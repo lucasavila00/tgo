@@ -16,7 +16,13 @@ go test ./...
 Local tgo imports build first. Output goes beside each input: `model.tgo` becomes `model_tgo.go`.
 Commit each generated file beside its tgo source. Do not edit generated files.
 A failed build restores the output files that it changed.
-The compiler removes stale generated files when their package still contains tgo source.
+The compiler removes generated files after their source is deleted.
+
+Use Go build constraints and target suffixes on tgo files.
+For example, `store_linux.tgo` emits `store_tgo_linux.go`.
+The compiler keeps outputs for other targets when it builds the current target.
+It ignores `_test.tgo`, hidden, `_`, `testdata`, and `vendor` paths.
+It stops at nested Go modules.
 
 ## Declare and use business types
 

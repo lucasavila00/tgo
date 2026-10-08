@@ -9,9 +9,23 @@ A tgo source file ends in `.tgo`. It starts with a Go package clause.
 Imports, declarations, statements, expressions, and types use Go syntax.
 
 A package may contain `.tgo` and `.go` files. The compiler checks both.
-It does not compile `_test.go` files. The Go tool compiles tests after tgo emits Go.
+It does not compile `_test.tgo` or `_test.go` files.
+The Go tool compiles Go tests after tgo emits Go.
+
+Go build constraints and target suffixes select tgo source files.
+An excluded source file is not parsed. It does not add declarations to its package.
+The compiler ignores hidden, `_`, `testdata`, and `vendor` directories.
+It also stops at a nested `go.mod` file.
 
 Each `name.tgo` file emits `name_tgo.go` in the same directory.
+Target suffixes stay at the end of the Go name:
+
+```text
+name_linux.tgo       -> name_tgo_linux.go
+name_linux_amd64.tgo -> name_tgo_linux_amd64.go
+```
+
+This lets the Go tool select the same target files.
 Generated files start with this line:
 
 ```go
@@ -326,10 +340,14 @@ A source declaration that collides with a generated name is a compile error.
 
 `tgo build` builds the current package. `tgo build ./...` builds matching packages below it.
 Local tgo dependencies build before their importers.
+The compiler parses only selected packages and their local tgo dependencies.
 
 A successful build formats and writes every generated file.
-It removes stale tgo-generated files from packages that still contain tgo source.
+It removes an owned output when its source no longer exists.
+It keeps an output when its source is inactive for the current Go target.
 It refuses to replace a matching file without the generated header.
+A Go file with a generated-style name and no exact header is user code.
+The compiler includes that file in package checks.
 
 A failed build exits with status 1 and writes the first error to standard error.
 It writes nothing to standard output. Source errors include the `.tgo` file, line, and column.
