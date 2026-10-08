@@ -8,6 +8,7 @@ import (
 	"sort"
 )
 
+// reportGenericZeroCall applies a generic effect summary to one call.
 func (c *checker) reportGenericZeroCall(
 	call *ast.CallExpr,
 	summaries map[*types.Func]*genericEffectSummary,
@@ -26,6 +27,7 @@ func (c *checker) reportGenericZeroCall(
 		receiverArguments, typeArguments, false, "call to "+function.Name())
 }
 
+// reportGenericEffects groups model effects and reports their certainty.
 func (c *checker) reportGenericEffects(
 	expression ast.Expr,
 	call *ast.CallExpr,
@@ -136,6 +138,7 @@ func (c *checker) genericEffectType(
 	return arguments[effect.TypeParameter]
 }
 
+// effectCertainty proves whether an effect never, can, or will occur.
 func (c *checker) effectCertainty(
 	call *ast.CallExpr,
 	effect genericEffect,
@@ -162,6 +165,7 @@ func (c *checker) effectCertainty(
 	return certainty
 }
 
+// effectConditionValue evaluates one condition against concrete call arguments.
 func (c *checker) effectConditionValue(
 	call *ast.CallExpr,
 	condition genericEffectCondition,
@@ -250,6 +254,7 @@ func (c *checker) compositeEffectCondition(
 	}
 }
 
+// knownSliceBounds reads exact length and capacity from literals and make calls.
 func (c *checker) knownSliceBounds(expression ast.Expr) (int64, int64, bool) {
 	if parentheses, ok := expression.(*ast.ParenExpr); ok {
 		return c.knownSliceBounds(parentheses.X)
@@ -422,6 +427,7 @@ func unparenthesized(expression ast.Expr) ast.Expr {
 	}
 }
 
+// modelBehindAccessType finds a model exposed through a type or method set.
 func (c *checker) modelBehindAccessType(typ types.Type) *model {
 	if model := c.modelForReceiver(typ); model != nil {
 		return model
@@ -445,6 +451,7 @@ func (c *checker) modelBehindAccessType(typ types.Type) *model {
 	return found
 }
 
+// genericCall resolves a call and its receiver and function type arguments.
 func (c *checker) genericCall(
 	call *ast.CallExpr,
 ) (*types.Func, []types.Type, []types.Type) {

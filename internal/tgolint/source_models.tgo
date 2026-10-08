@@ -104,12 +104,14 @@ func (c *checker) verifySourceModels(generated *ast.File) *verifiedSource {
 	return &verifiedSource{generated: generated, file: file}
 }
 
+// exportSourceModels publishes facts only after every generated file verifies.
 func (c *checker) exportSourceModels(source *verifiedSource) {
 	for _, declaration := range source.file.Decls {
 		c.exportSourceDeclaration(source.generated, declaration)
 	}
 }
 
+// parseGeneratedMetadata reads the source name, digest, and generated body.
 func parseGeneratedMetadata(data []byte) *generatedMetadata {
 	parts := bytes.SplitN(data, []byte("\n"), 4)
 	if len(parts) != 4 || string(parts[0]) != generatedHeader || len(parts[2]) != 0 {
@@ -147,6 +149,7 @@ func (c *checker) hasModelAPIs(object *types.TypeName) bool {
 		validReconstructAPI(object.Type())
 }
 
+// reportExtraGeneratedModels rejects model APIs with no matching TGo declaration.
 func (c *checker) reportExtraGeneratedModels(
 	file *ast.File,
 	sourceName string,
@@ -186,6 +189,7 @@ func validGeneratedIntegrity(metadata *generatedMetadata, source []byte) bool {
 	return bytes.Equal(metadata.digest, hash.Sum(nil))
 }
 
+// checkSourceDeclaration compares one TGo model with its generated Go API.
 func (c *checker) checkSourceDeclaration(
 	generated *ast.File,
 	sourceName string,
@@ -222,6 +226,7 @@ func (c *checker) checkSourceDeclaration(
 	}
 }
 
+// exportSourceDeclaration records one verified model and its constructors.
 func (c *checker) exportSourceDeclaration(generated *ast.File, declaration syntax.Node) {
 	source := sourceDeclaration(declaration, c.packagePath())
 	if source == nil {
@@ -259,6 +264,7 @@ type sourceModel struct {
 	variants []*syntax.VariantDecl
 }
 
+// sourceDeclaration converts one syntax declaration to verified model metadata.
 func sourceDeclaration(declaration syntax.Node, packagePath string) *sourceModel {
 	switch node := declaration.(type) {
 	case *syntax.CheckedDecl:
@@ -389,6 +395,7 @@ func (c *checker) runtimeSelector(expression ast.Expr, name string) bool {
 	return ok && strings.HasSuffix(packageName.Imported().Path(), "/internal/tgoruntime")
 }
 
+// sourceShapeMatches checks source fields and the public generated model API.
 func sourceShapeMatches(
 	generated *ast.File,
 	representation ast.Expr,
@@ -432,6 +439,7 @@ func sourceShapeMatches(
 }
 
 // generatedEnumShape checks source variants against the public ABI.
+// generatedEnumShape checks enum operations without reading private storage.
 func generatedEnumShape(
 	typ types.Type,
 	name string,
@@ -473,6 +481,7 @@ func typeInPackage(typ types.Type, name string) (types.Type, bool) {
 	return object.Type(), true
 }
 
+// sameModelFact compares model identity and the ordered enum variants.
 func sameModelFact(left *model, right *model) bool {
 	if left == nil || right == nil || !sameModel(left, right) {
 		return false

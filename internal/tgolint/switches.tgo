@@ -10,6 +10,7 @@ import (
 	"golang.org/x/tools/go/cfg"
 )
 
+// checkTagSwitch checks exhaustive tag cases and payload access.
 func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
 	receiver, selector, model := c.tagCall(statement.Tag)
 	if model == nil {
@@ -78,6 +79,7 @@ func (c *checker) defaultStops(clause *ast.CaseClause) bool {
 	return c.statementsTerminate(clause.Body)
 }
 
+// statementsTerminate reports whether all paths leave the current switch.
 func (c *checker) statementsTerminate(statements []ast.Stmt) bool {
 	if len(statements) == 0 || c.hasEscapingBranch(statements) {
 		return false
@@ -183,6 +185,7 @@ func (c *checker) callMayReturn(call *ast.CallExpr) bool {
 	return !builtin
 }
 
+// tagCall resolves a generated tag call and its stable receiver.
 func (c *checker) tagCall(expression ast.Expr) (ast.Expr, *ast.SelectorExpr, *model) {
 	call, ok := expression.(*ast.CallExpr)
 	if !ok || len(call.Args) != 0 {
@@ -217,6 +220,7 @@ func (c *checker) caseTags(clause *ast.CaseClause, variants int) map[int]bool {
 	return tags
 }
 
+// checkCaseAccessors permits only the payload selected by the active tag.
 func (c *checker) checkCaseAccessors(
 	clause *ast.CaseClause,
 	receiver ast.Expr,
@@ -269,6 +273,7 @@ func (c *checker) checkCaseAccessors(
 	}
 }
 
+// receiverUnsafe reports a receiver that can change between tag and payload reads.
 func (c *checker) receiverUnsafe(receiver ast.Expr, accessor *ast.SelectorExpr) bool {
 	root, _, ok := receiverPath(c.pass.TypesInfo, receiver)
 	variable, variableOK := root.(*types.Var)
@@ -382,6 +387,7 @@ func (c *checker) receiverChangesInCycle(
 	return false
 }
 
+// receiverCanChangeIn finds writes, escapes, and captures in one scope.
 func receiverCanChangeIn(info *types.Info, scope ast.Node, receiver ast.Expr) bool {
 	root, _, ok := receiverPath(info, receiver)
 	if !ok {
@@ -566,6 +572,7 @@ func sameReceiver(info *types.Info, left, right ast.Expr) bool {
 	return true
 }
 
+// receiverPath splits a stable receiver into its root and selected fields.
 func receiverPath(info *types.Info, expression ast.Expr) (types.Object, []types.Object, bool) {
 	switch expression := expression.(type) {
 	case *ast.Ident:
@@ -593,6 +600,7 @@ func receiverPath(info *types.Info, expression ast.Expr) (types.Object, []types.
 	return nil, nil, false
 }
 
+// checkRepresentationAccess blocks private fields and unchecked payload methods.
 func (c *checker) checkRepresentationAccess(selector *ast.SelectorExpr) {
 	if c.safe[selector] || c.handled[selector] {
 		return

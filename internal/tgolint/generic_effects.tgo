@@ -16,6 +16,7 @@ type genericEffectWireFact struct {
 	ReturnedAccessEffects []genericEffectWire
 }
 
+// AFact marks genericEffectWireFact as a Go analysis fact.
 func (*genericEffectWireFact) AFact() {}
 
 type zeroParameter struct {
@@ -126,6 +127,7 @@ func decodeEffectConditionKind(code uint8) (effectKind, bool) {
 	}
 }
 
+// encodeGenericEffects converts internal ADTs to serializable package facts.
 func encodeGenericEffects(effects []genericEffect) []genericEffectWire {
 	encoded := make([]genericEffectWire, 0, len(effects))
 	for _, effect := range effects {
@@ -169,6 +171,7 @@ func decodeGenericEffects(encoded []genericEffectWire) ([]genericEffect, bool) {
 	return effects, true
 }
 
+// decodeGenericEffectFact validates all effect codes at the package boundary.
 func decodeGenericEffectFact(fact *genericEffectWireFact) *genericEffectSet {
 	if fact == nil {
 		return nil
@@ -202,6 +205,7 @@ type genericEffectSummary struct {
 }
 
 // checkGenericZeroSafety exports generic zero facts and checks each use.
+// checkGenericZeroSafety builds effect facts and checks each concrete call.
 func (c *checker) checkGenericZeroSafety() {
 	summaries := c.collectGenericZeroSummaries()
 	c.propagateGenericZeroFacts(summaries)
@@ -237,6 +241,7 @@ func (c *checker) checkGenericZeroSafety() {
 	}
 }
 
+// collectGenericZeroSummaries creates one local effect summary per generic function.
 func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSummary {
 	summaries := make(map[*types.Func]*genericEffectSummary)
 	for _, file := range c.pass.Files {
@@ -302,6 +307,7 @@ func genericParameters(signature *types.Signature) map[*types.TypeParam]zeroPara
 	return parameters
 }
 
+// collectDirectGenericZeros records zero creation in one generic body.
 func (c *checker) collectDirectGenericZeros(summary *genericEffectSummary) {
 	c.collectGenericPresenceZeros(summary)
 	c.collectNamedResultZeros(summary)
@@ -338,6 +344,7 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 	})
 }
 
+// collectReturnedGenericEffects records effects in a directly returned closure.
 func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
 	ast.Inspect(summary.body, func(node ast.Node) bool {
 		if _, nested := node.(*ast.FuncLit); nested {
@@ -374,6 +381,7 @@ func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
 
 // collectGenericPresenceZeros runs the normal pair proof for each type parameter.
 // It records only pairs that discard or use a value before the ok proof.
+// collectGenericPresenceZeros records zero values from failed presence operations.
 func (c *checker) collectGenericPresenceZeros(summary *genericEffectSummary) {
 	previousZeroTypes := c.zeroTypes
 	previousCapture := c.capture
@@ -470,6 +478,7 @@ func (c *checker) collectValueSpecZeros(
 	}
 }
 
+// collectCallZeros records zero-producing built-ins and conversions.
 func (c *checker) collectCallZeros(summary *genericEffectSummary, call *ast.CallExpr) {
 	name, ok := call.Fun.(*ast.Ident)
 	if !ok {

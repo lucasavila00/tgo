@@ -21,6 +21,7 @@ type genericValueBinding struct {
 	ambiguous bool
 }
 
+// collectGenericValueBindings finds stable local generic function values.
 func (c *checker) collectGenericValueBindings(
 	summaries map[*types.Func]*genericEffectSummary,
 ) (map[types.Object]*genericValueBinding, map[ast.Expr]bool) {
@@ -65,6 +66,7 @@ func (c *checker) collectFileGenericValueBindings(
 	})
 }
 
+// markAmbiguousGenericValueBindings rejects values changed after their first binding.
 func (c *checker) markAmbiguousGenericValueBindings(
 	file *ast.File,
 	bindings map[types.Object]*genericValueBinding,
@@ -132,6 +134,7 @@ func (c *checker) collectAssignedGenericValues(
 	}
 }
 
+// genericValue resolves the effects carried by a function value expression.
 func (c *checker) genericValue(
 	expression ast.Expr,
 	summaries map[*types.Func]*genericEffectSummary,
@@ -177,6 +180,7 @@ func (c *checker) genericValue(
 	}, true
 }
 
+// reportDirectGenericValueEscape rejects an effectful value with no checked call site.
 func (c *checker) reportDirectGenericValueEscape(
 	expression ast.Expr,
 	summaries map[*types.Func]*genericEffectSummary,
@@ -288,6 +292,7 @@ func (c *checker) reportBoundGenericValueUse(
 	c.reportGenericValueEscape(name, binding.value)
 }
 
+// reportGenericValueCall checks saved effects with the current call arguments.
 func (c *checker) reportGenericValueCall(call *ast.CallExpr, value genericValue) {
 	conditionCall := call
 	effectsZero := value.fact.ZeroEffects
@@ -305,6 +310,7 @@ func (c *checker) reportGenericValueCall(call *ast.CallExpr, value genericValue)
 		value.receiverArguments, value.typeArguments, false, description)
 }
 
+// reportGenericValueEscape reports effects that escape local call analysis.
 func (c *checker) reportGenericValueEscape(position ast.Expr, value genericValue) {
 	if !c.genericValueAffectsModel(value) {
 		return

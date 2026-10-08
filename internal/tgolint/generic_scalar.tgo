@@ -40,6 +40,7 @@ func (c *checker) scalarValueAt(node ast.Node, expression ast.Expr) (scalarValue
 	return c.evaluateScalar(expression, state)
 }
 
+// enclosingFunction finds the declaration or literal that owns a node.
 func (c *checker) enclosingFunction(node ast.Node) ast.Node {
 	for current := node; current != nil; current = c.parents[current] {
 		switch current.(type) {
@@ -64,6 +65,7 @@ func (c *checker) buildScalarFlow(root ast.Node) *scalarFlow {
 	return flow
 }
 
+// solveScalarEntries computes stable input facts for every live CFG block.
 func (c *checker) solveScalarEntries(
 	graph *cfg.CFG,
 	entry scalarState,
@@ -94,6 +96,7 @@ func (c *checker) solveScalarEntries(
 	return entries
 }
 
+// transferScalarBlock applies every scalar write and escape in one block.
 func (c *checker) transferScalarBlock(
 	entry scalarState,
 	block *cfg.Block,
@@ -107,6 +110,7 @@ func (c *checker) transferScalarBlock(
 	return state
 }
 
+// scalarSuccessors removes an edge when the block condition is constant.
 func (c *checker) scalarSuccessors(
 	block *cfg.Block,
 	state scalarState,
@@ -132,6 +136,7 @@ func (c *checker) scalarSuccessors(
 	return block.Succs[1:]
 }
 
+// recordScalarEntries saves final facts before each AST node.
 func (c *checker) recordScalarEntries(
 	flow *scalarFlow,
 	graph *cfg.CFG,
@@ -175,6 +180,7 @@ func (c *checker) ownedScalars(root ast.Node, body *ast.BlockStmt) map[types.Obj
 	return owned
 }
 
+// scalarEntryState maps stable Boolean and integer parameters to call arguments.
 func (c *checker) scalarEntryState(
 	root ast.Node,
 ) scalarState {
@@ -270,6 +276,7 @@ func (c *checker) transferScalarNode(
 	c.invalidateScalarEscapes(state, node)
 }
 
+// transferScalarAssignment evaluates all right sides before it changes state.
 func (c *checker) transferScalarAssignment(
 	state scalarState,
 	statement *ast.AssignStmt,
@@ -357,6 +364,7 @@ func (c *checker) invalidateScalarEscapes(state scalarState, root ast.Node) {
 	})
 }
 
+// evaluateScalar reduces constants, aliases, and supported Boolean expressions.
 func (c *checker) evaluateScalar(
 	expression ast.Expr,
 	state scalarState,
@@ -414,6 +422,7 @@ func (c *checker) valuePreservingConversion(call *ast.CallExpr) bool {
 		)
 }
 
+// evaluateScalarBinary evaluates safe Boolean operations and equality.
 func (c *checker) evaluateScalarBinary(
 	expression *ast.BinaryExpr,
 	state scalarState,
@@ -570,6 +579,7 @@ func cloneScalarState(state scalarState) scalarState {
 	return cloned
 }
 
+// joinScalarState keeps facts that are equal on every incoming path.
 func joinScalarState(current scalarState, incoming scalarState) (scalarState, bool) {
 	if current == nil {
 		return cloneScalarState(incoming), true

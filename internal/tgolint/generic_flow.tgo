@@ -22,6 +22,7 @@ func neverEffectOutcome() effectOutcome { return effectOutcome.Never{} }
 func alwaysEffectOutcome() effectOutcome { return effectOutcome.Always{} }
 func conditionalEffectOutcome() effectOutcome { return effectOutcome.Conditional{} }
 
+// reachableNodes returns AST nodes from live CFG blocks.
 func (c *checker) reachableNodes(body *ast.BlockStmt) map[ast.Node]bool {
 	reachable := make(map[ast.Node]bool)
 	graph := cfg.New(body, c.callMayReturn)
@@ -44,6 +45,7 @@ func (c *checker) markGenericZeroAt(
 	c.markGenericZeroWith(summary, node, typ, nil, false)
 }
 
+// markGenericZeroWith adds one zero effect with its path conditions.
 func (c *checker) markGenericZeroWith(
 	summary *genericEffectSummary,
 	node ast.Node,
@@ -106,6 +108,7 @@ func (c *checker) expressionParameter(
 	return c.valueParameter(summary, c.pass.TypesInfo.ObjectOf(name))
 }
 
+// parameterStableBefore rejects a condition after mutation or escape.
 func (c *checker) parameterStableBefore(
 	summary *genericEffectSummary,
 	index int,
@@ -193,6 +196,7 @@ func callUsesObject(info *types.Info, call *ast.CallExpr, object types.Object) b
 	return false
 }
 
+// scalarEscapesInExpression finds address and pointer-receiver escapes.
 func scalarEscapesInExpression(
 	info *types.Info,
 	expression ast.Expr,
@@ -261,6 +265,7 @@ func (c *checker) markGenericAccessAt(
 	}
 }
 
+// addGenericEffect normalizes and deduplicates one summary effect.
 func (c *checker) addGenericEffect(
 	summary *genericEffectSummary,
 	zero bool,
@@ -287,6 +292,7 @@ func (c *checker) addGenericEffect(
 	return true
 }
 
+// normalizeGenericEffect sorts conditions and rejects contradictions.
 func normalizeGenericEffect(effect genericEffect) (genericEffect, bool) {
 	sort.Slice(effect.Conditions, func(left, right int) bool {
 		if effect.Conditions[left].ValueParameter !=
@@ -340,6 +346,7 @@ func equalGenericEffect(left, right genericEffect) bool {
 	return true
 }
 
+// genericEffectPath gets conditions that guard one operation.
 func (c *checker) genericEffectPath(
 	summary *genericEffectSummary,
 	node ast.Node,
@@ -611,6 +618,7 @@ func containedTypeParameters(
 	return result
 }
 
+// propagateGenericZeroFacts reaches a fixed point across local generic calls.
 func (c *checker) propagateGenericZeroFacts(
 	summaries map[*types.Func]*genericEffectSummary,
 ) {
@@ -680,6 +688,7 @@ func (c *checker) propagateGenericEffects(
 	return changed
 }
 
+// propagatedGenericEffect maps one callee effect into its caller.
 func (c *checker) propagatedGenericEffect(
 	summary *genericEffectSummary,
 	call *ast.CallExpr,
@@ -725,6 +734,7 @@ func (c *checker) propagatedGenericEffect(
 	), true
 }
 
+// mapEffectCondition evaluates or remaps one callee condition.
 func (c *checker) mapEffectCondition(
 	summary *genericEffectSummary,
 	call *ast.CallExpr,
@@ -855,6 +865,7 @@ func (summary *genericEffectSummary) effects() *genericEffectSet {
 	}
 }
 
+// fact sorts and encodes a local summary for package export.
 func (summary *genericEffectSummary) fact() *genericEffectWireFact {
 	effects := summary.effects()
 	sortGenericEffects(effects.ZeroEffects)

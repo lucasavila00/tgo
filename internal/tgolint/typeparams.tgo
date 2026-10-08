@@ -4,6 +4,7 @@ import "go/types"
 
 // coreType returns the common underlying type of an explicit constraint.
 // It returns nil when the type set has no common underlying type.
+// coreType returns one shared underlying type for a concrete or constrained type.
 func coreType(typ types.Type) types.Type {
 	typ = types.Unalias(typ)
 	if parameter, ok := typ.(*types.TypeParam); ok {
@@ -26,6 +27,7 @@ func coreType(typ types.Type) types.Type {
 	return typ.Underlying()
 }
 
+// commonChannel combines channel directions when their element types match.
 func commonChannel(left, right types.Type) types.Type {
 	leftChannel, leftOK := left.(*types.Chan)
 	rightChannel, rightOK := right.(*types.Chan)
@@ -42,6 +44,7 @@ func commonChannel(left, right types.Type) types.Type {
 }
 
 // simpleTerms gets the normalized structural terms of a constraint.
+// simpleTerms expands a constraint into a finite set of type terms.
 func simpleTerms(typ types.Type) ([]*types.Term, bool) {
 	typ = types.Unalias(typ)
 	switch typ := typ.(type) {
@@ -81,6 +84,7 @@ func simpleTerms(typ types.Type) ([]*types.Term, bool) {
 }
 
 // intersectTerms returns the terms that are present in both unions.
+// intersectTerms computes the shared terms from two constraint sets.
 func intersectTerms(left, right []*types.Term) []*types.Term {
 	intersection := make([]*types.Term, 0)
 	for _, leftTerm := range left {
@@ -95,6 +99,7 @@ func intersectTerms(left, right []*types.Term) []*types.Term {
 }
 
 // intersectTerm returns the overlap of two exact or approximate terms.
+// intersectTerm returns the narrower compatible term.
 func intersectTerm(left, right *types.Term) *types.Term {
 	leftType := types.Unalias(left.Type())
 	rightType := types.Unalias(right.Type())

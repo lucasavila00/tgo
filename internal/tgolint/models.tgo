@@ -23,6 +23,7 @@ type modelWireFact struct {
 	Variants []string
 }
 
+// AFact marks modelWireFact as a Go analysis fact.
 func (*modelWireFact) AFact() {}
 
 const (
@@ -164,6 +165,7 @@ func modelIsParameter(value *model) bool {
 	}
 }
 
+// encodeModelFact converts the internal ADT to its package fact form.
 func encodeModelFact(value *model) *modelWireFact {
 	if value == nil {
 		return nil
@@ -184,6 +186,7 @@ func encodeModelFact(value *model) *modelWireFact {
 	}
 }
 
+// decodeModelFact validates a wire fact before it enters the checker.
 func decodeModelFact(fact *modelWireFact, expectedPackage string) *model {
 	if fact == nil || fact.Package != expectedPackage || fact.Name == "" {
 		return nil
@@ -206,6 +209,7 @@ func decodeModelFact(fact *modelWireFact, expectedPackage string) *model {
 // validationFact marks a generated operation that returns a validated model.
 type validationFact struct{}
 
+// AFact marks validationFact as a Go analysis fact.
 func (*validationFact) AFact() {}
 
 type objectKey struct {
@@ -213,6 +217,7 @@ type objectKey struct {
 	name string
 }
 
+// findModels verifies generated files before it exports any model facts.
 func (c *checker) findModels() {
 	var verified []*verifiedSource = nil
 	for _, file := range c.pass.Files {
@@ -262,6 +267,7 @@ func validValidatorAPI(function *types.Func, typ types.Type) bool {
 		types.Identical(signature.Results().At(1).Type(), errorType)
 }
 
+// exportValidationFacts marks verified constructors as trusted value sources.
 func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
 	scope := object.Pkg().Scope()
 	var names []string = nil
@@ -340,6 +346,7 @@ func (c *checker) callHasValidationFact(call *ast.CallExpr) bool {
 	return true
 }
 
+// findValidationFunctionValues resolves stable local aliases of validators.
 func (c *checker) findValidationFunctionValues() {
 	candidates := make(map[types.Object]types.Object)
 	writes := make(map[types.Object]int)
@@ -502,6 +509,7 @@ func validEnumAPI(typ, payload types.Type, accessor, constructorName string) boo
 		types.Identical(makeValue.Results().At(0).Type(), typ)
 }
 
+// modelFor loads and caches the verified model for one named type.
 func (c *checker) modelFor(typ types.Type) *model {
 	typ = types.Unalias(typ)
 	named, ok := typ.(*types.Named)
@@ -536,6 +544,7 @@ func (c *checker) modelForReceiver(typ types.Type) *model {
 	}
 }
 
+// modelForTypeParameter finds one model shared by every constraint term.
 func (c *checker) modelForTypeParameter(parameter *types.TypeParam) *model {
 	terms, supported := simpleTerms(parameter.Constraint())
 	if !supported {
@@ -625,6 +634,7 @@ func (c *checker) receiverCanHideModel(typ types.Type) bool {
 	return !supported || len(terms) == 0
 }
 
+// modelForAccessor resolves a generated payload accessor to its owning model.
 func (c *checker) modelForAccessor(function *types.Func) *model {
 	name := function.Name()
 	if !strings.HasPrefix(name, "Tgo") || name == "TgoTag" {

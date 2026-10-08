@@ -18,8 +18,10 @@ type runtimeFact struct {
 	Digest  string
 }
 
+// AFact marks runtimeFact as a Go analysis fact.
 func (*runtimeFact) AFact() {}
 
+// verifyRuntimePackage exports trust only for the exact generated runtime body.
 func (c *checker) verifyRuntimePackage() bool {
 	if !strings.HasSuffix(c.pass.Pkg.Path(), "/internal/tgoruntime") {
 		return false
@@ -41,6 +43,7 @@ func (c *checker) verifyRuntimePackage() bool {
 	return true
 }
 
+// validRuntimeFile compares one runtime file with the compiler-owned source.
 func validRuntimeFile(data []byte) bool {
 	data = bytes.TrimPrefix(data, []byte(generatedHeader+"\n"))
 	parts := bytes.SplitN(data, []byte("\n"), 3)
@@ -61,6 +64,7 @@ func formatDigest(digest []byte) string {
 	return string(text)
 }
 
+// hasTrustedRuntime checks the package fact for the generated runtime import.
 func (c *checker) hasTrustedRuntime(file *ast.File) bool {
 	var runtimePackage *types.Package = nil
 	bindings := 0
