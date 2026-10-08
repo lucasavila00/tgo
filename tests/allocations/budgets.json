@@ -1,0 +1,14 @@
+{
+  "directory": "tests/e2e/testdata/business",
+  "package": "./model",
+  "benchmarks": {
+    "BenchmarkEnumJSONMarshal/external": {"bytes": 240, "allocations": 5},
+    "BenchmarkEnumJSONMarshal/internal": {"bytes": 288, "allocations": 5},
+    "BenchmarkEnumJSONMarshal/adjacent": {"bytes": 288, "allocations": 5},
+    "BenchmarkEnumJSONMarshal/untagged": {"bytes": 112, "allocations": 5},
+    "BenchmarkEnumJSONUnmarshal/external": {"bytes": 520, "allocations": 7},
+    "BenchmarkEnumJSONUnmarshal/internal": {"bytes": 104, "allocations": 4},
+    "BenchmarkEnumJSONUnmarshal/adjacent": {"bytes": 152, "allocations": 5},
+    "BenchmarkEnumJSONUnmarshal/untagged": {"bytes": 248, "allocations": 6}
+  }
+}

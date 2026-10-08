@@ -19,6 +19,8 @@ func TestEnumJSONForms(t *testing.T) {
 		{"adjacent", NewJSONAdjacentCreated(JSONAdjacentCreated{ID: "a1"}), new(JSONAdjacent), `{"type":"created","data":{"account_id":"a1"}}`},
 		{"untagged number", NewJSONUntaggedNumber(JSONUntaggedNumber{Value: 42}), new(JSONUntagged), `{"value":42}`},
 		{"escaped", NewJSONEscapedValue(JSONEscapedValue{}), new(JSONEscaped), `{"kind\u0001":"name\u0001\"end"}`},
+		{"escaped external", NewJSONEscapedExternalValue(JSONEscapedExternalValue{}), new(JSONEscapedExternal), `{"name\u0001\"end":{}}`},
+		{"escaped adjacent", NewJSONEscapedAdjacentValue(JSONEscapedAdjacentValue{}), new(JSONEscapedAdjacent), `{"kind\u0001":"name\u0001\"end","data\u0002":{}}`},
 		{"string field", NewJSONStringFieldValue(JSONStringFieldValue{Count: 42}), new(JSONStringField), `{"Value":{"count":"42"}}`},
 		{"optional field", NewJSONExternalCreated(JSONExternalCreated{ID: "a1", Reason: "closed"}), new(JSONExternal), `{"created":{"account_id":"a1","reason":"closed"}}`},
 		{"untagged", NewJSONUntaggedText(JSONUntaggedText{Value: "text"}), new(JSONUntagged), `{"value":"text"}`},

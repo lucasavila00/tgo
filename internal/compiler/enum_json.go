@@ -104,58 +104,62 @@ func parseEnumJSONOptions(config *enumJSON, control string) error {
 	return nil
 }
 
+func jsonStructFieldName(name string) bool {
+	return name != "-" && validJSONFieldName(name)
+}
+
+func jsonFieldTag(name string) string {
+	return "`json:" + strconv.Quote(name) + "`"
+}
+
+func jsonString(value string) string {
+	data, _ := json.Marshal(value)
+	return string(data)
+}
+
 // enumJSONGo emits JSON methods without a change to enum storage.
 func enumJSONGo(declaration *model, jsonPackage, fmtPackage string) string {
 	var out strings.Builder
+	emitEnumJSONMarshal(&out, declaration, jsonPackage, fmtPackage)
+	emitEnumJSONUnmarshal(&out, declaration, jsonPackage, fmtPackage)
+	return out.String()
+}
+
+func emitEnumJSONMarshal(
+	out *strings.Builder, declaration *model, jsonPackage string, fmtPackage string,
+) {
+	name := declaration.Name
+	config := declaration.JSON
+	fmt.Fprintf(out, "func (v %s) MarshalJSON() ([]byte, error) {\nswitch v.tgoTag {\n", name)
+	for index, variant := range declaration.Variants {
+		fmt.Fprintf(out, "case %d:\npayload := v.Tgo%s()\n", index+1, variant.Name)
+		switch config.Form {
+		case "external":
+			emitExternalJSONMarshal(out, name, variant, jsonPackage)
+		case "untagged":
+			fmt.Fprintf(out, "return %s.Marshal(payload)\n", jsonPackage)
+		case "adjacent":
+			emitAdjacentJSONMarshal(out, name, variant, config, jsonPackage)
+		case "internal":
+			emitInternalJSONMarshal(out, name, variant, config, jsonPackage, fmtPackage)
+		}
+	}
+	fmt.Fprintf(out,
+		"default: return nil, %s.Errorf(%s)\n}\n}\n",
+		fmtPackage,
+		strconv.Quote("invalid "+name+" JSON tag"))
+}
+
+func emitEnumJSONUnmarshal(
+	out *strings.Builder, declaration *model, jsonPackage string, fmtPackage string,
+) {
 	name := declaration.Name
 	config := declaration.JSON
 	q := strconv.Quote
-	fmt.Fprintf(&out, "func (v %s) MarshalJSON() ([]byte, error) {\nswitch v.tgoTag {\n", name)
-	for index, variant := range declaration.Variants {
-		fmt.Fprintf(&out, "case %d:\npayload := v.Tgo%s()\n", index+1, variant.Name)
-		switch config.Form {
-		case "external":
-			fmt.Fprintf(&out,
-				"return %s.Marshal(map[string]interface{}{%s: payload})\n",
-				jsonPackage,
-				q(variant.JSONName))
-		case "untagged":
-			fmt.Fprintf(&out, "return %s.Marshal(payload)\n", jsonPackage)
-		case "adjacent":
-			fmt.Fprintf(&out,
-				"return %s.Marshal(map[string]interface{}{%s: %s, %s: payload})\n",
-				jsonPackage,
-				q(config.Tag),
-				q(variant.JSONName),
-				q(config.Content))
-		case "internal":
-			tagData, _ := json.Marshal(variant.JSONName)
-			fmt.Fprintf(&out,
-				"data, err := %s.Marshal(payload)\n"+
-					"if err != nil { return nil, err }\n"+
-					"var object map[string]%s.RawMessage\n"+
-					"if err := %s.Unmarshal(data, &object); err != nil { return nil, err }\n"+
-					"if object == nil { return nil, %s.Errorf(%s) }\n"+
-					"object[%s] = %s.RawMessage(%s)\n"+
-					"return %s.Marshal(object)\n",
-				jsonPackage,
-				jsonPackage,
-				jsonPackage,
-				fmtPackage, q("expected "+name+" JSON payload object"),
-				q(config.Tag),
-				jsonPackage,
-				q(string(tagData)),
-				jsonPackage)
-		}
-	}
-	fmt.Fprintf(&out,
-		"default: return nil, %s.Errorf(%s)\n}\n}\n",
-		fmtPackage,
-		q("invalid "+name+" JSON tag"))
-	fmt.Fprintf(&out, "func (v *%s) UnmarshalJSON(data []byte) error {\n", name)
+	fmt.Fprintf(out, "func (v *%s) UnmarshalJSON(data []byte) error {\n", name)
 	if config.Form == "untagged" {
 		for _, variant := range declaration.Variants {
-			fmt.Fprintf(&out,
+			fmt.Fprintf(out,
 				"{ var payload %s%s\n"+
 					"if err := %s.Unmarshal(data, &payload); err == nil {\n"+
 					"*v = New%s%s(payload); return nil } }\n",
@@ -165,25 +169,36 @@ func enumJSONGo(declaration *model, jsonPackage, fmtPackage string) string {
 				name,
 				variant.Name)
 		}
-		fmt.Fprintf(&out,
+		fmt.Fprintf(out,
 			"return %s.Errorf(%s)\n}\n",
 			fmtPackage,
 			q("no matching "+name+" JSON variant"))
-		return out.String()
+		return
 	}
-	fmt.Fprintf(&out,
-		"var object map[string]%s.RawMessage\n"+
-			"if err := %s.Unmarshal(data, &object); err != nil { return err }\n",
-		jsonPackage, jsonPackage)
-	out.WriteString("var variant string\nvar payloadData []byte\n")
-	if config.Form == "external" {
-		fmt.Fprintf(&out,
+	out.WriteString("var variant string\n")
+	if config.Form != "internal" || !jsonStructFieldName(config.Tag) {
+		out.WriteString("var payloadData []byte\n")
+	}
+	switch {
+	case config.Form == "external":
+		fmt.Fprintf(out,
+			"var object map[string]%s.RawMessage\n"+
+				"if err := %s.Unmarshal(data, &object); err != nil { return err }\n",
+			jsonPackage, jsonPackage)
+		fmt.Fprintf(out,
 			"if len(object) != 1 { return %s.Errorf(%s) }\n"+
 				"for key, value := range object { variant = key; payloadData = value }\n",
 			fmtPackage,
 			q("expected one "+name+" JSON variant"))
-	} else {
-		fmt.Fprintf(&out,
+	case jsonStructFieldName(config.Tag) &&
+		(config.Form != "adjacent" || jsonStructFieldName(config.Content)):
+		emitTaggedJSONHeader(out, name, config, jsonPackage, fmtPackage)
+	default:
+		fmt.Fprintf(out,
+			"var object map[string]%s.RawMessage\n"+
+				"if err := %s.Unmarshal(data, &object); err != nil { return err }\n",
+			jsonPackage, jsonPackage)
+		fmt.Fprintf(out,
 			"tag, ok := object[%s]\n"+
 				"if !ok { return %s.Errorf(%s) }\n"+
 				"if err := %s.Unmarshal(tag, &variant); err != nil { return err }\n",
@@ -192,7 +207,7 @@ func enumJSONGo(declaration *model, jsonPackage, fmtPackage string) string {
 			q("missing "+name+" JSON tag"),
 			jsonPackage)
 		if config.Form == "adjacent" {
-			fmt.Fprintf(&out,
+			fmt.Fprintf(out,
 				"var present bool\n"+
 					"payloadData, present = object[%s]\n"+
 					"if !present { return %s.Errorf(%s) }\n",
@@ -200,7 +215,7 @@ func enumJSONGo(declaration *model, jsonPackage, fmtPackage string) string {
 				fmtPackage,
 				q("missing "+name+" JSON content"))
 		} else {
-			fmt.Fprintf(&out,
+			fmt.Fprintf(out,
 				"delete(object, %s)\n"+
 					"var err error\n"+
 					"payloadData, err = %s.Marshal(object)\n"+
@@ -211,7 +226,25 @@ func enumJSONGo(declaration *model, jsonPackage, fmtPackage string) string {
 	}
 	out.WriteString("switch variant {\n")
 	for _, variant := range declaration.Variants {
-		fmt.Fprintf(&out,
+		if config.Form == "internal" && jsonStructFieldName(config.Tag) {
+			fmt.Fprintf(out,
+				"case %s:\n"+
+					"type TgoPayload %s%s\n"+
+					"var payload TgoPayload\n"+
+					"if err := %s.Unmarshal(data, &payload); err != nil { return err }\n"+
+					"*v = New%s%s(%s%s(payload))\n"+
+					"return nil\n",
+				q(variant.JSONName),
+				name,
+				variant.Name,
+				jsonPackage,
+				name,
+				variant.Name,
+				name,
+				variant.Name)
+			continue
+		}
+		fmt.Fprintf(out,
 			"case %s:\n"+
 				"var payload %s%s\n"+
 				"if err := %s.Unmarshal(payloadData, &payload); err != nil { return err }\n"+
@@ -224,9 +257,136 @@ func enumJSONGo(declaration *model, jsonPackage, fmtPackage string) string {
 			name,
 			variant.Name)
 	}
-	fmt.Fprintf(&out,
+	fmt.Fprintf(out,
 		"default: return %s.Errorf(%s, variant)\n}\n}\n",
 		fmtPackage,
 		q("unknown "+name+" JSON variant %q"))
-	return out.String()
+}
+
+func emitExternalJSONMarshal(
+	out *strings.Builder, enum string, variant variant, jsonPackage string,
+) {
+	if jsonStructFieldName(variant.JSONName) {
+		fmt.Fprintf(out,
+			"return %s.Marshal(struct { Payload %s%s %s }{Payload: payload})\n",
+			jsonPackage,
+			enum,
+			variant.Name,
+			jsonFieldTag(variant.JSONName))
+		return
+	}
+	prefix := "{" + jsonString(variant.JSONName) + ":"
+	emitJSONEnvelope(out, prefix, jsonPackage)
+}
+
+func emitAdjacentJSONMarshal(
+	out *strings.Builder, enum string, variant variant, config enumJSON, jsonPackage string,
+) {
+	if jsonStructFieldName(config.Tag) && jsonStructFieldName(config.Content) {
+		fmt.Fprintf(out,
+			"return %s.Marshal(struct {\n"+
+				"Variant string %s\n"+
+				"Payload %s%s %s\n"+
+				"}{Variant: %s, Payload: payload})\n",
+			jsonPackage,
+			jsonFieldTag(config.Tag),
+			enum,
+			variant.Name,
+			jsonFieldTag(config.Content),
+			strconv.Quote(variant.JSONName))
+		return
+	}
+	prefix := "{" + jsonString(config.Tag) + ":" + jsonString(variant.JSONName) +
+		"," + jsonString(config.Content) + ":"
+	emitJSONEnvelope(out, prefix, jsonPackage)
+}
+
+func emitInternalJSONMarshal(
+	out *strings.Builder,
+	enum string,
+	variant variant,
+	config enumJSON,
+	jsonPackage string,
+	fmtPackage string,
+) {
+	if jsonStructFieldName(config.Tag) {
+		fmt.Fprintf(out,
+			"type TgoPayload %s%s\n"+
+				"return %s.Marshal(struct {\n"+
+				"TgoPayload\n"+
+				"Variant string %s\n"+
+				"}{TgoPayload: TgoPayload(payload), Variant: %s})\n",
+			enum,
+			variant.Name,
+			jsonPackage,
+			jsonFieldTag(config.Tag),
+			strconv.Quote(variant.JSONName))
+		return
+	}
+	prefix := "{" + jsonString(config.Tag) + ":" + jsonString(variant.JSONName)
+	fmt.Fprintf(out,
+		"payloadData, err := %s.Marshal(payload)\n"+
+			"if err != nil { return nil, err }\n"+
+			"if len(payloadData) < 2 || payloadData[0] != '{' || "+
+			"payloadData[len(payloadData)-1] != '}' {\n"+
+			"return nil, %s.Errorf(%s) }\n"+
+			"if len(payloadData) == 2 { return []byte(%s), nil }\n"+
+			"result := make([]byte, 0, len(payloadData)+%d)\n"+
+			"result = append(result, %s...)\n"+
+			"result = append(result, ',')\n"+
+			"result = append(result, payloadData[1:]...)\n"+
+			"return result, nil\n",
+		jsonPackage,
+		fmtPackage,
+		strconv.Quote("expected "+enum+" JSON payload object"),
+		strconv.Quote(prefix+"}"),
+		len(prefix),
+		strconv.Quote(prefix))
+}
+
+func emitJSONEnvelope(out *strings.Builder, prefix string, jsonPackage string) {
+	fmt.Fprintf(out,
+		"payloadData, err := %s.Marshal(payload)\n"+
+			"if err != nil { return nil, err }\n"+
+			"result := make([]byte, 0, len(payloadData)+%d)\n"+
+			"result = append(result, %s...)\n"+
+			"result = append(result, payloadData...)\n"+
+			"result = append(result, '}')\n"+
+			"return result, nil\n",
+		jsonPackage,
+		len(prefix)+1,
+		strconv.Quote(prefix))
+}
+
+func emitTaggedJSONHeader(
+	out *strings.Builder,
+	enum string,
+	config enumJSON,
+	jsonPackage string,
+	fmtPackage string,
+) {
+	contentField := ""
+	contentCheck := ""
+	if config.Form == "adjacent" {
+		contentField = "Content " + jsonPackage + ".RawMessage " +
+			jsonFieldTag(config.Content) + "\n"
+		contentCheck = "payloadData = object.Content\n" +
+			"if payloadData == nil { return " + fmtPackage + ".Errorf(" +
+			strconv.Quote("missing "+enum+" JSON content") + ") }\n"
+	}
+	fmt.Fprintf(out,
+		"var object struct {\n"+
+			"Tag %s.RawMessage %s\n%s"+
+			"}\n"+
+			"if err := %s.Unmarshal(data, &object); err != nil { return err }\n"+
+			"if object.Tag == nil { return %s.Errorf(%s) }\n"+
+			"if err := %s.Unmarshal(object.Tag, &variant); err != nil { return err }\n%s",
+		jsonPackage,
+		jsonFieldTag(config.Tag),
+		contentField,
+		jsonPackage,
+		fmtPackage,
+		strconv.Quote("missing "+enum+" JSON tag"),
+		jsonPackage,
+		contentCheck)
 }
