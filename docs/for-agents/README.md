@@ -85,9 +85,13 @@ The generated code trusts Go callers. There are no boundary scans or read guards
 ## Checkpoint status
 
 The first checkpoint tests two generated packages, Go generic calls, matches, constructor errors,
-fresh defaults, shared maps, and invalid source rejection. Builds must produce stable output.
+fresh defaults, and shared maps. The committed model output must match a fresh compile.
 
-The implementation is still in progress. Collection control flow, all Go type forms, source error
+The next checkpoint adds nested matches, presence tests for maps, channels, and assertions,
+bounded reslicing, overlapping copy, and map clearing. Sixteen invalid-source cases are tested.
+A changed bound loses its prior proof. No new runtime bound guard is generated.
+
+The implementation is still in progress. More control-flow forms, Go type forms, source error
 positions, package build edge cases, and cost comparisons need more tests and work.
 Do not treat a passing initial test suite as proof of every rule in the proposal.
 

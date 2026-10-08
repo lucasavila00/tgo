@@ -11,13 +11,14 @@ func enumGo(declaration *model) string {
 	name := declaration.Name
 	fmt.Fprintf(&output, "// %s requires a variant constructor. Its zero value is invalid.\n", name)
 	output.WriteString("// Shared data keeps Go aliases. Callers must keep model values valid.\n")
-	fmt.Fprintf(&output, "type %s struct {\n tgoTag uint32\n", name)
+	tagType := enumTagType(len(declaration.Variants))
+	fmt.Fprintf(&output, "type %s struct {\n tgoTag %s\n", name, tagType)
 	for _, variant := range declaration.Variants {
 		fmt.Fprintf(&output, "tgo%s %s%s\n", variant.Name, name, variant.Name)
 	}
 	output.WriteString("}\n")
 	output.WriteString("// TgoTag returns the tag. Use only on a constructed value.\n")
-	fmt.Fprintf(&output, "func (v %s) TgoTag() uint32 { return v.tgoTag }\n", name)
+	fmt.Fprintf(&output, "func (v %s) TgoTag() %s { return v.tgoTag }\n", name, tagType)
 	for index, variant := range declaration.Variants {
 		emitVariant(&output, name, variant, index+1)
 	}
@@ -56,4 +57,15 @@ func checkedGo(declaration *model) string {
 	output.WriteString("// Value requires construction success. Shared data keeps its aliases.\n")
 	fmt.Fprintf(&output, "func (v %s) Value() %s { return v.value }\n", name, declaration.Base)
 	return output.String()
+}
+
+func enumTagType(variants int) string {
+	switch {
+	case variants < 1<<8:
+		return "uint8"
+	case variants < 1<<16:
+		return "uint16"
+	default:
+		return "uint32"
+	}
 }

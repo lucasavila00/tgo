@@ -138,11 +138,11 @@ func (p *packageUnit) checkNode(node ast.Node, parents map[ast.Node]ast.Node) {
 	case *ast.IndexExpr:
 		p.checkMapRead(node, parents)
 	case *ast.UnaryExpr:
-		if node.Op == token.ARROW && !p.zeroValid(p.info.TypeOf(node)) {
+		if node.Op == token.ARROW && !p.zeroValid(firstResult(p.info.TypeOf(node))) {
 			p.checkPresence(node, parents)
 		}
 	case *ast.TypeAssertExpr:
-		if node.Type != nil && !p.zeroValid(p.info.TypeOf(node)) {
+		if node.Type != nil && !p.zeroValid(firstResult(p.info.TypeOf(node))) {
 			p.checkPresence(node, parents)
 		}
 	}
@@ -346,7 +346,7 @@ func (p *packageUnit) checkSlice(s *ast.SliceExpr, parents map[ast.Node]ast.Node
 		if !ok || child != branch.Body {
 			continue
 		}
-		if p.bounds(branch.Cond, s.High, s.X) {
+		if p.bounds(branch.Cond, s.High, s.X) && p.boundUnchanged(branch.Body, s) {
 			return
 		}
 	}
@@ -472,5 +472,51 @@ func (p *packageUnit) isLength(expression, slice ast.Expr) bool {
 	if !ok || !ident(call.Fun, "len") || len(call.Args) != 1 {
 		return false
 	}
-	return p.same(call.Args[0], slice)
+	_, builtin := p.info.Uses[call.Fun.(*ast.Ident)].(*types.Builtin)
+	return builtin && p.same(call.Args[0], slice)
+}
+
+func firstResult(typ types.Type) types.Type {
+	if tuple, ok := typ.(*types.Tuple); ok && tuple.Len() > 0 {
+		return tuple.At(0).Type()
+	}
+	return typ
+}
+
+// A bound test stops proving a bound when either operand can change.
+func (p *packageUnit) boundUnchanged(body *ast.BlockStmt, slice *ast.SliceExpr) bool {
+	unchanged := true
+	ast.Inspect(body, func(node ast.Node) bool {
+		if node == nil || node.Pos() >= slice.Pos() {
+			return false
+		}
+		switch node := node.(type) {
+		case *ast.AssignStmt:
+			for _, left := range node.Lhs {
+				if p.same(left, slice.X) || p.same(left, slice.High) {
+					unchanged = false
+				}
+			}
+		case *ast.IncDecStmt:
+			if p.same(node.X, slice.High) {
+				unchanged = false
+			}
+		case *ast.CallExpr:
+			name, ok := node.Fun.(*ast.Ident)
+			if !ok {
+				unchanged = false
+				break
+			}
+			_, builtin := p.info.Uses[name].(*types.Builtin)
+			if !builtin || name.Name != "len" && name.Name != "cap" {
+				unchanged = false
+			}
+		case *ast.UnaryExpr:
+			if node.Op == token.AND && (p.same(node.X, slice.High) || p.same(node.X, slice.X)) {
+				unchanged = false
+			}
+		}
+		return unchanged
+	})
+	return unchanged
 }

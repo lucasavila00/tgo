@@ -23,13 +23,13 @@ func (v Quantity) Value() int { return v.value }
 // Account requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type Account struct {
-	tgoTag      uint32
+	tgoTag      uint8
 	tgoPersonal AccountPersonal
 	tgoBusiness AccountBusiness
 }
 
 // TgoTag returns the tag. Use only on a constructed value.
-func (v Account) TgoTag() uint32 { return v.tgoTag }
+func (v Account) TgoTag() uint8 { return v.tgoTag }
 
 // AccountPersonal holds the variant fields. Supply every field.
 type AccountPersonal struct {

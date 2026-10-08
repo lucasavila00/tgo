@@ -5,21 +5,39 @@ import (
 	"go/ast"
 	"go/token"
 	"strconv"
+
+	"golang.org/x/tools/go/ast/astutil"
 )
 
 func (p *packageUnit) lowerMatches() {
-	for _, source := range p.Sources {
-		transform(source.File, func(node ast.Node) ast.Node {
-			statement, ok := node.(*ast.SwitchStmt)
-			if !ok {
-				return node
-			}
-			tag, ok := statement.Tag.(*ast.CallExpr)
-			if !ok || !ident(tag.Fun, "__tgo_match") {
-				return node
-			}
-			return p.lowerMatch(statement, tag)
-		})
+	for len(p.errors) == 0 {
+		changed := false
+		for _, source := range p.Sources {
+			astutil.Apply(source.File, func(cursor *astutil.Cursor) bool {
+				if changed {
+					return false
+				}
+				statement, ok := cursor.Node().(*ast.SwitchStmt)
+				if !ok {
+					return true
+				}
+				tag, ok := statement.Tag.(*ast.CallExpr)
+				if !ok || !ident(tag.Fun, "__tgo_match") {
+					return true
+				}
+				cursor.Replace(p.lowerMatch(statement, tag))
+				changed = true
+				return false
+			}, nil)
+		}
+		if !changed {
+			return
+		}
+		// An outer case introduces bindings needed to type nested matches.
+		if err := p.typecheck(false); err != nil {
+			p.errors = append(p.errors, err)
+			return
+		}
 	}
 }
 

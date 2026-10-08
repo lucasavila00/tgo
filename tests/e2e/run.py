@@ -50,6 +50,43 @@ def main():
                 "type Q int where value > 0\nfunc(q Q) Break() Q { return Q{} }",
                 "use a constructor for Q",
             ),
+            (
+                "type Q int where value > 0\nfunc f(xs []Q) { clear(xs) }",
+                "clear would create invalid slice elements",
+            ),
+            (
+                "type Q int where value > 0\n"
+                "func f(xs []Q, n int) []Q { return xs[:n] }",
+                "reslice bound must be proven",
+            ),
+            (
+                "type Q int where value > 0\n"
+                "func f(xs []Q, n int) []Q { "
+                "if n <= len(xs) { n++; return xs[:n] }; return xs }",
+                "reslice bound must be proven",
+            ),
+            (
+                "type Q int where value > 0\n"
+                "func f(xs map[int]Q) Q { return xs[0] }",
+                "this read needs if value, ok",
+            ),
+            (
+                "type Q int where value > 0\n"
+                "func f(xs map[int]Q) int { "
+                "if value, ok := xs[0]; ok { return value.Value() } "
+                "else { return value.Value() } }",
+                "value is available only in the successful presence branch",
+            ),
+            (
+                "type Q int where value > 0\n"
+                "func f(xs <-chan Q) Q { return <-xs }",
+                "this read needs if value, ok",
+            ),
+            (
+                "type Q int where value > 0\n"
+                "func f(value any) Q { return value.(Q) }",
+                "this read needs if value, ok",
+            ),
             ("var x = [2]int{1}", "supply every index"),
             ("var x = []int{2: 1}", "supply every index"),
             (

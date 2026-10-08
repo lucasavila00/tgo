@@ -80,6 +80,23 @@ func Accounts(name string) []Account {
 }
 ```
 
+For map values, channel values, and assertions whose zero is invalid, test presence first.
+Use the bound value only in the successful branch.
+
+```text
+func Find(accounts map[string]Account, id string) string {
+    if account, ok := accounts[id]; ok {
+        return Label(account)
+    }
+    return "missing"
+}
+```
+
+Use the same form for `if account, ok := <-channel; ok` and `if account, ok := input.(Account); ok`.
+A source guard can permit shortening a slice: `if n <= len(accounts) { use(accounts[:n]) }`.
+Do not change the bound or slice before the read. Unproven bounds fail at compile time.
+Map `clear` removes entries and is allowed. Native `copy` keeps Go overlap behavior.
+
 ## Go callers and tests
 
 Go calls use the original Go types. No boundary validation is added.
