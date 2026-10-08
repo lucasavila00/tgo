@@ -17,6 +17,7 @@ Local tgo imports build first. Output goes beside each input: `model.tgo` become
 Commit each generated file beside its tgo source. Do not edit generated files.
 A failed build restores the output files that it changed.
 The compiler removes generated files after their source is deleted.
+Ignore `.tgo.lock`. It serializes builds in one module.
 
 Use Go build constraints and target suffixes on tgo files.
 For example, `store_linux.tgo` emits `store_tgo_linux.go`.

@@ -4,6 +4,7 @@ Use `.tgo` files for business types and decisions. Use Go for the rest of the ap
 Keep Go imports and signatures. Compile with `tgo build ./...`, then run `go test ./...`.
 Commit each generated `*_tgo.go` file beside its source. Do not edit generated files.
 Regenerate them after each source change.
+Ignore `.tgo.lock`. Do not replace it with a link.
 Use Go build constraints and target suffixes on tgo files.
 For example, `store_linux.tgo` emits `store_tgo_linux.go`.
 Do not put tgo source in `_test.tgo`, hidden, `_`, `testdata`, or `vendor` paths.

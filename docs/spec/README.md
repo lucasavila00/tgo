@@ -349,6 +349,15 @@ It refuses to replace a matching file without the generated header.
 A Go file with a generated-style name and no exact header is user code.
 The compiler includes that file in package checks.
 
+One module build runs at a time. The compiler holds `.tgo.lock` through writes and rollback.
+It rejects symlinks and other non-regular output paths.
+It replaces each output from a synced temporary file in the same directory.
+It preserves the mode of an existing output.
+Each file replacement is atomic on Unix local file systems.
+Other platforms use the Go `os.Rename` contract.
+The full output set is not one file-system transaction.
+After a process or system failure, run the build again.
+
 A failed build exits with status 1 and writes the first error to standard error.
 It writes nothing to standard output. Source errors include the `.tgo` file, line, and column.
 Errors in predicates and defaults point to the original expression.
