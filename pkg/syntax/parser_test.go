@@ -234,11 +234,11 @@ func TestEnumJSONTags(t *testing.T) {
 	}
 	enum, ok := syntax.EnumDeclarationOf(tree.Declarations[0])
 	if !ok || enum.Tag == nil || enum.Tag.Value != "`json:\"adjacent,tag=type,content=data\"`" {
-		t.Fatalf("enum tag: %#v", enum)
+		t.Fatal("enum tag was not parsed")
 	}
 	variant := enum.Variants[0]
 	if variant.Tag == nil || variant.Tag.Value != "`json:\"created\"`" {
-		t.Fatalf("variant tag: %#v", variant)
+		t.Fatal("variant tag was not parsed")
 	}
 	if variant.Stop != variant.Tag.Stop {
 		t.Fatal("variant span does not include its tag")
