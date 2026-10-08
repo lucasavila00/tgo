@@ -293,8 +293,12 @@ func (e %nilEnvironment) checkNilFlow(
 		return
 	}
 	actual := e.contractForExpression(expression)
-	if expected[""] && !isNonNilValue(e.expressionNilValue(expression, state)) {
+	value := e.expressionNilValue(expression, state)
+	if expected[""] && !isNonNilValue(value) {
 		e.reportNil(expression.Pos(), "value is not proven non-nil for %%T")
+	}
+	if !expected[""] && isProvenNilValue(value) {
+		return
 	}
 	e.checkNilContractCompatibility(expression.Pos(), expected, actual)
 }
