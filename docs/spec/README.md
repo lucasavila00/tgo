@@ -238,6 +238,13 @@ and `uint32` otherwise.
 The compiler may change payload storage without changing this API. A variant with no payload
 fields adds no storage. The representation does not use an unsafe memory union.
 
+Payloads start in inline storage. The compiler uses the 64-bit Go compiler layout
+to calculate the enum size. If the size exceeds 80 bytes, it boxes the largest
+inline payload and repeats the calculation. Equal sizes select the first variant
+in declaration order. Boxed variants share one interface field. Construction can
+allocate when the payload escapes. A boxed payload accessor can panic on the wrong
+variant. Enums with no payload fields store only their tag.
+
 A tgo file may not build an enum with a struct literal, conversion, or `new`.
 It may not read representation fields or call generated `Tgo*` methods directly.
 Embedding an enum does not expose its representation fields or generated accessors.

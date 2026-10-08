@@ -24,6 +24,7 @@ type field struct {
 }
 
 type variant struct {
+	Boxed  bool
 	Name   string
 	Fields []field
 }

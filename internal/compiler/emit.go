@@ -14,11 +14,19 @@ func enumGo(sourceName string, declaration *model) string {
 	output.WriteString("// Shared data keeps Go aliases. Callers must keep model values valid.\n")
 	tagType := enumTagType(len(declaration.Variants))
 	fmt.Fprintf(&output, "type %s struct {\n tgoTag %s\n", name, tagType)
+	boxed := false
 	for _, variant := range declaration.Variants {
+		if variant.Boxed {
+			boxed = true
+			continue
+		}
 		if len(variant.Fields) == 0 {
 			continue
 		}
 		fmt.Fprintf(&output, "tgo%s %s%s\n", variant.Name, name, variant.Name)
+	}
+	if boxed {
+		output.WriteString("tgoPayload interface{}\n")
 	}
 	output.WriteString("}\n")
 	output.WriteString("// TgoTag returns the tag. Use only on a constructed value.\n")
@@ -54,9 +62,12 @@ func emitVariant(
 		parameter = "_"
 	}
 	fmt.Fprintf(output, "func %s(%s %s) %s {\n", constructor, parameter, payload, enum)
-	if len(variant.Fields) == 0 {
+	switch {
+	case len(variant.Fields) == 0:
 		fmt.Fprintf(output, "return %s{tgoTag: %d}\n}\n", enum, tag)
-	} else {
+	case variant.Boxed:
+		fmt.Fprintf(output, "return %s{tgoTag: %d, tgoPayload: value}\n}\n", enum, tag)
+	default:
 		fmt.Fprintf(
 			output,
 			"return %s{tgoTag: %d, tgo%s: value}\n}\n",
@@ -67,9 +78,12 @@ func emitVariant(
 	}
 	fmt.Fprintf(output, "// %s requires %s. No tag check.\n", accessor, variant.Name)
 	fmt.Fprintf(output, "func (v %s) %s() %s {\n", enum, accessor, payload)
-	if len(variant.Fields) == 0 {
+	switch {
+	case len(variant.Fields) == 0:
 		fmt.Fprintf(output, "return %s{}\n}\n", payload)
-	} else {
+	case variant.Boxed:
+		fmt.Fprintf(output, "return v.tgoPayload.(%s)\n}\n", payload)
+	default:
 		fmt.Fprintf(output, "return v.tgo%s\n}\n", variant.Name)
 	}
 }
