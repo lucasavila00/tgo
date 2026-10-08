@@ -47,7 +47,8 @@ even when its literal requires named fields. This is an explicit request for all
 Reject array or slice literals with holes. `[]T{}` is empty, not one omitted element.
 A fixed-length array literal must supply every index. Use explicit zero allocation where valid.
 For generic code, each zero-producing operation must be valid for every allowed type argument.
-A generic Go function may still produce an invalid foreign value; checked reads handle that case.
+A generic Go function may still produce an invalid foreign value. The caller contract forbids it;
+the generated code does not detect it on read.
 Named result slots need explicit assignment before any read or bare return, for all types.
 Their signature declarations do not count as initialization.
 
@@ -58,7 +59,8 @@ For element types whose zero is invalid:
 - `make([]T, 0, cap)` reserves storage; no zero element is readable.
 - `append` adds supplied valid values.
 - Reslicing may not increase the current length. Known violations are compile errors.
-  Dynamic bounds use a runtime length check. Shrinking and restoring length is also rejected.
+  Accept a dynamic bound only when source control flow already proves it is within len.
+  Otherwise reject it at compile time. Do not insert a new runtime guard.
 - `clear(slice)` is a compile error. It would create invalid elements.
 - Element writes, `copy`, iteration, and shortening remain available.
 
@@ -66,16 +68,14 @@ For zero-valid element types, keep Go allocation, reslicing, and clearing rules.
 Keep bounds panics and nil behavior. No automatic conversion of a nil map to an empty map.
 Map assignment requires valid keys and values. `delete` and `clear(map)` remove entries.
 
-Bulk operations must not bypass checks. For `copy(dst, src)`, check the selected source prefix
-of length min(len(dst), len(src)), then use ordinary Go copy. For `append(dst, src...)`, check
-all appended elements. Checks inspect tags and inline fields, not referenced graphs.
-Checks execute no user callbacks. Keep overlapping-slice behavior. Concurrent mutation needs
-caller synchronization, as it does in Go.
+Use native Go `copy` and `append`. Do not scan elements before or after the operation.
+Type-check source arguments. Trust foreign values. Preserve overlapping-slice behavior.
+No hidden copy, ownership transfer, or alias tracking runs at runtime.
 
 ## Missing values
 
 A map miss, closed-channel receive, or failed assertion can return an invalid zero.
-For such result types, require a checked binding:
+For such result types, require the ordinary Go presence test:
 
 ```text
 if account, ok := accounts[id]; ok {
@@ -85,11 +85,11 @@ if account, ok := accounts[id]; ok {
 }
 ```
 
-The compiler binds the model value only in the successful branch. It checks the loaded value
-there: a foreign map can contain an invalid enum even when the key exists.
-Changing an unrelated bool cannot make an unchecked value usable.
-Plain reads are allowed when the result zero is valid. Channel range stops at close,
-and checks each received model value. Nil channels retain their blocking behavior.
+The compiler binds the model value only in the successful branch. There is no tag check.
+A foreign map can still contain an invalid enum at an existing key; this breaks the contract.
+Changing an unrelated bool cannot establish presence for the source type checker.
+Plain reads are allowed when the result zero is valid. Channel range stops at close.
+Received values are trusted. Nil channels retain their blocking behavior.
 
 ## Enum storage and equality
 
@@ -101,98 +101,87 @@ This layout can use more space than a Rust enum. Stack allocation is not guarant
 
 References break recursive size dependencies. `Children []Node` and `Next *Node` are valid.
 An enum directly containing itself by value has infinite size and is rejected.
-Check inline struct and array payloads recursively. Do not follow references during this check.
-Reference cycles therefore do not require a whole-graph traversal.
+Check source constructions statically. Emit no inline or referenced graph validation.
+Reference cycles keep ordinary Go behavior.
 
-Equality compares tag, then active payload. All payloads must be comparable.
-A slice or map field makes the enum non-comparable, even if that variant is inactive.
-Interface fields keep Go's dynamic comparability checks and possible panics.
-Require zero inactive storage at construction and checked reads. Reject foreign values
-with nonzero inactive fields. This does not interpret inactive fields as source values.
-For comparable enums, raw Go equality then agrees with tag-and-active-payload equality.
-Use the generated comparable Go struct as the map key; no custom hash table is needed.
+Use ordinary Go equality for comparable generated structs. Source constructors keep inactive
+fields zero, so valid source values compare by tag and active payload. All payloads must be
+comparable. A slice or map field makes the enum non-comparable. Interface fields keep Go's
+dynamic comparability rules. No custom equality helper or validity scan is inserted.
+Foreign code that violates the representation contract also voids these source assumptions.
 
-## Full Go FFI
+## Trusted Go FFI
 
-Use native Go references. Preserve aliases, overlapping slices, interior pointers, pointer keys,
-cycles, nil, callbacks, and object identity. Do not silently serialize or deep-copy graphs.
-Import named Go types with their identity. Bind functions, methods, interfaces, channels,
-variadic calls, and generic calls from Go type information. No scalar-only admission list.
-Go runtime objects, including synchronization objects, retain their Go rules.
+Source typing ends at foreign code. Go calls and values are trusted, as JavaScript values
+are trusted across a TypeScript boundary. This is a deliberate loss of enforcement.
+Type-check signatures, not runtime values. No separate safe or unsafe FFI modes are needed.
+
+Use native Go calls and references. Preserve aliases, overlapping slices, interior pointers,
+pointer keys, cycles, nil, callbacks, and object identity. Keep named Go type identity.
+Support functions, methods, interfaces, channels, variadic calls, and generic calls.
+Do not serialize, clone, validate, or copy values merely because they cross the boundary.
 
 Export model type names with private representation fields. Go must be able to name these
-types in signatures, fields, containers, and callbacks. Zero values remain possible.
-Generate checked constructors, functions, and variant accessors. Carry source model metadata
-with variant and accessor names. Other generated packages use the accessors, not private fields.
-The checks enforce validity. Type-name privacy never prevented inferred generic zeros.
+types in signatures, fields, containers, and callbacks. Go can still construct zero values.
+Generated constructors set fields. Accessors expose payloads as the source operation requires.
+Source metadata maps variants to those accessors. No accessor performs hidden model validation.
+An explicit variant test still performs the requested tag comparison.
 
-Copy and check every enum when source code reads it. This includes ordinary variables,
-inline model fields, dereferences, indexing, map reads, channel receives, assertions,
-callback arguments/results, and outgoing function arguments. Check captured locals again
-if a Go alias could have changed them. The compiler may remove a check only with proof.
-A copy of an enum can still contain references; check those values when later read.
-
-Validate direct enum inputs before an exported source body runs. Apply the same rule to
-constructor inputs and inline model fields in structs and arrays. Check valid enum outputs
-before export. Opaque interfaces are not traversed; asserting a model type performs its check.
-Errors keep their exact Go values, including typed nil and wrapping chains.
-
-An invalid read panics with a generated `ffi.InvalidValue` value. Go can recover that panic.
-Do not add a result parameter, replace an existing error, or recover unrelated panics.
-This preserves interface method signatures and callback types.
-A delayed check may fail after earlier effects. There is no transaction or rollback.
-
-## Foreign result slots
-
-Go commonly returns a zero value with an error. Capturing a foreign tuple preserves its slots;
-it does not claim that each slot is a valid source model value.
-Checking the error or discarding another slot does not read that slot.
+Go callbacks use their original signatures and Go-managed lifetime. No error result is added.
+Keep the original result tuple, partial results, typed nil errors, and error identity.
+Capture and forward foreign values as ordinary Go values. Remove the foreign-slot mechanism.
+Do not generate ffi.InvalidValue panics or validation wrappers.
 
 ```text
 a, err := legacy.LoadAccount()
 if err != nil { return err }
-use(a) // Load, copy, and check here.
+use(a) // Trust the declared Go result type.
 ```
 
-Every source use loads and checks a model slot, including assignment, argument passing,
-storing into a container, matching, and returning it. The initial foreign tuple binding is
-the sole capture exception. Taking its address must retain the checked-read rule.
-A valid partial value remains usable on error. A nil error does not prove validity.
-An invalid value fails when read, regardless of the separate error result.
+An invalid foreign value may cause a normal Go panic or wrong program behavior.
+There is no guarantee that the error is detected. A match uses a normal tag switch.
+Its unmatched default may panic; there is no preceding read or entry check.
+Do not use violated source assumptions to justify unsafe memory operations in emitted Go.
 
-A source function that needs an absent result can return a pointer with nil, or an explicit
-result enum. Do not invent a zero model value for an error path.
-Exact unchecked forwarding can stay in Go adapters. It uses Go rules and does not produce
-a trusted source value. Do not silently skip checks to preserve a foreign zero enum.
+## Aliases and initialization history
 
-## Aliases and callbacks
-
-A Go caller can create zero with a literal or a generic function. Private fields do not prevent it.
-A Go function can retain a pointer or slice and overwrite its enum storage after validation.
-Checks must run on subsequent reads, not only on initial entry.
+A Go caller can make a zero enum through a literal or generic code. Private fields do not
+prevent it. A retained Go alias can replace a previously valid value after a call.
 
 ```go
 func Wipe[T any](items []T) { clear(items) }
 ```
 
-Calling Wipe with an enum slice retains the same storage. Later source reads fail.
-Calling it with an int slice yields zeros that remain valid. The FFI does not block the Go call.
+Wipe can zero a shared enum slice. Source reads then receive those zeros without validation.
+The caller broke the source model contract. An int slice remains valid after the same operation.
+Go can likewise modify a captured local through a pointer. No alias monitor is generated.
 
-Callbacks keep the Go runtime lifetime. Check model arguments on entry and model results on use.
-Retained callbacks and re-entry use the same rules. Channels check delivered values on receive.
-Keep the caller's synchronization duties. Concurrent Go mutation without synchronization is a race;
-validation cannot make it safe. Do not claim race freedom or safety from unsafe memory writes.
+Go cannot report which fields the caller explicitly initialized. Enforce initializer rules
+in source code only. Treat foreign fields as supplied values, regardless of how Go created them.
+Retained callbacks and channels use the same trust rule. Keep normal Go synchronization duties.
+There is no new race, ownership, purity, or foreign-code correctness guarantee.
 
-Go struct values do not record which fields were explicitly assigned. FFI cannot reconstruct
-that history. Enforce source initialization syntax locally and runtime value rules at foreign reads.
+## Cost requirement
+
+No runtime cost beyond the equivalent handwritten Go design. In particular, add no automatic
+validation, element scans, deep copies, special result slots, or boundary wrappers.
+Keep ordinary Go bounds checks, map operations, garbage collection, and requested allocations.
+Static restrictions must not secretly turn into runtime guards when proof fails.
+
+The tagged-struct layout still has costs: combined payload storage, Go value copies,
+and accessor calls across package boundaries. Inlining is not guaranteed.
+These are open cost questions, not proof that the design meets the requirement.
+Reject a layout or helper if it loses to the Go alternative. Do not weaken the requirement
+by comparing only with an unnecessarily expensive handwritten implementation.
 
 ## Evidence to compare
 
 Use the same business task in Go and the proposed language. Count source and adapter code.
-Compare review effort, extra checks, allocation, and payload storage costs.
+Compare review effort, execution time, allocation, and payload storage costs.
 Include shared mutation, overlapping copy, absent keys, closed channels, recursive payloads,
 explicit defaults, invalid foreign tuples, retained callbacks, and typed nil errors.
-Reject the design if necessary checks or lost Go behavior outweigh the clearer source rules.
+Reject the design if it adds runtime cost or loses required Go behavior.
+The proposal states a requirement; no compiler or benchmark result proves it yet.
 
 ## Sources
 
@@ -207,4 +196,4 @@ Reject the design if necessary checks or lost Go behavior outweigh the clearer s
 - [Race detector](https://go.dev/doc/articles/race_detector): Go synchronization requirements.
 - [Package types](https://pkg.go.dev/golang.org/x/tools/go/packages): inspect actual Go signatures.
 
-These sources describe Go. Checked reads, explicit defaults, and enum rules are this proposal.
+These sources describe Go. Static initialization, defaults, and enum rules are this proposal.
