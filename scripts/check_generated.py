@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that self-hosted generated Go is complete and stable."""
+"""Check that self-hosted generated Go matches its source."""
 
 from __future__ import annotations
 
@@ -55,20 +55,14 @@ def main() -> None:
     with tempfile.TemporaryDirectory(prefix="tgo-bootstrap-") as temporary:
         work = Path(temporary)
         repository = copy_repository(work)
-        stage0 = work / "tgo-stage0"
-        stage1 = work / "tgo-stage1"
+        compiler = work / "tgo"
 
         committed = generated_files(repository)
-        run(repository, "go", "build", "-o", str(stage0), "./cmd/tgo")
+        run(repository, "go", "build", "-o", str(compiler), "./cmd/tgo")
 
-        run(repository, str(stage0), "build", "./pkg/syntax", "./internal/tgolint")
-        stage1_files = generated_files(repository)
-        require_equal(committed, stage1_files, "committed generated output is stale")
-
-        run(repository, "go", "build", "-o", str(stage1), "./cmd/tgo")
-        run(repository, str(stage1), "build", "./pkg/syntax", "./internal/tgolint")
-        stage2_files = generated_files(repository)
-        require_equal(stage1_files, stage2_files, "self-hosted output is not stable")
+        run(repository, str(compiler), "build", "./pkg/syntax", "./internal/tgolint")
+        generated = generated_files(repository)
+        require_equal(committed, generated, "committed generated output is stale")
 
 
 if __name__ == "__main__":

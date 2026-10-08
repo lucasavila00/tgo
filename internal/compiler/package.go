@@ -87,20 +87,14 @@ func newInfo() *types.Info {
 func (p *packageUnit) typecheck() {
 	p.info = newInfo()
 	var problems []error
-	if p.exportPaths == nil {
-		p.exportPaths = make(map[string]string)
-	}
+	exportError := p.loadExportPaths()
 	imp := importer.ForCompiler(p.fs, "gc", func(path string) (io.ReadCloser, error) {
-		export, ok := p.exportPaths[path]
-		if !ok {
-			cmd := exec.Command("go", "list", "-export", "-f", "{{.Export}}", path)
-			cmd.Dir = p.Dir
-			out, err := cmd.CombinedOutput()
-			if err != nil {
-				return nil, fmt.Errorf("load %s: %s", path, out)
-			}
-			export = strings.TrimSpace(string(out))
-			p.exportPaths[path] = export
+		if exportError != nil {
+			return nil, exportError
+		}
+		export := p.exportPaths[path]
+		if export == "" {
+			return nil, fmt.Errorf("load %s: missing export data", path)
 		}
 		return os.Open(export)
 	})
@@ -111,6 +105,41 @@ func (p *packageUnit) typecheck() {
 	}
 	p.typed, _ = conf.Check(p.Path, p.fs, p.Files, p.info)
 	p.typeErrors = problems
+}
+
+// loadExportPaths finds import files with one Go command.
+func (p *packageUnit) loadExportPaths() error {
+	if p.exportPaths == nil {
+		p.exportPaths = make(map[string]string)
+	}
+	missing := make([]string, 0)
+	for _, path := range importsOf(p.Files) {
+		if p.exportPaths[path] == "" {
+			missing = append(missing, path)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	arguments := make([]string, 0, 5+len(missing))
+	arguments = append(
+		arguments,
+		"list", "-deps", "-export", "-f",
+		"{{if .Export}}{{.ImportPath}}\t{{.Export}}{{end}}",
+	)
+	command := exec.Command("go", append(arguments, missing...)...)
+	command.Dir = p.Dir
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("load imports: %s", output)
+	}
+	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+		path, export, found := strings.Cut(line, "\t")
+		if found {
+			p.exportPaths[path] = export
+		}
+	}
+	return nil
 }
 
 // transform replaces nodes after visiting their children.

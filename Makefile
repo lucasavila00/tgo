@@ -1,9 +1,12 @@
-.PHONY: ci ci-unlocked generated lint test build install-hooks install-tools
+.PHONY: ci ci-unlocked generated lint test unit-test e2e-test tgolint-test \
+	markdown build install-hooks install-tools
 
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
 
-ci-unlocked: generated lint test
+ci-unlocked: generated e2e-test tgolint-test lint unit-test markdown
+
+markdown:
 	python3 scripts/check_markdown.py
 
 generated:
@@ -13,9 +16,15 @@ lint:
 	golangci-lint run ./...
 	golangci-lint fmt --diff
 
-test:
+test: unit-test e2e-test tgolint-test
+
+unit-test:
 	go test ./...
+
+e2e-test:
 	python3 tests/e2e/run.py
+
+tgolint-test:
 	python3 tests/tgolint/run.py
 
 build:
