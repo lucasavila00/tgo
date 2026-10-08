@@ -65,27 +65,38 @@ valid. A branch that escapes the default is invalid.
 
 ## Runtime boundary
 
-The linter checks that Go code handles an error from an FFI function, decoder,
-wrapper, or callback. It cannot prove that the function follows its contract. A
-function can return an invalid tgo value with a nil error.
+A nil error from an arbitrary FFI function, decoder, wrapper, or callback does not prove that
+its tgo value is valid. `tgolint` keeps that value untrusted after the error check. Pass it to
+the generated validator and check the new error:
 
-A successful type assertion can also import an invalid value that already exists.
-It does not create a zero. The current generated API has no complete validation
-operation that the linter can recognize. Error handling alone is not validation.
+```go
+foreign, err := decode()
+if err != nil {
+    return err
+}
+value, err := model.ValidateEvent(foreign)
+if err != nil {
+    return err
+}
+use(value)
+```
 
-The linter also cannot inspect a value made by cgo, `unsafe`, reflection, storage,
-or code outside the loaded packages. It cannot prevent a race or a later change
-through shared mutable data.
+The same rule applies to an exact tgo model received as a Go parameter. A successful type
+assertion proves the dynamic Go type. It does not prove the tgo tag, payload, or predicate.
+Validate the asserted value before use.
 
-A boundary module must check these facts at ingress:
+The linter identifies exact generated validators with analysis facts. The facts cross package
+boundaries. It also recognizes a direct wrapper that returns a generated validator or checked
+constructor call, and a simple local function value that names such an operation. The value is
+trusted only on a path where the matching error is proved nil.
 
-- each checked value satisfies its predicate;
-- each enum tag is known and matches its active payload;
-- each nested tgo value is valid;
-- each application nil rule holds; and
-- foreign code cannot change mutable data after the check.
+The generated validator rejects invalid tags, rebuilds the active enum payload, reruns checked
+predicates, validates nested models, and copies reachable pointers, slices, maps, and interfaces.
+It preserves repeated pointers, maps, and identical slice headers, and it stops cycles. It
+rejects ordinary private fields, unsafe pointers, channels, functions, or dynamic interface
+values when their static shape can hide or transport a tgo model.
 
-Decode into transport types. Construct checked values and enum variants with their
-generated constructors. Check each error. Copy maps, slices, pointers, or interface
-data when foreign code can change them. Apply the same checks before storage,
-encoding, cgo calls, and callbacks.
+The linter does not inspect cgo or `unsafe` memory. It does not prove that shared ordinary data
+has the required ownership, and it cannot prevent a race after validation. It follows the
+supported local typed syntax and imported facts. A tool failure, an unanalyzed package, or an
+unsupported wrapper shape gives no proof.

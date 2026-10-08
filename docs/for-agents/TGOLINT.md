@@ -35,10 +35,33 @@ follow that closure through a local variable or another helper.
 
 ## Foreign values
 
-The linter checks that code handles errors from FFI calls, decoders, and callbacks.
-It cannot prove that foreign code returned a valid value when the error is nil.
-It also cannot validate a tgo value imported by a successful type assertion.
+Treat a direct tgo parameter, interface assertion, callback result, decoder result, stored value,
+or arbitrary `(T, error)` result as untrusted. Checking its original error is necessary, but it
+does not validate the value. Call the generated validator and check that error before use:
 
-At ingress, check the value rule, enum tag and payload, nested tgo values, nil rules,
-and ownership of mutable data. Build a new tgo value with generated constructors.
-Copy mutable data when foreign code can change it later.
+```go
+foreign, err := decode()
+if err != nil {
+    return err
+}
+value, err := model.ValidateEvent(foreign)
+if err != nil {
+    return err
+}
+```
+
+The validator returns a reconstructed graph. It rejects invalid enum tags, mismatched payloads,
+failed checked predicates, and nested invalid models. It copies arrays, slices, maps, pointers,
+and supported interface values. It preserves repeated pointers, maps, and identical slice
+headers, and it stops cycles. Overlapping slice views with different headers rebuild
+independently. Later changes to the foreign graph do not change the rebuilt graph.
+
+Nil values stay nil. A channel or function is shared only when its static type cannot transport
+or return a tgo model. The validator rejects interface-bearing channel or function signatures,
+unsafe pointers, and ordinary private fields that it cannot inspect. Check application nil
+and ownership rules after validation. Shared ordinary data can still need an application copy.
+
+`tgolint` recognizes generated validators across packages. It recognizes direct validator
+wrappers and simple local function values. It treats the result as valid only after the matching
+error is proved nil. It is local static analysis, not a runtime proof. It cannot inspect cgo or
+`unsafe` memory, prevent races, or prove ownership of shared ordinary data.

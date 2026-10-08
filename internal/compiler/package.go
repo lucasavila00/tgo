@@ -20,6 +20,7 @@ import (
 
 type packageUnit struct {
 	Dir, Path       string
+	Module          string
 	Sources         []*source
 	Files           []*ast.File
 	Models          map[string]*model
@@ -164,6 +165,7 @@ func (p *packageUnit) generatedDecl(d ast.Decl) bool { return p.generated[d] }
 // compile lowers one tgo package and formats its Go output files.
 func (p *packageUnit) compile() (map[string][]byte, error) {
 	p.prepare()
+	p.checkValidationNameCollisions()
 	if len(p.errors) > 0 {
 		return nil, p.errors[0]
 	}

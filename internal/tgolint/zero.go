@@ -182,12 +182,17 @@ func (c *checker) checkCall(call *ast.CallExpr) {
 		}
 		return
 	}
+	if model := c.boundarySingleCall(call); model != nil {
+		if !c.checked[call] {
+			c.reportModelResult(call.Pos(), model,
+				"tgo %s %s value from a Go call needs successful generated validation",
+				model.Kind, model.Name)
+		}
+		return
+	}
 	if c.pass.TypesInfo.Types[call.Fun].IsType() {
 		if model := c.modelFor(c.pass.TypesInfo.TypeOf(call)); model != nil {
-			if len(call.Args) == 1 && types.Identical(
-				c.pass.TypesInfo.TypeOf(call.Args[0]),
-				c.pass.TypesInfo.TypeOf(call),
-			) {
+			if c.identityConversion(call) {
 				return
 			}
 			c.pass.Reportf(call.Pos(),
@@ -210,6 +215,31 @@ func (c *checker) checkCall(call *ast.CallExpr) {
 	case "clear":
 		c.checkClear(call)
 	}
+}
+
+func (c *checker) identityConversion(call *ast.CallExpr) bool {
+	if len(call.Args) != 1 {
+		return false
+	}
+	target := c.pass.TypesInfo.TypeOf(call)
+	source := c.pass.TypesInfo.TypeOf(call.Args[0])
+	if types.Identical(source, target) {
+		return true
+	}
+	parameter, ok := types.Unalias(source).(*types.TypeParam)
+	if !ok {
+		return false
+	}
+	terms, supported := simpleTerms(parameter.Constraint())
+	if !supported || len(terms) == 0 {
+		return false
+	}
+	for _, term := range terms {
+		if term.Tilde() || !types.Identical(types.Unalias(term.Type()), types.Unalias(target)) {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *checker) checkTypeSpec(specification *ast.TypeSpec) {
@@ -327,9 +357,38 @@ func (c *checker) checkPresenceRead(expression ast.Expr) {
 // checkTypeAssertion checks the zero result from the comma-ok form.
 // A failed one-result assertion stops with a panic and returns no zero.
 func (c *checker) checkTypeAssertion(expression *ast.TypeAssertExpr) {
-	if expression.Type != nil && c.commaOK(expression) {
-		c.checkPresenceRead(expression)
+	if expression.Type == nil {
+		return
 	}
+	if c.commaOK(expression) {
+		c.checkPresenceRead(expression)
+		return
+	}
+	if c.assertionValidator(expression) {
+		return
+	}
+	model, invalid := c.zeroInvalid(c.pass.TypesInfo.TypeOf(expression))
+	if invalid {
+		c.pass.Reportf(expression.Pos(),
+			"type assertion imports an unvalidated tgo %s %s value; use its generated validator",
+			model.Kind, model.Name)
+	}
+}
+
+func (c *checker) assertionValidator(expression *ast.TypeAssertExpr) bool {
+	current := ast.Expr(expression)
+	for {
+		parentheses, ok := c.parents[current].(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		current = parentheses
+	}
+	call, ok := c.parents[current].(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 || call.Args[0] != current {
+		return false
+	}
+	return c.validatedCall(call)
 }
 
 func firstType(typ types.Type) types.Type {

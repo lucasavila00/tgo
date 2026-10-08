@@ -3,6 +3,9 @@ package compiler
 import (
 	"go/ast"
 	"go/types"
+	"strconv"
+
+	"golang.org/x/tools/go/ast/astutil"
 )
 
 // prepare marks generated declarations and lowers constructors and defaults.
@@ -12,6 +15,20 @@ func (p *packageUnit) prepare() {
 	p.references = nil
 	p.usedIdentifiers = nil
 	for _, source := range p.Sources {
+		if len(source.Models) != 0 {
+			for _, specification := range source.File.Imports {
+				path, err := strconv.Unquote(specification.Path.Value)
+				if err == nil && path == p.Module+"/internal/tgoruntime" {
+					p.fail(specification, "generated validation runtime import is reserved")
+				}
+			}
+			astutil.AddNamedImport(
+				p.fs,
+				source.File,
+				source.RuntimeAlias,
+				p.Module+"/internal/tgoruntime",
+			)
+		}
 		p.markGenerated(source)
 		p.addDefaults(source)
 	}
@@ -30,15 +47,16 @@ func (p *packageUnit) lowerConstructions() {
 func generatedNames(models []*model) map[string]bool {
 	names := make(map[string]bool)
 	for _, model := range models {
+		names["Validate"+model.Name] = true
+		names["tgo"+model.Name+"ValidationError"] = true
 		if len(model.Variants) > 0 {
-			names[model.Name] = true
 			for _, variant := range model.Variants {
 				names[model.Name+variant.Name] = true
 				names["New"+model.Name+variant.Name] = true
+				names["tgoReconstruct"+model.Name+variant.Name] = true
 			}
 		}
 		if model.Predicate != "" {
-			names[model.Name] = true
 			names["New"+model.Name] = true
 			names["tgo"+model.Name+"Error"] = true
 		}
@@ -75,6 +93,9 @@ func generatedMethod(function *ast.FuncDecl, models []*model) bool {
 	}
 
 	for _, model := range models {
+		if receiver == model.Name && function.Name.Name == "TgoReconstruct" {
+			return true
+		}
 		if generatedCheckedMethod(receiver, function.Name.Name, model) {
 			return true
 		}
@@ -91,6 +112,14 @@ func receiverName(function *ast.FuncDecl) (string, bool) {
 		return "", false
 	}
 	receiver, ok := function.Recv.List[0].Type.(*ast.Ident)
+	if ok {
+		return receiver.Name, true
+	}
+	pointer, ok := function.Recv.List[0].Type.(*ast.StarExpr)
+	if !ok {
+		return "", false
+	}
+	receiver, ok = pointer.X.(*ast.Ident)
 	if !ok {
 		return "", false
 	}

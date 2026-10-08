@@ -2,6 +2,36 @@ package bad
 
 import "example.com/tgolint/model"
 
+func AssertExisting(input any) model.Event {
+	return input.(model.Event)
+}
+
+func CallbackBoundary(decode func() (model.Event, error)) string {
+	value, err := decode()
+	if err != nil {
+		return ""
+	}
+	return value.TgoStarted().ID
+}
+
+func SingleResultCallback(decode func() model.Event) string {
+	value := decode()
+	return value.TgoStarted().ID
+}
+
+func ReassignedValidator(
+	event model.Event,
+	foreign func(model.Event) (model.Event, error),
+) string {
+	validate := model.ValidateEvent
+	validate = foreign
+	value, err := validate(event)
+	if err != nil {
+		return ""
+	}
+	return value.TgoStarted().ID
+}
+
 var zero model.Event
 
 var publishedEvent = model.NewEventStopped(model.EventStopped{})

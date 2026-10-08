@@ -345,40 +345,51 @@ Generated types are normal Go types. tgo calls Go functions directly and keeps G
 Pointers, aliases, methods, interfaces, callbacks, channels, variadic calls, generic calls,
 error values, typed nils, and object identity keep their Go behavior.
 
-No boundary adapter, scan, copy, or validation runs. Go code can create an invalid enum or
-checked zero. It can also invalidate shared data after a tgo call. This violates the generated
-type comments, but the runtime does not detect every violation.
+Constructors and accessors do not run a boundary scan. The compiler generates an explicit
+`ValidateT(value T) (T, error)` operation for each tgo model `T`. Call it when a value can
+come from ordinary Go, cgo, `unsafe`, reflection, a decoder, storage, an interface assertion,
+or a callback. A nil error from an arbitrary `(T, error)` function is not validation.
 
-### Foreign value contract
+`ValidateT` checks and reconstructs the complete reachable model graph:
 
-Every path that can supply a generated value without tgo checks is a trust boundary. These
-paths include ordinary Go, cgo, `unsafe`, reflection, decoders, stored data, and callbacks.
-The compiler and `tgolint` cannot prove that a value from one of these paths is valid.
-`tgolint` does check that Go code proves the matching error is nil before it uses the value.
+- A checked value runs its predicate again and returns the result from `NewT`.
+- An enum rejects zero and unknown tags. It reads only the active payload, validates that
+  payload, and calls the matching variant constructor.
+- A tgo struct reconstructs each field. Imported tgo models use the same validation context.
+- Arrays, slices, maps, and pointers are copied. The context preserves repeated pointers, maps,
+  and identical slice headers, and it stops cycles. Overlapping slices with different headers
+  rebuild independently. Nil values stay nil. A later change to the foreign graph does not
+  change the rebuilt graph.
+- An interface is accepted only when its dynamic value can be reconstructed. The validator
+  rejects an unsupported dynamic value instead of copying it without a check.
+- An ordinary struct is copied and its exported fields are reconstructed. The validator
+  rejects each private field because it cannot inspect or reconstruct that field.
+- A channel or function is shared only when its static type cannot transport or return a tgo
+  model. An interface in its signature is conservative and causes rejection. An unsafe pointer
+  causes rejection.
 
-An FFI or boundary module must validate and reconstruct each model value on ingress:
+The compiler emits one module-local `internal/tgoruntime` package. Generated validators in
+that module share its cycle context. Validation uses reflection only for explicit traversal of
+ordinary Go containers. Generated methods reconstruct private model fields with typed code.
+Constructors, accessors, and ordinary reads do not call the validator.
 
-- For a checked value, read its base value and call its constructor again. Use the returned
-  value only when the error is nil. This runs the predicate and replaces a foreign wrapper.
-- For an enum, reject an unknown tag. For each known tag, read only its matching payload,
-  validate all nested model values, and call the matching variant constructor.
-- Validate application rules for nil pointers, slices, maps, channels, interfaces, and
-  functions. Their Go zero is valid to tgo, but an application can require a non-nil value.
-- Copy maps, slices, pointers, and other mutable reference data when the foreign owner can
-  change them after validation.
+The generated operation checks tgo validity. The boundary module must still check application
+rules that the type does not declare, such as required non-nil values. A shared channel or
+function can still share ordinary mutable data. Copy or reject that data when ownership must
+not cross the boundary.
 
-On egress, the module must use checked and variant constructors. It must check each constructor
-error and must not return the failure value. It must validate nested models before storage,
-encoding, cgo calls, or callbacks. It must copy mutable data when the receiver must not share
-ownership.
+On ingress, check the validator error before use. On egress, use checked and variant
+constructors, check each constructor error, and send only valid nested models. Apply the same
+rules before storage, encoding, cgo calls, and callbacks.
 
-A known enum tag alone is not proof of validity. The active payload must match the tag, and
-each nested model must also be valid. A checked base that satisfies its predicate is not proof
-that the received wrapper came from its constructor. Reconstruction establishes a new valid
-value.
+`tgolint` recognizes generated validators through package facts. It treats exact tgo parameters,
+interface assertions, callbacks, decoders, and arbitrary `(T, error)` results as untrusted where
+its typed source analysis can identify the flow. A successful generated validator result becomes
+trusted only after its matching error is proved nil. The analysis is local and conservative. It
+cannot prevent a race, inspect `unsafe` or cgo memory, or prove application ownership rules.
 
-The emitted representation must cost no more than the equivalent handwritten Go design.
-Declared predicates and explicit match switches remain because the source requested them.
+The emitted representation and ordinary hot paths cost no more than the equivalent handwritten
+Go design. Only an explicit validation call pays for graph reconstruction.
 
 ## Reserved generated names
 
@@ -395,6 +406,10 @@ tgoV
 NewT
 Value
 tgoTError
+ValidateT
+TgoReconstruct
+tgoTValidationError
+tgoReconstructTV
 TgoDefaultTF
 ```
 
@@ -403,6 +418,8 @@ Internal match variables use names that do not occur in the package source.
 An inserted reference must resolve to its generated declaration. A local name cannot capture it.
 An enum reserves its emitted `uint8`, `uint16`, or `uint32` tag name.
 A checked type reserves the predeclared `string`, `error`, and `nil` names.
+Each tgo source reserves the `__tgo_runtime` import name. The module reserves
+`internal/tgoruntime` and its generated `runtime_tgo.go` file.
 
 ## Build command and diagnostics
 
@@ -413,6 +430,8 @@ It parses selected packages, required tgo packages, and imports from local Go br
 
 A successful build formats and writes every generated file.
 It removes an owned output when its source no longer exists.
+It removes the validation runtime after a successful module build removes the last model.
+It keeps the runtime when an unbuilt package still has generated code that imports it.
 It keeps an output when its source is inactive for the current Go target.
 It refuses to replace a matching file without the generated header.
 A Go file with a generated-style name and no exact header is user code.

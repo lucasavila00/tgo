@@ -9,6 +9,43 @@ import (
 type LocalAccountAlias = model.Account
 type LocalRequestAlias = model.Request
 
+type ValidationEnvelope struct {
+    Root *model.ValidationNode
+}
+
+type ValidationSharing struct {
+    Numbers chan int
+    Callback func() int
+}
+
+type ValidationModelChannel struct {
+    Accounts chan model.Account
+}
+
+type validationAccountChannel = chan model.Account
+type validationAccountCallback = func() model.Account
+
+type ValidationModelAliases struct {
+    Callback validationAccountCallback
+}
+
+type ValidationModelChannelAlias struct {
+    Accounts validationAccountChannel
+}
+
+type ValidationDynamicSharing struct {
+    Values chan any
+    Callback func() any
+}
+
+type ValidationOpaqueEnvelope struct {
+    Value validationOpaque
+}
+
+type ValidationOpaqueNumberEnvelope struct {
+    Value validationOpaqueNumber
+}
+
 func Summary(name string) string {
     account := model.Account.Personal{Name: name}
     match account {

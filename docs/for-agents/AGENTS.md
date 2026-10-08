@@ -111,10 +111,9 @@ Map `clear` removes entries and is allowed. Native `copy` keeps Go overlap behav
 
 ## Go callers and tests
 
-Go calls use the original Go types. No boundary validation is added.
-Go can build invalid zero values or change shared data after a call. Keep the caller contract.
-Keep named Go types. Keep callback, interface, channel, pointer, variadic, generic,
-and typed nil behavior. Do not add adapters only to cross the boundary.
+Go calls use the original Go types. Constructors and reads do not run boundary validation.
+Keep named Go types, callbacks, interfaces, channels, pointers, variadic calls, generic calls,
+and typed nil behavior.
 
 ```go
 quantity, err := model.NewQuantity(3)
@@ -125,26 +124,42 @@ account := model.NewAccountPersonal(model.AccountPersonal{Name: "Lucas"})
 ```
 
 Test constructor success and failure, every match branch, and shared collection changes.
-Test calls in both directions. Include Go error results and invalid foreign values where relevant.
-Review business rules and caller contracts. Do not assume the compiler proves foreign code safe.
-Use `tgolint` to check Go construction, presence results, and enum access.
+Test calls in both directions. Include Go error results and invalid foreign values. Run
+`tgolint` to check Go construction, result pairs, boundary validation, and enum access.
 
 ## Foreign data and callbacks
 
-Treat values from ordinary Go, cgo, `unsafe`, reflection, decoders, storage, and callbacks as
-untrusted. Validate them in the FFI or boundary module at each ingress. Treat values returned
-by a foreign callback as a new ingress.
+Treat exact tgo values from Go parameters, cgo, `unsafe`, reflection, decoders, storage,
+interface assertions, and callbacks as untrusted. A nil error from the source does not validate
+the value. Call the generated validator at each ingress and check its error:
 
-Decode into transport types. Then construct tgo values. For a checked value, call its
-constructor and check the error. For an enum, reject unknown tags, use only the payload for the
-selected tag, validate nested models, and call the matching variant constructor.
+```go
+foreign, err := load()
+if err != nil {
+    return err
+}
+value, err := model.ValidateAccount(foreign)
+if err != nil {
+    return err
+}
+```
 
-Check application nil rules. tgo permits nil pointers, slices, maps, channels, interfaces, and
-functions. Copy mutable maps, slices, pointers, or interface data when foreign code can change
-them after validation.
+The validator rejects invalid enum tags, rebuilds the active payload with its constructor,
+reruns checked predicates, and validates nested local or imported models. It copies reachable
+arrays, slices, maps, pointers, and supported interface values. It preserves repeated pointers,
+maps, and identical slice headers, and it stops cycles. Overlapping slice views with different
+headers rebuild independently. A later change to the foreign input graph does not change the
+rebuilt graph.
 
-On egress, use constructors, check all errors, and send only valid nested models. Copy mutable
-data when ownership must not cross the boundary. Do the same work before encoding or storage.
+Nil values stay nil. A channel or function is shared only when its static type cannot transport
+or return a tgo model. An interface in its signature causes rejection. The validator also
+rejects unsafe pointers and ordinary private fields that it cannot inspect.
 
-`tgolint` checks that loaded Go code handles each matching error before it uses a tgo value.
-It does not prove that a foreign or stored value is valid when the error is nil.
+Check application nil rules and ownership rules after validation. A shared channel or function
+can still share ordinary mutable data. Copy or reject that data when ownership must not cross
+the boundary. Apply the same rules before storage, encoding, cgo calls, and callbacks.
+
+`tgolint` identifies generated validators with cross-package facts. It recognizes direct
+validator wrappers and simple local function values. It trusts the returned value only after
+the matching error is proved nil. It does not inspect cgo or `unsafe` memory, prevent races, or
+prove application ownership rules.

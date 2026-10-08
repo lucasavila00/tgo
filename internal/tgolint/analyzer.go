@@ -16,23 +16,25 @@ var Analyzer = &analysis.Analyzer{
 	Name:      "tgolint",
 	Doc:       "check Go use of generated tgo types",
 	Run:       run,
-	FactTypes: []analysis.Fact{new(modelFact), new(genericEffectFact)},
+	FactTypes: []analysis.Fact{new(modelFact), new(validationFact), new(genericEffectFact)},
 }
 
 type checker struct {
-	pass      *analysis.Pass
-	models    map[objectKey]*modelFact
-	generated map[*ast.File]bool
-	parents   map[ast.Node]ast.Node
-	safe      map[*ast.SelectorExpr]bool
-	handled   map[*ast.SelectorExpr]bool
-	checked   map[*ast.CallExpr]bool
-	presence  map[ast.Expr]bool
-	escaped   map[types.Object]token.Pos
-	reported  map[diagnosticKey]bool
-	function  ast.Node
-	zeroTypes map[*types.TypeParam]*modelFact
-	capture   func(*modelFact, ast.Expr)
+	pass       *analysis.Pass
+	models     map[objectKey]*modelFact
+	validated  map[types.Object]bool
+	callTarget map[types.Object]types.Object
+	generated  map[*ast.File]bool
+	parents    map[ast.Node]ast.Node
+	safe       map[*ast.SelectorExpr]bool
+	handled    map[*ast.SelectorExpr]bool
+	checked    map[*ast.CallExpr]bool
+	presence   map[ast.Expr]bool
+	escaped    map[types.Object]token.Pos
+	reported   map[diagnosticKey]bool
+	function   ast.Node
+	zeroTypes  map[*types.TypeParam]*modelFact
+	capture    func(*modelFact, ast.Expr)
 }
 
 type diagnosticKey struct {
@@ -42,17 +44,21 @@ type diagnosticKey struct {
 
 func run(pass *analysis.Pass) (any, error) {
 	c := &checker{
-		pass:      pass,
-		models:    make(map[objectKey]*modelFact),
-		generated: make(map[*ast.File]bool),
-		parents:   make(map[ast.Node]ast.Node),
-		safe:      make(map[*ast.SelectorExpr]bool),
-		handled:   make(map[*ast.SelectorExpr]bool),
-		checked:   make(map[*ast.CallExpr]bool),
-		presence:  make(map[ast.Expr]bool),
-		reported:  make(map[diagnosticKey]bool),
+		pass:       pass,
+		models:     make(map[objectKey]*modelFact),
+		validated:  make(map[types.Object]bool),
+		callTarget: make(map[types.Object]types.Object),
+		generated:  make(map[*ast.File]bool),
+		parents:    make(map[ast.Node]ast.Node),
+		safe:       make(map[*ast.SelectorExpr]bool),
+		handled:    make(map[*ast.SelectorExpr]bool),
+		checked:    make(map[*ast.CallExpr]bool),
+		presence:   make(map[ast.Expr]bool),
+		reported:   make(map[diagnosticKey]bool),
 	}
 	c.findModels()
+	c.findValidationWrappers()
+	c.findValidationFunctionValues()
 	for _, file := range pass.Files {
 		if c.generated[file] {
 			continue

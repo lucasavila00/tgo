@@ -2,8 +2,27 @@
 
 package model
 
+import __tgo_runtime "example.com/business/internal/tgoruntime"
+
 type ExposedQuantity struct {
 	value int
+}
+type tgoExposedQuantityValidationError string
+
+func (e tgoExposedQuantityValidationError) Error() string { return string(e) }
+
+// ValidateExposedQuantity checks and reconstructs one foreign ExposedQuantity graph.
+func ValidateExposedQuantity(value ExposedQuantity) (ExposedQuantity, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ExposedQuantity) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.value, context)
+	if err != nil {
+		return result, err
+	}
+	result.value = field0
+	return result, nil
 }
 
 type OnlyExposedQuantity interface {

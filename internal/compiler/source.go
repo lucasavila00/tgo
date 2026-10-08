@@ -57,6 +57,7 @@ type source struct {
 	Models        []*model
 	MatchMarker   string
 	DefaultMarker string
+	RuntimeAlias  string
 }
 
 // requiresConstructor reports whether a model type has an invalid zero value.

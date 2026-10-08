@@ -2,6 +2,7 @@ package tgolint
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 	"strings"
 )
@@ -19,6 +20,14 @@ type modelFact struct {
 }
 
 func (*modelFact) AFact() {}
+
+// validationFact marks a generated operation that returns a validated model.
+type validationFact struct {
+	Kind string
+	Name string
+}
+
+func (*validationFact) AFact() {}
 
 type objectKey struct {
 	pkg  *types.Package
@@ -65,12 +74,198 @@ func (c *checker) findModel(specification *ast.TypeSpec) {
 		return
 	}
 	fact := emittedModel(specification.Name.Name, structure, object.Type())
+	c.exportGeneratedValidator(object)
 	if fact == nil {
 		return
 	}
 	key := objectKey{pkg: object.Pkg(), name: object.Name()}
 	c.models[key] = fact
 	c.pass.ExportObjectFact(object, fact)
+	c.exportValidationFacts(object, fact)
+}
+
+func (c *checker) exportGeneratedValidator(object *types.TypeName) {
+	function, ok := object.Pkg().Scope().Lookup("Validate" + object.Name()).(*types.Func)
+	if !ok || !validValidatorAPI(function, object.Type()) {
+		return
+	}
+	fact := &validationFact{Name: object.Name()}
+	c.validated[function] = true
+	c.pass.ExportObjectFact(function, fact)
+}
+
+func validValidatorAPI(function *types.Func, typ types.Type) bool {
+	signature, ok := function.Type().(*types.Signature)
+	if !ok || signature.Params().Len() != 1 || signature.Results().Len() != 2 {
+		return false
+	}
+	errorType := types.Universe.Lookup("error").Type()
+	return types.Identical(signature.Params().At(0).Type(), typ) &&
+		types.Identical(signature.Results().At(0).Type(), typ) &&
+		types.Identical(signature.Results().At(1).Type(), errorType)
+}
+
+func (c *checker) exportValidationFacts(object *types.TypeName, model *modelFact) {
+	scope := object.Pkg().Scope()
+	var names []string
+	if model.Kind == checkedKind {
+		names = append(names, "New"+model.Name)
+	}
+	if model.Kind == enumKind {
+		for _, variant := range model.Variants {
+			names = append(names, "New"+model.Name+variant)
+		}
+	}
+	for _, name := range names {
+		function, ok := scope.Lookup(name).(*types.Func)
+		if !ok {
+			continue
+		}
+		fact := &validationFact{Kind: model.Kind, Name: model.Name}
+		c.validated[function] = true
+		c.pass.ExportObjectFact(function, fact)
+	}
+}
+
+// findValidationWrappers exports a fact for a direct validator forwarding function.
+func (c *checker) findValidationWrappers() {
+	changed := true
+	for changed {
+		changed = false
+		for _, file := range c.pass.Files {
+			for _, declaration := range file.Decls {
+				changed = c.exportValidationWrapper(declaration) || changed
+			}
+		}
+	}
+}
+
+func (c *checker) exportValidationWrapper(declaration ast.Decl) bool {
+	function, ok := declaration.(*ast.FuncDecl)
+	if !ok || function.Body == nil || len(function.Body.List) != 1 {
+		return false
+	}
+	object, ok := c.pass.TypesInfo.Defs[function.Name].(*types.Func)
+	if !ok || c.validated[object] {
+		return false
+	}
+	statement, ok := function.Body.List[0].(*ast.ReturnStmt)
+	if !ok || len(statement.Results) != 1 {
+		return false
+	}
+	call, ok := statement.Results[0].(*ast.CallExpr)
+	if !ok || !c.callHasValidationFact(call) {
+		return false
+	}
+	fact := &validationFact{Name: object.Name()}
+	c.validated[object] = true
+	c.pass.ExportObjectFact(object, fact)
+	return true
+}
+
+func (c *checker) callHasValidationFact(call *ast.CallExpr) bool {
+	object := calledObject(c.pass.TypesInfo, call.Fun)
+	if object == nil {
+		return false
+	}
+	if target := c.callTarget[object]; target != nil {
+		object = target
+	}
+	if c.validated[object] {
+		return true
+	}
+	fact := new(validationFact)
+	if !c.pass.ImportObjectFact(object, fact) {
+		return false
+	}
+	c.validated[object] = true
+	return true
+}
+
+func (c *checker) findValidationFunctionValues() {
+	candidates := make(map[types.Object]types.Object)
+	writes := make(map[types.Object]int)
+	escaped := make(map[types.Object]bool)
+	for _, file := range c.pass.Files {
+		if c.generated[file] {
+			continue
+		}
+		ast.Inspect(file, func(node ast.Node) bool {
+			c.scanValidationFunctionValue(node, candidates, writes, escaped)
+			return true
+		})
+	}
+	for object, target := range candidates {
+		if object != nil && writes[object] == 1 && !escaped[object] {
+			c.callTarget[object] = target
+		}
+	}
+}
+
+func (c *checker) scanValidationFunctionValue(
+	node ast.Node,
+	candidates map[types.Object]types.Object,
+	writes map[types.Object]int,
+	escaped map[types.Object]bool,
+) {
+	switch node := node.(type) {
+	case *ast.AssignStmt:
+		c.recordFunctionWrites(node.Lhs, writes)
+		if len(node.Lhs) == 1 && len(node.Rhs) == 1 {
+			c.recordValidationFunctionValue(candidates, node.Lhs[0], node.Rhs[0])
+		}
+	case *ast.ValueSpec:
+		for _, name := range node.Names {
+			writes[c.pass.TypesInfo.ObjectOf(name)]++
+		}
+		if len(node.Names) == 1 && len(node.Values) == 1 {
+			c.recordValidationFunctionValue(candidates, node.Names[0], node.Values[0])
+		}
+	case *ast.RangeStmt:
+		c.recordFunctionWrites([]ast.Expr{node.Key, node.Value}, writes)
+	case *ast.UnaryExpr:
+		if node.Op == token.AND {
+			escaped[c.pass.TypesInfo.ObjectOf(identifier(node.X))] = true
+		}
+	}
+}
+
+func (c *checker) recordFunctionWrites(
+	expressions []ast.Expr,
+	writes map[types.Object]int,
+) {
+	for _, expression := range expressions {
+		if name, ok := expression.(*ast.Ident); ok {
+			writes[c.pass.TypesInfo.ObjectOf(name)]++
+		}
+	}
+}
+
+func (c *checker) recordValidationFunctionValue(
+	candidates map[types.Object]types.Object,
+	left ast.Expr,
+	right ast.Expr,
+) {
+	name, ok := left.(*ast.Ident)
+	if !ok {
+		return
+	}
+	target := calledObject(c.pass.TypesInfo, right)
+	if target != nil && c.objectHasValidationFact(target) {
+		candidates[c.pass.TypesInfo.ObjectOf(name)] = target
+	}
+}
+
+func (c *checker) objectHasValidationFact(object types.Object) bool {
+	if c.validated[object] {
+		return true
+	}
+	fact := new(validationFact)
+	if !c.pass.ImportObjectFact(object, fact) {
+		return false
+	}
+	c.validated[object] = true
+	return true
 }
 
 func emittedModel(name string, structure *ast.StructType, typ types.Type) *modelFact {

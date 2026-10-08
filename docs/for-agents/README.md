@@ -85,8 +85,9 @@ account := model.NewAccountPersonal(model.AccountPersonal{Name: "Lucas"})
 quantity, err := model.NewQuantity(3)
 ```
 
-Check `err` before using `quantity`. Go can create invalid zeros and change shared data.
-The generated code trusts Go callers. There are no boundary scans or read guards.
+Check `err` before using `quantity`. Constructors and reads do not run a boundary scan.
+For foreign data, call the generated `ValidateT` operation and check its error before use.
+The validator reconstructs nested model data and isolates mutable reference graphs.
 
 [Language specification](../spec/README.md).
 [Go caller checks](TGOLINT.md).

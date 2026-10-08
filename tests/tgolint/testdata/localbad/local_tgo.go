@@ -2,6 +2,8 @@
 
 package localbad
 
+import __tgo_runtime "example.com/tgolint/internal/tgoruntime"
+
 // Count requires NewCount success. Zero is invalid.
 // Shared data keeps Go aliases. Callers must keep the rule.
 type Count struct{ value int }
@@ -19,6 +21,22 @@ func NewCount(value int) (Count, error) {
 
 // Value requires construction success. Shared data keeps its aliases.
 func (v Count) Value() int { return v.value }
+
+type tgoCountValidationError string
+
+func (e tgoCountValidationError) Error() string { return string(e) }
+
+// ValidateCount checks and reconstructs one foreign Count graph.
+func ValidateCount(value Count) (Count, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v Count) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	rebuilt, err := __tgo_runtime.RebuildAs(v.value, context)
+	if err != nil {
+		return nil, err
+	}
+	return NewCount(rebuilt)
+}
 
 // Event requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
@@ -61,4 +79,49 @@ func NewEventStopped(value EventStopped) Event {
 // TgoStopped requires Stopped. No tag check.
 func (v Event) TgoStopped() EventStopped {
 	return v.tgoStopped
+}
+
+type tgoEventValidationError string
+
+func (e tgoEventValidationError) Error() string { return string(e) }
+
+// ValidateEvent checks and reconstructs one foreign Event graph.
+func ValidateEvent(value Event) (Event, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func tgoReconstructEventStarted(value EventStarted, context *__tgo_runtime.Context) (EventStarted, error) {
+	result := value
+	field0, err := __tgo_runtime.RebuildAs(value.ID, context)
+	if err != nil {
+		return result, err
+	}
+	result.ID = field0
+	return result, nil
+}
+func tgoReconstructEventStopped(value EventStopped, context *__tgo_runtime.Context) (EventStopped, error) {
+	result := value
+	field0, err := __tgo_runtime.RebuildAs(value.Reason, context)
+	if err != nil {
+		return result, err
+	}
+	result.Reason = field0
+	return result, nil
+}
+func (v Event) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	switch v.tgoTag {
+	case 1:
+		rebuilt, err := tgoReconstructEventStarted(v.tgoStarted, context)
+		if err != nil {
+			return nil, err
+		}
+		return NewEventStarted(rebuilt), nil
+	case 2:
+		rebuilt, err := tgoReconstructEventStopped(v.tgoStopped, context)
+		if err != nil {
+			return nil, err
+		}
+		return NewEventStopped(rebuilt), nil
+	default:
+		return nil, tgoEventValidationError("invalid Event tag")
+	}
 }

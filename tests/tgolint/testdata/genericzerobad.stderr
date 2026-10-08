@@ -1,3 +1,14 @@
+genericzerobad/bad.go:22:34: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:37:31: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:43:37: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:44:39: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:52:40: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:53:41: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:60:26: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:61:30: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:63:48: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:72:14: tgo enum Event value is used without successful generated validation
+genericzerobad/bad.go:81:11: tgo enum Event value is used without successful generated validation
 genericzerobad/bad.go:18:2: call to Variable will create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:19:6: call to Named will create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:20:6: call to New will create invalid tgo enum Event zero from a type argument

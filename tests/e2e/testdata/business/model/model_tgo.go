@@ -2,6 +2,8 @@
 
 package model
 
+import __tgo_runtime "example.com/business/internal/tgoruntime"
+
 // Quantity requires NewQuantity success. Zero is invalid.
 // Shared data keeps Go aliases. Callers must keep the rule.
 type Quantity struct{ value int }
@@ -19,6 +21,22 @@ func NewQuantity(value int) (Quantity, error) {
 
 // Value requires construction success. Shared data keeps its aliases.
 func (v Quantity) Value() int { return v.value }
+
+type tgoQuantityValidationError string
+
+func (e tgoQuantityValidationError) Error() string { return string(e) }
+
+// ValidateQuantity checks and reconstructs one foreign Quantity graph.
+func ValidateQuantity(value Quantity) (Quantity, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v Quantity) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	rebuilt, err := __tgo_runtime.RebuildAs(v.value, context)
+	if err != nil {
+		return nil, err
+	}
+	return NewQuantity(rebuilt)
+}
 
 // PositivePoint requires NewPositivePoint success. Zero is invalid.
 // Shared data keeps Go aliases. Callers must keep the rule.
@@ -38,6 +56,22 @@ func NewPositivePoint(value struct{ X int }) (PositivePoint, error) {
 // Value requires construction success. Shared data keeps its aliases.
 func (v PositivePoint) Value() struct{ X int } { return v.value }
 
+type tgoPositivePointValidationError string
+
+func (e tgoPositivePointValidationError) Error() string { return string(e) }
+
+// ValidatePositivePoint checks and reconstructs one foreign PositivePoint graph.
+func ValidatePositivePoint(value PositivePoint) (PositivePoint, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v PositivePoint) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	rebuilt, err := __tgo_runtime.RebuildAs(v.value, context)
+	if err != nil {
+		return nil, err
+	}
+	return NewPositivePoint(rebuilt)
+}
+
 // Multiline requires NewMultiline success. Zero is invalid.
 // Shared data keeps Go aliases. Callers must keep the rule.
 type Multiline struct{ value int }
@@ -56,6 +90,22 @@ func NewMultiline(value int) (Multiline, error) {
 // Value requires construction success. Shared data keeps its aliases.
 func (v Multiline) Value() int { return v.value }
 
+type tgoMultilineValidationError string
+
+func (e tgoMultilineValidationError) Error() string { return string(e) }
+
+// ValidateMultiline checks and reconstructs one foreign Multiline graph.
+func ValidateMultiline(value Multiline) (Multiline, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v Multiline) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	rebuilt, err := __tgo_runtime.RebuildAs(v.value, context)
+	if err != nil {
+		return nil, err
+	}
+	return NewMultiline(rebuilt)
+}
+
 type where int
 type enum int
 type WhereAlias where
@@ -70,14 +120,70 @@ type CounterRecord (struct {
 type Point struct {
 	X int
 }
+type tgoPointValidationError string
+
+func (e tgoPointValidationError) Error() string { return string(e) }
+
+// ValidatePoint checks and reconstructs one foreign Point graph.
+func ValidatePoint(value Point) (Point, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v Point) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.X, context)
+	if err != nil {
+		return result, err
+	}
+	result.X = field0
+	return result, nil
+}
 
 type Tagged struct {
 	tgoTag uint8
+}
+type tgoTaggedValidationError string
+
+func (e tgoTaggedValidationError) Error() string { return string(e) }
+
+// ValidateTagged checks and reconstructs one foreign Tagged graph.
+func ValidateTagged(value Tagged) (Tagged, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v Tagged) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.tgoTag, context)
+	if err != nil {
+		return result, err
+	}
+	result.tgoTag = field0
+	return result, nil
 }
 
 type MarkerRecord struct {
 	__tgo_defaults bool
 	Name           string
+}
+type tgoMarkerRecordValidationError string
+
+func (e tgoMarkerRecordValidationError) Error() string { return string(e) }
+
+// ValidateMarkerRecord checks and reconstructs one foreign MarkerRecord graph.
+func ValidateMarkerRecord(value MarkerRecord) (MarkerRecord, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v MarkerRecord) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.__tgo_defaults, context)
+	if err != nil {
+		return result, err
+	}
+	result.__tgo_defaults = field0
+	field1, err := __tgo_runtime.RebuildAs(v.Name, context)
+	if err != nil {
+		return result, err
+	}
+	result.Name = field1
+	return result, nil
 }
 
 // Account requires a variant constructor. Its zero value is invalid.
@@ -125,6 +231,61 @@ func (v Account) TgoBusiness() AccountBusiness {
 	return v.tgoBusiness
 }
 
+type tgoAccountValidationError string
+
+func (e tgoAccountValidationError) Error() string { return string(e) }
+
+// ValidateAccount checks and reconstructs one foreign Account graph.
+func ValidateAccount(value Account) (Account, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func tgoReconstructAccountPersonal(value AccountPersonal, context *__tgo_runtime.Context) (AccountPersonal, error) {
+	result := value
+	field0, err := __tgo_runtime.RebuildAs(value.Name, context)
+	if err != nil {
+		return result, err
+	}
+	result.Name = field0
+	return result, nil
+}
+func tgoReconstructAccountBusiness(value AccountBusiness, context *__tgo_runtime.Context) (AccountBusiness, error) {
+	result := value
+	field0, err := __tgo_runtime.RebuildAs(value.Company, context)
+	if err != nil {
+		return result, err
+	}
+	result.Company = field0
+	field1, err := __tgo_runtime.RebuildAs(value.Members, context)
+	if err != nil {
+		return result, err
+	}
+	result.Members = field1
+	field2, err := __tgo_runtime.RebuildAs(value.Tags, context)
+	if err != nil {
+		return result, err
+	}
+	result.Tags = field2
+	return result, nil
+}
+func (v Account) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	switch v.tgoTag {
+	case 1:
+		rebuilt, err := tgoReconstructAccountPersonal(v.tgoPersonal, context)
+		if err != nil {
+			return nil, err
+		}
+		return NewAccountPersonal(rebuilt), nil
+	case 2:
+		rebuilt, err := tgoReconstructAccountBusiness(v.tgoBusiness, context)
+		if err != nil {
+			return nil, err
+		}
+		return NewAccountBusiness(rebuilt), nil
+	default:
+		return nil, tgoAccountValidationError("invalid Account tag")
+	}
+}
+
 // Notice requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type Notice struct {
@@ -150,6 +311,41 @@ func NewNoticeText(value NoticeText) Notice {
 // TgoText requires Text. No tag check.
 func (v Notice) TgoText() NoticeText {
 	return v.tgoText
+}
+
+type tgoNoticeValidationError string
+
+func (e tgoNoticeValidationError) Error() string { return string(e) }
+
+// ValidateNotice checks and reconstructs one foreign Notice graph.
+func ValidateNotice(value Notice) (Notice, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func tgoReconstructNoticeText(value NoticeText, context *__tgo_runtime.Context) (NoticeText, error) {
+	result := value
+	field0, err := __tgo_runtime.RebuildAs(value.Body, context)
+	if err != nil {
+		return result, err
+	}
+	result.Body = field0
+	field1, err := __tgo_runtime.RebuildAs(value.Labels, context)
+	if err != nil {
+		return result, err
+	}
+	result.Labels = field1
+	return result, nil
+}
+func (v Notice) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	switch v.tgoTag {
+	case 1:
+		rebuilt, err := tgoReconstructNoticeText(v.tgoText, context)
+		if err != nil {
+			return nil, err
+		}
+		return NewNoticeText(rebuilt), nil
+	default:
+		return nil, tgoNoticeValidationError("invalid Notice tag")
+	}
 }
 
 // Signal requires a variant constructor. Its zero value is invalid.
@@ -193,14 +389,174 @@ func (v Signal) TgoOff() SignalOff {
 	return v.tgoOff
 }
 
+type tgoSignalValidationError string
+
+func (e tgoSignalValidationError) Error() string { return string(e) }
+
+// ValidateSignal checks and reconstructs one foreign Signal graph.
+func ValidateSignal(value Signal) (Signal, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func tgoReconstructSignalOn(value SignalOn, context *__tgo_runtime.Context) (SignalOn, error) {
+	result := value
+	return result, nil
+}
+func tgoReconstructSignalOff(value SignalOff, context *__tgo_runtime.Context) (SignalOff, error) {
+	result := value
+	return result, nil
+}
+func (v Signal) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	switch v.tgoTag {
+	case 1:
+		rebuilt, err := tgoReconstructSignalOn(v.tgoOn, context)
+		if err != nil {
+			return nil, err
+		}
+		return NewSignalOn(rebuilt), nil
+	case 2:
+		rebuilt, err := tgoReconstructSignalOff(v.tgoOff, context)
+		if err != nil {
+			return nil, err
+		}
+		return NewSignalOff(rebuilt), nil
+	default:
+		return nil, tgoSignalValidationError("invalid Signal tag")
+	}
+}
+
 type Request struct {
 	ID   string
 	Tags map[string]string
+}
+type tgoRequestValidationError string
+
+func (e tgoRequestValidationError) Error() string { return string(e) }
+
+// ValidateRequest checks and reconstructs one foreign Request graph.
+func ValidateRequest(value Request) (Request, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v Request) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.ID, context)
+	if err != nil {
+		return result, err
+	}
+	result.ID = field0
+	field1, err := __tgo_runtime.RebuildAs(v.Tags, context)
+	if err != nil {
+		return result, err
+	}
+	result.Tags = field1
+	return result, nil
 }
 
 type Message struct {
 	ID   string            `json:"id"`
 	Tags map[string]string `json:"tags"`
+}
+type tgoMessageValidationError string
+
+func (e tgoMessageValidationError) Error() string { return string(e) }
+
+// ValidateMessage checks and reconstructs one foreign Message graph.
+func ValidateMessage(value Message) (Message, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v Message) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.ID, context)
+	if err != nil {
+		return result, err
+	}
+	result.ID = field0
+	field1, err := __tgo_runtime.RebuildAs(v.Tags, context)
+	if err != nil {
+		return result, err
+	}
+	result.Tags = field1
+	return result, nil
+}
+
+type ValidationNode struct {
+	Amount      Quantity
+	Next        *ValidationNode
+	Other       *ValidationNode
+	Items       []Quantity
+	Alias       []Quantity
+	Fixed       [1]Quantity
+	Lookup      map[string]Quantity
+	AliasLookup map[string]Quantity
+	Dynamic     any
+	Numbers     chan int
+	Callback    func() int
+}
+type tgoValidationNodeValidationError string
+
+func (e tgoValidationNodeValidationError) Error() string { return string(e) }
+
+// ValidateValidationNode checks and reconstructs one foreign ValidationNode graph.
+func ValidateValidationNode(value ValidationNode) (ValidationNode, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ValidationNode) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.Amount, context)
+	if err != nil {
+		return result, err
+	}
+	result.Amount = field0
+	field1, err := __tgo_runtime.RebuildAs(v.Next, context)
+	if err != nil {
+		return result, err
+	}
+	result.Next = field1
+	field2, err := __tgo_runtime.RebuildAs(v.Other, context)
+	if err != nil {
+		return result, err
+	}
+	result.Other = field2
+	field3, err := __tgo_runtime.RebuildAs(v.Items, context)
+	if err != nil {
+		return result, err
+	}
+	result.Items = field3
+	field4, err := __tgo_runtime.RebuildAs(v.Alias, context)
+	if err != nil {
+		return result, err
+	}
+	result.Alias = field4
+	field5, err := __tgo_runtime.RebuildAs(v.Fixed, context)
+	if err != nil {
+		return result, err
+	}
+	result.Fixed = field5
+	field6, err := __tgo_runtime.RebuildAs(v.Lookup, context)
+	if err != nil {
+		return result, err
+	}
+	result.Lookup = field6
+	field7, err := __tgo_runtime.RebuildAs(v.AliasLookup, context)
+	if err != nil {
+		return result, err
+	}
+	result.AliasLookup = field7
+	field8, err := __tgo_runtime.RebuildAs(v.Dynamic, context)
+	if err != nil {
+		return result, err
+	}
+	result.Dynamic = field8
+	field9, err := __tgo_runtime.RebuildAs(v.Numbers, context)
+	if err != nil {
+		return result, err
+	}
+	result.Numbers = field9
+	field10, err := __tgo_runtime.RebuildAs(v.Callback, context)
+	if err != nil {
+		return result, err
+	}
+	result.Callback = field10
+	return result, nil
 }
 
 func Personal(name string) Account {
@@ -291,6 +647,18 @@ func match[T any](value T) T {
 }
 
 type matcher struct {
+}
+type tgomatcherValidationError string
+
+func (e tgomatcherValidationError) Error() string { return string(e) }
+
+// Validatematcher checks and reconstructs one foreign matcher graph.
+func Validatematcher(value matcher) (matcher, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v matcher) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	return result, nil
 }
 
 func (matcher) match(value string) string {

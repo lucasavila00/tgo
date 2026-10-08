@@ -67,6 +67,11 @@ func BoundaryAssertion(input any) {
 }
 
 func CheckedPresence(event model.Event) {
+	validated, err := model.ValidateEvent(event)
+	if err != nil {
+		return
+	}
+	event = validated
 	_ = genericzero.MapChecked(map[string]model.Event{"event": event}, "event")
 	_ = genericzero.ChannelChecked(make(chan model.Event))
 	_ = genericzero.AssertChecked[model.Event](event)

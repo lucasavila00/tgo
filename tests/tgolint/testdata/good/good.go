@@ -1,8 +1,57 @@
 package good
 
-import "example.com/tgolint/model"
+import (
+	"example.com/tgolint/model"
+	"example.com/tgolint/validated"
+)
+
+func validateEvent(event model.Event) (model.Event, error) {
+	return model.ValidateEvent(event)
+}
+
+func CrossPackageValidation(event model.Event) string {
+	value, err := validated.Event(event)
+	if err != nil {
+		return ""
+	}
+	switch value.TgoTag() {
+	case 1:
+		return value.TgoStarted().ID
+	case 2:
+		return value.TgoStopped().Reason
+	default:
+		panic("invalid Event variant")
+	}
+}
+
+func CrossPackageConstructor() string {
+	return Describe(validated.Constructed())
+}
+
+func ValidationFunctionValue(event model.Event) string {
+	validate := model.ValidateEvent
+	value, err := validate(event)
+	if err != nil {
+		return ""
+	}
+	return Describe(value)
+}
+
+func ConstructorFunctionValue() string {
+	construct := model.NewEventStopped
+	return Describe(construct(model.EventStopped{}))
+}
+
+func ValidateAssertion(input any) (model.Event, error) {
+	return model.ValidateEvent(input.(model.Event))
+}
 
 func Describe(event model.Event) string {
+	validated, err := validateEvent(event)
+	if err != nil {
+		return ""
+	}
+	event = validated
 	switch event.TgoTag() {
 	case 1:
 		started := event.TgoStarted()
@@ -41,6 +90,11 @@ func KeepLength(values []model.Event) []model.Event {
 }
 
 func Identity(event model.Event) model.Event {
+	validated, err := validateEvent(event)
+	if err != nil {
+		return model.NewEventStopped(model.EventStopped{})
+	}
+	event = validated
 	return model.Event(event)
 }
 
@@ -303,10 +357,6 @@ func PresenceAssertion(input any) (model.Event, bool) {
 	return value, ok
 }
 
-func AssertExisting(input any) model.Event {
-	return input.(model.Event)
-}
-
 func eventWrapper(values map[string]model.Event, key string) (model.Event, bool) {
 	value, ok := values[key]
 	return value, ok
@@ -317,6 +367,11 @@ func PresenceWrapper(values map[string]model.Event, key string) string {
 	if !ok {
 		return ""
 	}
+	validated, err := validateEvent(value)
+	if err != nil {
+		return ""
+	}
+	value = validated
 	switch value.TgoTag() {
 	case 1:
 		return value.TgoStarted().ID
@@ -330,6 +385,11 @@ func PresenceWrapper(values map[string]model.Event, key string) string {
 func PresenceBoolean(values map[string]model.Event, key string, ready bool) string {
 	value, ok := eventWrapper(values, key)
 	if ok == true && ready {
+		validated, err := validateEvent(value)
+		if err != nil {
+			return ""
+		}
+		value = validated
 		switch value.TgoTag() {
 		case 1:
 			return value.TgoStarted().ID
@@ -343,6 +403,11 @@ func PresenceBoolean(values map[string]model.Event, key string, ready bool) stri
 }
 
 func DescribeSnapshot(event model.Event) string {
+	validated, err := validateEvent(event)
+	if err != nil {
+		return ""
+	}
+	event = validated
 	switch snapshot := event; snapshot.TgoTag() {
 	case 1:
 		return snapshot.TgoStarted().ID
@@ -354,6 +419,11 @@ func DescribeSnapshot(event model.Event) string {
 }
 
 func DescribeWithInternalBreak(event model.Event) string {
+	validated, err := validateEvent(event)
+	if err != nil {
+		return ""
+	}
+	event = validated
 	switch event.TgoTag() {
 	case 1:
 		return event.TgoStarted().ID
@@ -368,6 +438,11 @@ func DescribeWithInternalBreak(event model.Event) string {
 }
 
 func DescribeWithInternalGoto(event model.Event) string {
+	validated, err := validateEvent(event)
+	if err != nil {
+		return ""
+	}
+	event = validated
 	switch event.TgoTag() {
 	case 1:
 		return event.TgoStarted().ID

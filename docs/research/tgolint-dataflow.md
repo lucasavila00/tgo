@@ -49,24 +49,33 @@ and `fallthrough`.
 
 ## Boundary validation contract
 
-An `error` result does not validate a foreign enum. A function can return an `Event`
-with an invalid tag and a nil error. The current generated API has tag and payload
-accessors, but it has no validation operation that tgolint can identify as a complete
-runtime check. A successful type assertion can also import an existing invalid tgo
-value. It is an ingress validation problem, not zero construction.
+An `error` result does not validate a foreign enum. A function can return an `Event` with an
+invalid tag and a nil error. A successful type assertion also imports an existing value. It
+does not validate the value.
 
-A checkable contract needs a generated operation such as:
+The compiler now generates this contract for each tgo model:
 
 ```go
 func ValidateEvent(value Event) (Event, error)
 ```
 
-The operation must reject unknown tags, read only the payload for the active tag,
-validate each nested model, and return a value rebuilt with the matching constructor.
-Checked nested values must run their predicates again. Application nil and ownership
-rules still belong to the boundary module because the type declaration does not state
-them.
+The operation rejects unknown tags, reads only the active payload, validates nested models,
+and returns a value rebuilt with the matching constructor. Checked values run their predicates
+again. A module-local generated runtime carries graph identity through imported validators.
+It preserves repeated pointers, maps, and identical slice headers, and stops recursive cycles.
+Overlapping slice views with different headers rebuild independently.
 
-The compiler must generate this operation and export an analysis fact that identifies
-it before tgolint can treat a nil error as proof of a valid foreign enum. This change
-does not add that public API.
+Generated methods reconstruct private model fields with typed assignments. Reflection is used
+only during an explicit validation call to traverse ordinary Go containers. Each ordinary
+private field is rejected because the validator cannot inspect it. A channel or function is shared only
+when its static signature cannot transport a model. Interfaces in those signatures are rejected.
+
+`tgolint` exports facts for the generated operation. It also exports a fact for a direct wrapper
+that returns a generated validator or checked constructor call. A successful error proof for an
+arbitrary `(T, error)` source does not mark its value valid. A successful proof for a generated
+validator result does.
+
+This analysis uses typed AST control flow and the existing pair-state merge. It does not use SSA
+dominance for boundary taint. The current proof follows exact direct model parameters, pair
+bindings, supported branches, direct forwarding wrappers, and simple local function values.
+It does not prove cgo or `unsafe` memory, application ownership, or race freedom.

@@ -16,6 +16,7 @@ type sourceParser struct {
 	models        []*model
 	matchMarker   string
 	defaultMarker string
+	runtimeAlias  string
 }
 
 // parseSource lowers tgo syntax and parses the result as a Go file.
@@ -24,7 +25,17 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	if err != nil {
 		return nil, err
 	}
-	reader := sourceParser{name: name, input: string(data), tokens: tokens}
+	used := identifierNames(tokens)
+	if used["__tgo_runtime"] {
+		return nil, fmt.Errorf(
+			"%s: generated validation import name __tgo_runtime is reserved",
+			name,
+		)
+	}
+	reader := sourceParser{
+		name: name, input: string(data), tokens: tokens,
+		runtimeAlias: "__tgo_runtime",
+	}
 	if err := reader.declarations(); err != nil {
 		return nil, fmt.Errorf("%s:%w", name, err)
 	}
@@ -44,6 +55,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		Models:        reader.models,
 		MatchMarker:   markers.match,
 		DefaultMarker: markers.defaults,
+		RuntimeAlias:  reader.runtimeAlias,
 	}, nil
 }
 
@@ -221,7 +233,7 @@ func (p *sourceParser) enumDeclaration(declaration *model) (string, error) {
 		return "", p.errorAt(enumToken, "enum %s has no variants", declaration.Name)
 	}
 	p.cursor = end + 1
-	return enumGo(p.name, declaration), nil
+	return enumGo(p.name, declaration, p.runtimeAlias), nil
 }
 
 // variant parses one named enum payload.
@@ -246,7 +258,8 @@ func (p *sourceParser) structDeclaration(declaration *model) (string, error) {
 		return "", err
 	}
 	declaration.Fields = fields
-	text := "type " + declaration.Name + " struct {\n" + fieldDecls(p.name, fields) + "}"
+	text := "type " + declaration.Name + " struct {\n" + fieldDecls(p.name, fields) + "}\n"
+	text += structValidationGo(declaration, p.runtimeAlias)
 	return text, nil
 }
 
@@ -290,7 +303,7 @@ func (p *sourceParser) finishCheckedDeclaration(
 	if declaration.Predicate == "" {
 		return "", p.errorAt(start, "checked type needs a base type and predicate")
 	}
-	return checkedGo(p.name, declaration), nil
+	return checkedGo(p.name, declaration, p.runtimeAlias), nil
 }
 
 // implicitSemicolon reports a newline semicolon inserted by the Go scanner.

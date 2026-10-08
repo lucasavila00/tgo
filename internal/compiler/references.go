@@ -245,12 +245,12 @@ func (p *packageUnit) checkGeneratedPredeclaredNames() {
 	checked := make(map[string]bool)
 	for _, source := range p.Sources {
 		for _, declaration := range source.Models {
-			var names []string
+			names := []string{"any", "error", "nil", "string"}
 			switch {
 			case len(declaration.Variants) > 0:
-				names = []string{enumTagType(len(declaration.Variants))}
+				names = append(names, enumTagType(len(declaration.Variants)))
 			case declaration.Predicate != "":
-				names = []string{"string", "error", "nil"}
+				names = append(names, "string")
 			}
 			for _, name := range names {
 				key := source.Name + "\x00" + name

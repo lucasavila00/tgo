@@ -3,6 +3,7 @@
 package app
 
 import (
+	__tgo_runtime "example.com/business/internal/tgoruntime"
 	"example.com/business/model"
 	"fmt"
 	"slices"
@@ -10,6 +11,189 @@ import (
 
 type LocalAccountAlias = model.Account
 type LocalRequestAlias = model.Request
+
+type ValidationEnvelope struct {
+	Root *model.ValidationNode
+}
+type tgoValidationEnvelopeValidationError string
+
+func (e tgoValidationEnvelopeValidationError) Error() string { return string(e) }
+
+// ValidateValidationEnvelope checks and reconstructs one foreign ValidationEnvelope graph.
+func ValidateValidationEnvelope(value ValidationEnvelope) (ValidationEnvelope, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ValidationEnvelope) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.Root, context)
+	if err != nil {
+		return result, err
+	}
+	result.Root = field0
+	return result, nil
+}
+
+type ValidationSharing struct {
+	Numbers  chan int
+	Callback func() int
+}
+type tgoValidationSharingValidationError string
+
+func (e tgoValidationSharingValidationError) Error() string { return string(e) }
+
+// ValidateValidationSharing checks and reconstructs one foreign ValidationSharing graph.
+func ValidateValidationSharing(value ValidationSharing) (ValidationSharing, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ValidationSharing) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.Numbers, context)
+	if err != nil {
+		return result, err
+	}
+	result.Numbers = field0
+	field1, err := __tgo_runtime.RebuildAs(v.Callback, context)
+	if err != nil {
+		return result, err
+	}
+	result.Callback = field1
+	return result, nil
+}
+
+type ValidationModelChannel struct {
+	Accounts chan model.Account
+}
+type tgoValidationModelChannelValidationError string
+
+func (e tgoValidationModelChannelValidationError) Error() string { return string(e) }
+
+// ValidateValidationModelChannel checks and reconstructs one foreign ValidationModelChannel graph.
+func ValidateValidationModelChannel(value ValidationModelChannel) (ValidationModelChannel, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ValidationModelChannel) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.Accounts, context)
+	if err != nil {
+		return result, err
+	}
+	result.Accounts = field0
+	return result, nil
+}
+
+type validationAccountChannel = chan model.Account
+type validationAccountCallback = func() model.Account
+
+type ValidationModelAliases struct {
+	Callback validationAccountCallback
+}
+type tgoValidationModelAliasesValidationError string
+
+func (e tgoValidationModelAliasesValidationError) Error() string { return string(e) }
+
+// ValidateValidationModelAliases checks and reconstructs one foreign ValidationModelAliases graph.
+func ValidateValidationModelAliases(value ValidationModelAliases) (ValidationModelAliases, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ValidationModelAliases) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.Callback, context)
+	if err != nil {
+		return result, err
+	}
+	result.Callback = field0
+	return result, nil
+}
+
+type ValidationModelChannelAlias struct {
+	Accounts validationAccountChannel
+}
+type tgoValidationModelChannelAliasValidationError string
+
+func (e tgoValidationModelChannelAliasValidationError) Error() string { return string(e) }
+
+// ValidateValidationModelChannelAlias checks and reconstructs one foreign ValidationModelChannelAlias graph.
+func ValidateValidationModelChannelAlias(value ValidationModelChannelAlias) (ValidationModelChannelAlias, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ValidationModelChannelAlias) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.Accounts, context)
+	if err != nil {
+		return result, err
+	}
+	result.Accounts = field0
+	return result, nil
+}
+
+type ValidationDynamicSharing struct {
+	Values   chan any
+	Callback func() any
+}
+type tgoValidationDynamicSharingValidationError string
+
+func (e tgoValidationDynamicSharingValidationError) Error() string { return string(e) }
+
+// ValidateValidationDynamicSharing checks and reconstructs one foreign ValidationDynamicSharing graph.
+func ValidateValidationDynamicSharing(value ValidationDynamicSharing) (ValidationDynamicSharing, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ValidationDynamicSharing) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.Values, context)
+	if err != nil {
+		return result, err
+	}
+	result.Values = field0
+	field1, err := __tgo_runtime.RebuildAs(v.Callback, context)
+	if err != nil {
+		return result, err
+	}
+	result.Callback = field1
+	return result, nil
+}
+
+type ValidationOpaqueEnvelope struct {
+	Value validationOpaque
+}
+type tgoValidationOpaqueEnvelopeValidationError string
+
+func (e tgoValidationOpaqueEnvelopeValidationError) Error() string { return string(e) }
+
+// ValidateValidationOpaqueEnvelope checks and reconstructs one foreign ValidationOpaqueEnvelope graph.
+func ValidateValidationOpaqueEnvelope(value ValidationOpaqueEnvelope) (ValidationOpaqueEnvelope, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ValidationOpaqueEnvelope) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.Value, context)
+	if err != nil {
+		return result, err
+	}
+	result.Value = field0
+	return result, nil
+}
+
+type ValidationOpaqueNumberEnvelope struct {
+	Value validationOpaqueNumber
+}
+type tgoValidationOpaqueNumberEnvelopeValidationError string
+
+func (e tgoValidationOpaqueNumberEnvelopeValidationError) Error() string { return string(e) }
+
+// ValidateValidationOpaqueNumberEnvelope checks and reconstructs one foreign ValidationOpaqueNumberEnvelope graph.
+func ValidateValidationOpaqueNumberEnvelope(value ValidationOpaqueNumberEnvelope) (ValidationOpaqueNumberEnvelope, error) {
+	return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())
+}
+func (v ValidationOpaqueNumberEnvelope) TgoReconstruct(context *__tgo_runtime.Context) (any, error) {
+	result := v
+	field0, err := __tgo_runtime.RebuildAs(v.Value, context)
+	if err != nil {
+		return result, err
+	}
+	result.Value = field0
+	return result, nil
+}
 
 func Summary(name string) string {
 	account := model.NewAccountPersonal(model.AccountPersonal{Name: name})

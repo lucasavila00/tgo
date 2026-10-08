@@ -52,6 +52,8 @@ type checkedResult struct {
 	validProof bool
 	presence   bool
 	source     ast.Expr
+	validated  bool
+	boundary   bool
 }
 
 type checkedState map[types.Object]checkedResult
@@ -65,7 +67,40 @@ func (c *checker) checkConstructors(function ast.Node, body *ast.BlockStmt) {
 		c.escaped = previousEscaped
 		c.function = previousFunction
 	}()
-	c.checkedBlock(body.List, make(checkedState))
+	state := make(checkedState)
+	c.seedBoundaryParameters(function, state)
+	c.checkedBlock(body.List, state)
+}
+
+func (c *checker) seedBoundaryParameters(function ast.Node, state checkedState) {
+	var fields []*ast.FieldList
+	switch function := function.(type) {
+	case *ast.FuncDecl:
+		fields = append(fields, function.Recv, function.Type.Params)
+	case *ast.FuncLit:
+		fields = append(fields, function.Type.Params)
+	}
+	for _, list := range fields {
+		if list == nil {
+			continue
+		}
+		for _, field := range list.List {
+			for _, name := range field.Names {
+				object := c.pass.TypesInfo.Defs[name]
+				if object == nil {
+					continue
+				}
+				model := c.boundaryModel(object.Type())
+				if model != nil {
+					state[object] = checkedResult{model: model, safe: true, boundary: true}
+				}
+			}
+		}
+	}
+}
+
+func (c *checker) boundaryModel(typ types.Type) *modelFact {
+	return c.modelFor(typ)
 }
 
 // escapedObjects finds local variables that an address or nested function can use.
@@ -242,17 +277,12 @@ func (c *checker) checkedAssignment(assignment *ast.AssignStmt, state checkedSta
 		return false
 	}
 	expression := assignment.Rhs[0]
-	call, callOK := expression.(*ast.CallExpr)
-	if callOK {
-		model := c.checkedCall(call)
-		if model != nil {
-			c.checked[call] = true
-			c.checkResultUses(call.Args, state, nil)
-			if len(assignment.Lhs) != 2 {
-				c.reportCheckedCall(call)
-				return true
-			}
-			c.bindCheckedResults(assignment.Lhs[0], assignment.Lhs[1], model, state)
+	if call, ok := expression.(*ast.CallExpr); ok {
+		if model := c.checkedCall(call); model != nil {
+			return c.checkedCallAssignment(assignment, call, model, state)
+		}
+		if model := c.boundarySingleCall(call); model != nil {
+			c.bindBoundaryValue(assignment.Lhs, call, model, state)
 			return true
 		}
 	}
@@ -271,6 +301,44 @@ func (c *checker) checkedAssignment(assignment *ast.AssignStmt, state checkedSta
 	return true
 }
 
+func (c *checker) bindBoundaryValue(
+	left []ast.Expr,
+	call *ast.CallExpr,
+	model *modelFact,
+	state checkedState,
+) {
+	c.checked[call] = true
+	if len(left) != 1 {
+		return
+	}
+	c.invalidateAssignments(left, state)
+	name, ok := left[0].(*ast.Ident)
+	if !ok || name.Name == "_" {
+		return
+	}
+	object := c.pass.TypesInfo.ObjectOf(name)
+	if object != nil {
+		state[object] = checkedResult{model: model, safe: true, boundary: true}
+	}
+}
+
+func (c *checker) checkedCallAssignment(
+	assignment *ast.AssignStmt,
+	call *ast.CallExpr,
+	model *modelFact,
+	state checkedState,
+) bool {
+	c.checked[call] = true
+	c.checkResultUses(call.Args, state, c.validatorArgumentSkip(call, state))
+	if len(assignment.Lhs) != 2 {
+		c.reportCheckedCall(call)
+		return true
+	}
+	c.bindCheckedResults(assignment.Lhs[0], assignment.Lhs[1], model, state)
+	c.markValidatedResult(call, assignment.Lhs[0], state)
+	return true
+}
+
 func (c *checker) checkedDeclaration(statement *ast.DeclStmt, state checkedState) {
 	declaration, ok := statement.Decl.(*ast.GenDecl)
 	if !ok {
@@ -281,41 +349,60 @@ func (c *checker) checkedDeclaration(statement *ast.DeclStmt, state checkedState
 		if !ok {
 			continue
 		}
-		if len(specification.Values) != 1 || len(specification.Names) != 2 {
-			c.checkResultUses(specification.Values, state, nil)
-			continue
-		}
-		call, ok := specification.Values[0].(*ast.CallExpr)
-		if ok {
-			model := c.checkedCall(call)
-			if model != nil {
-				c.checked[call] = true
-				c.checkResultUses(call.Args, state, nil)
-				c.bindCheckedResults(
-					specification.Names[0],
-					specification.Names[1],
-					model,
-					state,
-				)
-				continue
+		c.checkedValueSpec(specification, state)
+	}
+}
+
+func (c *checker) checkedValueSpec(specification *ast.ValueSpec, state checkedState) {
+	if len(specification.Values) == 1 && len(specification.Names) == 1 {
+		if call, ok := specification.Values[0].(*ast.CallExpr); ok {
+			if model := c.boundarySingleCall(call); model != nil {
+				c.bindBoundaryValue([]ast.Expr{specification.Names[0]}, call, model, state)
+				return
 			}
 		}
-		expression := specification.Values[0]
-		model := c.presenceModel(expression)
-		if model != nil {
-			c.presence[expression] = true
-			c.checkResultUses([]ast.Expr{expression}, state, nil)
-			c.bindPresenceResults(
-				specification.Names[0],
-				specification.Names[1],
-				expression,
-				model,
-				state,
-			)
-			continue
-		}
-		c.checkResultUses(specification.Values, state, nil)
 	}
+	if len(specification.Values) != 1 || len(specification.Names) != 2 {
+		c.checkResultUses(specification.Values, state, nil)
+		return
+	}
+	expression := specification.Values[0]
+	if call, ok := expression.(*ast.CallExpr); ok {
+		if model := c.checkedCall(call); model != nil {
+			c.checked[call] = true
+			c.checkResultUses(call.Args, state, c.validatorArgumentSkip(call, state))
+			c.bindCheckedResults(specification.Names[0], specification.Names[1], model, state)
+			c.markValidatedResult(call, specification.Names[0], state)
+			return
+		}
+	}
+	model := c.presenceModel(expression)
+	if model == nil {
+		c.checkResultUses(specification.Values, state, nil)
+		return
+	}
+	c.presence[expression] = true
+	c.checkResultUses([]ast.Expr{expression}, state, nil)
+	c.bindPresenceResults(
+		specification.Names[0], specification.Names[1], expression, model, state,
+	)
+}
+
+func (c *checker) markValidatedResult(
+	call *ast.CallExpr,
+	value ast.Expr,
+	state checkedState,
+) {
+	if !c.validatedCall(call) {
+		return
+	}
+	object := c.pass.TypesInfo.ObjectOf(identifier(value))
+	result, found := state[object]
+	if object == nil || !found {
+		return
+	}
+	result.validated = true
+	state[object] = result
 }
 
 func (c *checker) bindCheckedResults(
@@ -362,6 +449,7 @@ func (c *checker) bindCheckedResults(
 		failure:    errorObject,
 		model:      model,
 		validProof: true,
+		boundary:   true,
 	}
 }
 
@@ -457,7 +545,16 @@ func (c *checker) bindPresenceResults(
 		validProof: true,
 		presence:   true,
 		source:     source,
+		boundary:   presenceBoundary(source),
 	}
+}
+
+func presenceBoundary(source ast.Expr) bool {
+	switch source.(type) {
+	case *ast.TypeAssertExpr, *ast.CallExpr:
+		return true
+	}
+	return false
 }
 
 func escapedBefore(
@@ -479,13 +576,8 @@ func (c *checker) localResultObject(object types.Object) bool {
 }
 
 func (c *checker) checkedReturn(statement *ast.ReturnStmt, state checkedState) {
-	if len(statement.Results) == 1 {
-		if call, ok := statement.Results[0].(*ast.CallExpr); ok &&
-			c.checkedCall(call) != nil {
-			c.checked[call] = true
-			c.checkResultUses(call.Args, state, nil)
-			return
-		}
+	if c.forwardedCallResult(statement, state) {
+		return
 	}
 	skip := make(map[*ast.Ident]bool)
 	for index := 0; index+1 < len(statement.Results); index++ {
@@ -500,6 +592,30 @@ func (c *checker) checkedReturn(statement *ast.ReturnStmt, state checkedState) {
 		}
 	}
 	c.checkResultUses(statement.Results, state, skip)
+}
+
+func (c *checker) forwardedCallResult(
+	statement *ast.ReturnStmt,
+	state checkedState,
+) bool {
+	if len(statement.Results) != 1 {
+		return false
+	}
+	call, ok := statement.Results[0].(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	if c.checkedCall(call) != nil {
+		c.checked[call] = true
+		c.checkResultUses(call.Args, state, c.validatorArgumentSkip(call, state))
+		return true
+	}
+	if c.boundarySingleCall(call) == nil {
+		return false
+	}
+	c.checked[call] = true
+	c.checkResultUses(call.Args, state, nil)
+	return true
 }
 
 func (c *checker) checkedIf(statement *ast.IfStmt, state checkedState) bool {
@@ -728,12 +844,16 @@ func (c *checker) checkResultUses(
 			continue
 		}
 		c.invalidateEscapedProofs(expression, state)
+		validatorInput := c.validatorInput(expression, state)
 		ast.Inspect(expression, func(node ast.Node) bool {
 			name, ok := node.(*ast.Ident)
 			if !ok || skip[name] {
 				return true
 			}
 			result, found := state[c.pass.TypesInfo.Uses[name]]
+			if validatorInput[name] {
+				return true
+			}
 			if found && !result.safe {
 				if result.presence {
 					c.reportModelSource(name.Pos(), result.model, result.source,
@@ -744,10 +864,69 @@ func (c *checker) checkResultUses(
 						"tgo %s %s value is used before its error is proved nil",
 						result.model.Kind, result.model.Name)
 				}
+			} else if found && result.boundary && !result.validated {
+				if c.capture != nil {
+					return true
+				}
+				c.reportModelResult(name.Pos(), result.model,
+					"tgo %s %s value is used without successful generated validation",
+					result.model.Kind, result.model.Name)
 			}
 			return true
 		})
 	}
+}
+
+func (c *checker) validatorInput(expression ast.Expr, state checkedState) map[*ast.Ident]bool {
+	call, ok := expression.(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 {
+		return nil
+	}
+	model := c.checkedCall(call)
+	if model == nil || !c.validatedCall(call) {
+		return nil
+	}
+	name := c.boundaryArgumentName(call.Args[0])
+	if name == nil {
+		return nil
+	}
+	result, found := state[c.pass.TypesInfo.ObjectOf(name)]
+	if !found || !result.safe {
+		return nil
+	}
+	return map[*ast.Ident]bool{name: true}
+}
+
+func (c *checker) boundaryArgumentName(expression ast.Expr) *ast.Ident {
+	if name := identifier(expression); name != nil {
+		return name
+	}
+	call, ok := expression.(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 || !c.pass.TypesInfo.Types[call.Fun].IsType() {
+		return nil
+	}
+	if !c.identityConversion(call) {
+		return nil
+	}
+	return identifier(call.Args[0])
+}
+
+func (c *checker) validatorArgumentSkip(
+	call *ast.CallExpr,
+	state checkedState,
+) map[*ast.Ident]bool {
+	if len(call.Args) != 1 || !c.validatedCall(call) {
+		return nil
+	}
+	name := identifier(call.Args[0])
+	if name == nil {
+		return nil
+	}
+	result, found := state[c.pass.TypesInfo.ObjectOf(name)]
+	if !found || !result.safe {
+		return nil
+	}
+	return map[*ast.Ident]bool{name: true}
 }
 
 // invalidateEscapedProofs rejects a later proof through a writable alias.
@@ -959,6 +1138,57 @@ func (c *checker) checkedCall(call *ast.CallExpr) *modelFact {
 		return nil
 	}
 	return model
+}
+
+func (c *checker) boundarySingleCall(call *ast.CallExpr) *modelFact {
+	typ := c.pass.TypesInfo.TypeOf(call)
+	if typ == nil {
+		return nil
+	}
+	_, tuple := typ.(*types.Tuple)
+	if tuple || c.pass.TypesInfo.Types[call.Fun].IsType() {
+		return nil
+	}
+	model, invalid := c.zeroInvalid(typ)
+	if !invalid || c.callHasValidationFact(call) {
+		return nil
+	}
+	return model
+}
+
+func (c *checker) validatedCall(call *ast.CallExpr) bool {
+	object := calledObject(c.pass.TypesInfo, call.Fun)
+	if object == nil {
+		return false
+	}
+	if target := c.callTarget[object]; target != nil {
+		object = target
+	}
+	if c.validated[object] {
+		return true
+	}
+	fact := new(validationFact)
+	if !c.pass.ImportObjectFact(object, fact) {
+		return false
+	}
+	c.validated[object] = true
+	return true
+}
+
+func calledObject(info *types.Info, expression ast.Expr) types.Object {
+	switch expression := expression.(type) {
+	case *ast.Ident:
+		return info.ObjectOf(expression)
+	case *ast.SelectorExpr:
+		return info.ObjectOf(expression.Sel)
+	case *ast.IndexExpr:
+		return calledObject(info, expression.X)
+	case *ast.IndexListExpr:
+		return calledObject(info, expression.X)
+	case *ast.ParenExpr:
+		return calledObject(info, expression.X)
+	}
+	return nil
 }
 
 func (c *checker) reportCheckedCall(call *ast.CallExpr) {

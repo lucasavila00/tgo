@@ -63,6 +63,20 @@ type Message struct {
     Tags map[string]string `json:"tags"` = map[string]string{}
 }
 
+type ValidationNode struct {
+    Amount Quantity
+    Next *ValidationNode
+    Other *ValidationNode
+    Items []Quantity
+    Alias []Quantity
+    Fixed [1]Quantity
+    Lookup map[string]Quantity
+    AliasLookup map[string]Quantity
+    Dynamic any
+    Numbers chan int
+    Callback func() int
+}
+
 func Personal(name string) Account {
     return Account.Personal{Name: name}
 }
