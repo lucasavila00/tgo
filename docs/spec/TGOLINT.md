@@ -26,6 +26,7 @@ A clean run means that the loaded Go packages do not contain these errors:
 - a `%T` value that is nil, unknown, zero-filled, omitted, or lost at a control-flow join;
 - a map read, channel receive, or pointer assertion used without its required proof; or
 - a sequential `iota` set that uses one defined integer type in handwritten TGo source; or
+- a manual error wrapper that has the exact behavior of postfix `!`; or
 - the same errors hidden by embedding, wrappers, function values, control flow,
   or generic constraints.
 
@@ -89,6 +90,17 @@ The `iota` modernization check requires two or more unique values. Their values 
 one from one common offset. Every value must come from `iota` or its repeated expression. The
 check excludes bit shifts and bitwise expressions because they can define combinable flags. It
 does not check `.go` files and does not offer a fix because integer values can cross a boundary.
+
+The error-return modernization check reports two adjacent statements in handwritten `.tgo`
+source. The first statement must declare only new variables from one static call. The second must
+check its error and return the same zero values and `fmt.Errorf` wrapper that postfix `!` emits.
+The function must have unnamed results that end in the Go `error` type. The local error variable
+must have no use after the branch.
+
+The wrapper text must contain the full static call name and `: %w`. Thus, `repo.Find(id)!` matches
+`fmt.Errorf("repo.Find: %w", err)`. It does not match `fmt.Errorf("Find: %w", err)`. The check does
+not report function values, assignments to existing variables, extra branch work, named results,
+nonzero returns, or different error text. It does not check `.go` files or offer a fix.
 
 ## Go boundary
 

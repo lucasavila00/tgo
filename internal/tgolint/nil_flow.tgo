@@ -86,6 +86,7 @@ func (c %checker) checkTGoSource() {
 	analysis := c.analyzeTGoPackage()
 	c.checkNilSafety(analysis)
 	c.checkIotaModernization(analysis)
+	c.checkErrorReturnModernization(analysis)
 }
 
 // analyzeTGoPackage loads TGo source once for all source checks.

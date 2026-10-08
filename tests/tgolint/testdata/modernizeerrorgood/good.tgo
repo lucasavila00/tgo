@@ -1,0 +1,179 @@
+package modernizeerrorgood
+
+import (
+	"errors"
+	"fmt"
+)
+
+type record struct{}
+
+type store struct {
+	load func() (*record, error)
+}
+
+func load() (*record, error) { return nil, nil }
+
+func loadSlice() ([]int, error) { return nil, nil }
+
+func loadMap() (map[string]int, error) { return nil, nil }
+
+func (store) Find() (*record, error) { return nil, nil }
+
+func differentContext() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load record: %w", err)
+	}
+	return value, nil
+}
+
+func shortSelector(repository store) (*record, error) {
+	value, err := repository.Find()
+	if err != nil {
+		return nil, fmt.Errorf("Find: %w", err)
+	}
+	return value, nil
+}
+
+func wrongVerb() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %v", err)
+	}
+	return value, nil
+}
+
+func extraArgument() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %w: %s", err, "failed")
+	}
+	return value, nil
+}
+
+func anotherWrapper() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return nil, errors.Join(err)
+	}
+	return value, nil
+}
+
+func extraStatement() (*record, error) {
+	value, err := load()
+	if err != nil {
+		_ = err
+		return nil, fmt.Errorf("load: %w", err)
+	}
+	return value, nil
+}
+
+func branchElse() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %w", err)
+	} else {
+		return value, nil
+	}
+}
+
+func branchInitializer() (*record, error) {
+	value, err := load()
+	if checked := err; checked != nil {
+		return nil, fmt.Errorf("load: %w", checked)
+	}
+	return value, nil
+}
+
+func changedSuccessValue() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return &record{}, fmt.Errorf("load: %w", err)
+	}
+	return value, nil
+}
+
+func namedResult() (result *record, final error) {
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %w", err)
+	}
+	return value, nil
+}
+
+func normalAssignment() (*record, error) {
+	var value *record = nil
+	var err error = nil
+	value, err = load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %w", err)
+	}
+	return value, nil
+}
+
+func mixedDeclaration() (*record, error) {
+	var value *record = nil
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %w", err)
+	}
+	return value, nil
+}
+
+func dynamicCall() (*record, error) {
+	loader := load
+	value, err := loader()
+	if err != nil {
+		return nil, fmt.Errorf("loader: %w", err)
+	}
+	return value, nil
+}
+
+func functionField(repository store) (*record, error) {
+	value, err := repository.load()
+	if err != nil {
+		return nil, fmt.Errorf("repository.load: %w", err)
+	}
+	return value, nil
+}
+
+func wrongError() (*record, error) {
+	other := errors.New("other")
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %w", other)
+	}
+	return value, nil
+}
+
+func reusedError() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %w", err)
+	}
+	if err == nil {
+		return value, nil
+	}
+	return nil, err
+}
+
+func nonzeroSlice() ([]int, error) {
+	value, err := loadSlice()
+	if err != nil {
+		return []int{}, fmt.Errorf("loadSlice: %w", err)
+	}
+	return value, nil
+}
+
+func nonzeroMap() (map[string]int, error) {
+	value, err := loadMap()
+	if err != nil {
+		return map[string]int{}, fmt.Errorf("loadMap: %w", err)
+	}
+	return value, nil
+}
+
+func propagated() (*record, error) {
+	value := load()!
+	return value, nil
+}
