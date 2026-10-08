@@ -1,0 +1,9 @@
+{
+  "name": "Go and Codex",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.codex/auth.json,target=/root/.codex/auth.json,type=bind,readonly"
+  ]
+}
