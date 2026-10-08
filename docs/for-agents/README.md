@@ -19,7 +19,9 @@ go test ./...
 
 `tgo build` checks the current package. `tgo build ./...` checks packages below it.
 Local tgo imports build first. Output goes beside each input: `model.tgo` becomes `model_tgo.go`.
-Do not edit generated files. A failed build restores the output files that it changed.
+Commit each generated file beside its tgo source. Do not edit generated files.
+A failed build restores the output files that it changed.
+The compiler removes stale generated files when their package still contains tgo source.
 
 CI checks Go style, 100-character Go lines, formatting, Go tests, end-to-end tests, and Markdown width.
 The Python tests build the CLI, compile temporary Go modules, and run their Go tests.

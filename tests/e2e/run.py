@@ -33,6 +33,30 @@ def check_direct_ffi(work):
         assert call in generated, f"generated FFI call is not direct: {call}"
 
 
+def check_stale_output_cleanup(compiler, work):
+    source = work / "app" / "obsolete.tgo"
+    output = work / "app" / "obsolete_tgo.go"
+    source.write_text("package app\n\nfunc Obsolete() int { return 1 }\n")
+    run([str(compiler), "build", "./app"], work)
+    assert output.exists(), "compiler did not write the temporary output"
+
+    source.unlink()
+    invalid = work / "z_invalid"
+    invalid.mkdir()
+    (invalid / "invalid.tgo").write_text("package invalid\n\nvar missing int\n")
+    run([str(compiler), "build", "./..."], work, success=False)
+    assert output.exists(), "failed build did not restore stale output"
+    shutil.rmtree(invalid)
+
+    run([str(compiler), "build", "./app"], work)
+    assert not output.exists(), "compiler kept stale generated output"
+
+    user_file = work / "app" / "manual_tgo.go"
+    user_file.write_text("package app\n\nfunc Manual() int { return 1 }\n")
+    run([str(compiler), "build", "./app"], work)
+    assert user_file.exists(), "compiler removed a user-owned _tgo.go file"
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="tgo-e2e-") as temporary:
         temporary = Path(temporary)
@@ -50,6 +74,8 @@ def main():
             outputs = {path: path.read_bytes() for path in work.rglob("*_tgo.go")}
             run([str(compiler), "build", "./..."], work)
             assert outputs == {path: path.read_bytes() for path in outputs}
+            if fixture.name == "business":
+                check_stale_output_cleanup(compiler, work)
             run(["go", "test", "./..."], work)
             print(f"PASS {fixture.name}")
 

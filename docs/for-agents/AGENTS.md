@@ -2,7 +2,8 @@
 
 Use `.tgo` files for business types and decisions. Use Go for the rest of the application.
 Keep Go imports and signatures. Compile with `tgo build ./...`, then run `go test ./...`.
-Do not edit generated `*_tgo.go` files. Regenerate them after each source change.
+Commit each generated `*_tgo.go` file beside its source. Do not edit generated files.
+Regenerate them after each source change.
 
 ## Sum types
 
