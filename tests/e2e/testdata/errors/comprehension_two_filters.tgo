@@ -1,0 +1,7 @@
+package errors
+
+func Values(input []int) []int {
+    return []int{for _, value := range input {
+        if value > 0 { if value < 10 { value } }
+    }}
+}

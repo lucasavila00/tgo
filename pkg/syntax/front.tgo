@@ -175,4 +175,36 @@ type frontPropagateExpr struct {
 
 func (%frontPropagateExpr) extensionNode() {}
 
+// frontComprehensionExpr keeps parsed clauses beside its Go projection.
+type frontComprehensionExpr struct {
+	frontSpan
+	Projection *ast.CompositeLit
+	Type       ast.Expr
+	Lbrace     token.Pos
+	Clauses    []frontComprehensionClause
+	Result     frontComprehensionResult
+	Rbrace     token.Pos
+}
+
+func (%frontComprehensionExpr) extensionNode() {}
+
+type frontComprehensionClause struct {
+	frontSpan
+	Kind       string
+	Keyword    token.Pos
+	Bindings  []*ast.Ident
+	Define     token.Pos
+	Range      token.Pos
+	Expression ast.Expr
+	Lbrace     token.Pos
+	Rbrace     token.Pos
+}
+
+type frontComprehensionResult struct {
+	frontSpan
+	Key   ast.Expr
+	Colon token.Pos
+	Value ast.Expr
+}
+
 

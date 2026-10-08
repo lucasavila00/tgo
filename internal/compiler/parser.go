@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"strconv"
+	"strings"
 
 	"tgo/pkg/syntax"
 )
@@ -69,8 +70,8 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		})
 		models = append(models, item)
 	}
-	edits, propagations, err := lowerSourceExtensions(
-		files, file, tree, name, matchMarker, defaultMarker, used, edits,
+	edits, propagations, comprehensions, err := lowerSourceExtensions(
+		files, file, tree, name, data, matchMarker, defaultMarker, used, edits,
 	)
 	if err != nil {
 		return nil, err
@@ -94,15 +95,16 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		return true
 	})
 	return &source{
-		Name:          name,
-		Data:          append([]byte(nil), data...),
-		Tree:          tree,
-		File:          goFile,
-		Models:        models,
-		MatchMarker:   matchMarker,
-		DefaultMarker: defaultMarker,
-		Propagations:  propagations,
-		NonNil:        nonNil,
+		Name:           name,
+		Data:           append([]byte(nil), data...),
+		Tree:           tree,
+		File:           goFile,
+		Models:         models,
+		MatchMarker:    matchMarker,
+		DefaultMarker:  defaultMarker,
+		Propagations:   propagations,
+		Comprehensions: comprehensions,
+		NonNil:         nonNil,
 	}, nil
 }
 
@@ -133,13 +135,19 @@ func lowerSourceExtensions(
 	file *token.File,
 	tree *syntax.File,
 	name string,
+	data []byte,
 	matchMarker string,
 	defaultMarker string,
 	used map[string]bool,
 	edits []edit,
-) ([]edit, map[string]propagationSource, error) {
+) ([]edit, map[string]propagationSource, map[string]comprehensionSource, error) {
 	propagations := make(map[string]propagationSource)
+	comprehensionNodes := []*syntax.ComprehensionExpression(nil)
 	for _, extension := range syntax.Extensions(tree) {
+		if node, ok := syntax.ComprehensionExpressionOf(extension); ok {
+			comprehensionNodes = append(comprehensionNodes, node)
+			continue
+		}
 		if node, ok := syntax.NonNilPointerTypeOf(extension); ok {
 			start := file.Offset(node.Percent)
 			if !coveredByEdit(edits, start) {
@@ -173,7 +181,7 @@ func lowerSourceExtensions(
 		marker := freshIdentifier("__tgo_propagate", used)
 		callName, ok := syntax.StaticCallName(node.Call.Callee)
 		if !ok {
-			return nil, nil, fmt.Errorf(
+			return nil, nil, nil, fmt.Errorf(
 				"%s: error propagation needs a short static call name",
 				files.Position(node.Bang),
 			)
@@ -194,7 +202,147 @@ func lowerSourceExtensions(
 		)
 		propagations[marker] = propagationSource{Bang: node.Bang, Name: callName}
 	}
-	return edits, propagations, nil
+	comprehensions := make(map[string]comprehensionSource)
+	for _, node := range comprehensionNodes {
+		marker := freshIdentifier("__tgo_comprehension", used)
+		result := freshIdentifier("__tgo_result", used)
+		replacement := comprehensionProjection(
+			files, file, node, data, edits, marker, result,
+		)
+		start := file.Offset(node.Start)
+		end := file.Offset(node.Stop)
+		kept := edits[:0]
+		for _, change := range edits {
+			if start <= change.start && change.end <= end {
+				continue
+			}
+			kept = append(kept, change)
+		}
+		edits = kept
+		edits = append(edits, edit{start: start, end: end, text: replacement})
+		comprehensions[marker] = comprehensionSource{
+			Position: node.Start,
+			Map:      node.Result.Key != nil,
+		}
+	}
+	return edits, propagations, comprehensions, nil
+}
+
+// comprehensionProjection makes valid Go for type checking before direct lowering.
+func comprehensionProjection(
+	files *token.FileSet,
+	file *token.File,
+	node *syntax.ComprehensionExpression,
+	data []byte,
+	edits []edit,
+	marker string,
+	result string,
+) string {
+	var output strings.Builder
+	typeText := editedSourceText(files, file, data, node.Type, edits)
+	mapResult := node.Result.Key != nil
+	output.WriteString(marker)
+	output.WriteString("(func() ")
+	output.WriteString(typeText)
+	output.WriteString(" {\n")
+	output.WriteString(result)
+	if mapResult {
+		output.WriteString(" := make(")
+		output.WriteString(typeText)
+		output.WriteString(")\n")
+	} else {
+		output.WriteString(" := make(")
+		output.WriteString(typeText)
+		output.WriteString(", 0)\n")
+	}
+	for _, clause := range node.Clauses {
+		if rangeClause, ok := syntax.ComprehensionRangeClauseOf(&clause); ok {
+			output.WriteString("for ")
+			for index, binding := range rangeClause.Bindings {
+				if index > 0 {
+					output.WriteString(", ")
+				}
+				output.WriteString(binding.Name)
+			}
+			output.WriteString(" := range ")
+			output.WriteString(editedSourceText(
+				files, file, data, rangeClause.Source, edits,
+			))
+			output.WriteString(" {\n")
+			continue
+		}
+		filter, _ := syntax.ComprehensionFilterClauseOf(&clause)
+		output.WriteString("if ")
+		output.WriteString(editedSourceText(
+			files, file, data, filter.Condition, edits,
+		))
+		output.WriteString(" {\n")
+	}
+	if mapResult {
+		output.WriteString(result)
+		output.WriteString("[")
+		output.WriteString(editedSourceText(
+			files, file, data, node.Result.Key, edits,
+		))
+		output.WriteString("] = ")
+		output.WriteString(editedSourceText(
+			files, file, data, node.Result.Value, edits,
+		))
+		output.WriteByte('\n')
+	} else {
+		output.WriteString(result)
+		output.WriteString(" = append(")
+		output.WriteString(result)
+		output.WriteString(", ")
+		output.WriteString(editedSourceText(
+			files, file, data, node.Result.Value, edits,
+		))
+		output.WriteString(")\n")
+	}
+	for range node.Clauses {
+		output.WriteString("}\n")
+	}
+	output.WriteString("return ")
+	output.WriteString(result)
+	output.WriteString("\n})")
+	return output.String()
+}
+
+func editedSourceText(
+	files *token.FileSet,
+	file *token.File,
+	data []byte,
+	expression *syntax.Expression,
+	edits []edit,
+) string {
+	start := file.Offset(syntax.ExpressionPosition(expression))
+	end := file.Offset(syntax.ExpressionEnd(expression))
+	for {
+		extended := false
+		for _, change := range edits {
+			if change.start == end && change.end > end {
+				end = change.end
+				extended = true
+			}
+		}
+		if !extended {
+			break
+		}
+	}
+	local := make([]edit, 0)
+	for _, change := range edits {
+		if change.start < start || change.end > end {
+			continue
+		}
+		local = append(local, edit{
+			start: change.start - start,
+			end:   change.end - start,
+			text:  change.text,
+		})
+	}
+	text := applyEdits(string(data[start:end]), local)
+	position := files.Position(syntax.ExpressionPosition(expression))
+	return inlineLineDirective(position.Filename, position.Line, position.Column) + text
 }
 
 func coveredByEdit(edits []edit, offset int) bool {

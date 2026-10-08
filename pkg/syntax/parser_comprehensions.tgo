@@ -1,0 +1,267 @@
+package syntax
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+)
+
+// discoverComprehensions finds collection literals whose only element is a range clause.
+func (p %sourceParser) discoverComprehensions() error {
+	for cursor := 1; cursor < len(p.tokens); cursor++ {
+		if p.tokens[cursor].kind != token.FOR ||
+			p.tokens[cursor-1].kind != token.LBRACE {
+			continue
+		}
+		open := cursor - 1
+		close, err := p.closeToken(open)
+		if err != nil {
+			return err
+		}
+		start, isLiteral := p.compositeLiteralStart(open, close)
+		if !isLiteral {
+			continue
+		}
+		item, err := p.rawComprehension(start, open, close)
+		if err != nil {
+			return err
+		}
+		p.comprehensions = append(p.comprehensions, item)
+		p.edits = append(p.edits, sourceEdit{
+			start: p.tokens[open].end,
+			end:   p.tokens[close].start,
+			text:  "",
+		})
+		cursor = close
+	}
+	return nil
+}
+
+// compositeLiteralStart distinguishes a literal body from a statement block.
+func (p %sourceParser) compositeLiteralStart(open int, close int) (int, bool) {
+	edits := append([]sourceEdit(nil), p.edits...)
+	edits = append(edits, sourceEdit{
+		start: p.tokens[open].end,
+		end:   p.tokens[close].start,
+		text:  "",
+	})
+	set := token.NewFileSet()
+	file, _ := parser.ParseFile(
+		set,
+		p.filename,
+		p.project(0, len(p.source), edits),
+		parser.SkipObjectResolution|parser.AllErrors,
+	)
+	if file == nil {
+		return 0, false
+	}
+	tokenFile := set.File(file.Package)
+	start := 0
+	found := false
+	ast.Inspect(file, func(node ast.Node) bool {
+		literal, ok := node.(*ast.CompositeLit)
+		if !ok || tokenFile.Offset(literal.Lbrace) != p.tokens[open].start {
+			return true
+		}
+		start = tokenFile.Offset(literal.Pos())
+		found = true
+		return false
+	})
+	return start, found
+}
+
+func (p %sourceParser) rawComprehension(
+	start int,
+	open int,
+	close int,
+) (*rawComprehension, error) {
+	clauses, result, err := p.rawComprehensionBody(open+1, close)
+	if err != nil {
+		return nil, err
+	}
+	seenFilter := false
+	for _, clause := range clauses {
+		if clause.kind == "filter" {
+			if seenFilter {
+				return nil, p.tokenError(
+					clause.keyword,
+					"combine comprehension filters with &&",
+				)
+			}
+			seenFilter = true
+			continue
+		}
+		if seenFilter {
+			return nil, p.tokenError(
+				clause.keyword,
+				"comprehension ranges must precede the filter",
+			)
+		}
+	}
+	return &rawComprehension{
+		start: start,
+		end: p.tokens[close].end,
+		open: open,
+		close: close,
+		clauses: clauses,
+		result: result,
+		node: nil,
+	}, nil
+}
+
+func (p %sourceParser) rawComprehensionBody(
+	start int,
+	limit int,
+) ([]*rawComprehensionClause, *rawComprehensionResult, error) {
+	start, limit = p.trimComprehensionSemicolons(start, limit)
+	if start >= limit {
+		return nil, nil, p.tokenError(limit, "comprehension block needs one item")
+	}
+	if p.tokens[start].kind != token.FOR && p.tokens[start].kind != token.IF {
+		result, err := p.rawComprehensionResult(start, limit)
+		return nil, result, err
+	}
+	bodyClose := limit - 1
+	if p.tokens[bodyClose].kind != token.RBRACE {
+		return nil, nil, p.tokenError(start, "comprehension clause needs a block")
+	}
+	bodyOpen, err := p.openToken(bodyClose)
+	if err != nil {
+		return nil, nil, err
+	}
+	clause, err := p.rawComprehensionClause(start, bodyOpen, bodyClose)
+	if err != nil {
+		return nil, nil, err
+	}
+	children, result, err := p.rawComprehensionBody(bodyOpen+1, bodyClose)
+	if err != nil {
+		return nil, nil, err
+	}
+	return append([]*rawComprehensionClause{clause}, children...), result, nil
+}
+
+func (p %sourceParser) rawComprehensionClause(
+	start int,
+	open int,
+	close int,
+) (*rawComprehensionClause, error) {
+	if p.tokens[start].kind == token.IF {
+		if start+1 >= open {
+			return nil, p.tokenError(start, "comprehension if needs a condition")
+		}
+		return &rawComprehensionClause{
+			kind: "filter", start: start, end: close + 1, keyword: start,
+			bindings: nil, define: -1, rangeToken: -1,
+			expressionStart: start + 1, expressionEnd: open,
+			open: open, close: close,
+		}, nil
+	}
+	define, rangeToken := -1, -1
+	for cursor := start + 1; cursor < open; cursor++ {
+		if p.tokens[cursor].kind == token.DEFINE {
+			define = cursor
+		}
+		if p.tokens[cursor].kind == token.RANGE {
+			rangeToken = cursor
+			break
+		}
+	}
+	if define < 0 || rangeToken != define+1 {
+		return nil, p.tokenError(start, "comprehension range must use :=")
+	}
+	bindings, err := p.comprehensionBindings(start+1, define)
+	if err != nil {
+		return nil, err
+	}
+	if rangeToken+1 >= open {
+		return nil, p.tokenError(rangeToken, "comprehension range needs a source")
+	}
+	return &rawComprehensionClause{
+		kind: "range", start: start, end: close + 1, keyword: start,
+		bindings: bindings, define: define, rangeToken: rangeToken,
+		expressionStart: rangeToken + 1, expressionEnd: open,
+		open: open, close: close,
+	}, nil
+}
+
+func (p %sourceParser) comprehensionBindings(start int, end int) ([]int, error) {
+	bindings := []int(nil)
+	expectName := true
+	for cursor := start; cursor < end; cursor++ {
+		if expectName && p.tokens[cursor].kind == token.IDENT {
+			bindings = append(bindings, cursor)
+			expectName = false
+			continue
+		}
+		if !expectName && p.tokens[cursor].kind == token.COMMA {
+			expectName = true
+			continue
+		}
+		return nil, p.tokenError(cursor, "comprehension range needs one or two names")
+	}
+	if expectName || len(bindings) == 0 || len(bindings) > 2 {
+		return nil, p.tokenError(start, "comprehension range needs one or two names")
+	}
+	return bindings, nil
+}
+
+func (p %sourceParser) rawComprehensionResult(
+	start int,
+	end int,
+) (*rawComprehensionResult, error) {
+	colon := -1
+	depth := 0
+	for cursor := start; cursor < end; cursor++ {
+		switch p.tokens[cursor].kind {
+		case token.LPAREN, token.LBRACK, token.LBRACE:
+			depth++
+		case token.RPAREN, token.RBRACK, token.RBRACE:
+			depth--
+		case token.COLON:
+			if depth == 0 {
+				if colon >= 0 {
+					return nil, p.tokenError(cursor, "comprehension result has two colons")
+				}
+				colon = cursor
+			}
+		}
+	}
+	result := &rawComprehensionResult{
+		start: start, end: end, keyStart: -1, keyEnd: -1,
+		colon: colon, valueStart: start, valueEnd: end,
+	}
+	if colon >= 0 {
+		if colon == start || colon+1 == end {
+			return nil, p.tokenError(colon, "map comprehension needs a key and value")
+		}
+		result.keyStart, result.keyEnd = start, colon
+		result.valueStart = colon + 1
+	}
+	return result, nil
+}
+
+func (p %sourceParser) trimComprehensionSemicolons(start int, end int) (int, int) {
+	for start < end && p.tokens[start].kind == token.SEMICOLON {
+		start++
+	}
+	for start < end && p.tokens[end-1].kind == token.SEMICOLON {
+		end--
+	}
+	return start, end
+}
+
+func (p %sourceParser) openToken(close int) (int, error) {
+	depth := 0
+	for cursor := close; cursor >= 0; cursor-- {
+		switch p.tokens[cursor].kind {
+		case token.RPAREN, token.RBRACK, token.RBRACE:
+			depth++
+		case token.LPAREN, token.LBRACK, token.LBRACE:
+			depth--
+			if depth == 0 {
+				return cursor, nil
+			}
+		}
+	}
+	return 0, p.tokenError(close, "unmatched %s", p.tokens[close].text)
+}

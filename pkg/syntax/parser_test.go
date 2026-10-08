@@ -96,6 +96,9 @@ start:
 	_ = (<-chan int)(channel)
 	_ = Options{Limit: 1, ..default}
 	_ = load()!
+	_ = []int{for _, value := range []int{1, 2} {
+		if value > 0 { value }
+	}}
 	if local == 0 {
 		goto start
 	}
@@ -137,7 +140,7 @@ func load() (int, error) { return 0, nil }
 		"CompositeLiteral", "Parenthesized", "Selector", "Index", "IndexList",
 		"Slice", "TypeAssertion", "Call", "Star", "NonNilPointer", "Unary", "Binary",
 		"KeyValue", "ArrayType", "StructType", "FunctionType", "InterfaceType",
-		"MapType", "ChannelType", "Default", "Propagation",
+		"MapType", "ChannelType", "Default", "Propagation", "Comprehension",
 	})
 	requireKinds(t, statements, []string{
 		"Declaration", "Empty", "Labeled", "Expression", "Send", "Increment",

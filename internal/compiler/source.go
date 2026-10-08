@@ -47,20 +47,26 @@ type model struct {
 }
 
 type source struct {
-	Name          string
-	Data          []byte
-	Tree          *syntax.File
-	File          *ast.File
-	Models        []*model
-	MatchMarker   string
-	DefaultMarker string
-	Propagations  map[string]propagationSource
-	NonNil        map[token.Pos]bool
+	Name           string
+	Data           []byte
+	Tree           *syntax.File
+	File           *ast.File
+	Models         []*model
+	MatchMarker    string
+	DefaultMarker  string
+	Propagations   map[string]propagationSource
+	Comprehensions map[string]comprehensionSource
+	NonNil         map[token.Pos]bool
 }
 
 type propagationSource struct {
 	Bang token.Pos
 	Name string
+}
+
+type comprehensionSource struct {
+	Position token.Pos
+	Map      bool
 }
 
 // requiresConstructor reports whether a model type has an invalid zero value.

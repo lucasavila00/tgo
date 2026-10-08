@@ -106,6 +106,7 @@ func isExtension(node Node) bool {
 		case ChannelType(_): return false
 		case Default(_): return true
 		case Propagation(_): return true
+		case Comprehension(_): return true
 		}
 	case TGoField(_): return true
 	case EnumVariant(_): return true
@@ -223,6 +224,22 @@ func expressionChildren(value %Expression) []Node {
 	case ChannelType(item): addExpression(item.Value.Value)
 	case Propagation(item):
 		addExpression(item.Value.Expression)
+	case Comprehension(item):
+		addExpression(item.Value.Type)
+		for _, clause := range item.Value.Clauses {
+			match clause {
+			case Range(value):
+				for _, binding := range value.Value.Bindings {
+					result = append(result, nodeIdentifier(binding))
+				}
+				addExpression(value.Value.Source)
+			case Filter(value): addExpression(value.Value.Condition)
+			}
+		}
+		if item.Value.Result.Key != nil {
+			addExpression(item.Value.Result.Key)
+		}
+		addExpression(item.Value.Result.Value)
 	}
 	return result
 }

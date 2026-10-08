@@ -81,6 +81,7 @@ type Expression enum {
 	ChannelType struct { Value %ChannelType }
 	Default struct { Value %DefaultExpression }
 	Propagation struct { Value %PropagationExpression }
+	Comprehension struct { Value %ComprehensionExpression }
 }
 
 // BadExpression is an invalid expression range.
@@ -290,6 +291,51 @@ type PropagationExpression struct {
 	Expression %Expression
 	Call       %CallExpression
 	Bang       token.Pos
+}
+
+// ComprehensionExpression builds one slice or map with a fused loop nest.
+type ComprehensionExpression struct {
+	Span
+	Type    %Expression
+	Lbrace  token.Pos
+	Clauses []ComprehensionClause
+	Result  ComprehensionResult
+	Rbrace  token.Pos
+}
+
+// ComprehensionClause is one range or filter before the result.
+type ComprehensionClause enum {
+	Range struct { Value %ComprehensionRangeClause }
+	Filter struct { Value %ComprehensionFilterClause }
+}
+
+// ComprehensionRangeClause binds one Go range source.
+type ComprehensionRangeClause struct {
+	Span
+	For      token.Pos
+	Bindings []%Identifier
+	Define   token.Pos
+	Range    token.Pos
+	Source   %Expression
+	Lbrace   token.Pos
+	Rbrace   token.Pos
+}
+
+// ComprehensionFilterClause keeps results that meet one condition.
+type ComprehensionFilterClause struct {
+	Span
+	If        token.Pos
+	Condition %Expression
+	Lbrace    token.Pos
+	Rbrace    token.Pos
+}
+
+// ComprehensionResult is the emitted value and an optional map key.
+type ComprehensionResult struct {
+	Span
+	Key   *Expression
+	Colon token.Pos
+	Value %Expression
 }
 
 // Statement contains every Go statement form plus TGo match.

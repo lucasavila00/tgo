@@ -186,6 +186,7 @@ func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
@@ -221,6 +222,7 @@ func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) 
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
@@ -256,6 +258,7 @@ func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
@@ -293,6 +296,7 @@ func sourceCompositeLiteral(
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
@@ -326,6 +330,7 @@ func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
 		case ChannelType(_): return expression
 		case Default(_): return expression
 		case Propagation(_): return expression
+		case Comprehension(_): return expression
 		}
 	}
 	return nil
@@ -409,6 +414,7 @@ func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
 	case ChannelType(_): return token.NoPos, false
 	case Default(_): return token.NoPos, false
 	case Propagation(_): return token.NoPos, false
+	case Comprehension(_): return token.NoPos, false
 	}
 }
 
