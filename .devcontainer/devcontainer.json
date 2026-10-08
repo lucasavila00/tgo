@@ -5,6 +5,11 @@
   },
   "runArgs": ["--name=go2-devcontainer"],
   "mounts": [
-    "source=${localEnv:HOME}/.codex/auth.json,target=/root/.codex/auth.json,type=bind,readonly"
-  ]
+    "source=${localEnv:HOME}/.codex/auth.json,target=/root/.codex/auth.json,type=bind,readonly",
+    "source=${localEnv:SSH_AUTH_SOCK},target=/tmp/ssh-agent,type=bind",
+    "source=${localEnv:HOME}/.ssh/known_hosts,target=/root/.ssh/known_hosts,type=bind,readonly"
+  ],
+  "remoteEnv": {
+    "SSH_AUTH_SOCK": "/tmp/ssh-agent"
+  }
 }
