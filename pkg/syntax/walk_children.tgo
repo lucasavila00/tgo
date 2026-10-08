@@ -1,10 +1,28 @@
 package syntax
 
+// functionTypeNode wraps one required function type as an expression.
+func functionTypeNode(value %FunctionType) %Expression {
+	result := Expression.FunctionType{Value: value}
+	return &result
+}
+
+// basicLiteralNode wraps one required literal as an expression.
+func basicLiteralNode(value %BasicLiteral) %Expression {
+	result := Expression.BasicLiteral{Value: value}
+	return &result
+}
+
+// blockStatementNode wraps one required block as a statement.
+func blockStatementNode(value %BlockStatement) %Statement {
+	result := Statement.Block{Value: value}
+	return &result
+}
+
 func buildPublicIndex(file %File) {
 	file.children = make(map[Node][]Node)
 	file.parents = make(map[Node]Node)
 	file.extensions = nil
-	file.attached = make(map[Node][]*CommentGroup)
+	file.attached = make(map[Node][]%CommentGroup)
 	root := nodeFile(file)
 	var add func(Node) = nil
 	add = func(node Node) {
@@ -125,9 +143,9 @@ func publicChildren(node Node) []Node {
 	}
 }
 
-func fileChildren(value *File) []Node {
+func fileChildren(value %File) []Node {
 	result := []Node(nil)
-	result = appendNode(result, nodeIdentifier(value.Name), value.Name != nil)
+	result = append(result, nodeIdentifier(value.Name))
 	for _, item := range value.Declarations {
 		result = append(result, nodeDeclaration(item))
 	}
@@ -137,40 +155,45 @@ func fileChildren(value *File) []Node {
 	return result
 }
 
-func expressionChildren(value *Expression) []Node {
+func expressionChildren(value %Expression) []Node {
 	result := []Node(nil)
-	addExpression := func(item *Expression) { if item != nil {
+	addExpression := func(item %Expression) {
 		result = append(result, nodeExpression(item))
-	} }
-	addExpressions := func(items []*Expression) { for _, item := range items {
-		addExpression(item)
+	}
+	addExpressions := func(items []%Expression) { for _, item := range items {
+		result = append(result, nodeExpression(item))
 	} }
 	match *value {
 	case Bad(_): return result
 	case Identifier(_): return result
 	case BasicLiteral(_): return result
 	case Default(_): return result
-	case Ellipsis(item): addExpression(item.Value.Element)
+	case Ellipsis(item):
+		if item.Value.Element != nil { addExpression(item.Value.Element) }
 	case FunctionLiteral(item):
-		addExpression(expressionValue(item.Value.Type))
-		result = appendNode(result, nodeStatement(statementValue(item.Value.Body)),
-			item.Value.Body != nil)
+		addExpression(functionTypeNode(item.Value.Type))
+		result = append(
+			result, nodeStatement(blockStatementNode(item.Value.Body)),
+		)
 	case CompositeLiteral(item):
-		addExpression(item.Value.Type); addExpressions(item.Value.Elements)
+		if item.Value.Type != nil { addExpression(item.Value.Type) }
+		addExpressions(item.Value.Elements)
 	case Parenthesized(item): addExpression(item.Value.Expression)
 	case Selector(item):
 		addExpression(item.Value.Expression)
-		result = appendNode(result, nodeIdentifier(item.Value.Selector),
-			item.Value.Selector != nil)
+		result = append(result, nodeIdentifier(item.Value.Selector))
 	case Index(item):
 		addExpression(item.Value.Expression); addExpression(item.Value.Index)
 	case IndexList(item):
 		addExpression(item.Value.Expression); addExpressions(item.Value.Indices)
 	case Slice(item):
-		addExpression(item.Value.Expression); addExpression(item.Value.Low)
-		addExpression(item.Value.High); addExpression(item.Value.Max)
+		addExpression(item.Value.Expression)
+		if item.Value.Low != nil { addExpression(item.Value.Low) }
+		if item.Value.High != nil { addExpression(item.Value.High) }
+		if item.Value.Max != nil { addExpression(item.Value.Max) }
 	case TypeAssertion(item):
-		addExpression(item.Value.Expression); addExpression(item.Value.Type)
+		addExpression(item.Value.Expression)
+		if item.Value.Type != nil { addExpression(item.Value.Type) }
 	case Call(item):
 		addExpression(item.Value.Callee); addExpressions(item.Value.Args)
 	case Star(item): addExpression(item.Value.Expression)
@@ -181,20 +204,20 @@ func expressionChildren(value *Expression) []Node {
 	case KeyValue(item):
 		addExpression(item.Value.Key); addExpression(item.Value.Value)
 	case ArrayType(item):
-		addExpression(item.Value.Length); addExpression(item.Value.Element)
+		if item.Value.Length != nil { addExpression(item.Value.Length) }
+		addExpression(item.Value.Element)
 	case StructType(item):
-		result = appendNode(result, nodeFieldList(item.Value.Fields),
-			item.Value.Fields != nil)
+		result = append(result, nodeFieldList(item.Value.Fields))
 	case FunctionType(item):
-		result = appendNode(result, nodeFieldList(item.Value.TypeParams),
-			item.Value.TypeParams != nil)
-		result = appendNode(result, nodeFieldList(item.Value.Params),
-			item.Value.Params != nil)
-		result = appendNode(result, nodeFieldList(item.Value.Results),
-			item.Value.Results != nil)
+		if item.Value.TypeParams != nil {
+			result = append(result, nodeFieldList(item.Value.TypeParams))
+		}
+		result = append(result, nodeFieldList(item.Value.Params))
+		if item.Value.Results != nil {
+			result = append(result, nodeFieldList(item.Value.Results))
+		}
 	case InterfaceType(item):
-		result = appendNode(result, nodeFieldList(item.Value.Methods),
-			item.Value.Methods != nil)
+		result = append(result, nodeFieldList(item.Value.Methods))
 	case MapType(item):
 		addExpression(item.Value.Key); addExpression(item.Value.Value)
 	case ChannelType(item): addExpression(item.Value.Value)
@@ -204,29 +227,27 @@ func expressionChildren(value *Expression) []Node {
 	return result
 }
 
-func statementChildren(value *Statement) []Node {
+func statementChildren(value %Statement) []Node {
 	result := []Node(nil)
-	addStatement := func(item *Statement) { if item != nil {
+	addStatement := func(item %Statement) {
+		result = append(result, nodeStatement(item))
+	}
+	addStatements := func(items []%Statement) { for _, item := range items {
 		result = append(result, nodeStatement(item))
 	} }
-	addStatements := func(items []*Statement) { for _, item := range items {
-		addStatement(item)
-	} }
-	addExpression := func(item *Expression) { if item != nil {
+	addExpression := func(item %Expression) {
 		result = append(result, nodeExpression(item))
-	} }
-	addExpressions := func(items []*Expression) { for _, item := range items {
-		addExpression(item)
+	}
+	addExpressions := func(items []%Expression) { for _, item := range items {
+		result = append(result, nodeExpression(item))
 	} }
 	match *value {
 	case Bad(_): return result
 	case Empty(_): return result
 	case Declaration(item):
-		result = appendNode(result, nodeDeclaration(item.Value.Declaration),
-			item.Value.Declaration != nil)
+		result = append(result, nodeDeclaration(item.Value.Declaration))
 	case Labeled(item):
-		result = appendNode(result, nodeIdentifier(item.Value.Label),
-			item.Value.Label != nil)
+		result = append(result, nodeIdentifier(item.Value.Label))
 		addStatement(item.Value.Statement)
 	case Expression(item): addExpression(item.Value.Expression)
 	case Send(item):
@@ -240,29 +261,40 @@ func statementChildren(value *Statement) []Node {
 		addExpression(item.Value.Call)
 	case Return(item): addExpressions(item.Value.Results)
 	case Branch(item):
-		result = appendNode(result, nodeIdentifier(item.Value.Label),
-			item.Value.Label != nil)
+		if item.Value.Label != nil {
+			result = append(result, nodeIdentifier(item.Value.Label))
+		}
 	case Block(item): addStatements(item.Value.List)
 	case If(item):
-		addStatement(item.Value.Init); addExpression(item.Value.Condition)
-		addStatement(statementValue(item.Value.Body)); addStatement(item.Value.Else)
+		if item.Value.Init != nil { addStatement(item.Value.Init) }
+		addExpression(item.Value.Condition)
+		addStatement(blockStatementNode(item.Value.Body))
+		if item.Value.Else != nil { addStatement(item.Value.Else) }
 	case Case(item):
 		addExpressions(item.Value.List); addStatements(item.Value.Body)
 	case Switch(item):
-		addStatement(item.Value.Init); addExpression(item.Value.Tag)
-		addStatement(statementValue(item.Value.Body))
+		if item.Value.Init != nil { addStatement(item.Value.Init) }
+		if item.Value.Tag != nil { addExpression(item.Value.Tag) }
+		addStatement(blockStatementNode(item.Value.Body))
 	case TypeSwitch(item):
-		addStatement(item.Value.Init); addStatement(item.Value.Assignment)
-		addStatement(statementValue(item.Value.Body))
+		if item.Value.Init != nil { addStatement(item.Value.Init) }
+		addStatement(item.Value.Assignment)
+		addStatement(blockStatementNode(item.Value.Body))
 	case Communication(item):
-		addStatement(item.Value.Communication); addStatements(item.Value.Body)
-	case Select(item): addStatement(statementValue(item.Value.Body))
+		if item.Value.Communication != nil {
+			addStatement(item.Value.Communication)
+		}
+		addStatements(item.Value.Body)
+	case Select(item): addStatement(blockStatementNode(item.Value.Body))
 	case For(item):
-		addStatement(item.Value.Init); addExpression(item.Value.Condition)
-		addStatement(item.Value.Post); addStatement(statementValue(item.Value.Body))
+		if item.Value.Init != nil { addStatement(item.Value.Init) }
+		if item.Value.Condition != nil { addExpression(item.Value.Condition) }
+		if item.Value.Post != nil { addStatement(item.Value.Post) }
+		addStatement(blockStatementNode(item.Value.Body))
 	case Range(item):
-		addExpression(item.Value.Key); addExpression(item.Value.Value)
-		addExpression(item.Value.Source); addStatement(statementValue(item.Value.Body))
+		if item.Value.Key != nil { addExpression(item.Value.Key) }
+		if item.Value.Value != nil { addExpression(item.Value.Value) }
+		addExpression(item.Value.Source); addStatement(blockStatementNode(item.Value.Body))
 	case Match(item):
 		addExpression(item.Value.Subject)
 		for _, value := range item.Value.Cases {
@@ -272,7 +304,7 @@ func statementChildren(value *Statement) []Node {
 	return result
 }
 
-func declarationChildren(value *Declaration) []Node {
+func declarationChildren(value %Declaration) []Node {
 	result := []Node(nil)
 	match *value {
 	case Bad(_): return result
@@ -283,114 +315,114 @@ func declarationChildren(value *Declaration) []Node {
 		}
 	case Function(item):
 		result = addComment(result, item.Value.Doc)
-		result = appendNode(result, nodeFieldList(item.Value.Receiver),
-			item.Value.Receiver != nil)
-		result = appendNode(result, nodeIdentifier(item.Value.Name),
-			item.Value.Name != nil)
-		result = appendNode(result, nodeExpression(expressionValue(item.Value.Type)),
-			item.Value.Type != nil)
-		result = appendNode(result, nodeStatement(statementValue(item.Value.Body)),
-			item.Value.Body != nil)
+		if item.Value.Receiver != nil {
+			result = append(result, nodeFieldList(item.Value.Receiver))
+		}
+		result = append(result, nodeIdentifier(item.Value.Name))
+		result = append(result, nodeExpression(functionTypeNode(item.Value.Type)))
+		if item.Value.Body != nil {
+			result = append(
+				result, nodeStatement(blockStatementNode(item.Value.Body)),
+			)
+		}
 	case Enum(item):
 		result = addComment(result, item.Value.Doc)
-		result = appendNode(result, nodeIdentifier(item.Value.Name),
-			item.Value.Name != nil)
+		result = append(result, nodeIdentifier(item.Value.Name))
 		for _, variant := range item.Value.Variants {
 			result = append(result, nodeEnumVariant(variant))
 		}
 		result = addComment(result, item.Value.Comment)
 	case Struct(item):
 		result = addComment(result, item.Value.Doc)
-		result = appendNode(result, nodeIdentifier(item.Value.Name),
-			item.Value.Name != nil)
+		result = append(result, nodeIdentifier(item.Value.Name))
 		for _, field := range item.Value.Fields {
 			result = append(result, nodeTGoField(field))
 		}
 		result = addComment(result, item.Value.Comment)
 	case Checked(item):
 		result = addComment(result, item.Value.Doc)
-		result = appendNode(result, nodeIdentifier(item.Value.Name),
-			item.Value.Name != nil)
-		result = appendNode(result, nodeExpression(item.Value.Base),
-			item.Value.Base != nil)
-		result = appendNode(result, nodeExpression(item.Value.Predicate),
-			item.Value.Predicate != nil)
+		result = append(result, nodeIdentifier(item.Value.Name))
+		result = append(result, nodeExpression(item.Value.Base))
+		result = append(result, nodeExpression(item.Value.Predicate))
 		result = addComment(result, item.Value.Comment)
 	}
 	return result
 }
 
-func specificationChildren(value *Specification) []Node {
+func specificationChildren(value %Specification) []Node {
 	result := []Node(nil)
 	match *value {
 	case Import(item):
 		result = addComment(result, item.Value.Doc)
-		result = appendNode(result, nodeIdentifier(item.Value.Name),
-			item.Value.Name != nil)
-		result = appendNode(result, nodeExpression(expressionValue(item.Value.Path)),
-			item.Value.Path != nil)
+		if item.Value.Name != nil {
+			result = append(result, nodeIdentifier(item.Value.Name))
+		}
+		result = append(result, nodeExpression(basicLiteralNode(item.Value.Path)))
 		result = addComment(result, item.Value.Comment)
 	case Value(item):
 		result = addComment(result, item.Value.Doc)
 		for _, name := range item.Value.Names {
 			result = append(result, nodeIdentifier(name))
 		}
-		result = appendNode(result, nodeExpression(item.Value.Type),
-			item.Value.Type != nil)
+		if item.Value.Type != nil {
+			result = append(result, nodeExpression(item.Value.Type))
+		}
 		for _, expression := range item.Value.Values {
 			result = append(result, nodeExpression(expression))
 		}
 		result = addComment(result, item.Value.Comment)
 	case Type(item):
 		result = addComment(result, item.Value.Doc)
-		result = appendNode(result, nodeIdentifier(item.Value.Name),
-			item.Value.Name != nil)
-		result = appendNode(result, nodeFieldList(item.Value.TypeParams),
-			item.Value.TypeParams != nil)
-		result = appendNode(result, nodeExpression(item.Value.Type),
-			item.Value.Type != nil)
+		result = append(result, nodeIdentifier(item.Value.Name))
+		if item.Value.TypeParams != nil {
+			result = append(result, nodeFieldList(item.Value.TypeParams))
+		}
+		result = append(result, nodeExpression(item.Value.Type))
 		result = addComment(result, item.Value.Comment)
 	}
 	return result
 }
 
-func fieldChildren(value *Field) []Node {
+func fieldChildren(value %Field) []Node {
 	result := addComment(nil, value.Doc)
 	for _, name := range value.Names {
 		result = append(result, nodeIdentifier(name))
 	}
-	result = appendNode(result, nodeExpression(value.Type), value.Type != nil)
-	result = appendNode(result, nodeExpression(expressionValue(value.Tag)),
-		value.Tag != nil)
+	result = append(result, nodeExpression(value.Type))
+	if value.Tag != nil {
+		result = append(result, nodeExpression(basicLiteralNode(value.Tag)))
+	}
 	return addComment(result, value.Comment)
 }
 
-func fieldListChildren(value *FieldList) []Node {
+func fieldListChildren(value %FieldList) []Node {
 	result := []Node(nil)
 	for _, field := range value.List { result = append(result, nodeField(field)) }
 	return result
 }
 
-func tgoFieldChildren(value *TGoField) []Node {
+func tgoFieldChildren(value %TGoField) []Node {
 	result := []Node(nil)
-	result = appendNode(result, nodeField(value.Field), value.Field != nil)
-	result = appendNode(result, nodeExpression(value.Default), value.Default != nil)
+	result = append(result, nodeField(value.Field))
+	if value.Default != nil {
+		result = append(result, nodeExpression(value.Default))
+	}
 	return result
 }
 
-func enumVariantChildren(value *EnumVariant) []Node {
+func enumVariantChildren(value %EnumVariant) []Node {
 	result := addComment(nil, value.Doc)
-	result = appendNode(result, nodeIdentifier(value.Name), value.Name != nil)
+	result = append(result, nodeIdentifier(value.Name))
 	for _, field := range value.Fields {
 		result = append(result, nodeTGoField(field))
 	}
 	return addComment(result, value.Comment)
 }
 
-func matchCaseChildren(value *MatchCase) []Node {
+func matchCaseChildren(value %MatchCase) []Node {
 	result := []Node(nil)
-	result = appendNode(result, nodeIdentifier(value.Variant), value.Variant != nil)
-	result = appendNode(result, nodeIdentifier(value.Binding), value.Binding != nil)
+	result = append(result, nodeIdentifier(value.Variant))
+	result = append(result, nodeIdentifier(value.Binding))
 	for _, statement := range value.Body {
 		result = append(result, nodeStatement(statement))
 	}
@@ -401,5 +433,8 @@ func matchCaseChildren(value *MatchCase) []Node {
 }
 
 func addComment(values []Node, value *CommentGroup) []Node {
-	return appendNode(values, nodeCommentGroup(value), value != nil)
+	if value == nil {
+		return values
+	}
+	return append(values, nodeCommentGroup(value))
 }
