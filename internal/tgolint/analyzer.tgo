@@ -97,7 +97,7 @@ func run(pass *analysis.Pass) (any, error) {
 	}
 	c.findValidationWrappers()
 	c.findValidationFunctionValues()
-	c.checkNilSafety()
+	c.checkTGoSource()
 	for _, file := range pass.Files {
 		if c.generated[file] {
 			continue

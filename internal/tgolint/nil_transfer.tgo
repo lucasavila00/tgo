@@ -12,15 +12,18 @@ func (e %nilEnvironment) transferNilAssignment(
 	state *nilFlowState,
 	statement *ast.AssignStmt,
 ) {
-	values := make([]nilValue, len(statement.Lhs))
+	values := make([]nilValue, 0, len(statement.Lhs))
+	for range statement.Lhs {
+		values = append(values, unknownNilValue())
+	}
 	sources := make([]*nilPlace, len(statement.Lhs))
 	if len(statement.Rhs) == len(statement.Lhs) {
 		for index, expression := range statement.Rhs {
 			values[index] = e.expressionNilValue(expression, state)
-			if values[index] == nilUnknown &&
+			if isUnknownNilValue(values[index]) &&
 				len(e.contractForExpression(expression)) != 0 &&
 				!e.nilExpressionCanBeAbsent(expression) {
-				values[index] = nilNonNil
+				values[index] = nonNilValue()
 			}
 			if place, ok := e.nilPlace(expression); ok {
 				sources[index] = &place

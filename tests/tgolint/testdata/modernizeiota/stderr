@@ -1,0 +1,4 @@
+modernizeiota/bad.tgo:6:21: State is an iota enum; use a TGo enum to close its variants
+modernizeiota/bad.tgo:14:20: Phase is an iota enum; use a TGo enum to close its variants
+modernizeiota/bad.tgo:21:22: Pair is an iota enum; use a TGo enum to close its variants
+modernizeiota/bad.tgo:28:17: Reset is an iota enum; use a TGo enum to close its variants

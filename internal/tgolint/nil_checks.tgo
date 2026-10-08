@@ -231,7 +231,7 @@ func (e %nilEnvironment) checkNilNamedResults(
 					e.reportNil(statement.Pos(), "bare return cannot set a non-nil result")
 				} else {
 					name := field.Names[fieldIndex]
-					if e.expressionNilValue(name, state) != nilNonNil {
+					if !isNonNilValue(e.expressionNilValue(name, state)) {
 						e.reportNil(name.Pos(), "named result is not proven non-nil")
 					}
 				}
@@ -293,7 +293,7 @@ func (e %nilEnvironment) checkNilFlow(
 		return
 	}
 	actual := e.contractForExpression(expression)
-	if expected[""] && e.expressionNilValue(expression, state) != nilNonNil {
+	if expected[""] && !isNonNilValue(e.expressionNilValue(expression, state)) {
 		e.reportNil(expression.Pos(), "value is not proven non-nil for %%T")
 	}
 	e.checkNilContractCompatibility(expression.Pos(), expected, actual)

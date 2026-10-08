@@ -17,6 +17,7 @@ Fix every diagnostic. The command checks loaded Go packages for:
 - changed, aliased, captured, or pointer enum receivers; and
 - possibly nil or unknown pointers used as `%T`;
 - unsafe `%T` zero values, literals, collections, calls, and function values; and
+- sequential `iota` sets in handwritten `.tgo` files; and
 - the same errors through control flow, wrappers, embedding, and generics.
 
 You can return an unchanged result pair. Otherwise, check `err` or `ok` before you
@@ -37,6 +38,9 @@ and unsupported expressions stay `can`. Fix both. Keep a generic function value 
 so the linter can check each call.
 Return a generic closure as a direct function literal. The checker does not yet
 follow that closure through a local variable or another helper.
+
+Replace a reported `iota` set with a TGo enum. Keep explicit integer conversion code when the
+old values are part of a stored format, protocol, or Go boundary. Bit sets remain valid.
 
 For `%T`, prove a possibly nil pointer non-nil before use. The checker follows nil comparisons,
 Boolean guards, direct aliases, branches, loops, and early exits. A comma-ok map read or channel

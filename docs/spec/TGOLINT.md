@@ -25,6 +25,7 @@ A clean run means that the loaded Go packages do not contain these errors:
 - an enum receiver that is a pointer, alias, capture, or changed value; or
 - a `%T` value that is nil, unknown, zero-filled, omitted, or lost at a control-flow join;
 - a map read, channel receive, or pointer assertion used without its required proof; or
+- a sequential `iota` set that uses one defined integer type in handwritten TGo source; or
 - the same errors hidden by embedding, wrappers, function values, control flow,
   or generic constraints.
 
@@ -83,6 +84,11 @@ an effect from the checker.
 An enum payload read needs an exhaustive switch on the same stable value. The
 default must not continue. Internal loop breaks and internal `goto` targets are
 valid. A branch that escapes the default is invalid.
+
+The `iota` modernization check requires two or more unique values. Their values must increase by
+one from one common offset. Every value must come from `iota` or its repeated expression. The
+check excludes bit shifts and bitwise expressions because they can define combinable flags. It
+does not check `.go` files and does not offer a fix because integer values can cross a boundary.
 
 ## Go boundary
 
