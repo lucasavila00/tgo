@@ -89,7 +89,7 @@ func collectJSONFields(
 		if fieldName == "" {
 			fieldName = field.Name()
 		}
-		if fieldName == name {
+		if strings.EqualFold(fieldName, name) {
 			*matches = append(*matches, jsonFieldMatch{depth: depth, tagged: tagged})
 		}
 	}

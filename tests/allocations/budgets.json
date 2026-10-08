@@ -2,13 +2,19 @@
   "directory": "tests/e2e/testdata/business",
   "package": "./model",
   "benchmarks": {
-    "BenchmarkEnumJSONMarshal/external": {"bytes": 240, "allocations": 5},
-    "BenchmarkEnumJSONMarshal/internal": {"bytes": 288, "allocations": 5},
-    "BenchmarkEnumJSONMarshal/adjacent": {"bytes": 288, "allocations": 5},
-    "BenchmarkEnumJSONMarshal/untagged": {"bytes": 112, "allocations": 5},
+    "BenchmarkEnumJSONMarshal/external": {"bytes": 320, "allocations": 6},
+    "BenchmarkEnumJSONMarshal/internal": {"bytes": 344, "allocations": 7},
+    "BenchmarkEnumJSONMarshal/adjacent": {"bytes": 352, "allocations": 6},
+    "BenchmarkEnumJSONMarshal/untagged": {"bytes": 160, "allocations": 6},
+    "BenchmarkEnumJSONMarshal/escaped-external": {"bytes": 160, "allocations": 7},
+    "BenchmarkEnumJSONMarshal/escaped-internal": {"bytes": 192, "allocations": 7},
+    "BenchmarkEnumJSONMarshal/escaped-adjacent": {"bytes": 224, "allocations": 7},
     "BenchmarkEnumJSONUnmarshal/external": {"bytes": 520, "allocations": 7},
-    "BenchmarkEnumJSONUnmarshal/internal": {"bytes": 104, "allocations": 4},
-    "BenchmarkEnumJSONUnmarshal/adjacent": {"bytes": 152, "allocations": 5},
-    "BenchmarkEnumJSONUnmarshal/untagged": {"bytes": 248, "allocations": 6}
+    "BenchmarkEnumJSONUnmarshal/internal": {"bytes": 64, "allocations": 2},
+    "BenchmarkEnumJSONUnmarshal/adjacent": {"bytes": 120, "allocations": 3},
+    "BenchmarkEnumJSONUnmarshal/untagged": {"bytes": 248, "allocations": 6},
+    "BenchmarkEnumJSONUnmarshal/escaped-external": {"bytes": 504, "allocations": 8},
+    "BenchmarkEnumJSONUnmarshal/escaped-internal": {"bytes": 568, "allocations": 12},
+    "BenchmarkEnumJSONUnmarshal/escaped-adjacent": {"bytes": 576, "allocations": 12}
   }
 }

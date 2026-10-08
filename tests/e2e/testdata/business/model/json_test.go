@@ -216,3 +216,43 @@ func TestEnumJSONNullPayloads(t *testing.T) {
 		t.Fatal("null did not select the first payload decode")
 	}
 }
+
+func TestEnumJSONInternalPayloadMethods(t *testing.T) {
+	direct := NewJSONInternalPayloadMethodValue(JSONInternalPayloadMethodValue{})
+	data, err := json.Marshal(direct)
+	if err != nil || string(data) != `{"type":"value","custom":"payload"}` {
+		t.Fatalf("direct method: %s, %v", data, err)
+	}
+	var decodedDirect JSONInternalPayloadMethod
+	input := `{"type":"value","second":2,"first":1}`
+	if err := json.Unmarshal([]byte(input), &decodedDirect); err != nil {
+		t.Fatal(err)
+	}
+	if decodedDirect.TgoValue().Seen != input {
+		t.Fatalf("direct method input = %q", decodedDirect.TgoValue().Seen)
+	}
+
+	promoted := NewJSONInternalPromotedMethodValue(
+		JSONInternalPromotedMethodValue{JSONObject: JSONObject{}},
+	)
+	data, err = json.Marshal(promoted)
+	if err != nil || string(data) != `{"type":"value","custom":"promoted"}` {
+		t.Fatalf("promoted method: %s, %v", data, err)
+	}
+	var decodedPromoted JSONInternalPromotedMethod
+	input = `{"type":"value","last":2,"first":1}`
+	if err := json.Unmarshal([]byte(input), &decodedPromoted); err != nil {
+		t.Fatal(err)
+	}
+	if decodedPromoted.TgoValue().Seen != input {
+		t.Fatalf("promoted method input = %q", decodedPromoted.TgoValue().Seen)
+	}
+
+	invalid := NewJSONInternalPayloadMethodValue(
+		JSONInternalPayloadMethodValue{Seen: "scalar"},
+	)
+	if _, err := json.Marshal(invalid); err == nil ||
+		!strings.Contains(err.Error(), "expected JSONInternalPayloadMethod JSON payload object") {
+		t.Fatalf("scalar payload error = %v", err)
+	}
+}

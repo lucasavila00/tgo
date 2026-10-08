@@ -50,17 +50,25 @@ type JSONPlain struct {
 
 
 type JSONEscaped enum `json:"internal,tag=kind\u0001"` {
-    Value struct {} `json:"name\u0001\"end"`
+    Value struct { ID string `json:"id,omitempty"` } `json:"name\u0001\"end"`
 }
 
 type JSONEscapedExternal enum {
-    Value struct {} `json:"name\u0001\"end"`
+    Value struct { ID string `json:"id,omitempty"` } `json:"name\u0001\"end"`
 }
 
 type JSONEscapedAdjacent enum `json:"adjacent,tag=kind\u0001,content=data\u0002"` {
-    Value struct {} `json:"name\u0001\"end"`
+    Value struct { ID string `json:"id,omitempty"` } `json:"name\u0001\"end"`
 }
 
 type JSONStringField enum {
     Value struct { Count int `json:"count,string"` }
+}
+
+type JSONInternalPayloadMethod enum `json:"internal,tag=type"` {
+    Value struct { Seen string `json:"-"` } `json:"value"`
+}
+
+type JSONInternalPromotedMethod enum `json:"internal,tag=type"` {
+    Value struct { JSONObject } `json:"value"`
 }

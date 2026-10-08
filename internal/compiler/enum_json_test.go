@@ -83,6 +83,9 @@ func TestEnumJSONInternalFields(t *testing.T) {
 		conflict            bool
 	}{
 		{"default name", "Type string", "", true},
+		{"folded name before", "Name string `json:\"type\"`; ID string", "", true},
+		{"folded name after", "ID string; Name string `json:\"type\"`", "", true},
+		{"folded uppercase name", "Name string `json:\"TYPE\"`", "", true},
 		{"renamed field", "Name string `json:\"Type\"`", "", true},
 		{"omitted name", "Type string `json:\",omitempty\"`", "", true},
 		{"ignored field", "Type string `json:\"-\"`", "", false},

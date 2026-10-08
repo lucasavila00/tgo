@@ -8,26 +8,43 @@ import (
 var benchmarkJSONData []byte
 
 func BenchmarkEnumJSONMarshal(b *testing.B) {
-	values := []struct {
-		name  string
-		value any
-	}{
-		{"external", NewJSONExternalCreated(JSONExternalCreated{ID: "a1"})},
-		{"internal", NewJSONInternalCreated(JSONInternalCreated{ID: "a1"})},
-		{"adjacent", NewJSONAdjacentCreated(JSONAdjacentCreated{ID: "a1"})},
-		{"untagged", NewJSONUntaggedText(JSONUntaggedText{Value: "text"})},
+	b.Run("external", func(b *testing.B) {
+		benchmarkEnumJSONMarshal(b,
+			NewJSONExternalCreated(JSONExternalCreated{ID: "a1"}))
+	})
+	b.Run("internal", func(b *testing.B) {
+		benchmarkEnumJSONMarshal(b,
+			NewJSONInternalCreated(JSONInternalCreated{ID: "a1"}))
+	})
+	b.Run("adjacent", func(b *testing.B) {
+		benchmarkEnumJSONMarshal(b,
+			NewJSONAdjacentCreated(JSONAdjacentCreated{ID: "a1"}))
+	})
+	b.Run("untagged", func(b *testing.B) {
+		benchmarkEnumJSONMarshal(b,
+			NewJSONUntaggedText(JSONUntaggedText{Value: "text"}))
+	})
+	b.Run("escaped-external", func(b *testing.B) {
+		benchmarkEnumJSONMarshal(b,
+			NewJSONEscapedExternalValue(JSONEscapedExternalValue{ID: "a1"}))
+	})
+	b.Run("escaped-internal", func(b *testing.B) {
+		benchmarkEnumJSONMarshal(b, NewJSONEscapedValue(JSONEscapedValue{ID: "a1"}))
+	})
+	b.Run("escaped-adjacent", func(b *testing.B) {
+		benchmarkEnumJSONMarshal(b,
+			NewJSONEscapedAdjacentValue(JSONEscapedAdjacentValue{ID: "a1"}))
+	})
+}
+
+func benchmarkEnumJSONMarshal[T any](b *testing.B, value T) {
+	_, _ = json.Marshal(value)
+	b.ResetTimer()
+	var data []byte
+	for b.Loop() {
+		data, _ = json.Marshal(value)
 	}
-	for _, test := range values {
-		b.Run(test.name, func(b *testing.B) {
-			_, _ = json.Marshal(test.value)
-			b.ResetTimer()
-			var data []byte
-			for b.Loop() {
-				data, _ = json.Marshal(test.value)
-			}
-			benchmarkJSONData = data
-		})
-	}
+	benchmarkJSONData = data
 }
 
 func BenchmarkEnumJSONUnmarshal(b *testing.B) {
@@ -47,6 +64,15 @@ func BenchmarkEnumJSONUnmarshal(b *testing.B) {
 		}},
 		{"untagged", []byte(`{"value":"text"}`), func() any {
 			return new(JSONUntagged)
+		}},
+		{"escaped-external", []byte(`{"name\u0001\"end":{"id":"a1"}}`), func() any {
+			return new(JSONEscapedExternal)
+		}},
+		{"escaped-internal", []byte(`{"kind\u0001":"name\u0001\"end","id":"a1"}`), func() any {
+			return new(JSONEscaped)
+		}},
+		{"escaped-adjacent", []byte(`{"kind\u0001":"name\u0001\"end","data\u0002":{"id":"a1"}}`), func() any {
+			return new(JSONEscapedAdjacent)
 		}},
 	}
 	for _, test := range tests {

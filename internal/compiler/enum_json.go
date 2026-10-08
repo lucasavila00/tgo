@@ -176,7 +176,7 @@ func emitEnumJSONUnmarshal(
 		return
 	}
 	out.WriteString("var variant string\n")
-	if config.Form != "internal" || !jsonStructFieldName(config.Tag) {
+	if config.Form != "internal" {
 		out.WriteString("var payloadData []byte\n")
 	}
 	switch {
@@ -214,32 +214,21 @@ func emitEnumJSONUnmarshal(
 				q(config.Content),
 				fmtPackage,
 				q("missing "+name+" JSON content"))
-		} else {
-			fmt.Fprintf(out,
-				"delete(object, %s)\n"+
-					"var err error\n"+
-					"payloadData, err = %s.Marshal(object)\n"+
-					"if err != nil { return err }\n",
-				q(config.Tag),
-				jsonPackage)
 		}
 	}
 	out.WriteString("switch variant {\n")
 	for _, variant := range declaration.Variants {
-		if config.Form == "internal" && jsonStructFieldName(config.Tag) {
+		if config.Form == "internal" {
 			fmt.Fprintf(out,
 				"case %s:\n"+
-					"type TgoPayload %s%s\n"+
-					"var payload TgoPayload\n"+
+					"var payload %s%s\n"+
 					"if err := %s.Unmarshal(data, &payload); err != nil { return err }\n"+
-					"*v = New%s%s(%s%s(payload))\n"+
+					"*v = New%s%s(payload)\n"+
 					"return nil\n",
 				q(variant.JSONName),
 				name,
 				variant.Name,
 				jsonPackage,
-				name,
-				variant.Name,
 				name,
 				variant.Name)
 			continue
@@ -309,20 +298,6 @@ func emitInternalJSONMarshal(
 	jsonPackage string,
 	fmtPackage string,
 ) {
-	if jsonStructFieldName(config.Tag) {
-		fmt.Fprintf(out,
-			"type TgoPayload %s%s\n"+
-				"return %s.Marshal(struct {\n"+
-				"TgoPayload\n"+
-				"Variant string %s\n"+
-				"}{TgoPayload: TgoPayload(payload), Variant: %s})\n",
-			enum,
-			variant.Name,
-			jsonPackage,
-			jsonFieldTag(config.Tag),
-			strconv.Quote(variant.JSONName))
-		return
-	}
 	prefix := "{" + jsonString(config.Tag) + ":" + jsonString(variant.JSONName)
 	fmt.Fprintf(out,
 		"payloadData, err := %s.Marshal(payload)\n"+
@@ -376,17 +351,15 @@ func emitTaggedJSONHeader(
 	}
 	fmt.Fprintf(out,
 		"var object struct {\n"+
-			"Tag %s.RawMessage %s\n%s"+
+			"Tag string %s\n%s"+
 			"}\n"+
 			"if err := %s.Unmarshal(data, &object); err != nil { return err }\n"+
-			"if object.Tag == nil { return %s.Errorf(%s) }\n"+
-			"if err := %s.Unmarshal(object.Tag, &variant); err != nil { return err }\n%s",
-		jsonPackage,
+			"if object.Tag == \"\" { return %s.Errorf(%s) }\n"+
+			"variant = object.Tag\n%s",
 		jsonFieldTag(config.Tag),
 		contentField,
 		jsonPackage,
 		fmtPackage,
 		strconv.Quote("missing "+enum+" JSON tag"),
-		jsonPackage,
 		contentCheck)
 }

@@ -25,3 +25,28 @@ func (value *JSONField) UnmarshalJSON(data []byte) error {
 	*value = JSONField(text)
 	return nil
 }
+
+type JSONObject struct {
+	Seen string `json:"-"`
+}
+
+func (JSONObject) MarshalJSON() ([]byte, error) {
+	return []byte(`{"custom":"promoted"}`), nil
+}
+
+func (value *JSONObject) UnmarshalJSON(data []byte) error {
+	value.Seen = string(data)
+	return nil
+}
+
+func (value JSONInternalPayloadMethodValue) MarshalJSON() ([]byte, error) {
+	if value.Seen == "scalar" {
+		return []byte(`"scalar"`), nil
+	}
+	return []byte(`{"custom":"payload"}`), nil
+}
+
+func (value *JSONInternalPayloadMethodValue) UnmarshalJSON(data []byte) error {
+	value.Seen = string(data)
+	return nil
+}
