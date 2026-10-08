@@ -7,13 +7,33 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"go/types"
 )
 
 // VerifyGeneratedModels verifies all model declarations that the current emitter owns.
-func VerifyGeneratedModels(sourceName string, sourceData, generatedBody []byte) error {
+func VerifyGeneratedModels(
+	sourceName string,
+	sourceData, generatedBody []byte,
+	pkg *types.Package,
+) error {
 	parsed, err := parseSource(token.NewFileSet(), sourceName, sourceData)
 	if err != nil {
 		return fmt.Errorf("parse tgo source: %w", err)
+	}
+	for _, declaration := range parsed.Models {
+		if !declaration.Enum {
+			continue
+		}
+		for _, variant := range declaration.Variants {
+			name := declaration.Name + variant.Name
+			if pkg.Scope().Lookup(name) == nil {
+				return fmt.Errorf(
+					"generated declaration type %s does not match the current emitter",
+					name,
+				)
+			}
+		}
+		enumLayout(declaration, pkg)
 	}
 	expectedFiles := token.NewFileSet()
 	expected, err := parser.ParseFile(
