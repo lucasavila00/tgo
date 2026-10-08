@@ -1,10 +1,5 @@
 # go2
 
-- [Problem](docs/problem/README.md)
-- [tgo: business types and rules that compile to Go](docs/tgo/README.md)
-- [Language specification](docs/spec/README.md)
-- [Archived: Go superset proposal](docs/archive/improvements/README.md)
-
 Build the compiler with `make build`. See [agent instructions](docs/for-agents/README.md).
 
 Run `make install-tools`, then `make ci` to check code and documents.

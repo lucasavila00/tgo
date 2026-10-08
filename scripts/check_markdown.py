@@ -11,7 +11,7 @@ if not staged:
     command += ["--others", "--exclude-standard"]
 paths = subprocess.check_output(command).split(b"\0")
 failed = False
-proposal_roots = (Path("docs/tgo"),)
+proposal_roots = (Path("docs/archive/tgo"),)
 
 for raw_path in sorted(set(paths) - {b""}):
     path = Path(os.fsdecode(raw_path))

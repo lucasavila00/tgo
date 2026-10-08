@@ -76,4 +76,4 @@ quantity, err := model.NewQuantity(3)
 Check `err` before using `quantity`. Go can create invalid zeros and change shared data.
 The generated code trusts Go callers. There are no boundary scans or read guards.
 
-[Language overview](../tgo/README.md). [Specification](../spec/README.md).
+[Language specification](../spec/README.md).

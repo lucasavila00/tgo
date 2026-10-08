@@ -96,7 +96,7 @@ No matches: nil slice. Keep Go range behavior. Grouping stays in library functio
 
 Start with error branches. Compare source size and review effort against plain Go.
 Add getters and comprehensions separately. Test effects and Go calls both ways.
-[Work and sources](../research/go/improvements/notes.md).
+[Work and sources](notes.md).
 
 [unions]: https://github.com/golang/go/issues/57644
 [comprehensions]: https://hexdocs.pm/elixir/comprehensions.html
