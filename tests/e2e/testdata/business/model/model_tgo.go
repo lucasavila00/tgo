@@ -65,6 +65,33 @@ func (v Account) TgoBusiness() AccountBusiness {
 	return v.tgoBusiness
 }
 
+// Notice requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type Notice struct {
+	tgoTag  uint8
+	tgoText NoticeText
+}
+
+// TgoTag returns the tag. Use only on a constructed value.
+func (v Notice) TgoTag() uint8 { return v.tgoTag }
+
+// NoticeText holds the variant fields. Supply every field.
+type NoticeText struct {
+	Body   string
+	Labels map[string]string
+}
+
+// NewNoticeText constructs Notice. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func NewNoticeText(value NoticeText) Notice {
+	return Notice{tgoTag: 1, tgoText: value}
+}
+
+// TgoText requires Text. No tag check.
+func (v Notice) TgoText() NoticeText {
+	return v.tgoText
+}
+
 type Request struct {
 	ID   string
 	Tags map[string]string
@@ -99,12 +126,28 @@ func Label(account Account) string {
 	}
 }
 
+func NoticeLabels(notice Notice) map[string]string {
+	{
+		__tgo_match_2 := notice
+		switch __tgo_match_2.TgoTag() {
+		case 1:
+			text := __tgo_match_2.TgoText()
+			return text.Labels
+		default:
+			panic("invalid Notice variant")
+		}
+	}
+}
+
 func NewRequest(id string) Request {
 	return Request{ID: id, Tags: TgoDefaultRequestTags()}
 }
 
 func NewMessage(id string) Message {
 	return Message{ID: id, Tags: TgoDefaultMessageTags()}
+}
+func TgoDefaultNoticeTextLabels() map[string]string {
+	return map[string]string{}
 }
 func TgoDefaultRequestTags() map[string]string {
 	return map[string]string{}

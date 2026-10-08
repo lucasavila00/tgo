@@ -68,6 +68,7 @@ func NewRequest(id string) Request {
 
 A selected map or slice literal makes fresh storage. A reference default keeps its alias.
 A supplied field skips its default. Explicit fields run first, then selected defaults in field order.
+Defaults also work on enum payload fields.
 Struct copies share reference data. Do not assume a deep copy.
 
 ## Collections

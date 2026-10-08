@@ -18,6 +18,10 @@ func Request(id string) model.Request {
     return model.Request{ID: id, ..default}
 }
 
+func Notice(body string) model.Notice {
+    return model.Notice.Text{Body: body, ..default}
+}
+
 func Sorted(values []int) []int {
     result := slices.Clone(values)
     slices.Sort(result)

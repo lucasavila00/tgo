@@ -11,6 +11,13 @@ type Account enum {
     }
 }
 
+type Notice enum {
+    Text struct {
+        Body string
+        Labels map[string]string = map[string]string{}
+    }
+}
+
 type Request struct {
     ID string
     Tags map[string]string = map[string]string{}
@@ -33,6 +40,12 @@ func Label(account Account) string {
     match account {
     case Personal(person): return person.Name
     case Business(company): return company.Company
+    }
+}
+
+func NoticeLabels(notice Notice) map[string]string {
+    match notice {
+    case Text(text): return text.Labels
     }
 }
 

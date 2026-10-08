@@ -29,6 +29,14 @@ func TestBusiness(t *testing.T) {
 	if first.Tags["shared"] != "yes" || len(second.Tags) != 0 {
 		t.Fatal("defaults lost freshness or aliases")
 	}
+	firstNotice := app.Notice("one")
+	secondNotice := app.Notice("two")
+	firstLabels := model.NoticeLabels(firstNotice)
+	firstLabels["shared"] = "yes"
+	if model.NoticeLabels(firstNotice)["shared"] != "yes" ||
+		len(model.NoticeLabels(secondNotice)) != 0 {
+		t.Fatal("variant defaults lost freshness or aliases")
+	}
 	account := model.Business("Acme", []model.Account{model.Personal("Lucas")}, first.Tags)
 	if model.Label(account) != "Acme" {
 		t.Fatal("wrong variant")

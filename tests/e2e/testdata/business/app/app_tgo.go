@@ -29,6 +29,10 @@ func Request(id string) model.Request {
 	return model.Request{ID: id, Tags: model.TgoDefaultRequestTags()}
 }
 
+func Notice(body string) model.Notice {
+	return model.NewNoticeText(model.NoticeText{Body: body, Labels: model.TgoDefaultNoticeTextLabels()})
+}
+
 func Sorted(values []int) []int {
 	result := slices.Clone(values)
 	slices.Sort(result)
