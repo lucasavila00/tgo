@@ -1,0 +1,12 @@
+package model
+
+type Large enum {
+	First struct { Data [64]byte }
+	Second struct { Data [64]byte }
+	Empty struct {}
+}
+
+type Equal enum {
+	First struct { Data [40]byte }
+	Second struct { Data [40]byte }
+}
