@@ -74,3 +74,8 @@ work") require constant clarification.
 - Define acceptance criteria from the user's request, then verify the complete result against them. Passing narrow tests does not prove a broader goal is achieved.
 - If a real blocker prevents completion, state exactly what is blocked and why. Do not manufacture a blocker or request permission to avoid already authorized work.
 - When corrected, update the implementation and verification scope immediately. Acknowledging the correction or rewriting the plan is not completion.
+
+## 6. Use STE100
+
+Always use ASD-STE100 Simplified Technical English in all writing, including
+documentation, code comments, commit messages, and responses to the user.
