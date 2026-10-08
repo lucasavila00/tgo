@@ -30,6 +30,11 @@ func namedContract() {
 	nilmodel.NeedHolder(holder)
 }
 
+func nilOuterPointer() {
+	var holder *nilmodel.Holder = nil
+	_ = holder
+}
+
 func guardAlias(value *nilmodel.Item) {
 	valid := value != nil
 	copyOfValid := valid
@@ -111,6 +116,22 @@ func channelRead(values nilmodel.ItemChan) {
 		return
 	}
 	nilmodel.Need(value)
+}
+
+func rangeValues(
+	slice nilmodel.ItemSlice,
+	mapping nilmodel.ItemMap,
+	channel nilmodel.ItemChan,
+) {
+	for _, item := range slice {
+		nilmodel.Need(item)
+	}
+	for _, item := range mapping {
+		nilmodel.Need(item)
+	}
+	for item := range channel {
+		nilmodel.Need(item)
+	}
 }
 
 func assertion(value any) {

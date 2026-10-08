@@ -8,12 +8,12 @@ type Visitor interface {
 }
 
 // Children returns direct children in source order.
-func Children(file *File, node *Node) []*Node {
+func Children(file *File, node *Node) []%Node {
 	if file == nil || node == nil {
 		return nil
 	}
 	values := file.children[*node]
-	result := make([]*Node, 0, len(values))
+	result := make([]%Node, 0, len(values))
 	for _, value := range values {
 		item := value
 		result = append(result, &item)
@@ -33,11 +33,11 @@ func Parent(file *File, node *Node) *Node {
 }
 
 // Extensions returns TGo-specific nodes in source order.
-func Extensions(file *File) []*Node {
+func Extensions(file *File) []%Node {
 	if file == nil {
 		return nil
 	}
-	result := make([]*Node, 0, len(file.extensions))
+	result := make([]%Node, 0, len(file.extensions))
 	for _, value := range file.extensions {
 		item := value
 		result = append(result, &item)
@@ -60,11 +60,15 @@ func ExtensionAt(file *File, position token.Pos) *Node {
 }
 
 // AttachedComments returns comments attached to a node.
-func AttachedComments(file *File, node *Node) []*CommentGroup {
+func AttachedComments(file *File, node *Node) []%CommentGroup {
 	if file == nil || node == nil {
 		return nil
 	}
-	return append([]*CommentGroup(nil), file.attached[*node]...)
+	var result []%CommentGroup = nil
+	for _, comment := range file.attached[*node] {
+		result = append(result, comment)
+	}
+	return result
 }
 
 // Walk visits a complete file tree.
@@ -296,35 +300,30 @@ func specificationSpan(value *Specification) Span {
 func nodeFile(value %File) Node {
 	return Node.File{Value: value}
 }
-func nodeDeclaration(value *Declaration) Node {
+func nodeDeclaration(value %Declaration) Node {
 	return Node.Declaration{Value: value}
 }
-func nodeSpecification(value *Specification) Node {
+func nodeSpecification(value %Specification) Node {
 	return Node.Specification{Value: value}
 }
-func nodeStatement(value *Statement) Node {
+func nodeStatement(value %Statement) Node {
 	return Node.Statement{Value: value}
 }
-func nodeExpression(value *Expression) Node {
+func nodeExpression(value %Expression) Node {
 	return Node.Expression{Value: value}
 }
-func nodeField(value *Field) Node { return Node.Field{Value: value} }
-func nodeFieldList(value *FieldList) Node { return Node.FieldList{Value: value} }
-func nodeTGoField(value *TGoField) Node { return Node.TGoField{Value: value} }
-func nodeEnumVariant(value *EnumVariant) Node {
+func nodeField(value %Field) Node { return Node.Field{Value: value} }
+func nodeFieldList(value %FieldList) Node { return Node.FieldList{Value: value} }
+func nodeTGoField(value %TGoField) Node { return Node.TGoField{Value: value} }
+func nodeEnumVariant(value %EnumVariant) Node {
 	return Node.EnumVariant{Value: value}
 }
-func nodeMatchCase(value *MatchCase) Node { return Node.MatchCase{Value: value} }
-func nodeIdentifier(value *Identifier) Node {
+func nodeMatchCase(value %MatchCase) Node { return Node.MatchCase{Value: value} }
+func nodeIdentifier(value %Identifier) Node {
 	return Node.Identifier{Value: value}
 }
-func nodeComment(value *Comment) Node { return Node.Comment{Value: value} }
-func nodeCommentGroup(value *CommentGroup) Node {
+func nodeComment(value %Comment) Node { return Node.Comment{Value: value} }
+func nodeCommentGroup(value %CommentGroup) Node {
 	return Node.CommentGroup{Value: value}
-}
-
-func appendNode(values []Node, value Node, present bool) []Node {
-	if present { return append(values, value) }
-	return values
 }
 
