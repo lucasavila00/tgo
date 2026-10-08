@@ -31,54 +31,116 @@ func (p *sourceParser) fields() ([]field, error) {
 }
 
 func (p *sourceParser) field(limit int) ([]field, error) {
-	start := p.cursor
-	assignment := -1
-	for p.cursor < limit && !p.has(0, token.SEMICOLON) {
-		if p.has(0, token.ASSIGN) {
-			assignment = p.cursor
-		}
-		if err := p.advance(); err != nil {
-			return nil, err
-		}
-	}
-	end := p.cursor
-	if assignment >= 0 {
-		end = assignment
-	}
-	declaration := p.text(start, end)
-	parsed, err := parser.ParseExpr("struct {" + declaration + "}")
+	span, err := p.scanField(limit)
 	if err != nil {
 		return nil, err
 	}
-	parsedField := parsed.(*ast.StructType).Fields.List[0]
-	if len(parsedField.Names) == 0 {
-		if assignment >= 0 {
+
+	declaration := p.text(span.start, span.declarationEnd())
+	parsed, err := parseField(declaration)
+	if err != nil {
+		return nil, err
+	}
+
+	defaultValue, err := p.fieldDefault(span)
+	if err != nil {
+		return nil, err
+	}
+	if len(parsed.Names) == 0 {
+		if defaultValue != "" {
 			return nil, fmt.Errorf("embedded fields cannot have defaults")
 		}
-		return []field{{Type: declaration}}, nil
+		return []field{{Type: fieldNodeText(declaration, parsed.Type)}}, nil
 	}
-	firstTypeToken := start + len(parsedField.Names)*2 - 1
-	typeText := p.text(firstTypeToken, end)
-	defaultText := ""
-	if assignment >= 0 {
-		defaultText = p.text(assignment+1, p.cursor)
-		if defaultText == "" {
-			return nil, fmt.Errorf("missing field default")
+
+	typeText := fieldNodeText(declaration, parsed.Type)
+	tag := ""
+	if parsed.Tag != nil {
+		tag = parsed.Tag.Value
+	}
+	fields := make([]field, 0, len(parsed.Names))
+	for _, name := range parsed.Names {
+		fields = append(fields, field{
+			Name:    name.Name,
+			Type:    typeText,
+			Tag:     tag,
+			Default: defaultValue,
+		})
+	}
+
+	return fields, nil
+}
+
+type fieldSpan struct {
+	start      int
+	end        int
+	assignment int
+}
+
+func (s fieldSpan) declarationEnd() int {
+	if s.assignment >= 0 {
+		return s.assignment
+	}
+	return s.end
+}
+
+func (p *sourceParser) scanField(limit int) (fieldSpan, error) {
+	span := fieldSpan{start: p.cursor, assignment: -1}
+	for p.cursor < limit && !p.has(0, token.SEMICOLON) {
+		if p.has(0, token.ASSIGN) {
+			span.assignment = p.cursor
+		}
+		if err := p.advance(); err != nil {
+			return fieldSpan{}, err
 		}
 	}
-	fields := make([]field, 0, len(parsedField.Names))
-	for _, name := range parsedField.Names {
-		fields = append(fields, field{Name: name.Name, Type: typeText, Default: defaultText})
+	span.end = p.cursor
+	return span, nil
+}
+
+func parseField(declaration string) (*ast.Field, error) {
+	const prefix = "struct {"
+	expression, err := parser.ParseExpr(prefix + declaration + "}")
+	if err != nil {
+		return nil, err
 	}
-	return fields, nil
+	structure := expression.(*ast.StructType)
+	if len(structure.Fields.List) != 1 {
+		return nil, fmt.Errorf("field declaration must define one field group")
+	}
+	return structure.Fields.List[0], nil
+}
+
+func (p *sourceParser) fieldDefault(span fieldSpan) (string, error) {
+	if span.assignment < 0 {
+		return "", nil
+	}
+	value := p.text(span.assignment+1, span.end)
+	if value == "" {
+		return "", fmt.Errorf("missing field default")
+	}
+	return value, nil
+}
+
+func fieldNodeText(declaration string, node ast.Node) string {
+	const prefixLength = len("struct {")
+	start := int(node.Pos()) - 1 - prefixLength
+	end := int(node.End()) - 1 - prefixLength
+	return declaration[start:end]
 }
 
 func fieldDecls(fields []field) string {
 	var text strings.Builder
 	for _, field := range fields {
-		text.WriteString(field.Name)
-		text.WriteByte(' ')
+		if field.Name != "" {
+			text.WriteString(field.Name)
+			text.WriteByte(' ')
+		}
 		text.WriteString(field.Type)
+		if field.Tag != "" {
+			text.WriteByte(' ')
+			text.WriteString(field.Tag)
+		}
 		text.WriteByte('\n')
 	}
 	return text.String()

@@ -70,6 +70,11 @@ type Request struct {
 	Tags map[string]string
 }
 
+type Message struct {
+	ID   string            `json:"id"`
+	Tags map[string]string `json:"tags"`
+}
+
 func Personal(name string) Account {
 	return NewAccountPersonal(AccountPersonal{Name: name})
 }
@@ -97,4 +102,9 @@ func Label(account Account) string {
 func NewRequest(id string) Request {
 	return Request{ID: id, Tags: TgoDefaultRequestTags()}
 }
+
+func NewMessage(id string) Message {
+	return Message{ID: id, Tags: TgoDefaultMessageTags()}
+}
 func TgoDefaultRequestTags() map[string]string { return map[string]string{} }
+func TgoDefaultMessageTags() map[string]string { return map[string]string{} }

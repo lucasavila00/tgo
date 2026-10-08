@@ -22,6 +22,7 @@ type edit struct {
 type field struct {
 	Name    string
 	Type    string
+	Tag     string
 	Default string
 }
 

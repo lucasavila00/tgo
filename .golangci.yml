@@ -6,11 +6,28 @@ run:
 linters:
   default: standard
   enable:
+    - cyclop
+    - dupl
+    - errorlint
+    - gocognit
     - gocritic
     - ineffassign
     - lll
+    - misspell
+    - nestif
+    - nilerr
+    - nilnesserr
+    - prealloc
+    - predeclared
     - revive
+    - unconvert
+    - unparam
+    - wastedassign
   settings:
+    cyclop:
+      max-complexity: 15
+    gocognit:
+      min-complexity: 25
     lll:
       line-length: 100
       tab-width: 4

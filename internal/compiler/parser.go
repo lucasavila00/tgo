@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
-	"slices"
-	"strings"
 )
 
 // sourceParser reads tgo extensions. The Go parser reads all other syntax.
@@ -207,66 +205,4 @@ func (p *sourceParser) toSemicolon() error {
 		}
 	}
 	return nil
-}
-
-func rewriteExpressions(name, input string) (string, error) {
-	tokens, err := lex(name, input)
-	if err != nil {
-		return "", err
-	}
-	reader := sourceParser{name: name, input: input, tokens: tokens}
-	for reader.cursor < len(tokens) {
-		switch {
-		case reader.tokens[reader.cursor].text == "match":
-			if err := reader.match(); err != nil {
-				return "", fmt.Errorf("%s: %w", name, err)
-			}
-		case reader.defaultMarker():
-			reader.edits = append(reader.edits, edit{
-				start: tokens[reader.cursor].start,
-				end:   tokens[reader.cursor+2].end,
-				text:  "__tgo_defaults: true",
-			})
-			reader.cursor += 3
-		default:
-			reader.cursor++
-		}
-	}
-	return applyEdits(input, reader.edits), nil
-}
-
-func (p *sourceParser) match() error {
-	start := p.cursor
-	p.cursor++
-	for p.cursor < len(p.tokens) && !p.has(0, token.LBRACE) {
-		if err := p.advance(); err != nil {
-			return err
-		}
-	}
-	if !p.has(0, token.LBRACE) {
-		return fmt.Errorf("match needs cases")
-	}
-	p.edits = append(p.edits,
-		edit{start: p.tokens[start].start, end: p.tokens[start].end, text: "switch __tgo_match("},
-		edit{start: p.tokens[p.cursor].start, end: p.tokens[p.cursor].start, text: ") "},
-	)
-	p.cursor++
-	return nil
-}
-
-func applyEdits(input string, edits []edit) string {
-	slices.SortStableFunc(edits, func(left, right edit) int { return left.start - right.start })
-	var output strings.Builder
-	previous := 0
-	for _, change := range edits {
-		output.WriteString(input[previous:change.start])
-		output.WriteString(change.text)
-		previous = change.end
-	}
-	output.WriteString(input[previous:])
-	return output.String()
-}
-
-func (p *sourceParser) defaultMarker() bool {
-	return p.has(0, token.PERIOD) && p.has(1, token.PERIOD) && p.has(2, token.DEFAULT)
 }

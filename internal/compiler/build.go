@@ -74,54 +74,84 @@ func moduleRoot(directory string) (string, string, error) {
 }
 
 func discover(root, module string) (map[string]*packageUnit, error) {
-	packages := make(map[string]*packageUnit)
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			if path != root && (strings.HasPrefix(entry.Name(), ".") || entry.Name() == "vendor") {
-				return filepath.SkipDir
-			}
-			if path != root {
-				if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
-					return filepath.SkipDir
-				}
-			}
-			return nil
-		}
-		if filepath.Ext(path) != ".tgo" {
-			return nil
-		}
-		directory := filepath.Dir(path)
-		relative, err := filepath.Rel(root, directory)
-		if err != nil {
-			return err
-		}
-		importPath := module
-		if relative != "." {
-			importPath += "/" + filepath.ToSlash(relative)
-		}
-		unit := packages[importPath]
-		if unit == nil {
-			unit = &packageUnit{
-				Dir: directory, Path: importPath,
-				Models: make(map[string]*model), fs: token.NewFileSet(),
-			}
-			packages[importPath] = unit
-		}
-		return unit.readSource(path)
-	})
+	discovery := packageDiscovery{
+		root:     root,
+		module:   module,
+		packages: make(map[string]*packageUnit),
+	}
+	err := filepath.WalkDir(root, discovery.visit)
 	if err != nil {
 		return nil, err
 	}
-	for _, unit := range packages {
-		unit.Imports = packages
+	for _, unit := range discovery.packages {
+		unit.Imports = discovery.packages
 		if err := unit.readGoFiles(); err != nil {
 			return nil, err
 		}
 	}
-	return packages, nil
+	return discovery.packages, nil
+}
+
+type packageDiscovery struct {
+	root     string
+	module   string
+	packages map[string]*packageUnit
+}
+
+func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) error {
+	if walkErr != nil {
+		return walkErr
+	}
+	if entry.IsDir() {
+		return d.visitDirectory(path, entry.Name())
+	}
+	if filepath.Ext(path) != ".tgo" {
+		return nil
+	}
+	return d.addSource(path)
+}
+
+func (d *packageDiscovery) visitDirectory(path, name string) error {
+	if path == d.root {
+		return nil
+	}
+	if strings.HasPrefix(name, ".") || name == "vendor" {
+		return filepath.SkipDir
+	}
+	if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+		return filepath.SkipDir
+	}
+	return nil
+}
+
+func (d *packageDiscovery) addSource(path string) error {
+	directory := filepath.Dir(path)
+	importPath, err := d.importPath(directory)
+	if err != nil {
+		return err
+	}
+	unit := d.packages[importPath]
+	if unit == nil {
+		unit = &packageUnit{
+			Dir:    directory,
+			Path:   importPath,
+			Models: make(map[string]*model),
+			fs:     token.NewFileSet(),
+		}
+		d.packages[importPath] = unit
+	}
+	return unit.readSource(path)
+}
+
+func (d *packageDiscovery) importPath(directory string) (string, error) {
+	relative, err := filepath.Rel(d.root, directory)
+	if err != nil {
+		return "", err
+	}
+	if relative == "." {
+		return d.module, nil
+	}
+	return d.module + "/" + filepath.ToSlash(relative), nil
 }
 
 func (p *packageUnit) readSource(path string) error {
@@ -184,19 +214,10 @@ func selectPackages(
 	}
 	selected := make(map[string]bool)
 	for _, pattern := range patterns {
-		recursive := strings.HasSuffix(pattern, "/...") || pattern == "..."
-		target := strings.TrimSuffix(pattern, "/...")
-		if target == "..." {
-			target = "."
-		}
-		if !filepath.IsAbs(target) {
-			target = filepath.Join(directory, target)
-		}
-		target = filepath.Clean(target)
+		target, recursive := packagePattern(directory, pattern)
 		matched := false
 		for path, unit := range packages {
-			under := strings.HasPrefix(unit.Dir, target+string(filepath.Separator))
-			if unit.Dir == target || recursive && under || path == pattern {
+			if packageMatches(unit, path, pattern, target, recursive) {
 				selected[path] = true
 				matched = true
 			}
@@ -211,6 +232,32 @@ func selectPackages(
 	}
 	sort.Strings(paths)
 	return paths, nil
+}
+
+func packagePattern(directory, pattern string) (string, bool) {
+	recursive := strings.HasSuffix(pattern, "/...") || pattern == "..."
+	target := strings.TrimSuffix(pattern, "/...")
+	if target == "..." {
+		target = "."
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(directory, target)
+	}
+	return filepath.Clean(target), recursive
+}
+
+func packageMatches(
+	unit *packageUnit,
+	path string,
+	pattern string,
+	target string,
+	recursive bool,
+) bool {
+	if path == pattern || unit.Dir == target {
+		return true
+	}
+	childPrefix := target + string(filepath.Separator)
+	return recursive && strings.HasPrefix(unit.Dir, childPrefix)
 }
 
 type buildState uint8

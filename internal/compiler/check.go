@@ -20,7 +20,7 @@ func (p *packageUnit) zero(t types.Type, seen map[types.Type]bool) bool {
 		return true
 	}
 	seen[t] = true
-	if _, m := p.modelForType(t); m != nil && m.requiresConstructor() {
+	if model := p.modelForType(t); model != nil && model.requiresConstructor() {
 		return false
 	}
 	switch x := t.(type) {
@@ -53,24 +53,31 @@ func (p *packageUnit) constraintZero(t types.Type, seen map[types.Type]bool) boo
 	for i := 0; i < iface.NumEmbeddeds(); i++ {
 		embedded := iface.EmbeddedType(i)
 		if union, ok := embedded.(*types.Union); ok {
-			valid := true
-			for j := 0; j < union.Len(); j++ {
-				if !p.zero(union.Term(j).Type(), map[types.Type]bool{}) {
-					valid = false
-				}
-			}
-			if valid {
+			if p.unionZeroValid(union) {
 				return true
 			}
-		} else if nested, ok := embedded.Underlying().(*types.Interface); ok {
+			continue
+		}
+		if nested, ok := embedded.Underlying().(*types.Interface); ok {
 			if p.constraintZero(nested, seen) {
 				return true
 			}
-		} else if p.zero(embedded, seen) {
+			continue
+		}
+		if p.zero(embedded, seen) {
 			return true
 		}
 	}
 	return false
+}
+
+func (p *packageUnit) unionZeroValid(union *types.Union) bool {
+	for i := 0; i < union.Len(); i++ {
+		if !p.zero(union.Term(i).Type(), map[types.Type]bool{}) {
+			return false
+		}
+	}
+	return true
 }
 func integer(info *types.Info, e ast.Expr) (int64, bool) {
 	if e == nil {
@@ -122,27 +129,45 @@ func parentNodes(root ast.Node) map[ast.Node]ast.Node {
 func (p *packageUnit) checkNode(node ast.Node, parents map[ast.Node]ast.Node) {
 	switch node := node.(type) {
 	case *ast.ValueSpec:
-		declaration, ok := parents[node].(*ast.GenDecl)
-		repeatedConstant := ok && declaration.Tok == token.CONST
-		if len(node.Values) == 0 && !repeatedConstant {
-			p.fail(node, "variables need an initializer")
-		}
+		p.checkValueSpec(node, parents[node])
 	case *ast.CompositeLit:
 		p.checkLiteral(node)
 	case *ast.CallExpr:
 		p.checkCall(node)
 	case *ast.SelectorExpr:
 		p.checkSelector(node)
+	default:
+		p.checkCollectionNode(node, parents)
+	}
+}
+
+func (p *packageUnit) checkValueSpec(spec *ast.ValueSpec, parent ast.Node) {
+	declaration, ok := parent.(*ast.GenDecl)
+	repeatedConstant := ok && declaration.Tok == token.CONST
+	if len(spec.Values) == 0 && !repeatedConstant {
+		p.fail(spec, "variables need an initializer")
+	}
+}
+
+func (p *packageUnit) checkCollectionNode(
+	node ast.Node,
+	parents map[ast.Node]ast.Node,
+) {
+	switch node := node.(type) {
 	case *ast.SliceExpr:
 		p.checkSlice(node, parents)
 	case *ast.IndexExpr:
 		p.checkMapRead(node, parents)
 	case *ast.UnaryExpr:
-		if node.Op == token.ARROW && !p.zeroValid(firstResult(p.info.TypeOf(node))) {
+		invalidReceive := node.Op == token.ARROW &&
+			!p.zeroValid(firstResult(p.info.TypeOf(node)))
+		if invalidReceive {
 			p.checkPresence(node, parents)
 		}
 	case *ast.TypeAssertExpr:
-		if node.Type != nil && !p.zeroValid(firstResult(p.info.TypeOf(node))) {
+		invalidAssertion := node.Type != nil &&
+			!p.zeroValid(firstResult(p.info.TypeOf(node)))
+		if invalidAssertion {
 			p.checkPresence(node, parents)
 		}
 	}
@@ -156,7 +181,7 @@ func (p *packageUnit) checkSelector(selector *ast.SelectorExpr) {
 	if pointer, ok := typ.(*types.Pointer); ok {
 		typ = pointer.Elem()
 	}
-	_, model := p.modelForType(typ)
+	model := p.modelForType(typ)
 	if model == nil || !model.requiresConstructor() {
 		return
 	}
@@ -193,8 +218,8 @@ func (p *packageUnit) checkLiteral(lit *ast.CompositeLit) {
 	if t == nil {
 		return
 	}
-	if _, m := p.modelForType(t); m != nil && m.requiresConstructor() {
-		p.fail(lit, "use a constructor for %s", m.Name)
+	if model := p.modelForType(t); model != nil && model.requiresConstructor() {
+		p.fail(lit, "use a constructor for %s", model.Name)
 		return
 	}
 	switch typ := t.Underlying().(type) {
@@ -249,79 +274,121 @@ func (p *packageUnit) checkElements(lit *ast.CompositeLit, length int64) {
 	}
 }
 func (p *packageUnit) checkCall(c *ast.CallExpr) {
-	if p.info.Types[c.Fun].IsType() {
-		if _, m := p.modelForType(p.info.TypeOf(c)); m != nil && m.requiresConstructor() {
-			p.fail(c, "use a constructor for %s", m.Name)
-		}
+	if p.checkConversion(c) {
+		return
 	}
-	id, ok := c.Fun.(*ast.Ident)
+
+	name, ok := c.Fun.(*ast.Ident)
 	if !ok {
 		return
 	}
-	if _, ok := p.info.Uses[id].(*types.Builtin); !ok {
+	if _, ok := p.info.Uses[name].(*types.Builtin); !ok {
 		return
 	}
-	switch id.Name {
+
+	switch name.Name {
 	case "new":
-		if len(c.Args) == 1 && !p.zeroValid(p.info.TypeOf(c.Args[0])) {
-			p.fail(c, "new would create an invalid zero value")
-		}
+		p.checkNew(c)
 	case "make":
-		if len(c.Args) < 2 {
-			return
-		}
-		slice, ok := p.info.TypeOf(c.Args[0]).Underlying().(*types.Slice)
-		if ok && !p.zeroValid(slice.Elem()) {
-			n, known := integer(p.info, c.Args[1])
-			if !known || n != 0 {
-				p.fail(c, "make needs constant length 0 for elements with invalid zero values")
-			}
-		}
+		p.checkMake(c)
 	case "clear":
-		if len(c.Args) == 1 {
-			slice, ok := p.info.TypeOf(c.Args[0]).Underlying().(*types.Slice)
-			if ok && !p.zeroValid(slice.Elem()) {
-				p.fail(c, "clear would create invalid slice elements")
-			}
-		}
+		p.checkClear(c)
+	}
+}
+
+func (p *packageUnit) checkConversion(call *ast.CallExpr) bool {
+	if !p.info.Types[call.Fun].IsType() {
+		return false
+	}
+	model := p.modelForType(p.info.TypeOf(call))
+	if model != nil && model.requiresConstructor() {
+		p.fail(call, "use a constructor for %s", model.Name)
+	}
+	return true
+}
+
+func (p *packageUnit) checkNew(call *ast.CallExpr) {
+	if len(call.Args) == 1 && !p.zeroValid(p.info.TypeOf(call.Args[0])) {
+		p.fail(call, "new would create an invalid zero value")
+	}
+}
+
+func (p *packageUnit) checkMake(call *ast.CallExpr) {
+	if len(call.Args) < 2 {
+		return
+	}
+	slice, ok := p.info.TypeOf(call.Args[0]).Underlying().(*types.Slice)
+	if !ok || p.zeroValid(slice.Elem()) {
+		return
+	}
+	length, constant := integer(p.info, call.Args[1])
+	if !constant || length != 0 {
+		p.fail(call, "make needs constant length 0 for elements with invalid zero values")
+	}
+}
+
+func (p *packageUnit) checkClear(call *ast.CallExpr) {
+	if len(call.Args) != 1 {
+		return
+	}
+	slice, ok := p.info.TypeOf(call.Args[0]).Underlying().(*types.Slice)
+	if ok && !p.zeroValid(slice.Elem()) {
+		p.fail(call, "clear would create invalid slice elements")
 	}
 }
 
 func (p *packageUnit) checkPresence(e ast.Expr, parents map[ast.Node]ast.Node) {
-	assign, ok := parents[e].(*ast.AssignStmt)
-	if !ok || len(assign.Rhs) != 1 || len(assign.Lhs) != 2 || assign.Tok != token.DEFINE {
+	guard, ok := p.presenceGuard(e, parents)
+	if !ok {
 		p.fail(e, "this read needs if value, ok := read; ok { ... }")
 		return
 	}
-	branch, ok := parents[assign].(*ast.IfStmt)
-	flag, flagOK := assign.Lhs[1].(*ast.Ident)
-	value, valueOK := assign.Lhs[0].(*ast.Ident)
-	var cond *ast.Ident
-	condOK := false
-	if ok {
-		cond, condOK = branch.Cond.(*ast.Ident)
-	}
-	if !ok || !flagOK || !valueOK || !condOK {
-		p.fail(e, "this read needs if value, ok := read; ok { ... }")
+	if guard.value.Name == "_" || guard.branch.Else == nil {
 		return
 	}
-	if branch.Init != assign || p.info.Uses[cond] != p.info.Defs[flag] {
-		p.fail(e, "this read needs if value, ok := read; ok { ... }")
-		return
-	}
-	if value.Name == "_" {
-		return
-	}
-	obj := p.info.Defs[value]
-	if branch.Else == nil {
-		return
-	}
-	ast.Inspect(branch.Else, func(n ast.Node) bool {
-		if id, ok := n.(*ast.Ident); ok && p.info.Uses[id] == obj {
+
+	object := p.info.Defs[guard.value]
+	ast.Inspect(guard.branch.Else, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok && p.info.Uses[id] == object {
 			p.fail(id, "value is available only in the successful presence branch")
 		}
 		return true
 	})
+}
+
+type presenceGuard struct {
+	branch *ast.IfStmt
+	value  *ast.Ident
+}
+
+func (p *packageUnit) presenceGuard(
+	read ast.Expr,
+	parents map[ast.Node]ast.Node,
+) (presenceGuard, bool) {
+	assignment, ok := parents[read].(*ast.AssignStmt)
+	if !ok || !isPresenceAssignment(assignment) {
+		return presenceGuard{}, false
+	}
+	branch, ok := parents[assignment].(*ast.IfStmt)
+	if !ok || branch.Init != assignment {
+		return presenceGuard{}, false
+	}
+	value, valueOK := assignment.Lhs[0].(*ast.Ident)
+	flag, flagOK := assignment.Lhs[1].(*ast.Ident)
+	condition, conditionOK := branch.Cond.(*ast.Ident)
+	if !valueOK || !flagOK || !conditionOK {
+		return presenceGuard{}, false
+	}
+	if p.info.Uses[condition] != p.info.Defs[flag] {
+		return presenceGuard{}, false
+	}
+	return presenceGuard{branch: branch, value: value}, true
+}
+
+func isPresenceAssignment(assignment *ast.AssignStmt) bool {
+	return assignment.Tok == token.DEFINE &&
+		len(assignment.Rhs) == 1 &&
+		len(assignment.Lhs) == 2
 }
 
 func (p *packageUnit) checkSlice(s *ast.SliceExpr, parents map[ast.Node]ast.Node) {
@@ -410,61 +477,97 @@ func (p *packageUnit) resultReads(n ast.Node, state map[types.Object]bool) {
 	})
 }
 func (p *packageUnit) resultBlock(list []ast.Stmt, state map[types.Object]bool) bool {
-	for _, stmt := range list {
-		switch x := stmt.(type) {
-		case *ast.AssignStmt:
-			for _, e := range x.Rhs {
-				p.resultReads(e, state)
-			}
-			for _, e := range x.Lhs {
-				id, ok := e.(*ast.Ident)
-				if ok && (x.Tok == token.ASSIGN || x.Tok == token.DEFINE) {
-					obj := p.info.ObjectOf(id)
-					if _, found := state[obj]; found {
-						state[obj] = true
-					}
-				} else {
-					p.resultReads(e, state)
-				}
-			}
-		case *ast.ReturnStmt:
-			if len(x.Results) == 0 {
-				for obj, valid := range state {
-					if !valid {
-						p.fail(x, "named result %s needs an assignment before return", obj.Name())
-					}
-				}
-			}
-			for _, e := range x.Results {
-				p.resultReads(e, state)
-			}
+	for _, statement := range list {
+		if p.resultStatement(statement, state) {
 			return true
-		case *ast.BlockStmt:
-			if p.resultBlock(x.List, state) {
-				return true
-			}
-		case *ast.IfStmt:
-			if x.Init != nil {
-				p.resultBlock([]ast.Stmt{x.Init}, state)
-			}
-			p.resultReads(x.Cond, state)
-			yes, no := cloneState(state), cloneState(state)
-			yesReturns := p.resultBlock(x.Body.List, yes)
-			noReturns := false
-			if x.Else != nil {
-				noReturns = p.resultBlock([]ast.Stmt{x.Else}, no)
-			}
-			for k := range state {
-				state[k] = (yes[k] || yesReturns) && (no[k] || noReturns)
-			}
-			if yesReturns && noReturns {
-				return true
-			}
-		default:
-			p.resultReads(stmt, state)
 		}
 	}
 	return false
+}
+
+func (p *packageUnit) resultStatement(
+	statement ast.Stmt,
+	state map[types.Object]bool,
+) bool {
+	switch statement := statement.(type) {
+	case *ast.AssignStmt:
+		p.resultAssignment(statement, state)
+	case *ast.ReturnStmt:
+		p.resultReturn(statement, state)
+		return true
+	case *ast.BlockStmt:
+		return p.resultBlock(statement.List, state)
+	case *ast.IfStmt:
+		return p.resultIf(statement, state)
+	default:
+		p.resultReads(statement, state)
+	}
+	return false
+}
+
+func (p *packageUnit) resultAssignment(
+	assignment *ast.AssignStmt,
+	state map[types.Object]bool,
+) {
+	for _, expression := range assignment.Rhs {
+		p.resultReads(expression, state)
+	}
+	for _, expression := range assignment.Lhs {
+		name, ok := expression.(*ast.Ident)
+		plainAssignment := assignment.Tok == token.ASSIGN || assignment.Tok == token.DEFINE
+		if !ok || !plainAssignment {
+			p.resultReads(expression, state)
+			continue
+		}
+		object := p.info.ObjectOf(name)
+		if _, found := state[object]; found {
+			state[object] = true
+		}
+	}
+}
+
+func (p *packageUnit) resultReturn(
+	statement *ast.ReturnStmt,
+	state map[types.Object]bool,
+) {
+	if len(statement.Results) == 0 {
+		for object, initialized := range state {
+			if !initialized {
+				p.fail(
+					statement,
+					"named result %s needs an assignment before return",
+					object.Name(),
+				)
+			}
+		}
+	}
+	for _, expression := range statement.Results {
+		p.resultReads(expression, state)
+	}
+}
+
+func (p *packageUnit) resultIf(
+	statement *ast.IfStmt,
+	state map[types.Object]bool,
+) bool {
+	if statement.Init != nil {
+		p.resultStatement(statement.Init, state)
+	}
+	p.resultReads(statement.Cond, state)
+
+	trueState := cloneState(state)
+	falseState := cloneState(state)
+	trueReturns := p.resultBlock(statement.Body.List, trueState)
+	falseReturns := false
+	if statement.Else != nil {
+		falseReturns = p.resultStatement(statement.Else, falseState)
+	}
+	for object := range state {
+		truePath := trueState[object] || trueReturns
+		falsePath := falseState[object] || falseReturns
+		state[object] = truePath && falsePath
+	}
+	return trueReturns && falseReturns
 }
 
 func (p *packageUnit) isLength(expression, slice ast.Expr) bool {
@@ -485,38 +588,53 @@ func firstResult(typ types.Type) types.Type {
 
 // A bound test stops proving a bound when either operand can change.
 func (p *packageUnit) boundUnchanged(body *ast.BlockStmt, slice *ast.SliceExpr) bool {
-	unchanged := true
+	changed := false
 	ast.Inspect(body, func(node ast.Node) bool {
 		if node == nil || node.Pos() >= slice.Pos() {
 			return false
 		}
-		switch node := node.(type) {
-		case *ast.AssignStmt:
-			for _, left := range node.Lhs {
-				if p.same(left, slice.X) || p.same(left, slice.High) {
-					unchanged = false
-				}
-			}
-		case *ast.IncDecStmt:
-			if p.same(node.X, slice.High) {
-				unchanged = false
-			}
-		case *ast.CallExpr:
-			name, ok := node.Fun.(*ast.Ident)
-			if !ok {
-				unchanged = false
-				break
-			}
-			_, builtin := p.info.Uses[name].(*types.Builtin)
-			if !builtin || name.Name != "len" && name.Name != "cap" {
-				unchanged = false
-			}
-		case *ast.UnaryExpr:
-			if node.Op == token.AND && (p.same(node.X, slice.High) || p.same(node.X, slice.X)) {
-				unchanged = false
-			}
+		if p.changesBound(node, slice) {
+			changed = true
+			return false
 		}
-		return unchanged
+		return true
 	})
-	return unchanged
+	return !changed
+}
+
+func (p *packageUnit) changesBound(node ast.Node, slice *ast.SliceExpr) bool {
+	switch node := node.(type) {
+	case *ast.AssignStmt:
+		return p.assignmentChangesBound(node, slice)
+	case *ast.IncDecStmt:
+		return p.same(node.X, slice.High)
+	case *ast.CallExpr:
+		return p.callMayChangeBound(node)
+	case *ast.UnaryExpr:
+		return node.Op == token.AND &&
+			(p.same(node.X, slice.High) || p.same(node.X, slice.X))
+	default:
+		return false
+	}
+}
+
+func (p *packageUnit) assignmentChangesBound(
+	assignment *ast.AssignStmt,
+	slice *ast.SliceExpr,
+) bool {
+	for _, left := range assignment.Lhs {
+		if p.same(left, slice.X) || p.same(left, slice.High) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *packageUnit) callMayChangeBound(call *ast.CallExpr) bool {
+	name, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return true
+	}
+	_, builtin := p.info.Uses[name].(*types.Builtin)
+	return !builtin || name.Name != "len" && name.Name != "cap"
 }

@@ -46,7 +46,7 @@ func (p *packageUnit) lowerMatch(statement *ast.SwitchStmt, tag *ast.CallExpr) a
 		p.fail(statement, "match needs one value")
 		return statement
 	}
-	_, model := p.modelForType(p.info.TypeOf(tag.Args[0]))
+	model := p.modelForType(p.info.TypeOf(tag.Args[0]))
 	if model == nil || len(model.Variants) == 0 {
 		p.fail(statement, "match needs an enum value")
 		return statement

@@ -86,20 +86,20 @@ func transform(node ast.Node, change func(ast.Node) ast.Node) ast.Node {
 	})
 }
 
-func (p *packageUnit) modelForType(t types.Type) (*packageUnit, *model) {
+func (p *packageUnit) modelForType(t types.Type) *model {
 	t = types.Unalias(t)
 	n, ok := t.(*types.Named)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	owner := p
 	if n.Obj().Pkg() != nil && n.Obj().Pkg().Path() != p.Path {
 		owner = p.Imports[n.Obj().Pkg().Path()]
 	}
 	if owner == nil {
-		return nil, nil
+		return nil
 	}
-	return owner, owner.Models[n.Obj().Name()]
+	return owner.Models[n.Obj().Name()]
 }
 
 func (p *packageUnit) modelExpr(f *ast.File, e ast.Expr) (*packageUnit, *model, string) {

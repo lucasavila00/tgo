@@ -16,6 +16,11 @@ type Request struct {
     Tags map[string]string = map[string]string{}
 }
 
+type Message struct {
+    ID string `json:"id"`
+    Tags map[string]string `json:"tags"` = map[string]string{}
+}
+
 func Personal(name string) Account {
     return Account.Personal{Name: name}
 }
@@ -33,4 +38,8 @@ func Label(account Account) string {
 
 func NewRequest(id string) Request {
     return Request{ID: id, ..default}
+}
+
+func NewMessage(id string) Message {
+    return Message{ID: id, ..default}
 }

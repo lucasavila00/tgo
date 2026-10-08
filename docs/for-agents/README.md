@@ -91,6 +91,10 @@ The next checkpoint adds nested matches, presence tests for maps, channels, and 
 bounded reslicing, overlapping copy, and map clearing. Sixteen invalid-source cases are tested.
 A changed bound loses its prior proof. No new runtime bound guard is generated.
 
+The parser checkpoint separates declarations, fields, and expression rewrites.
+Field parsing uses Go syntax data for types and tags. CI checks 100-character Go lines,
+complexity, duplication, error handling, formatting, and unused code.
+
 The implementation is still in progress. More control-flow forms, Go type forms, source error
 positions, package build edge cases, and cost comparisons need more tests and work.
 Do not treat a passing initial test suite as proof of every rule in the proposal.

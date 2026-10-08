@@ -119,7 +119,7 @@ func typeQualifier(expression ast.Expr) string {
 }
 
 func (p *packageUnit) literalFields(typ types.Type) (string, []field) {
-	if _, model := p.modelForType(typ); model != nil {
+	if model := p.modelForType(typ); model != nil {
 		return model.Name, model.Fields
 	}
 	named, ok := types.Unalias(typ).(*types.Named)

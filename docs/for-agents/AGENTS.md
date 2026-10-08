@@ -52,6 +52,7 @@ Choose overflow behavior for the business task; a constructor does not prevent a
 
 Initialize each variable. Supply every struct field, or select declared defaults with `..default`.
 Use defaults for optional construction data. Keep required business data explicit.
+Go struct tags stay on generated fields.
 
 ```text
 type Request struct {
