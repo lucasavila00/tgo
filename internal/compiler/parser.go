@@ -159,6 +159,11 @@ func lineDirective(name string, line, column int) string {
 	return fmt.Sprintf("//line %s:%d:%d\n", name, line, column)
 }
 
+// inlineLineDirective maps the token after it without adding a source line.
+func inlineLineDirective(name string, line, column int) string {
+	return fmt.Sprintf("/*line %s:%d:%d*/", name, line, column)
+}
+
 // enumDeclaration parses variants and emits their Go representation.
 func (p *sourceParser) enumDeclaration(declaration *model) (string, error) {
 	enumToken := p.cursor
@@ -192,7 +197,7 @@ func (p *sourceParser) enumDeclaration(declaration *model) (string, error) {
 		return "", p.errorAt(enumToken, "enum %s has no variants", declaration.Name)
 	}
 	p.cursor = end + 1
-	return enumGo(declaration), nil
+	return enumGo(p.name, declaration), nil
 }
 
 // variant parses one named enum payload.
@@ -217,7 +222,7 @@ func (p *sourceParser) structDeclaration(declaration *model) (string, error) {
 		return "", err
 	}
 	declaration.Fields = fields
-	text := "type " + declaration.Name + " struct {\n" + fieldDecls(fields) + "}"
+	text := "type " + declaration.Name + " struct {\n" + fieldDecls(p.name, fields) + "}"
 	return text, nil
 }
 
@@ -227,6 +232,8 @@ func (p *sourceParser) checkedDeclaration(declaration *model) (string, error) {
 	for p.cursor < len(p.tokens) && !p.has(0, token.SEMICOLON) {
 		if p.tokens[p.cursor].text == "where" {
 			declaration.Base = p.text(start, p.cursor)
+			declaration.BaseLine = p.tokens[start].line
+			declaration.BaseColumn = p.tokens[start].column
 			p.cursor++
 			predicate := p.cursor
 			if predicate < len(p.tokens) {

@@ -114,7 +114,9 @@ func removeLineDirectives(file *ast.File) {
 	for _, group := range file.Comments {
 		comments := group.List[:0]
 		for _, comment := range group.List {
-			if !strings.HasPrefix(comment.Text, "//line ") {
+			lineComment := strings.HasPrefix(comment.Text, "//line ")
+			blockComment := strings.HasPrefix(comment.Text, "/*line ")
+			if !lineComment && !blockComment {
 				comments = append(comments, comment)
 			}
 		}

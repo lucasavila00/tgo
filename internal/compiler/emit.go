@@ -7,7 +7,7 @@ import (
 )
 
 // enumGo emits the tagged Go representation for one tgo enum.
-func enumGo(declaration *model) string {
+func enumGo(sourceName string, declaration *model) string {
 	var output strings.Builder
 	name := declaration.Name
 	fmt.Fprintf(&output, "// %s requires a variant constructor. Its zero value is invalid.\n", name)
@@ -21,18 +21,29 @@ func enumGo(declaration *model) string {
 	output.WriteString("// TgoTag returns the tag. Use only on a constructed value.\n")
 	fmt.Fprintf(&output, "func (v %s) TgoTag() %s { return v.tgoTag }\n", name, tagType)
 	for index, variant := range declaration.Variants {
-		emitVariant(&output, name, variant, index+1)
+		emitVariant(&output, sourceName, name, variant, index+1)
 	}
 	return output.String()
 }
 
 // emitVariant emits one payload type, constructor, and payload accessor.
-func emitVariant(output *strings.Builder, enum string, variant variant, tag int) {
+func emitVariant(
+	output *strings.Builder,
+	sourceName string,
+	enum string,
+	variant variant,
+	tag int,
+) {
 	payload := enum + variant.Name
 	constructor := "New" + payload
 	accessor := "Tgo" + variant.Name
 	fmt.Fprintf(output, "// %s holds the variant fields. Supply every field.\n", payload)
-	fmt.Fprintf(output, "type %s struct {\n%s}\n", payload, fieldDecls(variant.Fields))
+	fmt.Fprintf(
+		output,
+		"type %s struct {\n%s}\n",
+		payload,
+		fieldDecls(sourceName, variant.Fields),
+	)
 	fmt.Fprintf(output, "// %s constructs %s. Model fields must be valid.\n", constructor, enum)
 	output.WriteString("// Shared fields keep their aliases and caller duties.\n")
 	fmt.Fprintf(output, "func %s(value %s) %s {\n", constructor, payload, enum)
@@ -48,7 +59,9 @@ func checkedGo(sourceName string, declaration *model) string {
 	name := declaration.Name
 	fmt.Fprintf(&output, "// %s requires New%s success. Zero is invalid.\n", name, name)
 	output.WriteString("// Shared data keeps Go aliases. Callers must keep the rule.\n")
-	fmt.Fprintf(&output, "type %s struct { value %s }\n", name, declaration.Base)
+	baseColumn := declaration.BaseColumn - len("value ")
+	directive := inlineLineDirective(sourceName, declaration.BaseLine, baseColumn)
+	fmt.Fprintf(&output, "type %s struct { %svalue %s }\n", name, directive, declaration.Base)
 	fmt.Fprintf(&output, "type tgo%sError struct {}\n", name)
 	message := strconv.Quote("invalid " + name)
 	fmt.Fprintf(&output, "func (tgo%sError) Error() string { return %s }\n", name, message)

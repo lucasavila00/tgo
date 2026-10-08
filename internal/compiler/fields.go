@@ -48,14 +48,22 @@ func (p *sourceParser) field(limit int) ([]field, error) {
 	if err != nil {
 		return nil, err
 	}
+	typeStart, typeEnd := fieldNodeOffsets(parsed.Type)
+	typeText := declaration[typeStart:typeEnd]
+	typeLine, typeColumn := p.positionAt(
+		p.tokens[span.start].start + typeStart,
+	)
 	if len(parsed.Names) == 0 {
 		if defaultValue != "" {
 			return nil, p.errorAt(span.start, "embedded fields cannot have defaults")
 		}
-		return []field{{Type: fieldNodeText(declaration, parsed.Type)}}, nil
+		return []field{{
+			Type:       typeText,
+			TypeLine:   typeLine,
+			TypeColumn: typeColumn,
+		}}, nil
 	}
 
-	typeText := fieldNodeText(declaration, parsed.Type)
 	tag := ""
 	if parsed.Tag != nil {
 		tag = parsed.Tag.Value
@@ -74,12 +82,24 @@ func (p *sourceParser) field(limit int) ([]field, error) {
 			Type:          typeText,
 			Tag:           tag,
 			Default:       defaultValue,
+			TypeLine:      typeLine,
+			TypeColumn:    typeColumn,
 			DefaultLine:   defaultLine,
 			DefaultColumn: defaultColumn,
 		})
 	}
 
 	return fields, nil
+}
+
+// positionAt returns the source position of a token byte offset.
+func (p *sourceParser) positionAt(offset int) (int, int) {
+	for _, item := range p.tokens {
+		if item.start == offset {
+			return item.line, item.column
+		}
+	}
+	return 0, 0
 }
 
 type fieldSpan struct {
@@ -137,22 +157,25 @@ func (p *sourceParser) fieldDefault(span fieldSpan) (string, error) {
 	return value, nil
 }
 
-// fieldNodeText extracts an AST node from the original field text.
-func fieldNodeText(declaration string, node ast.Node) string {
+// fieldNodeOffsets maps a parsed field node back into its field text.
+func fieldNodeOffsets(node ast.Node) (int, int) {
 	const prefixLength = len("struct {")
 	start := int(node.Pos()) - 1 - prefixLength
 	end := int(node.End()) - 1 - prefixLength
-	return declaration[start:end]
+	return start, end
 }
 
-// fieldDecls emits Go field declarations without tgo defaults.
-func fieldDecls(fields []field) string {
+// fieldDecls emits mapped Go field declarations without tgo defaults.
+func fieldDecls(sourceName string, fields []field) string {
 	var text strings.Builder
 	for _, field := range fields {
+		prefix := ""
 		if field.Name != "" {
-			text.WriteString(field.Name)
-			text.WriteByte(' ')
+			prefix = field.Name + " "
 		}
+		column := field.TypeColumn - len(prefix)
+		text.WriteString(inlineLineDirective(sourceName, field.TypeLine, column))
+		text.WriteString(prefix)
 		text.WriteString(field.Type)
 		if field.Tag != "" {
 			text.WriteByte(' ')

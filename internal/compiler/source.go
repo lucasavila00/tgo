@@ -26,6 +26,8 @@ type field struct {
 	Type          string
 	Tag           string
 	Default       string
+	TypeLine      int
+	TypeColumn    int
 	DefaultLine   int
 	DefaultColumn int
 }
@@ -40,6 +42,8 @@ type model struct {
 	Line            int
 	Column          int
 	Base            string
+	BaseLine        int
+	BaseColumn      int
 	Predicate       string
 	PredicateLine   int
 	PredicateColumn int
