@@ -124,4 +124,5 @@ A declared constructor check stays. Hidden read checks, validation wrappers, and
 Compare time, allocations, layout size, and generated calls. Reject costly layouts or helpers.
 The enum layout and accessor calls still need this proof. No performance result is claimed yet.
 
+[Language specification](../spec/README.md).
 [Rules, tradeoffs, and sources](../research/go/tgo/notes.md).
