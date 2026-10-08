@@ -55,6 +55,12 @@ Go semicolon insertion applies. A qualified variant literal starts with a packag
 model.Account.Personal{Name: "Lucas"}
 ```
 
+`match` is a contextual keyword at the start of a match statement.
+An identifier named `match` keeps its Go meaning in other positions.
+`enum` is contextual before an enum body. `where` is contextual after a checked base type.
+These names keep their Go meaning in other positions.
+An immediate line break after a contextual keyword does not insert a semicolon.
+
 ## Enum types
 
 An enum declares a closed set of variants. Each variant has a struct payload.
@@ -342,6 +348,34 @@ error values, typed nils, and object identity keep their Go behavior.
 No boundary adapter, scan, copy, or validation runs. Go code can create an invalid enum or
 checked zero. It can also invalidate shared data after a tgo call. This violates the generated
 type comments, but the runtime does not detect every violation.
+
+### Foreign value contract
+
+Every path that can supply a generated value without tgo checks is a trust boundary. These
+paths include ordinary Go, cgo, `unsafe`, reflection, decoders, stored data, and callbacks.
+The compiler and `tgolint` cannot prove that a value from one of these paths is valid.
+`tgolint` does check that Go code proves the matching error is nil before it uses the value.
+
+An FFI or boundary module must validate and reconstruct each model value on ingress:
+
+- For a checked value, read its base value and call its constructor again. Use the returned
+  value only when the error is nil. This runs the predicate and replaces a foreign wrapper.
+- For an enum, reject an unknown tag. For each known tag, read only its matching payload,
+  validate all nested model values, and call the matching variant constructor.
+- Validate application rules for nil pointers, slices, maps, channels, interfaces, and
+  functions. Their Go zero is valid to tgo, but an application can require a non-nil value.
+- Copy maps, slices, pointers, and other mutable reference data when the foreign owner can
+  change them after validation.
+
+On egress, the module must use checked and variant constructors. It must check each constructor
+error and must not return the failure value. It must validate nested models before storage,
+encoding, cgo calls, or callbacks. It must copy mutable data when the receiver must not share
+ownership.
+
+A known enum tag alone is not proof of validity. The active payload must match the tag, and
+each nested model must also be valid. A checked base that satisfies its predicate is not proof
+that the received wrapper came from its constructor. Reconstruction establishes a new valid
+value.
 
 The emitted representation must cost no more than the equivalent handwritten Go design.
 Declared predicates and explicit match switches remain because the source requested them.

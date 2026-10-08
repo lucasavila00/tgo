@@ -1,0 +1,8 @@
+package localbad
+
+type Count int where value > 0
+
+type Event enum {
+	Started struct { ID string }
+	Stopped struct { Reason string }
+}

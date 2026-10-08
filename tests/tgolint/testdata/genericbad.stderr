@@ -1,0 +1,7 @@
+genericbad/bad.go:40:10: Event.TgoStopped access does not match its TgoTag case 2
+genericbad/bad.go:83:10: Event.TgoStarted needs an unaliased local value receiver
+genericbad/bad.go:85:10: Event.TgoStopped needs an unaliased local value receiver
+genericbad/bad.go:29:9: make creates invalid tgo checked Count values; use length zero
+genericbad/bad.go:33:6: zero declaration contains invalid tgo enum Event; construct it first
+genericbad/bad.go:70:9: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
+genericbad/bad.go:97:9: Tgo access through a type parameter cannot mix tgo models

@@ -119,12 +119,17 @@ func (p *sourceParser) typeDeclaration() (bool, error) {
 	var replacement string
 	var err error
 	switch {
-	case p.tokens[p.cursor].text == "enum":
+	case p.tokens[p.cursor].text == "enum" && p.enumBodyFollows():
 		replacement, err = p.enumDeclaration(declaration)
-	case p.has(0, token.STRUCT) && p.has(1, token.LBRACE):
-		replacement, err = p.structDeclaration(declaration)
 	default:
+		original := p.cursor
 		replacement, err = p.checkedDeclaration(declaration)
+		if replacement == "" && err == nil {
+			p.cursor = original
+			if p.has(0, token.STRUCT) && p.has(1, token.LBRACE) {
+				replacement, err = p.structDeclaration(declaration)
+			}
+		}
 	}
 	if err != nil {
 		return false, err
@@ -148,6 +153,14 @@ func (p *sourceParser) typeDeclaration() (bool, error) {
 	})
 	p.models = append(p.models, declaration)
 	return true, nil
+}
+
+// enumBodyFollows accepts a body after an optional implicit semicolon.
+func (p *sourceParser) enumBodyFollows() bool {
+	if p.has(1, token.LBRACE) {
+		return true
+	}
+	return p.implicitSemicolon(p.cursor+1) && p.has(2, token.LBRACE)
 }
 
 // generatedSource keeps generated declarations on their tgo source lines.
@@ -176,6 +189,9 @@ func inlineLineDirective(name string, line, column int) string {
 func (p *sourceParser) enumDeclaration(declaration *model) (string, error) {
 	enumToken := p.cursor
 	p.cursor++
+	if p.implicitSemicolon(p.cursor) {
+		p.cursor++
+	}
 	if !p.has(0, token.LBRACE) {
 		return "", p.errorAt(enumToken, "enum %s needs a body", declaration.Name)
 	}
@@ -238,30 +254,58 @@ func (p *sourceParser) structDeclaration(declaration *model) (string, error) {
 func (p *sourceParser) checkedDeclaration(declaration *model) (string, error) {
 	start := p.cursor
 	for p.cursor < len(p.tokens) && !p.has(0, token.SEMICOLON) {
-		if p.tokens[p.cursor].text == "where" {
-			declaration.Base = p.text(start, p.cursor)
-			declaration.BaseLine = p.tokens[start].line
-			declaration.BaseColumn = p.tokens[start].column
-			p.cursor++
-			predicate := p.cursor
-			if predicate < len(p.tokens) {
-				declaration.PredicateLine = p.tokens[predicate].line
-				declaration.PredicateColumn = p.tokens[predicate].column
-			}
-			if err := p.toSemicolon(); err != nil {
+		if p.tokens[p.cursor].text != "where" ||
+			!goTypeExpression(p.text(start, p.cursor)) {
+			if err := p.advance(); err != nil {
 				return "", err
 			}
-			declaration.Predicate = p.text(predicate, p.cursor)
-			if declaration.Base == "" || declaration.Predicate == "" {
-				return "", p.errorAt(start, "checked type needs a base type and predicate")
-			}
-			return checkedGo(p.name, declaration), nil
+			continue
 		}
-		if err := p.advance(); err != nil {
-			return "", err
-		}
+		return p.finishCheckedDeclaration(start, declaration)
 	}
 	return "", nil
+}
+
+// finishCheckedDeclaration reads a checked predicate after its where keyword.
+func (p *sourceParser) finishCheckedDeclaration(
+	start int,
+	declaration *model,
+) (string, error) {
+	declaration.Base = p.text(start, p.cursor)
+	declaration.BaseLine = p.tokens[start].line
+	declaration.BaseColumn = p.tokens[start].column
+	p.cursor++
+	if p.implicitSemicolon(p.cursor) {
+		p.cursor++
+	}
+	predicate := p.cursor
+	if predicate < len(p.tokens) {
+		declaration.PredicateLine = p.tokens[predicate].line
+		declaration.PredicateColumn = p.tokens[predicate].column
+	}
+	if err := p.toSemicolon(); err != nil {
+		return "", err
+	}
+	declaration.Predicate = p.text(predicate, p.cursor)
+	if declaration.Predicate == "" {
+		return "", p.errorAt(start, "checked type needs a base type and predicate")
+	}
+	return checkedGo(p.name, declaration), nil
+}
+
+// implicitSemicolon reports a newline semicolon inserted by the Go scanner.
+func (p *sourceParser) implicitSemicolon(index int) bool {
+	return index < len(p.tokens) && p.tokens[index].kind == token.SEMICOLON &&
+		p.tokens[index].start == p.tokens[index].end
+}
+
+// goTypeExpression reports syntax that can start a checked base type.
+func goTypeExpression(text string) bool {
+	if text == "" {
+		return false
+	}
+	_, err := parser.ParseExpr(text)
+	return err == nil
 }
 
 // toSemicolon advances across one top-level declaration expression.

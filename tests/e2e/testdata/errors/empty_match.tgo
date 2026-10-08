@@ -1,0 +1,10 @@
+package invalid
+
+type Result enum {
+	Success struct{}
+	Failure struct{}
+}
+
+func invalidResult(value Result) {
+	match value {}
+}

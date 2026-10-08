@@ -10,9 +10,11 @@ lint:
 test:
 	go test ./...
 	python3 tests/e2e/run.py
+	python3 tests/tgolint/run.py
 
 build:
 	go build -o bin/tgo ./cmd/tgo
+	go build -o bin/tgolint ./cmd/tgolint
 
 install-tools:
 	sh scripts/install-lint.sh

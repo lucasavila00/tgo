@@ -345,6 +345,190 @@ def check_fresh_build(compiler, temporary):
     print("PASS fresh dependency build")
 
 
+def check_build_context_and_cgo(compiler, temporary):
+    work = temporary / "build-context"
+    work.mkdir()
+    (work / "go.mod").write_text("module context.test\n\ngo 1.27.0\n")
+
+    tagged = work / "tagged"
+    tagged.mkdir()
+    (tagged / "base.tgo").write_text(
+        "package tagged\n\nfunc Base() int { return 1 }\n"
+    )
+    (tagged / "feature.tgo").write_text(
+        "//go:build audit_tag\n\npackage tagged\n\n"
+        "func Feature() int { return taggedValue() }\n"
+    )
+    (tagged / "feature.go").write_text(
+        "//go:build audit_tag\n\npackage tagged\n\n"
+        "func taggedValue() int { return 2 }\n"
+    )
+    run([str(compiler), "build", "./tagged"], work)
+    base_output = tagged / "base_tgo.go"
+    feature_output = tagged / "feature_tgo.go"
+    assert base_output.exists(), "base output is missing"
+    assert not feature_output.exists(), "inactive tag output exists"
+    tag_env = {**os.environ, "GOFLAGS": "'-tags=audit_tag audit_second'"}
+    run([str(compiler), "build", "./tagged"], work, env=tag_env)
+    assert feature_output.exists(), "GOFLAGS tag output is missing"
+
+    app = work / "app"
+    bridge = work / "bridge"
+    bad = work / "bad"
+    app.mkdir()
+    bridge.mkdir()
+    bad.mkdir()
+    (app / "app.tgo").write_text(
+        'package app\n\nimport "context.test/bridge"\n\n'
+        "func Value() int { return bridge.Value() }\n"
+    )
+    (bridge / "bridge.go").write_text(
+        "package bridge\n\nfunc Value() int { return 3 }\n"
+    )
+    (bridge / "bad.go").write_text(
+        "//go:build audit_bad\n\npackage bridge\n\n"
+        'import "context.test/bad"\n\n'
+        "func Bad() int { return bad.Value() }\n"
+    )
+    (bad / "bad.tgo").write_text("package bad\n\ntype\n")
+    run([str(compiler), "build", "./app"], work)
+    app_output = app / "app_tgo.go"
+    saved_outputs = {
+        path: path.read_bytes() for path in [base_output, feature_output, app_output]
+    }
+    bad_env = {**os.environ, "GOFLAGS": "-tags=audit_bad"}
+    result = run([str(compiler), "build", "./app"], work, success=False, env=bad_env)
+    assert "bad.tgo" in result, result
+    for path, data in saved_outputs.items():
+        assert path.read_bytes() == data, f"failed tagged build changed {path.name}"
+
+    target = work / "target"
+    target.mkdir()
+    host_goos = run(["go", "env", "GOOS"], work).strip()
+    other_goos = "windows" if host_goos != "windows" else "linux"
+    (target / f"value_{host_goos}.tgo").write_text(
+        'package target\n\nfunc Value() string { return "host" }\n'
+    )
+    (target / f"value_{other_goos}.tgo").write_text(
+        'package target\n\nfunc Value() string { return "other" }\n'
+    )
+    run([str(compiler), "build", "./target"], work)
+    host_output = target / f"value_tgo_{host_goos}.go"
+    assert host_output.exists(), "host output is missing"
+    goenv = work / "target.goenv"
+    goenv.write_text(f"GOOS={other_goos}\nGOARCH=amd64\nCGO_ENABLED=0\n")
+    target_env = os.environ.copy()
+    for name in ["GOOS", "GOARCH", "CGO_ENABLED", "GOFLAGS"]:
+        target_env.pop(name, None)
+    target_env["GOENV"] = str(goenv)
+    run([str(compiler), "build", "./target"], work, env=target_env)
+    other_output = target / f"value_tgo_{other_goos}.go"
+    assert other_output.exists(), "GOENV target output is missing"
+    assert host_output.exists(), "target build removed the host output"
+
+    features = work / "features"
+    features.mkdir()
+    (features / "base.tgo").write_text(
+        "package features\n\nfunc Base() int { return 1 }\n"
+    )
+    (features / "host_feature.tgo").write_text(
+        "//go:build amd64.v1\n\npackage features\n\n"
+        "func HostFeature() int { return 2 }\n"
+    )
+    (features / "level_three.tgo").write_text(
+        "//go:build amd64.v3\n\npackage features\n\n"
+        "func LevelThree() int { return 3 }\n"
+    )
+    (features / "level_four.tgo").write_text(
+        "//go:build amd64.v4\n\npackage features\n\ntype\n"
+    )
+    arm_goenv = work / "arm.goenv"
+    arm_goenv.write_text("GOOS=linux\nGOARCH=arm64\nCGO_ENABLED=0\n")
+    feature_env = target_env.copy()
+    feature_env["GOENV"] = str(arm_goenv)
+    run([str(compiler), "build", "./features"], work, env=feature_env)
+    assert not (features / "host_feature_tgo.go").exists(), (
+        "host architecture feature stayed active"
+    )
+    amd_goenv = work / "amd.goenv"
+    amd_goenv.write_text(
+        "GOOS=linux\nGOARCH=amd64\nGOAMD64=v3\nCGO_ENABLED=0\n"
+    )
+    feature_env["GOENV"] = str(amd_goenv)
+    run([str(compiler), "build", "./features"], work, env=feature_env)
+    assert (features / "level_three_tgo.go").exists(), "GOAMD64 level tag is missing"
+    assert not (features / "level_four_tgo.go").exists(), "higher GOAMD64 level built"
+    (features / "wasm_satconv.tgo").write_text(
+        "//go:build wasm.satconv\n\npackage features\n\n"
+        "func WasmSatConv() int { return 4 }\n"
+    )
+    (features / "wasm_signext.tgo").write_text(
+        "//go:build wasm.signext\n\npackage features\n\n"
+        "func WasmSignExt() int { return 5 }\n"
+    )
+    wasm_goenv = work / "wasm.goenv"
+    wasm_goenv.write_text(
+        "GOOS=js\nGOARCH=wasm\nGOWASM=satconv\nCGO_ENABLED=0\n"
+    )
+    feature_env["GOENV"] = str(wasm_goenv)
+    run([str(compiler), "build", "./features"], work, env=feature_env)
+    assert (features / "wasm_satconv_tgo.go").exists(), "GOWASM tag is missing"
+    assert (features / "wasm_signext_tgo.go").exists(), (
+        "legacy GOWASM tag is missing"
+    )
+    wasm_outputs = {
+        path: path.read_bytes()
+        for path in [
+            features / "wasm_satconv_tgo.go",
+            features / "wasm_signext_tgo.go",
+        ]
+    }
+    invalid_wasm_goenv = work / "invalid-wasm.goenv"
+    invalid_wasm_goenv.write_text(
+        "GOOS=js\nGOARCH=wasm\nGOWASM=missing\nCGO_ENABLED=0\n"
+    )
+    feature_env["GOENV"] = str(invalid_wasm_goenv)
+    result = run(
+        [str(compiler), "build", "./features"],
+        work,
+        success=False,
+        env=feature_env,
+    )
+    assert "invalid GOWASM feature" in result, result
+    for path, data in wasm_outputs.items():
+        assert path.read_bytes() == data, f"invalid GOWASM changed {path.name}"
+
+    cgo = work / "cgo"
+    cgo.mkdir()
+    (cgo / "value.tgo").write_text(
+        "package cgotest\n\nfunc Value() int { return cValue() }\n"
+    )
+    (cgo / "direct.tgo").write_text(
+        'package cgotest\n\n/* static int direct(void) { return 4; } */\n'
+        'import "C"\n\nfunc Direct() int { return int(C.direct()) }\n'
+    )
+    (cgo / "native.go").write_text(
+        'package cgotest\n\n/* static int value(void) { return 5; } */\n'
+        'import "C"\n\nfunc cValue() int { return int(C.value()) }\n'
+    )
+    (cgo / "fallback.go").write_text(
+        "//go:build !cgo\n\npackage cgotest\n\n"
+        "func cValue() int { return 6 }\n"
+    )
+    cgo_off = {**os.environ, "CGO_ENABLED": "0"}
+    run([str(compiler), "build", "./cgo"], work, env=cgo_off)
+    value_output = cgo / "value_tgo.go"
+    direct_output = cgo / "direct_tgo.go"
+    assert value_output.exists(), "non-cgo output is missing"
+    assert not direct_output.exists(), "disabled cgo tgo source built"
+    value_data = value_output.read_bytes()
+    cgo_on = {**os.environ, "CGO_ENABLED": "1"}
+    run([str(compiler), "build", "./cgo"], work, env=cgo_on)
+    assert direct_output.exists(), "enabled cgo tgo source did not build"
+    assert value_output.read_bytes() == value_data
+    print("PASS Go build context and cgo")
+
+
 def normalize_output(output, work):
     return output.replace(str(work), "<WORK>")
 
@@ -414,6 +598,7 @@ def main():
         check_package_discovery(compiler, temporary)
         check_output_safety(compiler, temporary)
         check_fresh_build(compiler, temporary)
+        check_build_context_and_cgo(compiler, temporary)
 
         invalid = temporary / "invalid"
         invalid.mkdir()

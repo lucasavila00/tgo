@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/format"
 	"go/importer"
 	"go/token"
@@ -28,6 +29,8 @@ type packageUnit struct {
 	generatedPaths  []string
 	knownOS         map[string]bool
 	knownArch       map[string]bool
+	context         *build.Context
+	usesC           bool
 	sourcesMatched  bool
 	loaded          bool
 	matchError      error
@@ -108,7 +111,11 @@ func (p *packageUnit) typecheck() {
 		}
 		return os.Open(export)
 	})
-	conf := types.Config{Importer: imp, Error: func(e error) { problems = append(problems, e) }}
+	conf := types.Config{
+		Importer:    imp,
+		FakeImportC: p.usesC,
+		Error:       func(e error) { problems = append(problems, e) },
+	}
 	p.typed, _ = conf.Check(p.Path, p.fs, p.Files, p.info)
 	p.typeErrors = problems
 }

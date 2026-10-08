@@ -2,6 +2,16 @@ package model
 
 type Quantity int where value > 0
 
+type PositivePoint struct { X int } where value.X > 0
+
+type Multiline int where
+    value > 0
+
+type where int
+type enum int
+type WhereAlias where
+type EnumAlias enum
+
 type AccountAlias = Account
 
 type CounterRecord (struct {
@@ -37,6 +47,12 @@ type Notice enum {
     }
 }
 
+type Signal enum
+{
+    On struct{}
+    Off struct{}
+}
+
 type Request struct {
     ID string
     Tags map[string]string = map[string]string{}
@@ -49,6 +65,10 @@ type Message struct {
 
 func Personal(name string) Account {
     return Account.Personal{Name: name}
+}
+
+func ContextualTypeNames() (WhereAlias, EnumAlias) {
+    return WhereAlias(1), EnumAlias(2)
 }
 
 func Business(company string, members []Account, tags map[string]string) Account {
@@ -105,6 +125,58 @@ func MarkerSwitch(value int) string {
     switch __tgo_match(value) {
     case 1: return "one"
     default: return "other"
+    }
+}
+
+func match[T any](value T) T {
+    return value
+}
+
+type matcher struct{}
+
+func (matcher) match(value string) string {
+    return value
+}
+
+func OrdinaryMatchName() string {
+	return matcher{}.match(match[string]("ordinary"))
+}
+
+func OrdinaryMatchStatement() {
+    match("ordinary")
+}
+
+func MatchLabel(value int) int {
+match:
+    switch value {
+    case 0:
+        value++
+        break match
+    default:
+        value++
+    }
+    return value
+}
+
+func FunctionMatchSubject(account Account) string {
+    match func() Account { return account }() {
+    case Personal(person): return person.Name
+    case Business(business): return business.Company
+    }
+}
+
+func LiteralMatchSubject(name string) string {
+    match Account.Personal{Name: name} {
+    case Personal(person): return person.Name
+    case Business(business): return business.Company
+    }
+}
+
+func SignalName(signal Signal) string {
+    match
+        signal {
+    case On(_): return "on"
+    case Off(_): return "off"
     }
 }
 

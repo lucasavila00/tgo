@@ -613,6 +613,9 @@ func (p *packageUnit) layoutModel(typ types.Type) *model {
 
 // interfaceType reports a concrete interface type, but not a type parameter.
 func interfaceType(typ types.Type) bool {
+	if typ == nil {
+		return false
+	}
 	typ = types.Unalias(typ)
 	if _, parameter := typ.(*types.TypeParam); parameter {
 		return false

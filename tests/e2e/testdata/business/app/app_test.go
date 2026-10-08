@@ -22,6 +22,18 @@ func TestBusiness(t *testing.T) {
 	if _, err := model.NewQuantity(0); err == nil {
 		t.Fatal("zero passed the constructor")
 	}
+	point, err := model.NewPositivePoint(struct{ X int }{X: 1})
+	if err != nil || point.Value().X != 1 {
+		t.Fatalf("checked struct: %v, %v", point, err)
+	}
+	multiline, err := model.NewMultiline(1)
+	if err != nil || multiline.Value() != 1 {
+		t.Fatalf("multiline checked type: %v, %v", multiline, err)
+	}
+	whereValue, enumValue := model.ContextualTypeNames()
+	if whereValue != 1 || enumValue != 2 {
+		t.Fatal("contextual type names became tgo keywords")
+	}
 	first := app.Request("a")
 	second := model.NewRequest("b")
 	copy := first
@@ -63,6 +75,22 @@ func TestBusiness(t *testing.T) {
 	}
 	if model.MarkerSwitch(1) != "one" {
 		t.Fatal("ordinary switch became a match")
+	}
+	if model.OrdinaryMatchName() != "ordinary" {
+		t.Fatal("ordinary match identifier became a statement")
+	}
+	model.OrdinaryMatchStatement()
+	if model.MatchLabel(0) != 1 {
+		t.Fatal("match label became a match statement")
+	}
+	if model.FunctionMatchSubject(person) != "Lucas" {
+		t.Fatal("function match subject used the wrong body")
+	}
+	if model.LiteralMatchSubject("Literal") != "Literal" {
+		t.Fatal("literal match subject used the wrong body")
+	}
+	if model.SignalName(model.NewSignalOn(model.SignalOn{})) != "on" {
+		t.Fatal("multiline match keyword inserted a semicolon")
 	}
 	explicitFlag, explicitName := model.MarkerValues(model.ExplicitMarker())
 	defaultFlag, defaultName := model.MarkerValues(model.SelectedMarker())

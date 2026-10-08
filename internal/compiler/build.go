@@ -3,6 +3,7 @@ package compiler
 import (
 	"bytes"
 	cryptorand "crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -30,6 +31,10 @@ func Build(directory string, patterns []string) (err error) {
 	if err != nil {
 		return err
 	}
+	context, err := effectiveBuildContext(directory)
+	if err != nil {
+		return err
+	}
 	lock, err := acquireModuleLock(root)
 	if err != nil {
 		return err
@@ -37,7 +42,7 @@ func Build(directory string, patterns []string) (err error) {
 	defer func() {
 		err = errors.Join(err, lock.Unlock())
 	}()
-	packages, err := discover(root, module)
+	packages, err := discover(root, module, &context)
 	if err != nil {
 		return err
 	}
@@ -49,6 +54,7 @@ func Build(directory string, patterns []string) (err error) {
 		packages: packages,
 		root:     root,
 		module:   module,
+		context:  &context,
 		states:   make(map[string]buildState),
 		previous: make(map[string]previousFile),
 		current:  make(map[string]previousFile),
@@ -64,6 +70,266 @@ func Build(directory string, patterns []string) (err error) {
 		}
 	}
 	return nil
+}
+
+type goEnvironment struct {
+	GOOS       string
+	GOARCH     string
+	CGOEnabled string `json:"CGO_ENABLED"`
+	GOFlags    string `json:"GOFLAGS"`
+	GO386      string
+	GOAMD64    string
+	GOARM      string
+	GOARM64    string
+	GOMIPS     string
+	GOMIPS64   string
+	GOPPC64    string
+	GORISCV64  string
+	GOWASM     string
+}
+
+// effectiveBuildContext gets target values and user tags used by the Go command.
+func effectiveBuildContext(directory string) (build.Context, error) {
+	command := exec.Command(
+		"go", "env", "-json",
+		"GOOS", "GOARCH", "CGO_ENABLED", "GOFLAGS",
+		"GO386", "GOAMD64", "GOARM", "GOARM64", "GOMIPS", "GOMIPS64",
+		"GOPPC64", "GORISCV64", "GOWASM",
+	)
+	command.Dir = directory
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return build.Context{}, fmt.Errorf("find Go build context: %s", output)
+	}
+	var environment goEnvironment
+	if err := json.Unmarshal(output, &environment); err != nil {
+		return build.Context{}, fmt.Errorf("read Go build context: %w", err)
+	}
+	context := build.Default
+	context.GOOS = environment.GOOS
+	context.GOARCH = environment.GOARCH
+	context.CgoEnabled = environment.CGOEnabled == "1"
+	toolTags, err := effectiveToolTags(build.Default.ToolTags, environment)
+	if err != nil {
+		return build.Context{}, err
+	}
+	context.ToolTags = toolTags
+	tags, err := buildTagsFromGoFlags(environment.GOFlags)
+	if err != nil {
+		return build.Context{}, fmt.Errorf("read GOFLAGS: %w", err)
+	}
+	context.BuildTags = append(append([]string(nil), build.Default.BuildTags...), tags...)
+	return context, nil
+}
+
+// effectiveToolTags replaces host architecture tags with target tags.
+func effectiveToolTags(current []string, environment goEnvironment) ([]string, error) {
+	tags := make([]string, 0, len(current))
+	for _, tag := range current {
+		if !architectureFeatureTag(tag) {
+			tags = append(tags, tag)
+		}
+	}
+	architecture, err := architectureFeatureTags(environment)
+	if err != nil {
+		return nil, err
+	}
+	return append(tags, architecture...), nil
+}
+
+// architectureFeatureTag reports whether a tool tag belongs to an architecture.
+func architectureFeatureTag(tag string) bool {
+	for _, architecture := range []string{
+		"386", "amd64", "arm", "arm64", "mips", "mipsle", "mips64", "mips64le",
+		"ppc64", "ppc64le", "riscv64", "wasm",
+	} {
+		if strings.HasPrefix(tag, architecture+".") {
+			return true
+		}
+	}
+	return false
+}
+
+// architectureFeatureTags gets cumulative feature tags for the target architecture.
+func architectureFeatureTags(environment goEnvironment) ([]string, error) {
+	switch environment.GOARCH {
+	case "386":
+		return singleFeatureTag("386", environment.GO386, "387", "sse2")
+	case "amd64":
+		return numberedFeatureTags("GOAMD64", "amd64.v", environment.GOAMD64, "v", 1, 4)
+	case "arm":
+		version, _, _ := strings.Cut(environment.GOARM, ",")
+		return numberedFeatureTags("GOARM", "arm.", version, "", 5, 7)
+	case "arm64":
+		return arm64FeatureTags(environment.GOARM64)
+	case "mips", "mipsle":
+		return singleFeatureTag(environment.GOARCH, environment.GOMIPS, "hardfloat", "softfloat")
+	case "mips64", "mips64le":
+		return singleFeatureTag(environment.GOARCH, environment.GOMIPS64, "hardfloat", "softfloat")
+	case "ppc64", "ppc64le":
+		return numberedFeatureTags(
+			"GOPPC64", environment.GOARCH+".power", environment.GOPPC64, "power", 8, 10,
+		)
+	case "riscv64":
+		return riscv64FeatureTags(environment.GORISCV64)
+	case "wasm":
+		return wasmFeatureTags(environment.GOWASM)
+	default:
+		return nil, nil
+	}
+}
+
+// numberedFeatureTags parses one level and returns all tags through it.
+func numberedFeatureTags(
+	name string,
+	tagPrefix string,
+	value string,
+	valuePrefix string,
+	first int,
+	last int,
+) ([]string, error) {
+	level, err := featureLevel(value, valuePrefix, first, last)
+	if err != nil {
+		return nil, fmt.Errorf("invalid %s %q", name, value)
+	}
+	return cumulativeFeatureTags(tagPrefix, first, level), nil
+}
+
+// arm64FeatureTags gets cumulative tags for one ARM64 version.
+func arm64FeatureTags(value string) ([]string, error) {
+	version, _, _ := strings.Cut(value, ",")
+	if len(version) != 4 || version[0] != 'v' || version[2] != '.' {
+		return nil, fmt.Errorf("invalid GOARM64 %q", value)
+	}
+	major := int(version[1] - '0')
+	minor := int(version[3] - '0')
+	if major != 8 && major != 9 || minor < 0 || minor > 9 || major == 9 && minor > 5 {
+		return nil, fmt.Errorf("invalid GOARM64 %q", value)
+	}
+	tags := cumulativeFeatureTags(fmt.Sprintf("arm64.v%d.", major), 0, minor)
+	if major == 9 {
+		tags = append(tags, cumulativeFeatureTags("arm64.v8.", 0, min(minor+5, 9))...)
+	}
+	return tags, nil
+}
+
+// riscv64FeatureTags gets cumulative RISC-V feature tags.
+func riscv64FeatureTags(value string) ([]string, error) {
+	levels := map[string]int{"rva20u64": 20, "rva22u64": 22, "rva23u64": 23}
+	level, ok := levels[value]
+	if !ok {
+		return nil, fmt.Errorf("invalid GORISCV64 %q", value)
+	}
+	tags := []string{"riscv64.rva20u64"}
+	if level >= 22 {
+		tags = append(tags, "riscv64.rva22u64")
+	}
+	if level >= 23 {
+		tags = append(tags, "riscv64.rva23u64")
+	}
+	return tags, nil
+}
+
+// wasmFeatureTags gets the configured WebAssembly feature tags.
+func wasmFeatureTags(value string) ([]string, error) {
+	for option := range strings.SplitSeq(value, ",") {
+		switch option {
+		case "satconv", "signext":
+		case "":
+		default:
+			return nil, fmt.Errorf("invalid GOWASM feature %q", option)
+		}
+	}
+	return []string{"wasm.satconv", "wasm.signext"}, nil
+}
+
+// featureLevel parses one numbered feature setting.
+func featureLevel(value string, prefix string, first int, last int) (int, error) {
+	number, found := strings.CutPrefix(value, prefix)
+	if !found {
+		return 0, errors.New("missing feature prefix")
+	}
+	level, err := strconv.Atoi(number)
+	if err != nil || level < first || level > last {
+		return 0, errors.New("invalid feature level")
+	}
+	return level, nil
+}
+
+// cumulativeFeatureTags returns all feature tags through one level.
+func cumulativeFeatureTags(prefix string, first int, last int) []string {
+	tags := make([]string, 0, last-first+1)
+	for level := first; level <= last; level++ {
+		tags = append(tags, prefix+strconv.Itoa(level))
+	}
+	return tags
+}
+
+// singleFeatureTag checks and returns one non-cumulative feature tag.
+func singleFeatureTag(architecture string, value string, valid ...string) ([]string, error) {
+	for _, candidate := range valid {
+		if value == candidate {
+			return []string{architecture + "." + value}, nil
+		}
+	}
+	return nil, fmt.Errorf("invalid %s feature %q", architecture, value)
+}
+
+// buildTagsFromGoFlags gets tags from each Go -tags flag.
+func buildTagsFromGoFlags(flags string) ([]string, error) {
+	fields, err := splitGoFlags(flags)
+	if err != nil {
+		return nil, err
+	}
+	var tags []string
+	for index := 0; index < len(fields); index++ {
+		field := fields[index]
+		value, found := strings.CutPrefix(field, "-tags=")
+		if !found && field == "-tags" {
+			if index+1 >= len(fields) {
+				return nil, errors.New("-tags needs a value")
+			}
+			index++
+			value = fields[index]
+			found = true
+		}
+		if !found {
+			continue
+		}
+		tags = strings.FieldsFunc(value, func(character rune) bool {
+			return character == ',' || character == ' '
+		})
+	}
+	return tags, nil
+}
+
+// splitGoFlags separates flags and removes matching outer quotes.
+func splitGoFlags(value string) ([]string, error) {
+	var fields []string
+	for len(value) > 0 {
+		value = strings.TrimLeft(value, " \t\n\r")
+		if value == "" {
+			break
+		}
+		if value[0] == '\'' || value[0] == '"' {
+			quote := value[0]
+			end := strings.IndexByte(value[1:], quote)
+			if end < 0 {
+				return nil, fmt.Errorf("unterminated %c string", quote)
+			}
+			fields = append(fields, value[1:end+1])
+			value = value[end+2:]
+			continue
+		}
+		end := strings.IndexAny(value, " \t\n\r")
+		if end < 0 {
+			fields = append(fields, value)
+			break
+		}
+		fields = append(fields, value[:end])
+		value = value[end:]
+	}
+	return fields, nil
 }
 
 // acquireModuleLock serializes builds and rollback for one module.
@@ -149,10 +415,15 @@ func moduleRoot(directory string) (string, string, error) {
 }
 
 // discover indexes tgo packages without parsing their source.
-func discover(root, module string) (map[string]*packageUnit, error) {
+func discover(
+	root string,
+	module string,
+	context *build.Context,
+) (map[string]*packageUnit, error) {
 	discovery := packageDiscovery{
 		root:      root,
 		module:    module,
+		context:   context,
 		knownOS:   make(map[string]bool),
 		knownArch: make(map[string]bool),
 		packages:  make(map[string]*packageUnit),
@@ -170,6 +441,7 @@ func discover(root, module string) (map[string]*packageUnit, error) {
 type packageDiscovery struct {
 	root      string
 	module    string
+	context   *build.Context
 	knownOS   map[string]bool
 	knownArch map[string]bool
 	packages  map[string]*packageUnit
@@ -286,6 +558,7 @@ func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
 		unit = &packageUnit{
 			Dir:       directory,
 			Path:      importPath,
+			context:   d.context,
 			Models:    make(map[string]*model),
 			knownOS:   d.knownOS,
 			knownArch: d.knownArch,
@@ -342,33 +615,43 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 	}
 	p.sourcesMatched = true
 	for _, path := range p.sourcePaths {
-		match, err := matchTgoFile(path)
+		match, err := matchTgoFile(p.context, path)
 		if err != nil {
 			p.matchError = err
 			return nil, err
 		}
-		if match {
-			p.matchingPaths = append(p.matchingPaths, path)
+		if !match {
+			continue
 		}
+		cgo, err := fileImportsC(path)
+		if err != nil {
+			p.matchError = err
+			return nil, err
+		}
+		if cgo && !p.context.CgoEnabled {
+			continue
+		}
+		p.usesC = p.usesC || cgo
+		p.matchingPaths = append(p.matchingPaths, path)
 	}
 	return p.matchingPaths, nil
 }
 
 // matchTgoFile applies Go build constraints to one tgo file.
-func matchTgoFile(path string) (bool, error) {
+func matchTgoFile(context *build.Context, path string) (bool, error) {
 	directory := filepath.Dir(path)
 	name := filepath.Base(path)
 	fakeName := strings.TrimSuffix(name, ".tgo") + ".s"
 	fakePath := filepath.Clean(filepath.Join(directory, fakeName))
 	realPath := filepath.Clean(path)
-	context := build.Default
-	context.OpenFile = func(requested string) (io.ReadCloser, error) {
+	fileContext := *context
+	fileContext.OpenFile = func(requested string) (io.ReadCloser, error) {
 		if filepath.Clean(requested) == fakePath {
 			return os.Open(realPath)
 		}
 		return os.Open(requested)
 	}
-	match, err := context.MatchFile(directory, fakeName)
+	match, err := fileContext.MatchFile(directory, fakeName)
 	if err == nil {
 		return match, nil
 	}
@@ -440,39 +723,15 @@ func (p *packageUnit) readGoFiles() error {
 		return err
 	}
 	for _, entry := range entries {
-		name := entry.Name()
-		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		if generatedFileName(name) {
-			path := filepath.Join(p.Dir, name)
-			info, err := os.Lstat(path)
-			if err != nil {
-				return err
-			}
-			if !info.Mode().IsRegular() {
-				return fmt.Errorf("refusing non-regular output %s", path)
-			}
-			generated, err := generatedFile(path)
-			if err != nil {
-				return err
-			}
-			if generated {
-				continue
-			}
-		}
-		matches, err := build.Default.MatchFile(p.Dir, name)
-		if err != nil {
-			return err
-		}
-		if !matches {
-			continue
-		}
 		mode := parser.ParseComments | parser.SkipObjectResolution
-		file, err := parser.ParseFile(p.fs, filepath.Join(p.Dir, name), nil, mode)
+		file, cgo, err := activeGoFile(p.context, p.fs, p.Dir, entry, mode)
 		if err != nil {
 			return err
 		}
+		if file == nil {
+			continue
+		}
+		p.usesC = p.usesC || cgo
 		p.Files = append(p.Files, file)
 	}
 	return nil
@@ -607,6 +866,7 @@ type packageBuilder struct {
 	packages map[string]*packageUnit
 	root     string
 	module   string
+	context  *build.Context
 	states   map[string]buildState
 	previous map[string]previousFile
 	current  map[string]previousFile
@@ -727,7 +987,13 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 	files := make([]*ast.File, 0)
 	set := token.NewFileSet()
 	for _, entry := range entries {
-		file, err := activeGoImportFile(set, directory, entry)
+		file, _, err := activeGoFile(
+			b.context,
+			set,
+			directory,
+			entry,
+			parser.ImportsOnly,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -738,29 +1004,39 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 	return importsOf(files), nil
 }
 
-// activeGoImportFile reads imports from one active user Go file.
-func activeGoImportFile(
+// activeGoFile parses one active user Go file.
+func activeGoFile(
+	context *build.Context,
 	set *token.FileSet,
 	directory string,
 	entry os.DirEntry,
-) (*ast.File, error) {
+	mode parser.Mode,
+) (*ast.File, bool, error) {
 	name := entry.Name()
 	if entry.IsDir() || !strings.HasSuffix(name, ".go") ||
 		strings.HasSuffix(name, "_test.go") {
-		return nil, nil
+		return nil, false, nil
 	}
 	path := filepath.Join(directory, name)
 	if generatedFileName(name) {
 		owned, err := generatedFile(path)
 		if err != nil || owned {
-			return nil, err
+			return nil, false, err
 		}
 	}
-	matches, err := build.Default.MatchFile(directory, name)
+	matches, err := context.MatchFile(directory, name)
 	if err != nil || !matches {
-		return nil, err
+		return nil, false, err
 	}
-	return parser.ParseFile(set, path, nil, parser.ImportsOnly)
+	file, err := parser.ParseFile(set, path, nil, mode)
+	if err != nil {
+		return nil, false, err
+	}
+	cgo := importsC(file)
+	if cgo && !context.CgoEnabled {
+		return nil, false, nil
+	}
+	return file, cgo, nil
 }
 
 // nestedModule reports whether a directory belongs to another module.
@@ -807,7 +1083,7 @@ func importsOf(files []*ast.File) []string {
 	for _, file := range files {
 		for _, spec := range file.Imports {
 			path, err := strconv.Unquote(spec.Path.Value)
-			if err == nil {
+			if err == nil && path != "C" {
 				imports[path] = true
 			}
 		}
@@ -818,6 +1094,26 @@ func importsOf(files []*ast.File) []string {
 	}
 	sort.Strings(paths)
 	return paths
+}
+
+// fileImportsC reports whether one source file imports C.
+func fileImportsC(path string) (bool, error) {
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
+	if err != nil {
+		return false, err
+	}
+	return importsC(file), nil
+}
+
+// importsC reports whether one parsed file imports C.
+func importsC(file *ast.File) bool {
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err == nil && path == "C" {
+			return true
+		}
+	}
+	return false
 }
 
 // write replaces one generated file and saves its prior state.

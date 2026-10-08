@@ -1,7 +1,8 @@
 # Write business logic in tgo
 
 Use `.tgo` files for business types and decisions. Use Go for the rest of the application.
-Keep Go imports and signatures. Compile with `tgo build ./...`, then run `go test ./...`.
+Keep Go imports and signatures. Compile with `tgo build ./...`, then run `go test ./...`
+and `tgolint ./...`.
 Commit each generated `*_tgo.go` file beside its source. Do not edit generated files.
 Regenerate them after each source change.
 Ignore `.tgo.lock`. Do not replace it with a link.
@@ -126,3 +127,24 @@ account := model.NewAccountPersonal(model.AccountPersonal{Name: "Lucas"})
 Test constructor success and failure, every match branch, and shared collection changes.
 Test calls in both directions. Include Go error results and invalid foreign values where relevant.
 Review business rules and caller contracts. Do not assume the compiler proves foreign code safe.
+Use `tgolint` to check Go construction, presence results, and enum access.
+
+## Foreign data and callbacks
+
+Treat values from ordinary Go, cgo, `unsafe`, reflection, decoders, storage, and callbacks as
+untrusted. Validate them in the FFI or boundary module at each ingress. Treat values returned
+by a foreign callback as a new ingress.
+
+Decode into transport types. Then construct tgo values. For a checked value, call its
+constructor and check the error. For an enum, reject unknown tags, use only the payload for the
+selected tag, validate nested models, and call the matching variant constructor.
+
+Check application nil rules. tgo permits nil pointers, slices, maps, channels, interfaces, and
+functions. Copy mutable maps, slices, pointers, or interface data when foreign code can change
+them after validation.
+
+On egress, use constructors, check all errors, and send only valid nested models. Copy mutable
+data when ownership must not cross the boundary. Do the same work before encoding or storage.
+
+`tgolint` checks that loaded Go code handles each matching error before it uses a tgo value.
+It does not prove that a foreign or stored value is valid when the error is nil.

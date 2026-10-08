@@ -20,6 +20,47 @@ func NewQuantity(value int) (Quantity, error) {
 // Value requires construction success. Shared data keeps its aliases.
 func (v Quantity) Value() int { return v.value }
 
+// PositivePoint requires NewPositivePoint success. Zero is invalid.
+// Shared data keeps Go aliases. Callers must keep the rule.
+type PositivePoint struct{ value struct{ X int } }
+type tgoPositivePointError struct{}
+
+func (tgoPositivePointError) Error() string { return "invalid PositivePoint" }
+
+// NewPositivePoint checks the rule. Check the error before use.
+func NewPositivePoint(value struct{ X int }) (PositivePoint, error) {
+	if !(value.X > 0) {
+		return PositivePoint{}, tgoPositivePointError{}
+	}
+	return PositivePoint{value: value}, nil
+}
+
+// Value requires construction success. Shared data keeps its aliases.
+func (v PositivePoint) Value() struct{ X int } { return v.value }
+
+// Multiline requires NewMultiline success. Zero is invalid.
+// Shared data keeps Go aliases. Callers must keep the rule.
+type Multiline struct{ value int }
+type tgoMultilineError struct{}
+
+func (tgoMultilineError) Error() string { return "invalid Multiline" }
+
+// NewMultiline checks the rule. Check the error before use.
+func NewMultiline(value int) (Multiline, error) {
+	if !(value > 0) {
+		return Multiline{}, tgoMultilineError{}
+	}
+	return Multiline{value: value}, nil
+}
+
+// Value requires construction success. Shared data keeps its aliases.
+func (v Multiline) Value() int { return v.value }
+
+type where int
+type enum int
+type WhereAlias where
+type EnumAlias enum
+
 type AccountAlias = Account
 
 type CounterRecord (struct {
@@ -111,6 +152,47 @@ func (v Notice) TgoText() NoticeText {
 	return v.tgoText
 }
 
+// Signal requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type Signal struct {
+	tgoTag uint8
+	tgoOn  SignalOn
+	tgoOff SignalOff
+}
+
+// TgoTag returns the tag. Use only on a constructed value.
+func (v Signal) TgoTag() uint8 { return v.tgoTag }
+
+// SignalOn holds the variant fields. Supply every field.
+type SignalOn struct {
+}
+
+// NewSignalOn constructs Signal. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func NewSignalOn(value SignalOn) Signal {
+	return Signal{tgoTag: 1, tgoOn: value}
+}
+
+// TgoOn requires On. No tag check.
+func (v Signal) TgoOn() SignalOn {
+	return v.tgoOn
+}
+
+// SignalOff holds the variant fields. Supply every field.
+type SignalOff struct {
+}
+
+// NewSignalOff constructs Signal. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func NewSignalOff(value SignalOff) Signal {
+	return Signal{tgoTag: 2, tgoOff: value}
+}
+
+// TgoOff requires Off. No tag check.
+func (v Signal) TgoOff() SignalOff {
+	return v.tgoOff
+}
+
 type Request struct {
 	ID   string
 	Tags map[string]string
@@ -123,6 +205,10 @@ type Message struct {
 
 func Personal(name string) Account {
 	return NewAccountPersonal(AccountPersonal{Name: name})
+}
+
+func ContextualTypeNames() (WhereAlias, EnumAlias) {
+	return WhereAlias(1), EnumAlias(2)
 }
 
 func Business(company string, members []Account, tags map[string]string) Account {
@@ -200,6 +286,74 @@ func MarkerSwitch(value int) string {
 	}
 }
 
+func match[T any](value T) T {
+	return value
+}
+
+type matcher struct {
+}
+
+func (matcher) match(value string) string {
+	return value
+}
+
+func OrdinaryMatchName() string {
+	return matcher{}.match(match[string]("ordinary"))
+}
+
+func OrdinaryMatchStatement() {
+	match("ordinary")
+}
+
+func MatchLabel(value int) int {
+match:
+	switch value {
+	case 0:
+		value++
+		break match
+	default:
+		value++
+	}
+	return value
+}
+
+func FunctionMatchSubject(account Account) string {
+	switch __tgo_match_6 := func() Account { return account }(); __tgo_match_6.TgoTag() {
+	case 1:
+		person := __tgo_match_6.TgoPersonal()
+		return person.Name
+	case 2:
+		business := __tgo_match_6.TgoBusiness()
+		return business.Company
+	default:
+		panic("invalid Account variant")
+	}
+}
+
+func LiteralMatchSubject(name string) string {
+	switch __tgo_match_7 := NewAccountPersonal(AccountPersonal{Name: name}); __tgo_match_7.TgoTag() {
+	case 1:
+		person := __tgo_match_7.TgoPersonal()
+		return person.Name
+	case 2:
+		business := __tgo_match_7.TgoBusiness()
+		return business.Company
+	default:
+		panic("invalid Account variant")
+	}
+}
+
+func SignalName(signal Signal) string {
+	switch __tgo_match_8 := signal; __tgo_match_8.TgoTag() {
+	case 1:
+		return "on"
+	case 2:
+		return "off"
+	default:
+		panic("invalid Signal variant")
+	}
+}
+
 func ExplicitMarker() MarkerRecord {
 	return MarkerRecord{__tgo_defaults: true, Name: "set"}
 }
@@ -218,7 +372,7 @@ func AliasAccount(name string) Account {
 
 func LabeledMatch(account Account) string {
 Done:
-	switch __tgo_match_6 := account; __tgo_match_6.TgoTag() {
+	switch __tgo_match_9 := account; __tgo_match_9.TgoTag() {
 	case 1:
 		break Done
 	case 2:
@@ -230,9 +384,9 @@ Done:
 }
 
 func NoticeLabels(notice Notice) map[string]string {
-	switch __tgo_match_7 := notice; __tgo_match_7.TgoTag() {
+	switch __tgo_match_10 := notice; __tgo_match_10.TgoTag() {
 	case 1:
-		text := __tgo_match_7.TgoText()
+		text := __tgo_match_10.TgoText()
 		return text.Labels
 	default:
 		panic("invalid Notice variant")

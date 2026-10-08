@@ -10,6 +10,7 @@ Use one Go module. Keep normal Go imports, package names, and tests.
 ```sh
 tgo build ./...
 go test ./...
+tgolint ./...
 ```
 
 `tgo build` checks the current package. `tgo build ./...` checks packages below it.
@@ -88,3 +89,4 @@ Check `err` before using `quantity`. Go can create invalid zeros and change shar
 The generated code trusts Go callers. There are no boundary scans or read guards.
 
 [Language specification](../spec/README.md).
+[Go caller checks](TGOLINT.md).

@@ -33,8 +33,12 @@ func rewriteExpressions(name, input string) (string, rewriteMarkers, error) {
 		defaultMarker: markers.defaults,
 	}
 	for parser.cursor < len(tokens) {
+		match, err := parser.atMatchStatement()
+		if err != nil {
+			return "", rewriteMarkers{}, fmt.Errorf("%s:%w", name, err)
+		}
 		switch {
-		case parser.currentText() == "match":
+		case match:
 			if err := parser.rewriteMatch(); err != nil {
 				return "", rewriteMarkers{}, fmt.Errorf("%s:%w", name, err)
 			}
@@ -46,6 +50,67 @@ func rewriteExpressions(name, input string) (string, rewriteMarkers, error) {
 	}
 
 	return applyEdits(input, parser.edits), markers, nil
+}
+
+// atMatchStatement distinguishes tgo match from a Go identifier named match.
+func (p *sourceParser) atMatchStatement() (bool, error) {
+	if p.currentText() != "match" || !p.atStatementStart() {
+		return false, nil
+	}
+	if p.has(1, token.COLON) {
+		return false, nil
+	}
+	opening, err := p.matchBody(p.cursor + 1)
+	if err != nil {
+		return false, err
+	}
+	return opening >= 0, nil
+}
+
+// atStatementStart reports a token position that can start a Go statement.
+func (p *sourceParser) atStatementStart() bool {
+	if p.cursor == 0 {
+		return false
+	}
+	previous := p.tokens[p.cursor-1].kind
+	return previous == token.LBRACE || previous == token.SEMICOLON ||
+		previous == token.COLON
+}
+
+// matchBody finds a case body before the end of the current statement.
+func (p *sourceParser) matchBody(start int) (int, error) {
+	for position := start; position < len(p.tokens); position++ {
+		current := p.tokens[position].kind
+		if current == token.SEMICOLON {
+			if position == start && p.implicitSemicolon(position) {
+				continue
+			}
+			return -1, nil
+		}
+		if !opening(current) {
+			continue
+		}
+		end, err := closeToken(p.tokens, position)
+		if err != nil {
+			return -1, err
+		}
+		if current == token.LBRACE {
+			first := p.tokens[position+1].kind
+			caseBody := position+1 < end &&
+				(first == token.CASE || first == token.DEFAULT)
+			emptyBody := position+1 == end && p.groupEndsStatement(end)
+			if caseBody || emptyBody {
+				return position, nil
+			}
+		}
+		position = end
+	}
+	return -1, nil
+}
+
+// groupEndsStatement reports a group followed by a semicolon or file end.
+func (p *sourceParser) groupEndsStatement(end int) bool {
+	return end+1 == len(p.tokens) || p.tokens[end+1].kind == token.SEMICOLON
 }
 
 // identifierNames gets every identifier spelling in one source file.
@@ -80,18 +145,15 @@ func (p *sourceParser) currentText() string {
 // rewriteMatch changes one match header into a temporary Go switch header.
 func (p *sourceParser) rewriteMatch() error {
 	keyword := p.cursor
-	p.cursor++
-
-	for p.cursor < len(p.tokens) && !p.has(0, token.LBRACE) {
-		if err := p.advance(); err != nil {
-			return err
-		}
+	opening, err := p.matchBody(keyword + 1)
+	if err != nil {
+		return err
 	}
-	if !p.has(0, token.LBRACE) {
+	if opening < 0 {
 		return p.errorAt(keyword, "match needs cases")
 	}
 
-	openingBrace := p.tokens[p.cursor]
+	openingBrace := p.tokens[opening]
 	p.edits = append(p.edits,
 		edit{
 			start: p.tokens[keyword].start,
@@ -104,7 +166,7 @@ func (p *sourceParser) rewriteMatch() error {
 			text:  ") ",
 		},
 	)
-	p.cursor++
+	p.cursor = opening + 1
 	return nil
 }
 

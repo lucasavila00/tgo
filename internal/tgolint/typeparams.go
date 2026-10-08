@@ -1,0 +1,127 @@
+package tgolint
+
+import "go/types"
+
+// coreType returns the common underlying type of an explicit constraint.
+// It returns nil when the type set has no common underlying type.
+func coreType(typ types.Type) types.Type {
+	typ = types.Unalias(typ)
+	if parameter, ok := typ.(*types.TypeParam); ok {
+		terms, supported := simpleTerms(parameter.Constraint())
+		if !supported || len(terms) == 0 {
+			return nil
+		}
+		core := terms[0].Type().Underlying()
+		for _, term := range terms[1:] {
+			candidate := term.Type().Underlying()
+			if !types.Identical(core, candidate) {
+				core = commonChannel(core, candidate)
+				if core == nil {
+					return nil
+				}
+			}
+		}
+		return core
+	}
+	return typ.Underlying()
+}
+
+func commonChannel(left, right types.Type) types.Type {
+	leftChannel, leftOK := left.(*types.Chan)
+	rightChannel, rightOK := right.(*types.Chan)
+	if !leftOK || !rightOK || !types.Identical(leftChannel.Elem(), rightChannel.Elem()) {
+		return nil
+	}
+	if leftChannel.Dir() == types.SendRecv {
+		return rightChannel
+	}
+	if rightChannel.Dir() == types.SendRecv || leftChannel.Dir() == rightChannel.Dir() {
+		return leftChannel
+	}
+	return nil
+}
+
+// simpleTerms gets the normalized structural terms of a constraint.
+func simpleTerms(typ types.Type) ([]*types.Term, bool) {
+	typ = types.Unalias(typ)
+	switch typ := typ.(type) {
+	case *types.TypeParam:
+		return simpleTerms(typ.Constraint())
+	case *types.Named:
+		if _, ok := typ.Underlying().(*types.Interface); ok {
+			return simpleTerms(typ.Underlying())
+		}
+		return []*types.Term{types.NewTerm(false, typ)}, true
+	case *types.Union:
+		terms := make([]*types.Term, typ.Len())
+		for index := range terms {
+			terms[index] = typ.Term(index)
+		}
+		return terms, true
+	case *types.Interface:
+		var restriction []*types.Term
+		for index := 0; index < typ.NumEmbeddeds(); index++ {
+			terms, supported := simpleTerms(typ.EmbeddedType(index))
+			if !supported {
+				return nil, false
+			}
+			if terms == nil {
+				continue
+			}
+			if restriction == nil {
+				restriction = terms
+				continue
+			}
+			restriction = intersectTerms(restriction, terms)
+		}
+		return restriction, true
+	default:
+		return []*types.Term{types.NewTerm(false, typ)}, true
+	}
+}
+
+// intersectTerms returns the terms that are present in both unions.
+func intersectTerms(left, right []*types.Term) []*types.Term {
+	intersection := make([]*types.Term, 0)
+	for _, leftTerm := range left {
+		for _, rightTerm := range right {
+			term := intersectTerm(leftTerm, rightTerm)
+			if term != nil && !containsTerm(intersection, term) {
+				intersection = append(intersection, term)
+			}
+		}
+	}
+	return intersection
+}
+
+// intersectTerm returns the overlap of two exact or approximate terms.
+func intersectTerm(left, right *types.Term) *types.Term {
+	leftType := types.Unalias(left.Type())
+	rightType := types.Unalias(right.Type())
+	if !left.Tilde() && !right.Tilde() {
+		if types.Identical(leftType, rightType) {
+			return types.NewTerm(false, leftType)
+		}
+		return nil
+	}
+	if !types.Identical(leftType.Underlying(), rightType.Underlying()) {
+		return nil
+	}
+	if !left.Tilde() {
+		return types.NewTerm(false, leftType)
+	}
+	if !right.Tilde() {
+		return types.NewTerm(false, rightType)
+	}
+	return types.NewTerm(true, leftType)
+}
+
+// containsTerm reports whether terms already contains the same term.
+func containsTerm(terms []*types.Term, target *types.Term) bool {
+	for _, term := range terms {
+		if term.Tilde() == target.Tilde() && types.Identical(term.Type(), target.Type()) {
+			return true
+		}
+	}
+	return false
+}
