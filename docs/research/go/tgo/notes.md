@@ -1,4 +1,4 @@
-# Rewrite rules and review cases
+# tgo rules and review cases
 
 ## Initialization
 
@@ -27,6 +27,23 @@ Keep source assignment and mutation. Do not add implicit deep copies or ownershi
 Changing an enum variant replaces the entire value. A match binds a copy of its active payload.
 Field writes on that copy follow Go value/reference rules; maps and slices can still share data.
 
+## Checked constructors
+
+`type Quantity int where value > 0` declares a wrapper and a constructor rule.
+Emit a private value field, `NewQuantity(int) (Quantity, error)`, and `Value() int`.
+It is not a Go integer type with unrestricted casts and arithmetic.
+tgo disallows writes or conversions that bypass the constructor. Arithmetic uses the base value;
+construct the result again when a Quantity is needed.
+
+The predicate runs at construction only. Constructor failure returns a zero wrapper and an error.
+The caller must check that error. Ignoring it can break the invariant inside tgo as well as Go.
+Do not claim a global refinement-type proof. Go callers can also make zero directly.
+This check is declared business logic, not FFI validation or hidden runtime enforcement.
+
+Generate comments on exported types, constructors, accessors, and business functions.
+State invalid zero values, construction requirements, error-result use, and alias obligations.
+Agents and tests should check that callers follow the comments. This is not a soundness theorem.
+
 ## Which Go zero values are valid?
 
 - Scalars: valid.
@@ -34,6 +51,7 @@ Field writes on that copy follow Go value/reference rules; maps and slices can s
 - Structs: valid only if every field has a valid zero.
 - Arrays: valid only if every element has a valid zero. A zero-length array is valid.
 - Enums: invalid. Tag zero is reserved.
+- Checked wrappers: no implicit zero. Use their constructor, even if the predicate accepts zero.
 
 These are value rules, not field-default rules. No enum has an implicit first variant.
 A nil slice of enums has no elements and is valid. A non-empty zero-filled slice is not.
@@ -196,4 +214,4 @@ The proposal states a requirement; no compiler or benchmark result proves it yet
 - [Race detector](https://go.dev/doc/articles/race_detector): Go synchronization requirements.
 - [Package types](https://pkg.go.dev/golang.org/x/tools/go/packages): inspect actual Go signatures.
 
-These sources describe Go. Static initialization, defaults, and enum rules are this proposal.
+These sources describe Go. Static initialization, defaults, and enum rules are the tgo proposal.

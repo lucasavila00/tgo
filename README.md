@@ -1,8 +1,8 @@
 # go2
 
 - [Problem](docs/problem/README.md)
-- [Improvements: a small Go superset](docs/improvements/README.md)
-- [Rewrite: a new language that compiles to Go](docs/rewrite/README.md)
+- [tgo: business types and rules that compile to Go](docs/tgo/README.md)
+- [Archived: Go superset proposal](docs/archive/improvements/README.md)
 
 Run `make ci` to check documents. Run `make install-hooks` after cloning.
 
