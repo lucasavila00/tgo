@@ -125,7 +125,9 @@ func (c *checker) collectAssignedGenericValues(
 			current.ambiguous = true
 			continue
 		}
-		bindings[object] = &genericValueBinding{value: value, source: expression}
+		bindings[object] = &genericValueBinding{
+			value: value, source: expression, ambiguous: false,
+		}
 		sources[expression] = true
 	}
 }
@@ -137,7 +139,7 @@ func (c *checker) genericValue(
 	if call, ok := unparenthesized(expression).(*ast.CallExpr); ok {
 		function, receiverArguments, typeArguments := c.genericCall(call)
 		if function == nil {
-			return genericValue{}, false
+			return noGenericValue(), false
 		}
 		fact := c.genericZeroFact(function, summaries)
 		if fact != nil &&
@@ -148,21 +150,21 @@ func (c *checker) genericValue(
 				typeArguments:     typeArguments, conditionCall: call, returned: true,
 			}, true
 		}
-		return genericValue{}, false
+		return noGenericValue(), false
 	}
 	identifier := genericCallIdentifier(expression)
 	if identifier == nil {
-		return genericValue{}, false
+		return noGenericValue(), false
 	}
 	function, ok := c.genericCallObject(expression).(*types.Func)
 	if !ok {
-		return genericValue{}, false
+		return noGenericValue(), false
 	}
 	fact := c.genericZeroFact(function.Origin(), summaries)
 	if fact == nil {
-		return genericValue{}, false
+		return noGenericValue(), false
 	}
-	var typeArguments []types.Type
+	var typeArguments []types.Type = nil
 	if instance, ok := c.pass.TypesInfo.Instances[identifier]; ok {
 		typeArguments = typeList(instance.TypeArgs)
 	}
@@ -170,6 +172,8 @@ func (c *checker) genericValue(
 		function: function.Origin(), fact: fact,
 		receiverArguments: c.receiverTypeArguments(expression),
 		typeArguments:     typeArguments,
+		conditionCall:     nil,
+		returned:          false,
 	}, true
 }
 
@@ -347,5 +351,12 @@ func (c *checker) calledDirectly(expression ast.Expr) bool {
 			return called && call.Fun == current
 		}
 		current = parentheses
+	}
+}
+
+func noGenericValue() genericValue {
+	return genericValue{
+		function: nil, fact: nil, receiverArguments: nil, typeArguments: nil,
+		conditionCall: nil, returned: false,
 	}
 }

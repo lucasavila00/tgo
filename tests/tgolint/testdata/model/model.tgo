@@ -2,8 +2,12 @@ package model
 
 type Count int where value > 0
 
+type Pair struct {
+	Left, Right string `json:"pair"` = ""
+}
+
 type Event enum {
-	Started struct { ID string }
+	Started struct { ID, Alias string `json:"event"` = "" }
 	Stopped struct { Reason string }
 }
 

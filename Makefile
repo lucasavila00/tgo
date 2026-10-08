@@ -1,7 +1,10 @@
-.PHONY: ci lint test build install-hooks install-tools
+.PHONY: ci generated lint test build install-hooks install-tools
 
-ci: lint test
+ci: generated lint test
 	python3 scripts/check_markdown.py
+
+generated:
+	python3 scripts/check_generated.py
 
 lint:
 	golangci-lint run ./...

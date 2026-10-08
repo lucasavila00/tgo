@@ -2,331 +2,264 @@ package compiler
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
+	"strconv"
+
+	"tgo/syntax"
 )
 
-// sourceParser reads tgo extensions. The Go parser reads all other syntax.
-type sourceParser struct {
-	name          string
-	input         string
-	tokens        []lexeme
-	cursor        int
-	edits         []edit
-	models        []*model
-	matchMarker   string
-	defaultMarker string
-	runtimeAlias  string
-}
-
-// parseSource lowers tgo syntax and parses the result as a Go file.
+// parseSource parses tgo syntax, lowers declarations, and parses the Go projection.
 func parseSource(files *token.FileSet, name string, data []byte) (*source, error) {
-	tokens, err := lex(name, string(data))
+	tree, err := syntax.ParseFile(
+		files,
+		name,
+		data,
+		syntax.ParseComments|syntax.AllErrors,
+	)
 	if err != nil {
 		return nil, err
 	}
-	used := identifierNames(tokens)
+	used := make(map[string]bool)
+	syntax.Inspect(tree, func(node syntax.Node) bool {
+		if identifier, ok := node.(*ast.Ident); ok {
+			used[identifier.Name] = true
+		}
+		return true
+	})
 	if used["__tgo_runtime"] {
 		return nil, fmt.Errorf(
 			"%s: generated validation import name __tgo_runtime is reserved",
 			name,
 		)
 	}
-	reader := sourceParser{
-		name: name, input: string(data), tokens: tokens,
-		runtimeAlias: "__tgo_runtime",
+	matchMarker := freshIdentifier("__tgo_match", used)
+	defaultMarker := freshIdentifier("__tgo_defaults", used)
+	runtimeAlias := "__tgo_runtime"
+	file := files.File(tree.Package)
+	edits := []edit(nil)
+	models := []*model(nil)
+	for _, declaration := range tree.Decls {
+		var item *model
+		var replacement string
+		switch node := declaration.(type) {
+		case *syntax.EnumDecl:
+			item = enumModel(files, data, node)
+			replacement = enumGo(name, item, runtimeAlias)
+		case *syntax.StructDecl:
+			item = structModel(files, data, node)
+			replacement = "type " + item.Name + " struct {\n" +
+				fieldDecls(name, item.Fields) + "}\n"
+			replacement += structValidationGo(item, runtimeAlias)
+		case *syntax.CheckedDecl:
+			item = checkedModel(files, data, node)
+			replacement = checkedGo(name, item, runtimeAlias)
+		}
+		if item == nil {
+			continue
+		}
+		start := file.Offset(declaration.Pos())
+		end := declarationEditEnd(data, file.Offset(declaration.End()))
+		startPosition := files.Position(declaration.Pos())
+		endPosition := files.Position(declaration.End())
+		edits = append(edits, edit{
+			start: start,
+			end:   end,
+			text: generatedSource(
+				name,
+				startPosition.Line,
+				endPosition.Line,
+				replacement,
+			),
+		})
+		models = append(models, item)
 	}
-	if err := reader.declarations(); err != nil {
-		return nil, fmt.Errorf("%s:%w", name, err)
+	for _, extension := range syntax.Extensions(tree) {
+		switch node := extension.(type) {
+		case *syntax.MatchStmt:
+			matchStart := file.Offset(node.Match)
+			matchEnd := matchStart + len("match")
+			brace := file.Offset(node.Lbrace)
+			edits = append(edits,
+				edit{start: matchStart, end: matchEnd, text: "switch " + matchMarker + "("},
+				edit{start: brace, end: brace, text: ") "},
+			)
+		case *syntax.DefaultMarker:
+			edits = append(edits, edit{
+				start: file.Offset(node.Pos()),
+				end:   file.Offset(node.End()),
+				text:  defaultMarker + ": true",
+			})
+		}
 	}
-	input := applyEdits(reader.input, reader.edits)
-	input, markers, err := rewriteExpressions(name, input)
-	if err != nil {
-		return nil, err
-	}
+	input := applyEdits(string(data), edits)
 	mode := parser.ParseComments | parser.AllErrors | parser.SkipObjectResolution
-	file, err := parser.ParseFile(files, name, input, mode)
+	goFile, err := parser.ParseFile(files, name, input, mode)
 	if err != nil {
 		return nil, err
 	}
 	return &source{
 		Name:          name,
-		File:          file,
-		Models:        reader.models,
-		MatchMarker:   markers.match,
-		DefaultMarker: markers.defaults,
-		RuntimeAlias:  reader.runtimeAlias,
+		Data:          append([]byte(nil), data...),
+		File:          goFile,
+		Models:        models,
+		MatchMarker:   matchMarker,
+		DefaultMarker: defaultMarker,
+		RuntimeAlias:  runtimeAlias,
 	}, nil
 }
 
-// has reports whether a token at the current offset has the given kind.
-func (p *sourceParser) has(offset int, kind token.Token) bool {
-	index := p.cursor + offset
-	return index < len(p.tokens) && p.tokens[index].kind == kind
-}
-
-// text returns source text for a half-open token range.
-func (p *sourceParser) text(start, end int) string {
-	if start == end {
-		return ""
+func declarationEditEnd(data []byte, end int) int {
+	cursor := end
+	for cursor < len(data) && (data[cursor] == ' ' || data[cursor] == '\t') {
+		cursor++
 	}
-	return p.input[p.tokens[start].start:p.tokens[end-1].end]
-}
-
-// errorAt reports a parser error at one original tgo token.
-func (p *sourceParser) errorAt(index int, pattern string, args ...any) error {
-	if index >= len(p.tokens) {
-		return fmt.Errorf(pattern, args...)
+	if cursor < len(data) && data[cursor] == ';' {
+		return cursor + 1
 	}
-	message := fmt.Sprintf(pattern, args...)
-	return fmt.Errorf("%d:%d: %s", p.tokens[index].line, p.tokens[index].column, message)
+	return end
 }
 
-// declarations finds and lowers top-level tgo type declarations.
-func (p *sourceParser) declarations() error {
-	for p.cursor < len(p.tokens) {
-		if p.has(0, token.TYPE) && p.has(1, token.IDENT) {
-			handled, err := p.typeDeclaration()
-			if err != nil {
-				return err
-			}
-			if handled {
-				continue
-			}
+func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDecl) *model {
+	position := files.Position(declaration.Name.Pos())
+	result := &model{
+		Name:            declaration.Name.Name,
+		Enum:            true,
+		Line:            position.Line,
+		Column:          position.Column,
+		Base:            "",
+		BaseLine:        0,
+		BaseColumn:      0,
+		Predicate:       "",
+		PredicateLine:   0,
+		PredicateColumn: 0,
+		Variants:        nil,
+		Fields:          nil,
+	}
+	for _, item := range declaration.Variants {
+		result.Variants = append(result.Variants, variant{
+			Name:   item.Name.Name,
+			Fields: modelFields(files, data, item.Fields),
+		})
+	}
+	return result
+}
+
+func structModel(files *token.FileSet, data []byte, declaration *syntax.StructDecl) *model {
+	position := files.Position(declaration.Name.Pos())
+	return &model{
+		Name:            declaration.Name.Name,
+		Enum:            false,
+		Line:            position.Line,
+		Column:          position.Column,
+		Base:            "",
+		BaseLine:        0,
+		BaseColumn:      0,
+		Predicate:       "",
+		PredicateLine:   0,
+		PredicateColumn: 0,
+		Variants:        nil,
+		Fields:          modelFields(files, data, declaration.Fields),
+	}
+}
+
+func checkedModel(files *token.FileSet, data []byte, declaration *syntax.CheckedDecl) *model {
+	position := files.Position(declaration.Name.Pos())
+	basePosition := files.Position(declaration.Base.Pos())
+	predicatePosition := files.Position(declaration.Predicate.Pos())
+	return &model{
+		Name:            declaration.Name.Name,
+		Enum:            false,
+		Line:            position.Line,
+		Column:          position.Column,
+		Base:            sourceText(files, data, declaration.Base),
+		BaseLine:        basePosition.Line,
+		BaseColumn:      basePosition.Column,
+		Predicate:       sourceText(files, data, declaration.Predicate),
+		PredicateLine:   predicatePosition.Line,
+		PredicateColumn: predicatePosition.Column,
+		Variants:        nil,
+		Fields:          nil,
+	}
+}
+
+func modelFields(files *token.FileSet, data []byte, declarations []*syntax.FieldDecl) []field {
+	result := []field(nil)
+	for _, declaration := range declarations {
+		typeText := sourceText(files, data, declaration.Field.Type)
+		typePosition := files.Position(declaration.Field.Type.Pos())
+		defaultText := ""
+		defaultLine := 0
+		defaultColumn := 0
+		if declaration.Default != nil {
+			defaultText = sourceText(files, data, declaration.Default)
+			defaultPosition := files.Position(declaration.Default.Pos())
+			defaultLine = defaultPosition.Line
+			defaultColumn = defaultPosition.Column
 		}
-		if err := p.advance(); err != nil {
-			return err
+		tag := ""
+		if declaration.Field.Tag != nil {
+			tag = declaration.Field.Tag.Value
+		}
+		if len(declaration.Field.Names) == 0 {
+			result = append(result, newField(
+				"", typeText, tag, defaultText, typePosition, defaultLine, defaultColumn,
+			))
+			continue
+		}
+		for _, name := range declaration.Field.Names {
+			result = append(result, newField(
+				name.Name, typeText, tag, defaultText, typePosition, defaultLine, defaultColumn,
+			))
 		}
 	}
-	return nil
+	return result
 }
 
-// advance skips a nested group so its contents do not become declarations.
-func (p *sourceParser) advance() error {
-	if opening(p.tokens[p.cursor].kind) {
-		end, err := closeToken(p.tokens, p.cursor)
-		if err != nil {
-			return err
-		}
-		p.cursor = end
+func newField(
+	name string,
+	typeText string,
+	tag string,
+	defaultText string,
+	typePosition token.Position,
+	defaultLine int,
+	defaultColumn int,
+) field {
+	return field{
+		Name:          name,
+		Type:          typeText,
+		Tag:           tag,
+		Default:       defaultText,
+		TypeLine:      typePosition.Line,
+		TypeColumn:    typePosition.Column,
+		DefaultLine:   defaultLine,
+		DefaultColumn: defaultColumn,
 	}
-	p.cursor++
-	return nil
 }
 
-// opening reports whether a token starts a nested group.
-func opening(kind token.Token) bool {
-	return kind == token.LBRACE || kind == token.LBRACK || kind == token.LPAREN
+func sourceText(files *token.FileSet, data []byte, node ast.Node) string {
+	file := files.File(node.Pos())
+	return string(data[file.Offset(node.Pos()):file.Offset(node.End())])
 }
 
-// typeDeclaration parses an enum, checked type, or struct with defaults.
-func (p *sourceParser) typeDeclaration() (bool, error) {
-	if p.cursor+2 >= len(p.tokens) {
-		return false, nil
-	}
-	start := p.cursor
-	name := p.tokens[start+1]
-	declaration := &model{Name: name.text, Line: name.line, Column: name.column}
-	p.cursor += 2
-	var replacement string
-	var err error
-	switch {
-	case p.tokens[p.cursor].text == "enum" && p.enumBodyFollows():
-		replacement, err = p.enumDeclaration(declaration)
-	default:
-		original := p.cursor
-		replacement, err = p.checkedDeclaration(declaration)
-		if replacement == "" && err == nil {
-			p.cursor = original
-			if p.has(0, token.STRUCT) && p.has(1, token.LBRACE) {
-				replacement, err = p.structDeclaration(declaration)
-			}
-		}
-	}
-	if err != nil {
-		return false, err
-	}
-	if replacement == "" {
-		p.cursor = start
-		return false, nil
-	}
-	if p.has(0, token.SEMICOLON) {
-		p.cursor++
-	}
-	p.edits = append(p.edits, edit{
-		start: p.tokens[start].start,
-		end:   p.tokens[p.cursor-1].end,
-		text: generatedSource(
-			p.name,
-			p.tokens[start].line,
-			p.tokens[p.cursor-1].line,
-			replacement,
-		),
-	})
-	p.models = append(p.models, declaration)
-	return true, nil
+func generatedSource(name string, startLine int, endLine int, code string) string {
+	return fmt.Sprintf("//line %s:%d:1\n%s\n//line %s:%d:1\n", name, startLine, code, name, endLine)
 }
 
-// enumBodyFollows accepts a body after an optional implicit semicolon.
-func (p *sourceParser) enumBodyFollows() bool {
-	if p.has(1, token.LBRACE) {
-		return true
-	}
-	return p.implicitSemicolon(p.cursor+1) && p.has(2, token.LBRACE)
-}
-
-// generatedSource keeps generated declarations on their tgo source lines.
-func generatedSource(name string, startLine, endLine int, code string) string {
-	return fmt.Sprintf(
-		"//line %s:%d:1\n%s\n//line %s:%d:1\n",
-		name,
-		startLine,
-		code,
-		name,
-		endLine,
-	)
-}
-
-// lineDirective maps the next generated line to one tgo source token.
-func lineDirective(name string, line, column int) string {
+func lineDirective(name string, line int, column int) string {
 	return fmt.Sprintf("//line %s:%d:%d\n", name, line, column)
 }
 
-// inlineLineDirective maps the token after it without adding a source line.
-func inlineLineDirective(name string, line, column int) string {
+func inlineLineDirective(name string, line int, column int) string {
 	return fmt.Sprintf("/*line %s:%d:%d*/", name, line, column)
 }
 
-// enumDeclaration parses variants and emits their Go representation.
-func (p *sourceParser) enumDeclaration(declaration *model) (string, error) {
-	enumToken := p.cursor
-	p.cursor++
-	if p.implicitSemicolon(p.cursor) {
-		p.cursor++
+func freshIdentifier(base string, used map[string]bool) string {
+	name := base
+	for suffix := 1; used[name]; suffix++ {
+		name = base + "_" + strconv.Itoa(suffix)
 	}
-	if !p.has(0, token.LBRACE) {
-		return "", p.errorAt(enumToken, "enum %s needs a body", declaration.Name)
-	}
-	end, err := closeToken(p.tokens, p.cursor)
-	if err != nil {
-		return "", err
-	}
-	p.cursor++
-	names := make(map[string]bool)
-	for p.cursor < end {
-		if p.has(0, token.SEMICOLON) {
-			p.cursor++
-			continue
-		}
-		variantToken := p.cursor
-		item, err := p.variant()
-		if err != nil {
-			return "", err
-		}
-		if names[item.Name] {
-			return "", p.errorAt(variantToken, "duplicate variant %s", item.Name)
-		}
-		names[item.Name] = true
-		declaration.Variants = append(declaration.Variants, item)
-	}
-	if len(declaration.Variants) == 0 {
-		return "", p.errorAt(enumToken, "enum %s has no variants", declaration.Name)
-	}
-	p.cursor = end + 1
-	return enumGo(p.name, declaration, p.runtimeAlias), nil
-}
-
-// variant parses one named enum payload.
-func (p *sourceParser) variant() (variant, error) {
-	if !p.has(0, token.IDENT) || !p.has(1, token.STRUCT) || !p.has(2, token.LBRACE) {
-		return variant{}, p.errorAt(p.cursor, "variant needs Name struct { fields }")
-	}
-	name := p.tokens[p.cursor].text
-	p.cursor += 2
-	fields, err := p.fields()
-	if err != nil {
-		return variant{}, err
-	}
-	return variant{Name: name, Fields: fields}, nil
-}
-
-// structDeclaration removes defaults from one tgo struct declaration.
-func (p *sourceParser) structDeclaration(declaration *model) (string, error) {
-	p.cursor++
-	fields, err := p.fields()
-	if err != nil {
-		return "", err
-	}
-	declaration.Fields = fields
-	text := "type " + declaration.Name + " struct {\n" + fieldDecls(p.name, fields) + "}\n"
-	text += structValidationGo(declaration, p.runtimeAlias)
-	return text, nil
-}
-
-// checkedDeclaration parses a base type and its construction predicate.
-func (p *sourceParser) checkedDeclaration(declaration *model) (string, error) {
-	start := p.cursor
-	for p.cursor < len(p.tokens) && !p.has(0, token.SEMICOLON) {
-		if p.tokens[p.cursor].text != "where" ||
-			!goTypeExpression(p.text(start, p.cursor)) {
-			if err := p.advance(); err != nil {
-				return "", err
-			}
-			continue
-		}
-		return p.finishCheckedDeclaration(start, declaration)
-	}
-	return "", nil
-}
-
-// finishCheckedDeclaration reads a checked predicate after its where keyword.
-func (p *sourceParser) finishCheckedDeclaration(
-	start int,
-	declaration *model,
-) (string, error) {
-	declaration.Base = p.text(start, p.cursor)
-	declaration.BaseLine = p.tokens[start].line
-	declaration.BaseColumn = p.tokens[start].column
-	p.cursor++
-	if p.implicitSemicolon(p.cursor) {
-		p.cursor++
-	}
-	predicate := p.cursor
-	if predicate < len(p.tokens) {
-		declaration.PredicateLine = p.tokens[predicate].line
-		declaration.PredicateColumn = p.tokens[predicate].column
-	}
-	if err := p.toSemicolon(); err != nil {
-		return "", err
-	}
-	declaration.Predicate = p.text(predicate, p.cursor)
-	if declaration.Predicate == "" {
-		return "", p.errorAt(start, "checked type needs a base type and predicate")
-	}
-	return checkedGo(p.name, declaration, p.runtimeAlias), nil
-}
-
-// implicitSemicolon reports a newline semicolon inserted by the Go scanner.
-func (p *sourceParser) implicitSemicolon(index int) bool {
-	return index < len(p.tokens) && p.tokens[index].kind == token.SEMICOLON &&
-		p.tokens[index].start == p.tokens[index].end
-}
-
-// goTypeExpression reports syntax that can start a checked base type.
-func goTypeExpression(text string) bool {
-	if text == "" {
-		return false
-	}
-	_, err := parser.ParseExpr(text)
-	return err == nil
-}
-
-// toSemicolon advances across one top-level declaration expression.
-func (p *sourceParser) toSemicolon() error {
-	for p.cursor < len(p.tokens) && !p.has(0, token.SEMICOLON) {
-		if err := p.advance(); err != nil {
-			return err
-		}
-	}
-	return nil
+	used[name] = true
+	return name
 }

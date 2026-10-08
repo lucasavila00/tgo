@@ -3,17 +3,7 @@ package compiler
 
 import (
 	"go/ast"
-	"go/token"
 )
-
-type lexeme struct {
-	kind   token.Token
-	text   string
-	start  int
-	end    int
-	line   int
-	column int
-}
 
 type edit struct {
 	start int
@@ -39,6 +29,7 @@ type variant struct {
 
 type model struct {
 	Name            string
+	Enum            bool
 	Line            int
 	Column          int
 	Base            string
@@ -53,6 +44,7 @@ type model struct {
 
 type source struct {
 	Name          string
+	Data          []byte
 	File          *ast.File
 	Models        []*model
 	MatchMarker   string

@@ -128,6 +128,15 @@ var validationRuntime []byte
 
 // ensureValidationRuntime writes the shared explicit-validation support package.
 func (b *packageBuilder) ensureValidationRuntime() error {
+	canonicalPath := filepath.Join(b.root, "internal", "tgoruntime", "runtime.go")
+	canonicalValid := false
+	if data, err := os.ReadFile(canonicalPath); err == nil {
+		canonical := bytes.TrimPrefix(
+			validationRuntime,
+			[]byte(generatedHeader+"\n"),
+		)
+		canonicalValid = bytes.Equal(data, canonical)
+	}
 	directory := filepath.Dir(b.validationRuntimePath())
 	if err := os.MkdirAll(directory, 0o755); err != nil {
 		return err
@@ -137,13 +146,19 @@ func (b *packageBuilder) ensureValidationRuntime() error {
 		return err
 	}
 	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".go") &&
-			entry.Name() != "runtime_tgo.go" {
+		allowed := entry.Name() == "runtime_tgo.go"
+		if canonicalValid {
+			allowed = entry.Name() == "runtime.go"
+		}
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".go") && !allowed {
 			return fmt.Errorf(
 				"reserved tgo validation runtime package contains user Go file %s",
 				filepath.Join(directory, entry.Name()),
 			)
 		}
+	}
+	if canonicalValid {
+		return nil
 	}
 	path := b.validationRuntimePath()
 	previous, err := readFileSnapshot(path)
@@ -535,12 +550,8 @@ func discover(
 	context *build.Context,
 ) (map[string]*packageUnit, error) {
 	discovery := packageDiscovery{
-		root:      root,
-		module:    module,
-		context:   context,
-		knownOS:   make(map[string]bool),
-		knownArch: make(map[string]bool),
-		packages:  make(map[string]*packageUnit),
+		root: root, module: module, context: context,
+		packages: make(map[string]*packageUnit),
 	}
 	err := filepath.WalkDir(root, discovery.visit)
 	if err != nil {
@@ -553,12 +564,10 @@ func discover(
 }
 
 type packageDiscovery struct {
-	root      string
-	module    string
-	context   *build.Context
-	knownOS   map[string]bool
-	knownArch map[string]bool
-	packages  map[string]*packageUnit
+	root     string
+	module   string
+	context  *build.Context
+	packages map[string]*packageUnit
 }
 
 // visit adds tgo files and skips directories outside the active module.
@@ -601,54 +610,12 @@ func (d *packageDiscovery) visitDirectory(path, name string) error {
 
 // addSource records one possible tgo source file.
 func (d *packageDiscovery) addSource(path string) error {
-	d.classifyTargetSuffixes(path)
 	unit, err := d.packageFor(filepath.Dir(path))
 	if err != nil {
 		return err
 	}
 	unit.sourcePaths = append(unit.sourcePaths, path)
 	return nil
-}
-
-// classifyTargetSuffixes records target words at the end of one source name.
-func (d *packageDiscovery) classifyTargetSuffixes(path string) {
-	name := strings.TrimSuffix(filepath.Base(path), ".tgo")
-	parts := strings.Split(name, "_")
-	for _, part := range parts[max(1, len(parts)-2):] {
-		knownOS, knownArch := targetSuffixKind(part)
-		if knownOS {
-			d.knownOS[part] = true
-		}
-		if knownArch {
-			d.knownArch[part] = true
-		}
-	}
-}
-
-// targetSuffixKind asks go/build how it classifies one filename word.
-func targetSuffixKind(word string) (bool, bool) {
-	const noOS = "tgo_unknown_os"
-	const noArch = "tgo_unknown_arch"
-	if matchTargetWord(word, noOS, noArch) {
-		return false, false
-	}
-	return matchTargetWord(word, word, noArch),
-		matchTargetWord(word, noOS, word)
-}
-
-// matchTargetWord tests one synthetic target suffix without reading a real file.
-func matchTargetWord(word, goos, goarch string) bool {
-	context := build.Default
-	context.GOOS = goos
-	context.GOARCH = goarch
-	context.BuildTags = nil
-	context.ToolTags = nil
-	context.ReleaseTags = nil
-	context.OpenFile = func(string) (io.ReadCloser, error) {
-		return io.NopCloser(strings.NewReader("")), nil
-	}
-	match, err := context.MatchFile(".", "source_"+word+".s")
-	return err == nil && match
 }
 
 // addGeneratedCandidate records an output that can keep an orphan package visible.
@@ -670,14 +637,12 @@ func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
 	unit := d.packages[importPath]
 	if unit == nil {
 		unit = &packageUnit{
-			Dir:       directory,
-			Path:      importPath,
-			Module:    d.module,
-			context:   d.context,
-			Models:    make(map[string]*model),
-			knownOS:   d.knownOS,
-			knownArch: d.knownArch,
-			fs:        token.NewFileSet(),
+			Dir:     directory,
+			Path:    importPath,
+			Module:  d.module,
+			context: d.context,
+			Models:  make(map[string]*model),
+			fs:      token.NewFileSet(),
 		}
 		d.packages[importPath] = unit
 	}

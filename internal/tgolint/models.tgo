@@ -1,0 +1,499 @@
+package tgolint
+
+import (
+	"go/ast"
+	"go/token"
+	"go/types"
+	"strings"
+)
+
+const (
+	checkedKind = "checked"
+	enumKind    = "enum"
+)
+
+type modelFact struct {
+	Kind     string
+	Name     string
+	Variants []string
+	Mixed    bool
+}
+
+func (*modelFact) AFact() {}
+
+// validationFact marks a generated operation that returns a validated model.
+type validationFact struct {
+	Kind string
+	Name string
+}
+
+func (*validationFact) AFact() {}
+
+type objectKey struct {
+	pkg  *types.Package
+	name string
+}
+
+func (c *checker) findModels() {
+	var verified []*verifiedSource = nil
+	for _, file := range c.pass.Files {
+		if !c.hasGeneratedHeader(file) {
+			continue
+		}
+		c.generated[file] = true
+		if source := c.verifySourceModels(file); source != nil {
+			verified = append(verified, source)
+		}
+	}
+	if c.invalid {
+		return
+	}
+	for _, source := range verified {
+		c.exportSourceModels(source)
+	}
+}
+
+func (c *checker) hasGeneratedHeader(file *ast.File) bool {
+	if len(file.Comments) == 0 || len(file.Comments[0].List) == 0 {
+		return false
+	}
+	comment := file.Comments[0].List[0]
+	position := c.pass.Fset.Position(comment.Pos())
+	return position.Line == 1 && position.Column == 1 && comment.Text == generatedHeader
+}
+
+func (c *checker) exportGeneratedValidator(object *types.TypeName) {
+	function, ok := object.Pkg().Scope().Lookup("Validate" + object.Name()).(*types.Func)
+	if !ok || !validValidatorAPI(function, object.Type()) {
+		return
+	}
+	fact := &validationFact{Kind: "", Name: object.Name()}
+	c.validated[function] = true
+	c.pass.ExportObjectFact(function, fact)
+}
+
+func validValidatorAPI(function *types.Func, typ types.Type) bool {
+	signature, ok := function.Type().(*types.Signature)
+	if !ok || signature.Params().Len() != 1 || signature.Results().Len() != 2 {
+		return false
+	}
+	errorType := types.Universe.Lookup("error").Type()
+	return types.Identical(signature.Params().At(0).Type(), typ) &&
+		types.Identical(signature.Results().At(0).Type(), typ) &&
+		types.Identical(signature.Results().At(1).Type(), errorType)
+}
+
+func (c *checker) exportValidationFacts(object *types.TypeName, model *modelFact) {
+	scope := object.Pkg().Scope()
+	var names []string = nil
+	if model.Kind == checkedKind {
+		names = append(names, "New"+model.Name)
+	}
+	if model.Kind == enumKind {
+		for _, variant := range model.Variants {
+			names = append(names, "New"+model.Name+variant)
+		}
+	}
+	for _, name := range names {
+		function, ok := scope.Lookup(name).(*types.Func)
+		if !ok {
+			continue
+		}
+		fact := &validationFact{Kind: model.Kind, Name: model.Name}
+		c.validated[function] = true
+		c.pass.ExportObjectFact(function, fact)
+	}
+}
+
+// findValidationWrappers exports a fact for a direct validator forwarding function.
+func (c *checker) findValidationWrappers() {
+	changed := true
+	for changed {
+		changed = false
+		for _, file := range c.pass.Files {
+			for _, declaration := range file.Decls {
+				changed = c.exportValidationWrapper(declaration) || changed
+			}
+		}
+	}
+}
+
+func (c *checker) exportValidationWrapper(declaration ast.Decl) bool {
+	function, ok := declaration.(*ast.FuncDecl)
+	if !ok || function.Body == nil || len(function.Body.List) != 1 {
+		return false
+	}
+	object, ok := c.pass.TypesInfo.Defs[function.Name].(*types.Func)
+	if !ok || c.validated[object] {
+		return false
+	}
+	statement, ok := function.Body.List[0].(*ast.ReturnStmt)
+	if !ok || len(statement.Results) != 1 {
+		return false
+	}
+	call, ok := statement.Results[0].(*ast.CallExpr)
+	if !ok || !c.callHasValidationFact(call) {
+		return false
+	}
+	fact := &validationFact{Kind: "", Name: object.Name()}
+	c.validated[object] = true
+	c.pass.ExportObjectFact(object, fact)
+	return true
+}
+
+func (c *checker) callHasValidationFact(call *ast.CallExpr) bool {
+	object := calledObject(c.pass.TypesInfo, call.Fun)
+	if object == nil {
+		return false
+	}
+	if target := c.callTarget[object]; target != nil {
+		object = target
+	}
+	if c.validated[object] {
+		return true
+	}
+	fact := new(validationFact)
+	if !c.pass.ImportObjectFact(object, fact) {
+		return false
+	}
+	c.validated[object] = true
+	return true
+}
+
+func (c *checker) findValidationFunctionValues() {
+	candidates := make(map[types.Object]types.Object)
+	writes := make(map[types.Object]int)
+	escaped := make(map[types.Object]bool)
+	for _, file := range c.pass.Files {
+		if c.generated[file] {
+			continue
+		}
+		ast.Inspect(file, func(node ast.Node) bool {
+			c.scanValidationFunctionValue(node, candidates, writes, escaped)
+			return true
+		})
+	}
+	for object, target := range candidates {
+		if object != nil && writes[object] == 1 && !escaped[object] {
+			c.callTarget[object] = target
+		}
+	}
+}
+
+func (c *checker) scanValidationFunctionValue(
+	node ast.Node,
+	candidates map[types.Object]types.Object,
+	writes map[types.Object]int,
+	escaped map[types.Object]bool,
+) {
+	switch node := node.(type) {
+	case *ast.AssignStmt:
+		c.recordFunctionWrites(node.Lhs, writes)
+		if len(node.Lhs) == 1 && len(node.Rhs) == 1 {
+			c.recordValidationFunctionValue(candidates, node.Lhs[0], node.Rhs[0])
+		}
+	case *ast.ValueSpec:
+		for _, name := range node.Names {
+			writes[c.pass.TypesInfo.ObjectOf(name)]++
+		}
+		if len(node.Names) == 1 && len(node.Values) == 1 {
+			c.recordValidationFunctionValue(candidates, node.Names[0], node.Values[0])
+		}
+	case *ast.RangeStmt:
+		c.recordFunctionWrites([]ast.Expr{node.Key, node.Value}, writes)
+	case *ast.UnaryExpr:
+		if node.Op == token.AND {
+			escaped[c.pass.TypesInfo.ObjectOf(identifier(node.X))] = true
+		}
+	}
+}
+
+func (c *checker) recordFunctionWrites(
+	expressions []ast.Expr,
+	writes map[types.Object]int,
+) {
+	for _, expression := range expressions {
+		if name, ok := expression.(*ast.Ident); ok {
+			writes[c.pass.TypesInfo.ObjectOf(name)]++
+		}
+	}
+}
+
+func (c *checker) recordValidationFunctionValue(
+	candidates map[types.Object]types.Object,
+	left ast.Expr,
+	right ast.Expr,
+) {
+	name, ok := left.(*ast.Ident)
+	if !ok {
+		return
+	}
+	target := calledObject(c.pass.TypesInfo, right)
+	if target != nil && c.objectHasValidationFact(target) {
+		candidates[c.pass.TypesInfo.ObjectOf(name)] = target
+	}
+}
+
+func (c *checker) objectHasValidationFact(object types.Object) bool {
+	if c.validated[object] {
+		return true
+	}
+	fact := new(validationFact)
+	if !c.pass.ImportObjectFact(object, fact) {
+		return false
+	}
+	c.validated[object] = true
+	return true
+}
+
+func emittedModel(name string, structure *ast.StructType, typ types.Type) *modelFact {
+	fields := structure.Fields.List
+	underlying, ok := typ.Underlying().(*types.Struct)
+	if !ok || underlying.NumFields() != len(fields) {
+		return nil
+	}
+	if len(fields) == 1 && fieldName(fields[0]) == "value" &&
+		validCheckedAPI(typ, underlying.Field(0).Type(), "New"+name) {
+		return &modelFact{Kind: checkedKind, Name: name, Variants: nil, Mixed: false}
+	}
+	if len(fields) < 2 || fieldName(fields[0]) != "tgoTag" ||
+		!validTagMethod(typ, underlying.Field(0).Type()) {
+		return nil
+	}
+	variants := make([]string, 0, len(fields)-1)
+	for index, field := range fields[1:] {
+		field := fieldName(field)
+		if !strings.HasPrefix(field, "tgo") || len(field) == len("tgo") {
+			return nil
+		}
+		variant := strings.TrimPrefix(field, "tgo")
+		payload := underlying.Field(index + 1).Type()
+		if !validEnumAPI(typ, payload, "Tgo"+variant, "New"+name+variant) {
+			return nil
+		}
+		variants = append(variants, variant)
+	}
+	return &modelFact{Kind: enumKind, Name: name, Variants: variants, Mixed: false}
+}
+
+func fieldName(field *ast.Field) string {
+	if len(field.Names) != 1 {
+		return ""
+	}
+	return field.Names[0].Name
+}
+
+func method(typ types.Type, name string) *types.Signature {
+	object, _, _ := types.LookupFieldOrMethod(typ, true, nil, name)
+	function, ok := object.(*types.Func)
+	if !ok {
+		return nil
+	}
+	signature, _ := function.Type().(*types.Signature)
+	return signature
+}
+
+func constructor(typ types.Type, name string) *types.Signature {
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return nil
+	}
+	function, ok := named.Obj().Pkg().Scope().Lookup(name).(*types.Func)
+	if !ok {
+		return nil
+	}
+	signature, _ := function.Type().(*types.Signature)
+	return signature
+}
+
+func validCheckedAPI(typ, base types.Type, constructorName string) bool {
+	value := method(typ, "Value")
+	makeValue := constructor(typ, constructorName)
+	if value == nil || makeValue == nil {
+		return false
+	}
+	errorType := types.Universe.Lookup("error").Type()
+	return value.Params().Len() == 0 && value.Results().Len() == 1 &&
+		types.Identical(value.Results().At(0).Type(), base) &&
+		makeValue.Params().Len() == 1 && makeValue.Results().Len() == 2 &&
+		types.Identical(makeValue.Params().At(0).Type(), base) &&
+		types.Identical(makeValue.Results().At(0).Type(), typ) &&
+		types.Identical(makeValue.Results().At(1).Type(), errorType)
+}
+
+func validTagMethod(typ, tag types.Type) bool {
+	method := method(typ, "TgoTag")
+	return method != nil && method.Params().Len() == 0 && method.Results().Len() == 1 &&
+		types.Identical(method.Results().At(0).Type(), tag)
+}
+
+func validEnumAPI(typ, payload types.Type, accessor, constructorName string) bool {
+	read := method(typ, accessor)
+	makeValue := constructor(typ, constructorName)
+	return read != nil && makeValue != nil &&
+		read.Params().Len() == 0 && read.Results().Len() == 1 &&
+		types.Identical(read.Results().At(0).Type(), payload) &&
+		makeValue.Params().Len() == 1 && makeValue.Results().Len() == 1 &&
+		types.Identical(makeValue.Params().At(0).Type(), payload) &&
+		types.Identical(makeValue.Results().At(0).Type(), typ)
+}
+
+func (c *checker) modelFor(typ types.Type) *modelFact {
+	typ = types.Unalias(typ)
+	named, ok := typ.(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return nil
+	}
+	key := objectKey{pkg: named.Obj().Pkg(), name: named.Obj().Name()}
+	if fact, ok := c.models[key]; ok {
+		return fact
+	}
+	fact := new(modelFact)
+	if !c.pass.ImportObjectFact(named.Obj(), fact) {
+		c.models[key] = nil
+		return nil
+	}
+	c.models[key] = fact
+	return fact
+}
+
+func (c *checker) modelForReceiver(typ types.Type) *modelFact {
+	typ = types.Unalias(typ)
+	for {
+		if parameter, ok := typ.(*types.TypeParam); ok {
+			return c.modelForTypeParameter(parameter)
+		}
+		pointer, ok := typ.(*types.Pointer)
+		if !ok {
+			return c.modelFor(typ)
+		}
+		typ = types.Unalias(pointer.Elem())
+	}
+}
+
+func (c *checker) modelForTypeParameter(parameter *types.TypeParam) *modelFact {
+	terms, supported := simpleTerms(parameter.Constraint())
+	if !supported {
+		return nil
+	}
+	var found *modelFact = nil
+	for _, term := range terms {
+		model := c.modelForReceiver(term.Type())
+		if model == nil {
+			continue
+		}
+		if found != nil && (found.Kind != model.Kind || found.Name != model.Name) {
+			return &modelFact{Kind: "", Name: "", Variants: nil, Mixed: true}
+		}
+		found = model
+	}
+	return found
+}
+
+func (c *checker) modelForSelector(selector *ast.SelectorExpr) *modelFact {
+	if model := c.modelForReceiver(c.pass.TypesInfo.TypeOf(selector.X)); model != nil {
+		return model
+	}
+	selection := c.pass.TypesInfo.Selections[selector]
+	if selection == nil {
+		return nil
+	}
+	if function, ok := selection.Obj().(*types.Func); ok {
+		signature, _ := function.Type().(*types.Signature)
+		if signature != nil && signature.Recv() != nil {
+			return c.modelForReceiver(signature.Recv().Type())
+		}
+	}
+	current := selection.Recv()
+	for offset, index := range selection.Index() {
+		current = dereference(current)
+		structure, ok := current.Underlying().(*types.Struct)
+		if !ok || index >= structure.NumFields() {
+			return nil
+		}
+		if offset == len(selection.Index())-1 {
+			return c.modelForReceiver(current)
+		}
+		current = structure.Field(index).Type()
+	}
+	return nil
+}
+
+// structuralModel finds a generated enum behind an interface method set.
+// It returns nil when the receiver cannot admit that enum.
+func (c *checker) structuralModel(selector *ast.SelectorExpr) *modelFact {
+	receiver := c.pass.TypesInfo.TypeOf(selector.X)
+	if !c.receiverCanHideModel(receiver) {
+		return nil
+	}
+	methods := types.NewMethodSet(receiver)
+	var found *modelFact = nil
+	for index := 0; index < methods.Len(); index++ {
+		function, ok := methods.At(index).Obj().(*types.Func)
+		if !ok {
+			continue
+		}
+		model := c.modelForAccessor(function)
+		if model == nil {
+			continue
+		}
+		if found != nil && (found.Name != model.Name || found.Kind != model.Kind) {
+			return &modelFact{Kind: "", Name: "", Variants: nil, Mixed: true}
+		}
+		found = model
+	}
+	return found
+}
+
+func (c *checker) receiverCanHideModel(typ types.Type) bool {
+	typ = types.Unalias(typ)
+	if named, ok := typ.(*types.Named); ok {
+		_, isInterface := named.Underlying().(*types.Interface)
+		return isInterface
+	}
+	parameter, ok := typ.(*types.TypeParam)
+	if !ok {
+		_, isInterface := typ.(*types.Interface)
+		return isInterface
+	}
+	terms, supported := simpleTerms(parameter.Constraint())
+	return !supported || len(terms) == 0
+}
+
+func (c *checker) modelForAccessor(function *types.Func) *modelFact {
+	name := function.Name()
+	if !strings.HasPrefix(name, "Tgo") || name == "TgoTag" {
+		return nil
+	}
+	variant := strings.TrimPrefix(name, "Tgo")
+	signature, ok := function.Type().(*types.Signature)
+	if !ok || signature.Params().Len() != 0 || signature.Results().Len() != 1 {
+		return nil
+	}
+	payload, ok := types.Unalias(signature.Results().At(0).Type()).(*types.Named)
+	if !ok || payload.Obj().Pkg() == nil ||
+		!strings.HasSuffix(payload.Obj().Name(), variant) {
+		return nil
+	}
+	modelName := strings.TrimSuffix(payload.Obj().Name(), variant)
+	object, ok := payload.Obj().Pkg().Scope().Lookup(modelName).(*types.TypeName)
+	if !ok {
+		return nil
+	}
+	model := c.modelFor(object.Type())
+	if model == nil || model.Kind != enumKind || variantTag(model, name) == 0 {
+		return nil
+	}
+	return model
+}
+
+func dereference(typ types.Type) types.Type {
+	typ = types.Unalias(typ)
+	for {
+		pointer, ok := typ.(*types.Pointer)
+		if !ok {
+			return typ
+		}
+		typ = types.Unalias(pointer.Elem())
+	}
+}

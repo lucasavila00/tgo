@@ -1,0 +1,468 @@
+package tgolint
+
+import (
+	"go/ast"
+	"go/constant"
+	"go/token"
+	"go/types"
+	"sort"
+)
+
+func (c *checker) reportGenericZeroCall(
+	call *ast.CallExpr,
+	summaries map[*types.Func]*genericEffectSummary,
+) {
+	function, receiverArguments, typeArguments := c.genericCall(call)
+	if function == nil {
+		return
+	}
+	fact := c.genericZeroFact(function, summaries)
+	if fact == nil {
+		return
+	}
+	c.reportGenericEffects(call, call, fact.ZeroEffects,
+		receiverArguments, typeArguments, true, "call to "+function.Name())
+	c.reportGenericEffects(call, call, fact.AccessEffects,
+		receiverArguments, typeArguments, false, "call to "+function.Name())
+}
+
+func (c *checker) reportGenericEffects(
+	expression ast.Expr,
+	call *ast.CallExpr,
+	effects []genericEffect,
+	receiverArguments []types.Type,
+	typeArguments []types.Type,
+	zero bool,
+	description string,
+) {
+	type result struct {
+		model     *modelFact
+		certainty effectOutcome
+	}
+	results := make(map[string]result)
+	for _, effect := range effects {
+		model := c.genericEffectModel(
+			effect,
+			receiverArguments,
+			typeArguments,
+			zero,
+		)
+		if model == nil {
+			continue
+		}
+		targetType := c.genericEffectType(effect, receiverArguments, typeArguments)
+		certainty := c.effectCertainty(call, effect, targetType)
+		if certainty == effectNever {
+			continue
+		}
+		key := model.Kind + "\x00" + model.Name
+		current, found := results[key]
+		if !found || current.certainty < certainty {
+			results[key] = result{model: model, certainty: certainty}
+		}
+	}
+	keys := make([]string, 0, len(results))
+	for key := range results {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		item := results[key]
+		verb := "can"
+		if item.certainty == effectAlways {
+			verb = "will"
+		}
+		if zero {
+			c.reportResult(expression.Pos(),
+				"%s %s create invalid tgo %s %s zero from a type argument",
+				description, verb, item.model.Kind, item.model.Name)
+		} else {
+			c.reportResult(expression.Pos(),
+				"%s %s access tgo %s %s through an open type parameter",
+				description, verb, item.model.Kind, item.model.Name)
+		}
+	}
+}
+
+func (c *checker) genericEffectModel(
+	effect genericEffect,
+	receiverArguments []types.Type,
+	typeArguments []types.Type,
+	zero bool,
+) *modelFact {
+	target := c.genericEffectType(effect, receiverArguments, typeArguments)
+	if target == nil {
+		return nil
+	}
+	if zero {
+		model, invalid := c.zeroInvalid(target)
+		if invalid {
+			return model
+		}
+		return nil
+	}
+	model := c.modelBehindAccessType(target)
+	if model == nil || model.Mixed {
+		return nil
+	}
+	return model
+}
+
+func (c *checker) genericEffectType(
+	effect genericEffect,
+	receiverArguments []types.Type,
+	typeArguments []types.Type,
+) types.Type {
+	arguments := typeArguments
+	if effect.Receiver {
+		arguments = receiverArguments
+	}
+	if effect.TypeParameter < 0 || effect.TypeParameter >= len(arguments) {
+		return nil
+	}
+	return arguments[effect.TypeParameter]
+}
+
+func (c *checker) effectCertainty(
+	call *ast.CallExpr,
+	effect genericEffect,
+	targetType types.Type,
+) effectOutcome {
+	certainty := effectAlways
+	if effect.MaySkip {
+		certainty = effectUnknown
+	}
+	for _, condition := range effect.Conditions {
+		if call == nil || condition.ValueParameter < 0 ||
+			condition.ValueParameter >= len(call.Args) {
+			certainty = effectUnknown
+			continue
+		}
+		matches, known := c.effectConditionValue(call, condition, targetType)
+		if known && !matches {
+			return effectNever
+		}
+		if !known {
+			certainty = effectUnknown
+		}
+	}
+	return certainty
+}
+
+func (c *checker) effectConditionValue(
+	call *ast.CallExpr,
+	condition genericEffectCondition,
+	targetType types.Type,
+) (bool, bool) {
+	if condition.ValueParameter < 0 || condition.ValueParameter >= len(call.Args) {
+		return false, false
+	}
+	expression := call.Args[condition.ValueParameter]
+	value := c.pass.TypesInfo.Types[expression].Value
+	switch condition.Kind {
+	case effectBoolean:
+		if value == nil || value.Kind() != constant.Bool {
+			return false, false
+		}
+		return constant.BoolVal(value) == condition.Expected, true
+	case effectNonzero:
+		if value == nil || value.Kind() != constant.Int {
+			return false, false
+		}
+		return (constant.Sign(value) != 0) == condition.Expected, true
+	default:
+		return c.compositeEffectCondition(call, condition, targetType)
+	}
+}
+
+func (c *checker) compositeEffectCondition(
+	call *ast.CallExpr,
+	condition genericEffectCondition,
+	targetType types.Type,
+) (bool, bool) {
+	expression := call.Args[condition.ValueParameter]
+	switch condition.Kind {
+	case effectNonempty:
+		length, _, known := c.knownSliceBounds(expression)
+		return (length != 0) == condition.Expected, known
+	case effectMapMiss:
+		return c.mapMissCondition(call, condition)
+	case effectChannelClosed:
+		return false, c.freshChannel(expression)
+	case effectAssertionFails:
+		return c.assertionFails(expression, targetType)
+	case effectResliceExtends:
+		return c.resliceExtends(call, condition)
+	default:
+		return false, false
+	}
+}
+
+func (c *checker) knownSliceBounds(expression ast.Expr) (int64, int64, bool) {
+	if parentheses, ok := expression.(*ast.ParenExpr); ok {
+		return c.knownSliceBounds(parentheses.X)
+	}
+	if literal, ok := expression.(*ast.CompositeLit); ok {
+		length, known := literalLength(c.pass.TypesInfo, literal)
+		return length, length, known
+	}
+	call, ok := expression.(*ast.CallExpr)
+	if !ok || len(call.Args) < 2 {
+		return 0, 0, false
+	}
+	name, ok := call.Fun.(*ast.Ident)
+	if !ok || name.Name != "make" {
+		return 0, 0, false
+	}
+	if _, builtin := c.pass.TypesInfo.Uses[name].(*types.Builtin); !builtin {
+		return 0, 0, false
+	}
+	if _, slice := coreType(c.pass.TypesInfo.TypeOf(call)).(*types.Slice); !slice {
+		return 0, 0, false
+	}
+	length, known := constantInteger(c.pass.TypesInfo.Types[call.Args[1]].Value)
+	if !known {
+		return 0, 0, false
+	}
+	capacity := length
+	if len(call.Args) > 2 {
+		capacity, known = constantInteger(c.pass.TypesInfo.Types[call.Args[2]].Value)
+	}
+	return length, capacity, known
+}
+
+func literalLength(info *types.Info, literal *ast.CompositeLit) (int64, bool) {
+	next := int64(0)
+	largest := int64(-1)
+	for _, element := range literal.Elts {
+		if pair, ok := element.(*ast.KeyValueExpr); ok {
+			index, known := constantInteger(info.Types[pair.Key].Value)
+			if !known {
+				return 0, false
+			}
+			next = index
+		}
+		if next > largest {
+			largest = next
+		}
+		next++
+	}
+	return largest + 1, true
+}
+
+func constantInteger(value constant.Value) (int64, bool) {
+	if value == nil || value.Kind() != constant.Int {
+		return 0, false
+	}
+	result, exact := constant.Int64Val(value)
+	return result, exact
+}
+
+func (c *checker) mapMissCondition(
+	call *ast.CallExpr,
+	condition genericEffectCondition,
+) (bool, bool) {
+	if condition.OtherParameter < 0 || condition.OtherParameter >= len(call.Args) {
+		return false, false
+	}
+	literal, ok := unparenthesized(call.Args[condition.ValueParameter]).(*ast.CompositeLit)
+	if !ok {
+		return false, false
+	}
+	key := c.pass.TypesInfo.Types[call.Args[condition.OtherParameter]].Value
+	if key == nil {
+		return false, false
+	}
+	for _, element := range literal.Elts {
+		pair, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			return false, false
+		}
+		candidate := c.pass.TypesInfo.Types[pair.Key].Value
+		if candidate == nil {
+			return false, false
+		}
+		if constant.Compare(candidate, token.EQL, key) {
+			return false, true
+		}
+	}
+	return true, true
+}
+
+func (c *checker) freshChannel(expression ast.Expr) bool {
+	call, ok := unparenthesized(expression).(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	name, ok := call.Fun.(*ast.Ident)
+	if !ok || name.Name != "make" {
+		return false
+	}
+	_, builtin := c.pass.TypesInfo.Uses[name].(*types.Builtin)
+	_, channel := coreType(c.pass.TypesInfo.TypeOf(call)).(*types.Chan)
+	return builtin && channel
+}
+
+func (c *checker) assertionFails(
+	expression ast.Expr,
+	target types.Type,
+) (bool, bool) {
+	fails, known := c.assertionTypes(expression, target)
+	return fails, known
+}
+
+func (c *checker) assertionTypes(
+	expression ast.Expr,
+	target types.Type,
+) (bool, bool) {
+	if target == nil {
+		return false, false
+	}
+	source := c.pass.TypesInfo.TypeOf(expression)
+	if source == nil {
+		return false, false
+	}
+	underlying := types.Unalias(source).Underlying()
+	if _, open := underlying.(*types.Interface); open {
+		return false, false
+	}
+	if _, open := types.Unalias(source).(*types.TypeParam); open {
+		return false, false
+	}
+	return !types.AssignableTo(source, target), true
+}
+
+func (c *checker) resliceExtends(
+	call *ast.CallExpr,
+	condition genericEffectCondition,
+) (bool, bool) {
+	if condition.OtherParameter < 0 || condition.OtherParameter >= len(call.Args) {
+		return false, false
+	}
+	length, capacity, known := c.knownSliceBounds(call.Args[condition.ValueParameter])
+	if !known {
+		return false, false
+	}
+	highValue := c.pass.TypesInfo.Types[call.Args[condition.OtherParameter]].Value
+	high, known := constantInteger(highValue)
+	if !known {
+		return false, false
+	}
+	return high > length && high <= capacity, true
+}
+
+func unparenthesized(expression ast.Expr) ast.Expr {
+	for {
+		parentheses, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			return expression
+		}
+		expression = parentheses.X
+	}
+}
+
+func (c *checker) modelBehindAccessType(typ types.Type) *modelFact {
+	if model := c.modelForReceiver(typ); model != nil {
+		return model
+	}
+	methods := types.NewMethodSet(typ)
+	var found *modelFact = nil
+	for index := 0; index < methods.Len(); index++ {
+		function, ok := methods.At(index).Obj().(*types.Func)
+		if !ok {
+			continue
+		}
+		model := c.modelForAccessor(function)
+		if model == nil {
+			continue
+		}
+		if found != nil && (found.Kind != model.Kind || found.Name != model.Name) {
+			return &modelFact{Kind: "", Name: "", Variants: nil, Mixed: true}
+		}
+		found = model
+	}
+	return found
+}
+
+func (c *checker) genericCall(
+	call *ast.CallExpr,
+) (*types.Func, []types.Type, []types.Type) {
+	identifier := genericCallIdentifier(call.Fun)
+	if identifier == nil {
+		return nil, nil, nil
+	}
+	function, ok := c.genericCallObject(call.Fun).(*types.Func)
+	if !ok {
+		return nil, nil, nil
+	}
+	var typeArguments []types.Type = nil
+	if instance, ok := c.pass.TypesInfo.Instances[identifier]; ok {
+		typeArguments = typeList(instance.TypeArgs)
+	}
+	return function.Origin(), c.receiverTypeArguments(call.Fun), typeArguments
+}
+
+func (c *checker) genericCallObject(expression ast.Expr) types.Object {
+	base := genericCallBase(expression)
+	if selector, ok := base.(*ast.SelectorExpr); ok {
+		if selection := c.pass.TypesInfo.Selections[selector]; selection != nil {
+			return selection.Obj()
+		}
+		return c.pass.TypesInfo.ObjectOf(selector.Sel)
+	}
+	if identifier, ok := base.(*ast.Ident); ok {
+		return c.pass.TypesInfo.ObjectOf(identifier)
+	}
+	return nil
+}
+
+func genericCallIdentifier(expression ast.Expr) *ast.Ident {
+	switch expression := genericCallBase(expression).(type) {
+	case *ast.Ident:
+		return expression
+	case *ast.SelectorExpr:
+		return expression.Sel
+	default:
+		return nil
+	}
+}
+
+func genericCallBase(expression ast.Expr) ast.Expr {
+	switch expression := expression.(type) {
+	case *ast.ParenExpr:
+		return genericCallBase(expression.X)
+	case *ast.IndexExpr:
+		return genericCallBase(expression.X)
+	case *ast.IndexListExpr:
+		return genericCallBase(expression.X)
+	default:
+		return expression
+	}
+}
+
+func (c *checker) receiverTypeArguments(expression ast.Expr) []types.Type {
+	selector, ok := genericCallBase(expression).(*ast.SelectorExpr)
+	if !ok {
+		return nil
+	}
+	selection := c.pass.TypesInfo.Selections[selector]
+	if selection == nil {
+		return nil
+	}
+	named, ok := dereference(selection.Recv()).(*types.Named)
+	if !ok {
+		return nil
+	}
+	return typeList(named.TypeArgs())
+}
+
+func typeList(list *types.TypeList) []types.Type {
+	if list == nil {
+		return nil
+	}
+	result := make([]types.Type, list.Len())
+	for index := range result {
+		result[index] = list.At(index)
+	}
+	return result
+}

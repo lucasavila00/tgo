@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"go/ast"
 	"go/build"
@@ -13,7 +14,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"tgo/internal/outputname"
 
 	"golang.org/x/tools/go/ast/astutil"
 )
@@ -28,8 +32,6 @@ type packageUnit struct {
 	sourcePaths     []string
 	matchingPaths   []string
 	generatedPaths  []string
-	knownOS         map[string]bool
-	knownArch       map[string]bool
 	context         *build.Context
 	usesC           bool
 	sourcesMatched  bool
@@ -48,25 +50,11 @@ type packageUnit struct {
 	serial          int
 }
 
+const integritySeparator = "\x00tgo generated body\x00"
+
 // outputPath returns the Go output path while preserving target suffixes.
 func (p *packageUnit) outputPath(sourcePath string) string {
-	directory := filepath.Dir(sourcePath)
-	name := strings.TrimSuffix(filepath.Base(sourcePath), ".tgo")
-	parts := strings.Split(name, "_")
-	suffix := len(parts)
-	if len(parts) > 2 && p.knownOS[parts[len(parts)-2]] &&
-		p.knownArch[parts[len(parts)-1]] {
-		suffix = len(parts) - 2
-	} else if len(parts) > 1 &&
-		(p.knownOS[parts[len(parts)-1]] || p.knownArch[parts[len(parts)-1]]) {
-		suffix = len(parts) - 1
-	}
-	if suffix == len(parts) {
-		return filepath.Join(directory, name+"_tgo.go")
-	}
-	prefix := strings.Join(parts[:suffix], "_")
-	target := strings.Join(parts[suffix:], "_")
-	return filepath.Join(directory, prefix+"_tgo_"+target+".go")
+	return outputname.Path(sourcePath)
 }
 
 // fail records a source error for later reporting.
@@ -203,11 +191,24 @@ func (p *packageUnit) compile() (map[string][]byte, error) {
 	outputs := map[string][]byte{}
 	for _, s := range p.Sources {
 		removeLineDirectives(s.File)
-		var b bytes.Buffer
-		b.WriteString(generatedHeader + "\n\n")
-		if err := format.Node(&b, p.fs, s.File); err != nil {
+		var body bytes.Buffer
+		if err := format.Node(&body, p.fs, s.File); err != nil {
 			return nil, err
 		}
+		hash := sha256.New()
+		_, _ = hash.Write(s.Data)
+		_, _ = hash.Write([]byte(integritySeparator))
+		_, _ = hash.Write(body.Bytes())
+		digest := hash.Sum(nil)
+		var b bytes.Buffer
+		b.WriteString(generatedHeader + "\n")
+		fmt.Fprintf(
+			&b,
+			"//tgo:v1 %s %x\n\n",
+			strconv.Quote(filepath.Base(s.Name)),
+			digest,
+		)
+		b.Write(body.Bytes())
 		outputs[p.outputPath(s.Name)] = b.Bytes()
 	}
 	return outputs, nil

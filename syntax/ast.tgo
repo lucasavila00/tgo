@@ -1,0 +1,208 @@
+// Package syntax parses tgo source files.
+// Parsed trees are read-only. Mutation makes the traversal indexes invalid.
+package syntax
+
+import (
+	"go/ast"
+	"go/token"
+	"go/types"
+)
+
+// Span is a half-open source range.
+type Span struct {
+	Start token.Pos
+	Stop  token.Pos
+}
+
+// Pos returns the first position in the range.
+func (s Span) Pos() token.Pos { return s.Start }
+
+// End returns the first position after the range.
+func (s Span) End() token.Pos { return s.Stop }
+
+// Node is a Go or tgo syntax node.
+type Node interface {
+	Pos() token.Pos
+	End() token.Pos
+}
+
+// Extension is a tgo syntax node.
+type Extension interface {
+	Node
+	extensionNode()
+}
+
+// File is one parsed tgo source file.
+type File struct {
+	Span
+	Doc       *ast.CommentGroup
+	Package   token.Pos
+	Name      *ast.Ident
+	Decls     []Node
+	Imports   []*ast.ImportSpec
+	Comments  []*ast.CommentGroup
+	GoVersion string
+
+	goFile     *ast.File
+	children   map[Node][]Node
+	parents    map[Node]Node
+	extensions []Extension
+	attached   map[Node][]*ast.CommentGroup
+}
+
+// GoFile returns the marker-free Go remainder of the source file.
+// Use Inspect or Walk when traversal must include tgo nodes.
+func (f *File) GoFile() *ast.File { return f.goFile }
+
+// EnumDecl declares a closed enum.
+type EnumDecl struct {
+	Span
+	Doc      *ast.CommentGroup
+	Type     token.Pos
+	Name     *ast.Ident
+	Enum     token.Pos
+	Lbrace   token.Pos
+	Variants []*VariantDecl
+	Rbrace   token.Pos
+	Comment  *ast.CommentGroup
+}
+
+func (*EnumDecl) extensionNode() {}
+
+// VariantDecl declares one enum payload.
+type VariantDecl struct {
+	Span
+	Doc     *ast.CommentGroup
+	Name    *ast.Ident
+	Struct  token.Pos
+	Lbrace  token.Pos
+	Fields  []*FieldDecl
+	Rbrace  token.Pos
+	Comment *ast.CommentGroup
+}
+
+func (*VariantDecl) extensionNode() {}
+
+// StructDecl declares a tgo struct.
+type StructDecl struct {
+	Span
+	Doc     *ast.CommentGroup
+	Type    token.Pos
+	Name    *ast.Ident
+	Struct  token.Pos
+	Lbrace  token.Pos
+	Fields  []*FieldDecl
+	Rbrace  token.Pos
+	Comment *ast.CommentGroup
+}
+
+func (*StructDecl) extensionNode() {}
+
+// CheckedDecl declares a type and its construction predicate.
+type CheckedDecl struct {
+	Span
+	Doc       *ast.CommentGroup
+	Type      token.Pos
+	Name      *ast.Ident
+	Base      ast.Expr
+	Where     token.Pos
+	Predicate ast.Expr
+	Comment   *ast.CommentGroup
+}
+
+func (*CheckedDecl) extensionNode() {}
+
+// FieldDecl is one tgo field group and its optional default.
+type FieldDecl struct {
+	Span
+	Doc     *ast.CommentGroup
+	Field   *ast.Field
+	Assign  token.Pos
+	Default ast.Expr
+	Comment *ast.CommentGroup
+}
+
+func (*FieldDecl) extensionNode() {}
+
+// LabeledStmt is an ordinary label whose statement is a tgo node.
+type LabeledStmt struct {
+	Span
+	Label *ast.Ident
+	Colon token.Pos
+	Stmt  Node
+}
+
+// MatchStmt selects one enum variant.
+type MatchStmt struct {
+	Span
+	Match   token.Pos
+	Subject ast.Expr
+	Lbrace  token.Pos
+	Cases   []*MatchCase
+	Rbrace  token.Pos
+}
+
+func (*MatchStmt) extensionNode() {}
+
+// MatchCase binds one enum payload.
+type MatchCase struct {
+	Span
+	Case     token.Pos
+	Variant  *ast.Ident
+	Lparen   token.Pos
+	Binding  *ast.Ident
+	Rparen   token.Pos
+	Colon    token.Pos
+	Body     []Node
+	Comments []*ast.CommentGroup
+}
+
+func (*MatchCase) extensionNode() {}
+
+// DefaultMarker selects all omitted fields that have defaults.
+type DefaultMarker struct {
+	Span
+	FirstDot token.Pos
+	LastDot  token.Pos
+	Default  token.Pos
+}
+
+func (*DefaultMarker) extensionNode() {}
+
+// VariantLiteral is the typed view of an enum variant literal.
+type VariantLiteral struct {
+	Span
+	Literal *ast.CompositeLit
+	Enum    ast.Expr
+	Variant *ast.Ident
+}
+
+func (*VariantLiteral) extensionNode() {}
+
+// EnumLookup reports whether a type is a tgo enum.
+type EnumLookup func(types.Type) bool
+
+// VariantLiteralOf returns the tgo view of a typed selector literal.
+func VariantLiteralOf(
+	literal *ast.CompositeLit,
+	info *types.Info,
+	isEnum EnumLookup,
+) (*VariantLiteral, bool) {
+	if literal == nil {
+		return nil, false
+	}
+	selector, ok := literal.Type.(*ast.SelectorExpr)
+	if !ok || info == nil || isEnum == nil {
+		return nil, false
+	}
+	typeAndValue, ok := info.Types[selector.X]
+	if !ok || !typeAndValue.IsType() || !isEnum(typeAndValue.Type) {
+		return nil, false
+	}
+	return &VariantLiteral{
+		Span:    Span{Start: literal.Pos(), Stop: literal.End()},
+		Literal: literal,
+		Enum:    selector.X,
+		Variant: selector.Sel,
+	}, true
+}

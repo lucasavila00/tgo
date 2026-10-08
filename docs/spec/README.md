@@ -61,6 +61,27 @@ An identifier named `match` keeps its Go meaning in other positions.
 These names keep their Go meaning in other positions.
 An immediate line break after a contextual keyword does not insert a semicolon.
 
+## Source syntax API
+
+The public `tgo/syntax` package parses this grammar. `ParseFile` accepts a Go
+`token.FileSet`, a file name, source bytes, and a parse mode. `ParseComments` retains comments.
+`AllErrors` reports independent scanner and Go parser errors. A tgo production error stops
+extension parsing at its first error.
+
+The syntax tree uses `go/ast` nodes for ordinary Go syntax. It uses explicit nodes for enums,
+variants, checked types, tgo structs and fields, field defaults, matches, cases, bindings, and
+`..default`. A `syntax.LabeledStmt` represents a Go label chain that contains a tgo statement.
+All node positions refer to the supplied file set and original source.
+
+`Children`, `Parent`, `Walk`, and `Inspect` traverse Go and tgo nodes as one source tree.
+`Extensions` returns tgo nodes in source order. `ExtensionAt` finds the smallest tgo node at a
+position. `AttachedComments` returns the comments owned by a node. Each node and comment has one
+parent. Callers must treat a parsed tree as read-only because traversal indexes are cached.
+
+`File.GoFile` returns the ordinary Go remainder. It does not contain parser markers or synthetic
+placeholder nodes. `VariantLiteralOf` uses Go type information to identify a selector composite
+literal as an enum variant. It does not classify literals from spelling alone.
+
 ## Enum types
 
 An enum declares a closed set of variants. Each variant has a struct payload.
@@ -387,6 +408,16 @@ interface assertions, callbacks, decoders, and arbitrary `(T, error)` results as
 its typed source analysis can identify the flow. A successful generated validator result becomes
 trusted only after its matching error is proved nil. The analysis is local and conservative. It
 cannot prevent a race, inspect `unsafe` or cgo memory, or prove application ownership rules.
+
+Each generated model file has versioned integrity metadata. It binds the exact tgo source bytes
+to the complete formatted Go body. Before it exports facts, `tgolint` checks the source and output
+name pair, the digest, and every fact-bearing declaration against the current compiler emitter.
+This includes representations, constructors, accessors, validators, and reconstruction helpers.
+
+The validation runtime is a separate trust boundary. Its only Go file has versioned metadata for
+the canonical runtime body. `tgolint` exports a runtime package fact only for that exact body. A
+model file must bind `__tgo_runtime` to a package with this fact. A missing or failed source,
+output, emitter, or runtime check produces a diagnostic and exports no model or validation facts.
 
 The emitted representation and ordinary hot paths cost no more than the equivalent handwritten
 Go design. Only an explicit validation call pays for graph reconstruction.

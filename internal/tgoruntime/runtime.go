@@ -1,3 +1,5 @@
+//tgo:runtime v1 sha256=a27f737d3f278a2907a775423f29adcd110fc9b31f2a8d7b4978e2594bfa67fb
+
 // Package tgoruntime supports generated tgo validation.
 package tgoruntime
 

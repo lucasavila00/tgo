@@ -1,0 +1,504 @@
+package tgolint
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"go/ast"
+	"go/format"
+	"go/token"
+	"go/types"
+	"path/filepath"
+	"reflect"
+	"strconv"
+	"strings"
+
+	"tgo/internal/compiler"
+	"tgo/internal/outputname"
+	"tgo/syntax"
+
+	"golang.org/x/tools/go/analysis"
+)
+
+const metadataPrefix = "//tgo:v1 "
+const integritySeparator = "\x00tgo generated body\x00"
+
+type generatedMetadata struct {
+	source string
+	digest []byte
+	body   []byte
+}
+
+type verifiedSource struct {
+	generated *ast.File
+	file      *syntax.File
+}
+
+// verifySourceModels checks generated declarations against their canonical source.
+func (c *checker) verifySourceModels(generated *ast.File) *verifiedSource {
+	generatedPath := c.pass.Fset.Position(generated.Package).Filename
+	generatedData, readErr := c.pass.ReadFile(generatedPath)
+	metadata := parseGeneratedMetadata(generatedData)
+	if readErr != nil || metadata == nil {
+		c.failVerification(generated.Package, "generated tgo model metadata is invalid")
+		return nil
+	}
+	sourceName := metadata.source
+	if !sourceMatchesGenerated(sourceName, generatedPath) {
+		c.failVerification(generated.Package, "generated tgo model metadata is invalid")
+		return nil
+	}
+	sourcePath := filepath.Join(filepath.Dir(generatedPath), sourceName)
+	data, err := readTGoSource(c.pass, sourcePath)
+	if err != nil {
+		c.failVerification(
+			generated.Package,
+			"cannot read tgo source %s: %v",
+			sourceName,
+			err,
+		)
+		return nil
+	}
+	if !validGeneratedIntegrity(metadata, data) {
+		c.failVerification(generated.Package, "generated tgo output integrity check failed")
+		return nil
+	}
+	if !c.hasTrustedRuntime(generated) {
+		c.failVerification(generated.Package, "tgo runtime integrity fact is missing")
+		return nil
+	}
+	if err := compiler.VerifyGeneratedModels(sourceName, data, metadata.body); err != nil {
+		c.failVerification(
+			generated.Package,
+			"generated tgo output does not match the current compiler emitter: %v",
+			err,
+		)
+		return nil
+	}
+	file, err := syntax.ParseFile(
+		token.NewFileSet(),
+		sourcePath,
+		data,
+		syntax.ParseComments|syntax.AllErrors,
+	)
+	if err != nil {
+		c.failVerification(
+			generated.Package,
+			"cannot parse tgo source %s: %v",
+			sourceName,
+			err,
+		)
+		return nil
+	}
+	sourceNames := make(map[string]bool)
+	for _, declaration := range file.Decls {
+		if source := sourceDeclaration(declaration); source != nil {
+			sourceNames[source.name] = true
+		}
+		c.checkSourceDeclaration(generated, sourceName, declaration)
+	}
+	c.reportExtraGeneratedModels(generated, sourceName, sourceNames)
+	if c.invalid {
+		return nil
+	}
+	return &verifiedSource{generated: generated, file: file}
+}
+
+func (c *checker) exportSourceModels(source *verifiedSource) {
+	for _, declaration := range source.file.Decls {
+		c.exportSourceDeclaration(source.generated, declaration)
+	}
+}
+
+func parseGeneratedMetadata(data []byte) *generatedMetadata {
+	parts := bytes.SplitN(data, []byte("\n"), 4)
+	if len(parts) != 4 || string(parts[0]) != generatedHeader || len(parts[2]) != 0 {
+		return nil
+	}
+	line := string(parts[1])
+	if !strings.HasPrefix(line, metadataPrefix) {
+		return nil
+	}
+	value := strings.TrimPrefix(line, metadataPrefix)
+	separator := strings.LastIndex(value, " ")
+	if separator < 0 {
+		return nil
+	}
+	quotedSource := value[:separator]
+	source, err := strconv.Unquote(quotedSource)
+	if err != nil || strconv.Quote(source) != quotedSource || filepath.Base(source) != source {
+		return nil
+	}
+	digestText := value[separator+1:]
+	digest, err := hex.DecodeString(digestText)
+	if err != nil || len(digest) != sha256.Size || hex.EncodeToString(digest) != digestText {
+		return nil
+	}
+	return &generatedMetadata{source: source, digest: digest, body: parts[3]}
+}
+
+func sourceMatchesGenerated(source string, generatedPath string) bool {
+	return outputname.Matches(source, generatedPath)
+}
+
+func (c *checker) hasModelAPIs(object *types.TypeName) bool {
+	validator, ok := object.Pkg().Scope().Lookup("Validate" + object.Name()).(*types.Func)
+	return ok && validValidatorAPI(validator, object.Type()) &&
+		validReconstructAPI(object.Type())
+}
+
+func (c *checker) reportExtraGeneratedModels(
+	file *ast.File,
+	sourceName string,
+	sourceNames map[string]bool,
+) {
+	for _, declaration := range file.Decls {
+		general, ok := declaration.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		for _, item := range general.Specs {
+			specification, ok := item.(*ast.TypeSpec)
+			if !ok || sourceNames[specification.Name.Name] {
+				continue
+			}
+			structure, structural := specification.Type.(*ast.StructType)
+			object, objectOK := c.pass.TypesInfo.Defs[specification.Name].(*types.TypeName)
+			if !structural || !objectOK {
+				continue
+			}
+			if emittedModel(specification.Name.Name, structure, object.Type()) != nil ||
+				c.hasModelAPIs(object) {
+				c.failVerification(
+					specification.Pos(),
+					"generated tgo output for %s does not match %s",
+					specification.Name.Name,
+					sourceName,
+				)
+			}
+		}
+	}
+}
+
+func validGeneratedIntegrity(metadata *generatedMetadata, source []byte) bool {
+	hash := sha256.New()
+	_, _ = hash.Write(source)
+	_, _ = hash.Write([]byte(integritySeparator))
+	_, _ = hash.Write(metadata.body)
+	return bytes.Equal(metadata.digest, hash.Sum(nil))
+}
+
+func (c *checker) checkSourceDeclaration(
+	generated *ast.File,
+	sourceName string,
+	declaration syntax.Node,
+) {
+	source := sourceDeclaration(declaration)
+	if source == nil {
+		return
+	}
+	name := source.name
+	specification := generatedTypeSpec(generated, name)
+	if specification == nil {
+		c.failVerification(
+			generated.Package,
+			"generated tgo output for %s does not match %s",
+			name,
+			sourceName,
+		)
+		return
+	}
+	object, objectOK := c.pass.TypesInfo.Defs[specification.Name].(*types.TypeName)
+	structure, structural := specification.Type.(*ast.StructType)
+	if !objectOK || !structural || !c.hasGeneratedValidator(generated, object) ||
+		!sourceShapeMatches(
+			generated, structure, object.Type(), source.fact,
+			source.fields, source.base, source.variants,
+		) {
+		c.failVerification(
+			specification.Pos(),
+			"generated tgo output for %s does not match %s",
+			name,
+			sourceName,
+		)
+		return
+	}
+}
+
+func (c *checker) exportSourceDeclaration(generated *ast.File, declaration syntax.Node) {
+	source := sourceDeclaration(declaration)
+	if source == nil {
+		return
+	}
+	specification := generatedTypeSpec(generated, source.name)
+	if specification == nil {
+		return
+	}
+	object, ok := c.pass.TypesInfo.Defs[specification.Name].(*types.TypeName)
+	if !ok {
+		return
+	}
+	c.exportGeneratedValidator(object)
+	if source.fact != nil {
+		key := objectKey{pkg: object.Pkg(), name: object.Name()}
+		c.models[key] = source.fact
+		c.pass.ExportObjectFact(object, source.fact)
+		c.exportValidationFacts(object, source.fact)
+	}
+}
+
+type sourceModel struct {
+	name     string
+	fact     *modelFact
+	fields   []*syntax.FieldDecl
+	base     ast.Expr
+	variants []*syntax.VariantDecl
+}
+
+func sourceDeclaration(declaration syntax.Node) *sourceModel {
+	switch node := declaration.(type) {
+	case *syntax.CheckedDecl:
+		return &sourceModel{
+			name: node.Name.Name,
+			fact: &modelFact{
+				Kind: checkedKind, Name: node.Name.Name, Variants: nil, Mixed: false,
+			},
+			fields: nil, base: node.Base, variants: nil,
+		}
+	case *syntax.EnumDecl:
+		variants := make([]string, 0, len(node.Variants))
+		for _, variant := range node.Variants {
+			variants = append(variants, variant.Name.Name)
+		}
+		return &sourceModel{
+			name: node.Name.Name,
+			fact: &modelFact{
+				Kind: enumKind, Name: node.Name.Name, Variants: variants, Mixed: false,
+			},
+			fields: nil, base: nil, variants: node.Variants,
+		}
+	case *syntax.StructDecl:
+		return &sourceModel{
+			name: node.Name.Name, fact: nil, fields: node.Fields,
+			base: nil, variants: nil,
+		}
+	default:
+		return nil
+	}
+}
+
+func readTGoSource(pass *analysis.Pass, path string) ([]byte, error) {
+	found := false
+	for _, other := range pass.OtherFiles {
+		if filepath.Clean(other) == filepath.Clean(path) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		pass.OtherFiles = append(pass.OtherFiles, path)
+	}
+	return pass.ReadFile(path)
+}
+
+func generatedTypeSpec(file *ast.File, name string) *ast.TypeSpec {
+	for _, declaration := range file.Decls {
+		general, ok := declaration.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		for _, item := range general.Specs {
+			specification, ok := item.(*ast.TypeSpec)
+			if ok && specification.Name.Name == name {
+				return specification
+			}
+		}
+	}
+	return nil
+}
+
+func (c *checker) hasGeneratedValidator(
+	file *ast.File,
+	object *types.TypeName,
+) bool {
+	function, ok := object.Pkg().Scope().Lookup("Validate" + object.Name()).(*types.Func)
+	return ok && validValidatorAPI(function, object.Type()) &&
+		validReconstructAPI(object.Type()) && c.validatorBody(file, object.Name())
+}
+
+func validReconstructAPI(typ types.Type) bool {
+	reconstruct := method(typ, "TgoReconstruct")
+	if reconstruct == nil || reconstruct.Params().Len() != 1 ||
+		reconstruct.Results().Len() != 2 {
+		return false
+	}
+	pointer, ok := reconstruct.Params().At(0).Type().(*types.Pointer)
+	if !ok {
+		return false
+	}
+	context, ok := pointer.Elem().(*types.Named)
+	if !ok || context.Obj().Name() != "Context" || context.Obj().Pkg() == nil ||
+		!strings.HasSuffix(context.Obj().Pkg().Path(), "/internal/tgoruntime") {
+		return false
+	}
+	anyType := types.Universe.Lookup("any").Type()
+	errorType := types.Universe.Lookup("error").Type()
+	return types.Identical(reconstruct.Results().At(0).Type(), anyType) &&
+		types.Identical(reconstruct.Results().At(1).Type(), errorType)
+}
+
+func (c *checker) validatorBody(file *ast.File, name string) bool {
+	for _, declaration := range file.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if !ok || function.Recv != nil || function.Name.Name != "Validate"+name {
+			continue
+		}
+		return c.validValidatorFunction(function)
+	}
+	return false
+}
+
+func (c *checker) validValidatorFunction(function *ast.FuncDecl) bool {
+	if function.Body == nil || len(function.Body.List) != 1 {
+		return false
+	}
+	statement, ok := function.Body.List[0].(*ast.ReturnStmt)
+	if !ok || len(statement.Results) != 1 {
+		return false
+	}
+	call, ok := statement.Results[0].(*ast.CallExpr)
+	if !ok || len(call.Args) != 2 || !c.runtimeSelector(call.Fun, "RebuildAs") {
+		return false
+	}
+	value, ok := call.Args[0].(*ast.Ident)
+	context, okContext := call.Args[1].(*ast.CallExpr)
+	return ok && value.Name == "value" && okContext && len(context.Args) == 0 &&
+		c.runtimeSelector(context.Fun, "NewContext")
+}
+
+func (c *checker) runtimeSelector(expression ast.Expr, name string) bool {
+	selector, ok := expression.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	qualifier, qualified := selector.X.(*ast.Ident)
+	if !qualified || qualifier.Name != "__tgo_runtime" || selector.Sel.Name != name {
+		return false
+	}
+	packageName, ok := c.pass.TypesInfo.ObjectOf(qualifier).(*types.PkgName)
+	return ok && strings.HasSuffix(packageName.Imported().Path(), "/internal/tgoruntime")
+}
+
+func sourceShapeMatches(
+	generated *ast.File,
+	structure *ast.StructType,
+	typ types.Type,
+	fact *modelFact,
+	fields []*syntax.FieldDecl,
+	base ast.Expr,
+	variants []*syntax.VariantDecl,
+) bool {
+	if fact == nil {
+		return sameFields(fields, structure.Fields)
+	}
+	emitted := emittedModel(fact.Name, structure, typ)
+	if !sameModelFact(fact, emitted) {
+		return false
+	}
+	if fact.Kind == checkedKind {
+		return len(structure.Fields.List) == 1 &&
+			sameExpression(base, structure.Fields.List[0].Type)
+	}
+	if len(structure.Fields.List) != len(variants)+1 {
+		return false
+	}
+	for _, variant := range variants {
+		payloadSpec := generatedTypeSpec(generated, fact.Name+variant.Name.Name)
+		if payloadSpec == nil {
+			return false
+		}
+		payload, ok := payloadSpec.Type.(*ast.StructType)
+		if !ok || !sameFields(variant.Fields, payload.Fields) {
+			return false
+		}
+	}
+	return true
+}
+
+func sameModelFact(left *modelFact, right *modelFact) bool {
+	if left == nil || right == nil || left.Kind != right.Kind || left.Name != right.Name ||
+		left.Mixed != right.Mixed || len(left.Variants) != len(right.Variants) {
+		return false
+	}
+	for index := range left.Variants {
+		if left.Variants[index] != right.Variants[index] {
+			return false
+		}
+	}
+	return true
+}
+
+type sourceField struct {
+	name           string
+	typeExpression ast.Expr
+	tag            ast.Expr
+}
+
+func sameFields(source []*syntax.FieldDecl, generated *ast.FieldList) bool {
+	flat := []sourceField(nil)
+	for _, declaration := range source {
+		if len(declaration.Field.Names) == 0 {
+			flat = append(flat, sourceField{
+				name: "", typeExpression: declaration.Field.Type, tag: declaration.Field.Tag,
+			})
+			continue
+		}
+		for _, name := range declaration.Field.Names {
+			flat = append(flat, sourceField{
+				name:           name.Name,
+				typeExpression: declaration.Field.Type,
+				tag:            declaration.Field.Tag,
+			})
+		}
+	}
+	if generated == nil || len(flat) != len(generated.List) {
+		return false
+	}
+	for index, field := range flat {
+		other := generated.List[index]
+		if !sameExpression(field.typeExpression, other.Type) ||
+			!sameExpression(field.tag, other.Tag) {
+			return false
+		}
+		if field.name == "" && len(other.Names) == 0 {
+			continue
+		}
+		if len(other.Names) != 1 || other.Names[0].Name != field.name {
+			return false
+		}
+	}
+	return true
+}
+
+func sameExpression(left ast.Expr, right ast.Expr) bool {
+	leftNil := expressionNil(left)
+	rightNil := expressionNil(right)
+	if leftNil || rightNil {
+		return leftNil && rightNil
+	}
+	leftText := new(bytes.Buffer)
+	rightText := new(bytes.Buffer)
+	if format.Node(leftText, token.NewFileSet(), left) != nil ||
+		format.Node(rightText, token.NewFileSet(), right) != nil {
+		return false
+	}
+	return leftText.String() == rightText.String()
+}
+
+func expressionNil(expression ast.Expr) bool {
+	if expression == nil {
+		return true
+	}
+	value := reflect.ValueOf(expression)
+	return value.Kind() == reflect.Pointer && value.IsNil()
+}

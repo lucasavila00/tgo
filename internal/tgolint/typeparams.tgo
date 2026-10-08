@@ -59,7 +59,7 @@ func simpleTerms(typ types.Type) ([]*types.Term, bool) {
 		}
 		return terms, true
 	case *types.Interface:
-		var restriction []*types.Term
+		var restriction []*types.Term = nil
 		for index := 0; index < typ.NumEmbeddeds(); index++ {
 			terms, supported := simpleTerms(typ.EmbeddedType(index))
 			if !supported {

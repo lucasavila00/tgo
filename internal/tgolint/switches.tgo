@@ -81,7 +81,11 @@ func (c *checker) statementsTerminate(statements []ast.Stmt) bool {
 		return false
 	}
 	sentinel := &ast.ExprStmt{X: ast.NewIdent("__tgolint_reached")}
-	body := &ast.BlockStmt{List: append(append([]ast.Stmt(nil), statements...), sentinel)}
+	body := &ast.BlockStmt{
+		Lbrace: token.NoPos,
+		List:   append(append([]ast.Stmt(nil), statements...), sentinel),
+		Rbrace: token.NoPos,
+	}
 	graph := cfg.New(body, c.callMayReturn)
 	for _, block := range graph.Blocks {
 		if !block.Live {
@@ -309,7 +313,7 @@ func (c *checker) receiverChangesThroughGoto(
 	accessor *ast.SelectorExpr,
 	function ast.Node,
 ) bool {
-	var clause *ast.CaseClause
+	var clause *ast.CaseClause = nil
 	for node := c.parents[accessor]; node != nil && node != function; node = c.parents[node] {
 		if current, ok := node.(*ast.CaseClause); ok {
 			clause = current
