@@ -1,0 +1,17 @@
+package nilbad
+
+import "example.com/tgolint/nilmodel"
+
+func badReturn(value *nilmodel.Item) %nilmodel.Item {
+	return value
+}
+
+func badZero() {
+	var value %nilmodel.Item = nil
+	_ = value
+}
+
+func badNamedResult() (value %nilmodel.Item) {
+	value = nil
+	return
+}

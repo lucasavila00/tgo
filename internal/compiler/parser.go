@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"strconv"
@@ -29,22 +30,22 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	})
 	matchMarker := freshIdentifier("__tgo_match", used)
 	defaultMarker := freshIdentifier("__tgo_defaults", used)
-	propagations := make(map[string]propagationSource)
 	file := files.File(tree.Package)
+	erasedData, nonNilLocations := eraseNonNilTypes(files, file, tree, data)
 	edits := []edit(nil)
 	models := []*model(nil)
 	for _, declaration := range tree.Declarations {
 		var item *model
 		var replacement string
 		if node, ok := syntax.EnumDeclarationOf(declaration); ok {
-			item = enumModel(files, data, node)
+			item = enumModel(files, erasedData, node)
 			replacement = enumGo(name, item)
 		} else if node, ok := syntax.StructDeclarationOf(declaration); ok {
-			item = structModel(files, data, node)
+			item = structModel(files, erasedData, node)
 			replacement = "type " + item.Name + " struct {\n" +
 				fieldDecls(name, item.Fields) + "}\n"
 		} else if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
-			item = checkedModel(files, data, node)
+			item = checkedModel(files, erasedData, node)
 			replacement = checkedGo(name, item)
 		}
 		if item == nil {
@@ -68,54 +69,11 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		})
 		models = append(models, item)
 	}
-	for _, extension := range syntax.Extensions(tree) {
-		if node, ok := syntax.MatchStatementOf(extension); ok {
-			matchStart := file.Offset(node.Match)
-			matchEnd := matchStart + len("match")
-			brace := file.Offset(node.Lbrace)
-			edits = append(edits,
-				edit{start: matchStart, end: matchEnd, text: "switch " + matchMarker + "("},
-				edit{start: brace, end: brace, text: ") "},
-			)
-			continue
-		}
-		if node, ok := syntax.DefaultExpressionOf(extension); ok {
-			edits = append(edits, edit{
-				start: file.Offset(node.Start),
-				end:   file.Offset(node.Stop),
-				text:  defaultMarker + ": true",
-			})
-			continue
-		}
-		if node, ok := syntax.PropagationExpressionOf(extension); ok {
-			marker := freshIdentifier("__tgo_propagate", used)
-			callName, ok := syntax.StaticCallName(node.Call.Callee)
-			if !ok {
-				return nil, fmt.Errorf(
-					"%s: error propagation needs a short static call name",
-					files.Position(node.Bang),
-				)
-			}
-			start := file.Offset(syntax.ExpressionPosition(node.Expression))
-			bang := file.Offset(node.Bang)
-			startPosition := files.Position(syntax.ExpressionPosition(node.Expression))
-			bangPosition := files.Position(node.Bang)
-			opening := marker + "(" + inlineLineDirective(
-				name,
-				startPosition.Line,
-				startPosition.Column,
-			)
-			closing := ")" + inlineLineDirective(
-				name,
-				bangPosition.Line,
-				bangPosition.Column+1,
-			)
-			edits = append(edits,
-				edit{start: start, end: start, text: opening},
-				edit{start: bang, end: bang + 1, text: closing},
-			)
-			propagations[marker] = propagationSource{Bang: node.Bang, Name: callName}
-		}
+	edits, propagations, err := lowerSourceExtensions(
+		files, file, tree, name, matchMarker, defaultMarker, used, edits,
+	)
+	if err != nil {
+		return nil, err
 	}
 	input := applyEdits(string(data), edits)
 	mode := parser.ParseComments | parser.AllErrors | parser.SkipObjectResolution
@@ -123,6 +81,18 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	if err != nil {
 		return nil, err
 	}
+	nonNil := make(map[token.Pos]bool)
+	ast.Inspect(goFile, func(node ast.Node) bool {
+		pointer, ok := node.(*ast.StarExpr)
+		if !ok {
+			return true
+		}
+		position := files.Position(pointer.Star)
+		if nonNilLocations[[2]int{position.Line, position.Column}] {
+			nonNil[pointer.Star] = true
+		}
+		return true
+	})
 	return &source{
 		Name:          name,
 		Data:          append([]byte(nil), data...),
@@ -131,7 +101,108 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		MatchMarker:   matchMarker,
 		DefaultMarker: defaultMarker,
 		Propagations:  propagations,
+		NonNil:        nonNil,
 	}, nil
+}
+
+// eraseNonNilTypes makes the Go spelling used inside generated model declarations.
+func eraseNonNilTypes(
+	files *token.FileSet,
+	file *token.File,
+	tree *syntax.File,
+	data []byte,
+) ([]byte, map[[2]int]bool) {
+	erased := append([]byte(nil), data...)
+	locations := make(map[[2]int]bool)
+	for _, extension := range syntax.Extensions(tree) {
+		node, ok := syntax.NonNilPointerTypeOf(extension)
+		if !ok {
+			continue
+		}
+		erased[file.Offset(node.Percent)] = '*'
+		position := files.Position(node.Percent)
+		locations[[2]int{position.Line, position.Column}] = true
+	}
+	return erased, locations
+}
+
+// lowerSourceExtensions builds Go edits and propagation metadata for one source file.
+func lowerSourceExtensions(
+	files *token.FileSet,
+	file *token.File,
+	tree *syntax.File,
+	name string,
+	matchMarker string,
+	defaultMarker string,
+	used map[string]bool,
+	edits []edit,
+) ([]edit, map[string]propagationSource, error) {
+	propagations := make(map[string]propagationSource)
+	for _, extension := range syntax.Extensions(tree) {
+		if node, ok := syntax.NonNilPointerTypeOf(extension); ok {
+			start := file.Offset(node.Percent)
+			if !coveredByEdit(edits, start) {
+				edits = append(edits, edit{start: start, end: start + 1, text: "*"})
+			}
+			continue
+		}
+		if node, ok := syntax.MatchStatementOf(extension); ok {
+			matchStart := file.Offset(node.Match)
+			brace := file.Offset(node.Lbrace)
+			edits = append(edits,
+				edit{
+					start: matchStart, end: matchStart + len("match"),
+					text: "switch " + matchMarker + "(",
+				},
+				edit{start: brace, end: brace, text: ") "},
+			)
+			continue
+		}
+		if node, ok := syntax.DefaultExpressionOf(extension); ok {
+			edits = append(edits, edit{
+				start: file.Offset(node.Start), end: file.Offset(node.Stop),
+				text: defaultMarker + ": true",
+			})
+			continue
+		}
+		node, ok := syntax.PropagationExpressionOf(extension)
+		if !ok {
+			continue
+		}
+		marker := freshIdentifier("__tgo_propagate", used)
+		callName, ok := syntax.StaticCallName(node.Call.Callee)
+		if !ok {
+			return nil, nil, fmt.Errorf(
+				"%s: error propagation needs a short static call name",
+				files.Position(node.Bang),
+			)
+		}
+		start := file.Offset(syntax.ExpressionPosition(node.Expression))
+		bang := file.Offset(node.Bang)
+		startPosition := files.Position(syntax.ExpressionPosition(node.Expression))
+		bangPosition := files.Position(node.Bang)
+		opening := marker + "(" + inlineLineDirective(
+			name, startPosition.Line, startPosition.Column,
+		)
+		closing := ")" + inlineLineDirective(
+			name, bangPosition.Line, bangPosition.Column+1,
+		)
+		edits = append(edits,
+			edit{start: start, end: start, text: opening},
+			edit{start: bang, end: bang + 1, text: closing},
+		)
+		propagations[marker] = propagationSource{Bang: node.Bang, Name: callName}
+	}
+	return edits, propagations, nil
+}
+
+func coveredByEdit(edits []edit, offset int) bool {
+	for _, change := range edits {
+		if change.start <= offset && offset < change.end {
+			return true
+		}
+	}
+	return false
 }
 
 func declarationEditEnd(data []byte, end int) int {

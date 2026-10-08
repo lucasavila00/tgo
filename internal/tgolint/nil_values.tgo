@@ -1,0 +1,550 @@
+package tgolint
+
+import (
+	"go/ast"
+	"go/constant"
+	"go/token"
+	"go/types"
+	"strconv"
+)
+
+// contractForTarget returns the contract required by an assignment target.
+func (e %nilEnvironment) contractForTarget(expression ast.Expr) nilContract {
+	switch expression := expression.(type) {
+	case *ast.ParenExpr:
+		return e.contractForTarget(expression.X)
+	case *ast.Ident:
+		return e.contractForObject(e.info.ObjectOf(expression))
+	case *ast.SelectorExpr:
+		return e.selectorContract(expression)
+	case *ast.IndexExpr:
+		container := e.contractForExpression(expression.X)
+		if _, mapping := coreType(e.info.TypeOf(expression.X)).(*types.Map); mapping {
+			return nilChild(container, "v")
+		}
+		return nilChild(container, "e")
+	case *ast.StarExpr:
+		return nilChild(e.contractForExpression(expression.X), "e")
+	}
+	return nil
+}
+
+// contractForExpression returns the contract carried by an expression.
+func (e %nilEnvironment) contractForExpression(expression ast.Expr) nilContract {
+	if expression == nil {
+		return nil
+	}
+	if e.info.Types[expression].IsType() {
+		contract := e.declaredContract(expression)
+		if len(contract) != 0 {
+			return contract
+		}
+		return e.contractForType(e.info.TypeOf(expression))
+	}
+	switch expression := expression.(type) {
+	case *ast.ParenExpr:
+		return e.contractForExpression(expression.X)
+	case *ast.Ident:
+		return e.contractForObject(e.info.ObjectOf(expression))
+	case *ast.SelectorExpr:
+		return e.selectorContract(expression)
+	case *ast.IndexExpr:
+		container := e.contractForExpression(expression.X)
+		if _, mapping := coreType(e.info.TypeOf(expression.X)).(*types.Map); mapping {
+			return nilChild(container, "v")
+		}
+		return nilChild(container, "e")
+	case *ast.SliceExpr:
+		return e.contractForExpression(expression.X)
+	case *ast.StarExpr:
+		return nilChild(e.contractForExpression(expression.X), "e")
+	case *ast.UnaryExpr:
+		if expression.Op == token.AND {
+			result := make(nilContract)
+			result[""] = true
+			addNilPath(result, "e", e.contractForExpression(expression.X))
+			return result
+		}
+		if expression.Op == token.ARROW {
+			return nilChild(e.contractForExpression(expression.X), "e")
+		}
+	case *ast.CallExpr:
+		if e.info.Types[expression.Fun].IsType() {
+			return e.contractForType(e.info.TypeOf(expression))
+		}
+		return e.resultContract(expression, 0)
+	case *ast.TypeAssertExpr:
+		return e.contractForType(e.info.TypeOf(expression))
+	case *ast.CompositeLit:
+		contract := e.declaredContract(expression.Type)
+		if len(contract) != 0 {
+			return contract
+		}
+		return e.contractForType(e.info.TypeOf(expression))
+	case *ast.FuncLit:
+		return e.functionContract(expression.Type)
+	}
+	return e.contractForType(e.info.TypeOf(expression))
+}
+
+func (e %nilEnvironment) selectorContract(selector *ast.SelectorExpr) nilContract {
+	selection := e.info.Selections[selector]
+	if selection == nil {
+		return e.contractForObject(e.info.ObjectOf(selector.Sel))
+	}
+	if contract := e.contractForObject(selection.Obj()); len(contract) != 0 {
+		if selection.Kind() == types.MethodVal {
+			return nilWithoutChild(contract, "v")
+		}
+		return contract
+	}
+	contract := e.contractForExpression(selector.X)
+	if selection.Kind() != types.FieldVal {
+		return e.contractForObject(selection.Obj())
+	}
+	for _, index := range selection.Index() {
+		contract = nilChild(contract, "f"+strconv.Itoa(index))
+	}
+	return contract
+}
+
+// resultContract returns one result contract from a multi-value expression.
+func (e %nilEnvironment) resultContract(
+	expression ast.Expr,
+	index int,
+) nilContract {
+	switch expression := expression.(type) {
+	case *ast.ParenExpr:
+		return e.resultContract(expression.X, index)
+	case *ast.CallExpr:
+		if contract := e.builtinResultContract(expression, index); len(contract) != 0 {
+			return contract
+		}
+		contract := e.callContract(expression)
+		return nilChild(contract, "r"+strconv.Itoa(index))
+	case *ast.IndexExpr:
+		if index == 0 {
+			return e.contractForExpression(expression)
+		}
+	case *ast.UnaryExpr:
+		if expression.Op == token.ARROW && index == 0 {
+			return e.contractForExpression(expression)
+		}
+	case *ast.TypeAssertExpr:
+		if index == 0 {
+			return e.contractForExpression(expression)
+		}
+	}
+	return nil
+}
+
+func (e %nilEnvironment) builtinResultContract(
+	call *ast.CallExpr,
+	index int,
+) nilContract {
+	if index != 0 || call == nil {
+		return nil
+	}
+	name, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	builtin, ok := e.info.Uses[name].(*types.Builtin)
+	if !ok {
+		return nil
+	}
+	switch builtin.Name() {
+	case "make":
+		if len(call.Args) != 0 {
+			return e.contractForExpression(call.Args[0])
+		}
+	case "append":
+		if len(call.Args) != 0 {
+			return e.contractForExpression(call.Args[0])
+		}
+	case "new":
+		if len(call.Args) != 0 {
+			result := nilContract{"": true}
+			addNilPath(result, "e", e.contractForExpression(call.Args[0]))
+			return result
+		}
+	}
+	return nil
+}
+
+func (e %nilEnvironment) resultNilValue(
+	expression ast.Expr,
+	index int,
+	state *nilFlowState,
+) nilValue {
+	switch expression := expression.(type) {
+	case *ast.ParenExpr:
+		return e.resultNilValue(expression.X, index, state)
+	case *ast.IndexExpr:
+		if _, mapping := coreType(e.info.TypeOf(expression.X)).(*types.Map); mapping &&
+			index == 0 {
+			return nilUnknown
+		}
+	case *ast.UnaryExpr:
+		if expression.Op == token.ARROW && index == 0 {
+			return nilUnknown
+		}
+	case *ast.TypeAssertExpr:
+		if index == 0 {
+			return nilUnknown
+		}
+	}
+	if e.resultContract(expression, index)[""] {
+		return nilNonNil
+	}
+	return nilUnknown
+}
+
+func (e %nilEnvironment) callContract(call *ast.CallExpr) nilContract {
+	if call == nil {
+		return nil
+	}
+	if object := calledObject(e.info, call.Fun); object != nil {
+		return e.contractForObject(object)
+	}
+	return e.contractForExpression(call.Fun)
+}
+
+// expressionNilValue returns the proved nil state of an expression.
+func (e %nilEnvironment) expressionNilValue(
+	expression ast.Expr,
+	state *nilFlowState,
+) nilValue {
+	if expression == nil {
+		return nilUnknown
+	}
+	if e.isNil(expression) {
+		return nilNil
+	}
+	if place, ok := e.nilPlace(expression); ok {
+		if value, exists := state.values[place]; exists {
+			return value
+		}
+	}
+	switch expression := expression.(type) {
+	case *ast.ParenExpr:
+		return e.expressionNilValue(expression.X, state)
+	case *ast.UnaryExpr:
+		if expression.Op == token.AND {
+			return nilNonNil
+		}
+		if expression.Op == token.ARROW {
+			return nilUnknown
+		}
+	case *ast.TypeAssertExpr:
+		return nilUnknown
+	case *ast.IndexExpr:
+		if _, mapping := coreType(e.info.TypeOf(expression.X)).(*types.Map); mapping {
+			return nilUnknown
+		}
+	case *ast.CallExpr:
+		if name, ok := expression.Fun.(*ast.Ident); ok {
+			if builtin, ok := e.info.Uses[name].(*types.Builtin); ok &&
+				builtin.Name() == "new" {
+				return nilNonNil
+			}
+		}
+		if e.info.Types[expression.Fun].IsType() && len(expression.Args) == 1 {
+			if e.contractForType(e.info.TypeOf(expression))[""] {
+				return nilNonNil
+			}
+			return e.expressionNilValue(expression.Args[0], state)
+		}
+	}
+	if e.contractForExpression(expression)[""] {
+		return nilNonNil
+	}
+	return nilUnknown
+}
+
+// checkNilExpression checks calls, literals, and pointer reads below an expression.
+func (e %nilEnvironment) checkNilExpression(
+	expression ast.Expr,
+	state *nilFlowState,
+) {
+	if expression == nil {
+		return
+	}
+	ast.Inspect(expression, func(node ast.Node) bool {
+		switch node := node.(type) {
+		case *ast.FuncLit:
+			return node == expression
+		case *ast.CallExpr:
+			e.checkNilCall(node, state)
+		case *ast.CompositeLit:
+			e.checkNilLiteral(node, state)
+		}
+		return true
+	})
+}
+
+// checkNilCall checks the receiver and each call argument.
+func (e %nilEnvironment) checkNilCall(
+	call *ast.CallExpr,
+	state *nilFlowState,
+) {
+	if call == nil {
+		return
+	}
+	if e.info.Types[call.Fun].IsType() {
+		if len(call.Args) == 1 {
+			e.checkNilFlow(
+				call.Args[0], e.contractForType(e.info.TypeOf(call)), state,
+			)
+		}
+		return
+	}
+	if e.checkNilBuiltin(call, state) {
+		return
+	}
+	contract := e.callContract(call)
+	if selector, ok := call.Fun.(*ast.SelectorExpr); ok {
+		e.checkNilFlow(selector.X, nilChild(contract, "v"), state)
+	}
+	signature, _ := coreType(e.info.TypeOf(call.Fun)).(*types.Signature)
+	if signature == nil {
+		return
+	}
+	for index, argument := range call.Args {
+		parameter := index
+		expected := nilChild(contract, "p"+strconv.Itoa(parameter))
+		if signature.Variadic() && index >= signature.Params().Len()-1 &&
+			call.Ellipsis == token.NoPos {
+			parameter = signature.Params().Len() - 1
+			expected = nilChild(
+				nilChild(contract, "p"+strconv.Itoa(parameter)), "e",
+			)
+		}
+		e.checkNilFlow(argument, expected, state)
+	}
+}
+
+// checkNilBuiltin applies nil rules for Go built-in functions.
+func (e %nilEnvironment) checkNilBuiltin(
+	call *ast.CallExpr,
+	state *nilFlowState,
+) bool {
+	name, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	builtin, ok := e.info.Uses[name].(*types.Builtin)
+	if !ok {
+		return false
+	}
+	switch builtin.Name() {
+	case "new":
+		if len(call.Args) == 1 {
+			contract := e.contractForExpression(call.Args[0])
+			if e.nilZeroInvalid(e.info.TypeOf(call.Args[0]), contract) {
+				e.reportNil(call.Pos(), "new creates an invalid nested non-nil pointer")
+			}
+		}
+	case "make":
+		e.checkNilMake(call)
+	case "append":
+		if len(call.Args) > 1 {
+			element := nilChild(e.contractForExpression(call.Args[0]), "e")
+			if call.Ellipsis != token.NoPos {
+				e.checkNilFlow(call.Args[1], e.contractForExpression(call.Args[0]), state)
+			} else {
+				for _, argument := range call.Args[1:] {
+					e.checkNilFlow(argument, element, state)
+				}
+			}
+		}
+	case "copy":
+		if len(call.Args) == 2 {
+			e.checkNilFlow(
+				call.Args[1], e.contractForExpression(call.Args[0]), state,
+			)
+		}
+	case "clear":
+		if len(call.Args) == 1 {
+			if _, slice := coreType(e.info.TypeOf(call.Args[0])).(*types.Slice); slice &&
+				nilChild(e.contractForExpression(call.Args[0]), "e")[""] {
+				e.reportNil(call.Pos(), "clear creates nil elements in a non-nil slice")
+			}
+		}
+	}
+	return true
+}
+
+func (e %nilEnvironment) nilZeroInvalid(
+	typ types.Type,
+	contract nilContract,
+) bool {
+	if contract[""] {
+		return true
+	}
+	switch typ := coreType(typ).(type) {
+	case *types.Struct:
+		for index := range typ.NumFields() {
+			if e.nilZeroInvalid(
+				typ.Field(index).Type(),
+				nilChild(contract, "f"+strconv.Itoa(index)),
+			) {
+				return true
+			}
+		}
+	case *types.Array:
+		return typ.Len() != 0 &&
+			e.nilZeroInvalid(typ.Elem(), nilChild(contract, "e"))
+	}
+	return false
+}
+
+func (e %nilEnvironment) checkNilMake(call *ast.CallExpr) {
+	if len(call.Args) < 2 {
+		return
+	}
+	contract := e.contractForExpression(call.Args[0])
+	if len(nilChild(contract, "e")) == 0 {
+		return
+	}
+	length := e.info.Types[call.Args[1]].Value
+	if length == nil || constant.Sign(length) != 0 {
+		e.reportNil(call.Pos(), "make creates nil elements in a non-nil slice")
+	}
+}
+
+// checkNilLiteral checks all initialized and omitted composite values.
+func (e %nilEnvironment) checkNilLiteral(
+	literal *ast.CompositeLit,
+	state *nilFlowState,
+) {
+	contract := e.contractForExpression(literal)
+	if len(contract) == 0 {
+		return
+	}
+	switch typ := coreType(e.info.TypeOf(literal)).(type) {
+	case *types.Struct:
+		e.checkNilStructLiteral(literal, typ, contract, state)
+	case *types.Array:
+		e.checkNilArrayLiteral(literal, typ.Len(), contract, state)
+	case *types.Slice:
+		e.checkNilSequenceLiteral(literal, nilChild(contract, "e"), state)
+	case *types.Map:
+		e.checkNilMapLiteral(literal, contract, state)
+	}
+}
+
+func (e %nilEnvironment) checkNilStructLiteral(
+	literal *ast.CompositeLit,
+	typ *types.Struct,
+	contract nilContract,
+	state *nilFlowState,
+) {
+	set := make([]bool, typ.NumFields())
+	for index, element := range literal.Elts {
+		fieldIndex := index
+		value := element
+		if keyed, ok := element.(*ast.KeyValueExpr); ok {
+			value = keyed.Value
+			fieldIndex = nilStructFieldIndex(typ, keyed.Key)
+		}
+		if fieldIndex < 0 || fieldIndex >= typ.NumFields() {
+			continue
+		}
+		set[fieldIndex] = true
+		e.checkNilFlow(
+			value,
+			nilChild(contract, "f"+strconv.Itoa(fieldIndex)),
+			state,
+		)
+	}
+	for index, initialized := range set {
+		if initialized || len(nilChild(contract, "f"+strconv.Itoa(index))) == 0 {
+			continue
+		}
+		e.reportNil(
+			literal.Pos(),
+			"omitted field %s has an invalid zero value",
+			typ.Field(index).Name(),
+		)
+	}
+}
+
+func nilStructFieldIndex(typ *types.Struct, key ast.Expr) int {
+	name, ok := key.(*ast.Ident)
+	if !ok {
+		return -1
+	}
+	for index := range typ.NumFields() {
+		if typ.Field(index).Name() == name.Name {
+			return index
+		}
+	}
+	return -1
+}
+
+func (e %nilEnvironment) checkNilArrayLiteral(
+	literal *ast.CompositeLit,
+	length int64,
+	contract nilContract,
+	state *nilFlowState,
+) {
+	elementContract := nilChild(contract, "e")
+	if len(elementContract) == 0 {
+		return
+	}
+	set := make(map[int64]bool)
+	next := int64(0)
+	for _, element := range literal.Elts {
+		value := element
+		index := next
+		if keyed, ok := element.(*ast.KeyValueExpr); ok {
+			value = keyed.Value
+			constantValue := e.info.Types[keyed.Key].Value
+			if constantValue == nil {
+				continue
+			}
+			parsed, exact := constant.Int64Val(constantValue)
+			if !exact {
+				continue
+			}
+			index = parsed
+		}
+		set[index] = true
+		next = index + 1
+		e.checkNilFlow(value, elementContract, state)
+	}
+	if int64(len(set)) != length {
+		e.reportNil(literal.Pos(), "array literal leaves a non-nil element at zero")
+	}
+}
+
+func (e %nilEnvironment) checkNilSequenceLiteral(
+	literal *ast.CompositeLit,
+	elementContract nilContract,
+	state *nilFlowState,
+) {
+	for _, element := range literal.Elts {
+		if keyed, ok := element.(*ast.KeyValueExpr); ok {
+			element = keyed.Value
+		}
+		e.checkNilFlow(element, elementContract, state)
+	}
+}
+
+func (e %nilEnvironment) checkNilMapLiteral(
+	literal *ast.CompositeLit,
+	contract nilContract,
+	state *nilFlowState,
+) {
+	keyContract := nilChild(contract, "k")
+	valueContract := nilChild(contract, "v")
+	for _, element := range literal.Elts {
+		keyed, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		e.checkNilFlow(keyed.Key, keyContract, state)
+		e.checkNilFlow(keyed.Value, valueContract, state)
+	}
+}

@@ -38,7 +38,7 @@ type verifiedSource struct {
 }
 
 // verifySourceModels checks generated declarations against their canonical source.
-func (c *checker) verifySourceModels(generated *ast.File) *verifiedSource {
+func (c %checker) verifySourceModels(generated *ast.File) *verifiedSource {
 	generatedPath := c.pass.Fset.Position(generated.Package).Filename
 	generatedData, readErr := c.pass.ReadFile(generatedPath)
 	metadata := parseGeneratedMetadata(generatedData)
@@ -94,12 +94,12 @@ func (c *checker) verifySourceModels(generated *ast.File) *verifiedSource {
 	sourceToken := sourceFiles.File(file.Package)
 	for _, declaration := range file.Declarations {
 		if source := sourceDeclaration(
-			declaration, c.packagePath(), sourceToken, data,
+			declaration, c.packagePath(), file, sourceToken, data,
 		); source != nil {
 			sourceNames[source.name] = true
 		}
 		c.checkSourceDeclaration(
-			generated, sourceName, declaration, sourceToken, data,
+			generated, sourceName, file, declaration, sourceToken, data,
 		)
 	}
 	c.reportExtraGeneratedModels(generated, sourceName, sourceNames)
@@ -112,10 +112,10 @@ func (c *checker) verifySourceModels(generated *ast.File) *verifiedSource {
 }
 
 // exportSourceModels publishes facts only after every generated file verifies.
-func (c *checker) exportSourceModels(source *verifiedSource) {
+func (c %checker) exportSourceModels(source *verifiedSource) {
 	for _, declaration := range source.file.Declarations {
 		c.exportSourceDeclaration(
-			source.generated, declaration, source.tokenFile, source.data,
+			source.generated, source.file, declaration, source.tokenFile, source.data,
 		)
 	}
 }
@@ -152,13 +152,13 @@ func sourceMatchesGenerated(source string, generatedPath string) bool {
 	return outputname.Matches(source, generatedPath)
 }
 
-func (c *checker) hasModelAPIs(object *types.TypeName) bool {
+func (c %checker) hasModelAPIs(object *types.TypeName) bool {
 	return method(object.Type(), "TgoTag") != nil ||
 		method(object.Type(), "Value") != nil
 }
 
 // reportExtraGeneratedModels rejects model APIs with no matching TGo declaration.
-func (c *checker) reportExtraGeneratedModels(
+func (c %checker) reportExtraGeneratedModels(
 	file *ast.File,
 	sourceName string,
 	sourceNames map[string]bool,
@@ -198,15 +198,16 @@ func validGeneratedIntegrity(metadata *generatedMetadata, source []byte) bool {
 }
 
 // checkSourceDeclaration compares one TGo model with its generated Go API.
-func (c *checker) checkSourceDeclaration(
+func (c %checker) checkSourceDeclaration(
 	generated *ast.File,
 	sourceName string,
+	file *syntax.File,
 	declaration *syntax.Declaration,
 	sourceFile *token.File,
 	data []byte,
 ) {
 	source := sourceDeclaration(
-		declaration, c.packagePath(), sourceFile, data,
+		declaration, c.packagePath(), file, sourceFile, data,
 	)
 	if source == nil {
 		return
@@ -238,14 +239,15 @@ func (c *checker) checkSourceDeclaration(
 }
 
 // exportSourceDeclaration records one verified model and its constructors.
-func (c *checker) exportSourceDeclaration(
+func (c %checker) exportSourceDeclaration(
 	generated *ast.File,
+	file *syntax.File,
 	declaration *syntax.Declaration,
 	sourceFile *token.File,
 	data []byte,
 ) {
 	source := sourceDeclaration(
-		declaration, c.packagePath(), sourceFile, data,
+		declaration, c.packagePath(), file, sourceFile, data,
 	)
 	if source == nil {
 		return
@@ -266,7 +268,7 @@ func (c *checker) exportSourceDeclaration(
 	}
 }
 
-func (c *checker) packagePath() string {
+func (c %checker) packagePath() string {
 	if c.pass.Pkg == nil {
 		return ""
 	}
@@ -285,6 +287,7 @@ type sourceModel struct {
 func sourceDeclaration(
 	declaration *syntax.Declaration,
 	packagePath string,
+	file *syntax.File,
 	sourceFile *token.File,
 	data []byte,
 ) *sourceModel {
@@ -293,7 +296,7 @@ func sourceDeclaration(
 			name: node.Name.Name,
 			fact: checkedModel(packagePath, node.Name.Name),
 			fields: nil,
-			base: sourceExpression(sourceFile, data, node.Base),
+			base: sourceExpression(file, sourceFile, data, node.Base),
 			variants: nil,
 		}
 	}
@@ -304,7 +307,7 @@ func sourceDeclaration(
 			variants = append(variants, variant.Name.Name)
 			sourceVariants = append(sourceVariants, sourceVariant{
 				name: variant.Name.Name,
-				fields: sourceFields(sourceFile, data, variant.Fields),
+				fields: sourceFields(file, sourceFile, data, variant.Fields),
 			})
 		}
 		return &sourceModel{
@@ -316,7 +319,7 @@ func sourceDeclaration(
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
 		return &sourceModel{
 			name: node.Name.Name, fact: nil,
-			fields: sourceFields(sourceFile, data, node.Fields),
+			fields: sourceFields(file, sourceFile, data, node.Fields),
 			base: "", variants: nil,
 		}
 	}
@@ -470,13 +473,14 @@ type sourceVariant struct {
 }
 
 func sourceFields(
+	file *syntax.File,
 	sourceFile *token.File,
 	data []byte,
 	fields []*syntax.TGoField,
 ) []sourceField {
 	result := []sourceField(nil)
 	for _, declaration := range fields {
-		typeText := sourceExpression(sourceFile, data, declaration.Field.Type)
+		typeText := sourceExpression(file, sourceFile, data, declaration.Field.Type)
 		tagText := ""
 		if declaration.Field.Tag != nil {
 			tagText = sourceRange(
@@ -500,6 +504,7 @@ func sourceFields(
 }
 
 func sourceExpression(
+	file *syntax.File,
 	sourceFile *token.File,
 	data []byte,
 	expression *syntax.Expression,
@@ -507,10 +512,23 @@ func sourceExpression(
 	if expression == nil {
 		return ""
 	}
-	return sourceRange(
+	start := syntax.ExpressionPosition(expression)
+	end := syntax.ExpressionEnd(expression)
+	result := []byte(sourceRange(
 		sourceFile, data, syntax.ExpressionPosition(expression),
 		syntax.ExpressionEnd(expression),
-	)
+	))
+	if file == nil {
+		return string(result)
+	}
+	for _, extension := range syntax.Extensions(file) {
+		node, ok := syntax.NonNilPointerTypeOf(extension)
+		if !ok || node.Percent < start || node.Percent >= end {
+			continue
+		}
+		result[sourceFile.Offset(node.Percent)-sourceFile.Offset(start)] = '*'
+	}
+	return string(result)
 }
 
 func sourceRange(

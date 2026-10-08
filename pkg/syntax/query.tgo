@@ -21,6 +21,7 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 		case TypeAssertion(_): return nil, false
 		case Call(_): return nil, false
 		case Star(_): return nil, false
+		case NonNilPointer(_): return nil, false
 		case Unary(_): return nil, false
 		case Binary(_): return nil, false
 		case KeyValue(_): return nil, false
@@ -150,6 +151,7 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 	case TypeAssertion(_): return nil, false
 	case Call(_): return nil, false
 	case Star(_): return nil, false
+	case NonNilPointer(_): return nil, false
 	case Unary(_): return nil, false
 	case Binary(_): return nil, false
 	case KeyValue(_): return nil, false
@@ -183,6 +185,7 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	case TypeAssertion(_): return nil, false
 	case Call(_): return nil, false
 	case Star(_): return nil, false
+	case NonNilPointer(_): return nil, false
 	case Unary(_): return nil, false
 	case Binary(_): return nil, false
 	case KeyValue(_): return nil, false
@@ -193,6 +196,40 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	case MapType(_): return nil, false
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
+	}
+}
+
+// NonNilPointerTypeOf returns a non-nil pointer type payload.
+func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
+	expression, ok := ExpressionOf(node)
+	if !ok { return nil, false }
+	match *expression {
+	case NonNilPointer(item): return item.Value, true
+	case Bad(_): return nil, false
+	case Identifier(_): return nil, false
+	case Ellipsis(_): return nil, false
+	case BasicLiteral(_): return nil, false
+	case FunctionLiteral(_): return nil, false
+	case CompositeLiteral(_): return nil, false
+	case Parenthesized(_): return nil, false
+	case Selector(_): return nil, false
+	case Index(_): return nil, false
+	case IndexList(_): return nil, false
+	case Slice(_): return nil, false
+	case TypeAssertion(_): return nil, false
+	case Call(_): return nil, false
+	case Star(_): return nil, false
+	case Unary(_): return nil, false
+	case Binary(_): return nil, false
+	case KeyValue(_): return nil, false
+	case ArrayType(_): return nil, false
+	case StructType(_): return nil, false
+	case FunctionType(_): return nil, false
+	case InterfaceType(_): return nil, false
+	case MapType(_): return nil, false
+	case ChannelType(_): return nil, false
+	case Default(_): return nil, false
+	case Propagation(_): return nil, false
 	}
 }
 
@@ -293,6 +330,7 @@ func ExpressionKind(value *Expression) string {
 	case TypeAssertion(_): return "TypeAssertion"
 	case Call(_): return "Call"
 	case Star(_): return "Star"
+	case NonNilPointer(_): return "NonNilPointer"
 	case Unary(_): return "Unary"
 	case Binary(_): return "Binary"
 	case KeyValue(_): return "KeyValue"
@@ -369,6 +407,7 @@ func StaticCallName(value *Expression) (string, bool) {
 	case IndexList(item): return StaticCallName(item.Value.Expression)
 	case Parenthesized(item): return StaticCallName(item.Value.Expression)
 	case Star(item): return StaticCallName(item.Value.Expression)
+	case NonNilPointer(_): return "", false
 	case Bad(_): return "", false
 	case Ellipsis(_): return "", false
 	case BasicLiteral(_): return "", false

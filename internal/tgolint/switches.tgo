@@ -11,7 +11,7 @@ import (
 )
 
 // checkTagSwitch checks exhaustive tag cases and payload access.
-func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
+func (c %checker) checkTagSwitch(statement *ast.SwitchStmt) {
 	receiver, selector, model := c.tagCall(statement.Tag)
 	if model == nil {
 		return
@@ -75,12 +75,12 @@ func clauseFallthrough(clause *ast.CaseClause) *ast.BranchStmt {
 	return nil
 }
 
-func (c *checker) defaultStops(clause *ast.CaseClause) bool {
+func (c %checker) defaultStops(clause *ast.CaseClause) bool {
 	return c.statementsTerminate(clause.Body)
 }
 
 // statementsTerminate reports whether all paths leave the current switch.
-func (c *checker) statementsTerminate(statements []ast.Stmt) bool {
+func (c %checker) statementsTerminate(statements []ast.Stmt) bool {
 	if len(statements) == 0 || c.hasEscapingBranch(statements) {
 		return false
 	}
@@ -104,7 +104,7 @@ func (c *checker) statementsTerminate(statements []ast.Stmt) bool {
 	return true
 }
 
-func (c *checker) hasEscapingBranch(statements []ast.Stmt) bool {
+func (c %checker) hasEscapingBranch(statements []ast.Stmt) bool {
 	roots := make(map[ast.Node]bool, len(statements))
 	labels := make(map[types.Object]bool)
 	for _, statement := range statements {
@@ -143,7 +143,7 @@ func (c *checker) hasEscapingBranch(statements []ast.Stmt) bool {
 	return false
 }
 
-func (c *checker) branchEscapes(
+func (c %checker) branchEscapes(
 	branch *ast.BranchStmt,
 	roots map[ast.Node]bool,
 	labels map[types.Object]bool,
@@ -176,7 +176,7 @@ func branchTarget(node ast.Node, branch token.Token) bool {
 	}
 }
 
-func (c *checker) callMayReturn(call *ast.CallExpr) bool {
+func (c %checker) callMayReturn(call *ast.CallExpr) bool {
 	name, ok := call.Fun.(*ast.Ident)
 	if !ok || name.Name != "panic" {
 		return true
@@ -186,7 +186,7 @@ func (c *checker) callMayReturn(call *ast.CallExpr) bool {
 }
 
 // tagCall resolves a generated tag call and its stable receiver.
-func (c *checker) tagCall(expression ast.Expr) (ast.Expr, *ast.SelectorExpr, *model) {
+func (c %checker) tagCall(expression ast.Expr) (ast.Expr, *ast.SelectorExpr, *model) {
 	call, ok := expression.(*ast.CallExpr)
 	if !ok || len(call.Args) != 0 {
 		return nil, nil, nil
@@ -202,7 +202,7 @@ func (c *checker) tagCall(expression ast.Expr) (ast.Expr, *ast.SelectorExpr, *mo
 	return selector.X, selector, model
 }
 
-func (c *checker) caseTags(clause *ast.CaseClause, variants int) map[int]bool {
+func (c %checker) caseTags(clause *ast.CaseClause, variants int) map[int]bool {
 	tags := make(map[int]bool)
 	for _, expression := range clause.List {
 		value := c.pass.TypesInfo.Types[expression].Value
@@ -221,7 +221,7 @@ func (c *checker) caseTags(clause *ast.CaseClause, variants int) map[int]bool {
 }
 
 // checkCaseAccessors permits only the payload selected by the active tag.
-func (c *checker) checkCaseAccessors(
+func (c %checker) checkCaseAccessors(
 	clause *ast.CaseClause,
 	receiver ast.Expr,
 	model *model,
@@ -274,7 +274,7 @@ func (c *checker) checkCaseAccessors(
 }
 
 // receiverUnsafe reports a receiver that can change between tag and payload reads.
-func (c *checker) receiverUnsafe(receiver ast.Expr, accessor *ast.SelectorExpr) bool {
+func (c %checker) receiverUnsafe(receiver ast.Expr, accessor *ast.SelectorExpr) bool {
 	root, _, ok := receiverPath(c.pass.TypesInfo, receiver)
 	variable, variableOK := root.(*types.Var)
 	if !ok || !variableOK || variable.IsField() ||
@@ -315,7 +315,7 @@ func (c *checker) receiverUnsafe(receiver ast.Expr, accessor *ast.SelectorExpr) 
 
 // receiverChangesThroughGoto finds a write on a backward path to an accessor.
 // A repeated payload read needs a new tag read after each receiver change.
-func (c *checker) receiverChangesThroughGoto(
+func (c %checker) receiverChangesThroughGoto(
 	receiver ast.Expr,
 	accessor *ast.SelectorExpr,
 	function ast.Node,
@@ -367,7 +367,7 @@ func typeMayBePointer(typ types.Type) bool {
 
 // receiverChangesInCycle finds a write that can run before a later iteration.
 // The tag proof cannot survive a loop that can change or alias the receiver.
-func (c *checker) receiverChangesInCycle(
+func (c %checker) receiverChangesInCycle(
 	receiver ast.Expr,
 	accessor *ast.SelectorExpr,
 	function ast.Node,
@@ -601,7 +601,7 @@ func receiverPath(info *types.Info, expression ast.Expr) (types.Object, []types.
 }
 
 // checkRepresentationAccess blocks private fields and unchecked payload methods.
-func (c *checker) checkRepresentationAccess(selector *ast.SelectorExpr) {
+func (c %checker) checkRepresentationAccess(selector *ast.SelectorExpr) {
 	if c.safe[selector] || c.handled[selector] {
 		return
 	}

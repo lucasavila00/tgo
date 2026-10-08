@@ -23,6 +23,8 @@ A clean run means that the loaded Go packages do not contain these errors:
 - a presence result used before its matching `ok` value is proved true;
 - a missing enum tag case, wrong payload read, unsafe default, or `fallthrough`;
 - an enum receiver that is a pointer, alias, capture, or changed value; or
+- a `%T` value that is nil, unknown, zero-filled, omitted, or lost at a control-flow join;
+- a map read, channel receive, or pointer assertion used without its required proof; or
 - the same errors hidden by embedding, wrappers, function values, control flow,
   or generic constraints.
 
@@ -40,6 +42,14 @@ pair only after the proof.
 The checker follows `if` conditions, Boolean `&&` and `||`, loops, switches, type
 switches, fallthrough, and selects. It joins all paths that can continue. An
 address or closure must not alias a pending value, error, or `ok` variable.
+
+For `%T`, the checker also follows direct pointer aliases and Boolean guard aliases. A comma-ok
+map read or channel receive proves a `%T` value only on the true path. A successful pointer type
+assertion proves the type but not the value because the interface can contain a typed nil.
+
+The checker exports `%T` paths for fields, parameters, results, aliases, nested collections, and
+function types. It checks the same paths in importing Go packages. `%T` generates the same Go
+pointer as `*T`; these facts exist only during analysis.
 
 The checker rejects generated `Tgo*` access through a structural interface or
 an open type parameter. These types erase the generated model identity. Exact
@@ -82,3 +92,7 @@ storage, and type assertions. It does not require runtime validation.
 It still reports unsafe construction, invalid zero values, unchecked constructor result pairs,
 incomplete tag switches, and wrong payload access when Go source proves the error. It cannot
 inspect reflection, `unsafe`, cgo, races, or foreign state.
+
+It also reports a possibly nil or unknown pointer at a `%T` use. It trusts a `%T` value returned by a
+checked signature. Unchecked Go can still return nil, change storage after analysis, or create a
+typed nil through reflection. These operations are outside the proof.

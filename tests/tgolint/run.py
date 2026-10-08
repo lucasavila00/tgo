@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build tgo and tgolint, then check Go boundary diagnostics."""
+"""Build tgo and tgolint, then check their diagnostics."""
 
 from pathlib import Path
 import hashlib
@@ -21,12 +21,26 @@ def run(command, cwd, *, success=True):
     return result
 
 
-def expected(name):
-    return (FIXTURE / name).read_text()
-
-
 def normalized(text, work):
     return text.replace(str(work) + "/", "")
+
+
+def fixture_directories():
+    for stdout in sorted(FIXTURE.glob("*/stdout")):
+        directory = stdout.parent
+        if (directory / "stderr").is_file():
+            yield directory
+
+
+def assert_case(linter, work, fixture):
+    expected_stdout = (fixture / "stdout").read_text()
+    expected_stderr = (fixture / "stderr").read_text()
+    success = not expected_stdout and not expected_stderr
+    result = run([str(linter), f"./{fixture.name}"], work, success=success)
+    stdout = normalized(result.stdout, work)
+    stderr = normalized(result.stderr, work)
+    assert stdout == expected_stdout, stdout
+    assert stderr == expected_stderr, stderr
 
 
 def with_generated_digest(text, source):
@@ -39,36 +53,104 @@ def with_generated_digest(text, source):
 
 
 def write_invalid_consumers(work):
-    direct = work / "invaliddirect"
-    middle = work / "invalidmiddle"
-    transitive = work / "invalidtransitive"
-    direct.mkdir()
-    middle.mkdir()
-    transitive.mkdir()
-    (direct / "direct.go").write_text(
-        'package invaliddirect\nimport _ "example.com/tgolint/model"\n'
-    )
-    (middle / "middle.go").write_text(
-        'package invalidmiddle\nimport _ "example.com/tgolint/model"\n'
-    )
-    (transitive / "transitive.go").write_text(
-        'package invalidtransitive\nimport _ "example.com/tgolint/invalidmiddle"\n'
-    )
+    sources = {
+        "invaliddirect": 'package invaliddirect\nimport _ "example.com/tgolint/model"\n',
+        "invalidmiddle": 'package invalidmiddle\nimport _ "example.com/tgolint/model"\n',
+        "invalidtransitive": (
+            'package invalidtransitive\n'
+            'import _ "example.com/tgolint/invalidmiddle"\n'
+        ),
+    }
+    for name, source in sources.items():
+        directory = work / name
+        directory.mkdir()
+        (directory / f"{name.removeprefix('invalid')}.go").write_text(source)
+
+
+def diagnostics(linter, work, package):
+    result = run([str(linter), package], work, success=False)
+    return normalized(result.stdout + result.stderr, work)
 
 
 def assert_invalid_consumers(linter, work):
-    direct = run([str(linter), "./invaliddirect"], work, success=False)
-    direct_diagnostics = normalized(direct.stdout + direct.stderr, work)
+    direct = diagnostics(linter, work, "./invaliddirect")
     assert (
-        "dependency example.com/tgolint/model failed tgo verification"
-        in direct_diagnostics
-    ), direct_diagnostics
-    transitive = run([str(linter), "./invalidtransitive"], work, success=False)
-    transitive_diagnostics = normalized(transitive.stdout + transitive.stderr, work)
+        "dependency example.com/tgolint/model failed tgo verification" in direct
+    ), direct
+    transitive = diagnostics(linter, work, "./invalidtransitive")
     assert (
         "dependency example.com/tgolint/invalidmiddle failed tgo verification"
-        in transitive_diagnostics
-    ), transitive_diagnostics
+        in transitive
+    ), transitive
+
+
+def assert_integrity_checks(linter, work):
+    generated_model = work / "model" / "model_tgo.go"
+    model_source = work / "model" / "model.tgo"
+    generated_text = generated_model.read_text()
+
+    replacements = (
+        ("return Count{value: value}, nil", "return Count{}, nil"),
+        (
+            "return Event{tgoTag: 1, tgoStarted: value}",
+            "_ = value\n\treturn Event{}",
+        ),
+    )
+    for original, replacement in replacements:
+        forged = generated_text.replace(original, replacement, 1)
+        assert forged != generated_text
+        forged = with_generated_digest(forged, model_source.read_bytes())
+        generated_model.write_text(forged)
+        result = diagnostics(linter, work, "./model")
+        assert "does not match the current compiler emitter" in result
+        generated_model.write_text(generated_text)
+
+    metadata_line = next(
+        line for line in generated_text.splitlines() if line.startswith("//tgo:v1 ")
+    )
+    missing_metadata = generated_text.replace(metadata_line + "\n", "", 1)
+    assert missing_metadata != generated_text
+    generated_model.write_text(missing_metadata)
+    result = diagnostics(linter, work, "./model")
+    assert "generated tgo model metadata is invalid" in result
+    assert_invalid_consumers(linter, work)
+    generated_model.write_text(generated_text)
+
+    corrupt_metadata = generated_text.replace('"model.tgo"', "bad", 1)
+    assert corrupt_metadata != generated_text
+    generated_model.write_text(corrupt_metadata)
+    result = diagnostics(linter, work, "./model")
+    assert "generated tgo model metadata is invalid" in result
+    generated_model.write_text(generated_text)
+
+    missing_source = model_source.with_suffix(".tgo.missing")
+    model_source.rename(missing_source)
+    assert_invalid_consumers(linter, work)
+    missing_source.rename(model_source)
+
+    model_source_text = model_source.read_text()
+    model_source.write_text(model_source_text.replace("value > 0", "value > 10", 1))
+    generated_model.write_text(
+        with_generated_digest(generated_text, model_source.read_bytes())
+    )
+    result = diagnostics(linter, work, "./model")
+    assert "does not match the current compiler emitter" in result
+    model_source.write_text(model_source_text)
+    generated_model.write_text(generated_text)
+
+    stale = model_source_text.replace(
+        "type Count int where value > 0",
+        'type Count string where value != ""',
+    )
+    stale = stale.replace("Started struct", "Opened struct")
+    stale = stale.replace('json:"pair"', 'json:"stale"')
+    model_source.write_text(stale)
+    generated_model.write_text(
+        with_generated_digest(generated_text, model_source.read_bytes())
+    )
+    result = diagnostics(linter, work, "./model")
+    assert "does not match the current compiler emitter" in result
+    assert_invalid_consumers(linter, work)
 
 
 def main():
@@ -85,122 +167,10 @@ def main():
         run(["go", "test", "./..."], work)
         write_invalid_consumers(work)
 
-        good = run([str(linter), "./good"], work)
-        assert good.stdout == expected("good.stdout"), good.stdout
-        assert good.stderr == expected("good.stderr"), good.stderr
+        for fixture in fixture_directories():
+            assert_case(linter, work, fixture)
 
-        bad = run([str(linter), "./bad"], work, success=False)
-        stdout = normalized(bad.stdout, work)
-        stderr = normalized(bad.stderr, work)
-        assert stdout == expected("bad.stdout"), stdout
-        assert stderr == expected("bad.stderr"), stderr
-
-        localbad = run([str(linter), "./localbad"], work, success=False)
-        stdout = normalized(localbad.stdout, work)
-        stderr = normalized(localbad.stderr, work)
-        assert stdout == expected("localbad.stdout"), stdout
-        assert stderr == expected("localbad.stderr"), stderr
-
-        genericgood = run([str(linter), "./genericgood"], work)
-        assert genericgood.stdout == expected("genericgood.stdout"), genericgood.stdout
-        assert genericgood.stderr == expected("genericgood.stderr"), genericgood.stderr
-
-        genericbad = run([str(linter), "./genericbad"], work, success=False)
-        stdout = normalized(genericbad.stdout, work)
-        stderr = normalized(genericbad.stderr, work)
-        assert stdout == expected("genericbad.stdout"), stdout
-        assert stderr == expected("genericbad.stderr"), stderr
-
-        genericzerogood = run([str(linter), "./genericzerogood"], work)
-        assert genericzerogood.stdout == expected("genericzerogood.stdout")
-        assert genericzerogood.stderr == expected("genericzerogood.stderr")
-
-        genericzerobad = run(
-            [str(linter), "./genericzerobad"], work, success=False
-        )
-        stdout = normalized(genericzerobad.stdout, work)
-        stderr = normalized(genericzerobad.stderr, work)
-        assert stdout == expected("genericzerobad.stdout"), stdout
-        assert stderr == expected("genericzerobad.stderr"), stderr
-
-        generated_model = work / "model" / "model_tgo.go"
-        model_source = work / "model" / "model.tgo"
-        generated_text = generated_model.read_text()
-        for original, replacement in (
-            ("return Count{value: value}, nil", "return Count{}, nil"),
-            (
-                "return Event{tgoTag: 1, tgoStarted: value}",
-                "_ = value\n\treturn Event{}",
-            ),
-        ):
-            forged = generated_text.replace(original, replacement, 1)
-            assert forged != generated_text
-            forged = with_generated_digest(forged, model_source.read_bytes())
-            generated_model.write_text(forged)
-            forged_result = run([str(linter), "./model"], work, success=False)
-            forged_diagnostics = normalized(
-                forged_result.stdout + forged_result.stderr, work
-            )
-            assert "does not match the current compiler emitter" in forged_diagnostics
-            generated_model.write_text(generated_text)
-
-        metadata_line = next(
-            line for line in generated_text.splitlines() if line.startswith("//tgo:v1 ")
-        )
-        missing_metadata = generated_text.replace(metadata_line + "\n", "", 1)
-        assert missing_metadata != generated_text
-        generated_model.write_text(missing_metadata)
-        missing_result = run([str(linter), "./model"], work, success=False)
-        missing_diagnostics = normalized(
-            missing_result.stdout + missing_result.stderr, work
-        )
-        assert "generated tgo model metadata is invalid" in missing_diagnostics
-        assert_invalid_consumers(linter, work)
-        generated_model.write_text(generated_text)
-
-        corrupt_metadata = generated_text.replace('"model.tgo"', "bad", 1)
-        assert corrupt_metadata != generated_text
-        generated_model.write_text(corrupt_metadata)
-        corrupt_result = run([str(linter), "./model"], work, success=False)
-        corrupt_diagnostics = normalized(
-            corrupt_result.stdout + corrupt_result.stderr, work
-        )
-        assert "generated tgo model metadata is invalid" in corrupt_diagnostics
-        generated_model.write_text(generated_text)
-
-        missing_source = model_source.with_suffix(".tgo.missing")
-        model_source.rename(missing_source)
-        assert_invalid_consumers(linter, work)
-        missing_source.rename(model_source)
-
-        model_source_text = model_source.read_text()
-        model_source.write_text(model_source_text.replace("value > 0", "value > 10", 1))
-        generated_model.write_text(
-            with_generated_digest(generated_text, model_source.read_bytes())
-        )
-        predicate_result = run([str(linter), "./model"], work, success=False)
-        predicate_diagnostics = normalized(
-            predicate_result.stdout + predicate_result.stderr, work
-        )
-        assert "does not match the current compiler emitter" in predicate_diagnostics
-        model_source.write_text(model_source_text)
-        generated_model.write_text(generated_text)
-
-        stale = model_source.read_text()
-        stale = stale.replace(
-            "type Count int where value > 0",
-            'type Count string where value != ""',
-        )
-        stale = stale.replace("Started struct", "Opened struct")
-        stale = stale.replace('json:"pair"', 'json:"stale"')
-        model_source.write_text(stale)
-        generated_model.write_text(
-            with_generated_digest(generated_text, model_source.read_bytes())
-        )
-        mismatch = run([str(linter), "./model"], work, success=False)
-        diagnostics = normalized(mismatch.stdout + mismatch.stderr, work)
-        assert "does not match the current compiler emitter" in diagnostics
-        assert_invalid_consumers(linter, work)
+        assert_integrity_checks(linter, work)
 
 
 if __name__ == "__main__":

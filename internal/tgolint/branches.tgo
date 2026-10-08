@@ -11,7 +11,7 @@ import (
 
 // checkBranch rejects a jump that moves a value before its proof.
 // A guard must run before goto, break, continue, or fallthrough.
-func (c *checker) checkBranch(statement *ast.BranchStmt, state checkedState) {
+func (c %checker) checkBranch(statement *ast.BranchStmt, state checkedState) {
 	if statement.Tok != token.GOTO && statement.Tok != token.BREAK &&
 		statement.Tok != token.CONTINUE && statement.Tok != token.FALLTHROUGH {
 		return
@@ -41,7 +41,7 @@ func (c *checker) checkBranch(statement *ast.BranchStmt, state checkedState) {
 }
 
 // branchHasUnsafeUse follows a jump target until the value is proved or replaced.
-func (c *checker) branchHasUnsafeUse(
+func (c %checker) branchHasUnsafeUse(
 	branch *ast.BranchStmt,
 	object types.Object,
 	result checkedResult,
@@ -72,7 +72,7 @@ func functionBody(function ast.Node) *ast.BlockStmt {
 }
 
 // branchTargetBlock resolves the CFG block reached by one branch statement.
-func (c *checker) branchTargetBlock(
+func (c %checker) branchTargetBlock(
 	graph *cfg.CFG,
 	branch *ast.BranchStmt,
 ) *cfg.Block {
@@ -86,7 +86,7 @@ func (c *checker) branchTargetBlock(
 	return controlTargetBlock(graph, target, branch.Tok)
 }
 
-func (c *checker) branchConstruct(branch *ast.BranchStmt) ast.Stmt {
+func (c %checker) branchConstruct(branch *ast.BranchStmt) ast.Stmt {
 	if branch.Label != nil {
 		label := c.pass.TypesInfo.Uses[branch.Label]
 		var target ast.Stmt = nil
@@ -146,7 +146,7 @@ func controlTargetKind(statement ast.Stmt, branch token.Token) cfg.BlockKind {
 	return cfg.KindInvalid
 }
 
-func (c *checker) gotoTargetBlock(graph *cfg.CFG, branch *ast.BranchStmt) *cfg.Block {
+func (c %checker) gotoTargetBlock(graph *cfg.CFG, branch *ast.BranchStmt) *cfg.Block {
 	label := c.pass.TypesInfo.Uses[branch.Label]
 	for _, block := range graph.Blocks {
 		statement, ok := block.Stmt.(*ast.LabeledStmt)
@@ -158,7 +158,7 @@ func (c *checker) gotoTargetBlock(graph *cfg.CFG, branch *ast.BranchStmt) *cfg.B
 	return nil
 }
 
-func (c *checker) fallthroughTargetBlock(
+func (c %checker) fallthroughTargetBlock(
 	graph *cfg.CFG,
 	branch *ast.BranchStmt,
 ) *cfg.Block {
@@ -191,7 +191,7 @@ type branchFlow struct {
 }
 
 // unsafeUseFromBlock searches all reachable blocks for use before proof.
-func (c *checker) unsafeUseFromBlock(
+func (c %checker) unsafeUseFromBlock(
 	block *cfg.Block,
 	object types.Object,
 	result checkedResult,
@@ -228,7 +228,7 @@ func (c *checker) unsafeUseFromBlock(
 }
 
 // blockProofSuccessors keeps only CFG edges allowed by a proved condition.
-func (c *checker) blockProofSuccessors(
+func (c %checker) blockProofSuccessors(
 	block *cfg.Block,
 	object types.Object,
 	result checkedResult,
@@ -247,7 +247,7 @@ func (c *checker) blockProofSuccessors(
 }
 
 // branchNodeEffect updates proof state for one node after a branch.
-func (c *checker) branchNodeEffect(
+func (c %checker) branchNodeEffect(
 	node ast.Node,
 	value types.Object,
 	failure types.Object,
@@ -276,7 +276,7 @@ func (c *checker) branchNodeEffect(
 	return unsafe, valueKilled, proofKilled
 }
 
-func (c *checker) branchNodeUnsafe(
+func (c %checker) branchNodeUnsafe(
 	node ast.Node,
 	value types.Object,
 	failure types.Object,
@@ -321,7 +321,7 @@ func nodeUsesObject(info *types.Info, node ast.Node, object types.Object) bool {
 	return used
 }
 
-func (c *checker) returnUsesPendingValue(
+func (c %checker) returnUsesPendingValue(
 	statement *ast.ReturnStmt,
 	value types.Object,
 	failure types.Object,

@@ -1,13 +1,16 @@
 .PHONY: ci ci-unlocked generated lint test unit-test e2e-test tgolint-test \
-	markdown build install-hooks install-tools
+	markdown tgo-size build install-hooks install-tools
 
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
 
-ci-unlocked: generated e2e-test tgolint-test lint unit-test markdown
+ci-unlocked: generated e2e-test tgolint-test lint unit-test markdown tgo-size
 
 markdown:
 	python3 scripts/check_markdown.py
+
+tgo-size:
+	python3 scripts/check_tgo_size.py
 
 generated:
 	python3 scripts/check_generated.py

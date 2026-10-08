@@ -22,8 +22,8 @@ type genericValueBinding struct {
 }
 
 // collectGenericValueBindings finds stable local generic function values.
-func (c *checker) collectGenericValueBindings(
-	summaries map[*types.Func]*genericEffectSummary,
+func (c %checker) collectGenericValueBindings(
+	summaries map[*types.Func]%genericEffectSummary,
 ) (map[types.Object]*genericValueBinding, map[ast.Expr]bool) {
 	bindings := make(map[types.Object]*genericValueBinding)
 	sources := make(map[ast.Expr]bool)
@@ -39,9 +39,9 @@ func (c *checker) collectGenericValueBindings(
 	return bindings, sources
 }
 
-func (c *checker) collectFileGenericValueBindings(
+func (c %checker) collectFileGenericValueBindings(
 	file *ast.File,
-	summaries map[*types.Func]*genericEffectSummary,
+	summaries map[*types.Func]%genericEffectSummary,
 	bindings map[types.Object]*genericValueBinding,
 	sources map[ast.Expr]bool,
 ) {
@@ -67,7 +67,7 @@ func (c *checker) collectFileGenericValueBindings(
 }
 
 // markAmbiguousGenericValueBindings rejects values changed after their first binding.
-func (c *checker) markAmbiguousGenericValueBindings(
+func (c %checker) markAmbiguousGenericValueBindings(
 	file *ast.File,
 	bindings map[types.Object]*genericValueBinding,
 ) {
@@ -84,7 +84,7 @@ func (c *checker) markAmbiguousGenericValueBindings(
 	})
 }
 
-func (c *checker) markAmbiguousGenericTargets(
+func (c %checker) markAmbiguousGenericTargets(
 	targets []ast.Expr,
 	operator token.Token,
 	bindings map[types.Object]*genericValueBinding,
@@ -103,10 +103,10 @@ func (c *checker) markAmbiguousGenericTargets(
 	}
 }
 
-func (c *checker) collectAssignedGenericValues(
+func (c %checker) collectAssignedGenericValues(
 	left []ast.Expr,
 	right []ast.Expr,
-	summaries map[*types.Func]*genericEffectSummary,
+	summaries map[*types.Func]%genericEffectSummary,
 	bindings map[types.Object]*genericValueBinding,
 	sources map[ast.Expr]bool,
 ) {
@@ -135,9 +135,9 @@ func (c *checker) collectAssignedGenericValues(
 }
 
 // genericValue resolves the effects carried by a function value expression.
-func (c *checker) genericValue(
+func (c %checker) genericValue(
 	expression ast.Expr,
-	summaries map[*types.Func]*genericEffectSummary,
+	summaries map[*types.Func]%genericEffectSummary,
 ) (genericValue, bool) {
 	if call, ok := unparenthesized(expression).(*ast.CallExpr); ok {
 		function, receiverArguments, typeArguments := c.genericCall(call)
@@ -181,9 +181,9 @@ func (c *checker) genericValue(
 }
 
 // reportDirectGenericValueEscape rejects an effectful value with no checked call site.
-func (c *checker) reportDirectGenericValueEscape(
+func (c %checker) reportDirectGenericValueEscape(
 	expression ast.Expr,
-	summaries map[*types.Func]*genericEffectSummary,
+	summaries map[*types.Func]%genericEffectSummary,
 	sources map[ast.Expr]bool,
 ) {
 	if sources[expression] || c.calledDirectly(expression) || c.discardedValue(expression) ||
@@ -196,7 +196,7 @@ func (c *checker) reportDirectGenericValueEscape(
 	}
 }
 
-func (c *checker) genericInstantiationPart(expression ast.Expr) bool {
+func (c %checker) genericInstantiationPart(expression ast.Expr) bool {
 	switch parent := c.parents[expression].(type) {
 	case *ast.IndexExpr:
 		return parent.X == expression
@@ -206,9 +206,9 @@ func (c *checker) genericInstantiationPart(expression ast.Expr) bool {
 	return false
 }
 
-func (c *checker) reportReturnedGenericCall(
+func (c %checker) reportReturnedGenericCall(
 	call *ast.CallExpr,
-	summaries map[*types.Func]*genericEffectSummary,
+	summaries map[*types.Func]%genericEffectSummary,
 	sources map[ast.Expr]bool,
 ) {
 	value, ok := c.genericValue(call, summaries)
@@ -225,7 +225,7 @@ func (c *checker) reportReturnedGenericCall(
 	c.reportGenericValueEscape(call, value)
 }
 
-func (c *checker) directCallOf(expression ast.Expr) *ast.CallExpr {
+func (c %checker) directCallOf(expression ast.Expr) *ast.CallExpr {
 	current := ast.Node(expression)
 	for {
 		parentheses, ok := c.parents[current].(*ast.ParenExpr)
@@ -241,7 +241,7 @@ func (c *checker) directCallOf(expression ast.Expr) *ast.CallExpr {
 	return nil
 }
 
-func (c *checker) discardedValue(expression ast.Expr) bool {
+func (c %checker) discardedValue(expression ast.Expr) bool {
 	current := ast.Node(expression)
 	for {
 		parentheses, ok := c.parents[current].(*ast.ParenExpr)
@@ -264,7 +264,7 @@ func (c *checker) discardedValue(expression ast.Expr) bool {
 	return false
 }
 
-func (c *checker) expressionStatement(expression ast.Expr) bool {
+func (c %checker) expressionStatement(expression ast.Expr) bool {
 	current := ast.Node(expression)
 	for {
 		parentheses, ok := c.parents[current].(*ast.ParenExpr)
@@ -277,7 +277,7 @@ func (c *checker) expressionStatement(expression ast.Expr) bool {
 	return ok && statement.X == current
 }
 
-func (c *checker) reportBoundGenericValueUse(
+func (c %checker) reportBoundGenericValueUse(
 	name *ast.Ident,
 	bindings map[types.Object]*genericValueBinding,
 ) {
@@ -293,7 +293,7 @@ func (c *checker) reportBoundGenericValueUse(
 }
 
 // reportGenericValueCall checks saved effects with the current call arguments.
-func (c *checker) reportGenericValueCall(call *ast.CallExpr, value genericValue) {
+func (c %checker) reportGenericValueCall(call *ast.CallExpr, value genericValue) {
 	conditionCall := call
 	effectsZero := value.fact.ZeroEffects
 	effectsAccess := value.fact.AccessEffects
@@ -311,7 +311,7 @@ func (c *checker) reportGenericValueCall(call *ast.CallExpr, value genericValue)
 }
 
 // reportGenericValueEscape reports effects that escape local call analysis.
-func (c *checker) reportGenericValueEscape(position ast.Expr, value genericValue) {
+func (c %checker) reportGenericValueEscape(position ast.Expr, value genericValue) {
 	if !c.genericValueAffectsModel(value) {
 		return
 	}
@@ -326,7 +326,7 @@ func (c *checker) reportGenericValueEscape(position ast.Expr, value genericValue
 	)
 }
 
-func (c *checker) genericValueAffectsModel(value genericValue) bool {
+func (c %checker) genericValueAffectsModel(value genericValue) bool {
 	zeroEffects, accessEffects := value.fact.ZeroEffects, value.fact.AccessEffects
 	if value.returned {
 		zeroEffects = value.fact.ReturnedZeroEffects
@@ -347,7 +347,7 @@ func (c *checker) genericValueAffectsModel(value genericValue) bool {
 	return false
 }
 
-func (c *checker) calledDirectly(expression ast.Expr) bool {
+func (c %checker) calledDirectly(expression ast.Expr) bool {
 	current := expression
 	for {
 		parent := c.parents[current]

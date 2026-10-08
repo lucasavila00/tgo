@@ -15,6 +15,8 @@ Fix every diagnostic. The command checks loaded Go packages for:
 - unchecked `(T, bool)` and comma-ok results;
 - incomplete enum switches and wrong payload reads;
 - changed, aliased, captured, or pointer enum receivers; and
+- possibly nil or unknown pointers used as `%T`;
+- unsafe `%T` zero values, literals, collections, calls, and function values; and
 - the same errors through control flow, wrappers, embedding, and generics.
 
 You can return an unchanged result pair. Otherwise, check `err` or `ok` before you
@@ -36,9 +38,17 @@ so the linter can check each call.
 Return a generic closure as a direct function literal. The checker does not yet
 follow that closure through a local variable or another helper.
 
+For `%T`, prove a possibly nil pointer non-nil before use. The checker follows nil comparisons,
+Boolean guards, direct aliases, branches, loops, and early exits. A comma-ok map read or channel
+receive proves a declared `%T` element only when `ok` is true. A pointer type assertion also needs
+a nil check.
+
 ## Go boundary
 
 TGo trusts values from Go. No generated validator checks the boundary. Go callers must use
 constructors and must read enum payloads only after the matching tag check. `tgolint` reports
 unsafe patterns that it can prove from Go source. It cannot inspect reflection, `unsafe`, cgo,
 races, or foreign state.
+
+`%T` has the Go `*T` representation. Unchecked Go can still pass nil. The linter adds no runtime
+check and cannot prove code that runs through reflection, `unsafe`, cgo, or a data race.

@@ -69,6 +69,7 @@ type Expression enum {
 	TypeAssertion struct { Value *TypeAssertionExpression }
 	Call struct { Value *CallExpression }
 	Star struct { Value *StarExpression }
+	NonNilPointer struct { Value *NonNilPointerType }
 	Unary struct { Value *UnaryExpression }
 	Binary struct { Value *BinaryExpression }
 	KeyValue struct { Value *KeyValueExpression }
@@ -191,6 +192,13 @@ type StarExpression struct {
 	Span
 	Star       token.Pos
 	Expression *Expression
+}
+
+// NonNilPointerType is one non-nil pointer type.
+type NonNilPointerType struct {
+	Span
+	Percent token.Pos
+	Type    *Expression
 }
 
 // UnaryExpression is one unary expression.

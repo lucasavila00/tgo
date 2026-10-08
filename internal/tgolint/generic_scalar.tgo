@@ -23,7 +23,7 @@ type scalarFlow struct {
 }
 
 // scalarValueAt returns a proven scalar value before the expression runs.
-func (c *checker) scalarValueAt(node ast.Node, expression ast.Expr) (scalarValue, bool) {
+func (c %checker) scalarValueAt(node ast.Node, expression ast.Expr) (scalarValue, bool) {
 	root := c.enclosingFunction(node)
 	if root == nil {
 		return scalarValue.Boolean{Value: false}, false
@@ -41,7 +41,7 @@ func (c *checker) scalarValueAt(node ast.Node, expression ast.Expr) (scalarValue
 }
 
 // enclosingFunction finds the declaration or literal that owns a node.
-func (c *checker) enclosingFunction(node ast.Node) ast.Node {
+func (c %checker) enclosingFunction(node ast.Node) ast.Node {
 	for current := node; current != nil; current = c.parents[current] {
 		switch current.(type) {
 		case *ast.FuncDecl, *ast.FuncLit:
@@ -52,7 +52,7 @@ func (c *checker) enclosingFunction(node ast.Node) ast.Node {
 }
 
 // buildScalarFlow solves scalar facts over the function control-flow graph.
-func (c *checker) buildScalarFlow(root ast.Node) *scalarFlow {
+func (c %checker) buildScalarFlow(root ast.Node) %scalarFlow {
 	body := functionBody(root)
 	flow := &scalarFlow{before: make(map[ast.Node]scalarState)}
 	if body == nil {
@@ -66,7 +66,7 @@ func (c *checker) buildScalarFlow(root ast.Node) *scalarFlow {
 }
 
 // solveScalarEntries computes stable input facts for every live CFG block.
-func (c *checker) solveScalarEntries(
+func (c %checker) solveScalarEntries(
 	graph *cfg.CFG,
 	entry scalarState,
 	owned map[types.Object]bool,
@@ -97,7 +97,7 @@ func (c *checker) solveScalarEntries(
 }
 
 // transferScalarBlock applies every scalar write and escape in one block.
-func (c *checker) transferScalarBlock(
+func (c %checker) transferScalarBlock(
 	entry scalarState,
 	block *cfg.Block,
 	owned map[types.Object]bool,
@@ -111,7 +111,7 @@ func (c *checker) transferScalarBlock(
 }
 
 // scalarSuccessors removes an edge when the block condition is constant.
-func (c *checker) scalarSuccessors(
+func (c %checker) scalarSuccessors(
 	block *cfg.Block,
 	state scalarState,
 ) []*cfg.Block {
@@ -137,7 +137,7 @@ func (c *checker) scalarSuccessors(
 }
 
 // recordScalarEntries saves final facts before each AST node.
-func (c *checker) recordScalarEntries(
+func (c %checker) recordScalarEntries(
 	flow *scalarFlow,
 	graph *cfg.CFG,
 	entries []scalarState,
@@ -157,7 +157,7 @@ func (c *checker) recordScalarEntries(
 }
 
 // ownedScalars limits facts to parameters and variables from this function.
-func (c *checker) ownedScalars(root ast.Node, body *ast.BlockStmt) map[types.Object]bool {
+func (c %checker) ownedScalars(root ast.Node, body *ast.BlockStmt) map[types.Object]bool {
 	owned := make(map[types.Object]bool)
 	if signature := c.functionSignature(root); signature != nil {
 		for index := 0; index < signature.Params().Len(); index++ {
@@ -181,7 +181,7 @@ func (c *checker) ownedScalars(root ast.Node, body *ast.BlockStmt) map[types.Obj
 }
 
 // scalarEntryState maps stable Boolean and integer parameters to call arguments.
-func (c *checker) scalarEntryState(
+func (c %checker) scalarEntryState(
 	root ast.Node,
 ) scalarState {
 	state := make(scalarState)
@@ -206,7 +206,7 @@ func (c *checker) scalarEntryState(
 	return state
 }
 
-func (c *checker) functionSignature(root ast.Node) *types.Signature {
+func (c %checker) functionSignature(root ast.Node) *types.Signature {
 	switch function := root.(type) {
 	case *ast.FuncDecl:
 		object, _ := c.pass.TypesInfo.Defs[function.Name].(*types.Func)
@@ -226,7 +226,7 @@ func isInteger(typ types.Type) bool {
 	return ok && basic.Info()&types.IsInteger != 0
 }
 
-func (c *checker) clearRangeScalars(
+func (c %checker) clearRangeScalars(
 	state scalarState,
 	block *cfg.Block,
 ) {
@@ -245,7 +245,7 @@ func (c *checker) clearRangeScalars(
 	}
 }
 
-func (c *checker) transferScalarNode(
+func (c %checker) transferScalarNode(
 	state scalarState,
 	node ast.Node,
 	owned map[types.Object]bool,
@@ -277,7 +277,7 @@ func (c *checker) transferScalarNode(
 }
 
 // transferScalarAssignment evaluates all right sides before it changes state.
-func (c *checker) transferScalarAssignment(
+func (c %checker) transferScalarAssignment(
 	state scalarState,
 	statement *ast.AssignStmt,
 	owned map[types.Object]bool,
@@ -312,7 +312,7 @@ func (c *checker) transferScalarAssignment(
 	}
 }
 
-func (c *checker) transferScalarValues(
+func (c %checker) transferScalarValues(
 	state scalarState,
 	names []*ast.Ident,
 	values []ast.Expr,
@@ -336,7 +336,7 @@ func (c *checker) transferScalarValues(
 }
 
 // invalidateScalarEscapes drops facts after an address or closure captures a value.
-func (c *checker) invalidateScalarEscapes(state scalarState, root ast.Node) {
+func (c %checker) invalidateScalarEscapes(state scalarState, root ast.Node) {
 	ast.Inspect(root, func(node ast.Node) bool {
 		if unary, ok := node.(*ast.UnaryExpr); ok && unary.Op == token.AND {
 			if name := identifier(unary.X); name != nil {
@@ -365,7 +365,7 @@ func (c *checker) invalidateScalarEscapes(state scalarState, root ast.Node) {
 }
 
 // evaluateScalar reduces constants, aliases, and supported Boolean expressions.
-func (c *checker) evaluateScalar(
+func (c %checker) evaluateScalar(
 	expression ast.Expr,
 	state scalarState,
 ) (scalarValue, bool) {
@@ -414,7 +414,7 @@ func exactScalar(value constant.Value) (scalarValue, bool) {
 	}
 }
 
-func (c *checker) valuePreservingConversion(call *ast.CallExpr) bool {
+func (c %checker) valuePreservingConversion(call *ast.CallExpr) bool {
 	return len(call.Args) == 1 && c.pass.TypesInfo.Types[call.Fun].IsType() &&
 		types.Identical(
 			c.pass.TypesInfo.TypeOf(call),
@@ -423,7 +423,7 @@ func (c *checker) valuePreservingConversion(call *ast.CallExpr) bool {
 }
 
 // evaluateScalarBinary evaluates safe Boolean operations and equality.
-func (c *checker) evaluateScalarBinary(
+func (c %checker) evaluateScalarBinary(
 	expression *ast.BinaryExpr,
 	state scalarState,
 ) (scalarValue, bool) {

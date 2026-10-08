@@ -24,31 +24,31 @@ type modelWireFact struct {
 }
 
 // AFact marks modelWireFact as a Go analysis fact.
-func (*modelWireFact) AFact() {}
+func (%modelWireFact) AFact() {}
 
 const (
 	checkedModelWire uint8 = 1
 	enumModelWire    uint8 = 2
 )
 
-func checkedModel(packagePath string, name string) *model {
+func checkedModel(packagePath string, name string) %model {
 	value := model.Checked{Package: packagePath, Name: name}
 	return &value
 }
 
-func enumModel(packagePath string, name string, variants []string) *model {
+func enumModel(packagePath string, name string, variants []string) %model {
 	value := model.Enum{
 		Package: packagePath, Name: name, Variants: variants,
 	}
 	return &value
 }
 
-func mixedModel() *model {
+func mixedModel() %model {
 	value := model.Mixed{}
 	return &value
 }
 
-func parameterModel() *model {
+func parameterModel() %model {
 	value := model.Parameter{}
 	return &value
 }
@@ -210,7 +210,7 @@ func decodeModelFact(fact *modelWireFact, expectedPackage string) *model {
 type validationFact struct{}
 
 // AFact marks validationFact as a Go analysis fact.
-func (*validationFact) AFact() {}
+func (%validationFact) AFact() {}
 
 type objectKey struct {
 	pkg  *types.Package
@@ -218,7 +218,7 @@ type objectKey struct {
 }
 
 // findModels verifies generated files before it exports any model facts.
-func (c *checker) findModels() {
+func (c %checker) findModels() {
 	var verified []*verifiedSource = nil
 	for _, file := range c.pass.Files {
 		if !c.hasGeneratedHeader(file) {
@@ -237,7 +237,7 @@ func (c *checker) findModels() {
 	}
 }
 
-func (c *checker) hasGeneratedHeader(file *ast.File) bool {
+func (c %checker) hasGeneratedHeader(file *ast.File) bool {
 	if len(file.Comments) == 0 || len(file.Comments[0].List) == 0 {
 		return false
 	}
@@ -246,7 +246,7 @@ func (c *checker) hasGeneratedHeader(file *ast.File) bool {
 	return position.Line == 1 && position.Column == 1 && comment.Text == generatedHeader
 }
 
-func (c *checker) exportGeneratedValidator(object *types.TypeName) {
+func (c %checker) exportGeneratedValidator(object *types.TypeName) {
 	function, ok := object.Pkg().Scope().Lookup("Validate" + object.Name()).(*types.Func)
 	if !ok || !validValidatorAPI(function, object.Type()) {
 		return
@@ -268,7 +268,7 @@ func validValidatorAPI(function *types.Func, typ types.Type) bool {
 }
 
 // exportValidationFacts marks verified constructors as trusted value sources.
-func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
+func (c %checker) exportValidationFacts(object *types.TypeName, value *model) {
 	scope := object.Pkg().Scope()
 	var names []string = nil
 	_, name := modelDescription(value)
@@ -292,7 +292,7 @@ func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
 }
 
 // findValidationWrappers exports a fact for a direct validator forwarding function.
-func (c *checker) findValidationWrappers() {
+func (c %checker) findValidationWrappers() {
 	changed := true
 	for changed {
 		changed = false
@@ -304,7 +304,7 @@ func (c *checker) findValidationWrappers() {
 	}
 }
 
-func (c *checker) exportValidationWrapper(declaration ast.Decl) bool {
+func (c %checker) exportValidationWrapper(declaration ast.Decl) bool {
 	function, ok := declaration.(*ast.FuncDecl)
 	if !ok || function.Body == nil || len(function.Body.List) != 1 {
 		return false
@@ -327,7 +327,7 @@ func (c *checker) exportValidationWrapper(declaration ast.Decl) bool {
 	return true
 }
 
-func (c *checker) callHasValidationFact(call *ast.CallExpr) bool {
+func (c %checker) callHasValidationFact(call *ast.CallExpr) bool {
 	object := calledObject(c.pass.TypesInfo, call.Fun)
 	if object == nil {
 		return false
@@ -347,7 +347,7 @@ func (c *checker) callHasValidationFact(call *ast.CallExpr) bool {
 }
 
 // findValidationFunctionValues resolves stable local aliases of validators.
-func (c *checker) findValidationFunctionValues() {
+func (c %checker) findValidationFunctionValues() {
 	candidates := make(map[types.Object]types.Object)
 	writes := make(map[types.Object]int)
 	escaped := make(map[types.Object]bool)
@@ -367,7 +367,7 @@ func (c *checker) findValidationFunctionValues() {
 	}
 }
 
-func (c *checker) scanValidationFunctionValue(
+func (c %checker) scanValidationFunctionValue(
 	node ast.Node,
 	candidates map[types.Object]types.Object,
 	writes map[types.Object]int,
@@ -395,7 +395,7 @@ func (c *checker) scanValidationFunctionValue(
 	}
 }
 
-func (c *checker) recordFunctionWrites(
+func (c %checker) recordFunctionWrites(
 	expressions []ast.Expr,
 	writes map[types.Object]int,
 ) {
@@ -406,7 +406,7 @@ func (c *checker) recordFunctionWrites(
 	}
 }
 
-func (c *checker) recordValidationFunctionValue(
+func (c %checker) recordValidationFunctionValue(
 	candidates map[types.Object]types.Object,
 	left ast.Expr,
 	right ast.Expr,
@@ -421,7 +421,7 @@ func (c *checker) recordValidationFunctionValue(
 	}
 }
 
-func (c *checker) objectHasValidationFact(object types.Object) bool {
+func (c %checker) objectHasValidationFact(object types.Object) bool {
 	if c.validated[object] {
 		return true
 	}
@@ -510,7 +510,7 @@ func validEnumAPI(typ, payload types.Type, accessor, constructorName string) boo
 }
 
 // modelFor loads and caches the verified model for one named type.
-func (c *checker) modelFor(typ types.Type) *model {
+func (c %checker) modelFor(typ types.Type) *model {
 	typ = types.Unalias(typ)
 	named, ok := typ.(*types.Named)
 	if !ok || named.Obj().Pkg() == nil {
@@ -530,7 +530,7 @@ func (c *checker) modelFor(typ types.Type) *model {
 	return value
 }
 
-func (c *checker) modelForReceiver(typ types.Type) *model {
+func (c %checker) modelForReceiver(typ types.Type) *model {
 	typ = types.Unalias(typ)
 	for {
 		if parameter, ok := typ.(*types.TypeParam); ok {
@@ -545,7 +545,7 @@ func (c *checker) modelForReceiver(typ types.Type) *model {
 }
 
 // modelForTypeParameter finds one model shared by every constraint term.
-func (c *checker) modelForTypeParameter(parameter *types.TypeParam) *model {
+func (c %checker) modelForTypeParameter(parameter *types.TypeParam) *model {
 	terms, supported := simpleTerms(parameter.Constraint())
 	if !supported {
 		return nil
@@ -564,7 +564,7 @@ func (c *checker) modelForTypeParameter(parameter *types.TypeParam) *model {
 	return found
 }
 
-func (c *checker) modelForSelector(selector *ast.SelectorExpr) *model {
+func (c %checker) modelForSelector(selector *ast.SelectorExpr) *model {
 	if model := c.modelForReceiver(c.pass.TypesInfo.TypeOf(selector.X)); model != nil {
 		return model
 	}
@@ -595,7 +595,7 @@ func (c *checker) modelForSelector(selector *ast.SelectorExpr) *model {
 
 // structuralModel finds a generated enum behind an interface method set.
 // It returns nil when the receiver cannot admit that enum.
-func (c *checker) structuralModel(selector *ast.SelectorExpr) *model {
+func (c %checker) structuralModel(selector *ast.SelectorExpr) *model {
 	receiver := c.pass.TypesInfo.TypeOf(selector.X)
 	if !c.receiverCanHideModel(receiver) {
 		return nil
@@ -619,7 +619,7 @@ func (c *checker) structuralModel(selector *ast.SelectorExpr) *model {
 	return found
 }
 
-func (c *checker) receiverCanHideModel(typ types.Type) bool {
+func (c %checker) receiverCanHideModel(typ types.Type) bool {
 	typ = types.Unalias(typ)
 	if named, ok := typ.(*types.Named); ok {
 		_, isInterface := named.Underlying().(*types.Interface)
@@ -635,7 +635,7 @@ func (c *checker) receiverCanHideModel(typ types.Type) bool {
 }
 
 // modelForAccessor resolves a generated payload accessor to its owning model.
-func (c *checker) modelForAccessor(function *types.Func) *model {
+func (c %checker) modelForAccessor(function *types.Func) *model {
 	name := function.Name()
 	if !strings.HasPrefix(name, "Tgo") || name == "TgoTag" {
 		return nil

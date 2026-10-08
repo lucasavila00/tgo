@@ -185,42 +185,8 @@ func (p *packageUnit) generatedDecl(d ast.Decl) bool { return p.generated[d] }
 
 // compile lowers one tgo package and formats its Go output files.
 func (p *packageUnit) compile() (map[string][]byte, error) {
-	p.prepare()
-	p.typecheck()
-	p.checkGeneratedPredeclaredNames()
-	if len(p.errors) > 0 {
-		return nil, p.errors[0]
-	}
-	p.lowerPropagations()
-	if len(p.errors) > 0 {
-		return nil, p.errors[0]
-	}
-	p.typecheck()
-	p.lowerConstructions()
-	p.typecheck()
-	if p.blankUnusedErasedImports() {
-		p.typecheck()
-	}
-	p.validateGeneratedReferences()
-	if len(p.errors) > 0 {
-		return nil, p.errors[0]
-	}
-	p.fillDefaults()
-	p.lowerMatches()
-	if len(p.errors) > 0 {
-		return nil, p.errors[0]
-	}
-	p.typecheck()
-	p.validateGeneratedReferences()
-	if len(p.errors) > 0 {
-		return nil, p.errors[0]
-	}
-	if len(p.typeErrors) > 0 {
-		return nil, p.typeErrors[0]
-	}
-	p.checkRules()
-	if len(p.errors) > 0 {
-		return nil, p.errors[0]
+	if err := p.checkAndLower(); err != nil {
+		return nil, err
 	}
 	outputs := map[string][]byte{}
 	for _, s := range p.Sources {
@@ -246,4 +212,46 @@ func (p *packageUnit) compile() (map[string][]byte, error) {
 		outputs[p.outputPath(s.Name)] = b.Bytes()
 	}
 	return outputs, nil
+}
+
+// checkAndLower checks one package and applies all source transformations.
+func (p *packageUnit) checkAndLower() error {
+	p.prepare()
+	p.typecheck()
+	p.checkGeneratedPredeclaredNames()
+	if len(p.errors) > 0 {
+		return p.errors[0]
+	}
+	p.lowerPropagations()
+	if len(p.errors) > 0 {
+		return p.errors[0]
+	}
+	p.typecheck()
+	p.lowerConstructions()
+	p.typecheck()
+	if p.blankUnusedErasedImports() {
+		p.typecheck()
+	}
+	p.validateGeneratedReferences()
+	if len(p.errors) > 0 {
+		return p.errors[0]
+	}
+	p.fillDefaults()
+	p.lowerMatches()
+	if len(p.errors) > 0 {
+		return p.errors[0]
+	}
+	p.typecheck()
+	p.validateGeneratedReferences()
+	if len(p.errors) > 0 {
+		return p.errors[0]
+	}
+	if len(p.typeErrors) > 0 {
+		return p.typeErrors[0]
+	}
+	p.checkRules()
+	if len(p.errors) > 0 {
+		return p.errors[0]
+	}
+	return nil
 }

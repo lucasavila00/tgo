@@ -7,12 +7,12 @@ import (
 )
 
 // zeroInvalid reports the model that makes a type's zero value invalid.
-func (c *checker) zeroInvalid(typ types.Type) (*model, bool) {
+func (c %checker) zeroInvalid(typ types.Type) (*model, bool) {
 	return c.zero(typ, make(map[types.Type]bool))
 }
 
 // zero walks one type and stops named recursion through types already seen.
-func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) {
+func (c %checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) {
 	if typ == nil {
 		return nil, false
 	}
@@ -55,7 +55,7 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 }
 
 // checkValueSpec rejects declarations that create an invalid model zero.
-func (c *checker) checkValueSpec(specification *ast.ValueSpec) {
+func (c %checker) checkValueSpec(specification *ast.ValueSpec) {
 	if len(specification.Values) != 0 {
 		return
 	}
@@ -73,7 +73,7 @@ func (c *checker) checkValueSpec(specification *ast.ValueSpec) {
 }
 
 // checkNamedResults rejects implicit zero values in named function results.
-func (c *checker) checkNamedResults(function *ast.FuncType) {
+func (c %checker) checkNamedResults(function *ast.FuncType) {
 	if function.Results == nil {
 		return
 	}
@@ -93,7 +93,7 @@ func (c *checker) checkNamedResults(function *ast.FuncType) {
 }
 
 // checkLiteral finds omitted elements that receive an invalid model zero.
-func (c *checker) checkLiteral(literal *ast.CompositeLit) {
+func (c %checker) checkLiteral(literal *ast.CompositeLit) {
 	typ := c.pass.TypesInfo.TypeOf(literal)
 	if model := c.modelFor(typ); model != nil {
 		c.pass.Reportf(literal.Pos(), "cannot construct tgo %s %s with a Go literal",
@@ -115,7 +115,7 @@ func (c *checker) checkLiteral(literal *ast.CompositeLit) {
 	}
 }
 
-func (c *checker) checkStructLiteral(literal *ast.CompositeLit, structure *types.Struct) {
+func (c %checker) checkStructLiteral(literal *ast.CompositeLit, structure *types.Struct) {
 	if len(literal.Elts) == 0 && structure.NumFields() == 0 {
 		return
 	}
@@ -145,7 +145,7 @@ func (c *checker) checkStructLiteral(literal *ast.CompositeLit, structure *types
 	}
 }
 
-func (c *checker) checkLiteralElements(
+func (c %checker) checkLiteralElements(
 	literal *ast.CompositeLit,
 	length int64,
 	model *model,
@@ -182,7 +182,7 @@ func (c *checker) checkLiteralElements(
 }
 
 // checkCall checks conversions and built-ins that can create model zero values.
-func (c *checker) checkCall(call *ast.CallExpr) {
+func (c %checker) checkCall(call *ast.CallExpr) {
 	if c.checkedCall(call) != nil {
 		if !c.checked[call] {
 			c.reportCheckedCall(call)
@@ -217,7 +217,7 @@ func (c *checker) checkCall(call *ast.CallExpr) {
 	}
 }
 
-func (c *checker) identityConversion(call *ast.CallExpr) bool {
+func (c %checker) identityConversion(call *ast.CallExpr) bool {
 	if len(call.Args) != 1 {
 		return false
 	}
@@ -242,7 +242,7 @@ func (c *checker) identityConversion(call *ast.CallExpr) bool {
 	return true
 }
 
-func (c *checker) checkTypeSpec(specification *ast.TypeSpec) {
+func (c %checker) checkTypeSpec(specification *ast.TypeSpec) {
 	if specification.Assign.IsValid() {
 		return
 	}
@@ -253,7 +253,7 @@ func (c *checker) checkTypeSpec(specification *ast.TypeSpec) {
 	}
 }
 
-func (c *checker) checkNew(call *ast.CallExpr) {
+func (c %checker) checkNew(call *ast.CallExpr) {
 	if len(call.Args) != 1 {
 		return
 	}
@@ -263,7 +263,7 @@ func (c *checker) checkNew(call *ast.CallExpr) {
 	}
 }
 
-func (c *checker) checkMake(call *ast.CallExpr) {
+func (c %checker) checkMake(call *ast.CallExpr) {
 	if len(call.Args) < 2 {
 		return
 	}
@@ -288,7 +288,7 @@ func constantZero(value constant.Value) bool {
 	return constant.Sign(value) == 0
 }
 
-func (c *checker) checkClear(call *ast.CallExpr) {
+func (c %checker) checkClear(call *ast.CallExpr) {
 	if len(call.Args) != 1 {
 		return
 	}
@@ -304,7 +304,7 @@ func (c *checker) checkClear(call *ast.CallExpr) {
 }
 
 // checkMapRead requires presence proof when a miss returns an invalid zero.
-func (c *checker) checkMapRead(index *ast.IndexExpr) {
+func (c %checker) checkMapRead(index *ast.IndexExpr) {
 	typ := c.pass.TypesInfo.TypeOf(index.X)
 	mapping, ok := coreType(typ).(*types.Map)
 	if !ok {
@@ -322,7 +322,7 @@ func (c *checker) checkMapRead(index *ast.IndexExpr) {
 		modelKind(model), modelName(model))
 }
 
-func (c *checker) assignmentTarget(expression ast.Expr) bool {
+func (c %checker) assignmentTarget(expression ast.Expr) bool {
 	assignment, ok := c.parents[expression].(*ast.AssignStmt)
 	if !ok {
 		return false
@@ -335,7 +335,7 @@ func (c *checker) assignmentTarget(expression ast.Expr) bool {
 	return false
 }
 
-func (c *checker) commaOK(expression ast.Expr) bool {
+func (c %checker) commaOK(expression ast.Expr) bool {
 	switch parent := c.parents[expression].(type) {
 	case *ast.AssignStmt:
 		return len(parent.Lhs) == 2 && len(parent.Rhs) == 1
@@ -347,7 +347,7 @@ func (c *checker) commaOK(expression ast.Expr) bool {
 }
 
 // checkPresenceRead checks channel and other reads that need a comma-ok proof.
-func (c *checker) checkPresenceRead(expression ast.Expr) {
+func (c %checker) checkPresenceRead(expression ast.Expr) {
 	model, invalid := c.zeroInvalid(firstType(c.pass.TypesInfo.TypeOf(expression)))
 	if !invalid {
 		return
@@ -362,7 +362,7 @@ func (c *checker) checkPresenceRead(expression ast.Expr) {
 
 // checkTypeAssertion checks the zero result from the comma-ok form.
 // A failed one-result assertion stops with a panic and returns no zero.
-func (c *checker) checkTypeAssertion(expression *ast.TypeAssertExpr) {
+func (c %checker) checkTypeAssertion(expression *ast.TypeAssertExpr) {
 	if expression.Type == nil {
 		return
 	}
@@ -373,7 +373,7 @@ func (c *checker) checkTypeAssertion(expression *ast.TypeAssertExpr) {
 	// Go can provide an invalid model value. The caller owns this boundary.
 }
 
-func (c *checker) assertionValidator(expression *ast.TypeAssertExpr) bool {
+func (c %checker) assertionValidator(expression *ast.TypeAssertExpr) bool {
 	current := ast.Expr(expression)
 	for {
 		parentheses, ok := c.parents[current].(*ast.ParenExpr)
@@ -397,7 +397,7 @@ func firstType(typ types.Type) types.Type {
 }
 
 // checkReslice rejects length growth that exposes invalid zero elements.
-func (c *checker) checkReslice(expression *ast.SliceExpr) {
+func (c %checker) checkReslice(expression *ast.SliceExpr) {
 	if expression.High == nil {
 		return
 	}
@@ -416,7 +416,7 @@ func (c *checker) checkReslice(expression *ast.SliceExpr) {
 		modelKind(model), modelName(model))
 }
 
-func (c *checker) currentLength(expression, slice ast.Expr) bool {
+func (c %checker) currentLength(expression, slice ast.Expr) bool {
 	call, ok := expression.(*ast.CallExpr)
 	if !ok || len(call.Args) != 1 {
 		return false

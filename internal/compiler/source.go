@@ -51,6 +51,7 @@ type source struct {
 	MatchMarker   string
 	DefaultMarker string
 	Propagations  map[string]propagationSource
+	NonNil        map[token.Pos]bool
 }
 
 type propagationSource struct {

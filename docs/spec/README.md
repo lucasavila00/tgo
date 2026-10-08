@@ -48,6 +48,7 @@ DefaultMarker  = "..default" .
 MatchStmt      = "match" GoExpression "{" { MatchCase } "}" .
 MatchCase      = "case" VariantName "(" identifier ")" ":" GoStatementList .
 PropagateExpr  = GoCallExpr "!" .
+NonNilPointer = "%" GoType .
 ```
 
 Go semicolon insertion applies. A qualified variant literal starts with a package name:
@@ -137,6 +138,48 @@ positions.
 
 Generated Go keeps the source function signature. Its success path has the call, nil check, and
 branch of a manual Go error check. Error wrapping runs only on failure.
+
+## Non-nil pointers
+
+`%T` is a non-nil pointer to `T`. `*T` is a possibly nil Go pointer.
+
+```text
+type Account struct {
+    Owner %User
+    Manager *User
+}
+
+func LoadOwner(id ID) (%User, error)
+```
+
+Pointer markers compose. `%*T` is a non-nil pointer to a possibly nil pointer. `*%T` is a possibly nil
+pointer to a non-nil pointer. `%%T` requires both pointers to be non-nil.
+
+The compiler parses `%T` and emits `*T`. It adds no wrapper, check, panic, or support function.
+The generated type has the same representation and ABI as the Go pointer. A `%` marker is valid
+only in a type.
+
+The zero value of `%T` is invalid. `&value` and `new(T)` are non-nil. A `%T` result is non-nil.
+A `*T` value can flow to `%T` only when `tgolint` proves that value non-nil on the current path.
+A `%T` value can flow to `*T`.
+
+`tgolint` checks `%T` contracts in `.tgo` source and in Go callers. Package facts keep contracts
+for fields, parameters, results, aliases, nested types, and function types. The checks cover
+declarations, assignments, returns, calls, receivers, field writes, literals, collections,
+closures, and function values.
+
+The analysis tracks nil, non-nil, and unknown values through `if`, `switch`, loops, `goto`,
+`break`, `continue`, `!`, `&&`, `||`, and Boolean guard aliases. A fact survives a join only when
+all incoming paths have it. An assignment ends old facts. Direct local aliases share a fact until
+an assignment breaks the alias. A closure write, address escape, or call that can change stable
+storage ends its storage facts.
+
+A comma-ok map read or channel receive links the value to `ok`. For `map[K]%T` and `chan %T`, a
+true `ok` proves that the returned value is non-nil. A pointer type assertion also needs a nil
+check because an interface can hold a typed nil pointer.
+
+Unchecked Go, reflection, `unsafe`, cgo, and data races can break a `%T` contract. Neither the
+compiler nor `tgolint` adds a runtime defense.
 
 ## Enum types
 
@@ -333,7 +376,8 @@ An array literal must supply every index, including indexes whose Go zero is val
 
 tgo classifies a type by whether Go zero filling makes a valid tgo value.
 
-- Basic types, pointers, slices, maps, channels, functions, and ordinary interfaces are valid.
+- Basic types, `*T`, slices, maps, channels, functions, and ordinary interfaces are valid.
+- `%T` is invalid.
 - A struct is valid when every field type is valid.
 - A nonempty array is valid when its element type is valid.
 - A zero-length array is valid.
@@ -371,6 +415,9 @@ The model value may be used in the successful branch, but not in `else`.
 
 A map assignment does not read a missing value. Channel range stops at close.
 No runtime tag check is added. Existing values from Go are trusted.
+
+For `%T`, `tgolint` also accepts a proof after the read. A nil comparison, Boolean guard, early
+exit, or comma-ok condition can establish the proof. The compiler adds no check.
 
 ## Reslicing
 

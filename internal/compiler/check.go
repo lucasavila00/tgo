@@ -110,6 +110,7 @@ func (p *packageUnit) checkRules() {
 			}
 			parents := parentNodes(declaration)
 			ast.Inspect(declaration, func(node ast.Node) bool {
+				p.checkNonNilType(source, node)
 				p.checkNode(node, parents)
 				if literal, ok := node.(*ast.FuncLit); ok {
 					p.checkFunctionResults(literal.Type.Results, literal.Body)
@@ -121,6 +122,14 @@ func (p *packageUnit) checkRules() {
 			}
 		}
 	}
+}
+
+func (p *packageUnit) checkNonNilType(source *source, node ast.Node) {
+	pointer, ok := node.(*ast.StarExpr)
+	if !ok || !source.NonNil[pointer.Star] || p.info.Types[pointer].IsType() {
+		return
+	}
+	p.failAt(pointer.Star, "%% is only valid in a pointer type")
 }
 
 // parentNodes maps each AST node to its direct parent.

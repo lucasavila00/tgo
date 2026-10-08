@@ -9,9 +9,9 @@ import (
 )
 
 // reportGenericZeroCall applies a generic effect summary to one call.
-func (c *checker) reportGenericZeroCall(
+func (c %checker) reportGenericZeroCall(
 	call *ast.CallExpr,
-	summaries map[*types.Func]*genericEffectSummary,
+	summaries map[*types.Func]%genericEffectSummary,
 ) {
 	function, receiverArguments, typeArguments := c.genericCall(call)
 	if function == nil {
@@ -28,7 +28,7 @@ func (c *checker) reportGenericZeroCall(
 }
 
 // reportGenericEffects groups model effects and reports their certainty.
-func (c *checker) reportGenericEffects(
+func (c %checker) reportGenericEffects(
 	expression ast.Expr,
 	call *ast.CallExpr,
 	effects []genericEffect,
@@ -99,7 +99,7 @@ func effectOutcomeRank(outcome effectOutcome) int {
 	}
 }
 
-func (c *checker) genericEffectModel(
+func (c %checker) genericEffectModel(
 	effect genericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
@@ -123,7 +123,7 @@ func (c *checker) genericEffectModel(
 	return model
 }
 
-func (c *checker) genericEffectType(
+func (c %checker) genericEffectType(
 	effect genericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
@@ -139,7 +139,7 @@ func (c *checker) genericEffectType(
 }
 
 // effectCertainty proves whether an effect never, can, or will occur.
-func (c *checker) effectCertainty(
+func (c %checker) effectCertainty(
 	call *ast.CallExpr,
 	effect genericEffect,
 	targetType types.Type,
@@ -166,7 +166,7 @@ func (c *checker) effectCertainty(
 }
 
 // effectConditionValue evaluates one condition against concrete call arguments.
-func (c *checker) effectConditionValue(
+func (c %checker) effectConditionValue(
 	call *ast.CallExpr,
 	condition genericEffectCondition,
 	targetType types.Type,
@@ -181,7 +181,7 @@ func (c *checker) effectConditionValue(
 	return c.compositeEffectCondition(call, condition, targetType)
 }
 
-func (c *checker) scalarEffectCondition(
+func (c %checker) scalarEffectCondition(
 	call *ast.CallExpr,
 	expression ast.Expr,
 	condition genericEffectCondition,
@@ -195,7 +195,7 @@ func (c *checker) scalarEffectCondition(
 	return false, false
 }
 
-func (c *checker) booleanConditionValue(
+func (c %checker) booleanConditionValue(
 	call *ast.CallExpr,
 	expression ast.Expr,
 	expected bool,
@@ -212,7 +212,7 @@ func (c *checker) booleanConditionValue(
 	return constant.BoolVal(value) == expected, true
 }
 
-func (c *checker) integerConditionValue(
+func (c %checker) integerConditionValue(
 	call *ast.CallExpr,
 	expression ast.Expr,
 	expected bool,
@@ -229,7 +229,7 @@ func (c *checker) integerConditionValue(
 	return (constant.Sign(value) != 0) == expected, true
 }
 
-func (c *checker) compositeEffectCondition(
+func (c %checker) compositeEffectCondition(
 	call *ast.CallExpr,
 	condition genericEffectCondition,
 	targetType types.Type,
@@ -255,7 +255,7 @@ func (c *checker) compositeEffectCondition(
 }
 
 // knownSliceBounds reads exact length and capacity from literals and make calls.
-func (c *checker) knownSliceBounds(expression ast.Expr) (int64, int64, bool) {
+func (c %checker) knownSliceBounds(expression ast.Expr) (int64, int64, bool) {
 	if parentheses, ok := expression.(*ast.ParenExpr); ok {
 		return c.knownSliceBounds(parentheses.X)
 	}
@@ -288,7 +288,7 @@ func (c *checker) knownSliceBounds(expression ast.Expr) (int64, int64, bool) {
 	return length, capacity, known
 }
 
-func (c *checker) knownIntegerAt(node ast.Node, expression ast.Expr) (int64, bool) {
+func (c %checker) knownIntegerAt(node ast.Node, expression ast.Expr) (int64, bool) {
 	if value, known := c.scalarValueAt(node, expression); known {
 		if integer, exact := scalarInteger(value); exact {
 			return integer, true
@@ -324,7 +324,7 @@ func constantInteger(value constant.Value) (int64, bool) {
 	return result, exact
 }
 
-func (c *checker) mapMissCondition(
+func (c %checker) mapMissCondition(
 	call *ast.CallExpr,
 	condition genericEffectCondition,
 ) (bool, bool) {
@@ -355,7 +355,7 @@ func (c *checker) mapMissCondition(
 	return true, true
 }
 
-func (c *checker) freshChannel(expression ast.Expr) bool {
+func (c %checker) freshChannel(expression ast.Expr) bool {
 	call, ok := unparenthesized(expression).(*ast.CallExpr)
 	if !ok {
 		return false
@@ -369,7 +369,7 @@ func (c *checker) freshChannel(expression ast.Expr) bool {
 	return builtin && channel
 }
 
-func (c *checker) assertionFails(
+func (c %checker) assertionFails(
 	expression ast.Expr,
 	target types.Type,
 ) (bool, bool) {
@@ -377,7 +377,7 @@ func (c *checker) assertionFails(
 	return fails, known
 }
 
-func (c *checker) assertionTypes(
+func (c %checker) assertionTypes(
 	expression ast.Expr,
 	target types.Type,
 ) (bool, bool) {
@@ -398,7 +398,7 @@ func (c *checker) assertionTypes(
 	return !types.AssignableTo(source, target), true
 }
 
-func (c *checker) resliceExtends(
+func (c %checker) resliceExtends(
 	call *ast.CallExpr,
 	condition genericEffectCondition,
 ) (bool, bool) {
@@ -428,7 +428,7 @@ func unparenthesized(expression ast.Expr) ast.Expr {
 }
 
 // modelBehindAccessType finds a model exposed through a type or method set.
-func (c *checker) modelBehindAccessType(typ types.Type) *model {
+func (c %checker) modelBehindAccessType(typ types.Type) *model {
 	if model := c.modelForReceiver(typ); model != nil {
 		return model
 	}
@@ -452,7 +452,7 @@ func (c *checker) modelBehindAccessType(typ types.Type) *model {
 }
 
 // genericCall resolves a call and its receiver and function type arguments.
-func (c *checker) genericCall(
+func (c %checker) genericCall(
 	call *ast.CallExpr,
 ) (*types.Func, []types.Type, []types.Type) {
 	identifier := genericCallIdentifier(call.Fun)
@@ -470,7 +470,7 @@ func (c *checker) genericCall(
 	return function.Origin(), c.receiverTypeArguments(call.Fun), typeArguments
 }
 
-func (c *checker) genericCallObject(expression ast.Expr) types.Object {
+func (c %checker) genericCallObject(expression ast.Expr) types.Object {
 	base := genericCallBase(expression)
 	if selector, ok := base.(*ast.SelectorExpr); ok {
 		if selection := c.pass.TypesInfo.Selections[selector]; selection != nil {
@@ -508,7 +508,7 @@ func genericCallBase(expression ast.Expr) ast.Expr {
 	}
 }
 
-func (c *checker) receiverTypeArguments(expression ast.Expr) []types.Type {
+func (c %checker) receiverTypeArguments(expression ast.Expr) []types.Type {
 	selector, ok := genericCallBase(expression).(*ast.SelectorExpr)
 	if !ok {
 		return nil

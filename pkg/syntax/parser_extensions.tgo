@@ -1,0 +1,430 @@
+package syntax
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"slices"
+)
+
+func (p *sourceParser) discoverExtensions() error {
+	for cursor := 0; cursor < len(p.tokens); cursor++ {
+		if p.tokens[cursor].kind == token.REM {
+			p.edits = append(p.edits, sourceEdit{
+				start: p.tokens[cursor].start,
+				end:   p.tokens[cursor].end,
+				text:  "*",
+			})
+		}
+		if p.atPropagation(cursor) {
+			item := &rawPropagation{
+				callEnd: p.tokens[cursor-1].end,
+				bang:    cursor,
+				node:    nil,
+			}
+			p.propagations = append(p.propagations, item)
+			p.edits = append(p.edits, sourceEdit{
+				start: p.tokens[cursor].start,
+				end:   p.tokens[cursor].end,
+				text:  "",
+			})
+			continue
+		}
+		if p.atDefault(cursor) {
+			item := new(rawDefault)
+			item.start = p.tokens[cursor].start
+			item.end = p.tokens[cursor+2].end
+			item.first = cursor
+			item.last = cursor + 1
+			item.word = cursor + 2
+			p.defaults = append(p.defaults, item)
+			p.edits = append(p.edits, sourceEdit{start: item.start, end: item.end, text: "0"})
+			cursor += 2
+			continue
+		}
+		if p.insideDeclaration(p.tokens[cursor].start) {
+			continue
+		}
+		if p.tokens[cursor].text != "match" || !p.atStatementStart(cursor) ||
+			p.goStatementSyntax(cursor) {
+			continue
+		}
+		open, err := p.matchBody(cursor + 1)
+		if err != nil {
+			return err
+		}
+		if open < 0 {
+			continue
+		}
+		match, err := p.rawMatch(cursor, open)
+		if err != nil {
+			return err
+		}
+		p.matches = append(p.matches, match)
+		p.edits = append(p.edits, sourceEdit{start: match.start, end: match.end, text: ";"})
+	}
+	return nil
+}
+
+func (p *sourceParser) atPropagation(cursor int) bool {
+	return cursor > 0 && p.tokens[cursor].kind == token.NOT &&
+		p.tokens[cursor-1].kind == token.RPAREN
+}
+
+func (p *sourceParser) goStatementSyntax(start int) bool {
+	if p.implicitSemicolon(start + 1) {
+		return false
+	}
+	cursor := start
+	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON &&
+		p.tokens[cursor].kind != token.RBRACE {
+		if opening(p.tokens[cursor].kind) {
+			end, err := p.closeToken(cursor)
+			if err != nil {
+				return false
+			}
+			cursor = end + 1
+			continue
+		}
+		cursor++
+	}
+	if cursor <= start {
+		return false
+	}
+	text := "package p\nfunc _() {\n" + p.text(start, cursor) + "\n}"
+	_, err := parser.ParseFile(token.NewFileSet(), "", text, parser.SkipObjectResolution)
+	return err == nil
+}
+
+func (p *sourceParser) insideDeclaration(offset int) bool {
+	for _, declaration := range p.decls {
+		if declaration.start <= offset && offset < declaration.end {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *sourceParser) atDefault(cursor int) bool {
+	return cursor+2 < len(p.tokens) && p.tokens[cursor].kind == token.PERIOD &&
+		p.tokens[cursor+1].kind == token.PERIOD &&
+		p.tokens[cursor+2].kind == token.DEFAULT
+}
+
+func (p *sourceParser) atStatementStart(cursor int) bool {
+	if cursor == 0 {
+		return false
+	}
+	previous := p.tokens[cursor-1].kind
+	return previous == token.LBRACE || previous == token.SEMICOLON || previous == token.COLON
+}
+
+func (p *sourceParser) matchBody(start int) (int, error) {
+	for cursor := start; cursor < len(p.tokens); cursor++ {
+		kind := p.tokens[cursor].kind
+		if kind == token.SEMICOLON {
+			if cursor == start && p.implicitSemicolon(cursor) {
+				continue
+			}
+			return -1, nil
+		}
+		if !opening(kind) {
+			continue
+		}
+		end, err := p.closeToken(cursor)
+		if err != nil {
+			return -1, err
+		}
+		if kind == token.LBRACE {
+			empty := cursor+1 == end
+			caseBody := !empty &&
+				(p.tokens[cursor+1].kind == token.CASE ||
+					p.tokens[cursor+1].kind == token.DEFAULT)
+			if caseBody || empty && p.groupEndsStatement(end) {
+				return cursor, nil
+			}
+		}
+		cursor = end
+	}
+	return -1, nil
+}
+
+func (p *sourceParser) groupEndsStatement(end int) bool {
+	return end+1 == len(p.tokens) || p.tokens[end+1].kind == token.SEMICOLON ||
+		p.tokens[end+1].kind == token.RBRACE
+}
+
+func (p *sourceParser) rawMatch(keyword int, open int) (*rawMatch, error) {
+	closing, err := p.closeToken(open)
+	if err != nil {
+		return nil, err
+	}
+	start := p.tokens[keyword].start
+	labels := []int(nil)
+	labelColons := []int(nil)
+	labelStart := keyword
+	for labelStart >= 2 && p.tokens[labelStart-1].kind == token.COLON &&
+		p.tokens[labelStart-2].kind == token.IDENT && p.labelCanStart(labelStart-2) {
+		labels = append([]int{labelStart - 2}, labels...)
+		labelColons = append([]int{labelStart - 1}, labelColons...)
+		labelStart -= 2
+	}
+	if len(labels) > 0 {
+		start = p.tokens[labels[0]].start
+	}
+	subjectStart := keyword + 1
+	if p.implicitSemicolon(subjectStart) {
+		subjectStart++
+	}
+	if subjectStart >= open {
+		return nil, p.tokenError(keyword, "match needs one value")
+	}
+	item := new(rawMatch)
+	item.start = start
+	item.end = p.tokens[closing].end
+	item.labels = labels
+	item.labelColons = labelColons
+	item.matchToken = keyword
+	item.subjectStart = subjectStart
+	item.subjectEnd = open
+	item.open = open
+	item.close = closing
+	cases, err := p.rawCases(open, closing)
+	if err != nil {
+		return nil, err
+	}
+	item.cases = cases
+	return item, nil
+}
+
+func (p *sourceParser) labelCanStart(label int) bool {
+	if label == 0 {
+		return false
+	}
+	previous := p.tokens[label-1].kind
+	if previous == token.CASE || previous == token.DEFAULT {
+		return false
+	}
+	return previous == token.LBRACE || previous == token.SEMICOLON ||
+		previous == token.COLON
+}
+
+func (p *sourceParser) rawCases(open int, closing int) ([]*rawCase, error) {
+	cases := []*rawCase(nil)
+	cursor := open + 1
+	for cursor < closing {
+		if p.tokens[cursor].kind == token.SEMICOLON {
+			cursor++
+			continue
+		}
+		if p.tokens[cursor].kind != token.CASE {
+			return nil, p.tokenError(cursor, "match needs case Variant(binding)")
+		}
+		if cursor+5 >= closing || p.tokens[cursor+1].kind != token.IDENT ||
+			p.tokens[cursor+2].kind != token.LPAREN ||
+			p.tokens[cursor+3].kind != token.IDENT ||
+			p.tokens[cursor+4].kind != token.RPAREN ||
+			p.tokens[cursor+5].kind != token.COLON {
+			return nil, p.tokenError(cursor, "use case Variant(binding)")
+		}
+		bodyStart := cursor + 6
+		bodyEnd := p.nextMatchCase(bodyStart, closing)
+		item := new(rawCase)
+		item.start = p.tokens[cursor].start
+		item.end = p.tokens[bodyEnd].start
+		item.caseToken = cursor
+		item.variant = cursor + 1
+		item.open = cursor + 2
+		item.binding = cursor + 3
+		item.close = cursor + 4
+		item.colon = cursor + 5
+		item.bodyStart = bodyStart
+		item.bodyEnd = bodyEnd
+		cases = append(cases, item)
+		cursor = bodyEnd
+	}
+	return cases, nil
+}
+
+func (p *sourceParser) nextMatchCase(start int, limit int) int {
+	for cursor := start; cursor < limit; cursor++ {
+		if p.tokens[cursor].kind == token.CASE || p.tokens[cursor].kind == token.DEFAULT {
+			return cursor
+		}
+		if opening(p.tokens[cursor].kind) {
+			end, err := p.closeToken(cursor)
+			if err == nil {
+				cursor = end
+			}
+		}
+	}
+	return limit
+}
+
+func (p *sourceParser) project(start int, end int, edits []sourceEdit) []byte {
+	result := append([]byte(nil), p.source[start:end]...)
+	applicable := []sourceEdit(nil)
+	for _, edit := range edits {
+		if edit.start < start || edit.end > end {
+			continue
+		}
+		applicable = append(applicable, edit)
+	}
+	slices.SortStableFunc(applicable, func(left sourceEdit, right sourceEdit) int {
+		if left.start != right.start {
+			return left.start - right.start
+		}
+		return right.end - left.end
+	})
+	coveredUntil := -1
+	for _, edit := range applicable {
+		if edit.end <= coveredUntil {
+			continue
+		}
+		from := edit.start - start
+		to := edit.end - start
+		for index := from; index < to; index++ {
+			if result[index] != '\n' && result[index] != '\r' {
+				result[index] = ' '
+			}
+		}
+		copy(result[from:to], edit.text)
+		coveredUntil = edit.end
+	}
+	for _, comment := range p.comments {
+		if comment.start >= start && comment.end <= end {
+			copy(result[comment.start-start:comment.end-start], comment.text)
+		}
+	}
+	return result
+}
+
+func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
+	result := &frontFile{
+		frontSpan:       frontSpan{Start: p.file.Pos(0), Stop: p.file.Pos(len(p.source))},
+		Doc:        goFile.Doc,
+		Package:    goFile.Package,
+		Name:       goFile.Name,
+		Decls:      nil,
+		Imports:    goFile.Imports,
+		Comments:   goFile.Comments,
+		GoVersion:  goFile.GoVersion,
+		goFile:     goFile,
+		children:   nil,
+		parents:    nil,
+		extensions: nil,
+		attached:   make(map[frontNode][]*ast.CommentGroup),
+		nonNil:    p.nonNil,
+	}
+	defaultAt := make(map[token.Pos]*frontDefaultMarker)
+	for _, raw := range p.defaults {
+		raw.node = &frontDefaultMarker{
+			frontSpan:     frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
+			FirstDot: p.pos(p.tokens[raw.first].start),
+			LastDot:  p.pos(p.tokens[raw.last].start),
+			Default:  p.pos(p.tokens[raw.word].start),
+		}
+		defaultAt[raw.node.Pos()] = raw.node
+	}
+	matchAt := make(map[token.Pos]frontNode)
+	anchors := make(map[frontNode]frontNode)
+	for _, raw := range p.matches {
+		node := p.makeMatch(raw)
+		raw.node = node
+		raw.root = node
+		for index := len(raw.labels) - 1; index >= 0; index-- {
+			label := &frontLabeledStmt{
+				frontSpan: frontSpan{
+					Start: p.pos(p.tokens[raw.labels[index]].start),
+					Stop:  raw.root.End(),
+				},
+				Label: &ast.Ident{
+					NamePos: p.pos(p.tokens[raw.labels[index]].start),
+					Name:    p.tokens[raw.labels[index]].text,
+					Obj:     nil,
+				},
+				Colon: p.pos(p.tokens[raw.labelColons[index]].start),
+				Stmt:  raw.root,
+			}
+			raw.root = label
+		}
+		matchAt[raw.root.Pos()] = raw.root
+	}
+	for _, raw := range p.matches {
+		subject, subjectAnchors, err := p.parseExpression(
+			p.tokens[raw.subjectStart].start,
+			p.tokens[raw.subjectEnd].start,
+			matchAt,
+			defaultAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		raw.node.Subject = subject
+		for child, parent := range subjectAnchors {
+			anchors[child] = parent
+		}
+		for index, rawCase := range raw.cases {
+			body, bodyAnchors, err := p.parseStatements(
+				p.caseBodyStart(rawCase),
+				p.tokens[rawCase.bodyEnd].start,
+				matchAt,
+				defaultAt,
+			)
+			if err != nil {
+				return nil, err
+			}
+			raw.node.Cases[index].Body = body
+			for extension, parent := range bodyAnchors {
+				anchors[extension] = parent
+			}
+		}
+	}
+	customDecls := make([]frontNode, 0, len(p.decls))
+	for _, raw := range p.decls {
+		declaration, declarationAnchors, err := p.makeDeclaration(raw, matchAt, defaultAt)
+		if err != nil {
+			return nil, err
+		}
+		customDecls = append(customDecls, declaration)
+		for extension, parent := range declarationAnchors {
+			anchors[extension] = parent
+		}
+	}
+	declarationStarts := make(map[token.Pos]bool)
+	for _, declaration := range p.decls {
+		declarationStarts[p.pos(declaration.start)] = true
+	}
+	goDecls := goFile.Decls[:0]
+	for _, declaration := range goFile.Decls {
+		if !declarationStarts[declaration.Pos()] {
+			goDecls = append(goDecls, declaration)
+		}
+	}
+	goFile.Decls = goDecls
+	mainAnchors := make(map[frontNode]frontNode)
+	p.sanitize(goFile, matchAt, defaultAt, mainAnchors)
+	for extension, parent := range mainAnchors {
+		anchors[extension] = parent
+	}
+	for _, declaration := range goFile.Decls {
+		result.Decls = append(result.Decls, declaration)
+	}
+	result.Decls = append(result.Decls, customDecls...)
+	slices.SortStableFunc(result.Decls, compareNodes)
+	for _, item := range p.propagations {
+		if item.node == nil {
+			return nil, p.tokenError(item.bang, "error propagation needs a call")
+		}
+	}
+	p.anchorPropagations(result, anchors)
+	for _, item := range p.defaults {
+		if anchors[item.node] == nil {
+			return nil, p.tokenError(item.first, "..default needs a composite literal")
+		}
+	}
+	buildIndex(result, anchors)
+	p.attachComments(result)
+	buildIndex(result, anchors)
+	return result, nil
+}

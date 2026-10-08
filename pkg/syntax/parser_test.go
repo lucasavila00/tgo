@@ -18,6 +18,7 @@ const constant = 1
 var global int
 type Alias = int
 type Generic[T any] []T
+type Required = %int
 
 type Result enum {
 	OK struct { Value int }
@@ -28,6 +29,7 @@ type Port int where value > 0
 
 func work[T any](receiver int, values ...T) (result int) {
 	var local int
+	var required %int
 	;
 start:
 	local++
@@ -86,6 +88,8 @@ start:
 	_ = unknown.(int)
 	_ = &local
 	_ = *(&local)
+	_ = required
+	_ = local % 2
 	_ = map[string]int{"x": 1}
 	_ = interface{ String() string }(nil)
 	_ = chan<- int(channel)
@@ -131,7 +135,7 @@ func load() (int, error) { return 0, nil }
 	requireKinds(t, expressions, []string{
 		"Identifier", "Ellipsis", "BasicLiteral", "FunctionLiteral",
 		"CompositeLiteral", "Parenthesized", "Selector", "Index", "IndexList",
-		"Slice", "TypeAssertion", "Call", "Star", "Unary", "Binary",
+		"Slice", "TypeAssertion", "Call", "Star", "NonNilPointer", "Unary", "Binary",
 		"KeyValue", "ArrayType", "StructType", "FunctionType", "InterfaceType",
 		"MapType", "ChannelType", "Default", "Propagation",
 	})

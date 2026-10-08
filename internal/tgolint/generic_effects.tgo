@@ -17,7 +17,7 @@ type genericEffectWireFact struct {
 }
 
 // AFact marks genericEffectWireFact as a Go analysis fact.
-func (*genericEffectWireFact) AFact() {}
+func (%genericEffectWireFact) AFact() {}
 
 type zeroParameter struct {
 	receiver bool
@@ -172,7 +172,7 @@ func decodeGenericEffects(encoded []genericEffectWire) ([]genericEffect, bool) {
 }
 
 // decodeGenericEffectFact validates all effect codes at the package boundary.
-func decodeGenericEffectFact(fact *genericEffectWireFact) *genericEffectSet {
+func decodeGenericEffectFact(fact %genericEffectWireFact) *genericEffectSet {
 	if fact == nil {
 		return nil
 	}
@@ -206,7 +206,7 @@ type genericEffectSummary struct {
 
 // checkGenericZeroSafety exports generic zero facts and checks each use.
 // checkGenericZeroSafety builds effect facts and checks each concrete call.
-func (c *checker) checkGenericZeroSafety() {
+func (c %checker) checkGenericZeroSafety() {
 	summaries := c.collectGenericZeroSummaries()
 	c.propagateGenericZeroFacts(summaries)
 
@@ -242,8 +242,8 @@ func (c *checker) checkGenericZeroSafety() {
 }
 
 // collectGenericZeroSummaries creates one local effect summary per generic function.
-func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSummary {
-	summaries := make(map[*types.Func]*genericEffectSummary)
+func (c %checker) collectGenericZeroSummaries() map[*types.Func]%genericEffectSummary {
+	summaries := make(map[*types.Func]%genericEffectSummary)
 	for _, file := range c.pass.Files {
 		if c.generated[file] {
 			continue
@@ -308,13 +308,13 @@ func genericParameters(signature *types.Signature) map[*types.TypeParam]zeroPara
 }
 
 // collectDirectGenericZeros records zero creation in one generic body.
-func (c *checker) collectDirectGenericZeros(summary *genericEffectSummary) {
+func (c %checker) collectDirectGenericZeros(summary %genericEffectSummary) {
 	c.collectGenericPresenceZeros(summary)
 	c.collectNamedResultZeros(summary)
 	c.collectGenericNodes(summary)
 }
 
-func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
+func (c %checker) collectGenericNodes(summary %genericEffectSummary) {
 	ast.Inspect(summary.body, func(node ast.Node) bool {
 		switch node := node.(type) {
 		case *ast.FuncLit:
@@ -345,7 +345,7 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 }
 
 // collectReturnedGenericEffects records effects in a directly returned closure.
-func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
+func (c %checker) collectReturnedGenericEffects(summary %genericEffectSummary) {
 	ast.Inspect(summary.body, func(node ast.Node) bool {
 		if _, nested := node.(*ast.FuncLit); nested {
 			return false
@@ -382,7 +382,7 @@ func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
 // collectGenericPresenceZeros runs the normal pair proof for each type parameter.
 // It records only pairs that discard or use a value before the ok proof.
 // collectGenericPresenceZeros records zero values from failed presence operations.
-func (c *checker) collectGenericPresenceZeros(summary *genericEffectSummary) {
+func (c %checker) collectGenericPresenceZeros(summary %genericEffectSummary) {
 	previousZeroTypes := c.zeroTypes
 	previousCapture := c.capture
 	previousChecked := c.checked
@@ -418,7 +418,7 @@ func (c *checker) collectGenericPresenceZeros(summary *genericEffectSummary) {
 	}
 }
 
-func (c *checker) markGenericPresenceEffect(
+func (c %checker) markGenericPresenceEffect(
 	summary *genericEffectSummary,
 	source ast.Expr,
 ) {
@@ -441,7 +441,7 @@ func (c *checker) markGenericPresenceEffect(
 	}
 }
 
-func (c *checker) collectNamedResultZeros(summary *genericEffectSummary) {
+func (c %checker) collectNamedResultZeros(summary %genericEffectSummary) {
 	results := summary.declaration.Type.Results
 	if results == nil {
 		return
@@ -455,7 +455,7 @@ func (c *checker) collectNamedResultZeros(summary *genericEffectSummary) {
 	}
 }
 
-func (c *checker) markGenericZeroUnconditional(
+func (c %checker) markGenericZeroUnconditional(
 	summary *genericEffectSummary,
 	typ types.Type,
 ) {
@@ -464,7 +464,7 @@ func (c *checker) markGenericZeroUnconditional(
 	}
 }
 
-func (c *checker) collectValueSpecZeros(
+func (c %checker) collectValueSpecZeros(
 	summary *genericEffectSummary,
 	specification *ast.ValueSpec,
 ) {
@@ -479,7 +479,7 @@ func (c *checker) collectValueSpecZeros(
 }
 
 // collectCallZeros records zero-producing built-ins and conversions.
-func (c *checker) collectCallZeros(summary *genericEffectSummary, call *ast.CallExpr) {
+func (c %checker) collectCallZeros(summary *genericEffectSummary, call *ast.CallExpr) {
 	name, ok := call.Fun.(*ast.Ident)
 	if !ok {
 		return
@@ -506,7 +506,7 @@ func (c *checker) collectCallZeros(summary *genericEffectSummary, call *ast.Call
 	}
 }
 
-func (c *checker) collectMakeZeros(
+func (c %checker) collectMakeZeros(
 	summary *genericEffectSummary,
 	call *ast.CallExpr,
 ) {
@@ -527,7 +527,7 @@ func (c *checker) collectMakeZeros(
 	}
 }
 
-func (c *checker) collectMapReadZero(
+func (c %checker) collectMapReadZero(
 	summary *genericEffectSummary,
 	index *ast.IndexExpr,
 ) {
@@ -545,7 +545,7 @@ func (c *checker) collectMapReadZero(
 	}
 }
 
-func (c *checker) collectResliceZero(
+func (c %checker) collectResliceZero(
 	summary *genericEffectSummary,
 	expression *ast.SliceExpr,
 ) {
@@ -562,7 +562,7 @@ func (c *checker) collectResliceZero(
 	}
 }
 
-func (c *checker) collectGenericAccess(
+func (c %checker) collectGenericAccess(
 	summary *genericEffectSummary,
 	selector *ast.SelectorExpr,
 ) {
@@ -578,7 +578,7 @@ func (c *checker) collectGenericAccess(
 	c.markGenericAccessAt(summary, selector, c.pass.TypesInfo.TypeOf(selector.X))
 }
 
-func (c *checker) collectLiteralZeros(
+func (c %checker) collectLiteralZeros(
 	summary *genericEffectSummary,
 	literal *ast.CompositeLit,
 ) {
@@ -596,7 +596,7 @@ func (c *checker) collectLiteralZeros(
 	}
 }
 
-func (c *checker) collectStructLiteralZeros(
+func (c %checker) collectStructLiteralZeros(
 	summary *genericEffectSummary,
 	literal *ast.CompositeLit,
 	structure *types.Struct,

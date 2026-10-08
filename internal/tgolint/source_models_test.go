@@ -96,7 +96,7 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 		t.Fatalf("ParseFile: %v", err)
 	}
 	checker.checkSourceDeclaration(
-		file, "model.tgo", source.Declarations[0],
+		file, "model.tgo", source, source.Declarations[0],
 		files.File(source.Package), data,
 	)
 	want := "generated tgo output for Missing does not match model.tgo"
