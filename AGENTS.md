@@ -79,3 +79,9 @@ work") require constant clarification.
 
 Always use ASD-STE100 Simplified Technical English in all writing, including
 documentation, code comments, commit messages, and responses to the user.
+
+## 7. Never Rewrite Git History
+
+Never change, replace, or remove an existing commit. Do not amend commits,
+rebase branches, move branches with `git reset`, or use a force-push. Add a new
+commit for each correction. Merge remote changes when branches have diverged.
