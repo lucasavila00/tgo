@@ -1,0 +1,12 @@
+package sample
+
+type Account enum {
+    Personal struct { Name string }
+}
+
+func label(account Account) string {
+    match account {
+    case Missing(value): return "missing"
+    case Personal(person): return person.Name
+    }
+}

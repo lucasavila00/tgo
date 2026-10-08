@@ -1,0 +1,11 @@
+package sample
+
+type Quantity int where value > 0
+
+func take(values []Quantity, count int) []Quantity {
+    if count <= len(values) {
+        count++
+        return values[:count]
+    }
+    return values
+}

@@ -1,0 +1,7 @@
+package sample
+
+type Quantity int where value > 0
+
+func find(values map[string]Quantity) Quantity {
+    return values["one"]
+}

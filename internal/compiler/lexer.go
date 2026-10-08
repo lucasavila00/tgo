@@ -6,6 +6,7 @@ import (
 	"go/token"
 )
 
+// lex scans Go tokens and keeps their byte spans in the source.
 func lex(name, input string) ([]lexeme, error) {
 	fs := token.NewFileSet()
 	file := fs.AddFile(name, -1, len(input))
@@ -25,6 +26,7 @@ func lex(name, input string) ([]lexeme, error) {
 		if kind == token.COMMENT {
 			continue
 		}
+		position := file.Position(pos)
 		start := file.Offset(pos)
 		text := literal
 		if text == "" {
@@ -34,11 +36,19 @@ func lex(name, input string) ([]lexeme, error) {
 		if kind == token.SEMICOLON && literal == "\n" {
 			end = start
 		}
-		result = append(result, lexeme{kind, text, start, end})
+		result = append(result, lexeme{
+			kind:   kind,
+			text:   text,
+			start:  start,
+			end:    end,
+			line:   position.Line,
+			column: position.Column,
+		})
 	}
 	return result, failure
 }
 
+// closeToken finds the matching close token for one nested group.
 func closeToken(tokens []lexeme, at int) (int, error) {
 	stack := []token.Token{}
 	for i := at; i < len(tokens); i++ {
@@ -51,7 +61,12 @@ func closeToken(tokens []lexeme, at int) (int, error) {
 			stack = append(stack, token.RBRACE)
 		case token.RPAREN, token.RBRACK, token.RBRACE:
 			if len(stack) == 0 || stack[len(stack)-1] != tokens[i].kind {
-				return 0, fmt.Errorf("unmatched %s", tokens[i].text)
+				return 0, fmt.Errorf(
+					"%d:%d: unmatched %s",
+					tokens[i].line,
+					tokens[i].column,
+					tokens[i].text,
+				)
 			}
 			stack = stack[:len(stack)-1]
 			if len(stack) == 0 {
@@ -59,5 +74,10 @@ func closeToken(tokens []lexeme, at int) (int, error) {
 			}
 		}
 	}
-	return 0, fmt.Errorf("unclosed %s", tokens[at].text)
+	return 0, fmt.Errorf(
+		"%d:%d: unclosed %s",
+		tokens[at].line,
+		tokens[at].column,
+		tokens[at].text,
+	)
 }

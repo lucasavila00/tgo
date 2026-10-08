@@ -9,6 +9,7 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 )
 
+// lowerMatches lowers nested matches until no match syntax remains.
 func (p *packageUnit) lowerMatches() {
 	for len(p.errors) == 0 {
 		changed := false
@@ -41,6 +42,7 @@ func (p *packageUnit) lowerMatches() {
 	}
 }
 
+// lowerMatch turns one exhaustive match into a tagged Go switch.
 func (p *packageUnit) lowerMatch(statement *ast.SwitchStmt, tag *ast.CallExpr) ast.Node {
 	if len(tag.Args) != 1 {
 		p.fail(statement, "match needs one value")
@@ -73,6 +75,7 @@ func (p *packageUnit) lowerMatch(statement *ast.SwitchStmt, tag *ast.CallExpr) a
 	return &ast.BlockStmt{List: []ast.Stmt{binding, statement}}
 }
 
+// lowerCase validates one variant case and binds its payload.
 func (p *packageUnit) lowerCase(
 	clause *ast.CaseClause,
 	model *model,
@@ -110,6 +113,7 @@ func (p *packageUnit) lowerCase(
 	clause.Body = append([]ast.Stmt{assignment}, clause.Body...)
 }
 
+// casePattern reads a variant name and binding from one match case.
 func casePattern(clause *ast.CaseClause) (string, *ast.Ident, error) {
 	if len(clause.List) != 1 {
 		return "", nil, fmt.Errorf("match needs one variant per case")
@@ -129,10 +133,12 @@ func casePattern(clause *ast.CaseClause) (string, *ast.Ident, error) {
 	return name.Name, binding, nil
 }
 
+// methodCall makes a no-argument call on a named receiver.
 func methodCall(receiver, method string) *ast.CallExpr {
 	return call(&ast.SelectorExpr{X: ast.NewIdent(receiver), Sel: ast.NewIdent(method)})
 }
 
+// invalidVariantCase emits the panic path for a foreign invalid enum.
 func invalidVariantCase(name string) *ast.CaseClause {
 	message := &ast.BasicLit{
 		Kind:  token.STRING,

@@ -1,0 +1,9 @@
+package sample
+
+type Account enum {
+    Personal struct { Name string }
+}
+
+func tag(account Account) uint8 {
+    return account.TgoTag()
+}

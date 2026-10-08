@@ -4,10 +4,12 @@
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = Path(__file__).parent / "testdata"
+ERROR_CASES = Path(__file__).parent / "error_cases"
 
 
 def run(command, cwd, *, success=True):
@@ -57,7 +59,41 @@ def check_stale_output_cleanup(compiler, work):
     assert user_file.exists(), "compiler removed a user-owned _tgo.go file"
 
 
+def normalize_output(output, work):
+    return output.replace(str(work), "<WORK>")
+
+
+def check_error_cases(compiler, temporary, update):
+    passed = 0
+    for source in sorted(ERROR_CASES.glob("*.tgo")):
+        work = temporary / "errors" / source.stem
+        work.mkdir(parents=True)
+        shutil.copyfile(source, work / "input.tgo")
+        (work / "go.mod").write_text("module error.test\n\ngo 1.27.0\n")
+        result = subprocess.run(
+            [str(compiler), "build"],
+            cwd=work,
+            text=True,
+            capture_output=True,
+        )
+        assert result.returncode == 1, f"{source.name} did not fail"
+        actual = {
+            ".stdout": normalize_output(result.stdout, work),
+            ".stderr": normalize_output(result.stderr, work),
+        }
+        for suffix, output in actual.items():
+            expected = source.with_suffix(suffix)
+            if update:
+                expected.write_text(output)
+            else:
+                assert output == expected.read_text(), f"wrong {expected.name}\n{output}"
+        assert not list(work.glob("*_tgo.go")), f"{source.name} wrote Go output"
+        passed += 1
+    print(f"PASS {passed} compiler error reports")
+
+
 def main():
+    update = "--update-errors" in sys.argv[1:]
     with tempfile.TemporaryDirectory(prefix="tgo-e2e-") as temporary:
         temporary = Path(temporary)
         compiler = temporary / "tgo"
@@ -143,6 +179,7 @@ def main():
             assert message in output, (message, output)
             assert not list(invalid.glob("*_tgo.go")), "failed build wrote output"
         print(f"PASS {len(cases)} rejected source cases")
+        check_error_cases(compiler, temporary, update)
 
 
 if __name__ == "__main__":

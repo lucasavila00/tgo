@@ -1,0 +1,1 @@
+<WORK>/input.tgo:6:12: this read needs if value, ok := read; ok { ... }

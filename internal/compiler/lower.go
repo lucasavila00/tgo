@@ -4,6 +4,7 @@ import (
 	"go/ast"
 )
 
+// prepare marks generated declarations and lowers constructors and defaults.
 func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
 	for _, source := range p.Sources {
@@ -15,6 +16,7 @@ func (p *packageUnit) prepare() {
 	}
 }
 
+// generatedNames returns type and constructor names emitted for all models.
 func generatedNames(models []*model) map[string]bool {
 	names := make(map[string]bool)
 	for _, model := range models {
@@ -34,6 +36,7 @@ func generatedNames(models []*model) map[string]bool {
 	return names
 }
 
+// markGenerated records declarations that source safety checks must skip.
 func (p *packageUnit) markGenerated(source *source) {
 	names := generatedNames(source.Models)
 	for _, declaration := range source.File.Decls {
@@ -54,6 +57,7 @@ func (p *packageUnit) markGenerated(source *source) {
 	}
 }
 
+// generatedMethod reports whether tgo emitted a method declaration.
 func generatedMethod(function *ast.FuncDecl, models []*model) bool {
 	receiver, ok := receiverName(function)
 	if !ok {
@@ -71,6 +75,7 @@ func generatedMethod(function *ast.FuncDecl, models []*model) bool {
 	return false
 }
 
+// receiverName returns a simple named receiver type.
 func receiverName(function *ast.FuncDecl) (string, bool) {
 	if function.Recv == nil || len(function.Recv.List) != 1 {
 		return "", false
@@ -82,6 +87,7 @@ func receiverName(function *ast.FuncDecl) (string, bool) {
 	return receiver.Name, true
 }
 
+// generatedCheckedMethod recognizes checked-value support methods.
 func generatedCheckedMethod(receiver, method string, model *model) bool {
 	if model.Predicate == "" {
 		return false
@@ -91,6 +97,7 @@ func generatedCheckedMethod(receiver, method string, model *model) bool {
 	return valueMethod || errorMethod
 }
 
+// generatedEnumMethod recognizes tag and payload accessor methods.
 func generatedEnumMethod(receiver, method string, model *model) bool {
 	if receiver != model.Name || len(model.Variants) == 0 {
 		return false
@@ -106,6 +113,7 @@ func generatedEnumMethod(receiver, method string, model *model) bool {
 	return false
 }
 
+// lowerConstruction replaces variant literals with generated constructor calls.
 func (p *packageUnit) lowerConstruction(file *ast.File, node ast.Node) ast.Node {
 	literal, ok := node.(*ast.CompositeLit)
 	if !ok {

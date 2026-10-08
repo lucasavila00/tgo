@@ -1,0 +1,5 @@
+package sample
+
+type Quantity int where value > 0
+
+var quantity = Quantity(1)

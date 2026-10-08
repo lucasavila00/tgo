@@ -2,11 +2,13 @@ package compiler
 
 import (
 	"fmt"
+	"go/ast"
 	"go/token"
 	"slices"
 	"strings"
 )
 
+// rewriteExpressions makes match and default markers valid Go syntax.
 func rewriteExpressions(name, input string) (string, error) {
 	tokens, err := lex(name, input)
 	if err != nil {
@@ -18,7 +20,7 @@ func rewriteExpressions(name, input string) (string, error) {
 		switch {
 		case parser.currentText() == "match":
 			if err := parser.rewriteMatch(); err != nil {
-				return "", fmt.Errorf("%s: %w", name, err)
+				return "", fmt.Errorf("%s:%w", name, err)
 			}
 		case parser.atDefaultMarker():
 			parser.rewriteDefaultMarker()
@@ -30,6 +32,7 @@ func rewriteExpressions(name, input string) (string, error) {
 	return applyEdits(input, parser.edits), nil
 }
 
+// currentText returns the current token text or an empty string at the end.
 func (p *sourceParser) currentText() string {
 	if p.cursor >= len(p.tokens) {
 		return ""
@@ -37,6 +40,7 @@ func (p *sourceParser) currentText() string {
 	return p.tokens[p.cursor].text
 }
 
+// rewriteMatch changes one match header into a temporary Go switch header.
 func (p *sourceParser) rewriteMatch() error {
 	keyword := p.cursor
 	p.cursor++
@@ -47,7 +51,7 @@ func (p *sourceParser) rewriteMatch() error {
 		}
 	}
 	if !p.has(0, token.LBRACE) {
-		return fmt.Errorf("match needs cases")
+		return p.errorAt(keyword, "match needs cases")
 	}
 
 	openingBrace := p.tokens[p.cursor]
@@ -67,12 +71,14 @@ func (p *sourceParser) rewriteMatch() error {
 	return nil
 }
 
+// atDefaultMarker recognizes the three tokens in a default marker.
 func (p *sourceParser) atDefaultMarker() bool {
 	return p.has(0, token.PERIOD) &&
 		p.has(1, token.PERIOD) &&
 		p.has(2, token.DEFAULT)
 }
 
+// rewriteDefaultMarker changes one marker into a temporary keyed field.
 func (p *sourceParser) rewriteDefaultMarker() {
 	p.edits = append(p.edits, edit{
 		start: p.tokens[p.cursor].start,
@@ -82,6 +88,7 @@ func (p *sourceParser) rewriteDefaultMarker() {
 	p.cursor += 3
 }
 
+// applyEdits applies source replacements from left to right.
 func applyEdits(input string, edits []edit) string {
 	slices.SortStableFunc(edits, compareEdits)
 
@@ -96,6 +103,25 @@ func applyEdits(input string, edits []edit) string {
 	return output.String()
 }
 
+// compareEdits orders source edits by byte offset.
 func compareEdits(left, right edit) int {
 	return left.start - right.start
+}
+
+// removeLineDirectives keeps source maps out of generated Go output.
+func removeLineDirectives(file *ast.File) {
+	groups := file.Comments[:0]
+	for _, group := range file.Comments {
+		comments := group.List[:0]
+		for _, comment := range group.List {
+			if !strings.HasPrefix(comment.Text, "//line ") {
+				comments = append(comments, comment)
+			}
+		}
+		group.List = comments
+		if len(group.List) > 0 {
+			groups = append(groups, group)
+		}
+	}
+	file.Comments = groups
 }

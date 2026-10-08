@@ -1,0 +1,8 @@
+package sample
+
+type Request struct {
+    ID string
+    Tags map[string]string = map[string]string{}
+}
+
+var request = Request{..default}

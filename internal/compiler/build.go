@@ -49,6 +49,7 @@ func Build(directory string, patterns []string) (err error) {
 	return nil
 }
 
+// moduleRoot finds the active module root and module path.
 func moduleRoot(directory string) (string, string, error) {
 	command := exec.Command("go", "env", "GOMOD")
 	command.Dir = directory
@@ -73,6 +74,7 @@ func moduleRoot(directory string) (string, string, error) {
 	return "", "", errors.New("go.mod has no module path")
 }
 
+// discover loads each tgo package in the active module.
 func discover(root, module string) (map[string]*packageUnit, error) {
 	discovery := packageDiscovery{
 		root:     root,
@@ -98,6 +100,7 @@ type packageDiscovery struct {
 	packages map[string]*packageUnit
 }
 
+// visit adds tgo files and skips directories outside the active module.
 func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) error {
 	if walkErr != nil {
 		return walkErr
@@ -111,6 +114,7 @@ func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) 
 	return d.addSource(path)
 }
 
+// visitDirectory skips hidden, vendor, and nested module directories.
 func (d *packageDiscovery) visitDirectory(path, name string) error {
 	if path == d.root {
 		return nil
@@ -124,6 +128,7 @@ func (d *packageDiscovery) visitDirectory(path, name string) error {
 	return nil
 }
 
+// addSource parses one tgo source file into its package.
 func (d *packageDiscovery) addSource(path string) error {
 	directory := filepath.Dir(path)
 	importPath, err := d.importPath(directory)
@@ -143,6 +148,7 @@ func (d *packageDiscovery) addSource(path string) error {
 	return unit.readSource(path)
 }
 
+// importPath maps a package directory to its module import path.
 func (d *packageDiscovery) importPath(directory string) (string, error) {
 	relative, err := filepath.Rel(d.root, directory)
 	if err != nil {
@@ -154,6 +160,7 @@ func (d *packageDiscovery) importPath(directory string) (string, error) {
 	return d.module + "/" + filepath.ToSlash(relative), nil
 }
 
+// readSource parses a tgo file and registers its model types.
 func (p *packageUnit) readSource(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -165,7 +172,13 @@ func (p *packageUnit) readSource(path string) error {
 	}
 	for _, model := range source.Models {
 		if p.Models[model.Name] != nil {
-			return fmt.Errorf("%s: duplicate type %s", path, model.Name)
+			return fmt.Errorf(
+				"%s:%d:%d: duplicate type %s",
+				path,
+				model.Line,
+				model.Column,
+				model.Name,
+			)
 		}
 		p.Models[model.Name] = model
 	}
@@ -174,6 +187,7 @@ func (p *packageUnit) readSource(path string) error {
 	return nil
 }
 
+// readGoFiles loads user Go files that take part in package type checks.
 func (p *packageUnit) readGoFiles() error {
 	entries, err := os.ReadDir(p.Dir)
 	if err != nil {
@@ -204,6 +218,7 @@ func (p *packageUnit) readGoFiles() error {
 	return nil
 }
 
+// selectPackages expands command patterns to tgo package paths.
 func selectPackages(
 	directory string,
 	patterns []string,
@@ -234,6 +249,7 @@ func selectPackages(
 	return paths, nil
 }
 
+// packagePattern returns the directory and recursion rule for a pattern.
 func packagePattern(directory, pattern string) (string, bool) {
 	recursive := strings.HasSuffix(pattern, "/...") || pattern == "..."
 	target := strings.TrimSuffix(pattern, "/...")
@@ -246,6 +262,7 @@ func packagePattern(directory, pattern string) (string, bool) {
 	return filepath.Clean(target), recursive
 }
 
+// packageMatches reports whether a package matches one command pattern.
 func packageMatches(
 	unit *packageUnit,
 	path string,
@@ -279,6 +296,7 @@ type packageBuilder struct {
 	previous map[string]previousFile
 }
 
+// build compiles dependencies before one package and writes its outputs.
 func (b *packageBuilder) build(path string) error {
 	switch b.states[path] {
 	case buildDone:
@@ -312,6 +330,7 @@ func (b *packageBuilder) build(path string) error {
 	return nil
 }
 
+// importsOf returns the sorted import paths from a set of files.
 func importsOf(files []*ast.File) []string {
 	imports := make(map[string]bool)
 	for _, file := range files {
@@ -330,6 +349,7 @@ func importsOf(files []*ast.File) []string {
 	return paths
 }
 
+// write replaces one generated file and saves its prior state.
 func (b *packageBuilder) write(path string, data []byte) error {
 	previous, err := os.ReadFile(path)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -343,6 +363,7 @@ func (b *packageBuilder) write(path string, data []byte) error {
 	return os.WriteFile(path, data, 0o644)
 }
 
+// removeStaleOutputs removes generated files with no current tgo source.
 func (b *packageBuilder) removeStaleOutputs(
 	unit *packageUnit,
 	outputs map[string][]byte,
@@ -363,6 +384,7 @@ func (b *packageBuilder) removeStaleOutputs(
 	return nil
 }
 
+// staleOutput reports whether a generated file is absent from new outputs.
 func staleOutput(entry os.DirEntry, path string, outputs map[string][]byte) bool {
 	if entry.IsDir() || !strings.HasSuffix(entry.Name(), "_tgo.go") {
 		return false
@@ -371,6 +393,7 @@ func staleOutput(entry os.DirEntry, path string, outputs map[string][]byte) bool
 	return !expected
 }
 
+// removeGenerated removes a tgo-owned file and saves it for rollback.
 func (b *packageBuilder) removeGenerated(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -383,6 +406,7 @@ func (b *packageBuilder) removeGenerated(path string) error {
 	return os.Remove(path)
 }
 
+// restore puts every changed output back after a failed build.
 func (b *packageBuilder) restore() error {
 	var failures []error
 	for path, previous := range b.previous {

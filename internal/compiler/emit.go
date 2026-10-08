@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// enumGo emits the tagged Go representation for one tgo enum.
 func enumGo(declaration *model) string {
 	var output strings.Builder
 	name := declaration.Name
@@ -25,6 +26,7 @@ func enumGo(declaration *model) string {
 	return output.String()
 }
 
+// emitVariant emits one payload type, constructor, and payload accessor.
 func emitVariant(output *strings.Builder, enum string, variant variant, tag int) {
 	payload := enum + variant.Name
 	constructor := "New" + payload
@@ -40,6 +42,7 @@ func emitVariant(output *strings.Builder, enum string, variant variant, tag int)
 	fmt.Fprintf(output, "return v.tgo%s\n}\n", variant.Name)
 }
 
+// checkedGo emits a checked wrapper, constructor, error, and value accessor.
 func checkedGo(declaration *model) string {
 	var output strings.Builder
 	name := declaration.Name
@@ -59,6 +62,7 @@ func checkedGo(declaration *model) string {
 	return output.String()
 }
 
+// enumTagType selects the smallest tag type that can name every variant.
 func enumTagType(variants int) string {
 	switch {
 	case variants < 1<<8:

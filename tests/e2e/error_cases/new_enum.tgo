@@ -1,0 +1,7 @@
+package sample
+
+type Account enum {
+    Personal struct { Name string }
+}
+
+var account = new(Account)

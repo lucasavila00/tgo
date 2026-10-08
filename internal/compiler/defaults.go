@@ -7,6 +7,7 @@ import (
 	"go/types"
 )
 
+// addDefaults emits one helper for each declared field default.
 func (p *packageUnit) addDefaults(source *source) {
 	for _, model := range source.Models {
 		p.addFieldDefaults(source, model.Name, model.Fields)
@@ -16,6 +17,7 @@ func (p *packageUnit) addDefaults(source *source) {
 	}
 }
 
+// addFieldDefaults adds default helpers for one struct or variant payload.
 func (p *packageUnit) addFieldDefaults(source *source, name string, fields []field) {
 	for _, field := range fields {
 		if field.Default == "" {
@@ -36,6 +38,7 @@ func (p *packageUnit) addFieldDefaults(source *source, name string, fields []fie
 	}
 }
 
+// fillDefaults replaces each marker with calls to declared default helpers.
 func (p *packageUnit) fillDefaults() {
 	for _, source := range p.Sources {
 		for _, declaration := range source.File.Decls {
@@ -52,6 +55,7 @@ func (p *packageUnit) fillDefaults() {
 	}
 }
 
+// fillLiteralDefaults adds omitted default fields to one composite literal.
 func (p *packageUnit) fillLiteralDefaults(literal *ast.CompositeLit) {
 	marked := false
 	supplied := make(map[string]bool)
@@ -94,6 +98,7 @@ func (p *packageUnit) fillLiteralDefaults(literal *ast.CompositeLit) {
 	literal.Elts = elements
 }
 
+// fieldName returns the key name from a keyed literal element.
 func fieldName(expression ast.Expr) string {
 	pair, ok := expression.(*ast.KeyValueExpr)
 	if !ok {
@@ -106,6 +111,7 @@ func fieldName(expression ast.Expr) string {
 	return name.Name
 }
 
+// typeQualifier returns the package name from a qualified type expression.
 func typeQualifier(expression ast.Expr) string {
 	selector, ok := expression.(*ast.SelectorExpr)
 	if !ok {
@@ -118,6 +124,7 @@ func typeQualifier(expression ast.Expr) string {
 	return name.Name
 }
 
+// literalFields returns tgo fields for a struct or variant payload type.
 func (p *packageUnit) literalFields(typ types.Type) (string, []field) {
 	if model := p.modelForType(typ); model != nil {
 		return model.Name, model.Fields

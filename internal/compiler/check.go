@@ -8,9 +8,12 @@ import (
 	"strings"
 )
 
+// zeroValid reports whether Go can make a valid value by zero filling a type.
 func (p *packageUnit) zeroValid(t types.Type) bool {
 	return p.zero(t, map[types.Type]bool{})
 }
+
+// zero checks zero validity and stops recursion through named cycles.
 func (p *packageUnit) zero(t types.Type, seen map[types.Type]bool) bool {
 	if t == nil {
 		return false
@@ -44,6 +47,8 @@ func (p *packageUnit) zero(t types.Type, seen map[types.Type]bool) bool {
 	}
 	return false
 }
+
+// constraintZero checks whether all allowed types have a valid zero.
 func (p *packageUnit) constraintZero(t types.Type, seen map[types.Type]bool) bool {
 	iface, ok := t.Underlying().(*types.Interface)
 	if !ok {
@@ -71,6 +76,7 @@ func (p *packageUnit) constraintZero(t types.Type, seen map[types.Type]bool) boo
 	return false
 }
 
+// unionZeroValid checks every term in one type union.
 func (p *packageUnit) unionZeroValid(union *types.Union) bool {
 	for i := 0; i < union.Len(); i++ {
 		if !p.zero(union.Term(i).Type(), map[types.Type]bool{}) {
@@ -79,6 +85,8 @@ func (p *packageUnit) unionZeroValid(union *types.Union) bool {
 	}
 	return true
 }
+
+// integer reads a constant integer expression.
 func integer(info *types.Info, e ast.Expr) (int64, bool) {
 	if e == nil {
 		return 0, false
@@ -89,8 +97,11 @@ func integer(info *types.Info, e ast.Expr) (int64, bool) {
 	}
 	return constant.Int64Val(tv.Value)
 }
+
+// ident reports whether an expression is an identifier with the given name.
 func ident(e ast.Expr, name string) bool { id, ok := e.(*ast.Ident); return ok && id.Name == name }
 
+// checkRules applies tgo safety rules after Go type checking.
 func (p *packageUnit) checkRules() {
 	for _, source := range p.Sources {
 		for _, declaration := range source.File.Decls {
@@ -109,6 +120,7 @@ func (p *packageUnit) checkRules() {
 	}
 }
 
+// parentNodes maps each AST node to its direct parent.
 func parentNodes(root ast.Node) map[ast.Node]ast.Node {
 	parents := make(map[ast.Node]ast.Node)
 	var stack []ast.Node
@@ -126,6 +138,7 @@ func parentNodes(root ast.Node) map[ast.Node]ast.Node {
 	return parents
 }
 
+// checkNode sends one source node to its applicable tgo checks.
 func (p *packageUnit) checkNode(node ast.Node, parents map[ast.Node]ast.Node) {
 	switch node := node.(type) {
 	case *ast.ValueSpec:
@@ -141,6 +154,7 @@ func (p *packageUnit) checkNode(node ast.Node, parents map[ast.Node]ast.Node) {
 	}
 }
 
+// checkValueSpec requires an initializer for each variable declaration.
 func (p *packageUnit) checkValueSpec(spec *ast.ValueSpec, parent ast.Node) {
 	declaration, ok := parent.(*ast.GenDecl)
 	repeatedConstant := ok && declaration.Tok == token.CONST
@@ -149,6 +163,7 @@ func (p *packageUnit) checkValueSpec(spec *ast.ValueSpec, parent ast.Node) {
 	}
 }
 
+// checkCollectionNode checks operations that can expose invalid zero values.
 func (p *packageUnit) checkCollectionNode(
 	node ast.Node,
 	parents map[ast.Node]ast.Node,
@@ -173,6 +188,7 @@ func (p *packageUnit) checkCollectionNode(
 	}
 }
 
+// checkSelector blocks direct access to generated model representation.
 func (p *packageUnit) checkSelector(selector *ast.SelectorExpr) {
 	if selector.Sel.Pos() == token.NoPos {
 		return
@@ -194,6 +210,7 @@ func (p *packageUnit) checkSelector(selector *ast.SelectorExpr) {
 	}
 }
 
+// checkMapRead requires a presence guard for a map value with an invalid zero.
 func (p *packageUnit) checkMapRead(index *ast.IndexExpr, parents map[ast.Node]ast.Node) {
 	typ := p.info.TypeOf(index.X)
 	if typ == nil {
@@ -213,6 +230,7 @@ func (p *packageUnit) checkMapRead(index *ast.IndexExpr, parents map[ast.Node]as
 	p.checkPresence(index, parents)
 }
 
+// checkLiteral requires full fields and valid model construction.
 func (p *packageUnit) checkLiteral(lit *ast.CompositeLit) {
 	t := p.info.TypeOf(lit)
 	if t == nil {
@@ -248,6 +266,8 @@ func (p *packageUnit) checkLiteral(lit *ast.CompositeLit) {
 		p.checkElements(lit, -1)
 	}
 }
+
+// checkElements rejects omitted array or slice elements.
 func (p *packageUnit) checkElements(lit *ast.CompositeLit, length int64) {
 	supplied := map[int64]bool{}
 	next := int64(0)
@@ -273,6 +293,8 @@ func (p *packageUnit) checkElements(lit *ast.CompositeLit, length int64) {
 		p.fail(lit, "array and slice literals must supply every index")
 	}
 }
+
+// checkCall applies tgo rules to conversions and zero-producing built-ins.
 func (p *packageUnit) checkCall(c *ast.CallExpr) {
 	if p.checkConversion(c) {
 		return
@@ -296,6 +318,7 @@ func (p *packageUnit) checkCall(c *ast.CallExpr) {
 	}
 }
 
+// checkConversion rejects conversions that bypass a model constructor.
 func (p *packageUnit) checkConversion(call *ast.CallExpr) bool {
 	if !p.info.Types[call.Fun].IsType() {
 		return false
@@ -307,12 +330,14 @@ func (p *packageUnit) checkConversion(call *ast.CallExpr) bool {
 	return true
 }
 
+// checkNew rejects allocation of a type with an invalid zero value.
 func (p *packageUnit) checkNew(call *ast.CallExpr) {
 	if len(call.Args) == 1 && !p.zeroValid(p.info.TypeOf(call.Args[0])) {
 		p.fail(call, "new would create an invalid zero value")
 	}
 }
 
+// checkMake permits invalid-zero slice elements only at length zero.
 func (p *packageUnit) checkMake(call *ast.CallExpr) {
 	if len(call.Args) < 2 {
 		return
@@ -327,6 +352,7 @@ func (p *packageUnit) checkMake(call *ast.CallExpr) {
 	}
 }
 
+// checkClear rejects zeroing slice elements that need construction.
 func (p *packageUnit) checkClear(call *ast.CallExpr) {
 	if len(call.Args) != 1 {
 		return
@@ -337,6 +363,7 @@ func (p *packageUnit) checkClear(call *ast.CallExpr) {
 	}
 }
 
+// checkPresence requires a direct presence guard around a risky read.
 func (p *packageUnit) checkPresence(e ast.Expr, parents map[ast.Node]ast.Node) {
 	guard, ok := p.presenceGuard(e, parents)
 	if !ok {
@@ -361,6 +388,7 @@ type presenceGuard struct {
 	value  *ast.Ident
 }
 
+// presenceGuard reads the value and success flag from a valid if guard.
 func (p *packageUnit) presenceGuard(
 	read ast.Expr,
 	parents map[ast.Node]ast.Node,
@@ -385,12 +413,14 @@ func (p *packageUnit) presenceGuard(
 	return presenceGuard{branch: branch, value: value}, true
 }
 
+// isPresenceAssignment recognizes a two-value short declaration.
 func isPresenceAssignment(assignment *ast.AssignStmt) bool {
 	return assignment.Tok == token.DEFINE &&
 		len(assignment.Rhs) == 1 &&
 		len(assignment.Lhs) == 2
 }
 
+// checkSlice requires proof before a reslice can expose new elements.
 func (p *packageUnit) checkSlice(s *ast.SliceExpr, parents map[ast.Node]ast.Node) {
 	t := p.info.TypeOf(s.X)
 	if t == nil {
@@ -419,11 +449,15 @@ func (p *packageUnit) checkSlice(s *ast.SliceExpr, parents map[ast.Node]ast.Node
 	}
 	p.fail(s, "reslice bound must be proven no greater than the current length")
 }
+
+// same reports whether two identifiers refer to the same Go object.
 func (p *packageUnit) same(a, b ast.Expr) bool {
 	x, ok := a.(*ast.Ident)
 	y, other := b.(*ast.Ident)
 	return ok && other && p.info.ObjectOf(x) == p.info.ObjectOf(y)
 }
+
+// bounds recognizes a condition that limits a bound to the current length.
 func (p *packageUnit) bounds(cond, high, slice ast.Expr) bool {
 	b, ok := cond.(*ast.BinaryExpr)
 	if !ok {
@@ -441,6 +475,7 @@ func (p *packageUnit) bounds(cond, high, slice ast.Expr) bool {
 	return p.same(left, high) && p.isLength(right, slice)
 }
 
+// checkResults requires named results to be assigned on every return path.
 func (p *packageUnit) checkResults(fn *ast.FuncDecl) {
 	if fn.Type.Results == nil {
 		return
@@ -456,6 +491,8 @@ func (p *packageUnit) checkResults(fn *ast.FuncDecl) {
 	}
 	p.resultBlock(fn.Body.List, results)
 }
+
+// cloneState copies named-result state for a control-flow branch.
 func cloneState(state map[types.Object]bool) map[types.Object]bool {
 	result := map[types.Object]bool{}
 	for k, v := range state {
@@ -463,6 +500,8 @@ func cloneState(state map[types.Object]bool) map[types.Object]bool {
 	}
 	return result
 }
+
+// resultReads reports reads of named results before assignment.
 func (p *packageUnit) resultReads(n ast.Node, state map[types.Object]bool) {
 	if n == nil {
 		return
@@ -476,6 +515,8 @@ func (p *packageUnit) resultReads(n ast.Node, state map[types.Object]bool) {
 		return true
 	})
 }
+
+// resultBlock checks named-result state through one statement block.
 func (p *packageUnit) resultBlock(list []ast.Stmt, state map[types.Object]bool) bool {
 	for _, statement := range list {
 		if p.resultStatement(statement, state) {
@@ -485,6 +526,7 @@ func (p *packageUnit) resultBlock(list []ast.Stmt, state map[types.Object]bool) 
 	return false
 }
 
+// resultStatement updates named-result state for one statement.
 func (p *packageUnit) resultStatement(
 	statement ast.Stmt,
 	state map[types.Object]bool,
@@ -505,6 +547,7 @@ func (p *packageUnit) resultStatement(
 	return false
 }
 
+// resultAssignment marks assigned named results and checks other expressions.
 func (p *packageUnit) resultAssignment(
 	assignment *ast.AssignStmt,
 	state map[types.Object]bool,
@@ -526,6 +569,7 @@ func (p *packageUnit) resultAssignment(
 	}
 }
 
+// resultReturn checks reads and bare-return assignment requirements.
 func (p *packageUnit) resultReturn(
 	statement *ast.ReturnStmt,
 	state map[types.Object]bool,
@@ -546,6 +590,7 @@ func (p *packageUnit) resultReturn(
 	}
 }
 
+// resultIf merges named-result state from both branches.
 func (p *packageUnit) resultIf(
 	statement *ast.IfStmt,
 	state map[types.Object]bool,
@@ -570,6 +615,7 @@ func (p *packageUnit) resultIf(
 	return trueReturns && falseReturns
 }
 
+// isLength recognizes len applied to the same slice object.
 func (p *packageUnit) isLength(expression, slice ast.Expr) bool {
 	call, ok := expression.(*ast.CallExpr)
 	if !ok || !ident(call.Fun, "len") || len(call.Args) != 1 {
@@ -579,6 +625,7 @@ func (p *packageUnit) isLength(expression, slice ast.Expr) bool {
 	return builtin && p.same(call.Args[0], slice)
 }
 
+// firstResult gets the first value type from a multi-value expression.
 func firstResult(typ types.Type) types.Type {
 	if tuple, ok := typ.(*types.Tuple); ok && tuple.Len() > 0 {
 		return tuple.At(0).Type()
@@ -602,6 +649,7 @@ func (p *packageUnit) boundUnchanged(body *ast.BlockStmt, slice *ast.SliceExpr) 
 	return !changed
 }
 
+// changesBound reports whether one node can invalidate a prior bound proof.
 func (p *packageUnit) changesBound(node ast.Node, slice *ast.SliceExpr) bool {
 	switch node := node.(type) {
 	case *ast.AssignStmt:
@@ -618,6 +666,7 @@ func (p *packageUnit) changesBound(node ast.Node, slice *ast.SliceExpr) bool {
 	}
 }
 
+// assignmentChangesBound reports writes to the slice or bound objects.
 func (p *packageUnit) assignmentChangesBound(
 	assignment *ast.AssignStmt,
 	slice *ast.SliceExpr,
@@ -630,6 +679,7 @@ func (p *packageUnit) assignmentChangesBound(
 	return false
 }
 
+// callMayChangeBound trusts only len and cap while a bound proof is active.
 func (p *packageUnit) callMayChangeBound(call *ast.CallExpr) bool {
 	name, ok := call.Fun.(*ast.Ident)
 	if !ok {

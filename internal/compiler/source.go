@@ -7,10 +7,12 @@ import (
 )
 
 type lexeme struct {
-	kind  token.Token
-	text  string
-	start int
-	end   int
+	kind   token.Token
+	text   string
+	start  int
+	end    int
+	line   int
+	column int
 }
 
 type edit struct {
@@ -33,6 +35,8 @@ type variant struct {
 
 type model struct {
 	Name      string
+	Line      int
+	Column    int
 	Base      string
 	Predicate string
 	Variants  []variant
@@ -45,6 +49,7 @@ type source struct {
 	Models []*model
 }
 
+// requiresConstructor reports whether a model type has an invalid zero value.
 func (m *model) requiresConstructor() bool {
 	return len(m.Variants) > 0 || m.Predicate != ""
 }
