@@ -49,6 +49,51 @@ func Mutated[T any](enabled bool) {
 	}
 }
 
+func AssignedTrue[T any](enabled bool) {
+	enabled = true
+	if enabled {
+		var value T
+		_ = value
+	}
+}
+
+func Copied[T any](enabled bool) {
+	copy := enabled
+	if copy {
+		var value T
+		_ = value
+	}
+}
+
+func ReadByCall[T any](enabled bool) {
+	consumeBool(enabled)
+	if enabled {
+		var value T
+		_ = value
+	}
+}
+
+func consumeBool(bool) {}
+
+type Flag bool
+
+func (flag *Flag) Enable() {
+	*flag = true
+}
+
+func ReceiverMutation[T any](enabled Flag) {
+	enabled.Enable()
+	if enabled {
+		var value T
+		_ = value
+	}
+}
+
+func Narrowed[T any](length int64) []T {
+	narrowed := int8(length)
+	return make([]T, narrowed)
+}
+
 func Unless[T any](skip bool) {
 	if skip {
 		return

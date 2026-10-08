@@ -92,7 +92,7 @@ func (c *checker) verifySourceModels(generated *ast.File) *verifiedSource {
 	}
 	sourceNames := make(map[string]bool)
 	for _, declaration := range file.Decls {
-		if source := sourceDeclaration(declaration); source != nil {
+		if source := sourceDeclaration(declaration, c.packagePath()); source != nil {
 			sourceNames[source.name] = true
 		}
 		c.checkSourceDeclaration(generated, sourceName, declaration)
@@ -162,13 +162,11 @@ func (c *checker) reportExtraGeneratedModels(
 			if !ok || sourceNames[specification.Name.Name] {
 				continue
 			}
-			structure, structural := specification.Type.(*ast.StructType)
 			object, objectOK := c.pass.TypesInfo.Defs[specification.Name].(*types.TypeName)
-			if !structural || !objectOK {
+			if !objectOK {
 				continue
 			}
-			if emittedModel(specification.Name.Name, structure, object.Type()) != nil ||
-				c.hasModelAPIs(object) {
+			if c.hasModelAPIs(object) {
 				c.failVerification(
 					specification.Pos(),
 					"generated tgo output for %s does not match %s",
@@ -193,7 +191,7 @@ func (c *checker) checkSourceDeclaration(
 	sourceName string,
 	declaration syntax.Node,
 ) {
-	source := sourceDeclaration(declaration)
+	source := sourceDeclaration(declaration, c.packagePath())
 	if source == nil {
 		return
 	}
@@ -209,10 +207,9 @@ func (c *checker) checkSourceDeclaration(
 		return
 	}
 	object, objectOK := c.pass.TypesInfo.Defs[specification.Name].(*types.TypeName)
-	structure, structural := specification.Type.(*ast.StructType)
-	if !objectOK || !structural || !c.hasGeneratedValidator(generated, object) ||
+	if !objectOK || !c.hasGeneratedValidator(generated, object) ||
 		!sourceShapeMatches(
-			generated, structure, object.Type(), source.fact,
+			generated, specification.Type, object.Type(), source.fact,
 			source.fields, source.base, source.variants,
 		) {
 		c.failVerification(
@@ -226,7 +223,7 @@ func (c *checker) checkSourceDeclaration(
 }
 
 func (c *checker) exportSourceDeclaration(generated *ast.File, declaration syntax.Node) {
-	source := sourceDeclaration(declaration)
+	source := sourceDeclaration(declaration, c.packagePath())
 	if source == nil {
 		return
 	}
@@ -242,27 +239,32 @@ func (c *checker) exportSourceDeclaration(generated *ast.File, declaration synta
 	if source.fact != nil {
 		key := objectKey{pkg: object.Pkg(), name: object.Name()}
 		c.models[key] = source.fact
-		c.pass.ExportObjectFact(object, source.fact)
+		c.pass.ExportObjectFact(object, encodeModelFact(source.fact))
 		c.exportValidationFacts(object, source.fact)
 	}
 }
 
+func (c *checker) packagePath() string {
+	if c.pass.Pkg == nil {
+		return ""
+	}
+	return c.pass.Pkg.Path()
+}
+
 type sourceModel struct {
 	name     string
-	fact     *modelFact
+	fact     *model
 	fields   []*syntax.FieldDecl
 	base     ast.Expr
 	variants []*syntax.VariantDecl
 }
 
-func sourceDeclaration(declaration syntax.Node) *sourceModel {
+func sourceDeclaration(declaration syntax.Node, packagePath string) *sourceModel {
 	switch node := declaration.(type) {
 	case *syntax.CheckedDecl:
 		return &sourceModel{
 			name: node.Name.Name,
-			fact: &modelFact{
-				Kind: checkedKind, Name: node.Name.Name, Variants: nil, Mixed: false,
-			},
+			fact: checkedModel(packagePath, node.Name.Name),
 			fields: nil, base: node.Base, variants: nil,
 		}
 	case *syntax.EnumDecl:
@@ -272,9 +274,7 @@ func sourceDeclaration(declaration syntax.Node) *sourceModel {
 		}
 		return &sourceModel{
 			name: node.Name.Name,
-			fact: &modelFact{
-				Kind: enumKind, Name: node.Name.Name, Variants: variants, Mixed: false,
-			},
+			fact: enumModel(packagePath, node.Name.Name, variants),
 			fields: nil, base: nil, variants: node.Variants,
 		}
 	case *syntax.StructDecl:
@@ -391,29 +391,35 @@ func (c *checker) runtimeSelector(expression ast.Expr, name string) bool {
 
 func sourceShapeMatches(
 	generated *ast.File,
-	structure *ast.StructType,
+	representation ast.Expr,
 	typ types.Type,
-	fact *modelFact,
+	fact *model,
 	fields []*syntax.FieldDecl,
 	base ast.Expr,
 	variants []*syntax.VariantDecl,
 ) bool {
 	if fact == nil {
+		structure, ok := representation.(*ast.StructType)
+		if !ok {
+			return false
+		}
 		return sameFields(fields, structure.Fields)
 	}
-	emitted := emittedModel(fact.Name, structure, typ)
-	if !sameModelFact(fact, emitted) {
-		return false
-	}
-	if fact.Kind == checkedKind {
-		return len(structure.Fields.List) == 1 &&
+	_, name := modelDescription(fact)
+	if modelIsChecked(fact) {
+		structure, ok := representation.(*ast.StructType)
+		if !ok {
+			return false
+		}
+		return sameModelFact(fact, emittedCheckedModel(name, structure, typ)) &&
+			len(structure.Fields.List) == 1 &&
 			sameExpression(base, structure.Fields.List[0].Type)
 	}
-	if len(structure.Fields.List) != len(variants)+1 {
+	if !generatedEnumShape(typ, name, variants) {
 		return false
 	}
 	for _, variant := range variants {
-		payloadSpec := generatedTypeSpec(generated, fact.Name+variant.Name.Name)
+		payloadSpec := generatedTypeSpec(generated, name+variant.Name.Name)
 		if payloadSpec == nil {
 			return false
 		}
@@ -425,13 +431,59 @@ func sourceShapeMatches(
 	return true
 }
 
-func sameModelFact(left *modelFact, right *modelFact) bool {
-	if left == nil || right == nil || left.Kind != right.Kind || left.Name != right.Name ||
-		left.Mixed != right.Mixed || len(left.Variants) != len(right.Variants) {
+// generatedEnumShape checks source variants against the public ABI.
+func generatedEnumShape(
+	typ types.Type,
+	name string,
+	variants []*syntax.VariantDecl,
+) bool {
+	if !validGeneratedTagMethod(typ) {
 		return false
 	}
-	for index := range left.Variants {
-		if left.Variants[index] != right.Variants[index] {
+	for _, variant := range variants {
+		payloadName := name + variant.Name.Name
+		payload, ok := typeInPackage(typ, payloadName)
+		if !ok || !validEnumAPI(
+			typ, payload, "Tgo"+variant.Name.Name, "New"+payloadName,
+		) {
+			return false
+		}
+	}
+	return true
+}
+
+func validGeneratedTagMethod(typ types.Type) bool {
+	tag := method(typ, "TgoTag")
+	if tag == nil || tag.Params().Len() != 0 || tag.Results().Len() != 1 {
+		return false
+	}
+	basic, ok := coreType(tag.Results().At(0).Type()).(*types.Basic)
+	return ok && basic.Info()&types.IsUnsigned != 0
+}
+
+func typeInPackage(typ types.Type, name string) (types.Type, bool) {
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return nil, false
+	}
+	object, ok := named.Obj().Pkg().Scope().Lookup(name).(*types.TypeName)
+	if !ok {
+		return nil, false
+	}
+	return object.Type(), true
+}
+
+func sameModelFact(left *model, right *model) bool {
+	if left == nil || right == nil || !sameModel(left, right) {
+		return false
+	}
+	leftVariants := modelVariants(left)
+	rightVariants := modelVariants(right)
+	if len(leftVariants) != len(rightVariants) {
+		return false
+	}
+	for index := range leftVariants {
+		if leftVariants[index] != rightVariants[index] {
 			return false
 		}
 	}

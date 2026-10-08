@@ -29,7 +29,10 @@ generic constraint.
 Do not pass a tgo type to a generic function or method that can make its zero
 value. The same rule applies when you save the function or method as a value.
 `will` means the unsafe event is proved. `can` means a runtime value is unknown.
-Fix both. Keep a generic function value local so the linter can check each call.
+Local Boolean and integer assignments can change `can` to `will` or remove the
+diagnostic. Package variables, captured values, addresses, narrowing conversions,
+and unsupported expressions stay `can`. Fix both. Keep a generic function value local
+so the linter can check each call.
 Return a generic closure as a direct function literal. The checker does not yet
 follow that closure through a local variable or another helper.
 

@@ -30,23 +30,25 @@ func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
 			incomingFallthrough = fallthroughBranch != nil
 			continue
 		}
-		tags := c.caseTags(clause, len(model.Variants))
+		tags := c.caseTags(clause, len(modelVariants(model)))
 		for tag := range tags {
 			seen[tag] = true
 		}
 		c.checkCaseAccessors(clause, receiver, model, tags, incomingFallthrough)
 		incomingFallthrough = fallthroughBranch != nil
 	}
-	for index, variant := range model.Variants {
+	for index, variant := range modelVariants(model) {
 		tag := index + 1
 		if !seen[tag] {
 			c.pass.Reportf(statement.Switch,
-				"switch on %s.TgoTag is missing tag %d (%s)", model.Name, tag, variant)
+				"switch on %s.TgoTag is missing tag %d (%s)",
+				modelName(model), tag, variant)
 		}
 	}
 	if !hasSafeDefault {
 		c.pass.Reportf(statement.Switch,
-			"switch on %s.TgoTag needs a default path that cannot continue", model.Name)
+			"switch on %s.TgoTag needs a default path that cannot continue",
+			modelName(model))
 	}
 }
 
@@ -181,7 +183,7 @@ func (c *checker) callMayReturn(call *ast.CallExpr) bool {
 	return !builtin
 }
 
-func (c *checker) tagCall(expression ast.Expr) (ast.Expr, *ast.SelectorExpr, *modelFact) {
+func (c *checker) tagCall(expression ast.Expr) (ast.Expr, *ast.SelectorExpr, *model) {
 	call, ok := expression.(*ast.CallExpr)
 	if !ok || len(call.Args) != 0 {
 		return nil, nil, nil
@@ -191,7 +193,7 @@ func (c *checker) tagCall(expression ast.Expr) (ast.Expr, *ast.SelectorExpr, *mo
 		return nil, nil, nil
 	}
 	model := c.modelForSelector(selector)
-	if model == nil || model.Kind != enumKind {
+	if !modelIsEnum(model) {
 		return nil, nil, nil
 	}
 	return selector.X, selector, model
@@ -218,7 +220,7 @@ func (c *checker) caseTags(clause *ast.CaseClause, variants int) map[int]bool {
 func (c *checker) checkCaseAccessors(
 	clause *ast.CaseClause,
 	receiver ast.Expr,
-	model *modelFact,
+	model *model,
 	tags map[int]bool,
 	incomingFallthrough bool,
 ) {
@@ -240,19 +242,19 @@ func (c *checker) checkCaseAccessors(
 			if c.receiverUnsafe(receiver, selector) {
 				c.pass.Reportf(selector.Pos(),
 					"%s.%s needs an unaliased local value receiver",
-					model.Name, selector.Sel.Name)
+					modelName(model), selector.Sel.Name)
 				return true
 			}
 			if receiverChangedBefore(c.pass.TypesInfo, clause.Body, receiver, selector.Pos()) {
 				c.pass.Reportf(selector.Pos(),
 					"%s.%s receiver changed after its TgoTag read",
-					model.Name, selector.Sel.Name)
+					modelName(model), selector.Sel.Name)
 				return true
 			}
 			if incomingFallthrough {
 				c.pass.Reportf(selector.Pos(),
 					"%s.%s can run after fallthrough from another tag",
-					model.Name, selector.Sel.Name)
+					modelName(model), selector.Sel.Name)
 				return true
 			}
 			if len(tags) == 1 && tags[tag] {
@@ -261,7 +263,7 @@ func (c *checker) checkCaseAccessors(
 			}
 			c.pass.Reportf(selector.Pos(),
 				"%s.%s access does not match its TgoTag case %d",
-				model.Name, selector.Sel.Name, tag)
+				modelName(model), selector.Sel.Name, tag)
 			return true
 		})
 	}
@@ -541,8 +543,8 @@ func receiverWrite(info *types.Info, target, receiver ast.Expr) bool {
 	return true
 }
 
-func variantTag(model *modelFact, method string) int {
-	for index, variant := range model.Variants {
+func variantTag(model *model, method string) int {
+	for index, variant := range modelVariants(model) {
 		if method == "Tgo"+variant {
 			return index + 1
 		}
@@ -601,7 +603,7 @@ func (c *checker) checkRepresentationAccess(selector *ast.SelectorExpr) {
 		if model != nil {
 			c.pass.Reportf(selector.Pos(),
 				"%s.%s access through an interface or open type parameter is unsafe",
-				model.Name, selector.Sel.Name)
+				modelName(model), selector.Sel.Name)
 		} else if c.receiverCanHideModel(c.pass.TypesInfo.TypeOf(selector.X)) &&
 			strings.HasPrefix(selector.Sel.Name, "Tgo") {
 			c.pass.Reportf(selector.Pos(),
@@ -610,39 +612,40 @@ func (c *checker) checkRepresentationAccess(selector *ast.SelectorExpr) {
 		}
 		return
 	}
-	if model.Mixed {
+	if modelIsMixed(model) {
 		c.pass.Reportf(selector.Pos(),
 			"Tgo access through a type parameter cannot mix tgo models")
 		return
 	}
 	if privateRepresentation(model, selector.Sel.Name) {
 		c.pass.Reportf(selector.Pos(),
-			"%s.%s is private tgo representation", model.Name, selector.Sel.Name)
+			"%s.%s is private tgo representation",
+			modelName(model), selector.Sel.Name)
 		return
 	}
-	if model.Kind != enumKind {
+	if !modelIsEnum(model) {
 		return
 	}
 	if selector.Sel.Name == "TgoTag" {
 		c.pass.Reportf(selector.Pos(),
-			"%s.TgoTag must be the tag of an exhaustive switch", model.Name)
+			"%s.TgoTag must be the tag of an exhaustive switch", modelName(model))
 		return
 	}
 	if variantTag(model, selector.Sel.Name) != 0 {
 		c.pass.Reportf(selector.Pos(),
 			"%s.%s requires the matching case of an exhaustive TgoTag switch",
-			model.Name, selector.Sel.Name)
+			modelName(model), selector.Sel.Name)
 	}
 }
 
-func privateRepresentation(model *modelFact, name string) bool {
-	if model.Kind == checkedKind {
+func privateRepresentation(model *model, name string) bool {
+	if modelIsChecked(model) {
 		return name == "value"
 	}
 	if name == "tgoTag" {
 		return true
 	}
-	for _, variant := range model.Variants {
+	for _, variant := range modelVariants(model) {
 		if name == "tgo"+variant {
 			return true
 		}

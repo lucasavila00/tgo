@@ -8,7 +8,7 @@ import (
 
 type genericValue struct {
 	function          *types.Func
-	fact              *genericEffectFact
+	fact              *genericEffectSet
 	receiverArguments []types.Type
 	typeArguments     []types.Type
 	conditionCall     *ast.CallExpr

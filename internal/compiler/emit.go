@@ -15,6 +15,9 @@ func enumGo(sourceName string, declaration *model, runtimeAlias string) string {
 	tagType := enumTagType(len(declaration.Variants))
 	fmt.Fprintf(&output, "type %s struct {\n tgoTag %s\n", name, tagType)
 	for _, variant := range declaration.Variants {
+		if len(variant.Fields) == 0 {
+			continue
+		}
 		fmt.Fprintf(&output, "tgo%s %s%s\n", variant.Name, name, variant.Name)
 	}
 	output.WriteString("}\n")
@@ -47,11 +50,29 @@ func emitVariant(
 	)
 	fmt.Fprintf(output, "// %s constructs %s. Model fields must be valid.\n", constructor, enum)
 	output.WriteString("// Shared fields keep their aliases and caller duties.\n")
-	fmt.Fprintf(output, "func %s(value %s) %s {\n", constructor, payload, enum)
-	fmt.Fprintf(output, "return %s{tgoTag: %d, tgo%s: value}\n}\n", enum, tag, variant.Name)
+	parameter := "value"
+	if len(variant.Fields) == 0 {
+		parameter = "_"
+	}
+	fmt.Fprintf(output, "func %s(%s %s) %s {\n", constructor, parameter, payload, enum)
+	if len(variant.Fields) == 0 {
+		fmt.Fprintf(output, "return %s{tgoTag: %d}\n}\n", enum, tag)
+	} else {
+		fmt.Fprintf(
+			output,
+			"return %s{tgoTag: %d, tgo%s: value}\n}\n",
+			enum,
+			tag,
+			variant.Name,
+		)
+	}
 	fmt.Fprintf(output, "// %s requires %s. No tag check.\n", accessor, variant.Name)
 	fmt.Fprintf(output, "func (v %s) %s() %s {\n", enum, accessor, payload)
-	fmt.Fprintf(output, "return v.tgo%s\n}\n", variant.Name)
+	if len(variant.Fields) == 0 {
+		fmt.Fprintf(output, "return %s{}\n}\n", payload)
+	} else {
+		fmt.Fprintf(output, "return v.tgo%s\n}\n", variant.Name)
+	}
 }
 
 // checkedGo emits a checked wrapper, constructor, error, and value accessor.

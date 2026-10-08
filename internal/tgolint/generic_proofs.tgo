@@ -36,7 +36,7 @@ func (c *checker) reportGenericEffects(
 	description string,
 ) {
 	type result struct {
-		model     *modelFact
+		model     *model
 		certainty effectOutcome
 	}
 	results := make(map[string]result)
@@ -52,14 +52,17 @@ func (c *checker) reportGenericEffects(
 		}
 		targetType := c.genericEffectType(effect, receiverArguments, typeArguments)
 		certainty := c.effectCertainty(call, effect, targetType)
-		if certainty == effectNever {
+		if certainty == neverEffectOutcome() {
 			continue
 		}
-		key := model.Kind + "\x00" + model.Name
-		current, found := results[key]
-		if !found || current.certainty < certainty {
-			results[key] = result{model: model, certainty: certainty}
+		key := modelKind(model) + "\x00" + modelName(model)
+		if current, found := results[key]; found {
+			if effectOutcomeRank(current.certainty) < effectOutcomeRank(certainty) {
+				results[key] = result{model: model, certainty: certainty}
+			}
+			continue
 		}
+		results[key] = result{model: model, certainty: certainty}
 	}
 	keys := make([]string, 0, len(results))
 	for key := range results {
@@ -67,20 +70,30 @@ func (c *checker) reportGenericEffects(
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		item := results[key]
-		verb := "can"
-		if item.certainty == effectAlways {
-			verb = "will"
+		if item, found := results[key]; found {
+			verb := "can"
+			if item.certainty == alwaysEffectOutcome() {
+				verb = "will"
+			}
+			if zero {
+				c.reportResult(expression.Pos(),
+					"%s %s create invalid tgo %s %s zero from a type argument",
+					description, verb, modelKind(item.model), modelName(item.model))
+			} else {
+				c.reportResult(expression.Pos(),
+					"%s %s access tgo %s %s through an open type parameter",
+					description, verb, modelKind(item.model), modelName(item.model))
+			}
 		}
-		if zero {
-			c.reportResult(expression.Pos(),
-				"%s %s create invalid tgo %s %s zero from a type argument",
-				description, verb, item.model.Kind, item.model.Name)
-		} else {
-			c.reportResult(expression.Pos(),
-				"%s %s access tgo %s %s through an open type parameter",
-				description, verb, item.model.Kind, item.model.Name)
-		}
+	}
+}
+
+func effectOutcomeRank(outcome effectOutcome) int {
+	match outcome {
+	case Unknown(_): return 1
+	case Never(_): return 0
+	case Always(_): return 2
+	case Conditional(_): return 1
 	}
 }
 
@@ -89,7 +102,7 @@ func (c *checker) genericEffectModel(
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 	zero bool,
-) *modelFact {
+) *model {
 	target := c.genericEffectType(effect, receiverArguments, typeArguments)
 	if target == nil {
 		return nil
@@ -102,7 +115,7 @@ func (c *checker) genericEffectModel(
 		return nil
 	}
 	model := c.modelBehindAccessType(target)
-	if model == nil || model.Mixed {
+	if model == nil || modelIsMixed(model) {
 		return nil
 	}
 	return model
@@ -128,22 +141,22 @@ func (c *checker) effectCertainty(
 	effect genericEffect,
 	targetType types.Type,
 ) effectOutcome {
-	certainty := effectAlways
+	certainty := alwaysEffectOutcome()
 	if effect.MaySkip {
-		certainty = effectUnknown
+		certainty = unknownEffectOutcome()
 	}
 	for _, condition := range effect.Conditions {
 		if call == nil || condition.ValueParameter < 0 ||
 			condition.ValueParameter >= len(call.Args) {
-			certainty = effectUnknown
+			certainty = unknownEffectOutcome()
 			continue
 		}
 		matches, known := c.effectConditionValue(call, condition, targetType)
 		if known && !matches {
-			return effectNever
+			return neverEffectOutcome()
 		}
 		if !known {
-			certainty = effectUnknown
+			certainty = unknownEffectOutcome()
 		}
 	}
 	return certainty
@@ -158,21 +171,58 @@ func (c *checker) effectConditionValue(
 		return false, false
 	}
 	expression := call.Args[condition.ValueParameter]
-	value := c.pass.TypesInfo.Types[expression].Value
-	switch condition.Kind {
-	case effectBoolean:
-		if value == nil || value.Kind() != constant.Bool {
-			return false, false
-		}
-		return constant.BoolVal(value) == condition.Expected, true
-	case effectNonzero:
-		if value == nil || value.Kind() != constant.Int {
-			return false, false
-		}
-		return (constant.Sign(value) != 0) == condition.Expected, true
-	default:
-		return c.compositeEffectCondition(call, condition, targetType)
+	if isScalarEffectCondition(condition.Kind) {
+		return c.scalarEffectCondition(call, expression, condition)
 	}
+	return c.compositeEffectCondition(call, condition, targetType)
+}
+
+func (c *checker) scalarEffectCondition(
+	call *ast.CallExpr,
+	expression ast.Expr,
+	condition genericEffectCondition,
+) (bool, bool) {
+	if condition.Kind == booleanEffectCondition() {
+		return c.booleanConditionValue(call, expression, condition.Expected)
+	}
+	if condition.Kind == nonzeroEffectConditionKind() {
+		return c.integerConditionValue(call, expression, condition.Expected)
+	}
+	return false, false
+}
+
+func (c *checker) booleanConditionValue(
+	call *ast.CallExpr,
+	expression ast.Expr,
+	expected bool,
+) (bool, bool) {
+	if value, known := c.scalarValueAt(call, expression); known {
+		if boolean, exact := scalarBoolean(value); exact {
+			return boolean == expected, true
+		}
+	}
+	value := c.pass.TypesInfo.Types[expression].Value
+	if value == nil || value.Kind() != constant.Bool {
+		return false, false
+	}
+	return constant.BoolVal(value) == expected, true
+}
+
+func (c *checker) integerConditionValue(
+	call *ast.CallExpr,
+	expression ast.Expr,
+	expected bool,
+) (bool, bool) {
+	if value, known := c.scalarValueAt(call, expression); known {
+		if integer, exact := scalarInteger(value); exact {
+			return (integer != 0) == expected, true
+		}
+	}
+	value := c.pass.TypesInfo.Types[expression].Value
+	if value == nil || value.Kind() != constant.Int {
+		return false, false
+	}
+	return (constant.Sign(value) != 0) == expected, true
 }
 
 func (c *checker) compositeEffectCondition(
@@ -181,19 +231,21 @@ func (c *checker) compositeEffectCondition(
 	targetType types.Type,
 ) (bool, bool) {
 	expression := call.Args[condition.ValueParameter]
-	switch condition.Kind {
-	case effectNonempty:
+	match condition.Kind {
+	case Nonempty(_):
 		length, _, known := c.knownSliceBounds(expression)
 		return (length != 0) == condition.Expected, known
-	case effectMapMiss:
+	case MapMiss(_):
 		return c.mapMissCondition(call, condition)
-	case effectChannelClosed:
+	case ChannelClosed(_):
 		return false, c.freshChannel(expression)
-	case effectAssertionFails:
+	case AssertionFails(_):
 		return c.assertionFails(expression, targetType)
-	case effectResliceExtends:
+	case ResliceExtends(_):
 		return c.resliceExtends(call, condition)
-	default:
+	case Boolean(_):
+		return false, false
+	case Nonzero(_):
 		return false, false
 	}
 }
@@ -220,15 +272,24 @@ func (c *checker) knownSliceBounds(expression ast.Expr) (int64, int64, bool) {
 	if _, slice := coreType(c.pass.TypesInfo.TypeOf(call)).(*types.Slice); !slice {
 		return 0, 0, false
 	}
-	length, known := constantInteger(c.pass.TypesInfo.Types[call.Args[1]].Value)
+	length, known := c.knownIntegerAt(call, call.Args[1])
 	if !known {
 		return 0, 0, false
 	}
 	capacity := length
 	if len(call.Args) > 2 {
-		capacity, known = constantInteger(c.pass.TypesInfo.Types[call.Args[2]].Value)
+		capacity, known = c.knownIntegerAt(call, call.Args[2])
 	}
 	return length, capacity, known
+}
+
+func (c *checker) knownIntegerAt(node ast.Node, expression ast.Expr) (int64, bool) {
+	if value, known := c.scalarValueAt(node, expression); known {
+		if integer, exact := scalarInteger(value); exact {
+			return integer, true
+		}
+	}
+	return constantInteger(c.pass.TypesInfo.Types[expression].Value)
 }
 
 func literalLength(info *types.Info, literal *ast.CompositeLit) (int64, bool) {
@@ -361,12 +422,12 @@ func unparenthesized(expression ast.Expr) ast.Expr {
 	}
 }
 
-func (c *checker) modelBehindAccessType(typ types.Type) *modelFact {
+func (c *checker) modelBehindAccessType(typ types.Type) *model {
 	if model := c.modelForReceiver(typ); model != nil {
 		return model
 	}
 	methods := types.NewMethodSet(typ)
-	var found *modelFact = nil
+	var found *model = nil
 	for index := 0; index < methods.Len(); index++ {
 		function, ok := methods.At(index).Obj().(*types.Func)
 		if !ok {
@@ -376,8 +437,8 @@ func (c *checker) modelBehindAccessType(typ types.Type) *modelFact {
 		if model == nil {
 			continue
 		}
-		if found != nil && (found.Kind != model.Kind || found.Name != model.Name) {
-			return &modelFact{Kind: "", Name: "", Variants: nil, Mixed: true}
+		if found != nil && !sameModel(found, model) {
+			return mixedModel()
 		}
 		found = model
 	}

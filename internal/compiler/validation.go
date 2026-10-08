@@ -123,14 +123,7 @@ func enumValidationGo(declaration *model, runtimeAlias string) string {
 	emitValidationHeader(&output, declaration.Name, runtimeAlias)
 	for _, variant := range declaration.Variants {
 		payload := declaration.Name + variant.Name
-		fmt.Fprintf(
-			&output,
-			"func tgoReconstruct%s(value %s, context *%s.Context) (%s, error) {\n",
-			payload,
-			payload,
-			runtimeAlias,
-			payload,
-		)
+		emitEnumReconstructorSignature(&output, payload, runtimeAlias)
 		emitFieldReconstruction(&output, "value", variant.Fields, runtimeAlias)
 		output.WriteString("}\n")
 	}
@@ -144,12 +137,11 @@ func enumValidationGo(declaration *model, runtimeAlias string) string {
 	for index, variant := range declaration.Variants {
 		payload := declaration.Name + variant.Name
 		fmt.Fprintf(&output, "case %d:\n", index+1)
-		fmt.Fprintf(
-			&output,
-			"rebuilt, err := tgoReconstruct%s(v.tgo%s, context)\n",
-			payload,
-			variant.Name,
-		)
+		value := "v.tgo" + variant.Name
+		if len(variant.Fields) == 0 {
+			value = payload + "{}"
+		}
+		emitEnumReconstructorCall(&output, payload, value)
 		output.WriteString("if err != nil { return nil, err }\n")
 		fmt.Fprintf(&output, "return New%s(rebuilt), nil\n", payload)
 	}
@@ -170,18 +162,79 @@ func emitValidationHeader(output *strings.Builder, name, runtimeAlias string) {
 		"func (e tgo%sValidationError) Error() string { return string(e) }\n",
 		name,
 	)
-	fmt.Fprintf(
-		output,
+	comment := fmt.Sprintf(
 		"// Validate%s checks and reconstructs one foreign %s graph.\n",
 		name,
 		name,
 	)
-	fmt.Fprintf(output, "func Validate%s(value %s) (%s, error) {\n", name, name, name)
+	if len(comment)-1 > 100 {
+		comment = fmt.Sprintf("// Validate%s checks one foreign model graph.\n", name)
+	}
+	output.WriteString(comment)
+	signature := fmt.Sprintf("func Validate%s(value %s) (%s, error) {\n", name, name, name)
+	if len(signature)-1 <= 100 {
+		output.WriteString(signature)
+	} else {
+		fmt.Fprintf(
+			output,
+			"func Validate%s(\nvalue %s,\n) (%s, error) {\n",
+			name,
+			name,
+			name,
+		)
+	}
 	fmt.Fprintf(
 		output,
 		"return %s.RebuildAs(value, %s.NewContext())\n}\n",
 		runtimeAlias,
 		runtimeAlias,
+	)
+}
+
+// emitEnumReconstructorSignature wraps a long generated helper signature.
+func emitEnumReconstructorSignature(
+	output *strings.Builder,
+	payload string,
+	runtimeAlias string,
+) {
+	signature := fmt.Sprintf(
+		"func tgoReconstruct%s(value %s, context *%s.Context) (%s, error) {\n",
+		payload,
+		payload,
+		runtimeAlias,
+		payload,
+	)
+	if len(signature)-1 <= 100 {
+		output.WriteString(signature)
+		return
+	}
+	fmt.Fprintf(
+		output,
+		"func tgoReconstruct%s(\nvalue %s,\ncontext *%s.Context,\n) (%s, error) {\n",
+		payload,
+		payload,
+		runtimeAlias,
+		payload,
+	)
+}
+
+// emitEnumReconstructorCall wraps a long generated helper call.
+func emitEnumReconstructorCall(output *strings.Builder, payload string, value string) {
+	call := fmt.Sprintf(
+		"rebuilt, err := tgoReconstruct%s(%s, context)\n",
+		payload,
+		value,
+	)
+	// The generated call has one tab. The line check counts it as four columns.
+	if len(call)-1 <= 96 {
+		output.WriteString(call)
+		return
+	}
+	fmt.Fprintf(
+		output,
+		"rebuilt, err := tgoReconstruct%s(\n%s,\ncontext,\n)\n",
+		payload,
+		value,
 	)
 }
 

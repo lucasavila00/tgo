@@ -55,6 +55,17 @@ The checker suppresses the diagnostic when the call proves that the event cannot
 occur. It checks local function and method values at their call sites. It rejects
 a value that escapes before its effects can be checked.
 
+A forward control-flow analysis tracks local Boolean and integer assignments and
+direct parameter aliases. It keeps a fact at a join only when every incoming path
+agrees. It removes a branch edge when the condition is a proved constant. Taking
+an address or creating a closure that captures the value removes the fact. Package
+variables, free variables, narrowing conversions, and unsupported expressions stay
+unresolved. Passing a Boolean or integer by value does not remove its fact.
+
+An imported model fact includes its package path and type name. The package path
+must match the object that owns the fact. Equal type names from different packages
+remain different models.
+
 Returned-function effects are complete only for a function literal returned
 directly. A closure returned through a local variable or another helper can hide
 an effect from the checker.

@@ -7,25 +7,204 @@ import (
 	"strings"
 )
 
-const (
-	checkedKind = "checked"
-	enumKind    = "enum"
-)
+type model enum {
+	Checked struct { Package string; Name string }
+	Enum struct { Package string; Name string; Variants []string }
+	Mixed struct{}
+	Parameter struct{}
+}
 
-type modelFact struct {
-	Kind     string
+// modelWireFact is the stable fact format used by go/analysis.
+// The checker decodes it before it uses the model.
+type modelWireFact struct {
+	Kind     uint8
+	Package  string
 	Name     string
 	Variants []string
-	Mixed    bool
 }
 
-func (*modelFact) AFact() {}
+func (*modelWireFact) AFact() {}
+
+const (
+	checkedModelWire uint8 = 1
+	enumModelWire    uint8 = 2
+)
+
+func checkedModel(packagePath string, name string) *model {
+	value := model.Checked{Package: packagePath, Name: name}
+	return &value
+}
+
+func enumModel(packagePath string, name string, variants []string) *model {
+	value := model.Enum{
+		Package: packagePath, Name: name, Variants: variants,
+	}
+	return &value
+}
+
+func mixedModel() *model {
+	value := model.Mixed{}
+	return &value
+}
+
+func parameterModel() *model {
+	value := model.Parameter{}
+	return &value
+}
+
+func modelDescription(value *model) (string, string) {
+	if value == nil {
+		return "", ""
+	}
+	match *value {
+	case Checked(checked): return "checked", checked.Name
+	case Enum(enum): return "enum", enum.Name
+	case Mixed(_): return "", ""
+	case Parameter(_): return "generic", "type argument"
+	}
+}
+
+func modelKind(value *model) string {
+	kind, _ := modelDescription(value)
+	return kind
+}
+
+func modelName(value *model) string {
+	_, name := modelDescription(value)
+	return name
+}
+
+func modelPackage(value *model) string {
+	if value == nil {
+		return ""
+	}
+	match *value {
+	case Checked(checked): return checked.Package
+	case Enum(enum): return enum.Package
+	case Mixed(_): return ""
+	case Parameter(_): return ""
+	}
+}
+
+func modelVariants(value *model) []string {
+	if value == nil {
+		return nil
+	}
+	match *value {
+	case Checked(_): return nil
+	case Enum(enum): return enum.Variants
+	case Mixed(_): return nil
+	case Parameter(_): return nil
+	}
+}
+
+func modelIsChecked(value *model) bool {
+	if value == nil {
+		return false
+	}
+	match *value {
+	case Checked(_): return true
+	case Enum(_): return false
+	case Mixed(_): return false
+	case Parameter(_): return false
+	}
+}
+
+func modelIsEnum(value *model) bool {
+	if value == nil {
+		return false
+	}
+	match *value {
+	case Checked(_): return false
+	case Enum(_): return true
+	case Mixed(_): return false
+	case Parameter(_): return false
+	}
+}
+
+func modelIsMixed(value *model) bool {
+	if value == nil {
+		return false
+	}
+	match *value {
+	case Checked(_): return false
+	case Enum(_): return false
+	case Mixed(_): return true
+	case Parameter(_): return false
+	}
+}
+
+func sameModel(left *model, right *model) bool {
+	if left == nil || right == nil {
+		return left == right
+	}
+	if modelIsChecked(left) {
+		return modelIsChecked(right) && modelPackage(left) == modelPackage(right) &&
+			modelName(left) == modelName(right)
+	}
+	if modelIsEnum(left) {
+		return modelIsEnum(right) && modelPackage(left) == modelPackage(right) &&
+			modelName(left) == modelName(right)
+	}
+	if modelIsMixed(left) {
+		return modelIsMixed(right)
+	}
+	return modelIsParameter(right)
+}
+
+func modelIsParameter(value *model) bool {
+	if value == nil {
+		return false
+	}
+	match *value {
+	case Checked(_): return false
+	case Enum(_): return false
+	case Mixed(_): return false
+	case Parameter(_): return true
+	}
+}
+
+func encodeModelFact(value *model) *modelWireFact {
+	if value == nil {
+		return nil
+	}
+	match *value {
+	case Checked(checked):
+		return &modelWireFact{
+			Kind: checkedModelWire, Package: checked.Package,
+			Name: checked.Name, Variants: nil,
+		}
+	case Enum(enum):
+		return &modelWireFact{
+			Kind: enumModelWire, Package: enum.Package, Name: enum.Name,
+			Variants: append([]string(nil), enum.Variants...),
+		}
+	case Mixed(_): return nil
+	case Parameter(_): return nil
+	}
+}
+
+func decodeModelFact(fact *modelWireFact, expectedPackage string) *model {
+	if fact == nil || fact.Package != expectedPackage || fact.Name == "" {
+		return nil
+	}
+	switch fact.Kind {
+	case checkedModelWire:
+		if len(fact.Variants) == 0 {
+			return checkedModel(fact.Package, fact.Name)
+		}
+	case enumModelWire:
+		if len(fact.Variants) != 0 {
+			return enumModel(
+				fact.Package, fact.Name, append([]string(nil), fact.Variants...),
+			)
+		}
+	}
+	return nil
+}
 
 // validationFact marks a generated operation that returns a validated model.
-type validationFact struct {
-	Kind string
-	Name string
-}
+type validationFact struct{}
 
 func (*validationFact) AFact() {}
 
@@ -67,7 +246,7 @@ func (c *checker) exportGeneratedValidator(object *types.TypeName) {
 	if !ok || !validValidatorAPI(function, object.Type()) {
 		return
 	}
-	fact := &validationFact{Kind: "", Name: object.Name()}
+	fact := &validationFact{}
 	c.validated[function] = true
 	c.pass.ExportObjectFact(function, fact)
 }
@@ -83,15 +262,16 @@ func validValidatorAPI(function *types.Func, typ types.Type) bool {
 		types.Identical(signature.Results().At(1).Type(), errorType)
 }
 
-func (c *checker) exportValidationFacts(object *types.TypeName, model *modelFact) {
+func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
 	scope := object.Pkg().Scope()
 	var names []string = nil
-	if model.Kind == checkedKind {
-		names = append(names, "New"+model.Name)
+	_, name := modelDescription(value)
+	if modelIsChecked(value) {
+		names = append(names, "New"+name)
 	}
-	if model.Kind == enumKind {
-		for _, variant := range model.Variants {
-			names = append(names, "New"+model.Name+variant)
+	if modelIsEnum(value) {
+		for _, variant := range modelVariants(value) {
+			names = append(names, "New"+name+variant)
 		}
 	}
 	for _, name := range names {
@@ -99,7 +279,7 @@ func (c *checker) exportValidationFacts(object *types.TypeName, model *modelFact
 		if !ok {
 			continue
 		}
-		fact := &validationFact{Kind: model.Kind, Name: model.Name}
+		fact := &validationFact{}
 		c.validated[function] = true
 		c.pass.ExportObjectFact(function, fact)
 	}
@@ -135,7 +315,7 @@ func (c *checker) exportValidationWrapper(declaration ast.Decl) bool {
 	if !ok || !c.callHasValidationFact(call) {
 		return false
 	}
-	fact := &validationFact{Kind: "", Name: object.Name()}
+	fact := &validationFact{}
 	c.validated[object] = true
 	c.pass.ExportObjectFact(object, fact)
 	return true
@@ -246,7 +426,7 @@ func (c *checker) objectHasValidationFact(object types.Object) bool {
 	return true
 }
 
-func emittedModel(name string, structure *ast.StructType, typ types.Type) *modelFact {
+func emittedCheckedModel(name string, structure *ast.StructType, typ types.Type) *model {
 	fields := structure.Fields.List
 	underlying, ok := typ.Underlying().(*types.Struct)
 	if !ok || underlying.NumFields() != len(fields) {
@@ -254,26 +434,10 @@ func emittedModel(name string, structure *ast.StructType, typ types.Type) *model
 	}
 	if len(fields) == 1 && fieldName(fields[0]) == "value" &&
 		validCheckedAPI(typ, underlying.Field(0).Type(), "New"+name) {
-		return &modelFact{Kind: checkedKind, Name: name, Variants: nil, Mixed: false}
+		named, _ := types.Unalias(typ).(*types.Named)
+		return checkedModel(named.Obj().Pkg().Path(), name)
 	}
-	if len(fields) < 2 || fieldName(fields[0]) != "tgoTag" ||
-		!validTagMethod(typ, underlying.Field(0).Type()) {
-		return nil
-	}
-	variants := make([]string, 0, len(fields)-1)
-	for index, field := range fields[1:] {
-		field := fieldName(field)
-		if !strings.HasPrefix(field, "tgo") || len(field) == len("tgo") {
-			return nil
-		}
-		variant := strings.TrimPrefix(field, "tgo")
-		payload := underlying.Field(index + 1).Type()
-		if !validEnumAPI(typ, payload, "Tgo"+variant, "New"+name+variant) {
-			return nil
-		}
-		variants = append(variants, variant)
-	}
-	return &modelFact{Kind: enumKind, Name: name, Variants: variants, Mixed: false}
+	return nil
 }
 
 func fieldName(field *ast.Field) string {
@@ -338,7 +502,7 @@ func validEnumAPI(typ, payload types.Type, accessor, constructorName string) boo
 		types.Identical(makeValue.Results().At(0).Type(), typ)
 }
 
-func (c *checker) modelFor(typ types.Type) *modelFact {
+func (c *checker) modelFor(typ types.Type) *model {
 	typ = types.Unalias(typ)
 	named, ok := typ.(*types.Named)
 	if !ok || named.Obj().Pkg() == nil {
@@ -348,16 +512,17 @@ func (c *checker) modelFor(typ types.Type) *modelFact {
 	if fact, ok := c.models[key]; ok {
 		return fact
 	}
-	fact := new(modelFact)
+	fact := new(modelWireFact)
 	if !c.pass.ImportObjectFact(named.Obj(), fact) {
 		c.models[key] = nil
 		return nil
 	}
-	c.models[key] = fact
-	return fact
+	value := decodeModelFact(fact, named.Obj().Pkg().Path())
+	c.models[key] = value
+	return value
 }
 
-func (c *checker) modelForReceiver(typ types.Type) *modelFact {
+func (c *checker) modelForReceiver(typ types.Type) *model {
 	typ = types.Unalias(typ)
 	for {
 		if parameter, ok := typ.(*types.TypeParam); ok {
@@ -371,26 +536,26 @@ func (c *checker) modelForReceiver(typ types.Type) *modelFact {
 	}
 }
 
-func (c *checker) modelForTypeParameter(parameter *types.TypeParam) *modelFact {
+func (c *checker) modelForTypeParameter(parameter *types.TypeParam) *model {
 	terms, supported := simpleTerms(parameter.Constraint())
 	if !supported {
 		return nil
 	}
-	var found *modelFact = nil
+	var found *model = nil
 	for _, term := range terms {
 		model := c.modelForReceiver(term.Type())
 		if model == nil {
 			continue
 		}
-		if found != nil && (found.Kind != model.Kind || found.Name != model.Name) {
-			return &modelFact{Kind: "", Name: "", Variants: nil, Mixed: true}
+		if found != nil && !sameModel(found, model) {
+			return mixedModel()
 		}
 		found = model
 	}
 	return found
 }
 
-func (c *checker) modelForSelector(selector *ast.SelectorExpr) *modelFact {
+func (c *checker) modelForSelector(selector *ast.SelectorExpr) *model {
 	if model := c.modelForReceiver(c.pass.TypesInfo.TypeOf(selector.X)); model != nil {
 		return model
 	}
@@ -421,13 +586,13 @@ func (c *checker) modelForSelector(selector *ast.SelectorExpr) *modelFact {
 
 // structuralModel finds a generated enum behind an interface method set.
 // It returns nil when the receiver cannot admit that enum.
-func (c *checker) structuralModel(selector *ast.SelectorExpr) *modelFact {
+func (c *checker) structuralModel(selector *ast.SelectorExpr) *model {
 	receiver := c.pass.TypesInfo.TypeOf(selector.X)
 	if !c.receiverCanHideModel(receiver) {
 		return nil
 	}
 	methods := types.NewMethodSet(receiver)
-	var found *modelFact = nil
+	var found *model = nil
 	for index := 0; index < methods.Len(); index++ {
 		function, ok := methods.At(index).Obj().(*types.Func)
 		if !ok {
@@ -437,8 +602,8 @@ func (c *checker) structuralModel(selector *ast.SelectorExpr) *modelFact {
 		if model == nil {
 			continue
 		}
-		if found != nil && (found.Name != model.Name || found.Kind != model.Kind) {
-			return &modelFact{Kind: "", Name: "", Variants: nil, Mixed: true}
+		if found != nil && !sameModel(found, model) {
+			return mixedModel()
 		}
 		found = model
 	}
@@ -460,7 +625,7 @@ func (c *checker) receiverCanHideModel(typ types.Type) bool {
 	return !supported || len(terms) == 0
 }
 
-func (c *checker) modelForAccessor(function *types.Func) *modelFact {
+func (c *checker) modelForAccessor(function *types.Func) *model {
 	name := function.Name()
 	if !strings.HasPrefix(name, "Tgo") || name == "TgoTag" {
 		return nil
@@ -481,7 +646,7 @@ func (c *checker) modelForAccessor(function *types.Func) *modelFact {
 		return nil
 	}
 	model := c.modelFor(object.Type())
-	if model == nil || model.Kind != enumKind || variantTag(model, name) == 0 {
+	if !modelIsEnum(model) || variantTag(model, name) == 0 {
 		return nil
 	}
 	return model

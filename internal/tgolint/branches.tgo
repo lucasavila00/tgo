@@ -31,11 +31,11 @@ func (c *checker) checkBranch(statement *ast.BranchStmt, state checkedState) {
 		if result.presence {
 			c.reportModelSource(statement.Pos(), result.model, result.source,
 				"%s moves tgo %s %s before ok is proved true",
-				statement.Tok, result.model.Kind, result.model.Name)
+				statement.Tok, modelKind(result.model), modelName(result.model))
 		} else {
 			c.reportModelResult(statement.Pos(), result.model,
 				"%s moves tgo %s %s before its error is proved nil",
-				statement.Tok, result.model.Kind, result.model.Name)
+				statement.Tok, modelKind(result.model), modelName(result.model))
 		}
 	}
 }

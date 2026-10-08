@@ -4,7 +4,19 @@ import (
 	"example.com/tgolint/genericzero"
 	"example.com/tgolint/genericzerowrap"
 	"example.com/tgolint/model"
+	"example.com/tgolint/othermodel"
 )
+
+var packageEnabled = false
+
+type sameNamedEvents interface {
+	model.Event | othermodel.Event
+	TgoTag() uint8
+}
+
+func MixedModels[T sameNamedEvents](event T) uint8 {
+	return event.TgoTag()
+}
 
 func Direct(
 	event model.Event,
@@ -38,6 +50,9 @@ func Direct(
 	genericzero.Maybe[model.Event](true)
 	genericzero.Mutated[model.Event](true)
 	genericzero.Mutated[model.Event](false)
+	genericzero.AssignedTrue[model.Event](false)
+	genericzero.Copied[model.Event](true)
+	genericzero.ReadByCall[model.Event](true)
 	genericzero.Unless[model.Event](false)
 	genericzero.Recursive[model.Event](true)
 	_ = genericzero.MaybeStarted(true, event)
@@ -53,6 +68,20 @@ func Conditional(event model.Event, enabled bool, length int) {
 	_ = genericzero.UnlessStarted(enabled, event)
 	genericzerowrap.Maybe[model.Event](enabled)
 	genericzerowrap.Make[model.Event](length)
+}
+
+func LocalConstants() {
+	enabled := true
+	genericzero.Maybe[model.Event](enabled)
+	length := 1
+	_ = genericzero.Make[model.Event](length)
+	_ = genericzero.Narrowed[model.Event](256)
+	genericzero.ReceiverMutation[model.Event](false)
+	genericzero.Maybe[model.Event](packageEnabled)
+	enabled = false
+	func() {
+		genericzero.Maybe[model.Event](enabled)
+	}()
 }
 
 func Wrapped(event model.Event) {

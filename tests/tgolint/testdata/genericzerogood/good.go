@@ -43,6 +43,9 @@ func Safe() {
 		model.NewEventStarted(model.EventStarted{}),
 	)
 	genericzero.Maybe[model.Event](false)
+	genericzero.Mutated[model.Event](true)
+	genericzero.Copied[model.Event](false)
+	genericzero.ReadByCall[model.Event](false)
 	genericzero.Unless[model.Event](true)
 	genericzero.Recursive[model.Event](false)
 	genericzero.Never[model.Event]()
@@ -52,6 +55,10 @@ func Safe() {
 	genericzerowrap.Make[model.Event](0)
 	_ = genericzero.MaybeStarted(false, model.NewEventStarted(model.EventStarted{}))
 	_ = genericzero.UnlessStarted(true, model.NewEventStarted(model.EventStarted{}))
+	enabled := false
+	genericzero.Maybe[model.Event](enabled)
+	length := 0
+	_ = genericzero.Make[model.Event](length)
 	makeEvents := genericzero.Make[model.Event]
 	_ = makeEvents(0)
 	factory := genericzero.Factory[model.Event]{}

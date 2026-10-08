@@ -185,6 +185,9 @@ func TestGoInterop(t *testing.T) {
 }
 
 func TestGeneratedCost(t *testing.T) {
+	if unsafe.Sizeof(model.Signal{}) != unsafe.Sizeof(uint8(0)) {
+		t.Fatal("payload-free enum is larger than its tag")
+	}
 	type accountLayout struct {
 		tag      uint8
 		personal model.AccountPersonal

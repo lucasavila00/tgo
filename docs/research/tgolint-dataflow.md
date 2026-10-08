@@ -5,11 +5,17 @@ The official
 builds SSA and a control-flow graph for each source function. The official
 [`nilness`](https://pkg.go.dev/golang.org/x/tools/go/analysis/passes/nilness) analyzer
 uses SSA dominance for branch facts.
+The Go compiler also stores immediate dominators and uses a
+[`SparseTree`](https://go.dev/src/cmd/compile/internal/ssa/sparsetree.go) for fast
+dominance queries. Go analysis facts support separate analysis across package boundaries.
 
-The current tgolint implementation does not use SSA dominance. It uses
-[`go/cfg`](https://pkg.go.dev/golang.org/x/tools/go/cfg) to remove unreachable syntax.
-It reads supported path conditions from the typed AST. It stores these conditions in
-the exported generic effect fact. It marks other control paths as unresolved.
+The current tgolint implementation uses
+[`go/cfg`](https://pkg.go.dev/golang.org/x/tools/go/cfg) for local control flow. A forward
+fixed-point analysis tracks Boolean and integer constants and direct parameter aliases.
+Each join keeps only facts that agree on every incoming path. A proven constant branch removes
+its dead edge. Typed AST conditions keep call parameters in exported generic effect facts.
+Go analysis facts carry a separate wire form across packages. The checker decodes that form to
+TGo sum types before use.
 
 For a generic call, `will` means that the analyzed operation will run and its unsafe
 event is proved. The analyzer uses these event rules:
@@ -29,8 +35,14 @@ event is proved. The analyzer uses these event rules:
 A fresh channel is proved to be open. A constant key in a map literal is proved to be
 present or absent. A concrete assertion is proved to succeed or fail. Constant slice
 bounds prove whether `clear` or a reslice produces a zero. These proofs can suppress a
-diagnostic. A mutable condition parameter, a runtime value, and an unsupported control
-path remain unresolved. The diagnostic uses `can` for these cases.
+diagnostic. Scalar assignments and local aliases can make a call prove `will` or `never`.
+Passing a Boolean or integer by value does not erase its fact. Taking its address or capturing
+it in a closure does. Package variables, free variables, narrowing conversions, mutable
+containers, runtime values, and unsupported paths remain unresolved. The diagnostic uses
+`can` for these cases.
+
+Model facts include the package path and type name. Two packages can declare the same type
+name without merging their models. Generic unions that mix those models stay mixed.
 
 A local generic function or method value is checked at each direct call. The call
 arguments decide its value conditions. An unresolved escape reports that the effects

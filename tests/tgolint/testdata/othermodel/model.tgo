@@ -1,0 +1,5 @@
+package othermodel
+
+type Event enum {
+	Started struct { Code int }
+}

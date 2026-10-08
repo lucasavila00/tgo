@@ -21,9 +21,9 @@ func newAnalyzer() *analysis.Analyzer {
 	analyzer.Doc = "check Go use of generated tgo types"
 	analyzer.Run = run
 	analyzer.FactTypes = []analysis.Fact{
-		new(modelFact),
+		new(modelWireFact),
 		new(validationFact),
-		new(genericEffectFact),
+		new(genericEffectWireFact),
 		new(runtimeFact),
 		new(invalidPackageFact),
 	}
@@ -32,7 +32,7 @@ func newAnalyzer() *analysis.Analyzer {
 
 type checker struct {
 	pass       *analysis.Pass
-	models     map[objectKey]*modelFact
+	models     map[objectKey]*model
 	validated  map[types.Object]bool
 	callTarget map[types.Object]types.Object
 	generated  map[*ast.File]bool
@@ -44,8 +44,9 @@ type checker struct {
 	escaped    map[types.Object]token.Pos
 	reported   map[diagnosticKey]bool
 	function   ast.Node
-	zeroTypes  map[*types.TypeParam]*modelFact
-	capture    func(*modelFact, ast.Expr)
+	zeroTypes  map[*types.TypeParam]*model
+	capture    func(*model, ast.Expr)
+	scalarFlows map[ast.Node]*scalarFlow
 	invalid    bool
 }
 
@@ -66,7 +67,7 @@ type diagnosticKey struct {
 func run(pass *analysis.Pass) (any, error) {
 	c := &checker{
 		pass:       pass,
-		models:     make(map[objectKey]*modelFact),
+		models:     make(map[objectKey]*model),
 		validated:  make(map[types.Object]bool),
 		callTarget: make(map[types.Object]types.Object),
 		generated:  make(map[*ast.File]bool),
@@ -80,6 +81,7 @@ func run(pass *analysis.Pass) (any, error) {
 		function:   nil,
 		zeroTypes:  nil,
 		capture:    nil,
+		scalarFlows: make(map[ast.Node]*scalarFlow),
 		invalid:    false,
 	}
 	if c.rejectInvalidDependencies() {

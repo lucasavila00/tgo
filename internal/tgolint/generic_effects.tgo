@@ -8,30 +8,52 @@ import (
 	"strings"
 )
 
-// genericEffectFact records unsafe effects on generic type arguments.
-type genericEffectFact struct {
-	ZeroEffects           []genericEffect
-	AccessEffects         []genericEffect
-	ReturnedZeroEffects   []genericEffect
-	ReturnedAccessEffects []genericEffect
+// genericEffectWireFact carries generic effects between analysis packages.
+type genericEffectWireFact struct {
+	ZeroEffects           []genericEffectWire
+	AccessEffects         []genericEffectWire
+	ReturnedZeroEffects   []genericEffectWire
+	ReturnedAccessEffects []genericEffectWire
 }
 
-func (*genericEffectFact) AFact() {}
+func (*genericEffectWireFact) AFact() {}
 
 type zeroParameter struct {
 	receiver bool
 	index    int
 }
 
-const (
-	effectBoolean = iota + 1
-	effectNonzero
-	effectNonempty
-	effectMapMiss
-	effectChannelClosed
-	effectAssertionFails
-	effectResliceExtends
-)
+type effectKind enum {
+	Boolean struct{}
+	Nonzero struct{}
+	Nonempty struct{}
+	MapMiss struct{}
+	ChannelClosed struct{}
+	AssertionFails struct{}
+	ResliceExtends struct{}
+}
+
+func booleanEffectCondition() effectKind {
+	return effectKind.Boolean{}
+}
+func nonzeroEffectConditionKind() effectKind {
+	return effectKind.Nonzero{}
+}
+func nonemptyEffectCondition() effectKind {
+	return effectKind.Nonempty{}
+}
+func mapMissEffectCondition() effectKind {
+	return effectKind.MapMiss{}
+}
+func closedChannelEffectCondition() effectKind {
+	return effectKind.ChannelClosed{}
+}
+func failedAssertionEffectCondition() effectKind {
+	return effectKind.AssertionFails{}
+}
+func extendingResliceEffectCondition() effectKind {
+	return effectKind.ResliceExtends{}
+}
 
 // genericEffect is a serializable condition for one type argument effect.
 type genericEffect struct {
@@ -44,8 +66,125 @@ type genericEffect struct {
 type genericEffectCondition struct {
 	ValueParameter int
 	OtherParameter int
-	Kind           int
+	Kind           effectKind
 	Expected       bool
+}
+
+type genericEffectSet struct {
+	ZeroEffects           []genericEffect
+	AccessEffects         []genericEffect
+	ReturnedZeroEffects   []genericEffect
+	ReturnedAccessEffects []genericEffect
+}
+
+type genericEffectWire struct {
+	Receiver      bool
+	TypeParameter int
+	Conditions    []genericEffectConditionWire
+	MaySkip       bool
+}
+
+type genericEffectConditionWire struct {
+	ValueParameter int
+	OtherParameter int
+	Kind           uint8
+	Expected       bool
+}
+
+const (
+	booleanConditionWire       uint8 = 1
+	nonzeroConditionWire       uint8 = 2
+	nonemptyConditionWire      uint8 = 3
+	mapMissConditionWire       uint8 = 4
+	channelClosedConditionWire uint8 = 5
+	assertionFailsConditionWire uint8 = 6
+	resliceExtendsConditionWire uint8 = 7
+)
+
+func effectConditionCode(kind effectKind) uint8 {
+	match kind {
+	case Boolean(_): return booleanConditionWire
+	case Nonzero(_): return nonzeroConditionWire
+	case Nonempty(_): return nonemptyConditionWire
+	case MapMiss(_): return mapMissConditionWire
+	case ChannelClosed(_): return channelClosedConditionWire
+	case AssertionFails(_): return assertionFailsConditionWire
+	case ResliceExtends(_): return resliceExtendsConditionWire
+	}
+}
+
+func decodeEffectConditionKind(code uint8) (effectKind, bool) {
+	switch code {
+	case booleanConditionWire: return booleanEffectCondition(), true
+	case nonzeroConditionWire: return nonzeroEffectConditionKind(), true
+	case nonemptyConditionWire: return nonemptyEffectCondition(), true
+	case mapMissConditionWire: return mapMissEffectCondition(), true
+	case channelClosedConditionWire: return closedChannelEffectCondition(), true
+	case assertionFailsConditionWire: return failedAssertionEffectCondition(), true
+	case resliceExtendsConditionWire: return extendingResliceEffectCondition(), true
+	default: return booleanEffectCondition(), false
+	}
+}
+
+func encodeGenericEffects(effects []genericEffect) []genericEffectWire {
+	encoded := make([]genericEffectWire, 0, len(effects))
+	for _, effect := range effects {
+		conditions := make([]genericEffectConditionWire, 0, len(effect.Conditions))
+		for _, condition := range effect.Conditions {
+			conditions = append(conditions, genericEffectConditionWire{
+				ValueParameter: condition.ValueParameter,
+				OtherParameter: condition.OtherParameter,
+				Kind: effectConditionCode(condition.Kind),
+				Expected: condition.Expected,
+			})
+		}
+		encoded = append(encoded, genericEffectWire{
+			Receiver: effect.Receiver, TypeParameter: effect.TypeParameter,
+			Conditions: conditions, MaySkip: effect.MaySkip,
+		})
+	}
+	return encoded
+}
+
+func decodeGenericEffects(encoded []genericEffectWire) ([]genericEffect, bool) {
+	effects := make([]genericEffect, 0, len(encoded))
+	for _, item := range encoded {
+		conditions := make([]genericEffectCondition, 0, len(item.Conditions))
+		for _, encodedCondition := range item.Conditions {
+			kind, ok := decodeEffectConditionKind(encodedCondition.Kind)
+			if !ok {
+				return nil, false
+			}
+			conditions = append(conditions, genericEffectCondition{
+				ValueParameter: encodedCondition.ValueParameter,
+				OtherParameter: encodedCondition.OtherParameter,
+				Kind: kind, Expected: encodedCondition.Expected,
+			})
+		}
+		effects = append(effects, genericEffect{
+			Receiver: item.Receiver, TypeParameter: item.TypeParameter,
+			Conditions: conditions, MaySkip: item.MaySkip,
+		})
+	}
+	return effects, true
+}
+
+func decodeGenericEffectFact(fact *genericEffectWireFact) *genericEffectSet {
+	if fact == nil {
+		return nil
+	}
+	zero, zeroOK := decodeGenericEffects(fact.ZeroEffects)
+	access, accessOK := decodeGenericEffects(fact.AccessEffects)
+	returnedZero, returnedZeroOK := decodeGenericEffects(fact.ReturnedZeroEffects)
+	returnedAccess, returnedAccessOK := decodeGenericEffects(fact.ReturnedAccessEffects)
+	if !zeroOK || !accessOK || !returnedZeroOK || !returnedAccessOK {
+		return nil
+	}
+	return &genericEffectSet{
+		ZeroEffects: zero, AccessEffects: access,
+		ReturnedZeroEffects: returnedZero,
+		ReturnedAccessEffects: returnedAccess,
+	}
 }
 
 type genericEffectSummary struct {
@@ -187,7 +326,7 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 			if node.Op == token.ARROW && !c.commaOK(node) {
 				c.markConditionalGenericZero(
 					summary, node, firstType(c.pass.TypesInfo.TypeOf(node)),
-					effectChannelClosed, node.X, nil,
+					closedChannelEffectCondition(), node.X, nil,
 				)
 			}
 		case *ast.SliceExpr:
@@ -248,13 +387,11 @@ func (c *checker) collectGenericPresenceZeros(summary *genericEffectSummary) {
 	}()
 
 	for parameter, reference := range summary.parameters {
-		model := &modelFact{
-			Kind: "generic", Name: "type argument", Variants: nil, Mixed: false,
-		}
+		currentModel := parameterModel()
 		var sources []ast.Expr = nil
-		c.zeroTypes = map[*types.TypeParam]*modelFact{parameter: model}
-		c.capture = func(candidate *modelFact, source ast.Expr) {
-			if candidate == model {
+		c.zeroTypes = map[*types.TypeParam]*model{parameter: currentModel}
+		c.capture = func(candidate *model, source ast.Expr) {
+			if candidate == currentModel {
 				sources = append(sources, source)
 			}
 		}
@@ -281,20 +418,18 @@ func (c *checker) markGenericPresenceEffect(
 	switch source := source.(type) {
 	case *ast.IndexExpr:
 		c.markConditionalGenericZero(
-			summary, source, typ, effectMapMiss, source.X, source.Index,
+			summary, source, typ, mapMissEffectCondition(), source.X, source.Index,
 		)
 	case *ast.UnaryExpr:
 		c.markConditionalGenericZero(
-			summary, source, typ, effectChannelClosed, source.X, nil,
+			summary, source, typ, closedChannelEffectCondition(), source.X, nil,
 		)
 	case *ast.TypeAssertExpr:
 		c.markConditionalGenericZero(
-			summary, source, typ, effectAssertionFails, source.X, nil,
+			summary, source, typ, failedAssertionEffectCondition(), source.X, nil,
 		)
 	default:
-		c.markGenericZeroWith(
-			summary, source, typ, noGenericEffectCondition(), true,
-		)
+		c.markGenericZeroWith(summary, source, typ, nil, true)
 	}
 }
 
@@ -349,31 +484,37 @@ func (c *checker) collectCallZeros(summary *genericEffectSummary, call *ast.Call
 			c.markGenericZeroAt(summary, call, c.pass.TypesInfo.TypeOf(call.Args[0]))
 		}
 	case "make":
-		if len(call.Args) < 2 {
-			return
-		}
-		if slice, ok := coreType(c.pass.TypesInfo.TypeOf(call.Args[0])).(*types.Slice); ok {
-			condition, outcome := c.nonzeroEffectCondition(summary, call.Args[1])
-			switch outcome {
-			case effectNever:
-				return
-			case effectAlways:
-				c.markGenericZeroAt(summary, call, slice.Elem())
-			case effectConditional:
-				c.markGenericZeroWith(summary, call, slice.Elem(), condition, false)
-			case effectUnknown:
-				c.markGenericZeroWith(summary, call, slice.Elem(), noGenericEffectCondition(), true)
-			}
-		}
+		c.collectMakeZeros(summary, call)
 	case "clear":
 		if len(call.Args) != 1 {
 			return
 		}
 		if slice, ok := coreType(c.pass.TypesInfo.TypeOf(call.Args[0])).(*types.Slice); ok {
 			c.markConditionalGenericZero(
-				summary, call, slice.Elem(), effectNonempty, call.Args[0], nil,
+			summary, call, slice.Elem(), nonemptyEffectCondition(), call.Args[0], nil,
 			)
 		}
+	}
+}
+
+func (c *checker) collectMakeZeros(
+	summary *genericEffectSummary,
+	call *ast.CallExpr,
+) {
+	if len(call.Args) < 2 {
+		return
+	}
+	slice, ok := coreType(c.pass.TypesInfo.TypeOf(call.Args[0])).(*types.Slice)
+	if !ok {
+		return
+	}
+	condition, outcome := c.nonzeroEffectCondition(call.Args[1])
+	match outcome {
+	case Never(_): return
+	case Always(_): c.markGenericZeroAt(summary, call, slice.Elem())
+	case Conditional(_):
+		c.markGenericZeroWith(summary, call, slice.Elem(), condition, false)
+	case Unknown(_): c.markGenericZeroWith(summary, call, slice.Elem(), nil, true)
 	}
 }
 
@@ -390,7 +531,7 @@ func (c *checker) collectMapReadZero(
 	mapping, ok := coreType(c.pass.TypesInfo.TypeOf(index.X)).(*types.Map)
 	if ok {
 		c.markConditionalGenericZero(
-			summary, index, mapping.Elem(), effectMapMiss, index.X, index.Index,
+			summary, index, mapping.Elem(), mapMissEffectCondition(), index.X, index.Index,
 		)
 	}
 }
@@ -406,7 +547,7 @@ func (c *checker) collectResliceZero(
 	slice, ok := coreType(c.pass.TypesInfo.TypeOf(expression.X)).(*types.Slice)
 	if ok {
 		c.markConditionalGenericZero(
-			summary, expression, slice.Elem(), effectResliceExtends,
+			summary, expression, slice.Elem(), extendingResliceEffectCondition(),
 			expression.X, expression.High,
 		)
 	}
@@ -505,11 +646,5 @@ func literalHasHoles(info *types.Info, literal *ast.CompositeLit, length int64) 
 func noGenericEffect() genericEffect {
 	return genericEffect{
 		Receiver: false, TypeParameter: 0, Conditions: nil, MaySkip: false,
-	}
-}
-
-func noGenericEffectCondition() genericEffectCondition {
-	return genericEffectCondition{
-		ValueParameter: 0, OtherParameter: 0, Kind: 0, Expected: false,
 	}
 }
