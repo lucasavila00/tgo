@@ -89,7 +89,7 @@ Keep Go mutation and copy rules. A struct copy shares its maps and slice data.
 An explicitly supplied nil or zero is valid where the type permits it.
 In tgo, enums and checked wrappers cannot be created by zero-filling allocation.
 Use empty slices plus initialized values. Require presence tests for missing map entries.
-Collection and default rules are defined in the [notes](../../research/go/tgo/notes.md).
+Collection and default rules are defined in the [notes](notes.md).
 
 ## 4. Go is a trusted boundary
 
@@ -126,4 +126,4 @@ A declared constructor check stays. Hidden read checks, validation wrappers, and
 Compare time, allocations, layout size, and generated calls. Reject costly layouts or helpers.
 The enum layout and accessor calls still need this proof. No performance result is claimed yet.
 
-[Rules, tradeoffs, and sources](../../research/go/tgo/notes.md).
+[Rules, tradeoffs, and sources](notes.md).

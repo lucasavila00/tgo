@@ -1,4 +1,4 @@
-"""Check Markdown line width. Exclude AGENTS.md and docs/research/go/."""
+"""Check Markdown line width. Exclude AGENTS.md."""
 
 import os
 from pathlib import Path
@@ -16,8 +16,6 @@ proposal_roots = (Path("docs/archive/tgo"),)
 for raw_path in sorted(set(paths) - {b""}):
     path = Path(os.fsdecode(raw_path))
     if path.name == "AGENTS.md" or path.suffix.lower() not in {".md", ".markdown"}:
-        continue
-    if path.is_relative_to("docs/research/go"):
         continue
     proposal = next((root for root in proposal_roots if path.is_relative_to(root)), None)
     if staged:
