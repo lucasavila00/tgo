@@ -16,6 +16,11 @@ type Tagged struct {
     tgoTag uint8
 }
 
+type MarkerRecord struct {
+    __tgo_defaults bool
+    Name string = "default"
+}
+
 type Account enum {
     Personal struct { Name string }
     Business struct {
@@ -82,6 +87,50 @@ func AnonymousPoint() struct { X int } {
 
 func Tag(value Tagged) uint8 {
     return value.tgoTag
+}
+
+func MatchName(account Account) string {
+    __tgo_match_1 := "source"
+    match account {
+    case Personal(_): return __tgo_match_1
+    case Business(_): return __tgo_match_1
+    }
+}
+
+func __tgo_match(value int) int {
+    return value
+}
+
+func MarkerSwitch(value int) string {
+    switch __tgo_match(value) {
+    case 1: return "one"
+    default: return "other"
+    }
+}
+
+func ExplicitMarker() MarkerRecord {
+    return MarkerRecord{__tgo_defaults: true, Name: "set"}
+}
+
+func SelectedMarker() MarkerRecord {
+    return MarkerRecord{__tgo_defaults: false, ..default}
+}
+
+func MarkerValues(value MarkerRecord) (bool, string) {
+    return value.__tgo_defaults, value.Name
+}
+
+func AliasAccount(name string) Account {
+    return AccountAlias.Personal{Name: name}
+}
+
+func LabeledMatch(account Account) string {
+Done:
+    match account {
+    case Personal(_): break Done
+    case Business(_): break Done
+    }
+    return "done"
 }
 
 func NoticeLabels(notice Notice) map[string]string {

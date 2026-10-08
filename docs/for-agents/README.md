@@ -48,6 +48,8 @@ func Label(account Account) string {
 Construct with `Account.Personal{Name: "Lucas"}`. Cover every variant in `match`.
 Use `_` to discard a payload. Duplicate or missing cases fail compilation.
 Do not use `fallthrough` in a match or select `Tgo*` methods through an interface.
+Type aliases can construct variants. Go name resolution selects the aliased type.
+Do not shadow generated payload, constructor, or default helper names at a construction.
 The value uses a tag and typed Go fields. Reads do not run validation.
 
 Call `NewQuantity(input)` and check its error. Use `quantity.Value()` for the underlying value.

@@ -8,12 +8,14 @@ import (
 
 // sourceParser reads tgo extensions. The Go parser reads all other syntax.
 type sourceParser struct {
-	name   string
-	input  string
-	tokens []lexeme
-	cursor int
-	edits  []edit
-	models []*model
+	name          string
+	input         string
+	tokens        []lexeme
+	cursor        int
+	edits         []edit
+	models        []*model
+	matchMarker   string
+	defaultMarker string
 }
 
 // parseSource lowers tgo syntax and parses the result as a Go file.
@@ -27,7 +29,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		return nil, fmt.Errorf("%s:%w", name, err)
 	}
 	input := applyEdits(reader.input, reader.edits)
-	input, err = rewriteExpressions(name, input)
+	input, markers, err := rewriteExpressions(name, input)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +38,13 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	if err != nil {
 		return nil, err
 	}
-	return &source{Name: name, File: file, Models: reader.models}, nil
+	return &source{
+		Name:          name,
+		File:          file,
+		Models:        reader.models,
+		MatchMarker:   markers.match,
+		DefaultMarker: markers.defaults,
+	}, nil
 }
 
 // has reports whether a token at the current offset has the given kind.

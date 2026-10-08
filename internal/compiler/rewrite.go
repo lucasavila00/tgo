@@ -8,19 +8,35 @@ import (
 	"strings"
 )
 
+type rewriteMarkers struct {
+	match    string
+	defaults string
+}
+
 // rewriteExpressions makes match and default markers valid Go syntax.
-func rewriteExpressions(name, input string) (string, error) {
+func rewriteExpressions(name, input string) (string, rewriteMarkers, error) {
 	tokens, err := lex(name, input)
 	if err != nil {
-		return "", err
+		return "", rewriteMarkers{}, err
 	}
 
-	parser := sourceParser{name: name, input: input, tokens: tokens}
+	used := identifierNames(tokens)
+	markers := rewriteMarkers{
+		match:    freshIdentifier("__tgo_match", used),
+		defaults: freshIdentifier("__tgo_defaults", used),
+	}
+	parser := sourceParser{
+		name:          name,
+		input:         input,
+		tokens:        tokens,
+		matchMarker:   markers.match,
+		defaultMarker: markers.defaults,
+	}
 	for parser.cursor < len(tokens) {
 		switch {
 		case parser.currentText() == "match":
 			if err := parser.rewriteMatch(); err != nil {
-				return "", fmt.Errorf("%s:%w", name, err)
+				return "", rewriteMarkers{}, fmt.Errorf("%s:%w", name, err)
 			}
 		case parser.atDefaultMarker():
 			parser.rewriteDefaultMarker()
@@ -29,7 +45,28 @@ func rewriteExpressions(name, input string) (string, error) {
 		}
 	}
 
-	return applyEdits(input, parser.edits), nil
+	return applyEdits(input, parser.edits), markers, nil
+}
+
+// identifierNames gets every identifier spelling in one source file.
+func identifierNames(tokens []lexeme) map[string]bool {
+	names := make(map[string]bool)
+	for _, item := range tokens {
+		if item.kind == token.IDENT {
+			names[item.text] = true
+		}
+	}
+	return names
+}
+
+// freshIdentifier gets an internal name absent from source tokens.
+func freshIdentifier(base string, used map[string]bool) string {
+	name := base
+	for suffix := 1; used[name]; suffix++ {
+		name = fmt.Sprintf("%s_%d", base, suffix)
+	}
+	used[name] = true
+	return name
 }
 
 // currentText returns the current token text or an empty string at the end.
@@ -59,7 +96,7 @@ func (p *sourceParser) rewriteMatch() error {
 		edit{
 			start: p.tokens[keyword].start,
 			end:   p.tokens[keyword].end,
-			text:  "switch __tgo_match(",
+			text:  "switch " + p.matchMarker + "(",
 		},
 		edit{
 			start: openingBrace.start,
@@ -83,7 +120,7 @@ func (p *sourceParser) rewriteDefaultMarker() {
 	p.edits = append(p.edits, edit{
 		start: p.tokens[p.cursor].start,
 		end:   p.tokens[p.cursor+2].end,
-		text:  "__tgo_defaults: true",
+		text:  p.defaultMarker + ": true",
 	})
 	p.cursor += 3
 }

@@ -57,6 +57,53 @@ func TestBusiness(t *testing.T) {
 	if model.Tag(model.Tagged{}) != 0 {
 		t.Fatal("ordinary tgoTag field became private")
 	}
+	person := model.Personal("Lucas")
+	if model.MatchName(person) != "source" {
+		t.Fatal("match temporary captured a source name")
+	}
+	if model.MarkerSwitch(1) != "one" {
+		t.Fatal("ordinary switch became a match")
+	}
+	explicitFlag, explicitName := model.MarkerValues(model.ExplicitMarker())
+	defaultFlag, defaultName := model.MarkerValues(model.SelectedMarker())
+	if !explicitFlag || explicitName != "set" || defaultFlag || defaultName != "default" {
+		t.Fatal("default marker captured a source field")
+	}
+	if model.Label(model.AliasAccount("Alias")) != "Alias" ||
+		model.Label(app.ImportedAlias("Imported")) != "Imported" ||
+		model.Label(app.LocalImportedAlias("Local")) != "Local" {
+		t.Fatal("alias variant construction failed")
+	}
+	if request := app.LocalImportedRequest("local"); request.ID != "local" || len(request.Tags) != 0 {
+		t.Fatal("alias default construction failed")
+	}
+	if model.LabeledMatch(person) != "done" {
+		t.Fatal("match label did not label the switch")
+	}
+	reexported, ok := app.ReexportedAccount("Bridge").(model.Account)
+	if !ok || model.Label(reexported) != "Bridge" {
+		t.Fatal("re-exported enum alias used the wrong owner")
+	}
+	onlyReexported, ok := app.OnlyReexportedAccount("Only").(model.Account)
+	if !ok || model.Label(onlyReexported) != "Only" {
+		t.Fatal("lowered enum alias lost its bridge import")
+	}
+	goReexported, ok := app.GoReexportedAccount("Go bridge").(model.Account)
+	if !ok || model.Label(goReexported) != "Go bridge" {
+		t.Fatal("Go enum alias used the wrong owner")
+	}
+	goRequest, ok := app.GoReexportedRequest("Go request").(model.Request)
+	if !ok || goRequest.ID != "Go request" || len(goRequest.Tags) != 0 {
+		t.Fatal("Go default alias used the wrong owner")
+	}
+	reexportedRequest, ok := app.ReexportedRequest("bridge").(model.Request)
+	if !ok || reexportedRequest.ID != "bridge" || len(reexportedRequest.Tags) != 0 {
+		t.Fatal("re-exported default alias used the wrong owner")
+	}
+	completeRequest, ok := app.CompleteReexportedRequest("complete").(model.Request)
+	if !ok || completeRequest.ID != "complete" || len(completeRequest.Tags) != 0 {
+		t.Fatal("complete default selection added an unused owner")
+	}
 	exposed := model.ExposedQuantity{}
 	if model.ConvertExposed[model.ExposedQuantity](exposed) != exposed {
 		t.Fatal("constraint intersection admitted a checked type")

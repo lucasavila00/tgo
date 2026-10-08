@@ -1,0 +1,5 @@
+package invalid
+
+type error interface{}
+
+type Quantity int where value > 0

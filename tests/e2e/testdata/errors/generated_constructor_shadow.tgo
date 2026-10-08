@@ -1,0 +1,11 @@
+package invalid
+
+type Account enum {
+	Personal struct { Name string }
+}
+
+func invalidAccount() any {
+	type AccountPersonal struct { Name string }
+	NewAccountPersonal := func(AccountPersonal) string { return "captured" }
+	return Account.Personal{Name: "invalid"}
+}

@@ -31,33 +31,27 @@ func ReadInt(values <-chan int) (int, bool) {
 }
 
 func Nested(account model.Account) string {
-	{
-		__tgo_match_2 := account
-		switch __tgo_match_2.TgoTag() {
+	switch __tgo_match_2 := account; __tgo_match_2.TgoTag() {
+	case 1:
+		person := __tgo_match_2.TgoPersonal()
+		return person.Name
+	case 2:
+		company := __tgo_match_2.TgoBusiness()
+		if len(company.Members) == 0 {
+			return company.Company
+		}
+		switch __tgo_match_3 := company.Members[0]; __tgo_match_3.TgoTag() {
 		case 1:
-			person := __tgo_match_2.TgoPersonal()
+			person := __tgo_match_3.TgoPersonal()
 			return person.Name
 		case 2:
-			company := __tgo_match_2.TgoBusiness()
-			if len(company.Members) == 0 {
-				return company.Company
-			}
-			{
-				__tgo_match_3 := company.Members[0]
-				switch __tgo_match_3.TgoTag() {
-				case 1:
-					person := __tgo_match_3.TgoPersonal()
-					return person.Name
-				case 2:
-					child := __tgo_match_3.TgoBusiness()
-					return child.Company
-				default:
-					panic("invalid Account variant")
-				}
-			}
+			child := __tgo_match_3.TgoBusiness()
+			return child.Company
 		default:
 			panic("invalid Account variant")
 		}
+	default:
+		panic("invalid Account variant")
 	}
 }
 

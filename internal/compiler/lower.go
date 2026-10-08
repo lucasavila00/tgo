@@ -2,14 +2,24 @@ package compiler
 
 import (
 	"go/ast"
+	"go/types"
 )
 
 // prepare marks generated declarations and lowers constructors and defaults.
 func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
+	p.erasedImports = make(map[*ast.ImportSpec]bool)
+	p.references = nil
+	p.usedIdentifiers = nil
 	for _, source := range p.Sources {
 		p.markGenerated(source)
 		p.addDefaults(source)
+	}
+}
+
+// lowerConstructions resolves and lowers enum variant literals.
+func (p *packageUnit) lowerConstructions() {
+	for _, source := range p.Sources {
 		transform(source.File, func(node ast.Node) ast.Node {
 			return p.lowerConstruction(source.File, node)
 		})
@@ -123,15 +133,25 @@ func (p *packageUnit) lowerConstruction(file *ast.File, node ast.Node) ast.Node 
 	if !ok {
 		return node
 	}
-	_, model, prefix := p.modelExpr(file, selector.X)
+	if !p.info.Types[selector.X].IsType() {
+		return node
+	}
+	typ := p.info.TypeOf(selector.X)
+	owner, model := p.modelOwner(typ)
 	if model == nil || len(model.Variants) == 0 {
 		return node
 	}
+	named := types.Unalias(typ).(*types.Named)
+	path := owner.Path
+	p.markErasedOwnerImport(file, selector.X, named.Obj().Pkg())
+	prefix := p.ownerQualifier(file, named.Obj().Pkg())
+	at := selector.Sel.Pos()
 	for _, variant := range model.Variants {
 		if selector.Sel.Name == variant.Name {
 			payload := model.Name + variant.Name
-			literal.Type = qualify(prefix, payload)
-			return call(qualify(prefix, "New"+payload), literal)
+			literal.Type = p.generatedObject(prefix, path, payload, at)
+			constructor := p.generatedObject(prefix, path, "New"+payload, at)
+			return call(constructor, literal)
 		}
 	}
 	p.fail(literal, "unknown variant %s.%s", model.Name, selector.Sel.Name)

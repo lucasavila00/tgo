@@ -27,6 +27,8 @@ func NewBusiness(company string) Account {
 Use `match` to read the active payload. Cover every variant. Use `_` for an unused payload.
 Do not access representation fields or call generated `Tgo*` accessors from tgo source.
 Do not use `fallthrough` in a match. Do not select `Tgo*` methods through interfaces.
+Type aliases can construct variants. Go name resolution selects the aliased type.
+Do not shadow generated payload, constructor, or default helper names at a construction.
 
 ```text
 func Label(account Account) string {

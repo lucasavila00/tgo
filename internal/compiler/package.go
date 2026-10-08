@@ -12,33 +12,36 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 )
 
 type packageUnit struct {
-	Dir, Path      string
-	Sources        []*source
-	Files          []*ast.File
-	Models         map[string]*model
-	Imports        map[string]*packageUnit
-	sourcePaths    []string
-	matchingPaths  []string
-	generatedPaths []string
-	knownOS        map[string]bool
-	knownArch      map[string]bool
-	sourcesMatched bool
-	loaded         bool
-	matchError     error
-	loadError      error
-	fs             *token.FileSet
-	info           *types.Info
-	typed          *types.Package
-	generated      map[ast.Decl]bool
-	errors         []error
-	serial         int
+	Dir, Path       string
+	Sources         []*source
+	Files           []*ast.File
+	Models          map[string]*model
+	Imports         map[string]*packageUnit
+	sourcePaths     []string
+	matchingPaths   []string
+	generatedPaths  []string
+	knownOS         map[string]bool
+	knownArch       map[string]bool
+	sourcesMatched  bool
+	loaded          bool
+	matchError      error
+	loadError       error
+	fs              *token.FileSet
+	info            *types.Info
+	typed           *types.Package
+	generated       map[ast.Decl]bool
+	erasedImports   map[*ast.ImportSpec]bool
+	references      []generatedReference
+	usedIdentifiers map[string]bool
+	typeErrors      []error
+	errors          []error
+	serial          int
 }
 
 // outputPath returns the Go output path while preserving target suffixes.
@@ -64,8 +67,13 @@ func (p *packageUnit) outputPath(sourcePath string) string {
 
 // fail records a source error for later reporting.
 func (p *packageUnit) fail(n ast.Node, pattern string, args ...any) {
+	p.failAt(n.Pos(), pattern, args...)
+}
+
+// failAt records a source error at one stable token position.
+func (p *packageUnit) failAt(position token.Pos, pattern string, args ...any) {
 	message := fmt.Sprintf(pattern, args...)
-	p.errors = append(p.errors, fmt.Errorf("%s: %s", p.fs.Position(n.Pos()), message))
+	p.errors = append(p.errors, fmt.Errorf("%s: %s", p.fs.Position(position), message))
 }
 
 // newInfo makes the maps that the Go type checker fills.
@@ -74,6 +82,7 @@ func newInfo() *types.Info {
 		Types:      make(map[ast.Expr]types.TypeAndValue),
 		Defs:       make(map[*ast.Ident]types.Object),
 		Uses:       make(map[*ast.Ident]types.Object),
+		Implicits:  make(map[ast.Node]types.Object),
 		Selections: make(map[*ast.SelectorExpr]*types.Selection),
 		Scopes:     make(map[ast.Node]*types.Scope),
 		Instances:  make(map[*ast.Ident]types.Instance),
@@ -81,7 +90,7 @@ func newInfo() *types.Info {
 }
 
 // typecheck checks all Go and lowered tgo files in one package.
-func (p *packageUnit) typecheck(strict bool) error {
+func (p *packageUnit) typecheck() {
 	p.info = newInfo()
 	var problems []error
 	cache := map[string]string{}
@@ -101,10 +110,7 @@ func (p *packageUnit) typecheck(strict bool) error {
 	})
 	conf := types.Config{Importer: imp, Error: func(e error) { problems = append(problems, e) }}
 	p.typed, _ = conf.Check(p.Path, p.fs, p.Files, p.info)
-	if strict && len(problems) > 0 {
-		return problems[0]
-	}
-	return nil
+	p.typeErrors = problems
 }
 
 // transform replaces nodes after visiting their children.
@@ -119,60 +125,27 @@ func transform(node ast.Node, change func(ast.Node) ast.Node) ast.Node {
 	})
 }
 
-// modelForType returns tgo metadata for a local or imported named type.
-func (p *packageUnit) modelForType(t types.Type) *model {
+// modelOwner returns the package and metadata for one tgo named type.
+func (p *packageUnit) modelOwner(t types.Type) (*packageUnit, *model) {
 	t = types.Unalias(t)
 	n, ok := t.(*types.Named)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	owner := p
 	if n.Obj().Pkg() != nil && n.Obj().Pkg().Path() != p.Path {
 		owner = p.Imports[n.Obj().Pkg().Path()]
 	}
 	if owner == nil {
-		return nil
+		return nil, nil
 	}
-	return owner.Models[n.Obj().Name()]
+	return owner, owner.Models[n.Obj().Name()]
 }
 
-// modelExpr resolves a type expression to its tgo package and model.
-func (p *packageUnit) modelExpr(f *ast.File, e ast.Expr) (*packageUnit, *model, string) {
-	switch x := e.(type) {
-	case *ast.Ident:
-		return p, p.Models[x.Name], ""
-	case *ast.SelectorExpr:
-		id, ok := x.X.(*ast.Ident)
-		if !ok {
-			return nil, nil, ""
-		}
-		for _, im := range f.Imports {
-			path, _ := strconv.Unquote(im.Path.Value)
-			dep := p.Imports[path]
-			if dep == nil {
-				continue
-			}
-			alias := filepath.Base(path)
-			if len(dep.Sources) > 0 {
-				alias = dep.Sources[0].File.Name.Name
-			}
-			if im.Name != nil {
-				alias = im.Name.Name
-			}
-			if alias == id.Name {
-				return dep, dep.Models[x.Sel.Name], alias
-			}
-		}
-	}
-	return nil, nil, ""
-}
-
-// qualify makes a local name or a package-qualified name.
-func qualify(prefix, name string) ast.Expr {
-	if prefix == "" {
-		return ast.NewIdent(name)
-	}
-	return &ast.SelectorExpr{X: ast.NewIdent(prefix), Sel: ast.NewIdent(name)}
+// modelForType returns tgo metadata for a local or imported named type.
+func (p *packageUnit) modelForType(t types.Type) *model {
+	_, declaration := p.modelOwner(t)
+	return declaration
 }
 
 // call makes a Go call expression.
@@ -187,16 +160,32 @@ func (p *packageUnit) compile() (map[string][]byte, error) {
 	if len(p.errors) > 0 {
 		return nil, p.errors[0]
 	}
-	if err := p.typecheck(false); err != nil {
-		return nil, err
+	p.typecheck()
+	p.checkGeneratedPredeclaredNames()
+	if len(p.errors) > 0 {
+		return nil, p.errors[0]
+	}
+	p.lowerConstructions()
+	p.typecheck()
+	if p.blankUnusedErasedImports() {
+		p.typecheck()
+	}
+	p.validateGeneratedReferences()
+	if len(p.errors) > 0 {
+		return nil, p.errors[0]
 	}
 	p.fillDefaults()
 	p.lowerMatches()
 	if len(p.errors) > 0 {
 		return nil, p.errors[0]
 	}
-	if err := p.typecheck(true); err != nil {
-		return nil, err
+	p.typecheck()
+	p.validateGeneratedReferences()
+	if len(p.errors) > 0 {
+		return nil, p.errors[0]
+	}
+	if len(p.typeErrors) > 0 {
+		return nil, p.typeErrors[0]
 	}
 	p.checkRules()
 	if len(p.errors) > 0 {

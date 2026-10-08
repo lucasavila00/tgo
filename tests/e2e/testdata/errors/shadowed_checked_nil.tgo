@@ -1,0 +1,5 @@
+package invalid
+
+var nil error
+
+type Quantity int where value > 0

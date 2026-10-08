@@ -52,9 +52,11 @@ type model struct {
 }
 
 type source struct {
-	Name   string
-	File   *ast.File
-	Models []*model
+	Name          string
+	File          *ast.File
+	Models        []*model
+	MatchMarker   string
+	DefaultMarker string
 }
 
 // requiresConstructor reports whether a model type has an invalid zero value.

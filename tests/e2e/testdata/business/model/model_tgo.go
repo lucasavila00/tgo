@@ -34,6 +34,11 @@ type Tagged struct {
 	tgoTag uint8
 }
 
+type MarkerRecord struct {
+	__tgo_defaults bool
+	Name           string
+}
+
 // Account requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type Account struct {
@@ -125,34 +130,28 @@ func Business(company string, members []Account, tags map[string]string) Account
 }
 
 func Label(account Account) string {
-	{
-		__tgo_match_1 := account
-		switch __tgo_match_1.TgoTag() {
-		case 1:
-			person := __tgo_match_1.TgoPersonal()
-			return person.Name
-		case 2:
-			company := __tgo_match_1.TgoBusiness()
-			return company.Company
-		default:
-			panic("invalid Account variant")
-		}
+	switch __tgo_match_3 := account; __tgo_match_3.TgoTag() {
+	case 1:
+		person := __tgo_match_3.TgoPersonal()
+		return person.Name
+	case 2:
+		company := __tgo_match_3.TgoBusiness()
+		return company.Company
+	default:
+		panic("invalid Account variant")
 	}
 }
 
 func AliasLabel(account AccountAlias) string {
-	{
-		__tgo_match_2 := account
-		switch __tgo_match_2.TgoTag() {
-		case 1:
-			person := __tgo_match_2.TgoPersonal()
-			return person.Name
-		case 2:
-			company := __tgo_match_2.TgoBusiness()
-			return company.Company
-		default:
-			panic("invalid Account variant")
-		}
+	switch __tgo_match_4 := account; __tgo_match_4.TgoTag() {
+	case 1:
+		person := __tgo_match_4.TgoPersonal()
+		return person.Name
+	case 2:
+		company := __tgo_match_4.TgoBusiness()
+		return company.Company
+	default:
+		panic("invalid Account variant")
 	}
 }
 
@@ -176,16 +175,67 @@ func Tag(value Tagged) uint8 {
 	return value.tgoTag
 }
 
+func MatchName(account Account) string {
+	__tgo_match_1 := "source"
+	switch __tgo_match_5 := account; __tgo_match_5.TgoTag() {
+	case 1:
+		return __tgo_match_1
+	case 2:
+		return __tgo_match_1
+	default:
+		panic("invalid Account variant")
+	}
+}
+
+func __tgo_match(value int) int {
+	return value
+}
+
+func MarkerSwitch(value int) string {
+	switch __tgo_match(value) {
+	case 1:
+		return "one"
+	default:
+		return "other"
+	}
+}
+
+func ExplicitMarker() MarkerRecord {
+	return MarkerRecord{__tgo_defaults: true, Name: "set"}
+}
+
+func SelectedMarker() MarkerRecord {
+	return MarkerRecord{__tgo_defaults: false, Name: TgoDefaultMarkerRecordName()}
+}
+
+func MarkerValues(value MarkerRecord) (bool, string) {
+	return value.__tgo_defaults, value.Name
+}
+
+func AliasAccount(name string) Account {
+	return NewAccountPersonal(AccountPersonal{Name: name})
+}
+
+func LabeledMatch(account Account) string {
+Done:
+	switch __tgo_match_6 := account; __tgo_match_6.TgoTag() {
+	case 1:
+		break Done
+	case 2:
+		break Done
+	default:
+		panic("invalid Account variant")
+	}
+	return "done"
+}
+
 func NoticeLabels(notice Notice) map[string]string {
-	{
-		__tgo_match_3 := notice
-		switch __tgo_match_3.TgoTag() {
-		case 1:
-			text := __tgo_match_3.TgoText()
-			return text.Labels
-		default:
-			panic("invalid Notice variant")
-		}
+	switch __tgo_match_7 := notice; __tgo_match_7.TgoTag() {
+	case 1:
+		text := __tgo_match_7.TgoText()
+		return text.Labels
+	default:
+		panic("invalid Notice variant")
 	}
 }
 
@@ -195,6 +245,9 @@ func NewRequest(id string) Request {
 
 func NewMessage(id string) Message {
 	return Message{ID: id, Tags: TgoDefaultMessageTags()}
+}
+func TgoDefaultMarkerRecordName() string {
+	return "default"
 }
 func TgoDefaultNoticeTextLabels() map[string]string {
 	return map[string]string{}

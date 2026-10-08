@@ -1,0 +1,15 @@
+package invalid
+
+type Result enum {
+	Success struct{}
+	Failure struct{}
+}
+
+func invalidMatch(value Result) {
+	panic := func(any) {}
+	match value {
+	case Success(_): return
+	case Failure(_): return
+	}
+	_ = panic
+}

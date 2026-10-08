@@ -62,7 +62,7 @@ func (p *packageUnit) fillDefaults() {
 			}
 			ast.Inspect(declaration, func(node ast.Node) bool {
 				if literal, ok := node.(*ast.CompositeLit); ok {
-					p.fillLiteralDefaults(literal)
+					p.fillLiteralDefaults(source.File, literal, source.DefaultMarker)
 				}
 				return true
 			})
@@ -71,13 +71,17 @@ func (p *packageUnit) fillDefaults() {
 }
 
 // fillLiteralDefaults adds omitted default fields to one composite literal.
-func (p *packageUnit) fillLiteralDefaults(literal *ast.CompositeLit) {
+func (p *packageUnit) fillLiteralDefaults(
+	file *ast.File,
+	literal *ast.CompositeLit,
+	marker string,
+) {
 	marked := false
 	supplied := make(map[string]bool)
 	elements := make([]ast.Expr, 0, len(literal.Elts))
 	for _, element := range literal.Elts {
 		name := fieldName(element)
-		if name == "__tgo_defaults" {
+		if name == marker {
 			if marked {
 				p.fail(literal, "duplicate ..default")
 			}
@@ -90,12 +94,13 @@ func (p *packageUnit) fillLiteralDefaults(literal *ast.CompositeLit) {
 	if !marked {
 		return
 	}
-	name, fields := p.literalFields(p.info.TypeOf(literal))
+	owner, name, fields := p.literalFields(p.info.TypeOf(literal))
 	if name == "" {
 		p.fail(literal, "..default needs a tgo struct with declared defaults")
 		return
 	}
-	prefix := typeQualifier(literal.Type)
+	prefix := ""
+	qualified := false
 	for _, field := range fields {
 		if supplied[field.Name] {
 			continue
@@ -104,7 +109,17 @@ func (p *packageUnit) fillLiteralDefaults(literal *ast.CompositeLit) {
 			p.fail(literal, "missing required field %s", field.Name)
 			continue
 		}
-		helper := qualify(prefix, "TgoDefault"+name+field.Name)
+		if !qualified {
+			named := types.Unalias(p.info.TypeOf(literal)).(*types.Named)
+			prefix = p.ownerQualifier(file, named.Obj().Pkg())
+			qualified = true
+		}
+		helper := p.generatedObject(
+			prefix,
+			owner.Path,
+			"TgoDefault"+name+field.Name,
+			literal.Lbrace,
+		)
 		elements = append(elements, &ast.KeyValueExpr{
 			Key:   ast.NewIdent(field.Name),
 			Value: call(helper),
@@ -126,42 +141,29 @@ func fieldName(expression ast.Expr) string {
 	return name.Name
 }
 
-// typeQualifier returns the package name from a qualified type expression.
-func typeQualifier(expression ast.Expr) string {
-	selector, ok := expression.(*ast.SelectorExpr)
-	if !ok {
-		return ""
-	}
-	name, ok := selector.X.(*ast.Ident)
-	if !ok {
-		return ""
-	}
-	return name.Name
-}
-
 // literalFields returns tgo fields for a struct or variant payload type.
-func (p *packageUnit) literalFields(typ types.Type) (string, []field) {
-	if model := p.modelForType(typ); model != nil {
-		return model.Name, model.Fields
+func (p *packageUnit) literalFields(typ types.Type) (*packageUnit, string, []field) {
+	if owner, model := p.modelOwner(typ); model != nil {
+		return owner, model.Name, model.Fields
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
 	if !ok {
-		return "", nil
+		return nil, "", nil
 	}
 	owner := p
 	if named.Obj().Pkg() != nil && named.Obj().Pkg().Path() != p.Path {
 		owner = p.Imports[named.Obj().Pkg().Path()]
 	}
 	if owner == nil {
-		return "", nil
+		return nil, "", nil
 	}
 	for _, model := range owner.Models {
 		for _, variant := range model.Variants {
 			name := model.Name + variant.Name
 			if name == named.Obj().Name() {
-				return name, variant.Fields
+				return owner, name, variant.Fields
 			}
 		}
 	}
-	return "", nil
+	return nil, "", nil
 }

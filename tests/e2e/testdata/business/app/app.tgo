@@ -6,6 +6,9 @@ import (
     "slices"
 )
 
+type LocalAccountAlias = model.Account
+type LocalRequestAlias = model.Request
+
 func Summary(name string) string {
     account := model.Account.Personal{Name: name}
     match account {
@@ -26,4 +29,16 @@ func Sorted(values []int) []int {
     result := slices.Clone(values)
     slices.Sort(result)
     return result
+}
+
+func ImportedAlias(name string) model.Account {
+	return model.AccountAlias.Personal{Name: name}
+}
+
+func LocalImportedAlias(name string) model.Account {
+	return LocalAccountAlias.Personal{Name: name}
+}
+
+func LocalImportedRequest(id string) model.Request {
+	return LocalRequestAlias{ID: id, ..default}
 }

@@ -23,7 +23,7 @@ func (p *packageUnit) lowerMatches() {
 					return true
 				}
 				tag, ok := statement.Tag.(*ast.CallExpr)
-				if !ok || !ident(tag.Fun, "__tgo_match") {
+				if !ok || !ident(tag.Fun, source.MatchMarker) {
 					return true
 				}
 				cursor.Replace(p.lowerMatch(statement, tag))
@@ -35,10 +35,7 @@ func (p *packageUnit) lowerMatches() {
 			return
 		}
 		// An outer case introduces bindings needed to type nested matches.
-		if err := p.typecheck(false); err != nil {
-			p.errors = append(p.errors, err)
-			return
-		}
+		p.typecheck()
 	}
 }
 
@@ -53,8 +50,7 @@ func (p *packageUnit) lowerMatch(statement *ast.SwitchStmt, tag *ast.CallExpr) a
 		p.fail(statement, "match needs an enum value")
 		return statement
 	}
-	p.serial++
-	temporary := fmt.Sprintf("__tgo_match_%d", p.serial)
+	temporary := p.nextMatchName()
 	seen := make(map[string]bool)
 	for _, body := range statement.Body.List {
 		clause := body.(*ast.CaseClause)
@@ -66,13 +62,29 @@ func (p *packageUnit) lowerMatch(statement *ast.SwitchStmt, tag *ast.CallExpr) a
 		}
 	}
 	statement.Tag = methodCall(temporary, "TgoTag")
-	statement.Body.List = append(statement.Body.List, invalidVariantCase(model.Name))
-	binding := &ast.AssignStmt{
+	statement.Body.List = append(
+		statement.Body.List,
+		p.invalidVariantCase(model.Name, statement.Switch),
+	)
+	statement.Init = &ast.AssignStmt{
 		Lhs: []ast.Expr{ast.NewIdent(temporary)},
 		Tok: token.DEFINE,
 		Rhs: tag.Args,
 	}
-	return &ast.BlockStmt{List: []ast.Stmt{binding, statement}}
+	return statement
+}
+
+// nextMatchName gets a package-wide temporary that cannot capture source names.
+func (p *packageUnit) nextMatchName() string {
+	p.collectUsedIdentifiers()
+	for {
+		p.serial++
+		name := fmt.Sprintf("__tgo_match_%d", p.serial)
+		if !p.usedIdentifiers[name] {
+			p.usedIdentifiers[name] = true
+			return name
+		}
+	}
 }
 
 // lowerCase validates one variant case and binds its payload.
@@ -180,11 +192,11 @@ func methodCall(receiver, method string) *ast.CallExpr {
 }
 
 // invalidVariantCase emits the panic path for a foreign invalid enum.
-func invalidVariantCase(name string) *ast.CaseClause {
+func (p *packageUnit) invalidVariantCase(name string, at token.Pos) *ast.CaseClause {
 	message := &ast.BasicLit{
 		Kind:  token.STRING,
 		Value: strconv.Quote("invalid " + name + " variant"),
 	}
-	failure := &ast.ExprStmt{X: call(ast.NewIdent("panic"), message)}
+	failure := &ast.ExprStmt{X: call(p.generatedUniverse("panic", at), message)}
 	return &ast.CaseClause{Body: []ast.Stmt{failure}}
 }

@@ -74,6 +74,13 @@ A variant literal constructs one valid value:
 account := Account.Personal{Name: "Lucas"}
 ```
 
+The type name uses Go name resolution. A type alias can name the enum.
+A local declaration that shadows the type name does not construct a variant.
+The constructor and payload come from the package that owns the aliased type.
+The compiler adds a private import when that package is not imported in the source file.
+If lowering removes the last bridge use, the emitted file keeps a blank import.
+The alias can be in a tgo file or a Go file in the same module.
+
 Every payload field follows the struct literal rules in this specification.
 Payloads may use Go types, including pointers, slices, maps, channels, and interfaces.
 Go rejects a direct recursive payload when its size is infinite.
@@ -145,8 +152,7 @@ A match case may not use `fallthrough`.
 The subject is evaluated once. A match lowers to this shape:
 
 ```go
-value := account
-switch value.TgoTag() {
+switch value := account; value.TgoTag() {
 case 1:
     person := value.TgoPersonal()
     return person.Name
@@ -160,6 +166,7 @@ default:
 
 The payload binding is a Go value copy. Reference fields keep their Go aliases.
 Accessors do not check the tag. The final switch case catches an invalid foreign tag.
+A label on a match labels the emitted switch.
 
 ## Checked types
 
@@ -234,6 +241,7 @@ A default that returns existing reference data keeps its Go aliases.
 `..default` may appear once in a literal for a tgo struct or variant payload.
 It may not supply a required field or apply to an ordinary Go struct.
 Go struct tags are copied to emitted fields.
+Internal marker names do not reserve source field names.
 
 ## Explicit initialization
 
@@ -357,12 +365,17 @@ TgoDefaultTF
 ```
 
 A source declaration that collides with a generated name is a compile error.
+Internal match variables use names that do not occur in the package source.
+An inserted reference must resolve to its generated declaration. A local name cannot capture it.
+An enum reserves its emitted `uint8`, `uint16`, or `uint32` tag name.
+A checked type reserves the predeclared `string`, `error`, and `nil` names.
 
 ## Build command and diagnostics
 
 `tgo build` builds the current package. `tgo build ./...` builds matching packages below it.
 Local tgo dependencies build before their importers.
-The compiler parses only selected packages and their local tgo dependencies.
+The build follows local Go-only packages that lead to tgo dependencies.
+It parses selected packages, required tgo packages, and imports from local Go bridges.
 
 A successful build formats and writes every generated file.
 It removes an owned output when its source no longer exists.

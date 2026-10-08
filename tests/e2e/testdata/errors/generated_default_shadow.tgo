@@ -1,0 +1,11 @@
+package invalid
+
+type Request struct {
+	ID string
+	Labels []string = []string{"default"}
+}
+
+func invalidRequest() Request {
+	TgoDefaultRequestLabels := func() []string { return []string{"captured"} }
+	return Request{ID: "invalid", ..default}
+}

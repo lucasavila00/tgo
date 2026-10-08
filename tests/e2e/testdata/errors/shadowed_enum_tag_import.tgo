@@ -1,0 +1,7 @@
+package invalid
+
+import uint8 "fmt"
+
+type Result enum {
+	Success struct{}
+}

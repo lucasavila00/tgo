@@ -8,20 +8,20 @@ import (
 	"slices"
 )
 
+type LocalAccountAlias = model.Account
+type LocalRequestAlias = model.Request
+
 func Summary(name string) string {
 	account := model.NewAccountPersonal(model.AccountPersonal{Name: name})
-	{
-		__tgo_match_1 := account
-		switch __tgo_match_1.TgoTag() {
-		case 1:
-			person := __tgo_match_1.TgoPersonal()
-			return fmt.Sprintf("person %s", person.Name)
-		case 2:
-			company := __tgo_match_1.TgoBusiness()
-			return company.Company
-		default:
-			panic("invalid Account variant")
-		}
+	switch __tgo_match_1 := account; __tgo_match_1.TgoTag() {
+	case 1:
+		person := __tgo_match_1.TgoPersonal()
+		return fmt.Sprintf("person %s", person.Name)
+	case 2:
+		company := __tgo_match_1.TgoBusiness()
+		return company.Company
+	default:
+		panic("invalid Account variant")
 	}
 }
 
@@ -37,4 +37,16 @@ func Sorted(values []int) []int {
 	result := slices.Clone(values)
 	slices.Sort(result)
 	return result
+}
+
+func ImportedAlias(name string) model.Account {
+	return model.NewAccountPersonal(model.AccountPersonal{Name: name})
+}
+
+func LocalImportedAlias(name string) model.Account {
+	return model.NewAccountPersonal(model.AccountPersonal{Name: name})
+}
+
+func LocalImportedRequest(id string) model.Request {
+	return LocalRequestAlias{ID: id, Tags: model.TgoDefaultRequestTags()}
 }

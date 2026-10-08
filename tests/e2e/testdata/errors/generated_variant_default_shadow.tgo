@@ -1,0 +1,12 @@
+package invalid
+
+type Result enum {
+	Success struct {
+		Labels []string = []string{"default"}
+	}
+}
+
+func invalidResult() Result {
+	TgoDefaultResultSuccessLabels := func() []string { return []string{"captured"} }
+	return Result.Success{..default}
+}

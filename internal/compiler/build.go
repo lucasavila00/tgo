@@ -47,6 +47,8 @@ func Build(directory string, patterns []string) (err error) {
 	}
 	builder := packageBuilder{
 		packages: packages,
+		root:     root,
+		module:   module,
 		states:   make(map[string]buildState),
 		previous: make(map[string]previousFile),
 		current:  make(map[string]previousFile),
@@ -603,6 +605,8 @@ type previousFile struct {
 
 type packageBuilder struct {
 	packages map[string]*packageUnit
+	root     string
+	module   string
 	states   map[string]buildState
 	previous map[string]previousFile
 	current  map[string]previousFile
@@ -623,6 +627,15 @@ func (b *packageBuilder) build(path string) error {
 		return err
 	}
 	if len(unit.Sources) == 0 {
+		imports, err := b.localGoImports(path)
+		if err != nil {
+			return err
+		}
+		for _, dependency := range imports {
+			if err := b.buildImport(dependency); err != nil {
+				return err
+			}
+		}
 		if err := b.removeStaleOutputs(unit, expectedOutputs(unit, nil)); err != nil {
 			return err
 		}
@@ -630,18 +643,7 @@ func (b *packageBuilder) build(path string) error {
 		return nil
 	}
 	for _, dependency := range importsOf(unit.Files) {
-		dep := b.packages[dependency]
-		if dep == nil {
-			continue
-		}
-		available, err := dep.available()
-		if err != nil {
-			return err
-		}
-		if !available {
-			continue
-		}
-		if err := b.build(dependency); err != nil {
+		if err := b.buildImport(dependency); err != nil {
 			return err
 		}
 	}
@@ -660,6 +662,121 @@ func (b *packageBuilder) build(path string) error {
 	}
 	b.states[path] = buildDone
 	return nil
+}
+
+// buildImport follows local Go packages until it reaches each tgo package.
+func (b *packageBuilder) buildImport(path string) error {
+	if dependency := b.packages[path]; dependency != nil {
+		available, err := dependency.available()
+		if err != nil {
+			return err
+		}
+		if available {
+			return b.build(path)
+		}
+	}
+	if path != b.module && !strings.HasPrefix(path, b.module+"/") {
+		return nil
+	}
+	switch b.states[path] {
+	case buildDone:
+		return nil
+	case buildActive:
+		return fmt.Errorf("import cycle at %s", path)
+	}
+	b.states[path] = buildActive
+	imports, err := b.localGoImports(path)
+	if err != nil {
+		return err
+	}
+	for _, dependency := range imports {
+		if err := b.buildImport(dependency); err != nil {
+			return err
+		}
+	}
+	b.states[path] = buildDone
+	return nil
+}
+
+// localGoImports reads active Go imports from one package in the main module.
+func (b *packageBuilder) localGoImports(path string) ([]string, error) {
+	relative := strings.TrimPrefix(path, b.module)
+	relative = strings.TrimPrefix(relative, "/")
+	directory := filepath.Clean(filepath.Join(b.root, filepath.FromSlash(relative)))
+	inside, err := filepath.Rel(b.root, directory)
+	if err != nil {
+		return nil, err
+	}
+	if inside == ".." || strings.HasPrefix(inside, ".."+string(filepath.Separator)) {
+		return nil, nil
+	}
+	nested, err := nestedModule(directory, b.root)
+	if err != nil {
+		return nil, err
+	}
+	if nested {
+		return nil, nil
+	}
+	entries, err := os.ReadDir(directory)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	files := make([]*ast.File, 0)
+	set := token.NewFileSet()
+	for _, entry := range entries {
+		file, err := activeGoImportFile(set, directory, entry)
+		if err != nil {
+			return nil, err
+		}
+		if file != nil {
+			files = append(files, file)
+		}
+	}
+	return importsOf(files), nil
+}
+
+// activeGoImportFile reads imports from one active user Go file.
+func activeGoImportFile(
+	set *token.FileSet,
+	directory string,
+	entry os.DirEntry,
+) (*ast.File, error) {
+	name := entry.Name()
+	if entry.IsDir() || !strings.HasSuffix(name, ".go") ||
+		strings.HasSuffix(name, "_test.go") {
+		return nil, nil
+	}
+	path := filepath.Join(directory, name)
+	if generatedFileName(name) {
+		owned, err := generatedFile(path)
+		if err != nil || owned {
+			return nil, err
+		}
+	}
+	matches, err := build.Default.MatchFile(directory, name)
+	if err != nil || !matches {
+		return nil, err
+	}
+	return parser.ParseFile(set, path, nil, parser.ImportsOnly)
+}
+
+// nestedModule reports whether a directory belongs to another module.
+func nestedModule(directory string, root string) (bool, error) {
+	for current := directory; current != root; current = filepath.Dir(current) {
+		if _, err := os.Stat(filepath.Join(current, "go.mod")); err == nil {
+			return true, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return false, err
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // expectedOutputs includes active output and output owned by inactive source.
