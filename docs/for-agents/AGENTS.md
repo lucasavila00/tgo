@@ -102,6 +102,8 @@ Map `clear` removes entries and is allowed. Native `copy` keeps Go overlap behav
 
 Go calls use the original Go types. No boundary validation is added.
 Go can build invalid zero values or change shared data after a call. Keep the caller contract.
+Keep named Go types. Keep callback, interface, channel, pointer, variadic, generic,
+and typed nil behavior. Do not add adapters only to cross the boundary.
 
 ```go
 quantity, err := model.NewQuantity(3)

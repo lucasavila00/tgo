@@ -19,6 +19,20 @@ def run(command, cwd, *, success=True):
     return result.stdout + result.stderr
 
 
+def check_direct_ffi(work):
+    generated = (work / "app" / "ffi_tgo.go").read_text()
+    calls = [
+        "store.Load(id)",
+        "legacy.Map(accounts",
+        "legacy.Stream(accounts...)",
+        "legacy.Update(account",
+        "legacy.TypedNilError()",
+        "legacy.Wrap(prefix, values...)",
+    ]
+    for call in calls:
+        assert call in generated, f"generated FFI call is not direct: {call}"
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="tgo-e2e-") as temporary:
         temporary = Path(temporary)
@@ -31,6 +45,8 @@ def main():
             run([str(compiler), "build", "./..."], work)
             for path, expected in committed.items():
                 assert path.read_bytes() == expected, f"regenerate committed output: {path}"
+            if fixture.name == "business":
+                check_direct_ffi(work)
             outputs = {path: path.read_bytes() for path in work.rglob("*_tgo.go")}
             run([str(compiler), "build", "./..."], work)
             assert outputs == {path: path.read_bytes() for path in outputs}

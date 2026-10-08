@@ -95,6 +95,10 @@ The parser checkpoint separates declarations, fields, and expression rewrites.
 Field parsing uses Go syntax data for types and tags. CI checks 100-character Go lines,
 complexity, duplication, error handling, formatting, and unused code.
 
+The FFI checkpoint compiles direct calls to Go interfaces, methods, generics, callbacks,
+channels, named types, variadic functions, pointers, and errors. Tests keep error identity,
+typed nil behavior, aliases, and callback mutation. A tested enum match allocates no heap data.
+
 The implementation is still in progress. More control-flow forms, Go type forms, source error
 positions, package build edge cases, and cost comparisons need more tests and work.
 Do not treat a passing initial test suite as proof of every rule in the proposal.
