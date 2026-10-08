@@ -1,12 +1,13 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/constant"
 	"go/token"
 	"go/types"
 
 	"tgo/internal/compiler"
+	"tgo/internal/sourcefacts"
+	"tgo/pkg/syntax"
 )
 
 type iotaCandidate struct {
@@ -22,34 +23,41 @@ func (c %checker) checkIotaModernization(analysis *compiler.AnalysisPackage) {
 	if analysis == nil {
 		return
 	}
-	for _, file := range analysis.Files {
-		for _, declaration := range file.Decls {
-			group, ok := declaration.(*ast.GenDecl)
-			if ok && group.Tok == token.CONST {
-				c.checkIotaGroup(group, analysis.Info)
+	for _, source := range analysis.Sources {
+		index := sourcefacts.New(
+			source.Projected, analysis.Info, analysis.FileSet,
+		)
+		for _, declaration := range source.Syntax.Declarations {
+			general, ok := sourceGeneralDeclaration(declaration)
+			if !ok || general.Kind != token.CONST {
+				continue
 			}
+			c.checkIotaGroup(general, index)
 		}
 	}
 }
 
 // checkIotaGroup reports each defined integer type that forms one closed list.
-func (c %checker) checkIotaGroup(group *ast.GenDecl, info *types.Info) {
+func (c %checker) checkIotaGroup(
+	group *syntax.GeneralDeclaration,
+	facts *sourcefacts.Index,
+) {
 	candidates := make(map[*types.Named]%iotaCandidate)
 	ordered := make([]%iotaCandidate, 0)
-	values := []ast.Expr(nil)
+	values := []*syntax.Expression(nil)
 	for _, specification := range group.Specs {
-		item, ok := specification.(*ast.ValueSpec)
+		item, ok := sourceValueSpecification(specification)
 		if !ok {
 			continue
 		}
 		if len(item.Values) != 0 {
 			values = item.Values
 		}
-		for index, identifier := range item.Names {
-			if identifier.Name == "_" || index >= len(values) {
+		for position, identifier := range item.Names {
+			if identifier.Name == "_" || position >= len(values) {
 				continue
 			}
-			object, ok := info.Defs[identifier].(*types.Const)
+			object, ok := facts.DefinitionName(identifier).(*types.Const)
 			if !ok {
 				continue
 			}
@@ -61,13 +69,13 @@ func (c %checker) checkIotaGroup(group *ast.GenDecl, info *types.Info) {
 			if created {
 				ordered = append(ordered, candidate)
 			}
-			position, usesIota := iotaPosition(values[index], info)
+			iotaPosition, usesIota := facts.IotaPosition(values[position])
 			candidate.values = append(candidate.values, object.Val())
 			candidate.allIota = candidate.allIota && usesIota
 			candidate.bitSet = candidate.bitSet ||
-				(usesIota && hasBitSetOperator(values[index]))
+				(usesIota && facts.HasBitSetOperator(values[position]))
 			if candidate.position == token.NoPos && usesIota {
-				candidate.position = position
+				candidate.position = iotaPosition
 			}
 		}
 	}
@@ -102,40 +110,6 @@ func iotaCandidateFor(
 func integerNamedType(typ *types.Named) bool {
 	basic, ok := typ.Underlying().(*types.Basic)
 	return ok && basic.Info()&types.IsInteger != 0
-}
-
-// iotaPosition finds the predeclared iota in one constant expression.
-func iotaPosition(expression ast.Expr, info *types.Info) (token.Pos, bool) {
-	position := token.NoPos
-	ast.Inspect(expression, func(node ast.Node) bool {
-		identifier, ok := node.(*ast.Ident)
-		if ok && info.Uses[identifier] == types.Universe.Lookup("iota") {
-			position = identifier.Pos()
-			return false
-		}
-		return position == token.NoPos
-	})
-	return position, position != token.NoPos
-}
-
-// hasBitSetOperator excludes constant expressions that build bit masks.
-func hasBitSetOperator(expression ast.Expr) bool {
-	found := false
-	ast.Inspect(expression, func(node ast.Node) bool {
-		switch item := node.(type) {
-		case *ast.BinaryExpr:
-			switch item.Op {
-			case token.SHL, token.SHR, token.OR, token.AND, token.XOR, token.AND_NOT:
-				found = true
-			}
-		case *ast.UnaryExpr:
-			if item.Op == token.XOR {
-				found = true
-			}
-		}
-		return !found
-	})
-	return found
 }
 
 // iotaEnumCandidate checks the typed values and the expression source.

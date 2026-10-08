@@ -4,11 +4,19 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+
+	"tgo/pkg/syntax"
 )
 
-// AnalysisPackage contains checked TGo source before Go output is formatted.
+// AnalysisSource pairs source syntax with its typed Go projection.
+type AnalysisSource struct {
+	Syntax    *syntax.File
+	Projected *ast.File
+}
+
+// AnalysisPackage contains checked TGo source and its typed projection.
 type AnalysisPackage struct {
-	Files   []*ast.File
+	Sources []AnalysisSource
 	FileSet *token.FileSet
 	Info    *types.Info
 	Package *types.Package
@@ -49,16 +57,18 @@ func AnalyzePackage(
 	if err := unit.checkAndLower(); err != nil {
 		return nil, err
 	}
-	sourceFiles := make([]*ast.File, 0, len(unit.Sources))
+	sources := make([]AnalysisSource, 0, len(unit.Sources))
 	nonNil := make(map[token.Pos]bool)
 	for _, source := range unit.Sources {
-		sourceFiles = append(sourceFiles, source.File)
+		sources = append(sources, AnalysisSource{
+			Syntax: source.Tree, Projected: source.File,
+		})
 		for position := range source.NonNil {
 			nonNil[position] = true
 		}
 	}
 	return &AnalysisPackage{
-		Files: sourceFiles, FileSet: unit.fs, Info: unit.info,
+		Sources: sources, FileSet: unit.fs, Info: unit.info,
 		Package: unit.typed, NonNil: nonNil,
 	}, nil
 }
