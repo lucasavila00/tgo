@@ -63,6 +63,13 @@ def normalize_output(output, work):
     return output.replace(str(work), "<WORK>")
 
 
+def check_fixture_format():
+    files = sorted(str(path) for path in FIXTURES.rglob("*.go"))
+    output = run(["gofmt", "-d", *files], ROOT)
+    assert output == "", f"format committed fixture Go files\n{output}"
+    print("PASS fixture Go formatting")
+
+
 def check_error_cases(compiler, temporary, update):
     passed = 0
     for source in sorted(ERROR_CASES.glob("*.tgo")):
@@ -94,6 +101,7 @@ def check_error_cases(compiler, temporary, update):
 
 def main():
     update = "--update-errors" in sys.argv[1:]
+    check_fixture_format()
     with tempfile.TemporaryDirectory(prefix="tgo-e2e-") as temporary:
         temporary = Path(temporary)
         compiler = temporary / "tgo"
