@@ -1,0 +1,36 @@
+package model
+
+type Quantity int where value > 0
+
+type Account enum {
+    Personal struct { Name string }
+    Business struct {
+        Company string
+        Members []Account
+        Tags map[string]string
+    }
+}
+
+type Request struct {
+    ID string
+    Tags map[string]string = map[string]string{}
+}
+
+func Personal(name string) Account {
+    return Account.Personal{Name: name}
+}
+
+func Business(company string, members []Account, tags map[string]string) Account {
+    return Account.Business{Company: company, Members: members, Tags: tags}
+}
+
+func Label(account Account) string {
+    match account {
+    case Personal(person): return person.Name
+    case Business(company): return company.Company
+    }
+}
+
+func NewRequest(id string) Request {
+    return Request{ID: id, ..default}
+}

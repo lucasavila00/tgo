@@ -1,7 +1,21 @@
-.PHONY: ci install-hooks
+.PHONY: ci lint test build install-hooks install-tools
 
-ci:
+ci: lint test
 	python3 scripts/check_markdown.py
+
+lint:
+	golangci-lint run ./...
+	golangci-lint fmt --diff
+
+test:
+	go test ./...
+	python3 tests/e2e/run.py
+
+build:
+	go build -o bin/tgo ./cmd/tgo
+
+install-tools:
+	sh scripts/install-lint.sh
 
 install-hooks:
 	git config --local core.hooksPath .githooks

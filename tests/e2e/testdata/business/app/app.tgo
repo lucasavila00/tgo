@@ -1,0 +1,25 @@
+package app
+
+import (
+    "example.com/business/model"
+    "fmt"
+    "slices"
+)
+
+func Summary(name string) string {
+    account := model.Account.Personal{Name: name}
+    match account {
+    case Personal(person): return fmt.Sprintf("person %s", person.Name)
+    case Business(company): return company.Company
+    }
+}
+
+func Request(id string) model.Request {
+    return model.Request{ID: id, ..default}
+}
+
+func Sorted(values []int) []int {
+    result := slices.Clone(values)
+    slices.Sort(result)
+    return result
+}
