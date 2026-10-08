@@ -9,7 +9,7 @@ import (
 )
 
 // anchorPropagations replaces each call with its tgo expression in the public tree.
-func (p *sourceParser) anchorPropagations(file *frontFile, anchors map[frontNode]frontNode) {
+func (p %sourceParser) anchorPropagations(file %frontFile, anchors map[frontNode]frontNode) {
 	parents := make(map[frontNode]frontNode)
 	var visit func(frontNode) = nil
 	visit = func(node frontNode) {
@@ -32,9 +32,9 @@ func (p *sourceParser) anchorPropagations(file *frontFile, anchors map[frontNode
 	}
 }
 
-func (p *sourceParser) makeMatch(
+func (p %sourceParser) makeMatch(
 	raw *rawMatch,
-) *frontMatchStmt {
+) %frontMatchStmt {
 	node := &frontMatchStmt{
 		frontSpan:    frontSpan{Start: p.pos(p.tokens[raw.matchToken].start), Stop: p.pos(raw.end)},
 		Match:   p.pos(p.tokens[raw.matchToken].start),
@@ -71,17 +71,17 @@ func (p *sourceParser) makeMatch(
 	return node
 }
 
-func (p *sourceParser) caseBodyStart(item *rawCase) int {
+func (p %sourceParser) caseBodyStart(item *rawCase) int {
 	if item.bodyStart < item.bodyEnd {
 		return p.tokens[item.bodyStart].start
 	}
 	return p.tokens[item.colon].end
 }
 
-func (p *sourceParser) makeDeclaration(
+func (p %sourceParser) makeDeclaration(
 	raw *rawDecl,
 	matchAt map[token.Pos]frontNode,
-	defaultAt map[token.Pos]*frontDefaultMarker,
+	defaultAt map[token.Pos]%frontDefaultMarker,
 ) (frontNode, map[frontNode]frontNode, error) {
 	anchors := make(map[frontNode]frontNode)
 	name := &ast.Ident{
@@ -189,10 +189,10 @@ func (p *sourceParser) makeDeclaration(
 	}
 }
 
-func (p *sourceParser) makeFields(
+func (p %sourceParser) makeFields(
 	rawFields []*rawField,
 	matchAt map[token.Pos]frontNode,
-	defaultAt map[token.Pos]*frontDefaultMarker,
+	defaultAt map[token.Pos]%frontDefaultMarker,
 ) ([]*frontFieldDecl, map[frontNode]frontNode, error) {
 	fields := make([]*frontFieldDecl, 0, len(rawFields))
 	anchors := make(map[frontNode]frontNode)
@@ -242,7 +242,7 @@ func (p *sourceParser) makeFields(
 	return fields, anchors, nil
 }
 
-func (p *sourceParser) parseField(start int, end int) (*ast.Field, error) {
+func (p %sourceParser) parseField(start int, end int) (*ast.Field, error) {
 	const prefix = "package p\ntype _ struct {\n"
 	from := p.tokens[start].start
 	to := p.tokens[end-1].end
@@ -273,15 +273,20 @@ func (p *sourceParser) parseField(start int, end int) (*ast.Field, error) {
 	temporary := set.File(file.Package)
 	delta := int(p.pos(p.tokens[start].start)) - int(temporary.Pos(len(prefix)))
 	shiftTokenPositions(field, delta)
-	p.sanitize(field, nil, nil, make(map[frontNode]frontNode))
+	p.sanitize(
+		field,
+		nil,
+		make(map[token.Pos]%frontDefaultMarker),
+		make(map[frontNode]frontNode),
+	)
 	return field, nil
 }
 
-func (p *sourceParser) parseExpression(
+func (p %sourceParser) parseExpression(
 	start int,
 	end int,
 	matchAt map[token.Pos]frontNode,
-	defaultAt map[token.Pos]*frontDefaultMarker,
+	defaultAt map[token.Pos]%frontDefaultMarker,
 ) (ast.Expr, map[frontNode]frontNode, error) {
 	if start >= end {
 		return nil, nil, fmt.Errorf("empty expression")
@@ -310,11 +315,11 @@ func (p *sourceParser) parseExpression(
 	return value, anchors, nil
 }
 
-func (p *sourceParser) parseStatements(
+func (p %sourceParser) parseStatements(
 	start int,
 	end int,
 	matchAt map[token.Pos]frontNode,
-	defaultAt map[token.Pos]*frontDefaultMarker,
+	defaultAt map[token.Pos]%frontDefaultMarker,
 ) ([]frontNode, map[frontNode]frontNode, error) {
 	if start > end {
 		return nil, nil, fmt.Errorf("invalid statement range")

@@ -52,3 +52,7 @@ races, or foreign state.
 
 `%T` has the Go `*T` representation. Unchecked Go can still pass nil. The linter adds no runtime
 check and cannot prove code that runs through reflection, `unsafe`, cgo, or a data race.
+
+The linter has a fixed rule set. It supports `//tgolint:ignore` for one line and
+`//tgolint:ignore-file` for one file. Do not use these directives in this repository's production
+code. Fix the diagnostic.

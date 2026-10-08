@@ -17,10 +17,8 @@ func ParseFile(
 	if front == nil {
 		return nil, err
 	}
-	result, conversionError := newConverter(front).file()
-	if conversionError != nil {
-		return nil, conversionError
-	}
+	conversion := newConverter(front)
+	result := conversion.file()!
 	if err != nil {
 		return result, err
 	}
@@ -28,37 +26,37 @@ func ParseFile(
 }
 
 type converter struct {
-	front       *frontFile
+	front       %frontFile
 	propagation map[ast.Expr]*frontPropagateExpr
-	convertedPropagation map[*frontPropagateExpr]*Expression
-	comments    map[*ast.Comment]*Comment
-	groups      map[*ast.CommentGroup]*CommentGroup
-	imports     map[*ast.ImportSpec]*ImportSpecification
+	convertedPropagation map[%frontPropagateExpr]%Expression
+	comments    map[%ast.Comment]%Comment
+	groups      map[%ast.CommentGroup]%CommentGroup
+	imports     map[%ast.ImportSpec]%ImportSpecification
 }
 
-func newConverter(front *frontFile) *converter {
-	value := &converter{
-		front:       front,
-		propagation: make(map[ast.Expr]*frontPropagateExpr),
-		convertedPropagation: make(map[*frontPropagateExpr]*Expression),
-		comments:    make(map[*ast.Comment]*Comment),
-		groups:      make(map[*ast.CommentGroup]*CommentGroup),
-		imports:     make(map[*ast.ImportSpec]*ImportSpecification),
-	}
+func newConverter(front %frontFile) %converter {
+	propagation := make(map[ast.Expr]*frontPropagateExpr)
 	for _, extension := range front.extensions {
 		item, ok := extension.(*frontPropagateExpr)
 		if ok {
-			value.propagation[item.Expression] = item
+			propagation[item.Expression] = item
 		}
 	}
-	return value
+	return &converter{
+		front:       front,
+		propagation: propagation,
+		convertedPropagation: make(map[%frontPropagateExpr]%Expression),
+		comments:    make(map[%ast.Comment]%Comment),
+		groups:      make(map[%ast.CommentGroup]%CommentGroup),
+		imports:     make(map[%ast.ImportSpec]%ImportSpecification),
+	}
 }
 
 func span(node interface{ Pos() token.Pos; End() token.Pos }) Span {
 	return Span{Start: node.Pos(), Stop: node.End()}
 }
 
-func (c *converter) file() (*File, error) {
+func (c %converter) file() (*File, error) {
 	result := &File{
 		Span:          Span{Start: c.front.Pos(), Stop: c.front.End()},
 		Doc:           c.commentGroup(c.front.Doc),
@@ -75,10 +73,7 @@ func (c *converter) file() (*File, error) {
 		attached:      nil,
 	}
 	for _, item := range c.front.Decls {
-		declaration, err := c.declaration(item)
-		if err != nil {
-			return nil, err
-		}
+		declaration := c.declaration(item)!
 		result.Declarations = append(result.Declarations, declaration)
 	}
 	for _, item := range c.front.Imports {
@@ -91,18 +86,18 @@ func (c *converter) file() (*File, error) {
 	return result, nil
 }
 
-func (c *converter) identifier(value *ast.Ident) *Identifier {
+func (c %converter) identifier(value *ast.Ident) *Identifier {
 	if value == nil {
 		return nil
 	}
 	return &Identifier{Span: span(value), Name: value.Name}
 }
 
-func (c *converter) comment(value *ast.Comment) *Comment {
+func (c %converter) comment(value *ast.Comment) *Comment {
 	if value == nil {
 		return nil
 	}
-	if found := c.comments[value]; found != nil {
+	if found, ok := c.comments[value]; ok {
 		return found
 	}
 	result := &Comment{Span: span(value), Text: value.Text}
@@ -110,11 +105,11 @@ func (c *converter) comment(value *ast.Comment) *Comment {
 	return result
 }
 
-func (c *converter) commentGroup(value *ast.CommentGroup) *CommentGroup {
+func (c %converter) commentGroup(value *ast.CommentGroup) *CommentGroup {
 	if value == nil {
 		return nil
 	}
-	if found := c.groups[value]; found != nil {
+	if found, ok := c.groups[value]; ok {
 		return found
 	}
 	result := &CommentGroup{Span: span(value), List: nil}
@@ -125,7 +120,7 @@ func (c *converter) commentGroup(value *ast.CommentGroup) *CommentGroup {
 	return result
 }
 
-func (c *converter) field(value *ast.Field) *Field {
+func (c %converter) field(value *ast.Field) *Field {
 	if value == nil {
 		return nil
 	}
@@ -143,7 +138,7 @@ func (c *converter) field(value *ast.Field) *Field {
 	return result
 }
 
-func (c *converter) fieldList(value *ast.FieldList) *FieldList {
+func (c %converter) fieldList(value *ast.FieldList) *FieldList {
 	if value == nil {
 		return nil
 	}
@@ -159,7 +154,7 @@ func (c *converter) fieldList(value *ast.FieldList) *FieldList {
 	return result
 }
 
-func expressionValue(value any) *Expression {
+func expressionValue(value any) %Expression {
 	switch item := value.(type) {
 	case *BadExpression:
 		result := Expression.Bad{Value: item}
@@ -244,7 +239,7 @@ func expressionValue(value any) *Expression {
 	}
 }
 
-func (c *converter) expression(value ast.Expr) *Expression {
+func (c %converter) expression(value ast.Expr) *Expression {
 	if value == nil {
 		return nil
 	}
@@ -254,7 +249,7 @@ func (c *converter) expression(value ast.Expr) *Expression {
 	return c.expressionRaw(value)
 }
 
-func (c *converter) expressionRaw(value ast.Expr) *Expression {
+func (c %converter) expressionRaw(value ast.Expr) *Expression {
 	if value == nil {
 		return nil
 	}
@@ -369,7 +364,7 @@ func (c *converter) expressionRaw(value ast.Expr) *Expression {
 	}
 }
 
-func (c *converter) expressions(values []ast.Expr) []*Expression {
+func (c %converter) expressions(values []ast.Expr) []*Expression {
 	result := make([]*Expression, 0, len(values))
 	for _, value := range values {
 		result = append(result, c.expression(value))
@@ -377,7 +372,7 @@ func (c *converter) expressions(values []ast.Expr) []*Expression {
 	return result
 }
 
-func (c *converter) basicLiteral(value *ast.BasicLit) *BasicLiteral {
+func (c %converter) basicLiteral(value *ast.BasicLit) *BasicLiteral {
 	if value == nil {
 		return nil
 	}
@@ -387,7 +382,7 @@ func (c *converter) basicLiteral(value *ast.BasicLit) *BasicLiteral {
 	}
 }
 
-func (c *converter) functionType(value *ast.FuncType) *FunctionType {
+func (c %converter) functionType(value *ast.FuncType) *FunctionType {
 	if value == nil {
 		return nil
 	}
@@ -398,7 +393,7 @@ func (c *converter) functionType(value *ast.FuncType) *FunctionType {
 	}
 }
 
-func (c *converter) call(value *ast.CallExpr) *CallExpression {
+func (c %converter) call(value *ast.CallExpr) *CallExpression {
 	if value == nil {
 		return nil
 	}
@@ -419,7 +414,7 @@ func channelDirection(value ast.ChanDir) ChannelDirection {
 	return ChannelDirection.SendReceive{}
 }
 
-func (c *converter) compositeLiteral(value *ast.CompositeLit) *CompositeLiteral {
+func (c %converter) compositeLiteral(value *ast.CompositeLit) %CompositeLiteral {
 	result := &CompositeLiteral{
 		Span: span(value), Type: c.expression(value.Type), Lbrace: value.Lbrace,
 		Elements: nil, Rbrace: value.Rbrace, Incomplete: value.Incomplete,
@@ -454,7 +449,7 @@ func insertExpression(values []*Expression, value *Expression) []*Expression {
 	return append(values, value)
 }
 
-func (c *converter) propagationExpression(value *frontPropagateExpr) *Expression {
+func (c %converter) propagationExpression(value %frontPropagateExpr) %Expression {
 	if result, ok := c.convertedPropagation[value]; ok {
 		return result
 	}

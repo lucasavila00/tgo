@@ -6,17 +6,15 @@ import (
 )
 
 func StoredLabel(store legacy.AccountStore, id legacy.AccountID) (string, error) {
-    account, err := store.Load(id)
-    if err != nil {
-        return "", err
-    }
+    account := store.Load(id)!
     return model.Label(account), nil
 }
 
 func Labels(accounts []model.Account) ([]string, error) {
-    return legacy.Map(accounts, func(account model.Account) (string, error) {
+    labels := legacy.Map(accounts, func(account model.Account) (string, error) {
         return model.Label(account), nil
-    })
+    })!
+    return labels, nil
 }
 
 func FirstStreamLabel(accounts ...model.Account) string {
@@ -27,8 +25,8 @@ func FirstStreamLabel(accounts ...model.Account) string {
     return "closed"
 }
 
-func Replace(account *model.Account, name string) {
-    legacy.Update(account, func(target *model.Account) {
+func Replace(account %model.Account, name string) {
+    legacy.Update(account, func(target %model.Account) {
         *target = model.Account.Personal{Name: name}
     })
 }

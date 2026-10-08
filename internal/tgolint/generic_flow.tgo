@@ -38,7 +38,7 @@ func (c %checker) reachableNodes(body *ast.BlockStmt) map[ast.Node]bool {
 }
 
 func (c %checker) markGenericZeroAt(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	node ast.Node,
 	typ types.Type,
 ) {
@@ -47,7 +47,7 @@ func (c %checker) markGenericZeroAt(
 
 // markGenericZeroWith adds one zero effect with its path conditions.
 func (c %checker) markGenericZeroWith(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	node ast.Node,
 	typ types.Type,
 	extra *genericEffectCondition,
@@ -70,7 +70,7 @@ func (c %checker) markGenericZeroWith(
 }
 
 func (c %checker) markConditionalGenericZero(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	node ast.Node,
 	typ types.Type,
 	kind effectKind,
@@ -98,7 +98,7 @@ func (c %checker) markConditionalGenericZero(
 }
 
 func (c %checker) expressionParameter(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	expression ast.Expr,
 ) (int, bool) {
 	name, ok := expression.(*ast.Ident)
@@ -110,7 +110,7 @@ func (c %checker) expressionParameter(
 
 // parameterStableBefore rejects a condition after mutation or escape.
 func (c %checker) parameterStableBefore(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	index int,
 	before token.Pos,
 ) bool {
@@ -245,7 +245,7 @@ func pointerMethodSelection(info *types.Info, selector *ast.SelectorExpr) bool {
 }
 
 func (c %checker) markGenericAccessAt(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	node ast.Node,
 	typ types.Type,
 ) {
@@ -267,7 +267,7 @@ func (c %checker) markGenericAccessAt(
 
 // addGenericEffect normalizes and deduplicates one summary effect.
 func (c %checker) addGenericEffect(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	zero bool,
 	parameter zeroParameter,
 	effect genericEffect,
@@ -348,7 +348,7 @@ func equalGenericEffect(left, right genericEffect) bool {
 
 // genericEffectPath gets conditions that guard one operation.
 func (c %checker) genericEffectPath(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	node ast.Node,
 ) ([]genericEffectCondition, bool, bool) {
 	reachable := false
@@ -379,7 +379,7 @@ func (c %checker) genericEffectPath(
 }
 
 func (c %checker) parentEffectConditions(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	parent ast.Node,
 	node ast.Node,
 ) ([]genericEffectCondition, bool, bool) {
@@ -412,7 +412,7 @@ func (c %checker) parentEffectConditions(
 }
 
 func (c %checker) blockEffectConditions(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	block *ast.BlockStmt,
 	node ast.Node,
 ) ([]genericEffectCondition, bool, bool) {
@@ -523,7 +523,7 @@ func (c %checker) nonzeroEffectCondition(
 }
 
 func (c %checker) valueParameter(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	object types.Object,
 ) (int, bool) {
 	signature := summary.function.Type().(*types.Signature)

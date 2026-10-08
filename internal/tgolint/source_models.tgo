@@ -189,7 +189,7 @@ func (c %checker) reportExtraGeneratedModels(
 	}
 }
 
-func validGeneratedIntegrity(metadata *generatedMetadata, source []byte) bool {
+func validGeneratedIntegrity(metadata %generatedMetadata, source []byte) bool {
 	hash := sha256.New()
 	_, _ = hash.Write(source)
 	_, _ = hash.Write([]byte(integritySeparator))

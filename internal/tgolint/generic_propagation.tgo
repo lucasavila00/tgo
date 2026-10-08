@@ -91,7 +91,7 @@ func (c %checker) propagateGenericZeroFacts(
 }
 
 func (c %checker) propagateGenericEffects(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	call *ast.CallExpr,
 	effects []genericEffect,
 	receiverArguments []types.Type,
@@ -120,7 +120,7 @@ func (c %checker) propagateGenericEffects(
 
 // propagatedGenericEffect maps one callee effect into its caller.
 func (c %checker) propagatedGenericEffect(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	call *ast.CallExpr,
 	effect genericEffect,
 	receiverArguments []types.Type,
@@ -166,7 +166,7 @@ func (c %checker) propagatedGenericEffect(
 
 // mapEffectCondition evaluates or remaps one callee condition.
 func (c %checker) mapEffectCondition(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	call *ast.CallExpr,
 	condition genericEffectCondition,
 	targetType types.Type,
@@ -188,7 +188,7 @@ func (c %checker) mapEffectCondition(
 }
 
 func (c %checker) mapParameterEffectCondition(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	call *ast.CallExpr,
 	expression ast.Expr,
 	condition genericEffectCondition,

@@ -7,7 +7,7 @@ import (
 
 var errPropagationMissing = errors.New("missing account")
 
-func propagationLoad(events *[]string, found bool) (int, error) {
+func propagationLoad(events %[]string, found bool) (int, error) {
 	*events = append(*events, "load")
 	if !found {
 		return 0, errPropagationMissing
@@ -29,17 +29,17 @@ func propagationFlush(found bool) error {
 	return nil
 }
 
-func propagationMark(events *[]string, name string) string {
+func propagationMark(events %[]string, name string) string {
 	*events = append(*events, name)
 	return name
 }
 
-func propagationTarget(events *[]string, values []int) []int {
+func propagationTarget(events %[]string, values []int) []int {
 	*events = append(*events, "target")
 	return values
 }
 
-func propagationTargetLoad(events *[]string, values []int, found bool) ([]int, error) {
+func propagationTargetLoad(events %[]string, values []int, found bool) ([]int, error) {
 	*events = append(*events, "target")
 	if !found {
 		return nil, errPropagationMissing
@@ -47,12 +47,12 @@ func propagationTargetLoad(events *[]string, values []int, found bool) ([]int, e
 	return values, nil
 }
 
-func propagationIndex(events *[]string) int {
+func propagationIndex(events %[]string) int {
 	*events = append(*events, "index")
 	return 0
 }
 
-func propagationArrayBound(values *[1]int, found bool) (int, error) {
+func propagationArrayBound(values %[1]int, found bool) (int, error) {
 	values[0] = 2
 	if !found {
 		return 0, errPropagationMissing
@@ -64,12 +64,12 @@ func propagationFormat(before string, value int, after string) string {
 	return fmt.Sprint(before, after)
 }
 
-func propagationBool(events *[]string, name string, value bool) (bool, error) {
+func propagationBool(events %[]string, name string, value bool) (bool, error) {
 	*events = append(*events, name)
 	return value, nil
 }
 
-func propagationLoopCondition(attempt *int, failAt int) (bool, error) {
+func propagationLoopCondition(attempt %int, failAt int) (bool, error) {
 	*attempt++
 	if *attempt == failAt {
 		return false, errPropagationMissing
@@ -77,7 +77,7 @@ func propagationLoopCondition(attempt *int, failAt int) (bool, error) {
 	return *attempt <= 2, nil
 }
 
-func propagationRecord(events *[]string, value int) {
+func propagationRecord(events %[]string, value int) {
 	*events = append(*events, "defer")
 }
 
@@ -104,17 +104,17 @@ func propagationTypedNil() (int, error) {
 	return 0, err
 }
 
-func PropagationValue(events *[]string, found bool) (int, error) {
+func PropagationValue(events %[]string, found bool) (int, error) {
 	value := propagationLoad(events, found)!
 	return value, nil
 }
 
-func PropagationOuter(events *[]string, found bool) (int, error) {
+func PropagationOuter(events %[]string, found bool) (int, error) {
 	value := PropagationValue(events, found)!
 	return value, nil
 }
 
-func PropagationNested(events *[]string, found bool) (string, error) {
+func PropagationNested(events %[]string, found bool) (string, error) {
 	return propagationFormat(
 		propagationMark(events, "before"),
 		(propagationLoad(events, found))!,
@@ -122,14 +122,14 @@ func PropagationNested(events *[]string, found bool) (string, error) {
 	), nil
 }
 
-func PropagationAssignment(events *[]string, found bool) ([]int, error) {
+func PropagationAssignment(events %[]string, found bool) ([]int, error) {
 	values := []int{0}
 	propagationTarget(events, values)[propagationIndex(events)] =
 		propagationLoad(events, found)!
 	return values, nil
 }
 
-func PropagationIncrement(events *[]string, found bool) (int, error) {
+func PropagationIncrement(events %[]string, found bool) (int, error) {
 	values := []int{0}
 	propagationTargetLoad(events, values, found)![propagationIndex(events)]++
 	return values[0], nil
@@ -146,12 +146,12 @@ func PropagationArraySlice(found bool) (bool, error) {
 	return &slice[0] == &values[0] && slice[0] == 2, nil
 }
 
-func PropagationGenericArraySlice[T ~[1]int](values *T, found bool) (bool, error) {
+func PropagationGenericArraySlice[T ~[1]int](values %T, found bool) (bool, error) {
 	slice := (*values)[propagationGenericArrayBound(values, found)!:]
 	return &slice[0] == &(*values)[0] && slice[0] == 2, nil
 }
 
-func propagationGenericArrayBound[T ~[1]int](values *T, found bool) (int, error) {
+func propagationGenericArrayBound[T ~[1]int](values %T, found bool) (int, error) {
 	(*values)[0] = 2
 	if !found {
 		return 0, errPropagationMissing
@@ -174,11 +174,11 @@ func PropagationErrorOnly(found bool) error {
 	return nil
 }
 
-func PropagationAnd(events *[]string, left bool, right bool) (bool, error) {
+func PropagationAnd(events %[]string, left bool, right bool) (bool, error) {
 	return left && propagationBool(events, "right", right)!, nil
 }
 
-func PropagationOr(events *[]string, left bool, right bool) (bool, error) {
+func PropagationOr(events %[]string, left bool, right bool) (bool, error) {
 	return left || propagationBool(events, "right", right)!, nil
 }
 
@@ -191,26 +191,26 @@ func PropagationLoop(failAt int) (int, error) {
 	return count, nil
 }
 
-func PropagationDeferredArgument(events *[]string, found bool) (int, error) {
+func PropagationDeferredArgument(events %[]string, found bool) (int, error) {
 	defer propagationRecord(events, propagationLoad(events, found)!)
 	*events = append(*events, "body")
 	return 7, nil
 }
 
-func PropagationExistingDefer(events *[]string, found bool) (int, error) {
+func PropagationExistingDefer(events %[]string, found bool) (int, error) {
 	defer func() { *events = append(*events, "exit") }()
 	value := propagationLoad(events, found)!
 	return value, nil
 }
 
-func PropagationIf(events *[]string, value bool) (bool, error) {
+func PropagationIf(events %[]string, value bool) (bool, error) {
 	if propagationBool(events, "if", value)! {
 		return true, nil
 	}
 	return false, nil
 }
 
-func PropagationIfInitializer(events *[]string, value bool) (string, error) {
+func PropagationIfInitializer(events %[]string, value bool) (string, error) {
 	if prefix := propagationMark(events, "init"); propagationBool(events, "if", value)! {
 		return prefix, nil
 	}
@@ -248,7 +248,7 @@ func PropagationSwitch(found bool) (string, error) {
 	}
 }
 
-func PropagationSwitchInitializer(events *[]string, found bool) (string, error) {
+func PropagationSwitchInitializer(events %[]string, found bool) (string, error) {
 	switch prefix := propagationMark(events, "init"); propagationCode(found)! {
 	case 2:
 		return prefix, nil
@@ -289,13 +289,13 @@ func PropagationTypedNil() (int, error) {
 	return value, nil
 }
 
-func PropagationFunctionValue(events *[]string, found bool) (int, error) {
+func PropagationFunctionValue(events %[]string, found bool) (int, error) {
 	load := propagationLoad
 	value := load(events, found)!
 	return value, nil
 }
 
-func PropagationNamed(events *[]string, found bool) (value int, err error) {
+func PropagationNamed(events %[]string, found bool) (value int, err error) {
 	value = 99
 	loaded := propagationLoad(events, found)!
 	return loaded, nil

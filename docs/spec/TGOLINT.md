@@ -96,3 +96,9 @@ inspect reflection, `unsafe`, cgo, races, or foreign state.
 It also reports a possibly nil or unknown pointer at a `%T` use. It trusts a `%T` value returned by a
 checked signature. Unchecked Go can still return nil, change storage after analysis, or create a
 typed nil through reflection. These operations are outside the proof.
+
+## Suppression
+
+The rule set has no configuration. `//tgolint:ignore` suppresses diagnostics on its line and the
+next line. `//tgolint:ignore-file` suppresses diagnostics in its file. Both directives work in Go
+and TGo source. This repository uses neither directive in production code.

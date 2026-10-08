@@ -100,7 +100,7 @@ func (c %checker) packageDirectory() string {
 }
 
 // copyPackageContracts maps source objects to their generated Go objects.
-func (e %nilEnvironment) copyPackageContracts(target *nilEnvironment) {
+func (e %nilEnvironment) copyPackageContracts(target %nilEnvironment) {
 	for object, contract := range e.contracts {
 		mapped := mapNilObject(object, e.pkg, target.pkg)
 		if mapped != nil {
@@ -305,7 +305,7 @@ func (e %nilEnvironment) solveNilEntries(
 }
 
 func (e %nilEnvironment) recordNilEntries(
-	flow *nilFlow,
+	flow %nilFlow,
 	graph *cfg.CFG,
 	entries []*nilFlowState,
 ) {
@@ -371,7 +371,7 @@ func joinNilStates(
 	return joined, true
 }
 
-func equalNilStates(left, right *nilFlowState) bool {
+func equalNilStates(left, right %nilFlowState) bool {
 	if len(left.values) != len(right.values) || len(left.aliases) != len(right.aliases) ||
 		len(left.guards) != len(right.guards) || len(left.presence) != len(right.presence) {
 		return false

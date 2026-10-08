@@ -8,7 +8,7 @@ import (
 	"reflect"
 )
 
-func (p *sourceParser) editsInRange(start int, end int) []sourceEdit {
+func (p %sourceParser) editsInRange(start int, end int) []sourceEdit {
 	result := []sourceEdit(nil)
 	for _, edit := range p.edits {
 		if edit.start >= start && edit.end <= end {
@@ -63,7 +63,7 @@ func shiftTokenPositions(root any, delta int) {
 	shift(reflect.ValueOf(root))
 }
 
-func (p *sourceParser) mapFragmentError(
+func (p %sourceParser) mapFragmentError(
 	err error,
 	prefixLength int,
 	start int,
@@ -96,10 +96,10 @@ func (p *sourceParser) mapFragmentError(
 	return mapped
 }
 
-func (p *sourceParser) sanitize(
+func (p %sourceParser) sanitize(
 	root ast.Node,
 	matchAt map[token.Pos]frontNode,
-	defaultAt map[token.Pos]*frontDefaultMarker,
+	defaultAt map[token.Pos]%frontDefaultMarker,
 	anchors map[frontNode]frontNode,
 ) {
 	ast.Inspect(root, func(node ast.Node) bool {
@@ -131,9 +131,9 @@ func (p *sourceParser) sanitize(
 			}
 			elements := node.Elts[:0]
 			for _, element := range node.Elts {
-				marker := defaultAt[element.Pos()]
+				marker, present := defaultAt[element.Pos()]
 				literal, artificial := element.(*ast.BasicLit)
-				if marker != nil && artificial && literal.Value == "0" {
+				if present && artificial && literal.Value == "0" {
 					anchors[marker] = node
 					continue
 				}
@@ -145,7 +145,7 @@ func (p *sourceParser) sanitize(
 	})
 }
 
-func (p *sourceParser) sourceToken(position token.Pos) byte {
+func (p %sourceParser) sourceToken(position token.Pos) byte {
 	if p.file == nil || position == token.NoPos {
 		return 0
 	}
@@ -157,7 +157,7 @@ func (p *sourceParser) sourceToken(position token.Pos) byte {
 }
 
 // buildPropagation binds a removed postfix marker to its parsed Go call.
-func (p *sourceParser) buildPropagation(expression ast.Expr, call *ast.CallExpr) {
+func (p %sourceParser) buildPropagation(expression ast.Expr, call *ast.CallExpr) {
 	end := p.file.Offset(expression.End())
 	for _, item := range p.propagations {
 		if item.node != nil || item.callEnd != end {
@@ -186,7 +186,7 @@ func unwrappedCall(expression ast.Expr) (*ast.CallExpr, bool) {
 	return call, ok
 }
 
-func (p *sourceParser) cleanStatements(
+func (p %sourceParser) cleanStatements(
 	parent frontNode,
 	statements []ast.Stmt,
 	matchAt map[token.Pos]frontNode,
@@ -208,7 +208,7 @@ func (p *sourceParser) cleanStatements(
 	return result
 }
 
-func (p *sourceParser) attachComments(file *frontFile) {
+func (p %sourceParser) attachComments(file %frontFile) {
 	file.attached = make(map[frontNode][]*ast.CommentGroup)
 	nodes := []frontNode(nil)
 	seen := make(map[frontNode]bool)
@@ -278,7 +278,7 @@ func standardCommentOwners(nodes []frontNode) map[*ast.CommentGroup]frontNode {
 	return owners
 }
 
-func (p *sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup) frontNode {
+func (p %sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup) frontNode {
 	var owner frontNode = nil
 	bestDistance := int(^uint(0) >> 1)
 	commentStart := p.file.Position(comment.Pos())
@@ -320,7 +320,7 @@ func (p *sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup
 	return owner
 }
 
-func (p *sourceParser) setNodeComments(node frontNode, comments []*ast.CommentGroup) {
+func (p %sourceParser) setNodeComments(node frontNode, comments []*ast.CommentGroup) {
 	var leading *ast.CommentGroup = nil
 	var trailing *ast.CommentGroup = nil
 	if len(comments) > 0 && comments[0].End() <= node.Pos() {

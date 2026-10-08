@@ -138,7 +138,7 @@ func (c %checker) scalarSuccessors(
 
 // recordScalarEntries saves final facts before each AST node.
 func (c %checker) recordScalarEntries(
-	flow *scalarFlow,
+	flow %scalarFlow,
 	graph *cfg.CFG,
 	entries []scalarState,
 	owned map[types.Object]bool,

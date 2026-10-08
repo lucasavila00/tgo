@@ -7,7 +7,7 @@ import (
 	"slices"
 )
 
-func (p *sourceParser) discoverExtensions() error {
+func (p %sourceParser) discoverExtensions() error {
 	for cursor := 0; cursor < len(p.tokens); cursor++ {
 		if p.tokens[cursor].kind == token.REM {
 			p.edits = append(p.edits, sourceEdit{
@@ -66,12 +66,12 @@ func (p *sourceParser) discoverExtensions() error {
 	return nil
 }
 
-func (p *sourceParser) atPropagation(cursor int) bool {
+func (p %sourceParser) atPropagation(cursor int) bool {
 	return cursor > 0 && p.tokens[cursor].kind == token.NOT &&
 		p.tokens[cursor-1].kind == token.RPAREN
 }
 
-func (p *sourceParser) goStatementSyntax(start int) bool {
+func (p %sourceParser) goStatementSyntax(start int) bool {
 	if p.implicitSemicolon(start + 1) {
 		return false
 	}
@@ -96,7 +96,7 @@ func (p *sourceParser) goStatementSyntax(start int) bool {
 	return err == nil
 }
 
-func (p *sourceParser) insideDeclaration(offset int) bool {
+func (p %sourceParser) insideDeclaration(offset int) bool {
 	for _, declaration := range p.decls {
 		if declaration.start <= offset && offset < declaration.end {
 			return true
@@ -105,13 +105,13 @@ func (p *sourceParser) insideDeclaration(offset int) bool {
 	return false
 }
 
-func (p *sourceParser) atDefault(cursor int) bool {
+func (p %sourceParser) atDefault(cursor int) bool {
 	return cursor+2 < len(p.tokens) && p.tokens[cursor].kind == token.PERIOD &&
 		p.tokens[cursor+1].kind == token.PERIOD &&
 		p.tokens[cursor+2].kind == token.DEFAULT
 }
 
-func (p *sourceParser) atStatementStart(cursor int) bool {
+func (p %sourceParser) atStatementStart(cursor int) bool {
 	if cursor == 0 {
 		return false
 	}
@@ -119,7 +119,7 @@ func (p *sourceParser) atStatementStart(cursor int) bool {
 	return previous == token.LBRACE || previous == token.SEMICOLON || previous == token.COLON
 }
 
-func (p *sourceParser) matchBody(start int) (int, error) {
+func (p %sourceParser) matchBody(start int) (int, error) {
 	for cursor := start; cursor < len(p.tokens); cursor++ {
 		kind := p.tokens[cursor].kind
 		if kind == token.SEMICOLON {
@@ -149,12 +149,12 @@ func (p *sourceParser) matchBody(start int) (int, error) {
 	return -1, nil
 }
 
-func (p *sourceParser) groupEndsStatement(end int) bool {
+func (p %sourceParser) groupEndsStatement(end int) bool {
 	return end+1 == len(p.tokens) || p.tokens[end+1].kind == token.SEMICOLON ||
 		p.tokens[end+1].kind == token.RBRACE
 }
 
-func (p *sourceParser) rawMatch(keyword int, open int) (*rawMatch, error) {
+func (p %sourceParser) rawMatch(keyword int, open int) (*rawMatch, error) {
 	closing, err := p.closeToken(open)
 	if err != nil {
 		return nil, err
@@ -197,7 +197,7 @@ func (p *sourceParser) rawMatch(keyword int, open int) (*rawMatch, error) {
 	return item, nil
 }
 
-func (p *sourceParser) labelCanStart(label int) bool {
+func (p %sourceParser) labelCanStart(label int) bool {
 	if label == 0 {
 		return false
 	}
@@ -209,7 +209,7 @@ func (p *sourceParser) labelCanStart(label int) bool {
 		previous == token.COLON
 }
 
-func (p *sourceParser) rawCases(open int, closing int) ([]*rawCase, error) {
+func (p %sourceParser) rawCases(open int, closing int) ([]*rawCase, error) {
 	cases := []*rawCase(nil)
 	cursor := open + 1
 	for cursor < closing {
@@ -246,7 +246,7 @@ func (p *sourceParser) rawCases(open int, closing int) ([]*rawCase, error) {
 	return cases, nil
 }
 
-func (p *sourceParser) nextMatchCase(start int, limit int) int {
+func (p %sourceParser) nextMatchCase(start int, limit int) int {
 	for cursor := start; cursor < limit; cursor++ {
 		if p.tokens[cursor].kind == token.CASE || p.tokens[cursor].kind == token.DEFAULT {
 			return cursor
@@ -261,7 +261,7 @@ func (p *sourceParser) nextMatchCase(start int, limit int) int {
 	return limit
 }
 
-func (p *sourceParser) project(start int, end int, edits []sourceEdit) []byte {
+func (p %sourceParser) project(start int, end int, edits []sourceEdit) []byte {
 	result := append([]byte(nil), p.source[start:end]...)
 	applicable := []sourceEdit(nil)
 	for _, edit := range edits {
@@ -299,7 +299,7 @@ func (p *sourceParser) project(start int, end int, edits []sourceEdit) []byte {
 	return result
 }
 
-func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
+func (p %sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 	result := &frontFile{
 		frontSpan:       frontSpan{Start: p.file.Pos(0), Stop: p.file.Pos(len(p.source))},
 		Doc:        goFile.Doc,
@@ -316,7 +316,7 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		attached:   make(map[frontNode][]*ast.CommentGroup),
 		nonNil:    p.nonNil,
 	}
-	defaultAt := make(map[token.Pos]*frontDefaultMarker)
+	defaultAt := make(map[token.Pos]%frontDefaultMarker)
 	for _, raw := range p.defaults {
 		raw.node = &frontDefaultMarker{
 			frontSpan:     frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},

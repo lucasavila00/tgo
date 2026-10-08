@@ -1,6 +1,6 @@
 package syntax
 
-func buildPublicIndex(file *File) {
+func buildPublicIndex(file %File) {
 	file.children = make(map[Node][]Node)
 	file.parents = make(map[Node]Node)
 	file.extensions = nil

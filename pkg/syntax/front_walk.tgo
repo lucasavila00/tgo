@@ -95,7 +95,7 @@ func (inspect inspector) Visit(node frontNode) frontVisitor {
 	return nil
 }
 
-func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
+func buildIndex(file %frontFile, anchors map[frontNode]frontNode) {
 	file.children = make(map[frontNode][]frontNode)
 	file.parents = make(map[frontNode]frontNode)
 	file.extensions = nil
@@ -145,7 +145,7 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 	slices.SortStableFunc(file.extensions, compareExtensions)
 }
 
-func syntaxChildren(file *frontFile, node frontNode) []frontNode {
+func syntaxChildren(file %frontFile, node frontNode) []frontNode {
 	children := []frontNode(nil)
 	switch node := node.(type) {
 	case *frontFile:

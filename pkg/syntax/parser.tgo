@@ -226,25 +226,25 @@ func scanSource(
 	return tokens, comments, nil
 }
 
-func (p *sourceParser) error(err error) error {
+func (p %sourceParser) error(err error) error {
 	if strings.HasPrefix(err.Error(), p.filename+":") {
 		return err
 	}
 	return fmt.Errorf("%s:%w", p.filename, err)
 }
 
-func (p *sourceParser) pos(offset int) token.Pos {
+func (p %sourceParser) pos(offset int) token.Pos {
 	return p.file.Pos(offset)
 }
 
-func (p *sourceParser) text(start int, end int) string {
+func (p %sourceParser) text(start int, end int) string {
 	if start >= end {
 		return ""
 	}
 	return string(p.source[p.tokens[start].start:p.tokens[end-1].end])
 }
 
-func (p *sourceParser) implicitSemicolon(index int) bool {
+func (p %sourceParser) implicitSemicolon(index int) bool {
 	return index >= 0 && index < len(p.tokens) &&
 		p.tokens[index].kind == token.SEMICOLON &&
 		p.tokens[index].start == p.tokens[index].end
@@ -254,7 +254,7 @@ func opening(kind token.Token) bool {
 	return kind == token.LPAREN || kind == token.LBRACK || kind == token.LBRACE
 }
 
-func (p *sourceParser) closeToken(start int) (int, error) {
+func (p %sourceParser) closeToken(start int) (int, error) {
 	stack := []token.Token(nil)
 	for index := start; index < len(p.tokens); index++ {
 		switch p.tokens[index].kind {
@@ -277,7 +277,7 @@ func (p *sourceParser) closeToken(start int) (int, error) {
 	return 0, p.tokenError(start, "unclosed %s", p.tokens[start].text)
 }
 
-func (p *sourceParser) tokenError(index int, pattern string, values ...any) error {
+func (p %sourceParser) tokenError(index int, pattern string, values ...any) error {
 	message := fmt.Sprintf(pattern, values...)
 	if index < 0 || index >= len(p.tokens) {
 		return fmt.Errorf("%s", message)
@@ -305,7 +305,7 @@ func lineColumn(source []byte, offset int) (int, int) {
 	return line, column
 }
 
-func (p *sourceParser) discoverDeclarations() error {
+func (p %sourceParser) discoverDeclarations() error {
 	for cursor := 0; cursor < len(p.tokens); {
 		if p.tokens[cursor].kind == token.TYPE && cursor+1 < len(p.tokens) &&
 			p.tokens[cursor+1].kind == token.IDENT {
@@ -337,7 +337,7 @@ func (p *sourceParser) discoverDeclarations() error {
 	return nil
 }
 
-func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
+func (p %sourceParser) declaration(start int) (*rawDecl, int, error) {
 	cursor := start + 2
 	if cursor >= len(p.tokens) {
 		return nil, start + 1, nil
@@ -382,7 +382,7 @@ func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
 	return nil, start + 1, nil
 }
 
-func (p *sourceParser) declarationEnd(start int) (int, error) {
+func (p %sourceParser) declarationEnd(start int) (int, error) {
 	cursor := start
 	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON {
 		if opening(p.tokens[cursor].kind) {
@@ -398,7 +398,7 @@ func (p *sourceParser) declarationEnd(start int) (int, error) {
 	return cursor, nil
 }
 
-func (p *sourceParser) goDeclarationSyntax(start int, end int) bool {
+func (p %sourceParser) goDeclarationSyntax(start int, end int) bool {
 	if end <= start {
 		return false
 	}
@@ -415,7 +415,7 @@ func goExpressionSyntax(text string) bool {
 	return err == nil
 }
 
-func (p *sourceParser) enumDeclaration(
+func (p %sourceParser) enumDeclaration(
 	start int,
 	keyword int,
 	open int,
@@ -462,7 +462,7 @@ func (p *sourceParser) enumDeclaration(
 	return declaration, skipSemicolon(p.tokens, closing+1), nil
 }
 
-func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
+func (p %sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	if start+2 >= limit || p.tokens[start].kind != token.IDENT ||
 		p.tokens[start+1].kind != token.STRUCT ||
 		p.tokens[start+2].kind != token.LBRACE {
@@ -487,7 +487,7 @@ func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	return variant, skipSemicolon(p.tokens, closing+1), nil
 }
 
-func (p *sourceParser) structDeclaration(
+func (p %sourceParser) structDeclaration(
 	start int,
 	keyword int,
 	open int,
@@ -517,7 +517,7 @@ func (p *sourceParser) structDeclaration(
 	return declaration, skipSemicolon(p.tokens, closing+1), nil
 }
 
-func (p *sourceParser) checkedDeclaration(
+func (p %sourceParser) checkedDeclaration(
 	start int,
 	baseStart int,
 	where int,
@@ -557,7 +557,7 @@ func (p *sourceParser) checkedDeclaration(
 	return declaration, skipSemicolon(p.tokens, cursor), nil
 }
 
-func (p *sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
+func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 	fields := []*rawField(nil)
 	cursor := open + 1
 	for cursor < closing {

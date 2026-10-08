@@ -1,0 +1,11 @@
+//tgolint:ignore-file
+
+package suppresstgofile
+
+type Item struct {}
+
+func need(value %Item) {}
+
+func suppressed(value *Item) {
+	need(value)
+}

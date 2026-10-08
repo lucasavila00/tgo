@@ -1,0 +1,10 @@
+package suppresstgoline
+
+type Item struct {}
+
+func need(value %Item) {}
+
+func suppressed(value *Item) {
+	//tgolint:ignore
+	need(value)
+}

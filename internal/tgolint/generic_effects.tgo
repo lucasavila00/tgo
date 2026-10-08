@@ -419,7 +419,7 @@ func (c %checker) collectGenericPresenceZeros(summary %genericEffectSummary) {
 }
 
 func (c %checker) markGenericPresenceEffect(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	source ast.Expr,
 ) {
 	typ := firstType(c.pass.TypesInfo.TypeOf(source))
@@ -456,7 +456,7 @@ func (c %checker) collectNamedResultZeros(summary %genericEffectSummary) {
 }
 
 func (c %checker) markGenericZeroUnconditional(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	typ types.Type,
 ) {
 	for parameter := range zeroTypeParameters(typ, summary.parameters, make(map[types.Type]bool)) {
@@ -465,7 +465,7 @@ func (c %checker) markGenericZeroUnconditional(
 }
 
 func (c %checker) collectValueSpecZeros(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	specification *ast.ValueSpec,
 ) {
 	if len(specification.Values) != 0 {
@@ -479,7 +479,7 @@ func (c %checker) collectValueSpecZeros(
 }
 
 // collectCallZeros records zero-producing built-ins and conversions.
-func (c %checker) collectCallZeros(summary *genericEffectSummary, call *ast.CallExpr) {
+func (c %checker) collectCallZeros(summary %genericEffectSummary, call *ast.CallExpr) {
 	name, ok := call.Fun.(*ast.Ident)
 	if !ok {
 		return
@@ -507,7 +507,7 @@ func (c %checker) collectCallZeros(summary *genericEffectSummary, call *ast.Call
 }
 
 func (c %checker) collectMakeZeros(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	call *ast.CallExpr,
 ) {
 	if len(call.Args) < 2 {
@@ -528,7 +528,7 @@ func (c %checker) collectMakeZeros(
 }
 
 func (c %checker) collectMapReadZero(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	index *ast.IndexExpr,
 ) {
 	if c.assignmentTarget(index) {
@@ -546,7 +546,7 @@ func (c %checker) collectMapReadZero(
 }
 
 func (c %checker) collectResliceZero(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	expression *ast.SliceExpr,
 ) {
 	if expression.High == nil || c.currentLength(expression.High, expression.X) ||
@@ -563,7 +563,7 @@ func (c %checker) collectResliceZero(
 }
 
 func (c %checker) collectGenericAccess(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	selector *ast.SelectorExpr,
 ) {
 	if !strings.HasPrefix(selector.Sel.Name, "Tgo") ||
@@ -579,7 +579,7 @@ func (c %checker) collectGenericAccess(
 }
 
 func (c %checker) collectLiteralZeros(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	literal *ast.CompositeLit,
 ) {
 	switch underlying := coreType(c.pass.TypesInfo.TypeOf(literal)).(type) {
@@ -597,7 +597,7 @@ func (c %checker) collectLiteralZeros(
 }
 
 func (c %checker) collectStructLiteralZeros(
-	summary *genericEffectSummary,
+	summary %genericEffectSummary,
 	literal *ast.CompositeLit,
 	structure *types.Struct,
 ) {

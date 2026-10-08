@@ -25,6 +25,11 @@ func narrow(value *nilmodel.Item) {
 	nilmodel.Need(value)
 }
 
+func namedContract() {
+	holder := nilmodel.NewHolder(&nilmodel.Item{})
+	nilmodel.NeedHolder(holder)
+}
+
 func guardAlias(value *nilmodel.Item) {
 	valid := value != nil
 	copyOfValid := valid

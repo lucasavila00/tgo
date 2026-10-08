@@ -68,6 +68,7 @@ type diagnosticKey struct {
 
 // run verifies generated code, loads model facts, and checks user Go code.
 func run(pass *analysis.Pass) (any, error) {
+	pass = suppressDiagnostics(pass)
 	c := &checker{
 		pass:       pass,
 		models:     make(map[objectKey]*model),

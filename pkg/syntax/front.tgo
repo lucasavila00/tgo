@@ -63,7 +63,7 @@ type frontEnumDecl struct {
 	Comment  *ast.CommentGroup
 }
 
-func (*frontEnumDecl) extensionNode() {}
+func (%frontEnumDecl) extensionNode() {}
 
 // frontVariantDecl declares one enum payload.
 type frontVariantDecl struct {
@@ -77,7 +77,7 @@ type frontVariantDecl struct {
 	Comment *ast.CommentGroup
 }
 
-func (*frontVariantDecl) extensionNode() {}
+func (%frontVariantDecl) extensionNode() {}
 
 // frontStructDecl declares a tgo struct.
 type frontStructDecl struct {
@@ -92,7 +92,7 @@ type frontStructDecl struct {
 	Comment *ast.CommentGroup
 }
 
-func (*frontStructDecl) extensionNode() {}
+func (%frontStructDecl) extensionNode() {}
 
 // frontCheckedDecl declares a type and its construction predicate.
 type frontCheckedDecl struct {
@@ -106,7 +106,7 @@ type frontCheckedDecl struct {
 	Comment   *ast.CommentGroup
 }
 
-func (*frontCheckedDecl) extensionNode() {}
+func (%frontCheckedDecl) extensionNode() {}
 
 // frontFieldDecl is one tgo field group and its optional default.
 type frontFieldDecl struct {
@@ -118,7 +118,7 @@ type frontFieldDecl struct {
 	Comment *ast.CommentGroup
 }
 
-func (*frontFieldDecl) extensionNode() {}
+func (%frontFieldDecl) extensionNode() {}
 
 // frontLabeledStmt is an ordinary label whose statement is a tgo node.
 type frontLabeledStmt struct {
@@ -138,7 +138,7 @@ type frontMatchStmt struct {
 	Rbrace  token.Pos
 }
 
-func (*frontMatchStmt) extensionNode() {}
+func (%frontMatchStmt) extensionNode() {}
 
 // frontMatchCase binds one enum payload.
 type frontMatchCase struct {
@@ -153,7 +153,7 @@ type frontMatchCase struct {
 	Comments []*ast.CommentGroup
 }
 
-func (*frontMatchCase) extensionNode() {}
+func (%frontMatchCase) extensionNode() {}
 
 // frontDefaultMarker selects all omitted fields that have defaults.
 type frontDefaultMarker struct {
@@ -163,7 +163,7 @@ type frontDefaultMarker struct {
 	Default  token.Pos
 }
 
-func (*frontDefaultMarker) extensionNode() {}
+func (%frontDefaultMarker) extensionNode() {}
 
 // frontPropagateExpr returns a wrapped Go error from the current function.
 type frontPropagateExpr struct {
@@ -173,6 +173,6 @@ type frontPropagateExpr struct {
 	Bang       token.Pos
 }
 
-func (*frontPropagateExpr) extensionNode() {}
+func (%frontPropagateExpr) extensionNode() {}
 
 

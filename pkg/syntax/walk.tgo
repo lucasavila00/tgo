@@ -293,7 +293,7 @@ func specificationSpan(value *Specification) Span {
 	}
 }
 
-func nodeFile(value *File) Node {
+func nodeFile(value %File) Node {
 	return Node.File{Value: value}
 }
 func nodeDeclaration(value *Declaration) Node {

@@ -179,10 +179,10 @@ func TestPublicASTDoesNotExposeGoAST(t *testing.T) {
 		}
 	}
 	inspect(reflect.TypeOf(syntax.File{}))
-	inspect(reflect.TypeOf(syntax.Expression{}))
-	inspect(reflect.TypeOf(syntax.Statement{}))
-	inspect(reflect.TypeOf(syntax.Declaration{}))
-	inspect(reflect.TypeOf(syntax.Specification{}))
+	inspect(reflect.TypeFor[syntax.Expression]())
+	inspect(reflect.TypeFor[syntax.Statement]())
+	inspect(reflect.TypeFor[syntax.Declaration]())
+	inspect(reflect.TypeFor[syntax.Specification]())
 }
 
 func TestParentAndChildrenUseTGoNodes(t *testing.T) {

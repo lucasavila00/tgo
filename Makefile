@@ -1,10 +1,14 @@
 .PHONY: ci ci-unlocked generated lint test unit-test e2e-test tgolint-test \
-	markdown tgo-size build install-hooks install-tools
+	dogfood markdown tgo-size build install-hooks install-tools
 
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
 
-ci-unlocked: generated e2e-test tgolint-test lint unit-test markdown tgo-size
+ci-unlocked: generated dogfood e2e-test tgolint-test lint unit-test markdown tgo-size
+
+dogfood:
+	! rg -n '//[[:space:]]*tgolint:ignore' cmd internal pkg
+	go run ./cmd/tgolint ./cmd/... ./internal/... ./pkg/...
 
 markdown:
 	python3 scripts/check_markdown.py
