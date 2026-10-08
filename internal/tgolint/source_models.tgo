@@ -304,7 +304,8 @@ func readTGoSource(pass *analysis.Pass, path string) ([]byte, error) {
 	if !found {
 		pass.OtherFiles = append(pass.OtherFiles, path)
 	}
-	return pass.ReadFile(path)
+	data := pass.ReadFile(path)!
+	return data, nil
 }
 
 func generatedTypeSpec(file *ast.File, name string) *ast.TypeSpec {

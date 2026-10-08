@@ -47,6 +47,7 @@ VariantLiteral = TypeName "." VariantName GoLiteralValue .
 DefaultMarker  = "..default" .
 MatchStmt      = "match" GoExpression "{" { MatchCase } "}" .
 MatchCase      = "case" VariantName "(" identifier ")" ":" GoStatementList .
+PropagateExpr  = GoCallExpr "!" .
 ```
 
 Go semicolon insertion applies. A qualified variant literal starts with a package name:
@@ -71,7 +72,8 @@ extension parsing at its first error.
 The syntax tree uses `go/ast` nodes for ordinary Go syntax. It uses explicit nodes for enums,
 variants, checked types, tgo structs and fields, field defaults, matches, cases, bindings, and
 `..default`. A `syntax.LabeledStmt` represents a Go label chain that contains a tgo statement.
-All node positions refer to the supplied file set and original source.
+`syntax.PropagateExpr` contains the source call and the position of `!`. All node positions refer
+to the supplied file set and original source.
 
 `Children`, `Parent`, `Walk`, and `Inspect` traverse Go and tgo nodes as one source tree.
 `Extensions` returns tgo nodes in source order. `ExtensionAt` finds the smallest tgo node at a
@@ -81,6 +83,59 @@ parent. Callers must treat a parsed tree as read-only because traversal indexes 
 `File.GoFile` returns the ordinary Go remainder. It does not contain parser markers or synthetic
 placeholder nodes. `VariantLiteralOf` uses Go type information to identify a selector composite
 literal as an enum variant. It does not classify literals from spelling alone.
+
+## Error propagation
+
+Postfix `!` checks and propagates the last `error` result from a call:
+
+```text
+func LoadLabel(repo Repo, id ID) (string, error) {
+    account := repo.Find(id)!
+    return account.Label, nil
+}
+```
+
+The call must return zero or more values followed by the predeclared Go `error` type. The current
+function must also have `error` as its last result. A type alias of `error` keeps this identity.
+A new defined error type does not.
+
+On success, the expression yields each result before `error`. One result can be used in a nested
+expression. Multiple results need a matching assignment. A call that returns only `error` can be
+an expression statement.
+
+```text
+store.Flush()!
+key, value := index.Entry(id)!
+label := strings.ToUpper(repo.Label(id)!)
+```
+
+On failure, the compiler returns zero values for every earlier result of the current function.
+This rule also applies to named results and generic result types. Normal defers still run.
+
+The returned error uses `fmt.Errorf` and `%w`. Its context is the short source call name. An
+identifier uses its name. A selector keeps its selector path. Generic type arguments do not
+change the name.
+
+```text
+repo.Find(id)!  -> "repo.Find: %w"
+load(id)!       -> "load: %w"
+```
+
+Each propagation adds one name. `errors.Is`, `errors.As`, and `errors.Unwrap` can still reach the
+first error.
+
+Lowering evaluates the call once. It keeps Go operand order and does not evaluate a later operand
+after failure. This includes nested calls, short-circuit Boolean expressions, deferred call
+arguments, range expressions, switch tags, and loop conditions. A loop condition checks the error
+on each iteration.
+
+The propagated call cannot be the direct call of `go` or `defer`, because its result would run
+outside the current return point. Propagation is also excluded from select communications, switch
+case expressions, and `for` initializers or post statements. Use a normal error check in these
+positions.
+
+Generated Go keeps the source function signature. Its success path has the call, nil check, and
+branch of a manual Go error check. Error wrapping runs only on failure.
 
 ## Enum types
 

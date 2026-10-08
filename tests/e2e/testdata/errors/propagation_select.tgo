@@ -1,0 +1,12 @@
+package errors
+
+func loadChannel() (chan int, error) { return nil, nil }
+
+func useChannel() error {
+	select {
+	case value := <-loadChannel()!:
+		_ = value
+	default:
+	}
+	return nil
+}

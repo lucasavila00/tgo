@@ -106,17 +106,24 @@ type rawDefault struct {
 	node  *DefaultMarker
 }
 
+type rawPropagation struct {
+	callEnd int
+	bang    int
+	node    *PropagateExpr
+}
+
 type sourceParser struct {
-	filename string
-	source   []byte
-	tokens   []lexeme
-	comments []sourceEdit
-	decls    []*rawDecl
-	matches  []*rawMatch
-	defaults []*rawDefault
-	edits    []sourceEdit
-	file     *token.File
-	mode     Mode
+	filename     string
+	source       []byte
+	tokens       []lexeme
+	comments     []sourceEdit
+	decls        []*rawDecl
+	matches      []*rawMatch
+	defaults     []*rawDefault
+	propagations []*rawPropagation
+	edits        []sourceEdit
+	file         *token.File
+	mode         Mode
 }
 
 // ParseFile parses one tgo source file.
@@ -134,16 +141,17 @@ func ParseFile(
 		return nil, err
 	}
 	state := &sourceParser{
-		filename: filename,
-		source:   append([]byte(nil), source...),
-		tokens:   tokens,
-		comments: comments,
-		decls:    nil,
-		matches:  nil,
-		defaults: nil,
-		edits:    nil,
-		file:     nil,
-		mode:     mode,
+		filename:     filename,
+		source:       append([]byte(nil), source...),
+		tokens:       tokens,
+		comments:     comments,
+		decls:        nil,
+		matches:      nil,
+		defaults:     nil,
+		propagations: nil,
+		edits:        nil,
+		file:         nil,
+		mode:         mode,
 	}
 	if err := state.discoverDeclarations(); err != nil {
 		return nil, state.error(err)
@@ -598,6 +606,20 @@ func skipSemicolon(tokens []lexeme, cursor int) int {
 
 func (p *sourceParser) discoverExtensions() error {
 	for cursor := 0; cursor < len(p.tokens); cursor++ {
+		if p.atPropagation(cursor) {
+			item := &rawPropagation{
+				callEnd: p.tokens[cursor-1].end,
+				bang:    cursor,
+				node:    nil,
+			}
+			p.propagations = append(p.propagations, item)
+			p.edits = append(p.edits, sourceEdit{
+				start: p.tokens[cursor].start,
+				end:   p.tokens[cursor].end,
+				text:  "",
+			})
+			continue
+		}
 		if p.atDefault(cursor) {
 			item := new(rawDefault)
 			item.start = p.tokens[cursor].start
@@ -632,6 +654,11 @@ func (p *sourceParser) discoverExtensions() error {
 		p.edits = append(p.edits, sourceEdit{start: match.start, end: match.end, text: ";"})
 	}
 	return nil
+}
+
+func (p *sourceParser) atPropagation(cursor int) bool {
+	return cursor > 0 && p.tokens[cursor].kind == token.NOT &&
+		p.tokens[cursor-1].kind == token.RPAREN
 }
 
 func (p *sourceParser) goStatementSyntax(start int) bool {
@@ -975,6 +1002,12 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*File, error) {
 	}
 	result.Decls = append(result.Decls, customDecls...)
 	slices.SortStableFunc(result.Decls, compareNodes)
+	for _, item := range p.propagations {
+		if item.node == nil {
+			return nil, p.tokenError(item.bang, "error propagation needs a call")
+		}
+	}
+	p.anchorPropagations(result, anchors)
 	for _, item := range p.defaults {
 		if anchors[item.node] == nil {
 			return nil, p.tokenError(item.first, "..default needs a composite literal")
@@ -984,6 +1017,30 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*File, error) {
 	p.attachComments(result)
 	buildIndex(result, anchors)
 	return result, nil
+}
+
+// anchorPropagations replaces each call with its tgo expression in the public tree.
+func (p *sourceParser) anchorPropagations(file *File, anchors map[Node]Node) {
+	parents := make(map[Node]Node)
+	var visit func(Node) = nil
+	visit = func(node Node) {
+		for _, child := range syntaxChildren(file, node) {
+			if child == nil {
+				continue
+			}
+			parents[child] = node
+			visit(child)
+		}
+	}
+	visit(file)
+	for _, item := range p.propagations {
+		parent := parents[item.node.Expression]
+		if parent == nil {
+			continue
+		}
+		anchors[item.node] = parent
+		anchors[item.node.Expression] = item.node
+	}
 }
 
 func (p *sourceParser) makeMatch(
@@ -1402,6 +1459,13 @@ func (p *sourceParser) sanitize(
 ) {
 	ast.Inspect(root, func(node ast.Node) bool {
 		switch node := node.(type) {
+		case *ast.CallExpr:
+			p.buildPropagation(node, node)
+		case *ast.ParenExpr:
+			call, ok := unwrappedCall(node)
+			if ok {
+				p.buildPropagation(node, call)
+			}
 		case *ast.BlockStmt:
 			node.List = p.cleanStatements(node, node.List, matchAt, anchors)
 		case *ast.CaseClause:
@@ -1426,6 +1490,36 @@ func (p *sourceParser) sanitize(
 		}
 		return true
 	})
+}
+
+// buildPropagation binds a removed postfix marker to its parsed Go call.
+func (p *sourceParser) buildPropagation(expression ast.Expr, call *ast.CallExpr) {
+	end := p.file.Offset(expression.End())
+	for _, item := range p.propagations {
+		if item.node != nil || item.callEnd != end {
+			continue
+		}
+		bang := p.tokens[item.bang]
+		item.node = &PropagateExpr{
+			Span:       Span{Start: expression.Pos(), Stop: p.pos(bang.end)},
+			Expression: expression,
+			Call:       call,
+			Bang:       p.pos(bang.start),
+		}
+		return
+	}
+}
+
+func unwrappedCall(expression ast.Expr) (*ast.CallExpr, bool) {
+	for {
+		parentheses, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expression = parentheses.X
+	}
+	call, ok := expression.(*ast.CallExpr)
+	return call, ok
 }
 
 func (p *sourceParser) cleanStatements(

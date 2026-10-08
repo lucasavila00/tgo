@@ -11,6 +11,7 @@ import (
 // prepare marks generated declarations and lowers constructors and defaults.
 func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
+	p.generatedValues = make(map[*ast.ValueSpec]bool)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
 	p.usedIdentifiers = nil

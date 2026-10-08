@@ -57,6 +57,21 @@ Check each constructor error before using its value. On failure, the value is in
 For arithmetic, read `Value()` and construct the result again. Do not cast or build wrapper literals.
 Choose overflow behavior for the business task; a constructor does not prevent arithmetic overflow.
 
+## Error propagation
+
+Use `call()!` for normal Go error propagation. The call must return values followed by `error`,
+and the current function must end in `error`. The compiler adds the call name and wraps the cause.
+
+```text
+func Load(repo Repo, id ID) (Account, error) {
+    account := repo.Find(id)!
+    return account, nil
+}
+```
+
+Use a normal error check when the caller must recover, classify the error, add runtime data, or
+return a different value.
+
 ## Initialization and defaults
 
 Initialize each variable. Supply every struct field, or select declared defaults with `..default`.

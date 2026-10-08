@@ -37,6 +37,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	matchMarker := freshIdentifier("__tgo_match", used)
 	defaultMarker := freshIdentifier("__tgo_defaults", used)
 	runtimeAlias := "__tgo_runtime"
+	propagations := make(map[string]propagationSource)
 	file := files.File(tree.Package)
 	edits := []edit(nil)
 	models := []*model(nil)
@@ -91,6 +92,34 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 				end:   file.Offset(node.End()),
 				text:  defaultMarker + ": true",
 			})
+		case *syntax.PropagateExpr:
+			marker := freshIdentifier("__tgo_propagate", used)
+			callName, ok := propagationCallName(node.Call.Fun)
+			if !ok {
+				return nil, fmt.Errorf(
+					"%s: error propagation needs a short static call name",
+					files.Position(node.Bang),
+				)
+			}
+			start := file.Offset(node.Expression.Pos())
+			bang := file.Offset(node.Bang)
+			startPosition := files.Position(node.Expression.Pos())
+			bangPosition := files.Position(node.Bang)
+			opening := marker + "(" + inlineLineDirective(
+				name,
+				startPosition.Line,
+				startPosition.Column,
+			)
+			closing := ")" + inlineLineDirective(
+				name,
+				bangPosition.Line,
+				bangPosition.Column+1,
+			)
+			edits = append(edits,
+				edit{start: start, end: start, text: opening},
+				edit{start: bang, end: bang + 1, text: closing},
+			)
+			propagations[marker] = propagationSource{Bang: node.Bang, Name: callName}
 		}
 	}
 	input := applyEdits(string(data), edits)
@@ -107,7 +136,31 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		MatchMarker:   matchMarker,
 		DefaultMarker: defaultMarker,
 		RuntimeAlias:  runtimeAlias,
+		Propagations:  propagations,
 	}, nil
+}
+
+func propagationCallName(expression ast.Expr) (string, bool) {
+	switch node := expression.(type) {
+	case *ast.Ident:
+		return node.Name, true
+	case *ast.SelectorExpr:
+		prefix, ok := propagationCallName(node.X)
+		if !ok {
+			return "", false
+		}
+		return prefix + "." + node.Sel.Name, true
+	case *ast.IndexExpr:
+		return propagationCallName(node.X)
+	case *ast.IndexListExpr:
+		return propagationCallName(node.X)
+	case *ast.ParenExpr:
+		return propagationCallName(node.X)
+	case *ast.StarExpr:
+		return propagationCallName(node.X)
+	default:
+		return "", false
+	}
 }
 
 func declarationEditEnd(data []byte, end int) int {

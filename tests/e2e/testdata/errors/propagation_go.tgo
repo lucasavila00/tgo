@@ -1,0 +1,8 @@
+package errors
+
+func flushAsync() error { return nil }
+
+func useAsync() error {
+	go flushAsync()!
+	return nil
+}

@@ -1,0 +1,5 @@
+package errors
+
+func loadValue() (int, error) { return 1, nil }
+
+var value = loadValue()!

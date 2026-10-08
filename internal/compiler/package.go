@@ -42,6 +42,7 @@ type packageUnit struct {
 	info            *types.Info
 	typed           *types.Package
 	generated       map[ast.Decl]bool
+	generatedValues map[*ast.ValueSpec]bool
 	erasedImports   map[*ast.ImportSpec]bool
 	references      []generatedReference
 	usedIdentifiers map[string]bool
@@ -162,6 +163,11 @@ func (p *packageUnit) compile() (map[string][]byte, error) {
 	if len(p.errors) > 0 {
 		return nil, p.errors[0]
 	}
+	p.lowerPropagations()
+	if len(p.errors) > 0 {
+		return nil, p.errors[0]
+	}
+	p.typecheck()
 	p.lowerConstructions()
 	p.typecheck()
 	if p.blankUnusedErasedImports() {

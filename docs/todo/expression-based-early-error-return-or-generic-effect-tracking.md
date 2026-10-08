@@ -97,6 +97,9 @@ key, value := index.Entry(id)!
 In a nested expression, the call must have one success value. The lowerer saves earlier operands
 and keeps Go evaluation order. It does not evaluate later operands after an error.
 
+Short-circuit expressions keep their conditional paths. Loop conditions check on each iteration.
+Deferred call arguments run before registration, as Go requires.
+
 ## Custom errors
 
 The function that creates an error sets its type, data, and message. Most callers use `!` and add

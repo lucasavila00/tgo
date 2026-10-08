@@ -1,0 +1,5 @@
+package errors
+
+func loadValue() (int, error) { return 1, nil }
+
+func useValue() (int, error) { value := loadValue()!; return missing, nil }

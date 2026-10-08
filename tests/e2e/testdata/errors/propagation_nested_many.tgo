@@ -1,0 +1,8 @@
+package errors
+
+func loadPair() (string, int, error) { return "", 0, nil }
+func join(string, int) string { return "" }
+
+func usePair() (string, error) {
+	return join(loadPair()!), nil
+}

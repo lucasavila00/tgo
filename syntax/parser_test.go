@@ -126,6 +126,47 @@ func use() enum { return match[enum](1) }
 	}
 }
 
+func TestErrorPropagationExpression(t *testing.T) {
+	set, file := parseFile(t, `package sample
+
+func load() (int, error) { return 1, nil }
+
+func use() (int, error) {
+	value := (load())!
+	other := load()!
+	if !ready(value) { return 0, nil }
+	return value + other, nil
+}
+
+func ready(int) bool { return true }
+`)
+	propagations := []*syntax.PropagateExpr(nil)
+	for _, extension := range syntax.Extensions(file) {
+		if node, ok := extension.(*syntax.PropagateExpr); ok {
+			propagations = append(propagations, node)
+		}
+	}
+	if len(propagations) != 2 {
+		t.Fatalf("propagation expressions: %d", len(propagations))
+	}
+	propagation := propagations[0]
+	if propagation == nil || propagation.Call == nil {
+		t.Fatal("propagation expression is missing")
+	}
+	if got := set.Position(propagation.Bang); got.Line != 6 || got.Column != 19 {
+		t.Fatalf("bang position: %v", got)
+	}
+	if _, ok := syntax.Parent(file, propagation).(*ast.AssignStmt); !ok {
+		t.Fatalf("propagation parent: %T", syntax.Parent(file, propagation))
+	}
+	if syntax.Parent(file, propagation.Expression) != propagation {
+		t.Fatalf("expression parent: %T", syntax.Parent(file, propagation.Expression))
+	}
+	if len(syntax.Children(file, propagation)) != 1 {
+		t.Fatalf("propagation children: %d", len(syntax.Children(file, propagation)))
+	}
+}
+
 func TestNestedMatchesAndTraversal(t *testing.T) {
 	_, file := parseFile(t, `package sample
 

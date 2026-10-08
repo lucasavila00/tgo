@@ -1,0 +1,11 @@
+package errors
+
+type loadError struct{}
+
+func (loadError) Error() string { return "load" }
+func loadValue() (int, loadError) { return 0, loadError{} }
+
+func useValue() (int, error) {
+	value := loadValue()!
+	return value, nil
+}

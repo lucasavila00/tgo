@@ -1,0 +1,10 @@
+package errors
+
+func loadCode() (int, error) { return 1, nil }
+
+func useCode(value int) error {
+	switch value {
+	case loadCode()!:
+	}
+	return nil
+}

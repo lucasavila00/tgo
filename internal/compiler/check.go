@@ -208,6 +208,9 @@ func (p *packageUnit) checkTypeSpec(specification *ast.TypeSpec) {
 
 // checkValueSpec requires an initializer for each variable declaration.
 func (p *packageUnit) checkValueSpec(spec *ast.ValueSpec, parent ast.Node) {
+	if p.generatedValues[spec] {
+		return
+	}
 	declaration, ok := parent.(*ast.GenDecl)
 	repeatedConstant := ok && declaration.Tok == token.CONST
 	if len(spec.Values) == 0 && !repeatedConstant {

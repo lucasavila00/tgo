@@ -103,5 +103,17 @@ Check `err` before using `quantity`. Constructors and reads do not run a boundar
 For foreign data, call the generated `ValidateT` operation and check its error before use.
 The validator reconstructs nested model data and isolates mutable reference graphs.
 
+Use postfix `!` when a call returns Go values followed by `error` and the current function also
+ends in `error`:
+
+```text
+account := repo.Find(id)!
+key, value := index.Entry(id)!
+store.Flush()!
+```
+
+On failure, TGo adds the call name, wraps the cause, and returns zero values with the error.
+Use a normal error check when the caller must recover, change the error, or add runtime data.
+
 [Language specification](../spec/README.md).
 [Go caller checks](TGOLINT.md).

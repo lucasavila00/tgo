@@ -1,0 +1,8 @@
+package errors
+
+func loadPair() (string, int, error) { return "", 0, nil }
+
+func usePair() (string, error) {
+	value := loadPair()!
+	return value, nil
+}

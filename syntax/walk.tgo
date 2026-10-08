@@ -204,6 +204,8 @@ func syntaxChildren(file *File, node Node) []Node {
 		children = append(children, node.Body...)
 	case *DefaultMarker:
 		children = nil
+	case *PropagateExpr:
+		children = []Node{node.Expression}
 	case *VariantLiteral:
 		children = []Node{node.Literal}
 	default:

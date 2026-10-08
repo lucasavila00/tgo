@@ -1,0 +1,9 @@
+package errors
+
+func loadNext() (int, error) { return 1, nil }
+
+func useNext() error {
+	for value := 0; value < 1; value = loadNext()! {
+	}
+	return nil
+}

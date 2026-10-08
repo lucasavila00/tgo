@@ -3,6 +3,7 @@ package compiler
 
 import (
 	"go/ast"
+	"go/token"
 )
 
 type edit struct {
@@ -50,6 +51,12 @@ type source struct {
 	MatchMarker   string
 	DefaultMarker string
 	RuntimeAlias  string
+	Propagations  map[string]propagationSource
+}
+
+type propagationSource struct {
+	Bang token.Pos
+	Name string
 }
 
 // requiresConstructor reports whether a model type has an invalid zero value.

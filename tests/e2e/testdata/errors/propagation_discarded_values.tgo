@@ -1,0 +1,8 @@
+package errors
+
+func loadValue() (int, error) { return 1, nil }
+
+func useValue() error {
+	loadValue()!
+	return nil
+}
