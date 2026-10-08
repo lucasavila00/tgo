@@ -38,8 +38,8 @@ The grammar below uses the notation from the Go specification.
 Names starting with `Go` refer to the matching Go grammar production.
 
 ```text
-EnumDecl       = "type" TypeName "enum" "{" { VariantDecl ";" } "}" .
-VariantDecl    = VariantName "struct" "{" { TgoFieldDecl ";" } "}" .
+EnumDecl       = "type" TypeName "enum" [ GoStringLiteral ] "{" { VariantDecl ";" } "}" .
+VariantDecl    = VariantName "struct" "{" { TgoFieldDecl ";" } "}" [ GoStringLiteral ] .
 CheckedDecl    = "type" TypeName GoType "where" GoExpression .
 TgoStructDecl  = "type" TypeName "struct" "{" { TgoFieldDecl ";" } "}" .
 TgoFieldDecl   = GoFieldDecl [ "=" GoExpression ] .
@@ -210,6 +210,51 @@ The alias can be in a tgo file or a Go file in the same module.
 Every payload field follows the struct literal rules in this specification.
 Payloads may use Go types, including pointers, slices, maps, channels, and interfaces.
 Go rejects a direct recursive payload when its size is infinite.
+
+### Enum JSON
+
+Every enum has generated `MarshalJSON` and `UnmarshalJSON` methods. Go callers use
+`encoding/json` with the enum value. Normal structs keep the standard Go JSON behavior.
+
+An optional Go struct tag after `enum` selects the JSON form. A tag after a variant payload
+sets its wire name. The default wire name is the variant name. Wire names must be nonempty
+and unique, including names that use the default.
+
+```text
+type Event enum `json:"adjacent,tag=type,content=data"` {
+    Created struct {
+        ID string `json:"account_id"`
+        Reason string `json:"reason,omitempty"`
+    } `json:"created"`
+    Closed struct {} `json:"closed"`
+}
+```
+
+| Enum JSON control | Wire value for `Created` |
+| --- | --- |
+| No control, or `json:"external"` | `{"created":{"account_id":"a1"}}` |
+| `json:"internal,tag=type"` | `{"type":"created","account_id":"a1"}` |
+| `json:"adjacent,tag=type,content=data"` | `{"type":"created","data":{"account_id":"a1"}}` |
+| `json:"untagged"` | `{"account_id":"a1"}` |
+
+Internal and adjacent forms require a nonempty `tag` name. Only the adjacent form uses
+`content`; it requires a nonempty name different from `tag`. Other forms reject these options.
+Unknown forms, unknown options, and repeated options are errors. An internal tag must not
+conflict with a payload field's effective Go JSON name, including promoted embedded fields.
+Ignored fields and fields that Go JSON omits because of an ambiguous name do not conflict.
+
+Encoding rejects a zero or unknown enum tag. Tagged decoding requires an object. External decoding
+requires one variant entry. Internal and adjacent decoding require a known variant name;
+adjacent decoding also requires its content field.
+Payload decoding uses standard Go JSON field rules, custom methods, and errors. As with Go
+structs, a `null` payload decodes to the zero payload fields.
+The receiver changes only after payload decoding succeeds and the constructor returns.
+
+Untagged decoding tries payloads in declaration order and selects the first successful decode.
+Go JSON ignores unknown fields and permits missing fields, so an object can match more than
+one payload. A `null` value selects the first successful payload decode. Variant order is part
+of the wire contract. JSON controls and variant wire names are also wire contracts; changes
+can break stored data or clients.
 
 ### Go API
 

@@ -293,6 +293,10 @@ func declarationChildren(value *Declaration) []Node {
 			item.Value.Body != nil)
 	case Enum(item):
 		result = addComment(result, item.Value.Doc)
+		if item.Value.Tag != nil {
+			tag := Expression.BasicLiteral{Value: item.Value.Tag}
+			result = append(result, nodeExpression(&tag))
+		}
 		result = appendNode(result, nodeIdentifier(item.Value.Name),
 			item.Value.Name != nil)
 		for _, variant := range item.Value.Variants {
@@ -380,6 +384,10 @@ func tgoFieldChildren(value *TGoField) []Node {
 
 func enumVariantChildren(value *EnumVariant) []Node {
 	result := addComment(nil, value.Doc)
+	if value.Tag != nil {
+		tag := Expression.BasicLiteral{Value: value.Tag}
+		result = append(result, nodeExpression(&tag))
+	}
 	result = appendNode(result, nodeIdentifier(value.Name), value.Name != nil)
 	for _, field := range value.Fields {
 		result = append(result, nodeTGoField(field))

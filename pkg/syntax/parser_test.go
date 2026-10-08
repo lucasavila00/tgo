@@ -221,3 +221,47 @@ func requireKinds(t *testing.T, found map[string]bool, expected []string) {
 		t.Fatalf("missing kinds %v; found %v", missing, found)
 	}
 }
+
+func TestEnumJSONTags(t *testing.T) {
+	source := []byte("package sample\n" +
+		"type Event enum `json:\"adjacent,tag=type,content=data\"`\n{\n" +
+		" Created struct { ID string `json:\"id\"` } `json:\"created\"` // variant\n" +
+		" Empty struct {}\n}\n")
+	files := token.NewFileSet()
+	tree, err := syntax.ParseFile(files, "sample.tgo", source, syntax.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	enum, ok := syntax.EnumDeclarationOf(tree.Declarations[0])
+	if !ok || enum.Tag == nil || enum.Tag.Value != "`json:\"adjacent,tag=type,content=data\"`" {
+		t.Fatalf("enum tag: %#v", enum)
+	}
+	variant := enum.Variants[0]
+	if variant.Tag == nil || variant.Tag.Value != "`json:\"created\"`" {
+		t.Fatalf("variant tag: %#v", variant)
+	}
+	if variant.Stop != variant.Tag.Stop {
+		t.Fatal("variant span does not include its tag")
+	}
+	if enum.Variants[1].Tag != nil {
+		t.Fatal("untagged variant has a tag")
+	}
+	positions := map[token.Pos]bool{
+		enum.Tag.Start:                    true,
+		variant.Tag.Start:                 true,
+		variant.Fields[0].Field.Tag.Start: true,
+	}
+	tags := 0
+	syntax.Inspect(tree, func(node *syntax.Node) bool {
+		if positions[syntax.NodePosition(node)] {
+			tags++
+			if syntax.Parent(tree, node) == nil {
+				t.Fatal("tag has no parent")
+			}
+		}
+		return true
+	})
+	if tags != 3 {
+		t.Fatalf("walk found %d tags, want 3", tags)
+	}
+}

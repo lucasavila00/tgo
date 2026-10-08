@@ -24,12 +24,14 @@ type field struct {
 }
 
 type variant struct {
-	Boxed  bool
-	Name   string
-	Fields []field
+	JSONName string
+	Boxed    bool
+	Name     string
+	Fields   []field
 }
 
 type model struct {
+	JSON            enumJSON
 	Name            string
 	Enum            bool
 	Line            int
@@ -45,6 +47,8 @@ type model struct {
 }
 
 type source struct {
+	JSONPackage   string
+	FmtPackage    string
 	Name          string
 	Data          []byte
 	File          *ast.File
