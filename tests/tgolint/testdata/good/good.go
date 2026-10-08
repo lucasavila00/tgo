@@ -155,6 +155,95 @@ func CheckedClosure(input int) (int, error) {
 	return read(), nil
 }
 
+func CheckedGoto(input int) (int, error) {
+	value, err := countWrapper(input)
+	if err != nil {
+		return 0, err
+	}
+	goto use
+use:
+	return value.Value(), nil
+}
+
+func CheckedBreak(input int, run bool) (int, error) {
+	value, err := countWrapper(input)
+	for run {
+		if err != nil {
+			return 0, err
+		}
+		break
+	}
+	if err != nil {
+		return 0, err
+	}
+	return value.Value(), nil
+}
+
+func DeadBreak(input int) (int, error) {
+	value, err := countWrapper(1)
+	if err != nil {
+		return 0, err
+	}
+	for input > 0 {
+		value, err = countWrapper(input)
+		break
+	}
+	value, err = countWrapper(1)
+	if err != nil {
+		return 0, err
+	}
+	return value.Value(), nil
+}
+
+func DeadContinue(input int, run bool) {
+	value, err := countWrapper(input)
+	for run {
+		continue
+		_, _ = value, err
+	}
+}
+
+func DeadGoto(input int) (int, error) {
+	value, err := countWrapper(input)
+	goto use
+use:
+	value, err = countWrapper(1)
+	if err != nil {
+		return 0, err
+	}
+	return value.Value(), nil
+}
+
+func DeadFallthrough(input int) (int, error) {
+	value, err := countWrapper(1)
+	if err != nil {
+		return 0, err
+	}
+	switch input {
+	case 0:
+		value, err = countWrapper(input)
+		fallthrough
+	case 1:
+		value, err = countWrapper(1)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return value.Value(), nil
+}
+
+func CheckedParameters(
+	value model.Count,
+	err error,
+	input int,
+) (int, error) {
+	value, err = countWrapper(input)
+	if err != nil {
+		return 0, err
+	}
+	return value.Value(), nil
+}
+
 type Counts interface {
 	model.Count
 }
@@ -212,6 +301,10 @@ func PresenceChannel(values <-chan model.Event) (model.Event, bool) {
 func PresenceAssertion(input any) (model.Event, bool) {
 	value, ok := input.(model.Event)
 	return value, ok
+}
+
+func AssertExisting(input any) model.Event {
+	return input.(model.Event)
 }
 
 func eventWrapper(values map[string]model.Event, key string) (model.Event, bool) {

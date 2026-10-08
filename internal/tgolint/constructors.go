@@ -18,21 +18,52 @@ func (c *checker) reportResult(position token.Pos, format string, arguments ...a
 	c.pass.Reportf(position, "%s", message)
 }
 
+func (c *checker) reportModelResult(
+	position token.Pos,
+	model *modelFact,
+	format string,
+	arguments ...any,
+) {
+	if c.capture != nil {
+		c.capture(model, nil)
+		return
+	}
+	c.reportResult(position, format, arguments...)
+}
+
+func (c *checker) reportModelSource(
+	position token.Pos,
+	model *modelFact,
+	source ast.Expr,
+	format string,
+	arguments ...any,
+) {
+	if c.capture != nil {
+		c.capture(model, source)
+		return
+	}
+	c.reportResult(position, format, arguments...)
+}
+
 type checkedResult struct {
 	failure    types.Object
 	model      *modelFact
 	safe       bool
 	validProof bool
 	presence   bool
+	source     ast.Expr
 }
 
 type checkedState map[types.Object]checkedResult
 
-func (c *checker) checkConstructors(body *ast.BlockStmt) {
-	previous := c.escaped
+func (c *checker) checkConstructors(function ast.Node, body *ast.BlockStmt) {
+	previousEscaped := c.escaped
+	previousFunction := c.function
 	c.escaped = escapedObjects(c.pass.TypesInfo, body)
+	c.function = function
 	defer func() {
-		c.escaped = previous
+		c.escaped = previousEscaped
+		c.function = previousFunction
 	}()
 	c.checkedBlock(body.List, make(checkedState))
 }
@@ -137,7 +168,10 @@ func (c *checker) checkedControlStatement(statement ast.Stmt, state checkedState
 		return replaceWithJoinedStates(state, exits)
 	case *ast.LabeledStmt:
 		return c.checkedStatement(statement.Stmt, state)
-	case *ast.BranchStmt, *ast.EmptyStmt:
+	case *ast.BranchStmt:
+		c.checkBranch(statement, state)
+		return false
+	case *ast.EmptyStmt:
 		return false
 	default:
 		c.checkResultUses([]ast.Expr{statementExpression(statement)}, state, nil)
@@ -231,7 +265,9 @@ func (c *checker) checkedAssignment(assignment *ast.AssignStmt, state checkedSta
 	if len(assignment.Lhs) != 2 {
 		return true
 	}
-	c.bindPresenceResults(assignment.Lhs[0], assignment.Lhs[1], presenceModel, state)
+	c.bindPresenceResults(
+		assignment.Lhs[0], assignment.Lhs[1], expression, presenceModel, state,
+	)
 	return true
 }
 
@@ -272,6 +308,7 @@ func (c *checker) checkedDeclaration(statement *ast.DeclStmt, state checkedState
 			c.bindPresenceResults(
 				specification.Names[0],
 				specification.Names[1],
+				expression,
 				model,
 				state,
 			)
@@ -290,7 +327,7 @@ func (c *checker) bindCheckedResults(
 	c.invalidateAssignments([]ast.Expr{valueExpression, errorExpression}, state)
 	errorName, errorOK := errorExpression.(*ast.Ident)
 	if !errorOK || errorName.Name == "_" {
-		c.reportResult(errorExpression.Pos(),
+		c.reportModelResult(errorExpression.Pos(), model,
 			"error for tgo %s %s result must not be discarded",
 			model.Kind, model.Name)
 		return
@@ -298,7 +335,7 @@ func (c *checker) bindCheckedResults(
 	errorObject := c.pass.TypesInfo.ObjectOf(errorName)
 	valueName, valueOK := valueExpression.(*ast.Ident)
 	if !valueOK {
-		c.reportResult(valueExpression.Pos(),
+		c.reportModelResult(valueExpression.Pos(), model,
 			"tgo %s %s result must first use a local variable",
 			model.Kind, model.Name)
 		return
@@ -310,9 +347,14 @@ func (c *checker) bindCheckedResults(
 	if valueObject == nil || errorObject == nil {
 		return
 	}
+	if !c.localResultObject(valueObject) || !c.localResultObject(errorObject) {
+		c.reportModelResult(valueExpression.Pos(), model,
+			"tgo %s %s result variables must be local to this function",
+			model.Kind, model.Name)
+	}
 	if escapedBefore(c.escaped, valueObject, valueExpression.Pos()) ||
 		escapedBefore(c.escaped, errorObject, errorExpression.Pos()) {
-		c.reportResult(valueExpression.Pos(),
+		c.reportModelResult(valueExpression.Pos(), model,
 			"tgo %s %s result variables must not have aliases",
 			model.Kind, model.Name)
 	}
@@ -371,20 +413,21 @@ func isBoolean(typ types.Type) bool {
 func (c *checker) bindPresenceResults(
 	valueExpression ast.Expr,
 	presenceExpression ast.Expr,
+	source ast.Expr,
 	model *modelFact,
 	state checkedState,
 ) {
 	c.invalidateAssignments([]ast.Expr{valueExpression, presenceExpression}, state)
 	presenceName, presenceOK := presenceExpression.(*ast.Ident)
 	if !presenceOK || presenceName.Name == "_" {
-		c.reportResult(presenceExpression.Pos(),
+		c.reportModelSource(presenceExpression.Pos(), model, source,
 			"ok result for tgo %s %s presence read must not be discarded",
 			model.Kind, model.Name)
 		return
 	}
 	valueName, valueOK := valueExpression.(*ast.Ident)
 	if !valueOK {
-		c.reportResult(valueExpression.Pos(),
+		c.reportModelSource(valueExpression.Pos(), model, source,
 			"tgo %s %s presence value must first use a local variable",
 			model.Kind, model.Name)
 		return
@@ -397,9 +440,14 @@ func (c *checker) bindPresenceResults(
 	if valueObject == nil || presenceObject == nil {
 		return
 	}
+	if !c.localResultObject(valueObject) || !c.localResultObject(presenceObject) {
+		c.reportModelSource(valueExpression.Pos(), model, source,
+			"tgo %s %s presence variables must be local to this function",
+			model.Kind, model.Name)
+	}
 	if escapedBefore(c.escaped, valueObject, valueExpression.Pos()) ||
 		escapedBefore(c.escaped, presenceObject, presenceExpression.Pos()) {
-		c.reportResult(valueExpression.Pos(),
+		c.reportModelSource(valueExpression.Pos(), model, source,
 			"tgo %s %s presence variables must not have aliases",
 			model.Kind, model.Name)
 	}
@@ -408,6 +456,7 @@ func (c *checker) bindPresenceResults(
 		model:      model,
 		validProof: true,
 		presence:   true,
+		source:     source,
 	}
 }
 
@@ -418,6 +467,15 @@ func escapedBefore(
 ) bool {
 	escape, found := escaped[object]
 	return found && escape < position
+}
+
+func (c *checker) localResultObject(object types.Object) bool {
+	variable, ok := object.(*types.Var)
+	if !ok || variable.IsField() || variable.Parent() == c.pass.Pkg.Scope() ||
+		c.function == nil {
+		return false
+	}
+	return variable.Pos() >= c.function.Pos() && variable.Pos() <= c.function.End()
 }
 
 func (c *checker) checkedReturn(statement *ast.ReturnStmt, state checkedState) {
@@ -678,11 +736,11 @@ func (c *checker) checkResultUses(
 			result, found := state[c.pass.TypesInfo.Uses[name]]
 			if found && !result.safe {
 				if result.presence {
-					c.reportResult(name.Pos(),
+					c.reportModelSource(name.Pos(), result.model, result.source,
 						"tgo %s %s presence value is used before ok is proved true",
 						result.model.Kind, result.model.Name)
 				} else {
-					c.reportResult(name.Pos(),
+					c.reportModelResult(name.Pos(), result.model,
 						"tgo %s %s value is used before its error is proved nil",
 						result.model.Kind, result.model.Name)
 				}
@@ -908,7 +966,7 @@ func (c *checker) reportCheckedCall(call *ast.CallExpr) {
 	if model == nil {
 		return
 	}
-	c.reportResult(call.Pos(),
+	c.reportModelResult(call.Pos(), model,
 		"tgo %s %s result error must be checked or returned",
 		model.Kind, model.Name)
 }

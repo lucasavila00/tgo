@@ -67,6 +67,18 @@ def main():
         assert stdout == expected("genericbad.stdout"), stdout
         assert stderr == expected("genericbad.stderr"), stderr
 
+        genericzerogood = run([str(linter), "./genericzerogood"], work)
+        assert genericzerogood.stdout == expected("genericzerogood.stdout")
+        assert genericzerogood.stderr == expected("genericzerogood.stderr")
+
+        genericzerobad = run(
+            [str(linter), "./genericzerobad"], work, success=False
+        )
+        stdout = normalized(genericzerobad.stdout, work)
+        stderr = normalized(genericzerobad.stderr, work)
+        assert stdout == expected("genericzerobad.stdout"), stdout
+        assert stderr == expected("genericzerobad.stderr"), stderr
+
 
 if __name__ == "__main__":
     main()

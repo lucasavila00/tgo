@@ -246,6 +246,74 @@ func (c *checker) modelForSelector(selector *ast.SelectorExpr) *modelFact {
 	return nil
 }
 
+// structuralModel finds a generated enum behind an interface method set.
+// It returns nil when the receiver cannot admit that enum.
+func (c *checker) structuralModel(selector *ast.SelectorExpr) *modelFact {
+	receiver := c.pass.TypesInfo.TypeOf(selector.X)
+	if !c.receiverCanHideModel(receiver) {
+		return nil
+	}
+	methods := types.NewMethodSet(receiver)
+	var found *modelFact
+	for index := 0; index < methods.Len(); index++ {
+		function, ok := methods.At(index).Obj().(*types.Func)
+		if !ok {
+			continue
+		}
+		model := c.modelForAccessor(function)
+		if model == nil {
+			continue
+		}
+		if found != nil && (found.Name != model.Name || found.Kind != model.Kind) {
+			return &modelFact{Mixed: true}
+		}
+		found = model
+	}
+	return found
+}
+
+func (c *checker) receiverCanHideModel(typ types.Type) bool {
+	typ = types.Unalias(typ)
+	if named, ok := typ.(*types.Named); ok {
+		_, isInterface := named.Underlying().(*types.Interface)
+		return isInterface
+	}
+	parameter, ok := typ.(*types.TypeParam)
+	if !ok {
+		_, isInterface := typ.(*types.Interface)
+		return isInterface
+	}
+	terms, supported := simpleTerms(parameter.Constraint())
+	return !supported || len(terms) == 0
+}
+
+func (c *checker) modelForAccessor(function *types.Func) *modelFact {
+	name := function.Name()
+	if !strings.HasPrefix(name, "Tgo") || name == "TgoTag" {
+		return nil
+	}
+	variant := strings.TrimPrefix(name, "Tgo")
+	signature, ok := function.Type().(*types.Signature)
+	if !ok || signature.Params().Len() != 0 || signature.Results().Len() != 1 {
+		return nil
+	}
+	payload, ok := types.Unalias(signature.Results().At(0).Type()).(*types.Named)
+	if !ok || payload.Obj().Pkg() == nil ||
+		!strings.HasSuffix(payload.Obj().Name(), variant) {
+		return nil
+	}
+	modelName := strings.TrimSuffix(payload.Obj().Name(), variant)
+	object, ok := payload.Obj().Pkg().Scope().Lookup(modelName).(*types.TypeName)
+	if !ok {
+		return nil
+	}
+	model := c.modelFor(object.Type())
+	if model == nil || model.Kind != enumKind || variantTag(model, name) == 0 {
+		return nil
+	}
+	return model
+}
+
 func dereference(typ types.Type) types.Type {
 	typ = types.Unalias(typ)
 	for {

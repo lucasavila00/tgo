@@ -5,6 +5,7 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"strings"
 
 	"golang.org/x/tools/go/cfg"
 )
@@ -399,6 +400,9 @@ func receiverCanChangeIn(info *types.Info, scope ast.Node, receiver ast.Expr) bo
 			}
 		case *ast.IncDecStmt:
 			unsafe = receiverWrite(info, node.X, receiver)
+		case *ast.RangeStmt:
+			unsafe = receiverWrite(info, node.Key, receiver) ||
+				receiverWrite(info, node.Value, receiver)
 		case *ast.UnaryExpr:
 			unsafe = node.Op == token.AND && receiverWrite(info, node.X, receiver)
 		case *ast.CallExpr:
@@ -589,6 +593,17 @@ func (c *checker) checkRepresentationAccess(selector *ast.SelectorExpr) {
 	}
 	model := c.modelForSelector(selector)
 	if model == nil {
+		model = c.structuralModel(selector)
+		if model != nil {
+			c.pass.Reportf(selector.Pos(),
+				"%s.%s access through an interface or open type parameter is unsafe",
+				model.Name, selector.Sel.Name)
+		} else if c.receiverCanHideModel(c.pass.TypesInfo.TypeOf(selector.X)) &&
+			strings.HasPrefix(selector.Sel.Name, "Tgo") {
+			c.pass.Reportf(selector.Pos(),
+				"%s access through an interface or open type parameter is unsafe",
+				selector.Sel.Name)
+		}
 		return
 	}
 	if model.Mixed {

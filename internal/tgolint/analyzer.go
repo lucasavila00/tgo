@@ -16,7 +16,7 @@ var Analyzer = &analysis.Analyzer{
 	Name:      "tgolint",
 	Doc:       "check Go use of generated tgo types",
 	Run:       run,
-	FactTypes: []analysis.Fact{new(modelFact)},
+	FactTypes: []analysis.Fact{new(modelFact), new(genericEffectFact)},
 }
 
 type checker struct {
@@ -30,6 +30,9 @@ type checker struct {
 	presence  map[ast.Expr]bool
 	escaped   map[types.Object]token.Pos
 	reported  map[diagnosticKey]bool
+	function  ast.Node
+	zeroTypes map[*types.TypeParam]*modelFact
+	capture   func(*modelFact, ast.Expr)
 }
 
 type diagnosticKey struct {
@@ -66,6 +69,7 @@ func run(pass *analysis.Pass) (any, error) {
 			return true
 		})
 	}
+	c.checkGenericZeroSafety()
 	return nil, nil
 }
 
@@ -89,11 +93,11 @@ func (c *checker) checkNode(node ast.Node) {
 	case *ast.FuncDecl:
 		if node.Body != nil {
 			c.checkNamedResults(node.Type)
-			c.checkConstructors(node.Body)
+			c.checkConstructors(node, node.Body)
 		}
 	case *ast.FuncLit:
 		c.checkNamedResults(node.Type)
-		c.checkConstructors(node.Body)
+		c.checkConstructors(node, node.Body)
 	case *ast.TypeSpec:
 		c.checkTypeSpec(node)
 	case *ast.ValueSpec:
@@ -109,9 +113,7 @@ func (c *checker) checkNode(node ast.Node) {
 			c.checkPresenceRead(node)
 		}
 	case *ast.TypeAssertExpr:
-		if node.Type != nil {
-			c.checkPresenceRead(node)
-		}
+		c.checkTypeAssertion(node)
 	case *ast.SelectorExpr:
 		c.checkRepresentationAccess(node)
 	case *ast.SliceExpr:

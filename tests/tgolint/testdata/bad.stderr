@@ -1,75 +1,87 @@
-bad/bad.go:30:3: TgoTag switch cases cannot fall through
-bad/bad.go:32:10: Event.TgoStopped can run after fallthrough from another tag
-bad/bad.go:28:2: switch on Event.TgoTag needs a default path that cannot continue
-bad/bad.go:42:2: switch on Event.TgoTag needs a default path that cannot continue
-bad/bad.go:53:2: switch on Event.TgoTag needs a default path that cannot continue
-bad/bad.go:154:10: Event.TgoStarted receiver changed after its TgoTag read
-bad/bad.go:165:10: Event.TgoStopped access does not match its TgoTag case 2
-bad/bad.go:232:10: Event.TgoStopped access does not match its TgoTag case 2
-bad/bad.go:241:2: switch on Event.TgoTag needs a default path that cannot continue
-bad/bad.go:397:10: Event.TgoStarted needs an unaliased local value receiver
-bad/bad.go:399:10: Event.TgoStopped needs an unaliased local value receiver
-bad/bad.go:413:10: Event.TgoStarted needs an unaliased local value receiver
-bad/bad.go:416:10: Event.TgoStopped needs an unaliased local value receiver
-bad/bad.go:427:10: Event.TgoStarted needs an unaliased local value receiver
-bad/bad.go:429:10: Event.TgoStopped needs an unaliased local value receiver
-bad/bad.go:481:10: Event.TgoStarted needs an unaliased local value receiver
-bad/bad.go:483:10: Event.TgoStopped needs an unaliased local value receiver
-bad/bad.go:501:10: Event.TgoStarted needs an unaliased local value receiver
-bad/bad.go:503:10: Event.TgoStopped needs an unaliased local value receiver
-bad/bad.go:515:11: Event.TgoStarted needs an unaliased local value receiver
-bad/bad.go:517:11: Event.TgoStopped needs an unaliased local value receiver
-bad/bad.go:532:8: Event.TgoStarted needs an unaliased local value receiver
-bad/bad.go:547:13: Event.TgoStarted needs an unaliased local value receiver
-bad/bad.go:568:10: Event.TgoStarted needs an unaliased local value receiver
-bad/bad.go:570:10: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:62:3: TgoTag switch cases cannot fall through
+bad/bad.go:64:10: Event.TgoStopped can run after fallthrough from another tag
+bad/bad.go:60:2: switch on Event.TgoTag needs a default path that cannot continue
+bad/bad.go:74:2: switch on Event.TgoTag needs a default path that cannot continue
+bad/bad.go:85:2: switch on Event.TgoTag needs a default path that cannot continue
+bad/bad.go:211:10: Event.TgoStarted receiver changed after its TgoTag read
+bad/bad.go:222:10: Event.TgoStopped access does not match its TgoTag case 2
+bad/bad.go:289:10: Event.TgoStopped access does not match its TgoTag case 2
+bad/bad.go:298:2: switch on Event.TgoTag needs a default path that cannot continue
+bad/bad.go:506:10: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:508:10: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:522:10: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:525:10: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:536:10: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:538:10: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:590:10: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:592:10: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:610:10: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:612:10: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:624:11: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:626:11: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:641:8: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:656:8: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:670:13: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:691:10: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:693:10: Event.TgoStopped needs an unaliased local value receiver
 bad/bad.go:5:5: zero declaration contains invalid tgo enum Event; construct it first
-bad/bad.go:11:17: cannot define a new Go type from tgo enum Event; use an alias
-bad/bad.go:14:6: cannot construct tgo enum Event with a Go literal
-bad/bad.go:15:6: field Event defaults to invalid tgo enum Event; supply it
-bad/bad.go:16:6: new creates invalid tgo checked Count
-bad/bad.go:17:6: make creates invalid tgo enum Event values; use length zero
-bad/bad.go:18:6: map read can return invalid tgo enum Event; use comma-ok
-bad/bad.go:19:6: reslice can expose invalid tgo enum Event values; keep the current length
-bad/bad.go:23:6: Event.TgoTag must be the tag of an exhaustive switch
-bad/bad.go:24:9: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
-bad/bad.go:37:21: named result contains invalid tgo enum Event zero; use an unnamed result
-bad/bad.go:68:5: error for tgo checked Count result must not be discarded
-bad/bad.go:72:2: tgo checked Count result error must be checked or returned
-bad/bad.go:80:9: error for tgo checked Count result must not be discarded
-bad/bad.go:86:9: error for tgo checked Count result must not be discarded
-bad/bad.go:95:9: error for tgo enum Event result must not be discarded
-bad/bad.go:102:9: tgo checked Count value is used before its error is proved nil
-bad/bad.go:107:15: tgo checked Count value is used before its error is proved nil
-bad/bad.go:119:10: tgo checked Count value is used before its error is proved nil
-bad/bad.go:127:10: tgo checked Count value is used before its error is proved nil
-bad/bad.go:137:10: tgo checked Count value is used before its error is proved nil
-bad/bad.go:197:6: zero declaration contains invalid tgo checked Count; construct it first
-bad/bad.go:201:32: named result contains invalid tgo checked Count zero; use an unnamed result
-bad/bad.go:206:9: new creates invalid tgo checked Count
-bad/bad.go:210:9: make creates invalid tgo checked Count values; use length zero
-bad/bad.go:214:2: clear creates invalid tgo checked Count values
-bad/bad.go:218:9: map read can return invalid tgo checked Count; use comma-ok
-bad/bad.go:222:9: read can return invalid tgo checked Count; use comma-ok
-bad/bad.go:226:9: read can return invalid tgo checked Count; use comma-ok
-bad/bad.go:257:9: ok result for tgo enum Event presence read must not be discarded
-bad/bad.go:263:12: tgo enum Event presence value is used before ok is proved true
-bad/bad.go:263:12: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
-bad/bad.go:272:6: tgo enum Event presence value is used before ok is proved true
-bad/bad.go:272:6: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
-bad/bad.go:281:12: tgo enum Event presence value is used before ok is proved true
-bad/bad.go:281:12: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
-bad/bad.go:294:9: ok result for tgo enum Event presence read must not be discarded
-bad/bad.go:295:9: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
-bad/bad.go:308:9: tgo checked Count value is used before its error is proved nil
-bad/bad.go:321:9: tgo checked Count value is used before its error is proved nil
-bad/bad.go:335:10: tgo checked Count value is used before its error is proved nil
-bad/bad.go:350:9: tgo checked Count value is used before its error is proved nil
-bad/bad.go:360:9: tgo enum Event presence value is used before ok is proved true
-bad/bad.go:366:2: tgo checked Count result variables must not have aliases
-bad/bad.go:378:10: tgo checked Count value is used before its error is proved nil
-bad/bad.go:386:2: tgo enum Event presence variables must not have aliases
-bad/bad.go:438:33: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
-bad/bad.go:440:33: Event.TgoStopped requires the matching case of an exhaustive TgoTag switch
-bad/bad.go:451:25: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
-bad/bad.go:464:22: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
+bad/bad.go:15:17: cannot define a new Go type from tgo enum Event; use an alias
+bad/bad.go:18:6: cannot construct tgo enum Event with a Go literal
+bad/bad.go:19:6: field Event defaults to invalid tgo enum Event; supply it
+bad/bad.go:20:6: new creates invalid tgo checked Count
+bad/bad.go:21:6: make creates invalid tgo enum Event values; use length zero
+bad/bad.go:22:6: map read can return invalid tgo enum Event; use comma-ok
+bad/bad.go:23:6: reslice can expose invalid tgo enum Event values; keep the current length
+bad/bad.go:27:6: Event.TgoTag must be the tag of an exhaustive switch
+bad/bad.go:28:9: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
+bad/bad.go:39:9: Event.TgoStarted access through an interface or open type parameter is unsafe
+bad/bad.go:47:9: Event.TgoStarted access through an interface or open type parameter is unsafe
+bad/bad.go:56:9: TgoTag access through an interface or open type parameter is unsafe
+bad/bad.go:69:21: named result contains invalid tgo enum Event zero; use an unnamed result
+bad/bad.go:100:5: error for tgo checked Count result must not be discarded
+bad/bad.go:104:2: tgo checked Count result error must be checked or returned
+bad/bad.go:112:9: error for tgo checked Count result must not be discarded
+bad/bad.go:118:9: error for tgo checked Count result must not be discarded
+bad/bad.go:127:9: error for tgo enum Event result must not be discarded
+bad/bad.go:132:2: tgo enum Event result variables must be local to this function
+bad/bad.go:139:2: tgo enum Event presence variables must be local to this function
+bad/bad.go:149:3: tgo enum Event result variables must be local to this function
+bad/bad.go:159:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:164:15: tgo checked Count value is used before its error is proved nil
+bad/bad.go:176:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:184:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:194:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:254:6: zero declaration contains invalid tgo checked Count; construct it first
+bad/bad.go:258:32: named result contains invalid tgo checked Count zero; use an unnamed result
+bad/bad.go:263:9: new creates invalid tgo checked Count
+bad/bad.go:267:9: make creates invalid tgo checked Count values; use length zero
+bad/bad.go:271:2: clear creates invalid tgo checked Count values
+bad/bad.go:275:9: map read can return invalid tgo checked Count; use comma-ok
+bad/bad.go:279:9: read can return invalid tgo checked Count; use comma-ok
+bad/bad.go:314:9: ok result for tgo enum Event presence read must not be discarded
+bad/bad.go:320:12: tgo enum Event presence value is used before ok is proved true
+bad/bad.go:320:12: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
+bad/bad.go:329:6: tgo enum Event presence value is used before ok is proved true
+bad/bad.go:329:6: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
+bad/bad.go:338:12: tgo enum Event presence value is used before ok is proved true
+bad/bad.go:338:12: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
+bad/bad.go:351:9: ok result for tgo enum Event presence read must not be discarded
+bad/bad.go:352:9: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
+bad/bad.go:365:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:378:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:390:3: fallthrough moves tgo checked Count before its error is proved nil
+bad/bad.go:392:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:407:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:412:2: goto moves tgo checked Count before its error is proved nil
+bad/bad.go:431:3: goto moves tgo checked Count before its error is proved nil
+bad/bad.go:440:3: break moves tgo checked Count before its error is proved nil
+bad/bad.go:454:3: continue moves tgo checked Count before its error is proved nil
+bad/bad.go:459:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:469:9: tgo enum Event presence value is used before ok is proved true
+bad/bad.go:475:2: tgo checked Count result variables must not have aliases
+bad/bad.go:487:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:495:2: tgo enum Event presence variables must not have aliases
+bad/bad.go:547:33: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
+bad/bad.go:549:33: Event.TgoStopped requires the matching case of an exhaustive TgoTag switch
+bad/bad.go:560:25: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch
+bad/bad.go:573:22: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch

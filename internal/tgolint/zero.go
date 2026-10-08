@@ -36,6 +36,9 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*modelFact, bo
 			return c.zero(typ.Elem(), seen)
 		}
 	case *types.TypeParam:
+		if model := c.zeroTypes[typ]; model != nil {
+			return model, true
+		}
 		terms, supported := simpleTerms(typ.Constraint())
 		if !supported {
 			return nil, false
@@ -319,6 +322,14 @@ func (c *checker) checkPresenceRead(expression ast.Expr) {
 	}
 	c.pass.Reportf(expression.Pos(),
 		"read can return invalid tgo %s %s; use comma-ok", model.Kind, model.Name)
+}
+
+// checkTypeAssertion checks the zero result from the comma-ok form.
+// A failed one-result assertion stops with a panic and returns no zero.
+func (c *checker) checkTypeAssertion(expression *ast.TypeAssertExpr) {
+	if expression.Type != nil && c.commaOK(expression) {
+		c.checkPresenceRead(expression)
+	}
 }
 
 func firstType(typ types.Type) types.Type {

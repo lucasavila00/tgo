@@ -1,0 +1,48 @@
+genericzerobad/bad.go:18:2: call to Variable will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:19:6: call to Named will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:20:6: call to New will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:21:6: call to Make will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:22:2: call to Clear will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:23:2: call to Clear can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:24:6: call to MapRead will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:25:6: call to MapRead can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:26:6: call to ChannelRead can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:28:6: call to MapDiscarded will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:29:6: call to MapDiscarded can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:30:6: call to ChannelDiscarded can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:31:6: call to AssertDiscarded can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:32:6: call to AssertDiscarded will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:33:6: call to Reslice can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:34:6: call to Reslice will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:35:6: call to OmittedField will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:36:6: call to OmittedArray will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:37:6: call to OmittedSlice will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:38:2: call to Maybe will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:39:2: call to Mutated can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:40:2: call to Mutated can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:41:2: call to Unless will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:42:2: call to Recursive will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:43:6: call to MaybeStarted will access tgo enum Event through an open type parameter
+genericzerobad/bad.go:44:6: call to UnlessStarted will access tgo enum Event through an open type parameter
+genericzerobad/bad.go:48:2: call to Maybe can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:49:2: call to Unless can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:50:2: call to Recursive can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:51:6: call to Make can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:52:6: call to MaybeStarted can access tgo enum Event through an open type parameter
+genericzerobad/bad.go:53:6: call to UnlessStarted can access tgo enum Event through an open type parameter
+genericzerobad/bad.go:54:2: call to Maybe can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:55:2: call to Make can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:59:2: call to Twice will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:60:6: call to Started will access tgo enum Event through an open type parameter
+genericzerobad/bad.go:61:6: call to Started will access tgo enum Event through an open type parameter
+genericzerobad/bad.go:62:2: call to Variable will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:63:6: call to Started will access tgo enum Event through an open type parameter
+genericzerobad/bad.go:68:2: call to Variable will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:70:6: call to Make will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:72:6: call to Started will access tgo enum Event through an open type parameter
+genericzerobad/bad.go:76:2: call to Variable will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:78:6: call to Make will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:81:6: call to Started will access tgo enum Event through an open type parameter
+genericzerobad/bad.go:84:7: generic tgo function value Make escapes; its effects cannot be checked at a call site
+genericzerobad/bad.go:85:2: call to function returned by Nested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:87:2: call to function returned by Nested will create invalid tgo enum Event zero from a type argument

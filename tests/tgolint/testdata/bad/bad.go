@@ -4,6 +4,10 @@ import "example.com/tgolint/model"
 
 var zero model.Event
 
+var publishedEvent = model.NewEventStopped(model.EventStopped{})
+var publishedError error
+var publishedOK bool
+
 type Outer struct {
 	Event model.Event
 }
@@ -22,6 +26,34 @@ func InvalidValues(values map[string]model.Event, slice []model.Event, key strin
 func Direct(event model.Event) string {
 	_ = event.TgoTag()
 	return event.TgoStarted().ID
+}
+
+type EventView interface {
+	TgoTag() uint8
+	TgoStarted() model.EventStarted
+	TgoStopped() model.EventStopped
+}
+
+func InterfaceAccessor(event model.Event) string {
+	var view EventView = event
+	return view.TgoStarted().ID
+}
+
+type EventAccess interface {
+	TgoStarted() model.EventStarted
+}
+
+func StructuralGeneric[T EventAccess](event T) string {
+	return event.TgoStarted().ID
+}
+
+type TagView interface {
+	TgoTag() uint8
+}
+
+func InterfaceTag(event model.Event) uint8 {
+	var view TagView = event
+	return view.TgoTag()
 }
 
 func Incomplete(event model.Event) string {
@@ -94,6 +126,31 @@ func eventWithError() (model.Event, error) {
 func DiscardEnumError() model.Event {
 	value, _ := eventWithError()
 	return value
+}
+
+func PublishResult() {
+	publishedEvent, publishedError = eventWithError()
+	if publishedError == nil {
+		_ = publishedEvent
+	}
+}
+
+func PublishPresence(values map[string]model.Event, key string) {
+	publishedEvent, publishedOK = values[key]
+	if publishedOK {
+		_ = publishedEvent
+	}
+}
+
+func CaptureResult() func() {
+	value := model.NewEventStopped(model.EventStopped{})
+	var err error
+	return func() {
+		value, err = eventWithError()
+		if err == nil {
+			_ = value
+		}
+	}
 }
 
 func UseBeforeCheck(input int) int {
@@ -350,6 +407,58 @@ func TypeSwitchOverwrite(input any) int {
 	return value.Value()
 }
 
+func GotoSkipsError(input int) int {
+	value, err := model.NewCount(input)
+	goto use
+	if err != nil {
+		return 0
+	}
+use:
+	return value.Value()
+}
+
+func GotoRepeatsUnchecked(input int, again bool) int {
+	value, err := model.NewCount(1)
+	if err != nil {
+		return 0
+	}
+again:
+	result := value.Value()
+	value, err = model.NewCount(input)
+	_ = err
+	if again {
+		again = false
+		goto again
+	}
+	return result
+}
+
+func BreakSkipsError(input int) int {
+	value, err := model.NewCount(input)
+	switch input {
+	case 1:
+		break
+		if err != nil {
+			return 0
+		}
+	default:
+		return 0
+	}
+	return value.Value()
+}
+
+func ContinueSkipsError(input int, run bool) int {
+	value, err := model.NewCount(input)
+	for run {
+		run = false
+		continue
+		if err != nil {
+			return 0
+		}
+	}
+	return value.Value()
+}
+
 func SelectOverwrite(values <-chan model.Event) model.Event {
 	value := model.NewEventStopped(model.EventStopped{})
 	var ok bool
@@ -531,6 +640,20 @@ func ReceiverLoop(event model.Event) string {
 		for range 2 {
 			_ = event.TgoStarted()
 			event = model.NewEventStopped(model.EventStopped{})
+		}
+		return ""
+	case 2:
+		return event.TgoStopped().Reason
+	default:
+		panic("invalid Event variant")
+	}
+}
+
+func ReceiverRange(event model.Event, events []model.Event) string {
+	switch event.TgoTag() {
+	case 1:
+		for _, event = range events {
+			_ = event.TgoStarted()
 		}
 		return ""
 	case 2:
