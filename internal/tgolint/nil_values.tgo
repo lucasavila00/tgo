@@ -183,21 +183,21 @@ func (e %nilEnvironment) resultNilValue(
 	case *ast.IndexExpr:
 		if _, mapping := coreType(e.info.TypeOf(expression.X)).(*types.Map); mapping &&
 			index == 0 {
-			return nilUnknown
+			return unknownNilValue()
 		}
 	case *ast.UnaryExpr:
 		if expression.Op == token.ARROW && index == 0 {
-			return nilUnknown
+			return unknownNilValue()
 		}
 	case *ast.TypeAssertExpr:
 		if index == 0 {
-			return nilUnknown
+			return unknownNilValue()
 		}
 	}
 	if e.resultContract(expression, index)[""] {
-		return nilNonNil
+		return nonNilValue()
 	}
-	return nilUnknown
+	return unknownNilValue()
 }
 
 func (e %nilEnvironment) callContract(call *ast.CallExpr) nilContract {
@@ -216,10 +216,10 @@ func (e %nilEnvironment) expressionNilValue(
 	state *nilFlowState,
 ) nilValue {
 	if expression == nil {
-		return nilUnknown
+		return unknownNilValue()
 	}
 	if e.isNil(expression) {
-		return nilNil
+		return provenNilValue()
 	}
 	if place, ok := e.nilPlace(expression); ok {
 		if value, exists := state.values[place]; exists {
@@ -231,35 +231,35 @@ func (e %nilEnvironment) expressionNilValue(
 		return e.expressionNilValue(expression.X, state)
 	case *ast.UnaryExpr:
 		if expression.Op == token.AND {
-			return nilNonNil
+			return nonNilValue()
 		}
 		if expression.Op == token.ARROW {
-			return nilUnknown
+			return unknownNilValue()
 		}
 	case *ast.TypeAssertExpr:
-		return nilUnknown
+		return unknownNilValue()
 	case *ast.IndexExpr:
 		if _, mapping := coreType(e.info.TypeOf(expression.X)).(*types.Map); mapping {
-			return nilUnknown
+			return unknownNilValue()
 		}
 	case *ast.CallExpr:
 		if name, ok := expression.Fun.(*ast.Ident); ok {
 			if builtin, ok := e.info.Uses[name].(*types.Builtin); ok &&
 				builtin.Name() == "new" {
-				return nilNonNil
+				return nonNilValue()
 			}
 		}
 		if e.info.Types[expression.Fun].IsType() && len(expression.Args) == 1 {
 			if e.contractForType(e.info.TypeOf(expression))[""] {
-				return nilNonNil
+				return nonNilValue()
 			}
 			return e.expressionNilValue(expression.Args[0], state)
 		}
 	}
 	if e.contractForExpression(expression)[""] {
-		return nilNonNil
+		return nonNilValue()
 	}
-	return nilUnknown
+	return unknownNilValue()
 }
 
 // checkNilExpression checks calls, literals, and pointer reads below an expression.

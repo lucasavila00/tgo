@@ -11,13 +11,47 @@ import (
 	"golang.org/x/tools/go/cfg"
 )
 
-type nilValue uint8
+type nilValue enum {
+	Unknown struct{}
+	NonNil struct{}
+	Nil struct{}
+}
 
-const (
-	nilUnknown nilValue = iota
-	nilNonNil
-	nilNil
-)
+func unknownNilValue() nilValue { return nilValue.Unknown{} }
+func nonNilValue() nilValue { return nilValue.NonNil{} }
+func provenNilValue() nilValue { return nilValue.Nil{} }
+
+func isUnknownNilValue(value nilValue) bool {
+	match value {
+	case Unknown(_): return true
+	case NonNil(_): return false
+	case Nil(_): return false
+	}
+}
+
+func isNonNilValue(value nilValue) bool {
+	match value {
+	case Unknown(_): return false
+	case NonNil(_): return true
+	case Nil(_): return false
+	}
+}
+
+func isProvenNilValue(value nilValue) bool {
+	match value {
+	case Unknown(_): return false
+	case NonNil(_): return false
+	case Nil(_): return true
+	}
+}
+
+func equalNilValue(left nilValue, right nilValue) bool {
+	match left {
+	case Unknown(_): return isUnknownNilValue(right)
+	case NonNil(_): return isNonNilValue(right)
+	case Nil(_): return isProvenNilValue(right)
+	}
+}
 
 type nilPlace struct {
 	object types.Object
@@ -47,8 +81,31 @@ type nilFlow struct {
 	before map[ast.Node]*nilFlowState
 }
 
+// checkTGoSource runs checks that need the typed TGo source package.
+func (c %checker) checkTGoSource() {
+	analysis := c.analyzeTGoPackage()
+	c.checkNilSafety(analysis)
+	c.checkIotaModernization(analysis)
+}
+
+// analyzeTGoPackage loads TGo source once for all source checks.
+func (c %checker) analyzeTGoPackage() *compiler.AnalysisPackage {
+	directory := c.packageDirectory()
+	if directory == "" {
+		return nil
+	}
+	analysis, err := compiler.AnalyzePackage(
+		directory, c.pass.Pkg.Path(), c.pass.Fset,
+	)
+	if err != nil {
+		c.reportResult(c.pass.Files[0].Package, "analyze TGo source: %v", err)
+		return nil
+	}
+	return analysis
+}
+
 // checkNilSafety checks `%T` contracts in TGo and Go source.
-func (c %checker) checkNilSafety() {
+func (c %checker) checkNilSafety(analysis *compiler.AnalysisPackage) {
 	goFiles := make([]*ast.File, 0, len(c.pass.Files))
 	for _, file := range c.pass.Files {
 		if !c.generated[file] {
@@ -60,25 +117,15 @@ func (c %checker) checkNilSafety() {
 	)
 	goEnvironment.collectNilContracts()
 
-	directory := c.packageDirectory()
-	if directory != "" {
-		analysis, err := compiler.AnalyzePackage(
-			directory, c.pass.Pkg.Path(), c.pass.Fset,
+	if analysis != nil {
+		sourceEnvironment := newNilEnvironment(
+			c.pass, analysis.Files, analysis.Info, analysis.Package,
+			analysis.NonNil,
 		)
-		if err != nil {
-			c.reportResult(c.pass.Files[0].Package, "analyze TGo nil safety: %v", err)
-			return
-		}
-		if analysis != nil {
-			sourceEnvironment := newNilEnvironment(
-				c.pass, analysis.Files, analysis.Info, analysis.Package,
-				analysis.NonNil,
-			)
-			sourceEnvironment.collectNilContracts()
-			sourceEnvironment.copyPackageContracts(goEnvironment)
-			sourceEnvironment.exportContracts(c.pass)
-			sourceEnvironment.checkNilFiles()
-		}
+		sourceEnvironment.collectNilContracts()
+		sourceEnvironment.copyPackageContracts(goEnvironment)
+		sourceEnvironment.exportContracts(c.pass)
+		sourceEnvironment.checkNilFiles()
 	}
 	goEnvironment.checkNilFiles()
 }
@@ -195,7 +242,7 @@ func (e %nilEnvironment) nilEntryState(
 			for _, name := range field.Names {
 				object := e.info.Defs[name]
 				if e.contractForObject(object)[""] {
-					e.setNilValue(state, nilPlace{object: object, path: ""}, nilNonNil)
+					e.setNilValue(state, nilPlace{object: object, path: ""}, nonNilValue())
 				}
 			}
 		}
@@ -207,7 +254,7 @@ func (e %nilEnvironment) nilEntryState(
 		for _, name := range field.Names {
 			object := e.info.Defs[name]
 			if len(e.contractForObject(object)) != 0 {
-				e.setNilValue(state, nilPlace{object: object, path: ""}, nilNonNil)
+				e.setNilValue(state, nilPlace{object: object, path: ""}, nonNilValue())
 			}
 		}
 	}
@@ -332,9 +379,10 @@ func joinNilStates(
 	}
 	joined := newNilState()
 	for place, value := range current.values {
-		incomingValue, exists := incoming.values[place]
-		if exists && incomingValue == value {
-			joined.values[place] = value
+		if incomingValue, exists := incoming.values[place]; exists {
+			if equalNilValue(incomingValue, value) {
+				joined.values[place] = value
+			}
 		}
 	}
 	places := make(map[nilPlace]bool)
@@ -377,7 +425,11 @@ func equalNilStates(left, right %nilFlowState) bool {
 		return false
 	}
 	for place, value := range left.values {
-		if right.values[place] != value {
+		if other, found := right.values[place]; found {
+			if !equalNilValue(other, value) {
+				return false
+			}
+		} else {
 			return false
 		}
 	}
@@ -409,7 +461,11 @@ func equalNilFacts(left, right nilFacts) bool {
 		return false
 	}
 	for place, value := range left {
-		if right[place] != value {
+		if other, found := right[place]; found {
+			if !equalNilValue(other, value) {
+				return false
+			}
+		} else {
 			return false
 		}
 	}
