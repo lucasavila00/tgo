@@ -25,8 +25,14 @@ func (p *packageUnit) addFieldDefaults(source *source, name string, fields []fie
 		}
 		helper := "TgoDefault" + name + field.Name
 		text := fmt.Sprintf(
-			"package %s\n// %s evaluates the declared default.\nfunc %s() %s { return %s }",
-			source.File.Name.Name, helper, helper, field.Type, field.Default,
+			"package %s\n// %s evaluates the declared default.\n"+
+				"func %s() %s { return (\n%s%s) }",
+			source.File.Name.Name,
+			helper,
+			helper,
+			field.Type,
+			lineDirective(source.Name, field.DefaultLine, field.DefaultColumn),
+			field.Default,
 		)
 		name := source.Name + " (default)"
 		file, err := parser.ParseFile(p.fs, name, text, parser.SkipObjectResolution)
@@ -34,8 +40,17 @@ func (p *packageUnit) addFieldDefaults(source *source, name string, fields []fie
 			p.errors = append(p.errors, err)
 			continue
 		}
+		removeDefaultParentheses(file)
 		source.File.Decls = append(source.File.Decls, file.Decls...)
 	}
+}
+
+// removeDefaultParentheses restores the normal generated helper shape.
+func removeDefaultParentheses(file *ast.File) {
+	function := file.Decls[0].(*ast.FuncDecl)
+	statement := function.Body.List[0].(*ast.ReturnStmt)
+	parenthesized := statement.Results[0].(*ast.ParenExpr)
+	statement.Results[0] = parenthesized.X
 }
 
 // fillDefaults replaces each marker with calls to declared default helpers.

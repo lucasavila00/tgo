@@ -154,6 +154,11 @@ func generatedSource(name string, startLine, endLine int, code string) string {
 	)
 }
 
+// lineDirective maps the next generated line to one tgo source token.
+func lineDirective(name string, line, column int) string {
+	return fmt.Sprintf("//line %s:%d:%d\n", name, line, column)
+}
+
 // enumDeclaration parses variants and emits their Go representation.
 func (p *sourceParser) enumDeclaration(declaration *model) (string, error) {
 	enumToken := p.cursor
@@ -224,6 +229,10 @@ func (p *sourceParser) checkedDeclaration(declaration *model) (string, error) {
 			declaration.Base = p.text(start, p.cursor)
 			p.cursor++
 			predicate := p.cursor
+			if predicate < len(p.tokens) {
+				declaration.PredicateLine = p.tokens[predicate].line
+				declaration.PredicateColumn = p.tokens[predicate].column
+			}
 			if err := p.toSemicolon(); err != nil {
 				return "", err
 			}
@@ -231,7 +240,7 @@ func (p *sourceParser) checkedDeclaration(declaration *model) (string, error) {
 			if declaration.Base == "" || declaration.Predicate == "" {
 				return "", p.errorAt(start, "checked type needs a base type and predicate")
 			}
-			return checkedGo(declaration), nil
+			return checkedGo(p.name, declaration), nil
 		}
 		if err := p.advance(); err != nil {
 			return "", err

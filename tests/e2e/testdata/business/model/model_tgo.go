@@ -106,5 +106,9 @@ func NewRequest(id string) Request {
 func NewMessage(id string) Message {
 	return Message{ID: id, Tags: TgoDefaultMessageTags()}
 }
-func TgoDefaultRequestTags() map[string]string { return map[string]string{} }
-func TgoDefaultMessageTags() map[string]string { return map[string]string{} }
+func TgoDefaultRequestTags() map[string]string {
+	return map[string]string{}
+}
+func TgoDefaultMessageTags() map[string]string {
+	return map[string]string{}
+}

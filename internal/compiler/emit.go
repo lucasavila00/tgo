@@ -43,7 +43,7 @@ func emitVariant(output *strings.Builder, enum string, variant variant, tag int)
 }
 
 // checkedGo emits a checked wrapper, constructor, error, and value accessor.
-func checkedGo(declaration *model) string {
+func checkedGo(sourceName string, declaration *model) string {
 	var output strings.Builder
 	name := declaration.Name
 	fmt.Fprintf(&output, "// %s requires New%s success. Zero is invalid.\n", name, name)
@@ -54,7 +54,13 @@ func checkedGo(declaration *model) string {
 	fmt.Fprintf(&output, "func (tgo%sError) Error() string { return %s }\n", name, message)
 	fmt.Fprintf(&output, "// New%s checks the rule. Check the error before use.\n", name)
 	fmt.Fprintf(&output, "func New%s(value %s) (%s, error) {\n", name, declaration.Base, name)
-	fmt.Fprintf(&output, "if !(%s) {\n", declaration.Predicate)
+	output.WriteString("if !(\n")
+	output.WriteString(lineDirective(
+		sourceName,
+		declaration.PredicateLine,
+		declaration.PredicateColumn,
+	))
+	fmt.Fprintf(&output, "%s) {\n", declaration.Predicate)
 	fmt.Fprintf(&output, "return %s{}, tgo%sError{}\n}\n", name, name)
 	fmt.Fprintf(&output, "return %s{value: value}, nil\n}\n", name)
 	output.WriteString("// Value requires construction success. Shared data keeps its aliases.\n")

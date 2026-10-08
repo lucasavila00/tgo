@@ -60,13 +60,22 @@ func (p *sourceParser) field(limit int) ([]field, error) {
 	if parsed.Tag != nil {
 		tag = parsed.Tag.Value
 	}
+	defaultLine := 0
+	defaultColumn := 0
+	if defaultValue != "" {
+		position := p.tokens[span.assignment+1]
+		defaultLine = position.line
+		defaultColumn = position.column
+	}
 	fields := make([]field, 0, len(parsed.Names))
 	for _, name := range parsed.Names {
 		fields = append(fields, field{
-			Name:    name.Name,
-			Type:    typeText,
-			Tag:     tag,
-			Default: defaultValue,
+			Name:          name.Name,
+			Type:          typeText,
+			Tag:           tag,
+			Default:       defaultValue,
+			DefaultLine:   defaultLine,
+			DefaultColumn: defaultColumn,
 		})
 	}
 

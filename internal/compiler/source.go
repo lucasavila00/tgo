@@ -22,10 +22,12 @@ type edit struct {
 }
 
 type field struct {
-	Name    string
-	Type    string
-	Tag     string
-	Default string
+	Name          string
+	Type          string
+	Tag           string
+	Default       string
+	DefaultLine   int
+	DefaultColumn int
 }
 
 type variant struct {
@@ -34,13 +36,15 @@ type variant struct {
 }
 
 type model struct {
-	Name      string
-	Line      int
-	Column    int
-	Base      string
-	Predicate string
-	Variants  []variant
-	Fields    []field
+	Name            string
+	Line            int
+	Column          int
+	Base            string
+	Predicate       string
+	PredicateLine   int
+	PredicateColumn int
+	Variants        []variant
+	Fields          []field
 }
 
 type source struct {

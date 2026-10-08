@@ -333,4 +333,5 @@ It refuses to replace a matching file without the generated header.
 
 A failed build exits with status 1 and writes the first error to standard error.
 It writes nothing to standard output. Source errors include the `.tgo` file, line, and column.
+Errors in predicates and defaults point to the original expression.
 The build restores generated files changed earlier in the same invocation.

@@ -1,0 +1,7 @@
+package sample
+
+type Request struct {
+    Count int = missingName
+}
+
+var request = Request{..default}
