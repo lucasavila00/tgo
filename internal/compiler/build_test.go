@@ -3,8 +3,6 @@ package compiler
 import (
 	"go/ast"
 	"go/token"
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -44,61 +42,5 @@ Outer: Inner: match value { case A(item): break Outer }
 	}
 	if _, ok := inner.Stmt.(*ast.SwitchStmt); !ok {
 		t.Fatalf("inner label statement: %T", inner.Stmt)
-	}
-}
-
-func TestValidationRuntimeRejectsForeignFile(t *testing.T) {
-	root := t.TempDir()
-	directory := filepath.Join(root, "internal", "tgoruntime")
-	if err := os.MkdirAll(directory, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(directory, "runtime.go")
-	if err := os.WriteFile(path, []byte("package tgoruntime\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	builder := &packageBuilder{root: root}
-	if err := builder.ensureValidationRuntime(); err == nil {
-		t.Fatal("arbitrary runtime.go was accepted")
-	}
-}
-
-func TestValidationRuntimeAcceptsCanonicalSource(t *testing.T) {
-	root := t.TempDir()
-	directory := filepath.Join(root, "internal", "tgoruntime")
-	if err := os.MkdirAll(directory, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	canonical := validationRuntime[len(generatedHeader)+1:]
-	path := filepath.Join(directory, "runtime.go")
-	if err := os.WriteFile(path, canonical, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	builder := &packageBuilder{root: root}
-	if err := builder.ensureValidationRuntime(); err != nil {
-		t.Fatalf("canonical runtime.go: %v", err)
-	}
-}
-
-func TestValidationRuntimeRejectsExtraFileBesideCanonicalSource(t *testing.T) {
-	root := t.TempDir()
-	directory := filepath.Join(root, "internal", "tgoruntime")
-	if err := os.MkdirAll(directory, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	canonical := validationRuntime[len(generatedHeader)+1:]
-	if err := os.WriteFile(
-		filepath.Join(directory, "runtime.go"), canonical, 0o644,
-	); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(
-		filepath.Join(directory, "extra.go"), []byte("package tgoruntime\n"), 0o644,
-	); err != nil {
-		t.Fatal(err)
-	}
-	builder := &packageBuilder{root: root}
-	if err := builder.ensureValidationRuntime(); err == nil {
-		t.Fatal("extra runtime Go file was accepted")
 	}
 }

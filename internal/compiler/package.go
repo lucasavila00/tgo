@@ -46,6 +46,7 @@ type packageUnit struct {
 	erasedImports   map[*ast.ImportSpec]bool
 	references      []generatedReference
 	usedIdentifiers map[string]bool
+	exportPaths     map[string]string
 	typeErrors      []error
 	errors          []error
 	serial          int
@@ -86,9 +87,11 @@ func newInfo() *types.Info {
 func (p *packageUnit) typecheck() {
 	p.info = newInfo()
 	var problems []error
-	cache := map[string]string{}
+	if p.exportPaths == nil {
+		p.exportPaths = make(map[string]string)
+	}
 	imp := importer.ForCompiler(p.fs, "gc", func(path string) (io.ReadCloser, error) {
-		export, ok := cache[path]
+		export, ok := p.exportPaths[path]
 		if !ok {
 			cmd := exec.Command("go", "list", "-export", "-f", "{{.Export}}", path)
 			cmd.Dir = p.Dir
@@ -97,7 +100,7 @@ func (p *packageUnit) typecheck() {
 				return nil, fmt.Errorf("load %s: %s", path, out)
 			}
 			export = strings.TrimSpace(string(out))
-			cache[path] = export
+			p.exportPaths[path] = export
 		}
 		return os.Open(export)
 	})
@@ -154,10 +157,6 @@ func (p *packageUnit) generatedDecl(d ast.Decl) bool { return p.generated[d] }
 // compile lowers one tgo package and formats its Go output files.
 func (p *packageUnit) compile() (map[string][]byte, error) {
 	p.prepare()
-	p.checkValidationNameCollisions()
-	if len(p.errors) > 0 {
-		return nil, p.errors[0]
-	}
 	p.typecheck()
 	p.checkGeneratedPredeclaredNames()
 	if len(p.errors) > 0 {

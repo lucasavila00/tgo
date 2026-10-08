@@ -1,0 +1,397 @@
+package syntax
+
+// IdentifierOf returns an identifier node payload.
+func IdentifierOf(node *Node) (*Identifier, bool) {
+	if node == nil { return nil, false }
+	match *node {
+	case Identifier(value): return value.Value, true
+	case Expression(value):
+		match *value.Value {
+		case Identifier(item): return item.Value, true
+		case Bad(_): return nil, false
+		case Ellipsis(_): return nil, false
+		case BasicLiteral(_): return nil, false
+		case FunctionLiteral(_): return nil, false
+		case CompositeLiteral(_): return nil, false
+		case Parenthesized(_): return nil, false
+		case Selector(_): return nil, false
+		case Index(_): return nil, false
+		case IndexList(_): return nil, false
+		case Slice(_): return nil, false
+		case TypeAssertion(_): return nil, false
+		case Call(_): return nil, false
+		case Star(_): return nil, false
+		case Unary(_): return nil, false
+		case Binary(_): return nil, false
+		case KeyValue(_): return nil, false
+		case ArrayType(_): return nil, false
+		case StructType(_): return nil, false
+		case FunctionType(_): return nil, false
+		case InterfaceType(_): return nil, false
+		case MapType(_): return nil, false
+		case ChannelType(_): return nil, false
+		case Default(_): return nil, false
+		case Propagation(_): return nil, false
+		}
+	case File(_): return nil, false
+	case Declaration(_): return nil, false
+	case Specification(_): return nil, false
+	case Statement(_): return nil, false
+	case Field(_): return nil, false
+	case FieldList(_): return nil, false
+	case TGoField(_): return nil, false
+	case EnumVariant(_): return nil, false
+	case MatchCase(_): return nil, false
+	case Comment(_): return nil, false
+	case CommentGroup(_): return nil, false
+	}
+}
+
+// EnumDeclarationOf returns an enum declaration payload.
+func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
+	if value == nil { return nil, false }
+	match *value {
+	case Enum(item): return item.Value, true
+	case Bad(_): return nil, false
+	case General(_): return nil, false
+	case Function(_): return nil, false
+	case Struct(_): return nil, false
+	case Checked(_): return nil, false
+	}
+}
+
+// StructDeclarationOf returns a TGo struct declaration payload.
+func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
+	if value == nil { return nil, false }
+	match *value {
+	case Struct(item): return item.Value, true
+	case Bad(_): return nil, false
+	case General(_): return nil, false
+	case Function(_): return nil, false
+	case Enum(_): return nil, false
+	case Checked(_): return nil, false
+	}
+}
+
+// CheckedDeclarationOf returns a checked declaration payload.
+func CheckedDeclarationOf(value *Declaration) (*CheckedDeclaration, bool) {
+	if value == nil { return nil, false }
+	match *value {
+	case Checked(item): return item.Value, true
+	case Bad(_): return nil, false
+	case General(_): return nil, false
+	case Function(_): return nil, false
+	case Enum(_): return nil, false
+	case Struct(_): return nil, false
+	}
+}
+
+// MatchStatementOf returns a match statement node payload.
+func MatchStatementOf(node *Node) (*MatchStatement, bool) {
+	if node == nil { return nil, false }
+	match *node {
+	case Statement(value):
+		match *value.Value {
+		case Match(item): return item.Value, true
+		case Bad(_): return nil, false
+		case Declaration(_): return nil, false
+		case Empty(_): return nil, false
+		case Labeled(_): return nil, false
+		case Expression(_): return nil, false
+		case Send(_): return nil, false
+		case Increment(_): return nil, false
+		case Assignment(_): return nil, false
+		case Go(_): return nil, false
+		case Defer(_): return nil, false
+		case Return(_): return nil, false
+		case Branch(_): return nil, false
+		case Block(_): return nil, false
+		case If(_): return nil, false
+		case Case(_): return nil, false
+		case Switch(_): return nil, false
+		case TypeSwitch(_): return nil, false
+		case Communication(_): return nil, false
+		case Select(_): return nil, false
+		case For(_): return nil, false
+		case Range(_): return nil, false
+		}
+	case File(_): return nil, false
+	case Declaration(_): return nil, false
+	case Specification(_): return nil, false
+	case Expression(_): return nil, false
+	case Field(_): return nil, false
+	case FieldList(_): return nil, false
+	case TGoField(_): return nil, false
+	case EnumVariant(_): return nil, false
+	case MatchCase(_): return nil, false
+	case Identifier(_): return nil, false
+	case Comment(_): return nil, false
+	case CommentGroup(_): return nil, false
+	}
+}
+
+// DefaultExpressionOf returns a default marker node payload.
+func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
+	expression, ok := ExpressionOf(node)
+	if !ok { return nil, false }
+	match *expression {
+	case Default(item): return item.Value, true
+	case Bad(_): return nil, false
+	case Identifier(_): return nil, false
+	case Ellipsis(_): return nil, false
+	case BasicLiteral(_): return nil, false
+	case FunctionLiteral(_): return nil, false
+	case CompositeLiteral(_): return nil, false
+	case Parenthesized(_): return nil, false
+	case Selector(_): return nil, false
+	case Index(_): return nil, false
+	case IndexList(_): return nil, false
+	case Slice(_): return nil, false
+	case TypeAssertion(_): return nil, false
+	case Call(_): return nil, false
+	case Star(_): return nil, false
+	case Unary(_): return nil, false
+	case Binary(_): return nil, false
+	case KeyValue(_): return nil, false
+	case ArrayType(_): return nil, false
+	case StructType(_): return nil, false
+	case FunctionType(_): return nil, false
+	case InterfaceType(_): return nil, false
+	case MapType(_): return nil, false
+	case ChannelType(_): return nil, false
+	case Propagation(_): return nil, false
+	}
+}
+
+// PropagationExpressionOf returns an error propagation node payload.
+func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
+	expression, ok := ExpressionOf(node)
+	if !ok { return nil, false }
+	match *expression {
+	case Propagation(item): return item.Value, true
+	case Bad(_): return nil, false
+	case Identifier(_): return nil, false
+	case Ellipsis(_): return nil, false
+	case BasicLiteral(_): return nil, false
+	case FunctionLiteral(_): return nil, false
+	case CompositeLiteral(_): return nil, false
+	case Parenthesized(_): return nil, false
+	case Selector(_): return nil, false
+	case Index(_): return nil, false
+	case IndexList(_): return nil, false
+	case Slice(_): return nil, false
+	case TypeAssertion(_): return nil, false
+	case Call(_): return nil, false
+	case Star(_): return nil, false
+	case Unary(_): return nil, false
+	case Binary(_): return nil, false
+	case KeyValue(_): return nil, false
+	case ArrayType(_): return nil, false
+	case StructType(_): return nil, false
+	case FunctionType(_): return nil, false
+	case InterfaceType(_): return nil, false
+	case MapType(_): return nil, false
+	case ChannelType(_): return nil, false
+	case Default(_): return nil, false
+	}
+}
+
+// ExpressionOf returns an expression node payload.
+func ExpressionOf(node *Node) (*Expression, bool) {
+	if node == nil { return nil, false }
+	match *node {
+	case Expression(value): return value.Value, true
+	case File(_): return nil, false
+	case Declaration(_): return nil, false
+	case Specification(_): return nil, false
+	case Statement(_): return nil, false
+	case Field(_): return nil, false
+	case FieldList(_): return nil, false
+	case TGoField(_): return nil, false
+	case EnumVariant(_): return nil, false
+	case MatchCase(_): return nil, false
+	case Identifier(_): return nil, false
+	case Comment(_): return nil, false
+	case CommentGroup(_): return nil, false
+	}
+}
+
+// StatementOf returns a statement node payload.
+func StatementOf(node *Node) (*Statement, bool) {
+	if node == nil { return nil, false }
+	match *node {
+	case Statement(value): return value.Value, true
+	case File(_): return nil, false
+	case Declaration(_): return nil, false
+	case Specification(_): return nil, false
+	case Expression(_): return nil, false
+	case Field(_): return nil, false
+	case FieldList(_): return nil, false
+	case TGoField(_): return nil, false
+	case EnumVariant(_): return nil, false
+	case MatchCase(_): return nil, false
+	case Identifier(_): return nil, false
+	case Comment(_): return nil, false
+	case CommentGroup(_): return nil, false
+	}
+}
+
+// DeclarationOf returns a declaration node payload.
+func DeclarationOf(node *Node) (*Declaration, bool) {
+	if node == nil { return nil, false }
+	match *node {
+	case Declaration(value): return value.Value, true
+	case File(_): return nil, false
+	case Specification(_): return nil, false
+	case Statement(_): return nil, false
+	case Expression(_): return nil, false
+	case Field(_): return nil, false
+	case FieldList(_): return nil, false
+	case TGoField(_): return nil, false
+	case EnumVariant(_): return nil, false
+	case MatchCase(_): return nil, false
+	case Identifier(_): return nil, false
+	case Comment(_): return nil, false
+	case CommentGroup(_): return nil, false
+	}
+}
+
+// SpecificationOf returns a specification node payload.
+func SpecificationOf(node *Node) (*Specification, bool) {
+	if node == nil { return nil, false }
+	match *node {
+	case Specification(value): return value.Value, true
+	case File(_): return nil, false
+	case Declaration(_): return nil, false
+	case Statement(_): return nil, false
+	case Expression(_): return nil, false
+	case Field(_): return nil, false
+	case FieldList(_): return nil, false
+	case TGoField(_): return nil, false
+	case EnumVariant(_): return nil, false
+	case MatchCase(_): return nil, false
+	case Identifier(_): return nil, false
+	case Comment(_): return nil, false
+	case CommentGroup(_): return nil, false
+	}
+}
+
+// ExpressionKind returns the closed expression variant name.
+func ExpressionKind(value *Expression) string {
+	match *value {
+	case Bad(_): return "Bad"
+	case Identifier(_): return "Identifier"
+	case Ellipsis(_): return "Ellipsis"
+	case BasicLiteral(_): return "BasicLiteral"
+	case FunctionLiteral(_): return "FunctionLiteral"
+	case CompositeLiteral(_): return "CompositeLiteral"
+	case Parenthesized(_): return "Parenthesized"
+	case Selector(_): return "Selector"
+	case Index(_): return "Index"
+	case IndexList(_): return "IndexList"
+	case Slice(_): return "Slice"
+	case TypeAssertion(_): return "TypeAssertion"
+	case Call(_): return "Call"
+	case Star(_): return "Star"
+	case Unary(_): return "Unary"
+	case Binary(_): return "Binary"
+	case KeyValue(_): return "KeyValue"
+	case ArrayType(_): return "ArrayType"
+	case StructType(_): return "StructType"
+	case FunctionType(_): return "FunctionType"
+	case InterfaceType(_): return "InterfaceType"
+	case MapType(_): return "MapType"
+	case ChannelType(_): return "ChannelType"
+	case Default(_): return "Default"
+	case Propagation(_): return "Propagation"
+	}
+}
+
+// StatementKind returns the closed statement variant name.
+func StatementKind(value *Statement) string {
+	match *value {
+	case Bad(_): return "Bad"
+	case Declaration(_): return "Declaration"
+	case Empty(_): return "Empty"
+	case Labeled(_): return "Labeled"
+	case Expression(_): return "Expression"
+	case Send(_): return "Send"
+	case Increment(_): return "Increment"
+	case Assignment(_): return "Assignment"
+	case Go(_): return "Go"
+	case Defer(_): return "Defer"
+	case Return(_): return "Return"
+	case Branch(_): return "Branch"
+	case Block(_): return "Block"
+	case If(_): return "If"
+	case Case(_): return "Case"
+	case Switch(_): return "Switch"
+	case TypeSwitch(_): return "TypeSwitch"
+	case Communication(_): return "Communication"
+	case Select(_): return "Select"
+	case For(_): return "For"
+	case Range(_): return "Range"
+	case Match(_): return "Match"
+	}
+}
+
+// DeclarationKind returns the closed declaration variant name.
+func DeclarationKind(value *Declaration) string {
+	match *value {
+	case Bad(_): return "Bad"
+	case General(_): return "General"
+	case Function(_): return "Function"
+	case Enum(_): return "Enum"
+	case Struct(_): return "Struct"
+	case Checked(_): return "Checked"
+	}
+}
+
+// SpecificationKind returns the closed specification variant name.
+func SpecificationKind(value *Specification) string {
+	match *value {
+	case Import(_): return "Import"
+	case Value(_): return "Value"
+	case Type(_): return "Type"
+	}
+}
+
+// StaticCallName returns the source name for a supported static call.
+func StaticCallName(value *Expression) (string, bool) {
+	if value == nil { return "", false }
+	match *value {
+	case Identifier(item): return item.Value.Name, true
+	case Selector(item):
+		prefix, ok := StaticCallName(item.Value.Expression)
+		if !ok { return "", false }
+		return prefix + "." + item.Value.Selector.Name, true
+	case Index(item): return StaticCallName(item.Value.Expression)
+	case IndexList(item): return StaticCallName(item.Value.Expression)
+	case Parenthesized(item): return StaticCallName(item.Value.Expression)
+	case Star(item): return StaticCallName(item.Value.Expression)
+	case Bad(_): return "", false
+	case Ellipsis(_): return "", false
+	case BasicLiteral(_): return "", false
+	case FunctionLiteral(_): return "", false
+	case CompositeLiteral(_): return "", false
+	case Slice(_): return "", false
+	case TypeAssertion(_): return "", false
+	case Call(_): return "", false
+	case Unary(_): return "", false
+	case Binary(_): return "", false
+	case KeyValue(_): return "", false
+	case ArrayType(_): return "", false
+	case StructType(_): return "", false
+	case FunctionType(_): return "", false
+	case InterfaceType(_): return "", false
+	case MapType(_): return "", false
+	case ChannelType(_): return "", false
+	case Default(_): return "", false
+	case Propagation(_): return "", false
+	}
+}
+
+
+
+
+

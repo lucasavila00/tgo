@@ -25,7 +25,6 @@ func newAnalyzer() *analysis.Analyzer {
 		new(modelWireFact),
 		new(validationFact),
 		new(genericEffectWireFact),
-		new(runtimeFact),
 		new(invalidPackageFact),
 	}
 	return analyzer
@@ -88,9 +87,6 @@ func run(pass *analysis.Pass) (any, error) {
 		invalid:    false,
 	}
 	if c.rejectInvalidDependencies() {
-		return nil, nil
-	}
-	if c.verifyRuntimePackage() {
 		return nil, nil
 	}
 	c.findModels()

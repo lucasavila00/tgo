@@ -1,6 +1,9 @@
-.PHONY: ci generated lint test build install-hooks install-tools
+.PHONY: ci ci-unlocked generated lint test build install-hooks install-tools
 
-ci: generated lint test
+ci:
+	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
+
+ci-unlocked: generated lint test
 	python3 scripts/check_markdown.py
 
 generated:

@@ -1,5 +1,0 @@
-package invalid
-
-var __tgo_runtime int
-
-type Count int where value > 0

@@ -2,12 +2,11 @@ package compiler
 
 import (
 	"fmt"
-	"go/ast"
 	"go/parser"
 	"go/token"
 	"strconv"
 
-	"tgo/syntax"
+	"tgo/pkg/syntax"
 )
 
 // parseSource parses tgo syntax, lowers declarations, and parses the Go projection.
@@ -22,48 +21,41 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		return nil, err
 	}
 	used := make(map[string]bool)
-	syntax.Inspect(tree, func(node syntax.Node) bool {
-		if identifier, ok := node.(*ast.Ident); ok {
+	syntax.Inspect(tree, func(node *syntax.Node) bool {
+		if identifier, ok := syntax.IdentifierOf(node); ok {
 			used[identifier.Name] = true
 		}
 		return true
 	})
-	if used["__tgo_runtime"] {
-		return nil, fmt.Errorf(
-			"%s: generated validation import name __tgo_runtime is reserved",
-			name,
-		)
-	}
 	matchMarker := freshIdentifier("__tgo_match", used)
 	defaultMarker := freshIdentifier("__tgo_defaults", used)
-	runtimeAlias := "__tgo_runtime"
 	propagations := make(map[string]propagationSource)
 	file := files.File(tree.Package)
 	edits := []edit(nil)
 	models := []*model(nil)
-	for _, declaration := range tree.Decls {
+	for _, declaration := range tree.Declarations {
 		var item *model
 		var replacement string
-		switch node := declaration.(type) {
-		case *syntax.EnumDecl:
+		if node, ok := syntax.EnumDeclarationOf(declaration); ok {
 			item = enumModel(files, data, node)
-			replacement = enumGo(name, item, runtimeAlias)
-		case *syntax.StructDecl:
+			replacement = enumGo(name, item)
+		} else if node, ok := syntax.StructDeclarationOf(declaration); ok {
 			item = structModel(files, data, node)
 			replacement = "type " + item.Name + " struct {\n" +
 				fieldDecls(name, item.Fields) + "}\n"
-			replacement += structValidationGo(item, runtimeAlias)
-		case *syntax.CheckedDecl:
+		} else if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
 			item = checkedModel(files, data, node)
-			replacement = checkedGo(name, item, runtimeAlias)
+			replacement = checkedGo(name, item)
 		}
 		if item == nil {
 			continue
 		}
-		start := file.Offset(declaration.Pos())
-		end := declarationEditEnd(data, file.Offset(declaration.End()))
-		startPosition := files.Position(declaration.Pos())
-		endPosition := files.Position(declaration.End())
+		startPositionValue := syntax.DeclarationPosition(declaration)
+		endPositionValue := syntax.DeclarationEnd(declaration)
+		start := file.Offset(startPositionValue)
+		end := declarationEditEnd(data, file.Offset(endPositionValue))
+		startPosition := files.Position(startPositionValue)
+		endPosition := files.Position(endPositionValue)
 		edits = append(edits, edit{
 			start: start,
 			end:   end,
@@ -77,8 +69,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		models = append(models, item)
 	}
 	for _, extension := range syntax.Extensions(tree) {
-		switch node := extension.(type) {
-		case *syntax.MatchStmt:
+		if node, ok := syntax.MatchStatementOf(extension); ok {
 			matchStart := file.Offset(node.Match)
 			matchEnd := matchStart + len("match")
 			brace := file.Offset(node.Lbrace)
@@ -86,24 +77,28 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 				edit{start: matchStart, end: matchEnd, text: "switch " + matchMarker + "("},
 				edit{start: brace, end: brace, text: ") "},
 			)
-		case *syntax.DefaultMarker:
+			continue
+		}
+		if node, ok := syntax.DefaultExpressionOf(extension); ok {
 			edits = append(edits, edit{
-				start: file.Offset(node.Pos()),
-				end:   file.Offset(node.End()),
+				start: file.Offset(node.Start),
+				end:   file.Offset(node.Stop),
 				text:  defaultMarker + ": true",
 			})
-		case *syntax.PropagateExpr:
+			continue
+		}
+		if node, ok := syntax.PropagationExpressionOf(extension); ok {
 			marker := freshIdentifier("__tgo_propagate", used)
-			callName, ok := propagationCallName(node.Call.Fun)
+			callName, ok := syntax.StaticCallName(node.Call.Callee)
 			if !ok {
 				return nil, fmt.Errorf(
 					"%s: error propagation needs a short static call name",
 					files.Position(node.Bang),
 				)
 			}
-			start := file.Offset(node.Expression.Pos())
+			start := file.Offset(syntax.ExpressionPosition(node.Expression))
 			bang := file.Offset(node.Bang)
-			startPosition := files.Position(node.Expression.Pos())
+			startPosition := files.Position(syntax.ExpressionPosition(node.Expression))
 			bangPosition := files.Position(node.Bang)
 			opening := marker + "(" + inlineLineDirective(
 				name,
@@ -135,32 +130,8 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		Models:        models,
 		MatchMarker:   matchMarker,
 		DefaultMarker: defaultMarker,
-		RuntimeAlias:  runtimeAlias,
 		Propagations:  propagations,
 	}, nil
-}
-
-func propagationCallName(expression ast.Expr) (string, bool) {
-	switch node := expression.(type) {
-	case *ast.Ident:
-		return node.Name, true
-	case *ast.SelectorExpr:
-		prefix, ok := propagationCallName(node.X)
-		if !ok {
-			return "", false
-		}
-		return prefix + "." + node.Sel.Name, true
-	case *ast.IndexExpr:
-		return propagationCallName(node.X)
-	case *ast.IndexListExpr:
-		return propagationCallName(node.X)
-	case *ast.ParenExpr:
-		return propagationCallName(node.X)
-	case *ast.StarExpr:
-		return propagationCallName(node.X)
-	default:
-		return "", false
-	}
 }
 
 func declarationEditEnd(data []byte, end int) int {
@@ -174,8 +145,8 @@ func declarationEditEnd(data []byte, end int) int {
 	return end
 }
 
-func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDecl) *model {
-	position := files.Position(declaration.Name.Pos())
+func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDeclaration) *model {
+	position := files.Position(declaration.Name.Start)
 	result := &model{
 		Name:            declaration.Name.Name,
 		Enum:            true,
@@ -199,8 +170,8 @@ func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDecl) 
 	return result
 }
 
-func structModel(files *token.FileSet, data []byte, declaration *syntax.StructDecl) *model {
-	position := files.Position(declaration.Name.Pos())
+func structModel(files *token.FileSet, data []byte, declaration *syntax.StructDeclaration) *model {
+	position := files.Position(declaration.Name.Start)
 	return &model{
 		Name:            declaration.Name.Name,
 		Enum:            false,
@@ -217,19 +188,29 @@ func structModel(files *token.FileSet, data []byte, declaration *syntax.StructDe
 	}
 }
 
-func checkedModel(files *token.FileSet, data []byte, declaration *syntax.CheckedDecl) *model {
-	position := files.Position(declaration.Name.Pos())
-	basePosition := files.Position(declaration.Base.Pos())
-	predicatePosition := files.Position(declaration.Predicate.Pos())
+func checkedModel(
+	files *token.FileSet,
+	data []byte,
+	declaration *syntax.CheckedDeclaration,
+) *model {
+	position := files.Position(declaration.Name.Start)
+	basePosition := files.Position(syntax.ExpressionPosition(declaration.Base))
+	predicatePosition := files.Position(syntax.ExpressionPosition(declaration.Predicate))
 	return &model{
-		Name:            declaration.Name.Name,
-		Enum:            false,
-		Line:            position.Line,
-		Column:          position.Column,
-		Base:            sourceText(files, data, declaration.Base),
-		BaseLine:        basePosition.Line,
-		BaseColumn:      basePosition.Column,
-		Predicate:       sourceText(files, data, declaration.Predicate),
+		Name:   declaration.Name.Name,
+		Enum:   false,
+		Line:   position.Line,
+		Column: position.Column,
+		Base: sourceText(
+			files, data, syntax.ExpressionPosition(declaration.Base),
+			syntax.ExpressionEnd(declaration.Base),
+		),
+		BaseLine:   basePosition.Line,
+		BaseColumn: basePosition.Column,
+		Predicate: sourceText(
+			files, data, syntax.ExpressionPosition(declaration.Predicate),
+			syntax.ExpressionEnd(declaration.Predicate),
+		),
 		PredicateLine:   predicatePosition.Line,
 		PredicateColumn: predicatePosition.Column,
 		Variants:        nil,
@@ -237,17 +218,23 @@ func checkedModel(files *token.FileSet, data []byte, declaration *syntax.Checked
 	}
 }
 
-func modelFields(files *token.FileSet, data []byte, declarations []*syntax.FieldDecl) []field {
+func modelFields(files *token.FileSet, data []byte, declarations []*syntax.TGoField) []field {
 	result := []field(nil)
 	for _, declaration := range declarations {
-		typeText := sourceText(files, data, declaration.Field.Type)
-		typePosition := files.Position(declaration.Field.Type.Pos())
+		typeText := sourceText(
+			files, data, syntax.ExpressionPosition(declaration.Field.Type),
+			syntax.ExpressionEnd(declaration.Field.Type),
+		)
+		typePosition := files.Position(syntax.ExpressionPosition(declaration.Field.Type))
 		defaultText := ""
 		defaultLine := 0
 		defaultColumn := 0
 		if declaration.Default != nil {
-			defaultText = sourceText(files, data, declaration.Default)
-			defaultPosition := files.Position(declaration.Default.Pos())
+			defaultText = sourceText(
+				files, data, syntax.ExpressionPosition(declaration.Default),
+				syntax.ExpressionEnd(declaration.Default),
+			)
+			defaultPosition := files.Position(syntax.ExpressionPosition(declaration.Default))
 			defaultLine = defaultPosition.Line
 			defaultColumn = defaultPosition.Column
 		}
@@ -291,9 +278,14 @@ func newField(
 	}
 }
 
-func sourceText(files *token.FileSet, data []byte, node ast.Node) string {
-	file := files.File(node.Pos())
-	return string(data[file.Offset(node.Pos()):file.Offset(node.End())])
+func sourceText(
+	files *token.FileSet,
+	data []byte,
+	start token.Pos,
+	end token.Pos,
+) string {
+	file := files.File(start)
+	return string(data[file.Offset(start):file.Offset(end)])
 }
 
 func generatedSource(name string, startLine int, endLine int, code string) string {

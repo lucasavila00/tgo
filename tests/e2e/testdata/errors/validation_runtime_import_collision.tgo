@@ -1,7 +1,0 @@
-package invalid
-
-import runtime "error.test/internal/tgoruntime"
-
-type Count int where value > 0
-
-var _ = runtime.NewContext

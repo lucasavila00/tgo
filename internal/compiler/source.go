@@ -50,7 +50,6 @@ type source struct {
 	Models        []*model
 	MatchMarker   string
 	DefaultMarker string
-	RuntimeAlias  string
 	Propagations  map[string]propagationSource
 }
 

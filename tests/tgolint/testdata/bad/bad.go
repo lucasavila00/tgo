@@ -19,11 +19,11 @@ func SingleResultCallback(decode func() model.Event) string {
 	return value.TgoStarted().ID
 }
 
-func ReassignedValidator(
+func TrustedBoundary(
 	event model.Event,
 	foreign func(model.Event) (model.Event, error),
 ) string {
-	validate := model.ValidateEvent
+	validate := foreign
 	validate = foreign
 	value, err := validate(event)
 	if err != nil {

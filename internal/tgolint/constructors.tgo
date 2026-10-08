@@ -896,13 +896,6 @@ func (c *checker) checkResultUses(
 						"tgo %s %s value is used before its error is proved nil",
 						modelKind(result.model), modelName(result.model))
 				}
-			} else if found && result.boundary && !result.validated {
-				if c.capture != nil {
-					return true
-				}
-				c.reportModelResult(name.Pos(), result.model,
-					"tgo %s %s value is used without successful generated validation",
-					modelKind(result.model), modelName(result.model))
 			}
 			return true
 		})

@@ -321,60 +321,6 @@ def check_output_safety(compiler, temporary):
     print("PASS output safety")
 
 
-def check_validation_runtime_lifecycle(compiler, temporary):
-    work = temporary / "validation-runtime"
-    work.mkdir()
-    (work / "go.mod").write_text("module runtime.test\n\ngo 1.27.0\n")
-    first = work / "first"
-    second = work / "second"
-    first.mkdir()
-    second.mkdir()
-    source = first / "model.tgo"
-    source.write_text("package first\n\ntype Count int where value > 0\n")
-    (second / "plain.tgo").write_text(
-        "package second\n\nfunc Value() int { return 1 }\n"
-    )
-
-    run([str(compiler), "build", "./first"], work)
-    runtime = work / "internal" / "tgoruntime" / "runtime_tgo.go"
-    output = first / "model_tgo.go"
-    assert runtime.exists(), "model build did not write the validation runtime"
-    runtime_data = runtime.read_bytes()
-    output_data = output.read_bytes()
-
-    run([str(compiler), "build", "./second"], work)
-    assert runtime.read_bytes() == runtime_data, (
-        "a separate package build changed the required validation runtime"
-    )
-
-    (first / "broken.tgo").write_text("package first\n\ntype\n")
-    run([str(compiler), "build", "./first"], work, success=False)
-    assert runtime.read_bytes() == runtime_data, (
-        "a failed build changed the prior validation runtime"
-    )
-    assert output.read_bytes() == output_data, (
-        "a failed build changed prior generated model output"
-    )
-    (first / "broken.tgo").unlink()
-
-    source.write_text("package first\n\nfunc Value() int { return 2 }\n")
-    run([str(compiler), "build", "./..."], work)
-    assert not runtime.exists(), "the last model removal kept the validation runtime"
-
-    source.write_text("package first\n\ntype Count int where value > 0\n")
-    user_runtime = runtime.parent / "user.go"
-    user_runtime.write_text("package tgoruntime\n")
-    result = run([str(compiler), "build", "./first"], work, success=False)
-    assert "reserved tgo validation runtime package contains user Go file" in result
-    user_runtime.unlink()
-
-    runtime.write_text("package tgoruntime\n")
-    result = run([str(compiler), "build", "./first"], work, success=False)
-    assert "reserved tgo validation runtime file is user-owned" in result
-    assert runtime.read_text() == "package tgoruntime\n"
-    print("PASS validation runtime lifecycle")
-
-
 def check_fresh_build(compiler, temporary):
     work = temporary / "fresh-business"
     shutil.copytree(FIXTURES / "business", work)
@@ -651,7 +597,6 @@ def main():
 
         check_package_discovery(compiler, temporary)
         check_output_safety(compiler, temporary)
-        check_validation_runtime_lifecycle(compiler, temporary)
         check_fresh_build(compiler, temporary)
         check_build_context_and_cgo(compiler, temporary)
 

@@ -85,3 +85,9 @@ documentation, code comments, commit messages, and responses to the user.
 Never change, replace, or remove an existing commit. Do not amend commits,
 rebase branches, move branches with `git reset`, or use a force-push. Add a new
 commit for each correction. Merge remote changes when branches have diverged.
+
+## 8. Do Not Add Unrequested Mechanisms
+
+Do not add safety checks, runtime behavior, abstractions, or support systems
+that the user did not request. Follow each stated trust assumption. Do not add
+checks for data or boundaries that the user declared trusted.

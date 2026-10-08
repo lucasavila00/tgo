@@ -126,37 +126,6 @@ def main():
         generated_model = work / "model" / "model_tgo.go"
         model_source = work / "model" / "model.tgo"
         generated_text = generated_model.read_text()
-        forged = generated_text.replace(
-            "return __tgo_runtime.RebuildAs(value, __tgo_runtime.NewContext())",
-            "return value, nil",
-            1,
-        )
-        assert forged != generated_text
-        forged = with_generated_digest(forged, model_source.read_bytes())
-        generated_model.write_text(forged)
-        forged_result = run([str(linter), "./model"], work, success=False)
-        forged_diagnostics = normalized(
-            forged_result.stdout + forged_result.stderr, work
-        )
-        assert "does not match the current compiler emitter" in forged_diagnostics
-        assert_invalid_consumers(linter, work)
-        generated_model.write_text(generated_text)
-
-        forged = generated_text.replace(
-            "return NewCount(rebuilt)",
-            "_ = rebuilt\n\treturn Count{}, nil",
-            1,
-        )
-        assert forged != generated_text
-        forged = with_generated_digest(forged, model_source.read_bytes())
-        generated_model.write_text(forged)
-        forged_result = run([str(linter), "./model"], work, success=False)
-        forged_diagnostics = normalized(
-            forged_result.stdout + forged_result.stderr, work
-        )
-        assert "does not match the current compiler emitter" in forged_diagnostics
-        generated_model.write_text(generated_text)
-
         for original, replacement in (
             ("return Count{value: value}, nil", "return Count{}, nil"),
             (
@@ -174,80 +143,6 @@ def main():
             )
             assert "does not match the current compiler emitter" in forged_diagnostics
             generated_model.write_text(generated_text)
-
-        decoy = work / "decoyruntime"
-        decoy.mkdir()
-        (decoy / "runtime.go").write_text(
-            "package decoyruntime\n"
-            "type Context struct{}\n"
-            "func NewContext() *Context { return &Context{} }\n"
-            "func RebuildAs[T any](value T, _ *Context) (T, error) { "
-            "return value, nil }\n"
-        )
-        two_runtime = generated_text.replace(
-            'import __tgo_runtime "example.com/tgolint/internal/tgoruntime"',
-            'import (\n\t_ "example.com/tgolint/internal/tgoruntime"\n'
-            '\t__tgo_runtime "example.com/tgolint/decoyruntime"\n)',
-            1,
-        )
-        assert two_runtime != generated_text
-        generated_model.write_text(
-            with_generated_digest(two_runtime, model_source.read_bytes())
-        )
-        decoy_result = run([str(linter), "./model"], work, success=False)
-        decoy_diagnostics = normalized(decoy_result.stdout + decoy_result.stderr, work)
-        assert "tgo runtime integrity fact is missing" in decoy_diagnostics
-        generated_model.write_text(generated_text)
-        shutil.rmtree(decoy)
-
-        runtime_path = work / "internal" / "tgoruntime" / "runtime_tgo.go"
-        runtime_text = runtime_path.read_text()
-        forged_runtime = runtime_text.replace(
-            "return &Context{seen: make(map[Identity]reflect.Value)}",
-            "return &Context{seen: nil}",
-            1,
-        )
-        assert forged_runtime != runtime_text
-        runtime_path.write_text(forged_runtime)
-        runtime_result = run(
-            [str(linter), "./internal/tgoruntime"], work, success=False
-        )
-        runtime_diagnostics = normalized(
-            runtime_result.stdout + runtime_result.stderr, work
-        )
-        assert "tgo runtime integrity check failed" in runtime_diagnostics
-        model_result = run([str(linter), "./model"], work, success=False)
-        model_diagnostics = normalized(model_result.stdout + model_result.stderr, work)
-        assert (
-            "dependency example.com/tgolint/internal/tgoruntime failed tgo verification"
-            in model_diagnostics
-        )
-        assert_invalid_consumers(linter, work)
-        runtime_path.write_text(runtime_text)
-
-        runtime_metadata = next(
-            line for line in runtime_text.splitlines() if line.startswith("//tgo:runtime ")
-        )
-        runtime_path.write_text(runtime_text.replace(runtime_metadata + "\n", "", 1))
-        runtime_result = run(
-            [str(linter), "./internal/tgoruntime"], work, success=False
-        )
-        runtime_diagnostics = normalized(
-            runtime_result.stdout + runtime_result.stderr, work
-        )
-        assert "tgo runtime integrity check failed" in runtime_diagnostics
-        runtime_path.write_text(runtime_text)
-
-        extra_runtime = runtime_path.with_name("extra.go")
-        extra_runtime.write_text("package tgoruntime\n")
-        runtime_result = run(
-            [str(linter), "./internal/tgoruntime"], work, success=False
-        )
-        runtime_diagnostics = normalized(
-            runtime_result.stdout + runtime_result.stderr, work
-        )
-        assert "tgo runtime integrity check failed" in runtime_diagnostics
-        extra_runtime.unlink()
 
         metadata_line = next(
             line for line in generated_text.splitlines() if line.startswith("//tgo:v1 ")

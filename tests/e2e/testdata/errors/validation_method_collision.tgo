@@ -1,7 +1,0 @@
-package invalid
-
-type Count int where value > 0
-
-func (value Count) TgoReconstruct(context any) (any, error) {
-	return value, nil
-}

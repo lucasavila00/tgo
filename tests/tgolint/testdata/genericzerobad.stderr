@@ -1,15 +1,4 @@
 genericzerobad/bad.go:18:9: Tgo access through a type parameter cannot mix tgo models
-genericzerobad/bad.go:34:34: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:49:31: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:58:37: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:59:39: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:67:40: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:68:41: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:89:26: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:90:30: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:92:48: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:101:14: tgo enum Event value is used without successful generated validation
-genericzerobad/bad.go:110:11: tgo enum Event value is used without successful generated validation
 genericzerobad/bad.go:30:2: call to Variable will create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:31:6: call to Named will create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:32:6: call to New will create invalid tgo enum Event zero from a type argument

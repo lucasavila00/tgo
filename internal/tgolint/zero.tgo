@@ -189,14 +189,6 @@ func (c *checker) checkCall(call *ast.CallExpr) {
 		}
 		return
 	}
-	if model := c.boundarySingleCall(call); model != nil {
-		if !c.checked[call] {
-			c.reportModelResult(call.Pos(), model,
-				"tgo %s %s value from a Go call needs successful generated validation",
-				modelKind(model), modelName(model))
-		}
-		return
-	}
 	if c.pass.TypesInfo.Types[call.Fun].IsType() {
 		if model := c.modelFor(c.pass.TypesInfo.TypeOf(call)); model != nil {
 			if c.identityConversion(call) {
@@ -378,15 +370,7 @@ func (c *checker) checkTypeAssertion(expression *ast.TypeAssertExpr) {
 		c.checkPresenceRead(expression)
 		return
 	}
-	if c.assertionValidator(expression) {
-		return
-	}
-	model, invalid := c.zeroInvalid(c.pass.TypesInfo.TypeOf(expression))
-	if invalid {
-		c.pass.Reportf(expression.Pos(),
-			"type assertion imports an unvalidated tgo %s %s value; use its generated validator",
-			modelKind(model), modelName(model))
-	}
+	// Go can provide an invalid model value. The caller owns this boundary.
 }
 
 func (c *checker) assertionValidator(expression *ast.TypeAssertExpr) bool {

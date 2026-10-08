@@ -32,16 +32,9 @@ linters:
       line-length: 100
       tab-width: 4
   exclusions:
-    generated: disable
+    generated: strict
     presets: []
     rules:
-      - path: _tgo\.go$
-        linters:
-          - dupl
-      - path: _tgo\.go$
-        text: calculated cyclomatic complexity for function TgoReconstruct
-        linters:
-          - cyclop
 
 formatters:
   enable:

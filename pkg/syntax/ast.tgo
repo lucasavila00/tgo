@@ -1,0 +1,646 @@
+// Package syntax parses TGo source files.
+// Parsed trees are read-only.
+package syntax
+
+import "go/token"
+
+// Span is a half-open source range.
+type Span struct {
+	Start token.Pos
+	Stop  token.Pos
+}
+
+// Identifier is one source name.
+type Identifier struct {
+	Span
+	Name string
+}
+
+// Comment is one line or block comment.
+type Comment struct {
+	Span
+	Text string
+}
+
+// CommentGroup is one comment sequence with no other tokens between its items.
+type CommentGroup struct {
+	Span
+	List []*Comment
+}
+
+// Field is one Go field group.
+type Field struct {
+	Span
+	Doc     *CommentGroup
+	Names   []*Identifier
+	Type    *Expression
+	Tag     *BasicLiteral
+	Comment *CommentGroup
+}
+
+// FieldList is one parenthesized or braced field list.
+type FieldList struct {
+	Span
+	Opening token.Pos
+	List    []*Field
+	Closing token.Pos
+}
+
+// ChannelDirection is a channel type direction.
+type ChannelDirection enum {
+	SendReceive struct{}
+	SendOnly struct{}
+	ReceiveOnly struct{}
+}
+
+// Expression contains every Go expression and type form plus TGo expressions.
+type Expression enum {
+	Bad struct { Value *BadExpression }
+	Identifier struct { Value *Identifier }
+	Ellipsis struct { Value *EllipsisExpression }
+	BasicLiteral struct { Value *BasicLiteral }
+	FunctionLiteral struct { Value *FunctionLiteral }
+	CompositeLiteral struct { Value *CompositeLiteral }
+	Parenthesized struct { Value *ParenthesizedExpression }
+	Selector struct { Value *SelectorExpression }
+	Index struct { Value *IndexExpression }
+	IndexList struct { Value *IndexListExpression }
+	Slice struct { Value *SliceExpression }
+	TypeAssertion struct { Value *TypeAssertionExpression }
+	Call struct { Value *CallExpression }
+	Star struct { Value *StarExpression }
+	Unary struct { Value *UnaryExpression }
+	Binary struct { Value *BinaryExpression }
+	KeyValue struct { Value *KeyValueExpression }
+	ArrayType struct { Value *ArrayType }
+	StructType struct { Value *StructType }
+	FunctionType struct { Value *FunctionType }
+	InterfaceType struct { Value *InterfaceType }
+	MapType struct { Value *MapType }
+	ChannelType struct { Value *ChannelType }
+	Default struct { Value *DefaultExpression }
+	Propagation struct { Value *PropagationExpression }
+}
+
+// BadExpression is an invalid expression range.
+type BadExpression struct {
+	Span
+	From token.Pos
+	To   token.Pos
+}
+
+// EllipsisExpression is an ellipsis with an optional element type.
+type EllipsisExpression struct {
+	Span
+	Ellipsis token.Pos
+	Element  *Expression
+}
+
+// BasicLiteral is one literal token.
+type BasicLiteral struct {
+	Span
+	ValuePosition token.Pos
+	Kind          token.Token
+	Value         string
+}
+
+// FunctionLiteral is one function literal.
+type FunctionLiteral struct {
+	Span
+	Type *FunctionType
+	Body *BlockStatement
+}
+
+// CompositeLiteral is one composite literal.
+type CompositeLiteral struct {
+	Span
+	Type       *Expression
+	Lbrace     token.Pos
+	Elements   []*Expression
+	Rbrace     token.Pos
+	Incomplete bool
+}
+
+// ParenthesizedExpression is one parenthesized expression.
+type ParenthesizedExpression struct {
+	Span
+	Lparen     token.Pos
+	Expression *Expression
+	Rparen     token.Pos
+}
+
+// SelectorExpression is one selector.
+type SelectorExpression struct {
+	Span
+	Expression *Expression
+	Selector   *Identifier
+}
+
+// IndexExpression is one indexed expression.
+type IndexExpression struct {
+	Span
+	Expression *Expression
+	Lbrack     token.Pos
+	Index      *Expression
+	Rbrack     token.Pos
+}
+
+// IndexListExpression is one generic index list.
+type IndexListExpression struct {
+	Span
+	Expression *Expression
+	Lbrack     token.Pos
+	Indices    []*Expression
+	Rbrack     token.Pos
+}
+
+// SliceExpression is one slice expression.
+type SliceExpression struct {
+	Span
+	Expression *Expression
+	Lbrack     token.Pos
+	Low        *Expression
+	High       *Expression
+	Max        *Expression
+	Slice3     bool
+	Rbrack     token.Pos
+}
+
+// TypeAssertionExpression is one type assertion or type switch guard.
+type TypeAssertionExpression struct {
+	Span
+	Expression *Expression
+	Lparen     token.Pos
+	Type       *Expression
+	Rparen     token.Pos
+}
+
+// CallExpression is one function or conversion call.
+type CallExpression struct {
+	Span
+	Function token.Pos
+	Callee   *Expression
+	Lparen   token.Pos
+	Args     []*Expression
+	Ellipsis token.Pos
+	Rparen   token.Pos
+}
+
+// StarExpression is one pointer type or dereference.
+type StarExpression struct {
+	Span
+	Star       token.Pos
+	Expression *Expression
+}
+
+// UnaryExpression is one unary expression.
+type UnaryExpression struct {
+	Span
+	OperatorPosition token.Pos
+	Operator         token.Token
+	Expression       *Expression
+}
+
+// BinaryExpression is one binary expression.
+type BinaryExpression struct {
+	Span
+	Left             *Expression
+	OperatorPosition token.Pos
+	Operator         token.Token
+	Right            *Expression
+}
+
+// KeyValueExpression is one keyed composite element.
+type KeyValueExpression struct {
+	Span
+	Key   *Expression
+	Colon token.Pos
+	Value *Expression
+}
+
+// ArrayType is one array or slice type.
+type ArrayType struct {
+	Span
+	Lbrack  token.Pos
+	Length  *Expression
+	Element *Expression
+}
+
+// StructType is one Go struct type.
+type StructType struct {
+	Span
+	Struct     token.Pos
+	Fields     *FieldList
+	Incomplete bool
+}
+
+// FunctionType is one function type.
+type FunctionType struct {
+	Span
+	Function   token.Pos
+	TypeParams *FieldList
+	Params     *FieldList
+	Results    *FieldList
+}
+
+// InterfaceType is one interface type.
+type InterfaceType struct {
+	Span
+	Interface  token.Pos
+	Methods    *FieldList
+	Incomplete bool
+}
+
+// MapType is one map type.
+type MapType struct {
+	Span
+	Map   token.Pos
+	Key   *Expression
+	Value *Expression
+}
+
+// ChannelType is one channel type.
+type ChannelType struct {
+	Span
+	Begin     token.Pos
+	Arrow     token.Pos
+	Direction ChannelDirection
+	Value     *Expression
+}
+
+// DefaultExpression applies declared field defaults.
+type DefaultExpression struct {
+	Span
+	FirstDot token.Pos
+	LastDot  token.Pos
+	Default  token.Pos
+}
+
+// PropagationExpression returns a call error with automatic context.
+type PropagationExpression struct {
+	Span
+	Expression *Expression
+	Call       *CallExpression
+	Bang       token.Pos
+}
+
+// Statement contains every Go statement form plus TGo match.
+type Statement enum {
+	Bad struct { Value *BadStatement }
+	Declaration struct { Value *DeclarationStatement }
+	Empty struct { Value *EmptyStatement }
+	Labeled struct { Value *LabeledStatement }
+	Expression struct { Value *ExpressionStatement }
+	Send struct { Value *SendStatement }
+	Increment struct { Value *IncrementStatement }
+	Assignment struct { Value *AssignmentStatement }
+	Go struct { Value *GoStatement }
+	Defer struct { Value *DeferStatement }
+	Return struct { Value *ReturnStatement }
+	Branch struct { Value *BranchStatement }
+	Block struct { Value *BlockStatement }
+	If struct { Value *IfStatement }
+	Case struct { Value *CaseClause }
+	Switch struct { Value *SwitchStatement }
+	TypeSwitch struct { Value *TypeSwitchStatement }
+	Communication struct { Value *CommunicationClause }
+	Select struct { Value *SelectStatement }
+	For struct { Value *ForStatement }
+	Range struct { Value *RangeStatement }
+	Match struct { Value *MatchStatement }
+}
+
+// BadStatement is an invalid statement range.
+type BadStatement struct { Span; From token.Pos; To token.Pos }
+
+// DeclarationStatement wraps a declaration in a statement list.
+type DeclarationStatement struct { Span; Declaration *Declaration }
+
+// EmptyStatement is one empty statement.
+type EmptyStatement struct { Span; Semicolon token.Pos; Implicit bool }
+
+// LabeledStatement is one labeled statement.
+type LabeledStatement struct {
+	Span
+	Label     *Identifier
+	Colon     token.Pos
+	Statement *Statement
+}
+
+// ExpressionStatement is one expression statement.
+type ExpressionStatement struct { Span; Expression *Expression }
+
+// SendStatement sends a value to a channel.
+type SendStatement struct {
+	Span
+	Channel *Expression
+	Arrow   token.Pos
+	Value   *Expression
+}
+
+// IncrementStatement increments or decrements one expression.
+type IncrementStatement struct {
+	Span
+	Expression *Expression
+	Token      token.Pos
+	Operator   token.Token
+}
+
+// AssignmentStatement assigns expression lists.
+type AssignmentStatement struct {
+	Span
+	Left     []*Expression
+	Token    token.Pos
+	Operator token.Token
+	Right    []*Expression
+}
+
+// GoStatement starts one call in a goroutine.
+type GoStatement struct { Span; Go token.Pos; Call *Expression }
+
+// DeferStatement defers one call.
+type DeferStatement struct { Span; Defer token.Pos; Call *Expression }
+
+// ReturnStatement returns zero or more values.
+type ReturnStatement struct { Span; Return token.Pos; Results []*Expression }
+
+// BranchStatement is one branch statement.
+type BranchStatement struct {
+	Span
+	TokenPosition token.Pos
+	Token         token.Token
+	Label         *Identifier
+}
+
+// BlockStatement is one statement block.
+type BlockStatement struct {
+	Span
+	Lbrace token.Pos
+	List   []*Statement
+	Rbrace token.Pos
+}
+
+// IfStatement is one conditional statement.
+type IfStatement struct {
+	Span
+	If        token.Pos
+	Init      *Statement
+	Condition *Expression
+	Body      *BlockStatement
+	Else      *Statement
+}
+
+// CaseClause is one expression switch clause.
+type CaseClause struct {
+	Span
+	Case  token.Pos
+	List  []*Expression
+	Colon token.Pos
+	Body  []*Statement
+}
+
+// SwitchStatement is one expression switch.
+type SwitchStatement struct {
+	Span
+	Switch token.Pos
+	Init   *Statement
+	Tag    *Expression
+	Body   *BlockStatement
+}
+
+// TypeSwitchStatement is one type switch.
+type TypeSwitchStatement struct {
+	Span
+	Switch     token.Pos
+	Init       *Statement
+	Assignment *Statement
+	Body       *BlockStatement
+}
+
+// CommunicationClause is one select clause.
+type CommunicationClause struct {
+	Span
+	Case          token.Pos
+	Communication *Statement
+	Colon         token.Pos
+	Body          []*Statement
+}
+
+// SelectStatement is one select statement.
+type SelectStatement struct {
+	Span
+	Select token.Pos
+	Body   *BlockStatement
+}
+
+// ForStatement is one for statement.
+type ForStatement struct {
+	Span
+	For       token.Pos
+	Init      *Statement
+	Condition *Expression
+	Post      *Statement
+	Body      *BlockStatement
+}
+
+// RangeStatement is one range statement.
+type RangeStatement struct {
+	Span
+	For      token.Pos
+	Key      *Expression
+	Value    *Expression
+	Token    token.Pos
+	Operator token.Token
+	Range    token.Pos
+	Source   *Expression
+	Body     *BlockStatement
+}
+
+// MatchStatement selects one TGo enum variant.
+type MatchStatement struct {
+	Span
+	Match   token.Pos
+	Subject *Expression
+	Lbrace  token.Pos
+	Cases   []*MatchCase
+	Rbrace  token.Pos
+}
+
+// MatchCase binds one enum variant payload.
+type MatchCase struct {
+	Span
+	Case     token.Pos
+	Variant  *Identifier
+	Lparen   token.Pos
+	Binding  *Identifier
+	Rparen   token.Pos
+	Colon    token.Pos
+	Body     []*Statement
+	Comments []*CommentGroup
+}
+
+// Specification contains every Go declaration specification.
+type Specification enum {
+	Import struct { Value *ImportSpecification }
+	Value struct { Value *ValueSpecification }
+	Type struct { Value *TypeSpecification }
+}
+
+// ImportSpecification is one import.
+type ImportSpecification struct {
+	Span
+	Doc     *CommentGroup
+	Name    *Identifier
+	Path    *BasicLiteral
+	Comment *CommentGroup
+	End     token.Pos
+}
+
+// ValueSpecification declares constants or variables.
+type ValueSpecification struct {
+	Span
+	Doc     *CommentGroup
+	Names   []*Identifier
+	Type    *Expression
+	Values  []*Expression
+	Comment *CommentGroup
+}
+
+// TypeSpecification declares one Go type.
+type TypeSpecification struct {
+	Span
+	Doc        *CommentGroup
+	Name       *Identifier
+	TypeParams *FieldList
+	Assign     token.Pos
+	Type       *Expression
+	Comment    *CommentGroup
+}
+
+// Declaration contains every Go declaration plus TGo declarations.
+type Declaration enum {
+	Bad struct { Value *BadDeclaration }
+	General struct { Value *GeneralDeclaration }
+	Function struct { Value *FunctionDeclaration }
+	Enum struct { Value *EnumDeclaration }
+	Struct struct { Value *StructDeclaration }
+	Checked struct { Value *CheckedDeclaration }
+}
+
+// BadDeclaration is an invalid declaration range.
+type BadDeclaration struct { Span; From token.Pos; To token.Pos }
+
+// GeneralDeclaration is one import, const, type, or var declaration.
+type GeneralDeclaration struct {
+	Span
+	Doc    *CommentGroup
+	Token  token.Pos
+	Kind   token.Token
+	Lparen token.Pos
+	Specs  []*Specification
+	Rparen token.Pos
+}
+
+// FunctionDeclaration is one function or method declaration.
+type FunctionDeclaration struct {
+	Span
+	Doc      *CommentGroup
+	Receiver *FieldList
+	Name     *Identifier
+	Type     *FunctionType
+	Body     *BlockStatement
+}
+
+// TGoField is one field group with an optional default.
+type TGoField struct {
+	Span
+	Field   *Field
+	Assign  token.Pos
+	Default *Expression
+}
+
+// EnumVariant declares one enum payload.
+type EnumVariant struct {
+	Span
+	Doc     *CommentGroup
+	Name    *Identifier
+	Struct  token.Pos
+	Lbrace  token.Pos
+	Fields  []*TGoField
+	Rbrace  token.Pos
+	Comment *CommentGroup
+}
+
+// EnumDeclaration declares a closed TGo enum.
+type EnumDeclaration struct {
+	Span
+	Doc      *CommentGroup
+	Type     token.Pos
+	Name     *Identifier
+	Enum     token.Pos
+	Lbrace   token.Pos
+	Variants []*EnumVariant
+	Rbrace   token.Pos
+	Comment  *CommentGroup
+}
+
+// StructDeclaration declares a TGo struct with checked construction.
+type StructDeclaration struct {
+	Span
+	Doc     *CommentGroup
+	Type    token.Pos
+	Name    *Identifier
+	Struct  token.Pos
+	Lbrace  token.Pos
+	Fields  []*TGoField
+	Rbrace  token.Pos
+	Comment *CommentGroup
+}
+
+// CheckedDeclaration declares a type with a construction predicate.
+type CheckedDeclaration struct {
+	Span
+	Doc       *CommentGroup
+	Type      token.Pos
+	Name      *Identifier
+	Base      *Expression
+	Where     token.Pos
+	Predicate *Expression
+	Comment   *CommentGroup
+}
+
+// File is one complete TGo source file.
+type File struct {
+	Span
+	Doc          *CommentGroup
+	Package      token.Pos
+	Name         *Identifier
+	Declarations []*Declaration
+	Imports      []*ImportSpecification
+	Comments     []*CommentGroup
+	GoVersion    string
+
+	front      *frontFile
+	children   map[Node][]Node
+	parents    map[Node]Node
+	extensions []Node
+	attached   map[Node][]*CommentGroup
+}
+
+// Node contains every public TGo syntax node category.
+type Node enum {
+	File struct { Value *File }
+	Declaration struct { Value *Declaration }
+	Specification struct { Value *Specification }
+	Statement struct { Value *Statement }
+	Expression struct { Value *Expression }
+	Field struct { Value *Field }
+	FieldList struct { Value *FieldList }
+	TGoField struct { Value *TGoField }
+	EnumVariant struct { Value *EnumVariant }
+	MatchCase struct { Value *MatchCase }
+	Identifier struct { Value *Identifier }
+	Comment struct { Value *Comment }
+	CommentGroup struct { Value *CommentGroup }
+}
+

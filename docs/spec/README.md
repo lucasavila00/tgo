@@ -64,18 +64,19 @@ An immediate line break after a contextual keyword does not insert a semicolon.
 
 ## Source syntax API
 
-The public `tgo/syntax` package parses this grammar. `ParseFile` accepts a Go
+The public `tgo/pkg/syntax` package parses this grammar. `ParseFile` accepts a Go
 `token.FileSet`, a file name, source bytes, and a parse mode. `ParseComments` retains comments.
 `AllErrors` reports independent scanner and Go parser errors. A tgo production error stops
 extension parsing at its first error.
 
-The syntax tree uses `go/ast` nodes for ordinary Go syntax. It uses explicit nodes for enums,
-variants, checked types, tgo structs and fields, field defaults, matches, cases, bindings, and
-`..default`. A `syntax.LabeledStmt` represents a Go label chain that contains a tgo statement.
-`syntax.PropagateExpr` contains the source call and the position of `!`. All node positions refer
-to the supplied file set and original source.
+The parser uses the Go parser as a private front end. It converts every Go and TGo form before
+`ParseFile` returns. The public tree contains closed `Expression`, `Statement`, `Declaration`,
+and `Specification` enums. It does not expose `go/ast` nodes.
 
-`Children`, `Parent`, `Walk`, and `Inspect` traverse Go and tgo nodes as one source tree.
+`PropagationExpression` contains the source call and the position of `!`. All positions refer
+to the supplied file set and the original source.
+
+`Children`, `Parent`, `Walk`, and `Inspect` traverse all Go and TGo forms as one source tree.
 `Extensions` returns tgo nodes in source order. `ExtensionAt` finds the smallest tgo node at a
 position. `AttachedComments` returns the comments owned by a node. Each node and comment has one
 parent. Callers must treat a parsed tree as read-only because traversal indexes are cached.
@@ -407,65 +408,20 @@ A write in the literal does not satisfy this rule or establish outer assignment.
 
 ## Go boundary
 
-Generated types are normal Go types. tgo calls Go functions directly and keeps Go signatures.
+Generated types are normal Go types. TGo calls Go functions directly and keeps Go signatures.
 Pointers, aliases, methods, interfaces, callbacks, channels, variadic calls, generic calls,
-error values, typed nils, and object identity keep their Go behavior.
+errors, typed nils, and object identity keep their Go behavior.
 
-Constructors and accessors do not run a boundary scan. The compiler generates an explicit
-`ValidateT(value T) (T, error)` operation for each tgo model `T`. Call it when a value can
-come from ordinary Go, cgo, `unsafe`, reflection, a decoder, storage, an interface assertion,
-or a callback. A nil error from an arbitrary `(T, error)` function is not validation.
+TGo trusts values that cross the Go boundary. The compiler does not scan, copy, reconstruct, or
+validate them. Go can create a zero enum, change private storage with `unsafe`, or return a value
+that breaks a checked type rule. The Go caller owns these risks.
 
-`ValidateT` checks and reconstructs the complete reachable model graph:
+`tgolint` checks unsafe Go patterns that it can prove from source. It does not make the Go
+boundary sound. It cannot inspect reflection, `unsafe`, cgo memory, races, or foreign state.
 
-- A checked value runs its predicate again and returns the result from `NewT`.
-- An enum rejects zero and unknown tags. It reads only the active payload, validates that
-  payload, and calls the matching variant constructor.
-- A tgo struct reconstructs each field. Imported tgo models use the same validation context.
-- Arrays, slices, maps, and pointers are copied. The context preserves repeated pointers, maps,
-  and identical slice headers, and it stops cycles. Overlapping slices with different headers
-  rebuild independently. Nil values stay nil. A later change to the foreign graph does not
-  change the rebuilt graph.
-- An interface is accepted only when its dynamic value can be reconstructed. The validator
-  rejects an unsupported dynamic value instead of copying it without a check.
-- An ordinary struct is copied and its exported fields are reconstructed. The validator
-  rejects each private field because it cannot inspect or reconstruct that field.
-- A channel or function is shared only when its static type cannot transport or return a tgo
-  model. An interface in its signature is conservative and causes rejection. An unsafe pointer
-  causes rejection.
-
-The compiler emits one module-local `internal/tgoruntime` package. Generated validators in
-that module share its cycle context. Validation uses reflection only for explicit traversal of
-ordinary Go containers. Generated methods reconstruct private model fields with typed code.
-Constructors, accessors, and ordinary reads do not call the validator.
-
-The generated operation checks tgo validity. The boundary module must still check application
-rules that the type does not declare, such as required non-nil values. A shared channel or
-function can still share ordinary mutable data. Copy or reject that data when ownership must
-not cross the boundary.
-
-On ingress, check the validator error before use. On egress, use checked and variant
-constructors, check each constructor error, and send only valid nested models. Apply the same
-rules before storage, encoding, cgo calls, and callbacks.
-
-`tgolint` recognizes generated validators through package facts. It treats exact tgo parameters,
-interface assertions, callbacks, decoders, and arbitrary `(T, error)` results as untrusted where
-its typed source analysis can identify the flow. A successful generated validator result becomes
-trusted only after its matching error is proved nil. The analysis is local and conservative. It
-cannot prevent a race, inspect `unsafe` or cgo memory, or prove application ownership rules.
-
-Each generated model file has versioned integrity metadata. It binds the exact tgo source bytes
-to the complete formatted Go body. Before it exports facts, `tgolint` checks the source and output
-name pair, the digest, and every fact-bearing declaration against the current compiler emitter.
-This includes representations, constructors, accessors, validators, and reconstruction helpers.
-
-The validation runtime is a separate trust boundary. Its only Go file has versioned metadata for
-the canonical runtime body. `tgolint` exports a runtime package fact only for that exact body. A
-model file must bind `__tgo_runtime` to a package with this fact. A missing or failed source,
-output, emitter, or runtime check produces a diagnostic and exports no model or validation facts.
-
-The emitted representation and ordinary hot paths cost no more than the equivalent handwritten
-Go design. Only an explicit validation call pays for graph reconstruction.
+Each generated model file has integrity metadata. It binds the TGo source bytes to the formatted
+Go body. Before it exports model facts, `tgolint` checks the source, output name, digest, and
+generated declarations against the current compiler emitter.
 
 ## Reserved generated names
 
@@ -482,10 +438,6 @@ tgoV
 NewT
 Value
 tgoTError
-ValidateT
-TgoReconstruct
-tgoTValidationError
-tgoReconstructTV
 TgoDefaultTF
 ```
 
@@ -494,8 +446,6 @@ Internal match variables use names that do not occur in the package source.
 An inserted reference must resolve to its generated declaration. A local name cannot capture it.
 An enum reserves its emitted `uint8`, `uint16`, or `uint32` tag name.
 A checked type reserves the predeclared `string`, `error`, and `nil` names.
-Each tgo source reserves the `__tgo_runtime` import name. The module reserves
-`internal/tgoruntime` and its generated `runtime_tgo.go` file.
 
 ## Build command and diagnostics
 
@@ -506,8 +456,6 @@ It parses selected packages, required tgo packages, and imports from local Go br
 
 A successful build formats and writes every generated file.
 It removes an owned output when its source no longer exists.
-It removes the validation runtime after a successful module build removes the last model.
-It keeps the runtime when an unbuilt package still has generated code that imports it.
 It keeps an output when its source is inactive for the current Go target.
 It refuses to replace a matching file without the generated header.
 A Go file with a generated-style name and no exact header is user code.

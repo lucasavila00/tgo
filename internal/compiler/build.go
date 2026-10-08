@@ -3,7 +3,6 @@ package compiler
 import (
 	"bytes"
 	cryptorand "crypto/rand"
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -65,140 +64,12 @@ func Build(directory string, patterns []string) (err error) {
 			err = errors.Join(err, builder.restore())
 		}
 	}()
-	needsValidation, err := builder.prepareValidationRuntime(selected)
-	if err != nil {
-		return err
-	}
 	for _, path := range selected {
-		if path == module+"/internal/tgoruntime" {
-			continue
-		}
 		if err = builder.build(path); err != nil {
 			return err
 		}
 	}
-	if err = builder.finishValidationRuntime(selected, needsValidation); err != nil {
-		return err
-	}
 	return nil
-}
-
-func (b *packageBuilder) prepareValidationRuntime(selected []string) (bool, error) {
-	needed, err := moduleNeedsValidationRuntime(b.packages)
-	if err != nil || len(selected) == 0 || !needed {
-		return needed, err
-	}
-	return true, b.ensureValidationRuntime()
-}
-
-func (b *packageBuilder) finishValidationRuntime(selected []string, needed bool) error {
-	if len(selected) == 0 || needed ||
-		!validationRuntimeCanBeRemoved(selected, b.packages, b.module) {
-		return nil
-	}
-	return b.removeGenerated(b.validationRuntimePath())
-}
-
-func validationRuntimeCanBeRemoved(
-	selected []string,
-	packages map[string]*packageUnit,
-	module string,
-) bool {
-	built := make(map[string]bool, len(selected))
-	for _, path := range selected {
-		built[path] = true
-	}
-	importText := []byte(strconv.Quote(module + "/internal/tgoruntime"))
-	for path, unit := range packages {
-		if built[path] {
-			continue
-		}
-		for _, generated := range unit.generatedPaths {
-			data, err := os.ReadFile(generated)
-			if err == nil && bytes.Contains(data, importText) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-//go:embed validation_runtime.go.txt
-var validationRuntime []byte
-
-// ensureValidationRuntime writes the shared explicit-validation support package.
-func (b *packageBuilder) ensureValidationRuntime() error {
-	canonicalPath := filepath.Join(b.root, "internal", "tgoruntime", "runtime.go")
-	canonicalValid := false
-	if data, err := os.ReadFile(canonicalPath); err == nil {
-		canonical := bytes.TrimPrefix(
-			validationRuntime,
-			[]byte(generatedHeader+"\n"),
-		)
-		canonicalValid = bytes.Equal(data, canonical)
-	}
-	directory := filepath.Dir(b.validationRuntimePath())
-	if err := os.MkdirAll(directory, 0o755); err != nil {
-		return err
-	}
-	entries, err := os.ReadDir(directory)
-	if err != nil {
-		return err
-	}
-	for _, entry := range entries {
-		allowed := entry.Name() == "runtime_tgo.go"
-		if canonicalValid {
-			allowed = entry.Name() == "runtime.go"
-		}
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".go") && !allowed {
-			return fmt.Errorf(
-				"reserved tgo validation runtime package contains user Go file %s",
-				filepath.Join(directory, entry.Name()),
-			)
-		}
-	}
-	if canonicalValid {
-		return nil
-	}
-	path := b.validationRuntimePath()
-	previous, err := readFileSnapshot(path)
-	if err != nil {
-		return err
-	}
-	if previous.exists && !hasGeneratedHeader(previous.data) {
-		return fmt.Errorf("reserved tgo validation runtime file is user-owned: %s", path)
-	}
-	return b.write(path, validationRuntime)
-}
-
-func (b *packageBuilder) validationRuntimePath() string {
-	return filepath.Join(b.root, "internal", "tgoruntime", "runtime_tgo.go")
-}
-
-func moduleNeedsValidationRuntime(packages map[string]*packageUnit) (bool, error) {
-	for _, unit := range packages {
-		paths, err := unit.matchingSources()
-		if err != nil {
-			return false, err
-		}
-		for _, path := range paths {
-			data, err := os.ReadFile(path)
-			if err != nil {
-				return false, err
-			}
-			source, err := parseSource(token.NewFileSet(), path, data)
-			if err != nil {
-				// A package build reports the source error. Keep an existing runtime
-				// until that build succeeds.
-				//nolint:nilerr // This scan must not report an unselected source error.
-				return true, nil
-			}
-			if len(source.Models) != 0 {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
 }
 
 type goEnvironment struct {

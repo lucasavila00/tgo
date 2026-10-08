@@ -6,7 +6,7 @@ import (
 )
 
 func validateEvent(event model.Event) (model.Event, error) {
-	return model.ValidateEvent(event)
+	return event, nil
 }
 
 func CrossPackageValidation(event model.Event) string {
@@ -29,12 +29,7 @@ func CrossPackageConstructor() string {
 }
 
 func ValidationFunctionValue(event model.Event) string {
-	validate := model.ValidateEvent
-	value, err := validate(event)
-	if err != nil {
-		return ""
-	}
-	return Describe(value)
+	return Describe(event)
 }
 
 func ConstructorFunctionValue() string {
@@ -42,16 +37,11 @@ func ConstructorFunctionValue() string {
 	return Describe(construct(model.EventStopped{}))
 }
 
-func ValidateAssertion(input any) (model.Event, error) {
-	return model.ValidateEvent(input.(model.Event))
+func TrustAssertion(input any) (model.Event, error) {
+	return input.(model.Event), nil
 }
 
 func Describe(event model.Event) string {
-	validated, err := validateEvent(event)
-	if err != nil {
-		return ""
-	}
-	event = validated
 	switch event.TgoTag() {
 	case 1:
 		started := event.TgoStarted()
@@ -90,11 +80,6 @@ func KeepLength(values []model.Event) []model.Event {
 }
 
 func Identity(event model.Event) model.Event {
-	validated, err := validateEvent(event)
-	if err != nil {
-		return model.NewEventStopped(model.EventStopped{})
-	}
-	event = validated
 	return model.Event(event)
 }
 

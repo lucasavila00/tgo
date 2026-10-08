@@ -1,7 +1,0 @@
-package invalid
-
-type Count int where value > 0
-
-func ValidateCount(value Count) (Count, error) {
-	return value, nil
-}

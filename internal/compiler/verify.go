@@ -19,7 +19,7 @@ func VerifyGeneratedModels(sourceName string, sourceData, generatedBody []byte) 
 	expected, err := parser.ParseFile(
 		expectedFiles,
 		sourceName+".expected.go",
-		"package verify\n"+expectedModelText(sourceName, parsed.Models, parsed.RuntimeAlias),
+		"package verify\n"+expectedModelText(sourceName, parsed.Models),
 		parser.SkipObjectResolution,
 	)
 	if err != nil {
@@ -52,14 +52,14 @@ func VerifyGeneratedModels(sourceName string, sourceData, generatedBody []byte) 
 	return nil
 }
 
-func expectedModelText(sourceName string, models []*model, runtimeAlias string) string {
+func expectedModelText(sourceName string, models []*model) string {
 	var output bytes.Buffer
 	for _, declaration := range models {
 		switch {
 		case declaration.Enum:
-			output.WriteString(enumGo(sourceName, declaration, runtimeAlias))
+			output.WriteString(enumGo(sourceName, declaration))
 		case declaration.Predicate != "":
-			output.WriteString(checkedGo(sourceName, declaration, runtimeAlias))
+			output.WriteString(checkedGo(sourceName, declaration))
 		default:
 			fmt.Fprintf(
 				&output,
@@ -67,7 +67,6 @@ func expectedModelText(sourceName string, models []*model, runtimeAlias string) 
 				declaration.Name,
 				fieldDecls(sourceName, declaration.Fields),
 			)
-			output.WriteString(structValidationGo(declaration, runtimeAlias))
 		}
 	}
 	return output.String()

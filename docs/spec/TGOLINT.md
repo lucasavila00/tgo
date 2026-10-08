@@ -74,40 +74,11 @@ An enum payload read needs an exhaustive switch on the same stable value. The
 default must not continue. Internal loop breaks and internal `goto` targets are
 valid. A branch that escapes the default is invalid.
 
-## Runtime boundary
+## Go boundary
 
-A nil error from an arbitrary FFI function, decoder, wrapper, or callback does not prove that
-its tgo value is valid. `tgolint` keeps that value untrusted after the error check. Pass it to
-the generated validator and check the new error:
+The linter trusts exact TGo values that enter from Go parameters, calls, callbacks, decoders,
+storage, and type assertions. It does not require runtime validation.
 
-```go
-foreign, err := decode()
-if err != nil {
-    return err
-}
-value, err := model.ValidateEvent(foreign)
-if err != nil {
-    return err
-}
-use(value)
-```
-
-The same rule applies to an exact tgo model received as a Go parameter. A successful type
-assertion proves the dynamic Go type. It does not prove the tgo tag, payload, or predicate.
-Validate the asserted value before use.
-
-The linter identifies exact generated validators with analysis facts. The facts cross package
-boundaries. It also recognizes a direct wrapper that returns a generated validator or checked
-constructor call, and a simple local function value that names such an operation. The value is
-trusted only on a path where the matching error is proved nil.
-
-The generated validator rejects invalid tags, rebuilds the active enum payload, reruns checked
-predicates, validates nested models, and copies reachable pointers, slices, maps, and interfaces.
-It preserves repeated pointers, maps, and identical slice headers, and it stops cycles. It
-rejects ordinary private fields, unsafe pointers, channels, functions, or dynamic interface
-values when their static shape can hide or transport a tgo model.
-
-The linter does not inspect cgo or `unsafe` memory. It does not prove that shared ordinary data
-has the required ownership, and it cannot prevent a race after validation. It follows the
-supported local typed syntax and imported facts. A tool failure, an unanalyzed package, or an
-unsupported wrapper shape gives no proof.
+It still reports unsafe construction, invalid zero values, unchecked constructor result pairs,
+incomplete tag switches, and wrong payload access when Go source proves the error. It cannot
+inspect reflection, `unsafe`, cgo, races, or foreign state.

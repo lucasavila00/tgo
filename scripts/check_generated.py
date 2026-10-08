@@ -10,8 +10,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-GENERATED_ROOTS = (Path("syntax"), Path("internal/tgolint"))
-RUNTIME = Path("internal/tgoruntime/runtime.go")
+GENERATED_ROOTS = (Path("pkg/syntax"), Path("internal/tgolint"))
 
 
 def copy_repository(destination: Path) -> Path:
@@ -38,9 +37,6 @@ def generated_files(repository: Path) -> dict[Path, bytes]:
             continue
         for path in sorted(root.rglob("*_tgo.go")):
             files[path.relative_to(repository)] = path.read_bytes()
-    runtime = repository / RUNTIME
-    if runtime.is_file():
-        files[RUNTIME] = runtime.read_bytes()
     return files
 
 
@@ -61,18 +57,16 @@ def main() -> None:
         repository = copy_repository(work)
         stage0 = work / "tgo-stage0"
         stage1 = work / "tgo-stage1"
-        lint0 = work / "tgolint-stage0"
 
         committed = generated_files(repository)
         run(repository, "go", "build", "-o", str(stage0), "./cmd/tgo")
-        run(repository, "go", "build", "-o", str(lint0), "./cmd/tgolint")
 
-        run(repository, str(stage0), "build", "./syntax", "./internal/tgolint")
+        run(repository, str(stage0), "build", "./pkg/syntax", "./internal/tgolint")
         stage1_files = generated_files(repository)
         require_equal(committed, stage1_files, "committed generated output is stale")
 
         run(repository, "go", "build", "-o", str(stage1), "./cmd/tgo")
-        run(repository, str(stage1), "build", "./syntax", "./internal/tgolint")
+        run(repository, str(stage1), "build", "./pkg/syntax", "./internal/tgolint")
         stage2_files = generated_files(repository)
         require_equal(stage1_files, stage2_files, "self-hosted output is not stable")
 

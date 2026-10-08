@@ -17,7 +17,7 @@ tgolint ./...
 Local tgo imports build first. Output goes beside each input: `model.tgo` becomes `model_tgo.go`.
 Commit each generated file beside its tgo source. Do not edit generated files.
 A generated model file contains versioned integrity metadata for its source and Go body.
-`tgolint` also verifies its declarations and the module validation runtime before it trusts facts.
+`tgolint` verifies generated declarations before it trusts model facts.
 Run `tgo build` again when an integrity diagnostic reports stale or changed output.
 A failed build restores the output files that it changed.
 The compiler removes generated files after their source is deleted.
@@ -31,14 +31,13 @@ It stops at nested Go modules.
 
 ## Parse tgo source
 
-Use the public `tgo/syntax` package when a tool must read tgo source. Call `ParseFile` with a Go
-file set. Use `syntax.Inspect` or `syntax.Walk` to visit ordinary Go nodes and tgo extension nodes
-together. Use `Extensions`, `Parent`, `Children`, and `AttachedComments` for direct queries.
+Use the public `tgo/pkg/syntax` package when a tool must read TGo source. Call `ParseFile` with a
+Go file set. Use `syntax.Inspect` or `syntax.Walk` to visit the closed TGo node enums. Use
+`Extensions`, `Parent`, `Children`, and `AttachedComments` for direct queries.
 
-Treat a parsed tree as read-only. Its traversal indexes describe the tree at parse time. Use
-`File.GoFile` only for the ordinary Go remainder. It omits tgo declarations and statements.
-Use `VariantLiteralOf` with `go/types` information when a tool must identify enum variant
-literals. Do not infer a variant from identifier spelling.
+Treat a parsed tree as read-only. Its traversal indexes describe the tree at parse time. Match the
+`Expression`, `Statement`, `Declaration`, and `Specification` enums. The public tree does not
+contain `go/ast` nodes.
 
 ## Declare and use business types
 
@@ -99,9 +98,8 @@ account := model.NewAccountPersonal(model.AccountPersonal{Name: "Lucas"})
 quantity, err := model.NewQuantity(3)
 ```
 
-Check `err` before using `quantity`. Constructors and reads do not run a boundary scan.
-For foreign data, call the generated `ValidateT` operation and check its error before use.
-The validator reconstructs nested model data and isolates mutable reference graphs.
+Check `err` before using `quantity`. TGo trusts values from Go. Go callers must follow the
+constructor and accessor rules.
 
 Use postfix `!` when a call returns Go values followed by `error` and the current function also
 ends in `error`:

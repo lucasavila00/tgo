@@ -7,7 +7,7 @@ import (
 )
 
 // enumGo emits the tagged Go representation for one tgo enum.
-func enumGo(sourceName string, declaration *model, runtimeAlias string) string {
+func enumGo(sourceName string, declaration *model) string {
 	var output strings.Builder
 	name := declaration.Name
 	fmt.Fprintf(&output, "// %s requires a variant constructor. Its zero value is invalid.\n", name)
@@ -26,7 +26,6 @@ func enumGo(sourceName string, declaration *model, runtimeAlias string) string {
 	for index, variant := range declaration.Variants {
 		emitVariant(&output, sourceName, name, variant, index+1)
 	}
-	output.WriteString(enumValidationGo(declaration, runtimeAlias))
 	return output.String()
 }
 
@@ -76,7 +75,7 @@ func emitVariant(
 }
 
 // checkedGo emits a checked wrapper, constructor, error, and value accessor.
-func checkedGo(sourceName string, declaration *model, runtimeAlias string) string {
+func checkedGo(sourceName string, declaration *model) string {
 	var output strings.Builder
 	name := declaration.Name
 	fmt.Fprintf(&output, "// %s requires New%s success. Zero is invalid.\n", name, name)
@@ -100,7 +99,6 @@ func checkedGo(sourceName string, declaration *model, runtimeAlias string) strin
 	fmt.Fprintf(&output, "return %s{value: value}, nil\n}\n", name)
 	output.WriteString("// Value requires construction success. Shared data keeps its aliases.\n")
 	fmt.Fprintf(&output, "func (v %s) Value() %s { return v.value }\n", name, declaration.Base)
-	output.WriteString(checkedValidationGo(declaration, runtimeAlias))
 	return output.String()
 }
 

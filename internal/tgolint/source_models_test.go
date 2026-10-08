@@ -6,7 +6,7 @@ import (
 	"go/token"
 	"testing"
 
-	"tgo/syntax"
+	"tgo/pkg/syntax"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -89,11 +89,16 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 	}
 	checker := &checker{pass: pass}
 	file := &ast.File{Package: token.Pos(1)}
-	declaration := &syntax.StructDecl{
-		Span: syntax.Span{Start: token.Pos(2), Stop: token.Pos(10)},
-		Name: &ast.Ident{NamePos: token.Pos(7), Name: "Missing"},
+	data := []byte("package sample\ntype Missing struct {}\n")
+	files := token.NewFileSet()
+	source, err := syntax.ParseFile(files, "model.tgo", data, syntax.AllErrors)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
 	}
-	checker.checkSourceDeclaration(file, "model.tgo", declaration)
+	checker.checkSourceDeclaration(
+		file, "model.tgo", source.Declarations[0],
+		files.File(source.Package), data,
+	)
 	want := "generated tgo output for Missing does not match model.tgo"
 	if message != want {
 		t.Fatalf("diagnostic: %q", message)

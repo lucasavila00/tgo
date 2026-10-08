@@ -140,41 +140,9 @@ account := model.NewAccountPersonal(model.AccountPersonal{Name: "Lucas"})
 
 Test constructor success and failure, every match branch, and shared collection changes.
 Test calls in both directions. Include Go error results and invalid foreign values. Run
-`tgolint` to check Go construction, result pairs, boundary validation, and enum access.
+`tgolint` to check Go construction, result pairs, and enum access.
 
-## Foreign data and callbacks
+## Go boundary
 
-Treat exact tgo values from Go parameters, cgo, `unsafe`, reflection, decoders, storage,
-interface assertions, and callbacks as untrusted. A nil error from the source does not validate
-the value. Call the generated validator at each ingress and check its error:
-
-```go
-foreign, err := load()
-if err != nil {
-    return err
-}
-value, err := model.ValidateAccount(foreign)
-if err != nil {
-    return err
-}
-```
-
-The validator rejects invalid enum tags, rebuilds the active payload with its constructor,
-reruns checked predicates, and validates nested local or imported models. It copies reachable
-arrays, slices, maps, pointers, and supported interface values. It preserves repeated pointers,
-maps, and identical slice headers, and it stops cycles. Overlapping slice views with different
-headers rebuild independently. A later change to the foreign input graph does not change the
-rebuilt graph.
-
-Nil values stay nil. A channel or function is shared only when its static type cannot transport
-or return a tgo model. An interface in its signature causes rejection. The validator also
-rejects unsafe pointers and ordinary private fields that it cannot inspect.
-
-Check application nil rules and ownership rules after validation. A shared channel or function
-can still share ordinary mutable data. Copy or reject that data when ownership must not cross
-the boundary. Apply the same rules before storage, encoding, cgo calls, and callbacks.
-
-`tgolint` identifies generated validators with cross-package facts. It recognizes direct
-validator wrappers and simple local function values. It trusts the returned value only after
-the matching error is proved nil. It does not inspect cgo or `unsafe` memory, prevent races, or
-prove application ownership rules.
+TGo trusts values from Go. Do not expect a runtime validator. Go code must follow the generated
+constructor and accessor rules. Use `tgolint` for the Go patterns that it can check.
