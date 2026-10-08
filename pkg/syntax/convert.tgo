@@ -18,7 +18,7 @@ func ParseFile(
 		return nil, err
 	}
 	conversion := newConverter(front)
-	result := conversion.file()!
+	result := conversion.file()
 	if err != nil {
 		return result, err
 	}
@@ -56,12 +56,12 @@ func span(node interface{ Pos() token.Pos; End() token.Pos }) Span {
 	return Span{Start: node.Pos(), Stop: node.End()}
 }
 
-func (c %converter) file() (*File, error) {
+func (c %converter) file() %File {
 	result := &File{
 		Span:          Span{Start: c.front.Pos(), Stop: c.front.End()},
 		Doc:           c.commentGroup(c.front.Doc),
 		Package:       c.front.Package,
-		Name:          c.identifier(c.front.Name),
+		Name:          c.identifierRequired(c.front.Name),
 		Declarations:  nil,
 		Imports:       nil,
 		Comments:      nil,
@@ -73,23 +73,26 @@ func (c %converter) file() (*File, error) {
 		attached:      nil,
 	}
 	for _, item := range c.front.Decls {
-		declaration := c.declaration(item)!
-		result.Declarations = append(result.Declarations, declaration)
+		result.Declarations = append(result.Declarations, c.declarationMust(item))
 	}
 	for _, item := range c.front.Imports {
-		result.Imports = append(result.Imports, c.importSpecification(item))
+		result.Imports = append(result.Imports, c.importSpecificationRequired(item))
 	}
 	for _, item := range c.front.Comments {
-		result.Comments = append(result.Comments, c.commentGroup(item))
+		result.Comments = append(result.Comments, c.commentGroupRequired(item))
 	}
 	buildPublicIndex(result)
-	return result, nil
+	return result
 }
 
 func (c %converter) identifier(value *ast.Ident) *Identifier {
 	if value == nil {
 		return nil
 	}
+	return c.identifierRequired(value)
+}
+
+func (c %converter) identifierRequired(value *ast.Ident) %Identifier {
 	return &Identifier{Span: span(value), Name: value.Name}
 }
 
@@ -105,17 +108,30 @@ func (c %converter) comment(value *ast.Comment) *Comment {
 	return result
 }
 
+func (c %converter) commentRequired(value *ast.Comment) %Comment {
+	if found, ok := c.comments[value]; ok {
+		return found
+	}
+	result := &Comment{Span: span(value), Text: value.Text}
+	c.comments[value] = result
+	return result
+}
+
 func (c %converter) commentGroup(value *ast.CommentGroup) *CommentGroup {
 	if value == nil {
 		return nil
 	}
+	return c.commentGroupRequired(value)
+}
+
+func (c %converter) commentGroupRequired(value *ast.CommentGroup) %CommentGroup {
 	if found, ok := c.groups[value]; ok {
 		return found
 	}
 	result := &CommentGroup{Span: span(value), List: nil}
 	c.groups[value] = result
 	for _, item := range value.List {
-		result.List = append(result.List, c.comment(item))
+		result.List = append(result.List, c.commentRequired(item))
 	}
 	return result
 }
@@ -124,16 +140,20 @@ func (c %converter) field(value *ast.Field) *Field {
 	if value == nil {
 		return nil
 	}
+	return c.fieldRequired(value)
+}
+
+func (c %converter) fieldRequired(value *ast.Field) %Field {
 	result := &Field{
 		Span:    span(value),
 		Doc:     c.commentGroup(value.Doc),
 		Names:   nil,
-		Type:    c.expression(value.Type),
+		Type:    c.expressionRequired(value.Type),
 		Tag:     c.basicLiteral(value.Tag),
 		Comment: c.commentGroup(value.Comment),
 	}
 	for _, name := range value.Names {
-		result.Names = append(result.Names, c.identifier(name))
+		result.Names = append(result.Names, c.identifierRequired(name))
 	}
 	return result
 }
@@ -142,6 +162,10 @@ func (c %converter) fieldList(value *ast.FieldList) *FieldList {
 	if value == nil {
 		return nil
 	}
+	return c.fieldListRequired(value)
+}
+
+func (c %converter) fieldListRequired(value *ast.FieldList) %FieldList {
 	result := &FieldList{
 		Span:    span(value),
 		Opening: value.Opening,
@@ -149,225 +173,171 @@ func (c %converter) fieldList(value *ast.FieldList) *FieldList {
 		Closing: value.Closing,
 	}
 	for _, item := range value.List {
-		result.List = append(result.List, c.field(item))
+		result.List = append(result.List, c.fieldRequired(item))
 	}
 	return result
 }
-
-func expressionValue(value any) %Expression {
-	switch item := value.(type) {
-	case *BadExpression:
-		result := Expression.Bad{Value: item}
-		return &result
-	case *Identifier:
-		result := Expression.Identifier{Value: item}
-		return &result
-	case *EllipsisExpression:
-		result := Expression.Ellipsis{Value: item}
-		return &result
-	case *BasicLiteral:
-		result := Expression.BasicLiteral{Value: item}
-		return &result
-	case *FunctionLiteral:
-		result := Expression.FunctionLiteral{Value: item}
-		return &result
-	case *CompositeLiteral:
-		result := Expression.CompositeLiteral{Value: item}
-		return &result
-	case *ParenthesizedExpression:
-		result := Expression.Parenthesized{Value: item}
-		return &result
-	case *SelectorExpression:
-		result := Expression.Selector{Value: item}
-		return &result
-	case *IndexExpression:
-		result := Expression.Index{Value: item}
-		return &result
-	case *IndexListExpression:
-		result := Expression.IndexList{Value: item}
-		return &result
-	case *SliceExpression:
-		result := Expression.Slice{Value: item}
-		return &result
-	case *TypeAssertionExpression:
-		result := Expression.TypeAssertion{Value: item}
-		return &result
-	case *CallExpression:
-		result := Expression.Call{Value: item}
-		return &result
-	case *StarExpression:
-		result := Expression.Star{Value: item}
-		return &result
-	case *NonNilPointerType:
-		result := Expression.NonNilPointer{Value: item}
-		return &result
-	case *UnaryExpression:
-		result := Expression.Unary{Value: item}
-		return &result
-	case *BinaryExpression:
-		result := Expression.Binary{Value: item}
-		return &result
-	case *KeyValueExpression:
-		result := Expression.KeyValue{Value: item}
-		return &result
-	case *ArrayType:
-		result := Expression.ArrayType{Value: item}
-		return &result
-	case *StructType:
-		result := Expression.StructType{Value: item}
-		return &result
-	case *FunctionType:
-		result := Expression.FunctionType{Value: item}
-		return &result
-	case *InterfaceType:
-		result := Expression.InterfaceType{Value: item}
-		return &result
-	case *MapType:
-		result := Expression.MapType{Value: item}
-		return &result
-	case *ChannelType:
-		result := Expression.ChannelType{Value: item}
-		return &result
-	case *DefaultExpression:
-		result := Expression.Default{Value: item}
-		return &result
-	case *PropagationExpression:
-		result := Expression.Propagation{Value: item}
-		return &result
-	default:
-		panic(fmt.Sprintf("unsupported TGo expression %T", value))
-	}
-}
-
 func (c %converter) expression(value ast.Expr) *Expression {
 	if value == nil {
 		return nil
 	}
+	return c.expressionRequired(value)
+}
+
+func (c %converter) expressionRequired(value ast.Expr) %Expression {
 	if item := c.propagation[value]; item != nil {
 		return c.propagationExpression(item)
 	}
 	return c.expressionRaw(value)
 }
 
-func (c %converter) expressionRaw(value ast.Expr) *Expression {
-	if value == nil {
-		return nil
-	}
+func (c %converter) expressionRaw(value ast.Expr) %Expression {
 	switch item := value.(type) {
 	case *ast.BadExpr:
-		return expressionValue(&BadExpression{
+		result := Expression.Bad{Value: &BadExpression{
 			Span: span(item), From: item.From, To: item.To,
-		})
+		}}
+		return &result
 	case *ast.Ident:
-		return expressionValue(c.identifier(item))
+		result := Expression.Identifier{Value: c.identifierRequired(item)}
+		return &result
 	case *ast.Ellipsis:
-		return expressionValue(&EllipsisExpression{
+		result := Expression.Ellipsis{Value: &EllipsisExpression{
 			Span: span(item), Ellipsis: item.Ellipsis, Element: c.expression(item.Elt),
-		})
+		}}
+		return &result
 	case *ast.BasicLit:
-		return expressionValue(c.basicLiteral(item))
+		result := Expression.BasicLiteral{Value: c.basicLiteralRequired(item)}
+		return &result
 	case *ast.FuncLit:
-		return expressionValue(&FunctionLiteral{
-			Span: span(item), Type: c.functionType(item.Type), Body: c.block(item.Body),
-		})
+		result := Expression.FunctionLiteral{Value: &FunctionLiteral{
+			Span: span(item), Type: c.functionTypeRequired(item.Type),
+			Body: c.blockRequired(item.Body),
+		}}
+		return &result
 	case *ast.CompositeLit:
-		return expressionValue(c.compositeLiteral(item))
+		result := Expression.CompositeLiteral{Value: c.compositeLiteral(item)}
+		return &result
 	case *ast.ParenExpr:
-		return expressionValue(&ParenthesizedExpression{
+		result := Expression.Parenthesized{Value: &ParenthesizedExpression{
 			Span: span(item), Lparen: item.Lparen,
-			Expression: c.expression(item.X), Rparen: item.Rparen,
-		})
+			Expression: c.expressionRequired(item.X), Rparen: item.Rparen,
+		}}
+		return &result
 	case *ast.SelectorExpr:
-		return expressionValue(&SelectorExpression{
-			Span: span(item), Expression: c.expression(item.X),
-			Selector: c.identifier(item.Sel),
-		})
+		result := Expression.Selector{Value: &SelectorExpression{
+			Span: span(item), Expression: c.expressionRequired(item.X),
+			Selector: c.identifierRequired(item.Sel),
+		}}
+		return &result
 	case *ast.IndexExpr:
-		return expressionValue(&IndexExpression{
-			Span: span(item), Expression: c.expression(item.X), Lbrack: item.Lbrack,
-			Index: c.expression(item.Index), Rbrack: item.Rbrack,
-		})
+		result := Expression.Index{Value: &IndexExpression{
+			Span: span(item), Expression: c.expressionRequired(item.X),
+			Lbrack: item.Lbrack, Index: c.expressionRequired(item.Index),
+			Rbrack: item.Rbrack,
+		}}
+		return &result
 	case *ast.IndexListExpr:
-		result := &IndexListExpression{
-			Span: span(item), Expression: c.expression(item.X),
+		value := &IndexListExpression{
+			Span: span(item), Expression: c.expressionRequired(item.X),
 			Lbrack: item.Lbrack, Indices: nil, Rbrack: item.Rbrack,
 		}
-		result.Indices = c.expressions(item.Indices)
-		return expressionValue(result)
+		value.Indices = c.expressions(item.Indices)
+		result := Expression.IndexList{Value: value}
+		return &result
 	case *ast.SliceExpr:
-		return expressionValue(&SliceExpression{
-			Span: span(item), Expression: c.expression(item.X), Lbrack: item.Lbrack,
-			Low: c.expression(item.Low), High: c.expression(item.High),
-			Max: c.expression(item.Max), Slice3: item.Slice3, Rbrack: item.Rbrack,
-		})
+		result := Expression.Slice{Value: &SliceExpression{
+			Span: span(item), Expression: c.expressionRequired(item.X),
+			Lbrack: item.Lbrack, Low: c.expression(item.Low),
+			High: c.expression(item.High), Max: c.expression(item.Max),
+			Slice3: item.Slice3, Rbrack: item.Rbrack,
+		}}
+		return &result
 	case *ast.TypeAssertExpr:
-		return expressionValue(&TypeAssertionExpression{
-			Span: span(item), Expression: c.expression(item.X),
+		result := Expression.TypeAssertion{Value: &TypeAssertionExpression{
+			Span: span(item), Expression: c.expressionRequired(item.X),
 			Lparen: item.Lparen, Type: c.expression(item.Type), Rparen: item.Rparen,
-		})
+		}}
+		return &result
 	case *ast.CallExpr:
-		return expressionValue(c.call(item))
+		result := Expression.Call{Value: c.callRequired(item)}
+		return &result
 	case *ast.StarExpr:
 		if c.front.nonNil[item.Star] {
-			return expressionValue(&NonNilPointerType{
-				Span: span(item), Percent: item.Star, Type: c.expression(item.X),
-			})
+			result := Expression.NonNilPointer{Value: &NonNilPointerType{
+				Span: span(item), Percent: item.Star,
+				Type: c.expressionRequired(item.X),
+			}}
+			return &result
 		}
-		return expressionValue(&StarExpression{
-			Span: span(item), Star: item.Star, Expression: c.expression(item.X),
-		})
+		result := Expression.Star{Value: &StarExpression{
+			Span: span(item), Star: item.Star,
+			Expression: c.expressionRequired(item.X),
+		}}
+		return &result
 	case *ast.UnaryExpr:
-		return expressionValue(&UnaryExpression{
+		result := Expression.Unary{Value: &UnaryExpression{
 			Span: span(item), OperatorPosition: item.OpPos,
-			Operator: item.Op, Expression: c.expression(item.X),
-		})
+			Operator: item.Op, Expression: c.expressionRequired(item.X),
+		}}
+		return &result
 	case *ast.BinaryExpr:
-		return expressionValue(&BinaryExpression{
-			Span: span(item), Left: c.expression(item.X),
+		result := Expression.Binary{Value: &BinaryExpression{
+			Span: span(item), Left: c.expressionRequired(item.X),
 			OperatorPosition: item.OpPos, Operator: item.Op,
-			Right: c.expression(item.Y),
-		})
+			Right: c.expressionRequired(item.Y),
+		}}
+		return &result
 	case *ast.KeyValueExpr:
-		return expressionValue(&KeyValueExpression{
-			Span: span(item), Key: c.expression(item.Key),
-			Colon: item.Colon, Value: c.expression(item.Value),
-		})
+		result := Expression.KeyValue{Value: &KeyValueExpression{
+			Span: span(item), Key: c.expressionRequired(item.Key),
+			Colon: item.Colon, Value: c.expressionRequired(item.Value),
+		}}
+		return &result
 	case *ast.ArrayType:
-		return expressionValue(&ArrayType{
+		result := Expression.ArrayType{Value: &ArrayType{
 			Span: span(item), Lbrack: item.Lbrack,
-			Length: c.expression(item.Len), Element: c.expression(item.Elt),
-		})
+			Length: c.expression(item.Len), Element: c.expressionRequired(item.Elt),
+		}}
+		return &result
 	case *ast.StructType:
-		return expressionValue(&StructType{
+		result := Expression.StructType{Value: &StructType{
 			Span: span(item), Struct: item.Struct,
-			Fields: c.fieldList(item.Fields), Incomplete: item.Incomplete,
-		})
+			Fields: c.fieldListRequired(item.Fields), Incomplete: item.Incomplete,
+		}}
+		return &result
 	case *ast.FuncType:
-		return expressionValue(c.functionType(item))
+		result := Expression.FunctionType{Value: c.functionTypeRequired(item)}
+		return &result
 	case *ast.InterfaceType:
-		return expressionValue(&InterfaceType{
+		result := Expression.InterfaceType{Value: &InterfaceType{
 			Span: span(item), Interface: item.Interface,
-			Methods: c.fieldList(item.Methods), Incomplete: item.Incomplete,
-		})
+			Methods: c.fieldListRequired(item.Methods), Incomplete: item.Incomplete,
+		}}
+		return &result
 	case *ast.MapType:
-		return expressionValue(&MapType{
+		result := Expression.MapType{Value: &MapType{
 			Span: span(item), Map: item.Map,
-			Key: c.expression(item.Key), Value: c.expression(item.Value),
-		})
+			Key: c.expressionRequired(item.Key),
+			Value: c.expressionRequired(item.Value),
+		}}
+		return &result
 	case *ast.ChanType:
-		return expressionValue(&ChannelType{
+		result := Expression.ChannelType{Value: &ChannelType{
 			Span: span(item), Begin: item.Begin, Arrow: item.Arrow,
-			Direction: channelDirection(item.Dir), Value: c.expression(item.Value),
-		})
+			Direction: channelDirection(item.Dir),
+			Value: c.expressionRequired(item.Value),
+		}}
+		return &result
 	default:
 		panic(fmt.Sprintf("unsupported go/ast expression %T", value))
 	}
 }
 
-func (c %converter) expressions(values []ast.Expr) []*Expression {
-	result := make([]*Expression, 0, len(values))
+func (c %converter) expressions(values []ast.Expr) []%Expression {
+	result := make([]%Expression, 0, len(values))
 	for _, value := range values {
-		result = append(result, c.expression(value))
+		result = append(result, c.expressionRequired(value))
 	}
 	return result
 }
@@ -376,6 +346,10 @@ func (c %converter) basicLiteral(value *ast.BasicLit) *BasicLiteral {
 	if value == nil {
 		return nil
 	}
+	return c.basicLiteralRequired(value)
+}
+
+func (c %converter) basicLiteralRequired(value *ast.BasicLit) %BasicLiteral {
 	return &BasicLiteral{
 		Span: span(value), ValuePosition: value.ValuePos,
 		Kind: value.Kind, Value: value.Value,
@@ -386,10 +360,14 @@ func (c %converter) functionType(value *ast.FuncType) *FunctionType {
 	if value == nil {
 		return nil
 	}
+	return c.functionTypeRequired(value)
+}
+
+func (c %converter) functionTypeRequired(value *ast.FuncType) %FunctionType {
 	return &FunctionType{
 		Span: span(value), Function: value.Func,
 		TypeParams: c.fieldList(value.TypeParams),
-		Params: c.fieldList(value.Params), Results: c.fieldList(value.Results),
+		Params: c.fieldListRequired(value.Params), Results: c.fieldList(value.Results),
 	}
 }
 
@@ -397,8 +375,13 @@ func (c %converter) call(value *ast.CallExpr) *CallExpression {
 	if value == nil {
 		return nil
 	}
+	return c.callRequired(value)
+}
+
+func (c %converter) callRequired(value *ast.CallExpr) %CallExpression {
 	return &CallExpression{
-		Span: span(value), Function: value.Fun.Pos(), Callee: c.expression(value.Fun),
+		Span: span(value), Function: value.Fun.Pos(),
+		Callee: c.expressionRequired(value.Fun),
 		Lparen: value.Lparen, Args: c.expressions(value.Args),
 		Ellipsis: value.Ellipsis, Rparen: value.Rparen,
 	}
@@ -420,27 +403,28 @@ func (c %converter) compositeLiteral(value *ast.CompositeLit) %CompositeLiteral 
 		Elements: nil, Rbrace: value.Rbrace, Incomplete: value.Incomplete,
 	}
 	for _, element := range value.Elts {
-		result.Elements = append(result.Elements, c.expression(element))
+		result.Elements = append(result.Elements, c.expressionRequired(element))
 	}
 	for _, child := range c.front.children[value] {
 		marker, ok := child.(*frontDefaultMarker)
 		if !ok {
 			continue
 		}
-		expression := expressionValue(&DefaultExpression{
+		expressionValue := &DefaultExpression{
 			Span: Span{Start: marker.Pos(), Stop: marker.End()},
 			FirstDot: marker.FirstDot, LastDot: marker.LastDot, Default: marker.Default,
-		})
-		result.Elements = insertExpression(result.Elements, expression)
+		}
+		expression := Expression.Default{Value: expressionValue}
+		result.Elements = insertExpression(result.Elements, &expression)
 	}
 	return result
 }
 
-func insertExpression(values []*Expression, value *Expression) []*Expression {
+func insertExpression(values []%Expression, value %Expression) []%Expression {
 	position := ExpressionPosition(value)
 	for index, item := range values {
 		if position < ExpressionPosition(item) {
-			values = append(values, nil)
+			values = append(values, value)
 			copy(values[index+1:], values[index:])
 			values[index] = value
 			return values
@@ -453,13 +437,14 @@ func (c %converter) propagationExpression(value %frontPropagateExpr) %Expression
 	if result, ok := c.convertedPropagation[value]; ok {
 		return result
 	}
-	result := expressionValue(&PropagationExpression{
+	payload := &PropagationExpression{
 		Span: Span{Start: value.Pos(), Stop: value.End()},
 		Expression: c.expressionRaw(value.Expression),
-		Call: c.call(value.Call),
-		Bang: value.Bang,
-	})
-	c.convertedPropagation[value] = result
-	return result
+		Call: c.callRequired(value.Call), Bang: value.Bang,
+	}
+	result := Expression.Propagation{Value: payload}
+	converted := &result
+	c.convertedPropagation[value] = converted
+	return converted
 }
 

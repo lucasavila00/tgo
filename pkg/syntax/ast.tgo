@@ -25,15 +25,15 @@ type Comment struct {
 // CommentGroup is one comment sequence with no other tokens between its items.
 type CommentGroup struct {
 	Span
-	List []*Comment
+	List []%Comment
 }
 
 // Field is one Go field group.
 type Field struct {
 	Span
 	Doc     *CommentGroup
-	Names   []*Identifier
-	Type    *Expression
+	Names   []%Identifier
+	Type    %Expression
 	Tag     *BasicLiteral
 	Comment *CommentGroup
 }
@@ -42,7 +42,7 @@ type Field struct {
 type FieldList struct {
 	Span
 	Opening token.Pos
-	List    []*Field
+	List    []%Field
 	Closing token.Pos
 }
 
@@ -55,32 +55,32 @@ type ChannelDirection enum {
 
 // Expression contains every Go expression and type form plus TGo expressions.
 type Expression enum {
-	Bad struct { Value *BadExpression }
-	Identifier struct { Value *Identifier }
-	Ellipsis struct { Value *EllipsisExpression }
-	BasicLiteral struct { Value *BasicLiteral }
-	FunctionLiteral struct { Value *FunctionLiteral }
-	CompositeLiteral struct { Value *CompositeLiteral }
-	Parenthesized struct { Value *ParenthesizedExpression }
-	Selector struct { Value *SelectorExpression }
-	Index struct { Value *IndexExpression }
-	IndexList struct { Value *IndexListExpression }
-	Slice struct { Value *SliceExpression }
-	TypeAssertion struct { Value *TypeAssertionExpression }
-	Call struct { Value *CallExpression }
-	Star struct { Value *StarExpression }
-	NonNilPointer struct { Value *NonNilPointerType }
-	Unary struct { Value *UnaryExpression }
-	Binary struct { Value *BinaryExpression }
-	KeyValue struct { Value *KeyValueExpression }
-	ArrayType struct { Value *ArrayType }
-	StructType struct { Value *StructType }
-	FunctionType struct { Value *FunctionType }
-	InterfaceType struct { Value *InterfaceType }
-	MapType struct { Value *MapType }
-	ChannelType struct { Value *ChannelType }
-	Default struct { Value *DefaultExpression }
-	Propagation struct { Value *PropagationExpression }
+	Bad struct { Value %BadExpression }
+	Identifier struct { Value %Identifier }
+	Ellipsis struct { Value %EllipsisExpression }
+	BasicLiteral struct { Value %BasicLiteral }
+	FunctionLiteral struct { Value %FunctionLiteral }
+	CompositeLiteral struct { Value %CompositeLiteral }
+	Parenthesized struct { Value %ParenthesizedExpression }
+	Selector struct { Value %SelectorExpression }
+	Index struct { Value %IndexExpression }
+	IndexList struct { Value %IndexListExpression }
+	Slice struct { Value %SliceExpression }
+	TypeAssertion struct { Value %TypeAssertionExpression }
+	Call struct { Value %CallExpression }
+	Star struct { Value %StarExpression }
+	NonNilPointer struct { Value %NonNilPointerType }
+	Unary struct { Value %UnaryExpression }
+	Binary struct { Value %BinaryExpression }
+	KeyValue struct { Value %KeyValueExpression }
+	ArrayType struct { Value %ArrayType }
+	StructType struct { Value %StructType }
+	FunctionType struct { Value %FunctionType }
+	InterfaceType struct { Value %InterfaceType }
+	MapType struct { Value %MapType }
+	ChannelType struct { Value %ChannelType }
+	Default struct { Value %DefaultExpression }
+	Propagation struct { Value %PropagationExpression }
 }
 
 // BadExpression is an invalid expression range.
@@ -108,8 +108,8 @@ type BasicLiteral struct {
 // FunctionLiteral is one function literal.
 type FunctionLiteral struct {
 	Span
-	Type *FunctionType
-	Body *BlockStatement
+	Type %FunctionType
+	Body %BlockStatement
 }
 
 // CompositeLiteral is one composite literal.
@@ -117,7 +117,7 @@ type CompositeLiteral struct {
 	Span
 	Type       *Expression
 	Lbrace     token.Pos
-	Elements   []*Expression
+	Elements   []%Expression
 	Rbrace     token.Pos
 	Incomplete bool
 }
@@ -126,39 +126,39 @@ type CompositeLiteral struct {
 type ParenthesizedExpression struct {
 	Span
 	Lparen     token.Pos
-	Expression *Expression
+	Expression %Expression
 	Rparen     token.Pos
 }
 
 // SelectorExpression is one selector.
 type SelectorExpression struct {
 	Span
-	Expression *Expression
-	Selector   *Identifier
+	Expression %Expression
+	Selector   %Identifier
 }
 
 // IndexExpression is one indexed expression.
 type IndexExpression struct {
 	Span
-	Expression *Expression
+	Expression %Expression
 	Lbrack     token.Pos
-	Index      *Expression
+	Index      %Expression
 	Rbrack     token.Pos
 }
 
 // IndexListExpression is one generic index list.
 type IndexListExpression struct {
 	Span
-	Expression *Expression
+	Expression %Expression
 	Lbrack     token.Pos
-	Indices    []*Expression
+	Indices    []%Expression
 	Rbrack     token.Pos
 }
 
 // SliceExpression is one slice expression.
 type SliceExpression struct {
 	Span
-	Expression *Expression
+	Expression %Expression
 	Lbrack     token.Pos
 	Low        *Expression
 	High       *Expression
@@ -170,7 +170,7 @@ type SliceExpression struct {
 // TypeAssertionExpression is one type assertion or type switch guard.
 type TypeAssertionExpression struct {
 	Span
-	Expression *Expression
+	Expression %Expression
 	Lparen     token.Pos
 	Type       *Expression
 	Rparen     token.Pos
@@ -180,9 +180,9 @@ type TypeAssertionExpression struct {
 type CallExpression struct {
 	Span
 	Function token.Pos
-	Callee   *Expression
+	Callee   %Expression
 	Lparen   token.Pos
-	Args     []*Expression
+	Args     []%Expression
 	Ellipsis token.Pos
 	Rparen   token.Pos
 }
@@ -191,14 +191,14 @@ type CallExpression struct {
 type StarExpression struct {
 	Span
 	Star       token.Pos
-	Expression *Expression
+	Expression %Expression
 }
 
 // NonNilPointerType is one non-nil pointer type.
 type NonNilPointerType struct {
 	Span
 	Percent token.Pos
-	Type    *Expression
+	Type    %Expression
 }
 
 // UnaryExpression is one unary expression.
@@ -206,24 +206,24 @@ type UnaryExpression struct {
 	Span
 	OperatorPosition token.Pos
 	Operator         token.Token
-	Expression       *Expression
+	Expression       %Expression
 }
 
 // BinaryExpression is one binary expression.
 type BinaryExpression struct {
 	Span
-	Left             *Expression
+	Left             %Expression
 	OperatorPosition token.Pos
 	Operator         token.Token
-	Right            *Expression
+	Right            %Expression
 }
 
 // KeyValueExpression is one keyed composite element.
 type KeyValueExpression struct {
 	Span
-	Key   *Expression
+	Key   %Expression
 	Colon token.Pos
-	Value *Expression
+	Value %Expression
 }
 
 // ArrayType is one array or slice type.
@@ -231,14 +231,14 @@ type ArrayType struct {
 	Span
 	Lbrack  token.Pos
 	Length  *Expression
-	Element *Expression
+	Element %Expression
 }
 
 // StructType is one Go struct type.
 type StructType struct {
 	Span
 	Struct     token.Pos
-	Fields     *FieldList
+	Fields     %FieldList
 	Incomplete bool
 }
 
@@ -247,7 +247,7 @@ type FunctionType struct {
 	Span
 	Function   token.Pos
 	TypeParams *FieldList
-	Params     *FieldList
+	Params     %FieldList
 	Results    *FieldList
 }
 
@@ -255,7 +255,7 @@ type FunctionType struct {
 type InterfaceType struct {
 	Span
 	Interface  token.Pos
-	Methods    *FieldList
+	Methods    %FieldList
 	Incomplete bool
 }
 
@@ -263,8 +263,8 @@ type InterfaceType struct {
 type MapType struct {
 	Span
 	Map   token.Pos
-	Key   *Expression
-	Value *Expression
+	Key   %Expression
+	Value %Expression
 }
 
 // ChannelType is one channel type.
@@ -273,7 +273,7 @@ type ChannelType struct {
 	Begin     token.Pos
 	Arrow     token.Pos
 	Direction ChannelDirection
-	Value     *Expression
+	Value     %Expression
 }
 
 // DefaultExpression applies declared field defaults.
@@ -287,42 +287,42 @@ type DefaultExpression struct {
 // PropagationExpression returns a call error with automatic context.
 type PropagationExpression struct {
 	Span
-	Expression *Expression
-	Call       *CallExpression
+	Expression %Expression
+	Call       %CallExpression
 	Bang       token.Pos
 }
 
 // Statement contains every Go statement form plus TGo match.
 type Statement enum {
-	Bad struct { Value *BadStatement }
-	Declaration struct { Value *DeclarationStatement }
-	Empty struct { Value *EmptyStatement }
-	Labeled struct { Value *LabeledStatement }
-	Expression struct { Value *ExpressionStatement }
-	Send struct { Value *SendStatement }
-	Increment struct { Value *IncrementStatement }
-	Assignment struct { Value *AssignmentStatement }
-	Go struct { Value *GoStatement }
-	Defer struct { Value *DeferStatement }
-	Return struct { Value *ReturnStatement }
-	Branch struct { Value *BranchStatement }
-	Block struct { Value *BlockStatement }
-	If struct { Value *IfStatement }
-	Case struct { Value *CaseClause }
-	Switch struct { Value *SwitchStatement }
-	TypeSwitch struct { Value *TypeSwitchStatement }
-	Communication struct { Value *CommunicationClause }
-	Select struct { Value *SelectStatement }
-	For struct { Value *ForStatement }
-	Range struct { Value *RangeStatement }
-	Match struct { Value *MatchStatement }
+	Bad struct { Value %BadStatement }
+	Declaration struct { Value %DeclarationStatement }
+	Empty struct { Value %EmptyStatement }
+	Labeled struct { Value %LabeledStatement }
+	Expression struct { Value %ExpressionStatement }
+	Send struct { Value %SendStatement }
+	Increment struct { Value %IncrementStatement }
+	Assignment struct { Value %AssignmentStatement }
+	Go struct { Value %GoStatement }
+	Defer struct { Value %DeferStatement }
+	Return struct { Value %ReturnStatement }
+	Branch struct { Value %BranchStatement }
+	Block struct { Value %BlockStatement }
+	If struct { Value %IfStatement }
+	Case struct { Value %CaseClause }
+	Switch struct { Value %SwitchStatement }
+	TypeSwitch struct { Value %TypeSwitchStatement }
+	Communication struct { Value %CommunicationClause }
+	Select struct { Value %SelectStatement }
+	For struct { Value %ForStatement }
+	Range struct { Value %RangeStatement }
+	Match struct { Value %MatchStatement }
 }
 
 // BadStatement is an invalid statement range.
 type BadStatement struct { Span; From token.Pos; To token.Pos }
 
 // DeclarationStatement wraps a declaration in a statement list.
-type DeclarationStatement struct { Span; Declaration *Declaration }
+type DeclarationStatement struct { Span; Declaration %Declaration }
 
 // EmptyStatement is one empty statement.
 type EmptyStatement struct { Span; Semicolon token.Pos; Implicit bool }
@@ -330,26 +330,26 @@ type EmptyStatement struct { Span; Semicolon token.Pos; Implicit bool }
 // LabeledStatement is one labeled statement.
 type LabeledStatement struct {
 	Span
-	Label     *Identifier
+	Label     %Identifier
 	Colon     token.Pos
-	Statement *Statement
+	Statement %Statement
 }
 
 // ExpressionStatement is one expression statement.
-type ExpressionStatement struct { Span; Expression *Expression }
+type ExpressionStatement struct { Span; Expression %Expression }
 
 // SendStatement sends a value to a channel.
 type SendStatement struct {
 	Span
-	Channel *Expression
+	Channel %Expression
 	Arrow   token.Pos
-	Value   *Expression
+	Value   %Expression
 }
 
 // IncrementStatement increments or decrements one expression.
 type IncrementStatement struct {
 	Span
-	Expression *Expression
+	Expression %Expression
 	Token      token.Pos
 	Operator   token.Token
 }
@@ -357,20 +357,20 @@ type IncrementStatement struct {
 // AssignmentStatement assigns expression lists.
 type AssignmentStatement struct {
 	Span
-	Left     []*Expression
+	Left     []%Expression
 	Token    token.Pos
 	Operator token.Token
-	Right    []*Expression
+	Right    []%Expression
 }
 
 // GoStatement starts one call in a goroutine.
-type GoStatement struct { Span; Go token.Pos; Call *Expression }
+type GoStatement struct { Span; Go token.Pos; Call %Expression }
 
 // DeferStatement defers one call.
-type DeferStatement struct { Span; Defer token.Pos; Call *Expression }
+type DeferStatement struct { Span; Defer token.Pos; Call %Expression }
 
 // ReturnStatement returns zero or more values.
-type ReturnStatement struct { Span; Return token.Pos; Results []*Expression }
+type ReturnStatement struct { Span; Return token.Pos; Results []%Expression }
 
 // BranchStatement is one branch statement.
 type BranchStatement struct {
@@ -384,7 +384,7 @@ type BranchStatement struct {
 type BlockStatement struct {
 	Span
 	Lbrace token.Pos
-	List   []*Statement
+	List   []%Statement
 	Rbrace token.Pos
 }
 
@@ -393,8 +393,8 @@ type IfStatement struct {
 	Span
 	If        token.Pos
 	Init      *Statement
-	Condition *Expression
-	Body      *BlockStatement
+	Condition %Expression
+	Body      %BlockStatement
 	Else      *Statement
 }
 
@@ -402,9 +402,9 @@ type IfStatement struct {
 type CaseClause struct {
 	Span
 	Case  token.Pos
-	List  []*Expression
+	List  []%Expression
 	Colon token.Pos
-	Body  []*Statement
+	Body  []%Statement
 }
 
 // SwitchStatement is one expression switch.
@@ -413,7 +413,7 @@ type SwitchStatement struct {
 	Switch token.Pos
 	Init   *Statement
 	Tag    *Expression
-	Body   *BlockStatement
+	Body   %BlockStatement
 }
 
 // TypeSwitchStatement is one type switch.
@@ -421,8 +421,8 @@ type TypeSwitchStatement struct {
 	Span
 	Switch     token.Pos
 	Init       *Statement
-	Assignment *Statement
-	Body       *BlockStatement
+	Assignment %Statement
+	Body       %BlockStatement
 }
 
 // CommunicationClause is one select clause.
@@ -431,14 +431,14 @@ type CommunicationClause struct {
 	Case          token.Pos
 	Communication *Statement
 	Colon         token.Pos
-	Body          []*Statement
+	Body          []%Statement
 }
 
 // SelectStatement is one select statement.
 type SelectStatement struct {
 	Span
 	Select token.Pos
-	Body   *BlockStatement
+	Body   %BlockStatement
 }
 
 // ForStatement is one for statement.
@@ -448,7 +448,7 @@ type ForStatement struct {
 	Init      *Statement
 	Condition *Expression
 	Post      *Statement
-	Body      *BlockStatement
+	Body      %BlockStatement
 }
 
 // RangeStatement is one range statement.
@@ -460,17 +460,17 @@ type RangeStatement struct {
 	Token    token.Pos
 	Operator token.Token
 	Range    token.Pos
-	Source   *Expression
-	Body     *BlockStatement
+	Source   %Expression
+	Body     %BlockStatement
 }
 
 // MatchStatement selects one TGo enum variant.
 type MatchStatement struct {
 	Span
 	Match   token.Pos
-	Subject *Expression
+	Subject %Expression
 	Lbrace  token.Pos
-	Cases   []*MatchCase
+	Cases   []%MatchCase
 	Rbrace  token.Pos
 }
 
@@ -478,20 +478,20 @@ type MatchStatement struct {
 type MatchCase struct {
 	Span
 	Case     token.Pos
-	Variant  *Identifier
+	Variant  %Identifier
 	Lparen   token.Pos
-	Binding  *Identifier
+	Binding  %Identifier
 	Rparen   token.Pos
 	Colon    token.Pos
-	Body     []*Statement
-	Comments []*CommentGroup
+	Body     []%Statement
+	Comments []%CommentGroup
 }
 
 // Specification contains every Go declaration specification.
 type Specification enum {
-	Import struct { Value *ImportSpecification }
-	Value struct { Value *ValueSpecification }
-	Type struct { Value *TypeSpecification }
+	Import struct { Value %ImportSpecification }
+	Value struct { Value %ValueSpecification }
+	Type struct { Value %TypeSpecification }
 }
 
 // ImportSpecification is one import.
@@ -499,7 +499,7 @@ type ImportSpecification struct {
 	Span
 	Doc     *CommentGroup
 	Name    *Identifier
-	Path    *BasicLiteral
+	Path    %BasicLiteral
 	Comment *CommentGroup
 	End     token.Pos
 }
@@ -508,9 +508,9 @@ type ImportSpecification struct {
 type ValueSpecification struct {
 	Span
 	Doc     *CommentGroup
-	Names   []*Identifier
+	Names   []%Identifier
 	Type    *Expression
-	Values  []*Expression
+	Values  []%Expression
 	Comment *CommentGroup
 }
 
@@ -518,21 +518,21 @@ type ValueSpecification struct {
 type TypeSpecification struct {
 	Span
 	Doc        *CommentGroup
-	Name       *Identifier
+	Name       %Identifier
 	TypeParams *FieldList
 	Assign     token.Pos
-	Type       *Expression
+	Type       %Expression
 	Comment    *CommentGroup
 }
 
 // Declaration contains every Go declaration plus TGo declarations.
 type Declaration enum {
-	Bad struct { Value *BadDeclaration }
-	General struct { Value *GeneralDeclaration }
-	Function struct { Value *FunctionDeclaration }
-	Enum struct { Value *EnumDeclaration }
-	Struct struct { Value *StructDeclaration }
-	Checked struct { Value *CheckedDeclaration }
+	Bad struct { Value %BadDeclaration }
+	General struct { Value %GeneralDeclaration }
+	Function struct { Value %FunctionDeclaration }
+	Enum struct { Value %EnumDeclaration }
+	Struct struct { Value %StructDeclaration }
+	Checked struct { Value %CheckedDeclaration }
 }
 
 // BadDeclaration is an invalid declaration range.
@@ -545,7 +545,7 @@ type GeneralDeclaration struct {
 	Token  token.Pos
 	Kind   token.Token
 	Lparen token.Pos
-	Specs  []*Specification
+	Specs  []%Specification
 	Rparen token.Pos
 }
 
@@ -554,15 +554,15 @@ type FunctionDeclaration struct {
 	Span
 	Doc      *CommentGroup
 	Receiver *FieldList
-	Name     *Identifier
-	Type     *FunctionType
+	Name     %Identifier
+	Type     %FunctionType
 	Body     *BlockStatement
 }
 
 // TGoField is one field group with an optional default.
 type TGoField struct {
 	Span
-	Field   *Field
+	Field   %Field
 	Assign  token.Pos
 	Default *Expression
 }
@@ -571,10 +571,10 @@ type TGoField struct {
 type EnumVariant struct {
 	Span
 	Doc     *CommentGroup
-	Name    *Identifier
+	Name    %Identifier
 	Struct  token.Pos
 	Lbrace  token.Pos
-	Fields  []*TGoField
+	Fields  []%TGoField
 	Rbrace  token.Pos
 	Tag     *BasicLiteral
 	Comment *CommentGroup
@@ -585,11 +585,11 @@ type EnumDeclaration struct {
 	Span
 	Doc      *CommentGroup
 	Type     token.Pos
-	Name     *Identifier
+	Name     %Identifier
 	Enum     token.Pos
 	Tag      *BasicLiteral
 	Lbrace   token.Pos
-	Variants []*EnumVariant
+	Variants []%EnumVariant
 	Rbrace   token.Pos
 	Comment  *CommentGroup
 }
@@ -599,10 +599,10 @@ type StructDeclaration struct {
 	Span
 	Doc     *CommentGroup
 	Type    token.Pos
-	Name    *Identifier
+	Name    %Identifier
 	Struct  token.Pos
 	Lbrace  token.Pos
-	Fields  []*TGoField
+	Fields  []%TGoField
 	Rbrace  token.Pos
 	Comment *CommentGroup
 }
@@ -612,10 +612,10 @@ type CheckedDeclaration struct {
 	Span
 	Doc       *CommentGroup
 	Type      token.Pos
-	Name      *Identifier
-	Base      *Expression
+	Name      %Identifier
+	Base      %Expression
 	Where     token.Pos
-	Predicate *Expression
+	Predicate %Expression
 	Comment   *CommentGroup
 }
 
@@ -624,33 +624,33 @@ type File struct {
 	Span
 	Doc          *CommentGroup
 	Package      token.Pos
-	Name         *Identifier
-	Declarations []*Declaration
-	Imports      []*ImportSpecification
-	Comments     []*CommentGroup
+	Name         %Identifier
+	Declarations []%Declaration
+	Imports      []%ImportSpecification
+	Comments     []%CommentGroup
 	GoVersion    string
 
 	front      *frontFile
 	children   map[Node][]Node
 	parents    map[Node]Node
 	extensions []Node
-	attached   map[Node][]*CommentGroup
+	attached   map[Node][]%CommentGroup
 }
 
 // Node contains every public TGo syntax node category.
 type Node enum {
-	File struct { Value *File }
-	Declaration struct { Value *Declaration }
-	Specification struct { Value *Specification }
-	Statement struct { Value *Statement }
-	Expression struct { Value *Expression }
-	Field struct { Value *Field }
-	FieldList struct { Value *FieldList }
-	TGoField struct { Value *TGoField }
-	EnumVariant struct { Value *EnumVariant }
-	MatchCase struct { Value *MatchCase }
-	Identifier struct { Value *Identifier }
-	Comment struct { Value *Comment }
-	CommentGroup struct { Value *CommentGroup }
+	File struct { Value %File }
+	Declaration struct { Value %Declaration }
+	Specification struct { Value %Specification }
+	Statement struct { Value %Statement }
+	Expression struct { Value %Expression }
+	Field struct { Value %Field }
+	FieldList struct { Value %FieldList }
+	TGoField struct { Value %TGoField }
+	EnumVariant struct { Value %EnumVariant }
+	MatchCase struct { Value %MatchCase }
+	Identifier struct { Value %Identifier }
+	Comment struct { Value %Comment }
+	CommentGroup struct { Value %CommentGroup }
 }
 

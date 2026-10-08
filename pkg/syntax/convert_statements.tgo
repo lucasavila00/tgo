@@ -5,165 +5,163 @@ import (
 	"go/ast"
 )
 
-func statementValue(value any) %Statement {
-	switch item := value.(type) {
-	case *BadStatement: result := Statement.Bad{Value: item}; return &result
-	case *DeclarationStatement:
-		result := Statement.Declaration{Value: item}; return &result
-	case *EmptyStatement: result := Statement.Empty{Value: item}; return &result
-	case *LabeledStatement: result := Statement.Labeled{Value: item}; return &result
-	case *ExpressionStatement:
-		result := Statement.Expression{Value: item}; return &result
-	case *SendStatement: result := Statement.Send{Value: item}; return &result
-	case *IncrementStatement:
-		result := Statement.Increment{Value: item}; return &result
-	case *AssignmentStatement:
-		result := Statement.Assignment{Value: item}; return &result
-	case *GoStatement: result := Statement.Go{Value: item}; return &result
-	case *DeferStatement: result := Statement.Defer{Value: item}; return &result
-	case *ReturnStatement: result := Statement.Return{Value: item}; return &result
-	case *BranchStatement: result := Statement.Branch{Value: item}; return &result
-	case *BlockStatement: result := Statement.Block{Value: item}; return &result
-	case *IfStatement: result := Statement.If{Value: item}; return &result
-	case *CaseClause: result := Statement.Case{Value: item}; return &result
-	case *SwitchStatement: result := Statement.Switch{Value: item}; return &result
-	case *TypeSwitchStatement:
-		result := Statement.TypeSwitch{Value: item}; return &result
-	case *CommunicationClause:
-		result := Statement.Communication{Value: item}; return &result
-	case *SelectStatement: result := Statement.Select{Value: item}; return &result
-	case *ForStatement: result := Statement.For{Value: item}; return &result
-	case *RangeStatement: result := Statement.Range{Value: item}; return &result
-	case *MatchStatement: result := Statement.Match{Value: item}; return &result
-	default:
-		panic(fmt.Sprintf("unsupported TGo statement %T", value))
-	}
-}
-
 func (c %converter) statement(value frontNode) *Statement {
 	if value == nil {
 		return nil
 	}
+	return c.statementRequired(value)
+}
+
+func (c %converter) statementRequired(value frontNode) %Statement {
 	switch item := value.(type) {
 	case *frontMatchStmt:
-		return statementValue(c.match(item))
+		result := Statement.Match{Value: c.match(item)}
+		return &result
 	case *frontLabeledStmt:
-		return statementValue(&LabeledStatement{
+		result := Statement.Labeled{Value: &LabeledStatement{
 			Span: Span{Start: item.Pos(), Stop: item.End()},
-			Label: c.identifier(item.Label), Colon: item.Colon,
-			Statement: c.statement(item.Stmt),
-		})
+			Label: c.identifierRequired(item.Label), Colon: item.Colon,
+			Statement: c.statementRequired(item.Stmt),
+		}}
+		return &result
 	case *ast.BadStmt:
-		return statementValue(&BadStatement{
+		result := Statement.Bad{Value: &BadStatement{
 			Span: span(item), From: item.From, To: item.To,
-		})
+		}}
+		return &result
 	case *ast.DeclStmt:
-		return statementValue(&DeclarationStatement{
+		result := Statement.Declaration{Value: &DeclarationStatement{
 			Span: span(item), Declaration: c.declarationMust(item.Decl),
-		})
+		}}
+		return &result
 	case *ast.EmptyStmt:
-		return statementValue(&EmptyStatement{
+		result := Statement.Empty{Value: &EmptyStatement{
 			Span: span(item), Semicolon: item.Semicolon, Implicit: item.Implicit,
-		})
+		}}
+		return &result
 	case *ast.LabeledStmt:
-		return statementValue(&LabeledStatement{
-			Span: span(item), Label: c.identifier(item.Label), Colon: item.Colon,
-			Statement: c.statement(item.Stmt),
-		})
+		result := Statement.Labeled{Value: &LabeledStatement{
+			Span: span(item), Label: c.identifierRequired(item.Label),
+			Colon: item.Colon, Statement: c.statementRequired(item.Stmt),
+		}}
+		return &result
 	case *ast.ExprStmt:
-		return statementValue(&ExpressionStatement{
-			Span: span(item), Expression: c.expression(item.X),
-		})
+		result := Statement.Expression{Value: &ExpressionStatement{
+			Span: span(item), Expression: c.expressionRequired(item.X),
+		}}
+		return &result
 	case *ast.SendStmt:
-		return statementValue(&SendStatement{
-			Span: span(item), Channel: c.expression(item.Chan),
-			Arrow: item.Arrow, Value: c.expression(item.Value),
-		})
+		result := Statement.Send{Value: &SendStatement{
+			Span: span(item), Channel: c.expressionRequired(item.Chan),
+			Arrow: item.Arrow, Value: c.expressionRequired(item.Value),
+		}}
+		return &result
 	case *ast.IncDecStmt:
-		return statementValue(&IncrementStatement{
-			Span: span(item), Expression: c.expression(item.X),
+		result := Statement.Increment{Value: &IncrementStatement{
+			Span: span(item), Expression: c.expressionRequired(item.X),
 			Token: item.TokPos, Operator: item.Tok,
-		})
+		}}
+		return &result
 	case *ast.AssignStmt:
-		return statementValue(&AssignmentStatement{
+		result := Statement.Assignment{Value: &AssignmentStatement{
 			Span: span(item), Left: c.expressions(item.Lhs), Token: item.TokPos,
 			Operator: item.Tok, Right: c.expressions(item.Rhs),
-		})
+		}}
+		return &result
 	case *ast.GoStmt:
-		return statementValue(&GoStatement{
-			Span: span(item), Go: item.Go, Call: c.expression(item.Call),
-		})
+		result := Statement.Go{Value: &GoStatement{
+			Span: span(item), Go: item.Go,
+			Call: c.expressionRequired(item.Call),
+		}}
+		return &result
 	case *ast.DeferStmt:
-		return statementValue(&DeferStatement{
-			Span: span(item), Defer: item.Defer, Call: c.expression(item.Call),
-		})
+		result := Statement.Defer{Value: &DeferStatement{
+			Span: span(item), Defer: item.Defer,
+			Call: c.expressionRequired(item.Call),
+		}}
+		return &result
 	case *ast.ReturnStmt:
-		return statementValue(&ReturnStatement{
+		result := Statement.Return{Value: &ReturnStatement{
 			Span: span(item), Return: item.Return,
 			Results: c.expressions(item.Results),
-		})
+		}}
+		return &result
 	case *ast.BranchStmt:
-		return statementValue(&BranchStatement{
+		result := Statement.Branch{Value: &BranchStatement{
 			Span: span(item), TokenPosition: item.TokPos,
 			Token: item.Tok, Label: c.identifier(item.Label),
-		})
+		}}
+		return &result
 	case *ast.BlockStmt:
-		return statementValue(c.block(item))
+		result := Statement.Block{Value: c.blockRequired(item)}
+		return &result
 	case *ast.IfStmt:
-		return statementValue(&IfStatement{
+		result := Statement.If{Value: &IfStatement{
 			Span: span(item), If: item.If, Init: c.statement(item.Init),
-			Condition: c.expression(item.Cond), Body: c.block(item.Body),
+			Condition: c.expressionRequired(item.Cond),
+			Body: c.blockRequired(item.Body),
 			Else: c.statement(item.Else),
-		})
+		}}
+		return &result
 	case *ast.CaseClause:
-		return statementValue(&CaseClause{
+		result := Statement.Case{Value: &CaseClause{
 			Span: span(item), Case: item.Case, List: c.expressions(item.List),
 			Colon: item.Colon, Body: c.statementList(item),
-		})
+		}}
+		return &result
 	case *ast.SwitchStmt:
-		return statementValue(&SwitchStatement{
+		result := Statement.Switch{Value: &SwitchStatement{
 			Span: span(item), Switch: item.Switch, Init: c.statement(item.Init),
-			Tag: c.expression(item.Tag), Body: c.block(item.Body),
-		})
+			Tag: c.expression(item.Tag), Body: c.blockRequired(item.Body),
+		}}
+		return &result
 	case *ast.TypeSwitchStmt:
-		return statementValue(&TypeSwitchStatement{
+		result := Statement.TypeSwitch{Value: &TypeSwitchStatement{
 			Span: span(item), Switch: item.Switch, Init: c.statement(item.Init),
-			Assignment: c.statement(item.Assign), Body: c.block(item.Body),
-		})
+			Assignment: c.statementRequired(item.Assign),
+			Body: c.blockRequired(item.Body),
+		}}
+		return &result
 	case *ast.CommClause:
-		return statementValue(&CommunicationClause{
+		result := Statement.Communication{Value: &CommunicationClause{
 			Span: span(item), Case: item.Case,
 			Communication: c.statement(item.Comm), Colon: item.Colon,
 			Body: c.statementList(item),
-		})
+		}}
+		return &result
 	case *ast.SelectStmt:
-		return statementValue(&SelectStatement{
-			Span: span(item), Select: item.Select, Body: c.block(item.Body),
-		})
+		result := Statement.Select{Value: &SelectStatement{
+			Span: span(item), Select: item.Select,
+			Body: c.blockRequired(item.Body),
+		}}
+		return &result
 	case *ast.ForStmt:
-		return statementValue(&ForStatement{
+		result := Statement.For{Value: &ForStatement{
 			Span: span(item), For: item.For, Init: c.statement(item.Init),
 			Condition: c.expression(item.Cond), Post: c.statement(item.Post),
-			Body: c.block(item.Body),
-		})
+			Body: c.blockRequired(item.Body),
+		}}
+		return &result
 	case *ast.RangeStmt:
-		return statementValue(&RangeStatement{
+		result := Statement.Range{Value: &RangeStatement{
 			Span: span(item), For: item.For, Key: c.expression(item.Key),
 			Value: c.expression(item.Value), Token: item.TokPos,
 			Operator: item.Tok, Range: item.Range,
-			Source: c.expression(item.X), Body: c.block(item.Body),
-		})
+			Source: c.expressionRequired(item.X),
+			Body: c.blockRequired(item.Body),
+		}}
+		return &result
 	default:
 		panic(fmt.Sprintf("unsupported go/ast statement %T", value))
 	}
 }
 
-func (c %converter) statementList(parent frontNode) []*Statement {
-	result := []*Statement(nil)
+func (c %converter) statementList(parent frontNode) []%Statement {
+	var result []%Statement = nil
 	for _, child := range c.front.children[parent] {
 		switch child.(type) {
 		case ast.Stmt, *frontMatchStmt, *frontLabeledStmt:
-			result = append(result, c.statement(child))
+			result = append(result, c.statementRequired(child))
 		}
 	}
 	return result
@@ -173,6 +171,10 @@ func (c %converter) block(value *ast.BlockStmt) *BlockStatement {
 	if value == nil {
 		return nil
 	}
+	return c.blockRequired(value)
+}
+
+func (c %converter) blockRequired(value *ast.BlockStmt) %BlockStatement {
 	return &BlockStatement{
 		Span: span(value), Lbrace: value.Lbrace,
 		List: c.statementList(value), Rbrace: value.Rbrace,
@@ -182,66 +184,59 @@ func (c %converter) block(value *ast.BlockStmt) *BlockStatement {
 func (c %converter) match(value *frontMatchStmt) %MatchStatement {
 	result := &MatchStatement{
 		Span: Span{Start: value.Pos(), Stop: value.End()}, Match: value.Match,
-		Subject: c.expression(value.Subject), Lbrace: value.Lbrace,
+		Subject: c.expressionRequired(value.Subject), Lbrace: value.Lbrace,
 		Cases: nil, Rbrace: value.Rbrace,
 	}
 	for _, item := range value.Cases {
 		matchCase := &MatchCase{
 			Span: Span{Start: item.Pos(), Stop: item.End()}, Case: item.Case,
-			Variant: c.identifier(item.Variant), Lparen: item.Lparen,
-			Binding: c.identifier(item.Binding), Rparen: item.Rparen,
+			Variant: c.identifierRequired(item.Variant), Lparen: item.Lparen,
+			Binding: c.identifierRequired(item.Binding), Rparen: item.Rparen,
 			Colon: item.Colon, Body: nil, Comments: nil,
 		}
 		for _, statement := range item.Body {
-			matchCase.Body = append(matchCase.Body, c.statement(statement))
+			matchCase.Body = append(matchCase.Body, c.statementRequired(statement))
 		}
 		for _, comment := range item.Comments {
-			matchCase.Comments = append(matchCase.Comments, c.commentGroup(comment))
+			matchCase.Comments = append(
+				matchCase.Comments, c.commentGroupRequired(comment),
+			)
 		}
 		result.Cases = append(result.Cases, matchCase)
 	}
 	return result
 }
 
-func specificationValue(value any) %Specification {
-	switch item := value.(type) {
-	case *ImportSpecification:
-		result := Specification.Import{Value: item}; return &result
-	case *ValueSpecification:
-		result := Specification.Value{Value: item}; return &result
-	case *TypeSpecification:
-		result := Specification.Type{Value: item}; return &result
-	default:
-		panic(fmt.Sprintf("unsupported TGo specification %T", value))
-	}
-}
-
 func (c %converter) specification(value ast.Spec) %Specification {
 	switch item := value.(type) {
 	case *ast.ImportSpec:
-		return specificationValue(c.importSpecification(item))
+		result := Specification.Import{Value: c.importSpecificationRequired(item)}
+		return &result
 	case *ast.ValueSpec:
-		return specificationValue(&ValueSpecification{
+		result := Specification.Value{Value: &ValueSpecification{
 			Span: span(item), Doc: c.commentGroup(item.Doc),
 			Names: c.identifiers(item.Names), Type: c.expression(item.Type),
 			Values: c.expressions(item.Values), Comment: c.commentGroup(item.Comment),
-		})
+		}}
+		return &result
 	case *ast.TypeSpec:
-		return specificationValue(&TypeSpecification{
+		result := Specification.Type{Value: &TypeSpecification{
 			Span: span(item), Doc: c.commentGroup(item.Doc),
-			Name: c.identifier(item.Name), TypeParams: c.fieldList(item.TypeParams),
-			Assign: item.Assign, Type: c.expression(item.Type),
+			Name: c.identifierRequired(item.Name),
+			TypeParams: c.fieldList(item.TypeParams), Assign: item.Assign,
+			Type: c.expressionRequired(item.Type),
 			Comment: c.commentGroup(item.Comment),
-		})
+		}}
+		return &result
 	default:
 		panic(fmt.Sprintf("unsupported go/ast specification %T", value))
 	}
 }
 
-func (c %converter) identifiers(values []*ast.Ident) []*Identifier {
-	result := make([]*Identifier, 0, len(values))
+func (c %converter) identifiers(values []*ast.Ident) []%Identifier {
+	result := make([]%Identifier, 0, len(values))
 	for _, value := range values {
-		result = append(result, c.identifier(value))
+		result = append(result, c.identifierRequired(value))
 	}
 	return result
 }
@@ -250,83 +245,68 @@ func (c %converter) importSpecification(value *ast.ImportSpec) *ImportSpecificat
 	if value == nil {
 		return nil
 	}
+	return c.importSpecificationRequired(value)
+}
+
+func (c %converter) importSpecificationRequired(
+	value *ast.ImportSpec,
+) %ImportSpecification {
 	if found, ok := c.imports[value]; ok {
 		return found
 	}
 	result := &ImportSpecification{
 		Span: span(value), Doc: c.commentGroup(value.Doc),
-		Name: c.identifier(value.Name), Path: c.basicLiteral(value.Path),
+		Name: c.identifier(value.Name), Path: c.basicLiteralRequired(value.Path),
 		Comment: c.commentGroup(value.Comment), End: value.EndPos,
 	}
 	c.imports[value] = result
 	return result
 }
 
-func declarationValue(value any) %Declaration {
-	switch item := value.(type) {
-	case *BadDeclaration:
-		result := Declaration.Bad{Value: item}; return &result
-	case *GeneralDeclaration:
-		result := Declaration.General{Value: item}; return &result
-	case *FunctionDeclaration:
-		result := Declaration.Function{Value: item}; return &result
-	case *EnumDeclaration:
-		result := Declaration.Enum{Value: item}; return &result
-	case *StructDeclaration:
-		result := Declaration.Struct{Value: item}; return &result
-	case *CheckedDeclaration:
-		result := Declaration.Checked{Value: item}; return &result
-	default:
-		panic(fmt.Sprintf("unsupported TGo declaration %T", value))
-	}
-}
-
 func (c %converter) declarationMust(value frontNode) %Declaration {
 	switch item := value.(type) {
 	case *ast.BadDecl:
-		return declarationValue(&BadDeclaration{
+		result := Declaration.Bad{Value: &BadDeclaration{
 			Span: span(item), From: item.From, To: item.To,
-		})
+		}}
+		return &result
 	case *ast.GenDecl:
-		result := &GeneralDeclaration{
+		value := &GeneralDeclaration{
 			Span: span(item), Doc: c.commentGroup(item.Doc),
 			Token: item.TokPos, Kind: item.Tok, Lparen: item.Lparen,
 			Specs: nil, Rparen: item.Rparen,
 		}
 		for _, spec := range item.Specs {
-			result.Specs = append(result.Specs, c.specification(spec))
+			value.Specs = append(value.Specs, c.specification(spec))
 		}
-		return declarationValue(result)
+		result := Declaration.General{Value: value}
+		return &result
 	case *ast.FuncDecl:
-		return declarationValue(&FunctionDeclaration{
+		result := Declaration.Function{Value: &FunctionDeclaration{
 			Span: span(item), Doc: c.commentGroup(item.Doc),
-			Receiver: c.fieldList(item.Recv), Name: c.identifier(item.Name),
-			Type: c.functionType(item.Type), Body: c.block(item.Body),
-		})
+			Receiver: c.fieldList(item.Recv),
+			Name: c.identifierRequired(item.Name),
+			Type: c.functionTypeRequired(item.Type), Body: c.block(item.Body),
+		}}
+		return &result
 	case *frontEnumDecl:
-		return declarationValue(c.enumDeclaration(item))
+		result := Declaration.Enum{Value: c.enumDeclaration(item)}
+		return &result
 	case *frontStructDecl:
-		return declarationValue(c.structDeclaration(item))
+		result := Declaration.Struct{Value: c.structDeclaration(item)}
+		return &result
 	case *frontCheckedDecl:
-		return declarationValue(&CheckedDeclaration{
+		result := Declaration.Checked{Value: &CheckedDeclaration{
 			Span: Span{Start: item.Pos(), Stop: item.End()},
 			Doc: c.commentGroup(item.Doc), Type: item.Type,
-			Name: c.identifier(item.Name), Base: c.expression(item.Base),
-			Where: item.Where, Predicate: c.expression(item.Predicate),
+			Name: c.identifierRequired(item.Name),
+			Base: c.expressionRequired(item.Base), Where: item.Where,
+			Predicate: c.expressionRequired(item.Predicate),
 			Comment: c.commentGroup(item.Comment),
-		})
+		}}
+		return &result
 	default:
 		panic(fmt.Sprintf("unsupported parser declaration %T", value))
-	}
-}
-
-func (c %converter) declaration(value frontNode) (*Declaration, error) {
-	switch value.(type) {
-	case *ast.BadDecl, *ast.GenDecl, *ast.FuncDecl,
-		*frontEnumDecl, *frontStructDecl, *frontCheckedDecl:
-		return c.declarationMust(value), nil
-	default:
-		return nil, fmt.Errorf("unsupported parser declaration %T", value)
 	}
 }
 
@@ -334,14 +314,15 @@ func (c %converter) enumDeclaration(value *frontEnumDecl) %EnumDeclaration {
 	result := &EnumDeclaration{
 		Span: Span{Start: value.Pos(), Stop: value.End()},
 		Doc: c.commentGroup(value.Doc), Type: value.Type,
-		Name: c.identifier(value.Name), Enum: value.Enum, Lbrace: value.Lbrace,
+		Name: c.identifierRequired(value.Name), Enum: value.Enum, Lbrace: value.Lbrace,
 		Tag: c.basicLiteral(value.Tag),
 		Variants: nil, Rbrace: value.Rbrace, Comment: c.commentGroup(value.Comment),
 	}
 	for _, variant := range value.Variants {
 		item := &EnumVariant{
 			Span: Span{Start: variant.Pos(), Stop: variant.End()},
-			Doc: c.commentGroup(variant.Doc), Name: c.identifier(variant.Name),
+			Doc: c.commentGroup(variant.Doc),
+			Name: c.identifierRequired(variant.Name),
 			Struct: variant.Struct, Lbrace: variant.Lbrace,
 			Tag: c.basicLiteral(variant.Tag),
 			Fields: c.tgoFields(variant.Fields), Rbrace: variant.Rbrace,
@@ -356,18 +337,18 @@ func (c %converter) structDeclaration(value *frontStructDecl) %StructDeclaration
 	return &StructDeclaration{
 		Span: Span{Start: value.Pos(), Stop: value.End()},
 		Doc: c.commentGroup(value.Doc), Type: value.Type,
-		Name: c.identifier(value.Name), Struct: value.Struct,
+		Name: c.identifierRequired(value.Name), Struct: value.Struct,
 		Lbrace: value.Lbrace, Fields: c.tgoFields(value.Fields),
 		Rbrace: value.Rbrace, Comment: c.commentGroup(value.Comment),
 	}
 }
 
-func (c %converter) tgoFields(values []*frontFieldDecl) []*TGoField {
-	result := make([]*TGoField, 0, len(values))
+func (c %converter) tgoFields(values []*frontFieldDecl) []%TGoField {
+	result := make([]%TGoField, 0, len(values))
 	for _, value := range values {
 		result = append(result, &TGoField{
 			Span: Span{Start: value.Pos(), Stop: value.End()},
-			Field: c.field(value.Field), Assign: value.Assign,
+			Field: c.fieldRequired(value.Field), Assign: value.Assign,
 			Default: c.expression(value.Default),
 		})
 	}

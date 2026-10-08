@@ -178,7 +178,7 @@ func TestPublicASTDoesNotExposeGoAST(t *testing.T) {
 			}
 		}
 	}
-	inspect(reflect.TypeOf(syntax.File{}))
+	inspect(reflect.TypeFor[syntax.File]())
 	inspect(reflect.TypeFor[syntax.Expression]())
 	inspect(reflect.TypeFor[syntax.Statement]())
 	inspect(reflect.TypeFor[syntax.Declaration]())

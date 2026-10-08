@@ -35,11 +35,17 @@ func (e %nilEnvironment) contractForExpression(expression ast.Expr) nilContract 
 		return nil
 	}
 	if e.info.Types[expression].IsType() {
-		contract := e.declaredContract(expression)
-		if len(contract) != 0 {
-			return contract
+		result := cloneNilContract(e.declaredContract(expression))
+		if result == nil {
+			result = make(nilContract)
 		}
-		return e.contractForType(e.info.TypeOf(expression))
+		for path := range e.contractForType(e.info.TypeOf(expression)) {
+			result[path] = true
+		}
+		if len(result) == 0 {
+			return nil
+		}
+		return result
 	}
 	switch expression := expression.(type) {
 	case *ast.ParenExpr:
@@ -452,14 +458,22 @@ func (e %nilEnvironment) checkNilStructLiteral(
 			continue
 		}
 		set[fieldIndex] = true
+		fieldContract := e.contractForObject(typ.Field(fieldIndex))
+		if len(fieldContract) == 0 {
+			fieldContract = nilChild(contract, "f"+strconv.Itoa(fieldIndex))
+		}
 		e.checkNilFlow(
 			value,
-			nilChild(contract, "f"+strconv.Itoa(fieldIndex)),
+			fieldContract,
 			state,
 		)
 	}
 	for index, initialized := range set {
-		if initialized || len(nilChild(contract, "f"+strconv.Itoa(index))) == 0 {
+		fieldContract := e.contractForObject(typ.Field(index))
+		if len(fieldContract) == 0 {
+			fieldContract = nilChild(contract, "f"+strconv.Itoa(index))
+		}
+		if initialized || !e.nilZeroInvalid(typ.Field(index).Type(), fieldContract) {
 			continue
 		}
 		e.reportNil(
