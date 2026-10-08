@@ -1,0 +1,438 @@
+package tgolint
+
+import (
+	"go/token"
+	"go/types"
+
+	"tgo/internal/sourcefacts"
+	"tgo/pkg/syntax"
+)
+
+// sourceStatementList gets a statement list that exists in TGo source.
+func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
+	if node == nil {
+		return nil, false
+	}
+	match *node {
+	case Statement(value): return statementList(value.Value)
+	case MatchCase(value): return value.Value.Body, true
+	case File(_): return nil, false
+	case Declaration(_): return nil, false
+	case Specification(_): return nil, false
+	case Expression(_): return nil, false
+	case Field(_): return nil, false
+	case FieldList(_): return nil, false
+	case TGoField(_): return nil, false
+	case EnumVariant(_): return nil, false
+	case Identifier(_): return nil, false
+	case Comment(_): return nil, false
+	case CommentGroup(_): return nil, false
+	}
+}
+
+// statementList gets the child list from one source statement container.
+func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
+	if statement == nil {
+		return nil, false
+	}
+	match *statement {
+	case Block(value): return value.Value.List, true
+	case Case(value): return value.Value.Body, true
+	case Communication(value): return value.Value.Body, true
+	case Bad(_): return nil, false
+	case Declaration(_): return nil, false
+	case Empty(_): return nil, false
+	case Labeled(_): return nil, false
+	case Expression(_): return nil, false
+	case Send(_): return nil, false
+	case Increment(_): return nil, false
+	case Assignment(_): return nil, false
+	case Go(_): return nil, false
+	case Defer(_): return nil, false
+	case Return(_): return nil, false
+	case Branch(_): return nil, false
+	case If(_): return nil, false
+	case Switch(_): return nil, false
+	case TypeSwitch(_): return nil, false
+	case Select(_): return nil, false
+	case For(_): return nil, false
+	case Range(_): return nil, false
+	case Match(_): return nil, false
+	}
+}
+
+// sourceAssignment gets an assignment that the user wrote.
+func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement, bool) {
+	if statement == nil {
+		return nil, false
+	}
+	match *statement {
+	case Assignment(value): return value.Value, true
+	case Bad(_): return nil, false
+	case Declaration(_): return nil, false
+	case Empty(_): return nil, false
+	case Labeled(_): return nil, false
+	case Expression(_): return nil, false
+	case Send(_): return nil, false
+	case Increment(_): return nil, false
+	case Go(_): return nil, false
+	case Defer(_): return nil, false
+	case Return(_): return nil, false
+	case Branch(_): return nil, false
+	case Block(_): return nil, false
+	case If(_): return nil, false
+	case Case(_): return nil, false
+	case Switch(_): return nil, false
+	case TypeSwitch(_): return nil, false
+	case Communication(_): return nil, false
+	case Select(_): return nil, false
+	case For(_): return nil, false
+	case Range(_): return nil, false
+	case Match(_): return nil, false
+	}
+}
+
+// sourceIf gets an if statement that the user wrote.
+func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
+	if statement == nil {
+		return nil, false
+	}
+	match *statement {
+	case If(value): return value.Value, true
+	case Bad(_): return nil, false
+	case Declaration(_): return nil, false
+	case Empty(_): return nil, false
+	case Labeled(_): return nil, false
+	case Expression(_): return nil, false
+	case Send(_): return nil, false
+	case Increment(_): return nil, false
+	case Assignment(_): return nil, false
+	case Go(_): return nil, false
+	case Defer(_): return nil, false
+	case Return(_): return nil, false
+	case Branch(_): return nil, false
+	case Block(_): return nil, false
+	case Case(_): return nil, false
+	case Switch(_): return nil, false
+	case TypeSwitch(_): return nil, false
+	case Communication(_): return nil, false
+	case Select(_): return nil, false
+	case For(_): return nil, false
+	case Range(_): return nil, false
+	case Match(_): return nil, false
+	}
+}
+
+// sourceReturn gets a return statement that the user wrote.
+func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
+	if statement == nil {
+		return nil, false
+	}
+	match *statement {
+	case Return(value): return value.Value, true
+	case Bad(_): return nil, false
+	case Declaration(_): return nil, false
+	case Empty(_): return nil, false
+	case Labeled(_): return nil, false
+	case Expression(_): return nil, false
+	case Send(_): return nil, false
+	case Increment(_): return nil, false
+	case Assignment(_): return nil, false
+	case Go(_): return nil, false
+	case Defer(_): return nil, false
+	case Branch(_): return nil, false
+	case Block(_): return nil, false
+	case If(_): return nil, false
+	case Case(_): return nil, false
+	case Switch(_): return nil, false
+	case TypeSwitch(_): return nil, false
+	case Communication(_): return nil, false
+	case Select(_): return nil, false
+	case For(_): return nil, false
+	case Range(_): return nil, false
+	case Match(_): return nil, false
+	}
+}
+
+// sourceCall gets a direct or parenthesized call from TGo source.
+func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
+	if expression == nil {
+		return nil, false
+	}
+	match *expression {
+	case Call(value): return value.Value, true
+	case Parenthesized(value): return sourceCall(value.Value.Expression)
+	case Bad(_): return nil, false
+	case Identifier(_): return nil, false
+	case Ellipsis(_): return nil, false
+	case BasicLiteral(_): return nil, false
+	case FunctionLiteral(_): return nil, false
+	case CompositeLiteral(_): return nil, false
+	case Selector(_): return nil, false
+	case Index(_): return nil, false
+	case IndexList(_): return nil, false
+	case Slice(_): return nil, false
+	case TypeAssertion(_): return nil, false
+	case Star(_): return nil, false
+	case NonNilPointer(_): return nil, false
+	case Unary(_): return nil, false
+	case Binary(_): return nil, false
+	case KeyValue(_): return nil, false
+	case ArrayType(_): return nil, false
+	case StructType(_): return nil, false
+	case FunctionType(_): return nil, false
+	case InterfaceType(_): return nil, false
+	case MapType(_): return nil, false
+	case ChannelType(_): return nil, false
+	case Default(_): return nil, false
+	case Propagation(_): return nil, false
+	}
+}
+
+// sourceIdentifier gets a direct identifier expression.
+func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) {
+	if expression == nil {
+		return nil, false
+	}
+	match *expression {
+	case Identifier(value): return value.Value, true
+	case Bad(_): return nil, false
+	case Ellipsis(_): return nil, false
+	case BasicLiteral(_): return nil, false
+	case FunctionLiteral(_): return nil, false
+	case CompositeLiteral(_): return nil, false
+	case Parenthesized(_): return nil, false
+	case Selector(_): return nil, false
+	case Index(_): return nil, false
+	case IndexList(_): return nil, false
+	case Slice(_): return nil, false
+	case TypeAssertion(_): return nil, false
+	case Call(_): return nil, false
+	case Star(_): return nil, false
+	case NonNilPointer(_): return nil, false
+	case Unary(_): return nil, false
+	case Binary(_): return nil, false
+	case KeyValue(_): return nil, false
+	case ArrayType(_): return nil, false
+	case StructType(_): return nil, false
+	case FunctionType(_): return nil, false
+	case InterfaceType(_): return nil, false
+	case MapType(_): return nil, false
+	case ChannelType(_): return nil, false
+	case Default(_): return nil, false
+	case Propagation(_): return nil, false
+	}
+}
+
+// sourceBinary gets a direct binary expression.
+func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool) {
+	if expression == nil {
+		return nil, false
+	}
+	match *expression {
+	case Binary(value): return value.Value, true
+	case Bad(_): return nil, false
+	case Identifier(_): return nil, false
+	case Ellipsis(_): return nil, false
+	case BasicLiteral(_): return nil, false
+	case FunctionLiteral(_): return nil, false
+	case CompositeLiteral(_): return nil, false
+	case Parenthesized(_): return nil, false
+	case Selector(_): return nil, false
+	case Index(_): return nil, false
+	case IndexList(_): return nil, false
+	case Slice(_): return nil, false
+	case TypeAssertion(_): return nil, false
+	case Call(_): return nil, false
+	case Star(_): return nil, false
+	case NonNilPointer(_): return nil, false
+	case Unary(_): return nil, false
+	case KeyValue(_): return nil, false
+	case ArrayType(_): return nil, false
+	case StructType(_): return nil, false
+	case FunctionType(_): return nil, false
+	case InterfaceType(_): return nil, false
+	case MapType(_): return nil, false
+	case ChannelType(_): return nil, false
+	case Default(_): return nil, false
+	case Propagation(_): return nil, false
+	}
+}
+
+// sourceCompositeLiteral gets a direct composite literal.
+func sourceCompositeLiteral(
+	expression *syntax.Expression,
+) (*syntax.CompositeLiteral, bool) {
+	if expression == nil {
+		return nil, false
+	}
+	match *expression {
+	case CompositeLiteral(value): return value.Value, true
+	case Bad(_): return nil, false
+	case Identifier(_): return nil, false
+	case Ellipsis(_): return nil, false
+	case BasicLiteral(_): return nil, false
+	case FunctionLiteral(_): return nil, false
+	case Parenthesized(_): return nil, false
+	case Selector(_): return nil, false
+	case Index(_): return nil, false
+	case IndexList(_): return nil, false
+	case Slice(_): return nil, false
+	case TypeAssertion(_): return nil, false
+	case Call(_): return nil, false
+	case Star(_): return nil, false
+	case NonNilPointer(_): return nil, false
+	case Unary(_): return nil, false
+	case Binary(_): return nil, false
+	case KeyValue(_): return nil, false
+	case ArrayType(_): return nil, false
+	case StructType(_): return nil, false
+	case FunctionType(_): return nil, false
+	case InterfaceType(_): return nil, false
+	case MapType(_): return nil, false
+	case ChannelType(_): return nil, false
+	case Default(_): return nil, false
+	case Propagation(_): return nil, false
+	}
+}
+
+// sourceUnparenthesized removes all outer source parentheses.
+func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
+	for expression != nil {
+		match *expression {
+		case Parenthesized(value): expression = value.Value.Expression
+		case Bad(_): return expression
+		case Identifier(_): return expression
+		case Ellipsis(_): return expression
+		case BasicLiteral(_): return expression
+		case FunctionLiteral(_): return expression
+		case CompositeLiteral(_): return expression
+		case Selector(_): return expression
+		case Index(_): return expression
+		case IndexList(_): return expression
+		case Slice(_): return expression
+		case TypeAssertion(_): return expression
+		case Call(_): return expression
+		case Star(_): return expression
+		case NonNilPointer(_): return expression
+		case Unary(_): return expression
+		case Binary(_): return expression
+		case KeyValue(_): return expression
+		case ArrayType(_): return expression
+		case StructType(_): return expression
+		case FunctionType(_): return expression
+		case InterfaceType(_): return expression
+		case MapType(_): return expression
+		case ChannelType(_): return expression
+		case Default(_): return expression
+		case Propagation(_): return expression
+		}
+	}
+	return nil
+}
+
+// sourceFunctionSignature finds the nearest source function around a node.
+func sourceFunctionSignature(
+	file *syntax.File,
+	node *syntax.Node,
+	index *sourcefacts.Index,
+) *types.Signature {
+	for current := node; current != nil; current = syntax.Parent(file, current) {
+		position, ok := sourceFunctionPosition(current)
+		if ok {
+			return index.FunctionSignature(position)
+		}
+	}
+	return nil
+}
+
+// sourceFunctionPosition gets a declaration or literal function position.
+func sourceFunctionPosition(node *syntax.Node) (token.Pos, bool) {
+	if node == nil {
+		return token.NoPos, false
+	}
+	match *node {
+	case Declaration(value): return declarationFunctionPosition(value.Value)
+	case Expression(value): return expressionFunctionPosition(value.Value)
+	case File(_): return token.NoPos, false
+	case Specification(_): return token.NoPos, false
+	case Statement(_): return token.NoPos, false
+	case Field(_): return token.NoPos, false
+	case FieldList(_): return token.NoPos, false
+	case TGoField(_): return token.NoPos, false
+	case EnumVariant(_): return token.NoPos, false
+	case MatchCase(_): return token.NoPos, false
+	case Identifier(_): return token.NoPos, false
+	case Comment(_): return token.NoPos, false
+	case CommentGroup(_): return token.NoPos, false
+	}
+}
+
+// declarationFunctionPosition gets a named function position.
+func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
+	match *value {
+	case Function(function): return function.Value.Start, true
+	case Bad(_): return token.NoPos, false
+	case General(_): return token.NoPos, false
+	case Enum(_): return token.NoPos, false
+	case Struct(_): return token.NoPos, false
+	case Checked(_): return token.NoPos, false
+	}
+}
+
+// expressionFunctionPosition gets a function literal position.
+func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
+	match *value {
+	case FunctionLiteral(function): return function.Value.Start, true
+	case Bad(_): return token.NoPos, false
+	case Identifier(_): return token.NoPos, false
+	case Ellipsis(_): return token.NoPos, false
+	case BasicLiteral(_): return token.NoPos, false
+	case CompositeLiteral(_): return token.NoPos, false
+	case Parenthesized(_): return token.NoPos, false
+	case Selector(_): return token.NoPos, false
+	case Index(_): return token.NoPos, false
+	case IndexList(_): return token.NoPos, false
+	case Slice(_): return token.NoPos, false
+	case TypeAssertion(_): return token.NoPos, false
+	case Call(_): return token.NoPos, false
+	case Star(_): return token.NoPos, false
+	case NonNilPointer(_): return token.NoPos, false
+	case Unary(_): return token.NoPos, false
+	case Binary(_): return token.NoPos, false
+	case KeyValue(_): return token.NoPos, false
+	case ArrayType(_): return token.NoPos, false
+	case StructType(_): return token.NoPos, false
+	case FunctionType(_): return token.NoPos, false
+	case InterfaceType(_): return token.NoPos, false
+	case MapType(_): return token.NoPos, false
+	case ChannelType(_): return token.NoPos, false
+	case Default(_): return token.NoPos, false
+	case Propagation(_): return token.NoPos, false
+	}
+}
+
+// sourceGeneralDeclaration gets one Go-style source declaration.
+func sourceGeneralDeclaration(
+	value *syntax.Declaration,
+) (*syntax.GeneralDeclaration, bool) {
+	match *value {
+	case General(declaration): return declaration.Value, true
+	case Bad(_): return nil, false
+	case Function(_): return nil, false
+	case Enum(_): return nil, false
+	case Struct(_): return nil, false
+	case Checked(_): return nil, false
+	}
+}
+
+// sourceValueSpecification gets one const or variable source specification.
+func sourceValueSpecification(
+	value *syntax.Specification,
+) (*syntax.ValueSpecification, bool) {
+	match *value {
+	case Value(specification): return specification.Value, true
+	case Import(_): return nil, false
+	case Type(_): return nil, false
+	}
+}

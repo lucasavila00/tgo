@@ -4,6 +4,8 @@ package compiler
 import (
 	"go/ast"
 	"go/token"
+
+	"tgo/pkg/syntax"
 )
 
 type edit struct {
@@ -51,6 +53,7 @@ type source struct {
 	FmtPackage    string
 	Name          string
 	Data          []byte
+	Tree          *syntax.File
 	File          *ast.File
 	Models        []*model
 	MatchMarker   string

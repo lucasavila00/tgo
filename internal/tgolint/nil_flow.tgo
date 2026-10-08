@@ -119,8 +119,12 @@ func (c %checker) checkNilSafety(analysis *compiler.AnalysisPackage) {
 	goEnvironment.collectNilContracts()
 
 	if analysis != nil {
+		projected := make([]*ast.File, 0, len(analysis.Sources))
+		for _, source := range analysis.Sources {
+			projected = append(projected, source.Projected)
+		}
 		sourceEnvironment := newNilEnvironment(
-			c.pass, analysis.Files, analysis.Info, analysis.Package,
+			c.pass, projected, analysis.Info, analysis.Package,
 			analysis.NonNil,
 		)
 		sourceEnvironment.collectNilContracts()

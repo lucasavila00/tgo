@@ -111,6 +111,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		FmtPackage:    fmtPackage,
 		Name:          name,
 		Data:          append([]byte(nil), data...),
+		Tree:          tree,
 		File:          goFile,
 		Models:        models,
 		MatchMarker:   matchMarker,
