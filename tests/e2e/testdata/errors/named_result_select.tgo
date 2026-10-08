@@ -1,0 +1,10 @@
+package invalid
+
+func invalidResult(values <-chan int) (result int) {
+    select {
+    case <-values:
+        return
+    default:
+        return
+    }
+}

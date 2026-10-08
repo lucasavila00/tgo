@@ -1,0 +1,13 @@
+package invalid
+
+type Account enum {
+    Personal struct { Name string }
+}
+
+type PersonalReader interface {
+    TgoPersonal() AccountPersonal
+}
+
+func name[T PersonalReader](value T) string {
+    return value.TgoPersonal().Name
+}

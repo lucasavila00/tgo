@@ -1,0 +1,13 @@
+package invalid
+
+type Account enum {
+    Personal struct { Name string }
+}
+
+type Wrapped struct {
+    Account
+}
+
+func tag(value Wrapped) uint8 {
+    return value.tgoTag
+}

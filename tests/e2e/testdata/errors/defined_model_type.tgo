@@ -1,0 +1,7 @@
+package invalid
+
+type Account enum {
+    Personal struct { Name string }
+}
+
+type Unsafe Account

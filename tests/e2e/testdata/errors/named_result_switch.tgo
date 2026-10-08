@@ -1,0 +1,8 @@
+package invalid
+
+func invalidResult(value int) (result int) {
+    switch value {
+    default:
+        return
+    }
+}

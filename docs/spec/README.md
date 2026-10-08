@@ -117,6 +117,14 @@ Inactive payloads hold Go zero values. The compiler does not use an unsafe memor
 
 A tgo file may not build an enum with a struct literal, conversion, or `new`.
 It may not read representation fields or call generated `Tgo*` methods directly.
+Embedding an enum does not expose its representation fields or generated accessors.
+A tgo file may not select a `Tgo`-prefixed method through an interface or type parameter.
+A new defined type may not derive from an enum, including through pointer layers.
+A type alias may name the enum or pointer and keeps all model rules.
+A tgo file may not convert an enum value or pointer to expose its representation.
+Conversion to a concrete interface type remains valid.
+An unnamed struct identical to the enum representation is reserved and rejected.
+The conversion rules also apply to a type parameter whose type set admits the enum.
 
 ## Match statements
 
@@ -132,6 +140,7 @@ case Business(business): return business.Company
 Cases may appear in any order. Each variant must appear once.
 Unknown, duplicate, and missing variants are compile errors.
 The binding is one name. `_` discards the payload.
+A match case may not use `fallthrough`.
 
 The subject is evaluated once. A match lowers to this shape:
 
@@ -185,6 +194,11 @@ Constructor failure returns an invalid zero wrapper and a non-nil error.
 A tgo file may not build a checked type with a literal, conversion, or `new`.
 Use `Value()` to read the base value. Construct a new checked value after arithmetic.
 The compiler does not prove that a caller checks the constructor error.
+A new defined type may not derive from a checked type, including through pointer layers.
+A tgo file may not convert a checked value or pointer to expose its representation.
+Conversion to a concrete interface type remains valid.
+An unnamed struct identical to the checked representation is reserved and rejected.
+The conversion rules also apply to a type parameter whose type set admits the checked type.
 
 ## Field defaults
 
@@ -301,7 +315,15 @@ It must be assigned before a read or bare return.
 
 The compiler tracks straight-line assignments and merges `if` and `else` paths.
 Both continuing paths must establish assignment. A returning path needs no later state.
-Assignments inside other control statements do not establish state after that statement.
+It checks returns in loops, ranges, switches, type switches, selects, and labeled statements.
+An initializer that always runs can establish assignment after its control statement.
+Assignments in a loop body, case, or select clause do not establish later state.
+A loop post clause cannot depend on an assignment in the loop body.
+A `goto` requires every named result to be assigned before the jump.
+
+A function literal follows the same rule for its own named results.
+If a function literal reads a captured result, assign it before the literal declaration.
+A write in the literal does not satisfy this rule or establish outer assignment.
 
 ## Go boundary
 

@@ -47,6 +47,7 @@ func Label(account Account) string {
 
 Construct with `Account.Personal{Name: "Lucas"}`. Cover every variant in `match`.
 Use `_` to discard a payload. Duplicate or missing cases fail compilation.
+Do not use `fallthrough` in a match or select `Tgo*` methods through an interface.
 The value uses a tag and typed Go fields. Reads do not run validation.
 
 Call `NewQuantity(input)` and check its error. Use `quantity.Value()` for the underlying value.
@@ -69,6 +70,7 @@ Supply every required field. Use `..default` to select declared defaults.
 Explicit fields run first. Selected defaults run in declaration order.
 Each map literal makes a fresh map. Struct copies keep Go reference aliases.
 Variables need an initializer. Array and slice literals must have no missing indices.
+Assign named results before a read or bare return.
 
 ## Call Go
 

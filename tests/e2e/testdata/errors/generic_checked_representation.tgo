@@ -1,0 +1,15 @@
+package invalid
+
+type Quantity int where value > 0
+
+type Exposed struct {
+    value int
+}
+
+type Quantities interface {
+    Quantity
+}
+
+func expose[T Quantities](quantity T) Exposed {
+    return Exposed(quantity)
+}

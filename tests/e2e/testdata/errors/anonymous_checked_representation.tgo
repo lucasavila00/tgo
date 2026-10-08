@@ -1,0 +1,10 @@
+package invalid
+
+type Quantity int where value > 0
+
+func expose(quantity Quantity) int {
+    var exposed struct {
+        value int
+    } = quantity
+    return exposed.value
+}

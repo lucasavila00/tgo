@@ -1,0 +1,16 @@
+package invalid
+
+type Account enum {
+    Personal struct { Name string }
+    Business struct { Name string }
+}
+
+func name(account Account) string {
+    match account {
+    case Personal(_):
+        fallthrough
+        ;
+    case Business(value):
+        return value.Name
+    }
+}

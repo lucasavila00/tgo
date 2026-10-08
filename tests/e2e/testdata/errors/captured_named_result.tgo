@@ -1,0 +1,10 @@
+package invalid
+
+func invalidResult() (result int) {
+    read := func() int {
+        return result
+    }
+    _ = read()
+    result = 1
+    return
+}

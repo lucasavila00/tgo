@@ -1,0 +1,8 @@
+package invalid
+
+func invalidResult() (result int) {
+    goto done
+    result = 1
+done:
+    return
+}

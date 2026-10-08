@@ -1,0 +1,12 @@
+package invalid
+
+func invalidResult(run bool) (result int) {
+    for ; run; _ = result {
+        if run {
+            continue
+        }
+        return 1
+    }
+    result = 2
+    return
+}

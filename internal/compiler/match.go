@@ -82,6 +82,9 @@ func (p *packageUnit) lowerCase(
 	temporary string,
 	seen map[string]bool,
 ) {
+	if branch := fallthroughBranch(clause.Body); branch != nil {
+		p.fail(branch, "match cases cannot fall through")
+	}
 	name, binding, err := casePattern(clause)
 	if err != nil {
 		p.fail(clause, "%s", err)
@@ -111,6 +114,44 @@ func (p *packageUnit) lowerCase(
 		Rhs: []ast.Expr{methodCall(temporary, "Tgo"+name)},
 	}
 	clause.Body = append([]ast.Stmt{assignment}, clause.Body...)
+}
+
+// fallthroughBranch gets a final fallthrough through labels and empty statements.
+func fallthroughBranch(statements []ast.Stmt) *ast.BranchStmt {
+	var statement ast.Stmt
+	for position := len(statements) - 1; position >= 0; position-- {
+		candidate := statements[position]
+		if emptyStatement(candidate) {
+			continue
+		}
+		statement = candidate
+		break
+	}
+	for {
+		label, ok := statement.(*ast.LabeledStmt)
+		if !ok {
+			break
+		}
+		statement = label.Stmt
+	}
+	branch, ok := statement.(*ast.BranchStmt)
+	if ok && branch.Tok == token.FALLTHROUGH {
+		return branch
+	}
+	return nil
+}
+
+// emptyStatement reports an empty statement with optional labels.
+func emptyStatement(statement ast.Stmt) bool {
+	for {
+		label, ok := statement.(*ast.LabeledStmt)
+		if !ok {
+			break
+		}
+		statement = label.Stmt
+	}
+	_, ok := statement.(*ast.EmptyStmt)
+	return ok
 }
 
 // casePattern reads a variant name and binding from one match case.

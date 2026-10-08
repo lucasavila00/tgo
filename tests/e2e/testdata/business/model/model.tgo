@@ -2,6 +2,20 @@ package model
 
 type Quantity int where value > 0
 
+type AccountAlias = Account
+
+type CounterRecord (struct {
+    value int
+})
+
+type Point struct {
+    X int
+}
+
+type Tagged struct {
+    tgoTag uint8
+}
+
 type Account enum {
     Personal struct { Name string }
     Business struct {
@@ -41,6 +55,33 @@ func Label(account Account) string {
     case Personal(person): return person.Name
     case Business(company): return company.Company
     }
+}
+
+func AliasLabel(account AccountAlias) string {
+    match account {
+    case Personal(person): return person.Name
+    case Business(company): return company.Company
+    }
+}
+
+func AsAny(account Account) any {
+    return any(account)
+}
+
+func Counter(value int) CounterRecord {
+    return CounterRecord{value: value}
+}
+
+func CounterValue(counter CounterRecord) int {
+    return counter.value
+}
+
+func AnonymousPoint() struct { X int } {
+    return struct { X int }{X: 1}
+}
+
+func Tag(value Tagged) uint8 {
+    return value.tgoTag
 }
 
 func NoticeLabels(notice Notice) map[string]string {

@@ -20,6 +20,20 @@ func NewQuantity(value int) (Quantity, error) {
 // Value requires construction success. Shared data keeps its aliases.
 func (v Quantity) Value() int { return v.value }
 
+type AccountAlias = Account
+
+type CounterRecord (struct {
+	value int
+})
+
+type Point struct {
+	X int
+}
+
+type Tagged struct {
+	tgoTag uint8
+}
+
 // Account requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type Account struct {
@@ -126,12 +140,48 @@ func Label(account Account) string {
 	}
 }
 
-func NoticeLabels(notice Notice) map[string]string {
+func AliasLabel(account AccountAlias) string {
 	{
-		__tgo_match_2 := notice
+		__tgo_match_2 := account
 		switch __tgo_match_2.TgoTag() {
 		case 1:
-			text := __tgo_match_2.TgoText()
+			person := __tgo_match_2.TgoPersonal()
+			return person.Name
+		case 2:
+			company := __tgo_match_2.TgoBusiness()
+			return company.Company
+		default:
+			panic("invalid Account variant")
+		}
+	}
+}
+
+func AsAny(account Account) any {
+	return any(account)
+}
+
+func Counter(value int) CounterRecord {
+	return CounterRecord{value: value}
+}
+
+func CounterValue(counter CounterRecord) int {
+	return counter.value
+}
+
+func AnonymousPoint() struct{ X int } {
+	return struct{ X int }{X: 1}
+}
+
+func Tag(value Tagged) uint8 {
+	return value.tgoTag
+}
+
+func NoticeLabels(notice Notice) map[string]string {
+	{
+		__tgo_match_3 := notice
+		switch __tgo_match_3.TgoTag() {
+		case 1:
+			text := __tgo_match_3.TgoText()
 			return text.Labels
 		default:
 			panic("invalid Notice variant")

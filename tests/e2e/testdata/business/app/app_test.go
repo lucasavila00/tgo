@@ -41,6 +41,26 @@ func TestBusiness(t *testing.T) {
 	if model.Label(account) != "Acme" {
 		t.Fatal("wrong variant")
 	}
+	if model.AliasLabel(account) != "Acme" {
+		t.Fatal("alias lost the model rules")
+	}
+	boxed, ok := model.AsAny(account).(model.Account)
+	if !ok || model.Label(boxed) != "Acme" {
+		t.Fatal("interface conversion changed the model value")
+	}
+	if model.CounterValue(model.Counter(2)) != 2 {
+		t.Fatal("named struct matched a private model layout")
+	}
+	if model.AnonymousPoint().X != 1 {
+		t.Fatal("ordinary struct reserved a model layout")
+	}
+	if model.Tag(model.Tagged{}) != 0 {
+		t.Fatal("ordinary tgoTag field became private")
+	}
+	exposed := model.ExposedQuantity{}
+	if model.ConvertExposed[model.ExposedQuantity](exposed) != exposed {
+		t.Fatal("constraint intersection admitted a checked type")
+	}
 	// Go can violate the contract. Value must not add a runtime check.
 	bad := model.Quantity{}
 	if bad.Value() != 0 {

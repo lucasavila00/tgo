@@ -1,0 +1,5 @@
+package invalid
+
+type Quantity int where value > 0
+
+type Unsafe Quantity

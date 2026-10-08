@@ -26,6 +26,7 @@ func NewBusiness(company string) Account {
 
 Use `match` to read the active payload. Cover every variant. Use `_` for an unused payload.
 Do not access representation fields or call generated `Tgo*` accessors from tgo source.
+Do not use `fallthrough` in a match. Do not select `Tgo*` methods through interfaces.
 
 ```text
 func Label(account Account) string {
@@ -58,6 +59,7 @@ Choose overflow behavior for the business task; a constructor does not prevent a
 Initialize each variable. Supply every struct field, or select declared defaults with `..default`.
 Use defaults for optional construction data. Keep required business data explicit.
 Go struct tags stay on generated fields.
+Assign each named result before a read or bare return. A closure cannot establish this assignment.
 
 ```text
 type Request struct {

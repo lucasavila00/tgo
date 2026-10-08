@@ -1,0 +1,11 @@
+package invalid
+
+type Quantity int where value > 0
+
+type Exposed struct {
+    value int
+}
+
+func expose(quantity Quantity) Exposed {
+    return Exposed(quantity)
+}

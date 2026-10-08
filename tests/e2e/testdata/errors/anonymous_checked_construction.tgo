@@ -1,0 +1,9 @@
+package invalid
+
+type Quantity int where value > 0
+
+func forge() Quantity {
+    return struct {
+        value int
+    }{value: 0}
+}
