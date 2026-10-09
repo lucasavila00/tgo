@@ -11,6 +11,7 @@ Fix every diagnostic. The command checks loaded Go packages for:
 
 - invalid checked-struct zero values;
 - constructor bypasses;
+- writes or address-taking through checked-struct fields;
 - unchecked `(T, error)` results;
 - unchecked `(T, bool)` and comma-ok results;
 - incomplete enum switches and wrong payload reads;

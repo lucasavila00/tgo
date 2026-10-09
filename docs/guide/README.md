@@ -76,7 +76,8 @@ The value uses a tag and typed Go fields. Reads do not run validation.
 Each `Port` literal returns `(Port, error)`. Use postfix `!` to handle the error. All fields must be
 private, and `check` must have the exact value-receiver signature shown above. The same literal
 works across TGo packages. Go callers use the generated `NewPort` function. TGo source cannot call
-that function. The compiler does not generate a field accessor.
+that function. The compiler does not generate a field accessor. TGo permits package-local field
+reads, but it rejects field changes and address-taking after construction.
 
 ## Supply initial values
 

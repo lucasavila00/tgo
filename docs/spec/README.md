@@ -489,9 +489,9 @@ error behavior.
 
 The declaring package generates a fallible `NewPort` function for Go callers. In general, a
 checked type `T` reserves `NewT`. Its parameters follow field declaration order. The compiler
-lowers each checked literal to this ABI. The generated function builds the raw value and calls
-`check` exactly once. TGo source cannot refer to `NewT`, and navigation does not expose it as TGo
-API.
+lowers each validated checked literal to this ABI. The generated function builds the raw value
+and calls `check` exactly once. TGo source cannot refer to `NewT`, and navigation does not expose
+it as TGo API.
 
 A keyed literal lowers through a reserved `TgoTInput` carrier. Its exported staging fields preserve
 contextual typing and source evaluation order across a package boundary. This carrier is compiler

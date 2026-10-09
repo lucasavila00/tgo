@@ -24,6 +24,7 @@ A clean run means that the loaded Go packages do not contain these errors:
 - an invalid checked-struct zero from a declaration, named result, literal, `new`, `make`,
   `clear`, map read, channel read, type assertion, or longer reslice;
 - a direct checked-struct literal in a Go file;
+- a write or address-taking operation through a checked-struct field;
 - a new defined Go type or conversion that bypasses tgo validation;
 - direct access to private enum representation;
 - a tgo result used before its matching error is proved nil;
