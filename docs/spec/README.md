@@ -268,100 +268,19 @@ can break stored data or clients.
 
 #### Allocation behavior
 
-Generated enum JSON uses standard `encoding/json` behavior. Its Go 1.27 stream methods write into
-the active encoder and read from the active decoder. This removes intermediate enum buffers and
-maps where the wire form permits it. Payload methods and field methods keep their normal Go JSON
-behavior.
+Generated enum JSON must stream the envelope through the active Go 1.27 encoder or decoder when
+the wire form permits it. It must not build a complete enum buffer or map only to encode or decode
+that envelope.
 
-Go does not specify which values escape to the heap. The tables below list each logical allocation
-site in the generated path. The Go version, the payload type, the JSON data, and escape analysis
-determine the final count.
-
-`json.Marshal(enumValue)` allocates its returned byte slice and can allocate encoder state or an
-interface box. `MarshalJSONTo` writes the envelope and payload into that encoder. It does not make
-an enum result buffer. Internal encoding uses one flattened typed wrapper when the payload has no
-JSON or text method. If the payload has such a method, it uses `MarshalJSON` so that the payload
-keeps its method behavior.
-
-`json.Unmarshal(data, &enumValue)` can allocate decoder state and method-dispatch state.
-`UnmarshalJSONFrom` reads from that decoder. The selected payload decode can allocate its own
-decoder state and destination values.
-
-External `UnmarshalJSONFrom` copies only the selected raw payload, then decodes it. The copy keeps
-the last value for a repeated variant name. A repeated different name still fails the one-variant
-rule. Internal decoding reads the input twice. The second read uses the original object, so a
-custom method receives the original member order. Normal adjacent streaming maps the tag token
-directly to a variant and copies the content value. Untagged decoding tries each payload in
-declaration order. Each failed attempt can allocate values before it returns an error.
-
-A name such as `-` cannot be represented safely in a Go JSON struct tag. Streaming encoding writes
-such names as JSON tokens and adds no fallback envelope allocation. Streaming external decoding
-uses the same selected-payload copy as normal external decoding. Streaming adjacent decoding
-maps the last tag token and copies the last content value. Escaped member names can allocate
-decoded key strings. Internal decoding still uses a map to find an arbitrary tag name, then passes
-the original input to the payload decoder. It does not delete the tag or marshal an intermediate
-map.
-
-Direct `MarshalJSON` calls return their own byte slice. External and adjacent normal-name paths use
-one typed-wrapper marshal. Their unusual-name paths marshal the payload and allocate an envelope.
-Internal direct calls marshal the payload and allocate the combined object. Direct external
-`UnmarshalJSON` uses a map, decoded key strings, a copied `RawMessage`, and one payload decode.
-Direct unusual-name internal and adjacent decoding also use a map and copied raw values.
-
-Payload decoding can allocate strings, pointers, slices, maps, interfaces, and values that custom
-`UnmarshalJSON` methods create. Payload encoding can allocate inside maps, slices, interfaces,
-pointer values, and custom `MarshalJSON` methods. A custom method can also retain input or output
-data.
-
-The generated typed wrappers and local payload variables do not contain an explicit heap
-allocation. Escape analysis can move them to the heap. `Tag`, inline construction, and inline
-payload access add no heap allocation. A boxed enum payload can allocate its interface box when it
-escapes. `UnknownTag` formats a new string on the default path. A zero or unknown tag, a
-missing field, an unknown variant, and a failed untagged match can allocate an error. JSON syntax,
-type, and custom-method errors can allocate before the generated method returns them.
+Allocations can come from public `encoding/json` state and interface conversion, marshaled byte
+slices, payload fields and custom JSON methods, copied raw payload or content values, decoded
+member names, each untagged decode attempt, boxed payloads that escape, and returned errors. `Tag`,
+inline construction, and inline payload access add no explicit heap allocation. Go escape analysis
+can still move values to the heap.
 
 JSON decoding uses reflection. It does not enforce `%T` contracts. Input for a `%T` payload field
 must contain a non-null value. Missing or null data can produce an invalid TGo value without a JSON
 error.
-
-CI measures public `encoding/json` calls and direct byte-slice method calls with a representative
-small payload. The public marshal benchmarks convert the typed enum to the interface in the timed
-loop. The escaped-name cases use a nonempty payload. The limits do not include allocations that a
-different payload type or a custom JSON method adds.
-
-| Public operation | Maximum allocations | Maximum bytes |
-| --- | ---: | ---: |
-| External marshal | 5 | 288 B/op |
-| Internal marshal | 5 | 304 B/op |
-| Adjacent marshal | 5 | 272 B/op |
-| Untagged marshal | 5 | 144 B/op |
-| Escaped external marshal | 5 | 112 B/op |
-| Escaped internal marshal | 5 | 160 B/op |
-| Escaped adjacent marshal | 5 | 144 B/op |
-| External unmarshal | 2 | 72 B/op |
-| Internal unmarshal | 2 | 64 B/op |
-| Adjacent unmarshal | 2 | 72 B/op |
-| Untagged unmarshal | 6 | 248 B/op |
-| Escaped external unmarshal | 3 | 56 B/op |
-| Escaped internal unmarshal | 12 | 568 B/op |
-| Escaped adjacent unmarshal | 5 | 88 B/op |
-
-| Direct method operation | Maximum allocations | Maximum bytes |
-| --- | ---: | ---: |
-| External marshal | 3 | 128 B/op |
-| Internal marshal | 4 | 168 B/op |
-| Adjacent marshal | 3 | 176 B/op |
-| Untagged marshal | 3 | 48 B/op |
-| Escaped external marshal | 4 | 80 B/op |
-| Escaped internal marshal | 4 | 96 B/op |
-| Escaped adjacent marshal | 4 | 112 B/op |
-| External unmarshal | 7 | 520 B/op |
-| Internal unmarshal | 2 | 64 B/op |
-| Adjacent unmarshal | 3 | 120 B/op |
-| Untagged unmarshal | 6 | 248 B/op |
-| Escaped external unmarshal | 8 | 504 B/op |
-| Escaped internal unmarshal | 12 | 568 B/op |
-| Escaped adjacent unmarshal | 12 | 576 B/op |
 
 ### Go API
 
