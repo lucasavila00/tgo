@@ -220,6 +220,18 @@ func (e %nilEnvironment) checkNilReturn(
 	for _, expression := range statement.Results {
 		e.checkNilExpression(expression, state)
 	}
+	if statement.FailureComma.IsValid() {
+		signature := e.functionSignature(function)
+		if signature != nil && len(statement.Results) == 1 {
+			last := signature.Results().Len() - 1
+			e.checkNilFlow(
+				statement.Results[0],
+				nilChild(contract, "r"+strconv.Itoa(last)),
+				state,
+			)
+		}
+		return
+	}
 	if statement.SuccessComma.IsValid() {
 		expected := nilChild(contract, "r"+strconv.Itoa(len(statement.Results)))
 		if expected[""] {

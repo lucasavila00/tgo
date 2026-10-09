@@ -157,11 +157,11 @@ func parseFrontFile(
 	mode Mode,
 ) (*frontFile, error) {
 	if fset == nil {
-		return nil, fmt.Errorf("parse %s: nil file set", filename)
+		return , fmt.Errorf("parse %s: nil file set", filename)
 	}
 	tokens, comments, err := scanSource(filename, source, mode&AllErrors != 0)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	state := &sourceParser{
 		filename:     filename,
@@ -182,10 +182,10 @@ func parseFrontFile(
 	}
 	if mode&goSource == 0 {
 		if err := state.discoverDeclarations(); err != nil {
-			return nil, state.error(err)
+			return , state.error(err)
 		}
 		if err := state.discoverExtensions(); err != nil {
-			return nil, state.error(err)
+			return , state.error(err)
 		}
 	}
 	projection := state.project(0, len(source), state.edits)
@@ -198,15 +198,15 @@ func parseFrontFile(
 	}
 	goFile, parseErr := parser.ParseFile(fset, filename, projection, parseMode)
 	if goFile == nil {
-		return nil, parseErr
+		return , parseErr
 	}
 	state.file = fset.File(goFile.Package)
 	if state.file == nil {
-		return nil, fmt.Errorf("parse %s: missing token file", filename)
+		return , fmt.Errorf("parse %s: missing token file", filename)
 	}
 	result, err := state.buildFile(goFile)
 	if err != nil {
-		return nil, state.error(err)
+		return , state.error(err)
 	}
 	if parseErr != nil {
 		return result, parseErr
@@ -297,7 +297,7 @@ func (p %sourceParser) closeToken(start int) (int, error) {
 			stack = append(stack, token.RBRACE)
 		case token.RPAREN, token.RBRACK, token.RBRACE:
 			if len(stack) == 0 || stack[len(stack)-1] != p.tokens[index].kind {
-				return 0, p.tokenError(index, "unmatched %s", p.tokens[index].text)
+				return , p.tokenError(index, "unmatched %s", p.tokens[index].text)
 			}
 			stack = stack[:len(stack)-1]
 			if len(stack) == 0 {
@@ -305,7 +305,7 @@ func (p %sourceParser) closeToken(start int) (int, error) {
 			}
 		}
 	}
-	return 0, p.tokenError(start, "unclosed %s", p.tokens[start].text)
+	return , p.tokenError(start, "unclosed %s", p.tokens[start].text)
 }
 
 func (p %sourceParser) tokenError(index int, pattern string, values ...any) error {
@@ -467,14 +467,14 @@ func (p %sourceParser) enumDeclaration(
 		variant, next := p.variant(cursor, closing)!
 		name := p.tokens[variant.name].text
 		if names[name] && p.mode&AllowInvalidModels == 0 {
-			return nil, 0, p.tokenError(variant.name, "duplicate variant %s", name)
+			return , p.tokenError(variant.name, "duplicate variant %s", name)
 		}
 		names[name] = true
 		declaration.variants = append(declaration.variants, variant)
 		cursor = next
 	}
 	if len(declaration.variants) == 0 && p.mode&AllowInvalidModels == 0 {
-		return nil, 0, p.tokenError(keyword, "enum %s has no variants", p.tokens[start+1].text)
+		return , p.tokenError(keyword, "enum %s has no variants", p.tokens[start+1].text)
 	}
 	return declaration, skipSemicolon(p.tokens, closing+1),
 }
@@ -483,15 +483,15 @@ func (p %sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	if start+2 >= limit || p.tokens[start].kind != token.IDENT ||
 		p.tokens[start+1].kind != token.STRUCT ||
 		p.tokens[start+2].kind != token.LBRACE {
-		return nil, 0, p.tokenError(start, "variant needs Name struct { fields }")
+		return , p.tokenError(start, "variant needs Name struct { fields }")
 	}
 	closing, err := p.closeToken(start + 2)
 	if err != nil {
-		return nil, 0, err
+		return , err
 	}
 	fields, err := p.rawFields(start+2, closing)
 	if err != nil {
-		return nil, 0, err
+		return , err
 	}
 	variant := new(rawVariant)
 	variant.start = p.tokens[start].start
@@ -518,11 +518,11 @@ func (p %sourceParser) structDeclaration(
 ) (*rawDecl, int, error) {
 	closing, err := p.closeToken(open)
 	if err != nil {
-		return nil, 0, err
+		return , err
 	}
 	fields, err := p.rawFields(open, closing)
 	if err != nil {
-		return nil, 0, err
+		return , err
 	}
 	declaration := new(rawDecl)
 	declaration.kind = "struct"
@@ -560,7 +560,7 @@ func (p %sourceParser) checkedDeclaration(
 		cursor++
 	}
 	if predicateStart == cursor {
-		return nil, 0, p.tokenError(where, "checked type needs a predicate")
+		return , p.tokenError(where, "checked type needs a predicate")
 	}
 	declaration := new(rawDecl)
 	declaration.kind = "checked"
@@ -592,7 +592,7 @@ func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 		for cursor < closing && p.tokens[cursor].kind != token.SEMICOLON {
 			if p.tokens[cursor].kind == token.ASSIGN {
 				if field.assign >= 0 {
-					return nil, p.tokenError(cursor, "field has more than one default assignment")
+					return , p.tokenError(cursor, "field has more than one default assignment")
 				}
 				field.assign = cursor
 			}
@@ -605,7 +605,7 @@ func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 		}
 		field.end = cursor
 		if field.assign+1 == field.end {
-			return nil, p.tokenError(field.assign, "missing field default")
+			return , p.tokenError(field.assign, "missing field default")
 		}
 		fields = append(fields, field)
 	}

@@ -2,6 +2,10 @@ package modernizefailuregood
 
 type record struct{ Value int }
 
+func nonnil(err error) (%record, error) {
+	return , err
+}
+
 func nonzero(err error) (int, error) {
 	return 1, err
 }

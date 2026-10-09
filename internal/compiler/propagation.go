@@ -904,7 +904,8 @@ func (l *propagationLowerer) failureReturn(
 		return append(prefix, statement)
 	}
 	zeroValues, declarations := l.zeroReturnValues(comma)
-	statement.Results = append(zeroValues, statement.Results[0])
+	zeroValues = append(zeroValues, statement.Results[0])
+	statement.Results = zeroValues
 	prefix = append(prefix, declarations...)
 	return append(prefix, statement)
 }

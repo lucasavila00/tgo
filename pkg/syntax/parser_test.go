@@ -51,24 +51,6 @@ func TestParseFileMarksSuccessfulReturns(t *testing.T) {
 	}
 }
 
-func TestParseFileRejectsEmptyReturnElision(t *testing.T) {
-	t.Parallel()
-	source, err := os.ReadFile("testdata/success-return/empty.tgo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = syntax.ParseFile(
-		token.NewFileSet(), "empty.tgo", source, syntax.AllErrors,
-	)
-	if err == nil {
-		t.Fatal("ParseFile accepted an empty successful return")
-	}
-	const want = "empty.tgo:4:9: failure return needs one error expression"
-	if err.Error() != want {
-		t.Fatalf("error = %q, want %q", err, want)
-	}
-}
-
 func TestParseFileMarksFailureReturns(t *testing.T) {
 	t.Parallel()
 	source, err := os.ReadFile("testdata/failure-return/valid.tgo")
@@ -113,7 +95,10 @@ func TestParseFileRejectsInvalidFailureReturns(t *testing.T) {
 		want string
 	}{
 		{name: "empty", want: "empty.tgo:4:9: failure return needs one error expression"},
-		{name: "multiple", want: "multiple.tgo:4:14: failure return needs exactly one error expression"},
+		{
+			name: "multiple",
+			want: "multiple.tgo:4:14: failure return needs exactly one error expression",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

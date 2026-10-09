@@ -6,6 +6,10 @@ type record struct {
 	Value int
 }
 
+func nonnil(err error) (*record, error) {
+	return nil, err
+}
+
 func nonzero(err error) (int, error) {
 	return 1, err
 }

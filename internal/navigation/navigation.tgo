@@ -171,7 +171,7 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 			ready := e.ready
 			e.mu.Unlock()
 			select {
-			case <-ctx.Done(): return nil, ctx.Err()
+			case <-ctx.Done(): return , ctx.Err()
 			case <-ready:
 			}
 			continue
@@ -189,19 +189,19 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		close(e.ready)
 		e.ready = nil
 		e.mu.Unlock()
-		if err != nil { return nil, err }
+		if err != nil { return , err }
 		if current { return index, }
 	}
 }
 
 func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	select {
-	case <-ctx.Done(): return nil, ctx.Err()
+	case <-ctx.Done(): return , ctx.Err()
 	default:
 	}
 	packages := compiler.AnalyzeWorkspaceContext(ctx, e.root)!!
 	select {
-	case <-ctx.Done(): return nil, ctx.Err()
+	case <-ctx.Done(): return , ctx.Err()
 	default:
 	}
 	index := &workspaceIndex{
@@ -212,7 +212,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	}
 	for _, pkg := range packages {
 		select {
-		case <-ctx.Done(): return nil, ctx.Err()
+		case <-ctx.Done(): return , ctx.Err()
 		default:
 		}
 		keys := newObjectKeys(pkg.Package)
