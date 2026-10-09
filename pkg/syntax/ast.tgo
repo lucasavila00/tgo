@@ -371,7 +371,13 @@ type GoStatement struct { Span; Go token.Pos; Call %Expression }
 type DeferStatement struct { Span; Defer token.Pos; Call %Expression }
 
 // ReturnStatement returns zero or more values.
-type ReturnStatement struct { Span; Return token.Pos; Results []%Expression }
+// SuccessComma marks an explicit trailing comma that adds one final nil.
+type ReturnStatement struct {
+	Span
+	Return       token.Pos
+	Results      []%Expression
+	SuccessComma token.Pos
+}
 
 // BranchStatement is one branch statement.
 type BranchStatement struct {
