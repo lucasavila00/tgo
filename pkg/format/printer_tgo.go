@@ -106,9 +106,7 @@ func (p *printer) printFile() []byte {
 			start := syntax.DeclarationPosition(declaration)
 			stop := syntax.DeclarationEnd(previous)
 			if declarationKind(previous) != declarationKind(declaration) ||
-				p.blankBetween(stop, start) || p.hasCommentBetween(stop, start) ||
-				declarationKind(declaration) == token.FUNC &&
-					p.multiline(start, syntax.DeclarationEnd(declaration)) {
+				p.blankBetween(stop, start) || p.hasCommentBetween(stop, start) {
 				p.blankline()
 			}
 		}

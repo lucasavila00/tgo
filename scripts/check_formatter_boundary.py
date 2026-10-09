@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import re
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,6 +35,27 @@ def main() -> None:
             for name, pattern in PROHIBITED.items():
                 if pattern.search(source):
                     violations.append(f"{relative}: prohibited {name} reference")
+
+    dependencies = subprocess.run(
+        [
+            "go",
+            "list",
+            "-deps",
+            "-f",
+            "{{.ImportPath}}",
+            "./pkg/format",
+            "./cmd/tgofmt",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    for dependency in ("go/format", "go/printer", "os/exec"):
+        if dependency in dependencies:
+            violations.append(
+                f"formatter dependency closure contains prohibited {dependency}"
+            )
 
     if violations:
         raise SystemExit("formatter crosses its TGo boundary:\n" + "\n".join(violations))

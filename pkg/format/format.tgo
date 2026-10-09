@@ -14,7 +14,7 @@ func Source(filename string, source []byte) ([]byte, error) {
 		files,
 		filename,
 		source,
-		syntax.ParseComments | syntax.AllErrors | syntax.AllowInvalidModels,
+		syntax.ParseComments|syntax.AllErrors|syntax.AllowInvalidModels,
 	)!!
 	return newPrinter(files, file, source).printFile(),
 }

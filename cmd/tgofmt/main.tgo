@@ -100,7 +100,7 @@ func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.Fi
 func createBackup(path string, source []byte, mode fs.FileMode) (string, error) {
 	backup := os.CreateTemp(
 		filepath.Dir(path),
-		"." + filepath.Base(path) + ".tgofmt-",
+		"."+filepath.Base(path)+".tgofmt-",
 	)!!
 	name := backup.Name()
 	if err := backup.Chmod(mode); err != nil {

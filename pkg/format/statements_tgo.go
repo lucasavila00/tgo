@@ -52,8 +52,16 @@ func (p *printer) statement(value *syntax.Statement) {
 		p.commaListAt(item.Left, depth)
 		p.space()
 		p.token(item.Token, item.Operator.String())
-		p.space()
-		p.commaListAt(item.Right, depth)
+		if len(item.Right) > 0 && p.position(item.Token).Line <
+			p.position(syntax.ExpressionPosition(item.Right[0])).Line {
+			p.newline()
+			p.indent++
+			p.commaListAt(item.Right, depth)
+			p.indent--
+		} else {
+			p.space()
+			p.commaListAt(item.Right, depth)
+		}
 	case syntax.StatementTagGo:
 		item := statementValue.GoPayload().Value
 		p.token(item.Go, "go")
@@ -108,17 +116,49 @@ func (p *printer) statement(value *syntax.Statement) {
 }
 
 func (p *printer) statementList(values []*syntax.Statement) {
-	for index, value := range values {
-		if index > 0 && p.blankBetween(
-			syntax.StatementEnd(values[index-1]),
-			syntax.StatementPosition(value),
+	for first := 0; first < len(values); {
+		last := first + 1
+		for last < len(values) && !p.blankBetween(
+			syntax.StatementEnd(values[last-1]),
+			syntax.StatementPosition(values[last]),
+		) && !p.hasCommentBetween(
+			syntax.StatementEnd(values[last-1]),
+			syntax.StatementPosition(values[last]),
+		) {
+			last++
+		}
+		commentWidth := 0
+		for _, value := range values[first:last] {
+			if !p.multiline(syntax.StatementPosition(value), syntax.StatementEnd(value)) &&
+				p.hasTrailingComment(syntax.StatementEnd(value)) {
+				commentWidth = max(commentWidth, p.formattedStatementWidth(value))
+			}
+		}
+		previousCommentColumn := p.commentColumn
+		if commentWidth > 0 {
+			p.commentColumn = p.indent*8 + commentWidth + 1
+		}
+		for _, value := range values[first:last] {
+			p.statement(value)
+			p.trailingLine(syntax.StatementEnd(value))
+			p.newline()
+		}
+		p.commentColumn = previousCommentColumn
+		first = last
+		if first < len(values) && p.blankBetween(
+			syntax.StatementEnd(values[first-1]),
+			syntax.StatementPosition(values[first]),
 		) {
 			p.blankline()
 		}
-		p.statement(value)
-		p.trailingLine(syntax.StatementEnd(value))
-		p.newline()
 	}
+}
+
+func (p *printer) formattedStatementWidth(value *syntax.Statement) int {
+	probe := newPrinter(p.files, p.file, p.source)
+	probe.comments = nil
+	probe.statement(value)
+	return probe.outputColumn()
 }
 
 func (p *printer) block(value *syntax.BlockStatement) {

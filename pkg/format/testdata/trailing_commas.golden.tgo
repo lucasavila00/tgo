@@ -1,19 +1,16 @@
 package comments
 
 type Positive int where value > 0
-
-type item[T, U any] struct { First T; Second U }
+type item[T, U any] struct{ First T; Second U }
 
 var value = item[int, int]{
 	First:  1, /* first field */
 	Second: 2, // second field
 }
-
 var names = map[string]int{
 	"x":    1,
 	"long": 2,
 }
-
 var grouped = map[string]int{
 	"a":    1,
 	"long": 2,
@@ -21,7 +18,6 @@ var grouped = map[string]int{
 	"b":      3,
 	"longer": 4,
 }
-
 var mixed = []int{
 	0: 1,
 	2,
@@ -35,7 +31,6 @@ func use[
 	first T, /* first parameter */
 	second int, // second parameter
 ) {}
-
 func call() {
 	use[int, int](
 		value.First, /* first argument */

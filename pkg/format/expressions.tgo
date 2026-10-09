@@ -408,8 +408,8 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		p.compositeElement(element, keyWidths[index])
 		previous = syntax.ExpressionEnd(element)
 		following := value.Rbrace
-		if index + 1 < len(value.Elements) {
-			following = syntax.ExpressionPosition(value.Elements[index + 1])
+		if index+1 < len(value.Elements) {
+			following = syntax.ExpressionPosition(value.Elements[index+1])
 		}
 		if index+1 < len(value.Elements) ||
 			p.position(previous).Line < p.position(value.Rbrace).Line {
@@ -447,7 +447,7 @@ func (p *printer) compositeKeyWidths(
 			p.position(syntax.ExpressionEnd(values[last-1])).Line <
 				p.position(syntax.ExpressionPosition(values[last])).Line &&
 			!p.blankBetween(
-				syntax.ExpressionEnd(values[last - 1]),
+				syntax.ExpressionEnd(values[last-1]),
 				syntax.ExpressionPosition(values[last]),
 			) {
 			last++
@@ -475,7 +475,7 @@ func (p *printer) compositeElement(value *syntax.Expression, keyWidth int) {
 	}
 	p.expression(keyValue.Key, 0)
 	p.token(keyValue.Colon, ":")
-	p.text(strings.Repeat(" ", keyWidth - width + 1))
+	p.text(strings.Repeat(" ", keyWidth-width+1))
 	p.expression(keyValue.Value, 0)
 }
 
@@ -585,7 +585,7 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 	for first := 0; first < len(value.List); {
 		last := first + 1
 		for last < len(value.List) &&
-			!p.blankBetween(value.List[last - 1].Stop, value.List[last].Start) &&
+			!p.blankBetween(value.List[last-1].Stop, value.List[last].Start) &&
 			value.List[last].Doc == nil &&
 			!p.hasCommentBetween(value.List[last-1].Stop, value.List[last].Start) {
 			last++
@@ -598,7 +598,7 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 		}
 		commentWidth := 0
 		for _, item := range value.List[first:last] {
-			if item.Comment != nil {
+			if item.Comment != nil || p.hasTrailingComment(fieldContentEnd(item)) {
 				commentWidth = max(commentWidth, p.formattedFieldWidth(item, width))
 			}
 		}
@@ -612,7 +612,10 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 		}
 		p.commentColumn = previousCommentColumn
 		first = last
-		if first < len(value.List) {
+		if first < len(value.List) && p.blankBetween(
+			value.List[first-1].Stop,
+			value.List[first].Start,
+		) {
 			p.blankline()
 		}
 	}
@@ -635,8 +638,8 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 			p.field(item)
 			p.text(",")
 			following := value.Closing
-			if index + 1 < len(value.List) {
-				following = value.List[index + 1].Start
+			if index+1 < len(value.List) {
+				following = value.List[index+1].Start
 			}
 			p.trailingLine(p.commaEnd(item.Stop, following))
 			p.newline()

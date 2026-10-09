@@ -345,12 +345,21 @@ func (p *printer) tgoField(value *syntax.TGoField, nameWidth int) {
 	}
 }
 
+func (p *printer) formattedTGoFieldWidth(value *syntax.TGoField, nameWidth int) int {
+	probe := newPrinter(p.files, p.file, p.source)
+	probe.comments = nil
+	probe.tgoField(value, nameWidth)
+	return probe.outputColumn()
+}
+
 func (p *printer) tgoFields(values []*syntax.TGoField) {
 	p.newline()
 	p.indent++
 	for first := 0; first < len(values); {
 		last := first + 1
-		for last < len(values) && !p.blankBetween(values[last-1].Stop, values[last].Start) {
+		for last < len(values) &&
+			!p.blankBetween(values[last-1].Stop, values[last].Start) &&
+			!p.hasCommentBetween(values[last-1].Stop, values[last].Start) {
 			last++
 		}
 		width := 0
@@ -359,13 +368,25 @@ func (p *printer) tgoFields(values []*syntax.TGoField) {
 				width = itemWidth
 			}
 		}
+		commentWidth := 0
+		for _, value := range values[first:last] {
+			if p.hasTrailingComment(fieldContentEnd(value.Field)) {
+				commentWidth = max(commentWidth, p.formattedTGoFieldWidth(value, width))
+			}
+		}
+		previousCommentColumn := p.commentColumn
+		if commentWidth > 0 {
+			p.commentColumn = p.indent*8 + commentWidth + 1
+		}
 		for _, value := range values[first:last] {
 			p.tgoField(value, width)
 			p.trailingLine(value.Stop)
 			p.newline()
 		}
+		p.commentColumn = previousCommentColumn
 		first = last
-		if first < len(values) {
+		if first < len(values) &&
+			p.blankBetween(values[first-1].Stop, values[first].Start) {
 			p.blankline()
 		}
 	}

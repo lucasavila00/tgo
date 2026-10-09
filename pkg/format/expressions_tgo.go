@@ -601,7 +601,7 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 		}
 		commentWidth := 0
 		for _, item := range value.List[first:last] {
-			if item.Comment != nil {
+			if item.Comment != nil || p.hasTrailingComment(fieldContentEnd(item)) {
 				commentWidth = max(commentWidth, p.formattedFieldWidth(item, width))
 			}
 		}
@@ -615,7 +615,10 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 		}
 		p.commentColumn = previousCommentColumn
 		first = last
-		if first < len(value.List) {
+		if first < len(value.List) && p.blankBetween(
+			value.List[first-1].Stop,
+			value.List[first].Start,
+		) {
 			p.blankline()
 		}
 	}
