@@ -10,20 +10,14 @@ type Event enum `json:"adjacent,tag=type,content=data"` {
 	Named struct { Name string }
 	Closed struct {}
 }
-
 type Options struct {
 	Name string
 	Tags []string = []string{}
 }
+type Single struct{ Name string }
+type Port struct{ number int } checked
 
-type Single struct { Name string }
-
-type Port struct { number int } checked
-
-func load() (*int, error) {
-	return nil, errors.New("x")
-}
-
+func load() (*int, error) { return nil, errors.New("x") }
 func work(value %int, event Event) (%int, error) {
 	next := load()!
 	same := load()!!

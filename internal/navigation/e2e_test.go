@@ -112,7 +112,10 @@ func TestHelperCancellationStopsBeforeInvalidPackage(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	var response navigation.Response
+	response := struct {
+		ID    int64  `json:"id"`
+		Error string `json:"error"`
+	}{}
 	if err := server.output.Decode(&response); err != nil {
 		t.Fatal(err)
 	}

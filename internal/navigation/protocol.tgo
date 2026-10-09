@@ -9,10 +9,15 @@ import (
 )
 
 // Response is one helper protocol response.
-type Response struct {
-	ID     int64 `json:"id"`
-	Result any   `json:"result,omitempty"`
-	Error  string `json:"error,omitempty"`
+type Response enum `json:"untagged"` {
+	Success struct {
+		ID     int64 `json:"id"`
+		Result any `json:"result,omitempty"`
+	}
+	Failure struct {
+		ID    int64 `json:"id"`
+		Error string `json:"error,omitempty"`
+	}
 }
 
 type positionParams struct {
@@ -103,7 +108,7 @@ func Serve(ctx context.Context, engine %Engine, input io.Reader, output io.Write
 		}
 		if err := json.Unmarshal(data, &request); err != nil {
 			if header.Method != "cancel" || header.ID != 0 {
-				server.send(Response{ID: header.ID, Result: nil, Error: err.Error()})
+				server.send(protocolError(header.ID, err.Error()))
 			}
 			continue
 		}
@@ -182,7 +187,7 @@ func (s %protocolServer) dispatch(request Request) {
 			return
 		}
 		s.engine.Invalidate()
-		s.send(Response{ID: payload.ID, Result: true, Error: ""})
+		s.send(protocolSuccess(payload.ID, true))
 	exhaustive:
 	}
 }
@@ -208,13 +213,16 @@ func (s %protocolServer) start(
 }
 
 func protocolResult(id int64, result any, err error) Response {
-	response := Response{ID: id, Result: result, Error: ""}
-	if err != nil { response.Error = err.Error() }
-	return response
+	if err != nil { return protocolError(id, err.Error()) }
+	return protocolSuccess(id, result)
 	}
 
+func protocolSuccess(id int64, result any) Response {
+	return ResponseSuccess{ID: id, Result: result}.Response()
+}
+
 func protocolError(id int64, message string) Response {
-	return Response{ID: id, Result: nil, Error: message}
+	return ResponseFailure{ID: id, Error: message}.Response()
 }
 
 func (s %protocolServer) cancel(request RequestCancel) {
@@ -223,7 +231,7 @@ func (s %protocolServer) cancel(request RequestCancel) {
 	s.activeMu.Unlock()
 	if cancel != nil { cancel() }
 	if request.ID != 0 {
-		s.send(Response{ID: request.ID, Result: true, Error: ""})
+		s.send(protocolSuccess(request.ID, true))
 	}
 	}
 
