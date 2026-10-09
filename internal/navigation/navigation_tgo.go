@@ -398,8 +398,27 @@ func pathURI(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return pathURIValue(absolute, filepath.VolumeName(absolute)), nil
+}
+
+func pathURIValue(absolute string, volume string) string {
+	slashPath := filepath.ToSlash(absolute)
+	slashVolume := filepath.ToSlash(volume)
 	value := new(url.URL)
 	value.Scheme = "file"
-	value.Path = filepath.ToSlash(absolute)
-	return value.String(), nil
+	if strings.HasPrefix(slashVolume, "//") {
+		authority := strings.TrimPrefix(slashVolume, "//")
+		separator := strings.IndexByte(authority, '/')
+		if separator >= 0 {
+			value.Host = authority[:separator]
+			value.Path = "/" + authority[separator+1:] +
+				strings.TrimPrefix(slashPath, slashVolume)
+			return value.String()
+		}
+	}
+	if slashVolume != "" && !strings.HasPrefix(slashPath, "/") {
+		slashPath = "/" + slashPath
+	}
+	value.Path = slashPath
+	return value.String()
 }

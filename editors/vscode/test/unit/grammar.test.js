@@ -9,7 +9,11 @@ const grammar = JSON.parse(fs.readFileSync(
   path.join(__dirname, "..", "..", "syntaxes", "tgo.tmLanguage.json"),
   "utf8"
 ));
-const patterns = grammar.repository.tgo.patterns.map((item) => new RegExp(item.match));
+function pattern(name) {
+  const item = grammar.repository.tgo.patterns.find((value) => value.name === name);
+  assert.ok(item, `missing ${name}`);
+  return new RegExp(item.match);
+}
 
 test("grammar includes Go after TGo rules", () => {
   assert.deepEqual(grammar.patterns, [
@@ -18,21 +22,43 @@ test("grammar includes Go after TGo rules", () => {
   ]);
 });
 
-test("grammar matches every TGo token", () => {
-  for (const token of [
-    "enum", "where", "exhaustive:", "...default", "!", "!!", "%Thing",
-    "for value := range values { value }"
-  ]) {
-    assert.ok(patterns.some((pattern) => pattern.test(token)), token);
+test("grammar matches TGo-only tokens", () => {
+  const cases = [
+    ["keyword.other.default.tgo", "..default"]
+  ];
+  for (const [name, source] of cases) {
+    assert.equal(pattern(name).test(source), true, source);
   }
 });
 
-test("propagation does not match Go inequality", () => {
-  const item = grammar.repository.tgo.patterns.find(
-    (pattern) => pattern.name === "keyword.operator.propagation.tgo"
-  );
-  const pattern = new RegExp(item.match);
-  assert.equal(pattern.test("!"), true);
-  assert.equal(pattern.test("!!"), true);
-  assert.equal(pattern.test("!="), false);
+test("TGo rules do not take ordinary Go operators", () => {
+  assert.equal(grammar.repository.tgo.patterns.some(
+    (item) => item.name === "keyword.operator.propagation.tgo"
+  ), false);
+  assert.equal(grammar.repository.tgo.patterns.some(
+    (item) => item.name === "storage.modifier.non-nil.tgo"
+  ), false);
+});
+
+test("default marker has exactly two dots", () => {
+  const marker = pattern("keyword.other.default.tgo");
+  assert.equal(marker.test("..default"), true);
+  assert.equal(marker.test("...default"), false);
+});
+
+test("comprehension control words keep their Go scopes", () => {
+  assert.equal(grammar.repository.tgo.patterns.some(
+    (item) => item.name === "keyword.control.comprehension.tgo"
+  ), false);
+});
+
+test("contextual words do not use broad top-level rules", () => {
+  for (const name of [
+    "keyword.control.where.tgo",
+    "keyword.control.exhaustive.tgo"
+  ]) {
+    assert.equal(grammar.repository.tgo.patterns.some(
+      (item) => item.name === name
+    ), false);
+  }
 });

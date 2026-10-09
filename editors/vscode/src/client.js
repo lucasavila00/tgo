@@ -156,7 +156,7 @@ class NavigationClient {
 
   dispose() {
     this.closed = true;
-    this.fail(new Error("navigation helper is closed"));
+    this.fail(new RequestCancelled());
   }
 }
 
