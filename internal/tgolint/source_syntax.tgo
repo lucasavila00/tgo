@@ -10,9 +10,11 @@ func sourceStatementList(node *syntax.Node) ([]%syntax.Statement, bool) {
 	switch enumValue25 := *node; enumValue25.Tag() {
 	case syntax.NodeTagStatement:
 		value := enumValue25.StatementPayload()
-		if value.Value == nil { return nil, false }
+		if value.Value == nil {
+			return nil, false
+		}
 		return statementList(value.Value)
-case syntax.NodeTagFile:
+	case syntax.NodeTagFile:
 		return nil, false
 	case syntax.NodeTagDeclaration:
 		return nil, false
@@ -86,7 +88,7 @@ func statementList(statement %syntax.Statement) ([]%syntax.Statement, bool) {
 		return nil, false
 	case syntax.StatementTagRange:
 		return nil, false
-exhaustive:
+	exhaustive:
 	}
 }
 
@@ -136,7 +138,7 @@ func sourceAssignment(statement %syntax.Statement) (*syntax.AssignmentStatement,
 		return nil, false
 	case syntax.StatementTagRange:
 		return nil, false
-exhaustive:
+	exhaustive:
 	}
 }
 
@@ -186,7 +188,7 @@ func sourceIf(statement %syntax.Statement) (*syntax.IfStatement, bool) {
 		return nil, false
 	case syntax.StatementTagRange:
 		return nil, false
-exhaustive:
+	exhaustive:
 	}
 }
 
@@ -236,7 +238,7 @@ func sourceReturn(statement %syntax.Statement) (*syntax.ReturnStatement, bool) {
 		return nil, false
 	case syntax.StatementTagRange:
 		return nil, false
-exhaustive:
+	exhaustive:
 	}
 }
 

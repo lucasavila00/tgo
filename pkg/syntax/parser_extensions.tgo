@@ -36,10 +36,10 @@ func (p %sourceParser) discoverExtensions() error {
 				end = p.tokens[secondBang].end
 			}
 			item := &rawPropagation{
-				callEnd:   p.tokens[cursor-1].end,
-				bang:      cursor,
+				callEnd:    p.tokens[cursor-1].end,
+				bang:       cursor,
 				secondBang: secondBang,
-				node:      nil,
+				node:       nil,
 			}
 			p.propagations = append(p.propagations, item)
 			p.edits = append(p.edits, sourceEdit{
@@ -139,13 +139,13 @@ func (p %sourceParser) discoverFailureReturn(keyword int) error {
 	}
 	p.failureReturns = append(p.failureReturns, &rawFailureReturn{
 		keyword: keyword,
-		commas: commas,
+		commas:  commas,
 	})
 	for _, comma := range commas {
 		p.edits = append(p.edits, sourceEdit{
 			start: p.tokens[comma].start,
-			end: p.tokens[comma].end,
-			text: "",
+			end:   p.tokens[comma].end,
+			text:  "",
 		})
 	}
 	return nil
@@ -308,33 +308,33 @@ func (p %sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		failureReturns[p.pos(p.tokens[item.keyword].start)] = commas
 	}
 	result := &frontFile{
-		frontSpan:       frontSpan{Start: p.file.Pos(0), Stop: p.file.Pos(len(p.source))},
-		Doc:        goFile.Doc,
-		Package:    goFile.Package,
-		Name:       goFile.Name,
-		Decls:      nil,
-		Imports:    goFile.Imports,
-		Comments:   goFile.Comments,
-		GoVersion:  goFile.GoVersion,
-		goFile:     goFile,
-		tokenFile:  p.file,
-		source:     p.source,
-		children:   nil,
-		parents:    nil,
-		extensions: nil,
-		attached:   make(map[frontNode][]*ast.CommentGroup),
-		nonNil:    p.nonNil,
+		frontSpan:         frontSpan{Start: p.file.Pos(0), Stop: p.file.Pos(len(p.source))},
+		Doc:               goFile.Doc,
+		Package:           goFile.Package,
+		Name:              goFile.Name,
+		Decls:             nil,
+		Imports:           goFile.Imports,
+		Comments:          goFile.Comments,
+		GoVersion:         goFile.GoVersion,
+		goFile:            goFile,
+		tokenFile:         p.file,
+		source:            p.source,
+		children:          nil,
+		parents:           nil,
+		extensions:        nil,
+		attached:          make(map[frontNode][]*ast.CommentGroup),
+		nonNil:            p.nonNil,
 		exhaustiveClauses: exhaustiveClauses,
-		successReturns: successReturns,
-		failureReturns: failureReturns,
+		successReturns:    successReturns,
+		failureReturns:    failureReturns,
 	}
 	defaultAt := make(map[token.Pos]%frontDefaultMarker)
 	for _, raw := range p.defaults {
 		raw.node = &frontDefaultMarker{
-			frontSpan:     frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
-			FirstDot: p.pos(p.tokens[raw.first].start),
-			LastDot:  p.pos(p.tokens[raw.last].start),
-			Default:  p.pos(p.tokens[raw.word].start),
+			frontSpan: frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
+			FirstDot:  p.pos(p.tokens[raw.first].start),
+			LastDot:   p.pos(p.tokens[raw.last].start),
+			Default:   p.pos(p.tokens[raw.word].start),
 		}
 		defaultAt[raw.node.Pos()] = raw.node
 	}

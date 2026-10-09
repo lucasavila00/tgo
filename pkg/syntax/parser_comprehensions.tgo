@@ -124,13 +124,13 @@ func (p %sourceParser) rawComprehension(
 		}
 	}
 	return &rawComprehension{
-		start: start,
-		end: p.tokens[close].end,
-		open: open,
-		close: close,
+		start:   start,
+		end:     p.tokens[close].end,
+		open:    open,
+		close:   close,
 		clauses: clauses,
-		result: result,
-		node: nil,
+		result:  result,
+		node:    nil,
 	},
 }
 

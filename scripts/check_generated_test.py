@@ -52,6 +52,22 @@ class ProductionFilesTest(unittest.TestCase):
 
             self.assertEqual(files, {})
 
+    def test_classifies_production_paths_without_the_worktree(self) -> None:
+        nested_modules = {Path("nested")}
+
+        self.assertTrue(
+            check_generated.production_path(Path("new-package/model.tgo"), nested_modules)
+        )
+        self.assertFalse(
+            check_generated.production_path(
+                Path("new-package/testdata/model.tgo"),
+                nested_modules,
+            )
+        )
+        self.assertFalse(
+            check_generated.production_path(Path("nested/model.tgo"), nested_modules)
+        )
+
 
 class RequireEqualTest(unittest.TestCase):
     def test_reports_missing_output(self) -> None:

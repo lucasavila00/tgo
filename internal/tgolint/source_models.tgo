@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"tgo/pkg/format"
 	"tgo/pkg/syntax"
 
 	"golang.org/x/tools/go/analysis"
@@ -49,7 +48,7 @@ func (c %checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 		sourceFiles,
 		sourcePath,
 		data,
-		syntax.ParseComments | syntax.AllErrors,
+		syntax.ParseComments|syntax.AllErrors,
 	)
 	if err != nil {
 		c.failVerification(
@@ -401,7 +400,7 @@ func sourceShapeMatches(
 			return false
 		}
 		for _, variant := range enum.Variants {
-			payloadSpec := generatedTypeSpec(generated, enum.Name + variant.name)
+			payloadSpec := generatedTypeSpec(generated, enum.Name+variant.name)
 			if payloadSpec == nil {
 				return false
 			}
@@ -428,11 +427,15 @@ func validCheckedStructAPI(typ types.Type) bool {
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil { return false }
+	if !ok || named.Obj().Pkg() == nil {
+		return false
+	}
 	constructor, ok := named.Obj().Pkg().Scope().Lookup(
 		"New" + named.Obj().Name(),
 	).(*types.Func)
-	if !ok { return false }
+	if !ok {
+		return false
+	}
 	created, ok := constructor.Type().(*types.Signature)
 	structure, structureOK := named.Underlying().(*types.Struct)
 	if !ok || !structureOK || created.Recv() != nil || created.Variadic() ||
@@ -454,7 +457,7 @@ func generatedEnumShape(
 	name string,
 	variants []sourceVariant,
 ) bool {
-	tag, ok := typeInPackage(typ, name + "Tag")
+	tag, ok := typeInPackage(typ, name+"Tag")
 	if !ok || !validGeneratedTagAPI(typ, tag, name, variants) {
 		return false
 	}
@@ -462,13 +465,15 @@ func generatedEnumShape(
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
 		if !ok || !validEnumAPI(
-			typ, payload, variant.name + "Payload", "New" + payloadName,
+			typ, payload, variant.name+"Payload", "New"+payloadName,
 		) {
 			return false
 		}
 		if len(variant.fields) > 0 {
-			carrier, ok := typeInPackage(typ, "Tgo" + payloadName + "Input")
-			if !ok || !validEnumCarrier(payload, carrier) { return false }
+			carrier, ok := typeInPackage(typ, "Tgo"+payloadName+"Input")
+			if !ok || !validEnumCarrier(payload, carrier) {
+				return false
+			}
 		}
 	}
 	return true
@@ -489,7 +494,7 @@ func validGeneratedTagAPI(
 		return false
 	}
 	basic, ok := coreType(tagType).(*types.Basic)
-	if !ok || basic.Info() & types.IsUnsigned == 0 {
+	if !ok || basic.Info()&types.IsUnsigned == 0 {
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
@@ -498,12 +503,12 @@ func validGeneratedTagAPI(
 	}
 	names := []string(nil)
 	for _, variant := range variants {
-		names = append(names, name + "Tag" + variant.name)
+		names = append(names, name+"Tag"+variant.name)
 	}
 	for index, constantName := range names {
 		constant, ok := named.Obj().Pkg().Scope().Lookup(constantName).(*types.Const)
 		if !ok || !types.Identical(constant.Type(), tagType) ||
-			constant.Val().ExactString() != strconv.Itoa(index + 1) {
+			constant.Val().ExactString() != strconv.Itoa(index+1) {
 			return false
 		}
 	}
@@ -608,7 +613,7 @@ func sourceExpression(
 		if !ok || node.Percent < start || node.Percent >= end {
 			continue
 		}
-		result[sourceFile.Offset(node.Percent) - sourceFile.Offset(start)] = '*'
+		result[sourceFile.Offset(node.Percent)-sourceFile.Offset(start)] = '*'
 	}
 	return string(result)
 }
@@ -620,81 +625,4 @@ func sourceRange(
 	end token.Pos,
 ) string {
 	return string(data[sourceFile.Offset(start):sourceFile.Offset(end)])
-}
-
-func sameFields(
-	source []sourceField,
-	generated []%syntax.Field,
-	file %syntax.File,
-) bool {
-	if len(source) != len(generated) {
-		return false
-	}
-	for index, field := range source {
-		other := generated[index]
-		if other == nil {
-			return false
-		}
-		typeText := syntax.SourceText(
-			file,
-			syntax.Span{
-				Start: syntax.ExpressionPosition(other.Type),
-				Stop:  syntax.ExpressionEnd(other.Type),
-			},
-		)
-		tagText := ""
-		if other.Tag != nil {
-			tagText = syntax.SourceText(file, other.Tag.Span)
-		}
-		if !sameTypeText(field.typeExpression, typeText) ||
-			!sameTagText(field.tag, tagText) {
-			return false
-		}
-		if field.name == "" && len(other.Names) == 0 {
-			continue
-		}
-		if len(other.Names) != 1 || other.Names[0].Name != field.name {
-			return false
-		}
-	}
-	return true
-}
-
-func sameTypeText(left string, right string) bool {
-	return sameFormattedText(
-		left,
-		right,
-		func(text string) string {
-			return "package p\ntype value " + text + "\n"
-		},
-	)
-}
-
-func sameTagText(left string, right string) bool {
-	return sameFormattedText(
-		left,
-		right,
-		func(text string) string {
-			return "package p\ntype value struct { Field int " + text + " }\n"
-		},
-	)
-}
-
-func sameFormattedText(
-	left string,
-	right string,
-	wrap func(string) string,
-) bool {
-	if left == right {
-		return true
-	}
-	if left == "" || right == "" {
-		return left == right
-	}
-	leftText, leftErr := format.Source("left.tgo", []byte(wrap(left)))
-	rightText, rightErr := format.Source("right.tgo", []byte(wrap(right)))
-	if leftErr != nil || rightErr != nil {
-		return false
-	}
-	return string(leftText) == string(rightText)
 }

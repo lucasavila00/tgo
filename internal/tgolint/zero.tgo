@@ -511,6 +511,8 @@ func (c %checker) currentLength(expression, slice %syntax.Expression) bool {
 	}
 	left := syntax.IdentifierExpressionOf(call.Args[0])
 	right := syntax.IdentifierExpressionOf(slice)
-	if left == nil || right == nil { return false }
+	if left == nil || right == nil {
+		return false
+	}
 	return c.facts.Object(left) == c.facts.Object(right)
 }

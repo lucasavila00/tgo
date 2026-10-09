@@ -12,10 +12,10 @@ import (
 type Response enum `json:"untagged"` {
 	Success struct {
 		ID     int64 `json:"id"`
-		Result any `json:"result,omitempty"`
+		Result any   `json:"result,omitempty"`
 	}
 	Failure struct {
-		ID    int64 `json:"id"`
+		ID    int64  `json:"id"`
 		Error string `json:"error,omitempty"`
 	}
 }
@@ -26,10 +26,10 @@ type positionParams struct {
 	IncludeDeclaration bool   `json:"includeDeclaration,omitempty"`
 }
 
-type documentParams struct { URI string `json:"uri"` }
-type workspaceParams struct { Query string `json:"query"` }
-type cancelParams struct { ID int64 `json:"id"` }
-type invalidateParams struct { URI string `json:"uri"` }
+type documentParams struct{ URI string `json:"uri"` }
+type workspaceParams struct{ Query string `json:"query"` }
+type cancelParams struct{ ID int64 `json:"id"` }
+type invalidateParams struct{ URI string `json:"uri"` }
 
 type protocolSymbol struct {
 	Name      string   `json:"name"`
@@ -82,31 +82,31 @@ func protocolSymbolKind(value SymbolKind) string {
 // Request is one helper protocol request.
 type Request enum `json:"internal,tag=method"` {
 	Hover struct {
-		ID int64 `json:"id,omitempty"`
+		ID     int64           `json:"id,omitempty"`
 		Params %positionParams `json:"params"`
 	} `json:"hover"`
 	Definition struct {
-		ID int64 `json:"id,omitempty"`
+		ID     int64           `json:"id,omitempty"`
 		Params %positionParams `json:"params"`
 	} `json:"definition"`
 	References struct {
-		ID int64 `json:"id,omitempty"`
+		ID     int64           `json:"id,omitempty"`
 		Params %positionParams `json:"params"`
 	} `json:"references"`
 	DocumentSymbols struct {
-		ID int64 `json:"id,omitempty"`
+		ID     int64           `json:"id,omitempty"`
 		Params %documentParams `json:"params"`
 	} `json:"documentSymbols"`
 	WorkspaceSymbols struct {
-		ID int64 `json:"id,omitempty"`
+		ID     int64            `json:"id,omitempty"`
 		Params %workspaceParams `json:"params"`
 	} `json:"workspaceSymbols"`
 	Cancel struct {
-		ID int64 `json:"id,omitempty"`
+		ID     int64         `json:"id,omitempty"`
 		Params %cancelParams `json:"params"`
 	} `json:"cancel"`
 	Invalidate struct {
-		ID int64 `json:"id,omitempty"`
+		ID     int64             `json:"id,omitempty"`
 		Params %invalidateParams `json:"params"`
 	} `json:"invalidate"`
 }
@@ -141,7 +141,7 @@ func Serve(ctx context.Context, engine %Engine, input io.Reader, output io.Write
 			return err
 		}
 		header := struct {
-			ID int64 `json:"id"`
+			ID     int64  `json:"id"`
 			Method string `json:"method"`
 		}{ID: 0, Method: ""}
 		if err := json.Unmarshal(data, &header); err != nil {
@@ -261,9 +261,11 @@ func (s %protocolServer) start(
 }
 
 func protocolResult(id int64, result any, err error) Response {
-	if err != nil { return protocolError(id, err.Error()) }
-	return protocolSuccess(id, result)
+	if err != nil {
+		return protocolError(id, err.Error())
 	}
+	return protocolSuccess(id, result)
+}
 
 func protocolSuccess(id int64, result any) Response {
 	return Response.Success{ID: id, Result: result}
@@ -277,21 +279,27 @@ func (s %protocolServer) cancel(id int64, params %cancelParams) {
 	s.activeMu.Lock()
 	cancel := s.active[params.ID]
 	s.activeMu.Unlock()
-	if cancel != nil { cancel() }
+	if cancel != nil {
+		cancel()
+	}
 	if id != 0 {
 		s.send(protocolSuccess(id, true))
 	}
-	}
+}
 
 func (s %protocolServer) send(response Response) {
 	s.write.Lock()
 	defer s.write.Unlock()
-	if s.writeErr == nil { s.writeErr = s.encoder.Encode(response) }
+	if s.writeErr == nil {
+		s.writeErr = s.encoder.Encode(response)
 	}
+}
 
 func (s %protocolServer) stop() {
 	s.activeMu.Lock()
-	for _, cancel := range s.active { cancel() }
+	for _, cancel := range s.active {
+		cancel()
+	}
 	s.activeMu.Unlock()
 	s.workers.Wait()
-	}
+}

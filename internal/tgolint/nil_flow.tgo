@@ -27,8 +27,8 @@ type nilGuard struct {
 }
 
 type nilPresence struct {
-	value    nilPlace
-	nonNil  bool
+	value  nilPlace
+	nonNil bool
 }
 
 type nilFlowState struct {
@@ -133,9 +133,13 @@ func (c %checker) checkNilSafety(analysis *sourceanalysis.Package) {
 	if analysis != nil {
 		sourceFiles := make([]%syntax.File, 0, len(analysis.Sources))
 		for _, source := range analysis.Sources {
-			if source.Syntax != nil { sourceFiles = append(sourceFiles, source.Syntax) }
+			if source.Syntax != nil {
+				sourceFiles = append(sourceFiles, source.Syntax)
+			}
 		}
-		if analysis.Facts == nil || analysis.Package == nil { return }
+		if analysis.Facts == nil || analysis.Package == nil {
+			return
+		}
 		sourceEnvironment := newNilEnvironment(
 			c.pass, sourceFiles, analysis.Facts, analysis.Package,
 			analysis.NonNil,
@@ -229,13 +233,17 @@ func (e %nilEnvironment) checkNilFunction(
 	flow := &nilFlow{before: make(map[syntax.Node]*nilFlowState)}
 	e.recordNilEntries(flow, graph, entries)
 	for _, block := range graph.Blocks {
-		if block == nil { continue }
+		if block == nil {
+			continue
+		}
 		entry := entries[block.Index]
 		if entry == nil {
 			continue
 		}
 		state := cloneNilState(entry)
-		if state == nil { continue }
+		if state == nil {
+			continue
+		}
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			e.transferNilNode(state, node, root, true)
@@ -245,7 +253,9 @@ func (e %nilEnvironment) checkNilFunction(
 
 func (e %nilEnvironment) nilCallMayReturn(expression *syntax.Expression) bool {
 	call := syntax.CallExpressionOf(expression)
-	if call == nil { return true }
+	if call == nil {
+		return true
+	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
 	if name == nil {
 		return true
@@ -286,10 +296,10 @@ func (e %nilEnvironment) nilEntryState(
 func newNilState() %nilFlowState {
 	return &nilFlowState{
 		reachable: true,
-		values: make(map[nilPlace]nilType),
-		aliases: make(map[nilPlace]nilPlace),
-		guards: make(map[types.Object]nilGuard),
-		presence: make(map[types.Object]nilPresence),
+		values:    make(map[nilPlace]nilType),
+		aliases:   make(map[nilPlace]nilPlace),
+		guards:    make(map[types.Object]nilGuard),
+		presence:  make(map[types.Object]nilPresence),
 	}
 }
 
@@ -316,7 +326,7 @@ func cloneNilState(source *nilFlowState) *nilFlowState {
 
 func cloneNilGuard(guard nilGuard) nilGuard {
 	return nilGuard{
-		trueBranches: cloneNilBranches(guard.trueBranches),
+		trueBranches:  cloneNilBranches(guard.trueBranches),
 		falseBranches: cloneNilBranches(guard.falseBranches),
 	}
 }
@@ -345,10 +355,14 @@ func (e %nilEnvironment) solveNilEntries(
 	for len(queue) != 0 {
 		block := queue[0]
 		queue = queue[1:]
-		if block == nil { continue }
+		if block == nil {
+			continue
+		}
 		queued[block.Index] = false
 		state := cloneNilState(entries[block.Index])
-		if state == nil { continue }
+		if state == nil {
+			continue
+		}
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			e.transferNilNode(state, node, nil, false)
@@ -386,12 +400,16 @@ func (e %nilEnvironment) recordNilEntries(
 	entries []*nilFlowState,
 ) {
 	for _, block := range graph.Blocks {
-		if block == nil { continue }
+		if block == nil {
+			continue
+		}
 		if entries[block.Index] == nil {
 			continue
 		}
 		state := cloneNilState(entries[block.Index])
-		if state == nil { continue }
+		if state == nil {
+			continue
+		}
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			flow.before[node] = cloneNilState(state)

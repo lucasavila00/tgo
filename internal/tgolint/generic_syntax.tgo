@@ -4,13 +4,17 @@ import "tgo/pkg/syntax"
 
 // inspectGenericBlock visits a function body in source order.
 func inspectGenericBlock(body %syntax.BlockStatement, visit func(%syntax.Node) bool) {
- if visit == nil { return }
+	if visit == nil {
+		return
+	}
 	statement := syntax.Statement.Block{Value: body}
 	inspectGenericStatement(&statement, visit)
 }
 
 func inspectGenericNode(node %syntax.Node, visit func(%syntax.Node) bool) {
-	if visit == nil { return }
+	if visit == nil {
+		return
+	}
 	if expression, ok := syntax.ExpressionOf(node); ok && expression != nil {
 		inspectGenericExpression(expression, visit)
 		return
@@ -19,10 +23,14 @@ func inspectGenericNode(node %syntax.Node, visit func(%syntax.Node) bool) {
 		inspectGenericStatement(statement, visit)
 		return
 	}
-	if !visit(node) { return }
+	if !visit(node) {
+		return
+	}
 	if specification, ok := syntax.SpecificationOf(node); ok {
 		if value := syntax.ValueSpecificationOf(specification); value != nil {
-			if value.Type != nil { inspectGenericExpression(value.Type, visit) }
+			if value.Type != nil {
+				inspectGenericExpression(value.Type, visit)
+			}
 			for _, expression := range value.Values {
 				inspectGenericExpression(expression, visit)
 			}
@@ -31,25 +39,37 @@ func inspectGenericNode(node %syntax.Node, visit func(%syntax.Node) bool) {
 }
 
 func inspectGenericFile(file %syntax.File, visit func(%syntax.Node) bool) {
-	if visit == nil { return }
+	if visit == nil {
+		return
+	}
 	syntax.Inspect(file, func(node *syntax.Node) bool {
-		if node == nil { return true }
+		if node == nil {
+			return true
+		}
 		return visit(node)
 	})
 }
 
 func inspectGenericExpression(expression %syntax.Expression, visit func(%syntax.Node) bool) {
-	if visit == nil { return }
+	if visit == nil {
+		return
+	}
 	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
-		if node == nil { return true }
+		if node == nil {
+			return true
+		}
 		return visit(node)
 	})
 }
 
 func inspectGenericStatement(statement %syntax.Statement, visit func(%syntax.Node) bool) {
-	if visit == nil { return }
+	if visit == nil {
+		return
+	}
 	syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-		if node == nil { return true }
+		if node == nil {
+			return true
+		}
 		return visit(node)
 	})
 }
