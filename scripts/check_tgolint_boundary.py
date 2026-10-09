@@ -13,9 +13,6 @@ TYPE_CHECKER_IMPORTS = {
     "go/token",
     "go/types",
 }
-SOURCE_IMPORTS = {
-    "go/format": Path("internal/tgolint/source_models.tgo"),
-}
 IMPORT = re.compile(r'"(go/[^"]+)"')
 SYNTAX_ASSERTION = re.compile(r"\.\(\*?syntax\.")
 
@@ -28,8 +25,7 @@ def main() -> None:
         for package in IMPORT.findall(source):
             if package in TYPE_CHECKER_IMPORTS:
                 continue
-            if SOURCE_IMPORTS.get(package) != relative:
-                violations.append(f"{relative}: prohibited import {package}")
+            violations.append(f"{relative}: prohibited import {package}")
         if ".(type)" in source and relative != TYPE_ADAPTER:
             violations.append(f"{relative}: Go type switch must use the TGo type adapter")
         if SYNTAX_ASSERTION.search(source):
