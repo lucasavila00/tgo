@@ -80,8 +80,8 @@ func activeFile(
 		return nil, nil
 	}
 	name := entry.Name()
-	language := Unknown
-	match := false
+	var language Language
+	var match bool
 	var err error
 	switch {
 	case strings.HasSuffix(name, ".tgo"):

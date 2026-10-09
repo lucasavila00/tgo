@@ -71,7 +71,8 @@ func TestClassify(t *testing.T) {
 			t.Parallel()
 			directory := t.TempDir()
 			for name, data := range test.files {
-				if err := os.WriteFile(filepath.Join(directory, name), []byte(data), 0o600); err != nil {
+				path := filepath.Join(directory, name)
+				if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}
