@@ -1,90 +1,116 @@
-# Consider struct-like checked construction
+# Add checked struct construction
 
 ## Decision
 
-Do not use a public struct literal as the checked-type constructor.
-
-The proposed form uses only familiar Go declarations and adds validation at the
-literal:
+Add an opaque checked record with a public construction payload.
 
 ```go
-type Port struct {
-	Value int
+newtype Port struct {
+	Number int `json:"number"`
 }
 
-func (port Port) Valid() bool {
-	return port.Value > 0 && port.Value < 65536
-}
-
-func PortNumber(text string) (int, error) {
-	number := strconv.Atoi(text)!
-	port := Port{Value: number}!
-	return port.Value, nil
+func (value PortValue) Validate() error {
+	if value.Number <= 0 || value.Number >= 65536 {
+		return fmt.Errorf("port %d is outside the valid range", value.Number)
+	}
+	return nil
 }
 ```
 
-The shape is easy to read. It also matches enum payload construction. It does not
-preserve the checked-type invariant.
+A `newtype T struct` declaration creates the source payload name `TValue). It
+requires `func (TValue) Validate() error`. The fields are inputs. They are not
+fields of `T).
+
+A checked literal has the static result type `(T, error)`:
+
+```go
+port, err := Port{Number: number}
+port := Port{Number: number}!
+port := Port{Number: number}!!
+```
+
+`!` and `!!` use their normal propagation rules. The validator error passes
+through unchanged, so `errors.Is` and `errors.As` keep working.
 
 ## Generated Go API
 
-The direct output would be:
+The declaration emits:
 
 ```go
-type Port struct {
-	Value int
+type PortValue struct {
+	Number int `json:"number"`
 }
 
-func (port Port) Valid() bool
+type Port struct {
+	value PortValue
+}
+
+func (value PortValue) Validate() error
+func (value PortValue) Port() (Port, error)
+func NewPort(value PortValue) (Port, error)
+func (port Port) Value() PortValue
 ```
 
-TGo would lower `Port{Value: number}!` to a helper that evaluates the literal,
-calls `Valid`, and returns `(Port, error)`. Validation failure would return
-`Port{}` and `invalid Port`. The normal `!` and `!!` rules would propagate
-that error.
+`Port{Number: number}` lowers to
+`PortValue{Number: number}.Port()`. The helper calls `Validate` once. On
+failure, it returns `Port{}` and the same error. On success, it stores the payload.
 
-This API lets any Go or TGo caller write `Port{Value: -1}` or mutate
-`port.Value`. The constructor is visible, but it is optional.
+The source and generated names follow one rule: `T`, `TValue), `NewT), and
+`TValue.T). Go callers can discover and use the same payload and constructor.
 
-## Alternative field rewrite
+## Value rules
 
-The compiler could emit a private field and a `Value()` accessor:
+`T` has nominal identity. Its fields remain private. `Value()` returns the
+payload by value. Slices, maps, pointers, and other reference fields keep normal Go
+aliasing. The wrapper prevents field reassignment; it does not deep-copy references.
+
+The Go zero value of `T` is invalid. `Value()` returns a zero payload for it.
+`tgolint` rejects use of an unconstructed zero. JSON marshals the payload and
+unmarshal validates before assignment. A multi-field checked record has no automatic
+text form.
+
+Field tags and defaults follow normal TGo struct rules. Field expressions evaluate
+once, from left to right, before validation.
+
+Generic checked records keep their parameters:
 
 ```go
-type Port struct { value int }
-func (port Port) Value() int
+newtype Range[T cmp.Ordered] struct {
+	Min T
+	Max T
+}
 ```
 
-That rewrite makes source fields differ from generated fields. Reflection, JSON
-tags, field selection, method bodies, and Go callers would see a different type.
-Embedding another checked struct would add the same mismatch. This is too much
-codegen for a small construction feature.
+This emits `RangeValue[T]), `Range[T]), and `NewRange[T]).
 
-## Type rules
+## Chaining
 
-The struct has nominal identity. Its zero value is invalid. Composition through
-embedding exposes the embedded value and its fields, so it does not provide safe
-extension. A second validator can check the outer value, but callers can still
-mutate either layer.
-
-A validator can return `error` instead of `bool` to keep a detailed failure:
+A second record can accept the first opaque value:
 
 ```go
-func (port Port) Validate() error
+newtype ServicePort struct {
+	Port Port
+}
+
+func (value ServicePortValue) Validate() error {
+	if value.Port.Value().Number == 22 {
+		return errors.New("service port cannot be SSH")
+	}
+	return nil
+}
+
+port := Port{Number: number}!
+service := ServicePort{Port: port}!
 ```
 
-That is useful, but it does not close construction or mutation paths.
+Each layer keeps its identity, payload, and validator. Construction of the outer
+value cannot bypass construction of the inner value.
 
 ## Compiler and linter work
 
-The parser accepts all declarations. The compiler would lower a composite literal
-followed by `!` or `!!`. The generated helper must preserve literal evaluation
-order.
+The compiler creates the payload and wrapper and lowers the checked literal. It does
+not decide whether a result error was handled.
 
-`tgolint` would have to reject every unchecked literal, field assignment,
-pointer mutation, reflection path, and generic write. It could enforce those rules
-in TGo source, but ordinary Go callers could still bypass them.
-
-Reject this option. It is suitable for validation at an API boundary. It is not a
-checked newtype. The conversion-shaped proposal keeps one opaque value and a clear
-construction path with less analysis.
+`tgolint` checks the validator signature, requires error handling or propagation,
+rejects representation construction and conversion, rejects invalid zero use, and
+applies the same rules to imported and generic checked records.
