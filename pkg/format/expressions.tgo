@@ -166,8 +166,15 @@ func (p *printer) binaryExpression(value *syntax.BinaryExpression, parentPrecede
 	p.expression(value.Left, precedence)
 	p.space()
 	p.token(value.OperatorPosition, value.Operator.String())
-	p.space()
-	p.expression(value.Right, precedence+1)
+	if p.multiline(syntax.ExpressionEnd(value.Left), syntax.ExpressionPosition(value.Right)) {
+		p.newline()
+		p.indent++
+		p.expression(value.Right, precedence+1)
+		p.indent--
+	} else {
+		p.space()
+		p.expression(value.Right, precedence+1)
+	}
 	if parenthesize {
 		p.text(")")
 	}
