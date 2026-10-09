@@ -1,4 +1,4 @@
-// Command tgolint checks Go callers of generated tgo types.
+// Command tgolint checks TGo source rules and Go use of generated TGo types.
 package main
 
 import (
