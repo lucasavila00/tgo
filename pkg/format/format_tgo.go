@@ -16,7 +16,7 @@ func Source(filename string, source []byte) ([]byte, error) {
 		files,
 		filename,
 		source,
-		syntax.ParseComments|syntax.AllErrors,
+		syntax.ParseComments|syntax.AllErrors|syntax.AllowInvalidModels,
 	)
 	if err != nil {
 		return nil, err
