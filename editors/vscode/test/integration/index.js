@@ -55,8 +55,9 @@ function checkRemoteURITranslation() {
 
 async function checkConfigurationRestart(api, folder, original) {
   const configuration = vscode.workspace.getConfiguration("tgo.navigation", folder.uri);
+  const helper = path.join(process.env.TGO_EXTENSION_PATH, "bin", "tgonav");
   await configuration.update(
-    "helperPath", process.env.TGO_NAV_HELPER, vscode.ConfigurationTarget.WorkspaceFolder
+    "helperPath", helper, vscode.ConfigurationTarget.WorkspaceFolder
   );
   let restarted;
   await waitFor(() => {
@@ -206,7 +207,8 @@ async function checkCancellation() {
     "cancellation"
   );
   const output = vscode.window.createOutputChannel("TGo cancellation test");
-  const client = new NavigationClient(process.env.TGO_NAV_HELPER, root, output);
+  const helper = path.join(process.env.TGO_EXTENSION_PATH, "bin", "tgonav");
+  const client = new NavigationClient(helper, root, output);
   const token = new vscode.CancellationTokenSource();
   const result = client.request("workspaceSymbols", { query: "" }, token.token);
   token.cancel();

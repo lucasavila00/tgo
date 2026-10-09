@@ -6,15 +6,6 @@
   "version": "0.1.0",
   "private": true,
   "license": "UNLICENSED",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/lucasavila00/go2.git",
-    "directory": "editors/vscode"
-  },
-  "homepage": "https://github.com/lucasavila00/go2/blob/main/docs/guide/VSCODE.md",
-  "bugs": {
-    "url": "https://github.com/lucasavila00/go2/issues"
-  },
   "extensionKind": [
     "workspace"
   ],
@@ -54,18 +45,18 @@
       "properties": {
         "tgo.navigation.helperPath": {
           "type": "string",
-          "default": "tgonav",
+          "default": "",
           "scope": "resource",
-          "description": "Path to the tgonav helper."
+          "description": "Absolute path to a tgonav helper. Leave empty to use the bundled helper."
         }
       }
     }
   },
   "scripts": {
-    "package": "vsce package --skip-license --out tgo-navigation.vsix",
+    "package": "test -x bin/tgonav && vsce package --skip-license --allow-missing-repository --out tgo-navigation.vsix",
     "test": "node --test test/unit/*.test.js",
     "test:integration": "node test/run-integration.js",
-    "test:all": "npm test && npm run package && npm run test:integration"
+    "test:all": "npm test && npm run test:integration"
   },
   "devDependencies": {
     "@vscode/test-electron": "3.1.0",

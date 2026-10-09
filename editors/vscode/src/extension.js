@@ -47,8 +47,9 @@ class WorkspaceClient {
 }
 
 class ClientManager {
-  constructor(output) {
+  constructor(output, bundledHelper) {
     this.output = output;
+    this.bundledHelper = bundledHelper;
     this.clients = new Map();
   }
 
@@ -62,8 +63,8 @@ class ClientManager {
     if (!client) {
       const configured = vscode.workspace
         .getConfiguration("tgo.navigation", folder.uri)
-        .get("helperPath", "tgonav");
-      const command = process.env.TGO_NAV_HELPER || configured;
+        .get("helperPath", "");
+      const command = configured || this.bundledHelper;
       client = new WorkspaceClient(folder, command, this.output);
       this.clients.set(key, client);
     }
@@ -116,7 +117,9 @@ class ClientManager {
 
 function activate(context) {
   const output = vscode.window.createOutputChannel("TGo Navigation");
-  const clients = new ClientManager(output);
+  const helperName = process.platform === "win32" ? "tgonav.exe" : "tgonav";
+  const bundledHelper = context.asAbsolutePath(path.join("bin", helperName));
+  const clients = new ClientManager(output, bundledHelper);
   context.subscriptions.push(output, clients);
   registerProviders(context, clients);
   context.subscriptions.push(
