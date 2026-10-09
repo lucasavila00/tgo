@@ -46,6 +46,7 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 	p.indent++
 	for _, item := range value.Specs {
 		p.specification(item)
+		p.trailingLine(syntax.SpecificationEnd(item))
 		p.newline()
 	}
 	p.indent--
@@ -71,6 +72,7 @@ func (p *printer) importSpecification(value *syntax.ImportSpecification) {
 		p.space()
 	}
 	p.token(value.Path.ValuePosition, value.Path.Value)
+	p.trailingLine(value.Stop)
 }
 
 func (p *printer) valueSpecification(value *syntax.ValueSpecification) {
@@ -85,6 +87,7 @@ func (p *printer) valueSpecification(value *syntax.ValueSpecification) {
 		p.space()
 		p.commaList(value.Values)
 	}
+	p.trailingLine(value.Stop)
 }
 
 func (p *printer) typeSpecification(value *syntax.TypeSpecification) {
@@ -98,6 +101,7 @@ func (p *printer) typeSpecification(value *syntax.TypeSpecification) {
 		p.space()
 	}
 	p.expression(value.Type, 0)
+	p.trailingLine(value.Stop)
 }
 
 func (p *printer) functionDeclaration(value *syntax.FunctionDeclaration) {
@@ -127,6 +131,7 @@ func (p *printer) enumDeclaration(value *syntax.EnumDeclaration) {
 	}
 	p.space()
 	p.token(value.Lbrace, "{")
+	p.trailingToken(value.Lbrace, 1)
 	if len(value.Variants) == 0 {
 		p.token(value.Rbrace, "}")
 		return
@@ -147,6 +152,7 @@ func (p *printer) enumVariant(value *syntax.EnumVariant) {
 	p.token(value.Struct, "struct")
 	p.space()
 	p.token(value.Lbrace, "{")
+	p.trailingToken(value.Lbrace, 1)
 	if len(value.Fields) > 0 {
 		p.newline()
 		p.indent++
@@ -171,6 +177,7 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 	p.token(value.Struct, "struct")
 	p.space()
 	p.token(value.Lbrace, "{")
+	p.trailingToken(value.Lbrace, 1)
 	if len(value.Fields) > 0 {
 		p.newline()
 		p.indent++

@@ -145,6 +145,11 @@ func (p *printer) space() {
 
 func (p *printer) newline() {
 	data := p.output.Bytes()
+	if len(data) == 0 {
+		p.lineStart = true
+		p.lineBreaks = 0
+		return
+	}
 	for len(data) > 0 && (data[len(data)-1] == ' ' || data[len(data)-1] == '\t') {
 		p.output.Truncate(len(data) - 1)
 		data = p.output.Bytes()
@@ -154,6 +159,35 @@ func (p *printer) newline() {
 		p.lineBreaks = 1
 	}
 	p.lineStart = true
+}
+
+func (p *printer) trailingLine(position token.Pos) {
+	if p.comment >= len(p.comments) {
+		return
+	}
+	line := p.files.Position(position).Line
+	comment := p.comments[p.comment]
+	start := p.files.Position(position).Offset
+	stop := p.files.Position(comment.start).Offset
+	if line > 0 && p.files.Position(comment.start).Line == line &&
+		start >= 0 && stop >= start && stop <= len(p.source) &&
+		strings.TrimSpace(string(p.source[start:stop])) == "" {
+		p.before(comment.stop + 1)
+	}
+}
+
+func (p *printer) trailingToken(position token.Pos, width int) {
+	file := p.files.File(position)
+	if file == nil {
+		return
+	}
+	p.trailingLine(file.Pos(file.Offset(position) + width))
+}
+
+func (p *printer) multiline(start token.Pos, stop token.Pos) bool {
+	first := p.files.Position(start)
+	last := p.files.Position(stop)
+	return first.IsValid() && last.IsValid() && first.Line != last.Line
 }
 
 func (p *printer) blankline() {

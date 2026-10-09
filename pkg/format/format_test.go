@@ -1,6 +1,9 @@
 package format_test
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"tgo/pkg/format"
@@ -23,6 +26,44 @@ func TestSourceBasic(t *testing.T) {
 	}
 	if string(again) != string(got) {
 		t.Fatalf("second pass changed output:\n%s", again)
+	}
+}
+
+func TestSourceFixtures(t *testing.T) {
+	t.Parallel()
+	inputs, err := filepath.Glob("testdata/*.input.tgo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, inputPath := range inputs {
+		inputPath := inputPath
+		name := strings.TrimSuffix(filepath.Base(inputPath), ".input.tgo")
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			input, err := os.ReadFile(inputPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantPath := strings.TrimSuffix(inputPath, ".input.tgo") + ".golden.tgo"
+			want, err := os.ReadFile(wantPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := format.Source(inputPath, input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != string(want) {
+				t.Fatalf("formatted source:\n%s\nwant:\n%s", got, want)
+			}
+			again, err := format.Source(wantPath, got)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(again) != string(got) {
+				t.Fatalf("second pass changed output:\n%s", again)
+			}
+		})
 	}
 }
 

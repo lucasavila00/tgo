@@ -102,7 +102,9 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 	case syntax.ExpressionTagStructType:
 		item := expressionValue.StructTypePayload().Value
 		p.token(item.Struct, "struct")
-		p.space()
+		if len(item.Fields.List) > 0 {
+			p.space()
+		}
 		p.fieldBlock(item.Fields)
 	case syntax.ExpressionTagFunctionType:
 		item := expressionValue.FunctionTypePayload().Value
@@ -113,7 +115,9 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 	case syntax.ExpressionTagInterfaceType:
 		item := expressionValue.InterfaceTypePayload().Value
 		p.token(item.Interface, "interface")
-		p.space()
+		if len(item.Methods.List) > 0 {
+			p.space()
+		}
 		p.fieldBlock(item.Methods)
 	case syntax.ExpressionTagMapType:
 		item := expressionValue.MapTypePayload().Value
@@ -197,7 +201,19 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		p.expression(value.Type, token.HighestPrec)
 	}
 	p.token(value.Lbrace, "{")
+	p.trailingToken(value.Lbrace, 1)
 	if len(value.Elements) == 0 {
+		p.token(value.Rbrace, "}")
+		return
+	}
+	if !p.multiline(value.Lbrace, value.Rbrace) {
+		for index, element := range value.Elements {
+			if index > 0 {
+				p.text(",")
+				p.space()
+			}
+			p.expression(element, 0)
+		}
 		p.token(value.Rbrace, "}")
 		return
 	}
@@ -206,6 +222,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	for _, element := range value.Elements {
 		p.expression(element, 0)
 		p.text(",")
+		p.trailingLine(syntax.ExpressionEnd(element))
 		p.newline()
 	}
 	p.indent--
@@ -215,18 +232,35 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 func (p *printer) field(value *syntax.Field) {
 	if len(value.Names) > 0 {
 		p.identifiers(value.Names)
-		p.space()
+		functionType := syntax.FunctionTypeExpressionOf(value.Type)
+		if functionType == nil || functionType.Function.IsValid() {
+			p.space()
+		}
 	}
 	p.expression(value.Type, 0)
 	if value.Tag != nil {
 		p.space()
 		p.token(value.Tag.ValuePosition, value.Tag.Value)
 	}
+	p.trailingLine(value.Stop)
 }
 
 func (p *printer) fieldBlock(value *syntax.FieldList) {
 	p.token(value.Opening, "{")
 	if len(value.List) == 0 {
+		p.token(value.Closing, "}")
+		return
+	}
+	if len(value.List) == 1 && !p.multiline(value.Opening, value.Closing) {
+		p.space()
+		for index, item := range value.List {
+			if index > 0 {
+				p.text(";")
+				p.space()
+			}
+			p.field(item)
+		}
+		p.space()
 		p.token(value.Closing, "}")
 		return
 	}
@@ -242,6 +276,24 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 
 func (p *printer) fieldList(value *syntax.FieldList, opening string, closing string) {
 	p.token(value.Opening, opening)
+	p.trailingToken(value.Opening, len(opening))
+	if len(value.List) == 0 {
+		p.token(value.Closing, closing)
+		return
+	}
+	if p.multiline(value.Opening, value.Closing) {
+		p.newline()
+		p.indent++
+		for _, item := range value.List {
+			p.field(item)
+			p.text(",")
+			p.trailingLine(item.Stop)
+			p.newline()
+		}
+		p.indent--
+		p.token(value.Closing, closing)
+		return
+	}
 	for index, item := range value.List {
 		if index > 0 {
 			p.text(",")
@@ -330,7 +382,6 @@ func (p *printer) comprehension(value *syntax.ComprehensionExpression) {
 	for index := len(value.Clauses) - 1; index >= 0; index-- {
 		p.indent--
 		p.text("}")
-		p.newline()
 	}
 	p.token(value.Rbrace, "}")
 }

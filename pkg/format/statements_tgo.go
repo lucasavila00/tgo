@@ -19,8 +19,10 @@ func (p *printer) statement(value *syntax.Statement) {
 		}
 	case syntax.StatementTagLabeled:
 		item := statementValue.LabeledPayload().Value
+		p.indent--
 		p.token(item.Label.Start, item.Label.Name)
 		p.token(item.Colon, ":")
+		p.indent++
 		p.newline()
 		p.statement(item.Statement)
 	case syntax.StatementTagExpression:
@@ -96,12 +98,14 @@ func (p *printer) statement(value *syntax.Statement) {
 func (p *printer) statementList(values []*syntax.Statement) {
 	for _, value := range values {
 		p.statement(value)
+		p.trailingLine(syntax.StatementEnd(value))
 		p.newline()
 	}
 }
 
 func (p *printer) block(value *syntax.BlockStatement) {
 	p.token(value.Lbrace, "{")
+	p.trailingToken(value.Lbrace, 1)
 	if len(value.List) == 0 {
 		p.token(value.Rbrace, "}")
 		return
@@ -115,6 +119,7 @@ func (p *printer) block(value *syntax.BlockStatement) {
 
 func (p *printer) clauseBlock(value *syntax.BlockStatement) {
 	p.token(value.Lbrace, "{")
+	p.trailingToken(value.Lbrace, 1)
 	if len(value.List) == 0 {
 		p.token(value.Rbrace, "}")
 		return
