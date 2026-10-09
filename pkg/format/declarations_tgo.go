@@ -537,6 +537,9 @@ func (p *printer) tgoFieldAlignment(values []*syntax.TGoField) [][]int {
 
 func (p *printer) tgoFieldCells(value *syntax.TGoField) []int {
 	cells := p.fieldSyntaxCells(value.Field)
+	if p.multilineFieldType(value.Field) {
+		return cells
+	}
 	if value.Default != nil {
 		cells[len(cells)-1] += 3 + p.formattedExpressionWidth(value.Default)
 	}

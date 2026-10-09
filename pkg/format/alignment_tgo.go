@@ -174,6 +174,9 @@ func (p *printer) fieldAlignment(values []*syntax.Field) [][]int {
 
 func (p *printer) fieldCells(value *syntax.Field) []int {
 	cells := p.fieldSyntaxCells(value)
+	if p.multilineFieldType(value) {
+		return cells
+	}
 	if p.hasTrailingComment(fieldContentEnd(value)) {
 		return fieldCommentCells(cells, value)
 	}
@@ -193,6 +196,9 @@ func (p *printer) fieldSyntaxCells(value *syntax.Field) []int {
 		cells = append(cells, fieldNameWidth(value))
 	}
 	cells = append(cells, p.formattedExpressionWidth(value.Type))
+	if p.multilineFieldType(value) {
+		return cells
+	}
 	if value.Tag != nil {
 		if len(value.Names) > 0 {
 			cells = append(cells, 0)
@@ -200,6 +206,13 @@ func (p *printer) fieldSyntaxCells(value *syntax.Field) []int {
 		cells = append(cells, utf8.RuneCountInString(value.Tag.Value))
 	}
 	return cells
+}
+
+func (p *printer) multilineFieldType(value *syntax.Field) bool {
+	return p.multiline(
+		syntax.ExpressionPosition(value.Type),
+		syntax.ExpressionEnd(value.Type),
+	)
 }
 
 func (p *printer) identifiersAreMultiline(values []*syntax.Identifier) bool {
