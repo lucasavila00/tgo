@@ -1,0 +1,5 @@
+package dep
+
+func internalTestValue() Choice {
+	return Choice.One{Name: "internal"}
+}

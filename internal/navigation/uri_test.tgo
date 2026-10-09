@@ -11,9 +11,10 @@ func TestPathURIValue(t *testing.T) {
 		want   string
 	}{
 		{
-			name: "Unix",
-			path: "/work space/Café#1.tgo",
-			want: "file:///work%20space/Caf%C3%A9%231.tgo",
+			name:   "Unix",
+			path:   "/work space/Café#1.tgo",
+			volume: "",
+			want:   "file:///work%20space/Caf%C3%A9%231.tgo",
 		},
 		{
 			name: "Windows drive",

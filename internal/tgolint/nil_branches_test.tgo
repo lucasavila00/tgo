@@ -14,16 +14,19 @@ func TestNilBranchAlternativesKeepRelations(t *testing.T) {
 			name: "alias alternatives",
 			body: "value = other\n" +
 				"if value != nil || other != nil { need(value) }",
+			unsafe: false,
 		},
 		{
 			name: "later check removes alternative",
 			body: "if (alias != nil || value != nil) && alias == nil {" +
 				" need(value) }",
+			unsafe: false,
 		},
 		{
 			name: "saved alternatives",
 			body: "checked := alias != nil || value != nil\n" +
 				"if checked && alias == nil { need(value) }",
+			unsafe: false,
 		},
 		{
 			name:   "unresolved alternative",
@@ -35,6 +38,7 @@ func TestNilBranchAlternativesKeepRelations(t *testing.T) {
 			body: "value = &Item{}\nother = nil\n" +
 				"checked := (other != nil || value == nil) || value == nil\n" +
 				"value = nil\nif checked { need(value) }",
+			unsafe: false,
 		},
 		{
 			name: "saved proof follows surviving alias",
@@ -42,6 +46,7 @@ func TestNilBranchAlternativesKeepRelations(t *testing.T) {
 				"value = alias\nvalue = other\nvalue = other\n" +
 				"other = &Item{}\nchecked := value != nil\n" +
 				"value = &Item{}\nif checked { need(alias) }",
+			unsafe: false,
 		},
 	}
 	for _, test := range tests {

@@ -107,7 +107,7 @@ func readGoCorpusManifest(t *testing.T) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var packages []string
+	packages := []string(nil)
 	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" && !strings.HasPrefix(line, "#") {
@@ -212,7 +212,7 @@ func TestSourceKeepsNestedLineDirectiveActive(t *testing.T) {
 	}
 	files := token.NewFileSet()
 	file := files.AddFile("directives.tgo", -1, len(formatted))
-	var lexer scanner.Scanner
+	lexer := *new(scanner.Scanner)
 	lexer.Init(file, formatted, nil, scanner.ScanComments)
 	for {
 		position, kind, _ := lexer.Scan()

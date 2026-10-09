@@ -61,7 +61,7 @@ func TestRequestJSONVariants(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := RequestHover{Params: new(positionParams)}.Request()
+			request := RequestHover{ID: 0, Params: new(positionParams)}.Request()
 			if err := json.Unmarshal([]byte(test.wire), &request); err != nil {
 				t.Fatal(err)
 			}
@@ -113,7 +113,7 @@ func TestRequestJSONRejectsInvalidInput(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := RequestHover{Params: new(positionParams)}.Request()
+			request := RequestHover{ID: 0, Params: new(positionParams)}.Request()
 			err := json.Unmarshal([]byte(test.wire), &request)
 			if err == nil || !strings.Contains(err.Error(), test.errorText) {
 				t.Fatalf("error = %v, want text %q", err, test.errorText)
@@ -138,7 +138,7 @@ func TestServeReportsProtocolErrors(t *testing.T) {
 			`{"id":8,"method":"invalidate"}` + "\n" +
 			`{"id":9,"method":"cancel","params":{"id":"one"}}` + "\n",
 	)
-	var output bytes.Buffer
+	output := *new(bytes.Buffer)
 	if err := Serve(context.Background(), engine, input, &output); err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestServeReportsProtocolErrors(t *testing.T) {
 		{9, "cannot unmarshal"},
 	}
 	for _, test := range tests {
-		var response protocolWireResponse
+		response := *new(protocolWireResponse)
 		if err := decoder.Decode(&response); err != nil {
 			t.Fatal(err)
 		}
@@ -182,7 +182,7 @@ func TestResponseJSONLines(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var output bytes.Buffer
+			output := *new(bytes.Buffer)
 			if err := json.NewEncoder(&output).Encode(test.response); err != nil {
 				t.Fatal(err)
 			}
@@ -212,7 +212,7 @@ func TestServeDoesNotReplyToInvalidCancelNotification(t *testing.T) {
 		`{"method":"cancel","params":{"id":"one"}}` + "\n" +
 			`{"method":"cancel"}` + "\n",
 	)
-	var output bytes.Buffer
+	output := *new(bytes.Buffer)
 	if err := Serve(context.Background(), engine, input, &output); err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func serveProtocolLine(t *testing.T, request string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var output bytes.Buffer
+	output := *new(bytes.Buffer)
 	if err := Serve(context.Background(), engine,
 		strings.NewReader(request+"\n"), &output); err != nil {
 		t.Fatal(err)
@@ -247,11 +247,11 @@ func assertJSONLine(t *testing.T, got, want string) {
 
 func sameJSON(t *testing.T, left, right []byte) bool {
 	t.Helper()
-	var leftValue any
+	leftValue := any(nil)
 	if err := json.Unmarshal(left, &leftValue); err != nil {
 		t.Fatal(err)
 	}
-	var rightValue any
+	rightValue := any(nil)
 	if err := json.Unmarshal(right, &rightValue); err != nil {
 		t.Fatal(err)
 	}

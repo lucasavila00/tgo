@@ -15,12 +15,14 @@ func TestNilParallelAssignmentKeepsValueIdentity(t *testing.T) {
 			body: "checked := other != nil\n" +
 				"value, other = other, value\n" +
 				"if checked { need(value) }",
+			unsafe: false,
 		},
 		{
 			name: "keep proof on copied value",
 			body: "other = value\nalias = value\n" +
 				"checked := value != nil\nvalue = nil\n" +
 				"if checked { need(other); need(alias) }",
+			unsafe: false,
 		},
 		{
 			name: "swap different values",
@@ -32,6 +34,7 @@ func TestNilParallelAssignmentKeepsValueIdentity(t *testing.T) {
 			name: "swap keeps non-nil value",
 			body: "value = nil\nother = &Item{}\n" +
 				"value, other = other, value\nneed(value)",
+			unsafe: false,
 		},
 	}
 	for _, test := range tests {

@@ -115,7 +115,7 @@ func TestHelperCancellationStopsBeforeInvalidPackage(t *testing.T) {
 	response := struct {
 		ID    int64  `json:"id"`
 		Error string `json:"error"`
-	}{}
+	}{ID: 0, Error: ""}
 	if err := server.output.Decode(&response); err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func (h *helperProcess) checkMutation(
 	if err := os.WriteFile(path, []byte(changed), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	var invalidated bool
+	invalidated := false
 	h.call(t, "invalidate", mustJSON(t, map[string]any{
 		"uri": fileURI(t, path),
 	}), &invalidated)
@@ -206,7 +206,7 @@ func (h *helperProcess) check(
 		"includeDeclaration": fixture.IncludeDeclaration,
 	})
 	if fixture.Method == "hover" {
-		var result *navigation.Hover
+		result := (*navigation.Hover)(nil)
 		h.call(t, fixture.Method, params, &result)
 		want := &navigation.Hover{
 			Contents: fixture.Hover,
@@ -223,7 +223,7 @@ func (h *helperProcess) check(
 		}
 		return
 	}
-	var result []navigation.Location
+	result := []navigation.Location(nil)
 	h.call(t, fixture.Method, params, &result)
 	want := make([]navigation.Location, 0, len(fixture.Locations))
 	for _, point := range fixture.Locations {
@@ -251,7 +251,7 @@ func (h *helperProcess) checkSymbols(
 	if fixture.File != "" {
 		params["uri"] = fileURI(t, filepath.Join(workspace, fixture.File))
 	}
-	var result []navigation.Symbol
+	result := []navigation.Symbol(nil)
 	h.call(t, fixture.Method, mustJSON(t, params), &result)
 	names := make([]string, 0, len(result))
 	for _, symbol := range result {
@@ -307,7 +307,11 @@ func (h *helperProcess) call(
 		ID     int64           `json:"id"`
 		Result json.RawMessage `json:"result"`
 		Error  string          `json:"error"`
-	}
+	} = struct {
+		ID     int64           `json:"id"`
+		Result json.RawMessage `json:"result"`
+		Error  string          `json:"error"`
+	}{ID: 0, Result: nil, Error: ""}
 	if err := h.output.Decode(&response); err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +342,7 @@ func readRequests(t *testing.T, workspace string) []fixtureRequest {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var result []fixtureRequest
+	result := []fixtureRequest(nil)
 	if err := json.Unmarshal(data, &result); err != nil {
 		t.Fatal(err)
 	}
@@ -355,7 +359,7 @@ func readSymbolRequests(t *testing.T, workspace string) []fixtureSymbolRequest {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var result []fixtureSymbolRequest
+	result := []fixtureSymbolRequest(nil)
 	if err := json.Unmarshal(data, &result); err != nil {
 		t.Fatal(err)
 	}
@@ -372,7 +376,7 @@ func readMutations(t *testing.T, workspace string) []fixtureMutation {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var result []fixtureMutation
+	result := []fixtureMutation(nil)
 	if err := json.Unmarshal(data, &result); err != nil {
 		t.Fatal(err)
 	}

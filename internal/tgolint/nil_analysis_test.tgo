@@ -104,13 +104,14 @@ func formatDiagnostics(diagnostics []analysis.Diagnostic) string {
 }
 
 type nilCondition struct {
-	kind        byte
-	left, right *nilCondition
+	kind  byte
+	left  *nilCondition
+	right *nilCondition
 }
 
 func decodeNilCondition(data []byte) *nilCondition {
 	index := 0
-	var decode func(depth int) *nilCondition
+	decode := (func(depth int) *nilCondition)(nil)
 	decode = func(depth int) *nilCondition {
 		value := byte(0)
 		if index < len(data) {
@@ -121,7 +122,7 @@ func decodeNilCondition(data []byte) *nilCondition {
 		if depth == 0 && kind >= 6 {
 			kind %= 6
 		}
-		result := &nilCondition{kind: kind}
+		result := &nilCondition{kind: kind, left: nil, right: nil}
 		switch kind {
 		case 6, 7:
 			result.left = decode(depth - 1)

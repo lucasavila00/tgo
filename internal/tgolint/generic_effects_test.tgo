@@ -10,6 +10,7 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 	t.Parallel()
 	want := &GenericEffectFact{
 		ZeroEffects: []GenericEffect{{
+			Receiver:      false,
 			TypeParameter: 1,
 			Conditions: []GenericEffectCondition{{
 				ValueParameter: 2,
@@ -17,9 +18,13 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 				Kind:           EffectKindBoolean{}.EffectKind(),
 				Expected:       true,
 			}},
+			MaySkip: false,
 		}},
+		AccessEffects:         nil,
+		ReturnedZeroEffects:   nil,
+		ReturnedAccessEffects: nil,
 	}
-	var data bytes.Buffer
+	data := *new(bytes.Buffer)
 	if err := gob.NewEncoder(&data).Encode(want); err != nil {
 		t.Fatal(err)
 	}

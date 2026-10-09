@@ -62,7 +62,7 @@ func readGoCorpusManifest(t *testing.T) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var packages []string
+	packages := []string(nil)
 	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" && !strings.HasPrefix(line, "#") {
@@ -91,6 +91,7 @@ func copyGoCorpusPackage(
 	sources map[string][]byte,
 ) (includedTests, excludedTests int) {
 	t.Helper()
+	includedTests, excludedTests = 0, 0
 	sourceDirectory := filepath.Join(goRoot, "src", filepath.FromSlash(packagePath))
 	entries, err := os.ReadDir(sourceDirectory)
 	if err != nil {

@@ -148,6 +148,7 @@ func TestReplaceContentsRestoresAfterPartialWrite(t *testing.T) {
 	target := &failingRewriteTarget{
 		data:      append([]byte(nil), original...),
 		failAfter: 4,
+		failed:    false,
 	}
 	restored, err := replaceContents(target, original, []byte("formatted source"))
 	if !errors.Is(err, errInjectedWrite) {
@@ -171,7 +172,7 @@ type failingRewriteTarget struct {
 
 func (f *failingRewriteTarget) Write(data []byte) (int, error) {
 	if f.failed {
-		return 0, errInjectedWrite
+		return , errInjectedWrite
 	}
 	f.failed = true
 	written := min(f.failAfter, len(data))
@@ -184,7 +185,7 @@ func (f *failingRewriteTarget) WriteAt(data []byte, offset int64) (int, error) {
 	if stop > len(f.data) {
 		f.data = append(f.data, make([]byte, stop-len(f.data))...)
 	}
-	return copy(f.data[int(offset):], data), nil
+	return copy(f.data[int(offset):], data),
 }
 
 func (f *failingRewriteTarget) Truncate(size int64) error {

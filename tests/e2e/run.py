@@ -200,6 +200,15 @@ def check_package_discovery(compiler, temporary):
     shutil.rmtree(broken)
     run([str(compiler), "build", "./..."], work)
 
+    test_only = work / "test-only"
+    test_only.mkdir()
+    (test_only / "only_test.tgo").write_text(
+        "package testonly\n\nfunc TestOnly() {}\n"
+    )
+    result = run([str(compiler), "build", "./..."], work, success=False)
+    assert "active TGo test needs active TGo production source" in result
+    shutil.rmtree(test_only)
+
     generated = (app / "app_tgo.go").read_bytes()
     manual = app / "manual_tgo.go"
     manual.write_text("package app\n\nvar Broken MissingType\n")

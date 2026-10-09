@@ -246,13 +246,14 @@ func flowVariable(index byte) string {
 }
 
 type flowCondition struct {
-	kind        byte
-	left, right *flowCondition
+	kind  byte
+	left  *flowCondition
+	right *flowCondition
 }
 
 func decodeFlowCondition(data []byte) *flowCondition {
 	index := 0
-	var decode func(depth int) *flowCondition
+	decode := (func(depth int) *flowCondition)(nil)
 	decode = func(depth int) *flowCondition {
 		value := byte(0)
 		if index < len(data) {
@@ -263,7 +264,7 @@ func decodeFlowCondition(data []byte) *flowCondition {
 		if depth == 0 && kind >= 10 {
 			kind %= 10
 		}
-		result := &flowCondition{kind: kind}
+		result := &flowCondition{kind: kind, left: nil, right: nil}
 		switch kind {
 		case 10, 11:
 			result.left = decode(depth - 1)

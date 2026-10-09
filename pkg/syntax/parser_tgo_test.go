@@ -374,7 +374,7 @@ func makePort(number int) (Port, error) {
 func TestPublicASTDoesNotExposeGoAST(t *testing.T) {
 	t.Parallel()
 	seen := make(map[reflect.Type]bool)
-	var inspect func(reflect.Type)
+	inspect := (func(reflect.Type))(nil)
 	inspect = func(value reflect.Type) {
 		if value == nil || seen[value] {
 			return
@@ -478,7 +478,7 @@ func TestParseFileTransparentPropagation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseFile: %v", err)
 	}
-	var propagation *syntax.PropagationExpression
+	propagation := (*syntax.PropagationExpression)(nil)
 	for _, extension := range syntax.Extensions(file) {
 		if value, ok := syntax.PropagationExpressionOf(extension); ok {
 			propagation = value

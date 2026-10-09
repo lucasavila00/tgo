@@ -171,6 +171,50 @@ func CompilePackage(
 	return unit.compiled, nil
 }
 
+// CompileTestPackage generates one internal or external TGo test package.
+func CompileTestPackage(
+	directory string,
+	importPath string,
+	external bool,
+	files *token.FileSet,
+) (*compiler.CompiledPackage, error) {
+	root, module, err := moduleRoot(directory)
+	if err != nil {
+		return nil, err
+	}
+	buildContext, err := effectiveBuildContext(directory)
+	if err != nil {
+		return nil, err
+	}
+	packages, err := discover(root, module, &buildContext)
+	if err != nil {
+		return nil, err
+	}
+	unit := packages[importPath]
+	if unit == nil {
+		return nil, nil
+	}
+	builder := newMemoryBuilder(packages, root, module, &buildContext)
+	if err := builder.build(importPath); err != nil {
+		return nil, err
+	}
+	internal, externalTests, err := unit.readTests()
+	if err != nil {
+		return nil, err
+	}
+	tests := internal
+	if external {
+		tests = externalTests
+	}
+	if len(tests.Sources) == 0 {
+		return nil, nil
+	}
+	if files == nil {
+		files = token.NewFileSet()
+	}
+	return builder.compileTestPackage(unit, tests, external, files)
+}
+
 func newMemoryBuilder(
 	packages map[string]*packageUnit,
 	root string,

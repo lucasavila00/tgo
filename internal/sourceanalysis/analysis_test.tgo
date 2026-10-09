@@ -15,7 +15,7 @@ func TestAnalysisOwnersCoverGeneratedPublicSurface(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var analysis *Package
+	analysis := (*Package)(nil)
 	for _, pkg := range packages {
 		if pkg.Path == "example.test/analysis/dep" {
 			analysis = pkg
@@ -98,5 +98,52 @@ func TestAnalyzeWorkspaceUsesStablePackageOrder(t *testing.T) {
 		if pkg.Facts == nil || pkg.Files == nil || len(pkg.Sources) == 0 {
 			t.Fatalf("incomplete analysis for %s", pkg.Path)
 		}
+	}
+}
+
+func TestAnalyzeTestPackageLoadsEachTestView(t *testing.T) {
+	tests := []struct {
+		name       string
+		external   bool
+		wantPath   string
+		wantSource string
+		wantCount  int
+	}{
+		{
+			name: "internal", external: false,
+			wantPath:   "example.test/analysis/dep",
+			wantSource: "internal_test.tgo", wantCount: 3,
+		},
+		{
+			name: "external", external: true,
+			wantPath:   "example.test/analysis/dep_test",
+			wantSource: "external_test.tgo", wantCount: 1,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			analysis, err := AnalyzeTestPackage(
+				"testdata/analysisworkspace",
+				"example.test/analysis/dep",
+				test.external,
+				token.NewFileSet(),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if analysis == nil || analysis.Path != test.wantPath ||
+				len(analysis.Sources) != test.wantCount {
+				t.Fatalf("test analysis: %#v", analysis)
+			}
+			found := false
+			for _, source := range analysis.Sources {
+				if source.Name == test.wantSource {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("missing source %s", test.wantSource)
+			}
+		})
 	}
 }

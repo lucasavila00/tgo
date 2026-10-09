@@ -145,65 +145,68 @@ func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, err
 		return nil, err
 	}
 	outputs := make(map[string][]byte)
-	for _, tests := range []struct {
-		path        string
-		sources     []compiler.File
-		goFiles     []compiler.File
-		files       []*syntax.File
-		usesC       bool
-		testSources []compiler.File
+	for _, item := range []struct {
+		tests    packageTests
+		external bool
 	}{
-		{
-			path: unit.Path,
-			sources: append(
-				append([]compiler.File(nil), unit.Sources...),
-				internal.Sources...,
-			),
-			goFiles: unit.GoFiles,
-			files: append(
-				append([]*syntax.File(nil), unit.Files...),
-				internal.Files...,
-			),
-			usesC:       unit.usesC || internal.UsesC,
-			testSources: internal.Sources,
-		},
-		{
-			path: unit.Path + "_test", sources: external.Sources,
-			files: external.Files, usesC: external.UsesC,
-			testSources: external.Sources,
-		},
+		{tests: internal, external: false},
+		{tests: external, external: true},
 	} {
-		if len(tests.sources) == 0 ||
-			(tests.path == unit.Path && len(internal.Sources) == 0) {
+		if len(item.tests.Sources) == 0 {
 			continue
 		}
-		for _, dependency := range importsOf(tests.files) {
-			if dependency == unit.Path {
-				continue
-			}
-			if err := b.buildImport(dependency); err != nil {
-				return nil, err
-			}
-		}
-		compiled, err := b.compileFiles(
+		compiled, err := b.compileTestPackage(
 			unit,
-			tests.path,
-			tests.sources,
-			tests.goFiles,
-			tests.files,
-			tests.usesC,
+			item.tests,
+			item.external,
 			token.NewFileSet(),
 		)
 		if err != nil {
 			return nil, err
 		}
-		for _, source := range tests.testSources {
+		for _, source := range item.tests.Sources {
 			if data, ok := compiled.Outputs[source.Name]; ok {
 				outputs[unit.outputPath(source.Name)] = data
 			}
 		}
 	}
 	return outputs, nil
+}
+
+// compileTestPackage compiles one internal or external test package view.
+func (b *packageBuilder) compileTestPackage(
+	unit *packageUnit,
+	tests packageTests,
+	external bool,
+	files *token.FileSet,
+) (*compiler.CompiledPackage, error) {
+	path := unit.Path
+	sources := tests.Sources
+	goFiles := []compiler.File(nil)
+	syntaxFiles := tests.Files
+	usesC := tests.UsesC
+	if !external {
+		sources = append(append([]compiler.File(nil), unit.Sources...), sources...)
+		goFiles = unit.GoFiles
+		syntaxFiles = append(
+			append([]*syntax.File(nil), unit.Files...),
+			syntaxFiles...,
+		)
+		usesC = unit.usesC || usesC
+	} else {
+		path += "_test"
+	}
+	for _, dependency := range importsOf(syntaxFiles) {
+		if dependency == unit.Path {
+			continue
+		}
+		if err := b.buildImport(dependency); err != nil {
+			return nil, err
+		}
+	}
+	return b.compileFiles(
+		unit, path, sources, goFiles, syntaxFiles, usesC, files,
+	)
 }
 
 // compileFiles compiles one production or test package view.
@@ -218,6 +221,10 @@ func (b *packageBuilder) compileFiles(
 ) (*compiler.CompiledPackage, error) {
 	imports := make(map[string]*compiler.CompiledPackage)
 	for _, importPath := range importsOf(files) {
+		if importPath == unit.Path && path != unit.Path && unit.compiled != nil {
+			imports[importPath] = unit.compiled
+			continue
+		}
 		if dependency := unit.Imports[importPath]; dependency != nil && dependency.compiled != nil {
 			imports[importPath] = dependency.compiled
 		}

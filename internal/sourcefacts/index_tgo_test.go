@@ -68,7 +68,7 @@ func TestProjectionFindsShiftedDefinition(t *testing.T) {
 	parsed := parseSource(t, files, source)
 	index := NewProjection(parsed, &projectionStub{definitions: []objectFact{{
 		position: position, name: "field", object: object,
-	}}}, files)
+	}}, uses: nil}, files)
 	declaration := syntax.GeneralDeclarationOf(parsed.Declarations[0])
 	specification := syntax.TypeSpecificationOf(declaration.Specs[0])
 	structure := syntax.StructTypeExpressionOf(specification.Type)
@@ -146,7 +146,7 @@ func sourceIdentifiers(
 }
 
 func identifierNode(file *syntax.File, identifier *syntax.Identifier) *syntax.Node {
-	var result *syntax.Node
+	var result *syntax.Node = nil
 	syntax.Inspect(file, func(node *syntax.Node) bool {
 		value, ok := syntax.IdentifierOf(node)
 		if ok && value.Start == identifier.Start && value.Stop == identifier.Stop {

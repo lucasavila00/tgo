@@ -215,8 +215,8 @@ func (p *packageUnit) readSource(path string) error {
 
 // readTests groups active tests by their Go test package.
 func (p *packageUnit) readTests() (packageTests, packageTests, error) {
-	var internal packageTests
-	var external packageTests
+	internal := packageTests{Sources: nil, Files: nil, UsesC: false}
+	external := packageTests{Sources: nil, Files: nil, UsesC: false}
 	paths, err := p.matchingTestSources()
 	if err != nil {
 		return ,, err
@@ -313,6 +313,13 @@ func (p *packageUnit) available() (bool, error) {
 	paths := p.matchingSources()!!
 	if len(paths) > 0 {
 		return true,
+	}
+	tests := p.matchingTestSources()!!
+	if len(tests) > 0 {
+		return , fmt.Errorf(
+			"%s: active TGo test needs active TGo production source",
+			tests[0],
+		)
 	}
 	for _, path := range p.generatedPaths {
 		owned := generatedFile(path)!!

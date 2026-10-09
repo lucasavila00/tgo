@@ -12,7 +12,8 @@ A package may contain `.tgo` and `.go` files. The compiler checks both.
 A TGo package writes tests in `_test.tgo` files. The compiler checks internal
 tests with the package and external tests as the normal `package_name_test`
 package. A Go package keeps `_test.go` files. The Go tool compiles generated
-tests after TGo emits Go.
+tests after TGo emits Go. An active `_test.tgo` file needs an active non-test
+TGo source file in the same package.
 
 Go build constraints and target suffixes select tgo source files.
 An excluded source file is not parsed. It does not add declarations to its package.
