@@ -33,11 +33,14 @@ func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer
 	comments := []sourceComment(nil)
 	for _, group := range file.Comments {
 		for _, item := range group.List {
-			comments = append(comments, sourceComment{
-				start: item.Start,
-				stop:  item.Stop,
-				text:  item.Text,
-			})
+			comments = append(
+				comments,
+				sourceComment{
+					start: item.Start,
+					stop:  item.Stop,
+					text:  item.Text,
+				},
+			)
 		}
 	}
 	return &printer{

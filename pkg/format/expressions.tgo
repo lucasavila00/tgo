@@ -169,11 +169,11 @@ func (p *printer) binaryExpression(value *syntax.BinaryExpression, parentPrecede
 	if p.multiline(syntax.ExpressionEnd(value.Left), syntax.ExpressionPosition(value.Right)) {
 		p.newline()
 		p.indent++
-		p.expression(value.Right, precedence+1)
+		p.expression(value.Right, precedence + 1)
 		p.indent--
 	} else {
 		p.space()
-		p.expression(value.Right, precedence+1)
+		p.expression(value.Right, precedence + 1)
 	}
 	if parenthesize {
 		p.text(")")
@@ -209,14 +209,14 @@ func (p *printer) callExpression(value *syntax.CallExpression) {
 		for index, argument := range value.Args {
 			p.expression(argument, 0)
 			end := syntax.ExpressionEnd(argument)
-			if index == len(value.Args)-1 && value.Ellipsis != token.NoPos {
+			if index == len(value.Args) - 1 && value.Ellipsis != token.NoPos {
 				p.token(value.Ellipsis, "...")
 				end = p.tokenEnd(value.Ellipsis, 3)
 			}
 			p.text(",")
 			following := value.Rparen
-			if index+1 < len(value.Args) {
-				following = syntax.ExpressionPosition(value.Args[index+1])
+			if index + 1 < len(value.Args) {
+				following = syntax.ExpressionPosition(value.Args[index + 1])
 			}
 			p.trailingLine(p.commaEnd(end, following))
 			p.newline()
@@ -231,7 +231,7 @@ func (p *printer) callExpression(value *syntax.CallExpression) {
 			p.space()
 		}
 		p.expression(argument, 0)
-		if index == len(value.Args)-1 && value.Ellipsis != token.NoPos {
+		if index == len(value.Args) - 1 && value.Ellipsis != token.NoPos {
 			p.token(value.Ellipsis, "...")
 		}
 	}
@@ -253,13 +253,13 @@ func (p *printer) delimitedExpressions(
 	for index, value := range values {
 		p.expression(value, 0)
 		end := syntax.ExpressionEnd(value)
-		if ellipsis && index == len(values)-1 {
+		if ellipsis && index == len(values) - 1 {
 			p.text("...")
 		}
 		p.text(",")
 		following := closing
-		if index+1 < len(values) {
-			following = syntax.ExpressionPosition(values[index+1])
+		if index + 1 < len(values) {
+			following = syntax.ExpressionPosition(values[index + 1])
 		}
 		p.trailingLine(p.commaEnd(end, following))
 		p.newline()
@@ -293,7 +293,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	keyWidths := p.compositeKeyWidths(value.Elements)
 	for index, element := range value.Elements {
 		if index > 0 && p.blankBetween(
-			syntax.ExpressionEnd(value.Elements[index-1]),
+			syntax.ExpressionEnd(value.Elements[index - 1]),
 			syntax.ExpressionPosition(element),
 		) {
 			p.blankline()
@@ -301,8 +301,8 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		p.compositeElement(element, keyWidths[index])
 		p.text(",")
 		following := value.Rbrace
-		if index+1 < len(value.Elements) {
-			following = syntax.ExpressionPosition(value.Elements[index+1])
+		if index + 1 < len(value.Elements) {
+			following = syntax.ExpressionPosition(value.Elements[index + 1])
 		}
 		p.trailingLine(p.commaEnd(syntax.ExpressionEnd(element), following))
 		p.newline()
@@ -321,7 +321,7 @@ func (p *printer) compositeKeyWidths(values []%syntax.Expression) []int {
 		last := first + 1
 		for last < len(values) && compositeKeyWidth(values[last]) > 0 &&
 			!p.blankBetween(
-				syntax.ExpressionEnd(values[last-1]),
+				syntax.ExpressionEnd(values[last - 1]),
 				syntax.ExpressionPosition(values[last]),
 			) {
 			last++
@@ -349,7 +349,7 @@ func (p *printer) compositeElement(value *syntax.Expression, keyWidth int) {
 	}
 	p.expression(keyValue.Key, 0)
 	p.token(keyValue.Colon, ":")
-	p.text(strings.Repeat(" ", keyWidth-width+1))
+	p.text(strings.Repeat(" ", keyWidth - width + 1))
 	p.expression(keyValue.Value, 0)
 }
 
@@ -428,7 +428,7 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 	for first := 0; first < len(value.List); {
 		last := first + 1
 		for last < len(value.List) &&
-			!p.blankBetween(value.List[last-1].Stop, value.List[last].Start) {
+			!p.blankBetween(value.List[last - 1].Stop, value.List[last].Start) {
 			last++
 		}
 		width := 0
@@ -464,8 +464,8 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 			p.field(item)
 			p.text(",")
 			following := value.Closing
-			if index+1 < len(value.List) {
-				following = value.List[index+1].Start
+			if index + 1 < len(value.List) {
+				following = value.List[index + 1].Start
 			}
 			p.trailingLine(p.commaEnd(item.Stop, following))
 			p.newline()

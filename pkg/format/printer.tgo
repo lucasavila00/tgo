@@ -31,11 +31,14 @@ func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer
 	comments := []sourceComment(nil)
 	for _, group := range file.Comments {
 		for _, item := range group.List {
-			comments = append(comments, sourceComment{
-				start: item.Start,
-				stop:  item.Stop,
-				text:  item.Text,
-			})
+			comments = append(
+				comments,
+				sourceComment{
+					start: item.Start,
+					stop:  item.Stop,
+					text:  item.Text,
+				},
+			)
 		}
 	}
 	return &printer{
@@ -55,7 +58,7 @@ func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer
 func (p *printer) printFile() []byte {
 	p.before(p.file.Package)
 	if p.comment > 0 {
-		leading := p.comments[p.comment-1].text
+		leading := p.comments[p.comment - 1].text
 		if strings.HasPrefix(leading, "//go:build") ||
 			strings.HasPrefix(leading, "// +build") {
 			p.blankline()
@@ -84,8 +87,8 @@ func (p *printer) printFile() []byte {
 
 func (p *printer) finish() {
 	data := p.output.Bytes()
-	for len(data) > 0 && (data[len(data)-1] == ' ' || data[len(data)-1] == '\t' ||
-		data[len(data)-1] == '\n') {
+	for len(data) > 0 && (data[len(data) - 1] == ' ' || data[len(data) - 1] == '\t' ||
+		data[len(data) - 1] == '\n') {
 		p.output.Truncate(len(data) - 1)
 		data = p.output.Bytes()
 	}
@@ -107,7 +110,7 @@ func (p *printer) before(position token.Pos) {
 			p.space()
 		} else {
 			p.newline()
-			if last.IsValid() && start.Line > last.Line+1 {
+			if last.IsValid() && start.Line > last.Line + 1 {
 				p.blankline()
 			}
 		}
@@ -124,7 +127,7 @@ func (p *printer) before(position token.Pos) {
 	if wroteComment {
 		last := p.position(p.lastSource)
 		next := p.position(position)
-		if last.IsValid() && next.IsValid() && next.Line > last.Line+1 {
+		if last.IsValid() && next.IsValid() && next.Line > last.Line + 1 {
 			p.blankline()
 		}
 	}
@@ -159,8 +162,8 @@ func (p *printer) space() {
 		return
 	}
 	data := p.output.Bytes()
-	if len(data) > 0 && data[len(data)-1] != ' ' && data[len(data)-1] != '\t' &&
-		data[len(data)-1] != '\n' {
+	if len(data) > 0 && data[len(data) - 1] != ' ' && data[len(data) - 1] != '\t' &&
+		data[len(data) - 1] != '\n' {
 		p.output.WriteByte(' ')
 	}
 }
@@ -172,7 +175,7 @@ func (p *printer) newline() {
 		p.lineBreaks = 0
 		return
 	}
-	for len(data) > 0 && (data[len(data)-1] == ' ' || data[len(data)-1] == '\t') {
+	for len(data) > 0 && (data[len(data) - 1] == ' ' || data[len(data) - 1] == '\t') {
 		p.output.Truncate(len(data) - 1)
 		data = p.output.Bytes()
 	}
@@ -250,7 +253,7 @@ func (p *printer) multiline(start token.Pos, stop token.Pos) bool {
 func (p *printer) blankBetween(stop token.Pos, start token.Pos) bool {
 	left := p.position(stop)
 	right := p.position(start)
-	return left.IsValid() && right.IsValid() && right.Line > left.Line+1
+	return left.IsValid() && right.IsValid() && right.Line > left.Line + 1
 }
 
 func (p *printer) blankline() {

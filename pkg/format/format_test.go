@@ -155,6 +155,10 @@ func TestSourceRepositoryCorpus(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			if (strings.HasPrefix(name, "pkg/format/") || name == "cmd/tgofmt/main.tgo") &&
+				!bytes.Equal(formatted, source) {
+				t.Fatal("formatter source is not in canonical format")
+			}
 			again, err := format.Source(path, formatted)
 			if err != nil {
 				t.Fatal(err)
