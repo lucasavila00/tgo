@@ -78,7 +78,7 @@ func (p *printer) alignedSpecification(
 }
 
 func (p *printer) valueSpecificationWidths(
-	values []%syntax.Specification,
+	values []*syntax.Specification,
 ) ([]int, []int) {
 	nameWidths := make([]int, len(values))
 	typeWidths := make([]int, len(values))
