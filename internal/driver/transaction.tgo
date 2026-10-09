@@ -1,0 +1,256 @@
+package driver
+
+import (
+	"bytes"
+	cryptorand "crypto/rand"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+
+	"tgo/internal/outputname"
+)
+
+func (b *packageBuilder) writeFile(path string, data []byte) error {
+	if b.changed(path) {
+		return fmt.Errorf("output changed twice in one build: %s", path)
+	}
+	previous, err := readFileSnapshot(path)
+	if err != nil {
+		return err
+	}
+	mode := fs.FileMode(0o644)
+	if previous.exists {
+		mode = previous.mode
+	}
+	changed, writtenMode, err := atomicWriteFile(path, data, mode, previous.exists)
+	if changed {
+		b.previous[path] = previous
+		b.current[path] = previousFile{data: data, mode: writtenMode, exists: true}
+		b.order = append(b.order, path)
+	}
+	return err
+}
+
+// removeStaleOutputs removes generated files with no current tgo source.
+func (b *packageBuilder) removeStaleOutputs(
+	unit *packageUnit,
+	outputs map[string]bool,
+) error {
+	entries, err := os.ReadDir(unit.Dir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		path := filepath.Join(unit.Dir, entry.Name())
+		if !staleOutput(entry, path, outputs) {
+			continue
+		}
+		if err := b.removeGenerated(path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// staleOutput reports whether a generated file is absent from new outputs.
+func staleOutput(entry os.DirEntry, path string, outputs map[string]bool) bool {
+	if !outputname.Reserved(entry.Name()) {
+		return false
+	}
+	return !outputs[path]
+}
+
+// removeGenerated removes a tgo-owned file and saves it for rollback.
+func (b *packageBuilder) removeGenerated(path string) error {
+	if b.changed(path) {
+		return fmt.Errorf("output changed twice in one build: %s", path)
+	}
+	owned, err := generatedFile(path)
+	if err != nil {
+		return err
+	}
+	if !owned {
+		return nil
+	}
+	previous, err := readFileSnapshot(path)
+	if err != nil {
+		return err
+	}
+	if !previous.exists {
+		return fmt.Errorf("output changed during build: %s", path)
+	}
+	changed, err := atomicRemoveFile(path)
+	if changed {
+		b.previous[path] = previous
+		b.current[path] = previousFile{}
+		b.order = append(b.order, path)
+	}
+	return err
+}
+
+// restore puts every changed output back after a failed build.
+func (b *packageBuilder) restore() error {
+	var failures []error
+	for index := len(b.order) - 1; index >= 0; index-- {
+		path := b.order[index]
+		previous := b.previous[path]
+		if err := fileUnchanged(path, b.current[path]); err != nil {
+			failures = append(failures, err)
+			continue
+		}
+		var err error
+		if previous.exists {
+			_, _, err = atomicWriteFile(path, previous.data, previous.mode, true)
+		} else {
+			_, err = atomicRemoveFile(path)
+		}
+		if err != nil {
+			failures = append(failures, err)
+		}
+	}
+	return errors.Join(failures...)
+}
+
+// changed reports whether this transaction already mutated one path.
+func (b *packageBuilder) changed(path string) bool {
+	_, changed := b.previous[path]
+	return changed
+}
+
+// readFileSnapshot reads one regular file without following a known symlink.
+func readFileSnapshot(path string) (previousFile, error) {
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return previousFile{}, nil
+	}
+	if err != nil {
+		return previousFile{}, err
+	}
+	if !info.Mode().IsRegular() {
+		return previousFile{}, fmt.Errorf("refusing non-regular output %s", path)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return previousFile{}, err
+	}
+	opened, err := file.Stat()
+	if err != nil {
+		return previousFile{}, errors.Join(err, file.Close())
+	}
+	if !os.SameFile(info, opened) {
+		changeErr := fmt.Errorf("output changed while opening: %s", path)
+		return previousFile{}, errors.Join(changeErr, file.Close())
+	}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return previousFile{}, errors.Join(err, file.Close())
+	}
+	if err := file.Close(); err != nil {
+		return previousFile{}, err
+	}
+	mode := chmodMode(info.Mode())
+	return previousFile{data: data, mode: mode, exists: true}, nil
+}
+
+// atomicWriteFile writes, syncs, and replaces one file in its directory.
+func atomicWriteFile(
+	path string,
+	data []byte,
+	mode fs.FileMode,
+	preserveMode bool,
+) (changed bool, writtenMode fs.FileMode, err error) {
+	temporaryPath := filepath.Join(
+		filepath.Dir(path),
+		"."+filepath.Base(path)+".tmp-"+cryptorand.Text(),
+	)
+	temporary, err := os.OpenFile(
+		temporaryPath,
+		os.O_CREATE|os.O_EXCL|os.O_WRONLY,
+		mode,
+	)
+	if err != nil {
+		return false, 0, err
+	}
+	closed := false
+	published := false
+	defer func() {
+		if !closed {
+			err = errors.Join(err, temporary.Close())
+		}
+		if !published {
+			removeErr := os.Remove(temporaryPath)
+			if removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+				err = errors.Join(err, removeErr)
+			}
+		}
+	}()
+	if _, err := temporary.Write(data); err != nil {
+		return false, 0, err
+	}
+	if preserveMode {
+		if err := temporary.Chmod(mode); err != nil {
+			return false, 0, err
+		}
+	}
+	if err := temporary.Sync(); err != nil {
+		return false, 0, err
+	}
+	temporaryInfo, err := temporary.Stat()
+	if err != nil {
+		return false, 0, err
+	}
+	writtenMode = chmodMode(temporaryInfo.Mode())
+	closeErr := temporary.Close()
+	closed = true
+	if closeErr != nil {
+		return false, 0, closeErr
+	}
+	if err := replaceFile(temporaryPath, path); err != nil {
+		return false, 0, err
+	}
+	published = true
+	if err := syncDirectory(filepath.Dir(path)); err != nil {
+		return true, writtenMode, err
+	}
+	return true, writtenMode, nil
+}
+
+// chmodMode returns file bits that chmod can preserve.
+func chmodMode(mode fs.FileMode) fs.FileMode {
+	return mode & (fs.ModePerm | fs.ModeSetuid | fs.ModeSetgid | fs.ModeSticky)
+}
+
+// atomicRemoveFile removes one file and syncs its directory.
+func atomicRemoveFile(path string) (bool, error) {
+	if err := os.Remove(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	if err := syncDirectory(filepath.Dir(path)); err != nil {
+		return true, err
+	}
+	return true, nil
+}
+
+// fileUnchanged checks that no other process changed one output state.
+func fileUnchanged(path string, expected previousFile) error {
+	actual, err := readFileSnapshot(path)
+	if err != nil {
+		return err
+	}
+	if actual.exists != expected.exists {
+		return fmt.Errorf("output changed during build: %s", path)
+	}
+	if !actual.exists {
+		return nil
+	}
+	if actual.mode != expected.mode || !bytes.Equal(actual.data, expected.data) {
+		return fmt.Errorf("output changed during build: %s", path)
+	}
+	return nil
+}

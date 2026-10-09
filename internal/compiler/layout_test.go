@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"go/ast"
+	"go/importer"
 	"go/token"
 	"go/types"
 	"testing"
@@ -69,6 +70,7 @@ func layoutPackage(t *testing.T, data string) *packageUnit {
 	p := &packageUnit{
 		Path: "sample", fs: files, Sources: []*source{parsed},
 		Files: []*ast.File{parsed.File}, Models: make(map[string]*model),
+		importer: importer.Default(),
 	}
 	for _, declaration := range parsed.Models {
 		p.Models[declaration.Name] = declaration

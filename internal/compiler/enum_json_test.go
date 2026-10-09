@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"go/ast"
+	"go/importer"
 	"go/token"
 	"strings"
 	"testing"
@@ -132,10 +133,11 @@ func TestEnumJSONInternalFields(t *testing.T) {
 				t.Fatal(err)
 			}
 			p := &packageUnit{Path: "sample",
-				fs:      files,
-				Sources: []*source{parsed},
-				Files:   []*ast.File{parsed.File},
-				Models:  make(map[string]*model)}
+				fs:       files,
+				Sources:  []*source{parsed},
+				Files:    []*ast.File{parsed.File},
+				Models:   make(map[string]*model),
+				importer: importer.Default()}
 			for _, model := range parsed.Models {
 				p.Models[model.Name] = model
 			}
@@ -177,10 +179,11 @@ func TestVerifyEnumJSONMethods(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := &packageUnit{Path: "sample",
-		fs:      files,
-		Sources: []*source{parsed},
-		Files:   []*ast.File{parsed.File},
-		Models:  make(map[string]*model)}
+		fs:       files,
+		Sources:  []*source{parsed},
+		Files:    []*ast.File{parsed.File},
+		Models:   make(map[string]*model),
+		importer: importer.Default()}
 	for _, model := range parsed.Models {
 		p.Models[model.Name] = model
 	}

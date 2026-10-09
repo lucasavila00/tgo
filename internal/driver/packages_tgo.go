@@ -1,0 +1,399 @@
+package driver
+
+import (
+	"errors"
+	"fmt"
+	"go/build"
+	"go/token"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"tgo/internal/compiler"
+	"tgo/internal/outputname"
+	"tgo/pkg/syntax"
+)
+
+type packageUnit struct {
+	Dir, Path      string
+	Module         string
+	Sources        []compiler.File
+	GoFiles        []compiler.File
+	Files          []*syntax.File
+	Imports        map[string]*packageUnit
+	sourcePaths    []string
+	matchingPaths  []string
+	generatedPaths []string
+	context        *build.Context
+	usesC          bool
+	sourcesMatched bool
+	loaded         bool
+	matchError     error
+	loadError      error
+	fs             *token.FileSet
+	compiled       *compiler.CompiledPackage
+}
+
+// outputPath returns the Go output path while preserving target suffixes.
+func (p *packageUnit) outputPath(sourcePath string) string {
+	return outputname.Path(sourcePath)
+}
+
+// discover indexes tgo packages without parsing their source.
+func discover(
+	root string,
+	module string,
+	context *build.Context,
+) (map[string]*packageUnit, error) {
+	discovery := packageDiscovery{
+		root: root, module: module, context: context,
+		packages: make(map[string]*packageUnit),
+	}
+	err := filepath.WalkDir(root, discovery.visit)
+	if err != nil {
+		return nil, err
+	}
+	for _, unit := range discovery.packages {
+		unit.Imports = discovery.packages
+	}
+	return discovery.packages, nil
+}
+
+type packageDiscovery struct {
+	root     string
+	module   string
+	context  *build.Context
+	packages map[string]*packageUnit
+}
+
+// visit adds tgo files and skips directories outside the active module.
+func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) error {
+	if walkErr != nil {
+		return walkErr
+	}
+	if entry.IsDir() {
+		return d.visitDirectory(path, entry.Name())
+	}
+	switch {
+	case strings.HasSuffix(entry.Name(), ".tgo"):
+		if strings.HasSuffix(entry.Name(), "_test.tgo") {
+			return nil
+		}
+		return d.addSource(path)
+	case outputname.Reserved(entry.Name()):
+		return d.addGeneratedCandidate(path)
+	default:
+		return nil
+	}
+}
+
+// visitDirectory skips hidden, vendor, and nested module directories.
+func (d *packageDiscovery) visitDirectory(path, name string) error {
+	if path == d.root {
+		return nil
+	}
+	if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") ||
+		name == "testdata" || name == "vendor" {
+		return filepath.SkipDir
+	}
+	if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+		return filepath.SkipDir
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
+// addSource records one possible tgo source file.
+func (d *packageDiscovery) addSource(path string) error {
+	unit, err := d.packageFor(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	unit.sourcePaths = append(unit.sourcePaths, path)
+	return nil
+}
+
+// addGeneratedCandidate records an output that can keep an orphan package visible.
+func (d *packageDiscovery) addGeneratedCandidate(path string) error {
+	unit, err := d.packageFor(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	unit.generatedPaths = append(unit.generatedPaths, path)
+	return nil
+}
+
+// packageFor returns the indexed package for one directory.
+func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
+	importPath, err := d.importPath(directory)
+	if err != nil {
+		return nil, err
+	}
+	unit := d.packages[importPath]
+	if unit == nil {
+		unit = &packageUnit{
+			Dir:     directory,
+			Path:    importPath,
+			Module:  d.module,
+			context: d.context,
+			fs:      token.NewFileSet(),
+		}
+		d.packages[importPath] = unit
+	}
+	return unit, nil
+}
+
+// importPath maps a package directory to its module import path.
+func (d *packageDiscovery) importPath(directory string) (string, error) {
+	relative, err := filepath.Rel(d.root, directory)
+	if err != nil {
+		return "", err
+	}
+	if relative == "." {
+		return d.module, nil
+	}
+	return d.module + "/" + filepath.ToSlash(relative), nil
+}
+
+// readSource loads one TGo source and its imports.
+func (p *packageUnit) readSource(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+	if err != nil {
+		return err
+	}
+	p.Sources = append(p.Sources, compiler.File{Name: path, Data: data})
+	p.Files = append(p.Files, file)
+	return nil
+}
+
+// matchingSources returns source files enabled for the current Go target.
+func (p *packageUnit) matchingSources() ([]string, error) {
+	if p.sourcesMatched {
+		return p.matchingPaths, p.matchError
+	}
+	p.sourcesMatched = true
+	for _, path := range p.sourcePaths {
+		match, err := matchTgoFile(p.context, path)
+		if err != nil {
+			p.matchError = err
+			return nil, err
+		}
+		if !match {
+			continue
+		}
+		cgo, err := fileImportsC(path)
+		if err != nil {
+			p.matchError = err
+			return nil, err
+		}
+		if cgo && !p.context.CgoEnabled {
+			continue
+		}
+		p.usesC = p.usesC || cgo
+		p.matchingPaths = append(p.matchingPaths, path)
+	}
+	return p.matchingPaths, nil
+}
+
+// matchTgoFile applies Go build constraints to one tgo file.
+func matchTgoFile(context *build.Context, path string) (bool, error) {
+	directory := filepath.Dir(path)
+	name := filepath.Base(path)
+	fakeName := strings.TrimSuffix(name, ".tgo") + ".s"
+	fakePath := filepath.Clean(filepath.Join(directory, fakeName))
+	realPath := filepath.Clean(path)
+	fileContext := *context
+	fileContext.OpenFile = func(requested string) (io.ReadCloser, error) {
+		if filepath.Clean(requested) == fakePath {
+			return os.Open(realPath)
+		}
+		return os.Open(requested)
+	}
+	match, err := fileContext.MatchFile(directory, fakeName)
+	if err == nil {
+		return match, nil
+	}
+	message := err.Error()
+	if detail, ok := strings.CutPrefix(message, fakeName); ok {
+		message = path + detail
+	}
+	return false, errors.New(message)
+}
+
+// available reports whether this package has active source or orphan output.
+func (p *packageUnit) available() (bool, error) {
+	paths, err := p.matchingSources()
+	if err != nil {
+		return false, err
+	}
+	if len(paths) > 0 {
+		return true, nil
+	}
+	for _, path := range p.generatedPaths {
+		owned, err := generatedFile(path)
+		if err != nil {
+			return false, err
+		}
+		if owned && !p.sourceOwnsOutput(path) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// sourceOwnsOutput reports whether a current source owns one generated path.
+func (p *packageUnit) sourceOwnsOutput(path string) bool {
+	for _, sourcePath := range p.sourcePaths {
+		if p.outputPath(sourcePath) == path {
+			return true
+		}
+	}
+	return false
+}
+
+// load parses one selected package and its active Go files.
+func (p *packageUnit) load() error {
+	if p.loaded {
+		return p.loadError
+	}
+	p.loaded = true
+	paths, err := p.matchingSources()
+	if err != nil {
+		p.loadError = err
+		return err
+	}
+	for _, path := range paths {
+		if err := p.readSource(path); err != nil {
+			p.loadError = err
+			return err
+		}
+	}
+	if len(paths) > 0 {
+		p.loadError = p.readGoFiles()
+	}
+	return p.loadError
+}
+
+// readGoFiles loads user Go files that take part in package type checks.
+func (p *packageUnit) readGoFiles() error {
+	entries, err := os.ReadDir(p.Dir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		file, data, cgo, err := activeGoFile(p.context, p.Dir, entry)
+		if err != nil {
+			return err
+		}
+		if file == nil {
+			continue
+		}
+		path := filepath.Join(p.Dir, entry.Name())
+		p.usesC = p.usesC || cgo
+		p.Files = append(p.Files, file)
+		p.GoFiles = append(p.GoFiles, compiler.File{Name: path, Data: data})
+	}
+	return nil
+}
+
+// generatedFile reports whether a reserved output is a regular file.
+func generatedFile(path string) (bool, error) {
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if !info.Mode().IsRegular() {
+		return false, fmt.Errorf("refusing non-regular output %s", path)
+	}
+	return true, nil
+}
+
+// selectPackages expands command patterns to tgo package paths.
+func selectPackages(
+	directory string,
+	patterns []string,
+	packages map[string]*packageUnit,
+) ([]string, error) {
+	if len(patterns) == 0 {
+		patterns = []string{"."}
+	}
+	selected := make(map[string]bool)
+	for _, pattern := range patterns {
+		target, recursive := packagePattern(directory, pattern)
+		matched := false
+		for _, path := range sortedPackagePaths(packages) {
+			unit := packages[path]
+			if !packageMatches(unit, path, pattern, target, recursive) {
+				continue
+			}
+			available, err := unit.available()
+			if err != nil {
+				return nil, err
+			}
+			if !available {
+				continue
+			}
+			selected[path] = true
+			matched = true
+		}
+		if !matched {
+			return nil, fmt.Errorf("%s: no tgo packages", pattern)
+		}
+	}
+	paths := make([]string, 0, len(selected))
+	for path := range selected {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	return paths, nil
+}
+
+// sortedPackagePaths returns stable package map keys.
+func sortedPackagePaths(packages map[string]*packageUnit) []string {
+	paths := make([]string, 0, len(packages))
+	for path := range packages {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+// packagePattern returns the directory and recursion rule for a pattern.
+func packagePattern(directory, pattern string) (string, bool) {
+	recursive := strings.HasSuffix(pattern, "/...") || pattern == "..."
+	target := strings.TrimSuffix(pattern, "/...")
+	if target == "..." {
+		target = "."
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(directory, target)
+	}
+	return filepath.Clean(target), recursive
+}
+
+// packageMatches reports whether a package matches one command pattern.
+func packageMatches(
+	unit *packageUnit,
+	path string,
+	pattern string,
+	target string,
+	recursive bool,
+) bool {
+	if path == pattern || unit.Dir == target {
+		return true
+	}
+	childPrefix := target + string(filepath.Separator)
+	return recursive && strings.HasPrefix(unit.Dir, childPrefix)
+}
+

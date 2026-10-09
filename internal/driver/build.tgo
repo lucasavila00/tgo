@@ -1,0 +1,384 @@
+package driver
+
+import (
+	"errors"
+	"fmt"
+	"go/build"
+	"go/importer"
+	"go/token"
+	"io"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	"tgo/internal/compiler"
+	"tgo/internal/outputname"
+	"tgo/pkg/syntax"
+)
+
+type buildState uint8
+
+const (
+	buildNew buildState = iota
+	buildActive
+	buildDone
+)
+
+type previousFile struct {
+	data   []byte
+	mode   fs.FileMode
+	exists bool
+}
+
+type packageBuilder struct {
+	packages map[string]*packageUnit
+	root     string
+	module   string
+	context  *build.Context
+	states   map[string]buildState
+	previous map[string]previousFile
+	current  map[string]previousFile
+	order    []string
+	write    bool
+}
+
+// build compiles dependencies before one package and writes its outputs.
+func (b *packageBuilder) build(path string) error {
+	switch b.states[path] {
+	case buildDone:
+		return nil
+	case buildActive:
+		return fmt.Errorf("import cycle at %s", path)
+	}
+	b.states[path] = buildActive
+	unit := b.packages[path]
+	if err := unit.load(); err != nil {
+		return err
+	}
+	if len(unit.Sources) == 0 {
+		imports, err := b.localGoImports(path)
+		if err != nil {
+			return err
+		}
+		for _, dependency := range imports {
+			if err := b.buildImport(dependency); err != nil {
+				return err
+			}
+		}
+		if b.write {
+			if err := b.removeStaleOutputs(unit, expectedOutputs(unit, nil)); err != nil {
+				return err
+			}
+		}
+		b.states[path] = buildDone
+		return nil
+	}
+	for _, dependency := range importsOf(unit.Files) {
+		if err := b.buildImport(dependency); err != nil {
+			return err
+		}
+	}
+	outputs, err := b.compile(unit)
+	if err != nil {
+		return err
+	}
+	if b.write {
+		for _, name := range sortedOutputPaths(outputs) {
+			data := outputs[name]
+			if err := b.writeFile(name, data); err != nil {
+				return err
+			}
+		}
+		if err := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs)); err != nil {
+			return err
+		}
+	}
+	b.states[path] = buildDone
+	return nil
+}
+
+// compile sends one prepared package to the in-memory compiler.
+func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
+	paths, err := loadExportPaths(unit)
+	if err != nil {
+		return nil, err
+	}
+	packageImporter := importer.ForCompiler(
+		unit.fs, "gc", func(path string) (io.ReadCloser, error) {
+			export := paths[path]
+			if export == "" {
+				export, err = loadExportPath(unit.Dir, path)
+				if err != nil {
+					return nil, err
+				}
+				paths[path] = export
+			}
+			return os.Open(export)
+		},
+	)
+	imports := make(map[string]*compiler.CompiledPackage)
+	for _, path := range importsOf(unit.Files) {
+		if dependency := unit.Imports[path]; dependency != nil && dependency.compiled != nil {
+			imports[path] = dependency.compiled
+		}
+	}
+	compiled, diagnostics := compiler.Compile(compiler.PackageInput{
+		Directory: unit.Dir,
+		Path:      unit.Path,
+		Sources:   unit.Sources,
+		GoFiles:   unit.GoFiles,
+		Imports:   imports,
+		FileSet:   unit.fs,
+		Importer:  packageImporter,
+		UsesC:     unit.usesC,
+	})
+	if len(diagnostics) != 0 {
+		return nil, errors.Join(diagnostics...)
+	}
+	unit.compiled = compiled
+	outputs := make(map[string][]byte, len(compiled.Outputs))
+	for sourcePath, data := range compiled.Outputs {
+		outputs[unit.outputPath(sourcePath)] = data
+	}
+	return outputs, nil
+}
+
+// loadExportPath finds one import file requested during type checking.
+func loadExportPath(directory string, path string) (string, error) {
+	command := exec.Command("go", "list", "-export", "-f", "{{.Export}}", path)
+	command.Dir = directory
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("load %s: %s", path, output)
+	}
+	export := strings.TrimSpace(string(output))
+	if export == "" {
+		return "", fmt.Errorf("load %s: missing export data", path)
+	}
+	return export, nil
+}
+
+// loadExportPaths finds import files with one Go command.
+func loadExportPaths(unit *packageUnit) (map[string]string, error) {
+	imports := importsOf(unit.Files)
+	if len(imports) == 0 {
+		return map[string]string{}, nil
+	}
+	arguments := make([]string, 0, 5+len(imports))
+	arguments = append(
+		arguments,
+		"list", "-deps", "-export", "-f",
+		"{{if .Export}}{{.ImportPath}}\t{{.Export}}{{end}}",
+	)
+	command := exec.Command("go", append(arguments, imports...)...)
+	command.Dir = unit.Dir
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("load imports: %s", output)
+	}
+	paths := make(map[string]string)
+	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+		path, export, found := strings.Cut(line, "\t")
+		if found {
+			paths[path] = export
+		}
+	}
+	return paths, nil
+}
+
+// buildImport follows local Go packages until it reaches each tgo package.
+func (b *packageBuilder) buildImport(path string) error {
+	if dependency := b.packages[path]; dependency != nil {
+		available, err := dependency.available()
+		if err != nil {
+			return err
+		}
+		if available {
+			return b.build(path)
+		}
+	}
+	if path != b.module && !strings.HasPrefix(path, b.module+"/") {
+		return nil
+	}
+	switch b.states[path] {
+	case buildDone:
+		return nil
+	case buildActive:
+		return fmt.Errorf("import cycle at %s", path)
+	}
+	b.states[path] = buildActive
+	imports, err := b.localGoImports(path)
+	if err != nil {
+		return err
+	}
+	for _, dependency := range imports {
+		if err := b.buildImport(dependency); err != nil {
+			return err
+		}
+	}
+	b.states[path] = buildDone
+	return nil
+}
+
+// localGoImports reads active Go imports from one package in the main module.
+func (b *packageBuilder) localGoImports(path string) ([]string, error) {
+	relative := strings.TrimPrefix(path, b.module)
+	relative = strings.TrimPrefix(relative, "/")
+	directory := filepath.Clean(filepath.Join(b.root, filepath.FromSlash(relative)))
+	inside, err := filepath.Rel(b.root, directory)
+	if err != nil {
+		return nil, err
+	}
+	if inside == ".." || strings.HasPrefix(inside, ".."+string(filepath.Separator)) {
+		return nil, nil
+	}
+	nested, err := nestedModule(directory, b.root)
+	if err != nil {
+		return nil, err
+	}
+	if nested {
+		return nil, nil
+	}
+	entries, err := os.ReadDir(directory)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	files := make([]*syntax.File, 0)
+	for _, entry := range entries {
+		file, _, _, err := activeGoFile(b.context, directory, entry)
+		if err != nil {
+			return nil, err
+		}
+		if file != nil {
+			files = append(files, file)
+		}
+	}
+	return importsOf(files), nil
+}
+
+// activeGoFile parses one active user Go file.
+func activeGoFile(
+	context *build.Context,
+	directory string,
+	entry os.DirEntry,
+) (*syntax.File, []byte, bool, error) {
+	name := entry.Name()
+	if entry.IsDir() || !strings.HasSuffix(name, ".go") ||
+		strings.HasSuffix(name, "_test.go") {
+		return nil, nil, false, nil
+	}
+	path := filepath.Join(directory, name)
+	if outputname.Reserved(name) {
+		owned, err := generatedFile(path)
+		if err != nil || owned {
+			return nil, nil, false, err
+		}
+	}
+	matches, err := context.MatchFile(directory, name)
+	if err != nil || !matches {
+		return nil, nil, false, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	file, err := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	cgo := importsC(file)
+	if cgo && !context.CgoEnabled {
+		return nil, nil, false, nil
+	}
+	return file, data, cgo, nil
+}
+
+// nestedModule reports whether a directory belongs to another module.
+func nestedModule(directory string, root string) (bool, error) {
+	for current := directory; current != root; current = filepath.Dir(current) {
+		if _, err := os.Stat(filepath.Join(current, "go.mod")); err == nil {
+			return true, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return false, err
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// expectedOutputs includes active output and output owned by inactive source.
+func expectedOutputs(unit *packageUnit, outputs map[string][]byte) map[string]bool {
+	expected := make(map[string]bool, len(outputs)+len(unit.sourcePaths))
+	for path := range outputs {
+		expected[path] = true
+	}
+	for _, sourcePath := range unit.sourcePaths {
+		expected[unit.outputPath(sourcePath)] = true
+	}
+	return expected
+}
+
+// sortedOutputPaths returns stable generated output map keys.
+func sortedOutputPaths(outputs map[string][]byte) []string {
+	paths := make([]string, 0, len(outputs))
+	for path := range outputs {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+// importsOf returns the sorted import paths from a set of files.
+func importsOf(files []*syntax.File) []string {
+	imports := make(map[string]bool)
+	for _, file := range files {
+		for _, spec := range file.Imports {
+			path, err := strconv.Unquote(spec.Path.Value)
+			if err == nil && path != "C" {
+				imports[path] = true
+			}
+		}
+	}
+	paths := make([]string, 0, len(imports))
+	for path := range imports {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+// fileImportsC reports whether one source file imports C.
+func fileImportsC(path string) (bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false, err
+	}
+	file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+	if err != nil {
+		return false, err
+	}
+	return importsC(file), nil
+}
+
+// importsC reports whether one parsed file imports C.
+func importsC(file *syntax.File) bool {
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err == nil && path == "C" {
+			return true
+		}
+	}
+	return false
+}
+
+// write replaces one generated file and saves its prior state.
