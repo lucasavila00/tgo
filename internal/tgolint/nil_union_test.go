@@ -139,20 +139,35 @@ func subject(%s) {
 	if err != nil {
 		return nil, err
 	}
+	if file == nil {
+		return nil, fmt.Errorf("load sample package syntax")
+	}
+	fileSet := loadedPackage.Fset
+	if fileSet == nil {
+		return nil, fmt.Errorf("load sample package file set")
+	}
+	typeInfo := loadedPackage.TypesInfo
+	if typeInfo == nil {
+		return nil, fmt.Errorf("load sample package type facts")
+	}
+	packageTypes := loadedPackage.Types
+	if packageTypes == nil {
+		return nil, fmt.Errorf("load sample package facts")
+	}
 	diagnostics := []analysis.Diagnostic(nil)
 	pass := &analysis.Pass{
-		Fset: loadedPackage.Fset, Pkg: loadedPackage.Types,
+		Fset: fileSet, Pkg: packageTypes,
 		Report: func(diagnostic analysis.Diagnostic) {
 			diagnostics = append(diagnostics, diagnostic)
 		},
 		ImportObjectFact: func(types.Object, analysis.Fact) bool { return false },
 	}
-	facts := sourcefacts.New(file, loadedPackage.TypesInfo, loadedPackage.Fset)
+	facts := sourcefacts.New(file, typeInfo, fileSet)
 	environment := newNilEnvironment(
-		pass, []*syntax.File{file}, facts, loadedPackage.Types, nil,
+		pass, singleNilEnvironmentFile(file), facts, packageTypes, nil,
 	)
 	environment.collectNilContracts()
-	need, _ := loadedPackage.Types.Scope().Lookup("need").(*types.Func)
+	need, _ := packageTypes.Scope().Lookup("need").(*types.Func)
 	environment.contracts[need] = nilContract{"p0": true}
 	environment.checkNilFiles()
 	return diagnostics, nil

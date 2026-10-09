@@ -314,7 +314,10 @@ func (e *nilEnvironment) zeroNilType(target *syntax.Expression) nilType {
 
 func (e *nilEnvironment) newNilTarget(target *syntax.Expression) bool {
 	name := syntax.IdentifierExpressionOf(target)
-	return name != nil && e.facts.DefinitionName(name) != nil
+	if name == nil {
+		return false
+	}
+	return e.facts.DefinitionName(name) != nil
 }
 
 func isNilDiscard(target *syntax.Expression) bool {
@@ -326,10 +329,10 @@ func (e *nilEnvironment) inferNilContracts(
 	names []*syntax.Identifier,
 	values []*syntax.Expression,
 ) {
-	targets := make([]*syntax.Expression, len(names))
-	for index, name := range names {
+	targets := make([]*syntax.Expression, 0, len(names))
+	for _, name := range names {
 		value := syntax.ExpressionIdentifier{Value: name}.Expression()
-		targets[index] = &value
+		targets = append(targets, &value)
 	}
 	e.inferNilExpressionContracts(targets, values)
 }
@@ -388,10 +391,10 @@ func (e *nilEnvironment) transferNilValues(
 	names []*syntax.Identifier,
 	values []*syntax.Expression,
 ) {
-	left := make([]*syntax.Expression, len(names))
-	for index, name := range names {
+	left := make([]*syntax.Expression, 0, len(names))
+	for _, name := range names {
 		value := syntax.ExpressionIdentifier{Value: name}.Expression()
-		left[index] = &value
+		left = append(left, &value)
 	}
 	e.transferNilAssignmentLists(state, left, values, token.DEFINE)
 }

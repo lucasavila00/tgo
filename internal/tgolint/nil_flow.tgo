@@ -76,7 +76,7 @@ func (c %checker) analyzeTGoPackage() *compiler.AnalysisPackage {
 
 // checkNilSafety checks `%T` contracts in TGo and Go source.
 func (c %checker) checkNilSafety(analysis *compiler.AnalysisPackage) {
-	goFiles := make([]*syntax.File, 0, len(c.files))
+	goFiles := make([]%syntax.File, 0, len(c.files))
 	for _, file := range c.files {
 		if !syntaxFileGenerated(file) {
 			goFiles = append(goFiles, file)
@@ -88,10 +88,11 @@ func (c %checker) checkNilSafety(analysis *compiler.AnalysisPackage) {
 	goEnvironment.collectNilContracts()
 
 	if analysis != nil {
-		sourceFiles := make([]*syntax.File, 0, len(analysis.Sources))
+		sourceFiles := make([]%syntax.File, 0, len(analysis.Sources))
 		for _, source := range analysis.Sources {
-			sourceFiles = append(sourceFiles, source.Syntax)
+			if source.Syntax != nil { sourceFiles = append(sourceFiles, source.Syntax) }
 		}
+		if analysis.Facts == nil || analysis.Package == nil { return }
 		sourceEnvironment := newNilEnvironment(
 			c.pass, sourceFiles, analysis.Facts, analysis.Package,
 			analysis.NonNil,
@@ -176,20 +177,22 @@ func (e %nilEnvironment) checkNilGlobals() {
 
 // checkNilFunction solves and checks one function control-flow graph.
 func (e %nilEnvironment) checkNilFunction(
-	root *syntax.Node,
-	typ *syntax.FunctionType,
-	body *syntax.BlockStatement,
+	root %syntax.Node,
+	typ %syntax.FunctionType,
+	body %syntax.BlockStatement,
 ) {
 	graph := cfg.New(body, e.nilCallMayReturn)
 	entries := e.solveNilEntries(graph, e.nilEntryState(root, typ))
 	flow := &nilFlow{before: make(map[syntax.Node]*nilFlowState)}
 	e.recordNilEntries(flow, graph, entries)
 	for _, block := range graph.Blocks {
+		if block == nil { continue }
 		entry := entries[block.Index]
 		if entry == nil {
 			continue
 		}
 		state := cloneNilState(entry)
+		if state == nil { continue }
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			e.transferNilNode(state, node, root, true)
@@ -209,8 +212,8 @@ func (e %nilEnvironment) nilCallMayReturn(expression *syntax.Expression) bool {
 }
 
 func (e %nilEnvironment) nilEntryState(
-	root *syntax.Node,
-	function *syntax.FunctionType,
+	root %syntax.Node,
+	function %syntax.FunctionType,
 ) *nilFlowState {
 	state := newNilState()
 	if declaration, ok := syntax.FunctionDeclarationOf(root); ok && declaration.Receiver != nil {
@@ -299,8 +302,10 @@ func (e %nilEnvironment) solveNilEntries(
 	for len(queue) != 0 {
 		block := queue[0]
 		queue = queue[1:]
+		if block == nil { continue }
 		queued[block.Index] = false
 		state := cloneNilState(entries[block.Index])
+		if state == nil { continue }
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			e.transferNilNode(state, node, nil, false)
@@ -338,10 +343,12 @@ func (e %nilEnvironment) recordNilEntries(
 	entries []*nilFlowState,
 ) {
 	for _, block := range graph.Blocks {
+		if block == nil { continue }
 		if entries[block.Index] == nil {
 			continue
 		}
 		state := cloneNilState(entries[block.Index])
+		if state == nil { continue }
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			flow.before[node] = cloneNilState(state)

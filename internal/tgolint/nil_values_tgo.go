@@ -57,6 +57,9 @@ func (e *nilEnvironment) contractForExpression(expression *syntax.Expression) ni
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
 		return e.contractForExpression(parenthesized.Expression)
 	}
+	if propagation := nilPropagationExpressionOf(expression); propagation != nil {
+		return e.resultContract(propagation.Expression, 0)
+	}
 	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
 		return e.contractForObject(e.facts.Object(identifier))
 	}
@@ -279,6 +282,9 @@ func (e *nilEnvironment) expressionNilType(
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
 		return e.expressionNilType(parenthesized.Expression, state)
 	}
+	if propagation := nilPropagationExpressionOf(expression); propagation != nil {
+		return e.resultNilType(propagation.Expression, 0, state)
+	}
 	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
 		if unary.Operator == token.AND {
 			return nonNilType()
@@ -313,6 +319,15 @@ func (e *nilEnvironment) expressionNilType(
 		return nonNilType()
 	}
 	return declaredNilType(e.facts.Type(expression))
+}
+
+func nilPropagationExpressionOf(
+	expression *syntax.Expression,
+) *syntax.PropagationExpression {
+	if expression == nil || expression.Tag() != syntax.ExpressionTagPropagation {
+		return nil
+	}
+	return expression.PropagationPayload().Value
 }
 
 // checkNilExpression checks calls, literals, and pointer reads below an expression.

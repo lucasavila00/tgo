@@ -55,7 +55,7 @@ func (e %nilEnvironment) transferNilNode(
 		if item := syntax.DeferStatementOf(statement); item != nil {
 			e.invalidateNilExpression(state, item.Call)
 		}
-		if item := syntax.ReturnStatementOf(statement); item != nil {
+		if item := syntax.ReturnStatementOf(statement); item != nil && function != nil {
 			e.invalidateNilExpressions(state, item.Results)
 		}
 	}
@@ -94,7 +94,7 @@ func (e %nilEnvironment) checkNilNode(
 			}
 		}
 		if item := syntax.ReturnStatementOf(statement); item != nil {
-			e.checkNilReturn(state, item, function)
+			if function != nil { e.checkNilReturn(state, item, function) }
 		}
 		if item := syntax.SendStatementOf(statement); item != nil {
 			channel := e.contractForExpression(item.Channel)
@@ -125,7 +125,7 @@ func (e %nilEnvironment) checkNilNode(
 // checkNilAssignment checks values before an assignment changes facts.
 func (e %nilEnvironment) checkNilAssignment(
 	state *nilFlowState,
-	statement *syntax.AssignmentStatement,
+	statement %syntax.AssignmentStatement,
 ) {
 	for _, target := range statement.Left {
 		e.checkNilExpression(target, state)
@@ -165,7 +165,7 @@ func (e %nilEnvironment) checkNilAssignment(
 
 func (e %nilEnvironment) checkNilValues(
 	state *nilFlowState,
-	specification *syntax.ValueSpecification,
+	specification %syntax.ValueSpecification,
 ) {
 	for _, value := range specification.Values {
 		e.checkNilExpression(value, state)
@@ -209,8 +209,8 @@ func (e %nilEnvironment) checkNilValues(
 // checkNilReturn checks each result against the function contract.
 func (e %nilEnvironment) checkNilReturn(
 	state *nilFlowState,
-	statement *syntax.ReturnStatement,
-	function *syntax.Node,
+	statement %syntax.ReturnStatement,
+	function %syntax.Node,
 ) {
 	contract := e.functionNodeContract(function)
 	if len(statement.Results) == 0 {
@@ -244,8 +244,8 @@ func (e %nilEnvironment) checkNilReturn(
 
 func (e %nilEnvironment) checkNilNamedResults(
 	state *nilFlowState,
-	statement *syntax.ReturnStatement,
-	function *syntax.Node,
+	statement %syntax.ReturnStatement,
+	function %syntax.Node,
 	contract nilContract,
 ) {
 	var resultList *syntax.FieldList = nil
@@ -281,7 +281,7 @@ func (e %nilEnvironment) checkNilNamedResults(
 	}
 }
 
-func (e %nilEnvironment) functionNodeContract(function *syntax.Node) nilContract {
+func (e %nilEnvironment) functionNodeContract(function %syntax.Node) nilContract {
 	if declaration, ok := syntax.FunctionDeclarationOf(function); ok {
 		return e.contractForObject(e.facts.DefinitionName(declaration.Name))
 	}
@@ -291,12 +291,12 @@ func (e %nilEnvironment) functionNodeContract(function *syntax.Node) nilContract
 	return nil
 }
 
-func (e %nilEnvironment) functionSignature(function *syntax.Node) *types.Signature {
+func (e %nilEnvironment) functionSignature(function %syntax.Node) *types.Signature {
 	return e.facts.FunctionSignature(syntax.NodePosition(function))
 }
 
 func (e %nilEnvironment) checkNilFlowResult(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	index int,
 	expected nilContract,
 	state *nilFlowState,

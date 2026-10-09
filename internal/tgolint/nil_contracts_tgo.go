@@ -136,6 +136,11 @@ func newNilEnvironment(
 	}
 }
 
+func singleNilEnvironmentFile(file *syntax.File) []*syntax.File {
+	files := make([]*syntax.File, 0, 1)
+	return append(files, file)
+}
+
 // collectNilContracts records every declared `%T` contract in this package.
 func (e *nilEnvironment) collectNilContracts() {
 	for _, file := range e.files {

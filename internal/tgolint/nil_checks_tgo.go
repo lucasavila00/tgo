@@ -58,7 +58,7 @@ func (e *nilEnvironment) transferNilNode(
 		if item := syntax.DeferStatementOf(statement); item != nil {
 			e.invalidateNilExpression(state, item.Call)
 		}
-		if item := syntax.ReturnStatementOf(statement); item != nil {
+		if item := syntax.ReturnStatementOf(statement); item != nil && function != nil {
 			e.invalidateNilExpressions(state, item.Results)
 		}
 	}
@@ -97,7 +97,9 @@ func (e *nilEnvironment) checkNilNode(
 			}
 		}
 		if item := syntax.ReturnStatementOf(statement); item != nil {
-			e.checkNilReturn(state, item, function)
+			if function != nil {
+				e.checkNilReturn(state, item, function)
+			}
 		}
 		if item := syntax.SendStatementOf(statement); item != nil {
 			channel := e.contractForExpression(item.Channel)
