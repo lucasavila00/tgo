@@ -1,16 +1,10 @@
 package tgolint
 
 import (
-	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"go/types"
 	"math/rand"
 	"testing"
 	"testing/quick"
-
-	"golang.org/x/tools/go/analysis"
 )
 
 func TestNilTypeLatticeProperties(t *testing.T) {
@@ -29,7 +23,17 @@ func TestNilTypeLatticeProperties(t *testing.T) {
 				intersectNilTypes(left, intersectNilTypes(middle, right)),
 			) &&
 			equalNilType(unionNilTypes(left, left), left) &&
-			equalNilType(intersectNilTypes(left, left), left)
+			equalNilType(intersectNilTypes(left, left), left) &&
+			equalNilType(
+				intersectNilTypes(left, unionNilTypes(left, middle)), left,
+			) &&
+			equalNilType(
+				unionNilTypes(left, intersectNilTypes(left, middle)), left,
+			) &&
+			equalNilType(unionNilTypes(left, neverNilType()), left) &&
+			equalNilType(intersectNilTypes(left, optionalNilType()), left) &&
+			isOptionalNilType(unionNilTypes(left, optionalNilType())) &&
+			isNeverNilType(intersectNilTypes(left, neverNilType()))
 	}
 	configuration := &quick.Config{
 		MaxCount: 1_000,
@@ -49,8 +53,9 @@ func TestDeclaredNilTypeSeparatesStringAndOptionalString(t *testing.T) {
 	if !isOptionalNilType(declaredNilType(optionalString)) {
 		t.Fatal("*string must contain string and nil")
 	}
-	if !isNonNilType(intersectNilTypes(optionalNilType(), nonNilType())) {
-		t.Fatal("a nil check must remove nil from *string")
+	narrowed := intersectNilTypes(declaredNilType(optionalString), nonNilType())
+	if !isNonNilType(narrowed) {
+		t.Fatal("a nil check must narrow *string to string")
 	}
 }
 
@@ -93,44 +98,4 @@ func TestNilBooleanReachability(t *testing.T) {
 			)
 		}
 	}
-}
-
-func runNilAnalysis(parameters string, body string) ([]analysis.Diagnostic, error) {
-	source := fmt.Sprintf(`package sample
-type Item struct{}
-func need(value *Item) {}
-func subject(%s) {
-%s
-}
-`, parameters, body)
-	set := token.NewFileSet()
-	file, err := parser.ParseFile(set, "sample.go", source, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
-	info := &types.Info{
-		Types:      make(map[ast.Expr]types.TypeAndValue),
-		Defs:       make(map[*ast.Ident]types.Object),
-		Uses:       make(map[*ast.Ident]types.Object),
-		Scopes:     make(map[ast.Node]*types.Scope),
-		Selections: make(map[*ast.SelectorExpr]*types.Selection),
-	}
-	pkg, err := new(types.Config).Check("sample", set, []*ast.File{file}, info)
-	if err != nil {
-		return nil, err
-	}
-	diagnostics := []analysis.Diagnostic(nil)
-	pass := &analysis.Pass{
-		Fset: set, Files: []*ast.File{file}, Pkg: pkg, TypesInfo: info,
-		Report: func(diagnostic analysis.Diagnostic) {
-			diagnostics = append(diagnostics, diagnostic)
-		},
-		ImportObjectFact: func(types.Object, analysis.Fact) bool { return false },
-	}
-	environment := newNilEnvironment(pass, []*ast.File{file}, info, pkg, nil)
-	environment.collectNilContracts()
-	need, _ := pkg.Scope().Lookup("need").(*types.Func)
-	environment.contracts[need] = nilContract{"p0": true}
-	environment.checkNilFiles()
-	return diagnostics, nil
 }

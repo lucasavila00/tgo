@@ -8,7 +8,7 @@ import __tgo_fmt "fmt"
 
 import "go/types"
 
-// nilType is the part of a value type that control flow can narrow.
+// Go types stores T. nilType stores the current union of T and nil.
 // Optional is T | nil. Never is an impossible value.
 // nilType requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.

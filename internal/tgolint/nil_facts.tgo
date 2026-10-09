@@ -150,10 +150,9 @@ func breakNilAlias(state *nilFlowState, target nilPlace) {
 			group = append(group, place)
 		}
 	}
-	for place := range state.aliases {
-		if nilAliased(state, target, place) {
-			delete(state.aliases, place)
-		}
+	delete(state.aliases, target)
+	for _, place := range group {
+		delete(state.aliases, place)
 	}
 	for index := 1; index < len(group); index++ {
 		addNilAlias(state, group[0], group[index])
