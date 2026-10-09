@@ -9,6 +9,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOTS = ("cmd", "internal", "pkg")
 GO_COPYRIGHT = re.compile(r"\A// Copyright \d{4} The Go Authors\.")
+GENERATED_GO = re.compile(r"_tgo(?:_[^/]+)?\.go$")
 
 
 @dataclass(frozen=True)
@@ -87,8 +88,8 @@ def production_sources() -> list[Path]:
         for suffix in ("*.go", "*.tgo"):
             for path in (ROOT / source_root).rglob(suffix):
                 if "testdata" in path.parts or path.name.endswith(
-                    ("_test.go", "_test.tgo", "_tgo.go")
-                ):
+                    ("_test.go", "_test.tgo")
+                ) or GENERATED_GO.search(path.name):
                     continue
                 result.append(path)
     return sorted(set(result))
