@@ -49,6 +49,7 @@ vscode-test:
 	cd editors/vscode && xvfb-run -a npm run test:all
 
 generated:
+	python3 -m unittest scripts.check_generated_test
 	python3 scripts/check_generated.py
 
 lint:
