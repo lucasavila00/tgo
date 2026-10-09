@@ -11,9 +11,11 @@ compiler.
 Repository tools outside the compiler bootstrap path can use tgo. For example, `tgolint` uses
 tgo source files.
 
-Each committed `.tgo` source file has a generated `*_tgo.go` file in the same directory. The Go
-tool uses these generated files as normal Go source. `make generated` verifies that the committed
-files match the current compiler output.
+Each production `.tgo` source file has a generated `*_tgo.go` file in the same directory. The Go
+tool uses these generated files as normal Go source. `make generated` uses the build driver's
+package and output rules to verify that the committed files match the current compiler output.
+It skips hidden directories, underscore-prefixed directories, `vendor`, `testdata`, nested modules,
+temporary `bin` output, and the copied Go corpus in `third_party/go`.
 
 ## Compiler boundary
 
@@ -30,13 +32,12 @@ Source policy, modernization advice, navigation, generated-output integrity, pac
 locking, file transactions, and stale-output cleanup stay outside the compiler. Production code
 for these tasks must be `.tgo` and must use `pkg/syntax` instead of `go/ast`.
 
-The remaining exceptions have migration issues:
+The remaining exception has a migration issue. The pull request that completes
+the migration must remove its row. Remove this table when no exception remains.
 
 | Compiler code | Destination | Issue |
 | --- | --- | --- |
-| `check.go` model usage policy | `tgolint` | [#61](https://github.com/lucasavila00/go2/issues/61) |
-| `enum_switch.go` switch policy | `tgolint` | [#60](https://github.com/lucasavila00/go2/issues/60) |
-| `build.go` and file transaction helpers | TGo build driver | [#64](https://github.com/lucasavila00/go2/issues/64) |
+| [`check.go`](../../internal/compiler/check.go) | `tgolint` | [#61](https://github.com/lucasavila00/tgo/issues/61) |
 
 ## Syntax boundary
 
@@ -70,13 +71,18 @@ The normal `golangci-lint` `unused` check is not sufficient for this rule. Repos
 generated Go, and `unused` does not prove that exported declarations are reachable from repository
 commands and tests.
 
-The check ignores only generated enum tag, payload, Gob, and JSON protocol functions because source
-authors cannot remove them. Other dead generated functions report their owning TGo type. A dead
-generated type, variable, or constant needs a named exclusion when it has no TGo declaration.
+The check ignores generated enum tag, payload, Gob, and JSON protocol functions because source
+authors cannot remove them. It also ignores generated enum payload and construction-input types.
+Other dead generated functions report their owning TGo type. A dead generated type, variable, or
+constant needs a named exclusion when it has no TGo declaration.
 
 The exclusion list is in `scripts/check_dead_code.py`. Each entry names one declaration and gives
 its reason. The check rejects an exclusion when the analyzer no longer reports that declaration.
 Build constraints select the current platform implementation. Keep each platform entry point
 reachable from code in the same build configuration.
+
+Run `make install-hooks` to install the repository pre-commit hook. The hook checks staged
+whitespace and Markdown line width only. It does not build the repository or run tests. Hosted CI
+runs the complete validation suite after a branch is pushed.
 
 The [Go printer port](go-printer-port.md) defines the staged formatter replacement.

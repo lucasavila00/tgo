@@ -1,0 +1,8 @@
+package sample_test
+
+import "example.test/test-navigation/sample"
+
+func externalOnly() string {
+	value := sample.Record{Name: "external"}
+	return sample.Production(value)
+}

@@ -13,8 +13,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXCLUSIONS = {
-    ("internal/driver/driver.tgo", "CompileWorkspace"):
-        "public Go API for callers that do not need a context",
     ("pkg/syntax/walk.tgo", "ExtensionAt"):
         "public syntax API for external source tools",
     ("pkg/syntax/walk.tgo", "AttachedComments"):
@@ -133,7 +131,20 @@ def source_declaration_line(source: Path, name: str, kind: str) -> int | None:
     return None
 
 
-def declaration_finding(item: dict[str, object], root: Path) -> Finding:
+def generated_support_type(root: Path, file: str, line: int, name: str) -> bool:
+    """Report a generated enum type that has no source declaration."""
+    if re.fullmatch(r"Tgo.+Input", name):
+        return True
+    lines = (root / file).read_text().splitlines()
+    if line < 2 or line > len(lines):
+        return False
+    return lines[line - 2].startswith(f"// {name} is the ") and \
+        lines[line - 2].endswith(" payload.")
+
+
+def declaration_finding(
+    item: dict[str, object], root: Path
+) -> Finding | None:
     """Map one dead declaration to Go source or its owning TGo declaration."""
     position = item["Position"]
     if not isinstance(position, dict):
@@ -150,6 +161,8 @@ def declaration_finding(item: dict[str, object], root: Path) -> Finding:
         return Finding(name, kind, file, line, file, line)
     owner_line = source_declaration_line(root / owner, name, kind)
     if owner_line is None:
+        if kind == "type" and generated_support_type(root, file, line, name):
+            return None
         return Finding(name, kind, file, line, file, line)
     return Finding(name, kind, owner, owner_line, file, line)
 
@@ -178,7 +191,9 @@ def check(
             if finding is not None:
                 findings.append(finding)
     for item in declarations:
-        findings.append(declaration_finding(item, root))
+        finding = declaration_finding(item, root)
+        if finding is not None:
+            findings.append(finding)
 
     for finding in sorted(
         findings, key=lambda item: (item.file, item.line, item.kind, item.name)

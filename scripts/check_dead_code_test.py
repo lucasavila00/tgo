@@ -29,6 +29,9 @@ class DeadCodeTest(unittest.TestCase):
             for function in package["Funcs"]
         }
 
+    def declaration_names(self) -> set[str]:
+        return {str(declaration["Name"]) for declaration in self.declarations}
+
     def test_policy(self) -> None:
         exclusions = {
             ("scripts/testdata/deadcode/main.go", "PublicAPI"):
@@ -106,6 +109,8 @@ class DeadCodeTest(unittest.TestCase):
         self.assertNotIn("testOnly", self.names())
         self.assertNotIn("platformOnly", self.names())
         self.assertIn("fixtureOwner.MarshalJSON", self.names())
+        self.assertIn("fixtureOwnerEmpty", self.declaration_names())
+        self.assertIn("TgoFixtureOwnerInput", self.declaration_names())
 
     def test_exclusions_need_reasons_and_live_findings(self) -> None:
         with self.assertRaises(ValueError):

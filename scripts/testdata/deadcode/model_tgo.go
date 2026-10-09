@@ -29,3 +29,8 @@ const (
 type fixtureOwnerTag uint8
 
 const fixtureOwnerTagValue fixtureOwnerTag = 1
+
+// fixtureOwnerEmpty is the Empty payload.
+type fixtureOwnerEmpty struct{}
+
+type TgoFixtureOwnerInput struct{}

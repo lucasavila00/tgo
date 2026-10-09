@@ -124,14 +124,14 @@ func (c %checker) statementsTerminateWith(
 	if len(statements) == 0 || c.hasEscapingBranch(file, statements, tagDefault) {
 		return false
 	}
-	identifier := syntax.ExpressionIdentifier{Value: &syntax.Identifier{
+	identifier := syntax.Expression.Identifier{Value: &syntax.Identifier{
 		Span: syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Name: "__tgolint_reached",
-	}}.Expression()
-	sentinel := syntax.StatementExpression{Value: &syntax.ExpressionStatement{
+	}}
+	sentinel := syntax.Statement.Expression{Value: &syntax.ExpressionStatement{
 		Span: syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Expression: &identifier,
-	}}.Statement()
+	}}
 	list := make([]%syntax.Statement, 0, len(statements)+1)
 	for _, statement := range statements { list = append(list, statement) }
 	list = append(list, &sentinel)
@@ -491,7 +491,7 @@ func capturesObject(
 	object types.Object,
 ) bool {
 	captured := false
-	statement := syntax.StatementBlock{Value: body}.Statement()
+	statement := syntax.Statement.Block{Value: body}
 	syntax.InspectStatement(&statement, func(node *syntax.Node) bool {
 		if captured { return false }
 		identifier, ok := syntax.IdentifierOf(node)

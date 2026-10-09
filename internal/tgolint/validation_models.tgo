@@ -51,19 +51,11 @@ func (c %checker) exportValidationFacts(object *types.TypeName, value *model) {
 		}
 	}
 	if modelIsEnum(value) {
-		payloads := append([]string{"Zero"}, modelVariants(value)...)
-		for _, variant := range payloads {
-			payload, ok := scope.Lookup(name + variant).(*types.TypeName)
-			if !ok {
-				continue
-			}
-			function, _, _ := types.LookupFieldOrMethod(
-				payload.Type(),
-				true,
-				object.Pkg(),
-				name,
-			)
-			if function == nil {
+		for _, variant := range modelVariants(value) {
+			function, ok := scope.Lookup("New" + name + variant).(*types.Func)
+			payload, payloadOK := scope.Lookup(name + variant).(*types.TypeName)
+			if !ok || !payloadOK ||
+				!validEnumConstructor(object.Type(), payload.Type(), function.Name()) {
 				continue
 			}
 			fact := &validationFact{}
@@ -181,7 +173,7 @@ func (c %checker) scanValidationFunctionValue(
 				writes[c.facts.DefinitionName(name)]++
 			}
 			if len(value.Names) == 1 && len(value.Values) == 1 {
-				left := syntax.ExpressionIdentifier{Value: value.Names[0]}.Expression()
+				left := syntax.Expression.Identifier{Value: value.Names[0]}
 				c.recordValidationFunctionValue(candidates, &left, value.Values[0])
 			}
 		}
@@ -259,17 +251,51 @@ func method(typ types.Type, name string) *types.Signature {
 }
 
 func validEnumAPI(typ, payload types.Type, accessor, constructorName string) bool {
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok { return false }
 	read := method(typ, accessor)
 	return read != nil && validEnumConstructor(typ, payload, constructorName) &&
+		method(payload, named.Obj().Name()) == nil &&
 		read.Params().Len() == 0 && read.Results().Len() == 1 &&
 		types.Identical(read.Results().At(0).Type(), payload)
 }
 
 func validEnumConstructor(typ, payload types.Type, constructorName string) bool {
-	makeValue := method(payload, constructorName)
-	return makeValue != nil && makeValue.Params().Len() == 0 &&
-		makeValue.Results().Len() == 1 &&
-		types.Identical(makeValue.Results().At(0).Type(), typ)
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return false
+	}
+	function, ok := named.Obj().Pkg().Scope().Lookup(constructorName).(*types.Func)
+	if !ok {
+		return false
+	}
+	signature, ok := function.Type().(*types.Signature)
+	structure, structureOK := payload.Underlying().(*types.Struct)
+	if !ok || !structureOK || signature.Params().Len() != structure.NumFields() ||
+		signature.Results().Len() != 1 || !types.Identical(signature.Results().At(0).Type(), typ) {
+		return false
+	}
+	for index := 0; index < structure.NumFields(); index++ {
+		if !types.Identical(signature.Params().At(index).Type(), structure.Field(index).Type()) {
+			return false
+		}
+	}
+	return true
+}
+
+func validEnumCarrier(payload types.Type, carrier types.Type) bool {
+	payloadStruct, payloadOK := payload.Underlying().(*types.Struct)
+	carrierStruct, carrierOK := carrier.Underlying().(*types.Struct)
+	if !payloadOK || !carrierOK || payloadStruct.NumFields() != carrierStruct.NumFields() {
+		return false
+	}
+	for index := 0; index < payloadStruct.NumFields(); index++ {
+		if !carrierStruct.Field(index).Exported() ||
+			!types.Identical(payloadStruct.Field(index).Type(), carrierStruct.Field(index).Type()) {
+			return false
+		}
+	}
+	return true
 }
 
 // modelFor loads and caches the verified model for one named type.

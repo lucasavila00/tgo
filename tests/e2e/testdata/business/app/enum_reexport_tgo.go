@@ -8,5 +8,7 @@ import (
 )
 
 func OnlyReexportedAccount(name string) any {
-	return model.AccountPersonal{Name: name}.Account()
+	return func(input model.TgoAccountPersonalInput) model.Account {
+		return model.NewAccountPersonal(input.FieldName)
+	}(model.TgoAccountPersonalInput{FieldName: name})
 }

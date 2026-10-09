@@ -16,6 +16,20 @@ Port these parts of the Go printer:
 - `printer.go`: printer state, positions, comments, whitespace, tokens, and the final tabwriter pass.
 - `nodes.go`: fields, lists, expressions, statements, declarations, and files.
 
+The current adapted files have this provenance:
+
+| TGo file | Go 1.27.2 source |
+| --- | --- |
+| `pkg/format/alignment.tgo` | `math.go`, `nodes.go` |
+| `pkg/format/binary.tgo` | `nodes.go` |
+| `pkg/format/declarations.tgo` | `nodes.go` |
+| `pkg/format/expression_lists.tgo` | `nodes.go` |
+| `pkg/format/expressions.tgo` | `nodes.go` |
+| `pkg/format/go_printer_layout.tgo` | `printer.go` |
+| `pkg/format/list_comment_alignment.tgo` | `nodes.go` |
+| `pkg/format/printer.tgo` | `comment.go`, `gobuild.go`, `nodes.go`, `printer.go` |
+| `pkg/format/statements.tgo` | `nodes.go` |
+
 Do not port the public `go/printer` API, `CommentedNode`, or `printNode`. TGo formats one parsed
 `syntax.File`. Use pointer-keyed size caches for each TGo node category.
 

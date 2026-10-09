@@ -1,7 +1,7 @@
 .PHONY: ci ci-unlocked fast-ci fast-ci-unlocked fast-checks slow-ci slow-ci-unlocked \
 	generated ast-boundary formatter-boundary tgolint-boundary lint test unit-test unit-test-fast tgolint-unit-test \
 	e2e-test tgolint-test formatter-go-corpus \
-	allocation-test dogfood markdown tgo-size dead-code vscode-test build install-hooks install-tools
+	allocation-test dogfood markdown tgo-size dead-code pre-commit-boundary vscode-test build install-hooks install-tools
 
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
@@ -13,7 +13,8 @@ fast-ci:
 
 fast-ci-unlocked: fast-checks unit-test-fast e2e-test allocation-test
 
-fast-checks: generated ast-boundary formatter-boundary tgolint-boundary dogfood lint markdown tgo-size dead-code
+fast-checks: generated ast-boundary formatter-boundary tgolint-boundary dogfood lint \
+	markdown tgo-size dead-code pre-commit-boundary
 
 slow-ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 slow-ci-unlocked
@@ -47,12 +48,16 @@ dead-code: generated
 	python3 scripts/check_dead_code_test.py
 	python3 scripts/check_dead_code.py
 
+pre-commit-boundary:
+	python3 scripts/check_pre_commit.py
+
 vscode-test:
 	./vscode.sh --package-only
 	python3 editors/vscode/test/package.py editors/vscode/tgo-navigation.vsix
 	cd editors/vscode && xvfb-run -a npm run test:all
 
 generated:
+	python3 -m unittest scripts.check_generated_test
 	python3 scripts/check_generated.py
 
 lint:
