@@ -1,0 +1,9 @@
+//go:build linux
+
+package directives
+
+//go:generate echo generate
+func generate() {}
+
+//line external.tgo:100
+var located = 1
