@@ -51,17 +51,17 @@ func ParsePort(text string) (Port, error)
 func (value Port) Value() int
 ```
 
-`Port{80}` lowers to `MustPort(80)). `Port(number)` lowers to
-`NewPort(number)). `Port.Parse(text)` lowers to `ParsePort(text)). These rules
+`Port{80}` lowers to `MustPort(80)`. `Port(number)` lowers to
+`NewPort(number)`. `Port.Parse(text)` lowers to `ParsePort(text)`. These rules
 also apply to `domain.Port`; imported TGo metadata records the base, predicate,
 and generated names.
 
 `NewPort` returns `Port{}` and `invalid Port` when the predicate is false.
 `MustPort` calls `NewPort` and panics on failure. TGo literal checks make that
 panic unreachable in checked source. `ParsePort` parses the exact base width with
-`strconv), then calls `NewPort`.
+`strconv`, then calls `NewPort`.
 
-The base is an exact Go type. Use `int8`, `uint16), `float64), or a named type
+The base is an exact Go type. Use `int8`, `uint16`, `float64`, or a named type
 when that width or method set matters. Newtypes do not inherit base operators.
 Call `Value()` before arithmetic.
 
@@ -78,8 +78,8 @@ func (ServicePort) Valid(value Port) bool {
 }
 ```
 
-`NewServicePort` first rejects an invalid `Port), then applies its own predicate.
-`ServicePort.Value()` returns `Port). This is composition, not subtyping.
+`NewServicePort` first rejects an invalid `Port`, then applies its own predicate.
+`ServicePort.Value()` returns `Port`. This is composition, not subtyping.
 
 The Go zero value contains the base zero. It is valid when all predicates accept
 that value and invalid otherwise. `Value` still returns the stored zero. `tgolint`
@@ -92,13 +92,13 @@ newtype ID[Entity any] string
 id := ID[User]{"u-123"}
 ```
 
-The output is `ID[Entity]), `NewID[Entity]), `MustID[Entity]), and
-`ParseID[Entity]). Callers give type arguments when Go cannot infer them.
+The output is `ID[Entity]`, `NewID[Entity]`, `MustID[Entity]`, and
+`ParseID[Entity]`. Callers give type arguments when Go cannot infer them.
 
 ## JSON, text, and lint rules
 
-JSON marshals the base value. JSON unmarshal decodes the base and calls `NewT).
-Text marshal uses the base text form. Text unmarshal calls `ParseT). Predicate,
+JSON marshals the base value. JSON unmarshal decodes the base and calls `NewT`.
+Text marshal uses the base text form. Text unmarshal calls `ParseT`. Predicate,
 syntax, range, and parse failures pass through. An invalid zero returns
 `invalid T` from marshal.
 
