@@ -211,6 +211,10 @@ func (p *sourceParser) makeDeclaration(
 		if tgoErr2 != nil {
 			return nil, nil, tgoErr2
 		}
+		checked := token.NoPos
+		if raw.checked >= 0 {
+			checked = p.pos(p.tokens[raw.checked].start)
+		}
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
 		}
@@ -223,6 +227,7 @@ func (p *sourceParser) makeDeclaration(
 			Lbrace:    p.pos(p.tokens[raw.open].start),
 			Fields:    fields,
 			Rbrace:    p.pos(p.tokens[raw.close].start),
+			Checked:   checked,
 			Comment:   nil,
 		}, anchors, nil
 

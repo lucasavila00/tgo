@@ -197,12 +197,20 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 		p.tgoField(value.Fields[0], 0)
 		p.space()
 		p.token(value.Rbrace, "}")
+		if value.Checked != token.NoPos {
+			p.space()
+			p.token(value.Checked, "checked")
+		}
 		return
 	}
 	if len(value.Fields) > 0 {
 		p.tgoFields(value.Fields)
 	}
 	p.token(value.Rbrace, "}")
+	if value.Checked != token.NoPos {
+		p.space()
+		p.token(value.Checked, "checked")
+	}
 }
 
 func (p *printer) tgoField(value *syntax.TGoField, nameWidth int) {

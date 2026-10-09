@@ -101,6 +101,7 @@ type frontStructDecl struct {
 	Lbrace  token.Pos
 	Fields  []*frontFieldDecl
 	Rbrace  token.Pos
+	Checked token.Pos
 	Comment *ast.CommentGroup
 }
 

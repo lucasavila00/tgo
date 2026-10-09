@@ -3591,6 +3591,7 @@ type StructDeclaration struct {
 	Lbrace  token.Pos
 	Fields  []*TGoField
 	Rbrace  token.Pos
+	Checked token.Pos
 	Comment *CommentGroup
 }
 

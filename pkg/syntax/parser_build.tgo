@@ -200,6 +200,10 @@ func (p %sourceParser) makeDeclaration(
 		return node, anchors,
 	case "struct":
 		fields, fieldAnchors := p.makeFields(raw.fields, defaultAt)!!
+		checked := token.NoPos
+		if raw.checked >= 0 {
+			checked = p.pos(p.tokens[raw.checked].start)
+		}
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
 		}
@@ -212,6 +216,7 @@ func (p %sourceParser) makeDeclaration(
 			Lbrace:  p.pos(p.tokens[raw.open].start),
 			Fields:  fields,
 			Rbrace:  p.pos(p.tokens[raw.close].start),
+			Checked: checked,
 			Comment: nil,
 		}, anchors,
 	case "checked":

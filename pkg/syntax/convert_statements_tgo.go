@@ -322,7 +322,8 @@ func (c *converter) structDeclaration(value *frontStructDecl) *StructDeclaration
 		Doc:  c.commentGroup(value.Doc), Type: value.Type,
 		Name: c.identifierRequired(value.Name), Struct: value.Struct,
 		Lbrace: value.Lbrace, Fields: c.tgoFields(value.Fields),
-		Rbrace: value.Rbrace, Comment: c.commentGroup(value.Comment),
+		Rbrace: value.Rbrace, Checked: value.Checked,
+		Comment: c.commentGroup(value.Comment),
 	}
 }
 

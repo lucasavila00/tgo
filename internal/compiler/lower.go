@@ -9,6 +9,7 @@ import (
 func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
 	p.generatedValues = make(map[*ast.ValueSpec]bool)
+	p.checkedLiterals = make(map[*ast.CompositeLit]bool)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
 	p.usedIdentifiers = nil
@@ -19,16 +20,27 @@ func (p *packageUnit) prepare() {
 	}
 }
 
-// lowerConstructions resolves and lowers enum variant literals.
+// lowerConstructions resolves and lowers checked and enum literals.
 func (p *packageUnit) lowerConstructions() {
 	for _, source := range p.Sources {
-		transform(source.File, func(node ast.Node) ast.Node {
-			replacement := p.lowerConstruction(source.File, node)
-			if replacement != node {
-				source.Lowered = true
+		for _, declaration := range source.File.Decls {
+			var exempt *model
+			if function, ok := declaration.(*ast.FuncDecl); ok && function.Name.Name == "check" {
+				if receiver, ok := receiverName(function); ok {
+					candidate := p.Models[receiver]
+					if candidate != nil && candidate.CheckedStruct {
+						exempt = candidate
+					}
+				}
 			}
-			return replacement
-		})
+			transform(declaration, func(node ast.Node) ast.Node {
+				replacement := p.lowerConstruction(source.File, node, exempt)
+				if replacement != node {
+					source.Lowered = true
+				}
+				return replacement
+			})
+		}
 	}
 }
 
@@ -154,11 +166,26 @@ func generatedEnumMethod(receiver, method string, model *model) bool {
 	return false
 }
 
-// lowerConstruction replaces variant literals with generated constructor calls.
-func (p *packageUnit) lowerConstruction(file *ast.File, node ast.Node) ast.Node {
+// lowerConstruction replaces protected literals with their validation calls.
+func (p *packageUnit) lowerConstruction(
+	file *ast.File,
+	node ast.Node,
+	exempt *model,
+) ast.Node {
 	literal, ok := node.(*ast.CompositeLit)
 	if !ok {
 		return node
+	}
+	typ := p.info.TypeOf(literal)
+	owner, declaration := p.modelOwner(typ)
+	if declaration != nil && declaration.CheckedStruct {
+		if owner == p && declaration == exempt {
+			return node
+		}
+		p.checkedLiterals[literal] = true
+		return call(&ast.SelectorExpr{
+			X: literal, Sel: &ast.Ident{NamePos: literal.End(), Name: "check"},
+		})
 	}
 	selector, ok := literal.Type.(*ast.SelectorExpr)
 	if !ok {
@@ -167,7 +194,7 @@ func (p *packageUnit) lowerConstruction(file *ast.File, node ast.Node) ast.Node 
 	if !p.info.Types[selector.X].IsType() {
 		return node
 	}
-	typ := p.info.TypeOf(selector.X)
+	typ = p.info.TypeOf(selector.X)
 	owner, model := p.modelOwner(typ)
 	if model == nil || len(model.Variants) == 0 {
 		return node

@@ -57,6 +57,7 @@ type rawVariant struct {
 
 type rawDecl struct {
 	tag            int
+	checked        int
 	kind           string
 	start          int
 	end            int
@@ -540,10 +541,21 @@ func (p *sourceParser) structDeclaration(
 	if err != nil {
 		return nil, 0, err
 	}
+	next := closing + 1
+	checked := -1
+	if next < len(p.tokens) && p.tokens[next].kind == token.IDENT &&
+		p.tokens[next].text == "checked" {
+		checked = next
+		next++
+	}
 	declaration := new(rawDecl)
 	declaration.kind = "struct"
 	declaration.start = p.tokens[start].start
 	declaration.end = p.tokens[closing].end
+	if checked >= 0 {
+		declaration.end = p.tokens[checked].end
+	}
+	declaration.checked = checked
 	declaration.typeToken = start
 	declaration.name = start + 1
 	declaration.keyword = keyword
@@ -554,7 +566,7 @@ func (p *sourceParser) structDeclaration(
 	declaration.predicateStart = -1
 	declaration.predicateEnd = -1
 	declaration.fields = fields
-	return declaration, skipSemicolon(p.tokens, closing+1), nil
+	return declaration, skipSemicolon(p.tokens, next), nil
 }
 
 func (p *sourceParser) checkedDeclaration(

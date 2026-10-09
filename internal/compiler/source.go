@@ -48,6 +48,7 @@ type model struct {
 	JSON            enumJSON
 	Name            string
 	Enum            bool
+	CheckedStruct   bool
 	Line            int
 	Column          int
 	Base            string
@@ -96,5 +97,5 @@ type comprehensionSource struct {
 
 // requiresConstructor reports whether a model type has an invalid zero value.
 func (m *model) requiresConstructor() bool {
-	return len(m.Variants) > 0 || m.Predicate != ""
+	return len(m.Variants) > 0 || m.Predicate != "" || m.CheckedStruct
 }

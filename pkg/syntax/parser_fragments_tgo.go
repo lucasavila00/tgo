@@ -121,6 +121,9 @@ func (p *sourceParser) sanitize(
 				p.buildPropagation(node, call)
 			}
 		case *ast.CompositeLit:
+			p.buildPropagation(node, &ast.CallExpr{
+				Fun: node.Type, Lparen: node.Rbrace, Rparen: node.Rbrace,
+			})
 			if defaultAt == nil {
 				break
 			}
