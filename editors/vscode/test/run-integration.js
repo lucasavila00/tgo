@@ -9,7 +9,7 @@ async function main() {
   const repository = path.resolve(extension, "..", "..");
   const cache = path.join(extension, ".vscode-test");
   const workspace = path.join(cache, "workspace with spaces");
-  const secondWorkspace = repository;
+  const secondWorkspace = path.join(cache, "second workspace");
   const workspaceFile = path.join(cache, "navigation.code-workspace");
   fs.mkdirSync(cache, { recursive: true });
   fs.rmSync(workspace, { recursive: true, force: true });
@@ -21,8 +21,21 @@ async function main() {
     "workspaces",
     "spaced workspace"
   ), workspace, { recursive: true });
+  fs.rmSync(secondWorkspace, { recursive: true, force: true });
+  fs.cpSync(path.join(
+    repository,
+    "internal",
+    "navigation",
+    "testdata",
+    "workspaces",
+    "basic"
+  ), secondWorkspace, { recursive: true });
   fs.writeFileSync(workspaceFile, JSON.stringify({
-    folders: [{ path: workspace }, { path: secondWorkspace }]
+    folders: [
+      { path: workspace },
+      { path: secondWorkspace },
+      { path: repository }
+    ]
   }));
   const helper = path.join(extension, "bin", "tgonav");
   if (!fs.existsSync(helper)) {

@@ -27,7 +27,7 @@ async function run() {
     originalInvalidate(changed);
   };
 
-  await checkRepositoryHovers(folder);
+  await checkRepositoryHovers();
   await checkProviders(document);
   await checkWatchers(folder, client, invalidations);
   checkRemoteURITranslation();
@@ -37,9 +37,10 @@ async function run() {
   await checkWorkspaceFolderRemoval(api);
 }
 
-async function checkRepositoryHovers(firstFolder) {
+async function checkRepositoryHovers() {
+  const repository = path.resolve(process.env.TGO_EXTENSION_PATH, "..", "..");
   const folder = vscode.workspace.workspaceFolders.find(
-    (item) => item.uri.toString() !== firstFolder.uri.toString()
+    (item) => item.uri.fsPath === repository
   );
   assert.ok(folder, "repository workspace is absent");
   await checkHover(
@@ -128,7 +129,7 @@ async function checkDirtyDocument(document) {
 
 async function checkWorkspaceFolderRemoval(api) {
   const folders = vscode.workspace.workspaceFolders;
-  assert.equal(folders.length, 2);
+  assert.equal(folders.length, 3);
   const removed = folders[1];
   const client = api.clients.forURI(removed.uri);
   assert.ok(client);
