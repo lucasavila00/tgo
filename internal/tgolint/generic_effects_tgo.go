@@ -752,7 +752,9 @@ func returnedNamedResultExpressions(
 			continue
 		}
 		for _, name := range field.Names {
-			expression := syntax.ExpressionIdentifier{Value: name}.Expression()
+			expression := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+				return syntax.NewExpressionIdentifier(input.FieldValue)
+			}(syntax.TgoExpressionIdentifierInput{FieldValue: name})
 			results = append(results, &expression)
 		}
 	}

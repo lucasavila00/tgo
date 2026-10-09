@@ -30,7 +30,9 @@ func (c *checker) returnedClosureBindings(
 			if value := syntax.ValueSpecificationOf(specification); value != nil {
 				left := make([]*syntax.Expression, len(value.Names))
 				for index := range value.Names {
-					item := syntax.ExpressionIdentifier{Value: value.Names[index]}.Expression()
+					item := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+						return syntax.NewExpressionIdentifier(input.FieldValue)
+					}(syntax.TgoExpressionIdentifierInput{FieldValue: value.Names[index]})
 					left[index] = &item
 				}
 				c.addReturnedClosureBindings(bindings, left, value.Values, true)

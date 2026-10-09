@@ -329,7 +329,7 @@ func returnedNamedResultExpressions(
 			continue
 		}
 		for _, name := range field.Names {
-			expression := syntax.ExpressionIdentifier{Value: name}.Expression()
+			expression := syntax.Expression.Identifier{Value: name}
 			results = append(results, &expression)
 		}
 	}
