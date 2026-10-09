@@ -239,13 +239,13 @@ func emitExternalJSONUnmarshalFrom(
 				"var payload %s%s\n"+
 				"if err := %s.Unmarshal(payloadData, &payload, in.Options()); "+
 				"err != nil { return err }\n"+
-				"*v = payload.%s()\n"+
+				"*v = %s\n"+
 				"return nil\n",
 			index+1,
 			name,
 			variant.Name,
 			jsonV2Package,
-			name,
+			enumPayloadConstructorCall(name, variant),
 		)
 	}
 	fmt.Fprintf(
@@ -371,13 +371,13 @@ func emitAdjacentJSONUnmarshalFrom(
 				"var payload %s%s\n"+
 				"if err := %s.Unmarshal(contentData, &payload, in.Options()); "+
 				"err != nil { return err }\n"+
-				"*v = payload.%s()\n"+
+				"*v = %s\n"+
 				"return nil\n",
 			index+1,
 			name,
 			variant.Name,
 			jsonV2Package,
-			name,
+			enumPayloadConstructorCall(name, variant),
 		)
 	}
 	fmt.Fprintf(

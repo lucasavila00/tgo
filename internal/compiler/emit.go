@@ -2,6 +2,8 @@ package compiler
 
 import (
 	"fmt"
+	"go/ast"
+	"go/parser"
 	"strings"
 	"unicode"
 )
@@ -176,7 +178,17 @@ func emitEnumGob(output *strings.Builder, declaration *model, fmtPackage string)
 		fmtPackage,
 		name+": cannot gob decode unknown tag %d",
 	)
-	fmt.Fprintf(output, "*v = %s{tgoTag: tag}\nreturn nil\n}\n", name)
+	output.WriteString("switch tag {\n")
+	for _, variant := range declaration.Variants {
+		fmt.Fprintf(
+			output,
+			"case %sTag%s: *v = %s()\n",
+			name,
+			variant.Name,
+			enumConstructorName(name, variant.Name),
+		)
+	}
+	output.WriteString("}\nreturn nil\n}\n")
 }
 
 // payloadFreeEnum reports whether every variant has no payload field.
@@ -192,7 +204,7 @@ func payloadFreeEnum(declaration *model) bool {
 	return true
 }
 
-// emitVariant emits one payload type, constructor, and payload accessor.
+// emitVariant emits one payload type, Go constructor, and payload accessor.
 func emitVariant(
 	output *strings.Builder,
 	sourceName string,
@@ -200,6 +212,7 @@ func emitVariant(
 	variant variant,
 ) {
 	payload := enum + variant.Name
+	constructor := enumConstructorName(enum, variant.Name)
 	accessor := variant.Name + "Payload"
 	tagName := enum + "Tag" + variant.Name
 	fmt.Fprintf(output, "// %s is the %s payload.\n", payload, variant.Name)
@@ -213,21 +226,54 @@ func emitVariant(
 			fieldDecls(sourceName, variant.Fields),
 		)
 	}
-	fmt.Fprintf(output, "// %s constructs %s. Model fields must be valid.\n", enum, enum)
+	if len(variant.Fields) > 0 {
+		fmt.Fprintf(output, "type %s struct {\n", enumCarrierName(enum, variant.Name))
+		for index, fieldName := range enumCarrierFieldNames(variant.Fields) {
+			fmt.Fprintf(output, "%s %s\n", fieldName, variant.Fields[index].Type)
+		}
+		output.WriteString("}\n")
+	}
+	parameters := enumParameterNames(variant.Fields, enum, payload, tagName)
+	payloadValue := enumPayloadLocalName(parameters)
+	fmt.Fprintf(output, "// %s constructs %s. Model fields must be valid.\n", constructor, enum)
 	output.WriteString("// Shared fields keep their aliases and caller duties.\n")
-	fmt.Fprintf(output, "func (value %s) %s() %s {\n", payload, enum, enum)
+	fmt.Fprintf(output, "func %s(", constructor)
+	for index, field := range variant.Fields {
+		if index != 0 {
+			output.WriteString(", ")
+		}
+		fmt.Fprintf(output, "%s %s", parameters[index], field.Type)
+	}
+	fmt.Fprintf(output, ") %s {\n", enum)
+	if len(variant.Fields) > 0 {
+		fmt.Fprintf(output, "%s := %s{", payloadValue, payload)
+		for index, parameter := range parameters {
+			if index != 0 {
+				output.WriteString(", ")
+			}
+			output.WriteString(parameter)
+		}
+		output.WriteString("}\n")
+	}
 	switch {
 	case len(variant.Fields) == 0:
 		fmt.Fprintf(output, "return %s{tgoTag: %s}\n}\n", enum, tagName)
 	case variant.Boxed:
-		fmt.Fprintf(output, "return %s{tgoTag: %s, tgoPayload: value}\n}\n", enum, tagName)
+		fmt.Fprintf(
+			output,
+			"return %s{tgoTag: %s, tgoPayload: %s}\n}\n",
+			enum,
+			tagName,
+			payloadValue,
+		)
 	default:
 		fmt.Fprintf(
 			output,
-			"return %s{tgoTag: %s, tgo%s: value}\n}\n",
+			"return %s{tgoTag: %s, tgo%s: %s}\n}\n",
 			enum,
 			tagName,
 			variant.Name,
+			payloadValue,
 		)
 	}
 	fmt.Fprintf(
@@ -257,6 +303,112 @@ func emitVariant(
 			payload,
 			variant.Name,
 		)
+	}
+}
+
+func enumConstructorName(enum string, variant string) string {
+	return "New" + enum + variant
+}
+
+func enumCarrierName(enum string, variant string) string {
+	return "Tgo" + enum + variant + "Input"
+}
+
+func enumParameterNames(fields []field, reserved ...string) []string {
+	names := make([]string, len(fields))
+	used := make(map[string]bool)
+	for _, name := range reserved {
+		used[name] = true
+	}
+	for index, value := range fields {
+		if value.Name != "" && value.Name != "_" && !used[value.Name] {
+			names[index] = value.Name
+			used[value.Name] = true
+			continue
+		}
+		base := fmt.Sprintf("tgoField%d", index)
+		name := base
+		for suffix := 1; used[name]; suffix++ {
+			name = fmt.Sprintf("%s_%d", base, suffix)
+		}
+		names[index] = name
+		used[name] = true
+	}
+	return names
+}
+
+func enumPayloadLocalName(parameters []string) string {
+	used := make(map[string]bool)
+	for _, name := range parameters {
+		used[name] = true
+	}
+	base := "tgoValue"
+	name := base
+	for suffix := 1; used[name]; suffix++ {
+		name = fmt.Sprintf("%s_%d", base, suffix)
+	}
+	return name
+}
+
+func enumCarrierFieldNames(fields []field) []string {
+	names := make([]string, len(fields))
+	used := make(map[string]bool)
+	for index, value := range fields {
+		base := fmt.Sprintf("Field%d", index)
+		if value.Name != "" && value.Name != "_" {
+			runes := []rune(value.Name)
+			runes[0] = unicode.ToUpper(runes[0])
+			base = "Field" + string(runes)
+		}
+		name := base
+		for suffix := 1; used[name]; suffix++ {
+			name = fmt.Sprintf("%s_%d", base, suffix)
+		}
+		names[index] = name
+		used[name] = true
+	}
+	return names
+}
+
+func enumPayloadConstructorCall(enum string, value variant) string {
+	arguments := make([]string, len(value.Fields))
+	for index, field := range value.Fields {
+		name := field.Name
+		if name == "" {
+			name = embeddedGoFieldName(field.Type)
+		}
+		switch name {
+		case "", "_":
+			arguments[index] = "*new(" + field.Type + ")"
+		default:
+			arguments[index] = "payload." + name
+		}
+	}
+	return enumConstructorName(enum, value.Name) + "(" + strings.Join(arguments, ", ") + ")"
+}
+
+func embeddedGoFieldName(text string) string {
+	expression, err := parser.ParseExpr(text)
+	if err != nil {
+		return ""
+	}
+	for {
+		switch value := expression.(type) {
+		case *ast.Ident:
+			return value.Name
+		case *ast.SelectorExpr:
+			return value.Sel.Name
+		case *ast.StarExpr:
+			expression = value.X
+		case *ast.ParenExpr:
+			expression = value.X
+		case *ast.IndexExpr:
+			expression = value.X
+		case *ast.IndexListExpr:
+			expression = value.X
+		default:
+			return ""
+		}
 	}
 }
 

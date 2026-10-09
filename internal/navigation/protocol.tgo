@@ -31,6 +31,54 @@ type workspaceParams struct { Query string `json:"query"` }
 type cancelParams struct { ID int64 `json:"id"` }
 type invalidateParams struct { URI string `json:"uri"` }
 
+type protocolSymbol struct {
+	Name      string   `json:"name"`
+	Kind      string   `json:"kind"`
+	Container string   `json:"container,omitempty"`
+	Range     Location `json:"range"`
+	Selection Location `json:"selection"`
+}
+
+func protocolSymbols(values []Symbol) []protocolSymbol {
+	result := make([]protocolSymbol, 0, len(values))
+	for _, value := range values {
+		result = append(result, protocolSymbol{
+			Name: value.Name, Kind: protocolSymbolKind(value.Kind),
+			Container: value.Container, Range: value.Range,
+			Selection: value.Selection,
+		})
+	}
+	return result
+}
+
+func protocolSymbolKind(value SymbolKind) string {
+	switch value.Tag() {
+	case SymbolKindTagPackage:
+		return "package"
+	case SymbolKindTagType:
+		return "type"
+	case SymbolKindTagStruct:
+		return "struct"
+	case SymbolKindTagInterface:
+		return "interface"
+	case SymbolKindTagFunction:
+		return "function"
+	case SymbolKindTagMethod:
+		return "method"
+	case SymbolKindTagField:
+		return "field"
+	case SymbolKindTagEnum:
+		return "enum"
+	case SymbolKindTagEnumMember:
+		return "enumMember"
+	case SymbolKindTagConstant:
+		return "constant"
+	case SymbolKindTagVariable:
+		return "variable"
+	exhaustive:
+	}
+}
+
 // Request is one helper protocol request.
 type Request enum `json:"internal,tag=method"` {
 	Hover struct {
@@ -159,7 +207,7 @@ func (s %protocolServer) dispatch(request Request) {
 		}
 		s.start(payload.ID, func(ctx context.Context) Response {
 			result, err := s.engine.DocumentSymbols(ctx, payload.Params.URI)
-			return protocolResult(payload.ID, result, err)
+			return protocolResult(payload.ID, protocolSymbols(result), err)
 		})
 	case RequestTagWorkspaceSymbols:
 		payload := request.WorkspaceSymbolsPayload()
@@ -169,7 +217,7 @@ func (s %protocolServer) dispatch(request Request) {
 		}
 		s.start(payload.ID, func(ctx context.Context) Response {
 			result, err := s.engine.WorkspaceSymbols(ctx, payload.Params.Query)
-			return protocolResult(payload.ID, result, err)
+			return protocolResult(payload.ID, protocolSymbols(result), err)
 		})
 	case RequestTagCancel:
 		payload := request.CancelPayload()
@@ -179,7 +227,7 @@ func (s %protocolServer) dispatch(request Request) {
 			}
 			return
 		}
-		s.cancel(payload)
+		s.cancel(payload.ID, payload.Params)
 	case RequestTagInvalidate:
 		payload := request.InvalidatePayload()
 		if payload.Params == nil {
@@ -218,20 +266,20 @@ func protocolResult(id int64, result any, err error) Response {
 	}
 
 func protocolSuccess(id int64, result any) Response {
-	return ResponseSuccess{ID: id, Result: result}.Response()
+	return Response.Success{ID: id, Result: result}
 }
 
 func protocolError(id int64, message string) Response {
-	return ResponseFailure{ID: id, Error: message}.Response()
+	return Response.Failure{ID: id, Error: message}
 }
 
-func (s %protocolServer) cancel(request RequestCancel) {
+func (s %protocolServer) cancel(id int64, params %cancelParams) {
 	s.activeMu.Lock()
-	cancel := s.active[request.Params.ID]
+	cancel := s.active[params.ID]
 	s.activeMu.Unlock()
 	if cancel != nil { cancel() }
-	if request.ID != 0 {
-		s.send(protocolSuccess(request.ID, true))
+	if id != 0 {
+		s.send(protocolSuccess(id, true))
 	}
 	}
 
