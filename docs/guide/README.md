@@ -1,6 +1,6 @@
-# Use tgo
+# Use TGo
 
-Copy [these rules](AGENTS.md) into a tgo user repository's `AGENTS.md`.
+Copy [these rules](../for-agents/AGENTS.md) into a TGo user repository's `AGENTS.md`.
 
 Write small business packages in `.tgo` files. Keep tests and other Go code in `.go` files.
 Use one Go module. Keep normal Go imports, package names, and tests.
@@ -14,8 +14,8 @@ tgolint ./...
 ```
 
 `tgo build` checks the current package. `tgo build ./...` checks packages below it.
-Local tgo imports build first. Output goes beside each input: `model.tgo` becomes `model_tgo.go`.
-Commit each generated file beside its tgo source. Do not edit generated files.
+Local TGo imports build first. Output goes beside each input: `model.tgo` becomes `model_tgo.go`.
+Commit each generated file beside its TGo source. Do not edit generated files.
 A generated model file contains stable versioned metadata that names its source.
 `tgolint` recompiles the package in memory and verifies the complete output before it trusts model
 facts.
@@ -24,13 +24,13 @@ A failed build restores the output files that it changed.
 The compiler removes generated files after their source is deleted.
 Ignore `.tgo.lock`. It serializes builds in one module.
 
-Use Go build constraints and target suffixes on tgo files.
+Use Go build constraints and target suffixes on TGo files.
 For example, `store_linux.tgo` emits `store_tgo_linux.go`.
 The compiler keeps outputs for other targets when it builds the current target.
 It ignores `_test.tgo`, hidden, `_`, `testdata`, and `vendor` paths.
 It stops at nested Go modules.
 
-## Parse tgo source
+## Parse TGo source
 
 Use the public `tgo/pkg/syntax` package when a tool must read TGo source. Call `ParseFile` with a
 Go file set. Use `syntax.Inspect` or `syntax.Walk` to visit the closed TGo node enums. Use
@@ -127,4 +127,4 @@ Use `call()!!` to return the original error with no context or wrapper allocatio
 Use a normal error check when the caller must recover, change the error, or add runtime data.
 
 [Language specification](../spec/README.md).
-[Go caller checks](TGOLINT.md).
+[Go caller checks](GO-CALLERS.md).

@@ -15,4 +15,22 @@ fails CI. Review the generated code and the benchmark result before you increase
 
 Use 100,000 operations for each benchmark. This fixed count keeps the one-time benchmark setup
 cost stable and keeps the check fast. Public marshal benchmarks include the enum-to-interface
-conversion. Direct method benchmarks measure the returned-buffer API without the outer encoder.
+conversion. Direct marshal benchmarks exclude the outer encoder. Direct unmarshal benchmarks
+exclude the outer decoder.
+
+## Allocation sources
+
+The Go version, payload type, input data, and escape analysis determine the measured count.
+Streaming methods avoid a complete envelope buffer or map when the wire form permits it.
+Measured allocations can come from:
+
+- public encoder or decoder state and interface conversion;
+- marshaled result buffers;
+- copied raw payload or content values and decoded member names;
+- each untagged decode attempt;
+- payload fields and custom methods;
+- boxed payloads that escape and returned errors; and
+- compatibility buffers and maps used by direct methods.
+
+`budgets.json` is the only list of numeric limits. Keep it next to the runner because these values
+measure this implementation. They are not part of the TGo language specification.

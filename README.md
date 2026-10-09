@@ -13,6 +13,12 @@ func LoadName(repo Repo, id ID) (string, error) {
 
 `!` returns the error with `repo.Find: ` context. It keeps `errors.Is` and `errors.As` working.
 
+Use `!!` to return the original error without context or wrapping:
+
+```go
+user := repo.Find(id)!!
+```
+
 ## Require non-nil pointers
 
 ```go
@@ -94,5 +100,6 @@ go test ./...
 ./bin/tgolint ./...
 ```
 
-Read the [language specification](docs/spec/README.md) and the
-[tgolint rules](docs/spec/TGOLINT.md).
+Read the [documentation map](docs/README.md), the
+[language specification](docs/spec/README.md), and the
+[`tgolint` specification](docs/spec/TGOLINT.md).
