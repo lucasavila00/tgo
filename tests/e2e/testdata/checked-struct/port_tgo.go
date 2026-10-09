@@ -4,7 +4,7 @@ package checkedstruct
 
 import (
 	"errors"
-	__tgo_fmt "fmt"
+	"fmt"
 )
 
 var ErrInvalidPort = errors.New("invalid port")
@@ -35,7 +35,7 @@ func NewPort(number int) (Port, error) {
 func NewServicePort(number int) (ServicePort, error) {
 	port, err := Port{number: number}.check()
 	if err != nil {
-		return ServicePort{}, __tgo_fmt.Errorf("Port: %w", err)
+		return ServicePort{}, fmt.Errorf("Port: %w", err)
 	}
 
 	return ServicePort{port: port}.check()

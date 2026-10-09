@@ -30,13 +30,13 @@ func run(paths []string, write bool, list bool, input io.Reader, output io.Write
 		if write {
 			return fmt.Errorf("cannot use -w with standard input")
 		}
-		source, tgoErr := io.ReadAll(input)
-		if tgoErr != nil {
-			return tgoErr
+		source, err_1 := io.ReadAll(input)
+		if err_1 != nil {
+			return err_1
 		}
-		formatted, tgoErr2 := format.Source("<standard input>", source)
-		if tgoErr2 != nil {
-			return tgoErr2
+		formatted, err_2 := format.Source("<standard input>", source)
+		if err_2 != nil {
+			return err_2
 		}
 		if list {
 			if !bytes.Equal(source, formatted) {
@@ -57,13 +57,13 @@ func run(paths []string, write bool, list bool, input io.Reader, output io.Write
 }
 
 func formatPath(path string, write bool, list bool, output io.Writer) error {
-	source, tgoErr := os.ReadFile(path)
-	if tgoErr != nil {
-		return tgoErr
+	source, err_1 := os.ReadFile(path)
+	if err_1 != nil {
+		return err_1
 	}
-	formatted, tgoErr2 := format.Source(path, source)
-	if tgoErr2 != nil {
-		return tgoErr2
+	formatted, err_2 := format.Source(path, source)
+	if err_2 != nil {
+		return err_2
 	}
 	changed := !bytes.Equal(source, formatted)
 	if list && changed {
@@ -72,9 +72,9 @@ func formatPath(path string, write bool, list bool, output io.Writer) error {
 		}
 	}
 	if write && changed {
-		info, tgoErr3 := os.Stat(path)
-		if tgoErr3 != nil {
-			return tgoErr3
+		info, err_3 := os.Stat(path)
+		if err_3 != nil {
+			return err_3
 		}
 		return writeFormattedFile(path, source, formatted, info.Mode().Perm())
 	}
@@ -93,9 +93,9 @@ type rewriteTarget interface {
 
 func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.FileMode) error {
 	// Rewrite the existing inode so hard links and symbolic links keep their identity.
-	backup, tgoErr := createBackup(path, source, mode)
-	if tgoErr != nil {
-		return tgoErr
+	backup, err_1 := createBackup(path, source, mode)
+	if err_1 != nil {
+		return err_1
 	}
 	target, err := os.OpenFile(path, os.O_WRONLY, mode)
 	if err != nil {
@@ -118,12 +118,12 @@ func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.Fi
 }
 
 func createBackup(path string, source []byte, mode fs.FileMode) (string, error) {
-	backup, tgoErr := os.CreateTemp(
+	backup, err_1 := os.CreateTemp(
 		filepath.Dir(path),
 		"."+filepath.Base(path)+".tgofmt-",
 	)
-	if tgoErr != nil {
-		return "", tgoErr
+	if err_1 != nil {
+		return "", err_1
 	}
 	name := backup.Name()
 	if err := backup.Chmod(mode); err != nil {

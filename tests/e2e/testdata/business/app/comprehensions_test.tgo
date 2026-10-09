@@ -92,7 +92,7 @@ func TestComprehensionGeneratedLoops(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(generated)
-	for _, forbidden := range []string{"__tgo_comprehension", "func() comprehension"} {
+	for _, forbidden := range []string{"__tgo_", "func() comprehension"} {
 		if strings.Contains(text, forbidden) {
 			t.Fatalf("generated projection remains: %s", forbidden)
 		}
@@ -101,7 +101,7 @@ func TestComprehensionGeneratedLoops(t *testing.T) {
 		!strings.Contains(text, "for _, sale := range account.Sales") {
 		t.Fatal("generated output does not contain the fused loop nest")
 	}
-	for _, required := range []string{"copy(__tgo_result_4, values)", "] = comprehensionRecord("} {
+	for _, required := range []string{"copy(result, values)", "] = comprehensionRecord("} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("generated output lacks exact slice lowering: %s", required)
 		}
