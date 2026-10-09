@@ -61,6 +61,19 @@ constructors. `tgolint` checks payload calls in recognized canonical switches. C
 a switch are outside this analysis. It cannot inspect reflection, `unsafe`, cgo, races, or foreign
 state.
 
+For a checked struct `Port`, call the generated `NewPort` function and check its error:
+
+```go
+port, err := model.NewPort(3)
+if err != nil {
+	return err
+}
+```
+
+The constructor parameters follow field declaration order. `NewPort` and the generated staging
+carrier are Go ABI. TGo source uses `model.Port{number: 3}` and cannot refer to either generated
+name.
+
 `%T` has the Go `*T` representation. Unchecked Go can still pass nil. The linter adds no runtime
 check and cannot prove code that runs through reflection, `unsafe`, cgo, or a data race.
 
