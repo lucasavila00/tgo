@@ -62,49 +62,63 @@ func (c %checker) checkErrorReturnPair(
 	function *types.Signature,
 	index %sourcefacts.Index,
 ) {
-	if !unnamedErrorResults(function) {
+	name, operator, ok := errorReturnModernization(first, second, function, index)
+	if !ok {
 		return
+	}
+	assignment, _ := sourceAssignment(first)
+	kind := "return"
+	if operator == "!" {
+		kind = "wrapper"
+	}
+	c.reportResult(
+		assignment.Start,
+		"manual %s error %s matches postfix %s; use postfix %s",
+		name, kind, operator, operator,
+	)
+}
+
+// errorReturnModernization recognizes one exact manual propagation expansion.
+func errorReturnModernization(
+	first %syntax.Statement,
+	second %syntax.Statement,
+	function *types.Signature,
+	index %sourcefacts.Index,
+) (string, string, bool) {
+	if !unnamedErrorResults(function) {
+		return "", "", false
 	}
 	assignment, ok := sourceAssignment(first)
 	if !ok || assignment == nil || assignment.Operator != token.DEFINE ||
 		len(assignment.Right) != 1 {
-		return
+		return "", "", false
 	}
 	call, ok := sourceCall(assignment.Right[0])
 	if !ok || call == nil {
-		return
+		return "", "", false
 	}
 	errorObject, ok := errorReturnAssignment(assignment, call, index)
 	if !ok || index.UseCount(errorObject) != 2 {
-		return
+		return "", "", false
 	}
 	branch, ok := sourceIf(second)
 	if !ok || branch == nil {
-		return
+		return "", "", false
 	}
 	if !errorReturnBranch(branch, errorObject, function, index) {
-		return
+		return "", "", false
 	}
 	name, ok := syntax.StaticCallName(call.Callee)
 	if !ok {
-		return
+		return "", "", false
 	}
 	if errorReturnIdentity(branch, errorObject, index) {
-		c.reportResult(
-			assignment.Start,
-			"manual %s error return matches postfix !!; use postfix !!",
-			name,
-		)
-		return
+		return name, "!!", true
 	}
 	if !errorReturnFormat(branch, errorObject, name, index) {
-		return
+		return "", "", false
 	}
-	c.reportResult(
-		assignment.Start,
-		"manual %s error wrapper matches postfix !; use postfix !",
-		name,
-	)
+	return name, "!", true
 }
 
 // errorReturnIdentity proves that the final return is the original error.

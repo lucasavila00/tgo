@@ -1,5 +1,0 @@
-package successreturn
-
-func empty() error {
-	return ,
-}

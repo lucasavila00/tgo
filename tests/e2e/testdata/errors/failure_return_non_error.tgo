@@ -1,0 +1,5 @@
+package errors
+
+func invalid(text string) (int, string) {
+	return , text
+}

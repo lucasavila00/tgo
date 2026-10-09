@@ -15,7 +15,7 @@ func ParseFile(
 ) (*File, error) {
 	front, err := parseFrontFile(files, filename, source, mode)
 	if front == nil {
-		return nil, err
+		return , err
 	}
 	conversion := newConverter(front)
 	result := conversion.file()

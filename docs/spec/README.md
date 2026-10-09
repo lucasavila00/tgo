@@ -178,6 +178,32 @@ Valid Go returns have no trailing comma and remain unchanged. Explicit expressio
 source positions. `ReturnStatement.SuccessComma` is the comma position, or `token.NoPos` for a Go
 return. A diagnostic for the generated `nil` uses the original `return` position.
 
+## Failure returns
+
+Each leading comma before one error expression adds the zero value of one result, from left to
+right:
+
+```text
+(int, error):                return , err                 -> return 0, err
+(*Item, string, error):      return ,, err                -> return nil, "", err
+(bool, int, string, error):  return ,,, fmt.Errorf("bad") -> return false, 0, "", fmt.Errorf("bad")
+```
+
+The final function result must be the predeclared Go `error` type. The source return must contain
+exactly one expression after the leading commas. The comma count is syntactic. The compiler does
+not infer missing results from the function signature. The normal Go type check rejects too few
+commas and verifies the explicit expression against `error`. The compiler reports the first comma
+that has no preceding result type.
+
+This syntax applies in functions, methods, and function literals. It uses the nearest function
+signature. It returns zeros even when results have names and their current values are not zero.
+For a type parameter, the generated Go declares a local variable of that type and returns it. This
+does not require a heap allocation; normal Go escape analysis decides whether storage escapes.
+
+`return nil,` remains a successful return with an explicit first result and an elided final `nil`.
+A source tree records the leading commas in `ReturnStatement.FailureCommas`. It records only the
+explicit error in `Results`. The slice is empty for a Go return.
+
 ## Non-nil pointers
 
 `%T` is a non-nil pointer to `T`. `*T` is a possibly nil Go pointer.

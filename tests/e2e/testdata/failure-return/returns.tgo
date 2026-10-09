@@ -1,0 +1,50 @@
+package failurereturn
+
+type record struct {
+	Value int
+}
+
+type number int
+
+type loader struct{}
+
+func Scalars(err error) (bool, int, float64, complex128, string, error) {
+	return ,,,,, err
+}
+
+func References(err error) (*int, []int, map[string]int, chan int, func(), any, error) {
+	return ,,,,,, err
+}
+
+func Values(err error) (record, [2]int, number, error) {
+	return ,,, err
+}
+
+func Generic[T any](err error) (T, error) {
+	return , err
+}
+
+func Named(err error) (value int, returned error) {
+	value = 9
+	returned = nil
+	return , err
+}
+
+func Two(err error) (int, string, error) {
+	return ,, err
+}
+
+func (loader) Method(err error) (int, error) {
+	return , err
+}
+
+func Nested(err error) (string, error) {
+	call := func() (string, error) {
+		return , err
+	}
+	return call()!!,
+}
+
+func NilSuccess() (any, error) {
+	return nil,
+}

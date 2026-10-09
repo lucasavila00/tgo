@@ -81,15 +81,15 @@ func CompileWorkspaceContext(
 ) ([]%compiler.CompiledPackage, error) {
 	root, module, err := moduleRoot(directory)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	buildContext, err := effectiveBuildContext(directory)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	packages, err := discover(root, module, &buildContext)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	paths := sortedPackagePaths(packages)
@@ -97,11 +97,11 @@ func CompileWorkspaceContext(
 	for _, path := range paths {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return , ctx.Err()
 		default:
 		}
 		if err := builder.build(path); err != nil {
-			return nil, err
+			return , err
 		}
 		if packages[path].compiled != nil {
 			result = append(result, packages[path].compiled)
@@ -118,15 +118,15 @@ func CompilePackage(
 ) (*compiler.CompiledPackage, error) {
 	root, module, err := moduleRoot(directory)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	buildContext, err := effectiveBuildContext(directory)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	packages, err := discover(root, module, &buildContext)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	unit := packages[importPath]
 	if unit == nil {
@@ -137,7 +137,7 @@ func CompilePackage(
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	if err := builder.build(importPath); err != nil {
-		return nil, err
+		return , err
 	}
 	if unit.compiled == nil {
 		return nil,
@@ -306,7 +306,7 @@ func numberedFeatureTags(
 ) ([]string, error) {
 	level, err := featureLevel(value, valuePrefix, first, last)
 	if err != nil {
-		return nil, fmt.Errorf("invalid %s %q", name, value)
+		return , fmt.Errorf("invalid %s %q", name, value)
 	}
 	return cumulativeFeatureTags(tagPrefix, first, level),
 }
@@ -315,12 +315,12 @@ func numberedFeatureTags(
 func arm64FeatureTags(value string) ([]string, error) {
 	version, _, _ := strings.Cut(value, ",")
 	if len(version) != 4 || version[0] != 'v' || version[2] != '.' {
-		return nil, fmt.Errorf("invalid GOARM64 %q", value)
+		return , fmt.Errorf("invalid GOARM64 %q", value)
 	}
 	major := int(version[1] - '0')
 	minor := int(version[3] - '0')
 	if major != 8 && major != 9 || minor < 0 || minor > 9 || major == 9 && minor > 5 {
-		return nil, fmt.Errorf("invalid GOARM64 %q", value)
+		return , fmt.Errorf("invalid GOARM64 %q", value)
 	}
 	tags := cumulativeFeatureTags(fmt.Sprintf("arm64.v%d.", major), 0, minor)
 	if major == 9 {
@@ -334,7 +334,7 @@ func riscv64FeatureTags(value string) ([]string, error) {
 	levels := map[string]int{"rva20u64": 20, "rva22u64": 22, "rva23u64": 23}
 	level, ok := levels[value]
 	if !ok {
-		return nil, fmt.Errorf("invalid GORISCV64 %q", value)
+		return , fmt.Errorf("invalid GORISCV64 %q", value)
 	}
 	tags := []string{"riscv64.rva20u64"}
 	if level >= 22 {
@@ -353,7 +353,7 @@ func wasmFeatureTags(value string) ([]string, error) {
 		case "satconv", "signext":
 		case "":
 		default:
-			return nil, fmt.Errorf("invalid GOWASM feature %q", option)
+			return , fmt.Errorf("invalid GOWASM feature %q", option)
 		}
 	}
 	return []string{"wasm.satconv", "wasm.signext"},
@@ -363,11 +363,11 @@ func wasmFeatureTags(value string) ([]string, error) {
 func featureLevel(value string, prefix string, first int, last int) (int, error) {
 	number, found := strings.CutPrefix(value, prefix)
 	if !found {
-		return 0, errors.New("missing feature prefix")
+		return , errors.New("missing feature prefix")
 	}
 	level, err := strconv.Atoi(number)
 	if err != nil || level < first || level > last {
-		return 0, errors.New("invalid feature level")
+		return , errors.New("invalid feature level")
 	}
 	return level,
 }
@@ -388,7 +388,7 @@ func singleFeatureTag(architecture string, value string, valid ...string) ([]str
 			return []string{architecture + "." + value},
 		}
 	}
-	return nil, fmt.Errorf("invalid %s feature %q", architecture, value)
+	return , fmt.Errorf("invalid %s feature %q", architecture, value)
 }
 
 // buildTagsFromGoFlags gets tags from each Go -tags flag.
@@ -400,7 +400,7 @@ func buildTagsFromGoFlags(flags string) ([]string, error) {
 		value, found := strings.CutPrefix(field, "-tags=")
 		if !found && field == "-tags" {
 			if index + 1 >= len(fields) {
-				return nil, errors.New("-tags needs a value")
+				return , errors.New("-tags needs a value")
 			}
 			index++
 			value = fields[index]
@@ -431,7 +431,7 @@ func splitGoFlags(value string) ([]string, error) {
 			quote := value[0]
 			end := strings.IndexByte(value[1:], quote)
 			if end < 0 {
-				return nil, fmt.Errorf("unterminated %c string", quote)
+				return , fmt.Errorf("unterminated %c string", quote)
 			}
 			fields = append(fields, value[1:end + 1])
 			value = value[end + 2:]
@@ -452,15 +452,15 @@ func splitGoFlags(value string) ([]string, error) {
 func acquireModuleLock(root string) (acquired *flock.Flock, err error) {
 	canonicalRoot, err := filepath.EvalSymlinks(root)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	path := filepath.Join(canonicalRoot, ".tgo.lock")
 	if err := ensureLockFile(path); err != nil {
-		return nil, err
+		return , err
 	}
 	lock := flock.New(path)
 	if err := lock.Lock(); err != nil {
-		return nil, err
+		return , err
 	}
 	defer func() {
 		if err != nil {
@@ -469,14 +469,14 @@ func acquireModuleLock(root string) (acquired *flock.Flock, err error) {
 	}()
 	pathInfo, err := os.Lstat(path)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	lockedInfo, err := lock.Stat()
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	if !pathInfo.Mode().IsRegular() || !os.SameFile(pathInfo, lockedInfo) {
-		return nil, fmt.Errorf("refusing non-regular lock file %s", path)
+		return , fmt.Errorf("refusing non-regular lock file %s", path)
 	}
 	return lock,
 }
@@ -511,15 +511,15 @@ func moduleRoot(directory string) (string, string, error) {
 	command.Dir = directory
 	output, err := command.Output()
 	if err != nil {
-		return "", "", fmt.Errorf("find go.mod: %w", err)
+		return ,, fmt.Errorf("find go.mod: %w", err)
 	}
 	path := strings.TrimSpace(string(output))
 	if path == "" || path == os.DevNull {
-		return "", "", errors.New("tgo needs a Go module; run go mod init first")
+		return ,, errors.New("tgo needs a Go module; run go mod init first")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", "", err
+		return ,, err
 	}
 	for line := range strings.SplitSeq(string(data), "\n") {
 		fields := strings.Fields(line)
@@ -527,5 +527,5 @@ func moduleRoot(directory string) (string, string, error) {
 			return filepath.Dir(path), strings.Trim(fields[1], "\""),
 		}
 	}
-	return "", "", errors.New("go.mod has no module path")
+	return ,, errors.New("go.mod has no module path")
 }

@@ -127,7 +127,7 @@ func (p %sourceParser) makeComprehension(
 		defaultAt,
 	)
 	if err != nil {
-		return nil, nil, err
+		return ,, err
 	}
 	for child, parent := range found {
 		anchors[child] = parent
@@ -141,7 +141,7 @@ func (p %sourceParser) makeComprehension(
 			defaultAt,
 		)
 		if err != nil {
-			return nil, nil, err
+			return ,, err
 		}
 		for child, parent := range found {
 			anchors[child] = parent
@@ -232,7 +232,7 @@ func (p %sourceParser) makeDeclaration(
 			Comment:   nil,
 		}, anchors,
 	default:
-		return nil, nil, fmt.Errorf("unknown declaration kind %q", raw.kind)
+		return ,, fmt.Errorf("unknown declaration kind %q", raw.kind)
 	}
 }
 
@@ -252,7 +252,8 @@ func (p %sourceParser) makeFields(
 		assign := token.NoPos
 		if raw.assign >= 0 {
 			if len(field.Names) == 0 {
-				return nil, nil, p.tokenError(raw.start, "embedded fields cannot have defaults")
+				failure := p.tokenError(raw.start, "embedded fields cannot have defaults")
+				return ,, failure
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
 			parsedDefault, expressionAnchors := p.parseExpression(
@@ -295,7 +296,7 @@ func (p %sourceParser) parseField(start int, end int) (*ast.Field, error) {
 		parser.ParseComments | parser.SkipObjectResolution,
 	)
 	if err != nil {
-		return nil, p.mapFragmentError(
+		return , p.mapFragmentError(
 			err,
 			len(prefix),
 			p.tokens[start].start,
@@ -306,7 +307,7 @@ func (p %sourceParser) parseField(start int, end int) (*ast.Field, error) {
 	typeSpec := general.Specs[0].(*ast.TypeSpec)
 	structure := typeSpec.Type.(*ast.StructType)
 	if len(structure.Fields.List) != 1 {
-		return nil, p.tokenError(start, "field declaration must define one field group")
+		return , p.tokenError(start, "field declaration must define one field group")
 	}
 	field := structure.Fields.List[0]
 	temporary := set.File(file.Package)
@@ -326,7 +327,7 @@ func (p %sourceParser) parseExpression(
 	defaultAt map[token.Pos]%frontDefaultMarker,
 ) (ast.Expr, map[frontNode]frontNode, error) {
 	if start >= end {
-		return nil, nil, fmt.Errorf("empty expression")
+		return ,, fmt.Errorf("empty expression")
 	}
 	const prefix = "package p\nvar _ = "
 	edits := p.editsInRange(start, end)
@@ -340,7 +341,8 @@ func (p %sourceParser) parseExpression(
 		parser.ParseComments | parser.SkipObjectResolution,
 	)
 	if err != nil {
-		return nil, nil, p.mapFragmentError(err, len(prefix), start, end)
+		failure := p.mapFragmentError(err, len(prefix), start, end)
+		return ,, failure
 	}
 	general := file.Decls[0].(*ast.GenDecl)
 	value := general.Specs[0].(*ast.ValueSpec).Values[0]
