@@ -58,7 +58,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	}
 	edits, successLocations := lowerSuccessReturnCommas(files, file, tree, edits)
 	edits, failureLocations := lowerFailureReturnCommas(files, file, tree, edits)
-	edits, propagations, comprehensions, exhaustiveLocations, err := lowerCheckedExtensions(
+	edits, propagations, comprehensions, err := lowerCheckedExtensions(
 		files, file, tree, name, data, defaultMarker, used, edits,
 	)
 	if err != nil {
@@ -112,7 +112,6 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		Name:           name, Data: append([]byte(nil), data...), Tree: tree, File: goFile,
 		Models: models, DefaultMarker: defaultMarker, Propagations: propagations,
 		Comprehensions: comprehensions,
-		Exhaustive:     exhaustiveClausePositions(files, goFile, exhaustiveLocations),
 		NonNil:         nonNil,
 		SuccessReturns: successReturns,
 		FailureReturns: failureReturns,
@@ -262,37 +261,16 @@ func lowerCheckedExtensions(
 	[]edit,
 	map[string]propagationSource,
 	map[string]comprehensionSource,
-	map[[2]int]bool,
 	error,
 ) {
-	edits, exhaustive, err := lowerExhaustiveClauses(files, file, tree, data, edits)
+	edits, err := lowerExhaustiveClauses(files, file, tree, data, edits)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 	edits, propagations, comprehensions, err := lowerSourceExtensions(
 		files, file, tree, name, data, defaultMarker, used, edits,
 	)
-	return edits, propagations, comprehensions, exhaustive, err
-}
-
-func exhaustiveClausePositions(
-	files *token.FileSet,
-	file *ast.File,
-	locations map[[2]int]bool,
-) map[token.Pos]bool {
-	result := make(map[token.Pos]bool)
-	ast.Inspect(file, func(node ast.Node) bool {
-		clause, ok := node.(*ast.CaseClause)
-		if !ok || len(clause.List) != 0 {
-			return true
-		}
-		position := files.Position(clause.Case)
-		if locations[[2]int{position.Line, position.Column}] {
-			result[clause.Case] = true
-		}
-		return true
-	})
-	return result
+	return edits, propagations, comprehensions, err
 }
 
 func validateEnumPublicNames(declaration *model, node *syntax.EnumDeclaration) error {

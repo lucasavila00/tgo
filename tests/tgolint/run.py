@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build tgo and tgolint, then check their diagnostics."""
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import shutil
 import subprocess
@@ -40,6 +41,18 @@ def assert_case(linter, work, fixture):
     stderr = normalized(result.stderr, work)
     assert stdout == expected_stdout, stdout
     assert stderr == expected_stderr, stderr
+
+
+def assert_fixture_cases(linter, work):
+    """Check independent fixture packages with two workers."""
+    fixtures = list(fixture_directories())
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        futures = [
+            workers.submit(assert_case, linter, work, fixture)
+            for fixture in fixtures
+        ]
+        for future in futures:
+            future.result()
 
 
 def assert_nil_fact_cache_sequence(linter, work):
@@ -153,8 +166,7 @@ def main():
         run(["go", "test", "./..."], work)
         write_invalid_consumers(work)
 
-        for fixture in fixture_directories():
-            assert_case(linter, work, fixture)
+        assert_fixture_cases(linter, work)
 
         assert_nil_fact_cache_sequence(linter, work)
 

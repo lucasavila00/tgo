@@ -113,21 +113,26 @@ func (p *sourceParser) rawComprehension(
 	}
 	seenFilter := false
 	for _, clause := range clauses {
-		if clause.kind == "filter" {
+		switch item := *clause; item.Tag() {
+		case rawComprehensionClauseTagRange:
 			if seenFilter {
+				rangeClause := item.RangePayload()
 				return nil, p.tokenError(
-					clause.keyword,
+					rangeClause.forToken,
+					"comprehension ranges must precede the filter",
+				)
+			}
+		case rawComprehensionClauseTagFilter:
+			if seenFilter {
+				filter := item.FilterPayload()
+				return nil, p.tokenError(
+					filter.ifToken,
 					"combine comprehension filters with &&",
 				)
 			}
 			seenFilter = true
-			continue
-		}
-		if seenFilter {
-			return nil, p.tokenError(
-				clause.keyword,
-				"comprehension ranges must precede the filter",
-			)
+		default:
+			panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
 	}
 	return &rawComprehension{
@@ -184,13 +189,12 @@ func (p *sourceParser) rawComprehensionClause(
 		if start+1 >= open {
 			return nil, p.tokenError(start, "comprehension if needs a condition")
 		}
-		return &rawComprehensionClause{
-			kind: "filter", start: start, end: close + 1, keyword: start,
-			bindings: nil, define: -1, rangeToken: -1,
-			expressionStart: start + 1, expressionEnd: open,
+		clause := rawComprehensionClauseFilter{
+			start: start, end: close + 1, ifToken: start,
+			conditionStart: start + 1, conditionEnd: open,
 			open: open, close: close,
-		}, nil
-
+		}.rawComprehensionClause()
+		return &clause, nil
 	}
 	define, rangeToken := -1, -1
 	for cursor := start + 1; cursor < open; cursor++ {
@@ -212,13 +216,13 @@ func (p *sourceParser) rawComprehensionClause(
 	if rangeToken+1 >= open {
 		return nil, p.tokenError(rangeToken, "comprehension range needs a source")
 	}
-	return &rawComprehensionClause{
-		kind: "range", start: start, end: close + 1, keyword: start,
+	clause := rawComprehensionClauseRange{
+		start: start, end: close + 1, forToken: start,
 		bindings: bindings, define: define, rangeToken: rangeToken,
-		expressionStart: rangeToken + 1, expressionEnd: open,
+		sourceStart: rangeToken + 1, sourceEnd: open,
 		open: open, close: close,
-	}, nil
-
+	}.rawComprehensionClause()
+	return &clause, nil
 }
 
 func (p *sourceParser) comprehensionBindings(start int, end int) ([]int, error) {
