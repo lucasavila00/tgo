@@ -4,6 +4,8 @@
 package tgolint
 
 import __tgo_json "encoding/json"
+import __tgo_jsonv2 "encoding/json/v2"
+import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
 import (
@@ -29,6 +31,19 @@ func (*genericEffectWireFact) AFact() {}
 type zeroParameter struct {
 	receiver bool
 	index    int
+}
+
+func __tgo_effectKind_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(__tgo_jsontext.EndObject)
 }
 
 // effectKind requires a variant constructor. Its zero value is invalid.
@@ -183,6 +198,34 @@ func (v effectKind) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v effectKind) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case effectKindTagBoolean:
+		payload := v.BooleanPayload()
+		return __tgo_effectKind_external_json_to(out, "Boolean", payload)
+	case effectKindTagNonzero:
+		payload := v.NonzeroPayload()
+		return __tgo_effectKind_external_json_to(out, "Nonzero", payload)
+	case effectKindTagNonempty:
+		payload := v.NonemptyPayload()
+		return __tgo_effectKind_external_json_to(out, "Nonempty", payload)
+	case effectKindTagMapMiss:
+		payload := v.MapMissPayload()
+		return __tgo_effectKind_external_json_to(out, "MapMiss", payload)
+	case effectKindTagChannelClosed:
+		payload := v.ChannelClosedPayload()
+		return __tgo_effectKind_external_json_to(out, "ChannelClosed", payload)
+	case effectKindTagAssertionFails:
+		payload := v.AssertionFailsPayload()
+		return __tgo_effectKind_external_json_to(out, "AssertionFails", payload)
+	case effectKindTagResliceExtends:
+		payload := v.ResliceExtendsPayload()
+		return __tgo_effectKind_external_json_to(out, "ResliceExtends", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid effectKind JSON tag")
+	}
+}
+
 func (v *effectKind) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -249,6 +292,129 @@ func (v *effectKind) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown effectKind JSON variant %q", variant)
+	}
+}
+
+func (v *effectKind) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one effectKind JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Boolean":
+			current = 1
+		case "Nonzero":
+			current = 2
+		case "Nonempty":
+			current = 3
+		case "MapMiss":
+			current = 4
+		case "ChannelClosed":
+			current = 5
+		case "AssertionFails":
+			current = 6
+		case "ResliceExtends":
+			current = 7
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one effectKind JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown effectKind JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload effectKindBoolean
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.effectKind()
+		return nil
+	case 2:
+		var payload effectKindNonzero
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.effectKind()
+		return nil
+	case 3:
+		var payload effectKindNonempty
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.effectKind()
+		return nil
+	case 4:
+		var payload effectKindMapMiss
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.effectKind()
+		return nil
+	case 5:
+		var payload effectKindChannelClosed
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.effectKind()
+		return nil
+	case 6:
+		var payload effectKindAssertionFails
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.effectKind()
+		return nil
+	case 7:
+		var payload effectKindResliceExtends
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.effectKind()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid effectKind JSON tag")
 	}
 }
 

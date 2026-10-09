@@ -4,6 +4,8 @@
 package model
 
 import __tgo_json "encoding/json"
+import __tgo_jsonv2 "encoding/json/v2"
+import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
 // Quantity requires NewQuantity success. Zero is invalid.
@@ -92,6 +94,19 @@ type MarkerRecord struct {
 	Name           string
 }
 
+func __tgo_Account_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(__tgo_jsontext.EndObject)
+}
+
 // Account requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type AccountTag uint8
@@ -162,6 +177,19 @@ func (v Account) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v Account) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case AccountTagPersonal:
+		payload := v.PersonalPayload()
+		return __tgo_Account_external_json_to(out, "Personal", payload)
+	case AccountTagBusiness:
+		payload := v.BusinessPayload()
+		return __tgo_Account_external_json_to(out, "Business", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid Account JSON tag")
+	}
+}
+
 func (v *Account) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -193,6 +221,84 @@ func (v *Account) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Account JSON variant %q", variant)
+	}
+}
+
+func (v *Account) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one Account JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Personal":
+			current = 1
+		case "Business":
+			current = 2
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one Account JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown Account JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload AccountPersonal
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.Account()
+		return nil
+	case 2:
+		var payload AccountBusiness
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.Account()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid Account JSON tag")
 	}
 }
 
@@ -244,6 +350,16 @@ func (v Notice) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v Notice) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case NoticeTagText:
+		payload := v.TextPayload()
+		return __tgo_Account_external_json_to(out, "Text", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid Notice JSON tag")
+	}
+}
+
 func (v *Notice) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -268,6 +384,75 @@ func (v *Notice) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Notice JSON variant %q", variant)
+	}
+}
+
+func (v *Notice) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one Notice JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Text":
+			current = 1
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one Notice JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown Notice JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload NoticeText
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.Notice()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid Notice JSON tag")
 	}
 }
 
@@ -333,6 +518,19 @@ func (v Signal) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v Signal) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case SignalTagOn:
+		payload := v.OnPayload()
+		return __tgo_Account_external_json_to(out, "On", payload)
+	case SignalTagOff:
+		payload := v.OffPayload()
+		return __tgo_Account_external_json_to(out, "Off", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid Signal JSON tag")
+	}
+}
+
 func (v *Signal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -364,6 +562,84 @@ func (v *Signal) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Signal JSON variant %q", variant)
+	}
+}
+
+func (v *Signal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one Signal JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "On":
+			current = 1
+		case "Off":
+			current = 2
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one Signal JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown Signal JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload SignalOn
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.Signal()
+		return nil
+	case 2:
+		var payload SignalOff
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.Signal()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid Signal JSON tag")
 	}
 }
 
