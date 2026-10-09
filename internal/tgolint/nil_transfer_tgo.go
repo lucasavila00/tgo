@@ -37,20 +37,24 @@ func (e *nilEnvironment) transferNilAssignment(
 			values[index] = e.resultNilType(statement.Rhs[0], index, state)
 		}
 	}
-	trueFacts, falseFacts := nilFacts(nil), nilFacts(nil)
+	trueBranches, falseBranches := nilBranches(nil), nilBranches(nil)
 	if len(statement.Rhs) == 1 {
-		trueFacts, falseFacts = e.conditionNilFacts(statement.Rhs[0], state)
+		trueBranches, falseBranches = e.conditionNilBranches(
+			statement.Rhs[0], state,
+		)
 	}
-	truePossible := e.nilFactsPossible(state, trueFacts)
-	falsePossible := e.nilFactsPossible(state, falseFacts)
 	e.invalidateNilExpressions(state, statement.Rhs)
 	beforeAssignment := cloneNilState(state)
 	guards, presence := e.copiedNilDependencies(state, statement)
 	remappedGuards, remappedPresence := e.remapNilDependencies(
 		state, statement.Lhs, sources,
 	)
-	trueFacts = e.remapNilFacts(state, trueFacts, statement.Lhs, sources)
-	falseFacts = e.remapNilFacts(state, falseFacts, statement.Lhs, sources)
+	trueBranches = e.remapNilBranches(
+		state, trueBranches, statement.Lhs, sources,
+	)
+	falseBranches = e.remapNilBranches(
+		state, falseBranches, statement.Lhs, sources,
+	)
 	for _, target := range statement.Lhs {
 		e.assignNilTarget(state, target, nil)
 	}
@@ -70,10 +74,10 @@ func (e *nilEnvironment) transferNilAssignment(
 			object := e.info.ObjectOf(name)
 			delete(state.guards, object)
 			delete(state.presence, object)
-			if index == 0 && (len(trueFacts) != 0 || len(falseFacts) != 0) {
+			if index == 0 && (nilBranchesInformative(trueBranches) ||
+				nilBranchesInformative(falseBranches)) {
 				state.guards[object] = nilGuard{
-					trueFacts: trueFacts, falseFacts: falseFacts,
-					truePossible: truePossible, falsePossible: falsePossible,
+					trueBranches: trueBranches, falseBranches: falseBranches,
 				}
 			}
 			if guards[index] != nil {
@@ -173,14 +177,12 @@ func (e *nilEnvironment) remapNilDependencies(
 	guards := make(map[types.Object]nilGuard, len(state.guards))
 	for object, guard := range state.guards {
 		guards[object] = nilGuard{
-			trueFacts: e.remapNilFacts(
-				state, guard.trueFacts, targets, sources,
+			trueBranches: e.remapNilBranches(
+				state, guard.trueBranches, targets, sources,
 			),
-			falseFacts: e.remapNilFacts(
-				state, guard.falseFacts, targets, sources,
+			falseBranches: e.remapNilBranches(
+				state, guard.falseBranches, targets, sources,
 			),
-			truePossible:  guard.truePossible,
-			falsePossible: guard.falsePossible,
 		}
 	}
 	presence := make(map[types.Object]nilPresence, len(state.presence))
@@ -460,12 +462,16 @@ func (e *nilEnvironment) invalidateNilPlace(
 	}
 	delete(state.values, place)
 	for object, guard := range state.guards {
-		if nilFactsAffected(guard.trueFacts, place) ||
-			nilFactsAffected(guard.falseFacts, place) {
-			guard.trueFacts = withoutAffectedNilFacts(guard.trueFacts, place)
-			guard.falseFacts = withoutAffectedNilFacts(guard.falseFacts, place)
-			if guard.truePossible != guard.falsePossible ||
-				len(guard.trueFacts) != 0 || len(guard.falseFacts) != 0 {
+		if nilBranchesAffected(guard.trueBranches, place) ||
+			nilBranchesAffected(guard.falseBranches, place) {
+			guard.trueBranches = e.withoutAffectedNilBranches(
+				state, guard.trueBranches, place,
+			)
+			guard.falseBranches = e.withoutAffectedNilBranches(
+				state, guard.falseBranches, place,
+			)
+			if nilBranchesInformative(guard.trueBranches) ||
+				nilBranchesInformative(guard.falseBranches) {
 				state.guards[object] = guard
 			} else {
 				delete(state.guards, object)
@@ -500,11 +506,11 @@ func preserveNilAliasFacts(state *nilFlowState, changed nilPlace) {
 		return
 	}
 	for object, guard := range state.guards {
-		guard.trueFacts = replaceNilFactPlace(
-			guard.trueFacts, changed, replacement,
+		guard.trueBranches = replaceNilBranchPlace(
+			guard.trueBranches, changed, replacement,
 		)
-		guard.falseFacts = replaceNilFactPlace(
-			guard.falseFacts, changed, replacement,
+		guard.falseBranches = replaceNilBranchPlace(
+			guard.falseBranches, changed, replacement,
 		)
 		state.guards[object] = guard
 	}
