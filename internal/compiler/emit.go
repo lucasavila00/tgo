@@ -159,7 +159,7 @@ func emitVariant(
 		}
 		output.WriteString("}\n")
 	}
-	parameters := enumParameterNames(variant.Fields)
+	parameters := enumParameterNames(variant.Fields, enum, payload, tagName)
 	payloadValue := enumPayloadLocalName(parameters)
 	fmt.Fprintf(output, "// %s constructs %s. Model fields must be valid.\n", constructor, enum)
 	output.WriteString("// Shared fields keep their aliases and caller duties.\n")
@@ -240,9 +240,12 @@ func enumCarrierName(enum string, variant string) string {
 	return "Tgo" + enum + variant + "Input"
 }
 
-func enumParameterNames(fields []field) []string {
+func enumParameterNames(fields []field, reserved ...string) []string {
 	names := make([]string, len(fields))
 	used := make(map[string]bool)
+	for _, name := range reserved {
+		used[name] = true
+	}
 	for index, value := range fields {
 		if value.Name != "" && value.Name != "_" && !used[value.Name] {
 			names[index] = value.Name

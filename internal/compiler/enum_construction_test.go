@@ -18,6 +18,7 @@ type Event enum {
 		value *int
 		labels []string = []string{"new"}
 	}
+	Named struct { Event string; EventNamed string; EventTagNamed string }
 	Empty struct{}
 }
 
@@ -34,6 +35,7 @@ var empty = Event.Empty{}
 	output := string(compiled.Outputs["sample.tgo"])
 	for _, text := range []string{
 		"func NewEventReady(value *int, labels []string) Event",
+		"func NewEventNamed(tgoField0 string, tgoField1 string, tgoField2 string) Event",
 		"func NewEventEmpty() Event",
 		"type TgoEventReadyInput struct",
 		"NewEventReady(tgoInput.FieldValue, tgoInput.FieldLabels)",
