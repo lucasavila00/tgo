@@ -37,6 +37,7 @@ type printer struct {
 	lastSource          token.Pos
 	commentColumn       int
 	commentColumns      map[token.Pos]int
+	fixedCommentColumns map[token.Pos]int
 	measureComments     map[token.Pos]int
 	functionBodyColumn  int
 	sourceCommentIndent bool
@@ -101,6 +102,7 @@ func newPrinterState(
 		lastSource:          token.NoPos,
 		commentColumn:       0,
 		commentColumns:      nil,
+		fixedCommentColumns: make(map[token.Pos]int),
 		measureComments:     nil,
 		functionBodyColumn:  0,
 		sourceCommentIndent: false,
@@ -326,7 +328,9 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 			if _, ok := p.measureComments[item.start]; ok {
 				p.measureComments[item.start] = p.outputColumn()
 			}
-			if column, ok := p.commentColumns[item.start]; ok {
+			if _, ok := p.fixedCommentColumns[item.start]; ok {
+				// trailingLine applied the persistent list alignment.
+			} else if column, ok := p.commentColumns[item.start]; ok {
 				p.padTo(column)
 			} else {
 				p.space()
@@ -370,6 +374,14 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 			p.blankline()
 		}
 	}
+}
+
+func (p *printer) commentAlignment(position token.Pos) (int, bool) {
+	if column, ok := p.fixedCommentColumns[position]; ok {
+		return column, true
+	}
+	column, ok := p.commentColumns[position]
+	return column, ok
 }
 
 func (p *printer) sourceIndent(position token.Pos) int {
@@ -477,7 +489,7 @@ func (p *printer) trailingLine(position token.Pos) {
 	if line > 0 && p.position(comment.start).Line == line &&
 		start >= 0 && stop >= start && stop <= len(p.source) &&
 		strings.TrimSpace(string(p.source[start:stop])) == "" {
-		if column, ok := p.commentColumns[comment.start]; ok {
+		if column, ok := p.commentAlignment(comment.start); ok {
 			p.padTo(column)
 		} else if p.commentColumn > 0 {
 			p.padTo(p.commentColumn)

@@ -541,72 +541,26 @@ func (p *printer) compositeAlignment(
 			position: (p.indent+1)*8 + columns[index][len(columns[index])-1],
 		}
 	}
+	fallback := p.listCommentAlignment(
+		values,
+		opening,
+		closing,
+		(p.indent+1)*8,
+		0,
+	)
+	for index, columns := range fallback {
+		position := token.NoPos
+		for item := range columns {
+			position = item
+		}
+		if index+1 < len(values) && position.IsValid() &&
+			p.sourceCommentPadding(position) > 1 {
+			commentColumns[index] = map[token.Pos]int{
+				position: p.sourceVisualColumn(position),
+			}
+		}
+	}
 	return columns, commentColumns
-}
-
-func (p *printer) expressionListCommentAlignment(
-	values []*syntax.Expression,
-	opening token.Pos,
-	closing token.Pos,
-	baseColumn int,
-	depth int,
-) []map[token.Pos]int {
-	rows := make([]alignmentRow, len(values))
-	sizes := make([]int, len(values))
-	comments := make([]token.Pos, len(values))
-	for index, value := range values {
-		start := syntax.ExpressionPosition(value)
-		stop := syntax.ExpressionEnd(value)
-		previous := opening
-		if index > 0 {
-			previous = syntax.ExpressionEnd(values[index-1])
-		}
-		lineBreak := p.position(previous).Line < p.position(start).Line
-		if index > 0 {
-			rows[index].breakBefore = !lineBreak ||
-				p.blankBetween(previous, start) ||
-				p.hasCommentBetween(previous, start) ||
-				p.multiline(
-					syntax.ExpressionPosition(values[index-1]),
-					syntax.ExpressionEnd(values[index-1]),
-				)
-		}
-		if p.multiline(start, stop) {
-			continue
-		}
-		sizes[index] = p.formattedExpressionWidthAt(value, depth)
-		if !lineBreak {
-			continue
-		}
-		following := closing
-		if index+1 < len(values) {
-			following = syntax.ExpressionPosition(values[index+1])
-		}
-		commaEnd := p.sourceCommaEnd(stop, following)
-		comments[index] = p.trailingCommentPosition(commaEnd)
-		if comment := p.commentAt(comments[index]); comment == nil ||
-			!strings.HasPrefix(comment.text, "//") {
-			comments[index] = token.NoPos
-			continue
-		}
-		commaWidth := 0
-		if commaEnd != stop {
-			commaWidth = 1
-		}
-		rows[index].cells = []int{sizes[index] + commaWidth, 0}
-	}
-	applyListAlignmentSections(rows, sizes)
-	columns := alignmentColumns(rows)
-	result := make([]map[token.Pos]int, len(values))
-	for index, position := range comments {
-		if !position.IsValid() || len(columns[index]) == 0 {
-			continue
-		}
-		result[index] = map[token.Pos]int{
-			position: baseColumn + columns[index][0],
-		}
-	}
-	return result
 }
 
 func (p *printer) compositeKeyWidth(value *syntax.Expression) int {

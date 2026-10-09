@@ -356,7 +356,14 @@ func (p *printer) caseClause(value *syntax.CaseClause) {
 			p.indent--
 		} else {
 			p.space()
-			p.commaList(value.List)
+			comments := p.expressionListCommentAlignment(
+				value.List,
+				value.Case,
+				value.Colon,
+				(p.indent+1)*8,
+				0,
+			)
+			p.commaListWithComments(value.List, 1, false, comments)
 		}
 	}
 	p.token(value.Colon, ":")

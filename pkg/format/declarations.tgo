@@ -139,6 +139,12 @@ func (p *printer) specificationCells(
 		if p.identifiersAreMultiline(item.Names) {
 			return nil
 		}
+		if item.Type != nil && p.multiline(
+			syntax.ExpressionPosition(item.Type),
+			syntax.ExpressionEnd(item.Type),
+		) {
+			return []int{identifierWidth(item.Names), 0}
+		}
 		cells = append(cells, identifierWidth(item.Names))
 		if item.Type != nil || keepType {
 			typeWidth := 0

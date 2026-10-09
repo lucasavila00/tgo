@@ -434,7 +434,8 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 			p.breakSourceGap(value.List[index-1].Stop, item.Start)
 		}
 		previousCommentColumn := p.commentColumn
-		if p.hasTrailingComment(fieldContentEnd(item)) && len(columns[index]) > 0 {
+		if !p.multilineFieldType(item) &&
+			p.hasTrailingComment(fieldContentEnd(item)) && len(columns[index]) > 0 {
 			p.commentColumn = p.indent*8 + columns[index][len(columns[index])-1]
 		}
 		p.alignedFieldColumns(item, columns[index])
