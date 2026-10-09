@@ -1,5 +1,20 @@
 [
   {
+    "method": "hover",
+    "position": {"file": "app/app.tgo", "text": "Target", "occurrence": 1},
+    "hover": "func Target(value Record) string"
+  },
+  {
+    "method": "hover",
+    "position": {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
+    "hover": "func (Account) PersonalPayload() AccountPersonal"
+  },
+  {
+    "method": "hover",
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 3},
+    "hover": "var value string"
+  },
+  {
     "method": "definition",
     "position": {"file": "app/app.tgo", "text": "Target", "occurrence": 1},
     "locations": [

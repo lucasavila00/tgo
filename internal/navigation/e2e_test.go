@@ -28,6 +28,7 @@ type fixtureRequest struct {
 	Position           fixturePoint   `json:"position"`
 	IncludeDeclaration bool           `json:"includeDeclaration"`
 	Locations          []fixturePoint `json:"locations"`
+	Hover              string         `json:"hover"`
 }
 
 type fixtureSymbol struct {
@@ -202,6 +203,24 @@ func (h *helperProcess) check(
 		"offset":             offset,
 		"includeDeclaration": fixture.IncludeDeclaration,
 	})
+	if fixture.Method == "hover" {
+		var result *navigation.Hover
+		h.call(t, fixture.Method, params, &result)
+		want := &navigation.Hover{
+			Contents: fixture.Hover,
+			Range: navigation.Location{
+				URI: fileURI(t, positionPath), Start: offset,
+				End: offset + len(fixture.Position.Text),
+			},
+		}
+		if result == nil || *result != *want {
+			t.Fatalf(
+				"hover at %#v result = %#v, want %#v",
+				fixture.Position, result, want,
+			)
+		}
+		return
+	}
 	var result []navigation.Location
 	h.call(t, fixture.Method, params, &result)
 	want := make([]navigation.Location, 0, len(fixture.Locations))

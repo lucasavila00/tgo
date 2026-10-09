@@ -13,5 +13,14 @@
         "occurrence": 1
       }
     ]
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Target",
+      "occurrence": 2
+    },
+    "hover": "func Target() string"
   }
 ]

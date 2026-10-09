@@ -15,7 +15,7 @@ import (
 	"strings"
 	"sync"
 
-	"tgo/internal/compiler"
+	"tgo/internal/driver"
 	"tgo/pkg/syntax"
 )
 
@@ -37,6 +37,13 @@ type Symbol struct {
 	Selection Location `json:"selection"`
 }
 
+// Hover is type information for one source identifier.
+
+type Hover struct {
+	Contents string   `json:"contents"`
+	Range    Location `json:"range"`
+}
+
 type occurrence struct {
 	location Location
 	key      string
@@ -51,6 +58,7 @@ type sourcePosition struct {
 type workspaceIndex struct {
 	occurrences []occurrence
 	definitions map[string]Location
+	hovers      map[string]string
 	references  map[string][]Location
 	symbols     []Symbol
 }
@@ -147,6 +155,29 @@ func (e *Engine) Definition(
 	return nil, nil
 }
 
+// Hover returns type information for the name at a byte offset.
+func (e *Engine) Hover(
+	ctx context.Context,
+	uri string,
+	offset int,
+) (*Hover, error) {
+	index, err := e.load(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range index.occurrences {
+		if item.location.URI == uri && item.location.Start <= offset &&
+			offset < item.location.End {
+			contents, ok := index.hovers[item.key]
+			if !ok {
+				return nil, nil
+			}
+			return &Hover{Contents: contents, Range: item.location}, nil
+		}
+	}
+	return nil, nil
+}
+
 // References returns all exact uses of the name at a byte offset.
 func (e *Engine) References(
 	ctx context.Context,
@@ -234,7 +265,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		return nil, ctx.Err()
 	default:
 	}
-	packages, err := compiler.AnalyzeWorkspaceContext(ctx, e.root)
+	packages, err := driver.AnalyzeWorkspaceContext(ctx, e.root)
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +277,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	index := &workspaceIndex{
 		occurrences: nil,
 		definitions: make(map[string]Location),
+		hovers:      make(map[string]string),
 		references:  make(map[string][]Location),
 		symbols:     nil,
 	}
@@ -286,6 +318,19 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 					return true
 				}
 				key := keys.key(object)
+				qualifier := types.RelativeTo(object.Pkg())
+				contents := types.ObjectString(object, qualifier)
+				if function, ok := object.(*types.Func); ok {
+					signature := function.Type().(*types.Signature)
+					if receiver := signature.Recv(); receiver != nil {
+						contents = "func (" + types.TypeString(
+							receiver.Type(), qualifier,
+						) + ") " + function.Name() + strings.TrimPrefix(
+							types.TypeString(signature, qualifier), "func",
+						)
+					}
+				}
+				index.hovers[key] = contents
 				index.occurrences = append(index.occurrences, occurrence{
 					location: location, key: key,
 				})

@@ -1,14 +1,12 @@
 package compiler
 
 import (
-	"context"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
 	"maps"
 	"path/filepath"
-	"sort"
 
 	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
@@ -35,99 +33,7 @@ type AnalysisPackage struct {
 	NonNil        map[token.Pos]bool
 }
 
-// AnalyzeWorkspace loads and checks all active TGo packages in one module.
-func AnalyzeWorkspace(directory string) ([]*AnalysisPackage, error) {
-	return AnalyzeWorkspaceContext(context.Background(), directory)
-}
-
-// AnalyzeWorkspaceContext stops before the next package after cancellation.
-func AnalyzeWorkspaceContext(
-	ctx context.Context,
-	directory string,
-) ([]*AnalysisPackage, error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return nil, err
-	}
-	context, err := effectiveBuildContext(directory)
-	if err != nil {
-		return nil, err
-	}
-	packages, err := discover(root, module, &context)
-	if err != nil {
-		return nil, err
-	}
-	paths := make([]string, 0, len(packages))
-	for path := range packages {
-		paths = append(paths, path)
-	}
-	sort.Strings(paths)
-	loaded := make(map[string]bool)
-	result := make([]*AnalysisPackage, 0, len(paths))
-	for _, path := range paths {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-		}
-		unit := packages[path]
-		if err := loadAnalysisPackage(unit, packages, loaded); err != nil {
-			return nil, err
-		}
-		if len(unit.Sources) == 0 {
-			continue
-		}
-		analysis, err := analyzeUnit(unit)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, analysis)
-	}
-	return result, nil
-}
-
-// AnalyzePackage loads and checks one TGo package without writing output files.
-func AnalyzePackage(
-	directory string,
-	importPath string,
-	files *token.FileSet,
-) (*AnalysisPackage, error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return nil, err
-	}
-	context, err := effectiveBuildContext(directory)
-	if err != nil {
-		return nil, err
-	}
-	packages, err := discover(root, module, &context)
-	if err != nil {
-		return nil, err
-	}
-	unit := packages[importPath]
-	if unit == nil {
-		return nil, nil
-	}
-	if files != nil {
-		unit.fs = files
-	}
-	if err := loadAnalysisPackage(unit, packages, make(map[string]bool)); err != nil {
-		return nil, err
-	}
-	if len(unit.Sources) == 0 {
-		return nil, nil
-	}
-	return analyzeUnit(unit)
-}
-
-func analyzeUnit(unit *packageUnit) (*AnalysisPackage, error) {
-	if err := unit.checkAndLower(); err != nil {
-		return nil, err
-	}
-	outputs, err := unit.generatedOutputs()
-	if err != nil {
-		return nil, err
-	}
+func analysisPackage(unit *packageUnit, outputs map[string][]byte) (*AnalysisPackage, error) {
 	sources, facts, nonNil, err := analysisSources(unit, outputs)
 	if err != nil {
 		return nil, err
@@ -266,7 +172,7 @@ func analysisSources(
 		}
 		sources = append(sources, AnalysisSource{
 			Name: filepath.Base(source.Name), Path: source.Name,
-			Output: outputs[unit.outputPath(source.Name)],
+			Output: outputs[source.Name],
 			Syntax: tree,
 		})
 		if facts == nil {
@@ -313,27 +219,4 @@ func analysisTypeInfo(unit *packageUnit) *types.Info {
 		})
 	}
 	return &result
-}
-
-func loadAnalysisPackage(
-	unit *packageUnit,
-	packages map[string]*packageUnit,
-	loaded map[string]bool,
-) error {
-	if loaded[unit.Path] {
-		return nil
-	}
-	loaded[unit.Path] = true
-	if err := unit.load(); err != nil {
-		return err
-	}
-	for _, path := range importsOf(unit.Files) {
-		dependency := packages[path]
-		if dependency != nil {
-			if err := loadAnalysisPackage(dependency, packages, loaded); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
