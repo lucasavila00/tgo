@@ -13,6 +13,8 @@ func TestEnumNamespaceLowersToGoABI(t *testing.T) {
 	t.Parallel()
 	data := []byte(`package sample
 
+import "net/http"
+
 type Event enum {
 	Ready struct {
 		value *int
@@ -21,6 +23,8 @@ type Event enum {
 	Named struct { Event string; EventNamed string; EventTagNamed string }
 	Empty struct{}
 }
+
+type Request enum { Value struct { *http.Request } }
 
 var ready = Event.Ready{value: nil, ..default}
 var empty = Event.Empty{}
@@ -36,6 +40,7 @@ var empty = Event.Empty{}
 	for _, text := range []string{
 		"func NewEventReady(value *int, labels []string) Event",
 		"func NewEventNamed(tgoField0 string, tgoField1 string, tgoField2 string) Event",
+		"func NewRequestValue(tgoField0 *http.Request) Request",
 		"func NewEventEmpty() Event",
 		"type TgoEventReadyInput struct",
 		"NewEventReady(tgoInput.FieldValue, tgoInput.FieldLabels)",
