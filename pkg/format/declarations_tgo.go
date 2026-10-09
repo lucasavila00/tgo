@@ -163,18 +163,19 @@ func (p *printer) enumVariant(value *syntax.EnumVariant) {
 	p.space()
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
-	if len(value.Fields) > 0 {
-		p.newline()
-		p.indent++
-		for index, field := range value.Fields {
-			if index > 0 && p.blankBetween(value.Fields[index-1].Stop, field.Start) {
-				p.blankline()
-			}
-			p.tgoField(field)
-			p.trailingLine(field.Stop)
-			p.newline()
+	if len(value.Fields) == 1 && !p.multiline(value.Lbrace, value.Rbrace) {
+		p.space()
+		p.tgoField(value.Fields[0], 0)
+		p.space()
+		p.token(value.Rbrace, "}")
+		if value.Tag != nil {
+			p.space()
+			p.token(value.Tag.ValuePosition, value.Tag.Value)
 		}
-		p.indent--
+		return
+	}
+	if len(value.Fields) > 0 {
+		p.tgoFields(value.Fields)
 	}
 	p.token(value.Rbrace, "}")
 	if value.Tag != nil {
@@ -192,30 +193,54 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 	p.space()
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
+	if len(value.Fields) == 1 && !p.multiline(value.Lbrace, value.Rbrace) {
+		p.space()
+		p.tgoField(value.Fields[0], 0)
+		p.space()
+		p.token(value.Rbrace, "}")
+		return
+	}
 	if len(value.Fields) > 0 {
-		p.newline()
-		p.indent++
-		for index, field := range value.Fields {
-			if index > 0 && p.blankBetween(value.Fields[index-1].Stop, field.Start) {
-				p.blankline()
-			}
-			p.tgoField(field)
-			p.trailingLine(field.Stop)
-			p.newline()
-		}
-		p.indent--
+		p.tgoFields(value.Fields)
 	}
 	p.token(value.Rbrace, "}")
 }
 
-func (p *printer) tgoField(value *syntax.TGoField) {
-	p.field(value.Field)
+func (p *printer) tgoField(value *syntax.TGoField, nameWidth int) {
+	p.alignedField(value.Field, nameWidth)
 	if value.Default != nil {
 		p.space()
 		p.token(value.Assign, "=")
 		p.space()
 		p.expression(value.Default, 0)
 	}
+}
+
+func (p *printer) tgoFields(values []*syntax.TGoField) {
+	p.newline()
+	p.indent++
+	for first := 0; first < len(values); {
+		last := first + 1
+		for last < len(values) && !p.blankBetween(values[last-1].Stop, values[last].Start) {
+			last++
+		}
+		width := 0
+		for _, value := range values[first:last] {
+			if itemWidth := fieldNameWidth(value.Field); itemWidth > width {
+				width = itemWidth
+			}
+		}
+		for _, value := range values[first:last] {
+			p.tgoField(value, width)
+			p.trailingLine(value.Stop)
+			p.newline()
+		}
+		first = last
+		if first < len(values) {
+			p.blankline()
+		}
+	}
+	p.indent--
 }
 
 func (p *printer) checkedDeclaration(value *syntax.CheckedDeclaration) {

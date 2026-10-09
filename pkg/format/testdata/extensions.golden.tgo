@@ -4,9 +4,10 @@ import "errors"
 
 type Event enum `json:"adjacent,tag=type,content=data"` {
 	Created struct {
-		ID string
+		ID    string
 		Retry int = 3
 	} `json:"created"`
+	Named struct { Name string }
 	Closed struct {}
 }
 
@@ -14,6 +15,8 @@ type Options struct {
 	Name string
 	Tags []string = []string{}
 }
+
+type Single struct { Name string }
 
 type Port int where value > 0
 
@@ -38,3 +41,19 @@ func work(value %int, event Event) (%int, error) {
 	exhaustive:
 	}
 }
+
+type Groups struct {
+	A      int
+	Longer string
+
+	X        int
+	WideName string
+}
+
+var anonymous = struct {
+	A      int
+	Longer string
+
+	X        int
+	WideName string
+}{}

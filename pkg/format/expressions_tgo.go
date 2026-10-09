@@ -5,6 +5,8 @@ package format
 
 import (
 	"go/token"
+	"strings"
+	"unicode/utf8"
 
 	"tgo/pkg/syntax"
 )
@@ -277,11 +279,19 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 }
 
 func (p *printer) field(value *syntax.Field) {
+	p.alignedField(value, 0)
+}
+
+func (p *printer) alignedField(value *syntax.Field, nameWidth int) {
 	if len(value.Names) > 0 {
 		p.identifiers(value.Names)
 		functionType := syntax.FunctionTypeExpressionOf(value.Type)
 		if functionType == nil || functionType.Function.IsValid() {
-			p.space()
+			padding := 1
+			if width := fieldNameWidth(value); nameWidth > width {
+				padding += nameWidth - width
+			}
+			p.text(strings.Repeat(" ", padding))
 		}
 	}
 	p.expression(value.Type, 0)
@@ -290,6 +300,17 @@ func (p *printer) field(value *syntax.Field) {
 		p.token(value.Tag.ValuePosition, value.Tag.Value)
 	}
 	p.trailingLine(value.Stop)
+}
+
+func fieldNameWidth(value *syntax.Field) int {
+	width := 0
+	for index, name := range value.Names {
+		if index > 0 {
+			width += 2
+		}
+		width += utf8.RuneCountInString(name.Name)
+	}
+	return width
 }
 
 func (p *printer) fieldBlock(value *syntax.FieldList) {
@@ -313,12 +334,26 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 	}
 	p.newline()
 	p.indent++
-	for index, item := range value.List {
-		if index > 0 && p.blankBetween(value.List[index-1].Stop, item.Start) {
+	for first := 0; first < len(value.List); {
+		last := first + 1
+		for last < len(value.List) &&
+			!p.blankBetween(value.List[last-1].Stop, value.List[last].Start) {
+			last++
+		}
+		width := 0
+		for _, item := range value.List[first:last] {
+			if itemWidth := fieldNameWidth(item); itemWidth > width {
+				width = itemWidth
+			}
+		}
+		for _, item := range value.List[first:last] {
+			p.alignedField(item, width)
+			p.newline()
+		}
+		first = last
+		if first < len(value.List) {
 			p.blankline()
 		}
-		p.field(item)
-		p.newline()
 	}
 	p.indent--
 	p.token(value.Closing, "}")
