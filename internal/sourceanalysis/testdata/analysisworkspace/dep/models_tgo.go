@@ -2,22 +2,22 @@
 
 package dep
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
-func __tgo_Choice_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoChoiceExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // Choice requires a variant constructor. Its zero value is invalid.
@@ -39,18 +39,22 @@ func (v Choice) Tag() ChoiceTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Choice) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Choice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Choice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // ChoiceOne is the One payload.
 type ChoiceOne struct {
 	Name string
 }
+type TgoChoiceOneInput struct {
+	FieldName string
+}
 
-// Choice constructs Choice. Model fields must be valid.
+// NewChoiceOne constructs Choice. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ChoiceOne) Choice() Choice {
-	return Choice{tgoTag: ChoiceTagOne, tgoOne: value}
+func NewChoiceOne(Name string) Choice {
+	tgoValue := ChoiceOne{Name}
+	return Choice{tgoTag: ChoiceTagOne, tgoOne: tgoValue}
 }
 
 // OnePayload requires One. No tag check.
@@ -59,9 +63,9 @@ func (v Choice) OnePayload() ChoiceOne { return v.tgoOne }
 // ChoiceTwo is the Two payload.
 type ChoiceTwo struct{}
 
-// Choice constructs Choice. Model fields must be valid.
+// NewChoiceTwo constructs Choice. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ChoiceTwo) Choice() Choice {
+func NewChoiceTwo() Choice {
 	return Choice{tgoTag: ChoiceTagTwo}
 }
 
@@ -72,41 +76,41 @@ func (v Choice) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case ChoiceTagOne:
 		payload := v.OnePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload ChoiceOne `json:"One"`
 		}{Payload: payload})
 	case ChoiceTagTwo:
 		payload := v.TwoPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload ChoiceTwo `json:"Two"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Choice JSON tag")
+		return nil, fmt.Errorf("invalid Choice JSON tag")
 	}
 }
 
-func (v Choice) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Choice) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case ChoiceTagOne:
 		payload := v.OnePayload()
-		return __tgo_Choice_external_json_to(out, "One", payload)
+		return tgoChoiceExternalJSONTo(out, "One", payload)
 	case ChoiceTagTwo:
 		payload := v.TwoPayload()
-		return __tgo_Choice_external_json_to(out, "Two", payload)
+		return tgoChoiceExternalJSONTo(out, "Two", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Choice JSON tag")
+		return fmt.Errorf("invalid Choice JSON tag")
 	}
 }
 
 func (v *Choice) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Choice JSON variant")
+		return fmt.Errorf("expected one Choice JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -115,32 +119,32 @@ func (v *Choice) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "One":
 		var payload ChoiceOne
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceOne(payload.Name)
 		return nil
 	case "Two":
 		var payload ChoiceTwo
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceTwo()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Choice JSON variant %q", variant)
+		return fmt.Errorf("unknown Choice JSON variant %q", variant)
 	}
 }
 
-func (v *Choice) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Choice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Choice JSON variant")
+		return fmt.Errorf("expected one Choice JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -185,27 +189,27 @@ func (v *Choice) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Choice JSON variant")
+		return fmt.Errorf("expected one Choice JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Choice JSON variant %q", unknown)
+		return fmt.Errorf("unknown Choice JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload ChoiceOne
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceOne(payload.Name)
 		return nil
 	case 2:
 		var payload ChoiceTwo
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceTwo()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Choice JSON tag")
+		return fmt.Errorf("invalid Choice JSON tag")
 	}
 }

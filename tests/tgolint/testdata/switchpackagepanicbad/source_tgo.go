@@ -2,22 +2,22 @@
 
 package switchpackagepanicbad
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
-func __tgo_Result_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoResultExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // Result requires a variant constructor. Its zero value is invalid.
@@ -38,13 +38,13 @@ func (v Result) Tag() ResultTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Result) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Result: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Result: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v Result) GobEncode() ([]byte, error) {
 	if v.tgoTag < ResultTagSuccess || v.tgoTag > ResultTagFailure {
-		return nil, __tgo_fmt.Errorf("Result: cannot gob encode invalid tag %d", v.tgoTag)
+		return nil, fmt.Errorf("Result: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
 	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
@@ -53,23 +53,28 @@ func (v Result) GobEncode() ([]byte, error) {
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *Result) GobDecode(data []byte) error {
 	if len(data) != 4 {
-		return __tgo_fmt.Errorf("Result: invalid gob data length %d", len(data))
+		return fmt.Errorf("Result: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := ResultTag(number)
 	if uint32(tag) != number || tag < ResultTagSuccess || tag > ResultTagFailure {
-		return __tgo_fmt.Errorf("Result: cannot gob decode unknown tag %d", number)
+		return fmt.Errorf("Result: cannot gob decode unknown tag %d", number)
 	}
-	*v = Result{tgoTag: tag}
+	switch tag {
+	case ResultTagSuccess:
+		*v = NewResultSuccess()
+	case ResultTagFailure:
+		*v = NewResultFailure()
+	}
 	return nil
 }
 
 // ResultSuccess is the Success payload.
 type ResultSuccess struct{}
 
-// Result constructs Result. Model fields must be valid.
+// NewResultSuccess constructs Result. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResultSuccess) Result() Result {
+func NewResultSuccess() Result {
 	return Result{tgoTag: ResultTagSuccess}
 }
 
@@ -79,9 +84,9 @@ func (Result) SuccessPayload() ResultSuccess { return ResultSuccess{} }
 // ResultFailure is the Failure payload.
 type ResultFailure struct{}
 
-// Result constructs Result. Model fields must be valid.
+// NewResultFailure constructs Result. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResultFailure) Result() Result {
+func NewResultFailure() Result {
 	return Result{tgoTag: ResultTagFailure}
 }
 
@@ -92,41 +97,41 @@ func (v Result) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case ResultTagSuccess:
 		payload := v.SuccessPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload ResultSuccess `json:"Success"`
 		}{Payload: payload})
 	case ResultTagFailure:
 		payload := v.FailurePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload ResultFailure `json:"Failure"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Result JSON tag")
+		return nil, fmt.Errorf("invalid Result JSON tag")
 	}
 }
 
-func (v Result) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Result) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case ResultTagSuccess:
 		payload := v.SuccessPayload()
-		return __tgo_Result_external_json_to(out, "Success", payload)
+		return tgoResultExternalJSONTo(out, "Success", payload)
 	case ResultTagFailure:
 		payload := v.FailurePayload()
-		return __tgo_Result_external_json_to(out, "Failure", payload)
+		return tgoResultExternalJSONTo(out, "Failure", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Result JSON tag")
+		return fmt.Errorf("invalid Result JSON tag")
 	}
 }
 
 func (v *Result) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Result JSON variant")
+		return fmt.Errorf("expected one Result JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -135,32 +140,32 @@ func (v *Result) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Success":
 		var payload ResultSuccess
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Result()
+		*v = NewResultSuccess()
 		return nil
 	case "Failure":
 		var payload ResultFailure
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Result()
+		*v = NewResultFailure()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Result JSON variant %q", variant)
+		return fmt.Errorf("unknown Result JSON variant %q", variant)
 	}
 }
 
-func (v *Result) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Result) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Result JSON variant")
+		return fmt.Errorf("expected one Result JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -205,28 +210,28 @@ func (v *Result) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Result JSON variant")
+		return fmt.Errorf("expected one Result JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Result JSON variant %q", unknown)
+		return fmt.Errorf("unknown Result JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload ResultSuccess
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Result()
+		*v = NewResultSuccess()
 		return nil
 	case 2:
 		var payload ResultFailure
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Result()
+		*v = NewResultFailure()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Result JSON tag")
+		return fmt.Errorf("invalid Result JSON tag")
 	}
 }
 

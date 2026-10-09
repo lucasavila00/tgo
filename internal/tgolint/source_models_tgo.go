@@ -2,10 +2,10 @@
 
 package tgolint
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
 import (
 	"bytes"
@@ -114,6 +114,9 @@ func (c *checker) exportSourceModels(source *verifiedSource) {
 }
 
 func (c *checker) hasModelAPIs(object *types.TypeName) bool {
+	if _, ok := object.Type().Underlying().(*types.Interface); ok {
+		return false
+	}
 	return method(object.Type(), "Tag") != nil ||
 		method(object.Type(), "check") != nil
 }
@@ -240,17 +243,17 @@ func (c *checker) packagePath() string {
 	return c.pass.Pkg.Path()
 }
 
-func __tgo_sourceModel_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgosourceModelExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // sourceModel requires a variant constructor. Its zero value is invalid.
@@ -273,7 +276,7 @@ func (v sourceModel) Tag() sourceModelTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v sourceModel) UnknownTag() string {
-	return __tgo_fmt.Sprintf("sourceModel: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("sourceModel: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // sourceModelEnum is the Enum payload.
@@ -282,11 +285,17 @@ type sourceModelEnum struct {
 	Fact     *model
 	Variants []sourceVariant
 }
+type TgosourceModelEnumInput struct {
+	FieldName     string
+	FieldFact     *model
+	FieldVariants []sourceVariant
+}
 
-// sourceModel constructs sourceModel. Model fields must be valid.
+// NewsourceModelEnum constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value sourceModelEnum) sourceModel() sourceModel {
-	return sourceModel{tgoTag: sourceModelTagEnum, tgoPayload: value}
+func NewsourceModelEnum(Name string, Fact *model, Variants []sourceVariant) sourceModel {
+	tgoValue := sourceModelEnum{Name, Fact, Variants}
+	return sourceModel{tgoTag: sourceModelTagEnum, tgoPayload: tgoValue}
 }
 
 // EnumPayload requires Enum. No tag check.
@@ -298,11 +307,17 @@ type sourceModelStruct struct {
 	Fact   *model
 	Fields []sourceField
 }
+type TgosourceModelStructInput struct {
+	FieldName   string
+	FieldFact   *model
+	FieldFields []sourceField
+}
 
-// sourceModel constructs sourceModel. Model fields must be valid.
+// NewsourceModelStruct constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value sourceModelStruct) sourceModel() sourceModel {
-	return sourceModel{tgoTag: sourceModelTagStruct, tgoStruct: value}
+func NewsourceModelStruct(Name string, Fact *model, Fields []sourceField) sourceModel {
+	tgoValue := sourceModelStruct{Name, Fact, Fields}
+	return sourceModel{tgoTag: sourceModelTagStruct, tgoStruct: tgoValue}
 }
 
 // StructPayload requires Struct. No tag check.
@@ -312,41 +327,41 @@ func (v sourceModel) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case sourceModelTagEnum:
 		payload := v.EnumPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload sourceModelEnum `json:"Enum"`
 		}{Payload: payload})
 	case sourceModelTagStruct:
 		payload := v.StructPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload sourceModelStruct `json:"Struct"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid sourceModel JSON tag")
+		return nil, fmt.Errorf("invalid sourceModel JSON tag")
 	}
 }
 
-func (v sourceModel) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v sourceModel) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case sourceModelTagEnum:
 		payload := v.EnumPayload()
-		return __tgo_sourceModel_external_json_to(out, "Enum", payload)
+		return tgosourceModelExternalJSONTo(out, "Enum", payload)
 	case sourceModelTagStruct:
 		payload := v.StructPayload()
-		return __tgo_sourceModel_external_json_to(out, "Struct", payload)
+		return tgosourceModelExternalJSONTo(out, "Struct", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid sourceModel JSON tag")
+		return fmt.Errorf("invalid sourceModel JSON tag")
 	}
 }
 
 func (v *sourceModel) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one sourceModel JSON variant")
+		return fmt.Errorf("expected one sourceModel JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -355,32 +370,32 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Enum":
 		var payload sourceModelEnum
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.sourceModel()
+		*v = NewsourceModelEnum(payload.Name, payload.Fact, payload.Variants)
 		return nil
 	case "Struct":
 		var payload sourceModelStruct
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.sourceModel()
+		*v = NewsourceModelStruct(payload.Name, payload.Fact, payload.Fields)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown sourceModel JSON variant %q", variant)
+		return fmt.Errorf("unknown sourceModel JSON variant %q", variant)
 	}
 }
 
-func (v *sourceModel) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one sourceModel JSON variant")
+		return fmt.Errorf("expected one sourceModel JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -425,28 +440,28 @@ func (v *sourceModel) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one sourceModel JSON variant")
+		return fmt.Errorf("expected one sourceModel JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown sourceModel JSON variant %q", unknown)
+		return fmt.Errorf("unknown sourceModel JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload sourceModelEnum
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.sourceModel()
+		*v = NewsourceModelEnum(payload.Name, payload.Fact, payload.Variants)
 		return nil
 	case 2:
 		var payload sourceModelStruct
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.sourceModel()
+		*v = NewsourceModelStruct(payload.Name, payload.Fact, payload.Fields)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid sourceModel JSON tag")
+		return fmt.Errorf("invalid sourceModel JSON tag")
 	}
 }
 
@@ -489,11 +504,10 @@ func sourceDeclaration(
 				},
 			)
 		}
-		result := sourceModelEnum{
-			Name:     node.Name.Name,
-			Fact:     enumModel(packagePath, node.Name.Name, variants),
-			Variants: sourceVariants,
-		}.sourceModel()
+		result := func(input TgosourceModelEnumInput) sourceModel {
+			return NewsourceModelEnum(input.FieldName, input.FieldFact, input.FieldVariants)
+		}(TgosourceModelEnumInput{FieldName: node.Name.Name, FieldFact: enumModel(packagePath, node.Name.Name, variants), FieldVariants: sourceVariants})
+
 		return &result
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
@@ -510,11 +524,10 @@ func sourceDeclaration(
 		if node.Checked != token.NoPos {
 			fact = checkedModel(packagePath, node.Name.Name)
 		}
-		result := sourceModelStruct{
-			Name:   node.Name.Name,
-			Fact:   fact,
-			Fields: fields,
-		}.sourceModel()
+		result := func(input TgosourceModelStructInput) sourceModel {
+			return NewsourceModelStruct(input.FieldName, input.FieldFact, input.FieldFields)
+		}(TgosourceModelStructInput{FieldName: node.Name.Name, FieldFact: fact, FieldFields: fields})
+
 		return &result
 	}
 	return nil
@@ -561,7 +574,7 @@ func readTGoSource(pass *analysis.Pass, path string) ([]byte, error) {
 	}
 	data, err := pass.ReadFile(path)
 	if err != nil {
-		return nil, __tgo_fmt.Errorf("pass.ReadFile: %w", err)
+		return nil, fmt.Errorf("pass.ReadFile: %w", err)
 	}
 	return data, nil
 }
@@ -676,12 +689,15 @@ func generatedEnumShape(
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
 		if !ok || !validEnumAPI(
-			typ,
-			payload,
-			variant.name+"Payload",
-			name,
+			typ, payload, variant.name+"Payload", "New"+payloadName,
 		) {
 			return false
+		}
+		if len(variant.fields) > 0 {
+			carrier, ok := typeInPackage(typ, "Tgo"+payloadName+"Input")
+			if !ok || !validEnumCarrier(payload, carrier) {
+				return false
+			}
 		}
 	}
 	return true

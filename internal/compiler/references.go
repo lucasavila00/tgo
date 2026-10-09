@@ -7,8 +7,203 @@ import (
 	"go/types"
 	"strconv"
 
+	"tgo/pkg/syntax"
+
 	"golang.org/x/tools/go/ast/astutil"
 )
+
+type enumNameReservation struct {
+	allowed token.Pos
+	owner   string
+}
+
+// checkGeneratedEnumNameCollisions reserves the package-level enum ABI.
+func (p *packageUnit) checkGeneratedEnumNameCollisions() {
+	reserved := p.generatedEnumNameReservations()
+	p.checkTGoEnumNameCollisions(reserved)
+	p.checkGoEnumNameCollisions(reserved)
+}
+
+func (p *packageUnit) generatedEnumNameReservations() map[string]enumNameReservation {
+	reserved := make(map[string]enumNameReservation)
+	for _, source := range p.Sources {
+		for _, declaration := range source.Tree.Declarations {
+			node, ok := syntax.EnumDeclarationOf(declaration)
+			if !ok || node == nil {
+				continue
+			}
+			p.reserveEnumDeclarationNames(reserved, node)
+		}
+	}
+	return reserved
+}
+
+func (p *packageUnit) reserveEnumDeclarationNames(
+	reserved map[string]enumNameReservation,
+	node *syntax.EnumDeclaration,
+) {
+	owner := "enum " + node.Name.Name
+	p.reserveEnumName(reserved, node.Name.Name, node.Name.Start, owner, node.Name.Start)
+	p.reserveEnumName(reserved, node.Name.Name+"Tag", token.NoPos, owner, node.Name.Start)
+	for _, item := range node.Variants {
+		p.reserveEnumVariantNames(reserved, node.Name.Name, owner, item)
+	}
+}
+
+func (p *packageUnit) reserveEnumVariantNames(
+	reserved map[string]enumNameReservation,
+	enum string,
+	owner string,
+	item *syntax.EnumVariant,
+) {
+	p.reserveEnumName(reserved, enum+item.Name.Name, token.NoPos, owner, item.Name.Start)
+	p.reserveEnumName(reserved, enum+"Tag"+item.Name.Name, token.NoPos, owner, item.Name.Start)
+	p.reserveEnumName(
+		reserved,
+		enumConstructorName(enum, item.Name.Name),
+		token.NoPos,
+		owner,
+		item.Name.Start,
+	)
+	if len(item.Fields) > 0 {
+		p.reserveEnumName(
+			reserved,
+			enumCarrierName(enum, item.Name.Name),
+			token.NoPos,
+			owner,
+			item.Name.Start,
+		)
+	}
+	for _, itemField := range item.Fields {
+		if itemField.Default == nil {
+			continue
+		}
+		for _, fieldName := range itemField.Field.Names {
+			p.reserveEnumName(
+				reserved,
+				"TgoDefault"+enum+item.Name.Name+fieldName.Name,
+				token.NoPos,
+				owner,
+				fieldName.Start,
+			)
+		}
+	}
+}
+
+func (p *packageUnit) reserveEnumName(
+	reserved map[string]enumNameReservation,
+	name string,
+	allowed token.Pos,
+	owner string,
+	at token.Pos,
+) {
+	if previous, exists := reserved[name]; exists {
+		if previous.allowed != allowed || previous.owner != owner {
+			p.failAt(at, "generated enum name %s conflicts with %s", name, previous.owner)
+		}
+		return
+	}
+	reserved[name] = enumNameReservation{allowed: allowed, owner: owner}
+}
+
+func (p *packageUnit) checkTGoEnumNameCollisions(
+	reserved map[string]enumNameReservation,
+) {
+	for _, source := range p.Sources {
+		for _, declaration := range source.Tree.Declarations {
+			for _, declared := range sourceDeclarationNames(declaration) {
+				reservation, exists := reserved[declared.Name]
+				if exists && declared.Position != reservation.allowed {
+					p.failAt(
+						declared.Position,
+						"name %s is reserved by %s",
+						declared.Name,
+						reservation.owner,
+					)
+				}
+			}
+		}
+	}
+}
+
+func (p *packageUnit) checkGoEnumNameCollisions(
+	reserved map[string]enumNameReservation,
+) {
+	tgoFiles := make(map[*ast.File]bool)
+	for _, source := range p.Sources {
+		tgoFiles[source.File] = true
+	}
+	for _, file := range p.Files {
+		if tgoFiles[file] {
+			continue
+		}
+		for _, declaration := range file.Decls {
+			for _, declared := range goDeclarationNames(declaration) {
+				if reservation, exists := reserved[declared.Name]; exists {
+					p.failAt(
+						declared.Position,
+						"name %s is reserved by %s",
+						declared.Name,
+						reservation.owner,
+					)
+				}
+			}
+		}
+	}
+}
+
+type namedPosition struct {
+	Name     string
+	Position token.Pos
+}
+
+func sourceDeclarationNames(declaration *syntax.Declaration) []namedPosition {
+	var result []namedPosition
+	if node := syntax.GeneralDeclarationOf(declaration); node != nil {
+		for _, specification := range node.Specs {
+			if value := syntax.ValueSpecificationOf(specification); value != nil {
+				for _, name := range value.Names {
+					result = append(result, namedPosition{name.Name, name.Start})
+				}
+			}
+			if value := syntax.TypeSpecificationOf(specification); value != nil {
+				result = append(result, namedPosition{value.Name.Name, value.Name.Start})
+			}
+		}
+	}
+	if node := syntax.FunctionDeclarationValueOf(declaration); node != nil && node.Receiver == nil {
+		result = append(result, namedPosition{node.Name.Name, node.Name.Start})
+	}
+	if node, ok := syntax.EnumDeclarationOf(declaration); ok && node != nil {
+		result = append(result, namedPosition{node.Name.Name, node.Name.Start})
+	}
+	if node, ok := syntax.StructDeclarationOf(declaration); ok && node != nil {
+		result = append(result, namedPosition{node.Name.Name, node.Name.Start})
+	}
+	return result
+}
+
+func goDeclarationNames(declaration ast.Decl) []namedPosition {
+	var result []namedPosition
+	switch node := declaration.(type) {
+	case *ast.GenDecl:
+		for _, specification := range node.Specs {
+			switch item := specification.(type) {
+			case *ast.TypeSpec:
+				result = append(result, namedPosition{item.Name.Name, item.Name.Pos()})
+			case *ast.ValueSpec:
+				for _, name := range item.Names {
+					result = append(result, namedPosition{name.Name, name.Pos()})
+				}
+			}
+		}
+	case *ast.FuncDecl:
+		if node.Recv == nil {
+			result = append(result, namedPosition{node.Name.Name, node.Name.Pos()})
+		}
+	}
+	return result
+}
 
 // generatedReference records the object that one inserted name must use.
 type generatedReference struct {
@@ -68,15 +263,23 @@ func (p *packageUnit) ownerQualifier(file *ast.File, owner *types.Package) strin
 		case ".":
 			return ""
 		case "_":
-			alias := p.freshIdentifier("__tgo_import")
-			specification.Name = ast.NewIdent(alias)
+			alias := freshASTIdentifier(file, owner.Name())
+			if alias == owner.Name() {
+				specification.Name = nil
+			} else {
+				specification.Name = ast.NewIdent(alias)
+			}
 			return alias
 		default:
 			return specification.Name.Name
 		}
 	}
-	alias := p.freshIdentifier("__tgo_import")
-	astutil.AddNamedImport(p.fs, file, alias, owner.Path())
+	alias := freshASTIdentifier(file, owner.Name())
+	if alias == owner.Name() {
+		astutil.AddImport(p.fs, file, owner.Path())
+	} else {
+		astutil.AddNamedImport(p.fs, file, alias, owner.Path())
+	}
 	return alias
 }
 
@@ -164,38 +367,6 @@ func (p *packageUnit) importUsed(specification *ast.ImportSpec) bool {
 	return false
 }
 
-// freshIdentifier claims a package-wide name that source does not contain.
-func (p *packageUnit) freshIdentifier(base string) string {
-	p.collectUsedIdentifiers()
-	if !p.usedIdentifiers[base] {
-		p.usedIdentifiers[base] = true
-		return base
-	}
-	for suffix := 1; ; suffix++ {
-		name := base + "_" + strconv.Itoa(suffix)
-		if !p.usedIdentifiers[name] {
-			p.usedIdentifiers[name] = true
-			return name
-		}
-	}
-}
-
-// collectUsedIdentifiers records all names in the package syntax.
-func (p *packageUnit) collectUsedIdentifiers() {
-	if p.usedIdentifiers != nil {
-		return
-	}
-	p.usedIdentifiers = make(map[string]bool)
-	for _, file := range p.Files {
-		ast.Inspect(file, func(node ast.Node) bool {
-			if name, ok := node.(*ast.Ident); ok {
-				p.usedIdentifiers[name.Name] = true
-			}
-			return true
-		})
-	}
-}
-
 // validateGeneratedReferences rejects a source name that captures inserted code.
 func (p *packageUnit) validateGeneratedReferences() {
 	for _, reference := range p.references {
@@ -247,6 +418,7 @@ func (p *packageUnit) checkGeneratedPredeclaredNames() {
 		for _, declaration := range source.Models {
 			names := []string{"any", "error", "nil", "string"}
 			if len(declaration.Variants) > 0 {
+				names = append(names, "new")
 				names = append(names, enumTagType(len(declaration.Variants)))
 			}
 			for _, name := range names {

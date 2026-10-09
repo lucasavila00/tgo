@@ -3,5 +3,7 @@
 package dep
 
 func internalTestValue() Choice {
-	return ChoiceOne{Name: "internal"}.Choice()
+	return func(input TgoChoiceOneInput) Choice {
+		return NewChoiceOne(input.FieldName)
+	}(TgoChoiceOneInput{FieldName: "internal"})
 }

@@ -4,7 +4,7 @@ package successreturn
 
 import (
 	"errors"
-	__tgo_fmt "fmt"
+	"fmt"
 )
 
 var ErrFailure = errors.New("failure")
@@ -61,7 +61,7 @@ func FromLiteral(value int) (int, error) {
 func Wrapped(ok bool) (int, error) {
 	result, err := load(ok)
 	if err != nil {
-		return 0, __tgo_fmt.Errorf("load: %w", err)
+		return 0, fmt.Errorf("load: %w", err)
 	}
 	return result, nil
 }

@@ -107,6 +107,9 @@ func (c %checker) exportSourceModels(source *verifiedSource) {
 }
 
 func (c %checker) hasModelAPIs(object *types.TypeName) bool {
+	if _, ok := object.Type().Underlying().(*types.Interface); ok {
+		return false
+	}
 	return method(object.Type(), "Tag") != nil ||
 		method(object.Type(), "check") != nil
 }
@@ -462,12 +465,13 @@ func generatedEnumShape(
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
 		if !ok || !validEnumAPI(
-			typ,
-			payload,
-			variant.name + "Payload",
-			name,
+			typ, payload, variant.name + "Payload", "New" + payloadName,
 		) {
 			return false
+		}
+		if len(variant.fields) > 0 {
+			carrier, ok := typeInPackage(typ, "Tgo" + payloadName + "Input")
+			if !ok || !validEnumCarrier(payload, carrier) { return false }
 		}
 	}
 	return true

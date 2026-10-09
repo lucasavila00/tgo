@@ -2,24 +2,24 @@
 
 package sourcepolicybad
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
 import "example.com/tgolint/model"
 
-func __tgo_Local_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoLocalExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // Local requires a variant constructor. Its zero value is invalid.
@@ -40,18 +40,22 @@ func (v Local) Tag() LocalTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Local) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Local: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Local: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // LocalReady is the Ready payload.
 type LocalReady struct {
 	ID string
 }
+type TgoLocalReadyInput struct {
+	FieldID string
+}
 
-// Local constructs Local. Model fields must be valid.
+// NewLocalReady constructs Local. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value LocalReady) Local() Local {
-	return Local{tgoTag: LocalTagReady, tgoReady: value}
+func NewLocalReady(ID string) Local {
+	tgoValue := LocalReady{ID}
+	return Local{tgoTag: LocalTagReady, tgoReady: tgoValue}
 }
 
 // ReadyPayload requires Ready. No tag check.
@@ -61,33 +65,33 @@ func (v Local) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case LocalTagReady:
 		payload := v.ReadyPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload LocalReady `json:"Ready"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Local JSON tag")
+		return nil, fmt.Errorf("invalid Local JSON tag")
 	}
 }
 
-func (v Local) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Local) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case LocalTagReady:
 		payload := v.ReadyPayload()
-		return __tgo_Local_external_json_to(out, "Ready", payload)
+		return tgoLocalExternalJSONTo(out, "Ready", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Local JSON tag")
+		return fmt.Errorf("invalid Local JSON tag")
 	}
 }
 
 func (v *Local) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Local JSON variant")
+		return fmt.Errorf("expected one Local JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -96,25 +100,25 @@ func (v *Local) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Ready":
 		var payload LocalReady
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Local()
+		*v = NewLocalReady(payload.ID)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Local JSON variant %q", variant)
+		return fmt.Errorf("unknown Local JSON variant %q", variant)
 	}
 }
 
-func (v *Local) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Local) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Local JSON variant")
+		return fmt.Errorf("expected one Local JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -157,21 +161,21 @@ func (v *Local) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Local JSON variant")
+		return fmt.Errorf("expected one Local JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Local JSON variant %q", unknown)
+		return fmt.Errorf("unknown Local JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload LocalReady
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Local()
+		*v = NewLocalReady(payload.ID)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Local JSON tag")
+		return fmt.Errorf("invalid Local JSON tag")
 	}
 }
 
@@ -209,6 +213,9 @@ type DirectImported model.Event
 
 type LocalTypes interface {
 	Local
+	Tag() LocalTag
+	UnknownTag() string
+	ReadyPayload() LocalReady
 }
 
 func localLiteral() Local {
@@ -263,6 +270,16 @@ var localConstructor = NewPort
 var localCarrier = TgoPortInput{FieldNumber: 0}
 var importedConstructor = model.NewCount
 var importedCarrier = model.TgoCountInput{FieldValue: 0}
+var localEnumConstructor = NewLocalReady
+var importedEnumConstructor = model.NewEventStarted
+
+func generatedEnumTypes(
+	localPayload LocalReady,
+	localCarrier TgoLocalReadyInput,
+	importedPayload model.EventStarted,
+	importedCarrier model.TgoEventStartedInput,
+) {
+}
 
 func importedLiteral() model.Event {
 	return model.Event{}
@@ -275,5 +292,7 @@ func validChecked(number int) (Port, error) {
 }
 
 func validVariant(id string) Local {
-	return LocalReady{ID: id}.Local()
+	return func(input TgoLocalReadyInput) Local {
+		return NewLocalReady(input.FieldID)
+	}(TgoLocalReadyInput{FieldID: id})
 }

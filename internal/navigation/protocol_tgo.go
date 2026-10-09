@@ -2,10 +2,9 @@
 
 package navigation
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
 import (
 	"bufio"
@@ -36,7 +35,7 @@ func (v Response) Tag() ResponseTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Response) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Response: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Response: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // ResponseSuccess is the Success payload.
@@ -44,11 +43,16 @@ type ResponseSuccess struct {
 	ID     int64 `json:"id"`
 	Result any   `json:"result,omitempty"`
 }
+type TgoResponseSuccessInput struct {
+	FieldID     int64
+	FieldResult any
+}
 
-// Response constructs Response. Model fields must be valid.
+// NewResponseSuccess constructs Response. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResponseSuccess) Response() Response {
-	return Response{tgoTag: ResponseTagSuccess, tgoSuccess: value}
+func NewResponseSuccess(ID int64, Result any) Response {
+	tgoValue := ResponseSuccess{ID, Result}
+	return Response{tgoTag: ResponseTagSuccess, tgoSuccess: tgoValue}
 }
 
 // SuccessPayload requires Success. No tag check.
@@ -59,11 +63,16 @@ type ResponseFailure struct {
 	ID    int64  `json:"id"`
 	Error string `json:"error,omitempty"`
 }
+type TgoResponseFailureInput struct {
+	FieldID    int64
+	FieldError string
+}
 
-// Response constructs Response. Model fields must be valid.
+// NewResponseFailure constructs Response. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResponseFailure) Response() Response {
-	return Response{tgoTag: ResponseTagFailure, tgoFailure: value}
+func NewResponseFailure(ID int64, Error string) Response {
+	tgoValue := ResponseFailure{ID, Error}
+	return Response{tgoTag: ResponseTagFailure, tgoFailure: tgoValue}
 }
 
 // FailurePayload requires Failure. No tag check.
@@ -73,47 +82,47 @@ func (v Response) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case ResponseTagSuccess:
 		payload := v.SuccessPayload()
-		return __tgo_json.Marshal(payload)
+		return json.Marshal(payload)
 	case ResponseTagFailure:
 		payload := v.FailurePayload()
-		return __tgo_json.Marshal(payload)
+		return json.Marshal(payload)
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Response JSON tag")
+		return nil, fmt.Errorf("invalid Response JSON tag")
 	}
 }
 
-func (v Response) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Response) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case ResponseTagSuccess:
 		payload := v.SuccessPayload()
-		return __tgo_jsonv2.MarshalEncode(out, payload)
+		return jsonv2.MarshalEncode(out, payload)
 	case ResponseTagFailure:
 		payload := v.FailurePayload()
-		return __tgo_jsonv2.MarshalEncode(out, payload)
+		return jsonv2.MarshalEncode(out, payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Response JSON tag")
+		return fmt.Errorf("invalid Response JSON tag")
 	}
 }
 
 func (v *Response) UnmarshalJSON(data []byte) error {
 	{
 		var payload ResponseSuccess
-		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
-			*v = payload.Response()
+		if err := json.Unmarshal(data, &payload); err == nil {
+			*v = NewResponseSuccess(payload.ID, payload.Result)
 			return nil
 		}
 	}
 	{
 		var payload ResponseFailure
-		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
-			*v = payload.Response()
+		if err := json.Unmarshal(data, &payload); err == nil {
+			*v = NewResponseFailure(payload.ID, payload.Error)
 			return nil
 		}
 	}
-	return __tgo_fmt.Errorf("no matching Response JSON variant")
+	return fmt.Errorf("no matching Response JSON variant")
 }
 
-func (v *Response) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Response) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	data, err := in.ReadValue()
 	if err != nil {
 		return err
@@ -141,6 +150,55 @@ type cancelParams struct {
 
 type invalidateParams struct {
 	URI string `json:"uri"`
+}
+
+type protocolSymbol struct {
+	Name      string   `json:"name"`
+	Kind      string   `json:"kind"`
+	Container string   `json:"container,omitempty"`
+	Range     Location `json:"range"`
+	Selection Location `json:"selection"`
+}
+
+func protocolSymbols(values []Symbol) []protocolSymbol {
+	result := make([]protocolSymbol, 0, len(values))
+	for _, value := range values {
+		result = append(result, protocolSymbol{
+			Name: value.Name, Kind: protocolSymbolKind(value.Kind),
+			Container: value.Container, Range: value.Range,
+			Selection: value.Selection,
+		})
+	}
+	return result
+}
+
+func protocolSymbolKind(value SymbolKind) string {
+	switch value.Tag() {
+	case SymbolKindTagPackage:
+		return "package"
+	case SymbolKindTagType:
+		return "type"
+	case SymbolKindTagStruct:
+		return "struct"
+	case SymbolKindTagInterface:
+		return "interface"
+	case SymbolKindTagFunction:
+		return "function"
+	case SymbolKindTagMethod:
+		return "method"
+	case SymbolKindTagField:
+		return "field"
+	case SymbolKindTagEnum:
+		return "enum"
+	case SymbolKindTagEnumMember:
+		return "enumMember"
+	case SymbolKindTagConstant:
+		return "constant"
+	case SymbolKindTagVariable:
+		return "variable"
+	default:
+		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
 }
 
 // Request is one helper protocol request.
@@ -171,7 +229,7 @@ func (v Request) Tag() RequestTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Request) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Request: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Request: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // RequestHover is the Hover payload.
@@ -179,11 +237,16 @@ type RequestHover struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *positionParams `json:"params"`
 }
+type TgoRequestHoverInput struct {
+	FieldID     int64
+	FieldParams *positionParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestHover constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestHover) Request() Request {
-	return Request{tgoTag: RequestTagHover, tgoPayload: value}
+func NewRequestHover(ID int64, Params *positionParams) Request {
+	tgoValue := RequestHover{ID, Params}
+	return Request{tgoTag: RequestTagHover, tgoPayload: tgoValue}
 }
 
 // HoverPayload requires Hover. No tag check.
@@ -194,11 +257,16 @@ type RequestDefinition struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *positionParams `json:"params"`
 }
+type TgoRequestDefinitionInput struct {
+	FieldID     int64
+	FieldParams *positionParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestDefinition constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestDefinition) Request() Request {
-	return Request{tgoTag: RequestTagDefinition, tgoPayload: value}
+func NewRequestDefinition(ID int64, Params *positionParams) Request {
+	tgoValue := RequestDefinition{ID, Params}
+	return Request{tgoTag: RequestTagDefinition, tgoPayload: tgoValue}
 }
 
 // DefinitionPayload requires Definition. No tag check.
@@ -209,11 +277,16 @@ type RequestReferences struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *positionParams `json:"params"`
 }
+type TgoRequestReferencesInput struct {
+	FieldID     int64
+	FieldParams *positionParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestReferences constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestReferences) Request() Request {
-	return Request{tgoTag: RequestTagReferences, tgoPayload: value}
+func NewRequestReferences(ID int64, Params *positionParams) Request {
+	tgoValue := RequestReferences{ID, Params}
+	return Request{tgoTag: RequestTagReferences, tgoPayload: tgoValue}
 }
 
 // ReferencesPayload requires References. No tag check.
@@ -224,11 +297,16 @@ type RequestDocumentSymbols struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *documentParams `json:"params"`
 }
+type TgoRequestDocumentSymbolsInput struct {
+	FieldID     int64
+	FieldParams *documentParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestDocumentSymbols constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestDocumentSymbols) Request() Request {
-	return Request{tgoTag: RequestTagDocumentSymbols, tgoPayload: value}
+func NewRequestDocumentSymbols(ID int64, Params *documentParams) Request {
+	tgoValue := RequestDocumentSymbols{ID, Params}
+	return Request{tgoTag: RequestTagDocumentSymbols, tgoPayload: tgoValue}
 }
 
 // DocumentSymbolsPayload requires DocumentSymbols. No tag check.
@@ -241,11 +319,16 @@ type RequestWorkspaceSymbols struct {
 	ID     int64            `json:"id,omitempty"`
 	Params *workspaceParams `json:"params"`
 }
+type TgoRequestWorkspaceSymbolsInput struct {
+	FieldID     int64
+	FieldParams *workspaceParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestWorkspaceSymbols constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestWorkspaceSymbols) Request() Request {
-	return Request{tgoTag: RequestTagWorkspaceSymbols, tgoWorkspaceSymbols: value}
+func NewRequestWorkspaceSymbols(ID int64, Params *workspaceParams) Request {
+	tgoValue := RequestWorkspaceSymbols{ID, Params}
+	return Request{tgoTag: RequestTagWorkspaceSymbols, tgoWorkspaceSymbols: tgoValue}
 }
 
 // WorkspaceSymbolsPayload requires WorkspaceSymbols. No tag check.
@@ -256,11 +339,16 @@ type RequestCancel struct {
 	ID     int64         `json:"id,omitempty"`
 	Params *cancelParams `json:"params"`
 }
+type TgoRequestCancelInput struct {
+	FieldID     int64
+	FieldParams *cancelParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestCancel constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestCancel) Request() Request {
-	return Request{tgoTag: RequestTagCancel, tgoCancel: value}
+func NewRequestCancel(ID int64, Params *cancelParams) Request {
+	tgoValue := RequestCancel{ID, Params}
+	return Request{tgoTag: RequestTagCancel, tgoCancel: tgoValue}
 }
 
 // CancelPayload requires Cancel. No tag check.
@@ -271,11 +359,16 @@ type RequestInvalidate struct {
 	ID     int64             `json:"id,omitempty"`
 	Params *invalidateParams `json:"params"`
 }
+type TgoRequestInvalidateInput struct {
+	FieldID     int64
+	FieldParams *invalidateParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestInvalidate constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestInvalidate) Request() Request {
-	return Request{tgoTag: RequestTagInvalidate, tgoInvalidate: value}
+func NewRequestInvalidate(ID int64, Params *invalidateParams) Request {
+	tgoValue := RequestInvalidate{ID, Params}
+	return Request{tgoTag: RequestTagInvalidate, tgoInvalidate: tgoValue}
 }
 
 // InvalidatePayload requires Invalidate. No tag check.
@@ -285,12 +378,12 @@ func (v Request) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case RequestTagHover:
 		payload := v.HoverPayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"method\":\"hover\"}"), nil
@@ -302,12 +395,12 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		return result, nil
 	case RequestTagDefinition:
 		payload := v.DefinitionPayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"method\":\"definition\"}"), nil
@@ -319,12 +412,12 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		return result, nil
 	case RequestTagReferences:
 		payload := v.ReferencesPayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"method\":\"references\"}"), nil
@@ -336,12 +429,12 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		return result, nil
 	case RequestTagDocumentSymbols:
 		payload := v.DocumentSymbolsPayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"method\":\"documentSymbols\"}"), nil
@@ -353,12 +446,12 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		return result, nil
 	case RequestTagWorkspaceSymbols:
 		payload := v.WorkspaceSymbolsPayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"method\":\"workspaceSymbols\"}"), nil
@@ -370,12 +463,12 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		return result, nil
 	case RequestTagCancel:
 		payload := v.CancelPayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"method\":\"cancel\"}"), nil
@@ -387,12 +480,12 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		return result, nil
 	case RequestTagInvalidate:
 		payload := v.InvalidatePayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"method\":\"invalidate\"}"), nil
@@ -403,19 +496,17 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Request JSON tag")
+		return nil, fmt.Errorf("invalid Request JSON tag")
 	}
 }
 
-func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case RequestTagHover:
 		payload := v.HoverPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -423,7 +514,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"method"`
 			RequestHover
 		}{Variant: "hover", RequestHover: payload})
@@ -431,9 +522,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 		payload := v.DefinitionPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -441,7 +530,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"method"`
 			RequestDefinition
 		}{Variant: "definition", RequestDefinition: payload})
@@ -449,9 +538,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 		payload := v.ReferencesPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -459,7 +546,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"method"`
 			RequestReferences
 		}{Variant: "references", RequestReferences: payload})
@@ -467,9 +554,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 		payload := v.DocumentSymbolsPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -477,7 +562,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"method"`
 			RequestDocumentSymbols
 		}{Variant: "documentSymbols", RequestDocumentSymbols: payload})
@@ -485,9 +570,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 		payload := v.WorkspaceSymbolsPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -495,7 +578,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"method"`
 			RequestWorkspaceSymbols
 		}{Variant: "workspaceSymbols", RequestWorkspaceSymbols: payload})
@@ -503,9 +586,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 		payload := v.CancelPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -513,7 +594,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"method"`
 			RequestCancel
 		}{Variant: "cancel", RequestCancel: payload})
@@ -521,9 +602,7 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 		payload := v.InvalidatePayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -531,12 +610,12 @@ func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"method"`
 			RequestInvalidate
 		}{Variant: "invalidate", RequestInvalidate: payload})
 	default:
-		return __tgo_fmt.Errorf("invalid Request JSON tag")
+		return fmt.Errorf("invalid Request JSON tag")
 	}
 }
 
@@ -545,69 +624,69 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Tag string `json:"method"`
 	}
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if object.Tag == "" {
-		return __tgo_fmt.Errorf("missing Request JSON tag")
+		return fmt.Errorf("missing Request JSON tag")
 	}
 	variant = object.Tag
 	switch variant {
 	case "hover":
 		var payload RequestHover
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestHover(payload.ID, payload.Params)
 		return nil
 	case "definition":
 		var payload RequestDefinition
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestDefinition(payload.ID, payload.Params)
 		return nil
 	case "references":
 		var payload RequestReferences
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestReferences(payload.ID, payload.Params)
 		return nil
 	case "documentSymbols":
 		var payload RequestDocumentSymbols
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestDocumentSymbols(payload.ID, payload.Params)
 		return nil
 	case "workspaceSymbols":
 		var payload RequestWorkspaceSymbols
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestWorkspaceSymbols(payload.ID, payload.Params)
 		return nil
 	case "cancel":
 		var payload RequestCancel
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestCancel(payload.ID, payload.Params)
 		return nil
 	case "invalidate":
 		var payload RequestInvalidate
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestInvalidate(payload.ID, payload.Params)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Request JSON variant %q", variant)
+		return fmt.Errorf("unknown Request JSON variant %q", variant)
 	}
 }
 
-func (v *Request) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Request) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	data, err := in.ReadValue()
 	if err != nil {
 		return err
@@ -652,12 +731,12 @@ func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Write
 			server.stop()
 			return err
 		}
-		request := RequestHover{
-			ID: 0,
-			Params: &positionParams{
-				URI: "", Offset: 0, IncludeDeclaration: false,
-			},
-		}.Request()
+		request := func(input TgoRequestHoverInput) Request {
+			return NewRequestHover(input.FieldID, input.FieldParams)
+		}(TgoRequestHoverInput{FieldID: 0, FieldParams: &positionParams{
+			URI: "", Offset: 0, IncludeDeclaration: false,
+		}})
+
 		if err := json.Unmarshal(data, &request); err != nil {
 			if header.Method != "cancel" || header.ID != 0 {
 				server.send(protocolError(header.ID, err.Error()))
@@ -711,7 +790,7 @@ func (s *protocolServer) dispatch(request Request) {
 		}
 		s.start(payload.ID, func(ctx context.Context) Response {
 			result, err := s.engine.DocumentSymbols(ctx, payload.Params.URI)
-			return protocolResult(payload.ID, result, err)
+			return protocolResult(payload.ID, protocolSymbols(result), err)
 		})
 	case RequestTagWorkspaceSymbols:
 		payload := request.WorkspaceSymbolsPayload()
@@ -721,7 +800,7 @@ func (s *protocolServer) dispatch(request Request) {
 		}
 		s.start(payload.ID, func(ctx context.Context) Response {
 			result, err := s.engine.WorkspaceSymbols(ctx, payload.Params.Query)
-			return protocolResult(payload.ID, result, err)
+			return protocolResult(payload.ID, protocolSymbols(result), err)
 		})
 	case RequestTagCancel:
 		payload := request.CancelPayload()
@@ -731,7 +810,7 @@ func (s *protocolServer) dispatch(request Request) {
 			}
 			return
 		}
-		s.cancel(payload)
+		s.cancel(payload.ID, payload.Params)
 	case RequestTagInvalidate:
 		payload := request.InvalidatePayload()
 		if payload.Params == nil {
@@ -773,22 +852,26 @@ func protocolResult(id int64, result any, err error) Response {
 }
 
 func protocolSuccess(id int64, result any) Response {
-	return ResponseSuccess{ID: id, Result: result}.Response()
+	return func(input TgoResponseSuccessInput) Response {
+		return NewResponseSuccess(input.FieldID, input.FieldResult)
+	}(TgoResponseSuccessInput{FieldID: id, FieldResult: result})
 }
 
 func protocolError(id int64, message string) Response {
-	return ResponseFailure{ID: id, Error: message}.Response()
+	return func(input TgoResponseFailureInput) Response {
+		return NewResponseFailure(input.FieldID, input.FieldError)
+	}(TgoResponseFailureInput{FieldID: id, FieldError: message})
 }
 
-func (s *protocolServer) cancel(request RequestCancel) {
+func (s *protocolServer) cancel(id int64, params *cancelParams) {
 	s.activeMu.Lock()
-	cancel := s.active[request.Params.ID]
+	cancel := s.active[params.ID]
 	s.activeMu.Unlock()
 	if cancel != nil {
 		cancel()
 	}
-	if request.ID != 0 {
-		s.send(protocolSuccess(request.ID, true))
+	if id != 0 {
+		s.send(protocolSuccess(id, true))
 	}
 }
 

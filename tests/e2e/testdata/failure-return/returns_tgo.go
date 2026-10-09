@@ -46,9 +46,9 @@ func Nested(err error) (string, error) {
 	call := func() (string, error) {
 		return "", err
 	}
-	result, tgoErr := call()
-	if tgoErr != nil {
-		return "", tgoErr
+	result, err_1 := call()
+	if err_1 != nil {
+		return "", err_1
 	}
 	return result, nil
 }

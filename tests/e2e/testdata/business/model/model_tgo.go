@@ -2,10 +2,10 @@
 
 package model
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
 type Quantity struct {
 	value int
@@ -107,21 +107,21 @@ type Tagged struct {
 }
 
 type MarkerRecord struct {
-	__tgo_defaults bool
-	Name           string
+	tgoDefaults bool
+	Name        string
 }
 
-func __tgo_Account_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoAccountExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // Account requires a variant constructor. Its zero value is invalid.
@@ -144,18 +144,22 @@ func (v Account) Tag() AccountTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Account) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Account: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Account: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // AccountPersonal is the Personal payload.
 type AccountPersonal struct {
 	Name string
 }
+type TgoAccountPersonalInput struct {
+	FieldName string
+}
 
-// Account constructs Account. Model fields must be valid.
+// NewAccountPersonal constructs Account. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value AccountPersonal) Account() Account {
-	return Account{tgoTag: AccountTagPersonal, tgoPersonal: value}
+func NewAccountPersonal(Name string) Account {
+	tgoValue := AccountPersonal{Name}
+	return Account{tgoTag: AccountTagPersonal, tgoPersonal: tgoValue}
 }
 
 // PersonalPayload requires Personal. No tag check.
@@ -167,11 +171,17 @@ type AccountBusiness struct {
 	Members []Account
 	Tags    map[string]string
 }
+type TgoAccountBusinessInput struct {
+	FieldCompany string
+	FieldMembers []Account
+	FieldTags    map[string]string
+}
 
-// Account constructs Account. Model fields must be valid.
+// NewAccountBusiness constructs Account. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value AccountBusiness) Account() Account {
-	return Account{tgoTag: AccountTagBusiness, tgoBusiness: value}
+func NewAccountBusiness(Company string, Members []Account, Tags map[string]string) Account {
+	tgoValue := AccountBusiness{Company, Members, Tags}
+	return Account{tgoTag: AccountTagBusiness, tgoBusiness: tgoValue}
 }
 
 // BusinessPayload requires Business. No tag check.
@@ -181,41 +191,41 @@ func (v Account) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case AccountTagPersonal:
 		payload := v.PersonalPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload AccountPersonal `json:"Personal"`
 		}{Payload: payload})
 	case AccountTagBusiness:
 		payload := v.BusinessPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload AccountBusiness `json:"Business"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Account JSON tag")
+		return nil, fmt.Errorf("invalid Account JSON tag")
 	}
 }
 
-func (v Account) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Account) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case AccountTagPersonal:
 		payload := v.PersonalPayload()
-		return __tgo_Account_external_json_to(out, "Personal", payload)
+		return tgoAccountExternalJSONTo(out, "Personal", payload)
 	case AccountTagBusiness:
 		payload := v.BusinessPayload()
-		return __tgo_Account_external_json_to(out, "Business", payload)
+		return tgoAccountExternalJSONTo(out, "Business", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Account JSON tag")
+		return fmt.Errorf("invalid Account JSON tag")
 	}
 }
 
 func (v *Account) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Account JSON variant")
+		return fmt.Errorf("expected one Account JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -224,32 +234,32 @@ func (v *Account) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Personal":
 		var payload AccountPersonal
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Account()
+		*v = NewAccountPersonal(payload.Name)
 		return nil
 	case "Business":
 		var payload AccountBusiness
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Account()
+		*v = NewAccountBusiness(payload.Company, payload.Members, payload.Tags)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Account JSON variant %q", variant)
+		return fmt.Errorf("unknown Account JSON variant %q", variant)
 	}
 }
 
-func (v *Account) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Account) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Account JSON variant")
+		return fmt.Errorf("expected one Account JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -294,28 +304,28 @@ func (v *Account) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Account JSON variant")
+		return fmt.Errorf("expected one Account JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Account JSON variant %q", unknown)
+		return fmt.Errorf("unknown Account JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload AccountPersonal
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Account()
+		*v = NewAccountPersonal(payload.Name)
 		return nil
 	case 2:
 		var payload AccountBusiness
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Account()
+		*v = NewAccountBusiness(payload.Company, payload.Members, payload.Tags)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Account JSON tag")
+		return fmt.Errorf("invalid Account JSON tag")
 	}
 }
 
@@ -337,7 +347,7 @@ func (v Notice) Tag() NoticeTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Notice) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Notice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Notice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // NoticeText is the Text payload.
@@ -345,11 +355,16 @@ type NoticeText struct {
 	Body   string
 	Labels map[string]string
 }
+type TgoNoticeTextInput struct {
+	FieldBody   string
+	FieldLabels map[string]string
+}
 
-// Notice constructs Notice. Model fields must be valid.
+// NewNoticeText constructs Notice. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NoticeText) Notice() Notice {
-	return Notice{tgoTag: NoticeTagText, tgoText: value}
+func NewNoticeText(Body string, Labels map[string]string) Notice {
+	tgoValue := NoticeText{Body, Labels}
+	return Notice{tgoTag: NoticeTagText, tgoText: tgoValue}
 }
 
 // TextPayload requires Text. No tag check.
@@ -359,33 +374,33 @@ func (v Notice) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case NoticeTagText:
 		payload := v.TextPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload NoticeText `json:"Text"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Notice JSON tag")
+		return nil, fmt.Errorf("invalid Notice JSON tag")
 	}
 }
 
-func (v Notice) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Notice) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case NoticeTagText:
 		payload := v.TextPayload()
-		return __tgo_Account_external_json_to(out, "Text", payload)
+		return tgoAccountExternalJSONTo(out, "Text", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Notice JSON tag")
+		return fmt.Errorf("invalid Notice JSON tag")
 	}
 }
 
 func (v *Notice) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Notice JSON variant")
+		return fmt.Errorf("expected one Notice JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -394,25 +409,25 @@ func (v *Notice) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Text":
 		var payload NoticeText
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Notice()
+		*v = NewNoticeText(payload.Body, payload.Labels)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Notice JSON variant %q", variant)
+		return fmt.Errorf("unknown Notice JSON variant %q", variant)
 	}
 }
 
-func (v *Notice) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Notice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Notice JSON variant")
+		return fmt.Errorf("expected one Notice JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -455,21 +470,21 @@ func (v *Notice) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Notice JSON variant")
+		return fmt.Errorf("expected one Notice JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Notice JSON variant %q", unknown)
+		return fmt.Errorf("unknown Notice JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload NoticeText
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Notice()
+		*v = NewNoticeText(payload.Body, payload.Labels)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Notice JSON tag")
+		return fmt.Errorf("invalid Notice JSON tag")
 	}
 }
 
@@ -491,13 +506,13 @@ func (v Signal) Tag() SignalTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Signal) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Signal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Signal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v Signal) GobEncode() ([]byte, error) {
 	if v.tgoTag < SignalTagOn || v.tgoTag > SignalTagOff {
-		return nil, __tgo_fmt.Errorf("Signal: cannot gob encode invalid tag %d", v.tgoTag)
+		return nil, fmt.Errorf("Signal: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
 	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
@@ -506,23 +521,28 @@ func (v Signal) GobEncode() ([]byte, error) {
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *Signal) GobDecode(data []byte) error {
 	if len(data) != 4 {
-		return __tgo_fmt.Errorf("Signal: invalid gob data length %d", len(data))
+		return fmt.Errorf("Signal: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := SignalTag(number)
 	if uint32(tag) != number || tag < SignalTagOn || tag > SignalTagOff {
-		return __tgo_fmt.Errorf("Signal: cannot gob decode unknown tag %d", number)
+		return fmt.Errorf("Signal: cannot gob decode unknown tag %d", number)
 	}
-	*v = Signal{tgoTag: tag}
+	switch tag {
+	case SignalTagOn:
+		*v = NewSignalOn()
+	case SignalTagOff:
+		*v = NewSignalOff()
+	}
 	return nil
 }
 
 // SignalOn is the On payload.
 type SignalOn struct{}
 
-// Signal constructs Signal. Model fields must be valid.
+// NewSignalOn constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SignalOn) Signal() Signal {
+func NewSignalOn() Signal {
 	return Signal{tgoTag: SignalTagOn}
 }
 
@@ -532,9 +552,9 @@ func (Signal) OnPayload() SignalOn { return SignalOn{} }
 // SignalOff is the Off payload.
 type SignalOff struct{}
 
-// Signal constructs Signal. Model fields must be valid.
+// NewSignalOff constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SignalOff) Signal() Signal {
+func NewSignalOff() Signal {
 	return Signal{tgoTag: SignalTagOff}
 }
 
@@ -545,41 +565,41 @@ func (v Signal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case SignalTagOn:
 		payload := v.OnPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload SignalOn `json:"On"`
 		}{Payload: payload})
 	case SignalTagOff:
 		payload := v.OffPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload SignalOff `json:"Off"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Signal JSON tag")
+		return nil, fmt.Errorf("invalid Signal JSON tag")
 	}
 }
 
-func (v Signal) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Signal) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case SignalTagOn:
 		payload := v.OnPayload()
-		return __tgo_Account_external_json_to(out, "On", payload)
+		return tgoAccountExternalJSONTo(out, "On", payload)
 	case SignalTagOff:
 		payload := v.OffPayload()
-		return __tgo_Account_external_json_to(out, "Off", payload)
+		return tgoAccountExternalJSONTo(out, "Off", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Signal JSON tag")
+		return fmt.Errorf("invalid Signal JSON tag")
 	}
 }
 
 func (v *Signal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Signal JSON variant")
+		return fmt.Errorf("expected one Signal JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -588,32 +608,32 @@ func (v *Signal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "On":
 		var payload SignalOn
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Signal()
+		*v = NewSignalOn()
 		return nil
 	case "Off":
 		var payload SignalOff
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Signal()
+		*v = NewSignalOff()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Signal JSON variant %q", variant)
+		return fmt.Errorf("unknown Signal JSON variant %q", variant)
 	}
 }
 
-func (v *Signal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Signal JSON variant")
+		return fmt.Errorf("expected one Signal JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -658,29 +678,420 @@ func (v *Signal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Signal JSON variant")
+		return fmt.Errorf("expected one Signal JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Signal JSON variant %q", unknown)
+		return fmt.Errorf("unknown Signal JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload SignalOn
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Signal()
+		*v = NewSignalOn()
 		return nil
 	case 2:
 		var payload SignalOff
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Signal()
+		*v = NewSignalOff()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Signal JSON tag")
+		return fmt.Errorf("invalid Signal JSON tag")
 	}
+}
+
+// PrivateChoice requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type PrivateChoiceTag uint8
+
+const (
+	PrivateChoiceTagValue PrivateChoiceTag = iota + 1
+	PrivateChoiceTagEmpty
+)
+
+type PrivateChoice struct {
+	tgoTag   PrivateChoiceTag
+	tgoValue PrivateChoiceValue
+}
+
+// Tag returns the active tag.
+func (v PrivateChoice) Tag() PrivateChoiceTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v PrivateChoice) UnknownTag() string {
+	return fmt.Sprintf("PrivateChoice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// PrivateChoiceValue is the Value payload.
+type PrivateChoiceValue struct {
+	text    string
+	pointer *int
+	values  []int
+}
+type TgoPrivateChoiceValueInput struct {
+	FieldText    string
+	FieldPointer *int
+	FieldValues  []int
+}
+
+// NewPrivateChoiceValue constructs PrivateChoice. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func NewPrivateChoiceValue(text string, pointer *int, values []int) PrivateChoice {
+	tgoValue := PrivateChoiceValue{text, pointer, values}
+	return PrivateChoice{tgoTag: PrivateChoiceTagValue, tgoValue: tgoValue}
+}
+
+// ValuePayload requires Value. No tag check.
+func (v PrivateChoice) ValuePayload() PrivateChoiceValue { return v.tgoValue }
+
+// PrivateChoiceEmpty is the Empty payload.
+type PrivateChoiceEmpty struct{}
+
+// NewPrivateChoiceEmpty constructs PrivateChoice. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func NewPrivateChoiceEmpty() PrivateChoice {
+	return PrivateChoice{tgoTag: PrivateChoiceTagEmpty}
+}
+
+// EmptyPayload requires Empty. No tag check.
+func (PrivateChoice) EmptyPayload() PrivateChoiceEmpty { return PrivateChoiceEmpty{} }
+
+func (v PrivateChoice) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case PrivateChoiceTagValue:
+		payload := v.ValuePayload()
+		return json.Marshal(struct {
+			Payload PrivateChoiceValue `json:"Value"`
+		}{Payload: payload})
+	case PrivateChoiceTagEmpty:
+		payload := v.EmptyPayload()
+		return json.Marshal(struct {
+			Payload PrivateChoiceEmpty `json:"Empty"`
+		}{Payload: payload})
+	default:
+		return nil, fmt.Errorf("invalid PrivateChoice JSON tag")
+	}
+}
+
+func (v PrivateChoice) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case PrivateChoiceTagValue:
+		payload := v.ValuePayload()
+		return tgoAccountExternalJSONTo(out, "Value", payload)
+	case PrivateChoiceTagEmpty:
+		payload := v.EmptyPayload()
+		return tgoAccountExternalJSONTo(out, "Empty", payload)
+	default:
+		return fmt.Errorf("invalid PrivateChoice JSON tag")
+	}
+}
+
+func (v *PrivateChoice) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return fmt.Errorf("expected one PrivateChoice JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Value":
+		var payload PrivateChoiceValue
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = NewPrivateChoiceValue(payload.text, payload.pointer, payload.values)
+		return nil
+	case "Empty":
+		var payload PrivateChoiceEmpty
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = NewPrivateChoiceEmpty()
+		return nil
+	default:
+		return fmt.Errorf("unknown PrivateChoice JSON variant %q", variant)
+	}
+}
+
+func (v *PrivateChoice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return fmt.Errorf("expected one PrivateChoice JSON variant")
+	}
+	var payloadData jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Value":
+			current = 1
+		case "Empty":
+			current = 2
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return fmt.Errorf("expected one PrivateChoice JSON variant")
+	}
+	if selected == 0 {
+		return fmt.Errorf("unknown PrivateChoice JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload PrivateChoiceValue
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewPrivateChoiceValue(payload.text, payload.pointer, payload.values)
+		return nil
+	case 2:
+		var payload PrivateChoiceEmpty
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewPrivateChoiceEmpty()
+		return nil
+	default:
+		return fmt.Errorf("invalid PrivateChoice JSON tag")
+	}
+}
+
+func PrivateChoiceText(value PrivateChoice) string {
+	switch value.Tag() {
+	case PrivateChoiceTagValue:
+		return value.ValuePayload().text
+	case PrivateChoiceTagEmpty:
+		return ""
+	default:
+		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func PrivateChoiceValueCount(value PrivateChoice) int {
+	switch value.Tag() {
+	case PrivateChoiceTagValue:
+		return len(value.ValuePayload().values)
+	case PrivateChoiceTagEmpty:
+		return 0
+	default:
+		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+// OrderedChoice requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type OrderedChoiceTag uint8
+
+const (
+	OrderedChoiceTagValue OrderedChoiceTag = iota + 1
+)
+
+type OrderedChoice struct {
+	tgoTag   OrderedChoiceTag
+	tgoValue OrderedChoiceValue
+}
+
+// Tag returns the active tag.
+func (v OrderedChoice) Tag() OrderedChoiceTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v OrderedChoice) UnknownTag() string {
+	return fmt.Sprintf("OrderedChoice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// OrderedChoiceValue is the Value payload.
+type OrderedChoiceValue struct {
+	First  string
+	Second string
+}
+type TgoOrderedChoiceValueInput struct {
+	FieldFirst  string
+	FieldSecond string
+}
+
+// NewOrderedChoiceValue constructs OrderedChoice. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func NewOrderedChoiceValue(First string, Second string) OrderedChoice {
+	tgoValue := OrderedChoiceValue{First, Second}
+	return OrderedChoice{tgoTag: OrderedChoiceTagValue, tgoValue: tgoValue}
+}
+
+// ValuePayload requires Value. No tag check.
+func (v OrderedChoice) ValuePayload() OrderedChoiceValue { return v.tgoValue }
+
+func (v OrderedChoice) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case OrderedChoiceTagValue:
+		payload := v.ValuePayload()
+		return json.Marshal(struct {
+			Payload OrderedChoiceValue `json:"Value"`
+		}{Payload: payload})
+	default:
+		return nil, fmt.Errorf("invalid OrderedChoice JSON tag")
+	}
+}
+
+func (v OrderedChoice) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case OrderedChoiceTagValue:
+		payload := v.ValuePayload()
+		return tgoAccountExternalJSONTo(out, "Value", payload)
+	default:
+		return fmt.Errorf("invalid OrderedChoice JSON tag")
+	}
+}
+
+func (v *OrderedChoice) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return fmt.Errorf("expected one OrderedChoice JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Value":
+		var payload OrderedChoiceValue
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = NewOrderedChoiceValue(payload.First, payload.Second)
+		return nil
+	default:
+		return fmt.Errorf("unknown OrderedChoice JSON variant %q", variant)
+	}
+}
+
+func (v *OrderedChoice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return fmt.Errorf("expected one OrderedChoice JSON variant")
+	}
+	var payloadData jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Value":
+			current = 1
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return fmt.Errorf("expected one OrderedChoice JSON variant")
+	}
+	if selected == 0 {
+		return fmt.Errorf("unknown OrderedChoice JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload OrderedChoiceValue
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewOrderedChoiceValue(payload.First, payload.Second)
+		return nil
+	default:
+		return fmt.Errorf("invalid OrderedChoice JSON tag")
+	}
+}
+
+func appendOrder(order *[]string, value string) string {
+	*order = append(*order, value)
+	return value
+}
+
+func MakeOrderedChoice(order *[]string) OrderedChoice {
+	return func(input TgoOrderedChoiceValueInput) OrderedChoice {
+		return NewOrderedChoiceValue(input.FieldFirst, input.FieldSecond)
+	}(TgoOrderedChoiceValueInput{FieldSecond: appendOrder(order, "second"), FieldFirst: appendOrder(order, "first")})
+
 }
 
 type Request struct {
@@ -708,7 +1119,9 @@ type ValidationNode struct {
 }
 
 func Personal(name string) Account {
-	return AccountPersonal{Name: name}.Account()
+	return func(input TgoAccountPersonalInput) Account {
+		return NewAccountPersonal(input.FieldName)
+	}(TgoAccountPersonalInput{FieldName: name})
 }
 
 func ContextualTypeNames() (WhereAlias, EnumAlias) {
@@ -716,7 +1129,9 @@ func ContextualTypeNames() (WhereAlias, EnumAlias) {
 }
 
 func Business(company string, members []Account, tags map[string]string) Account {
-	return AccountBusiness{Company: company, Members: members, Tags: tags}.Account()
+	return func(input TgoAccountBusinessInput) Account {
+		return NewAccountBusiness(input.FieldCompany, input.FieldMembers, input.FieldTags)
+	}(TgoAccountBusinessInput{FieldCompany: company, FieldMembers: members, FieldTags: tags})
 }
 
 func Label(account Account) string {
@@ -821,7 +1236,9 @@ func FunctionTagSubject(account Account) string {
 }
 
 func LiteralTagSubject(name string) string {
-	switch enumValue7 := (AccountPersonal{Name: name}.Account()); enumValue7.Tag() {
+	switch enumValue7 := (func(input TgoAccountPersonalInput) Account {
+		return NewAccountPersonal(input.FieldName)
+	}(TgoAccountPersonalInput{FieldName: name})); enumValue7.Tag() {
 	case AccountTagPersonal:
 		person := enumValue7.PersonalPayload()
 		return person.Name
@@ -863,19 +1280,21 @@ func SignalStateOrInvalid(signal Signal) string {
 }
 
 func ExplicitMarker() MarkerRecord {
-	return MarkerRecord{__tgo_defaults: true, Name: "set"}
+	return MarkerRecord{tgoDefaults: true, Name: "set"}
 }
 
 func SelectedMarker() MarkerRecord {
-	return MarkerRecord{__tgo_defaults: false, Name: TgoDefaultMarkerRecordName()}
+	return MarkerRecord{tgoDefaults: false, Name: TgoDefaultMarkerRecordName()}
 }
 
 func MarkerValues(value MarkerRecord) (bool, string) {
-	return value.__tgo_defaults, value.Name
+	return value.tgoDefaults, value.Name
 }
 
 func AliasAccount(name string) Account {
-	return AccountPersonal{Name: name}.Account()
+	return func(input TgoAccountPersonalInput) Account {
+		return NewAccountPersonal(input.FieldName)
+	}(TgoAccountPersonalInput{FieldName: name})
 }
 
 func LabeledTagSwitch(account Account) string {
@@ -913,6 +1332,9 @@ func TgoDefaultMarkerRecordName() string {
 }
 func TgoDefaultNoticeTextLabels() map[string]string {
 	return map[string]string{}
+}
+func TgoDefaultPrivateChoiceValuevalues() []int {
+	return []int{1}
 }
 func TgoDefaultRequestTags() map[string]string {
 	return map[string]string{}

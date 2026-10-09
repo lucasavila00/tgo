@@ -2,10 +2,10 @@
 
 package tgolint
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
 import (
 	"go/constant"
@@ -17,17 +17,17 @@ import (
 	"tgo/pkg/syntax/cfg"
 )
 
-func __tgo_effectOutcome_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoeffectOutcomeExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // effectOutcome requires a variant constructor. Its zero value is invalid.
@@ -50,13 +50,13 @@ func (v effectOutcome) Tag() effectOutcomeTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v effectOutcome) UnknownTag() string {
-	return __tgo_fmt.Sprintf("effectOutcome: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("effectOutcome: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v effectOutcome) GobEncode() ([]byte, error) {
 	if v.tgoTag < effectOutcomeTagUnknown || v.tgoTag > effectOutcomeTagConditional {
-		return nil, __tgo_fmt.Errorf("effectOutcome: cannot gob encode invalid tag %d", v.tgoTag)
+		return nil, fmt.Errorf("effectOutcome: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
 	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
@@ -65,23 +65,32 @@ func (v effectOutcome) GobEncode() ([]byte, error) {
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *effectOutcome) GobDecode(data []byte) error {
 	if len(data) != 4 {
-		return __tgo_fmt.Errorf("effectOutcome: invalid gob data length %d", len(data))
+		return fmt.Errorf("effectOutcome: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := effectOutcomeTag(number)
 	if uint32(tag) != number || tag < effectOutcomeTagUnknown || tag > effectOutcomeTagConditional {
-		return __tgo_fmt.Errorf("effectOutcome: cannot gob decode unknown tag %d", number)
+		return fmt.Errorf("effectOutcome: cannot gob decode unknown tag %d", number)
 	}
-	*v = effectOutcome{tgoTag: tag}
+	switch tag {
+	case effectOutcomeTagUnknown:
+		*v = NeweffectOutcomeUnknown()
+	case effectOutcomeTagNever:
+		*v = NeweffectOutcomeNever()
+	case effectOutcomeTagAlways:
+		*v = NeweffectOutcomeAlways()
+	case effectOutcomeTagConditional:
+		*v = NeweffectOutcomeConditional()
+	}
 	return nil
 }
 
 // effectOutcomeUnknown is the Unknown payload.
 type effectOutcomeUnknown struct{}
 
-// effectOutcome constructs effectOutcome. Model fields must be valid.
+// NeweffectOutcomeUnknown constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectOutcomeUnknown) effectOutcome() effectOutcome {
+func NeweffectOutcomeUnknown() effectOutcome {
 	return effectOutcome{tgoTag: effectOutcomeTagUnknown}
 }
 
@@ -91,9 +100,9 @@ func (effectOutcome) UnknownPayload() effectOutcomeUnknown { return effectOutcom
 // effectOutcomeNever is the Never payload.
 type effectOutcomeNever struct{}
 
-// effectOutcome constructs effectOutcome. Model fields must be valid.
+// NeweffectOutcomeNever constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectOutcomeNever) effectOutcome() effectOutcome {
+func NeweffectOutcomeNever() effectOutcome {
 	return effectOutcome{tgoTag: effectOutcomeTagNever}
 }
 
@@ -103,9 +112,9 @@ func (effectOutcome) NeverPayload() effectOutcomeNever { return effectOutcomeNev
 // effectOutcomeAlways is the Always payload.
 type effectOutcomeAlways struct{}
 
-// effectOutcome constructs effectOutcome. Model fields must be valid.
+// NeweffectOutcomeAlways constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectOutcomeAlways) effectOutcome() effectOutcome {
+func NeweffectOutcomeAlways() effectOutcome {
 	return effectOutcome{tgoTag: effectOutcomeTagAlways}
 }
 
@@ -115,9 +124,9 @@ func (effectOutcome) AlwaysPayload() effectOutcomeAlways { return effectOutcomeA
 // effectOutcomeConditional is the Conditional payload.
 type effectOutcomeConditional struct{}
 
-// effectOutcome constructs effectOutcome. Model fields must be valid.
+// NeweffectOutcomeConditional constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectOutcomeConditional) effectOutcome() effectOutcome {
+func NeweffectOutcomeConditional() effectOutcome {
 	return effectOutcome{tgoTag: effectOutcomeTagConditional}
 }
 
@@ -128,57 +137,57 @@ func (v effectOutcome) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case effectOutcomeTagUnknown:
 		payload := v.UnknownPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload effectOutcomeUnknown `json:"Unknown"`
 		}{Payload: payload})
 	case effectOutcomeTagNever:
 		payload := v.NeverPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload effectOutcomeNever `json:"Never"`
 		}{Payload: payload})
 	case effectOutcomeTagAlways:
 		payload := v.AlwaysPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload effectOutcomeAlways `json:"Always"`
 		}{Payload: payload})
 	case effectOutcomeTagConditional:
 		payload := v.ConditionalPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload effectOutcomeConditional `json:"Conditional"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid effectOutcome JSON tag")
+		return nil, fmt.Errorf("invalid effectOutcome JSON tag")
 	}
 }
 
-func (v effectOutcome) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v effectOutcome) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case effectOutcomeTagUnknown:
 		payload := v.UnknownPayload()
-		return __tgo_effectOutcome_external_json_to(out, "Unknown", payload)
+		return tgoeffectOutcomeExternalJSONTo(out, "Unknown", payload)
 	case effectOutcomeTagNever:
 		payload := v.NeverPayload()
-		return __tgo_effectOutcome_external_json_to(out, "Never", payload)
+		return tgoeffectOutcomeExternalJSONTo(out, "Never", payload)
 	case effectOutcomeTagAlways:
 		payload := v.AlwaysPayload()
-		return __tgo_effectOutcome_external_json_to(out, "Always", payload)
+		return tgoeffectOutcomeExternalJSONTo(out, "Always", payload)
 	case effectOutcomeTagConditional:
 		payload := v.ConditionalPayload()
-		return __tgo_effectOutcome_external_json_to(out, "Conditional", payload)
+		return tgoeffectOutcomeExternalJSONTo(out, "Conditional", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid effectOutcome JSON tag")
+		return fmt.Errorf("invalid effectOutcome JSON tag")
 	}
 }
 
 func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one effectOutcome JSON variant")
+		return fmt.Errorf("expected one effectOutcome JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -187,46 +196,46 @@ func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Unknown":
 		var payload effectOutcomeUnknown
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeUnknown()
 		return nil
 	case "Never":
 		var payload effectOutcomeNever
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeNever()
 		return nil
 	case "Always":
 		var payload effectOutcomeAlways
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeAlways()
 		return nil
 	case "Conditional":
 		var payload effectOutcomeConditional
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeConditional()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown effectOutcome JSON variant %q", variant)
+		return fmt.Errorf("unknown effectOutcome JSON variant %q", variant)
 	}
 }
 
-func (v *effectOutcome) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one effectOutcome JSON variant")
+		return fmt.Errorf("expected one effectOutcome JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -275,55 +284,51 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one effectOutcome JSON variant")
+		return fmt.Errorf("expected one effectOutcome JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown effectOutcome JSON variant %q", unknown)
+		return fmt.Errorf("unknown effectOutcome JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload effectOutcomeUnknown
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeUnknown()
 		return nil
 	case 2:
 		var payload effectOutcomeNever
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeNever()
 		return nil
 	case 3:
 		var payload effectOutcomeAlways
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeAlways()
 		return nil
 	case 4:
 		var payload effectOutcomeConditional
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeConditional()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid effectOutcome JSON tag")
+		return fmt.Errorf("invalid effectOutcome JSON tag")
 	}
 }
 
-func unknownEffectOutcome() effectOutcome { return effectOutcomeUnknown{}.effectOutcome() }
-func neverEffectOutcome() effectOutcome   { return effectOutcomeNever{}.effectOutcome() }
-func alwaysEffectOutcome() effectOutcome  { return effectOutcomeAlways{}.effectOutcome() }
-func conditionalEffectOutcome() effectOutcome {
-	return effectOutcomeConditional{}.effectOutcome(
+func unknownEffectOutcome() effectOutcome     { return NeweffectOutcomeUnknown() }
+func neverEffectOutcome() effectOutcome       { return NeweffectOutcomeNever() }
+func alwaysEffectOutcome() effectOutcome      { return NeweffectOutcomeAlways() }
+func conditionalEffectOutcome() effectOutcome { return NeweffectOutcomeConditional() }
 
-	// reachableNodes returns syntax nodes from live CFG blocks.
-	)
-}
-
+// reachableNodes returns syntax nodes from live CFG blocks.
 func (c *checker) reachableNodes(body *syntax.BlockStatement) map[syntax.Node]bool {
 	reachable := make(map[syntax.Node]bool)
 	graph := cfg.New(body, c.callMayReturn)

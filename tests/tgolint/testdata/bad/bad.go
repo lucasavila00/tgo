@@ -34,7 +34,7 @@ func TrustedBoundary(
 
 var zero model.Event
 
-var publishedEvent = model.EventStopped{}.Event()
+var publishedEvent = model.NewEventStopped("")
 var publishedError error
 var publishedOK bool
 
@@ -152,7 +152,7 @@ func DiscardFunctionError(input int) int {
 }
 
 func eventWithError() (model.Event, error) {
-	return model.EventStopped{}.Event(), nil
+	return model.NewEventStopped(""), nil
 }
 
 func DiscardEnumError() model.Event {
@@ -175,7 +175,7 @@ func PublishPresence(values map[string]model.Event, key string) {
 }
 
 func CaptureResult() func() {
-	value := model.EventStopped{}.Event()
+	value := model.NewEventStopped("")
 	var err error
 	return func() {
 		value, err = eventWithError()
@@ -239,7 +239,7 @@ type Embedded struct {
 func ChangedReceiver(envelope Envelope) string {
 	switch envelope.Event.Tag() {
 	case model.EventTagStarted:
-		envelope.Event = model.EventStopped{Reason: "changed"}.Event()
+		envelope.Event = model.NewEventStopped("changed")
 		return envelope.Event.StartedPayload().ID
 	case model.EventTagStopped:
 		return envelope.Event.StoppedPayload().Reason
@@ -493,7 +493,7 @@ func ContinueSkipsError(input int, run bool) int {
 }
 
 func SelectOverwrite(values <-chan model.Event) model.Event {
-	value := model.EventStopped{}.Event()
+	value := model.NewEventStopped("")
 	var ok bool
 	select {
 	case value, ok = <-values:
@@ -530,7 +530,7 @@ func PresenceAliasBefore(values map[string]model.Event, key string) model.Event 
 	if ok {
 		return value
 	}
-	return model.EventStopped{}.Event()
+	return model.NewEventStopped("")
 }
 
 func PointerReceiver(event *model.Event) string {
@@ -545,7 +545,7 @@ func PointerReceiver(event *model.Event) string {
 }
 
 func mutateEvent(event *model.Event) {
-	*event = model.EventStopped{}.Event()
+	*event = model.NewEventStopped("")
 }
 
 func AddressedReceiver(event model.Event) string {
@@ -565,7 +565,7 @@ func AliasedReceiver(event model.Event) string {
 	pointer := &event
 	switch event.Tag() {
 	case model.EventTagStarted:
-		*pointer = model.EventStopped{}.Event()
+		*pointer = model.NewEventStopped("")
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
@@ -615,7 +615,7 @@ func DelayedGo(event model.Event) {
 
 func CapturedReceiver(event model.Event) string {
 	mutate := func() {
-		event = model.EventStopped{}.Event()
+		event = model.NewEventStopped("")
 	}
 	switch event.Tag() {
 	case model.EventTagStarted:
@@ -633,7 +633,7 @@ type MutableEmbedded struct {
 }
 
 func (event *MutableEmbedded) stop() {
-	event.Event = model.EventStopped{}.Event()
+	event.Event = model.NewEventStopped("")
 }
 
 func PointerMethodMutation(event MutableEmbedded) string {
@@ -662,7 +662,7 @@ func OuterCapture(
 		}
 	}
 	write := func() {
-		event = model.EventStopped{}.Event()
+		event = model.NewEventStopped("")
 	}
 	return read, write
 }
@@ -672,7 +672,7 @@ func ReceiverLoop(event model.Event) string {
 	case model.EventTagStarted:
 		for range 2 {
 			_ = event.StartedPayload()
-			event = model.EventStopped{}.Event()
+			event = model.NewEventStopped("")
 		}
 		return ""
 	case model.EventTagStopped:
@@ -701,7 +701,7 @@ func ReceiverGoto(event model.Event, repeat bool) string {
 	case model.EventTagStarted:
 	again:
 		result := event.StartedPayload().ID
-		event = model.EventStopped{}.Event()
+		event = model.NewEventStopped("")
 		if repeat {
 			repeat = false
 			goto again
@@ -816,6 +816,6 @@ func DefaultPayload(event model.Event) string {
 }
 
 func LiteralHoles() {
-	_ = [2]model.Event{0: model.EventStopped{}.Event()}
-	_ = []model.Event{1: model.EventStopped{}.Event()}
+	_ = [2]model.Event{0: model.NewEventStopped("")}
+	_ = []model.Event{1: model.NewEventStopped("")}
 }

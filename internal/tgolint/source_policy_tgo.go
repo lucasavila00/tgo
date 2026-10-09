@@ -381,7 +381,9 @@ func (c *checker) resultCapturedReads(literal *syntax.FunctionLiteral, state res
 	if literal == nil || literal.Body == nil {
 		return
 	}
-	body := syntax.StatementBlock{Value: literal.Body}.Statement()
+	body := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
+	}(syntax.TgoStatementBlockInput{FieldValue: literal.Body})
 	c.resultReadsStatement(&body, state)
 }
 
@@ -389,7 +391,9 @@ func (c *checker) resultWrite(name *syntax.Identifier) bool {
 	if name == nil || c.file == nil {
 		return false
 	}
-	node := syntax.NodeIdentifier{Value: name}.Node()
+	node := func(input syntax.TgoNodeIdentifierInput) syntax.Node {
+		return syntax.NewNodeIdentifier(input.FieldValue)
+	}(syntax.TgoNodeIdentifierInput{FieldValue: name})
 	parent := syntax.Parent(c.file, &node)
 	expression, ok := syntax.ExpressionOf(parent)
 	if ok && expression != nil {

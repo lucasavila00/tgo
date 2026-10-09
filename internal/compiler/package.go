@@ -27,7 +27,6 @@ type packageUnit struct {
 	sourceReferences map[token.Pos]types.Object
 	erasedImports    map[*ast.ImportSpec]bool
 	references       []generatedReference
-	usedIdentifiers  map[string]bool
 	typeErrors       []error
 	errors           []error
 }
@@ -155,13 +154,17 @@ func (p *packageUnit) generatedOutputs() (map[string][]byte, error) {
 func (p *packageUnit) checkAndLower() error {
 	p.prepare()
 	p.typecheck()
+	if p.addExactEnumConstraintMethods() {
+		p.typecheck()
+	}
 	p.checkGeneratedPredeclaredNames()
+	p.checkGeneratedEnumNameCollisions()
 	p.checkCheckedStructs()
 	p.validateNonNilPointerForms()
 	if len(p.errors) > 0 {
 		return p.errors[0]
 	}
-	p.fillCheckedDefaults()
+	p.fillConstructionDefaults()
 	p.lowerConstructions()
 	p.typecheck()
 	p.lowerPropagations()

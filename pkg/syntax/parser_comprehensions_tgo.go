@@ -27,9 +27,9 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 			continue
 		}
 		open := cursor - 1
-		close, tgoErr := p.closeToken(open)
-		if tgoErr != nil {
-			return tgoErr
+		close, err_1 := p.closeToken(open)
+		if err_1 != nil {
+			return err_1
 		}
 		candidates = append(candidates, comprehensionCandidate{open: open, close: close})
 		cursor = close
@@ -46,9 +46,9 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 			}
 			continue
 		}
-		comprehension, tgoErr2 := p.rawComprehension(literalStart, item.open, item.close)
-		if tgoErr2 != nil {
-			return tgoErr2
+		comprehension, err_2 := p.rawComprehension(literalStart, item.open, item.close)
+		if err_2 != nil {
+			return err_2
 		}
 		p.comprehensions = append(p.comprehensions, comprehension)
 		p.edits = append(p.edits, sourceEdit{
@@ -189,11 +189,10 @@ func (p *sourceParser) rawComprehensionClause(
 		if start+1 >= open {
 			return nil, p.tokenError(start, "comprehension if needs a condition")
 		}
-		clause := rawComprehensionClauseFilter{
-			start: start, end: close + 1, ifToken: start,
-			conditionStart: start + 1, conditionEnd: open,
-			open: open, close: close,
-		}.rawComprehensionClause()
+		clause := func(input TgorawComprehensionClauseFilterInput) rawComprehensionClause {
+			return NewrawComprehensionClauseFilter(input.FieldStart, input.FieldEnd, input.FieldIfToken, input.FieldConditionStart, input.FieldConditionEnd, input.FieldOpen, input.FieldClose)
+		}(TgorawComprehensionClauseFilterInput{FieldStart: start, FieldEnd: close + 1, FieldIfToken: start, FieldConditionStart: start + 1, FieldConditionEnd: open, FieldOpen: open, FieldClose: close})
+
 		return &clause, nil
 	}
 	define, rangeToken := -1, -1
@@ -216,12 +215,10 @@ func (p *sourceParser) rawComprehensionClause(
 	if rangeToken+1 >= open {
 		return nil, p.tokenError(rangeToken, "comprehension range needs a source")
 	}
-	clause := rawComprehensionClauseRange{
-		start: start, end: close + 1, forToken: start,
-		bindings: bindings, define: define, rangeToken: rangeToken,
-		sourceStart: rangeToken + 1, sourceEnd: open,
-		open: open, close: close,
-	}.rawComprehensionClause()
+	clause := func(input TgorawComprehensionClauseRangeInput) rawComprehensionClause {
+		return NewrawComprehensionClauseRange(input.FieldStart, input.FieldEnd, input.FieldForToken, input.FieldBindings, input.FieldDefine, input.FieldRangeToken, input.FieldSourceStart, input.FieldSourceEnd, input.FieldOpen, input.FieldClose)
+	}(TgorawComprehensionClauseRangeInput{FieldStart: start, FieldEnd: close + 1, FieldForToken: start, FieldBindings: bindings, FieldDefine: define, FieldRangeToken: rangeToken, FieldSourceStart: rangeToken + 1, FieldSourceEnd: open, FieldOpen: open, FieldClose: close})
+
 	return &clause, nil
 }
 

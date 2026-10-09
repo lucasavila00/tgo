@@ -5,13 +5,13 @@ package app
 import (
 	"example.com/business/legacy"
 	"example.com/business/model"
-	__tgo_fmt_1 "fmt"
+	"fmt"
 )
 
 func StoredLabel(store legacy.AccountStore, id legacy.AccountID) (string, error) {
 	account, err := store.Load(id)
 	if err != nil {
-		return "", __tgo_fmt_1.Errorf("store.Load: %w", err)
+		return "", fmt.Errorf("store.Load: %w", err)
 	}
 	return model.Label(account), nil
 }
@@ -21,7 +21,7 @@ func Labels(accounts []model.Account) ([]string, error) {
 		return model.Label(account), nil
 	})
 	if err != nil {
-		return nil, __tgo_fmt_1.Errorf("legacy.Map: %w", err)
+		return nil, fmt.Errorf("legacy.Map: %w", err)
 	}
 	return labels, nil
 }
@@ -36,7 +36,9 @@ func FirstStreamLabel(accounts ...model.Account) string {
 
 func Replace(account *model.Account, name string) {
 	legacy.Update(account, func(target *model.Account) {
-		*target = model.AccountPersonal{Name: name}.Account()
+		*target = func(input model.TgoAccountPersonalInput) model.Account {
+			return model.NewAccountPersonal(input.FieldName)
+		}(model.TgoAccountPersonalInput{FieldName: name})
 	})
 }
 

@@ -4,9 +4,11 @@ package app
 
 import (
 	_ "example.com/business/bridge"
-	__tgo_import "example.com/business/model"
+	"example.com/business/model"
 )
 
 func OnlyReexportedAccount(name string) any {
-	return __tgo_import.AccountPersonal{Name: name}.Account()
+	return func(input model.TgoAccountPersonalInput) model.Account {
+		return model.NewAccountPersonal(input.FieldName)
+	}(model.TgoAccountPersonalInput{FieldName: name})
 }

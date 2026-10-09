@@ -34,7 +34,7 @@ func (c %checker) checkSourceModelPolicy(node %syntax.Node) {
 	}
 }
 
-// checkSourceGeneratedName hides checked-struct Go ABI names from TGo.
+// checkSourceGeneratedName hides generated Go ABI names from TGo.
 func (c %checker) checkSourceGeneratedName(identifier %syntax.Identifier) {
 	object := c.facts.Object(identifier)
 	if object == nil || object.Name() != identifier.Name {
@@ -42,6 +42,14 @@ func (c %checker) checkSourceGeneratedName(identifier %syntax.Identifier) {
 	}
 	switch value := object.(type) {
 	case *types.Func:
+		if model, variant := c.enumConstructorModel(value); model != nil {
+			c.reportResult(
+				identifier.Start,
+				"%s is generated Go ABI; use %s.%s{...}",
+				value.Name(), modelName(model), variant,
+			)
+			return
+		}
 		if model := c.checkedConstructorModel(value); model != nil {
 			c.reportResult(
 				identifier.Start,
@@ -50,6 +58,20 @@ func (c %checker) checkSourceGeneratedName(identifier %syntax.Identifier) {
 			)
 		}
 	case *types.TypeName:
+		if model, variant, carrier := c.enumGeneratedType(value); model != nil {
+			name := modelName(model) + variant
+			kind := "enum representation"
+			if carrier {
+				name = "Tgo" + name + "Input"
+				kind = "staging ABI"
+			}
+			c.reportResult(
+				identifier.Start,
+				"%s is generated %s; use %s.%s{...}",
+				name, kind, modelName(model), variant,
+			)
+			return
+		}
 		if model := c.checkedCarrierModel(value); model != nil {
 			c.reportResult(
 				identifier.Start,
@@ -58,6 +80,65 @@ func (c %checker) checkSourceGeneratedName(identifier %syntax.Identifier) {
 			)
 		}
 	}
+}
+
+func (c %checker) enumConstructorModel(
+	function *types.Func,
+) (*model, string) {
+	if function == nil || function.Pkg() == nil {
+		return nil, ""
+	}
+	scope := function.Pkg().Scope()
+	for _, name := range scope.Names() {
+		object, ok := scope.Lookup(name).(*types.TypeName)
+		if !ok {
+			continue
+		}
+		model := c.modelFor(object.Type())
+		if !modelIsEnum(model) {
+			continue
+		}
+		for _, variant := range modelVariants(model) {
+			constructor := "New" + modelName(model) + variant
+			if function.Name() == constructor && scope.Lookup(constructor) == function {
+				return model, variant
+			}
+		}
+	}
+	return nil, ""
+}
+
+func (c %checker) enumGeneratedType(
+	object *types.TypeName,
+) (*model, string, bool) {
+	if object == nil {
+		return nil, "", false
+	}
+	named, ok := types.Unalias(object.Type()).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return nil, "", false
+	}
+	scope := named.Obj().Pkg().Scope()
+	for _, name := range scope.Names() {
+		candidate, ok := scope.Lookup(name).(*types.TypeName)
+		if !ok {
+			continue
+		}
+		model := c.modelFor(candidate.Type())
+		if !modelIsEnum(model) {
+			continue
+		}
+		for _, variant := range modelVariants(model) {
+			payload := modelName(model) + variant
+			switch named.Obj().Name() {
+			case payload:
+				return model, variant, false
+			case "Tgo" + payload + "Input":
+				return model, variant, true
+			}
+		}
+	}
+	return nil, "", false
 }
 
 func (c %checker) checkedConstructorModel(function *types.Func) *model {

@@ -9,8 +9,8 @@ import (
 )
 
 func TestCheckedStructConstruction(t *testing.T) {
-	port, err := func(tgoInput_2 TgoPortInput) (Port, error) {
-		return NewPort(tgoInput_2.FieldNumber)
+	port, err := func(tgoInput TgoPortInput) (Port, error) {
+		return NewPort(tgoInput.FieldNumber)
 	}(TgoPortInput{FieldNumber: 8080})
 	if err != nil {
 		t.Fatal(err)
@@ -19,8 +19,8 @@ func TestCheckedStructConstruction(t *testing.T) {
 	if Number(port) != 8080 {
 		t.Fatalf("Port literal = %d, %v", Number(port), err)
 	}
-	_, err = func(tgoInput_3 TgoPortInput) (Port, error) {
-		return NewPort(tgoInput_3.FieldNumber)
+	_, err = func(tgoInput_1 TgoPortInput) (Port, error) {
+		return NewPort(tgoInput_1.FieldNumber)
 	}(TgoPortInput{FieldNumber: 0})
 	if !errors.Is(err, ErrInvalidPort) {
 		t.Fatalf("Port literal error = %v", err)

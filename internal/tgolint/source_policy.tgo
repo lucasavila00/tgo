@@ -378,7 +378,7 @@ func (c %checker) resultCapturedReads(literal *syntax.FunctionLiteral, state res
 	if literal == nil || literal.Body == nil {
 		return
 	}
-	body := syntax.StatementBlock{Value: literal.Body}.Statement()
+	body := syntax.Statement.Block{Value: literal.Body}
 	c.resultReadsStatement(&body, state)
 }
 

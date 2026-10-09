@@ -2,43 +2,43 @@
 
 package model
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
-import __tgo_strings "strings"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
+import "strings"
 
-func __tgo_JSONExternal_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoJSONExternalExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
-func __tgo_JSONExternal_adjacent_json_to[T interface{}](
-	out *__tgo_jsontext.Encoder, tag string, name string, content string, payload T,
+func tgoJSONExternalAdjacentJSONTo[T interface{}](
+	out *jsontext.Encoder, tag string, name string, content string, payload T,
 ) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(tag)); err != nil {
+	if err := out.WriteToken(jsontext.String(tag)); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(content)); err != nil {
+	if err := out.WriteToken(jsontext.String(content)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // JSONExternal requires a variant constructor. Its zero value is invalid.
@@ -62,7 +62,7 @@ func (v JSONExternal) Tag() JSONExternalTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONExternal) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONExternalCreated is the Created payload.
@@ -71,11 +71,17 @@ type JSONExternalCreated struct {
 	Reason string    `json:"reason,omitempty"`
 	Custom JSONField `json:"custom,omitempty"`
 }
+type TgoJSONExternalCreatedInput struct {
+	FieldID     string
+	FieldReason string
+	FieldCustom JSONField
+}
 
-// JSONExternal constructs JSONExternal. Model fields must be valid.
+// NewJSONExternalCreated constructs JSONExternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONExternalCreated) JSONExternal() JSONExternal {
-	return JSONExternal{tgoTag: JSONExternalTagCreated, tgoCreated: value}
+func NewJSONExternalCreated(ID string, Reason string, Custom JSONField) JSONExternal {
+	tgoValue := JSONExternalCreated{ID, Reason, Custom}
+	return JSONExternal{tgoTag: JSONExternalTagCreated, tgoCreated: tgoValue}
 }
 
 // CreatedPayload requires Created. No tag check.
@@ -84,9 +90,9 @@ func (v JSONExternal) CreatedPayload() JSONExternalCreated { return v.tgoCreated
 // JSONExternalEmpty is the Empty payload.
 type JSONExternalEmpty struct{}
 
-// JSONExternal constructs JSONExternal. Model fields must be valid.
+// NewJSONExternalEmpty constructs JSONExternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONExternalEmpty) JSONExternal() JSONExternal {
+func NewJSONExternalEmpty() JSONExternal {
 	return JSONExternal{tgoTag: JSONExternalTagEmpty}
 }
 
@@ -97,11 +103,15 @@ func (JSONExternal) EmptyPayload() JSONExternalEmpty { return JSONExternalEmpty{
 type JSONExternalLarge struct {
 	Data [100]byte
 }
+type TgoJSONExternalLargeInput struct {
+	FieldData [100]byte
+}
 
-// JSONExternal constructs JSONExternal. Model fields must be valid.
+// NewJSONExternalLarge constructs JSONExternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONExternalLarge) JSONExternal() JSONExternal {
-	return JSONExternal{tgoTag: JSONExternalTagLarge, tgoPayload: value}
+func NewJSONExternalLarge(Data [100]byte) JSONExternal {
+	tgoValue := JSONExternalLarge{Data}
+	return JSONExternal{tgoTag: JSONExternalTagLarge, tgoPayload: tgoValue}
 }
 
 // LargePayload requires Large. No tag check.
@@ -111,49 +121,49 @@ func (v JSONExternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONExternalTagCreated:
 		payload := v.CreatedPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload JSONExternalCreated `json:"created"`
 		}{Payload: payload})
 	case JSONExternalTagEmpty:
 		payload := v.EmptyPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload JSONExternalEmpty `json:"Empty"`
 		}{Payload: payload})
 	case JSONExternalTagLarge:
 		payload := v.LargePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload JSONExternalLarge `json:"Large"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONExternal JSON tag")
+		return nil, fmt.Errorf("invalid JSONExternal JSON tag")
 	}
 }
 
-func (v JSONExternal) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONExternal) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONExternalTagCreated:
 		payload := v.CreatedPayload()
-		return __tgo_JSONExternal_external_json_to(out, "created", payload)
+		return tgoJSONExternalExternalJSONTo(out, "created", payload)
 	case JSONExternalTagEmpty:
 		payload := v.EmptyPayload()
-		return __tgo_JSONExternal_external_json_to(out, "Empty", payload)
+		return tgoJSONExternalExternalJSONTo(out, "Empty", payload)
 	case JSONExternalTagLarge:
 		payload := v.LargePayload()
-		return __tgo_JSONExternal_external_json_to(out, "Large", payload)
+		return tgoJSONExternalExternalJSONTo(out, "Large", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid JSONExternal JSON tag")
+		return fmt.Errorf("invalid JSONExternal JSON tag")
 	}
 }
 
 func (v *JSONExternal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one JSONExternal JSON variant")
+		return fmt.Errorf("expected one JSONExternal JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -162,39 +172,39 @@ func (v *JSONExternal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "created":
 		var payload JSONExternalCreated
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONExternal()
+		*v = NewJSONExternalCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case "Empty":
 		var payload JSONExternalEmpty
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONExternal()
+		*v = NewJSONExternalEmpty()
 		return nil
 	case "Large":
 		var payload JSONExternalLarge
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONExternal()
+		*v = NewJSONExternalLarge(payload.Data)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONExternal JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONExternal JSON variant %q", variant)
 	}
 }
 
-func (v *JSONExternal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one JSONExternal JSON variant")
+		return fmt.Errorf("expected one JSONExternal JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -241,35 +251,35 @@ func (v *JSONExternal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one JSONExternal JSON variant")
+		return fmt.Errorf("expected one JSONExternal JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown JSONExternal JSON variant %q", unknown)
+		return fmt.Errorf("unknown JSONExternal JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload JSONExternalCreated
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONExternal()
+		*v = NewJSONExternalCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case 2:
 		var payload JSONExternalEmpty
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONExternal()
+		*v = NewJSONExternalEmpty()
 		return nil
 	case 3:
 		var payload JSONExternalLarge
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONExternal()
+		*v = NewJSONExternalLarge(payload.Data)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid JSONExternal JSON tag")
+		return fmt.Errorf("invalid JSONExternal JSON tag")
 	}
 }
 
@@ -292,7 +302,7 @@ func (v JSONInternal) Tag() JSONInternalTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONInternal) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONInternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONInternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONInternalCreated is the Created payload.
@@ -301,11 +311,17 @@ type JSONInternalCreated struct {
 	Reason string    `json:"reason,omitempty"`
 	Custom JSONField `json:"custom,omitempty"`
 }
+type TgoJSONInternalCreatedInput struct {
+	FieldID     string
+	FieldReason string
+	FieldCustom JSONField
+}
 
-// JSONInternal constructs JSONInternal. Model fields must be valid.
+// NewJSONInternalCreated constructs JSONInternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONInternalCreated) JSONInternal() JSONInternal {
-	return JSONInternal{tgoTag: JSONInternalTagCreated, tgoCreated: value}
+func NewJSONInternalCreated(ID string, Reason string, Custom JSONField) JSONInternal {
+	tgoValue := JSONInternalCreated{ID, Reason, Custom}
+	return JSONInternal{tgoTag: JSONInternalTagCreated, tgoCreated: tgoValue}
 }
 
 // CreatedPayload requires Created. No tag check.
@@ -314,9 +330,9 @@ func (v JSONInternal) CreatedPayload() JSONInternalCreated { return v.tgoCreated
 // JSONInternalEmpty is the Empty payload.
 type JSONInternalEmpty struct{}
 
-// JSONInternal constructs JSONInternal. Model fields must be valid.
+// NewJSONInternalEmpty constructs JSONInternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONInternalEmpty) JSONInternal() JSONInternal {
+func NewJSONInternalEmpty() JSONInternal {
 	return JSONInternal{tgoTag: JSONInternalTagEmpty}
 }
 
@@ -327,12 +343,12 @@ func (v JSONInternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalTagCreated:
 		payload := v.CreatedPayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected JSONInternal JSON payload object")
+			return nil, fmt.Errorf("expected JSONInternal JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"type\":\"created\"}"), nil
@@ -344,12 +360,12 @@ func (v JSONInternal) MarshalJSON() ([]byte, error) {
 		return result, nil
 	case JSONInternalTagEmpty:
 		payload := v.EmptyPayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected JSONInternal JSON payload object")
+			return nil, fmt.Errorf("expected JSONInternal JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"type\":\"Empty\"}"), nil
@@ -360,19 +376,17 @@ func (v JSONInternal) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONInternal JSON tag")
+		return nil, fmt.Errorf("invalid JSONInternal JSON tag")
 	}
 }
 
-func (v JSONInternal) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONInternal) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONInternalTagCreated:
 		payload := v.CreatedPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -380,7 +394,7 @@ func (v JSONInternal) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"type"`
 			JSONInternalCreated
 		}{Variant: "created", JSONInternalCreated: payload})
@@ -388,9 +402,7 @@ func (v JSONInternal) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 		payload := v.EmptyPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -398,12 +410,12 @@ func (v JSONInternal) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"type"`
 			JSONInternalEmpty
 		}{Variant: "Empty", JSONInternalEmpty: payload})
 	default:
-		return __tgo_fmt.Errorf("invalid JSONInternal JSON tag")
+		return fmt.Errorf("invalid JSONInternal JSON tag")
 	}
 }
 
@@ -412,34 +424,34 @@ func (v *JSONInternal) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Tag string `json:"type"`
 	}
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if object.Tag == "" {
-		return __tgo_fmt.Errorf("missing JSONInternal JSON tag")
+		return fmt.Errorf("missing JSONInternal JSON tag")
 	}
 	variant = object.Tag
 	switch variant {
 	case "created":
 		var payload JSONInternalCreated
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONInternal()
+		*v = NewJSONInternalCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case "Empty":
 		var payload JSONInternalEmpty
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONInternal()
+		*v = NewJSONInternalEmpty()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONInternal JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONInternal JSON variant %q", variant)
 	}
 }
 
-func (v *JSONInternal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONInternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	data, err := in.ReadValue()
 	if err != nil {
 		return err
@@ -466,7 +478,7 @@ func (v JSONAdjacent) Tag() JSONAdjacentTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONAdjacent) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONAdjacentCreated is the Created payload.
@@ -475,11 +487,17 @@ type JSONAdjacentCreated struct {
 	Reason string    `json:"reason,omitempty"`
 	Custom JSONField `json:"custom,omitempty"`
 }
+type TgoJSONAdjacentCreatedInput struct {
+	FieldID     string
+	FieldReason string
+	FieldCustom JSONField
+}
 
-// JSONAdjacent constructs JSONAdjacent. Model fields must be valid.
+// NewJSONAdjacentCreated constructs JSONAdjacent. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONAdjacentCreated) JSONAdjacent() JSONAdjacent {
-	return JSONAdjacent{tgoTag: JSONAdjacentTagCreated, tgoCreated: value}
+func NewJSONAdjacentCreated(ID string, Reason string, Custom JSONField) JSONAdjacent {
+	tgoValue := JSONAdjacentCreated{ID, Reason, Custom}
+	return JSONAdjacent{tgoTag: JSONAdjacentTagCreated, tgoCreated: tgoValue}
 }
 
 // CreatedPayload requires Created. No tag check.
@@ -488,9 +506,9 @@ func (v JSONAdjacent) CreatedPayload() JSONAdjacentCreated { return v.tgoCreated
 // JSONAdjacentEmpty is the Empty payload.
 type JSONAdjacentEmpty struct{}
 
-// JSONAdjacent constructs JSONAdjacent. Model fields must be valid.
+// NewJSONAdjacentEmpty constructs JSONAdjacent. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONAdjacentEmpty) JSONAdjacent() JSONAdjacent {
+func NewJSONAdjacentEmpty() JSONAdjacent {
 	return JSONAdjacent{tgoTag: JSONAdjacentTagEmpty}
 }
 
@@ -501,31 +519,31 @@ func (v JSONAdjacent) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONAdjacentTagCreated:
 		payload := v.CreatedPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Variant string              `json:"type"`
 			Payload JSONAdjacentCreated `json:"data"`
 		}{Variant: "created", Payload: payload})
 	case JSONAdjacentTagEmpty:
 		payload := v.EmptyPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Variant string            `json:"type"`
 			Payload JSONAdjacentEmpty `json:"data"`
 		}{Variant: "Empty", Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONAdjacent JSON tag")
+		return nil, fmt.Errorf("invalid JSONAdjacent JSON tag")
 	}
 }
 
-func (v JSONAdjacent) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONAdjacent) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONAdjacentTagCreated:
 		payload := v.CreatedPayload()
-		return __tgo_JSONExternal_adjacent_json_to(out, "type", "created", "data", payload)
+		return tgoJSONExternalAdjacentJSONTo(out, "type", "created", "data", payload)
 	case JSONAdjacentTagEmpty:
 		payload := v.EmptyPayload()
-		return __tgo_JSONExternal_adjacent_json_to(out, "type", "Empty", "data", payload)
+		return tgoJSONExternalAdjacentJSONTo(out, "type", "Empty", "data", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid JSONAdjacent JSON tag")
+		return fmt.Errorf("invalid JSONAdjacent JSON tag")
 	}
 }
 
@@ -533,49 +551,49 @@ func (v *JSONAdjacent) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object struct {
-		Tag     string                `json:"type"`
-		Content __tgo_json.RawMessage `json:"data"`
+		Tag     string          `json:"type"`
+		Content json.RawMessage `json:"data"`
 	}
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if object.Tag == "" {
-		return __tgo_fmt.Errorf("missing JSONAdjacent JSON tag")
+		return fmt.Errorf("missing JSONAdjacent JSON tag")
 	}
 	variant = object.Tag
 	payloadData = object.Content
 	if payloadData == nil {
-		return __tgo_fmt.Errorf("missing JSONAdjacent JSON content")
+		return fmt.Errorf("missing JSONAdjacent JSON content")
 	}
 	switch variant {
 	case "created":
 		var payload JSONAdjacentCreated
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONAdjacent()
+		*v = NewJSONAdjacentCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case "Empty":
 		var payload JSONAdjacentEmpty
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONAdjacent()
+		*v = NewJSONAdjacentEmpty()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONAdjacent JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONAdjacent JSON variant %q", variant)
 	}
 }
 
-func (v *JSONAdjacent) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("missing JSONAdjacent JSON tag")
+		return fmt.Errorf("missing JSONAdjacent JSON tag")
 	}
-	var contentData __tgo_jsontext.Value
+	var contentData jsontext.Value
 	selected := 0
 	var unknown string
 	contentPresent := false
@@ -591,9 +609,9 @@ func (v *JSONAdjacent) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 			field = 1
 		case wireName == "data":
 			field = 2
-		case __tgo_strings.EqualFold(wireName, "type"):
+		case strings.EqualFold(wireName, "type"):
 			field = 1
-		case __tgo_strings.EqualFold(wireName, "data"):
+		case strings.EqualFold(wireName, "data"):
 			field = 2
 		}
 		switch field {
@@ -606,7 +624,7 @@ func (v *JSONAdjacent) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 			}
 			if in.PeekKind() != '"' {
 				var invalid string
-				return __tgo_jsonv2.UnmarshalDecode(in, &invalid)
+				return jsonv2.UnmarshalDecode(in, &invalid)
 			}
 			tagToken, err := in.ReadToken()
 			if err != nil {
@@ -640,31 +658,31 @@ func (v *JSONAdjacent) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if selected == 0 && unknown == "" {
-		return __tgo_fmt.Errorf("missing JSONAdjacent JSON tag")
+		return fmt.Errorf("missing JSONAdjacent JSON tag")
 	}
 	if !contentPresent {
-		return __tgo_fmt.Errorf("missing JSONAdjacent JSON content")
+		return fmt.Errorf("missing JSONAdjacent JSON content")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown JSONAdjacent JSON variant %q", unknown)
+		return fmt.Errorf("unknown JSONAdjacent JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload JSONAdjacentCreated
-		if err := __tgo_jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONAdjacent()
+		*v = NewJSONAdjacentCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case 2:
 		var payload JSONAdjacentEmpty
-		if err := __tgo_jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONAdjacent()
+		*v = NewJSONAdjacentEmpty()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid JSONAdjacent JSON tag")
+		return fmt.Errorf("invalid JSONAdjacent JSON tag")
 	}
 }
 
@@ -690,18 +708,22 @@ func (v JSONUntagged) Tag() JSONUntaggedTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONUntagged) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONUntagged: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONUntagged: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONUntaggedNumber is the Number payload.
 type JSONUntaggedNumber struct {
 	Value int `json:"value"`
 }
+type TgoJSONUntaggedNumberInput struct {
+	FieldValue int
+}
 
-// JSONUntagged constructs JSONUntagged. Model fields must be valid.
+// NewJSONUntaggedNumber constructs JSONUntagged. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONUntaggedNumber) JSONUntagged() JSONUntagged {
-	return JSONUntagged{tgoTag: JSONUntaggedTagNumber, tgoNumber: value}
+func NewJSONUntaggedNumber(Value int) JSONUntagged {
+	tgoValue := JSONUntaggedNumber{Value}
+	return JSONUntagged{tgoTag: JSONUntaggedTagNumber, tgoNumber: tgoValue}
 }
 
 // NumberPayload requires Number. No tag check.
@@ -711,11 +733,15 @@ func (v JSONUntagged) NumberPayload() JSONUntaggedNumber { return v.tgoNumber }
 type JSONUntaggedText struct {
 	Value string `json:"value"`
 }
+type TgoJSONUntaggedTextInput struct {
+	FieldValue string
+}
 
-// JSONUntagged constructs JSONUntagged. Model fields must be valid.
+// NewJSONUntaggedText constructs JSONUntagged. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONUntaggedText) JSONUntagged() JSONUntagged {
-	return JSONUntagged{tgoTag: JSONUntaggedTagText, tgoText: value}
+func NewJSONUntaggedText(Value string) JSONUntagged {
+	tgoValue := JSONUntaggedText{Value}
+	return JSONUntagged{tgoTag: JSONUntaggedTagText, tgoText: tgoValue}
 }
 
 // TextPayload requires Text. No tag check.
@@ -725,11 +751,15 @@ func (v JSONUntagged) TextPayload() JSONUntaggedText { return v.tgoText }
 type JSONUntaggedOther struct {
 	Value string `json:"value"`
 }
+type TgoJSONUntaggedOtherInput struct {
+	FieldValue string
+}
 
-// JSONUntagged constructs JSONUntagged. Model fields must be valid.
+// NewJSONUntaggedOther constructs JSONUntagged. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONUntaggedOther) JSONUntagged() JSONUntagged {
-	return JSONUntagged{tgoTag: JSONUntaggedTagOther, tgoOther: value}
+func NewJSONUntaggedOther(Value string) JSONUntagged {
+	tgoValue := JSONUntaggedOther{Value}
+	return JSONUntagged{tgoTag: JSONUntaggedTagOther, tgoOther: tgoValue}
 }
 
 // OtherPayload requires Other. No tag check.
@@ -739,60 +769,60 @@ func (v JSONUntagged) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONUntaggedTagNumber:
 		payload := v.NumberPayload()
-		return __tgo_json.Marshal(payload)
+		return json.Marshal(payload)
 	case JSONUntaggedTagText:
 		payload := v.TextPayload()
-		return __tgo_json.Marshal(payload)
+		return json.Marshal(payload)
 	case JSONUntaggedTagOther:
 		payload := v.OtherPayload()
-		return __tgo_json.Marshal(payload)
+		return json.Marshal(payload)
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONUntagged JSON tag")
+		return nil, fmt.Errorf("invalid JSONUntagged JSON tag")
 	}
 }
 
-func (v JSONUntagged) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONUntagged) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONUntaggedTagNumber:
 		payload := v.NumberPayload()
-		return __tgo_jsonv2.MarshalEncode(out, payload)
+		return jsonv2.MarshalEncode(out, payload)
 	case JSONUntaggedTagText:
 		payload := v.TextPayload()
-		return __tgo_jsonv2.MarshalEncode(out, payload)
+		return jsonv2.MarshalEncode(out, payload)
 	case JSONUntaggedTagOther:
 		payload := v.OtherPayload()
-		return __tgo_jsonv2.MarshalEncode(out, payload)
+		return jsonv2.MarshalEncode(out, payload)
 	default:
-		return __tgo_fmt.Errorf("invalid JSONUntagged JSON tag")
+		return fmt.Errorf("invalid JSONUntagged JSON tag")
 	}
 }
 
 func (v *JSONUntagged) UnmarshalJSON(data []byte) error {
 	{
 		var payload JSONUntaggedNumber
-		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
-			*v = payload.JSONUntagged()
+		if err := json.Unmarshal(data, &payload); err == nil {
+			*v = NewJSONUntaggedNumber(payload.Value)
 			return nil
 		}
 	}
 	{
 		var payload JSONUntaggedText
-		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
-			*v = payload.JSONUntagged()
+		if err := json.Unmarshal(data, &payload); err == nil {
+			*v = NewJSONUntaggedText(payload.Value)
 			return nil
 		}
 	}
 	{
 		var payload JSONUntaggedOther
-		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
-			*v = payload.JSONUntagged()
+		if err := json.Unmarshal(data, &payload); err == nil {
+			*v = NewJSONUntaggedOther(payload.Value)
 			return nil
 		}
 	}
-	return __tgo_fmt.Errorf("no matching JSONUntagged JSON variant")
+	return fmt.Errorf("no matching JSONUntagged JSON variant")
 }
 
-func (v *JSONUntagged) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONUntagged) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	data, err := in.ReadValue()
 	if err != nil {
 		return err
@@ -818,18 +848,22 @@ func (v JSONNested) Tag() JSONNestedTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONNested) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONNested: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONNested: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONNestedNested is the Nested payload.
 type JSONNestedNested struct {
 	Value JSONExternal `json:"value"`
 }
+type TgoJSONNestedNestedInput struct {
+	FieldValue JSONExternal
+}
 
-// JSONNested constructs JSONNested. Model fields must be valid.
+// NewJSONNestedNested constructs JSONNested. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONNestedNested) JSONNested() JSONNested {
-	return JSONNested{tgoTag: JSONNestedTagNested, tgoNested: value}
+func NewJSONNestedNested(Value JSONExternal) JSONNested {
+	tgoValue := JSONNestedNested{Value}
+	return JSONNested{tgoTag: JSONNestedTagNested, tgoNested: tgoValue}
 }
 
 // NestedPayload requires Nested. No tag check.
@@ -839,33 +873,33 @@ func (v JSONNested) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONNestedTagNested:
 		payload := v.NestedPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload JSONNestedNested `json:"Nested"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONNested JSON tag")
+		return nil, fmt.Errorf("invalid JSONNested JSON tag")
 	}
 }
 
-func (v JSONNested) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONNested) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONNestedTagNested:
 		payload := v.NestedPayload()
-		return __tgo_JSONExternal_external_json_to(out, "Nested", payload)
+		return tgoJSONExternalExternalJSONTo(out, "Nested", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid JSONNested JSON tag")
+		return fmt.Errorf("invalid JSONNested JSON tag")
 	}
 }
 
 func (v *JSONNested) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one JSONNested JSON variant")
+		return fmt.Errorf("expected one JSONNested JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -874,25 +908,25 @@ func (v *JSONNested) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Nested":
 		var payload JSONNestedNested
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONNested()
+		*v = NewJSONNestedNested(payload.Value)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONNested JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONNested JSON variant %q", variant)
 	}
 }
 
-func (v *JSONNested) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONNested) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one JSONNested JSON variant")
+		return fmt.Errorf("expected one JSONNested JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -935,21 +969,21 @@ func (v *JSONNested) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one JSONNested JSON variant")
+		return fmt.Errorf("expected one JSONNested JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown JSONNested JSON variant %q", unknown)
+		return fmt.Errorf("unknown JSONNested JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload JSONNestedNested
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONNested()
+		*v = NewJSONNestedNested(payload.Value)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid JSONNested JSON tag")
+		return fmt.Errorf("invalid JSONNested JSON tag")
 	}
 }
 
@@ -971,18 +1005,22 @@ func (v JSONCustom) Tag() JSONCustomTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONCustom) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONCustom: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONCustom: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONCustomValue is the Value payload.
 type JSONCustomValue struct {
 	Value JSONField `json:"value"`
 }
+type TgoJSONCustomValueInput struct {
+	FieldValue JSONField
+}
 
-// JSONCustom constructs JSONCustom. Model fields must be valid.
+// NewJSONCustomValue constructs JSONCustom. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONCustomValue) JSONCustom() JSONCustom {
-	return JSONCustom{tgoTag: JSONCustomTagValue, tgoValue: value}
+func NewJSONCustomValue(Value JSONField) JSONCustom {
+	tgoValue := JSONCustomValue{Value}
+	return JSONCustom{tgoTag: JSONCustomTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -992,33 +1030,33 @@ func (v JSONCustom) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONCustomTagValue:
 		payload := v.ValuePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload JSONCustomValue `json:"Value"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONCustom JSON tag")
+		return nil, fmt.Errorf("invalid JSONCustom JSON tag")
 	}
 }
 
-func (v JSONCustom) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONCustom) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONCustomTagValue:
 		payload := v.ValuePayload()
-		return __tgo_JSONExternal_external_json_to(out, "Value", payload)
+		return tgoJSONExternalExternalJSONTo(out, "Value", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid JSONCustom JSON tag")
+		return fmt.Errorf("invalid JSONCustom JSON tag")
 	}
 }
 
 func (v *JSONCustom) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one JSONCustom JSON variant")
+		return fmt.Errorf("expected one JSONCustom JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -1027,25 +1065,25 @@ func (v *JSONCustom) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Value":
 		var payload JSONCustomValue
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONCustom()
+		*v = NewJSONCustomValue(payload.Value)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONCustom JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONCustom JSON variant %q", variant)
 	}
 }
 
-func (v *JSONCustom) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONCustom) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one JSONCustom JSON variant")
+		return fmt.Errorf("expected one JSONCustom JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -1088,21 +1126,21 @@ func (v *JSONCustom) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one JSONCustom JSON variant")
+		return fmt.Errorf("expected one JSONCustom JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown JSONCustom JSON variant %q", unknown)
+		return fmt.Errorf("unknown JSONCustom JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload JSONCustomValue
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONCustom()
+		*v = NewJSONCustomValue(payload.Value)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid JSONCustom JSON tag")
+		return fmt.Errorf("invalid JSONCustom JSON tag")
 	}
 }
 
@@ -1130,18 +1168,22 @@ func (v JSONEscaped) Tag() JSONEscapedTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONEscaped) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONEscaped: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONEscaped: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONEscapedValue is the Value payload.
 type JSONEscapedValue struct {
 	ID string `json:"id,omitempty"`
 }
+type TgoJSONEscapedValueInput struct {
+	FieldID string
+}
 
-// JSONEscaped constructs JSONEscaped. Model fields must be valid.
+// NewJSONEscapedValue constructs JSONEscaped. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONEscapedValue) JSONEscaped() JSONEscaped {
-	return JSONEscaped{tgoTag: JSONEscapedTagValue, tgoValue: value}
+func NewJSONEscapedValue(ID string) JSONEscaped {
+	tgoValue := JSONEscapedValue{ID}
+	return JSONEscaped{tgoTag: JSONEscapedTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -1151,12 +1193,12 @@ func (v JSONEscaped) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONEscapedTagValue:
 		payload := v.ValuePayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected JSONEscaped JSON payload object")
+			return nil, fmt.Errorf("expected JSONEscaped JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"kind\\u0001\":\"name\\u0001\\\"end\"}"), nil
@@ -1167,19 +1209,17 @@ func (v JSONEscaped) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONEscaped JSON tag")
+		return nil, fmt.Errorf("invalid JSONEscaped JSON tag")
 	}
 }
 
-func (v JSONEscaped) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONEscaped) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONEscapedTagValue:
 		payload := v.ValuePayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -1187,42 +1227,42 @@ func (v JSONEscaped) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"kind\x01"`
 			JSONEscapedValue
 		}{Variant: "name\x01\"end", JSONEscapedValue: payload})
 	default:
-		return __tgo_fmt.Errorf("invalid JSONEscaped JSON tag")
+		return fmt.Errorf("invalid JSONEscaped JSON tag")
 	}
 }
 
 func (v *JSONEscaped) UnmarshalJSON(data []byte) error {
 	var variant string
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	tag, ok := object["kind\x01"]
 	if !ok {
-		return __tgo_fmt.Errorf("missing JSONEscaped JSON tag")
+		return fmt.Errorf("missing JSONEscaped JSON tag")
 	}
-	if err := __tgo_json.Unmarshal(tag, &variant); err != nil {
+	if err := json.Unmarshal(tag, &variant); err != nil {
 		return err
 	}
 	switch variant {
 	case "name\x01\"end":
 		var payload JSONEscapedValue
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONEscaped()
+		*v = NewJSONEscapedValue(payload.ID)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONEscaped JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONEscaped JSON variant %q", variant)
 	}
 }
 
-func (v *JSONEscaped) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONEscaped) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	data, err := in.ReadValue()
 	if err != nil {
 		return err
@@ -1248,18 +1288,22 @@ func (v JSONEscapedExternal) Tag() JSONEscapedExternalTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONEscapedExternal) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONEscapedExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONEscapedExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONEscapedExternalValue is the Value payload.
 type JSONEscapedExternalValue struct {
 	ID string `json:"id,omitempty"`
 }
+type TgoJSONEscapedExternalValueInput struct {
+	FieldID string
+}
 
-// JSONEscapedExternal constructs JSONEscapedExternal. Model fields must be valid.
+// NewJSONEscapedExternalValue constructs JSONEscapedExternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONEscapedExternalValue) JSONEscapedExternal() JSONEscapedExternal {
-	return JSONEscapedExternal{tgoTag: JSONEscapedExternalTagValue, tgoValue: value}
+func NewJSONEscapedExternalValue(ID string) JSONEscapedExternal {
+	tgoValue := JSONEscapedExternalValue{ID}
+	return JSONEscapedExternal{tgoTag: JSONEscapedExternalTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -1269,7 +1313,7 @@ func (v JSONEscapedExternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONEscapedExternalTagValue:
 		payload := v.ValuePayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
@@ -1279,29 +1323,29 @@ func (v JSONEscapedExternal) MarshalJSON() ([]byte, error) {
 		result = append(result, '}')
 		return result, nil
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONEscapedExternal JSON tag")
+		return nil, fmt.Errorf("invalid JSONEscapedExternal JSON tag")
 	}
 }
 
-func (v JSONEscapedExternal) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONEscapedExternal) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONEscapedExternalTagValue:
 		payload := v.ValuePayload()
-		return __tgo_JSONExternal_external_json_to(out, "name\x01\"end", payload)
+		return tgoJSONExternalExternalJSONTo(out, "name\x01\"end", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid JSONEscapedExternal JSON tag")
+		return fmt.Errorf("invalid JSONEscapedExternal JSON tag")
 	}
 }
 
 func (v *JSONEscapedExternal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one JSONEscapedExternal JSON variant")
+		return fmt.Errorf("expected one JSONEscapedExternal JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -1310,25 +1354,25 @@ func (v *JSONEscapedExternal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "name\x01\"end":
 		var payload JSONEscapedExternalValue
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONEscapedExternal()
+		*v = NewJSONEscapedExternalValue(payload.ID)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONEscapedExternal JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONEscapedExternal JSON variant %q", variant)
 	}
 }
 
-func (v *JSONEscapedExternal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONEscapedExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one JSONEscapedExternal JSON variant")
+		return fmt.Errorf("expected one JSONEscapedExternal JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -1371,21 +1415,21 @@ func (v *JSONEscapedExternal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) erro
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one JSONEscapedExternal JSON variant")
+		return fmt.Errorf("expected one JSONEscapedExternal JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown JSONEscapedExternal JSON variant %q", unknown)
+		return fmt.Errorf("unknown JSONEscapedExternal JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload JSONEscapedExternalValue
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONEscapedExternal()
+		*v = NewJSONEscapedExternalValue(payload.ID)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid JSONEscapedExternal JSON tag")
+		return fmt.Errorf("invalid JSONEscapedExternal JSON tag")
 	}
 }
 
@@ -1407,18 +1451,22 @@ func (v JSONEscapedAdjacent) Tag() JSONEscapedAdjacentTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONEscapedAdjacent) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONEscapedAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONEscapedAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONEscapedAdjacentValue is the Value payload.
 type JSONEscapedAdjacentValue struct {
 	ID string `json:"id,omitempty"`
 }
+type TgoJSONEscapedAdjacentValueInput struct {
+	FieldID string
+}
 
-// JSONEscapedAdjacent constructs JSONEscapedAdjacent. Model fields must be valid.
+// NewJSONEscapedAdjacentValue constructs JSONEscapedAdjacent. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONEscapedAdjacentValue) JSONEscapedAdjacent() JSONEscapedAdjacent {
-	return JSONEscapedAdjacent{tgoTag: JSONEscapedAdjacentTagValue, tgoValue: value}
+func NewJSONEscapedAdjacentValue(ID string) JSONEscapedAdjacent {
+	tgoValue := JSONEscapedAdjacentValue{ID}
+	return JSONEscapedAdjacent{tgoTag: JSONEscapedAdjacentTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -1428,7 +1476,7 @@ func (v JSONEscapedAdjacent) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONEscapedAdjacentTagValue:
 		payload := v.ValuePayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
@@ -1438,61 +1486,61 @@ func (v JSONEscapedAdjacent) MarshalJSON() ([]byte, error) {
 		result = append(result, '}')
 		return result, nil
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONEscapedAdjacent JSON tag")
+		return nil, fmt.Errorf("invalid JSONEscapedAdjacent JSON tag")
 	}
 }
 
-func (v JSONEscapedAdjacent) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONEscapedAdjacent) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONEscapedAdjacentTagValue:
 		payload := v.ValuePayload()
-		return __tgo_JSONExternal_adjacent_json_to(out, "kind\x01", "name\x01\"end", "data\x02", payload)
+		return tgoJSONExternalAdjacentJSONTo(out, "kind\x01", "name\x01\"end", "data\x02", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid JSONEscapedAdjacent JSON tag")
+		return fmt.Errorf("invalid JSONEscapedAdjacent JSON tag")
 	}
 }
 
 func (v *JSONEscapedAdjacent) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	tag, ok := object["kind\x01"]
 	if !ok {
-		return __tgo_fmt.Errorf("missing JSONEscapedAdjacent JSON tag")
+		return fmt.Errorf("missing JSONEscapedAdjacent JSON tag")
 	}
-	if err := __tgo_json.Unmarshal(tag, &variant); err != nil {
+	if err := json.Unmarshal(tag, &variant); err != nil {
 		return err
 	}
 	var present bool
 	payloadData, present = object["data\x02"]
 	if !present {
-		return __tgo_fmt.Errorf("missing JSONEscapedAdjacent JSON content")
+		return fmt.Errorf("missing JSONEscapedAdjacent JSON content")
 	}
 	switch variant {
 	case "name\x01\"end":
 		var payload JSONEscapedAdjacentValue
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONEscapedAdjacent()
+		*v = NewJSONEscapedAdjacentValue(payload.ID)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONEscapedAdjacent JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONEscapedAdjacent JSON variant %q", variant)
 	}
 }
 
-func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("missing JSONEscapedAdjacent JSON tag")
+		return fmt.Errorf("missing JSONEscapedAdjacent JSON tag")
 	}
-	var contentData __tgo_jsontext.Value
+	var contentData jsontext.Value
 	selected := 0
 	var unknown string
 	contentPresent := false
@@ -1519,7 +1567,7 @@ func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) erro
 			}
 			if in.PeekKind() != '"' {
 				var invalid string
-				return __tgo_jsonv2.UnmarshalDecode(in, &invalid)
+				return jsonv2.UnmarshalDecode(in, &invalid)
 			}
 			tagToken, err := in.ReadToken()
 			if err != nil {
@@ -1551,24 +1599,24 @@ func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) erro
 		return err
 	}
 	if selected == 0 && unknown == "" {
-		return __tgo_fmt.Errorf("missing JSONEscapedAdjacent JSON tag")
+		return fmt.Errorf("missing JSONEscapedAdjacent JSON tag")
 	}
 	if !contentPresent {
-		return __tgo_fmt.Errorf("missing JSONEscapedAdjacent JSON content")
+		return fmt.Errorf("missing JSONEscapedAdjacent JSON content")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown JSONEscapedAdjacent JSON variant %q", unknown)
+		return fmt.Errorf("unknown JSONEscapedAdjacent JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload JSONEscapedAdjacentValue
-		if err := __tgo_jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONEscapedAdjacent()
+		*v = NewJSONEscapedAdjacentValue(payload.ID)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid JSONEscapedAdjacent JSON tag")
+		return fmt.Errorf("invalid JSONEscapedAdjacent JSON tag")
 	}
 }
 
@@ -1590,18 +1638,22 @@ func (v JSONStringField) Tag() JSONStringFieldTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v JSONStringField) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONStringField: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONStringField: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONStringFieldValue is the Value payload.
 type JSONStringFieldValue struct {
 	Count int `json:"count,string"`
 }
+type TgoJSONStringFieldValueInput struct {
+	FieldCount int
+}
 
-// JSONStringField constructs JSONStringField. Model fields must be valid.
+// NewJSONStringFieldValue constructs JSONStringField. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONStringFieldValue) JSONStringField() JSONStringField {
-	return JSONStringField{tgoTag: JSONStringFieldTagValue, tgoValue: value}
+func NewJSONStringFieldValue(Count int) JSONStringField {
+	tgoValue := JSONStringFieldValue{Count}
+	return JSONStringField{tgoTag: JSONStringFieldTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -1611,33 +1663,33 @@ func (v JSONStringField) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONStringFieldTagValue:
 		payload := v.ValuePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload JSONStringFieldValue `json:"Value"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONStringField JSON tag")
+		return nil, fmt.Errorf("invalid JSONStringField JSON tag")
 	}
 }
 
-func (v JSONStringField) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONStringField) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONStringFieldTagValue:
 		payload := v.ValuePayload()
-		return __tgo_JSONExternal_external_json_to(out, "Value", payload)
+		return tgoJSONExternalExternalJSONTo(out, "Value", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid JSONStringField JSON tag")
+		return fmt.Errorf("invalid JSONStringField JSON tag")
 	}
 }
 
 func (v *JSONStringField) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one JSONStringField JSON variant")
+		return fmt.Errorf("expected one JSONStringField JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -1646,25 +1698,25 @@ func (v *JSONStringField) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Value":
 		var payload JSONStringFieldValue
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONStringField()
+		*v = NewJSONStringFieldValue(payload.Count)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONStringField JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONStringField JSON variant %q", variant)
 	}
 }
 
-func (v *JSONStringField) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONStringField) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one JSONStringField JSON variant")
+		return fmt.Errorf("expected one JSONStringField JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -1707,21 +1759,21 @@ func (v *JSONStringField) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one JSONStringField JSON variant")
+		return fmt.Errorf("expected one JSONStringField JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown JSONStringField JSON variant %q", unknown)
+		return fmt.Errorf("unknown JSONStringField JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload JSONStringFieldValue
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.JSONStringField()
+		*v = NewJSONStringFieldValue(payload.Count)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid JSONStringField JSON tag")
+		return fmt.Errorf("invalid JSONStringField JSON tag")
 	}
 }
 
@@ -1743,18 +1795,22 @@ func (v JSONInternalPayloadMethod) Tag() JSONInternalPayloadMethodTag { return v
 
 // UnknownTag describes an invalid tag.
 func (v JSONInternalPayloadMethod) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONInternalPayloadMethod: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONInternalPayloadMethod: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONInternalPayloadMethodValue is the Value payload.
 type JSONInternalPayloadMethodValue struct {
 	Seen string `json:"-"`
 }
+type TgoJSONInternalPayloadMethodValueInput struct {
+	FieldSeen string
+}
 
-// JSONInternalPayloadMethod constructs JSONInternalPayloadMethod. Model fields must be valid.
+// NewJSONInternalPayloadMethodValue constructs JSONInternalPayloadMethod. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONInternalPayloadMethodValue) JSONInternalPayloadMethod() JSONInternalPayloadMethod {
-	return JSONInternalPayloadMethod{tgoTag: JSONInternalPayloadMethodTagValue, tgoValue: value}
+func NewJSONInternalPayloadMethodValue(Seen string) JSONInternalPayloadMethod {
+	tgoValue := JSONInternalPayloadMethodValue{Seen}
+	return JSONInternalPayloadMethod{tgoTag: JSONInternalPayloadMethodTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -1764,12 +1820,12 @@ func (v JSONInternalPayloadMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalPayloadMethodTagValue:
 		payload := v.ValuePayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected JSONInternalPayloadMethod JSON payload object")
+			return nil, fmt.Errorf("expected JSONInternalPayloadMethod JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"type\":\"value\"}"), nil
@@ -1780,19 +1836,17 @@ func (v JSONInternalPayloadMethod) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONInternalPayloadMethod JSON tag")
+		return nil, fmt.Errorf("invalid JSONInternalPayloadMethod JSON tag")
 	}
 }
 
-func (v JSONInternalPayloadMethod) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONInternalPayloadMethod) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONInternalPayloadMethodTagValue:
 		payload := v.ValuePayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -1800,12 +1854,12 @@ func (v JSONInternalPayloadMethod) MarshalJSONTo(out *__tgo_jsontext.Encoder) er
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"type"`
 			JSONInternalPayloadMethodValue
 		}{Variant: "value", JSONInternalPayloadMethodValue: payload})
 	default:
-		return __tgo_fmt.Errorf("invalid JSONInternalPayloadMethod JSON tag")
+		return fmt.Errorf("invalid JSONInternalPayloadMethod JSON tag")
 	}
 }
 
@@ -1814,27 +1868,27 @@ func (v *JSONInternalPayloadMethod) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Tag string `json:"type"`
 	}
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if object.Tag == "" {
-		return __tgo_fmt.Errorf("missing JSONInternalPayloadMethod JSON tag")
+		return fmt.Errorf("missing JSONInternalPayloadMethod JSON tag")
 	}
 	variant = object.Tag
 	switch variant {
 	case "value":
 		var payload JSONInternalPayloadMethodValue
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONInternalPayloadMethod()
+		*v = NewJSONInternalPayloadMethodValue(payload.Seen)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONInternalPayloadMethod JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONInternalPayloadMethod JSON variant %q", variant)
 	}
 }
 
-func (v *JSONInternalPayloadMethod) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONInternalPayloadMethod) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	data, err := in.ReadValue()
 	if err != nil {
 		return err
@@ -1860,18 +1914,22 @@ func (v JSONInternalPromotedMethod) Tag() JSONInternalPromotedMethodTag { return
 
 // UnknownTag describes an invalid tag.
 func (v JSONInternalPromotedMethod) UnknownTag() string {
-	return __tgo_fmt.Sprintf("JSONInternalPromotedMethod: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("JSONInternalPromotedMethod: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // JSONInternalPromotedMethodValue is the Value payload.
 type JSONInternalPromotedMethodValue struct {
 	JSONObject
 }
+type TgoJSONInternalPromotedMethodValueInput struct {
+	Field0 JSONObject
+}
 
-// JSONInternalPromotedMethod constructs JSONInternalPromotedMethod. Model fields must be valid.
+// NewJSONInternalPromotedMethodValue constructs JSONInternalPromotedMethod. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONInternalPromotedMethodValue) JSONInternalPromotedMethod() JSONInternalPromotedMethod {
-	return JSONInternalPromotedMethod{tgoTag: JSONInternalPromotedMethodTagValue, tgoValue: value}
+func NewJSONInternalPromotedMethodValue(tgoField0 JSONObject) JSONInternalPromotedMethod {
+	tgoValue := JSONInternalPromotedMethodValue{tgoField0}
+	return JSONInternalPromotedMethod{tgoTag: JSONInternalPromotedMethodTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -1881,12 +1939,12 @@ func (v JSONInternalPromotedMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalPromotedMethodTagValue:
 		payload := v.ValuePayload()
-		payloadData, err := __tgo_json.Marshal(payload)
+		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
-			return nil, __tgo_fmt.Errorf("expected JSONInternalPromotedMethod JSON payload object")
+			return nil, fmt.Errorf("expected JSONInternalPromotedMethod JSON payload object")
 		}
 		if len(payloadData) == 2 {
 			return []byte("{\"type\":\"value\"}"), nil
@@ -1897,19 +1955,17 @@ func (v JSONInternalPromotedMethod) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	default:
-		return nil, __tgo_fmt.Errorf("invalid JSONInternalPromotedMethod JSON tag")
+		return nil, fmt.Errorf("invalid JSONInternalPromotedMethod JSON tag")
 	}
 }
 
-func (v JSONInternalPromotedMethod) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v JSONInternalPromotedMethod) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case JSONInternalPromotedMethodTagValue:
 		payload := v.ValuePayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
-		_, marshalsJSONTo := interface{}(payload).(interface {
-			MarshalJSONTo(*__tgo_jsontext.Encoder) error
-		})
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
 		if marshalsJSON || marshalsText || marshalsJSONTo {
 			data, err := v.MarshalJSON()
 			if err != nil {
@@ -1917,12 +1973,12 @@ func (v JSONInternalPromotedMethod) MarshalJSONTo(out *__tgo_jsontext.Encoder) e
 			}
 			return out.WriteValue(data)
 		}
-		return __tgo_jsonv2.MarshalEncode(out, struct {
+		return jsonv2.MarshalEncode(out, struct {
 			Variant string `json:"type"`
 			JSONInternalPromotedMethodValue
 		}{Variant: "value", JSONInternalPromotedMethodValue: payload})
 	default:
-		return __tgo_fmt.Errorf("invalid JSONInternalPromotedMethod JSON tag")
+		return fmt.Errorf("invalid JSONInternalPromotedMethod JSON tag")
 	}
 }
 
@@ -1931,27 +1987,27 @@ func (v *JSONInternalPromotedMethod) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Tag string `json:"type"`
 	}
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if object.Tag == "" {
-		return __tgo_fmt.Errorf("missing JSONInternalPromotedMethod JSON tag")
+		return fmt.Errorf("missing JSONInternalPromotedMethod JSON tag")
 	}
 	variant = object.Tag
 	switch variant {
 	case "value":
 		var payload JSONInternalPromotedMethodValue
-		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.JSONInternalPromotedMethod()
+		*v = NewJSONInternalPromotedMethodValue(payload.JSONObject)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown JSONInternalPromotedMethod JSON variant %q", variant)
+		return fmt.Errorf("unknown JSONInternalPromotedMethod JSON variant %q", variant)
 	}
 }
 
-func (v *JSONInternalPromotedMethod) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *JSONInternalPromotedMethod) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	data, err := in.ReadValue()
 	if err != nil {
 		return err

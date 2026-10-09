@@ -87,13 +87,13 @@ func (p *sourceParser) makeComprehension(
 		switch rawClause := *clause; rawClause.Tag() {
 		case rawComprehensionClauseTagRange:
 			rawRange := rawClause.RangePayload()
-			source, found, tgoErr := p.parseExpression(
+			source, found, err_1 := p.parseExpression(
 				p.tokens[rawRange.sourceStart].start,
 				p.tokens[rawRange.sourceEnd].start,
 				defaultAt,
 			)
-			if tgoErr != nil {
-				return nil, nil, tgoErr
+			if err_1 != nil {
+				return nil, nil, err_1
 			}
 			for child, parent := range found {
 				anchors[child] = parent
@@ -109,43 +109,34 @@ func (p *sourceParser) makeComprehension(
 					},
 				)
 			}
-			item := frontComprehensionClauseRange{
-				frontSpan: frontSpan{
-					Start: p.pos(p.tokens[rawRange.start].start),
-					Stop:  p.pos(p.tokens[rawRange.end-1].end),
-				},
-				For:      p.pos(p.tokens[rawRange.forToken].start),
-				Bindings: bindings,
-				Define:   p.pos(p.tokens[rawRange.define].start),
-				Range:    p.pos(p.tokens[rawRange.rangeToken].start),
-				Source:   source,
-				Lbrace:   p.pos(p.tokens[rawRange.open].start),
-				Rbrace:   p.pos(p.tokens[rawRange.close].start),
-			}.frontComprehensionClause()
+			item := func(input TgofrontComprehensionClauseRangeInput) frontComprehensionClause {
+				return NewfrontComprehensionClauseRange(input.Field0, input.FieldFor, input.FieldBindings, input.FieldDefine, input.FieldRange, input.FieldSource, input.FieldLbrace, input.FieldRbrace)
+			}(TgofrontComprehensionClauseRangeInput{Field0: frontSpan{
+				Start: p.pos(p.tokens[rawRange.start].start),
+				Stop:  p.pos(p.tokens[rawRange.end-1].end),
+			}, FieldFor: p.pos(p.tokens[rawRange.forToken].start), FieldBindings: bindings, FieldDefine: p.pos(p.tokens[rawRange.define].start), FieldRange: p.pos(p.tokens[rawRange.rangeToken].start), FieldSource: source, FieldLbrace: p.pos(p.tokens[rawRange.open].start), FieldRbrace: p.pos(p.tokens[rawRange.close].start)})
+
 			result.Clauses = append(result.Clauses, item)
 		case rawComprehensionClauseTagFilter:
 			rawFilter := rawClause.FilterPayload()
-			condition, found, tgoErr2 := p.parseExpression(
+			condition, found, err_2 := p.parseExpression(
 				p.tokens[rawFilter.conditionStart].start,
 				p.tokens[rawFilter.conditionEnd].start,
 				defaultAt,
 			)
-			if tgoErr2 != nil {
-				return nil, nil, tgoErr2
+			if err_2 != nil {
+				return nil, nil, err_2
 			}
 			for child, parent := range found {
 				anchors[child] = parent
 			}
-			item := frontComprehensionClauseFilter{
-				frontSpan: frontSpan{
-					Start: p.pos(p.tokens[rawFilter.start].start),
-					Stop:  p.pos(p.tokens[rawFilter.end-1].end),
-				},
-				If:        p.pos(p.tokens[rawFilter.ifToken].start),
-				Condition: condition,
-				Lbrace:    p.pos(p.tokens[rawFilter.open].start),
-				Rbrace:    p.pos(p.tokens[rawFilter.close].start),
-			}.frontComprehensionClause()
+			item := func(input TgofrontComprehensionClauseFilterInput) frontComprehensionClause {
+				return NewfrontComprehensionClauseFilter(input.Field0, input.FieldIf, input.FieldCondition, input.FieldLbrace, input.FieldRbrace)
+			}(TgofrontComprehensionClauseFilterInput{Field0: frontSpan{
+				Start: p.pos(p.tokens[rawFilter.start].start),
+				Stop:  p.pos(p.tokens[rawFilter.end-1].end),
+			}, FieldIf: p.pos(p.tokens[rawFilter.ifToken].start), FieldCondition: condition, FieldLbrace: p.pos(p.tokens[rawFilter.open].start), FieldRbrace: p.pos(p.tokens[rawFilter.close].start)})
+
 			result.Clauses = append(result.Clauses, item)
 		default:
 			panic(rawClause.UnknownTag()) // unreachable: tgolint requires a case per tag
@@ -253,9 +244,9 @@ func (p *sourceParser) makeDeclaration(
 			Name:    p.tokens[rawStruct.name].text,
 			Obj:     nil,
 		}
-		fields, fieldAnchors, tgoErr := p.makeFields(rawStruct.fields, defaultAt)
-		if tgoErr != nil {
-			return nil, nil, tgoErr
+		fields, fieldAnchors, err_1 := p.makeFields(rawStruct.fields, defaultAt)
+		if err_1 != nil {
+			return nil, nil, err_1
 		}
 		checked := token.NoPos
 		if rawStruct.checked >= 0 {
@@ -305,13 +296,13 @@ func (p *sourceParser) makeFields(
 				return nil, nil, failure
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
-			parsedDefault, expressionAnchors, tgoErr := p.parseExpression(
+			parsedDefault, expressionAnchors, err_1 := p.parseExpression(
 				p.tokens[raw.assign+1].start,
 				p.tokens[raw.end-1].end,
 				defaultAt,
 			)
-			if tgoErr != nil {
-				return nil, nil, tgoErr
+			if err_1 != nil {
+				return nil, nil, err_1
 			}
 			defaultValue = parsedDefault
 			for extension, parent := range expressionAnchors {
