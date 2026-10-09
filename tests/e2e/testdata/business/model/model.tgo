@@ -14,6 +14,13 @@ type EnumAlias enum
 
 type AccountAlias = Account
 
+type Accounts interface {
+    Account
+    TgoTag() uint8
+    TgoPersonal() AccountPersonal
+    TgoBusiness() AccountBusiness
+}
+
 type CounterRecord (struct {
     value int
 })
@@ -110,6 +117,17 @@ func AliasLabel(account AccountAlias) string {
     case 2:
         company := enumValue4.TgoBusiness()
         return company.Company
+    default:
+        panic("invalid Account variant")
+    }
+}
+
+func GenericLabel[T Accounts](account T) string {
+    switch account.TgoTag() {
+    case 1:
+        return account.TgoPersonal().Name
+    case 2:
+        return account.TgoBusiness().Company
     default:
         panic("invalid Account variant")
     }

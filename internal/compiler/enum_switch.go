@@ -55,7 +55,7 @@ func (p *packageUnit) checkEnumSwitch(
 			incomingFallthrough = fallthroughBranch != nil
 			continue
 		}
-		tags := p.enumCaseTags(clause, len(model.Variants))
+		tags := p.enumCaseTags(clause, len(model.Variants), seen)
 		for tag := range tags {
 			seen[tag] = true
 		}
@@ -103,13 +103,22 @@ func (p *packageUnit) enumTagCall(expression ast.Expr) (ast.Expr, *ast.SelectorE
 		return nil, nil, nil
 	}
 	model := p.modelForType(dereference(signature.Recv().Type()))
+	if model == nil {
+		if parameter, ok := types.Unalias(p.info.TypeOf(selector.X)).(*types.TypeParam); ok {
+			model = p.enumTypeParameterModel(parameter)
+		}
+	}
 	if model == nil || len(model.Variants) == 0 {
 		return nil, nil, nil
 	}
 	return selector.X, selector, model
 }
 
-func (p *packageUnit) enumCaseTags(clause *ast.CaseClause, variants int) map[int]bool {
+func (p *packageUnit) enumCaseTags(
+	clause *ast.CaseClause,
+	variants int,
+	seen map[int]bool,
+) map[int]bool {
 	tags := make(map[int]bool)
 	for _, expression := range clause.List {
 		value := p.info.Types[expression].Value
@@ -122,7 +131,12 @@ func (p *packageUnit) enumCaseTags(clause *ast.CaseClause, variants int) map[int
 			p.fail(expression, "tgo enum tag case is outside the variant range")
 			continue
 		}
-		tags[int(tag64)] = true
+		tag := int(tag64)
+		if tags[tag] || seen[tag] {
+			p.fail(expression, "tgo enum tag %d occurs more than once", tag)
+			continue
+		}
+		tags[tag] = true
 	}
 	return tags
 }
@@ -329,7 +343,7 @@ func (p *packageUnit) enumReceiverUnsafe(
 	root, _, ok := enumReceiverPath(p.info, receiver)
 	variable, variableOK := root.(*types.Var)
 	if !ok || !variableOK || variable.IsField() || variable.Parent() == p.typed.Scope() ||
-		enumTypeMayBePointer(variable.Type()) {
+		p.enumTypeMayBePointer(variable.Type()) {
 		return true
 	}
 	selection := p.info.Selections[accessor]
@@ -363,7 +377,7 @@ func (p *packageUnit) enumTagReceiverUnsafe(
 	root, _, ok := enumReceiverPath(p.info, receiver)
 	variable, variableOK := root.(*types.Var)
 	if !ok || !variableOK || variable.IsField() || variable.Parent() == p.typed.Scope() ||
-		enumTypeMayBePointer(variable.Type()) {
+		p.enumTypeMayBePointer(variable.Type()) {
 		return true
 	}
 	selection := p.info.Selections[selector]
@@ -384,13 +398,50 @@ func (p *packageUnit) enumTagReceiverUnsafe(
 	return true
 }
 
-func enumTypeMayBePointer(typ types.Type) bool {
+func (p *packageUnit) enumTypeMayBePointer(typ types.Type) bool {
 	typ = types.Unalias(typ)
 	if _, pointer := typ.(*types.Pointer); pointer {
 		return true
 	}
-	_, parameter := typ.(*types.TypeParam)
-	return parameter
+	parameter, ok := typ.(*types.TypeParam)
+	if !ok {
+		return false
+	}
+	return p.enumTypeParameterModel(parameter) == nil
+}
+
+// enumTypeParameterModel gets one exact non-pointer enum constraint.
+func (p *packageUnit) enumTypeParameterModel(parameter *types.TypeParam) *model {
+	return p.enumConstraintModel(parameter.Constraint(), make(map[types.Type]bool))
+}
+
+func (p *packageUnit) enumConstraintModel(
+	typ types.Type,
+	seen map[types.Type]bool,
+) *model {
+	typ = types.Unalias(typ)
+	if seen[typ] {
+		return nil
+	}
+	seen[typ] = true
+	if model := p.modelForType(typ); model != nil && len(model.Variants) > 0 {
+		return model
+	}
+	switch typ := typ.(type) {
+	case *types.TypeParam:
+		return p.enumConstraintModel(typ.Constraint(), seen)
+	case *types.Named:
+		if _, ok := typ.Underlying().(*types.Interface); ok {
+			return p.enumConstraintModel(typ.Underlying(), seen)
+		}
+	case *types.Interface:
+		for index := 0; index < typ.NumEmbeddeds(); index++ {
+			if model := p.enumConstraintModel(typ.EmbeddedType(index), seen); model != nil {
+				return model
+			}
+		}
+	}
+	return nil
 }
 
 func enumReceiverChangesThroughGoto(

@@ -251,7 +251,8 @@ A tgo file may not build an enum with a struct literal, conversion, or `new`.
 It may not read representation fields. It can call generated `Tgo*` methods only in the checked
 tag switch below.
 Embedding an enum does not expose its representation fields or generated accessors.
-A tgo file may not select a `Tgo`-prefixed method through an interface or type parameter.
+A tgo file may not select a `Tgo`-prefixed method through an interface or an open or mixed type
+parameter. An exact enum constraint can use these methods in a checked tag switch.
 A new defined type may not derive from an enum, including through pointer layers.
 A type alias may name the enum or pointer and keeps all model rules.
 A tgo file may not convert an enum value or pointer to expose its representation.

@@ -56,6 +56,9 @@ func TestBusiness(t *testing.T) {
 	if model.AliasLabel(account) != "Acme" {
 		t.Fatal("alias lost the model rules")
 	}
+	if model.GenericLabel(account) != "Acme" {
+		t.Fatal("exact enum constraint lost the tag proof")
+	}
 	boxed, ok := model.AsAny(account).(model.Account)
 	if !ok || model.Label(boxed) != "Acme" {
 		t.Fatal("interface conversion changed the model value")
