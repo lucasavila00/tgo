@@ -258,9 +258,9 @@ func (p *printer) expressionList(
 			following = syntax.ExpressionPosition(values[index+1])
 		}
 		if index+1 < len(values) || p.position(previous).Line < p.position(closing).Line {
-			p.text(",")
+			previous = p.comma(previous, following)
+			p.trailingLine(previous)
 		}
-		p.trailingLine(p.commaEnd(previous, following))
 	}
 	if p.position(previous).Line < p.position(closing).Line {
 		p.newline()
@@ -321,9 +321,9 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		}
 		if index+1 < len(value.Elements) ||
 			p.position(previous).Line < p.position(value.Rbrace).Line {
-			p.text(",")
+			previous = p.comma(previous, following)
+			p.trailingLine(previous)
 		}
-		p.trailingLine(p.commaEnd(previous, following))
 	}
 	if p.position(previous).Line < p.position(value.Rbrace).Line {
 		p.newline()
@@ -544,12 +544,11 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 		p.indent++
 		for index, item := range value.List {
 			p.field(item)
-			p.text(",")
 			following := value.Closing
 			if index+1 < len(value.List) {
 				following = value.List[index+1].Start
 			}
-			p.trailingLine(p.commaEnd(item.Stop, following))
+			p.trailingLine(p.comma(item.Stop, following))
 			p.newline()
 		}
 		p.indent--

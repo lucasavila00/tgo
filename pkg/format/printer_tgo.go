@@ -209,6 +209,10 @@ func (p *printer) finish() {
 }
 
 func (p *printer) before(position token.Pos) {
+	p.beforeComments(position, p.tightDelimiter(position))
+}
+
+func (p *printer) beforeComments(position token.Pos, tight bool) {
 	wroteComment := false
 	for p.comment < len(p.comments) && p.comments[p.comment].start < position {
 		wroteComment = true
@@ -236,7 +240,7 @@ func (p *printer) before(position token.Pos) {
 		next := p.position(position)
 		if strings.HasPrefix(item.text, "//") || !next.IsValid() || stop.Line != next.Line {
 			p.newline()
-		} else {
+		} else if !tight {
 			p.space()
 		}
 		p.lastSource = item.stop
@@ -247,6 +251,23 @@ func (p *printer) before(position token.Pos) {
 		if last.IsValid() && next.IsValid() && next.Line > last.Line+1 {
 			p.blankline()
 		}
+	}
+}
+
+func (p *printer) tightDelimiter(position token.Pos) bool {
+	file := p.files.File(position)
+	if file == nil {
+		return false
+	}
+	offset := file.Offset(position)
+	if offset < 0 || offset >= len(p.source) {
+		return false
+	}
+	switch p.source[offset] {
+	case ',', ')', ']', '}':
+		return true
+	default:
+		return false
 	}
 }
 
@@ -343,31 +364,53 @@ func (p *printer) trailingToken(position token.Pos, width int) {
 	p.trailingLine(file.Pos(file.Offset(position) + width))
 }
 
-func (p *printer) commaEnd(position token.Pos, following token.Pos) token.Pos {
-	if p.comment >= len(p.comments) {
-		return position
-	}
-	comment := p.comments[p.comment]
-	if !strings.HasPrefix(comment.text, "//") {
-		commentStop := p.position(comment.stop)
-		next := p.position(following)
-		if next.IsValid() && commentStop.Line == next.Line {
-			return position
-		}
-	}
+func (p *printer) comma(position token.Pos, following token.Pos) token.Pos {
 	file := p.files.File(position)
-	if file == nil {
+	if file == nil || p.files.File(following) != file {
+		p.text(",")
 		return position
 	}
 	offset := file.Offset(position)
-	for offset < len(p.source) &&
-		(p.source[offset] == ' ' || p.source[offset] == '\t' || p.source[offset] == '\r') {
+	limit := file.Offset(following)
+	comment := p.comment
+	comma := token.NoPos
+	for offset < limit && offset < len(p.source) {
+		for comment < len(p.comments) && file.Offset(p.comments[comment].stop) <= offset {
+			comment++
+		}
+		if comment < len(p.comments) {
+			start := file.Offset(p.comments[comment].start)
+			stop := file.Offset(p.comments[comment].stop)
+			if offset >= start && offset < stop {
+				offset = stop
+				continue
+			}
+		}
+		if p.source[offset] == ',' {
+			comma = file.Pos(offset)
+			break
+		}
 		offset++
 	}
-	if offset < len(p.source) && p.source[offset] == ',' {
-		return file.Pos(offset + 1)
+	if !comma.IsValid() {
+		p.text(",")
+		return position
 	}
-	return position
+	commentLimit := comma
+	line := p.position(position).Line
+	for index := p.comment; index < len(p.comments); index++ {
+		item := p.comments[index]
+		if item.start >= following || strings.HasPrefix(item.text, "//") ||
+			p.position(item.start).Line != line || p.position(item.stop).Line != line {
+			break
+		}
+		commentLimit = item.stop + 1
+	}
+	if commentLimit > comma {
+		p.beforeComments(commentLimit, true)
+	}
+	p.token(comma, ",")
+	return p.tokenEnd(comma, 1)
 }
 
 func (p *printer) tokenEnd(position token.Pos, width int) token.Pos {
