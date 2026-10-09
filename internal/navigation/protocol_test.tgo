@@ -202,13 +202,13 @@ func TestServeReportsProtocolErrors(t *testing.T) {
 		errorText string
 	}{
 		{1, "unknown Request JSON variant"},
-		{2, "missing params for hover"},
-		{3, "missing params for definition"},
-		{4, "missing params for references"},
-		{5, "missing params for documentSymbols"},
-		{6, "missing params for workspaceSymbols"},
-		{7, "missing params for cancel"},
-		{8, "missing params for invalidate"},
+		{2, "invalid Request.Hover JSON payload: Params must not be nil"},
+		{3, "invalid Request.Definition JSON payload: Params must not be nil"},
+		{4, "invalid Request.References JSON payload: Params must not be nil"},
+		{5, "invalid Request.DocumentSymbols JSON payload: Params must not be nil"},
+		{6, "invalid Request.WorkspaceSymbols JSON payload: Params must not be nil"},
+		{7, "invalid Request.Cancel JSON payload: Params must not be nil"},
+		{8, "invalid Request.Invalidate JSON payload: Params must not be nil"},
 		{9, "cannot unmarshal"},
 	}
 	for _, test := range tests {

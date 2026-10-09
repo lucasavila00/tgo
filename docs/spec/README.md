@@ -239,7 +239,8 @@ func LoadOwner(id ID) (%User, error)
 Pointer markers compose. `%*T` is a non-nil pointer to a possibly nil pointer. `*%T` is a possibly nil
 pointer to a non-nil pointer. `%%T` requires both pointers to be non-nil.
 
-The compiler parses `%T` and emits `*T`. It adds no wrapper, check, panic, or support function.
+The compiler parses `%T` and emits `*T`. It adds no wrapper, panic, or general runtime check.
+Generated enum JSON decoders check payload construction as described in the enum JSON section.
 The generated type has the same representation and ABI as the Go pointer. A `%` marker is valid
 only in a type.
 
@@ -262,8 +263,9 @@ A comma-ok map read or channel receive links the value to `ok`. For `map[K]%T` a
 true `ok` proves that the returned value is non-nil. A pointer type assertion also needs a nil
 check because an interface can hold a typed nil pointer.
 
-Unchecked Go, reflection, `unsafe`, cgo, and data races can break a `%T` contract. Neither the
-compiler nor `tgolint` adds a runtime defense.
+Unchecked Go, reflection, `unsafe`, cgo, and data races can break a `%T` contract. Except for
+generated enum JSON payload construction, neither the compiler nor `tgolint` adds a runtime
+defense.
 
 ## Enum types
 
@@ -340,13 +342,17 @@ Ignored fields and fields that Go JSON omits because of an ambiguous name do not
 Encoding rejects a zero or unknown enum tag. Tagged decoding requires an object. External decoding
 requires one variant entry. Internal and adjacent decoding require a known variant name;
 adjacent decoding also requires its content field.
-Payload decoding uses standard Go JSON field rules, custom methods, and errors. As with Go
-structs, a `null` payload decodes to the zero payload fields.
-The receiver changes only after payload decoding succeeds and the constructor returns.
+Payload decoding uses standard Go JSON field rules, custom methods, and errors. After payload
+decoding, generated methods check each known `%T` field path before they change the receiver. The
+check follows nested structs, arrays, slices, maps, optional pointers, and type aliases. An error
+identifies the variant and field path. A custom payload method cannot bypass this check. As with Go
+structs, a `null` payload decodes to zero payload fields, but the decode fails if this leaves a
+known `%T` path nil. The receiver changes only after payload decoding and these checks succeed.
 
-Untagged decoding tries payloads in declaration order and selects the first successful decode.
+Untagged decoding tries payloads in declaration order and selects the first successful, valid decode.
+If one payload decodes but fails a `%T` check, decoding tries the next payload.
 Go JSON ignores unknown fields and permits missing fields, so an object can match more than
-one payload. A `null` value selects the first successful payload decode. Variant order is part
+one payload. A `null` value selects the first payload that decodes and passes its checks. Variant order is part
 of the wire contract. JSON controls and variant wire names are also wire contracts; changes
 can break stored data or clients.
 
@@ -362,9 +368,8 @@ member names, each untagged decode attempt, boxed payloads that escape, and retu
 inline construction, and inline payload access add no explicit heap allocation. Go escape analysis
 can still move values to the heap.
 
-JSON decoding uses reflection. It does not enforce `%T` contracts. Input for a `%T` payload field
-must contain a non-null value. Missing or null data can produce an invalid TGo value without a JSON
-error.
+JSON decoding uses reflection, but the generated checks after decoding enforce known `%T` paths in
+enum payloads. Other reflection operations do not enforce `%T` contracts.
 
 ### Go API
 
