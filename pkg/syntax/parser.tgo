@@ -176,7 +176,7 @@ func parseFrontFile(
 	if fset == nil {
 		return , fmt.Errorf("parse %s: nil file set", filename)
 	}
-	tokens, comments, err := scanSource(filename, source, mode & AllErrors != 0)
+	tokens, comments, err := scanSource(filename, source, mode&AllErrors != 0)
 	if err != nil {
 		return , err
 	}
@@ -197,7 +197,7 @@ func parseFrontFile(
 		file:              nil,
 		mode:              mode,
 	}
-	if mode & goSource == 0 {
+	if mode&goSource == 0 {
 		if err := state.discoverDeclarations(); err != nil {
 			return , state.error(err)
 		}
@@ -207,10 +207,10 @@ func parseFrontFile(
 	}
 	projection := state.project(0, len(source), state.edits)
 	parseMode := parser.SkipObjectResolution
-	if mode & ParseComments != 0 {
+	if mode&ParseComments != 0 {
 		parseMode |= parser.ParseComments
 	}
-	if mode & AllErrors != 0 {
+	if mode&AllErrors != 0 {
 		parseMode |= parser.AllErrors
 	}
 	goFile, parseErr := parser.ParseFile(fset, filename, projection, parseMode)
@@ -280,7 +280,7 @@ func scanSource(
 }
 
 func (p %sourceParser) error(err error) error {
-	if strings.HasPrefix(err.Error(), p.filename + ":") {
+	if strings.HasPrefix(err.Error(), p.filename+":") {
 		return err
 	}
 	return fmt.Errorf("%s:%w", p.filename, err)
@@ -294,7 +294,7 @@ func (p %sourceParser) text(start int, end int) string {
 	if start >= end {
 		return ""
 	}
-	return string(p.source[p.tokens[start].start:p.tokens[end - 1].end])
+	return string(p.source[p.tokens[start].start:p.tokens[end-1].end])
 }
 
 func (p %sourceParser) implicitSemicolon(index int) bool {
@@ -318,10 +318,10 @@ func (p %sourceParser) closeToken(start int) (int, error) {
 		case token.LBRACE:
 			stack = append(stack, token.RBRACE)
 		case token.RPAREN, token.RBRACK, token.RBRACE:
-			if len(stack) == 0 || stack[len(stack) - 1] != p.tokens[index].kind {
+			if len(stack) == 0 || stack[len(stack)-1] != p.tokens[index].kind {
 				return , p.tokenError(index, "unmatched %s", p.tokens[index].text)
 			}
-			stack = stack[:len(stack) - 1]
+			stack = stack[:len(stack)-1]
 			if len(stack) == 0 {
 				return index,
 			}
@@ -360,8 +360,8 @@ func lineColumn(source []byte, offset int) (int, int) {
 
 func (p %sourceParser) discoverDeclarations() error {
 	for cursor := 0; cursor < len(p.tokens); {
-		if p.tokens[cursor].kind == token.TYPE && cursor + 1 < len(p.tokens) &&
-			p.tokens[cursor + 1].kind == token.IDENT {
+		if p.tokens[cursor].kind == token.TYPE && cursor+1 < len(p.tokens) &&
+			p.tokens[cursor+1].kind == token.IDENT {
 			declaration, next := p.declaration(cursor)!!
 			if declaration != nil {
 				p.decls = append(p.decls, declaration)
@@ -423,9 +423,9 @@ func (p %sourceParser) declaration(start int) (*rawDecl, int, error) {
 	if ordinary && p.tokens[baseStart].kind != token.STRUCT {
 		return nil, start + 1,
 	}
-	if p.tokens[baseStart].kind == token.STRUCT && baseStart + 1 < len(p.tokens) &&
-		p.tokens[baseStart + 1].kind == token.LBRACE {
-		return p.structDeclaration(start, baseStart, baseStart + 1)
+	if p.tokens[baseStart].kind == token.STRUCT && baseStart+1 < len(p.tokens) &&
+		p.tokens[baseStart+1].kind == token.LBRACE {
+		return p.structDeclaration(start, baseStart, baseStart+1)
 	}
 	return nil, start + 1,
 }
@@ -459,7 +459,7 @@ func (p %sourceParser) enumDeclaration(
 ) (*rawDecl, int, error) {
 	closing := p.closeToken(open)!
 	tag := -1
-	if keyword + 1 < open && p.tokens[keyword + 1].kind == token.STRING {
+	if keyword+1 < open && p.tokens[keyword+1].kind == token.STRING {
 		tag = keyword + 1
 	}
 	variants := []*rawVariant(nil)
@@ -472,7 +472,7 @@ func (p %sourceParser) enumDeclaration(
 		}
 		variant, next := p.variant(cursor, closing)!
 		name := p.tokens[variant.name].text
-		if names[name] && p.mode & AllowInvalidModels == 0 {
+		if names[name] && p.mode&AllowInvalidModels == 0 {
 			failure := p.tokenError(variant.name, "duplicate variant %s", name)
 			return ,, failure
 		}
@@ -480,8 +480,8 @@ func (p %sourceParser) enumDeclaration(
 		variants = append(variants, variant)
 		cursor = next
 	}
-	if len(variants) == 0 && p.mode & AllowInvalidModels == 0 {
-		failure := p.tokenError(keyword, "enum %s has no variants", p.tokens[start + 1].text)
+	if len(variants) == 0 && p.mode&AllowInvalidModels == 0 {
+		failure := p.tokenError(keyword, "enum %s has no variants", p.tokens[start+1].text)
 		return ,, failure
 	}
 	declaration := rawDecl.Enum{
@@ -494,16 +494,16 @@ func (p %sourceParser) enumDeclaration(
 			open:      open,
 			close:     closing,
 		},
-		tag:         tag,
-		variants:    variants,
+		tag:      tag,
+		variants: variants,
 	}
-	return &declaration, skipSemicolon(p.tokens, closing + 1),
+	return &declaration, skipSemicolon(p.tokens, closing+1),
 }
 
 func (p %sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
-	if start + 2 >= limit || p.tokens[start].kind != token.IDENT ||
-		p.tokens[start + 1].kind != token.STRUCT ||
-		p.tokens[start + 2].kind != token.LBRACE {
+	if start+2 >= limit || p.tokens[start].kind != token.IDENT ||
+		p.tokens[start+1].kind != token.STRUCT ||
+		p.tokens[start+2].kind != token.LBRACE {
 		failure := p.tokenError(start, "variant needs Name struct { fields }")
 		return ,, failure
 	}
@@ -511,7 +511,7 @@ func (p %sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	if err != nil {
 		return ,, err
 	}
-	fields, err := p.rawFields(start + 2, closing)
+	fields, err := p.rawFields(start+2, closing)
 	if err != nil {
 		return ,, err
 	}
@@ -567,8 +567,8 @@ func (p %sourceParser) structDeclaration(
 			open:      open,
 			close:     closing,
 		},
-		checked:     checked,
-		fields:      fields,
+		checked: checked,
+		fields:  fields,
 	}
 	return &declaration, skipSemicolon(p.tokens, next),
 }
@@ -599,7 +599,7 @@ func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 			cursor++
 		}
 		field.end = cursor
-		if field.assign + 1 == field.end {
+		if field.assign+1 == field.end {
 			return , p.tokenError(field.assign, "missing field default")
 		}
 		fields = append(fields, field)

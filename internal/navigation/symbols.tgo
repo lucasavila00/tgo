@@ -81,7 +81,7 @@ func sourceSymbols(
 					pkg,
 					uri,
 					variant.Fields,
-					value.Name.Name + "." + variant.Name.Name,
+					value.Name.Name+"."+variant.Name.Name,
 				)
 			}
 		case structDeclaration(declaration) != nil:

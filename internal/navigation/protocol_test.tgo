@@ -39,7 +39,9 @@ func TestSymbolKindProtocolContract(t *testing.T) {
 		SymbolKind.Constant{}, SymbolKind.Variable{},
 	}
 	got := make([]string, 0, len(values))
-	for _, value := range values { got = append(got, protocolSymbolKind(value)) }
+	for _, value := range values {
+		got = append(got, protocolSymbolKind(value))
+	}
 	want := make([]string, 0, len(contract))
 	for _, value := range contract {
 		want = append(want, value.Wire)
@@ -48,15 +50,21 @@ func TestSymbolKindProtocolContract(t *testing.T) {
 		t.Fatalf("server symbol kinds = %#v, want contract %#v", got, want)
 	}
 	source, err := os.ReadFile("navigation.tgo")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	file, err := syntax.ParseFile(
 		token.NewFileSet(), "navigation.tgo", source, syntax.AllErrors,
 	)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	variants := make([]string, 0)
 	for _, declaration := range file.Declarations {
 		value, _ := syntax.EnumDeclarationOf(declaration)
-		if value == nil || value.Name.Name != "SymbolKind" { continue }
+		if value == nil || value.Name.Name != "SymbolKind" {
+			continue
+		}
 		for _, variant := range value.Variants {
 			variants = append(variants, variant.Name.Name)
 		}

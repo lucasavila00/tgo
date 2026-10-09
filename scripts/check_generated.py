@@ -35,12 +35,28 @@ def run(repository: Path, *command: str) -> None:
 
 def skip_directory(repository: Path, path: Path) -> bool:
     relative = path.relative_to(repository)
-    name = path.name
-    if name.startswith((".", "_")) or name in SKIPPED_DIRECTORY_NAMES:
-        return True
-    if any(relative == tree or tree in relative.parents for tree in SKIPPED_TREES):
+    if skipped_relative_directory(relative):
         return True
     return relative != Path(".") and (path / "go.mod").is_file()
+
+
+def skipped_relative_directory(relative: Path) -> bool:
+    """Report whether an explicit repository exclusion matches a directory."""
+    name = relative.name
+    if name.startswith((".", "_")) or name in SKIPPED_DIRECTORY_NAMES:
+        return True
+    return any(relative == tree or tree in relative.parents for tree in SKIPPED_TREES)
+
+
+def production_path(path: Path, nested_modules: set[Path]) -> bool:
+    """Report whether a repository-relative path is production TGo source."""
+    if path.suffix != ".tgo":
+        return False
+    return not any(
+        skipped_relative_directory(parent) or parent in nested_modules
+        for parent in path.parents
+        if parent != Path(".")
+    )
 
 
 def production_files(repository: Path, suffix: str) -> dict[Path, bytes]:

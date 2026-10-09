@@ -165,11 +165,11 @@ func atomicWriteFile(
 ) (changed bool, writtenMode fs.FileMode, err error) {
 	temporaryPath := filepath.Join(
 		filepath.Dir(path),
-		"." + filepath.Base(path) + ".tmp-" + cryptorand.Text(),
+		"."+filepath.Base(path)+".tmp-"+cryptorand.Text(),
 	)
 	temporary, err := os.OpenFile(
 		temporaryPath,
-		os.O_CREATE | os.O_EXCL | os.O_WRONLY,
+		os.O_CREATE|os.O_EXCL|os.O_WRONLY,
 		mode,
 	)
 	if err != nil {

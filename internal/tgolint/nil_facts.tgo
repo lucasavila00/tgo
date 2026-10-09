@@ -29,7 +29,9 @@ func (e %nilEnvironment) blockNilFacts(
 		bodyStatement, bodyOK := syntax.StatementOf(bodyNode)
 		body := syntax.BlockStatementOf(bodyStatement)
 		var switchNode *syntax.Node = nil
-		if bodyNode != nil { switchNode = e.parents[*bodyNode] }
+		if bodyNode != nil {
+			switchNode = e.parents[*bodyNode]
+		}
 		switchStatementNode, switchOK := syntax.StatementOf(switchNode)
 		switchStatement := syntax.SwitchStatementOf(switchStatementNode)
 		if clauseOK && clause != nil && bodyOK && body != nil && switchOK &&
@@ -65,7 +67,9 @@ func (e %nilEnvironment) comparisonNilFacts(
 
 func nilFactsImpossible(facts nilFacts) bool {
 	for _, value := range facts {
-		if isNeverNilType(value) { return true }
+		if isNeverNilType(value) {
+			return true
+		}
 	}
 	return false
 }
@@ -75,10 +79,14 @@ func impossibleNilFacts() nilFacts {
 }
 
 func (e %nilEnvironment) applyNilFacts(state *nilFlowState, facts nilFacts) {
-	if state == nil || !state.reachable { return }
+	if state == nil || !state.reachable {
+		return
+	}
 	for place, value := range facts {
 		current := optionalNilType()
-		if known, found := state.values[place]; found { current = known }
+		if known, found := state.values[place]; found {
+			current = known
+		}
 		narrowed := intersectNilTypes(current, value)
 		if isNeverNilType(narrowed) {
 			state.reachable = false
@@ -234,7 +242,9 @@ func (e %nilEnvironment) stableIndex(expression %syntax.Expression) (string, boo
 
 func (e %nilEnvironment) isNil(expression %syntax.Expression) bool {
 	name := syntax.IdentifierExpressionOf(expression)
-	if name == nil { return false }
+	if name == nil {
+		return false
+	}
 	return e.facts.Object(name) == types.Universe.Lookup("nil")
 }
 

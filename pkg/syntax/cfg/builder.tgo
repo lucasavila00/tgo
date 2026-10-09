@@ -44,7 +44,9 @@ start:
 		declaration := syntax.GeneralDeclarationOf(item.Declaration)
 		if declaration != nil && declaration.Kind == token.VAR {
 			for _, specification := range declaration.Specs {
-				if specification == nil { continue }
+				if specification == nil {
+					continue
+				}
 				if syntax.ValueSpecificationOf(specification) != nil {
 					b.addSpecification(specification)
 				}

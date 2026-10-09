@@ -188,8 +188,10 @@ func addEnumOwners(
 	owner := declaration.Name.Start
 	scope := pkg.Scope()
 	enumObject := scope.Lookup(name)
-	if enumObject != nil { hovers[enumObject] = "enum " + name }
-	addOwnedObject(owners, scope.Lookup(name + "Tag"), owner)
+	if enumObject != nil {
+		hovers[enumObject] = "enum " + name
+	}
+	addOwnedObject(owners, scope.Lookup(name+"Tag"), owner)
 	named := namedObject(enumObject)
 	for _, method := range []string{
 		"Tag",
@@ -203,17 +205,17 @@ func addEnumOwners(
 	}
 	for _, variant := range declaration.Variants {
 		variantOwner := variant.Name.Start
-		addOwnedObject(owners, scope.Lookup(name + "Tag" + variant.Name.Name), variantOwner)
+		addOwnedObject(owners, scope.Lookup(name+"Tag"+variant.Name.Name), variantOwner)
 		payload := namedObject(scope.Lookup(name + variant.Name.Name))
 		if payload != nil {
 			addOwnedObject(owners, payload.Obj(), variantOwner)
 		}
 		addOwnedObject(
 			owners,
-			namedMethod(named, variant.Name.Name + "Payload"),
+			namedMethod(named, variant.Name.Name+"Payload"),
 			variantOwner,
 		)
-		accessor := namedMethod(named, variant.Name.Name + "Payload")
+		accessor := namedMethod(named, variant.Name.Name+"Payload")
 		if accessor != nil {
 			hovers[accessor] = "func (" + name + ") " + variant.Name.Name +
 				"Payload() " + name + "." + variant.Name.Name

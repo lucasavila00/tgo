@@ -5,7 +5,7 @@ import "go/types"
 // goType closes the go/types.Type implementations used by tgolint.
 // goTypeOf is the only open Go type switch in this package.
 type goType enum {
-	Nil struct{}
+	Nil struct {}
 	Basic struct { Value *types.Basic }
 	Array struct { Value *types.Array }
 	Slice struct { Value *types.Slice }
@@ -19,7 +19,7 @@ type goType enum {
 	Named struct { Value *types.Named }
 	TypeParameter struct { Value *types.TypeParam }
 	Union struct { Value *types.Union }
-	Other struct{}
+	Other struct {}
 }
 
 func goTypeOf(typ types.Type) goType {

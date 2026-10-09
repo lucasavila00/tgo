@@ -11,11 +11,11 @@ import (
 )
 
 type iotaCandidate struct {
-	name      string
-	values    []constant.Value
-	position  token.Pos
-	allIota   bool
-	bitSet    bool
+	name     string
+	values   []constant.Value
+	position token.Pos
+	allIota  bool
+	bitSet   bool
 }
 
 // checkIotaModernization reports open integer sets in handwritten TGo source.

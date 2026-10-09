@@ -36,13 +36,13 @@ func ParseGoFile(
 }
 
 type converter struct {
-	front       %frontFile
-	propagation map[ast.Expr]*frontPropagateExpr
+	front                %frontFile
+	propagation          map[ast.Expr]*frontPropagateExpr
 	convertedPropagation map[%frontPropagateExpr]%Expression
-	comprehension map[*ast.CompositeLit]*frontComprehensionExpr
-	comments    map[%ast.Comment]%Comment
-	groups      map[%ast.CommentGroup]%CommentGroup
-	imports     map[%ast.ImportSpec]%ImportSpecification
+	comprehension        map[*ast.CompositeLit]*frontComprehensionExpr
+	comments             map[%ast.Comment]%Comment
+	groups               map[%ast.CommentGroup]%CommentGroup
+	imports              map[%ast.ImportSpec]%ImportSpecification
 }
 
 func newConverter(front %frontFile) %converter {
@@ -59,13 +59,13 @@ func newConverter(front %frontFile) %converter {
 		}
 	}
 	return &converter{
-		front:       front,
-		propagation: propagation,
+		front:                front,
+		propagation:          propagation,
 		convertedPropagation: make(map[%frontPropagateExpr]%Expression),
-		comprehension: comprehension,
-		comments:    make(map[%ast.Comment]%Comment),
-		groups:      make(map[%ast.CommentGroup]%CommentGroup),
-		imports:     make(map[%ast.ImportSpec]%ImportSpecification),
+		comprehension:        comprehension,
+		comments:             make(map[%ast.Comment]%Comment),
+		groups:               make(map[%ast.CommentGroup]%CommentGroup),
+		imports:              make(map[%ast.ImportSpec]%ImportSpecification),
 	}
 }
 
@@ -75,19 +75,19 @@ func span(node interface{ Pos() token.Pos; End() token.Pos }) Span {
 
 func (c %converter) file() %File {
 	result := &File{
-		Span:          Span{Start: c.front.Pos(), Stop: c.front.End()},
-		Doc:           c.commentGroup(c.front.Doc),
-		Package:       c.front.Package,
-		Name:          c.identifierRequired(c.front.Name),
-		Declarations:  nil,
-		Imports:       nil,
-		Comments:      nil,
-		GoVersion:     c.front.GoVersion,
-		front:         c.front,
-		children:      nil,
-		parents:       nil,
-		extensions:    nil,
-		attached:      nil,
+		Span:         Span{Start: c.front.Pos(), Stop: c.front.End()},
+		Doc:          c.commentGroup(c.front.Doc),
+		Package:      c.front.Package,
+		Name:         c.identifierRequired(c.front.Name),
+		Declarations: nil,
+		Imports:      nil,
+		Comments:     nil,
+		GoVersion:    c.front.GoVersion,
+		front:        c.front,
+		children:     nil,
+		parents:      nil,
+		extensions:   nil,
+		attached:     nil,
 	}
 	for _, item := range c.front.Decls {
 		result.Declarations = append(result.Declarations, c.declarationMust(item))
@@ -217,13 +217,13 @@ func (c %converter) comprehensionExpression(
 	value %frontComprehensionExpr,
 ) %Expression {
 	payload := &ComprehensionExpression{
-		Span: Span{Start: value.Pos(), Stop: value.End()},
-		Type: c.expressionRequired(value.Type),
-		Lbrace: value.Lbrace,
+		Span:    Span{Start: value.Pos(), Stop: value.End()},
+		Type:    c.expressionRequired(value.Type),
+		Lbrace:  value.Lbrace,
 		Clauses: nil,
 		Result: ComprehensionResult{
-			Span: Span{Start: value.Result.Pos(), Stop: value.Result.End()},
-			Key: c.expression(value.Result.Key),
+			Span:  Span{Start: value.Result.Pos(), Stop: value.Result.End()},
+			Key:   c.expression(value.Result.Key),
 			Colon: value.Result.Colon,
 			Value: c.expressionRequired(value.Result.Value),
 		},
@@ -235,7 +235,7 @@ func (c %converter) comprehensionExpression(
 			clause := item.RangePayload()
 			rangeClause := &ComprehensionRangeClause{
 				Span: Span{Start: clause.Pos(), Stop: clause.End()},
-				For: clause.For, Bindings: nil,
+				For:  clause.For, Bindings: nil,
 				Define: clause.Define, Range: clause.Range,
 				Source: c.expressionRequired(clause.Source),
 				Lbrace: clause.Lbrace, Rbrace: clause.Rbrace,
@@ -255,10 +255,10 @@ func (c %converter) comprehensionExpression(
 			payload.Clauses = append(
 				payload.Clauses,
 				ComprehensionClause.Filter{Value: &ComprehensionFilterClause{
-					Span: Span{Start: clause.Pos(), Stop: clause.End()},
-					If: clause.If,
+					Span:      Span{Start: clause.Pos(), Stop: clause.End()},
+					If:        clause.If,
 					Condition: c.expressionRequired(clause.Condition),
-					Lbrace: clause.Lbrace, Rbrace: clause.Rbrace,
+					Lbrace:    clause.Lbrace, Rbrace: clause.Rbrace,
 				}},
 			)
 		exhaustive:
@@ -395,7 +395,7 @@ func (c %converter) expressionRaw(value ast.Expr) %Expression {
 	case *ast.MapType:
 		result := Expression.MapType{Value: &MapType{
 			Span: span(item), Map: item.Map,
-			Key: c.expressionRequired(item.Key),
+			Key:   c.expressionRequired(item.Key),
 			Value: c.expressionRequired(item.Value),
 		}}
 		return &result
@@ -403,7 +403,7 @@ func (c %converter) expressionRaw(value ast.Expr) %Expression {
 		result := Expression.ChannelType{Value: &ChannelType{
 			Span: span(item), Begin: item.Begin, Arrow: item.Arrow,
 			Direction: channelDirection(item.Dir),
-			Value: c.expressionRequired(item.Value),
+			Value:     c.expressionRequired(item.Value),
 		}}
 		return &result
 	default:
@@ -444,7 +444,7 @@ func (c %converter) functionTypeRequired(value *ast.FuncType) %FunctionType {
 	return &FunctionType{
 		Span: span(value), Function: value.Func,
 		TypeParams: c.fieldList(value.TypeParams),
-		Params: c.fieldListRequired(value.Params), Results: c.fieldList(value.Results),
+		Params:     c.fieldListRequired(value.Params), Results: c.fieldList(value.Results),
 	}
 }
 
@@ -488,7 +488,7 @@ func (c %converter) compositeLiteral(value *ast.CompositeLit) %CompositeLiteral 
 			continue
 		}
 		expressionValue := &DefaultExpression{
-			Span: Span{Start: marker.Pos(), Stop: marker.End()},
+			Span:     Span{Start: marker.Pos(), Stop: marker.End()},
 			FirstDot: marker.FirstDot, LastDot: marker.LastDot, Default: marker.Default,
 		}
 		expression := Expression.Default{Value: expressionValue}
@@ -515,9 +515,9 @@ func (c %converter) propagationExpression(value %frontPropagateExpr) %Expression
 		return result
 	}
 	payload := &PropagationExpression{
-		Span: Span{Start: value.Pos(), Stop: value.End()},
+		Span:       Span{Start: value.Pos(), Stop: value.End()},
 		Expression: c.expressionRaw(value.Expression),
-		Call: c.callRequired(value.Call), Bang: value.Bang,
+		Call:       c.callRequired(value.Call), Bang: value.Bang,
 		SecondBang: value.SecondBang,
 	}
 	result := Expression.Propagation{Value: payload}
@@ -525,4 +525,3 @@ func (c %converter) propagationExpression(value %frontPropagateExpr) %Expression
 	c.convertedPropagation[value] = converted
 	return converted
 }
-
