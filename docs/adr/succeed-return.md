@@ -49,10 +49,10 @@ result is another type that accepts `nil`, exactly as an explicit Go `return ...
 
 ## Parsing and lowering
 
-The parser recognizes `succeed` only at the start of this statement form. Calls such as
-`succeed()`, labels such as `succeed:`, selectors, declarations, and assignments keep their Go
-meaning. A valid Go program cannot contain the new statement form, so ordinary Go remains
-byte-identical.
+The parser gives an ordinary Go statement form precedence. Thus, `succeed(value)` is a call, and
+`succeed <- value` is a channel send. Labels, selectors, declarations, and assignments also keep
+their Go meaning. Bind an intended parenthesized first value or leading receive before `succeed`.
+No valid Go program contains the remaining statement form, so ordinary Go stays byte-identical.
 
 The parser records the statement and its source span. Lowering replaces the keyword with `return`
 and inserts `nil` after the expression list. It adds no temporary, helper, branch, type query, or
