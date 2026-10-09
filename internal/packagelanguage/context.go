@@ -42,7 +42,7 @@ func BuildTagsFromGoFlags(flags string) ([]string, error) {
 		field := fields[index]
 		value, found := strings.CutPrefix(field, "-tags=")
 		if !found && field == "-tags" {
-			if index + 1 >= len(fields) {
+			if index+1 >= len(fields) {
 				return nil, errors.New("-tags needs a value")
 			}
 			index++

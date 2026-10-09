@@ -120,7 +120,7 @@ func compileWorkspaceContext(
 		default:
 		}
 		if err := builder.build(path); err != nil {
-			boundary := new(packagelanguage.BoundaryError)
+			var boundary *packagelanguage.BoundaryError = nil
 			if !continueAfterError || errors.As(err, &boundary) {
 				return nil, err
 			}
