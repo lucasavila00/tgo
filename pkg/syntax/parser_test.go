@@ -225,7 +225,7 @@ func TestParseFilePropagationKeepsParserErrorPosition(t *testing.T) {
 				"type Result enum {\n" +
 				"\tBad struct { Value (int] }\n" +
 				"}\n",
-			want: "bad.tgo:p.closeToken: 3:25: unmatched ]",
+			want: "bad.tgo:p.declaration: p.closeToken: 3:25: unmatched ]",
 		},
 		{
 			name: "two results",
@@ -233,7 +233,7 @@ func TestParseFilePropagationKeepsParserErrorPosition(t *testing.T) {
 				"type Result enum {\n" +
 				"\tBad int\n" +
 				"}\n",
-			want: "bad.tgo:p.variant: 3:2: variant needs Name struct { fields }",
+			want: "bad.tgo:p.declaration: p.variant: 3:2: variant needs Name struct { fields }",
 		},
 	}
 	for _, test := range tests {

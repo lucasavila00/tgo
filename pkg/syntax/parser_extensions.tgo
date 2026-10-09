@@ -49,17 +49,11 @@ func (p %sourceParser) discoverExtensions() error {
 			p.goStatementSyntax(cursor) {
 			continue
 		}
-		open, err := p.matchBody(cursor + 1)
-		if err != nil {
-			return err
-		}
+		open := p.matchBody(cursor + 1)!
 		if open < 0 {
 			continue
 		}
-		match, err := p.rawMatch(cursor, open)
-		if err != nil {
-			return err
-		}
+		match := p.rawMatch(cursor, open)!
 		p.matches = append(p.matches, match)
 		p.edits = append(p.edits, sourceEdit{start: match.start, end: match.end, text: ";"})
 	}
@@ -131,10 +125,7 @@ func (p %sourceParser) matchBody(start int) (int, error) {
 		if !opening(kind) {
 			continue
 		}
-		end, err := p.closeToken(cursor)
-		if err != nil {
-			return -1, err
-		}
+		end := p.closeToken(cursor)!
 		if kind == token.LBRACE {
 			empty := cursor+1 == end
 			caseBody := !empty &&
@@ -155,10 +146,7 @@ func (p %sourceParser) groupEndsStatement(end int) bool {
 }
 
 func (p %sourceParser) rawMatch(keyword int, open int) (*rawMatch, error) {
-	closing, err := p.closeToken(open)
-	if err != nil {
-		return nil, err
-	}
+	closing := p.closeToken(open)!
 	start := p.tokens[keyword].start
 	labels := []int(nil)
 	labelColons := []int(nil)
@@ -189,10 +177,7 @@ func (p %sourceParser) rawMatch(keyword int, open int) (*rawMatch, error) {
 	item.subjectEnd = open
 	item.open = open
 	item.close = closing
-	cases, err := p.rawCases(open, closing)
-	if err != nil {
-		return nil, err
-	}
+	cases := p.rawCases(open, closing)!
 	item.cases = cases
 	return item, nil
 }
@@ -341,10 +326,7 @@ func (p %sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		if projection == nil {
 			return nil, p.tokenError(raw.open, "cannot project comprehension literal")
 		}
-		node, found, err := p.makeComprehension(raw, projection, matchAt, defaultAt)
-		if err != nil {
-			return nil, err
-		}
+		node, found := p.makeComprehension(raw, projection, matchAt, defaultAt)!
 		raw.node = node
 		for child, parent := range found {
 			anchors[child] = parent
@@ -373,29 +355,23 @@ func (p %sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		matchAt[raw.root.Pos()] = raw.root
 	}
 	for _, raw := range p.matches {
-		subject, subjectAnchors, err := p.parseExpression(
+		subject, subjectAnchors := p.parseExpression(
 			p.tokens[raw.subjectStart].start,
 			p.tokens[raw.subjectEnd].start,
 			matchAt,
 			defaultAt,
-		)
-		if err != nil {
-			return nil, err
-		}
+		)!
 		raw.node.Subject = subject
 		for child, parent := range subjectAnchors {
 			anchors[child] = parent
 		}
 		for index, rawCase := range raw.cases {
-			body, bodyAnchors, err := p.parseStatements(
+			body, bodyAnchors := p.parseStatements(
 				p.caseBodyStart(rawCase),
 				p.tokens[rawCase.bodyEnd].start,
 				matchAt,
 				defaultAt,
-			)
-			if err != nil {
-				return nil, err
-			}
+			)!
 			raw.node.Cases[index].Body = body
 			for extension, parent := range bodyAnchors {
 				anchors[extension] = parent
@@ -404,10 +380,7 @@ func (p %sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 	}
 	customDecls := make([]frontNode, 0, len(p.decls))
 	for _, raw := range p.decls {
-		declaration, declarationAnchors, err := p.makeDeclaration(raw, matchAt, defaultAt)
-		if err != nil {
-			return nil, err
-		}
+		declaration, declarationAnchors := p.makeDeclaration(raw, matchAt, defaultAt)!
 		customDecls = append(customDecls, declaration)
 		for extension, parent := range declarationAnchors {
 			anchors[extension] = parent

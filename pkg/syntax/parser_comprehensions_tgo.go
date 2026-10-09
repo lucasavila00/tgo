@@ -4,6 +4,7 @@
 package syntax
 
 import (
+	__tgo_fmt_1 "fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -30,7 +31,7 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 		open := cursor - 1
 		close, err := p.closeToken(open)
 		if err != nil {
-			return err
+			return __tgo_fmt_1.Errorf("p.closeToken: %w", err)
 		}
 		candidates = append(candidates, comprehensionCandidate{open: open, close: close})
 		cursor = close
@@ -42,14 +43,15 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 	for _, item := range candidates {
 		literalStart, isLiteral := starts[item.open]
 		if !isLiteral {
-			if err := p.discoverComprehensionsIn(item.open+2, item.close); err != nil {
-				return err
+			tgoErr := p.discoverComprehensionsIn(item.open+2, item.close)
+			if tgoErr != nil {
+				return __tgo_fmt_1.Errorf("p.discoverComprehensionsIn: %w", tgoErr)
 			}
 			continue
 		}
-		comprehension, err := p.rawComprehension(literalStart, item.open, item.close)
-		if err != nil {
-			return err
+		comprehension, tgoErr2 := p.rawComprehension(literalStart, item.open, item.close)
+		if tgoErr2 != nil {
+			return __tgo_fmt_1.Errorf("p.rawComprehension: %w", tgoErr2)
 		}
 		p.comprehensions = append(p.comprehensions, comprehension)
 		p.edits = append(p.edits, sourceEdit{
@@ -110,7 +112,7 @@ func (p *sourceParser) rawComprehension(
 ) (*rawComprehension, error) {
 	clauses, result, err := p.rawComprehensionBody(open+1, close)
 	if err != nil {
-		return nil, err
+		return nil, __tgo_fmt_1.Errorf("p.rawComprehensionBody: %w", err)
 	}
 	seenFilter := false
 	for _, clause := range clauses {
@@ -158,17 +160,17 @@ func (p *sourceParser) rawComprehensionBody(
 	if p.tokens[bodyClose].kind != token.RBRACE {
 		return nil, nil, p.tokenError(start, "comprehension clause needs a block")
 	}
-	bodyOpen, err := p.openToken(bodyClose)
-	if err != nil {
-		return nil, nil, err
+	bodyOpen, tgoErr := p.openToken(bodyClose)
+	if tgoErr != nil {
+		return nil, nil, __tgo_fmt_1.Errorf("p.openToken: %w", tgoErr)
 	}
-	clause, err := p.rawComprehensionClause(start, bodyOpen, bodyClose)
-	if err != nil {
-		return nil, nil, err
+	clause, tgoErr2 := p.rawComprehensionClause(start, bodyOpen, bodyClose)
+	if tgoErr2 != nil {
+		return nil, nil, __tgo_fmt_1.Errorf("p.rawComprehensionClause: %w", tgoErr2)
 	}
-	children, result, err := p.rawComprehensionBody(bodyOpen+1, bodyClose)
-	if err != nil {
-		return nil, nil, err
+	children, result, tgoErr3 := p.rawComprehensionBody(bodyOpen+1, bodyClose)
+	if tgoErr3 != nil {
+		return nil, nil, __tgo_fmt_1.Errorf("p.rawComprehensionBody: %w", tgoErr3)
 	}
 	return append([]*rawComprehensionClause{clause}, children...), result, nil
 }
@@ -204,7 +206,7 @@ func (p *sourceParser) rawComprehensionClause(
 	}
 	bindings, err := p.comprehensionBindings(start+1, define)
 	if err != nil {
-		return nil, err
+		return nil, __tgo_fmt_1.Errorf("p.comprehensionBindings: %w", err)
 	}
 	if rangeToken+1 >= open {
 		return nil, p.tokenError(rangeToken, "comprehension range needs a source")

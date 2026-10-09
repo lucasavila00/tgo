@@ -80,15 +80,12 @@ func (p %sourceParser) makeComprehension(
 		Rbrace: p.pos(p.tokens[raw.close].start),
 	}
 	for _, clause := range raw.clauses {
-		expression, found, err := p.parseExpression(
+		expression, found := p.parseExpression(
 			p.tokens[clause.expressionStart].start,
 			p.tokens[clause.expressionEnd].start,
 			matchAt,
 			defaultAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
+		)!
 		for child, parent := range found {
 			anchors[child] = parent
 		}
@@ -117,30 +114,24 @@ func (p %sourceParser) makeComprehension(
 		result.Clauses = append(result.Clauses, item)
 	}
 	rawResult := raw.result
-	value, found, err := p.parseExpression(
+	value, found := p.parseExpression(
 		p.tokens[rawResult.valueStart].start,
 		p.tokens[rawResult.valueEnd-1].end,
 		matchAt,
 		defaultAt,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
+	)!
 	for child, parent := range found {
 		anchors[child] = parent
 	}
 	var key ast.Expr = nil
 	colon := token.NoPos
 	if rawResult.colon >= 0 {
-		key, found, err = p.parseExpression(
+		key, found = p.parseExpression(
 			p.tokens[rawResult.keyStart].start,
 			p.tokens[rawResult.keyEnd-1].end,
 			matchAt,
 			defaultAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
+		)!
 		for child, parent := range found {
 			anchors[child] = parent
 		}
@@ -228,10 +219,7 @@ func (p %sourceParser) makeDeclaration(
 			Comment:  nil,
 		}
 		for _, rawVariant := range raw.variants {
-			fields, fieldAnchors, err := p.makeFields(rawVariant.fields, matchAt, defaultAt)
-			if err != nil {
-				return nil, nil, err
-			}
+			fields, fieldAnchors := p.makeFields(rawVariant.fields, matchAt, defaultAt)!
 			variant := &frontVariantDecl{
 				frontSpan: frontSpan{
 					Start: p.pos(rawVariant.start),
@@ -257,10 +245,7 @@ func (p %sourceParser) makeDeclaration(
 		}
 		return node, anchors, nil
 	case "struct":
-		fields, fieldAnchors, err := p.makeFields(raw.fields, matchAt, defaultAt)
-		if err != nil {
-			return nil, nil, err
-		}
+		fields, fieldAnchors := p.makeFields(raw.fields, matchAt, defaultAt)!
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
 		}
@@ -276,24 +261,18 @@ func (p %sourceParser) makeDeclaration(
 			Comment: nil,
 		}, anchors, nil
 	case "checked":
-		base, baseAnchors, err := p.parseExpression(
+		base, baseAnchors := p.parseExpression(
 			p.tokens[raw.baseStart].start,
 			p.tokens[raw.baseEnd].start,
 			matchAt,
 			defaultAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		predicate, predicateAnchors, err := p.parseExpression(
+		)!
+		predicate, predicateAnchors := p.parseExpression(
 			p.tokens[raw.predicateStart].start,
 			p.tokens[raw.predicateEnd-1].end,
 			matchAt,
 			defaultAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
+		)!
 		for extension, parent := range baseAnchors {
 			anchors[extension] = parent
 		}
@@ -327,10 +306,7 @@ func (p %sourceParser) makeFields(
 		if raw.assign >= 0 {
 			declarationEnd = raw.assign
 		}
-		field, err := p.parseField(raw.start, declarationEnd)
-		if err != nil {
-			return nil, nil, err
-		}
+		field := p.parseField(raw.start, declarationEnd)!
 		var defaultValue ast.Expr = nil
 		assign := token.NoPos
 		if raw.assign >= 0 {
@@ -338,15 +314,12 @@ func (p %sourceParser) makeFields(
 				return nil, nil, p.tokenError(raw.start, "embedded fields cannot have defaults")
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
-			parsedDefault, expressionAnchors, parseErr := p.parseExpression(
+			parsedDefault, expressionAnchors := p.parseExpression(
 				p.tokens[raw.assign+1].start,
 				p.tokens[raw.end-1].end,
 				matchAt,
 				defaultAt,
-			)
-			if parseErr != nil {
-				return nil, nil, parseErr
-			}
+			)!
 			defaultValue = parsedDefault
 			for extension, parent := range expressionAnchors {
 				anchors[extension] = parent

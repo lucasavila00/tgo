@@ -1,1 +1,1 @@
-<WORK>/input.tgo:4:18: comprehension range must use :=
+<WORK>/input.tgo:p.rawComprehension: p.rawComprehensionBody: p.rawComprehensionClause: 4:18: comprehension range must use :=

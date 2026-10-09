@@ -173,9 +173,9 @@ func parseFrontFile(
 	if fset == nil {
 		return nil, fmt.Errorf("parse %s: nil file set", filename)
 	}
-	tokens, comments, err := scanSource(filename, source, mode&AllErrors != 0)
-	if err != nil {
-		return nil, err
+	tokens, comments, tgoErr := scanSource(filename, source, mode&AllErrors != 0)
+	if tgoErr != nil {
+		return nil, fmt.Errorf("scanSource: %w", tgoErr)
 	}
 	state := &sourceParser{
 		filename:       filename,
@@ -352,7 +352,7 @@ func (p *sourceParser) discoverDeclarations() error {
 			p.tokens[cursor+1].kind == token.IDENT {
 			declaration, next, err := p.declaration(cursor)
 			if err != nil {
-				return err
+				return fmt.Errorf("p.declaration: %w", err)
 			}
 			if declaration != nil {
 				p.decls = append(p.decls, declaration)
@@ -366,9 +366,9 @@ func (p *sourceParser) discoverDeclarations() error {
 			}
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return err
+			end, tgoErr := p.closeToken(cursor)
+			if tgoErr != nil {
+				return fmt.Errorf("p.closeToken: %w", tgoErr)
 			}
 			cursor = end + 1
 			continue
@@ -397,7 +397,7 @@ func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
 	}
 	declarationEnd, err := p.declarationEnd(cursor)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("p.declarationEnd: %w", err)
 	}
 	ordinary := p.goDeclarationSyntax(start, declarationEnd)
 	baseStart := cursor
@@ -410,9 +410,9 @@ func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
 			return p.checkedDeclaration(start, baseStart, cursor)
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return nil, 0, err
+			end, tgoErr := p.closeToken(cursor)
+			if tgoErr != nil {
+				return nil, 0, fmt.Errorf("p.closeToken: %w", tgoErr)
 			}
 			cursor = end + 1
 			continue
@@ -432,7 +432,7 @@ func (p *sourceParser) declarationEnd(start int) (int, error) {
 		if opening(p.tokens[cursor].kind) {
 			end, err := p.closeToken(cursor)
 			if err != nil {
-				return 0, err
+				return 0, fmt.Errorf("p.closeToken: %w", err)
 			}
 			cursor = end + 1
 			continue
@@ -518,11 +518,11 @@ func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	}
 	closing, err := p.closeToken(start + 2)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("p.closeToken: %w", err)
 	}
-	fields, err := p.rawFields(start+2, closing)
-	if err != nil {
-		return nil, 0, err
+	fields, tgoErr := p.rawFields(start+2, closing)
+	if tgoErr != nil {
+		return nil, 0, fmt.Errorf("p.rawFields: %w", tgoErr)
 	}
 	variant := new(rawVariant)
 	variant.start = p.tokens[start].start
@@ -549,11 +549,11 @@ func (p *sourceParser) structDeclaration(
 ) (*rawDecl, int, error) {
 	closing, err := p.closeToken(open)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("p.closeToken: %w", err)
 	}
-	fields, err := p.rawFields(open, closing)
-	if err != nil {
-		return nil, 0, err
+	fields, tgoErr := p.rawFields(open, closing)
+	if tgoErr != nil {
+		return nil, 0, fmt.Errorf("p.rawFields: %w", tgoErr)
 	}
 	declaration := new(rawDecl)
 	declaration.kind = "struct"
@@ -586,7 +586,7 @@ func (p *sourceParser) checkedDeclaration(
 		if opening(p.tokens[cursor].kind) {
 			end, err := p.closeToken(cursor)
 			if err != nil {
-				return nil, 0, err
+				return nil, 0, fmt.Errorf("p.closeToken: %w", err)
 			}
 			cursor = end + 1
 			continue
@@ -633,7 +633,7 @@ func (p *sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 			if opening(p.tokens[cursor].kind) {
 				end, err := p.closeToken(cursor)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("p.closeToken: %w", err)
 				}
 				cursor = end + 1
 				continue

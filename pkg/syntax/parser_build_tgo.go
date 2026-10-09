@@ -90,7 +90,7 @@ func (p *sourceParser) makeComprehension(
 			defaultAt,
 		)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("p.parseExpression: %w", err)
 		}
 		for child, parent := range found {
 			anchors[child] = parent
@@ -120,14 +120,14 @@ func (p *sourceParser) makeComprehension(
 		result.Clauses = append(result.Clauses, item)
 	}
 	rawResult := raw.result
-	value, found, err := p.parseExpression(
+	value, found, tgoErr := p.parseExpression(
 		p.tokens[rawResult.valueStart].start,
 		p.tokens[rawResult.valueEnd-1].end,
 		matchAt,
 		defaultAt,
 	)
-	if err != nil {
-		return nil, nil, err
+	if tgoErr != nil {
+		return nil, nil, fmt.Errorf("p.parseExpression: %w", tgoErr)
 	}
 	for child, parent := range found {
 		anchors[child] = parent
@@ -135,15 +135,17 @@ func (p *sourceParser) makeComprehension(
 	var key ast.Expr = nil
 	colon := token.NoPos
 	if rawResult.colon >= 0 {
-		key, found, err = p.parseExpression(
+		tgoResult, tgoResult2, tgoErr2 := p.parseExpression(
 			p.tokens[rawResult.keyStart].start,
 			p.tokens[rawResult.keyEnd-1].end,
 			matchAt,
 			defaultAt,
 		)
-		if err != nil {
-			return nil, nil, err
+		if tgoErr2 != nil {
+			return nil, nil, fmt.Errorf("p.parseExpression: %w", tgoErr2)
 		}
+		key, found = tgoResult, tgoResult2
+
 		for child, parent := range found {
 			anchors[child] = parent
 		}
@@ -233,7 +235,7 @@ func (p *sourceParser) makeDeclaration(
 		for _, rawVariant := range raw.variants {
 			fields, fieldAnchors, err := p.makeFields(rawVariant.fields, matchAt, defaultAt)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("p.makeFields: %w", err)
 			}
 			variant := &frontVariantDecl{
 				frontSpan: frontSpan{
@@ -260,9 +262,9 @@ func (p *sourceParser) makeDeclaration(
 		}
 		return node, anchors, nil
 	case "struct":
-		fields, fieldAnchors, err := p.makeFields(raw.fields, matchAt, defaultAt)
-		if err != nil {
-			return nil, nil, err
+		fields, fieldAnchors, tgoErr := p.makeFields(raw.fields, matchAt, defaultAt)
+		if tgoErr != nil {
+			return nil, nil, fmt.Errorf("p.makeFields: %w", tgoErr)
 		}
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
@@ -279,23 +281,23 @@ func (p *sourceParser) makeDeclaration(
 			Comment:   nil,
 		}, anchors, nil
 	case "checked":
-		base, baseAnchors, err := p.parseExpression(
+		base, baseAnchors, tgoErr2 := p.parseExpression(
 			p.tokens[raw.baseStart].start,
 			p.tokens[raw.baseEnd].start,
 			matchAt,
 			defaultAt,
 		)
-		if err != nil {
-			return nil, nil, err
+		if tgoErr2 != nil {
+			return nil, nil, fmt.Errorf("p.parseExpression: %w", tgoErr2)
 		}
-		predicate, predicateAnchors, err := p.parseExpression(
+		predicate, predicateAnchors, tgoErr3 := p.parseExpression(
 			p.tokens[raw.predicateStart].start,
 			p.tokens[raw.predicateEnd-1].end,
 			matchAt,
 			defaultAt,
 		)
-		if err != nil {
-			return nil, nil, err
+		if tgoErr3 != nil {
+			return nil, nil, fmt.Errorf("p.parseExpression: %w", tgoErr3)
 		}
 		for extension, parent := range baseAnchors {
 			anchors[extension] = parent
@@ -332,7 +334,7 @@ func (p *sourceParser) makeFields(
 		}
 		field, err := p.parseField(raw.start, declarationEnd)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("p.parseField: %w", err)
 		}
 		var defaultValue ast.Expr = nil
 		assign := token.NoPos
@@ -341,14 +343,14 @@ func (p *sourceParser) makeFields(
 				return nil, nil, p.tokenError(raw.start, "embedded fields cannot have defaults")
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
-			parsedDefault, expressionAnchors, parseErr := p.parseExpression(
+			parsedDefault, expressionAnchors, tgoErr := p.parseExpression(
 				p.tokens[raw.assign+1].start,
 				p.tokens[raw.end-1].end,
 				matchAt,
 				defaultAt,
 			)
-			if parseErr != nil {
-				return nil, nil, parseErr
+			if tgoErr != nil {
+				return nil, nil, fmt.Errorf("p.parseExpression: %w", tgoErr)
 			}
 			defaultValue = parsedDefault
 			for extension, parent := range expressionAnchors {

@@ -170,10 +170,7 @@ func parseFrontFile(
 	if fset == nil {
 		return nil, fmt.Errorf("parse %s: nil file set", filename)
 	}
-	tokens, comments, err := scanSource(filename, source, mode&AllErrors != 0)
-	if err != nil {
-		return nil, err
-	}
+	tokens, comments := scanSource(filename, source, mode&AllErrors != 0)!
 	state := &sourceParser{
 		filename:     filename,
 		source:       append([]byte(nil), source...),
@@ -347,10 +344,7 @@ func (p %sourceParser) discoverDeclarations() error {
 	for cursor := 0; cursor < len(p.tokens); {
 		if p.tokens[cursor].kind == token.TYPE && cursor+1 < len(p.tokens) &&
 			p.tokens[cursor+1].kind == token.IDENT {
-			declaration, next, err := p.declaration(cursor)
-			if err != nil {
-				return err
-			}
+			declaration, next := p.declaration(cursor)!
 			if declaration != nil {
 				p.decls = append(p.decls, declaration)
 				p.edits = append(p.edits, sourceEdit{
@@ -363,10 +357,7 @@ func (p %sourceParser) discoverDeclarations() error {
 			}
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return err
-			}
+			end := p.closeToken(cursor)!
 			cursor = end + 1
 			continue
 		}
@@ -392,10 +383,7 @@ func (p %sourceParser) declaration(start int) (*rawDecl, int, error) {
 			return p.enumDeclaration(start, cursor, open)
 		}
 	}
-	declarationEnd, err := p.declarationEnd(cursor)
-	if err != nil {
-		return nil, 0, err
-	}
+	declarationEnd := p.declarationEnd(cursor)!
 	ordinary := p.goDeclarationSyntax(start, declarationEnd)
 	baseStart := cursor
 	if ordinary && p.tokens[baseStart].kind != token.STRUCT {
@@ -407,10 +395,7 @@ func (p %sourceParser) declaration(start int) (*rawDecl, int, error) {
 			return p.checkedDeclaration(start, baseStart, cursor)
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return nil, 0, err
-			}
+			end := p.closeToken(cursor)!
 			cursor = end + 1
 			continue
 		}
@@ -427,10 +412,7 @@ func (p %sourceParser) declarationEnd(start int) (int, error) {
 	cursor := start
 	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON {
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return 0, err
-			}
+			end := p.closeToken(cursor)!
 			cursor = end + 1
 			continue
 		}
@@ -507,14 +489,8 @@ func (p %sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 		p.tokens[start+2].kind != token.LBRACE {
 		return nil, 0, p.tokenError(start, "variant needs Name struct { fields }")
 	}
-	closing, err := p.closeToken(start + 2)
-	if err != nil {
-		return nil, 0, err
-	}
-	fields, err := p.rawFields(start+2, closing)
-	if err != nil {
-		return nil, 0, err
-	}
+	closing := p.closeToken(start + 2)!
+	fields := p.rawFields(start+2, closing)!
 	variant := new(rawVariant)
 	variant.start = p.tokens[start].start
 	variant.end = p.tokens[closing].end
@@ -538,14 +514,8 @@ func (p %sourceParser) structDeclaration(
 	keyword int,
 	open int,
 ) (*rawDecl, int, error) {
-	closing, err := p.closeToken(open)
-	if err != nil {
-		return nil, 0, err
-	}
-	fields, err := p.rawFields(open, closing)
-	if err != nil {
-		return nil, 0, err
-	}
+	closing := p.closeToken(open)!
+	fields := p.rawFields(open, closing)!
 	declaration := new(rawDecl)
 	declaration.kind = "struct"
 	declaration.start = p.tokens[start].start
@@ -575,10 +545,7 @@ func (p %sourceParser) checkedDeclaration(
 	cursor := predicateStart
 	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON {
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return nil, 0, err
-			}
+			end := p.closeToken(cursor)!
 			cursor = end + 1
 			continue
 		}
@@ -622,10 +589,7 @@ func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 				field.assign = cursor
 			}
 			if opening(p.tokens[cursor].kind) {
-				end, err := p.closeToken(cursor)
-				if err != nil {
-					return nil, err
-				}
+				end := p.closeToken(cursor)!
 				cursor = end + 1
 				continue
 			}
