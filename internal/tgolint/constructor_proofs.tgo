@@ -292,7 +292,7 @@ func (c %checker) boundaryArgumentName(expression *syntax.Expression) *syntax.Id
 	if call == nil || len(call.Args) != 1 || !c.facts.IsType(call.Callee) {
 		return nil
 	}
-	if !c.identityConversion(call) {
+	if !c.identityConversion(expression, call) {
 		return nil
 	}
 	return identifier(call.Args[0])
@@ -413,8 +413,8 @@ func (c %checker) checkedTypeSwitch(statement *syntax.TypeSwitchStatement, state
 	if statement.Init != nil {
 		c.checkedStatement(statement.Init, state)
 	}
-	if statement.Assign != nil {
-		c.checkedStatement(statement.Assign, state)
+	if statement.Assignment != nil {
+		c.checkedStatement(statement.Assignment, state)
 	}
 	entry := cloneCheckedState(state)
 	var exits []checkedState = nil
