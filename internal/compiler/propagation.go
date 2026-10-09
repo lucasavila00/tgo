@@ -894,6 +894,10 @@ func (l *propagationLowerer) failureReturn(
 	prefix []ast.Stmt,
 	comma token.Pos,
 ) []ast.Stmt {
+	if len(statement.Results) != 1 {
+		l.unit.failAt(comma, "failure return error expression must produce one value")
+		return append(prefix, statement)
+	}
 	if l.function.resultType.Len() < 2 {
 		l.unit.failAt(comma, "failure return needs at least two function results")
 		return append(prefix, statement)
