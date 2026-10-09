@@ -118,7 +118,7 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 				if !ok || identifier == nil {
 					return true
 				}
-				object, definition := pkg.Facts.IdentifierFact(identifier)
+				object, definition := pkg.Facts.IdentifierFact(source.Syntax, node)
 				if object == nil {
 					return true
 				}

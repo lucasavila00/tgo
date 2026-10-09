@@ -11,6 +11,26 @@ import (
 	"tgo/pkg/syntax"
 )
 
+func TestAnalyzeWorkspaceUsesStablePackageOrder(t *testing.T) {
+	t.Parallel()
+	packages, err := AnalyzeWorkspace("testdata/analysisworkspace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(packages) != 2 {
+		t.Fatalf("package count = %d, want 2", len(packages))
+	}
+	if packages[0].Path != "example.test/analysis/app" ||
+		packages[1].Path != "example.test/analysis/dep" {
+		t.Fatalf("package order = %q, %q", packages[0].Path, packages[1].Path)
+	}
+	for _, pkg := range packages {
+		if pkg.Facts == nil || pkg.Files == nil || len(pkg.Sources) != 1 {
+			t.Fatalf("incomplete analysis for %s", pkg.Path)
+		}
+	}
+}
+
 func TestSourceFactsFindShiftedDefinition(t *testing.T) {
 	t.Parallel()
 	files := token.NewFileSet()
@@ -53,6 +73,68 @@ func TestSourceFactsFindShiftedDefinition(t *testing.T) {
 	if object == nil || object.Name() != "field" {
 		t.Fatalf("shifted field definition = %v, want field", object)
 	}
+}
+
+func TestSourceFactsDoNotClassifySameLineUseAsDefinition(t *testing.T) {
+	t.Parallel()
+	files := token.NewFileSet()
+	projected, err := parser.ParseFile(
+		files,
+		"sample.tgo",
+		"package sample\nvar      value = 1; var copy = value\n",
+		0,
+	)
+	if err != nil {
+		t.Fatalf("parse projected Go: %v", err)
+	}
+	info := newInfo()
+	if _, err := new(types.Config).Check(
+		"sample", files, []*ast.File{projected}, info,
+	); err != nil {
+		t.Fatalf("check projected Go: %v", err)
+	}
+	parsed, err := syntax.ParseGoFile(
+		files,
+		"sample.tgo",
+		[]byte("package sample\nvar value = 1; var copy = value\n"),
+		syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("parse source syntax: %v", err)
+	}
+	index := sourcefacts.New(parsed, info, files)
+	first := syntax.GeneralDeclarationOf(parsed.Declarations[0])
+	definition := syntax.ValueSpecificationOf(first.Specs[0]).Names[0]
+	second := syntax.GeneralDeclarationOf(parsed.Declarations[1])
+	use := syntax.IdentifierExpressionOf(
+		syntax.ValueSpecificationOf(second.Specs[0]).Values[0],
+	)
+	definitionNode := identifierNode(parsed, definition)
+	useNode := identifierNode(parsed, use)
+	definitionObject, definitionFact := index.IdentifierFact(parsed, definitionNode)
+	useObject, useFact := index.IdentifierFact(parsed, useNode)
+	if definitionObject == nil || useObject != definitionObject {
+		t.Fatalf("objects = %v, %v", definitionObject, useObject)
+	}
+	if !definitionFact {
+		t.Fatal("declaration is not classified as a definition")
+	}
+	if useFact {
+		t.Fatal("same-line use is classified as a definition")
+	}
+}
+
+func identifierNode(file *syntax.File, identifier *syntax.Identifier) *syntax.Node {
+	var result *syntax.Node
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		value, ok := syntax.IdentifierOf(node)
+		if ok && value.Start == identifier.Start && value.Stop == identifier.Stop {
+			result = node
+			return false
+		}
+		return result == nil
+	})
+	return result
 }
 
 func TestAnalysisTypeInfoOmitsGeneratedFunctionFacts(t *testing.T) {

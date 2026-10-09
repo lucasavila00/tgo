@@ -97,7 +97,7 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 			syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
 				identifier, ok := syntax.IdentifierOf(node)
 				if !ok || identifier == nil { return true }
-				object, definition := pkg.Facts.IdentifierFact(identifier)
+				object, definition := pkg.Facts.IdentifierFact(source.Syntax, node)
 				if object == nil { return true }
 				start := pkg.Files.Position(identifier.Start).Offset
 				end := pkg.Files.Position(identifier.Stop).Offset
