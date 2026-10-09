@@ -2,6 +2,11 @@
 
 package syntax
 
+import __tgo_json "encoding/json"
+import __tgo_jsonv2 "encoding/json/v2"
+import __tgo_jsontext "encoding/json/jsontext"
+import __tgo_fmt "fmt"
+
 import (
 	"fmt"
 	"go/parser"
@@ -57,10 +62,7 @@ type rawVariant struct {
 	fields      []*rawField
 }
 
-type rawDecl struct {
-	tag       int
-	checked   int
-	kind      string
+type rawDeclBase struct {
 	start     int
 	end       int
 	typeToken int
@@ -68,8 +70,215 @@ type rawDecl struct {
 	keyword   int
 	open      int
 	close     int
-	fields    []*rawField
-	variants  []*rawVariant
+}
+
+func __tgo_rawDecl_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(__tgo_jsontext.EndObject)
+}
+
+// rawDecl requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type rawDeclTag uint8
+
+const (
+	rawDeclTagEnum rawDeclTag = iota + 1
+	rawDeclTagStruct
+)
+
+type rawDecl struct {
+	tgoTag     rawDeclTag
+	tgoPayload interface{}
+}
+
+// Tag returns the active tag.
+func (v rawDecl) Tag() rawDeclTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v rawDecl) UnknownTag() string {
+	return __tgo_fmt.Sprintf("rawDecl: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// rawDeclEnum is the Enum payload.
+type rawDeclEnum struct {
+	rawDeclBase
+	tag      int
+	variants []*rawVariant
+}
+
+// rawDecl constructs rawDecl. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value rawDeclEnum) rawDecl() rawDecl {
+	return rawDecl{tgoTag: rawDeclTagEnum, tgoPayload: value}
+}
+
+// EnumPayload requires Enum. No tag check.
+func (v rawDecl) EnumPayload() rawDeclEnum { return v.tgoPayload.(rawDeclEnum) }
+
+// rawDeclStruct is the Struct payload.
+type rawDeclStruct struct {
+	rawDeclBase
+	checked int
+	fields  []*rawField
+}
+
+// rawDecl constructs rawDecl. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value rawDeclStruct) rawDecl() rawDecl {
+	return rawDecl{tgoTag: rawDeclTagStruct, tgoPayload: value}
+}
+
+// StructPayload requires Struct. No tag check.
+func (v rawDecl) StructPayload() rawDeclStruct { return v.tgoPayload.(rawDeclStruct) }
+
+func (v rawDecl) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case rawDeclTagEnum:
+		payload := v.EnumPayload()
+		return __tgo_json.Marshal(struct {
+			Payload rawDeclEnum `json:"Enum"`
+		}{Payload: payload})
+	case rawDeclTagStruct:
+		payload := v.StructPayload()
+		return __tgo_json.Marshal(struct {
+			Payload rawDeclStruct `json:"Struct"`
+		}{Payload: payload})
+	default:
+		return nil, __tgo_fmt.Errorf("invalid rawDecl JSON tag")
+	}
+}
+
+func (v rawDecl) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case rawDeclTagEnum:
+		payload := v.EnumPayload()
+		return __tgo_rawDecl_external_json_to(out, "Enum", payload)
+	case rawDeclTagStruct:
+		payload := v.StructPayload()
+		return __tgo_rawDecl_external_json_to(out, "Struct", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid rawDecl JSON tag")
+	}
+}
+
+func (v *rawDecl) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]__tgo_json.RawMessage
+	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return __tgo_fmt.Errorf("expected one rawDecl JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Enum":
+		var payload rawDeclEnum
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.rawDecl()
+		return nil
+	case "Struct":
+		var payload rawDeclStruct
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.rawDecl()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("unknown rawDecl JSON variant %q", variant)
+	}
+}
+
+func (v *rawDecl) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one rawDecl JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Enum":
+			current = 1
+		case "Struct":
+			current = 2
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one rawDecl JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown rawDecl JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload rawDeclEnum
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.rawDecl()
+		return nil
+	case 2:
+		var payload rawDeclStruct
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.rawDecl()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid rawDecl JSON tag")
+	}
 }
 
 type rawDefault struct {
@@ -352,11 +561,25 @@ func (p *sourceParser) discoverDeclarations() error {
 			}
 			if declaration != nil {
 				p.decls = append(p.decls, declaration)
+				declarationStart := 0
+				declarationEnd := 0
+				switch value := *declaration; value.Tag() {
+				case rawDeclTagEnum:
+					payload := value.EnumPayload()
+					declarationStart = payload.start
+					declarationEnd = payload.end
+				case rawDeclTagStruct:
+					payload := value.StructPayload()
+					declarationStart = payload.start
+					declarationEnd = payload.end
+				default:
+					panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+				}
 				p.edits = append(
 					p.edits,
 					sourceEdit{
-						start: declaration.start,
-						end:   declaration.end,
+						start: declarationStart,
+						end:   declarationEnd,
 						text:  "var _ int",
 					},
 				)
@@ -442,21 +665,13 @@ func (p *sourceParser) enumDeclaration(
 ) (*rawDecl, int, error) {
 	closing, err := p.closeToken(open)
 	if err != nil {
-		return nil, 0, fmt.Errorf("p.closeToken: %w", err)
+		return nil, 0, __tgo_fmt.Errorf("p.closeToken: %w", err)
 	}
-	declaration := new(rawDecl)
-	declaration.kind = "enum"
-	declaration.start = p.tokens[start].start
-	declaration.end = p.tokens[closing].end
-	declaration.typeToken = start
-	declaration.name = start + 1
-	declaration.keyword = keyword
-	declaration.tag = -1
+	tag := -1
 	if keyword+1 < open && p.tokens[keyword+1].kind == token.STRING {
-		declaration.tag = keyword + 1
+		tag = keyword + 1
 	}
-	declaration.open = open
-	declaration.close = closing
+	variants := []*rawVariant(nil)
 	cursor := open + 1
 	names := make(map[string]bool)
 	for cursor < closing {
@@ -466,7 +681,7 @@ func (p *sourceParser) enumDeclaration(
 		}
 		variant, next, tgoErr := p.variant(cursor, closing)
 		if tgoErr != nil {
-			return nil, 0, fmt.Errorf("p.variant: %w", tgoErr)
+			return nil, 0, __tgo_fmt.Errorf("p.variant: %w", tgoErr)
 		}
 		name := p.tokens[variant.name].text
 		if names[name] && p.mode&AllowInvalidModels == 0 {
@@ -474,14 +689,27 @@ func (p *sourceParser) enumDeclaration(
 			return nil, 0, failure
 		}
 		names[name] = true
-		declaration.variants = append(declaration.variants, variant)
+		variants = append(variants, variant)
 		cursor = next
 	}
-	if len(declaration.variants) == 0 && p.mode&AllowInvalidModels == 0 {
+	if len(variants) == 0 && p.mode&AllowInvalidModels == 0 {
 		failure := p.tokenError(keyword, "enum %s has no variants", p.tokens[start+1].text)
 		return nil, 0, failure
 	}
-	return declaration, skipSemicolon(p.tokens, closing+1), nil
+	declaration := rawDeclEnum{
+		rawDeclBase: rawDeclBase{
+			start:     p.tokens[start].start,
+			end:       p.tokens[closing].end,
+			typeToken: start,
+			name:      start + 1,
+			keyword:   keyword,
+			open:      open,
+			close:     closing,
+		},
+		tag:      tag,
+		variants: variants,
+	}.rawDecl()
+	return &declaration, skipSemicolon(p.tokens, closing+1), nil
 }
 
 func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
@@ -537,21 +765,24 @@ func (p *sourceParser) structDeclaration(
 		checked = next
 		next++
 	}
-	declaration := new(rawDecl)
-	declaration.kind = "struct"
-	declaration.start = p.tokens[start].start
-	declaration.end = p.tokens[closing].end
+	end := p.tokens[closing].end
 	if checked >= 0 {
-		declaration.end = p.tokens[checked].end
+		end = p.tokens[checked].end
 	}
-	declaration.checked = checked
-	declaration.typeToken = start
-	declaration.name = start + 1
-	declaration.keyword = keyword
-	declaration.open = open
-	declaration.close = closing
-	declaration.fields = fields
-	return declaration, skipSemicolon(p.tokens, next), nil
+	declaration := rawDeclStruct{
+		rawDeclBase: rawDeclBase{
+			start:     p.tokens[start].start,
+			end:       end,
+			typeToken: start,
+			name:      start + 1,
+			keyword:   keyword,
+			open:      open,
+			close:     closing,
+		},
+		checked: checked,
+		fields:  fields,
+	}.rawDecl()
+	return &declaration, skipSemicolon(p.tokens, next), nil
 }
 
 func (p *sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
