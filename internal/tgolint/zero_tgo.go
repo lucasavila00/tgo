@@ -439,14 +439,14 @@ func (c *checker) assertionValidator(expression *syntax.Expression) bool {
 	for {
 		node := syntax.ExpressionNode(current)
 		parent, ok := syntax.ExpressionOf(c.parents[node])
-		if !ok || syntax.ParenthesizedExpressionOf(parent) == nil {
+		if !ok || parent == nil || syntax.ParenthesizedExpressionOf(parent) == nil {
 			break
 		}
 		current = parent
 	}
 	node := syntax.ExpressionNode(current)
 	parent, ok := syntax.ExpressionOf(c.parents[node])
-	if !ok {
+	if !ok || parent == nil {
 		return false
 	}
 	call := syntax.CallExpressionOf(parent)
@@ -468,7 +468,8 @@ func (c *checker) checkReslice(
 	expression *syntax.Expression,
 	slicing *syntax.SliceExpression,
 ) {
-	if slicing.High == nil {
+	high := slicing.High
+	if high == nil {
 		return
 	}
 	typ := c.facts.Type(slicing.Expression)
@@ -477,8 +478,8 @@ func (c *checker) checkReslice(
 		return
 	}
 	model, invalid := c.zeroInvalid(slice.Elem())
-	if !invalid || c.currentLength(slicing.High, slicing.Expression) ||
-		constantZero(c.facts.Constant(slicing.High)) {
+	if !invalid || c.currentLength(high, slicing.Expression) ||
+		constantZero(c.facts.Constant(high)) {
 		return
 	}
 	c.pass.Reportf(syntax.ExpressionPosition(expression),
@@ -500,5 +501,8 @@ func (c *checker) currentLength(expression, slice *syntax.Expression) bool {
 	}
 	left := syntax.IdentifierExpressionOf(call.Args[0])
 	right := syntax.IdentifierExpressionOf(slice)
-	return left != nil && right != nil && c.facts.Object(left) == c.facts.Object(right)
+	if left == nil || right == nil {
+		return false
+	}
+	return c.facts.Object(left) == c.facts.Object(right)
 }

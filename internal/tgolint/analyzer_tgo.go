@@ -236,9 +236,10 @@ func (c *checker) addParent(node *syntax.Node) {
 func (c *checker) checkNode(node *syntax.Node) {
 	if function, ok := syntax.FunctionDeclarationOf(node); ok {
 		if function != nil {
+			functionType := function.Type
 			body := function.Body
-			if body != nil {
-				c.checkNamedResults(function.Type)
+			if functionType != nil && body != nil {
+				c.checkNamedResults(functionType)
 				c.checkConstructors(node, body)
 			}
 		}
@@ -248,7 +249,10 @@ func (c *checker) checkNode(node *syntax.Node) {
 		if literal == nil {
 			return
 		}
-		c.checkNamedResults(literal.Type)
+		functionType := literal.Type
+		if functionType != nil {
+			c.checkNamedResults(functionType)
+		}
 		body := literal.Body
 		if body != nil {
 			c.checkConstructors(node, body)
@@ -265,7 +269,7 @@ func (c *checker) checkNode(node *syntax.Node) {
 		return
 	}
 	expression, ok := syntax.ExpressionOf(node)
-	if !ok {
+	if !ok || expression == nil {
 		return
 	}
 	if value := syntax.CompositeLiteralOf(expression); value != nil {

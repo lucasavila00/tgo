@@ -414,7 +414,7 @@ func sourceDeclaration(
 			variants = append(variants, variant.Name.Name)
 			sourceVariants = append(sourceVariants, sourceVariant{
 				name:   variant.Name.Name,
-				fields: sourceFields(file, sourceFile, data, variant.Fields),
+				fields: sourceFields(file, sourceFile, data, variant.Fields...),
 			})
 		}
 		result := sourceModelEnum{
@@ -427,7 +427,7 @@ func sourceDeclaration(
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
 		result := sourceModelStruct{
 			Name:   node.Name.Name,
-			Fields: sourceFields(file, sourceFile, data, node.Fields),
+			Fields: sourceFields(file, sourceFile, data, node.Fields...),
 		}.sourceModel()
 		return &result
 	}
@@ -657,10 +657,13 @@ func sourceFields(
 	file *syntax.File,
 	sourceFile *token.File,
 	data []byte,
-	fields []*syntax.TGoField,
+	fields ...*syntax.TGoField,
 ) []sourceField {
 	result := []sourceField(nil)
 	for _, declaration := range fields {
+		if declaration == nil {
+			continue
+		}
 		typeText := sourceExpression(file, sourceFile, data, declaration.Field.Type)
 		tagText := ""
 		if declaration.Field.Tag != nil {
