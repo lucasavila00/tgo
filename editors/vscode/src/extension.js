@@ -142,6 +142,31 @@ function activate(context) {
 
 function registerProviders(context, clients) {
   context.subscriptions.push(
+    vscode.languages.registerHoverProvider(documentSelector, {
+      async provideHover(document, position, token) {
+        if (document.isDirty) {
+          return undefined;
+        }
+        const client = clients.forURI(document.uri);
+        const offset = positionToByteOffset(document.getText(), position);
+        if (!client || offset === undefined) {
+          return undefined;
+        }
+        const value = await request(client, "hover", {
+          uri: client.toHelperURI(document.uri), offset
+        }, token);
+        if (!value) {
+          return undefined;
+        }
+        const range = await convertRange(value.range, token, client);
+        if (!range) {
+          return undefined;
+        }
+        const contents = new vscode.MarkdownString();
+        contents.appendCodeblock(value.contents, "tgo");
+        return new vscode.Hover(contents, range);
+      }
+    }),
     vscode.languages.registerDefinitionProvider(documentSelector, {
       async provideDefinition(document, position, token) {
         if (document.isDirty) {

@@ -80,6 +80,10 @@ async function checkDirtyDocument(document) {
     "vscode.executeDefinitionProvider", document.uri, document.positionAt(use + 1)
   );
   assert.deepEqual(definitions, []);
+  const hovers = await vscode.commands.executeCommand(
+    "vscode.executeHoverProvider", document.uri, document.positionAt(use + 1)
+  );
+  assert.deepEqual(hovers || [], []);
   const symbols = await vscode.commands.executeCommand(
     "vscode.executeDocumentSymbolProvider", document.uri
   );
@@ -104,6 +108,14 @@ async function checkProviders(document) {
   const source = document.getText();
   const use = source.lastIndexOf("Café");
   const position = document.positionAt(use + 1);
+  const hovers = await vscode.commands.executeCommand(
+    "vscode.executeHoverProvider", document.uri, position
+  );
+  assert.equal(hovers.length, 1);
+  assert.equal(document.getText(hovers[0].range), "Café");
+  assert.ok(hovers[0].contents.some(
+    (content) => content.value.includes("func Café() string")
+  ));
   const definitions = await vscode.commands.executeCommand(
     "vscode.executeDefinitionProvider", document.uri, position
   );
