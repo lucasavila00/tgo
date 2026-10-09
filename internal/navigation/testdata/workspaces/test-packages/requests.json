@@ -1,0 +1,36 @@
+[
+  {
+    "method": "hover",
+    "position": {"file": "sample/internal_test.tgo", "text": "Production", "occurrence": 1},
+    "hover": "func Production(value Record) string"
+  },
+  {
+    "method": "definition",
+    "position": {"file": "sample/internal_test.tgo", "text": "Production", "occurrence": 1},
+    "locations": [
+      {"file": "sample/production.tgo", "text": "Production", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "hover",
+    "position": {"file": "sample/external_test.tgo", "text": "Production", "occurrence": 1},
+    "hover": "func Production(value Record) string"
+  },
+  {
+    "method": "definition",
+    "position": {"file": "sample/external_test.tgo", "text": "Production", "occurrence": 1},
+    "locations": [
+      {"file": "sample/production.tgo", "text": "Production", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "references",
+    "position": {"file": "sample/internal_test.tgo", "text": "Production", "occurrence": 1},
+    "includeDeclaration": true,
+    "locations": [
+      {"file": "sample/external_test.tgo", "text": "Production", "occurrence": 1},
+      {"file": "sample/internal_test.tgo", "text": "Production", "occurrence": 1},
+      {"file": "sample/production.tgo", "text": "Production", "occurrence": 1}
+    ]
+  }
+]
