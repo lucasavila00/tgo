@@ -551,6 +551,10 @@ func comprehensionProjection(
 	output.WriteString("return ")
 	output.WriteString(result)
 	output.WriteString("\n})")
+	position := files.Position(node.Stop)
+	output.WriteString(inlineLineDirective(
+		position.Filename, position.Line, position.Column,
+	))
 	return output.String()
 }
 
