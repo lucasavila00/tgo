@@ -59,11 +59,15 @@ func (v Choice) UnknownTag() string {
 type ChoiceText struct {
 	Value string
 }
+type TgoChoiceTextInput struct {
+	FieldValue string
+}
 
-// Choice constructs Choice. Model fields must be valid.
+// NewChoiceText constructs Choice. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ChoiceText) Choice() Choice {
-	return Choice{tgoTag: ChoiceTagText, tgoText: value}
+func NewChoiceText(Value string) Choice {
+	tgoValue := ChoiceText{Value}
+	return Choice{tgoTag: ChoiceTagText, tgoText: tgoValue}
 }
 
 // TextPayload requires Text. No tag check.
@@ -73,11 +77,15 @@ func (v Choice) TextPayload() ChoiceText { return v.tgoText }
 type ChoiceNumber struct {
 	Value int
 }
+type TgoChoiceNumberInput struct {
+	FieldValue int
+}
 
-// Choice constructs Choice. Model fields must be valid.
+// NewChoiceNumber constructs Choice. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ChoiceNumber) Choice() Choice {
-	return Choice{tgoTag: ChoiceTagNumber, tgoNumber: value}
+func NewChoiceNumber(Value int) Choice {
+	tgoValue := ChoiceNumber{Value}
+	return Choice{tgoTag: ChoiceTagNumber, tgoNumber: tgoValue}
 }
 
 // NumberPayload requires Number. No tag check.
@@ -133,14 +141,14 @@ func (v *Choice) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceText(payload.Value)
 		return nil
 	case "Number":
 		var payload ChoiceNumber
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceNumber(payload.Value)
 		return nil
 	default:
 		return fmt.Errorf("unknown Choice JSON variant %q", variant)
@@ -211,14 +219,14 @@ func (v *Choice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceText(payload.Value)
 		return nil
 	case 2:
 		var payload ChoiceNumber
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceNumber(payload.Value)
 		return nil
 	default:
 		return fmt.Errorf("invalid Choice JSON tag")
@@ -268,11 +276,12 @@ func readChoice(value Choice) string {
 	return value.TextPayload().Value
 }
 
-func choicePayload(value Choice) func() ChoiceText {
+func choicePayload(value Choice) string {
 	if ChoiceTagText != value.Tag() {
-		return nil
+		return ""
 	}
-	return value.TextPayload
+	payload := value.TextPayload
+	return payload().Value
 }
 func TgoDefaultRequestTags() map[string]string {
 	return map[string]string{}

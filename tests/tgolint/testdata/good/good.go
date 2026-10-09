@@ -132,6 +132,27 @@ func EarlyExitPayloadMethod(event model.Event) func() model.EventStarted {
 	return event.StartedPayload
 }
 
+func CompoundEarlyExitPayload(event model.Event, ready bool) string {
+	if !ready || event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	return event.StartedPayload().ID
+}
+
+func IfPayload(event model.Event) string {
+	if event.Tag() == model.EventTagStarted {
+		return event.StartedPayload().ID
+	}
+	return ""
+}
+
+func ForPayload(event model.Event, ready bool) string {
+	for ready && event.Tag() == model.EventTagStarted {
+		return event.StartedPayload().ID
+	}
+	return ""
+}
+
 func Values() ([]model.Event, error) {
 	count, err := model.NewCount(1)
 	if err != nil {

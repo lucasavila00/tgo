@@ -50,9 +50,10 @@ func readChoice(value Choice) string {
 	return value.TextPayload().Value
 }
 
-func choicePayload(value Choice) func() ChoiceText {
+func choicePayload(value Choice) string {
 	if ChoiceTagText != value.Tag() {
-		return nil
+		return ""
 	}
-	return value.TextPayload
+	payload := value.TextPayload
+	return payload().Value
 }

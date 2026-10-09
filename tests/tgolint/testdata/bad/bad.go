@@ -911,7 +911,7 @@ again:
 func EmbeddedAssignment(event MutableEmbedded) string {
 	switch event.Tag() {
 	case model.EventTagStarted:
-		event.Event = model.EventStopped{}.Event()
+		event.Event = model.NewEventStopped("")
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
 		return ""
@@ -925,4 +925,18 @@ func PackageReceiverPayload() string {
 		return ""
 	}
 	return publishedEvent.StoppedPayload().Reason
+}
+
+func InsufficientIfProof(event model.Event, ready bool) string {
+	if ready || event.Tag() == model.EventTagStarted {
+		return event.StartedPayload().ID
+	}
+	return ""
+}
+
+func InsufficientEarlyExitProof(event model.Event, ready bool) string {
+	if ready && event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	return event.StartedPayload().ID
 }

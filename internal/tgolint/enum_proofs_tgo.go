@@ -18,7 +18,8 @@ func (c *checker) checkPayloadAccessor(
 	model *model,
 	tag int,
 ) {
-	if c.earlyExitPayloadProof(expression, selector.Expression, model, tag) {
+	if c.branchPayloadProof(expression, selector.Expression, model, tag) ||
+		c.earlyExitPayloadProof(expression, selector.Expression, model, tag) {
 		c.syntaxSafe[expression] = true
 		return
 	}
@@ -28,6 +29,43 @@ func (c *checker) checkPayloadAccessor(
 		"%s: %s requires proof of %s",
 		modelName(model), selector.Selector.Name, tagConstant(model, tag),
 	)
+}
+
+// branchPayloadProof finds a true condition that selects the payload tag.
+func (c *checker) branchPayloadProof(
+	expression *syntax.Expression,
+	receiver *syntax.Expression,
+	model *model,
+	tag int,
+) bool {
+	access := syntax.ExpressionPosition(expression)
+	for node := c.parents[syntax.ExpressionNode(expression)]; node != nil; node = c.parents[*node] {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
+			return false
+		}
+		statement, ok := syntax.StatementOf(node)
+		if !ok {
+			continue
+		}
+		if guard := syntax.IfStatementOf(statement); guard != nil &&
+			guard.Body.Start <= access && access < guard.Body.Stop &&
+			c.tagConditionProof(guard.Condition, true, receiver, model, tag) {
+			return c.enumReceiverStableBetween(
+				expression, receiver, syntax.ExpressionEnd(guard.Condition), access,
+			)
+		}
+		loop := syntax.ForStatementOf(statement)
+		if loop == nil || loop.Condition == nil ||
+			access < loop.Body.Start || loop.Body.Stop <= access {
+			continue
+		}
+		if c.tagConditionProof(loop.Condition, true, receiver, model, tag) {
+			return c.enumReceiverStableBetween(
+				expression, receiver, syntax.ExpressionEnd(loop.Condition), access,
+			)
+		}
+	}
+	return false
 }
 
 // earlyExitPayloadProof finds a preceding guard that stops for other tags.
@@ -52,11 +90,7 @@ func (c *checker) earlyExitPayloadProof(
 		}
 		index := containingStatement(block.List, access)
 		for candidate := index - 1; candidate >= 0; candidate-- {
-			proofReceiver, proofModel, proofTag, proof := c.earlyExitTagGuard(
-				block.List[candidate],
-			)
-			if !proof || !sameModel(proofModel, model) || proofTag != tag ||
-				!sameReceiver(c.facts, receiver, proofReceiver) {
+			if !c.earlyExitTagGuard(block.List[candidate], receiver, model, tag) {
 				continue
 			}
 			return c.enumReceiverStableBetween(
@@ -80,20 +114,51 @@ func containingStatement(statements []*syntax.Statement, position token.Pos) int
 
 func (c *checker) earlyExitTagGuard(
 	statement *syntax.Statement,
-) (*syntax.Expression, *model, int, bool) {
+	receiver *syntax.Expression,
+	model *model,
+	tag int,
+) bool {
 	guard := syntax.IfStatementOf(statement)
-	if guard == nil || guard.Init != nil || guard.Else != nil ||
-		!c.statementsTerminate(c.file, guard.Body.List) {
-		return nil, nil, 0, false
+	if guard == nil || guard.Init != nil || guard.Else != nil || c.file == nil {
+		return false
 	}
-	condition := syntax.BinaryExpressionOf(guard.Condition)
-	if condition == nil || condition.Operator != token.NEQ {
-		return nil, nil, 0, false
+	if !c.statementsTerminate(c.file, guard.Body.List) {
+		return false
 	}
-	if receiver, model, tag, ok := c.tagGuardSides(condition.Left, condition.Right); ok {
-		return receiver, model, tag, true
+	return c.tagConditionProof(guard.Condition, false, receiver, model, tag)
+}
+
+// tagConditionProof reports an exact tag fact on one condition branch.
+func (c *checker) tagConditionProof(
+	condition *syntax.Expression,
+	truth bool,
+	receiver *syntax.Expression,
+	model *model,
+	tag int,
+) bool {
+	if parenthesized := syntax.ParenthesizedExpressionOf(condition); parenthesized != nil {
+		return c.tagConditionProof(parenthesized.Expression, truth, receiver, model, tag)
 	}
-	return c.tagGuardSides(condition.Right, condition.Left)
+	if unary := syntax.UnaryExpressionOf(condition); unary != nil && unary.Operator == token.NOT {
+		return c.tagConditionProof(unary.Expression, !truth, receiver, model, tag)
+	}
+	binary := syntax.BinaryExpressionOf(condition)
+	if binary == nil {
+		return false
+	}
+	if truth && binary.Operator == token.LAND || !truth && binary.Operator == token.LOR {
+		return c.tagConditionProof(binary.Left, truth, receiver, model, tag) ||
+			c.tagConditionProof(binary.Right, truth, receiver, model, tag)
+	}
+	if truth && binary.Operator != token.EQL || !truth && binary.Operator != token.NEQ {
+		return false
+	}
+	proofReceiver, proofModel, proofTag, ok := c.tagGuardSides(binary.Left, binary.Right)
+	if !ok {
+		proofReceiver, proofModel, proofTag, ok = c.tagGuardSides(binary.Right, binary.Left)
+	}
+	return ok && sameModel(proofModel, model) && proofTag == tag &&
+		sameReceiver(c.facts, receiver, proofReceiver)
 }
 
 func (c *checker) tagGuardSides(
@@ -126,7 +191,10 @@ func (c *checker) enumReceiverStableBefore(
 	_ = file
 	access := syntax.ExpressionPosition(expression)
 	_, body := c.enclosingEnumFunction(expression)
-	if body == nil || !c.enumReceiverLocalToFunction(expression, receiver) ||
+	if body == nil {
+		return false
+	}
+	if !c.enumReceiverLocalToFunction(expression, receiver) ||
 		c.enumGotoEntersClause(body, clause, access) {
 		return false
 	}
@@ -156,7 +224,8 @@ func (c *checker) enumReceiverStableBefore(
 				stable = false
 				return false
 			}
-			if syntax.NodePosition(node) > proof && c.enumReceiverChangesAt(node, receiver) {
+			if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
+				c.enumReceiverChangesAt(node, receiver) {
 				stable = false
 			}
 			return stable
@@ -168,7 +237,12 @@ func (c *checker) enumReceiverStableBefore(
 	if c.enumLoopCanInvalidate(expression, receiver, proof, access) {
 		return false
 	}
-	clauseBody := &syntax.BlockStatement{List: clause.Body}
+	clauseBody := &syntax.BlockStatement{
+		Span:   syntax.Span{Start: token.NoPos, Stop: token.NoPos},
+		Lbrace: token.NoPos,
+		List:   clause.Body,
+		Rbrace: token.NoPos,
+	}
 	return !c.enumGotoCanInvalidate(clauseBody, receiver, proof, access)
 }
 
@@ -236,7 +310,10 @@ func (c *checker) enumReceiverStableBetween(
 	access token.Pos,
 ) bool {
 	_, body := c.enclosingEnumFunction(expression)
-	if body == nil || !c.enumReceiverLocalToFunction(expression, receiver) {
+	if body == nil {
+		return false
+	}
+	if !c.enumReceiverLocalToFunction(expression, receiver) {
 		return false
 	}
 	if c.enumReceiverEscapedBefore(expression, receiver, access) {
@@ -253,7 +330,8 @@ func (c *checker) enumReceiverStableBetween(
 		if !stable || syntax.NodePosition(node) >= access {
 			return false
 		}
-		if syntax.NodePosition(node) > proof && c.enumReceiverChangesAt(node, receiver) {
+		if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
+			c.enumReceiverChangesAt(node, receiver) {
 			stable = false
 			return false
 		}
@@ -351,9 +429,6 @@ func (c *checker) enumReceiverEscapedBefore(
 func (c *checker) enclosingEnumFunction(
 	expression *syntax.Expression,
 ) (*syntax.Node, *syntax.BlockStatement) {
-	if expression == nil {
-		return nil, nil
-	}
 	node := syntax.ExpressionNode(expression)
 	for parent := c.parents[node]; parent != nil; parent = c.parents[*parent] {
 		if declaration, ok := syntax.FunctionDeclarationOf(parent); ok {
@@ -434,17 +509,18 @@ func (c *checker) enumReceiverEscapesAt(
 	receiver *syntax.Expression,
 ) bool {
 	expression, ok := syntax.ExpressionOf(node)
-	if !ok {
+	if !ok || expression == nil {
 		return false
 	}
 	if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
 		unary.Operator == token.AND && receiverOverlaps(c.facts, unary.Expression, receiver) {
 		return true
 	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil &&
-		c.pointerMethodSelection(expression) &&
-		receiverOverlaps(c.facts, selector.Expression, receiver) {
-		return true
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		if c.pointerMethodSelection(expression) &&
+			receiverOverlaps(c.facts, selector.Expression, receiver) {
+			return true
+		}
 	}
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
@@ -492,9 +568,6 @@ func (c *checker) enumLoopCanInvalidate(
 	proof token.Pos,
 	access token.Pos,
 ) bool {
-	if expression == nil {
-		return false
-	}
 	for node := c.parents[syntax.ExpressionNode(expression)]; node != nil; node = c.parents[*node] {
 		statement, ok := syntax.StatementOf(node)
 		if !ok {

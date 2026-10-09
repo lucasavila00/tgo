@@ -227,20 +227,24 @@ func directPayload(account Account) string {
 	return account.PersonalPayload().Name
 }
 
-func directPayloadMethod(account Account) func() AccountPersonal {
-	return account.PersonalPayload
+func directPayloadMethod(account Account) string {
+	return account.PersonalPayload().Name
 }
 
 func assignedGuardPayload(account Account) string {
 	if account.Tag() != AccountTagPersonal {
 		return ""
 	}
-	account = AccountBusiness{Company: "changed"}.Account()
+	account = func(input TgoAccountBusinessInput) Account {
+		return NewAccountBusiness(input.FieldCompany)
+	}(TgoAccountBusinessInput{FieldCompany: "changed"})
 	return account.PersonalPayload().Name
 }
 
 func changeAccount(account *Account) {
-	*account = AccountBusiness{Company: "changed"}.Account()
+	*account = func(input TgoAccountBusinessInput) Account {
+		return NewAccountBusiness(input.FieldCompany)
+	}(TgoAccountBusinessInput{FieldCompany: "changed"})
 }
 
 func escapedGuardPayload(account Account) string {

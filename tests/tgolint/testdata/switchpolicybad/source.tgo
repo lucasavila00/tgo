@@ -11,8 +11,8 @@ func directPayload(account Account) string {
 	return account.PersonalPayload().Name
 }
 
-func directPayloadMethod(account Account) func() AccountPersonal {
-	return account.PersonalPayload
+func directPayloadMethod(account Account) string {
+	return account.PersonalPayload().Name
 }
 
 func assignedGuardPayload(account Account) string {
