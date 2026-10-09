@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"go/build"
 	"go/token"
+	"go/types"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -42,6 +43,8 @@ type packageUnit struct {
 	loadError         error
 	fs                *token.FileSet
 	compiled          *compiler.CompiledPackage
+	typeImporter      types.Importer
+	typeExports       map[string]string
 }
 
 type packageTests struct {
@@ -183,6 +186,8 @@ func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
 			loadError:         nil,
 			fs:                token.NewFileSet(),
 			compiled:          nil,
+			typeImporter:      nil,
+			typeExports:       nil,
 		}
 		d.packages[importPath] = unit
 	}

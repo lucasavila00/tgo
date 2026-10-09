@@ -104,6 +104,10 @@ func TestBuildRejectsMixedPackage(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Fatalf("workspace error = %v, want %q", err, want)
 	}
+	_, err = CompileAvailableWorkspaceViewsContext(context.Background(), root)
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Fatalf("workspace views error = %v, want %q", err, want)
+	}
 	if _, err := os.Stat(filepath.Join(directory, "app_tgo.go")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("generated output exists after rejection: %v", err)
 	}

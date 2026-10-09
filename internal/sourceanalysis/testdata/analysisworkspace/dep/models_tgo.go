@@ -46,11 +46,15 @@ func (v Choice) UnknownTag() string {
 type ChoiceOne struct {
 	Name string
 }
+type TgoChoiceOneInput struct {
+	FieldName string
+}
 
-// Choice constructs Choice. Model fields must be valid.
+// NewChoiceOne constructs Choice. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ChoiceOne) Choice() Choice {
-	return Choice{tgoTag: ChoiceTagOne, tgoOne: value}
+func NewChoiceOne(Name string) Choice {
+	tgoValue := ChoiceOne{Name}
+	return Choice{tgoTag: ChoiceTagOne, tgoOne: tgoValue}
 }
 
 // OnePayload requires One. No tag check.
@@ -59,9 +63,9 @@ func (v Choice) OnePayload() ChoiceOne { return v.tgoOne }
 // ChoiceTwo is the Two payload.
 type ChoiceTwo struct{}
 
-// Choice constructs Choice. Model fields must be valid.
+// NewChoiceTwo constructs Choice. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ChoiceTwo) Choice() Choice {
+func NewChoiceTwo() Choice {
 	return Choice{tgoTag: ChoiceTagTwo}
 }
 
@@ -118,14 +122,14 @@ func (v *Choice) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceOne(payload.Name)
 		return nil
 	case "Two":
 		var payload ChoiceTwo
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceTwo()
 		return nil
 	default:
 		return fmt.Errorf("unknown Choice JSON variant %q", variant)
@@ -196,14 +200,14 @@ func (v *Choice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceOne(payload.Name)
 		return nil
 	case 2:
 		var payload ChoiceTwo
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Choice()
+		*v = NewChoiceTwo()
 		return nil
 	default:
 		return fmt.Errorf("invalid Choice JSON tag")

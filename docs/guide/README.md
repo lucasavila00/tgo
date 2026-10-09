@@ -77,7 +77,7 @@ Construct with `Account.Personal{Name: "Lucas"}`. `exhaustive:` requires one cas
 variant. Use `default:` when the switch needs fallback behavior. Duplicate tags and missing
 exhaustive cases fail compilation. Do not use `fallthrough` or select generated enum methods through an interface.
 Type aliases can construct variants. Go name resolution selects the aliased type.
-Do not shadow generated payload, constructor, or default helper names at a construction.
+Do not shadow generated constructor, carrier, or default helper names at a construction.
 The value uses a tag and typed Go fields. Reads do not run validation.
 
 Each `Port` literal returns `(Port, error)`. Use postfix `!` to handle the error. All fields must be
@@ -121,7 +121,7 @@ Import Go packages and call them directly. Keep their types, callbacks, and erro
 Go code can call generated enum functions and generated checked struct constructors:
 
 ```go
-account := model.AccountPersonal{Name: "Lucas"}.Account()
+account := model.NewAccountPersonal("Lucas")
 port, err := model.NewPort(3)
 ```
 

@@ -8,6 +8,7 @@ import (
 	"go/build"
 	"go/importer"
 	"go/token"
+	"go/types"
 	"io"
 	"io/fs"
 	"os"
@@ -46,6 +47,62 @@ type packageBuilder struct {
 	current  map[string]previousFile
 	order    []string
 	write    bool
+}
+
+type memoryImporter struct {
+	packages map[string]*compiler.CompiledPackage
+	fallback types.Importer
+}
+
+func (i memoryImporter) Import(path string) (*types.Package, error) {
+	if compiled := i.packages[path]; compiled != nil {
+		return compiled.Package, nil
+	}
+	return i.fallback.Import(path)
+}
+
+func (i memoryImporter) ImportFrom(
+	path string,
+	directory string,
+	mode types.ImportMode,
+) (*types.Package, error) {
+	if compiled := i.packages[path]; compiled != nil {
+		return compiled.Package, nil
+	}
+	if fallback, ok := i.fallback.(types.ImporterFrom); ok {
+		return fallback.ImportFrom(path, directory, mode)
+	}
+	return i.fallback.Import(path)
+}
+
+func packageTypeImporter(
+	unit *packageUnit,
+	files *token.FileSet,
+	paths map[string]string,
+) types.Importer {
+	if unit.typeImporter == nil {
+		unit.typeExports = make(map[string]string)
+		unit.typeImporter = importer.ForCompiler(
+			files,
+			"gc",
+			func(path string) (io.ReadCloser, error) {
+				export := unit.typeExports[path]
+				if export == "" {
+					var err error = nil
+					export, err = loadExportPath(unit.Dir, path)
+					if err != nil {
+						return nil, err
+					}
+					unit.typeExports[path] = export
+				}
+				return os.Open(export)
+			},
+		)
+	}
+	for path, export := range paths {
+		unit.typeExports[path] = export
+	}
+	return unit.typeImporter
 }
 
 // build compiles dependencies before one package and writes its outputs.
@@ -209,34 +266,25 @@ func (b *packageBuilder) compileFiles(
 	fileSet *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
 	imports := make(map[string]*compiler.CompiledPackage)
+	memoryImports := make(map[string]*compiler.CompiledPackage)
+	diskImports := make([]string, 0)
 	for _, importPath := range importsOf(files) {
 		if importPath == unit.Path && path != unit.Path && unit.compiled != nil {
 			imports[importPath] = unit.compiled
+			memoryImports[importPath] = unit.compiled
 			continue
 		}
 		if dependency := unit.Imports[importPath]; dependency != nil && dependency.compiled != nil {
 			imports[importPath] = dependency.compiled
 		}
+		diskImports = append(diskImports, importPath)
 	}
-	paths, err := loadExportPaths(unit.Dir, importsOf(files))
+	paths, err := loadExportPaths(unit.Dir, diskImports)
 	if err != nil {
 		return nil, err
 	}
-	packageImporter := importer.ForCompiler(
-		fileSet,
-		"gc",
-		func(path string) (io.ReadCloser, error) {
-			export := paths[path]
-			if export == "" {
-				export, err = loadExportPath(unit.Dir, path)
-				if err != nil {
-					return nil, err
-				}
-				paths[path] = export
-			}
-			return os.Open(export)
-		},
-	)
+	fallback := packageTypeImporter(unit, fileSet, paths)
+	packageImporter := memoryImporter{packages: memoryImports, fallback: fallback}
 	compiled, diagnostics := compiler.Compile(
 		compiler.PackageInput{
 			Directory: unit.Dir,

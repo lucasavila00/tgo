@@ -268,10 +268,15 @@ func validateEnumPublicNames(declaration *model, node *syntax.EnumDeclaration) e
 		declaration.Name + "Tag": {},
 	}
 	for _, item := range node.Variants {
-		for _, name := range []string{
+		names := []string{
 			declaration.Name + item.Name.Name,
 			declaration.Name + "Tag" + item.Name.Name,
-		} {
+			enumConstructorName(declaration.Name, item.Name.Name),
+		}
+		if len(item.Fields) > 0 {
+			names = append(names, enumCarrierName(declaration.Name, item.Name.Name))
+		}
+		for _, name := range names {
 			previous, exists := generated[name]
 			if !exists {
 				generated[name] = generatedName{variant: item.Name.Name}
@@ -283,19 +288,6 @@ func validateEnumPublicNames(declaration *model, node *syntax.EnumDeclaration) e
 			}
 			return fmt.Errorf("enum variant %s generates %s, which conflicts with generated %s API",
 				item.Name.Name, name, declaration.Name)
-		}
-		for _, field := range item.Fields {
-			if len(field.Field.Names) == 0 &&
-				embeddedFieldName(field.Field.Type) == declaration.Name {
-				return fmt.Errorf("enum payload field %s conflicts with its constructor method",
-					declaration.Name)
-			}
-			for _, name := range field.Field.Names {
-				if name.Name == declaration.Name {
-					return fmt.Errorf("enum payload field %s conflicts with its constructor method",
-						declaration.Name)
-				}
-			}
 		}
 	}
 	return nil

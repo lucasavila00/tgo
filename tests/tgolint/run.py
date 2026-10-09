@@ -121,8 +121,8 @@ def assert_integrity_checks(linter, work):
     replacements = (
         ("return Count{value}.check()", "return Count{}.check()"),
         (
-            "return Event{tgoTag: EventTagStarted, tgoStarted: value}",
-            "_ = value\n\treturn Event{}",
+            "return Event{tgoTag: EventTagStarted, tgoStarted: tgoValue}",
+            "_ = tgoValue\n\treturn Event{}",
         ),
         (
             "func Identity(value int) int { return value }",

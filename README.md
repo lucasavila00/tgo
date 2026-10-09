@@ -1,8 +1,9 @@
 # TGo
 
-TGo adds checked syntax to Go and emits ordinary `*_tgo.go` files.
+TGo adds checked syntax to Go and emits ordinary `*_tgo.go` files. It preserves
+Go packages, imports, types, calls, and the generated ABI.
 
-## Return success
+## Return success or failure
 
 ```go
 func Name(user User) (string, error) {
@@ -11,6 +12,15 @@ func Name(user User) (string, error) {
 ```
 
 The trailing comma adds the final `nil` result.
+
+Use leading commas to return zero values with one error:
+
+```go
+func Parse(text string) (int, error) {
+	if text == "" { return , ErrEmpty }
+	return strconv.Atoi(text)!,
+}
+```
 
 ## Propagate errors with context
 
@@ -59,8 +69,9 @@ type Account enum {
 account := Account.Personal{Name: "Lucas"}
 ```
 
-The compiler closes the variant set. Enums support external, internal, adjacent, and untagged
-JSON forms.
+The compiler closes the variant set. A checked tag switch can use `exhaustive:`
+to require every variant. Enums support external, internal, adjacent, and
+untagged JSON forms. Payload-free enums also have a stable gob form.
 
 ## Validate construction
 
@@ -118,6 +129,41 @@ byID := map[ID]Account{for _, account := range accounts {
 ```
 
 Comprehensions emit direct Go loops. They add no iterator or runtime helper.
+
+## Keep values valid
+
+TGo requires explicit variable initialization, complete struct and collection
+literals, initialized named results, and proofs for invalid zero values.
+Presence checks protect map reads, channel receives, and type assertions.
+Bounds checks can prove a reslice safe. `tgolint` checks these rules in TGo
+source and in Go code that uses generated TGo models.
+
+Read the [language specification](docs/spec/README.md) and the
+[`tgolint` specification](docs/spec/TGOLINT.md) for the complete rules.
+
+## Use TGo packages from Go
+
+Write TGo package tests in `_test.tgo` files. Go build constraints and target
+suffixes select active TGo files. Generated production and test Go files stay
+beside their TGo source and are committed. Go packages can import a TGo package
+and use its original Go types. Generated APIs provide the Go construction
+boundary for checked structs and enums.
+
+TGo trusts values that arrive from Go. It adds no runtime wrapper. Run
+`tgolint` across both sides of the boundary. See the [user guide](docs/guide/README.md)
+and [Go caller guide](docs/guide/GO-CALLERS.md).
+
+## Tools
+
+- `tgo build` checks TGo and writes ordinary Go output.
+- `tgofmt` formats TGo and matches `gofmt` for ordinary Go syntax.
+- `tgolint` checks TGo source policy and Go use of generated models.
+- `pkg/syntax` provides the public, closed TGo syntax tree for source tools.
+- `tgonav` provides hover, definition, references, and symbols to the
+  [VS Code extension](docs/guide/VSCODE.md).
+
+The extension also provides TGo syntax highlighting and hides generated files
+by default.
 
 ## Build and check
 

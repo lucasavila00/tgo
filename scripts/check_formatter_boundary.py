@@ -8,6 +8,24 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 FORMATTER_DIRS = (ROOT / "pkg" / "format", ROOT / "cmd" / "tgofmt")
+GO_HEADER = (
+    "// Copyright 2009 The Go Authors. All rights reserved.\n"
+    "// Use of this source code is governed by a BSD-style\n"
+    "// license that can be found in ../../third_party/go/LICENSE.\n"
+)
+PROVENANCE = {
+    "pkg/format/alignment.tgo": ("math.go", "nodes.go"),
+    "pkg/format/binary.tgo": ("nodes.go",),
+    "pkg/format/declarations.tgo": ("nodes.go",),
+    "pkg/format/expression_lists.tgo": ("nodes.go",),
+    "pkg/format/expressions.tgo": ("nodes.go",),
+    "pkg/format/go_printer_layout.tgo": ("printer.go",),
+    "pkg/format/list_comment_alignment.tgo": ("nodes.go",),
+    "pkg/format/printer.tgo": (
+        "comment.go", "gobuild.go", "nodes.go", "printer.go",
+    ),
+    "pkg/format/statements.tgo": ("nodes.go",),
+}
 PROHIBITED = {
     "go/format": re.compile(r"\bgo/format\b"),
     "go/printer": re.compile(r"\bgo/printer\b"),
@@ -18,6 +36,24 @@ OS_EXEC = re.compile(r"\bos/exec\b")
 
 def main() -> None:
     violations: list[str] = []
+    documentation = (ROOT / "docs" / "implementation" / "go-printer-port.md").read_text()
+    for name, sources in PROVENANCE.items():
+        path = ROOT / name
+        if not path.is_file():
+            violations.append(f"formatter provenance names missing file {name}")
+            continue
+        if not path.read_text().startswith(GO_HEADER):
+            violations.append(f"{name}: adapted Go source has no Go copyright header")
+        source_list = ", ".join(f"`{source}`" for source in sources)
+        row = f"| `{name}` | {source_list} |"
+        if row not in documentation:
+            violations.append(f"{name}: formatter provenance is absent from documentation")
+
+    for path in sorted((ROOT / "pkg" / "format").glob("*.tgo")):
+        name = path.relative_to(ROOT).as_posix()
+        if path.read_text().startswith(GO_HEADER) and name not in PROVENANCE:
+            violations.append(f"{name}: Go copyright header has no provenance entry")
+
     for directory in FORMATTER_DIRS:
         for path in sorted(directory.rglob("*")):
             if path.suffix not in {".go", ".tgo"}:
