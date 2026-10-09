@@ -19,6 +19,10 @@ func Convert(value countRepresentation) Count {
 	return Count(value)
 }
 
+func BypassPortCheck() Port {
+	return Port{number: 80}
+}
+
 func ReadPromoted(value embedded) EventTag {
 	return value.tgoTag
 }

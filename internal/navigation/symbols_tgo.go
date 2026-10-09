@@ -18,14 +18,24 @@ func sourceSymbols(
 	file := source.Syntax
 	result := make([]Symbol, 0)
 	result = appendSymbol(
-		result, pkg, uri, file.Name.Name, "package", pkg.Path,
-		file.Name.Span, file.Name.Span,
+		result,
+		pkg,
+		uri,
+		file.Name.Name,
+		"package",
+		pkg.Path,
+		file.Name.Span,
+		file.Name.Span,
 	)
 	for _, declaration := range file.Declarations {
 		switch {
 		case syntax.GeneralDeclarationOf(declaration) != nil:
 			result = appendGeneralSymbols(
-				result, pkg, uri, syntax.GeneralDeclarationOf(declaration), pkg.Path,
+				result,
+				pkg,
+				uri,
+				syntax.GeneralDeclarationOf(declaration),
+				pkg.Path,
 			)
 		case syntax.FunctionDeclarationValueOf(declaration) != nil:
 			value := syntax.FunctionDeclarationValueOf(declaration)
@@ -36,39 +46,64 @@ func sourceSymbols(
 				container = receiverName(pkg, value)
 			}
 			result = appendSymbol(
-				result, pkg, uri, value.Name.Name, kind, container,
-				value.Span, value.Name.Span,
+				result,
+				pkg,
+				uri,
+				value.Name.Name,
+				kind,
+				container,
+				value.Span,
+				value.Name.Span,
 			)
 		case enumDeclaration(declaration) != nil:
 			value := enumDeclaration(declaration)
 			result = appendSymbol(
-				result, pkg, uri, value.Name.Name, "enum", pkg.Path,
-				value.Span, value.Name.Span,
+				result,
+				pkg,
+				uri,
+				value.Name.Name,
+				"enum",
+				pkg.Path,
+				value.Span,
+				value.Name.Span,
 			)
 			for _, variant := range value.Variants {
 				result = appendSymbol(
-					result, pkg, uri, variant.Name.Name, "enumMember", value.Name.Name,
-					variant.Span, variant.Name.Span,
+					result,
+					pkg,
+					uri,
+					variant.Name.Name,
+					"enumMember",
+					value.Name.Name,
+					variant.Span,
+					variant.Name.Span,
 				)
 				result = appendTGoFieldSymbols(
-					result, pkg, uri, variant.Fields,
+					result,
+					pkg,
+					uri,
+					variant.Fields,
 					value.Name.Name+"."+variant.Name.Name,
 				)
 			}
 		case structDeclaration(declaration) != nil:
 			value := structDeclaration(declaration)
 			result = appendSymbol(
-				result, pkg, uri, value.Name.Name, "struct", pkg.Path,
-				value.Span, value.Name.Span,
+				result,
+				pkg,
+				uri,
+				value.Name.Name,
+				"struct",
+				pkg.Path,
+				value.Span,
+				value.Name.Span,
 			)
 			result = appendTGoFieldSymbols(
-				result, pkg, uri, value.Fields, value.Name.Name,
-			)
-		case checkedDeclaration(declaration) != nil:
-			value := checkedDeclaration(declaration)
-			result = appendSymbol(
-				result, pkg, uri, value.Name.Name, "type", pkg.Path,
-				value.Span, value.Name.Span,
+				result,
+				pkg,
+				uri,
+				value.Fields,
+				value.Name.Name,
 			)
 		}
 	}
@@ -90,24 +125,45 @@ func appendGeneralSymbols(
 			}
 			for _, name := range value.Names {
 				result = appendSymbol(
-					result, pkg, uri, name.Name, kind, container,
-					value.Span, name.Span,
+					result,
+					pkg,
+					uri,
+					name.Name,
+					kind,
+					container,
+					value.Span,
+					name.Span,
 				)
 			}
 		}
 		if value := syntax.TypeSpecificationOf(specification); value != nil {
 			result = appendSymbol(
-				result, pkg, uri, value.Name.Name, typeKind(value.Type), container,
-				value.Span, value.Name.Span,
+				result,
+				pkg,
+				uri,
+				value.Name.Name,
+				typeKind(value.Type),
+				container,
+				value.Span,
+				value.Name.Span,
 			)
 			if structure := syntax.StructTypeExpressionOf(value.Type); structure != nil {
 				result = appendFieldSymbols(
-					result, pkg, uri, structure.Fields.List, value.Name.Name,
+					result,
+					pkg,
+					uri,
+					structure.Fields.List,
+					value.Name.Name,
 				)
 			}
 			if methods := interfaceMethods(value.Type); methods != nil {
 				result = appendNamedFields(
-					result, pkg, uri, methods.List, value.Name.Name, "method",
+					result,
+					pkg,
+					uri,
+					methods.List,
+					value.Name.Name,
+					"method",
 				)
 			}
 		}
@@ -166,8 +222,14 @@ func appendTGoFieldSymbols(
 	for _, field := range fields {
 		for _, name := range field.Field.Names {
 			result = appendSymbol(
-				result, pkg, uri, name.Name, "field", container,
-				field.Field.Span, name.Span,
+				result,
+				pkg,
+				uri,
+				name.Name,
+				"field",
+				container,
+				field.Field.Span,
+				name.Span,
 			)
 		}
 	}
@@ -195,8 +257,14 @@ func appendNamedFields(
 	for _, field := range fields {
 		for _, name := range field.Names {
 			result = appendSymbol(
-				result, pkg, uri, name.Name, kind, container,
-				field.Span, name.Span,
+				result,
+				pkg,
+				uri,
+				name.Name,
+				kind,
+				container,
+				field.Span,
+				name.Span,
 			)
 		}
 	}
@@ -225,10 +293,16 @@ func appendSymbol(
 	if !fullOK || !selectedOK {
 		return result
 	}
-	return append(result, Symbol{
-		Name: name, Kind: kind, Container: container,
-		Range: full, Selection: selected,
-	})
+	return append(
+		result,
+		Symbol{
+			Name:      name,
+			Kind:      kind,
+			Container: container,
+			Range:     full,
+			Selection: selected,
+		},
+	)
 }
 
 func sourceLocation(
@@ -251,10 +325,5 @@ func enumDeclaration(value *syntax.Declaration) *syntax.EnumDeclaration {
 
 func structDeclaration(value *syntax.Declaration) *syntax.StructDeclaration {
 	result, _ := syntax.StructDeclarationOf(value)
-	return result
-}
-
-func checkedDeclaration(value *syntax.Declaration) *syntax.CheckedDeclaration {
-	result, _ := syntax.CheckedDeclarationOf(value)
 	return result
 }

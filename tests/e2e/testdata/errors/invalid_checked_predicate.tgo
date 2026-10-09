@@ -1,3 +1,0 @@
-package sample
-
-type Quantity int where missingName(value)

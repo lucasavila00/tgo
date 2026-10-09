@@ -13,17 +13,14 @@ func parseAnalysisFiles(pass %analysis.Pass) ([]%syntax.File, error) {
 	result := make([]%syntax.File, 0, len(pass.Files))
 	for _, file := range pass.Files {
 		filename := pass.Fset.Position(file.Pos()).Filename
-		data, err := pass.ReadFile(filename)
-		if err != nil {
-			return nil, err
-		}
+		data := pass.ReadFile(filename)!!
 		parsed, err := syntax.ParseGoFile(
 			pass.Fset, filename, data, syntax.ParseComments|syntax.AllErrors,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("parse analysis file %s: %w", filename, err)
+			return , fmt.Errorf("parse analysis file %s: %w", filename, err)
 		}
-		if parsed == nil { return nil, fmt.Errorf("parse analysis file %s: no syntax", filename) }
+		if parsed == nil { return , fmt.Errorf("parse analysis file %s: no syntax", filename) }
 		result = append(result, parsed)
 	}
 	return result,

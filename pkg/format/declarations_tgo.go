@@ -21,8 +21,6 @@ func (p *printer) declaration(value *syntax.Declaration) {
 		p.enumDeclaration(declarationValue.EnumPayload().Value)
 	case syntax.DeclarationTagStruct:
 		p.structDeclaration(declarationValue.StructPayload().Value)
-	case syntax.DeclarationTagChecked:
-		p.checkedDeclaration(declarationValue.CheckedPayload().Value)
 	default:
 		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -468,12 +466,20 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 		p.tgoField(value.Fields[0], nil)
 		p.space()
 		p.token(value.Rbrace, "}")
+		if value.Checked != token.NoPos {
+			p.space()
+			p.token(value.Checked, "checked")
+		}
 		return
 	}
 	if len(value.Fields) > 0 {
 		p.tgoFields(value.Fields, value.Lbrace, value.Rbrace)
 	}
 	p.token(value.Rbrace, "}")
+	if value.Checked != token.NoPos {
+		p.space()
+		p.token(value.Checked, "checked")
+	}
 }
 
 func (p *printer) tgoField(value *syntax.TGoField, columns []int) {
@@ -512,7 +518,6 @@ func (p *printer) tgoFields(
 	p.before(closing)
 	p.indent--
 }
-
 func (p *printer) tgoFieldAlignment(values []*syntax.TGoField) [][]int {
 	if len(values) == 1 {
 		return make([][]int, 1)
@@ -542,16 +547,4 @@ func (p *printer) tgoFieldCells(value *syntax.TGoField) []int {
 		cells = append(cells, 0)
 	}
 	return cells
-}
-
-func (p *printer) checkedDeclaration(value *syntax.CheckedDeclaration) {
-	p.token(value.Type, "type")
-	p.space()
-	p.token(value.Name.Start, value.Name.Name)
-	p.space()
-	p.expression(value.Base, 0)
-	p.space()
-	p.token(value.Where, "where")
-	p.space()
-	p.expression(value.Predicate, 0)
 }

@@ -127,6 +127,16 @@ func (p *packageUnit) reportUnloweredExtensions(source *source) {
 		}
 		return true
 	})
+	ast.Inspect(source.File, func(node ast.Node) bool {
+		statement, ok := node.(*ast.ReturnStmt)
+		if !ok {
+			return true
+		}
+		if commas, found := source.FailureReturns[statement]; found {
+			p.failAt(commas[0], "failure return needs a valid function signature")
+		}
+		return true
+	})
 }
 
 func propagationMarker(
@@ -168,6 +178,10 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 	case *ast.ReturnStmt:
 		values, prefix := l.expressions(node.Results)
 		node.Results = values
+		if commas, ok := l.source.FailureReturns[node]; ok {
+			delete(l.source.FailureReturns, node)
+			return l.failureReturn(node, prefix, commas)
+		}
 		return append(prefix, node)
 	case *ast.SendStmt:
 		values, prefix := l.expressions([]ast.Expr{node.Chan, node.Value})
@@ -850,31 +864,7 @@ func (l *propagationLowerer) errorBranch(
 	metadata propagationSource,
 	errorName *ast.Ident,
 ) ast.Stmt {
-	zeroValues := make([]ast.Expr, 0, len(l.function.resultAST)-1)
-	body := make([]ast.Stmt, 0, len(l.function.resultAST))
-	for index, resultType := range l.function.resultAST[:len(l.function.resultAST)-1] {
-		valueType := l.function.resultType.At(index).Type()
-		if value, ok := l.zeroExpression(
-			valueType,
-			resultType,
-			metadata.Bang,
-		); ok {
-			zeroValues = append(zeroValues, value)
-			continue
-		}
-		name := l.freshName("zero", "tgoZero")
-		if parameter, ok := types.Unalias(valueType).(*types.TypeParam); ok {
-			resultType = ast.NewIdent(parameter.Obj().Name())
-		}
-		specification := &ast.ValueSpec{Names: []*ast.Ident{name}, Type: resultType}
-		l.unit.generatedValues[specification] = true
-		declaration := &ast.DeclStmt{Decl: &ast.GenDecl{
-			Tok:   token.VAR,
-			Specs: []ast.Spec{specification},
-		}}
-		body = append(body, declaration)
-		zeroValues = append(zeroValues, name)
-	}
+	zeroValues, body := l.zeroReturnValues(metadata.Bang, len(l.function.resultAST)-1)
 	returnedError := ast.Expr(errorName)
 	if !metadata.Transparent {
 		formatError := l.unit.generatedObject(
@@ -896,6 +886,73 @@ func (l *propagationLowerer) errorBranch(
 		},
 		Body: &ast.BlockStmt{List: body},
 	}
+}
+
+// failureReturn adds one zero value for each leading comma.
+func (l *propagationLowerer) failureReturn(
+	statement *ast.ReturnStmt,
+	prefix []ast.Stmt,
+	commas []token.Pos,
+) []ast.Stmt {
+	comma := commas[0]
+	if len(statement.Results) != 1 {
+		l.unit.failAt(comma, "failure return error expression must produce one value")
+		return append(prefix, statement)
+	}
+	if len(commas) >= l.function.resultType.Len() {
+		excess := l.function.resultType.Len() - 1
+		if excess < 0 {
+			excess = 0
+		}
+		l.unit.failAt(
+			commas[excess],
+			"failure return has more commas than preceding results",
+		)
+		return append(prefix, statement)
+	}
+	last := l.function.resultType.Len() - 1
+	if !isPredeclaredError(l.function.resultType.At(last).Type()) {
+		l.unit.failAt(comma, "failure return function must end in the Go error type")
+		return append(prefix, statement)
+	}
+	zeroValues, declarations := l.zeroReturnValues(comma, len(commas))
+	zeroValues = append(zeroValues, statement.Results[0])
+	statement.Results = zeroValues
+	prefix = append(prefix, declarations...)
+	return append(prefix, statement)
+}
+
+// zeroReturnValues makes exact zero values for the requested leading results.
+func (l *propagationLowerer) zeroReturnValues(
+	position token.Pos,
+	count int,
+) ([]ast.Expr, []ast.Stmt) {
+	zeroValues := make([]ast.Expr, 0, count)
+	declarations := make([]ast.Stmt, 0, count)
+	for index, resultType := range l.function.resultAST[:count] {
+		valueType := l.function.resultType.At(index).Type()
+		if value, ok := l.zeroExpression(
+			valueType,
+			resultType,
+			position,
+		); ok {
+			zeroValues = append(zeroValues, value)
+			continue
+		}
+		name := l.freshName("zero", "tgoZero")
+		if parameter, ok := types.Unalias(valueType).(*types.TypeParam); ok {
+			resultType = ast.NewIdent(parameter.Obj().Name())
+		}
+		specification := &ast.ValueSpec{Names: []*ast.Ident{name}, Type: resultType}
+		l.unit.generatedValues[specification] = true
+		declaration := &ast.DeclStmt{Decl: &ast.GenDecl{
+			Tok:   token.VAR,
+			Specs: []ast.Spec{specification},
+		}}
+		declarations = append(declarations, declaration)
+		zeroValues = append(zeroValues, name)
+	}
+	return zeroValues, declarations
 }
 
 func (l *propagationLowerer) formatQualifier() string {

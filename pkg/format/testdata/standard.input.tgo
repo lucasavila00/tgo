@@ -1,6 +1,6 @@
 package fixtures
 import("fmt";alias "strings")
-type Positive int where value>0
+type Fixture struct{} checked
 const(one=1;two)
 var global int=2
 type Number=int

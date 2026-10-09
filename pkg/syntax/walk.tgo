@@ -66,7 +66,7 @@ func ExtensionAt(file *File, position token.Pos) *Node {
 		start := NodePosition(node)
 		end := NodeEnd(node)
 		if start <= position && position < end &&
-			(result == nil || end-start < NodeEnd(result)-NodePosition(result)) {
+			(result == nil || end - start < NodeEnd(result) - NodePosition(result)) {
 			result = node
 		}
 	}
@@ -155,7 +155,7 @@ func NodePosition(node *Node) token.Pos {
 	case NodeTagEnumVariant:
 		value := enumValue20.EnumVariantPayload()
 		return value.Value.Start
-case NodeTagIdentifier:
+	case NodeTagIdentifier:
 		value := enumValue20.IdentifierPayload()
 		return value.Value.Start
 	case NodeTagComment:
@@ -201,7 +201,7 @@ func NodeEnd(node *Node) token.Pos {
 	case NodeTagEnumVariant:
 		value := enumValue21.EnumVariantPayload()
 		return value.Value.Stop
-case NodeTagIdentifier:
+	case NodeTagIdentifier:
 		value := enumValue21.IdentifierPayload()
 		return value.Value.Stop
 	case NodeTagComment:
@@ -216,7 +216,9 @@ case NodeTagIdentifier:
 
 // ExpressionPosition returns the first expression position.
 func ExpressionPosition(value *Expression) token.Pos {
-	if value == nil { return token.NoPos }
+	if value == nil {
+		return token.NoPos
+	}
 	switch enumValue22 := *value; enumValue22.Tag() {
 	case ExpressionTagBad:
 		item := enumValue22.BadPayload()
@@ -305,7 +307,9 @@ func ExpressionPosition(value *Expression) token.Pos {
 
 // ExpressionEnd returns the first position after an expression.
 func ExpressionEnd(value *Expression) token.Pos {
-	if value == nil { return token.NoPos }
+	if value == nil {
+		return token.NoPos
+	}
 	switch enumValue23 := *value; enumValue23.Tag() {
 	case ExpressionTagBad:
 		item := enumValue23.BadPayload()
@@ -403,7 +407,9 @@ func StatementEnd(value *Statement) token.Pos {
 }
 
 func statementSpan(value *Statement) Span {
-	if value == nil { return Span{Start: token.NoPos, Stop: token.NoPos} }
+	if value == nil {
+		return Span{Start: token.NoPos, Stop: token.NoPos}
+	}
 	switch enumValue24 := *value; enumValue24.Tag() {
 	case StatementTagBad:
 		item := enumValue24.BadPayload()
@@ -468,7 +474,7 @@ func statementSpan(value *Statement) Span {
 	case StatementTagRange:
 		item := enumValue24.RangePayload()
 		return item.Value.Span
-exhaustive:
+	exhaustive:
 	}
 }
 
@@ -483,7 +489,9 @@ func DeclarationEnd(value *Declaration) token.Pos {
 }
 
 func declarationSpan(value *Declaration) Span {
-	if value == nil { return Span{Start: token.NoPos, Stop: token.NoPos} }
+	if value == nil {
+		return Span{Start: token.NoPos, Stop: token.NoPos}
+	}
 	switch enumValue25 := *value; enumValue25.Tag() {
 	case DeclarationTagBad:
 		item := enumValue25.BadPayload()
@@ -500,9 +508,6 @@ func declarationSpan(value *Declaration) Span {
 	case DeclarationTagStruct:
 		item := enumValue25.StructPayload()
 		return item.Value.Span
-	case DeclarationTagChecked:
-		item := enumValue25.CheckedPayload()
-		return item.Value.Span
 	exhaustive:
 	}
 }
@@ -518,7 +523,9 @@ func SpecificationEnd(value *Specification) token.Pos {
 }
 
 func specificationSpan(value *Specification) Span {
-	if value == nil { return Span{Start: token.NoPos, Stop: token.NoPos} }
+	if value == nil {
+		return Span{Start: token.NoPos, Stop: token.NoPos}
+	}
 	switch enumValue26 := *value; enumValue26.Tag() {
 	case SpecificationTagImport:
 		item := enumValue26.ImportPayload()
@@ -536,29 +543,47 @@ func specificationSpan(value *Specification) Span {
 func nodeFile(value %File) Node {
 	return Node.File{Value: value}
 }
+
 func nodeDeclaration(value %Declaration) Node {
 	return Node.Declaration{Value: value}
 }
+
 func nodeSpecification(value %Specification) Node {
 	return Node.Specification{Value: value}
 }
+
 func nodeStatement(value %Statement) Node {
 	return Node.Statement{Value: value}
 }
+
 func nodeExpression(value %Expression) Node {
 	return Node.Expression{Value: value}
 }
-func nodeField(value %Field) Node { return Node.Field{Value: value} }
-func nodeFieldList(value %FieldList) Node { return Node.FieldList{Value: value} }
-func nodeTGoField(value %TGoField) Node { return Node.TGoField{Value: value} }
+
+func nodeField(value %Field) Node {
+	return Node.Field{Value: value}
+}
+
+func nodeFieldList(value %FieldList) Node {
+	return Node.FieldList{Value: value}
+}
+
+func nodeTGoField(value %TGoField) Node {
+	return Node.TGoField{Value: value}
+}
+
 func nodeEnumVariant(value %EnumVariant) Node {
 	return Node.EnumVariant{Value: value}
 }
+
 func nodeIdentifier(value %Identifier) Node {
 	return Node.Identifier{Value: value}
 }
-func nodeComment(value %Comment) Node { return Node.Comment{Value: value} }
+
+func nodeComment(value %Comment) Node {
+	return Node.Comment{Value: value}
+}
+
 func nodeCommentGroup(value %CommentGroup) Node {
 	return Node.CommentGroup{Value: value}
 }
-

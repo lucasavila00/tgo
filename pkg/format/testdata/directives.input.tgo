@@ -1,6 +1,6 @@
 //go:build linux
 package directives
-type Positive int where value>0
+type Fixture struct{} checked
 //go:generate echo generate
 func generate(){}
 //line external.tgo:100

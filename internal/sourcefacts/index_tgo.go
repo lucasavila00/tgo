@@ -64,61 +64,73 @@ func NewProjection(
 		panic("source facts require type facts")
 	}
 	index := newIndex(files)
-	facts.RangeTypes(func(
-		start token.Pos,
-		stop token.Pos,
-		value types.TypeAndValue,
-		synthetic bool,
-	) {
-		if !synthetic {
-			index.types[index.nodeSpan(start, stop)] = value
-		}
-	})
-	facts.RangeDefinitions(func(
-		position token.Pos,
-		name string,
-		object types.Object,
-		synthetic bool,
-	) {
-		if object != nil && !synthetic {
-			index.addDefinition(position, name, object)
-		}
-	})
-	facts.RangeUses(func(position token.Pos, object types.Object, synthetic bool) {
-		if object != nil && !synthetic {
-			index.uses[index.location(position)] = object
-			index.useCounts[object]++
-		}
-	})
-	facts.RangeSelections(func(
-		start token.Pos,
-		stop token.Pos,
-		selection *types.Selection,
-		synthetic bool,
-	) {
-		if !synthetic {
-			index.selections[index.nodeSpan(start, stop)] = selection
-		}
-	})
-	facts.RangeInstances(func(
-		position token.Pos,
-		instance types.Instance,
-		synthetic bool,
-	) {
-		if !synthetic {
-			index.instances[index.location(position)] = instance
-		}
-	})
-	facts.RangeImplicits(func(
-		start token.Pos,
-		stop token.Pos,
-		object types.Object,
-		synthetic bool,
-	) {
-		if !synthetic {
-			index.implicits[index.nodeSpan(start, stop)] = object
-		}
-	})
+	facts.RangeTypes(
+		func(
+			start token.Pos,
+			stop token.Pos,
+			value types.TypeAndValue,
+			synthetic bool,
+		) {
+			if !synthetic {
+				index.types[index.nodeSpan(start, stop)] = value
+			}
+		},
+	)
+	facts.RangeDefinitions(
+		func(
+			position token.Pos,
+			name string,
+			object types.Object,
+			synthetic bool,
+		) {
+			if object != nil && !synthetic {
+				index.addDefinition(position, name, object)
+			}
+		},
+	)
+	facts.RangeUses(
+		func(position token.Pos, object types.Object, synthetic bool) {
+			if object != nil && !synthetic {
+				index.uses[index.location(position)] = object
+				index.useCounts[object]++
+			}
+		},
+	)
+	facts.RangeSelections(
+		func(
+			start token.Pos,
+			stop token.Pos,
+			selection *types.Selection,
+			synthetic bool,
+		) {
+			if !synthetic {
+				index.selections[index.nodeSpan(start, stop)] = selection
+			}
+		},
+	)
+	facts.RangeInstances(
+		func(
+			position token.Pos,
+			instance types.Instance,
+			synthetic bool,
+		) {
+			if !synthetic {
+				index.instances[index.location(position)] = instance
+			}
+		},
+	)
+	facts.RangeImplicits(
+		func(
+			start token.Pos,
+			stop token.Pos,
+			object types.Object,
+			synthetic bool,
+		) {
+			if !synthetic {
+				index.implicits[index.nodeSpan(start, stop)] = object
+			}
+		},
+	)
 	index.indexFunctionSignatures(file)
 	return index
 }
@@ -196,26 +208,31 @@ func (i *Index) ImplicitField(field *syntax.Field) types.Object {
 }
 
 // AddFile indexes function signatures from one more package file.
-func (i *Index) AddFile(file *syntax.File) { i.indexFunctionSignatures(file) }
+func (i *Index) AddFile(file *syntax.File) {
+	i.indexFunctionSignatures(file)
+}
 
 func (i *Index) indexFunctionSignatures(file *syntax.File) {
-	syntax.Inspect(file, func(node *syntax.Node) bool {
-		declaration, declarationOK := syntax.FunctionDeclarationOf(node)
-		if declarationOK {
-			object, _ := i.DefinitionName(declaration.Name).(*types.Func)
-			if object != nil {
-				signature, _ := object.Type().(*types.Signature)
-				i.signatures[i.location(declaration.Start)] = signature
+	syntax.Inspect(
+		file,
+		func(node *syntax.Node) bool {
+			declaration, declarationOK := syntax.FunctionDeclarationOf(node)
+			if declarationOK {
+				object, _ := i.DefinitionName(declaration.Name).(*types.Func)
+				if object != nil {
+					signature, _ := object.Type().(*types.Signature)
+					i.signatures[i.location(declaration.Start)] = signature
+				}
 			}
-		}
-		literal, literalOK := syntax.FunctionLiteralOf(node)
-		if literalOK {
-			value := i.types[i.nodeSpan(literal.Type.Start, literal.Type.Stop)]
-			signature, _ := value.Type.(*types.Signature)
-			i.signatures[i.location(literal.Start)] = signature
-		}
-		return true
-	})
+			literal, literalOK := syntax.FunctionLiteralOf(node)
+			if literalOK {
+				value := i.types[i.nodeSpan(literal.Type.Start, literal.Type.Stop)]
+				signature, _ := value.Type.(*types.Signature)
+				i.signatures[i.location(literal.Start)] = signature
+			}
+			return true
+		},
+	)
 }
 
 // FunctionSignature returns the typed function at a source position.
@@ -289,9 +306,6 @@ func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identif
 			return sameIdentifier(value.Name, name)
 		}
 		if value, ok := syntax.StructDeclarationOf(declaration); ok {
-			return sameIdentifier(value.Name, name)
-		}
-		if value, ok := syntax.CheckedDeclarationOf(declaration); ok {
 			return sameIdentifier(value.Name, name)
 		}
 	}
@@ -413,7 +427,9 @@ func (i *Index) lineDefinition(
 	position location,
 ) types.Object {
 	key := definitionLocation{
-		file: position.file, line: position.line, name: identifier.Name,
+		file: position.file,
+		line: position.line,
+		name: identifier.Name,
 	}
 	if i.ambiguousDefinitions[key] {
 		return nil
@@ -446,38 +462,44 @@ func (i *Index) UseCount(target types.Object) int {
 // IotaPosition returns the predeclared iota in one source expression.
 func (i *Index) IotaPosition(expression *syntax.Expression) (token.Pos, bool) {
 	position := token.NoPos
-	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
-		identifier, ok := syntax.IdentifierOf(node)
-		if ok && i.Object(identifier) == types.Universe.Lookup("iota") {
-			position = identifier.Start
-			return false
-		}
-		return position == token.NoPos
-	})
+	syntax.InspectExpression(
+		expression,
+		func(node *syntax.Node) bool {
+			identifier, ok := syntax.IdentifierOf(node)
+			if ok && i.Object(identifier) == types.Universe.Lookup("iota") {
+				position = identifier.Start
+				return false
+			}
+			return position == token.NoPos
+		},
+	)
 	return position, position != token.NoPos
 }
 
 // HasBitSetOperator reports bit operators in one source expression.
 func (i *Index) HasBitSetOperator(expression *syntax.Expression) bool {
 	found := false
-	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
-		value, ok := syntax.ExpressionOf(node)
-		if !ok {
-			return true
-		}
-		binary := syntax.BinaryExpressionOf(value)
-		if binary != nil {
-			switch binary.Operator {
-			case token.SHL, token.SHR, token.OR, token.AND, token.XOR, token.AND_NOT:
+	syntax.InspectExpression(
+		expression,
+		func(node *syntax.Node) bool {
+			value, ok := syntax.ExpressionOf(node)
+			if !ok {
+				return true
+			}
+			binary := syntax.BinaryExpressionOf(value)
+			if binary != nil {
+				switch binary.Operator {
+				case token.SHL, token.SHR, token.OR, token.AND, token.XOR, token.AND_NOT:
+					found = true
+				}
+			}
+			unary := syntax.UnaryExpressionOf(value)
+			if unary != nil && unary.Operator == token.XOR {
 				found = true
 			}
-		}
-		unary := syntax.UnaryExpressionOf(value)
-		if unary != nil && unary.Operator == token.XOR {
-			found = true
-		}
-		return !found
-	})
+			return !found
+		},
+	)
 	return found
 }
 
@@ -506,14 +528,17 @@ func (i *Index) typeAndValue(expression *syntax.Expression) types.TypeAndValue {
 
 func (i *Index) expressionSpan(expression *syntax.Expression) span {
 	return i.nodeSpan(
-		syntax.ExpressionPosition(expression), syntax.ExpressionEnd(expression),
+		syntax.ExpressionPosition(expression),
+		syntax.ExpressionEnd(expression),
 	)
 }
 
 func (i *Index) location(position token.Pos) location {
 	value := i.files.Position(position)
 	return location{
-		file: value.Filename, line: value.Line, column: value.Column,
+		file:   value.Filename,
+		line:   value.Line,
+		column: value.Column,
 	}
 }
 

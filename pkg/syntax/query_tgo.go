@@ -114,8 +114,6 @@ func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 		return nil, false
 	case DeclarationTagStruct:
 		return nil, false
-	case DeclarationTagChecked:
-		return nil, false
 	default:
 		panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -138,34 +136,8 @@ func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 		return nil, false
 	case DeclarationTagEnum:
 		return nil, false
-	case DeclarationTagChecked:
-		return nil, false
 	default:
 		panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
-	}
-}
-
-// CheckedDeclarationOf returns a checked declaration payload.
-func CheckedDeclarationOf(value *Declaration) (*CheckedDeclaration, bool) {
-	if value == nil {
-		return nil, false
-	}
-	switch enumValue5 := *value; enumValue5.Tag() {
-	case DeclarationTagChecked:
-		item := enumValue5.CheckedPayload()
-		return item.Value, true
-	case DeclarationTagBad:
-		return nil, false
-	case DeclarationTagGeneral:
-		return nil, false
-	case DeclarationTagFunction:
-		return nil, false
-	case DeclarationTagEnum:
-		return nil, false
-	case DeclarationTagStruct:
-		return nil, false
-	default:
-		panic(enumValue5.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -312,16 +284,7 @@ func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
 	switch item := *expression; item.Tag() {
 	case ExpressionTagComprehension:
 		return item.ComprehensionPayload().Value, true
-	case ExpressionTagBad, ExpressionTagIdentifier, ExpressionTagEllipsis,
-		ExpressionTagBasicLiteral, ExpressionTagFunctionLiteral,
-		ExpressionTagCompositeLiteral, ExpressionTagParenthesized,
-		ExpressionTagSelector, ExpressionTagIndex, ExpressionTagIndexList,
-		ExpressionTagSlice, ExpressionTagTypeAssertion, ExpressionTagCall,
-		ExpressionTagStar, ExpressionTagNonNilPointer, ExpressionTagUnary,
-		ExpressionTagBinary, ExpressionTagKeyValue, ExpressionTagArrayType,
-		ExpressionTagStructType, ExpressionTagFunctionType,
-		ExpressionTagInterfaceType, ExpressionTagMapType,
-		ExpressionTagChannelType, ExpressionTagDefault, ExpressionTagPropagation:
+	case ExpressionTagBad, ExpressionTagIdentifier, ExpressionTagEllipsis, ExpressionTagBasicLiteral, ExpressionTagFunctionLiteral, ExpressionTagCompositeLiteral, ExpressionTagParenthesized, ExpressionTagSelector, ExpressionTagIndex, ExpressionTagIndexList, ExpressionTagSlice, ExpressionTagTypeAssertion, ExpressionTagCall, ExpressionTagStar, ExpressionTagNonNilPointer, ExpressionTagUnary, ExpressionTagBinary, ExpressionTagKeyValue, ExpressionTagArrayType, ExpressionTagStructType, ExpressionTagFunctionType, ExpressionTagInterfaceType, ExpressionTagMapType, ExpressionTagChannelType, ExpressionTagDefault, ExpressionTagPropagation:
 		return nil, false
 	default:
 		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
@@ -698,8 +661,6 @@ func DeclarationKind(value *Declaration) string {
 		return "Enum"
 	case DeclarationTagStruct:
 		return "Struct"
-	case DeclarationTagChecked:
-		return "Checked"
 	default:
 		panic(enumValue17.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}

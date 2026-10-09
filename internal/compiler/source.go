@@ -45,19 +45,14 @@ type variant struct {
 }
 
 type model struct {
-	JSON            enumJSON
-	Name            string
-	Enum            bool
-	Line            int
-	Column          int
-	Base            string
-	BaseLine        int
-	BaseColumn      int
-	Predicate       string
-	PredicateLine   int
-	PredicateColumn int
-	Variants        []variant
-	Fields          []field
+	JSON          enumJSON
+	Name          string
+	Enum          bool
+	CheckedStruct bool
+	Line          int
+	Column        int
+	Variants      []variant
+	Fields        []field
 }
 
 type source struct {
@@ -79,6 +74,7 @@ type source struct {
 	Exhaustive       map[token.Pos]bool
 	NonNil           map[token.Pos]bool
 	SuccessReturns   []*ast.ReturnStmt
+	FailureReturns   map[*ast.ReturnStmt][]token.Pos
 	GeneratedHelpers map[string]bool
 	Lowered          bool
 }
@@ -96,5 +92,5 @@ type comprehensionSource struct {
 
 // requiresConstructor reports whether a model type has an invalid zero value.
 func (m *model) requiresConstructor() bool {
-	return len(m.Variants) > 0 || m.Predicate != ""
+	return len(m.Variants) > 0 || m.CheckedStruct
 }

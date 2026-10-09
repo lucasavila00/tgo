@@ -9,6 +9,7 @@ import (
 func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
 	p.generatedValues = make(map[*ast.ValueSpec]bool)
+	p.checkedLiterals = make(map[*ast.CompositeLit]bool)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
 	p.usedIdentifiers = nil
@@ -19,16 +20,27 @@ func (p *packageUnit) prepare() {
 	}
 }
 
-// lowerConstructions resolves and lowers enum variant literals.
+// lowerConstructions resolves and lowers checked and enum literals.
 func (p *packageUnit) lowerConstructions() {
 	for _, source := range p.Sources {
-		transform(source.File, func(node ast.Node) ast.Node {
-			replacement := p.lowerConstruction(source.File, node)
-			if replacement != node {
-				source.Lowered = true
+		for _, declaration := range source.File.Decls {
+			var exempt *model
+			if function, ok := declaration.(*ast.FuncDecl); ok && function.Name.Name == "check" {
+				if receiver, ok := receiverName(function); ok {
+					candidate := p.Models[receiver]
+					if candidate != nil && candidate.CheckedStruct {
+						exempt = candidate
+					}
+				}
 			}
-			return replacement
-		})
+			transform(declaration, func(node ast.Node) ast.Node {
+				replacement := p.lowerConstruction(source.File, node, exempt)
+				if replacement != node {
+					source.Lowered = true
+				}
+				return replacement
+			})
+		}
 	}
 }
 
@@ -41,10 +53,6 @@ func generatedNames(models []*model) map[string]bool {
 			for _, variant := range model.Variants {
 				names[model.Name+variant.Name] = true
 			}
-		}
-		if model.Predicate != "" {
-			names["New"+model.Name] = true
-			names["tgo"+model.Name+"Error"] = true
 		}
 	}
 	return names
@@ -80,9 +88,6 @@ func generatedMethod(function *ast.FuncDecl, models []*model) bool {
 	}
 
 	for _, model := range models {
-		if generatedCheckedMethod(receiver, function.Name.Name, model) {
-			return true
-		}
 		if model.Enum && receiver == model.Name &&
 			(function.Name.Name == "MarshalJSON" ||
 				function.Name.Name == "MarshalJSONTo" ||
@@ -117,16 +122,6 @@ func receiverName(function *ast.FuncDecl) (string, bool) {
 	return receiver.Name, true
 }
 
-// generatedCheckedMethod recognizes checked-value support methods.
-func generatedCheckedMethod(receiver, method string, model *model) bool {
-	if model.Predicate == "" {
-		return false
-	}
-	valueMethod := receiver == model.Name && method == "Value"
-	errorMethod := receiver == "tgo"+model.Name+"Error" && method == "Error"
-	return valueMethod || errorMethod
-}
-
 // generatedEnumMethod recognizes tag and payload accessor methods.
 func generatedEnumMethod(receiver, method string, model *model) bool {
 	if len(model.Variants) == 0 {
@@ -154,11 +149,30 @@ func generatedEnumMethod(receiver, method string, model *model) bool {
 	return false
 }
 
-// lowerConstruction replaces variant literals with generated constructor calls.
-func (p *packageUnit) lowerConstruction(file *ast.File, node ast.Node) ast.Node {
+// lowerConstruction replaces protected literals with their validation calls.
+func (p *packageUnit) lowerConstruction(
+	file *ast.File,
+	node ast.Node,
+	exempt *model,
+) ast.Node {
 	literal, ok := node.(*ast.CompositeLit)
 	if !ok {
 		return node
+	}
+	typ := p.info.TypeOf(literal)
+	owner, declaration := p.modelOwner(typ)
+	if declaration == nil {
+		owner, declaration = p.namedLiteralModel(literal.Type)
+	}
+	if declaration != nil && declaration.CheckedStruct {
+		if owner == p && declaration == exempt {
+			p.checkedLiterals[literal] = true
+			return node
+		}
+		p.checkedLiterals[literal] = true
+		return call(&ast.SelectorExpr{
+			X: literal, Sel: &ast.Ident{NamePos: literal.End(), Name: "check"},
+		})
 	}
 	selector, ok := literal.Type.(*ast.SelectorExpr)
 	if !ok {
@@ -167,7 +181,7 @@ func (p *packageUnit) lowerConstruction(file *ast.File, node ast.Node) ast.Node 
 	if !p.info.Types[selector.X].IsType() {
 		return node
 	}
-	typ := p.info.TypeOf(selector.X)
+	typ = p.info.TypeOf(selector.X)
 	owner, model := p.modelOwner(typ)
 	if model == nil || len(model.Variants) == 0 {
 		return node
@@ -186,4 +200,28 @@ func (p *packageUnit) lowerConstruction(file *ast.File, node ast.Node) ast.Node 
 	}
 	p.fail(literal, "unknown variant %s.%s", model.Name, selector.Sel.Name)
 	return node
+}
+
+// namedLiteralModel resolves a named literal when an outer marker blocks type information.
+func (p *packageUnit) namedLiteralModel(expression ast.Expr) (*packageUnit, *model) {
+	switch node := expression.(type) {
+	case *ast.Ident:
+		return p, p.Models[node.Name]
+	case *ast.SelectorExpr:
+		name, ok := node.X.(*ast.Ident)
+		if !ok {
+			return nil, nil
+		}
+		ownerName, ok := p.info.Uses[name].(*types.PkgName)
+		if !ok {
+			return nil, nil
+		}
+		owner := p.Imports[ownerName.Imported().Path()]
+		if owner == nil {
+			return nil, nil
+		}
+		return owner, owner.Models[node.Sel.Name]
+	default:
+		return nil, nil
+	}
 }

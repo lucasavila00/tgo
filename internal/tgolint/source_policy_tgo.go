@@ -117,6 +117,9 @@ func (c *checker) checkCompleteLiteral(
 	if typ == nil {
 		return
 	}
+	if c.literalInOwnCheckMethod(expression, typ) {
+		return
+	}
 	classified := goTypeOf(typ.Underlying())
 	switch classified.Tag() {
 	case goTypeTagStruct:
@@ -133,6 +136,32 @@ func (c *checker) checkCompleteLiteral(
 	default:
 		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
+}
+
+func (c *checker) literalInOwnCheckMethod(
+	expression *syntax.Expression,
+	typ types.Type,
+) bool {
+	if expression == nil {
+		return false
+	}
+	if model := c.modelFor(typ); model == nil || !modelIsChecked(model) {
+		return false
+	}
+	node := syntax.ExpressionNode(expression)
+	for parent := c.parents[node]; parent != nil; parent = c.parents[*parent] {
+		function, ok := syntax.FunctionDeclarationOf(parent)
+		if !ok || function == nil {
+			continue
+		}
+		if function.Name.Name != "check" || function.Receiver == nil ||
+			len(function.Receiver.List) != 1 {
+			return false
+		}
+		receiver := c.facts.Type(function.Receiver.List[0].Type)
+		return types.Identical(receiver, typ)
+	}
+	return false
 }
 
 func (c *checker) checkCompleteStructLiteral(

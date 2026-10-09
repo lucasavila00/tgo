@@ -104,16 +104,16 @@
   },
   {
     "method": "definition",
-    "position": {"file": "lib/lib.tgo", "text": "Value()", "occurrence": 1},
+    "position": {"file": "lib/lib.tgo", "text": "Value()", "occurrence": 2},
     "locations": [
-      {"file": "lib/lib.tgo", "text": "UserID", "occurrence": 1}
+      {"file": "lib/lib.tgo", "text": "Value", "occurrence": 1}
     ]
   },
   {
     "method": "definition",
-    "position": {"file": "lib/lib.tgo", "text": "NewUserID", "occurrence": 1},
+    "position": {"file": "lib/lib.tgo", "text": "NewUserID", "occurrence": 2},
     "locations": [
-      {"file": "lib/lib.tgo", "text": "UserID", "occurrence": 1}
+      {"file": "lib/lib.tgo", "text": "NewUserID", "occurrence": 1}
     ]
   },
   {

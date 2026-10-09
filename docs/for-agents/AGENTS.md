@@ -45,22 +45,23 @@ func Label(account Account) string {
 }
 ```
 
-## Checked constructors
+## Checked structs
 
-Use `where` for a rule that must run when a value is constructed.
-The predicate reads the proposed underlying value as `value`.
+Add `checked` after a struct when a rule must run for each literal. Make all fields private and
+define the exact value-receiver method `check() (T, error)`.
 
 ```text
-type Quantity int where value > 0
+type Quantity struct { value int } checked
 
-func Add(left Quantity, right Quantity) (Quantity, error) {
-    return NewQuantity(left.Value() + right.Value())
+func (value Quantity) check() (Quantity, error) {
+    if value.value < 1 { return Quantity{}, ErrInvalidQuantity }
+    return value,
 }
 ```
 
-Check each constructor error before using its value. On failure, the value is invalid.
-For arithmetic, read `Value()` and construct the result again. Do not cast or build wrapper literals.
-Choose overflow behavior for the business task; a constructor does not prevent arithmetic overflow.
+Each literal returns `(Quantity, error)`. Use postfix `!` when the surrounding function returns an
+error. TGo does not generate a public constructor or accessor. Add a fallible factory when another
+package must construct the value. On failure, the zero value is invalid.
 
 ## Error propagation
 
@@ -157,7 +158,8 @@ if err != nil {
 account := model.AccountPersonal{Name: "Lucas"}.Account()
 ```
 
-Test constructor success and failure, every tag branch, and shared collection changes.
+`NewQuantity` in this example is a project-defined factory. Test check success and failure, every
+tag branch, and shared collection changes.
 Test calls in both directions. Include Go error results and invalid foreign values. Run
 `tgolint` to check Go construction, result pairs, and enum access.
 

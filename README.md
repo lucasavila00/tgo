@@ -65,16 +65,27 @@ JSON forms.
 ## Validate construction
 
 ```go
-type Port int where value > 0 && value < 65536
+type Port struct {
+	number int
+} checked
 
-func PortNumber(text string) (int, error) {
+func (value Port) check() (Port, error) {
+	if value.number < 1 || value.number > 65535 {
+		return Port{}, ErrInvalidPort
+	}
+	return value,
+}
+
+func ParsePort(text string) (Port, error) {
 	number := strconv.Atoi(text)!
-	port := NewPort(number)!
-	return port.Value(),
+	port := Port{number: number}!
+	return port,
 }
 ```
 
-TGo generates `NewPort(int) (Port, error)` and `Port.Value() int`.
+The compiler calls `check` for each `Port` literal. All fields must be private. TGo does not
+generate a constructor or accessor. Add an exported fallible factory when another package must
+construct the value.
 
 ## Declare field defaults
 

@@ -117,7 +117,7 @@ def assert_integrity_checks(linter, work):
     missing_source.rename(model_source)
 
     model_source_text = model_source.read_text()
-    model_source.write_text(model_source_text.replace("value > 0", "value > 10", 1))
+    model_source.write_text(model_source_text.replace("value.value <= 0", "value.value <= 10", 1))
     result = diagnostics(linter, work, "./model")
     assert "generated tgo output integrity check failed" in result
     model_source.write_text(model_source_text)
@@ -128,8 +128,8 @@ def assert_integrity_checks(linter, work):
     model_source.write_text(model_source_text)
 
     stale = model_source_text.replace(
-        "type Count int where value > 0",
-        'type Count string where value != ""',
+        "type Count struct { value int } checked",
+        "type Count struct { value int; extra int } checked",
     )
     stale = stale.replace("Started struct", "Opened struct")
     stale = stale.replace('json:"pair"', 'json:"stale"')

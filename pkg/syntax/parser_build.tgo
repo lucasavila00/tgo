@@ -68,14 +68,18 @@ func (p %sourceParser) makeComprehension(
 ) (*frontComprehensionExpr, map[frontNode]frontNode, error) {
 	anchors := make(map[frontNode]frontNode)
 	result := &frontComprehensionExpr{
-		frontSpan: frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
-		Projection: projection, Type: projection.Type,
-		Lbrace: p.pos(p.tokens[raw.open].start), Clauses: nil,
-		Result: frontComprehensionResult{
-			frontSpan: frontSpan{Start: token.NoPos, Stop: token.NoPos}, Key: nil,
-			Colon: token.NoPos, Value: nil,
+		frontSpan:  frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
+		Projection: projection,
+		Type:       projection.Type,
+		Lbrace:     p.pos(p.tokens[raw.open].start),
+		Clauses:    nil,
+		Result:     frontComprehensionResult{
+			frontSpan: frontSpan{Start: token.NoPos, Stop: token.NoPos},
+			Key:       nil,
+			Colon:     token.NoPos,
+			Value:     nil,
 		},
-		Rbrace: p.pos(p.tokens[raw.close].start),
+		Rbrace:     p.pos(p.tokens[raw.close].start),
 	}
 	for _, clause := range raw.clauses {
 		expression, found := p.parseExpression(
@@ -87,22 +91,28 @@ func (p %sourceParser) makeComprehension(
 			anchors[child] = parent
 		}
 		item := frontComprehensionClause{
-			frontSpan: frontSpan{
+			frontSpan:  frontSpan{
 				Start: p.pos(p.tokens[clause.start].start),
-				Stop: p.pos(p.tokens[clause.end-1].end),
+				Stop:  p.pos(p.tokens[clause.end - 1].end),
 			},
-			Kind: clause.kind, Keyword: p.pos(p.tokens[clause.keyword].start),
-			Bindings: nil, Define: token.NoPos, Range: token.NoPos,
+			Kind:       clause.kind,
+			Keyword:    p.pos(p.tokens[clause.keyword].start),
+			Bindings:   nil,
+			Define:     token.NoPos,
+			Range:      token.NoPos,
 			Expression: expression,
-			Lbrace: p.pos(p.tokens[clause.open].start),
-			Rbrace: p.pos(p.tokens[clause.close].start),
+			Lbrace:     p.pos(p.tokens[clause.open].start),
+			Rbrace:     p.pos(p.tokens[clause.close].start),
 		}
 		for _, binding := range clause.bindings {
-			item.Bindings = append(item.Bindings, &ast.Ident{
-				NamePos: p.pos(p.tokens[binding].start),
-				Name: p.tokens[binding].text,
-				Obj: nil,
-			})
+			item.Bindings = append(
+				item.Bindings,
+				&ast.Ident{
+					NamePos: p.pos(p.tokens[binding].start),
+					Name:    p.tokens[binding].text,
+					Obj:     nil,
+				},
+			)
 		}
 		if clause.define >= 0 {
 			item.Define = p.pos(p.tokens[clause.define].start)
@@ -113,11 +123,11 @@ func (p %sourceParser) makeComprehension(
 	rawResult := raw.result
 	value, found, err := p.parseExpression(
 		p.tokens[rawResult.valueStart].start,
-		p.tokens[rawResult.valueEnd-1].end,
+		p.tokens[rawResult.valueEnd - 1].end,
 		defaultAt,
 	)
 	if err != nil {
-		return nil, nil, err
+		return ,, err
 	}
 	for child, parent := range found {
 		anchors[child] = parent
@@ -127,11 +137,11 @@ func (p %sourceParser) makeComprehension(
 	if rawResult.colon >= 0 {
 		key, found, err = p.parseExpression(
 			p.tokens[rawResult.keyStart].start,
-			p.tokens[rawResult.keyEnd-1].end,
+			p.tokens[rawResult.keyEnd - 1].end,
 			defaultAt,
 		)
 		if err != nil {
-			return nil, nil, err
+			return ,, err
 		}
 		for child, parent := range found {
 			anchors[child] = parent
@@ -141,9 +151,11 @@ func (p %sourceParser) makeComprehension(
 	result.Result = frontComprehensionResult{
 		frontSpan: frontSpan{
 			Start: p.pos(p.tokens[rawResult.start].start),
-			Stop: p.pos(p.tokens[rawResult.end-1].end),
+			Stop:  p.pos(p.tokens[rawResult.end - 1].end),
 		},
-		Key: key, Colon: colon, Value: value,
+		Key:       key,
+		Colon:     colon,
+		Value:     value,
 	}
 	return result, anchors,
 }
@@ -161,16 +173,16 @@ func (p %sourceParser) makeDeclaration(
 	switch raw.kind {
 	case "enum":
 		node := &frontEnumDecl{
-			frontSpan:     frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
-			Doc:      nil,
-			Type:     p.pos(p.tokens[raw.typeToken].start),
-			Name:     name,
-			Enum:     p.pos(p.tokens[raw.keyword].start),
-			Tag:      p.enumTag(raw.tag),
-			Lbrace:   p.pos(p.tokens[raw.open].start),
-			Variants: nil,
-			Rbrace:   p.pos(p.tokens[raw.close].start),
-			Comment:  nil,
+			frontSpan: frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
+			Doc:       nil,
+			Type:      p.pos(p.tokens[raw.typeToken].start),
+			Name:      name,
+			Enum:      p.pos(p.tokens[raw.keyword].start),
+			Tag:       p.enumTag(raw.tag),
+			Lbrace:    p.pos(p.tokens[raw.open].start),
+			Variants:  nil,
+			Rbrace:    p.pos(p.tokens[raw.close].start),
+			Comment:   nil,
 		}
 		for _, rawVariant := range raw.variants {
 			fields, fieldAnchors := p.makeFields(rawVariant.fields, defaultAt)!!
@@ -179,18 +191,18 @@ func (p %sourceParser) makeDeclaration(
 					Start: p.pos(rawVariant.start),
 					Stop:  p.pos(rawVariant.end),
 				},
-				Doc: nil,
-				Name: &ast.Ident{
+				Doc:       nil,
+				Name:      &ast.Ident{
 					NamePos: p.pos(p.tokens[rawVariant.name].start),
 					Name:    p.tokens[rawVariant.name].text,
 					Obj:     nil,
 				},
-				Struct:  p.pos(p.tokens[rawVariant.structToken].start),
-				Tag:     p.enumTag(rawVariant.tag),
-				Lbrace:  p.pos(p.tokens[rawVariant.open].start),
-				Fields:  fields,
-				Rbrace:  p.pos(p.tokens[rawVariant.close].start),
-				Comment: nil,
+				Struct:    p.pos(p.tokens[rawVariant.structToken].start),
+				Tag:       p.enumTag(rawVariant.tag),
+				Lbrace:    p.pos(p.tokens[rawVariant.open].start),
+				Fields:    fields,
+				Rbrace:    p.pos(p.tokens[rawVariant.close].start),
+				Comment:   nil,
 			}
 			node.Variants = append(node.Variants, variant)
 			for extension, parent := range fieldAnchors {
@@ -200,55 +212,27 @@ func (p %sourceParser) makeDeclaration(
 		return node, anchors,
 	case "struct":
 		fields, fieldAnchors := p.makeFields(raw.fields, defaultAt)!!
+		checked := token.NoPos
+		if raw.checked >= 0 {
+			checked = p.pos(p.tokens[raw.checked].start)
+		}
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
 		}
 		return &frontStructDecl{
-			frontSpan:    frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
-			Doc:     nil,
-			Type:    p.pos(p.tokens[raw.typeToken].start),
-			Name:    name,
-			Struct:  p.pos(p.tokens[raw.keyword].start),
-			Lbrace:  p.pos(p.tokens[raw.open].start),
-			Fields:  fields,
-			Rbrace:  p.pos(p.tokens[raw.close].start),
-			Comment: nil,
-		}, anchors,
-	case "checked":
-		base, baseAnchors, err := p.parseExpression(
-			p.tokens[raw.baseStart].start,
-			p.tokens[raw.baseEnd].start,
-			defaultAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		predicate, predicateAnchors, err := p.parseExpression(
-			p.tokens[raw.predicateStart].start,
-			p.tokens[raw.predicateEnd-1].end,
-			defaultAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		for extension, parent := range baseAnchors {
-			anchors[extension] = parent
-		}
-		for extension, parent := range predicateAnchors {
-			anchors[extension] = parent
-		}
-		return &frontCheckedDecl{
-			frontSpan:      frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
+			frontSpan: frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
 			Doc:       nil,
 			Type:      p.pos(p.tokens[raw.typeToken].start),
 			Name:      name,
-			Base:      base,
-			Where:     p.pos(p.tokens[raw.keyword].start),
-			Predicate: predicate,
+			Struct:    p.pos(p.tokens[raw.keyword].start),
+			Lbrace:    p.pos(p.tokens[raw.open].start),
+			Fields:    fields,
+			Rbrace:    p.pos(p.tokens[raw.close].start),
+			Checked:   checked,
 			Comment:   nil,
 		}, anchors,
 	default:
-		return nil, nil, fmt.Errorf("unknown declaration kind %q", raw.kind)
+		return ,, fmt.Errorf("unknown declaration kind %q", raw.kind)
 	}
 }
 
@@ -268,12 +252,13 @@ func (p %sourceParser) makeFields(
 		assign := token.NoPos
 		if raw.assign >= 0 {
 			if len(field.Names) == 0 {
-				return nil, nil, p.tokenError(raw.start, "embedded fields cannot have defaults")
+				failure := p.tokenError(raw.start, "embedded fields cannot have defaults")
+				return ,, failure
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
 			parsedDefault, expressionAnchors := p.parseExpression(
-				p.tokens[raw.assign+1].start,
-				p.tokens[raw.end-1].end,
+				p.tokens[raw.assign + 1].start,
+				p.tokens[raw.end - 1].end,
 				defaultAt,
 			)!!
 			defaultValue = parsedDefault
@@ -284,13 +269,13 @@ func (p %sourceParser) makeFields(
 		item := &frontFieldDecl{
 			frontSpan: frontSpan{
 				Start: p.pos(p.tokens[raw.start].start),
-				Stop:  p.pos(p.tokens[raw.end-1].end),
+				Stop:  p.pos(p.tokens[raw.end - 1].end),
 			},
-			Doc:     field.Doc,
-			Field:   field,
-			Assign:  assign,
-			Default: defaultValue,
-			Comment: field.Comment,
+			Doc:       field.Doc,
+			Field:     field,
+			Assign:    assign,
+			Default:   defaultValue,
+			Comment:   field.Comment,
 		}
 		fields = append(fields, item)
 	}
@@ -300,29 +285,29 @@ func (p %sourceParser) makeFields(
 func (p %sourceParser) parseField(start int, end int) (*ast.Field, error) {
 	const prefix = "package p\ntype _ struct {\n"
 	from := p.tokens[start].start
-	to := p.tokens[end-1].end
+	to := p.tokens[end - 1].end
 	projection := p.project(from, to, p.editsInRange(from, to))
 	wrapped := prefix + string(projection) + "\n}"
 	set := token.NewFileSet()
 	file, err := parser.ParseFile(
 		set,
-		p.filename+" (field)",
+		p.filename + " (field)",
 		wrapped,
-		parser.ParseComments|parser.SkipObjectResolution,
+		parser.ParseComments | parser.SkipObjectResolution,
 	)
 	if err != nil {
-		return nil, p.mapFragmentError(
+		return , p.mapFragmentError(
 			err,
 			len(prefix),
 			p.tokens[start].start,
-			p.tokens[end-1].end,
+			p.tokens[end - 1].end,
 		)
 	}
 	general := file.Decls[0].(*ast.GenDecl)
 	typeSpec := general.Specs[0].(*ast.TypeSpec)
 	structure := typeSpec.Type.(*ast.StructType)
 	if len(structure.Fields.List) != 1 {
-		return nil, p.tokenError(start, "field declaration must define one field group")
+		return , p.tokenError(start, "field declaration must define one field group")
 	}
 	field := structure.Fields.List[0]
 	temporary := set.File(file.Package)
@@ -342,7 +327,7 @@ func (p %sourceParser) parseExpression(
 	defaultAt map[token.Pos]%frontDefaultMarker,
 ) (ast.Expr, map[frontNode]frontNode, error) {
 	if start >= end {
-		return nil, nil, fmt.Errorf("empty expression")
+		return ,, fmt.Errorf("empty expression")
 	}
 	const prefix = "package p\nvar _ = "
 	edits := p.editsInRange(start, end)
@@ -351,12 +336,13 @@ func (p %sourceParser) parseExpression(
 	set := token.NewFileSet()
 	file, err := parser.ParseFile(
 		set,
-		p.filename+" (expression)",
+		p.filename + " (expression)",
 		wrapped,
-		parser.ParseComments|parser.SkipObjectResolution,
+		parser.ParseComments | parser.SkipObjectResolution,
 	)
 	if err != nil {
-		return nil, nil, p.mapFragmentError(err, len(prefix), start, end)
+		failure := p.mapFragmentError(err, len(prefix), start, end)
+		return ,, failure
 	}
 	general := file.Decls[0].(*ast.GenDecl)
 	value := general.Specs[0].(*ast.ValueSpec).Values[0]

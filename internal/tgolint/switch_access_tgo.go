@@ -18,16 +18,19 @@ func (c *checker) checkRepresentationAccess(expression *syntax.Expression) {
 		return
 	}
 	if privateRepresentation(model, selector.Selector.Name) {
-		c.pass.Reportf(selector.Start,
+		c.pass.Reportf(
+			selector.Start,
 			"%s.%s is private tgo representation",
-			modelName(model), selector.Selector.Name)
+			modelName(model),
+			selector.Selector.Name,
+		)
 		return
 	}
 }
 
 func privateRepresentation(model *model, name string) bool {
 	if modelIsChecked(model) {
-		return name == "value"
+		return false
 	}
 	if name == "tgoTag" {
 		return true

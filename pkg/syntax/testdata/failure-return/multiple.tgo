@@ -1,0 +1,5 @@
+package failurereturn
+
+func multiple(err error) (int, error) {
+	return , err, err
+}

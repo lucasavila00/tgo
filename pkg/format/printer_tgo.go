@@ -211,7 +211,7 @@ func declarationKind(value *syntax.Declaration) token.Token {
 		return declarationValue.GeneralPayload().Value.Kind
 	case syntax.DeclarationTagFunction:
 		return token.FUNC
-	case syntax.DeclarationTagEnum, syntax.DeclarationTagStruct, syntax.DeclarationTagChecked:
+	case syntax.DeclarationTagEnum, syntax.DeclarationTagStruct:
 		return token.TYPE
 	default:
 		return token.ILLEGAL

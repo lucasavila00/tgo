@@ -106,21 +106,21 @@ func createBackup(path string, source []byte, mode fs.FileMode) (string, error) 
 	if err := backup.Chmod(mode); err != nil {
 		_ = backup.Close()
 		_ = os.Remove(name)
-		return "", err
+		return , err
 	}
 	if err := writeAll(backup, source); err != nil {
 		_ = backup.Close()
 		_ = os.Remove(name)
-		return "", err
+		return , err
 	}
 	if err := backup.Sync(); err != nil {
 		_ = backup.Close()
 		_ = os.Remove(name)
-		return "", err
+		return , err
 	}
 	if err := backup.Close(); err != nil {
 		_ = os.Remove(name)
-		return "", err
+		return , err
 	}
 	return name,
 }
@@ -130,12 +130,12 @@ func replaceContents(target rewriteTarget, source []byte, formatted []byte) (boo
 		if err := target.Truncate(int64(len(formatted))); err == nil {
 			return false,
 		} else if restoreErr := restoreContents(target, source); restoreErr != nil {
-			return false, fmt.Errorf("%w; restore failed: %v", err, restoreErr)
+			return , fmt.Errorf("%w; restore failed: %v", err, restoreErr)
 		} else {
 			return true, err
 		}
 	} else if restoreErr := restoreContents(target, source); restoreErr != nil {
-		return false, fmt.Errorf("%w; restore failed: %v", err, restoreErr)
+		return , fmt.Errorf("%w; restore failed: %v", err, restoreErr)
 	} else {
 		return true, err
 	}

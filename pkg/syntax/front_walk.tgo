@@ -44,7 +44,7 @@ func frontExtensionAt(file *frontFile, position token.Pos) frontExtension {
 	var found frontExtension = nil
 	for _, extension := range file.extensions {
 		if extension.Pos() <= position && position < extension.End() &&
-			(found == nil || extension.End()-extension.Pos() < found.End()-found.Pos()) {
+			(found == nil || extension.End() - extension.Pos() < found.End() - found.Pos()) {
 			found = extension
 		}
 	}
@@ -164,27 +164,25 @@ func syntaxChildren(file %frontFile, node frontNode) []frontNode {
 			}
 		}
 	case *frontEnumDecl:
-		children = make([]frontNode, 1, 2+len(node.Variants))
+		children = make([]frontNode, 1, 2 + len(node.Variants))
 		children = append(children, node.Tag)
 		children[0] = node.Name
 		for _, variant := range node.Variants {
 			children = append(children, variant)
 		}
 	case *frontVariantDecl:
-		children = make([]frontNode, 1, 2+len(node.Fields))
+		children = make([]frontNode, 1, 2 + len(node.Fields))
 		children = append(children, node.Tag)
 		children[0] = node.Name
 		for _, field := range node.Fields {
 			children = append(children, field)
 		}
 	case *frontStructDecl:
-		children = make([]frontNode, 1, 1+len(node.Fields))
+		children = make([]frontNode, 1, 1 + len(node.Fields))
 		children[0] = node.Name
 		for _, field := range node.Fields {
 			children = append(children, field)
 		}
-	case *frontCheckedDecl:
-		children = []frontNode{node.Name, node.Base, node.Predicate}
 	case *frontFieldDecl:
 		children = []frontNode{node.Field, node.Default}
 	case *frontDefaultMarker:
@@ -290,6 +288,3 @@ func nodePresent(node frontNode) bool {
 func compareExtensions(left frontExtension, right frontExtension) int {
 	return compareNodes(left, right)
 }
-
-
-

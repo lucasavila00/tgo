@@ -14,9 +14,11 @@ type Mode uint
 const (
 	// ParseComments retains all source comments.
 	ParseComments Mode = 1 << iota
+
 	// AllErrors reports independent scanner and Go parser errors.
 	// A tgo production error stops extension parsing at the first error.
 	AllErrors
+
 	// AllowInvalidModels keeps syntactically complete enum declarations when
 	// their variant set is empty or has duplicate names.
 	AllowInvalidModels
@@ -54,21 +56,18 @@ type rawVariant struct {
 }
 
 type rawDecl struct {
-	tag            int
-	kind           string
-	start          int
-	end            int
-	typeToken      int
-	name           int
-	keyword        int
-	open           int
-	close          int
-	baseStart      int
-	baseEnd        int
-	predicateStart int
-	predicateEnd   int
-	fields         []*rawField
-	variants       []*rawVariant
+	tag       int
+	checked   int
+	kind      string
+	start     int
+	end       int
+	typeToken int
+	name      int
+	keyword   int
+	open      int
+	close     int
+	fields    []*rawField
+	variants  []*rawVariant
 }
 
 type rawDefault struct {
@@ -81,15 +80,20 @@ type rawDefault struct {
 }
 
 type rawPropagation struct {
-	callEnd   int
-	bang      int
+	callEnd    int
+	bang       int
 	secondBang int
-	node      *frontPropagateExpr
+	node       *frontPropagateExpr
 }
 
 type rawSuccessReturn struct {
 	keyword int
 	comma   int
+}
+
+type rawFailureReturn struct {
+	keyword int
+	commas  []int
 }
 
 type rawComprehension struct {
@@ -103,17 +107,17 @@ type rawComprehension struct {
 }
 
 type rawComprehensionClause struct {
-	kind       string
-	start      int
-	end        int
-	keyword    int
-	bindings  []int
-	define     int
-	rangeToken int
+	kind            string
+	start           int
+	end             int
+	keyword         int
+	bindings        []int
+	define          int
+	rangeToken      int
 	expressionStart int
 	expressionEnd   int
-	open       int
-	close      int
+	open            int
+	close           int
 }
 
 type rawComprehensionResult struct {
@@ -127,20 +131,21 @@ type rawComprehensionResult struct {
 }
 
 type sourceParser struct {
-	filename     string
-	source       []byte
-	tokens       []lexeme
-	comments     []sourceEdit
-	decls        []*rawDecl
-	defaults     []*rawDefault
+	filename          string
+	source            []byte
+	tokens            []lexeme
+	comments          []sourceEdit
+	decls             []*rawDecl
+	defaults          []*rawDefault
 	exhaustiveOffsets []int
-	propagations []*rawPropagation
-	successReturns []*rawSuccessReturn
-	comprehensions []*rawComprehension
-	nonNil      map[token.Pos]bool
-	edits        []sourceEdit
-	file         *token.File
-	mode         Mode
+	propagations      []*rawPropagation
+	successReturns    []*rawSuccessReturn
+	failureReturns    []*rawFailureReturn
+	comprehensions    []*rawComprehension
+	nonNil            map[token.Pos]bool
+	edits             []sourceEdit
+	file              *token.File
+	mode              Mode
 }
 
 // ParseFile parses one tgo source file.
@@ -151,55 +156,56 @@ func parseFrontFile(
 	mode Mode,
 ) (*frontFile, error) {
 	if fset == nil {
-		return nil, fmt.Errorf("parse %s: nil file set", filename)
+		return , fmt.Errorf("parse %s: nil file set", filename)
 	}
-	tokens, comments, err := scanSource(filename, source, mode&AllErrors != 0)
+	tokens, comments, err := scanSource(filename, source, mode & AllErrors != 0)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	state := &sourceParser{
-		filename:     filename,
-		source:       append([]byte(nil), source...),
-		tokens:       tokens,
-		comments:     comments,
-		decls:        nil,
-		defaults:     nil,
+		filename:          filename,
+		source:            append([]byte(nil), source...),
+		tokens:            tokens,
+		comments:          comments,
+		decls:             nil,
+		defaults:          nil,
 		exhaustiveOffsets: nil,
-		propagations: nil,
-		successReturns: nil,
-		comprehensions: nil,
-		nonNil:      make(map[token.Pos]bool),
-		edits:        nil,
-		file:         nil,
-		mode:         mode,
+		propagations:      nil,
+		successReturns:    nil,
+		failureReturns:    nil,
+		comprehensions:    nil,
+		nonNil:            make(map[token.Pos]bool),
+		edits:             nil,
+		file:              nil,
+		mode:              mode,
 	}
-	if mode&goSource == 0 {
+	if mode & goSource == 0 {
 		if err := state.discoverDeclarations(); err != nil {
-			return nil, state.error(err)
+			return , state.error(err)
 		}
 		if err := state.discoverExtensions(); err != nil {
-			return nil, state.error(err)
+			return , state.error(err)
 		}
 	}
 	projection := state.project(0, len(source), state.edits)
 	parseMode := parser.SkipObjectResolution
-	if mode&ParseComments != 0 {
+	if mode & ParseComments != 0 {
 		parseMode |= parser.ParseComments
 	}
-	if mode&AllErrors != 0 {
+	if mode & AllErrors != 0 {
 		parseMode |= parser.AllErrors
 	}
 	goFile, parseErr := parser.ParseFile(fset, filename, projection, parseMode)
 	if goFile == nil {
-		return nil, parseErr
+		return , parseErr
 	}
 	state.file = fset.File(goFile.Package)
 	if state.file == nil {
-		return nil, fmt.Errorf("parse %s: missing token file", filename)
+		return , fmt.Errorf("parse %s: missing token file", filename)
 	}
 	result, err := state.buildFile(goFile)
 	if err != nil {
-		return nil, state.error(err)
+		return , state.error(err)
 	}
 	if parseErr != nil {
 		return result, parseErr
@@ -216,11 +222,16 @@ func scanSource(
 	file := set.AddFile(filename, -1, len(source))
 	scan := new(scanner.Scanner)
 	errors := make(scanner.ErrorList, 0)
-	scan.Init(file, source, func(position token.Position, message string) {
-		if allErrors || len(errors) == 0 {
-			errors.Add(position, message)
-		}
-	}, scanner.ScanComments)
+	scan.Init(
+		file,
+		source,
+		func(position token.Position, message string) {
+			if allErrors || len(errors) == 0 {
+				errors.Add(position, message)
+			}
+		},
+		scanner.ScanComments,
+	)
 	tokens := []lexeme(nil)
 	comments := []sourceEdit(nil)
 	for {
@@ -251,7 +262,7 @@ func scanSource(
 }
 
 func (p %sourceParser) error(err error) error {
-	if strings.HasPrefix(err.Error(), p.filename+":") {
+	if strings.HasPrefix(err.Error(), p.filename + ":") {
 		return err
 	}
 	return fmt.Errorf("%s:%w", p.filename, err)
@@ -265,7 +276,7 @@ func (p %sourceParser) text(start int, end int) string {
 	if start >= end {
 		return ""
 	}
-	return string(p.source[p.tokens[start].start:p.tokens[end-1].end])
+	return string(p.source[p.tokens[start].start:p.tokens[end - 1].end])
 }
 
 func (p %sourceParser) implicitSemicolon(index int) bool {
@@ -289,16 +300,16 @@ func (p %sourceParser) closeToken(start int) (int, error) {
 		case token.LBRACE:
 			stack = append(stack, token.RBRACE)
 		case token.RPAREN, token.RBRACK, token.RBRACE:
-			if len(stack) == 0 || stack[len(stack)-1] != p.tokens[index].kind {
-				return 0, p.tokenError(index, "unmatched %s", p.tokens[index].text)
+			if len(stack) == 0 || stack[len(stack) - 1] != p.tokens[index].kind {
+				return , p.tokenError(index, "unmatched %s", p.tokens[index].text)
 			}
-			stack = stack[:len(stack)-1]
+			stack = stack[:len(stack) - 1]
 			if len(stack) == 0 {
 				return index,
 			}
 		}
 	}
-	return 0, p.tokenError(start, "unclosed %s", p.tokens[start].text)
+	return , p.tokenError(start, "unclosed %s", p.tokens[start].text)
 }
 
 func (p %sourceParser) tokenError(index int, pattern string, values ...any) error {
@@ -331,16 +342,19 @@ func lineColumn(source []byte, offset int) (int, int) {
 
 func (p %sourceParser) discoverDeclarations() error {
 	for cursor := 0; cursor < len(p.tokens); {
-		if p.tokens[cursor].kind == token.TYPE && cursor+1 < len(p.tokens) &&
-			p.tokens[cursor+1].kind == token.IDENT {
+		if p.tokens[cursor].kind == token.TYPE && cursor + 1 < len(p.tokens) &&
+			p.tokens[cursor + 1].kind == token.IDENT {
 			declaration, next := p.declaration(cursor)!!
 			if declaration != nil {
 				p.decls = append(p.decls, declaration)
-				p.edits = append(p.edits, sourceEdit{
-					start: declaration.start,
-					end:   declaration.end,
-					text:  "var _ int",
-				})
+				p.edits = append(
+					p.edits,
+					sourceEdit{
+						start: declaration.start,
+						end:   declaration.end,
+						text:  "var _ int",
+					},
+				)
 				cursor = next
 				continue
 			}
@@ -378,21 +392,9 @@ func (p %sourceParser) declaration(start int) (*rawDecl, int, error) {
 	if ordinary && p.tokens[baseStart].kind != token.STRUCT {
 		return nil, start + 1,
 	}
-	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON {
-		if p.tokens[cursor].text == "where" &&
-			goExpressionSyntax(p.text(baseStart, cursor)) {
-			return p.checkedDeclaration(start, baseStart, cursor)
-		}
-		if opening(p.tokens[cursor].kind) {
-			end := p.closeToken(cursor)!!
-			cursor = end + 1
-			continue
-		}
-		cursor++
-	}
-	if p.tokens[baseStart].kind == token.STRUCT && baseStart+1 < len(p.tokens) &&
-		p.tokens[baseStart+1].kind == token.LBRACE {
-		return p.structDeclaration(start, baseStart, baseStart+1)
+	if p.tokens[baseStart].kind == token.STRUCT && baseStart + 1 < len(p.tokens) &&
+		p.tokens[baseStart + 1].kind == token.LBRACE {
+		return p.structDeclaration(start, baseStart, baseStart + 1)
 	}
 	return nil, start + 1,
 }
@@ -419,14 +421,6 @@ func (p %sourceParser) goDeclarationSyntax(start int, end int) bool {
 	return err == nil
 }
 
-func goExpressionSyntax(text string) bool {
-	if text == "" {
-		return false
-	}
-	_, err := parser.ParseExpr(text)
-	return err == nil
-}
-
 func (p %sourceParser) enumDeclaration(
 	start int,
 	keyword int,
@@ -441,15 +435,11 @@ func (p %sourceParser) enumDeclaration(
 	declaration.name = start + 1
 	declaration.keyword = keyword
 	declaration.tag = -1
-	if keyword+1 < open && p.tokens[keyword+1].kind == token.STRING {
+	if keyword + 1 < open && p.tokens[keyword + 1].kind == token.STRING {
 		declaration.tag = keyword + 1
 	}
 	declaration.open = open
 	declaration.close = closing
-	declaration.baseStart = -1
-	declaration.baseEnd = -1
-	declaration.predicateStart = -1
-	declaration.predicateEnd = -1
 	cursor := open + 1
 	names := make(map[string]bool)
 	for cursor < closing {
@@ -459,32 +449,35 @@ func (p %sourceParser) enumDeclaration(
 		}
 		variant, next := p.variant(cursor, closing)!
 		name := p.tokens[variant.name].text
-		if names[name] && p.mode&AllowInvalidModels == 0 {
-			return nil, 0, p.tokenError(variant.name, "duplicate variant %s", name)
+		if names[name] && p.mode & AllowInvalidModels == 0 {
+			failure := p.tokenError(variant.name, "duplicate variant %s", name)
+			return ,, failure
 		}
 		names[name] = true
 		declaration.variants = append(declaration.variants, variant)
 		cursor = next
 	}
-	if len(declaration.variants) == 0 && p.mode&AllowInvalidModels == 0 {
-		return nil, 0, p.tokenError(keyword, "enum %s has no variants", p.tokens[start+1].text)
+	if len(declaration.variants) == 0 && p.mode & AllowInvalidModels == 0 {
+		failure := p.tokenError(keyword, "enum %s has no variants", p.tokens[start + 1].text)
+		return ,, failure
 	}
-	return declaration, skipSemicolon(p.tokens, closing+1),
+	return declaration, skipSemicolon(p.tokens, closing + 1),
 }
 
 func (p %sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
-	if start+2 >= limit || p.tokens[start].kind != token.IDENT ||
-		p.tokens[start+1].kind != token.STRUCT ||
-		p.tokens[start+2].kind != token.LBRACE {
-		return nil, 0, p.tokenError(start, "variant needs Name struct { fields }")
+	if start + 2 >= limit || p.tokens[start].kind != token.IDENT ||
+		p.tokens[start + 1].kind != token.STRUCT ||
+		p.tokens[start + 2].kind != token.LBRACE {
+		failure := p.tokenError(start, "variant needs Name struct { fields }")
+		return ,, failure
 	}
 	closing, err := p.closeToken(start + 2)
 	if err != nil {
-		return nil, 0, err
+		return ,, err
 	}
-	fields, err := p.rawFields(start+2, closing)
+	fields, err := p.rawFields(start + 2, closing)
 	if err != nil {
-		return nil, 0, err
+		return ,, err
 	}
 	variant := new(rawVariant)
 	variant.start = p.tokens[start].start
@@ -511,64 +504,34 @@ func (p %sourceParser) structDeclaration(
 ) (*rawDecl, int, error) {
 	closing, err := p.closeToken(open)
 	if err != nil {
-		return nil, 0, err
+		return ,, err
 	}
 	fields, err := p.rawFields(open, closing)
 	if err != nil {
-		return nil, 0, err
+		return ,, err
+	}
+	next := closing + 1
+	checked := -1
+	if next < len(p.tokens) && p.tokens[next].kind == token.IDENT &&
+		p.tokens[next].text == "checked" {
+		checked = next
+		next++
 	}
 	declaration := new(rawDecl)
 	declaration.kind = "struct"
 	declaration.start = p.tokens[start].start
 	declaration.end = p.tokens[closing].end
+	if checked >= 0 {
+		declaration.end = p.tokens[checked].end
+	}
+	declaration.checked = checked
 	declaration.typeToken = start
 	declaration.name = start + 1
 	declaration.keyword = keyword
 	declaration.open = open
 	declaration.close = closing
-	declaration.baseStart = -1
-	declaration.baseEnd = -1
-	declaration.predicateStart = -1
-	declaration.predicateEnd = -1
 	declaration.fields = fields
-	return declaration, skipSemicolon(p.tokens, closing+1),
-}
-
-func (p %sourceParser) checkedDeclaration(
-	start int,
-	baseStart int,
-	where int,
-) (*rawDecl, int, error) {
-	predicateStart := where + 1
-	if p.implicitSemicolon(predicateStart) {
-		predicateStart++
-	}
-	cursor := predicateStart
-	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON {
-		if opening(p.tokens[cursor].kind) {
-			end := p.closeToken(cursor)!!
-			cursor = end + 1
-			continue
-		}
-		cursor++
-	}
-	if predicateStart == cursor {
-		return nil, 0, p.tokenError(where, "checked type needs a predicate")
-	}
-	declaration := new(rawDecl)
-	declaration.kind = "checked"
-	declaration.start = p.tokens[start].start
-	declaration.end = p.tokens[cursor-1].end
-	declaration.typeToken = start
-	declaration.name = start + 1
-	declaration.keyword = where
-	declaration.open = -1
-	declaration.close = -1
-	declaration.baseStart = baseStart
-	declaration.baseEnd = where
-	declaration.predicateStart = predicateStart
-	declaration.predicateEnd = cursor
-	return declaration, skipSemicolon(p.tokens, cursor),
+	return declaration, skipSemicolon(p.tokens, next),
 }
 
 func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
@@ -585,7 +548,7 @@ func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 		for cursor < closing && p.tokens[cursor].kind != token.SEMICOLON {
 			if p.tokens[cursor].kind == token.ASSIGN {
 				if field.assign >= 0 {
-					return nil, p.tokenError(cursor, "field has more than one default assignment")
+					return , p.tokenError(cursor, "field has more than one default assignment")
 				}
 				field.assign = cursor
 			}
@@ -597,8 +560,8 @@ func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 			cursor++
 		}
 		field.end = cursor
-		if field.assign+1 == field.end {
-			return nil, p.tokenError(field.assign, "missing field default")
+		if field.assign + 1 == field.end {
+			return , p.tokenError(field.assign, "missing field default")
 		}
 		fields = append(fields, field)
 	}
@@ -611,4 +574,3 @@ func skipSemicolon(tokens []lexeme, cursor int) int {
 	}
 	return cursor
 }
-

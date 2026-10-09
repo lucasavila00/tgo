@@ -9,7 +9,7 @@ tgolint ./...
 
 Fix every diagnostic. The command checks loaded Go packages for:
 
-- invalid checked-type zero values;
+- invalid checked-struct zero values;
 - constructor bypasses;
 - unchecked `(T, error)` results;
 - unchecked `(T, bool)` and comma-ok results;

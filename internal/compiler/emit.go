@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -184,34 +183,6 @@ func emitVariant(
 			variant.Name,
 		)
 	}
-}
-
-// checkedGo emits a checked wrapper, constructor, error, and value accessor.
-func checkedGo(sourceName string, declaration *model) string {
-	var output strings.Builder
-	name := declaration.Name
-	fmt.Fprintf(&output, "// %s requires New%s success. Zero is invalid.\n", name, name)
-	output.WriteString("// Shared data keeps Go aliases. Callers must keep the rule.\n")
-	baseColumn := declaration.BaseColumn - len("value ")
-	directive := inlineLineDirective(sourceName, declaration.BaseLine, baseColumn)
-	fmt.Fprintf(&output, "type %s struct { %svalue %s }\n", name, directive, declaration.Base)
-	fmt.Fprintf(&output, "type tgo%sError struct {}\n", name)
-	message := strconv.Quote("invalid " + name)
-	fmt.Fprintf(&output, "func (tgo%sError) Error() string { return %s }\n", name, message)
-	fmt.Fprintf(&output, "// New%s checks the rule. Check the error before use.\n", name)
-	fmt.Fprintf(&output, "func New%s(value %s) (%s, error) {\n", name, declaration.Base, name)
-	output.WriteString("if !(\n")
-	output.WriteString(lineDirective(
-		sourceName,
-		declaration.PredicateLine,
-		declaration.PredicateColumn,
-	))
-	fmt.Fprintf(&output, "%s) {\n", declaration.Predicate)
-	fmt.Fprintf(&output, "return %s{}, tgo%sError{}\n}\n", name, name)
-	fmt.Fprintf(&output, "return %s{value: value}, nil\n}\n", name)
-	output.WriteString("// Value requires construction success. Shared data keeps its aliases.\n")
-	fmt.Fprintf(&output, "func (v %s) Value() %s { return v.value }\n", name, declaration.Base)
-	return output.String()
 }
 
 // enumTagType selects the smallest tag type that can name every variant.

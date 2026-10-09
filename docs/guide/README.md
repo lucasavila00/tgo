@@ -45,7 +45,12 @@ contain `go/ast` nodes.
 ```text
 package model
 
-type Quantity int where value > 0
+type Port struct { number int } checked
+
+func (value Port) check() (Port, error) {
+    if value.number < 1 { return Port{}, ErrInvalidPort }
+    return value,
+}
 
 type Account enum {
     Personal struct { Name string }
@@ -68,8 +73,9 @@ Type aliases can construct variants. Go name resolution selects the aliased type
 Do not shadow generated payload, constructor, or default helper names at a construction.
 The value uses a tag and typed Go fields. Reads do not run validation.
 
-Call `NewQuantity(input)` and check its error. Use `quantity.Value()` for the underlying value.
-Direct wrapper literals fail. The compiler does not prove that callers check constructor errors.
+Each `Port` literal returns `(Port, error)`. Use postfix `!` to handle the error. All fields must be
+private, and `check` must have the exact value-receiver signature shown above. TGo does not
+generate a constructor or accessor.
 
 ## Supply initial values
 
@@ -103,15 +109,14 @@ becomes `*T` in generated Go and adds no runtime check.
 ## Call Go
 
 Import Go packages and call them directly. Keep their types, callbacks, and error results.
-Go code can call generated functions. Variant constructors use these names:
+Go code can call generated enum functions and project-defined checked struct factories:
 
 ```go
 account := model.AccountPersonal{Name: "Lucas"}.Account()
-quantity, err := model.NewQuantity(3)
+port, err := model.NewPort(3)
 ```
 
-Check `err` before using `quantity`. TGo trusts values from Go. Go callers must follow the
-constructor and accessor rules.
+Check `err` before using `port`. TGo trusts values from Go. Go callers must use the project factory.
 
 Use postfix `!` when a call returns Go values followed by `error` and the current function also
 ends in `error`:

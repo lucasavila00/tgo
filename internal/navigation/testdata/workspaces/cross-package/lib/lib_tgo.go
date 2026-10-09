@@ -252,23 +252,25 @@ func MakeAccount() Account {
 	return AccountPersonal{Name: "person"}.Account()
 }
 
-// UserID requires NewUserID success. Zero is invalid.
-// Shared data keeps Go aliases. Callers must keep the rule.
-type UserID struct{ value int }
-type tgoUserIDError struct{}
-
-func (tgoUserIDError) Error() string { return "invalid UserID" }
-
-// NewUserID checks the rule. Check the error before use.
-func NewUserID(value int) (UserID, error) {
-	if !(value > 0) {
-		return UserID{}, tgoUserIDError{}
-	}
-	return UserID{value: value}, nil
+type UserID struct {
+	value int
 }
 
-// Value requires construction success. Shared data keeps its aliases.
-func (v UserID) Value() int { return v.value }
+type userIDError struct {
+}
+
+func (userIDError) Error() string { return "invalid UserID" }
+
+func (value UserID) check() (UserID, error) {
+	if value.value < 1 {
+		return UserID{}, userIDError{}
+	}
+	return value, nil
+}
+
+func NewUserID(value int) (UserID, error) { return UserID{value: value}.check() }
+
+func (value UserID) Value() int { return value.value }
 
 func ReadID(value UserID) int {
 	return value.Value()

@@ -75,6 +75,12 @@ func (p *printer) statement(value *syntax.Statement) {
 	case syntax.StatementTagReturn:
 		item := statementValue.ReturnPayload().Value
 		p.token(item.Return, "return")
+		if len(item.FailureCommas) > 0 {
+			p.space()
+			for _, comma := range item.FailureCommas {
+				p.token(comma, ",")
+			}
+		}
 		if len(item.Results) > 0 {
 			p.space()
 			p.commaList(item.Results)

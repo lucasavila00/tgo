@@ -15,23 +15,11 @@ var slice = []int{2: 3}
 
 func Named() (result int) { return }
 
-// Quantity requires NewQuantity success. Zero is invalid.
-// Shared data keeps Go aliases. Callers must keep the rule.
-type Quantity struct{ value int }
-type tgoQuantityError struct{}
-
-func (tgoQuantityError) Error() string { return "invalid Quantity" }
-
-// NewQuantity checks the rule. Check the error before use.
-func NewQuantity(value int) (Quantity, error) {
-	if !(value > 0) {
-		return Quantity{}, tgoQuantityError{}
-	}
-	return Quantity{value: value}, nil
+type Quantity struct {
+	value int
 }
 
-// Value requires construction success. Shared data keeps its aliases.
-func (v Quantity) Value() int { return v.value }
+func (value Quantity) check() (Quantity, error) { return value, nil }
 
 var pointer = new(Quantity)
 var values = make([]Quantity, 2)

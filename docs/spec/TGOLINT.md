@@ -21,10 +21,11 @@ A clean run means that the loaded Go packages do not contain these errors:
 - a TGo variable declaration without an initializer;
 - a TGo struct, array, or slice literal with an omitted field or element;
 - a TGo named result read or returned before assignment;
-- an invalid checked-type zero from a declaration, named result, literal, `new`, `make`,
+- an invalid checked-struct zero from a declaration, named result, literal, `new`, `make`,
   `clear`, map read, channel read, type assertion, or longer reslice;
-- a new defined Go type or conversion that bypasses a tgo constructor;
-- direct access to private generated representation;
+- a direct checked-struct literal in a Go file;
+- a new defined Go type or conversion that bypasses tgo validation;
+- direct access to private enum representation;
 - a tgo result used before its matching error is proved nil;
 - a presence result used before its matching `ok` value is proved true;
 - a missing enum tag case, wrong payload read, unsafe default, or `fallthrough`;
@@ -117,6 +118,11 @@ nonzero returns, or different error text. It does not check `.go` files or offer
 The successful-return modernization check reports `return value, nil` in handwritten `.tgo`
 source. It also accepts parenthesized `nil` and returns with more than two values. It does not
 report one-result returns, a non-final `nil`, a shadowed `nil`, or an existing trailing comma.
+
+The same check reports an explicit failure return when every result before the final error is the
+exact zero for its declared type. For example, it reports `return nil, err`, `return 0, err`, and
+longer zero prefixes in favor of one leading comma per zero result. It does not report existing
+leading commas, a nonzero prefix, a final `nil`, or a value that it cannot prove is zero.
 
 ## Go boundary
 

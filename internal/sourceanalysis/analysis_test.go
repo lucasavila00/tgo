@@ -32,8 +32,7 @@ func TestAnalysisOwnersCoverGeneratedPublicSurface(t *testing.T) {
 	} {
 		objects[scope.Lookup(name)] = positions[name]
 	}
-	objects[scope.Lookup("NewPositive")] = positions["Positive"]
-	for _, name := range []string{"Choice", "ChoiceOne", "ChoiceTwo", "Positive"} {
+	for _, name := range []string{"Choice", "ChoiceOne", "ChoiceTwo"} {
 		named := namedObject(scope.Lookup(name))
 		for index := 0; index < named.NumMethods(); index++ {
 			method := named.Method(index)
@@ -76,9 +75,6 @@ func modelOwnerPositions(
 					result[enum.Name.Name+"Tag"+variant.Name.Name] = variant.Name.Start
 					result[enum.Name.Name+variant.Name.Name] = variant.Name.Start
 				}
-			}
-			if checked, ok := syntax.CheckedDeclarationOf(declaration); ok {
-				result[checked.Name.Name] = checked.Name.Start
 			}
 		}
 	}

@@ -32,7 +32,9 @@ func (l *propagationLowerer) zeroExpression(
 		*types.Signature, *types.Interface:
 		return l.unit.generatedUniverse("nil", position), true
 	case *types.Array, *types.Struct:
-		return &ast.CompositeLit{Type: typeExpression}, true
+		literal := &ast.CompositeLit{Type: typeExpression}
+		l.unit.checkedLiterals[literal] = true
+		return literal, true
 	}
 	return nil, false
 }
