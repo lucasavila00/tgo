@@ -12,17 +12,25 @@ func (c %checker) collectLiteralZeros(
 	expression %syntax.Expression,
 	literal %syntax.CompositeLiteral,
 ) {
-	switch underlying := coreType(c.facts.Type(expression)).(type) {
-	case *types.Struct:
-		c.collectStructLiteralZeros(summary, expression, literal, underlying)
-	case *types.Array:
-		if c.literalHasHoles(literal, underlying.Len()) {
-			c.markGenericZeroAt(summary, syntaxNode(expression), underlying.Elem())
+	underlying := goTypeOf(coreType(c.facts.Type(expression)))
+	switch underlying.Tag() {
+	case goTypeTagStruct:
+		structure := underlying.StructPayload().Value
+		c.collectStructLiteralZeros(summary, expression, literal, structure)
+	case goTypeTagArray:
+		array := underlying.ArrayPayload().Value
+		if c.literalHasHoles(literal, array.Len()) {
+			c.markGenericZeroAt(summary, syntaxNode(expression), array.Elem())
 		}
-	case *types.Slice:
+	case goTypeTagSlice:
+		slice := underlying.SlicePayload().Value
 		if c.literalHasHoles(literal, -1) {
-			c.markGenericZeroAt(summary, syntaxNode(expression), underlying.Elem())
+			c.markGenericZeroAt(summary, syntaxNode(expression), slice.Elem())
 		}
+	case goTypeTagNil, goTypeTagBasic, goTypeTagPointer, goTypeTagTuple,
+		goTypeTagSignature, goTypeTagMap, goTypeTagChannel, goTypeTagInterface,
+		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
+	exhaustive:
 	}
 }
 

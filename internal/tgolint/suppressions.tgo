@@ -1,11 +1,12 @@
 package tgolint
 
 import (
-	"go/scanner"
 	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"tgo/pkg/syntax"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -80,28 +81,27 @@ func (s diagnosticSuppressions) addTGoFiles(pass %analysis.Pass) {
 	}
 }
 
-// addSource scans TGo comments without parsing the source as Go.
+// addSource reads directives from the TGo syntax tree.
 func (s diagnosticSuppressions) addSource(filename string, data []byte) {
 	files := token.NewFileSet()
-	file := files.AddFile(filename, -1, len(data))
-	source := new(scanner.Scanner)
-	source.Init(file, data, nil, scanner.ScanComments)
-	for {
-		position, kind, text := source.Scan()
-		if kind == token.EOF {
-			return
-		}
-		if kind != token.COMMENT || !strings.HasPrefix(text, "//") {
-			continue
-		}
-		directive := strings.TrimSpace(strings.TrimPrefix(text, "//"))
-		switch directive {
-		case ignoreFileDirective:
-			s.files[filename] = true
-		case ignoreLineDirective:
-			line := files.Position(position).Line
-			s.addLine(filename, line)
-			s.addLine(filename, line+1)
+	file, _ := syntax.ParseFile(files, filename, data, syntax.ParseComments)
+	if file == nil {
+		return
+	}
+	for _, group := range file.Comments {
+		for _, comment := range group.List {
+			if !strings.HasPrefix(comment.Text, "//") {
+				continue
+			}
+			directive := strings.TrimSpace(strings.TrimPrefix(comment.Text, "//"))
+			switch directive {
+			case ignoreFileDirective:
+				s.files[filename] = true
+			case ignoreLineDirective:
+				line := files.Position(comment.Start).Line
+				s.addLine(filename, line)
+				s.addLine(filename, line+1)
+			}
 		}
 	}
 }

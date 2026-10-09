@@ -117,13 +117,21 @@ func (c *checker) checkCompleteLiteral(
 	if typ == nil {
 		return
 	}
-	switch value := typ.Underlying().(type) {
-	case *types.Struct:
-		c.checkCompleteStructLiteral(typ, literal, value)
-	case *types.Array:
-		c.checkCompleteElements(literal, value.Len())
-	case *types.Slice:
+	classified := goTypeOf(typ.Underlying())
+	switch classified.Tag() {
+	case goTypeTagStruct:
+		c.checkCompleteStructLiteral(
+			typ, literal, classified.StructPayload().Value,
+		)
+	case goTypeTagArray:
+		c.checkCompleteElements(literal, classified.ArrayPayload().Value.Len())
+	case goTypeTagSlice:
 		c.checkCompleteElements(literal, -1)
+	case goTypeTagNil, goTypeTagBasic, goTypeTagPointer, goTypeTagTuple,
+		goTypeTagSignature, goTypeTagMap, goTypeTagChannel, goTypeTagInterface,
+		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
+	default:
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

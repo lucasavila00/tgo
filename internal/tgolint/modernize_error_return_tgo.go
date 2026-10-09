@@ -268,9 +268,16 @@ func exactZeroValue(
 		!types.Identical(index.Type(expression), resultType) {
 		return false
 	}
-	switch coreType(resultType).(type) {
-	case *types.Array, *types.Struct:
+	classified := goTypeOf(coreType(resultType))
+	switch classified.Tag() {
+	case goTypeTagArray, goTypeTagStruct:
 		return true
+	case goTypeTagNil, goTypeTagBasic, goTypeTagSlice, goTypeTagPointer,
+		goTypeTagTuple, goTypeTagSignature, goTypeTagMap, goTypeTagChannel,
+		goTypeTagInterface, goTypeTagNamed, goTypeTagTypeParameter,
+		goTypeTagUnion, goTypeTagOther:
+	default:
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	return false
 }
