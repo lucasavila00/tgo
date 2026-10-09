@@ -202,6 +202,46 @@ func TestParentAndChildrenUseTGoNodes(t *testing.T) {
 	}
 }
 
+func TestParseFilePropagationKeepsParserErrorPosition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			name: "one result",
+			source: "package sample\n" +
+				"type Result enum {\n" +
+				"\tBad struct { Value (int] }\n" +
+				"}\n",
+			want: "bad.tgo:p.closeToken: 3:25: unmatched ]",
+		},
+		{
+			name: "two results",
+			source: "package sample\n" +
+				"type Result enum {\n" +
+				"\tBad int\n" +
+				"}\n",
+			want: "bad.tgo:p.variant: 3:2: variant needs Name struct { fields }",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := syntax.ParseFile(
+				token.NewFileSet(), "bad.tgo", []byte(test.source), syntax.AllErrors,
+			)
+			if err == nil {
+				t.Fatal("ParseFile succeeded")
+			}
+			if got := err.Error(); got != test.want {
+				t.Fatalf("error = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
 func requireKinds(t *testing.T, found map[string]bool, expected []string) {
 	t.Helper()
 	missing := []string(nil)
