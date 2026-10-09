@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/importer"
 	"go/token"
+	"go/types"
 	"strings"
 	"testing"
 )
@@ -349,5 +350,131 @@ func TestEnumJSONMethodsGenerated(t *testing.T) {
 		if !strings.Contains(output, method) {
 			t.Fatalf("generated output does not contain %s", method)
 		}
+	}
+}
+
+func TestEnumJSONValidatesNonNilPayloadPaths(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+type Target struct{}
+type Required = %Target
+type E enum {
+	Value struct {
+		Direct %Target
+		Alias Required
+		Nested struct {
+			Items []map[string]%Target
+			Optional *struct { Item %Target }
+		}
+	}
+}
+`)
+	for _, path := range []string{
+		"Direct must not be nil",
+		"Alias must not be nil",
+		"Nested.Items[][] must not be nil",
+		"Nested.Optional.Item must not be nil",
+	} {
+		if count := strings.Count(output, path); count != 2 {
+			t.Fatalf("generated %q checks = %d, want 2\n%s", path, count, output)
+		}
+	}
+	assignment := strings.Index(output, "*v = NewEValue(")
+	check := strings.Index(output, "Direct must not be nil")
+	if check < 0 || assignment < check {
+		t.Fatalf("receiver assignment occurs before validation\n%s", output)
+	}
+}
+
+func TestEnumJSONValidatesImportedNonNilAlias(t *testing.T) {
+	files := token.NewFileSet()
+	modelPackage, problems := Compile(PackageInput{
+		Path: "model",
+		Sources: []File{{Name: "model.tgo", Data: []byte(`package model
+type Target struct{}
+type Required = %Target
+type Hidden struct { item %Target }
+`)}},
+		FileSet:  files,
+		Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	compiled, problems := Compile(PackageInput{
+		Path: "app",
+		Sources: []File{{Name: "app.tgo", Data: []byte(`package app
+import _ "reflect"
+import "model"
+type E enum { Value struct { Item model.Required; Hidden model.Hidden } }
+`)}},
+		Imports: map[string]*CompiledPackage{"model": modelPackage},
+		FileSet: token.NewFileSet(),
+		Importer: checkedPackageImporter{
+			packages: map[string]*types.Package{"model": modelPackage.Package},
+			fallback: importer.Default(),
+		},
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	output := string(compiled.Outputs["app.tgo"])
+	if count := strings.Count(output, "Item must not be nil"); count != 2 {
+		t.Fatalf("generated imported alias checks = %d, want 2\n%s", count, output)
+	}
+	if !strings.Contains(output, `"reflect"`) ||
+		strings.Count(output, "Hidden.item must not be nil") != 2 ||
+		strings.Count(output, "reflect.ValueOf(payload.Hidden).Field(0).IsNil()") != 2 {
+		t.Fatalf("generated imported private path checks are incomplete\n%s", output)
+	}
+}
+
+func TestEnumJSONValidatesRecursiveAndInstantiatedTypes(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+type Target struct{}
+type Recursive struct {
+	Next *Recursive
+	Required %Target
+}
+type Required struct { Item %Target }
+type Box[T any] struct { Value T }
+type E enum {
+	Value struct {
+		Recursive Recursive
+		Generic Box[Required]
+	}
+}
+`)
+	for _, text := range []string{
+		"tgoJSONValidate",
+		"tgoJSONVisited",
+		"tgoJSONPath+\".Next\"",
+		"Generic.Value.Item must not be nil",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("generated recursive or generic check does not contain %q\n%s", text, output)
+		}
+	}
+}
+
+func TestEnumJSONValidationDoesNotInspectRecursiveEnumStorage(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+type Target struct{}
+type Recursive enum {
+	Bad struct { Required %Target; Padding [100]byte }
+	Link struct { Next *Recursive }
+}
+`)
+	if strings.Contains(output, ".tgoBad") {
+		t.Fatalf("generated validation uses temporary enum storage\n%s", output)
+	}
+}
+
+func TestEnumJSONIgnoresRecursiveTypesWithoutNonNilFields(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+type Recursive struct { Next *Recursive }
+type E enum { Value struct { Recursive Recursive } }
+`)
+	if strings.Contains(output, "tgoJSONValidate") || strings.Contains(output, `"reflect"`) {
+		t.Fatalf("generated an unnecessary recursive check\n%s", output)
 	}
 }

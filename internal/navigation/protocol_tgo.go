@@ -637,6 +637,10 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
+		if payload.Params == nil {
+			return fmt.Errorf("invalid Request.Hover JSON payload: Params must not be nil")
+		}
+
 		*v = NewRequestHover(payload.ID, payload.Params)
 		return nil
 	case "definition":
@@ -644,6 +648,10 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
+		if payload.Params == nil {
+			return fmt.Errorf("invalid Request.Definition JSON payload: Params must not be nil")
+		}
+
 		*v = NewRequestDefinition(payload.ID, payload.Params)
 		return nil
 	case "references":
@@ -651,6 +659,10 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
+		if payload.Params == nil {
+			return fmt.Errorf("invalid Request.References JSON payload: Params must not be nil")
+		}
+
 		*v = NewRequestReferences(payload.ID, payload.Params)
 		return nil
 	case "documentSymbols":
@@ -658,6 +670,10 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
+		if payload.Params == nil {
+			return fmt.Errorf("invalid Request.DocumentSymbols JSON payload: Params must not be nil")
+		}
+
 		*v = NewRequestDocumentSymbols(payload.ID, payload.Params)
 		return nil
 	case "workspaceSymbols":
@@ -665,6 +681,10 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
+		if payload.Params == nil {
+			return fmt.Errorf("invalid Request.WorkspaceSymbols JSON payload: Params must not be nil")
+		}
+
 		*v = NewRequestWorkspaceSymbols(payload.ID, payload.Params)
 		return nil
 	case "cancel":
@@ -672,6 +692,10 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
+		if payload.Params == nil {
+			return fmt.Errorf("invalid Request.Cancel JSON payload: Params must not be nil")
+		}
+
 		*v = NewRequestCancel(payload.ID, payload.Params)
 		return nil
 	case "invalidate":
@@ -679,6 +703,10 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
+		if payload.Params == nil {
+			return fmt.Errorf("invalid Request.Invalidate JSON payload: Params must not be nil")
+		}
+
 		*v = NewRequestInvalidate(payload.ID, payload.Params)
 		return nil
 	default:
