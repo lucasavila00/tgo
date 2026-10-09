@@ -1,0 +1,3 @@
+# Branded newtypes
+
+Status: Proposed
