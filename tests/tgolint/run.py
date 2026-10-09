@@ -2,7 +2,6 @@
 """Build tgo and tgolint, then check their diagnostics."""
 
 from pathlib import Path
-import hashlib
 import shutil
 import subprocess
 import tempfile
@@ -41,15 +40,6 @@ def assert_case(linter, work, fixture):
     stderr = normalized(result.stderr, work)
     assert stdout == expected_stdout, stdout
     assert stderr == expected_stderr, stderr
-
-
-def with_generated_digest(text, source):
-    parts = text.split("\n", 3)
-    digest = hashlib.sha256(
-        source + b"\x00tgo generated body\x00" + parts[3].encode()
-    ).hexdigest()
-    parts[1] = f'//tgo:v1 "model.tgo" {digest}'
-    return "\n".join(parts)
 
 
 def write_invalid_consumers(work):
@@ -95,18 +85,21 @@ def assert_integrity_checks(linter, work):
             "return Event{tgoTag: EventTagStarted, tgoStarted: value}",
             "_ = value\n\treturn Event{}",
         ),
+        (
+            "func Identity(value int) int { return value }",
+            "func Identity(value int) int { return 0 }",
+        ),
     )
     for original, replacement in replacements:
         forged = generated_text.replace(original, replacement, 1)
         assert forged != generated_text
-        forged = with_generated_digest(forged, model_source.read_bytes())
         generated_model.write_text(forged)
         result = diagnostics(linter, work, "./model")
-        assert "does not match the current compiler emitter" in result
+        assert "generated tgo output integrity check failed" in result
         generated_model.write_text(generated_text)
 
     metadata_line = next(
-        line for line in generated_text.splitlines() if line.startswith("//tgo:v1 ")
+        line for line in generated_text.splitlines() if line.startswith("//tgo:v2 ")
     )
     missing_metadata = generated_text.replace(metadata_line + "\n", "", 1)
     assert missing_metadata != generated_text
@@ -130,13 +123,14 @@ def assert_integrity_checks(linter, work):
 
     model_source_text = model_source.read_text()
     model_source.write_text(model_source_text.replace("value > 0", "value > 10", 1))
-    generated_model.write_text(
-        with_generated_digest(generated_text, model_source.read_bytes())
-    )
     result = diagnostics(linter, work, "./model")
-    assert "does not match the current compiler emitter" in result
+    assert "generated tgo output integrity check failed" in result
     model_source.write_text(model_source_text)
-    generated_model.write_text(generated_text)
+
+    whitespace = model_source_text.replace("package model\n\n", "package model\n\n\n", 1)
+    model_source.write_text(whitespace)
+    run([str(linter), "./model"], work)
+    model_source.write_text(model_source_text)
 
     stale = model_source_text.replace(
         "type Count int where value > 0",
@@ -145,11 +139,8 @@ def assert_integrity_checks(linter, work):
     stale = stale.replace("Started struct", "Opened struct")
     stale = stale.replace('json:"pair"', 'json:"stale"')
     model_source.write_text(stale)
-    generated_model.write_text(
-        with_generated_digest(generated_text, model_source.read_bytes())
-    )
     result = diagnostics(linter, work, "./model")
-    assert "does not match the current compiler emitter" in result
+    assert "generated tgo output integrity check failed" in result
     assert_invalid_consumers(linter, work)
 
 

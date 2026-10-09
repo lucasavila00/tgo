@@ -28,6 +28,7 @@ func narrow(value *nilmodel.Item) {
 func namedContract() {
 	holder := nilmodel.NewHolder(&nilmodel.Item{})
 	nilmodel.NeedHolder(holder)
+	nilmodel.Need(holder.Required)
 }
 
 func nilOuterPointer() {
@@ -163,3 +164,11 @@ func collectionOperations(item *nilmodel.Item) {
 }
 
 var handler nilmodel.RequiredHandler = nilmodel.AcceptOptional
+
+func crossPackageMethodContract() {
+	lookup := nilmodel.NewLookup()
+	value := lookup.Find(&nilmodel.Item{})
+	if value != nil {
+		nilmodel.Need(value)
+	}
+}

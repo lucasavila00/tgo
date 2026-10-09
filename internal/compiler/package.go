@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"go/ast"
 	"go/build"
@@ -50,8 +49,6 @@ type packageUnit struct {
 	typeErrors      []error
 	errors          []error
 }
-
-const integritySeparator = "\x00tgo generated body\x00"
 
 // outputPath returns the Go output path while preserving target suffixes.
 func (p *packageUnit) outputPath(sourcePath string) string {
@@ -187,6 +184,11 @@ func (p *packageUnit) compile() (map[string][]byte, error) {
 	if err := p.checkAndLower(); err != nil {
 		return nil, err
 	}
+	return p.generatedOutputs()
+}
+
+// generatedOutputs formats each checked source with stable ownership metadata.
+func (p *packageUnit) generatedOutputs() (map[string][]byte, error) {
 	outputs := map[string][]byte{}
 	for _, s := range p.Sources {
 		removeLineDirectives(s.File)
@@ -194,18 +196,12 @@ func (p *packageUnit) compile() (map[string][]byte, error) {
 		if err := format.Node(&body, p.fs, s.File); err != nil {
 			return nil, err
 		}
-		hash := sha256.New()
-		_, _ = hash.Write(s.Data)
-		_, _ = hash.Write([]byte(integritySeparator))
-		_, _ = hash.Write(body.Bytes())
-		digest := hash.Sum(nil)
 		var b bytes.Buffer
 		b.WriteString(generatedHeader + "\n")
 		fmt.Fprintf(
 			&b,
-			"//tgo:v1 %s %x\n\n",
+			"//tgo:v2 %s\n\n",
 			strconv.Quote(filepath.Base(s.Name)),
-			digest,
 		)
 		b.Write(body.Bytes())
 		outputs[p.outputPath(s.Name)] = b.Bytes()

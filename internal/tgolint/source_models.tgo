@@ -2,8 +2,6 @@ package tgolint
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -21,12 +19,10 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-const metadataPrefix = "//tgo:v1 "
-const integritySeparator = "\x00tgo generated body\x00"
+const metadataPrefix = "//tgo:v2 "
 
 type generatedMetadata struct {
 	source string
-	digest []byte
 	body   []byte
 }
 
@@ -62,7 +58,7 @@ func (c %checker) verifySourceModels(generated *ast.File) *verifiedSource {
 		)
 		return nil
 	}
-	if !validGeneratedIntegrity(metadata, data) {
+	if !bytes.Equal(generatedData, c.outputs[sourceName]) {
 		c.failVerification(generated.Package, "generated tgo output integrity check failed")
 		return nil
 	}
@@ -96,7 +92,7 @@ func (c %checker) verifySourceModels(generated *ast.File) *verifiedSource {
 		if source := sourceDeclaration(
 			declaration, c.packagePath(), file, sourceToken, data,
 		); source != nil {
-			sourceNames[source.name] = true
+			sourceNames[sourceModelName(source)] = true
 		}
 		c.checkSourceDeclaration(
 			generated, sourceName, file, declaration, sourceToken, data,
@@ -120,7 +116,7 @@ func (c %checker) exportSourceModels(source *verifiedSource) {
 	}
 }
 
-// parseGeneratedMetadata reads the source name, digest, and generated body.
+// parseGeneratedMetadata reads the source name and generated body.
 func parseGeneratedMetadata(data []byte) *generatedMetadata {
 	parts := bytes.SplitN(data, []byte("\n"), 4)
 	if len(parts) != 4 || string(parts[0]) != generatedHeader || len(parts[2]) != 0 {
@@ -130,22 +126,12 @@ func parseGeneratedMetadata(data []byte) *generatedMetadata {
 	if !strings.HasPrefix(line, metadataPrefix) {
 		return nil
 	}
-	value := strings.TrimPrefix(line, metadataPrefix)
-	separator := strings.LastIndex(value, " ")
-	if separator < 0 {
-		return nil
-	}
-	quotedSource := value[:separator]
+	quotedSource := strings.TrimPrefix(line, metadataPrefix)
 	source, err := strconv.Unquote(quotedSource)
 	if err != nil || strconv.Quote(source) != quotedSource || filepath.Base(source) != source {
 		return nil
 	}
-	digestText := value[separator+1:]
-	digest, err := hex.DecodeString(digestText)
-	if err != nil || len(digest) != sha256.Size || hex.EncodeToString(digest) != digestText {
-		return nil
-	}
-	return &generatedMetadata{source: source, digest: digest, body: parts[3]}
+	return &generatedMetadata{source: source, body: parts[3]}
 }
 
 func sourceMatchesGenerated(source string, generatedPath string) bool {
@@ -189,14 +175,6 @@ func (c %checker) reportExtraGeneratedModels(
 	}
 }
 
-func validGeneratedIntegrity(metadata %generatedMetadata, source []byte) bool {
-	hash := sha256.New()
-	_, _ = hash.Write(source)
-	_, _ = hash.Write([]byte(integritySeparator))
-	_, _ = hash.Write(metadata.body)
-	return bytes.Equal(metadata.digest, hash.Sum(nil))
-}
-
 // checkSourceDeclaration compares one TGo model with its generated Go API.
 func (c %checker) checkSourceDeclaration(
 	generated *ast.File,
@@ -212,7 +190,7 @@ func (c %checker) checkSourceDeclaration(
 	if source == nil {
 		return
 	}
-	name := source.name
+	name := sourceModelName(source)
 	specification := generatedTypeSpec(generated, name)
 	if specification == nil {
 		c.failVerification(
@@ -225,9 +203,8 @@ func (c %checker) checkSourceDeclaration(
 	}
 	object, objectOK := c.pass.TypesInfo.Defs[specification.Name].(*types.TypeName)
 	if !objectOK || !sourceShapeMatches(
-			generated, specification.Type, object.Type(), source.fact,
-			source.fields, source.base, source.variants,
-		) {
+		generated, specification.Type, object.Type(), source,
+	) {
 		c.failVerification(
 			specification.Pos(),
 			"generated tgo output for %s does not match %s",
@@ -252,7 +229,8 @@ func (c %checker) exportSourceDeclaration(
 	if source == nil {
 		return
 	}
-	specification := generatedTypeSpec(generated, source.name)
+	name := sourceModelName(source)
+	specification := generatedTypeSpec(generated, name)
 	if specification == nil {
 		return
 	}
@@ -260,11 +238,12 @@ func (c %checker) exportSourceDeclaration(
 	if !ok {
 		return
 	}
-	if source.fact != nil {
+	fact := sourceModelFact(source)
+	if fact != nil {
 		key := objectKey{pkg: object.Pkg(), name: object.Name()}
-		c.models[key] = source.fact
-		c.pass.ExportObjectFact(object, encodeModelFact(source.fact))
-		c.exportValidationFacts(object, source.fact)
+		c.models[key] = fact
+		c.pass.ExportObjectFact(object, encodeModelFact(fact))
+		c.exportValidationFacts(object, fact)
 	}
 }
 
@@ -275,12 +254,10 @@ func (c %checker) packagePath() string {
 	return c.pass.Pkg.Path()
 }
 
-type sourceModel struct {
-	name     string
-	fact     *model
-	fields   []sourceField
-	base     string
-	variants []sourceVariant
+type sourceModel enum {
+	Checked struct { Name string; Fact %model; Base string }
+	Enum struct { Name string; Fact %model; Variants []sourceVariant }
+	Struct struct { Name string; Fields []sourceField }
 }
 
 // sourceDeclaration converts one syntax declaration to verified model metadata.
@@ -292,13 +269,12 @@ func sourceDeclaration(
 	data []byte,
 ) *sourceModel {
 	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
-		return &sourceModel{
-			name: node.Name.Name,
-			fact: checkedModel(packagePath, node.Name.Name),
-			fields: nil,
-			base: sourceExpression(file, sourceFile, data, node.Base),
-			variants: nil,
+		result := sourceModel.Checked{
+			Name: node.Name.Name,
+			Fact: checkedModel(packagePath, node.Name.Name),
+			Base: sourceExpression(file, sourceFile, data, node.Base),
 		}
+		return &result
 	}
 	if node, ok := syntax.EnumDeclarationOf(declaration); ok {
 		variants := make([]string, 0, len(node.Variants))
@@ -310,20 +286,57 @@ func sourceDeclaration(
 				fields: sourceFields(file, sourceFile, data, variant.Fields),
 			})
 		}
-		return &sourceModel{
-			name: node.Name.Name,
-			fact: enumModel(packagePath, node.Name.Name, variants),
-			fields: nil, base: "", variants: sourceVariants,
+		result := sourceModel.Enum{
+			Name: node.Name.Name,
+			Fact: enumModel(packagePath, node.Name.Name, variants),
+			Variants: sourceVariants,
 		}
+		return &result
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
-		return &sourceModel{
-			name: node.Name.Name, fact: nil,
-			fields: sourceFields(file, sourceFile, data, node.Fields),
-			base: "", variants: nil,
+		result := sourceModel.Struct{
+			Name: node.Name.Name,
+			Fields: sourceFields(file, sourceFile, data, node.Fields),
 		}
+		return &result
 	}
 	return nil
+}
+
+func sourceModelName(value *sourceModel) string {
+	if value == nil {
+		return ""
+	}
+	switch item := *value; item.Tag() {
+	case sourceModelTagZero:
+		panic("zero sourceModel")
+	case sourceModelTagChecked:
+		return item.CheckedPayload().Name
+	case sourceModelTagEnum:
+		return item.EnumPayload().Name
+	case sourceModelTagStruct:
+		return item.StructPayload().Name
+	default:
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func sourceModelFact(value *sourceModel) *model {
+	if value == nil {
+		return nil
+	}
+	switch item := *value; item.Tag() {
+	case sourceModelTagZero:
+		panic("zero sourceModel")
+	case sourceModelTagChecked:
+		return item.CheckedPayload().Fact
+	case sourceModelTagEnum:
+		return item.EnumPayload().Fact
+	case sourceModelTagStruct:
+		return nil
+	default:
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
 }
 
 func readTGoSource(pass *analysis.Pass, path string) ([]byte, error) {
@@ -362,42 +375,51 @@ func sourceShapeMatches(
 	generated *ast.File,
 	representation ast.Expr,
 	typ types.Type,
-	fact *model,
-	fields []sourceField,
-	base string,
-	variants []sourceVariant,
+	source *sourceModel,
 ) bool {
-	if fact == nil {
-		structure, ok := representation.(*ast.StructType)
-		if !ok {
-			return false
-		}
-		return sameFields(fields, structure.Fields)
-	}
-	_, name := modelDescription(fact)
-	if modelIsChecked(fact) {
-		structure, ok := representation.(*ast.StructType)
-		if !ok {
-			return false
-		}
-		return sameModelFact(fact, emittedCheckedModel(name, structure, typ)) &&
-			len(structure.Fields.List) == 1 &&
-			sameExpressionText(base, structure.Fields.List[0].Type)
-	}
-	if !generatedEnumShape(typ, name, variants) {
+	if source == nil {
 		return false
 	}
-	for _, variant := range variants {
-		payloadSpec := generatedTypeSpec(generated, name+variant.name)
-		if payloadSpec == nil {
+	switch item := *source; item.Tag() {
+	case sourceModelTagZero:
+		panic("zero sourceModel")
+	case sourceModelTagStruct:
+		sourceStruct := item.StructPayload()
+		structure, ok := representation.(*ast.StructType)
+		if !ok {
 			return false
 		}
-		payload, ok := payloadSpec.Type.(*ast.StructType)
-		if !ok || !sameFields(variant.fields, payload.Fields) {
+		return sameFields(sourceStruct.Fields, structure.Fields)
+	case sourceModelTagChecked:
+		checked := item.CheckedPayload()
+		structure, ok := representation.(*ast.StructType)
+		if !ok {
 			return false
 		}
+		return sameModelFact(
+			checked.Fact, emittedCheckedModel(checked.Name, structure, typ),
+		) &&
+			len(structure.Fields.List) == 1 &&
+			sameExpressionText(checked.Base, structure.Fields.List[0].Type)
+	case sourceModelTagEnum:
+		enum := item.EnumPayload()
+		if !generatedEnumShape(typ, enum.Name, enum.Variants) {
+			return false
+		}
+		for _, variant := range enum.Variants {
+			payloadSpec := generatedTypeSpec(generated, enum.Name+variant.name)
+			if payloadSpec == nil {
+				return false
+			}
+			payload, ok := payloadSpec.Type.(*ast.StructType)
+			if !ok || !sameFields(variant.fields, payload.Fields) {
+				return false
+			}
+		}
+		return true
+	default:
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
-	return true
 }
 
 // generatedEnumShape checks enum operations without reading private storage.

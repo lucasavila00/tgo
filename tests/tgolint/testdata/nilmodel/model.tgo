@@ -21,6 +21,12 @@ type BothRequired = %%Item
 type RequiredHandler = func(%Item) %Item
 type OptionalHandler = func(*Item) *Item
 
+type Syntax enum {
+	Item struct { Value %Item }
+}
+
+type SyntaxList = []%Syntax
+
 func Need(value %Item) {}
 
 func NeedHolder(value %Holder) {}
@@ -48,4 +54,14 @@ func AcceptOptional(value *Item) %Item {
 
 func RequireAndReturn(value %Item) *Item {
 	return value
+}
+
+type Lookup struct {}
+
+func NewLookup() %Lookup {
+	return &Lookup{}
+}
+
+func (l %Lookup) Find(value %Item) *Item {
+	return nil
 }

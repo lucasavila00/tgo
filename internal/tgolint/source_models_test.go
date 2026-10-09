@@ -12,10 +12,8 @@ import (
 )
 
 func TestParseGeneratedMetadataUsesOnlyFixedHeaderLine(t *testing.T) {
-	digest := bytes.Repeat([]byte("01"), 32)
 	body := []byte("package p\n\n//tgo:v1 this is an ordinary source comment\n")
-	data := append([]byte(generatedHeader+"\n//tgo:v1 \"model.tgo\" "), digest...)
-	data = append(data, []byte("\n\n")...)
+	data := []byte(generatedHeader + "\n//tgo:v2 \"model.tgo\"\n\n")
 	data = append(data, body...)
 	metadata := parseGeneratedMetadata(data)
 	if metadata == nil || metadata.source != "model.tgo" ||
@@ -24,10 +22,8 @@ func TestParseGeneratedMetadataUsesOnlyFixedHeaderLine(t *testing.T) {
 	}
 }
 
-func TestParseGeneratedMetadataRejectsUppercaseDigest(t *testing.T) {
-	digest := bytes.Repeat([]byte("AB"), 32)
-	data := append([]byte(generatedHeader+"\n//tgo:v1 \"model.tgo\" "), digest...)
-	data = append(data, []byte("\n\npackage p\n")...)
+func TestParseGeneratedMetadataRejectsTrailingData(t *testing.T) {
+	data := []byte(generatedHeader + "\n//tgo:v2 \"model.tgo\" stale\n\npackage p\n")
 	if metadata := parseGeneratedMetadata(data); metadata != nil {
 		t.Fatalf("metadata: %#v", metadata)
 	}
@@ -102,5 +98,140 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 	want := "generated tgo output for Missing does not match model.tgo"
 	if message != want {
 		t.Fatalf("diagnostic: %q", message)
+	}
+}
+
+func TestCheckedSourceDeclarationFactRoundTrip(t *testing.T) {
+	t.Parallel()
+	models := sourceModelShapes(t)
+	if sourceModelName(models[0]) != "Count" {
+		t.Fatalf("checked source model: %#v", models[0])
+	}
+	checked := *models[0]
+	switch checked.Tag() {
+	case sourceModelTagZero:
+		t.Fatal("checked source is Zero")
+	case sourceModelTagChecked:
+		shape := checked.CheckedPayload()
+		if shape.Base != "int" {
+			t.Fatalf("checked base: %q", shape.Base)
+		}
+		assertSourceModelFactRoundTrip(t, shape.Fact, checkedModelWire, "Count", nil)
+	case sourceModelTagEnum, sourceModelTagStruct:
+		t.Fatal("checked source has a different variant")
+	default:
+		panic(checked.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func TestEnumSourceDeclarationFactRoundTrip(t *testing.T) {
+	t.Parallel()
+	models := sourceModelShapes(t)
+	if sourceModelName(models[1]) != "Event" {
+		t.Fatalf("enum source model: %#v", models[1])
+	}
+	enum := *models[1]
+	switch enum.Tag() {
+	case sourceModelTagZero:
+		t.Fatal("enum source is Zero")
+	case sourceModelTagChecked, sourceModelTagStruct:
+		t.Fatal("enum source has a different variant")
+	case sourceModelTagEnum:
+		shape := enum.EnumPayload()
+		wantVariants := []string{"Started", "Stopped"}
+		if len(shape.Variants) != 2 ||
+			shape.Variants[0].name != wantVariants[0] ||
+			shape.Variants[1].name != wantVariants[1] {
+			t.Fatalf("enum variants: %#v", shape.Variants)
+		}
+		assertSourceModelFactRoundTrip(
+			t, shape.Fact, enumModelWire, "Event", wantVariants,
+		)
+	default:
+		panic(enum.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func TestStructSourceDeclaration(t *testing.T) {
+	t.Parallel()
+	models := sourceModelShapes(t)
+	if sourceModelName(models[2]) != "Options" {
+		t.Fatalf("struct source model: %#v", models[2])
+	}
+	structure := *models[2]
+	switch structure.Tag() {
+	case sourceModelTagZero:
+		t.Fatal("struct source is Zero")
+	case sourceModelTagChecked, sourceModelTagEnum:
+		t.Fatal("struct source has a different variant")
+	case sourceModelTagStruct:
+		shape := structure.StructPayload()
+		if len(shape.Fields) != 1 || shape.Fields[0].name != "Limit" ||
+			shape.Fields[0].typeExpression != "int" {
+			t.Fatalf("struct fields: %#v", shape.Fields)
+		}
+	default:
+		panic(structure.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+	if sourceModelFact(&structure) != nil {
+		t.Fatal("struct source model has a fact")
+	}
+}
+
+func sourceModelShapes(t *testing.T) []*sourceModel {
+	t.Helper()
+	data := []byte(`package sample
+
+type Count int where value > 0
+
+type Event enum {
+	Started struct { ID string }
+	Stopped struct { Reason string }
+}
+
+type Options struct { Limit int }
+`)
+	files := token.NewFileSet()
+	file, err := syntax.ParseFile(files, "model.tgo", data, syntax.AllErrors)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	tokenFile := files.File(file.Package)
+	models := make([]*sourceModel, 0, len(file.Declarations))
+	for _, declaration := range file.Declarations {
+		model := sourceDeclaration(
+			declaration, "example.com/sample", file, tokenFile, data,
+		)
+		if model != nil {
+			models = append(models, model)
+		}
+	}
+	if len(models) != 3 {
+		t.Fatalf("source models: %d", len(models))
+	}
+	return models
+}
+
+func assertSourceModelFactRoundTrip(
+	t *testing.T,
+	fact *model,
+	wantKind uint8,
+	wantName string,
+	wantVariants []string,
+) {
+	t.Helper()
+	wire := encodeModelFact(fact)
+	if wire == nil || wire.Kind != wantKind || wire.Package != "example.com/sample" ||
+		wire.Name != wantName || len(wire.Variants) != len(wantVariants) {
+		t.Fatalf("wire fact: %#v", wire)
+	}
+	for index := range wantVariants {
+		if wire.Variants[index] != wantVariants[index] {
+			t.Fatalf("wire variants: %v", wire.Variants)
+		}
+	}
+	decoded := decodeModelFact(wire, "example.com/sample")
+	if !sameModelFact(fact, decoded) {
+		t.Fatalf("fact round trip: %#v -> %#v", fact, decoded)
 	}
 }
