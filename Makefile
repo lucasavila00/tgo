@@ -4,7 +4,7 @@
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
 
-ci-unlocked: generated ast-boundary dogfood e2e-test tgolint-test allocation-test lint unit-test markdown tgo-size vscode-test
+ci-unlocked: generated ast-boundary dogfood e2e-test tgolint-test allocation-test lint unit-test markdown tgo-size
 
 ast-boundary:
 	python3 scripts/check_ast_boundary.py
