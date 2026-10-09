@@ -9,6 +9,15 @@ import (
 	"golang.org/x/tools/go/cfg"
 )
 
+func (c %checker) callMayReturn(call *ast.CallExpr) bool {
+	name, ok := call.Fun.(*ast.Ident)
+	if !ok || name.Name != "panic" {
+		return true
+	}
+	_, builtin := c.pass.TypesInfo.Uses[name].(*types.Builtin)
+	return !builtin
+}
+
 // checkBranch rejects a jump that moves a value before its proof.
 // A guard must run before goto, break, continue, or fallthrough.
 func (c %checker) checkBranch(statement *ast.BranchStmt, state checkedState) {

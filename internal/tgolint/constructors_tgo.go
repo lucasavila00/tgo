@@ -27,8 +27,12 @@ func (c *checker) reportModelResult(
 	format string,
 	arguments ...any,
 ) {
-	if c.capture != nil {
-		c.capture(model, nil)
+	if model == nil {
+		return
+	}
+	capture := c.captureResult
+	if capture != nil {
+		capture(model)
 		return
 	}
 	c.reportResult(position, format, arguments...)
@@ -42,8 +46,18 @@ func (c *checker) reportModelSource(
 	format string,
 	arguments ...any,
 ) {
-	if c.capture != nil {
-		c.capture(model, source)
+	if model == nil {
+		return
+	}
+	if source == nil {
+		if capture := c.captureResult; capture != nil {
+			capture(model)
+		}
+		return
+	}
+	capture := c.captureSource
+	if capture != nil {
+		capture(model, source)
 		return
 	}
 	c.reportResult(position, format, arguments...)
@@ -153,7 +167,7 @@ func (c *checker) checkedBlock(statements []ast.Stmt, state checkedState) bool {
 		if c.checkedStatement(statement, state) {
 			return true
 		}
-		if c.statementsTerminate([]ast.Stmt{statement}) {
+		if c.astStatementsTerminate([]ast.Stmt{statement}) {
 			return true
 		}
 	}

@@ -19,7 +19,7 @@ type diagnosticSuppressions struct {
 }
 
 // suppressDiagnostics filters diagnostics with explicit source directives.
-func suppressDiagnostics(pass *analysis.Pass) *analysis.Pass {
+func suppressDiagnostics(pass %analysis.Pass) %analysis.Pass {
 	suppressions := collectDiagnosticSuppressions(pass)
 	originalReport := pass.Report
 	pass.Report = func(diagnostic analysis.Diagnostic) {
@@ -31,7 +31,7 @@ func suppressDiagnostics(pass *analysis.Pass) *analysis.Pass {
 }
 
 // collectDiagnosticSuppressions reads fixed line and file directives.
-func collectDiagnosticSuppressions(pass *analysis.Pass) diagnosticSuppressions {
+func collectDiagnosticSuppressions(pass %analysis.Pass) diagnosticSuppressions {
 	result := diagnosticSuppressions{
 		files: make(map[string]bool),
 		lines: make(map[string]map[int]bool),
@@ -60,7 +60,7 @@ func collectDiagnosticSuppressions(pass *analysis.Pass) diagnosticSuppressions {
 }
 
 // addTGoFiles reads directives from TGo source beside the loaded Go files.
-func (s diagnosticSuppressions) addTGoFiles(pass *analysis.Pass) {
+func (s diagnosticSuppressions) addTGoFiles(pass %analysis.Pass) {
 	directories := make(map[string]bool)
 	for _, file := range pass.Files {
 		filename := pass.Fset.Position(file.Package).Filename
@@ -115,7 +115,7 @@ func (s diagnosticSuppressions) addLine(filename string, line int) {
 }
 
 // contains reports whether a source position has an active directive.
-func (s diagnosticSuppressions) contains(pass *analysis.Pass, position token.Pos) bool {
+func (s diagnosticSuppressions) contains(pass %analysis.Pass, position token.Pos) bool {
 	source := pass.Fset.Position(position)
 	return s.files[source.Filename] || s.lines[source.Filename][source.Line]
 }

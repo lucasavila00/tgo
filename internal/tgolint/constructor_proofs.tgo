@@ -23,12 +23,12 @@ func (c %checker) checkedIf(statement *ast.IfStmt, state checkedState) bool {
 		proveResult(falseState, failure)
 	}
 	trueStops := c.checkedBlock(statement.Body.List, trueState) ||
-		c.statementsTerminate(statement.Body.List)
+		c.astStatementsTerminate(statement.Body.List)
 	falseStops := false
 	if statement.Else != nil {
 		falseStops = c.checkedStatement(statement.Else, falseState)
 		if !falseStops {
-			falseStops = c.statementsTerminate([]ast.Stmt{statement.Else})
+			falseStops = c.astStatementsTerminate([]ast.Stmt{statement.Else})
 		}
 	}
 	switch {
@@ -326,7 +326,7 @@ func (c %checker) invalidateEscapedProofs(expression ast.Expr, state checkedStat
 			}
 		case *ast.FuncLit:
 			for _, result := range state {
-				if capturesObject(c.pass.TypesInfo, node.Body, result.failure) {
+				if astCapturesObject(c.pass.TypesInfo, node.Body, result.failure) {
 					c.invalidateProof(result.failure, state)
 				}
 			}
@@ -391,7 +391,7 @@ func (c %checker) checkedSwitch(statement *ast.SwitchStmt, state checkedState) b
 		if len(clause.List) == 0 {
 			hasDefault = true
 		}
-		if clauseFallthrough(clause) != nil {
+		if astClauseFallthrough(clause) != nil {
 			carried = branch
 			continue
 		}
