@@ -11,7 +11,7 @@ MAX_LINES = 700
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_EXCLUSIONS = {
     Path("tests/tgolint/testdata/bad/bad.go"):
-        "The fixture keeps all bad tgolint cases in one source file.",
+        "The fixture keeps all diagnostics and its golden output in one source file.",
 }
 
 
@@ -25,7 +25,9 @@ def is_source(path: Path) -> bool:
     """Report whether a path is handwritten Go or TGo source."""
     if path.suffix == ".tgo":
         return True
-    return path.suffix == ".go" and not path.name.endswith("_tgo.go")
+    return path.suffix == ".go" and not path.name.endswith(
+        ("_tgo.go", "_tgo_test.go")
+    )
 
 
 def is_fixture(path: Path) -> bool:

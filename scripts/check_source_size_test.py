@@ -33,6 +33,7 @@ class SourceSizeTest(unittest.TestCase):
 
     def test_ignores_generated_go(self) -> None:
         self.write_lines("package/model_tgo.go", check_source_size.MAX_LINES + 1)
+        self.write_lines("package/model_tgo_test.go", check_source_size.MAX_LINES + 1)
 
         self.assertEqual(check_source_size.failures(self.repository, {}), [])
 
@@ -76,6 +77,29 @@ class SourceSizeTest(unittest.TestCase):
 
         self.assertEqual(len(result), 1)
         self.assertIn("stale fixture exclusion", result[0])
+
+    def test_rejects_an_exclusion_for_a_missing_file(self) -> None:
+        relative = Path("package/testdata/missing.go")
+
+        result = check_source_size.failures(
+            self.repository,
+            {relative: "This file no longer exists."},
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("stale fixture exclusion", result[0])
+
+    def test_rejects_a_production_exclusion(self) -> None:
+        relative = Path("package/large.go")
+        self.write_lines(str(relative), check_source_size.MAX_LINES + 1)
+
+        result = check_source_size.failures(
+            self.repository,
+            {relative: "Production source cannot use a fixture exclusion."},
+        )
+
+        self.assertTrue(any("not a source fixture" in failure for failure in result))
+        self.assertTrue(any("maximum is" in failure for failure in result))
 
 
 if __name__ == "__main__":
