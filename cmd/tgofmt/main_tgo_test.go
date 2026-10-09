@@ -127,6 +127,24 @@ func TestRunRejectsMixedPackage(t *testing.T) {
 	}
 }
 
+func TestRunFormatsInvalidModel(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	path := filepath.Join(directory, "sample.tgo")
+	input := []byte("package sample\ntype Empty enum{}\n")
+	if err := os.WriteFile(path, input, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	output := new(bytes.Buffer)
+	if err := run([]string{path}, false, false, strings.NewReader(""), output); err != nil {
+		t.Fatal(err)
+	}
+	want := "package sample\n\ntype Empty enum {}\n"
+	if output.String() != want {
+		t.Fatalf("formatted source:\n%s\nwant:\n%s", output.String(), want)
+	}
+}
+
 func TestRunWritePreservesHardLink(t *testing.T) {
 	t.Parallel()
 	directory := t.TempDir()

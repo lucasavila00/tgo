@@ -11,9 +11,9 @@ FORMATTER_DIRS = (ROOT / "pkg" / "format", ROOT / "cmd" / "tgofmt")
 PROHIBITED = {
     "go/format": re.compile(r"\bgo/format\b"),
     "go/printer": re.compile(r"\bgo/printer\b"),
-    "os/exec": re.compile(r"\bos/exec\b"),
     "gofmt command": re.compile(r"\bgofmt\b"),
 }
+OS_EXEC = re.compile(r"\bos/exec\b")
 
 
 def main() -> None:
@@ -51,11 +51,34 @@ def main() -> None:
         capture_output=True,
         text=True,
     ).stdout.splitlines()
-    for dependency in ("go/format", "go/printer", "os/exec"):
+    for dependency in ("go/format", "go/printer"):
         if dependency in dependencies:
             violations.append(
                 f"formatter dependency closure contains prohibited {dependency}"
             )
+
+    module = subprocess.run(
+        ["go", "list", "-m", "-f", "{{.Path}}"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    for dependency in dependencies:
+        if dependency == module:
+            directory = ROOT
+        elif dependency.startswith(module + "/"):
+            directory = ROOT / dependency.removeprefix(module + "/")
+        else:
+            continue
+        for path in sorted(directory.iterdir()):
+            if path.suffix not in {".go", ".tgo"} or path.name.endswith(
+                ("_test.go", "_test.tgo")
+            ):
+                continue
+            if OS_EXEC.search(path.read_text()):
+                relative = path.relative_to(ROOT)
+                violations.append(f"{relative}: prohibited os/exec reference")
 
     if violations:
         raise SystemExit("formatter crosses its TGo boundary:\n" + "\n".join(violations))

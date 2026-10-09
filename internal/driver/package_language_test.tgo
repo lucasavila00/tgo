@@ -75,7 +75,9 @@ func TestRepositoryPackagesHaveOneLanguage(t *testing.T) {
 				return filepath.SkipDir
 			}
 		}
-		_, err = packagelanguage.Classify(packageLanguageContext(&context), path)
+		_, err = packagelanguage.Classify(
+			packagelanguage.ContextFromBuild(&context), path,
+		)
 		return err
 	})
 	if err != nil {
@@ -221,7 +223,9 @@ func moduleGoTestsInTGoPackages(
 			strings.HasSuffix(entry.Name(), "_test.tgo") {
 			return nil
 		}
-		matches, err := matchTGoFile(context, path)
+		matches, err := packagelanguage.MatchFile(
+			context, path, packagelanguage.TGo,
+		)
 		if err != nil || !matches {
 			return err
 		}

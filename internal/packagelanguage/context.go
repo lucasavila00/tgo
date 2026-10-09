@@ -3,32 +3,35 @@ package packagelanguage
 import (
 	"errors"
 	"fmt"
-	"go/build/constraint"
+	"go/build"
+	"io"
 	"os"
 	"path/filepath"
-	"runtime"
-	"strconv"
 	"strings"
-
-	"tgo/internal/outputname"
 )
 
 // DefaultContext returns the active process build target for source tools.
 func DefaultContext() (Context, error) {
-	goos := environmentDefault("GOOS", runtime.GOOS)
-	goarch := environmentDefault("GOARCH", runtime.GOARCH)
 	tags, err := BuildTagsFromGoFlags(os.Getenv("GOFLAGS"))
 	if err != nil {
 		return Context{}, err
 	}
-	active := defaultTags(goos, goarch, tags)
-	cgo := os.Getenv("CGO_ENABLED") != "0" && goarch != "wasm"
+	buildContext := build.Default
+	buildContext.BuildTags = append(
+		append([]string(nil), buildContext.BuildTags...),
+		tags...,
+	)
+	return ContextFromBuild(&buildContext), nil
+}
+
+// ContextFromBuild returns a package language context for one Go build context.
+func ContextFromBuild(buildContext *build.Context) Context {
 	return Context{
-		CgoEnabled: cgo,
-		MatchFile: func(path string, _ Language) (bool, error) {
-			return matchFile(path, goos, goarch, active)
+		CgoEnabled: buildContext.CgoEnabled,
+		MatchFile: func(path string, language Language) (bool, error) {
+			return MatchFile(buildContext, path, language)
 		},
-	}, nil
+	}
 }
 
 // BuildTagsFromGoFlags returns each user build tag from GOFLAGS.
@@ -86,114 +89,34 @@ func splitGoFlags(value string) ([]string, error) {
 	return fields, nil
 }
 
-func matchFile(
+// MatchFile applies a Go build context to one Go or TGo source file.
+func MatchFile(
+	buildContext *build.Context,
 	path string,
-	goos string,
-	goarch string,
-	tags map[string]bool,
+	language Language,
 ) (bool, error) {
+	directory := filepath.Dir(path)
 	name := filepath.Base(path)
-	if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") ||
-		!outputname.MatchesTarget(name, goos, goarch) {
-		return false, nil
+	if language == Go {
+		return buildContext.MatchFile(directory, name)
 	}
-	expression, err := fileConstraint(path)
-	if err != nil || expression == nil {
-		return err == nil, err
-	}
-	return expression.Eval(func(tag string) bool { return tags[tag] }), nil
-}
-
-func fileConstraint(path string) (constraint.Expr, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var expression constraint.Expr
-	for line := range strings.SplitSeq(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "package ") {
-			break
+	fakeName := strings.TrimSuffix(name, ".tgo") + ".s"
+	fakePath := filepath.Clean(filepath.Join(directory, fakeName))
+	realPath := filepath.Clean(path)
+	fileContext := *buildContext
+	fileContext.OpenFile = func(requested string) (io.ReadCloser, error) {
+		if filepath.Clean(requested) == fakePath {
+			return os.Open(realPath)
 		}
-		if !constraint.IsGoBuild(line) && !constraint.IsPlusBuild(line) {
-			continue
-		}
-		item, err := constraint.Parse(line)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
-		if expression == nil {
-			expression = item
-		} else {
-			expression = &constraint.AndExpr{X: expression, Y: item}
-		}
+		return os.Open(requested)
 	}
-	return expression, nil
-}
-
-func defaultTags(goos, goarch string, user []string) map[string]bool {
-	tags := map[string]bool{goos: true, goarch: true, "gc": true}
-	if os.Getenv("CGO_ENABLED") != "0" && goarch != "wasm" {
-		tags["cgo"] = true
+	match, err := fileContext.MatchFile(directory, fakeName)
+	if err == nil {
+		return match, nil
 	}
-	if goos == "android" {
-		tags["linux"] = true
+	message := err.Error()
+	if detail, ok := strings.CutPrefix(message, fakeName); ok {
+		message = path + detail
 	}
-	if goos == "illumos" {
-		tags["solaris"] = true
-	}
-	if goos == "ios" {
-		tags["darwin"] = true
-	}
-	if unixTarget(goos) {
-		tags["unix"] = true
-	}
-	for _, tag := range releaseTags() {
-		tags[tag] = true
-	}
-	for _, tag := range user {
-		tags[tag] = true
-	}
-	return tags
-}
-
-func releaseTags() []string {
-	version := runtime.Version()
-	start := strings.Index(version, "go1.")
-	if start < 0 {
-		return nil
-	}
-	minorText := version[start+len("go1."):]
-	end := strings.IndexFunc(minorText, func(character rune) bool {
-		return character < '0' || character > '9'
-	})
-	if end >= 0 {
-		minorText = minorText[:end]
-	}
-	minor, err := strconv.Atoi(minorText)
-	if err != nil {
-		return nil
-	}
-	tags := make([]string, 0, minor)
-	for number := 1; number <= minor; number++ {
-		tags = append(tags, "go1."+strconv.Itoa(number))
-	}
-	return tags
-}
-
-func unixTarget(goos string) bool {
-	switch goos {
-	case "aix", "android", "darwin", "dragonfly", "freebsd", "hurd",
-		"illumos", "ios", "linux", "netbsd", "openbsd", "solaris":
-		return true
-	default:
-		return false
-	}
-}
-
-func environmentDefault(name, fallback string) string {
-	if value := os.Getenv(name); value != "" {
-		return value
-	}
-	return fallback
+	return false, errors.New(message)
 }

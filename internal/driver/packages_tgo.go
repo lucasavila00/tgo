@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"go/build"
 	"go/token"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -197,7 +196,9 @@ func (p *packageUnit) matchingTestSources() ([]string, error) {
 	}
 	p.testsMatched = true
 	for _, path := range p.testSourcePaths {
-		match, err := matchTGoFile(p.context, path)
+		match, err := packagelanguage.MatchFile(
+			p.context, path, packagelanguage.TGo,
+		)
 		if err != nil {
 			p.matchError = err
 			return nil, err
@@ -292,7 +293,9 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 	}
 	p.sourcesMatched = true
 	for _, path := range p.sourcePaths {
-		match, err := matchTGoFile(p.context, path)
+		match, err := packagelanguage.MatchFile(
+			p.context, path, packagelanguage.TGo,
+		)
 		if err != nil {
 			p.matchError = err
 			return nil, err
@@ -312,31 +315,6 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 		p.matchingPaths = append(p.matchingPaths, path)
 	}
 	return p.matchingPaths, nil
-}
-
-// matchTGoFile applies Go build constraints to one TGo file.
-func matchTGoFile(context *build.Context, path string) (bool, error) {
-	directory := filepath.Dir(path)
-	name := filepath.Base(path)
-	fakeName := strings.TrimSuffix(name, ".tgo") + ".s"
-	fakePath := filepath.Clean(filepath.Join(directory, fakeName))
-	realPath := filepath.Clean(path)
-	fileContext := *context
-	fileContext.OpenFile = func(requested string) (io.ReadCloser, error) {
-		if filepath.Clean(requested) == fakePath {
-			return os.Open(realPath)
-		}
-		return os.Open(requested)
-	}
-	match, err := fileContext.MatchFile(directory, fakeName)
-	if err == nil {
-		return match, nil
-	}
-	message := err.Error()
-	if detail, ok := strings.CutPrefix(message, fakeName); ok {
-		message = path + detail
-	}
-	return false, errors.New(message)
 }
 
 // available reports whether this package has active source or orphan output.
@@ -380,21 +358,9 @@ func (p *packageUnit) packageLanguage() (packagelanguage.Language, error) {
 		return p.language, p.matchError
 	}
 	p.languageMatched = true
-	context := packageLanguageContext(p.context)
+	context := packagelanguage.ContextFromBuild(p.context)
 	p.language, p.matchError = packagelanguage.Classify(context, p.Dir)
 	return p.language, p.matchError
-}
-
-func packageLanguageContext(context *build.Context) packagelanguage.Context {
-	return packagelanguage.Context{
-		CgoEnabled: context.CgoEnabled,
-		MatchFile: func(path string, language packagelanguage.Language) (bool, error) {
-			if language == packagelanguage.TGo {
-				return matchTGoFile(context, path)
-			}
-			return context.MatchFile(filepath.Dir(path), filepath.Base(path))
-		},
-	}
 }
 
 // sourceOwnsOutput reports whether a current source owns one generated path.

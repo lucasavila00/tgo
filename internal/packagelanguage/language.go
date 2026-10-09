@@ -3,6 +3,7 @@ package packagelanguage
 
 import (
 	"fmt"
+	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 	"strings"
 
 	"tgo/internal/outputname"
-	"tgo/pkg/syntax"
 )
 
 // Language identifies the handwritten source language of a package.
@@ -112,11 +112,7 @@ func activeFile(
 }
 
 func fileImportsC(path string) (bool, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return false, err
-	}
-	file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
 	if err != nil {
 		return false, err
 	}

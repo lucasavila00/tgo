@@ -77,15 +77,11 @@ func TestClassify(t *testing.T) {
 				}
 			}
 			buildContext := build.Default
-			tags := defaultTags(
-				buildContext.GOOS, buildContext.GOARCH, []string{"active"},
+			buildContext.BuildTags = append(
+				append([]string(nil), buildContext.BuildTags...),
+				"active",
 			)
-			context := Context{
-				CgoEnabled: buildContext.CgoEnabled,
-				MatchFile: func(path string, _ Language) (bool, error) {
-					return matchFile(path, buildContext.GOOS, buildContext.GOARCH, tags)
-				},
-			}
+			context := ContextFromBuild(&buildContext)
 			got, err := Classify(context, directory)
 			if test.err != "" {
 				if err == nil || !strings.Contains(err.Error(), test.err) {
@@ -116,23 +112,64 @@ func TestClassifyUsesCgoSelection(t *testing.T) {
 		}
 	}
 	buildContext := build.Default
-	context := Context{
-		CgoEnabled: false,
-		MatchFile: func(path string, _ Language) (bool, error) {
-			return matchFile(
-				path,
-				buildContext.GOOS,
-				buildContext.GOARCH,
-				defaultTags(buildContext.GOOS, buildContext.GOARCH, nil),
-			)
-		},
-	}
+	buildContext.CgoEnabled = false
+	context := ContextFromBuild(&buildContext)
 	got, err := Classify(context, directory)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got != TGo {
 		t.Fatalf("language = %v, want %v", got, TGo)
+	}
+}
+
+func TestDefaultContextUsesGoBuildDefaults(t *testing.T) {
+	previous := build.Default
+	t.Cleanup(func() { build.Default = previous })
+	t.Setenv("CGO_ENABLED", "")
+	t.Setenv("GOFLAGS", "")
+	build.Default.GOOS = "windows"
+	build.Default.GOARCH = "arm64"
+	build.Default.CgoEnabled = false
+
+	context, err := DefaultContext()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if context.CgoEnabled {
+		t.Fatal("default context enabled cgo for a cross-compilation target")
+	}
+	directory := t.TempDir()
+	target := filepath.Join(directory, "model_windows_arm64.tgo")
+	foreign := filepath.Join(directory, "model_linux_arm64.tgo")
+	for _, path := range []string{target, foreign} {
+		if err := os.WriteFile(path, []byte("package model\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	match, err := context.MatchFile(target, TGo)
+	if err != nil || !match {
+		t.Fatalf("target match = %t, %v, want true", match, err)
+	}
+	match, err = context.MatchFile(foreign, TGo)
+	if err != nil || match {
+		t.Fatalf("foreign match = %t, %v, want false", match, err)
+	}
+}
+
+func TestFileImportsCStopsAfterImports(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "model.tgo")
+	source := "package model\n\nimport \"C\"\n\ntype Empty enum {}\n"
+	if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	imports, err := fileImportsC(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !imports {
+		t.Fatal("C import was not found")
 	}
 }
 
