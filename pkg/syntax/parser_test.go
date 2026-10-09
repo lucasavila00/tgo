@@ -160,6 +160,34 @@ func inspect(value int) {
 	exhaustive:
 	}
 }
+
+func TestParseGoFileKeepsGoStructTypeSpecification(t *testing.T) {
+	t.Parallel()
+	source := []byte("package sample\n\ntype Value struct { Field int }\n")
+	file, err := syntax.ParseGoFile(
+		token.NewFileSet(), "value.go", source, syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("ParseGoFile: %v", err)
+	}
+	if len(file.Declarations) != 1 {
+		t.Fatalf("declarations = %d, want 1", len(file.Declarations))
+	}
+	general := syntax.GeneralDeclarationOf(file.Declarations[0])
+	if general == nil || len(general.Specs) != 1 {
+		t.Fatalf("general declaration: %#v", general)
+	}
+	specification := syntax.TypeSpecificationOf(general.Specs[0])
+	if specification == nil || specification.Name.Name != "Value" {
+		t.Fatalf("type specification: %#v", specification)
+	}
+	if got := syntax.SourceText(file, syntax.Span{
+		Start: syntax.ExpressionPosition(specification.Type),
+		Stop:  syntax.ExpressionEnd(specification.Type),
+	}); got != "struct { Field int }" {
+		t.Fatalf("source text = %q", got)
+	}
+}
 `)
 	file, err := syntax.ParseFile(
 		token.NewFileSet(), "exhaustive.tgo", source, syntax.AllErrors,
