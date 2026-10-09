@@ -33,6 +33,7 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 		case ChannelType(_): return nil, false
 		case Default(_): return nil, false
 		case Propagation(_): return nil, false
+		case Comprehension(_): return nil, false
 		}
 	case File(_): return nil, false
 	case Declaration(_): return nil, false
@@ -162,6 +163,7 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 	case MapType(_): return nil, false
 	case ChannelType(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
@@ -171,6 +173,7 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	if !ok { return nil, false }
 	match *expression {
 	case Propagation(item): return item.Value, true
+	case Comprehension(_): return nil, false
 	case Bad(_): return nil, false
 	case Identifier(_): return nil, false
 	case Ellipsis(_): return nil, false
@@ -196,6 +199,63 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	case MapType(_): return nil, false
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
+	}
+}
+
+// ComprehensionExpressionOf returns a collection comprehension payload.
+func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
+	expression, ok := ExpressionOf(node)
+	if !ok { return nil, false }
+	match *expression {
+	case Comprehension(item): return item.Value, true
+	case Bad(_): return nil, false
+	case Identifier(_): return nil, false
+	case Ellipsis(_): return nil, false
+	case BasicLiteral(_): return nil, false
+	case FunctionLiteral(_): return nil, false
+	case CompositeLiteral(_): return nil, false
+	case Parenthesized(_): return nil, false
+	case Selector(_): return nil, false
+	case Index(_): return nil, false
+	case IndexList(_): return nil, false
+	case Slice(_): return nil, false
+	case TypeAssertion(_): return nil, false
+	case Call(_): return nil, false
+	case Star(_): return nil, false
+	case NonNilPointer(_): return nil, false
+	case Unary(_): return nil, false
+	case Binary(_): return nil, false
+	case KeyValue(_): return nil, false
+	case ArrayType(_): return nil, false
+	case StructType(_): return nil, false
+	case FunctionType(_): return nil, false
+	case InterfaceType(_): return nil, false
+	case MapType(_): return nil, false
+	case ChannelType(_): return nil, false
+	case Default(_): return nil, false
+	case Propagation(_): return nil, false
+	}
+}
+
+// ComprehensionRangeClauseOf returns one range clause.
+func ComprehensionRangeClauseOf(
+	value *ComprehensionClause,
+) (*ComprehensionRangeClause, bool) {
+	if value == nil { return nil, false }
+	match *value {
+	case Range(item): return item.Value, true
+	case Filter(_): return nil, false
+	}
+}
+
+// ComprehensionFilterClauseOf returns one filter clause.
+func ComprehensionFilterClauseOf(
+	value *ComprehensionClause,
+) (*ComprehensionFilterClause, bool) {
+	if value == nil { return nil, false }
+	match *value {
+	case Filter(item): return item.Value, true
+	case Range(_): return nil, false
 	}
 }
 
@@ -230,6 +290,7 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
@@ -342,6 +403,7 @@ func ExpressionKind(value *Expression) string {
 	case ChannelType(_): return "ChannelType"
 	case Default(_): return "Default"
 	case Propagation(_): return "Propagation"
+	case Comprehension(_): return "Comprehension"
 	}
 }
 
@@ -427,6 +489,7 @@ func StaticCallName(value *Expression) (string, bool) {
 	case ChannelType(_): return "", false
 	case Default(_): return "", false
 	case Propagation(_): return "", false
+	case Comprehension(_): return "", false
 	}
 }
 

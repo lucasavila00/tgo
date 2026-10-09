@@ -113,19 +113,54 @@ type rawPropagation struct {
 	node    *frontPropagateExpr
 }
 
+type rawComprehension struct {
+	start   int
+	end     int
+	open    int
+	close   int
+	clauses []*rawComprehensionClause
+	result  *rawComprehensionResult
+	node    *frontComprehensionExpr
+}
+
+type rawComprehensionClause struct {
+	kind            string
+	start           int
+	end             int
+	keyword         int
+	bindings        []int
+	define          int
+	rangeToken      int
+	expressionStart int
+	expressionEnd   int
+	open            int
+	close           int
+}
+
+type rawComprehensionResult struct {
+	start      int
+	end        int
+	keyStart   int
+	keyEnd     int
+	colon      int
+	valueStart int
+	valueEnd   int
+}
+
 type sourceParser struct {
-	filename     string
-	source       []byte
-	tokens       []lexeme
-	comments     []sourceEdit
-	decls        []*rawDecl
-	matches      []*rawMatch
-	defaults     []*rawDefault
-	propagations []*rawPropagation
-	nonNil       map[token.Pos]bool
-	edits        []sourceEdit
-	file         *token.File
-	mode         Mode
+	filename       string
+	source         []byte
+	tokens         []lexeme
+	comments       []sourceEdit
+	decls          []*rawDecl
+	matches        []*rawMatch
+	defaults       []*rawDefault
+	propagations   []*rawPropagation
+	comprehensions []*rawComprehension
+	nonNil         map[token.Pos]bool
+	edits          []sourceEdit
+	file           *token.File
+	mode           Mode
 }
 
 // ParseFile parses one tgo source file.
@@ -143,18 +178,19 @@ func parseFrontFile(
 		return nil, err
 	}
 	state := &sourceParser{
-		filename:     filename,
-		source:       append([]byte(nil), source...),
-		tokens:       tokens,
-		comments:     comments,
-		decls:        nil,
-		matches:      nil,
-		defaults:     nil,
-		propagations: nil,
-		nonNil:       make(map[token.Pos]bool),
-		edits:        nil,
-		file:         nil,
-		mode:         mode,
+		filename:       filename,
+		source:         append([]byte(nil), source...),
+		tokens:         tokens,
+		comments:       comments,
+		decls:          nil,
+		matches:        nil,
+		defaults:       nil,
+		propagations:   nil,
+		comprehensions: nil,
+		nonNil:         make(map[token.Pos]bool),
+		edits:          nil,
+		file:           nil,
+		mode:           mode,
 	}
 	if err := state.discoverDeclarations(); err != nil {
 		return nil, state.error(err)

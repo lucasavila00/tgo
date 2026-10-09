@@ -96,6 +96,9 @@ start:
 	_ = (<-chan int)(channel)
 	_ = Options{Limit: 1, ..default}
 	_ = load()!
+	_ = []int{for _, value := range []int{1, 2} {
+		if value > 0 { value }
+	}}
 	if local == 0 {
 		goto start
 	}
@@ -137,7 +140,7 @@ func load() (int, error) { return 0, nil }
 		"CompositeLiteral", "Parenthesized", "Selector", "Index", "IndexList",
 		"Slice", "TypeAssertion", "Call", "Star", "NonNilPointer", "Unary", "Binary",
 		"KeyValue", "ArrayType", "StructType", "FunctionType", "InterfaceType",
-		"MapType", "ChannelType", "Default", "Propagation",
+		"MapType", "ChannelType", "Default", "Propagation", "Comprehension",
 	})
 	requireKinds(t, statements, []string{
 		"Declaration", "Empty", "Labeled", "Expression", "Send", "Increment",
@@ -246,6 +249,32 @@ func TestParseFilePropagationKeepsParserErrorPosition(t *testing.T) {
 				t.Fatalf("error = %q, want %q", got, test.want)
 			}
 		})
+	}
+}
+
+func TestComprehensionDiscoveryInsideLeadingLoop(t *testing.T) {
+	t.Parallel()
+	source := []byte(`package sample
+func collect(values []int) {
+	for range values {
+		_ = []int{for _, value := range values { value }}
+	}
+}
+`)
+	file, err := syntax.ParseFile(
+		token.NewFileSet(), "nested.tgo", source, syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	count := 0
+	for _, extension := range syntax.Extensions(file) {
+		if _, ok := syntax.ComprehensionExpressionOf(extension); ok {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("found %d comprehensions", count)
 	}
 }
 
