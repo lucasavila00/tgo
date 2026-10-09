@@ -49,6 +49,29 @@ func TestPropagationErrorChain(t *testing.T) {
 	}
 }
 
+func TestTransparentPropagationReturnsOriginalError(t *testing.T) {
+	events := []string{}
+	value, err := PropagationTransparent(&events, false)
+	if value != 0 || err != errPropagationMissing {
+		t.Fatalf("value=%d error=%v", value, err)
+	}
+	value, err = PropagationTransparentFunction(&events, false)
+	if value != 0 || err != errPropagationMissing {
+		t.Fatalf("function value=%d error=%v", value, err)
+	}
+
+	events = nil
+	text, err := PropagationTransparentNested(&events, true)
+	if text != "beforeafter" || err != nil || strings.Join(events, ",") != "before,load,after" {
+		t.Fatalf("text=%q error=%v events=%v", text, err, events)
+	}
+	events = nil
+	text, err = PropagationTransparentNested(&events, false)
+	if text != "" || err != errPropagationMissing || strings.Join(events, ",") != "before,load" {
+		t.Fatalf("failed text=%q error=%v events=%v", text, err, events)
+	}
+}
+
 func TestPropagationKeepsEvaluationOrder(t *testing.T) {
 	events := []string{}
 	value, err := PropagationNested(&events, true)
@@ -262,6 +285,7 @@ func TestPropagationGeneratedGoUsesDirectNames(t *testing.T) {
 	for _, required := range []string{
 		"value, err := propagationLoad(events, found)",
 		`return 0, fmt.Errorf("propagationLoad: %w", err)`,
+		"func PropagationTransparent(events *[]string, found bool) (int, error) {\n\tvalue, err := propagationLoad(events, found)\n\tif err != nil {\n\t\treturn 0, err\n\t}",
 		"var name, value, err = propagationPair(found)",
 		"var zero T",
 	} {

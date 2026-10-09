@@ -15,18 +15,18 @@ func (e *nilEnvironment) transferNilAssignment(
 	state *nilFlowState,
 	statement *ast.AssignStmt,
 ) {
-	values := make([]nilValue, 0, len(statement.Lhs))
-	for range statement.Lhs {
-		values = append(values, unknownNilValue())
+	values := make([]nilType, 0, len(statement.Lhs))
+	for _, target := range statement.Lhs {
+		values = append(values, e.zeroNilType(target))
 	}
 	sources := make([]*nilPlace, len(statement.Lhs))
 	if len(statement.Rhs) == len(statement.Lhs) {
 		for index, expression := range statement.Rhs {
-			values[index] = e.expressionNilValue(expression, state)
-			if isUnknownNilValue(values[index]) &&
+			values[index] = e.expressionNilType(expression, state)
+			if isOptionalNilType(values[index]) &&
 				len(e.contractForExpression(expression)) != 0 &&
 				!e.nilExpressionCanBeAbsent(expression) {
-				values[index] = nonNilValue()
+				values[index] = nonNilType()
 			}
 			if place, ok := e.nilPlace(expression); ok {
 				sources[index] = &place
@@ -34,36 +34,37 @@ func (e *nilEnvironment) transferNilAssignment(
 		}
 	} else if len(statement.Rhs) == 1 {
 		for index := range statement.Lhs {
-			values[index] = e.resultNilValue(statement.Rhs[0], index, state)
+			values[index] = e.resultNilType(statement.Rhs[0], index, state)
 		}
 	}
 	trueFacts, falseFacts := nilFacts(nil), nilFacts(nil)
 	if len(statement.Rhs) == 1 {
 		trueFacts, falseFacts = e.conditionNilFacts(statement.Rhs[0], state)
 	}
-	guards := make([]*nilGuard, len(statement.Lhs))
-	presence := make([]*nilPresence, len(statement.Lhs))
-	if len(statement.Rhs) == len(statement.Lhs) {
-		for index, expression := range statement.Rhs {
-			if source, ok := expression.(*ast.Ident); ok {
-				sourceObject := e.info.ObjectOf(source)
-				if guard, found := state.guards[sourceObject]; found {
-					copy := cloneNilGuard(guard)
-					guards[index] = &copy
-				}
-				if fact, found := state.presence[sourceObject]; found {
-					copy := fact
-					presence[index] = &copy
-				}
-			}
+	truePossible := e.nilFactsPossible(state, trueFacts)
+	falsePossible := e.nilFactsPossible(state, falseFacts)
+	e.invalidateNilExpressions(state, statement.Rhs)
+	beforeAssignment := cloneNilState(state)
+	guards, presence := e.copiedNilDependencies(state, statement)
+	remappedGuards, remappedPresence := e.remapNilDependencies(
+		state, statement.Lhs, sources,
+	)
+	trueFacts = e.remapNilFacts(state, trueFacts, statement.Lhs, sources)
+	falseFacts = e.remapNilFacts(state, falseFacts, statement.Lhs, sources)
+	for _, target := range statement.Lhs {
+		e.assignNilTarget(state, target, nil)
+	}
+	for index, target := range statement.Lhs {
+		if place, ok := e.nilPlace(target); ok {
+			e.setNilType(state, place, values[index])
 		}
 	}
-	e.invalidateNilExpressions(state, statement.Rhs)
+	e.bindNilAssignmentAliases(
+		state, beforeAssignment, statement.Lhs, sources,
+	)
+	state.guards = remappedGuards
+	state.presence = remappedPresence
 	for index, target := range statement.Lhs {
-		e.assignNilTarget(state, target, sources[index])
-		if place, ok := e.nilPlace(target); ok {
-			e.setNilValue(state, place, values[index])
-		}
 		name, ok := target.(*ast.Ident)
 		if ok && name.Name != "_" {
 			object := e.info.ObjectOf(name)
@@ -72,6 +73,7 @@ func (e *nilEnvironment) transferNilAssignment(
 			if index == 0 && (len(trueFacts) != 0 || len(falseFacts) != 0) {
 				state.guards[object] = nilGuard{
 					trueFacts: trueFacts, falseFacts: falseFacts,
+					truePossible: truePossible, falsePossible: falsePossible,
 				}
 			}
 			if guards[index] != nil {
@@ -86,6 +88,226 @@ func (e *nilEnvironment) transferNilAssignment(
 	if statement.Tok == token.DEFINE {
 		e.inferNilExpressionContracts(statement.Lhs, statement.Rhs)
 	}
+}
+
+// bindNilAssignmentAliases restores identities copied from the old state.
+func (e *nilEnvironment) bindNilAssignmentAliases(
+	state *nilFlowState,
+	before *nilFlowState,
+	targets []ast.Expr,
+	sources []*nilPlace,
+) {
+	targetPlaces, validTargets := e.assignmentNilPlaces(targets)
+	for index, source := range sources {
+		if source == nil || !validTargets[index] {
+			continue
+		}
+		for candidate := range before.aliases {
+			if nilPlaceOverwritten(candidate, targetPlaces, validTargets) ||
+				!nilAliased(before, *source, candidate) {
+				continue
+			}
+			addNilAlias(state, targetPlaces[index], candidate)
+		}
+		if !nilPlaceOverwritten(*source, targetPlaces, validTargets) {
+			addNilAlias(state, targetPlaces[index], *source)
+		}
+		for previous := range index {
+			if sources[previous] != nil && validTargets[previous] &&
+				nilAliased(before, *source, *sources[previous]) {
+				addNilAlias(
+					state, targetPlaces[index], targetPlaces[previous],
+				)
+			}
+		}
+	}
+}
+
+func nilPlaceOverwritten(
+	place nilPlace,
+	targets []nilPlace,
+	valid []bool,
+) bool {
+	for index, target := range targets {
+		if valid[index] && nilPlacesOverlap(place, target) {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *nilEnvironment) copiedNilDependencies(
+	state *nilFlowState,
+	statement *ast.AssignStmt,
+) ([]*nilGuard, []*nilPresence) {
+	guards := make([]*nilGuard, len(statement.Lhs))
+	presence := make([]*nilPresence, len(statement.Lhs))
+	if len(statement.Rhs) != len(statement.Lhs) {
+		return guards, presence
+	}
+	for index, expression := range statement.Rhs {
+		source, ok := expression.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		sourceObject := e.info.ObjectOf(source)
+		if guard, found := state.guards[sourceObject]; found {
+			copy := cloneNilGuard(guard)
+			guards[index] = &copy
+		}
+		if fact, found := state.presence[sourceObject]; found {
+			copy := fact
+			presence[index] = &copy
+		}
+	}
+	return guards, presence
+}
+
+// remapNilDependencies follows values through one parallel assignment.
+// Each right side uses the state from before any left side changes.
+func (e *nilEnvironment) remapNilDependencies(
+	state *nilFlowState,
+	targets []ast.Expr,
+	sources []*nilPlace,
+) (map[types.Object]nilGuard, map[types.Object]nilPresence) {
+	guards := make(map[types.Object]nilGuard, len(state.guards))
+	for object, guard := range state.guards {
+		guards[object] = nilGuard{
+			trueFacts: e.remapNilFacts(
+				state, guard.trueFacts, targets, sources,
+			),
+			falseFacts: e.remapNilFacts(
+				state, guard.falseFacts, targets, sources,
+			),
+			truePossible:  guard.truePossible,
+			falsePossible: guard.falsePossible,
+		}
+	}
+	presence := make(map[types.Object]nilPresence, len(state.presence))
+	for object, fact := range state.presence {
+		mapped := e.remapNilFacts(
+			state, nilFacts{fact.value: nonNilType()}, targets, sources,
+		)
+		if place, found := firstNilFactPlace(mapped); found {
+			fact.value = place
+			presence[object] = fact
+		}
+	}
+	return guards, presence
+}
+
+func (e *nilEnvironment) remapNilFacts(
+	state *nilFlowState,
+	facts nilFacts,
+	targets []ast.Expr,
+	sources []*nilPlace,
+) nilFacts {
+	if len(facts) == 0 {
+		return nil
+	}
+	targetPlaces, validTargets := e.assignmentNilPlaces(targets)
+	result := make(nilFacts)
+	for factPlace, value := range facts {
+		retained := true
+		for index, target := range targetPlaces {
+			if validTargets[index] && nilPlacesOverlap(factPlace, target) {
+				retained = false
+			}
+		}
+		if retained {
+			addRemappedNilFact(result, factPlace, value)
+		} else {
+			for candidate := range state.aliases {
+				if nilAliased(state, factPlace, candidate) &&
+					!nilPlaceOverwritten(
+						candidate, targetPlaces, validTargets,
+					) {
+					addRemappedNilFact(result, candidate, value)
+				}
+			}
+		}
+		for index, source := range sources {
+			if source == nil || !validTargets[index] {
+				continue
+			}
+			if mapped, ok := copiedNilFactPlace(
+				state, factPlace, *source, targetPlaces[index],
+			); ok {
+				addRemappedNilFact(result, mapped, value)
+			}
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func (e *nilEnvironment) assignmentNilPlaces(
+	expressions []ast.Expr,
+) ([]nilPlace, []bool) {
+	places := make([]nilPlace, len(expressions))
+	valid := make([]bool, len(expressions))
+	for index, expression := range expressions {
+		places[index], valid[index] = e.nilPlace(expression)
+	}
+	return places, valid
+}
+
+func copiedNilFactPlace(
+	state *nilFlowState,
+	fact nilPlace,
+	source nilPlace,
+	target nilPlace,
+) (nilPlace, bool) {
+	if fact == source || nilAliased(state, fact, source) {
+		return target, true
+	}
+	if fact.object != source.object {
+		return nilPlace{object: nil, path: ""}, false
+	}
+	prefix := source.path
+	if prefix != "" {
+		prefix += "/"
+	}
+	suffix, found := strings.CutPrefix(fact.path, prefix)
+	if !found {
+		return nilPlace{object: nil, path: ""}, false
+	}
+	path := target.path
+	if path != "" && suffix != "" {
+		path += "/"
+	}
+	return nilPlace{object: target.object, path: path + suffix}, true
+}
+
+func addRemappedNilFact(facts nilFacts, place nilPlace, value nilType) {
+	if current, found := facts[place]; found {
+		facts[place] = intersectNilTypes(current, value)
+	} else {
+		facts[place] = value
+	}
+}
+
+func firstNilFactPlace(facts nilFacts) (nilPlace, bool) {
+	result := nilPlace{object: nil, path: ""}
+	found := false
+	for place := range facts {
+		if !found || nilPlaceID(place) < nilPlaceID(result) {
+			result = place
+			found = true
+		}
+	}
+	return result, found
+}
+
+// zeroNilType returns the nil type of a Go zero value.
+func (e *nilEnvironment) zeroNilType(target ast.Expr) nilType {
+	typ := e.info.TypeOf(target)
+	if typeCanBeNil(typ) {
+		return nilOnlyType()
+	}
+	return nonNilType()
 }
 
 func (e *nilEnvironment) newNilTarget(target ast.Expr) bool {
@@ -223,6 +445,7 @@ func (e *nilEnvironment) invalidateNilPlace(
 	state *nilFlowState,
 	place nilPlace,
 ) {
+	preserveNilAliasFacts(state, place)
 	breakNilAlias(state, place)
 	indexReference := ""
 	if place.path == "" {
@@ -239,7 +462,14 @@ func (e *nilEnvironment) invalidateNilPlace(
 	for object, guard := range state.guards {
 		if nilFactsAffected(guard.trueFacts, place) ||
 			nilFactsAffected(guard.falseFacts, place) {
-			delete(state.guards, object)
+			guard.trueFacts = withoutAffectedNilFacts(guard.trueFacts, place)
+			guard.falseFacts = withoutAffectedNilFacts(guard.falseFacts, place)
+			if guard.truePossible != guard.falsePossible ||
+				len(guard.trueFacts) != 0 || len(guard.falseFacts) != 0 {
+				state.guards[object] = guard
+			} else {
+				delete(state.guards, object)
+			}
 		}
 	}
 	for object, presence := range state.presence {
@@ -247,6 +477,79 @@ func (e *nilEnvironment) invalidateNilPlace(
 			delete(state.presence, object)
 		}
 	}
+}
+
+func withoutAffectedNilFacts(facts nilFacts, changed nilPlace) nilFacts {
+	result := cloneNilFacts(facts)
+	for place := range result {
+		if nilPlacesOverlap(place, changed) {
+			delete(result, place)
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+// preserveNilAliasFacts moves facts away from storage that will change.
+// A copied value can keep a guard valid after its old variable changes.
+func preserveNilAliasFacts(state *nilFlowState, changed nilPlace) {
+	replacement, found := survivingNilAlias(state, changed)
+	if !found {
+		return
+	}
+	for object, guard := range state.guards {
+		guard.trueFacts = replaceNilFactPlace(
+			guard.trueFacts, changed, replacement,
+		)
+		guard.falseFacts = replaceNilFactPlace(
+			guard.falseFacts, changed, replacement,
+		)
+		state.guards[object] = guard
+	}
+	for object, presence := range state.presence {
+		if presence.value == changed {
+			presence.value = replacement
+			state.presence[object] = presence
+		}
+	}
+}
+
+func survivingNilAlias(
+	state *nilFlowState,
+	changed nilPlace,
+) (nilPlace, bool) {
+	replacement := nilPlace{object: nil, path: ""}
+	found := false
+	for candidate := range state.aliases {
+		if candidate == changed || !nilAliased(state, changed, candidate) {
+			continue
+		}
+		if !found || nilPlaceID(candidate) < nilPlaceID(replacement) {
+			replacement = candidate
+			found = true
+		}
+	}
+	return replacement, found
+}
+
+func replaceNilFactPlace(
+	facts nilFacts,
+	old nilPlace,
+	replacement nilPlace,
+) nilFacts {
+	if value, found := facts[old]; found {
+		result := cloneNilFacts(facts)
+		delete(result, old)
+		if current, exists := result[replacement]; exists {
+			result[replacement] = intersectNilTypes(current, value)
+		} else {
+			result[replacement] = value
+		}
+		return result
+	}
+	return facts
 }
 
 func nilFactsAffected(facts nilFacts, changed nilPlace) bool {

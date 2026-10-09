@@ -70,6 +70,9 @@ func Load(repo Repo, id ID) (Account, error) {
 }
 ```
 
+Use `call()!!` when the caller must return the same error value. This form adds no context and no
+explicit allocation.
+
 Use a normal error check when the caller must recover, classify the error, add runtime data, or
 return a different value.
 

@@ -28,9 +28,9 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 			continue
 		}
 		open := cursor - 1
-		close, err := p.closeToken(open)
-		if err != nil {
-			return err
+		close, tgoErr := p.closeToken(open)
+		if tgoErr != nil {
+			return tgoErr
 		}
 		candidates = append(candidates, comprehensionCandidate{open: open, close: close})
 		cursor = close
@@ -47,9 +47,9 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 			}
 			continue
 		}
-		comprehension, err := p.rawComprehension(literalStart, item.open, item.close)
-		if err != nil {
-			return err
+		comprehension, tgoErr2 := p.rawComprehension(literalStart, item.open, item.close)
+		if tgoErr2 != nil {
+			return tgoErr2
 		}
 		p.comprehensions = append(p.comprehensions, comprehension)
 		p.edits = append(p.edits, sourceEdit{

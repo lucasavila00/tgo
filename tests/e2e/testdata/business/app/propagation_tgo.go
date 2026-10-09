@@ -124,6 +124,32 @@ func PropagationOuter(events *[]string, found bool) (int, error) {
 	return value, nil
 }
 
+func PropagationTransparent(events *[]string, found bool) (int, error) {
+	value, err := propagationLoad(events, found)
+	if err != nil {
+		return 0, err
+	}
+	return value, nil
+}
+
+func PropagationTransparentFunction(events *[]string, found bool) (int, error) {
+	load := propagationLoad
+	value, err := load(events, found)
+	if err != nil {
+		return 0, err
+	}
+	return value, nil
+}
+
+func PropagationTransparentNested(events *[]string, found bool) (string, error) {
+	operand := propagationMark(events, "before")
+	result, err := propagationLoad(events, found)
+	if err != nil {
+		return "", err
+	}
+	return propagationFormat(operand, result, propagationMark(events, "after")), nil
+}
+
 func PropagationNested(events *[]string, found bool) (string, error) {
 	operand := propagationMark(events, "before")
 	result, err := propagationLoad(events, found)

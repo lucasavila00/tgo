@@ -281,6 +281,46 @@ func TestParseFilePropagationKeepsParserErrorPosition(t *testing.T) {
 	}
 }
 
+func TestParseFileTransparentPropagation(t *testing.T) {
+	t.Parallel()
+	source := []byte("package sample\nfunc load() (int, error) { return 0, nil }\n" +
+		"func use() (int, error) { return load()!!, nil }\n")
+	files := token.NewFileSet()
+	file, err := syntax.ParseFile(files, "transparent.tgo", source, syntax.AllErrors)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	var propagation *syntax.PropagationExpression
+	for _, extension := range syntax.Extensions(file) {
+		if value, ok := syntax.PropagationExpressionOf(extension); ok {
+			propagation = value
+		}
+	}
+	if propagation == nil {
+		t.Fatal("transparent propagation is absent")
+	}
+	first := files.Position(propagation.Bang)
+	second := files.Position(propagation.SecondBang)
+	end := files.Position(propagation.Stop)
+	if first.Line != 3 || first.Column != 40 ||
+		second.Line != 3 || second.Column != 41 ||
+		end.Line != 3 || end.Column != 42 {
+		t.Fatalf("positions = %v, %v, %v", first, second, end)
+	}
+}
+
+func TestParseFileTransparentPropagationNeedsAdjacentMarks(t *testing.T) {
+	t.Parallel()
+	source := []byte("package sample\nfunc load() (int, error) { return 0, nil }\n" +
+		"func use() (int, error) { return load()! !, nil }\n")
+	_, err := syntax.ParseFile(
+		token.NewFileSet(), "spaced.tgo", source, syntax.AllErrors,
+	)
+	if err == nil {
+		t.Fatal("ParseFile accepted spaced propagation marks")
+	}
+}
+
 func TestComprehensionDiscoveryInsideLeadingLoop(t *testing.T) {
 	t.Parallel()
 	source := []byte(`package sample
