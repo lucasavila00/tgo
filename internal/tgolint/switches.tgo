@@ -21,7 +21,9 @@ func (c %checker) checkTagSwitch(
 	tagSwitch %syntax.SwitchStatement,
 ) {
 	receiver, selectorExpression, selector, model, tagType := c.tagCall(tagSwitch.Tag)
-	if model == nil { return }
+	if model == nil {
+		return
+	}
 	c.syntaxSafe[selectorExpression] = true
 	seen := make(map[int]bool)
 	clauseTypes := make(map[*syntax.CaseClause]variantflow.Type)
@@ -32,7 +34,9 @@ func (c %checker) checkTagSwitch(
 	labelsResolved := true
 	for _, item := range tagSwitch.Body.List {
 		clause := syntax.CaseClauseOf(item)
-		if clause == nil { continue }
+		if clause == nil {
+			continue
+		}
 		fallthroughBranch := clauseFallthrough(clause)
 		if fallthroughBranch != nil {
 			c.pass.Reportf(fallthroughBranch.TokenPosition,
@@ -56,15 +60,21 @@ func (c %checker) checkTagSwitch(
 		labelsResolved = labelsResolved && resolved
 		clauseTypes[clause] = variantflow.Intersect(declaredType, tagVariantType(tags))
 		explicitType = variantflow.Union(explicitType, clauseTypes[clause])
-		for tag := range tags { seen[tag] = true }
+		for tag := range tags {
+			seen[tag] = true
+		}
 	}
 	defaultType := variantflow.Without(declaredType, explicitType)
 	for _, item := range tagSwitch.Body.List {
 		clause := syntax.CaseClauseOf(item)
-		if clause == nil { continue }
+		if clause == nil {
+			continue
+		}
 		flowType, explicitClause := clauseTypes[clause]
 		defaultClause := !explicitClause
-		if defaultClause { flowType = defaultType }
+		if defaultClause {
+			flowType = defaultType
+		}
 		c.checkCaseAccessors(
 			file, clause, statement, receiver, model, flowType, defaultClause,
 			syntax.ExpressionEnd(tagSwitch.Tag),
@@ -96,14 +106,18 @@ func tagVariantType(tags map[int]bool) variantflow.Type {
 }
 
 func clauseFallthrough(clause %syntax.CaseClause) *syntax.BranchStatement {
-	for index := len(clause.Body)-1; index >= 0; index-- {
+	for index := len(clause.Body) - 1; index >= 0; index-- {
 		statement := clause.Body[index]
-		if statement.Tag() == syntax.StatementTagEmpty { continue }
+		if statement.Tag() == syntax.StatementTagEmpty {
+			continue
+		}
 		for statement.Tag() == syntax.StatementTagLabeled {
 			statement = syntax.LabeledStatementOf(statement).Statement
 		}
 		branch := syntax.BranchStatementOf(statement)
-		if branch != nil && branch.Token == token.FALLTHROUGH { return branch }
+		if branch != nil && branch.Token == token.FALLTHROUGH {
+			return branch
+		}
 		return nil
 	}
 	return nil
@@ -134,24 +148,30 @@ func (c %checker) statementsTerminateWith(
 		Name: "__tgolint_reached",
 	}}
 	sentinel := syntax.Statement.Expression{Value: &syntax.ExpressionStatement{
-		Span: syntax.Span{Start: token.NoPos, Stop: token.NoPos},
+		Span:       syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Expression: &identifier,
 	}}
 	list := make([]%syntax.Statement, 0, len(statements)+1)
-	for _, statement := range statements { list = append(list, statement) }
+	for _, statement := range statements {
+		list = append(list, statement)
+	}
 	list = append(list, &sentinel)
 	body := &syntax.BlockStatement{
-		Span: syntax.Span{Start: token.NoPos, Stop: token.NoPos},
+		Span:   syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Lbrace: token.NoPos,
-		List: list,
+		List:   list,
 		Rbrace: token.NoPos,
 	}
 	graph := syntaxcfg.New(body, c.syntaxCallMayReturn)
 	for _, block := range graph.Blocks {
-		if !block.Live { continue }
+		if !block.Live {
+			continue
+		}
 		for _, node := range block.Nodes {
 			value, ok := syntax.StatementOf(&node)
-			if ok && value == &sentinel { return false }
+			if ok && value == &sentinel {
+				return false
+			}
 		}
 	}
 	return true
@@ -167,27 +187,43 @@ func (c %checker) hasEscapingBranch(
 	for _, statement := range statements {
 		roots[syntax.StatementNode(statement)] = true
 		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			if _, nested := syntax.FunctionLiteralOf(node); nested { return false }
+			if _, nested := syntax.FunctionLiteralOf(node); nested {
+				return false
+			}
 			value, ok := syntax.StatementOf(node)
-			if !ok { return true }
+			if !ok {
+				return true
+			}
 			label := syntax.LabeledStatementOf(value)
-			if label != nil { labels[c.facts.DefinitionName(label.Label)] = true }
+			if label != nil {
+				labels[c.facts.DefinitionName(label.Label)] = true
+			}
 			return true
 		})
 	}
 	for _, statement := range statements {
 		escapes := false
 		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			if escapes { return false }
-			if _, nested := syntax.FunctionLiteralOf(node); nested { return false }
+			if escapes {
+				return false
+			}
+			if _, nested := syntax.FunctionLiteralOf(node); nested {
+				return false
+			}
 			value, ok := syntax.StatementOf(node)
-			if !ok { return true }
+			if !ok {
+				return true
+			}
 			branch := syntax.BranchStatementOf(value)
-			if branch == nil { return true }
+			if branch == nil {
+				return true
+			}
 			escapes = c.branchEscapes(file, node, branch, roots, labels, tagDefault)
 			return !escapes
 		})
-		if escapes { return true }
+		if escapes {
+			return true
+		}
 	}
 	return false
 }
@@ -200,20 +236,34 @@ func (c %checker) branchEscapes(
 	labels map[types.Object]bool,
 	tagDefault bool,
 ) bool {
-	if tagDefault && branch.Token == token.RETURN { return false }
-	if branch.Label != nil { return !labels[c.facts.Object(branch.Label)] }
-	if branch.Token != token.BREAK && branch.Token != token.CONTINUE { return true }
-	if tagDefault && roots[*branchNode] { return true }
+	if tagDefault && branch.Token == token.RETURN {
+		return false
+	}
+	if branch.Label != nil {
+		return !labels[c.facts.Object(branch.Label)]
+	}
+	if branch.Token != token.BREAK && branch.Token != token.CONTINUE {
+		return true
+	}
+	if tagDefault && roots[*branchNode] {
+		return true
+	}
 	for node := syntax.Parent(file, branchNode); node != nil; node = syntax.Parent(file, node) {
-		if branchTarget(node, branch.Token) { return false }
-		if roots[*node] { return true }
+		if branchTarget(node, branch.Token) {
+			return false
+		}
+		if roots[*node] {
+			return true
+		}
 	}
 	return true
 }
 
 func branchTarget(node *syntax.Node, branch token.Token) bool {
 	statement, ok := syntax.StatementOf(node)
-	if !ok { return false }
+	if !ok {
+		return false
+	}
 	switch statement.Tag() {
 	case syntax.StatementTagFor, syntax.StatementTagRange:
 		return true
@@ -235,9 +285,13 @@ func branchTarget(node *syntax.Node, branch token.Token) bool {
 
 func (c %checker) syntaxCallMayReturn(expression *syntax.Expression) bool {
 	call := syntax.CallExpressionOf(expression)
-	if call == nil { return true }
+	if call == nil {
+		return true
+	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
-	if name == nil || name.Name != "panic" { return true }
+	if name == nil || name.Name != "panic" {
+		return true
+	}
 	_, builtin := c.facts.Object(name).(*types.Builtin)
 	return !builtin
 }
@@ -246,20 +300,28 @@ func (c %checker) syntaxCallMayReturn(expression *syntax.Expression) bool {
 func (c %checker) tagCall(
 	expression *syntax.Expression,
 ) (*syntax.Expression, *syntax.Expression, *syntax.SelectorExpression, *model, types.Type) {
-	if expression == nil { return nil, nil, nil, nil, }
+	if expression == nil {
+		return nil, nil, nil, nil,
+	}
 	for expression != nil {
 		parenthesized := syntax.ParenthesizedExpressionOf(expression)
-		if parenthesized == nil { break }
+		if parenthesized == nil {
+			break
+		}
 		expression = parenthesized.Expression
 	}
 	call := syntax.CallExpressionOf(expression)
-	if call == nil || len(call.Args) != 0 { return nil, nil, nil, nil, }
+	if call == nil || len(call.Args) != 0 {
+		return nil, nil, nil, nil,
+	}
 	selector := syntax.SelectorExpressionOf(call.Callee)
 	if selector == nil || selector.Selector.Name != "Tag" {
 		return nil, nil, nil, nil,
 	}
 	model := c.modelForSourceSelector(call.Callee, selector)
-	if !modelIsEnum(model) { return nil, nil, nil, nil, }
+	if !modelIsEnum(model) {
+		return nil, nil, nil, nil,
+	}
 	return selector.Expression, call.Callee, selector, model, c.facts.Type(expression)
 }
 
@@ -314,7 +376,9 @@ func (c %checker) tagExpressionSeen(
 ) bool {
 	for {
 		parenthesized := syntax.ParenthesizedExpressionOf(expression)
-		if parenthesized == nil { break }
+		if parenthesized == nil {
+			break
+		}
 		expression = parenthesized.Expression
 	}
 	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
@@ -338,11 +402,15 @@ func (c %checker) tagConstantExpression(
 	tagType types.Type,
 	seen map[*types.Const]bool,
 ) bool {
-	if !types.Identical(object.Type(), tagType) || seen[object] { return false }
+	if !types.Identical(object.Type(), tagType) || seen[object] {
+		return false
+	}
 	named, ok := types.Unalias(tagType).(*types.Named)
 	if ok && named.Obj().Pkg() == object.Pkg() {
 		for tag := 1; tag <= len(modelVariants(model)); tag++ {
-			if object.Name() == tagConstant(model, tag) { return true }
+			if object.Name() == tagConstant(model, tag) {
+				return true
+			}
 		}
 	}
 	seen[object] = true
@@ -350,16 +418,22 @@ func (c %checker) tagConstantExpression(
 	for _, file := range c.files {
 		for _, declarationValue := range file.Declarations {
 			declaration := syntax.GeneralDeclarationOf(declarationValue)
-			if declaration == nil || declaration.Kind != token.CONST { continue }
+			if declaration == nil || declaration.Kind != token.CONST {
+				continue
+			}
 			for _, specificationValue := range declaration.Specs {
 				specification := syntax.ValueSpecificationOf(specificationValue)
-				if specification == nil { continue }
+				if specification == nil {
+					continue
+				}
 				for index, name := range specification.Names {
 					if c.facts.DefinitionName(name) != object || len(specification.Values) == 0 {
 						continue
 					}
 					right := specification.Values[len(specification.Values)-1]
-					if index < len(specification.Values) { right = specification.Values[index] }
+					if index < len(specification.Values) {
+						right = specification.Values[index]
+					}
 					return c.tagExpressionSeen(right, model, tagType, seen)
 				}
 			}
@@ -369,7 +443,7 @@ func (c %checker) tagConstantExpression(
 }
 
 func tagConstant(model *model, tag int) string {
-	return modelName(model)+"Tag"+modelVariants(model)[tag-1]
+	return modelName(model) + "Tag" + modelVariants(model)[tag-1]
 }
 
 func (c %checker) tagDefaultSentinel(
@@ -378,25 +452,45 @@ func (c %checker) tagDefaultSentinel(
 	receiver *syntax.Expression,
 	model *model,
 ) bool {
-	if clause == nil || receiver == nil { return false }
-	if len(clause.Body) != 1 { return false }
+	if clause == nil || receiver == nil {
+		return false
+	}
+	if len(clause.Body) != 1 {
+		return false
+	}
 	expressionStatement := syntax.ExpressionStatementOf(clause.Body[0])
-	if expressionStatement == nil { return false }
+	if expressionStatement == nil {
+		return false
+	}
 	panicCall := syntax.CallExpressionOf(expressionStatement.Expression)
-	if panicCall == nil || len(panicCall.Args) != 1 { return false }
+	if panicCall == nil || len(panicCall.Args) != 1 {
+		return false
+	}
 	panicName := syntax.IdentifierExpressionOf(panicCall.Callee)
-	if panicName == nil || panicName.Name != "panic" { return false }
-	if _, ok := c.facts.Object(panicName).(*types.Builtin); !ok { return false }
+	if panicName == nil || panicName.Name != "panic" {
+		return false
+	}
+	if _, ok := c.facts.Object(panicName).(*types.Builtin); !ok {
+		return false
+	}
 	unknownCall := syntax.CallExpressionOf(panicCall.Args[0])
-	if unknownCall == nil || len(unknownCall.Args) != 0 { return false }
+	if unknownCall == nil || len(unknownCall.Args) != 0 {
+		return false
+	}
 	selector := syntax.SelectorExpressionOf(unknownCall.Callee)
 	if selector == nil || selector.Selector.Name != "UnknownTag" ||
-		!sameReceiver(c.facts, receiver, selector.Expression) { return false }
+		!sameReceiver(c.facts, receiver, selector.Expression) {
+		return false
+	}
 	selection := c.facts.Selection(unknownCall.Callee)
-	if selection == nil { return false }
+	if selection == nil {
+		return false
+	}
 	function, ok := selection.Obj().(*types.Func)
 	if !ok || function.Name() != "UnknownTag" ||
-		!sameModel(c.modelForSourceSelector(unknownCall.Callee, selector), model) { return false }
+		!sameModel(c.modelForSourceSelector(unknownCall.Callee, selector), model) {
+		return false
+	}
 	expressionPosition := c.pass.Fset.Position(expressionStatement.Stop)
 	for _, group := range file.Comments {
 		for _, comment := range group.List {
@@ -404,7 +498,9 @@ func (c %checker) tagDefaultSentinel(
 			if comment.Text == enumDefaultComment &&
 				commentPosition.Filename == expressionPosition.Filename &&
 				commentPosition.Line == expressionPosition.Line &&
-				comment.Start > expressionStatement.Stop { return true }
+				comment.Start > expressionStatement.Stop {
+				return true
+			}
 		}
 	}
 	return false
@@ -418,7 +514,9 @@ func (c %checker) modelForSourceSelector(
 		return model
 	}
 	selection := c.facts.Selection(expression)
-	if selection == nil { return nil }
+	if selection == nil {
+		return nil
+	}
 	if function, ok := selection.Obj().(*types.Func); ok {
 		signature, _ := function.Type().(*types.Signature)
 		if signature != nil && signature.Recv() != nil {
@@ -429,8 +527,12 @@ func (c %checker) modelForSourceSelector(
 	for offset, index := range selection.Index() {
 		current = dereference(current)
 		structure, ok := current.Underlying().(*types.Struct)
-		if !ok || index >= structure.NumFields() { return nil }
-		if offset == len(selection.Index())-1 { return c.modelForReceiver(current) }
+		if !ok || index >= structure.NumFields() {
+			return nil
+		}
+		if offset == len(selection.Index())-1 {
+			return c.modelForReceiver(current)
+		}
 		current = structure.Field(index).Type()
 	}
 	return nil
@@ -447,25 +549,35 @@ func (c %checker) checkCaseAccessors(
 	defaultClause bool,
 	proof token.Pos,
 ) {
-	if clause == nil || receiver == nil { return }
+	if clause == nil || receiver == nil {
+		return
+	}
 	for _, statement := range clause.Body {
 		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			if _, nested := syntax.FunctionLiteralOf(node); nested { return false }
+			if _, nested := syntax.FunctionLiteralOf(node); nested {
+				return false
+			}
 			if nestedStatement, ok := syntax.StatementOf(node); ok && nestedStatement != tagSwitch {
 				if nested := syntax.SwitchStatementOf(nestedStatement); nested != nil {
 					nestedReceiver, _, _, nestedModel, _ := c.tagCall(nested.Tag)
 					if sameModel(nestedModel, model) &&
-						sameReceiver(c.facts, receiver, nestedReceiver) { return false }
+						sameReceiver(c.facts, receiver, nestedReceiver) {
+						return false
+					}
 				}
 			}
 			expression, ok := syntax.ExpressionOf(node)
-			if !ok { return true }
+			if !ok {
+				return true
+			}
 			selector := syntax.SelectorExpressionOf(expression)
 			if selector == nil || !sameReceiver(c.facts, receiver, selector.Expression) {
 				return true
 			}
 			tag := variantTag(model, selector.Selector.Name)
-			if tag == 0 { return true }
+			if tag == 0 {
+				return true
+			}
 			if !c.enumReceiverStableBefore(file, clause, expression, receiver, proof) {
 				return true
 			}
@@ -480,7 +592,7 @@ func (c %checker) checkCaseAccessors(
 				caseName = "a multi-tag case"
 			}
 			if !defaultClause && narrowed {
-				caseName = "case "+tagConstant(model, active)
+				caseName = "case " + tagConstant(model, active)
 			}
 			c.pass.Reportf(selector.Start, "%s: %s called under %s",
 				modelName(model), selector.Selector.Name, caseName)
@@ -497,9 +609,13 @@ func capturesObject(
 	captured := false
 	statement := syntax.Statement.Block{Value: body}
 	syntax.InspectStatement(&statement, func(node *syntax.Node) bool {
-		if captured { return false }
+		if captured {
+			return false
+		}
 		identifier, ok := syntax.IdentifierOf(node)
-		if ok && facts.Object(identifier) == object { captured = true }
+		if ok && facts.Object(identifier) == object {
+			captured = true
+		}
 		return !captured
 	})
 	return captured
@@ -513,16 +629,22 @@ func receiverWrite(
 	targetRoot, targetPath, targetOK := receiverPath(facts, target)
 	receiverRoot, receiverFields, receiverOK := receiverPath(facts, receiver)
 	if !targetOK || !receiverOK || targetRoot != receiverRoot ||
-		len(targetPath) > len(receiverFields) { return false }
+		len(targetPath) > len(receiverFields) {
+		return false
+	}
 	for index := range targetPath {
-		if targetPath[index] != receiverFields[index] { return false }
+		if targetPath[index] != receiverFields[index] {
+			return false
+		}
 	}
 	return true
 }
 
 func variantTag(model *model, method string) int {
 	for index, variant := range modelVariants(model) {
-		if method == variant+"Payload" { return index+1 }
+		if method == variant+"Payload" {
+			return index + 1
+		}
 	}
 	return 0
 }
@@ -538,7 +660,9 @@ func sameReceiver(
 		return false
 	}
 	for index := range leftPath {
-		if leftPath[index] != rightPath[index] { return false }
+		if leftPath[index] != rightPath[index] {
+			return false
+		}
 	}
 	return true
 }
@@ -548,16 +672,22 @@ func receiverPath(
 	facts %sourcefacts.Index,
 	expression *syntax.Expression,
 ) (types.Object, []types.Object, bool) {
-	if expression == nil { return nil, nil, false }
+	if expression == nil {
+		return nil, nil, false
+	}
 	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
 		object := facts.Object(identifier)
 		return object, nil, object != nil
 	}
 	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
 		root, path, ok := receiverPath(facts, selector.Expression)
-		if !ok { return nil, nil, false }
+		if !ok {
+			return nil, nil, false
+		}
 		selection := facts.Selection(expression)
-		if selection == nil || selection.Kind() != types.FieldVal { return nil, nil, false }
+		if selection == nil || selection.Kind() != types.FieldVal {
+			return nil, nil, false
+		}
 		return root, append(path, selection.Obj()), true
 	}
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {

@@ -344,7 +344,9 @@ func (c %checker) invalidateEscapedProofs(expression %syntax.Expression, state c
 			unary := syntax.UnaryExpressionOf(value)
 			if unary != nil && unary.Operator == token.AND {
 				name := identifier(unary.Expression)
-				if name != nil { c.invalidateProof(c.facts.Object(name), state) }
+				if name != nil {
+					c.invalidateProof(c.facts.Object(name), state)
+				}
 			}
 		}
 		return true
@@ -352,7 +354,9 @@ func (c %checker) invalidateEscapedProofs(expression %syntax.Expression, state c
 }
 
 func identifier(expression %syntax.Expression) *syntax.Identifier {
-	if name := syntax.IdentifierExpressionOf(expression); name != nil { return name }
+	if name := syntax.IdentifierExpressionOf(expression); name != nil {
+		return name
+	}
 	if value := syntax.ParenthesizedExpressionOf(expression); value != nil {
 		return identifier(value.Expression)
 	}
@@ -396,7 +400,9 @@ func (c %checker) checkedSwitch(statement %syntax.SwitchStatement, state checked
 	hasDefault := false
 	for _, item := range statement.Body.List {
 		clause := syntax.CaseClauseOf(item)
-		if clause == nil { continue }
+		if clause == nil {
+			continue
+		}
 		branch := cloneCheckedState(entry)
 		if carried != nil {
 			branch = joinCheckedStates(branch, carried)
@@ -433,7 +439,9 @@ func (c %checker) checkedTypeSwitch(statement %syntax.TypeSwitchStatement, state
 	hasDefault := false
 	for _, item := range statement.Body.List {
 		clause := syntax.CaseClauseOf(item)
-		if clause == nil { continue }
+		if clause == nil {
+			continue
+		}
 		branch := cloneCheckedState(entry)
 		if !c.checkedBlock(clause.Body, branch) {
 			exits = append(exits, branch)
@@ -567,7 +575,9 @@ func (c %checker) callHasValidationFact(call %syntax.Expression) bool {
 // validatedCall identifies a generated validator or trusted direct wrapper.
 func (c %checker) validatedCall(call %syntax.Expression) bool {
 	value := syntax.CallExpressionOf(call)
-	if value == nil { return false }
+	if value == nil {
+		return false
+	}
 	object := calledObject(c.facts, value.Callee)
 	if object == nil {
 		return false
@@ -587,7 +597,9 @@ func (c %checker) validatedCall(call %syntax.Expression) bool {
 }
 
 func calledObject(facts %sourcefacts.Index, expression %syntax.Expression) types.Object {
-	if name := syntax.IdentifierExpressionOf(expression); name != nil { return facts.Object(name) }
+	if name := syntax.IdentifierExpressionOf(expression); name != nil {
+		return facts.Object(name)
+	}
 	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
 		return facts.Object(selector.Selector)
 	}

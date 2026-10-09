@@ -12,7 +12,10 @@ import (
 type scalarValue enum {
 	Boolean struct { Value bool }
 	Integer struct { Value int64 }
-	BooleanParameter struct { Index int; Negated bool }
+	BooleanParameter struct {
+		Index   int
+		Negated bool
+	}
 	IntegerParameter struct { Index int }
 }
 
@@ -56,9 +59,13 @@ func (c %checker) enclosingFunction(node %syntax.Node) *syntax.Node {
 		if _, declaration := syntax.FunctionDeclarationOf(current); declaration {
 			return current
 		}
-		if _, literal := syntax.FunctionLiteralOf(current); literal { return current }
+		if _, literal := syntax.FunctionLiteralOf(current); literal {
+			return current
+		}
 		parent := c.parents[*current]
-		if parent == nil { return nil }
+		if parent == nil {
+			return nil
+		}
 		current = parent
 	}
 	return nil
@@ -271,7 +278,9 @@ func (c %checker) transferScalarNode(
 			if general != nil {
 				for _, specification := range general.Specs {
 					values := syntax.ValueSpecificationOf(specification)
-					if values == nil { continue }
+					if values == nil {
+						continue
+					}
 					c.transferScalarValues(state, values.Names, values.Values, owned)
 				}
 			}
@@ -284,9 +293,9 @@ func (c %checker) transferScalarNode(
 	}
 	if specification, ok := syntax.SpecificationOf(&node); ok {
 		if values := syntax.ValueSpecificationOf(specification); values != nil {
-				c.transferScalarValues(
-					state, values.Names, values.Values, owned,
-				)
+			c.transferScalarValues(
+				state, values.Names, values.Values, owned,
+			)
 		}
 	}
 	c.invalidateScalarEscapes(state, &node)

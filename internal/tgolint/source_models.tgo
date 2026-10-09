@@ -49,7 +49,7 @@ func (c %checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 		sourceFiles,
 		sourcePath,
 		data,
-		syntax.ParseComments | syntax.AllErrors,
+		syntax.ParseComments|syntax.AllErrors,
 	)
 	if err != nil {
 		c.failVerification(
@@ -401,7 +401,7 @@ func sourceShapeMatches(
 			return false
 		}
 		for _, variant := range enum.Variants {
-			payloadSpec := generatedTypeSpec(generated, enum.Name + variant.name)
+			payloadSpec := generatedTypeSpec(generated, enum.Name+variant.name)
 			if payloadSpec == nil {
 				return false
 			}
@@ -428,11 +428,15 @@ func validCheckedStructAPI(typ types.Type) bool {
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil { return false }
+	if !ok || named.Obj().Pkg() == nil {
+		return false
+	}
 	constructor, ok := named.Obj().Pkg().Scope().Lookup(
 		"New" + named.Obj().Name(),
 	).(*types.Func)
-	if !ok { return false }
+	if !ok {
+		return false
+	}
 	created, ok := constructor.Type().(*types.Signature)
 	structure, structureOK := named.Underlying().(*types.Struct)
 	if !ok || !structureOK || created.Recv() != nil || created.Variadic() ||
@@ -454,7 +458,7 @@ func generatedEnumShape(
 	name string,
 	variants []sourceVariant,
 ) bool {
-	tag, ok := typeInPackage(typ, name + "Tag")
+	tag, ok := typeInPackage(typ, name+"Tag")
 	if !ok || !validGeneratedTagAPI(typ, tag, name, variants) {
 		return false
 	}
@@ -462,13 +466,15 @@ func generatedEnumShape(
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
 		if !ok || !validEnumAPI(
-			typ, payload, variant.name + "Payload", "New" + payloadName,
+			typ, payload, variant.name+"Payload", "New"+payloadName,
 		) {
 			return false
 		}
 		if len(variant.fields) > 0 {
-			carrier, ok := typeInPackage(typ, "Tgo" + payloadName + "Input")
-			if !ok || !validEnumCarrier(payload, carrier) { return false }
+			carrier, ok := typeInPackage(typ, "Tgo"+payloadName+"Input")
+			if !ok || !validEnumCarrier(payload, carrier) {
+				return false
+			}
 		}
 	}
 	return true
@@ -489,7 +495,7 @@ func validGeneratedTagAPI(
 		return false
 	}
 	basic, ok := coreType(tagType).(*types.Basic)
-	if !ok || basic.Info() & types.IsUnsigned == 0 {
+	if !ok || basic.Info()&types.IsUnsigned == 0 {
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
@@ -498,12 +504,12 @@ func validGeneratedTagAPI(
 	}
 	names := []string(nil)
 	for _, variant := range variants {
-		names = append(names, name + "Tag" + variant.name)
+		names = append(names, name+"Tag"+variant.name)
 	}
 	for index, constantName := range names {
 		constant, ok := named.Obj().Pkg().Scope().Lookup(constantName).(*types.Const)
 		if !ok || !types.Identical(constant.Type(), tagType) ||
-			constant.Val().ExactString() != strconv.Itoa(index + 1) {
+			constant.Val().ExactString() != strconv.Itoa(index+1) {
 			return false
 		}
 	}
@@ -608,7 +614,7 @@ func sourceExpression(
 		if !ok || node.Percent < start || node.Percent >= end {
 			continue
 		}
-		result[sourceFile.Offset(node.Percent) - sourceFile.Offset(start)] = '*'
+		result[sourceFile.Offset(node.Percent)-sourceFile.Offset(start)] = '*'
 	}
 	return string(result)
 }

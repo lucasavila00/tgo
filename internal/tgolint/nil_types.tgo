@@ -5,33 +5,41 @@ import "go/types"
 // Go types stores T. nilType stores the current union of T and nil.
 // Optional is T | nil. Never is an impossible value.
 type nilType enum {
-	Never struct{}
-	NonNil struct{}
-	Nil struct{}
-	Optional struct{}
+	Never struct {}
+	NonNil struct {}
+	Nil struct {}
+	Optional struct {}
 }
 
-func neverNilType() nilType { return nilType.Never{} }
-func nonNilType() nilType { return nilType.NonNil{} }
-func nilOnlyType() nilType { return nilType.Nil{} }
+func neverNilType() nilType    { return nilType.Never{} }
+func nonNilType() nilType      { return nilType.NonNil{} }
+func nilOnlyType() nilType     { return nilType.Nil{} }
 func optionalNilType() nilType { return nilType.Optional{} }
 
 func nilTypeMembers(value nilType) uint8 {
 	switch value.Tag() {
-	case nilTypeTagNever: return 0
-	case nilTypeTagNonNil: return 1
-	case nilTypeTagNil: return 2
-	case nilTypeTagOptional: return 3
+	case nilTypeTagNever:
+		return 0
+	case nilTypeTagNonNil:
+		return 1
+	case nilTypeTagNil:
+		return 2
+	case nilTypeTagOptional:
+		return 3
 	exhaustive:
 	}
 }
 
 func nilTypeFromMembers(members uint8) nilType {
 	switch members & 3 {
-	case 0: return neverNilType()
-	case 1: return nonNilType()
-	case 2: return nilOnlyType()
-	default: return optionalNilType()
+	case 0:
+		return neverNilType()
+	case 1:
+		return nonNilType()
+	case 2:
+		return nilOnlyType()
+	default:
+		return optionalNilType()
 	}
 }
 
@@ -47,9 +55,9 @@ func equalNilType(left nilType, right nilType) bool {
 	return nilTypeMembers(left) == nilTypeMembers(right)
 }
 
-func isNeverNilType(value nilType) bool { return nilTypeMembers(value) == 0 }
-func isNonNilType(value nilType) bool { return nilTypeMembers(value) == 1 }
-func isNilOnlyType(value nilType) bool { return nilTypeMembers(value) == 2 }
+func isNeverNilType(value nilType) bool    { return nilTypeMembers(value) == 0 }
+func isNonNilType(value nilType) bool      { return nilTypeMembers(value) == 1 }
+func isNilOnlyType(value nilType) bool     { return nilTypeMembers(value) == 2 }
 func isOptionalNilType(value nilType) bool { return nilTypeMembers(value) == 3 }
 
 // declaredNilType maps a Go type to T or T | nil.

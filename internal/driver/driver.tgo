@@ -140,7 +140,9 @@ func compileWorkspaceContext(
 		default:
 		}
 		if err := builder.build(path); err != nil {
-			if !continueAfterError { return , err }
+			if !continueAfterError {
+				return , err
+			}
 			resetActiveBuilds(builder)
 			continue
 		}
@@ -178,7 +180,9 @@ func compileWorkspaceViewsContext(
 		}
 		unit := packages[path]
 		if err := builder.build(path); err != nil {
-			if !continueAfterError { return , err }
+			if !continueAfterError {
+				return , err
+			}
 			resetActiveBuilds(builder)
 			continue
 		}
@@ -191,7 +195,9 @@ func compileWorkspaceViewsContext(
 		})
 		internal, external, err := unit.readTests()
 		if err != nil {
-			if !continueAfterError { return , err }
+			if !continueAfterError {
+				return , err
+			}
 			continue
 		}
 		for _, test := range []struct {
@@ -213,7 +219,9 @@ func compileWorkspaceViewsContext(
 				unit, test.files, test.external, token.NewFileSet(),
 			)
 			if err != nil {
-				if !continueAfterError { return , err }
+				if !continueAfterError {
+					return , err
+				}
 				resetActiveBuilds(builder)
 				continue
 			}
@@ -230,7 +238,9 @@ func compileWorkspaceViewsContext(
 
 func resetActiveBuilds(builder *packageBuilder) {
 	for failed, state := range builder.states {
-		if state == buildActive { delete(builder.states, failed) }
+		if state == buildActive {
+			delete(builder.states, failed)
+		}
 	}
 }
 
@@ -422,7 +432,7 @@ func architectureFeatureTag(tag string) bool {
 		"riscv64",
 		"wasm",
 	} {
-		if strings.HasPrefix(tag, architecture + ".") {
+		if strings.HasPrefix(tag, architecture+".") {
 			return true
 		}
 	}
@@ -448,7 +458,7 @@ func architectureFeatureTags(environment goEnvironment) ([]string, error) {
 	case "ppc64", "ppc64le":
 		return numberedFeatureTags(
 			"GOPPC64",
-			environment.GOARCH + ".power",
+			environment.GOARCH+".power",
 			environment.GOPPC64,
 			"power",
 			8,
@@ -492,7 +502,7 @@ func arm64FeatureTags(value string) ([]string, error) {
 	}
 	tags := cumulativeFeatureTags(fmt.Sprintf("arm64.v%d.", major), 0, minor)
 	if major == 9 {
-		tags = append(tags, cumulativeFeatureTags("arm64.v8.", 0, min(minor + 5, 9))...)
+		tags = append(tags, cumulativeFeatureTags("arm64.v8.", 0, min(minor+5, 9))...)
 	}
 	return tags,
 }
@@ -542,9 +552,9 @@ func featureLevel(value string, prefix string, first int, last int) (int, error)
 
 // cumulativeFeatureTags returns all feature tags through one level.
 func cumulativeFeatureTags(prefix string, first int, last int) []string {
-	tags := make([]string, 0, last - first + 1)
+	tags := make([]string, 0, last-first+1)
 	for level := first; level <= last; level++ {
-		tags = append(tags, prefix + strconv.Itoa(level))
+		tags = append(tags, prefix+strconv.Itoa(level))
 	}
 	return tags
 }
@@ -567,7 +577,7 @@ func buildTagsFromGoFlags(flags string) ([]string, error) {
 		field := fields[index]
 		value, found := strings.CutPrefix(field, "-tags=")
 		if !found && field == "-tags" {
-			if index + 1 >= len(fields) {
+			if index+1 >= len(fields) {
 				return , errors.New("-tags needs a value")
 			}
 			index++
@@ -601,8 +611,8 @@ func splitGoFlags(value string) ([]string, error) {
 			if end < 0 {
 				return , fmt.Errorf("unterminated %c string", quote)
 			}
-			fields = append(fields, value[1:end + 1])
-			value = value[end + 2:]
+			fields = append(fields, value[1:end+1])
+			value = value[end+2:]
 			continue
 		}
 		end := strings.IndexAny(value, " \t\n\r")
@@ -662,7 +672,7 @@ func ensureLockFile(path string) error {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-		file, err := os.OpenFile(path, os.O_CREATE | os.O_EXCL | os.O_WRONLY, 0o600)
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if errors.Is(err, os.ErrExist) {
 			continue
 		}
