@@ -1,0 +1,5 @@
+package bad
+
+func Broken() string { return Missing }
+
+func Use() string { return Broken() }

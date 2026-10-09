@@ -1,0 +1,28 @@
+[
+  {
+    "method": "hover",
+    "position": {"file": "good/good.tgo", "text": "Target", "occurrence": 2},
+    "hover": "func Target() string"
+  },
+  {
+    "method": "definition",
+    "position": {"file": "good/good.tgo", "text": "Target", "occurrence": 2},
+    "locations": [
+      {"file": "good/good.tgo", "text": "Target", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "references",
+    "position": {"file": "good/good.tgo", "text": "Target", "occurrence": 2},
+    "includeDeclaration": true,
+    "locations": [
+      {"file": "good/good.tgo", "text": "Target", "occurrence": 1},
+      {"file": "good/good.tgo", "text": "Target", "occurrence": 2}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "bad/bad.tgo", "text": "Broken", "occurrence": 2},
+    "locations": []
+  }
+]
