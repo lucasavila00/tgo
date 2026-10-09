@@ -5,6 +5,8 @@ import (
 	alias "strings"
 )
 
+type Positive int where value > 0
+
 const (
 	one = 1
 	two

@@ -1,0 +1,10 @@
+package boundaries
+type Positive int where value>0
+func minus(value int)int{return - -value}
+func plus(value int)int{return + +value}
+func address(value int)*int{return & ^value}
+func addressAgain(value int)**int{return & &value}
+func receive(input chan chan int)int{return <- <-input}
+func not(value bool)bool{return ! !value}
+func xor(value int)int{return ^ ^value}
+func stars(value **int)int{return * *value}
