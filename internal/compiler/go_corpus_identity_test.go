@@ -24,25 +24,37 @@ func TestGoCorpusIdentity(t *testing.T) {
 		t.Fatalf("Go corpus needs Go 1.27; got %s", runtime.Version())
 	}
 	packages := readGoCorpusManifest(t)
+	goRoot := goCorpusRoot(t)
 	root := t.TempDir()
 	writeIdentityModule(t, root)
 	sources := make(map[string][]byte)
 	testFiles := 0
 	externalTests := 0
 	for _, packagePath := range packages {
-		included, excluded := copyGoCorpusPackage(t, root, packagePath, sources)
+		included, excluded := copyGoCorpusPackage(t, goRoot, root, packagePath, sources)
 		testFiles += included
 		externalTests += excluded
 	}
 	if err := Build(root, []string{"./generated/..."}); err != nil {
 		t.Fatal(err)
 	}
-	active := compareGoCorpusOutput(t, root, sources)
+	active := compareGoCorpusOutput(t, goRoot, root, sources)
 	runGoCorpusTests(t, root, "./original/...", "./generated/...")
 	t.Logf(
-		"%s: %d packages, %d active source files, %d same-package test files, %d external test files excluded",
+		"%s: %d packages, %d active source files, "+
+			"%d same-package test files, %d external test files excluded",
 		runtime.Version(), len(packages), active, testFiles, externalTests,
 	)
+}
+
+func goCorpusRoot(t *testing.T) string {
+	t.Helper()
+	command := exec.Command("go", "env", "GOROOT")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("find GOROOT: %v\n%s", err, output)
+	}
+	return strings.TrimSpace(string(output))
 }
 
 func readGoCorpusManifest(t *testing.T) []string {
@@ -74,12 +86,13 @@ func writeIdentityModule(t *testing.T, root string) {
 
 func copyGoCorpusPackage(
 	t *testing.T,
+	goRoot string,
 	root string,
 	packagePath string,
 	sources map[string][]byte,
 ) (includedTests, excludedTests int) {
 	t.Helper()
-	sourceDirectory := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(packagePath))
+	sourceDirectory := filepath.Join(goRoot, "src", filepath.FromSlash(packagePath))
 	entries, err := os.ReadDir(sourceDirectory)
 	if err != nil {
 		t.Fatal(err)
@@ -151,7 +164,12 @@ func copyCorpusFile(
 	}
 }
 
-func compareGoCorpusOutput(t *testing.T, root string, sources map[string][]byte) int {
+func compareGoCorpusOutput(
+	t *testing.T,
+	goRoot string,
+	root string,
+	sources map[string][]byte,
+) int {
 	t.Helper()
 	paths := make([]string, 0, len(sources))
 	for path := range sources {
@@ -163,9 +181,7 @@ func compareGoCorpusOutput(t *testing.T, root string, sources map[string][]byte)
 		directory := filepath.Join(root, "generated", filepath.Dir(sourcePath))
 		name := filepath.Base(sourcePath)
 		goName := strings.TrimSuffix(name, ".tgo") + ".go"
-		sourceDirectory := filepath.Join(
-			runtime.GOROOT(), "src", filepath.Dir(sourcePath),
-		)
+		sourceDirectory := filepath.Join(goRoot, "src", filepath.Dir(sourcePath))
 		match, err := build.Default.MatchFile(sourceDirectory, goName)
 		if err != nil {
 			t.Fatal(err)

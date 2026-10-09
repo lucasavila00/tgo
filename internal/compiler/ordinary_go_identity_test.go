@@ -44,6 +44,21 @@ func TestGeneratedOrdinaryGoIdentity(t *testing.T) {
 	checkOrdinaryGoIdentity(t, sources)
 }
 
+func TestVerifyOrdinaryGoIdentity(t *testing.T) {
+	source := []byte("package sample\n\ntype Pair struct{}\n")
+	body, err := format.Source(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyGeneratedModels("sample.tgo", source, body, nil); err != nil {
+		t.Fatal(err)
+	}
+	changed := bytes.Replace(body, []byte("struct{}"), []byte("struct{ Value int }"), 1)
+	if err := VerifyGeneratedModels("sample.tgo", source, changed, nil); err == nil {
+		t.Fatal("ownership verification accepted changed ordinary Go")
+	}
+}
+
 func generatedGoSource(index, shape, value int) string {
 	switch shape {
 	case 0:
