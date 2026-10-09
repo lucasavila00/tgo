@@ -40,7 +40,7 @@ type Event struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v Event) TgoTag() uint8 { return v.tgoTag }
 
-// EventStarted holds the variant fields. Supply every field.
+// EventStarted is the Started payload.
 type EventStarted struct {
 	ID    string `json:"event"`
 	Alias string `json:"event"`
@@ -52,12 +52,10 @@ func NewEventStarted(value EventStarted) Event {
 	return Event{tgoTag: 1, tgoStarted: value}
 }
 
-// TgoStarted requires Started. No tag check.
-func (v Event) TgoStarted() EventStarted {
-	return v.tgoStarted
-}
+// TgoStarted returns the Started payload. Check TgoTag first.
+func (v Event) TgoStarted() EventStarted { return v.tgoStarted }
 
-// EventStopped holds the variant fields. Supply every field.
+// EventStopped is the Stopped payload.
 type EventStopped struct {
 	Reason string
 }
@@ -68,10 +66,9 @@ func NewEventStopped(value EventStopped) Event {
 	return Event{tgoTag: 2, tgoStopped: value}
 }
 
-// TgoStopped requires Stopped. No tag check.
-func (v Event) TgoStopped() EventStopped {
-	return v.tgoStopped
-}
+// TgoStopped returns the Stopped payload. Check TgoTag first.
+func (v Event) TgoStopped() EventStopped { return v.tgoStopped }
+
 func (v Event) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -88,6 +85,7 @@ func (v Event) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Event JSON tag")
 	}
 }
+
 func (v *Event) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -131,9 +129,8 @@ type Signal struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v Signal) TgoTag() uint8 { return v.tgoTag }
 
-// SignalOn holds the variant fields. Supply every field.
-type SignalOn struct {
-}
+// SignalOn is the On payload.
+type SignalOn struct{}
 
 // NewSignalOn constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -141,10 +138,9 @@ func NewSignalOn(_ SignalOn) Signal {
 	return Signal{tgoTag: 1}
 }
 
-// TgoOn requires On. No tag check.
-func (v Signal) TgoOn() SignalOn {
-	return SignalOn{}
-}
+// TgoOn returns the On payload. Check TgoTag first.
+func (Signal) TgoOn() SignalOn { return SignalOn{} }
+
 func (v Signal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -156,6 +152,7 @@ func (v Signal) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Signal JSON tag")
 	}
 }
+
 func (v *Signal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

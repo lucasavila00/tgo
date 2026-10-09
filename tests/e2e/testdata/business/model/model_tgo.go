@@ -95,7 +95,7 @@ type Account struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v Account) TgoTag() uint8 { return v.tgoTag }
 
-// AccountPersonal holds the variant fields. Supply every field.
+// AccountPersonal is the Personal payload.
 type AccountPersonal struct {
 	Name string
 }
@@ -106,12 +106,10 @@ func NewAccountPersonal(value AccountPersonal) Account {
 	return Account{tgoTag: 1, tgoPersonal: value}
 }
 
-// TgoPersonal requires Personal. No tag check.
-func (v Account) TgoPersonal() AccountPersonal {
-	return v.tgoPersonal
-}
+// TgoPersonal returns the Personal payload. Check TgoTag first.
+func (v Account) TgoPersonal() AccountPersonal { return v.tgoPersonal }
 
-// AccountBusiness holds the variant fields. Supply every field.
+// AccountBusiness is the Business payload.
 type AccountBusiness struct {
 	Company string
 	Members []Account
@@ -124,10 +122,9 @@ func NewAccountBusiness(value AccountBusiness) Account {
 	return Account{tgoTag: 2, tgoBusiness: value}
 }
 
-// TgoBusiness requires Business. No tag check.
-func (v Account) TgoBusiness() AccountBusiness {
-	return v.tgoBusiness
-}
+// TgoBusiness returns the Business payload. Check TgoTag first.
+func (v Account) TgoBusiness() AccountBusiness { return v.tgoBusiness }
+
 func (v Account) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -144,6 +141,7 @@ func (v Account) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Account JSON tag")
 	}
 }
+
 func (v *Account) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -188,7 +186,7 @@ type Notice struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v Notice) TgoTag() uint8 { return v.tgoTag }
 
-// NoticeText holds the variant fields. Supply every field.
+// NoticeText is the Text payload.
 type NoticeText struct {
 	Body   string
 	Labels map[string]string
@@ -200,10 +198,9 @@ func NewNoticeText(value NoticeText) Notice {
 	return Notice{tgoTag: 1, tgoText: value}
 }
 
-// TgoText requires Text. No tag check.
-func (v Notice) TgoText() NoticeText {
-	return v.tgoText
-}
+// TgoText returns the Text payload. Check TgoTag first.
+func (v Notice) TgoText() NoticeText { return v.tgoText }
+
 func (v Notice) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -215,6 +212,7 @@ func (v Notice) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Notice JSON tag")
 	}
 }
+
 func (v *Notice) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -251,9 +249,8 @@ type Signal struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v Signal) TgoTag() uint8 { return v.tgoTag }
 
-// SignalOn holds the variant fields. Supply every field.
-type SignalOn struct {
-}
+// SignalOn is the On payload.
+type SignalOn struct{}
 
 // NewSignalOn constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -261,14 +258,11 @@ func NewSignalOn(_ SignalOn) Signal {
 	return Signal{tgoTag: 1}
 }
 
-// TgoOn requires On. No tag check.
-func (v Signal) TgoOn() SignalOn {
-	return SignalOn{}
-}
+// TgoOn returns the On payload. Check TgoTag first.
+func (Signal) TgoOn() SignalOn { return SignalOn{} }
 
-// SignalOff holds the variant fields. Supply every field.
-type SignalOff struct {
-}
+// SignalOff is the Off payload.
+type SignalOff struct{}
 
 // NewSignalOff constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -276,10 +270,9 @@ func NewSignalOff(_ SignalOff) Signal {
 	return Signal{tgoTag: 2}
 }
 
-// TgoOff requires Off. No tag check.
-func (v Signal) TgoOff() SignalOff {
-	return SignalOff{}
-}
+// TgoOff returns the Off payload. Check TgoTag first.
+func (Signal) TgoOff() SignalOff { return SignalOff{} }
+
 func (v Signal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -296,6 +289,7 @@ func (v Signal) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Signal JSON tag")
 	}
 }
+
 func (v *Signal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

@@ -16,7 +16,7 @@ type Large struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v Large) TgoTag() uint8 { return v.tgoTag }
 
-// LargeFirst holds the variant fields. Supply every field.
+// LargeFirst is the First payload.
 type LargeFirst struct {
 	Data [64]byte
 }
@@ -27,12 +27,10 @@ func NewLargeFirst(value LargeFirst) Large {
 	return Large{tgoTag: 1, tgoPayload: value}
 }
 
-// TgoFirst requires First. No tag check.
-func (v Large) TgoFirst() LargeFirst {
-	return v.tgoPayload.(LargeFirst)
-}
+// TgoFirst returns the First payload. Check TgoTag first.
+func (v Large) TgoFirst() LargeFirst { return v.tgoPayload.(LargeFirst) }
 
-// LargeSecond holds the variant fields. Supply every field.
+// LargeSecond is the Second payload.
 type LargeSecond struct {
 	Data [64]byte
 }
@@ -43,14 +41,11 @@ func NewLargeSecond(value LargeSecond) Large {
 	return Large{tgoTag: 2, tgoPayload: value}
 }
 
-// TgoSecond requires Second. No tag check.
-func (v Large) TgoSecond() LargeSecond {
-	return v.tgoPayload.(LargeSecond)
-}
+// TgoSecond returns the Second payload. Check TgoTag first.
+func (v Large) TgoSecond() LargeSecond { return v.tgoPayload.(LargeSecond) }
 
-// LargeEmpty holds the variant fields. Supply every field.
-type LargeEmpty struct {
-}
+// LargeEmpty is the Empty payload.
+type LargeEmpty struct{}
 
 // NewLargeEmpty constructs Large. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -58,10 +53,9 @@ func NewLargeEmpty(_ LargeEmpty) Large {
 	return Large{tgoTag: 3}
 }
 
-// TgoEmpty requires Empty. No tag check.
-func (v Large) TgoEmpty() LargeEmpty {
-	return LargeEmpty{}
-}
+// TgoEmpty returns the Empty payload. Check TgoTag first.
+func (Large) TgoEmpty() LargeEmpty { return LargeEmpty{} }
+
 func (v Large) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -83,6 +77,7 @@ func (v Large) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Large JSON tag")
 	}
 }
+
 func (v *Large) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -135,7 +130,7 @@ type Equal struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v Equal) TgoTag() uint8 { return v.tgoTag }
 
-// EqualFirst holds the variant fields. Supply every field.
+// EqualFirst is the First payload.
 type EqualFirst struct {
 	Data [40]byte
 }
@@ -146,12 +141,10 @@ func NewEqualFirst(value EqualFirst) Equal {
 	return Equal{tgoTag: 1, tgoPayload: value}
 }
 
-// TgoFirst requires First. No tag check.
-func (v Equal) TgoFirst() EqualFirst {
-	return v.tgoPayload.(EqualFirst)
-}
+// TgoFirst returns the First payload. Check TgoTag first.
+func (v Equal) TgoFirst() EqualFirst { return v.tgoPayload.(EqualFirst) }
 
-// EqualSecond holds the variant fields. Supply every field.
+// EqualSecond is the Second payload.
 type EqualSecond struct {
 	Data [40]byte
 }
@@ -162,10 +155,9 @@ func NewEqualSecond(value EqualSecond) Equal {
 	return Equal{tgoTag: 2, tgoSecond: value}
 }
 
-// TgoSecond requires Second. No tag check.
-func (v Equal) TgoSecond() EqualSecond {
-	return v.tgoSecond
-}
+// TgoSecond returns the Second payload. Check TgoTag first.
+func (v Equal) TgoSecond() EqualSecond { return v.tgoSecond }
+
 func (v Equal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -182,6 +174,7 @@ func (v Equal) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Equal JSON tag")
 	}
 }
+
 func (v *Equal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

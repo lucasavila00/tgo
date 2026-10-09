@@ -34,6 +34,7 @@ func enumGo(sourceName string, declaration *model) string {
 	for index, variant := range declaration.Variants {
 		emitVariant(&output, sourceName, name, variant, index+1)
 	}
+	output.WriteByte('\n')
 	return output.String()
 }
 
@@ -48,13 +49,17 @@ func emitVariant(
 	payload := enum + variant.Name
 	constructor := "New" + payload
 	accessor := "Tgo" + variant.Name
-	fmt.Fprintf(output, "// %s holds the variant fields. Supply every field.\n", payload)
-	fmt.Fprintf(
-		output,
-		"type %s struct {\n%s}\n",
-		payload,
-		fieldDecls(sourceName, variant.Fields),
-	)
+	fmt.Fprintf(output, "// %s is the %s payload.\n", payload, variant.Name)
+	if len(variant.Fields) == 0 {
+		fmt.Fprintf(output, "type %s struct{}\n", payload)
+	} else {
+		fmt.Fprintf(
+			output,
+			"type %s struct {\n%s}\n",
+			payload,
+			fieldDecls(sourceName, variant.Fields),
+		)
+	}
 	fmt.Fprintf(output, "// %s constructs %s. Model fields must be valid.\n", constructor, enum)
 	output.WriteString("// Shared fields keep their aliases and caller duties.\n")
 	parameter := "value"
@@ -76,15 +81,33 @@ func emitVariant(
 			variant.Name,
 		)
 	}
-	fmt.Fprintf(output, "// %s requires %s. No tag check.\n", accessor, variant.Name)
-	fmt.Fprintf(output, "func (v %s) %s() %s {\n", enum, accessor, payload)
+	fmt.Fprintf(
+		output,
+		"// %s returns the %s payload. Check TgoTag first.\n",
+		accessor,
+		variant.Name,
+	)
 	switch {
 	case len(variant.Fields) == 0:
-		fmt.Fprintf(output, "return %s{}\n}\n", payload)
+		fmt.Fprintf(output, "func (%s) %s() %s { return %s{} }\n", enum, accessor, payload, payload)
 	case variant.Boxed:
-		fmt.Fprintf(output, "return v.tgoPayload.(%s)\n}\n", payload)
+		fmt.Fprintf(
+			output,
+			"func (v %s) %s() %s { return v.tgoPayload.(%s) }\n",
+			enum,
+			accessor,
+			payload,
+			payload,
+		)
 	default:
-		fmt.Fprintf(output, "return v.tgo%s\n}\n", variant.Name)
+		fmt.Fprintf(
+			output,
+			"func (v %s) %s() %s { return v.tgo%s }\n",
+			enum,
+			accessor,
+			payload,
+			variant.Name,
+		)
 	}
 }
 
