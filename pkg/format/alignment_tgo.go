@@ -406,7 +406,7 @@ func (p *printer) declarationCommentAlignment(
 				end,
 			)
 		}
-		breakBefore := functionDeclarationOf(value) != nil
+		breakBefore := functionDeclarationOf(value) != nil && bodyColumns[index] == 0
 		if index > 0 {
 			previous := values[index-1]
 			previousStop := syntax.DeclarationEnd(previous)
