@@ -34,7 +34,7 @@ func TestSymbolKindProtocolContract(t *testing.T) {
 	if err := json.Unmarshal(contractData, &contract); err != nil {
 		t.Fatal(err)
 	}
-	values := []SymbolKind{SymbolKindPackage{}.SymbolKind(), SymbolKindType{}.SymbolKind(), SymbolKindStruct{}.SymbolKind(), SymbolKindInterface{}.SymbolKind(), SymbolKindFunction{}.SymbolKind(), SymbolKindMethod{}.SymbolKind(), SymbolKindField{}.SymbolKind(), SymbolKindEnum{}.SymbolKind(), SymbolKindEnumMember{}.SymbolKind(), SymbolKindConstant{}.SymbolKind(), SymbolKindVariable{}.SymbolKind()}
+	values := []SymbolKind{NewSymbolKindPackage(), NewSymbolKindType(), NewSymbolKindStruct(), NewSymbolKindInterface(), NewSymbolKindFunction(), NewSymbolKindMethod(), NewSymbolKindField(), NewSymbolKindEnum(), NewSymbolKindEnumMember(), NewSymbolKindConstant(), NewSymbolKindVariable()}
 	got := make([]string, 0, len(values))
 	for _, value := range values {
 		got = append(got, protocolSymbolKind(value))
