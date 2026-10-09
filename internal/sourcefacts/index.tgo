@@ -33,7 +33,7 @@ type Index struct {
 }
 
 // New copies typed facts into a syntax position index.
-func New(sourceFiles []*syntax.File, info %types.Info, files %token.FileSet) %Index {
+func New(file %syntax.File, info %types.Info, files %token.FileSet) %Index {
 	index := &Index{
 		files: files,
 		types: make(map[span]types.TypeAndValue),
@@ -64,11 +64,12 @@ func New(sourceFiles []*syntax.File, info %types.Info, files %token.FileSet) %In
 	for identifier, instance := range info.Instances {
 		index.instances[index.location(identifier.Pos())] = instance
 	}
-	for _, file := range sourceFiles {
-		if file != nil { index.indexFunctionSignatures(file) }
-	}
+	index.indexFunctionSignatures(file)
 	return index
 }
+
+// AddFile indexes function signatures from one more package file.
+func (i %Index) AddFile(file %syntax.File) { i.indexFunctionSignatures(file) }
 
 func (i %Index) indexFunctionSignatures(file %syntax.File) {
 	syntax.Inspect(file, func(node *syntax.Node) bool {
