@@ -1,0 +1,185 @@
+// Package navigation indexes typed TGo source for read-only code navigation.
+package navigation
+
+import (
+	"context"
+	"fmt"
+	"go/types"
+	"net/url"
+	"path/filepath"
+	"strconv"
+	"sync"
+
+	"tgo/internal/compiler"
+	"tgo/pkg/syntax"
+)
+
+// Location is one exact byte range in a source file URI.
+type Location struct {
+	URI   string `json:"uri"`
+	Start int    `json:"start"`
+	End   int    `json:"end"`
+}
+
+type occurrence struct {
+	location Location
+	key      string
+}
+
+type workspaceIndex struct {
+	occurrences []occurrence
+	definitions map[string]Location
+}
+
+// Engine owns one invalidatable workspace index.
+type Engine struct {
+	root  string
+	mu    %sync.Mutex
+	index *workspaceIndex
+}
+
+// New makes an engine for one workspace directory.
+func New(root string) (*Engine, error) {
+	absolute, err := filepath.Abs(root)
+	if err != nil { return nil, err }
+	return &Engine{root: absolute, mu: new(sync.Mutex), index: nil}, nil
+}
+
+// Invalidate removes all cached facts after a source or module change.
+func (e *Engine) Invalidate() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.index = nil
+}
+
+// Definition returns the exact declaration for the name at a byte offset.
+func (e *Engine) Definition(
+	ctx context.Context,
+	uri string,
+	offset int,
+) ([]Location, error) {
+	index, err := e.load(ctx)
+	if err != nil { return nil, err }
+	for _, item := range index.occurrences {
+		if item.location.URI == uri && item.location.Start <= offset &&
+			offset < item.location.End {
+			definition, ok := index.definitions[item.key]
+			if !ok { return nil, nil }
+			return []Location{definition}, nil
+		}
+	}
+	return nil, nil
+}
+
+func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.index != nil { return e.index, nil }
+	select {
+	case <-ctx.Done(): return nil, ctx.Err()
+	default:
+	}
+	packages, err := compiler.AnalyzeWorkspace(e.root)
+	if err != nil { return nil, err }
+	index := &workspaceIndex{
+		occurrences: nil,
+		definitions: make(map[string]Location),
+	}
+	for _, pkg := range packages {
+		select {
+		case <-ctx.Done(): return nil, ctx.Err()
+		default:
+		}
+		keys := newObjectKeys(pkg.Package)
+		for _, source := range pkg.Sources {
+			fileURI, err := pathURI(source.Path)
+			if err != nil { return nil, err }
+			syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
+				identifier, ok := syntax.IdentifierOf(node)
+				if !ok || identifier == nil { return true }
+				object, definition := pkg.Facts.IdentifierFact(identifier)
+				if object == nil { return true }
+				start := pkg.Files.Position(identifier.Start).Offset
+				end := pkg.Files.Position(identifier.Stop).Offset
+				if start < 0 || end <= start { return true }
+				key := keys.key(object)
+				location := Location{URI: fileURI, Start: start, End: end}
+				index.occurrences = append(index.occurrences, occurrence{
+					location: location, key: key,
+				})
+				if definition { index.definitions[key] = location }
+				return true
+			})
+		}
+	}
+	e.index = index
+	return index, nil
+}
+
+type objectKeys struct {
+	known map[types.Object]string
+	next  int
+}
+
+func newObjectKeys(root *types.Package) *objectKeys {
+	keys := &objectKeys{known: make(map[types.Object]string), next: 0}
+	keys.addPackage(root, make(map[*types.Package]bool))
+	return keys
+}
+
+func (k *objectKeys) addPackage(pkg *types.Package, seen map[*types.Package]bool) {
+	if pkg == nil || seen[pkg] { return }
+	seen[pkg] = true
+	scope := pkg.Scope()
+	for _, name := range scope.Names() {
+		object := scope.Lookup(name)
+		prefix := "package:" + pkg.Path() + ":" + name
+		k.known[object] = prefix
+		typeName, ok := object.(*types.TypeName)
+		if !ok { continue }
+		named, ok := types.Unalias(typeName.Type()).(*types.Named)
+		if !ok { continue }
+		k.addNamed(prefix, named)
+	}
+	for _, imported := range pkg.Imports() { k.addPackage(imported, seen) }
+}
+
+func (k *objectKeys) addNamed(prefix string, named *types.Named) {
+	origin := named.Origin()
+	for index := 0; index < origin.NumMethods(); index++ {
+		method := origin.Method(index)
+		k.known[method] = prefix + ":method:" + method.Name()
+	}
+	switch value := origin.Underlying().(type) {
+	case *types.Struct:
+		for index := 0; index < value.NumFields(); index++ {
+			field := value.Field(index)
+			k.known[field] = prefix + ":field:" + strconv.Itoa(index)
+		}
+	case *types.Interface:
+		value.Complete()
+		for index := 0; index < value.NumExplicitMethods(); index++ {
+			method := value.ExplicitMethod(index)
+			k.known[method] = prefix + ":method:" + method.Name()
+		}
+	}
+}
+
+func (k *objectKeys) key(object types.Object) string {
+	if key := k.known[object]; key != "" { return key }
+	packagePath := "universe"
+	if object.Pkg() != nil { packagePath = object.Pkg().Path() }
+	k.next++
+	key := fmt.Sprintf("local:%s:%d", packagePath, k.next)
+	k.known[object] = key
+	return key
+}
+
+func pathURI(path string) (string, error) {
+	absolute, err := filepath.Abs(path)
+	if err != nil { return "", err }
+	value := new(url.URL)
+	value.Scheme = "file"
+	value.Path = filepath.ToSlash(absolute)
+	return value.String(), nil
+}

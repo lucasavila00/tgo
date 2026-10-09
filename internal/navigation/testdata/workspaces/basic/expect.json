@@ -1,0 +1,6 @@
+{
+  "file": "main.tgo",
+  "use": "Target()",
+  "useOccurrence": 2,
+  "definition": "Target"
+}

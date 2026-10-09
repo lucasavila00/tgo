@@ -171,6 +171,22 @@ func (i *Index) Object(identifier *syntax.Identifier) types.Object {
 	return i.lineDefinition(identifier, position)
 }
 
+// IdentifierFact returns the object and reports whether the name defines it.
+func (i *Index) IdentifierFact(identifier *syntax.Identifier) (types.Object, bool) {
+	if identifier == nil {
+		return nil, false
+	}
+	position := i.location(identifier.Start)
+	if object := i.definitions[position]; object != nil {
+		return object, true
+	}
+	if object := i.uses[position]; object != nil {
+		return object, false
+	}
+	object := i.lineDefinition(identifier, position)
+	return object, object != nil
+}
+
 // Definition returns the object defined by a source identifier expression.
 func (i *Index) Definition(expression *syntax.Expression) types.Object {
 	identifier := syntax.IdentifierExpressionOf(expression)
