@@ -1,0 +1,111 @@
+package sourcepolicybad
+
+import "example.com/tgolint/model"
+
+type Local enum {
+	Ready struct { ID string }
+}
+
+type Port struct{ number int } checked
+
+func (value Port) check() (Port, error) {
+	value.number = 1
+	other := value
+	other.number = 2
+	{
+		value := Port{}
+		value.number = 3
+		_ = value
+	}
+	return value,
+}
+
+type LocalLayout struct {
+	tgoTag   LocalTag
+	tgoReady LocalReady
+}
+
+type DirectLocal Local
+type DirectImported model.Event
+
+type LocalTypes interface {
+	Local
+}
+
+func localLiteral() Local {
+	return Local{}
+}
+
+func localConstruction(value LocalLayout) Local {
+	return Local(value)
+}
+
+func localExposure(value Local) LocalLayout {
+	return LocalLayout(value)
+}
+
+func pointerExposure(value *Local) *LocalLayout {
+	return (*LocalLayout)(value)
+}
+
+func genericConstruction[T LocalTypes](value LocalLayout) T {
+	return T(value)
+}
+
+func genericExposure[T LocalTypes](value T) LocalLayout {
+	return LocalLayout(value)
+}
+
+func anonymousExposure(value Local) LocalReady {
+	var exposed struct {
+		tgoTag   LocalTag
+		tgoReady LocalReady
+	} = value
+	return exposed.tgoReady
+}
+
+type Embedded struct{ Local }
+
+func promotedRepresentation(value Embedded) LocalTag {
+	return value.tgoTag
+}
+
+func change(value Port) {
+	value.number = 2
+	value.number++
+	_ = &value.number
+	for value.number = range []int{1} {
+	}
+}
+
+var localConstructor = NewPort
+var localCarrier = TgoPortInput{FieldNumber: 0}
+var importedConstructor = model.NewCount
+var importedCarrier = model.TgoCountInput{FieldValue: 0}
+var localEnumConstructor = NewLocalReady
+var importedEnumConstructor = model.NewEventStarted
+
+func generatedEnumTypes(
+	localPayload LocalReady,
+	localCarrier TgoLocalReadyInput,
+	importedPayload model.EventStarted,
+	importedCarrier model.TgoEventStartedInput,
+) {}
+
+func importedLiteral() model.Event {
+	return model.Event{}
+}
+
+func validChecked(number int) (Port, error) {
+	return Port{number: number}
+}
+
+func validVariant(id string) Local {
+	return Local.Ready{ID: id}
+}
+
+func (value LocalReady) Label() string { return value.ID }
+
+func (value *LocalReady) Clear() { value.ID = "" }
+
+type LocalAlias = Local

@@ -18,7 +18,9 @@ func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
 	}
 	savedFacts, savedFile := c.facts, c.file
 	savedParents := c.parents
+	savedPackage := c.sourcePackage
 	c.facts = analysis.Facts
+	c.sourcePackage = analysis.Package
 	c.sourceFiles = nil
 	for _, source := range analysis.Sources {
 		if source.Syntax != nil {
@@ -52,9 +54,11 @@ func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
 		)
 	}
 	c.facts, c.file, c.parents = savedFacts, savedFile, savedParents
+	c.sourcePackage = savedPackage
 }
 
 func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
+	c.checkSourceModelPolicy(node)
 	if function, ok := syntax.FunctionDeclarationOf(node); ok {
 		if function != nil {
 			functionType, body := function.Type, function.Body
@@ -89,7 +93,9 @@ func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
 		c.checkRepresentationAccess(expression)
 	}
 	if literal := syntax.CompositeLiteralOf(expression); literal != nil {
-		c.checkCompleteLiteral(expression, literal)
+		if !modelIsEnum(c.sourceDirectModel(c.facts.Type(expression))) {
+			c.checkCompleteLiteral(expression, literal)
+		}
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
 		c.checkSourceZeroCall(expression, call)
