@@ -28,6 +28,7 @@ func narrow(value *nilmodel.Item) {
 func namedContract() {
 	holder := nilmodel.NewHolder(&nilmodel.Item{})
 	nilmodel.NeedHolder(holder)
+	nilmodel.Need(holder.Required)
 }
 
 func nilOuterPointer() {

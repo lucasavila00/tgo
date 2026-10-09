@@ -21,6 +21,12 @@ type BothRequired = %%Item
 type RequiredHandler = func(%Item) %Item
 type OptionalHandler = func(*Item) *Item
 
+type Syntax enum {
+	Item struct { Value %Item }
+}
+
+type SyntaxList = []%Syntax
+
 func Need(value %Item) {}
 
 func NeedHolder(value %Holder) {}
