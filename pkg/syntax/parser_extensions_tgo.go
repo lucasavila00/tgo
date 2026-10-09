@@ -382,7 +382,14 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 	}
 	declarationStarts := make(map[token.Pos]bool)
 	for _, declaration := range p.decls {
-		declarationStarts[p.pos(declaration.start)] = true
+		switch value := *declaration; value.Tag() {
+		case rawDeclTagEnum:
+			declarationStarts[p.pos(value.EnumPayload().start)] = true
+		case rawDeclTagStruct:
+			declarationStarts[p.pos(value.StructPayload().start)] = true
+		default:
+			panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+		}
 	}
 	goDecls := goFile.Decls[:0]
 	for _, declaration := range goFile.Decls {

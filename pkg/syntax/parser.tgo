@@ -55,10 +55,7 @@ type rawVariant struct {
 	fields      []*rawField
 }
 
-type rawDecl struct {
-	tag       int
-	checked   int
-	kind      string
+type rawDeclBase struct {
 	start     int
 	end       int
 	typeToken int
@@ -66,8 +63,19 @@ type rawDecl struct {
 	keyword   int
 	open      int
 	close     int
-	fields    []*rawField
-	variants  []*rawVariant
+}
+
+type rawDecl enum {
+	Enum struct {
+		rawDeclBase
+		tag      int
+		variants []*rawVariant
+	}
+	Struct struct {
+		rawDeclBase
+		checked int
+		fields  []*rawField
+	}
 }
 
 type rawDefault struct {
@@ -347,11 +355,24 @@ func (p %sourceParser) discoverDeclarations() error {
 			declaration, next := p.declaration(cursor)!!
 			if declaration != nil {
 				p.decls = append(p.decls, declaration)
+				declarationStart := 0
+				declarationEnd := 0
+				switch value := *declaration; value.Tag() {
+				case rawDeclTagEnum:
+					payload := value.EnumPayload()
+					declarationStart = payload.start
+					declarationEnd = payload.end
+				case rawDeclTagStruct:
+					payload := value.StructPayload()
+					declarationStart = payload.start
+					declarationEnd = payload.end
+				exhaustive:
+				}
 				p.edits = append(
 					p.edits,
 					sourceEdit{
-						start: declaration.start,
-						end:   declaration.end,
+						start: declarationStart,
+						end:   declarationEnd,
 						text:  "var _ int",
 					},
 				)
@@ -427,19 +448,11 @@ func (p %sourceParser) enumDeclaration(
 	open int,
 ) (*rawDecl, int, error) {
 	closing := p.closeToken(open)!
-	declaration := new(rawDecl)
-	declaration.kind = "enum"
-	declaration.start = p.tokens[start].start
-	declaration.end = p.tokens[closing].end
-	declaration.typeToken = start
-	declaration.name = start + 1
-	declaration.keyword = keyword
-	declaration.tag = -1
+	tag := -1
 	if keyword + 1 < open && p.tokens[keyword + 1].kind == token.STRING {
-		declaration.tag = keyword + 1
+		tag = keyword + 1
 	}
-	declaration.open = open
-	declaration.close = closing
+	variants := []*rawVariant(nil)
 	cursor := open + 1
 	names := make(map[string]bool)
 	for cursor < closing {
@@ -454,14 +467,27 @@ func (p %sourceParser) enumDeclaration(
 			return ,, failure
 		}
 		names[name] = true
-		declaration.variants = append(declaration.variants, variant)
+		variants = append(variants, variant)
 		cursor = next
 	}
-	if len(declaration.variants) == 0 && p.mode & AllowInvalidModels == 0 {
+	if len(variants) == 0 && p.mode & AllowInvalidModels == 0 {
 		failure := p.tokenError(keyword, "enum %s has no variants", p.tokens[start + 1].text)
 		return ,, failure
 	}
-	return declaration, skipSemicolon(p.tokens, closing + 1),
+	declaration := rawDecl.Enum{
+		rawDeclBase: rawDeclBase{
+			start:     p.tokens[start].start,
+			end:       p.tokens[closing].end,
+			typeToken: start,
+			name:      start + 1,
+			keyword:   keyword,
+			open:      open,
+			close:     closing,
+		},
+		tag:         tag,
+		variants:    variants,
+	}
+	return &declaration, skipSemicolon(p.tokens, closing + 1),
 }
 
 func (p %sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
@@ -517,21 +543,24 @@ func (p %sourceParser) structDeclaration(
 		checked = next
 		next++
 	}
-	declaration := new(rawDecl)
-	declaration.kind = "struct"
-	declaration.start = p.tokens[start].start
-	declaration.end = p.tokens[closing].end
+	end := p.tokens[closing].end
 	if checked >= 0 {
-		declaration.end = p.tokens[checked].end
+		end = p.tokens[checked].end
 	}
-	declaration.checked = checked
-	declaration.typeToken = start
-	declaration.name = start + 1
-	declaration.keyword = keyword
-	declaration.open = open
-	declaration.close = closing
-	declaration.fields = fields
-	return declaration, skipSemicolon(p.tokens, next),
+	declaration := rawDecl.Struct{
+		rawDeclBase: rawDeclBase{
+			start:     p.tokens[start].start,
+			end:       end,
+			typeToken: start,
+			name:      start + 1,
+			keyword:   keyword,
+			open:      open,
+			close:     closing,
+		},
+		checked:     checked,
+		fields:      fields,
+	}
+	return &declaration, skipSemicolon(p.tokens, next),
 }
 
 func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
