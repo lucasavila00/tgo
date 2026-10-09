@@ -77,4 +77,3 @@ func typeCanBeNil(typ types.Type) bool {
 	}
 	return false
 }
-

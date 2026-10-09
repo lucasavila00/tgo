@@ -4,55 +4,58 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/token"
 	"sort"
 	"strings"
+
+	"tgo/pkg/syntax"
 )
 
 // conditionNilBranches keeps each possible set of related nil facts.
 func (e *nilEnvironment) conditionNilBranches(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	state *nilFlowState,
 ) (nilBranches, nilBranches) {
-	switch expression := expression.(type) {
-	case *ast.ParenExpr:
-		return e.conditionNilBranches(expression.X, state)
-	case *ast.UnaryExpr:
-		if expression.Op == token.NOT {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return e.conditionNilBranches(parenthesized.Expression, state)
+	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+		if unary.Operator == token.NOT {
 			trueBranches, falseBranches := e.conditionNilBranches(
-				expression.X, state,
+				unary.Expression, state,
 			)
 			return falseBranches, trueBranches
 		}
-	case *ast.Ident:
-		if guard, ok := state.guards[e.info.ObjectOf(expression)]; ok {
+	}
+	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
+		if guard, ok := state.guards[e.facts.Object(identifier)]; ok {
 			return cloneNilBranches(guard.trueBranches),
 				cloneNilBranches(guard.falseBranches)
 		}
-		if presence, ok := state.presence[e.info.ObjectOf(expression)]; ok {
+		if presence, ok := state.presence[e.facts.Object(identifier)]; ok {
 			if presence.nonNil {
 				return nilBranches{{presence.value: nonNilType()}},
 					unconstrainedNilBranches()
 			}
 		}
-	case *ast.BinaryExpr:
-		switch expression.Op {
+	}
+	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
+		switch binary.Operator {
 		case token.EQL, token.NEQ:
 			return e.comparisonNilBranches(
-				expression.X, expression.Y, expression.Op, state,
+				binary.Left, binary.Right, binary.Operator, state,
 			)
 		case token.LAND:
-			leftTrue, leftFalse := e.conditionNilBranches(expression.X, state)
-			rightTrue, rightFalse := e.conditionNilBranches(expression.Y, state)
+			leftTrue, leftFalse := e.conditionNilBranches(binary.Left, state)
+			rightTrue, rightFalse := e.conditionNilBranches(binary.Right, state)
 			return e.andNilBranches(state, leftTrue, rightTrue),
 				e.orNilBranches(
 					state, leftFalse,
 					e.andNilBranches(state, leftTrue, rightFalse),
 				)
 		case token.LOR:
-			leftTrue, leftFalse := e.conditionNilBranches(expression.X, state)
-			rightTrue, rightFalse := e.conditionNilBranches(expression.Y, state)
+			leftTrue, leftFalse := e.conditionNilBranches(binary.Left, state)
+			rightTrue, rightFalse := e.conditionNilBranches(binary.Right, state)
 			return e.orNilBranches(
 				state, leftTrue,
 				e.andNilBranches(state, leftFalse, rightTrue),
@@ -63,8 +66,8 @@ func (e *nilEnvironment) conditionNilBranches(
 }
 
 func (e *nilEnvironment) comparisonNilBranches(
-	left ast.Expr,
-	right ast.Expr,
+	left *syntax.Expression,
+	right *syntax.Expression,
 	operator token.Token,
 	state *nilFlowState,
 ) (nilBranches, nilBranches) {
@@ -275,7 +278,7 @@ func nilBranchesInformative(branches nilBranches) bool {
 func (e *nilEnvironment) remapNilBranches(
 	state *nilFlowState,
 	branches nilBranches,
-	targets []ast.Expr,
+	targets []*syntax.Expression,
 	sources []*nilPlace,
 ) nilBranches {
 	if branches == nil {

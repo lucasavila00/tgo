@@ -12,3 +12,9 @@ func syntaxFacts(values nilmodel.SyntaxList) {
 		}
 	}
 }
+
+func propagationContract() error {
+	item := nilmodel.Load()!!
+	nilmodel.Need(item)
+	return nil
+}

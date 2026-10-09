@@ -121,6 +121,10 @@ func Give(value *Item) *Item {
 	return value
 }
 
+func Load() (*Item, error) {
+	return &Item{Name: ""}, nil
+}
+
 func AcceptOptional(value *Item) *Item {
 	if value == nil {
 		return &Item{Name: ""}

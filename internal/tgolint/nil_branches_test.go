@@ -39,7 +39,7 @@ func TestNilBranchAlternativesKeepRelations(t *testing.T) {
 	}
 	for _, test := range tests {
 		diagnostics, err := runNilAnalysis(
-			"value, other, alias *Item", test.body,
+			t, "value, other, alias *Item", test.body,
 		)
 		if err != nil {
 			t.Fatalf("%s: %v", test.name, err)

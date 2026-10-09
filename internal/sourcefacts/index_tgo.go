@@ -18,6 +18,12 @@ type location struct {
 	column int
 }
 
+type definitionLocation struct {
+	file string
+	line int
+	name string
+}
+
 type span struct {
 	start location
 	stop  location
@@ -26,34 +32,55 @@ type span struct {
 // Index maps syntax positions to facts from one typed package.
 
 type Index struct {
-	files       *token.FileSet
-	types       map[span]types.TypeAndValue
-	definitions map[location]types.Object
-	uses        map[location]types.Object
-	selections  map[span]*types.Selection
-	instances   map[location]types.Instance
-	useCounts   map[types.Object]int
-	signatures  map[location]*types.Signature
+	files                *token.FileSet
+	types                map[span]types.TypeAndValue
+	definitions          map[location]types.Object
+	lineDefinitions      map[definitionLocation]types.Object
+	ambiguousDefinitions map[definitionLocation]bool
+	uses                 map[location]types.Object
+	selections           map[span]*types.Selection
+	instances            map[location]types.Instance
+	implicits            map[span]types.Object
+	useCounts            map[types.Object]int
+	signatures           map[location]*types.Signature
 }
 
 // New copies typed facts into a syntax position index.
 func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
+	if info == nil {
+		panic("source facts require type facts")
+	}
+	if files == nil {
+		panic("source facts require position facts")
+	}
 	index := &Index{
-		files:       files,
-		types:       make(map[span]types.TypeAndValue),
-		definitions: make(map[location]types.Object),
-		uses:        make(map[location]types.Object),
-		selections:  make(map[span]*types.Selection),
-		instances:   make(map[location]types.Instance),
-		useCounts:   make(map[types.Object]int),
-		signatures:  make(map[location]*types.Signature),
+		files:                files,
+		types:                make(map[span]types.TypeAndValue),
+		definitions:          make(map[location]types.Object),
+		lineDefinitions:      make(map[definitionLocation]types.Object),
+		ambiguousDefinitions: make(map[definitionLocation]bool),
+		uses:                 make(map[location]types.Object),
+		selections:           make(map[span]*types.Selection),
+		instances:            make(map[location]types.Instance),
+		implicits:            make(map[span]types.Object),
+		useCounts:            make(map[types.Object]int),
+		signatures:           make(map[location]*types.Signature),
 	}
 	for expression, value := range info.Types {
 		index.types[index.nodeSpan(expression.Pos(), expression.End())] = value
 	}
 	for identifier, object := range info.Defs {
 		if object != nil {
-			index.definitions[index.location(identifier.Pos())] = object
+			location := index.location(identifier.Pos())
+			index.definitions[location] = object
+			key := definitionLocation{
+				file: location.file, line: location.line, name: identifier.Name,
+			}
+			if current := index.lineDefinitions[key]; current != nil && current != object {
+				index.ambiguousDefinitions[key] = true
+			} else {
+				index.lineDefinitions[key] = object
+			}
 		}
 	}
 	for identifier, object := range info.Uses {
@@ -68,8 +95,16 @@ func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
 	for identifier, instance := range info.Instances {
 		index.instances[index.location(identifier.Pos())] = instance
 	}
+	for node, object := range info.Implicits {
+		index.implicits[index.nodeSpan(node.Pos(), node.End())] = object
+	}
 	index.indexFunctionSignatures(file)
 	return index
+}
+
+// ImplicitField returns the object for one anonymous field.
+func (i *Index) ImplicitField(field *syntax.Field) types.Object {
+	return i.implicits[i.nodeSpan(field.Start, field.Stop)]
 }
 
 // AddFile indexes function signatures from one more package file.
@@ -130,7 +165,10 @@ func (i *Index) Object(identifier *syntax.Identifier) types.Object {
 	if object := i.definitions[position]; object != nil {
 		return object
 	}
-	return i.uses[position]
+	if object := i.uses[position]; object != nil {
+		return object
+	}
+	return i.lineDefinition(identifier, position)
 }
 
 // Definition returns the object defined by a source identifier expression.
@@ -144,7 +182,24 @@ func (i *Index) Definition(expression *syntax.Expression) types.Object {
 
 // DefinitionName returns the object defined by a source identifier node.
 func (i *Index) DefinitionName(identifier *syntax.Identifier) types.Object {
-	return i.definitions[i.location(identifier.Start)]
+	position := i.location(identifier.Start)
+	if object := i.definitions[position]; object != nil {
+		return object
+	}
+	return i.lineDefinition(identifier, position)
+}
+
+func (i *Index) lineDefinition(
+	identifier *syntax.Identifier,
+	position location,
+) types.Object {
+	key := definitionLocation{
+		file: position.file, line: position.line, name: identifier.Name,
+	}
+	if i.ambiguousDefinitions[key] {
+		return nil
+	}
+	return i.lineDefinitions[key]
 }
 
 // Selection returns the typed selection for a selector expression.
