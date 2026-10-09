@@ -48,6 +48,19 @@ func AnalyzeWorkspaceContext(ctx context.Context, directory string) ([]*Package,
 	return result,
 }
 
+// AnalyzeAvailableWorkspaceContext checks each valid package in one module.
+func AnalyzeAvailableWorkspaceContext(
+	ctx context.Context,
+	directory string,
+) ([]*Package, error) {
+	compiled := driver.CompileAvailableWorkspaceContext(ctx, directory)!!
+	result := make([]*Package, 0, len(compiled))
+	for _, pkg := range compiled {
+		result = append(result, analyzePackage(pkg))
+	}
+	return result,
+}
+
 // AnalyzePackage loads and checks one TGo package without writing output files.
 func AnalyzePackage(
 	directory string,
