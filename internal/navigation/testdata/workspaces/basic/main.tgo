@@ -1,0 +1,9 @@
+package basic
+
+func Target() string {
+	return "ok"
+}
+
+func Read() string {
+	return Target()
+}

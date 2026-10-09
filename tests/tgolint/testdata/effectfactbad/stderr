@@ -1,0 +1,1 @@
+effectfactbad/bad.go:9:2: call to ConditionalZero will create invalid tgo enum Event zero from a type argument

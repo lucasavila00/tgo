@@ -1,0 +1,17 @@
+[
+  {
+    "method": "definition",
+    "position": {
+      "file": "main.tgo",
+      "text": "Target()",
+      "occurrence": 2
+    },
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Target",
+        "occurrence": 1
+      }
+    ]
+  }
+]

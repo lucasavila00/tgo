@@ -96,6 +96,29 @@ func (v ChannelDirection) UnknownTag() string {
 	return __tgo_fmt.Sprintf("ChannelDirection: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
+// GobEncode returns the stable four-byte enum tag.
+func (v ChannelDirection) GobEncode() ([]byte, error) {
+	if v.tgoTag < ChannelDirectionTagSendReceive || v.tgoTag > ChannelDirectionTagReceiveOnly {
+		return nil, __tgo_fmt.Errorf("ChannelDirection: cannot gob encode invalid tag %d", v.tgoTag)
+	}
+	tag := uint32(v.tgoTag)
+	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
+}
+
+// GobDecode replaces the value with a valid four-byte enum tag.
+func (v *ChannelDirection) GobDecode(data []byte) error {
+	if len(data) != 4 {
+		return __tgo_fmt.Errorf("ChannelDirection: invalid gob data length %d", len(data))
+	}
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := ChannelDirectionTag(number)
+	if uint32(tag) != number || tag < ChannelDirectionTagSendReceive || tag > ChannelDirectionTagReceiveOnly {
+		return __tgo_fmt.Errorf("ChannelDirection: cannot gob decode unknown tag %d", number)
+	}
+	*v = ChannelDirection{tgoTag: tag}
+	return nil
+}
+
 // ChannelDirectionSendReceive is the SendReceive payload.
 type ChannelDirectionSendReceive struct{}
 

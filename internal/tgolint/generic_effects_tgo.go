@@ -16,24 +16,25 @@ import (
 	"tgo/pkg/syntax"
 )
 
-// genericEffectWireFact carries generic effects between analysis packages.
+// GenericEffectFact carries generic effects between analysis packages.
 
-type genericEffectWireFact struct {
-	ZeroEffects           []genericEffectWire
-	AccessEffects         []genericEffectWire
-	ReturnedZeroEffects   []genericEffectWire
-	ReturnedAccessEffects []genericEffectWire
+type GenericEffectFact struct {
+	ZeroEffects           []GenericEffect
+	AccessEffects         []GenericEffect
+	ReturnedZeroEffects   []GenericEffect
+	ReturnedAccessEffects []GenericEffect
 }
 
-// AFact marks genericEffectWireFact as a Go analysis fact.
-func (*genericEffectWireFact) AFact() {}
+// AFact marks GenericEffectFact as a Go analysis fact.
+func (*GenericEffectFact) AFact() {}
 
 type zeroParameter struct {
 	receiver bool
 	index    int
 }
 
-func __tgo_effectKind_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
+// EffectKind identifies the condition that controls a generic effect.
+func __tgo_EffectKind_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
 	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
 		return err
 	}
@@ -46,187 +47,210 @@ func __tgo_effectKind_external_json_to[T interface{}](out *__tgo_jsontext.Encode
 	return out.WriteToken(__tgo_jsontext.EndObject)
 }
 
-// effectKind requires a variant constructor. Its zero value is invalid.
+// EffectKind requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
-type effectKindTag uint8
+type EffectKindTag uint8
 
 const (
-	effectKindTagBoolean effectKindTag = iota + 1
-	effectKindTagNonzero
-	effectKindTagNonempty
-	effectKindTagMapMiss
-	effectKindTagChannelClosed
-	effectKindTagAssertionFails
-	effectKindTagResliceExtends
+	EffectKindTagBoolean EffectKindTag = iota + 1
+	EffectKindTagNonzero
+	EffectKindTagNonempty
+	EffectKindTagMapMiss
+	EffectKindTagChannelClosed
+	EffectKindTagAssertionFails
+	EffectKindTagResliceExtends
 )
 
-type effectKind struct {
-	tgoTag effectKindTag
+type EffectKind struct {
+	tgoTag EffectKindTag
 }
 
 // Tag returns the active tag.
-func (v effectKind) Tag() effectKindTag { return v.tgoTag }
+func (v EffectKind) Tag() EffectKindTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
-func (v effectKind) UnknownTag() string {
-	return __tgo_fmt.Sprintf("effectKind: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+func (v EffectKind) UnknownTag() string {
+	return __tgo_fmt.Sprintf("EffectKind: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// effectKindBoolean is the Boolean payload.
-type effectKindBoolean struct{}
+// GobEncode returns the stable four-byte enum tag.
+func (v EffectKind) GobEncode() ([]byte, error) {
+	if v.tgoTag < EffectKindTagBoolean || v.tgoTag > EffectKindTagResliceExtends {
+		return nil, __tgo_fmt.Errorf("EffectKind: cannot gob encode invalid tag %d", v.tgoTag)
+	}
+	tag := uint32(v.tgoTag)
+	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
+}
 
-// effectKind constructs effectKind. Model fields must be valid.
+// GobDecode replaces the value with a valid four-byte enum tag.
+func (v *EffectKind) GobDecode(data []byte) error {
+	if len(data) != 4 {
+		return __tgo_fmt.Errorf("EffectKind: invalid gob data length %d", len(data))
+	}
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := EffectKindTag(number)
+	if uint32(tag) != number || tag < EffectKindTagBoolean || tag > EffectKindTagResliceExtends {
+		return __tgo_fmt.Errorf("EffectKind: cannot gob decode unknown tag %d", number)
+	}
+	*v = EffectKind{tgoTag: tag}
+	return nil
+}
+
+// EffectKindBoolean is the Boolean payload.
+type EffectKindBoolean struct{}
+
+// EffectKind constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectKindBoolean) effectKind() effectKind {
-	return effectKind{tgoTag: effectKindTagBoolean}
+func (value EffectKindBoolean) EffectKind() EffectKind {
+	return EffectKind{tgoTag: EffectKindTagBoolean}
 }
 
 // BooleanPayload requires Boolean. No tag check.
-func (effectKind) BooleanPayload() effectKindBoolean { return effectKindBoolean{} }
+func (EffectKind) BooleanPayload() EffectKindBoolean { return EffectKindBoolean{} }
 
-// effectKindNonzero is the Nonzero payload.
-type effectKindNonzero struct{}
+// EffectKindNonzero is the Nonzero payload.
+type EffectKindNonzero struct{}
 
-// effectKind constructs effectKind. Model fields must be valid.
+// EffectKind constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectKindNonzero) effectKind() effectKind {
-	return effectKind{tgoTag: effectKindTagNonzero}
+func (value EffectKindNonzero) EffectKind() EffectKind {
+	return EffectKind{tgoTag: EffectKindTagNonzero}
 }
 
 // NonzeroPayload requires Nonzero. No tag check.
-func (effectKind) NonzeroPayload() effectKindNonzero { return effectKindNonzero{} }
+func (EffectKind) NonzeroPayload() EffectKindNonzero { return EffectKindNonzero{} }
 
-// effectKindNonempty is the Nonempty payload.
-type effectKindNonempty struct{}
+// EffectKindNonempty is the Nonempty payload.
+type EffectKindNonempty struct{}
 
-// effectKind constructs effectKind. Model fields must be valid.
+// EffectKind constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectKindNonempty) effectKind() effectKind {
-	return effectKind{tgoTag: effectKindTagNonempty}
+func (value EffectKindNonempty) EffectKind() EffectKind {
+	return EffectKind{tgoTag: EffectKindTagNonempty}
 }
 
 // NonemptyPayload requires Nonempty. No tag check.
-func (effectKind) NonemptyPayload() effectKindNonempty { return effectKindNonempty{} }
+func (EffectKind) NonemptyPayload() EffectKindNonempty { return EffectKindNonempty{} }
 
-// effectKindMapMiss is the MapMiss payload.
-type effectKindMapMiss struct{}
+// EffectKindMapMiss is the MapMiss payload.
+type EffectKindMapMiss struct{}
 
-// effectKind constructs effectKind. Model fields must be valid.
+// EffectKind constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectKindMapMiss) effectKind() effectKind {
-	return effectKind{tgoTag: effectKindTagMapMiss}
+func (value EffectKindMapMiss) EffectKind() EffectKind {
+	return EffectKind{tgoTag: EffectKindTagMapMiss}
 }
 
 // MapMissPayload requires MapMiss. No tag check.
-func (effectKind) MapMissPayload() effectKindMapMiss { return effectKindMapMiss{} }
+func (EffectKind) MapMissPayload() EffectKindMapMiss { return EffectKindMapMiss{} }
 
-// effectKindChannelClosed is the ChannelClosed payload.
-type effectKindChannelClosed struct{}
+// EffectKindChannelClosed is the ChannelClosed payload.
+type EffectKindChannelClosed struct{}
 
-// effectKind constructs effectKind. Model fields must be valid.
+// EffectKind constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectKindChannelClosed) effectKind() effectKind {
-	return effectKind{tgoTag: effectKindTagChannelClosed}
+func (value EffectKindChannelClosed) EffectKind() EffectKind {
+	return EffectKind{tgoTag: EffectKindTagChannelClosed}
 }
 
 // ChannelClosedPayload requires ChannelClosed. No tag check.
-func (effectKind) ChannelClosedPayload() effectKindChannelClosed { return effectKindChannelClosed{} }
+func (EffectKind) ChannelClosedPayload() EffectKindChannelClosed { return EffectKindChannelClosed{} }
 
-// effectKindAssertionFails is the AssertionFails payload.
-type effectKindAssertionFails struct{}
+// EffectKindAssertionFails is the AssertionFails payload.
+type EffectKindAssertionFails struct{}
 
-// effectKind constructs effectKind. Model fields must be valid.
+// EffectKind constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectKindAssertionFails) effectKind() effectKind {
-	return effectKind{tgoTag: effectKindTagAssertionFails}
+func (value EffectKindAssertionFails) EffectKind() EffectKind {
+	return EffectKind{tgoTag: EffectKindTagAssertionFails}
 }
 
 // AssertionFailsPayload requires AssertionFails. No tag check.
-func (effectKind) AssertionFailsPayload() effectKindAssertionFails { return effectKindAssertionFails{} }
+func (EffectKind) AssertionFailsPayload() EffectKindAssertionFails { return EffectKindAssertionFails{} }
 
-// effectKindResliceExtends is the ResliceExtends payload.
-type effectKindResliceExtends struct{}
+// EffectKindResliceExtends is the ResliceExtends payload.
+type EffectKindResliceExtends struct{}
 
-// effectKind constructs effectKind. Model fields must be valid.
+// EffectKind constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectKindResliceExtends) effectKind() effectKind {
-	return effectKind{tgoTag: effectKindTagResliceExtends}
+func (value EffectKindResliceExtends) EffectKind() EffectKind {
+	return EffectKind{tgoTag: EffectKindTagResliceExtends}
 }
 
 // ResliceExtendsPayload requires ResliceExtends. No tag check.
-func (effectKind) ResliceExtendsPayload() effectKindResliceExtends { return effectKindResliceExtends{} }
+func (EffectKind) ResliceExtendsPayload() EffectKindResliceExtends { return EffectKindResliceExtends{} }
 
-func (v effectKind) MarshalJSON() ([]byte, error) {
+func (v EffectKind) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case effectKindTagBoolean:
+	case EffectKindTagBoolean:
 		payload := v.BooleanPayload()
 		return __tgo_json.Marshal(struct {
-			Payload effectKindBoolean `json:"Boolean"`
+			Payload EffectKindBoolean `json:"Boolean"`
 		}{Payload: payload})
-	case effectKindTagNonzero:
+	case EffectKindTagNonzero:
 		payload := v.NonzeroPayload()
 		return __tgo_json.Marshal(struct {
-			Payload effectKindNonzero `json:"Nonzero"`
+			Payload EffectKindNonzero `json:"Nonzero"`
 		}{Payload: payload})
-	case effectKindTagNonempty:
+	case EffectKindTagNonempty:
 		payload := v.NonemptyPayload()
 		return __tgo_json.Marshal(struct {
-			Payload effectKindNonempty `json:"Nonempty"`
+			Payload EffectKindNonempty `json:"Nonempty"`
 		}{Payload: payload})
-	case effectKindTagMapMiss:
+	case EffectKindTagMapMiss:
 		payload := v.MapMissPayload()
 		return __tgo_json.Marshal(struct {
-			Payload effectKindMapMiss `json:"MapMiss"`
+			Payload EffectKindMapMiss `json:"MapMiss"`
 		}{Payload: payload})
-	case effectKindTagChannelClosed:
+	case EffectKindTagChannelClosed:
 		payload := v.ChannelClosedPayload()
 		return __tgo_json.Marshal(struct {
-			Payload effectKindChannelClosed `json:"ChannelClosed"`
+			Payload EffectKindChannelClosed `json:"ChannelClosed"`
 		}{Payload: payload})
-	case effectKindTagAssertionFails:
+	case EffectKindTagAssertionFails:
 		payload := v.AssertionFailsPayload()
 		return __tgo_json.Marshal(struct {
-			Payload effectKindAssertionFails `json:"AssertionFails"`
+			Payload EffectKindAssertionFails `json:"AssertionFails"`
 		}{Payload: payload})
-	case effectKindTagResliceExtends:
+	case EffectKindTagResliceExtends:
 		payload := v.ResliceExtendsPayload()
 		return __tgo_json.Marshal(struct {
-			Payload effectKindResliceExtends `json:"ResliceExtends"`
+			Payload EffectKindResliceExtends `json:"ResliceExtends"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid effectKind JSON tag")
+		return nil, __tgo_fmt.Errorf("invalid EffectKind JSON tag")
 	}
 }
 
-func (v effectKind) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v EffectKind) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case effectKindTagBoolean:
+	case EffectKindTagBoolean:
 		payload := v.BooleanPayload()
-		return __tgo_effectKind_external_json_to(out, "Boolean", payload)
-	case effectKindTagNonzero:
+		return __tgo_EffectKind_external_json_to(out, "Boolean", payload)
+	case EffectKindTagNonzero:
 		payload := v.NonzeroPayload()
-		return __tgo_effectKind_external_json_to(out, "Nonzero", payload)
-	case effectKindTagNonempty:
+		return __tgo_EffectKind_external_json_to(out, "Nonzero", payload)
+	case EffectKindTagNonempty:
 		payload := v.NonemptyPayload()
-		return __tgo_effectKind_external_json_to(out, "Nonempty", payload)
-	case effectKindTagMapMiss:
+		return __tgo_EffectKind_external_json_to(out, "Nonempty", payload)
+	case EffectKindTagMapMiss:
 		payload := v.MapMissPayload()
-		return __tgo_effectKind_external_json_to(out, "MapMiss", payload)
-	case effectKindTagChannelClosed:
+		return __tgo_EffectKind_external_json_to(out, "MapMiss", payload)
+	case EffectKindTagChannelClosed:
 		payload := v.ChannelClosedPayload()
-		return __tgo_effectKind_external_json_to(out, "ChannelClosed", payload)
-	case effectKindTagAssertionFails:
+		return __tgo_EffectKind_external_json_to(out, "ChannelClosed", payload)
+	case EffectKindTagAssertionFails:
 		payload := v.AssertionFailsPayload()
-		return __tgo_effectKind_external_json_to(out, "AssertionFails", payload)
-	case effectKindTagResliceExtends:
+		return __tgo_EffectKind_external_json_to(out, "AssertionFails", payload)
+	case EffectKindTagResliceExtends:
 		payload := v.ResliceExtendsPayload()
-		return __tgo_effectKind_external_json_to(out, "ResliceExtends", payload)
+		return __tgo_EffectKind_external_json_to(out, "ResliceExtends", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid effectKind JSON tag")
+		return __tgo_fmt.Errorf("invalid EffectKind JSON tag")
 	}
 }
 
-func (v *effectKind) UnmarshalJSON(data []byte) error {
+func (v *EffectKind) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -234,7 +258,7 @@ func (v *effectKind) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one effectKind JSON variant")
+		return __tgo_fmt.Errorf("expected one EffectKind JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -242,66 +266,66 @@ func (v *effectKind) UnmarshalJSON(data []byte) error {
 	}
 	switch variant {
 	case "Boolean":
-		var payload effectKindBoolean
+		var payload EffectKindBoolean
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case "Nonzero":
-		var payload effectKindNonzero
+		var payload EffectKindNonzero
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case "Nonempty":
-		var payload effectKindNonempty
+		var payload EffectKindNonempty
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case "MapMiss":
-		var payload effectKindMapMiss
+		var payload EffectKindMapMiss
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case "ChannelClosed":
-		var payload effectKindChannelClosed
+		var payload EffectKindChannelClosed
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case "AssertionFails":
-		var payload effectKindAssertionFails
+		var payload EffectKindAssertionFails
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case "ResliceExtends":
-		var payload effectKindResliceExtends
+		var payload EffectKindResliceExtends
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown effectKind JSON variant %q", variant)
+		return __tgo_fmt.Errorf("unknown EffectKind JSON variant %q", variant)
 	}
 }
 
-func (v *effectKind) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *EffectKind) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one effectKind JSON variant")
+		return __tgo_fmt.Errorf("expected one EffectKind JSON variant")
 	}
 	var payloadData __tgo_jsontext.Value
 	var unknown string
@@ -358,239 +382,105 @@ func (v *effectKind) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one effectKind JSON variant")
+		return __tgo_fmt.Errorf("expected one EffectKind JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown effectKind JSON variant %q", unknown)
+		return __tgo_fmt.Errorf("unknown EffectKind JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
-		var payload effectKindBoolean
+		var payload EffectKindBoolean
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case 2:
-		var payload effectKindNonzero
+		var payload EffectKindNonzero
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case 3:
-		var payload effectKindNonempty
+		var payload EffectKindNonempty
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case 4:
-		var payload effectKindMapMiss
+		var payload EffectKindMapMiss
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case 5:
-		var payload effectKindChannelClosed
+		var payload EffectKindChannelClosed
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case 6:
-		var payload effectKindAssertionFails
+		var payload EffectKindAssertionFails
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	case 7:
-		var payload effectKindResliceExtends
+		var payload EffectKindResliceExtends
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectKind()
+		*v = payload.EffectKind()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid effectKind JSON tag")
+		return __tgo_fmt.Errorf("invalid EffectKind JSON tag")
 	}
 }
 
-func booleanEffectCondition() effectKind {
-	return effectKindBoolean{}.effectKind()
+func booleanEffectCondition() EffectKind {
+	return EffectKindBoolean{}.EffectKind()
 }
-func nonzeroEffectConditionKind() effectKind {
-	return effectKindNonzero{}.effectKind()
+func nonzeroEffectConditionKind() EffectKind {
+	return EffectKindNonzero{}.EffectKind()
 }
-func nonemptyEffectCondition() effectKind {
-	return effectKindNonempty{}.effectKind()
+func nonemptyEffectCondition() EffectKind {
+	return EffectKindNonempty{}.EffectKind()
 }
-func mapMissEffectCondition() effectKind {
-	return effectKindMapMiss{}.effectKind()
+func mapMissEffectCondition() EffectKind {
+	return EffectKindMapMiss{}.EffectKind()
 }
-func closedChannelEffectCondition() effectKind {
-	return effectKindChannelClosed{}.effectKind()
+func closedChannelEffectCondition() EffectKind {
+	return EffectKindChannelClosed{}.EffectKind()
 }
-func failedAssertionEffectCondition() effectKind {
-	return effectKindAssertionFails{}.effectKind()
+func failedAssertionEffectCondition() EffectKind {
+	return EffectKindAssertionFails{}.EffectKind()
 }
-func extendingResliceEffectCondition() effectKind {
-	return effectKindResliceExtends{}.effectKind(
+func extendingResliceEffectCondition() EffectKind {
+	return EffectKindResliceExtends{}.EffectKind(
 
-	// genericEffect is a serializable condition for one type argument effect.
+	// GenericEffect is a serializable condition for one type argument effect.
 	)
 }
 
-type genericEffect struct {
+type GenericEffect struct {
 	Receiver      bool
 	TypeParameter int
-	Conditions    []genericEffectCondition
+	Conditions    []GenericEffectCondition
 	MaySkip       bool
 }
 
-type genericEffectCondition struct {
+// GenericEffectCondition describes one value condition for a generic effect.
+
+type GenericEffectCondition struct {
 	ValueParameter int
 	OtherParameter int
-	Kind           effectKind
+	Kind           EffectKind
 	Expected       bool
-}
-
-type genericEffectSet struct {
-	ZeroEffects           []genericEffect
-	AccessEffects         []genericEffect
-	ReturnedZeroEffects   []genericEffect
-	ReturnedAccessEffects []genericEffect
-}
-
-type genericEffectWire struct {
-	Receiver      bool
-	TypeParameter int
-	Conditions    []genericEffectConditionWire
-	MaySkip       bool
-}
-
-type genericEffectConditionWire struct {
-	ValueParameter int
-	OtherParameter int
-	Kind           uint8
-	Expected       bool
-}
-
-const (
-	booleanConditionWire        uint8 = 1
-	nonzeroConditionWire        uint8 = 2
-	nonemptyConditionWire       uint8 = 3
-	mapMissConditionWire        uint8 = 4
-	channelClosedConditionWire  uint8 = 5
-	assertionFailsConditionWire uint8 = 6
-	resliceExtendsConditionWire uint8 = 7
-)
-
-func effectConditionCode(kind effectKind) uint8 {
-	switch enumValue1 := kind; enumValue1.Tag() {
-	case effectKindTagBoolean:
-		return booleanConditionWire
-	case effectKindTagNonzero:
-		return nonzeroConditionWire
-	case effectKindTagNonempty:
-		return nonemptyConditionWire
-	case effectKindTagMapMiss:
-		return mapMissConditionWire
-	case effectKindTagChannelClosed:
-		return channelClosedConditionWire
-	case effectKindTagAssertionFails:
-		return assertionFailsConditionWire
-	case effectKindTagResliceExtends:
-		return resliceExtendsConditionWire
-	default:
-		panic(enumValue1.UnknownTag()) // unreachable: tgolint requires a case per tag
-	}
-}
-
-func decodeEffectConditionKind(code uint8) (effectKind, bool) {
-	switch code {
-	case booleanConditionWire:
-		return booleanEffectCondition(), true
-	case nonzeroConditionWire:
-		return nonzeroEffectConditionKind(), true
-	case nonemptyConditionWire:
-		return nonemptyEffectCondition(), true
-	case mapMissConditionWire:
-		return mapMissEffectCondition(), true
-	case channelClosedConditionWire:
-		return closedChannelEffectCondition(), true
-	case assertionFailsConditionWire:
-		return failedAssertionEffectCondition(), true
-	case resliceExtendsConditionWire:
-		return extendingResliceEffectCondition(), true
-	default:
-		return booleanEffectCondition(), false
-	}
-}
-
-// encodeGenericEffects converts internal ADTs to serializable package facts.
-func encodeGenericEffects(effects []genericEffect) []genericEffectWire {
-	encoded := make([]genericEffectWire, 0, len(effects))
-	for _, effect := range effects {
-		conditions := make([]genericEffectConditionWire, 0, len(effect.Conditions))
-		for _, condition := range effect.Conditions {
-			conditions = append(conditions, genericEffectConditionWire{
-				ValueParameter: condition.ValueParameter,
-				OtherParameter: condition.OtherParameter,
-				Kind:           effectConditionCode(condition.Kind),
-				Expected:       condition.Expected,
-			})
-		}
-		encoded = append(encoded, genericEffectWire{
-			Receiver: effect.Receiver, TypeParameter: effect.TypeParameter,
-			Conditions: conditions, MaySkip: effect.MaySkip,
-		})
-	}
-	return encoded
-}
-
-func decodeGenericEffects(encoded []genericEffectWire) ([]genericEffect, bool) {
-	effects := make([]genericEffect, 0, len(encoded))
-	for _, item := range encoded {
-		conditions := make([]genericEffectCondition, 0, len(item.Conditions))
-		for _, encodedCondition := range item.Conditions {
-			kind, ok := decodeEffectConditionKind(encodedCondition.Kind)
-			if !ok {
-				return nil, false
-			}
-			conditions = append(conditions, genericEffectCondition{
-				ValueParameter: encodedCondition.ValueParameter,
-				OtherParameter: encodedCondition.OtherParameter,
-				Kind:           kind, Expected: encodedCondition.Expected,
-			})
-		}
-		effects = append(effects, genericEffect{
-			Receiver: item.Receiver, TypeParameter: item.TypeParameter,
-			Conditions: conditions, MaySkip: item.MaySkip,
-		})
-	}
-	return effects, true
-}
-
-// decodeGenericEffectFact validates all effect codes at the package boundary.
-func decodeGenericEffectFact(fact *genericEffectWireFact) *genericEffectSet {
-	if fact == nil {
-		return nil
-	}
-	zero, zeroOK := decodeGenericEffects(fact.ZeroEffects)
-	access, accessOK := decodeGenericEffects(fact.AccessEffects)
-	returnedZero, returnedZeroOK := decodeGenericEffects(fact.ReturnedZeroEffects)
-	returnedAccess, returnedAccessOK := decodeGenericEffects(fact.ReturnedAccessEffects)
-	if !zeroOK || !accessOK || !returnedZeroOK || !returnedAccessOK {
-		return nil
-	}
-	return &genericEffectSet{
-		ZeroEffects: zero, AccessEffects: access,
-		ReturnedZeroEffects:   returnedZero,
-		ReturnedAccessEffects: returnedAccess,
-	}
 }
 
 type genericEffectSummary struct {
@@ -598,10 +488,10 @@ type genericEffectSummary struct {
 	file                  *syntax.File
 	declaration           *syntax.FunctionDeclaration
 	parameters            map[*types.TypeParam]zeroParameter
-	zeroEffects           []genericEffect
-	accessEffects         []genericEffect
-	returnedZeroEffects   []genericEffect
-	returnedAccessEffects []genericEffect
+	zeroEffects           []GenericEffect
+	accessEffects         []GenericEffect
+	returnedZeroEffects   []GenericEffect
+	returnedAccessEffects []GenericEffect
 	calls                 []*syntax.Expression
 	reachable             map[syntax.Node]bool
 	root                  *syntax.Node
@@ -842,7 +732,7 @@ func (c *checker) collectGenericPresenceZeros(summary *genericEffectSummary) {
 		c.checkConstructors(summary.root, summary.body)
 		for _, source := range sources {
 			if source == nil {
-				c.addGenericEffect(summary, true, reference, genericEffect{
+				c.addGenericEffect(summary, true, reference, GenericEffect{
 					Receiver: false, TypeParameter: 0, Conditions: nil, MaySkip: true,
 				})
 				continue
@@ -1045,8 +935,8 @@ func (c *checker) collectGenericAccess(
 	c.markGenericAccessAt(summary, node, c.facts.Type(selector.Expression))
 }
 
-func noGenericEffect() genericEffect {
-	return genericEffect{
+func noGenericEffect() GenericEffect {
+	return GenericEffect{
 		Receiver: false, TypeParameter: 0, Conditions: nil, MaySkip: false,
 	}
 }

@@ -35,7 +35,7 @@ func (c *checker) reportGenericZeroCall(
 func (c *checker) reportGenericEffects(
 	expression *syntax.Expression,
 	call *syntax.Expression,
-	effects []genericEffect,
+	effects []GenericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 	zero bool,
@@ -105,7 +105,7 @@ func effectOutcomeRank(outcome effectOutcome) int {
 }
 
 func (c *checker) genericEffectModel(
-	effect genericEffect,
+	effect GenericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 	zero bool,
@@ -129,7 +129,7 @@ func (c *checker) genericEffectModel(
 }
 
 func (c *checker) genericEffectType(
-	effect genericEffect,
+	effect GenericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 ) types.Type {
@@ -146,7 +146,7 @@ func (c *checker) genericEffectType(
 // effectCertainty proves whether an effect never, can, or will occur.
 func (c *checker) effectCertainty(
 	expression *syntax.Expression,
-	effect genericEffect,
+	effect GenericEffect,
 	targetType types.Type,
 ) effectOutcome {
 	certainty := alwaysEffectOutcome()
@@ -174,7 +174,7 @@ func (c *checker) effectCertainty(
 // effectConditionValue evaluates one condition against concrete call arguments.
 func (c *checker) effectConditionValue(
 	callExpression *syntax.Expression,
-	condition genericEffectCondition,
+	condition GenericEffectCondition,
 	targetType types.Type,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(callExpression)
@@ -194,7 +194,7 @@ func (c *checker) effectConditionValue(
 func (c *checker) scalarEffectCondition(
 	call *syntax.Expression,
 	expression *syntax.Expression,
-	condition genericEffectCondition,
+	condition GenericEffectCondition,
 ) (bool, bool) {
 	if condition.Kind == booleanEffectCondition() {
 		return c.booleanConditionValue(call, expression, condition.Expected)
@@ -241,7 +241,7 @@ func (c *checker) integerConditionValue(
 
 func (c *checker) compositeEffectCondition(
 	callExpression *syntax.Expression,
-	condition genericEffectCondition,
+	condition GenericEffectCondition,
 	targetType types.Type,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(callExpression)
@@ -250,20 +250,20 @@ func (c *checker) compositeEffectCondition(
 	}
 	value := call.Args[condition.ValueParameter]
 	switch enumValue5 := condition.Kind; enumValue5.Tag() {
-	case effectKindTagNonempty:
+	case EffectKindTagNonempty:
 		length, _, known := c.knownSliceBounds(value)
 		return (length != 0) == condition.Expected, known
-	case effectKindTagMapMiss:
+	case EffectKindTagMapMiss:
 		return c.mapMissCondition(callExpression, condition)
-	case effectKindTagChannelClosed:
+	case EffectKindTagChannelClosed:
 		return false, c.freshChannel(value)
-	case effectKindTagAssertionFails:
+	case EffectKindTagAssertionFails:
 		return c.assertionFails(value, targetType)
-	case effectKindTagResliceExtends:
+	case EffectKindTagResliceExtends:
 		return c.resliceExtends(callExpression, condition)
-	case effectKindTagBoolean:
+	case EffectKindTagBoolean:
 		return false, false
-	case effectKindTagNonzero:
+	case EffectKindTagNonzero:
 		return false, false
 	default:
 		panic(enumValue5.UnknownTag()) // unreachable: tgolint requires a case per tag
@@ -342,7 +342,7 @@ func constantInteger(value constant.Value) (int64, bool) {
 
 func (c *checker) mapMissCondition(
 	expression *syntax.Expression,
-	condition genericEffectCondition,
+	condition GenericEffectCondition,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
@@ -421,7 +421,7 @@ func (c *checker) assertionTypes(
 
 func (c *checker) resliceExtends(
 	expression *syntax.Expression,
-	condition genericEffectCondition,
+	condition GenericEffectCondition,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {

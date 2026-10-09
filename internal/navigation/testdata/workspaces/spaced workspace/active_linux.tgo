@@ -1,0 +1,7 @@
+//go:build linux
+
+package spaced
+
+func Active() string {
+	return "linux"
+}

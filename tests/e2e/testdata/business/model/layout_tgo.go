@@ -464,6 +464,29 @@ func (v NamedZero) UnknownTag() string {
 	return __tgo_fmt.Sprintf("NamedZero: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
+// GobEncode returns the stable four-byte enum tag.
+func (v NamedZero) GobEncode() ([]byte, error) {
+	if v.tgoTag < NamedZeroTagZero || v.tgoTag > NamedZeroTagOther {
+		return nil, __tgo_fmt.Errorf("NamedZero: cannot gob encode invalid tag %d", v.tgoTag)
+	}
+	tag := uint32(v.tgoTag)
+	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
+}
+
+// GobDecode replaces the value with a valid four-byte enum tag.
+func (v *NamedZero) GobDecode(data []byte) error {
+	if len(data) != 4 {
+		return __tgo_fmt.Errorf("NamedZero: invalid gob data length %d", len(data))
+	}
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := NamedZeroTag(number)
+	if uint32(tag) != number || tag < NamedZeroTagZero || tag > NamedZeroTagOther {
+		return __tgo_fmt.Errorf("NamedZero: cannot gob decode unknown tag %d", number)
+	}
+	*v = NamedZero{tgoTag: tag}
+	return nil
+}
+
 // NamedZeroZero is the Zero payload.
 type NamedZeroZero struct{}
 
