@@ -91,7 +91,7 @@ func Contextual() (model.Context, error) {
 `)}},
 		Imports: map[string]*CompiledPackage{"model": modelPackage},
 		FileSet: token.NewFileSet(),
-		Importer: packageImporter{
+		Importer: checkedPackageImporter{
 			packages: map[string]*types.Package{"model": modelPackage.Package},
 			fallback: importer.Default(),
 		},
@@ -121,7 +121,7 @@ func Invalid(number int) (model.Port, error) { return model.NewPort(number) }
 `)}},
 		Imports: map[string]*CompiledPackage{"model": modelPackage},
 		FileSet: token.NewFileSet(),
-		Importer: packageImporter{
+		Importer: checkedPackageImporter{
 			packages: map[string]*types.Package{"model": modelPackage.Package},
 			fallback: importer.Default(),
 		},
@@ -141,7 +141,7 @@ func Invalid(number int) (model.Port, error) {
 `)}},
 		Imports: map[string]*CompiledPackage{"model": modelPackage},
 		FileSet: token.NewFileSet(),
-		Importer: packageImporter{
+		Importer: checkedPackageImporter{
 			packages: map[string]*types.Package{"model": modelPackage.Package},
 			fallback: importer.Default(),
 		},
@@ -355,12 +355,12 @@ func (value Context) check() (Context, error) { return value, nil }
 	return compiled
 }
 
-type packageImporter struct {
+type checkedPackageImporter struct {
 	packages map[string]*types.Package
 	fallback types.Importer
 }
 
-func (i packageImporter) Import(path string) (*types.Package, error) {
+func (i checkedPackageImporter) Import(path string) (*types.Package, error) {
 	if imported := i.packages[path]; imported != nil {
 		return imported, nil
 	}
