@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var testedGoType goType
+var testedGoType = goTypeNil{}.goType()
 
 func TestGoTypeOf(t *testing.T) {
 	tuple := types.NewTuple()
