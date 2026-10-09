@@ -292,7 +292,7 @@ func (c %checker) boundaryArgumentName(expression *syntax.Expression) *syntax.Id
 	if call == nil || len(call.Args) != 1 || !c.facts.IsType(call.Callee) {
 		return nil
 	}
-	if !c.identityConversion(call) {
+	if !c.identityConversion(expression, call) {
 		return nil
 	}
 	return identifier(call.Args[0])
