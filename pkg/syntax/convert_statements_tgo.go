@@ -122,10 +122,15 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 		}}.Statement()
 		return &result
 	case *ast.CommClause:
+		__tgo_source := item.Body
+		__tgo_result := make([]*Statement, len(__tgo_source))
+		for __tgo_index, statement := range __tgo_source {
+			__tgo_result[__tgo_index] = c.statementRequired(statement)
+		}
 		result := StatementCommunication{Value: &CommunicationClause{
 			Span: span(item), Case: item.Case,
 			Communication: c.statement(item.Comm), Colon: item.Colon,
-			Body: c.statements(item.Body),
+			Body: __tgo_result,
 		}}.Statement()
 		return &result
 	case *ast.SelectStmt:
@@ -153,14 +158,6 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 	default:
 		panic(fmt.Sprintf("unsupported go/ast statement %T", value))
 	}
-}
-
-func (c *converter) statements(values []ast.Stmt) []*Statement {
-	var result []*Statement = nil
-	for _, value := range values {
-		result = append(result, c.statementRequired(value))
-	}
-	return result
 }
 
 func (c *converter) statementList(parent frontNode) []*Statement {

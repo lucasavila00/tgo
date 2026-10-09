@@ -122,7 +122,9 @@ func (c %converter) statementRequired(value frontNode) %Statement {
 		result := Statement.Communication{Value: &CommunicationClause{
 			Span: span(item), Case: item.Case,
 			Communication: c.statement(item.Comm), Colon: item.Colon,
-			Body: c.statements(item.Body),
+			Body: []%Statement{for _, statement := range item.Body {
+				c.statementRequired(statement)
+			}},
 		}}
 		return &result
 	case *ast.SelectStmt:
@@ -150,14 +152,6 @@ func (c %converter) statementRequired(value frontNode) %Statement {
 	default:
 		panic(fmt.Sprintf("unsupported go/ast statement %T", value))
 	}
-}
-
-func (c %converter) statements(values []ast.Stmt) []%Statement {
-	var result []%Statement = nil
-	for _, value := range values {
-		result = append(result, c.statementRequired(value))
-	}
-	return result
 }
 
 func (c %converter) statementList(parent frontNode) []%Statement {
