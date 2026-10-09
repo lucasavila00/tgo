@@ -495,42 +495,70 @@ func scalarLogicalOr(
 }
 
 func scalarBoolean(value scalarValue) (bool, bool) {
-	match value {
-	case Boolean(boolean): return boolean.Value, true
-	case Integer(_): return false, false
-	case BooleanParameter(_): return false, false
-	case IntegerParameter(_): return false, false
+	switch enumValue7 := value; enumValue7.TgoTag() {
+	case 1:
+		boolean := enumValue7.TgoBoolean()
+		return boolean.Value, true
+	case 2:
+		return false, false
+	case 3:
+		return false, false
+	case 4:
+		return false, false
+	default:
+		panic("invalid scalarValue variant")
 	}
 }
 
 func scalarInteger(value scalarValue) (int64, bool) {
-	match value {
-	case Boolean(_): return 0, false
-	case Integer(integer): return integer.Value, true
-	case BooleanParameter(_): return 0, false
-	case IntegerParameter(_): return 0, false
+	switch enumValue8 := value; enumValue8.TgoTag() {
+	case 1:
+		return 0, false
+	case 2:
+		integer := enumValue8.TgoInteger()
+		return integer.Value, true
+	case 3:
+		return 0, false
+	case 4:
+		return 0, false
+	default:
+		panic("invalid scalarValue variant")
 	}
 }
 
 func scalarParameter(value scalarValue) (int, bool, bool) {
-	match value {
-	case Boolean(_): return 0, false, false
-	case Integer(_): return 0, false, false
-	case BooleanParameter(parameter):
+	switch enumValue9 := value; enumValue9.TgoTag() {
+	case 1:
+		return 0, false, false
+	case 2:
+		return 0, false, false
+	case 3:
+		parameter := enumValue9.TgoBooleanParameter()
 		return parameter.Index, parameter.Negated, true
-	case IntegerParameter(parameter): return parameter.Index, false, true
+	case 4:
+		parameter := enumValue9.TgoIntegerParameter()
+		return parameter.Index, false, true
+	default:
+		panic("invalid scalarValue variant")
 	}
 }
 
 func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
-	match value {
-	case Boolean(boolean): return scalarValue.Boolean{Value: !boolean.Value}, true
-	case Integer(_): return scalarValue.Boolean{Value: false}, false
-	case BooleanParameter(parameter):
+	switch enumValue10 := value; enumValue10.TgoTag() {
+	case 1:
+		boolean := enumValue10.TgoBoolean()
+		return scalarValue.Boolean{Value: !boolean.Value}, true
+	case 2:
+		return scalarValue.Boolean{Value: false}, false
+	case 3:
+		parameter := enumValue10.TgoBooleanParameter()
 		return scalarValue.BooleanParameter{
 			Index: parameter.Index, Negated: !parameter.Negated,
 		}, true
-	case IntegerParameter(_): return scalarValue.Boolean{Value: false}, false
+	case 4:
+		return scalarValue.Boolean{Value: false}, false
+	default:
+		panic("invalid scalarValue variant")
 	}
 }
 
@@ -553,21 +581,34 @@ func scalarValuesEqual(left scalarValue, right scalarValue) bool {
 }
 
 func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
-	match value {
-	case Boolean(_): return 0, false, false
-	case Integer(_): return 0, false, false
-	case BooleanParameter(parameter):
+	switch enumValue11 := value; enumValue11.TgoTag() {
+	case 1:
+		return 0, false, false
+	case 2:
+		return 0, false, false
+	case 3:
+		parameter := enumValue11.TgoBooleanParameter()
 		return parameter.Index, parameter.Negated, true
-	case IntegerParameter(_): return 0, false, false
+	case 4:
+		return 0, false, false
+	default:
+		panic("invalid scalarValue variant")
 	}
 }
 
 func scalarIntegerParameter(value scalarValue) (int, bool) {
-	match value {
-	case Boolean(_): return 0, false
-	case Integer(_): return 0, false
-	case BooleanParameter(_): return 0, false
-	case IntegerParameter(parameter): return parameter.Index, true
+	switch enumValue12 := value; enumValue12.TgoTag() {
+	case 1:
+		return 0, false
+	case 2:
+		return 0, false
+	case 3:
+		return 0, false
+	case 4:
+		parameter := enumValue12.TgoIntegerParameter()
+		return parameter.Index, true
+	default:
+		panic("invalid scalarValue variant")
 	}
 }
 

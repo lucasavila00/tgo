@@ -52,16 +52,17 @@ type Account enum {
 }
 
 func Label(account Account) string {
-    match account {
-    case Personal(person): return person.Name
-    case Business(company): return company.Company
+    switch account.TgoTag() {
+    case 1: return account.TgoPersonal().Name
+    case 2: return account.TgoBusiness().Company
+    default: panic("invalid Account variant")
     }
 }
 ```
 
-Construct with `Account.Personal{Name: "Lucas"}`. Cover every variant in `match`.
-Use `_` to discard a payload. Duplicate or missing cases fail compilation.
-Do not use `fallthrough` in a match or select `Tgo*` methods through an interface.
+Construct with `Account.Personal{Name: "Lucas"}`. Cover each numeric tag in a tag switch.
+Add a default that returns or panics. Duplicate or missing cases fail compilation.
+Do not use `fallthrough` or select `Tgo*` methods through an interface.
 Type aliases can construct variants. Go name resolution selects the aliased type.
 Do not shadow generated payload, constructor, or default helper names at a construction.
 The value uses a tag and typed Go fields. Reads do not run validation.

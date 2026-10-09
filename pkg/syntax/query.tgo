@@ -3,131 +3,157 @@ package syntax
 // IdentifierOf returns an identifier node payload.
 func IdentifierOf(node *Node) (*Identifier, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Identifier(value): return value.Value, true
-	case Expression(value):
-		match *value.Value {
-		case Identifier(item): return item.Value, true
-		case Bad(_): return nil, false
-		case Ellipsis(_): return nil, false
-		case BasicLiteral(_): return nil, false
-		case FunctionLiteral(_): return nil, false
-		case CompositeLiteral(_): return nil, false
-		case Parenthesized(_): return nil, false
-		case Selector(_): return nil, false
-		case Index(_): return nil, false
-		case IndexList(_): return nil, false
-		case Slice(_): return nil, false
-		case TypeAssertion(_): return nil, false
-		case Call(_): return nil, false
-		case Star(_): return nil, false
-		case NonNilPointer(_): return nil, false
-		case Unary(_): return nil, false
-		case Binary(_): return nil, false
-		case KeyValue(_): return nil, false
-		case ArrayType(_): return nil, false
-		case StructType(_): return nil, false
-		case FunctionType(_): return nil, false
-		case InterfaceType(_): return nil, false
-		case MapType(_): return nil, false
-		case ChannelType(_): return nil, false
-		case Default(_): return nil, false
-		case Propagation(_): return nil, false
+	switch enumValue1 := *node; enumValue1.TgoTag() {
+	case 10:
+		value := enumValue1.TgoIdentifier()
+		return value.Value, true
+	case 5:
+		value := enumValue1.TgoExpression()
+		switch enumValue2 := *value.Value; enumValue2.TgoTag() {
+		case 2:
+			item := enumValue2.TgoIdentifier()
+			return item.Value, true
+		case 1:
+			return nil, false
+		case 3:
+			return nil, false
+		case 4:
+			return nil, false
+		case 5:
+			return nil, false
+		case 6:
+			return nil, false
+		case 7:
+			return nil, false
+		case 8:
+			return nil, false
+		case 9:
+			return nil, false
+		case 10:
+			return nil, false
+		case 11:
+			return nil, false
+		case 12:
+			return nil, false
+		case 13:
+			return nil, false
+		case 14:
+			return nil, false
+		case 15:
+			return nil, false
+		case 16:
+			return nil, false
+		case 17:
+			return nil, false
+		case 18:
+			return nil, false
+		case 19:
+			return nil, false
+		case 20:
+			return nil, false
+		case 21:
+			return nil, false
+		case 22:
+			return nil, false
+		case 23:
+			return nil, false
+		case 24:
+			return nil, false
+		case 25:
+			return nil, false
+		case 26:
+			return nil, false
+		default:
+			panic("invalid Expression variant")
 		}
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Specification(_): return nil, false
-	case Statement(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 4:
+		return nil, false
+	case 6:
+		return nil, false
+	case 7:
+		return nil, false
+	case 8:
+		return nil, false
+	case 9:
+		return nil, false
+case 11:
+		return nil, false
+	case 12:
+		return nil, false
+	default:
+		panic("invalid Node variant")
 	}
 }
 
 // EnumDeclarationOf returns an enum declaration payload.
 func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 	if value == nil { return nil, false }
-	match *value {
-	case Enum(item): return item.Value, true
-	case Bad(_): return nil, false
-	case General(_): return nil, false
-	case Function(_): return nil, false
-	case Struct(_): return nil, false
-	case Checked(_): return nil, false
+	switch enumValue3 := *value; enumValue3.TgoTag() {
+	case 4:
+		item := enumValue3.TgoEnum()
+		return item.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 5:
+		return nil, false
+	case 6:
+		return nil, false
+	default:
+		panic("invalid Declaration variant")
 	}
 }
 
 // StructDeclarationOf returns a TGo struct declaration payload.
 func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 	if value == nil { return nil, false }
-	match *value {
-	case Struct(item): return item.Value, true
-	case Bad(_): return nil, false
-	case General(_): return nil, false
-	case Function(_): return nil, false
-	case Enum(_): return nil, false
-	case Checked(_): return nil, false
+	switch enumValue4 := *value; enumValue4.TgoTag() {
+	case 5:
+		item := enumValue4.TgoStruct()
+		return item.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 4:
+		return nil, false
+	case 6:
+		return nil, false
+	default:
+		panic("invalid Declaration variant")
 	}
 }
 
 // CheckedDeclarationOf returns a checked declaration payload.
 func CheckedDeclarationOf(value *Declaration) (*CheckedDeclaration, bool) {
 	if value == nil { return nil, false }
-	match *value {
-	case Checked(item): return item.Value, true
-	case Bad(_): return nil, false
-	case General(_): return nil, false
-	case Function(_): return nil, false
-	case Enum(_): return nil, false
-	case Struct(_): return nil, false
-	}
-}
-
-// MatchStatementOf returns a match statement node payload.
-func MatchStatementOf(node *Node) (*MatchStatement, bool) {
-	if node == nil { return nil, false }
-	match *node {
-	case Statement(value):
-		match *value.Value {
-		case Match(item): return item.Value, true
-		case Bad(_): return nil, false
-		case Declaration(_): return nil, false
-		case Empty(_): return nil, false
-		case Labeled(_): return nil, false
-		case Expression(_): return nil, false
-		case Send(_): return nil, false
-		case Increment(_): return nil, false
-		case Assignment(_): return nil, false
-		case Go(_): return nil, false
-		case Defer(_): return nil, false
-		case Return(_): return nil, false
-		case Branch(_): return nil, false
-		case Block(_): return nil, false
-		case If(_): return nil, false
-		case Case(_): return nil, false
-		case Switch(_): return nil, false
-		case TypeSwitch(_): return nil, false
-		case Communication(_): return nil, false
-		case Select(_): return nil, false
-		case For(_): return nil, false
-		case Range(_): return nil, false
-		}
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Specification(_): return nil, false
-	case Expression(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue5 := *value; enumValue5.TgoTag() {
+	case 6:
+		item := enumValue5.TgoChecked()
+		return item.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 4:
+		return nil, false
+	case 5:
+		return nil, false
+	default:
+		panic("invalid Declaration variant")
 	}
 }
 
@@ -135,33 +161,62 @@ func MatchStatementOf(node *Node) (*MatchStatement, bool) {
 func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok { return nil, false }
-	match *expression {
-	case Default(item): return item.Value, true
-	case Bad(_): return nil, false
-	case Identifier(_): return nil, false
-	case Ellipsis(_): return nil, false
-	case BasicLiteral(_): return nil, false
-	case FunctionLiteral(_): return nil, false
-	case CompositeLiteral(_): return nil, false
-	case Parenthesized(_): return nil, false
-	case Selector(_): return nil, false
-	case Index(_): return nil, false
-	case IndexList(_): return nil, false
-	case Slice(_): return nil, false
-	case TypeAssertion(_): return nil, false
-	case Call(_): return nil, false
-	case Star(_): return nil, false
-	case NonNilPointer(_): return nil, false
-	case Unary(_): return nil, false
-	case Binary(_): return nil, false
-	case KeyValue(_): return nil, false
-	case ArrayType(_): return nil, false
-	case StructType(_): return nil, false
-	case FunctionType(_): return nil, false
-	case InterfaceType(_): return nil, false
-	case MapType(_): return nil, false
-	case ChannelType(_): return nil, false
-	case Propagation(_): return nil, false
+	switch enumValue8 := *expression; enumValue8.TgoTag() {
+	case 25:
+		item := enumValue8.TgoDefault()
+		return item.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 4:
+		return nil, false
+	case 5:
+		return nil, false
+	case 6:
+		return nil, false
+	case 7:
+		return nil, false
+	case 8:
+		return nil, false
+	case 9:
+		return nil, false
+	case 10:
+		return nil, false
+	case 11:
+		return nil, false
+	case 12:
+		return nil, false
+	case 13:
+		return nil, false
+	case 14:
+		return nil, false
+	case 15:
+		return nil, false
+	case 16:
+		return nil, false
+	case 17:
+		return nil, false
+	case 18:
+		return nil, false
+	case 19:
+		return nil, false
+	case 20:
+		return nil, false
+	case 21:
+		return nil, false
+	case 22:
+		return nil, false
+	case 23:
+		return nil, false
+	case 24:
+		return nil, false
+	case 26:
+		return nil, false
+	default:
+		panic("invalid Expression variant")
 	}
 }
 
@@ -169,33 +224,62 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok { return nil, false }
-	match *expression {
-	case Propagation(item): return item.Value, true
-	case Bad(_): return nil, false
-	case Identifier(_): return nil, false
-	case Ellipsis(_): return nil, false
-	case BasicLiteral(_): return nil, false
-	case FunctionLiteral(_): return nil, false
-	case CompositeLiteral(_): return nil, false
-	case Parenthesized(_): return nil, false
-	case Selector(_): return nil, false
-	case Index(_): return nil, false
-	case IndexList(_): return nil, false
-	case Slice(_): return nil, false
-	case TypeAssertion(_): return nil, false
-	case Call(_): return nil, false
-	case Star(_): return nil, false
-	case NonNilPointer(_): return nil, false
-	case Unary(_): return nil, false
-	case Binary(_): return nil, false
-	case KeyValue(_): return nil, false
-	case ArrayType(_): return nil, false
-	case StructType(_): return nil, false
-	case FunctionType(_): return nil, false
-	case InterfaceType(_): return nil, false
-	case MapType(_): return nil, false
-	case ChannelType(_): return nil, false
-	case Default(_): return nil, false
+	switch enumValue9 := *expression; enumValue9.TgoTag() {
+	case 26:
+		item := enumValue9.TgoPropagation()
+		return item.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 4:
+		return nil, false
+	case 5:
+		return nil, false
+	case 6:
+		return nil, false
+	case 7:
+		return nil, false
+	case 8:
+		return nil, false
+	case 9:
+		return nil, false
+	case 10:
+		return nil, false
+	case 11:
+		return nil, false
+	case 12:
+		return nil, false
+	case 13:
+		return nil, false
+	case 14:
+		return nil, false
+	case 15:
+		return nil, false
+	case 16:
+		return nil, false
+	case 17:
+		return nil, false
+	case 18:
+		return nil, false
+	case 19:
+		return nil, false
+	case 20:
+		return nil, false
+	case 21:
+		return nil, false
+	case 22:
+		return nil, false
+	case 23:
+		return nil, false
+	case 24:
+		return nil, false
+	case 25:
+		return nil, false
+	default:
+		panic("invalid Expression variant")
 	}
 }
 
@@ -203,230 +287,413 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok { return nil, false }
-	match *expression {
-	case NonNilPointer(item): return item.Value, true
-	case Bad(_): return nil, false
-	case Identifier(_): return nil, false
-	case Ellipsis(_): return nil, false
-	case BasicLiteral(_): return nil, false
-	case FunctionLiteral(_): return nil, false
-	case CompositeLiteral(_): return nil, false
-	case Parenthesized(_): return nil, false
-	case Selector(_): return nil, false
-	case Index(_): return nil, false
-	case IndexList(_): return nil, false
-	case Slice(_): return nil, false
-	case TypeAssertion(_): return nil, false
-	case Call(_): return nil, false
-	case Star(_): return nil, false
-	case Unary(_): return nil, false
-	case Binary(_): return nil, false
-	case KeyValue(_): return nil, false
-	case ArrayType(_): return nil, false
-	case StructType(_): return nil, false
-	case FunctionType(_): return nil, false
-	case InterfaceType(_): return nil, false
-	case MapType(_): return nil, false
-	case ChannelType(_): return nil, false
-	case Default(_): return nil, false
-	case Propagation(_): return nil, false
+	switch enumValue10 := *expression; enumValue10.TgoTag() {
+	case 15:
+		item := enumValue10.TgoNonNilPointer()
+		return item.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 4:
+		return nil, false
+	case 5:
+		return nil, false
+	case 6:
+		return nil, false
+	case 7:
+		return nil, false
+	case 8:
+		return nil, false
+	case 9:
+		return nil, false
+	case 10:
+		return nil, false
+	case 11:
+		return nil, false
+	case 12:
+		return nil, false
+	case 13:
+		return nil, false
+	case 14:
+		return nil, false
+	case 16:
+		return nil, false
+	case 17:
+		return nil, false
+	case 18:
+		return nil, false
+	case 19:
+		return nil, false
+	case 20:
+		return nil, false
+	case 21:
+		return nil, false
+	case 22:
+		return nil, false
+	case 23:
+		return nil, false
+	case 24:
+		return nil, false
+	case 25:
+		return nil, false
+	case 26:
+		return nil, false
+	default:
+		panic("invalid Expression variant")
 	}
 }
 
 // ExpressionOf returns an expression node payload.
 func ExpressionOf(node *Node) (*Expression, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Expression(value): return value.Value, true
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Specification(_): return nil, false
-	case Statement(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue11 := *node; enumValue11.TgoTag() {
+	case 5:
+		value := enumValue11.TgoExpression()
+		return value.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 4:
+		return nil, false
+	case 6:
+		return nil, false
+	case 7:
+		return nil, false
+	case 8:
+		return nil, false
+	case 9:
+		return nil, false
+case 10:
+		return nil, false
+	case 11:
+		return nil, false
+	case 12:
+		return nil, false
+	default:
+		panic("invalid Node variant")
 	}
 }
 
 // StatementOf returns a statement node payload.
 func StatementOf(node *Node) (*Statement, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Statement(value): return value.Value, true
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Specification(_): return nil, false
-	case Expression(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue12 := *node; enumValue12.TgoTag() {
+	case 4:
+		value := enumValue12.TgoStatement()
+		return value.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 5:
+		return nil, false
+	case 6:
+		return nil, false
+	case 7:
+		return nil, false
+	case 8:
+		return nil, false
+	case 9:
+		return nil, false
+case 10:
+		return nil, false
+	case 11:
+		return nil, false
+	case 12:
+		return nil, false
+	default:
+		panic("invalid Node variant")
 	}
 }
 
 // DeclarationOf returns a declaration node payload.
 func DeclarationOf(node *Node) (*Declaration, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Declaration(value): return value.Value, true
-	case File(_): return nil, false
-	case Specification(_): return nil, false
-	case Statement(_): return nil, false
-	case Expression(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue13 := *node; enumValue13.TgoTag() {
+	case 2:
+		value := enumValue13.TgoDeclaration()
+		return value.Value, true
+	case 1:
+		return nil, false
+	case 3:
+		return nil, false
+	case 4:
+		return nil, false
+	case 5:
+		return nil, false
+	case 6:
+		return nil, false
+	case 7:
+		return nil, false
+	case 8:
+		return nil, false
+	case 9:
+		return nil, false
+case 10:
+		return nil, false
+	case 11:
+		return nil, false
+	case 12:
+		return nil, false
+	default:
+		panic("invalid Node variant")
 	}
 }
 
 // SpecificationOf returns a specification node payload.
 func SpecificationOf(node *Node) (*Specification, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Specification(value): return value.Value, true
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Statement(_): return nil, false
-	case Expression(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue14 := *node; enumValue14.TgoTag() {
+	case 3:
+		value := enumValue14.TgoSpecification()
+		return value.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 4:
+		return nil, false
+	case 5:
+		return nil, false
+	case 6:
+		return nil, false
+	case 7:
+		return nil, false
+	case 8:
+		return nil, false
+	case 9:
+		return nil, false
+case 10:
+		return nil, false
+	case 11:
+		return nil, false
+	case 12:
+		return nil, false
+	default:
+		panic("invalid Node variant")
 	}
 }
 
 // ExpressionKind returns the closed expression variant name.
 func ExpressionKind(value *Expression) string {
-	match *value {
-	case Bad(_): return "Bad"
-	case Identifier(_): return "Identifier"
-	case Ellipsis(_): return "Ellipsis"
-	case BasicLiteral(_): return "BasicLiteral"
-	case FunctionLiteral(_): return "FunctionLiteral"
-	case CompositeLiteral(_): return "CompositeLiteral"
-	case Parenthesized(_): return "Parenthesized"
-	case Selector(_): return "Selector"
-	case Index(_): return "Index"
-	case IndexList(_): return "IndexList"
-	case Slice(_): return "Slice"
-	case TypeAssertion(_): return "TypeAssertion"
-	case Call(_): return "Call"
-	case Star(_): return "Star"
-	case NonNilPointer(_): return "NonNilPointer"
-	case Unary(_): return "Unary"
-	case Binary(_): return "Binary"
-	case KeyValue(_): return "KeyValue"
-	case ArrayType(_): return "ArrayType"
-	case StructType(_): return "StructType"
-	case FunctionType(_): return "FunctionType"
-	case InterfaceType(_): return "InterfaceType"
-	case MapType(_): return "MapType"
-	case ChannelType(_): return "ChannelType"
-	case Default(_): return "Default"
-	case Propagation(_): return "Propagation"
+	switch enumValue15 := *value; enumValue15.TgoTag() {
+	case 1:
+		return "Bad"
+	case 2:
+		return "Identifier"
+	case 3:
+		return "Ellipsis"
+	case 4:
+		return "BasicLiteral"
+	case 5:
+		return "FunctionLiteral"
+	case 6:
+		return "CompositeLiteral"
+	case 7:
+		return "Parenthesized"
+	case 8:
+		return "Selector"
+	case 9:
+		return "Index"
+	case 10:
+		return "IndexList"
+	case 11:
+		return "Slice"
+	case 12:
+		return "TypeAssertion"
+	case 13:
+		return "Call"
+	case 14:
+		return "Star"
+	case 15:
+		return "NonNilPointer"
+	case 16:
+		return "Unary"
+	case 17:
+		return "Binary"
+	case 18:
+		return "KeyValue"
+	case 19:
+		return "ArrayType"
+	case 20:
+		return "StructType"
+	case 21:
+		return "FunctionType"
+	case 22:
+		return "InterfaceType"
+	case 23:
+		return "MapType"
+	case 24:
+		return "ChannelType"
+	case 25:
+		return "Default"
+	case 26:
+		return "Propagation"
+	default:
+		panic("invalid Expression variant")
 	}
 }
 
 // StatementKind returns the closed statement variant name.
 func StatementKind(value *Statement) string {
-	match *value {
-	case Bad(_): return "Bad"
-	case Declaration(_): return "Declaration"
-	case Empty(_): return "Empty"
-	case Labeled(_): return "Labeled"
-	case Expression(_): return "Expression"
-	case Send(_): return "Send"
-	case Increment(_): return "Increment"
-	case Assignment(_): return "Assignment"
-	case Go(_): return "Go"
-	case Defer(_): return "Defer"
-	case Return(_): return "Return"
-	case Branch(_): return "Branch"
-	case Block(_): return "Block"
-	case If(_): return "If"
-	case Case(_): return "Case"
-	case Switch(_): return "Switch"
-	case TypeSwitch(_): return "TypeSwitch"
-	case Communication(_): return "Communication"
-	case Select(_): return "Select"
-	case For(_): return "For"
-	case Range(_): return "Range"
-	case Match(_): return "Match"
+	switch enumValue16 := *value; enumValue16.TgoTag() {
+	case 1:
+		return "Bad"
+	case 2:
+		return "Declaration"
+	case 3:
+		return "Empty"
+	case 4:
+		return "Labeled"
+	case 5:
+		return "Expression"
+	case 6:
+		return "Send"
+	case 7:
+		return "Increment"
+	case 8:
+		return "Assignment"
+	case 9:
+		return "Go"
+	case 10:
+		return "Defer"
+	case 11:
+		return "Return"
+	case 12:
+		return "Branch"
+	case 13:
+		return "Block"
+	case 14:
+		return "If"
+	case 15:
+		return "Case"
+	case 16:
+		return "Switch"
+	case 17:
+		return "TypeSwitch"
+	case 18:
+		return "Communication"
+	case 19:
+		return "Select"
+	case 20:
+		return "For"
+	case 21:
+		return "Range"
+default:
+		panic("invalid Statement variant")
 	}
 }
 
 // DeclarationKind returns the closed declaration variant name.
 func DeclarationKind(value *Declaration) string {
-	match *value {
-	case Bad(_): return "Bad"
-	case General(_): return "General"
-	case Function(_): return "Function"
-	case Enum(_): return "Enum"
-	case Struct(_): return "Struct"
-	case Checked(_): return "Checked"
+	switch enumValue17 := *value; enumValue17.TgoTag() {
+	case 1:
+		return "Bad"
+	case 2:
+		return "General"
+	case 3:
+		return "Function"
+	case 4:
+		return "Enum"
+	case 5:
+		return "Struct"
+	case 6:
+		return "Checked"
+	default:
+		panic("invalid Declaration variant")
 	}
 }
 
 // SpecificationKind returns the closed specification variant name.
 func SpecificationKind(value *Specification) string {
-	match *value {
-	case Import(_): return "Import"
-	case Value(_): return "Value"
-	case Type(_): return "Type"
+	switch enumValue18 := *value; enumValue18.TgoTag() {
+	case 1:
+		return "Import"
+	case 2:
+		return "Value"
+	case 3:
+		return "Type"
+	default:
+		panic("invalid Specification variant")
 	}
 }
 
 // StaticCallName returns the source name for a supported static call.
 func StaticCallName(value *Expression) (string, bool) {
 	if value == nil { return "", false }
-	match *value {
-	case Identifier(item): return item.Value.Name, true
-	case Selector(item):
+	switch enumValue19 := *value; enumValue19.TgoTag() {
+	case 2:
+		item := enumValue19.TgoIdentifier()
+		return item.Value.Name, true
+	case 8:
+		item := enumValue19.TgoSelector()
 		prefix, ok := StaticCallName(item.Value.Expression)
-		if !ok { return "", false }
+		if !ok {
+			return "", false
+		}
 		return prefix + "." + item.Value.Selector.Name, true
-	case Index(item): return StaticCallName(item.Value.Expression)
-	case IndexList(item): return StaticCallName(item.Value.Expression)
-	case Parenthesized(item): return StaticCallName(item.Value.Expression)
-	case Star(item): return StaticCallName(item.Value.Expression)
-	case NonNilPointer(_): return "", false
-	case Bad(_): return "", false
-	case Ellipsis(_): return "", false
-	case BasicLiteral(_): return "", false
-	case FunctionLiteral(_): return "", false
-	case CompositeLiteral(_): return "", false
-	case Slice(_): return "", false
-	case TypeAssertion(_): return "", false
-	case Call(_): return "", false
-	case Unary(_): return "", false
-	case Binary(_): return "", false
-	case KeyValue(_): return "", false
-	case ArrayType(_): return "", false
-	case StructType(_): return "", false
-	case FunctionType(_): return "", false
-	case InterfaceType(_): return "", false
-	case MapType(_): return "", false
-	case ChannelType(_): return "", false
-	case Default(_): return "", false
-	case Propagation(_): return "", false
+	case 9:
+		item := enumValue19.TgoIndex()
+		return StaticCallName(item.Value.Expression)
+	case 10:
+		item := enumValue19.TgoIndexList()
+		return StaticCallName(item.Value.Expression)
+	case 7:
+		item := enumValue19.TgoParenthesized()
+		return StaticCallName(item.Value.Expression)
+	case 14:
+		item := enumValue19.TgoStar()
+		return StaticCallName(item.Value.Expression)
+	case 15:
+		return "", false
+	case 1:
+		return "", false
+	case 3:
+		return "", false
+	case 4:
+		return "", false
+	case 5:
+		return "", false
+	case 6:
+		return "", false
+	case 11:
+		return "", false
+	case 12:
+		return "", false
+	case 13:
+		return "", false
+	case 16:
+		return "", false
+	case 17:
+		return "", false
+	case 18:
+		return "", false
+	case 19:
+		return "", false
+	case 20:
+		return "", false
+	case 21:
+		return "", false
+	case 22:
+		return "", false
+	case 23:
+		return "", false
+	case 24:
+		return "", false
+	case 25:
+		return "", false
+	case 26:
+		return "", false
+	default:
+		panic("invalid Expression variant")
 	}
 }
 

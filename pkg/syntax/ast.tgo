@@ -292,7 +292,7 @@ type PropagationExpression struct {
 	Bang       token.Pos
 }
 
-// Statement contains every Go statement form plus TGo match.
+// Statement contains every Go statement form.
 type Statement enum {
 	Bad struct { Value %BadStatement }
 	Declaration struct { Value %DeclarationStatement }
@@ -315,7 +315,6 @@ type Statement enum {
 	Select struct { Value %SelectStatement }
 	For struct { Value %ForStatement }
 	Range struct { Value %RangeStatement }
-	Match struct { Value %MatchStatement }
 }
 
 // BadStatement is an invalid statement range.
@@ -462,29 +461,6 @@ type RangeStatement struct {
 	Range    token.Pos
 	Source   %Expression
 	Body     %BlockStatement
-}
-
-// MatchStatement selects one TGo enum variant.
-type MatchStatement struct {
-	Span
-	Match   token.Pos
-	Subject %Expression
-	Lbrace  token.Pos
-	Cases   []%MatchCase
-	Rbrace  token.Pos
-}
-
-// MatchCase binds one enum variant payload.
-type MatchCase struct {
-	Span
-	Case     token.Pos
-	Variant  %Identifier
-	Lparen   token.Pos
-	Binding  %Identifier
-	Rparen   token.Pos
-	Colon    token.Pos
-	Body     []%Statement
-	Comments []%CommentGroup
 }
 
 // Specification contains every Go declaration specification.
@@ -646,7 +622,6 @@ type Node enum {
 	FieldList struct { Value %FieldList }
 	TGoField struct { Value %TGoField }
 	EnumVariant struct { Value %EnumVariant }
-	MatchCase struct { Value %MatchCase }
 	Identifier struct { Value %Identifier }
 	Comment struct { Value %Comment }
 	CommentGroup struct { Value %CommentGroup }

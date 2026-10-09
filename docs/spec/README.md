@@ -45,8 +45,6 @@ TgoStructDecl  = "type" TypeName "struct" "{" { TgoFieldDecl ";" } "}" .
 TgoFieldDecl   = GoFieldDecl [ "=" GoExpression ] .
 VariantLiteral = TypeName "." VariantName GoLiteralValue .
 DefaultMarker  = "..default" .
-MatchStmt      = "match" GoExpression "{" { MatchCase } "}" .
-MatchCase      = "case" VariantName "(" identifier ")" ":" GoStatementList .
 PropagateExpr  = GoCallExpr "!" .
 NonNilPointer = "%" GoType .
 ```
@@ -57,8 +55,6 @@ Go semicolon insertion applies. A qualified variant literal starts with a packag
 model.Account.Personal{Name: "Lucas"}
 ```
 
-`match` is a contextual keyword at the start of a match statement.
-An identifier named `match` keeps its Go meaning in other positions.
 `enum` is contextual before an enum body. `where` is contextual after a checked base type.
 These names keep their Go meaning in other positions.
 An immediate line break after a contextual keyword does not insert a semicolon.
@@ -245,8 +241,15 @@ in declaration order. Boxed variants share one interface field. Construction can
 allocate when the payload escapes. A boxed payload accessor can panic on the wrong
 variant. Enums with no payload fields store only their tag.
 
+Payload accessors do not check the tag and do not allocate. An inline accessor for the wrong
+variant returns the inactive inline slot. A value from another variant constructor normally has
+the zero value in that slot. A boxed accessor for the wrong variant panics during its type
+assertion. An empty-payload accessor returns an empty value for each tag. The contextual checks
+below prevent these calls in checked source.
+
 A tgo file may not build an enum with a struct literal, conversion, or `new`.
-It may not read representation fields or call generated `Tgo*` methods directly.
+It may not read representation fields. It can call generated `Tgo*` methods only in the checked
+tag switch below.
 Embedding an enum does not expose its representation fields or generated accessors.
 A tgo file may not select a `Tgo`-prefixed method through an interface or type parameter.
 A new defined type may not derive from an enum, including through pointer layers.
@@ -256,40 +259,37 @@ Conversion to a concrete interface type remains valid.
 An unnamed struct identical to the enum representation is reserved and rejected.
 The conversion rules also apply to a type parameter whose type set admits the enum.
 
-## Match statements
+## Enum tag switches
 
-A match reads an enum and has one case for every variant:
+A TGo file reads an enum payload with a checked tag switch:
 
 ```text
-match account {
-case Personal(person): return person.Name
-case Business(business): return business.Company
-}
-```
-
-Cases may appear in any order. Each variant must appear once.
-Unknown, duplicate, and missing variants are compile errors.
-The binding is one name. `_` discards the payload.
-A match case may not use `fallthrough`.
-
-The subject is evaluated once. A match lowers to this shape:
-
-```go
-switch value := account; value.TgoTag() {
+switch account.TgoTag() {
 case 1:
-    person := value.TgoPersonal()
-    return person.Name
+    return account.TgoPersonal().Name
 case 2:
-    business := value.TgoBusiness()
-    return business.Company
+    return account.TgoBusiness().Company
 default:
     panic("invalid Account variant")
 }
 ```
 
-The payload binding is a Go value copy. Reference fields keep their Go aliases.
-Accessors do not check the tag. The final switch case catches an invalid foreign tag.
-A label on a match labels the emitted switch.
+The switch tag must be a direct `TgoTag()` call on a stable enum value. The value must be an
+unaliased local value or a field path that starts at one. A pointer, package variable, interface
+value, or open type parameter cannot supply the proof. A switch initializer can bind an
+expression once: `switch value := load(); value.TgoTag() {`.
+
+Cases use the one-based numeric tags in declaration order. Each case value must be a constant in
+the tag range. The switch must cover each tag. It must have a default path that cannot continue
+after the switch. A case cannot use `fallthrough`. TGo does not generate tag constants.
+
+A case with one tag permits only that variant's payload accessor on the same receiver. A case
+with multiple tags permits no payload accessor. An assignment to the receiver invalidates the
+proof for later payload reads. A nested closure does not inherit the proof. It needs its own
+checked tag switch.
+
+`TgoTag()` is invalid outside a checked switch. A payload accessor is invalid outside its proven
+case. The accessor returns a Go value copy. Reference fields keep their Go aliases.
 
 ## Checked types
 
@@ -496,7 +496,6 @@ TgoDefaultTF
 ```
 
 A source declaration that collides with a generated name is a compile error.
-Internal match variables use names that do not occur in the package source.
 An inserted reference must resolve to its generated declaration. A local name cannot capture it.
 An enum reserves its emitted `uint8`, `uint16`, or `uint32` tag name.
 A checked type reserves the predeclared `string`, `error`, and `nil` names.

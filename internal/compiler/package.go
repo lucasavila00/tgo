@@ -49,7 +49,6 @@ type packageUnit struct {
 	exportPaths     map[string]string
 	typeErrors      []error
 	errors          []error
-	serial          int
 }
 
 const integritySeparator = "\x00tgo generated body\x00"
@@ -237,10 +236,6 @@ func (p *packageUnit) checkAndLower() error {
 		return p.errors[0]
 	}
 	p.fillDefaults()
-	p.lowerMatches()
-	if len(p.errors) > 0 {
-		return p.errors[0]
-	}
 	p.typecheck()
 	p.validateGeneratedReferences()
 	if len(p.errors) > 0 {

@@ -1,0 +1,18 @@
+package invalid
+
+type Result enum {
+	Success struct{}
+	Failure struct{}
+}
+
+func use(value Result) {
+	panic := func(any) {}
+	switch value.TgoTag() {
+	case 1:
+		return
+	case 2:
+		return
+	default:
+		panic("invalid Result variant")
+	}
+}

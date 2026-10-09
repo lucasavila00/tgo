@@ -255,14 +255,23 @@ func (c %checker) mappedScalarEffectCondition(
 }
 
 func isScalarEffectCondition(kind effectKind) bool {
-	match kind {
-	case Boolean(_): return true
-	case Nonzero(_): return true
-	case Nonempty(_): return false
-	case MapMiss(_): return false
-	case ChannelClosed(_): return false
-	case AssertionFails(_): return false
-	case ResliceExtends(_): return false
+	switch enumValue6 := kind; enumValue6.TgoTag() {
+	case 1:
+		return true
+	case 2:
+		return true
+	case 3:
+		return false
+	case 4:
+		return false
+	case 5:
+		return false
+	case 6:
+		return false
+	case 7:
+		return false
+	default:
+		panic("invalid effectKind variant")
 	}
 }
 

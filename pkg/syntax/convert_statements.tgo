@@ -14,16 +14,6 @@ func (c %converter) statement(value frontNode) *Statement {
 
 func (c %converter) statementRequired(value frontNode) %Statement {
 	switch item := value.(type) {
-	case *frontMatchStmt:
-		result := Statement.Match{Value: c.match(item)}
-		return &result
-	case *frontLabeledStmt:
-		result := Statement.Labeled{Value: &LabeledStatement{
-			Span: Span{Start: item.Pos(), Stop: item.End()},
-			Label: c.identifierRequired(item.Label), Colon: item.Colon,
-			Statement: c.statementRequired(item.Stmt),
-		}}
-		return &result
 	case *ast.BadStmt:
 		result := Statement.Bad{Value: &BadStatement{
 			Span: span(item), From: item.From, To: item.To,
@@ -160,7 +150,7 @@ func (c %converter) statementList(parent frontNode) []%Statement {
 	var result []%Statement = nil
 	for _, child := range c.front.children[parent] {
 		switch child.(type) {
-		case ast.Stmt, *frontMatchStmt, *frontLabeledStmt:
+		case ast.Stmt:
 			result = append(result, c.statementRequired(child))
 		}
 	}
@@ -179,32 +169,6 @@ func (c %converter) blockRequired(value *ast.BlockStmt) %BlockStatement {
 		Span: span(value), Lbrace: value.Lbrace,
 		List: c.statementList(value), Rbrace: value.Rbrace,
 	}
-}
-
-func (c %converter) match(value *frontMatchStmt) %MatchStatement {
-	result := &MatchStatement{
-		Span: Span{Start: value.Pos(), Stop: value.End()}, Match: value.Match,
-		Subject: c.expressionRequired(value.Subject), Lbrace: value.Lbrace,
-		Cases: nil, Rbrace: value.Rbrace,
-	}
-	for _, item := range value.Cases {
-		matchCase := &MatchCase{
-			Span: Span{Start: item.Pos(), Stop: item.End()}, Case: item.Case,
-			Variant: c.identifierRequired(item.Variant), Lparen: item.Lparen,
-			Binding: c.identifierRequired(item.Binding), Rparen: item.Rparen,
-			Colon: item.Colon, Body: nil, Comments: nil,
-		}
-		for _, statement := range item.Body {
-			matchCase.Body = append(matchCase.Body, c.statementRequired(statement))
-		}
-		for _, comment := range item.Comments {
-			matchCase.Comments = append(
-				matchCase.Comments, c.commentGroupRequired(comment),
-			)
-		}
-		result.Cases = append(result.Cases, matchCase)
-	}
-	return result
 }
 
 func (c %converter) specification(value ast.Spec) %Specification {

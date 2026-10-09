@@ -1,1 +1,1 @@
-<WORK>/input.tgo:12:12: Account representation is private; use constructors and match
+<WORK>/input.tgo:12:12: Account representation is private; use constructors and a checked TgoTag switch

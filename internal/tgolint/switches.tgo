@@ -17,6 +17,10 @@ func (c %checker) checkTagSwitch(statement *ast.SwitchStmt) {
 		return
 	}
 	c.safe[selector] = true
+	if c.tagReceiverUnsafe(receiver, selector) {
+		c.pass.Reportf(selector.Pos(), "%s.TgoTag needs an unaliased local value receiver",
+			modelName(model))
+	}
 	seen := make(map[int]bool)
 	hasSafeDefault := false
 	incomingFallthrough := false
@@ -76,12 +80,16 @@ func clauseFallthrough(clause *ast.CaseClause) *ast.BranchStmt {
 }
 
 func (c %checker) defaultStops(clause *ast.CaseClause) bool {
-	return c.statementsTerminate(clause.Body)
+	return c.statementsTerminateWith(clause.Body, true)
 }
 
 // statementsTerminate reports whether all paths leave the current switch.
 func (c %checker) statementsTerminate(statements []ast.Stmt) bool {
-	if len(statements) == 0 || c.hasEscapingBranch(statements) {
+	return c.statementsTerminateWith(statements, false)
+}
+
+func (c %checker) statementsTerminateWith(statements []ast.Stmt, tagDefault bool) bool {
+	if len(statements) == 0 || c.hasEscapingBranch(statements, tagDefault) {
 		return false
 	}
 	sentinel := &ast.ExprStmt{X: ast.NewIdent("__tgolint_reached")}
@@ -104,7 +112,7 @@ func (c %checker) statementsTerminate(statements []ast.Stmt) bool {
 	return true
 }
 
-func (c %checker) hasEscapingBranch(statements []ast.Stmt) bool {
+func (c %checker) hasEscapingBranch(statements []ast.Stmt, tagDefault bool) bool {
 	roots := make(map[ast.Node]bool, len(statements))
 	labels := make(map[types.Object]bool)
 	for _, statement := range statements {
@@ -133,7 +141,7 @@ func (c %checker) hasEscapingBranch(statements []ast.Stmt) bool {
 			if !ok {
 				return true
 			}
-			escapes = c.branchEscapes(branch, roots, labels)
+			escapes = c.branchEscapes(branch, roots, labels, tagDefault)
 			return !escapes
 		})
 		if escapes {
@@ -147,11 +155,18 @@ func (c %checker) branchEscapes(
 	branch *ast.BranchStmt,
 	roots map[ast.Node]bool,
 	labels map[types.Object]bool,
+	tagDefault bool,
 ) bool {
+	if tagDefault && branch.Tok == token.RETURN {
+		return false
+	}
 	if branch.Label != nil {
 		return !labels[c.pass.TypesInfo.Uses[branch.Label]]
 	}
 	if branch.Tok != token.BREAK && branch.Tok != token.CONTINUE {
+		return true
+	}
+	if tagDefault && roots[branch] {
 		return true
 	}
 	for node := c.parents[branch]; node != nil; node = c.parents[node] {
@@ -313,6 +328,37 @@ func (c %checker) receiverUnsafe(receiver ast.Expr, accessor *ast.SelectorExpr) 
 	return true
 }
 
+// tagReceiverUnsafe rejects receivers that cannot keep one stable tag proof.
+func (c %checker) tagReceiverUnsafe(receiver ast.Expr, selector *ast.SelectorExpr) bool {
+	root, _, ok := receiverPath(c.pass.TypesInfo, receiver)
+	variable, variableOK := root.(*types.Var)
+	if !ok || !variableOK || variable.IsField() ||
+		variable.Parent() == c.pass.Pkg.Scope() || typeMayBePointer(variable.Type()) {
+		return true
+	}
+	selection := c.pass.TypesInfo.Selections[selector]
+	if selection != nil && selection.Indirect() {
+		return true
+	}
+	var function ast.Node = selector
+	for c.parents[function] != nil {
+		function = c.parents[function]
+		switch function.(type) {
+		case *ast.FuncDecl, *ast.FuncLit:
+			if variable.Pos() < function.Pos() || variable.Pos() > function.End() {
+				return true
+			}
+			return receiverCanChangeBefore(
+				c.pass.TypesInfo,
+				function,
+				receiver,
+				selector.Pos(),
+			)
+		}
+	}
+	return true
+}
+
 // receiverChangesThroughGoto finds a write on a backward path to an accessor.
 // A repeated payload read needs a new tag read after each receiver change.
 func (c %checker) receiverChangesThroughGoto(
@@ -373,6 +419,9 @@ func (c %checker) receiverChangesInCycle(
 	function ast.Node,
 ) bool {
 	for node := c.parents[accessor]; node != nil && node != function; node = c.parents[node] {
+		if _, clause := node.(*ast.CaseClause); clause {
+			return false
+		}
 		switch node := node.(type) {
 		case *ast.ForStmt:
 			if receiverCanChangeIn(c.pass.TypesInfo, node, receiver) {

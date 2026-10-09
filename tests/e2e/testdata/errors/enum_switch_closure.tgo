@@ -1,0 +1,17 @@
+package invalid
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
+
+func label(account Account) func() string {
+	switch account.TgoTag() {
+	case 1:
+		return func() string { return account.TgoPersonal().Name }
+	case 2:
+		return func() string { return account.TgoBusiness().Company }
+	default:
+		panic("invalid Account variant")
+	}
+}

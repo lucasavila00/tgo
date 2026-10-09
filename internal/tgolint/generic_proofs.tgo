@@ -91,11 +91,17 @@ func (c %checker) reportGenericEffects(
 }
 
 func effectOutcomeRank(outcome effectOutcome) int {
-	match outcome {
-	case Unknown(_): return 1
-	case Never(_): return 0
-	case Always(_): return 2
-	case Conditional(_): return 1
+	switch enumValue4 := outcome; enumValue4.TgoTag() {
+	case 1:
+		return 1
+	case 2:
+		return 0
+	case 3:
+		return 2
+	case 4:
+		return 1
+	default:
+		panic("invalid effectOutcome variant")
 	}
 }
 
@@ -235,22 +241,24 @@ func (c %checker) compositeEffectCondition(
 	targetType types.Type,
 ) (bool, bool) {
 	expression := call.Args[condition.ValueParameter]
-	match condition.Kind {
-	case Nonempty(_):
+	switch enumValue5 := condition.Kind; enumValue5.TgoTag() {
+	case 3:
 		length, _, known := c.knownSliceBounds(expression)
 		return (length != 0) == condition.Expected, known
-	case MapMiss(_):
+	case 4:
 		return c.mapMissCondition(call, condition)
-	case ChannelClosed(_):
+	case 5:
 		return false, c.freshChannel(expression)
-	case AssertionFails(_):
+	case 6:
 		return c.assertionFails(expression, targetType)
-	case ResliceExtends(_):
+	case 7:
 		return c.resliceExtends(call, condition)
-	case Boolean(_):
+	case 1:
 		return false, false
-	case Nonzero(_):
+	case 2:
 		return false, false
+	default:
+		panic("invalid effectKind variant")
 	}
 }
 

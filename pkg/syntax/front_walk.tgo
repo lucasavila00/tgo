@@ -187,19 +187,6 @@ func syntaxChildren(file %frontFile, node frontNode) []frontNode {
 		children = []frontNode{node.Name, node.Base, node.Predicate}
 	case *frontFieldDecl:
 		children = []frontNode{node.Field, node.Default}
-	case *frontLabeledStmt:
-		children = []frontNode{node.Label, node.Stmt}
-	case *frontMatchStmt:
-		children = make([]frontNode, 1, 1+len(node.Cases))
-		children[0] = node.Subject
-		for _, matchCase := range node.Cases {
-			children = append(children, matchCase)
-		}
-	case *frontMatchCase:
-		children = make([]frontNode, 2, 2+len(node.Body))
-		children[0] = node.Variant
-		children[1] = node.Binding
-		children = append(children, node.Body...)
 	case *frontDefaultMarker:
 		children = nil
 	case *frontPropagateExpr:

@@ -113,20 +113,45 @@ func NodePosition(node *Node) token.Pos {
 	if node == nil {
 		return token.NoPos
 	}
-	match *node {
-	case File(value): return value.Value.Start
-	case Declaration(value): return DeclarationPosition(value.Value)
-	case Specification(value): return SpecificationPosition(value.Value)
-	case Statement(value): return StatementPosition(value.Value)
-	case Expression(value): return ExpressionPosition(value.Value)
-	case Field(value): return value.Value.Start
-	case FieldList(value): return value.Value.Start
-	case TGoField(value): return value.Value.Start
-	case EnumVariant(value): return value.Value.Start
-	case MatchCase(value): return value.Value.Start
-	case Identifier(value): return value.Value.Start
-	case Comment(value): return value.Value.Start
-	case CommentGroup(value): return value.Value.Start
+	switch enumValue20 := *node; enumValue20.TgoTag() {
+	case 1:
+		value := enumValue20.TgoFile()
+		return value.Value.Start
+	case 2:
+		value := enumValue20.TgoDeclaration()
+		return DeclarationPosition(value.Value)
+	case 3:
+		value := enumValue20.TgoSpecification()
+		return SpecificationPosition(value.Value)
+	case 4:
+		value := enumValue20.TgoStatement()
+		return StatementPosition(value.Value)
+	case 5:
+		value := enumValue20.TgoExpression()
+		return ExpressionPosition(value.Value)
+	case 6:
+		value := enumValue20.TgoField()
+		return value.Value.Start
+	case 7:
+		value := enumValue20.TgoFieldList()
+		return value.Value.Start
+	case 8:
+		value := enumValue20.TgoTGoField()
+		return value.Value.Start
+	case 9:
+		value := enumValue20.TgoEnumVariant()
+		return value.Value.Start
+case 10:
+		value := enumValue20.TgoIdentifier()
+		return value.Value.Start
+	case 11:
+		value := enumValue20.TgoComment()
+		return value.Value.Start
+	case 12:
+		value := enumValue20.TgoCommentGroup()
+		return value.Value.Start
+	default:
+		panic("invalid Node variant")
 	}
 }
 
@@ -135,86 +160,219 @@ func NodeEnd(node *Node) token.Pos {
 	if node == nil {
 		return token.NoPos
 	}
-	match *node {
-	case File(value): return value.Value.Stop
-	case Declaration(value): return DeclarationEnd(value.Value)
-	case Specification(value): return SpecificationEnd(value.Value)
-	case Statement(value): return StatementEnd(value.Value)
-	case Expression(value): return ExpressionEnd(value.Value)
-	case Field(value): return value.Value.Stop
-	case FieldList(value): return value.Value.Stop
-	case TGoField(value): return value.Value.Stop
-	case EnumVariant(value): return value.Value.Stop
-	case MatchCase(value): return value.Value.Stop
-	case Identifier(value): return value.Value.Stop
-	case Comment(value): return value.Value.Stop
-	case CommentGroup(value): return value.Value.Stop
+	switch enumValue21 := *node; enumValue21.TgoTag() {
+	case 1:
+		value := enumValue21.TgoFile()
+		return value.Value.Stop
+	case 2:
+		value := enumValue21.TgoDeclaration()
+		return DeclarationEnd(value.Value)
+	case 3:
+		value := enumValue21.TgoSpecification()
+		return SpecificationEnd(value.Value)
+	case 4:
+		value := enumValue21.TgoStatement()
+		return StatementEnd(value.Value)
+	case 5:
+		value := enumValue21.TgoExpression()
+		return ExpressionEnd(value.Value)
+	case 6:
+		value := enumValue21.TgoField()
+		return value.Value.Stop
+	case 7:
+		value := enumValue21.TgoFieldList()
+		return value.Value.Stop
+	case 8:
+		value := enumValue21.TgoTGoField()
+		return value.Value.Stop
+	case 9:
+		value := enumValue21.TgoEnumVariant()
+		return value.Value.Stop
+case 10:
+		value := enumValue21.TgoIdentifier()
+		return value.Value.Stop
+	case 11:
+		value := enumValue21.TgoComment()
+		return value.Value.Stop
+	case 12:
+		value := enumValue21.TgoCommentGroup()
+		return value.Value.Stop
+	default:
+		panic("invalid Node variant")
 	}
 }
 
 // ExpressionPosition returns the first expression position.
 func ExpressionPosition(value *Expression) token.Pos {
 	if value == nil { return token.NoPos }
-	match *value {
-	case Bad(item): return item.Value.Start
-	case Identifier(item): return item.Value.Start
-	case Ellipsis(item): return item.Value.Start
-	case BasicLiteral(item): return item.Value.Start
-	case FunctionLiteral(item): return item.Value.Start
-	case CompositeLiteral(item): return item.Value.Start
-	case Parenthesized(item): return item.Value.Start
-	case Selector(item): return item.Value.Start
-	case Index(item): return item.Value.Start
-	case IndexList(item): return item.Value.Start
-	case Slice(item): return item.Value.Start
-	case TypeAssertion(item): return item.Value.Start
-	case Call(item): return item.Value.Start
-	case Star(item): return item.Value.Start
-	case NonNilPointer(item): return item.Value.Start
-	case Unary(item): return item.Value.Start
-	case Binary(item): return item.Value.Start
-	case KeyValue(item): return item.Value.Start
-	case ArrayType(item): return item.Value.Start
-	case StructType(item): return item.Value.Start
-	case FunctionType(item): return item.Value.Start
-	case InterfaceType(item): return item.Value.Start
-	case MapType(item): return item.Value.Start
-	case ChannelType(item): return item.Value.Start
-	case Default(item): return item.Value.Start
-	case Propagation(item): return item.Value.Start
+	switch enumValue22 := *value; enumValue22.TgoTag() {
+	case 1:
+		item := enumValue22.TgoBad()
+		return item.Value.Start
+	case 2:
+		item := enumValue22.TgoIdentifier()
+		return item.Value.Start
+	case 3:
+		item := enumValue22.TgoEllipsis()
+		return item.Value.Start
+	case 4:
+		item := enumValue22.TgoBasicLiteral()
+		return item.Value.Start
+	case 5:
+		item := enumValue22.TgoFunctionLiteral()
+		return item.Value.Start
+	case 6:
+		item := enumValue22.TgoCompositeLiteral()
+		return item.Value.Start
+	case 7:
+		item := enumValue22.TgoParenthesized()
+		return item.Value.Start
+	case 8:
+		item := enumValue22.TgoSelector()
+		return item.Value.Start
+	case 9:
+		item := enumValue22.TgoIndex()
+		return item.Value.Start
+	case 10:
+		item := enumValue22.TgoIndexList()
+		return item.Value.Start
+	case 11:
+		item := enumValue22.TgoSlice()
+		return item.Value.Start
+	case 12:
+		item := enumValue22.TgoTypeAssertion()
+		return item.Value.Start
+	case 13:
+		item := enumValue22.TgoCall()
+		return item.Value.Start
+	case 14:
+		item := enumValue22.TgoStar()
+		return item.Value.Start
+	case 15:
+		item := enumValue22.TgoNonNilPointer()
+		return item.Value.Start
+	case 16:
+		item := enumValue22.TgoUnary()
+		return item.Value.Start
+	case 17:
+		item := enumValue22.TgoBinary()
+		return item.Value.Start
+	case 18:
+		item := enumValue22.TgoKeyValue()
+		return item.Value.Start
+	case 19:
+		item := enumValue22.TgoArrayType()
+		return item.Value.Start
+	case 20:
+		item := enumValue22.TgoStructType()
+		return item.Value.Start
+	case 21:
+		item := enumValue22.TgoFunctionType()
+		return item.Value.Start
+	case 22:
+		item := enumValue22.TgoInterfaceType()
+		return item.Value.Start
+	case 23:
+		item := enumValue22.TgoMapType()
+		return item.Value.Start
+	case 24:
+		item := enumValue22.TgoChannelType()
+		return item.Value.Start
+	case 25:
+		item := enumValue22.TgoDefault()
+		return item.Value.Start
+	case 26:
+		item := enumValue22.TgoPropagation()
+		return item.Value.Start
+	default:
+		panic("invalid Expression variant")
 	}
 }
 
 // ExpressionEnd returns the first position after an expression.
 func ExpressionEnd(value *Expression) token.Pos {
 	if value == nil { return token.NoPos }
-	match *value {
-	case Bad(item): return item.Value.Stop
-	case Identifier(item): return item.Value.Stop
-	case Ellipsis(item): return item.Value.Stop
-	case BasicLiteral(item): return item.Value.Stop
-	case FunctionLiteral(item): return item.Value.Stop
-	case CompositeLiteral(item): return item.Value.Stop
-	case Parenthesized(item): return item.Value.Stop
-	case Selector(item): return item.Value.Stop
-	case Index(item): return item.Value.Stop
-	case IndexList(item): return item.Value.Stop
-	case Slice(item): return item.Value.Stop
-	case TypeAssertion(item): return item.Value.Stop
-	case Call(item): return item.Value.Stop
-	case Star(item): return item.Value.Stop
-	case NonNilPointer(item): return item.Value.Stop
-	case Unary(item): return item.Value.Stop
-	case Binary(item): return item.Value.Stop
-	case KeyValue(item): return item.Value.Stop
-	case ArrayType(item): return item.Value.Stop
-	case StructType(item): return item.Value.Stop
-	case FunctionType(item): return item.Value.Stop
-	case InterfaceType(item): return item.Value.Stop
-	case MapType(item): return item.Value.Stop
-	case ChannelType(item): return item.Value.Stop
-	case Default(item): return item.Value.Stop
-	case Propagation(item): return item.Value.Stop
+	switch enumValue23 := *value; enumValue23.TgoTag() {
+	case 1:
+		item := enumValue23.TgoBad()
+		return item.Value.Stop
+	case 2:
+		item := enumValue23.TgoIdentifier()
+		return item.Value.Stop
+	case 3:
+		item := enumValue23.TgoEllipsis()
+		return item.Value.Stop
+	case 4:
+		item := enumValue23.TgoBasicLiteral()
+		return item.Value.Stop
+	case 5:
+		item := enumValue23.TgoFunctionLiteral()
+		return item.Value.Stop
+	case 6:
+		item := enumValue23.TgoCompositeLiteral()
+		return item.Value.Stop
+	case 7:
+		item := enumValue23.TgoParenthesized()
+		return item.Value.Stop
+	case 8:
+		item := enumValue23.TgoSelector()
+		return item.Value.Stop
+	case 9:
+		item := enumValue23.TgoIndex()
+		return item.Value.Stop
+	case 10:
+		item := enumValue23.TgoIndexList()
+		return item.Value.Stop
+	case 11:
+		item := enumValue23.TgoSlice()
+		return item.Value.Stop
+	case 12:
+		item := enumValue23.TgoTypeAssertion()
+		return item.Value.Stop
+	case 13:
+		item := enumValue23.TgoCall()
+		return item.Value.Stop
+	case 14:
+		item := enumValue23.TgoStar()
+		return item.Value.Stop
+	case 15:
+		item := enumValue23.TgoNonNilPointer()
+		return item.Value.Stop
+	case 16:
+		item := enumValue23.TgoUnary()
+		return item.Value.Stop
+	case 17:
+		item := enumValue23.TgoBinary()
+		return item.Value.Stop
+	case 18:
+		item := enumValue23.TgoKeyValue()
+		return item.Value.Stop
+	case 19:
+		item := enumValue23.TgoArrayType()
+		return item.Value.Stop
+	case 20:
+		item := enumValue23.TgoStructType()
+		return item.Value.Stop
+	case 21:
+		item := enumValue23.TgoFunctionType()
+		return item.Value.Stop
+	case 22:
+		item := enumValue23.TgoInterfaceType()
+		return item.Value.Stop
+	case 23:
+		item := enumValue23.TgoMapType()
+		return item.Value.Stop
+	case 24:
+		item := enumValue23.TgoChannelType()
+		return item.Value.Stop
+	case 25:
+		item := enumValue23.TgoDefault()
+		return item.Value.Stop
+	case 26:
+		item := enumValue23.TgoPropagation()
+		return item.Value.Stop
+	default:
+		panic("invalid Expression variant")
 	}
 }
 
@@ -230,29 +388,72 @@ func StatementEnd(value *Statement) token.Pos {
 
 func statementSpan(value *Statement) Span {
 	if value == nil { return Span{Start: token.NoPos, Stop: token.NoPos} }
-	match *value {
-	case Bad(item): return item.Value.Span
-	case Declaration(item): return item.Value.Span
-	case Empty(item): return item.Value.Span
-	case Labeled(item): return item.Value.Span
-	case Expression(item): return item.Value.Span
-	case Send(item): return item.Value.Span
-	case Increment(item): return item.Value.Span
-	case Assignment(item): return item.Value.Span
-	case Go(item): return item.Value.Span
-	case Defer(item): return item.Value.Span
-	case Return(item): return item.Value.Span
-	case Branch(item): return item.Value.Span
-	case Block(item): return item.Value.Span
-	case If(item): return item.Value.Span
-	case Case(item): return item.Value.Span
-	case Switch(item): return item.Value.Span
-	case TypeSwitch(item): return item.Value.Span
-	case Communication(item): return item.Value.Span
-	case Select(item): return item.Value.Span
-	case For(item): return item.Value.Span
-	case Range(item): return item.Value.Span
-	case Match(item): return item.Value.Span
+	switch enumValue24 := *value; enumValue24.TgoTag() {
+	case 1:
+		item := enumValue24.TgoBad()
+		return item.Value.Span
+	case 2:
+		item := enumValue24.TgoDeclaration()
+		return item.Value.Span
+	case 3:
+		item := enumValue24.TgoEmpty()
+		return item.Value.Span
+	case 4:
+		item := enumValue24.TgoLabeled()
+		return item.Value.Span
+	case 5:
+		item := enumValue24.TgoExpression()
+		return item.Value.Span
+	case 6:
+		item := enumValue24.TgoSend()
+		return item.Value.Span
+	case 7:
+		item := enumValue24.TgoIncrement()
+		return item.Value.Span
+	case 8:
+		item := enumValue24.TgoAssignment()
+		return item.Value.Span
+	case 9:
+		item := enumValue24.TgoGo()
+		return item.Value.Span
+	case 10:
+		item := enumValue24.TgoDefer()
+		return item.Value.Span
+	case 11:
+		item := enumValue24.TgoReturn()
+		return item.Value.Span
+	case 12:
+		item := enumValue24.TgoBranch()
+		return item.Value.Span
+	case 13:
+		item := enumValue24.TgoBlock()
+		return item.Value.Span
+	case 14:
+		item := enumValue24.TgoIf()
+		return item.Value.Span
+	case 15:
+		item := enumValue24.TgoCase()
+		return item.Value.Span
+	case 16:
+		item := enumValue24.TgoSwitch()
+		return item.Value.Span
+	case 17:
+		item := enumValue24.TgoTypeSwitch()
+		return item.Value.Span
+	case 18:
+		item := enumValue24.TgoCommunication()
+		return item.Value.Span
+	case 19:
+		item := enumValue24.TgoSelect()
+		return item.Value.Span
+	case 20:
+		item := enumValue24.TgoFor()
+		return item.Value.Span
+	case 21:
+		item := enumValue24.TgoRange()
+		return item.Value.Span
+default:
+		panic("invalid Statement variant")
 	}
 }
 
@@ -268,13 +469,27 @@ func DeclarationEnd(value *Declaration) token.Pos {
 
 func declarationSpan(value *Declaration) Span {
 	if value == nil { return Span{Start: token.NoPos, Stop: token.NoPos} }
-	match *value {
-	case Bad(item): return item.Value.Span
-	case General(item): return item.Value.Span
-	case Function(item): return item.Value.Span
-	case Enum(item): return item.Value.Span
-	case Struct(item): return item.Value.Span
-	case Checked(item): return item.Value.Span
+	switch enumValue25 := *value; enumValue25.TgoTag() {
+	case 1:
+		item := enumValue25.TgoBad()
+		return item.Value.Span
+	case 2:
+		item := enumValue25.TgoGeneral()
+		return item.Value.Span
+	case 3:
+		item := enumValue25.TgoFunction()
+		return item.Value.Span
+	case 4:
+		item := enumValue25.TgoEnum()
+		return item.Value.Span
+	case 5:
+		item := enumValue25.TgoStruct()
+		return item.Value.Span
+	case 6:
+		item := enumValue25.TgoChecked()
+		return item.Value.Span
+	default:
+		panic("invalid Declaration variant")
 	}
 }
 
@@ -290,10 +505,18 @@ func SpecificationEnd(value *Specification) token.Pos {
 
 func specificationSpan(value *Specification) Span {
 	if value == nil { return Span{Start: token.NoPos, Stop: token.NoPos} }
-	match *value {
-	case Import(item): return item.Value.Span
-	case Value(item): return item.Value.Span
-	case Type(item): return item.Value.Span
+	switch enumValue26 := *value; enumValue26.TgoTag() {
+	case 1:
+		item := enumValue26.TgoImport()
+		return item.Value.Span
+	case 2:
+		item := enumValue26.TgoValue()
+		return item.Value.Span
+	case 3:
+		item := enumValue26.TgoType()
+		return item.Value.Span
+	default:
+		panic("invalid Specification variant")
 	}
 }
 
@@ -318,7 +541,6 @@ func nodeTGoField(value %TGoField) Node { return Node.TGoField{Value: value} }
 func nodeEnumVariant(value %EnumVariant) Node {
 	return Node.EnumVariant{Value: value}
 }
-func nodeMatchCase(value %MatchCase) Node { return Node.MatchCase{Value: value} }
 func nodeIdentifier(value %Identifier) Node {
 	return Node.Identifier{Value: value}
 }

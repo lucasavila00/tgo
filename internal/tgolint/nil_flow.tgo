@@ -22,34 +22,54 @@ func nonNilValue() nilValue { return nilValue.NonNil{} }
 func provenNilValue() nilValue { return nilValue.Nil{} }
 
 func isUnknownNilValue(value nilValue) bool {
-	match value {
-	case Unknown(_): return true
-	case NonNil(_): return false
-	case Nil(_): return false
+	switch enumValue21 := value; enumValue21.TgoTag() {
+	case 1:
+		return true
+	case 2:
+		return false
+	case 3:
+		return false
+	default:
+		panic("invalid nilValue variant")
 	}
 }
 
 func isNonNilValue(value nilValue) bool {
-	match value {
-	case Unknown(_): return false
-	case NonNil(_): return true
-	case Nil(_): return false
+	switch enumValue22 := value; enumValue22.TgoTag() {
+	case 1:
+		return false
+	case 2:
+		return true
+	case 3:
+		return false
+	default:
+		panic("invalid nilValue variant")
 	}
 }
 
 func isProvenNilValue(value nilValue) bool {
-	match value {
-	case Unknown(_): return false
-	case NonNil(_): return false
-	case Nil(_): return true
+	switch enumValue23 := value; enumValue23.TgoTag() {
+	case 1:
+		return false
+	case 2:
+		return false
+	case 3:
+		return true
+	default:
+		panic("invalid nilValue variant")
 	}
 }
 
 func equalNilValue(left nilValue, right nilValue) bool {
-	match left {
-	case Unknown(_): return isUnknownNilValue(right)
-	case NonNil(_): return isNonNilValue(right)
-	case Nil(_): return isProvenNilValue(right)
+	switch enumValue24 := left; enumValue24.TgoTag() {
+	case 1:
+		return isUnknownNilValue(right)
+	case 2:
+		return isNonNilValue(right)
+	case 3:
+		return isProvenNilValue(right)
+	default:
+		panic("invalid nilValue variant")
 	}
 }
 

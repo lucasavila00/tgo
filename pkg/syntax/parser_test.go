@@ -70,12 +70,6 @@ start:
 	for index, value := range []int{1, 2} {
 		local += index + value
 	}
-	match Result.OK{Value: local} {
-	case OK(ok):
-		local = ok.Value
-	case Error(problem):
-		local = len(problem.Message)
-	}
 	array := [2]int{0: 1}
 	slice := array[:1:2]
 	_ = struct{ Name string }{Name: "x"}
@@ -143,7 +137,6 @@ func load() (int, error) { return 0, nil }
 		"Declaration", "Empty", "Labeled", "Expression", "Send", "Increment",
 		"Assignment", "Go", "Defer", "Return", "Branch", "Block", "If", "Case",
 		"Switch", "TypeSwitch", "Communication", "Select", "For", "Range",
-		"Match",
 	})
 	requireKinds(t, declarations, []string{
 		"General", "Function", "Enum", "Struct", "Checked",

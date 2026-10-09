@@ -29,7 +29,7 @@ func TestCollections(t *testing.T) {
 		t.Fatal("zero-valid channel read")
 	}
 	if app.Nested(company) != "Lucas" {
-		t.Fatal("nested match")
+		t.Fatal("nested tag switch")
 	}
 	values := []model.Account{person, company, model.Personal("Other")}
 	if len(app.Shorten(values, 2)) != 2 {

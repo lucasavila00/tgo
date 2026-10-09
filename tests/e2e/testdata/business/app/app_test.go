@@ -70,27 +70,27 @@ func TestBusiness(t *testing.T) {
 		t.Fatal("ordinary tgoTag field became private")
 	}
 	person := model.Personal("Lucas")
-	if model.MatchName(person) != "source" {
-		t.Fatal("match temporary captured a source name")
-	}
-	if model.MarkerSwitch(1) != "one" {
-		t.Fatal("ordinary switch became a match")
-	}
 	if model.OrdinaryMatchName() != "ordinary" {
-		t.Fatal("ordinary match identifier became a statement")
+		t.Fatal("match is not an ordinary identifier")
 	}
 	model.OrdinaryMatchStatement()
 	if model.MatchLabel(0) != 1 {
-		t.Fatal("match label became a match statement")
+		t.Fatal("match is not an ordinary label")
 	}
-	if model.FunctionMatchSubject(person) != "Lucas" {
-		t.Fatal("function match subject used the wrong body")
+	if model.FunctionTagSubject(person) != "Lucas" {
+		t.Fatal("function tag subject used the wrong body")
 	}
-	if model.LiteralMatchSubject("Literal") != "Literal" {
-		t.Fatal("literal match subject used the wrong body")
+	if model.LiteralTagSubject("Literal") != "Literal" {
+		t.Fatal("literal tag subject used the wrong body")
 	}
 	if model.SignalName(model.NewSignalOn(model.SignalOn{})) != "on" {
-		t.Fatal("multiline match keyword inserted a semicolon")
+		t.Fatal("multiline enum declaration has the wrong tag")
+	}
+	if model.SignalState(model.NewSignalOff(model.SignalOff{})) != "known" {
+		t.Fatal("multi-tag case rejected a known tag")
+	}
+	if model.SignalStateOrInvalid(model.NewSignalOn(model.SignalOn{})) != "known" {
+		t.Fatal("returning default rejected a known tag")
 	}
 	explicitFlag, explicitName := model.MarkerValues(model.ExplicitMarker())
 	defaultFlag, defaultName := model.MarkerValues(model.SelectedMarker())
@@ -105,8 +105,8 @@ func TestBusiness(t *testing.T) {
 	if request := app.LocalImportedRequest("local"); request.ID != "local" || len(request.Tags) != 0 {
 		t.Fatal("alias default construction failed")
 	}
-	if model.LabeledMatch(person) != "done" {
-		t.Fatal("match label did not label the switch")
+	if model.LabeledTagSwitch(person) != "done" {
+		t.Fatal("label did not label the tag switch")
 	}
 	reexported, ok := app.ReexportedAccount("Bridge").(model.Account)
 	if !ok || model.Label(reexported) != "Bridge" {
@@ -202,6 +202,6 @@ func TestGeneratedCost(t *testing.T) {
 		label = model.Label(person)
 	})
 	if allocations != 0 || label != "Lucas" {
-		t.Fatalf("match cost: %f allocations, %q", allocations, label)
+		t.Fatalf("tag switch cost: %f allocations, %q", allocations, label)
 	}
 }

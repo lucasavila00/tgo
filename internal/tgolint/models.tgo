@@ -57,11 +57,19 @@ func modelDescription(value *model) (string, string) {
 	if value == nil {
 		return "", ""
 	}
-	match *value {
-	case Checked(checked): return "checked", checked.Name
-	case Enum(enum): return "enum", enum.Name
-	case Mixed(_): return "", ""
-	case Parameter(_): return "generic", "type argument"
+	switch enumValue13 := *value; enumValue13.TgoTag() {
+	case 1:
+		checked := enumValue13.TgoChecked()
+		return "checked", checked.Name
+	case 2:
+		enum := enumValue13.TgoEnum()
+		return "enum", enum.Name
+	case 3:
+		return "", ""
+	case 4:
+		return "generic", "type argument"
+	default:
+		panic("invalid model variant")
 	}
 }
 
@@ -79,11 +87,19 @@ func modelPackage(value *model) string {
 	if value == nil {
 		return ""
 	}
-	match *value {
-	case Checked(checked): return checked.Package
-	case Enum(enum): return enum.Package
-	case Mixed(_): return ""
-	case Parameter(_): return ""
+	switch enumValue14 := *value; enumValue14.TgoTag() {
+	case 1:
+		checked := enumValue14.TgoChecked()
+		return checked.Package
+	case 2:
+		enum := enumValue14.TgoEnum()
+		return enum.Package
+	case 3:
+		return ""
+	case 4:
+		return ""
+	default:
+		panic("invalid model variant")
 	}
 }
 
@@ -91,11 +107,18 @@ func modelVariants(value *model) []string {
 	if value == nil {
 		return nil
 	}
-	match *value {
-	case Checked(_): return nil
-	case Enum(enum): return enum.Variants
-	case Mixed(_): return nil
-	case Parameter(_): return nil
+	switch enumValue15 := *value; enumValue15.TgoTag() {
+	case 1:
+		return nil
+	case 2:
+		enum := enumValue15.TgoEnum()
+		return enum.Variants
+	case 3:
+		return nil
+	case 4:
+		return nil
+	default:
+		panic("invalid model variant")
 	}
 }
 
@@ -103,11 +126,17 @@ func modelIsChecked(value *model) bool {
 	if value == nil {
 		return false
 	}
-	match *value {
-	case Checked(_): return true
-	case Enum(_): return false
-	case Mixed(_): return false
-	case Parameter(_): return false
+	switch enumValue16 := *value; enumValue16.TgoTag() {
+	case 1:
+		return true
+	case 2:
+		return false
+	case 3:
+		return false
+	case 4:
+		return false
+	default:
+		panic("invalid model variant")
 	}
 }
 
@@ -115,11 +144,17 @@ func modelIsEnum(value *model) bool {
 	if value == nil {
 		return false
 	}
-	match *value {
-	case Checked(_): return false
-	case Enum(_): return true
-	case Mixed(_): return false
-	case Parameter(_): return false
+	switch enumValue17 := *value; enumValue17.TgoTag() {
+	case 1:
+		return false
+	case 2:
+		return true
+	case 3:
+		return false
+	case 4:
+		return false
+	default:
+		panic("invalid model variant")
 	}
 }
 
@@ -127,11 +162,17 @@ func modelIsMixed(value *model) bool {
 	if value == nil {
 		return false
 	}
-	match *value {
-	case Checked(_): return false
-	case Enum(_): return false
-	case Mixed(_): return true
-	case Parameter(_): return false
+	switch enumValue18 := *value; enumValue18.TgoTag() {
+	case 1:
+		return false
+	case 2:
+		return false
+	case 3:
+		return true
+	case 4:
+		return false
+	default:
+		panic("invalid model variant")
 	}
 }
 
@@ -157,11 +198,17 @@ func modelIsParameter(value *model) bool {
 	if value == nil {
 		return false
 	}
-	match *value {
-	case Checked(_): return false
-	case Enum(_): return false
-	case Mixed(_): return false
-	case Parameter(_): return true
+	switch enumValue19 := *value; enumValue19.TgoTag() {
+	case 1:
+		return false
+	case 2:
+		return false
+	case 3:
+		return false
+	case 4:
+		return true
+	default:
+		panic("invalid model variant")
 	}
 }
 
@@ -170,19 +217,25 @@ func encodeModelFact(value *model) *modelWireFact {
 	if value == nil {
 		return nil
 	}
-	match *value {
-	case Checked(checked):
+	switch enumValue20 := *value; enumValue20.TgoTag() {
+	case 1:
+		checked := enumValue20.TgoChecked()
 		return &modelWireFact{
 			Kind: checkedModelWire, Package: checked.Package,
 			Name: checked.Name, Variants: nil,
 		}
-	case Enum(enum):
+	case 2:
+		enum := enumValue20.TgoEnum()
 		return &modelWireFact{
 			Kind: enumModelWire, Package: enum.Package, Name: enum.Name,
 			Variants: append([]string(nil), enum.Variants...),
 		}
-	case Mixed(_): return nil
-	case Parameter(_): return nil
+	case 3:
+		return nil
+	case 4:
+		return nil
+	default:
+		panic("invalid model variant")
 	}
 }
 

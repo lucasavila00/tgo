@@ -65,34 +65,6 @@ type rawDecl struct {
 	variants       []*rawVariant
 }
 
-type rawCase struct {
-	start     int
-	end       int
-	caseToken int
-	variant   int
-	open      int
-	binding   int
-	close     int
-	colon     int
-	bodyStart int
-	bodyEnd   int
-}
-
-type rawMatch struct {
-	start        int
-	end          int
-	labels       []int
-	labelColons  []int
-	matchToken   int
-	subjectStart int
-	subjectEnd   int
-	open         int
-	close        int
-	cases        []*rawCase
-	node         *frontMatchStmt
-	root         frontNode
-}
-
 type rawDefault struct {
 	start int
 	end   int
@@ -114,7 +86,6 @@ type sourceParser struct {
 	tokens       []lexeme
 	comments     []sourceEdit
 	decls        []*rawDecl
-	matches      []*rawMatch
 	defaults     []*rawDefault
 	propagations []*rawPropagation
 	nonNil      map[token.Pos]bool
@@ -143,7 +114,6 @@ func parseFrontFile(
 		tokens:       tokens,
 		comments:     comments,
 		decls:        nil,
-		matches:      nil,
 		defaults:     nil,
 		propagations: nil,
 		nonNil:      make(map[token.Pos]bool),

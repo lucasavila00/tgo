@@ -52,7 +52,6 @@ type source struct {
 	Tree          *syntax.File
 	File          *ast.File
 	Models        []*model
-	MatchMarker   string
 	DefaultMarker string
 	Propagations  map[string]propagationSource
 	NonNil        map[token.Pos]bool

@@ -1,1 +1,1 @@
-<WORK>/input.tgo:12:12: use match to read an enum payload
+<WORK>/input.tgo:12:12: enum payload access requires its matching TgoTag case

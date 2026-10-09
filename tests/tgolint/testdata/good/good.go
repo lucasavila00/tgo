@@ -54,6 +54,17 @@ func Describe(event model.Event) string {
 	}
 }
 
+func DescribeOrInvalid(event model.Event) string {
+	switch event.TgoTag() {
+	case 1:
+		return event.TgoStarted().ID
+	case 2:
+		return event.TgoStopped().Reason
+	default:
+		return "invalid"
+	}
+}
+
 func Values() ([]model.Event, error) {
 	count, err := model.NewCount(1)
 	if err != nil {

@@ -40,4 +40,11 @@ func TestBoxedEnumLayout(t *testing.T) {
 	if model.NewEqualSecond(mixed).TgoSecond() != mixed {
 		t.Fatal("inline payload")
 	}
+	var read model.LargeFirst
+	allocations := testing.AllocsPerRun(1000, func() {
+		read = a.TgoFirst()
+	})
+	if allocations != 0 || read != first {
+		t.Fatalf("boxed accessor cost: %f allocations", allocations)
+	}
 }

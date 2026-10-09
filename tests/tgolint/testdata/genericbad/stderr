@@ -1,4 +1,5 @@
 genericbad/bad.go:40:10: Event.TgoStopped access does not match its TgoTag case 2
+genericbad/bad.go:81:9: Event.TgoTag needs an unaliased local value receiver
 genericbad/bad.go:83:10: Event.TgoStarted needs an unaliased local value receiver
 genericbad/bad.go:85:10: Event.TgoStopped needs an unaliased local value receiver
 genericbad/bad.go:29:9: make creates invalid tgo checked Count values; use length zero

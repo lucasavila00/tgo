@@ -654,8 +654,9 @@ def main():
             ("var x = []int{2: 1}", "supply every index"),
             (
                 "type A enum { One struct {}; Two struct {} }\n"
-                "func f(a A) { match a { case One(_): return } }",
-                "missing variant Two",
+                "func f(a A) { switch a.TgoTag() { "
+                "case 1: return; default: panic(\"invalid A variant\") } }",
+                "missing tag 2 (Two)",
             ),
         ]
         for source, message in cases:

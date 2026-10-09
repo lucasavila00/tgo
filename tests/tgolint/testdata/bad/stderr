@@ -7,21 +7,26 @@ bad/bad.go:241:10: Event.TgoStarted receiver changed after its TgoTag read
 bad/bad.go:252:10: Event.TgoStopped access does not match its TgoTag case 2
 bad/bad.go:319:10: Event.TgoStopped access does not match its TgoTag case 2
 bad/bad.go:328:2: switch on Event.TgoTag needs a default path that cannot continue
+bad/bad.go:534:9: Event.TgoTag needs an unaliased local value receiver
 bad/bad.go:536:10: Event.TgoStarted needs an unaliased local value receiver
 bad/bad.go:538:10: Event.TgoStopped needs an unaliased local value receiver
 bad/bad.go:552:10: Event.TgoStarted needs an unaliased local value receiver
 bad/bad.go:555:10: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:563:9: Event.TgoTag needs an unaliased local value receiver
 bad/bad.go:566:10: Event.TgoStarted needs an unaliased local value receiver
 bad/bad.go:568:10: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:617:9: Event.TgoTag needs an unaliased local value receiver
 bad/bad.go:620:10: Event.TgoStarted needs an unaliased local value receiver
 bad/bad.go:622:10: Event.TgoStopped needs an unaliased local value receiver
 bad/bad.go:640:10: Event.TgoStarted needs an unaliased local value receiver
 bad/bad.go:642:10: Event.TgoStopped needs an unaliased local value receiver
+bad/bad.go:652:10: Event.TgoTag needs an unaliased local value receiver
 bad/bad.go:654:11: Event.TgoStarted needs an unaliased local value receiver
 bad/bad.go:656:11: Event.TgoStopped needs an unaliased local value receiver
 bad/bad.go:671:8: Event.TgoStarted needs an unaliased local value receiver
 bad/bad.go:686:8: Event.TgoStarted needs an unaliased local value receiver
 bad/bad.go:700:13: Event.TgoStarted needs an unaliased local value receiver
+bad/bad.go:719:9: Event.TgoTag needs an unaliased local value receiver
 bad/bad.go:721:10: Event.TgoStarted needs an unaliased local value receiver
 bad/bad.go:723:10: Event.TgoStopped needs an unaliased local value receiver
 bad/bad.go:14:9: Event.TgoStarted requires the matching case of an exhaustive TgoTag switch

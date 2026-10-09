@@ -439,14 +439,16 @@ func (c %checker) blockEffectConditions(
 			continue
 		}
 		condition, outcome := c.booleanEffectCondition(conditional.Cond, falseStops)
-		match outcome {
-		case Never(_):
+		switch enumValue3 := outcome; enumValue3.TgoTag() {
+		case 2:
 			return nil, false, false
-		case Conditional(_):
+		case 4:
 			conditions = append(conditions, *condition)
-		case Unknown(_):
+		case 1:
 			unknown = true
-		case Always(_):
+		case 3:
+		default:
+			panic("invalid effectOutcome variant")
 		}
 	}
 	return conditions, unknown, true

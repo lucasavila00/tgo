@@ -28,7 +28,6 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		}
 		return true
 	})
-	matchMarker := freshIdentifier("__tgo_match", used)
 	defaultMarker := freshIdentifier("__tgo_defaults", used)
 	file := files.File(tree.Package)
 	erasedData, nonNilLocations := eraseNonNilTypes(files, file, tree, data)
@@ -70,7 +69,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		models = append(models, item)
 	}
 	edits, propagations, err := lowerSourceExtensions(
-		files, file, tree, name, matchMarker, defaultMarker, used, edits,
+		files, file, tree, name, defaultMarker, used, edits,
 	)
 	if err != nil {
 		return nil, err
@@ -99,7 +98,6 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		Tree:          tree,
 		File:          goFile,
 		Models:        models,
-		MatchMarker:   matchMarker,
 		DefaultMarker: defaultMarker,
 		Propagations:  propagations,
 		NonNil:        nonNil,
@@ -133,7 +131,6 @@ func lowerSourceExtensions(
 	file *token.File,
 	tree *syntax.File,
 	name string,
-	matchMarker string,
 	defaultMarker string,
 	used map[string]bool,
 	edits []edit,
@@ -145,18 +142,6 @@ func lowerSourceExtensions(
 			if !coveredByEdit(edits, start) {
 				edits = append(edits, edit{start: start, end: start + 1, text: "*"})
 			}
-			continue
-		}
-		if node, ok := syntax.MatchStatementOf(extension); ok {
-			matchStart := file.Offset(node.Match)
-			brace := file.Offset(node.Lbrace)
-			edits = append(edits,
-				edit{
-					start: matchStart, end: matchStart + len("match"),
-					text: "switch " + matchMarker + "(",
-				},
-				edit{start: brace, end: brace, text: ") "},
-			)
 			continue
 		}
 		if node, ok := syntax.DefaultExpressionOf(extension); ok {
