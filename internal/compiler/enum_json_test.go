@@ -155,8 +155,17 @@ func TestEnumJSONImportNames(t *testing.T) {
 	layoutPackage(t, `package sample
 import "encoding/json"
 import __tgo_json "fmt"
+import __tgo_jsonv2 "strings"
+import __tgo_jsontext "bytes"
 type E enum { A struct{} }
-func use(value E) ([]byte,error) { __tgo_json.Println(value); return json.Marshal(value) }
+func __tgo_E_external_json_to() {}
+func __tgo_E_adjacent_json_to() {}
+func use(value E) ([]byte,error) {
+    __tgo_json.Println(value)
+	_ = __tgo_jsonv2.Compare
+	_ = __tgo_jsontext.Compare
+    return json.Marshal(value)
+}
 `)
 }
 
@@ -183,9 +192,18 @@ func TestVerifyEnumJSONMethods(t *testing.T) {
 		if err := VerifyGeneratedModels("sample.tgo", data, output, p.typed); err != nil {
 			t.Fatal(err)
 		}
-		changed := strings.Replace(string(output), "MarshalJSON()", "MarshalChanged()", 1)
-		if err := VerifyGeneratedModels("sample.tgo", data, []byte(changed), p.typed); err == nil {
-			t.Fatal("changed JSON method was accepted")
+		for _, method := range []string{
+			"MarshalJSON()",
+			"MarshalJSONTo(",
+			"UnmarshalJSON(",
+			"UnmarshalJSONFrom(",
+		} {
+			changed := strings.Replace(string(output), method, "Changed(", 1)
+			if err := VerifyGeneratedModels(
+				"sample.tgo", data, []byte(changed), p.typed,
+			); err == nil {
+				t.Fatalf("changed %s method was accepted", method)
+			}
 		}
 	}
 }

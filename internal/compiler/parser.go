@@ -31,54 +31,30 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	})
 	defaultMarker := freshIdentifier("__tgo_defaults", used)
 	jsonPackage := freshIdentifier("__tgo_json", used)
+	jsonV2Package := freshIdentifier("__tgo_jsonv2", used)
+	jsonTextPackage := freshIdentifier("__tgo_jsontext", used)
+	stringsPackage := freshIdentifier("__tgo_strings", used)
 	fmtPackage := freshIdentifier("__tgo_fmt", used)
-	hasEnum := false
+	externalJSONTo, adjacentJSONTo := enumJSONHelperNames(tree, used)
 	file := files.File(tree.Package)
 	erasedData, nonNilLocations := eraseNonNilTypes(files, file, tree, data)
-	edits := []edit(nil)
-	models := []*model(nil)
-	for _, declaration := range tree.Declarations {
-		var item *model
-		var replacement string
-		if node, ok := syntax.EnumDeclarationOf(declaration); ok {
-			item = enumModel(files, erasedData, node)
-			if err := validateEnumPublicNames(item, node); err != nil {
-				return nil, fmt.Errorf("%s: %w", files.Position(node.Name.Start), err)
-			}
-			if err := configureEnumJSON(item, node); err != nil {
-				return nil, fmt.Errorf("%s: %w", files.Position(node.Name.Start), err)
-			}
-			hasEnum = true
-			replacement = enumGo(name, item, fmtPackage) +
-				enumJSONGo(item, jsonPackage, fmtPackage)
-		} else if node, ok := syntax.StructDeclarationOf(declaration); ok {
-			item = structModel(files, erasedData, node)
-			replacement = "type " + item.Name + " struct {\n" +
-				fieldDecls(name, item.Fields) + "}\n"
-		} else if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
-			item = checkedModel(files, erasedData, node)
-			replacement = checkedGo(name, item)
-		}
-		if item == nil {
-			continue
-		}
-		startPositionValue := syntax.DeclarationPosition(declaration)
-		endPositionValue := syntax.DeclarationEnd(declaration)
-		start := file.Offset(startPositionValue)
-		end := declarationEditEnd(data, file.Offset(endPositionValue))
-		startPosition := files.Position(startPositionValue)
-		endPosition := files.Position(endPositionValue)
-		edits = append(edits, edit{
-			start: start,
-			end:   end,
-			text: generatedSource(
-				name,
-				startPosition.Line,
-				endPosition.Line,
-				replacement,
-			),
-		})
-		models = append(models, item)
+	models, edits, jsonUse, firstEnumEdit, err := sourceModels(
+		files, file, tree, name, data, erasedData,
+		sourceModelConfig{
+			jsonPackage: jsonPackage, jsonV2Package: jsonV2Package,
+			jsonTextPackage: jsonTextPackage, stringsPackage: stringsPackage,
+			fmtPackage: fmtPackage, externalJSONTo: externalJSONTo,
+			adjacentJSONTo: adjacentJSONTo,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if firstEnumEdit >= 0 {
+		edits[firstEnumEdit].text = enumJSONHelpers(
+			jsonV2Package, jsonTextPackage, externalJSONTo, adjacentJSONTo,
+			jsonUse.external, jsonUse.adjacent,
+		) + edits[firstEnumEdit].text
 	}
 	edits, propagations, comprehensions, exhaustiveLocations, err := lowerCheckedExtensions(
 		files, file, tree, name, data, defaultMarker, used, edits,
@@ -86,10 +62,18 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	if err != nil {
 		return nil, err
 	}
-	if hasEnum {
+	if jsonUse.enum {
 		offset := file.Offset(tree.Name.Stop)
-		imports := fmt.Sprintf("\nimport %s \"encoding/json\"\nimport %s \"fmt\"\n",
-			jsonPackage, fmtPackage)
+		imports := fmt.Sprintf(
+			"\nimport %s \"encoding/json\"\n"+
+				"import %s \"encoding/json/v2\"\n"+
+				"import %s \"encoding/json/jsontext\"\n"+
+				"import %s \"fmt\"\n",
+			jsonPackage, jsonV2Package, jsonTextPackage, fmtPackage,
+		)
+		if jsonUse.foldedAdjacent {
+			imports += fmt.Sprintf("import %s \"strings\"\n", stringsPackage)
+		}
 		edits = append(edits, edit{start: offset, end: offset, text: imports})
 	}
 	input := applyEdits(string(data), edits)
@@ -111,19 +95,141 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		return true
 	})
 	return &source{
-		JSONPackage:    jsonPackage,
-		FmtPackage:     fmtPackage,
-		Name:           name,
-		Data:           append([]byte(nil), data...),
-		Tree:           tree,
-		File:           goFile,
-		Models:         models,
-		DefaultMarker:  defaultMarker,
-		Propagations:   propagations,
+		JSONPackage: jsonPackage, JSONV2Package: jsonV2Package,
+		JSONTextPackage: jsonTextPackage, StringsPackage: stringsPackage,
+		FmtPackage: fmtPackage, ExternalJSONTo: externalJSONTo,
+		AdjacentJSONTo: adjacentJSONTo,
+		Name:           name, Data: append([]byte(nil), data...), Tree: tree, File: goFile,
+		Models: models, DefaultMarker: defaultMarker, Propagations: propagations,
 		Comprehensions: comprehensions,
 		Exhaustive:     exhaustiveClausePositions(files, goFile, exhaustiveLocations),
 		NonNil:         nonNil,
+		GeneratedHelpers: map[string]bool{
+			externalJSONTo: jsonUse.external,
+			adjacentJSONTo: jsonUse.adjacent,
+		},
 	}, nil
+}
+
+type enumJSONUse struct {
+	enum           bool
+	external       bool
+	adjacent       bool
+	foldedAdjacent bool
+}
+
+type sourceModelConfig struct {
+	jsonPackage     string
+	jsonV2Package   string
+	jsonTextPackage string
+	stringsPackage  string
+	fmtPackage      string
+	externalJSONTo  string
+	adjacentJSONTo  string
+}
+
+func enumJSONHelperNames(tree *syntax.File, used map[string]bool) (string, string) {
+	for _, declaration := range tree.Declarations {
+		node, ok := syntax.EnumDeclarationOf(declaration)
+		if !ok {
+			continue
+		}
+		return freshIdentifier("__tgo_"+node.Name.Name+"_external_json_to", used),
+			freshIdentifier("__tgo_"+node.Name.Name+"_adjacent_json_to", used)
+	}
+	return "", ""
+}
+
+// sourceModels builds the projected model declarations and source edits.
+func sourceModels(
+	files *token.FileSet,
+	file *token.File,
+	tree *syntax.File,
+	sourceName string,
+	data []byte,
+	erasedData []byte,
+	config sourceModelConfig,
+) ([]*model, []edit, enumJSONUse, int, error) {
+	models := []*model(nil)
+	edits := []edit(nil)
+	use := enumJSONUse{}
+	firstEnumEdit := -1
+	for _, declaration := range tree.Declarations {
+		item, replacement, itemUse, err := sourceModel(
+			files, erasedData, declaration, sourceName, config,
+		)
+		if err != nil {
+			return nil, nil, enumJSONUse{}, -1, err
+		}
+		use.enum = use.enum || itemUse.enum
+		use.external = use.external || itemUse.external
+		use.adjacent = use.adjacent || itemUse.adjacent
+		use.foldedAdjacent = use.foldedAdjacent || itemUse.foldedAdjacent
+		if item == nil {
+			continue
+		}
+		startPositionValue := syntax.DeclarationPosition(declaration)
+		endPositionValue := syntax.DeclarationEnd(declaration)
+		if item.Enum && firstEnumEdit < 0 {
+			firstEnumEdit = len(edits)
+		}
+		edits = append(edits, edit{
+			start: file.Offset(startPositionValue),
+			end:   declarationEditEnd(data, file.Offset(endPositionValue)),
+			text: generatedSource(
+				sourceName, files.Position(startPositionValue).Line,
+				files.Position(endPositionValue).Line, replacement,
+			),
+		})
+		models = append(models, item)
+	}
+	return models, edits, use, firstEnumEdit, nil
+}
+
+// sourceModel builds one projected model declaration.
+func sourceModel(
+	files *token.FileSet,
+	erasedData []byte,
+	declaration *syntax.Declaration,
+	sourceName string,
+	config sourceModelConfig,
+) (*model, string, enumJSONUse, error) {
+	if node, ok := syntax.EnumDeclarationOf(declaration); ok {
+		item := enumModel(files, erasedData, node)
+		if err := validateEnumPublicNames(item, node); err != nil {
+			return nil, "", enumJSONUse{}, fmt.Errorf(
+				"%s: %w", files.Position(node.Name.Start), err,
+			)
+		}
+		if err := configureEnumJSON(item, node); err != nil {
+			return nil, "", enumJSONUse{}, fmt.Errorf(
+				"%s: %w", files.Position(node.Name.Start), err,
+			)
+		}
+		use := enumJSONUse{
+			enum: true, external: item.JSON.Form == "external",
+			adjacent: item.JSON.Form == "adjacent",
+			foldedAdjacent: item.JSON.Form == "adjacent" &&
+				jsonStructFieldName(item.JSON.Tag) &&
+				jsonStructFieldName(item.JSON.Content),
+		}
+		replacement := enumGo(sourceName, item, config.fmtPackage) + enumJSONGo(
+			item, config.jsonPackage, config.jsonV2Package,
+			config.jsonTextPackage, config.stringsPackage, config.fmtPackage,
+			config.externalJSONTo, config.adjacentJSONTo,
+		)
+		return item, replacement, use, nil
+	}
+	if node, ok := syntax.StructDeclarationOf(declaration); ok {
+		item := structModel(files, erasedData, node)
+		return item, "type " + item.Name + " struct {\n" +
+			fieldDecls(sourceName, item.Fields) + "}\n", enumJSONUse{}, nil
+	}
+	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
+		item := checkedModel(files, erasedData, node)
+		return item, checkedGo(sourceName, item), enumJSONUse{}, nil
+	}
+	return nil, "", enumJSONUse{}, nil
 }
 
 func lowerCheckedExtensions(
