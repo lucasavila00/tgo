@@ -5,6 +5,14 @@ import (
 	"strings"
 )
 
+func (p *printer) commentAlignment(position token.Pos) (int, bool) {
+	if column, ok := p.fixedCommentColumns[position]; ok {
+		return column, true
+	}
+	column, ok := p.commentColumns[position]
+	return column, ok
+}
+
 func (p *printer) sourceWhitespaceBetween(stop token.Pos, start token.Pos) bool {
 	file := p.files.File(stop)
 	if file == nil || p.files.File(start) != file {

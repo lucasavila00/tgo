@@ -376,14 +376,6 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 	}
 }
 
-func (p *printer) commentAlignment(position token.Pos) (int, bool) {
-	if column, ok := p.fixedCommentColumns[position]; ok {
-		return column, true
-	}
-	column, ok := p.commentColumns[position]
-	return column, ok
-}
-
 func (p *printer) sourceIndent(position token.Pos) int {
 	file := p.files.File(position)
 	if file == nil {
