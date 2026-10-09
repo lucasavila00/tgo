@@ -11,58 +11,18 @@ import (
 	"golang.org/x/tools/go/cfg"
 )
 
-type nilValue enum {
-	Unknown struct{}
-	NonNil struct{}
-	Nil struct{}
-}
-
-func unknownNilValue() nilValue { return nilValue.Unknown{} }
-func nonNilValue() nilValue { return nilValue.NonNil{} }
-func provenNilValue() nilValue { return nilValue.Nil{} }
-
-func isUnknownNilValue(value nilValue) bool {
-	match value {
-	case Unknown(_): return true
-	case NonNil(_): return false
-	case Nil(_): return false
-	}
-}
-
-func isNonNilValue(value nilValue) bool {
-	match value {
-	case Unknown(_): return false
-	case NonNil(_): return true
-	case Nil(_): return false
-	}
-}
-
-func isProvenNilValue(value nilValue) bool {
-	match value {
-	case Unknown(_): return false
-	case NonNil(_): return false
-	case Nil(_): return true
-	}
-}
-
-func equalNilValue(left nilValue, right nilValue) bool {
-	match left {
-	case Unknown(_): return isUnknownNilValue(right)
-	case NonNil(_): return isNonNilValue(right)
-	case Nil(_): return isProvenNilValue(right)
-	}
-}
-
 type nilPlace struct {
 	object types.Object
 	path   string
 }
 
-type nilFacts map[nilPlace]nilValue
+type nilFacts map[nilPlace]nilType
 
 type nilGuard struct {
-	trueFacts  nilFacts
-	falseFacts nilFacts
+	trueFacts    nilFacts
+	falseFacts   nilFacts
+	truePossible bool
+	falsePossible bool
 }
 
 type nilPresence struct {
@@ -71,7 +31,8 @@ type nilPresence struct {
 }
 
 type nilFlowState struct {
-	values    map[nilPlace]nilValue
+	reachable bool
+	values    map[nilPlace]nilType
 	aliases   map[nilPlace]nilPlace
 	guards    map[types.Object]nilGuard
 	presence  map[types.Object]nilPresence
@@ -273,7 +234,7 @@ func (e %nilEnvironment) nilEntryState(
 			for _, name := range field.Names {
 				object := e.info.Defs[name]
 				if e.contractForObject(object)[""] {
-					e.setNilValue(state, nilPlace{object: object, path: ""}, nonNilValue())
+					e.setNilType(state, nilPlace{object: object, path: ""}, nonNilType())
 				}
 			}
 		}
@@ -285,7 +246,7 @@ func (e %nilEnvironment) nilEntryState(
 		for _, name := range field.Names {
 			object := e.info.Defs[name]
 			if len(e.contractForObject(object)) != 0 {
-				e.setNilValue(state, nilPlace{object: object, path: ""}, nonNilValue())
+				e.setNilType(state, nilPlace{object: object, path: ""}, nonNilType())
 			}
 		}
 	}
@@ -294,7 +255,8 @@ func (e %nilEnvironment) nilEntryState(
 
 func newNilState() %nilFlowState {
 	return &nilFlowState{
-		values: make(map[nilPlace]nilValue),
+		reachable: true,
+		values: make(map[nilPlace]nilType),
 		aliases: make(map[nilPlace]nilPlace),
 		guards: make(map[types.Object]nilGuard),
 		presence: make(map[types.Object]nilPresence),
@@ -306,6 +268,7 @@ func cloneNilState(source *nilFlowState) *nilFlowState {
 		return nil
 	}
 	result := newNilState()
+	result.reachable = source.reachable
 	for place, value := range source.values {
 		result.values[place] = value
 	}
@@ -325,6 +288,8 @@ func cloneNilGuard(guard nilGuard) nilGuard {
 	return nilGuard{
 		trueFacts: cloneNilFacts(guard.trueFacts),
 		falseFacts: cloneNilFacts(guard.falseFacts),
+		truePossible: guard.truePossible,
+		falsePossible: guard.falsePossible,
 	}
 }
 
@@ -368,6 +333,9 @@ func (e %nilEnvironment) solveNilEntries(
 					e.applyNilFacts(next, falseFacts)
 				}
 			}
+			if !next.reachable {
+				continue
+			}
 			joined, changed := joinNilStates(entries[successor.Index], next)
 			if !changed {
 				continue
@@ -405,14 +373,18 @@ func joinNilStates(
 	current *nilFlowState,
 	incoming *nilFlowState,
 ) (*nilFlowState, bool) {
+	if incoming == nil || !incoming.reachable {
+		return current, false
+	}
 	if current == nil {
 		return cloneNilState(incoming), true
 	}
 	joined := newNilState()
 	for place, value := range current.values {
 		if incomingValue, exists := incoming.values[place]; exists {
-			if equalNilValue(incomingValue, value) {
-				joined.values[place] = value
+			combined := unionNilTypes(value, incomingValue)
+			if !isOptionalNilType(combined) {
+				joined.values[place] = combined
 			}
 		}
 	}
@@ -451,13 +423,14 @@ func joinNilStates(
 }
 
 func equalNilStates(left, right %nilFlowState) bool {
-	if len(left.values) != len(right.values) || len(left.aliases) != len(right.aliases) ||
+	if left.reachable != right.reachable ||
+		len(left.values) != len(right.values) || len(left.aliases) != len(right.aliases) ||
 		len(left.guards) != len(right.guards) || len(left.presence) != len(right.presence) {
 		return false
 	}
 	for place, value := range left.values {
 		if other, found := right.values[place]; found {
-			if !equalNilValue(other, value) {
+			if !equalNilType(other, value) {
 				return false
 			}
 		} else {
@@ -483,7 +456,9 @@ func equalNilStates(left, right %nilFlowState) bool {
 }
 
 func equalNilGuard(left, right nilGuard) bool {
-	return equalNilFacts(left.trueFacts, right.trueFacts) &&
+	return left.truePossible == right.truePossible &&
+		left.falsePossible == right.falsePossible &&
+		equalNilFacts(left.trueFacts, right.trueFacts) &&
 		equalNilFacts(left.falseFacts, right.falseFacts)
 }
 
@@ -493,7 +468,7 @@ func equalNilFacts(left, right nilFacts) bool {
 	}
 	for place, value := range left {
 		if other, found := right[place]; found {
-			if !equalNilValue(other, value) {
+			if !equalNilType(other, value) {
 				return false
 			}
 		} else {
