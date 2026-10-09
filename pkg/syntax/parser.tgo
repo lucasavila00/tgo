@@ -114,18 +114,28 @@ type rawComprehension struct {
 	node    *frontComprehensionExpr
 }
 
-type rawComprehensionClause struct {
-	kind            string
-	start           int
-	end             int
-	keyword         int
-	bindings        []int
-	define          int
-	rangeToken      int
-	expressionStart int
-	expressionEnd   int
-	open            int
-	close           int
+type rawComprehensionClause enum {
+	Range struct {
+		start       int
+		end         int
+		forToken    int
+		bindings    []int
+		define      int
+		rangeToken  int
+		sourceStart int
+		sourceEnd   int
+		open        int
+		close       int
+	}
+	Filter struct {
+		start          int
+		end            int
+		ifToken        int
+		conditionStart int
+		conditionEnd   int
+		open           int
+		close          int
+	}
 }
 
 type rawComprehensionResult struct {

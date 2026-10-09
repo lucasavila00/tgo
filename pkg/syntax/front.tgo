@@ -152,16 +152,24 @@ type frontComprehensionExpr struct {
 
 func (%frontComprehensionExpr) extensionNode() {}
 
-type frontComprehensionClause struct {
-	frontSpan
-	Kind       string
-	Keyword    token.Pos
-	Bindings   []*ast.Ident
-	Define     token.Pos
-	Range      token.Pos
-	Expression ast.Expr
-	Lbrace     token.Pos
-	Rbrace     token.Pos
+type frontComprehensionClause enum {
+	Range struct {
+		frontSpan
+		For      token.Pos
+		Bindings []*ast.Ident
+		Define   token.Pos
+		Range    token.Pos
+		Source   ast.Expr
+		Lbrace   token.Pos
+		Rbrace   token.Pos
+	}
+	Filter struct {
+		frontSpan
+		If        token.Pos
+		Condition ast.Expr
+		Lbrace    token.Pos
+		Rbrace    token.Pos
+	}
 }
 
 type frontComprehensionResult struct {
