@@ -40,8 +40,9 @@ Local Boolean and integer assignments can change `can` to `will` or remove the
 diagnostic. Package variables, captured values, addresses, narrowing conversions,
 and unsupported expressions stay `can`. Fix both. Keep a generic function value local
 so the linter can check each call.
-Return a generic closure as a direct function literal. The checker does not yet
-follow that closure through a local variable or another helper.
+Return a generic closure directly, through stable local aliases, or through one
+statically resolved local helper. The checker rejects a call or escape when an
+unresolved helper can return a visible effectful closure.
 
 Replace a reported `iota` set with a TGo enum. Keep explicit integer conversion code when the
 old values are part of a stored format, protocol, or Go boundary. Bit sets remain valid.

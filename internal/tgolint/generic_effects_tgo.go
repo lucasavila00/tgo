@@ -492,9 +492,20 @@ type genericEffectSummary struct {
 	returnedZeroEffects   []GenericEffect
 	returnedAccessEffects []GenericEffect
 	calls                 []*syntax.Expression
+	returnedCalls         []returnedGenericCall
 	reachable             map[syntax.Node]bool
 	root                  *syntax.Node
 	body                  *syntax.BlockStatement
+}
+
+type returnedGenericCall struct {
+	expression *syntax.Expression
+	maySkip    bool
+}
+
+type returnedClosureBinding struct {
+	sources  []*syntax.Expression
+	unstable bool
 }
 
 // checkGenericZeroSafety exports generic zero facts and checks each use.
@@ -540,6 +551,7 @@ func (c *checker) checkGenericZeroSafety() {
 // collectGenericZeroSummaries creates one local effect summary per generic function.
 func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSummary {
 	summaries := make(map[*types.Func]*genericEffectSummary)
+	declarations := make(map[*types.Func]*syntax.FunctionDeclaration)
 	for _, file := range c.files {
 		if c.generated[file] {
 			continue
@@ -553,6 +565,7 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 			if !ok {
 				return false
 			}
+			declarations[object.Origin()] = function
 			signature, ok := object.Type().(*types.Signature)
 			if !ok {
 				return false
@@ -565,15 +578,17 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 			summary := &genericEffectSummary{
 				function: object, file: file, declaration: function, parameters: parameters,
 				zeroEffects: nil, accessEffects: nil, returnedZeroEffects: nil,
-				returnedAccessEffects: nil, calls: nil,
+				returnedAccessEffects: nil, calls: nil, returnedCalls: nil,
 				reachable: c.reachableNodes(function.Body), root: &root,
 				body: function.Body,
 			}
 			c.collectDirectGenericZeros(summary)
-			c.collectReturnedGenericEffects(summary)
 			summaries[object] = summary
 			return false
 		})
+	}
+	for _, summary := range summaries {
+		c.collectReturnedGenericEffects(summary, summaries, declarations)
 	}
 	return summaries
 }
@@ -654,8 +669,14 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 	})
 }
 
-// collectReturnedGenericEffects records effects in a directly returned closure.
-func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
+// collectReturnedGenericEffects records effects in returned closure values.
+func (c *checker) collectReturnedGenericEffects(
+	summary *genericEffectSummary,
+	summaries map[*types.Func]*genericEffectSummary,
+	declarations map[*types.Func]*syntax.FunctionDeclaration,
+) {
+	bindings := c.returnedClosureBindings(summary.body)
+	signature := summary.function.Type().(*types.Signature)
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
@@ -664,32 +685,23 @@ func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
 		if !ok || syntax.ReturnStatementOf(statement) == nil {
 			return true
 		}
-		for _, expression := range syntax.ReturnStatementOf(statement).Results {
-			value := unparenthesized(expression)
-			literal := syntax.FunctionLiteralExpressionOf(value)
-			if literal == nil {
+		for index, expression := range syntax.ReturnStatementOf(statement).Results {
+			if index >= signature.Results().Len() ||
+				!returnedFunctionType(signature.Results().At(index).Type()) {
 				continue
 			}
-			root := syntax.ExpressionNode(value)
-			returned := &genericEffectSummary{
-				function: summary.function, file: summary.file,
-				declaration: summary.declaration,
-				parameters:  summary.parameters, zeroEffects: nil,
-				accessEffects: nil, returnedZeroEffects: nil,
-				returnedAccessEffects: nil, calls: nil,
-				reachable: c.reachableNodes(literal.Body), root: &root,
-				body: literal.Body,
-			}
-			c.collectGenericNodes(returned)
-			summary.returnedZeroEffects = append(
-				summary.returnedZeroEffects, returned.zeroEffects...,
-			)
-			summary.returnedAccessEffects = append(
-				summary.returnedAccessEffects, returned.accessEffects...,
+			c.collectReturnedExpression(
+				summary, expression, bindings, summaries, declarations,
+				true, false, make(map[types.Object]bool),
 			)
 		}
 		return false
 	})
+}
+
+func returnedFunctionType(typ types.Type) bool {
+	_, ok := types.Unalias(typ).Underlying().(*types.Signature)
+	return ok
 }
 
 // collectGenericPresenceZeros runs the normal pair proof for each type parameter.
