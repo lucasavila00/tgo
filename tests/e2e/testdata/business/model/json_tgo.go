@@ -30,7 +30,7 @@ func (v JSONExternal) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONExternalCreated holds the variant fields. Supply every field.
+// JSONExternalCreated is the Created payload.
 type JSONExternalCreated struct {
 	ID     string    `json:"account_id"`
 	Reason string    `json:"reason,omitempty"`
@@ -44,13 +44,10 @@ func (value JSONExternalCreated) JSONExternal() JSONExternal {
 }
 
 // CreatedPayload requires Created. No tag check.
-func (v JSONExternal) CreatedPayload() JSONExternalCreated {
-	return v.tgoCreated
-}
+func (v JSONExternal) CreatedPayload() JSONExternalCreated { return v.tgoCreated }
 
-// JSONExternalEmpty holds the variant fields. Supply every field.
-type JSONExternalEmpty struct {
-}
+// JSONExternalEmpty is the Empty payload.
+type JSONExternalEmpty struct{}
 
 // JSONExternal constructs JSONExternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -59,11 +56,9 @@ func (value JSONExternalEmpty) JSONExternal() JSONExternal {
 }
 
 // EmptyPayload requires Empty. No tag check.
-func (v JSONExternal) EmptyPayload() JSONExternalEmpty {
-	return JSONExternalEmpty{}
-}
+func (JSONExternal) EmptyPayload() JSONExternalEmpty { return JSONExternalEmpty{} }
 
-// JSONExternalLarge holds the variant fields. Supply every field.
+// JSONExternalLarge is the Large payload.
 type JSONExternalLarge struct {
 	Data [100]byte
 }
@@ -75,9 +70,8 @@ func (value JSONExternalLarge) JSONExternal() JSONExternal {
 }
 
 // LargePayload requires Large. No tag check.
-func (v JSONExternal) LargePayload() JSONExternalLarge {
-	return v.tgoPayload.(JSONExternalLarge)
-}
+func (v JSONExternal) LargePayload() JSONExternalLarge { return v.tgoPayload.(JSONExternalLarge) }
+
 func (v JSONExternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONExternalTagCreated:
@@ -99,6 +93,7 @@ func (v JSONExternal) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONExternal JSON tag")
 	}
 }
+
 func (v *JSONExternal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -162,7 +157,7 @@ func (v JSONInternal) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONInternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONInternalCreated holds the variant fields. Supply every field.
+// JSONInternalCreated is the Created payload.
 type JSONInternalCreated struct {
 	ID     string    `json:"account_id"`
 	Reason string    `json:"reason,omitempty"`
@@ -176,13 +171,10 @@ func (value JSONInternalCreated) JSONInternal() JSONInternal {
 }
 
 // CreatedPayload requires Created. No tag check.
-func (v JSONInternal) CreatedPayload() JSONInternalCreated {
-	return v.tgoCreated
-}
+func (v JSONInternal) CreatedPayload() JSONInternalCreated { return v.tgoCreated }
 
-// JSONInternalEmpty holds the variant fields. Supply every field.
-type JSONInternalEmpty struct {
-}
+// JSONInternalEmpty is the Empty payload.
+type JSONInternalEmpty struct{}
 
 // JSONInternal constructs JSONInternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -191,9 +183,8 @@ func (value JSONInternalEmpty) JSONInternal() JSONInternal {
 }
 
 // EmptyPayload requires Empty. No tag check.
-func (v JSONInternal) EmptyPayload() JSONInternalEmpty {
-	return JSONInternalEmpty{}
-}
+func (JSONInternal) EmptyPayload() JSONInternalEmpty { return JSONInternalEmpty{} }
+
 func (v JSONInternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalTagCreated:
@@ -234,6 +225,7 @@ func (v JSONInternal) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONInternal JSON tag")
 	}
 }
+
 func (v *JSONInternal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var object struct {
@@ -288,7 +280,7 @@ func (v JSONAdjacent) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONAdjacentCreated holds the variant fields. Supply every field.
+// JSONAdjacentCreated is the Created payload.
 type JSONAdjacentCreated struct {
 	ID     string    `json:"account_id"`
 	Reason string    `json:"reason,omitempty"`
@@ -302,13 +294,10 @@ func (value JSONAdjacentCreated) JSONAdjacent() JSONAdjacent {
 }
 
 // CreatedPayload requires Created. No tag check.
-func (v JSONAdjacent) CreatedPayload() JSONAdjacentCreated {
-	return v.tgoCreated
-}
+func (v JSONAdjacent) CreatedPayload() JSONAdjacentCreated { return v.tgoCreated }
 
-// JSONAdjacentEmpty holds the variant fields. Supply every field.
-type JSONAdjacentEmpty struct {
-}
+// JSONAdjacentEmpty is the Empty payload.
+type JSONAdjacentEmpty struct{}
 
 // JSONAdjacent constructs JSONAdjacent. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -317,9 +306,8 @@ func (value JSONAdjacentEmpty) JSONAdjacent() JSONAdjacent {
 }
 
 // EmptyPayload requires Empty. No tag check.
-func (v JSONAdjacent) EmptyPayload() JSONAdjacentEmpty {
-	return JSONAdjacentEmpty{}
-}
+func (JSONAdjacent) EmptyPayload() JSONAdjacentEmpty { return JSONAdjacentEmpty{} }
+
 func (v JSONAdjacent) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONAdjacentTagCreated:
@@ -338,6 +326,7 @@ func (v JSONAdjacent) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONAdjacent JSON tag")
 	}
 }
+
 func (v *JSONAdjacent) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -401,7 +390,7 @@ func (v JSONUntagged) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONUntagged: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONUntaggedNumber holds the variant fields. Supply every field.
+// JSONUntaggedNumber is the Number payload.
 type JSONUntaggedNumber struct {
 	Value int `json:"value"`
 }
@@ -413,11 +402,9 @@ func (value JSONUntaggedNumber) JSONUntagged() JSONUntagged {
 }
 
 // NumberPayload requires Number. No tag check.
-func (v JSONUntagged) NumberPayload() JSONUntaggedNumber {
-	return v.tgoNumber
-}
+func (v JSONUntagged) NumberPayload() JSONUntaggedNumber { return v.tgoNumber }
 
-// JSONUntaggedText holds the variant fields. Supply every field.
+// JSONUntaggedText is the Text payload.
 type JSONUntaggedText struct {
 	Value string `json:"value"`
 }
@@ -429,11 +416,9 @@ func (value JSONUntaggedText) JSONUntagged() JSONUntagged {
 }
 
 // TextPayload requires Text. No tag check.
-func (v JSONUntagged) TextPayload() JSONUntaggedText {
-	return v.tgoText
-}
+func (v JSONUntagged) TextPayload() JSONUntaggedText { return v.tgoText }
 
-// JSONUntaggedOther holds the variant fields. Supply every field.
+// JSONUntaggedOther is the Other payload.
 type JSONUntaggedOther struct {
 	Value string `json:"value"`
 }
@@ -445,9 +430,8 @@ func (value JSONUntaggedOther) JSONUntagged() JSONUntagged {
 }
 
 // OtherPayload requires Other. No tag check.
-func (v JSONUntagged) OtherPayload() JSONUntaggedOther {
-	return v.tgoOther
-}
+func (v JSONUntagged) OtherPayload() JSONUntaggedOther { return v.tgoOther }
+
 func (v JSONUntagged) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONUntaggedTagNumber:
@@ -463,6 +447,7 @@ func (v JSONUntagged) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONUntagged JSON tag")
 	}
 }
+
 func (v *JSONUntagged) UnmarshalJSON(data []byte) error {
 	{
 		var payload JSONUntaggedNumber
@@ -509,7 +494,7 @@ func (v JSONNested) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONNested: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONNestedNested holds the variant fields. Supply every field.
+// JSONNestedNested is the Nested payload.
 type JSONNestedNested struct {
 	Value JSONExternal `json:"value"`
 }
@@ -521,9 +506,8 @@ func (value JSONNestedNested) JSONNested() JSONNested {
 }
 
 // NestedPayload requires Nested. No tag check.
-func (v JSONNested) NestedPayload() JSONNestedNested {
-	return v.tgoNested
-}
+func (v JSONNested) NestedPayload() JSONNestedNested { return v.tgoNested }
+
 func (v JSONNested) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONNestedTagNested:
@@ -535,6 +519,7 @@ func (v JSONNested) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONNested JSON tag")
 	}
 }
+
 func (v *JSONNested) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -583,7 +568,7 @@ func (v JSONCustom) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONCustom: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONCustomValue holds the variant fields. Supply every field.
+// JSONCustomValue is the Value payload.
 type JSONCustomValue struct {
 	Value JSONField `json:"value"`
 }
@@ -595,9 +580,8 @@ func (value JSONCustomValue) JSONCustom() JSONCustom {
 }
 
 // ValuePayload requires Value. No tag check.
-func (v JSONCustom) ValuePayload() JSONCustomValue {
-	return v.tgoValue
-}
+func (v JSONCustom) ValuePayload() JSONCustomValue { return v.tgoValue }
+
 func (v JSONCustom) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONCustomTagValue:
@@ -609,6 +593,7 @@ func (v JSONCustom) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONCustom JSON tag")
 	}
 }
+
 func (v *JSONCustom) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -663,7 +648,7 @@ func (v JSONEscaped) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONEscaped: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONEscapedValue holds the variant fields. Supply every field.
+// JSONEscapedValue is the Value payload.
 type JSONEscapedValue struct {
 	ID string `json:"id,omitempty"`
 }
@@ -675,9 +660,8 @@ func (value JSONEscapedValue) JSONEscaped() JSONEscaped {
 }
 
 // ValuePayload requires Value. No tag check.
-func (v JSONEscaped) ValuePayload() JSONEscapedValue {
-	return v.tgoValue
-}
+func (v JSONEscaped) ValuePayload() JSONEscapedValue { return v.tgoValue }
+
 func (v JSONEscaped) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONEscapedTagValue:
@@ -701,6 +685,7 @@ func (v JSONEscaped) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONEscaped JSON tag")
 	}
 }
+
 func (v *JSONEscaped) UnmarshalJSON(data []byte) error {
 	var variant string
 	var object map[string]__tgo_json.RawMessage
@@ -748,7 +733,7 @@ func (v JSONEscapedExternal) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONEscapedExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONEscapedExternalValue holds the variant fields. Supply every field.
+// JSONEscapedExternalValue is the Value payload.
 type JSONEscapedExternalValue struct {
 	ID string `json:"id,omitempty"`
 }
@@ -760,9 +745,8 @@ func (value JSONEscapedExternalValue) JSONEscapedExternal() JSONEscapedExternal 
 }
 
 // ValuePayload requires Value. No tag check.
-func (v JSONEscapedExternal) ValuePayload() JSONEscapedExternalValue {
-	return v.tgoValue
-}
+func (v JSONEscapedExternal) ValuePayload() JSONEscapedExternalValue { return v.tgoValue }
+
 func (v JSONEscapedExternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONEscapedExternalTagValue:
@@ -780,6 +764,7 @@ func (v JSONEscapedExternal) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONEscapedExternal JSON tag")
 	}
 }
+
 func (v *JSONEscapedExternal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -828,7 +813,7 @@ func (v JSONEscapedAdjacent) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONEscapedAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONEscapedAdjacentValue holds the variant fields. Supply every field.
+// JSONEscapedAdjacentValue is the Value payload.
 type JSONEscapedAdjacentValue struct {
 	ID string `json:"id,omitempty"`
 }
@@ -840,9 +825,8 @@ func (value JSONEscapedAdjacentValue) JSONEscapedAdjacent() JSONEscapedAdjacent 
 }
 
 // ValuePayload requires Value. No tag check.
-func (v JSONEscapedAdjacent) ValuePayload() JSONEscapedAdjacentValue {
-	return v.tgoValue
-}
+func (v JSONEscapedAdjacent) ValuePayload() JSONEscapedAdjacentValue { return v.tgoValue }
+
 func (v JSONEscapedAdjacent) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONEscapedAdjacentTagValue:
@@ -860,6 +844,7 @@ func (v JSONEscapedAdjacent) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONEscapedAdjacent JSON tag")
 	}
 }
+
 func (v *JSONEscapedAdjacent) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -913,7 +898,7 @@ func (v JSONStringField) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONStringField: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONStringFieldValue holds the variant fields. Supply every field.
+// JSONStringFieldValue is the Value payload.
 type JSONStringFieldValue struct {
 	Count int `json:"count,string"`
 }
@@ -925,9 +910,8 @@ func (value JSONStringFieldValue) JSONStringField() JSONStringField {
 }
 
 // ValuePayload requires Value. No tag check.
-func (v JSONStringField) ValuePayload() JSONStringFieldValue {
-	return v.tgoValue
-}
+func (v JSONStringField) ValuePayload() JSONStringFieldValue { return v.tgoValue }
+
 func (v JSONStringField) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONStringFieldTagValue:
@@ -939,6 +923,7 @@ func (v JSONStringField) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONStringField JSON tag")
 	}
 }
+
 func (v *JSONStringField) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -987,7 +972,7 @@ func (v JSONInternalPayloadMethod) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONInternalPayloadMethod: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONInternalPayloadMethodValue holds the variant fields. Supply every field.
+// JSONInternalPayloadMethodValue is the Value payload.
 type JSONInternalPayloadMethodValue struct {
 	Seen string `json:"-"`
 }
@@ -999,9 +984,8 @@ func (value JSONInternalPayloadMethodValue) JSONInternalPayloadMethod() JSONInte
 }
 
 // ValuePayload requires Value. No tag check.
-func (v JSONInternalPayloadMethod) ValuePayload() JSONInternalPayloadMethodValue {
-	return v.tgoValue
-}
+func (v JSONInternalPayloadMethod) ValuePayload() JSONInternalPayloadMethodValue { return v.tgoValue }
+
 func (v JSONInternalPayloadMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalPayloadMethodTagValue:
@@ -1025,6 +1009,7 @@ func (v JSONInternalPayloadMethod) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONInternalPayloadMethod JSON tag")
 	}
 }
+
 func (v *JSONInternalPayloadMethod) UnmarshalJSON(data []byte) error {
 	var variant string
 	var object struct {
@@ -1071,7 +1056,7 @@ func (v JSONInternalPromotedMethod) UnknownTag() string {
 	return __tgo_fmt.Sprintf("JSONInternalPromotedMethod: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// JSONInternalPromotedMethodValue holds the variant fields. Supply every field.
+// JSONInternalPromotedMethodValue is the Value payload.
 type JSONInternalPromotedMethodValue struct {
 	JSONObject
 }
@@ -1083,9 +1068,8 @@ func (value JSONInternalPromotedMethodValue) JSONInternalPromotedMethod() JSONIn
 }
 
 // ValuePayload requires Value. No tag check.
-func (v JSONInternalPromotedMethod) ValuePayload() JSONInternalPromotedMethodValue {
-	return v.tgoValue
-}
+func (v JSONInternalPromotedMethod) ValuePayload() JSONInternalPromotedMethodValue { return v.tgoValue }
+
 func (v JSONInternalPromotedMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalPromotedMethodTagValue:
@@ -1109,6 +1093,7 @@ func (v JSONInternalPromotedMethod) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid JSONInternalPromotedMethod JSON tag")
 	}
 }
+
 func (v *JSONInternalPromotedMethod) UnmarshalJSON(data []byte) error {
 	var variant string
 	var object struct {

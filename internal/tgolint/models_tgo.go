@@ -31,7 +31,7 @@ func (v model) UnknownTag() string {
 	return __tgo_fmt.Sprintf("model: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// modelChecked holds the variant fields. Supply every field.
+// modelChecked is the Checked payload.
 type modelChecked struct {
 	Package string
 	Name    string
@@ -44,11 +44,9 @@ func (value modelChecked) model() model {
 }
 
 // CheckedPayload requires Checked. No tag check.
-func (v model) CheckedPayload() modelChecked {
-	return v.tgoChecked
-}
+func (v model) CheckedPayload() modelChecked { return v.tgoChecked }
 
-// modelEnum holds the variant fields. Supply every field.
+// modelEnum is the Enum payload.
 type modelEnum struct {
 	Package  string
 	Name     string
@@ -62,13 +60,10 @@ func (value modelEnum) model() model {
 }
 
 // EnumPayload requires Enum. No tag check.
-func (v model) EnumPayload() modelEnum {
-	return v.tgoPayload.(modelEnum)
-}
+func (v model) EnumPayload() modelEnum { return v.tgoPayload.(modelEnum) }
 
-// modelMixed holds the variant fields. Supply every field.
-type modelMixed struct {
-}
+// modelMixed is the Mixed payload.
+type modelMixed struct{}
 
 // model constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -77,13 +72,10 @@ func (value modelMixed) model() model {
 }
 
 // MixedPayload requires Mixed. No tag check.
-func (v model) MixedPayload() modelMixed {
-	return modelMixed{}
-}
+func (model) MixedPayload() modelMixed { return modelMixed{} }
 
-// modelParameter holds the variant fields. Supply every field.
-type modelParameter struct {
-}
+// modelParameter is the Parameter payload.
+type modelParameter struct{}
 
 // model constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -92,9 +84,8 @@ func (value modelParameter) model() model {
 }
 
 // ParameterPayload requires Parameter. No tag check.
-func (v model) ParameterPayload() modelParameter {
-	return modelParameter{}
-}
+func (model) ParameterPayload() modelParameter { return modelParameter{} }
+
 func (v model) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case modelTagChecked:
@@ -121,6 +112,7 @@ func (v model) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid model JSON tag")
 	}
 }
+
 func (v *model) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

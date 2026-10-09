@@ -115,7 +115,7 @@ func (v Account) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Account: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// AccountPersonal holds the variant fields. Supply every field.
+// AccountPersonal is the Personal payload.
 type AccountPersonal struct {
 	Name string
 }
@@ -127,11 +127,9 @@ func (value AccountPersonal) Account() Account {
 }
 
 // PersonalPayload requires Personal. No tag check.
-func (v Account) PersonalPayload() AccountPersonal {
-	return v.tgoPersonal
-}
+func (v Account) PersonalPayload() AccountPersonal { return v.tgoPersonal }
 
-// AccountBusiness holds the variant fields. Supply every field.
+// AccountBusiness is the Business payload.
 type AccountBusiness struct {
 	Company string
 	Members []Account
@@ -145,9 +143,8 @@ func (value AccountBusiness) Account() Account {
 }
 
 // BusinessPayload requires Business. No tag check.
-func (v Account) BusinessPayload() AccountBusiness {
-	return v.tgoBusiness
-}
+func (v Account) BusinessPayload() AccountBusiness { return v.tgoBusiness }
+
 func (v Account) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case AccountTagPersonal:
@@ -164,6 +161,7 @@ func (v Account) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Account JSON tag")
 	}
 }
+
 func (v *Account) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -219,7 +217,7 @@ func (v Notice) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Notice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// NoticeText holds the variant fields. Supply every field.
+// NoticeText is the Text payload.
 type NoticeText struct {
 	Body   string
 	Labels map[string]string
@@ -232,9 +230,8 @@ func (value NoticeText) Notice() Notice {
 }
 
 // TextPayload requires Text. No tag check.
-func (v Notice) TextPayload() NoticeText {
-	return v.tgoText
-}
+func (v Notice) TextPayload() NoticeText { return v.tgoText }
+
 func (v Notice) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case NoticeTagText:
@@ -246,6 +243,7 @@ func (v Notice) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Notice JSON tag")
 	}
 }
+
 func (v *Notice) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -294,9 +292,8 @@ func (v Signal) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Signal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// SignalOn holds the variant fields. Supply every field.
-type SignalOn struct {
-}
+// SignalOn is the On payload.
+type SignalOn struct{}
 
 // Signal constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -305,13 +302,10 @@ func (value SignalOn) Signal() Signal {
 }
 
 // OnPayload requires On. No tag check.
-func (v Signal) OnPayload() SignalOn {
-	return SignalOn{}
-}
+func (Signal) OnPayload() SignalOn { return SignalOn{} }
 
-// SignalOff holds the variant fields. Supply every field.
-type SignalOff struct {
-}
+// SignalOff is the Off payload.
+type SignalOff struct{}
 
 // Signal constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -320,9 +314,8 @@ func (value SignalOff) Signal() Signal {
 }
 
 // OffPayload requires Off. No tag check.
-func (v Signal) OffPayload() SignalOff {
-	return SignalOff{}
-}
+func (Signal) OffPayload() SignalOff { return SignalOff{} }
+
 func (v Signal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case SignalTagOn:
@@ -339,6 +332,7 @@ func (v Signal) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Signal JSON tag")
 	}
 }
+
 func (v *Signal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

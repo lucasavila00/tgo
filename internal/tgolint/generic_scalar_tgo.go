@@ -42,7 +42,7 @@ func (v scalarValue) UnknownTag() string {
 	return __tgo_fmt.Sprintf("scalarValue: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// scalarValueBoolean holds the variant fields. Supply every field.
+// scalarValueBoolean is the Boolean payload.
 type scalarValueBoolean struct {
 	Value bool
 }
@@ -54,11 +54,9 @@ func (value scalarValueBoolean) scalarValue() scalarValue {
 }
 
 // BooleanPayload requires Boolean. No tag check.
-func (v scalarValue) BooleanPayload() scalarValueBoolean {
-	return v.tgoBoolean
-}
+func (v scalarValue) BooleanPayload() scalarValueBoolean { return v.tgoBoolean }
 
-// scalarValueInteger holds the variant fields. Supply every field.
+// scalarValueInteger is the Integer payload.
 type scalarValueInteger struct {
 	Value int64
 }
@@ -70,11 +68,9 @@ func (value scalarValueInteger) scalarValue() scalarValue {
 }
 
 // IntegerPayload requires Integer. No tag check.
-func (v scalarValue) IntegerPayload() scalarValueInteger {
-	return v.tgoInteger
-}
+func (v scalarValue) IntegerPayload() scalarValueInteger { return v.tgoInteger }
 
-// scalarValueBooleanParameter holds the variant fields. Supply every field.
+// scalarValueBooleanParameter is the BooleanParameter payload.
 type scalarValueBooleanParameter struct {
 	Index   int
 	Negated bool
@@ -91,7 +87,7 @@ func (v scalarValue) BooleanParameterPayload() scalarValueBooleanParameter {
 	return v.tgoBooleanParameter
 }
 
-// scalarValueIntegerParameter holds the variant fields. Supply every field.
+// scalarValueIntegerParameter is the IntegerParameter payload.
 type scalarValueIntegerParameter struct {
 	Index int
 }
@@ -106,6 +102,7 @@ func (value scalarValueIntegerParameter) scalarValue() scalarValue {
 func (v scalarValue) IntegerParameterPayload() scalarValueIntegerParameter {
 	return v.tgoIntegerParameter
 }
+
 func (v scalarValue) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case scalarValueTagBoolean:
@@ -132,6 +129,7 @@ func (v scalarValue) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid scalarValue JSON tag")
 	}
 }
+
 func (v *scalarValue) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

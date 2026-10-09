@@ -57,9 +57,8 @@ func (v effectKind) UnknownTag() string {
 	return __tgo_fmt.Sprintf("effectKind: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// effectKindBoolean holds the variant fields. Supply every field.
-type effectKindBoolean struct {
-}
+// effectKindBoolean is the Boolean payload.
+type effectKindBoolean struct{}
 
 // effectKind constructs effectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -68,13 +67,10 @@ func (value effectKindBoolean) effectKind() effectKind {
 }
 
 // BooleanPayload requires Boolean. No tag check.
-func (v effectKind) BooleanPayload() effectKindBoolean {
-	return effectKindBoolean{}
-}
+func (effectKind) BooleanPayload() effectKindBoolean { return effectKindBoolean{} }
 
-// effectKindNonzero holds the variant fields. Supply every field.
-type effectKindNonzero struct {
-}
+// effectKindNonzero is the Nonzero payload.
+type effectKindNonzero struct{}
 
 // effectKind constructs effectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -83,13 +79,10 @@ func (value effectKindNonzero) effectKind() effectKind {
 }
 
 // NonzeroPayload requires Nonzero. No tag check.
-func (v effectKind) NonzeroPayload() effectKindNonzero {
-	return effectKindNonzero{}
-}
+func (effectKind) NonzeroPayload() effectKindNonzero { return effectKindNonzero{} }
 
-// effectKindNonempty holds the variant fields. Supply every field.
-type effectKindNonempty struct {
-}
+// effectKindNonempty is the Nonempty payload.
+type effectKindNonempty struct{}
 
 // effectKind constructs effectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -98,13 +91,10 @@ func (value effectKindNonempty) effectKind() effectKind {
 }
 
 // NonemptyPayload requires Nonempty. No tag check.
-func (v effectKind) NonemptyPayload() effectKindNonempty {
-	return effectKindNonempty{}
-}
+func (effectKind) NonemptyPayload() effectKindNonempty { return effectKindNonempty{} }
 
-// effectKindMapMiss holds the variant fields. Supply every field.
-type effectKindMapMiss struct {
-}
+// effectKindMapMiss is the MapMiss payload.
+type effectKindMapMiss struct{}
 
 // effectKind constructs effectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -113,13 +103,10 @@ func (value effectKindMapMiss) effectKind() effectKind {
 }
 
 // MapMissPayload requires MapMiss. No tag check.
-func (v effectKind) MapMissPayload() effectKindMapMiss {
-	return effectKindMapMiss{}
-}
+func (effectKind) MapMissPayload() effectKindMapMiss { return effectKindMapMiss{} }
 
-// effectKindChannelClosed holds the variant fields. Supply every field.
-type effectKindChannelClosed struct {
-}
+// effectKindChannelClosed is the ChannelClosed payload.
+type effectKindChannelClosed struct{}
 
 // effectKind constructs effectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -128,13 +115,10 @@ func (value effectKindChannelClosed) effectKind() effectKind {
 }
 
 // ChannelClosedPayload requires ChannelClosed. No tag check.
-func (v effectKind) ChannelClosedPayload() effectKindChannelClosed {
-	return effectKindChannelClosed{}
-}
+func (effectKind) ChannelClosedPayload() effectKindChannelClosed { return effectKindChannelClosed{} }
 
-// effectKindAssertionFails holds the variant fields. Supply every field.
-type effectKindAssertionFails struct {
-}
+// effectKindAssertionFails is the AssertionFails payload.
+type effectKindAssertionFails struct{}
 
 // effectKind constructs effectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -143,13 +127,10 @@ func (value effectKindAssertionFails) effectKind() effectKind {
 }
 
 // AssertionFailsPayload requires AssertionFails. No tag check.
-func (v effectKind) AssertionFailsPayload() effectKindAssertionFails {
-	return effectKindAssertionFails{}
-}
+func (effectKind) AssertionFailsPayload() effectKindAssertionFails { return effectKindAssertionFails{} }
 
-// effectKindResliceExtends holds the variant fields. Supply every field.
-type effectKindResliceExtends struct {
-}
+// effectKindResliceExtends is the ResliceExtends payload.
+type effectKindResliceExtends struct{}
 
 // effectKind constructs effectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -158,9 +139,8 @@ func (value effectKindResliceExtends) effectKind() effectKind {
 }
 
 // ResliceExtendsPayload requires ResliceExtends. No tag check.
-func (v effectKind) ResliceExtendsPayload() effectKindResliceExtends {
-	return effectKindResliceExtends{}
-}
+func (effectKind) ResliceExtendsPayload() effectKindResliceExtends { return effectKindResliceExtends{} }
+
 func (v effectKind) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case effectKindTagBoolean:
@@ -202,6 +182,7 @@ func (v effectKind) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid effectKind JSON tag")
 	}
 }
+
 func (v *effectKind) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

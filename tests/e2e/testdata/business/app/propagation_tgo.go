@@ -109,91 +109,79 @@ func propagationTypedNil() (int, error) {
 }
 
 func PropagationValue(events *[]string, found bool) (int, error) {
-	__tgo_value_7, __tgo_error_7 := propagationLoad(events, found)
-	if __tgo_error_7 != nil {
-		var __tgo_zero_7 int
-		return __tgo_zero_7, fmt.Errorf("propagationLoad: %w", __tgo_error_7)
+	value, err := propagationLoad(events, found)
+	if err != nil {
+		return 0, fmt.Errorf("propagationLoad: %w", err)
 	}
-	value := __tgo_value_7
 	return value, nil
 }
 
 func PropagationOuter(events *[]string, found bool) (int, error) {
-	__tgo_value_8, __tgo_error_8 := PropagationValue(events, found)
-	if __tgo_error_8 != nil {
-		var __tgo_zero_8 int
-		return __tgo_zero_8, fmt.Errorf("PropagationValue: %w", __tgo_error_8)
+	value, err := PropagationValue(events, found)
+	if err != nil {
+		return 0, fmt.Errorf("PropagationValue: %w", err)
 	}
-	value := __tgo_value_8
 	return value, nil
 }
 
 func PropagationNested(events *[]string, found bool) (string, error) {
-	__tgo_operand := propagationMark(events, "before")
-	__tgo_value_9, __tgo_error_9 := propagationLoad(events, found)
-	if __tgo_error_9 != nil {
-		var __tgo_zero_9 string
-		return __tgo_zero_9, fmt.Errorf("propagationLoad: %w", __tgo_error_9)
+	operand := propagationMark(events, "before")
+	result, err := propagationLoad(events, found)
+	if err != nil {
+		return "", fmt.Errorf("propagationLoad: %w", err)
 	}
-	return propagationFormat(__tgo_operand, __tgo_value_9, propagationMark(events, "after")), nil
+	return propagationFormat(operand, result, propagationMark(events, "after")), nil
 }
 
 func PropagationAssignment(events *[]string, found bool) ([]int, error) {
 	values := []int{0}
-	__tgo_operand_1 := propagationTarget(events, values)
-	__tgo_operand_2 := propagationIndex(events)
-	__tgo_value_10, __tgo_error_10 := propagationLoad(events, found)
-	if __tgo_error_10 != nil {
-		var __tgo_zero_10 []int
-		return __tgo_zero_10, fmt.Errorf("propagationLoad: %w", __tgo_error_10)
+	operand := propagationTarget(events, values)
+	tgoOperand := propagationIndex(events)
+	result, err := propagationLoad(events, found)
+	if err != nil {
+		return nil, fmt.Errorf("propagationLoad: %w", err)
 	}
-	__tgo_operand_1[__tgo_operand_2] = __tgo_value_10
+	operand[tgoOperand] = result
 
 	return values, nil
 }
 
 func PropagationIncrement(events *[]string, found bool) (int, error) {
 	values := []int{0}
-	__tgo_value_11, __tgo_error_11 := propagationTargetLoad(events, values, found)
-	if __tgo_error_11 != nil {
-		var __tgo_zero_11 int
-		return __tgo_zero_11, fmt.Errorf("propagationTargetLoad: %w", __tgo_error_11)
+	result, err := propagationTargetLoad(events, values, found)
+	if err != nil {
+		return 0, fmt.Errorf("propagationTargetLoad: %w", err)
 	}
-	__tgo_operand_3 := propagationIndex(events)
-	__tgo_value_11[__tgo_operand_3]++
+	operand := propagationIndex(events)
+	result[operand]++
 	return values[0], nil
 }
 
 func PropagationArrayIndex(found bool) (int, error) {
 	values := [1]int{1}
-	__tgo_value_12, __tgo_error_12 := propagationArrayBound(&values, found)
-	if __tgo_error_12 != nil {
-		var __tgo_zero_12 int
-		return __tgo_zero_12, fmt.Errorf("propagationArrayBound: %w", __tgo_error_12)
+	result, err := propagationArrayBound(&values, found)
+	if err != nil {
+		return 0, fmt.Errorf("propagationArrayBound: %w", err)
 	}
-
-	return values[__tgo_value_12], nil
+	return values[result], nil
 }
 
 func PropagationArraySlice(found bool) (bool, error) {
 	values := [1]int{1}
-	__tgo_value_13, __tgo_error_13 := propagationArrayBound(&values, found)
-	if __tgo_error_13 != nil {
-		var __tgo_zero_13 bool
-		return __tgo_zero_13, fmt.Errorf("propagationArrayBound: %w", __tgo_error_13)
+	result, err := propagationArrayBound(&values, found)
+	if err != nil {
+		return false, fmt.Errorf("propagationArrayBound: %w", err)
 	}
-
-	slice := values[__tgo_value_13:]
+	slice := values[result:]
 	return &slice[0] == &values[0] && slice[0] == 2, nil
 }
 
 func PropagationGenericArraySlice[T ~[1]int](values *T, found bool) (bool, error) {
-	__tgo_value_14, __tgo_error_14 := propagationGenericArrayBound(values, found)
-	if __tgo_error_14 != nil {
-		var __tgo_zero_14 bool
-		return __tgo_zero_14, fmt.Errorf("propagationGenericArrayBound: %w", __tgo_error_14)
+	result, err := propagationGenericArrayBound(values, found)
+	if err != nil {
+		return false, fmt.Errorf("propagationGenericArrayBound: %w", err)
 	}
-	slice := (*values)[__tgo_value_14:]
+	slice := (*values)[result:]
 	return &slice[0] == &(*values)[0] && slice[0] == 2, nil
 }
 
@@ -206,114 +194,95 @@ func propagationGenericArrayBound[T ~[1]int](values *T, found bool) (int, error)
 }
 
 func PropagationMany(found bool) (string, int, error) {
-	__tgo_value_15, __tgo_value_16, __tgo_error_15 := propagationPair(found)
-	if __tgo_error_15 != nil {
-		var __tgo_zero_15 string
-		var __tgo_zero_16 int
-		return __tgo_zero_15, __tgo_zero_16, fmt.Errorf("propagationPair: %w", __tgo_error_15)
+	name, value, err := propagationPair(found)
+	if err != nil {
+		return "", 0, fmt.Errorf("propagationPair: %w", err)
 	}
-	name, value := __tgo_value_15, __tgo_value_16
 	return name, value, nil
 }
 
 func PropagationManyDeclaration(found bool) (string, int, error) {
-	__tgo_value_17, __tgo_value_18, __tgo_error_16 := propagationPair(found)
-	if __tgo_error_16 != nil {
-		var __tgo_zero_17 string
-		var __tgo_zero_18 int
-		return __tgo_zero_17, __tgo_zero_18, fmt.Errorf("propagationPair: %w", __tgo_error_16)
+	var name, value, err = propagationPair(found)
+	if err != nil {
+		return "", 0, fmt.Errorf("propagationPair: %w", err)
 	}
-	var name, value = __tgo_value_17, __tgo_value_18
 	return name, value, nil
 }
 
 func PropagationErrorOnly(found bool) error {
-	__tgo_error_17 := propagationFlush(found)
-	if __tgo_error_17 != nil {
-		return fmt.Errorf("propagationFlush: %w", __tgo_error_17)
+	err := propagationFlush(found)
+	if err != nil {
+		return fmt.Errorf("propagationFlush: %w", err)
 	}
 	return nil
 }
 
 func PropagationAnd(events *[]string, left bool, right bool) (bool, error) {
-	__tgo_left := left
-	__tgo_condition := false
-	if __tgo_left {
-		__tgo_value_19, __tgo_error_18 := propagationBool(events, "right", right)
-		if __tgo_error_18 != nil {
-			var __tgo_zero_19 bool
-			return __tgo_zero_19, fmt.Errorf("propagationBool: %w", __tgo_error_18)
+	condition := false
+	if left {
+		result, err := propagationBool(events, "right", right)
+		if err != nil {
+			return false, fmt.Errorf("propagationBool: %w", err)
 		}
-		__tgo_condition = __tgo_value_19
+		condition = result
 	}
-	return __tgo_condition, nil
+	return condition, nil
 }
 
 func PropagationOr(events *[]string, left bool, right bool) (bool, error) {
-	__tgo_left_1 := left
-	__tgo_condition_1 := true
-	if !__tgo_left_1 {
-		__tgo_value_20, __tgo_error_19 := propagationBool(events, "right", right)
-		if __tgo_error_19 != nil {
-			var __tgo_zero_20 bool
-			return __tgo_zero_20, fmt.Errorf("propagationBool: %w", __tgo_error_19)
+	condition := true
+	if !left {
+		result, err := propagationBool(events, "right", right)
+		if err != nil {
+			return false, fmt.Errorf("propagationBool: %w", err)
 		}
-		__tgo_condition_1 = __tgo_value_20
+		condition = result
 	}
-	return __tgo_condition_1, nil
+	return condition, nil
 }
 
 func PropagationLoop(failAt int) (int, error) {
 	attempt := 0
 	count := 0
 	for {
-		__tgo_value_21, __tgo_error_20 := propagationLoopCondition(&attempt, failAt)
-		if __tgo_error_20 != nil {
-			var __tgo_zero_21 int
-			return __tgo_zero_21, fmt.Errorf("propagationLoopCondition: %w", __tgo_error_20)
+		result, err := propagationLoopCondition(&attempt, failAt)
+		if err != nil {
+			return 0, fmt.Errorf("propagationLoopCondition: %w", err)
 		}
-		if !__tgo_value_21 {
+		if !result {
 			break
 		}
-
 		count++
 	}
 	return count, nil
 }
 
 func PropagationDeferredArgument(events *[]string, found bool) (int, error) {
-	__tgo_value_22, __tgo_error_21 := propagationLoad(events, found)
-	if __tgo_error_21 != nil {
-		var __tgo_zero_22 int
-		return __tgo_zero_22, fmt.Errorf("propagationLoad: %w", __tgo_error_21)
+	result, err := propagationLoad(events, found)
+	if err != nil {
+		return 0, fmt.Errorf("propagationLoad: %w", err)
 	}
-	defer propagationRecord(events, __tgo_value_22)
+	defer propagationRecord(events, result)
 	*events = append(*events, "body")
 	return 7, nil
 }
 
 func PropagationExistingDefer(events *[]string, found bool) (int, error) {
 	defer func() { *events = append(*events, "exit") }()
-	__tgo_value_23, __tgo_error_22 := propagationLoad(events, found)
-	if __tgo_error_22 != nil {
-		var __tgo_zero_23 int
-		return __tgo_zero_23, fmt.Errorf("propagationLoad: %w", __tgo_error_22)
+	value, err := propagationLoad(events, found)
+	if err != nil {
+		return 0, fmt.Errorf("propagationLoad: %w", err)
 	}
-
-	value := __tgo_value_23
 	return value, nil
 }
 
 func PropagationIf(events *[]string, value bool) (bool, error) {
-	{
-		__tgo_value_24, __tgo_error_23 := propagationBool(events, "if", value)
-		if __tgo_error_23 != nil {
-			var __tgo_zero_24 bool
-			return __tgo_zero_24, fmt.Errorf("propagationBool: %w", __tgo_error_23)
-		}
-		if __tgo_value_24 {
-			return true, nil
-		}
+	result, err := propagationBool(events, "if", value)
+	if err != nil {
+		return false, fmt.Errorf("propagationBool: %w", err)
+	}
+	if result {
+		return true, nil
 	}
 	return false, nil
 }
@@ -321,12 +290,11 @@ func PropagationIf(events *[]string, value bool) (bool, error) {
 func PropagationIfInitializer(events *[]string, value bool) (string, error) {
 	{
 		prefix := propagationMark(events, "init")
-		__tgo_value_25, __tgo_error_24 := propagationBool(events, "if", value)
-		if __tgo_error_24 != nil {
-			var __tgo_zero_25 string
-			return __tgo_zero_25, fmt.Errorf("propagationBool: %w", __tgo_error_24)
+		result, err := propagationBool(events, "if", value)
+		if err != nil {
+			return "", fmt.Errorf("propagationBool: %w", err)
 		}
-		if __tgo_value_25 {
+		if result {
 			return prefix, nil
 		}
 	}
@@ -335,67 +303,55 @@ func PropagationIfInitializer(events *[]string, value bool) (string, error) {
 
 func PropagationRange(found bool) (int, error) {
 	total := 0
-	{
-		__tgo_value_26, __tgo_error_25 := propagationValues(found)
-		if __tgo_error_25 != nil {
-			var __tgo_zero_26 int
-			return __tgo_zero_26, fmt.Errorf("propagationValues: %w", __tgo_error_25)
-		}
-
-		for _, value := range __tgo_value_26 {
-			total += value
-		}
+	result, err := propagationValues(found)
+	if err != nil {
+		return 0, fmt.Errorf("propagationValues: %w", err)
+	}
+	for _, value := range result {
+		total += value
 	}
 	return total, nil
 }
 
 func PropagationLabeledRange(found bool) (int, error) {
 	total := 0
-	{
-		__tgo_value_27, __tgo_error_26 := propagationValues(found)
-		if __tgo_error_26 != nil {
-			var __tgo_zero_27 int
-			return __tgo_zero_27, fmt.Errorf("propagationValues: %w", __tgo_error_26)
-		}
-
-	outer:
-		for _, value := range __tgo_value_27 {
-			for {
-				total += value
-				continue outer
-			}
+	result, err := propagationValues(found)
+	if err != nil {
+		return 0, fmt.Errorf("propagationValues: %w", err)
+	}
+outer:
+	for _, value := range result {
+		for {
+			total += value
+			continue outer
 		}
 	}
 	return total, nil
 }
 
 func PropagationSwitch(found bool) (string, error) {
-	{
-		__tgo_value_28, __tgo_error_27 := propagationCode(found)
-		if __tgo_error_27 != nil {
-			var __tgo_zero_28 string
-			return __tgo_zero_28, fmt.Errorf("propagationCode: %w", __tgo_error_27)
-		}
-		switch __tgo_value_28 {
-		case 1:
-			return "one", nil
-		case 2:
-			return "two", nil
-		default:
-			return "other", nil
-		}
+	result, err := propagationCode(found)
+	if err != nil {
+		return "", fmt.Errorf("propagationCode: %w", err)
+	}
+	switch result {
+	case 1:
+		return "one", nil
+	case 2:
+		return "two", nil
+	default:
+		return "other", nil
 	}
 }
 
 func PropagationSwitchInitializer(events *[]string, found bool) (string, error) {
 	{
 		prefix := propagationMark(events, "init")
-		__tgo_value_29, __tgo_error_28 := propagationCode(found)
-		if __tgo_error_28 != nil {
-			var __tgo_zero_29 string
-			return __tgo_zero_29, fmt.Errorf("propagationCode: %w", __tgo_error_28)
+		result, err := propagationCode(found)
+		if err != nil {
+			return "", fmt.Errorf("propagationCode: %w", err)
 		}
-		switch __tgo_value_29 {
+		switch result {
 		case 2:
 			return prefix, nil
 		default:
@@ -406,21 +362,17 @@ func PropagationSwitchInitializer(events *[]string, found bool) (string, error) 
 
 func PropagationLabeledSwitch(found bool) (string, error) {
 	result := "before"
-	{
-		__tgo_value_30, __tgo_error_29 := propagationCode(found)
-		if __tgo_error_29 != nil {
-			var __tgo_zero_30 string
-			return __tgo_zero_30, fmt.Errorf("propagationCode: %w", __tgo_error_29)
-		}
-
-	outer:
-		switch __tgo_value_30 {
-		case 2:
-			result = "two"
-			break outer
-		default:
-			result = "other"
-		}
+	tgoResult, err := propagationCode(found)
+	if err != nil {
+		return "", fmt.Errorf("propagationCode: %w", err)
+	}
+outer:
+	switch tgoResult {
+	case 2:
+		result = "two"
+		break outer
+	default:
+		result = "other"
 	}
 	return result, nil
 }
@@ -430,16 +382,15 @@ func PropagationGotoLabeledSwitch(found bool) (string, error) {
 	goto outer
 outer:
 	{
-		__tgo_value_31, __tgo_error_30 := propagationCode(found)
-		if __tgo_error_30 != nil {
-			var __tgo_zero_31 string
-			return __tgo_zero_31, fmt.Errorf("propagationCode: %w", __tgo_error_30)
+		tgoResult, err := propagationCode(found)
+		if err != nil {
+			return "", fmt.Errorf("propagationCode: %w", err)
 		}
-	__tgo_control:
-		switch __tgo_value_31 {
+	control:
+		switch tgoResult {
 		case 2:
 			result = "two"
-			break __tgo_control
+			break control
 		default:
 			result = "other"
 		}
@@ -448,46 +399,37 @@ outer:
 }
 
 func PropagationTypedNil() (int, error) {
-	__tgo_value_32, __tgo_error_31 := propagationTypedNil()
-	if __tgo_error_31 != nil {
-		var __tgo_zero_32 int
-		return __tgo_zero_32, fmt.Errorf("propagationTypedNil: %w", __tgo_error_31)
+	value, err := propagationTypedNil()
+	if err != nil {
+		return 0, fmt.Errorf("propagationTypedNil: %w", err)
 	}
-	value := __tgo_value_32
 	return value, nil
 }
 
 func PropagationFunctionValue(events *[]string, found bool) (int, error) {
 	load := propagationLoad
-	__tgo_value_33, __tgo_error_32 := load(events, found)
-	if __tgo_error_32 != nil {
-		var __tgo_zero_33 int
-		return __tgo_zero_33, fmt.Errorf("load: %w", __tgo_error_32)
+	value, err := load(events, found)
+	if err != nil {
+		return 0, fmt.Errorf("load: %w", err)
 	}
-
-	value := __tgo_value_33
 	return value, nil
 }
 
 func PropagationNamed(events *[]string, found bool) (value int, err error) {
 	value = 99
-	__tgo_value_34, __tgo_error_33 := propagationLoad(events, found)
-	if __tgo_error_33 != nil {
-		var __tgo_zero_34 int
-		return __tgo_zero_34, fmt.Errorf("propagationLoad: %w", __tgo_error_33)
+	loaded, tgoErr := propagationLoad(events, found)
+	if tgoErr != nil {
+		return 0, fmt.Errorf("propagationLoad: %w", tgoErr)
 	}
-
-	loaded := __tgo_value_34
 	return loaded, nil
 }
 
 func PropagationGeneric[T any](value T, found bool) (T, error) {
-	__tgo_value_35, __tgo_error_34 := propagationGenericLoad(value, found)
-	if __tgo_error_34 != nil {
-		var __tgo_zero_35 T
-		return __tgo_zero_35, fmt.Errorf("propagationGenericLoad: %w", __tgo_error_34)
+	loaded, err := propagationGenericLoad(value, found)
+	if err != nil {
+		var zero T
+		return zero, fmt.Errorf("propagationGenericLoad: %w", err)
 	}
-	loaded := __tgo_value_35
 	return loaded, nil
 }
 

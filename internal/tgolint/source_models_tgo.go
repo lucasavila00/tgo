@@ -284,7 +284,7 @@ func (v sourceModel) UnknownTag() string {
 	return __tgo_fmt.Sprintf("sourceModel: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// sourceModelChecked holds the variant fields. Supply every field.
+// sourceModelChecked is the Checked payload.
 type sourceModelChecked struct {
 	Name string
 	Fact *model
@@ -298,11 +298,9 @@ func (value sourceModelChecked) sourceModel() sourceModel {
 }
 
 // CheckedPayload requires Checked. No tag check.
-func (v sourceModel) CheckedPayload() sourceModelChecked {
-	return v.tgoPayload.(sourceModelChecked)
-}
+func (v sourceModel) CheckedPayload() sourceModelChecked { return v.tgoPayload.(sourceModelChecked) }
 
-// sourceModelEnum holds the variant fields. Supply every field.
+// sourceModelEnum is the Enum payload.
 type sourceModelEnum struct {
 	Name     string
 	Fact     *model
@@ -316,11 +314,9 @@ func (value sourceModelEnum) sourceModel() sourceModel {
 }
 
 // EnumPayload requires Enum. No tag check.
-func (v sourceModel) EnumPayload() sourceModelEnum {
-	return v.tgoPayload.(sourceModelEnum)
-}
+func (v sourceModel) EnumPayload() sourceModelEnum { return v.tgoPayload.(sourceModelEnum) }
 
-// sourceModelStruct holds the variant fields. Supply every field.
+// sourceModelStruct is the Struct payload.
 type sourceModelStruct struct {
 	Name   string
 	Fields []sourceField
@@ -333,9 +329,8 @@ func (value sourceModelStruct) sourceModel() sourceModel {
 }
 
 // StructPayload requires Struct. No tag check.
-func (v sourceModel) StructPayload() sourceModelStruct {
-	return v.tgoStruct
-}
+func (v sourceModel) StructPayload() sourceModelStruct { return v.tgoStruct }
+
 func (v sourceModel) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case sourceModelTagChecked:
@@ -357,6 +352,7 @@ func (v sourceModel) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid sourceModel JSON tag")
 	}
 }
+
 func (v *sourceModel) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -484,13 +480,10 @@ func readTGoSource(pass *analysis.Pass, path string) ([]byte, error) {
 	if !found {
 		pass.OtherFiles = append(pass.OtherFiles, path)
 	}
-	__tgo_value, __tgo_error := pass.ReadFile(path)
-	if __tgo_error != nil {
-		var __tgo_zero []byte
-		return __tgo_zero, __tgo_fmt.Errorf("pass.ReadFile: %w", __tgo_error)
+	data, err := pass.ReadFile(path)
+	if err != nil {
+		return nil, __tgo_fmt.Errorf("pass.ReadFile: %w", err)
 	}
-
-	data := __tgo_value
 	return data, nil
 }
 

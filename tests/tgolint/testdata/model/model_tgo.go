@@ -52,7 +52,7 @@ func (v Event) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Event: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// EventStarted holds the variant fields. Supply every field.
+// EventStarted is the Started payload.
 type EventStarted struct {
 	ID    string `json:"event"`
 	Alias string `json:"event"`
@@ -65,11 +65,9 @@ func (value EventStarted) Event() Event {
 }
 
 // StartedPayload requires Started. No tag check.
-func (v Event) StartedPayload() EventStarted {
-	return v.tgoStarted
-}
+func (v Event) StartedPayload() EventStarted { return v.tgoStarted }
 
-// EventStopped holds the variant fields. Supply every field.
+// EventStopped is the Stopped payload.
 type EventStopped struct {
 	Reason string
 }
@@ -81,9 +79,8 @@ func (value EventStopped) Event() Event {
 }
 
 // StoppedPayload requires Stopped. No tag check.
-func (v Event) StoppedPayload() EventStopped {
-	return v.tgoStopped
-}
+func (v Event) StoppedPayload() EventStopped { return v.tgoStopped }
+
 func (v Event) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case EventTagStarted:
@@ -100,6 +97,7 @@ func (v Event) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Event JSON tag")
 	}
 }
+
 func (v *Event) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -154,9 +152,8 @@ func (v Signal) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Signal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// SignalOn holds the variant fields. Supply every field.
-type SignalOn struct {
-}
+// SignalOn is the On payload.
+type SignalOn struct{}
 
 // Signal constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -165,9 +162,8 @@ func (value SignalOn) Signal() Signal {
 }
 
 // OnPayload requires On. No tag check.
-func (v Signal) OnPayload() SignalOn {
-	return SignalOn{}
-}
+func (Signal) OnPayload() SignalOn { return SignalOn{} }
+
 func (v Signal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case SignalTagOn:
@@ -179,6 +175,7 @@ func (v Signal) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Signal JSON tag")
 	}
 }
+
 func (v *Signal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

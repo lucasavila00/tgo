@@ -81,9 +81,8 @@ func (v ChannelDirection) UnknownTag() string {
 	return __tgo_fmt.Sprintf("ChannelDirection: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// ChannelDirectionSendReceive holds the variant fields. Supply every field.
-type ChannelDirectionSendReceive struct {
-}
+// ChannelDirectionSendReceive is the SendReceive payload.
+type ChannelDirectionSendReceive struct{}
 
 // ChannelDirection constructs ChannelDirection. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -92,13 +91,12 @@ func (value ChannelDirectionSendReceive) ChannelDirection() ChannelDirection {
 }
 
 // SendReceivePayload requires SendReceive. No tag check.
-func (v ChannelDirection) SendReceivePayload() ChannelDirectionSendReceive {
+func (ChannelDirection) SendReceivePayload() ChannelDirectionSendReceive {
 	return ChannelDirectionSendReceive{}
 }
 
-// ChannelDirectionSendOnly holds the variant fields. Supply every field.
-type ChannelDirectionSendOnly struct {
-}
+// ChannelDirectionSendOnly is the SendOnly payload.
+type ChannelDirectionSendOnly struct{}
 
 // ChannelDirection constructs ChannelDirection. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -107,13 +105,10 @@ func (value ChannelDirectionSendOnly) ChannelDirection() ChannelDirection {
 }
 
 // SendOnlyPayload requires SendOnly. No tag check.
-func (v ChannelDirection) SendOnlyPayload() ChannelDirectionSendOnly {
-	return ChannelDirectionSendOnly{}
-}
+func (ChannelDirection) SendOnlyPayload() ChannelDirectionSendOnly { return ChannelDirectionSendOnly{} }
 
-// ChannelDirectionReceiveOnly holds the variant fields. Supply every field.
-type ChannelDirectionReceiveOnly struct {
-}
+// ChannelDirectionReceiveOnly is the ReceiveOnly payload.
+type ChannelDirectionReceiveOnly struct{}
 
 // ChannelDirection constructs ChannelDirection. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -122,9 +117,10 @@ func (value ChannelDirectionReceiveOnly) ChannelDirection() ChannelDirection {
 }
 
 // ReceiveOnlyPayload requires ReceiveOnly. No tag check.
-func (v ChannelDirection) ReceiveOnlyPayload() ChannelDirectionReceiveOnly {
+func (ChannelDirection) ReceiveOnlyPayload() ChannelDirectionReceiveOnly {
 	return ChannelDirectionReceiveOnly{}
 }
+
 func (v ChannelDirection) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case ChannelDirectionTagSendReceive:
@@ -146,6 +142,7 @@ func (v ChannelDirection) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid ChannelDirection JSON tag")
 	}
 }
+
 func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -242,7 +239,7 @@ func (v Expression) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Expression: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// ExpressionBad holds the variant fields. Supply every field.
+// ExpressionBad is the Bad payload.
 type ExpressionBad struct {
 	Value *BadExpression
 }
@@ -254,11 +251,9 @@ func (value ExpressionBad) Expression() Expression {
 }
 
 // BadPayload requires Bad. No tag check.
-func (v Expression) BadPayload() ExpressionBad {
-	return v.tgoPayload.(ExpressionBad)
-}
+func (v Expression) BadPayload() ExpressionBad { return v.tgoPayload.(ExpressionBad) }
 
-// ExpressionIdentifier holds the variant fields. Supply every field.
+// ExpressionIdentifier is the Identifier payload.
 type ExpressionIdentifier struct {
 	Value *Identifier
 }
@@ -274,7 +269,7 @@ func (v Expression) IdentifierPayload() ExpressionIdentifier {
 	return v.tgoPayload.(ExpressionIdentifier)
 }
 
-// ExpressionEllipsis holds the variant fields. Supply every field.
+// ExpressionEllipsis is the Ellipsis payload.
 type ExpressionEllipsis struct {
 	Value *EllipsisExpression
 }
@@ -286,11 +281,9 @@ func (value ExpressionEllipsis) Expression() Expression {
 }
 
 // EllipsisPayload requires Ellipsis. No tag check.
-func (v Expression) EllipsisPayload() ExpressionEllipsis {
-	return v.tgoPayload.(ExpressionEllipsis)
-}
+func (v Expression) EllipsisPayload() ExpressionEllipsis { return v.tgoPayload.(ExpressionEllipsis) }
 
-// ExpressionBasicLiteral holds the variant fields. Supply every field.
+// ExpressionBasicLiteral is the BasicLiteral payload.
 type ExpressionBasicLiteral struct {
 	Value *BasicLiteral
 }
@@ -306,7 +299,7 @@ func (v Expression) BasicLiteralPayload() ExpressionBasicLiteral {
 	return v.tgoPayload.(ExpressionBasicLiteral)
 }
 
-// ExpressionFunctionLiteral holds the variant fields. Supply every field.
+// ExpressionFunctionLiteral is the FunctionLiteral payload.
 type ExpressionFunctionLiteral struct {
 	Value *FunctionLiteral
 }
@@ -322,7 +315,7 @@ func (v Expression) FunctionLiteralPayload() ExpressionFunctionLiteral {
 	return v.tgoPayload.(ExpressionFunctionLiteral)
 }
 
-// ExpressionCompositeLiteral holds the variant fields. Supply every field.
+// ExpressionCompositeLiteral is the CompositeLiteral payload.
 type ExpressionCompositeLiteral struct {
 	Value *CompositeLiteral
 }
@@ -338,7 +331,7 @@ func (v Expression) CompositeLiteralPayload() ExpressionCompositeLiteral {
 	return v.tgoPayload.(ExpressionCompositeLiteral)
 }
 
-// ExpressionParenthesized holds the variant fields. Supply every field.
+// ExpressionParenthesized is the Parenthesized payload.
 type ExpressionParenthesized struct {
 	Value *ParenthesizedExpression
 }
@@ -354,7 +347,7 @@ func (v Expression) ParenthesizedPayload() ExpressionParenthesized {
 	return v.tgoPayload.(ExpressionParenthesized)
 }
 
-// ExpressionSelector holds the variant fields. Supply every field.
+// ExpressionSelector is the Selector payload.
 type ExpressionSelector struct {
 	Value *SelectorExpression
 }
@@ -366,11 +359,9 @@ func (value ExpressionSelector) Expression() Expression {
 }
 
 // SelectorPayload requires Selector. No tag check.
-func (v Expression) SelectorPayload() ExpressionSelector {
-	return v.tgoPayload.(ExpressionSelector)
-}
+func (v Expression) SelectorPayload() ExpressionSelector { return v.tgoPayload.(ExpressionSelector) }
 
-// ExpressionIndex holds the variant fields. Supply every field.
+// ExpressionIndex is the Index payload.
 type ExpressionIndex struct {
 	Value *IndexExpression
 }
@@ -382,11 +373,9 @@ func (value ExpressionIndex) Expression() Expression {
 }
 
 // IndexPayload requires Index. No tag check.
-func (v Expression) IndexPayload() ExpressionIndex {
-	return v.tgoPayload.(ExpressionIndex)
-}
+func (v Expression) IndexPayload() ExpressionIndex { return v.tgoPayload.(ExpressionIndex) }
 
-// ExpressionIndexList holds the variant fields. Supply every field.
+// ExpressionIndexList is the IndexList payload.
 type ExpressionIndexList struct {
 	Value *IndexListExpression
 }
@@ -398,11 +387,9 @@ func (value ExpressionIndexList) Expression() Expression {
 }
 
 // IndexListPayload requires IndexList. No tag check.
-func (v Expression) IndexListPayload() ExpressionIndexList {
-	return v.tgoPayload.(ExpressionIndexList)
-}
+func (v Expression) IndexListPayload() ExpressionIndexList { return v.tgoPayload.(ExpressionIndexList) }
 
-// ExpressionSlice holds the variant fields. Supply every field.
+// ExpressionSlice is the Slice payload.
 type ExpressionSlice struct {
 	Value *SliceExpression
 }
@@ -414,11 +401,9 @@ func (value ExpressionSlice) Expression() Expression {
 }
 
 // SlicePayload requires Slice. No tag check.
-func (v Expression) SlicePayload() ExpressionSlice {
-	return v.tgoPayload.(ExpressionSlice)
-}
+func (v Expression) SlicePayload() ExpressionSlice { return v.tgoPayload.(ExpressionSlice) }
 
-// ExpressionTypeAssertion holds the variant fields. Supply every field.
+// ExpressionTypeAssertion is the TypeAssertion payload.
 type ExpressionTypeAssertion struct {
 	Value *TypeAssertionExpression
 }
@@ -434,7 +419,7 @@ func (v Expression) TypeAssertionPayload() ExpressionTypeAssertion {
 	return v.tgoPayload.(ExpressionTypeAssertion)
 }
 
-// ExpressionCall holds the variant fields. Supply every field.
+// ExpressionCall is the Call payload.
 type ExpressionCall struct {
 	Value *CallExpression
 }
@@ -446,11 +431,9 @@ func (value ExpressionCall) Expression() Expression {
 }
 
 // CallPayload requires Call. No tag check.
-func (v Expression) CallPayload() ExpressionCall {
-	return v.tgoPayload.(ExpressionCall)
-}
+func (v Expression) CallPayload() ExpressionCall { return v.tgoPayload.(ExpressionCall) }
 
-// ExpressionStar holds the variant fields. Supply every field.
+// ExpressionStar is the Star payload.
 type ExpressionStar struct {
 	Value *StarExpression
 }
@@ -462,11 +445,9 @@ func (value ExpressionStar) Expression() Expression {
 }
 
 // StarPayload requires Star. No tag check.
-func (v Expression) StarPayload() ExpressionStar {
-	return v.tgoPayload.(ExpressionStar)
-}
+func (v Expression) StarPayload() ExpressionStar { return v.tgoPayload.(ExpressionStar) }
 
-// ExpressionNonNilPointer holds the variant fields. Supply every field.
+// ExpressionNonNilPointer is the NonNilPointer payload.
 type ExpressionNonNilPointer struct {
 	Value *NonNilPointerType
 }
@@ -482,7 +463,7 @@ func (v Expression) NonNilPointerPayload() ExpressionNonNilPointer {
 	return v.tgoPayload.(ExpressionNonNilPointer)
 }
 
-// ExpressionUnary holds the variant fields. Supply every field.
+// ExpressionUnary is the Unary payload.
 type ExpressionUnary struct {
 	Value *UnaryExpression
 }
@@ -494,11 +475,9 @@ func (value ExpressionUnary) Expression() Expression {
 }
 
 // UnaryPayload requires Unary. No tag check.
-func (v Expression) UnaryPayload() ExpressionUnary {
-	return v.tgoPayload.(ExpressionUnary)
-}
+func (v Expression) UnaryPayload() ExpressionUnary { return v.tgoPayload.(ExpressionUnary) }
 
-// ExpressionBinary holds the variant fields. Supply every field.
+// ExpressionBinary is the Binary payload.
 type ExpressionBinary struct {
 	Value *BinaryExpression
 }
@@ -510,11 +489,9 @@ func (value ExpressionBinary) Expression() Expression {
 }
 
 // BinaryPayload requires Binary. No tag check.
-func (v Expression) BinaryPayload() ExpressionBinary {
-	return v.tgoPayload.(ExpressionBinary)
-}
+func (v Expression) BinaryPayload() ExpressionBinary { return v.tgoPayload.(ExpressionBinary) }
 
-// ExpressionKeyValue holds the variant fields. Supply every field.
+// ExpressionKeyValue is the KeyValue payload.
 type ExpressionKeyValue struct {
 	Value *KeyValueExpression
 }
@@ -526,11 +503,9 @@ func (value ExpressionKeyValue) Expression() Expression {
 }
 
 // KeyValuePayload requires KeyValue. No tag check.
-func (v Expression) KeyValuePayload() ExpressionKeyValue {
-	return v.tgoPayload.(ExpressionKeyValue)
-}
+func (v Expression) KeyValuePayload() ExpressionKeyValue { return v.tgoPayload.(ExpressionKeyValue) }
 
-// ExpressionArrayType holds the variant fields. Supply every field.
+// ExpressionArrayType is the ArrayType payload.
 type ExpressionArrayType struct {
 	Value *ArrayType
 }
@@ -542,11 +517,9 @@ func (value ExpressionArrayType) Expression() Expression {
 }
 
 // ArrayTypePayload requires ArrayType. No tag check.
-func (v Expression) ArrayTypePayload() ExpressionArrayType {
-	return v.tgoPayload.(ExpressionArrayType)
-}
+func (v Expression) ArrayTypePayload() ExpressionArrayType { return v.tgoPayload.(ExpressionArrayType) }
 
-// ExpressionStructType holds the variant fields. Supply every field.
+// ExpressionStructType is the StructType payload.
 type ExpressionStructType struct {
 	Value *StructType
 }
@@ -562,7 +535,7 @@ func (v Expression) StructTypePayload() ExpressionStructType {
 	return v.tgoPayload.(ExpressionStructType)
 }
 
-// ExpressionFunctionType holds the variant fields. Supply every field.
+// ExpressionFunctionType is the FunctionType payload.
 type ExpressionFunctionType struct {
 	Value *FunctionType
 }
@@ -574,11 +547,9 @@ func (value ExpressionFunctionType) Expression() Expression {
 }
 
 // FunctionTypePayload requires FunctionType. No tag check.
-func (v Expression) FunctionTypePayload() ExpressionFunctionType {
-	return v.tgoFunctionType
-}
+func (v Expression) FunctionTypePayload() ExpressionFunctionType { return v.tgoFunctionType }
 
-// ExpressionInterfaceType holds the variant fields. Supply every field.
+// ExpressionInterfaceType is the InterfaceType payload.
 type ExpressionInterfaceType struct {
 	Value *InterfaceType
 }
@@ -590,11 +561,9 @@ func (value ExpressionInterfaceType) Expression() Expression {
 }
 
 // InterfaceTypePayload requires InterfaceType. No tag check.
-func (v Expression) InterfaceTypePayload() ExpressionInterfaceType {
-	return v.tgoInterfaceType
-}
+func (v Expression) InterfaceTypePayload() ExpressionInterfaceType { return v.tgoInterfaceType }
 
-// ExpressionMapType holds the variant fields. Supply every field.
+// ExpressionMapType is the MapType payload.
 type ExpressionMapType struct {
 	Value *MapType
 }
@@ -606,11 +575,9 @@ func (value ExpressionMapType) Expression() Expression {
 }
 
 // MapTypePayload requires MapType. No tag check.
-func (v Expression) MapTypePayload() ExpressionMapType {
-	return v.tgoMapType
-}
+func (v Expression) MapTypePayload() ExpressionMapType { return v.tgoMapType }
 
-// ExpressionChannelType holds the variant fields. Supply every field.
+// ExpressionChannelType is the ChannelType payload.
 type ExpressionChannelType struct {
 	Value *ChannelType
 }
@@ -622,11 +589,9 @@ func (value ExpressionChannelType) Expression() Expression {
 }
 
 // ChannelTypePayload requires ChannelType. No tag check.
-func (v Expression) ChannelTypePayload() ExpressionChannelType {
-	return v.tgoChannelType
-}
+func (v Expression) ChannelTypePayload() ExpressionChannelType { return v.tgoChannelType }
 
-// ExpressionDefault holds the variant fields. Supply every field.
+// ExpressionDefault is the Default payload.
 type ExpressionDefault struct {
 	Value *DefaultExpression
 }
@@ -638,11 +603,9 @@ func (value ExpressionDefault) Expression() Expression {
 }
 
 // DefaultPayload requires Default. No tag check.
-func (v Expression) DefaultPayload() ExpressionDefault {
-	return v.tgoDefault
-}
+func (v Expression) DefaultPayload() ExpressionDefault { return v.tgoDefault }
 
-// ExpressionPropagation holds the variant fields. Supply every field.
+// ExpressionPropagation is the Propagation payload.
 type ExpressionPropagation struct {
 	Value *PropagationExpression
 }
@@ -654,11 +617,9 @@ func (value ExpressionPropagation) Expression() Expression {
 }
 
 // PropagationPayload requires Propagation. No tag check.
-func (v Expression) PropagationPayload() ExpressionPropagation {
-	return v.tgoPropagation
-}
+func (v Expression) PropagationPayload() ExpressionPropagation { return v.tgoPropagation }
 
-// ExpressionComprehension holds the variant fields. Supply every field.
+// ExpressionComprehension is the Comprehension payload.
 type ExpressionComprehension struct {
 	Value *ComprehensionExpression
 }
@@ -670,9 +631,8 @@ func (value ExpressionComprehension) Expression() Expression {
 }
 
 // ComprehensionPayload requires Comprehension. No tag check.
-func (v Expression) ComprehensionPayload() ExpressionComprehension {
-	return v.tgoComprehension
-}
+func (v Expression) ComprehensionPayload() ExpressionComprehension { return v.tgoComprehension }
+
 func (v Expression) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case ExpressionTagBad:
@@ -814,6 +774,7 @@ func (v Expression) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Expression JSON tag")
 	}
 }
+
 func (v *Expression) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -1306,7 +1267,7 @@ func (v Statement) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Statement: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// StatementBad holds the variant fields. Supply every field.
+// StatementBad is the Bad payload.
 type StatementBad struct {
 	Value *BadStatement
 }
@@ -1318,11 +1279,9 @@ func (value StatementBad) Statement() Statement {
 }
 
 // BadPayload requires Bad. No tag check.
-func (v Statement) BadPayload() StatementBad {
-	return v.tgoPayload.(StatementBad)
-}
+func (v Statement) BadPayload() StatementBad { return v.tgoPayload.(StatementBad) }
 
-// StatementDeclaration holds the variant fields. Supply every field.
+// StatementDeclaration is the Declaration payload.
 type StatementDeclaration struct {
 	Value *DeclarationStatement
 }
@@ -1338,7 +1297,7 @@ func (v Statement) DeclarationPayload() StatementDeclaration {
 	return v.tgoPayload.(StatementDeclaration)
 }
 
-// StatementEmpty holds the variant fields. Supply every field.
+// StatementEmpty is the Empty payload.
 type StatementEmpty struct {
 	Value *EmptyStatement
 }
@@ -1350,11 +1309,9 @@ func (value StatementEmpty) Statement() Statement {
 }
 
 // EmptyPayload requires Empty. No tag check.
-func (v Statement) EmptyPayload() StatementEmpty {
-	return v.tgoPayload.(StatementEmpty)
-}
+func (v Statement) EmptyPayload() StatementEmpty { return v.tgoPayload.(StatementEmpty) }
 
-// StatementLabeled holds the variant fields. Supply every field.
+// StatementLabeled is the Labeled payload.
 type StatementLabeled struct {
 	Value *LabeledStatement
 }
@@ -1366,11 +1323,9 @@ func (value StatementLabeled) Statement() Statement {
 }
 
 // LabeledPayload requires Labeled. No tag check.
-func (v Statement) LabeledPayload() StatementLabeled {
-	return v.tgoPayload.(StatementLabeled)
-}
+func (v Statement) LabeledPayload() StatementLabeled { return v.tgoPayload.(StatementLabeled) }
 
-// StatementExpression holds the variant fields. Supply every field.
+// StatementExpression is the Expression payload.
 type StatementExpression struct {
 	Value *ExpressionStatement
 }
@@ -1382,11 +1337,9 @@ func (value StatementExpression) Statement() Statement {
 }
 
 // ExpressionPayload requires Expression. No tag check.
-func (v Statement) ExpressionPayload() StatementExpression {
-	return v.tgoPayload.(StatementExpression)
-}
+func (v Statement) ExpressionPayload() StatementExpression { return v.tgoPayload.(StatementExpression) }
 
-// StatementSend holds the variant fields. Supply every field.
+// StatementSend is the Send payload.
 type StatementSend struct {
 	Value *SendStatement
 }
@@ -1398,11 +1351,9 @@ func (value StatementSend) Statement() Statement {
 }
 
 // SendPayload requires Send. No tag check.
-func (v Statement) SendPayload() StatementSend {
-	return v.tgoPayload.(StatementSend)
-}
+func (v Statement) SendPayload() StatementSend { return v.tgoPayload.(StatementSend) }
 
-// StatementIncrement holds the variant fields. Supply every field.
+// StatementIncrement is the Increment payload.
 type StatementIncrement struct {
 	Value *IncrementStatement
 }
@@ -1414,11 +1365,9 @@ func (value StatementIncrement) Statement() Statement {
 }
 
 // IncrementPayload requires Increment. No tag check.
-func (v Statement) IncrementPayload() StatementIncrement {
-	return v.tgoPayload.(StatementIncrement)
-}
+func (v Statement) IncrementPayload() StatementIncrement { return v.tgoPayload.(StatementIncrement) }
 
-// StatementAssignment holds the variant fields. Supply every field.
+// StatementAssignment is the Assignment payload.
 type StatementAssignment struct {
 	Value *AssignmentStatement
 }
@@ -1430,11 +1379,9 @@ func (value StatementAssignment) Statement() Statement {
 }
 
 // AssignmentPayload requires Assignment. No tag check.
-func (v Statement) AssignmentPayload() StatementAssignment {
-	return v.tgoPayload.(StatementAssignment)
-}
+func (v Statement) AssignmentPayload() StatementAssignment { return v.tgoPayload.(StatementAssignment) }
 
-// StatementGo holds the variant fields. Supply every field.
+// StatementGo is the Go payload.
 type StatementGo struct {
 	Value *GoStatement
 }
@@ -1446,11 +1393,9 @@ func (value StatementGo) Statement() Statement {
 }
 
 // GoPayload requires Go. No tag check.
-func (v Statement) GoPayload() StatementGo {
-	return v.tgoPayload.(StatementGo)
-}
+func (v Statement) GoPayload() StatementGo { return v.tgoPayload.(StatementGo) }
 
-// StatementDefer holds the variant fields. Supply every field.
+// StatementDefer is the Defer payload.
 type StatementDefer struct {
 	Value *DeferStatement
 }
@@ -1462,11 +1407,9 @@ func (value StatementDefer) Statement() Statement {
 }
 
 // DeferPayload requires Defer. No tag check.
-func (v Statement) DeferPayload() StatementDefer {
-	return v.tgoPayload.(StatementDefer)
-}
+func (v Statement) DeferPayload() StatementDefer { return v.tgoPayload.(StatementDefer) }
 
-// StatementReturn holds the variant fields. Supply every field.
+// StatementReturn is the Return payload.
 type StatementReturn struct {
 	Value *ReturnStatement
 }
@@ -1478,11 +1421,9 @@ func (value StatementReturn) Statement() Statement {
 }
 
 // ReturnPayload requires Return. No tag check.
-func (v Statement) ReturnPayload() StatementReturn {
-	return v.tgoPayload.(StatementReturn)
-}
+func (v Statement) ReturnPayload() StatementReturn { return v.tgoPayload.(StatementReturn) }
 
-// StatementBranch holds the variant fields. Supply every field.
+// StatementBranch is the Branch payload.
 type StatementBranch struct {
 	Value *BranchStatement
 }
@@ -1494,11 +1435,9 @@ func (value StatementBranch) Statement() Statement {
 }
 
 // BranchPayload requires Branch. No tag check.
-func (v Statement) BranchPayload() StatementBranch {
-	return v.tgoPayload.(StatementBranch)
-}
+func (v Statement) BranchPayload() StatementBranch { return v.tgoPayload.(StatementBranch) }
 
-// StatementBlock holds the variant fields. Supply every field.
+// StatementBlock is the Block payload.
 type StatementBlock struct {
 	Value *BlockStatement
 }
@@ -1510,11 +1449,9 @@ func (value StatementBlock) Statement() Statement {
 }
 
 // BlockPayload requires Block. No tag check.
-func (v Statement) BlockPayload() StatementBlock {
-	return v.tgoPayload.(StatementBlock)
-}
+func (v Statement) BlockPayload() StatementBlock { return v.tgoPayload.(StatementBlock) }
 
-// StatementIf holds the variant fields. Supply every field.
+// StatementIf is the If payload.
 type StatementIf struct {
 	Value *IfStatement
 }
@@ -1526,11 +1463,9 @@ func (value StatementIf) Statement() Statement {
 }
 
 // IfPayload requires If. No tag check.
-func (v Statement) IfPayload() StatementIf {
-	return v.tgoPayload.(StatementIf)
-}
+func (v Statement) IfPayload() StatementIf { return v.tgoPayload.(StatementIf) }
 
-// StatementCase holds the variant fields. Supply every field.
+// StatementCase is the Case payload.
 type StatementCase struct {
 	Value *CaseClause
 }
@@ -1542,11 +1477,9 @@ func (value StatementCase) Statement() Statement {
 }
 
 // CasePayload requires Case. No tag check.
-func (v Statement) CasePayload() StatementCase {
-	return v.tgoCase
-}
+func (v Statement) CasePayload() StatementCase { return v.tgoCase }
 
-// StatementSwitch holds the variant fields. Supply every field.
+// StatementSwitch is the Switch payload.
 type StatementSwitch struct {
 	Value *SwitchStatement
 }
@@ -1558,11 +1491,9 @@ func (value StatementSwitch) Statement() Statement {
 }
 
 // SwitchPayload requires Switch. No tag check.
-func (v Statement) SwitchPayload() StatementSwitch {
-	return v.tgoSwitch
-}
+func (v Statement) SwitchPayload() StatementSwitch { return v.tgoSwitch }
 
-// StatementTypeSwitch holds the variant fields. Supply every field.
+// StatementTypeSwitch is the TypeSwitch payload.
 type StatementTypeSwitch struct {
 	Value *TypeSwitchStatement
 }
@@ -1574,11 +1505,9 @@ func (value StatementTypeSwitch) Statement() Statement {
 }
 
 // TypeSwitchPayload requires TypeSwitch. No tag check.
-func (v Statement) TypeSwitchPayload() StatementTypeSwitch {
-	return v.tgoTypeSwitch
-}
+func (v Statement) TypeSwitchPayload() StatementTypeSwitch { return v.tgoTypeSwitch }
 
-// StatementCommunication holds the variant fields. Supply every field.
+// StatementCommunication is the Communication payload.
 type StatementCommunication struct {
 	Value *CommunicationClause
 }
@@ -1590,11 +1519,9 @@ func (value StatementCommunication) Statement() Statement {
 }
 
 // CommunicationPayload requires Communication. No tag check.
-func (v Statement) CommunicationPayload() StatementCommunication {
-	return v.tgoCommunication
-}
+func (v Statement) CommunicationPayload() StatementCommunication { return v.tgoCommunication }
 
-// StatementSelect holds the variant fields. Supply every field.
+// StatementSelect is the Select payload.
 type StatementSelect struct {
 	Value *SelectStatement
 }
@@ -1606,11 +1533,9 @@ func (value StatementSelect) Statement() Statement {
 }
 
 // SelectPayload requires Select. No tag check.
-func (v Statement) SelectPayload() StatementSelect {
-	return v.tgoSelect
-}
+func (v Statement) SelectPayload() StatementSelect { return v.tgoSelect }
 
-// StatementFor holds the variant fields. Supply every field.
+// StatementFor is the For payload.
 type StatementFor struct {
 	Value *ForStatement
 }
@@ -1622,11 +1547,9 @@ func (value StatementFor) Statement() Statement {
 }
 
 // ForPayload requires For. No tag check.
-func (v Statement) ForPayload() StatementFor {
-	return v.tgoFor
-}
+func (v Statement) ForPayload() StatementFor { return v.tgoFor }
 
-// StatementRange holds the variant fields. Supply every field.
+// StatementRange is the Range payload.
 type StatementRange struct {
 	Value *RangeStatement
 }
@@ -1638,9 +1561,8 @@ func (value StatementRange) Statement() Statement {
 }
 
 // RangePayload requires Range. No tag check.
-func (v Statement) RangePayload() StatementRange {
-	return v.tgoRange
-}
+func (v Statement) RangePayload() StatementRange { return v.tgoRange }
+
 func (v Statement) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case StatementTagBad:
@@ -1752,6 +1674,7 @@ func (v Statement) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Statement JSON tag")
 	}
 }
+
 func (v *Statement) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -2138,7 +2061,7 @@ func (v Specification) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Specification: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// SpecificationImport holds the variant fields. Supply every field.
+// SpecificationImport is the Import payload.
 type SpecificationImport struct {
 	Value *ImportSpecification
 }
@@ -2150,11 +2073,9 @@ func (value SpecificationImport) Specification() Specification {
 }
 
 // ImportPayload requires Import. No tag check.
-func (v Specification) ImportPayload() SpecificationImport {
-	return v.tgoImport
-}
+func (v Specification) ImportPayload() SpecificationImport { return v.tgoImport }
 
-// SpecificationValue holds the variant fields. Supply every field.
+// SpecificationValue is the Value payload.
 type SpecificationValue struct {
 	Value *ValueSpecification
 }
@@ -2166,11 +2087,9 @@ func (value SpecificationValue) Specification() Specification {
 }
 
 // ValuePayload requires Value. No tag check.
-func (v Specification) ValuePayload() SpecificationValue {
-	return v.tgoValue
-}
+func (v Specification) ValuePayload() SpecificationValue { return v.tgoValue }
 
-// SpecificationType holds the variant fields. Supply every field.
+// SpecificationType is the Type payload.
 type SpecificationType struct {
 	Value *TypeSpecification
 }
@@ -2182,9 +2101,8 @@ func (value SpecificationType) Specification() Specification {
 }
 
 // TypePayload requires Type. No tag check.
-func (v Specification) TypePayload() SpecificationType {
-	return v.tgoType
-}
+func (v Specification) TypePayload() SpecificationType { return v.tgoType }
+
 func (v Specification) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case SpecificationTagImport:
@@ -2206,6 +2124,7 @@ func (v Specification) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Specification JSON tag")
 	}
 }
+
 func (v *Specification) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -2313,7 +2232,7 @@ func (v Declaration) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Declaration: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// DeclarationBad holds the variant fields. Supply every field.
+// DeclarationBad is the Bad payload.
 type DeclarationBad struct {
 	Value *BadDeclaration
 }
@@ -2325,11 +2244,9 @@ func (value DeclarationBad) Declaration() Declaration {
 }
 
 // BadPayload requires Bad. No tag check.
-func (v Declaration) BadPayload() DeclarationBad {
-	return v.tgoBad
-}
+func (v Declaration) BadPayload() DeclarationBad { return v.tgoBad }
 
-// DeclarationGeneral holds the variant fields. Supply every field.
+// DeclarationGeneral is the General payload.
 type DeclarationGeneral struct {
 	Value *GeneralDeclaration
 }
@@ -2341,11 +2258,9 @@ func (value DeclarationGeneral) Declaration() Declaration {
 }
 
 // GeneralPayload requires General. No tag check.
-func (v Declaration) GeneralPayload() DeclarationGeneral {
-	return v.tgoGeneral
-}
+func (v Declaration) GeneralPayload() DeclarationGeneral { return v.tgoGeneral }
 
-// DeclarationFunction holds the variant fields. Supply every field.
+// DeclarationFunction is the Function payload.
 type DeclarationFunction struct {
 	Value *FunctionDeclaration
 }
@@ -2357,11 +2272,9 @@ func (value DeclarationFunction) Declaration() Declaration {
 }
 
 // FunctionPayload requires Function. No tag check.
-func (v Declaration) FunctionPayload() DeclarationFunction {
-	return v.tgoFunction
-}
+func (v Declaration) FunctionPayload() DeclarationFunction { return v.tgoFunction }
 
-// DeclarationEnum holds the variant fields. Supply every field.
+// DeclarationEnum is the Enum payload.
 type DeclarationEnum struct {
 	Value *EnumDeclaration
 }
@@ -2373,11 +2286,9 @@ func (value DeclarationEnum) Declaration() Declaration {
 }
 
 // EnumPayload requires Enum. No tag check.
-func (v Declaration) EnumPayload() DeclarationEnum {
-	return v.tgoEnum
-}
+func (v Declaration) EnumPayload() DeclarationEnum { return v.tgoEnum }
 
-// DeclarationStruct holds the variant fields. Supply every field.
+// DeclarationStruct is the Struct payload.
 type DeclarationStruct struct {
 	Value *StructDeclaration
 }
@@ -2389,11 +2300,9 @@ func (value DeclarationStruct) Declaration() Declaration {
 }
 
 // StructPayload requires Struct. No tag check.
-func (v Declaration) StructPayload() DeclarationStruct {
-	return v.tgoStruct
-}
+func (v Declaration) StructPayload() DeclarationStruct { return v.tgoStruct }
 
-// DeclarationChecked holds the variant fields. Supply every field.
+// DeclarationChecked is the Checked payload.
 type DeclarationChecked struct {
 	Value *CheckedDeclaration
 }
@@ -2405,9 +2314,8 @@ func (value DeclarationChecked) Declaration() Declaration {
 }
 
 // CheckedPayload requires Checked. No tag check.
-func (v Declaration) CheckedPayload() DeclarationChecked {
-	return v.tgoChecked
-}
+func (v Declaration) CheckedPayload() DeclarationChecked { return v.tgoChecked }
+
 func (v Declaration) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case DeclarationTagBad:
@@ -2444,6 +2352,7 @@ func (v Declaration) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Declaration JSON tag")
 	}
 }
+
 func (v *Declaration) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -2660,7 +2569,7 @@ func (v Node) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Node: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// NodeFile holds the variant fields. Supply every field.
+// NodeFile is the File payload.
 type NodeFile struct {
 	Value *File
 }
@@ -2672,11 +2581,9 @@ func (value NodeFile) Node() Node {
 }
 
 // FilePayload requires File. No tag check.
-func (v Node) FilePayload() NodeFile {
-	return v.tgoPayload.(NodeFile)
-}
+func (v Node) FilePayload() NodeFile { return v.tgoPayload.(NodeFile) }
 
-// NodeDeclaration holds the variant fields. Supply every field.
+// NodeDeclaration is the Declaration payload.
 type NodeDeclaration struct {
 	Value *Declaration
 }
@@ -2688,11 +2595,9 @@ func (value NodeDeclaration) Node() Node {
 }
 
 // DeclarationPayload requires Declaration. No tag check.
-func (v Node) DeclarationPayload() NodeDeclaration {
-	return v.tgoPayload.(NodeDeclaration)
-}
+func (v Node) DeclarationPayload() NodeDeclaration { return v.tgoPayload.(NodeDeclaration) }
 
-// NodeSpecification holds the variant fields. Supply every field.
+// NodeSpecification is the Specification payload.
 type NodeSpecification struct {
 	Value *Specification
 }
@@ -2704,11 +2609,9 @@ func (value NodeSpecification) Node() Node {
 }
 
 // SpecificationPayload requires Specification. No tag check.
-func (v Node) SpecificationPayload() NodeSpecification {
-	return v.tgoPayload.(NodeSpecification)
-}
+func (v Node) SpecificationPayload() NodeSpecification { return v.tgoPayload.(NodeSpecification) }
 
-// NodeStatement holds the variant fields. Supply every field.
+// NodeStatement is the Statement payload.
 type NodeStatement struct {
 	Value *Statement
 }
@@ -2720,11 +2623,9 @@ func (value NodeStatement) Node() Node {
 }
 
 // StatementPayload requires Statement. No tag check.
-func (v Node) StatementPayload() NodeStatement {
-	return v.tgoPayload.(NodeStatement)
-}
+func (v Node) StatementPayload() NodeStatement { return v.tgoPayload.(NodeStatement) }
 
-// NodeExpression holds the variant fields. Supply every field.
+// NodeExpression is the Expression payload.
 type NodeExpression struct {
 	Value *Expression
 }
@@ -2736,11 +2637,9 @@ func (value NodeExpression) Node() Node {
 }
 
 // ExpressionPayload requires Expression. No tag check.
-func (v Node) ExpressionPayload() NodeExpression {
-	return v.tgoPayload.(NodeExpression)
-}
+func (v Node) ExpressionPayload() NodeExpression { return v.tgoPayload.(NodeExpression) }
 
-// NodeField holds the variant fields. Supply every field.
+// NodeField is the Field payload.
 type NodeField struct {
 	Value *Field
 }
@@ -2752,11 +2651,9 @@ func (value NodeField) Node() Node {
 }
 
 // FieldPayload requires Field. No tag check.
-func (v Node) FieldPayload() NodeField {
-	return v.tgoField
-}
+func (v Node) FieldPayload() NodeField { return v.tgoField }
 
-// NodeFieldList holds the variant fields. Supply every field.
+// NodeFieldList is the FieldList payload.
 type NodeFieldList struct {
 	Value *FieldList
 }
@@ -2768,11 +2665,9 @@ func (value NodeFieldList) Node() Node {
 }
 
 // FieldListPayload requires FieldList. No tag check.
-func (v Node) FieldListPayload() NodeFieldList {
-	return v.tgoFieldList
-}
+func (v Node) FieldListPayload() NodeFieldList { return v.tgoFieldList }
 
-// NodeTGoField holds the variant fields. Supply every field.
+// NodeTGoField is the TGoField payload.
 type NodeTGoField struct {
 	Value *TGoField
 }
@@ -2784,11 +2679,9 @@ func (value NodeTGoField) Node() Node {
 }
 
 // TGoFieldPayload requires TGoField. No tag check.
-func (v Node) TGoFieldPayload() NodeTGoField {
-	return v.tgoTGoField
-}
+func (v Node) TGoFieldPayload() NodeTGoField { return v.tgoTGoField }
 
-// NodeEnumVariant holds the variant fields. Supply every field.
+// NodeEnumVariant is the EnumVariant payload.
 type NodeEnumVariant struct {
 	Value *EnumVariant
 }
@@ -2800,11 +2693,9 @@ func (value NodeEnumVariant) Node() Node {
 }
 
 // EnumVariantPayload requires EnumVariant. No tag check.
-func (v Node) EnumVariantPayload() NodeEnumVariant {
-	return v.tgoEnumVariant
-}
+func (v Node) EnumVariantPayload() NodeEnumVariant { return v.tgoEnumVariant }
 
-// NodeIdentifier holds the variant fields. Supply every field.
+// NodeIdentifier is the Identifier payload.
 type NodeIdentifier struct {
 	Value *Identifier
 }
@@ -2816,11 +2707,9 @@ func (value NodeIdentifier) Node() Node {
 }
 
 // IdentifierPayload requires Identifier. No tag check.
-func (v Node) IdentifierPayload() NodeIdentifier {
-	return v.tgoIdentifier
-}
+func (v Node) IdentifierPayload() NodeIdentifier { return v.tgoIdentifier }
 
-// NodeComment holds the variant fields. Supply every field.
+// NodeComment is the Comment payload.
 type NodeComment struct {
 	Value *Comment
 }
@@ -2832,11 +2721,9 @@ func (value NodeComment) Node() Node {
 }
 
 // CommentPayload requires Comment. No tag check.
-func (v Node) CommentPayload() NodeComment {
-	return v.tgoComment
-}
+func (v Node) CommentPayload() NodeComment { return v.tgoComment }
 
-// NodeCommentGroup holds the variant fields. Supply every field.
+// NodeCommentGroup is the CommentGroup payload.
 type NodeCommentGroup struct {
 	Value *CommentGroup
 }
@@ -2848,9 +2735,8 @@ func (value NodeCommentGroup) Node() Node {
 }
 
 // CommentGroupPayload requires CommentGroup. No tag check.
-func (v Node) CommentGroupPayload() NodeCommentGroup {
-	return v.tgoCommentGroup
-}
+func (v Node) CommentGroupPayload() NodeCommentGroup { return v.tgoCommentGroup }
+
 func (v Node) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case NodeTagFile:
@@ -2917,6 +2803,7 @@ func (v Node) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Node JSON tag")
 	}
 }
+
 func (v *Node) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

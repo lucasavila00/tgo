@@ -1,4 +1,4 @@
-# go2
+# tgo
 
 Build the compiler with `make build`. See [agent instructions](docs/for-agents/README.md).
 

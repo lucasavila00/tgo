@@ -39,9 +39,8 @@ func (v effectOutcome) UnknownTag() string {
 	return __tgo_fmt.Sprintf("effectOutcome: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// effectOutcomeUnknown holds the variant fields. Supply every field.
-type effectOutcomeUnknown struct {
-}
+// effectOutcomeUnknown is the Unknown payload.
+type effectOutcomeUnknown struct{}
 
 // effectOutcome constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -50,13 +49,10 @@ func (value effectOutcomeUnknown) effectOutcome() effectOutcome {
 }
 
 // UnknownPayload requires Unknown. No tag check.
-func (v effectOutcome) UnknownPayload() effectOutcomeUnknown {
-	return effectOutcomeUnknown{}
-}
+func (effectOutcome) UnknownPayload() effectOutcomeUnknown { return effectOutcomeUnknown{} }
 
-// effectOutcomeNever holds the variant fields. Supply every field.
-type effectOutcomeNever struct {
-}
+// effectOutcomeNever is the Never payload.
+type effectOutcomeNever struct{}
 
 // effectOutcome constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -65,13 +61,10 @@ func (value effectOutcomeNever) effectOutcome() effectOutcome {
 }
 
 // NeverPayload requires Never. No tag check.
-func (v effectOutcome) NeverPayload() effectOutcomeNever {
-	return effectOutcomeNever{}
-}
+func (effectOutcome) NeverPayload() effectOutcomeNever { return effectOutcomeNever{} }
 
-// effectOutcomeAlways holds the variant fields. Supply every field.
-type effectOutcomeAlways struct {
-}
+// effectOutcomeAlways is the Always payload.
+type effectOutcomeAlways struct{}
 
 // effectOutcome constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -80,13 +73,10 @@ func (value effectOutcomeAlways) effectOutcome() effectOutcome {
 }
 
 // AlwaysPayload requires Always. No tag check.
-func (v effectOutcome) AlwaysPayload() effectOutcomeAlways {
-	return effectOutcomeAlways{}
-}
+func (effectOutcome) AlwaysPayload() effectOutcomeAlways { return effectOutcomeAlways{} }
 
-// effectOutcomeConditional holds the variant fields. Supply every field.
-type effectOutcomeConditional struct {
-}
+// effectOutcomeConditional is the Conditional payload.
+type effectOutcomeConditional struct{}
 
 // effectOutcome constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -95,9 +85,8 @@ func (value effectOutcomeConditional) effectOutcome() effectOutcome {
 }
 
 // ConditionalPayload requires Conditional. No tag check.
-func (v effectOutcome) ConditionalPayload() effectOutcomeConditional {
-	return effectOutcomeConditional{}
-}
+func (effectOutcome) ConditionalPayload() effectOutcomeConditional { return effectOutcomeConditional{} }
+
 func (v effectOutcome) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case effectOutcomeTagUnknown:
@@ -124,6 +113,7 @@ func (v effectOutcome) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid effectOutcome JSON tag")
 	}
 }
+
 func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

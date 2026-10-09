@@ -120,12 +120,11 @@ func ComprehensionOrder(events *[]string) []string {
 }
 
 func ComprehensionSourceError(events *[]string, fail bool) ([]string, error) {
-	__tgo_value, __tgo_error := comprehensionLoad(events, "source", fail)
-	if __tgo_error != nil {
-		var __tgo_zero []string
-		return __tgo_zero, __tgo_fmt.Errorf("comprehensionLoad: %w", __tgo_error)
+	result, err := comprehensionLoad(events, "source", fail)
+	if err != nil {
+		return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", err)
 	}
-	__tgo_source_2 := []string{__tgo_value}
+	__tgo_source_2 := []string{result}
 	__tgo_result_8 := make([]string, len(__tgo_source_2))
 	copy(__tgo_result_8, __tgo_source_2)
 	return __tgo_result_8,
@@ -136,16 +135,12 @@ func ComprehensionFilterError(events *[]string, fail bool) ([]string, error) {
 
 	__tgo_result_9 := make([]string, 0)
 	for _, value := range []string{"value"} {
-		{
-			__tgo_value_1, __tgo_error_1 := comprehensionLoad(events, "filter", fail)
-			if __tgo_error_1 != nil {
-				var __tgo_zero_1 []string
-				return __tgo_zero_1, __tgo_fmt.Errorf("comprehensionLoad: %w", __tgo_error_1)
-			}
-
-			if __tgo_value_1 != "" {
-				__tgo_result_9 = append(__tgo_result_9, value)
-			}
+		result, err := comprehensionLoad(events, "filter", fail)
+		if err != nil {
+			return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", err)
+		}
+		if result != "" {
+			__tgo_result_9 = append(__tgo_result_9, value)
 		}
 	}
 	return __tgo_result_9,
@@ -156,13 +151,11 @@ func ComprehensionResultError(events *[]string, fail bool) ([]string, error) {
 	__tgo_source_3 := []string{"value"}
 	__tgo_result_10 := make([]string, len(__tgo_source_3))
 	for __tgo_index_1, value := range __tgo_source_3 {
-		__tgo_value_2, __tgo_error_2 := comprehensionLoad(events, "result", fail)
-		if __tgo_error_2 != nil {
-			var __tgo_zero_2 []string
-			return __tgo_zero_2, __tgo_fmt.Errorf("comprehensionLoad: %w", __tgo_error_2)
+		result, err := comprehensionLoad(events, "result", fail)
+		if err != nil {
+			return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", err)
 		}
-
-		__tgo_result_10[__tgo_index_1] = value + __tgo_value_2
+		__tgo_result_10[__tgo_index_1] = value + result
 	}
 	return __tgo_result_10,
 		nil
@@ -176,18 +169,15 @@ func ComprehensionMapError(
 
 	__tgo_result_11 := make(map[string]string)
 	for _, value := range []string{"value"} {
-		__tgo_value_3, __tgo_error_3 := comprehensionLoad(events, "key", failKey)
-		if __tgo_error_3 != nil {
-			var __tgo_zero_3 map[string]string
-			return __tgo_zero_3, __tgo_fmt.Errorf("comprehensionLoad: %w", __tgo_error_3)
+		result, err := comprehensionLoad(events, "key", failKey)
+		if err != nil {
+			return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", err)
 		}
-		__tgo_value_4, __tgo_error_4 := comprehensionLoad(events, "value", failValue)
-		if __tgo_error_4 != nil {
-			var __tgo_zero_4 map[string]string
-			return __tgo_zero_4, __tgo_fmt.Errorf("comprehensionLoad: %w", __tgo_error_4)
+		tgoResult, tgoErr := comprehensionLoad(events, "value", failValue)
+		if tgoErr != nil {
+			return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", tgoErr)
 		}
-
-		__tgo_result_11[__tgo_value_3] = value + __tgo_value_4
+		__tgo_result_11[result] = value + tgoResult
 	}
 	return __tgo_result_11,
 		nil

@@ -27,7 +27,7 @@ func (v Event) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Event: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// EventStarted holds the variant fields. Supply every field.
+// EventStarted is the Started payload.
 type EventStarted struct {
 	Code int
 }
@@ -39,9 +39,8 @@ func (value EventStarted) Event() Event {
 }
 
 // StartedPayload requires Started. No tag check.
-func (v Event) StartedPayload() EventStarted {
-	return v.tgoStarted
-}
+func (v Event) StartedPayload() EventStarted { return v.tgoStarted }
+
 func (v Event) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case EventTagStarted:
@@ -53,6 +52,7 @@ func (v Event) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Event JSON tag")
 	}
 }
+
 func (v *Event) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

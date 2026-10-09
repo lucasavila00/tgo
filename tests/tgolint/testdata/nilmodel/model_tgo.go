@@ -48,7 +48,7 @@ func (v Syntax) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Syntax: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// SyntaxItem holds the variant fields. Supply every field.
+// SyntaxItem is the Item payload.
 type SyntaxItem struct {
 	Value *Item
 }
@@ -60,9 +60,8 @@ func (value SyntaxItem) Syntax() Syntax {
 }
 
 // ItemPayload requires Item. No tag check.
-func (v Syntax) ItemPayload() SyntaxItem {
-	return v.tgoItem
-}
+func (v Syntax) ItemPayload() SyntaxItem { return v.tgoItem }
+
 func (v Syntax) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case SyntaxTagItem:
@@ -74,6 +73,7 @@ func (v Syntax) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Syntax JSON tag")
 	}
 }
+
 func (v *Syntax) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

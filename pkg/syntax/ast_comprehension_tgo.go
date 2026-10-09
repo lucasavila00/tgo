@@ -43,7 +43,7 @@ func (v ComprehensionClause) UnknownTag() string {
 	return __tgo_fmt.Sprintf("ComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
-// ComprehensionClauseRange holds the variant fields. Supply every field.
+// ComprehensionClauseRange is the Range payload.
 type ComprehensionClauseRange struct {
 	Value *ComprehensionRangeClause
 }
@@ -55,11 +55,9 @@ func (value ComprehensionClauseRange) ComprehensionClause() ComprehensionClause 
 }
 
 // RangePayload requires Range. No tag check.
-func (v ComprehensionClause) RangePayload() ComprehensionClauseRange {
-	return v.tgoRange
-}
+func (v ComprehensionClause) RangePayload() ComprehensionClauseRange { return v.tgoRange }
 
-// ComprehensionClauseFilter holds the variant fields. Supply every field.
+// ComprehensionClauseFilter is the Filter payload.
 type ComprehensionClauseFilter struct {
 	Value *ComprehensionFilterClause
 }
@@ -71,9 +69,8 @@ func (value ComprehensionClauseFilter) ComprehensionClause() ComprehensionClause
 }
 
 // FilterPayload requires Filter. No tag check.
-func (v ComprehensionClause) FilterPayload() ComprehensionClauseFilter {
-	return v.tgoFilter
-}
+func (v ComprehensionClause) FilterPayload() ComprehensionClauseFilter { return v.tgoFilter }
+
 func (v ComprehensionClause) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case ComprehensionClauseTagRange:
@@ -90,6 +87,7 @@ func (v ComprehensionClause) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid ComprehensionClause JSON tag")
 	}
 }
+
 func (v *ComprehensionClause) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
