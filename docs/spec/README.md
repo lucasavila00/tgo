@@ -63,9 +63,8 @@ Go semicolon insertion applies. A qualified variant literal starts with a packag
 model.Account.Personal{Name: "Lucas"}
 ```
 
-`enum` is contextual before an enum body. `where` is contextual after a checked base type.
-`checked` is contextual after a TGo struct declaration.
-These names keep their Go meaning in other positions.
+`enum` is contextual before an enum body. `checked` is contextual after a TGo
+struct declaration. These names keep their Go meaning in other positions.
 An immediate line break after a contextual keyword does not insert a semicolon.
 
 ## Source syntax API

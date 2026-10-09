@@ -1,5 +1,5 @@
 .PHONY: ci ci-unlocked fast-ci fast-ci-unlocked fast-checks slow-ci slow-ci-unlocked \
-	generated ast-boundary formatter-boundary tgolint-boundary lint test unit-test unit-test-fast tgolint-unit-test \
+	generated ast-boundary formatter-boundary tgolint-boundary removed-syntax lint test unit-test unit-test-fast tgolint-unit-test \
 	e2e-test tgolint-test formatter-go-corpus \
 	allocation-test dogfood markdown tgo-size vscode-test build install-hooks install-tools
 
@@ -13,7 +13,7 @@ fast-ci:
 
 fast-ci-unlocked: fast-checks unit-test-fast e2e-test allocation-test
 
-fast-checks: generated ast-boundary formatter-boundary tgolint-boundary dogfood lint markdown tgo-size
+fast-checks: generated ast-boundary formatter-boundary tgolint-boundary removed-syntax dogfood lint markdown tgo-size
 
 slow-ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 slow-ci-unlocked
@@ -31,6 +31,10 @@ formatter-go-corpus:
 
 tgolint-boundary:
 	python3 scripts/check_tgolint_boundary.py
+
+removed-syntax:
+	python3 scripts/check_removed_syntax_test.py
+	python3 scripts/check_removed_syntax.py
 
 dogfood:
 	! grep -R -n -E --include='*.go' --include='*.tgo' \
