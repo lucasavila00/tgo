@@ -18,8 +18,8 @@ func (c *converter) statement(value frontNode) *Statement {
 func (c *converter) statementRequired(value frontNode) *Statement {
 	switch item := value.(type) {
 	case *ast.BadStmt:
-		result := func(tgoInput_29 TgoStatementBadInput) Statement {
-			return NewStatementBad(tgoInput_29.FieldValue)
+		result := func(input TgoStatementBadInput) Statement {
+			return NewStatementBad(input.FieldValue)
 		}(TgoStatementBadInput{FieldValue: &BadStatement{
 			Span: span(item),
 			From: item.From,
@@ -28,8 +28,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.DeclStmt:
-		result := func(tgoInput_30 TgoStatementDeclarationInput) Statement {
-			return NewStatementDeclaration(tgoInput_30.FieldValue)
+		result := func(input TgoStatementDeclarationInput) Statement {
+			return NewStatementDeclaration(input.FieldValue)
 		}(TgoStatementDeclarationInput{FieldValue: &DeclarationStatement{
 			Span:        span(item),
 			Declaration: c.declarationMust(item.Decl),
@@ -37,8 +37,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.EmptyStmt:
-		result := func(tgoInput_31 TgoStatementEmptyInput) Statement {
-			return NewStatementEmpty(tgoInput_31.FieldValue)
+		result := func(input TgoStatementEmptyInput) Statement {
+			return NewStatementEmpty(input.FieldValue)
 		}(TgoStatementEmptyInput{FieldValue: &EmptyStatement{
 			Span:      span(item),
 			Semicolon: item.Semicolon,
@@ -47,8 +47,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.LabeledStmt:
-		result := func(tgoInput_32 TgoStatementLabeledInput) Statement {
-			return NewStatementLabeled(tgoInput_32.FieldValue)
+		result := func(input TgoStatementLabeledInput) Statement {
+			return NewStatementLabeled(input.FieldValue)
 		}(TgoStatementLabeledInput{FieldValue: &LabeledStatement{
 			Span:      span(item),
 			Label:     c.identifierRequired(item.Label),
@@ -58,8 +58,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.ExprStmt:
-		result := func(tgoInput_33 TgoStatementExpressionInput) Statement {
-			return NewStatementExpression(tgoInput_33.FieldValue)
+		result := func(input TgoStatementExpressionInput) Statement {
+			return NewStatementExpression(input.FieldValue)
 		}(TgoStatementExpressionInput{FieldValue: &ExpressionStatement{
 			Span:       span(item),
 			Expression: c.expressionRequired(item.X),
@@ -67,8 +67,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.SendStmt:
-		result := func(tgoInput_34 TgoStatementSendInput) Statement {
-			return NewStatementSend(tgoInput_34.FieldValue)
+		result := func(input TgoStatementSendInput) Statement {
+			return NewStatementSend(input.FieldValue)
 		}(TgoStatementSendInput{FieldValue: &SendStatement{
 			Span:    span(item),
 			Channel: c.expressionRequired(item.Chan),
@@ -78,8 +78,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.IncDecStmt:
-		result := func(tgoInput_35 TgoStatementIncrementInput) Statement {
-			return NewStatementIncrement(tgoInput_35.FieldValue)
+		result := func(input TgoStatementIncrementInput) Statement {
+			return NewStatementIncrement(input.FieldValue)
 		}(TgoStatementIncrementInput{FieldValue: &IncrementStatement{
 			Span:       span(item),
 			Expression: c.expressionRequired(item.X),
@@ -89,8 +89,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.AssignStmt:
-		result := func(tgoInput_36 TgoStatementAssignmentInput) Statement {
-			return NewStatementAssignment(tgoInput_36.FieldValue)
+		result := func(input TgoStatementAssignmentInput) Statement {
+			return NewStatementAssignment(input.FieldValue)
 		}(TgoStatementAssignmentInput{FieldValue: &AssignmentStatement{
 			Span:     span(item),
 			Left:     c.expressions(item.Lhs),
@@ -101,8 +101,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.GoStmt:
-		result := func(tgoInput_37 TgoStatementGoInput) Statement {
-			return NewStatementGo(tgoInput_37.FieldValue)
+		result := func(input TgoStatementGoInput) Statement {
+			return NewStatementGo(input.FieldValue)
 		}(TgoStatementGoInput{FieldValue: &GoStatement{
 			Span: span(item),
 			Go:   item.Go,
@@ -111,8 +111,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.DeferStmt:
-		result := func(tgoInput_38 TgoStatementDeferInput) Statement {
-			return NewStatementDefer(tgoInput_38.FieldValue)
+		result := func(input TgoStatementDeferInput) Statement {
+			return NewStatementDefer(input.FieldValue)
 		}(TgoStatementDeferInput{FieldValue: &DeferStatement{
 			Span:  span(item),
 			Defer: item.Defer,
@@ -127,8 +127,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 		if comma.IsValid() {
 			itemSpan.Stop = comma + 1
 		}
-		result := func(tgoInput_39 TgoStatementReturnInput) Statement {
-			return NewStatementReturn(tgoInput_39.FieldValue)
+		result := func(input TgoStatementReturnInput) Statement {
+			return NewStatementReturn(input.FieldValue)
 		}(TgoStatementReturnInput{FieldValue: &ReturnStatement{
 			Span:          itemSpan,
 			Return:        item.Return,
@@ -139,8 +139,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.BranchStmt:
-		result := func(tgoInput_40 TgoStatementBranchInput) Statement {
-			return NewStatementBranch(tgoInput_40.FieldValue)
+		result := func(input TgoStatementBranchInput) Statement {
+			return NewStatementBranch(input.FieldValue)
 		}(TgoStatementBranchInput{FieldValue: &BranchStatement{
 			Span:          span(item),
 			TokenPosition: item.TokPos,
@@ -150,13 +150,13 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.BlockStmt:
-		result := func(tgoInput_41 TgoStatementBlockInput) Statement {
-			return NewStatementBlock(tgoInput_41.FieldValue)
+		result := func(input TgoStatementBlockInput) Statement {
+			return NewStatementBlock(input.FieldValue)
 		}(TgoStatementBlockInput{FieldValue: c.blockRequired(item)})
 		return &result
 	case *ast.IfStmt:
-		result := func(tgoInput_42 TgoStatementIfInput) Statement {
-			return NewStatementIf(tgoInput_42.FieldValue)
+		result := func(input TgoStatementIfInput) Statement {
+			return NewStatementIf(input.FieldValue)
 		}(TgoStatementIfInput{FieldValue: &IfStatement{
 			Span:      span(item),
 			If:        item.If,
@@ -172,8 +172,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 		if c.front.exhaustiveClauses[item.Case] {
 			exhaustive = item.Case
 		}
-		result := func(tgoInput_43 TgoStatementCaseInput) Statement {
-			return NewStatementCase(tgoInput_43.FieldValue)
+		result := func(input TgoStatementCaseInput) Statement {
+			return NewStatementCase(input.FieldValue)
 		}(TgoStatementCaseInput{FieldValue: &CaseClause{
 			Span:       span(item),
 			Case:       item.Case,
@@ -185,8 +185,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.SwitchStmt:
-		result := func(tgoInput_44 TgoStatementSwitchInput) Statement {
-			return NewStatementSwitch(tgoInput_44.FieldValue)
+		result := func(input TgoStatementSwitchInput) Statement {
+			return NewStatementSwitch(input.FieldValue)
 		}(TgoStatementSwitchInput{FieldValue: &SwitchStatement{
 			Span:   span(item),
 			Switch: item.Switch,
@@ -197,8 +197,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.TypeSwitchStmt:
-		result := func(tgoInput_45 TgoStatementTypeSwitchInput) Statement {
-			return NewStatementTypeSwitch(tgoInput_45.FieldValue)
+		result := func(input TgoStatementTypeSwitchInput) Statement {
+			return NewStatementTypeSwitch(input.FieldValue)
 		}(TgoStatementTypeSwitchInput{FieldValue: &TypeSwitchStatement{
 			Span:       span(item),
 			Switch:     item.Switch,
@@ -213,8 +213,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 		for _, statement := range item.Body {
 			body = append(body, c.statementRequired(statement))
 		}
-		result := func(tgoInput_46 TgoStatementCommunicationInput) Statement {
-			return NewStatementCommunication(tgoInput_46.FieldValue)
+		result := func(input TgoStatementCommunicationInput) Statement {
+			return NewStatementCommunication(input.FieldValue)
 		}(TgoStatementCommunicationInput{FieldValue: &CommunicationClause{
 			Span:          span(item),
 			Case:          item.Case,
@@ -225,8 +225,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.SelectStmt:
-		result := func(tgoInput_47 TgoStatementSelectInput) Statement {
-			return NewStatementSelect(tgoInput_47.FieldValue)
+		result := func(input TgoStatementSelectInput) Statement {
+			return NewStatementSelect(input.FieldValue)
 		}(TgoStatementSelectInput{FieldValue: &SelectStatement{
 			Span:   span(item),
 			Select: item.Select,
@@ -235,8 +235,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.ForStmt:
-		result := func(tgoInput_48 TgoStatementForInput) Statement {
-			return NewStatementFor(tgoInput_48.FieldValue)
+		result := func(input TgoStatementForInput) Statement {
+			return NewStatementFor(input.FieldValue)
 		}(TgoStatementForInput{FieldValue: &ForStatement{
 			Span:      span(item),
 			For:       item.For,
@@ -248,8 +248,8 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 
 		return &result
 	case *ast.RangeStmt:
-		result := func(tgoInput_49 TgoStatementRangeInput) Statement {
-			return NewStatementRange(tgoInput_49.FieldValue)
+		result := func(input TgoStatementRangeInput) Statement {
+			return NewStatementRange(input.FieldValue)
 		}(TgoStatementRangeInput{FieldValue: &RangeStatement{
 			Span:     span(item),
 			For:      item.For,
@@ -298,13 +298,13 @@ func (c *converter) blockRequired(value *ast.BlockStmt) *BlockStatement {
 func (c *converter) specification(value ast.Spec) *Specification {
 	switch item := value.(type) {
 	case *ast.ImportSpec:
-		result := func(tgoInput_50 TgoSpecificationImportInput) Specification {
-			return NewSpecificationImport(tgoInput_50.FieldValue)
+		result := func(input TgoSpecificationImportInput) Specification {
+			return NewSpecificationImport(input.FieldValue)
 		}(TgoSpecificationImportInput{FieldValue: c.importSpecificationRequired(item)})
 		return &result
 	case *ast.ValueSpec:
-		result := func(tgoInput_51 TgoSpecificationValueInput) Specification {
-			return NewSpecificationValue(tgoInput_51.FieldValue)
+		result := func(input TgoSpecificationValueInput) Specification {
+			return NewSpecificationValue(input.FieldValue)
 		}(TgoSpecificationValueInput{FieldValue: &ValueSpecification{
 			Span:    span(item),
 			Doc:     c.commentGroup(item.Doc),
@@ -316,8 +316,8 @@ func (c *converter) specification(value ast.Spec) *Specification {
 
 		return &result
 	case *ast.TypeSpec:
-		result := func(tgoInput_52 TgoSpecificationTypeInput) Specification {
-			return NewSpecificationType(tgoInput_52.FieldValue)
+		result := func(input TgoSpecificationTypeInput) Specification {
+			return NewSpecificationType(input.FieldValue)
 		}(TgoSpecificationTypeInput{FieldValue: &TypeSpecification{
 			Span:       span(item),
 			Doc:        c.commentGroup(item.Doc),
@@ -370,8 +370,8 @@ func (c *converter) importSpecificationRequired(
 func (c *converter) declarationMust(value frontNode) *Declaration {
 	switch item := value.(type) {
 	case *ast.BadDecl:
-		result := func(tgoInput_53 TgoDeclarationBadInput) Declaration {
-			return NewDeclarationBad(tgoInput_53.FieldValue)
+		result := func(input TgoDeclarationBadInput) Declaration {
+			return NewDeclarationBad(input.FieldValue)
 		}(TgoDeclarationBadInput{FieldValue: &BadDeclaration{
 			Span: span(item),
 			From: item.From,
@@ -392,13 +392,13 @@ func (c *converter) declarationMust(value frontNode) *Declaration {
 		for _, spec := range item.Specs {
 			value.Specs = append(value.Specs, c.specification(spec))
 		}
-		result := func(tgoInput_54 TgoDeclarationGeneralInput) Declaration {
-			return NewDeclarationGeneral(tgoInput_54.FieldValue)
+		result := func(input TgoDeclarationGeneralInput) Declaration {
+			return NewDeclarationGeneral(input.FieldValue)
 		}(TgoDeclarationGeneralInput{FieldValue: value})
 		return &result
 	case *ast.FuncDecl:
-		result := func(tgoInput_55 TgoDeclarationFunctionInput) Declaration {
-			return NewDeclarationFunction(tgoInput_55.FieldValue)
+		result := func(input TgoDeclarationFunctionInput) Declaration {
+			return NewDeclarationFunction(input.FieldValue)
 		}(TgoDeclarationFunctionInput{FieldValue: &FunctionDeclaration{
 			Span:     span(item),
 			Doc:      c.commentGroup(item.Doc),
@@ -410,13 +410,13 @@ func (c *converter) declarationMust(value frontNode) *Declaration {
 
 		return &result
 	case *frontEnumDecl:
-		result := func(tgoInput_56 TgoDeclarationEnumInput) Declaration {
-			return NewDeclarationEnum(tgoInput_56.FieldValue)
+		result := func(input TgoDeclarationEnumInput) Declaration {
+			return NewDeclarationEnum(input.FieldValue)
 		}(TgoDeclarationEnumInput{FieldValue: c.enumDeclaration(item)})
 		return &result
 	case *frontStructDecl:
-		result := func(tgoInput_57 TgoDeclarationStructInput) Declaration {
-			return NewDeclarationStruct(tgoInput_57.FieldValue)
+		result := func(input TgoDeclarationStructInput) Declaration {
+			return NewDeclarationStruct(input.FieldValue)
 		}(TgoDeclarationStructInput{FieldValue: c.structDeclaration(item)})
 		return &result
 	default:

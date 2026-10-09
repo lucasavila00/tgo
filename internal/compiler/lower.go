@@ -13,7 +13,6 @@ func (p *packageUnit) prepare() {
 	p.checkedLiterals = make(map[*ast.CompositeLit]bool)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
-	p.usedIdentifiers = nil
 	for _, source := range p.Sources {
 		p.markGenerated(source)
 		p.lowerSuccessReturns(source)
@@ -248,7 +247,7 @@ func (p *packageUnit) enumConstructorCall(
 			Value: value,
 		})
 	}
-	inputName := p.freshIdentifier("tgoInput")
+	inputName := freshASTIdentifier(literal, "input")
 	arguments := make([]ast.Expr, len(values))
 	for index := range arguments {
 		arguments[index] = &ast.SelectorExpr{

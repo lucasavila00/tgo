@@ -48,7 +48,7 @@ func shadowPayloadName() Event {
 		"func NewRequestValue(tgoField0 *http.Request) Request",
 		"func NewEventEmpty() Event",
 		"type TgoEventReadyInput struct",
-		"NewEventReady(tgoInput.FieldValue, tgoInput.FieldLabels)",
+		"NewEventReady(input.FieldValue, input.FieldLabels)",
 		"NewEventEmpty()",
 	} {
 		if !strings.Contains(output, text) {
@@ -265,7 +265,8 @@ func TestEnumGeneratedNamesAreReservedAcrossFiles(t *testing.T) {
 		},
 		{
 			name: "TGo carrier", source: &File{
-				Name: "other.tgo", Data: []byte("package sample\ntype TgoEventReadyInput struct{}\n"),
+				Name: "other.tgo",
+				Data: []byte("package sample\ntype TgoEventReadyInput struct{}\n"),
 			},
 			want: "other.tgo:2:6: name TgoEventReadyInput is reserved by enum Event",
 		},
@@ -277,7 +278,8 @@ func TestEnumGeneratedNamesAreReservedAcrossFiles(t *testing.T) {
 		},
 		{
 			name: "Go carrier", goFile: &File{
-				Name: "other.go", Data: []byte("package sample\ntype TgoEventReadyInput struct{}\n"),
+				Name: "other.go",
+				Data: []byte("package sample\ntype TgoEventReadyInput struct{}\n"),
 			},
 			want: "other.go:2:6: name TgoEventReadyInput is reserved by enum Event",
 		},

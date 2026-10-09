@@ -2,22 +2,22 @@
 
 package tgolint
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
-func __tgo_model_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgomodelExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // model requires a variant constructor. Its zero value is invalid.
@@ -42,7 +42,7 @@ func (v model) Tag() modelTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v model) UnknownTag() string {
-	return __tgo_fmt.Sprintf("model: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("model: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // modelChecked is the Checked payload.
@@ -115,57 +115,57 @@ func (v model) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case modelTagChecked:
 		payload := v.CheckedPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload modelChecked `json:"Checked"`
 		}{Payload: payload})
 	case modelTagEnum:
 		payload := v.EnumPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload modelEnum `json:"Enum"`
 		}{Payload: payload})
 	case modelTagMixed:
 		payload := v.MixedPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload modelMixed `json:"Mixed"`
 		}{Payload: payload})
 	case modelTagParameter:
 		payload := v.ParameterPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload modelParameter `json:"Parameter"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid model JSON tag")
+		return nil, fmt.Errorf("invalid model JSON tag")
 	}
 }
 
-func (v model) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v model) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case modelTagChecked:
 		payload := v.CheckedPayload()
-		return __tgo_model_external_json_to(out, "Checked", payload)
+		return tgomodelExternalJSONTo(out, "Checked", payload)
 	case modelTagEnum:
 		payload := v.EnumPayload()
-		return __tgo_model_external_json_to(out, "Enum", payload)
+		return tgomodelExternalJSONTo(out, "Enum", payload)
 	case modelTagMixed:
 		payload := v.MixedPayload()
-		return __tgo_model_external_json_to(out, "Mixed", payload)
+		return tgomodelExternalJSONTo(out, "Mixed", payload)
 	case modelTagParameter:
 		payload := v.ParameterPayload()
-		return __tgo_model_external_json_to(out, "Parameter", payload)
+		return tgomodelExternalJSONTo(out, "Parameter", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid model JSON tag")
+		return fmt.Errorf("invalid model JSON tag")
 	}
 }
 
 func (v *model) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one model JSON variant")
+		return fmt.Errorf("expected one model JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -174,46 +174,46 @@ func (v *model) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Checked":
 		var payload modelChecked
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewmodelChecked(payload.Package, payload.Name)
 		return nil
 	case "Enum":
 		var payload modelEnum
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewmodelEnum(payload.Package, payload.Name, payload.Variants)
 		return nil
 	case "Mixed":
 		var payload modelMixed
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewmodelMixed()
 		return nil
 	case "Parameter":
 		var payload modelParameter
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewmodelParameter()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown model JSON variant %q", variant)
+		return fmt.Errorf("unknown model JSON variant %q", variant)
 	}
 }
 
-func (v *model) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one model JSON variant")
+		return fmt.Errorf("expected one model JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -262,42 +262,42 @@ func (v *model) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one model JSON variant")
+		return fmt.Errorf("expected one model JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown model JSON variant %q", unknown)
+		return fmt.Errorf("unknown model JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload modelChecked
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewmodelChecked(payload.Package, payload.Name)
 		return nil
 	case 2:
 		var payload modelEnum
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewmodelEnum(payload.Package, payload.Name, payload.Variants)
 		return nil
 	case 3:
 		var payload modelMixed
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewmodelMixed()
 		return nil
 	case 4:
 		var payload modelParameter
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewmodelParameter()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid model JSON tag")
+		return fmt.Errorf("invalid model JSON tag")
 	}
 }
 
@@ -320,15 +320,15 @@ const (
 )
 
 func checkedModel(packagePath string, name string) *model {
-	value := func(tgoInput_48 TgomodelCheckedInput) model {
-		return NewmodelChecked(tgoInput_48.FieldPackage, tgoInput_48.FieldName)
+	value := func(input TgomodelCheckedInput) model {
+		return NewmodelChecked(input.FieldPackage, input.FieldName)
 	}(TgomodelCheckedInput{FieldPackage: packagePath, FieldName: name})
 	return &value
 }
 
 func enumModel(packagePath string, name string, variants []string) *model {
-	value := func(tgoInput_49 TgomodelEnumInput) model {
-		return NewmodelEnum(tgoInput_49.FieldPackage, tgoInput_49.FieldName, tgoInput_49.FieldVariants)
+	value := func(input TgomodelEnumInput) model {
+		return NewmodelEnum(input.FieldPackage, input.FieldName, input.FieldVariants)
 	}(TgomodelEnumInput{FieldPackage: packagePath, FieldName: name, FieldVariants: variants})
 
 	return &value

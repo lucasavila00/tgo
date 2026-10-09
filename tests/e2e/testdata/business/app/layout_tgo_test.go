@@ -26,11 +26,11 @@ func TestBoxedEnumLayout(t *testing.T) {
 	}
 	first := [64]byte{1, 2}
 	second := [64]byte{3, 4}
-	a := func(tgoInput model.TgoLargeFirstInput) model.Large {
-		return model.NewLargeFirst(tgoInput.FieldData)
+	a := func(input model.TgoLargeFirstInput) model.Large {
+		return model.NewLargeFirst(input.FieldData)
 	}(model.TgoLargeFirstInput{FieldData: first})
-	b := func(tgoInput_1 model.TgoLargeSecondInput) model.Large {
-		return model.NewLargeSecond(tgoInput_1.FieldData)
+	b := func(input model.TgoLargeSecondInput) model.Large {
+		return model.NewLargeSecond(input.FieldData)
 	}(model.TgoLargeSecondInput{FieldData: second})
 	empty := model.NewLargeEmpty()
 	if a.Tag() != model.LargeTagFirst || a.FirstPayload().Data != first {
@@ -43,8 +43,8 @@ func TestBoxedEnumLayout(t *testing.T) {
 		t.Fatal("empty variant")
 	}
 	mixed := [40]byte{5}
-	if (func(tgoInput_2 model.TgoEqualSecondInput) model.Equal {
-		return model.NewEqualSecond(tgoInput_2.FieldData)
+	if (func(input model.TgoEqualSecondInput) model.Equal {
+		return model.NewEqualSecond(input.FieldData)
 	}(model.TgoEqualSecondInput{FieldData: mixed})).SecondPayload().Data != mixed {
 		t.Fatal("inline payload")
 	}
@@ -62,8 +62,8 @@ func TestEnumPublicAPI(t *testing.T) {
 	if namedZero.Tag() != model.NamedZeroTagZero || namedZero.Tag() == 0 {
 		t.Fatal("declared Zero variant tag")
 	}
-	inline := (func(tgoInput_3 model.TgoEqualFirstInput) model.Equal {
-		return model.NewEqualFirst(tgoInput_3.FieldData)
+	inline := (func(input model.TgoEqualFirstInput) model.Equal {
+		return model.NewEqualFirst(input.FieldData)
 	}(model.TgoEqualFirstInput{FieldData: [40]byte{}})).SecondPayload()
 	if inline.Data != ([40]byte{}) {
 		t.Fatal("wrong inline accessor did not return its inactive slot")
@@ -73,7 +73,7 @@ func TestEnumPublicAPI(t *testing.T) {
 			t.Fatal("wrong boxed accessor did not panic")
 		}
 	}()
-	_ = (func(tgoInput_4 model.TgoEqualSecondInput) model.Equal {
-		return model.NewEqualSecond(tgoInput_4.FieldData)
+	_ = (func(input model.TgoEqualSecondInput) model.Equal {
+		return model.NewEqualSecond(input.FieldData)
 	}(model.TgoEqualSecondInput{FieldData: [40]byte{}})).FirstPayload()
 }

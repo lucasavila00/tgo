@@ -27,7 +27,6 @@ type packageUnit struct {
 	checkedLiterals map[*ast.CompositeLit]bool
 	erasedImports   map[*ast.ImportSpec]bool
 	references      []generatedReference
-	usedIdentifiers map[string]bool
 	typeErrors      []error
 	errors          []error
 }

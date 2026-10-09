@@ -4,15 +4,15 @@ package app
 
 import (
 	bridge "example.com/business/gobridge"
-	__tgo_import_1 "example.com/business/model"
+	"example.com/business/model"
 )
 
 func GoReexportedAccount(name string) any {
-	return func(tgoInput_7 __tgo_import_1.TgoAccountPersonalInput) __tgo_import_1.Account {
-		return __tgo_import_1.NewAccountPersonal(tgoInput_7.FieldName)
-	}(__tgo_import_1.TgoAccountPersonalInput{FieldName: name})
+	return func(input model.TgoAccountPersonalInput) model.Account {
+		return model.NewAccountPersonal(input.FieldName)
+	}(model.TgoAccountPersonalInput{FieldName: name})
 }
 
 func GoReexportedRequest(id string) any {
-	return bridge.Request{ID: id, Tags: __tgo_import_1.TgoDefaultRequestTags()}
+	return bridge.Request{ID: id, Tags: model.TgoDefaultRequestTags()}
 }

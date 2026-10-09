@@ -61,8 +61,8 @@ func (c *checker) collectFileGenericValueBindings(
 			if value := syntax.ValueSpecificationOf(specification); value != nil {
 				left := make([]*syntax.Expression, len(value.Names))
 				for index := range value.Names {
-					item := func(tgoInput_34 syntax.TgoExpressionIdentifierInput) syntax.Expression {
-						return syntax.NewExpressionIdentifier(tgoInput_34.FieldValue)
+					item := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+						return syntax.NewExpressionIdentifier(input.FieldValue)
 					}(syntax.TgoExpressionIdentifierInput{FieldValue: value.Names[index]})
 					left[index] = &item
 				}

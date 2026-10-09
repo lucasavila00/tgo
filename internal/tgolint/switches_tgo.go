@@ -144,14 +144,14 @@ func (c *checker) statementsTerminateWith(
 	if len(statements) == 0 || c.hasEscapingBranch(file, statements, tagDefault) {
 		return false
 	}
-	identifier := func(tgoInput_58 syntax.TgoExpressionIdentifierInput) syntax.Expression {
-		return syntax.NewExpressionIdentifier(tgoInput_58.FieldValue)
+	identifier := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+		return syntax.NewExpressionIdentifier(input.FieldValue)
 	}(syntax.TgoExpressionIdentifierInput{FieldValue: &syntax.Identifier{
 		Span: syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Name: "__tgolint_reached",
 	}})
-	sentinel := func(tgoInput_59 syntax.TgoStatementExpressionInput) syntax.Statement {
-		return syntax.NewStatementExpression(tgoInput_59.FieldValue)
+	sentinel := func(input syntax.TgoStatementExpressionInput) syntax.Statement {
+		return syntax.NewStatementExpression(input.FieldValue)
 	}(syntax.TgoStatementExpressionInput{FieldValue: &syntax.ExpressionStatement{
 		Span:       syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Expression: &identifier,
@@ -618,8 +618,8 @@ func capturesObject(
 	object types.Object,
 ) bool {
 	captured := false
-	statement := func(tgoInput_60 syntax.TgoStatementBlockInput) syntax.Statement {
-		return syntax.NewStatementBlock(tgoInput_60.FieldValue)
+	statement := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&statement, func(node *syntax.Node) bool {
 		if captured {

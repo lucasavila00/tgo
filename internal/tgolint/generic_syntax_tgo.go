@@ -9,8 +9,8 @@ func inspectGenericBlock(body *syntax.BlockStatement, visit func(*syntax.Node) b
 	if visit == nil {
 		return
 	}
-	statement := func(tgoInput_33 syntax.TgoStatementBlockInput) syntax.Statement {
-		return syntax.NewStatementBlock(tgoInput_33.FieldValue)
+	statement := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	inspectGenericStatement(&statement, visit)
 }

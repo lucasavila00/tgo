@@ -140,13 +140,13 @@ func escapedObjects(facts *sourcefacts.Index, body *syntax.BlockStatement) map[t
 			escaped[object] = position
 		}
 	}
-	block := func(tgoInput_1 syntax.TgoStatementBlockInput) syntax.Statement {
-		return syntax.NewStatementBlock(tgoInput_1.FieldValue)
+	block := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&block, func(node *syntax.Node) bool {
 		if literal, ok := syntax.FunctionLiteralOf(node); ok {
-			literalBlock := func(tgoInput_2 syntax.TgoStatementBlockInput) syntax.Statement {
-				return syntax.NewStatementBlock(tgoInput_2.FieldValue)
+			literalBlock := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+				return syntax.NewStatementBlock(input.FieldValue)
 			}(syntax.TgoStatementBlockInput{FieldValue: literal.Body})
 			syntax.InspectStatement(&literalBlock, func(captured *syntax.Node) bool {
 				name, ok := syntax.IdentifierOf(captured)
@@ -419,8 +419,8 @@ func (c *checker) checkedValueSpec(specification *syntax.ValueSpecification, sta
 	if len(specification.Values) == 1 && len(specification.Names) == 1 {
 		if syntax.CallExpressionOf(specification.Values[0]) != nil {
 			if model := c.boundarySingleCall(specification.Values[0]); model != nil {
-				name := func(tgoInput_3 syntax.TgoExpressionIdentifierInput) syntax.Expression {
-					return syntax.NewExpressionIdentifier(tgoInput_3.FieldValue)
+				name := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+					return syntax.NewExpressionIdentifier(input.FieldValue)
 				}(syntax.TgoExpressionIdentifierInput{FieldValue: specification.Names[0]})
 				c.bindBoundaryValue([]*syntax.Expression{&name}, specification.Values[0], model, state)
 				return
@@ -436,11 +436,11 @@ func (c *checker) checkedValueSpec(specification *syntax.ValueSpecification, sta
 		if model := c.checkedCall(expression); model != nil {
 			c.checked[expression] = true
 			c.checkResultUses(call.Args, state, c.validatorArgumentSkip(expression, state))
-			value := func(tgoInput_4 syntax.TgoExpressionIdentifierInput) syntax.Expression {
-				return syntax.NewExpressionIdentifier(tgoInput_4.FieldValue)
+			value := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+				return syntax.NewExpressionIdentifier(input.FieldValue)
 			}(syntax.TgoExpressionIdentifierInput{FieldValue: specification.Names[0]})
-			failure := func(tgoInput_5 syntax.TgoExpressionIdentifierInput) syntax.Expression {
-				return syntax.NewExpressionIdentifier(tgoInput_5.FieldValue)
+			failure := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+				return syntax.NewExpressionIdentifier(input.FieldValue)
 			}(syntax.TgoExpressionIdentifierInput{FieldValue: specification.Names[1]})
 			c.bindCheckedResults(&value, &failure, model, state)
 			c.markValidatedResult(expression, &value, state)
@@ -454,11 +454,11 @@ func (c *checker) checkedValueSpec(specification *syntax.ValueSpecification, sta
 	}
 	c.presence[expression] = true
 	c.checkResultUses([]*syntax.Expression{expression}, state, nil)
-	value := func(tgoInput_6 syntax.TgoExpressionIdentifierInput) syntax.Expression {
-		return syntax.NewExpressionIdentifier(tgoInput_6.FieldValue)
+	value := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+		return syntax.NewExpressionIdentifier(input.FieldValue)
 	}(syntax.TgoExpressionIdentifierInput{FieldValue: specification.Names[0]})
-	present := func(tgoInput_7 syntax.TgoExpressionIdentifierInput) syntax.Expression {
-		return syntax.NewExpressionIdentifier(tgoInput_7.FieldValue)
+	present := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+		return syntax.NewExpressionIdentifier(input.FieldValue)
 	}(syntax.TgoExpressionIdentifierInput{FieldValue: specification.Names[1]})
 	c.bindPresenceResults(
 		&value, &present, expression, model, state,

@@ -17,43 +17,43 @@ func TestEnumJSONForms(t *testing.T) {
 		receiver any
 		wire     string
 	}{
-		{"external", func(tgoInput_19 TgoJSONExternalCreatedInput) JSONExternal {
-			return NewJSONExternalCreated(tgoInput_19.FieldID, tgoInput_19.FieldReason, tgoInput_19.FieldCustom)
+		{"external", func(input TgoJSONExternalCreatedInput) JSONExternal {
+			return NewJSONExternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONExternalCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""}), new(JSONExternal), `{"created":{"account_id":"a1"}}`},
-		{"internal", func(tgoInput_20 TgoJSONInternalCreatedInput) JSONInternal {
-			return NewJSONInternalCreated(tgoInput_20.FieldID, tgoInput_20.FieldReason, tgoInput_20.FieldCustom)
+		{"internal", func(input TgoJSONInternalCreatedInput) JSONInternal {
+			return NewJSONInternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONInternalCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""}), new(JSONInternal), `{"type":"created","account_id":"a1"}`},
-		{"adjacent", func(tgoInput_21 TgoJSONAdjacentCreatedInput) JSONAdjacent {
-			return NewJSONAdjacentCreated(tgoInput_21.FieldID, tgoInput_21.FieldReason, tgoInput_21.FieldCustom)
+		{"adjacent", func(input TgoJSONAdjacentCreatedInput) JSONAdjacent {
+			return NewJSONAdjacentCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONAdjacentCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""}), new(JSONAdjacent), `{"type":"created","data":{"account_id":"a1"}}`},
-		{"untagged number", func(tgoInput_22 TgoJSONUntaggedNumberInput) JSONUntagged {
-			return NewJSONUntaggedNumber(tgoInput_22.FieldValue)
+		{"untagged number", func(input TgoJSONUntaggedNumberInput) JSONUntagged {
+			return NewJSONUntaggedNumber(input.FieldValue)
 		}(TgoJSONUntaggedNumberInput{FieldValue: 42}), new(JSONUntagged), `{"value":42}`},
-		{"escaped", func(tgoInput_23 TgoJSONEscapedValueInput) JSONEscaped {
-			return NewJSONEscapedValue(tgoInput_23.FieldID)
+		{"escaped", func(input TgoJSONEscapedValueInput) JSONEscaped {
+			return NewJSONEscapedValue(input.FieldID)
 		}(TgoJSONEscapedValueInput{FieldID: ""}), new(JSONEscaped), `{"kind\u0001":"name\u0001\"end"}`},
-		{"escaped external", func(tgoInput_24 TgoJSONEscapedExternalValueInput) JSONEscapedExternal {
-			return NewJSONEscapedExternalValue(tgoInput_24.FieldID)
+		{"escaped external", func(input TgoJSONEscapedExternalValueInput) JSONEscapedExternal {
+			return NewJSONEscapedExternalValue(input.FieldID)
 		}(TgoJSONEscapedExternalValueInput{FieldID: ""}), new(JSONEscapedExternal), `{"name\u0001\"end":{}}`},
-		{"escaped adjacent", func(tgoInput_25 TgoJSONEscapedAdjacentValueInput) JSONEscapedAdjacent {
-			return NewJSONEscapedAdjacentValue(tgoInput_25.FieldID)
+		{"escaped adjacent", func(input TgoJSONEscapedAdjacentValueInput) JSONEscapedAdjacent {
+			return NewJSONEscapedAdjacentValue(input.FieldID)
 		}(TgoJSONEscapedAdjacentValueInput{FieldID: ""}), new(JSONEscapedAdjacent), `{"kind\u0001":"name\u0001\"end","data\u0002":{}}`},
-		{"string field", func(tgoInput_26 TgoJSONStringFieldValueInput) JSONStringField {
-			return NewJSONStringFieldValue(tgoInput_26.FieldCount)
+		{"string field", func(input TgoJSONStringFieldValueInput) JSONStringField {
+			return NewJSONStringFieldValue(input.FieldCount)
 		}(TgoJSONStringFieldValueInput{FieldCount: 42}), new(JSONStringField), `{"Value":{"count":"42"}}`},
-		{"optional field", func(tgoInput_27 TgoJSONExternalCreatedInput) JSONExternal {
-			return NewJSONExternalCreated(tgoInput_27.FieldID, tgoInput_27.FieldReason, tgoInput_27.FieldCustom)
+		{"optional field", func(input TgoJSONExternalCreatedInput) JSONExternal {
+			return NewJSONExternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONExternalCreatedInput{FieldID: "a1", FieldReason: "closed", FieldCustom: ""}), new(JSONExternal), `{"created":{"account_id":"a1","reason":"closed"}}`},
-		{"untagged", func(tgoInput_28 TgoJSONUntaggedTextInput) JSONUntagged {
-			return NewJSONUntaggedText(tgoInput_28.FieldValue)
+		{"untagged", func(input TgoJSONUntaggedTextInput) JSONUntagged {
+			return NewJSONUntaggedText(input.FieldValue)
 		}(TgoJSONUntaggedTextInput{FieldValue: "text"}), new(JSONUntagged), `{"value":"text"}`},
 		{"external empty", NewJSONExternalEmpty(), new(JSONExternal), `{"Empty":{}}`},
 		{"internal empty", NewJSONInternalEmpty(), new(JSONInternal), `{"type":"Empty"}`},
 		{"adjacent empty", NewJSONAdjacentEmpty(), new(JSONAdjacent), `{"type":"Empty","data":{}}`},
-		{"nested", func(tgoInput_30 TgoJSONNestedNestedInput) JSONNested {
-			return NewJSONNestedNested(tgoInput_30.FieldValue)
-		}(TgoJSONNestedNestedInput{FieldValue: func(tgoInput_29 TgoJSONExternalCreatedInput) JSONExternal {
-			return NewJSONExternalCreated(tgoInput_29.FieldID, tgoInput_29.FieldReason, tgoInput_29.FieldCustom)
+		{"nested", func(input_1 TgoJSONNestedNestedInput) JSONNested {
+			return NewJSONNestedNested(input_1.FieldValue)
+		}(TgoJSONNestedNestedInput{FieldValue: func(input TgoJSONExternalCreatedInput) JSONExternal {
+			return NewJSONExternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONExternalCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""})}), new(JSONNested), `{"Nested":{"value":{"created":{"account_id":"a1"}}}}`},
 	}
 	for _, test := range tests {
@@ -83,17 +83,17 @@ func TestEnumJSONForms(t *testing.T) {
 }
 
 func TestEnumJSONDecodeFailureKeepsReceiver(t *testing.T) {
-	external := func(tgoInput_31 TgoJSONExternalCreatedInput) JSONExternal {
-		return NewJSONExternalCreated(tgoInput_31.FieldID, tgoInput_31.FieldReason, tgoInput_31.FieldCustom)
+	external := func(input TgoJSONExternalCreatedInput) JSONExternal {
+		return NewJSONExternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 	}(TgoJSONExternalCreatedInput{FieldID: "old", FieldReason: "", FieldCustom: ""})
-	internal := func(tgoInput_32 TgoJSONInternalCreatedInput) JSONInternal {
-		return NewJSONInternalCreated(tgoInput_32.FieldID, tgoInput_32.FieldReason, tgoInput_32.FieldCustom)
+	internal := func(input TgoJSONInternalCreatedInput) JSONInternal {
+		return NewJSONInternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 	}(TgoJSONInternalCreatedInput{FieldID: "old", FieldReason: "", FieldCustom: ""})
-	adjacent := func(tgoInput_33 TgoJSONAdjacentCreatedInput) JSONAdjacent {
-		return NewJSONAdjacentCreated(tgoInput_33.FieldID, tgoInput_33.FieldReason, tgoInput_33.FieldCustom)
+	adjacent := func(input TgoJSONAdjacentCreatedInput) JSONAdjacent {
+		return NewJSONAdjacentCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 	}(TgoJSONAdjacentCreatedInput{FieldID: "old", FieldReason: "", FieldCustom: ""})
-	untagged := func(tgoInput_34 TgoJSONUntaggedTextInput) JSONUntagged {
-		return NewJSONUntaggedText(tgoInput_34.FieldValue)
+	untagged := func(input TgoJSONUntaggedTextInput) JSONUntagged {
+		return NewJSONUntaggedText(input.FieldValue)
 	}(TgoJSONUntaggedTextInput{FieldValue: "old"})
 	tests := []struct {
 		name     string
@@ -132,8 +132,8 @@ func TestEnumJSONExternalDuplicateNames(t *testing.T) {
 		t.Fatalf("last duplicate value was not selected: %#v", value)
 	}
 
-	value = func(tgoInput_35 TgoJSONExternalCreatedInput) JSONExternal {
-		return NewJSONExternalCreated(tgoInput_35.FieldID, tgoInput_35.FieldReason, tgoInput_35.FieldCustom)
+	value = func(input TgoJSONExternalCreatedInput) JSONExternal {
+		return NewJSONExternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 	}(TgoJSONExternalCreatedInput{FieldID: "old", FieldReason: "", FieldCustom: ""})
 	err := json.Unmarshal(
 		[]byte(`{"created":{"account_id":"first"},"created":{"account_id":7}}`),
@@ -161,8 +161,8 @@ func TestEnumJSONExternalDuplicateNames(t *testing.T) {
 }
 
 func TestEnumJSONDirectMethods(t *testing.T) {
-	value := func(tgoInput_36 TgoJSONAdjacentCreatedInput) JSONAdjacent {
-		return NewJSONAdjacentCreated(tgoInput_36.FieldID, tgoInput_36.FieldReason, tgoInput_36.FieldCustom)
+	value := func(input TgoJSONAdjacentCreatedInput) JSONAdjacent {
+		return NewJSONAdjacentCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 	}(TgoJSONAdjacentCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""})
 	data, err := value.MarshalJSON()
 	if err != nil {
@@ -224,8 +224,8 @@ func TestEnumJSONOrderAndPayloadRules(t *testing.T) {
 	if external.CreatedPayload().ID != "a1" {
 		t.Fatal("wrong payload")
 	}
-	large := func(tgoInput_37 TgoJSONExternalLargeInput) JSONExternal {
-		return NewJSONExternalLarge(tgoInput_37.FieldData)
+	large := func(input TgoJSONExternalLargeInput) JSONExternal {
+		return NewJSONExternalLarge(input.FieldData)
 	}(TgoJSONExternalLargeInput{FieldData: [100]byte{}})
 	data, err := json.Marshal(large)
 	if err != nil {
@@ -245,8 +245,8 @@ func TestEnumJSONOrderAndPayloadRules(t *testing.T) {
 }
 
 func TestEnumJSONCustomFields(t *testing.T) {
-	value := func(tgoInput_38 TgoJSONCustomValueInput) JSONCustom {
-		return NewJSONCustomValue(tgoInput_38.FieldValue)
+	value := func(input TgoJSONCustomValueInput) JSONCustom {
+		return NewJSONCustomValue(input.FieldValue)
 	}(TgoJSONCustomValueInput{FieldValue: "ok"})
 	data, err := json.Marshal(value)
 	if err != nil || string(data) != `{"Value":{"value":"custom:ok"}}` {
@@ -265,8 +265,8 @@ func TestEnumJSONCustomFields(t *testing.T) {
 	if value != before {
 		t.Fatal("receiver changed after field error")
 	}
-	if _, err := json.Marshal(func(tgoInput_39 TgoJSONCustomValueInput) JSONCustom {
-		return NewJSONCustomValue(tgoInput_39.FieldValue)
+	if _, err := json.Marshal(func(input TgoJSONCustomValueInput) JSONCustom {
+		return NewJSONCustomValue(input.FieldValue)
 	}(TgoJSONCustomValueInput{FieldValue: "bad"})); err == nil {
 		t.Fatal("field encode error was lost")
 	}
@@ -300,14 +300,14 @@ func TestEnumJSONCustomFieldsInTaggedForms(t *testing.T) {
 		receiver  any
 		wire, bad string
 	}{
-		{"external", func(tgoInput_40 TgoJSONExternalCreatedInput) JSONExternal {
-			return NewJSONExternalCreated(tgoInput_40.FieldID, tgoInput_40.FieldReason, tgoInput_40.FieldCustom)
+		{"external", func(input TgoJSONExternalCreatedInput) JSONExternal {
+			return NewJSONExternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONExternalCreatedInput{FieldID: "", FieldReason: "", FieldCustom: "ok"}), new(JSONExternal), `{"created":{"custom":"ok"}}`, `{"created":{"custom":"bad"}}`},
-		{"internal", func(tgoInput_41 TgoJSONInternalCreatedInput) JSONInternal {
-			return NewJSONInternalCreated(tgoInput_41.FieldID, tgoInput_41.FieldReason, tgoInput_41.FieldCustom)
+		{"internal", func(input TgoJSONInternalCreatedInput) JSONInternal {
+			return NewJSONInternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONInternalCreatedInput{FieldID: "", FieldReason: "", FieldCustom: "ok"}), new(JSONInternal), `{"type":"created","custom":"ok"}`, `{"type":"created","custom":"bad"}`},
-		{"adjacent", func(tgoInput_42 TgoJSONAdjacentCreatedInput) JSONAdjacent {
-			return NewJSONAdjacentCreated(tgoInput_42.FieldID, tgoInput_42.FieldReason, tgoInput_42.FieldCustom)
+		{"adjacent", func(input TgoJSONAdjacentCreatedInput) JSONAdjacent {
+			return NewJSONAdjacentCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONAdjacentCreatedInput{FieldID: "", FieldReason: "", FieldCustom: "ok"}), new(JSONAdjacent), `{"type":"created","data":{"custom":"ok"}}`, `{"type":"created","data":{"custom":"bad"}}`},
 	}
 	for _, test := range tests {
@@ -365,8 +365,8 @@ func TestEnumJSONNullPayloads(t *testing.T) {
 }
 
 func TestEnumJSONInternalPayloadMethods(t *testing.T) {
-	direct := func(tgoInput_43 TgoJSONInternalPayloadMethodValueInput) JSONInternalPayloadMethod {
-		return NewJSONInternalPayloadMethodValue(tgoInput_43.FieldSeen)
+	direct := func(input TgoJSONInternalPayloadMethodValueInput) JSONInternalPayloadMethod {
+		return NewJSONInternalPayloadMethodValue(input.FieldSeen)
 	}(TgoJSONInternalPayloadMethodValueInput{FieldSeen: ""})
 	data, err := json.Marshal(direct)
 	if err != nil || string(data) != `{"type":"value","custom":"payload"}` {
@@ -381,8 +381,8 @@ func TestEnumJSONInternalPayloadMethods(t *testing.T) {
 		t.Fatalf("direct method input = %q", decodedDirect.ValuePayload().Seen)
 	}
 
-	promoted := func(tgoInput_44 TgoJSONInternalPromotedMethodValueInput) JSONInternalPromotedMethod {
-		return NewJSONInternalPromotedMethodValue(tgoInput_44.Field0)
+	promoted := func(input TgoJSONInternalPromotedMethodValueInput) JSONInternalPromotedMethod {
+		return NewJSONInternalPromotedMethodValue(input.Field0)
 	}(TgoJSONInternalPromotedMethodValueInput{Field0: JSONObject{}})
 
 	data, err = json.Marshal(promoted)
@@ -398,8 +398,8 @@ func TestEnumJSONInternalPayloadMethods(t *testing.T) {
 		t.Fatalf("promoted method input = %q", decodedPromoted.ValuePayload().Seen)
 	}
 
-	invalid := func(tgoInput_45 TgoJSONInternalPayloadMethodValueInput) JSONInternalPayloadMethod {
-		return NewJSONInternalPayloadMethodValue(tgoInput_45.FieldSeen)
+	invalid := func(input TgoJSONInternalPayloadMethodValueInput) JSONInternalPayloadMethod {
+		return NewJSONInternalPayloadMethodValue(input.FieldSeen)
 	}(TgoJSONInternalPayloadMethodValueInput{FieldSeen: "scalar"})
 
 	if _, err := json.Marshal(invalid); err == nil ||

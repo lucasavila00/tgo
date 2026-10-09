@@ -2,22 +2,22 @@
 
 package switchpolicybad
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
-func __tgo_Account_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoAccountExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // Account requires a variant constructor. Its zero value is invalid.
@@ -40,7 +40,7 @@ func (v Account) Tag() AccountTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Account) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Account: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Account: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // AccountPersonal is the Personal payload.
@@ -83,41 +83,41 @@ func (v Account) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case AccountTagPersonal:
 		payload := v.PersonalPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload AccountPersonal `json:"Personal"`
 		}{Payload: payload})
 	case AccountTagBusiness:
 		payload := v.BusinessPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload AccountBusiness `json:"Business"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Account JSON tag")
+		return nil, fmt.Errorf("invalid Account JSON tag")
 	}
 }
 
-func (v Account) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Account) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case AccountTagPersonal:
 		payload := v.PersonalPayload()
-		return __tgo_Account_external_json_to(out, "Personal", payload)
+		return tgoAccountExternalJSONTo(out, "Personal", payload)
 	case AccountTagBusiness:
 		payload := v.BusinessPayload()
-		return __tgo_Account_external_json_to(out, "Business", payload)
+		return tgoAccountExternalJSONTo(out, "Business", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Account JSON tag")
+		return fmt.Errorf("invalid Account JSON tag")
 	}
 }
 
 func (v *Account) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Account JSON variant")
+		return fmt.Errorf("expected one Account JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -126,32 +126,32 @@ func (v *Account) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Personal":
 		var payload AccountPersonal
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewAccountPersonal(payload.Name)
 		return nil
 	case "Business":
 		var payload AccountBusiness
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewAccountBusiness(payload.Company)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Account JSON variant %q", variant)
+		return fmt.Errorf("unknown Account JSON variant %q", variant)
 	}
 }
 
-func (v *Account) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Account) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Account JSON variant")
+		return fmt.Errorf("expected one Account JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -196,28 +196,28 @@ func (v *Account) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Account JSON variant")
+		return fmt.Errorf("expected one Account JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Account JSON variant %q", unknown)
+		return fmt.Errorf("unknown Account JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload AccountPersonal
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewAccountPersonal(payload.Name)
 		return nil
 	case 2:
 		var payload AccountBusiness
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewAccountBusiness(payload.Company)
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Account JSON tag")
+		return fmt.Errorf("invalid Account JSON tag")
 	}
 }
 

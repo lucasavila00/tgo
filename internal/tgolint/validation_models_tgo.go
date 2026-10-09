@@ -204,8 +204,8 @@ func (c *checker) scanValidationFunctionValue(
 				writes[c.facts.DefinitionName(name)]++
 			}
 			if len(value.Names) == 1 && len(value.Values) == 1 {
-				left := func(tgoInput_61 syntax.TgoExpressionIdentifierInput) syntax.Expression {
-					return syntax.NewExpressionIdentifier(tgoInput_61.FieldValue)
+				left := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+					return syntax.NewExpressionIdentifier(input.FieldValue)
 				}(syntax.TgoExpressionIdentifierInput{FieldValue: value.Names[0]})
 				c.recordValidationFunctionValue(candidates, &left, value.Values[0])
 			}

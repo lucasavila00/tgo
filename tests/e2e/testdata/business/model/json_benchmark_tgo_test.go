@@ -11,38 +11,38 @@ var benchmarkJSONData []byte
 
 func BenchmarkEnumJSONMarshal(b *testing.B) {
 	b.Run("external", func(b *testing.B) {
-		benchmarkEnumJSONMarshal(b, func(tgoInput_5 TgoJSONExternalCreatedInput) JSONExternal {
-			return NewJSONExternalCreated(tgoInput_5.FieldID, tgoInput_5.FieldReason, tgoInput_5.FieldCustom)
+		benchmarkEnumJSONMarshal(b, func(input TgoJSONExternalCreatedInput) JSONExternal {
+			return NewJSONExternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONExternalCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""}))
 	})
 	b.Run("internal", func(b *testing.B) {
-		benchmarkEnumJSONMarshal(b, func(tgoInput_6 TgoJSONInternalCreatedInput) JSONInternal {
-			return NewJSONInternalCreated(tgoInput_6.FieldID, tgoInput_6.FieldReason, tgoInput_6.FieldCustom)
+		benchmarkEnumJSONMarshal(b, func(input TgoJSONInternalCreatedInput) JSONInternal {
+			return NewJSONInternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONInternalCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""}))
 	})
 	b.Run("adjacent", func(b *testing.B) {
-		benchmarkEnumJSONMarshal(b, func(tgoInput_7 TgoJSONAdjacentCreatedInput) JSONAdjacent {
-			return NewJSONAdjacentCreated(tgoInput_7.FieldID, tgoInput_7.FieldReason, tgoInput_7.FieldCustom)
+		benchmarkEnumJSONMarshal(b, func(input TgoJSONAdjacentCreatedInput) JSONAdjacent {
+			return NewJSONAdjacentCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONAdjacentCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""}))
 	})
 	b.Run("untagged", func(b *testing.B) {
-		benchmarkEnumJSONMarshal(b, func(tgoInput_8 TgoJSONUntaggedTextInput) JSONUntagged {
-			return NewJSONUntaggedText(tgoInput_8.FieldValue)
+		benchmarkEnumJSONMarshal(b, func(input TgoJSONUntaggedTextInput) JSONUntagged {
+			return NewJSONUntaggedText(input.FieldValue)
 		}(TgoJSONUntaggedTextInput{FieldValue: "text"}))
 	})
 	b.Run("escaped-external", func(b *testing.B) {
-		benchmarkEnumJSONMarshal(b, func(tgoInput_9 TgoJSONEscapedExternalValueInput) JSONEscapedExternal {
-			return NewJSONEscapedExternalValue(tgoInput_9.FieldID)
+		benchmarkEnumJSONMarshal(b, func(input TgoJSONEscapedExternalValueInput) JSONEscapedExternal {
+			return NewJSONEscapedExternalValue(input.FieldID)
 		}(TgoJSONEscapedExternalValueInput{FieldID: "a1"}))
 	})
 	b.Run("escaped-internal", func(b *testing.B) {
-		benchmarkEnumJSONMarshal(b, func(tgoInput_10 TgoJSONEscapedValueInput) JSONEscaped {
-			return NewJSONEscapedValue(tgoInput_10.FieldID)
+		benchmarkEnumJSONMarshal(b, func(input TgoJSONEscapedValueInput) JSONEscaped {
+			return NewJSONEscapedValue(input.FieldID)
 		}(TgoJSONEscapedValueInput{FieldID: "a1"}))
 	})
 	b.Run("escaped-adjacent", func(b *testing.B) {
-		benchmarkEnumJSONMarshal(b, func(tgoInput_11 TgoJSONEscapedAdjacentValueInput) JSONEscapedAdjacent {
-			return NewJSONEscapedAdjacentValue(tgoInput_11.FieldID)
+		benchmarkEnumJSONMarshal(b, func(input TgoJSONEscapedAdjacentValueInput) JSONEscapedAdjacent {
+			return NewJSONEscapedAdjacentValue(input.FieldID)
 		}(TgoJSONEscapedAdjacentValueInput{FieldID: "a1"}))
 	})
 }
@@ -59,38 +59,38 @@ func benchmarkEnumJSONMarshal[T any](b *testing.B, value T) {
 
 func BenchmarkEnumJSONMarshalMethod(b *testing.B) {
 	b.Run("external", func(b *testing.B) {
-		benchmarkEnumJSONMarshalMethod(b, func(tgoInput_12 TgoJSONExternalCreatedInput) JSONExternal {
-			return NewJSONExternalCreated(tgoInput_12.FieldID, tgoInput_12.FieldReason, tgoInput_12.FieldCustom)
+		benchmarkEnumJSONMarshalMethod(b, func(input TgoJSONExternalCreatedInput) JSONExternal {
+			return NewJSONExternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONExternalCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""}))
 	})
 	b.Run("internal", func(b *testing.B) {
-		benchmarkEnumJSONMarshalMethod(b, func(tgoInput_13 TgoJSONInternalCreatedInput) JSONInternal {
-			return NewJSONInternalCreated(tgoInput_13.FieldID, tgoInput_13.FieldReason, tgoInput_13.FieldCustom)
+		benchmarkEnumJSONMarshalMethod(b, func(input TgoJSONInternalCreatedInput) JSONInternal {
+			return NewJSONInternalCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONInternalCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""}))
 	})
 	b.Run("adjacent", func(b *testing.B) {
-		benchmarkEnumJSONMarshalMethod(b, func(tgoInput_14 TgoJSONAdjacentCreatedInput) JSONAdjacent {
-			return NewJSONAdjacentCreated(tgoInput_14.FieldID, tgoInput_14.FieldReason, tgoInput_14.FieldCustom)
+		benchmarkEnumJSONMarshalMethod(b, func(input TgoJSONAdjacentCreatedInput) JSONAdjacent {
+			return NewJSONAdjacentCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 		}(TgoJSONAdjacentCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""}))
 	})
 	b.Run("untagged", func(b *testing.B) {
-		benchmarkEnumJSONMarshalMethod(b, func(tgoInput_15 TgoJSONUntaggedTextInput) JSONUntagged {
-			return NewJSONUntaggedText(tgoInput_15.FieldValue)
+		benchmarkEnumJSONMarshalMethod(b, func(input TgoJSONUntaggedTextInput) JSONUntagged {
+			return NewJSONUntaggedText(input.FieldValue)
 		}(TgoJSONUntaggedTextInput{FieldValue: "text"}))
 	})
 	b.Run("escaped-external", func(b *testing.B) {
-		benchmarkEnumJSONMarshalMethod(b, func(tgoInput_16 TgoJSONEscapedExternalValueInput) JSONEscapedExternal {
-			return NewJSONEscapedExternalValue(tgoInput_16.FieldID)
+		benchmarkEnumJSONMarshalMethod(b, func(input TgoJSONEscapedExternalValueInput) JSONEscapedExternal {
+			return NewJSONEscapedExternalValue(input.FieldID)
 		}(TgoJSONEscapedExternalValueInput{FieldID: "a1"}))
 	})
 	b.Run("escaped-internal", func(b *testing.B) {
-		benchmarkEnumJSONMarshalMethod(b, func(tgoInput_17 TgoJSONEscapedValueInput) JSONEscaped {
-			return NewJSONEscapedValue(tgoInput_17.FieldID)
+		benchmarkEnumJSONMarshalMethod(b, func(input TgoJSONEscapedValueInput) JSONEscaped {
+			return NewJSONEscapedValue(input.FieldID)
 		}(TgoJSONEscapedValueInput{FieldID: "a1"}))
 	})
 	b.Run("escaped-adjacent", func(b *testing.B) {
-		benchmarkEnumJSONMarshalMethod(b, func(tgoInput_18 TgoJSONEscapedAdjacentValueInput) JSONEscapedAdjacent {
-			return NewJSONEscapedAdjacentValue(tgoInput_18.FieldID)
+		benchmarkEnumJSONMarshalMethod(b, func(input TgoJSONEscapedAdjacentValueInput) JSONEscapedAdjacent {
+			return NewJSONEscapedAdjacentValue(input.FieldID)
 		}(TgoJSONEscapedAdjacentValueInput{FieldID: "a1"}))
 	})
 }

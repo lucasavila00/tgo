@@ -2,26 +2,26 @@
 
 package tgolint
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
 import "go/types"
 
 // goType closes the go/types.Type implementations used by tgolint.
 // goTypeOf is the only open Go type switch in this package.
-func __tgo_goType_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgogoTypeExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // goType requires a variant constructor. Its zero value is invalid.
@@ -63,7 +63,7 @@ func (v goType) Tag() goTypeTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v goType) UnknownTag() string {
-	return __tgo_fmt.Sprintf("goType: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("goType: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // goTypeNil is the Nil payload.
@@ -328,145 +328,145 @@ func (v goType) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case goTypeTagNil:
 		payload := v.NilPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeNil `json:"Nil"`
 		}{Payload: payload})
 	case goTypeTagBasic:
 		payload := v.BasicPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeBasic `json:"Basic"`
 		}{Payload: payload})
 	case goTypeTagArray:
 		payload := v.ArrayPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeArray `json:"Array"`
 		}{Payload: payload})
 	case goTypeTagSlice:
 		payload := v.SlicePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeSlice `json:"Slice"`
 		}{Payload: payload})
 	case goTypeTagStruct:
 		payload := v.StructPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeStruct `json:"Struct"`
 		}{Payload: payload})
 	case goTypeTagPointer:
 		payload := v.PointerPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypePointer `json:"Pointer"`
 		}{Payload: payload})
 	case goTypeTagTuple:
 		payload := v.TuplePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeTuple `json:"Tuple"`
 		}{Payload: payload})
 	case goTypeTagSignature:
 		payload := v.SignaturePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeSignature `json:"Signature"`
 		}{Payload: payload})
 	case goTypeTagMap:
 		payload := v.MapPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeMap `json:"Map"`
 		}{Payload: payload})
 	case goTypeTagChannel:
 		payload := v.ChannelPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeChannel `json:"Channel"`
 		}{Payload: payload})
 	case goTypeTagInterface:
 		payload := v.InterfacePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeInterface `json:"Interface"`
 		}{Payload: payload})
 	case goTypeTagNamed:
 		payload := v.NamedPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeNamed `json:"Named"`
 		}{Payload: payload})
 	case goTypeTagTypeParameter:
 		payload := v.TypeParameterPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeTypeParameter `json:"TypeParameter"`
 		}{Payload: payload})
 	case goTypeTagUnion:
 		payload := v.UnionPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeUnion `json:"Union"`
 		}{Payload: payload})
 	case goTypeTagOther:
 		payload := v.OtherPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload goTypeOther `json:"Other"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid goType JSON tag")
+		return nil, fmt.Errorf("invalid goType JSON tag")
 	}
 }
 
-func (v goType) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v goType) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case goTypeTagNil:
 		payload := v.NilPayload()
-		return __tgo_goType_external_json_to(out, "Nil", payload)
+		return tgogoTypeExternalJSONTo(out, "Nil", payload)
 	case goTypeTagBasic:
 		payload := v.BasicPayload()
-		return __tgo_goType_external_json_to(out, "Basic", payload)
+		return tgogoTypeExternalJSONTo(out, "Basic", payload)
 	case goTypeTagArray:
 		payload := v.ArrayPayload()
-		return __tgo_goType_external_json_to(out, "Array", payload)
+		return tgogoTypeExternalJSONTo(out, "Array", payload)
 	case goTypeTagSlice:
 		payload := v.SlicePayload()
-		return __tgo_goType_external_json_to(out, "Slice", payload)
+		return tgogoTypeExternalJSONTo(out, "Slice", payload)
 	case goTypeTagStruct:
 		payload := v.StructPayload()
-		return __tgo_goType_external_json_to(out, "Struct", payload)
+		return tgogoTypeExternalJSONTo(out, "Struct", payload)
 	case goTypeTagPointer:
 		payload := v.PointerPayload()
-		return __tgo_goType_external_json_to(out, "Pointer", payload)
+		return tgogoTypeExternalJSONTo(out, "Pointer", payload)
 	case goTypeTagTuple:
 		payload := v.TuplePayload()
-		return __tgo_goType_external_json_to(out, "Tuple", payload)
+		return tgogoTypeExternalJSONTo(out, "Tuple", payload)
 	case goTypeTagSignature:
 		payload := v.SignaturePayload()
-		return __tgo_goType_external_json_to(out, "Signature", payload)
+		return tgogoTypeExternalJSONTo(out, "Signature", payload)
 	case goTypeTagMap:
 		payload := v.MapPayload()
-		return __tgo_goType_external_json_to(out, "Map", payload)
+		return tgogoTypeExternalJSONTo(out, "Map", payload)
 	case goTypeTagChannel:
 		payload := v.ChannelPayload()
-		return __tgo_goType_external_json_to(out, "Channel", payload)
+		return tgogoTypeExternalJSONTo(out, "Channel", payload)
 	case goTypeTagInterface:
 		payload := v.InterfacePayload()
-		return __tgo_goType_external_json_to(out, "Interface", payload)
+		return tgogoTypeExternalJSONTo(out, "Interface", payload)
 	case goTypeTagNamed:
 		payload := v.NamedPayload()
-		return __tgo_goType_external_json_to(out, "Named", payload)
+		return tgogoTypeExternalJSONTo(out, "Named", payload)
 	case goTypeTagTypeParameter:
 		payload := v.TypeParameterPayload()
-		return __tgo_goType_external_json_to(out, "TypeParameter", payload)
+		return tgogoTypeExternalJSONTo(out, "TypeParameter", payload)
 	case goTypeTagUnion:
 		payload := v.UnionPayload()
-		return __tgo_goType_external_json_to(out, "Union", payload)
+		return tgogoTypeExternalJSONTo(out, "Union", payload)
 	case goTypeTagOther:
 		payload := v.OtherPayload()
-		return __tgo_goType_external_json_to(out, "Other", payload)
+		return tgogoTypeExternalJSONTo(out, "Other", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid goType JSON tag")
+		return fmt.Errorf("invalid goType JSON tag")
 	}
 }
 
 func (v *goType) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one goType JSON variant")
+		return fmt.Errorf("expected one goType JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -475,123 +475,123 @@ func (v *goType) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Nil":
 		var payload goTypeNil
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeNil()
 		return nil
 	case "Basic":
 		var payload goTypeBasic
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeBasic(payload.Value)
 		return nil
 	case "Array":
 		var payload goTypeArray
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeArray(payload.Value)
 		return nil
 	case "Slice":
 		var payload goTypeSlice
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeSlice(payload.Value)
 		return nil
 	case "Struct":
 		var payload goTypeStruct
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeStruct(payload.Value)
 		return nil
 	case "Pointer":
 		var payload goTypePointer
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypePointer(payload.Value)
 		return nil
 	case "Tuple":
 		var payload goTypeTuple
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeTuple(payload.Value)
 		return nil
 	case "Signature":
 		var payload goTypeSignature
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeSignature(payload.Value)
 		return nil
 	case "Map":
 		var payload goTypeMap
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeMap(payload.Value)
 		return nil
 	case "Channel":
 		var payload goTypeChannel
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeChannel(payload.Value)
 		return nil
 	case "Interface":
 		var payload goTypeInterface
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeInterface(payload.Value)
 		return nil
 	case "Named":
 		var payload goTypeNamed
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeNamed(payload.Value)
 		return nil
 	case "TypeParameter":
 		var payload goTypeTypeParameter
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeTypeParameter(payload.Value)
 		return nil
 	case "Union":
 		var payload goTypeUnion
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeUnion(payload.Value)
 		return nil
 	case "Other":
 		var payload goTypeOther
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = NewgoTypeOther()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown goType JSON variant %q", variant)
+		return fmt.Errorf("unknown goType JSON variant %q", variant)
 	}
 }
 
-func (v *goType) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *goType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one goType JSON variant")
+		return fmt.Errorf("expected one goType JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -662,119 +662,119 @@ func (v *goType) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one goType JSON variant")
+		return fmt.Errorf("expected one goType JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown goType JSON variant %q", unknown)
+		return fmt.Errorf("unknown goType JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload goTypeNil
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeNil()
 		return nil
 	case 2:
 		var payload goTypeBasic
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeBasic(payload.Value)
 		return nil
 	case 3:
 		var payload goTypeArray
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeArray(payload.Value)
 		return nil
 	case 4:
 		var payload goTypeSlice
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeSlice(payload.Value)
 		return nil
 	case 5:
 		var payload goTypeStruct
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeStruct(payload.Value)
 		return nil
 	case 6:
 		var payload goTypePointer
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypePointer(payload.Value)
 		return nil
 	case 7:
 		var payload goTypeTuple
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeTuple(payload.Value)
 		return nil
 	case 8:
 		var payload goTypeSignature
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeSignature(payload.Value)
 		return nil
 	case 9:
 		var payload goTypeMap
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeMap(payload.Value)
 		return nil
 	case 10:
 		var payload goTypeChannel
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeChannel(payload.Value)
 		return nil
 	case 11:
 		var payload goTypeInterface
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeInterface(payload.Value)
 		return nil
 	case 12:
 		var payload goTypeNamed
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeNamed(payload.Value)
 		return nil
 	case 13:
 		var payload goTypeTypeParameter
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeTypeParameter(payload.Value)
 		return nil
 	case 14:
 		var payload goTypeUnion
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeUnion(payload.Value)
 		return nil
 	case 15:
 		var payload goTypeOther
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = NewgoTypeOther()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid goType JSON tag")
+		return fmt.Errorf("invalid goType JSON tag")
 	}
 }
 
@@ -783,56 +783,56 @@ func goTypeOf(typ types.Type) goType {
 	case nil:
 		return NewgoTypeNil()
 	case *types.Basic:
-		return func(tgoInput_35 TgogoTypeBasicInput) goType {
-			return NewgoTypeBasic(tgoInput_35.FieldValue)
+		return func(input TgogoTypeBasicInput) goType {
+			return NewgoTypeBasic(input.FieldValue)
 		}(TgogoTypeBasicInput{FieldValue: value})
 	case *types.Array:
-		return func(tgoInput_36 TgogoTypeArrayInput) goType {
-			return NewgoTypeArray(tgoInput_36.FieldValue)
+		return func(input TgogoTypeArrayInput) goType {
+			return NewgoTypeArray(input.FieldValue)
 		}(TgogoTypeArrayInput{FieldValue: value})
 	case *types.Slice:
-		return func(tgoInput_37 TgogoTypeSliceInput) goType {
-			return NewgoTypeSlice(tgoInput_37.FieldValue)
+		return func(input TgogoTypeSliceInput) goType {
+			return NewgoTypeSlice(input.FieldValue)
 		}(TgogoTypeSliceInput{FieldValue: value})
 	case *types.Struct:
-		return func(tgoInput_38 TgogoTypeStructInput) goType {
-			return NewgoTypeStruct(tgoInput_38.FieldValue)
+		return func(input TgogoTypeStructInput) goType {
+			return NewgoTypeStruct(input.FieldValue)
 		}(TgogoTypeStructInput{FieldValue: value})
 	case *types.Pointer:
-		return func(tgoInput_39 TgogoTypePointerInput) goType {
-			return NewgoTypePointer(tgoInput_39.FieldValue)
+		return func(input TgogoTypePointerInput) goType {
+			return NewgoTypePointer(input.FieldValue)
 		}(TgogoTypePointerInput{FieldValue: value})
 	case *types.Tuple:
-		return func(tgoInput_40 TgogoTypeTupleInput) goType {
-			return NewgoTypeTuple(tgoInput_40.FieldValue)
+		return func(input TgogoTypeTupleInput) goType {
+			return NewgoTypeTuple(input.FieldValue)
 		}(TgogoTypeTupleInput{FieldValue: value})
 	case *types.Signature:
-		return func(tgoInput_41 TgogoTypeSignatureInput) goType {
-			return NewgoTypeSignature(tgoInput_41.FieldValue)
+		return func(input TgogoTypeSignatureInput) goType {
+			return NewgoTypeSignature(input.FieldValue)
 		}(TgogoTypeSignatureInput{FieldValue: value})
 	case *types.Map:
-		return func(tgoInput_42 TgogoTypeMapInput) goType {
-			return NewgoTypeMap(tgoInput_42.FieldValue)
+		return func(input TgogoTypeMapInput) goType {
+			return NewgoTypeMap(input.FieldValue)
 		}(TgogoTypeMapInput{FieldValue: value})
 	case *types.Chan:
-		return func(tgoInput_43 TgogoTypeChannelInput) goType {
-			return NewgoTypeChannel(tgoInput_43.FieldValue)
+		return func(input TgogoTypeChannelInput) goType {
+			return NewgoTypeChannel(input.FieldValue)
 		}(TgogoTypeChannelInput{FieldValue: value})
 	case *types.Interface:
-		return func(tgoInput_44 TgogoTypeInterfaceInput) goType {
-			return NewgoTypeInterface(tgoInput_44.FieldValue)
+		return func(input TgogoTypeInterfaceInput) goType {
+			return NewgoTypeInterface(input.FieldValue)
 		}(TgogoTypeInterfaceInput{FieldValue: value})
 	case *types.Named:
-		return func(tgoInput_45 TgogoTypeNamedInput) goType {
-			return NewgoTypeNamed(tgoInput_45.FieldValue)
+		return func(input TgogoTypeNamedInput) goType {
+			return NewgoTypeNamed(input.FieldValue)
 		}(TgogoTypeNamedInput{FieldValue: value})
 	case *types.TypeParam:
-		return func(tgoInput_46 TgogoTypeTypeParameterInput) goType {
-			return NewgoTypeTypeParameter(tgoInput_46.FieldValue)
+		return func(input TgogoTypeTypeParameterInput) goType {
+			return NewgoTypeTypeParameter(input.FieldValue)
 		}(TgogoTypeTypeParameterInput{FieldValue: value})
 	case *types.Union:
-		return func(tgoInput_47 TgogoTypeUnionInput) goType {
-			return NewgoTypeUnion(tgoInput_47.FieldValue)
+		return func(input TgogoTypeUnionInput) goType {
+			return NewgoTypeUnion(input.FieldValue)
 		}(TgogoTypeUnionInput{FieldValue: value})
 	default:
 		return NewgoTypeOther()

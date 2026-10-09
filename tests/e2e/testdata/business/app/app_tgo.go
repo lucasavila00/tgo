@@ -49,8 +49,8 @@ type ValidationOpaqueNumberEnvelope struct {
 }
 
 func Summary(name string) string {
-	account := func(tgoInput model.TgoAccountPersonalInput) model.Account {
-		return model.NewAccountPersonal(tgoInput.FieldName)
+	account := func(input model.TgoAccountPersonalInput) model.Account {
+		return model.NewAccountPersonal(input.FieldName)
 	}(model.TgoAccountPersonalInput{FieldName: name})
 	switch enumValue1 := account; enumValue1.Tag() {
 	case model.AccountTagPersonal:
@@ -69,8 +69,8 @@ func Request(id string) model.Request {
 }
 
 func Notice(body string) model.Notice {
-	return func(tgoInput_1 model.TgoNoticeTextInput) model.Notice {
-		return model.NewNoticeText(tgoInput_1.FieldBody, tgoInput_1.FieldLabels)
+	return func(input model.TgoNoticeTextInput) model.Notice {
+		return model.NewNoticeText(input.FieldBody, input.FieldLabels)
 	}(model.TgoNoticeTextInput{FieldBody: body, FieldLabels: model.TgoDefaultNoticeTextLabels()})
 }
 
@@ -81,20 +81,20 @@ func Sorted(values []int) []int {
 }
 
 func ImportedAlias(name string) model.Account {
-	return func(tgoInput_2 model.TgoAccountPersonalInput) model.Account {
-		return model.NewAccountPersonal(tgoInput_2.FieldName)
+	return func(input model.TgoAccountPersonalInput) model.Account {
+		return model.NewAccountPersonal(input.FieldName)
 	}(model.TgoAccountPersonalInput{FieldName: name})
 }
 
 func LocalImportedAlias(name string) model.Account {
-	return func(tgoInput_3 model.TgoAccountPersonalInput) model.Account {
-		return model.NewAccountPersonal(tgoInput_3.FieldName)
+	return func(input model.TgoAccountPersonalInput) model.Account {
+		return model.NewAccountPersonal(input.FieldName)
 	}(model.TgoAccountPersonalInput{FieldName: name})
 }
 
 func ImportedPrivateChoice(text string) model.PrivateChoice {
-	return func(tgoInput_4 model.TgoPrivateChoiceValueInput) model.PrivateChoice {
-		return model.NewPrivateChoiceValue(tgoInput_4.FieldText, tgoInput_4.FieldPointer, tgoInput_4.FieldValues)
+	return func(input model.TgoPrivateChoiceValueInput) model.PrivateChoice {
+		return model.NewPrivateChoiceValue(input.FieldText, input.FieldPointer, input.FieldValues)
 	}(model.TgoPrivateChoiceValueInput{FieldText: text, FieldPointer: nil, FieldValues: model.TgoDefaultPrivateChoiceValuevalues()})
 }
 
