@@ -120,8 +120,8 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 			externalJSONTo: jsonUse.external,
 			adjacentJSONTo: jsonUse.adjacent,
 		},
+		Lowered: editsNeedOutput(edits),
 	}
-	result.Lowered = result.initiallyNeedsLowering()
 	return result, nil
 }
 
@@ -194,6 +194,7 @@ func sourceModels(
 				sourceName, files.Position(startPositionValue).Line,
 				files.Position(endPositionValue).Line, replacement,
 			),
+			projectionOnly: plainStructProjection(item),
 		})
 		models = append(models, item)
 	}
@@ -403,7 +404,9 @@ func lowerSourceExtensions(
 		}
 		if node, ok := syntax.NonNilPointerTypeOf(extension); ok {
 			start := file.Offset(node.Percent)
-			if !coveredByEdit(edits, start) {
+			if index := coveringEdit(edits, start); index >= 0 {
+				edits[index].projectionOnly = false
+			} else {
 				edits = append(edits, edit{start: start, end: start + 1, text: "*"})
 			}
 			continue
@@ -609,13 +612,25 @@ func editedSourceText(
 	return inlineLineDirective(position.Filename, position.Line, position.Column) + text
 }
 
-func coveredByEdit(edits []edit, offset int) bool {
-	for _, change := range edits {
+func coveringEdit(edits []edit, offset int) int {
+	for index, change := range edits {
 		if change.start <= offset && offset < change.end {
-			return true
+			return index
 		}
 	}
-	return false
+	return -1
+}
+
+func plainStructProjection(item *model) bool {
+	if item.Enum || item.Predicate != "" {
+		return false
+	}
+	for _, field := range item.Fields {
+		if field.Default != "" {
+			return false
+		}
+	}
+	return true
 }
 
 func declarationEditEnd(data []byte, end int) int {
