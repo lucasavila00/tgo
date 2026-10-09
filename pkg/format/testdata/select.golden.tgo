@@ -1,6 +1,6 @@
 package fixtures
 
-type Positive int where value > 0
+type Fixture struct {} checked
 
 func choose(input <-chan int, output chan<- int) int {
 	select {

@@ -6,5 +6,3 @@ type Choice enum {
 	}
 	Two struct{}
 }
-
-type Positive int where value > 0

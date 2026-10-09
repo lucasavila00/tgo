@@ -54,7 +54,7 @@ test("comprehension control words keep their Go scopes", () => {
 
 test("contextual words do not use broad top-level rules", () => {
   for (const name of [
-    "keyword.control.where.tgo",
+    "keyword.declaration.checked.tgo",
     "keyword.control.exhaustive.tgo"
   ]) {
     assert.equal(grammar.repository.tgo.patterns.some(

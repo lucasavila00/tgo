@@ -2,7 +2,9 @@ package syntax
 
 // IdentifierOf returns an identifier node payload.
 func IdentifierOf(node *Node) (*Identifier, bool) {
-	if node == nil { return nil, false }
+	if node == nil {
+		return nil, false
+	}
 	switch enumValue1 := *node; enumValue1.Tag() {
 	case NodeTagIdentifier:
 		value := enumValue1.IdentifierPayload()
@@ -83,7 +85,7 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 		return nil, false
 	case NodeTagEnumVariant:
 		return nil, false
-case NodeTagComment:
+	case NodeTagComment:
 		return nil, false
 	case NodeTagCommentGroup:
 		return nil, false
@@ -93,7 +95,9 @@ case NodeTagComment:
 
 // EnumDeclarationOf returns an enum declaration payload.
 func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
-	if value == nil { return nil, false }
+	if value == nil {
+		return nil, false
+	}
 	switch enumValue3 := *value; enumValue3.Tag() {
 	case DeclarationTagEnum:
 		item := enumValue3.EnumPayload()
@@ -106,15 +110,15 @@ func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 		return nil, false
 	case DeclarationTagStruct:
 		return nil, false
-	case DeclarationTagChecked:
-		return nil, false
 	exhaustive:
 	}
 }
 
 // StructDeclarationOf returns a TGo struct declaration payload.
 func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
-	if value == nil { return nil, false }
+	if value == nil {
+		return nil, false
+	}
 	switch enumValue4 := *value; enumValue4.Tag() {
 	case DeclarationTagStruct:
 		item := enumValue4.StructPayload()
@@ -127,29 +131,6 @@ func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 		return nil, false
 	case DeclarationTagEnum:
 		return nil, false
-	case DeclarationTagChecked:
-		return nil, false
-	exhaustive:
-	}
-}
-
-// CheckedDeclarationOf returns a checked declaration payload.
-func CheckedDeclarationOf(value *Declaration) (*CheckedDeclaration, bool) {
-	if value == nil { return nil, false }
-	switch enumValue5 := *value; enumValue5.Tag() {
-	case DeclarationTagChecked:
-		item := enumValue5.CheckedPayload()
-		return item.Value, true
-	case DeclarationTagBad:
-		return nil, false
-	case DeclarationTagGeneral:
-		return nil, false
-	case DeclarationTagFunction:
-		return nil, false
-	case DeclarationTagEnum:
-		return nil, false
-	case DeclarationTagStruct:
-		return nil, false
 	exhaustive:
 	}
 }
@@ -157,7 +138,9 @@ func CheckedDeclarationOf(value *Declaration) (*CheckedDeclaration, bool) {
 // DefaultExpressionOf returns a default marker node payload.
 func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 	expression, ok := ExpressionOf(node)
-	if !ok { return nil, false }
+	if !ok {
+		return nil, false
+	}
 	switch enumValue8 := *expression; enumValue8.Tag() {
 	case ExpressionTagDefault:
 		item := enumValue8.DefaultPayload()
@@ -221,7 +204,9 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 // PropagationExpressionOf returns an error propagation node payload.
 func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	expression, ok := ExpressionOf(node)
-	if !ok { return nil, false }
+	if !ok {
+		return nil, false
+	}
 	switch enumValue9 := *expression; enumValue9.Tag() {
 	case ExpressionTagPropagation:
 		item := enumValue9.PropagationPayload()
@@ -285,20 +270,13 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 // ComprehensionExpressionOf returns a collection comprehension payload.
 func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
 	expression, ok := ExpressionOf(node)
-	if !ok { return nil, false }
+	if !ok {
+		return nil, false
+	}
 	switch item := *expression; item.Tag() {
 	case ExpressionTagComprehension:
 		return item.ComprehensionPayload().Value, true
-	case ExpressionTagBad, ExpressionTagIdentifier, ExpressionTagEllipsis,
-		ExpressionTagBasicLiteral, ExpressionTagFunctionLiteral,
-		ExpressionTagCompositeLiteral, ExpressionTagParenthesized,
-		ExpressionTagSelector, ExpressionTagIndex, ExpressionTagIndexList,
-		ExpressionTagSlice, ExpressionTagTypeAssertion, ExpressionTagCall,
-		ExpressionTagStar, ExpressionTagNonNilPointer, ExpressionTagUnary,
-		ExpressionTagBinary, ExpressionTagKeyValue, ExpressionTagArrayType,
-		ExpressionTagStructType, ExpressionTagFunctionType,
-		ExpressionTagInterfaceType, ExpressionTagMapType,
-		ExpressionTagChannelType, ExpressionTagDefault, ExpressionTagPropagation:
+	case ExpressionTagBad, ExpressionTagIdentifier, ExpressionTagEllipsis, ExpressionTagBasicLiteral, ExpressionTagFunctionLiteral, ExpressionTagCompositeLiteral, ExpressionTagParenthesized, ExpressionTagSelector, ExpressionTagIndex, ExpressionTagIndexList, ExpressionTagSlice, ExpressionTagTypeAssertion, ExpressionTagCall, ExpressionTagStar, ExpressionTagNonNilPointer, ExpressionTagUnary, ExpressionTagBinary, ExpressionTagKeyValue, ExpressionTagArrayType, ExpressionTagStructType, ExpressionTagFunctionType, ExpressionTagInterfaceType, ExpressionTagMapType, ExpressionTagChannelType, ExpressionTagDefault, ExpressionTagPropagation:
 		return nil, false
 	exhaustive:
 	}
@@ -308,7 +286,9 @@ func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
 func ComprehensionRangeClauseOf(
 	value *ComprehensionClause,
 ) (*ComprehensionRangeClause, bool) {
-	if value == nil { return nil, false }
+	if value == nil {
+		return nil, false
+	}
 	switch item := *value; item.Tag() {
 	case ComprehensionClauseTagRange:
 		return item.RangePayload().Value, true
@@ -322,7 +302,9 @@ func ComprehensionRangeClauseOf(
 func ComprehensionFilterClauseOf(
 	value *ComprehensionClause,
 ) (*ComprehensionFilterClause, bool) {
-	if value == nil { return nil, false }
+	if value == nil {
+		return nil, false
+	}
 	switch item := *value; item.Tag() {
 	case ComprehensionClauseTagRange:
 		return nil, false
@@ -335,7 +317,9 @@ func ComprehensionFilterClauseOf(
 // NonNilPointerTypeOf returns a non-nil pointer type payload.
 func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	expression, ok := ExpressionOf(node)
-	if !ok { return nil, false }
+	if !ok {
+		return nil, false
+	}
 	switch enumValue10 := *expression; enumValue10.Tag() {
 	case ExpressionTagNonNilPointer:
 		item := enumValue10.NonNilPointerPayload()
@@ -398,7 +382,9 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 
 // ExpressionOf returns an expression node payload.
 func ExpressionOf(node *Node) (*Expression, bool) {
-	if node == nil { return nil, false }
+	if node == nil {
+		return nil, false
+	}
 	switch enumValue11 := *node; enumValue11.Tag() {
 	case NodeTagExpression:
 		value := enumValue11.ExpressionPayload()
@@ -419,7 +405,7 @@ func ExpressionOf(node *Node) (*Expression, bool) {
 		return nil, false
 	case NodeTagEnumVariant:
 		return nil, false
-case NodeTagIdentifier:
+	case NodeTagIdentifier:
 		return nil, false
 	case NodeTagComment:
 		return nil, false
@@ -431,7 +417,9 @@ case NodeTagIdentifier:
 
 // StatementOf returns a statement node payload.
 func StatementOf(node *Node) (*Statement, bool) {
-	if node == nil { return nil, false }
+	if node == nil {
+		return nil, false
+	}
 	switch enumValue12 := *node; enumValue12.Tag() {
 	case NodeTagStatement:
 		value := enumValue12.StatementPayload()
@@ -452,7 +440,7 @@ func StatementOf(node *Node) (*Statement, bool) {
 		return nil, false
 	case NodeTagEnumVariant:
 		return nil, false
-case NodeTagIdentifier:
+	case NodeTagIdentifier:
 		return nil, false
 	case NodeTagComment:
 		return nil, false
@@ -464,7 +452,9 @@ case NodeTagIdentifier:
 
 // DeclarationOf returns a declaration node payload.
 func DeclarationOf(node *Node) (*Declaration, bool) {
-	if node == nil { return nil, false }
+	if node == nil {
+		return nil, false
+	}
 	switch enumValue13 := *node; enumValue13.Tag() {
 	case NodeTagDeclaration:
 		value := enumValue13.DeclarationPayload()
@@ -485,7 +475,7 @@ func DeclarationOf(node *Node) (*Declaration, bool) {
 		return nil, false
 	case NodeTagEnumVariant:
 		return nil, false
-case NodeTagIdentifier:
+	case NodeTagIdentifier:
 		return nil, false
 	case NodeTagComment:
 		return nil, false
@@ -497,7 +487,9 @@ case NodeTagIdentifier:
 
 // SpecificationOf returns a specification node payload.
 func SpecificationOf(node *Node) (*Specification, bool) {
-	if node == nil { return nil, false }
+	if node == nil {
+		return nil, false
+	}
 	switch enumValue14 := *node; enumValue14.Tag() {
 	case NodeTagSpecification:
 		value := enumValue14.SpecificationPayload()
@@ -518,7 +510,7 @@ func SpecificationOf(node *Node) (*Specification, bool) {
 		return nil, false
 	case NodeTagEnumVariant:
 		return nil, false
-case NodeTagIdentifier:
+	case NodeTagIdentifier:
 		return nil, false
 	case NodeTagComment:
 		return nil, false
@@ -634,7 +626,7 @@ func StatementKind(value *Statement) string {
 		return "For"
 	case StatementTagRange:
 		return "Range"
-exhaustive:
+	exhaustive:
 	}
 }
 
@@ -651,8 +643,6 @@ func DeclarationKind(value *Declaration) string {
 		return "Enum"
 	case DeclarationTagStruct:
 		return "Struct"
-	case DeclarationTagChecked:
-		return "Checked"
 	exhaustive:
 	}
 }

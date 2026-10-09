@@ -3170,7 +3170,6 @@ const (
 	DeclarationTagFunction
 	DeclarationTagEnum
 	DeclarationTagStruct
-	DeclarationTagChecked
 )
 
 type Declaration struct {
@@ -3180,7 +3179,6 @@ type Declaration struct {
 	tgoFunction DeclarationFunction
 	tgoEnum     DeclarationEnum
 	tgoStruct   DeclarationStruct
-	tgoChecked  DeclarationChecked
 }
 
 // Tag returns the active tag.
@@ -3261,20 +3259,6 @@ func (value DeclarationStruct) Declaration() Declaration {
 // StructPayload requires Struct. No tag check.
 func (v Declaration) StructPayload() DeclarationStruct { return v.tgoStruct }
 
-// DeclarationChecked is the Checked payload.
-type DeclarationChecked struct {
-	Value *CheckedDeclaration
-}
-
-// Declaration constructs Declaration. Model fields must be valid.
-// Shared fields keep their aliases and caller duties.
-func (value DeclarationChecked) Declaration() Declaration {
-	return Declaration{tgoTag: DeclarationTagChecked, tgoChecked: value}
-}
-
-// CheckedPayload requires Checked. No tag check.
-func (v Declaration) CheckedPayload() DeclarationChecked { return v.tgoChecked }
-
 func (v Declaration) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case DeclarationTagBad:
@@ -3302,11 +3286,6 @@ func (v Declaration) MarshalJSON() ([]byte, error) {
 		return __tgo_json.Marshal(struct {
 			Payload DeclarationStruct `json:"Struct"`
 		}{Payload: payload})
-	case DeclarationTagChecked:
-		payload := v.CheckedPayload()
-		return __tgo_json.Marshal(struct {
-			Payload DeclarationChecked `json:"Checked"`
-		}{Payload: payload})
 	default:
 		return nil, __tgo_fmt.Errorf("invalid Declaration JSON tag")
 	}
@@ -3329,9 +3308,6 @@ func (v Declaration) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	case DeclarationTagStruct:
 		payload := v.StructPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Struct", payload)
-	case DeclarationTagChecked:
-		payload := v.CheckedPayload()
-		return __tgo_ChannelDirection_external_json_to(out, "Checked", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid Declaration JSON tag")
 	}
@@ -3387,13 +3363,6 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		}
 		*v = payload.Declaration()
 		return nil
-	case "Checked":
-		var payload DeclarationChecked
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
-			return err
-		}
-		*v = payload.Declaration()
-		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Declaration JSON variant %q", variant)
 	}
@@ -3430,8 +3399,6 @@ func (v *Declaration) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 			current = 4
 		case "Struct":
 			current = 5
-		case "Checked":
-			current = 6
 		}
 		same := haveName && current == selected
 		if same && current == 0 {
@@ -3496,13 +3463,6 @@ func (v *Declaration) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return nil
 	case 5:
 		var payload DeclarationStruct
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
-		}
-		*v = payload.Declaration()
-		return nil
-	case 6:
-		var payload DeclarationChecked
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
@@ -3593,20 +3553,8 @@ type StructDeclaration struct {
 	Lbrace  token.Pos
 	Fields  []*TGoField
 	Rbrace  token.Pos
+	Checked token.Pos
 	Comment *CommentGroup
-}
-
-// CheckedDeclaration declares a type with a construction predicate.
-
-type CheckedDeclaration struct {
-	Span
-	Doc       *CommentGroup
-	Type      token.Pos
-	Name      *Identifier
-	Base      *Expression
-	Where     token.Pos
-	Predicate *Expression
-	Comment   *CommentGroup
 }
 
 // File is one complete TGo source file.

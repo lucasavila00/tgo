@@ -5,25 +5,15 @@
     "has": "keyword.declaration.enum.tgo"
   },
   {
-    "line": "type Port int where value > 0",
-    "token": "where",
-    "has": "keyword.control.where.tgo"
-  },
-  {
-    "line": "type PositivePoint struct { X int } where value.X > 0",
-    "token": "where",
-    "has": "keyword.control.where.tgo"
-  },
-  {
-    "line": "type Multiline int where",
-    "token": "where",
-    "has": "keyword.control.where.tgo"
+    "line": "type Port struct { number int } checked",
+    "token": "checked",
+    "has": "keyword.declaration.checked.tgo"
   },
   {
     "line": "type WhereAlias where",
     "token": "where",
     "has": "identifier.go",
-    "not": "keyword.control.where.tgo"
+    "not": "keyword.declaration.checked.tgo"
   },
   {
     "line": "_ = Request{..default}",
@@ -97,7 +87,7 @@
     "line": "where := 1",
     "token": "where",
     "has": "identifier.go",
-    "not": "keyword.control.where.tgo"
+    "not": "keyword.declaration.checked.tgo"
   },
   {
     "line": "enum := 2",

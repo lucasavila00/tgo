@@ -16,9 +16,11 @@ type Mode uint
 const (
 	// ParseComments retains all source comments.
 	ParseComments Mode = 1 << iota
+
 	// AllErrors reports independent scanner and Go parser errors.
 	// A tgo production error stops extension parsing at the first error.
 	AllErrors
+
 	// AllowInvalidModels keeps syntactically complete enum declarations when
 	// their variant set is empty or has duplicate names.
 	AllowInvalidModels
@@ -56,21 +58,18 @@ type rawVariant struct {
 }
 
 type rawDecl struct {
-	tag            int
-	kind           string
-	start          int
-	end            int
-	typeToken      int
-	name           int
-	keyword        int
-	open           int
-	close          int
-	baseStart      int
-	baseEnd        int
-	predicateStart int
-	predicateEnd   int
-	fields         []*rawField
-	variants       []*rawVariant
+	tag       int
+	checked   int
+	kind      string
+	start     int
+	end       int
+	typeToken int
+	name      int
+	keyword   int
+	open      int
+	close     int
+	fields    []*rawField
+	variants  []*rawVariant
 }
 
 type rawDefault struct {
@@ -225,11 +224,16 @@ func scanSource(
 	file := set.AddFile(filename, -1, len(source))
 	scan := new(scanner.Scanner)
 	errors := make(scanner.ErrorList, 0)
-	scan.Init(file, source, func(position token.Position, message string) {
-		if allErrors || len(errors) == 0 {
-			errors.Add(position, message)
-		}
-	}, scanner.ScanComments)
+	scan.Init(
+		file,
+		source,
+		func(position token.Position, message string) {
+			if allErrors || len(errors) == 0 {
+				errors.Add(position, message)
+			}
+		},
+		scanner.ScanComments,
+	)
 	tokens := []lexeme(nil)
 	comments := []sourceEdit(nil)
 	for {
@@ -348,11 +352,14 @@ func (p *sourceParser) discoverDeclarations() error {
 			}
 			if declaration != nil {
 				p.decls = append(p.decls, declaration)
-				p.edits = append(p.edits, sourceEdit{
-					start: declaration.start,
-					end:   declaration.end,
-					text:  "var _ int",
-				})
+				p.edits = append(
+					p.edits,
+					sourceEdit{
+						start: declaration.start,
+						end:   declaration.end,
+						text:  "var _ int",
+					},
+				)
 				cursor = next
 				continue
 			}
@@ -396,21 +403,6 @@ func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
 	if ordinary && p.tokens[baseStart].kind != token.STRUCT {
 		return nil, start + 1, nil
 	}
-	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON {
-		if p.tokens[cursor].text == "where" &&
-			goExpressionSyntax(p.text(baseStart, cursor)) {
-			return p.checkedDeclaration(start, baseStart, cursor)
-		}
-		if opening(p.tokens[cursor].kind) {
-			end, tgoErr := p.closeToken(cursor)
-			if tgoErr != nil {
-				return nil, 0, tgoErr
-			}
-			cursor = end + 1
-			continue
-		}
-		cursor++
-	}
 	if p.tokens[baseStart].kind == token.STRUCT && baseStart+1 < len(p.tokens) &&
 		p.tokens[baseStart+1].kind == token.LBRACE {
 		return p.structDeclaration(start, baseStart, baseStart+1)
@@ -443,14 +435,6 @@ func (p *sourceParser) goDeclarationSyntax(start int, end int) bool {
 	return err == nil
 }
 
-func goExpressionSyntax(text string) bool {
-	if text == "" {
-		return false
-	}
-	_, err := parser.ParseExpr(text)
-	return err == nil
-}
-
 func (p *sourceParser) enumDeclaration(
 	start int,
 	keyword int,
@@ -473,10 +457,6 @@ func (p *sourceParser) enumDeclaration(
 	}
 	declaration.open = open
 	declaration.close = closing
-	declaration.baseStart = -1
-	declaration.baseEnd = -1
-	declaration.predicateStart = -1
-	declaration.predicateEnd = -1
 	cursor := open + 1
 	names := make(map[string]bool)
 	for cursor < closing {
@@ -550,62 +530,28 @@ func (p *sourceParser) structDeclaration(
 	if err != nil {
 		return nil, 0, err
 	}
+	next := closing + 1
+	checked := -1
+	if next < len(p.tokens) && p.tokens[next].kind == token.IDENT &&
+		p.tokens[next].text == "checked" {
+		checked = next
+		next++
+	}
 	declaration := new(rawDecl)
 	declaration.kind = "struct"
 	declaration.start = p.tokens[start].start
 	declaration.end = p.tokens[closing].end
+	if checked >= 0 {
+		declaration.end = p.tokens[checked].end
+	}
+	declaration.checked = checked
 	declaration.typeToken = start
 	declaration.name = start + 1
 	declaration.keyword = keyword
 	declaration.open = open
 	declaration.close = closing
-	declaration.baseStart = -1
-	declaration.baseEnd = -1
-	declaration.predicateStart = -1
-	declaration.predicateEnd = -1
 	declaration.fields = fields
-	return declaration, skipSemicolon(p.tokens, closing+1), nil
-}
-
-func (p *sourceParser) checkedDeclaration(
-	start int,
-	baseStart int,
-	where int,
-) (*rawDecl, int, error) {
-	predicateStart := where + 1
-	if p.implicitSemicolon(predicateStart) {
-		predicateStart++
-	}
-	cursor := predicateStart
-	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON {
-		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return nil, 0, err
-			}
-			cursor = end + 1
-			continue
-		}
-		cursor++
-	}
-	if predicateStart == cursor {
-		failure := p.tokenError(where, "checked type needs a predicate")
-		return nil, 0, failure
-	}
-	declaration := new(rawDecl)
-	declaration.kind = "checked"
-	declaration.start = p.tokens[start].start
-	declaration.end = p.tokens[cursor-1].end
-	declaration.typeToken = start
-	declaration.name = start + 1
-	declaration.keyword = where
-	declaration.open = -1
-	declaration.close = -1
-	declaration.baseStart = baseStart
-	declaration.baseEnd = where
-	declaration.predicateStart = predicateStart
-	declaration.predicateEnd = cursor
-	return declaration, skipSemicolon(p.tokens, cursor), nil
+	return declaration, skipSemicolon(p.tokens, next), nil
 }
 
 func (p *sourceParser) rawFields(open int, closing int) ([]*rawField, error) {

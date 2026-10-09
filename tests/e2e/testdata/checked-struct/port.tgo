@@ -1,0 +1,41 @@
+package checkedstruct
+
+import "errors"
+
+var ErrInvalidPort = errors.New("invalid port")
+
+type Port struct {
+	number int
+} checked
+
+func (value Port) check() (Port, error) {
+	if value.number < 1 || value.number > 65535 {
+		return Port{}, ErrInvalidPort
+	}
+	return value,
+}
+
+type ServicePort struct {
+	port Port
+} checked
+
+func (value ServicePort) check() (ServicePort, error) {
+	return value,
+}
+
+func NewPort(number int) (Port, error) {
+	return Port{number: number}
+}
+
+func NewServicePort(number int) (ServicePort, error) {
+	port := Port{number: number}!
+	return ServicePort{port: port}
+}
+
+func Number(value Port) int {
+	return value.number
+}
+
+func ServiceNumber(value ServicePort) int {
+	return value.port.number
+}

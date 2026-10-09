@@ -1,6 +1,15 @@
 package model
 
-type Count int where value > 0
+type Count struct { value int } checked
+
+type countError struct{}
+func (countError) Error() string { return "invalid Count" }
+func (value Count) check() (Count, error) {
+	if value.value <= 0 { return Count{}, countError{} }
+	return value, nil
+}
+func NewCount(value int) (Count, error) { return Count{value: value} }
+func (value Count) Value() int { return value.value }
 
 type Pair struct {
 	Left, Right string `json:"pair"` = ""

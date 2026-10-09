@@ -58,7 +58,7 @@ func (c %checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 		sourceFiles,
 		sourcePath,
 		data,
-		syntax.ParseComments|syntax.AllErrors,
+		syntax.ParseComments | syntax.AllErrors,
 	)
 	if err != nil {
 		c.failVerification(
@@ -73,12 +73,21 @@ func (c %checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 	sourceToken := sourceFiles.File(file.Package)
 	for _, declaration := range file.Declarations {
 		if source := sourceDeclaration(
-			declaration, c.packagePath(), file, sourceToken, data,
+			declaration,
+			c.packagePath(),
+			file,
+			sourceToken,
+			data,
 		); source != nil {
 			sourceNames[sourceModelName(source)] = true
 		}
 		c.checkSourceDeclaration(
-			generated, sourceName, file, declaration, sourceToken, data,
+			generated,
+			sourceName,
+			file,
+			declaration,
+			sourceToken,
+			data,
 		)
 	}
 	c.reportExtraGeneratedModels(generated, sourceName, sourceNames)
@@ -86,7 +95,10 @@ func (c %checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 		return nil
 	}
 	return &verifiedSource{
-		generated: generated, file: file, tokenFile: sourceToken, data: data,
+		generated: generated,
+		file:      file,
+		tokenFile: sourceToken,
+		data:      data,
 	}
 }
 
@@ -94,14 +106,18 @@ func (c %checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 func (c %checker) exportSourceModels(source *verifiedSource) {
 	for _, declaration := range source.file.Declarations {
 		c.exportSourceDeclaration(
-			source.generated, source.file, declaration, source.tokenFile, source.data,
+			source.generated,
+			source.file,
+			declaration,
+			source.tokenFile,
+			source.data,
 		)
 	}
 }
 
 func (c %checker) hasModelAPIs(object *types.TypeName) bool {
 	return method(object.Type(), "Tag") != nil ||
-		method(object.Type(), "Value") != nil
+		method(object.Type(), "check") != nil
 }
 
 // reportExtraGeneratedModels rejects model APIs with no matching TGo declaration.
@@ -146,7 +162,11 @@ func (c %checker) checkSourceDeclaration(
 	data []byte,
 ) {
 	source := sourceDeclaration(
-		declaration, c.packagePath(), file, sourceFile, data,
+		declaration,
+		c.packagePath(),
+		file,
+		sourceFile,
+		data,
 	)
 	if source == nil {
 		return
@@ -164,7 +184,10 @@ func (c %checker) checkSourceDeclaration(
 	}
 	object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
 	if !objectOK || !sourceShapeMatches(
-		generated, specification.Type, object.Type(), source,
+		generated,
+		specification.Type,
+		object.Type(),
+		source,
 	) {
 		c.failVerification(
 			specification.Start,
@@ -185,7 +208,11 @@ func (c %checker) exportSourceDeclaration(
 	data []byte,
 ) {
 	source := sourceDeclaration(
-		declaration, c.packagePath(), file, sourceFile, data,
+		declaration,
+		c.packagePath(),
+		file,
+		sourceFile,
+		data,
 	)
 	if source == nil {
 		return
@@ -216,9 +243,16 @@ func (c %checker) packagePath() string {
 }
 
 type sourceModel enum {
-	Checked struct { Name string; Fact %model; Base string }
-	Enum struct { Name string; Fact %model; Variants []sourceVariant }
-	Struct struct { Name string; Fields []sourceField }
+	Enum struct {
+		Name     string
+		Fact     %model
+		Variants []sourceVariant
+	}
+	Struct struct {
+		Name   string
+		Fact   *model
+		Fields []sourceField
+	}
 }
 
 // sourceDeclaration converts one syntax declaration to verified model metadata.
@@ -229,23 +263,22 @@ func sourceDeclaration(
 	sourceFile *token.File,
 	data []byte,
 ) *sourceModel {
-	if file == nil { return nil }
-	if sourceFile == nil { return nil }
-	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
-		if node == nil { return nil }
-		result := sourceModel.Checked{
-			Name: node.Name.Name,
-			Fact: checkedModel(packagePath, node.Name.Name),
-			Base: sourceExpression(file, sourceFile, data, node.Base),
-		}
-		return &result
+	if file == nil {
+		return nil
+	}
+	if sourceFile == nil {
+		return nil
 	}
 	if node, ok := syntax.EnumDeclarationOf(declaration); ok {
-		if node == nil { return nil }
+		if node == nil {
+			return nil
+		}
 		variants := make([]string, 0, len(node.Variants))
 		sourceVariants := make([]sourceVariant, 0, len(node.Variants))
 		for _, variant := range node.Variants {
-			if variant == nil { continue }
+			if variant == nil {
+				continue
+			}
 			variants = append(variants, variant.Name.Name)
 			fields := []sourceField(nil)
 			for _, field := range variant.Fields {
@@ -253,28 +286,38 @@ func sourceDeclaration(
 					fields = append(fields, sourceFields(file, sourceFile, data, field)...)
 				}
 			}
-			sourceVariants = append(sourceVariants, sourceVariant{
-				name: variant.Name.Name,
-				fields: fields,
-			})
+			sourceVariants = append(
+				sourceVariants,
+				sourceVariant{
+					name:   variant.Name.Name,
+					fields: fields,
+				},
+			)
 		}
 		result := sourceModel.Enum{
-			Name: node.Name.Name,
-			Fact: enumModel(packagePath, node.Name.Name, variants),
+			Name:     node.Name.Name,
+			Fact:     enumModel(packagePath, node.Name.Name, variants),
 			Variants: sourceVariants,
 		}
 		return &result
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
-		if node == nil { return nil }
+		if node == nil {
+			return nil
+		}
 		fields := []sourceField(nil)
 		for _, field := range node.Fields {
 			if field != nil {
 				fields = append(fields, sourceFields(file, sourceFile, data, field)...)
 			}
 		}
+		var fact *model = nil
+		if node.Checked != token.NoPos {
+			fact = checkedModel(packagePath, node.Name.Name)
+		}
 		result := sourceModel.Struct{
-			Name: node.Name.Name,
+			Name:   node.Name.Name,
+			Fact:   fact,
 			Fields: fields,
 		}
 		return &result
@@ -287,8 +330,6 @@ func sourceModelName(value *sourceModel) string {
 		return ""
 	}
 	switch item := *value; item.Tag() {
-	case sourceModelTagChecked:
-		return item.CheckedPayload().Name
 	case sourceModelTagEnum:
 		return item.EnumPayload().Name
 	case sourceModelTagStruct:
@@ -302,12 +343,10 @@ func sourceModelFact(value *sourceModel) *model {
 		return nil
 	}
 	switch item := *value; item.Tag() {
-	case sourceModelTagChecked:
-		return item.CheckedPayload().Fact
 	case sourceModelTagEnum:
 		return item.EnumPayload().Fact
 	case sourceModelTagStruct:
-		return nil
+		return item.StructPayload().Fact
 	exhaustive:
 	}
 }
@@ -360,29 +399,17 @@ func sourceShapeMatches(
 		if structure == nil {
 			return false
 		}
-		return sameFields(sourceStruct.Fields, structure.Fields.List, generated)
-	case sourceModelTagChecked:
-		checked := item.CheckedPayload()
-		structure := syntax.StructTypeExpressionOf(representation)
-		if structure == nil {
+		if !sameFields(sourceStruct.Fields, structure.Fields.List, generated) {
 			return false
 		}
-		return sameModelFact(
-			checked.Fact, emittedCheckedModel(checked.Name, structure, typ),
-		) &&
-			len(structure.Fields.List) == 1 && sameTypeText(
-				checked.Base, syntax.SourceText(generated, syntax.Span{
-					Start: syntax.ExpressionPosition(structure.Fields.List[0].Type),
-					Stop: syntax.ExpressionEnd(structure.Fields.List[0].Type),
-				}),
-			)
+		return sourceStruct.Fact == nil || validCheckedStructAPI(typ)
 	case sourceModelTagEnum:
 		enum := item.EnumPayload()
 		if !generatedEnumShape(typ, enum.Name, enum.Variants) {
 			return false
 		}
 		for _, variant := range enum.Variants {
-			payloadSpec := generatedTypeSpec(generated, enum.Name+variant.name)
+			payloadSpec := generatedTypeSpec(generated, enum.Name + variant.name)
 			if payloadSpec == nil {
 				return false
 			}
@@ -396,13 +423,25 @@ func sourceShapeMatches(
 	}
 }
 
+func validCheckedStructAPI(typ types.Type) bool {
+	signature := method(typ, "check")
+	if signature == nil || signature.Recv() == nil || signature.Params().Len() != 0 ||
+		signature.Results().Len() != 2 || signature.Variadic() {
+		return false
+	}
+	errorObject := types.Universe.Lookup("error")
+	return errorObject != nil && types.Identical(signature.Recv().Type(), typ) &&
+		types.Identical(signature.Results().At(0).Type(), typ) &&
+		types.Identical(signature.Results().At(1).Type(), errorObject.Type())
+}
+
 // generatedEnumShape checks enum operations without reading private storage.
 func generatedEnumShape(
 	typ types.Type,
 	name string,
 	variants []sourceVariant,
 ) bool {
-	tag, ok := typeInPackage(typ, name+"Tag")
+	tag, ok := typeInPackage(typ, name + "Tag")
 	if !ok || !validGeneratedTagAPI(typ, tag, name, variants) {
 		return false
 	}
@@ -410,7 +449,10 @@ func generatedEnumShape(
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
 		if !ok || !validEnumAPI(
-			typ, payload, variant.name+"Payload", name,
+			typ,
+			payload,
+			variant.name + "Payload",
+			name,
 		) {
 			return false
 		}
@@ -433,7 +475,7 @@ func validGeneratedTagAPI(
 		return false
 	}
 	basic, ok := coreType(tagType).(*types.Basic)
-	if !ok || basic.Info()&types.IsUnsigned == 0 {
+	if !ok || basic.Info() & types.IsUnsigned == 0 {
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
@@ -442,12 +484,12 @@ func validGeneratedTagAPI(
 	}
 	names := []string(nil)
 	for _, variant := range variants {
-		names = append(names, name+"Tag"+variant.name)
+		names = append(names, name + "Tag" + variant.name)
 	}
 	for index, constantName := range names {
 		constant, ok := named.Obj().Pkg().Scope().Lookup(constantName).(*types.Const)
 		if !ok || !types.Identical(constant.Type(), tagType) ||
-			constant.Val().ExactString() != strconv.Itoa(index+1) {
+			constant.Val().ExactString() != strconv.Itoa(index + 1) {
 			return false
 		}
 	}
@@ -506,7 +548,9 @@ func sourceFields(
 	tagText := ""
 	if declaration.Field.Tag != nil {
 		tagText = sourceRange(
-			sourceFile, data, declaration.Field.Tag.Start,
+			sourceFile,
+			data,
+			declaration.Field.Tag.Start,
 			declaration.Field.Tag.Stop,
 		)
 	}
@@ -514,9 +558,14 @@ func sourceFields(
 		return []sourceField{{name: "", typeExpression: typeText, tag: tagText}}
 	}
 	for _, name := range declaration.Field.Names {
-		result = append(result, sourceField{
-			name: name.Name, typeExpression: typeText, tag: tagText,
-		})
+		result = append(
+			result,
+			sourceField{
+				name:           name.Name,
+				typeExpression: typeText,
+				tag:            tagText,
+			},
+		)
 	}
 	return result
 }
@@ -532,16 +581,20 @@ func sourceExpression(
 	}
 	start := syntax.ExpressionPosition(expression)
 	end := syntax.ExpressionEnd(expression)
-	result := []byte(sourceRange(
-		sourceFile, data, syntax.ExpressionPosition(expression),
-		syntax.ExpressionEnd(expression),
-	))
+	result := []byte(
+		sourceRange(
+			sourceFile,
+			data,
+			syntax.ExpressionPosition(expression),
+			syntax.ExpressionEnd(expression),
+		),
+	)
 	for _, extension := range syntax.Extensions(file) {
 		node, ok := syntax.NonNilPointerTypeOf(extension)
 		if !ok || node.Percent < start || node.Percent >= end {
 			continue
 		}
-		result[sourceFile.Offset(node.Percent)-sourceFile.Offset(start)] = '*'
+		result[sourceFile.Offset(node.Percent) - sourceFile.Offset(start)] = '*'
 	}
 	return string(result)
 }
@@ -565,13 +618,20 @@ func sameFields(
 	}
 	for index, field := range source {
 		other := generated[index]
-		if other == nil { return false }
-		typeText := syntax.SourceText(file, syntax.Span{
-			Start: syntax.ExpressionPosition(other.Type),
-			Stop:  syntax.ExpressionEnd(other.Type),
-		})
+		if other == nil {
+			return false
+		}
+		typeText := syntax.SourceText(
+			file,
+			syntax.Span{
+				Start: syntax.ExpressionPosition(other.Type),
+				Stop:  syntax.ExpressionEnd(other.Type),
+			},
+		)
 		tagText := ""
-		if other.Tag != nil { tagText = syntax.SourceText(file, other.Tag.Span) }
+		if other.Tag != nil {
+			tagText = syntax.SourceText(file, other.Tag.Span)
+		}
 		if !sameTypeText(field.typeExpression, typeText) ||
 			!sameTagText(field.tag, tagText) {
 			return false
@@ -590,7 +650,9 @@ func sameTypeText(left string, right string) bool {
 	return sameFormattedText(
 		left,
 		right,
-		func(text string) string { return "package p\ntype value " + text + "\n" },
+		func(text string) string {
+			return "package p\ntype value " + text + "\n"
+		},
 	)
 }
 
@@ -609,7 +671,9 @@ func sameFormattedText(
 	right string,
 	wrap func(string) string,
 ) bool {
-	if left == right { return true }
+	if left == right {
+		return true
+	}
 	if left == "" || right == "" {
 		return left == right
 	}

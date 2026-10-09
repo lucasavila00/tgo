@@ -93,8 +93,6 @@ func expectedModelText(sourceName string, parsed *source) string {
 				parsed.JSONTextPackage, parsed.StringsPackage, parsed.FmtPackage,
 				parsed.ExternalJSONTo, parsed.AdjacentJSONTo,
 			))
-		case declaration.Predicate != "":
-			output.WriteString(checkedGo(sourceName, declaration))
 		default:
 			fmt.Fprintf(
 				&output,

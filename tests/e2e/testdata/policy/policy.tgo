@@ -13,7 +13,9 @@ var slice = []int{2: 3}
 
 func Named() (result int) { return }
 
-type Quantity int where value > 0
+type Quantity struct { value int } checked
+
+func (value Quantity) check() (Quantity, error) { return value, nil }
 
 var pointer = new(Quantity)
 var values = make([]Quantity, 2)

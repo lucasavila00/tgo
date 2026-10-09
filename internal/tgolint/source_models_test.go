@@ -61,24 +61,24 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 	}
 }
 
-func TestCheckedSourceDeclarationFactRoundTrip(t *testing.T) {
+func TestCheckedStructSourceDeclarationFactRoundTrip(t *testing.T) {
 	t.Parallel()
 	models := sourceModelShapes(t)
 	if sourceModelName(models[0]) != "Count" {
 		t.Fatalf("checked source model: %#v", models[0])
 	}
-	checked := *models[0]
-	switch checked.Tag() {
-	case sourceModelTagChecked:
-		shape := checked.CheckedPayload()
-		if shape.Base != "int" {
-			t.Fatalf("checked base: %q", shape.Base)
+	structure := *models[0]
+	switch structure.Tag() {
+	case sourceModelTagEnum:
+		t.Fatal("checked source has a different variant")
+	case sourceModelTagStruct:
+		shape := structure.StructPayload()
+		if len(shape.Fields) != 1 || shape.Fields[0].name != "value" {
+			t.Fatalf("checked fields: %#v", shape.Fields)
 		}
 		assertSourceModelFactRoundTrip(t, shape.Fact, checkedModelWire, "Count", nil)
-	case sourceModelTagEnum, sourceModelTagStruct:
-		t.Fatal("checked source has a different variant")
 	default:
-		panic(checked.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(structure.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -90,7 +90,7 @@ func TestEnumSourceDeclarationFactRoundTrip(t *testing.T) {
 	}
 	enum := *models[1]
 	switch enum.Tag() {
-	case sourceModelTagChecked, sourceModelTagStruct:
+	case sourceModelTagStruct:
 		t.Fatal("enum source has a different variant")
 	case sourceModelTagEnum:
 		shape := enum.EnumPayload()
@@ -116,7 +116,7 @@ func TestStructSourceDeclaration(t *testing.T) {
 	}
 	structure := *models[2]
 	switch structure.Tag() {
-	case sourceModelTagChecked, sourceModelTagEnum:
+	case sourceModelTagEnum:
 		t.Fatal("struct source has a different variant")
 	case sourceModelTagStruct:
 		shape := structure.StructPayload()
@@ -136,7 +136,9 @@ func sourceModelShapes(t *testing.T) []*sourceModel {
 	t.Helper()
 	data := []byte(`package sample
 
-type Count int where value > 0
+type Count struct { value int } checked
+
+func (value Count) check() (Count, error) { return value, nil }
 
 type Event enum {
 	Started struct { ID string }

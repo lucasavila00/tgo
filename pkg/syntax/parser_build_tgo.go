@@ -71,11 +71,15 @@ func (p *sourceParser) makeComprehension(
 	anchors := make(map[frontNode]frontNode)
 	result := &frontComprehensionExpr{
 		frontSpan:  frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
-		Projection: projection, Type: projection.Type,
-		Lbrace: p.pos(p.tokens[raw.open].start), Clauses: nil,
+		Projection: projection,
+		Type:       projection.Type,
+		Lbrace:     p.pos(p.tokens[raw.open].start),
+		Clauses:    nil,
 		Result: frontComprehensionResult{
-			frontSpan: frontSpan{Start: token.NoPos, Stop: token.NoPos}, Key: nil,
-			Colon: token.NoPos, Value: nil,
+			frontSpan: frontSpan{Start: token.NoPos, Stop: token.NoPos},
+			Key:       nil,
+			Colon:     token.NoPos,
+			Value:     nil,
 		},
 		Rbrace: p.pos(p.tokens[raw.close].start),
 	}
@@ -96,18 +100,24 @@ func (p *sourceParser) makeComprehension(
 				Start: p.pos(p.tokens[clause.start].start),
 				Stop:  p.pos(p.tokens[clause.end-1].end),
 			},
-			Kind: clause.kind, Keyword: p.pos(p.tokens[clause.keyword].start),
-			Bindings: nil, Define: token.NoPos, Range: token.NoPos,
+			Kind:       clause.kind,
+			Keyword:    p.pos(p.tokens[clause.keyword].start),
+			Bindings:   nil,
+			Define:     token.NoPos,
+			Range:      token.NoPos,
 			Expression: expression,
 			Lbrace:     p.pos(p.tokens[clause.open].start),
 			Rbrace:     p.pos(p.tokens[clause.close].start),
 		}
 		for _, binding := range clause.bindings {
-			item.Bindings = append(item.Bindings, &ast.Ident{
-				NamePos: p.pos(p.tokens[binding].start),
-				Name:    p.tokens[binding].text,
-				Obj:     nil,
-			})
+			item.Bindings = append(
+				item.Bindings,
+				&ast.Ident{
+					NamePos: p.pos(p.tokens[binding].start),
+					Name:    p.tokens[binding].text,
+					Obj:     nil,
+				},
+			)
 		}
 		if clause.define >= 0 {
 			item.Define = p.pos(p.tokens[clause.define].start)
@@ -148,7 +158,9 @@ func (p *sourceParser) makeComprehension(
 			Start: p.pos(p.tokens[rawResult.start].start),
 			Stop:  p.pos(p.tokens[rawResult.end-1].end),
 		},
-		Key: key, Colon: colon, Value: value,
+		Key:   key,
+		Colon: colon,
+		Value: value,
 	}
 	return result, anchors, nil
 }
@@ -178,9 +190,9 @@ func (p *sourceParser) makeDeclaration(
 			Comment:   nil,
 		}
 		for _, rawVariant := range raw.variants {
-			fields, fieldAnchors, tgoErr := p.makeFields(rawVariant.fields, defaultAt)
-			if tgoErr != nil {
-				return nil, nil, tgoErr
+			fields, fieldAnchors, err := p.makeFields(rawVariant.fields, defaultAt)
+			if err != nil {
+				return nil, nil, err
 			}
 			variant := &frontVariantDecl{
 				frontSpan: frontSpan{
@@ -207,9 +219,13 @@ func (p *sourceParser) makeDeclaration(
 		}
 		return node, anchors, nil
 	case "struct":
-		fields, fieldAnchors, tgoErr2 := p.makeFields(raw.fields, defaultAt)
-		if tgoErr2 != nil {
-			return nil, nil, tgoErr2
+		fields, fieldAnchors, tgoErr := p.makeFields(raw.fields, defaultAt)
+		if tgoErr != nil {
+			return nil, nil, tgoErr
+		}
+		checked := token.NoPos
+		if raw.checked >= 0 {
+			checked = p.pos(p.tokens[raw.checked].start)
 		}
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
@@ -223,40 +239,7 @@ func (p *sourceParser) makeDeclaration(
 			Lbrace:    p.pos(p.tokens[raw.open].start),
 			Fields:    fields,
 			Rbrace:    p.pos(p.tokens[raw.close].start),
-			Comment:   nil,
-		}, anchors, nil
-
-	case "checked":
-		base, baseAnchors, err := p.parseExpression(
-			p.tokens[raw.baseStart].start,
-			p.tokens[raw.baseEnd].start,
-			defaultAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		predicate, predicateAnchors, err := p.parseExpression(
-			p.tokens[raw.predicateStart].start,
-			p.tokens[raw.predicateEnd-1].end,
-			defaultAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		for extension, parent := range baseAnchors {
-			anchors[extension] = parent
-		}
-		for extension, parent := range predicateAnchors {
-			anchors[extension] = parent
-		}
-		return &frontCheckedDecl{
-			frontSpan: frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
-			Doc:       nil,
-			Type:      p.pos(p.tokens[raw.typeToken].start),
-			Name:      name,
-			Base:      base,
-			Where:     p.pos(p.tokens[raw.keyword].start),
-			Predicate: predicate,
+			Checked:   checked,
 			Comment:   nil,
 		}, anchors, nil
 

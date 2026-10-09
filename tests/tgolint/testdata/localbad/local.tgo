@@ -1,6 +1,16 @@
 package localbad
 
-type Count int where value > 0
+type Count struct { value int } checked
+
+func (value Count) check() (Count, error) { return value, nil }
+
+type Port struct {
+	number int
+} checked
+
+func (value Port) check() (Port, error) {
+	return value,
+}
 
 type Event enum {
 	Started struct { ID string }

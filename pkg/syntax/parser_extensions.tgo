@@ -241,7 +241,8 @@ func (p %sourceParser) exhaustiveTokens() map[int]bool {
 
 func (p %sourceParser) atPropagation(cursor int) bool {
 	return cursor > 0 && p.tokens[cursor].kind == token.NOT &&
-		p.tokens[cursor-1].kind == token.RPAREN
+		(p.tokens[cursor-1].kind == token.RPAREN ||
+			p.tokens[cursor-1].kind == token.RBRACE)
 }
 
 func (p %sourceParser) atDefault(cursor int) bool {

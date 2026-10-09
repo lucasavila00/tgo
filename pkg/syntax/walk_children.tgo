@@ -57,8 +57,6 @@ func isExtension(node Node) bool {
 			return true
 		case DeclarationTagStruct:
 			return true
-		case DeclarationTagChecked:
-			return true
 		exhaustive:
 		}
 	case NodeTagStatement:
@@ -106,7 +104,7 @@ func isExtension(node Node) bool {
 			return false
 		case StatementTagRange:
 			return false
-exhaustive:
+		exhaustive:
 		}
 	case NodeTagExpression:
 		value := enumValue27.ExpressionPayload()
@@ -171,7 +169,7 @@ exhaustive:
 		return true
 	case NodeTagEnumVariant:
 		return true
-case NodeTagFile:
+	case NodeTagFile:
 		return false
 	case NodeTagSpecification:
 		return false
@@ -218,7 +216,7 @@ func publicChildren(node Node) []Node {
 	case NodeTagEnumVariant:
 		value := enumValue31.EnumVariantPayload()
 		return enumVariantChildren(value.Value)
-case NodeTagIdentifier:
+	case NodeTagIdentifier:
 		return nil
 	case NodeTagComment:
 		return nil
@@ -250,9 +248,11 @@ func expressionChildren(value %Expression) []Node {
 	addExpression := func(item %Expression) {
 		result = append(result, nodeExpression(item))
 	}
-	addExpressions := func(items []%Expression) { for _, item := range items {
-		result = append(result, nodeExpression(item))
-	} }
+	addExpressions := func(items []%Expression) {
+		for _, item := range items {
+			result = append(result, nodeExpression(item))
+		}
+	}
 	switch enumValue32 := *value; enumValue32.Tag() {
 	case ExpressionTagBad:
 		return result
@@ -271,7 +271,8 @@ func expressionChildren(value %Expression) []Node {
 		item := enumValue32.FunctionLiteralPayload()
 		addExpression(functionTypeNode(item.Value.Type))
 		result = append(
-			result, nodeStatement(blockStatementNode(item.Value.Body)),
+			result,
+			nodeStatement(blockStatementNode(item.Value.Body)),
 		)
 	case ExpressionTagCompositeLiteral:
 		item := enumValue32.CompositeLiteralPayload()
@@ -393,15 +394,19 @@ func statementChildren(value %Statement) []Node {
 	addStatement := func(item %Statement) {
 		result = append(result, nodeStatement(item))
 	}
-	addStatements := func(items []%Statement) { for _, item := range items {
-		result = append(result, nodeStatement(item))
-	} }
+	addStatements := func(items []%Statement) {
+		for _, item := range items {
+			result = append(result, nodeStatement(item))
+		}
+	}
 	addExpression := func(item %Expression) {
 		result = append(result, nodeExpression(item))
 	}
-	addExpressions := func(items []%Expression) { for _, item := range items {
-		result = append(result, nodeExpression(item))
-	} }
+	addExpressions := func(items []%Expression) {
+		for _, item := range items {
+			result = append(result, nodeExpression(item))
+		}
+	}
 	switch enumValue33 := *value; enumValue33.Tag() {
 	case StatementTagBad:
 		return result
@@ -506,7 +511,7 @@ func statementChildren(value %Statement) []Node {
 		}
 		addExpression(item.Value.Source)
 		addStatement(blockStatementNode(item.Value.Body))
-exhaustive:
+	exhaustive:
 	}
 	return result
 }
@@ -532,7 +537,8 @@ func declarationChildren(value %Declaration) []Node {
 		result = append(result, nodeExpression(functionTypeNode(item.Value.Type)))
 		if item.Value.Body != nil {
 			result = append(
-				result, nodeStatement(blockStatementNode(item.Value.Body)),
+				result,
+				nodeStatement(blockStatementNode(item.Value.Body)),
 			)
 		}
 	case DeclarationTagEnum:
@@ -554,13 +560,6 @@ func declarationChildren(value %Declaration) []Node {
 		for _, field := range item.Value.Fields {
 			result = append(result, nodeTGoField(field))
 		}
-		result = addComment(result, item.Value.Comment)
-	case DeclarationTagChecked:
-		item := enumValue34.CheckedPayload()
-		result = addComment(result, item.Value.Doc)
-		result = append(result, nodeIdentifier(item.Value.Name))
-		result = append(result, nodeExpression(item.Value.Base))
-		result = append(result, nodeExpression(item.Value.Predicate))
 		result = addComment(result, item.Value.Comment)
 	exhaustive:
 	}
@@ -619,7 +618,9 @@ func fieldChildren(value %Field) []Node {
 
 func fieldListChildren(value %FieldList) []Node {
 	result := []Node(nil)
-	for _, field := range value.List { result = append(result, nodeField(field)) }
+	for _, field := range value.List {
+		result = append(result, nodeField(field))
+	}
 	return result
 }
 

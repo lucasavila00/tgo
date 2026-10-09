@@ -21,6 +21,12 @@
       "PersonalName",
       "MakeAccount",
       "UserID",
+      "value",
+      "userIDError",
+      "Error",
+      "check",
+      "NewUserID",
+      "Value",
       "ReadID",
       "MakeID"
     ],
@@ -90,9 +96,9 @@
       },
       {
         "name": "UserID",
-        "kind": "type",
+        "kind": "struct",
         "container": "example.test/navigation/lib",
-        "range": {"file": "lib/lib.tgo", "text": "type UserID int where value > 0", "occurrence": 1},
+        "range": {"file": "lib/lib.tgo", "text": "type UserID struct { value int } checked", "occurrence": 1},
         "selection": {"file": "lib/lib.tgo", "text": "UserID", "occurrence": 1}
       }
     ]

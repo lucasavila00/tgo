@@ -43,12 +43,11 @@ Names starting with `Go` refer to the matching Go grammar production.
 ```text
 EnumDecl       = "type" TypeName "enum" [ GoStringLiteral ] "{" { VariantDecl ";" } "}" .
 VariantDecl    = VariantName "struct" "{" { TgoFieldDecl ";" } "}" [ GoStringLiteral ] .
-CheckedDecl    = "type" TypeName GoType "where" GoExpression .
-TgoStructDecl  = "type" TypeName "struct" "{" { TgoFieldDecl ";" } "}" .
+TgoStructDecl  = "type" TypeName "struct" "{" { TgoFieldDecl ";" } "}" [ "checked" ] .
 TgoFieldDecl   = GoFieldDecl [ "=" GoExpression ] .
 VariantLiteral = TypeName "." VariantName GoLiteralValue .
 DefaultMarker  = "..default" .
-PropagateExpr  = GoCallExpr ( "!" | "!!" ) .
+PropagateExpr  = ( GoCallExpr | CheckedStructLiteral ) ( "!" | "!!" ) .
 SuccessReturn  = "return" GoExpressionList "," .
 NonNilPointer = "%" GoType .
 ```
@@ -60,6 +59,7 @@ model.Account.Personal{Name: "Lucas"}
 ```
 
 `enum` is contextual before an enum body. `where` is contextual after a checked base type.
+`checked` is contextual after a TGo struct declaration.
 These names keep their Go meaning in other positions.
 An immediate line break after a contextual keyword does not insert a semicolon.
 
@@ -452,44 +452,45 @@ A nested switch on the same `Tag()` receiver supplies its own proof.
 The compiler does not analyze a `Tag` or payload call outside a recognized canonical switch.
 The accessor returns a Go value copy. Reference fields keep their Go aliases.
 
-## Checked types
+## Checked structs
 
-A checked type wraps a Go base type and declares a construction predicate:
+A checked struct keeps its ordinary Go representation and adds fallible literal construction:
 
 ```text
-type Quantity int where value > 0
-```
+type Port struct {
+    number int
+} checked
 
-`value` is the proposed base value. The predicate is a Go boolean expression.
-The zero value of a checked type is invalid, even when the predicate accepts zero.
-
-The declaration emits this shape:
-
-```go
-type Quantity struct { value int }
-
-func NewQuantity(value int) (Quantity, error) {
-    if !(value > 0) {
-        return Quantity{}, tgoQuantityError{}
+func (value Port) check() (Port, error) {
+    if value.number < 1 || value.number > 65535 {
+        return Port{}, ErrInvalidPort
     }
-    return Quantity{value: value}, nil
+    return value,
 }
-
-func (value Quantity) Value() int { return value.value }
 ```
 
-The private error has the text `invalid Quantity`.
-The predicate runs once in the constructor. No read repeats it.
-Constructor failure returns an invalid zero wrapper and a non-nil error.
+All fields must be private. The type must declare a value-receiver method with the exact signature
+`check() (Port, error)`. The compiler reports a missing method or a different signature.
 
-A tgo file may not build a checked type with a literal, conversion, or `new`.
-Use `Value()` to read the base value. Construct a new checked value after arithmetic.
-The compiler does not prove that a caller checks the constructor error.
-A new defined type may not derive from a checked type, including through pointer layers.
-A tgo file may not convert a checked value or pointer to expose its representation.
-Conversion to a concrete interface type remains valid.
-An unnamed struct identical to the checked representation is reserved and rejected.
-The conversion rules also apply to a type parameter whose type set admits the checked type.
+The compiler removes the `checked` marker and keeps the struct and method. It changes each literal
+of that type to a call to `check`:
+
+```text
+port, err := Port{number: number}
+port := Port{number: number}!
+port := Port{number: number}!!
+```
+
+Each field expression runs once in source order. The `!` and `!!` operators keep their normal error
+behavior. A raw literal of the same type is permitted inside its own `check` method. This trusted
+exception lets a failed check return the invalid zero value with a non-nil error.
+
+The zero value is invalid. A checked struct can contain another checked struct. Code in the same
+package can read its private fields. A package must provide its own fallible exported factory when
+another package must construct the type. TGo does not generate a public constructor or accessor.
+
+Handwritten Go can bypass validation with a direct literal. `tgolint` reports this bypass and the
+same invalid-zero uses that it reports for enums and non-nil pointer types.
 
 ## Field defaults
 
@@ -581,7 +582,7 @@ tgo classifies a type by whether Go zero filling makes a valid tgo value.
 - A struct is valid when every field type is valid.
 - A nonempty array is valid when its element type is valid.
 - A zero-length array is valid.
-- An enum or checked type is invalid.
+- An enum or checked struct is invalid.
 - A type parameter is valid only when every admitted type has a valid zero.
 
 Named types and aliases use the rule for their underlying type unless they are tgo models.
@@ -661,7 +662,7 @@ errors, typed nils, and object identity keep their Go behavior.
 
 TGo trusts values that cross the Go boundary. The compiler does not scan, copy, reconstruct, or
 validate them. Go can create an unknown enum tag, change private storage with `unsafe`, or return a value
-that breaks a checked type rule. The Go caller owns these risks.
+that breaks a checked struct rule. The Go caller owns these risks.
 
 `tgolint` checks unsafe Go patterns that it can prove from source. It does not make the Go
 boundary sound. It cannot inspect reflection, `unsafe`, cgo memory, races, or foreign state.
@@ -685,9 +686,6 @@ VPayload
 T
 tgoTag
 tgoV
-NewT
-Value
-tgoTError
 TgoDefaultTF
 ```
 
@@ -697,7 +695,6 @@ An enum reserves its emitted `uint8`, `uint16`, or `uint32` tag name.
 Generated payload types and tag constants must have different names. Thus, a variant named `Tag`
 is invalid, but a variant named `Zero` is valid. A payload field cannot have the enum name because
 that name belongs to the constructor method.
-A checked type reserves the predeclared `string`, `error`, and `nil` names.
 
 ## Build command and diagnostics
 

@@ -28,7 +28,7 @@ func TestBusiness(t *testing.T) {
 	}
 	multiline, err := model.NewMultiline(1)
 	if err != nil || multiline.Value() != 1 {
-		t.Fatalf("multiline checked type: %v, %v", multiline, err)
+		t.Fatalf("multiline checked struct: %v, %v", multiline, err)
 	}
 	whereValue, enumValue := model.ContextualTypeNames()
 	if whereValue != 1 || enumValue != 2 {
@@ -137,7 +137,7 @@ func TestBusiness(t *testing.T) {
 	}
 	exposed := model.ExposedQuantity{}
 	if model.ConvertExposed[model.ExposedQuantity](exposed) != exposed {
-		t.Fatal("constraint intersection admitted a checked type")
+		t.Fatal("constraint intersection admitted a checked struct")
 	}
 	// Go can violate the contract. Value must not add a runtime check.
 	bad := model.Quantity{}
