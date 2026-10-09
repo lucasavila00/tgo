@@ -488,19 +488,28 @@ func (e *nilEnvironment) nilZeroInvalid(
 	if contract[""] {
 		return true
 	}
-	switch typ := coreType(typ).(type) {
-	case *types.Struct:
-		for index := range typ.NumFields() {
+	classified := goTypeOf(coreType(typ))
+	switch classified.Tag() {
+	case goTypeTagStruct:
+		structure := classified.StructPayload().Value
+		for index := range structure.NumFields() {
 			if e.nilZeroInvalid(
-				typ.Field(index).Type(),
+				structure.Field(index).Type(),
 				nilChild(contract, "f"+strconv.Itoa(index)),
 			) {
 				return true
 			}
 		}
-	case *types.Array:
-		return typ.Len() != 0 &&
-			e.nilZeroInvalid(typ.Elem(), nilChild(contract, "e"))
+	case goTypeTagArray:
+		array := classified.ArrayPayload().Value
+		return array.Len() != 0 &&
+			e.nilZeroInvalid(array.Elem(), nilChild(contract, "e"))
+	case goTypeTagNil, goTypeTagBasic, goTypeTagSlice, goTypeTagPointer,
+		goTypeTagTuple, goTypeTagSignature, goTypeTagMap, goTypeTagChannel,
+		goTypeTagInterface, goTypeTagNamed, goTypeTagTypeParameter,
+		goTypeTagUnion, goTypeTagOther:
+	default:
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	return false
 }
@@ -532,15 +541,25 @@ func (e *nilEnvironment) checkNilLiteral(
 	if len(contract) == 0 {
 		return
 	}
-	switch typ := coreType(e.facts.Type(expression)).(type) {
-	case *types.Struct:
-		e.checkNilStructLiteral(literal, typ, contract, state)
-	case *types.Array:
-		e.checkNilArrayLiteral(literal, typ.Len(), contract, state)
-	case *types.Slice:
+	classified := goTypeOf(coreType(e.facts.Type(expression)))
+	switch classified.Tag() {
+	case goTypeTagStruct:
+		e.checkNilStructLiteral(
+			literal, classified.StructPayload().Value, contract, state,
+		)
+	case goTypeTagArray:
+		e.checkNilArrayLiteral(
+			literal, classified.ArrayPayload().Value.Len(), contract, state,
+		)
+	case goTypeTagSlice:
 		e.checkNilSequenceLiteral(literal, nilChild(contract, "e"), state)
-	case *types.Map:
+	case goTypeTagMap:
 		e.checkNilMapLiteral(literal, contract, state)
+	case goTypeTagNil, goTypeTagBasic, goTypeTagPointer, goTypeTagTuple,
+		goTypeTagSignature, goTypeTagChannel, goTypeTagInterface, goTypeTagNamed,
+		goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
+	default:
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

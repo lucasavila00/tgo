@@ -905,24 +905,34 @@ func zeroTypeParameters(
 		return result
 	}
 	seen[typ] = true
-	switch typ := typ.(type) {
-	case *types.TypeParam:
-		if parameter, ok := parameters[typ]; ok {
+	classified := goTypeOf(typ)
+	switch classified.Tag() {
+	case goTypeTagTypeParameter:
+		parameterType := classified.TypeParameterPayload().Value
+		if parameter, ok := parameters[parameterType]; ok {
 			result[parameter] = true
 		}
-	case *types.Named:
-		mergeZeroParameters(result, zeroTypeParameters(typ.Underlying(), parameters, seen))
-	case *types.Struct:
-		for index := 0; index < typ.NumFields(); index++ {
+	case goTypeTagNamed:
+		named := classified.NamedPayload().Value
+		mergeZeroParameters(result, zeroTypeParameters(named.Underlying(), parameters, seen))
+	case goTypeTagStruct:
+		structure := classified.StructPayload().Value
+		for index := 0; index < structure.NumFields(); index++ {
 			mergeZeroParameters(
 				result,
-				zeroTypeParameters(typ.Field(index).Type(), parameters, seen),
+				zeroTypeParameters(structure.Field(index).Type(), parameters, seen),
 			)
 		}
-	case *types.Array:
-		if typ.Len() > 0 {
-			mergeZeroParameters(result, zeroTypeParameters(typ.Elem(), parameters, seen))
+	case goTypeTagArray:
+		array := classified.ArrayPayload().Value
+		if array.Len() > 0 {
+			mergeZeroParameters(result, zeroTypeParameters(array.Elem(), parameters, seen))
 		}
+	case goTypeTagNil, goTypeTagBasic, goTypeTagSlice, goTypeTagPointer,
+		goTypeTagTuple, goTypeTagSignature, goTypeTagMap, goTypeTagChannel,
+		goTypeTagInterface, goTypeTagUnion, goTypeTagOther:
+	default:
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	return result
 }

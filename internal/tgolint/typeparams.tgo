@@ -49,24 +49,28 @@ func commonChannel(left, right types.Type) types.Type {
 // simpleTerms expands a constraint into a finite set of type terms.
 func simpleTerms(typ types.Type) ([]*types.Term, bool) {
 	typ = types.Unalias(typ)
-	switch typ := typ.(type) {
-	case *types.TypeParam:
-		return simpleTerms(typ.Constraint())
-	case *types.Named:
-		if _, ok := typ.Underlying().(*types.Interface); ok {
-			return simpleTerms(typ.Underlying())
+	classified := goTypeOf(typ)
+	switch classified.Tag() {
+	case goTypeTagTypeParameter:
+		return simpleTerms(classified.TypeParameterPayload().Value.Constraint())
+	case goTypeTagNamed:
+		named := classified.NamedPayload().Value
+		if goTypeOf(named.Underlying()).Tag() == goTypeTagInterface {
+			return simpleTerms(named.Underlying())
 		}
-		return []*types.Term{types.NewTerm(false, typ)}, true
-	case *types.Union:
-		terms := make([]*types.Term, typ.Len())
+		return []*types.Term{types.NewTerm(false, named)}, true
+	case goTypeTagUnion:
+		union := classified.UnionPayload().Value
+		terms := make([]*types.Term, union.Len())
 		for index := range terms {
-			terms[index] = typ.Term(index)
+			terms[index] = union.Term(index)
 		}
 		return terms, true
-	case *types.Interface:
+	case goTypeTagInterface:
+		value := classified.InterfacePayload().Value
 		var restriction []*types.Term = nil
-		for index := 0; index < typ.NumEmbeddeds(); index++ {
-			terms, supported := simpleTerms(typ.EmbeddedType(index))
+		for index := 0; index < value.NumEmbeddeds(); index++ {
+			terms, supported := simpleTerms(value.EmbeddedType(index))
 			if !supported {
 				return nil, false
 			}
@@ -80,8 +84,11 @@ func simpleTerms(typ types.Type) ([]*types.Term, bool) {
 			restriction = intersectTerms(restriction, terms)
 		}
 		return restriction, true
-	default:
+	case goTypeTagNil, goTypeTagBasic, goTypeTagArray, goTypeTagSlice,
+		goTypeTagStruct, goTypeTagPointer, goTypeTagTuple, goTypeTagSignature,
+		goTypeTagMap, goTypeTagChannel, goTypeTagOther:
 		return []*types.Term{types.NewTerm(false, typ)}, true
+	exhaustive:
 	}
 }
 

@@ -262,14 +262,20 @@ func (e *nilEnvironment) collectRangeContracts(statement *syntax.RangeStatement)
 	contract := e.contractForExpression(statement.Source)
 	keyContract := nilContract(nil)
 	valueContract := nilContract(nil)
-	switch coreType(e.facts.Type(statement.Source)).(type) {
-	case *types.Array, *types.Slice:
+	classified := goTypeOf(coreType(e.facts.Type(statement.Source)))
+	switch classified.Tag() {
+	case goTypeTagArray, goTypeTagSlice:
 		valueContract = nilChild(contract, "e")
-	case *types.Map:
+	case goTypeTagMap:
 		keyContract = nilChild(contract, "k")
 		valueContract = nilChild(contract, "v")
-	case *types.Chan:
+	case goTypeTagChannel:
 		keyContract = nilChild(contract, "e")
+	case goTypeTagNil, goTypeTagBasic, goTypeTagStruct, goTypeTagPointer,
+		goTypeTagTuple, goTypeTagSignature, goTypeTagInterface, goTypeTagNamed,
+		goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
+	default:
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	e.setRangeContract(statement.Key, keyContract)
 	e.setRangeContract(statement.Value, valueContract)
@@ -481,33 +487,41 @@ func (e *nilEnvironment) contractForType(typ types.Type) nilContract {
 		return e.contractForObject(named.Obj())
 	}
 	result := make(nilContract)
-	switch typ := typ.(type) {
-	case *types.Pointer:
-		addNilPath(result, "e", e.contractForType(typ.Elem()))
-	case *types.Array:
-		addNilPath(result, "e", e.contractForType(typ.Elem()))
-	case *types.Slice:
-		addNilPath(result, "e", e.contractForType(typ.Elem()))
-	case *types.Map:
-		addNilPath(result, "k", e.contractForType(typ.Key()))
-		addNilPath(result, "v", e.contractForType(typ.Elem()))
-	case *types.Chan:
-		addNilPath(result, "e", e.contractForType(typ.Elem()))
-	case *types.Struct:
-		for index := range typ.NumFields() {
-			field := typ.Field(index)
+	classified := goTypeOf(typ)
+	switch classified.Tag() {
+	case goTypeTagPointer:
+		addNilPath(result, "e", e.contractForType(classified.PointerPayload().Value.Elem()))
+	case goTypeTagArray:
+		addNilPath(result, "e", e.contractForType(classified.ArrayPayload().Value.Elem()))
+	case goTypeTagSlice:
+		addNilPath(result, "e", e.contractForType(classified.SlicePayload().Value.Elem()))
+	case goTypeTagMap:
+		mapping := classified.MapPayload().Value
+		addNilPath(result, "k", e.contractForType(mapping.Key()))
+		addNilPath(result, "v", e.contractForType(mapping.Elem()))
+	case goTypeTagChannel:
+		addNilPath(result, "e", e.contractForType(classified.ChannelPayload().Value.Elem()))
+	case goTypeTagStruct:
+		structure := classified.StructPayload().Value
+		for index := range structure.NumFields() {
+			field := structure.Field(index)
 			contract := e.contractForObject(field)
 			if len(contract) == 0 {
 				contract = e.contractForType(field.Type())
 			}
 			addNilPath(result, "f"+strconv.Itoa(index), contract)
 		}
-	case *types.Signature:
-		if typ.Recv() != nil {
-			addNilPath(result, "v", e.contractForObject(typ.Recv()))
+	case goTypeTagSignature:
+		signature := classified.SignaturePayload().Value
+		if signature.Recv() != nil {
+			addNilPath(result, "v", e.contractForObject(signature.Recv()))
 		}
-		e.addTupleTypeContract(result, "p", typ.Params())
-		e.addTupleTypeContract(result, "r", typ.Results())
+		e.addTupleTypeContract(result, "p", signature.Params())
+		e.addTupleTypeContract(result, "r", signature.Results())
+	case goTypeTagNil, goTypeTagBasic, goTypeTagTuple, goTypeTagInterface,
+		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
+	default:
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	if len(result) == 0 {
 		return nil

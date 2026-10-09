@@ -9,13 +9,13 @@ import __tgo_fmt "fmt"
 
 import (
 	"bytes"
-	"go/format"
 	"go/token"
 	"go/types"
 	"path/filepath"
 	"strconv"
 
 	"tgo/internal/compiler"
+	"tgo/pkg/format"
 	"tgo/pkg/syntax"
 
 	"golang.org/x/tools/go/analysis"
@@ -638,7 +638,7 @@ func sourceShapeMatches(
 		return sameModelFact(
 			checked.Fact, emittedCheckedModel(checked.Name, structure, typ),
 		) &&
-			len(structure.Fields.List) == 1 && sameExpressionText(
+			len(structure.Fields.List) == 1 && sameTypeText(
 			checked.Base, syntax.SourceText(generated, syntax.Span{
 				Start: syntax.ExpressionPosition(structure.Fields.List[0].Type),
 				Stop:  syntax.ExpressionEnd(structure.Fields.List[0].Type),
@@ -845,8 +845,8 @@ func sameFields(
 		if other.Tag != nil {
 			tagText = syntax.SourceText(file, other.Tag.Span)
 		}
-		if !sameExpressionText(field.typeExpression, typeText) ||
-			!sameExpressionText(field.tag, tagText) {
+		if !sameTypeText(field.typeExpression, typeText) ||
+			!sameTagText(field.tag, tagText) {
 			return false
 		}
 		if field.name == "" && len(other.Names) == 0 {
@@ -859,15 +859,37 @@ func sameFields(
 	return true
 }
 
-func sameExpressionText(left string, right string) bool {
+func sameTypeText(left string, right string) bool {
+	return sameFormattedText(
+		left,
+		right,
+		func(text string) string { return "package p\ntype value " + text + "\n" },
+	)
+}
+
+func sameTagText(left string, right string) bool {
+	return sameFormattedText(
+		left,
+		right,
+		func(text string) string {
+			return "package p\ntype value struct { Field int " + text + " }\n"
+		},
+	)
+}
+
+func sameFormattedText(
+	left string,
+	right string,
+	wrap func(string) string,
+) bool {
 	if left == right {
 		return true
 	}
 	if left == "" || right == "" {
 		return left == right
 	}
-	leftText, leftErr := format.Source([]byte(left))
-	rightText, rightErr := format.Source([]byte(right))
+	leftText, leftErr := format.Source("left.tgo", []byte(wrap(left)))
+	rightText, rightErr := format.Source("right.tgo", []byte(wrap(right)))
 	if leftErr != nil || rightErr != nil {
 		return false
 	}
