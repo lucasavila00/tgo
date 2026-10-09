@@ -323,7 +323,7 @@ func (p *printer) alignedField(value *syntax.Field, nameWidth int) {
 }
 
 func (p *printer) alignedFieldColumns(value *syntax.Field, columns []int) {
-	p.fieldContent(value, 0, columns, false)
+	p.fieldContent(value, 0, columns, true)
 	p.trailingLine(fieldContentEnd(value))
 }
 
@@ -465,7 +465,7 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 			} else if index > 0 {
 				p.space()
 			}
-			p.fieldContent(item, 0, nil, true)
+			p.fieldContent(item, 0, nil, indented)
 			following := value.Closing
 			if index+1 < len(value.List) {
 				following = value.List[index+1].Start

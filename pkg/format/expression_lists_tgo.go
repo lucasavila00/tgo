@@ -23,20 +23,30 @@ func (p *printer) expressionList(
 		}
 		return
 	}
+	listIndent := max(p.indent+1, p.outputIndent()+1)
+	commentColumns := p.expressionListCommentAlignment(
+		values,
+		opening,
+		closing,
+		listIndent*8,
+	)
 	previous := opening
 	indented := false
+	previousIndent := p.indent
 	for index, value := range values {
 		start := syntax.ExpressionPosition(value)
 		gap := p.sourceGap(previous, start)
 		if gap.lineBreak {
 			if !indented {
-				p.indent++
+				p.indent = listIndent
 				indented = true
 			}
 			p.breakSourceGap(previous, start)
 		} else if index > 0 {
 			p.space()
 		}
+		previousCommentColumns := p.commentColumns
+		p.commentColumns = commentColumns[index]
 		p.expressionAt(value, 0, depth)
 		previous = syntax.ExpressionEnd(value)
 		if index == len(values)-1 && ellipsis.IsValid() {
@@ -51,16 +61,17 @@ func (p *printer) expressionList(
 			previous = p.comma(previous, following)
 			p.trailingLine(previous)
 		}
+		p.commentColumns = previousCommentColumns
 	}
 	gap := p.sourceGap(previous, closing)
 	if gap.leadingComment && gap.lineBreak && !indented {
-		p.indent++
+		p.indent = listIndent
 		indented = true
 	}
 	p.breakClosingGap(previous, closing)
 	if indented {
 		p.before(closing)
-		p.indent--
+		p.indent = previousIndent
 	}
 }
 

@@ -32,7 +32,7 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 	p.token(value.Token, value.Kind.String())
 	if value.Lparen == token.NoPos {
 		p.space()
-		p.specification(value.Specs[0])
+		p.specification(value.Specs[0], false)
 		return
 	}
 	p.space()
@@ -62,7 +62,7 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 			len(columns[index]) > 0 {
 			p.commentColumn = p.indent*8 + columns[index][len(columns[index])-1]
 		}
-		p.alignedSpecification(item, keepTypes[index], columns[index])
+		p.alignedSpecification(item, keepTypes[index], columns[index], true)
 		p.commentColumn = previousCommentColumn
 		p.trailingLine(syntax.SpecificationEnd(item))
 		p.newline()
@@ -76,20 +76,26 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 	p.token(value.Rparen, ")")
 }
 
-func (p *printer) specification(value *syntax.Specification) {
-	p.alignedSpecification(value, false, nil)
+func (p *printer) specification(value *syntax.Specification, alreadyIndented bool) {
+	p.alignedSpecification(value, false, nil, alreadyIndented)
 }
 
 func (p *printer) alignedSpecification(
 	value *syntax.Specification,
 	keepType bool,
 	columns []int,
+	alreadyIndented bool,
 ) {
 	switch specificationValue := *value; specificationValue.Tag() {
 	case syntax.SpecificationTagImport:
 		p.importSpecification(specificationValue.ImportPayload().Value)
 	case syntax.SpecificationTagValue:
-		p.valueSpecification(specificationValue.ValuePayload().Value, keepType, columns)
+		p.valueSpecification(
+			specificationValue.ValuePayload().Value,
+			keepType,
+			columns,
+			alreadyIndented,
+		)
 	case syntax.SpecificationTagType:
 		p.typeSpecification(specificationValue.TypePayload().Value, columns)
 	default:
@@ -132,6 +138,9 @@ func (p *printer) specificationCells(
 		cells = []int{p.formattedImportSpecificationWidth(item)}
 	case syntax.SpecificationTagValue:
 		item := specificationValue.ValuePayload().Value
+		if p.identifiersAreMultiline(item.Names) {
+			return nil
+		}
 		cells = append(cells, identifierWidth(item.Names))
 		if item.Type != nil || keepType {
 			typeWidth := 0
@@ -225,8 +234,9 @@ func (p *printer) valueSpecification(
 	value *syntax.ValueSpecification,
 	keepType bool,
 	columns []int,
+	alreadyIndented bool,
 ) {
-	p.identifiers(value.Names)
+	p.identifiersAt(value.Names, alreadyIndented)
 	column := 0
 	if value.Type != nil || keepType {
 		p.alignmentSpace(columns, column)

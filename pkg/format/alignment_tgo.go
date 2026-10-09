@@ -3,7 +3,9 @@
 package format
 
 import (
+	"bytes"
 	"go/token"
+	"math"
 	"strings"
 	"unicode/utf8"
 
@@ -13,6 +15,80 @@ import (
 type alignmentRow struct {
 	breakBefore bool
 	cells       []int
+}
+
+func (p *printer) outputIndent() int {
+	data := p.output.Bytes()
+	start := bytes.LastIndexByte(data, '\n') + 1
+	column := 0
+	for _, value := range string(data[start:]) {
+		switch value {
+		case '\t':
+			column += 8 - column%8
+		case ' ':
+			column++
+		default:
+			return column / 8
+		}
+	}
+	return column / 8
+}
+
+func applyListAlignmentSections(rows []alignmentRow, sizes []int) {
+	previousSize := 0
+	log2sum := 0.0
+	count := 0
+	for index, size := range sizes {
+		if rows[index].breakBefore {
+			previousSize = 0
+			log2sum = 0
+			count = 0
+		} else if index > 0 && listStartsAlignmentSection(
+			previousSize,
+			size,
+			log2sum,
+			count,
+		) {
+			rows[index].breakBefore = true
+			previousSize = 0
+			log2sum = 0
+			count = 0
+		}
+		if size > 0 {
+			log2sum += listLog2(size)
+			count++
+		}
+		previousSize = size
+	}
+}
+
+func listStartsAlignmentSection(
+	previousSize int,
+	size int,
+	log2sum float64,
+	count int,
+) bool {
+	if previousSize == 0 || size == 0 {
+		return true
+	}
+	const smallSize = 40
+	if count == 0 || previousSize <= smallSize && size <= smallSize {
+		return false
+	}
+	const ratioLimit = 2.5
+	mean := listExp2(log2sum / float64(count))
+	ratio := float64(size) / mean
+	return ratioLimit*ratio <= 1 || ratioLimit <= ratio
+}
+
+func listLog2(value int) float64 {
+	fraction, exponent := math.Frexp(float64(value))
+	return float64(exponent) + 2*(fraction-1)
+}
+
+func listExp2(value float64) float64 {
+	integer := math.Floor(value)
+	return math.Ldexp(1+value-integer, int(integer))
 }
 
 func alignmentColumns(rows []alignmentRow) [][]int {
@@ -105,6 +181,9 @@ func (p *printer) fieldCells(value *syntax.Field) []int {
 }
 
 func (p *printer) fieldSyntaxCells(value *syntax.Field) []int {
+	if p.identifiersAreMultiline(value.Names) {
+		return nil
+	}
 	functionType := syntax.FunctionTypeExpressionOf(value.Type)
 	if len(value.Names) > 0 && functionType != nil && !functionType.Function.IsValid() {
 		return []int{p.formattedFieldContentWidth(value)}
@@ -121,6 +200,13 @@ func (p *printer) fieldSyntaxCells(value *syntax.Field) []int {
 		cells = append(cells, utf8.RuneCountInString(value.Tag.Value))
 	}
 	return cells
+}
+
+func (p *printer) identifiersAreMultiline(values []*syntax.Identifier) bool {
+	if len(values) < 2 {
+		return false
+	}
+	return p.position(values[0].Start).Line < p.position(values[len(values)-1].Stop).Line
 }
 
 func fieldCommentCells(cells []int, value *syntax.Field) []int {
@@ -368,6 +454,7 @@ func (p *printer) compositeAlignment(
 	closing token.Pos,
 ) ([][]int, []map[token.Pos]int) {
 	rows := make([]alignmentRow, len(values))
+	sizes := make([]int, len(values))
 	comments := make([]token.Pos, len(values))
 	for index, value := range values {
 		start := syntax.ExpressionPosition(value)
@@ -386,7 +473,15 @@ func (p *printer) compositeAlignment(
 					syntax.ExpressionEnd(values[index-1]),
 				)
 		}
-		if !lineBreak || p.multiline(start, stop) {
+		if p.multiline(start, stop) {
+			continue
+		}
+		sizes[index] = p.formattedExpressionWidth(value)
+		keyValue := syntax.KeyValueExpressionOf(value)
+		if keyValue != nil {
+			sizes[index] = p.compositeKeyWidth(keyValue.Key)
+		}
+		if !lineBreak {
 			continue
 		}
 		following := closing
@@ -403,7 +498,6 @@ func (p *printer) compositeAlignment(
 			!strings.HasPrefix(comment.text, "//") {
 			comments[index] = token.NoPos
 		}
-		keyValue := syntax.KeyValueExpressionOf(value)
 		if keyValue == nil {
 			if comments[index].IsValid() {
 				rows[index].cells = []int{
@@ -419,6 +513,7 @@ func (p *printer) compositeAlignment(
 			rows[index].cells = append(rows[index].cells, 0)
 		}
 	}
+	applyListAlignmentSections(rows, sizes)
 	columns := alignmentColumns(rows)
 	commentColumns := make([]map[token.Pos]int, len(values))
 	for index, position := range comments {
@@ -430,6 +525,70 @@ func (p *printer) compositeAlignment(
 		}
 	}
 	return columns, commentColumns
+}
+
+func (p *printer) expressionListCommentAlignment(
+	values []*syntax.Expression,
+	opening token.Pos,
+	closing token.Pos,
+	baseColumn int,
+) []map[token.Pos]int {
+	rows := make([]alignmentRow, len(values))
+	sizes := make([]int, len(values))
+	comments := make([]token.Pos, len(values))
+	for index, value := range values {
+		start := syntax.ExpressionPosition(value)
+		stop := syntax.ExpressionEnd(value)
+		previous := opening
+		if index > 0 {
+			previous = syntax.ExpressionEnd(values[index-1])
+		}
+		lineBreak := p.position(previous).Line < p.position(start).Line
+		if index > 0 {
+			rows[index].breakBefore = !lineBreak ||
+				p.blankBetween(previous, start) ||
+				p.hasCommentBetween(previous, start) ||
+				p.multiline(
+					syntax.ExpressionPosition(values[index-1]),
+					syntax.ExpressionEnd(values[index-1]),
+				)
+		}
+		if p.multiline(start, stop) {
+			continue
+		}
+		sizes[index] = p.formattedExpressionWidth(value)
+		if !lineBreak {
+			continue
+		}
+		following := closing
+		if index+1 < len(values) {
+			following = syntax.ExpressionPosition(values[index+1])
+		}
+		commaEnd := p.sourceCommaEnd(stop, following)
+		comments[index] = p.trailingCommentPosition(commaEnd)
+		if comment := p.commentAt(comments[index]); comment == nil ||
+			!strings.HasPrefix(comment.text, "//") {
+			comments[index] = token.NoPos
+			continue
+		}
+		commaWidth := 0
+		if commaEnd != stop {
+			commaWidth = 1
+		}
+		rows[index].cells = []int{sizes[index] + commaWidth, 0}
+	}
+	applyListAlignmentSections(rows, sizes)
+	columns := alignmentColumns(rows)
+	result := make([]map[token.Pos]int, len(values))
+	for index, position := range comments {
+		if !position.IsValid() || len(columns[index]) == 0 {
+			continue
+		}
+		result[index] = map[token.Pos]int{
+			position: baseColumn + columns[index][0],
+		}
+	}
+	return result
 }
 
 func (p *printer) compositeKeyWidth(value *syntax.Expression) int {

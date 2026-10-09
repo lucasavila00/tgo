@@ -175,8 +175,8 @@ func (p *printer) functionBodyColumns(values []%syntax.Declaration) []int {
 					syntax.DeclarationEnd(values[last-1]),
 					syntax.DeclarationPosition(values[last]),
 				) || p.hasCommentBetween(
-				syntax.DeclarationEnd(values[last-1]),
-				syntax.DeclarationPosition(values[last]),
+					syntax.DeclarationEnd(values[last-1]),
+					syntax.DeclarationPosition(values[last]),
 			) {
 				break
 			}
