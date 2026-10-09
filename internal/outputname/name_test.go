@@ -101,3 +101,27 @@ func TestReserved(t *testing.T) {
 		}
 	}
 }
+
+func TestMatchesTarget(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{name: "model.tgo", want: true},
+		{name: "model_linux.tgo", want: true},
+		{name: "model_windows.tgo", want: false},
+		{name: "model_amd64.tgo", want: true},
+		{name: "model_arm64.tgo", want: false},
+		{name: "model_linux_amd64.tgo", want: true},
+		{name: "model_linux_arm64.tgo", want: false},
+		{name: "model_linux_test.tgo", want: true},
+		{name: "model_windows_test.tgo", want: false},
+		{name: "model_hack.tgo", want: true},
+	}
+	for _, test := range tests {
+		if got := MatchesTarget(test.name, "linux", "amd64"); got != test.want {
+			t.Errorf("MatchesTarget(%q) = %t, want %t", test.name, got, test.want)
+		}
+	}
+}

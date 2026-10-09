@@ -2,8 +2,6 @@
 package outputname
 
 import (
-	"go/build"
-	"io"
 	"path/filepath"
 	"strings"
 )
@@ -78,27 +76,50 @@ func Reserved(path string) bool {
 }
 
 func targetSuffixKind(word string) (bool, bool) {
-	const noOS = "tgo_unknown_os"
-	const noArch = "tgo_unknown_arch"
-	if matchTargetWord(word, noOS, noArch) {
-		return false, false
-	}
-	return matchTargetWord(word, word, noArch), matchTargetWord(word, noOS, word)
+	return knownTargetOS(word), knownTargetArch(word)
 }
 
-func matchTargetWord(word string, goos string, goarch string) bool {
-	if word == "tgo_unknown_os" || word == "tgo_unknown_arch" {
+// MatchesTarget reports whether target suffixes allow a source file name.
+func MatchesTarget(name, goos, goarch string) bool {
+	stem := strings.TrimSuffix(name, filepath.Ext(name))
+	stem = strings.TrimSuffix(stem, "_test")
+	parts := strings.Split(stem, "_")
+	if len(parts) < 2 {
+		return true
+	}
+	lastOS, lastArch := targetSuffixKind(parts[len(parts)-1])
+	if len(parts) > 2 {
+		previousOS, _ := targetSuffixKind(parts[len(parts)-2])
+		if previousOS && lastArch {
+			return parts[len(parts)-2] == goos && parts[len(parts)-1] == goarch
+		}
+	}
+	if lastOS {
+		return parts[len(parts)-1] == goos
+	}
+	if lastArch {
+		return parts[len(parts)-1] == goarch
+	}
+	return true
+}
+
+func knownTargetOS(word string) bool {
+	switch word {
+	case "aix", "android", "darwin", "dragonfly", "freebsd", "hurd",
+		"illumos", "ios", "js", "linux", "netbsd", "openbsd", "plan9",
+		"solaris", "wasip1", "windows", "zos":
+		return true
+	default:
 		return false
 	}
-	context := build.Default
-	context.GOOS = goos
-	context.GOARCH = goarch
-	context.BuildTags = nil
-	context.ToolTags = nil
-	context.ReleaseTags = nil
-	context.OpenFile = func(string) (io.ReadCloser, error) {
-		return io.NopCloser(strings.NewReader("")), nil
+}
+
+func knownTargetArch(word string) bool {
+	switch word {
+	case "386", "amd64", "arm", "arm64", "loong64", "mips", "mips64",
+		"mips64le", "mipsle", "ppc64", "ppc64le", "riscv64", "s390x", "wasm":
+		return true
+	default:
+		return false
 	}
-	match, err := context.MatchFile(".", "source_"+word+".s")
-	return err == nil && match
 }

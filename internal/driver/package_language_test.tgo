@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"context"
 	"errors"
 	"go/build"
 	"io/fs"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"tgo/internal/outputname"
+	"tgo/internal/packagelanguage"
 )
 
 func TestRepositoryTGoPackagesUseTGoTests(t *testing.T) {
@@ -46,6 +48,125 @@ func TestRepositoryTGoPackagesUseTGoTests(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Errorf("TGo package has handwritten Go test: %s", relative)
+	}
+}
+
+func TestRepositoryPackagesHaveOneLanguage(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot locate repository")
+	}
+	root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
+	context, err := effectiveBuildContext(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			return nil
+		}
+		if path != root {
+			name := entry.Name()
+			if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") ||
+				name == "testdata" || name == "vendor" {
+				return filepath.SkipDir
+			}
+		}
+		_, err = packagelanguage.Classify(packageLanguageContext(&context), path)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBuildRejectsMixedPackage(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writePackageLanguageFile(t, root, "go.mod", "module example.com/mixed\n\ngo 1.27\n")
+	directory := filepath.Join(root, "app")
+	if err := os.Mkdir(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writePackageLanguageFile(t, directory, "app.tgo", "package app\n")
+	writePackageLanguageFile(t, directory, "helper.go", "package app\n")
+	err := Build(root, []string{"./app"})
+	want := "package app mixes handwritten TGo and Go files: app.tgo, helper.go"
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Fatalf("error = %v, want %q", err, want)
+	}
+	_, err = CompileAvailableWorkspaceContext(context.Background(), root)
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Fatalf("workspace error = %v, want %q", err, want)
+	}
+	if _, err := os.Stat(filepath.Join(directory, "app_tgo.go"));
+		!errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("generated output exists after rejection: %v", err)
+	}
+}
+
+func TestBuildRejectsTestLanguageMismatch(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		production string
+		test       string
+	}{
+		{name: "TGo package", production: "app.tgo", test: "app_test.go"},
+		{name: "Go package", production: "app.go", test: "app_test.tgo"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			writePackageLanguageFile(
+				t, root, "go.mod", "module example.com/mixedtest\n\ngo 1.27\n",
+			)
+			directory := filepath.Join(root, "app")
+			if err := os.Mkdir(directory, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			writePackageLanguageFile(t, directory, test.production, "package app\n")
+			writePackageLanguageFile(t, directory, test.test, "package app\n")
+			err := Build(root, []string{"./app"})
+			want := "package app mixes handwritten TGo and Go files"
+			if err == nil || !strings.Contains(err.Error(), want) {
+				t.Fatalf("error = %v, want %q", err, want)
+			}
+		})
+	}
+}
+
+func TestBuildIgnoresInactiveOtherLanguage(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writePackageLanguageFile(t, root, "go.mod", "module example.com/target\n\ngo 1.27\n")
+	directory := filepath.Join(root, "app")
+	if err := os.Mkdir(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writePackageLanguageFile(t, directory, "app.tgo", "package app\n")
+	writePackageLanguageFile(
+		t,
+		directory,
+		"helper.go",
+		"//go:build tgo_inactive_target\n\npackage app\n",
+	)
+	if err := Build(root, []string{"./app"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(directory, "app_tgo.go")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writePackageLanguageFile(t *testing.T, directory, name, data string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(directory, name), []byte(data), 0o600); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -101,7 +222,7 @@ func moduleGoTestsInTGoPackages(
 			strings.HasSuffix(entry.Name(), "_test.tgo") {
 			return nil
 		}
-		matches, err := matchTgoFile(context, path)
+		matches, err := matchTGoFile(context, path)
 		if err != nil || !matches {
 			return err
 		}

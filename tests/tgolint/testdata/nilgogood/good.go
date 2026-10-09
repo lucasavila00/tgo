@@ -1,4 +1,4 @@
-package nilgood
+package nilgogood
 
 import "example.com/tgolint/nilmodel"
 

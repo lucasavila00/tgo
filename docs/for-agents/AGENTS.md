@@ -1,6 +1,8 @@
 # Write business logic in tgo
 
 Use `.tgo` files for business types and decisions. Use Go for the rest of the application.
+Make each package either TGo or Go. Do not mix handwritten `.tgo` and `.go`
+files in one package. Generated `*_tgo.go` files do not change a TGo package.
 Keep Go imports and signatures. Compile with `tgo build ./...`, then run `go test ./...`
 and `tgolint ./...`.
 Commit each generated `*_tgo.go` file beside its source. Do not edit generated files.

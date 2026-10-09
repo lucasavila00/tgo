@@ -8,14 +8,28 @@ Go syntax and semantics apply unless this document replaces them.
 A tgo source file ends in `.tgo`. It starts with a Go package clause.
 Imports, declarations, statements, expressions, and types use Go syntax.
 
-A package may contain `.tgo` and `.go` files. The compiler checks both.
-A TGo package writes tests in `_test.tgo` files. The compiler checks internal
-tests with the package and external tests as the normal `package_name_test`
-package. A Go package keeps `_test.go` files. The Go tool compiles generated
-tests after TGo emits Go. An active `_test.tgo` file needs an active non-test
-TGo source file in the same package.
+A package uses one source language for each build target. Active handwritten
+production `.tgo` files make a TGo package. Active handwritten production
+`.go` files make a Go package. One package cannot contain both forms.
+Generated Go output does not take part in classification and can exist in a
+TGo package.
 
-Go build constraints and target suffixes select tgo source files.
+A TGo package writes internal and external tests in `_test.tgo` files. The
+compiler checks external tests as the normal `package_name_test` package. A Go
+package writes tests in `_test.go` files. An active `_test.tgo` file needs an
+active non-test TGo source file in the same package. The Go tool compiles
+generated tests after TGo emits Go.
+
+Build constraints, target suffixes, and cgo selection choose active source
+before package classification. If active handwritten Go and TGo source conflict,
+all TGo tools report one package diagnostic. The diagnostic lists the active
+files in lexical order. Compilation, formatting, source analysis, and navigation
+stop for that package.
+
+A Go package can import a TGo package through its generated public Go API.
+`tgolint` continues to check protected TGo model rules in the Go caller.
+
+Go build constraints and target suffixes select TGo source files.
 An excluded source file is not parsed. It does not add declarations to its package.
 The compiler ignores hidden, `_`, `testdata`, and `vendor` directories.
 It also stops at a nested `go.mod` file.

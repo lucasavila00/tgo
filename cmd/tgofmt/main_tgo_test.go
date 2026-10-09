@@ -107,6 +107,26 @@ func TestRunRejectsWriteForStandardInput(t *testing.T) {
 	}
 }
 
+func TestRunRejectsMixedPackage(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	path := filepath.Join(directory, "sample.tgo")
+	if err := os.WriteFile(path, []byte("package sample\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(directory, "helper.go"),
+		[]byte("package sample\n"),
+		0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	err := run([]string{path}, false, false, strings.NewReader(""), new(bytes.Buffer))
+	if err == nil || !strings.Contains(err.Error(), "mixes handwritten TGo and Go files") {
+		t.Fatalf("error = %v, want package language diagnostic", err)
+	}
+}
+
 func TestRunWritePreservesHardLink(t *testing.T) {
 	t.Parallel()
 	directory := t.TempDir()

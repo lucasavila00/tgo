@@ -1,4 +1,4 @@
-package modernizegood
+package modernizeiotagogood
 
 type GoOnly uint8
 

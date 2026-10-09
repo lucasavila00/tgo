@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"tgo/internal/packagelanguage"
 	"tgo/pkg/format"
 )
 
@@ -48,7 +49,19 @@ func run(paths []string, write bool, list bool, input io.Reader, output io.Write
 		_, err := output.Write(formatted)
 		return err
 	}
+	context, tgoErr3 := packagelanguage.DefaultContext()
+	if tgoErr3 != nil {
+		return fmt.Errorf("packagelanguage.DefaultContext: %w", tgoErr3)
+	}
+	checked := make(map[string]bool)
 	for _, path := range paths {
+		directory := filepath.Clean(filepath.Dir(path))
+		if !checked[directory] {
+			if _, err := packagelanguage.Classify(context, directory); err != nil {
+				return err
+			}
+			checked[directory] = true
+		}
 		if err := formatPath(path, write, list, output); err != nil {
 			return err
 		}

@@ -118,6 +118,9 @@ Comprehensions emit direct Go loops. They add no iterator or runtime helper.
 
 ## Build and check
 
+Each package is either TGo or Go. Do not mix handwritten `.tgo` and `.go`
+files in one package. A Go package can import the generated API of a TGo package.
+
 ```sh
 make build
 ./bin/tgo build ./...
