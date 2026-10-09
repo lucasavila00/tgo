@@ -9,16 +9,17 @@ import (
 
 const exhaustiveWord = "exhaustive"
 
-// lowerExhaustiveClauses emits the checked Go default for each exhaustive clause.
+const enumDefaultComment = "// unreachable: tgolint requires a case per tag"
+
+// lowerExhaustiveClauses emits the Go default for each exhaustive clause.
 func lowerExhaustiveClauses(
 	files *token.FileSet,
 	file *token.File,
 	tree *syntax.File,
 	data []byte,
 	edits []edit,
-) ([]edit, map[[2]int]bool, error) {
+) ([]edit, error) {
 	var failure error
-	locations := make(map[[2]int]bool)
 	syntax.Inspect(tree, func(node *syntax.Node) bool {
 		if failure != nil {
 			return false
@@ -37,8 +38,6 @@ func lowerExhaustiveClauses(
 				continue
 			}
 			start := file.Offset(clause.Exhaustive)
-			position := files.Position(clause.Exhaustive)
-			locations[[2]int{position.Line, position.Column}] = true
 			if len(clause.Body) != 0 {
 				failure = fmt.Errorf(
 					"%s: exhaustive clause must not have a body",
@@ -75,7 +74,7 @@ func lowerExhaustiveClauses(
 		}
 		return true
 	})
-	return edits, locations, failure
+	return edits, failure
 }
 
 func exhaustiveReceiver(expression *syntax.Expression) (*syntax.Expression, bool) {

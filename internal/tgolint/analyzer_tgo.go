@@ -43,6 +43,7 @@ type checker struct {
 	callTarget      map[types.Object]types.Object
 	generated       map[*syntax.File]bool
 	generatedSource map[*syntax.File]string
+	sourceFiles     []*syntax.File
 	outputs         map[string][]byte
 	parents         map[syntax.Node]*syntax.Node
 	syntaxSafe      map[*syntax.Expression]bool
@@ -110,6 +111,7 @@ func run(pass *analysis.Pass) (any, error) {
 		callTarget:      make(map[types.Object]types.Object),
 		generated:       make(map[*syntax.File]bool),
 		generatedSource: make(map[*syntax.File]string),
+		sourceFiles:     nil,
 		outputs:         make(map[string][]byte),
 		parents:         make(map[syntax.Node]*syntax.Node),
 		syntaxSafe:      make(map[*syntax.Expression]bool),
