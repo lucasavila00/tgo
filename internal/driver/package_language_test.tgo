@@ -181,9 +181,9 @@ func TestMatchingTestSourcesIgnoresCgoWhenDisabled(t *testing.T) {
 	buildContext := build.Default
 	buildContext.CgoEnabled = false
 	discovery := packageDiscovery{
-		root: directory,
-		module: "example.com/app",
-		context: &buildContext,
+		root:     directory,
+		module:   "example.com/app",
+		context:  &buildContext,
 		packages: make(map[string]*packageUnit),
 	}
 	unit, err := discovery.packageFor(directory)
