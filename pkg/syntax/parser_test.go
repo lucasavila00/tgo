@@ -24,6 +24,7 @@ type Result enum {
 	OK struct { Value int }
 	Error struct { Message string }
 }
+
 type Options struct { Limit int = 10 }
 type Port int where value > 0
 
@@ -429,5 +430,44 @@ func TestEnumJSONTags(t *testing.T) {
 	})
 	if tags != 3 {
 		t.Fatalf("walk found %d tags, want 3", tags)
+	}
+}
+
+func TestCommunicationBodyExcludesCommunication(t *testing.T) {
+	t.Parallel()
+	source := []byte(`package sample
+
+func read(values <-chan int) int {
+	select {
+	case result := <-values:
+		return result
+	default:
+		return 0
+	}
+}
+`)
+	files := token.NewFileSet()
+	file, err := syntax.ParseFile(files, "select.tgo", source, syntax.AllErrors)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	found := false
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		statement, ok := syntax.StatementOf(node)
+		if !ok || statement.Tag() != syntax.StatementTagCommunication {
+			return true
+		}
+		clause := statement.CommunicationPayload().Value
+		if clause.Communication == nil {
+			return true
+		}
+		found = true
+		if len(clause.Body) != 1 || clause.Body[0].Tag() != syntax.StatementTagReturn {
+			t.Fatalf("communication body = %#v, want one return statement", clause.Body)
+		}
+		return true
+	})
+	if !found {
+		t.Fatal("communication clause was not found")
 	}
 }
