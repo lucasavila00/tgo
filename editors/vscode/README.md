@@ -14,6 +14,9 @@ The extension reads saved `.tgo` files in an open workspace. It also reads the G
 files and module files that provide their type information. It does not edit source,
 format code, or report diagnostics.
 
+The extension hides generated `*_tgo.go` and `*_tgo_<target>.go` files in the
+Explorer by default. Set their `files.exclude` patterns to `false` to show them.
+
 The extension works in local and desktop remote workspaces. Run the install
 script in the environment that runs the workspace extension host. The extension
 does not run in browser-only VS Code.

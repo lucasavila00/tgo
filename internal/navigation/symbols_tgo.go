@@ -6,13 +6,13 @@ import (
 	"go/token"
 	"go/types"
 
-	"tgo/internal/compiler"
+	"tgo/internal/sourceanalysis"
 	"tgo/pkg/syntax"
 )
 
 func sourceSymbols(
-	pkg *compiler.AnalysisPackage,
-	source compiler.AnalysisSource,
+	pkg *sourceanalysis.Package,
+	source sourceanalysis.Source,
 	uri string,
 ) []Symbol {
 	file := source.Syntax
@@ -77,7 +77,7 @@ func sourceSymbols(
 
 func appendGeneralSymbols(
 	result []Symbol,
-	pkg *compiler.AnalysisPackage,
+	pkg *sourceanalysis.Package,
 	uri string,
 	declaration *syntax.GeneralDeclaration,
 	container string,
@@ -130,7 +130,7 @@ func typeKind(value *syntax.Expression) string {
 }
 
 func receiverName(
-	pkg *compiler.AnalysisPackage,
+	pkg *sourceanalysis.Package,
 	declaration *syntax.FunctionDeclaration,
 ) string {
 	object, _ := pkg.Facts.DefinitionName(declaration.Name).(*types.Func)
@@ -158,7 +158,7 @@ func receiverName(
 
 func appendTGoFieldSymbols(
 	result []Symbol,
-	pkg *compiler.AnalysisPackage,
+	pkg *sourceanalysis.Package,
 	uri string,
 	fields []*syntax.TGoField,
 	container string,
@@ -176,7 +176,7 @@ func appendTGoFieldSymbols(
 
 func appendFieldSymbols(
 	result []Symbol,
-	pkg *compiler.AnalysisPackage,
+	pkg *sourceanalysis.Package,
 	uri string,
 	fields []*syntax.Field,
 	container string,
@@ -186,7 +186,7 @@ func appendFieldSymbols(
 
 func appendNamedFields(
 	result []Symbol,
-	pkg *compiler.AnalysisPackage,
+	pkg *sourceanalysis.Package,
 	uri string,
 	fields []*syntax.Field,
 	container string,
@@ -212,7 +212,7 @@ func interfaceMethods(value *syntax.Expression) *syntax.FieldList {
 
 func appendSymbol(
 	result []Symbol,
-	pkg *compiler.AnalysisPackage,
+	pkg *sourceanalysis.Package,
 	uri string,
 	name string,
 	kind string,
@@ -232,7 +232,7 @@ func appendSymbol(
 }
 
 func sourceLocation(
-	pkg *compiler.AnalysisPackage,
+	pkg *sourceanalysis.Package,
 	uri string,
 	span syntax.Span,
 ) (Location, bool) {

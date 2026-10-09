@@ -7,7 +7,7 @@ import (
 	"go/token"
 	"go/types"
 
-	"tgo/internal/compiler"
+	"tgo/internal/sourceanalysis"
 	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
 )
@@ -21,7 +21,7 @@ type iotaCandidate struct {
 }
 
 // checkIotaModernization reports open integer sets in handwritten TGo source.
-func (c *checker) checkIotaModernization(analysis *compiler.AnalysisPackage) {
+func (c *checker) checkIotaModernization(analysis *sourceanalysis.Package) {
 	if analysis == nil {
 		return
 	}
