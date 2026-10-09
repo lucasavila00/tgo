@@ -4,9 +4,11 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/constant"
+	"go/token"
 	"go/types"
+
+	"tgo/pkg/syntax"
 )
 
 // zeroInvalid reports the model that makes a type's zero value invalid.
@@ -58,17 +60,17 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 }
 
 // checkValueSpec rejects declarations that create an invalid model zero.
-func (c *checker) checkValueSpec(specification *ast.ValueSpec) {
+func (c *checker) checkValueSpec(specification *syntax.ValueSpecification) {
 	if len(specification.Values) != 0 {
 		return
 	}
 	for _, name := range specification.Names {
-		object, ok := c.pass.TypesInfo.Defs[name].(*types.Var)
+		object, ok := c.facts.DefinitionName(name).(*types.Var)
 		if !ok {
 			continue
 		}
 		if model, invalid := c.zeroInvalid(object.Type()); invalid {
-			c.pass.Reportf(name.Pos(),
+			c.pass.Reportf(name.Start,
 				"zero declaration contains invalid tgo %s %s; construct it first",
 				modelKind(model), modelName(model))
 		}
@@ -76,18 +78,18 @@ func (c *checker) checkValueSpec(specification *ast.ValueSpec) {
 }
 
 // checkNamedResults rejects implicit zero values in named function results.
-func (c *checker) checkNamedResults(function *ast.FuncType) {
+func (c *checker) checkNamedResults(function *syntax.FunctionType) {
 	if function.Results == nil {
 		return
 	}
 	for _, field := range function.Results.List {
 		for _, name := range field.Names {
-			object, ok := c.pass.TypesInfo.Defs[name].(*types.Var)
+			object, ok := c.facts.DefinitionName(name).(*types.Var)
 			if !ok {
 				continue
 			}
 			if model, invalid := c.zeroInvalid(object.Type()); invalid {
-				c.pass.Reportf(name.Pos(),
+				c.pass.Reportf(name.Start,
 					"named result contains invalid tgo %s %s zero; use an unnamed result",
 					modelKind(model), modelName(model))
 			}
@@ -96,10 +98,13 @@ func (c *checker) checkNamedResults(function *ast.FuncType) {
 }
 
 // checkLiteral finds omitted elements that receive an invalid model zero.
-func (c *checker) checkLiteral(literal *ast.CompositeLit) {
-	typ := c.pass.TypesInfo.TypeOf(literal)
+func (c *checker) checkLiteral(
+	expression *syntax.Expression,
+	literal *syntax.CompositeLiteral,
+) {
+	typ := c.facts.Type(expression)
 	if model := c.modelFor(typ); model != nil {
-		c.pass.Reportf(literal.Pos(), "cannot construct tgo %s %s with a Go literal",
+		c.pass.Reportf(literal.Start, "cannot construct tgo %s %s with a Go literal",
 			modelKind(model), modelName(model))
 		return
 	}
@@ -118,19 +123,22 @@ func (c *checker) checkLiteral(literal *ast.CompositeLit) {
 	}
 }
 
-func (c *checker) checkStructLiteral(literal *ast.CompositeLit, structure *types.Struct) {
-	if len(literal.Elts) == 0 && structure.NumFields() == 0 {
+func (c *checker) checkStructLiteral(
+	literal *syntax.CompositeLiteral,
+	structure *types.Struct,
+) {
+	if len(literal.Elements) == 0 && structure.NumFields() == 0 {
 		return
 	}
 	supplied := make(map[string]bool)
-	keyed := len(literal.Elts) == 0
-	for _, element := range literal.Elts {
-		pair, ok := element.(*ast.KeyValueExpr)
-		if !ok {
+	keyed := len(literal.Elements) == 0
+	for _, element := range literal.Elements {
+		pair := syntax.KeyValueExpressionOf(element)
+		if pair == nil {
 			continue
 		}
 		keyed = true
-		if name, ok := pair.Key.(*ast.Ident); ok {
+		if name := syntax.IdentifierExpressionOf(pair.Key); name != nil {
 			supplied[name.Name] = true
 		}
 	}
@@ -141,7 +149,7 @@ func (c *checker) checkStructLiteral(literal *ast.CompositeLit, structure *types
 		field := structure.Field(index)
 		model, invalid := c.zeroInvalid(field.Type())
 		if invalid && !supplied[field.Name()] {
-			c.pass.Reportf(literal.Pos(),
+			c.pass.Reportf(literal.Start,
 				"field %s defaults to invalid tgo %s %s; supply it",
 				field.Name(), modelKind(model), modelName(model))
 		}
@@ -149,16 +157,16 @@ func (c *checker) checkStructLiteral(literal *ast.CompositeLit, structure *types
 }
 
 func (c *checker) checkLiteralElements(
-	literal *ast.CompositeLit,
+	literal *syntax.CompositeLiteral,
 	length int64,
 	model *model,
 ) {
 	supplied := make(map[int64]bool)
 	next := int64(0)
 	largest := int64(-1)
-	for _, element := range literal.Elts {
-		if pair, ok := element.(*ast.KeyValueExpr); ok {
-			value := c.pass.TypesInfo.Types[pair.Key].Value
+	for _, element := range literal.Elements {
+		if pair := syntax.KeyValueExpressionOf(element); pair != nil {
+			value := c.facts.Constant(pair.Key)
 			if value == nil || value.Kind() != constant.Int {
 				return
 			}
@@ -178,54 +186,77 @@ func (c *checker) checkLiteralElements(
 		length = largest + 1
 	}
 	if int64(len(supplied)) != length {
-		c.pass.Reportf(literal.Pos(),
+		c.pass.Reportf(literal.Start,
 			"literal holes contain invalid tgo %s %s values",
 			modelKind(model), modelName(model))
 	}
 }
 
 // checkCall checks conversions and built-ins that can create model zero values.
-func (c *checker) checkCall(call *ast.CallExpr) {
-	if c.checkedCall(call) != nil {
-		if !c.checked[call] {
-			c.reportCheckedCall(call)
+func (c *checker) checkCall(
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+) {
+	if model := c.checkedSourceCall(expression); model != nil {
+		if !c.checked[expression] {
+			c.reportModelResult(syntax.ExpressionPosition(expression), model,
+				"tgo %s %s result error must be checked or returned",
+				modelKind(model), modelName(model))
 		}
 		return
 	}
-	if c.pass.TypesInfo.Types[call.Fun].IsType() {
-		if model := c.modelFor(c.pass.TypesInfo.TypeOf(call)); model != nil {
-			if c.identityConversion(call) {
+	if c.facts.IsType(call.Callee) {
+		if model := c.modelFor(c.facts.Type(expression)); model != nil {
+			if c.identityConversion(expression, call) {
 				return
 			}
-			c.pass.Reportf(call.Pos(),
+			c.pass.Reportf(syntax.ExpressionPosition(expression),
 				"conversion bypasses the tgo %s %s constructor",
 				modelKind(model), modelName(model))
 		}
 		return
 	}
-	name, ok := call.Fun.(*ast.Ident)
-	if !ok {
+	name := syntax.IdentifierExpressionOf(call.Callee)
+	if name == nil {
 		return
 	}
-	if _, ok := c.pass.TypesInfo.Uses[name].(*types.Builtin); !ok {
+	if _, ok := c.facts.Object(name).(*types.Builtin); !ok {
 		return
 	}
 	switch name.Name {
 	case "new":
-		c.checkNew(call)
+		c.checkNew(expression, call)
 	case "make":
-		c.checkMake(call)
+		c.checkMake(expression, call)
 	case "clear":
-		c.checkClear(call)
+		c.checkClear(expression, call)
 	}
 }
 
-func (c *checker) identityConversion(call *ast.CallExpr) bool {
+func (c *checker) checkedSourceCall(expression *syntax.Expression) *model {
+	tuple, ok := c.facts.Type(expression).(*types.Tuple)
+	if !ok || tuple.Len() != 2 {
+		return nil
+	}
+	model, invalid := c.zeroInvalid(tuple.At(0).Type())
+	if !invalid {
+		return nil
+	}
+	if !types.Identical(tuple.At(1).Type(), types.Universe.Lookup("error").Type()) {
+		return nil
+	}
+	return model
+}
+
+func (c *checker) identityConversion(
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+) bool {
 	if len(call.Args) != 1 {
 		return false
 	}
-	target := c.pass.TypesInfo.TypeOf(call)
-	source := c.pass.TypesInfo.TypeOf(call.Args[0])
+	target := c.facts.Type(expression)
+	source := c.facts.Type(call.Args[0])
 	if types.Identical(source, target) {
 		return true
 	}
@@ -245,41 +276,47 @@ func (c *checker) identityConversion(call *ast.CallExpr) bool {
 	return true
 }
 
-func (c *checker) checkTypeSpec(specification *ast.TypeSpec) {
-	if specification.Assign.IsValid() {
+func (c *checker) checkTypeSpec(specification *syntax.TypeSpecification) {
+	if specification.Assign != token.NoPos {
 		return
 	}
-	if model := c.modelFor(c.pass.TypesInfo.TypeOf(specification.Type)); model != nil {
-		c.pass.Reportf(specification.Type.Pos(),
+	if model := c.modelFor(c.facts.Type(specification.Type)); model != nil {
+		c.pass.Reportf(syntax.ExpressionPosition(specification.Type),
 			"cannot define a new Go type from tgo %s %s; use an alias",
 			modelKind(model), modelName(model))
 	}
 }
 
-func (c *checker) checkNew(call *ast.CallExpr) {
+func (c *checker) checkNew(
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+) {
 	if len(call.Args) != 1 {
 		return
 	}
-	if model, invalid := c.zeroInvalid(c.pass.TypesInfo.TypeOf(call.Args[0])); invalid {
-		c.pass.Reportf(call.Pos(), "new creates invalid tgo %s %s",
+	if model, invalid := c.zeroInvalid(c.facts.Type(call.Args[0])); invalid {
+		c.pass.Reportf(syntax.ExpressionPosition(expression), "new creates invalid tgo %s %s",
 			modelKind(model), modelName(model))
 	}
 }
 
-func (c *checker) checkMake(call *ast.CallExpr) {
+func (c *checker) checkMake(
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+) {
 	if len(call.Args) < 2 {
 		return
 	}
-	typ := c.pass.TypesInfo.TypeOf(call.Args[0])
+	typ := c.facts.Type(call.Args[0])
 	slice, ok := coreType(typ).(*types.Slice)
 	if !ok {
 		return
 	}
 	model, invalid := c.zeroInvalid(slice.Elem())
-	if !invalid || constantZero(c.pass.TypesInfo.Types[call.Args[1]].Value) {
+	if !invalid || constantZero(c.facts.Constant(call.Args[1])) {
 		return
 	}
-	c.pass.Reportf(call.Pos(),
+	c.pass.Reportf(syntax.ExpressionPosition(expression),
 		"make creates invalid tgo %s %s values; use length zero",
 		modelKind(model), modelName(model))
 }
@@ -291,46 +328,57 @@ func constantZero(value constant.Value) bool {
 	return constant.Sign(value) == 0
 }
 
-func (c *checker) checkClear(call *ast.CallExpr) {
+func (c *checker) checkClear(
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+) {
 	if len(call.Args) != 1 {
 		return
 	}
-	typ := c.pass.TypesInfo.TypeOf(call.Args[0])
+	typ := c.facts.Type(call.Args[0])
 	slice, ok := coreType(typ).(*types.Slice)
 	if !ok {
 		return
 	}
 	if model, invalid := c.zeroInvalid(slice.Elem()); invalid {
-		c.pass.Reportf(call.Pos(), "clear creates invalid tgo %s %s values",
+		c.pass.Reportf(syntax.ExpressionPosition(expression), "clear creates invalid tgo %s %s values",
 			modelKind(model), modelName(model))
 	}
 }
 
 // checkMapRead requires presence proof when a miss returns an invalid zero.
-func (c *checker) checkMapRead(index *ast.IndexExpr) {
-	typ := c.pass.TypesInfo.TypeOf(index.X)
+func (c *checker) checkMapRead(
+	expression *syntax.Expression,
+	index *syntax.IndexExpression,
+) {
+	typ := c.facts.Type(index.Expression)
 	mapping, ok := coreType(typ).(*types.Map)
 	if !ok {
 		return
 	}
 	model, invalid := c.zeroInvalid(mapping.Elem())
-	if !invalid || c.assignmentTarget(index) {
+	if !invalid || c.assignmentTarget(expression) {
 		return
 	}
-	if c.commaOK(index) && c.presence[index] {
+	if c.commaOK(expression) && c.presence[expression] {
 		return
 	}
-	c.pass.Reportf(index.Pos(),
+	c.pass.Reportf(syntax.ExpressionPosition(expression),
 		"map read can return invalid tgo %s %s; use comma-ok",
 		modelKind(model), modelName(model))
 }
 
-func (c *checker) assignmentTarget(expression ast.Expr) bool {
-	assignment, ok := c.parents[expression].(*ast.AssignStmt)
+func (c *checker) assignmentTarget(expression *syntax.Expression) bool {
+	node := syntax.ExpressionNode(expression)
+	statement, ok := syntax.StatementOf(c.parents[node])
 	if !ok {
 		return false
 	}
-	for _, left := range assignment.Lhs {
+	assignment := syntax.AssignmentStatementOf(statement)
+	if assignment == nil {
+		return false
+	}
+	for _, left := range assignment.Left {
 		if left == expression {
 			return true
 		}
@@ -338,58 +386,74 @@ func (c *checker) assignmentTarget(expression ast.Expr) bool {
 	return false
 }
 
-func (c *checker) commaOK(expression ast.Expr) bool {
-	switch parent := c.parents[expression].(type) {
-	case *ast.AssignStmt:
-		return len(parent.Lhs) == 2 && len(parent.Rhs) == 1
-	case *ast.ValueSpec:
-		return len(parent.Names) == 2 && len(parent.Values) == 1
-	default:
-		return false
+func (c *checker) commaOK(expression *syntax.Expression) bool {
+	node := syntax.ExpressionNode(expression)
+	parent := c.parents[node]
+	if statement, ok := syntax.StatementOf(parent); ok {
+		assignment := syntax.AssignmentStatementOf(statement)
+		return assignment != nil && len(assignment.Left) == 2 &&
+			len(assignment.Right) == 1
 	}
+	if specification, ok := syntax.SpecificationOf(parent); ok {
+		values := syntax.ValueSpecificationOf(specification)
+		return values != nil && len(values.Names) == 2 && len(values.Values) == 1
+	}
+	return false
 }
 
 // checkPresenceRead checks channel and other reads that need a comma-ok proof.
-func (c *checker) checkPresenceRead(expression ast.Expr) {
-	model, invalid := c.zeroInvalid(firstType(c.pass.TypesInfo.TypeOf(expression)))
+func (c *checker) checkPresenceRead(
+	expression *syntax.Expression,
+	_ *syntax.UnaryExpression,
+) {
+	model, invalid := c.zeroInvalid(firstType(c.facts.Type(expression)))
 	if !invalid {
 		return
 	}
 	if c.commaOK(expression) && c.presence[expression] {
 		return
 	}
-	c.pass.Reportf(expression.Pos(),
+	c.pass.Reportf(syntax.ExpressionPosition(expression),
 		"read can return invalid tgo %s %s; use comma-ok",
 		modelKind(model), modelName(model))
 }
 
 // checkTypeAssertion checks the zero result from the comma-ok form.
 // A failed one-result assertion stops with a panic and returns no zero.
-func (c *checker) checkTypeAssertion(expression *ast.TypeAssertExpr) {
-	if expression.Type == nil {
+func (c *checker) checkTypeAssertion(
+	expression *syntax.Expression,
+	assertion *syntax.TypeAssertionExpression,
+) {
+	if assertion.Type == nil {
 		return
 	}
 	if c.commaOK(expression) {
-		c.checkPresenceRead(expression)
+		c.checkPresenceRead(expression, nil)
 		return
 	}
 	// Go can provide an invalid model value. The caller owns this boundary.
 }
 
-func (c *checker) assertionValidator(expression *ast.TypeAssertExpr) bool {
-	current := ast.Expr(expression)
+func (c *checker) assertionValidator(expression *syntax.Expression) bool {
+	current := expression
 	for {
-		parentheses, ok := c.parents[current].(*ast.ParenExpr)
-		if !ok {
+		node := syntax.ExpressionNode(current)
+		parent, ok := syntax.ExpressionOf(c.parents[node])
+		if !ok || syntax.ParenthesizedExpressionOf(parent) == nil {
 			break
 		}
-		current = parentheses
+		current = parent
 	}
-	call, ok := c.parents[current].(*ast.CallExpr)
-	if !ok || len(call.Args) != 1 || call.Args[0] != current {
+	node := syntax.ExpressionNode(current)
+	parent, ok := syntax.ExpressionOf(c.parents[node])
+	if !ok {
 		return false
 	}
-	return c.validatedCall(call)
+	call := syntax.CallExpressionOf(parent)
+	if call == nil || len(call.Args) != 1 || call.Args[0] != current {
+		return false
+	}
+	return c.sourceCallHasValidationFact(call)
 }
 
 func firstType(typ types.Type) types.Type {
@@ -400,38 +464,41 @@ func firstType(typ types.Type) types.Type {
 }
 
 // checkReslice rejects length growth that exposes invalid zero elements.
-func (c *checker) checkReslice(expression *ast.SliceExpr) {
-	if expression.High == nil {
+func (c *checker) checkReslice(
+	expression *syntax.Expression,
+	slicing *syntax.SliceExpression,
+) {
+	if slicing.High == nil {
 		return
 	}
-	typ := c.pass.TypesInfo.TypeOf(expression.X)
+	typ := c.facts.Type(slicing.Expression)
 	slice, ok := coreType(typ).(*types.Slice)
 	if !ok {
 		return
 	}
 	model, invalid := c.zeroInvalid(slice.Elem())
-	if !invalid || c.currentLength(expression.High, expression.X) ||
-		constantZero(c.pass.TypesInfo.Types[expression.High].Value) {
+	if !invalid || c.currentLength(slicing.High, slicing.Expression) ||
+		constantZero(c.facts.Constant(slicing.High)) {
 		return
 	}
-	c.pass.Reportf(expression.Pos(),
+	c.pass.Reportf(syntax.ExpressionPosition(expression),
 		"reslice can expose invalid tgo %s %s values; keep the current length",
 		modelKind(model), modelName(model))
 }
 
-func (c *checker) currentLength(expression, slice ast.Expr) bool {
-	call, ok := expression.(*ast.CallExpr)
-	if !ok || len(call.Args) != 1 {
+func (c *checker) currentLength(expression, slice *syntax.Expression) bool {
+	call := syntax.CallExpressionOf(expression)
+	if call == nil || len(call.Args) != 1 {
 		return false
 	}
-	name, ok := call.Fun.(*ast.Ident)
-	if !ok || name.Name != "len" {
+	name := syntax.IdentifierExpressionOf(call.Callee)
+	if name == nil || name.Name != "len" {
 		return false
 	}
-	if _, ok := c.pass.TypesInfo.Uses[name].(*types.Builtin); !ok {
+	if _, ok := c.facts.Object(name).(*types.Builtin); !ok {
 		return false
 	}
-	left, leftOK := call.Args[0].(*ast.Ident)
-	right, rightOK := slice.(*ast.Ident)
-	return leftOK && rightOK && c.pass.TypesInfo.ObjectOf(left) == c.pass.TypesInfo.ObjectOf(right)
+	left := syntax.IdentifierExpressionOf(call.Args[0])
+	right := syntax.IdentifierExpressionOf(slice)
+	return left != nil && right != nil && c.facts.Object(left) == c.facts.Object(right)
 }

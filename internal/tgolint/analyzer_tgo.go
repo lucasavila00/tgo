@@ -6,7 +6,6 @@ package tgolint
 
 import (
 	"fmt"
-	"go/ast"
 	"go/token"
 	"go/types"
 	"strconv"
@@ -45,20 +44,21 @@ type checker struct {
 	models        map[objectKey]*model
 	validated     map[types.Object]bool
 	callTarget    map[types.Object]types.Object
-	generated     map[*ast.File]bool
+	generated     map[*syntax.File]bool
 	outputs       map[string][]byte
-	parents       map[ast.Node]ast.Node
+	parents       map[syntax.Node]*syntax.Node
 	syntaxSafe    map[*syntax.Expression]bool
 	syntaxHandled map[*syntax.Expression]bool
-	checked       map[*ast.CallExpr]bool
-	presence      map[ast.Expr]bool
+	checked       map[*syntax.Expression]bool
+	presence      map[*syntax.Expression]bool
 	escaped       map[types.Object]token.Pos
 	reported      map[diagnosticKey]bool
-	function      ast.Node
+	function      *syntax.Node
+	file          *syntax.File
 	zeroTypes     map[*types.TypeParam]*model
 	captureResult func(*model)
-	captureSource func(*model, ast.Expr)
-	scalarFlows   map[ast.Node]*scalarFlow
+	captureSource func(*model, *syntax.Expression)
+	scalarFlows   map[syntax.Node]*scalarFlow
 	invalid       bool
 }
 
@@ -107,25 +107,26 @@ func run(pass *analysis.Pass) (any, error) {
 		models:        make(map[objectKey]*model),
 		validated:     make(map[types.Object]bool),
 		callTarget:    make(map[types.Object]types.Object),
-		generated:     make(map[*ast.File]bool),
+		generated:     make(map[*syntax.File]bool),
 		outputs:       make(map[string][]byte),
-		parents:       make(map[ast.Node]ast.Node),
+		parents:       make(map[syntax.Node]*syntax.Node),
 		syntaxSafe:    make(map[*syntax.Expression]bool),
 		syntaxHandled: make(map[*syntax.Expression]bool),
-		checked:       make(map[*ast.CallExpr]bool),
-		presence:      make(map[ast.Expr]bool),
+		checked:       make(map[*syntax.Expression]bool),
+		presence:      make(map[*syntax.Expression]bool),
 		escaped:       make(map[types.Object]token.Pos),
 		reported:      make(map[diagnosticKey]bool),
 		function:      nil,
+		file:          nil,
 		zeroTypes:     nil,
 		captureResult: nil,
 		captureSource: nil,
-		scalarFlows:   make(map[ast.Node]*scalarFlow),
+		scalarFlows:   make(map[syntax.Node]*scalarFlow),
 		invalid:       false,
 	}
-	for index, file := range files {
+	for _, file := range files {
 		if syntaxFileGenerated(file) {
-			c.generated[pass.Files[index]] = true
+			c.generated[file] = true
 		}
 	}
 	if c.rejectInvalidDependencies() {
@@ -140,39 +141,28 @@ func run(pass *analysis.Pass) (any, error) {
 	c.findValidationWrappers()
 	c.findValidationFunctionValues()
 	c.checkTGoSource(analysis)
-	representationAt := make(map[token.Position]*syntax.Expression)
 	for _, file := range c.files {
 		if syntaxFileGenerated(file) {
 			continue
 		}
+		c.file = file
 		syntax.Inspect(file, func(node *syntax.Node) bool {
-			expression, expressionOK := syntax.ExpressionOf(node)
-			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
-				representationAt[c.pass.Fset.Position(
-					syntax.ExpressionPosition(expression),
-				)] = expression
-			}
-			statement, ok := syntax.StatementOf(node)
-			if !ok {
-				return true
-			}
-			tagSwitch := syntax.SwitchStatementOf(statement)
-			if tagSwitch != nil {
-				c.checkTagSwitch(file, statement, tagSwitch)
+			c.addParent(node)
+			return true
+		})
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			if statement, ok := syntax.StatementOf(node); ok {
+				tagSwitch := syntax.SwitchStatementOf(statement)
+				if tagSwitch != nil {
+					c.checkTagSwitch(file, statement, tagSwitch)
+				}
 			}
 			return true
 		})
-	}
-	for _, file := range pass.Files {
-		if c.generated[file] {
-			continue
-		}
-		c.addParents(file)
-		ast.Inspect(file, func(node ast.Node) bool {
-			if _, ok := node.(*ast.SelectorExpr); ok {
-				if expression := representationAt[c.pass.Fset.Position(node.Pos())]; expression != nil {
-					c.checkRepresentationAccess(expression)
-				}
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			expression, expressionOK := syntax.ExpressionOf(node)
+			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
+				c.checkRepresentationAccess(expression)
 			}
 			c.checkNode(node)
 			return true
@@ -229,49 +219,56 @@ func (c *checker) markInvalid() {
 }
 
 // addParents builds the upward AST links used by local flow checks.
-func (c *checker) addParents(file *ast.File) {
-	var stack []ast.Node = nil
-	ast.Inspect(file, func(node ast.Node) bool {
-		if node == nil {
-			stack = stack[:len(stack)-1]
-			return false
-		}
-		if len(stack) > 0 {
-			c.parents[node] = stack[len(stack)-1]
-		}
-		stack = append(stack, node)
-		return true
-	})
+func (c *checker) addParent(node *syntax.Node) {
+	for _, child := range syntax.Children(c.file, node) {
+		c.parents[*child] = node
+	}
 }
 
 // checkNode sends one AST node to each check that applies to its form.
-func (c *checker) checkNode(node ast.Node) {
-	switch node := node.(type) {
-	case *ast.FuncDecl:
-		if node.Body != nil {
-			c.checkNamedResults(node.Type)
-			c.checkConstructors(node, node.Body)
+func (c *checker) checkNode(node *syntax.Node) {
+	if function, ok := syntax.FunctionDeclarationOf(node); ok {
+		if function.Body != nil {
+			c.checkNamedResults(function.Type)
+			c.checkConstructors(node, function.Body)
 		}
-	case *ast.FuncLit:
-		c.checkNamedResults(node.Type)
-		c.checkConstructors(node, node.Body)
-	case *ast.TypeSpec:
-		c.checkTypeSpec(node)
-	case *ast.ValueSpec:
-		c.checkValueSpec(node)
-	case *ast.CompositeLit:
-		c.checkLiteral(node)
-	case *ast.CallExpr:
-		c.checkCall(node)
-	case *ast.IndexExpr:
-		c.checkMapRead(node)
-	case *ast.UnaryExpr:
-		if node.Op == token.ARROW {
-			c.checkPresenceRead(node)
+		return
+	}
+	if literal, ok := syntax.FunctionLiteralOf(node); ok {
+		c.checkNamedResults(literal.Type)
+		c.checkConstructors(node, literal.Body)
+		return
+	}
+	if specification, ok := syntax.SpecificationOf(node); ok {
+		if value := syntax.TypeSpecificationOf(specification); value != nil {
+			c.checkTypeSpec(value)
 		}
-	case *ast.TypeAssertExpr:
-		c.checkTypeAssertion(node)
-	case *ast.SliceExpr:
-		c.checkReslice(node)
+		if value := syntax.ValueSpecificationOf(specification); value != nil {
+			c.checkValueSpec(value)
+		}
+		return
+	}
+	expression, ok := syntax.ExpressionOf(node)
+	if !ok {
+		return
+	}
+	if value := syntax.CompositeLiteralOf(expression); value != nil {
+		c.checkLiteral(expression, value)
+	}
+	if value := syntax.CallExpressionOf(expression); value != nil {
+		c.checkCall(expression, value)
+	}
+	if value := syntax.IndexExpressionOf(expression); value != nil {
+		c.checkMapRead(expression, value)
+	}
+	if value := syntax.UnaryExpressionOf(expression); value != nil &&
+		value.Operator == token.ARROW {
+		c.checkPresenceRead(expression, value)
+	}
+	if value := syntax.TypeAssertionExpressionOf(expression); value != nil {
+		c.checkTypeAssertion(expression, value)
+	}
+	if value := syntax.SliceExpressionOf(expression); value != nil {
+		c.checkReslice(expression, value)
 	}
 }

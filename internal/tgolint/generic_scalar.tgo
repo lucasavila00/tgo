@@ -1,12 +1,12 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/constant"
 	"go/token"
 	"go/types"
 
-	"golang.org/x/tools/go/cfg"
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
 )
 
 type scalarValue enum {
@@ -19,42 +19,45 @@ type scalarValue enum {
 type scalarState map[types.Object]scalarValue
 
 type scalarFlow struct {
-	before map[ast.Node]scalarState
+	before map[syntax.Node]scalarState
 }
 
 // scalarValueAt returns a proven scalar value before the expression runs.
-func (c %checker) scalarValueAt(node ast.Node, expression ast.Expr) (scalarValue, bool) {
+func (c %checker) scalarValueAt(
+	node *syntax.Node,
+	expression *syntax.Expression,
+) (scalarValue, bool) {
 	root := c.enclosingFunction(node)
 	if root == nil {
 		return scalarValue.Boolean{Value: false}, false
 	}
-	flow := c.scalarFlows[root]
+	flow := c.scalarFlows[*root]
 	if flow == nil {
 		flow = c.buildScalarFlow(root)
-		c.scalarFlows[root] = flow
+		c.scalarFlows[*root] = flow
 	}
-	state := flow.before[expression]
+	state := flow.before[syntax.ExpressionNode(expression)]
 	if state == nil {
-		state = flow.before[node]
+		state = flow.before[*node]
 	}
 	return c.evaluateScalar(expression, state)
 }
 
 // enclosingFunction finds the declaration or literal that owns a node.
-func (c %checker) enclosingFunction(node ast.Node) ast.Node {
-	for current := node; current != nil; current = c.parents[current] {
-		switch current.(type) {
-		case *ast.FuncDecl, *ast.FuncLit:
+func (c %checker) enclosingFunction(node *syntax.Node) *syntax.Node {
+	for current := node; current != nil; current = c.parents[*current] {
+		if _, declaration := syntax.FunctionDeclarationOf(current); declaration {
 			return current
 		}
+		if _, literal := syntax.FunctionLiteralOf(current); literal { return current }
 	}
 	return nil
 }
 
 // buildScalarFlow solves scalar facts over the function control-flow graph.
-func (c %checker) buildScalarFlow(root ast.Node) %scalarFlow {
-	body := functionBody(root)
-	flow := &scalarFlow{before: make(map[ast.Node]scalarState)}
+func (c %checker) buildScalarFlow(root *syntax.Node) %scalarFlow {
+	body := genericFunctionBody(root)
+	flow := &scalarFlow{before: make(map[syntax.Node]scalarState)}
 	if body == nil {
 		return flow
 	}
@@ -118,7 +121,7 @@ func (c %checker) scalarSuccessors(
 	if len(block.Succs) != 2 || len(block.Nodes) == 0 {
 		return block.Succs
 	}
-	condition, ok := block.Nodes[len(block.Nodes)-1].(ast.Expr)
+	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
 	if !ok {
 		return block.Succs
 	}
@@ -136,7 +139,7 @@ func (c %checker) scalarSuccessors(
 	return block.Succs[1:]
 }
 
-// recordScalarEntries saves final facts before each AST node.
+// recordScalarEntries saves final facts before each syntax node.
 func (c %checker) recordScalarEntries(
 	flow %scalarFlow,
 	graph *cfg.CFG,
@@ -157,22 +160,25 @@ func (c %checker) recordScalarEntries(
 }
 
 // ownedScalars limits facts to parameters and variables from this function.
-func (c %checker) ownedScalars(root ast.Node, body *ast.BlockStmt) map[types.Object]bool {
+func (c %checker) ownedScalars(
+	root *syntax.Node,
+	body *syntax.BlockStatement,
+) map[types.Object]bool {
 	owned := make(map[types.Object]bool)
 	if signature := c.functionSignature(root); signature != nil {
 		for index := 0; index < signature.Params().Len(); index++ {
 			owned[signature.Params().At(index)] = true
 		}
 	}
-	ast.Inspect(body, func(node ast.Node) bool {
-		if _, nested := node.(*ast.FuncLit); nested {
+	inspectGenericBlock(body, func(node *syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
-		name, ok := node.(*ast.Ident)
+		name, ok := syntax.IdentifierOf(node)
 		if !ok {
 			return true
 		}
-		if variable, ok := c.pass.TypesInfo.Defs[name].(*types.Var); ok {
+		if variable, ok := c.facts.DefinitionName(name).(*types.Var); ok {
 			owned[variable] = true
 		}
 		return true
@@ -182,7 +188,7 @@ func (c %checker) ownedScalars(root ast.Node, body *ast.BlockStmt) map[types.Obj
 
 // scalarEntryState maps stable Boolean and integer parameters to call arguments.
 func (c %checker) scalarEntryState(
-	root ast.Node,
+	root *syntax.Node,
 ) scalarState {
 	state := make(scalarState)
 	signature := c.functionSignature(root)
@@ -206,19 +212,15 @@ func (c %checker) scalarEntryState(
 	return state
 }
 
-func (c %checker) functionSignature(root ast.Node) *types.Signature {
-	switch function := root.(type) {
-	case *ast.FuncDecl:
-		object, _ := c.pass.TypesInfo.Defs[function.Name].(*types.Func)
+func (c %checker) functionSignature(root *syntax.Node) *types.Signature {
+	if function, ok := syntax.FunctionDeclarationOf(root); ok {
+		object, _ := c.facts.DefinitionName(function.Name).(*types.Func)
 		if object != nil {
 			signature, _ := object.Type().(*types.Signature)
 			return signature
 		}
-	case *ast.FuncLit:
-		signature, _ := c.pass.TypesInfo.TypeOf(function).(*types.Signature)
-		return signature
 	}
-	return nil
+	return c.facts.FunctionSignature(syntax.NodePosition(root))
 }
 
 func isInteger(typ types.Type) bool {
@@ -233,77 +235,81 @@ func (c %checker) clearRangeScalars(
 	if block.Kind != cfg.KindRangeBody {
 		return
 	}
-	statement, ok := block.Stmt.(*ast.RangeStmt)
-	if !ok {
+	statement := syntax.RangeStatementOf(block.Stmt)
+	if statement == nil {
 		return
 	}
-	for _, expression := range []ast.Expr{statement.Key, statement.Value} {
-		name, ok := expression.(*ast.Ident)
-		if ok && name != nil && name.Name != "_" {
-			delete(state, c.pass.TypesInfo.ObjectOf(name))
+	for _, expression := range []*syntax.Expression{statement.Key, statement.Value} {
+		name := syntax.IdentifierExpressionOf(expression)
+		if name != nil && name.Name != "_" {
+			delete(state, c.facts.Object(name))
 		}
 	}
 }
 
 func (c %checker) transferScalarNode(
 	state scalarState,
-	node ast.Node,
+	node syntax.Node,
 	owned map[types.Object]bool,
 ) {
-	switch node := node.(type) {
-	case *ast.AssignStmt:
-		c.transferScalarAssignment(state, node, owned)
-	case *ast.ValueSpec:
-		c.transferScalarValues(state, node.Names, node.Values, owned)
-	case *ast.DeclStmt:
-		declaration, ok := node.Decl.(*ast.GenDecl)
-		if !ok {
-			return
+	if statement, ok := syntax.StatementOf(&node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			c.transferScalarAssignment(state, assignment, owned)
 		}
-		for _, specification := range declaration.Specs {
-			values, ok := specification.(*ast.ValueSpec)
-			if ok {
+		if declaration := syntax.DeclarationStatementOf(statement); declaration != nil {
+			general := syntax.GeneralDeclarationOf(declaration.Declaration)
+			if general != nil {
+				for _, specification := range general.Specs {
+					values := syntax.ValueSpecificationOf(specification)
+					if values == nil { continue }
+					c.transferScalarValues(state, values.Names, values.Values, owned)
+				}
+			}
+		}
+		if increment := syntax.IncrementStatementOf(statement); increment != nil {
+			if name := syntax.IdentifierExpressionOf(increment.Expression); name != nil {
+				delete(state, c.facts.Object(name))
+			}
+		}
+	}
+	if specification, ok := syntax.SpecificationOf(&node); ok {
+		if values := syntax.ValueSpecificationOf(specification); values != nil {
 				c.transferScalarValues(
 					state, values.Names, values.Values, owned,
 				)
-			}
-		}
-	case *ast.IncDecStmt:
-		if name := identifier(node.X); name != nil {
-			delete(state, c.pass.TypesInfo.ObjectOf(name))
 		}
 	}
-	c.invalidateScalarEscapes(state, node)
+	c.invalidateScalarEscapes(state, &node)
 }
 
 // transferScalarAssignment evaluates all right sides before it changes state.
 func (c %checker) transferScalarAssignment(
 	state scalarState,
-	statement *ast.AssignStmt,
+	statement *syntax.AssignmentStatement,
 	owned map[types.Object]bool,
 ) {
-	if statement.Tok != token.ASSIGN && statement.Tok != token.DEFINE ||
-		len(statement.Lhs) != len(statement.Rhs) {
-		for _, target := range statement.Lhs {
-			if name := identifier(target); name != nil {
-				delete(state, c.pass.TypesInfo.ObjectOf(name))
+	if statement.Operator != token.ASSIGN && statement.Operator != token.DEFINE ||
+		len(statement.Left) != len(statement.Right) {
+		for _, target := range statement.Left {
+			if name := syntax.IdentifierExpressionOf(target); name != nil {
+				delete(state, c.facts.Object(name))
 			}
 		}
 		return
 	}
-	values := make([]scalarValue, 0, len(statement.Rhs))
-	known := make([]bool, 0, len(statement.Rhs))
-	for _, expression := range statement.Rhs {
+	values := make([]scalarValue, 0, len(statement.Right))
+	known := make([]bool, 0, len(statement.Right))
+	for _, expression := range statement.Right {
 		value, valueKnown := c.evaluateScalar(expression, state)
 		values = append(values, value)
 		known = append(known, valueKnown)
 	}
-	for index, target := range statement.Lhs {
-		name, ok := target.(*ast.Ident)
-		if !ok || name.Name == "_" {
+	for index, target := range statement.Left {
+		name := syntax.IdentifierExpressionOf(target)
+		if name == nil || name.Name == "_" {
 			continue
 		}
-		object := c.pass.TypesInfo.ObjectOf(name)
+		object := c.facts.Object(name)
 		if !owned[object] || !known[index] {
 			delete(state, object)
 		} else {
@@ -314,18 +320,18 @@ func (c %checker) transferScalarAssignment(
 
 func (c %checker) transferScalarValues(
 	state scalarState,
-	names []*ast.Ident,
-	values []ast.Expr,
+	names []*syntax.Identifier,
+	values []*syntax.Expression,
 	owned map[types.Object]bool,
 ) {
 	if len(names) != len(values) {
 		for _, name := range names {
-			delete(state, c.pass.TypesInfo.ObjectOf(name))
+			delete(state, c.facts.Object(name))
 		}
 		return
 	}
 	for index, name := range names {
-		object := c.pass.TypesInfo.ObjectOf(name)
+		object := c.facts.Object(name)
 		value, known := c.evaluateScalar(values[index], state)
 		if !owned[object] || !known {
 			delete(state, object)
@@ -336,27 +342,30 @@ func (c %checker) transferScalarValues(
 }
 
 // invalidateScalarEscapes drops facts after an address or closure captures a value.
-func (c %checker) invalidateScalarEscapes(state scalarState, root ast.Node) {
-	ast.Inspect(root, func(node ast.Node) bool {
-		if unary, ok := node.(*ast.UnaryExpr); ok && unary.Op == token.AND {
-			if name := identifier(unary.X); name != nil {
-				delete(state, c.pass.TypesInfo.ObjectOf(name))
+func (c %checker) invalidateScalarEscapes(state scalarState, root *syntax.Node) {
+	inspectGenericNode(root, func(node *syntax.Node) bool {
+		if expression, ok := syntax.ExpressionOf(node); ok {
+			if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
+				unary.Operator == token.AND {
+				if name := syntax.IdentifierExpressionOf(unary.Expression); name != nil {
+					delete(state, c.facts.Object(name))
+				}
+			}
+			if selector := syntax.SelectorExpressionOf(expression); selector != nil &&
+				c.pointerMethodSelection(expression) {
+				if name := syntax.IdentifierExpressionOf(selector.Expression); name != nil {
+					delete(state, c.facts.Object(name))
+				}
 			}
 		}
-		if selector, ok := node.(*ast.SelectorExpr); ok &&
-			pointerMethodSelection(c.pass.TypesInfo, selector) {
-			if name := identifier(selector.X); name != nil {
-				delete(state, c.pass.TypesInfo.ObjectOf(name))
-			}
-		}
-		literal, ok := node.(*ast.FuncLit)
+		literal, ok := syntax.FunctionLiteralOf(node)
 		if !ok {
 			return true
 		}
-		ast.Inspect(literal.Body, func(nested ast.Node) bool {
-			name, ok := nested.(*ast.Ident)
+		inspectGenericBlock(literal.Body, func(nested *syntax.Node) bool {
+			name, ok := syntax.IdentifierOf(nested)
 			if ok {
-				delete(state, c.pass.TypesInfo.Uses[name])
+				delete(state, c.facts.Object(name))
 			}
 			return true
 		})
@@ -366,34 +375,37 @@ func (c %checker) invalidateScalarEscapes(state scalarState, root ast.Node) {
 
 // evaluateScalar reduces constants, aliases, and supported Boolean expressions.
 func (c %checker) evaluateScalar(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	state scalarState,
 ) (scalarValue, bool) {
 	if expression == nil {
 		return scalarValue.Boolean{Value: false}, false
 	}
-	if exact, known := exactScalar(c.pass.TypesInfo.Types[expression].Value); known {
+	if exact, known := exactScalar(c.facts.Constant(expression)); known {
 		return exact, true
 	}
-	switch expression := expression.(type) {
-	case *ast.ParenExpr:
-		return c.evaluateScalar(expression.X, state)
-	case *ast.Ident:
-		if value, ok := state[c.pass.TypesInfo.ObjectOf(expression)]; ok {
+	if parentheses := syntax.ParenthesizedExpressionOf(expression); parentheses != nil {
+		return c.evaluateScalar(parentheses.Expression, state)
+	}
+	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
+		if value, ok := state[c.facts.Object(identifier)]; ok {
 			return value, true
 		}
 		return scalarValue.Boolean{Value: false}, false
-	case *ast.UnaryExpr:
-		value, ok := c.evaluateScalar(expression.X, state)
-		if !ok || expression.Op != token.NOT {
+	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+		value, ok := c.evaluateScalar(unary.Expression, state)
+		if !ok || unary.Operator != token.NOT {
 			return scalarValue.Boolean{Value: false}, false
 		}
 		return negateScalarBoolean(value)
-	case *ast.BinaryExpr:
-		return c.evaluateScalarBinary(expression, state)
-	case *ast.CallExpr:
-		if c.valuePreservingConversion(expression) {
-			return c.evaluateScalar(expression.Args[0], state)
+	}
+	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
+		return c.evaluateScalarBinary(binary, state)
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		if c.valuePreservingConversion(expression, call) {
+			return c.evaluateScalar(call.Args[0], state)
 		}
 	}
 	return scalarValue.Boolean{Value: false}, false
@@ -414,27 +426,30 @@ func exactScalar(value constant.Value) (scalarValue, bool) {
 	}
 }
 
-func (c %checker) valuePreservingConversion(call *ast.CallExpr) bool {
-	return len(call.Args) == 1 && c.pass.TypesInfo.Types[call.Fun].IsType() &&
+func (c %checker) valuePreservingConversion(
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+) bool {
+	return len(call.Args) == 1 && c.facts.IsType(call.Callee) &&
 		types.Identical(
-			c.pass.TypesInfo.TypeOf(call),
-			c.pass.TypesInfo.TypeOf(call.Args[0]),
+			c.facts.Type(expression),
+			c.facts.Type(call.Args[0]),
 		)
 }
 
 // evaluateScalarBinary evaluates safe Boolean operations and equality.
 func (c %checker) evaluateScalarBinary(
-	expression *ast.BinaryExpr,
+	expression *syntax.BinaryExpression,
 	state scalarState,
 ) (scalarValue, bool) {
-	left, leftKnown := c.evaluateScalar(expression.X, state)
-	right, rightKnown := c.evaluateScalar(expression.Y, state)
+	left, leftKnown := c.evaluateScalar(expression.Left, state)
+	right, rightKnown := c.evaluateScalar(expression.Right, state)
 	if !leftKnown || !rightKnown {
 		return scalarValue.Boolean{Value: false}, false
 	}
 	leftBoolean, leftBooleanKnown := scalarBoolean(left)
 	rightBoolean, rightBooleanKnown := scalarBoolean(right)
-	switch expression.Op {
+	switch expression.Operator {
 	case token.LAND:
 		return scalarLogicalAnd(
 			left, leftBoolean, leftBooleanKnown,
@@ -447,7 +462,7 @@ func (c %checker) evaluateScalarBinary(
 		)
 	case token.EQL, token.NEQ:
 		if scalarValuesEqual(left, right) {
-			equal := expression.Op == token.EQL
+			equal := expression.Operator == token.EQL
 			return scalarValue.Boolean{Value: equal}, true
 		}
 	}
@@ -649,15 +664,16 @@ func scalarStatesEqual(left scalarState, right scalarState) bool {
 	return true
 }
 
-func recordScalarState(target map[ast.Node]scalarState, root ast.Node, state scalarState) {
-	ast.Inspect(root, func(node ast.Node) bool {
-		if node == nil {
+func recordScalarState(
+	target map[syntax.Node]scalarState,
+	root syntax.Node,
+	state scalarState,
+) {
+	inspectGenericNode(&root, func(node *syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
-		if _, nested := node.(*ast.FuncLit); nested {
-			return false
-		}
-		target[node] = cloneScalarState(state)
+		target[*node] = cloneScalarState(state)
 		return true
 	})
 }
