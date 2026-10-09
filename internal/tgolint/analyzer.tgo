@@ -75,7 +75,7 @@ type diagnosticKey struct {
 
 // run verifies generated code, loads model facts, and checks user Go code.
 func run(pass *analysis.Pass) (any, error) {
-	if pass == nil { return nil, fmt.Errorf("tgolint received a nil analysis pass") }
+	if pass == nil { return , fmt.Errorf("tgolint received a nil analysis pass") }
 	pass = suppressDiagnostics(pass)
 	files := parseAnalysisFiles(pass)!!
 	if len(files) == 0 {
@@ -84,10 +84,10 @@ func run(pass *analysis.Pass) (any, error) {
 	info := pass.TypesInfo
 	fileSet := pass.Fset
 	if info == nil {
-		return nil, fmt.Errorf("tgolint requires type facts")
+		return , fmt.Errorf("tgolint requires type facts")
 	}
 	if fileSet == nil {
-		return nil, fmt.Errorf("tgolint requires type and position facts")
+		return , fmt.Errorf("tgolint requires type and position facts")
 	}
 	facts := sourcefacts.New(files[0], info, fileSet)
 	for _, file := range files[1:] { facts.AddFile(file) }

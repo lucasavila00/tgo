@@ -27,6 +27,10 @@ func TestFailureReturns(t *testing.T) {
 	if value != 0 || err != want {
 		t.Fatalf("Named = %d, %v", value, err)
 	}
+	value, err = (loader{}).Method(want)
+	if value != 0 || err != want {
+		t.Fatalf("Method = %d, %v", value, err)
+	}
 	valueText, err := Nested(want)
 	if valueText != "" || err != want {
 		t.Fatalf("Nested = %q, %v", valueText, err)

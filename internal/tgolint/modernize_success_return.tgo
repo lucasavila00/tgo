@@ -1,6 +1,7 @@
 package tgolint
 
 import (
+	"go/token"
 	"go/types"
 
 	"tgo/internal/compiler"
@@ -19,6 +20,7 @@ func (c %checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPac
 			continue
 		}
 		facts := analysis.Facts
+		propagationReturns := manualPropagationReturns(file, facts)
 		syntax.Inspect(
 			file,
 			func(node *syntax.Node) bool {
@@ -29,6 +31,9 @@ func (c %checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPac
 				returned := syntax.ReturnStatementOf(statement)
 				if returned == nil || returned.SuccessComma.IsValid() ||
 					returned.FailureComma.IsValid() || len(returned.Results) < 2 {
+					return true
+				}
+				if propagationReturns[returned.Return] {
 					return true
 				}
 				last := sourceUnparenthesized(returned.Results[len(returned.Results) - 1])
@@ -52,6 +57,34 @@ func (c %checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPac
 			},
 		)
 	}
+}
+
+// manualPropagationReturns finds returns covered by the postfix propagation check.
+func manualPropagationReturns(
+	file %syntax.File,
+	facts %sourcefacts.Index,
+) map[token.Pos]bool {
+	result := make(map[token.Pos]bool)
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		statements, ok := sourceStatementList(node)
+		if !ok || len(statements) < 2 {
+			return true
+		}
+		signature := sourceFunctionSignature(file, node, facts)
+		for position := 0; position+1 < len(statements); position++ {
+			_, _, matched := errorReturnModernization(
+				statements[position], statements[position+1], signature, facts,
+			)
+			if !matched {
+				continue
+			}
+			branch, _ := sourceIf(statements[position+1])
+			returned, _ := sourceReturn(branch.Body.List[0])
+			result[returned.Return] = true
+		}
+		return true
+	})
+	return result
 }
 
 func failureReturnCanUseLeadingComma(

@@ -118,6 +118,11 @@ The successful-return modernization check reports `return value, nil` in handwri
 source. It also accepts parenthesized `nil` and returns with more than two values. It does not
 report one-result returns, a non-final `nil`, a shadowed `nil`, or an existing trailing comma.
 
+The same check reports an explicit failure return when every result before the final error is the
+exact zero for its declared type. For example, it reports `return nil, err`, `return 0, err`, and
+longer zero prefixes in favor of `return , err`. It does not report an existing leading comma, a
+nonzero prefix, a final `nil`, or a value that it cannot prove is zero.
+
 ## Go boundary
 
 The linter trusts exact TGo values that enter from Go parameters, calls, callbacks, decoders,

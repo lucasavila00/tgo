@@ -8,6 +8,9 @@ type record struct {
 
 type number int
 
+type loader struct {
+}
+
 func Scalars(err error) (bool, int, float64, complex128, string, error) {
 	return false, 0, 0, 0, "", err
 }
@@ -28,6 +31,10 @@ func Generic[T any](err error) (T, error) {
 func Named(err error) (value int, returned error) {
 	value = 9
 	returned = nil
+	return 0, err
+}
+
+func (loader) Method(err error) (int, error) {
 	return 0, err
 }
 
