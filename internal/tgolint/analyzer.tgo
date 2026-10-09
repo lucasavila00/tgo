@@ -135,6 +135,9 @@ func run(pass *analysis.Pass) (any, error) {
 		c.file = file
 		syntax.Inspect(file, func(node *syntax.Node) bool {
 			c.addParent(node)
+			return true
+		})
+		syntax.Inspect(file, func(node *syntax.Node) bool {
 			expression, expressionOK := syntax.ExpressionOf(node)
 			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
 				c.checkRepresentationAccess(expression)

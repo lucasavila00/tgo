@@ -302,8 +302,7 @@ func (c %checker) nodeUsesObject(node *syntax.Node, object types.Object) bool {
 	name, ok := syntax.IdentifierOf(node)
 	if ok && c.facts.Object(name) == object { return true }
 	for _, child := range syntax.Children(c.file, node) {
-		childValue := child
-		if c.nodeUsesObject(&childValue, object) { return true }
+		if c.nodeUsesObject(child, object) { return true }
 	}
 	return false
 }
