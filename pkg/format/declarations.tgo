@@ -1,0 +1,201 @@
+package format
+
+import (
+	"go/token"
+
+	"tgo/pkg/syntax"
+)
+
+func (p *printer) declaration(value *syntax.Declaration) {
+	switch declarationValue := *value; declarationValue.Tag() {
+	case syntax.DeclarationTagBad:
+		item := declarationValue.BadPayload().Value
+		p.sourceSpan(item.Span)
+	case syntax.DeclarationTagGeneral:
+		p.generalDeclaration(declarationValue.GeneralPayload().Value)
+	case syntax.DeclarationTagFunction:
+		p.functionDeclaration(declarationValue.FunctionPayload().Value)
+	case syntax.DeclarationTagEnum:
+		p.enumDeclaration(declarationValue.EnumPayload().Value)
+	case syntax.DeclarationTagStruct:
+		p.structDeclaration(declarationValue.StructPayload().Value)
+	case syntax.DeclarationTagChecked:
+		p.checkedDeclaration(declarationValue.CheckedPayload().Value)
+	exhaustive:
+	}
+}
+
+func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
+	p.token(value.Token, value.Kind.String())
+	if value.Lparen == token.NoPos {
+		p.space()
+		p.specification(value.Specs[0])
+		return
+	}
+	p.space()
+	p.token(value.Lparen, "(")
+	if len(value.Specs) == 0 {
+		p.token(value.Rparen, ")")
+		return
+	}
+	p.newline()
+	p.indent++
+	for _, item := range value.Specs {
+		p.specification(item)
+		p.newline()
+	}
+	p.indent--
+	p.token(value.Rparen, ")")
+}
+
+func (p *printer) specification(value *syntax.Specification) {
+	switch specificationValue := *value; specificationValue.Tag() {
+	case syntax.SpecificationTagImport:
+		p.importSpecification(specificationValue.ImportPayload().Value)
+	case syntax.SpecificationTagValue:
+		p.valueSpecification(specificationValue.ValuePayload().Value)
+	case syntax.SpecificationTagType:
+		p.typeSpecification(specificationValue.TypePayload().Value)
+	exhaustive:
+	}
+}
+
+func (p *printer) importSpecification(value *syntax.ImportSpecification) {
+	if value.Name != nil {
+		p.token(value.Name.Start, value.Name.Name)
+		p.space()
+	}
+	p.token(value.Path.ValuePosition, value.Path.Value)
+}
+
+func (p *printer) valueSpecification(value *syntax.ValueSpecification) {
+	p.identifiers(value.Names)
+	if value.Type != nil {
+		p.space()
+		p.expression(value.Type, 0)
+	}
+	if len(value.Values) > 0 {
+		p.space()
+		p.text("=")
+		p.space()
+		p.commaList(value.Values)
+	}
+}
+
+func (p *printer) typeSpecification(value *syntax.TypeSpecification) {
+	p.token(value.Name.Start, value.Name.Name)
+	if value.TypeParams != nil {
+		p.fieldList(value.TypeParams, "[", "]")
+	}
+	p.space()
+	if value.Assign != token.NoPos {
+		p.token(value.Assign, "=")
+		p.space()
+	}
+	p.expression(value.Type, 0)
+}
+
+func (p *printer) functionDeclaration(value *syntax.FunctionDeclaration) {
+	p.token(value.Type.Function, "func")
+	p.space()
+	if value.Receiver != nil {
+		p.fieldList(value.Receiver, "(", ")")
+		p.space()
+	}
+	p.token(value.Name.Start, value.Name.Name)
+	p.functionSignature(value.Type)
+	if value.Body != nil {
+		p.space()
+		p.block(value.Body)
+	}
+}
+
+func (p *printer) enumDeclaration(value *syntax.EnumDeclaration) {
+	p.token(value.Type, "type")
+	p.space()
+	p.token(value.Name.Start, value.Name.Name)
+	p.space()
+	p.token(value.Enum, "enum")
+	if value.Tag != nil {
+		p.space()
+		p.token(value.Tag.ValuePosition, value.Tag.Value)
+	}
+	p.space()
+	p.token(value.Lbrace, "{")
+	if len(value.Variants) == 0 {
+		p.token(value.Rbrace, "}")
+		return
+	}
+	p.newline()
+	p.indent++
+	for _, variant := range value.Variants {
+		p.enumVariant(variant)
+		p.newline()
+	}
+	p.indent--
+	p.token(value.Rbrace, "}")
+}
+
+func (p *printer) enumVariant(value *syntax.EnumVariant) {
+	p.token(value.Name.Start, value.Name.Name)
+	p.space()
+	p.token(value.Struct, "struct")
+	p.space()
+	p.token(value.Lbrace, "{")
+	if len(value.Fields) > 0 {
+		p.newline()
+		p.indent++
+		for _, field := range value.Fields {
+			p.tgoField(field)
+			p.newline()
+		}
+		p.indent--
+	}
+	p.token(value.Rbrace, "}")
+	if value.Tag != nil {
+		p.space()
+		p.token(value.Tag.ValuePosition, value.Tag.Value)
+	}
+}
+
+func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
+	p.token(value.Type, "type")
+	p.space()
+	p.token(value.Name.Start, value.Name.Name)
+	p.space()
+	p.token(value.Struct, "struct")
+	p.space()
+	p.token(value.Lbrace, "{")
+	if len(value.Fields) > 0 {
+		p.newline()
+		p.indent++
+		for _, field := range value.Fields {
+			p.tgoField(field)
+			p.newline()
+		}
+		p.indent--
+	}
+	p.token(value.Rbrace, "}")
+}
+
+func (p *printer) tgoField(value *syntax.TGoField) {
+	p.field(value.Field)
+	if value.Default != nil {
+		p.space()
+		p.token(value.Assign, "=")
+		p.space()
+		p.expression(value.Default, 0)
+	}
+}
+
+func (p *printer) checkedDeclaration(value *syntax.CheckedDeclaration) {
+	p.token(value.Type, "type")
+	p.space()
+	p.token(value.Name.Start, value.Name.Name)
+	p.space()
+	p.expression(value.Base, 0)
+	p.space()
+	p.token(value.Where, "where")
+	p.space()
+	p.expression(value.Predicate, 0)
+}

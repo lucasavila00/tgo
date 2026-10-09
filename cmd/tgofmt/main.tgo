@@ -1,0 +1,72 @@
+// Command tgofmt formats TGo source files.
+package main
+
+import (
+	"bytes"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+
+	"tgo/pkg/format"
+)
+
+func main() {
+	write := flag.Bool("w", false, "write result to file")
+	list := flag.Bool("l", false, "list files whose format differs")
+	flag.Parse()
+	if err := run(flag.Args(), *write, *list); err != nil {
+		fmt.Fprintln(os.Stderr, "tgofmt:", err)
+		os.Exit(1)
+	}
+}
+
+func run(paths []string, write bool, list bool) error {
+	if len(paths) == 0 {
+		if write {
+			return fmt.Errorf("cannot use -w with standard input")
+		}
+		source, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+		formatted, err := format.Source("<standard input>", source)
+		if err != nil {
+			return err
+		}
+		_, err = os.Stdout.Write(formatted)
+		return err
+	}
+	for _, path := range paths {
+		if err := formatPath(path, write, list); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func formatPath(path string, write bool, list bool) error {
+	source, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	formatted, err := format.Source(path, source)
+	if err != nil {
+		return err
+	}
+	changed := !bytes.Equal(source, formatted)
+	if list && changed {
+		fmt.Fprintln(os.Stdout, path)
+	}
+	if write && changed {
+		info, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(path, formatted, info.Mode().Perm())
+	}
+	if !write && !list {
+		_, err = os.Stdout.Write(formatted)
+	}
+	return err
+}

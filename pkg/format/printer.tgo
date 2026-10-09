@@ -1,0 +1,183 @@
+package format
+
+import (
+	"bytes"
+	"go/token"
+	"strings"
+
+	"tgo/pkg/syntax"
+)
+
+type sourceComment struct {
+	start token.Pos
+	stop  token.Pos
+	text  string
+}
+
+type printer struct {
+	files      *token.FileSet
+	file       *syntax.File
+	source     []byte
+	output     bytes.Buffer
+	comments   []sourceComment
+	comment    int
+	indent     int
+	lineStart  bool
+	lineBreaks int
+	lastSource token.Pos
+}
+
+func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer {
+	comments := []sourceComment(nil)
+	for _, group := range file.Comments {
+		for _, item := range group.List {
+			comments = append(comments, sourceComment{
+				start: item.Start,
+				stop:  item.Stop,
+				text:  item.Text,
+			})
+		}
+	}
+	return &printer{
+		files:      files,
+		file:       file,
+		source:     source,
+		output:     *new(bytes.Buffer),
+		comments:   comments,
+		comment:    0,
+		indent:     0,
+		lineStart:  true,
+		lineBreaks: 0,
+		lastSource: token.NoPos,
+	}
+}
+
+func (p *printer) printFile() []byte {
+	p.before(p.file.Package)
+	p.text("package")
+	p.space()
+	p.token(p.file.Name.Start, p.file.Name.Name)
+	p.newline()
+	if len(p.file.Declarations) > 0 {
+		p.newline()
+	}
+	for index, declaration := range p.file.Declarations {
+		if index > 0 {
+			p.newline()
+		}
+		p.declaration(declaration)
+		p.newline()
+	}
+	p.before(token.Pos(^uint(0) >> 1))
+	p.finish()
+	return append([]byte(nil), p.output.Bytes()...)
+}
+
+func (p *printer) finish() {
+	data := p.output.Bytes()
+	for len(data) > 0 && (data[len(data)-1] == ' ' || data[len(data)-1] == '\t' ||
+		data[len(data)-1] == '\n') {
+		p.output.Truncate(len(data) - 1)
+		data = p.output.Bytes()
+	}
+	p.output.WriteByte('\n')
+	p.lineStart = true
+	p.lineBreaks = 1
+}
+
+func (p *printer) before(position token.Pos) {
+	for p.comment < len(p.comments) && p.comments[p.comment].start < position {
+		item := p.comments[p.comment]
+		p.comment++
+		start := p.files.Position(item.start)
+		last := p.files.Position(p.lastSource)
+		inline := !p.lineStart && last.IsValid() && last.Line == start.Line
+		if inline {
+			p.space()
+		} else {
+			p.newline()
+			if last.IsValid() && start.Line > last.Line+1 {
+				p.newline()
+			}
+		}
+		p.text(item.text)
+		stop := p.files.Position(item.stop)
+		next := p.files.Position(position)
+		if strings.HasPrefix(item.text, "//") || !next.IsValid() || stop.Line != next.Line {
+			p.newline()
+		} else {
+			p.space()
+		}
+		p.lastSource = item.stop
+	}
+}
+
+func (p *printer) token(position token.Pos, value string) {
+	p.before(position)
+	p.text(value)
+	p.lastSource = position
+}
+
+func (p *printer) text(value string) {
+	if value == "" {
+		return
+	}
+	if p.lineStart {
+		for range p.indent {
+			p.output.WriteByte('\t')
+		}
+		p.lineStart = false
+	}
+	p.output.WriteString(value)
+	p.lineBreaks = 0
+}
+
+func (p *printer) space() {
+	if p.lineStart {
+		return
+	}
+	data := p.output.Bytes()
+	if len(data) > 0 && data[len(data)-1] != ' ' && data[len(data)-1] != '\t' &&
+		data[len(data)-1] != '\n' {
+		p.output.WriteByte(' ')
+	}
+}
+
+func (p *printer) newline() {
+	data := p.output.Bytes()
+	for len(data) > 0 && (data[len(data)-1] == ' ' || data[len(data)-1] == '\t') {
+		p.output.Truncate(len(data) - 1)
+		data = p.output.Bytes()
+	}
+	if p.lineBreaks < 2 {
+		p.output.WriteByte('\n')
+		p.lineBreaks++
+	}
+	p.lineStart = true
+}
+
+func (p *printer) sourceSpan(span syntax.Span) {
+	p.before(span.Start)
+	p.text(syntax.SourceText(p.file, span))
+	p.lastSource = span.Stop
+}
+
+func (p *printer) commaList(values []%syntax.Expression) {
+	for index, value := range values {
+		if index > 0 {
+			p.text(",")
+			p.space()
+		}
+		p.expression(value, 0)
+	}
+}
+
+func (p *printer) identifiers(values []%syntax.Identifier) {
+	for index, value := range values {
+		if index > 0 {
+			p.text(",")
+			p.space()
+		}
+		p.token(value.Start, value.Name)
+	}
+}

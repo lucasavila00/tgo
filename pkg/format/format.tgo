@@ -1,0 +1,23 @@
+// Package format formats TGo source.
+package format
+
+import (
+	"go/token"
+
+	"tgo/pkg/syntax"
+)
+
+// Source formats one complete TGo source file.
+func Source(filename string, source []byte) ([]byte, error) {
+	files := token.NewFileSet()
+	file, err := syntax.ParseFile(
+		files,
+		filename,
+		source,
+		syntax.ParseComments|syntax.AllErrors,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return newPrinter(files, file, source).printFile(), nil
+}

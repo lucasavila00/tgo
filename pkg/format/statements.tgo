@@ -1,0 +1,246 @@
+package format
+
+import "tgo/pkg/syntax"
+
+func (p *printer) statement(value *syntax.Statement) {
+	switch statementValue := *value; statementValue.Tag() {
+	case syntax.StatementTagBad:
+		item := statementValue.BadPayload().Value
+		p.sourceSpan(item.Span)
+	case syntax.StatementTagDeclaration:
+		p.declaration(statementValue.DeclarationPayload().Value.Declaration)
+	case syntax.StatementTagEmpty:
+		item := statementValue.EmptyPayload().Value
+		if !item.Implicit {
+			p.token(item.Semicolon, ";")
+		}
+	case syntax.StatementTagLabeled:
+		item := statementValue.LabeledPayload().Value
+		p.token(item.Label.Start, item.Label.Name)
+		p.token(item.Colon, ":")
+		p.newline()
+		p.statement(item.Statement)
+	case syntax.StatementTagExpression:
+		p.expression(statementValue.ExpressionPayload().Value.Expression, 0)
+	case syntax.StatementTagSend:
+		item := statementValue.SendPayload().Value
+		p.expression(item.Channel, 0)
+		p.space()
+		p.token(item.Arrow, "<-")
+		p.space()
+		p.expression(item.Value, 0)
+	case syntax.StatementTagIncrement:
+		item := statementValue.IncrementPayload().Value
+		p.expression(item.Expression, 0)
+		p.token(item.Token, item.Operator.String())
+	case syntax.StatementTagAssignment:
+		item := statementValue.AssignmentPayload().Value
+		p.commaList(item.Left)
+		p.space()
+		p.token(item.Token, item.Operator.String())
+		p.space()
+		p.commaList(item.Right)
+	case syntax.StatementTagGo:
+		item := statementValue.GoPayload().Value
+		p.token(item.Go, "go")
+		p.space()
+		p.expression(item.Call, 0)
+	case syntax.StatementTagDefer:
+		item := statementValue.DeferPayload().Value
+		p.token(item.Defer, "defer")
+		p.space()
+		p.expression(item.Call, 0)
+	case syntax.StatementTagReturn:
+		item := statementValue.ReturnPayload().Value
+		p.token(item.Return, "return")
+		if len(item.Results) > 0 {
+			p.space()
+			p.commaList(item.Results)
+		}
+	case syntax.StatementTagBranch:
+		item := statementValue.BranchPayload().Value
+		p.token(item.TokenPosition, item.Token.String())
+		if item.Label != nil {
+			p.space()
+			p.token(item.Label.Start, item.Label.Name)
+		}
+	case syntax.StatementTagBlock:
+		p.block(statementValue.BlockPayload().Value)
+	case syntax.StatementTagIf:
+		p.ifStatement(statementValue.IfPayload().Value)
+	case syntax.StatementTagCase:
+		p.caseClause(statementValue.CasePayload().Value)
+	case syntax.StatementTagSwitch:
+		p.switchStatement(statementValue.SwitchPayload().Value)
+	case syntax.StatementTagTypeSwitch:
+		p.typeSwitchStatement(statementValue.TypeSwitchPayload().Value)
+	case syntax.StatementTagCommunication:
+		p.communicationClause(statementValue.CommunicationPayload().Value)
+	case syntax.StatementTagSelect:
+		item := statementValue.SelectPayload().Value
+		p.token(item.Select, "select")
+		p.space()
+		p.block(item.Body)
+	case syntax.StatementTagFor:
+		p.forStatement(statementValue.ForPayload().Value)
+	case syntax.StatementTagRange:
+		p.rangeStatement(statementValue.RangePayload().Value)
+	exhaustive:
+	}
+}
+
+func (p *printer) statementList(values []%syntax.Statement) {
+	for _, value := range values {
+		p.statement(value)
+		p.newline()
+	}
+}
+
+func (p *printer) block(value *syntax.BlockStatement) {
+	p.token(value.Lbrace, "{")
+	if len(value.List) == 0 {
+		p.token(value.Rbrace, "}")
+		return
+	}
+	p.newline()
+	p.indent++
+	p.statementList(value.List)
+	p.indent--
+	p.token(value.Rbrace, "}")
+}
+
+func (p *printer) ifStatement(value *syntax.IfStatement) {
+	p.token(value.If, "if")
+	p.space()
+	if value.Init != nil {
+		p.statement(value.Init)
+		p.text(";")
+		p.space()
+	}
+	p.expression(value.Condition, 0)
+	p.space()
+	p.block(value.Body)
+	if value.Else != nil {
+		p.space()
+		p.text("else")
+		p.space()
+		p.statement(value.Else)
+	}
+}
+
+func (p *printer) caseClause(value *syntax.CaseClause) {
+	if value.Exhaustive.IsValid() {
+		p.token(value.Exhaustive, "exhaustive")
+	} else if len(value.List) == 0 {
+		p.token(value.Case, "default")
+	} else {
+		p.token(value.Case, "case")
+		p.space()
+		p.commaList(value.List)
+	}
+	p.token(value.Colon, ":")
+	if len(value.Body) == 0 {
+		return
+	}
+	p.newline()
+	p.indent++
+	p.statementList(value.Body)
+	p.indent--
+}
+
+func (p *printer) switchStatement(value *syntax.SwitchStatement) {
+	p.token(value.Switch, "switch")
+	if value.Init != nil || value.Tag != nil {
+		p.space()
+	}
+	if value.Init != nil {
+		p.statement(value.Init)
+		p.text(";")
+		if value.Tag != nil {
+			p.space()
+		}
+	}
+	if value.Tag != nil {
+		p.expression(value.Tag, 0)
+	}
+	p.space()
+	p.block(value.Body)
+}
+
+func (p *printer) typeSwitchStatement(value *syntax.TypeSwitchStatement) {
+	p.token(value.Switch, "switch")
+	p.space()
+	if value.Init != nil {
+		p.statement(value.Init)
+		p.text(";")
+		p.space()
+	}
+	p.statement(value.Assignment)
+	p.space()
+	p.block(value.Body)
+}
+
+func (p *printer) communicationClause(value *syntax.CommunicationClause) {
+	if value.Communication == nil {
+		p.token(value.Case, "default")
+	} else {
+		p.token(value.Case, "case")
+		p.space()
+		p.statement(value.Communication)
+	}
+	p.token(value.Colon, ":")
+	if len(value.Body) == 0 {
+		return
+	}
+	p.newline()
+	p.indent++
+	p.statementList(value.Body)
+	p.indent--
+}
+
+func (p *printer) forStatement(value *syntax.ForStatement) {
+	p.token(value.For, "for")
+	if value.Init != nil || value.Condition != nil || value.Post != nil {
+		p.space()
+	}
+	if value.Init != nil || value.Post != nil {
+		if value.Init != nil {
+			p.statement(value.Init)
+		}
+		p.text(";")
+		p.space()
+		if value.Condition != nil {
+			p.expression(value.Condition, 0)
+		}
+		p.text(";")
+		p.space()
+		if value.Post != nil {
+			p.statement(value.Post)
+		}
+	} else if value.Condition != nil {
+		p.expression(value.Condition, 0)
+	}
+	p.space()
+	p.block(value.Body)
+}
+
+func (p *printer) rangeStatement(value *syntax.RangeStatement) {
+	p.token(value.For, "for")
+	p.space()
+	if value.Key != nil {
+		p.expression(value.Key, 0)
+		if value.Value != nil {
+			p.text(",")
+			p.space()
+			p.expression(value.Value, 0)
+		}
+		p.space()
+		p.token(value.Token, value.Operator.String())
+		p.space()
+	}
+	p.token(value.Range, "range")
+	p.space()
+	p.expression(value.Source, 0)
+	p.space()
+	p.block(value.Body)
+}
