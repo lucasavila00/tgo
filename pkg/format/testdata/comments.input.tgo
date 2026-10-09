@@ -5,6 +5,7 @@ package fixtures // package
 import("fmt" // standard
 // next
 "strings")
+type Positive int where value>0
 // Work keeps comments.
 func Work( // first
 value int, /* second */ other int)int { // body

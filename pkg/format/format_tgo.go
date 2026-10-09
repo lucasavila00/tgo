@@ -4,6 +4,7 @@
 package format
 
 import (
+	goformat "go/format"
 	"go/token"
 
 	"tgo/pkg/syntax"
@@ -21,5 +22,59 @@ func Source(filename string, source []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if !usesTGoSyntax(file) {
+		return goformat.Source(source)
+	}
 	return newPrinter(files, file, source).printFile(), nil
+}
+
+func usesTGoSyntax(file *syntax.File) bool {
+	found := false
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		if found {
+			return false
+		}
+		if declaration, ok := syntax.DeclarationOf(node); ok {
+			if _, enum := syntax.EnumDeclarationOf(declaration); enum {
+				found = true
+				return false
+			}
+			if _, checked := syntax.CheckedDeclarationOf(declaration); checked {
+				found = true
+				return false
+			}
+			if structure, model := syntax.StructDeclarationOf(declaration); model {
+				for _, field := range structure.Fields {
+					if field.Default != nil {
+						found = true
+						return false
+					}
+				}
+			}
+		}
+		if statement, ok := syntax.StatementOf(node); ok {
+			if returned := syntax.ReturnStatementOf(statement); returned != nil &&
+				returned.SuccessComma.IsValid() {
+				found = true
+				return false
+			}
+			if clause := syntax.CaseClauseOf(statement); clause != nil &&
+				clause.Exhaustive.IsValid() {
+				found = true
+				return false
+			}
+		}
+		if expression, ok := syntax.ExpressionOf(node); ok {
+			tag := expression.Tag()
+			if tag == syntax.ExpressionTagNonNilPointer ||
+				tag == syntax.ExpressionTagDefault ||
+				tag == syntax.ExpressionTagPropagation ||
+				tag == syntax.ExpressionTagComprehension {
+				found = true
+				return false
+			}
+		}
+		return true
+	})
+	return found
 }

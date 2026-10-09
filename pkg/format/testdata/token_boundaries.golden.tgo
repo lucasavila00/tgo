@@ -1,5 +1,7 @@
 package boundaries
 
+type Positive int where value > 0
+
 func minus(value int) int {
 	return - -value
 }

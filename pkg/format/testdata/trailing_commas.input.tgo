@@ -1,4 +1,5 @@
 package comments
+type Positive int where value>0
 type item[T,U any] struct{First T;Second U}
 var value=item[int,int]{
 First:1, /* first field */

@@ -2,6 +2,8 @@
 
 package directives
 
+type Positive int where value > 0
+
 //go:generate echo generate
 func generate() {}
 

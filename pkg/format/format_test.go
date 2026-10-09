@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -17,7 +18,7 @@ import (
 func TestSourceBasic(t *testing.T) {
 	t.Parallel()
 	input := "package sample\nfunc add(left int,right int)int{return left+right}\n"
-	want := "package sample\n\nfunc add(left int, right int) int {\n\treturn left + right\n}\n"
+	want := "package sample\n\nfunc add(left int, right int) int { return left + right }\n"
 	got, err := format.Source("sample.tgo", []byte(input))
 	if err != nil {
 		t.Fatal(err)
@@ -32,6 +33,54 @@ func TestSourceBasic(t *testing.T) {
 	if string(again) != string(got) {
 		t.Fatalf("second pass changed output:\n%s", again)
 	}
+}
+
+func TestSourceMatchesGoCorpus(t *testing.T) {
+	if !strings.HasPrefix(runtime.Version(), "go1.27.") {
+		t.Fatalf("Go corpus needs Go 1.27; got %s", runtime.Version())
+	}
+	manifest, err := os.ReadFile("../../internal/compiler/testdata/go-corpus/packages.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := 0
+	for line := range strings.SplitSeq(string(manifest), "\n") {
+		packagePath := strings.TrimSpace(line)
+		if packagePath == "" || strings.HasPrefix(packagePath, "#") {
+			continue
+		}
+		directory := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(packagePath))
+		entries, err := os.ReadDir(directory)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+				continue
+			}
+			path := filepath.Join(directory, entry.Name())
+			source, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, err := goformat.Source(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := format.Source(path, source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, want) {
+				t.Errorf("%s differs from Go format", path)
+			}
+			count++
+		}
+	}
+	if count == 0 {
+		t.Fatal("Go corpus has no source files")
+	}
+	t.Logf("checked %d Go 1.27 source files", count)
 }
 
 func TestSourceMatchesGoFormatForOrdinarySyntax(t *testing.T) {

@@ -31,7 +31,7 @@ func TestRunWritesAndListsFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "package sample\n\nfunc value() int {\n\treturn 1\n}\n"
+	want := "package sample\n\nfunc value() int { return 1 }\n"
 	if string(got) != want {
 		t.Fatalf("written source:\n%s\nwant:\n%s", got, want)
 	}
@@ -58,7 +58,7 @@ func TestRunFormatsStandardInput(t *testing.T) {
 	if err := run(nil, false, false, strings.NewReader(input), output); err != nil {
 		t.Fatal(err)
 	}
-	want := "package sample\n\nfunc value() int {\n\treturn 1\n}\n"
+	want := "package sample\n\nfunc value() int { return 1 }\n"
 	if output.String() != want {
 		t.Fatalf("standard output:\n%s\nwant:\n%s", output.String(), want)
 	}
@@ -130,7 +130,7 @@ func TestRunWritePreservesHardLink(t *testing.T) {
 	if !os.SameFile(originalInfo, linkedInfo) {
 		t.Fatal("formatter replaced the linked inode")
 	}
-	want := "package sample\n\nfunc value() int {\n\treturn 1\n}\n"
+	want := "package sample\n\nfunc value() int { return 1 }\n"
 	got, err := os.ReadFile(original)
 	if err != nil {
 		t.Fatal(err)
