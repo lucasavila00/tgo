@@ -1,0 +1,17 @@
+package comments
+type item[T,U any] struct{First T;Second U}
+var value=item[int,int]{
+First:1, /* first field */
+Second:2, // second field
+}
+func use[
+T any, /* first type parameter */
+U any, // second type parameter
+](
+first T, /* first parameter */
+second int, // second parameter
+){}
+func call(){use[int,int](
+value.First, /* first argument */
+value.Second, // second argument
+)}

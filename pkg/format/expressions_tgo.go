@@ -204,11 +204,17 @@ func (p *printer) callExpression(value *syntax.CallExpression) {
 		p.indent++
 		for index, argument := range value.Args {
 			p.expression(argument, 0)
+			end := syntax.ExpressionEnd(argument)
 			if index == len(value.Args)-1 && value.Ellipsis != token.NoPos {
 				p.token(value.Ellipsis, "...")
+				end = p.tokenEnd(value.Ellipsis, 3)
 			}
 			p.text(",")
-			p.trailingLine(syntax.ExpressionEnd(argument))
+			following := value.Rparen
+			if index+1 < len(value.Args) {
+				following = syntax.ExpressionPosition(value.Args[index+1])
+			}
+			p.trailingLine(p.commaEnd(end, following))
 			p.newline()
 		}
 		p.indent--
@@ -242,11 +248,16 @@ func (p *printer) delimitedExpressions(
 	p.indent++
 	for index, value := range values {
 		p.expression(value, 0)
+		end := syntax.ExpressionEnd(value)
 		if ellipsis && index == len(values)-1 {
 			p.text("...")
 		}
 		p.text(",")
-		p.trailingLine(syntax.ExpressionEnd(value))
+		following := closing
+		if index+1 < len(values) {
+			following = syntax.ExpressionPosition(values[index+1])
+		}
+		p.trailingLine(p.commaEnd(end, following))
 		p.newline()
 	}
 	p.indent--
@@ -284,7 +295,11 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		}
 		p.expression(element, 0)
 		p.text(",")
-		p.trailingLine(syntax.ExpressionEnd(element))
+		following := value.Rbrace
+		if index+1 < len(value.Elements) {
+			following = syntax.ExpressionPosition(value.Elements[index+1])
+		}
+		p.trailingLine(p.commaEnd(syntax.ExpressionEnd(element), following))
 		p.newline()
 	}
 	p.indent--
@@ -382,10 +397,14 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 	if p.multiline(value.Opening, value.Closing) {
 		p.newline()
 		p.indent++
-		for _, item := range value.List {
+		for index, item := range value.List {
 			p.field(item)
 			p.text(",")
-			p.trailingLine(item.Stop)
+			following := value.Closing
+			if index+1 < len(value.List) {
+				following = value.List[index+1].Start
+			}
+			p.trailingLine(p.commaEnd(item.Stop, following))
 			p.newline()
 		}
 		p.indent--

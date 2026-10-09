@@ -188,6 +188,41 @@ func (p *printer) trailingToken(position token.Pos, width int) {
 	p.trailingLine(file.Pos(file.Offset(position) + width))
 }
 
+func (p *printer) commaEnd(position token.Pos, following token.Pos) token.Pos {
+	if p.comment >= len(p.comments) {
+		return position
+	}
+	comment := p.comments[p.comment]
+	if !strings.HasPrefix(comment.text, "//") {
+		commentStop := p.files.Position(comment.stop)
+		next := p.files.Position(following)
+		if next.IsValid() && commentStop.Line == next.Line {
+			return position
+		}
+	}
+	file := p.files.File(position)
+	if file == nil {
+		return position
+	}
+	offset := file.Offset(position)
+	for offset < len(p.source) &&
+		(p.source[offset] == ' ' || p.source[offset] == '\t' || p.source[offset] == '\r') {
+		offset++
+	}
+	if offset < len(p.source) && p.source[offset] == ',' {
+		return file.Pos(offset + 1)
+	}
+	return position
+}
+
+func (p *printer) tokenEnd(position token.Pos, width int) token.Pos {
+	file := p.files.File(position)
+	if file == nil {
+		return position
+	}
+	return file.Pos(file.Offset(position) + width)
+}
+
 func (p *printer) multiline(start token.Pos, stop token.Pos) bool {
 	first := p.files.Position(start)
 	last := p.files.Position(stop)
