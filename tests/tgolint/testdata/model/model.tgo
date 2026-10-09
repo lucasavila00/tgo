@@ -8,7 +8,6 @@ func (value Count) check() (Count, error) {
 	if value.value <= 0 { return , countError{} }
 	return value,
 }
-func NewCount(value int) (Count, error) { return Count{value: value} }
 func (value Count) Value() int { return value.value }
 
 type Pair struct {

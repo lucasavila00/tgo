@@ -15,18 +15,18 @@ func TestBusiness(t *testing.T) {
 	if got := app.Summary("Lucas"); got != "person Lucas" {
 		t.Fatal(got)
 	}
-	quantity, err := model.NewQuantity(3)
+	quantity, err := model.Quantity{value: 3}
 	if err != nil || quantity.Value() != 3 {
 		t.Fatalf("quantity: %v, %v", quantity, err)
 	}
-	if _, err := model.NewQuantity(0); err == nil {
+	if _, err := (model.Quantity{value: 0}); err == nil {
 		t.Fatal("zero passed the constructor")
 	}
-	point, err := model.NewPositivePoint(struct{ X int }{X: 1})
+	point, err := model.PositivePoint{value: struct{ X int }{X: 1}}
 	if err != nil || point.Value().X != 1 {
 		t.Fatalf("checked struct: %v, %v", point, err)
 	}
-	multiline, err := model.NewMultiline(1)
+	multiline, err := model.Multiline{value: 1}
 	if err != nil || multiline.Value() != 1 {
 		t.Fatalf("multiline checked struct: %v, %v", multiline, err)
 	}

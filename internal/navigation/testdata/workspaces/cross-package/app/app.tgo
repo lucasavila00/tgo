@@ -6,6 +6,10 @@ func Read() string {
 	return lib.Target(lib.Record{Name: "app"})
 }
 
+func MakeID(value int) (lib.UserID, error) {
+	return lib.UserID{value: value}
+}
+
 func Scope() string {
 	value := "outer"
 	{
