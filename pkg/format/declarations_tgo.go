@@ -48,6 +48,7 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 	}
 	p.newline()
 	p.indent++
+	p.breakSourceGap(value.Lparen, syntax.SpecificationPosition(value.Specs[0]))
 	columns, keepTypes := p.specificationAlignment(value)
 	for index, item := range value.Specs {
 		if index > 0 {
@@ -66,12 +67,10 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 		p.trailingLine(syntax.SpecificationEnd(item))
 		p.newline()
 	}
-	if p.sourceGap(
+	p.breakClosingGap(
 		syntax.SpecificationEnd(value.Specs[len(value.Specs)-1]),
 		value.Rparen,
-	).lineBreak {
-		p.newline()
-	}
+	)
 	p.before(value.Rparen)
 	p.indent--
 	p.token(value.Rparen, ")")
@@ -393,6 +392,7 @@ func (p *printer) enumDeclaration(value *syntax.EnumDeclaration) {
 	}
 	p.newline()
 	p.indent++
+	p.breakSourceGap(value.Lbrace, value.Variants[0].Start)
 	for index, variant := range value.Variants {
 		if index > 0 {
 			p.breakSourceGap(value.Variants[index-1].Stop, variant.Start)
@@ -401,9 +401,7 @@ func (p *printer) enumDeclaration(value *syntax.EnumDeclaration) {
 		p.trailingLine(variant.Stop)
 		p.newline()
 	}
-	if p.sourceGap(value.Variants[len(value.Variants)-1].Stop, value.Rbrace).lineBreak {
-		p.newline()
-	}
+	p.breakClosingGap(value.Variants[len(value.Variants)-1].Stop, value.Rbrace)
 	p.before(value.Rbrace)
 	p.indent--
 	p.token(value.Rbrace, "}")
@@ -434,7 +432,7 @@ func (p *printer) enumVariant(value *syntax.EnumVariant) {
 		return
 	}
 	if len(value.Fields) > 0 {
-		p.tgoFields(value.Fields, value.Rbrace)
+		p.tgoFields(value.Fields, value.Lbrace, value.Rbrace)
 	}
 	p.token(value.Rbrace, "}")
 	if value.Tag != nil {
@@ -468,7 +466,7 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 		return
 	}
 	if len(value.Fields) > 0 {
-		p.tgoFields(value.Fields, value.Rbrace)
+		p.tgoFields(value.Fields, value.Lbrace, value.Rbrace)
 	}
 	p.token(value.Rbrace, "}")
 }
@@ -483,9 +481,14 @@ func (p *printer) tgoField(value *syntax.TGoField, columns []int) {
 	}
 }
 
-func (p *printer) tgoFields(values []*syntax.TGoField, closing token.Pos) {
+func (p *printer) tgoFields(
+	values []*syntax.TGoField,
+	opening token.Pos,
+	closing token.Pos,
+) {
 	p.newline()
 	p.indent++
+	p.breakSourceGap(opening, values[0].Start)
 	columns := p.tgoFieldAlignment(values)
 	for index, value := range values {
 		if index > 0 {
@@ -500,9 +503,7 @@ func (p *printer) tgoFields(values []*syntax.TGoField, closing token.Pos) {
 		p.commentColumn = previousCommentColumn
 		p.newline()
 	}
-	if p.sourceGap(values[len(values)-1].Stop, closing).lineBreak {
-		p.newline()
-	}
+	p.breakClosingGap(values[len(values)-1].Stop, closing)
 	p.before(closing)
 	p.indent--
 }

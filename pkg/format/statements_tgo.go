@@ -124,41 +124,26 @@ func (p *printer) statementList(values []*syntax.Statement) {
 	}
 	values = printed
 	commentColumns := p.statementCommentAlignment(values)
-	for first := 0; first < len(values); {
-		last := first + 1
-		for last < len(values) && !p.blankBetween(
-			syntax.StatementEnd(values[last-1]),
-			syntax.StatementPosition(values[last]),
-		) && !p.hasCommentBetween(
-			syntax.StatementEnd(values[last-1]),
-			syntax.StatementPosition(values[last]),
-		) {
-			last++
-		}
-		for index, value := range values[first:last] {
-			previousCommentColumns := p.commentColumns
-			p.commentColumns = commentColumns[first+index]
-			p.statement(value)
-			p.trailingLine(syntax.StatementEnd(value))
-			p.commentColumns = previousCommentColumns
-			if clauseStatement(value) && first+index+1 < len(values) {
-				next := syntax.StatementPosition(values[first+index+1])
-				gap := p.sourceGap(syntax.StatementEnd(value), next)
-				if gap.leadingCommentIndented {
-					p.indent++
-					p.before(next)
-					p.indent--
-				}
+	for index, value := range values {
+		if index > 0 {
+			previous := values[index-1]
+			stop := syntax.StatementEnd(previous)
+			start := syntax.StatementPosition(value)
+			gap := p.sourceGap(stop, start)
+			if clauseStatement(previous) && gap.leadingCommentIndented {
+				p.indent++
+				p.before(start)
+				p.indent--
+			} else {
+				p.breakSourceGap(stop, start)
 			}
-			p.newline()
 		}
-		first = last
-		if first < len(values) {
-			p.breakSourceGap(
-				syntax.StatementEnd(values[first-1]),
-				syntax.StatementPosition(values[first]),
-			)
-		}
+		previousCommentColumns := p.commentColumns
+		p.commentColumns = commentColumns[index]
+		p.statement(value)
+		p.trailingLine(syntax.StatementEnd(value))
+		p.commentColumns = previousCommentColumns
+		p.newline()
 	}
 }
 
@@ -197,6 +182,7 @@ func (p *printer) block(value *syntax.BlockStatement) {
 	}
 	p.newline()
 	p.indent++
+	p.breakSourceGap(value.Lbrace, syntax.StatementPosition(value.List[0]))
 	p.statementList(value.List)
 	p.breakSourceGap(syntax.StatementEnd(value.List[len(value.List)-1]), value.Rbrace)
 	p.before(value.Rbrace)
@@ -256,6 +242,7 @@ func (p *printer) clauseBlock(value *syntax.BlockStatement) {
 		return
 	}
 	p.newline()
+	p.breakSourceGap(value.Lbrace, syntax.StatementPosition(value.List[0]))
 	p.statementList(value.List)
 	last := syntax.StatementEnd(value.List[len(value.List)-1])
 	gap := p.sourceGap(last, value.Rbrace)
@@ -307,6 +294,7 @@ func (p *printer) caseClause(value *syntax.CaseClause) {
 	}
 	p.newline()
 	p.indent++
+	p.breakSourceGap(value.Colon, syntax.StatementPosition(value.Body[0]))
 	p.statementList(value.Body)
 	p.indent--
 }
@@ -358,6 +346,7 @@ func (p *printer) communicationClause(value *syntax.CommunicationClause) {
 	}
 	p.newline()
 	p.indent++
+	p.breakSourceGap(value.Colon, syntax.StatementPosition(value.Body[0]))
 	p.statementList(value.Body)
 	p.indent--
 }

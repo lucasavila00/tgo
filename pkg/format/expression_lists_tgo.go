@@ -57,9 +57,7 @@ func (p *printer) expressionList(
 		p.indent++
 		indented = true
 	}
-	if gap.lineBreak {
-		p.newline()
-	}
+	p.breakClosingGap(previous, closing)
 	if indented {
 		p.before(closing)
 		p.indent--

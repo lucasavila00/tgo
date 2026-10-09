@@ -217,6 +217,22 @@ func (p *printer) hasCommentBetween(stop token.Pos, start token.Pos) bool {
 	return false
 }
 
+func (p *printer) hasInlineCommentBetween(stop token.Pos, start token.Pos) bool {
+	line := p.position(stop).Line
+	if line == 0 || p.position(start).Line != line {
+		return false
+	}
+	for _, comment := range p.comments {
+		if comment.start >= start {
+			return false
+		}
+		if comment.start > stop && p.position(comment.stop).Line == line {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *printer) finish() {
 	data := p.output.Bytes()
 	for len(data) > 0 && (data[len(data)-1] == ' ' || data[len(data)-1] == '\t' ||
@@ -548,6 +564,16 @@ func (p *printer) breakSourceGap(stop token.Pos, start token.Pos) {
 		p.newline()
 	}
 	if gap.blank {
+		p.blankline()
+	}
+}
+
+func (p *printer) breakClosingGap(stop token.Pos, start token.Pos) {
+	gap := p.sourceGap(stop, start)
+	if gap.lineBreak {
+		p.newline()
+	}
+	if gap.blank && p.hasTrailingComment(stop) {
 		p.blankline()
 	}
 }
