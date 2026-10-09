@@ -71,9 +71,9 @@ For each user-visible feature change:
 7. Add or update tests for examples, diagnostics, generated output, and public
    protocol behavior.
 
-For removed syntax, update the grammar, specification prose, guides, agent
-rules, editor grammar and fixtures, examples, and generated test data. Search
-all of these locations for its old syntax or name. Keep a rejection test when
+For a removed feature, search the README, specification, guides, agent rules,
+editor files, examples, fixtures, and generated test data for its old syntax or
+name. For removed syntax, also update the grammar. Keep a rejection test when
 users can otherwise mistake the removed form for valid syntax.
 
 Before review, run `make markdown` and check each local link. Run the focused

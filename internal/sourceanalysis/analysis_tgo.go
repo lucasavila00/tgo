@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"go/types"
 	"path/filepath"
+	"strings"
 
 	"tgo/internal/compiler"
 	"tgo/internal/driver"
@@ -28,45 +29,48 @@ type Source struct {
 
 type Package struct {
 	Path          string
+	Test          bool
+	External      bool
 	Sources       []Source
 	Facts         *sourcefacts.Index
 	Files         *token.FileSet
 	Package       *types.Package
 	Owners        map[types.Object]token.Pos
+	OwnerHovers   map[types.Object]string
 	GeneratedUses map[token.Pos]types.Object
 	NonNil        map[token.Pos]bool
 }
 
-// AnalyzeWorkspace loads and checks all active TGo packages in one module.
+// AnalyzeWorkspace loads all active TGo package views in one module.
 func AnalyzeWorkspace(directory string) ([]*Package, error) {
 	return AnalyzeWorkspaceContext(context.Background(), directory)
 }
 
 // AnalyzeWorkspaceContext stops before the next package after cancellation.
 func AnalyzeWorkspaceContext(ctx context.Context, directory string) ([]*Package, error) {
-	compiled, err := driver.CompileWorkspaceContext(ctx, directory)
+	compiled, err := driver.CompileWorkspaceViewsContext(ctx, directory)
 	if err != nil {
 		return nil, err
 	}
 	result := make([]*Package, 0, len(compiled))
-	for _, pkg := range compiled {
-		result = append(result, analyzePackage(pkg))
+	for _, view := range compiled {
+		result = append(result, analyzeWorkspaceView(view))
 	}
 	return result, nil
 }
 
-// AnalyzeAvailableWorkspaceContext checks each valid package in one module.
+// AnalyzeAvailableWorkspaceContext checks each valid package view in one module.
 func AnalyzeAvailableWorkspaceContext(
 	ctx context.Context,
 	directory string,
 ) ([]*Package, error) {
-	compiled, err := driver.CompileAvailableWorkspaceContext(ctx, directory)
+	compiled, err := driver.CompileAvailableWorkspaceViewsContext(ctx, directory)
 	if err != nil {
 		return nil, err
 	}
 	result := make([]*Package, 0, len(compiled))
-	for _, pkg := range compiled {
-		result = append(result, analyzePackage(pkg))
+	for _, view := range compiled {
+		result = append(result, analyzeWorkspaceView(view))
 	}
 	return result, nil
 }
@@ -84,7 +88,7 @@ func AnalyzePackage(
 	if compiled == nil {
 		return nil, nil
 	}
-	return analyzePackage(compiled), nil
+	return analyzePackage(compiled, false), nil
 }
 
 // AnalyzeTestPackage loads one internal or external TGo test package.
@@ -103,10 +107,20 @@ func AnalyzeTestPackage(
 	if compiled == nil {
 		return nil, nil
 	}
-	return analyzePackage(compiled), nil
+	result := analyzePackage(compiled, false)
+	result.Test = true
+	result.External = external
+	return result, nil
 }
 
-func analyzePackage(compiled *compiler.CompiledPackage) *Package {
+func analyzeWorkspaceView(view driver.CompiledView) *Package {
+	result := analyzePackage(view.Package, view.Test)
+	result.Test = view.Test
+	result.External = view.External
+	return result
+}
+
+func analyzePackage(compiled *compiler.CompiledPackage, testSourcesOnly bool) *Package {
 	projection := compiled.Facts
 	files := compiled.Files
 	pkg := compiled.Package
@@ -117,6 +131,9 @@ func analyzePackage(compiled *compiler.CompiledPackage) *Package {
 	nonNil := make(map[token.Pos]bool)
 	var facts *sourcefacts.Index = nil
 	for _, source := range compiled.Sources {
+		if testSourcesOnly && !strings.HasSuffix(source.Name, "_test.tgo") {
+			continue
+		}
 		tree := source.Syntax
 		if tree == nil {
 			panic("compiled source has no syntax")
@@ -143,42 +160,55 @@ func analyzePackage(compiled *compiler.CompiledPackage) *Package {
 			nonNil[position] = true
 		}
 	}
+	owners, ownerHovers := analysisOwners(sources, pkg)
 	return &Package{
 		Path:          compiled.Path,
+		Test:          false,
+		External:      false,
 		Sources:       sources,
 		Facts:         facts,
 		Files:         files,
 		Package:       pkg,
-		Owners:        analysisOwners(sources, pkg),
+		Owners:        owners,
+		OwnerHovers:   ownerHovers,
 		GeneratedUses: compiled.References,
 		NonNil:        nonNil,
 	}
 }
 
 // analysisOwners maps generated public objects to their TGo declarations.
-func analysisOwners(sources []Source, pkg *types.Package) map[types.Object]token.Pos {
+func analysisOwners(
+	sources []Source,
+	pkg *types.Package,
+) (map[types.Object]token.Pos, map[types.Object]string) {
 	owners := make(map[types.Object]token.Pos)
+	hovers := make(map[types.Object]string)
 	for _, source := range sources {
 		for _, declaration := range source.Syntax.Declarations {
 			enum, _ := syntax.EnumDeclarationOf(declaration)
 			if enum != nil {
-				addEnumOwners(owners, pkg, enum)
+				addEnumOwners(owners, hovers, pkg, enum)
 			}
 		}
 	}
-	return owners
+	return owners, hovers
 }
 
 func addEnumOwners(
 	owners map[types.Object]token.Pos,
+	hovers map[types.Object]string,
 	pkg *types.Package,
 	declaration *syntax.EnumDeclaration,
 ) {
 	name := declaration.Name.Name
 	owner := declaration.Name.Start
 	scope := pkg.Scope()
+	enumObject := scope.Lookup(name)
+	if enumObject != nil {
+		hovers[enumObject] = "enum " + name
+	}
 	addOwnedObject(owners, scope.Lookup(name+"Tag"), owner)
-	named := namedObject(scope.Lookup(name))
+	named := namedObject(enumObject)
 	for _, method := range []string{
 		"Tag",
 		"UnknownTag",
@@ -201,7 +231,16 @@ func addEnumOwners(
 			namedMethod(named, variant.Name.Name+"Payload"),
 			variantOwner,
 		)
-		addOwnedObject(owners, namedMethod(payload, name), variantOwner)
+		accessor := namedMethod(named, variant.Name.Name+"Payload")
+		if accessor != nil {
+			hovers[accessor] = "func (" + name + ") " + variant.Name.Name +
+				"Payload() " + name + "." + variant.Name.Name
+		}
+		constructor := scope.Lookup("New" + name + variant.Name.Name)
+		addOwnedObject(owners, constructor, variantOwner)
+		if constructor != nil {
+			hovers[constructor] = "variant " + name + "." + variant.Name.Name
+		}
 	}
 }
 

@@ -92,6 +92,30 @@ func CompileAvailableWorkspaceContext(
 	return compileWorkspaceContext(ctx, directory, true)
 }
 
+// CompiledView contains one production, internal-test, or external-test view.
+
+type CompiledView struct {
+	Package  *compiler.CompiledPackage
+	Test     bool
+	External bool
+}
+
+// CompileWorkspaceViewsContext generates all package views in one module.
+func CompileWorkspaceViewsContext(
+	ctx context.Context,
+	directory string,
+) ([]CompiledView, error) {
+	return compileWorkspaceViewsContext(ctx, directory, false)
+}
+
+// CompileAvailableWorkspaceViewsContext generates each valid package view.
+func CompileAvailableWorkspaceViewsContext(
+	ctx context.Context,
+	directory string,
+) ([]CompiledView, error) {
+	return compileWorkspaceViewsContext(ctx, directory, true)
+}
+
 func compileWorkspaceContext(
 	ctx context.Context,
 	directory string,
@@ -122,11 +146,7 @@ func compileWorkspaceContext(
 			if !continueAfterError {
 				return nil, err
 			}
-			for failed, state := range builder.states {
-				if state == buildActive {
-					delete(builder.states, failed)
-				}
-			}
+			resetActiveBuilds(builder)
 			continue
 		}
 		if packages[path].compiled != nil {
@@ -134,6 +154,97 @@ func compileWorkspaceContext(
 		}
 	}
 	return result, nil
+}
+
+func compileWorkspaceViewsContext(
+	ctx context.Context,
+	directory string,
+	continueAfterError bool,
+) ([]CompiledView, error) {
+	root, module, err := moduleRoot(directory)
+	if err != nil {
+		return nil, err
+	}
+	buildContext, err := effectiveBuildContext(directory)
+	if err != nil {
+		return nil, err
+	}
+	packages, err := discover(root, module, &buildContext)
+	if err != nil {
+		return nil, err
+	}
+	builder := newMemoryBuilder(packages, root, module, &buildContext)
+	result := make([]CompiledView, 0, len(packages))
+	for _, path := range sortedPackagePaths(packages) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		unit := packages[path]
+		if err := builder.build(path); err != nil {
+			if !continueAfterError {
+				return nil, err
+			}
+			resetActiveBuilds(builder)
+			continue
+		}
+		compiled := unit.compiled
+		if compiled == nil {
+			continue
+		}
+		result = append(result, CompiledView{
+			Package: compiled, Test: false, External: false,
+		})
+		internal, external, err := unit.readTests()
+		if err != nil {
+			if !continueAfterError {
+				return nil, err
+			}
+			continue
+		}
+		for _, test := range []struct {
+			files    packageTests
+			external bool
+		}{
+			{files: internal, external: false},
+			{files: external, external: true},
+		} {
+			if len(test.files.Sources) == 0 {
+				continue
+			}
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+			}
+			compiled, err := builder.compileTestPackage(
+				unit, test.files, test.external, token.NewFileSet(),
+			)
+			if err != nil {
+				if !continueAfterError {
+					return nil, err
+				}
+				resetActiveBuilds(builder)
+				continue
+			}
+			if compiled == nil {
+				panic("test compiler returned no package")
+			}
+			result = append(result, CompiledView{
+				Package: compiled, Test: true, External: test.external,
+			})
+		}
+	}
+	return result, nil
+}
+
+func resetActiveBuilds(builder *packageBuilder) {
+	for failed, state := range builder.states {
+		if state == buildActive {
+			delete(builder.states, failed)
+		}
+	}
 }
 
 // CompilePackage generates one TGo package without writing output files.

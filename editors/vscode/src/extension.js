@@ -4,6 +4,7 @@ const path = require("node:path");
 const vscode = require("vscode");
 const { NavigationClient, RequestCancelled } = require("./client");
 const { byteOffsetToPosition, positionToByteOffset } = require("./positions");
+const { symbolKind } = require("./symbol-kinds");
 const { helperURI, relativeHelperPath } = require("./uris");
 
 const watchedPatterns = ["**/*.tgo", "**/*.go", "**/go.mod", "**/go.work"];
@@ -221,7 +222,7 @@ function registerProviders(context, clients) {
             result.push(new vscode.DocumentSymbol(
               value.name,
               value.container || "",
-              symbolKind(value.kind),
+              symbolKind(value.kind, vscode.SymbolKind),
               range,
               selection
             ));
@@ -257,7 +258,7 @@ function registerProviders(context, clients) {
               seen.add(key);
               result.push(new vscode.SymbolInformation(
                 value.name,
-                symbolKind(value.kind),
+                symbolKind(value.kind, vscode.SymbolKind),
                 value.container || "",
                 new vscode.Location(uri, range)
               ));
@@ -327,22 +328,6 @@ function symbolKey(value, uri, range) {
     range.end.line,
     range.end.character
   ].join("\u0000");
-}
-
-function symbolKind(kind) {
-  return {
-    package: vscode.SymbolKind.Package,
-    type: vscode.SymbolKind.Object,
-    struct: vscode.SymbolKind.Struct,
-    interface: vscode.SymbolKind.Interface,
-    function: vscode.SymbolKind.Function,
-    method: vscode.SymbolKind.Method,
-    field: vscode.SymbolKind.Field,
-    enum: vscode.SymbolKind.Enum,
-    enumMember: vscode.SymbolKind.EnumMember,
-    constant: vscode.SymbolKind.Constant,
-    variable: vscode.SymbolKind.Variable
-  }[kind] || vscode.SymbolKind.Object;
 }
 
 function deactivate() {}
