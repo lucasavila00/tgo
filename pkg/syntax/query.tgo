@@ -696,8 +696,3 @@ func StaticCallName(value *Expression) (string, bool) {
 		panic("invalid Expression variant")
 	}
 }
-
-
-
-
-
