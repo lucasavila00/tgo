@@ -54,7 +54,7 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 		item := expressionValue.IndexListPayload().Value
 		p.expression(item.Expression, token.HighestPrec)
 		p.token(item.Lbrack, "[")
-		p.commaList(item.Indices)
+		p.delimitedExpressions(item.Indices, item.Lbrack, item.Rbrack, false)
 		p.token(item.Rbrack, "]")
 	case syntax.ExpressionTagSlice:
 		p.sliceExpression(expressionValue.SlicePayload().Value)
@@ -183,6 +183,23 @@ func (p *printer) sliceExpression(value *syntax.SliceExpression) {
 func (p *printer) callExpression(value *syntax.CallExpression) {
 	p.expression(value.Callee, token.HighestPrec)
 	p.token(value.Lparen, "(")
+	p.trailingToken(value.Lparen, 1)
+	if p.multiline(value.Lparen, value.Rparen) {
+		p.newline()
+		p.indent++
+		for index, argument := range value.Args {
+			p.expression(argument, 0)
+			if index == len(value.Args)-1 && value.Ellipsis != token.NoPos {
+				p.token(value.Ellipsis, "...")
+			}
+			p.text(",")
+			p.trailingLine(syntax.ExpressionEnd(argument))
+			p.newline()
+		}
+		p.indent--
+		p.token(value.Rparen, ")")
+		return
+	}
 	for index, argument := range value.Args {
 		if index > 0 {
 			p.text(",")
@@ -194,6 +211,30 @@ func (p *printer) callExpression(value *syntax.CallExpression) {
 		}
 	}
 	p.token(value.Rparen, ")")
+}
+
+func (p *printer) delimitedExpressions(
+	values []*syntax.Expression,
+	opening token.Pos,
+	closing token.Pos,
+	ellipsis bool,
+) {
+	if !p.multiline(opening, closing) {
+		p.commaList(values)
+		return
+	}
+	p.newline()
+	p.indent++
+	for index, value := range values {
+		p.expression(value, 0)
+		if ellipsis && index == len(values)-1 {
+			p.text("...")
+		}
+		p.text(",")
+		p.trailingLine(syntax.ExpressionEnd(value))
+		p.newline()
+	}
+	p.indent--
 }
 
 func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
@@ -251,7 +292,7 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 		p.token(value.Closing, "}")
 		return
 	}
-	if len(value.List) == 1 && !p.multiline(value.Opening, value.Closing) {
+	if !p.multiline(value.Opening, value.Closing) {
 		p.space()
 		for index, item := range value.List {
 			if index > 0 {

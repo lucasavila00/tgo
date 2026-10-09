@@ -16,10 +16,7 @@ type Number = int
 
 type Set[T comparable] map[T]struct{}
 
-type Text interface {
-	String() string
-	~string
-}
+type Text interface { String() string; ~string }
 
 func all[T any](values []T, channel chan<- T, input <-chan T) (result int) {
 label:
