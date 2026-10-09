@@ -21,7 +21,6 @@ def production_sources(repository: Path) -> dict[Path, bytes]:
 
 def staged_sources(repository: Path) -> dict[Path, bytes]:
     """Read staged production TGo source."""
-    production = production_sources(repository)
     output = subprocess.check_output(
         [
             "git",
@@ -35,17 +34,36 @@ def staged_sources(repository: Path) -> dict[Path, bytes]:
         ],
         cwd=repository,
     )
-    paths = {
+    staged_paths = {
         Path(os.fsdecode(raw_path))
         for raw_path in output.split(b"\0")
         if raw_path
+    }
+    indexed_output = subprocess.check_output(
+        ["git", "ls-files", "-z", "--cached"],
+        cwd=repository,
+    )
+    indexed_paths = {
+        Path(os.fsdecode(raw_path))
+        for raw_path in indexed_output.split(b"\0")
+        if raw_path
+    }
+    nested_modules = {
+        path.parent
+        for path in indexed_paths
+        if path.name == "go.mod" and path.parent != Path(".")
+    }
+    paths = {
+        path
+        for path in staged_paths
+        if check_generated.production_path(path, nested_modules)
     }
     return {
         path: subprocess.check_output(
             ["git", "show", f":./{path.as_posix()}"],
             cwd=repository,
         )
-        for path in sorted(paths & production.keys())
+        for path in sorted(paths)
     }
 
 

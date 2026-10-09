@@ -28,7 +28,7 @@ class ProductionSourcesTest(unittest.TestCase):
 
 
 class StagedSourcesTest(unittest.TestCase):
-    def test_reads_the_index_instead_of_the_worktree(self) -> None:
+    def test_reads_staged_source_that_is_absent_from_the_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repository = Path(temporary)
             subprocess.run(["git", "init", "-q"], cwd=repository, check=True)
@@ -36,7 +36,44 @@ class StagedSourcesTest(unittest.TestCase):
             source.parent.mkdir()
             source.write_text("package model\n", encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=repository, check=True)
-            source.write_text("worktree content\n", encoding="utf-8")
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=TGo Test",
+                    "-c",
+                    "user.email=test@example.com",
+                    "commit",
+                    "-q",
+                    "-m",
+                    "Initial source",
+                ],
+                cwd=repository,
+                check=True,
+            )
+            source.write_text("package staged\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repository, check=True)
+            source.unlink()
+
+            sources = check_tgofmt.staged_sources(repository)
+
+            self.assertEqual(sources, {Path("package/model.tgo"): b"package staged\n"})
+
+    def test_excludes_indexed_fixture_and_nested_module_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository = Path(temporary)
+            subprocess.run(["git", "init", "-q"], cwd=repository, check=True)
+            paths = {
+                "package/model.tgo": "package model\n",
+                "package/testdata/input.tgo": "fixture\n",
+                "nested/go.mod": "module nested\n",
+                "nested/model.tgo": "package nested\n",
+            }
+            for relative, content in paths.items():
+                path = repository / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repository, check=True)
 
             sources = check_tgofmt.staged_sources(repository)
 
