@@ -14,62 +14,106 @@ import (
 	"tgo/internal/navigation"
 )
 
-type fixtureExpectation struct {
-	File          string `json:"file"`
-	Use           string `json:"use"`
-	UseOccurrence int    `json:"useOccurrence"`
-	Definition    string `json:"definition"`
+type fixturePoint struct {
+	File       string `json:"file"`
+	Text       string `json:"text"`
+	Occurrence int    `json:"occurrence"`
 }
 
-func TestHelperDefinitionProtocol(t *testing.T) {
+type fixtureRequest struct {
+	Method    string         `json:"method"`
+	Position  fixturePoint   `json:"position"`
+	Locations []fixturePoint `json:"locations"`
+}
+
+type helperProcess struct {
+	command *exec.Cmd
+	input   *json.Encoder
+	output  *json.Decoder
+	nextID  int64
+}
+
+func TestHelperWorkspaceFixtures(t *testing.T) {
 	repository := repositoryRoot(t)
+	helper := buildHelper(t, repository)
+	workspaces := filepath.Join(
+		repository, "internal", "navigation", "testdata", "workspaces",
+	)
+	entries, err := os.ReadDir(workspaces)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		t.Run(entry.Name(), func(t *testing.T) {
+			workspace := filepath.Join(workspaces, entry.Name())
+			server := startHelper(t, helper, workspace)
+			for _, request := range readRequests(t, workspace) {
+				server.check(t, workspace, request)
+			}
+		})
+	}
+}
+
+func buildHelper(t *testing.T, repository string) string {
+	t.Helper()
 	helper := filepath.Join(t.TempDir(), "tgonav")
 	command := exec.Command("go", "build", "-o", helper, "./cmd/tgonav")
 	command.Dir = repository
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("build helper: %v\n%s", err, output)
 	}
+	return helper
+}
 
-	workspace := filepath.Join(
-		repository, "internal", "navigation", "testdata", "workspaces", "basic",
-	)
-	expectation := readExpectation(t, filepath.Join(workspace, "expect.json"))
-	sourcePath := filepath.Join(workspace, expectation.File)
-	source, err := os.ReadFile(sourcePath)
+func startHelper(t *testing.T, helper, workspace string) *helperProcess {
+	t.Helper()
+	command := exec.Command(helper, "-root", workspace)
+	input, err := command.StdinPipe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	use := nthOffset(t, string(source), expectation.Use, expectation.UseOccurrence)
-	definition := strings.Index(string(source), expectation.Definition)
-	if definition < 0 {
-		t.Fatalf("definition %q is absent", expectation.Definition)
-	}
-
-	process := exec.Command(helper, "-root", workspace)
-	input, err := process.StdinPipe()
+	output, err := command.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	output, err := process.StdoutPipe()
-	if err != nil {
+	command.Stderr = os.Stderr
+	if err := command.Start(); err != nil {
 		t.Fatal(err)
 	}
-	process.Stderr = os.Stderr
-	if err := process.Start(); err != nil {
-		t.Fatal(err)
+	t.Cleanup(func() {
+		_ = input.Close()
+		if err := command.Wait(); err != nil {
+			t.Errorf("stop helper: %v", err)
+		}
+	})
+	return &helperProcess{
+		command: command,
+		input:   json.NewEncoder(input),
+		output:  json.NewDecoder(bufio.NewReader(output)),
+		nextID:  1,
 	}
+}
 
-	encoder := json.NewEncoder(input)
-	decoder := json.NewDecoder(bufio.NewReader(output))
+func (h *helperProcess) check(
+	t *testing.T,
+	workspace string,
+	fixture fixtureRequest,
+) {
+	t.Helper()
+	positionPath := filepath.Join(workspace, fixture.Position.File)
+	offset := pointOffset(t, positionPath, fixture.Position)
 	request := navigation.Request{
-		ID:     1,
-		Method: "definition",
+		ID:     h.nextID,
+		Method: fixture.Method,
 		Params: mustJSON(t, map[string]any{
-			"uri":    fileURI(t, sourcePath),
-			"offset": use,
+			"uri":    fileURI(t, positionPath),
+			"offset": offset,
 		}),
 	}
-	if err := encoder.Encode(request); err != nil {
+	if err := h.input.Encode(request); err != nil {
 		t.Fatal(err)
 	}
 	var response struct {
@@ -77,28 +121,26 @@ func TestHelperDefinitionProtocol(t *testing.T) {
 		Result []navigation.Location `json:"result"`
 		Error  string                `json:"error"`
 	}
-	if err := decoder.Decode(&response); err != nil {
+	if err := h.output.Decode(&response); err != nil {
 		t.Fatal(err)
 	}
 	if response.Error != "" {
 		t.Fatalf("helper error: %s", response.Error)
 	}
-	if response.ID != 1 {
-		t.Fatalf("response ID = %d, want 1", response.ID)
+	if response.ID != h.nextID {
+		t.Fatalf("response ID = %d, want %d", response.ID, h.nextID)
 	}
-	want := navigation.Location{
-		URI:   fileURI(t, sourcePath),
-		Start: definition,
-		End:   definition + len(expectation.Definition),
+	h.nextID++
+	want := make([]navigation.Location, 0, len(fixture.Locations))
+	for _, point := range fixture.Locations {
+		path := filepath.Join(workspace, point.File)
+		start := pointOffset(t, path, point)
+		want = append(want, navigation.Location{
+			URI: fileURI(t, path), Start: start, End: start + len(point.Text),
+		})
 	}
-	if len(response.Result) != 1 || response.Result[0] != want {
-		t.Fatalf("definition = %#v, want %#v", response.Result, want)
-	}
-	if err := input.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := process.Wait(); err != nil {
-		t.Fatal(err)
+	if !equalLocations(response.Result, want) {
+		t.Fatalf("%s result = %#v, want %#v", fixture.Method, response.Result, want)
 	}
 }
 
@@ -111,17 +153,26 @@ func repositoryRoot(t *testing.T) string {
 	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
 }
 
-func readExpectation(t *testing.T, path string) fixtureExpectation {
+func readRequests(t *testing.T, workspace string) []fixtureRequest {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(workspace, "requests.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result []fixtureRequest
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatal(err)
+	}
+	return result
+}
+
+func pointOffset(t *testing.T, path string, point fixturePoint) int {
 	t.Helper()
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var result fixtureExpectation
-	if err := json.Unmarshal(data, &result); err != nil {
-		t.Fatal(err)
-	}
-	return result
+	return nthOffset(t, string(data), point.Text, point.Occurrence)
 }
 
 func nthOffset(t *testing.T, source, needle string, occurrence int) int {
@@ -160,4 +211,16 @@ func mustJSON(t *testing.T, value any) json.RawMessage {
 		t.Fatal(err)
 	}
 	return data
+}
+
+func equalLocations(left, right []navigation.Location) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }
