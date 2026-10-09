@@ -4,14 +4,14 @@ Status: Proposed
 
 ## Decision
 
-Extend the existing checked type syntax. Do not add `newtype`.
+Add a contextual `checked` marker after a struct declaration:
 
 ```tgo
 type Port struct {
 	Number int `json:"number"`
-} where value.Validate()
+} checked
 
-func (value PortValue) Validate() error {
+func (value Port) check() error {
 	if value.Number <= 0 || value.Number >= 65536 {
 		return fmt.Errorf("port %d is outside the valid range", value.Number)
 	}
@@ -19,10 +19,9 @@ func (value PortValue) Validate() error {
 }
 ```
 
-A `where` expression must return `bool` or `error`. A Boolean result accepts the value when it
-is true. When it is false, construction returns the zero checked value and the generated
-`invalid Port` error. An error result accepts the value when it is nil. When it is non-nil,
-construction returns the zero checked value and that error unchanged.
+Every checked struct must define one package-local `check() error` method on the checked type. A nil
+result accepts the value. A non-nil result rejects it and becomes the construction error. The
+compiler reports a missing or invalid method.
 
 A checked struct literal is a fallible expression:
 
@@ -51,8 +50,9 @@ func (value PortValue) Port() (Port, error)
 func (port Port) Value() PortValue
 ```
 
-`Port{Number: number}` lowers to `PortValue{Number: number}.Port()`. The constructor evaluates
-the `where` expression once. On failure, it returns the zero `Port` and the validation error.
+`Port{Number: number}` lowers to `PortValue{Number: number}.Port()`. The constructor creates the
+opaque candidate and calls `candidate.check()` once. On failure, it returns the zero `Port` and the
+same error.
 
 Go callers use the same `PortValue` and constructor. Field tags, field defaults, generic type
 parameters, and ordinary Go reference semantics are preserved. JSON unmarshaling validates before
@@ -60,14 +60,19 @@ it assigns the value.
 
 ## Value rules
 
-The zero value of `T` is invalid. `Value()` returns a copy of the payload. Reference fields keep
-their normal aliases. A second checked struct can contain `T`, so checked types form nominal chains
-without new syntax.
+The zero value of `T` is invalid. TGo code reads checked fields with normal selectors. The compiler
+lowers those selectors to private payload reads. Go callers use `Value()`, which returns a copy of
+the payload. Reference fields keep their normal aliases. A second checked struct can contain `T`,
+so checked types form nominal chains without new syntax.
 
 ```tgo
 type ServicePort struct {
 	Port Port
-} where value.Validate()
+} checked
+
+func (value ServicePort) check() error {
+	return nil
+}
 ```
 
 `tgolint` rejects direct wrapper construction, representation conversion, invalid zero use, and an
