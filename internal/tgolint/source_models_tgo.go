@@ -686,10 +686,7 @@ func generatedEnumShape(
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
 		if !ok || !validEnumAPI(
-			typ,
-			payload,
-			variant.name+"Payload",
-			"New"+payloadName,
+			typ, payload, variant.name+"Payload", "New"+payloadName,
 		) {
 			return false
 		}
