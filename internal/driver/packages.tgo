@@ -18,7 +18,8 @@ import (
 )
 
 type packageUnit struct {
-	Dir, Path      string
+	Dir            string
+	Path           string
 	Module         string
 	Sources        []compiler.File
 	GoFiles        []compiler.File
@@ -49,17 +50,16 @@ func discover(
 	context *build.Context,
 ) (map[string]*packageUnit, error) {
 	discovery := packageDiscovery{
-		root: root, module: module, context: context,
+		root:     root,
+		module:   module,
+		context:  context,
 		packages: make(map[string]*packageUnit),
 	}
-	err := filepath.WalkDir(root, discovery.visit)
-	if err != nil {
-		return nil, err
-	}
+	filepath.WalkDir(root, discovery.visit)!!
 	for _, unit := range discovery.packages {
 		unit.Imports = discovery.packages
 	}
-	return discovery.packages, nil
+	return discovery.packages,
 }
 
 type packageDiscovery struct {
@@ -109,54 +109,55 @@ func (d *packageDiscovery) visitDirectory(path, name string) error {
 
 // addSource records one possible tgo source file.
 func (d *packageDiscovery) addSource(path string) error {
-	unit, err := d.packageFor(filepath.Dir(path))
-	if err != nil {
-		return err
-	}
+	unit := d.packageFor(filepath.Dir(path))!!
 	unit.sourcePaths = append(unit.sourcePaths, path)
 	return nil
 }
 
 // addGeneratedCandidate records an output that can keep an orphan package visible.
 func (d *packageDiscovery) addGeneratedCandidate(path string) error {
-	unit, err := d.packageFor(filepath.Dir(path))
-	if err != nil {
-		return err
-	}
+	unit := d.packageFor(filepath.Dir(path))!!
 	unit.generatedPaths = append(unit.generatedPaths, path)
 	return nil
 }
 
 // packageFor returns the indexed package for one directory.
 func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
-	importPath, err := d.importPath(directory)
-	if err != nil {
-		return nil, err
-	}
+	importPath := d.importPath(directory)!!
 	unit := d.packages[importPath]
 	if unit == nil {
 		unit = &packageUnit{
-			Dir:     directory,
-			Path:    importPath,
-			Module:  d.module,
-			context: d.context,
-			fs:      token.NewFileSet(),
+			Dir:            directory,
+			Path:           importPath,
+			Module:         d.module,
+			Sources:        nil,
+			GoFiles:        nil,
+			Files:          nil,
+			Imports:        nil,
+			sourcePaths:    nil,
+			matchingPaths:  nil,
+			generatedPaths: nil,
+			context:        d.context,
+			usesC:          false,
+			sourcesMatched: false,
+			loaded:         false,
+			matchError:     nil,
+			loadError:      nil,
+			fs:             token.NewFileSet(),
+			compiled:       nil,
 		}
 		d.packages[importPath] = unit
 	}
-	return unit, nil
+	return unit,
 }
 
 // importPath maps a package directory to its module import path.
 func (d *packageDiscovery) importPath(directory string) (string, error) {
-	relative, err := filepath.Rel(d.root, directory)
-	if err != nil {
-		return "", err
-	}
+	relative := filepath.Rel(d.root, directory)!!
 	if relative == "." {
-		return d.module, nil
+		return d.module,
 	}
-	return d.module + "/" + filepath.ToSlash(relative), nil
+	return d.module + "/" + filepath.ToSlash(relative),
 }
 
 // readSource loads one TGo source and its imports.
@@ -200,7 +201,7 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 		p.usesC = p.usesC || cgo
 		p.matchingPaths = append(p.matchingPaths, path)
 	}
-	return p.matchingPaths, nil
+	return p.matchingPaths,
 }
 
 // matchTgoFile applies Go build constraints to one tgo file.
@@ -219,7 +220,7 @@ func matchTgoFile(context *build.Context, path string) (bool, error) {
 	}
 	match, err := fileContext.MatchFile(directory, fakeName)
 	if err == nil {
-		return match, nil
+		return match,
 	}
 	message := err.Error()
 	if detail, ok := strings.CutPrefix(message, fakeName); ok {
@@ -230,23 +231,17 @@ func matchTgoFile(context *build.Context, path string) (bool, error) {
 
 // available reports whether this package has active source or orphan output.
 func (p *packageUnit) available() (bool, error) {
-	paths, err := p.matchingSources()
-	if err != nil {
-		return false, err
-	}
+	paths := p.matchingSources()!!
 	if len(paths) > 0 {
-		return true, nil
+		return true,
 	}
 	for _, path := range p.generatedPaths {
-		owned, err := generatedFile(path)
-		if err != nil {
-			return false, err
-		}
+		owned := generatedFile(path)!!
 		if owned && !p.sourceOwnsOutput(path) {
-			return true, nil
+			return true,
 		}
 	}
-	return false, nil
+	return false,
 }
 
 // sourceOwnsOutput reports whether a current source owns one generated path.
@@ -284,15 +279,9 @@ func (p *packageUnit) load() error {
 
 // readGoFiles loads user Go files that take part in package type checks.
 func (p *packageUnit) readGoFiles() error {
-	entries, err := os.ReadDir(p.Dir)
-	if err != nil {
-		return err
-	}
+	entries := os.ReadDir(p.Dir)!!
 	for _, entry := range entries {
-		file, data, cgo, err := activeGoFile(p.context, p.Dir, entry)
-		if err != nil {
-			return err
-		}
+		file, data, cgo := activeGoFile(p.context, p.Dir, entry)!!
 		if file == nil {
 			continue
 		}
@@ -308,7 +297,7 @@ func (p *packageUnit) readGoFiles() error {
 func generatedFile(path string) (bool, error) {
 	info, err := os.Lstat(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
+		return false,
 	}
 	if err != nil {
 		return false, err
@@ -316,7 +305,7 @@ func generatedFile(path string) (bool, error) {
 	if !info.Mode().IsRegular() {
 		return false, fmt.Errorf("refusing non-regular output %s", path)
 	}
-	return true, nil
+	return true,
 }
 
 // selectPackages expands command patterns to tgo package paths.
@@ -337,10 +326,7 @@ func selectPackages(
 			if !packageMatches(unit, path, pattern, target, recursive) {
 				continue
 			}
-			available, err := unit.available()
-			if err != nil {
-				return nil, err
-			}
+			available := unit.available()!!
 			if !available {
 				continue
 			}
@@ -356,7 +342,7 @@ func selectPackages(
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)
-	return paths, nil
+	return paths,
 }
 
 // sortedPackagePaths returns stable package map keys.
