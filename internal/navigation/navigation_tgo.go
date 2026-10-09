@@ -11,6 +11,7 @@ import (
 	"go/types"
 	"net/url"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"sync"
 
@@ -29,6 +30,12 @@ type Location struct {
 type occurrence struct {
 	location Location
 	key      string
+}
+
+type sourcePosition struct {
+	file   string
+	line   int
+	column int
 }
 
 type workspaceIndex struct {
@@ -102,12 +109,23 @@ func (e *Engine) References(
 		}
 		result := make([]Location, 0, len(index.references[item.key]))
 		definition, hasDefinition := index.definitions[item.key]
+		seen := make(map[Location]bool)
 		for _, location := range index.references[item.key] {
-			if !includeDeclaration && hasDefinition && location == definition {
+			if hasDefinition && location == definition {
 				continue
 			}
 			result = append(result, location)
+			seen[location] = true
 		}
+		if includeDeclaration && hasDefinition && !seen[definition] {
+			result = append(result, definition)
+		}
+		sort.Slice(result, func(left, right int) bool {
+			if result[left].URI != result[right].URI {
+				return result[left].URI < result[right].URI
+			}
+			return result[left].Start < result[right].Start
+		})
 		return result, nil
 	}
 	return nil, nil
@@ -141,6 +159,10 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		}
 		keys := newObjectKeys(pkg.Package)
 		ownerLocations := make(map[token.Pos]Location)
+		generatedUses := make(map[sourcePosition]types.Object)
+		for position, object := range pkg.GeneratedUses {
+			generatedUses[positionKey(pkg.Files.Position(position))] = object
+		}
 		for _, source := range pkg.Sources {
 			fileURI, err := pathURI(source.Path)
 			if err != nil {
@@ -151,22 +173,25 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 				if !ok || identifier == nil {
 					return true
 				}
-				object, definition := pkg.Facts.IdentifierFact(source.Syntax, node)
-				if object == nil {
-					return true
-				}
 				start := pkg.Files.Position(identifier.Start).Offset
 				end := pkg.Files.Position(identifier.Stop).Offset
 				if start < 0 || end <= start {
 					return true
 				}
-				key := keys.key(object)
 				location := Location{URI: fileURI, Start: start, End: end}
+				ownerLocations[identifier.Start] = location
+				object, definition := pkg.Facts.IdentifierFact(source.Syntax, node)
+				if object == nil {
+					object = generatedUses[positionKey(pkg.Files.Position(identifier.Start))]
+				}
+				if object == nil {
+					return true
+				}
+				key := keys.key(object)
 				index.occurrences = append(index.occurrences, occurrence{
 					location: location, key: key,
 				})
 				index.references[key] = append(index.references[key], location)
-				ownerLocations[identifier.Start] = location
 				if definition {
 					index.definitions[key] = location
 				}
@@ -182,6 +207,12 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 	}
 	e.index = index
 	return index, nil
+}
+
+func positionKey(position token.Position) sourcePosition {
+	return sourcePosition{
+		file: position.Filename, line: position.Line, column: position.Column,
+	}
 }
 
 type objectKeys struct {

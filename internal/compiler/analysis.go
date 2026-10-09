@@ -23,14 +23,15 @@ type AnalysisSource struct {
 
 // AnalysisPackage contains checked TGo source and indexed type facts.
 type AnalysisPackage struct {
-	Directory string
-	Path      string
-	Sources   []AnalysisSource
-	Facts     *sourcefacts.Index
-	Files     *token.FileSet
-	Package   *types.Package
-	Owners    map[types.Object]token.Pos
-	NonNil    map[token.Pos]bool
+	Directory     string
+	Path          string
+	Sources       []AnalysisSource
+	Facts         *sourcefacts.Index
+	Files         *token.FileSet
+	Package       *types.Package
+	Owners        map[types.Object]token.Pos
+	GeneratedUses map[token.Pos]types.Object
+	NonNil        map[token.Pos]bool
 }
 
 // AnalyzeWorkspace loads and checks all active TGo packages in one module.
@@ -118,15 +119,26 @@ func analyzeUnit(unit *packageUnit) (*AnalysisPackage, error) {
 		return nil, err
 	}
 	return &AnalysisPackage{
-		Directory: unit.Dir,
-		Path:      unit.Path,
-		Sources:   sources,
-		Facts:     facts,
-		Files:     unit.fs,
-		Package:   unit.typed,
-		Owners:    analysisOwners(unit),
-		NonNil:    nonNil,
+		Directory:     unit.Dir,
+		Path:          unit.Path,
+		Sources:       sources,
+		Facts:         facts,
+		Files:         unit.fs,
+		Package:       unit.typed,
+		Owners:        analysisOwners(unit),
+		GeneratedUses: analysisGeneratedUses(unit),
+		NonNil:        nonNil,
 	}, nil
+}
+
+func analysisGeneratedUses(unit *packageUnit) map[token.Pos]types.Object {
+	uses := make(map[token.Pos]types.Object)
+	for _, reference := range unit.references {
+		if object := unit.info.Uses[reference.Name]; object != nil {
+			uses[reference.At] = object
+		}
+	}
+	return uses
 }
 
 // analysisOwners maps generated public objects to their TGo declarations.

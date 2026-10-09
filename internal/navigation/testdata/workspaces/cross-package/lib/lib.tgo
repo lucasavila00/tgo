@@ -1,0 +1,50 @@
+package lib
+
+type Record struct {
+	Name string
+}
+
+func (value Record) Text() string {
+	return value.Name
+}
+
+func Target(value Record) string {
+	return value.Text()
+}
+
+type Account enum {
+	Personal struct {
+		Name string
+	}
+	Business struct {
+		Company string
+	}
+}
+
+func AccountName(value Account) string {
+	switch value.Tag() {
+	case AccountTagPersonal:
+		return value.PersonalPayload().Name
+	case AccountTagBusiness:
+		return value.BusinessPayload().Company
+	exhaustive:
+	}
+}
+
+func PersonalName(value AccountPersonal) string {
+	return value.Name
+}
+
+func MakeAccount() Account {
+	return Account.Personal{Name: "person"}
+}
+
+type UserID int where value > 0
+
+func ReadID(value UserID) int {
+	return value.Value()
+}
+
+func MakeID() (UserID, error) {
+	return NewUserID(1)
+}

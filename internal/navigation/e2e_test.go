@@ -21,9 +21,10 @@ type fixturePoint struct {
 }
 
 type fixtureRequest struct {
-	Method    string         `json:"method"`
-	Position  fixturePoint   `json:"position"`
-	Locations []fixturePoint `json:"locations"`
+	Method             string         `json:"method"`
+	Position           fixturePoint   `json:"position"`
+	IncludeDeclaration bool           `json:"includeDeclaration"`
+	Locations          []fixturePoint `json:"locations"`
 }
 
 type helperProcess struct {
@@ -109,8 +110,9 @@ func (h *helperProcess) check(
 		ID:     h.nextID,
 		Method: fixture.Method,
 		Params: mustJSON(t, map[string]any{
-			"uri":    fileURI(t, positionPath),
-			"offset": offset,
+			"uri":                fileURI(t, positionPath),
+			"offset":             offset,
+			"includeDeclaration": fixture.IncludeDeclaration,
 		}),
 	}
 	if err := h.input.Encode(request); err != nil {
@@ -140,7 +142,10 @@ func (h *helperProcess) check(
 		})
 	}
 	if !equalLocations(response.Result, want) {
-		t.Fatalf("%s result = %#v, want %#v", fixture.Method, response.Result, want)
+		t.Fatalf(
+			"%s at %#v result = %#v, want %#v",
+			fixture.Method, fixture.Position, response.Result, want,
+		)
 	}
 }
 

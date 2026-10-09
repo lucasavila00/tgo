@@ -1,0 +1,118 @@
+[
+  {
+    "method": "definition",
+    "position": {"file": "app/app.tgo", "text": "Target", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "Target", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "references",
+    "position": {"file": "app/app.tgo", "text": "Target", "occurrence": 1},
+    "includeDeclaration": true,
+    "locations": [
+      {"file": "app/app.tgo", "text": "Target", "occurrence": 1},
+      {"file": "lib/lib.tgo", "text": "Target", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "references",
+    "position": {"file": "app/app.tgo", "text": "Target", "occurrence": 1},
+    "locations": [
+      {"file": "app/app.tgo", "text": "Target", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "app/app.tgo", "text": "Name:", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "Name", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "lib/lib.tgo", "text": "Text()", "occurrence": 2},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "Text", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "lib/lib.tgo", "text": "Tag()", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "Account", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "lib/lib.tgo", "text": "AccountTagPersonal", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "lib/lib.tgo", "text": "AccountPersonal", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "lib/lib.tgo", "text": "Personal{", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "references",
+    "position": {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
+    "includeDeclaration": true,
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 1},
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "references",
+    "position": {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "lib/lib.tgo", "text": "Value()", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "UserID", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "lib/lib.tgo", "text": "NewUserID", "occurrence": 1},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "UserID", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 3},
+    "locations": [
+      {"file": "app/app.tgo", "text": "value", "occurrence": 2}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 4},
+    "locations": [
+      {"file": "app/app.tgo", "text": "value", "occurrence": 1}
+    ]
+  }
+]
