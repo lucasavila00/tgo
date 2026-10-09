@@ -189,3 +189,82 @@ func replaceDotQualifiers(edits []edit, imports ...generatedImport) {
 		}
 	}
 }
+
+// resolveEnumJSONHelperNames avoids package declaration collisions.
+func (p *packageUnit) resolveEnumJSONHelperNames() {
+	generated := make(map[ast.Decl]bool)
+	for _, source := range p.Sources {
+		for _, declaration := range source.File.Decls {
+			function, ok := declaration.(*ast.FuncDecl)
+			if ok && source.GeneratedHelpers[function.Name.Name] {
+				generated[declaration] = true
+			}
+		}
+	}
+	used := make(map[string]bool)
+	for _, file := range p.Files {
+		for _, declaration := range file.Decls {
+			if !generated[declaration] {
+				addPackageDeclarationNames(used, declaration)
+			}
+		}
+	}
+	for _, source := range p.Sources {
+		p.resolveEnumJSONHelperName(source, &source.ExternalJSONTo, used)
+		p.resolveEnumJSONHelperName(source, &source.AdjacentJSONTo, used)
+	}
+}
+
+func addPackageDeclarationNames(used map[string]bool, declaration ast.Decl) {
+	switch node := declaration.(type) {
+	case *ast.FuncDecl:
+		if node.Recv == nil {
+			used[node.Name.Name] = true
+		}
+	case *ast.GenDecl:
+		for _, specification := range node.Specs {
+			switch item := specification.(type) {
+			case *ast.TypeSpec:
+				used[item.Name.Name] = true
+			case *ast.ValueSpec:
+				for _, name := range item.Names {
+					used[name.Name] = true
+				}
+			}
+		}
+	}
+}
+
+func (p *packageUnit) resolveEnumJSONHelperName(
+	source *source,
+	name *string,
+	used map[string]bool,
+) {
+	old := *name
+	if !source.GeneratedHelpers[old] {
+		return
+	}
+	local := make(map[string]bool)
+	ast.Inspect(source.File, func(node ast.Node) bool {
+		if identifier, ok := node.(*ast.Ident); ok && identifier.Name != old {
+			local[identifier.Name] = true
+		}
+		return true
+	})
+	updated := old
+	for suffix := 1; used[updated] || local[updated]; suffix++ {
+		updated = old + "_" + strconv.Itoa(suffix)
+	}
+	used[updated] = true
+	if updated != old {
+		ast.Inspect(source.File, func(node ast.Node) bool {
+			if identifier, ok := node.(*ast.Ident); ok && identifier.Name == old {
+				identifier.Name = updated
+			}
+			return true
+		})
+		delete(source.GeneratedHelpers, old)
+		source.GeneratedHelpers[updated] = true
+		*name = updated
+	}
+}

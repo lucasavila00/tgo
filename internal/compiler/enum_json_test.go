@@ -252,6 +252,61 @@ func read(result int, index int) []int {
 	}
 }
 
+func TestEnumJSONHelperNamesAvoidPackageDeclarations(t *testing.T) {
+	t.Parallel()
+	enumSource := File{Name: "enum.tgo", Data: []byte(`package sample
+type E enum ` + "`json:\"external\"`" + ` { A struct{} }
+type F enum ` + "`json:\"adjacent,tag=type,content=data\"`" + ` { B struct{} }
+func useNames() {
+	var tgoEExternalJSONTo_2, tgoEAdjacentJSONTo_2 int
+	_, _ = tgoEExternalJSONTo_2, tgoEAdjacentJSONTo_2
+}
+`)}
+	declarations := []byte(`package sample
+func tgoEExternalJSONTo() {}
+func tgoEExternalJSONTo_1() {}
+var tgoEAdjacentJSONTo, tgoEAdjacentJSONTo_1 func()
+`)
+	tests := []struct {
+		name    string
+		sources []File
+		goFiles []File
+	}{
+		{
+			name: "tgo declarations",
+			sources: []File{
+				enumSource,
+				{Name: "names.tgo", Data: declarations},
+			},
+		},
+		{
+			name:    "go declarations",
+			sources: []File{enumSource},
+			goFiles: []File{{Name: "names.go", Data: declarations}},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compiled, problems := Compile(PackageInput{
+				Path: "sample", Sources: test.sources, GoFiles: test.goFiles,
+				FileSet: token.NewFileSet(), Importer: importer.Default(),
+			})
+			if len(problems) != 0 {
+				t.Fatal(problems[0])
+			}
+			output := string(compiled.Outputs["enum.tgo"])
+			for _, name := range []string{
+				"tgoEExternalJSONTo_3", "tgoEAdjacentJSONTo_3",
+			} {
+				if !strings.Contains(output, name) {
+					t.Fatalf("generated output does not contain %s\n%s", name, output)
+				}
+			}
+		})
+	}
+}
+
 func compileSourceOutput(t *testing.T, source string) string {
 	t.Helper()
 	compiled, problems := Compile(PackageInput{
