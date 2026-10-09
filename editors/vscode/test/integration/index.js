@@ -27,6 +27,7 @@ async function run() {
     originalInvalidate(changed);
   };
 
+  await checkRepositoryHovers(folder);
   await checkProviders(document);
   await checkWatchers(folder, client, invalidations);
   checkRemoteURITranslation();
@@ -34,6 +35,41 @@ async function run() {
   await checkCancellation();
   await checkDirtyDocument(document);
   await checkWorkspaceFolderRemoval(api);
+}
+
+async function checkRepositoryHovers(firstFolder) {
+  const folder = vscode.workspace.workspaceFolders.find(
+    (item) => item.uri.toString() !== firstFolder.uri.toString()
+  );
+  assert.ok(folder, "repository workspace is absent");
+  await checkHover(
+    vscode.Uri.joinPath(folder.uri, "internal", "navigation", "navigation.tgo"),
+    "Hover(",
+    "func (*Engine) Hover"
+  );
+  await checkHover(
+    vscode.Uri.joinPath(folder.uri, "internal", "navigation", "navigation.tgo"),
+    "contents, ok :=",
+    "var contents string"
+  );
+  await checkHover(
+    vscode.Uri.joinPath(folder.uri, "pkg", "format", "expressions.tgo"),
+    ".Tag()",
+    "func (Expression) Tag() ExpressionTag"
+  );
+}
+
+async function checkHover(uri, text, contents) {
+  const document = await vscode.workspace.openTextDocument(uri);
+  const offset = document.getText().indexOf(text);
+  assert.notEqual(offset, -1, `missing hover target ${text}`);
+  const hovers = await vscode.commands.executeCommand(
+    "vscode.executeHoverProvider", document.uri, document.positionAt(offset + 1)
+  );
+  assert.equal(hovers.length, 1);
+  assert.ok(hovers[0].contents.some(
+    (content) => content.value.includes(contents)
+  ));
 }
 
 function checkRemoteURITranslation() {
