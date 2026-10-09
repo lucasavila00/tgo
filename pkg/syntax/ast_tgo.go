@@ -1138,6 +1138,10 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Bad JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionBad(payload.Value)
 		return nil
 	case "Identifier":
@@ -1145,6 +1149,10 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Identifier JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionIdentifier(payload.Value)
 		return nil
 	case "Ellipsis":
@@ -1152,6 +1160,10 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Ellipsis JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionEllipsis(payload.Value)
 		return nil
 	case "BasicLiteral":
@@ -1159,6 +1171,10 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.BasicLiteral JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionBasicLiteral(payload.Value)
 		return nil
 	case "FunctionLiteral":
@@ -1166,6 +1182,123 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Type != nil {
+				if (*(*payload.Value).Type).TypeParams != nil {
+					for _, tgoJSONValue0 := range (*(*(*payload.Value).Type).TypeParams).List {
+						if tgoJSONValue0 == nil {
+							return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[] must not be nil")
+						}
+						if tgoJSONValue0 != nil {
+							if (*tgoJSONValue0).Doc != nil {
+								for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+									if tgoJSONValue1 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue0).Type == nil {
+								return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue0).Comment != nil {
+								for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+									if tgoJSONValue3 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+				if (*(*payload.Value).Type).Params == nil {
+					return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params must not be nil")
+				}
+				if (*(*payload.Value).Type).Params != nil {
+					for _, tgoJSONValue4 := range (*(*(*payload.Value).Type).Params).List {
+						if tgoJSONValue4 == nil {
+							return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[] must not be nil")
+						}
+						if tgoJSONValue4 != nil {
+							if (*tgoJSONValue4).Doc != nil {
+								for _, tgoJSONValue5 := range (*(*tgoJSONValue4).Doc).List {
+									if tgoJSONValue5 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue6 := range (*tgoJSONValue4).Names {
+								if tgoJSONValue6 == nil {
+									return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue4).Type == nil {
+								return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue4).Comment != nil {
+								for _, tgoJSONValue7 := range (*(*tgoJSONValue4).Comment).List {
+									if tgoJSONValue7 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+				if (*(*payload.Value).Type).Results != nil {
+					for _, tgoJSONValue8 := range (*(*(*payload.Value).Type).Results).List {
+						if tgoJSONValue8 == nil {
+							return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[] must not be nil")
+						}
+						if tgoJSONValue8 != nil {
+							if (*tgoJSONValue8).Doc != nil {
+								for _, tgoJSONValue9 := range (*(*tgoJSONValue8).Doc).List {
+									if tgoJSONValue9 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue10 := range (*tgoJSONValue8).Names {
+								if tgoJSONValue10 == nil {
+									return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue8).Type == nil {
+								return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue8).Comment != nil {
+								for _, tgoJSONValue11 := range (*(*tgoJSONValue8).Comment).List {
+									if tgoJSONValue11 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue12 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue12 == nil {
+						return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionFunctionLiteral(payload.Value)
 		return nil
 	case "CompositeLiteral":
@@ -1173,6 +1306,17 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.CompositeLiteral JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Elements {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Expression.CompositeLiteral JSON payload: Value.Elements[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewExpressionCompositeLiteral(payload.Value)
 		return nil
 	case "Parenthesized":
@@ -1180,6 +1324,15 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Parenthesized JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Parenthesized JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionParenthesized(payload.Value)
 		return nil
 	case "Selector":
@@ -1187,6 +1340,18 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Selector JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Selector JSON payload: Value.Expression must not be nil")
+			}
+			if (*payload.Value).Selector == nil {
+				return fmt.Errorf("invalid Expression.Selector JSON payload: Value.Selector must not be nil")
+			}
+		}
+
 		*v = NewExpressionSelector(payload.Value)
 		return nil
 	case "Index":
@@ -1194,6 +1359,18 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Index JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Index JSON payload: Value.Expression must not be nil")
+			}
+			if (*payload.Value).Index == nil {
+				return fmt.Errorf("invalid Expression.Index JSON payload: Value.Index must not be nil")
+			}
+		}
+
 		*v = NewExpressionIndex(payload.Value)
 		return nil
 	case "IndexList":
@@ -1201,6 +1378,20 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.IndexList JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.IndexList JSON payload: Value.Expression must not be nil")
+			}
+			for _, tgoJSONValue0 := range (*payload.Value).Indices {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Expression.IndexList JSON payload: Value.Indices[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewExpressionIndexList(payload.Value)
 		return nil
 	case "Slice":
@@ -1208,6 +1399,15 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Slice JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Slice JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionSlice(payload.Value)
 		return nil
 	case "TypeAssertion":
@@ -1215,6 +1415,15 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.TypeAssertion JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.TypeAssertion JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionTypeAssertion(payload.Value)
 		return nil
 	case "Call":
@@ -1222,6 +1431,20 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Call JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Callee == nil {
+				return fmt.Errorf("invalid Expression.Call JSON payload: Value.Callee must not be nil")
+			}
+			for _, tgoJSONValue0 := range (*payload.Value).Args {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Expression.Call JSON payload: Value.Args[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewExpressionCall(payload.Value)
 		return nil
 	case "Star":
@@ -1229,6 +1452,15 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Star JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Star JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionStar(payload.Value)
 		return nil
 	case "NonNilPointer":
@@ -1236,6 +1468,15 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.NonNilPointer JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Expression.NonNilPointer JSON payload: Value.Type must not be nil")
+			}
+		}
+
 		*v = NewExpressionNonNilPointer(payload.Value)
 		return nil
 	case "Unary":
@@ -1243,6 +1484,15 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Unary JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Unary JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionUnary(payload.Value)
 		return nil
 	case "Binary":
@@ -1250,6 +1500,18 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Binary JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Left == nil {
+				return fmt.Errorf("invalid Expression.Binary JSON payload: Value.Left must not be nil")
+			}
+			if (*payload.Value).Right == nil {
+				return fmt.Errorf("invalid Expression.Binary JSON payload: Value.Right must not be nil")
+			}
+		}
+
 		*v = NewExpressionBinary(payload.Value)
 		return nil
 	case "KeyValue":
@@ -1257,6 +1519,18 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.KeyValue JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Key == nil {
+				return fmt.Errorf("invalid Expression.KeyValue JSON payload: Value.Key must not be nil")
+			}
+			if (*payload.Value).Value == nil {
+				return fmt.Errorf("invalid Expression.KeyValue JSON payload: Value.Value must not be nil")
+			}
+		}
+
 		*v = NewExpressionKeyValue(payload.Value)
 		return nil
 	case "ArrayType":
@@ -1264,6 +1538,15 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.ArrayType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Element == nil {
+				return fmt.Errorf("invalid Expression.ArrayType JSON payload: Value.Element must not be nil")
+			}
+		}
+
 		*v = NewExpressionArrayType(payload.Value)
 		return nil
 	case "StructType":
@@ -1271,6 +1554,46 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.StructType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Fields == nil {
+				return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields must not be nil")
+			}
+			if (*payload.Value).Fields != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Fields).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[] must not be nil")
+					}
+					if tgoJSONValue0 != nil {
+						if (*tgoJSONValue0).Doc != nil {
+							for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+								if tgoJSONValue1 == nil {
+									return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+							if tgoJSONValue2 == nil {
+								return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue0).Type == nil {
+							return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue0).Comment != nil {
+							for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+								if tgoJSONValue3 == nil {
+									return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionStructType(payload.Value)
 		return nil
 	case "FunctionType":
@@ -1278,6 +1601,108 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).TypeParams != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).TypeParams).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[] must not be nil")
+					}
+					if tgoJSONValue0 != nil {
+						if (*tgoJSONValue0).Doc != nil {
+							for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+								if tgoJSONValue1 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+							if tgoJSONValue2 == nil {
+								return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue0).Type == nil {
+							return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue0).Comment != nil {
+							for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+								if tgoJSONValue3 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Params == nil {
+				return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params must not be nil")
+			}
+			if (*payload.Value).Params != nil {
+				for _, tgoJSONValue4 := range (*(*payload.Value).Params).List {
+					if tgoJSONValue4 == nil {
+						return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[] must not be nil")
+					}
+					if tgoJSONValue4 != nil {
+						if (*tgoJSONValue4).Doc != nil {
+							for _, tgoJSONValue5 := range (*(*tgoJSONValue4).Doc).List {
+								if tgoJSONValue5 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue6 := range (*tgoJSONValue4).Names {
+							if tgoJSONValue6 == nil {
+								return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue4).Type == nil {
+							return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue4).Comment != nil {
+							for _, tgoJSONValue7 := range (*(*tgoJSONValue4).Comment).List {
+								if tgoJSONValue7 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Results != nil {
+				for _, tgoJSONValue8 := range (*(*payload.Value).Results).List {
+					if tgoJSONValue8 == nil {
+						return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[] must not be nil")
+					}
+					if tgoJSONValue8 != nil {
+						if (*tgoJSONValue8).Doc != nil {
+							for _, tgoJSONValue9 := range (*(*tgoJSONValue8).Doc).List {
+								if tgoJSONValue9 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue10 := range (*tgoJSONValue8).Names {
+							if tgoJSONValue10 == nil {
+								return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue8).Type == nil {
+							return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue8).Comment != nil {
+							for _, tgoJSONValue11 := range (*(*tgoJSONValue8).Comment).List {
+								if tgoJSONValue11 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionFunctionType(payload.Value)
 		return nil
 	case "InterfaceType":
@@ -1285,6 +1710,46 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Methods == nil {
+				return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods must not be nil")
+			}
+			if (*payload.Value).Methods != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Methods).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[] must not be nil")
+					}
+					if tgoJSONValue0 != nil {
+						if (*tgoJSONValue0).Doc != nil {
+							for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+								if tgoJSONValue1 == nil {
+									return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+							if tgoJSONValue2 == nil {
+								return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue0).Type == nil {
+							return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue0).Comment != nil {
+							for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+								if tgoJSONValue3 == nil {
+									return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionInterfaceType(payload.Value)
 		return nil
 	case "MapType":
@@ -1292,6 +1757,18 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.MapType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Key == nil {
+				return fmt.Errorf("invalid Expression.MapType JSON payload: Value.Key must not be nil")
+			}
+			if (*payload.Value).Value == nil {
+				return fmt.Errorf("invalid Expression.MapType JSON payload: Value.Value must not be nil")
+			}
+		}
+
 		*v = NewExpressionMapType(payload.Value)
 		return nil
 	case "ChannelType":
@@ -1299,6 +1776,15 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.ChannelType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Value == nil {
+				return fmt.Errorf("invalid Expression.ChannelType JSON payload: Value.Value must not be nil")
+			}
+		}
+
 		*v = NewExpressionChannelType(payload.Value)
 		return nil
 	case "Default":
@@ -1306,6 +1792,10 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Default JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionDefault(payload.Value)
 		return nil
 	case "Propagation":
@@ -1313,6 +1803,28 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Propagation JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Propagation JSON payload: Value.Expression must not be nil")
+			}
+			if (*payload.Value).Call == nil {
+				return fmt.Errorf("invalid Expression.Propagation JSON payload: Value.Call must not be nil")
+			}
+			if (*payload.Value).Call != nil {
+				if (*(*payload.Value).Call).Callee == nil {
+					return fmt.Errorf("invalid Expression.Propagation JSON payload: Value.Call.Callee must not be nil")
+				}
+				for _, tgoJSONValue0 := range (*(*payload.Value).Call).Args {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Expression.Propagation JSON payload: Value.Call.Args[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionPropagation(payload.Value)
 		return nil
 	case "Comprehension":
@@ -1320,6 +1832,18 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Comprehension JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Expression.Comprehension JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Result.Value == nil {
+				return fmt.Errorf("invalid Expression.Comprehension JSON payload: Value.Result.Value must not be nil")
+			}
+		}
+
 		*v = NewExpressionComprehension(payload.Value)
 		return nil
 	default:
@@ -1441,6 +1965,10 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Bad JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionBad(payload.Value)
 		return nil
 	case 2:
@@ -1448,6 +1976,10 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Identifier JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionIdentifier(payload.Value)
 		return nil
 	case 3:
@@ -1455,6 +1987,10 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Ellipsis JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionEllipsis(payload.Value)
 		return nil
 	case 4:
@@ -1462,6 +1998,10 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.BasicLiteral JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionBasicLiteral(payload.Value)
 		return nil
 	case 5:
@@ -1469,6 +2009,123 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Type != nil {
+				if (*(*payload.Value).Type).TypeParams != nil {
+					for _, tgoJSONValue0 := range (*(*(*payload.Value).Type).TypeParams).List {
+						if tgoJSONValue0 == nil {
+							return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[] must not be nil")
+						}
+						if tgoJSONValue0 != nil {
+							if (*tgoJSONValue0).Doc != nil {
+								for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+									if tgoJSONValue1 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue0).Type == nil {
+								return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue0).Comment != nil {
+								for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+									if tgoJSONValue3 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.TypeParams.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+				if (*(*payload.Value).Type).Params == nil {
+					return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params must not be nil")
+				}
+				if (*(*payload.Value).Type).Params != nil {
+					for _, tgoJSONValue4 := range (*(*(*payload.Value).Type).Params).List {
+						if tgoJSONValue4 == nil {
+							return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[] must not be nil")
+						}
+						if tgoJSONValue4 != nil {
+							if (*tgoJSONValue4).Doc != nil {
+								for _, tgoJSONValue5 := range (*(*tgoJSONValue4).Doc).List {
+									if tgoJSONValue5 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue6 := range (*tgoJSONValue4).Names {
+								if tgoJSONValue6 == nil {
+									return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue4).Type == nil {
+								return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue4).Comment != nil {
+								for _, tgoJSONValue7 := range (*(*tgoJSONValue4).Comment).List {
+									if tgoJSONValue7 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Params.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+				if (*(*payload.Value).Type).Results != nil {
+					for _, tgoJSONValue8 := range (*(*(*payload.Value).Type).Results).List {
+						if tgoJSONValue8 == nil {
+							return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[] must not be nil")
+						}
+						if tgoJSONValue8 != nil {
+							if (*tgoJSONValue8).Doc != nil {
+								for _, tgoJSONValue9 := range (*(*tgoJSONValue8).Doc).List {
+									if tgoJSONValue9 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue10 := range (*tgoJSONValue8).Names {
+								if tgoJSONValue10 == nil {
+									return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue8).Type == nil {
+								return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue8).Comment != nil {
+								for _, tgoJSONValue11 := range (*(*tgoJSONValue8).Comment).List {
+									if tgoJSONValue11 == nil {
+										return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Type.Results.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue12 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue12 == nil {
+						return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionFunctionLiteral(payload.Value)
 		return nil
 	case 6:
@@ -1476,6 +2133,17 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.CompositeLiteral JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Elements {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Expression.CompositeLiteral JSON payload: Value.Elements[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewExpressionCompositeLiteral(payload.Value)
 		return nil
 	case 7:
@@ -1483,6 +2151,15 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Parenthesized JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Parenthesized JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionParenthesized(payload.Value)
 		return nil
 	case 8:
@@ -1490,6 +2167,18 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Selector JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Selector JSON payload: Value.Expression must not be nil")
+			}
+			if (*payload.Value).Selector == nil {
+				return fmt.Errorf("invalid Expression.Selector JSON payload: Value.Selector must not be nil")
+			}
+		}
+
 		*v = NewExpressionSelector(payload.Value)
 		return nil
 	case 9:
@@ -1497,6 +2186,18 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Index JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Index JSON payload: Value.Expression must not be nil")
+			}
+			if (*payload.Value).Index == nil {
+				return fmt.Errorf("invalid Expression.Index JSON payload: Value.Index must not be nil")
+			}
+		}
+
 		*v = NewExpressionIndex(payload.Value)
 		return nil
 	case 10:
@@ -1504,6 +2205,20 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.IndexList JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.IndexList JSON payload: Value.Expression must not be nil")
+			}
+			for _, tgoJSONValue0 := range (*payload.Value).Indices {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Expression.IndexList JSON payload: Value.Indices[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewExpressionIndexList(payload.Value)
 		return nil
 	case 11:
@@ -1511,6 +2226,15 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Slice JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Slice JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionSlice(payload.Value)
 		return nil
 	case 12:
@@ -1518,6 +2242,15 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.TypeAssertion JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.TypeAssertion JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionTypeAssertion(payload.Value)
 		return nil
 	case 13:
@@ -1525,6 +2258,20 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Call JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Callee == nil {
+				return fmt.Errorf("invalid Expression.Call JSON payload: Value.Callee must not be nil")
+			}
+			for _, tgoJSONValue0 := range (*payload.Value).Args {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Expression.Call JSON payload: Value.Args[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewExpressionCall(payload.Value)
 		return nil
 	case 14:
@@ -1532,6 +2279,15 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Star JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Star JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionStar(payload.Value)
 		return nil
 	case 15:
@@ -1539,6 +2295,15 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.NonNilPointer JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Expression.NonNilPointer JSON payload: Value.Type must not be nil")
+			}
+		}
+
 		*v = NewExpressionNonNilPointer(payload.Value)
 		return nil
 	case 16:
@@ -1546,6 +2311,15 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Unary JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Unary JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewExpressionUnary(payload.Value)
 		return nil
 	case 17:
@@ -1553,6 +2327,18 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Binary JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Left == nil {
+				return fmt.Errorf("invalid Expression.Binary JSON payload: Value.Left must not be nil")
+			}
+			if (*payload.Value).Right == nil {
+				return fmt.Errorf("invalid Expression.Binary JSON payload: Value.Right must not be nil")
+			}
+		}
+
 		*v = NewExpressionBinary(payload.Value)
 		return nil
 	case 18:
@@ -1560,6 +2346,18 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.KeyValue JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Key == nil {
+				return fmt.Errorf("invalid Expression.KeyValue JSON payload: Value.Key must not be nil")
+			}
+			if (*payload.Value).Value == nil {
+				return fmt.Errorf("invalid Expression.KeyValue JSON payload: Value.Value must not be nil")
+			}
+		}
+
 		*v = NewExpressionKeyValue(payload.Value)
 		return nil
 	case 19:
@@ -1567,6 +2365,15 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.ArrayType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Element == nil {
+				return fmt.Errorf("invalid Expression.ArrayType JSON payload: Value.Element must not be nil")
+			}
+		}
+
 		*v = NewExpressionArrayType(payload.Value)
 		return nil
 	case 20:
@@ -1574,6 +2381,46 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.StructType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Fields == nil {
+				return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields must not be nil")
+			}
+			if (*payload.Value).Fields != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Fields).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[] must not be nil")
+					}
+					if tgoJSONValue0 != nil {
+						if (*tgoJSONValue0).Doc != nil {
+							for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+								if tgoJSONValue1 == nil {
+									return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+							if tgoJSONValue2 == nil {
+								return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue0).Type == nil {
+							return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue0).Comment != nil {
+							for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+								if tgoJSONValue3 == nil {
+									return fmt.Errorf("invalid Expression.StructType JSON payload: Value.Fields.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionStructType(payload.Value)
 		return nil
 	case 21:
@@ -1581,6 +2428,108 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).TypeParams != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).TypeParams).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[] must not be nil")
+					}
+					if tgoJSONValue0 != nil {
+						if (*tgoJSONValue0).Doc != nil {
+							for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+								if tgoJSONValue1 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+							if tgoJSONValue2 == nil {
+								return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue0).Type == nil {
+							return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue0).Comment != nil {
+							for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+								if tgoJSONValue3 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.TypeParams.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Params == nil {
+				return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params must not be nil")
+			}
+			if (*payload.Value).Params != nil {
+				for _, tgoJSONValue4 := range (*(*payload.Value).Params).List {
+					if tgoJSONValue4 == nil {
+						return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[] must not be nil")
+					}
+					if tgoJSONValue4 != nil {
+						if (*tgoJSONValue4).Doc != nil {
+							for _, tgoJSONValue5 := range (*(*tgoJSONValue4).Doc).List {
+								if tgoJSONValue5 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue6 := range (*tgoJSONValue4).Names {
+							if tgoJSONValue6 == nil {
+								return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue4).Type == nil {
+							return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue4).Comment != nil {
+							for _, tgoJSONValue7 := range (*(*tgoJSONValue4).Comment).List {
+								if tgoJSONValue7 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Params.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Results != nil {
+				for _, tgoJSONValue8 := range (*(*payload.Value).Results).List {
+					if tgoJSONValue8 == nil {
+						return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[] must not be nil")
+					}
+					if tgoJSONValue8 != nil {
+						if (*tgoJSONValue8).Doc != nil {
+							for _, tgoJSONValue9 := range (*(*tgoJSONValue8).Doc).List {
+								if tgoJSONValue9 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue10 := range (*tgoJSONValue8).Names {
+							if tgoJSONValue10 == nil {
+								return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue8).Type == nil {
+							return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue8).Comment != nil {
+							for _, tgoJSONValue11 := range (*(*tgoJSONValue8).Comment).List {
+								if tgoJSONValue11 == nil {
+									return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value.Results.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionFunctionType(payload.Value)
 		return nil
 	case 22:
@@ -1588,6 +2537,46 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Methods == nil {
+				return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods must not be nil")
+			}
+			if (*payload.Value).Methods != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Methods).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[] must not be nil")
+					}
+					if tgoJSONValue0 != nil {
+						if (*tgoJSONValue0).Doc != nil {
+							for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+								if tgoJSONValue1 == nil {
+									return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+							if tgoJSONValue2 == nil {
+								return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue0).Type == nil {
+							return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue0).Comment != nil {
+							for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+								if tgoJSONValue3 == nil {
+									return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value.Methods.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionInterfaceType(payload.Value)
 		return nil
 	case 23:
@@ -1595,6 +2584,18 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.MapType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Key == nil {
+				return fmt.Errorf("invalid Expression.MapType JSON payload: Value.Key must not be nil")
+			}
+			if (*payload.Value).Value == nil {
+				return fmt.Errorf("invalid Expression.MapType JSON payload: Value.Value must not be nil")
+			}
+		}
+
 		*v = NewExpressionMapType(payload.Value)
 		return nil
 	case 24:
@@ -1602,6 +2603,15 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.ChannelType JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Value == nil {
+				return fmt.Errorf("invalid Expression.ChannelType JSON payload: Value.Value must not be nil")
+			}
+		}
+
 		*v = NewExpressionChannelType(payload.Value)
 		return nil
 	case 25:
@@ -1609,6 +2619,10 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Default JSON payload: Value must not be nil")
+		}
+
 		*v = NewExpressionDefault(payload.Value)
 		return nil
 	case 26:
@@ -1616,6 +2630,28 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Propagation JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Expression.Propagation JSON payload: Value.Expression must not be nil")
+			}
+			if (*payload.Value).Call == nil {
+				return fmt.Errorf("invalid Expression.Propagation JSON payload: Value.Call must not be nil")
+			}
+			if (*payload.Value).Call != nil {
+				if (*(*payload.Value).Call).Callee == nil {
+					return fmt.Errorf("invalid Expression.Propagation JSON payload: Value.Call.Callee must not be nil")
+				}
+				for _, tgoJSONValue0 := range (*(*payload.Value).Call).Args {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Expression.Propagation JSON payload: Value.Call.Args[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewExpressionPropagation(payload.Value)
 		return nil
 	case 27:
@@ -1623,6 +2659,18 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Expression.Comprehension JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Expression.Comprehension JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Result.Value == nil {
+				return fmt.Errorf("invalid Expression.Comprehension JSON payload: Value.Result.Value must not be nil")
+			}
+		}
+
 		*v = NewExpressionComprehension(payload.Value)
 		return nil
 	default:
@@ -2496,6 +3544,10 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Bad JSON payload: Value must not be nil")
+		}
+
 		*v = NewStatementBad(payload.Value)
 		return nil
 	case "Declaration":
@@ -2503,6 +3555,15 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Declaration JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Declaration == nil {
+				return fmt.Errorf("invalid Statement.Declaration JSON payload: Value.Declaration must not be nil")
+			}
+		}
+
 		*v = NewStatementDeclaration(payload.Value)
 		return nil
 	case "Empty":
@@ -2510,6 +3571,10 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Empty JSON payload: Value must not be nil")
+		}
+
 		*v = NewStatementEmpty(payload.Value)
 		return nil
 	case "Labeled":
@@ -2517,6 +3582,18 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Labeled JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Label == nil {
+				return fmt.Errorf("invalid Statement.Labeled JSON payload: Value.Label must not be nil")
+			}
+			if (*payload.Value).Statement == nil {
+				return fmt.Errorf("invalid Statement.Labeled JSON payload: Value.Statement must not be nil")
+			}
+		}
+
 		*v = NewStatementLabeled(payload.Value)
 		return nil
 	case "Expression":
@@ -2524,6 +3601,15 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Expression JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Statement.Expression JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewStatementExpression(payload.Value)
 		return nil
 	case "Send":
@@ -2531,6 +3617,18 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Send JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Channel == nil {
+				return fmt.Errorf("invalid Statement.Send JSON payload: Value.Channel must not be nil")
+			}
+			if (*payload.Value).Value == nil {
+				return fmt.Errorf("invalid Statement.Send JSON payload: Value.Value must not be nil")
+			}
+		}
+
 		*v = NewStatementSend(payload.Value)
 		return nil
 	case "Increment":
@@ -2538,6 +3636,15 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Increment JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Statement.Increment JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewStatementIncrement(payload.Value)
 		return nil
 	case "Assignment":
@@ -2545,6 +3652,22 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Assignment JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Left {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Assignment JSON payload: Value.Left[] must not be nil")
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Right {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Statement.Assignment JSON payload: Value.Right[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementAssignment(payload.Value)
 		return nil
 	case "Go":
@@ -2552,6 +3675,15 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Go JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Call == nil {
+				return fmt.Errorf("invalid Statement.Go JSON payload: Value.Call must not be nil")
+			}
+		}
+
 		*v = NewStatementGo(payload.Value)
 		return nil
 	case "Defer":
@@ -2559,6 +3691,15 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Defer JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Call == nil {
+				return fmt.Errorf("invalid Statement.Defer JSON payload: Value.Call must not be nil")
+			}
+		}
+
 		*v = NewStatementDefer(payload.Value)
 		return nil
 	case "Return":
@@ -2566,6 +3707,17 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Return JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Results {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Return JSON payload: Value.Results[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementReturn(payload.Value)
 		return nil
 	case "Branch":
@@ -2573,6 +3725,10 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Branch JSON payload: Value must not be nil")
+		}
+
 		*v = NewStatementBranch(payload.Value)
 		return nil
 	case "Block":
@@ -2580,6 +3736,17 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Block JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).List {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Block JSON payload: Value.List[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementBlock(payload.Value)
 		return nil
 	case "If":
@@ -2587,6 +3754,25 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.If JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Condition == nil {
+				return fmt.Errorf("invalid Statement.If JSON payload: Value.Condition must not be nil")
+			}
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.If JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.If JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementIf(payload.Value)
 		return nil
 	case "Case":
@@ -2594,6 +3780,22 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Case JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).List {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Case JSON payload: Value.List[] must not be nil")
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Body {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Statement.Case JSON payload: Value.Body[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementCase(payload.Value)
 		return nil
 	case "Switch":
@@ -2601,6 +3803,22 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Switch JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.Switch JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.Switch JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementSwitch(payload.Value)
 		return nil
 	case "TypeSwitch":
@@ -2608,6 +3826,25 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Assignment == nil {
+				return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value.Assignment must not be nil")
+			}
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementTypeSwitch(payload.Value)
 		return nil
 	case "Communication":
@@ -2615,6 +3852,17 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Communication JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Body {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Communication JSON payload: Value.Body[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementCommunication(payload.Value)
 		return nil
 	case "Select":
@@ -2622,6 +3870,22 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Select JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.Select JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.Select JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementSelect(payload.Value)
 		return nil
 	case "For":
@@ -2629,6 +3893,22 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.For JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.For JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.For JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementFor(payload.Value)
 		return nil
 	case "Range":
@@ -2636,6 +3916,25 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Range JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Source == nil {
+				return fmt.Errorf("invalid Statement.Range JSON payload: Value.Source must not be nil")
+			}
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.Range JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.Range JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementRange(payload.Value)
 		return nil
 	default:
@@ -2745,6 +4044,10 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Bad JSON payload: Value must not be nil")
+		}
+
 		*v = NewStatementBad(payload.Value)
 		return nil
 	case 2:
@@ -2752,6 +4055,15 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Declaration JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Declaration == nil {
+				return fmt.Errorf("invalid Statement.Declaration JSON payload: Value.Declaration must not be nil")
+			}
+		}
+
 		*v = NewStatementDeclaration(payload.Value)
 		return nil
 	case 3:
@@ -2759,6 +4071,10 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Empty JSON payload: Value must not be nil")
+		}
+
 		*v = NewStatementEmpty(payload.Value)
 		return nil
 	case 4:
@@ -2766,6 +4082,18 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Labeled JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Label == nil {
+				return fmt.Errorf("invalid Statement.Labeled JSON payload: Value.Label must not be nil")
+			}
+			if (*payload.Value).Statement == nil {
+				return fmt.Errorf("invalid Statement.Labeled JSON payload: Value.Statement must not be nil")
+			}
+		}
+
 		*v = NewStatementLabeled(payload.Value)
 		return nil
 	case 5:
@@ -2773,6 +4101,15 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Expression JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Statement.Expression JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewStatementExpression(payload.Value)
 		return nil
 	case 6:
@@ -2780,6 +4117,18 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Send JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Channel == nil {
+				return fmt.Errorf("invalid Statement.Send JSON payload: Value.Channel must not be nil")
+			}
+			if (*payload.Value).Value == nil {
+				return fmt.Errorf("invalid Statement.Send JSON payload: Value.Value must not be nil")
+			}
+		}
+
 		*v = NewStatementSend(payload.Value)
 		return nil
 	case 7:
@@ -2787,6 +4136,15 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Increment JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Expression == nil {
+				return fmt.Errorf("invalid Statement.Increment JSON payload: Value.Expression must not be nil")
+			}
+		}
+
 		*v = NewStatementIncrement(payload.Value)
 		return nil
 	case 8:
@@ -2794,6 +4152,22 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Assignment JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Left {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Assignment JSON payload: Value.Left[] must not be nil")
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Right {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Statement.Assignment JSON payload: Value.Right[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementAssignment(payload.Value)
 		return nil
 	case 9:
@@ -2801,6 +4175,15 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Go JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Call == nil {
+				return fmt.Errorf("invalid Statement.Go JSON payload: Value.Call must not be nil")
+			}
+		}
+
 		*v = NewStatementGo(payload.Value)
 		return nil
 	case 10:
@@ -2808,6 +4191,15 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Defer JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Call == nil {
+				return fmt.Errorf("invalid Statement.Defer JSON payload: Value.Call must not be nil")
+			}
+		}
+
 		*v = NewStatementDefer(payload.Value)
 		return nil
 	case 11:
@@ -2815,6 +4207,17 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Return JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Results {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Return JSON payload: Value.Results[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementReturn(payload.Value)
 		return nil
 	case 12:
@@ -2822,6 +4225,10 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Branch JSON payload: Value must not be nil")
+		}
+
 		*v = NewStatementBranch(payload.Value)
 		return nil
 	case 13:
@@ -2829,6 +4236,17 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Block JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).List {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Block JSON payload: Value.List[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementBlock(payload.Value)
 		return nil
 	case 14:
@@ -2836,6 +4254,25 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.If JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Condition == nil {
+				return fmt.Errorf("invalid Statement.If JSON payload: Value.Condition must not be nil")
+			}
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.If JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.If JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementIf(payload.Value)
 		return nil
 	case 15:
@@ -2843,6 +4280,22 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Case JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).List {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Case JSON payload: Value.List[] must not be nil")
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Body {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Statement.Case JSON payload: Value.Body[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementCase(payload.Value)
 		return nil
 	case 16:
@@ -2850,6 +4303,22 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Switch JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.Switch JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.Switch JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementSwitch(payload.Value)
 		return nil
 	case 17:
@@ -2857,6 +4326,25 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Assignment == nil {
+				return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value.Assignment must not be nil")
+			}
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementTypeSwitch(payload.Value)
 		return nil
 	case 18:
@@ -2864,6 +4352,17 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Communication JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Body {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Statement.Communication JSON payload: Value.Body[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewStatementCommunication(payload.Value)
 		return nil
 	case 19:
@@ -2871,6 +4370,22 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Select JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.Select JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.Select JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementSelect(payload.Value)
 		return nil
 	case 20:
@@ -2878,6 +4393,22 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.For JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.For JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.For JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementFor(payload.Value)
 		return nil
 	case 21:
@@ -2885,6 +4416,25 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Statement.Range JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Source == nil {
+				return fmt.Errorf("invalid Statement.Range JSON payload: Value.Source must not be nil")
+			}
+			if (*payload.Value).Body == nil {
+				return fmt.Errorf("invalid Statement.Range JSON payload: Value.Body must not be nil")
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Statement.Range JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewStatementRange(payload.Value)
 		return nil
 	default:
@@ -3228,6 +4778,29 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Specification.Import JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Specification.Import JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Path == nil {
+				return fmt.Errorf("invalid Specification.Import JSON payload: Value.Path must not be nil")
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue1 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue1 == nil {
+						return fmt.Errorf("invalid Specification.Import JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewSpecificationImport(payload.Value)
 		return nil
 	case "Value":
@@ -3235,6 +4808,36 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Specification.Value JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Specification.Value JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Names {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Specification.Value JSON payload: Value.Names[] must not be nil")
+				}
+			}
+			for _, tgoJSONValue2 := range (*payload.Value).Values {
+				if tgoJSONValue2 == nil {
+					return fmt.Errorf("invalid Specification.Value JSON payload: Value.Values[] must not be nil")
+				}
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue3 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue3 == nil {
+						return fmt.Errorf("invalid Specification.Value JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewSpecificationValue(payload.Value)
 		return nil
 	case "Type":
@@ -3242,6 +4845,63 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Specification.Type JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Specification.Type JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Specification.Type JSON payload: Value.Name must not be nil")
+			}
+			if (*payload.Value).TypeParams != nil {
+				for _, tgoJSONValue1 := range (*(*payload.Value).TypeParams).List {
+					if tgoJSONValue1 == nil {
+						return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[] must not be nil")
+					}
+					if tgoJSONValue1 != nil {
+						if (*tgoJSONValue1).Doc != nil {
+							for _, tgoJSONValue2 := range (*(*tgoJSONValue1).Doc).List {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue3 := range (*tgoJSONValue1).Names {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue1).Type == nil {
+							return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue1).Comment != nil {
+							for _, tgoJSONValue4 := range (*(*tgoJSONValue1).Comment).List {
+								if tgoJSONValue4 == nil {
+									return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Specification.Type JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue5 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue5 == nil {
+						return fmt.Errorf("invalid Specification.Type JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewSpecificationType(payload.Value)
 		return nil
 	default:
@@ -3315,6 +4975,29 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Specification.Import JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Specification.Import JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Path == nil {
+				return fmt.Errorf("invalid Specification.Import JSON payload: Value.Path must not be nil")
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue1 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue1 == nil {
+						return fmt.Errorf("invalid Specification.Import JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewSpecificationImport(payload.Value)
 		return nil
 	case 2:
@@ -3322,6 +5005,36 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Specification.Value JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Specification.Value JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Names {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Specification.Value JSON payload: Value.Names[] must not be nil")
+				}
+			}
+			for _, tgoJSONValue2 := range (*payload.Value).Values {
+				if tgoJSONValue2 == nil {
+					return fmt.Errorf("invalid Specification.Value JSON payload: Value.Values[] must not be nil")
+				}
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue3 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue3 == nil {
+						return fmt.Errorf("invalid Specification.Value JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewSpecificationValue(payload.Value)
 		return nil
 	case 3:
@@ -3329,6 +5042,63 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Specification.Type JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Specification.Type JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Specification.Type JSON payload: Value.Name must not be nil")
+			}
+			if (*payload.Value).TypeParams != nil {
+				for _, tgoJSONValue1 := range (*(*payload.Value).TypeParams).List {
+					if tgoJSONValue1 == nil {
+						return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[] must not be nil")
+					}
+					if tgoJSONValue1 != nil {
+						if (*tgoJSONValue1).Doc != nil {
+							for _, tgoJSONValue2 := range (*(*tgoJSONValue1).Doc).List {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue3 := range (*tgoJSONValue1).Names {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue1).Type == nil {
+							return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue1).Comment != nil {
+							for _, tgoJSONValue4 := range (*(*tgoJSONValue1).Comment).List {
+								if tgoJSONValue4 == nil {
+									return fmt.Errorf("invalid Specification.Type JSON payload: Value.TypeParams.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Specification.Type JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue5 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue5 == nil {
+						return fmt.Errorf("invalid Specification.Type JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewSpecificationType(payload.Value)
 		return nil
 	default:
@@ -3564,6 +5334,10 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.Bad JSON payload: Value must not be nil")
+		}
+
 		*v = NewDeclarationBad(payload.Value)
 		return nil
 	case "General":
@@ -3571,6 +5345,24 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.General JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Declaration.General JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Specs {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Declaration.General JSON payload: Value.Specs[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewDeclarationGeneral(payload.Value)
 		return nil
 	case "Function":
@@ -3578,6 +5370,161 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.Function JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Receiver != nil {
+				for _, tgoJSONValue1 := range (*(*payload.Value).Receiver).List {
+					if tgoJSONValue1 == nil {
+						return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[] must not be nil")
+					}
+					if tgoJSONValue1 != nil {
+						if (*tgoJSONValue1).Doc != nil {
+							for _, tgoJSONValue2 := range (*(*tgoJSONValue1).Doc).List {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue3 := range (*tgoJSONValue1).Names {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue1).Type == nil {
+							return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue1).Comment != nil {
+							for _, tgoJSONValue4 := range (*(*tgoJSONValue1).Comment).List {
+								if tgoJSONValue4 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Name must not be nil")
+			}
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Type != nil {
+				if (*(*payload.Value).Type).TypeParams != nil {
+					for _, tgoJSONValue5 := range (*(*(*payload.Value).Type).TypeParams).List {
+						if tgoJSONValue5 == nil {
+							return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[] must not be nil")
+						}
+						if tgoJSONValue5 != nil {
+							if (*tgoJSONValue5).Doc != nil {
+								for _, tgoJSONValue6 := range (*(*tgoJSONValue5).Doc).List {
+									if tgoJSONValue6 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue7 := range (*tgoJSONValue5).Names {
+								if tgoJSONValue7 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue5).Type == nil {
+								return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue5).Comment != nil {
+								for _, tgoJSONValue8 := range (*(*tgoJSONValue5).Comment).List {
+									if tgoJSONValue8 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+				if (*(*payload.Value).Type).Params == nil {
+					return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params must not be nil")
+				}
+				if (*(*payload.Value).Type).Params != nil {
+					for _, tgoJSONValue9 := range (*(*(*payload.Value).Type).Params).List {
+						if tgoJSONValue9 == nil {
+							return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[] must not be nil")
+						}
+						if tgoJSONValue9 != nil {
+							if (*tgoJSONValue9).Doc != nil {
+								for _, tgoJSONValue10 := range (*(*tgoJSONValue9).Doc).List {
+									if tgoJSONValue10 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue11 := range (*tgoJSONValue9).Names {
+								if tgoJSONValue11 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue9).Type == nil {
+								return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue9).Comment != nil {
+								for _, tgoJSONValue12 := range (*(*tgoJSONValue9).Comment).List {
+									if tgoJSONValue12 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+				if (*(*payload.Value).Type).Results != nil {
+					for _, tgoJSONValue13 := range (*(*(*payload.Value).Type).Results).List {
+						if tgoJSONValue13 == nil {
+							return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[] must not be nil")
+						}
+						if tgoJSONValue13 != nil {
+							if (*tgoJSONValue13).Doc != nil {
+								for _, tgoJSONValue14 := range (*(*tgoJSONValue13).Doc).List {
+									if tgoJSONValue14 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue15 := range (*tgoJSONValue13).Names {
+								if tgoJSONValue15 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue13).Type == nil {
+								return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue13).Comment != nil {
+								for _, tgoJSONValue16 := range (*(*tgoJSONValue13).Comment).List {
+									if tgoJSONValue16 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue17 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue17 == nil {
+						return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewDeclarationFunction(payload.Value)
 		return nil
 	case "Enum":
@@ -3585,6 +5532,87 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.Enum JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Name must not be nil")
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Variants {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[] must not be nil")
+				}
+				if tgoJSONValue1 != nil {
+					if (*tgoJSONValue1).Doc != nil {
+						for _, tgoJSONValue2 := range (*(*tgoJSONValue1).Doc).List {
+							if tgoJSONValue2 == nil {
+								return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Doc.List[] must not be nil")
+							}
+						}
+					}
+					if (*tgoJSONValue1).Name == nil {
+						return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Name must not be nil")
+					}
+					for _, tgoJSONValue3 := range (*tgoJSONValue1).Fields {
+						if tgoJSONValue3 == nil {
+							return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[] must not be nil")
+						}
+						if tgoJSONValue3 != nil {
+							if (*tgoJSONValue3).Field == nil {
+								return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field must not be nil")
+							}
+							if (*tgoJSONValue3).Field != nil {
+								if (*(*tgoJSONValue3).Field).Doc != nil {
+									for _, tgoJSONValue4 := range (*(*(*tgoJSONValue3).Field).Doc).List {
+										if tgoJSONValue4 == nil {
+											return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field.Doc.List[] must not be nil")
+										}
+									}
+								}
+								for _, tgoJSONValue5 := range (*(*tgoJSONValue3).Field).Names {
+									if tgoJSONValue5 == nil {
+										return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field.Names[] must not be nil")
+									}
+								}
+								if (*(*tgoJSONValue3).Field).Type == nil {
+									return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field.Type must not be nil")
+								}
+								if (*(*tgoJSONValue3).Field).Comment != nil {
+									for _, tgoJSONValue6 := range (*(*(*tgoJSONValue3).Field).Comment).List {
+										if tgoJSONValue6 == nil {
+											return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field.Comment.List[] must not be nil")
+										}
+									}
+								}
+							}
+						}
+					}
+					if (*tgoJSONValue1).Comment != nil {
+						for _, tgoJSONValue7 := range (*(*tgoJSONValue1).Comment).List {
+							if tgoJSONValue7 == nil {
+								return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Comment.List[] must not be nil")
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue8 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue8 == nil {
+						return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewDeclarationEnum(payload.Value)
 		return nil
 	case "Struct":
@@ -3592,6 +5620,63 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.Struct JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Name must not be nil")
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Fields {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[] must not be nil")
+				}
+				if tgoJSONValue1 != nil {
+					if (*tgoJSONValue1).Field == nil {
+						return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field must not be nil")
+					}
+					if (*tgoJSONValue1).Field != nil {
+						if (*(*tgoJSONValue1).Field).Doc != nil {
+							for _, tgoJSONValue2 := range (*(*(*tgoJSONValue1).Field).Doc).List {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field.Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue3 := range (*(*tgoJSONValue1).Field).Names {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field.Names[] must not be nil")
+							}
+						}
+						if (*(*tgoJSONValue1).Field).Type == nil {
+							return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field.Type must not be nil")
+						}
+						if (*(*tgoJSONValue1).Field).Comment != nil {
+							for _, tgoJSONValue4 := range (*(*(*tgoJSONValue1).Field).Comment).List {
+								if tgoJSONValue4 == nil {
+									return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field.Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue5 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue5 == nil {
+						return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewDeclarationStruct(payload.Value)
 		return nil
 	default:
@@ -3669,6 +5754,10 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.Bad JSON payload: Value must not be nil")
+		}
+
 		*v = NewDeclarationBad(payload.Value)
 		return nil
 	case 2:
@@ -3676,6 +5765,24 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.General JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Declaration.General JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Specs {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Declaration.General JSON payload: Value.Specs[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewDeclarationGeneral(payload.Value)
 		return nil
 	case 3:
@@ -3683,6 +5790,161 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.Function JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Receiver != nil {
+				for _, tgoJSONValue1 := range (*(*payload.Value).Receiver).List {
+					if tgoJSONValue1 == nil {
+						return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[] must not be nil")
+					}
+					if tgoJSONValue1 != nil {
+						if (*tgoJSONValue1).Doc != nil {
+							for _, tgoJSONValue2 := range (*(*tgoJSONValue1).Doc).List {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[].Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue3 := range (*tgoJSONValue1).Names {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[].Names[] must not be nil")
+							}
+						}
+						if (*tgoJSONValue1).Type == nil {
+							return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[].Type must not be nil")
+						}
+						if (*tgoJSONValue1).Comment != nil {
+							for _, tgoJSONValue4 := range (*(*tgoJSONValue1).Comment).List {
+								if tgoJSONValue4 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Receiver.List[].Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Name must not be nil")
+			}
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Type != nil {
+				if (*(*payload.Value).Type).TypeParams != nil {
+					for _, tgoJSONValue5 := range (*(*(*payload.Value).Type).TypeParams).List {
+						if tgoJSONValue5 == nil {
+							return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[] must not be nil")
+						}
+						if tgoJSONValue5 != nil {
+							if (*tgoJSONValue5).Doc != nil {
+								for _, tgoJSONValue6 := range (*(*tgoJSONValue5).Doc).List {
+									if tgoJSONValue6 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue7 := range (*tgoJSONValue5).Names {
+								if tgoJSONValue7 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue5).Type == nil {
+								return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue5).Comment != nil {
+								for _, tgoJSONValue8 := range (*(*tgoJSONValue5).Comment).List {
+									if tgoJSONValue8 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.TypeParams.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+				if (*(*payload.Value).Type).Params == nil {
+					return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params must not be nil")
+				}
+				if (*(*payload.Value).Type).Params != nil {
+					for _, tgoJSONValue9 := range (*(*(*payload.Value).Type).Params).List {
+						if tgoJSONValue9 == nil {
+							return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[] must not be nil")
+						}
+						if tgoJSONValue9 != nil {
+							if (*tgoJSONValue9).Doc != nil {
+								for _, tgoJSONValue10 := range (*(*tgoJSONValue9).Doc).List {
+									if tgoJSONValue10 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue11 := range (*tgoJSONValue9).Names {
+								if tgoJSONValue11 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue9).Type == nil {
+								return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue9).Comment != nil {
+								for _, tgoJSONValue12 := range (*(*tgoJSONValue9).Comment).List {
+									if tgoJSONValue12 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Params.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+				if (*(*payload.Value).Type).Results != nil {
+					for _, tgoJSONValue13 := range (*(*(*payload.Value).Type).Results).List {
+						if tgoJSONValue13 == nil {
+							return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[] must not be nil")
+						}
+						if tgoJSONValue13 != nil {
+							if (*tgoJSONValue13).Doc != nil {
+								for _, tgoJSONValue14 := range (*(*tgoJSONValue13).Doc).List {
+									if tgoJSONValue14 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[].Doc.List[] must not be nil")
+									}
+								}
+							}
+							for _, tgoJSONValue15 := range (*tgoJSONValue13).Names {
+								if tgoJSONValue15 == nil {
+									return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[].Names[] must not be nil")
+								}
+							}
+							if (*tgoJSONValue13).Type == nil {
+								return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[].Type must not be nil")
+							}
+							if (*tgoJSONValue13).Comment != nil {
+								for _, tgoJSONValue16 := range (*(*tgoJSONValue13).Comment).List {
+									if tgoJSONValue16 == nil {
+										return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Type.Results.List[].Comment.List[] must not be nil")
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Body != nil {
+				for _, tgoJSONValue17 := range (*(*payload.Value).Body).List {
+					if tgoJSONValue17 == nil {
+						return fmt.Errorf("invalid Declaration.Function JSON payload: Value.Body.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewDeclarationFunction(payload.Value)
 		return nil
 	case 4:
@@ -3690,6 +5952,87 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.Enum JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Name must not be nil")
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Variants {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[] must not be nil")
+				}
+				if tgoJSONValue1 != nil {
+					if (*tgoJSONValue1).Doc != nil {
+						for _, tgoJSONValue2 := range (*(*tgoJSONValue1).Doc).List {
+							if tgoJSONValue2 == nil {
+								return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Doc.List[] must not be nil")
+							}
+						}
+					}
+					if (*tgoJSONValue1).Name == nil {
+						return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Name must not be nil")
+					}
+					for _, tgoJSONValue3 := range (*tgoJSONValue1).Fields {
+						if tgoJSONValue3 == nil {
+							return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[] must not be nil")
+						}
+						if tgoJSONValue3 != nil {
+							if (*tgoJSONValue3).Field == nil {
+								return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field must not be nil")
+							}
+							if (*tgoJSONValue3).Field != nil {
+								if (*(*tgoJSONValue3).Field).Doc != nil {
+									for _, tgoJSONValue4 := range (*(*(*tgoJSONValue3).Field).Doc).List {
+										if tgoJSONValue4 == nil {
+											return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field.Doc.List[] must not be nil")
+										}
+									}
+								}
+								for _, tgoJSONValue5 := range (*(*tgoJSONValue3).Field).Names {
+									if tgoJSONValue5 == nil {
+										return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field.Names[] must not be nil")
+									}
+								}
+								if (*(*tgoJSONValue3).Field).Type == nil {
+									return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field.Type must not be nil")
+								}
+								if (*(*tgoJSONValue3).Field).Comment != nil {
+									for _, tgoJSONValue6 := range (*(*(*tgoJSONValue3).Field).Comment).List {
+										if tgoJSONValue6 == nil {
+											return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Fields[].Field.Comment.List[] must not be nil")
+										}
+									}
+								}
+							}
+						}
+					}
+					if (*tgoJSONValue1).Comment != nil {
+						for _, tgoJSONValue7 := range (*(*tgoJSONValue1).Comment).List {
+							if tgoJSONValue7 == nil {
+								return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Variants[].Comment.List[] must not be nil")
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue8 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue8 == nil {
+						return fmt.Errorf("invalid Declaration.Enum JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewDeclarationEnum(payload.Value)
 		return nil
 	case 5:
@@ -3697,6 +6040,63 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Declaration.Struct JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Name must not be nil")
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Fields {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[] must not be nil")
+				}
+				if tgoJSONValue1 != nil {
+					if (*tgoJSONValue1).Field == nil {
+						return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field must not be nil")
+					}
+					if (*tgoJSONValue1).Field != nil {
+						if (*(*tgoJSONValue1).Field).Doc != nil {
+							for _, tgoJSONValue2 := range (*(*(*tgoJSONValue1).Field).Doc).List {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field.Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue3 := range (*(*tgoJSONValue1).Field).Names {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field.Names[] must not be nil")
+							}
+						}
+						if (*(*tgoJSONValue1).Field).Type == nil {
+							return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field.Type must not be nil")
+						}
+						if (*(*tgoJSONValue1).Field).Comment != nil {
+							for _, tgoJSONValue4 := range (*(*(*tgoJSONValue1).Field).Comment).List {
+								if tgoJSONValue4 == nil {
+									return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Fields[].Field.Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue5 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue5 == nil {
+						return fmt.Errorf("invalid Declaration.Struct JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewDeclarationStruct(payload.Value)
 		return nil
 	default:
@@ -4192,6 +6592,77 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.File JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Node.File JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Node.File JSON payload: Value.Name must not be nil")
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Declarations {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Node.File JSON payload: Value.Declarations[] must not be nil")
+				}
+			}
+			for _, tgoJSONValue2 := range (*payload.Value).Imports {
+				if tgoJSONValue2 == nil {
+					return fmt.Errorf("invalid Node.File JSON payload: Value.Imports[] must not be nil")
+				}
+				if tgoJSONValue2 != nil {
+					if (*tgoJSONValue2).Doc != nil {
+						for _, tgoJSONValue3 := range (*(*tgoJSONValue2).Doc).List {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Node.File JSON payload: Value.Imports[].Doc.List[] must not be nil")
+							}
+						}
+					}
+					if (*tgoJSONValue2).Path == nil {
+						return fmt.Errorf("invalid Node.File JSON payload: Value.Imports[].Path must not be nil")
+					}
+					if (*tgoJSONValue2).Comment != nil {
+						for _, tgoJSONValue4 := range (*(*tgoJSONValue2).Comment).List {
+							if tgoJSONValue4 == nil {
+								return fmt.Errorf("invalid Node.File JSON payload: Value.Imports[].Comment.List[] must not be nil")
+							}
+						}
+					}
+				}
+			}
+			for _, tgoJSONValue5 := range (*payload.Value).Comments {
+				if tgoJSONValue5 == nil {
+					return fmt.Errorf("invalid Node.File JSON payload: Value.Comments[] must not be nil")
+				}
+				if tgoJSONValue5 != nil {
+					for _, tgoJSONValue6 := range (*tgoJSONValue5).List {
+						if tgoJSONValue6 == nil {
+							return fmt.Errorf("invalid Node.File JSON payload: Value.Comments[].List[] must not be nil")
+						}
+					}
+				}
+			}
+			for _, tgoJSONValue7 := range (*payload.Value).attached {
+				for _, tgoJSONValue8 := range tgoJSONValue7 {
+					if tgoJSONValue8 == nil {
+						return fmt.Errorf("invalid Node.File JSON payload: Value.attached[][] must not be nil")
+					}
+					if tgoJSONValue8 != nil {
+						for _, tgoJSONValue9 := range (*tgoJSONValue8).List {
+							if tgoJSONValue9 == nil {
+								return fmt.Errorf("invalid Node.File JSON payload: Value.attached[][].List[] must not be nil")
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewNodeFile(payload.Value)
 		return nil
 	case "Declaration":
@@ -4199,6 +6670,10 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Declaration JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeDeclaration(payload.Value)
 		return nil
 	case "Specification":
@@ -4206,6 +6681,10 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Specification JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeSpecification(payload.Value)
 		return nil
 	case "Statement":
@@ -4213,6 +6692,10 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Statement JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeStatement(payload.Value)
 		return nil
 	case "Expression":
@@ -4220,6 +6703,10 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Expression JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeExpression(payload.Value)
 		return nil
 	case "Field":
@@ -4227,6 +6714,34 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Field JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Node.Field JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Names {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Node.Field JSON payload: Value.Names[] must not be nil")
+				}
+			}
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Node.Field JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue2 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue2 == nil {
+						return fmt.Errorf("invalid Node.Field JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewNodeField(payload.Value)
 		return nil
 	case "FieldList":
@@ -4234,6 +6749,41 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.FieldList JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).List {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[] must not be nil")
+				}
+				if tgoJSONValue0 != nil {
+					if (*tgoJSONValue0).Doc != nil {
+						for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+							if tgoJSONValue1 == nil {
+								return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[].Doc.List[] must not be nil")
+							}
+						}
+					}
+					for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+						if tgoJSONValue2 == nil {
+							return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[].Names[] must not be nil")
+						}
+					}
+					if (*tgoJSONValue0).Type == nil {
+						return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[].Type must not be nil")
+					}
+					if (*tgoJSONValue0).Comment != nil {
+						for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[].Comment.List[] must not be nil")
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewNodeFieldList(payload.Value)
 		return nil
 	case "TGoField":
@@ -4241,6 +6791,39 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.TGoField JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Field == nil {
+				return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field must not be nil")
+			}
+			if (*payload.Value).Field != nil {
+				if (*(*payload.Value).Field).Doc != nil {
+					for _, tgoJSONValue0 := range (*(*(*payload.Value).Field).Doc).List {
+						if tgoJSONValue0 == nil {
+							return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field.Doc.List[] must not be nil")
+						}
+					}
+				}
+				for _, tgoJSONValue1 := range (*(*payload.Value).Field).Names {
+					if tgoJSONValue1 == nil {
+						return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field.Names[] must not be nil")
+					}
+				}
+				if (*(*payload.Value).Field).Type == nil {
+					return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field.Type must not be nil")
+				}
+				if (*(*payload.Value).Field).Comment != nil {
+					for _, tgoJSONValue2 := range (*(*(*payload.Value).Field).Comment).List {
+						if tgoJSONValue2 == nil {
+							return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field.Comment.List[] must not be nil")
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewNodeTGoField(payload.Value)
 		return nil
 	case "EnumVariant":
@@ -4248,6 +6831,63 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Name must not be nil")
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Fields {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[] must not be nil")
+				}
+				if tgoJSONValue1 != nil {
+					if (*tgoJSONValue1).Field == nil {
+						return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field must not be nil")
+					}
+					if (*tgoJSONValue1).Field != nil {
+						if (*(*tgoJSONValue1).Field).Doc != nil {
+							for _, tgoJSONValue2 := range (*(*(*tgoJSONValue1).Field).Doc).List {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field.Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue3 := range (*(*tgoJSONValue1).Field).Names {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field.Names[] must not be nil")
+							}
+						}
+						if (*(*tgoJSONValue1).Field).Type == nil {
+							return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field.Type must not be nil")
+						}
+						if (*(*tgoJSONValue1).Field).Comment != nil {
+							for _, tgoJSONValue4 := range (*(*(*tgoJSONValue1).Field).Comment).List {
+								if tgoJSONValue4 == nil {
+									return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field.Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue5 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue5 == nil {
+						return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewNodeEnumVariant(payload.Value)
 		return nil
 	case "Identifier":
@@ -4255,6 +6895,10 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Identifier JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeIdentifier(payload.Value)
 		return nil
 	case "Comment":
@@ -4262,6 +6906,10 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Comment JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeComment(payload.Value)
 		return nil
 	case "CommentGroup":
@@ -4269,6 +6917,17 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.CommentGroup JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).List {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Node.CommentGroup JSON payload: Value.List[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewNodeCommentGroup(payload.Value)
 		return nil
 	default:
@@ -4360,6 +7019,77 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.File JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Node.File JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Node.File JSON payload: Value.Name must not be nil")
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Declarations {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Node.File JSON payload: Value.Declarations[] must not be nil")
+				}
+			}
+			for _, tgoJSONValue2 := range (*payload.Value).Imports {
+				if tgoJSONValue2 == nil {
+					return fmt.Errorf("invalid Node.File JSON payload: Value.Imports[] must not be nil")
+				}
+				if tgoJSONValue2 != nil {
+					if (*tgoJSONValue2).Doc != nil {
+						for _, tgoJSONValue3 := range (*(*tgoJSONValue2).Doc).List {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Node.File JSON payload: Value.Imports[].Doc.List[] must not be nil")
+							}
+						}
+					}
+					if (*tgoJSONValue2).Path == nil {
+						return fmt.Errorf("invalid Node.File JSON payload: Value.Imports[].Path must not be nil")
+					}
+					if (*tgoJSONValue2).Comment != nil {
+						for _, tgoJSONValue4 := range (*(*tgoJSONValue2).Comment).List {
+							if tgoJSONValue4 == nil {
+								return fmt.Errorf("invalid Node.File JSON payload: Value.Imports[].Comment.List[] must not be nil")
+							}
+						}
+					}
+				}
+			}
+			for _, tgoJSONValue5 := range (*payload.Value).Comments {
+				if tgoJSONValue5 == nil {
+					return fmt.Errorf("invalid Node.File JSON payload: Value.Comments[] must not be nil")
+				}
+				if tgoJSONValue5 != nil {
+					for _, tgoJSONValue6 := range (*tgoJSONValue5).List {
+						if tgoJSONValue6 == nil {
+							return fmt.Errorf("invalid Node.File JSON payload: Value.Comments[].List[] must not be nil")
+						}
+					}
+				}
+			}
+			for _, tgoJSONValue7 := range (*payload.Value).attached {
+				for _, tgoJSONValue8 := range tgoJSONValue7 {
+					if tgoJSONValue8 == nil {
+						return fmt.Errorf("invalid Node.File JSON payload: Value.attached[][] must not be nil")
+					}
+					if tgoJSONValue8 != nil {
+						for _, tgoJSONValue9 := range (*tgoJSONValue8).List {
+							if tgoJSONValue9 == nil {
+								return fmt.Errorf("invalid Node.File JSON payload: Value.attached[][].List[] must not be nil")
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewNodeFile(payload.Value)
 		return nil
 	case 2:
@@ -4367,6 +7097,10 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Declaration JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeDeclaration(payload.Value)
 		return nil
 	case 3:
@@ -4374,6 +7108,10 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Specification JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeSpecification(payload.Value)
 		return nil
 	case 4:
@@ -4381,6 +7119,10 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Statement JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeStatement(payload.Value)
 		return nil
 	case 5:
@@ -4388,6 +7130,10 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Expression JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeExpression(payload.Value)
 		return nil
 	case 6:
@@ -4395,6 +7141,34 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Field JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Node.Field JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Names {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Node.Field JSON payload: Value.Names[] must not be nil")
+				}
+			}
+			if (*payload.Value).Type == nil {
+				return fmt.Errorf("invalid Node.Field JSON payload: Value.Type must not be nil")
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue2 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue2 == nil {
+						return fmt.Errorf("invalid Node.Field JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewNodeField(payload.Value)
 		return nil
 	case 7:
@@ -4402,6 +7176,41 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.FieldList JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).List {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[] must not be nil")
+				}
+				if tgoJSONValue0 != nil {
+					if (*tgoJSONValue0).Doc != nil {
+						for _, tgoJSONValue1 := range (*(*tgoJSONValue0).Doc).List {
+							if tgoJSONValue1 == nil {
+								return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[].Doc.List[] must not be nil")
+							}
+						}
+					}
+					for _, tgoJSONValue2 := range (*tgoJSONValue0).Names {
+						if tgoJSONValue2 == nil {
+							return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[].Names[] must not be nil")
+						}
+					}
+					if (*tgoJSONValue0).Type == nil {
+						return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[].Type must not be nil")
+					}
+					if (*tgoJSONValue0).Comment != nil {
+						for _, tgoJSONValue3 := range (*(*tgoJSONValue0).Comment).List {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Node.FieldList JSON payload: Value.List[].Comment.List[] must not be nil")
+							}
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewNodeFieldList(payload.Value)
 		return nil
 	case 8:
@@ -4409,6 +7218,39 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.TGoField JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Field == nil {
+				return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field must not be nil")
+			}
+			if (*payload.Value).Field != nil {
+				if (*(*payload.Value).Field).Doc != nil {
+					for _, tgoJSONValue0 := range (*(*(*payload.Value).Field).Doc).List {
+						if tgoJSONValue0 == nil {
+							return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field.Doc.List[] must not be nil")
+						}
+					}
+				}
+				for _, tgoJSONValue1 := range (*(*payload.Value).Field).Names {
+					if tgoJSONValue1 == nil {
+						return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field.Names[] must not be nil")
+					}
+				}
+				if (*(*payload.Value).Field).Type == nil {
+					return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field.Type must not be nil")
+				}
+				if (*(*payload.Value).Field).Comment != nil {
+					for _, tgoJSONValue2 := range (*(*(*payload.Value).Field).Comment).List {
+						if tgoJSONValue2 == nil {
+							return fmt.Errorf("invalid Node.TGoField JSON payload: Value.Field.Comment.List[] must not be nil")
+						}
+					}
+				}
+			}
+		}
+
 		*v = NewNodeTGoField(payload.Value)
 		return nil
 	case 9:
@@ -4416,6 +7258,63 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Doc != nil {
+				for _, tgoJSONValue0 := range (*(*payload.Value).Doc).List {
+					if tgoJSONValue0 == nil {
+						return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Doc.List[] must not be nil")
+					}
+				}
+			}
+			if (*payload.Value).Name == nil {
+				return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Name must not be nil")
+			}
+			for _, tgoJSONValue1 := range (*payload.Value).Fields {
+				if tgoJSONValue1 == nil {
+					return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[] must not be nil")
+				}
+				if tgoJSONValue1 != nil {
+					if (*tgoJSONValue1).Field == nil {
+						return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field must not be nil")
+					}
+					if (*tgoJSONValue1).Field != nil {
+						if (*(*tgoJSONValue1).Field).Doc != nil {
+							for _, tgoJSONValue2 := range (*(*(*tgoJSONValue1).Field).Doc).List {
+								if tgoJSONValue2 == nil {
+									return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field.Doc.List[] must not be nil")
+								}
+							}
+						}
+						for _, tgoJSONValue3 := range (*(*tgoJSONValue1).Field).Names {
+							if tgoJSONValue3 == nil {
+								return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field.Names[] must not be nil")
+							}
+						}
+						if (*(*tgoJSONValue1).Field).Type == nil {
+							return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field.Type must not be nil")
+						}
+						if (*(*tgoJSONValue1).Field).Comment != nil {
+							for _, tgoJSONValue4 := range (*(*(*tgoJSONValue1).Field).Comment).List {
+								if tgoJSONValue4 == nil {
+									return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Fields[].Field.Comment.List[] must not be nil")
+								}
+							}
+						}
+					}
+				}
+			}
+			if (*payload.Value).Comment != nil {
+				for _, tgoJSONValue5 := range (*(*payload.Value).Comment).List {
+					if tgoJSONValue5 == nil {
+						return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value.Comment.List[] must not be nil")
+					}
+				}
+			}
+		}
+
 		*v = NewNodeEnumVariant(payload.Value)
 		return nil
 	case 10:
@@ -4423,6 +7322,10 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Identifier JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeIdentifier(payload.Value)
 		return nil
 	case 11:
@@ -4430,6 +7333,10 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.Comment JSON payload: Value must not be nil")
+		}
+
 		*v = NewNodeComment(payload.Value)
 		return nil
 	case 12:
@@ -4437,6 +7344,17 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Node.CommentGroup JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).List {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid Node.CommentGroup JSON payload: Value.List[] must not be nil")
+				}
+			}
+		}
+
 		*v = NewNodeCommentGroup(payload.Value)
 		return nil
 	default:

@@ -372,6 +372,10 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Fact == nil {
+			return fmt.Errorf("invalid sourceModel.Enum JSON payload: Fact must not be nil")
+		}
+
 		*v = NewsourceModelEnum(payload.Name, payload.Fact, payload.Variants)
 		return nil
 	case "Struct":
@@ -450,6 +454,10 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Fact == nil {
+			return fmt.Errorf("invalid sourceModel.Enum JSON payload: Fact must not be nil")
+		}
+
 		*v = NewsourceModelEnum(payload.Name, payload.Fact, payload.Variants)
 		return nil
 	case 2:

@@ -151,6 +151,9 @@ func (p *packageUnit) checkAndLower() error {
 	if p.addExactEnumConstraintMethods() {
 		p.typecheck()
 	}
+	if p.addEnumJSONNonNilChecks() {
+		p.typecheck()
+	}
 	p.checkGeneratedPredeclaredNames()
 	p.checkGeneratedEnumNameCollisions()
 	p.checkCheckedStructs()
