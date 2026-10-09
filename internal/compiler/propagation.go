@@ -25,10 +25,10 @@ type propagationLowerer struct {
 	names    map[string]bool
 }
 
-// lowerPropagations turns each postfix marker into a direct Go error branch.
+// lowerPropagations lowers postfix errors and comprehensions into direct control flow.
 func (p *packageUnit) lowerPropagations() {
 	for _, source := range p.Sources {
-		functions := p.propagationFunctions(source.File)
+		functions := p.loweringFunctions(source)
 		for _, function := range functions {
 			lowerer := &propagationLowerer{
 				unit: p, source: source, function: function, fmtAlias: "",
@@ -36,7 +36,7 @@ func (p *packageUnit) lowerPropagations() {
 			}
 			function.body.List = lowerer.statements(function.body.List)
 		}
-		p.reportUnloweredPropagations(source)
+		p.reportUnloweredExtensions(source)
 	}
 }
 
@@ -57,24 +57,29 @@ func functionGotoLabels(body *ast.BlockStmt) map[string]bool {
 	return labels
 }
 
-// propagationFunctions collects named and literal functions before the AST changes.
-func (p *packageUnit) propagationFunctions(file *ast.File) []propagationFunction {
+// loweringFunctions collects source functions but skips projection-only literals.
+func (p *packageUnit) loweringFunctions(source *source) []propagationFunction {
 	result := []propagationFunction(nil)
-	ast.Inspect(file, func(node ast.Node) bool {
+	ast.Inspect(source.File, func(node ast.Node) bool {
+		if call, ok := node.(*ast.CallExpr); ok {
+			if _, _, found := comprehensionMarker(source, call); found {
+				return false
+			}
+		}
 		switch function := node.(type) {
 		case *ast.FuncDecl:
 			signature, _ := p.info.TypeOf(function.Name).(*types.Signature)
-			result = appendPropagationFunction(result, function.Body, function.Type, signature)
+			result = appendLoweringFunction(result, function.Body, function.Type, signature)
 		case *ast.FuncLit:
 			signature, _ := p.info.TypeOf(function.Type).(*types.Signature)
-			result = appendPropagationFunction(result, function.Body, function.Type, signature)
+			result = appendLoweringFunction(result, function.Body, function.Type, signature)
 		}
 		return true
 	})
 	return result
 }
 
-func appendPropagationFunction(
+func appendLoweringFunction(
 	functions []propagationFunction,
 	body *ast.BlockStmt,
 	typeNode *ast.FuncType,
@@ -108,7 +113,7 @@ func flattenedResultTypes(fields *ast.FieldList) []ast.Expr {
 	return result
 }
 
-func (p *packageUnit) reportUnloweredPropagations(source *source) {
+func (p *packageUnit) reportUnloweredExtensions(source *source) {
 	ast.Inspect(source.File, func(node ast.Node) bool {
 		call, ok := node.(*ast.CallExpr)
 		if !ok {
@@ -116,6 +121,9 @@ func (p *packageUnit) reportUnloweredPropagations(source *source) {
 		}
 		if metadata, found := propagationMarker(source, call); found {
 			p.failAt(metadata.Bang, "error propagation needs a function body")
+		}
+		if metadata, _, found := comprehensionMarker(source, call); found {
+			p.failAt(metadata.Position, "comprehension needs a function body")
 		}
 		return true
 	})
@@ -176,7 +184,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		condition, prefix := l.expression(node.Cond)
 		node.Cond = condition
 		scopedInitializer := node.Init != nil
-		if len(prefix) > 0 || l.statementHasPropagation(node.Init) {
+		if len(prefix) > 0 || l.statementHasLowering(node.Init) {
 			prefix = append(l.simpleStatement(node.Init), prefix...)
 			node.Init = nil
 		}
@@ -191,7 +199,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		value, prefix := l.optionalExpression(node.Tag)
 		node.Tag = value
 		scopedInitializer := node.Init != nil
-		if len(prefix) > 0 || l.statementHasPropagation(node.Init) {
+		if len(prefix) > 0 || l.statementHasLowering(node.Init) {
 			prefix = append(l.simpleStatement(node.Init), prefix...)
 			node.Init = nil
 		}
@@ -205,7 +213,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		node.Body.List = l.statements(node.Body.List)
 		l.rejectStatement(node.Init, "for initializer")
 		l.rejectStatement(node.Post, "for post statement")
-		if l.hasPropagation(node.Cond) {
+		if l.hasLowering(node.Cond) {
 			condition, prefix := l.expression(node.Cond)
 			exit := &ast.IfStmt{
 				Cond: &ast.UnaryExpr{Op: token.NOT, X: condition},
@@ -314,7 +322,7 @@ func rewriteControlBranches(node ast.Node, oldLabel string, newLabel string) boo
 }
 
 func (l *propagationLowerer) assignment(node *ast.AssignStmt) []ast.Stmt {
-	if !l.assignmentHasPropagation(node) {
+	if !l.assignmentHasLowering(node) {
 		return []ast.Stmt{node}
 	}
 	if statements, fused := l.directShortAssignment(node); fused {
@@ -339,9 +347,9 @@ func (l *propagationLowerer) assignment(node *ast.AssignStmt) []ast.Stmt {
 	return append(prefix, node)
 }
 
-func (l *propagationLowerer) assignmentHasPropagation(node *ast.AssignStmt) bool {
+func (l *propagationLowerer) assignmentHasLowering(node *ast.AssignStmt) bool {
 	for _, expression := range append(append([]ast.Expr(nil), node.Lhs...), node.Rhs...) {
-		if l.hasPropagation(expression) {
+		if l.hasLowering(expression) {
 			return true
 		}
 	}
@@ -456,7 +464,7 @@ func isCheapAssignmentOperand(expression ast.Expr) bool {
 }
 
 func (l *propagationLowerer) increment(node *ast.IncDecStmt) []ast.Stmt {
-	if !l.hasPropagation(node.X) {
+	if !l.hasLowering(node.X) {
 		return []ast.Stmt{node}
 	}
 	value, prefix := l.assignmentTarget(node.X)
@@ -541,7 +549,7 @@ func (l *propagationLowerer) simpleStatement(statement ast.Stmt) []ast.Stmt {
 	return l.statement(statement)
 }
 
-func (l *propagationLowerer) statementHasPropagation(statement ast.Stmt) bool {
+func (l *propagationLowerer) statementHasLowering(statement ast.Stmt) bool {
 	if statement == nil {
 		return false
 	}
@@ -591,7 +599,7 @@ func (l *propagationLowerer) expressions(input []ast.Expr) ([]ast.Expr, []ast.St
 	for index, expression := range result {
 		lowered, before := l.expression(expression)
 		prefix = append(prefix, before...)
-		if l.laterPropagation(result[index+1:]) {
+		if l.laterLowering(result[index+1:]) {
 			lowered, before = l.materializeOrderedOperand(lowered)
 			prefix = append(prefix, before...)
 		}
@@ -600,9 +608,9 @@ func (l *propagationLowerer) expressions(input []ast.Expr) ([]ast.Expr, []ast.St
 	return result, prefix
 }
 
-func (l *propagationLowerer) laterPropagation(expressions []ast.Expr) bool {
+func (l *propagationLowerer) laterLowering(expressions []ast.Expr) bool {
 	for _, expression := range expressions {
-		if l.hasPropagation(expression) {
+		if l.hasLowering(expression) {
 			return true
 		}
 	}
@@ -611,8 +619,11 @@ func (l *propagationLowerer) laterPropagation(expressions []ast.Expr) bool {
 
 //nolint:cyclop,gocognit // Each expression case keeps Go operand order.
 func (l *propagationLowerer) expression(expression ast.Expr) (ast.Expr, []ast.Stmt) {
-	if expression == nil || !l.hasPropagation(expression) {
+	if expression == nil || !l.hasLowering(expression) {
 		return expression, nil
+	}
+	if metadata, function, ok := comprehensionMarker(l.source, expression); ok {
+		return l.comprehension(metadata, function, expression)
 	}
 	if metadata, ok := propagationMarker(l.source, expression); ok {
 		values, prefix := l.propagation(expression)
@@ -749,7 +760,7 @@ func (l *propagationLowerer) optionalExpression(expression ast.Expr) (ast.Expr, 
 	return l.expression(expression)
 }
 
-func (l *propagationLowerer) hasPropagation(expression ast.Expr) bool {
+func (l *propagationLowerer) hasLowering(expression ast.Expr) bool {
 	if expression == nil {
 		return false
 	}
@@ -766,6 +777,10 @@ func (l *propagationLowerer) hasPropagation(expression ast.Expr) bool {
 			return true
 		}
 		if _, ok := propagationMarker(l.source, call); ok {
+			found = true
+			return false
+		}
+		if _, _, ok := comprehensionMarker(l.source, call); ok {
 			found = true
 			return false
 		}
@@ -957,6 +972,10 @@ func (l *propagationLowerer) rejectExpression(expression ast.Expr, context strin
 		}
 		if metadata, found := propagationMarker(l.source, call); found {
 			l.unit.failAt(metadata.Bang, "error propagation is not valid in %s", context)
+			return false
+		}
+		if metadata, _, found := comprehensionMarker(l.source, call); found {
+			l.unit.failAt(metadata.Position, "comprehension is not valid in %s", context)
 			return false
 		}
 		return true

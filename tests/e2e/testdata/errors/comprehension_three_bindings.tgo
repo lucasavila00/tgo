@@ -1,0 +1,5 @@
+package errors
+
+func Values(input []int) []int {
+    return []int{for first, second, third := range input { first + second + third }}
+}

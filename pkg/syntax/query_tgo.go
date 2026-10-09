@@ -68,6 +68,8 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 			return nil, false
 		case 26:
 			return nil, false
+		case 27:
+			return nil, false
 		default:
 			panic("invalid Expression variant")
 		}
@@ -321,6 +323,8 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 		return nil, false
 	case 26:
 		return nil, false
+	case 27:
+		return nil, false
 	default:
 
 		// PropagationExpressionOf returns an error propagation node payload.
@@ -337,6 +341,8 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	case 26:
 		item := __tgo_match_9.TgoPropagation()
 		return item.Value, true
+	case 27:
+		return nil, false
 	case 1:
 		return nil, false
 	case 2:
@@ -389,8 +395,114 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 		return nil, false
 	default:
 
-		// NonNilPointerTypeOf returns a non-nil pointer type payload.
+		// ComprehensionExpressionOf returns a collection comprehension payload.
 		panic("invalid Expression variant")
+	}
+}
+
+func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
+	expression, ok := ExpressionOf(node)
+	if !ok {
+		return nil, false
+	}
+	switch __tgo_match_10 := *expression; __tgo_match_10.TgoTag() {
+	case 27:
+		item := __tgo_match_10.TgoComprehension()
+		return item.Value, true
+	case 1:
+		return nil, false
+	case 2:
+		return nil, false
+	case 3:
+		return nil, false
+	case 4:
+		return nil, false
+	case 5:
+		return nil, false
+	case 6:
+		return nil, false
+	case 7:
+		return nil, false
+	case 8:
+		return nil, false
+	case 9:
+		return nil, false
+	case 10:
+		return nil, false
+	case 11:
+		return nil, false
+	case 12:
+		return nil, false
+	case 13:
+		return nil, false
+	case 14:
+		return nil, false
+	case 15:
+		return nil, false
+	case 16:
+		return nil, false
+	case 17:
+		return nil, false
+	case 18:
+		return nil, false
+	case 19:
+		return nil, false
+	case 20:
+		return nil, false
+	case 21:
+		return nil, false
+	case 22:
+		return nil, false
+	case 23:
+		return nil, false
+	case 24:
+		return nil, false
+	case 25:
+		return nil, false
+	case 26:
+		return nil, false
+	default:
+
+		// ComprehensionRangeClauseOf returns one range clause.
+		panic("invalid Expression variant")
+	}
+}
+
+func ComprehensionRangeClauseOf(
+	value *ComprehensionClause,
+) (*ComprehensionRangeClause, bool) {
+	if value == nil {
+		return nil, false
+	}
+	switch __tgo_match_11 := *value; __tgo_match_11.TgoTag() {
+	case 1:
+		item := __tgo_match_11.TgoRange()
+		return item.Value, true
+	case 2:
+		return nil, false
+	default:
+
+		// ComprehensionFilterClauseOf returns one filter clause.
+		panic("invalid ComprehensionClause variant")
+	}
+}
+
+func ComprehensionFilterClauseOf(
+	value *ComprehensionClause,
+) (*ComprehensionFilterClause, bool) {
+	if value == nil {
+		return nil, false
+	}
+	switch __tgo_match_12 := *value; __tgo_match_12.TgoTag() {
+	case 2:
+		item := __tgo_match_12.TgoFilter()
+		return item.Value, true
+	case 1:
+		return nil, false
+	default:
+
+		// NonNilPointerTypeOf returns a non-nil pointer type payload.
+		panic("invalid ComprehensionClause variant")
 	}
 }
 
@@ -399,9 +511,9 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	if !ok {
 		return nil, false
 	}
-	switch __tgo_match_10 := *expression; __tgo_match_10.TgoTag() {
+	switch __tgo_match_13 := *expression; __tgo_match_13.TgoTag() {
 	case 15:
-		item := __tgo_match_10.TgoNonNilPointer()
+		item := __tgo_match_13.TgoNonNilPointer()
 		return item.Value, true
 	case 1:
 		return nil, false
@@ -453,6 +565,8 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 		return nil, false
 	case 26:
 		return nil, false
+	case 27:
+		return nil, false
 	default:
 
 		// ExpressionOf returns an expression node payload.
@@ -464,9 +578,9 @@ func ExpressionOf(node *Node) (*Expression, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch __tgo_match_11 := *node; __tgo_match_11.TgoTag() {
+	switch __tgo_match_14 := *node; __tgo_match_14.TgoTag() {
 	case 5:
-		value := __tgo_match_11.TgoExpression()
+		value := __tgo_match_14.TgoExpression()
 		return value.Value, true
 	case 1:
 		return nil, false
@@ -503,9 +617,9 @@ func StatementOf(node *Node) (*Statement, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch __tgo_match_12 := *node; __tgo_match_12.TgoTag() {
+	switch __tgo_match_15 := *node; __tgo_match_15.TgoTag() {
 	case 4:
-		value := __tgo_match_12.TgoStatement()
+		value := __tgo_match_15.TgoStatement()
 		return value.Value, true
 	case 1:
 		return nil, false
@@ -542,9 +656,9 @@ func DeclarationOf(node *Node) (*Declaration, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch __tgo_match_13 := *node; __tgo_match_13.TgoTag() {
+	switch __tgo_match_16 := *node; __tgo_match_16.TgoTag() {
 	case 2:
-		value := __tgo_match_13.TgoDeclaration()
+		value := __tgo_match_16.TgoDeclaration()
 		return value.Value, true
 	case 1:
 		return nil, false
@@ -581,9 +695,9 @@ func SpecificationOf(node *Node) (*Specification, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch __tgo_match_14 := *node; __tgo_match_14.TgoTag() {
+	switch __tgo_match_17 := *node; __tgo_match_17.TgoTag() {
 	case 3:
-		value := __tgo_match_14.TgoSpecification()
+		value := __tgo_match_17.TgoSpecification()
 		return value.Value, true
 	case 1:
 		return nil, false
@@ -617,7 +731,7 @@ func SpecificationOf(node *Node) (*Specification, bool) {
 }
 
 func ExpressionKind(value *Expression) string {
-	switch __tgo_match_15 := *value; __tgo_match_15.TgoTag() {
+	switch __tgo_match_18 := *value; __tgo_match_18.TgoTag() {
 	case 1:
 		return "Bad"
 	case 2:
@@ -670,6 +784,8 @@ func ExpressionKind(value *Expression) string {
 		return "Default"
 	case 26:
 		return "Propagation"
+	case 27:
+		return "Comprehension"
 	default:
 
 		// StatementKind returns the closed statement variant name.
@@ -678,7 +794,7 @@ func ExpressionKind(value *Expression) string {
 }
 
 func StatementKind(value *Statement) string {
-	switch __tgo_match_16 := *value; __tgo_match_16.TgoTag() {
+	switch __tgo_match_19 := *value; __tgo_match_19.TgoTag() {
 	case 1:
 		return "Bad"
 	case 2:
@@ -731,7 +847,7 @@ func StatementKind(value *Statement) string {
 }
 
 func DeclarationKind(value *Declaration) string {
-	switch __tgo_match_17 := *value; __tgo_match_17.TgoTag() {
+	switch __tgo_match_20 := *value; __tgo_match_20.TgoTag() {
 	case 1:
 		return "Bad"
 	case 2:
@@ -752,7 +868,7 @@ func DeclarationKind(value *Declaration) string {
 }
 
 func SpecificationKind(value *Specification) string {
-	switch __tgo_match_18 := *value; __tgo_match_18.TgoTag() {
+	switch __tgo_match_21 := *value; __tgo_match_21.TgoTag() {
 	case 1:
 		return "Import"
 	case 2:
@@ -770,28 +886,28 @@ func StaticCallName(value *Expression) (string, bool) {
 	if value == nil {
 		return "", false
 	}
-	switch __tgo_match_19 := *value; __tgo_match_19.TgoTag() {
+	switch __tgo_match_22 := *value; __tgo_match_22.TgoTag() {
 	case 2:
-		item := __tgo_match_19.TgoIdentifier()
+		item := __tgo_match_22.TgoIdentifier()
 		return item.Value.Name, true
 	case 8:
-		item := __tgo_match_19.TgoSelector()
+		item := __tgo_match_22.TgoSelector()
 		prefix, ok := StaticCallName(item.Value.Expression)
 		if !ok {
 			return "", false
 		}
 		return prefix + "." + item.Value.Selector.Name, true
 	case 9:
-		item := __tgo_match_19.TgoIndex()
+		item := __tgo_match_22.TgoIndex()
 		return StaticCallName(item.Value.Expression)
 	case 10:
-		item := __tgo_match_19.TgoIndexList()
+		item := __tgo_match_22.TgoIndexList()
 		return StaticCallName(item.Value.Expression)
 	case 7:
-		item := __tgo_match_19.TgoParenthesized()
+		item := __tgo_match_22.TgoParenthesized()
 		return StaticCallName(item.Value.Expression)
 	case 14:
-		item := __tgo_match_19.TgoStar()
+		item := __tgo_match_22.TgoStar()
 		return StaticCallName(item.Value.Expression)
 	case 15:
 		return "", false
@@ -832,6 +948,8 @@ func StaticCallName(value *Expression) (string, bool) {
 	case 25:
 		return "", false
 	case 26:
+		return "", false
+	case 27:
 		return "", false
 	default:
 		panic("invalid Expression variant")

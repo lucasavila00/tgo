@@ -102,9 +102,11 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 	file.children = make(map[frontNode][]frontNode)
 	file.parents = make(map[frontNode]frontNode)
 	file.extensions = nil
+	anchoredChildren := make(map[frontNode][]frontNode, len(anchors))
 	for child, parent := range anchors {
 		if nodePresent(child) && nodePresent(parent) {
 			file.parents[child] = parent
+			anchoredChildren[parent] = append(anchoredChildren[parent], child)
 		}
 	}
 	visited := make(map[frontNode]bool)
@@ -115,11 +117,7 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 		}
 		visited[node] = true
 		children := syntaxChildren(file, node)
-		for child, parent := range anchors {
-			if parent == node {
-				children = append(children, child)
-			}
-		}
+		children = append(children, anchoredChildren[node]...)
 		filtered := children[:0]
 		seenChild := make(map[frontNode]bool)
 		for _, child := range children {
@@ -209,6 +207,15 @@ func syntaxChildren(file *frontFile, node frontNode) []frontNode {
 		children = nil
 	case *frontPropagateExpr:
 		children = []frontNode{node.Expression}
+	case *frontComprehensionExpr:
+		children = []frontNode{node.Type}
+		for _, clause := range node.Clauses {
+			for _, binding := range clause.Bindings {
+				children = append(children, binding)
+			}
+			children = append(children, clause.Expression)
+		}
+		children = append(children, node.Result.Key, node.Result.Value)
 	default:
 		if goNode, ok := node.(ast.Node); ok {
 			children = directGoChildren(goNode)

@@ -171,6 +171,7 @@ func sourceCall(expression %syntax.Expression) (*syntax.CallExpression, bool) {
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
@@ -203,6 +204,7 @@ func sourceIdentifier(expression %syntax.Expression) (*syntax.Identifier, bool) 
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
@@ -235,6 +237,7 @@ func sourceBinary(expression %syntax.Expression) (*syntax.BinaryExpression, bool
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
@@ -269,38 +272,42 @@ func sourceCompositeLiteral(
 	case ChannelType(_): return nil, false
 	case Default(_): return nil, false
 	case Propagation(_): return nil, false
+	case Comprehension(_): return nil, false
 	}
 }
 
 // sourceUnparenthesized removes all outer source parentheses.
 func sourceUnparenthesized(expression %syntax.Expression) %syntax.Expression {
-	match *expression {
-	case Parenthesized(value): return sourceUnparenthesized(value.Value.Expression)
-	case Bad(_): return expression
-	case Identifier(_): return expression
-	case Ellipsis(_): return expression
-	case BasicLiteral(_): return expression
-	case FunctionLiteral(_): return expression
-	case CompositeLiteral(_): return expression
-	case Selector(_): return expression
-	case Index(_): return expression
-	case IndexList(_): return expression
-	case Slice(_): return expression
-	case TypeAssertion(_): return expression
-	case Call(_): return expression
-	case Star(_): return expression
-	case NonNilPointer(_): return expression
-	case Unary(_): return expression
-	case Binary(_): return expression
-	case KeyValue(_): return expression
-	case ArrayType(_): return expression
-	case StructType(_): return expression
-	case FunctionType(_): return expression
-	case InterfaceType(_): return expression
-	case MapType(_): return expression
-	case ChannelType(_): return expression
-	case Default(_): return expression
-	case Propagation(_): return expression
+	for {
+		match *expression {
+		case Parenthesized(value): expression = value.Value.Expression
+		case Bad(_): return expression
+		case Identifier(_): return expression
+		case Ellipsis(_): return expression
+		case BasicLiteral(_): return expression
+		case FunctionLiteral(_): return expression
+		case CompositeLiteral(_): return expression
+		case Selector(_): return expression
+		case Index(_): return expression
+		case IndexList(_): return expression
+		case Slice(_): return expression
+		case TypeAssertion(_): return expression
+		case Call(_): return expression
+		case Star(_): return expression
+		case NonNilPointer(_): return expression
+		case Unary(_): return expression
+		case Binary(_): return expression
+		case KeyValue(_): return expression
+		case ArrayType(_): return expression
+		case StructType(_): return expression
+		case FunctionType(_): return expression
+		case InterfaceType(_): return expression
+		case MapType(_): return expression
+		case ChannelType(_): return expression
+		case Default(_): return expression
+		case Propagation(_): return expression
+		case Comprehension(_): return expression
+		}
 	}
 }
 
@@ -382,6 +389,7 @@ func expressionFunctionPosition(value %syntax.Expression) (token.Pos, bool) {
 	case ChannelType(_): return token.NoPos, false
 	case Default(_): return token.NoPos, false
 	case Propagation(_): return token.NoPos, false
+	case Comprehension(_): return token.NoPos, false
 	}
 }
 

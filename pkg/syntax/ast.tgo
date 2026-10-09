@@ -81,6 +81,7 @@ type Expression enum {
 	ChannelType struct { Value %ChannelType }
 	Default struct { Value %DefaultExpression }
 	Propagation struct { Value %PropagationExpression }
+	Comprehension struct { Value %ComprehensionExpression }
 }
 
 // BadExpression is an invalid expression range.

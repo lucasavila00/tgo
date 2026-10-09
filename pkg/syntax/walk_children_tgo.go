@@ -46,10 +46,10 @@ func buildPublicIndex(file *File) {
 }
 
 func isExtension(node Node) bool {
-	switch __tgo_match_27 := node; __tgo_match_27.TgoTag() {
+	switch __tgo_match_30 := node; __tgo_match_30.TgoTag() {
 	case 2:
-		value := __tgo_match_27.TgoDeclaration()
-		switch __tgo_match_28 := *value.Value; __tgo_match_28.TgoTag() {
+		value := __tgo_match_30.TgoDeclaration()
+		switch __tgo_match_31 := *value.Value; __tgo_match_31.TgoTag() {
 		case 1:
 			return false
 		case 2:
@@ -66,8 +66,8 @@ func isExtension(node Node) bool {
 			panic("invalid Declaration variant")
 		}
 	case 4:
-		value := __tgo_match_27.TgoStatement()
-		switch __tgo_match_29 := *value.Value; __tgo_match_29.TgoTag() {
+		value := __tgo_match_30.TgoStatement()
+		switch __tgo_match_32 := *value.Value; __tgo_match_32.TgoTag() {
 		case 1:
 			return false
 		case 2:
@@ -116,8 +116,8 @@ func isExtension(node Node) bool {
 			panic("invalid Statement variant")
 		}
 	case 5:
-		value := __tgo_match_27.TgoExpression()
-		switch __tgo_match_30 := *value.Value; __tgo_match_30.TgoTag() {
+		value := __tgo_match_30.TgoExpression()
+		switch __tgo_match_33 := *value.Value; __tgo_match_33.TgoTag() {
 		case 1:
 			return false
 		case 2:
@@ -170,6 +170,8 @@ func isExtension(node Node) bool {
 			return true
 		case 26:
 			return true
+		case 27:
+			return true
 		default:
 			panic("invalid Expression variant")
 		}
@@ -199,43 +201,43 @@ func isExtension(node Node) bool {
 }
 
 func publicChildren(node Node) []Node {
-	switch __tgo_match_31 := node; __tgo_match_31.TgoTag() {
+	switch __tgo_match_34 := node; __tgo_match_34.TgoTag() {
 	case 1:
-		value := __tgo_match_31.TgoFile()
+		value := __tgo_match_34.TgoFile()
 		return fileChildren(value.Value)
 	case 2:
-		value := __tgo_match_31.TgoDeclaration()
+		value := __tgo_match_34.TgoDeclaration()
 		return declarationChildren(value.Value)
 	case 3:
-		value := __tgo_match_31.TgoSpecification()
+		value := __tgo_match_34.TgoSpecification()
 		return specificationChildren(value.Value)
 	case 4:
-		value := __tgo_match_31.TgoStatement()
+		value := __tgo_match_34.TgoStatement()
 		return statementChildren(value.Value)
 	case 5:
-		value := __tgo_match_31.TgoExpression()
+		value := __tgo_match_34.TgoExpression()
 		return expressionChildren(value.Value)
 	case 6:
-		value := __tgo_match_31.TgoField()
+		value := __tgo_match_34.TgoField()
 		return fieldChildren(value.Value)
 	case 7:
-		value := __tgo_match_31.TgoFieldList()
+		value := __tgo_match_34.TgoFieldList()
 		return fieldListChildren(value.Value)
 	case 8:
-		value := __tgo_match_31.TgoTGoField()
+		value := __tgo_match_34.TgoTGoField()
 		return tgoFieldChildren(value.Value)
 	case 9:
-		value := __tgo_match_31.TgoEnumVariant()
+		value := __tgo_match_34.TgoEnumVariant()
 		return enumVariantChildren(value.Value)
 	case 10:
-		value := __tgo_match_31.TgoMatchCase()
+		value := __tgo_match_34.TgoMatchCase()
 		return matchCaseChildren(value.Value)
 	case 11:
 		return nil
 	case 12:
 		return nil
 	case 13:
-		value := __tgo_match_31.TgoCommentGroup()
+		value := __tgo_match_34.TgoCommentGroup()
 		result := make([]Node, 0, len(value.Value.List))
 		for _, item := range value.Value.List {
 			result = append(result, nodeComment(item))
@@ -268,7 +270,7 @@ func expressionChildren(value *Expression) []Node {
 			result = append(result, nodeExpression(item))
 		}
 	}
-	switch __tgo_match_32 := *value; __tgo_match_32.TgoTag() {
+	switch __tgo_match_35 := *value; __tgo_match_35.TgoTag() {
 	case 1:
 		return result
 	case 2:
@@ -278,39 +280,39 @@ func expressionChildren(value *Expression) []Node {
 	case 25:
 		return result
 	case 3:
-		item := __tgo_match_32.TgoEllipsis()
+		item := __tgo_match_35.TgoEllipsis()
 		if item.Value.Element != nil {
 			addExpression(item.Value.Element)
 		}
 	case 5:
-		item := __tgo_match_32.TgoFunctionLiteral()
+		item := __tgo_match_35.TgoFunctionLiteral()
 		addExpression(functionTypeNode(item.Value.Type))
 		result = append(
 			result, nodeStatement(blockStatementNode(item.Value.Body)),
 		)
 	case 6:
-		item := __tgo_match_32.TgoCompositeLiteral()
+		item := __tgo_match_35.TgoCompositeLiteral()
 		if item.Value.Type != nil {
 			addExpression(item.Value.Type)
 		}
 		addExpressions(item.Value.Elements)
 	case 7:
-		item := __tgo_match_32.TgoParenthesized()
+		item := __tgo_match_35.TgoParenthesized()
 		addExpression(item.Value.Expression)
 	case 8:
-		item := __tgo_match_32.TgoSelector()
+		item := __tgo_match_35.TgoSelector()
 		addExpression(item.Value.Expression)
 		result = append(result, nodeIdentifier(item.Value.Selector))
 	case 9:
-		item := __tgo_match_32.TgoIndex()
+		item := __tgo_match_35.TgoIndex()
 		addExpression(item.Value.Expression)
 		addExpression(item.Value.Index)
 	case 10:
-		item := __tgo_match_32.TgoIndexList()
+		item := __tgo_match_35.TgoIndexList()
 		addExpression(item.Value.Expression)
 		addExpressions(item.Value.Indices)
 	case 11:
-		item := __tgo_match_32.TgoSlice()
+		item := __tgo_match_35.TgoSlice()
 		addExpression(item.Value.Expression)
 		if item.Value.Low != nil {
 			addExpression(item.Value.Low)
@@ -322,43 +324,43 @@ func expressionChildren(value *Expression) []Node {
 			addExpression(item.Value.Max)
 		}
 	case 12:
-		item := __tgo_match_32.TgoTypeAssertion()
+		item := __tgo_match_35.TgoTypeAssertion()
 		addExpression(item.Value.Expression)
 		if item.Value.Type != nil {
 			addExpression(item.Value.Type)
 		}
 	case 13:
-		item := __tgo_match_32.TgoCall()
+		item := __tgo_match_35.TgoCall()
 		addExpression(item.Value.Callee)
 		addExpressions(item.Value.Args)
 	case 14:
-		item := __tgo_match_32.TgoStar()
+		item := __tgo_match_35.TgoStar()
 		addExpression(item.Value.Expression)
 	case 15:
-		item := __tgo_match_32.TgoNonNilPointer()
+		item := __tgo_match_35.TgoNonNilPointer()
 		addExpression(item.Value.Type)
 	case 16:
-		item := __tgo_match_32.TgoUnary()
+		item := __tgo_match_35.TgoUnary()
 		addExpression(item.Value.Expression)
 	case 17:
-		item := __tgo_match_32.TgoBinary()
+		item := __tgo_match_35.TgoBinary()
 		addExpression(item.Value.Left)
 		addExpression(item.Value.Right)
 	case 18:
-		item := __tgo_match_32.TgoKeyValue()
+		item := __tgo_match_35.TgoKeyValue()
 		addExpression(item.Value.Key)
 		addExpression(item.Value.Value)
 	case 19:
-		item := __tgo_match_32.TgoArrayType()
+		item := __tgo_match_35.TgoArrayType()
 		if item.Value.Length != nil {
 			addExpression(item.Value.Length)
 		}
 		addExpression(item.Value.Element)
 	case 20:
-		item := __tgo_match_32.TgoStructType()
+		item := __tgo_match_35.TgoStructType()
 		result = append(result, nodeFieldList(item.Value.Fields))
 	case 21:
-		item := __tgo_match_32.TgoFunctionType()
+		item := __tgo_match_35.TgoFunctionType()
 		if item.Value.TypeParams != nil {
 			result = append(result, nodeFieldList(item.Value.TypeParams))
 		}
@@ -367,18 +369,40 @@ func expressionChildren(value *Expression) []Node {
 			result = append(result, nodeFieldList(item.Value.Results))
 		}
 	case 22:
-		item := __tgo_match_32.TgoInterfaceType()
+		item := __tgo_match_35.TgoInterfaceType()
 		result = append(result, nodeFieldList(item.Value.Methods))
 	case 23:
-		item := __tgo_match_32.TgoMapType()
+		item := __tgo_match_35.TgoMapType()
 		addExpression(item.Value.Key)
 		addExpression(item.Value.Value)
 	case 24:
-		item := __tgo_match_32.TgoChannelType()
+		item := __tgo_match_35.TgoChannelType()
 		addExpression(item.Value.Value)
 	case 26:
-		item := __tgo_match_32.TgoPropagation()
+		item := __tgo_match_35.TgoPropagation()
 		addExpression(item.Value.Expression)
+	case 27:
+		item := __tgo_match_35.TgoComprehension()
+		addExpression(item.Value.Type)
+		for _, clause := range item.Value.Clauses {
+			switch __tgo_match_36 := clause; __tgo_match_36.TgoTag() {
+			case 1:
+				value := __tgo_match_36.TgoRange()
+				for _, binding := range value.Value.Bindings {
+					result = append(result, nodeIdentifier(binding))
+				}
+				addExpression(value.Value.Source)
+			case 2:
+				value := __tgo_match_36.TgoFilter()
+				addExpression(value.Value.Condition)
+			default:
+				panic("invalid ComprehensionClause variant")
+			}
+		}
+		if item.Value.Result.Key != nil {
+			addExpression(item.Value.Result.Key)
+		}
+		addExpression(item.Value.Result.Value)
 	default:
 		panic("invalid Expression variant")
 	}
@@ -403,51 +427,51 @@ func statementChildren(value *Statement) []Node {
 			result = append(result, nodeExpression(item))
 		}
 	}
-	switch __tgo_match_33 := *value; __tgo_match_33.TgoTag() {
+	switch __tgo_match_37 := *value; __tgo_match_37.TgoTag() {
 	case 1:
 		return result
 	case 3:
 		return result
 	case 2:
-		item := __tgo_match_33.TgoDeclaration()
+		item := __tgo_match_37.TgoDeclaration()
 		result = append(result, nodeDeclaration(item.Value.Declaration))
 	case 4:
-		item := __tgo_match_33.TgoLabeled()
+		item := __tgo_match_37.TgoLabeled()
 		result = append(result, nodeIdentifier(item.Value.Label))
 		addStatement(item.Value.Statement)
 	case 5:
-		item := __tgo_match_33.TgoExpression()
+		item := __tgo_match_37.TgoExpression()
 		addExpression(item.Value.Expression)
 	case 6:
-		item := __tgo_match_33.TgoSend()
+		item := __tgo_match_37.TgoSend()
 		addExpression(item.Value.Channel)
 		addExpression(item.Value.Value)
 	case 7:
-		item := __tgo_match_33.TgoIncrement()
+		item := __tgo_match_37.TgoIncrement()
 		addExpression(item.Value.Expression)
 	case 8:
-		item := __tgo_match_33.TgoAssignment()
+		item := __tgo_match_37.TgoAssignment()
 		addExpressions(item.Value.Left)
 		addExpressions(item.Value.Right)
 	case 9:
-		item := __tgo_match_33.TgoGo()
+		item := __tgo_match_37.TgoGo()
 		addExpression(item.Value.Call)
 	case 10:
-		item := __tgo_match_33.TgoDefer()
+		item := __tgo_match_37.TgoDefer()
 		addExpression(item.Value.Call)
 	case 11:
-		item := __tgo_match_33.TgoReturn()
+		item := __tgo_match_37.TgoReturn()
 		addExpressions(item.Value.Results)
 	case 12:
-		item := __tgo_match_33.TgoBranch()
+		item := __tgo_match_37.TgoBranch()
 		if item.Value.Label != nil {
 			result = append(result, nodeIdentifier(item.Value.Label))
 		}
 	case 13:
-		item := __tgo_match_33.TgoBlock()
+		item := __tgo_match_37.TgoBlock()
 		addStatements(item.Value.List)
 	case 14:
-		item := __tgo_match_33.TgoIf()
+		item := __tgo_match_37.TgoIf()
 		if item.Value.Init != nil {
 			addStatement(item.Value.Init)
 		}
@@ -457,11 +481,11 @@ func statementChildren(value *Statement) []Node {
 			addStatement(item.Value.Else)
 		}
 	case 15:
-		item := __tgo_match_33.TgoCase()
+		item := __tgo_match_37.TgoCase()
 		addExpressions(item.Value.List)
 		addStatements(item.Value.Body)
 	case 16:
-		item := __tgo_match_33.TgoSwitch()
+		item := __tgo_match_37.TgoSwitch()
 		if item.Value.Init != nil {
 			addStatement(item.Value.Init)
 		}
@@ -470,23 +494,23 @@ func statementChildren(value *Statement) []Node {
 		}
 		addStatement(blockStatementNode(item.Value.Body))
 	case 17:
-		item := __tgo_match_33.TgoTypeSwitch()
+		item := __tgo_match_37.TgoTypeSwitch()
 		if item.Value.Init != nil {
 			addStatement(item.Value.Init)
 		}
 		addStatement(item.Value.Assignment)
 		addStatement(blockStatementNode(item.Value.Body))
 	case 18:
-		item := __tgo_match_33.TgoCommunication()
+		item := __tgo_match_37.TgoCommunication()
 		if item.Value.Communication != nil {
 			addStatement(item.Value.Communication)
 		}
 		addStatements(item.Value.Body)
 	case 19:
-		item := __tgo_match_33.TgoSelect()
+		item := __tgo_match_37.TgoSelect()
 		addStatement(blockStatementNode(item.Value.Body))
 	case 20:
-		item := __tgo_match_33.TgoFor()
+		item := __tgo_match_37.TgoFor()
 		if item.Value.Init != nil {
 			addStatement(item.Value.Init)
 		}
@@ -498,7 +522,7 @@ func statementChildren(value *Statement) []Node {
 		}
 		addStatement(blockStatementNode(item.Value.Body))
 	case 21:
-		item := __tgo_match_33.TgoRange()
+		item := __tgo_match_37.TgoRange()
 		if item.Value.Key != nil {
 			addExpression(item.Value.Key)
 		}
@@ -508,7 +532,7 @@ func statementChildren(value *Statement) []Node {
 		addExpression(item.Value.Source)
 		addStatement(blockStatementNode(item.Value.Body))
 	case 22:
-		item := __tgo_match_33.TgoMatch()
+		item := __tgo_match_37.TgoMatch()
 		addExpression(item.Value.Subject)
 		for _, value := range item.Value.Cases {
 			result = append(result, nodeMatchCase(value))
@@ -521,17 +545,17 @@ func statementChildren(value *Statement) []Node {
 
 func declarationChildren(value *Declaration) []Node {
 	result := []Node(nil)
-	switch __tgo_match_34 := *value; __tgo_match_34.TgoTag() {
+	switch __tgo_match_38 := *value; __tgo_match_38.TgoTag() {
 	case 1:
 		return result
 	case 2:
-		item := __tgo_match_34.TgoGeneral()
+		item := __tgo_match_38.TgoGeneral()
 		result = addComment(result, item.Value.Doc)
 		for _, spec := range item.Value.Specs {
 			result = append(result, nodeSpecification(spec))
 		}
 	case 3:
-		item := __tgo_match_34.TgoFunction()
+		item := __tgo_match_38.TgoFunction()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Receiver != nil {
 			result = append(result, nodeFieldList(item.Value.Receiver))
@@ -544,7 +568,7 @@ func declarationChildren(value *Declaration) []Node {
 			)
 		}
 	case 4:
-		item := __tgo_match_34.TgoEnum()
+		item := __tgo_match_38.TgoEnum()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Tag != nil {
 			tag := NewExpressionBasicLiteral(ExpressionBasicLiteral{Value: item.Value.Tag})
@@ -556,7 +580,7 @@ func declarationChildren(value *Declaration) []Node {
 		}
 		result = addComment(result, item.Value.Comment)
 	case 5:
-		item := __tgo_match_34.TgoStruct()
+		item := __tgo_match_38.TgoStruct()
 		result = addComment(result, item.Value.Doc)
 		result = append(result, nodeIdentifier(item.Value.Name))
 		for _, field := range item.Value.Fields {
@@ -564,7 +588,7 @@ func declarationChildren(value *Declaration) []Node {
 		}
 		result = addComment(result, item.Value.Comment)
 	case 6:
-		item := __tgo_match_34.TgoChecked()
+		item := __tgo_match_38.TgoChecked()
 		result = addComment(result, item.Value.Doc)
 		result = append(result, nodeIdentifier(item.Value.Name))
 		result = append(result, nodeExpression(item.Value.Base))
@@ -578,9 +602,9 @@ func declarationChildren(value *Declaration) []Node {
 
 func specificationChildren(value *Specification) []Node {
 	result := []Node(nil)
-	switch __tgo_match_35 := *value; __tgo_match_35.TgoTag() {
+	switch __tgo_match_39 := *value; __tgo_match_39.TgoTag() {
 	case 1:
-		item := __tgo_match_35.TgoImport()
+		item := __tgo_match_39.TgoImport()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Name != nil {
 			result = append(result, nodeIdentifier(item.Value.Name))
@@ -588,7 +612,7 @@ func specificationChildren(value *Specification) []Node {
 		result = append(result, nodeExpression(basicLiteralNode(item.Value.Path)))
 		result = addComment(result, item.Value.Comment)
 	case 2:
-		item := __tgo_match_35.TgoValue()
+		item := __tgo_match_39.TgoValue()
 		result = addComment(result, item.Value.Doc)
 		for _, name := range item.Value.Names {
 			result = append(result, nodeIdentifier(name))
@@ -601,7 +625,7 @@ func specificationChildren(value *Specification) []Node {
 		}
 		result = addComment(result, item.Value.Comment)
 	case 3:
-		item := __tgo_match_35.TgoType()
+		item := __tgo_match_39.TgoType()
 		result = addComment(result, item.Value.Doc)
 		result = append(result, nodeIdentifier(item.Value.Name))
 		if item.Value.TypeParams != nil {
