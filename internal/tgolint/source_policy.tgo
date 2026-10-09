@@ -83,6 +83,9 @@ func (c %checker) checkSourcePolicyNode(node %syntax.Node) {
 	if !ok || expression == nil {
 		return
 	}
+	if syntax.SelectorExpressionOf(expression) != nil {
+		c.checkRepresentationAccess(expression)
+	}
 	if literal := syntax.CompositeLiteralOf(expression); literal != nil {
 		c.checkCompleteLiteral(expression, literal)
 	}

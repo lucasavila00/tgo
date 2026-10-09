@@ -2,6 +2,11 @@
 
 package policygood
 
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
+
 type Quantity struct {
 	value int
 }
@@ -12,6 +17,212 @@ type TgoQuantityInput struct {
 // NewQuantity constructs and checks Quantity.
 func NewQuantity(value int) (Quantity, error) {
 	return Quantity{value}.check()
+}
+
+func tgoChoiceExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(jsontext.EndObject)
+}
+
+// Choice requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type ChoiceTag uint8
+
+const (
+	ChoiceTagText ChoiceTag = iota + 1
+	ChoiceTagNumber
+)
+
+type Choice struct {
+	tgoTag    ChoiceTag
+	tgoText   ChoiceText
+	tgoNumber ChoiceNumber
+}
+
+// Tag returns the active tag.
+func (v Choice) Tag() ChoiceTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Choice) UnknownTag() string {
+	return fmt.Sprintf("Choice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// ChoiceText is the Text payload.
+type ChoiceText struct {
+	Value string
+}
+
+// Choice constructs Choice. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value ChoiceText) Choice() Choice {
+	return Choice{tgoTag: ChoiceTagText, tgoText: value}
+}
+
+// TextPayload requires Text. No tag check.
+func (v Choice) TextPayload() ChoiceText { return v.tgoText }
+
+// ChoiceNumber is the Number payload.
+type ChoiceNumber struct {
+	Value int
+}
+
+// Choice constructs Choice. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value ChoiceNumber) Choice() Choice {
+	return Choice{tgoTag: ChoiceTagNumber, tgoNumber: value}
+}
+
+// NumberPayload requires Number. No tag check.
+func (v Choice) NumberPayload() ChoiceNumber { return v.tgoNumber }
+
+func (v Choice) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case ChoiceTagText:
+		payload := v.TextPayload()
+		return json.Marshal(struct {
+			Payload ChoiceText `json:"Text"`
+		}{Payload: payload})
+	case ChoiceTagNumber:
+		payload := v.NumberPayload()
+		return json.Marshal(struct {
+			Payload ChoiceNumber `json:"Number"`
+		}{Payload: payload})
+	default:
+		return nil, fmt.Errorf("invalid Choice JSON tag")
+	}
+}
+
+func (v Choice) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case ChoiceTagText:
+		payload := v.TextPayload()
+		return tgoChoiceExternalJSONTo(out, "Text", payload)
+	case ChoiceTagNumber:
+		payload := v.NumberPayload()
+		return tgoChoiceExternalJSONTo(out, "Number", payload)
+	default:
+		return fmt.Errorf("invalid Choice JSON tag")
+	}
+}
+
+func (v *Choice) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return fmt.Errorf("expected one Choice JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Text":
+		var payload ChoiceText
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.Choice()
+		return nil
+	case "Number":
+		var payload ChoiceNumber
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.Choice()
+		return nil
+	default:
+		return fmt.Errorf("unknown Choice JSON variant %q", variant)
+	}
+}
+
+func (v *Choice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return fmt.Errorf("expected one Choice JSON variant")
+	}
+	var payloadData jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Text":
+			current = 1
+		case "Number":
+			current = 2
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return fmt.Errorf("expected one Choice JSON variant")
+	}
+	if selected == 0 {
+		return fmt.Errorf("unknown Choice JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload ChoiceText
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.Choice()
+		return nil
+	case 2:
+		var payload ChoiceNumber
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.Choice()
+		return nil
+	default:
+		return fmt.Errorf("invalid Choice JSON tag")
+	}
 }
 
 func (value Quantity) check() (Quantity, error) { return value, nil }
@@ -48,6 +259,20 @@ func read(items map[string]Quantity, input any, channel <-chan Quantity) int {
 		return value.Value()
 	}
 	return len(values[:len(values)])
+}
+
+func readChoice(value Choice) string {
+	if value.Tag() != ChoiceTagText {
+		return ""
+	}
+	return value.TextPayload().Value
+}
+
+func choicePayload(value Choice) func() ChoiceText {
+	if ChoiceTagText != value.Tag() {
+		return nil
+	}
+	return value.TextPayload
 }
 func TgoDefaultRequestTags() map[string]string {
 	return map[string]string{}

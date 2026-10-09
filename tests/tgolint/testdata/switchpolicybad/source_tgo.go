@@ -215,6 +215,34 @@ func (v *Account) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 
 const unrelated AccountTag = 1
 
+func directPayload(account Account) string {
+	return account.PersonalPayload().Name
+}
+
+func directPayloadMethod(account Account) func() AccountPersonal {
+	return account.PersonalPayload
+}
+
+func assignedGuardPayload(account Account) string {
+	if account.Tag() != AccountTagPersonal {
+		return ""
+	}
+	account = AccountBusiness{Company: "changed"}.Account()
+	return account.PersonalPayload().Name
+}
+
+func changeAccount(account *Account) {
+	*account = AccountBusiness{Company: "changed"}.Account()
+}
+
+func escapedGuardPayload(account Account) string {
+	if account.Tag() != AccountTagPersonal {
+		return ""
+	}
+	changeAccount(&account)
+	return account.PersonalPayload().Name
+}
+
 func noDefault(account Account) {
 	switch account.Tag() {
 	case AccountTagPersonal:

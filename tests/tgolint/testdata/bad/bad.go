@@ -58,6 +58,56 @@ func Direct(event model.Event) string {
 	return event.StartedPayload().ID
 }
 
+func DirectPayloadMethod(event model.Event) func() model.EventStarted {
+	return event.StartedPayload
+}
+
+func WrongEarlyExitPayload(event model.Event) string {
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	return event.StoppedPayload().Reason
+}
+
+func AssignedEarlyExitPayload(event, replacement model.Event) string {
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	event = replacement
+	return event.StartedPayload().ID
+}
+
+func EscapedEarlyExitPayload(event model.Event) string {
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	mutateEvent(&event)
+	return event.StartedPayload().ID
+}
+
+func AssignedSwitchPayload(event, replacement model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		event = replacement
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return ""
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func ClosureSwitchPayload(event model.Event) func() string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return func() string { return event.StartedPayload().ID }
+	case model.EventTagStopped:
+		return nil
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
 type EventView interface {
 	Tag() model.EventTag
 	UnknownTag() string

@@ -1,3 +1,4 @@
 genericbad/bad.go:41:10: Event: StoppedPayload called under case EventTagStarted
 genericbad/bad.go:30:9: make creates invalid tgo checked Count values; use length zero
 genericbad/bad.go:34:6: zero declaration contains invalid tgo enum Event; construct it first
+genericbad/bad.go:74:9: Event: StartedPayload requires proof of EventTagStarted

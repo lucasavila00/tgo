@@ -7,6 +7,34 @@ type Account enum {
 
 const unrelated AccountTag = 1
 
+func directPayload(account Account) string {
+	return account.PersonalPayload().Name
+}
+
+func directPayloadMethod(account Account) func() AccountPersonal {
+	return account.PersonalPayload
+}
+
+func assignedGuardPayload(account Account) string {
+	if account.Tag() != AccountTagPersonal {
+		return ""
+	}
+	account = Account.Business{Company: "changed"}
+	return account.PersonalPayload().Name
+}
+
+func changeAccount(account *Account) {
+	*account = Account.Business{Company: "changed"}
+}
+
+func escapedGuardPayload(account Account) string {
+	if account.Tag() != AccountTagPersonal {
+		return ""
+	}
+	changeAccount(&account)
+	return account.PersonalPayload().Name
+}
+
 func noDefault(account Account) {
 	switch account.Tag() {
 	case AccountTagPersonal:
