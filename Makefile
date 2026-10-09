@@ -1,7 +1,7 @@
 .PHONY: ci ci-unlocked fast-ci fast-ci-unlocked fast-checks slow-ci slow-ci-unlocked \
 	generated ast-boundary formatter-boundary tgolint-boundary lint test unit-test unit-test-fast tgolint-unit-test \
 	e2e-test tgolint-test formatter-go-corpus \
-	allocation-test dogfood markdown tgo-size vscode-test build install-hooks install-tools
+	allocation-test dogfood markdown tgo-size pre-commit-boundary vscode-test build install-hooks install-tools
 
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
@@ -13,7 +13,7 @@ fast-ci:
 
 fast-ci-unlocked: fast-checks unit-test-fast e2e-test allocation-test
 
-fast-checks: generated ast-boundary formatter-boundary tgolint-boundary dogfood lint markdown tgo-size
+fast-checks: generated ast-boundary formatter-boundary tgolint-boundary dogfood lint markdown tgo-size pre-commit-boundary
 
 slow-ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 slow-ci-unlocked
@@ -42,6 +42,9 @@ markdown:
 
 tgo-size:
 	python3 scripts/check_tgo_size.py
+
+pre-commit-boundary:
+	python3 scripts/check_pre_commit.py
 
 vscode-test:
 	./vscode.sh --package-only

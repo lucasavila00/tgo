@@ -58,4 +58,8 @@ payload storage.
 Production source in this repository does not use `tgolint` suppression directives. The main CI
 target checks generated files, the syntax boundary, allocation budgets, Markdown, lint, and tests.
 
+Run `make install-hooks` to install the repository pre-commit hook. The hook checks staged
+whitespace and Markdown line width only. It does not build the repository or run tests. Hosted CI
+runs the complete validation suite after a branch is pushed.
+
 The [Go printer port](go-printer-port.md) defines the staged formatter replacement.
