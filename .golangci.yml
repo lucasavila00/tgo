@@ -33,8 +33,10 @@ linters:
       tab-width: 4
   exclusions:
     generated: strict
+    paths:
+      - '_tgo(?:_[^/]+)?\.go$'
     presets: []
-    rules:
+    rules: []
 
 formatters:
   enable:
