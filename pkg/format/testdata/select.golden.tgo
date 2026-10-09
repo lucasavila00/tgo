@@ -1,6 +1,6 @@
 package fixtures
 
-type Fixture struct {} checked
+type Fixture struct{} checked
 
 func choose(input <-chan int, output chan<- int) int {
 	select {

@@ -1,0 +1,206 @@
+package format
+
+import (
+	"bytes"
+	"go/token"
+	"strings"
+
+	"tgo/pkg/syntax"
+)
+
+func (p *printer) sourceCommentPadding(position token.Pos) int {
+	file := p.files.File(position)
+	if file == nil {
+		return 0
+	}
+	offset := file.Offset(position)
+	padding := 0
+	for offset > 0 {
+		switch p.source[offset-1] {
+		case ' ', '\t':
+			padding++
+			offset--
+		default:
+			return padding
+		}
+	}
+	return padding
+}
+
+func (p *printer) sourceVisualColumn(position token.Pos) int {
+	file := p.files.File(position)
+	if file == nil {
+		return 0
+	}
+	offset := file.Offset(position)
+	start := bytes.LastIndexByte(p.source[:offset], '\n') + 1
+	column := 0
+	for _, value := range p.source[start:offset] {
+		if value == '\t' {
+			column += 8 - column%8
+		} else {
+			column++
+		}
+	}
+	return column
+}
+
+func applyCommentAlignmentSections(rows []alignmentRow, sizes []int) {
+	previousSize := 0
+	log2sum := 0.0
+	count := 0
+	for index, size := range sizes {
+		if rows[index].breakBefore {
+			previousSize = 0
+			log2sum = 0
+			count = 0
+		} else if index > 0 && previousSize > 0 && size > 0 && count > 0 {
+			const ratioLimit = 2.5
+			mean := listExp2(log2sum / float64(count))
+			if ratioLimit*float64(size)/mean <= 1 {
+				rows[index].breakBefore = true
+				previousSize = 0
+				log2sum = 0
+				count = 0
+			}
+		}
+		if size > 0 {
+			log2sum += listLog2(size)
+			count++
+		}
+		previousSize = size
+	}
+}
+
+func (p *printer) expressionListCommentAlignment(
+	values []%syntax.Expression,
+	opening token.Pos,
+	closing token.Pos,
+	baseColumn int,
+	depth int,
+) []map[token.Pos]int {
+	aligned := p.listCommentAlignment(values, opening, closing, baseColumn, depth)
+	if closing.IsValid() && p.sourceToken(closing) == ':' {
+		position := p.trailingCommentPosition(p.tokenEnd(closing, 1))
+		if position.IsValid() && p.sourceCommentPadding(position) > 1 {
+			p.fixedCommentColumns[position] = p.sourceVisualColumn(position)
+		}
+	} else if closing.IsValid() {
+		position := p.trailingCommentPosition(p.tokenEnd(closing, 1))
+		target := 0
+		for _, columns := range aligned {
+			for item, column := range columns {
+				if item != position {
+					target = max(target, column)
+				}
+			}
+		}
+		if position.IsValid() && target > 0 {
+			p.fixedCommentColumns[position] = target
+		}
+	}
+	return aligned
+}
+
+func (p *printer) sourceToken(position token.Pos) byte {
+	file := p.files.File(position)
+	if file == nil {
+		return 0
+	}
+	offset := file.Offset(position)
+	if offset < 0 || offset >= len(p.source) {
+		return 0
+	}
+	return p.source[offset]
+}
+
+func (p *printer) listCommentAlignment(
+	values []%syntax.Expression,
+	opening token.Pos,
+	closing token.Pos,
+	baseColumn int,
+	depth int,
+) []map[token.Pos]int {
+	result := make([]map[token.Pos]int, len(values))
+	if len(values) == 0 {
+		return result
+	}
+	commentRows := make([]commentAlignmentRow, 0, len(values))
+	sizes := make([]int, 0, len(values))
+	lineWidth := 0
+	line := 0
+	previousCommentLine := 0
+	previousLineComment := false
+	previousStop := opening
+	for index, value := range values {
+		start := syntax.ExpressionPosition(value)
+		stop := syntax.ExpressionEnd(value)
+		startLine := p.position(start).Line
+		stopLine := p.position(stop).Line
+		if startLine == 0 || startLine != stopLine {
+			line = 0
+			lineWidth = 0
+			previousStop = stop
+			continue
+		}
+		width := p.formattedExpressionWidthAt(value, depth)
+		if line == startLine {
+			lineWidth += 2 + width
+		} else {
+			line = startLine
+			lineWidth = width
+		}
+		following := closing
+		if index+1 < len(values) {
+			following = syntax.ExpressionPosition(values[index+1])
+		}
+		separatorEnd := p.sourceCommaEnd(stop, following)
+		comment := p.trailingCommentPosition(separatorEnd)
+		suffixWidth := 0
+		if separatorEnd != stop {
+			suffixWidth = 1
+		}
+		if !comment.IsValid() && index+1 == len(values) && closing.IsValid() &&
+			p.position(closing).Line == stopLine {
+			separatorEnd = p.tokenEnd(closing, 1)
+			comment = p.trailingCommentPosition(separatorEnd)
+			if comment.IsValid() {
+				suffixWidth = 1
+			}
+		}
+		if comment.IsValid() && startLine > p.position(opening).Line {
+			lineComment := strings.HasPrefix(p.commentAt(comment).text, "//")
+			row := alignmentRow{
+				breakBefore: false,
+				cells:       []int{lineWidth + suffixWidth, 0},
+			}
+			if len(commentRows) > 0 {
+				row.breakBefore = lineComment != previousLineComment ||
+					previousCommentLine+1 < startLine ||
+					p.blankBetween(previousStop, start) ||
+					p.hasCommentBetween(previousStop, start)
+			}
+			commentRows = append(
+				commentRows,
+				commentAlignmentRow{
+					owner:    index,
+					position: comment,
+					row:      row,
+				},
+			)
+			sizes = append(sizes, lineWidth)
+			previousCommentLine = startLine
+			previousLineComment = lineComment
+			previousStop = separatorEnd
+		}
+	}
+	rows := make([]alignmentRow, len(commentRows))
+	for index, row := range commentRows {
+		rows[index] = row.row
+	}
+	applyCommentAlignmentSections(rows, sizes)
+	for index := range commentRows {
+		commentRows[index].row = rows[index]
+	}
+	return commentAlignmentColumns(commentRows, len(values), baseColumn)
+}
