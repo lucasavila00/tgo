@@ -1,16 +1,16 @@
-# Generate one checked struct constructor
+# Keep checked literals across package boundaries
 
 ## Context
 
-A checked struct is an opaque value whose usable instances passed validation.
-Private fields protect its representation, but the current literal form cannot
-cross a package boundary. A project-defined factory gives different packages
-different construction APIs and does not make the language enforce one path.
+Checked literals are the TGo construction form, but private fields make an
+imported literal fail Go visibility checks. Requiring a constructor call in
+TGo would replace the current form and give the language two APIs. TGo needs
+one construction form that works in every package and keeps the value opaque.
 
 ## Decision
 
-Keep every checked-struct field private. Generate one exported fallible
-constructor as the only construction API for TGo and Go code:
+Keep every checked-struct field private. The existing checked literal remains
+the only TGo construction form, in the declaring package and in other packages:
 
 ```tgo
 type Port struct {
@@ -25,44 +25,46 @@ func (value Port) check() (Port, error) {
 }
 ```
 
+```tgo
+port, err := model.Port{number: number}
+port := model.Port{number: number}!
+port := model.Port{number: number}!!
+```
+
+An imported checked literal is construction, not ordinary field access. It can
+name the imported checked type's private fields. This adds no syntax.
+
+The declaring package generates this public Go ABI:
+
 ```go
 func NewPort(number int) (Port, error) {
 	return Port{number: number}.check()
 }
 ```
 
-Code in the declaring package, another TGo package, or a Go package calls
-`NewPort`. TGo error propagation applies to that call without special syntax.
+The compiler uses that ABI for checked literals. It builds the raw value and
+calls the private `check` method exactly once. In TGo source, only the owning
+`check` method can use a raw literal. That method can build and normalize its
+local raw value.
 
-The generated signature follows these rules:
+Handwritten Go can call `NewPort`. TGo rejects a source-written call to the
+generated function, navigation hides it, and TGo documentation shows only the
+literal. The compiler generates no public field reader or setter.
 
-- Its name is `New<Type>` and that package-level name is reserved.
-- It has one parameter for each nonblank field, in declaration order.
-- A named field gives the parameter its name and type.
-- An embedded field gives the parameter its declared field name and type.
-- A blank field has no parameter and keeps its zero value.
-- A generic constructor repeats the type parameters and constraints of the
-  checked struct.
+Existing complete-literal and `..default` rules remain. Explicit field
+expressions run once in source order. Selected defaults run once in field
+order. `!` and `!!` keep their current error behavior.
 
-Checked structs cannot declare field defaults. One fixed function cannot both
-accept an override and omit the same argument without another API or an options
-mechanism. Approval of this decision includes this restriction.
+Package-local code can read private fields. Cross-package reads stay private.
+TGo rejects direct field writes and address-taking after construction, including
+in the declaring package. Copying the value remains normal.
 
-The constructor evaluates its arguments once, builds the private value, calls
-the package-local `check` method once, and returns its value and error. It does
-not generate readers, setters, or another validation entry point.
-
-TGo rejects a checked-struct literal outside its own `check` method. It also
-rejects field assignment after construction, including in the declaring
-package. The private `check` method can build and normalize its local raw value.
-Package-local code can read private fields, and copying a validated value keeps
-normal Go value semantics.
+Reference-valued fields keep normal Go aliases. A caller can mutate shared data
+through another alias, so checked structs do not provide deep immutability.
 
 ## Consequences
 
-- Existing checked literals must become `New<Type>` calls.
-- Other packages can construct the value but cannot access its representation.
-- Handwritten Go in the declaring package can still bypass these rules, so
-  `tgolint` reports raw literals, field writes, and unchecked constructor
-  errors.
+- TGo uses one literal API without new syntax in all packages.
+- Go uses the generated constructor ABI.
+- `tgolint` reports handwritten Go bypasses and unchecked constructor errors.
 - The zero value remains invalid and subject to the existing use checks.
