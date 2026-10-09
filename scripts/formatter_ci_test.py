@@ -154,6 +154,19 @@ class WorkflowVerificationTest(unittest.TestCase):
             failures,
         )
 
+    def test_rejects_inline_paths_under_pull_request(self) -> None:
+        source = WORKFLOW.read_text().replace(
+            "  pull_request:\n",
+            '  pull_request:\n    paths: ["pkg/format/**"]\n',
+        )
+
+        failures = formatter_ci.formatter_workflow_failures(source)
+
+        self.assertIn(
+            "formatter pull_request event must not have options",
+            failures,
+        )
+
 
 class GateTest(unittest.TestCase):
     def test_accepts_successful_required_corpus(self) -> None:

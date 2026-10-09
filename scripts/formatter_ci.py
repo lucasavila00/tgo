@@ -130,8 +130,11 @@ def formatter_workflow_failures(source: str) -> list[str]:
     )
     if pull_request is None:
         failures.append("formatter workflow needs an active pull_request event")
-    elif "    paths:" in pull_request:
-        failures.append("formatter workflow must not use a pull request path filter")
+    elif any(
+        line.strip() and not line.lstrip().startswith("#")
+        for line in pull_request
+    ):
+        failures.append("formatter pull_request event must not have options")
 
     jobs = workflow_section(source, "jobs:")
     required_jobs = {
