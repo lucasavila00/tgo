@@ -1,10 +1,19 @@
 package tgolint
 
 import (
+	"fmt"
 	"go/types"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"testing"
 	"testing/quick"
+
+	"tgo/internal/sourcefacts"
+	"tgo/pkg/syntax"
+
+	"golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/packages"
 )
 
 func TestNilTypeLatticeProperties(t *testing.T) {
@@ -87,7 +96,7 @@ func TestNilBooleanReachability(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		diagnostics, err := runNilAnalysis("value *Item", test.body)
+		diagnostics, err := runNilAnalysis(t, "value *Item", test.body)
 		if err != nil {
 			t.Fatalf("%s: %v", test.name, err)
 		}
@@ -98,4 +107,79 @@ func TestNilBooleanReachability(t *testing.T) {
 			)
 		}
 	}
+}
+
+func runNilAnalysis(
+	t testing.TB,
+	parameters string,
+	body string,
+) ([]analysis.Diagnostic, error) {
+	t.Helper()
+	source := fmt.Sprintf(`package sample
+type Item struct{}
+func need(value *Item) {}
+func subject(%s) {
+%s
+}
+`, parameters, body)
+	directory := t.TempDir()
+	if err := os.WriteFile(
+		filepath.Join(directory, "go.mod"), []byte("module sample\n"), 0o600,
+	); err != nil {
+		return nil, err
+	}
+	filename := filepath.Join(directory, "sample.go")
+	if err := os.WriteFile(filename, []byte(source), 0o600); err != nil {
+		return nil, err
+	}
+	loaded, err := packages.Load(&packages.Config{
+		Dir: directory,
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
+			packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
+	}, ".")
+	if err != nil {
+		return nil, err
+	}
+	if packages.PrintErrors(loaded) != 0 || len(loaded) != 1 {
+		return nil, fmt.Errorf("load sample package")
+	}
+	loadedPackage := loaded[0]
+	file, err := syntax.ParseGoFile(
+		loadedPackage.Fset, filename, []byte(source), syntax.ParseComments|syntax.AllErrors,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if file == nil {
+		return nil, fmt.Errorf("load sample package syntax")
+	}
+	fileSet := loadedPackage.Fset
+	if fileSet == nil {
+		return nil, fmt.Errorf("load sample package file set")
+	}
+	typeInfo := loadedPackage.TypesInfo
+	if typeInfo == nil {
+		return nil, fmt.Errorf("load sample package type facts")
+	}
+	packageTypes := loadedPackage.Types
+	if packageTypes == nil {
+		return nil, fmt.Errorf("load sample package facts")
+	}
+	diagnostics := []analysis.Diagnostic(nil)
+	pass := &analysis.Pass{
+		Fset: fileSet, Pkg: packageTypes,
+		Report: func(diagnostic analysis.Diagnostic) {
+			diagnostics = append(diagnostics, diagnostic)
+		},
+		ImportObjectFact: func(types.Object, analysis.Fact) bool { return false },
+	}
+	facts := sourcefacts.New(file, typeInfo, fileSet)
+	environment := newNilEnvironment(
+		pass, singleNilEnvironmentFile(file), facts, packageTypes, nil,
+	)
+	environment.collectNilContracts()
+	need, _ := packageTypes.Scope().Lookup("need").(*types.Func)
+	environment.contracts[need] = nilContract{"p0": true}
+	environment.checkNilFiles()
+	return diagnostics, nil
 }

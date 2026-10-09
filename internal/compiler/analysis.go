@@ -1,28 +1,28 @@
 package compiler
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
+	"maps"
 	"path/filepath"
 
+	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
 )
 
-// AnalysisSource pairs source syntax with its typed Go projection.
+// AnalysisSource contains source syntax and its generated output.
 type AnalysisSource struct {
-	Name      string
-	Output    []byte
-	Syntax    *syntax.File
-	Projected *ast.File
-	Generated map[ast.Decl]bool
+	Name   string
+	Output []byte
+	Syntax *syntax.File
 }
 
-// AnalysisPackage contains checked TGo source and its typed projection.
+// AnalysisPackage contains checked TGo source and indexed type facts.
 type AnalysisPackage struct {
 	Sources []AnalysisSource
-	FileSet *token.FileSet
-	Info    *types.Info
+	Facts   *sourcefacts.Index
 	Package *types.Package
 	NonNil  map[token.Pos]bool
 }
@@ -65,27 +65,80 @@ func AnalyzePackage(
 	if err != nil {
 		return nil, err
 	}
+	sources, facts, nonNil, err := analysisSources(unit, outputs)
+	if err != nil {
+		return nil, err
+	}
+	return &AnalysisPackage{
+		Sources: sources, Facts: facts,
+		Package: unit.typed, NonNil: nonNil,
+	}, nil
+}
+
+func analysisSources(
+	unit *packageUnit,
+	outputs map[string][]byte,
+) ([]AnalysisSource, *sourcefacts.Index, map[token.Pos]bool, error) {
+	if unit.info == nil || unit.fs == nil {
+		return nil, nil, nil, fmt.Errorf("analysis package has no type or position facts")
+	}
 	sources := make([]AnalysisSource, 0, len(unit.Sources))
 	nonNil := make(map[token.Pos]bool)
+	info := analysisTypeInfo(unit)
+	var facts *sourcefacts.Index
 	for _, source := range unit.Sources {
-		generated := make(map[ast.Decl]bool)
-		for _, declaration := range source.File.Decls {
-			if unit.generatedDecl(declaration) {
-				generated[declaration] = true
-			}
+		tree := source.Tree
+		if tree == nil {
+			return nil, nil, nil, fmt.Errorf("analysis source %s has no syntax", source.Name)
 		}
 		sources = append(sources, AnalysisSource{
 			Name: filepath.Base(source.Name), Output: outputs[unit.outputPath(source.Name)],
-			Syntax: source.Tree, Projected: source.File, Generated: generated,
+			Syntax: tree,
 		})
+		if facts == nil {
+			facts = sourcefacts.New(tree, info, unit.fs)
+		} else {
+			facts.AddFile(tree)
+		}
 		for position := range source.NonNil {
 			nonNil[position] = true
 		}
 	}
-	return &AnalysisPackage{
-		Sources: sources, FileSet: unit.fs, Info: unit.info,
-		Package: unit.typed, NonNil: nonNil,
-	}, nil
+	return sources, facts, nonNil, nil
+}
+
+// analysisTypeInfo removes generated function facts that can share source positions.
+func analysisTypeInfo(unit *packageUnit) *types.Info {
+	result := *unit.info
+	result.Types = maps.Clone(unit.info.Types)
+	result.Defs = maps.Clone(unit.info.Defs)
+	result.Uses = maps.Clone(unit.info.Uses)
+	result.Implicits = maps.Clone(unit.info.Implicits)
+	result.Selections = maps.Clone(unit.info.Selections)
+	result.Scopes = maps.Clone(unit.info.Scopes)
+	result.Instances = maps.Clone(unit.info.Instances)
+	for declaration := range unit.generated {
+		if _, ok := declaration.(*ast.FuncDecl); !ok {
+			continue
+		}
+		ast.Inspect(declaration, func(node ast.Node) bool {
+			delete(result.Implicits, node)
+			delete(result.Scopes, node)
+			if expression, ok := node.(ast.Expr); ok {
+				delete(result.Types, expression)
+			}
+			if identifier, ok := node.(*ast.Ident); ok {
+				delete(result.Defs, identifier)
+				delete(result.Uses, identifier)
+				delete(result.Instances, identifier)
+			}
+			if selector, ok := node.(*ast.SelectorExpr); ok {
+				delete(result.Selections, selector)
+			}
+			return true
+		})
+	}
+	return &result
 }
 
 func loadAnalysisPackage(

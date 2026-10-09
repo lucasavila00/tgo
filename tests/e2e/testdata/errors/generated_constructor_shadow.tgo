@@ -6,6 +6,5 @@ type Account enum {
 
 func invalidAccount() any {
 	type AccountPersonal struct { Name string }
-	NewAccountPersonal := func(AccountPersonal) string { return "captured" }
 	return Account.Personal{Name: "invalid"}
 }

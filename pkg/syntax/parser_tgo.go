@@ -20,6 +20,7 @@ const (
 	// AllErrors reports independent scanner and Go parser errors.
 	// A tgo production error stops extension parsing at the first error.
 	AllErrors
+	goSource
 )
 
 type lexeme struct {
@@ -68,34 +69,6 @@ type rawDecl struct {
 	predicateEnd   int
 	fields         []*rawField
 	variants       []*rawVariant
-}
-
-type rawCase struct {
-	start     int
-	end       int
-	caseToken int
-	variant   int
-	open      int
-	binding   int
-	close     int
-	colon     int
-	bodyStart int
-	bodyEnd   int
-}
-
-type rawMatch struct {
-	start        int
-	end          int
-	labels       []int
-	labelColons  []int
-	matchToken   int
-	subjectStart int
-	subjectEnd   int
-	open         int
-	close        int
-	cases        []*rawCase
-	node         *frontMatchStmt
-	root         frontNode
 }
 
 type rawDefault struct {
@@ -149,19 +122,19 @@ type rawComprehensionResult struct {
 }
 
 type sourceParser struct {
-	filename       string
-	source         []byte
-	tokens         []lexeme
-	comments       []sourceEdit
-	decls          []*rawDecl
-	matches        []*rawMatch
-	defaults       []*rawDefault
-	propagations   []*rawPropagation
-	comprehensions []*rawComprehension
-	nonNil         map[token.Pos]bool
-	edits          []sourceEdit
-	file           *token.File
-	mode           Mode
+	filename          string
+	source            []byte
+	tokens            []lexeme
+	comments          []sourceEdit
+	decls             []*rawDecl
+	defaults          []*rawDefault
+	exhaustiveOffsets []int
+	propagations      []*rawPropagation
+	comprehensions    []*rawComprehension
+	nonNil            map[token.Pos]bool
+	edits             []sourceEdit
+	file              *token.File
+	mode              Mode
 }
 
 // ParseFile parses one tgo source file.
@@ -179,25 +152,27 @@ func parseFrontFile(
 		return nil, err
 	}
 	state := &sourceParser{
-		filename:       filename,
-		source:         append([]byte(nil), source...),
-		tokens:         tokens,
-		comments:       comments,
-		decls:          nil,
-		matches:        nil,
-		defaults:       nil,
-		propagations:   nil,
-		comprehensions: nil,
-		nonNil:         make(map[token.Pos]bool),
-		edits:          nil,
-		file:           nil,
-		mode:           mode,
+		filename:          filename,
+		source:            append([]byte(nil), source...),
+		tokens:            tokens,
+		comments:          comments,
+		decls:             nil,
+		defaults:          nil,
+		exhaustiveOffsets: nil,
+		propagations:      nil,
+		comprehensions:    nil,
+		nonNil:            make(map[token.Pos]bool),
+		edits:             nil,
+		file:              nil,
+		mode:              mode,
 	}
-	if err := state.discoverDeclarations(); err != nil {
-		return nil, state.error(err)
-	}
-	if err := state.discoverExtensions(); err != nil {
-		return nil, state.error(err)
+	if mode&goSource == 0 {
+		if err := state.discoverDeclarations(); err != nil {
+			return nil, state.error(err)
+		}
+		if err := state.discoverExtensions(); err != nil {
+			return nil, state.error(err)
+		}
 	}
 	projection := state.project(0, len(source), state.edits)
 	parseMode := parser.SkipObjectResolution

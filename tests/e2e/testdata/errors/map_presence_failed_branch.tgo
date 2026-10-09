@@ -1,0 +1,11 @@
+package invalid
+
+type Quantity int where value > 0
+
+func find(values map[int]Quantity) int {
+	if value, ok := values[0]; ok {
+		return value.Value()
+	} else {
+		return value.Value()
+	}
+}

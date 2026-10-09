@@ -5,7 +5,6 @@
 package sourcefacts
 
 import (
-	"go/ast"
 	"go/constant"
 	"go/token"
 	"go/types"
@@ -19,48 +18,116 @@ type location struct {
 	column int
 }
 
+type definitionLocation struct {
+	file string
+	line int
+	name string
+}
+
 type span struct {
 	start location
 	stop  location
 }
 
-// Index maps one TGo source file to its typed Go projection.
+// Index maps syntax positions to facts from one typed package.
 
 type Index struct {
-	files       *token.FileSet
-	info        *types.Info
-	expressions map[span]ast.Expr
-	signatures  map[location]*types.Signature
+	files                *token.FileSet
+	types                map[span]types.TypeAndValue
+	definitions          map[location]types.Object
+	lineDefinitions      map[definitionLocation]types.Object
+	ambiguousDefinitions map[definitionLocation]bool
+	uses                 map[location]types.Object
+	selections           map[span]*types.Selection
+	instances            map[location]types.Instance
+	implicits            map[span]types.Object
+	useCounts            map[types.Object]int
+	signatures           map[location]*types.Signature
 }
 
-// New builds the source-to-projection index once for one file.
-func New(file *ast.File, info *types.Info, files *token.FileSet) *Index {
-	index := &Index{
-		files:       files,
-		info:        info,
-		expressions: make(map[span]ast.Expr),
-		signatures:  make(map[location]*types.Signature),
+// New copies typed facts into a syntax position index.
+func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
+	if info == nil {
+		panic("source facts require type facts")
 	}
-	ast.Inspect(file, func(node ast.Node) bool {
-		if expression, ok := node.(ast.Expr); ok {
-			index.expressions[index.nodeSpan(
-				expression.Pos(), expression.End(),
-			)] = expression
+	if files == nil {
+		panic("source facts require position facts")
+	}
+	index := &Index{
+		files:                files,
+		types:                make(map[span]types.TypeAndValue),
+		definitions:          make(map[location]types.Object),
+		lineDefinitions:      make(map[definitionLocation]types.Object),
+		ambiguousDefinitions: make(map[definitionLocation]bool),
+		uses:                 make(map[location]types.Object),
+		selections:           make(map[span]*types.Selection),
+		instances:            make(map[location]types.Instance),
+		implicits:            make(map[span]types.Object),
+		useCounts:            make(map[types.Object]int),
+		signatures:           make(map[location]*types.Signature),
+	}
+	for expression, value := range info.Types {
+		index.types[index.nodeSpan(expression.Pos(), expression.End())] = value
+	}
+	for identifier, object := range info.Defs {
+		if object != nil {
+			location := index.location(identifier.Pos())
+			index.definitions[location] = object
+			key := definitionLocation{
+				file: location.file, line: location.line, name: identifier.Name,
+			}
+			if current := index.lineDefinitions[key]; current != nil && current != object {
+				index.ambiguousDefinitions[key] = true
+			} else {
+				index.lineDefinitions[key] = object
+			}
 		}
-		switch node := node.(type) {
-		case *ast.FuncDecl:
-			object, _ := info.Defs[node.Name].(*types.Func)
+	}
+	for identifier, object := range info.Uses {
+		if object != nil {
+			index.uses[index.location(identifier.Pos())] = object
+			index.useCounts[object]++
+		}
+	}
+	for expression, selection := range info.Selections {
+		index.selections[index.nodeSpan(expression.Pos(), expression.End())] = selection
+	}
+	for identifier, instance := range info.Instances {
+		index.instances[index.location(identifier.Pos())] = instance
+	}
+	for node, object := range info.Implicits {
+		index.implicits[index.nodeSpan(node.Pos(), node.End())] = object
+	}
+	index.indexFunctionSignatures(file)
+	return index
+}
+
+// ImplicitField returns the object for one anonymous field.
+func (i *Index) ImplicitField(field *syntax.Field) types.Object {
+	return i.implicits[i.nodeSpan(field.Start, field.Stop)]
+}
+
+// AddFile indexes function signatures from one more package file.
+func (i *Index) AddFile(file *syntax.File) { i.indexFunctionSignatures(file) }
+
+func (i *Index) indexFunctionSignatures(file *syntax.File) {
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		declaration, declarationOK := syntax.FunctionDeclarationOf(node)
+		if declarationOK {
+			object, _ := i.DefinitionName(declaration.Name).(*types.Func)
 			if object != nil {
 				signature, _ := object.Type().(*types.Signature)
-				index.signatures[index.location(node.Pos())] = signature
+				i.signatures[i.location(declaration.Start)] = signature
 			}
-		case *ast.FuncLit:
-			signature, _ := info.TypeOf(node.Type).(*types.Signature)
-			index.signatures[index.location(node.Pos())] = signature
+		}
+		literal, literalOK := syntax.FunctionLiteralOf(node)
+		if literalOK {
+			value := i.types[i.nodeSpan(literal.Type.Start, literal.Type.Stop)]
+			signature, _ := value.Type.(*types.Signature)
+			i.signatures[i.location(literal.Start)] = signature
 		}
 		return true
 	})
-	return index
 }
 
 // FunctionSignature returns the typed function at a source position.
@@ -70,58 +137,100 @@ func (i *Index) FunctionSignature(position token.Pos) *types.Signature {
 
 // Type returns the projected type of a source expression.
 func (i *Index) Type(expression *syntax.Expression) types.Type {
-	return i.info.TypeOf(i.expression(expression))
+	return i.typeAndValue(expression).Type
 }
 
 // Constant returns the projected constant value of a source expression.
 func (i *Index) Constant(expression *syntax.Expression) constant.Value {
-	return i.info.Types[i.expression(expression)].Value
+	return i.typeAndValue(expression).Value
+}
+
+// IsType reports whether an expression denotes a type.
+func (i *Index) IsType(expression *syntax.Expression) bool {
+	return i.typeAndValue(expression).IsType()
 }
 
 // IdentifierObject returns the object used by a source identifier.
 func (i *Index) IdentifierObject(expression *syntax.Expression) types.Object {
-	identifier, _ := i.expression(expression).(*ast.Ident)
-	return i.info.ObjectOf(identifier)
+	identifier := syntax.IdentifierExpressionOf(expression)
+	if identifier == nil {
+		return nil
+	}
+	return i.Object(identifier)
+}
+
+// Object returns the object used or defined by an identifier.
+func (i *Index) Object(identifier *syntax.Identifier) types.Object {
+	position := i.location(identifier.Start)
+	if object := i.definitions[position]; object != nil {
+		return object
+	}
+	if object := i.uses[position]; object != nil {
+		return object
+	}
+	return i.lineDefinition(identifier, position)
 }
 
 // Definition returns the object defined by a source identifier expression.
 func (i *Index) Definition(expression *syntax.Expression) types.Object {
-	identifier, _ := i.expression(expression).(*ast.Ident)
-	return i.info.Defs[identifier]
+	identifier := syntax.IdentifierExpressionOf(expression)
+	if identifier == nil {
+		return nil
+	}
+	return i.DefinitionName(identifier)
 }
 
 // DefinitionName returns the object defined by a source identifier node.
 func (i *Index) DefinitionName(identifier *syntax.Identifier) types.Object {
-	projected, _ := i.expressions[i.nodeSpan(
-		identifier.Start, identifier.Stop,
-	)].(*ast.Ident)
-	return i.info.Defs[projected]
+	position := i.location(identifier.Start)
+	if object := i.definitions[position]; object != nil {
+		return object
+	}
+	return i.lineDefinition(identifier, position)
+}
+
+func (i *Index) lineDefinition(
+	identifier *syntax.Identifier,
+	position location,
+) types.Object {
+	key := definitionLocation{
+		file: position.file, line: position.line, name: identifier.Name,
+	}
+	if i.ambiguousDefinitions[key] {
+		return nil
+	}
+	return i.lineDefinitions[key]
+}
+
+// Selection returns the typed selection for a selector expression.
+func (i *Index) Selection(expression *syntax.Expression) *types.Selection {
+	return i.selections[i.expressionSpan(expression)]
+}
+
+// Instance returns generic instance information for an identifier.
+func (i *Index) Instance(identifier *syntax.Identifier) (types.Instance, bool) {
+	value, ok := i.instances[i.location(identifier.Start)]
+	return value, ok
 }
 
 // CalledFunction returns the static function called by a source expression.
 func (i *Index) CalledFunction(expression *syntax.Expression) *types.Func {
-	function, _ := calledObject(i.info, i.expression(expression)).(*types.Func)
+	function, _ := i.calledObject(expression).(*types.Func)
 	return function
 }
 
 // UseCount counts all projected uses of one typed object.
 func (i *Index) UseCount(target types.Object) int {
-	count := 0
-	for _, object := range i.info.Uses {
-		if object == target {
-			count++
-		}
-	}
-	return count
+	return i.useCounts[target]
 }
 
 // IotaPosition returns the predeclared iota in one source expression.
 func (i *Index) IotaPosition(expression *syntax.Expression) (token.Pos, bool) {
 	position := token.NoPos
-	ast.Inspect(i.expression(expression), func(node ast.Node) bool {
-		identifier, ok := node.(*ast.Ident)
-		if ok && i.info.Uses[identifier] == types.Universe.Lookup("iota") {
-			position = identifier.Pos()
+	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+		identifier, ok := syntax.IdentifierOf(node)
+		if ok && i.Object(identifier) == types.Universe.Lookup("iota") {
+			position = identifier.Start
 			return false
 		}
 		return position == token.NoPos
@@ -132,27 +241,54 @@ func (i *Index) IotaPosition(expression *syntax.Expression) (token.Pos, bool) {
 // HasBitSetOperator reports bit operators in one source expression.
 func (i *Index) HasBitSetOperator(expression *syntax.Expression) bool {
 	found := false
-	ast.Inspect(i.expression(expression), func(node ast.Node) bool {
-		switch item := node.(type) {
-		case *ast.BinaryExpr:
-			switch item.Op {
+	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+		value, ok := syntax.ExpressionOf(node)
+		if !ok {
+			return true
+		}
+		binary := syntax.BinaryExpressionOf(value)
+		if binary != nil {
+			switch binary.Operator {
 			case token.SHL, token.SHR, token.OR, token.AND, token.XOR, token.AND_NOT:
 				found = true
 			}
-		case *ast.UnaryExpr:
-			if item.Op == token.XOR {
-				found = true
-			}
+		}
+		unary := syntax.UnaryExpressionOf(value)
+		if unary != nil && unary.Operator == token.XOR {
+			found = true
 		}
 		return !found
 	})
 	return found
 }
 
-func (i *Index) expression(source *syntax.Expression) ast.Expr {
-	return i.expressions[i.nodeSpan(
-		syntax.ExpressionPosition(source), syntax.ExpressionEnd(source),
-	)]
+func (i *Index) calledObject(expression *syntax.Expression) types.Object {
+	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
+		return i.Object(identifier)
+	}
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		return i.Object(selector.Selector)
+	}
+	if index := syntax.IndexExpressionOf(expression); index != nil {
+		return i.calledObject(index.Expression)
+	}
+	if index := syntax.IndexListExpressionOf(expression); index != nil {
+		return i.calledObject(index.Expression)
+	}
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return i.calledObject(parenthesized.Expression)
+	}
+	return nil
+}
+
+func (i *Index) typeAndValue(expression *syntax.Expression) types.TypeAndValue {
+	return i.types[i.expressionSpan(expression)]
+}
+
+func (i *Index) expressionSpan(expression *syntax.Expression) span {
+	return i.nodeSpan(
+		syntax.ExpressionPosition(expression), syntax.ExpressionEnd(expression),
+	)
 }
 
 func (i *Index) location(position token.Pos) location {
@@ -164,20 +300,4 @@ func (i *Index) location(position token.Pos) location {
 
 func (i *Index) nodeSpan(start token.Pos, stop token.Pos) span {
 	return span{start: i.location(start), stop: i.location(stop)}
-}
-
-func calledObject(info *types.Info, expression ast.Expr) types.Object {
-	switch expression := expression.(type) {
-	case *ast.Ident:
-		return info.ObjectOf(expression)
-	case *ast.SelectorExpr:
-		return info.ObjectOf(expression.Sel)
-	case *ast.IndexExpr:
-		return calledObject(info, expression.X)
-	case *ast.IndexListExpr:
-		return calledObject(info, expression.X)
-	case *ast.ParenExpr:
-		return calledObject(info, expression.X)
-	}
-	return nil
 }

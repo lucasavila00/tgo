@@ -7,54 +7,68 @@ import __tgo_json "encoding/json"
 import __tgo_fmt "fmt"
 
 import (
-	"go/ast"
 	"go/constant"
 	"go/token"
 	"go/types"
 
-	"golang.org/x/tools/go/cfg"
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
 )
 
 // scalarValue requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type scalarValueTag uint8
+
+const (
+	scalarValueTagBoolean scalarValueTag = iota + 1
+	scalarValueTagInteger
+	scalarValueTagBooleanParameter
+	scalarValueTagIntegerParameter
+)
+
 type scalarValue struct {
-	tgoTag              uint8
+	tgoTag              scalarValueTag
 	tgoBoolean          scalarValueBoolean
 	tgoInteger          scalarValueInteger
 	tgoBooleanParameter scalarValueBooleanParameter
 	tgoIntegerParameter scalarValueIntegerParameter
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v scalarValue) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v scalarValue) Tag() scalarValueTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v scalarValue) UnknownTag() string {
+	return __tgo_fmt.Sprintf("scalarValue: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // scalarValueBoolean is the Boolean payload.
 type scalarValueBoolean struct {
 	Value bool
 }
 
-// NewscalarValueBoolean constructs scalarValue. Model fields must be valid.
+// scalarValue constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewscalarValueBoolean(value scalarValueBoolean) scalarValue {
-	return scalarValue{tgoTag: 1, tgoBoolean: value}
+func (value scalarValueBoolean) scalarValue() scalarValue {
+	return scalarValue{tgoTag: scalarValueTagBoolean, tgoBoolean: value}
 }
 
-// TgoBoolean returns the Boolean payload. Check TgoTag first.
-func (v scalarValue) TgoBoolean() scalarValueBoolean { return v.tgoBoolean }
+// BooleanPayload requires Boolean. No tag check.
+func (v scalarValue) BooleanPayload() scalarValueBoolean { return v.tgoBoolean }
 
 // scalarValueInteger is the Integer payload.
 type scalarValueInteger struct {
 	Value int64
 }
 
-// NewscalarValueInteger constructs scalarValue. Model fields must be valid.
+// scalarValue constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewscalarValueInteger(value scalarValueInteger) scalarValue {
-	return scalarValue{tgoTag: 2, tgoInteger: value}
+func (value scalarValueInteger) scalarValue() scalarValue {
+	return scalarValue{tgoTag: scalarValueTagInteger, tgoInteger: value}
 }
 
-// TgoInteger returns the Integer payload. Check TgoTag first.
-func (v scalarValue) TgoInteger() scalarValueInteger { return v.tgoInteger }
+// IntegerPayload requires Integer. No tag check.
+func (v scalarValue) IntegerPayload() scalarValueInteger { return v.tgoInteger }
 
 // scalarValueBooleanParameter is the BooleanParameter payload.
 type scalarValueBooleanParameter struct {
@@ -62,48 +76,52 @@ type scalarValueBooleanParameter struct {
 	Negated bool
 }
 
-// NewscalarValueBooleanParameter constructs scalarValue. Model fields must be valid.
+// scalarValue constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewscalarValueBooleanParameter(value scalarValueBooleanParameter) scalarValue {
-	return scalarValue{tgoTag: 3, tgoBooleanParameter: value}
+func (value scalarValueBooleanParameter) scalarValue() scalarValue {
+	return scalarValue{tgoTag: scalarValueTagBooleanParameter, tgoBooleanParameter: value}
 }
 
-// TgoBooleanParameter returns the BooleanParameter payload. Check TgoTag first.
-func (v scalarValue) TgoBooleanParameter() scalarValueBooleanParameter { return v.tgoBooleanParameter }
+// BooleanParameterPayload requires BooleanParameter. No tag check.
+func (v scalarValue) BooleanParameterPayload() scalarValueBooleanParameter {
+	return v.tgoBooleanParameter
+}
 
 // scalarValueIntegerParameter is the IntegerParameter payload.
 type scalarValueIntegerParameter struct {
 	Index int
 }
 
-// NewscalarValueIntegerParameter constructs scalarValue. Model fields must be valid.
+// scalarValue constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewscalarValueIntegerParameter(value scalarValueIntegerParameter) scalarValue {
-	return scalarValue{tgoTag: 4, tgoIntegerParameter: value}
+func (value scalarValueIntegerParameter) scalarValue() scalarValue {
+	return scalarValue{tgoTag: scalarValueTagIntegerParameter, tgoIntegerParameter: value}
 }
 
-// TgoIntegerParameter returns the IntegerParameter payload. Check TgoTag first.
-func (v scalarValue) TgoIntegerParameter() scalarValueIntegerParameter { return v.tgoIntegerParameter }
+// IntegerParameterPayload requires IntegerParameter. No tag check.
+func (v scalarValue) IntegerParameterPayload() scalarValueIntegerParameter {
+	return v.tgoIntegerParameter
+}
 
 func (v scalarValue) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoBoolean()
+	case scalarValueTagBoolean:
+		payload := v.BooleanPayload()
 		return __tgo_json.Marshal(struct {
 			Payload scalarValueBoolean `json:"Boolean"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoInteger()
+	case scalarValueTagInteger:
+		payload := v.IntegerPayload()
 		return __tgo_json.Marshal(struct {
 			Payload scalarValueInteger `json:"Integer"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoBooleanParameter()
+	case scalarValueTagBooleanParameter:
+		payload := v.BooleanParameterPayload()
 		return __tgo_json.Marshal(struct {
 			Payload scalarValueBooleanParameter `json:"BooleanParameter"`
 		}{Payload: payload})
-	case 4:
-		payload := v.TgoIntegerParameter()
+	case scalarValueTagIntegerParameter:
+		payload := v.IntegerParameterPayload()
 		return __tgo_json.Marshal(struct {
 			Payload scalarValueIntegerParameter `json:"IntegerParameter"`
 		}{Payload: payload})
@@ -132,28 +150,28 @@ func (v *scalarValue) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewscalarValueBoolean(payload)
+		*v = payload.scalarValue()
 		return nil
 	case "Integer":
 		var payload scalarValueInteger
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewscalarValueInteger(payload)
+		*v = payload.scalarValue()
 		return nil
 	case "BooleanParameter":
 		var payload scalarValueBooleanParameter
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewscalarValueBooleanParameter(payload)
+		*v = payload.scalarValue()
 		return nil
 	case "IntegerParameter":
 		var payload scalarValueIntegerParameter
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewscalarValueIntegerParameter(payload)
+		*v = payload.scalarValue()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown scalarValue JSON variant %q", variant)
@@ -163,42 +181,59 @@ func (v *scalarValue) UnmarshalJSON(data []byte) error {
 type scalarState map[types.Object]scalarValue
 
 type scalarFlow struct {
-	before map[ast.Node]scalarState
+	before map[syntax.Node]scalarState
 }
 
 // scalarValueAt returns a proven scalar value before the expression runs.
-func (c *checker) scalarValueAt(node ast.Node, expression ast.Expr) (scalarValue, bool) {
+func (c *checker) scalarValueAt(
+	node *syntax.Node,
+	expression *syntax.Expression,
+) (scalarValue, bool) {
+	if c == nil || node == nil || expression == nil {
+		return scalarValueBoolean{Value: false}.scalarValue(), false
+	}
 	root := c.enclosingFunction(node)
 	if root == nil {
-		return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+		return scalarValueBoolean{Value: false}.scalarValue(), false
 	}
-	flow := c.scalarFlows[root]
+	flow := c.scalarFlows[*root]
 	if flow == nil {
 		flow = c.buildScalarFlow(root)
-		c.scalarFlows[root] = flow
+		c.scalarFlows[*root] = flow
 	}
-	state := flow.before[expression]
+	if flow == nil {
+		return scalarValueBoolean{Value: false}.scalarValue(), false
+	}
+	state := flow.before[syntax.ExpressionNode(expression)]
 	if state == nil {
-		state = flow.before[node]
+		state = flow.before[*node]
 	}
 	return c.evaluateScalar(expression, state)
 }
 
 // enclosingFunction finds the declaration or literal that owns a node.
-func (c *checker) enclosingFunction(node ast.Node) ast.Node {
-	for current := node; current != nil; current = c.parents[current] {
-		switch current.(type) {
-		case *ast.FuncDecl, *ast.FuncLit:
+func (c *checker) enclosingFunction(node *syntax.Node) *syntax.Node {
+	var current *syntax.Node = node
+	for current != nil {
+		if _, declaration := syntax.FunctionDeclarationOf(current); declaration {
 			return current
 		}
+		if _, literal := syntax.FunctionLiteralOf(current); literal {
+			return current
+		}
+		parent := c.parents[*current]
+		if parent == nil {
+			return nil
+		}
+		current = parent
 	}
 	return nil
 }
 
 // buildScalarFlow solves scalar facts over the function control-flow graph.
-func (c *checker) buildScalarFlow(root ast.Node) *scalarFlow {
-	body := functionBody(root)
-	flow := &scalarFlow{before: make(map[ast.Node]scalarState)}
+func (c *checker) buildScalarFlow(root *syntax.Node) *scalarFlow {
+	body := genericFunctionBody(root)
+	flow := &scalarFlow{before: make(map[syntax.Node]scalarState)}
 	if body == nil {
 		return flow
 	}
@@ -262,8 +297,8 @@ func (c *checker) scalarSuccessors(
 	if len(block.Succs) != 2 || len(block.Nodes) == 0 {
 		return block.Succs
 	}
-	condition, ok := block.Nodes[len(block.Nodes)-1].(ast.Expr)
-	if !ok {
+	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
+	if !ok || condition == nil {
 		return block.Succs
 	}
 	value, known := c.evaluateScalar(condition, state)
@@ -280,7 +315,7 @@ func (c *checker) scalarSuccessors(
 	return block.Succs[1:]
 }
 
-// recordScalarEntries saves final facts before each AST node.
+// recordScalarEntries saves final facts before each syntax node.
 func (c *checker) recordScalarEntries(
 	flow *scalarFlow,
 	graph *cfg.CFG,
@@ -301,22 +336,25 @@ func (c *checker) recordScalarEntries(
 }
 
 // ownedScalars limits facts to parameters and variables from this function.
-func (c *checker) ownedScalars(root ast.Node, body *ast.BlockStmt) map[types.Object]bool {
+func (c *checker) ownedScalars(
+	root *syntax.Node,
+	body *syntax.BlockStatement,
+) map[types.Object]bool {
 	owned := make(map[types.Object]bool)
 	if signature := c.functionSignature(root); signature != nil {
 		for index := 0; index < signature.Params().Len(); index++ {
 			owned[signature.Params().At(index)] = true
 		}
 	}
-	ast.Inspect(body, func(node ast.Node) bool {
-		if _, nested := node.(*ast.FuncLit); nested {
+	inspectGenericBlock(body, func(node *syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
-		name, ok := node.(*ast.Ident)
+		name, ok := syntax.IdentifierOf(node)
 		if !ok {
 			return true
 		}
-		if variable, ok := c.pass.TypesInfo.Defs[name].(*types.Var); ok {
+		if variable, ok := c.facts.DefinitionName(name).(*types.Var); ok {
 			owned[variable] = true
 		}
 		return true
@@ -326,7 +364,7 @@ func (c *checker) ownedScalars(root ast.Node, body *ast.BlockStmt) map[types.Obj
 
 // scalarEntryState maps stable Boolean and integer parameters to call arguments.
 func (c *checker) scalarEntryState(
-	root ast.Node,
+	root *syntax.Node,
 ) scalarState {
 	state := make(scalarState)
 	signature := c.functionSignature(root)
@@ -336,33 +374,29 @@ func (c *checker) scalarEntryState(
 	for index := 0; index < signature.Params().Len(); index++ {
 		parameter := signature.Params().At(index)
 		if isBoolean(parameter.Type()) {
-			state[parameter] = NewscalarValueBooleanParameter(scalarValueBooleanParameter{
+			state[parameter] = scalarValueBooleanParameter{
 				Index: index, Negated: false,
-			})
+			}.scalarValue()
 			continue
 		}
 		if isInteger(parameter.Type()) {
-			state[parameter] = NewscalarValueIntegerParameter(scalarValueIntegerParameter{
+			state[parameter] = scalarValueIntegerParameter{
 				Index: index,
-			})
+			}.scalarValue()
 		}
 	}
 	return state
 }
 
-func (c *checker) functionSignature(root ast.Node) *types.Signature {
-	switch function := root.(type) {
-	case *ast.FuncDecl:
-		object, _ := c.pass.TypesInfo.Defs[function.Name].(*types.Func)
+func (c *checker) functionSignature(root *syntax.Node) *types.Signature {
+	if function, ok := syntax.FunctionDeclarationOf(root); ok {
+		object, _ := c.facts.DefinitionName(function.Name).(*types.Func)
 		if object != nil {
 			signature, _ := object.Type().(*types.Signature)
 			return signature
 		}
-	case *ast.FuncLit:
-		signature, _ := c.pass.TypesInfo.TypeOf(function).(*types.Signature)
-		return signature
 	}
-	return nil
+	return c.facts.FunctionSignature(syntax.NodePosition(root))
 }
 
 func isInteger(typ types.Type) bool {
@@ -377,77 +411,83 @@ func (c *checker) clearRangeScalars(
 	if block.Kind != cfg.KindRangeBody {
 		return
 	}
-	statement, ok := block.Stmt.(*ast.RangeStmt)
-	if !ok {
+	statement := syntax.RangeStatementOf(block.Stmt)
+	if statement == nil {
 		return
 	}
-	for _, expression := range []ast.Expr{statement.Key, statement.Value} {
-		name, ok := expression.(*ast.Ident)
-		if ok && name != nil && name.Name != "_" {
-			delete(state, c.pass.TypesInfo.ObjectOf(name))
+	for _, expression := range []*syntax.Expression{statement.Key, statement.Value} {
+		name := syntax.IdentifierExpressionOf(expression)
+		if name != nil && name.Name != "_" {
+			delete(state, c.facts.Object(name))
 		}
 	}
 }
 
 func (c *checker) transferScalarNode(
 	state scalarState,
-	node ast.Node,
+	node syntax.Node,
 	owned map[types.Object]bool,
 ) {
-	switch node := node.(type) {
-	case *ast.AssignStmt:
-		c.transferScalarAssignment(state, node, owned)
-	case *ast.ValueSpec:
-		c.transferScalarValues(state, node.Names, node.Values, owned)
-	case *ast.DeclStmt:
-		declaration, ok := node.Decl.(*ast.GenDecl)
-		if !ok {
-			return
+	if statement, ok := syntax.StatementOf(&node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			c.transferScalarAssignment(state, assignment, owned)
 		}
-		for _, specification := range declaration.Specs {
-			values, ok := specification.(*ast.ValueSpec)
-			if ok {
-				c.transferScalarValues(
-					state, values.Names, values.Values, owned,
-				)
+		if declaration := syntax.DeclarationStatementOf(statement); declaration != nil {
+			general := syntax.GeneralDeclarationOf(declaration.Declaration)
+			if general != nil {
+				for _, specification := range general.Specs {
+					values := syntax.ValueSpecificationOf(specification)
+					if values == nil {
+						continue
+					}
+					c.transferScalarValues(state, values.Names, values.Values, owned)
+				}
 			}
 		}
-	case *ast.IncDecStmt:
-		if name := identifier(node.X); name != nil {
-			delete(state, c.pass.TypesInfo.ObjectOf(name))
+		if increment := syntax.IncrementStatementOf(statement); increment != nil {
+			if name := syntax.IdentifierExpressionOf(increment.Expression); name != nil {
+				delete(state, c.facts.Object(name))
+			}
 		}
 	}
-	c.invalidateScalarEscapes(state, node)
+	if specification, ok := syntax.SpecificationOf(&node); ok {
+		if values := syntax.ValueSpecificationOf(specification); values != nil {
+			c.transferScalarValues(
+				state, values.Names, values.Values, owned,
+			)
+		}
+	}
+	c.invalidateScalarEscapes(state, &node)
 }
 
 // transferScalarAssignment evaluates all right sides before it changes state.
 func (c *checker) transferScalarAssignment(
 	state scalarState,
-	statement *ast.AssignStmt,
+	statement *syntax.AssignmentStatement,
 	owned map[types.Object]bool,
 ) {
-	if statement.Tok != token.ASSIGN && statement.Tok != token.DEFINE ||
-		len(statement.Lhs) != len(statement.Rhs) {
-		for _, target := range statement.Lhs {
-			if name := identifier(target); name != nil {
-				delete(state, c.pass.TypesInfo.ObjectOf(name))
+	if statement.Operator != token.ASSIGN && statement.Operator != token.DEFINE ||
+		len(statement.Left) != len(statement.Right) {
+		for _, target := range statement.Left {
+			if name := syntax.IdentifierExpressionOf(target); name != nil {
+				delete(state, c.facts.Object(name))
 			}
 		}
 		return
 	}
-	values := make([]scalarValue, 0, len(statement.Rhs))
-	known := make([]bool, 0, len(statement.Rhs))
-	for _, expression := range statement.Rhs {
+	values := make([]scalarValue, 0, len(statement.Right))
+	known := make([]bool, 0, len(statement.Right))
+	for _, expression := range statement.Right {
 		value, valueKnown := c.evaluateScalar(expression, state)
 		values = append(values, value)
 		known = append(known, valueKnown)
 	}
-	for index, target := range statement.Lhs {
-		name, ok := target.(*ast.Ident)
-		if !ok || name.Name == "_" {
+	for index, target := range statement.Left {
+		name := syntax.IdentifierExpressionOf(target)
+		if name == nil || name.Name == "_" {
 			continue
 		}
-		object := c.pass.TypesInfo.ObjectOf(name)
+		object := c.facts.Object(name)
 		if !owned[object] || !known[index] {
 			delete(state, object)
 		} else {
@@ -458,18 +498,18 @@ func (c *checker) transferScalarAssignment(
 
 func (c *checker) transferScalarValues(
 	state scalarState,
-	names []*ast.Ident,
-	values []ast.Expr,
+	names []*syntax.Identifier,
+	values []*syntax.Expression,
 	owned map[types.Object]bool,
 ) {
 	if len(names) != len(values) {
 		for _, name := range names {
-			delete(state, c.pass.TypesInfo.ObjectOf(name))
+			delete(state, c.facts.Object(name))
 		}
 		return
 	}
 	for index, name := range names {
-		object := c.pass.TypesInfo.ObjectOf(name)
+		object := c.facts.Object(name)
 		value, known := c.evaluateScalar(values[index], state)
 		if !owned[object] || !known {
 			delete(state, object)
@@ -480,27 +520,30 @@ func (c *checker) transferScalarValues(
 }
 
 // invalidateScalarEscapes drops facts after an address or closure captures a value.
-func (c *checker) invalidateScalarEscapes(state scalarState, root ast.Node) {
-	ast.Inspect(root, func(node ast.Node) bool {
-		if unary, ok := node.(*ast.UnaryExpr); ok && unary.Op == token.AND {
-			if name := identifier(unary.X); name != nil {
-				delete(state, c.pass.TypesInfo.ObjectOf(name))
+func (c *checker) invalidateScalarEscapes(state scalarState, root *syntax.Node) {
+	inspectGenericNode(root, func(node *syntax.Node) bool {
+		if expression, ok := syntax.ExpressionOf(node); ok {
+			if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
+				unary.Operator == token.AND {
+				if name := syntax.IdentifierExpressionOf(unary.Expression); name != nil {
+					delete(state, c.facts.Object(name))
+				}
+			}
+			if selector := syntax.SelectorExpressionOf(expression); selector != nil &&
+				c.pointerMethodSelection(expression) {
+				if name := syntax.IdentifierExpressionOf(selector.Expression); name != nil {
+					delete(state, c.facts.Object(name))
+				}
 			}
 		}
-		if selector, ok := node.(*ast.SelectorExpr); ok &&
-			pointerMethodSelection(c.pass.TypesInfo, selector) {
-			if name := identifier(selector.X); name != nil {
-				delete(state, c.pass.TypesInfo.ObjectOf(name))
-			}
-		}
-		literal, ok := node.(*ast.FuncLit)
+		literal, ok := syntax.FunctionLiteralOf(node)
 		if !ok {
 			return true
 		}
-		ast.Inspect(literal.Body, func(nested ast.Node) bool {
-			name, ok := nested.(*ast.Ident)
+		inspectGenericBlock(literal.Body, func(nested *syntax.Node) bool {
+			name, ok := syntax.IdentifierOf(nested)
 			if ok {
-				delete(state, c.pass.TypesInfo.Uses[name])
+				delete(state, c.facts.Object(name))
 			}
 			return true
 		})
@@ -510,75 +553,81 @@ func (c *checker) invalidateScalarEscapes(state scalarState, root ast.Node) {
 
 // evaluateScalar reduces constants, aliases, and supported Boolean expressions.
 func (c *checker) evaluateScalar(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	state scalarState,
 ) (scalarValue, bool) {
 	if expression == nil {
-		return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+		return scalarValueBoolean{Value: false}.scalarValue(), false
 	}
-	if exact, known := exactScalar(c.pass.TypesInfo.Types[expression].Value); known {
+	if exact, known := exactScalar(c.facts.Constant(expression)); known {
 		return exact, true
 	}
-	switch expression := expression.(type) {
-	case *ast.ParenExpr:
-		return c.evaluateScalar(expression.X, state)
-	case *ast.Ident:
-		if value, ok := state[c.pass.TypesInfo.ObjectOf(expression)]; ok {
+	if parentheses := syntax.ParenthesizedExpressionOf(expression); parentheses != nil {
+		return c.evaluateScalar(parentheses.Expression, state)
+	}
+	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
+		if value, ok := state[c.facts.Object(identifier)]; ok {
 			return value, true
 		}
-		return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
-	case *ast.UnaryExpr:
-		value, ok := c.evaluateScalar(expression.X, state)
-		if !ok || expression.Op != token.NOT {
-			return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+		return scalarValueBoolean{Value: false}.scalarValue(), false
+	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+		value, ok := c.evaluateScalar(unary.Expression, state)
+		if !ok || unary.Operator != token.NOT {
+			return scalarValueBoolean{Value: false}.scalarValue(), false
 		}
 		return negateScalarBoolean(value)
-	case *ast.BinaryExpr:
-		return c.evaluateScalarBinary(expression, state)
-	case *ast.CallExpr:
-		if c.valuePreservingConversion(expression) {
-			return c.evaluateScalar(expression.Args[0], state)
+	}
+	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
+		return c.evaluateScalarBinary(binary, state)
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		if c.valuePreservingConversion(expression, call) {
+			return c.evaluateScalar(call.Args[0], state)
 		}
 	}
-	return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+	return scalarValueBoolean{Value: false}.scalarValue(), false
 }
 
 func exactScalar(value constant.Value) (scalarValue, bool) {
 	if value == nil {
-		return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+		return scalarValueBoolean{Value: false}.scalarValue(), false
 	}
 	switch value.Kind() {
 	case constant.Bool:
-		return NewscalarValueBoolean(scalarValueBoolean{Value: constant.BoolVal(value)}), true
+		return scalarValueBoolean{Value: constant.BoolVal(value)}.scalarValue(), true
 	case constant.Int:
 		integer, ok := constant.Int64Val(value)
-		return NewscalarValueInteger(scalarValueInteger{Value: integer}), ok
+		return scalarValueInteger{Value: integer}.scalarValue(), ok
 	default:
-		return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+		return scalarValueBoolean{Value: false}.scalarValue(), false
 	}
 }
 
-func (c *checker) valuePreservingConversion(call *ast.CallExpr) bool {
-	return len(call.Args) == 1 && c.pass.TypesInfo.Types[call.Fun].IsType() &&
+func (c *checker) valuePreservingConversion(
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+) bool {
+	return len(call.Args) == 1 && c.facts.IsType(call.Callee) &&
 		types.Identical(
-			c.pass.TypesInfo.TypeOf(call),
-			c.pass.TypesInfo.TypeOf(call.Args[0]),
+			c.facts.Type(expression),
+			c.facts.Type(call.Args[0]),
 		)
 }
 
 // evaluateScalarBinary evaluates safe Boolean operations and equality.
 func (c *checker) evaluateScalarBinary(
-	expression *ast.BinaryExpr,
+	expression *syntax.BinaryExpression,
 	state scalarState,
 ) (scalarValue, bool) {
-	left, leftKnown := c.evaluateScalar(expression.X, state)
-	right, rightKnown := c.evaluateScalar(expression.Y, state)
+	left, leftKnown := c.evaluateScalar(expression.Left, state)
+	right, rightKnown := c.evaluateScalar(expression.Right, state)
 	if !leftKnown || !rightKnown {
-		return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+		return scalarValueBoolean{Value: false}.scalarValue(), false
 	}
 	leftBoolean, leftBooleanKnown := scalarBoolean(left)
 	rightBoolean, rightBooleanKnown := scalarBoolean(right)
-	switch expression.Op {
+	switch expression.Operator {
 	case token.LAND:
 		return scalarLogicalAnd(
 			left, leftBoolean, leftBooleanKnown,
@@ -591,11 +640,11 @@ func (c *checker) evaluateScalarBinary(
 		)
 	case token.EQL, token.NEQ:
 		if scalarValuesEqual(left, right) {
-			equal := expression.Op == token.EQL
-			return NewscalarValueBoolean(scalarValueBoolean{Value: equal}), true
+			equal := expression.Operator == token.EQL
+			return scalarValueBoolean{Value: equal}.scalarValue(), true
 		}
 	}
-	return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+	return scalarValueBoolean{Value: false}.scalarValue(), false
 }
 
 func scalarLogicalAnd(
@@ -607,7 +656,7 @@ func scalarLogicalAnd(
 	rightKnown bool,
 ) (scalarValue, bool) {
 	if leftKnown && !leftBoolean || rightKnown && !rightBoolean {
-		return NewscalarValueBoolean(scalarValueBoolean{Value: false}), true
+		return scalarValueBoolean{Value: false}.scalarValue(), true
 	}
 	if leftKnown && leftBoolean {
 		return right, true
@@ -615,7 +664,7 @@ func scalarLogicalAnd(
 	if rightKnown && rightBoolean {
 		return left, true
 	}
-	return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+	return scalarValueBoolean{Value: false}.scalarValue(), false
 }
 
 func scalarLogicalOr(
@@ -627,7 +676,7 @@ func scalarLogicalOr(
 	rightKnown bool,
 ) (scalarValue, bool) {
 	if leftKnown && leftBoolean || rightKnown && rightBoolean {
-		return NewscalarValueBoolean(scalarValueBoolean{Value: true}), true
+		return scalarValueBoolean{Value: true}.scalarValue(), true
 	}
 	if leftKnown && !leftBoolean {
 		return right, true
@@ -635,74 +684,74 @@ func scalarLogicalOr(
 	if rightKnown && !rightBoolean {
 		return left, true
 	}
-	return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+	return scalarValueBoolean{Value: false}.scalarValue(), false
 }
 
 func scalarBoolean(value scalarValue) (bool, bool) {
-	switch __tgo_match_7 := value; __tgo_match_7.TgoTag() {
-	case 1:
-		boolean := __tgo_match_7.TgoBoolean()
+	switch enumValue7 := value; enumValue7.Tag() {
+	case scalarValueTagBoolean:
+		boolean := enumValue7.BooleanPayload()
 		return boolean.Value, true
-	case 2:
+	case scalarValueTagInteger:
 		return false, false
-	case 3:
+	case scalarValueTagBooleanParameter:
 		return false, false
-	case 4:
+	case scalarValueTagIntegerParameter:
 		return false, false
 	default:
-		panic("invalid scalarValue variant")
+		panic(enumValue7.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func scalarInteger(value scalarValue) (int64, bool) {
-	switch __tgo_match_8 := value; __tgo_match_8.TgoTag() {
-	case 1:
+	switch enumValue8 := value; enumValue8.Tag() {
+	case scalarValueTagBoolean:
 		return 0, false
-	case 2:
-		integer := __tgo_match_8.TgoInteger()
+	case scalarValueTagInteger:
+		integer := enumValue8.IntegerPayload()
 		return integer.Value, true
-	case 3:
+	case scalarValueTagBooleanParameter:
 		return 0, false
-	case 4:
+	case scalarValueTagIntegerParameter:
 		return 0, false
 	default:
-		panic("invalid scalarValue variant")
+		panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func scalarParameter(value scalarValue) (int, bool, bool) {
-	switch __tgo_match_9 := value; __tgo_match_9.TgoTag() {
-	case 1:
+	switch enumValue9 := value; enumValue9.Tag() {
+	case scalarValueTagBoolean:
 		return 0, false, false
-	case 2:
+	case scalarValueTagInteger:
 		return 0, false, false
-	case 3:
-		parameter := __tgo_match_9.TgoBooleanParameter()
+	case scalarValueTagBooleanParameter:
+		parameter := enumValue9.BooleanParameterPayload()
 		return parameter.Index, parameter.Negated, true
-	case 4:
-		parameter := __tgo_match_9.TgoIntegerParameter()
+	case scalarValueTagIntegerParameter:
+		parameter := enumValue9.IntegerParameterPayload()
 		return parameter.Index, false, true
 	default:
-		panic("invalid scalarValue variant")
+		panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
-	switch __tgo_match_10 := value; __tgo_match_10.TgoTag() {
-	case 1:
-		boolean := __tgo_match_10.TgoBoolean()
-		return NewscalarValueBoolean(scalarValueBoolean{Value: !boolean.Value}), true
-	case 2:
-		return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
-	case 3:
-		parameter := __tgo_match_10.TgoBooleanParameter()
-		return NewscalarValueBooleanParameter(scalarValueBooleanParameter{
+	switch enumValue10 := value; enumValue10.Tag() {
+	case scalarValueTagBoolean:
+		boolean := enumValue10.BooleanPayload()
+		return scalarValueBoolean{Value: !boolean.Value}.scalarValue(), true
+	case scalarValueTagInteger:
+		return scalarValueBoolean{Value: false}.scalarValue(), false
+	case scalarValueTagBooleanParameter:
+		parameter := enumValue10.BooleanParameterPayload()
+		return scalarValueBooleanParameter{
 			Index: parameter.Index, Negated: !parameter.Negated,
-		}), true
-	case 4:
-		return NewscalarValueBoolean(scalarValueBoolean{Value: false}), false
+		}.scalarValue(), true
+	case scalarValueTagIntegerParameter:
+		return scalarValueBoolean{Value: false}.scalarValue(), false
 	default:
-		panic("invalid scalarValue variant")
+		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -725,34 +774,34 @@ func scalarValuesEqual(left scalarValue, right scalarValue) bool {
 }
 
 func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
-	switch __tgo_match_11 := value; __tgo_match_11.TgoTag() {
-	case 1:
+	switch enumValue11 := value; enumValue11.Tag() {
+	case scalarValueTagBoolean:
 		return 0, false, false
-	case 2:
+	case scalarValueTagInteger:
 		return 0, false, false
-	case 3:
-		parameter := __tgo_match_11.TgoBooleanParameter()
+	case scalarValueTagBooleanParameter:
+		parameter := enumValue11.BooleanParameterPayload()
 		return parameter.Index, parameter.Negated, true
-	case 4:
+	case scalarValueTagIntegerParameter:
 		return 0, false, false
 	default:
-		panic("invalid scalarValue variant")
+		panic(enumValue11.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func scalarIntegerParameter(value scalarValue) (int, bool) {
-	switch __tgo_match_12 := value; __tgo_match_12.TgoTag() {
-	case 1:
+	switch enumValue12 := value; enumValue12.Tag() {
+	case scalarValueTagBoolean:
 		return 0, false
-	case 2:
+	case scalarValueTagInteger:
 		return 0, false
-	case 3:
+	case scalarValueTagBooleanParameter:
 		return 0, false
-	case 4:
-		parameter := __tgo_match_12.TgoIntegerParameter()
+	case scalarValueTagIntegerParameter:
+		parameter := enumValue12.IntegerParameterPayload()
 		return parameter.Index, true
 	default:
-		panic("invalid scalarValue variant")
+		panic(enumValue12.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -799,15 +848,16 @@ func scalarStatesEqual(left scalarState, right scalarState) bool {
 	return true
 }
 
-func recordScalarState(target map[ast.Node]scalarState, root ast.Node, state scalarState) {
-	ast.Inspect(root, func(node ast.Node) bool {
-		if node == nil {
+func recordScalarState(
+	target map[syntax.Node]scalarState,
+	root syntax.Node,
+	state scalarState,
+) {
+	inspectGenericNode(&root, func(node *syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
-		if _, nested := node.(*ast.FuncLit); nested {
-			return false
-		}
-		target[node] = cloneScalarState(state)
+		target[*node] = cloneScalarState(state)
 		return true
 	})
 }

@@ -14,13 +14,13 @@ func CrossPackageValidation(event model.Event) string {
 	if err != nil {
 		return ""
 	}
-	switch value.TgoTag() {
-	case 1:
-		return value.TgoStarted().ID
-	case 2:
-		return value.TgoStopped().Reason
+	switch value.Tag() {
+	case model.EventTagStarted:
+		return value.StartedPayload().ID
+	case model.EventTagStopped:
+		return value.StoppedPayload().Reason
 	default:
-		panic("invalid Event variant")
+		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -33,7 +33,7 @@ func ValidationFunctionValue(event model.Event) string {
 }
 
 func ConstructorFunctionValue() string {
-	construct := model.NewEventStopped
+	construct := model.EventStopped.Event
 	return Describe(construct(model.EventStopped{}))
 }
 
@@ -42,15 +42,102 @@ func TrustAssertion(input any) (model.Event, error) {
 }
 
 func Describe(event model.Event) string {
-	switch event.TgoTag() {
-	case 1:
-		started := event.TgoStarted()
+	switch event.Tag() {
+	case model.EventTagStarted:
+		started := event.StartedPayload()
 		return started.ID
-	case 2:
-		stopped := event.TgoStopped()
+	case model.EventTagStopped:
+		stopped := event.StoppedPayload()
 		return stopped.Reason
 	default:
-		panic("invalid Event variant")
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func DescribeOrInvalid(event model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+const eventStartedAlias = model.EventTagStarted
+
+func DescribeAlias(event model.Event) string {
+	switch event.Tag() {
+	case eventStartedAlias:
+		return event.StartedPayload().ID
+	case model.EventTag(model.EventTagStopped):
+		return event.StoppedPayload().Reason
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func DescribeMultiTag(event model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return "none"
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func DescribeNested(event model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		switch event.Tag() {
+		case model.EventTagStarted:
+			return event.StartedPayload().ID
+		case model.EventTagStopped:
+			return event.StoppedPayload().Reason
+		default:
+			panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		}
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func AssignedClause(event model.Event, replacement model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		event = replacement
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func ClosureClause(event model.Event) func() string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return func() string { return event.StoppedPayload().Reason }
+	case model.EventTagStopped:
+		return nil
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func PayloadMethod(event model.Event) func() model.EventStarted {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StartedPayload
+	case model.EventTagStopped:
+		return nil
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -61,7 +148,7 @@ func Values() ([]model.Event, error) {
 	}
 	_ = count.Value()
 	return []model.Event{
-		model.NewEventStarted(model.EventStarted{ID: "one"}),
+		model.EventStarted{ID: "one"}.Event(),
 	}, nil
 }
 
@@ -92,25 +179,24 @@ type Embedded struct {
 }
 
 func DescribeEnvelope(envelope Envelope) string {
-	switch envelope.Event.TgoTag() {
-	case 1:
-		return envelope.Event.TgoStarted().ID
-	case 2:
-		return envelope.Event.TgoStopped().Reason
+	switch envelope.Event.Tag() {
+	case model.EventTagStarted:
+		return envelope.Event.StartedPayload().ID
+	case model.EventTagStopped:
+		return envelope.Event.StoppedPayload().Reason
 	default:
-		for {
-		}
+		panic(envelope.Event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func DescribeEmbedded(embedded Embedded) string {
-	switch embedded.TgoTag() {
-	case 1:
-		return embedded.TgoStarted().ID
-	case 2:
-		return embedded.TgoStopped().Reason
+	switch embedded.Tag() {
+	case model.EventTagStarted:
+		return embedded.StartedPayload().ID
+	case model.EventTagStopped:
+		return embedded.StoppedPayload().Reason
 	default:
-		panic("invalid Event variant")
+		panic(embedded.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -297,9 +383,10 @@ type CountMaps interface {
 
 type Events interface {
 	model.Event
-	TgoTag() uint8
-	TgoStarted() model.EventStarted
-	TgoStopped() model.EventStopped
+	Tag() model.EventTag
+	UnknownTag() string
+	StartedPayload() model.EventStarted
+	StoppedPayload() model.EventStopped
 }
 
 func GenericSlice[S CountSlices]() S {
@@ -312,13 +399,13 @@ func GenericMap[M CountMaps](values M, key string) (model.Count, bool) {
 }
 
 func DescribeGeneric[E Events](event E) string {
-	switch event.TgoTag() {
-	case 1:
-		return event.TgoStarted().ID
-	case 2:
-		return event.TgoStopped().Reason
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
 	default:
-		panic("invalid Event variant")
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -326,13 +413,13 @@ func PresenceMap(values map[string]model.Event, key string) (model.Event, bool) 
 	if value, ok := values[key]; ok {
 		return value, true
 	}
-	return model.NewEventStopped(model.EventStopped{}), false
+	return model.EventStopped{}.Event(), false
 }
 
 func PresenceChannel(values <-chan model.Event) (model.Event, bool) {
 	value, ok := <-values
 	if !ok {
-		return model.NewEventStopped(model.EventStopped{}), false
+		return model.EventStopped{}.Event(), false
 	}
 	return value, true
 }
@@ -357,13 +444,13 @@ func PresenceWrapper(values map[string]model.Event, key string) string {
 		return ""
 	}
 	value = validated
-	switch value.TgoTag() {
-	case 1:
-		return value.TgoStarted().ID
-	case 2:
-		return value.TgoStopped().Reason
+	switch value.Tag() {
+	case model.EventTagStarted:
+		return value.StartedPayload().ID
+	case model.EventTagStopped:
+		return value.StoppedPayload().Reason
 	default:
-		panic("invalid Event variant")
+		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -375,13 +462,13 @@ func PresenceBoolean(values map[string]model.Event, key string, ready bool) stri
 			return ""
 		}
 		value = validated
-		switch value.TgoTag() {
-		case 1:
-			return value.TgoStarted().ID
-		case 2:
-			return value.TgoStopped().Reason
+		switch value.Tag() {
+		case model.EventTagStarted:
+			return value.StartedPayload().ID
+		case model.EventTagStopped:
+			return value.StoppedPayload().Reason
 		default:
-			panic("invalid Event variant")
+			panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
 	}
 	return ""
@@ -393,13 +480,13 @@ func DescribeSnapshot(event model.Event) string {
 		return ""
 	}
 	event = validated
-	switch snapshot := event; snapshot.TgoTag() {
-	case 1:
-		return snapshot.TgoStarted().ID
-	case 2:
-		return snapshot.TgoStopped().Reason
+	switch snapshot := event; snapshot.Tag() {
+	case model.EventTagStarted:
+		return snapshot.StartedPayload().ID
+	case model.EventTagStopped:
+		return snapshot.StoppedPayload().Reason
 	default:
-		panic("invalid Event variant")
+		panic(snapshot.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -409,16 +496,13 @@ func DescribeWithInternalBreak(event model.Event) string {
 		return ""
 	}
 	event = validated
-	switch event.TgoTag() {
-	case 1:
-		return event.TgoStarted().ID
-	case 2:
-		return event.TgoStopped().Reason
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
 	default:
-		for {
-			break
-		}
-		panic("invalid Event variant")
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -428,14 +512,21 @@ func DescribeWithInternalGoto(event model.Event) string {
 		return ""
 	}
 	event = validated
-	switch event.TgoTag() {
-	case 1:
-		return event.TgoStarted().ID
-	case 2:
-		return event.TgoStopped().Reason
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
 	default:
-		goto invalid
-	invalid:
-		panic("invalid Event variant")
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func DefaultFallback(event model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StartedPayload().ID
+	default:
+		return event.StoppedPayload().Reason
 	}
 }

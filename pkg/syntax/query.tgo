@@ -3,132 +3,154 @@ package syntax
 // IdentifierOf returns an identifier node payload.
 func IdentifierOf(node *Node) (*Identifier, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Identifier(value): return value.Value, true
-	case Expression(value):
-		match *value.Value {
-		case Identifier(item): return item.Value, true
-		case Bad(_): return nil, false
-		case Ellipsis(_): return nil, false
-		case BasicLiteral(_): return nil, false
-		case FunctionLiteral(_): return nil, false
-		case CompositeLiteral(_): return nil, false
-		case Parenthesized(_): return nil, false
-		case Selector(_): return nil, false
-		case Index(_): return nil, false
-		case IndexList(_): return nil, false
-		case Slice(_): return nil, false
-		case TypeAssertion(_): return nil, false
-		case Call(_): return nil, false
-		case Star(_): return nil, false
-		case NonNilPointer(_): return nil, false
-		case Unary(_): return nil, false
-		case Binary(_): return nil, false
-		case KeyValue(_): return nil, false
-		case ArrayType(_): return nil, false
-		case StructType(_): return nil, false
-		case FunctionType(_): return nil, false
-		case InterfaceType(_): return nil, false
-		case MapType(_): return nil, false
-		case ChannelType(_): return nil, false
-		case Default(_): return nil, false
-		case Propagation(_): return nil, false
-		case Comprehension(_): return nil, false
+	switch enumValue1 := *node; enumValue1.Tag() {
+	case NodeTagIdentifier:
+		value := enumValue1.IdentifierPayload()
+		return value.Value, true
+	case NodeTagExpression:
+		value := enumValue1.ExpressionPayload()
+		switch enumValue2 := *value.Value; enumValue2.Tag() {
+		case ExpressionTagIdentifier:
+			item := enumValue2.IdentifierPayload()
+			return item.Value, true
+		case ExpressionTagBad:
+			return nil, false
+		case ExpressionTagEllipsis:
+			return nil, false
+		case ExpressionTagBasicLiteral:
+			return nil, false
+		case ExpressionTagFunctionLiteral:
+			return nil, false
+		case ExpressionTagCompositeLiteral:
+			return nil, false
+		case ExpressionTagParenthesized:
+			return nil, false
+		case ExpressionTagSelector:
+			return nil, false
+		case ExpressionTagIndex:
+			return nil, false
+		case ExpressionTagIndexList:
+			return nil, false
+		case ExpressionTagSlice:
+			return nil, false
+		case ExpressionTagTypeAssertion:
+			return nil, false
+		case ExpressionTagCall:
+			return nil, false
+		case ExpressionTagStar:
+			return nil, false
+		case ExpressionTagNonNilPointer:
+			return nil, false
+		case ExpressionTagUnary:
+			return nil, false
+		case ExpressionTagBinary:
+			return nil, false
+		case ExpressionTagKeyValue:
+			return nil, false
+		case ExpressionTagArrayType:
+			return nil, false
+		case ExpressionTagStructType:
+			return nil, false
+		case ExpressionTagFunctionType:
+			return nil, false
+		case ExpressionTagInterfaceType:
+			return nil, false
+		case ExpressionTagMapType:
+			return nil, false
+		case ExpressionTagChannelType:
+			return nil, false
+		case ExpressionTagDefault:
+			return nil, false
+		case ExpressionTagPropagation:
+			return nil, false
+		case ExpressionTagComprehension:
+			return nil, false
+		exhaustive:
 		}
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Specification(_): return nil, false
-	case Statement(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	case NodeTagFile:
+		return nil, false
+	case NodeTagDeclaration:
+		return nil, false
+	case NodeTagSpecification:
+		return nil, false
+	case NodeTagStatement:
+		return nil, false
+	case NodeTagField:
+		return nil, false
+	case NodeTagFieldList:
+		return nil, false
+	case NodeTagTGoField:
+		return nil, false
+	case NodeTagEnumVariant:
+		return nil, false
+case NodeTagComment:
+		return nil, false
+	case NodeTagCommentGroup:
+		return nil, false
+	exhaustive:
 	}
 }
 
 // EnumDeclarationOf returns an enum declaration payload.
 func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 	if value == nil { return nil, false }
-	match *value {
-	case Enum(item): return item.Value, true
-	case Bad(_): return nil, false
-	case General(_): return nil, false
-	case Function(_): return nil, false
-	case Struct(_): return nil, false
-	case Checked(_): return nil, false
+	switch enumValue3 := *value; enumValue3.Tag() {
+	case DeclarationTagEnum:
+		item := enumValue3.EnumPayload()
+		return item.Value, true
+	case DeclarationTagBad:
+		return nil, false
+	case DeclarationTagGeneral:
+		return nil, false
+	case DeclarationTagFunction:
+		return nil, false
+	case DeclarationTagStruct:
+		return nil, false
+	case DeclarationTagChecked:
+		return nil, false
+	exhaustive:
 	}
 }
 
 // StructDeclarationOf returns a TGo struct declaration payload.
 func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 	if value == nil { return nil, false }
-	match *value {
-	case Struct(item): return item.Value, true
-	case Bad(_): return nil, false
-	case General(_): return nil, false
-	case Function(_): return nil, false
-	case Enum(_): return nil, false
-	case Checked(_): return nil, false
+	switch enumValue4 := *value; enumValue4.Tag() {
+	case DeclarationTagStruct:
+		item := enumValue4.StructPayload()
+		return item.Value, true
+	case DeclarationTagBad:
+		return nil, false
+	case DeclarationTagGeneral:
+		return nil, false
+	case DeclarationTagFunction:
+		return nil, false
+	case DeclarationTagEnum:
+		return nil, false
+	case DeclarationTagChecked:
+		return nil, false
+	exhaustive:
 	}
 }
 
 // CheckedDeclarationOf returns a checked declaration payload.
 func CheckedDeclarationOf(value *Declaration) (*CheckedDeclaration, bool) {
 	if value == nil { return nil, false }
-	match *value {
-	case Checked(item): return item.Value, true
-	case Bad(_): return nil, false
-	case General(_): return nil, false
-	case Function(_): return nil, false
-	case Enum(_): return nil, false
-	case Struct(_): return nil, false
-	}
-}
-
-// MatchStatementOf returns a match statement node payload.
-func MatchStatementOf(node *Node) (*MatchStatement, bool) {
-	if node == nil { return nil, false }
-	match *node {
-	case Statement(value):
-		match *value.Value {
-		case Match(item): return item.Value, true
-		case Bad(_): return nil, false
-		case Declaration(_): return nil, false
-		case Empty(_): return nil, false
-		case Labeled(_): return nil, false
-		case Expression(_): return nil, false
-		case Send(_): return nil, false
-		case Increment(_): return nil, false
-		case Assignment(_): return nil, false
-		case Go(_): return nil, false
-		case Defer(_): return nil, false
-		case Return(_): return nil, false
-		case Branch(_): return nil, false
-		case Block(_): return nil, false
-		case If(_): return nil, false
-		case Case(_): return nil, false
-		case Switch(_): return nil, false
-		case TypeSwitch(_): return nil, false
-		case Communication(_): return nil, false
-		case Select(_): return nil, false
-		case For(_): return nil, false
-		case Range(_): return nil, false
-		}
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Specification(_): return nil, false
-	case Expression(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue5 := *value; enumValue5.Tag() {
+	case DeclarationTagChecked:
+		item := enumValue5.CheckedPayload()
+		return item.Value, true
+	case DeclarationTagBad:
+		return nil, false
+	case DeclarationTagGeneral:
+		return nil, false
+	case DeclarationTagFunction:
+		return nil, false
+	case DeclarationTagEnum:
+		return nil, false
+	case DeclarationTagStruct:
+		return nil, false
+	exhaustive:
 	}
 }
 
@@ -136,34 +158,63 @@ func MatchStatementOf(node *Node) (*MatchStatement, bool) {
 func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok { return nil, false }
-	match *expression {
-	case Default(item): return item.Value, true
-	case Bad(_): return nil, false
-	case Identifier(_): return nil, false
-	case Ellipsis(_): return nil, false
-	case BasicLiteral(_): return nil, false
-	case FunctionLiteral(_): return nil, false
-	case CompositeLiteral(_): return nil, false
-	case Parenthesized(_): return nil, false
-	case Selector(_): return nil, false
-	case Index(_): return nil, false
-	case IndexList(_): return nil, false
-	case Slice(_): return nil, false
-	case TypeAssertion(_): return nil, false
-	case Call(_): return nil, false
-	case Star(_): return nil, false
-	case NonNilPointer(_): return nil, false
-	case Unary(_): return nil, false
-	case Binary(_): return nil, false
-	case KeyValue(_): return nil, false
-	case ArrayType(_): return nil, false
-	case StructType(_): return nil, false
-	case FunctionType(_): return nil, false
-	case InterfaceType(_): return nil, false
-	case MapType(_): return nil, false
-	case ChannelType(_): return nil, false
-	case Propagation(_): return nil, false
-	case Comprehension(_): return nil, false
+	switch enumValue8 := *expression; enumValue8.Tag() {
+	case ExpressionTagDefault:
+		item := enumValue8.DefaultPayload()
+		return item.Value, true
+	case ExpressionTagBad:
+		return nil, false
+	case ExpressionTagIdentifier:
+		return nil, false
+	case ExpressionTagEllipsis:
+		return nil, false
+	case ExpressionTagBasicLiteral:
+		return nil, false
+	case ExpressionTagFunctionLiteral:
+		return nil, false
+	case ExpressionTagCompositeLiteral:
+		return nil, false
+	case ExpressionTagParenthesized:
+		return nil, false
+	case ExpressionTagSelector:
+		return nil, false
+	case ExpressionTagIndex:
+		return nil, false
+	case ExpressionTagIndexList:
+		return nil, false
+	case ExpressionTagSlice:
+		return nil, false
+	case ExpressionTagTypeAssertion:
+		return nil, false
+	case ExpressionTagCall:
+		return nil, false
+	case ExpressionTagStar:
+		return nil, false
+	case ExpressionTagNonNilPointer:
+		return nil, false
+	case ExpressionTagUnary:
+		return nil, false
+	case ExpressionTagBinary:
+		return nil, false
+	case ExpressionTagKeyValue:
+		return nil, false
+	case ExpressionTagArrayType:
+		return nil, false
+	case ExpressionTagStructType:
+		return nil, false
+	case ExpressionTagFunctionType:
+		return nil, false
+	case ExpressionTagInterfaceType:
+		return nil, false
+	case ExpressionTagMapType:
+		return nil, false
+	case ExpressionTagChannelType:
+		return nil, false
+	case ExpressionTagPropagation:
+		return nil, false
+	case ExpressionTagComprehension:
+		return nil, false
+	exhaustive:
 	}
 }
 
@@ -171,34 +222,63 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok { return nil, false }
-	match *expression {
-	case Propagation(item): return item.Value, true
-	case Comprehension(_): return nil, false
-	case Bad(_): return nil, false
-	case Identifier(_): return nil, false
-	case Ellipsis(_): return nil, false
-	case BasicLiteral(_): return nil, false
-	case FunctionLiteral(_): return nil, false
-	case CompositeLiteral(_): return nil, false
-	case Parenthesized(_): return nil, false
-	case Selector(_): return nil, false
-	case Index(_): return nil, false
-	case IndexList(_): return nil, false
-	case Slice(_): return nil, false
-	case TypeAssertion(_): return nil, false
-	case Call(_): return nil, false
-	case Star(_): return nil, false
-	case NonNilPointer(_): return nil, false
-	case Unary(_): return nil, false
-	case Binary(_): return nil, false
-	case KeyValue(_): return nil, false
-	case ArrayType(_): return nil, false
-	case StructType(_): return nil, false
-	case FunctionType(_): return nil, false
-	case InterfaceType(_): return nil, false
-	case MapType(_): return nil, false
-	case ChannelType(_): return nil, false
-	case Default(_): return nil, false
+	switch enumValue9 := *expression; enumValue9.Tag() {
+	case ExpressionTagPropagation:
+		item := enumValue9.PropagationPayload()
+		return item.Value, true
+	case ExpressionTagBad:
+		return nil, false
+	case ExpressionTagIdentifier:
+		return nil, false
+	case ExpressionTagEllipsis:
+		return nil, false
+	case ExpressionTagBasicLiteral:
+		return nil, false
+	case ExpressionTagFunctionLiteral:
+		return nil, false
+	case ExpressionTagCompositeLiteral:
+		return nil, false
+	case ExpressionTagParenthesized:
+		return nil, false
+	case ExpressionTagSelector:
+		return nil, false
+	case ExpressionTagIndex:
+		return nil, false
+	case ExpressionTagIndexList:
+		return nil, false
+	case ExpressionTagSlice:
+		return nil, false
+	case ExpressionTagTypeAssertion:
+		return nil, false
+	case ExpressionTagCall:
+		return nil, false
+	case ExpressionTagStar:
+		return nil, false
+	case ExpressionTagNonNilPointer:
+		return nil, false
+	case ExpressionTagUnary:
+		return nil, false
+	case ExpressionTagBinary:
+		return nil, false
+	case ExpressionTagKeyValue:
+		return nil, false
+	case ExpressionTagArrayType:
+		return nil, false
+	case ExpressionTagStructType:
+		return nil, false
+	case ExpressionTagFunctionType:
+		return nil, false
+	case ExpressionTagInterfaceType:
+		return nil, false
+	case ExpressionTagMapType:
+		return nil, false
+	case ExpressionTagChannelType:
+		return nil, false
+	case ExpressionTagDefault:
+		return nil, false
+	case ExpressionTagComprehension:
+		return nil, false
+	exhaustive:
 	}
 }
 
@@ -206,34 +286,21 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok { return nil, false }
-	match *expression {
-	case Comprehension(item): return item.Value, true
-	case Bad(_): return nil, false
-	case Identifier(_): return nil, false
-	case Ellipsis(_): return nil, false
-	case BasicLiteral(_): return nil, false
-	case FunctionLiteral(_): return nil, false
-	case CompositeLiteral(_): return nil, false
-	case Parenthesized(_): return nil, false
-	case Selector(_): return nil, false
-	case Index(_): return nil, false
-	case IndexList(_): return nil, false
-	case Slice(_): return nil, false
-	case TypeAssertion(_): return nil, false
-	case Call(_): return nil, false
-	case Star(_): return nil, false
-	case NonNilPointer(_): return nil, false
-	case Unary(_): return nil, false
-	case Binary(_): return nil, false
-	case KeyValue(_): return nil, false
-	case ArrayType(_): return nil, false
-	case StructType(_): return nil, false
-	case FunctionType(_): return nil, false
-	case InterfaceType(_): return nil, false
-	case MapType(_): return nil, false
-	case ChannelType(_): return nil, false
-	case Default(_): return nil, false
-	case Propagation(_): return nil, false
+	switch item := *expression; item.Tag() {
+	case ExpressionTagComprehension:
+		return item.ComprehensionPayload().Value, true
+	case ExpressionTagBad, ExpressionTagIdentifier, ExpressionTagEllipsis,
+		ExpressionTagBasicLiteral, ExpressionTagFunctionLiteral,
+		ExpressionTagCompositeLiteral, ExpressionTagParenthesized,
+		ExpressionTagSelector, ExpressionTagIndex, ExpressionTagIndexList,
+		ExpressionTagSlice, ExpressionTagTypeAssertion, ExpressionTagCall,
+		ExpressionTagStar, ExpressionTagNonNilPointer, ExpressionTagUnary,
+		ExpressionTagBinary, ExpressionTagKeyValue, ExpressionTagArrayType,
+		ExpressionTagStructType, ExpressionTagFunctionType,
+		ExpressionTagInterfaceType, ExpressionTagMapType,
+		ExpressionTagChannelType, ExpressionTagDefault, ExpressionTagPropagation:
+		return nil, false
+	exhaustive:
 	}
 }
 
@@ -242,9 +309,12 @@ func ComprehensionRangeClauseOf(
 	value *ComprehensionClause,
 ) (*ComprehensionRangeClause, bool) {
 	if value == nil { return nil, false }
-	match *value {
-	case Range(item): return item.Value, true
-	case Filter(_): return nil, false
+	switch item := *value; item.Tag() {
+	case ComprehensionClauseTagRange:
+		return item.RangePayload().Value, true
+	case ComprehensionClauseTagFilter:
+		return nil, false
+	exhaustive:
 	}
 }
 
@@ -253,9 +323,12 @@ func ComprehensionFilterClauseOf(
 	value *ComprehensionClause,
 ) (*ComprehensionFilterClause, bool) {
 	if value == nil { return nil, false }
-	match *value {
-	case Filter(item): return item.Value, true
-	case Range(_): return nil, false
+	switch item := *value; item.Tag() {
+	case ComprehensionClauseTagRange:
+		return nil, false
+	case ComprehensionClauseTagFilter:
+		return item.FilterPayload().Value, true
+	exhaustive:
 	}
 }
 
@@ -263,237 +336,336 @@ func ComprehensionFilterClauseOf(
 func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok { return nil, false }
-	match *expression {
-	case NonNilPointer(item): return item.Value, true
-	case Bad(_): return nil, false
-	case Identifier(_): return nil, false
-	case Ellipsis(_): return nil, false
-	case BasicLiteral(_): return nil, false
-	case FunctionLiteral(_): return nil, false
-	case CompositeLiteral(_): return nil, false
-	case Parenthesized(_): return nil, false
-	case Selector(_): return nil, false
-	case Index(_): return nil, false
-	case IndexList(_): return nil, false
-	case Slice(_): return nil, false
-	case TypeAssertion(_): return nil, false
-	case Call(_): return nil, false
-	case Star(_): return nil, false
-	case Unary(_): return nil, false
-	case Binary(_): return nil, false
-	case KeyValue(_): return nil, false
-	case ArrayType(_): return nil, false
-	case StructType(_): return nil, false
-	case FunctionType(_): return nil, false
-	case InterfaceType(_): return nil, false
-	case MapType(_): return nil, false
-	case ChannelType(_): return nil, false
-	case Default(_): return nil, false
-	case Propagation(_): return nil, false
-	case Comprehension(_): return nil, false
+	switch enumValue10 := *expression; enumValue10.Tag() {
+	case ExpressionTagNonNilPointer:
+		item := enumValue10.NonNilPointerPayload()
+		return item.Value, true
+	case ExpressionTagBad:
+		return nil, false
+	case ExpressionTagIdentifier:
+		return nil, false
+	case ExpressionTagEllipsis:
+		return nil, false
+	case ExpressionTagBasicLiteral:
+		return nil, false
+	case ExpressionTagFunctionLiteral:
+		return nil, false
+	case ExpressionTagCompositeLiteral:
+		return nil, false
+	case ExpressionTagParenthesized:
+		return nil, false
+	case ExpressionTagSelector:
+		return nil, false
+	case ExpressionTagIndex:
+		return nil, false
+	case ExpressionTagIndexList:
+		return nil, false
+	case ExpressionTagSlice:
+		return nil, false
+	case ExpressionTagTypeAssertion:
+		return nil, false
+	case ExpressionTagCall:
+		return nil, false
+	case ExpressionTagStar:
+		return nil, false
+	case ExpressionTagUnary:
+		return nil, false
+	case ExpressionTagBinary:
+		return nil, false
+	case ExpressionTagKeyValue:
+		return nil, false
+	case ExpressionTagArrayType:
+		return nil, false
+	case ExpressionTagStructType:
+		return nil, false
+	case ExpressionTagFunctionType:
+		return nil, false
+	case ExpressionTagInterfaceType:
+		return nil, false
+	case ExpressionTagMapType:
+		return nil, false
+	case ExpressionTagChannelType:
+		return nil, false
+	case ExpressionTagDefault:
+		return nil, false
+	case ExpressionTagPropagation:
+		return nil, false
+	case ExpressionTagComprehension:
+		return nil, false
+	exhaustive:
 	}
 }
 
 // ExpressionOf returns an expression node payload.
 func ExpressionOf(node *Node) (*Expression, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Expression(value): return value.Value, true
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Specification(_): return nil, false
-	case Statement(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue11 := *node; enumValue11.Tag() {
+	case NodeTagExpression:
+		value := enumValue11.ExpressionPayload()
+		return value.Value, true
+	case NodeTagFile:
+		return nil, false
+	case NodeTagDeclaration:
+		return nil, false
+	case NodeTagSpecification:
+		return nil, false
+	case NodeTagStatement:
+		return nil, false
+	case NodeTagField:
+		return nil, false
+	case NodeTagFieldList:
+		return nil, false
+	case NodeTagTGoField:
+		return nil, false
+	case NodeTagEnumVariant:
+		return nil, false
+case NodeTagIdentifier:
+		return nil, false
+	case NodeTagComment:
+		return nil, false
+	case NodeTagCommentGroup:
+		return nil, false
+	exhaustive:
 	}
 }
 
 // StatementOf returns a statement node payload.
 func StatementOf(node *Node) (*Statement, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Statement(value): return value.Value, true
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Specification(_): return nil, false
-	case Expression(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue12 := *node; enumValue12.Tag() {
+	case NodeTagStatement:
+		value := enumValue12.StatementPayload()
+		return value.Value, true
+	case NodeTagFile:
+		return nil, false
+	case NodeTagDeclaration:
+		return nil, false
+	case NodeTagSpecification:
+		return nil, false
+	case NodeTagExpression:
+		return nil, false
+	case NodeTagField:
+		return nil, false
+	case NodeTagFieldList:
+		return nil, false
+	case NodeTagTGoField:
+		return nil, false
+	case NodeTagEnumVariant:
+		return nil, false
+case NodeTagIdentifier:
+		return nil, false
+	case NodeTagComment:
+		return nil, false
+	case NodeTagCommentGroup:
+		return nil, false
+	exhaustive:
 	}
 }
 
 // DeclarationOf returns a declaration node payload.
 func DeclarationOf(node *Node) (*Declaration, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Declaration(value): return value.Value, true
-	case File(_): return nil, false
-	case Specification(_): return nil, false
-	case Statement(_): return nil, false
-	case Expression(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue13 := *node; enumValue13.Tag() {
+	case NodeTagDeclaration:
+		value := enumValue13.DeclarationPayload()
+		return value.Value, true
+	case NodeTagFile:
+		return nil, false
+	case NodeTagSpecification:
+		return nil, false
+	case NodeTagStatement:
+		return nil, false
+	case NodeTagExpression:
+		return nil, false
+	case NodeTagField:
+		return nil, false
+	case NodeTagFieldList:
+		return nil, false
+	case NodeTagTGoField:
+		return nil, false
+	case NodeTagEnumVariant:
+		return nil, false
+case NodeTagIdentifier:
+		return nil, false
+	case NodeTagComment:
+		return nil, false
+	case NodeTagCommentGroup:
+		return nil, false
+	exhaustive:
 	}
 }
 
 // SpecificationOf returns a specification node payload.
 func SpecificationOf(node *Node) (*Specification, bool) {
 	if node == nil { return nil, false }
-	match *node {
-	case Specification(value): return value.Value, true
-	case File(_): return nil, false
-	case Declaration(_): return nil, false
-	case Statement(_): return nil, false
-	case Expression(_): return nil, false
-	case Field(_): return nil, false
-	case FieldList(_): return nil, false
-	case TGoField(_): return nil, false
-	case EnumVariant(_): return nil, false
-	case MatchCase(_): return nil, false
-	case Identifier(_): return nil, false
-	case Comment(_): return nil, false
-	case CommentGroup(_): return nil, false
+	switch enumValue14 := *node; enumValue14.Tag() {
+	case NodeTagSpecification:
+		value := enumValue14.SpecificationPayload()
+		return value.Value, true
+	case NodeTagFile:
+		return nil, false
+	case NodeTagDeclaration:
+		return nil, false
+	case NodeTagStatement:
+		return nil, false
+	case NodeTagExpression:
+		return nil, false
+	case NodeTagField:
+		return nil, false
+	case NodeTagFieldList:
+		return nil, false
+	case NodeTagTGoField:
+		return nil, false
+	case NodeTagEnumVariant:
+		return nil, false
+case NodeTagIdentifier:
+		return nil, false
+	case NodeTagComment:
+		return nil, false
+	case NodeTagCommentGroup:
+		return nil, false
+	exhaustive:
 	}
 }
 
 // ExpressionKind returns the closed expression variant name.
 func ExpressionKind(value *Expression) string {
-	match *value {
-	case Bad(_): return "Bad"
-	case Identifier(_): return "Identifier"
-	case Ellipsis(_): return "Ellipsis"
-	case BasicLiteral(_): return "BasicLiteral"
-	case FunctionLiteral(_): return "FunctionLiteral"
-	case CompositeLiteral(_): return "CompositeLiteral"
-	case Parenthesized(_): return "Parenthesized"
-	case Selector(_): return "Selector"
-	case Index(_): return "Index"
-	case IndexList(_): return "IndexList"
-	case Slice(_): return "Slice"
-	case TypeAssertion(_): return "TypeAssertion"
-	case Call(_): return "Call"
-	case Star(_): return "Star"
-	case NonNilPointer(_): return "NonNilPointer"
-	case Unary(_): return "Unary"
-	case Binary(_): return "Binary"
-	case KeyValue(_): return "KeyValue"
-	case ArrayType(_): return "ArrayType"
-	case StructType(_): return "StructType"
-	case FunctionType(_): return "FunctionType"
-	case InterfaceType(_): return "InterfaceType"
-	case MapType(_): return "MapType"
-	case ChannelType(_): return "ChannelType"
-	case Default(_): return "Default"
-	case Propagation(_): return "Propagation"
-	case Comprehension(_): return "Comprehension"
+	switch enumValue15 := *value; enumValue15.Tag() {
+	case ExpressionTagBad:
+		return "Bad"
+	case ExpressionTagIdentifier:
+		return "Identifier"
+	case ExpressionTagEllipsis:
+		return "Ellipsis"
+	case ExpressionTagBasicLiteral:
+		return "BasicLiteral"
+	case ExpressionTagFunctionLiteral:
+		return "FunctionLiteral"
+	case ExpressionTagCompositeLiteral:
+		return "CompositeLiteral"
+	case ExpressionTagParenthesized:
+		return "Parenthesized"
+	case ExpressionTagSelector:
+		return "Selector"
+	case ExpressionTagIndex:
+		return "Index"
+	case ExpressionTagIndexList:
+		return "IndexList"
+	case ExpressionTagSlice:
+		return "Slice"
+	case ExpressionTagTypeAssertion:
+		return "TypeAssertion"
+	case ExpressionTagCall:
+		return "Call"
+	case ExpressionTagStar:
+		return "Star"
+	case ExpressionTagNonNilPointer:
+		return "NonNilPointer"
+	case ExpressionTagUnary:
+		return "Unary"
+	case ExpressionTagBinary:
+		return "Binary"
+	case ExpressionTagKeyValue:
+		return "KeyValue"
+	case ExpressionTagArrayType:
+		return "ArrayType"
+	case ExpressionTagStructType:
+		return "StructType"
+	case ExpressionTagFunctionType:
+		return "FunctionType"
+	case ExpressionTagInterfaceType:
+		return "InterfaceType"
+	case ExpressionTagMapType:
+		return "MapType"
+	case ExpressionTagChannelType:
+		return "ChannelType"
+	case ExpressionTagDefault:
+		return "Default"
+	case ExpressionTagPropagation:
+		return "Propagation"
+	case ExpressionTagComprehension:
+		return "Comprehension"
+	exhaustive:
 	}
 }
 
 // StatementKind returns the closed statement variant name.
 func StatementKind(value *Statement) string {
-	match *value {
-	case Bad(_): return "Bad"
-	case Declaration(_): return "Declaration"
-	case Empty(_): return "Empty"
-	case Labeled(_): return "Labeled"
-	case Expression(_): return "Expression"
-	case Send(_): return "Send"
-	case Increment(_): return "Increment"
-	case Assignment(_): return "Assignment"
-	case Go(_): return "Go"
-	case Defer(_): return "Defer"
-	case Return(_): return "Return"
-	case Branch(_): return "Branch"
-	case Block(_): return "Block"
-	case If(_): return "If"
-	case Case(_): return "Case"
-	case Switch(_): return "Switch"
-	case TypeSwitch(_): return "TypeSwitch"
-	case Communication(_): return "Communication"
-	case Select(_): return "Select"
-	case For(_): return "For"
-	case Range(_): return "Range"
-	case Match(_): return "Match"
+	switch enumValue16 := *value; enumValue16.Tag() {
+	case StatementTagBad:
+		return "Bad"
+	case StatementTagDeclaration:
+		return "Declaration"
+	case StatementTagEmpty:
+		return "Empty"
+	case StatementTagLabeled:
+		return "Labeled"
+	case StatementTagExpression:
+		return "Expression"
+	case StatementTagSend:
+		return "Send"
+	case StatementTagIncrement:
+		return "Increment"
+	case StatementTagAssignment:
+		return "Assignment"
+	case StatementTagGo:
+		return "Go"
+	case StatementTagDefer:
+		return "Defer"
+	case StatementTagReturn:
+		return "Return"
+	case StatementTagBranch:
+		return "Branch"
+	case StatementTagBlock:
+		return "Block"
+	case StatementTagIf:
+		return "If"
+	case StatementTagCase:
+		return "Case"
+	case StatementTagSwitch:
+		return "Switch"
+	case StatementTagTypeSwitch:
+		return "TypeSwitch"
+	case StatementTagCommunication:
+		return "Communication"
+	case StatementTagSelect:
+		return "Select"
+	case StatementTagFor:
+		return "For"
+	case StatementTagRange:
+		return "Range"
+exhaustive:
 	}
 }
 
 // DeclarationKind returns the closed declaration variant name.
 func DeclarationKind(value *Declaration) string {
-	match *value {
-	case Bad(_): return "Bad"
-	case General(_): return "General"
-	case Function(_): return "Function"
-	case Enum(_): return "Enum"
-	case Struct(_): return "Struct"
-	case Checked(_): return "Checked"
+	switch enumValue17 := *value; enumValue17.Tag() {
+	case DeclarationTagBad:
+		return "Bad"
+	case DeclarationTagGeneral:
+		return "General"
+	case DeclarationTagFunction:
+		return "Function"
+	case DeclarationTagEnum:
+		return "Enum"
+	case DeclarationTagStruct:
+		return "Struct"
+	case DeclarationTagChecked:
+		return "Checked"
+	exhaustive:
 	}
 }
 
 // SpecificationKind returns the closed specification variant name.
 func SpecificationKind(value *Specification) string {
-	match *value {
-	case Import(_): return "Import"
-	case Value(_): return "Value"
-	case Type(_): return "Type"
+	switch enumValue18 := *value; enumValue18.Tag() {
+	case SpecificationTagImport:
+		return "Import"
+	case SpecificationTagValue:
+		return "Value"
+	case SpecificationTagType:
+		return "Type"
+	exhaustive:
 	}
 }
-
-// StaticCallName returns the source name for a supported static call.
-func StaticCallName(value *Expression) (string, bool) {
-	if value == nil { return "", false }
-	match *value {
-	case Identifier(item): return item.Value.Name, true
-	case Selector(item):
-		prefix, ok := StaticCallName(item.Value.Expression)
-		if !ok { return "", false }
-		return prefix + "." + item.Value.Selector.Name, true
-	case Index(item): return StaticCallName(item.Value.Expression)
-	case IndexList(item): return StaticCallName(item.Value.Expression)
-	case Parenthesized(item): return StaticCallName(item.Value.Expression)
-	case Star(item): return StaticCallName(item.Value.Expression)
-	case NonNilPointer(_): return "", false
-	case Bad(_): return "", false
-	case Ellipsis(_): return "", false
-	case BasicLiteral(_): return "", false
-	case FunctionLiteral(_): return "", false
-	case CompositeLiteral(_): return "", false
-	case Slice(_): return "", false
-	case TypeAssertion(_): return "", false
-	case Call(_): return "", false
-	case Unary(_): return "", false
-	case Binary(_): return "", false
-	case KeyValue(_): return "", false
-	case ArrayType(_): return "", false
-	case StructType(_): return "", false
-	case FunctionType(_): return "", false
-	case InterfaceType(_): return "", false
-	case MapType(_): return "", false
-	case ChannelType(_): return "", false
-	case Default(_): return "", false
-	case Propagation(_): return "", false
-	case Comprehension(_): return "", false
-	}
-}
-
-
-
-
-

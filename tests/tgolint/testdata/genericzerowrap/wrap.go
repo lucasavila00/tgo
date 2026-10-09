@@ -22,8 +22,9 @@ func Make[T any](length int) {
 }
 
 type eventLike interface {
-	TgoTag() uint8
-	TgoStarted() model.EventStarted
+	Tag() model.EventTag
+	UnknownTag() string
+	StartedPayload() model.EventStarted
 }
 
 func Started[T eventLike](event T) string {

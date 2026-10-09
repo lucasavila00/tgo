@@ -5,19 +5,19 @@ package syntax
 
 // functionTypeNode wraps one required function type as an expression.
 func functionTypeNode(value *FunctionType) *Expression {
-	result := NewExpressionFunctionType(ExpressionFunctionType{Value: value})
+	result := ExpressionFunctionType{Value: value}.Expression()
 	return &result
 }
 
 // basicLiteralNode wraps one required literal as an expression.
 func basicLiteralNode(value *BasicLiteral) *Expression {
-	result := NewExpressionBasicLiteral(ExpressionBasicLiteral{Value: value})
+	result := ExpressionBasicLiteral{Value: value}.Expression()
 	return &result
 }
 
 // blockStatementNode wraps one required block as a statement.
 func blockStatementNode(value *BlockStatement) *Statement {
-	result := NewStatementBlock(StatementBlock{Value: value})
+	result := StatementBlock{Value: value}.Statement()
 	return &result
 }
 
@@ -46,205 +46,198 @@ func buildPublicIndex(file *File) {
 }
 
 func isExtension(node Node) bool {
-	switch __tgo_match_30 := node; __tgo_match_30.TgoTag() {
-	case 2:
-		value := __tgo_match_30.TgoDeclaration()
-		switch __tgo_match_31 := *value.Value; __tgo_match_31.TgoTag() {
-		case 1:
+	switch enumValue27 := node; enumValue27.Tag() {
+	case NodeTagDeclaration:
+		value := enumValue27.DeclarationPayload()
+		switch enumValue28 := *value.Value; enumValue28.Tag() {
+		case DeclarationTagBad:
 			return false
-		case 2:
+		case DeclarationTagGeneral:
 			return false
-		case 3:
+		case DeclarationTagFunction:
 			return false
-		case 4:
+		case DeclarationTagEnum:
 			return true
-		case 5:
+		case DeclarationTagStruct:
 			return true
-		case 6:
-			return true
-		default:
-			panic("invalid Declaration variant")
-		}
-	case 4:
-		value := __tgo_match_30.TgoStatement()
-		switch __tgo_match_32 := *value.Value; __tgo_match_32.TgoTag() {
-		case 1:
-			return false
-		case 2:
-			return false
-		case 3:
-			return false
-		case 4:
-			return false
-		case 5:
-			return false
-		case 6:
-			return false
-		case 7:
-			return false
-		case 8:
-			return false
-		case 9:
-			return false
-		case 10:
-			return false
-		case 11:
-			return false
-		case 12:
-			return false
-		case 13:
-			return false
-		case 14:
-			return false
-		case 15:
-			return false
-		case 16:
-			return false
-		case 17:
-			return false
-		case 18:
-			return false
-		case 19:
-			return false
-		case 20:
-			return false
-		case 21:
-			return false
-		case 22:
+		case DeclarationTagChecked:
 			return true
 		default:
-			panic("invalid Statement variant")
+			panic(enumValue28.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
-	case 5:
-		value := __tgo_match_30.TgoExpression()
-		switch __tgo_match_33 := *value.Value; __tgo_match_33.TgoTag() {
-		case 1:
+	case NodeTagStatement:
+		value := enumValue27.StatementPayload()
+		switch enumValue29 := *value.Value; enumValue29.Tag() {
+		case StatementTagBad:
 			return false
-		case 2:
+		case StatementTagDeclaration:
 			return false
-		case 3:
+		case StatementTagEmpty:
 			return false
-		case 4:
+		case StatementTagLabeled:
 			return false
-		case 5:
+		case StatementTagExpression:
 			return false
-		case 6:
+		case StatementTagSend:
 			return false
-		case 7:
+		case StatementTagIncrement:
 			return false
-		case 8:
+		case StatementTagAssignment:
 			return false
-		case 9:
+		case StatementTagGo:
 			return false
-		case 10:
+		case StatementTagDefer:
 			return false
-		case 11:
+		case StatementTagReturn:
 			return false
-		case 12:
+		case StatementTagBranch:
 			return false
-		case 13:
+		case StatementTagBlock:
 			return false
-		case 14:
+		case StatementTagIf:
 			return false
-		case 15:
+		case StatementTagCase:
+			return false
+		case StatementTagSwitch:
+			return false
+		case StatementTagTypeSwitch:
+			return false
+		case StatementTagCommunication:
+			return false
+		case StatementTagSelect:
+			return false
+		case StatementTagFor:
+			return false
+		case StatementTagRange:
+			return false
+		default:
+			panic(enumValue29.UnknownTag()) // unreachable: tgolint requires a case per tag
+		}
+	case NodeTagExpression:
+		value := enumValue27.ExpressionPayload()
+		switch enumValue30 := *value.Value; enumValue30.Tag() {
+		case ExpressionTagBad:
+			return false
+		case ExpressionTagIdentifier:
+			return false
+		case ExpressionTagEllipsis:
+			return false
+		case ExpressionTagBasicLiteral:
+			return false
+		case ExpressionTagFunctionLiteral:
+			return false
+		case ExpressionTagCompositeLiteral:
+			return false
+		case ExpressionTagParenthesized:
+			return false
+		case ExpressionTagSelector:
+			return false
+		case ExpressionTagIndex:
+			return false
+		case ExpressionTagIndexList:
+			return false
+		case ExpressionTagSlice:
+			return false
+		case ExpressionTagTypeAssertion:
+			return false
+		case ExpressionTagCall:
+			return false
+		case ExpressionTagStar:
+			return false
+		case ExpressionTagNonNilPointer:
 			return true
-		case 16:
+		case ExpressionTagUnary:
 			return false
-		case 17:
+		case ExpressionTagBinary:
 			return false
-		case 18:
+		case ExpressionTagKeyValue:
 			return false
-		case 19:
+		case ExpressionTagArrayType:
 			return false
-		case 20:
+		case ExpressionTagStructType:
 			return false
-		case 21:
+		case ExpressionTagFunctionType:
 			return false
-		case 22:
+		case ExpressionTagInterfaceType:
 			return false
-		case 23:
+		case ExpressionTagMapType:
 			return false
-		case 24:
+		case ExpressionTagChannelType:
 			return false
-		case 25:
+		case ExpressionTagDefault:
 			return true
-		case 26:
+		case ExpressionTagPropagation:
 			return true
-		case 27:
+		case ExpressionTagComprehension:
 			return true
 		default:
-			panic("invalid Expression variant")
+			panic(enumValue30.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
-	case 8:
+	case NodeTagTGoField:
 		return true
-	case 9:
+	case NodeTagEnumVariant:
 		return true
-	case 10:
-		return true
-	case 1:
+	case NodeTagFile:
 		return false
-	case 3:
+	case NodeTagSpecification:
 		return false
-	case 6:
+	case NodeTagField:
 		return false
-	case 7:
+	case NodeTagFieldList:
 		return false
-	case 11:
+	case NodeTagIdentifier:
 		return false
-	case 12:
+	case NodeTagComment:
 		return false
-	case 13:
+	case NodeTagCommentGroup:
 		return false
 	default:
-		panic("invalid Node variant")
+		panic(enumValue27.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func publicChildren(node Node) []Node {
-	switch __tgo_match_34 := node; __tgo_match_34.TgoTag() {
-	case 1:
-		value := __tgo_match_34.TgoFile()
+	switch enumValue31 := node; enumValue31.Tag() {
+	case NodeTagFile:
+		value := enumValue31.FilePayload()
 		return fileChildren(value.Value)
-	case 2:
-		value := __tgo_match_34.TgoDeclaration()
+	case NodeTagDeclaration:
+		value := enumValue31.DeclarationPayload()
 		return declarationChildren(value.Value)
-	case 3:
-		value := __tgo_match_34.TgoSpecification()
+	case NodeTagSpecification:
+		value := enumValue31.SpecificationPayload()
 		return specificationChildren(value.Value)
-	case 4:
-		value := __tgo_match_34.TgoStatement()
+	case NodeTagStatement:
+		value := enumValue31.StatementPayload()
 		return statementChildren(value.Value)
-	case 5:
-		value := __tgo_match_34.TgoExpression()
+	case NodeTagExpression:
+		value := enumValue31.ExpressionPayload()
 		return expressionChildren(value.Value)
-	case 6:
-		value := __tgo_match_34.TgoField()
+	case NodeTagField:
+		value := enumValue31.FieldPayload()
 		return fieldChildren(value.Value)
-	case 7:
-		value := __tgo_match_34.TgoFieldList()
+	case NodeTagFieldList:
+		value := enumValue31.FieldListPayload()
 		return fieldListChildren(value.Value)
-	case 8:
-		value := __tgo_match_34.TgoTGoField()
+	case NodeTagTGoField:
+		value := enumValue31.TGoFieldPayload()
 		return tgoFieldChildren(value.Value)
-	case 9:
-		value := __tgo_match_34.TgoEnumVariant()
+	case NodeTagEnumVariant:
+		value := enumValue31.EnumVariantPayload()
 		return enumVariantChildren(value.Value)
-	case 10:
-		value := __tgo_match_34.TgoMatchCase()
-		return matchCaseChildren(value.Value)
-	case 11:
+	case NodeTagIdentifier:
 		return nil
-	case 12:
+	case NodeTagComment:
 		return nil
-	case 13:
-		value := __tgo_match_34.TgoCommentGroup()
+	case NodeTagCommentGroup:
+		value := enumValue31.CommentGroupPayload()
 		result := make([]Node, 0, len(value.Value.List))
 		for _, item := range value.Value.List {
 			result = append(result, nodeComment(item))
 		}
 		return result
 	default:
-		panic("invalid Node variant")
+		panic(enumValue31.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -270,49 +263,49 @@ func expressionChildren(value *Expression) []Node {
 			result = append(result, nodeExpression(item))
 		}
 	}
-	switch __tgo_match_35 := *value; __tgo_match_35.TgoTag() {
-	case 1:
+	switch enumValue32 := *value; enumValue32.Tag() {
+	case ExpressionTagBad:
 		return result
-	case 2:
+	case ExpressionTagIdentifier:
 		return result
-	case 4:
+	case ExpressionTagBasicLiteral:
 		return result
-	case 25:
+	case ExpressionTagDefault:
 		return result
-	case 3:
-		item := __tgo_match_35.TgoEllipsis()
+	case ExpressionTagEllipsis:
+		item := enumValue32.EllipsisPayload()
 		if item.Value.Element != nil {
 			addExpression(item.Value.Element)
 		}
-	case 5:
-		item := __tgo_match_35.TgoFunctionLiteral()
+	case ExpressionTagFunctionLiteral:
+		item := enumValue32.FunctionLiteralPayload()
 		addExpression(functionTypeNode(item.Value.Type))
 		result = append(
 			result, nodeStatement(blockStatementNode(item.Value.Body)),
 		)
-	case 6:
-		item := __tgo_match_35.TgoCompositeLiteral()
+	case ExpressionTagCompositeLiteral:
+		item := enumValue32.CompositeLiteralPayload()
 		if item.Value.Type != nil {
 			addExpression(item.Value.Type)
 		}
 		addExpressions(item.Value.Elements)
-	case 7:
-		item := __tgo_match_35.TgoParenthesized()
+	case ExpressionTagParenthesized:
+		item := enumValue32.ParenthesizedPayload()
 		addExpression(item.Value.Expression)
-	case 8:
-		item := __tgo_match_35.TgoSelector()
+	case ExpressionTagSelector:
+		item := enumValue32.SelectorPayload()
 		addExpression(item.Value.Expression)
 		result = append(result, nodeIdentifier(item.Value.Selector))
-	case 9:
-		item := __tgo_match_35.TgoIndex()
+	case ExpressionTagIndex:
+		item := enumValue32.IndexPayload()
 		addExpression(item.Value.Expression)
 		addExpression(item.Value.Index)
-	case 10:
-		item := __tgo_match_35.TgoIndexList()
+	case ExpressionTagIndexList:
+		item := enumValue32.IndexListPayload()
 		addExpression(item.Value.Expression)
 		addExpressions(item.Value.Indices)
-	case 11:
-		item := __tgo_match_35.TgoSlice()
+	case ExpressionTagSlice:
+		item := enumValue32.SlicePayload()
 		addExpression(item.Value.Expression)
 		if item.Value.Low != nil {
 			addExpression(item.Value.Low)
@@ -323,44 +316,44 @@ func expressionChildren(value *Expression) []Node {
 		if item.Value.Max != nil {
 			addExpression(item.Value.Max)
 		}
-	case 12:
-		item := __tgo_match_35.TgoTypeAssertion()
+	case ExpressionTagTypeAssertion:
+		item := enumValue32.TypeAssertionPayload()
 		addExpression(item.Value.Expression)
 		if item.Value.Type != nil {
 			addExpression(item.Value.Type)
 		}
-	case 13:
-		item := __tgo_match_35.TgoCall()
+	case ExpressionTagCall:
+		item := enumValue32.CallPayload()
 		addExpression(item.Value.Callee)
 		addExpressions(item.Value.Args)
-	case 14:
-		item := __tgo_match_35.TgoStar()
+	case ExpressionTagStar:
+		item := enumValue32.StarPayload()
 		addExpression(item.Value.Expression)
-	case 15:
-		item := __tgo_match_35.TgoNonNilPointer()
+	case ExpressionTagNonNilPointer:
+		item := enumValue32.NonNilPointerPayload()
 		addExpression(item.Value.Type)
-	case 16:
-		item := __tgo_match_35.TgoUnary()
+	case ExpressionTagUnary:
+		item := enumValue32.UnaryPayload()
 		addExpression(item.Value.Expression)
-	case 17:
-		item := __tgo_match_35.TgoBinary()
+	case ExpressionTagBinary:
+		item := enumValue32.BinaryPayload()
 		addExpression(item.Value.Left)
 		addExpression(item.Value.Right)
-	case 18:
-		item := __tgo_match_35.TgoKeyValue()
+	case ExpressionTagKeyValue:
+		item := enumValue32.KeyValuePayload()
 		addExpression(item.Value.Key)
 		addExpression(item.Value.Value)
-	case 19:
-		item := __tgo_match_35.TgoArrayType()
+	case ExpressionTagArrayType:
+		item := enumValue32.ArrayTypePayload()
 		if item.Value.Length != nil {
 			addExpression(item.Value.Length)
 		}
 		addExpression(item.Value.Element)
-	case 20:
-		item := __tgo_match_35.TgoStructType()
+	case ExpressionTagStructType:
+		item := enumValue32.StructTypePayload()
 		result = append(result, nodeFieldList(item.Value.Fields))
-	case 21:
-		item := __tgo_match_35.TgoFunctionType()
+	case ExpressionTagFunctionType:
+		item := enumValue32.FunctionTypePayload()
 		if item.Value.TypeParams != nil {
 			result = append(result, nodeFieldList(item.Value.TypeParams))
 		}
@@ -368,35 +361,33 @@ func expressionChildren(value *Expression) []Node {
 		if item.Value.Results != nil {
 			result = append(result, nodeFieldList(item.Value.Results))
 		}
-	case 22:
-		item := __tgo_match_35.TgoInterfaceType()
+	case ExpressionTagInterfaceType:
+		item := enumValue32.InterfaceTypePayload()
 		result = append(result, nodeFieldList(item.Value.Methods))
-	case 23:
-		item := __tgo_match_35.TgoMapType()
+	case ExpressionTagMapType:
+		item := enumValue32.MapTypePayload()
 		addExpression(item.Value.Key)
 		addExpression(item.Value.Value)
-	case 24:
-		item := __tgo_match_35.TgoChannelType()
+	case ExpressionTagChannelType:
+		item := enumValue32.ChannelTypePayload()
 		addExpression(item.Value.Value)
-	case 26:
-		item := __tgo_match_35.TgoPropagation()
+	case ExpressionTagPropagation:
+		item := enumValue32.PropagationPayload()
 		addExpression(item.Value.Expression)
-	case 27:
-		item := __tgo_match_35.TgoComprehension()
+	case ExpressionTagComprehension:
+		item := enumValue32.ComprehensionPayload()
 		addExpression(item.Value.Type)
 		for _, clause := range item.Value.Clauses {
-			switch __tgo_match_36 := clause; __tgo_match_36.TgoTag() {
-			case 1:
-				value := __tgo_match_36.TgoRange()
-				for _, binding := range value.Value.Bindings {
+			switch value := clause; value.Tag() {
+			case ComprehensionClauseTagRange:
+				for _, binding := range value.RangePayload().Value.Bindings {
 					result = append(result, nodeIdentifier(binding))
 				}
-				addExpression(value.Value.Source)
-			case 2:
-				value := __tgo_match_36.TgoFilter()
-				addExpression(value.Value.Condition)
+				addExpression(value.RangePayload().Value.Source)
+			case ComprehensionClauseTagFilter:
+				addExpression(value.FilterPayload().Value.Condition)
 			default:
-				panic("invalid ComprehensionClause variant")
+				panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
 			}
 		}
 		if item.Value.Result.Key != nil {
@@ -404,7 +395,7 @@ func expressionChildren(value *Expression) []Node {
 		}
 		addExpression(item.Value.Result.Value)
 	default:
-		panic("invalid Expression variant")
+		panic(enumValue32.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	return result
 }
@@ -427,51 +418,51 @@ func statementChildren(value *Statement) []Node {
 			result = append(result, nodeExpression(item))
 		}
 	}
-	switch __tgo_match_37 := *value; __tgo_match_37.TgoTag() {
-	case 1:
+	switch enumValue33 := *value; enumValue33.Tag() {
+	case StatementTagBad:
 		return result
-	case 3:
+	case StatementTagEmpty:
 		return result
-	case 2:
-		item := __tgo_match_37.TgoDeclaration()
+	case StatementTagDeclaration:
+		item := enumValue33.DeclarationPayload()
 		result = append(result, nodeDeclaration(item.Value.Declaration))
-	case 4:
-		item := __tgo_match_37.TgoLabeled()
+	case StatementTagLabeled:
+		item := enumValue33.LabeledPayload()
 		result = append(result, nodeIdentifier(item.Value.Label))
 		addStatement(item.Value.Statement)
-	case 5:
-		item := __tgo_match_37.TgoExpression()
+	case StatementTagExpression:
+		item := enumValue33.ExpressionPayload()
 		addExpression(item.Value.Expression)
-	case 6:
-		item := __tgo_match_37.TgoSend()
+	case StatementTagSend:
+		item := enumValue33.SendPayload()
 		addExpression(item.Value.Channel)
 		addExpression(item.Value.Value)
-	case 7:
-		item := __tgo_match_37.TgoIncrement()
+	case StatementTagIncrement:
+		item := enumValue33.IncrementPayload()
 		addExpression(item.Value.Expression)
-	case 8:
-		item := __tgo_match_37.TgoAssignment()
+	case StatementTagAssignment:
+		item := enumValue33.AssignmentPayload()
 		addExpressions(item.Value.Left)
 		addExpressions(item.Value.Right)
-	case 9:
-		item := __tgo_match_37.TgoGo()
+	case StatementTagGo:
+		item := enumValue33.GoPayload()
 		addExpression(item.Value.Call)
-	case 10:
-		item := __tgo_match_37.TgoDefer()
+	case StatementTagDefer:
+		item := enumValue33.DeferPayload()
 		addExpression(item.Value.Call)
-	case 11:
-		item := __tgo_match_37.TgoReturn()
+	case StatementTagReturn:
+		item := enumValue33.ReturnPayload()
 		addExpressions(item.Value.Results)
-	case 12:
-		item := __tgo_match_37.TgoBranch()
+	case StatementTagBranch:
+		item := enumValue33.BranchPayload()
 		if item.Value.Label != nil {
 			result = append(result, nodeIdentifier(item.Value.Label))
 		}
-	case 13:
-		item := __tgo_match_37.TgoBlock()
+	case StatementTagBlock:
+		item := enumValue33.BlockPayload()
 		addStatements(item.Value.List)
-	case 14:
-		item := __tgo_match_37.TgoIf()
+	case StatementTagIf:
+		item := enumValue33.IfPayload()
 		if item.Value.Init != nil {
 			addStatement(item.Value.Init)
 		}
@@ -480,12 +471,12 @@ func statementChildren(value *Statement) []Node {
 		if item.Value.Else != nil {
 			addStatement(item.Value.Else)
 		}
-	case 15:
-		item := __tgo_match_37.TgoCase()
+	case StatementTagCase:
+		item := enumValue33.CasePayload()
 		addExpressions(item.Value.List)
 		addStatements(item.Value.Body)
-	case 16:
-		item := __tgo_match_37.TgoSwitch()
+	case StatementTagSwitch:
+		item := enumValue33.SwitchPayload()
 		if item.Value.Init != nil {
 			addStatement(item.Value.Init)
 		}
@@ -493,24 +484,24 @@ func statementChildren(value *Statement) []Node {
 			addExpression(item.Value.Tag)
 		}
 		addStatement(blockStatementNode(item.Value.Body))
-	case 17:
-		item := __tgo_match_37.TgoTypeSwitch()
+	case StatementTagTypeSwitch:
+		item := enumValue33.TypeSwitchPayload()
 		if item.Value.Init != nil {
 			addStatement(item.Value.Init)
 		}
 		addStatement(item.Value.Assignment)
 		addStatement(blockStatementNode(item.Value.Body))
-	case 18:
-		item := __tgo_match_37.TgoCommunication()
+	case StatementTagCommunication:
+		item := enumValue33.CommunicationPayload()
 		if item.Value.Communication != nil {
 			addStatement(item.Value.Communication)
 		}
 		addStatements(item.Value.Body)
-	case 19:
-		item := __tgo_match_37.TgoSelect()
+	case StatementTagSelect:
+		item := enumValue33.SelectPayload()
 		addStatement(blockStatementNode(item.Value.Body))
-	case 20:
-		item := __tgo_match_37.TgoFor()
+	case StatementTagFor:
+		item := enumValue33.ForPayload()
 		if item.Value.Init != nil {
 			addStatement(item.Value.Init)
 		}
@@ -521,8 +512,8 @@ func statementChildren(value *Statement) []Node {
 			addStatement(item.Value.Post)
 		}
 		addStatement(blockStatementNode(item.Value.Body))
-	case 21:
-		item := __tgo_match_37.TgoRange()
+	case StatementTagRange:
+		item := enumValue33.RangePayload()
 		if item.Value.Key != nil {
 			addExpression(item.Value.Key)
 		}
@@ -531,31 +522,25 @@ func statementChildren(value *Statement) []Node {
 		}
 		addExpression(item.Value.Source)
 		addStatement(blockStatementNode(item.Value.Body))
-	case 22:
-		item := __tgo_match_37.TgoMatch()
-		addExpression(item.Value.Subject)
-		for _, value := range item.Value.Cases {
-			result = append(result, nodeMatchCase(value))
-		}
 	default:
-		panic("invalid Statement variant")
+		panic(enumValue33.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	return result
 }
 
 func declarationChildren(value *Declaration) []Node {
 	result := []Node(nil)
-	switch __tgo_match_38 := *value; __tgo_match_38.TgoTag() {
-	case 1:
+	switch enumValue34 := *value; enumValue34.Tag() {
+	case DeclarationTagBad:
 		return result
-	case 2:
-		item := __tgo_match_38.TgoGeneral()
+	case DeclarationTagGeneral:
+		item := enumValue34.GeneralPayload()
 		result = addComment(result, item.Value.Doc)
 		for _, spec := range item.Value.Specs {
 			result = append(result, nodeSpecification(spec))
 		}
-	case 3:
-		item := __tgo_match_38.TgoFunction()
+	case DeclarationTagFunction:
+		item := enumValue34.FunctionPayload()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Receiver != nil {
 			result = append(result, nodeFieldList(item.Value.Receiver))
@@ -567,11 +552,11 @@ func declarationChildren(value *Declaration) []Node {
 				result, nodeStatement(blockStatementNode(item.Value.Body)),
 			)
 		}
-	case 4:
-		item := __tgo_match_38.TgoEnum()
+	case DeclarationTagEnum:
+		item := enumValue34.EnumPayload()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Tag != nil {
-			tag := NewExpressionBasicLiteral(ExpressionBasicLiteral{Value: item.Value.Tag})
+			tag := ExpressionBasicLiteral{Value: item.Value.Tag}.Expression()
 			result = append(result, nodeExpression(&tag))
 		}
 		result = append(result, nodeIdentifier(item.Value.Name))
@@ -579,40 +564,40 @@ func declarationChildren(value *Declaration) []Node {
 			result = append(result, nodeEnumVariant(variant))
 		}
 		result = addComment(result, item.Value.Comment)
-	case 5:
-		item := __tgo_match_38.TgoStruct()
+	case DeclarationTagStruct:
+		item := enumValue34.StructPayload()
 		result = addComment(result, item.Value.Doc)
 		result = append(result, nodeIdentifier(item.Value.Name))
 		for _, field := range item.Value.Fields {
 			result = append(result, nodeTGoField(field))
 		}
 		result = addComment(result, item.Value.Comment)
-	case 6:
-		item := __tgo_match_38.TgoChecked()
+	case DeclarationTagChecked:
+		item := enumValue34.CheckedPayload()
 		result = addComment(result, item.Value.Doc)
 		result = append(result, nodeIdentifier(item.Value.Name))
 		result = append(result, nodeExpression(item.Value.Base))
 		result = append(result, nodeExpression(item.Value.Predicate))
 		result = addComment(result, item.Value.Comment)
 	default:
-		panic("invalid Declaration variant")
+		panic(enumValue34.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	return result
 }
 
 func specificationChildren(value *Specification) []Node {
 	result := []Node(nil)
-	switch __tgo_match_39 := *value; __tgo_match_39.TgoTag() {
-	case 1:
-		item := __tgo_match_39.TgoImport()
+	switch enumValue35 := *value; enumValue35.Tag() {
+	case SpecificationTagImport:
+		item := enumValue35.ImportPayload()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Name != nil {
 			result = append(result, nodeIdentifier(item.Value.Name))
 		}
 		result = append(result, nodeExpression(basicLiteralNode(item.Value.Path)))
 		result = addComment(result, item.Value.Comment)
-	case 2:
-		item := __tgo_match_39.TgoValue()
+	case SpecificationTagValue:
+		item := enumValue35.ValuePayload()
 		result = addComment(result, item.Value.Doc)
 		for _, name := range item.Value.Names {
 			result = append(result, nodeIdentifier(name))
@@ -624,8 +609,8 @@ func specificationChildren(value *Specification) []Node {
 			result = append(result, nodeExpression(expression))
 		}
 		result = addComment(result, item.Value.Comment)
-	case 3:
-		item := __tgo_match_39.TgoType()
+	case SpecificationTagType:
+		item := enumValue35.TypePayload()
 		result = addComment(result, item.Value.Doc)
 		result = append(result, nodeIdentifier(item.Value.Name))
 		if item.Value.TypeParams != nil {
@@ -634,7 +619,7 @@ func specificationChildren(value *Specification) []Node {
 		result = append(result, nodeExpression(item.Value.Type))
 		result = addComment(result, item.Value.Comment)
 	default:
-		panic("invalid Specification variant")
+		panic(enumValue35.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	return result
 }
@@ -671,7 +656,7 @@ func tgoFieldChildren(value *TGoField) []Node {
 func enumVariantChildren(value *EnumVariant) []Node {
 	result := addComment(nil, value.Doc)
 	if value.Tag != nil {
-		tag := NewExpressionBasicLiteral(ExpressionBasicLiteral{Value: value.Tag})
+		tag := ExpressionBasicLiteral{Value: value.Tag}.Expression()
 		result = append(result, nodeExpression(&tag))
 	}
 	result = append(result, nodeIdentifier(value.Name))
@@ -679,19 +664,6 @@ func enumVariantChildren(value *EnumVariant) []Node {
 		result = append(result, nodeTGoField(field))
 	}
 	return addComment(result, value.Comment)
-}
-
-func matchCaseChildren(value *MatchCase) []Node {
-	result := []Node(nil)
-	result = append(result, nodeIdentifier(value.Variant))
-	result = append(result, nodeIdentifier(value.Binding))
-	for _, statement := range value.Body {
-		result = append(result, nodeStatement(statement))
-	}
-	for _, comment := range value.Comments {
-		result = append(result, nodeCommentGroup(comment))
-	}
-	return result
 }
 
 func addComment(values []Node, value *CommentGroup) []Node {

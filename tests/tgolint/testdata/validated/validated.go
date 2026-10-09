@@ -7,5 +7,5 @@ func Event(value model.Event) (model.Event, error) {
 }
 
 func Constructed() model.Event {
-	return model.NewEventStopped(model.EventStopped{})
+	return model.EventStopped{}.Event()
 }

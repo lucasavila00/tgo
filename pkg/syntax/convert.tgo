@@ -25,6 +25,16 @@ func ParseFile(
 	return result, nil
 }
 
+// ParseGoFile parses one Go source file into the public syntax ADT.
+func ParseGoFile(
+	files *token.FileSet,
+	filename string,
+	source []byte,
+	mode Mode,
+) (*File, error) {
+	return ParseFile(files, filename, source, mode|goSource)
+}
+
 type converter struct {
 	front       %frontFile
 	propagation map[ast.Expr]*frontPropagateExpr

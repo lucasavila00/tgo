@@ -67,6 +67,14 @@ type EnumAlias enum
 
 type AccountAlias = Account
 
+type Accounts interface {
+	Account
+	Tag() AccountTag
+	UnknownTag() string
+	PersonalPayload() AccountPersonal
+	BusinessPayload() AccountBusiness
+}
+
 type CounterRecord (struct {
 	value int
 })
@@ -86,28 +94,40 @@ type MarkerRecord struct {
 
 // Account requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type AccountTag uint8
+
+const (
+	AccountTagPersonal AccountTag = iota + 1
+	AccountTagBusiness
+)
+
 type Account struct {
-	tgoTag      uint8
+	tgoTag      AccountTag
 	tgoPersonal AccountPersonal
 	tgoBusiness AccountBusiness
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Account) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Account) Tag() AccountTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Account) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Account: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // AccountPersonal is the Personal payload.
 type AccountPersonal struct {
 	Name string
 }
 
-// NewAccountPersonal constructs Account. Model fields must be valid.
+// Account constructs Account. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewAccountPersonal(value AccountPersonal) Account {
-	return Account{tgoTag: 1, tgoPersonal: value}
+func (value AccountPersonal) Account() Account {
+	return Account{tgoTag: AccountTagPersonal, tgoPersonal: value}
 }
 
-// TgoPersonal returns the Personal payload. Check TgoTag first.
-func (v Account) TgoPersonal() AccountPersonal { return v.tgoPersonal }
+// PersonalPayload requires Personal. No tag check.
+func (v Account) PersonalPayload() AccountPersonal { return v.tgoPersonal }
 
 // AccountBusiness is the Business payload.
 type AccountBusiness struct {
@@ -116,24 +136,24 @@ type AccountBusiness struct {
 	Tags    map[string]string
 }
 
-// NewAccountBusiness constructs Account. Model fields must be valid.
+// Account constructs Account. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewAccountBusiness(value AccountBusiness) Account {
-	return Account{tgoTag: 2, tgoBusiness: value}
+func (value AccountBusiness) Account() Account {
+	return Account{tgoTag: AccountTagBusiness, tgoBusiness: value}
 }
 
-// TgoBusiness returns the Business payload. Check TgoTag first.
-func (v Account) TgoBusiness() AccountBusiness { return v.tgoBusiness }
+// BusinessPayload requires Business. No tag check.
+func (v Account) BusinessPayload() AccountBusiness { return v.tgoBusiness }
 
 func (v Account) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoPersonal()
+	case AccountTagPersonal:
+		payload := v.PersonalPayload()
 		return __tgo_json.Marshal(struct {
 			Payload AccountPersonal `json:"Personal"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoBusiness()
+	case AccountTagBusiness:
+		payload := v.BusinessPayload()
 		return __tgo_json.Marshal(struct {
 			Payload AccountBusiness `json:"Business"`
 		}{Payload: payload})
@@ -162,14 +182,14 @@ func (v *Account) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewAccountPersonal(payload)
+		*v = payload.Account()
 		return nil
 	case "Business":
 		var payload AccountBusiness
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewAccountBusiness(payload)
+		*v = payload.Account()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Account JSON variant %q", variant)
@@ -178,13 +198,24 @@ func (v *Account) UnmarshalJSON(data []byte) error {
 
 // Notice requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type NoticeTag uint8
+
+const (
+	NoticeTagText NoticeTag = iota + 1
+)
+
 type Notice struct {
-	tgoTag  uint8
+	tgoTag  NoticeTag
 	tgoText NoticeText
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Notice) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Notice) Tag() NoticeTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Notice) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Notice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // NoticeText is the Text payload.
 type NoticeText struct {
@@ -192,19 +223,19 @@ type NoticeText struct {
 	Labels map[string]string
 }
 
-// NewNoticeText constructs Notice. Model fields must be valid.
+// Notice constructs Notice. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNoticeText(value NoticeText) Notice {
-	return Notice{tgoTag: 1, tgoText: value}
+func (value NoticeText) Notice() Notice {
+	return Notice{tgoTag: NoticeTagText, tgoText: value}
 }
 
-// TgoText returns the Text payload. Check TgoTag first.
-func (v Notice) TgoText() NoticeText { return v.tgoText }
+// TextPayload requires Text. No tag check.
+func (v Notice) TextPayload() NoticeText { return v.tgoText }
 
 func (v Notice) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoText()
+	case NoticeTagText:
+		payload := v.TextPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NoticeText `json:"Text"`
 		}{Payload: payload})
@@ -233,7 +264,7 @@ func (v *Notice) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNoticeText(payload)
+		*v = payload.Notice()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Notice JSON variant %q", variant)
@@ -242,46 +273,58 @@ func (v *Notice) UnmarshalJSON(data []byte) error {
 
 // Signal requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type SignalTag uint8
+
+const (
+	SignalTagOn SignalTag = iota + 1
+	SignalTagOff
+)
+
 type Signal struct {
-	tgoTag uint8
+	tgoTag SignalTag
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Signal) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Signal) Tag() SignalTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Signal) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Signal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // SignalOn is the On payload.
 type SignalOn struct{}
 
-// NewSignalOn constructs Signal. Model fields must be valid.
+// Signal constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewSignalOn(_ SignalOn) Signal {
-	return Signal{tgoTag: 1}
+func (value SignalOn) Signal() Signal {
+	return Signal{tgoTag: SignalTagOn}
 }
 
-// TgoOn returns the On payload. Check TgoTag first.
-func (Signal) TgoOn() SignalOn { return SignalOn{} }
+// OnPayload requires On. No tag check.
+func (Signal) OnPayload() SignalOn { return SignalOn{} }
 
 // SignalOff is the Off payload.
 type SignalOff struct{}
 
-// NewSignalOff constructs Signal. Model fields must be valid.
+// Signal constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewSignalOff(_ SignalOff) Signal {
-	return Signal{tgoTag: 2}
+func (value SignalOff) Signal() Signal {
+	return Signal{tgoTag: SignalTagOff}
 }
 
-// TgoOff returns the Off payload. Check TgoTag first.
-func (Signal) TgoOff() SignalOff { return SignalOff{} }
+// OffPayload requires Off. No tag check.
+func (Signal) OffPayload() SignalOff { return SignalOff{} }
 
 func (v Signal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoOn()
+	case SignalTagOn:
+		payload := v.OnPayload()
 		return __tgo_json.Marshal(struct {
 			Payload SignalOn `json:"On"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoOff()
+	case SignalTagOff:
+		payload := v.OffPayload()
 		return __tgo_json.Marshal(struct {
 			Payload SignalOff `json:"Off"`
 		}{Payload: payload})
@@ -310,14 +353,14 @@ func (v *Signal) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewSignalOn(payload)
+		*v = payload.Signal()
 		return nil
 	case "Off":
 		var payload SignalOff
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewSignalOff(payload)
+		*v = payload.Signal()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Signal JSON variant %q", variant)
@@ -349,7 +392,7 @@ type ValidationNode struct {
 }
 
 func Personal(name string) Account {
-	return NewAccountPersonal(AccountPersonal{Name: name})
+	return AccountPersonal{Name: name}.Account()
 }
 
 func ContextualTypeNames() (WhereAlias, EnumAlias) {
@@ -357,32 +400,43 @@ func ContextualTypeNames() (WhereAlias, EnumAlias) {
 }
 
 func Business(company string, members []Account, tags map[string]string) Account {
-	return NewAccountBusiness(AccountBusiness{Company: company, Members: members, Tags: tags})
+	return AccountBusiness{Company: company, Members: members, Tags: tags}.Account()
 }
 
 func Label(account Account) string {
-	switch __tgo_match_3 := account; __tgo_match_3.TgoTag() {
-	case 1:
-		person := __tgo_match_3.TgoPersonal()
+	switch enumValue3 := account; enumValue3.Tag() {
+	case AccountTagPersonal:
+		person := enumValue3.PersonalPayload()
 		return person.Name
-	case 2:
-		company := __tgo_match_3.TgoBusiness()
+	case AccountTagBusiness:
+		company := enumValue3.BusinessPayload()
 		return company.Company
 	default:
-		panic("invalid Account variant")
+		panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func AliasLabel(account AccountAlias) string {
-	switch __tgo_match_4 := account; __tgo_match_4.TgoTag() {
-	case 1:
-		person := __tgo_match_4.TgoPersonal()
+	switch enumValue4 := account; enumValue4.Tag() {
+	case AccountTagPersonal:
+		person := enumValue4.PersonalPayload()
 		return person.Name
-	case 2:
-		company := __tgo_match_4.TgoBusiness()
+	case AccountTagBusiness:
+		company := enumValue4.BusinessPayload()
 		return company.Company
 	default:
-		panic("invalid Account variant")
+		panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func GenericLabel[T Accounts](account T) string {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return account.PersonalPayload().Name
+	case AccountTagBusiness:
+		return account.BusinessPayload().Company
+	default:
+		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -404,31 +458,6 @@ func AnonymousPoint() struct{ X int } {
 
 func Tag(value Tagged) uint8 {
 	return value.tgoTag
-}
-
-func MatchName(account Account) string {
-	__tgo_match_1 := "source"
-	switch __tgo_match_5 := account; __tgo_match_5.TgoTag() {
-	case 1:
-		return __tgo_match_1
-	case 2:
-		return __tgo_match_1
-	default:
-		panic("invalid Account variant")
-	}
-}
-
-func __tgo_match(value int) int {
-	return value
-}
-
-func MarkerSwitch(value int) string {
-	switch __tgo_match(value) {
-	case 1:
-		return "one"
-	default:
-		return "other"
-	}
 }
 
 func match[T any](value T) T {
@@ -462,40 +491,58 @@ match:
 	return value
 }
 
-func FunctionMatchSubject(account Account) string {
-	switch __tgo_match_6 := func() Account { return account }(); __tgo_match_6.TgoTag() {
-	case 1:
-		person := __tgo_match_6.TgoPersonal()
+func FunctionTagSubject(account Account) string {
+	switch enumValue6 := func() Account { return account }(); enumValue6.Tag() {
+	case AccountTagPersonal:
+		person := enumValue6.PersonalPayload()
 		return person.Name
-	case 2:
-		business := __tgo_match_6.TgoBusiness()
+	case AccountTagBusiness:
+		business := enumValue6.BusinessPayload()
 		return business.Company
 	default:
-		panic("invalid Account variant")
+		panic(enumValue6.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
-func LiteralMatchSubject(name string) string {
-	switch __tgo_match_7 := NewAccountPersonal(AccountPersonal{Name: name}); __tgo_match_7.TgoTag() {
-	case 1:
-		person := __tgo_match_7.TgoPersonal()
+func LiteralTagSubject(name string) string {
+	switch enumValue7 := (AccountPersonal{Name: name}.Account()); enumValue7.Tag() {
+	case AccountTagPersonal:
+		person := enumValue7.PersonalPayload()
 		return person.Name
-	case 2:
-		business := __tgo_match_7.TgoBusiness()
+	case AccountTagBusiness:
+		business := enumValue7.BusinessPayload()
 		return business.Company
 	default:
-		panic("invalid Account variant")
+		panic(enumValue7.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func SignalName(signal Signal) string {
-	switch __tgo_match_8 := signal; __tgo_match_8.TgoTag() {
-	case 1:
+	switch enumValue8 := signal; enumValue8.Tag() {
+	case SignalTagOn:
 		return "on"
-	case 2:
+	case SignalTagOff:
 		return "off"
 	default:
-		panic("invalid Signal variant")
+		panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func SignalState(signal Signal) string {
+	switch signal.Tag() {
+	case SignalTagOn, SignalTagOff:
+		return "known"
+	default:
+		panic(signal.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func SignalStateOrInvalid(signal Signal) string {
+	switch signal.Tag() {
+	case SignalTagOn, SignalTagOff:
+		return "known"
+	default:
+		panic(signal.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -512,29 +559,29 @@ func MarkerValues(value MarkerRecord) (bool, string) {
 }
 
 func AliasAccount(name string) Account {
-	return NewAccountPersonal(AccountPersonal{Name: name})
+	return AccountPersonal{Name: name}.Account()
 }
 
-func LabeledMatch(account Account) string {
+func LabeledTagSwitch(account Account) string {
 Done:
-	switch __tgo_match_9 := account; __tgo_match_9.TgoTag() {
-	case 1:
+	switch enumValue9 := account; enumValue9.Tag() {
+	case AccountTagPersonal:
 		break Done
-	case 2:
+	case AccountTagBusiness:
 		break Done
 	default:
-		panic("invalid Account variant")
+		panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	return "done"
 }
 
 func NoticeLabels(notice Notice) map[string]string {
-	switch __tgo_match_10 := notice; __tgo_match_10.TgoTag() {
-	case 1:
-		text := __tgo_match_10.TgoText()
+	switch enumValue10 := notice; enumValue10.Tag() {
+	case NoticeTagText:
+		text := enumValue10.TextPayload()
 		return text.Labels
 	default:
-		panic("invalid Notice variant")
+		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

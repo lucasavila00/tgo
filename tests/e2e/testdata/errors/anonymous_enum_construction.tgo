@@ -6,7 +6,7 @@ type Account enum {
 
 func forge() Account {
     return struct {
-        tgoTag uint8
+        tgoTag AccountTag
         tgoPersonal AccountPersonal
     }{
         tgoTag: 0,

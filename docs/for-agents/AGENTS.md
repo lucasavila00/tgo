@@ -25,17 +25,18 @@ func NewBusiness(company string) Account {
 }
 ```
 
-Use `match` to read the active payload. Cover every variant. Use `_` for an unused payload.
-Do not access representation fields or call generated `Tgo*` accessors from tgo source.
-Do not use `fallthrough` in a match. Do not select `Tgo*` methods through interfaces.
+Use a checked `switch value.Tag()` to read the active payload. Use `exhaustive:` to require every
+declared variant, or use `default:` for fallback behavior. Read a payload only in its single-tag
+case. Do not use `fallthrough` or select generated enum methods through interfaces.
 Type aliases can construct variants. Go name resolution selects the aliased type.
 Do not shadow generated payload, constructor, or default helper names at a construction.
 
 ```text
 func Label(account Account) string {
-    match account {
-    case Personal(person): return person.Name
-    case Business(company): return company.Company
+    switch account.Tag() {
+    case AccountTagPersonal: return account.PersonalPayload().Name
+    case AccountTagBusiness: return account.BusinessPayload().Company
+    exhaustive:
     }
 }
 ```
@@ -149,10 +150,10 @@ quantity, err := model.NewQuantity(3)
 if err != nil {
     return err
 }
-account := model.NewAccountPersonal(model.AccountPersonal{Name: "Lucas"})
+account := model.AccountPersonal{Name: "Lucas"}.Account()
 ```
 
-Test constructor success and failure, every match branch, and shared collection changes.
+Test constructor success and failure, every tag branch, and shared collection changes.
 Test calls in both directions. Include Go error results and invalid foreign values. Run
 `tgolint` to check Go construction, result pairs, and enum access.
 

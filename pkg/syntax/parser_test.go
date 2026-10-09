@@ -70,12 +70,6 @@ start:
 	for index, value := range []int{1, 2} {
 		local += index + value
 	}
-	match Result.OK{Value: local} {
-	case OK(ok):
-		local = ok.Value
-	case Error(problem):
-		local = len(problem.Message)
-	}
 	array := [2]int{0: 1}
 	slice := array[:1:2]
 	_ = struct{ Name string }{Name: "x"}
@@ -146,12 +140,75 @@ func load() (int, error) { return 0, nil }
 		"Declaration", "Empty", "Labeled", "Expression", "Send", "Increment",
 		"Assignment", "Go", "Defer", "Return", "Branch", "Block", "If", "Case",
 		"Switch", "TypeSwitch", "Communication", "Select", "For", "Range",
-		"Match",
 	})
 	requireKinds(t, declarations, []string{
 		"General", "Function", "Enum", "Struct", "Checked",
 	})
 	requireKinds(t, specifications, []string{"Import", "Value", "Type"})
+}
+
+func TestParseFileMarksOnlySwitchExhaustiveClause(t *testing.T) {
+	t.Parallel()
+	source := []byte(`package sample
+
+type holder struct { exhaustive int }
+
+func inspect(value int) {
+	_ = holder{exhaustive: 1}
+	switch value {
+	case 1:
+	exhaustive:
+	}
+}
+
+func TestParseGoFileKeepsGoStructTypeSpecification(t *testing.T) {
+	t.Parallel()
+	source := []byte("package sample\n\ntype Value struct { Field int }\n")
+	file, err := syntax.ParseGoFile(
+		token.NewFileSet(), "value.go", source, syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("ParseGoFile: %v", err)
+	}
+	if len(file.Declarations) != 1 {
+		t.Fatalf("declarations = %d, want 1", len(file.Declarations))
+	}
+	general := syntax.GeneralDeclarationOf(file.Declarations[0])
+	if general == nil || len(general.Specs) != 1 {
+		t.Fatalf("general declaration: %#v", general)
+	}
+	specification := syntax.TypeSpecificationOf(general.Specs[0])
+	if specification == nil || specification.Name.Name != "Value" {
+		t.Fatalf("type specification: %#v", specification)
+	}
+	if got := syntax.SourceText(file, syntax.Span{
+		Start: syntax.ExpressionPosition(specification.Type),
+		Stop:  syntax.ExpressionEnd(specification.Type),
+	}); got != "struct { Field int }" {
+		t.Fatalf("source text = %q", got)
+	}
+}
+`)
+	file, err := syntax.ParseFile(
+		token.NewFileSet(), "exhaustive.tgo", source, syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	marked := 0
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		statement, ok := syntax.StatementOf(node)
+		if !ok || statement.Tag() != syntax.StatementTagCase {
+			return true
+		}
+		if statement.CasePayload().Value.Exhaustive.IsValid() {
+			marked++
+		}
+		return true
+	})
+	if marked != 1 {
+		t.Fatalf("marked exhaustive clauses = %d, want 1", marked)
+	}
 }
 
 func TestPublicASTDoesNotExposeGoAST(t *testing.T) {

@@ -8,68 +8,81 @@ import __tgo_fmt "fmt"
 
 // Large requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type LargeTag uint8
+
+const (
+	LargeTagFirst LargeTag = iota + 1
+	LargeTagSecond
+	LargeTagEmpty
+)
+
 type Large struct {
-	tgoTag     uint8
+	tgoTag     LargeTag
 	tgoPayload interface{}
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Large) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Large) Tag() LargeTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Large) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Large: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // LargeFirst is the First payload.
 type LargeFirst struct {
 	Data [64]byte
 }
 
-// NewLargeFirst constructs Large. Model fields must be valid.
+// Large constructs Large. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewLargeFirst(value LargeFirst) Large {
-	return Large{tgoTag: 1, tgoPayload: value}
+func (value LargeFirst) Large() Large {
+	return Large{tgoTag: LargeTagFirst, tgoPayload: value}
 }
 
-// TgoFirst returns the First payload. Check TgoTag first.
-func (v Large) TgoFirst() LargeFirst { return v.tgoPayload.(LargeFirst) }
+// FirstPayload requires First. No tag check.
+func (v Large) FirstPayload() LargeFirst { return v.tgoPayload.(LargeFirst) }
 
 // LargeSecond is the Second payload.
 type LargeSecond struct {
 	Data [64]byte
 }
 
-// NewLargeSecond constructs Large. Model fields must be valid.
+// Large constructs Large. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewLargeSecond(value LargeSecond) Large {
-	return Large{tgoTag: 2, tgoPayload: value}
+func (value LargeSecond) Large() Large {
+	return Large{tgoTag: LargeTagSecond, tgoPayload: value}
 }
 
-// TgoSecond returns the Second payload. Check TgoTag first.
-func (v Large) TgoSecond() LargeSecond { return v.tgoPayload.(LargeSecond) }
+// SecondPayload requires Second. No tag check.
+func (v Large) SecondPayload() LargeSecond { return v.tgoPayload.(LargeSecond) }
 
 // LargeEmpty is the Empty payload.
 type LargeEmpty struct{}
 
-// NewLargeEmpty constructs Large. Model fields must be valid.
+// Large constructs Large. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewLargeEmpty(_ LargeEmpty) Large {
-	return Large{tgoTag: 3}
+func (value LargeEmpty) Large() Large {
+	return Large{tgoTag: LargeTagEmpty}
 }
 
-// TgoEmpty returns the Empty payload. Check TgoTag first.
-func (Large) TgoEmpty() LargeEmpty { return LargeEmpty{} }
+// EmptyPayload requires Empty. No tag check.
+func (Large) EmptyPayload() LargeEmpty { return LargeEmpty{} }
 
 func (v Large) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoFirst()
+	case LargeTagFirst:
+		payload := v.FirstPayload()
 		return __tgo_json.Marshal(struct {
 			Payload LargeFirst `json:"First"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoSecond()
+	case LargeTagSecond:
+		payload := v.SecondPayload()
 		return __tgo_json.Marshal(struct {
 			Payload LargeSecond `json:"Second"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoEmpty()
+	case LargeTagEmpty:
+		payload := v.EmptyPayload()
 		return __tgo_json.Marshal(struct {
 			Payload LargeEmpty `json:"Empty"`
 		}{Payload: payload})
@@ -98,21 +111,21 @@ func (v *Large) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewLargeFirst(payload)
+		*v = payload.Large()
 		return nil
 	case "Second":
 		var payload LargeSecond
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewLargeSecond(payload)
+		*v = payload.Large()
 		return nil
 	case "Empty":
 		var payload LargeEmpty
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewLargeEmpty(payload)
+		*v = payload.Large()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Large JSON variant %q", variant)
@@ -121,52 +134,64 @@ func (v *Large) UnmarshalJSON(data []byte) error {
 
 // Equal requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type EqualTag uint8
+
+const (
+	EqualTagFirst EqualTag = iota + 1
+	EqualTagSecond
+)
+
 type Equal struct {
-	tgoTag     uint8
+	tgoTag     EqualTag
 	tgoSecond  EqualSecond
 	tgoPayload interface{}
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Equal) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Equal) Tag() EqualTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Equal) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Equal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // EqualFirst is the First payload.
 type EqualFirst struct {
 	Data [40]byte
 }
 
-// NewEqualFirst constructs Equal. Model fields must be valid.
+// Equal constructs Equal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewEqualFirst(value EqualFirst) Equal {
-	return Equal{tgoTag: 1, tgoPayload: value}
+func (value EqualFirst) Equal() Equal {
+	return Equal{tgoTag: EqualTagFirst, tgoPayload: value}
 }
 
-// TgoFirst returns the First payload. Check TgoTag first.
-func (v Equal) TgoFirst() EqualFirst { return v.tgoPayload.(EqualFirst) }
+// FirstPayload requires First. No tag check.
+func (v Equal) FirstPayload() EqualFirst { return v.tgoPayload.(EqualFirst) }
 
 // EqualSecond is the Second payload.
 type EqualSecond struct {
 	Data [40]byte
 }
 
-// NewEqualSecond constructs Equal. Model fields must be valid.
+// Equal constructs Equal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewEqualSecond(value EqualSecond) Equal {
-	return Equal{tgoTag: 2, tgoSecond: value}
+func (value EqualSecond) Equal() Equal {
+	return Equal{tgoTag: EqualTagSecond, tgoSecond: value}
 }
 
-// TgoSecond returns the Second payload. Check TgoTag first.
-func (v Equal) TgoSecond() EqualSecond { return v.tgoSecond }
+// SecondPayload requires Second. No tag check.
+func (v Equal) SecondPayload() EqualSecond { return v.tgoSecond }
 
 func (v Equal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoFirst()
+	case EqualTagFirst:
+		payload := v.FirstPayload()
 		return __tgo_json.Marshal(struct {
 			Payload EqualFirst `json:"First"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoSecond()
+	case EqualTagSecond:
+		payload := v.SecondPayload()
 		return __tgo_json.Marshal(struct {
 			Payload EqualSecond `json:"Second"`
 		}{Payload: payload})
@@ -195,16 +220,112 @@ func (v *Equal) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewEqualFirst(payload)
+		*v = payload.Equal()
 		return nil
 	case "Second":
 		var payload EqualSecond
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewEqualSecond(payload)
+		*v = payload.Equal()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Equal JSON variant %q", variant)
+	}
+}
+
+// NamedZero requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type NamedZeroTag uint8
+
+const (
+	NamedZeroTagZero NamedZeroTag = iota + 1
+	NamedZeroTagOther
+)
+
+type NamedZero struct {
+	tgoTag NamedZeroTag
+}
+
+// Tag returns the active tag.
+func (v NamedZero) Tag() NamedZeroTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v NamedZero) UnknownTag() string {
+	return __tgo_fmt.Sprintf("NamedZero: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// NamedZeroZero is the Zero payload.
+type NamedZeroZero struct{}
+
+// NamedZero constructs NamedZero. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value NamedZeroZero) NamedZero() NamedZero {
+	return NamedZero{tgoTag: NamedZeroTagZero}
+}
+
+// ZeroPayload requires Zero. No tag check.
+func (NamedZero) ZeroPayload() NamedZeroZero { return NamedZeroZero{} }
+
+// NamedZeroOther is the Other payload.
+type NamedZeroOther struct{}
+
+// NamedZero constructs NamedZero. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value NamedZeroOther) NamedZero() NamedZero {
+	return NamedZero{tgoTag: NamedZeroTagOther}
+}
+
+// OtherPayload requires Other. No tag check.
+func (NamedZero) OtherPayload() NamedZeroOther { return NamedZeroOther{} }
+
+func (v NamedZero) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case NamedZeroTagZero:
+		payload := v.ZeroPayload()
+		return __tgo_json.Marshal(struct {
+			Payload NamedZeroZero `json:"Zero"`
+		}{Payload: payload})
+	case NamedZeroTagOther:
+		payload := v.OtherPayload()
+		return __tgo_json.Marshal(struct {
+			Payload NamedZeroOther `json:"Other"`
+		}{Payload: payload})
+	default:
+		return nil, __tgo_fmt.Errorf("invalid NamedZero JSON tag")
+	}
+}
+
+func (v *NamedZero) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]__tgo_json.RawMessage
+	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return __tgo_fmt.Errorf("expected one NamedZero JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Zero":
+		var payload NamedZeroZero
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.NamedZero()
+		return nil
+	case "Other":
+		var payload NamedZeroOther
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.NamedZero()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("unknown NamedZero JSON variant %q", variant)
 	}
 }

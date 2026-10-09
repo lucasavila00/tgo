@@ -1,0 +1,458 @@
+package cfg
+
+import (
+	"fmt"
+	"go/token"
+
+	"tgo/pkg/syntax"
+)
+
+type graphBuilder struct {
+	blocks    []*Block
+	mayReturn func(*syntax.Expression) bool
+	current   *Block
+	labels    map[string]*labelBlocks
+	targets   *branchTargets
+}
+
+func (b *graphBuilder) statement(statement %syntax.Statement) {
+	var label *labelBlocks = nil
+start:
+	switch statement.Tag() {
+	case syntax.StatementTagBad,
+		syntax.StatementTagSend,
+		syntax.StatementTagIncrement,
+		syntax.StatementTagGo,
+		syntax.StatementTagEmpty,
+		syntax.StatementTagAssignment:
+		b.addStatement(statement)
+	case syntax.StatementTagDefer:
+		b.addStatement(statement)
+		b.current.returns = true
+	case syntax.StatementTagExpression:
+		b.addStatement(statement)
+		item := syntax.ExpressionStatementOf(statement)
+		if syntax.CallExpressionOf(item.Expression) != nil && !b.mayReturn(item.Expression) {
+			b.current = b.newBlock(KindUnreachable, statement)
+		}
+	case syntax.StatementTagDeclaration:
+		item := syntax.DeclarationStatementOf(statement)
+		declaration := syntax.GeneralDeclarationOf(item.Declaration)
+		if declaration != nil && declaration.Kind == token.VAR {
+			for _, specification := range declaration.Specs {
+				if specification == nil { continue }
+				if syntax.ValueSpecificationOf(specification) != nil {
+					b.addSpecification(specification)
+				}
+			}
+		}
+	case syntax.StatementTagLabeled:
+		item := syntax.LabeledStatementOf(statement)
+		label = b.label(item.Label, statement)
+		b.jump(label.goTo)
+		b.current = label.goTo
+		statement = item.Statement
+		goto start
+	case syntax.StatementTagReturn:
+		b.current.returns = true
+		b.addStatement(statement)
+		b.current = b.newBlock(KindUnreachable, statement)
+	case syntax.StatementTagBranch:
+		b.branch(syntax.BranchStatementOf(statement), statement)
+	case syntax.StatementTagBlock:
+		b.statementList(syntax.BlockStatementOf(statement).List)
+	case syntax.StatementTagIf:
+		b.ifStatement(syntax.IfStatementOf(statement), statement)
+	case syntax.StatementTagSwitch:
+		b.switchStatement(syntax.SwitchStatementOf(statement), statement, label)
+	case syntax.StatementTagTypeSwitch:
+		b.typeSwitchStatement(syntax.TypeSwitchStatementOf(statement), statement, label)
+	case syntax.StatementTagSelect:
+		b.selectStatement(syntax.SelectStatementOf(statement), statement, label)
+	case syntax.StatementTagFor:
+		b.forStatement(syntax.ForStatementOf(statement), statement, label)
+	case syntax.StatementTagRange:
+		b.rangeStatement(syntax.RangeStatementOf(statement), statement, label)
+	case syntax.StatementTagCase, syntax.StatementTagCommunication:
+		panic(fmt.Sprintf("unexpected statement kind: %s", syntax.StatementKind(statement)))
+	default:
+		panic(statement.UnknownTag())
+	}
+}
+
+func (b *graphBuilder) statementList(list []%syntax.Statement) {
+	for _, statement := range list {
+		b.statement(statement)
+	}
+}
+
+func (b *graphBuilder) branch(item *syntax.BranchStatement, statement *syntax.Statement) {
+	var block *Block = nil
+	switch item.Token {
+	case token.BREAK:
+		if item.Label != nil {
+			block = b.label(item.Label, nil).breakTo
+		} else {
+			for target := b.targets; target != nil && block == nil; target = target.tail {
+				block = target.breakTo
+			}
+		}
+	case token.CONTINUE:
+		if item.Label != nil {
+			block = b.label(item.Label, nil).continueTo
+		} else {
+			for target := b.targets; target != nil && block == nil; target = target.tail {
+				block = target.continueTo
+			}
+		}
+	case token.FALLTHROUGH:
+		for target := b.targets; target != nil && block == nil; target = target.tail {
+			block = target.fallthroughTo
+		}
+	case token.GOTO:
+		if item.Label != nil {
+			block = b.label(item.Label, nil).goTo
+		}
+	}
+	if block == nil {
+		block = b.newBlock(KindUnreachable, statement)
+	}
+	b.jump(block)
+	b.current = b.newBlock(KindUnreachable, statement)
+}
+
+func (b *graphBuilder) ifStatement(item *syntax.IfStatement, statement *syntax.Statement) {
+	if item.Init != nil {
+		b.statement(item.Init)
+	}
+	thenBlock := b.newBlock(KindIfThen, statement)
+	done := b.newBlock(KindIfDone, statement)
+	elseBlock := done
+	if item.Else != nil {
+		elseBlock = b.newBlock(KindIfElse, statement)
+	}
+	b.addExpression(item.Condition)
+	b.ifElse(thenBlock, elseBlock)
+	b.current = thenBlock
+	b.statementList(item.Body.List)
+	b.jump(done)
+	if item.Else != nil {
+		b.current = elseBlock
+		b.statement(item.Else)
+		b.jump(done)
+	}
+	b.current = done
+}
+
+func (b *graphBuilder) switchStatement(
+	item *syntax.SwitchStatement,
+	statement *syntax.Statement,
+	label *labelBlocks,
+) {
+	if item.Init != nil {
+		b.statement(item.Init)
+	}
+	if item.Tag != nil {
+		b.addExpression(item.Tag)
+	}
+	done := b.newBlock(KindSwitchDone, statement)
+	if label != nil {
+		label.breakTo = done
+	}
+	var defaultBody []%syntax.Statement = nil
+	var defaultFallthrough *Block = nil
+	var fallthroughBlock *Block = nil
+	var defaultBlock *Block = nil
+	for index, clauseStatement := range item.Body.List {
+		body := fallthroughBlock
+		if body == nil {
+			body = b.newBlock(KindSwitchCaseBody, clauseStatement)
+		}
+		fallthroughBlock = done
+		if index+1 < len(item.Body.List) {
+			fallthroughBlock = b.newBlock(KindSwitchCaseBody, item.Body.List[index+1])
+		}
+		clause := syntax.CaseClauseOf(clauseStatement)
+		if clause == nil {
+			continue
+		}
+		if len(clause.List) == 0 {
+			defaultBody = clause.Body
+			defaultFallthrough = fallthroughBlock
+			defaultBlock = body
+			continue
+		}
+		var next *Block = nil
+		for _, condition := range clause.List {
+			next = b.newBlock(KindSwitchNextCase, clauseStatement)
+			b.addExpression(condition)
+			b.ifElse(body, next)
+			b.current = next
+		}
+		b.current = body
+		b.targets = &branchTargets{
+			tail: b.targets, breakTo: done, continueTo: nil,
+			fallthroughTo: fallthroughBlock,
+		}
+		b.statementList(clause.Body)
+		b.targets = b.targets.tail
+		b.jump(done)
+		b.current = next
+	}
+	if defaultBlock != nil {
+		b.jump(defaultBlock)
+		b.current = defaultBlock
+		b.targets = &branchTargets{
+			tail: b.targets, breakTo: done, continueTo: nil,
+			fallthroughTo: defaultFallthrough,
+		}
+		b.statementList(defaultBody)
+		b.targets = b.targets.tail
+	}
+	b.jump(done)
+	b.current = done
+}
+
+func (b *graphBuilder) typeSwitchStatement(
+	item *syntax.TypeSwitchStatement,
+	statement *syntax.Statement,
+	label *labelBlocks,
+) {
+	if item.Init != nil {
+		b.statement(item.Init)
+	}
+	if item.Assignment != nil {
+		b.addStatement(item.Assignment)
+	}
+	done := b.newBlock(KindSwitchDone, statement)
+	if label != nil {
+		label.breakTo = done
+	}
+	var defaultClause *syntax.CaseClause = nil
+	for _, clauseStatement := range item.Body.List {
+		clause := syntax.CaseClauseOf(clauseStatement)
+		if clause == nil {
+			continue
+		}
+		if len(clause.List) == 0 {
+			defaultClause = clause
+			continue
+		}
+		body := b.newBlock(KindSwitchCaseBody, clauseStatement)
+		var next *Block = nil
+		for range clause.List {
+			next = b.newBlock(KindSwitchNextCase, clauseStatement)
+			b.ifElse(body, next)
+			b.current = next
+		}
+		b.current = body
+		b.typeCaseBody(clause, done)
+		b.current = next
+	}
+	if defaultClause != nil {
+		b.typeCaseBody(defaultClause, done)
+	} else {
+		b.jump(done)
+	}
+	b.current = done
+}
+
+func (b *graphBuilder) typeCaseBody(clause *syntax.CaseClause, done *Block) {
+	b.targets = &branchTargets{
+		tail: b.targets, breakTo: done, continueTo: nil, fallthroughTo: nil,
+	}
+	b.statementList(clause.Body)
+	b.targets = b.targets.tail
+	b.jump(done)
+}
+
+func (b *graphBuilder) selectStatement(
+	item *syntax.SelectStatement,
+	statement *syntax.Statement,
+	label *labelBlocks,
+) {
+	for _, clauseStatement := range item.Body.List {
+		clause := syntax.CommunicationClauseOf(clauseStatement)
+		if clause != nil && clause.Communication != nil {
+			b.statement(clause.Communication)
+		}
+	}
+	done := b.newBlock(KindSelectDone, statement)
+	if label != nil {
+		label.breakTo = done
+	}
+	var defaultBody []%syntax.Statement = nil
+	for _, clauseStatement := range item.Body.List {
+		clause := syntax.CommunicationClauseOf(clauseStatement)
+		if clause == nil {
+			continue
+		}
+		if clause.Communication == nil {
+			defaultBody = clause.Body
+			continue
+		}
+		body := b.newBlock(KindSelectCaseBody, clauseStatement)
+		next := b.newBlock(KindSelectAfterCase, clauseStatement)
+		b.ifElse(body, next)
+		b.current = body
+		b.targets = &branchTargets{
+			tail: b.targets, breakTo: done, continueTo: nil, fallthroughTo: nil,
+		}
+		if assignment := syntax.AssignmentStatementOf(clause.Communication); assignment != nil &&
+			len(assignment.Left) > 0 {
+			b.addExpression(assignment.Left[0])
+		}
+		b.statementList(clause.Body)
+		b.targets = b.targets.tail
+		b.jump(done)
+		b.current = next
+	}
+	if defaultBody != nil {
+		b.targets = &branchTargets{
+			tail: b.targets, breakTo: done, continueTo: nil, fallthroughTo: nil,
+		}
+		b.statementList(defaultBody)
+		b.targets = b.targets.tail
+		b.jump(done)
+	}
+	b.current = done
+}
+
+func (b *graphBuilder) forStatement(
+	item *syntax.ForStatement,
+	statement *syntax.Statement,
+	label *labelBlocks,
+) {
+	if item.Init != nil {
+		b.statement(item.Init)
+	}
+	body := b.newBlock(KindForBody, statement)
+	done := b.newBlock(KindForDone, statement)
+	loop := body
+	if item.Condition != nil {
+		loop = b.newBlock(KindForLoop, statement)
+	}
+	continueBlock := loop
+	if item.Post != nil {
+		continueBlock = b.newBlock(KindForPost, statement)
+	}
+	if label != nil {
+		label.breakTo = done
+		label.continueTo = continueBlock
+	}
+	b.jump(loop)
+	b.current = loop
+	if item.Condition != nil {
+		b.addExpression(item.Condition)
+		b.ifElse(body, done)
+		b.current = body
+	}
+	b.targets = &branchTargets{
+		tail: b.targets, breakTo: done, continueTo: continueBlock,
+		fallthroughTo: nil,
+	}
+	b.statementList(item.Body.List)
+	b.targets = b.targets.tail
+	b.jump(continueBlock)
+	if item.Post != nil {
+		b.current = continueBlock
+		b.statement(item.Post)
+		b.jump(loop)
+	}
+	b.current = done
+}
+
+func (b *graphBuilder) rangeStatement(
+	item *syntax.RangeStatement,
+	statement *syntax.Statement,
+	label *labelBlocks,
+) {
+	b.addExpression(item.Source)
+	if item.Key != nil {
+		b.addExpression(item.Key)
+	}
+	if item.Value != nil {
+		b.addExpression(item.Value)
+	}
+	loop := b.newBlock(KindRangeLoop, statement)
+	b.jump(loop)
+	b.current = loop
+	body := b.newBlock(KindRangeBody, statement)
+	done := b.newBlock(KindRangeDone, statement)
+	b.ifElse(body, done)
+	b.current = body
+	if label != nil {
+		label.breakTo = done
+		label.continueTo = loop
+	}
+	b.targets = &branchTargets{
+		tail: b.targets, breakTo: done, continueTo: loop, fallthroughTo: nil,
+	}
+	b.statementList(item.Body.List)
+	b.targets = b.targets.tail
+	b.jump(loop)
+	b.current = done
+}
+
+type branchTargets struct {
+	tail          *branchTargets
+	breakTo       *Block
+	continueTo    *Block
+	fallthroughTo *Block
+}
+
+type labelBlocks struct {
+	goTo       *Block
+	breakTo    *Block
+	continueTo *Block
+}
+
+func (b *graphBuilder) label(identifier *syntax.Identifier, statement *syntax.Statement) *labelBlocks {
+	value := b.labels[identifier.Name]
+	if value == nil {
+		value = &labelBlocks{
+			goTo: b.newBlock(KindLabel, nil), breakTo: nil, continueTo: nil,
+		}
+		if b.labels == nil {
+			b.labels = make(map[string]*labelBlocks)
+		}
+		b.labels[identifier.Name] = value
+	}
+	if statement != nil && value.goTo.Stmt == nil {
+		value.goTo.Stmt = statement
+	}
+	return value
+}
+
+func (b *graphBuilder) newBlock(kind BlockKind, statement *syntax.Statement) *Block {
+	block := &Block{
+		Nodes: nil, Succs: nil, Index: int32(len(b.blocks)), Live: false,
+		Kind: kind, Stmt: statement, returns: false,
+		succs: [2]*Block{nil, nil},
+	}
+	block.Succs = block.succs[:0]
+	b.blocks = append(b.blocks, block)
+	return block
+}
+
+func (b *graphBuilder) addStatement(value %syntax.Statement) {
+	b.current.Nodes = append(b.current.Nodes, syntax.StatementNode(value))
+}
+
+func (b *graphBuilder) addExpression(value %syntax.Expression) {
+	b.current.Nodes = append(b.current.Nodes, syntax.ExpressionNode(value))
+}
+
+func (b *graphBuilder) addSpecification(value %syntax.Specification) {
+	b.current.Nodes = append(b.current.Nodes, syntax.SpecificationNode(value))
+}
+
+func (b *graphBuilder) jump(target *Block) {
+	b.current.Succs = append(b.current.Succs, target)
+	b.current = nil
+}
+
+func (b *graphBuilder) ifElse(trueBlock *Block, falseBlock *Block) {
+	b.current.Succs = append(b.current.Succs, trueBlock, falseBlock)
+	b.current = nil
+}

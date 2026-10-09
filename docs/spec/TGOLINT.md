@@ -11,18 +11,22 @@ tgolint ./...
 data from generated packages and uses it in packages that import them. It does
 not check generated files.
 
+Downstream analysis uses only `pkg/syntax` nodes. The compiler implementation and
+the private `pkg/syntax` parser and converter can use `go/ast`. Downstream packages
+must not import or expose `go/ast` types.
+
 ## Checked by tgolint
 
 A clean run means that the loaded Go packages do not contain these errors:
 
-- an invalid tgo zero from a declaration, named result, literal, `new`, `make`,
+- an invalid checked-type zero from a declaration, named result, literal, `new`, `make`,
   `clear`, map read, channel read, type assertion, or longer reslice;
 - a new defined Go type or conversion that bypasses a tgo constructor;
 - direct access to private generated representation;
 - a tgo result used before its matching error is proved nil;
 - a presence result used before its matching `ok` value is proved true;
 - a missing enum tag case, wrong payload read, unsafe default, or `fallthrough`;
-- an enum receiver that is a pointer, alias, capture, or changed value; or
+- a wrong enum payload call in a recognized tag switch; or
 - a `%T` value that is nil, unknown, zero-filled, omitted, or lost at a control-flow join;
 - a map read, channel receive, or pointer assertion used without its required proof; or
 - a sequential `iota` set that uses one defined integer type in handwritten TGo source; or
@@ -53,9 +57,9 @@ The checker exports `%T` paths for fields, parameters, results, aliases, nested 
 function types. It checks the same paths in importing Go packages. `%T` generates the same Go
 pointer as `*T`; these facts exist only during analysis.
 
-The checker rejects generated `Tgo*` access through a structural interface or
-an open type parameter. These types erase the generated model identity. Exact
-model constraints keep the normal exhaustive switch checks.
+A structural interface or an open type parameter erases the generated model identity. The
+checker does not recognize its tag switch. Exact model constraints keep the normal exhaustive
+switch checks.
 
 The checker records effects for generic functions and methods. An effect states
 that a type argument can get a zero value or lose its model identity. The facts
@@ -82,9 +86,14 @@ Returned-function effects are complete only for a function literal returned
 directly. A closure returned through a local variable or another helper can hide
 an effect from the checker.
 
-An enum payload read needs an exhaustive switch on the same stable value. The
-default must not continue. Internal loop breaks and internal `goto` targets are
-valid. A branch that escapes the default is invalid.
+An enum payload read needs a tag switch on the same syntactic receiver. A TGo `exhaustive:` clause
+requires all declared tags and emits the generated `UnknownTag` panic and required comment. A normal
+default clause is fallback behavior and can cover omitted tags. A clause assignment to the receiver
+or its selector prefix removes the clause proof. Each clause has the union of its possible variants.
+A default has the union of omitted variants and proves a payload when only one variant remains.
+A function literal does not inherit the proof. Direct `go` and `defer` calls do inherit it.
+The checker does not analyze `Tag` calls, payload calls, or payload method values outside a
+recognized canonical switch.
 
 The `iota` modernization check requires two or more unique values. Their values must increase by
 one from one common offset. Every value must come from `iota` or its repeated expression. The

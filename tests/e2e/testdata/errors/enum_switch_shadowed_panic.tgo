@@ -1,0 +1,17 @@
+package invalid
+
+type Result enum {
+	Success struct{}
+	Failure struct{}
+}
+
+func use(value Result) {
+	panic := func(any) {}
+	switch value.Tag() {
+	case ResultTagSuccess:
+		return
+	case ResultTagFailure:
+		return
+	exhaustive:
+	}
+}

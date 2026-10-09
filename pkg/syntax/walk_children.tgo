@@ -43,104 +43,193 @@ func buildPublicIndex(file %File) {
 }
 
 func isExtension(node Node) bool {
-	match node {
-	case Declaration(value):
-		match *value.Value {
-		case Bad(_): return false
-		case General(_): return false
-		case Function(_): return false
-		case Enum(_): return true
-		case Struct(_): return true
-		case Checked(_): return true
+	switch enumValue27 := node; enumValue27.Tag() {
+	case NodeTagDeclaration:
+		value := enumValue27.DeclarationPayload()
+		switch enumValue28 := *value.Value; enumValue28.Tag() {
+		case DeclarationTagBad:
+			return false
+		case DeclarationTagGeneral:
+			return false
+		case DeclarationTagFunction:
+			return false
+		case DeclarationTagEnum:
+			return true
+		case DeclarationTagStruct:
+			return true
+		case DeclarationTagChecked:
+			return true
+		exhaustive:
 		}
-	case Statement(value):
-		match *value.Value {
-		case Bad(_): return false
-		case Declaration(_): return false
-		case Empty(_): return false
-		case Labeled(_): return false
-		case Expression(_): return false
-		case Send(_): return false
-		case Increment(_): return false
-		case Assignment(_): return false
-		case Go(_): return false
-		case Defer(_): return false
-		case Return(_): return false
-		case Branch(_): return false
-		case Block(_): return false
-		case If(_): return false
-		case Case(_): return false
-		case Switch(_): return false
-		case TypeSwitch(_): return false
-		case Communication(_): return false
-		case Select(_): return false
-		case For(_): return false
-		case Range(_): return false
-		case Match(_): return true
+	case NodeTagStatement:
+		value := enumValue27.StatementPayload()
+		switch enumValue29 := *value.Value; enumValue29.Tag() {
+		case StatementTagBad:
+			return false
+		case StatementTagDeclaration:
+			return false
+		case StatementTagEmpty:
+			return false
+		case StatementTagLabeled:
+			return false
+		case StatementTagExpression:
+			return false
+		case StatementTagSend:
+			return false
+		case StatementTagIncrement:
+			return false
+		case StatementTagAssignment:
+			return false
+		case StatementTagGo:
+			return false
+		case StatementTagDefer:
+			return false
+		case StatementTagReturn:
+			return false
+		case StatementTagBranch:
+			return false
+		case StatementTagBlock:
+			return false
+		case StatementTagIf:
+			return false
+		case StatementTagCase:
+			return false
+		case StatementTagSwitch:
+			return false
+		case StatementTagTypeSwitch:
+			return false
+		case StatementTagCommunication:
+			return false
+		case StatementTagSelect:
+			return false
+		case StatementTagFor:
+			return false
+		case StatementTagRange:
+			return false
+exhaustive:
 		}
-	case Expression(value):
-		match *value.Value {
-		case Bad(_): return false
-		case Identifier(_): return false
-		case Ellipsis(_): return false
-		case BasicLiteral(_): return false
-		case FunctionLiteral(_): return false
-		case CompositeLiteral(_): return false
-		case Parenthesized(_): return false
-		case Selector(_): return false
-		case Index(_): return false
-		case IndexList(_): return false
-		case Slice(_): return false
-		case TypeAssertion(_): return false
-		case Call(_): return false
-		case Star(_): return false
-		case NonNilPointer(_): return true
-		case Unary(_): return false
-		case Binary(_): return false
-		case KeyValue(_): return false
-		case ArrayType(_): return false
-		case StructType(_): return false
-		case FunctionType(_): return false
-		case InterfaceType(_): return false
-		case MapType(_): return false
-		case ChannelType(_): return false
-		case Default(_): return true
-		case Propagation(_): return true
-		case Comprehension(_): return true
+	case NodeTagExpression:
+		value := enumValue27.ExpressionPayload()
+		switch enumValue30 := *value.Value; enumValue30.Tag() {
+		case ExpressionTagBad:
+			return false
+		case ExpressionTagIdentifier:
+			return false
+		case ExpressionTagEllipsis:
+			return false
+		case ExpressionTagBasicLiteral:
+			return false
+		case ExpressionTagFunctionLiteral:
+			return false
+		case ExpressionTagCompositeLiteral:
+			return false
+		case ExpressionTagParenthesized:
+			return false
+		case ExpressionTagSelector:
+			return false
+		case ExpressionTagIndex:
+			return false
+		case ExpressionTagIndexList:
+			return false
+		case ExpressionTagSlice:
+			return false
+		case ExpressionTagTypeAssertion:
+			return false
+		case ExpressionTagCall:
+			return false
+		case ExpressionTagStar:
+			return false
+		case ExpressionTagNonNilPointer:
+			return true
+		case ExpressionTagUnary:
+			return false
+		case ExpressionTagBinary:
+			return false
+		case ExpressionTagKeyValue:
+			return false
+		case ExpressionTagArrayType:
+			return false
+		case ExpressionTagStructType:
+			return false
+		case ExpressionTagFunctionType:
+			return false
+		case ExpressionTagInterfaceType:
+			return false
+		case ExpressionTagMapType:
+			return false
+		case ExpressionTagChannelType:
+			return false
+		case ExpressionTagDefault:
+			return true
+		case ExpressionTagPropagation:
+			return true
+		case ExpressionTagComprehension:
+			return true
+		exhaustive:
 		}
-	case TGoField(_): return true
-	case EnumVariant(_): return true
-	case MatchCase(_): return true
-	case File(_): return false
-	case Specification(_): return false
-	case Field(_): return false
-	case FieldList(_): return false
-	case Identifier(_): return false
-	case Comment(_): return false
-	case CommentGroup(_): return false
+	case NodeTagTGoField:
+		return true
+	case NodeTagEnumVariant:
+		return true
+case NodeTagFile:
+		return false
+	case NodeTagSpecification:
+		return false
+	case NodeTagField:
+		return false
+	case NodeTagFieldList:
+		return false
+	case NodeTagIdentifier:
+		return false
+	case NodeTagComment:
+		return false
+	case NodeTagCommentGroup:
+		return false
+	exhaustive:
 	}
 }
 
 func publicChildren(node Node) []Node {
-	match node {
-	case File(value): return fileChildren(value.Value)
-	case Declaration(value): return declarationChildren(value.Value)
-	case Specification(value): return specificationChildren(value.Value)
-	case Statement(value): return statementChildren(value.Value)
-	case Expression(value): return expressionChildren(value.Value)
-	case Field(value): return fieldChildren(value.Value)
-	case FieldList(value): return fieldListChildren(value.Value)
-	case TGoField(value): return tgoFieldChildren(value.Value)
-	case EnumVariant(value): return enumVariantChildren(value.Value)
-	case MatchCase(value): return matchCaseChildren(value.Value)
-	case Identifier(_): return nil
-	case Comment(_): return nil
-	case CommentGroup(value):
+	switch enumValue31 := node; enumValue31.Tag() {
+	case NodeTagFile:
+		value := enumValue31.FilePayload()
+		return fileChildren(value.Value)
+	case NodeTagDeclaration:
+		value := enumValue31.DeclarationPayload()
+		return declarationChildren(value.Value)
+	case NodeTagSpecification:
+		value := enumValue31.SpecificationPayload()
+		return specificationChildren(value.Value)
+	case NodeTagStatement:
+		value := enumValue31.StatementPayload()
+		return statementChildren(value.Value)
+	case NodeTagExpression:
+		value := enumValue31.ExpressionPayload()
+		return expressionChildren(value.Value)
+	case NodeTagField:
+		value := enumValue31.FieldPayload()
+		return fieldChildren(value.Value)
+	case NodeTagFieldList:
+		value := enumValue31.FieldListPayload()
+		return fieldListChildren(value.Value)
+	case NodeTagTGoField:
+		value := enumValue31.TGoFieldPayload()
+		return tgoFieldChildren(value.Value)
+	case NodeTagEnumVariant:
+		value := enumValue31.EnumVariantPayload()
+		return enumVariantChildren(value.Value)
+case NodeTagIdentifier:
+		return nil
+	case NodeTagComment:
+		return nil
+	case NodeTagCommentGroup:
+		value := enumValue31.CommentGroupPayload()
 		result := make([]Node, 0, len(value.Value.List))
 		for _, item := range value.Value.List {
 			result = append(result, nodeComment(item))
 		}
 		return result
+	exhaustive:
 	}
 }
 
@@ -164,52 +253,97 @@ func expressionChildren(value %Expression) []Node {
 	addExpressions := func(items []%Expression) { for _, item := range items {
 		result = append(result, nodeExpression(item))
 	} }
-	match *value {
-	case Bad(_): return result
-	case Identifier(_): return result
-	case BasicLiteral(_): return result
-	case Default(_): return result
-	case Ellipsis(item):
-		if item.Value.Element != nil { addExpression(item.Value.Element) }
-	case FunctionLiteral(item):
+	switch enumValue32 := *value; enumValue32.Tag() {
+	case ExpressionTagBad:
+		return result
+	case ExpressionTagIdentifier:
+		return result
+	case ExpressionTagBasicLiteral:
+		return result
+	case ExpressionTagDefault:
+		return result
+	case ExpressionTagEllipsis:
+		item := enumValue32.EllipsisPayload()
+		if item.Value.Element != nil {
+			addExpression(item.Value.Element)
+		}
+	case ExpressionTagFunctionLiteral:
+		item := enumValue32.FunctionLiteralPayload()
 		addExpression(functionTypeNode(item.Value.Type))
 		result = append(
 			result, nodeStatement(blockStatementNode(item.Value.Body)),
 		)
-	case CompositeLiteral(item):
-		if item.Value.Type != nil { addExpression(item.Value.Type) }
+	case ExpressionTagCompositeLiteral:
+		item := enumValue32.CompositeLiteralPayload()
+		if item.Value.Type != nil {
+			addExpression(item.Value.Type)
+		}
 		addExpressions(item.Value.Elements)
-	case Parenthesized(item): addExpression(item.Value.Expression)
-	case Selector(item):
+	case ExpressionTagParenthesized:
+		item := enumValue32.ParenthesizedPayload()
+		addExpression(item.Value.Expression)
+	case ExpressionTagSelector:
+		item := enumValue32.SelectorPayload()
 		addExpression(item.Value.Expression)
 		result = append(result, nodeIdentifier(item.Value.Selector))
-	case Index(item):
-		addExpression(item.Value.Expression); addExpression(item.Value.Index)
-	case IndexList(item):
-		addExpression(item.Value.Expression); addExpressions(item.Value.Indices)
-	case Slice(item):
+	case ExpressionTagIndex:
+		item := enumValue32.IndexPayload()
 		addExpression(item.Value.Expression)
-		if item.Value.Low != nil { addExpression(item.Value.Low) }
-		if item.Value.High != nil { addExpression(item.Value.High) }
-		if item.Value.Max != nil { addExpression(item.Value.Max) }
-	case TypeAssertion(item):
+		addExpression(item.Value.Index)
+	case ExpressionTagIndexList:
+		item := enumValue32.IndexListPayload()
 		addExpression(item.Value.Expression)
-		if item.Value.Type != nil { addExpression(item.Value.Type) }
-	case Call(item):
-		addExpression(item.Value.Callee); addExpressions(item.Value.Args)
-	case Star(item): addExpression(item.Value.Expression)
-	case NonNilPointer(item): addExpression(item.Value.Type)
-	case Unary(item): addExpression(item.Value.Expression)
-	case Binary(item):
-		addExpression(item.Value.Left); addExpression(item.Value.Right)
-	case KeyValue(item):
-		addExpression(item.Value.Key); addExpression(item.Value.Value)
-	case ArrayType(item):
-		if item.Value.Length != nil { addExpression(item.Value.Length) }
+		addExpressions(item.Value.Indices)
+	case ExpressionTagSlice:
+		item := enumValue32.SlicePayload()
+		addExpression(item.Value.Expression)
+		if item.Value.Low != nil {
+			addExpression(item.Value.Low)
+		}
+		if item.Value.High != nil {
+			addExpression(item.Value.High)
+		}
+		if item.Value.Max != nil {
+			addExpression(item.Value.Max)
+		}
+	case ExpressionTagTypeAssertion:
+		item := enumValue32.TypeAssertionPayload()
+		addExpression(item.Value.Expression)
+		if item.Value.Type != nil {
+			addExpression(item.Value.Type)
+		}
+	case ExpressionTagCall:
+		item := enumValue32.CallPayload()
+		addExpression(item.Value.Callee)
+		addExpressions(item.Value.Args)
+	case ExpressionTagStar:
+		item := enumValue32.StarPayload()
+		addExpression(item.Value.Expression)
+	case ExpressionTagNonNilPointer:
+		item := enumValue32.NonNilPointerPayload()
+		addExpression(item.Value.Type)
+	case ExpressionTagUnary:
+		item := enumValue32.UnaryPayload()
+		addExpression(item.Value.Expression)
+	case ExpressionTagBinary:
+		item := enumValue32.BinaryPayload()
+		addExpression(item.Value.Left)
+		addExpression(item.Value.Right)
+	case ExpressionTagKeyValue:
+		item := enumValue32.KeyValuePayload()
+		addExpression(item.Value.Key)
+		addExpression(item.Value.Value)
+	case ExpressionTagArrayType:
+		item := enumValue32.ArrayTypePayload()
+		if item.Value.Length != nil {
+			addExpression(item.Value.Length)
+		}
 		addExpression(item.Value.Element)
-	case StructType(item):
+	case ExpressionTagStructType:
+		item := enumValue32.StructTypePayload()
 		result = append(result, nodeFieldList(item.Value.Fields))
-	case FunctionType(item):
+	case ExpressionTagFunctionType:
+		item := enumValue32.FunctionTypePayload()
 		if item.Value.TypeParams != nil {
 			result = append(result, nodeFieldList(item.Value.TypeParams))
 		}
@@ -217,29 +351,39 @@ func expressionChildren(value %Expression) []Node {
 		if item.Value.Results != nil {
 			result = append(result, nodeFieldList(item.Value.Results))
 		}
-	case InterfaceType(item):
+	case ExpressionTagInterfaceType:
+		item := enumValue32.InterfaceTypePayload()
 		result = append(result, nodeFieldList(item.Value.Methods))
-	case MapType(item):
-		addExpression(item.Value.Key); addExpression(item.Value.Value)
-	case ChannelType(item): addExpression(item.Value.Value)
-	case Propagation(item):
+	case ExpressionTagMapType:
+		item := enumValue32.MapTypePayload()
+		addExpression(item.Value.Key)
+		addExpression(item.Value.Value)
+	case ExpressionTagChannelType:
+		item := enumValue32.ChannelTypePayload()
+		addExpression(item.Value.Value)
+	case ExpressionTagPropagation:
+		item := enumValue32.PropagationPayload()
 		addExpression(item.Value.Expression)
-	case Comprehension(item):
+	case ExpressionTagComprehension:
+		item := enumValue32.ComprehensionPayload()
 		addExpression(item.Value.Type)
 		for _, clause := range item.Value.Clauses {
-			match clause {
-			case Range(value):
-				for _, binding := range value.Value.Bindings {
+			switch value := clause; value.Tag() {
+			case ComprehensionClauseTagRange:
+				for _, binding := range value.RangePayload().Value.Bindings {
 					result = append(result, nodeIdentifier(binding))
 				}
-				addExpression(value.Value.Source)
-			case Filter(value): addExpression(value.Value.Condition)
+				addExpression(value.RangePayload().Value.Source)
+			case ComprehensionClauseTagFilter:
+				addExpression(value.FilterPayload().Value.Condition)
+			exhaustive:
 			}
 		}
 		if item.Value.Result.Key != nil {
 			addExpression(item.Value.Result.Key)
 		}
 		addExpression(item.Value.Result.Value)
+	exhaustive:
 	}
 	return result
 }
@@ -258,79 +402,128 @@ func statementChildren(value %Statement) []Node {
 	addExpressions := func(items []%Expression) { for _, item := range items {
 		result = append(result, nodeExpression(item))
 	} }
-	match *value {
-	case Bad(_): return result
-	case Empty(_): return result
-	case Declaration(item):
+	switch enumValue33 := *value; enumValue33.Tag() {
+	case StatementTagBad:
+		return result
+	case StatementTagEmpty:
+		return result
+	case StatementTagDeclaration:
+		item := enumValue33.DeclarationPayload()
 		result = append(result, nodeDeclaration(item.Value.Declaration))
-	case Labeled(item):
+	case StatementTagLabeled:
+		item := enumValue33.LabeledPayload()
 		result = append(result, nodeIdentifier(item.Value.Label))
 		addStatement(item.Value.Statement)
-	case Expression(item): addExpression(item.Value.Expression)
-	case Send(item):
-		addExpression(item.Value.Channel); addExpression(item.Value.Value)
-	case Increment(item): addExpression(item.Value.Expression)
-	case Assignment(item):
-		addExpressions(item.Value.Left); addExpressions(item.Value.Right)
-	case Go(item):
+	case StatementTagExpression:
+		item := enumValue33.ExpressionPayload()
+		addExpression(item.Value.Expression)
+	case StatementTagSend:
+		item := enumValue33.SendPayload()
+		addExpression(item.Value.Channel)
+		addExpression(item.Value.Value)
+	case StatementTagIncrement:
+		item := enumValue33.IncrementPayload()
+		addExpression(item.Value.Expression)
+	case StatementTagAssignment:
+		item := enumValue33.AssignmentPayload()
+		addExpressions(item.Value.Left)
+		addExpressions(item.Value.Right)
+	case StatementTagGo:
+		item := enumValue33.GoPayload()
 		addExpression(item.Value.Call)
-	case Defer(item):
+	case StatementTagDefer:
+		item := enumValue33.DeferPayload()
 		addExpression(item.Value.Call)
-	case Return(item): addExpressions(item.Value.Results)
-	case Branch(item):
+	case StatementTagReturn:
+		item := enumValue33.ReturnPayload()
+		addExpressions(item.Value.Results)
+	case StatementTagBranch:
+		item := enumValue33.BranchPayload()
 		if item.Value.Label != nil {
 			result = append(result, nodeIdentifier(item.Value.Label))
 		}
-	case Block(item): addStatements(item.Value.List)
-	case If(item):
-		if item.Value.Init != nil { addStatement(item.Value.Init) }
+	case StatementTagBlock:
+		item := enumValue33.BlockPayload()
+		addStatements(item.Value.List)
+	case StatementTagIf:
+		item := enumValue33.IfPayload()
+		if item.Value.Init != nil {
+			addStatement(item.Value.Init)
+		}
 		addExpression(item.Value.Condition)
 		addStatement(blockStatementNode(item.Value.Body))
-		if item.Value.Else != nil { addStatement(item.Value.Else) }
-	case Case(item):
-		addExpressions(item.Value.List); addStatements(item.Value.Body)
-	case Switch(item):
-		if item.Value.Init != nil { addStatement(item.Value.Init) }
-		if item.Value.Tag != nil { addExpression(item.Value.Tag) }
+		if item.Value.Else != nil {
+			addStatement(item.Value.Else)
+		}
+	case StatementTagCase:
+		item := enumValue33.CasePayload()
+		addExpressions(item.Value.List)
+		addStatements(item.Value.Body)
+	case StatementTagSwitch:
+		item := enumValue33.SwitchPayload()
+		if item.Value.Init != nil {
+			addStatement(item.Value.Init)
+		}
+		if item.Value.Tag != nil {
+			addExpression(item.Value.Tag)
+		}
 		addStatement(blockStatementNode(item.Value.Body))
-	case TypeSwitch(item):
-		if item.Value.Init != nil { addStatement(item.Value.Init) }
+	case StatementTagTypeSwitch:
+		item := enumValue33.TypeSwitchPayload()
+		if item.Value.Init != nil {
+			addStatement(item.Value.Init)
+		}
 		addStatement(item.Value.Assignment)
 		addStatement(blockStatementNode(item.Value.Body))
-	case Communication(item):
+	case StatementTagCommunication:
+		item := enumValue33.CommunicationPayload()
 		if item.Value.Communication != nil {
 			addStatement(item.Value.Communication)
 		}
 		addStatements(item.Value.Body)
-	case Select(item): addStatement(blockStatementNode(item.Value.Body))
-	case For(item):
-		if item.Value.Init != nil { addStatement(item.Value.Init) }
-		if item.Value.Condition != nil { addExpression(item.Value.Condition) }
-		if item.Value.Post != nil { addStatement(item.Value.Post) }
+	case StatementTagSelect:
+		item := enumValue33.SelectPayload()
 		addStatement(blockStatementNode(item.Value.Body))
-	case Range(item):
-		if item.Value.Key != nil { addExpression(item.Value.Key) }
-		if item.Value.Value != nil { addExpression(item.Value.Value) }
-		addExpression(item.Value.Source); addStatement(blockStatementNode(item.Value.Body))
-	case Match(item):
-		addExpression(item.Value.Subject)
-		for _, value := range item.Value.Cases {
-			result = append(result, nodeMatchCase(value))
+	case StatementTagFor:
+		item := enumValue33.ForPayload()
+		if item.Value.Init != nil {
+			addStatement(item.Value.Init)
 		}
+		if item.Value.Condition != nil {
+			addExpression(item.Value.Condition)
+		}
+		if item.Value.Post != nil {
+			addStatement(item.Value.Post)
+		}
+		addStatement(blockStatementNode(item.Value.Body))
+	case StatementTagRange:
+		item := enumValue33.RangePayload()
+		if item.Value.Key != nil {
+			addExpression(item.Value.Key)
+		}
+		if item.Value.Value != nil {
+			addExpression(item.Value.Value)
+		}
+		addExpression(item.Value.Source)
+		addStatement(blockStatementNode(item.Value.Body))
+exhaustive:
 	}
 	return result
 }
 
 func declarationChildren(value %Declaration) []Node {
 	result := []Node(nil)
-	match *value {
-	case Bad(_): return result
-	case General(item):
+	switch enumValue34 := *value; enumValue34.Tag() {
+	case DeclarationTagBad:
+		return result
+	case DeclarationTagGeneral:
+		item := enumValue34.GeneralPayload()
 		result = addComment(result, item.Value.Doc)
 		for _, spec := range item.Value.Specs {
 			result = append(result, nodeSpecification(spec))
 		}
-	case Function(item):
+	case DeclarationTagFunction:
+		item := enumValue34.FunctionPayload()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Receiver != nil {
 			result = append(result, nodeFieldList(item.Value.Receiver))
@@ -342,7 +535,8 @@ func declarationChildren(value %Declaration) []Node {
 				result, nodeStatement(blockStatementNode(item.Value.Body)),
 			)
 		}
-	case Enum(item):
+	case DeclarationTagEnum:
+		item := enumValue34.EnumPayload()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Tag != nil {
 			tag := Expression.BasicLiteral{Value: item.Value.Tag}
@@ -353,34 +547,39 @@ func declarationChildren(value %Declaration) []Node {
 			result = append(result, nodeEnumVariant(variant))
 		}
 		result = addComment(result, item.Value.Comment)
-	case Struct(item):
+	case DeclarationTagStruct:
+		item := enumValue34.StructPayload()
 		result = addComment(result, item.Value.Doc)
 		result = append(result, nodeIdentifier(item.Value.Name))
 		for _, field := range item.Value.Fields {
 			result = append(result, nodeTGoField(field))
 		}
 		result = addComment(result, item.Value.Comment)
-	case Checked(item):
+	case DeclarationTagChecked:
+		item := enumValue34.CheckedPayload()
 		result = addComment(result, item.Value.Doc)
 		result = append(result, nodeIdentifier(item.Value.Name))
 		result = append(result, nodeExpression(item.Value.Base))
 		result = append(result, nodeExpression(item.Value.Predicate))
 		result = addComment(result, item.Value.Comment)
+	exhaustive:
 	}
 	return result
 }
 
 func specificationChildren(value %Specification) []Node {
 	result := []Node(nil)
-	match *value {
-	case Import(item):
+	switch enumValue35 := *value; enumValue35.Tag() {
+	case SpecificationTagImport:
+		item := enumValue35.ImportPayload()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Name != nil {
 			result = append(result, nodeIdentifier(item.Value.Name))
 		}
 		result = append(result, nodeExpression(basicLiteralNode(item.Value.Path)))
 		result = addComment(result, item.Value.Comment)
-	case Value(item):
+	case SpecificationTagValue:
+		item := enumValue35.ValuePayload()
 		result = addComment(result, item.Value.Doc)
 		for _, name := range item.Value.Names {
 			result = append(result, nodeIdentifier(name))
@@ -392,7 +591,8 @@ func specificationChildren(value %Specification) []Node {
 			result = append(result, nodeExpression(expression))
 		}
 		result = addComment(result, item.Value.Comment)
-	case Type(item):
+	case SpecificationTagType:
+		item := enumValue35.TypePayload()
 		result = addComment(result, item.Value.Doc)
 		result = append(result, nodeIdentifier(item.Value.Name))
 		if item.Value.TypeParams != nil {
@@ -400,6 +600,7 @@ func specificationChildren(value %Specification) []Node {
 		}
 		result = append(result, nodeExpression(item.Value.Type))
 		result = addComment(result, item.Value.Comment)
+	exhaustive:
 	}
 	return result
 }
@@ -442,19 +643,6 @@ func enumVariantChildren(value %EnumVariant) []Node {
 		result = append(result, nodeTGoField(field))
 	}
 	return addComment(result, value.Comment)
-}
-
-func matchCaseChildren(value %MatchCase) []Node {
-	result := []Node(nil)
-	result = append(result, nodeIdentifier(value.Variant))
-	result = append(result, nodeIdentifier(value.Binding))
-	for _, statement := range value.Body {
-		result = append(result, nodeStatement(statement))
-	}
-	for _, comment := range value.Comments {
-		result = append(result, nodeCommentGroup(comment))
-	}
-	return result
 }
 
 func addComment(values []Node, value *CommentGroup) []Node {

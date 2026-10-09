@@ -101,7 +101,6 @@ func (p *sourceParser) mapFragmentError(
 
 func (p *sourceParser) sanitize(
 	root ast.Node,
-	matchAt map[token.Pos]frontNode,
 	defaultAt map[token.Pos]*frontDefaultMarker,
 	anchors map[frontNode]frontNode,
 ) {
@@ -122,12 +121,6 @@ func (p *sourceParser) sanitize(
 			if ok {
 				p.buildPropagation(node, call)
 			}
-		case *ast.BlockStmt:
-			node.List = p.cleanStatements(node, node.List, matchAt, anchors)
-		case *ast.CaseClause:
-			node.Body = p.cleanStatements(node, node.Body, matchAt, anchors)
-		case *ast.CommClause:
-			node.Body = p.cleanStatements(node, node.Body, matchAt, anchors)
 		case *ast.CompositeLit:
 			if defaultAt == nil {
 				break
@@ -197,28 +190,6 @@ func unwrappedCall(expression ast.Expr) (*ast.CallExpr, bool) {
 	return call, ok
 }
 
-func (p *sourceParser) cleanStatements(
-	parent frontNode,
-	statements []ast.Stmt,
-	matchAt map[token.Pos]frontNode,
-	anchors map[frontNode]frontNode,
-) []ast.Stmt {
-	if matchAt == nil {
-		return statements
-	}
-	result := statements[:0]
-	for _, statement := range statements {
-		match := matchAt[statement.Pos()]
-		empty, artificial := statement.(*ast.EmptyStmt)
-		if match != nil && artificial && !empty.Implicit {
-			anchors[match] = parent
-			continue
-		}
-		result = append(result, statement)
-	}
-	return result
-}
-
 func (p *sourceParser) attachComments(file *frontFile) {
 	file.attached = make(map[frontNode][]*ast.CommentGroup)
 	nodes := []frontNode(nil)
@@ -250,17 +221,6 @@ func (p *sourceParser) attachComments(file *frontFile) {
 	}
 	for _, node := range nodes {
 		p.setNodeComments(node, file.attached[node])
-	}
-	for _, extension := range file.extensions {
-		matchCase, ok := extension.(*frontMatchCase)
-		if !ok {
-			continue
-		}
-		for _, comment := range file.Comments {
-			if matchCase.Pos() <= comment.Pos() && comment.End() <= matchCase.End() {
-				matchCase.Comments = append(matchCase.Comments, comment)
-			}
-		}
 	}
 }
 
@@ -302,9 +262,7 @@ func (p *sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup
 			continue
 		}
 		if _, custom := node.(frontExtension); !custom {
-			if _, label := node.(*frontLabeledStmt); !label {
-				continue
-			}
+			continue
 		}
 		nodeStart := p.file.Position(node.Pos())
 		nodeEnd := p.file.Position(node.End())

@@ -32,27 +32,27 @@ func ReadInt(values <-chan int) (int, bool) {
 }
 
 func Nested(account model.Account) string {
-	switch __tgo_match_2 := account; __tgo_match_2.TgoTag() {
-	case 1:
-		person := __tgo_match_2.TgoPersonal()
+	switch enumValue2 := account; enumValue2.Tag() {
+	case model.AccountTagPersonal:
+		person := enumValue2.PersonalPayload()
 		return person.Name
-	case 2:
-		company := __tgo_match_2.TgoBusiness()
+	case model.AccountTagBusiness:
+		company := enumValue2.BusinessPayload()
 		if len(company.Members) == 0 {
 			return company.Company
 		}
-		switch __tgo_match_3 := company.Members[0]; __tgo_match_3.TgoTag() {
-		case 1:
-			person := __tgo_match_3.TgoPersonal()
+		switch enumValue3 := company.Members[0]; enumValue3.Tag() {
+		case model.AccountTagPersonal:
+			person := enumValue3.PersonalPayload()
 			return person.Name
-		case 2:
-			child := __tgo_match_3.TgoBusiness()
+		case model.AccountTagBusiness:
+			child := enumValue3.BusinessPayload()
 			return child.Company
 		default:
-			panic("invalid Account variant")
+			panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
 	default:
-		panic("invalid Account variant")
+		panic(enumValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

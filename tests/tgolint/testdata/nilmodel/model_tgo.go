@@ -29,32 +29,43 @@ type OptionalHandler = func(*Item) *Item
 
 // Syntax requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type SyntaxTag uint8
+
+const (
+	SyntaxTagItem SyntaxTag = iota + 1
+)
+
 type Syntax struct {
-	tgoTag  uint8
+	tgoTag  SyntaxTag
 	tgoItem SyntaxItem
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Syntax) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Syntax) Tag() SyntaxTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Syntax) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Syntax: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // SyntaxItem is the Item payload.
 type SyntaxItem struct {
 	Value *Item
 }
 
-// NewSyntaxItem constructs Syntax. Model fields must be valid.
+// Syntax constructs Syntax. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewSyntaxItem(value SyntaxItem) Syntax {
-	return Syntax{tgoTag: 1, tgoItem: value}
+func (value SyntaxItem) Syntax() Syntax {
+	return Syntax{tgoTag: SyntaxTagItem, tgoItem: value}
 }
 
-// TgoItem returns the Item payload. Check TgoTag first.
-func (v Syntax) TgoItem() SyntaxItem { return v.tgoItem }
+// ItemPayload requires Item. No tag check.
+func (v Syntax) ItemPayload() SyntaxItem { return v.tgoItem }
 
 func (v Syntax) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoItem()
+	case SyntaxTagItem:
+		payload := v.ItemPayload()
 		return __tgo_json.Marshal(struct {
 			Payload SyntaxItem `json:"Item"`
 		}{Payload: payload})
@@ -83,7 +94,7 @@ func (v *Syntax) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewSyntaxItem(payload)
+		*v = payload.Syntax()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Syntax JSON variant %q", variant)
@@ -108,6 +119,10 @@ func NeedBoth(value BothRequired) {}
 
 func Give(value *Item) *Item {
 	return value
+}
+
+func Load() (*Item, error) {
+	return &Item{Name: ""}, nil
 }
 
 func AcceptOptional(value *Item) *Item {
