@@ -9,14 +9,14 @@ import (
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
-func TestFilterKeepsDiagnosticPositions(t *testing.T) {
+func TestReporterKeepsPositionsAndDeduplicates(t *testing.T) {
 	analyzer := new(analysis.Analyzer)
 	analyzer.Name = "reportfilter"
 	analyzer.Doc = "test diagnostic filtering"
 	analyzer.Run = func(pass *analysis.Pass) (any, error) {
-		filtered := Filter(pass)
-		filtered.Reportf(pass.Files[0].Decls[0].Pos(), "hidden")
-		filtered.Reportf(pass.Files[0].Package, "visible")
+		reporter := New(Filter(pass))
+		reporter.Reportf(pass.Files[0].Package, "visible")
+		reporter.Reportf(pass.Files[0].Package, "visible")
 		return nil, nil
 	}
 	analysistest.Run(t, analysistest.TestData(), analyzer, "reportfilter")
