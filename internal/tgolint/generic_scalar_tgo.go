@@ -189,6 +189,9 @@ func (c *checker) scalarValueAt(
 	node *syntax.Node,
 	expression *syntax.Expression,
 ) (scalarValue, bool) {
+	if c == nil || node == nil || expression == nil {
+		return scalarValueBoolean{Value: false}.scalarValue(), false
+	}
 	root := c.enclosingFunction(node)
 	if root == nil {
 		return scalarValueBoolean{Value: false}.scalarValue(), false
@@ -197,6 +200,9 @@ func (c *checker) scalarValueAt(
 	if flow == nil {
 		flow = c.buildScalarFlow(root)
 		c.scalarFlows[*root] = flow
+	}
+	if flow == nil {
+		return scalarValueBoolean{Value: false}.scalarValue(), false
 	}
 	state := flow.before[syntax.ExpressionNode(expression)]
 	if state == nil {
@@ -207,13 +213,19 @@ func (c *checker) scalarValueAt(
 
 // enclosingFunction finds the declaration or literal that owns a node.
 func (c *checker) enclosingFunction(node *syntax.Node) *syntax.Node {
-	for current := node; current != nil; current = c.parents[*current] {
+	var current *syntax.Node = node
+	for current != nil {
 		if _, declaration := syntax.FunctionDeclarationOf(current); declaration {
 			return current
 		}
 		if _, literal := syntax.FunctionLiteralOf(current); literal {
 			return current
 		}
+		parent := c.parents[*current]
+		if parent == nil {
+			return nil
+		}
+		current = parent
 	}
 	return nil
 }
@@ -286,7 +298,7 @@ func (c *checker) scalarSuccessors(
 		return block.Succs
 	}
 	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
-	if !ok {
+	if !ok || condition == nil {
 		return block.Succs
 	}
 	value, known := c.evaluateScalar(condition, state)

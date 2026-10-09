@@ -24,9 +24,12 @@ type scalarFlow struct {
 
 // scalarValueAt returns a proven scalar value before the expression runs.
 func (c %checker) scalarValueAt(
-	node *syntax.Node,
-	expression *syntax.Expression,
+	node %syntax.Node,
+	expression %syntax.Expression,
 ) (scalarValue, bool) {
+	if c == nil || node == nil || expression == nil {
+		return scalarValue.Boolean{Value: false}, false
+	}
 	root := c.enclosingFunction(node)
 	if root == nil {
 		return scalarValue.Boolean{Value: false}, false
@@ -36,6 +39,9 @@ func (c %checker) scalarValueAt(
 		flow = c.buildScalarFlow(root)
 		c.scalarFlows[*root] = flow
 	}
+	if flow == nil {
+		return scalarValue.Boolean{Value: false}, false
+	}
 	state := flow.before[syntax.ExpressionNode(expression)]
 	if state == nil {
 		state = flow.before[*node]
@@ -44,18 +50,22 @@ func (c %checker) scalarValueAt(
 }
 
 // enclosingFunction finds the declaration or literal that owns a node.
-func (c %checker) enclosingFunction(node *syntax.Node) *syntax.Node {
-	for current := node; current != nil; current = c.parents[*current] {
+func (c %checker) enclosingFunction(node %syntax.Node) *syntax.Node {
+	var current *syntax.Node = node
+	for current != nil {
 		if _, declaration := syntax.FunctionDeclarationOf(current); declaration {
 			return current
 		}
 		if _, literal := syntax.FunctionLiteralOf(current); literal { return current }
+		parent := c.parents[*current]
+		if parent == nil { return nil }
+		current = parent
 	}
 	return nil
 }
 
 // buildScalarFlow solves scalar facts over the function control-flow graph.
-func (c %checker) buildScalarFlow(root *syntax.Node) %scalarFlow {
+func (c %checker) buildScalarFlow(root %syntax.Node) %scalarFlow {
 	body := genericFunctionBody(root)
 	flow := &scalarFlow{before: make(map[syntax.Node]scalarState)}
 	if body == nil {
@@ -122,7 +132,7 @@ func (c %checker) scalarSuccessors(
 		return block.Succs
 	}
 	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
-	if !ok {
+	if !ok || condition == nil {
 		return block.Succs
 	}
 	value, known := c.evaluateScalar(condition, state)
@@ -161,8 +171,8 @@ func (c %checker) recordScalarEntries(
 
 // ownedScalars limits facts to parameters and variables from this function.
 func (c %checker) ownedScalars(
-	root *syntax.Node,
-	body *syntax.BlockStatement,
+	root %syntax.Node,
+	body %syntax.BlockStatement,
 ) map[types.Object]bool {
 	owned := make(map[types.Object]bool)
 	if signature := c.functionSignature(root); signature != nil {
@@ -170,7 +180,7 @@ func (c %checker) ownedScalars(
 			owned[signature.Params().At(index)] = true
 		}
 	}
-	inspectGenericBlock(body, func(node *syntax.Node) bool {
+	inspectGenericBlock(body, func(node %syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
@@ -188,7 +198,7 @@ func (c %checker) ownedScalars(
 
 // scalarEntryState maps stable Boolean and integer parameters to call arguments.
 func (c %checker) scalarEntryState(
-	root *syntax.Node,
+	root %syntax.Node,
 ) scalarState {
 	state := make(scalarState)
 	signature := c.functionSignature(root)
@@ -212,7 +222,7 @@ func (c %checker) scalarEntryState(
 	return state
 }
 
-func (c %checker) functionSignature(root *syntax.Node) *types.Signature {
+func (c %checker) functionSignature(root %syntax.Node) *types.Signature {
 	if function, ok := syntax.FunctionDeclarationOf(root); ok {
 		object, _ := c.facts.DefinitionName(function.Name).(*types.Func)
 		if object != nil {
@@ -320,8 +330,8 @@ func (c %checker) transferScalarAssignment(
 
 func (c %checker) transferScalarValues(
 	state scalarState,
-	names []*syntax.Identifier,
-	values []*syntax.Expression,
+	names []%syntax.Identifier,
+	values []%syntax.Expression,
 	owned map[types.Object]bool,
 ) {
 	if len(names) != len(values) {
@@ -342,8 +352,8 @@ func (c %checker) transferScalarValues(
 }
 
 // invalidateScalarEscapes drops facts after an address or closure captures a value.
-func (c %checker) invalidateScalarEscapes(state scalarState, root *syntax.Node) {
-	inspectGenericNode(root, func(node *syntax.Node) bool {
+func (c %checker) invalidateScalarEscapes(state scalarState, root %syntax.Node) {
+	inspectGenericNode(root, func(node %syntax.Node) bool {
 		if expression, ok := syntax.ExpressionOf(node); ok {
 			if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
 				unary.Operator == token.AND {
@@ -375,7 +385,7 @@ func (c %checker) invalidateScalarEscapes(state scalarState, root *syntax.Node) 
 
 // evaluateScalar reduces constants, aliases, and supported Boolean expressions.
 func (c %checker) evaluateScalar(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	state scalarState,
 ) (scalarValue, bool) {
 	if expression == nil {
@@ -427,8 +437,8 @@ func exactScalar(value constant.Value) (scalarValue, bool) {
 }
 
 func (c %checker) valuePreservingConversion(
-	expression *syntax.Expression,
-	call *syntax.CallExpression,
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
 ) bool {
 	return len(call.Args) == 1 && c.facts.IsType(call.Callee) &&
 		types.Identical(
@@ -669,7 +679,7 @@ func recordScalarState(
 	root syntax.Node,
 	state scalarState,
 ) {
-	inspectGenericNode(&root, func(node *syntax.Node) bool {
+	inspectGenericNode(&root, func(node %syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}

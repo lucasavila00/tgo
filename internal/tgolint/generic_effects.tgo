@@ -201,17 +201,17 @@ func decodeGenericEffectFact(fact %genericEffectWireFact) *genericEffectSet {
 
 type genericEffectSummary struct {
 	function              *types.Func
-	file                  *syntax.File
-	declaration           *syntax.FunctionDeclaration
+	file                  %syntax.File
+	declaration           %syntax.FunctionDeclaration
 	parameters            map[*types.TypeParam]zeroParameter
 	zeroEffects           []genericEffect
 	accessEffects         []genericEffect
 	returnedZeroEffects   []genericEffect
 	returnedAccessEffects []genericEffect
-	calls                 []*syntax.Expression
+	calls                 []%syntax.Expression
 	reachable             map[syntax.Node]bool
-	root                  *syntax.Node
-	body                  *syntax.BlockStatement
+	root                  %syntax.Node
+	body                  %syntax.BlockStatement
 }
 
 // checkGenericZeroSafety exports generic zero facts and checks each use.
@@ -232,7 +232,7 @@ func (c %checker) checkGenericZeroSafety() {
 		if c.generated[file] {
 			continue
 		}
-		syntax.Inspect(file, func(node *syntax.Node) bool {
+		inspectGenericFile(file, func(node %syntax.Node) bool {
 			expression, ok := syntax.ExpressionOf(node)
 			if !ok {
 				return true
@@ -261,7 +261,7 @@ func (c %checker) collectGenericZeroSummaries() map[*types.Func]%genericEffectSu
 		if c.generated[file] {
 			continue
 		}
-		syntax.Inspect(file, func(node *syntax.Node) bool {
+		inspectGenericFile(file, func(node %syntax.Node) bool {
 			function, ok := syntax.FunctionDeclarationOf(node)
 			if !ok || function.Body == nil {
 				return true
@@ -330,7 +330,7 @@ func (c %checker) collectDirectGenericZeros(summary %genericEffectSummary) {
 }
 
 func (c %checker) collectGenericNodes(summary %genericEffectSummary) {
-	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
+	inspectGenericBlock(summary.body, func(node %syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
@@ -373,7 +373,7 @@ func (c %checker) collectGenericNodes(summary %genericEffectSummary) {
 
 // collectReturnedGenericEffects records effects in a directly returned closure.
 func (c %checker) collectReturnedGenericEffects(summary %genericEffectSummary) {
-	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
+	inspectGenericBlock(summary.body, func(node %syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
@@ -458,7 +458,7 @@ func (c %checker) collectGenericPresenceZeros(summary %genericEffectSummary) {
 
 func (c %checker) markGenericPresenceEffect(
 	summary %genericEffectSummary,
-	source *syntax.Expression,
+	source %syntax.Expression,
 ) {
 	typ := firstType(c.facts.Type(source))
 	if index := syntax.IndexExpressionOf(source); index != nil {
@@ -506,8 +506,8 @@ func (c %checker) markGenericZeroUnconditional(
 
 func (c %checker) collectValueSpecZeros(
 	summary %genericEffectSummary,
-	node *syntax.Node,
-	specification *syntax.ValueSpecification,
+	node %syntax.Node,
+	specification %syntax.ValueSpecification,
 ) {
 	if len(specification.Values) != 0 {
 		return
@@ -522,8 +522,8 @@ func (c %checker) collectValueSpecZeros(
 // collectCallZeros records zero-producing built-ins and conversions.
 func (c %checker) collectCallZeros(
 	summary %genericEffectSummary,
-	expression *syntax.Expression,
-	call *syntax.CallExpression,
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
 ) {
 	name := syntax.IdentifierExpressionOf(call.Callee)
 	if name == nil {
@@ -554,34 +554,40 @@ func (c %checker) collectCallZeros(
 
 func (c %checker) collectMakeZeros(
 	summary %genericEffectSummary,
-	expression *syntax.Expression,
-	call *syntax.CallExpression,
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
 ) {
 	if len(call.Args) < 2 {
 		return
 	}
-	slice, ok := coreType(c.facts.Type(call.Args[0])).(*types.Slice)
+	typeArgument := call.Args[0]
+	if typeArgument == nil { return }
+	slice, ok := coreType(c.facts.Type(typeArgument)).(*types.Slice)
 	if !ok {
 		return
 	}
-	condition, outcome := c.nonzeroEffectCondition(call.Args[1])
-	switch enumValue2 := outcome; enumValue2.Tag() {
-	case effectOutcomeTagNever:
+	lengthArgument := call.Args[1]
+	if lengthArgument == nil { return }
+	condition, outcome := c.nonzeroEffectCondition(lengthArgument)
+	if outcome == neverEffectOutcome() {
 		return
-	case effectOutcomeTagAlways:
-		c.markGenericZeroAt(summary, syntaxNode(expression), slice.Elem())
-	case effectOutcomeTagConditional:
-		c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), condition, false)
-	case effectOutcomeTagUnknown:
-		c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), nil, true)
-	exhaustive:
 	}
+	if outcome == alwaysEffectOutcome() {
+		c.markGenericZeroAt(summary, syntaxNode(expression), slice.Elem())
+		return
+	}
+	if outcome == conditionalEffectOutcome() {
+		if condition == nil { return }
+		c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), condition, false)
+		return
+	}
+	c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), nil, true)
 }
 
 func (c %checker) collectMapReadZero(
 	summary %genericEffectSummary,
-	expression *syntax.Expression,
-	index *syntax.IndexExpression,
+	expression %syntax.Expression,
+	index %syntax.IndexExpression,
 ) {
 	if c.assignmentTarget(expression) {
 		return
@@ -600,10 +606,11 @@ func (c %checker) collectMapReadZero(
 
 func (c %checker) collectResliceZero(
 	summary %genericEffectSummary,
-	value *syntax.Expression,
-	expression *syntax.SliceExpression,
+	value %syntax.Expression,
+	expression %syntax.SliceExpression,
 ) {
-	if expression.High == nil || c.currentLength(expression.High, expression.Expression) ||
+	if expression.High == nil { return }
+	if c.currentLength(expression.High, expression.Expression) ||
 		constantZero(c.facts.Constant(expression.High)) {
 		return
 	}
@@ -618,9 +625,9 @@ func (c %checker) collectResliceZero(
 
 func (c %checker) collectGenericAccess(
 	summary %genericEffectSummary,
-	node *syntax.Node,
-	expression *syntax.Expression,
-	selector *syntax.SelectorExpression,
+	node %syntax.Node,
+	expression %syntax.Expression,
+	selector %syntax.SelectorExpression,
 ) {
 	if !strings.HasPrefix(selector.Selector.Name, "Tgo") ||
 		!c.receiverCanHideModel(c.facts.Type(selector.Expression)) {
@@ -636,8 +643,8 @@ func (c %checker) collectGenericAccess(
 
 func (c %checker) collectLiteralZeros(
 	summary %genericEffectSummary,
-	expression *syntax.Expression,
-	literal *syntax.CompositeLiteral,
+	expression %syntax.Expression,
+	literal %syntax.CompositeLiteral,
 ) {
 	switch underlying := coreType(c.facts.Type(expression)).(type) {
 	case *types.Struct:
@@ -655,8 +662,8 @@ func (c %checker) collectLiteralZeros(
 
 func (c %checker) collectStructLiteralZeros(
 	summary %genericEffectSummary,
-	expression *syntax.Expression,
-	literal *syntax.CompositeLiteral,
+	expression %syntax.Expression,
+	literal %syntax.CompositeLiteral,
 	structure *types.Struct,
 ) {
 	keyed := len(literal.Elements) == 0
@@ -682,7 +689,7 @@ func (c %checker) collectStructLiteralZeros(
 	}
 }
 
-func (c %checker) literalHasHoles(literal *syntax.CompositeLiteral, length int64) bool {
+func (c %checker) literalHasHoles(literal %syntax.CompositeLiteral, length int64) bool {
 	supplied := make(map[int64]bool)
 	next := int64(0)
 	largest := int64(-1)
