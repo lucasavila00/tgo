@@ -96,6 +96,9 @@ func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
 		uses: []objectFact{{position: usePosition, object: object}},
 	}, files)
 	definition, use := sourceIdentifiers(t, parsed)
+	if definition == nil || use == nil {
+		t.Fatal("identifier node is absent")
+	}
 	definitionObject, definitionFact := index.IdentifierFact(parsed, definition)
 	useObject, useFact := index.IdentifierFact(parsed, use)
 	if definitionObject != object || useObject != object {
