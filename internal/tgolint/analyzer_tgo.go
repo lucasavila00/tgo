@@ -6,7 +6,6 @@ package tgolint
 
 import (
 	"fmt"
-	"go/ast"
 	"go/token"
 	"go/types"
 	"strconv"
@@ -32,7 +31,7 @@ func newAnalyzer() *analysis.Analyzer {
 		new(modelWireFact),
 		new(validationFact),
 		new(genericEffectWireFact),
-		new(nilContractWireFact),
+		new(nilContractWireFactV2),
 		new(invalidPackageFact),
 	}
 	return analyzer
@@ -46,7 +45,6 @@ type checker struct {
 	validated     map[types.Object]bool
 	callTarget    map[types.Object]types.Object
 	generated     map[*syntax.File]bool
-	astGenerated  map[*ast.File]bool
 	outputs       map[string][]byte
 	parents       map[syntax.Node]*syntax.Node
 	syntaxSafe    map[*syntax.Expression]bool
@@ -95,7 +93,10 @@ func run(pass *analysis.Pass) (any, error) {
 	}
 	info := pass.TypesInfo
 	fileSet := pass.Fset
-	if info == nil || fileSet == nil {
+	if info == nil {
+		return nil, fmt.Errorf("tgolint requires type facts")
+	}
+	if fileSet == nil {
 		return nil, fmt.Errorf("tgolint requires type and position facts")
 	}
 	facts := sourcefacts.New(files[0], info, fileSet)
@@ -110,7 +111,6 @@ func run(pass *analysis.Pass) (any, error) {
 		validated:     make(map[types.Object]bool),
 		callTarget:    make(map[types.Object]types.Object),
 		generated:     make(map[*syntax.File]bool),
-		astGenerated:  make(map[*ast.File]bool),
 		outputs:       make(map[string][]byte),
 		parents:       make(map[syntax.Node]*syntax.Node),
 		syntaxSafe:    make(map[*syntax.Expression]bool),
@@ -127,10 +127,9 @@ func run(pass *analysis.Pass) (any, error) {
 		scalarFlows:   make(map[syntax.Node]*scalarFlow),
 		invalid:       false,
 	}
-	for index, file := range files {
+	for _, file := range files {
 		if syntaxFileGenerated(file) {
 			c.generated[file] = true
-			c.astGenerated[pass.Files[index]] = true
 		}
 	}
 	if c.rejectInvalidDependencies() {
@@ -223,6 +222,7 @@ func (c *checker) markInvalid() {
 }
 
 // addParents builds the upward AST links used by local flow checks.
+
 func (c *checker) addParent(node *syntax.Node) {
 	if c.file == nil {
 		return
