@@ -226,6 +226,8 @@ func (c %checker) checkedControlStatement(statement *syntax.Statement, state che
 		return false
 	} else if statement.Tag() == syntax.StatementTagEmpty {
 		return false
+	} else if value := syntax.SendStatementOf(statement); value != nil {
+		c.checkResultUses([]*syntax.Expression{value.Channel, value.Value}, state, nil)
 	} else if expression := statementExpression(statement); expression != nil {
 		c.checkResultUses([]*syntax.Expression{expression}, state, nil)
 	}
