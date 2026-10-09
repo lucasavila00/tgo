@@ -56,7 +56,7 @@ func usesTGoSyntax(file *syntax.File) bool {
 			}
 			if statement, ok := syntax.StatementOf(node); ok {
 				if returned := syntax.ReturnStatementOf(statement); returned != nil &&
-					returned.SuccessComma.IsValid() {
+					(returned.SuccessComma.IsValid() || returned.FailureComma.IsValid()) {
 					found = true
 					return false
 				}
