@@ -95,3 +95,10 @@ func closureWrite(value *nilmodel.Item) {
 }
 
 var badHandler nilmodel.OptionalHandler = nilmodel.RequireAndReturn
+
+func badCrossPackageMethodContract(
+	lookup *nilmodel.Lookup,
+	value *nilmodel.Item,
+) {
+	_ = lookup.Find(value)
+}

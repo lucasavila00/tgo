@@ -15,9 +15,18 @@ func (c %checker) checkErrorReturnModernization(analysis *compiler.AnalysisPacka
 	if analysis == nil {
 		return
 	}
+	info := analysis.Info
+	files := analysis.FileSet
+	if info == nil || files == nil {
+		return
+	}
 	for _, source := range analysis.Sources {
+		projected := source.Projected
+		if projected == nil {
+			continue
+		}
 		index := sourcefacts.New(
-			source.Projected, analysis.Info, analysis.FileSet,
+			projected, info, files,
 		)
 		syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
 			statements, ok := sourceStatementList(node)
@@ -55,7 +64,7 @@ func (c %checker) checkErrorReturnPair(
 	first %syntax.Statement,
 	second %syntax.Statement,
 	function *types.Signature,
-	index *sourcefacts.Index,
+	index %sourcefacts.Index,
 ) {
 	if !unnamedErrorResults(function) {
 		return
@@ -95,7 +104,7 @@ func (c %checker) checkErrorReturnPair(
 func errorReturnAssignment(
 	assignment %syntax.AssignmentStatement,
 	call %syntax.CallExpression,
-	index *sourcefacts.Index,
+	index %sourcefacts.Index,
 ) (types.Object, bool) {
 	if index.CalledFunction(call.Callee) == nil {
 		return nil, false
@@ -128,7 +137,7 @@ func errorReturnBranch(
 	branch %syntax.IfStatement,
 	errorObject types.Object,
 	function *types.Signature,
-	index *sourcefacts.Index,
+	index %sourcefacts.Index,
 ) bool {
 	if branch.Init != nil || branch.Else != nil || len(branch.Body.List) != 1 {
 		return false
@@ -154,7 +163,7 @@ func errorReturnBranch(
 func sameErrorCondition(
 	expression %syntax.Expression,
 	errorObject types.Object,
-	index *sourcefacts.Index,
+	index %sourcefacts.Index,
 ) bool {
 	comparison, ok := sourceBinary(expression)
 	if !ok || comparison == nil || comparison.Operator != token.NEQ {
@@ -174,7 +183,7 @@ func errorReturnFormat(
 	branch %syntax.IfStatement,
 	errorObject types.Object,
 	name string,
-	index *sourcefacts.Index,
+	index %sourcefacts.Index,
 ) bool {
 	result, ok := sourceReturn(branch.Body.List[0])
 	if !ok || result == nil || len(result.Results) == 0 {
@@ -205,7 +214,7 @@ func errorReturnFormat(
 func exactZeroValue(
 	expression %syntax.Expression,
 	resultType types.Type,
-	index *sourcefacts.Index,
+	index %sourcefacts.Index,
 ) bool {
 	expression = sourceUnparenthesized(expression)
 	if _, ok := sourceIdentifier(expression); ok {

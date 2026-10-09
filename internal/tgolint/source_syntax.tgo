@@ -308,7 +308,7 @@ func sourceUnparenthesized(expression %syntax.Expression) %syntax.Expression {
 func sourceFunctionSignature(
 	file *syntax.File,
 	node *syntax.Node,
-	index *sourcefacts.Index,
+	index %sourcefacts.Index,
 ) *types.Signature {
 	for current := node; current != nil; current = syntax.Parent(file, current) {
 		position, ok := sourceFunctionPosition(current)

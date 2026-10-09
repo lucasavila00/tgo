@@ -164,3 +164,11 @@ func collectionOperations(item *nilmodel.Item) {
 }
 
 var handler nilmodel.RequiredHandler = nilmodel.AcceptOptional
+
+func crossPackageMethodContract() {
+	lookup := nilmodel.NewLookup()
+	value := lookup.Find(&nilmodel.Item{})
+	if value != nil {
+		nilmodel.Need(value)
+	}
+}
