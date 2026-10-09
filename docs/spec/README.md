@@ -522,6 +522,38 @@ Array and slice literals may not leave index holes.
 An empty slice literal has no elements and is valid.
 An array literal must supply every index, including indexes whose Go zero is valid.
 
+## Collection comprehensions
+
+A slice or map literal can contain one `for range` block. Each range uses `:=` with one or two
+names. A nested range adds one loop. An `if` block filters results. Use `&&` for two conditions.
+The deepest block contains one result.
+
+```text
+names := []string{for _, account := range accounts {
+    if account.Active { account.Name }
+}}
+
+byID := map[ID]Account{for _, account := range accounts {
+    account.ID: account
+}}
+```
+
+The literal type must have a slice or map underlying type. A slice result has one expression.
+A map result has `key: value`. An equal map key replaces its earlier value. Map range order stays
+unspecified.
+
+The compiler emits one direct Go loop nest. It emits no closure, iterator, runtime helper, or
+intermediate collection. Each range source runs once when its containing loop reaches it. Each
+accepted result runs once. Map keys run before their values. An empty slice result is non-nil.
+
+A single unfiltered range over a slice allocates the exact result length and writes by index.
+An identity result uses Go `copy`. Other sources can use `len` as an initial capacity. Filtered
+and nested slices grow with Go `append`. Postfix `!` can occur in a source, condition, key, value,
+or slice result. It returns from the surrounding function.
+
+Use a Go loop when the body needs mutation, `break`, `continue`, or more than one result path.
+Comprehensions add no reducer, grouping, sorting, lazy result, parallel work, or collector.
+
 ## Zero validity
 
 tgo classifies a type by whether Go zero filling makes a valid tgo value.

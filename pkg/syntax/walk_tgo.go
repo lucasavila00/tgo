@@ -289,6 +289,9 @@ func ExpressionPosition(value *Expression) token.Pos {
 	case ExpressionTagPropagation:
 		item := enumValue22.PropagationPayload()
 		return item.Value.Start
+	case ExpressionTagComprehension:
+		item := enumValue22.ComprehensionPayload()
+		return item.Value.Start
 	default:
 		panic(enumValue22.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -377,6 +380,9 @@ func ExpressionEnd(value *Expression) token.Pos {
 		return item.Value.Stop
 	case ExpressionTagPropagation:
 		item := enumValue23.PropagationPayload()
+		return item.Value.Stop
+	case ExpressionTagComprehension:
+		item := enumValue23.ComprehensionPayload()
 		return item.Value.Stop
 	default:
 		panic(enumValue23.UnknownTag()) // unreachable: tgolint requires a case per tag

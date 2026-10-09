@@ -71,6 +71,8 @@ func StaticCallName(value *Expression) (string, bool) {
 		return "", false
 	case ExpressionTagPropagation:
 		return "", false
+	case ExpressionTagComprehension:
+		return "", false
 	default:
 		panic(enumValue19.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}

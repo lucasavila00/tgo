@@ -68,6 +68,8 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 			return nil, false
 		case ExpressionTagPropagation:
 			return nil, false
+		case ExpressionTagComprehension:
+			return nil, false
 		default:
 			panic(enumValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
@@ -228,6 +230,8 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 		return nil, false
 	case ExpressionTagPropagation:
 		return nil, false
+	case ExpressionTagComprehension:
+		return nil, false
 	default:
 		panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -293,8 +297,69 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 		return nil, false
 	case ExpressionTagDefault:
 		return nil, false
+	case ExpressionTagComprehension:
+		return nil, false
 	default:
 		panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+// ComprehensionExpressionOf returns a collection comprehension payload.
+func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
+	expression, ok := ExpressionOf(node)
+	if !ok {
+		return nil, false
+	}
+	switch item := *expression; item.Tag() {
+	case ExpressionTagComprehension:
+		return item.ComprehensionPayload().Value, true
+	case ExpressionTagBad, ExpressionTagIdentifier, ExpressionTagEllipsis,
+		ExpressionTagBasicLiteral, ExpressionTagFunctionLiteral,
+		ExpressionTagCompositeLiteral, ExpressionTagParenthesized,
+		ExpressionTagSelector, ExpressionTagIndex, ExpressionTagIndexList,
+		ExpressionTagSlice, ExpressionTagTypeAssertion, ExpressionTagCall,
+		ExpressionTagStar, ExpressionTagNonNilPointer, ExpressionTagUnary,
+		ExpressionTagBinary, ExpressionTagKeyValue, ExpressionTagArrayType,
+		ExpressionTagStructType, ExpressionTagFunctionType,
+		ExpressionTagInterfaceType, ExpressionTagMapType,
+		ExpressionTagChannelType, ExpressionTagDefault, ExpressionTagPropagation:
+		return nil, false
+	default:
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+// ComprehensionRangeClauseOf returns one range clause.
+func ComprehensionRangeClauseOf(
+	value *ComprehensionClause,
+) (*ComprehensionRangeClause, bool) {
+	if value == nil {
+		return nil, false
+	}
+	switch item := *value; item.Tag() {
+	case ComprehensionClauseTagRange:
+		return item.RangePayload().Value, true
+	case ComprehensionClauseTagFilter:
+		return nil, false
+	default:
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+// ComprehensionFilterClauseOf returns one filter clause.
+func ComprehensionFilterClauseOf(
+	value *ComprehensionClause,
+) (*ComprehensionFilterClause, bool) {
+	if value == nil {
+		return nil, false
+	}
+	switch item := *value; item.Tag() {
+	case ComprehensionClauseTagRange:
+		return nil, false
+	case ComprehensionClauseTagFilter:
+		return item.FilterPayload().Value, true
+	default:
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -357,6 +422,8 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	case ExpressionTagDefault:
 		return nil, false
 	case ExpressionTagPropagation:
+		return nil, false
+	case ExpressionTagComprehension:
 		return nil, false
 	default:
 		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
@@ -562,6 +629,8 @@ func ExpressionKind(value *Expression) string {
 		return "Default"
 	case ExpressionTagPropagation:
 		return "Propagation"
+	case ExpressionTagComprehension:
+		return "Comprehension"
 	default:
 		panic(enumValue15.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}

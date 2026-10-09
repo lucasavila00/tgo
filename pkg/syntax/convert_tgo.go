@@ -32,6 +32,7 @@ type converter struct {
 	front                *frontFile
 	propagation          map[ast.Expr]*frontPropagateExpr
 	convertedPropagation map[*frontPropagateExpr]*Expression
+	comprehension        map[*ast.CompositeLit]*frontComprehensionExpr
 	comments             map[*ast.Comment]*Comment
 	groups               map[*ast.CommentGroup]*CommentGroup
 	imports              map[*ast.ImportSpec]*ImportSpecification
@@ -39,16 +40,22 @@ type converter struct {
 
 func newConverter(front *frontFile) *converter {
 	propagation := make(map[ast.Expr]*frontPropagateExpr)
+	comprehension := make(map[*ast.CompositeLit]*frontComprehensionExpr)
 	for _, extension := range front.extensions {
 		item, ok := extension.(*frontPropagateExpr)
 		if ok {
 			propagation[item.Expression] = item
+		}
+		collection, ok := extension.(*frontComprehensionExpr)
+		if ok {
+			comprehension[collection.Projection] = collection
 		}
 	}
 	return &converter{
 		front:                front,
 		propagation:          propagation,
 		convertedPropagation: make(map[*frontPropagateExpr]*Expression),
+		comprehension:        comprehension,
 		comments:             make(map[*ast.Comment]*Comment),
 		groups:               make(map[*ast.CommentGroup]*CommentGroup),
 		imports:              make(map[*ast.ImportSpec]*ImportSpecification),
@@ -191,10 +198,64 @@ func (c *converter) expression(value ast.Expr) *Expression {
 }
 
 func (c *converter) expressionRequired(value ast.Expr) *Expression {
+	if literal, ok := value.(*ast.CompositeLit); ok {
+		if item := c.comprehension[literal]; item != nil {
+			return c.comprehensionExpression(item)
+		}
+	}
 	if item := c.propagation[value]; item != nil {
 		return c.propagationExpression(item)
 	}
 	return c.expressionRaw(value)
+}
+
+func (c *converter) comprehensionExpression(
+	value *frontComprehensionExpr,
+) *Expression {
+	payload := &ComprehensionExpression{
+		Span:    Span{Start: value.Pos(), Stop: value.End()},
+		Type:    c.expressionRequired(value.Type),
+		Lbrace:  value.Lbrace,
+		Clauses: nil,
+		Result: ComprehensionResult{
+			Span:  Span{Start: value.Result.Pos(), Stop: value.Result.End()},
+			Key:   c.expression(value.Result.Key),
+			Colon: value.Result.Colon,
+			Value: c.expressionRequired(value.Result.Value),
+		},
+		Rbrace: value.Rbrace,
+	}
+	for _, clause := range value.Clauses {
+		if clause.Kind == "range" {
+			rangeClause := &ComprehensionRangeClause{
+				Span: Span{Start: clause.Pos(), Stop: clause.End()},
+				For:  clause.Keyword, Bindings: nil,
+				Define: clause.Define, Range: clause.Range,
+				Source: c.expressionRequired(clause.Expression),
+				Lbrace: clause.Lbrace, Rbrace: clause.Rbrace,
+			}
+			for _, binding := range clause.Bindings {
+				rangeClause.Bindings = append(
+					rangeClause.Bindings,
+					c.identifierRequired(binding),
+				)
+			}
+			payload.Clauses = append(
+				payload.Clauses, ComprehensionClauseRange{Value: rangeClause}.ComprehensionClause(),
+			)
+			continue
+		}
+		payload.Clauses = append(
+			payload.Clauses, ComprehensionClauseFilter{Value: &ComprehensionFilterClause{
+				Span:      Span{Start: clause.Pos(), Stop: clause.End()},
+				If:        clause.Keyword,
+				Condition: c.expressionRequired(clause.Expression),
+				Lbrace:    clause.Lbrace, Rbrace: clause.Rbrace,
+			}}.ComprehensionClause(),
+		)
+	}
+	result := ExpressionComprehension{Value: payload}.Expression()
+	return &result
 }
 
 func (c *converter) expressionRaw(value ast.Expr) *Expression {

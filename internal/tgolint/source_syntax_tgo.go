@@ -304,6 +304,8 @@ func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
 		return nil, false
 	case syntax.ExpressionTagPropagation:
 		return nil, false
+	case syntax.ExpressionTagComprehension:
+		return nil, false
 	default:
 		panic(enumValue30.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -365,6 +367,8 @@ func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) 
 		return nil, false
 	case syntax.ExpressionTagPropagation:
 		return nil, false
+	case syntax.ExpressionTagComprehension:
+		return nil, false
 	default:
 		panic(enumValue31.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -425,6 +429,8 @@ func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool
 	case syntax.ExpressionTagDefault:
 		return nil, false
 	case syntax.ExpressionTagPropagation:
+		return nil, false
+	case syntax.ExpressionTagComprehension:
 		return nil, false
 	default:
 		panic(enumValue32.UnknownTag()) // unreachable: tgolint requires a case per tag
@@ -489,6 +495,8 @@ func sourceCompositeLiteral(
 		return nil, false
 	case syntax.ExpressionTagPropagation:
 		return nil, false
+	case syntax.ExpressionTagComprehension:
+		return nil, false
 	default:
 		panic(enumValue33.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -550,6 +558,8 @@ func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
 		case syntax.ExpressionTagDefault:
 			return expression
 		case syntax.ExpressionTagPropagation:
+			return expression
+		case syntax.ExpressionTagComprehension:
 			return expression
 		default:
 			panic(enumValue34.UnknownTag()) // unreachable: tgolint requires a case per tag

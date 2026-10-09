@@ -140,6 +140,8 @@ func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
 		return token.NoPos, false
 	case syntax.ExpressionTagPropagation:
 		return token.NoPos, false
+	case syntax.ExpressionTagComprehension:
+		return token.NoPos, false
 	default:
 		panic(enumValue37.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}

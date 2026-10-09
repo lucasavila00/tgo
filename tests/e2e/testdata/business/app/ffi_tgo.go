@@ -6,28 +6,28 @@ package app
 import (
 	"example.com/business/legacy"
 	"example.com/business/model"
-	__tgo_fmt "fmt"
+	__tgo_fmt_1 "fmt"
 )
 
 func StoredLabel(store legacy.AccountStore, id legacy.AccountID) (string, error) {
-	__tgo_value, __tgo_error := store.Load(id)
-	if __tgo_error != nil {
-		var __tgo_zero string
-		return __tgo_zero, __tgo_fmt.Errorf("store.Load: %w", __tgo_error)
+	__tgo_value_5, __tgo_error_5 := store.Load(id)
+	if __tgo_error_5 != nil {
+		var __tgo_zero_5 string
+		return __tgo_zero_5, __tgo_fmt_1.Errorf("store.Load: %w", __tgo_error_5)
 	}
-	account := __tgo_value
+	account := __tgo_value_5
 	return model.Label(account), nil
 }
 
 func Labels(accounts []model.Account) ([]string, error) {
-	__tgo_value_1, __tgo_error_1 := legacy.Map(accounts, func(account model.Account) (string, error) {
+	__tgo_value_6, __tgo_error_6 := legacy.Map(accounts, func(account model.Account) (string, error) {
 		return model.Label(account), nil
 	})
-	if __tgo_error_1 != nil {
-		var __tgo_zero_1 []string
-		return __tgo_zero_1, __tgo_fmt.Errorf("legacy.Map: %w", __tgo_error_1)
+	if __tgo_error_6 != nil {
+		var __tgo_zero_6 []string
+		return __tgo_zero_6, __tgo_fmt_1.Errorf("legacy.Map: %w", __tgo_error_6)
 	}
-	labels := __tgo_value_1
+	labels := __tgo_value_6
 
 	return labels, nil
 }

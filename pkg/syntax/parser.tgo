@@ -82,6 +82,40 @@ type rawPropagation struct {
 	node    *frontPropagateExpr
 }
 
+type rawComprehension struct {
+	start   int
+	end     int
+	open    int
+	close   int
+	clauses []*rawComprehensionClause
+	result  *rawComprehensionResult
+	node    *frontComprehensionExpr
+}
+
+type rawComprehensionClause struct {
+	kind       string
+	start      int
+	end        int
+	keyword    int
+	bindings  []int
+	define     int
+	rangeToken int
+	expressionStart int
+	expressionEnd   int
+	open       int
+	close      int
+}
+
+type rawComprehensionResult struct {
+	start      int
+	end        int
+	keyStart   int
+	keyEnd     int
+	colon      int
+	valueStart int
+	valueEnd   int
+}
+
 type sourceParser struct {
 	filename     string
 	source       []byte
@@ -90,6 +124,7 @@ type sourceParser struct {
 	decls        []*rawDecl
 	defaults     []*rawDefault
 	propagations []*rawPropagation
+	comprehensions []*rawComprehension
 	nonNil      map[token.Pos]bool
 	edits        []sourceEdit
 	file         *token.File
@@ -118,6 +153,7 @@ func parseFrontFile(
 		decls:        nil,
 		defaults:     nil,
 		propagations: nil,
+		comprehensions: nil,
 		nonNil:      make(map[token.Pos]bool),
 		edits:        nil,
 		file:         nil,

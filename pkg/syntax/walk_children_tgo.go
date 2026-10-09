@@ -168,6 +168,8 @@ func isExtension(node Node) bool {
 			return true
 		case ExpressionTagPropagation:
 			return true
+		case ExpressionTagComprehension:
+			return true
 		default:
 			panic(enumValue30.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
@@ -372,6 +374,26 @@ func expressionChildren(value *Expression) []Node {
 	case ExpressionTagPropagation:
 		item := enumValue32.PropagationPayload()
 		addExpression(item.Value.Expression)
+	case ExpressionTagComprehension:
+		item := enumValue32.ComprehensionPayload()
+		addExpression(item.Value.Type)
+		for _, clause := range item.Value.Clauses {
+			switch value := clause; value.Tag() {
+			case ComprehensionClauseTagRange:
+				for _, binding := range value.RangePayload().Value.Bindings {
+					result = append(result, nodeIdentifier(binding))
+				}
+				addExpression(value.RangePayload().Value.Source)
+			case ComprehensionClauseTagFilter:
+				addExpression(value.FilterPayload().Value.Condition)
+			default:
+				panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+			}
+		}
+		if item.Value.Result.Key != nil {
+			addExpression(item.Value.Result.Key)
+		}
+		addExpression(item.Value.Result.Value)
 	default:
 		panic(enumValue32.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}

@@ -45,7 +45,7 @@ func (p *sourceParser) discoverExtensions() error {
 			continue
 		}
 	}
-	return nil
+	return p.discoverComprehensions()
 }
 
 func (p *sourceParser) atPropagation(cursor int) bool {
@@ -125,6 +125,28 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		defaultAt[raw.node.Pos()] = raw.node
 	}
 	anchors := make(map[frontNode]frontNode)
+	compositeAt := make(map[token.Pos]*ast.CompositeLit)
+	ast.Inspect(goFile, func(node ast.Node) bool {
+		literal, ok := node.(*ast.CompositeLit)
+		if ok {
+			compositeAt[literal.Lbrace] = literal
+		}
+		return true
+	})
+	for _, raw := range p.comprehensions {
+		projection := compositeAt[p.pos(p.tokens[raw.open].start)]
+		if projection == nil {
+			return nil, p.tokenError(raw.open, "cannot project comprehension literal")
+		}
+		node, found, err := p.makeComprehension(raw, projection, defaultAt)
+		if err != nil {
+			return nil, err
+		}
+		raw.node = node
+		for child, parent := range found {
+			anchors[child] = parent
+		}
+	}
 	customDecls := make([]frontNode, 0, len(p.decls))
 	for _, raw := range p.decls {
 		declaration, declarationAnchors, err := p.makeDeclaration(raw, defaultAt)
@@ -162,6 +184,7 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 			return nil, p.tokenError(item.bang, "error propagation needs a call")
 		}
 	}
+	p.anchorComprehensions(result, anchors)
 	p.anchorPropagations(result, anchors)
 	for _, item := range p.defaults {
 		if anchors[item.node] == nil {

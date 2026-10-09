@@ -219,17 +219,18 @@ const (
 	ExpressionTagChannelType
 	ExpressionTagDefault
 	ExpressionTagPropagation
+	ExpressionTagComprehension
 )
 
 type Expression struct {
 	tgoTag           ExpressionTag
-	tgoStructType    ExpressionStructType
 	tgoFunctionType  ExpressionFunctionType
 	tgoInterfaceType ExpressionInterfaceType
 	tgoMapType       ExpressionMapType
 	tgoChannelType   ExpressionChannelType
 	tgoDefault       ExpressionDefault
 	tgoPropagation   ExpressionPropagation
+	tgoComprehension ExpressionComprehension
 	tgoPayload       interface{}
 }
 
@@ -553,12 +554,12 @@ type ExpressionStructType struct {
 // Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func (value ExpressionStructType) Expression() Expression {
-	return Expression{tgoTag: ExpressionTagStructType, tgoStructType: value}
+	return Expression{tgoTag: ExpressionTagStructType, tgoPayload: value}
 }
 
 // StructTypePayload requires StructType. No tag check.
 func (v Expression) StructTypePayload() ExpressionStructType {
-	return v.tgoStructType
+	return v.tgoPayload.(ExpressionStructType)
 }
 
 // ExpressionFunctionType holds the variant fields. Supply every field.
@@ -655,6 +656,22 @@ func (value ExpressionPropagation) Expression() Expression {
 // PropagationPayload requires Propagation. No tag check.
 func (v Expression) PropagationPayload() ExpressionPropagation {
 	return v.tgoPropagation
+}
+
+// ExpressionComprehension holds the variant fields. Supply every field.
+type ExpressionComprehension struct {
+	Value *ComprehensionExpression
+}
+
+// Expression constructs Expression. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value ExpressionComprehension) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagComprehension, tgoComprehension: value}
+}
+
+// ComprehensionPayload requires Comprehension. No tag check.
+func (v Expression) ComprehensionPayload() ExpressionComprehension {
+	return v.tgoComprehension
 }
 func (v Expression) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
@@ -787,6 +804,11 @@ func (v Expression) MarshalJSON() ([]byte, error) {
 		payload := v.PropagationPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionPropagation `json:"Propagation"`
+		}{Payload: payload})
+	case ExpressionTagComprehension:
+		payload := v.ComprehensionPayload()
+		return __tgo_json.Marshal(struct {
+			Payload ExpressionComprehension `json:"Comprehension"`
 		}{Payload: payload})
 	default:
 		return nil, __tgo_fmt.Errorf("invalid Expression JSON tag")
@@ -984,6 +1006,13 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Propagation":
 		var payload ExpressionPropagation
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.Expression()
+		return nil
+	case "Comprehension":
+		var payload ExpressionComprehension
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}

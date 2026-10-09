@@ -100,8 +100,19 @@ Struct copies share reference data. Do not assume a deep copy.
 
 ## Collections
 
-Start checked-value slices with length zero. Append constructed values.
-Do not zero-fill or clear checked values. Supply every index in array and slice literals.
+Use a comprehension for one eager slice or map result. Keep ranges and filters as one nested path.
+
+```text
+names := []string{for _, account := range accounts {
+    if account.Active { account.Name }
+}}
+```
+
+Use `key: value` for a map result. Use a Go loop when the body mutates other data or needs control
+statements. A comprehension emits direct fused loops and one result collection.
+
+Start enum and checked-value slices with length zero. Append constructed values.
+Do not zero-fill or clear their elements. Supply every index in array and slice literals.
 
 ```text
 func Accounts(name string) []Account {

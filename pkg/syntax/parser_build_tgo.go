@@ -13,9 +13,15 @@ import (
 // anchorPropagations replaces each call with its tgo expression in the public tree.
 func (p *sourceParser) anchorPropagations(file *frontFile, anchors map[frontNode]frontNode) {
 	parents := make(map[frontNode]frontNode)
+	anchoredChildren := make(map[frontNode][]frontNode, len(anchors))
+	for child, parent := range anchors {
+		anchoredChildren[parent] = append(anchoredChildren[parent], child)
+	}
 	var visit func(frontNode) = nil
 	visit = func(node frontNode) {
-		for _, child := range syntaxChildren(file, node) {
+		children := syntaxChildren(file, node)
+		children = append(children, anchoredChildren[node]...)
+		for _, child := range children {
 			if child == nil {
 				continue
 			}
@@ -32,6 +38,120 @@ func (p *sourceParser) anchorPropagations(file *frontFile, anchors map[frontNode
 		anchors[item.node] = parent
 		anchors[item.node.Expression] = item.node
 	}
+}
+
+// anchorComprehensions replaces each empty Go projection with its TGo expression.
+func (p *sourceParser) anchorComprehensions(file *frontFile, anchors map[frontNode]frontNode) {
+	parents := make(map[frontNode]frontNode)
+	var visit func(frontNode) = nil
+	visit = func(node frontNode) {
+		for _, child := range syntaxChildren(file, node) {
+			if child == nil {
+				continue
+			}
+			parents[child] = node
+			visit(child)
+		}
+	}
+	visit(file)
+	for _, item := range p.comprehensions {
+		parent := parents[item.node.Projection]
+		if parent == nil {
+			continue
+		}
+		anchors[item.node] = parent
+		anchors[item.node.Projection] = item.node
+	}
+}
+
+func (p *sourceParser) makeComprehension(
+	raw *rawComprehension,
+	projection *ast.CompositeLit,
+	defaultAt map[token.Pos]*frontDefaultMarker,
+) (*frontComprehensionExpr, map[frontNode]frontNode, error) {
+	anchors := make(map[frontNode]frontNode)
+	result := &frontComprehensionExpr{
+		frontSpan:  frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
+		Projection: projection, Type: projection.Type,
+		Lbrace: p.pos(p.tokens[raw.open].start), Clauses: nil,
+		Result: frontComprehensionResult{
+			frontSpan: frontSpan{Start: token.NoPos, Stop: token.NoPos}, Key: nil,
+			Colon: token.NoPos, Value: nil,
+		},
+		Rbrace: p.pos(p.tokens[raw.close].start),
+	}
+	for _, clause := range raw.clauses {
+		expression, found, err := p.parseExpression(
+			p.tokens[clause.expressionStart].start,
+			p.tokens[clause.expressionEnd].start,
+			defaultAt,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		for child, parent := range found {
+			anchors[child] = parent
+		}
+		item := frontComprehensionClause{
+			frontSpan: frontSpan{
+				Start: p.pos(p.tokens[clause.start].start),
+				Stop:  p.pos(p.tokens[clause.end-1].end),
+			},
+			Kind: clause.kind, Keyword: p.pos(p.tokens[clause.keyword].start),
+			Bindings: nil, Define: token.NoPos, Range: token.NoPos,
+			Expression: expression,
+			Lbrace:     p.pos(p.tokens[clause.open].start),
+			Rbrace:     p.pos(p.tokens[clause.close].start),
+		}
+		for _, binding := range clause.bindings {
+			item.Bindings = append(item.Bindings, &ast.Ident{
+				NamePos: p.pos(p.tokens[binding].start),
+				Name:    p.tokens[binding].text,
+				Obj:     nil,
+			})
+		}
+		if clause.define >= 0 {
+			item.Define = p.pos(p.tokens[clause.define].start)
+			item.Range = p.pos(p.tokens[clause.rangeToken].start)
+		}
+		result.Clauses = append(result.Clauses, item)
+	}
+	rawResult := raw.result
+	value, found, err := p.parseExpression(
+		p.tokens[rawResult.valueStart].start,
+		p.tokens[rawResult.valueEnd-1].end,
+		defaultAt,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	for child, parent := range found {
+		anchors[child] = parent
+	}
+	var key ast.Expr = nil
+	colon := token.NoPos
+	if rawResult.colon >= 0 {
+		key, found, err = p.parseExpression(
+			p.tokens[rawResult.keyStart].start,
+			p.tokens[rawResult.keyEnd-1].end,
+			defaultAt,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		for child, parent := range found {
+			anchors[child] = parent
+		}
+		colon = p.pos(p.tokens[rawResult.colon].start)
+	}
+	result.Result = frontComprehensionResult{
+		frontSpan: frontSpan{
+			Start: p.pos(p.tokens[rawResult.start].start),
+			Stop:  p.pos(p.tokens[rawResult.end-1].end),
+		},
+		Key: key, Colon: colon, Value: value,
+	}
+	return result, anchors, nil
 }
 
 func (p *sourceParser) makeDeclaration(
