@@ -39,6 +39,22 @@ class CheckContentTest(unittest.TestCase):
 
         self.assertIn("remove template instruction placeholders", failures[0])
 
+    def test_rejects_issue_number_placeholder(self) -> None:
+        failures = check_adrs.check_content(
+            "docs/adr/example.md", "Issue: #135\n<number>\n", True
+        )
+
+        self.assertIn("remove template instruction placeholders", failures[0])
+
+    def test_accepts_other_angle_bracket_forms(self) -> None:
+        failures = check_adrs.check_content(
+            "docs/adr/example.md",
+            "Issue: #135\n<details>\nUse <T>.\n</details>\n",
+            True,
+        )
+
+        self.assertEqual(failures, [])
+
     def test_rejects_status_field(self) -> None:
         failures = check_adrs.check_content(
             "docs/adr/example.md", "Issue: #135\nStatus: accepted\n", True

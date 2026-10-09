@@ -13,8 +13,21 @@ PERMANENT_FILES = frozenset({"README.md", "template.md"})
 MAX_PROSE_WIDTH = 80
 MAX_LINES = 100
 ISSUE_REFERENCE = re.compile(r"(?:#\d+\b|/issues/\d+\b)")
-PLACEHOLDER = re.compile(r"<([A-Za-z][^>\n]*)>")
+ANGLE_FORM = re.compile(r"<([^<>]+)>", re.DOTALL)
 STATUS_FIELD = re.compile(r"^\s*Status\s*:", re.IGNORECASE | re.MULTILINE)
+
+
+def angle_forms(content: str) -> set[str]:
+    """Return normalized angle-bracket forms from Markdown."""
+    return {
+        " ".join(match.group(1).split())
+        for match in ANGLE_FORM.finditer(content)
+    }
+
+
+TEMPLATE_PLACEHOLDERS = angle_forms(
+    (ADR_DIRECTORY / "template.md").read_text(encoding="utf-8")
+)
 
 
 def check_content(name: str, content: str, proposal: bool) -> list[str]:
@@ -38,12 +51,8 @@ def check_content(name: str, content: str, proposal: bool) -> list[str]:
     if STATUS_FIELD.search(content):
         failures.append(f"{name}: remove the Status field")
     if proposal:
-        for match in PLACEHOLDER.finditer(content):
-            if not match.group(1).lower().startswith(
-                ("http://", "https://", "mailto:")
-            ):
-                failures.append(f"{name}: remove template instruction placeholders")
-                break
+        if angle_forms(content) & TEMPLATE_PLACEHOLDERS:
+            failures.append(f"{name}: remove template instruction placeholders")
         if not ISSUE_REFERENCE.search(content):
             failures.append(f"{name}: add an issue reference")
     return failures
