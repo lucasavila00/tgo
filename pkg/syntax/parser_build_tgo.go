@@ -170,26 +170,28 @@ func (p *sourceParser) makeDeclaration(
 	defaultAt map[token.Pos]*frontDefaultMarker,
 ) (frontNode, map[frontNode]frontNode, error) {
 	anchors := make(map[frontNode]frontNode)
-	name := &ast.Ident{
-		NamePos: p.pos(p.tokens[raw.name].start),
-		Name:    p.tokens[raw.name].text,
-		Obj:     nil,
-	}
-	switch raw.kind {
-	case "enum":
+	var node frontNode = nil
+	switch declaration := *raw; declaration.Tag() {
+	case rawDeclTagEnum:
+		rawEnum := declaration.EnumPayload()
+		name := &ast.Ident{
+			NamePos: p.pos(p.tokens[rawEnum.name].start),
+			Name:    p.tokens[rawEnum.name].text,
+			Obj:     nil,
+		}
 		node := &frontEnumDecl{
-			frontSpan: frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
+			frontSpan: frontSpan{Start: p.pos(rawEnum.start), Stop: p.pos(rawEnum.end)},
 			Doc:       nil,
-			Type:      p.pos(p.tokens[raw.typeToken].start),
+			Type:      p.pos(p.tokens[rawEnum.typeToken].start),
 			Name:      name,
-			Enum:      p.pos(p.tokens[raw.keyword].start),
-			Tag:       p.enumTag(raw.tag),
-			Lbrace:    p.pos(p.tokens[raw.open].start),
+			Enum:      p.pos(p.tokens[rawEnum.keyword].start),
+			Tag:       p.enumTag(rawEnum.tag),
+			Lbrace:    p.pos(p.tokens[rawEnum.open].start),
 			Variants:  nil,
-			Rbrace:    p.pos(p.tokens[raw.close].start),
+			Rbrace:    p.pos(p.tokens[rawEnum.close].start),
 			Comment:   nil,
 		}
-		for _, rawVariant := range raw.variants {
+		for _, rawVariant := range rawEnum.variants {
 			fields, fieldAnchors, err := p.makeFields(rawVariant.fields, defaultAt)
 			if err != nil {
 				return nil, nil, err
@@ -218,34 +220,40 @@ func (p *sourceParser) makeDeclaration(
 			}
 		}
 		return node, anchors, nil
-	case "struct":
-		fields, fieldAnchors, tgoErr := p.makeFields(raw.fields, defaultAt)
+	case rawDeclTagStruct:
+		rawStruct := declaration.StructPayload()
+		name := &ast.Ident{
+			NamePos: p.pos(p.tokens[rawStruct.name].start),
+			Name:    p.tokens[rawStruct.name].text,
+			Obj:     nil,
+		}
+		fields, fieldAnchors, tgoErr := p.makeFields(rawStruct.fields, defaultAt)
 		if tgoErr != nil {
 			return nil, nil, tgoErr
 		}
 		checked := token.NoPos
-		if raw.checked >= 0 {
-			checked = p.pos(p.tokens[raw.checked].start)
+		if rawStruct.checked >= 0 {
+			checked = p.pos(p.tokens[rawStruct.checked].start)
 		}
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
 		}
-		return &frontStructDecl{
-			frontSpan: frontSpan{Start: p.pos(raw.start), Stop: p.pos(raw.end)},
+		node = &frontStructDecl{
+			frontSpan: frontSpan{Start: p.pos(rawStruct.start), Stop: p.pos(rawStruct.end)},
 			Doc:       nil,
-			Type:      p.pos(p.tokens[raw.typeToken].start),
+			Type:      p.pos(p.tokens[rawStruct.typeToken].start),
 			Name:      name,
-			Struct:    p.pos(p.tokens[raw.keyword].start),
-			Lbrace:    p.pos(p.tokens[raw.open].start),
+			Struct:    p.pos(p.tokens[rawStruct.keyword].start),
+			Lbrace:    p.pos(p.tokens[rawStruct.open].start),
 			Fields:    fields,
-			Rbrace:    p.pos(p.tokens[raw.close].start),
+			Rbrace:    p.pos(p.tokens[rawStruct.close].start),
 			Checked:   checked,
 			Comment:   nil,
-		}, anchors, nil
-
+		}
 	default:
-		return nil, nil, fmt.Errorf("unknown declaration kind %q", raw.kind)
+		panic(declaration.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
+	return node, anchors, nil
 }
 
 func (p *sourceParser) makeFields(
