@@ -101,15 +101,14 @@ func TestHelperCancellationStopsBeforeInvalidPackage(t *testing.T) {
 	workspace := filepath.Join(t.TempDir(), "cancellation")
 	copyWorkspace(t, source, workspace)
 	server := startHelper(t, helper, workspace)
-	if err := server.input.Encode(navigation.Request{
-		ID: 1, Method: "workspaceSymbols",
-		Params: mustJSON(t, map[string]any{"query": ""}),
+	if err := server.input.Encode(map[string]any{
+		"id": 1, "method": "workspaceSymbols",
+		"params": map[string]any{"query": ""},
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := server.input.Encode(navigation.Request{
-		ID: 0, Method: "cancel",
-		Params: mustJSON(t, map[string]any{"id": 1}),
+	if err := server.input.Encode(map[string]any{
+		"method": "cancel", "params": map[string]any{"id": 1},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +294,9 @@ func (h *helperProcess) call(
 	result any,
 ) {
 	t.Helper()
-	request := navigation.Request{ID: h.nextID, Method: method, Params: params}
+	request := map[string]any{
+		"id": h.nextID, "method": method, "params": params,
+	}
 	if err := h.input.Encode(request); err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "UNLICENSED",
+  "icon": "images/icon.png",
   "extensionKind": [
     "workspace"
   ],
@@ -30,7 +31,11 @@
         "extensions": [
           ".tgo"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/language-light.svg",
+          "dark": "./images/language-dark.svg"
+        }
       }
     ],
     "grammars": [

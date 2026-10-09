@@ -31,7 +31,11 @@ async function main() {
     "basic"
   ), secondWorkspace, { recursive: true });
   fs.writeFileSync(workspaceFile, JSON.stringify({
-    folders: [{ path: workspace }, { path: secondWorkspace }]
+    folders: [
+      { path: workspace },
+      { path: secondWorkspace },
+      { path: repository }
+    ]
   }));
   const helper = path.join(extension, "bin", "tgonav");
   if (!fs.existsSync(helper)) {
