@@ -16,6 +16,13 @@ type sourceComment struct {
 	text  string
 }
 
+type sourceGap struct {
+	lineBreak              bool
+	blank                  bool
+	leadingComment         bool
+	leadingCommentIndented bool
+}
+
 type printer struct {
 	files              *token.FileSet
 	file               *syntax.File
@@ -110,7 +117,7 @@ func (p *printer) printFile() []byte {
 			stop := syntax.DeclarationEnd(previous)
 			if declarationKind(previous) != declarationKind(declaration) &&
 				(commentWidths[index-1] == 0 || commentWidths[index] == 0) ||
-				p.blankBetween(stop, start) || p.hasCommentBetween(stop, start) {
+				p.sourceGap(stop, start).blank || p.hasCommentBetween(stop, start) {
 				p.blankline()
 			}
 		}
@@ -273,7 +280,7 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 			p.space()
 		} else {
 			p.newline()
-			if last.IsValid() && start.Line > last.Line+1 {
+			if last.IsValid() && p.sourceBlankBetween(p.lastSource, item.start) {
 				p.blankline()
 			}
 		}
@@ -294,9 +301,7 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		p.lastSource = item.stop
 	}
 	if wroteComment {
-		last := p.position(p.lastSource)
-		next := p.position(position)
-		if last.IsValid() && next.IsValid() && next.Line > last.Line+1 {
+		if p.sourceBlankBetween(p.lastSource, position) {
 			p.blankline()
 		}
 	}
@@ -505,6 +510,10 @@ func (p *printer) multiline(start token.Pos, stop token.Pos) bool {
 }
 
 func (p *printer) blankBetween(stop token.Pos, start token.Pos) bool {
+	return p.sourceBlankBetween(stop, start)
+}
+
+func (p *printer) sourceBlankBetween(stop token.Pos, start token.Pos) bool {
 	file := p.files.File(stop)
 	if file == nil || p.files.File(start) != file {
 		return false
@@ -537,6 +546,38 @@ func (p *printer) blankBetween(stop token.Pos, start token.Pos) bool {
 		}
 	}
 	return false
+}
+
+func (p *printer) sourceGap(stop token.Pos, start token.Pos) sourceGap {
+	left := stop
+	comment := p.comment
+	for comment < len(p.comments) && p.comments[comment].start < start &&
+		p.position(p.comments[comment].start).Line == p.position(left).Line {
+		left = p.comments[comment].stop
+		comment++
+	}
+	right := start
+	leadingComment := comment < len(p.comments) && p.comments[comment].start < start
+	if leadingComment {
+		right = p.comments[comment].start
+	}
+	return sourceGap{
+		lineBreak:      p.position(left).Line < p.position(start).Line,
+		blank:          p.sourceBlankBetween(left, right),
+		leadingComment: leadingComment,
+		leadingCommentIndented: leadingComment &&
+			p.position(right).Column > p.position(start).Column,
+	}
+}
+
+func (p *printer) breakSourceGap(stop token.Pos, start token.Pos) {
+	gap := p.sourceGap(stop, start)
+	if gap.lineBreak {
+		p.newline()
+	}
+	if gap.blank {
+		p.blankline()
+	}
 }
 
 func (p *printer) blankline() {

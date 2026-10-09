@@ -22,9 +22,11 @@ func (p *printer) binaryExpressionAt(
 		p.space()
 	}
 	p.token(value.OperatorPosition, value.Operator.String())
+	operatorEnd := p.tokenEnd(value.OperatorPosition, len(value.Operator.String()))
+	p.trailingToken(value.OperatorPosition, len(value.Operator.String()))
 	if p.multiline(syntax.ExpressionEnd(value.Left), syntax.ExpressionPosition(value.Right)) {
-		p.newline()
 		p.indent++
+		p.breakSourceGap(operatorEnd, syntax.ExpressionPosition(value.Right))
 		p.binaryOperand(value.Right, precedence+1, depth+1)
 		p.indent--
 	} else {

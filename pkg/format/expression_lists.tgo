@@ -1,0 +1,79 @@
+package format
+
+import (
+	"go/token"
+
+	"tgo/pkg/syntax"
+)
+
+func (p *printer) expressionList(
+	values []%syntax.Expression,
+	opening token.Pos,
+	closing token.Pos,
+	ellipsis token.Pos,
+	depth int,
+) {
+	if len(values) == 0 {
+		gap := p.sourceGap(opening, closing)
+		if gap.leadingComment {
+			p.breakSourceGap(opening, closing)
+			p.before(closing)
+		}
+		return
+	}
+	previous := opening
+	indented := false
+	for index, value := range values {
+		start := syntax.ExpressionPosition(value)
+		gap := p.sourceGap(previous, start)
+		if gap.lineBreak {
+			if !indented {
+				p.indent++
+				indented = true
+			}
+			p.breakSourceGap(previous, start)
+		} else if index > 0 {
+			p.space()
+		}
+		p.expressionAt(value, 0, depth)
+		previous = syntax.ExpressionEnd(value)
+		if index == len(values)-1 && ellipsis.IsValid() {
+			p.token(ellipsis, "...")
+			previous = p.tokenEnd(ellipsis, 3)
+		}
+		following := closing
+		if index+1 < len(values) {
+			following = syntax.ExpressionPosition(values[index+1])
+		}
+		if index+1 < len(values) || p.position(previous).Line < p.position(closing).Line {
+			previous = p.comma(previous, following)
+			p.trailingLine(previous)
+		}
+	}
+	gap := p.sourceGap(previous, closing)
+	if gap.leadingComment && gap.lineBreak && !indented {
+		p.indent++
+		indented = true
+	}
+	if gap.lineBreak {
+		p.newline()
+	}
+	if indented {
+		p.before(closing)
+		p.indent--
+	}
+}
+
+func (p *printer) delimitedExpressions(
+	values []%syntax.Expression,
+	opening token.Pos,
+	closing token.Pos,
+	ellipsis bool,
+	depth int,
+) {
+	ellipsisPosition := token.NoPos
+	if ellipsis && len(values) > 0 {
+		ellipsisPosition = syntax.ExpressionEnd(values[len(values)-1])
+	}
+	p.expressionList(values, opening, closing, ellipsisPosition, depth)
+}

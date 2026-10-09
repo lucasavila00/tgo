@@ -143,19 +143,23 @@ func (p *printer) statementList(values []*syntax.Statement) {
 			p.statement(value)
 			p.trailingLine(syntax.StatementEnd(value))
 			p.commentColumn = previousCommentColumn
-			if emptyClauseStatement(value) && first+index+1 < len(values) {
-				p.indent++
-				p.before(syntax.StatementPosition(values[first+index+1]))
-				p.indent--
+			if clauseStatement(value) && first+index+1 < len(values) {
+				next := syntax.StatementPosition(values[first+index+1])
+				gap := p.sourceGap(syntax.StatementEnd(value), next)
+				if gap.leadingCommentIndented {
+					p.indent++
+					p.before(next)
+					p.indent--
+				}
 			}
 			p.newline()
 		}
 		first = last
-		if first < len(values) && p.blankBetween(
-			syntax.StatementEnd(values[first-1]),
-			syntax.StatementPosition(values[first]),
-		) {
-			p.blankline()
+		if first < len(values) {
+			p.breakSourceGap(
+				syntax.StatementEnd(values[first-1]),
+				syntax.StatementPosition(values[first]),
+			)
 		}
 	}
 }
@@ -169,12 +173,12 @@ func implicitEmptyStatement(value *syntax.Statement) bool {
 	}
 }
 
-func emptyClauseStatement(value *syntax.Statement) bool {
+func clauseStatement(value *syntax.Statement) bool {
 	switch statementValue := *value; statementValue.Tag() {
 	case syntax.StatementTagCase:
-		return len(statementValue.CasePayload().Value.Body) == 0
+		return true
 	case syntax.StatementTagCommunication:
-		return len(statementValue.CommunicationPayload().Value.Body) == 0
+		return true
 	default:
 		return false
 	}
@@ -225,8 +229,8 @@ func (p *printer) block(value *syntax.BlockStatement) {
 	p.trailingToken(value.Lbrace, 1)
 	if len(value.List) == 0 {
 		if p.multiline(value.Lbrace, value.Rbrace) {
-			p.newline()
 			p.indent++
+			p.breakSourceGap(value.Lbrace, value.Rbrace)
 			p.before(value.Rbrace)
 			p.indent--
 		}
@@ -236,9 +240,7 @@ func (p *printer) block(value *syntax.BlockStatement) {
 	p.newline()
 	p.indent++
 	p.statementList(value.List)
-	if p.blankBetween(syntax.StatementEnd(value.List[len(value.List)-1]), value.Rbrace) {
-		p.blankline()
-	}
+	p.breakSourceGap(syntax.StatementEnd(value.List[len(value.List)-1]), value.Rbrace)
 	p.before(value.Rbrace)
 	p.indent--
 	p.token(value.Rbrace, "}")
@@ -289,21 +291,23 @@ func (p *printer) clauseBlock(value *syntax.BlockStatement) {
 	p.trailingToken(value.Lbrace, 1)
 	if len(value.List) == 0 {
 		if p.multiline(value.Lbrace, value.Rbrace) {
-			p.newline()
-			p.indent++
+			p.breakSourceGap(value.Lbrace, value.Rbrace)
 			p.before(value.Rbrace)
-			p.indent--
 		}
 		p.token(value.Rbrace, "}")
 		return
 	}
 	p.newline()
 	p.statementList(value.List)
-	if emptyClauseStatement(value.List[len(value.List)-1]) {
+	last := syntax.StatementEnd(value.List[len(value.List)-1])
+	gap := p.sourceGap(last, value.Rbrace)
+	if clauseStatement(value.List[len(value.List)-1]) && gap.leadingCommentIndented {
 		p.indent++
+		p.breakSourceGap(last, value.Rbrace)
 		p.before(value.Rbrace)
 		p.indent--
 	} else {
+		p.breakSourceGap(last, value.Rbrace)
 		p.before(value.Rbrace)
 	}
 	p.token(value.Rbrace, "}")

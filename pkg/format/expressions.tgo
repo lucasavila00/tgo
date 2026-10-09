@@ -231,68 +231,6 @@ func (p *printer) callExpression(value *syntax.CallExpression, depth int) {
 	p.token(value.Rparen, ")")
 }
 
-func (p *printer) expressionList(
-	values []%syntax.Expression,
-	opening token.Pos,
-	closing token.Pos,
-	ellipsis token.Pos,
-	depth int,
-) {
-	if len(values) == 0 {
-		return
-	}
-	previous := opening
-	indented := false
-	for index, value := range values {
-		start := syntax.ExpressionPosition(value)
-		lineBreak := p.position(previous).Line < p.position(start).Line
-		if lineBreak {
-			p.newline()
-			if !indented {
-				p.indent++
-				indented = true
-			}
-		} else if index > 0 {
-			p.space()
-		}
-		p.expressionAt(value, 0, depth)
-		previous = syntax.ExpressionEnd(value)
-		if index == len(values)-1 && ellipsis.IsValid() {
-			p.token(ellipsis, "...")
-			previous = p.tokenEnd(ellipsis, 3)
-		}
-		following := closing
-		if index+1 < len(values) {
-			following = syntax.ExpressionPosition(values[index+1])
-		}
-		if index+1 < len(values) || p.position(previous).Line < p.position(closing).Line {
-			previous = p.comma(previous, following)
-			p.trailingLine(previous)
-		}
-	}
-	if p.position(previous).Line < p.position(closing).Line {
-		p.newline()
-	}
-	if indented {
-		p.before(closing)
-		p.indent--
-	}
-}
-
-func (p *printer) delimitedExpressions(
-	values []%syntax.Expression,
-	opening token.Pos,
-	closing token.Pos,
-	ellipsis bool,
-	depth int,
-) {
-	ellipsisPosition := token.NoPos
-	if ellipsis && len(values) > 0 {
-		ellipsisPosition = syntax.ExpressionEnd(values[len(values)-1])
-	}
-	p.expressionList(values, opening, closing, ellipsisPosition, depth)
-}
-
 func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	if value.Type != nil {
 		p.expression(value.Type, token.HighestPrec)
@@ -300,6 +238,13 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
 	if len(value.Elements) == 0 {
+		gap := p.sourceGap(value.Lbrace, value.Rbrace)
+		if gap.leadingComment {
+			p.indent++
+			p.breakSourceGap(value.Lbrace, value.Rbrace)
+			p.before(value.Rbrace)
+			p.indent--
+		}
 		p.token(value.Rbrace, "}")
 		return
 	}
@@ -309,16 +254,13 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	indented := false
 	for index, element := range value.Elements {
 		start := syntax.ExpressionPosition(element)
-		lineBreak := p.position(previous).Line < p.position(start).Line
-		if lineBreak {
-			p.newline()
+		gap := p.sourceGap(previous, start)
+		if gap.lineBreak {
 			if !indented {
 				p.indent++
 				indented = true
 			}
-			if index > 0 && p.blankBetween(previous, start) {
-				p.blankline()
-			}
+			p.breakSourceGap(previous, start)
 		} else if index > 0 {
 			p.space()
 		}
@@ -339,7 +281,12 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		}
 		p.commentColumn = previousCommentColumn
 	}
-	if p.position(previous).Line < p.position(value.Rbrace).Line {
+	gap := p.sourceGap(previous, value.Rbrace)
+	if gap.leadingComment && gap.lineBreak && !indented {
+		p.indent++
+		indented = true
+	}
+	if gap.lineBreak {
 		p.newline()
 	}
 	if indented {
@@ -502,10 +449,8 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 	p.trailingToken(value.Opening, 1)
 	if len(value.List) == 0 {
 		if p.multiline(value.Opening, value.Closing) {
-			p.newline()
-			p.indent++
+			p.breakSourceGap(value.Opening, value.Closing)
 			p.before(value.Closing)
-			p.indent--
 		}
 		p.token(value.Closing, "}")
 		return
@@ -550,12 +495,12 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 			p.newline()
 		}
 		first = last
-		if first < len(value.List) && p.blankBetween(
-			value.List[first-1].Stop,
-			value.List[first].Start,
-		) {
-			p.blankline()
+		if first < len(value.List) {
+			p.breakSourceGap(value.List[first-1].Stop, value.List[first].Start)
 		}
+	}
+	if p.sourceGap(value.List[len(value.List)-1].Stop, value.Closing).lineBreak {
+		p.newline()
 	}
 	p.before(value.Closing)
 	p.indent--
@@ -566,6 +511,11 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 	p.token(value.Opening, opening)
 	p.trailingToken(value.Opening, len(opening))
 	if len(value.List) == 0 {
+		gap := p.sourceGap(value.Opening, value.Closing)
+		if gap.leadingComment {
+			p.breakSourceGap(value.Opening, value.Closing)
+			p.before(value.Closing)
+		}
 		p.token(value.Closing, closing)
 		return
 	}
@@ -573,12 +523,13 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 		previous := value.Opening
 		indented := false
 		for index, item := range value.List {
-			if p.position(previous).Line < p.position(item.Start).Line {
-				p.newline()
+			gap := p.sourceGap(previous, item.Start)
+			if gap.lineBreak {
 				if !indented {
 					p.indent++
 					indented = true
 				}
+				p.breakSourceGap(previous, item.Start)
 			} else if index > 0 {
 				p.space()
 			}
@@ -594,7 +545,12 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 				p.trailingLine(previous)
 			}
 		}
-		if p.position(previous).Line < p.position(value.Closing).Line {
+		gap := p.sourceGap(previous, value.Closing)
+		if gap.leadingComment && gap.lineBreak && !indented {
+			p.indent++
+			indented = true
+		}
+		if gap.lineBreak {
 			p.newline()
 		}
 		if indented {

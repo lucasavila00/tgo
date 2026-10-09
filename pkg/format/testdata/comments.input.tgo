@@ -20,3 +20,13 @@ func ordinaryLineComment(){
 	//line ordinary.go:40
 	return
 }
+func tgoClause(value int){switch value{
+case 1:
+		// empty TGo case
+exhaustive:
+		// final TGo case
+}}
+func tgoClosing(){values:=[]int{
+1,
+// TGo literal close
+};_ = values}
