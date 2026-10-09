@@ -23,9 +23,18 @@ func (c %checker) checkIotaModernization(analysis *compiler.AnalysisPackage) {
 	if analysis == nil {
 		return
 	}
+	info := analysis.Info
+	files := analysis.FileSet
+	if info == nil || files == nil {
+		return
+	}
 	for _, source := range analysis.Sources {
+		projected := source.Projected
+		if projected == nil {
+			continue
+		}
 		index := sourcefacts.New(
-			source.Projected, analysis.Info, analysis.FileSet,
+			projected, info, files,
 		)
 		for _, declaration := range source.Syntax.Declarations {
 			general, ok := sourceGeneralDeclaration(declaration)
