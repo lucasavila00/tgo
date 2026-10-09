@@ -2,7 +2,17 @@
 
 TGo adds checked syntax to Go and emits ordinary `*_tgo.go` files.
 
-## Propagate errors
+## Return success
+
+```go
+func Name(user User) (string, error) {
+	return user.Name,
+}
+```
+
+The trailing comma adds the final `nil` result.
+
+## Propagate errors with context
 
 ```go
 func LoadName(repo Repo, id ID) (string, error) {
@@ -11,13 +21,16 @@ func LoadName(repo Repo, id ID) (string, error) {
 }
 ```
 
-The trailing comma adds the final `nil` result. `!` returns the error with `repo.Find: ` context.
-It keeps `errors.Is` and `errors.As` working.
+`!` returns the error with `repo.Find: ` context. It keeps `errors.Is` and `errors.As` working.
 
-Use `!!` to return the original error without context or wrapping:
+Use `!!` to return the original error without context or wrapping. On success, the expression
+yields the call's non-error result:
 
 ```go
-user := repo.Find(id)!!
+func LoadName(repo Repo, id ID) (string, error) {
+	user := repo.Find(id)!!
+	return user.Name,
+}
 ```
 
 ## Require non-nil pointers
