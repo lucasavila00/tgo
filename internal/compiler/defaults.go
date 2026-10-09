@@ -70,6 +70,31 @@ func (p *packageUnit) fillDefaults() {
 	}
 }
 
+// fillCheckedDefaults expands checked literals before constructor lowering.
+func (p *packageUnit) fillCheckedDefaults() {
+	for _, source := range p.Sources {
+		for _, declaration := range source.File.Decls {
+			if p.generatedDecl(declaration) {
+				continue
+			}
+			ast.Inspect(declaration, func(node ast.Node) bool {
+				literal, ok := node.(*ast.CompositeLit)
+				if !ok {
+					return true
+				}
+				_, value := p.modelOwner(p.info.TypeOf(literal))
+				if value == nil {
+					_, value = p.namedLiteralModel(literal.Type)
+				}
+				if value != nil && value.CheckedStruct {
+					p.fillLiteralDefaults(source, literal, source.DefaultMarker)
+				}
+				return true
+			})
+		}
+	}
+}
+
 // fillLiteralDefaults adds omitted default fields to one composite literal.
 func (p *packageUnit) fillLiteralDefaults(
 	source *source,

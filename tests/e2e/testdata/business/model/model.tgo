@@ -8,7 +8,6 @@ func (value Quantity) check() (Quantity, error) {
     if value.value <= 0 { return Quantity{}, quantityError{} }
     return value, nil
 }
-func NewQuantity(value int) (Quantity, error) { return Quantity{value: value} }
 func (value Quantity) Value() int { return value.value }
 
 type PositivePoint struct { value struct { X int } } checked
@@ -18,9 +17,6 @@ func (positivePointError) Error() string { return "invalid PositivePoint" }
 func (value PositivePoint) check() (PositivePoint, error) {
     if value.value.X <= 0 { return PositivePoint{}, positivePointError{} }
     return value, nil
-}
-func NewPositivePoint(value struct { X int }) (PositivePoint, error) {
-    return PositivePoint{value: value}
 }
 func (value PositivePoint) Value() struct { X int } { return value.value }
 
@@ -34,7 +30,6 @@ func (value Multiline) check() (Multiline, error) {
     if value.value <= 0 { return Multiline{}, multilineError{} }
     return value, nil
 }
-func NewMultiline(value int) (Multiline, error) { return Multiline{value: value} }
 func (value Multiline) Value() int { return value.value }
 
 type where int

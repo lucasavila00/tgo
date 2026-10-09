@@ -477,25 +477,44 @@ func (value Port) check() (Port, error) {
 All fields must be private. The type must declare a value-receiver method with the exact signature
 `check() (Port, error)`. The compiler reports a missing method or a different signature.
 
-The compiler removes the `checked` marker and keeps the struct and method. It changes each literal
-of that type to a call to `check`:
+The compiler removes the `checked` marker and keeps the struct and method. Checked literals are the
+only TGo construction form, both in the declaring package and in another package:
 
 ```text
 port, err := Port{number: number}
 port := Port{number: number}!
 port := Port{number: number}!!
+port := model.Port{number: number}!
 ```
 
-Each field expression runs once in source order. The `!` and `!!` operators keep their normal error
-behavior. A raw literal of the same type is permitted inside its own `check` method. This trusted
-exception lets a failed check return the invalid zero value with a non-nil error.
+An imported checked literal can name the private fields as constructor input. Ordinary
+cross-package field access remains invalid. Each explicit field expression runs once in source
+order. Selected defaults run once in field order. The `!` and `!!` operators keep their normal
+error behavior.
+
+The declaring package generates a fallible `NewPort` function for Go callers. In general, a
+checked type `T` reserves `NewT`. Its parameters follow field declaration order. The compiler
+lowers each validated checked literal to this ABI. The generated function builds the raw value
+and calls `check` exactly once. TGo source cannot refer to `NewT`, and navigation does not expose
+it as TGo API.
+
+A keyed literal lowers through a reserved `TgoTInput` carrier. Its exported staging fields preserve
+contextual typing and source evaluation order across a package boundary. This carrier is compiler
+output, not TGo API. TGo source cannot refer to it, and navigation hides it.
+
+A raw literal is permitted only inside its own `check` method and the generated constructor. The
+method can normalize its local raw value. This trusted exception also lets a failed check return
+the invalid zero value with a non-nil error.
 
 The zero value is invalid. A checked struct can contain another checked struct. Code in the same
-package can read its private fields. A package must provide its own fallible exported factory when
-another package must construct the type. TGo does not generate a public constructor or accessor.
+package can read its private fields. TGo rejects assignment, increment, decrement, range assignment,
+and address-taking through a checked field after construction, including in the declaring package.
+It permits normal value copies. Reference fields keep normal Go aliases, so this rule does not
+provide deep immutability. No field accessor or setter is generated.
 
-Handwritten Go can bypass validation with a direct literal. `tgolint` reports this bypass and the
-same invalid-zero uses that it reports for enums and non-nil pointer types.
+Handwritten Go can call the generated constructor. `tgolint` reports direct Go literals, field
+writes, discarded constructor errors, and the same invalid-zero uses that it reports for enums and
+non-nil pointer types.
 
 ## Field defaults
 
@@ -692,6 +711,8 @@ T
 tgoTag
 tgoV
 TgoDefaultTF
+NewT
+TgoTInput
 ```
 
 A source declaration that collides with a generated name is a compile error.

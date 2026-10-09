@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 )
 
@@ -10,6 +11,8 @@ func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
 	p.generatedValues = make(map[*ast.ValueSpec]bool)
 	p.checkedLiterals = make(map[*ast.CompositeLit]bool)
+	p.checkedCalls = make(map[*ast.CallExpr]bool)
+	p.sourceReferences = make(map[token.Pos]types.Object)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
 	for _, source := range p.Sources {
@@ -23,6 +26,9 @@ func (p *packageUnit) prepare() {
 func (p *packageUnit) lowerConstructions() {
 	for _, source := range p.Sources {
 		for _, declaration := range source.File.Decls {
+			if p.generatedDecl(declaration) {
+				continue
+			}
 			var exempt *model
 			if function, ok := declaration.(*ast.FuncDecl); ok && function.Name.Name == "check" {
 				if receiver, ok := receiverName(function); ok {
@@ -52,6 +58,10 @@ func generatedNames(models []*model) map[string]bool {
 			for _, variant := range model.Variants {
 				names[model.Name+variant.Name] = true
 			}
+		}
+		if model.CheckedStruct {
+			names["New"+model.Name] = true
+			names[checkedCarrierName(model.Name)] = true
 		}
 	}
 	return names
@@ -169,9 +179,7 @@ func (p *packageUnit) lowerConstruction(
 			return node
 		}
 		p.checkedLiterals[literal] = true
-		return call(&ast.SelectorExpr{
-			X: literal, Sel: &ast.Ident{NamePos: literal.End(), Name: "check"},
-		})
+		return p.checkedConstructorCall(file, literal, owner, declaration)
 	}
 	selector, ok := literal.Type.(*ast.SelectorExpr)
 	if !ok {
@@ -199,6 +207,193 @@ func (p *packageUnit) lowerConstruction(
 	}
 	p.fail(literal, "unknown variant %s.%s", model.Name, selector.Sel.Name)
 	return node
+}
+
+// checkedConstructorCall lowers one checked literal to its generated Go ABI.
+func (p *packageUnit) checkedConstructorCall(
+	file *ast.File,
+	literal *ast.CompositeLit,
+	owner *packageUnit,
+	declaration *model,
+) ast.Expr {
+	typ := p.info.TypeOf(literal)
+	if typ == nil && owner != nil && owner.typed != nil {
+		if object := owner.typed.Scope().Lookup(declaration.Name); object != nil {
+			typ = object.Type()
+		}
+	}
+	if typ == nil {
+		return literal
+	}
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok {
+		return literal
+	}
+	structure, ok := named.Underlying().(*types.Struct)
+	if !ok || structure.NumFields() != len(declaration.Fields) {
+		return literal
+	}
+
+	values, evaluation, indices, keyed, valid := p.checkedLiteralValues(
+		literal, structure,
+	)
+	if !valid {
+		return literal
+	}
+	p.recordCheckedLiteralReferences(literal, named, structure, indices)
+
+	prefix := p.ownerQualifier(file, named.Obj().Pkg())
+	constructor := p.generatedObject(
+		prefix, owner.Path, "New"+declaration.Name, literal.Lbrace,
+	)
+	if !keyed {
+		result := call(constructor, values...)
+		p.checkedCalls[result] = true
+		return result
+	}
+
+	carrierType := p.generatedObject(
+		prefix, owner.Path, checkedCarrierName(declaration.Name), literal.Lbrace,
+	)
+	carrierElements := make([]ast.Expr, 0, len(evaluation))
+	for index, value := range evaluation {
+		fieldIndex := indices[index]
+		carrierElements = append(carrierElements, &ast.KeyValueExpr{
+			Key: ast.NewIdent(checkedCarrierFieldName(
+				declaration.Fields[fieldIndex], fieldIndex,
+			)),
+			Value: value,
+		})
+	}
+	inputName := freshASTIdentifier(file, "tgoInput")
+	arguments := make([]ast.Expr, len(values))
+	for index := range arguments {
+		arguments[index] = &ast.SelectorExpr{
+			X:   ast.NewIdent(inputName),
+			Sel: ast.NewIdent(checkedCarrierFieldName(declaration.Fields[index], index)),
+		}
+	}
+	constructorCall := call(constructor, arguments...)
+	p.checkedCalls[constructorCall] = true
+	resultType := p.generatedObject(
+		prefix, owner.Path, declaration.Name, literal.Lbrace,
+	)
+	function := &ast.FuncLit{
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{List: []*ast.Field{{
+				Names: []*ast.Ident{ast.NewIdent(inputName)},
+				Type:  carrierType,
+			}}},
+			Results: &ast.FieldList{List: []*ast.Field{
+				{Type: resultType},
+				{Type: p.generatedUniverse("error", literal.Lbrace)},
+			}},
+		},
+		Body: &ast.BlockStmt{List: []ast.Stmt{
+			&ast.ReturnStmt{Results: []ast.Expr{constructorCall}},
+		}},
+	}
+	carrierLiteralType := p.generatedObject(
+		prefix, owner.Path, checkedCarrierName(declaration.Name), literal.Lbrace,
+	)
+	return call(function, &ast.CompositeLit{
+		Type: carrierLiteralType, Elts: carrierElements,
+	})
+}
+
+// recordCheckedLiteralReferences keeps navigation on lowered source names.
+func (p *packageUnit) recordCheckedLiteralReferences(
+	literal *ast.CompositeLit,
+	named *types.Named,
+	structure *types.Struct,
+	indices []int,
+) {
+	var typeName *ast.Ident
+	switch expression := literal.Type.(type) {
+	case *ast.Ident:
+		typeName = expression
+	case *ast.SelectorExpr:
+		typeName = expression.Sel
+	}
+	if typeName != nil && typeName.Pos() != token.NoPos {
+		p.sourceReferences[typeName.Pos()] = named.Obj()
+	}
+	for index, element := range literal.Elts {
+		pair, ok := element.(*ast.KeyValueExpr)
+		if !ok || pair.Key.Pos() == token.NoPos || index >= len(indices) {
+			continue
+		}
+		field := indices[index]
+		if field >= 0 && field < structure.NumFields() {
+			p.sourceReferences[pair.Key.Pos()] = structure.Field(field)
+		}
+	}
+}
+
+func (p *packageUnit) checkedLiteralValues(
+	literal *ast.CompositeLit,
+	structure *types.Struct,
+) ([]ast.Expr, []ast.Expr, []int, bool, bool) {
+	values := make([]ast.Expr, structure.NumFields())
+	evaluation := make([]ast.Expr, 0, len(literal.Elts))
+	indices := make([]int, 0, len(literal.Elts))
+	keyed, unkeyed := false, false
+	supplied := make(map[int]bool)
+	for index, element := range literal.Elts {
+		fieldIndex, value, pair := checkedLiteralElement(structure, index, element)
+		keyed, unkeyed = keyed || pair, unkeyed || !pair
+		if keyed && unkeyed {
+			p.fail(literal, "mixture of field:value and value elements in struct literal")
+			return nil, nil, nil, false, false
+		}
+		if fieldIndex < 0 || fieldIndex >= len(values) {
+			return nil, nil, nil, false, false
+		}
+		if supplied[fieldIndex] {
+			p.fail(
+				element,
+				"duplicate field %s in struct literal",
+				structure.Field(fieldIndex).Name(),
+			)
+			return nil, nil, nil, false, false
+		}
+		supplied[fieldIndex] = true
+		values[fieldIndex] = value
+		evaluation = append(evaluation, value)
+		indices = append(indices, fieldIndex)
+	}
+	for index, value := range values {
+		if value == nil {
+			p.fail(literal, "missing required field %s", structure.Field(index).Name())
+			return nil, nil, nil, false, false
+		}
+	}
+	return values, evaluation, indices, keyed, true
+}
+
+func checkedLiteralElement(
+	structure *types.Struct,
+	index int,
+	element ast.Expr,
+) (int, ast.Expr, bool) {
+	pair, ok := element.(*ast.KeyValueExpr)
+	if !ok {
+		return index, element, false
+	}
+	name, ok := pair.Key.(*ast.Ident)
+	if !ok {
+		return -1, pair.Value, true
+	}
+	return structFieldIndex(structure, name.Name), pair.Value, true
+}
+
+func structFieldIndex(structure *types.Struct, name string) int {
+	for index := 0; index < structure.NumFields(); index++ {
+		if structure.Field(index).Name() == name {
+			return index
+		}
+	}
+	return -1
 }
 
 // namedLiteralModel resolves a named literal when an outer marker blocks type information.

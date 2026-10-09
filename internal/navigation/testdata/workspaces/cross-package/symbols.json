@@ -25,7 +25,6 @@
       "userIDError",
       "Error",
       "check",
-      "NewUserID",
       "Value",
       "ReadID",
       "MakeID"
@@ -116,5 +115,11 @@
         "selection": {"file": "lib/lib.tgo", "text": "MakeAccount", "occurrence": 1}
       }
     ]
+  },
+  {
+    "method": "workspaceSymbols",
+    "query": "UserID",
+    "names": ["UserID", "userIDError"],
+    "symbols": []
   }
 ]
