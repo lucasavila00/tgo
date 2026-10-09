@@ -147,17 +147,22 @@ func addNilAlias(state *nilFlowState, left, right nilPlace) {
 }
 
 func breakNilAlias(state *nilFlowState, target nilPlace) {
+	representative := nilRepresentative(state, target)
 	group := make([]nilPlace, 0)
+	members := make([]nilPlace, 0)
 	for place := range state.aliases {
-		if nilAliased(state, target, place) && place != target {
+		if nilRepresentative(state, place) != representative {
+			continue
+		}
+		members = append(members, place)
+		if place != target {
 			group = append(group, place)
 		}
 	}
-	for place := range state.aliases {
-		if nilAliased(state, target, place) {
-			delete(state.aliases, place)
-		}
+	for _, place := range members {
+		delete(state.aliases, place)
 	}
+	delete(state.aliases, target)
 	for index := 1; index < len(group); index++ {
 		addNilAlias(state, group[0], group[index])
 	}
