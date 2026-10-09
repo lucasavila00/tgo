@@ -5,6 +5,20 @@ package syntax
 
 import "go/token"
 
+// SourceText returns the source text in one syntax span.
+func SourceText(file *File, span Span) string {
+	if file == nil || file.front == nil || file.front.tokenFile == nil ||
+		span.Start < file.front.tokenFile.Pos(0) || span.Stop < span.Start {
+		return ""
+	}
+	start := file.front.tokenFile.Offset(span.Start)
+	stop := file.front.tokenFile.Offset(span.Stop)
+	if start < 0 || stop < start || stop > len(file.front.source) {
+		return ""
+	}
+	return string(file.front.source[start:stop])
+}
+
 // Visitor visits each node in source order.
 type Visitor interface {
 	Visit(*Node) Visitor

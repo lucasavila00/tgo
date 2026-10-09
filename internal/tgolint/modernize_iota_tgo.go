@@ -32,14 +32,14 @@ func (c *checker) checkIotaModernization(analysis *compiler.AnalysisPackage) {
 		return
 	}
 	for _, source := range analysis.Sources {
-		projected := source.Projected
-		if projected == nil {
+		file := source.Syntax
+		if file == nil {
 			continue
 		}
 		index := sourcefacts.New(
-			projected, info, files,
+			file, info, files,
 		)
-		for _, declaration := range source.Syntax.Declarations {
+		for _, declaration := range file.Declarations {
 			general, ok := sourceGeneralDeclaration(declaration)
 			if !ok || general == nil || general.Kind != token.CONST {
 				continue

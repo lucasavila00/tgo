@@ -172,6 +172,8 @@ func (p %sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		Comments:   goFile.Comments,
 		GoVersion:  goFile.GoVersion,
 		goFile:     goFile,
+		tokenFile:  p.file,
+		source:     p.source,
 		children:   nil,
 		parents:    nil,
 		extensions: nil,

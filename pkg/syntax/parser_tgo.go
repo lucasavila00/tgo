@@ -20,6 +20,7 @@ const (
 	// AllErrors reports independent scanner and Go parser errors.
 	// A tgo production error stops extension parsing at the first error.
 	AllErrors
+	goSource
 )
 
 type lexeme struct {
@@ -165,11 +166,13 @@ func parseFrontFile(
 		file:              nil,
 		mode:              mode,
 	}
-	if err := state.discoverDeclarations(); err != nil {
-		return nil, state.error(err)
-	}
-	if err := state.discoverExtensions(); err != nil {
-		return nil, state.error(err)
+	if mode&goSource == 0 {
+		if err := state.discoverDeclarations(); err != nil {
+			return nil, state.error(err)
+		}
+		if err := state.discoverExtensions(); err != nil {
+			return nil, state.error(err)
+		}
 	}
 	projection := state.project(0, len(source), state.edits)
 	parseMode := parser.SkipObjectResolution
