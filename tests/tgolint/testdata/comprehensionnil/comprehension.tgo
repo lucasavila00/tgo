@@ -1,0 +1,23 @@
+package comprehensionnil
+
+type item struct{}
+type holder struct {
+	Body []%item
+}
+
+func copyItems(groups [][]*item) {
+	result := holder{
+		Body: []%item{for _, value := range groups[0] {
+			copyItem(value)
+		}},
+	}
+	_ = result
+	for _, value := range groups[0] {
+		_ = value
+	}
+}
+
+func copyItem(value *item) %item {
+	_ = value
+	return &item{}
+}
