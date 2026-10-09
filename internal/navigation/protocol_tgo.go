@@ -109,6 +109,19 @@ func (s *protocolServer) handle(
 ) Response {
 	response := Response{ID: request.ID, Result: nil, Error: ""}
 	switch request.Method {
+	case "hover":
+		params := positionParams{
+			URI: "", Offset: 0, IncludeDeclaration: false,
+		}
+		if err := json.Unmarshal(request.Params, &params); err != nil {
+			response.Error = err.Error()
+		} else {
+			result, err := s.engine.Hover(ctx, params.URI, params.Offset)
+			response.Result = result
+			if err != nil {
+				response.Error = err.Error()
+			}
+		}
 	case "definition":
 		params := positionParams{
 			URI: "", Offset: 0, IncludeDeclaration: false,
