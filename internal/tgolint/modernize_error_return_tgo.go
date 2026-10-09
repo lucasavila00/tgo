@@ -24,18 +24,19 @@ func (c *checker) checkErrorReturnModernization(analysis *compiler.AnalysisPacka
 		return
 	}
 	for _, source := range analysis.Sources {
-		if source.Syntax == nil {
+		file := source.Syntax
+		if file == nil {
 			continue
 		}
 		index := sourcefacts.New(
-			[]*syntax.File{source.Syntax}, info, files,
+			file, info, files,
 		)
-		syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
+		syntax.Inspect(file, func(node *syntax.Node) bool {
 			statements, ok := sourceStatementList(node)
 			if !ok || len(statements) < 2 {
 				return true
 			}
-			signature := sourceFunctionSignature(source.Syntax, node, index)
+			signature := sourceFunctionSignature(file, node, index)
 			for position := 0; position+1 < len(statements); position++ {
 				c.checkErrorReturnPair(
 					statements[position], statements[position+1],
