@@ -189,10 +189,9 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 		}.Statement()
 		return &result
 	case *ast.CommClause:
-		__tgo_source := item.Body
-		__tgo_result := make([]*Statement, len(__tgo_source))
-		for __tgo_index, statement := range __tgo_source {
-			__tgo_result[__tgo_index] = c.statementRequired(statement)
+		body := make([]*Statement, 0, len(item.Body))
+		for _, statement := range item.Body {
+			body = append(body, c.statementRequired(statement))
 		}
 		result := StatementCommunication{
 			Value: &CommunicationClause{
@@ -200,7 +199,7 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 				Case:          item.Case,
 				Communication: c.statement(item.Comm),
 				Colon:         item.Colon,
-				Body:          __tgo_result,
+				Body:          body,
 			},
 		}.Statement()
 		return &result

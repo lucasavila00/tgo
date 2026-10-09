@@ -187,15 +187,17 @@ func (c %converter) statementRequired(value frontNode) %Statement {
 		}
 		return &result
 	case *ast.CommClause:
+		body := make([]%Statement, 0, len(item.Body))
+		for _, statement := range item.Body {
+			body = append(body, c.statementRequired(statement))
+		}
 		result := Statement.Communication{
 			Value: &CommunicationClause{
 				Span:          span(item),
 				Case:          item.Case,
 				Communication: c.statement(item.Comm),
 				Colon:         item.Colon,
-				Body:          []%Statement{for _, statement := range item.Body {
-					c.statementRequired(statement)
-				}},
+				Body:          body,
 			},
 		}
 		return &result

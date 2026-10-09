@@ -642,12 +642,12 @@ func declarationEditEnd(data []byte, end int) int {
 func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDeclaration) *model {
 	position := files.Position(declaration.Name.Start)
 	result := &model{
-		Name:            declaration.Name.Name,
-		Enum:            true,
-		Line:            position.Line,
-		Column:          position.Column,
-		Variants:        nil,
-		Fields:          nil,
+		Name:     declaration.Name.Name,
+		Enum:     true,
+		Line:     position.Line,
+		Column:   position.Column,
+		Variants: nil,
+		Fields:   nil,
 	}
 	for _, item := range declaration.Variants {
 		fields := make([]field, 0, len(item.Fields))
@@ -669,13 +669,13 @@ func structModel(files *token.FileSet, data []byte, declaration *syntax.StructDe
 		fields = append(fields, sourceModelField(files, data, itemField)...)
 	}
 	return &model{
-		Name:            declaration.Name.Name,
-		Enum:            false,
-		CheckedStruct:   declaration.Checked != token.NoPos,
-		Line:            position.Line,
-		Column:          position.Column,
-		Variants:        nil,
-		Fields:          fields,
+		Name:          declaration.Name.Name,
+		Enum:          false,
+		CheckedStruct: declaration.Checked != token.NoPos,
+		Line:          position.Line,
+		Column:        position.Column,
+		Variants:      nil,
+		Fields:        fields,
 	}
 }
 

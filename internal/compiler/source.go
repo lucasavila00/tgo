@@ -45,14 +45,14 @@ type variant struct {
 }
 
 type model struct {
-	JSON            enumJSON
-	Name            string
-	Enum            bool
-	CheckedStruct   bool
-	Line            int
-	Column          int
-	Variants        []variant
-	Fields          []field
+	JSON          enumJSON
+	Name          string
+	Enum          bool
+	CheckedStruct bool
+	Line          int
+	Column        int
+	Variants      []variant
+	Fields        []field
 }
 
 type source struct {
