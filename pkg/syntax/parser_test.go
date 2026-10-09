@@ -24,7 +24,6 @@ type Result enum {
 	OK struct { Value int }
 	Error struct { Message string }
 }
-
 type Options struct { Limit int = 10 }
 type Port int where value > 0
 
