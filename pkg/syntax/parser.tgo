@@ -123,6 +123,7 @@ type sourceParser struct {
 	comments     []sourceEdit
 	decls        []*rawDecl
 	defaults     []*rawDefault
+	exhaustiveOffsets []int
 	propagations []*rawPropagation
 	comprehensions []*rawComprehension
 	nonNil      map[token.Pos]bool
@@ -152,6 +153,7 @@ func parseFrontFile(
 		comments:     comments,
 		decls:        nil,
 		defaults:     nil,
+		exhaustiveOffsets: nil,
 		propagations: nil,
 		comprehensions: nil,
 		nonNil:      make(map[token.Pos]bool),

@@ -314,8 +314,7 @@ func sourceModelName(value *sourceModel) string {
 		return item.EnumPayload().Name
 	case sourceModelTagStruct:
 		return item.StructPayload().Name
-	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -330,8 +329,7 @@ func sourceModelFact(value *sourceModel) *model {
 		return item.EnumPayload().Fact
 	case sourceModelTagStruct:
 		return nil
-	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -411,8 +409,7 @@ func sourceShapeMatches(
 			}
 		}
 		return true
-	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 

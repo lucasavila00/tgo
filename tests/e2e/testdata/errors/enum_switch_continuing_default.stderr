@@ -1,1 +1,0 @@
-<WORK>/input.tgo:9:2: Account: default must be exactly "panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag"

@@ -82,9 +82,10 @@ Returned-function effects are complete only for a function literal returned
 directly. A closure returned through a local variable or another helper can hide
 an effect from the checker.
 
-An enum payload read needs an exhaustive switch on the same syntactic receiver. The switch covers
-`Zero` and all declared tags. Its default is exactly the generated `UnknownTag` panic and required
-comment. A clause assignment to the receiver or its selector prefix removes the clause proof.
+An enum payload read needs a tag switch on the same syntactic receiver. A TGo `exhaustive:` clause
+requires all declared tags and emits the generated `UnknownTag` panic and required comment. A normal
+default clause is fallback behavior and can cover omitted tags. A clause assignment to the receiver
+or its selector prefix removes the clause proof.
 A function literal does not inherit the proof. Direct `go` and `defer` calls do inherit it.
 The checker does not analyze `Tag` calls, payload calls, or payload method values outside a
 recognized canonical switch.

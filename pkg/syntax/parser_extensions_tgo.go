@@ -10,7 +10,17 @@ import (
 )
 
 func (p *sourceParser) discoverExtensions() error {
+	exhaustiveTokens := p.exhaustiveTokens()
 	for cursor := 0; cursor < len(p.tokens); cursor++ {
+		if exhaustiveTokens[cursor] {
+			p.exhaustiveOffsets = append(p.exhaustiveOffsets, p.tokens[cursor].start)
+			p.edits = append(p.edits, sourceEdit{
+				start: p.tokens[cursor].start,
+				end:   p.tokens[cursor].end,
+				text:  "default",
+			})
+			continue
+		}
 		if p.tokens[cursor].kind == token.REM {
 			p.edits = append(p.edits, sourceEdit{
 				start: p.tokens[cursor].start,
@@ -46,6 +56,47 @@ func (p *sourceParser) discoverExtensions() error {
 		}
 	}
 	return p.discoverComprehensions()
+}
+
+func (p *sourceParser) exhaustiveTokens() map[int]bool {
+	result := make(map[int]bool)
+	openBraces := []int(nil)
+	candidates := make(map[int][]int)
+	hasClause := make(map[int]bool)
+	for cursor, item := range p.tokens {
+		switch item.kind {
+		case token.LBRACE:
+			openBraces = append(openBraces, cursor)
+		case token.RBRACE:
+			if len(openBraces) == 0 {
+				continue
+			}
+			open := openBraces[len(openBraces)-1]
+			openBraces = openBraces[:len(openBraces)-1]
+			if !hasClause[open] || open > 0 && p.tokens[open-1].kind == token.SELECT {
+				continue
+			}
+			for _, candidate := range candidates[open] {
+				result[candidate] = true
+			}
+		case token.CASE:
+			if len(openBraces) != 0 {
+				hasClause[openBraces[len(openBraces)-1]] = true
+			}
+		case token.DEFAULT:
+			if len(openBraces) != 0 && cursor+1 < len(p.tokens) &&
+				p.tokens[cursor+1].kind == token.COLON {
+				hasClause[openBraces[len(openBraces)-1]] = true
+			}
+		case token.IDENT:
+			if len(openBraces) != 0 && item.text == "exhaustive" &&
+				cursor+1 < len(p.tokens) && p.tokens[cursor+1].kind == token.COLON {
+				open := openBraces[len(openBraces)-1]
+				candidates[open] = append(candidates[open], cursor)
+			}
+		}
+	}
+	return result
 }
 
 func (p *sourceParser) atPropagation(cursor int) bool {
@@ -98,21 +149,26 @@ func (p *sourceParser) project(start int, end int, edits []sourceEdit) []byte {
 }
 
 func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
+	exhaustiveClauses := make(map[token.Pos]bool)
+	for _, offset := range p.exhaustiveOffsets {
+		exhaustiveClauses[p.pos(offset)] = true
+	}
 	result := &frontFile{
-		frontSpan:  frontSpan{Start: p.file.Pos(0), Stop: p.file.Pos(len(p.source))},
-		Doc:        goFile.Doc,
-		Package:    goFile.Package,
-		Name:       goFile.Name,
-		Decls:      nil,
-		Imports:    goFile.Imports,
-		Comments:   goFile.Comments,
-		GoVersion:  goFile.GoVersion,
-		goFile:     goFile,
-		children:   nil,
-		parents:    nil,
-		extensions: nil,
-		attached:   make(map[frontNode][]*ast.CommentGroup),
-		nonNil:     p.nonNil,
+		frontSpan:         frontSpan{Start: p.file.Pos(0), Stop: p.file.Pos(len(p.source))},
+		Doc:               goFile.Doc,
+		Package:           goFile.Package,
+		Name:              goFile.Name,
+		Decls:             nil,
+		Imports:           goFile.Imports,
+		Comments:          goFile.Comments,
+		GoVersion:         goFile.GoVersion,
+		goFile:            goFile,
+		children:          nil,
+		parents:           nil,
+		extensions:        nil,
+		attached:          make(map[frontNode][]*ast.CommentGroup),
+		nonNil:            p.nonNil,
+		exhaustiveClauses: exhaustiveClauses,
 	}
 	defaultAt := make(map[token.Pos]*frontDefaultMarker)
 	for _, raw := range p.defaults {

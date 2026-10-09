@@ -150,8 +150,7 @@ case NodeTagIdentifier:
 	case NodeTagCommentGroup:
 		value := enumValue20.CommentGroupPayload()
 		return value.Value.Start
-	default:
-		panic(enumValue20.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -197,8 +196,7 @@ case NodeTagIdentifier:
 	case NodeTagCommentGroup:
 		value := enumValue21.CommentGroupPayload()
 		return value.Value.Stop
-	default:
-		panic(enumValue21.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -287,8 +285,7 @@ func ExpressionPosition(value *Expression) token.Pos {
 	case ExpressionTagComprehension:
 		item := enumValue22.ComprehensionPayload()
 		return item.Value.Start
-	default:
-		panic(enumValue22.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -377,8 +374,7 @@ func ExpressionEnd(value *Expression) token.Pos {
 	case ExpressionTagComprehension:
 		item := enumValue23.ComprehensionPayload()
 		return item.Value.Stop
-	default:
-		panic(enumValue23.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -458,8 +454,7 @@ func statementSpan(value *Statement) Span {
 	case StatementTagRange:
 		item := enumValue24.RangePayload()
 		return item.Value.Span
-default:
-		panic(enumValue24.UnknownTag()) // unreachable: tgolint requires a case per tag
+exhaustive:
 	}
 }
 
@@ -494,8 +489,7 @@ func declarationSpan(value *Declaration) Span {
 	case DeclarationTagChecked:
 		item := enumValue25.CheckedPayload()
 		return item.Value.Span
-	default:
-		panic(enumValue25.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -521,8 +515,7 @@ func specificationSpan(value *Specification) Span {
 	case SpecificationTagType:
 		item := enumValue26.TypePayload()
 		return item.Value.Span
-	default:
-		panic(enumValue26.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 

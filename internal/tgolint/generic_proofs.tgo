@@ -100,8 +100,7 @@ func effectOutcomeRank(outcome effectOutcome) int {
 		return 2
 	case effectOutcomeTagConditional:
 		return 1
-	default:
-		panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -257,8 +256,7 @@ func (c %checker) compositeEffectCondition(
 		return false, false
 	case effectKindTagNonzero:
 		return false, false
-	default:
-		panic(enumValue5.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 

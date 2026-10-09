@@ -1,16 +1,14 @@
 bad/bad.go:94:3: Event: fallthrough is not allowed in a tag switch
 bad/bad.go:92:2: Event: switch must have a default clause
-bad/bad.go:106:2: Event: default must be exactly "panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag"
-bad/bad.go:117:2: Event: default must be exactly "panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag"
 bad/bad.go:254:10: Event: StoppedPayload called under case EventTagStarted
 bad/bad.go:322:10: Event: StoppedPayload called under case EventTagStarted
-bad/bad.go:331:2: Event: default must be exactly "panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag"
 bad/bad.go:736:7: Event: case label must be a tag constant
 bad/bad.go:749:7: Event: case label must be a tag constant
 bad/bad.go:761:10: Event: StartedPayload called under a multi-tag case
 bad/bad.go:779:2: Event: switch is missing cases: EventTagStopped
 bad/bad.go:792:22: Event: StartedPayload called under case EventTagStopped
 bad/bad.go:803:25: Event: StartedPayload called under case EventTagStopped
+bad/bad.go:814:10: Event: StoppedPayload called under default
 bad/bad.go:35:5: zero declaration contains invalid tgo enum Event; construct it first
 bad/bad.go:45:17: cannot define a new Go type from tgo enum Event; use an alias
 bad/bad.go:48:6: cannot construct tgo enum Event with a Go literal

@@ -56,15 +56,14 @@ func Label(account Account) string {
     switch account.Tag() {
     case AccountTagPersonal: return account.PersonalPayload().Name
     case AccountTagBusiness: return account.BusinessPayload().Company
-    default:
-        panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 ```
 
-Construct with `Account.Personal{Name: "Lucas"}`. Cover each declared variant with generated tag
-constants. Use the exact `UnknownTag` panic in the default. Duplicate or missing
-cases fail compilation. Do not use `fallthrough` or select generated enum methods through an interface.
+Construct with `Account.Personal{Name: "Lucas"}`. `exhaustive:` requires one case for each declared
+variant. Use `default:` when the switch needs fallback behavior. Duplicate tags and missing
+exhaustive cases fail compilation. Do not use `fallthrough` or select generated enum methods through an interface.
 Type aliases can construct variants. Go name resolution selects the aliased type.
 Do not shadow generated payload, constructor, or default helper names at a construction.
 The value uses a tag and typed Go fields. Reads do not run validation.

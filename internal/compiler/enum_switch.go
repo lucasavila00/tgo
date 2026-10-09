@@ -1,10 +1,8 @@
 package compiler
 
 import (
-	"bytes"
 	"go/ast"
 	"go/constant"
-	"go/format"
 	"go/token"
 	"go/types"
 	"strings"
@@ -14,13 +12,14 @@ import (
 func (p *packageUnit) checkEnumSwitches(
 	root ast.Node,
 	parents map[ast.Node]ast.Node,
+	exhaustive map[token.Pos]bool,
 ) (map[*ast.SelectorExpr]bool, map[*ast.SelectorExpr]bool) {
 	safe := make(map[*ast.SelectorExpr]bool)
 	handled := make(map[*ast.SelectorExpr]bool)
 	ast.Inspect(root, func(node ast.Node) bool {
 		statement, ok := node.(*ast.SwitchStmt)
 		if ok {
-			p.checkEnumSwitch(statement, parents, safe, handled)
+			p.checkEnumSwitch(statement, parents, exhaustive, safe, handled)
 		}
 		return true
 	})
@@ -33,6 +32,7 @@ const enumDefaultComment = "// unreachable: tgolint requires a case per tag"
 func (p *packageUnit) checkEnumSwitch(
 	statement *ast.SwitchStmt,
 	parents map[ast.Node]ast.Node,
+	exhaustive map[token.Pos]bool,
 	safe map[*ast.SelectorExpr]bool,
 	handled map[*ast.SelectorExpr]bool,
 ) {
@@ -53,7 +53,13 @@ func (p *packageUnit) checkEnumSwitch(
 		}
 		if len(clause.List) == 0 {
 			hasDefault = true
-			hasSentinelDefault = p.enumDefaultSentinel(clause, receiver, model)
+			hasSentinelDefault = p.enumDefaultIsExhaustive(
+				clause, receiver, model, exhaustive[clause.Case],
+			)
+			p.checkEnumCaseAccessors(
+				clause, statement, receiver, model, nil, true,
+				parents, safe, handled,
+			)
 			continue
 		}
 		tags, resolved := p.enumCaseTags(clause, model, tagType, seen)
@@ -62,11 +68,11 @@ func (p *packageUnit) checkEnumSwitch(
 			seen[tag] = true
 		}
 		p.checkEnumCaseAccessors(
-			clause, statement, receiver, model, tags,
+			clause, statement, receiver, model, tags, false,
 			parents, safe, handled,
 		)
 	}
-	if labelsResolved {
+	if labelsResolved && hasSentinelDefault {
 		var missing []string
 		for tag := 1; tag <= len(model.Variants); tag++ {
 			if !seen[tag] {
@@ -80,13 +86,20 @@ func (p *packageUnit) checkEnumSwitch(
 	}
 	if !hasDefault {
 		p.fail(statement, "%s: switch must have a default clause", model.Name)
-	} else if !hasSentinelDefault {
-		receiverText := p.enumExpressionText(receiver)
-		p.fail(statement,
-			"%s: default must be exactly %q",
-			model.Name, "panic("+receiverText+".UnknownTag()) "+enumDefaultComment,
-		)
 	}
+}
+
+func (p *packageUnit) enumDefaultIsExhaustive(
+	clause *ast.CaseClause,
+	receiver ast.Expr,
+	model *model,
+	sourceExhaustive bool,
+) bool {
+	sentinel := p.enumDefaultSentinel(clause, receiver, model)
+	if sourceExhaustive && !sentinel {
+		p.fail(clause, "%s: exhaustive clause requires the predeclared panic", model.Name)
+	}
+	return sourceExhaustive || sentinel
 }
 
 // enumTagCall resolves a generated tag call and its receiver model.
@@ -164,14 +177,6 @@ func (p *packageUnit) enumCaseTags(
 		tags[tag] = true
 	}
 	return tags, resolved
-}
-
-func (p *packageUnit) enumExpressionText(expression ast.Expr) string {
-	var output bytes.Buffer
-	if format.Node(&output, p.fs, expression) != nil {
-		return "value"
-	}
-	return output.String()
 }
 
 func (p *packageUnit) enumTagExpression(
@@ -334,6 +339,7 @@ func (p *packageUnit) checkEnumCaseAccessors(
 	receiver ast.Expr,
 	model *model,
 	tags map[int]bool,
+	defaultClause bool,
 	parents map[ast.Node]ast.Node,
 	safe map[*ast.SelectorExpr]bool,
 	handled map[*ast.SelectorExpr]bool,
@@ -369,8 +375,11 @@ func (p *packageUnit) checkEnumCaseAccessors(
 				safe[selector] = true
 				return true
 			}
-			caseName := "a multi-tag case"
-			if len(tags) == 1 {
+			caseName := "default"
+			if !defaultClause && len(tags) != 1 {
+				caseName = "a multi-tag case"
+			}
+			if !defaultClause && len(tags) == 1 {
 				for active := range tags {
 					caseName = "case " + enumTagConstant(model, active)
 				}

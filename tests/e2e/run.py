@@ -656,8 +656,7 @@ def main():
                 "type A enum { One struct {}; Two struct {} }\n"
                 "func f(a A) { switch a.Tag() {\n"
                 "case ATagOne: return\n"
-                "default: panic(a.UnknownTag()) "
-                "// unreachable: tgolint requires a case per tag\n"
+                "exhaustive:\n"
                 "} }",
                 "A: switch is missing cases: ATagTwo",
             ),

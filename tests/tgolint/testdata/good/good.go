@@ -521,3 +521,12 @@ func DescribeWithInternalGoto(event model.Event) string {
 		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
+
+func DefaultFallback(event model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StartedPayload().ID
+	default:
+		return "fallback"
+	}
+}

@@ -4,10 +4,8 @@
 package tgolint
 
 import (
-	"bytes"
 	"go/ast"
 	"go/constant"
-	"go/format"
 	"go/token"
 	"go/types"
 	"strings"
@@ -38,6 +36,7 @@ func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
 		if len(clause.List) == 0 {
 			hasDefault = true
 			hasSentinelDefault = c.tagDefaultSentinel(clause, receiver, model)
+			c.checkCaseAccessors(clause, statement, receiver, model, nil, true)
 			continue
 		}
 		tags, resolved := c.caseTags(clause, model, tagType, seen)
@@ -45,9 +44,9 @@ func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
 		for tag := range tags {
 			seen[tag] = true
 		}
-		c.checkCaseAccessors(clause, statement, receiver, model, tags)
+		c.checkCaseAccessors(clause, statement, receiver, model, tags, false)
 	}
-	if labelsResolved {
+	if labelsResolved && hasSentinelDefault {
 		var missing []string = nil
 		for tag := 1; tag <= len(modelVariants(model)); tag++ {
 			if !seen[tag] {
@@ -62,10 +61,6 @@ func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
 	if !hasDefault {
 		c.pass.Reportf(statement.Switch, "%s: switch must have a default clause",
 			modelName(model))
-	} else if !hasSentinelDefault {
-		receiverText := c.tagExpressionText(receiver)
-		c.pass.Reportf(statement.Switch, "%s: default must be exactly %q",
-			modelName(model), "panic("+receiverText+".UnknownTag()) "+enumDefaultComment)
 	}
 }
 
@@ -354,14 +349,6 @@ func tagConstant(model *model, tag int) string {
 	return name + modelVariants(model)[tag-1]
 }
 
-func (c *checker) tagExpressionText(expression ast.Expr) string {
-	output := new(bytes.Buffer)
-	if format.Node(output, c.pass.Fset, expression) != nil {
-		return "value"
-	}
-	return output.String()
-}
-
 func (c *checker) tagDefaultSentinel(
 	clause *ast.CaseClause,
 	receiver ast.Expr,
@@ -427,6 +414,7 @@ func (c *checker) checkCaseAccessors(
 	receiver ast.Expr,
 	model *model,
 	tags map[int]bool,
+	defaultClause bool,
 ) {
 	if clauseAssignsReceiver(c.pass.TypesInfo, clause, receiver) {
 		return
@@ -460,8 +448,11 @@ func (c *checker) checkCaseAccessors(
 				c.safe[selector] = true
 				return true
 			}
-			caseName := "a multi-tag case"
-			if len(tags) == 1 {
+			caseName := "default"
+			if !defaultClause && len(tags) != 1 {
+				caseName = "a multi-tag case"
+			}
+			if !defaultClause && len(tags) == 1 {
 				for active := range tags {
 					caseName = "case " + tagConstant(model, active)
 				}

@@ -29,8 +29,7 @@ func isUnknownNilValue(value nilValue) bool {
 		return false
 	case nilValueTagNil:
 		return false
-	default:
-		panic(enumValue21.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -42,8 +41,7 @@ func isNonNilValue(value nilValue) bool {
 		return true
 	case nilValueTagNil:
 		return false
-	default:
-		panic(enumValue22.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -55,8 +53,7 @@ func isProvenNilValue(value nilValue) bool {
 		return false
 	case nilValueTagNil:
 		return true
-	default:
-		panic(enumValue23.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -68,8 +65,7 @@ func equalNilValue(left nilValue, right nilValue) bool {
 		return isNonNilValue(right)
 	case nilValueTagNil:
 		return isProvenNilValue(right)
-	default:
-		panic(enumValue24.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 

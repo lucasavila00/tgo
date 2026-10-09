@@ -147,6 +147,42 @@ func load() (int, error) { return 0, nil }
 	requireKinds(t, specifications, []string{"Import", "Value", "Type"})
 }
 
+func TestParseFileMarksOnlySwitchExhaustiveClause(t *testing.T) {
+	t.Parallel()
+	source := []byte(`package sample
+
+type holder struct { exhaustive int }
+
+func inspect(value int) {
+	_ = holder{exhaustive: 1}
+	switch value {
+	case 1:
+	exhaustive:
+	}
+}
+`)
+	file, err := syntax.ParseFile(
+		token.NewFileSet(), "exhaustive.tgo", source, syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	marked := 0
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		statement, ok := syntax.StatementOf(node)
+		if !ok || statement.Tag() != syntax.StatementTagCase {
+			return true
+		}
+		if statement.CasePayload().Value.Exhaustive.IsValid() {
+			marked++
+		}
+		return true
+	})
+	if marked != 1 {
+		t.Fatalf("marked exhaustive clauses = %d, want 1", marked)
+	}
+}
+
 func TestPublicASTDoesNotExposeGoAST(t *testing.T) {
 	t.Parallel()
 	seen := make(map[reflect.Type]bool)

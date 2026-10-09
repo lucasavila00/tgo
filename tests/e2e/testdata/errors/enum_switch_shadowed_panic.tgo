@@ -12,7 +12,6 @@ func use(value Result) {
 		return
 	case ResultTagFailure:
 		return
-	default:
-		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }

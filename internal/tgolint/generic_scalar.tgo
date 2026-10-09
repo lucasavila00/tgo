@@ -505,8 +505,7 @@ func scalarBoolean(value scalarValue) (bool, bool) {
 		return false, false
 	case scalarValueTagIntegerParameter:
 		return false, false
-	default:
-		panic(enumValue7.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -521,8 +520,7 @@ func scalarInteger(value scalarValue) (int64, bool) {
 		return 0, false
 	case scalarValueTagIntegerParameter:
 		return 0, false
-	default:
-		panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -538,8 +536,7 @@ func scalarParameter(value scalarValue) (int, bool, bool) {
 	case scalarValueTagIntegerParameter:
 		parameter := enumValue9.IntegerParameterPayload()
 		return parameter.Index, false, true
-	default:
-		panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -557,8 +554,7 @@ func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
 		}, true
 	case scalarValueTagIntegerParameter:
 		return scalarValue.Boolean{Value: false}, false
-	default:
-		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -591,8 +587,7 @@ func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
 		return parameter.Index, parameter.Negated, true
 	case scalarValueTagIntegerParameter:
 		return 0, false, false
-	default:
-		panic(enumValue11.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -607,8 +602,7 @@ func scalarIntegerParameter(value scalarValue) (int, bool) {
 	case scalarValueTagIntegerParameter:
 		parameter := enumValue12.IntegerParameterPayload()
 		return parameter.Index, true
-	default:
-		panic(enumValue12.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 

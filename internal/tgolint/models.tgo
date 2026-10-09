@@ -61,8 +61,7 @@ func modelDescription(value *model) (string, string) {
 		return "", ""
 	case modelTagParameter:
 		return "generic", "type argument"
-	default:
-		panic(enumValue13.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -91,8 +90,7 @@ func modelPackage(value *model) string {
 		return ""
 	case modelTagParameter:
 		return ""
-	default:
-		panic(enumValue14.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -110,8 +108,7 @@ func modelVariants(value *model) []string {
 		return nil
 	case modelTagParameter:
 		return nil
-	default:
-		panic(enumValue15.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -128,8 +125,7 @@ func modelIsChecked(value *model) bool {
 		return false
 	case modelTagParameter:
 		return false
-	default:
-		panic(enumValue16.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -146,8 +142,7 @@ func modelIsEnum(value *model) bool {
 		return false
 	case modelTagParameter:
 		return false
-	default:
-		panic(enumValue17.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -164,8 +159,7 @@ func modelIsMixed(value *model) bool {
 		return true
 	case modelTagParameter:
 		return false
-	default:
-		panic(enumValue18.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -200,8 +194,7 @@ func modelIsParameter(value *model) bool {
 		return false
 	case modelTagParameter:
 		return true
-	default:
-		panic(enumValue19.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -227,8 +220,7 @@ func encodeModelFact(value *model) *modelWireFact {
 		return nil
 	case modelTagParameter:
 		return nil
-	default:
-		panic(enumValue20.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 

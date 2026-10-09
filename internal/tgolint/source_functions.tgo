@@ -55,8 +55,7 @@ case syntax.NodeTagIdentifier:
 		return token.NoPos, false
 	case syntax.NodeTagCommentGroup:
 		return token.NoPos, false
-	default:
-		panic(enumValue35.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -76,8 +75,7 @@ func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
 		return token.NoPos, false
 	case syntax.DeclarationTagChecked:
 		return token.NoPos, false
-	default:
-		panic(enumValue36.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -139,8 +137,7 @@ func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
 		return token.NoPos, false
 	case syntax.ExpressionTagComprehension:
 		return token.NoPos, false
-	default:
-		panic(enumValue37.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -162,8 +159,7 @@ func sourceGeneralDeclaration(
 		return nil, false
 	case syntax.DeclarationTagChecked:
 		return nil, false
-	default:
-		panic(enumValue38.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -179,7 +175,6 @@ func sourceValueSpecification(
 		return nil, false
 	case syntax.SpecificationTagType:
 		return nil, false
-	default:
-		panic(enumValue39.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }

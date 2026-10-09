@@ -26,9 +26,8 @@ use the value. Do not take an address of a pending pair variable or capture it i
 closure. Keep both variables local to the function. Check the pair before a
 `goto`, `break`, `continue`, or `fallthrough`.
 
-Use `switch value.Tag()` for an enum value or pointer. Cover `Zero` and each declared tag with
-generated constants. Read only the payload for that tag. Use the exact
-`panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag` default.
+Use `switch value.Tag()` for an enum value or pointer. Use `exhaustive:` to require every declared
+tag, or use `default:` for fallback behavior. Read only the payload for one explicit tag.
 Do not call generated enum methods through a structural interface or an open
 generic constraint.
 Calls outside a recognized canonical switch do not get contextual payload checks.

@@ -39,19 +39,20 @@ type frontExtension interface {
 
 type frontFile struct {
 	frontSpan
-	Doc        *ast.CommentGroup
-	Package    token.Pos
-	Name       *ast.Ident
-	Decls      []frontNode
-	Imports    []*ast.ImportSpec
-	Comments   []*ast.CommentGroup
-	GoVersion  string
-	goFile     *ast.File
-	children   map[frontNode][]frontNode
-	parents    map[frontNode]frontNode
-	extensions []frontExtension
-	attached   map[frontNode][]*ast.CommentGroup
-	nonNil     map[token.Pos]bool
+	Doc               *ast.CommentGroup
+	Package           token.Pos
+	Name              *ast.Ident
+	Decls             []frontNode
+	Imports           []*ast.ImportSpec
+	Comments          []*ast.CommentGroup
+	GoVersion         string
+	goFile            *ast.File
+	children          map[frontNode][]frontNode
+	parents           map[frontNode]frontNode
+	extensions        []frontExtension
+	attached          map[frontNode][]*ast.CommentGroup
+	nonNil            map[token.Pos]bool
+	exhaustiveClauses map[token.Pos]bool
 }
 
 // frontEnumDecl declares a closed enum.

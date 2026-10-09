@@ -6,6 +6,7 @@ package syntax
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 )
 
 func (c *converter) statement(value frontNode) *Statement {
@@ -97,8 +98,13 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 		}}.Statement()
 		return &result
 	case *ast.CaseClause:
+		exhaustive := token.NoPos
+		if c.front.exhaustiveClauses[item.Case] {
+			exhaustive = item.Case
+		}
 		result := StatementCase{Value: &CaseClause{
-			Span: span(item), Case: item.Case, List: c.expressions(item.List),
+			Span: span(item), Case: item.Case, Exhaustive: exhaustive,
+			List:  c.expressions(item.List),
 			Colon: item.Colon, Body: c.statementList(item),
 		}}.Statement()
 		return &result

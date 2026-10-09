@@ -401,10 +401,11 @@ type IfStatement struct {
 // CaseClause is one expression switch clause.
 type CaseClause struct {
 	Span
-	Case  token.Pos
-	List  []%Expression
-	Colon token.Pos
-	Body  []%Statement
+	Case       token.Pos
+	Exhaustive token.Pos
+	List       []%Expression
+	Colon      token.Pos
+	Body       []%Statement
 }
 
 // SwitchStatement is one expression switch.

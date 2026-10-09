@@ -118,8 +118,7 @@ func effectConditionCode(kind effectKind) uint8 {
 		return assertionFailsConditionWire
 	case effectKindTagResliceExtends:
 		return resliceExtendsConditionWire
-	default:
-		panic(enumValue1.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -536,8 +535,7 @@ func (c %checker) collectMakeZeros(
 		c.markGenericZeroWith(summary, call, slice.Elem(), condition, false)
 	case effectOutcomeTagUnknown:
 		c.markGenericZeroWith(summary, call, slice.Elem(), nil, true)
-	default:
-		panic(enumValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 

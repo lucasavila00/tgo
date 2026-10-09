@@ -403,8 +403,7 @@ case AccountTagPersonal:
     return account.PersonalPayload().Name
 case AccountTagBusiness:
     return account.BusinessPayload().Company
-default:
-    panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+exhaustive:
 }
 ```
 
@@ -412,21 +411,25 @@ The switch tag must be a direct `Tag()` call on an enum value or pointer. Parent
 The receiver can be a local value, package value, field, alias, or captured value. An exact enum
 type constraint can use the switch. An interface or open or mixed type parameter cannot.
 
-The switch must cover every declared tag with generated tag constants. Parentheses, a
+An `exhaustive:` clause requires the switch to cover every declared tag with generated tag
+constants. Parentheses, a
 constant conversion, and a same-value constant alias are valid labels. An unrelated numeric
 constant is invalid, even when its value is equal to a tag. An unresolved label suppresses the
-missing-case diagnostic. A repeated tag is invalid. The switch must have this exact default for
-the same receiver:
+missing-case diagnostic. A repeated tag is invalid. `exhaustive:` must have no body. It emits this
+Go default for the same receiver:
 
 ```text
 default:
     panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
 ```
 
+A normal `default:` clause is a fallback and may cover omitted variants. Its body is ordinary Go
+control flow. A tag switch must have either `default:` or `exhaustive:`.
+
 A case cannot use `fallthrough`.
 
 A case with one tag permits only that variant's payload accessor on the same receiver. A case
-with multiple tags permits no payload accessor. If a clause assigns the receiver or a
+with multiple tags and a default clause permit no payload accessor. If a clause assigns the receiver or a
 selector-prefix receiver, the clause gets no payload proof. A nested function literal does not
 inherit the proof. Direct calls in `go` and `defer` statements do inherit it. Method values do not.
 A nested switch on the same `Tag()` receiver supplies its own proof.

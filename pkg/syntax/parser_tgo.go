@@ -120,18 +120,19 @@ type rawComprehensionResult struct {
 }
 
 type sourceParser struct {
-	filename       string
-	source         []byte
-	tokens         []lexeme
-	comments       []sourceEdit
-	decls          []*rawDecl
-	defaults       []*rawDefault
-	propagations   []*rawPropagation
-	comprehensions []*rawComprehension
-	nonNil         map[token.Pos]bool
-	edits          []sourceEdit
-	file           *token.File
-	mode           Mode
+	filename          string
+	source            []byte
+	tokens            []lexeme
+	comments          []sourceEdit
+	decls             []*rawDecl
+	defaults          []*rawDefault
+	exhaustiveOffsets []int
+	propagations      []*rawPropagation
+	comprehensions    []*rawComprehension
+	nonNil            map[token.Pos]bool
+	edits             []sourceEdit
+	file              *token.File
+	mode              Mode
 }
 
 // ParseFile parses one tgo source file.
@@ -149,18 +150,19 @@ func parseFrontFile(
 		return nil, err
 	}
 	state := &sourceParser{
-		filename:       filename,
-		source:         append([]byte(nil), source...),
-		tokens:         tokens,
-		comments:       comments,
-		decls:          nil,
-		defaults:       nil,
-		propagations:   nil,
-		comprehensions: nil,
-		nonNil:         make(map[token.Pos]bool),
-		edits:          nil,
-		file:           nil,
-		mode:           mode,
+		filename:          filename,
+		source:            append([]byte(nil), source...),
+		tokens:            tokens,
+		comments:          comments,
+		decls:             nil,
+		defaults:          nil,
+		exhaustiveOffsets: nil,
+		propagations:      nil,
+		comprehensions:    nil,
+		nonNil:            make(map[token.Pos]bool),
+		edits:             nil,
+		file:              nil,
+		mode:              mode,
 	}
 	if err := state.discoverDeclarations(); err != nil {
 		return nil, state.error(err)

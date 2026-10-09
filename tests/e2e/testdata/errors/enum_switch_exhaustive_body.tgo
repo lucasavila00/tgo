@@ -11,7 +11,7 @@ func label(account Account) string {
 		return account.PersonalPayload().Name
 	case AccountTagBusiness:
 		return account.BusinessPayload().Company
-	default:
+	exhaustive:
 		break
 	}
 	return "unknown"

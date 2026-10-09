@@ -80,7 +80,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		})
 		models = append(models, item)
 	}
-	edits, propagations, comprehensions, err := lowerSourceExtensions(
+	edits, propagations, comprehensions, exhaustiveLocations, err := lowerCheckedExtensions(
 		files, file, tree, name, data, defaultMarker, used, edits,
 	)
 	if err != nil {
@@ -121,8 +121,55 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		DefaultMarker:  defaultMarker,
 		Propagations:   propagations,
 		Comprehensions: comprehensions,
+		Exhaustive:     exhaustiveClausePositions(files, goFile, exhaustiveLocations),
 		NonNil:         nonNil,
 	}, nil
+}
+
+func lowerCheckedExtensions(
+	files *token.FileSet,
+	file *token.File,
+	tree *syntax.File,
+	name string,
+	data []byte,
+	defaultMarker string,
+	used map[string]bool,
+	edits []edit,
+) (
+	[]edit,
+	map[string]propagationSource,
+	map[string]comprehensionSource,
+	map[[2]int]bool,
+	error,
+) {
+	edits, exhaustive, err := lowerExhaustiveClauses(files, file, tree, data, edits)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	edits, propagations, comprehensions, err := lowerSourceExtensions(
+		files, file, tree, name, data, defaultMarker, used, edits,
+	)
+	return edits, propagations, comprehensions, exhaustive, err
+}
+
+func exhaustiveClausePositions(
+	files *token.FileSet,
+	file *ast.File,
+	locations map[[2]int]bool,
+) map[token.Pos]bool {
+	result := make(map[token.Pos]bool)
+	ast.Inspect(file, func(node ast.Node) bool {
+		clause, ok := node.(*ast.CaseClause)
+		if !ok || len(clause.List) != 0 {
+			return true
+		}
+		position := files.Position(clause.Case)
+		if locations[[2]int{position.Line, position.Column}] {
+			result[clause.Case] = true
+		}
+		return true
+	})
+	return result
 }
 
 func validateEnumPublicNames(declaration *model, node *syntax.EnumDeclaration) error {

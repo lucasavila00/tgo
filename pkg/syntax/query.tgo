@@ -65,8 +65,7 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 			return nil, false
 		case ExpressionTagComprehension:
 			return nil, false
-		default:
-			panic(enumValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
+		exhaustive:
 		}
 	case NodeTagFile:
 		return nil, false
@@ -88,8 +87,7 @@ case NodeTagComment:
 		return nil, false
 	case NodeTagCommentGroup:
 		return nil, false
-	default:
-		panic(enumValue1.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -110,8 +108,7 @@ func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 		return nil, false
 	case DeclarationTagChecked:
 		return nil, false
-	default:
-		panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -132,8 +129,7 @@ func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 		return nil, false
 	case DeclarationTagChecked:
 		return nil, false
-	default:
-		panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -154,8 +150,7 @@ func CheckedDeclarationOf(value *Declaration) (*CheckedDeclaration, bool) {
 		return nil, false
 	case DeclarationTagStruct:
 		return nil, false
-	default:
-		panic(enumValue5.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -219,8 +214,7 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 		return nil, false
 	case ExpressionTagComprehension:
 		return nil, false
-	default:
-		panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -284,8 +278,7 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 		return nil, false
 	case ExpressionTagComprehension:
 		return nil, false
-	default:
-		panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -307,8 +300,7 @@ func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
 		ExpressionTagInterfaceType, ExpressionTagMapType,
 		ExpressionTagChannelType, ExpressionTagDefault, ExpressionTagPropagation:
 		return nil, false
-	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -322,8 +314,7 @@ func ComprehensionRangeClauseOf(
 		return item.RangePayload().Value, true
 	case ComprehensionClauseTagFilter:
 		return nil, false
-	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -337,8 +328,7 @@ func ComprehensionFilterClauseOf(
 		return nil, false
 	case ComprehensionClauseTagFilter:
 		return item.FilterPayload().Value, true
-	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -402,8 +392,7 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 		return nil, false
 	case ExpressionTagComprehension:
 		return nil, false
-	default:
-		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -436,8 +425,7 @@ case NodeTagIdentifier:
 		return nil, false
 	case NodeTagCommentGroup:
 		return nil, false
-	default:
-		panic(enumValue11.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -470,8 +458,7 @@ case NodeTagIdentifier:
 		return nil, false
 	case NodeTagCommentGroup:
 		return nil, false
-	default:
-		panic(enumValue12.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -504,8 +491,7 @@ case NodeTagIdentifier:
 		return nil, false
 	case NodeTagCommentGroup:
 		return nil, false
-	default:
-		panic(enumValue13.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -538,8 +524,7 @@ case NodeTagIdentifier:
 		return nil, false
 	case NodeTagCommentGroup:
 		return nil, false
-	default:
-		panic(enumValue14.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -600,8 +585,7 @@ func ExpressionKind(value *Expression) string {
 		return "Propagation"
 	case ExpressionTagComprehension:
 		return "Comprehension"
-	default:
-		panic(enumValue15.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -650,8 +634,7 @@ func StatementKind(value *Statement) string {
 		return "For"
 	case StatementTagRange:
 		return "Range"
-default:
-		panic(enumValue16.UnknownTag()) // unreachable: tgolint requires a case per tag
+exhaustive:
 	}
 }
 
@@ -670,8 +653,7 @@ func DeclarationKind(value *Declaration) string {
 		return "Struct"
 	case DeclarationTagChecked:
 		return "Checked"
-	default:
-		panic(enumValue17.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -684,7 +666,6 @@ func SpecificationKind(value *Specification) string {
 		return "Value"
 	case SpecificationTagType:
 		return "Type"
-	default:
-		panic(enumValue18.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }

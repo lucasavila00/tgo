@@ -59,8 +59,7 @@ func isExtension(node Node) bool {
 			return true
 		case DeclarationTagChecked:
 			return true
-		default:
-			panic(enumValue28.UnknownTag()) // unreachable: tgolint requires a case per tag
+		exhaustive:
 		}
 	case NodeTagStatement:
 		value := enumValue27.StatementPayload()
@@ -107,8 +106,7 @@ func isExtension(node Node) bool {
 			return false
 		case StatementTagRange:
 			return false
-default:
-			panic(enumValue29.UnknownTag()) // unreachable: tgolint requires a case per tag
+exhaustive:
 		}
 	case NodeTagExpression:
 		value := enumValue27.ExpressionPayload()
@@ -167,8 +165,7 @@ default:
 			return true
 		case ExpressionTagComprehension:
 			return true
-		default:
-			panic(enumValue30.UnknownTag()) // unreachable: tgolint requires a case per tag
+		exhaustive:
 		}
 	case NodeTagTGoField:
 		return true
@@ -188,8 +185,7 @@ case NodeTagFile:
 		return false
 	case NodeTagCommentGroup:
 		return false
-	default:
-		panic(enumValue27.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -233,8 +229,7 @@ case NodeTagIdentifier:
 			result = append(result, nodeComment(item))
 		}
 		return result
-	default:
-		panic(enumValue31.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }
 
@@ -381,16 +376,14 @@ func expressionChildren(value %Expression) []Node {
 				addExpression(value.RangePayload().Value.Source)
 			case ComprehensionClauseTagFilter:
 				addExpression(value.FilterPayload().Value.Condition)
-			default:
-				panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+			exhaustive:
 			}
 		}
 		if item.Value.Result.Key != nil {
 			addExpression(item.Value.Result.Key)
 		}
 		addExpression(item.Value.Result.Value)
-	default:
-		panic(enumValue32.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 	return result
 }
@@ -513,8 +506,7 @@ func statementChildren(value %Statement) []Node {
 		}
 		addExpression(item.Value.Source)
 		addStatement(blockStatementNode(item.Value.Body))
-default:
-		panic(enumValue33.UnknownTag()) // unreachable: tgolint requires a case per tag
+exhaustive:
 	}
 	return result
 }
@@ -570,8 +562,7 @@ func declarationChildren(value %Declaration) []Node {
 		result = append(result, nodeExpression(item.Value.Base))
 		result = append(result, nodeExpression(item.Value.Predicate))
 		result = addComment(result, item.Value.Comment)
-	default:
-		panic(enumValue34.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 	return result
 }
@@ -609,8 +600,7 @@ func specificationChildren(value %Specification) []Node {
 		}
 		result = append(result, nodeExpression(item.Value.Type))
 		result = addComment(result, item.Value.Comment)
-	default:
-		panic(enumValue35.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 	return result
 }

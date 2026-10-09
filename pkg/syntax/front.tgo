@@ -48,6 +48,7 @@ type frontFile struct {
 	extensions []frontExtension
 	attached   map[frontNode][]*ast.CommentGroup
 	nonNil    map[token.Pos]bool
+	exhaustiveClauses map[token.Pos]bool
 }
 
 // frontEnumDecl declares a closed enum.

@@ -59,6 +59,7 @@ type source struct {
 	DefaultMarker  string
 	Propagations   map[string]propagationSource
 	Comprehensions map[string]comprehensionSource
+	Exhaustive     map[token.Pos]bool
 	NonNil         map[token.Pos]bool
 }
 

@@ -805,3 +805,12 @@ func WrongDeferPayload(event model.Event) {
 		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
+
+func DefaultPayload(event model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StartedPayload().ID
+	default:
+		return event.StoppedPayload().Reason
+	}
+}

@@ -11,7 +11,6 @@ func label(account Account) string {
 		fallthrough
 	case AccountTagBusiness:
 		return account.BusinessPayload().Company
-	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }

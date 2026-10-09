@@ -55,8 +55,7 @@ func Summary(name string) string {
     case model.AccountTagBusiness:
         company := enumValue1.BusinessPayload()
         return company.Company
-    default:
-        panic(enumValue1.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 

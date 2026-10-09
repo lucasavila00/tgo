@@ -447,8 +447,7 @@ func (c %checker) blockEffectConditions(
 		case effectOutcomeTagUnknown:
 			unknown = true
 		case effectOutcomeTagAlways:
-		default:
-			panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
+		exhaustive:
 		}
 	}
 	return conditions, unknown, true

@@ -5,8 +5,69 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"strings"
 	"testing"
 )
+
+func TestExhaustiveClauseLowersToCheckedDefault(t *testing.T) {
+	p := layoutPackage(t, `package sample
+type Account enum { Personal struct{}; Business struct{} }
+func use(account Account) {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return
+	case AccountTagBusiness:
+		return
+	exhaustive:
+	}
+}
+`)
+	if len(p.Sources[0].Exhaustive) != 1 {
+		t.Fatalf("exhaustive clauses = %d", len(p.Sources[0].Exhaustive))
+	}
+	var clause *ast.CaseClause
+	ast.Inspect(p.Sources[0].File, func(node ast.Node) bool {
+		item, ok := node.(*ast.CaseClause)
+		if ok && len(item.List) == 0 {
+			clause = item
+		}
+		return true
+	})
+	if clause == nil || len(clause.Body) != 1 {
+		t.Fatal("exhaustive clause did not emit a default panic")
+	}
+}
+
+func TestEnumDefaultAllowsFallback(t *testing.T) {
+	layoutPackage(t, `package sample
+type Account enum { Personal struct{}; Business struct{} }
+func use(account Account) string {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return "personal"
+	default:
+		return "fallback"
+	}
+}
+`)
+}
+
+func TestExhaustiveClauseRejectsBody(t *testing.T) {
+	_, err := parseSource(token.NewFileSet(), "sample.tgo", []byte(`package sample
+type Account enum { Personal struct{} }
+func use(account Account) {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return
+	exhaustive:
+		return
+	}
+}
+`))
+	if err == nil || !strings.Contains(err.Error(), "exhaustive clause must not have a body") {
+		t.Fatalf("error = %v", err)
+	}
+}
 
 func TestEnumCaseTagsRejectsRepeatedTags(t *testing.T) {
 	first := ast.NewIdent("first")

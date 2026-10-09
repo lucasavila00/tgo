@@ -10,7 +10,6 @@ func use(value E) {
 	switch value.Tag() {
 	case unrelated:
 		return
-	default:
-		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }

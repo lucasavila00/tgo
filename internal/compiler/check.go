@@ -109,7 +109,7 @@ func (p *packageUnit) checkRules() {
 				continue
 			}
 			parents := parentNodes(declaration)
-			safe, handled := p.checkEnumSwitches(declaration, parents)
+			safe, handled := p.checkEnumSwitches(declaration, parents, source.Exhaustive)
 			ast.Inspect(declaration, func(node ast.Node) bool {
 				p.checkNonNilType(source, node)
 				p.checkNode(node, parents, safe, handled)

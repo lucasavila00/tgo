@@ -1,1 +1,1 @@
-<WORK>/input.tgo:10:2: Result: default must be exactly "panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag"
+<WORK>/input.tgo:15:2: Result: exhaustive clause requires the predeclared panic

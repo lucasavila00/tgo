@@ -9,7 +9,6 @@ func label(account Account) string {
 	switch account.Tag() {
 	case AccountTagPersonal:
 		return account.PersonalPayload().Name
-	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+	exhaustive:
 	}
 }

@@ -105,8 +105,7 @@ func Label(account Account) string {
     case AccountTagBusiness:
         company := enumValue3.BusinessPayload()
         return company.Company
-    default:
-        panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 
@@ -118,8 +117,7 @@ func AliasLabel(account AccountAlias) string {
     case AccountTagBusiness:
         company := enumValue4.BusinessPayload()
         return company.Company
-    default:
-        panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 
@@ -129,8 +127,7 @@ func GenericLabel[T Accounts](account T) string {
         return account.PersonalPayload().Name
     case AccountTagBusiness:
         return account.BusinessPayload().Company
-    default:
-        panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 
@@ -192,8 +189,7 @@ func FunctionTagSubject(account Account) string {
     case AccountTagBusiness:
         business := enumValue6.BusinessPayload()
         return business.Company
-    default:
-        panic(enumValue6.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 
@@ -205,8 +201,7 @@ func LiteralTagSubject(name string) string {
     case AccountTagBusiness:
         business := enumValue7.BusinessPayload()
         return business.Company
-    default:
-        panic(enumValue7.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 
@@ -216,8 +211,7 @@ func SignalName(signal Signal) string {
         return "on"
     case SignalTagOff:
         return "off"
-    default:
-        panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 
@@ -225,8 +219,7 @@ func SignalState(signal Signal) string {
     switch signal.Tag() {
     case SignalTagOn, SignalTagOff:
         return "known"
-    default:
-        panic(signal.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 
@@ -234,8 +227,7 @@ func SignalStateOrInvalid(signal Signal) string {
     switch signal.Tag() {
     case SignalTagOn, SignalTagOff:
         return "known"
-    default:
-        panic(signal.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 
@@ -262,8 +254,7 @@ Done:
         break Done
     case AccountTagBusiness:
         break Done
-    default:
-        panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
     return "done"
 }
@@ -273,8 +264,7 @@ func NoticeLabels(notice Notice) map[string]string {
     case NoticeTagText:
         text := enumValue10.TextPayload()
         return text.Labels
-    default:
-        panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
+    exhaustive:
     }
 }
 
