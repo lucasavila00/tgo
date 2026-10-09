@@ -88,6 +88,25 @@ func AnalyzePackage(
 	return analyzePackage(compiled), nil
 }
 
+// AnalyzeTestPackage loads one internal or external TGo test package.
+func AnalyzeTestPackage(
+	directory string,
+	importPath string,
+	external bool,
+	files *token.FileSet,
+) (*Package, error) {
+	compiled, err := driver.CompileTestPackage(
+		directory, importPath, external, files,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if compiled == nil {
+		return nil, nil
+	}
+	return analyzePackage(compiled), nil
+}
+
 func analyzePackage(compiled *compiler.CompiledPackage) *Package {
 	projection := compiled.Facts
 	files := compiled.Files

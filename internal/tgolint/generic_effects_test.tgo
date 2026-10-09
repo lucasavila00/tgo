@@ -1,0 +1,43 @@
+package tgolint
+
+import (
+	"bytes"
+	"encoding/gob"
+	"testing"
+)
+
+func TestGenericEffectFactGobRoundTrip(t *testing.T) {
+	t.Parallel()
+	want := &GenericEffectFact{
+		ZeroEffects: []GenericEffect{{
+			Receiver:      false,
+			TypeParameter: 1,
+			Conditions: []GenericEffectCondition{{
+				ValueParameter: 2,
+				OtherParameter: -1,
+				Kind:           NewEffectKindBoolean(),
+				Expected:       true,
+			}},
+			MaySkip: false,
+		}},
+		AccessEffects:         nil,
+		ReturnedZeroEffects:   nil,
+		ReturnedAccessEffects: nil,
+	}
+	data := *new(bytes.Buffer)
+	if err := gob.NewEncoder(&data).Encode(want); err != nil {
+		t.Fatal(err)
+	}
+	got := new(GenericEffectFact)
+	if err := gob.NewDecoder(&data).Decode(got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.ZeroEffects) != 1 || len(got.ZeroEffects[0].Conditions) != 1 {
+		t.Fatalf("decoded fact = %#v", got)
+	}
+	condition := got.ZeroEffects[0].Conditions[0]
+	if condition.Kind.Tag() != EffectKindTagBoolean || !condition.Expected ||
+		condition.ValueParameter != 2 || condition.OtherParameter != -1 {
+		t.Fatalf("decoded condition = %#v", condition)
+	}
+}
