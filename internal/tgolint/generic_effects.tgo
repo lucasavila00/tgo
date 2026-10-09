@@ -26,13 +26,13 @@ type zeroParameter struct {
 
 // EffectKind identifies the condition that controls a generic effect.
 type EffectKind enum {
-	Boolean struct{}
-	Nonzero struct{}
-	Nonempty struct{}
-	MapMiss struct{}
-	ChannelClosed struct{}
-	AssertionFails struct{}
-	ResliceExtends struct{}
+	Boolean struct {}
+	Nonzero struct {}
+	Nonempty struct {}
+	MapMiss struct {}
+	ChannelClosed struct {}
+	AssertionFails struct {}
+	ResliceExtends struct {}
 }
 
 func booleanEffectCondition() EffectKind {
@@ -168,7 +168,7 @@ func (c %checker) collectGenericZeroSummaries() map[*types.Func]%genericEffectSu
 			summary := &genericEffectSummary{
 				function: object, file: file, declaration: function, parameters: parameters,
 				zeroEffects: nil, accessEffects: nil, returnedZeroEffects: nil,
-					returnedAccessEffects: nil, calls: nil, returnedCalls: nil,
+				returnedAccessEffects: nil, calls: nil, returnedCalls: nil,
 				reachable: c.reachableNodes(function.Body), root: &root,
 				body: function.Body,
 			}
@@ -332,7 +332,9 @@ func (c %checker) collectGenericPresenceZeros(summary %genericEffectSummary) {
 		c.zeroTypes = map[*types.TypeParam]*model{parameter: currentModel}
 		record := func(candidate %model, source *syntax.Expression) {
 			if source == nil {
-				if candidate == currentModel { sources = append(sources, nil) }
+				if candidate == currentModel {
+					sources = append(sources, nil)
+				}
 				return
 			}
 			if candidate == currentModel {
@@ -461,13 +463,17 @@ func (c %checker) collectMakeZeros(
 		return
 	}
 	typeArgument := call.Args[0]
-	if typeArgument == nil { return }
+	if typeArgument == nil {
+		return
+	}
 	slice, ok := coreType(c.facts.Type(typeArgument)).(*types.Slice)
 	if !ok {
 		return
 	}
 	lengthArgument := call.Args[1]
-	if lengthArgument == nil { return }
+	if lengthArgument == nil {
+		return
+	}
 	condition, outcome := c.nonzeroEffectCondition(lengthArgument)
 	if outcome == neverEffectOutcome() {
 		return
@@ -477,7 +483,9 @@ func (c %checker) collectMakeZeros(
 		return
 	}
 	if outcome == conditionalEffectOutcome() {
-		if condition == nil { return }
+		if condition == nil {
+			return
+		}
 		c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), condition, false)
 		return
 	}
@@ -509,7 +517,9 @@ func (c %checker) collectResliceZero(
 	value %syntax.Expression,
 	expression %syntax.SliceExpression,
 ) {
-	if expression.High == nil { return }
+	if expression.High == nil {
+		return
+	}
 	if c.currentLength(expression.High, expression.Expression) ||
 		constantZero(c.facts.Constant(expression.High)) {
 		return

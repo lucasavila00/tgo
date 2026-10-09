@@ -94,7 +94,9 @@ func (e %nilEnvironment) checkNilNode(
 			}
 		}
 		if item := syntax.ReturnStatementOf(statement); item != nil {
-			if function != nil { e.checkNilReturn(state, item, function) }
+			if function != nil {
+				e.checkNilReturn(state, item, function)
+			}
 		}
 		if item := syntax.SendStatementOf(statement); item != nil {
 			channel := e.contractForExpression(item.Channel)

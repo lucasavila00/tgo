@@ -9,22 +9,32 @@ import (
 
 // panicIsShadowed reports whether an exhaustive clause can call another panic.
 func (c %checker) panicIsShadowed(file %syntax.File, position token.Pos) bool {
-	if c.pass.Pkg.Scope().Lookup("panic") != nil { return true }
+	if c.pass.Pkg.Scope().Lookup("panic") != nil {
+		return true
+	}
 	shadowed := false
 	for _, source := range c.sourceFiles {
 		syntax.Inspect(source, func(node *syntax.Node) bool {
-			if shadowed { return false }
+			if shadowed {
+				return false
+			}
 			identifier, ok := syntax.IdentifierOf(node)
-			if !ok || identifier.Name != "panic" { return true }
+			if !ok || identifier.Name != "panic" {
+				return true
+			}
 			object, definition := c.facts.IdentifierFact(source, node)
-			if !definition || object == nil || object.Parent() == nil { return true }
+			if !definition || object == nil || object.Parent() == nil {
+				return true
+			}
 			if source == file && c.sourceObjectVisibleAt(file, node, object, position) {
 				shadowed = true
 				return false
 			}
 			return true
 		})
-		if shadowed { break }
+		if shadowed {
+			break
+		}
 	}
 	return shadowed
 }
@@ -55,7 +65,9 @@ func (c %checker) sourceObjectScopeStart(
 				return value.Stop
 			}
 		}
-		if field, ok := syntax.FieldOf(parent); ok { return field.Stop }
+		if field, ok := syntax.FieldOf(parent); ok {
+			return field.Stop
+		}
 		if statement, ok := syntax.StatementOf(parent); ok {
 			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil &&
 				assignment.Operator == token.DEFINE {

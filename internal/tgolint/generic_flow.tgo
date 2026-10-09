@@ -11,15 +11,15 @@ import (
 )
 
 type effectOutcome enum {
-	Unknown struct{}
-	Never struct{}
-	Always struct{}
-	Conditional struct{}
+	Unknown struct {}
+	Never struct {}
+	Always struct {}
+	Conditional struct {}
 }
 
-func unknownEffectOutcome() effectOutcome { return effectOutcome.Unknown{} }
-func neverEffectOutcome() effectOutcome { return effectOutcome.Never{} }
-func alwaysEffectOutcome() effectOutcome { return effectOutcome.Always{} }
+func unknownEffectOutcome() effectOutcome     { return effectOutcome.Unknown{} }
+func neverEffectOutcome() effectOutcome       { return effectOutcome.Never{} }
+func alwaysEffectOutcome() effectOutcome      { return effectOutcome.Always{} }
 func conditionalEffectOutcome() effectOutcome { return effectOutcome.Conditional{} }
 
 // reachableNodes returns syntax nodes from live CFG blocks.
@@ -141,7 +141,9 @@ func (c %checker) parameterChangedAt(
 	object types.Object,
 ) (bool, bool) {
 	if literal, ok := syntax.FunctionLiteralOf(node); ok {
-		if literal == nil || literal.Body == nil { return false, false }
+		if literal == nil || literal.Body == nil {
+			return false, false
+		}
 		return c.syntaxCapturesObject(literal.Body, object), false
 	}
 	if statement, ok := syntax.StatementOf(node); ok {
@@ -418,7 +420,9 @@ func (c %checker) genericEffectPath(
 		}
 		conditions = append(conditions, path...)
 		maySkip = maySkip || unknown
-		if parent == nil { break }
+		if parent == nil {
+			break
+		}
 		current = parent
 	}
 	return conditions, maySkip, reachable

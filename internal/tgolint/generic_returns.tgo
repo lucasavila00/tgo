@@ -177,7 +177,7 @@ func (c %checker) collectReturnedLiteral(
 	returned := &genericEffectSummary{
 		function: summary.function, file: summary.file,
 		declaration: summary.declaration,
-		parameters: summary.parameters, zeroEffects: nil,
+		parameters:  summary.parameters, zeroEffects: nil,
 		accessEffects: nil, returnedZeroEffects: nil,
 		returnedAccessEffects: nil, calls: nil, returnedCalls: nil,
 		reachable: c.reachableNodes(literal.Body), root: &root,

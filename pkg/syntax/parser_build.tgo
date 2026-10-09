@@ -73,13 +73,13 @@ func (p %sourceParser) makeComprehension(
 		Type:       projection.Type,
 		Lbrace:     p.pos(p.tokens[raw.open].start),
 		Clauses:    nil,
-		Result:     frontComprehensionResult{
+		Result: frontComprehensionResult{
 			frontSpan: frontSpan{Start: token.NoPos, Stop: token.NoPos},
 			Key:       nil,
 			Colon:     token.NoPos,
 			Value:     nil,
 		},
-		Rbrace:     p.pos(p.tokens[raw.close].start),
+		Rbrace: p.pos(p.tokens[raw.close].start),
 	}
 	for _, clause := range raw.clauses {
 		switch rawClause := *clause; rawClause.Tag() {
@@ -107,7 +107,7 @@ func (p %sourceParser) makeComprehension(
 			item := frontComprehensionClause.Range{
 				frontSpan: frontSpan{
 					Start: p.pos(p.tokens[rawRange.start].start),
-					Stop:  p.pos(p.tokens[rawRange.end - 1].end),
+					Stop:  p.pos(p.tokens[rawRange.end-1].end),
 				},
 				For:      p.pos(p.tokens[rawRange.forToken].start),
 				Bindings: bindings,
@@ -131,7 +131,7 @@ func (p %sourceParser) makeComprehension(
 			item := frontComprehensionClause.Filter{
 				frontSpan: frontSpan{
 					Start: p.pos(p.tokens[rawFilter.start].start),
-					Stop:  p.pos(p.tokens[rawFilter.end - 1].end),
+					Stop:  p.pos(p.tokens[rawFilter.end-1].end),
 				},
 				If:        p.pos(p.tokens[rawFilter.ifToken].start),
 				Condition: condition,
@@ -145,7 +145,7 @@ func (p %sourceParser) makeComprehension(
 	rawResult := raw.result
 	value, found, err := p.parseExpression(
 		p.tokens[rawResult.valueStart].start,
-		p.tokens[rawResult.valueEnd - 1].end,
+		p.tokens[rawResult.valueEnd-1].end,
 		defaultAt,
 	)
 	if err != nil {
@@ -159,7 +159,7 @@ func (p %sourceParser) makeComprehension(
 	if rawResult.colon >= 0 {
 		key, found, err = p.parseExpression(
 			p.tokens[rawResult.keyStart].start,
-			p.tokens[rawResult.keyEnd - 1].end,
+			p.tokens[rawResult.keyEnd-1].end,
 			defaultAt,
 		)
 		if err != nil {
@@ -173,11 +173,11 @@ func (p %sourceParser) makeComprehension(
 	result.Result = frontComprehensionResult{
 		frontSpan: frontSpan{
 			Start: p.pos(p.tokens[rawResult.start].start),
-			Stop:  p.pos(p.tokens[rawResult.end - 1].end),
+			Stop:  p.pos(p.tokens[rawResult.end-1].end),
 		},
-		Key:       key,
-		Colon:     colon,
-		Value:     value,
+		Key:   key,
+		Colon: colon,
+		Value: value,
 	}
 	return result, anchors,
 }
@@ -215,18 +215,18 @@ func (p %sourceParser) makeDeclaration(
 					Start: p.pos(rawVariant.start),
 					Stop:  p.pos(rawVariant.end),
 				},
-				Doc:       nil,
-				Name:      &ast.Ident{
+				Doc: nil,
+				Name: &ast.Ident{
 					NamePos: p.pos(p.tokens[rawVariant.name].start),
 					Name:    p.tokens[rawVariant.name].text,
 					Obj:     nil,
 				},
-				Struct:    p.pos(p.tokens[rawVariant.structToken].start),
-				Tag:       p.enumTag(rawVariant.tag),
-				Lbrace:    p.pos(p.tokens[rawVariant.open].start),
-				Fields:    fields,
-				Rbrace:    p.pos(p.tokens[rawVariant.close].start),
-				Comment:   nil,
+				Struct:  p.pos(p.tokens[rawVariant.structToken].start),
+				Tag:     p.enumTag(rawVariant.tag),
+				Lbrace:  p.pos(p.tokens[rawVariant.open].start),
+				Fields:  fields,
+				Rbrace:  p.pos(p.tokens[rawVariant.close].start),
+				Comment: nil,
 			}
 			node.Variants = append(node.Variants, variant)
 			for extension, parent := range fieldAnchors {
@@ -287,8 +287,8 @@ func (p %sourceParser) makeFields(
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
 			parsedDefault, expressionAnchors := p.parseExpression(
-				p.tokens[raw.assign + 1].start,
-				p.tokens[raw.end - 1].end,
+				p.tokens[raw.assign+1].start,
+				p.tokens[raw.end-1].end,
 				defaultAt,
 			)!!
 			defaultValue = parsedDefault
@@ -299,13 +299,13 @@ func (p %sourceParser) makeFields(
 		item := &frontFieldDecl{
 			frontSpan: frontSpan{
 				Start: p.pos(p.tokens[raw.start].start),
-				Stop:  p.pos(p.tokens[raw.end - 1].end),
+				Stop:  p.pos(p.tokens[raw.end-1].end),
 			},
-			Doc:       field.Doc,
-			Field:     field,
-			Assign:    assign,
-			Default:   defaultValue,
-			Comment:   field.Comment,
+			Doc:     field.Doc,
+			Field:   field,
+			Assign:  assign,
+			Default: defaultValue,
+			Comment: field.Comment,
 		}
 		fields = append(fields, item)
 	}
@@ -315,22 +315,22 @@ func (p %sourceParser) makeFields(
 func (p %sourceParser) parseField(start int, end int) (*ast.Field, error) {
 	const prefix = "package p\ntype _ struct {\n"
 	from := p.tokens[start].start
-	to := p.tokens[end - 1].end
+	to := p.tokens[end-1].end
 	projection := p.project(from, to, p.editsInRange(from, to))
 	wrapped := prefix + string(projection) + "\n}"
 	set := token.NewFileSet()
 	file, err := parser.ParseFile(
 		set,
-		p.filename + " (field)",
+		p.filename+" (field)",
 		wrapped,
-		parser.ParseComments | parser.SkipObjectResolution,
+		parser.ParseComments|parser.SkipObjectResolution,
 	)
 	if err != nil {
 		return , p.mapFragmentError(
 			err,
 			len(prefix),
 			p.tokens[start].start,
-			p.tokens[end - 1].end,
+			p.tokens[end-1].end,
 		)
 	}
 	general := file.Decls[0].(*ast.GenDecl)
@@ -366,9 +366,9 @@ func (p %sourceParser) parseExpression(
 	set := token.NewFileSet()
 	file, err := parser.ParseFile(
 		set,
-		p.filename + " (expression)",
+		p.filename+" (expression)",
 		wrapped,
-		parser.ParseComments | parser.SkipObjectResolution,
+		parser.ParseComments|parser.SkipObjectResolution,
 	)
 	if err != nil {
 		failure := p.mapFragmentError(err, len(prefix), start, end)
