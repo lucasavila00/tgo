@@ -3,34 +3,58 @@ package tgolint
 import "tgo/pkg/syntax"
 
 // inspectGenericBlock visits a function body in source order.
-func inspectGenericBlock(body *syntax.BlockStatement, visit func(*syntax.Node) bool) {
-	if body == nil || visit == nil { return }
+func inspectGenericBlock(body %syntax.BlockStatement, visit func(%syntax.Node) bool) {
+ if visit == nil { return }
 	statement := syntax.Statement.Block{Value: body}
-	syntax.InspectStatement(&statement, visit)
+	inspectGenericStatement(&statement, visit)
 }
 
-func inspectGenericNode(node *syntax.Node, visit func(*syntax.Node) bool) {
-	if node == nil || visit == nil { return }
-	if expression, ok := syntax.ExpressionOf(node); ok {
-		syntax.InspectExpression(expression, visit)
+func inspectGenericNode(node %syntax.Node, visit func(%syntax.Node) bool) {
+	if visit == nil { return }
+	if expression, ok := syntax.ExpressionOf(node); ok && expression != nil {
+		inspectGenericExpression(expression, visit)
 		return
 	}
-	if statement, ok := syntax.StatementOf(node); ok {
-		syntax.InspectStatement(statement, visit)
+	if statement, ok := syntax.StatementOf(node); ok && statement != nil {
+		inspectGenericStatement(statement, visit)
 		return
 	}
 	if !visit(node) { return }
 	if specification, ok := syntax.SpecificationOf(node); ok {
 		if value := syntax.ValueSpecificationOf(specification); value != nil {
-			if value.Type != nil { syntax.InspectExpression(value.Type, visit) }
+			if value.Type != nil { inspectGenericExpression(value.Type, visit) }
 			for _, expression := range value.Values {
-				syntax.InspectExpression(expression, visit)
+				inspectGenericExpression(expression, visit)
 			}
 		}
 	}
 }
 
-func genericFunctionBody(node *syntax.Node) *syntax.BlockStatement {
+func inspectGenericFile(file %syntax.File, visit func(%syntax.Node) bool) {
+	if visit == nil { return }
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		if node == nil { return true }
+		return visit(node)
+	})
+}
+
+func inspectGenericExpression(expression %syntax.Expression, visit func(%syntax.Node) bool) {
+	if visit == nil { return }
+	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+		if node == nil { return true }
+		return visit(node)
+	})
+}
+
+func inspectGenericStatement(statement %syntax.Statement, visit func(%syntax.Node) bool) {
+	if visit == nil { return }
+	syntax.InspectStatement(statement, func(node *syntax.Node) bool {
+		if node == nil { return true }
+		return visit(node)
+	})
+}
+
+func genericFunctionBody(node %syntax.Node) *syntax.BlockStatement {
 	if declaration, ok := syntax.FunctionDeclarationOf(node); ok {
 		return declaration.Body
 	}
@@ -40,8 +64,7 @@ func genericFunctionBody(node *syntax.Node) *syntax.BlockStatement {
 	return nil
 }
 
-func syntaxNode(expression *syntax.Expression) *syntax.Node {
-	if expression == nil { return nil }
+func syntaxNode(expression %syntax.Expression) %syntax.Node {
 	node := syntax.ExpressionNode(expression)
 	return &node
 }

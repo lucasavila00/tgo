@@ -11,7 +11,7 @@ import (
 
 // reportGenericZeroCall applies a generic effect summary to one call.
 func (c %checker) reportGenericZeroCall(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	summaries map[*types.Func]%genericEffectSummary,
 ) {
 	function, receiverArguments, typeArguments := c.genericCall(expression)
@@ -30,8 +30,8 @@ func (c %checker) reportGenericZeroCall(
 
 // reportGenericEffects groups model effects and reports their certainty.
 func (c %checker) reportGenericEffects(
-	expression *syntax.Expression,
-	call *syntax.Expression,
+	expression %syntax.Expression,
+	call %syntax.Expression,
 	effects []genericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
@@ -92,17 +92,13 @@ func (c %checker) reportGenericEffects(
 }
 
 func effectOutcomeRank(outcome effectOutcome) int {
-	switch enumValue4 := outcome; enumValue4.Tag() {
-	case effectOutcomeTagUnknown:
-		return 1
-	case effectOutcomeTagNever:
+	if outcome == neverEffectOutcome() {
 		return 0
-	case effectOutcomeTagAlways:
-		return 2
-	case effectOutcomeTagConditional:
-		return 1
-	exhaustive:
 	}
+	if outcome == alwaysEffectOutcome() {
+		return 2
+	}
+	return 1
 }
 
 func (c %checker) genericEffectModel(
@@ -146,7 +142,7 @@ func (c %checker) genericEffectType(
 
 // effectCertainty proves whether an effect never, can, or will occur.
 func (c %checker) effectCertainty(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	effect genericEffect,
 	targetType types.Type,
 ) effectOutcome {
@@ -174,7 +170,7 @@ func (c %checker) effectCertainty(
 
 // effectConditionValue evaluates one condition against concrete call arguments.
 func (c %checker) effectConditionValue(
-	callExpression *syntax.Expression,
+	callExpression %syntax.Expression,
 	condition genericEffectCondition,
 	targetType types.Type,
 ) (bool, bool) {
@@ -191,8 +187,8 @@ func (c %checker) effectConditionValue(
 }
 
 func (c %checker) scalarEffectCondition(
-	call *syntax.Expression,
-	expression *syntax.Expression,
+	call %syntax.Expression,
+	expression %syntax.Expression,
 	condition genericEffectCondition,
 ) (bool, bool) {
 	if condition.Kind == booleanEffectCondition() {
@@ -205,8 +201,8 @@ func (c %checker) scalarEffectCondition(
 }
 
 func (c %checker) booleanConditionValue(
-	call *syntax.Expression,
-	expression *syntax.Expression,
+	call %syntax.Expression,
+	expression %syntax.Expression,
 	expected bool,
 ) (bool, bool) {
 	if value, known := c.scalarValueAt(syntaxNode(call), expression); known {
@@ -222,8 +218,8 @@ func (c %checker) booleanConditionValue(
 }
 
 func (c %checker) integerConditionValue(
-	call *syntax.Expression,
-	expression *syntax.Expression,
+	call %syntax.Expression,
+	expression %syntax.Expression,
 	expected bool,
 ) (bool, bool) {
 	if value, known := c.scalarValueAt(syntaxNode(call), expression); known {
@@ -239,7 +235,7 @@ func (c %checker) integerConditionValue(
 }
 
 func (c %checker) compositeEffectCondition(
-	callExpression *syntax.Expression,
+	callExpression %syntax.Expression,
 	condition genericEffectCondition,
 	targetType types.Type,
 ) (bool, bool) {
@@ -267,7 +263,7 @@ func (c %checker) compositeEffectCondition(
 }
 
 // knownSliceBounds reads exact length and capacity from literals and make calls.
-func (c %checker) knownSliceBounds(expression *syntax.Expression) (int64, int64, bool) {
+func (c %checker) knownSliceBounds(expression %syntax.Expression) (int64, int64, bool) {
 	if parentheses := syntax.ParenthesizedExpressionOf(expression); parentheses != nil {
 		return c.knownSliceBounds(parentheses.Expression)
 	}
@@ -300,7 +296,7 @@ func (c %checker) knownSliceBounds(expression *syntax.Expression) (int64, int64,
 	return length, capacity, known
 }
 
-func (c %checker) knownIntegerAt(node *syntax.Node, expression *syntax.Expression) (int64, bool) {
+func (c %checker) knownIntegerAt(node %syntax.Node, expression %syntax.Expression) (int64, bool) {
 	if value, known := c.scalarValueAt(node, expression); known {
 		if integer, exact := scalarInteger(value); exact {
 			return integer, true
@@ -309,7 +305,7 @@ func (c %checker) knownIntegerAt(node *syntax.Node, expression *syntax.Expressio
 	return constantInteger(c.facts.Constant(expression))
 }
 
-func (c %checker) literalLength(literal *syntax.CompositeLiteral) (int64, bool) {
+func (c %checker) literalLength(literal %syntax.CompositeLiteral) (int64, bool) {
 	next := int64(0)
 	largest := int64(-1)
 	for _, element := range literal.Elements {
@@ -337,7 +333,7 @@ func constantInteger(value constant.Value) (int64, bool) {
 }
 
 func (c %checker) mapMissCondition(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	condition genericEffectCondition,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(expression)
@@ -369,7 +365,7 @@ func (c %checker) mapMissCondition(
 	return true, true
 }
 
-func (c %checker) freshChannel(expression *syntax.Expression) bool {
+func (c %checker) freshChannel(expression %syntax.Expression) bool {
 	value := unparenthesized(expression)
 	call := syntax.CallExpressionOf(value)
 	if call == nil {
@@ -385,7 +381,7 @@ func (c %checker) freshChannel(expression *syntax.Expression) bool {
 }
 
 func (c %checker) assertionFails(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	target types.Type,
 ) (bool, bool) {
 	fails, known := c.assertionTypes(expression, target)
@@ -393,7 +389,7 @@ func (c %checker) assertionFails(
 }
 
 func (c %checker) assertionTypes(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	target types.Type,
 ) (bool, bool) {
 	if target == nil {
@@ -414,7 +410,7 @@ func (c %checker) assertionTypes(
 }
 
 func (c %checker) resliceExtends(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	condition genericEffectCondition,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(expression)
@@ -434,7 +430,7 @@ func (c %checker) resliceExtends(
 	return high > length && high <= capacity, true
 }
 
-func unparenthesized(expression *syntax.Expression) *syntax.Expression {
+func unparenthesized(expression %syntax.Expression) %syntax.Expression {
 	for {
 		parentheses := syntax.ParenthesizedExpressionOf(expression)
 		if parentheses == nil {
@@ -470,7 +466,7 @@ func (c %checker) modelBehindAccessType(typ types.Type) *model {
 
 // genericCall resolves a call and its receiver and function type arguments.
 func (c %checker) genericCall(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 ) (*types.Func, []types.Type, []types.Type) {
 	call := syntax.CallExpressionOf(expression)
 	if call == nil { return nil, nil, nil }
@@ -489,7 +485,7 @@ func (c %checker) genericCall(
 	return function.Origin(), c.receiverTypeArguments(call.Callee), typeArguments
 }
 
-func (c %checker) genericCallObject(expression *syntax.Expression) types.Object {
+func (c %checker) genericCallObject(expression %syntax.Expression) types.Object {
 	base := genericCallBase(expression)
 	if selector := syntax.SelectorExpressionOf(base); selector != nil {
 		if selection := c.facts.Selection(base); selection != nil {
@@ -503,7 +499,7 @@ func (c %checker) genericCallObject(expression *syntax.Expression) types.Object 
 	return nil
 }
 
-func genericCallIdentifier(expression *syntax.Expression) *syntax.Identifier {
+func genericCallIdentifier(expression %syntax.Expression) *syntax.Identifier {
 	base := genericCallBase(expression)
 	if identifier := syntax.IdentifierExpressionOf(base); identifier != nil {
 		return identifier
@@ -514,7 +510,7 @@ func genericCallIdentifier(expression *syntax.Expression) *syntax.Identifier {
 	return nil
 }
 
-func genericCallBase(expression *syntax.Expression) *syntax.Expression {
+func genericCallBase(expression %syntax.Expression) %syntax.Expression {
 	if item := syntax.ParenthesizedExpressionOf(expression); item != nil {
 		return genericCallBase(item.Expression)
 	}
@@ -527,7 +523,7 @@ func genericCallBase(expression *syntax.Expression) *syntax.Expression {
 	return expression
 }
 
-func (c %checker) receiverTypeArguments(expression *syntax.Expression) []types.Type {
+func (c %checker) receiverTypeArguments(expression %syntax.Expression) []types.Type {
 	base := genericCallBase(expression)
 	selector := syntax.SelectorExpressionOf(base)
 	if selector == nil {

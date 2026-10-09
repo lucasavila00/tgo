@@ -41,12 +41,12 @@ func (c %checker) collectGenericValueBindings(
 }
 
 func (c %checker) collectFileGenericValueBindings(
-	file *syntax.File,
+	file %syntax.File,
 	summaries map[*types.Func]%genericEffectSummary,
 	bindings map[types.Object]%genericValueBinding,
 	sources map[*syntax.Expression]bool,
 ) {
-	syntax.Inspect(file, func(node *syntax.Node) bool {
+	inspectGenericFile(file, func(node %syntax.Node) bool {
 		if statement, ok := syntax.StatementOf(node); ok {
 			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil &&
 				assignment.Operator == token.DEFINE {
@@ -57,7 +57,7 @@ func (c %checker) collectFileGenericValueBindings(
 		}
 		if specification, ok := syntax.SpecificationOf(node); ok {
 			if value := syntax.ValueSpecificationOf(specification); value != nil {
-				left := make([]*syntax.Expression, len(value.Names))
+				left := make([]%syntax.Expression, len(value.Names))
 				for index := range value.Names {
 					item := syntax.Expression.Identifier{Value: value.Names[index]}
 					left[index] = &item
@@ -73,10 +73,10 @@ func (c %checker) collectFileGenericValueBindings(
 
 // markAmbiguousGenericValueBindings rejects values changed after their first binding.
 func (c %checker) markAmbiguousGenericValueBindings(
-	file *syntax.File,
+	file %syntax.File,
 	bindings map[types.Object]%genericValueBinding,
 ) {
-	syntax.Inspect(file, func(node *syntax.Node) bool {
+	inspectGenericFile(file, func(node %syntax.Node) bool {
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			return true
@@ -116,8 +116,8 @@ func (c %checker) markAmbiguousGenericTargets(
 }
 
 func (c %checker) collectAssignedGenericValues(
-	left []*syntax.Expression,
-	right []*syntax.Expression,
+	left []%syntax.Expression,
+	right []%syntax.Expression,
 	summaries map[*types.Func]%genericEffectSummary,
 	bindings map[types.Object]%genericValueBinding,
 	sources map[*syntax.Expression]bool,
@@ -148,7 +148,7 @@ func (c %checker) collectAssignedGenericValues(
 
 // genericValue resolves the effects carried by a function value expression.
 func (c %checker) genericValue(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	summaries map[*types.Func]%genericEffectSummary,
 ) (genericValue, bool) {
 	if callExpression := unparenthesized(expression);
@@ -196,7 +196,7 @@ func (c %checker) genericValue(
 
 // reportDirectGenericValueEscape rejects an effectful value with no checked call site.
 func (c %checker) reportDirectGenericValueEscape(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	summaries map[*types.Func]%genericEffectSummary,
 	sources map[*syntax.Expression]bool,
 ) {
@@ -210,9 +210,11 @@ func (c %checker) reportDirectGenericValueEscape(
 	}
 }
 
-func (c %checker) genericInstantiationPart(expression *syntax.Expression) bool {
-	parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(expression)])
-	if !ok {
+func (c %checker) genericInstantiationPart(expression %syntax.Expression) bool {
+	parentNode := c.parents[syntax.ExpressionNode(expression)]
+	if parentNode == nil { return false }
+	parent, ok := syntax.ExpressionOf(parentNode)
+	if !ok || parent == nil {
 		return false
 	}
 	if index := syntax.IndexExpressionOf(parent); index != nil {
@@ -223,7 +225,7 @@ func (c %checker) genericInstantiationPart(expression *syntax.Expression) bool {
 }
 
 func (c %checker) reportReturnedGenericCall(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	summaries map[*types.Func]%genericEffectSummary,
 	sources map[*syntax.Expression]bool,
 ) {
@@ -241,11 +243,13 @@ func (c %checker) reportReturnedGenericCall(
 	c.reportGenericValueEscape(expression, value)
 }
 
-func (c %checker) directCallOf(expression *syntax.Expression) *syntax.Expression {
-	current := expression
+func (c %checker) directCallOf(expression %syntax.Expression) *syntax.Expression {
+	var current *syntax.Expression = expression
 	for {
-		parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
-		if !ok {
+		parentNode := c.parents[syntax.ExpressionNode(current)]
+		if parentNode == nil { return nil }
+		parent, ok := syntax.ExpressionOf(parentNode)
+		if !ok || parent == nil {
 			return nil
 		}
 		parentheses := syntax.ParenthesizedExpressionOf(parent)
@@ -254,8 +258,10 @@ func (c %checker) directCallOf(expression *syntax.Expression) *syntax.Expression
 		}
 		current = parent
 	}
-	parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
-	if !ok {
+	parentNode := c.parents[syntax.ExpressionNode(current)]
+	if parentNode == nil { return nil }
+	parent, ok := syntax.ExpressionOf(parentNode)
+	if !ok || parent == nil {
 		return nil
 	}
 	call := syntax.CallExpressionOf(parent)
@@ -265,11 +271,13 @@ func (c %checker) directCallOf(expression *syntax.Expression) *syntax.Expression
 	return nil
 }
 
-func (c %checker) discardedValue(expression *syntax.Expression) bool {
-	current := expression
+func (c %checker) discardedValue(expression %syntax.Expression) bool {
+	var current *syntax.Expression = expression
 	for {
-		parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
-		if !ok {
+		parentNode := c.parents[syntax.ExpressionNode(current)]
+		if parentNode == nil { break }
+		parent, ok := syntax.ExpressionOf(parentNode)
+		if !ok || parent == nil {
 			break
 		}
 		parentheses := syntax.ParenthesizedExpressionOf(parent)
@@ -278,8 +286,10 @@ func (c %checker) discardedValue(expression *syntax.Expression) bool {
 		}
 		current = parent
 	}
-	statement, ok := syntax.StatementOf(c.parents[syntax.ExpressionNode(current)])
-	if !ok {
+	parentNode := c.parents[syntax.ExpressionNode(current)]
+	if parentNode == nil { return false }
+	statement, ok := syntax.StatementOf(parentNode)
+	if !ok || statement == nil {
 		return false
 	}
 	assignment := syntax.AssignmentStatementOf(statement)
@@ -296,11 +306,13 @@ func (c %checker) discardedValue(expression *syntax.Expression) bool {
 	return false
 }
 
-func (c %checker) expressionStatement(expression *syntax.Expression) bool {
-	current := expression
+func (c %checker) expressionStatement(expression %syntax.Expression) bool {
+	var current *syntax.Expression = expression
 	for {
-		parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
-		if !ok {
+		parentNode := c.parents[syntax.ExpressionNode(current)]
+		if parentNode == nil { break }
+		parent, ok := syntax.ExpressionOf(parentNode)
+		if !ok || parent == nil {
 			break
 		}
 		parentheses := syntax.ParenthesizedExpressionOf(parent)
@@ -309,8 +321,10 @@ func (c %checker) expressionStatement(expression *syntax.Expression) bool {
 		}
 		current = parent
 	}
-	statement, ok := syntax.StatementOf(c.parents[syntax.ExpressionNode(current)])
-	if !ok {
+	parentNode := c.parents[syntax.ExpressionNode(current)]
+	if parentNode == nil { return false }
+	statement, ok := syntax.StatementOf(parentNode)
+	if !ok || statement == nil {
 		return false
 	}
 	expressionStatement := syntax.ExpressionStatementOf(statement)
@@ -318,11 +332,12 @@ func (c %checker) expressionStatement(expression *syntax.Expression) bool {
 }
 
 func (c %checker) reportBoundGenericValueUse(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	bindings map[types.Object]%genericValueBinding,
 ) {
 	name := syntax.IdentifierExpressionOf(expression)
-	if name == nil || c.facts.DefinitionName(name) != nil { return }
+	if name == nil { return }
+	if c.facts.DefinitionName(name) != nil { return }
 	binding, found := bindings[c.facts.Object(name)]
 	if !found || c.discardedValue(expression) {
 		return
@@ -336,7 +351,7 @@ func (c %checker) reportBoundGenericValueUse(
 
 // reportGenericValueCall checks saved effects with the current call arguments.
 func (c %checker) reportGenericValueCall(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	value genericValue,
 ) {
 	if syntax.CallExpressionOf(expression) == nil { return }
@@ -345,6 +360,7 @@ func (c %checker) reportGenericValueCall(
 	effectsAccess := value.fact.AccessEffects
 	description := "call to " + value.function.Name()
 	if value.returned {
+		if value.conditionCall == nil { return }
 		conditionCall = value.conditionCall
 		effectsZero = value.fact.ReturnedZeroEffects
 		effectsAccess = value.fact.ReturnedAccessEffects
@@ -393,11 +409,13 @@ func (c %checker) genericValueAffectsModel(value genericValue) bool {
 	return false
 }
 
-func (c %checker) calledDirectly(expression *syntax.Expression) bool {
-	current := expression
+func (c %checker) calledDirectly(expression %syntax.Expression) bool {
+	var current *syntax.Expression = expression
 	for {
-		parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
-		if !ok {
+		parentNode := c.parents[syntax.ExpressionNode(current)]
+		if parentNode == nil { return false }
+		parent, ok := syntax.ExpressionOf(parentNode)
+		if !ok || parent == nil {
 			return false
 		}
 		parentheses := syntax.ParenthesizedExpressionOf(parent)

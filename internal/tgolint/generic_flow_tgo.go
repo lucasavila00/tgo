@@ -255,7 +255,8 @@ func (c *checker) expressionParameter(
 	if name == nil {
 		return 0, false
 	}
-	return c.valueParameter(summary, c.facts.Object(name))
+	object := c.facts.Object(name)
+	return c.valueParameter(summary, object)
 }
 
 // parameterStableBefore rejects a condition after mutation or escape.
@@ -289,6 +290,9 @@ func (c *checker) parameterChangedAt(
 	object types.Object,
 ) (bool, bool) {
 	if literal, ok := syntax.FunctionLiteralOf(node); ok {
+		if literal == nil || literal.Body == nil {
+			return false, false
+		}
 		return c.syntaxCapturesObject(literal.Body, object), false
 	}
 	if statement, ok := syntax.StatementOf(node); ok {
@@ -368,7 +372,7 @@ func (c *checker) scalarEscapesInExpression(
 	object types.Object,
 ) bool {
 	escapes := false
-	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+	inspectGenericExpression(expression, func(node *syntax.Node) bool {
 		if value, ok := syntax.ExpressionOf(node); ok {
 			if unary := syntax.UnaryExpressionOf(value); unary != nil &&
 				unary.Operator == token.AND &&
@@ -521,7 +525,7 @@ func (c *checker) genericEffectPath(
 	reachable := false
 	var conditions []genericEffectCondition = nil
 	maySkip := false
-	current := node
+	var current *syntax.Node = node
 	for current != nil && *current != *summary.root {
 		if summary.reachable[*current] {
 			reachable = true
@@ -541,6 +545,9 @@ func (c *checker) genericEffectPath(
 		}
 		conditions = append(conditions, path...)
 		maySkip = maySkip || unknown
+		if parent == nil {
+			break
+		}
 		current = parent
 	}
 	return conditions, maySkip, reachable
@@ -614,22 +621,34 @@ func (c *checker) blockEffectConditions(
 			continue
 		}
 		trueStops := c.statementsTerminate(summary.file, conditional.Body.List)
-		falseStops := conditional.Else != nil &&
-			c.statementsTerminate(summary.file, []*syntax.Statement{conditional.Else})
+		falseStops := false
+		if conditional.Else != nil {
+			falseStops = c.statementsTerminate(
+				summary.file, []*syntax.Statement{conditional.Else},
+			)
+		}
 		if trueStops == falseStops {
 			continue
 		}
-		condition, outcome := c.booleanEffectCondition(conditional.Condition, falseStops)
-		switch enumValue3 := outcome; enumValue3.Tag() {
-		case effectOutcomeTagNever:
-			return nil, false, false
-		case effectOutcomeTagConditional:
-			conditions = append(conditions, *condition)
-		case effectOutcomeTagUnknown:
+		conditionExpression := conditional.Condition
+		if conditionExpression == nil {
 			unknown = true
-		case effectOutcomeTagAlways:
-		default:
-			panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
+			continue
+		}
+		condition, outcome := c.booleanEffectCondition(conditionExpression, falseStops)
+		if outcome == neverEffectOutcome() {
+			return nil, false, false
+		}
+		if outcome == conditionalEffectOutcome() {
+			if condition == nil {
+				unknown = true
+				continue
+			}
+			conditions = append(conditions, *condition)
+			continue
+		}
+		if outcome == unknownEffectOutcome() {
+			unknown = true
 		}
 	}
 	return conditions, unknown, true

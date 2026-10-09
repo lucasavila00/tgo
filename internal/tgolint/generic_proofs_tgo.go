@@ -95,18 +95,13 @@ func (c *checker) reportGenericEffects(
 }
 
 func effectOutcomeRank(outcome effectOutcome) int {
-	switch enumValue4 := outcome; enumValue4.Tag() {
-	case effectOutcomeTagUnknown:
-		return 1
-	case effectOutcomeTagNever:
+	if outcome == neverEffectOutcome() {
 		return 0
-	case effectOutcomeTagAlways:
-		return 2
-	case effectOutcomeTagConditional:
-		return 1
-	default:
-		panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
+	if outcome == alwaysEffectOutcome() {
+		return 2
+	}
+	return 1
 }
 
 func (c *checker) genericEffectModel(

@@ -461,7 +461,7 @@ func (c *checker) checkGenericZeroSafety() {
 		if c.generated[file] {
 			continue
 		}
-		syntax.Inspect(file, func(node *syntax.Node) bool {
+		inspectGenericFile(file, func(node *syntax.Node) bool {
 			expression, ok := syntax.ExpressionOf(node)
 			if !ok {
 				return true
@@ -490,7 +490,7 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 		if c.generated[file] {
 			continue
 		}
-		syntax.Inspect(file, func(node *syntax.Node) bool {
+		inspectGenericFile(file, func(node *syntax.Node) bool {
 			function, ok := syntax.FunctionDeclarationOf(node)
 			if !ok || function.Body == nil {
 				return true
@@ -791,23 +791,34 @@ func (c *checker) collectMakeZeros(
 	if len(call.Args) < 2 {
 		return
 	}
-	slice, ok := coreType(c.facts.Type(call.Args[0])).(*types.Slice)
+	typeArgument := call.Args[0]
+	if typeArgument == nil {
+		return
+	}
+	slice, ok := coreType(c.facts.Type(typeArgument)).(*types.Slice)
 	if !ok {
 		return
 	}
-	condition, outcome := c.nonzeroEffectCondition(call.Args[1])
-	switch enumValue2 := outcome; enumValue2.Tag() {
-	case effectOutcomeTagNever:
+	lengthArgument := call.Args[1]
+	if lengthArgument == nil {
 		return
-	case effectOutcomeTagAlways:
-		c.markGenericZeroAt(summary, syntaxNode(expression), slice.Elem())
-	case effectOutcomeTagConditional:
-		c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), condition, false)
-	case effectOutcomeTagUnknown:
-		c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), nil, true)
-	default:
-		panic(enumValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
+	condition, outcome := c.nonzeroEffectCondition(lengthArgument)
+	if outcome == neverEffectOutcome() {
+		return
+	}
+	if outcome == alwaysEffectOutcome() {
+		c.markGenericZeroAt(summary, syntaxNode(expression), slice.Elem())
+		return
+	}
+	if outcome == conditionalEffectOutcome() {
+		if condition == nil {
+			return
+		}
+		c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), condition, false)
+		return
+	}
+	c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), nil, true)
 }
 
 func (c *checker) collectMapReadZero(
@@ -835,7 +846,10 @@ func (c *checker) collectResliceZero(
 	value *syntax.Expression,
 	expression *syntax.SliceExpression,
 ) {
-	if expression.High == nil || c.currentLength(expression.High, expression.Expression) ||
+	if expression.High == nil {
+		return
+	}
+	if c.currentLength(expression.High, expression.Expression) ||
 		constantZero(c.facts.Constant(expression.High)) {
 		return
 	}

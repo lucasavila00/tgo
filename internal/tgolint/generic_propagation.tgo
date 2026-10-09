@@ -93,7 +93,7 @@ func (c %checker) propagateGenericZeroFacts(
 
 func (c %checker) propagateGenericEffects(
 	summary %genericEffectSummary,
-	callExpression *syntax.Expression,
+	callExpression %syntax.Expression,
 	effects []genericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
@@ -124,7 +124,7 @@ func (c %checker) propagateGenericEffects(
 // propagatedGenericEffect maps one callee effect into its caller.
 func (c %checker) propagatedGenericEffect(
 	summary %genericEffectSummary,
-	callExpression *syntax.Expression,
+	callExpression %syntax.Expression,
 	effect genericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
@@ -172,7 +172,7 @@ func (c %checker) propagatedGenericEffect(
 // mapEffectCondition evaluates or remaps one callee condition.
 func (c %checker) mapEffectCondition(
 	summary %genericEffectSummary,
-	callExpression *syntax.Expression,
+	callExpression %syntax.Expression,
 	condition genericEffectCondition,
 	targetType types.Type,
 ) (*genericEffectCondition, effectOutcome) {
@@ -202,8 +202,8 @@ func (c %checker) mapEffectCondition(
 
 func (c %checker) mapParameterEffectCondition(
 	summary %genericEffectSummary,
-	callExpression *syntax.Expression,
-	expression *syntax.Expression,
+	callExpression %syntax.Expression,
+	expression %syntax.Expression,
 	condition genericEffectCondition,
 ) (*genericEffectCondition, effectOutcome) {
 	call := syntax.CallExpressionOf(callExpression)
@@ -244,8 +244,8 @@ func (c %checker) mapParameterEffectCondition(
 }
 
 func (c %checker) mappedScalarEffectCondition(
-	callExpression *syntax.Expression,
-	expression *syntax.Expression,
+	callExpression %syntax.Expression,
+	expression %syntax.Expression,
 	condition genericEffectCondition,
 ) *genericEffectCondition {
 	if !isScalarEffectCondition(condition.Kind) {
