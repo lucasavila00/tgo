@@ -80,9 +80,10 @@ type rawDefault struct {
 }
 
 type rawPropagation struct {
-	callEnd int
-	bang    int
-	node    *frontPropagateExpr
+	callEnd    int
+	bang       int
+	secondBang int
+	node       *frontPropagateExpr
 }
 
 type rawComprehension struct {
@@ -338,9 +339,9 @@ func (p *sourceParser) discoverDeclarations() error {
 			}
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return err
+			end, tgoErr := p.closeToken(cursor)
+			if tgoErr != nil {
+				return tgoErr
 			}
 			cursor = end + 1
 			continue
@@ -382,9 +383,9 @@ func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
 			return p.checkedDeclaration(start, baseStart, cursor)
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return nil, 0, err
+			end, tgoErr := p.closeToken(cursor)
+			if tgoErr != nil {
+				return nil, 0, tgoErr
 			}
 			cursor = end + 1
 			continue

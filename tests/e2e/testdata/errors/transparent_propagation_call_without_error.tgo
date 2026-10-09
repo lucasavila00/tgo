@@ -1,0 +1,8 @@
+package errors
+
+func transparentValue() int { return 1 }
+
+func useTransparentValue() (int, error) {
+	value := transparentValue()!!
+	return value, nil
+}

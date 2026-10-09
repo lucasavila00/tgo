@@ -45,7 +45,7 @@ TgoStructDecl  = "type" TypeName "struct" "{" { TgoFieldDecl ";" } "}" .
 TgoFieldDecl   = GoFieldDecl [ "=" GoExpression ] .
 VariantLiteral = TypeName "." VariantName GoLiteralValue .
 DefaultMarker  = "..default" .
-PropagateExpr  = GoCallExpr "!" .
+PropagateExpr  = GoCallExpr ( "!" | "!!" ) .
 NonNilPointer = "%" GoType .
 ```
 
@@ -70,8 +70,9 @@ The parser uses the Go parser as a private front end. It converts every Go and T
 `ParseFile` returns. The public tree contains closed `Expression`, `Statement`, `Declaration`,
 and `Specification` enums. It does not expose `go/ast` nodes.
 
-`PropagationExpression` contains the source call and the position of `!`. All positions refer
-to the supplied file set and the original source.
+`PropagationExpression` contains the source call and the positions of the postfix marks.
+`SecondBang` is `token.NoPos` for `!`. The two marks in `!!` must be adjacent. All positions
+refer to the supplied file set and the original source.
 
 `Children`, `Parent`, `Walk`, and `Inspect` traverse all Go and TGo forms as one source tree.
 `Extensions` returns tgo nodes in source order. `ExtensionAt` finds the smallest tgo node at a
@@ -84,7 +85,7 @@ literal as an enum variant. It does not classify literals from spelling alone.
 
 ## Error propagation
 
-Postfix `!` checks and propagates the last `error` result from a call:
+Postfix `!` and `!!` check and propagate the last `error` result from a call:
 
 ```text
 func LoadLabel(repo Repo, id ID) (string, error) {
@@ -110,17 +111,26 @@ label := strings.ToUpper(repo.Label(id)!)
 On failure, the compiler returns zero values for every earlier result of the current function.
 This rule also applies to named results and generic result types. Normal defers still run.
 
-The returned error uses `fmt.Errorf` and `%w`. Its context is the short source call name. An
-identifier uses its name. A selector keeps its selector path. Generic type arguments do not
-change the name.
+With `!`, the returned error uses `fmt.Errorf` and `%w`. Its context is the short source call
+name. An identifier uses its name. A selector keeps its selector path. Generic type arguments
+do not change the name. Thus, `!` requires a short static call name.
 
 ```text
 repo.Find(id)!  -> "repo.Find: %w"
 load(id)!       -> "load: %w"
 ```
 
-Each propagation adds one name. `errors.Is`, `errors.As`, and `errors.Unwrap` can still reach the
+Each `!` propagation adds one name. `errors.Is`, `errors.As`, and `errors.Unwrap` can still reach the
 first error.
+
+With `!!`, the failure return uses the original error value. It does not add a name or wrapper.
+The returned error has the same interface identity as the call result. A dynamic call is valid
+because this form does not need a static name.
+
+```text
+repo.Find(id)!!  -> err
+loader(id)!!     -> err
+```
 
 Lowering evaluates the call once. It keeps Go operand order and does not evaluate a later operand
 after failure. This includes nested calls, short-circuit Boolean expressions, deferred call
@@ -133,7 +143,9 @@ case expressions, and `for` initializers or post statements. Use a normal error 
 positions.
 
 Generated Go keeps the source function signature. Its success path has the call, nil check, and
-branch of a manual Go error check. Error wrapping runs only on failure.
+branch of a manual Go error check. `!` calls `fmt.Errorf` only on failure and can allocate its
+wrapper. `!!` has no added call or explicit allocation. The propagated call and Go escape analysis
+can still allocate.
 
 ## Non-nil pointers
 

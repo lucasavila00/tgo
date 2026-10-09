@@ -64,8 +64,9 @@ type source struct {
 }
 
 type propagationSource struct {
-	Bang token.Pos
-	Name string
+	Bang        token.Pos
+	Name        string
+	Transparent bool
 }
 
 type comprehensionSource struct {
