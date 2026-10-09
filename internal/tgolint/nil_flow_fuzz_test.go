@@ -2,12 +2,33 @@ package tgolint
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 )
 
+func TestNilAssignmentFlowProperties(t *testing.T) {
+	random := rand.New(rand.NewSource(3)) //nolint:gosec // Tests need stable data.
+	for range 300 {
+		data := make([]byte, 20)
+		if _, err := random.Read(data); err != nil {
+			t.Fatal(err)
+		}
+		checkNilAssignmentProperty(t, data)
+	}
+}
+
 func FuzzNilAssignmentFlow(f *testing.F) {
 	f.Add([]byte{0})
+	f.Add([]byte{1, 0, 0, 1})
+	f.Add([]byte{3, 1, 2, 4, 10, 1, 0})
+	f.Add([]byte{5, 2, 6, 0, 3, 5, 11, 0, 1})
+	f.Add([]byte("%''\x05\x03\x0501B"))
+	f.Add([]byte("B'A8z\x9b"))
+	f.Add([]byte("120021110210007"))
+	f.Add([]byte("000129112008"))
+	f.Add([]byte("\xad198c700227"))
+	f.Add([]byte("79zYB2281bZ"))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		if len(data) > 64 {
@@ -26,14 +47,29 @@ func checkNilAssignmentProperty(t testing.TB, data []byte) {
 		unsafe bool
 	}{
 		{
-			name:   "direct",
-			body:   program.directSource(),
-			unsafe: program.unsafe(false),
+			name:   "true branch",
+			body:   program.branchSource(true),
+			unsafe: program.unsafe(true, false),
 		},
 		{
-			name:   "saved guard",
-			body:   program.savedGuardSource(),
-			unsafe: program.unsafe(true),
+			name:   "false branch",
+			body:   program.branchSource(false),
+			unsafe: program.unsafe(false, false),
+		},
+		{
+			name:   "early exit",
+			body:   program.earlyExitSource(),
+			unsafe: program.unsafe(false, false),
+		},
+		{
+			name:   "saved true guard",
+			body:   program.savedGuardSource(true),
+			unsafe: program.unsafe(true, true),
+		},
+		{
+			name:   "saved false guard",
+			body:   program.savedGuardSource(false),
+			unsafe: program.unsafe(false, true),
 		},
 	}
 	for _, item := range cases {
@@ -86,20 +122,38 @@ func decodeNilProgram(data []byte) nilProgram {
 	}
 }
 
-func (p nilProgram) directSource() string {
+func (p nilProgram) branchSource(result bool) string {
 	lines := p.operationSource(p.operations)
-	lines = append(lines, fmt.Sprintf(
-		"if %s { need(%s) }", p.condition.source(), flowVariable(p.target),
-	))
+	if result {
+		lines = append(lines, fmt.Sprintf(
+			"if %s { need(%s) }", p.condition.source(), flowVariable(p.target),
+		))
+	} else {
+		lines = append(lines, fmt.Sprintf(
+			"if %s {} else { need(%s) }",
+			p.condition.source(), flowVariable(p.target),
+		))
+	}
 	return strings.Join(lines, "\n")
 }
 
-func (p nilProgram) savedGuardSource() string {
+func (p nilProgram) earlyExitSource() string {
+	lines := p.operationSource(p.operations)
+	lines = append(lines, "if "+p.condition.source()+" { return }")
+	lines = append(lines, "need("+flowVariable(p.target)+")")
+	return strings.Join(lines, "\n")
+}
+
+func (p nilProgram) savedGuardSource(result bool) string {
 	lines := p.operationSource(p.operations)
 	lines = append(lines, "checked := "+p.condition.source())
 	lines = append(lines, nilOperationSource(p.mutation))
+	guard := "checked"
+	if !result {
+		guard = "!checked"
+	}
 	lines = append(lines, fmt.Sprintf(
-		"if checked { need(%s) }", flowVariable(p.target),
+		"if %s { need(%s) }", guard, flowVariable(p.target),
 	))
 	return strings.Join(lines, "\n")
 }
@@ -141,13 +195,13 @@ func nilOperationSource(operation byte) string {
 	}
 }
 
-func (p nilProgram) unsafe(savedGuard bool) bool {
+func (p nilProgram) unsafe(result bool, savedGuard bool) bool {
 	for initial := byte(0); initial < 8; initial++ {
 		state := [3]bool{initial&1 != 0, initial&2 != 0, initial&4 != 0}
 		for _, operation := range p.operations {
 			applyNilOperation(&state, operation)
 		}
-		conditionCanPass := p.condition.possible(true, state)
+		conditionCanPass := p.condition.possible(result, state)
 		if savedGuard {
 			applyNilOperation(&state, p.mutation)
 		}
