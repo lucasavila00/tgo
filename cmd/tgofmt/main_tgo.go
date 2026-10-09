@@ -18,18 +18,18 @@ func main() {
 	write := flag.Bool("w", false, "write result to file")
 	list := flag.Bool("l", false, "list files whose format differs")
 	flag.Parse()
-	if err := run(flag.Args(), *write, *list); err != nil {
+	if err := run(flag.Args(), *write, *list, os.Stdin, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "tgofmt:", err)
 		os.Exit(1)
 	}
 }
 
-func run(paths []string, write bool, list bool) error {
+func run(paths []string, write bool, list bool, input io.Reader, output io.Writer) error {
 	if len(paths) == 0 {
 		if write {
 			return fmt.Errorf("cannot use -w with standard input")
 		}
-		source, tgoErr := io.ReadAll(os.Stdin)
+		source, tgoErr := io.ReadAll(input)
 		if tgoErr != nil {
 			return tgoErr
 		}
@@ -37,18 +37,25 @@ func run(paths []string, write bool, list bool) error {
 		if tgoErr2 != nil {
 			return tgoErr2
 		}
-		_, err := os.Stdout.Write(formatted)
+		if list {
+			if !bytes.Equal(source, formatted) {
+				_, err := fmt.Fprintln(output, "<standard input>")
+				return err
+			}
+			return nil
+		}
+		_, err := output.Write(formatted)
 		return err
 	}
 	for _, path := range paths {
-		if err := formatPath(path, write, list); err != nil {
+		if err := formatPath(path, write, list, output); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func formatPath(path string, write bool, list bool) error {
+func formatPath(path string, write bool, list bool, output io.Writer) error {
 	source, tgoErr := os.ReadFile(path)
 	if tgoErr != nil {
 		return tgoErr
@@ -59,7 +66,9 @@ func formatPath(path string, write bool, list bool) error {
 	}
 	changed := !bytes.Equal(source, formatted)
 	if list && changed {
-		fmt.Fprintln(os.Stdout, path)
+		if _, err := fmt.Fprintln(output, path); err != nil {
+			return err
+		}
 	}
 	if write && changed {
 		info, tgoErr3 := os.Stat(path)
@@ -69,7 +78,7 @@ func formatPath(path string, write bool, list bool) error {
 		return os.WriteFile(path, formatted, info.Mode().Perm())
 	}
 	if !write && !list {
-		_, err := os.Stdout.Write(formatted)
+		_, err := output.Write(formatted)
 		return err
 	}
 	return nil

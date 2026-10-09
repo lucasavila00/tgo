@@ -1,9 +1,10 @@
 package main
 
 import (
-	"io"
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -14,29 +15,15 @@ func TestRunWritesAndListsFiles(t *testing.T) {
 	if err := os.WriteFile(path, input, 0o640); err != nil {
 		t.Fatal(err)
 	}
-	read, write, err := os.Pipe()
+	output := new(bytes.Buffer)
+	err := run([]string{path}, false, true, strings.NewReader(""), output)
 	if err != nil {
 		t.Fatal(err)
 	}
-	standardOutput := os.Stdout
-	os.Stdout = write
-	err = run([]string{path}, false, true)
-	closeErr := write.Close()
-	os.Stdout = standardOutput
-	if err != nil {
-		t.Fatal(err)
+	if output.String() != path+"\n" {
+		t.Fatalf("listed files = %q, want %q", output.String(), path+"\n")
 	}
-	if closeErr != nil {
-		t.Fatal(closeErr)
-	}
-	listed, err := io.ReadAll(read)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(listed) != path+"\n" {
-		t.Fatalf("listed files = %q, want %q", listed, path+"\n")
-	}
-	if err := run([]string{path}, true, false); err != nil {
+	if err := run([]string{path}, true, false, strings.NewReader(""), output); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(path)
@@ -53,5 +40,30 @@ func TestRunWritesAndListsFiles(t *testing.T) {
 	}
 	if info.Mode().Perm() != 0o640 {
 		t.Fatalf("written mode = %v, want 0640", info.Mode().Perm())
+	}
+}
+
+func TestRunFormatsStandardInput(t *testing.T) {
+	t.Parallel()
+	input := "package sample\nfunc value()int{return 1}\n"
+	output := new(bytes.Buffer)
+	if err := run(nil, false, false, strings.NewReader(input), output); err != nil {
+		t.Fatal(err)
+	}
+	want := "package sample\n\nfunc value() int {\n\treturn 1\n}\n"
+	if output.String() != want {
+		t.Fatalf("standard output:\n%s\nwant:\n%s", output.String(), want)
+	}
+}
+
+func TestRunListsChangedStandardInput(t *testing.T) {
+	t.Parallel()
+	output := new(bytes.Buffer)
+	input := strings.NewReader("package   sample\n")
+	if err := run(nil, false, true, input, output); err != nil {
+		t.Fatal(err)
+	}
+	if output.String() != "<standard input>\n" {
+		t.Fatalf("listed input = %q", output.String())
 	}
 }
