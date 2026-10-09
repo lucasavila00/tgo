@@ -123,7 +123,7 @@ func (p *printer) statementList(values []*syntax.Statement) {
 		}
 	}
 	values = printed
-	commentWidths := p.statementCommentWidths(values)
+	commentColumns := p.statementCommentAlignment(values)
 	for first := 0; first < len(values); {
 		last := first + 1
 		for last < len(values) && !p.blankBetween(
@@ -136,13 +136,11 @@ func (p *printer) statementList(values []*syntax.Statement) {
 			last++
 		}
 		for index, value := range values[first:last] {
-			previousCommentColumn := p.commentColumn
-			if commentWidths[first+index] > 0 {
-				p.commentColumn = p.indent*8 + commentWidths[first+index] + 1
-			}
+			previousCommentColumns := p.commentColumns
+			p.commentColumns = commentColumns[first+index]
 			p.statement(value)
 			p.trailingLine(syntax.StatementEnd(value))
-			p.commentColumn = previousCommentColumn
+			p.commentColumns = previousCommentColumns
 			if clauseStatement(value) && first+index+1 < len(values) {
 				next := syntax.StatementPosition(values[first+index+1])
 				gap := p.sourceGap(syntax.StatementEnd(value), next)
@@ -182,46 +180,6 @@ func clauseStatement(value *syntax.Statement) bool {
 	default:
 		return false
 	}
-}
-
-func (p *printer) statementCommentWidths(values []*syntax.Statement) []int {
-	widths := make([]int, len(values))
-	for first := 0; first < len(values); {
-		if p.multiline(syntax.StatementPosition(values[first]), syntax.StatementEnd(values[first])) ||
-			!p.hasTrailingComment(syntax.StatementEnd(values[first])) {
-			first++
-			continue
-		}
-		last := first + 1
-		for last < len(values) &&
-			!p.multiline(syntax.StatementPosition(values[last]), syntax.StatementEnd(values[last])) &&
-			p.hasTrailingComment(syntax.StatementEnd(values[last])) &&
-			!p.blankBetween(
-				syntax.StatementEnd(values[last-1]),
-				syntax.StatementPosition(values[last]),
-			) && !p.hasCommentBetween(
-			syntax.StatementEnd(values[last-1]),
-			syntax.StatementPosition(values[last]),
-		) {
-			last++
-		}
-		width := 0
-		for _, value := range values[first:last] {
-			width = max(width, p.formattedStatementWidth(value))
-		}
-		for index := first; index < last; index++ {
-			widths[index] = width
-		}
-		first = last
-	}
-	return widths
-}
-
-func (p *printer) formattedStatementWidth(value *syntax.Statement) int {
-	probe := newPrinter(p.files, p.file, p.source)
-	probe.comments = nil
-	probe.statement(value)
-	return probe.outputColumn()
 }
 
 func (p *printer) block(value *syntax.BlockStatement) {

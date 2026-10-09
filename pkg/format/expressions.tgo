@@ -248,8 +248,11 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		p.token(value.Rbrace, "}")
 		return
 	}
-	keyWidths := p.compositeKeyWidths(value.Elements, value.Lbrace)
-	commentWidths := p.compositeCommentWidths(value.Elements, keyWidths)
+	columns, commentColumns := p.compositeAlignment(
+		value.Elements,
+		value.Lbrace,
+		value.Rbrace,
+	)
 	previous := value.Lbrace
 	indented := false
 	for index, element := range value.Elements {
@@ -264,11 +267,9 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		} else if index > 0 {
 			p.space()
 		}
-		previousCommentColumn := p.commentColumn
-		if commentWidths[index] > 0 {
-			p.commentColumn = p.indent*8 + commentWidths[index] + 1
-		}
-		p.compositeElement(element, keyWidths[index])
+		previousCommentColumns := p.commentColumns
+		p.commentColumns = commentColumns[index]
+		p.compositeElement(element, columns[index])
 		previous = syntax.ExpressionEnd(element)
 		following := value.Rbrace
 		if index+1 < len(value.Elements) {
@@ -279,7 +280,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 			previous = p.comma(previous, following)
 			p.trailingLine(previous)
 		}
-		p.commentColumn = previousCommentColumn
+		p.commentColumns = previousCommentColumns
 	}
 	gap := p.sourceGap(previous, value.Rbrace)
 	if gap.leadingComment && gap.lineBreak && !indented {
@@ -296,84 +297,16 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	p.token(value.Rbrace, "}")
 }
 
-func (p *printer) compositeKeyWidths(
-	values []%syntax.Expression,
-	opening token.Pos,
-) []int {
-	widths := make([]int, len(values))
-	for first := 0; first < len(values); {
-		previous := opening
-		if first > 0 {
-			previous = syntax.ExpressionEnd(values[first-1])
-		}
-		if compositeKeyWidth(values[first]) == 0 ||
-			p.multiline(
-				syntax.ExpressionPosition(values[first]),
-				syntax.ExpressionEnd(values[first]),
-			) ||
-			p.position(previous).Line >= p.position(syntax.ExpressionPosition(values[first])).Line {
-			first++
-			continue
-		}
-		last := first + 1
-		for last < len(values) && compositeKeyWidth(values[last]) > 0 &&
-			!p.multiline(
-				syntax.ExpressionPosition(values[last]),
-				syntax.ExpressionEnd(values[last]),
-			) &&
-			p.position(syntax.ExpressionEnd(values[last-1])).Line <
-				p.position(syntax.ExpressionPosition(values[last])).Line &&
-			!p.hasCommentBetween(
-				syntax.ExpressionEnd(values[last-1]),
-				syntax.ExpressionPosition(values[last]),
-			) &&
-			!p.blankBetween(
-				syntax.ExpressionEnd(values[last-1]),
-				syntax.ExpressionPosition(values[last]),
-			) {
-			last++
-		}
-		width := 0
-		for _, value := range values[first:last] {
-			if keyWidth := compositeKeyWidth(value); keyWidth > width {
-				width = keyWidth
-			}
-		}
-		for index := first; index < last; index++ {
-			widths[index] = width
-		}
-		first = last
-	}
-	return widths
-}
-
-func (p *printer) compositeElement(value *syntax.Expression, keyWidth int) {
+func (p *printer) compositeElement(value *syntax.Expression, columns []int) {
 	keyValue := syntax.KeyValueExpressionOf(value)
-	width := compositeKeyWidth(value)
-	if keyValue == nil || width == 0 || keyWidth == 0 {
+	if keyValue == nil || len(columns) == 0 {
 		p.expression(value, 0)
 		return
 	}
 	p.expression(keyValue.Key, 0)
 	p.token(keyValue.Colon, ":")
-	p.text(strings.Repeat(" ", keyWidth-width+1))
+	p.alignmentSpace(columns, 0)
 	p.expression(keyValue.Value, 0)
-}
-
-func compositeKeyWidth(value *syntax.Expression) int {
-	keyValue := syntax.KeyValueExpressionOf(value)
-	if keyValue == nil {
-		return 0
-	}
-	if name := syntax.IdentifierExpressionOf(keyValue.Key); name != nil {
-		return utf8.RuneCountInString(name.Name)
-	}
-	switch key := *keyValue.Key; key.Tag() {
-	case syntax.ExpressionTagBasicLiteral:
-		return utf8.RuneCountInString(key.BasicLiteralPayload().Value.Value)
-	default:
-		return 0
-	}
 }
 
 func (p *printer) field(value *syntax.Field) {
