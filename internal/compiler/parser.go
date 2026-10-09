@@ -632,9 +632,13 @@ func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDeclar
 		Fields:          nil,
 	}
 	for _, item := range declaration.Variants {
+		fields := make([]field, 0, len(item.Fields))
+		for _, itemField := range item.Fields {
+			fields = append(fields, sourceModelField(files, data, itemField)...)
+		}
 		result.Variants = append(result.Variants, variant{
 			Name:   item.Name.Name,
-			Fields: modelFields(files, data, item.Fields),
+			Fields: fields,
 		})
 	}
 	return result
@@ -642,6 +646,10 @@ func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDeclar
 
 func structModel(files *token.FileSet, data []byte, declaration *syntax.StructDeclaration) *model {
 	position := files.Position(declaration.Name.Start)
+	fields := make([]field, 0, len(declaration.Fields))
+	for _, itemField := range declaration.Fields {
+		fields = append(fields, sourceModelField(files, data, itemField)...)
+	}
 	return &model{
 		Name:            declaration.Name.Name,
 		Enum:            false,
@@ -654,7 +662,7 @@ func structModel(files *token.FileSet, data []byte, declaration *syntax.StructDe
 		PredicateLine:   0,
 		PredicateColumn: 0,
 		Variants:        nil,
-		Fields:          modelFields(files, data, declaration.Fields),
+		Fields:          fields,
 	}
 }
 
@@ -688,41 +696,38 @@ func checkedModel(
 	}
 }
 
-func modelFields(files *token.FileSet, data []byte, declarations []*syntax.TGoField) []field {
+func sourceModelField(files *token.FileSet, data []byte, declaration *syntax.TGoField) []field {
 	result := []field(nil)
-	for _, declaration := range declarations {
-		typeText := sourceText(
-			files, data, syntax.ExpressionPosition(declaration.Field.Type),
-			syntax.ExpressionEnd(declaration.Field.Type),
+	typeText := sourceText(
+		files, data, syntax.ExpressionPosition(declaration.Field.Type),
+		syntax.ExpressionEnd(declaration.Field.Type),
+	)
+	typePosition := files.Position(syntax.ExpressionPosition(declaration.Field.Type))
+	defaultText := ""
+	defaultLine := 0
+	defaultColumn := 0
+	if declaration.Default != nil {
+		defaultText = sourceText(
+			files, data, syntax.ExpressionPosition(declaration.Default),
+			syntax.ExpressionEnd(declaration.Default),
 		)
-		typePosition := files.Position(syntax.ExpressionPosition(declaration.Field.Type))
-		defaultText := ""
-		defaultLine := 0
-		defaultColumn := 0
-		if declaration.Default != nil {
-			defaultText = sourceText(
-				files, data, syntax.ExpressionPosition(declaration.Default),
-				syntax.ExpressionEnd(declaration.Default),
-			)
-			defaultPosition := files.Position(syntax.ExpressionPosition(declaration.Default))
-			defaultLine = defaultPosition.Line
-			defaultColumn = defaultPosition.Column
-		}
-		tag := ""
-		if declaration.Field.Tag != nil {
-			tag = declaration.Field.Tag.Value
-		}
-		if len(declaration.Field.Names) == 0 {
-			result = append(result, newField(
-				"", typeText, tag, defaultText, typePosition, defaultLine, defaultColumn,
-			))
-			continue
-		}
-		for _, name := range declaration.Field.Names {
-			result = append(result, newField(
-				name.Name, typeText, tag, defaultText, typePosition, defaultLine, defaultColumn,
-			))
-		}
+		defaultPosition := files.Position(syntax.ExpressionPosition(declaration.Default))
+		defaultLine = defaultPosition.Line
+		defaultColumn = defaultPosition.Column
+	}
+	tag := ""
+	if declaration.Field.Tag != nil {
+		tag = declaration.Field.Tag.Value
+	}
+	if len(declaration.Field.Names) == 0 {
+		return []field{newField(
+			"", typeText, tag, defaultText, typePosition, defaultLine, defaultColumn,
+		)}
+	}
+	for _, name := range declaration.Field.Names {
+		result = append(result, newField(
+			name.Name, typeText, tag, defaultText, typePosition, defaultLine, defaultColumn,
+		))
 	}
 	return result
 }

@@ -123,21 +123,28 @@ func (e *nilEnvironment) selectorContract(
 	if selection == nil {
 		return e.contractForObject(e.facts.Object(selector.Selector))
 	}
-	if contract := e.contractForObject(selection.Obj()); len(contract) != 0 {
-		if selection.Kind() == types.MethodVal {
-			return nilWithoutChild(contract, "v")
-		}
-		return contract
+	selected := e.contractForObject(selection.Obj())
+	if selection.Kind() == types.MethodVal {
+		return nilWithoutChild(selected, "v")
+	}
+	if selection.Kind() != types.FieldVal {
+		return selected
 	}
 	contract := e.contractForExpression(selector.Expression)
-	if selection.Kind() != types.FieldVal {
-		return e.contractForObject(selection.Obj())
-	}
 	if _, pointer := coreType(e.facts.Type(selector.Expression)).(*types.Pointer); pointer {
 		contract = nilChild(contract, "e")
 	}
 	for _, index := range selection.Index() {
 		contract = nilChild(contract, "f"+strconv.Itoa(index))
+	}
+	if contract == nil {
+		contract = make(nilContract)
+	}
+	for path := range selected {
+		contract[path] = true
+	}
+	if len(contract) == 0 {
+		return nil
 	}
 	return contract
 }
