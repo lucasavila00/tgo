@@ -68,11 +68,15 @@ function assertScopes(lines, expectations) {
     if (expectation.has) {
       assert.ok(
         token.scopes.includes(expectation.has),
-        `${expectation.token} scopes ${token.scopes.join(", ")}`
+        `${expectation.line}: ${expectation.token} scopes ${token.scopes.join(", ")}`
       );
     }
     if (expectation.not) {
-      assert.equal(token.scopes.includes(expectation.not), false);
+      assert.equal(
+        token.scopes.includes(expectation.not),
+        false,
+        `${expectation.line}: ${expectation.token} scopes ${token.scopes.join(", ")}`
+      );
     }
   }
 }

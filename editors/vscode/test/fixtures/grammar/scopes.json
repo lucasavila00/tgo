@@ -379,5 +379,25 @@
     "token": "%",
     "has": "keyword.operator.arithmetic.go",
     "not": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "type CommentedType int // func(",
+    "token": "func",
+    "has": "comment.line.go"
+  },
+  {
+    "line": "var commentedVariable int // func(",
+    "token": "func",
+    "has": "comment.line.go"
+  },
+  {
+    "line": "commentedField int // func(",
+    "token": "func",
+    "has": "comment.line.go"
+  },
+  {
+    "line": "groupedCommented int // func(",
+    "token": "func",
+    "has": "comment.line.go"
   }
 ]
