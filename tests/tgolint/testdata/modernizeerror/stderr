@@ -1,7 +1,8 @@
 modernizeerror/bad.tgo:35:2: manual load error wrapper matches postfix !; use postfix !
 modernizeerror/bad.tgo:43:2: manual repository.Find error wrapper matches postfix !; use postfix !
-modernizeerror/bad.tgo:51:2: manual strconv.Atoi error wrapper matches postfix !; use postfix !
-modernizeerror/bad.tgo:59:2: manual repository.Flush error wrapper matches postfix !; use postfix !
-modernizeerror/bad.tgo:77:2: manual zeroes error wrapper matches postfix !; use postfix !
-modernizeerror/bad.tgo:86:2: manual copyValue error wrapper matches postfix !; use postfix !
-modernizeerror/bad.tgo:95:3: manual strconv.Atoi error wrapper matches postfix !; use postfix !
+modernizeerror/bad.tgo:51:2: manual load error return matches postfix !!; use postfix !!
+modernizeerror/bad.tgo:59:2: manual strconv.Atoi error wrapper matches postfix !; use postfix !
+modernizeerror/bad.tgo:67:2: manual repository.Flush error wrapper matches postfix !; use postfix !
+modernizeerror/bad.tgo:85:2: manual zeroes error wrapper matches postfix !; use postfix !
+modernizeerror/bad.tgo:94:2: manual copyValue error wrapper matches postfix !; use postfix !
+modernizeerror/bad.tgo:103:3: manual strconv.Atoi error wrapper matches postfix !; use postfix !
