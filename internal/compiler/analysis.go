@@ -1,28 +1,25 @@
 package compiler
 
 import (
-	"go/ast"
 	"go/token"
 	"go/types"
 	"path/filepath"
 
+	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
 )
 
-// AnalysisSource pairs source syntax with its typed Go projection.
+// AnalysisSource contains source syntax and its generated output.
 type AnalysisSource struct {
-	Name      string
-	Output    []byte
-	Syntax    *syntax.File
-	Projected *ast.File
-	Generated map[ast.Decl]bool
+	Name   string
+	Output []byte
+	Syntax *syntax.File
 }
 
-// AnalysisPackage contains checked TGo source and its typed projection.
+// AnalysisPackage contains checked TGo source and indexed type facts.
 type AnalysisPackage struct {
 	Sources []AnalysisSource
-	FileSet *token.FileSet
-	Info    *types.Info
+	Facts   *sourcefacts.Index
 	Package *types.Package
 	NonNil  map[token.Pos]bool
 }
@@ -66,24 +63,24 @@ func AnalyzePackage(
 		return nil, err
 	}
 	sources := make([]AnalysisSource, 0, len(unit.Sources))
+	sourceFiles := make([]*syntax.File, 0, len(unit.Sources))
 	nonNil := make(map[token.Pos]bool)
 	for _, source := range unit.Sources {
-		generated := make(map[ast.Decl]bool)
-		for _, declaration := range source.File.Decls {
-			if unit.generatedDecl(declaration) {
-				generated[declaration] = true
-			}
-		}
 		sources = append(sources, AnalysisSource{
 			Name: filepath.Base(source.Name), Output: outputs[unit.outputPath(source.Name)],
-			Syntax: source.Tree, Projected: source.File, Generated: generated,
+			Syntax: source.Tree,
 		})
+		sourceFiles = append(sourceFiles, source.Tree)
 		for position := range source.NonNil {
 			nonNil[position] = true
 		}
 	}
+	facts := sourcefacts.New(sourceFiles[0], unit.info, unit.fs)
+	for _, file := range sourceFiles[1:] {
+		facts.AddFile(file)
+	}
 	return &AnalysisPackage{
-		Sources: sources, FileSet: unit.fs, Info: unit.info,
+		Sources: sources, Facts: facts,
 		Package: unit.typed, NonNil: nonNil,
 	}, nil
 }

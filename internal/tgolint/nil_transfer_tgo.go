@@ -4,24 +4,36 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/token"
 	"go/types"
 	"strings"
+
+	"tgo/pkg/syntax"
 )
 
 // transferNilAssignment updates values, aliases, guards, and presence facts.
 func (e *nilEnvironment) transferNilAssignment(
 	state *nilFlowState,
-	statement *ast.AssignStmt,
+	statement *syntax.AssignmentStatement,
 ) {
-	values := make([]nilType, 0, len(statement.Lhs))
-	for _, target := range statement.Lhs {
+	e.transferNilAssignmentLists(
+		state, statement.Left, statement.Right, statement.Operator,
+	)
+}
+
+func (e *nilEnvironment) transferNilAssignmentLists(
+	state *nilFlowState,
+	left []*syntax.Expression,
+	right []*syntax.Expression,
+	operator token.Token,
+) {
+	values := make([]nilType, 0, len(left))
+	for _, target := range left {
 		values = append(values, e.zeroNilType(target))
 	}
-	sources := make([]*nilPlace, len(statement.Lhs))
-	if len(statement.Rhs) == len(statement.Lhs) {
-		for index, expression := range statement.Rhs {
+	sources := make([]*nilPlace, len(left))
+	if len(right) == len(left) {
+		for index, expression := range right {
 			values[index] = e.expressionNilType(expression, state)
 			if isOptionalNilType(values[index]) &&
 				len(e.contractForExpression(expression)) != 0 &&
@@ -32,42 +44,40 @@ func (e *nilEnvironment) transferNilAssignment(
 				sources[index] = &place
 			}
 		}
-	} else if len(statement.Rhs) == 1 {
-		for index := range statement.Lhs {
-			values[index] = e.resultNilType(statement.Rhs[0], index, state)
+	} else if len(right) == 1 {
+		for index := range left {
+			values[index] = e.resultNilType(right[0], index, state)
 		}
 	}
 	trueFacts, falseFacts := nilFacts(nil), nilFacts(nil)
-	if len(statement.Rhs) == 1 {
-		trueFacts, falseFacts = e.conditionNilFacts(statement.Rhs[0], state)
+	if len(right) == 1 {
+		trueFacts, falseFacts = e.conditionNilFacts(right[0], state)
 	}
 	truePossible := e.nilFactsPossible(state, trueFacts)
 	falsePossible := e.nilFactsPossible(state, falseFacts)
-	e.invalidateNilExpressions(state, statement.Rhs)
+	e.invalidateNilExpressions(state, right)
 	beforeAssignment := cloneNilState(state)
-	guards, presence := e.copiedNilDependencies(state, statement)
+	guards, presence := e.copiedNilDependencies(state, left, right)
 	remappedGuards, remappedPresence := e.remapNilDependencies(
-		state, statement.Lhs, sources,
+		state, left, sources,
 	)
-	trueFacts = e.remapNilFacts(state, trueFacts, statement.Lhs, sources)
-	falseFacts = e.remapNilFacts(state, falseFacts, statement.Lhs, sources)
-	for _, target := range statement.Lhs {
+	trueFacts = e.remapNilFacts(state, trueFacts, left, sources)
+	falseFacts = e.remapNilFacts(state, falseFacts, left, sources)
+	for _, target := range left {
 		e.assignNilTarget(state, target, nil)
 	}
-	for index, target := range statement.Lhs {
+	for index, target := range left {
 		if place, ok := e.nilPlace(target); ok {
 			e.setNilType(state, place, values[index])
 		}
 	}
-	e.bindNilAssignmentAliases(
-		state, beforeAssignment, statement.Lhs, sources,
-	)
+	e.bindNilAssignmentAliases(state, beforeAssignment, left, sources)
 	state.guards = remappedGuards
 	state.presence = remappedPresence
-	for index, target := range statement.Lhs {
-		name, ok := target.(*ast.Ident)
-		if ok && name.Name != "_" {
-			object := e.info.ObjectOf(name)
+	for index, target := range left {
+		name := syntax.IdentifierExpressionOf(target)
+		if name != nil && name.Name != "_" {
+			object := e.facts.Object(name)
 			delete(state.guards, object)
 			delete(state.presence, object)
 			if index == 0 && (len(trueFacts) != 0 || len(falseFacts) != 0) {
@@ -84,9 +94,9 @@ func (e *nilEnvironment) transferNilAssignment(
 			}
 		}
 	}
-	e.bindNilPresence(state, statement.Lhs, statement.Rhs)
-	if statement.Tok == token.DEFINE {
-		e.inferNilExpressionContracts(statement.Lhs, statement.Rhs)
+	e.bindNilPresence(state, left, right)
+	if operator == token.DEFINE {
+		e.inferNilExpressionContracts(left, right)
 	}
 }
 
@@ -94,7 +104,7 @@ func (e *nilEnvironment) transferNilAssignment(
 func (e *nilEnvironment) bindNilAssignmentAliases(
 	state *nilFlowState,
 	before *nilFlowState,
-	targets []ast.Expr,
+	targets []*syntax.Expression,
 	sources []*nilPlace,
 ) {
 	targetPlaces, validTargets := e.assignmentNilPlaces(targets)
@@ -115,19 +125,13 @@ func (e *nilEnvironment) bindNilAssignmentAliases(
 		for previous := range index {
 			if sources[previous] != nil && validTargets[previous] &&
 				nilAliased(before, *source, *sources[previous]) {
-				addNilAlias(
-					state, targetPlaces[index], targetPlaces[previous],
-				)
+				addNilAlias(state, targetPlaces[index], targetPlaces[previous])
 			}
 		}
 	}
 }
 
-func nilPlaceOverwritten(
-	place nilPlace,
-	targets []nilPlace,
-	valid []bool,
-) bool {
+func nilPlaceOverwritten(place nilPlace, targets []nilPlace, valid []bool) bool {
 	for index, target := range targets {
 		if valid[index] && nilPlacesOverlap(place, target) {
 			return true
@@ -138,19 +142,20 @@ func nilPlaceOverwritten(
 
 func (e *nilEnvironment) copiedNilDependencies(
 	state *nilFlowState,
-	statement *ast.AssignStmt,
+	left []*syntax.Expression,
+	right []*syntax.Expression,
 ) ([]*nilGuard, []*nilPresence) {
-	guards := make([]*nilGuard, len(statement.Lhs))
-	presence := make([]*nilPresence, len(statement.Lhs))
-	if len(statement.Rhs) != len(statement.Lhs) {
+	guards := make([]*nilGuard, len(left))
+	presence := make([]*nilPresence, len(left))
+	if len(right) != len(left) {
 		return guards, presence
 	}
-	for index, expression := range statement.Rhs {
-		source, ok := expression.(*ast.Ident)
-		if !ok {
+	for index, expression := range right {
+		source := syntax.IdentifierExpressionOf(expression)
+		if source == nil {
 			continue
 		}
-		sourceObject := e.info.ObjectOf(source)
+		sourceObject := e.facts.Object(source)
 		if guard, found := state.guards[sourceObject]; found {
 			copy := cloneNilGuard(guard)
 			guards[index] = &copy
@@ -167,18 +172,14 @@ func (e *nilEnvironment) copiedNilDependencies(
 // Each right side uses the state from before any left side changes.
 func (e *nilEnvironment) remapNilDependencies(
 	state *nilFlowState,
-	targets []ast.Expr,
+	targets []*syntax.Expression,
 	sources []*nilPlace,
 ) (map[types.Object]nilGuard, map[types.Object]nilPresence) {
 	guards := make(map[types.Object]nilGuard, len(state.guards))
 	for object, guard := range state.guards {
 		guards[object] = nilGuard{
-			trueFacts: e.remapNilFacts(
-				state, guard.trueFacts, targets, sources,
-			),
-			falseFacts: e.remapNilFacts(
-				state, guard.falseFacts, targets, sources,
-			),
+			trueFacts:     e.remapNilFacts(state, guard.trueFacts, targets, sources),
+			falseFacts:    e.remapNilFacts(state, guard.falseFacts, targets, sources),
 			truePossible:  guard.truePossible,
 			falsePossible: guard.falsePossible,
 		}
@@ -199,7 +200,7 @@ func (e *nilEnvironment) remapNilDependencies(
 func (e *nilEnvironment) remapNilFacts(
 	state *nilFlowState,
 	facts nilFacts,
-	targets []ast.Expr,
+	targets []*syntax.Expression,
 	sources []*nilPlace,
 ) nilFacts {
 	if len(facts) == 0 {
@@ -219,9 +220,7 @@ func (e *nilEnvironment) remapNilFacts(
 		} else {
 			for candidate := range state.aliases {
 				if nilAliased(state, factPlace, candidate) &&
-					!nilPlaceOverwritten(
-						candidate, targetPlaces, validTargets,
-					) {
+					!nilPlaceOverwritten(candidate, targetPlaces, validTargets) {
 					addRemappedNilFact(result, candidate, value)
 				}
 			}
@@ -244,7 +243,7 @@ func (e *nilEnvironment) remapNilFacts(
 }
 
 func (e *nilEnvironment) assignmentNilPlaces(
-	expressions []ast.Expr,
+	expressions []*syntax.Expression,
 ) ([]nilPlace, []bool) {
 	places := make([]nilPlace, len(expressions))
 	valid := make([]bool, len(expressions))
@@ -302,39 +301,39 @@ func firstNilFactPlace(facts nilFacts) (nilPlace, bool) {
 }
 
 // zeroNilType returns the nil type of a Go zero value.
-func (e *nilEnvironment) zeroNilType(target ast.Expr) nilType {
-	typ := e.info.TypeOf(target)
-	if typeCanBeNil(typ) {
+func (e *nilEnvironment) zeroNilType(target *syntax.Expression) nilType {
+	if typeCanBeNil(e.facts.Type(target)) {
 		return nilOnlyType()
 	}
 	return nonNilType()
 }
 
-func (e *nilEnvironment) newNilTarget(target ast.Expr) bool {
-	name, ok := target.(*ast.Ident)
-	return ok && e.info.Defs[name] != nil
+func (e *nilEnvironment) newNilTarget(target *syntax.Expression) bool {
+	name := syntax.IdentifierExpressionOf(target)
+	return name != nil && e.facts.DefinitionName(name) != nil
 }
 
-func isNilDiscard(target ast.Expr) bool {
-	name, ok := target.(*ast.Ident)
-	return ok && name.Name == "_"
+func isNilDiscard(target *syntax.Expression) bool {
+	name := syntax.IdentifierExpressionOf(target)
+	return name != nil && name.Name == "_"
 }
 
 func (e *nilEnvironment) inferNilContracts(
-	names []*ast.Ident,
-	values []ast.Expr,
+	names []*syntax.Identifier,
+	values []*syntax.Expression,
 ) {
-	targets := make([]ast.Expr, len(names))
+	targets := make([]*syntax.Expression, len(names))
 	for index, name := range names {
-		targets[index] = name
+		value := syntax.ExpressionIdentifier{Value: name}.Expression()
+		targets[index] = &value
 	}
 	e.inferNilExpressionContracts(targets, values)
 }
 
 // inferNilExpressionContracts keeps contracts on inferred local values.
 func (e *nilEnvironment) inferNilExpressionContracts(
-	targets []ast.Expr,
-	values []ast.Expr,
+	targets []*syntax.Expression,
+	values []*syntax.Expression,
 ) {
 	if len(values) == len(targets) {
 		for index, target := range targets {
@@ -350,29 +349,31 @@ func (e *nilEnvironment) inferNilExpressionContracts(
 }
 
 func (e *nilEnvironment) setInferredNilContract(
-	target ast.Expr,
+	target *syntax.Expression,
 	contract nilContract,
 ) {
-	name, ok := target.(*ast.Ident)
-	if !ok || len(contract) == 0 {
+	name := syntax.IdentifierExpressionOf(target)
+	if name == nil || len(contract) == 0 {
 		return
 	}
-	object := e.info.Defs[name]
+	object := e.facts.DefinitionName(name)
 	if object != nil {
 		e.contracts[object] = cloneNilContract(contract)
 	}
 }
 
-func (e *nilEnvironment) nilExpressionCanBeAbsent(expression ast.Expr) bool {
-	switch expression := expression.(type) {
-	case *ast.ParenExpr:
-		return e.nilExpressionCanBeAbsent(expression.X)
-	case *ast.IndexExpr:
-		_, mapping := coreType(e.info.TypeOf(expression.X)).(*types.Map)
+func (e *nilEnvironment) nilExpressionCanBeAbsent(expression *syntax.Expression) bool {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return e.nilExpressionCanBeAbsent(parenthesized.Expression)
+	}
+	if index := syntax.IndexExpressionOf(expression); index != nil {
+		_, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map)
 		return mapping
-	case *ast.UnaryExpr:
-		return expression.Op == token.ARROW
-	case *ast.TypeAssertExpr:
+	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+		return unary.Operator == token.ARROW
+	}
+	if syntax.TypeAssertionExpressionOf(expression) != nil {
 		return true
 	}
 	return false
@@ -380,21 +381,20 @@ func (e *nilEnvironment) nilExpressionCanBeAbsent(expression ast.Expr) bool {
 
 func (e *nilEnvironment) transferNilValues(
 	state *nilFlowState,
-	names []*ast.Ident,
-	values []ast.Expr,
+	names []*syntax.Identifier,
+	values []*syntax.Expression,
 ) {
-	left := make([]ast.Expr, len(names))
+	left := make([]*syntax.Expression, len(names))
 	for index, name := range names {
-		left[index] = name
+		value := syntax.ExpressionIdentifier{Value: name}.Expression()
+		left[index] = &value
 	}
-	e.transferNilAssignment(state, &ast.AssignStmt{
-		Lhs: left, TokPos: token.NoPos, Tok: token.DEFINE, Rhs: values,
-	})
+	e.transferNilAssignmentLists(state, left, values, token.DEFINE)
 }
 
 func (e *nilEnvironment) assignNilTarget(
 	state *nilFlowState,
-	target ast.Expr,
+	target *syntax.Expression,
 	source *nilPlace,
 ) {
 	place, ok := e.nilPlace(target)
@@ -409,32 +409,31 @@ func (e *nilEnvironment) assignNilTarget(
 
 func (e *nilEnvironment) bindNilPresence(
 	state *nilFlowState,
-	left []ast.Expr,
-	right []ast.Expr,
+	left []*syntax.Expression,
+	right []*syntax.Expression,
 ) {
 	if len(left) != 2 || len(right) != 1 {
 		return
 	}
-	okName, ok := left[1].(*ast.Ident)
+	okName := syntax.IdentifierExpressionOf(left[1])
 	valuePlace, valueOK := e.nilPlace(left[0])
-	if !ok || !valueOK {
+	if okName == nil || !valueOK {
 		return
 	}
-	okObject := e.info.ObjectOf(okName)
+	okObject := e.facts.Object(okName)
 	if okObject == nil {
 		return
 	}
 	nonNil := false
-	switch expression := right[0].(type) {
-	case *ast.IndexExpr:
-		if _, mapping := coreType(e.info.TypeOf(expression.X)).(*types.Map); mapping {
-			nonNil = nilChild(e.contractForExpression(expression.X), "v")[""]
+	if index := syntax.IndexExpressionOf(right[0]); index != nil {
+		if _, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map); mapping {
+			nonNil = nilChild(e.contractForExpression(index.Expression), "v")[""]
 		}
-	case *ast.UnaryExpr:
-		if expression.Op == token.ARROW {
-			nonNil = nilChild(e.contractForExpression(expression.X), "e")[""]
+	} else if unary := syntax.UnaryExpressionOf(right[0]); unary != nil {
+		if unary.Operator == token.ARROW {
+			nonNil = nilChild(e.contractForExpression(unary.Expression), "e")[""]
 		}
-	case *ast.TypeAssertExpr:
+	} else if syntax.TypeAssertionExpressionOf(right[0]) != nil {
 		nonNil = false
 	}
 	state.presence[okObject] = nilPresence{value: valuePlace, nonNil: nonNil}
@@ -500,12 +499,8 @@ func preserveNilAliasFacts(state *nilFlowState, changed nilPlace) {
 		return
 	}
 	for object, guard := range state.guards {
-		guard.trueFacts = replaceNilFactPlace(
-			guard.trueFacts, changed, replacement,
-		)
-		guard.falseFacts = replaceNilFactPlace(
-			guard.falseFacts, changed, replacement,
-		)
+		guard.trueFacts = replaceNilFactPlace(guard.trueFacts, changed, replacement)
+		guard.falseFacts = replaceNilFactPlace(guard.falseFacts, changed, replacement)
 		state.guards[object] = guard
 	}
 	for object, presence := range state.presence {
@@ -516,10 +511,7 @@ func preserveNilAliasFacts(state *nilFlowState, changed nilPlace) {
 	}
 }
 
-func survivingNilAlias(
-	state *nilFlowState,
-	changed nilPlace,
-) (nilPlace, bool) {
+func survivingNilAlias(state *nilFlowState, changed nilPlace) (nilPlace, bool) {
 	replacement := nilPlace{object: nil, path: ""}
 	found := false
 	for candidate := range state.aliases {
@@ -572,7 +564,7 @@ func nilPlacesOverlap(left, right nilPlace) bool {
 
 func (e *nilEnvironment) invalidateNilExpressions(
 	state *nilFlowState,
-	expressions []ast.Expr,
+	expressions []*syntax.Expression,
 ) {
 	for _, expression := range expressions {
 		e.invalidateNilExpression(state, expression)
@@ -582,25 +574,28 @@ func (e *nilEnvironment) invalidateNilExpressions(
 // invalidateNilExpression removes facts that can change through an expression.
 func (e *nilEnvironment) invalidateNilExpression(
 	state *nilFlowState,
-	root ast.Node,
+	root *syntax.Expression,
 ) {
 	if root == nil {
 		return
 	}
 	hasCall := false
-	ast.Inspect(root, func(node ast.Node) bool {
-		switch node := node.(type) {
-		case *ast.CallExpr:
-			hasCall = true
-		case *ast.UnaryExpr:
-			if node.Op == token.AND {
-				if place, ok := e.nilPlace(node.X); ok {
-					e.invalidateNilPlace(state, place)
+	syntax.InspectExpression(root, func(node *syntax.Node) bool {
+		if expression, ok := syntax.ExpressionOf(node); ok {
+			if syntax.CallExpressionOf(expression) != nil {
+				hasCall = true
+			}
+			if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+				if unary.Operator == token.AND {
+					if place, ok := e.nilPlace(unary.Expression); ok {
+						e.invalidateNilPlace(state, place)
+					}
 				}
 			}
-		case *ast.FuncLit:
+		}
+		if literal, ok := syntax.FunctionLiteralOf(node); ok {
 			for place := range state.values {
-				if e.closureMayWriteNilPlace(node.Body, place) {
+				if e.closureMayWriteNilPlace(literal.Body, place) {
 					e.invalidateNilPlace(state, place)
 				}
 			}
@@ -619,32 +614,38 @@ func (e *nilEnvironment) invalidateNilExpression(
 
 // closureMayWriteNilPlace reports whether a closure can change tracked storage.
 func (e *nilEnvironment) closureMayWriteNilPlace(
-	body *ast.BlockStmt,
+	body *syntax.BlockStatement,
 	tracked nilPlace,
 ) bool {
 	writes := false
-	ast.Inspect(body, func(node ast.Node) bool {
-		if node == nil || writes {
+	statement := syntax.StatementBlock{Value: body}.Statement()
+	syntax.InspectStatement(&statement, func(node *syntax.Node) bool {
+		if writes {
 			return false
 		}
-		switch node := node.(type) {
-		case *ast.AssignStmt:
-			for _, target := range node.Lhs {
-				if e.nilWriteAffects(target, tracked) {
-					writes = true
-					return false
+		if value, ok := syntax.StatementOf(node); ok {
+			if assignment := syntax.AssignmentStatementOf(value); assignment != nil {
+				for _, target := range assignment.Left {
+					if e.nilWriteAffects(target, tracked) {
+						writes = true
+						return false
+					}
 				}
 			}
-		case *ast.IncDecStmt:
-			writes = e.nilWriteAffects(node.X, tracked)
-		case *ast.RangeStmt:
-			if node.Tok == token.ASSIGN {
-				writes = e.nilWriteAffects(node.Key, tracked) ||
-					e.nilWriteAffects(node.Value, tracked)
+			if increment := syntax.IncrementStatementOf(value); increment != nil {
+				writes = e.nilWriteAffects(increment.Expression, tracked)
 			}
-		case *ast.UnaryExpr:
-			if node.Op == token.AND {
-				writes = e.nilWriteAffects(node.X, tracked)
+			if item := syntax.RangeStatementOf(value); item != nil {
+				if item.Operator == token.ASSIGN {
+					writes = e.nilWriteAffects(item.Key, tracked) ||
+						e.nilWriteAffects(item.Value, tracked)
+				}
+			}
+		}
+		if expression, ok := syntax.ExpressionOf(node); ok {
+			if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
+				unary.Operator == token.AND {
+				writes = e.nilWriteAffects(unary.Expression, tracked)
 			}
 		}
 		return !writes
@@ -653,7 +654,7 @@ func (e *nilEnvironment) closureMayWriteNilPlace(
 }
 
 func (e *nilEnvironment) nilWriteAffects(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	tracked nilPlace,
 ) bool {
 	if expression == nil {

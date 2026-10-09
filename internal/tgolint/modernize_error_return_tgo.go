@@ -18,9 +18,7 @@ func (c *checker) checkErrorReturnModernization(analysis *compiler.AnalysisPacka
 	if analysis == nil {
 		return
 	}
-	info := analysis.Info
-	files := analysis.FileSet
-	if info == nil || files == nil {
+	if analysis.Facts == nil {
 		return
 	}
 	for _, source := range analysis.Sources {
@@ -28,9 +26,7 @@ func (c *checker) checkErrorReturnModernization(analysis *compiler.AnalysisPacka
 		if file == nil {
 			continue
 		}
-		index := sourcefacts.New(
-			file, info, files,
-		)
+		index := analysis.Facts
 		syntax.Inspect(file, func(node *syntax.Node) bool {
 			statements, ok := sourceStatementList(node)
 			if !ok || len(statements) < 2 {
