@@ -1,0 +1,9 @@
+policycollectionbad/source.tgo:5:15: new creates invalid tgo checked Quantity
+policycollectionbad/source.tgo:7:14: make creates invalid tgo checked Quantity values; use length zero
+policycollectionbad/source.tgo:10:9: map read can return invalid tgo checked Quantity; use comma-ok
+policycollectionbad/source.tgo:14:9: read can return invalid tgo checked Quantity; use comma-ok
+policycollectionbad/source.tgo:18:9: this read needs if value, ok := read; ok { ... }
+policycollectionbad/source.tgo:22:9: reslice can expose invalid tgo checked Quantity values; keep the current length
+policycollectionbad/source.tgo:28:10: reslice can expose invalid tgo checked Quantity values; keep the current length
+policycollectionbad/source.tgo:34:2: clear creates invalid tgo checked Quantity values
+policycollectionbad/source.tgo:41:10: tgo checked Quantity presence value is used before ok is proved true

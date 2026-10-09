@@ -1,7 +1,0 @@
-package invalid
-
-func invalidResult() (result int) {
-    for {
-        return
-    }
-}

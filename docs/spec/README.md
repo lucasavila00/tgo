@@ -499,10 +499,10 @@ Internal marker names do not reserve source field names.
 
 ## Explicit initialization
 
-Every `var` declaration in a tgo file needs an initializer.
+`tgolint` reports every `var` declaration in a tgo file that has no initializer.
 Go parameters, fields, and repeated constant declarations keep their Go rules.
 
-Every struct literal in a tgo file must supply every field.
+`tgolint` reports every struct literal in a tgo file that does not supply every field.
 A keyed literal may use `..default` for declared tgo defaults.
 An unkeyed literal must contain exactly one value per field.
 
@@ -557,11 +557,11 @@ tgo classifies a type by whether Go zero filling makes a valid tgo value.
 Named types and aliases use the rule for their underlying type unless they are tgo models.
 Recursive checks stop after revisiting the same type.
 
-These operations have added checks:
+`tgolint` checks these operations:
 
-- `new(T)` is rejected when the zero of `T` is invalid.
-- `make([]T, length, capacity)` needs constant `length == 0` when `T` is invalid.
-- `clear(slice)` is rejected when the element zero is invalid.
+- it reports `new(T)` when the zero of `T` is invalid;
+- it reports `make([]T, length, capacity)` unless `length` is constant zero when `T` is invalid;
+- it reports `clear(slice)` when the element zero is invalid; and
 - `clear(map)` remains valid because it removes entries.
 
 No check scans an existing collection. `append`, `copy`, assignment, and range use Go behavior.
@@ -604,14 +604,14 @@ that resolve to the same objects used by the slice expression.
 
 The proof ends if code before the reslice assigns the bound or slice, increments the bound,
 takes either address, or calls anything except `len` or `cap`.
-An unproven reslice is a compile error. The compiler does not add a runtime guard.
+`tgolint` reports an unproven reslice. The compiler does not add a runtime guard.
 
 ## Named results
 
 A named result is not initialized by its function signature.
 It must be assigned before a read or bare return.
 
-The compiler tracks straight-line assignments and merges `if` and `else` paths.
+`tgolint` tracks straight-line assignments and merges `if` and `else` paths.
 Both continuing paths must establish assignment. A returning path needs no later state.
 It checks returns in loops, ranges, switches, type switches, selects, and labeled statements.
 An initializer that always runs can establish assignment after its control statement.
