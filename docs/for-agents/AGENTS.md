@@ -5,6 +5,10 @@ Keep Go imports and signatures. Compile with `tgo build ./...`, then run `go tes
 and `tgolint ./...`.
 Commit each generated `*_tgo.go` file beside its source. Do not edit generated files.
 Regenerate them after each source change.
+
+The compiler parses TGo syntax and emits Go. `tgolint` checks source usage rules,
+including explicit initialization, complete literals, named results, and invalid-zero
+collection operations.
 Ignore `.tgo.lock`. Do not replace it with a link.
 Use Go build constraints and target suffixes on tgo files.
 For example, `store_linux.tgo` emits `store_tgo_linux.go`.

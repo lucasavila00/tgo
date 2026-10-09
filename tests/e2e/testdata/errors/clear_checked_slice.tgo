@@ -1,7 +1,0 @@
-package sample
-
-type Quantity int where value > 0
-
-func clearAll(values []Quantity) {
-    clear(values)
-}

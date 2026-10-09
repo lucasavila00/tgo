@@ -1,0 +1,43 @@
+package policycollectionbad
+
+type Quantity int where value > 0
+
+var pointer = new(Quantity)
+
+var values = make([]Quantity, 2)
+
+func mapRead(items map[string]Quantity) Quantity {
+	return items["one"]
+}
+
+func channelRead(items <-chan Quantity) Quantity {
+	return <-items
+}
+
+func assertion(input any) Quantity {
+	return input.(Quantity)
+}
+
+func reslice(items []Quantity, size int) []Quantity {
+	return items[:size]
+}
+
+func changedReslice(items []Quantity, size int) []Quantity {
+	if size <= len(items) {
+		size++
+		return items[:size]
+	}
+	return items
+}
+
+func clearAll(items []Quantity) {
+	clear(items)
+}
+
+func failedBranch(items map[int]Quantity) int {
+	if value, ok := items[0]; ok {
+		return value.Value()
+	} else {
+		return value.Value()
+	}
+}

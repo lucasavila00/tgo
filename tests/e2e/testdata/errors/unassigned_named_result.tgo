@@ -1,5 +1,0 @@
-package sample
-
-func value() (result int) {
-    return
-}
