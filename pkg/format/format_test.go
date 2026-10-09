@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -39,48 +40,78 @@ func TestSourceMatchesGoCorpus(t *testing.T) {
 	if !strings.HasPrefix(runtime.Version(), "go1.27.") {
 		t.Fatalf("Go corpus needs Go 1.27; got %s", runtime.Version())
 	}
-	manifest, err := os.ReadFile("../../internal/compiler/testdata/go-corpus/packages.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
+	packages := readGoCorpusManifest(t)
+	goRoot := goCorpusRoot(t)
 	count := 0
-	for line := range strings.SplitSeq(string(manifest), "\n") {
-		packagePath := strings.TrimSpace(line)
-		if packagePath == "" || strings.HasPrefix(packagePath, "#") {
-			continue
-		}
-		directory := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(packagePath))
-		entries, err := os.ReadDir(directory)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
-				continue
-			}
-			path := filepath.Join(directory, entry.Name())
-			source, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			want, err := goformat.Source(source)
-			if err != nil {
-				t.Fatal(err)
-			}
-			got, err := format.Source(path, source)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(got, want) {
-				t.Errorf("%s differs from Go format", path)
-			}
-			count++
-		}
+	for _, packagePath := range packages {
+		count += checkGoFormatPackage(t, goRoot, packagePath)
 	}
 	if count == 0 {
 		t.Fatal("Go corpus has no source files")
 	}
 	t.Logf("checked %d Go 1.27 source files", count)
+}
+
+func readGoCorpusManifest(t *testing.T) []string {
+	t.Helper()
+	data, err := os.ReadFile("../../internal/compiler/testdata/go-corpus/packages.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var packages []string
+	for line := range strings.SplitSeq(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "#") {
+			packages = append(packages, line)
+		}
+	}
+	return packages
+}
+
+func goCorpusRoot(t *testing.T) string {
+	t.Helper()
+	output, err := exec.Command("go", "env", "GOROOT").CombinedOutput()
+	if err != nil {
+		t.Fatalf("find GOROOT: %v\n%s", err, output)
+	}
+	return strings.TrimSpace(string(output))
+}
+
+func checkGoFormatPackage(t *testing.T, goRoot string, packagePath string) int {
+	t.Helper()
+	directory := filepath.Join(goRoot, "src", filepath.FromSlash(packagePath))
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := 0
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+			continue
+		}
+		checkGoFormatFile(t, filepath.Join(directory, entry.Name()))
+		count++
+	}
+	return count
+}
+
+func checkGoFormatFile(t *testing.T, path string) {
+	t.Helper()
+	source, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := goformat.Source(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := format.Source(path, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Errorf("%s differs from Go format", path)
+	}
 }
 
 func TestSourceMatchesGoFormatForOrdinarySyntax(t *testing.T) {
@@ -118,24 +149,7 @@ func TestSourceRepositoryCorpus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	files := make([]string, 0)
-	for _, directory := range []string{"cmd", "internal", "pkg"} {
-		err := filepath.WalkDir(filepath.Join(root, directory), func(path string, entry fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if entry.IsDir() && entry.Name() == "testdata" {
-				return filepath.SkipDir
-			}
-			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".tgo") {
-				files = append(files, path)
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	files := repositoryTGoFiles(t, root)
 	if len(files) == 0 {
 		t.Fatal("repository corpus has no TGo source")
 	}
@@ -147,31 +161,68 @@ func TestSourceRepositoryCorpus(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			source, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			formatted, err := format.Source(path, source)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if (strings.HasPrefix(name, "pkg/format/") || name == "cmd/tgofmt/main.tgo") &&
-				!bytes.Equal(formatted, source) {
-				t.Fatal("formatter source is not in canonical format")
-			}
-			again, err := format.Source(path, formatted)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(again, formatted) {
-				t.Fatal("second formatting pass changed output")
-			}
-			before := commentTexts(t, path, source)
-			after := commentTexts(t, path, formatted)
-			if !equalStrings(before, after) {
-				t.Fatalf("comments changed:\n%q\nwant:\n%q", after, before)
-			}
+			checkRepositorySource(t, path, name)
 		})
+	}
+}
+
+func repositoryTGoFiles(t *testing.T, root string) []string {
+	t.Helper()
+	files := make([]string, 0)
+	for _, directory := range []string{"cmd", "internal", "pkg"} {
+		rootDirectory := filepath.Join(root, directory)
+		err := filepath.WalkDir(rootDirectory, func(
+			path string,
+			entry fs.DirEntry,
+			err error,
+		) error {
+			return collectTGoFile(path, entry, err, &files)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return files
+}
+
+func collectTGoFile(path string, entry fs.DirEntry, err error, files *[]string) error {
+	if err != nil {
+		return err
+	}
+	if entry.IsDir() && entry.Name() == "testdata" {
+		return filepath.SkipDir
+	}
+	if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".tgo") {
+		*files = append(*files, path)
+	}
+	return nil
+}
+
+func checkRepositorySource(t *testing.T, path string, name string) {
+	t.Helper()
+	source, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	formatted, err := format.Source(path, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if (strings.HasPrefix(name, "pkg/format/") || name == "cmd/tgofmt/main.tgo") &&
+		!bytes.Equal(formatted, source) {
+		t.Fatal("formatter source is not in canonical format")
+	}
+	again, err := format.Source(path, formatted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(again, formatted) {
+		t.Fatal("second formatting pass changed output")
+	}
+	before := commentTexts(t, path, source)
+	after := commentTexts(t, path, formatted)
+	if !equalStrings(before, after) {
+		t.Fatalf("comments changed:\n%q\nwant:\n%q", after, before)
 	}
 }
 

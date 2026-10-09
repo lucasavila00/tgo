@@ -110,13 +110,15 @@ func TestRunWritePreservesHardLink(t *testing.T) {
 	directory := t.TempDir()
 	original := filepath.Join(directory, "source.tgo")
 	linked := filepath.Join(directory, "linked.tgo")
-	if err := os.WriteFile(original, []byte("package sample\nfunc value()int{return 1}\n"), 0o600); err != nil {
+	source := []byte("package sample\nfunc value()int{return 1}\n")
+	if err := os.WriteFile(original, source, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Link(original, linked); err != nil {
 		t.Skipf("hard links are unavailable: %v", err)
 	}
-	if err := run([]string{linked}, true, false, strings.NewReader(""), new(bytes.Buffer)); err != nil {
+	input := strings.NewReader("")
+	if err := run([]string{linked}, true, false, input, new(bytes.Buffer)); err != nil {
 		t.Fatal(err)
 	}
 	originalInfo, err := os.Stat(original)
