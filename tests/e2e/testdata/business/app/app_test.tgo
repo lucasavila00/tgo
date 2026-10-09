@@ -140,7 +140,7 @@ func TestBusiness(t *testing.T) {
 		t.Fatal("constraint intersection admitted a checked struct")
 	}
 	// Go can violate the contract. Value must not add a runtime check.
-	bad := model.Quantity{}
+	bad := *new(model.Quantity)
 	if bad.Value() != 0 {
 		t.Fatal("foreign zero did not pass through")
 	}
@@ -188,7 +188,7 @@ func TestGoInterop(t *testing.T) {
 }
 
 func TestGeneratedCost(t *testing.T) {
-	if unsafe.Sizeof(model.Signal{}) != unsafe.Sizeof(uint8(0)) {
+	if unsafe.Sizeof(*new(model.Signal)) != unsafe.Sizeof(uint8(0)) {
 		t.Fatal("payload-free enum is larger than its tag")
 	}
 	type accountLayout struct {
@@ -196,7 +196,7 @@ func TestGeneratedCost(t *testing.T) {
 		personal model.AccountPersonal
 		business model.AccountBusiness
 	}
-	if unsafe.Sizeof(model.Account{}) != unsafe.Sizeof(accountLayout{}) {
+	if unsafe.Sizeof(*new(model.Account)) != unsafe.Sizeof(accountLayout{}) {
 		t.Fatal("enum layout differs from the direct Go layout")
 	}
 	person := model.Personal("Lucas")

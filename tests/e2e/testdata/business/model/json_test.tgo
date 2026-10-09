@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"unsafe"
 )
 
 func TestEnumJSONForms(t *testing.T) {
@@ -228,16 +229,24 @@ func TestEnumJSONCustomFields(t *testing.T) {
 }
 
 func TestEnumJSONInvalidTags(t *testing.T) {
-	zero := JSONExternal{}
+	zero := invalidJSONExternal(0)
 	want := "JSONExternal: unknown tag 0 — tgolint proves every tag has a case, so this is unreachable"
 	if zero.UnknownTag() != want {
 		t.Fatalf("UnknownTag = %q", zero.UnknownTag())
 	}
-	for _, value := range []JSONExternal{{}, {tgoTag: 255}} {
+	for _, value := range []JSONExternal{zero, invalidJSONExternal(255)} {
 		if _, err := json.Marshal(value); err == nil {
 			t.Fatal("invalid tag was accepted")
 		}
 	}
+}
+
+func invalidJSONExternal(tag JSONExternalTag) JSONExternal {
+	value := *new(JSONExternal)
+	field := reflect.ValueOf(&value).Elem().FieldByName("tgoTag")
+	writable := reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+	writable.SetUint(uint64(tag))
+	return value
 }
 
 func TestEnumJSONCustomFieldsInTaggedForms(t *testing.T) {

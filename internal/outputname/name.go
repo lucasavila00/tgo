@@ -12,6 +12,10 @@ import (
 func Path(source string) string {
 	directory := filepath.Dir(source)
 	name := strings.TrimSuffix(filepath.Base(source), ".tgo")
+	test := strings.HasSuffix(name, "_test")
+	if test {
+		name = strings.TrimSuffix(name, "_test")
+	}
 	parts := strings.Split(name, "_")
 	suffix := len(parts)
 	lastOS, lastArch := targetSuffixKind(parts[len(parts)-1])
@@ -24,12 +28,16 @@ func Path(source string) string {
 	} else if len(parts) > 1 && (lastOS || lastArch) {
 		suffix = len(parts) - 1
 	}
+	testSuffix := ""
+	if test {
+		testSuffix = "_test"
+	}
 	if suffix == len(parts) {
-		return filepath.Join(directory, name+"_tgo.go")
+		return filepath.Join(directory, name+"_tgo"+testSuffix+".go")
 	}
 	prefix := strings.Join(parts[:suffix], "_")
 	target := strings.Join(parts[suffix:], "_")
-	return filepath.Join(directory, prefix+"_tgo_"+target+".go")
+	return filepath.Join(directory, prefix+"_tgo_"+target+testSuffix+".go")
 }
 
 // Matches reports whether a generated path belongs to a source basename.
@@ -47,6 +55,7 @@ func Reserved(path string) bool {
 		return false
 	}
 	stem := strings.TrimSuffix(name, ".go")
+	stem = strings.TrimSuffix(stem, "_test")
 	if strings.HasSuffix(stem, "_tgo") {
 		return true
 	}

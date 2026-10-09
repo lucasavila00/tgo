@@ -9,8 +9,10 @@ A tgo source file ends in `.tgo`. It starts with a Go package clause.
 Imports, declarations, statements, expressions, and types use Go syntax.
 
 A package may contain `.tgo` and `.go` files. The compiler checks both.
-It does not compile `_test.tgo` or `_test.go` files.
-The Go tool compiles Go tests after tgo emits Go.
+A TGo package writes tests in `_test.tgo` files. The compiler checks internal
+tests with the package and external tests as the normal `package_name_test`
+package. A Go package keeps `_test.go` files. The Go tool compiles generated
+tests after TGo emits Go.
 
 Go build constraints and target suffixes select tgo source files.
 An excluded source file is not parsed. It does not add declarations to its package.
@@ -23,6 +25,8 @@ Target suffixes stay at the end of the Go name:
 ```text
 name_linux.tgo       -> name_tgo_linux.go
 name_linux_amd64.tgo -> name_tgo_linux_amd64.go
+name_test.tgo        -> name_tgo_test.go
+name_linux_test.tgo  -> name_tgo_linux_test.go
 ```
 
 This lets the Go tool select the same target files.

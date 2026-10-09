@@ -20,24 +20,33 @@ import (
 )
 
 type packageUnit struct {
-	Dir            string
-	Path           string
-	Module         string
-	Sources        []compiler.File
-	GoFiles        []compiler.File
-	Files          []*syntax.File
-	Imports        map[string]*packageUnit
-	sourcePaths    []string
-	matchingPaths  []string
-	generatedPaths []string
-	context        *build.Context
-	usesC          bool
-	sourcesMatched bool
-	loaded         bool
-	matchError     error
-	loadError      error
-	fs             *token.FileSet
-	compiled       *compiler.CompiledPackage
+	Dir               string
+	Path              string
+	Module            string
+	Sources           []compiler.File
+	GoFiles           []compiler.File
+	Files             []*syntax.File
+	Imports           map[string]*packageUnit
+	sourcePaths       []string
+	testSourcePaths   []string
+	matchingPaths     []string
+	matchingTestPaths []string
+	generatedPaths    []string
+	context           *build.Context
+	usesC             bool
+	sourcesMatched    bool
+	testsMatched      bool
+	loaded            bool
+	matchError        error
+	loadError         error
+	fs                *token.FileSet
+	compiled          *compiler.CompiledPackage
+}
+
+type packageTests struct {
+	Sources []compiler.File
+	Files   []*syntax.File
+	UsesC   bool
 }
 
 // outputPath returns the Go output path while preserving target suffixes.
@@ -85,7 +94,7 @@ func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) 
 	switch {
 	case strings.HasSuffix(entry.Name(), ".tgo"):
 		if strings.HasSuffix(entry.Name(), "_test.tgo") {
-			return nil
+			return d.addTestSource(path)
 		}
 		return d.addSource(path)
 	case outputname.Reserved(entry.Name()):
@@ -93,6 +102,16 @@ func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) 
 	default:
 		return nil
 	}
+}
+
+// addTestSource records one possible TGo test source file.
+func (d *packageDiscovery) addTestSource(path string) error {
+	unit, err := d.packageFor(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	unit.testSourcePaths = append(unit.testSourcePaths, path)
+	return nil
 }
 
 // visitDirectory skips hidden, vendor, and nested module directories.
@@ -141,28 +160,50 @@ func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
 	unit := d.packages[importPath]
 	if unit == nil {
 		unit = &packageUnit{
-			Dir:            directory,
-			Path:           importPath,
-			Module:         d.module,
-			Sources:        nil,
-			GoFiles:        nil,
-			Files:          nil,
-			Imports:        nil,
-			sourcePaths:    nil,
-			matchingPaths:  nil,
-			generatedPaths: nil,
-			context:        d.context,
-			usesC:          false,
-			sourcesMatched: false,
-			loaded:         false,
-			matchError:     nil,
-			loadError:      nil,
-			fs:             token.NewFileSet(),
-			compiled:       nil,
+			Dir:               directory,
+			Path:              importPath,
+			Module:            d.module,
+			Sources:           nil,
+			GoFiles:           nil,
+			Files:             nil,
+			Imports:           nil,
+			sourcePaths:       nil,
+			testSourcePaths:   nil,
+			matchingPaths:     nil,
+			matchingTestPaths: nil,
+			generatedPaths:    nil,
+			context:           d.context,
+			usesC:             false,
+			sourcesMatched:    false,
+			testsMatched:      false,
+			loaded:            false,
+			matchError:        nil,
+			loadError:         nil,
+			fs:                token.NewFileSet(),
+			compiled:          nil,
 		}
 		d.packages[importPath] = unit
 	}
 	return unit, nil
+}
+
+// matchingTestSources returns test files enabled for the current Go target.
+func (p *packageUnit) matchingTestSources() ([]string, error) {
+	if p.testsMatched {
+		return p.matchingTestPaths, p.matchError
+	}
+	p.testsMatched = true
+	for _, path := range p.testSourcePaths {
+		match, err := matchTgoFile(p.context, path)
+		if err != nil {
+			p.matchError = err
+			return nil, err
+		}
+		if match {
+			p.matchingTestPaths = append(p.matchingTestPaths, path)
+		}
+	}
+	return p.matchingTestPaths, nil
 }
 
 // importPath maps a package directory to its module import path.
@@ -190,6 +231,55 @@ func (p *packageUnit) readSource(path string) error {
 	p.Sources = append(p.Sources, compiler.File{Name: path, Data: data})
 	p.Files = append(p.Files, file)
 	return nil
+}
+
+// readTests groups active tests by their Go test package.
+func (p *packageUnit) readTests() (packageTests, packageTests, error) {
+	var internal packageTests
+	var external packageTests
+	paths, err := p.matchingTestSources()
+	if err != nil {
+		return packageTests{}, packageTests{},
+
+			err
+	}
+	if len(paths) == 0 {
+		return internal, external, nil
+	}
+	packageName := p.Files[0].Name.Name
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return packageTests{}, packageTests{},
+
+				err
+		}
+		file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+		if err != nil {
+			return packageTests{}, packageTests{},
+
+				err
+		}
+		cgo := importsC(file)
+		if cgo && !p.context.CgoEnabled {
+			continue
+		}
+		tests := &internal
+		if file.Name.Name == packageName+"_test" {
+			tests = &external
+		} else if file.Name.Name != packageName {
+			return packageTests{}, packageTests{},
+
+				fmt.Errorf(
+					"%s: package %s, want %s or %s_test",
+					path, file.Name.Name, packageName, packageName,
+				)
+		}
+		tests.Sources = append(tests.Sources, compiler.File{Name: path, Data: data})
+		tests.Files = append(tests.Files, file)
+		tests.UsesC = tests.UsesC || cgo
+	}
+	return internal, external, nil
 }
 
 // matchingSources returns source files enabled for the current Go target.
@@ -270,6 +360,11 @@ func (p *packageUnit) available() (bool, error) {
 // sourceOwnsOutput reports whether a current source owns one generated path.
 func (p *packageUnit) sourceOwnsOutput(path string) bool {
 	for _, sourcePath := range p.sourcePaths {
+		if p.outputPath(sourcePath) == path {
+			return true
+		}
+	}
+	for _, sourcePath := range p.testSourcePaths {
 		if p.outputPath(sourcePath) == path {
 			return true
 		}
