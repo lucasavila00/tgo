@@ -98,6 +98,16 @@ func (b *packageBuilder) build(path string) error {
 		if err := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs)); err != nil {
 			return err
 		}
+		testOutputs, err_3 := b.compileTests(unit)
+		if err_3 != nil {
+			return err_3
+		}
+		for _, name := range sortedOutputPaths(testOutputs) {
+			data := testOutputs[name]
+			if err := b.writeFile(name, data); err != nil {
+				return err
+			}
+		}
 	}
 	b.states[path] = buildDone
 	return nil
@@ -105,12 +115,119 @@ func (b *packageBuilder) build(path string) error {
 
 // compile sends one prepared package to the in-memory compiler.
 func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
-	paths, err := loadExportPaths(unit)
+	compiled, err := b.compileFiles(
+		unit,
+		unit.Path,
+		unit.Sources,
+		unit.GoFiles,
+		unit.Files,
+		unit.usesC,
+		unit.fs,
+	)
+	if err != nil {
+		return nil, err
+	}
+	unit.compiled = compiled
+	return outputPaths(unit, compiled.Outputs), nil
+}
+
+// compileTests emits internal and external TGo test packages.
+func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, error) {
+	internal, external, err := unit.readTests()
+	if err != nil {
+		return nil, err
+	}
+	outputs := make(map[string][]byte)
+	for _, item := range []struct {
+		tests    packageTests
+		external bool
+	}{
+		{tests: internal, external: false},
+		{tests: external, external: true},
+	} {
+		if len(item.tests.Sources) == 0 {
+			continue
+		}
+		compiled, err := b.compileTestPackage(
+			unit,
+			item.tests,
+			item.external,
+			token.NewFileSet(),
+		)
+		if err != nil {
+			return nil, err
+		}
+		for _, source := range item.tests.Sources {
+			if data, ok := compiled.Outputs[source.Name]; ok {
+				outputs[unit.outputPath(source.Name)] = data
+			}
+		}
+	}
+	return outputs, nil
+}
+
+// compileTestPackage compiles one internal or external test package view.
+func (b *packageBuilder) compileTestPackage(
+	unit *packageUnit,
+	tests packageTests,
+	external bool,
+	files *token.FileSet,
+) (*compiler.CompiledPackage, error) {
+	path := unit.Path
+	sources := tests.Sources
+	goFiles := []compiler.File(nil)
+	syntaxFiles := tests.Files
+	usesC := tests.UsesC
+	if !external {
+		sources = append(append([]compiler.File(nil), unit.Sources...), sources...)
+		goFiles = unit.GoFiles
+		syntaxFiles = append(
+			append([]*syntax.File(nil), unit.Files...),
+			syntaxFiles...,
+		)
+		usesC = unit.usesC || usesC
+	} else {
+		path += "_test"
+	}
+	for _, dependency := range importsOf(syntaxFiles) {
+		if dependency == unit.Path {
+			continue
+		}
+		if err := b.buildImport(dependency); err != nil {
+			return nil, err
+		}
+	}
+	return b.compileFiles(
+		unit, path, sources, goFiles, syntaxFiles, usesC, files,
+	)
+}
+
+// compileFiles compiles one production or test package view.
+func (b *packageBuilder) compileFiles(
+	unit *packageUnit,
+	path string,
+	sources []compiler.File,
+	goFiles []compiler.File,
+	files []*syntax.File,
+	usesC bool,
+	fileSet *token.FileSet,
+) (*compiler.CompiledPackage, error) {
+	imports := make(map[string]*compiler.CompiledPackage)
+	for _, importPath := range importsOf(files) {
+		if importPath == unit.Path && path != unit.Path && unit.compiled != nil {
+			imports[importPath] = unit.compiled
+			continue
+		}
+		if dependency := unit.Imports[importPath]; dependency != nil && dependency.compiled != nil {
+			imports[importPath] = dependency.compiled
+		}
+	}
+	paths, err := loadExportPaths(unit.Dir, importsOf(files))
 	if err != nil {
 		return nil, err
 	}
 	packageImporter := importer.ForCompiler(
-		unit.fs,
+		fileSet,
 		"gc",
 		func(path string) (io.ReadCloser, error) {
 			export := paths[path]
@@ -124,33 +241,34 @@ func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 			return os.Open(export)
 		},
 	)
-	imports := make(map[string]*compiler.CompiledPackage)
-	for _, path := range importsOf(unit.Files) {
-		if dependency := unit.Imports[path]; dependency != nil && dependency.compiled != nil {
-			imports[path] = dependency.compiled
-		}
-	}
 	compiled, diagnostics := compiler.Compile(
 		compiler.PackageInput{
 			Directory: unit.Dir,
-			Path:      unit.Path,
-			Sources:   unit.Sources,
-			GoFiles:   unit.GoFiles,
+			Path:      path,
+			Sources:   sources,
+			GoFiles:   goFiles,
 			Imports:   imports,
-			FileSet:   unit.fs,
+			FileSet:   fileSet,
 			Importer:  packageImporter,
-			UsesC:     unit.usesC,
+			UsesC:     usesC,
 		},
 	)
 	if len(diagnostics) != 0 {
 		return nil, errors.Join(diagnostics...)
 	}
-	unit.compiled = compiled
-	outputs := make(map[string][]byte, len(compiled.Outputs))
-	for sourcePath, data := range compiled.Outputs {
+	return compiled, nil
+}
+
+// outputPaths maps compiler source keys to file-system output paths.
+func outputPaths(
+	unit *packageUnit,
+	compiled map[string][]byte,
+) map[string][]byte {
+	outputs := make(map[string][]byte, len(compiled))
+	for sourcePath, data := range compiled {
 		outputs[unit.outputPath(sourcePath)] = data
 	}
-	return outputs, nil
+	return outputs
 }
 
 // loadExportPath finds one import file requested during type checking.
@@ -169,8 +287,10 @@ func loadExportPath(directory string, path string) (string, error) {
 }
 
 // loadExportPaths finds import files with one Go command.
-func loadExportPaths(unit *packageUnit) (map[string]string, error) {
-	imports := importsOf(unit.Files)
+func loadExportPaths(
+	directory string,
+	imports []string,
+) (map[string]string, error) {
 	if len(imports) == 0 {
 		return map[string]string{}, nil
 	}
@@ -184,7 +304,7 @@ func loadExportPaths(unit *packageUnit) (map[string]string, error) {
 		"{{if .Export}}{{.ImportPath}}\t{{.Export}}{{end}}",
 	)
 	command := exec.Command("go", append(arguments, imports...)...)
-	command.Dir = unit.Dir
+	command.Dir = directory
 	output, err := command.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("load imports: %s", output)
@@ -332,6 +452,9 @@ func expectedOutputs(unit *packageUnit, outputs map[string][]byte) map[string]bo
 		expected[path] = true
 	}
 	for _, sourcePath := range unit.sourcePaths {
+		expected[unit.outputPath(sourcePath)] = true
+	}
+	for _, sourcePath := range unit.testSourcePaths {
 		expected[unit.outputPath(sourcePath)] = true
 	}
 	return expected
