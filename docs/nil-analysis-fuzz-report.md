@@ -21,6 +21,8 @@ Boolean guards, early exits, loops, assignments, swaps, saved guards, and later 
    an impossible alternative, so the remaining proof is lost.
 8. A saved compound guard can lose its known false result after a source value changes.
    Its body then reports an error even though the body cannot run.
+9. A saved non-nil proof can lose the old value when its checked variable is overwritten.
+   A surviving alias then reports an error even though the saved guard proves it is non-nil.
 
 The fixes use three independent branches from `main`. One fixes nil unions and Boolean
 reachability. One fixes parallel assignment identities. One keeps relational branch
