@@ -94,5 +94,6 @@ go test ./...
 ./bin/tgolint ./...
 ```
 
-Read the [language specification](docs/spec/README.md) and the
-[tgolint rules](docs/spec/TGOLINT.md).
+Read the [documentation map](docs/README.md), the
+[language specification](docs/spec/README.md), and the
+[`tgolint` specification](docs/spec/TGOLINT.md).

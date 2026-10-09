@@ -66,9 +66,9 @@ The public `tgo/pkg/syntax` package parses this grammar. `ParseFile` accepts a G
 `AllErrors` reports independent scanner and Go parser errors. A tgo production error stops
 extension parsing at its first error.
 
-The parser uses the Go parser as a private front end. It converts every Go and TGo form before
-`ParseFile` returns. The public tree contains closed `Expression`, `Statement`, `Declaration`,
-and `Specification` enums. It does not expose `go/ast` nodes.
+The parser converts every Go and TGo form before `ParseFile` returns. The public tree contains
+closed `Expression`, `Statement`, `Declaration`, and `Specification` enums. It does not expose
+`go/ast` nodes.
 
 `PropagationExpression` contains the source call and the positions of the postfix marks.
 `SecondBang` is `token.NoPos` for `!`. The two marks in `!!` must be adjacent. All positions
@@ -266,83 +266,15 @@ can break stored data or clients.
 
 #### Allocation behavior
 
-Generated enum JSON uses standard `encoding/json` behavior. It avoids a map or a second marshal
-when the wire form does not require one. Payload methods and field methods keep their normal Go
-JSON behavior.
+Generated enum JSON must not marshal the selected payload more than once. Tagged decoding must not
+decode the selected payload more than once. Untagged decoding can try each payload in declaration
+order. Generated code must not build an intermediate map unless the wire form or Go JSON
+compatibility requires one. Payload fields and custom methods keep their normal `encoding/json`
+allocation behavior. Go escape analysis and the Go version can change measured counts, so numeric
+limits are not language behavior.
 
-Go does not specify which values escape to the heap. The tables below list each logical allocation
-site in the generated path. The Go version, the payload type, the JSON data, and escape analysis
-determine the final count.
-
-Each successful `json.Marshal` call allocates its returned byte slice. A public
-`json.Marshal(enumValue)` call can also allocate its own output buffer after the generated
-`MarshalJSON` method returns. Each `json.Unmarshal` call can allocate decoder state and destination
-values. The normal-name paths use these operations:
-
-- External encoding has one typed-wrapper marshal. Decoding has one map, each decoded key string,
-  one copied payload `RawMessage`, and one payload decode.
-- Internal encoding marshals the payload and allocates the combined object. This operation keeps
-  payload-level and promoted JSON methods. Decoding reads the tag directly into a string. It then
-  decodes the payload from the original object, so a custom method receives the original member
-  order.
-- Adjacent encoding has one typed-wrapper marshal. Decoding reads the tag directly into a string,
-  copies the content into one `RawMessage`, and decodes that content.
-- Untagged encoding has one direct payload marshal. Decoding has one payload decode for each
-  attempted variant. A failed attempt can allocate values before it returns an error.
-
-External decoding needs the map to find an arbitrary key and to require exactly one entry.
-`RawMessage.UnmarshalJSON` allocates and copies its JSON value. Internal decoding reads the input
-twice. It does not allocate a map or an intermediate payload document.
-
-A name such as `-` cannot be represented safely in a JSON struct tag. Such a name uses these
-compatibility sites:
-
-- External and adjacent encoding first allocate the payload marshal result. A generated `make`
-  then allocates the envelope byte slice.
-- Internal encoding first allocates the payload marshal result. For an empty object, conversion
-  of the complete constant JSON string can allocate a byte slice. For a nonempty object, a
-  generated `make` allocates the combined byte slice.
-- Internal and adjacent decoding allocate a map, decoded key strings, and copied `RawMessage`
-  values. Internal decoding passes the original input to the payload decoder. It does not delete
-  the tag or marshal an intermediate map.
-
-Payload decoding can allocate strings, pointers, slices, maps, interfaces, and values that custom
-`UnmarshalJSON` methods create. Payload encoding can allocate inside maps, slices, interfaces,
-pointer values, and custom `MarshalJSON` methods. A custom method can also retain input or output
-data.
-
-The generated typed wrappers and local payload variables do not contain an explicit heap
-allocation. Escape analysis can move them to the heap. `Tag`, inline construction, and inline
-payload access add no heap allocation. A boxed enum payload can allocate its interface box when it
-escapes. `UnknownTag` formats a new string on the default path. A zero or unknown tag, a
-missing field, an unknown variant, and a failed untagged match can allocate an error. JSON syntax,
-type, and custom-method errors can allocate before the generated method returns them.
-
-JSON decoding uses reflection. It does not enforce `%T` contracts. Input for a `%T` payload field
-must contain a non-null value. Missing or null data can produce an invalid TGo value without a JSON
-error.
-
-CI measures public `encoding/json` calls with a representative small payload. The marshal
-benchmarks convert the typed enum to the interface in the timed loop. These limits include that
-conversion. The escaped-name cases use a nonempty payload and cover each fallback. The limits do
-not include allocations that a different payload type or a custom JSON method adds.
-
-| Operation | Maximum allocations | Maximum bytes |
-| --- | ---: | ---: |
-| External marshal | 6 | 320 B/op |
-| Internal marshal | 7 | 344 B/op |
-| Adjacent marshal | 6 | 352 B/op |
-| Untagged marshal | 6 | 160 B/op |
-| Escaped external marshal | 7 | 160 B/op |
-| Escaped internal marshal | 7 | 192 B/op |
-| Escaped adjacent marshal | 7 | 224 B/op |
-| External unmarshal | 7 | 520 B/op |
-| Internal unmarshal | 2 | 64 B/op |
-| Adjacent unmarshal | 3 | 120 B/op |
-| Untagged unmarshal | 6 | 248 B/op |
-| Escaped external unmarshal | 8 | 504 B/op |
-| Escaped internal unmarshal | 12 | 568 B/op |
-| Escaped adjacent unmarshal | 12 | 576 B/op |
+JSON decoding uses reflection. It does not enforce `%T` contracts. Missing or null data can produce
+an invalid TGo value without a JSON error.
 
 ### Go API
 
@@ -377,14 +309,8 @@ The tag uses `uint8` below 256 variants, `uint16` below 65,536 variants,
 and `uint32` otherwise.
 
 The compiler may change payload storage without changing this API. A variant with no payload
-fields adds no storage. The representation does not use an unsafe memory union.
-
-Payloads start in inline storage. The compiler uses the 64-bit Go compiler layout
-to calculate the enum size. If the size exceeds 80 bytes, it boxes the largest
-inline payload and repeats the calculation. Equal sizes select the first variant
-in declaration order. Boxed variants share one interface field. Construction can
-allocate when the payload escapes. A boxed payload accessor can panic on the wrong
-variant. Enums with no payload fields store only their tag.
+fields adds no storage. The representation does not use an unsafe memory union. The compiler can
+box a large payload; construction can then allocate when the box escapes.
 
 Payload accessors do not check the tag and do not allocate. An inline accessor for the wrong
 variant returns the inactive inline slot. A value from another variant constructor normally has

@@ -127,4 +127,4 @@ Use `call()!!` to return the original error with no context or wrapper allocatio
 Use a normal error check when the caller must recover, change the error, or add runtime data.
 
 [Language specification](../spec/README.md).
-[Go caller checks](TGOLINT.md).
+[Go caller checks](GO-CALLERS.md).
