@@ -5,140 +5,177 @@ package tgolint
 
 import (
 	"fmt"
-	"go/ast"
 	"go/token"
 	"go/types"
 	"strconv"
 	"strings"
+
+	"tgo/pkg/syntax"
 )
 
 // transferNilNode applies one source operation to the current facts.
 func (e *nilEnvironment) transferNilNode(
 	state *nilFlowState,
-	node ast.Node,
-	function ast.Node,
+	node syntax.Node,
+	function *syntax.Node,
 	report bool,
 ) {
 	if report {
 		e.checkNilNode(state, node, function)
 	}
-	switch node := node.(type) {
-	case *ast.AssignStmt:
-		e.transferNilAssignment(state, node)
-	case *ast.ValueSpec:
-		e.transferNilValues(state, node.Names, node.Values)
-		if node.Type == nil {
-			e.inferNilContracts(node.Names, node.Values)
+	if statement, ok := syntax.StatementOf(&node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			e.transferNilAssignment(state, assignment)
+			return
 		}
-	case *ast.DeclStmt:
-		declaration, ok := node.Decl.(*ast.GenDecl)
-		if ok {
-			for _, item := range declaration.Specs {
-				if values, ok := item.(*ast.ValueSpec); ok {
-					e.transferNilValues(state, values.Names, values.Values)
-					if values.Type == nil {
-						e.inferNilContracts(values.Names, values.Values)
+		if declarationStatement := syntax.DeclarationStatementOf(statement); declarationStatement != nil {
+			declaration := syntax.GeneralDeclarationOf(declarationStatement.Declaration)
+			if declaration != nil {
+				for _, item := range declaration.Specs {
+					if values := syntax.ValueSpecificationOf(item); values != nil {
+						e.transferNilValues(state, values.Names, values.Values)
+						if values.Type == nil {
+							e.inferNilContracts(values.Names, values.Values)
+						}
 					}
 				}
 			}
+			return
 		}
-	default:
-		e.invalidateNilExpression(state, node)
+		if item := syntax.ExpressionStatementOf(statement); item != nil {
+			e.invalidateNilExpression(state, item.Expression)
+		}
+		if item := syntax.SendStatementOf(statement); item != nil {
+			e.invalidateNilExpression(state, item.Channel)
+			e.invalidateNilExpression(state, item.Value)
+		}
+		if item := syntax.GoStatementOf(statement); item != nil {
+			e.invalidateNilExpression(state, item.Call)
+		}
+		if item := syntax.DeferStatementOf(statement); item != nil {
+			e.invalidateNilExpression(state, item.Call)
+		}
+		if item := syntax.ReturnStatementOf(statement); item != nil {
+			e.invalidateNilExpressions(state, item.Results)
+		}
+	}
+	if specification, ok := syntax.SpecificationOf(&node); ok {
+		if values := syntax.ValueSpecificationOf(specification); values != nil {
+			e.transferNilValues(state, values.Names, values.Values)
+			if values.Type == nil {
+				e.inferNilContracts(values.Names, values.Values)
+			}
+		}
+		return
+	}
+	if expression, ok := syntax.ExpressionOf(&node); ok {
+		e.invalidateNilExpression(state, expression)
 	}
 }
 
 // checkNilNode checks the nil rules for one control-flow node.
 func (e *nilEnvironment) checkNilNode(
 	state *nilFlowState,
-	node ast.Node,
-	function ast.Node,
+	node syntax.Node,
+	function *syntax.Node,
 ) {
-	switch node := node.(type) {
-	case *ast.AssignStmt:
-		e.checkNilAssignment(state, node)
-	case *ast.ValueSpec:
-		e.checkNilValues(state, node)
-	case *ast.DeclStmt:
-		declaration, ok := node.Decl.(*ast.GenDecl)
-		if ok {
-			for _, item := range declaration.Specs {
-				if values, ok := item.(*ast.ValueSpec); ok {
-					e.checkNilValues(state, values)
+	if statement, ok := syntax.StatementOf(&node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			e.checkNilAssignment(state, assignment)
+		}
+		if declarationStatement := syntax.DeclarationStatementOf(statement); declarationStatement != nil {
+			declaration := syntax.GeneralDeclarationOf(declarationStatement.Declaration)
+			if declaration != nil {
+				for _, item := range declaration.Specs {
+					if values := syntax.ValueSpecificationOf(item); values != nil {
+						e.checkNilValues(state, values)
+					}
 				}
 			}
 		}
-	case *ast.ReturnStmt:
-		e.checkNilReturn(state, node, function)
-	case *ast.SendStmt:
-		channel := e.contractForExpression(node.Chan)
-		e.checkNilFlow(node.Value, nilChild(channel, "e"), state)
-		e.checkNilExpression(node.Chan, state)
-		e.checkNilExpression(node.Value, state)
-	case *ast.ExprStmt:
-		e.checkNilExpression(node.X, state)
-	case *ast.GoStmt:
-		e.checkNilExpression(node.Call, state)
-	case *ast.DeferStmt:
-		e.checkNilExpression(node.Call, state)
-	case ast.Expr:
-		e.checkNilExpression(node, state)
+		if item := syntax.ReturnStatementOf(statement); item != nil {
+			e.checkNilReturn(state, item, function)
+		}
+		if item := syntax.SendStatementOf(statement); item != nil {
+			channel := e.contractForExpression(item.Channel)
+			e.checkNilFlow(item.Value, nilChild(channel, "e"), state)
+			e.checkNilExpression(item.Channel, state)
+			e.checkNilExpression(item.Value, state)
+		}
+		if item := syntax.ExpressionStatementOf(statement); item != nil {
+			e.checkNilExpression(item.Expression, state)
+		}
+		if item := syntax.GoStatementOf(statement); item != nil {
+			e.checkNilExpression(item.Call, state)
+		}
+		if item := syntax.DeferStatementOf(statement); item != nil {
+			e.checkNilExpression(item.Call, state)
+		}
+	}
+	if specification, ok := syntax.SpecificationOf(&node); ok {
+		if values := syntax.ValueSpecificationOf(specification); values != nil {
+			e.checkNilValues(state, values)
+		}
+	}
+	if expression, ok := syntax.ExpressionOf(&node); ok {
+		e.checkNilExpression(expression, state)
 	}
 }
 
 // checkNilAssignment checks values before an assignment changes facts.
 func (e *nilEnvironment) checkNilAssignment(
 	state *nilFlowState,
-	statement *ast.AssignStmt,
+	statement *syntax.AssignmentStatement,
 ) {
-	for _, target := range statement.Lhs {
+	for _, target := range statement.Left {
 		e.checkNilExpression(target, state)
 	}
-	for _, expression := range statement.Rhs {
+	for _, expression := range statement.Right {
 		e.checkNilExpression(expression, state)
 	}
-	if len(statement.Rhs) == len(statement.Lhs) {
-		for index, target := range statement.Lhs {
+	if len(statement.Right) == len(statement.Left) {
+		for index, target := range statement.Left {
 			if isNilDiscard(target) {
 				continue
 			}
-			if statement.Tok == token.DEFINE && e.newNilTarget(target) {
+			if statement.Operator == token.DEFINE && e.newNilTarget(target) {
 				continue
 			}
 			e.checkNilFlow(
-				statement.Rhs[index], e.contractForTarget(target), state,
+				statement.Right[index], e.contractForTarget(target), state,
 			)
 		}
 		return
 	}
-	if len(statement.Rhs) != 1 {
+	if len(statement.Right) != 1 {
 		return
 	}
-	for index, target := range statement.Lhs {
+	for index, target := range statement.Left {
 		if isNilDiscard(target) {
 			continue
 		}
-		if statement.Tok == token.DEFINE && e.newNilTarget(target) {
+		if statement.Operator == token.DEFINE && e.newNilTarget(target) {
 			continue
 		}
 		e.checkNilFlowResult(
-			statement.Rhs[0], index, e.contractForTarget(target), state,
+			statement.Right[0], index, e.contractForTarget(target), state,
 		)
 	}
 }
 
 func (e *nilEnvironment) checkNilValues(
 	state *nilFlowState,
-	specification *ast.ValueSpec,
+	specification *syntax.ValueSpecification,
 ) {
 	for _, value := range specification.Values {
 		e.checkNilExpression(value, state)
 	}
 	if len(specification.Values) == 0 {
 		for _, name := range specification.Names {
-			object := e.info.Defs[name]
+			object := e.facts.DefinitionName(name)
 			contract := e.contractForObject(object)
 			if e.nilZeroInvalid(object.Type(), contract) {
-				e.reportNil(name.Pos(), "zero value breaks a non-nil contract")
+				e.reportNil(name.Start, "zero value breaks a non-nil contract")
 			}
 		}
 		return
@@ -150,7 +187,7 @@ func (e *nilEnvironment) checkNilValues(
 			}
 			e.checkNilFlow(
 				specification.Values[index],
-				e.contractForObject(e.info.Defs[name]), state,
+				e.contractForObject(e.facts.DefinitionName(name)), state,
 			)
 		}
 		return
@@ -164,7 +201,7 @@ func (e *nilEnvironment) checkNilValues(
 		}
 		e.checkNilFlowResult(
 			specification.Values[0], index,
-			e.contractForObject(e.info.Defs[name]), state,
+			e.contractForObject(e.facts.DefinitionName(name)), state,
 		)
 	}
 }
@@ -172,8 +209,8 @@ func (e *nilEnvironment) checkNilValues(
 // checkNilReturn checks each result against the function contract.
 func (e *nilEnvironment) checkNilReturn(
 	state *nilFlowState,
-	statement *ast.ReturnStmt,
-	function ast.Node,
+	statement *syntax.ReturnStatement,
+	function *syntax.Node,
 ) {
 	contract := e.functionNodeContract(function)
 	if len(statement.Results) == 0 {
@@ -184,7 +221,7 @@ func (e *nilEnvironment) checkNilReturn(
 		e.checkNilExpression(expression, state)
 	}
 	if len(statement.Results) == 1 {
-		if _, tuple := e.info.TypeOf(statement.Results[0]).(*types.Tuple); tuple {
+		if _, tuple := e.facts.Type(statement.Results[0]).(*types.Tuple); tuple {
 			signature := e.functionSignature(function)
 			if signature == nil {
 				return
@@ -207,16 +244,15 @@ func (e *nilEnvironment) checkNilReturn(
 
 func (e *nilEnvironment) checkNilNamedResults(
 	state *nilFlowState,
-	statement *ast.ReturnStmt,
-	function ast.Node,
+	statement *syntax.ReturnStatement,
+	function *syntax.Node,
 	contract nilContract,
 ) {
-	var resultList *ast.FieldList = nil
-	switch function := function.(type) {
-	case *ast.FuncDecl:
-		resultList = function.Type.Results
-	case *ast.FuncLit:
-		resultList = function.Type.Results
+	var resultList *syntax.FieldList = nil
+	if declaration, ok := syntax.FunctionDeclarationOf(function); ok {
+		resultList = declaration.Type.Results
+	} else if literal, ok := syntax.FunctionLiteralOf(function); ok {
+		resultList = literal.Type.Results
 	}
 	if resultList == nil {
 		return
@@ -231,11 +267,12 @@ func (e *nilEnvironment) checkNilNamedResults(
 			expected := nilChild(contract, "r"+strconv.Itoa(index))
 			if len(expected) != 0 {
 				if len(field.Names) == 0 {
-					e.reportNil(statement.Pos(), "bare return cannot set a non-nil result")
+					e.reportNil(statement.Start, "bare return cannot set a non-nil result")
 				} else {
 					name := field.Names[fieldIndex]
-					if !isNonNilValue(e.expressionNilValue(name, state)) {
-						e.reportNil(name.Pos(), "named result is not proven non-nil")
+					nameExpression := syntax.ExpressionIdentifier{Value: name}.Expression()
+					if !isNonNilValue(e.expressionNilValue(&nameExpression, state)) {
+						e.reportNil(name.Start, "named result is not proven non-nil")
 					}
 				}
 			}
@@ -244,33 +281,22 @@ func (e *nilEnvironment) checkNilNamedResults(
 	}
 }
 
-func (e *nilEnvironment) functionNodeContract(function ast.Node) nilContract {
-	switch function := function.(type) {
-	case *ast.FuncDecl:
-		return e.contractForObject(e.info.Defs[function.Name])
-	case *ast.FuncLit:
-		return e.functionContract(function.Type)
+func (e *nilEnvironment) functionNodeContract(function *syntax.Node) nilContract {
+	if declaration, ok := syntax.FunctionDeclarationOf(function); ok {
+		return e.contractForObject(e.facts.DefinitionName(declaration.Name))
+	}
+	if literal, ok := syntax.FunctionLiteralOf(function); ok {
+		return e.functionContract(literal.Type)
 	}
 	return nil
 }
 
-func (e *nilEnvironment) functionSignature(function ast.Node) *types.Signature {
-	switch function := function.(type) {
-	case *ast.FuncDecl:
-		object, _ := e.info.Defs[function.Name].(*types.Func)
-		if object != nil {
-			signature, _ := object.Type().(*types.Signature)
-			return signature
-		}
-	case *ast.FuncLit:
-		signature, _ := e.info.TypeOf(function).(*types.Signature)
-		return signature
-	}
-	return nil
+func (e *nilEnvironment) functionSignature(function *syntax.Node) *types.Signature {
+	return e.facts.FunctionSignature(syntax.NodePosition(function))
 }
 
 func (e *nilEnvironment) checkNilFlowResult(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	index int,
 	expected nilContract,
 	state *nilFlowState,
@@ -278,17 +304,17 @@ func (e *nilEnvironment) checkNilFlowResult(
 	actual := e.resultContract(expression, index)
 	if expected[""] && !actual[""] {
 		e.reportNil(
-			expression.Pos(),
+			syntax.ExpressionPosition(expression),
 			"result %d is not proven non-nil for %%T",
 			index+1,
 		)
 	}
-	e.checkNestedNilContract(expression.Pos(), expected, actual)
+	e.checkNestedNilContract(syntax.ExpressionPosition(expression), expected, actual)
 }
 
 // checkNilFlow checks one value against its destination contract.
 func (e *nilEnvironment) checkNilFlow(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	expected nilContract,
 	state *nilFlowState,
 ) {
@@ -298,12 +324,12 @@ func (e *nilEnvironment) checkNilFlow(
 	actual := e.contractForExpression(expression)
 	value := e.expressionNilValue(expression, state)
 	if expected[""] && !isNonNilValue(value) {
-		e.reportNil(expression.Pos(), "value is not proven non-nil for %%T")
+		e.reportNil(syntax.ExpressionPosition(expression), "value is not proven non-nil for %%T")
 	}
 	if !expected[""] && isProvenNilValue(value) {
 		return
 	}
-	e.checkNilContractCompatibility(expression.Pos(), expected, actual)
+	e.checkNilContractCompatibility(syntax.ExpressionPosition(expression), expected, actual)
 }
 
 func (e *nilEnvironment) checkNestedNilContract(

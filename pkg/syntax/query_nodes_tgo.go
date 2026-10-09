@@ -12,6 +12,14 @@ func StatementNode(value *Statement) Node { return nodeStatement(value) }
 // SpecificationNode wraps a specification as a public node.
 func SpecificationNode(value *Specification) Node { return nodeSpecification(value) }
 
+// FieldOf returns a field node payload.
+func FieldOf(node *Node) (*Field, bool) {
+	if node == nil || node.Tag() != NodeTagField {
+		return nil, false
+	}
+	return node.FieldPayload().Value, true
+}
+
 // InspectExpression visits one expression tree in source order.
 func InspectExpression(value *Expression, visit func(*Node) bool) {
 	if value == nil || visit == nil {
@@ -159,6 +167,14 @@ func StarExpressionOf(value *Expression) *StarExpression {
 	return value.StarPayload().Value
 }
 
+// NonNilPointerTypeExpressionOf returns a non-nil pointer type payload.
+func NonNilPointerTypeExpressionOf(value *Expression) *NonNilPointerType {
+	if value == nil || value.Tag() != ExpressionTagNonNilPointer {
+		return nil
+	}
+	return value.NonNilPointerPayload().Value
+}
+
 // KeyValueExpressionOf returns a key-value expression payload.
 func KeyValueExpressionOf(value *Expression) *KeyValueExpression {
 	if value == nil || value.Tag() != ExpressionTagKeyValue {
@@ -173,6 +189,14 @@ func BasicLiteralExpressionOf(value *Expression) *BasicLiteral {
 		return nil
 	}
 	return value.BasicLiteralPayload().Value
+}
+
+// FunctionLiteralExpressionOf returns a function literal payload.
+func FunctionLiteralExpressionOf(value *Expression) *FunctionLiteral {
+	if value == nil || value.Tag() != ExpressionTagFunctionLiteral {
+		return nil
+	}
+	return value.FunctionLiteralPayload().Value
 }
 
 // EllipsisExpressionOf returns an ellipsis payload.

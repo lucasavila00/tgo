@@ -1,12 +1,14 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/token"
 	"go/types"
 	"sort"
 	"strconv"
 	"strings"
+
+	"tgo/internal/sourcefacts"
+	"tgo/pkg/syntax"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -106,26 +108,26 @@ func decodeNilContract(fact *nilContractWireFact) nilContract {
 
 type nilEnvironment struct {
 	pass      *analysis.Pass
-	files     []*ast.File
-	info      *types.Info
+	files     []*syntax.File
+	facts     *sourcefacts.Index
 	pkg       *types.Package
 	markers   map[token.Pos]bool
 	contracts map[types.Object]nilContract
-	parents   map[ast.Node]ast.Node
+	parents   map[syntax.Node]*syntax.Node
 	reported  map[diagnosticKey]bool
 }
 
 func newNilEnvironment(
 	pass *analysis.Pass,
-	files []*ast.File,
-	info *types.Info,
+	files []*syntax.File,
+	facts *sourcefacts.Index,
 	pkg *types.Package,
 	markers map[token.Pos]bool,
 ) %nilEnvironment {
 	return &nilEnvironment{
-		pass: pass, files: files, info: info, pkg: pkg, markers: markers,
+		pass: pass, files: files, facts: facts, pkg: pkg, markers: markers,
 		contracts: make(map[types.Object]nilContract),
-		parents: make(map[ast.Node]ast.Node),
+		parents: make(map[syntax.Node]*syntax.Node),
 		reported: make(map[diagnosticKey]bool),
 	}
 }
@@ -134,53 +136,86 @@ func newNilEnvironment(
 func (e %nilEnvironment) collectNilContracts() {
 	for _, file := range e.files {
 		e.addParents(file)
-		ast.Inspect(file, func(node ast.Node) bool {
-			specification, ok := node.(*ast.TypeSpec)
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			declaration, declarationOK := syntax.DeclarationOf(node)
+			if declarationOK {
+				structure, structureOK := syntax.StructDeclarationOf(declaration)
+				if structureOK {
+					e.setContract(
+						e.facts.DefinitionName(structure.Name),
+						e.structDeclarationContract(structure),
+					)
+				}
+			}
+			specification, ok := syntax.SpecificationOf(node)
 			if ok {
-				e.setContract(
-					e.info.Defs[specification.Name],
-					e.declaredContract(specification.Type),
-				)
+				typeSpecification := syntax.TypeSpecificationOf(specification)
+				if typeSpecification != nil {
+					e.setContract(
+						e.facts.DefinitionName(typeSpecification.Name),
+						e.declaredContract(typeSpecification.Type),
+					)
+				}
 			}
 			return true
 		})
 	}
 	for _, file := range e.files {
-		ast.Inspect(file, func(node ast.Node) bool {
-			switch node := node.(type) {
-			case *ast.Field:
-				e.collectFieldContract(node)
-			case *ast.ValueSpec:
-				e.collectValueContract(node)
-			case *ast.RangeStmt:
-				e.collectRangeContracts(node)
-			case *ast.FuncDecl:
-				contract := e.functionContract(node.Type)
-				if node.Recv != nil && len(node.Recv.List) == 1 {
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			if field, ok := syntax.FieldOf(node); ok {
+				e.collectFieldContract(field)
+			}
+			if specification, ok := syntax.SpecificationOf(node); ok {
+				if values := syntax.ValueSpecificationOf(specification); values != nil {
+					e.collectValueContract(values)
+				}
+			}
+			if statement, ok := syntax.StatementOf(node); ok {
+				if item := syntax.RangeStatementOf(statement); item != nil {
+					e.collectRangeContracts(item)
+				}
+			}
+			if declaration, ok := syntax.FunctionDeclarationOf(node); ok {
+				contract := e.functionContract(declaration.Type)
+				if declaration.Receiver != nil && len(declaration.Receiver.List) == 1 {
 					if contract == nil {
 						contract = make(nilContract)
 					}
 					addNilPath(
 						contract, "v",
-						e.valueContract(node.Recv.List[0].Type),
+						e.valueContract(declaration.Receiver.List[0].Type),
 					)
 				}
-				e.setContract(e.info.Defs[node.Name], contract)
+				e.setContract(e.facts.DefinitionName(declaration.Name), contract)
 			}
 			return true
 		})
 	}
 }
 
+func (e %nilEnvironment) structDeclarationContract(
+	declaration *syntax.StructDeclaration,
+) nilContract {
+	result := make(nilContract)
+	for index, field := range declaration.Fields {
+		addNilPath(
+			result, "f"+strconv.Itoa(index),
+			e.declaredContract(field.Field.Type),
+		)
+	}
+	if len(result) == 0 { return nil }
+	return result
+}
+
 // collectRangeContracts gives range variables the source element contracts.
-func (e %nilEnvironment) collectRangeContracts(statement *ast.RangeStmt) {
-	if statement == nil || statement.Tok != token.DEFINE {
+func (e %nilEnvironment) collectRangeContracts(statement *syntax.RangeStatement) {
+	if statement == nil || statement.Operator != token.DEFINE {
 		return
 	}
-	contract := e.contractForExpression(statement.X)
+	contract := e.contractForExpression(statement.Source)
 	keyContract := nilContract(nil)
 	valueContract := nilContract(nil)
-	switch coreType(e.info.TypeOf(statement.X)).(type) {
+	switch coreType(e.facts.Type(statement.Source)).(type) {
 	case *types.Array, *types.Slice:
 		valueContract = nilChild(contract, "e")
 	case *types.Map:
@@ -194,21 +229,22 @@ func (e %nilEnvironment) collectRangeContracts(statement *ast.RangeStmt) {
 }
 
 // setRangeContract records one range variable contract.
-func (e %nilEnvironment) setRangeContract(expression ast.Expr, contract nilContract) {
-	name, ok := expression.(*ast.Ident)
-	if !ok || name.Name == "_" {
+func (e %nilEnvironment) setRangeContract(expression *syntax.Expression, contract nilContract) {
+	name := syntax.IdentifierExpressionOf(expression)
+	if name == nil || name.Name == "_" {
 		return
 	}
-	e.setContract(e.info.Defs[name], contract)
+	e.setContract(e.facts.DefinitionName(name), contract)
 }
 
 // valueContract adds contracts supplied by a named value type.
-func (e %nilEnvironment) valueContract(expression ast.Expr) nilContract {
+func (e %nilEnvironment) valueContract(expression *syntax.Expression) nilContract {
+	if expression == nil { return nil }
 	result := cloneNilContract(e.declaredContract(expression))
 	if result == nil {
 		result = make(nilContract)
 	}
-	for path := range e.contractForType(e.info.TypeOf(expression)) {
+	for path := range e.contractForType(e.facts.Type(expression)) {
 		result[path] = true
 	}
 	if len(result) == 0 {
@@ -217,17 +253,11 @@ func (e %nilEnvironment) valueContract(expression ast.Expr) nilContract {
 	return result
 }
 
-func (e %nilEnvironment) addParents(file *ast.File) {
-	stack := []ast.Node(nil)
-	ast.Inspect(file, func(node ast.Node) bool {
-		if node == nil {
-			stack = stack[:len(stack)-1]
-			return false
+func (e %nilEnvironment) addParents(file *syntax.File) {
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		if parent := syntax.Parent(file, node); parent != nil {
+			e.parents[*node] = parent
 		}
-		if len(stack) != 0 {
-			e.parents[node] = stack[len(stack)-1]
-		}
-		stack = append(stack, node)
 		return true
 	})
 }
@@ -238,24 +268,24 @@ func (e %nilEnvironment) setContract(object types.Object, contract nilContract) 
 	}
 }
 
-func (e %nilEnvironment) collectFieldContract(field *ast.Field) {
+func (e %nilEnvironment) collectFieldContract(field *syntax.Field) {
 	contract := e.valueContract(field.Type)
 	for _, name := range field.Names {
-		e.setContract(e.info.Defs[name], contract)
+		e.setContract(e.facts.DefinitionName(name), contract)
 	}
 	if len(field.Names) == 0 {
-		e.setContract(e.info.Implicits[field], contract)
+		e.setContract(e.facts.ImplicitField(field), contract)
 	}
 }
 
-func (e %nilEnvironment) collectValueContract(specification *ast.ValueSpec) {
+func (e %nilEnvironment) collectValueContract(specification *syntax.ValueSpecification) {
 	contract := e.valueContract(specification.Type)
 	for _, name := range specification.Names {
-		e.setContract(e.info.Defs[name], contract)
+		e.setContract(e.facts.DefinitionName(name), contract)
 	}
 }
 
-func (e %nilEnvironment) functionContract(function *ast.FuncType) nilContract {
+func (e %nilEnvironment) functionContract(function *syntax.FunctionType) nilContract {
 	if function == nil {
 		return nil
 	}
@@ -271,7 +301,7 @@ func (e %nilEnvironment) functionContract(function *ast.FuncType) nilContract {
 func (e %nilEnvironment) addFieldListContract(
 	target nilContract,
 	prefix string,
-	fields *ast.FieldList,
+	fields *syntax.FieldList,
 ) {
 	if fields == nil {
 		return
@@ -290,36 +320,39 @@ func (e %nilEnvironment) addFieldListContract(
 	}
 }
 
-func (e %nilEnvironment) declaredContract(expression ast.Expr) nilContract {
+func (e %nilEnvironment) declaredContract(expression *syntax.Expression) nilContract {
 	if expression == nil {
 		return nil
 	}
 	result := make(nilContract)
-	switch expression := expression.(type) {
-	case *ast.ParenExpr:
-		return e.declaredContract(expression.X)
-	case *ast.StarExpr:
-		if e.markers[expression.Star] {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return e.declaredContract(parenthesized.Expression)
+	}
+	if pointer := syntax.NonNilPointerTypeExpressionOf(expression); pointer != nil {
+		result[""] = true
+		addNilPath(result, "e", e.declaredContract(pointer.Type))
+	} else if star := syntax.StarExpressionOf(expression); star != nil {
+		if e.markers[star.Star] {
 			result[""] = true
 		}
-		addNilPath(result, "e", e.declaredContract(expression.X))
-	case *ast.ArrayType:
-		addNilPath(result, "e", e.declaredContract(expression.Elt))
-	case *ast.MapType:
-		addNilPath(result, "k", e.declaredContract(expression.Key))
-		addNilPath(result, "v", e.declaredContract(expression.Value))
-	case *ast.ChanType:
-		addNilPath(result, "e", e.declaredContract(expression.Value))
-	case *ast.StructType:
-		for index, field := range expression.Fields.List {
+		addNilPath(result, "e", e.declaredContract(star.Expression))
+	} else if array := syntax.ArrayTypeExpressionOf(expression); array != nil {
+		addNilPath(result, "e", e.declaredContract(array.Element))
+	} else if mapping := syntax.MapTypeExpressionOf(expression); mapping != nil {
+		addNilPath(result, "k", e.declaredContract(mapping.Key))
+		addNilPath(result, "v", e.declaredContract(mapping.Value))
+	} else if channel := syntax.ChannelTypeExpressionOf(expression); channel != nil {
+		addNilPath(result, "e", e.declaredContract(channel.Value))
+	} else if structure := syntax.StructTypeExpressionOf(expression); structure != nil {
+		for index, field := range structure.Fields.List {
 			addNilPath(
 				result, "f"+strconv.Itoa(index), e.declaredContract(field.Type),
 			)
 		}
-	case *ast.FuncType:
-		return e.functionContract(expression)
-	case *ast.Ellipsis:
-		addNilPath(result, "e", e.declaredContract(expression.Elt))
+	} else if function := syntax.FunctionTypeExpressionOf(expression); function != nil {
+		return e.functionContract(function)
+	} else if ellipsis := syntax.EllipsisExpressionOf(expression); ellipsis != nil {
+		addNilPath(result, "e", e.declaredContract(ellipsis.Element))
 	}
 	if len(result) == 0 {
 		return nil

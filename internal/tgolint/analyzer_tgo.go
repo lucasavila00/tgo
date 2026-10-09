@@ -83,14 +83,10 @@ func run(pass *analysis.Pass) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	var factFile *syntax.File = nil
-	if len(files) > 0 {
-		factFile = files[0]
-	}
 	c := &checker{
 		pass:          pass,
 		files:         files,
-		facts:         sourcefacts.New(factFile, pass.TypesInfo, pass.Fset),
+		facts:         sourcefacts.New(files, pass.TypesInfo, pass.Fset),
 		models:        make(map[objectKey]*model),
 		validated:     make(map[types.Object]bool),
 		callTarget:    make(map[types.Object]types.Object),

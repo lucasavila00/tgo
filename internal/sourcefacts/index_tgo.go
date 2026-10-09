@@ -32,12 +32,13 @@ type Index struct {
 	uses        map[location]types.Object
 	selections  map[span]*types.Selection
 	instances   map[location]types.Instance
+	implicits   map[span]types.Object
 	useCounts   map[types.Object]int
 	signatures  map[location]*types.Signature
 }
 
 // New copies typed facts into a syntax position index.
-func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
+func New(sourceFiles []*syntax.File, info *types.Info, files *token.FileSet) *Index {
 	index := &Index{
 		files:       files,
 		types:       make(map[span]types.TypeAndValue),
@@ -45,6 +46,7 @@ func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
 		uses:        make(map[location]types.Object),
 		selections:  make(map[span]*types.Selection),
 		instances:   make(map[location]types.Instance),
+		implicits:   make(map[span]types.Object),
 		useCounts:   make(map[types.Object]int),
 		signatures:  make(map[location]*types.Signature),
 	}
@@ -68,8 +70,18 @@ func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
 	for identifier, instance := range info.Instances {
 		index.instances[index.location(identifier.Pos())] = instance
 	}
-	index.indexFunctionSignatures(file)
+	for node, object := range info.Implicits {
+		index.implicits[index.nodeSpan(node.Pos(), node.End())] = object
+	}
+	for _, file := range sourceFiles {
+		index.indexFunctionSignatures(file)
+	}
 	return index
+}
+
+// ImplicitField returns the object for one anonymous field.
+func (i *Index) ImplicitField(field *syntax.Field) types.Object {
+	return i.implicits[i.nodeSpan(field.Start, field.Stop)]
 }
 
 func (i *Index) indexFunctionSignatures(file *syntax.File) {
