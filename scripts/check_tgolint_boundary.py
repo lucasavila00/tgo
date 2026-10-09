@@ -14,7 +14,8 @@ TYPE_CHECKER_IMPORTS = {
     "go/types",
 }
 IMPORT = re.compile(r'"(go/[^"]+)"')
-SYNTAX_ASSERTION = re.compile(r"\.\(\*?syntax\.")
+TYPE_SWITCH = re.compile(r"\.\(\s*type\s*\)")
+SYNTAX_ASSERTION = re.compile(r"\.\(\s*\*?\s*syntax\.")
 
 
 def main() -> None:
@@ -26,7 +27,7 @@ def main() -> None:
             if package in TYPE_CHECKER_IMPORTS:
                 continue
             violations.append(f"{relative}: prohibited import {package}")
-        if ".(type)" in source and relative != TYPE_ADAPTER:
+        if TYPE_SWITCH.search(source) and relative != TYPE_ADAPTER:
             violations.append(f"{relative}: Go type switch must use the TGo type adapter")
         if SYNTAX_ASSERTION.search(source):
             violations.append(f"{relative}: use pkg/syntax enum accessors")
