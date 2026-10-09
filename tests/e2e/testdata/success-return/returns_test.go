@@ -20,6 +20,7 @@ func TestSuccessfulReturns(t *testing.T) {
 		{name: "literal", got: first(FromLiteral(5)), want: 5},
 		{name: "wrapped", got: first(Wrapped(true)), want: 7},
 		{name: "transparent", got: first(Transparent(true)), want: 7},
+		{name: "only success return", got: first(OnlySuccessReturn()), want: 9},
 	}
 	for _, test := range tests {
 		if test.got != test.want {

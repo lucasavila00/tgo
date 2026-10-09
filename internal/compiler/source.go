@@ -85,7 +85,7 @@ type comprehensionSource struct {
 // initiallyNeedsLowering reports whether parsed TGo syntax changes Go output.
 func (s *source) initiallyNeedsLowering() bool {
 	if len(s.Propagations) > 0 || len(s.Comprehensions) > 0 ||
-		len(s.Exhaustive) > 0 || len(s.NonNil) > 0 {
+		len(s.Exhaustive) > 0 || len(s.NonNil) > 0 || len(s.SuccessReturns) > 0 {
 		return true
 	}
 	for _, declaration := range s.Models {
