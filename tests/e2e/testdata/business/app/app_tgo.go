@@ -49,7 +49,9 @@ type ValidationOpaqueNumberEnvelope struct {
 }
 
 func Summary(name string) string {
-	account := model.AccountPersonal{Name: name}.Account()
+	account := func(input model.TgoAccountPersonalInput) model.Account {
+		return model.NewAccountPersonal(input.FieldName)
+	}(model.TgoAccountPersonalInput{FieldName: name})
 	switch enumValue1 := account; enumValue1.Tag() {
 	case model.AccountTagPersonal:
 		person := enumValue1.PersonalPayload()
@@ -67,7 +69,9 @@ func Request(id string) model.Request {
 }
 
 func Notice(body string) model.Notice {
-	return model.NoticeText{Body: body, Labels: model.TgoDefaultNoticeTextLabels()}.Notice()
+	return func(input model.TgoNoticeTextInput) model.Notice {
+		return model.NewNoticeText(input.FieldBody, input.FieldLabels)
+	}(model.TgoNoticeTextInput{FieldBody: body, FieldLabels: model.TgoDefaultNoticeTextLabels()})
 }
 
 func Sorted(values []int) []int {
@@ -77,11 +81,21 @@ func Sorted(values []int) []int {
 }
 
 func ImportedAlias(name string) model.Account {
-	return model.AccountPersonal{Name: name}.Account()
+	return func(input model.TgoAccountPersonalInput) model.Account {
+		return model.NewAccountPersonal(input.FieldName)
+	}(model.TgoAccountPersonalInput{FieldName: name})
 }
 
 func LocalImportedAlias(name string) model.Account {
-	return model.AccountPersonal{Name: name}.Account()
+	return func(input model.TgoAccountPersonalInput) model.Account {
+		return model.NewAccountPersonal(input.FieldName)
+	}(model.TgoAccountPersonalInput{FieldName: name})
+}
+
+func ImportedPrivateChoice(text string) model.PrivateChoice {
+	return func(input model.TgoPrivateChoiceValueInput) model.PrivateChoice {
+		return model.NewPrivateChoiceValue(input.FieldText, input.FieldPointer, input.FieldValues)
+	}(model.TgoPrivateChoiceValueInput{FieldText: text, FieldPointer: nil, FieldValues: model.TgoDefaultPrivateChoiceValuevalues()})
 }
 
 func LocalImportedRequest(id string) model.Request {

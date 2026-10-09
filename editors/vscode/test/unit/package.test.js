@@ -6,7 +6,10 @@ const test = require("node:test");
 const manifest = require("../../package.json");
 
 test("extension contributes only read-only language features", () => {
-  assert.deepEqual(manifest.activationEvents, ["onLanguage:tgo"]);
+  assert.deepEqual(manifest.activationEvents, [
+    "onLanguage:tgo",
+    "workspaceContains:**/*.tgo"
+  ]);
   assert.equal(manifest.contributes.languages[0].id, "tgo");
   assert.equal(manifest.contributes.grammars[0].scopeName, "source.tgo");
   assert.equal(manifest.contributes.commands, undefined);

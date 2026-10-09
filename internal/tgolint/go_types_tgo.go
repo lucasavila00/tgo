@@ -69,9 +69,9 @@ func (v goType) UnknownTag() string {
 // goTypeNil is the Nil payload.
 type goTypeNil struct{}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeNil constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeNil) goType() goType {
+func NewgoTypeNil() goType {
 	return goType{tgoTag: goTypeTagNil}
 }
 
@@ -82,11 +82,15 @@ func (goType) NilPayload() goTypeNil { return goTypeNil{} }
 type goTypeBasic struct {
 	Value *types.Basic
 }
+type TgogoTypeBasicInput struct {
+	FieldValue *types.Basic
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeBasic constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeBasic) goType() goType {
-	return goType{tgoTag: goTypeTagBasic, tgoPayload: value}
+func NewgoTypeBasic(Value *types.Basic) goType {
+	tgoValue := goTypeBasic{Value}
+	return goType{tgoTag: goTypeTagBasic, tgoPayload: tgoValue}
 }
 
 // BasicPayload requires Basic. No tag check.
@@ -96,11 +100,15 @@ func (v goType) BasicPayload() goTypeBasic { return v.tgoPayload.(goTypeBasic) }
 type goTypeArray struct {
 	Value *types.Array
 }
+type TgogoTypeArrayInput struct {
+	FieldValue *types.Array
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeArray constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeArray) goType() goType {
-	return goType{tgoTag: goTypeTagArray, tgoPayload: value}
+func NewgoTypeArray(Value *types.Array) goType {
+	tgoValue := goTypeArray{Value}
+	return goType{tgoTag: goTypeTagArray, tgoPayload: tgoValue}
 }
 
 // ArrayPayload requires Array. No tag check.
@@ -110,11 +118,15 @@ func (v goType) ArrayPayload() goTypeArray { return v.tgoPayload.(goTypeArray) }
 type goTypeSlice struct {
 	Value *types.Slice
 }
+type TgogoTypeSliceInput struct {
+	FieldValue *types.Slice
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeSlice constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeSlice) goType() goType {
-	return goType{tgoTag: goTypeTagSlice, tgoPayload: value}
+func NewgoTypeSlice(Value *types.Slice) goType {
+	tgoValue := goTypeSlice{Value}
+	return goType{tgoTag: goTypeTagSlice, tgoPayload: tgoValue}
 }
 
 // SlicePayload requires Slice. No tag check.
@@ -124,11 +136,15 @@ func (v goType) SlicePayload() goTypeSlice { return v.tgoPayload.(goTypeSlice) }
 type goTypeStruct struct {
 	Value *types.Struct
 }
+type TgogoTypeStructInput struct {
+	FieldValue *types.Struct
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeStruct constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeStruct) goType() goType {
-	return goType{tgoTag: goTypeTagStruct, tgoPayload: value}
+func NewgoTypeStruct(Value *types.Struct) goType {
+	tgoValue := goTypeStruct{Value}
+	return goType{tgoTag: goTypeTagStruct, tgoPayload: tgoValue}
 }
 
 // StructPayload requires Struct. No tag check.
@@ -138,11 +154,15 @@ func (v goType) StructPayload() goTypeStruct { return v.tgoPayload.(goTypeStruct
 type goTypePointer struct {
 	Value *types.Pointer
 }
+type TgogoTypePointerInput struct {
+	FieldValue *types.Pointer
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypePointer constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypePointer) goType() goType {
-	return goType{tgoTag: goTypeTagPointer, tgoPayload: value}
+func NewgoTypePointer(Value *types.Pointer) goType {
+	tgoValue := goTypePointer{Value}
+	return goType{tgoTag: goTypeTagPointer, tgoPayload: tgoValue}
 }
 
 // PointerPayload requires Pointer. No tag check.
@@ -152,11 +172,15 @@ func (v goType) PointerPayload() goTypePointer { return v.tgoPayload.(goTypePoin
 type goTypeTuple struct {
 	Value *types.Tuple
 }
+type TgogoTypeTupleInput struct {
+	FieldValue *types.Tuple
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeTuple constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeTuple) goType() goType {
-	return goType{tgoTag: goTypeTagTuple, tgoPayload: value}
+func NewgoTypeTuple(Value *types.Tuple) goType {
+	tgoValue := goTypeTuple{Value}
+	return goType{tgoTag: goTypeTagTuple, tgoPayload: tgoValue}
 }
 
 // TuplePayload requires Tuple. No tag check.
@@ -166,11 +190,15 @@ func (v goType) TuplePayload() goTypeTuple { return v.tgoPayload.(goTypeTuple) }
 type goTypeSignature struct {
 	Value *types.Signature
 }
+type TgogoTypeSignatureInput struct {
+	FieldValue *types.Signature
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeSignature constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeSignature) goType() goType {
-	return goType{tgoTag: goTypeTagSignature, tgoSignature: value}
+func NewgoTypeSignature(Value *types.Signature) goType {
+	tgoValue := goTypeSignature{Value}
+	return goType{tgoTag: goTypeTagSignature, tgoSignature: tgoValue}
 }
 
 // SignaturePayload requires Signature. No tag check.
@@ -180,11 +208,15 @@ func (v goType) SignaturePayload() goTypeSignature { return v.tgoSignature }
 type goTypeMap struct {
 	Value *types.Map
 }
+type TgogoTypeMapInput struct {
+	FieldValue *types.Map
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeMap constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeMap) goType() goType {
-	return goType{tgoTag: goTypeTagMap, tgoMap: value}
+func NewgoTypeMap(Value *types.Map) goType {
+	tgoValue := goTypeMap{Value}
+	return goType{tgoTag: goTypeTagMap, tgoMap: tgoValue}
 }
 
 // MapPayload requires Map. No tag check.
@@ -194,11 +226,15 @@ func (v goType) MapPayload() goTypeMap { return v.tgoMap }
 type goTypeChannel struct {
 	Value *types.Chan
 }
+type TgogoTypeChannelInput struct {
+	FieldValue *types.Chan
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeChannel constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeChannel) goType() goType {
-	return goType{tgoTag: goTypeTagChannel, tgoChannel: value}
+func NewgoTypeChannel(Value *types.Chan) goType {
+	tgoValue := goTypeChannel{Value}
+	return goType{tgoTag: goTypeTagChannel, tgoChannel: tgoValue}
 }
 
 // ChannelPayload requires Channel. No tag check.
@@ -208,11 +244,15 @@ func (v goType) ChannelPayload() goTypeChannel { return v.tgoChannel }
 type goTypeInterface struct {
 	Value *types.Interface
 }
+type TgogoTypeInterfaceInput struct {
+	FieldValue *types.Interface
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeInterface constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeInterface) goType() goType {
-	return goType{tgoTag: goTypeTagInterface, tgoInterface: value}
+func NewgoTypeInterface(Value *types.Interface) goType {
+	tgoValue := goTypeInterface{Value}
+	return goType{tgoTag: goTypeTagInterface, tgoInterface: tgoValue}
 }
 
 // InterfacePayload requires Interface. No tag check.
@@ -222,11 +262,15 @@ func (v goType) InterfacePayload() goTypeInterface { return v.tgoInterface }
 type goTypeNamed struct {
 	Value *types.Named
 }
+type TgogoTypeNamedInput struct {
+	FieldValue *types.Named
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeNamed constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeNamed) goType() goType {
-	return goType{tgoTag: goTypeTagNamed, tgoNamed: value}
+func NewgoTypeNamed(Value *types.Named) goType {
+	tgoValue := goTypeNamed{Value}
+	return goType{tgoTag: goTypeTagNamed, tgoNamed: tgoValue}
 }
 
 // NamedPayload requires Named. No tag check.
@@ -236,11 +280,15 @@ func (v goType) NamedPayload() goTypeNamed { return v.tgoNamed }
 type goTypeTypeParameter struct {
 	Value *types.TypeParam
 }
+type TgogoTypeTypeParameterInput struct {
+	FieldValue *types.TypeParam
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeTypeParameter constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeTypeParameter) goType() goType {
-	return goType{tgoTag: goTypeTagTypeParameter, tgoTypeParameter: value}
+func NewgoTypeTypeParameter(Value *types.TypeParam) goType {
+	tgoValue := goTypeTypeParameter{Value}
+	return goType{tgoTag: goTypeTagTypeParameter, tgoTypeParameter: tgoValue}
 }
 
 // TypeParameterPayload requires TypeParameter. No tag check.
@@ -250,11 +298,15 @@ func (v goType) TypeParameterPayload() goTypeTypeParameter { return v.tgoTypePar
 type goTypeUnion struct {
 	Value *types.Union
 }
+type TgogoTypeUnionInput struct {
+	FieldValue *types.Union
+}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeUnion constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeUnion) goType() goType {
-	return goType{tgoTag: goTypeTagUnion, tgoUnion: value}
+func NewgoTypeUnion(Value *types.Union) goType {
+	tgoValue := goTypeUnion{Value}
+	return goType{tgoTag: goTypeTagUnion, tgoUnion: tgoValue}
 }
 
 // UnionPayload requires Union. No tag check.
@@ -263,9 +315,9 @@ func (v goType) UnionPayload() goTypeUnion { return v.tgoUnion }
 // goTypeOther is the Other payload.
 type goTypeOther struct{}
 
-// goType constructs goType. Model fields must be valid.
+// NewgoTypeOther constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value goTypeOther) goType() goType {
+func NewgoTypeOther() goType {
 	return goType{tgoTag: goTypeTagOther}
 }
 
@@ -426,105 +478,105 @@ func (v *goType) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeNil()
 		return nil
 	case "Basic":
 		var payload goTypeBasic
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeBasic(payload.Value)
 		return nil
 	case "Array":
 		var payload goTypeArray
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeArray(payload.Value)
 		return nil
 	case "Slice":
 		var payload goTypeSlice
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeSlice(payload.Value)
 		return nil
 	case "Struct":
 		var payload goTypeStruct
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeStruct(payload.Value)
 		return nil
 	case "Pointer":
 		var payload goTypePointer
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypePointer(payload.Value)
 		return nil
 	case "Tuple":
 		var payload goTypeTuple
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeTuple(payload.Value)
 		return nil
 	case "Signature":
 		var payload goTypeSignature
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeSignature(payload.Value)
 		return nil
 	case "Map":
 		var payload goTypeMap
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeMap(payload.Value)
 		return nil
 	case "Channel":
 		var payload goTypeChannel
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeChannel(payload.Value)
 		return nil
 	case "Interface":
 		var payload goTypeInterface
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeInterface(payload.Value)
 		return nil
 	case "Named":
 		var payload goTypeNamed
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeNamed(payload.Value)
 		return nil
 	case "TypeParameter":
 		var payload goTypeTypeParameter
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeTypeParameter(payload.Value)
 		return nil
 	case "Union":
 		var payload goTypeUnion
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeUnion(payload.Value)
 		return nil
 	case "Other":
 		var payload goTypeOther
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeOther()
 		return nil
 	default:
 		return fmt.Errorf("unknown goType JSON variant %q", variant)
@@ -621,105 +673,105 @@ func (v *goType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeNil()
 		return nil
 	case 2:
 		var payload goTypeBasic
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeBasic(payload.Value)
 		return nil
 	case 3:
 		var payload goTypeArray
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeArray(payload.Value)
 		return nil
 	case 4:
 		var payload goTypeSlice
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeSlice(payload.Value)
 		return nil
 	case 5:
 		var payload goTypeStruct
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeStruct(payload.Value)
 		return nil
 	case 6:
 		var payload goTypePointer
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypePointer(payload.Value)
 		return nil
 	case 7:
 		var payload goTypeTuple
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeTuple(payload.Value)
 		return nil
 	case 8:
 		var payload goTypeSignature
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeSignature(payload.Value)
 		return nil
 	case 9:
 		var payload goTypeMap
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeMap(payload.Value)
 		return nil
 	case 10:
 		var payload goTypeChannel
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeChannel(payload.Value)
 		return nil
 	case 11:
 		var payload goTypeInterface
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeInterface(payload.Value)
 		return nil
 	case 12:
 		var payload goTypeNamed
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeNamed(payload.Value)
 		return nil
 	case 13:
 		var payload goTypeTypeParameter
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeTypeParameter(payload.Value)
 		return nil
 	case 14:
 		var payload goTypeUnion
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeUnion(payload.Value)
 		return nil
 	case 15:
 		var payload goTypeOther
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.goType()
+		*v = NewgoTypeOther()
 		return nil
 	default:
 		return fmt.Errorf("invalid goType JSON tag")
@@ -729,34 +781,60 @@ func (v *goType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 func goTypeOf(typ types.Type) goType {
 	switch value := typ.(type) {
 	case nil:
-		return goTypeNil{}.goType()
+		return NewgoTypeNil()
 	case *types.Basic:
-		return goTypeBasic{Value: value}.goType()
+		return func(input TgogoTypeBasicInput) goType {
+			return NewgoTypeBasic(input.FieldValue)
+		}(TgogoTypeBasicInput{FieldValue: value})
 	case *types.Array:
-		return goTypeArray{Value: value}.goType()
+		return func(input TgogoTypeArrayInput) goType {
+			return NewgoTypeArray(input.FieldValue)
+		}(TgogoTypeArrayInput{FieldValue: value})
 	case *types.Slice:
-		return goTypeSlice{Value: value}.goType()
+		return func(input TgogoTypeSliceInput) goType {
+			return NewgoTypeSlice(input.FieldValue)
+		}(TgogoTypeSliceInput{FieldValue: value})
 	case *types.Struct:
-		return goTypeStruct{Value: value}.goType()
+		return func(input TgogoTypeStructInput) goType {
+			return NewgoTypeStruct(input.FieldValue)
+		}(TgogoTypeStructInput{FieldValue: value})
 	case *types.Pointer:
-		return goTypePointer{Value: value}.goType()
+		return func(input TgogoTypePointerInput) goType {
+			return NewgoTypePointer(input.FieldValue)
+		}(TgogoTypePointerInput{FieldValue: value})
 	case *types.Tuple:
-		return goTypeTuple{Value: value}.goType()
+		return func(input TgogoTypeTupleInput) goType {
+			return NewgoTypeTuple(input.FieldValue)
+		}(TgogoTypeTupleInput{FieldValue: value})
 	case *types.Signature:
-		return goTypeSignature{Value: value}.goType()
+		return func(input TgogoTypeSignatureInput) goType {
+			return NewgoTypeSignature(input.FieldValue)
+		}(TgogoTypeSignatureInput{FieldValue: value})
 	case *types.Map:
-		return goTypeMap{Value: value}.goType()
+		return func(input TgogoTypeMapInput) goType {
+			return NewgoTypeMap(input.FieldValue)
+		}(TgogoTypeMapInput{FieldValue: value})
 	case *types.Chan:
-		return goTypeChannel{Value: value}.goType()
+		return func(input TgogoTypeChannelInput) goType {
+			return NewgoTypeChannel(input.FieldValue)
+		}(TgogoTypeChannelInput{FieldValue: value})
 	case *types.Interface:
-		return goTypeInterface{Value: value}.goType()
+		return func(input TgogoTypeInterfaceInput) goType {
+			return NewgoTypeInterface(input.FieldValue)
+		}(TgogoTypeInterfaceInput{FieldValue: value})
 	case *types.Named:
-		return goTypeNamed{Value: value}.goType()
+		return func(input TgogoTypeNamedInput) goType {
+			return NewgoTypeNamed(input.FieldValue)
+		}(TgogoTypeNamedInput{FieldValue: value})
 	case *types.TypeParam:
-		return goTypeTypeParameter{Value: value}.goType()
+		return func(input TgogoTypeTypeParameterInput) goType {
+			return NewgoTypeTypeParameter(input.FieldValue)
+		}(TgogoTypeTypeParameterInput{FieldValue: value})
 	case *types.Union:
-		return goTypeUnion{Value: value}.goType()
+		return func(input TgogoTypeUnionInput) goType {
+			return NewgoTypeUnion(input.FieldValue)
+		}(TgogoTypeUnionInput{FieldValue: value})
 	default:
-		return goTypeOther{}.goType()
+		return NewgoTypeOther()
 	}
 }
