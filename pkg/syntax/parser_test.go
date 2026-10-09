@@ -594,14 +594,20 @@ if value > row { value }
 		col  int
 	}{
 		{name: "outer for", got: outer.For, line: 3, col: 14},
+		{name: "outer start", got: outer.Start, line: 3, col: 14},
+		{name: "outer stop", got: outer.Stop, line: 7, col: 2},
 		{name: "outer define", got: outer.Define, line: 3, col: 30},
 		{name: "outer range", got: outer.Range, line: 3, col: 33},
 		{name: "outer open", got: outer.Lbrace, line: 3, col: 46},
 		{name: "outer close", got: outer.Rbrace, line: 7, col: 1},
 		{name: "inner for", got: inner.For, line: 4, col: 1},
+		{name: "inner start", got: inner.Start, line: 4, col: 1},
+		{name: "inner stop", got: inner.Stop, line: 6, col: 2},
 		{name: "inner open", got: inner.Lbrace, line: 4, col: 30},
 		{name: "inner close", got: inner.Rbrace, line: 6, col: 1},
 		{name: "filter if", got: filter.If, line: 5, col: 1},
+		{name: "filter start", got: filter.Start, line: 5, col: 1},
+		{name: "filter stop", got: filter.Stop, line: 5, col: 25},
 		{name: "filter open", got: filter.Lbrace, line: 5, col: 16},
 		{name: "filter close", got: filter.Rbrace, line: 5, col: 24},
 	}
