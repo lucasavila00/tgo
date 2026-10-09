@@ -57,6 +57,7 @@ func (p *printer) printFile() []byte {
 	p.text("package")
 	p.space()
 	p.token(p.file.Name.Start, p.file.Name.Name)
+	p.trailingLine(p.file.Name.Stop)
 	p.newline()
 	if len(p.file.Declarations) > 0 {
 		p.blankline()

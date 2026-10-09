@@ -1,7 +1,7 @@
 //go:build linux
 
 // Package fixtures tests comments.
-package fixtures
+package fixtures // package
 
 import (
 	"fmt" // standard
