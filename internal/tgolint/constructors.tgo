@@ -147,7 +147,8 @@ func escapedObjects(facts *sourcefacts.Index, body *syntax.BlockStatement) map[t
 		if !ok { return true }
 		unary := syntax.UnaryExpressionOf(expression)
 		if unary != nil && unary.Operator == token.AND {
-			record(facts.Object(identifier(unary.Expression)), unary.Start)
+			name := identifier(unary.Expression)
+			if name != nil { record(facts.Object(name), unary.Start) }
 		}
 		return true
 	})
@@ -417,7 +418,9 @@ func (c %checker) markValidatedResult(
 	if !c.validatedCall(call) {
 		return
 	}
-	object := c.facts.Object(identifier(value))
+	name := identifier(value)
+	if name == nil { return }
+	object := c.facts.Object(name)
 	result, found := state[object]
 	if object == nil || !found {
 		return
