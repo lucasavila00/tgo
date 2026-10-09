@@ -68,7 +68,8 @@ An immediate line break after a contextual keyword does not insert a semicolon.
 The public `tgo/pkg/syntax` package parses this grammar. `ParseFile` accepts a Go
 `token.FileSet`, a file name, source bytes, and a parse mode. `ParseComments` retains comments.
 `AllErrors` reports independent scanner and Go parser errors. A tgo production error stops
-extension parsing at its first error.
+extension parsing at its first error. `AllowInvalidModels` retains empty enums and duplicate enum
+variants so source tools can process them before model validation succeeds.
 
 The parser converts every Go and TGo form before `ParseFile` returns. The public tree contains
 closed `Expression`, `Statement`, `Declaration`, and `Specification` enums. It does not expose

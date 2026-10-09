@@ -15,4 +15,5 @@ tgofmt -l file.tgo
 when the source would change.
 
 The formatter keeps comments and build constraints. It gives the same output after a second run.
-It reports malformed source and does not change a malformed named file.
+Source with no TGo extension has exactly the same output as `gofmt`. The formatter reports
+malformed source and does not change a malformed named file.

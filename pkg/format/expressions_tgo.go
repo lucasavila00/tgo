@@ -83,6 +83,9 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 	case syntax.ExpressionTagUnary:
 		item := expressionValue.UnaryPayload().Value
 		p.token(item.OperatorPosition, item.Operator.String())
+		if unaryNeedsSpace(item.Operator, item.Expression) {
+			p.space()
+		}
 		p.expression(item.Expression, token.UnaryPrec)
 	case syntax.ExpressionTagBinary:
 		p.binaryExpression(expressionValue.BinaryPayload().Value, parentPrecedence)
@@ -146,6 +149,17 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 	}
 }
 
+func unaryNeedsSpace(operator token.Token, operand *syntax.Expression) bool {
+	inner := syntax.UnaryExpressionOf(operand)
+	if inner == nil {
+		return false
+	}
+	return operator == token.ADD && inner.Operator == token.ADD ||
+		operator == token.SUB && inner.Operator == token.SUB ||
+		operator == token.AND &&
+			(inner.Operator == token.AND || inner.Operator == token.XOR)
+}
+
 func (p *printer) binaryExpression(value *syntax.BinaryExpression, parentPrecedence int) {
 	precedence := value.Operator.Precedence()
 	parenthesize := precedence < parentPrecedence
@@ -155,8 +169,15 @@ func (p *printer) binaryExpression(value *syntax.BinaryExpression, parentPrecede
 	p.expression(value.Left, precedence)
 	p.space()
 	p.token(value.OperatorPosition, value.Operator.String())
-	p.space()
-	p.expression(value.Right, precedence+1)
+	if p.multiline(syntax.ExpressionEnd(value.Left), syntax.ExpressionPosition(value.Right)) {
+		p.newline()
+		p.indent++
+		p.expression(value.Right, precedence+1)
+		p.indent--
+	} else {
+		p.space()
+		p.expression(value.Right, precedence+1)
+	}
 	if parenthesize {
 		p.text(")")
 	}
@@ -190,11 +211,17 @@ func (p *printer) callExpression(value *syntax.CallExpression) {
 		p.indent++
 		for index, argument := range value.Args {
 			p.expression(argument, 0)
+			end := syntax.ExpressionEnd(argument)
 			if index == len(value.Args)-1 && value.Ellipsis != token.NoPos {
 				p.token(value.Ellipsis, "...")
+				end = p.tokenEnd(value.Ellipsis, 3)
 			}
 			p.text(",")
-			p.trailingLine(syntax.ExpressionEnd(argument))
+			following := value.Rparen
+			if index+1 < len(value.Args) {
+				following = syntax.ExpressionPosition(value.Args[index+1])
+			}
+			p.trailingLine(p.commaEnd(end, following))
 			p.newline()
 		}
 		p.indent--
@@ -228,11 +255,16 @@ func (p *printer) delimitedExpressions(
 	p.indent++
 	for index, value := range values {
 		p.expression(value, 0)
+		end := syntax.ExpressionEnd(value)
 		if ellipsis && index == len(values)-1 {
 			p.text("...")
 		}
 		p.text(",")
-		p.trailingLine(syntax.ExpressionEnd(value))
+		following := closing
+		if index+1 < len(values) {
+			following = syntax.ExpressionPosition(values[index+1])
+		}
+		p.trailingLine(p.commaEnd(end, following))
 		p.newline()
 	}
 	p.indent--
@@ -261,6 +293,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	}
 	p.newline()
 	p.indent++
+	keyWidths := p.compositeKeyWidths(value.Elements)
 	for index, element := range value.Elements {
 		if index > 0 && p.blankBetween(
 			syntax.ExpressionEnd(value.Elements[index-1]),
@@ -268,13 +301,75 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		) {
 			p.blankline()
 		}
-		p.expression(element, 0)
+		p.compositeElement(element, keyWidths[index])
 		p.text(",")
-		p.trailingLine(syntax.ExpressionEnd(element))
+		following := value.Rbrace
+		if index+1 < len(value.Elements) {
+			following = syntax.ExpressionPosition(value.Elements[index+1])
+		}
+		p.trailingLine(p.commaEnd(syntax.ExpressionEnd(element), following))
 		p.newline()
 	}
 	p.indent--
 	p.token(value.Rbrace, "}")
+}
+
+func (p *printer) compositeKeyWidths(values []*syntax.Expression) []int {
+	widths := make([]int, len(values))
+	for first := 0; first < len(values); {
+		if compositeKeyWidth(values[first]) == 0 {
+			first++
+			continue
+		}
+		last := first + 1
+		for last < len(values) && compositeKeyWidth(values[last]) > 0 &&
+			!p.blankBetween(
+				syntax.ExpressionEnd(values[last-1]),
+				syntax.ExpressionPosition(values[last]),
+			) {
+			last++
+		}
+		width := 0
+		for _, value := range values[first:last] {
+			if keyWidth := compositeKeyWidth(value); keyWidth > width {
+				width = keyWidth
+			}
+		}
+		for index := first; index < last; index++ {
+			widths[index] = width
+		}
+		first = last
+	}
+	return widths
+}
+
+func (p *printer) compositeElement(value *syntax.Expression, keyWidth int) {
+	keyValue := syntax.KeyValueExpressionOf(value)
+	width := compositeKeyWidth(value)
+	if keyValue == nil || width == 0 {
+		p.expression(value, 0)
+		return
+	}
+	p.expression(keyValue.Key, 0)
+	p.token(keyValue.Colon, ":")
+	p.text(strings.Repeat(" ", keyWidth-width+1))
+	p.expression(keyValue.Value, 0)
+}
+
+func compositeKeyWidth(value *syntax.Expression) int {
+	keyValue := syntax.KeyValueExpressionOf(value)
+	if keyValue == nil {
+		return 0
+	}
+	if name := syntax.IdentifierExpressionOf(keyValue.Key); name != nil {
+		return utf8.RuneCountInString(name.Name)
+	}
+	switch key := *keyValue.Key; key.Tag() {
+	case syntax.ExpressionTagBasicLiteral:
+		return utf8.RuneCountInString(key.BasicLiteralPayload().Value.Value)
+	default:
+		return 0
+	}
 }
 
 func (p *printer) field(value *syntax.Field) {
@@ -368,10 +463,14 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 	if p.multiline(value.Opening, value.Closing) {
 		p.newline()
 		p.indent++
-		for _, item := range value.List {
+		for index, item := range value.List {
 			p.field(item)
 			p.text(",")
-			p.trailingLine(item.Stop)
+			following := value.Closing
+			if index+1 < len(value.List) {
+				following = value.List[index+1].Start
+			}
+			p.trailingLine(p.commaEnd(item.Stop, following))
 			p.newline()
 		}
 		p.indent--

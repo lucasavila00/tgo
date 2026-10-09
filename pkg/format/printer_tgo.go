@@ -33,11 +33,14 @@ func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer
 	comments := []sourceComment(nil)
 	for _, group := range file.Comments {
 		for _, item := range group.List {
-			comments = append(comments, sourceComment{
-				start: item.Start,
-				stop:  item.Stop,
-				text:  item.Text,
-			})
+			comments = append(
+				comments,
+				sourceComment{
+					start: item.Start,
+					stop:  item.Stop,
+					text:  item.Text,
+				},
+			)
 		}
 	}
 	return &printer{
@@ -56,6 +59,13 @@ func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer
 
 func (p *printer) printFile() []byte {
 	p.before(p.file.Package)
+	if p.comment > 0 {
+		leading := p.comments[p.comment-1].text
+		if strings.HasPrefix(leading, "//go:build") ||
+			strings.HasPrefix(leading, "// +build") {
+			p.blankline()
+		}
+	}
 	p.text("package")
 	p.space()
 	p.token(p.file.Name.Start, p.file.Name.Name)
@@ -90,11 +100,13 @@ func (p *printer) finish() {
 }
 
 func (p *printer) before(position token.Pos) {
+	wroteComment := false
 	for p.comment < len(p.comments) && p.comments[p.comment].start < position {
+		wroteComment = true
 		item := p.comments[p.comment]
 		p.comment++
-		start := p.files.Position(item.start)
-		last := p.files.Position(p.lastSource)
+		start := p.position(item.start)
+		last := p.position(p.lastSource)
 		inline := !p.lineStart && last.IsValid() && last.Line == start.Line
 		if inline {
 			p.space()
@@ -104,9 +116,15 @@ func (p *printer) before(position token.Pos) {
 				p.blankline()
 			}
 		}
-		p.text(item.text)
-		stop := p.files.Position(item.stop)
-		next := p.files.Position(position)
+		if p.lineStart && strings.HasPrefix(item.text, "//line ") {
+			p.output.WriteString(item.text)
+			p.lineStart = false
+			p.lineBreaks = 0
+		} else {
+			p.text(item.text)
+		}
+		stop := p.position(item.stop)
+		next := p.position(position)
 		if strings.HasPrefix(item.text, "//") || !next.IsValid() || stop.Line != next.Line {
 			p.newline()
 		} else {
@@ -114,6 +132,17 @@ func (p *printer) before(position token.Pos) {
 		}
 		p.lastSource = item.stop
 	}
+	if wroteComment {
+		last := p.position(p.lastSource)
+		next := p.position(position)
+		if last.IsValid() && next.IsValid() && next.Line > last.Line+1 {
+			p.blankline()
+		}
+	}
+}
+
+func (p *printer) position(position token.Pos) token.Position {
+	return p.files.PositionFor(position, false)
 }
 
 func (p *printer) token(position token.Pos, value string) {
@@ -169,11 +198,11 @@ func (p *printer) trailingLine(position token.Pos) {
 	if p.comment >= len(p.comments) {
 		return
 	}
-	line := p.files.Position(position).Line
+	line := p.position(position).Line
 	comment := p.comments[p.comment]
-	start := p.files.Position(position).Offset
-	stop := p.files.Position(comment.start).Offset
-	if line > 0 && p.files.Position(comment.start).Line == line &&
+	start := p.position(position).Offset
+	stop := p.position(comment.start).Offset
+	if line > 0 && p.position(comment.start).Line == line &&
 		start >= 0 && stop >= start && stop <= len(p.source) &&
 		strings.TrimSpace(string(p.source[start:stop])) == "" {
 		p.before(comment.stop + 1)
@@ -188,15 +217,50 @@ func (p *printer) trailingToken(position token.Pos, width int) {
 	p.trailingLine(file.Pos(file.Offset(position) + width))
 }
 
+func (p *printer) commaEnd(position token.Pos, following token.Pos) token.Pos {
+	if p.comment >= len(p.comments) {
+		return position
+	}
+	comment := p.comments[p.comment]
+	if !strings.HasPrefix(comment.text, "//") {
+		commentStop := p.position(comment.stop)
+		next := p.position(following)
+		if next.IsValid() && commentStop.Line == next.Line {
+			return position
+		}
+	}
+	file := p.files.File(position)
+	if file == nil {
+		return position
+	}
+	offset := file.Offset(position)
+	for offset < len(p.source) &&
+		(p.source[offset] == ' ' || p.source[offset] == '\t' || p.source[offset] == '\r') {
+		offset++
+	}
+	if offset < len(p.source) && p.source[offset] == ',' {
+		return file.Pos(offset + 1)
+	}
+	return position
+}
+
+func (p *printer) tokenEnd(position token.Pos, width int) token.Pos {
+	file := p.files.File(position)
+	if file == nil {
+		return position
+	}
+	return file.Pos(file.Offset(position) + width)
+}
+
 func (p *printer) multiline(start token.Pos, stop token.Pos) bool {
-	first := p.files.Position(start)
-	last := p.files.Position(stop)
+	first := p.position(start)
+	last := p.position(stop)
 	return first.IsValid() && last.IsValid() && first.Line != last.Line
 }
 
 func (p *printer) blankBetween(stop token.Pos, start token.Pos) bool {
-	left := p.files.Position(stop)
-	right := p.files.Position(start)
+	left := p.position(stop)
+	right := p.position(start)
 	return left.IsValid() && right.IsValid() && right.Line > left.Line+1
 }
 
