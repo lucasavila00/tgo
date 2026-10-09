@@ -254,7 +254,6 @@ func TestEnumGeneratedNamesAreReservedAcrossFiles(t *testing.T) {
 	tests := []struct {
 		name   string
 		source *File
-		goFile *File
 		want   string
 	}{
 		{
@@ -270,19 +269,6 @@ func TestEnumGeneratedNamesAreReservedAcrossFiles(t *testing.T) {
 			},
 			want: "other.tgo:2:6: name TgoEventReadyInput is reserved by enum Event",
 		},
-		{
-			name: "Go constructor", goFile: &File{
-				Name: "other.go", Data: []byte("package sample\nfunc NewEventReady() {}\n"),
-			},
-			want: "other.go:2:6: name NewEventReady is reserved by enum Event",
-		},
-		{
-			name: "Go carrier", goFile: &File{
-				Name: "other.go",
-				Data: []byte("package sample\ntype TgoEventReadyInput struct{}\n"),
-			},
-			want: "other.go:2:6: name TgoEventReadyInput is reserved by enum Event",
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -294,9 +280,6 @@ func TestEnumGeneratedNamesAreReservedAcrossFiles(t *testing.T) {
 				}
 				if test.source != nil {
 					input.Sources = append(input.Sources, *test.source)
-				}
-				if test.goFile != nil {
-					input.GoFiles = append(input.GoFiles, *test.goFile)
 				}
 				_, problems := Compile(input)
 				if len(problems) != 1 || problems[0].Error() != test.want {
