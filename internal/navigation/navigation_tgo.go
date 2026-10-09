@@ -94,16 +94,39 @@ func (v *SymbolKind) GobDecode(data []byte) error {
 	if uint32(tag) != number || tag < SymbolKindTagPackage || tag > SymbolKindTagVariable {
 		return fmt.Errorf("SymbolKind: cannot gob decode unknown tag %d", number)
 	}
-	*v = SymbolKind{tgoTag: tag}
+	switch tag {
+	case SymbolKindTagPackage:
+		*v = NewSymbolKindPackage()
+	case SymbolKindTagType:
+		*v = NewSymbolKindType()
+	case SymbolKindTagStruct:
+		*v = NewSymbolKindStruct()
+	case SymbolKindTagInterface:
+		*v = NewSymbolKindInterface()
+	case SymbolKindTagFunction:
+		*v = NewSymbolKindFunction()
+	case SymbolKindTagMethod:
+		*v = NewSymbolKindMethod()
+	case SymbolKindTagField:
+		*v = NewSymbolKindField()
+	case SymbolKindTagEnum:
+		*v = NewSymbolKindEnum()
+	case SymbolKindTagEnumMember:
+		*v = NewSymbolKindEnumMember()
+	case SymbolKindTagConstant:
+		*v = NewSymbolKindConstant()
+	case SymbolKindTagVariable:
+		*v = NewSymbolKindVariable()
+	}
 	return nil
 }
 
 // SymbolKindPackage is the Package payload.
 type SymbolKindPackage struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindPackage constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindPackage) SymbolKind() SymbolKind {
+func NewSymbolKindPackage() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagPackage}
 }
 
@@ -113,9 +136,9 @@ func (SymbolKind) PackagePayload() SymbolKindPackage { return SymbolKindPackage{
 // SymbolKindType is the Type payload.
 type SymbolKindType struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindType constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindType) SymbolKind() SymbolKind {
+func NewSymbolKindType() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagType}
 }
 
@@ -125,9 +148,9 @@ func (SymbolKind) TypePayload() SymbolKindType { return SymbolKindType{} }
 // SymbolKindStruct is the Struct payload.
 type SymbolKindStruct struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindStruct constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindStruct) SymbolKind() SymbolKind {
+func NewSymbolKindStruct() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagStruct}
 }
 
@@ -137,9 +160,9 @@ func (SymbolKind) StructPayload() SymbolKindStruct { return SymbolKindStruct{} }
 // SymbolKindInterface is the Interface payload.
 type SymbolKindInterface struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindInterface constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindInterface) SymbolKind() SymbolKind {
+func NewSymbolKindInterface() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagInterface}
 }
 
@@ -149,9 +172,9 @@ func (SymbolKind) InterfacePayload() SymbolKindInterface { return SymbolKindInte
 // SymbolKindFunction is the Function payload.
 type SymbolKindFunction struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindFunction constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindFunction) SymbolKind() SymbolKind {
+func NewSymbolKindFunction() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagFunction}
 }
 
@@ -161,9 +184,9 @@ func (SymbolKind) FunctionPayload() SymbolKindFunction { return SymbolKindFuncti
 // SymbolKindMethod is the Method payload.
 type SymbolKindMethod struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindMethod constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindMethod) SymbolKind() SymbolKind {
+func NewSymbolKindMethod() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagMethod}
 }
 
@@ -173,9 +196,9 @@ func (SymbolKind) MethodPayload() SymbolKindMethod { return SymbolKindMethod{} }
 // SymbolKindField is the Field payload.
 type SymbolKindField struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindField constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindField) SymbolKind() SymbolKind {
+func NewSymbolKindField() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagField}
 }
 
@@ -185,9 +208,9 @@ func (SymbolKind) FieldPayload() SymbolKindField { return SymbolKindField{} }
 // SymbolKindEnum is the Enum payload.
 type SymbolKindEnum struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindEnum constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindEnum) SymbolKind() SymbolKind {
+func NewSymbolKindEnum() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagEnum}
 }
 
@@ -197,9 +220,9 @@ func (SymbolKind) EnumPayload() SymbolKindEnum { return SymbolKindEnum{} }
 // SymbolKindEnumMember is the EnumMember payload.
 type SymbolKindEnumMember struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindEnumMember constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindEnumMember) SymbolKind() SymbolKind {
+func NewSymbolKindEnumMember() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagEnumMember}
 }
 
@@ -209,9 +232,9 @@ func (SymbolKind) EnumMemberPayload() SymbolKindEnumMember { return SymbolKindEn
 // SymbolKindConstant is the Constant payload.
 type SymbolKindConstant struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindConstant constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindConstant) SymbolKind() SymbolKind {
+func NewSymbolKindConstant() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagConstant}
 }
 
@@ -221,9 +244,9 @@ func (SymbolKind) ConstantPayload() SymbolKindConstant { return SymbolKindConsta
 // SymbolKindVariable is the Variable payload.
 type SymbolKindVariable struct{}
 
-// SymbolKind constructs SymbolKind. Model fields must be valid.
+// NewSymbolKindVariable constructs SymbolKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SymbolKindVariable) SymbolKind() SymbolKind {
+func NewSymbolKindVariable() SymbolKind {
 	return SymbolKind{tgoTag: SymbolKindTagVariable}
 }
 
@@ -352,77 +375,77 @@ func (v *SymbolKind) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindPackage()
 		return nil
 	case "Type":
 		var payload SymbolKindType
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindType()
 		return nil
 	case "Struct":
 		var payload SymbolKindStruct
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindStruct()
 		return nil
 	case "Interface":
 		var payload SymbolKindInterface
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindInterface()
 		return nil
 	case "Function":
 		var payload SymbolKindFunction
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindFunction()
 		return nil
 	case "Method":
 		var payload SymbolKindMethod
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindMethod()
 		return nil
 	case "Field":
 		var payload SymbolKindField
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindField()
 		return nil
 	case "Enum":
 		var payload SymbolKindEnum
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindEnum()
 		return nil
 	case "EnumMember":
 		var payload SymbolKindEnumMember
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindEnumMember()
 		return nil
 	case "Constant":
 		var payload SymbolKindConstant
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindConstant()
 		return nil
 	case "Variable":
 		var payload SymbolKindVariable
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindVariable()
 		return nil
 	default:
 		return fmt.Errorf("unknown SymbolKind JSON variant %q", variant)
@@ -511,77 +534,77 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindPackage()
 		return nil
 	case 2:
 		var payload SymbolKindType
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindType()
 		return nil
 	case 3:
 		var payload SymbolKindStruct
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindStruct()
 		return nil
 	case 4:
 		var payload SymbolKindInterface
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindInterface()
 		return nil
 	case 5:
 		var payload SymbolKindFunction
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindFunction()
 		return nil
 	case 6:
 		var payload SymbolKindMethod
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindMethod()
 		return nil
 	case 7:
 		var payload SymbolKindField
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindField()
 		return nil
 	case 8:
 		var payload SymbolKindEnum
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindEnum()
 		return nil
 	case 9:
 		var payload SymbolKindEnumMember
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindEnumMember()
 		return nil
 	case 10:
 		var payload SymbolKindConstant
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindConstant()
 		return nil
 	case 11:
 		var payload SymbolKindVariable
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.SymbolKind()
+		*v = NewSymbolKindVariable()
 		return nil
 	default:
 		return fmt.Errorf("invalid SymbolKind JSON tag")
