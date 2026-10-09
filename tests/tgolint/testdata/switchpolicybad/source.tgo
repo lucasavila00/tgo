@@ -1,0 +1,120 @@
+package switchpolicybad
+
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
+
+const unrelated AccountTag = 1
+
+func noDefault(account Account) {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return
+	case AccountTagBusiness:
+		return
+	}
+}
+
+func fallthroughCase(account Account) string {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		fallthrough
+	case AccountTagBusiness:
+		return account.BusinessPayload().Company
+	exhaustive:
+	}
+}
+
+func missingCase(account Account) string {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return account.PersonalPayload().Name
+	exhaustive:
+	}
+}
+
+func multiTagPayload(account Account) string {
+	switch account.Tag() {
+	case AccountTagPersonal, AccountTagBusiness:
+		return account.PersonalPayload().Name
+	exhaustive:
+	}
+}
+
+func numericLabel(account Account) {
+	switch account.Tag() {
+	case 0:
+		return
+	case AccountTagPersonal:
+		return
+	case AccountTagBusiness:
+		return
+	exhaustive:
+	}
+}
+
+func unrelatedLabel(account Account) {
+	switch account.Tag() {
+	case unrelated:
+		return
+	case AccountTagBusiness:
+		return
+	exhaustive:
+	}
+}
+
+func wrongPayload(account Account) string {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return account.BusinessPayload().Company
+	case AccountTagBusiness:
+		return account.PersonalPayload().Name
+	exhaustive:
+	}
+}
+
+func defaultPayload(account Account) string {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return account.PersonalPayload().Name
+	default:
+		return account.PersonalPayload().Name
+	}
+}
+
+func shadowedPanic(account Account) {
+	panic := func(any) {}
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return
+	case AccountTagBusiness:
+		return
+	exhaustive:
+	}
+}
+
+func laterPanic(account Account) {
+	switch account.Tag() {
+	case AccountTagPersonal:
+		return
+	case AccountTagBusiness:
+		return
+	exhaustive:
+	}
+	panic := func(any) {}
+	_ = panic
+}
+
+func initializerPanic(account Account) {
+	panic := func() {
+		switch account.Tag() {
+		case AccountTagPersonal:
+			return
+		case AccountTagBusiness:
+			return
+		exhaustive:
+		}
+	}
+	panic()
+}
