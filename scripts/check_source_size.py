@@ -3,15 +3,18 @@
 
 from __future__ import annotations
 
+from functools import cache
 from pathlib import Path
+import subprocess
 import sys
 
 
 MAX_LINES = 700
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_EXCLUSIONS = {
-    Path("tests/tgolint/testdata/bad/bad.go"):
-        "The fixture keeps all diagnostics and its golden output in one source file.",
+    Path("tests/tgolint/testdata/bad/bad.go"): (
+        "The fixture keeps all diagnostics and its golden output in one source file."
+    ),
 }
 
 
@@ -21,12 +24,47 @@ def line_count(path: Path) -> int:
         return sum(1 for _ in source)
 
 
+@cache
+def target_words() -> tuple[frozenset[str], frozenset[str]]:
+    """Return target words from the active Go toolchain."""
+    result = subprocess.run(
+        ["go", "tool", "dist", "list"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    pairs = [line.split("/", 1) for line in result.stdout.splitlines()]
+    return (
+        frozenset(pair[0] for pair in pairs),
+        frozenset(pair[1] for pair in pairs),
+    )
+
+
+def is_generated_go(path: Path) -> bool:
+    """Report whether a path is in the reserved TGo output namespace."""
+    if path.suffix != ".go":
+        return False
+    stem = path.stem
+    if stem.endswith("_test"):
+        stem = stem.removesuffix("_test")
+    if stem.endswith("_tgo"):
+        return True
+    marker = stem.rfind("_tgo_")
+    if marker < 0:
+        return False
+    target = stem[marker + len("_tgo_"):].split("_")
+    target_oses, target_architectures = target_words()
+    if len(target) == 1:
+        return target[0] in target_oses or target[0] in target_architectures
+    if len(target) == 2:
+        return target[0] in target_oses and target[1] in target_architectures
+    return False
+
+
 def is_source(path: Path) -> bool:
     """Report whether a path is handwritten Go or TGo source."""
-    if path.suffix == ".tgo":
-        return True
-    return path.suffix == ".go" and not path.name.endswith(
-        ("_tgo.go", "_tgo_test.go")
+    return path.suffix == ".tgo" or (
+        path.suffix == ".go" and not is_generated_go(path)
     )
 
 

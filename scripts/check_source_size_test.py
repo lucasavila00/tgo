@@ -32,10 +32,39 @@ class SourceSizeTest(unittest.TestCase):
         self.assertIn("package/model.tgo", result[1])
 
     def test_ignores_generated_go(self) -> None:
-        self.write_lines("package/model_tgo.go", check_source_size.MAX_LINES + 1)
-        self.write_lines("package/model_tgo_test.go", check_source_size.MAX_LINES + 1)
+        names = [
+            "model_tgo.go",
+            "model_tgo_test.go",
+            "model_tgo_linux.go",
+            "model_tgo_linux_test.go",
+            "model_tgo_amd64.go",
+            "model_tgo_linux_amd64.go",
+            "model_tgo_linux_amd64_test.go",
+            "foo_tgo_bar_tgo_linux.go",
+        ]
+        for name in names:
+            self.write_lines(f"package/{name}", check_source_size.MAX_LINES + 1)
 
         self.assertEqual(check_source_size.failures(self.repository, {}), [])
+
+    def test_checks_ordinary_go_names_that_contain_tgo(self) -> None:
+        names = [
+            "model_tgo_helper.go",
+            "model_tgo_linux_helper.go",
+            "model_tgo_helper_amd64.go",
+            "model_tgo_linux_amd64_extra.go",
+            "model_tgo__linux.go",
+            "model_tgo_linux_.go",
+            "model_tgo_helper_test.go",
+        ]
+        for name in names:
+            self.write_lines(f"package/{name}", check_source_size.MAX_LINES + 1)
+
+        result = check_source_size.failures(self.repository, {})
+
+        self.assertEqual(len(result), len(names))
+        for name in names:
+            self.assertTrue(any(name in failure for failure in result))
 
     def test_requires_an_explicit_fixture_exclusion(self) -> None:
         relative = Path("package/testdata/large.go")
