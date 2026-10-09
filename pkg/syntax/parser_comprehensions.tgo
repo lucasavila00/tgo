@@ -127,7 +127,7 @@ func (p %sourceParser) rawComprehension(
 		clauses: clauses,
 		result: result,
 		node: nil,
-	}, nil
+	},
 }
 
 func (p %sourceParser) rawComprehensionBody(
@@ -158,7 +158,7 @@ func (p %sourceParser) rawComprehensionBody(
 	if err != nil {
 		return nil, nil, err
 	}
-	return append([]*rawComprehensionClause{clause}, children...), result, nil
+	return append([]*rawComprehensionClause{clause}, children...), result,
 }
 
 func (p %sourceParser) rawComprehensionClause(
@@ -175,7 +175,7 @@ func (p %sourceParser) rawComprehensionClause(
 			bindings: nil, define: -1, rangeToken: -1,
 			expressionStart: start + 1, expressionEnd: open,
 			open: open, close: close,
-		}, nil
+		},
 	}
 	define, rangeToken := -1, -1
 	for cursor := start + 1; cursor < open; cursor++ {
@@ -199,7 +199,7 @@ func (p %sourceParser) rawComprehensionClause(
 		bindings: bindings, define: define, rangeToken: rangeToken,
 		expressionStart: rangeToken + 1, expressionEnd: open,
 		open: open, close: close,
-	}, nil
+	},
 }
 
 func (p %sourceParser) comprehensionBindings(start int, end int) ([]int, error) {
@@ -220,7 +220,7 @@ func (p %sourceParser) comprehensionBindings(start int, end int) ([]int, error) 
 	if expectName || len(bindings) == 0 || len(bindings) > 2 {
 		return nil, p.tokenError(start, "comprehension range needs one or two names")
 	}
-	return bindings, nil
+	return bindings,
 }
 
 func (p %sourceParser) rawComprehensionResult(
@@ -255,7 +255,7 @@ func (p %sourceParser) rawComprehensionResult(
 		result.keyStart, result.keyEnd = start, colon
 		result.valueStart = colon + 1
 	}
-	return result, nil
+	return result,
 }
 
 func (p %sourceParser) trimComprehensionSemicolons(start int, end int) (int, int) {
@@ -277,7 +277,7 @@ func (p %sourceParser) openToken(close int) (int, error) {
 		case token.LPAREN, token.LBRACK, token.LBRACE:
 			depth--
 			if depth == 0 {
-				return cursor, nil
+				return cursor,
 			}
 		}
 	}

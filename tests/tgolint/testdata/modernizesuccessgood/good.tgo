@@ -1,0 +1,21 @@
+package modernizesuccessgood
+
+func shorthand() (int, error) {
+	return 1,
+}
+
+func oneResult() error {
+	return nil
+}
+
+func failure(err error) (int, error) {
+	return 0, err
+}
+
+func shadow(nil error) (int, error) {
+	return 0, nil
+}
+
+func earlierNil(err error) (*int, error) {
+	return nil, err
+}

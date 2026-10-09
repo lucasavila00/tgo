@@ -237,20 +237,20 @@ func (c %checker) syntaxCallMayReturn(expression *syntax.Expression) bool {
 func (c %checker) tagCall(
 	expression *syntax.Expression,
 ) (*syntax.Expression, *syntax.Expression, *syntax.SelectorExpression, *model, types.Type) {
-	if expression == nil { return nil, nil, nil, nil, nil }
+	if expression == nil { return nil, nil, nil, nil, }
 	for expression != nil {
 		parenthesized := syntax.ParenthesizedExpressionOf(expression)
 		if parenthesized == nil { break }
 		expression = parenthesized.Expression
 	}
 	call := syntax.CallExpressionOf(expression)
-	if call == nil || len(call.Args) != 0 { return nil, nil, nil, nil, nil }
+	if call == nil || len(call.Args) != 0 { return nil, nil, nil, nil, }
 	selector := syntax.SelectorExpressionOf(call.Callee)
 	if selector == nil || selector.Selector.Name != "Tag" {
-		return nil, nil, nil, nil, nil
+		return nil, nil, nil, nil,
 	}
 	model := c.modelForSourceSelector(call.Callee, selector)
-	if !modelIsEnum(model) { return nil, nil, nil, nil, nil }
+	if !modelIsEnum(model) { return nil, nil, nil, nil, }
 	return selector.Expression, call.Callee, selector, model, c.facts.Type(expression)
 }
 

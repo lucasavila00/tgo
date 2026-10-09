@@ -40,6 +40,34 @@ func Matches(source string, generated string) bool {
 	return filepath.Base(Path(source)) == filepath.Base(generated)
 }
 
+// Reserved reports whether a path is in the TGo output namespace.
+func Reserved(path string) bool {
+	name := filepath.Base(path)
+	if !strings.HasSuffix(name, ".go") {
+		return false
+	}
+	stem := strings.TrimSuffix(name, ".go")
+	if strings.HasSuffix(stem, "_tgo") {
+		return true
+	}
+	marker := strings.LastIndex(stem, "_tgo_")
+	if marker < 0 {
+		return false
+	}
+	parts := strings.Split(stem[marker+len("_tgo_"):], "_")
+	switch len(parts) {
+	case 1:
+		isOS, isArch := targetSuffixKind(parts[0])
+		return isOS || isArch
+	case 2:
+		isOS, _ := targetSuffixKind(parts[0])
+		_, isArch := targetSuffixKind(parts[1])
+		return isOS && isArch
+	default:
+		return false
+	}
+}
+
 func targetSuffixKind(word string) (bool, bool) {
 	const noOS = "tgo_unknown_os"
 	const noArch = "tgo_unknown_arch"

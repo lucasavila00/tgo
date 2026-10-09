@@ -145,7 +145,7 @@ func (p %sourceParser) makeComprehension(
 		},
 		Key: key, Colon: colon, Value: value,
 	}
-	return result, anchors, nil
+	return result, anchors,
 }
 
 func (p %sourceParser) makeDeclaration(
@@ -197,7 +197,7 @@ func (p %sourceParser) makeDeclaration(
 				anchors[extension] = parent
 			}
 		}
-		return node, anchors, nil
+		return node, anchors,
 	case "struct":
 		fields, fieldAnchors := p.makeFields(raw.fields, defaultAt)!!
 		for extension, parent := range fieldAnchors {
@@ -213,7 +213,7 @@ func (p %sourceParser) makeDeclaration(
 			Fields:  fields,
 			Rbrace:  p.pos(p.tokens[raw.close].start),
 			Comment: nil,
-		}, anchors, nil
+		}, anchors,
 	case "checked":
 		base, baseAnchors, err := p.parseExpression(
 			p.tokens[raw.baseStart].start,
@@ -246,7 +246,7 @@ func (p %sourceParser) makeDeclaration(
 			Where:     p.pos(p.tokens[raw.keyword].start),
 			Predicate: predicate,
 			Comment:   nil,
-		}, anchors, nil
+		}, anchors,
 	default:
 		return nil, nil, fmt.Errorf("unknown declaration kind %q", raw.kind)
 	}
@@ -294,7 +294,7 @@ func (p %sourceParser) makeFields(
 		}
 		fields = append(fields, item)
 	}
-	return fields, anchors, nil
+	return fields, anchors,
 }
 
 func (p %sourceParser) parseField(start int, end int) (*ast.Field, error) {
@@ -333,7 +333,7 @@ func (p %sourceParser) parseField(start int, end int) (*ast.Field, error) {
 		make(map[token.Pos]%frontDefaultMarker),
 		make(map[frontNode]frontNode),
 	)
-	return field, nil
+	return field,
 }
 
 func (p %sourceParser) parseExpression(
@@ -365,7 +365,7 @@ func (p %sourceParser) parseExpression(
 	shiftTokenPositions(value, delta)
 	anchors := make(map[frontNode]frontNode)
 	p.sanitize(value, defaultAt, anchors)
-	return value, anchors, nil
+	return value, anchors,
 }
 
 func (p %sourceParser) enumTag(index int) *ast.BasicLit {

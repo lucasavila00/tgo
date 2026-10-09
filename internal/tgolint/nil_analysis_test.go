@@ -1,3 +1,4 @@
+// Package tgolint tests the TGo analyzer.
 package tgolint
 
 import (

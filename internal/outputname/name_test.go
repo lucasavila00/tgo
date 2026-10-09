@@ -57,3 +57,32 @@ func TestMatches(t *testing.T) {
 		}
 	}
 }
+
+func TestReserved(t *testing.T) {
+	for _, name := range []string{
+		"model_tgo.go",
+		"model_tgo_linux.go",
+		"model_tgo_amd64.go",
+		"model_tgo_linux_amd64.go",
+		"model_tgo_js_wasm.go",
+		"foo_tgo_bar_tgo_linux.go",
+	} {
+		if !Reserved(name) {
+			t.Errorf("Reserved(%q) = false", name)
+		}
+	}
+	for _, name := range []string{
+		"model.go",
+		"model_tgo.txt",
+		"model_tgo_helper.go",
+		"model_tgo_linux_helper.go",
+		"model_tgo_helper_amd64.go",
+		"model_tgo_linux_amd64_extra.go",
+		"model_tgo__linux.go",
+		"model_tgo_linux_.go",
+	} {
+		if Reserved(name) {
+			t.Errorf("Reserved(%q) = true", name)
+		}
+	}
+}

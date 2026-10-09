@@ -20,6 +20,9 @@ func VerifyGeneratedModels(
 	if err != nil {
 		return fmt.Errorf("parse tgo source: %w", err)
 	}
+	if !parsed.Lowered {
+		return verifyOrdinaryGoOutput(sourceData, generatedBody)
+	}
 	for _, declaration := range parsed.Models {
 		if !declaration.Enum {
 			continue
@@ -68,6 +71,13 @@ func VerifyGeneratedModels(
 		if !ok || !bytes.Equal(declaration, actual) {
 			return fmt.Errorf("generated declaration %s does not match the current emitter", key)
 		}
+	}
+	return nil
+}
+
+func verifyOrdinaryGoOutput(sourceData, generatedBody []byte) error {
+	if !bytes.Equal(sourceData, generatedBody) {
+		return fmt.Errorf("ordinary Go output does not match source")
 	}
 	return nil
 }
