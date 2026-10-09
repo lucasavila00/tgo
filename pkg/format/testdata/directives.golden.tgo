@@ -2,7 +2,7 @@
 
 package directives
 
-type Fixture struct {} checked
+type Fixture struct{} checked
 
 //go:generate echo generate
 func generate() {}

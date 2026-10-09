@@ -40,7 +40,7 @@ func TestSourceBasic(t *testing.T) {
 func TestSourceFormatsCheckedStruct(t *testing.T) {
 	t.Parallel()
 	input := "package sample\ntype Port struct{number int} checked\n"
-	want := "package sample\n\ntype Port struct { number int } checked\n"
+	want := "package sample\n\ntype Port struct{ number int } checked\n"
 	got, err := format.Source("sample.tgo", []byte(input))
 	if err != nil {
 		t.Fatal(err)
@@ -62,6 +62,41 @@ func TestSourceMatchesGoCorpus(t *testing.T) {
 	}
 	if count == 0 {
 		t.Fatal("Go corpus has no source files")
+	}
+	t.Logf("checked %d Go 1.27 source files", count)
+}
+
+func TestSourceMatchesFullGoTree(t *testing.T) {
+	if os.Getenv("TGO_FULL_GO_FORMAT_CORPUS") != "1" {
+		t.Skip("set TGO_FULL_GO_FORMAT_CORPUS=1 in hosted slow CI")
+	}
+	if !strings.HasPrefix(runtime.Version(), "go1.27.") {
+		t.Fatalf("Go corpus needs Go 1.27; got %s", runtime.Version())
+	}
+	root := filepath.Join(goCorpusRoot(t), "src")
+	count := 0
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			if entry.Name() == "testdata" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(path) != ".go" {
+			return nil
+		}
+		checkGoFormatFile(t, path)
+		count++
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count == 0 {
+		t.Fatal("Go source tree has no source files")
 	}
 	t.Logf("checked %d Go 1.27 source files", count)
 }
@@ -153,6 +188,13 @@ func TestSourceMatchesGoFormatForOrdinarySyntax(t *testing.T) {
 			}
 			if !bytes.Equal(got, want) {
 				t.Fatalf("formatted source:\n%s\nwant Go format:\n%s", got, want)
+			}
+			again, err := format.Source(inputPath, got)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(again, got) {
+				t.Fatalf("second pass changed output:\n%s", again)
 			}
 		})
 	}

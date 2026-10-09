@@ -5,23 +5,19 @@ package fixtures // package
 
 import (
 	"fmt" // standard
-
 	// next
 	"strings"
 )
 
-type Fixture struct {} checked
+type Fixture struct{} checked
 
 // Work keeps comments.
 func Work( // first
-	value int,
-	/* second */ other int,
-) int { // body
+	value int /* second */, other int) int { // body
 	result := value + other // result
 
 	return result
 }
-
 func label(value int) int {
 	switch value {
 	case 1: // one
@@ -30,3 +26,22 @@ func label(value int) int {
 		return 0
 	}
 } // label
+func ordinaryLineComment() {
+	//line ordinary.go:40
+	return
+}
+func tgoClause(value int) {
+	switch value {
+	case 1:
+		// empty TGo case
+	exhaustive:
+		// final TGo case
+	}
+}
+func tgoClosing() {
+	values := []int{
+		1,
+		// TGo literal close
+	}
+	_ = values
+}
