@@ -42,6 +42,8 @@ func NewPort(number int) (Port, error) {
 }
 ```
 
+The package-level name `New<Type>` is reserved for this generated ABI.
+
 The compiler uses that ABI for checked literals. It builds the raw value and
 calls the private `check` method exactly once. In TGo source, only the owning
 `check` method can use a raw literal. That method can build and normalize its
