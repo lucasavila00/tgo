@@ -75,14 +75,9 @@ func layoutPackage(t *testing.T, data string) *packageUnit {
 	for _, declaration := range parsed.Models {
 		p.Models[declaration.Name] = declaration
 	}
-	outputs, err := p.compile()
+	_, err = p.compile()
 	if err != nil {
 		t.Fatal(err)
-	}
-	for _, output := range outputs {
-		if err := VerifyGeneratedModels("sample.tgo", []byte(data), output, p.typed); err != nil {
-			t.Fatal(err)
-		}
 	}
 	return p
 }

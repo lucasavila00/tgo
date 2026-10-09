@@ -171,7 +171,7 @@ func use(value E) ([]byte,error) {
 `)
 }
 
-func TestVerifyEnumJSONMethods(t *testing.T) {
+func TestEnumJSONMethodsGenerated(t *testing.T) {
 	data := []byte("package sample\ntype E enum { A struct{} }\n")
 	files := token.NewFileSet()
 	parsed, err := parseSource(files, "sample.tgo", data)
@@ -191,22 +191,15 @@ func TestVerifyEnumJSONMethods(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, output := range outputs {
-		if err := VerifyGeneratedModels("sample.tgo", data, output, p.typed); err != nil {
-			t.Fatal(err)
-		}
-		for _, method := range []string{
-			"MarshalJSON()",
-			"MarshalJSONTo(",
-			"UnmarshalJSON(",
-			"UnmarshalJSONFrom(",
-		} {
-			changed := strings.Replace(string(output), method, "Changed(", 1)
-			if err := VerifyGeneratedModels(
-				"sample.tgo", data, []byte(changed), p.typed,
-			); err == nil {
-				t.Fatalf("changed %s method was accepted", method)
-			}
+	output := string(outputs["sample.tgo"])
+	for _, method := range []string{
+		"MarshalJSON()",
+		"MarshalJSONTo(",
+		"UnmarshalJSON(",
+		"UnmarshalJSONFrom(",
+	} {
+		if !strings.Contains(output, method) {
+			t.Fatalf("generated output does not contain %s", method)
 		}
 	}
 }

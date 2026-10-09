@@ -17,7 +17,8 @@ type countError struct {
 func (countError) Error() string { return "invalid Count" }
 func (value Count) check() (Count, error) {
 	if value.value <= 0 {
-		return Count{}, countError{}
+		return Count{},
+			countError{}
 	}
 	return value, nil
 }

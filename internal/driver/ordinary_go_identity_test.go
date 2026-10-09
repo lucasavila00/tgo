@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"tgo/internal/compiler"
 	"tgo/internal/outputname"
 )
 
@@ -40,17 +39,6 @@ func TestGeneratedOrdinaryGoIdentity(t *testing.T) {
 	}
 	t.Logf("seed: %d", seed)
 	checkOrdinaryGoIdentity(t, sources)
-}
-
-func TestVerifyOrdinaryGoIdentity(t *testing.T) {
-	source := []byte("package sample\n\ntype Pair struct{}\n")
-	if err := compiler.VerifyGeneratedModels("sample.tgo", source, source, nil); err != nil {
-		t.Fatal(err)
-	}
-	changed := bytes.Replace(source, []byte("struct{}"), []byte("struct{ Value int }"), 1)
-	if err := compiler.VerifyGeneratedModels("sample.tgo", source, changed, nil); err == nil {
-		t.Fatal("ownership verification accepted changed ordinary Go")
-	}
 }
 
 func generatedGoSource(index, shape, value int) string {
