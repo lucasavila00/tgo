@@ -17,7 +17,7 @@ func TestAnalysisOwnersCoverGeneratedPublicSurface(t *testing.T) {
 	}
 	analysis := (*Package)(nil)
 	for _, pkg := range packages {
-		if pkg.Path == "example.test/analysis/dep" {
+		if pkg.Path == "example.test/analysis/dep" && !pkg.Test {
 			analysis = pkg
 		}
 	}
@@ -87,18 +87,107 @@ func TestAnalyzeWorkspaceUsesStablePackageOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(packages) != 2 {
-		t.Fatalf("package count = %d, want 2", len(packages))
+	if len(packages) != 6 {
+		t.Fatalf("package count = %d, want 6", len(packages))
 	}
 	if packages[0].Path != "example.test/analysis/app" ||
-		packages[1].Path != "example.test/analysis/dep" {
-		t.Fatalf("package order = %q, %q", packages[0].Path, packages[1].Path)
+		packages[1].Path != "example.test/analysis/dep" ||
+		packages[2].Path != "example.test/analysis/dep" ||
+		packages[3].Path != "example.test/analysis/dep_test" ||
+		packages[4].Path != "example.test/analysis/fresh" ||
+		packages[5].Path != "example.test/analysis/fresh_test" {
+		t.Fatalf(
+			"package order = %q, %q, %q, %q, %q, %q",
+			packages[0].Path, packages[1].Path,
+			packages[2].Path, packages[3].Path,
+			packages[4].Path, packages[5].Path,
+		)
 	}
 	for _, pkg := range packages {
 		if pkg.Facts == nil || pkg.Files == nil || len(pkg.Sources) == 0 {
 			t.Fatalf("incomplete analysis for %s", pkg.Path)
 		}
 	}
+}
+
+func TestAnalyzeWorkspaceUsesInMemoryProductionForExternalTest(t *testing.T) {
+	t.Parallel()
+	packages, err := AnalyzeWorkspace("testdata/analysisworkspace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pkg := range packages {
+		if pkg.Path != "example.test/analysis/fresh_test" {
+			continue
+		}
+		if !pkg.Test || !pkg.External || len(pkg.Sources) != 1 ||
+			pkg.Sources[0].Name != "external_test.tgo" {
+			t.Fatalf(
+				"external test view is incomplete: test=%t external=%t sources=%d",
+				pkg.Test, pkg.External, len(pkg.Sources),
+			)
+		}
+		return
+	}
+	t.Fatal("source-only external test view is absent")
+}
+
+func TestAnalyzeWorkspaceKeepsPackageViewsSeparate(t *testing.T) {
+	t.Parallel()
+	packages, err := AnalyzeWorkspace("testdata/analysisworkspace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	production := packageView(t, packages, false, false)
+	internal := packageView(t, packages, true, false)
+	external := packageView(t, packages, true, true)
+	if production.Package.Scope().Lookup("internalTestValue") != nil {
+		t.Fatal("production scope contains an internal test declaration")
+	}
+	if production.Package.Scope().Lookup("externalTestValue") != nil {
+		t.Fatal("production scope contains an external test declaration")
+	}
+	if len(production.Sources) != 2 || len(internal.Sources) != 1 ||
+		len(external.Sources) != 1 {
+		t.Fatalf(
+			"source counts = %d, %d, %d, want 2, 1, 1",
+			len(production.Sources), len(internal.Sources), len(external.Sources),
+		)
+	}
+	if internal.Sources[0].Name != "internal_test.tgo" ||
+		external.Sources[0].Name != "external_test.tgo" {
+		t.Fatalf(
+			"test sources = %s, %s",
+			internal.Sources[0].Name, external.Sources[0].Name,
+		)
+	}
+	if internal.Package.Scope().Lookup("Value") == nil ||
+		internal.Package.Scope().Lookup("internalTestValue") == nil {
+		t.Fatal("internal test scope is incomplete")
+	}
+	if external.Package.Scope().Lookup("externalTestValue") == nil {
+		t.Fatal("external test scope is incomplete")
+	}
+}
+
+func packageView(
+	t *testing.T,
+	packages []*Package,
+	test bool,
+	external bool,
+) *Package {
+	t.Helper()
+	path := "example.test/analysis/dep"
+	if external {
+		path += "_test"
+	}
+	for _, pkg := range packages {
+		if pkg.Path == path && pkg.Test == test && pkg.External == external {
+			return pkg
+		}
+	}
+	t.Fatalf("package view test=%t external=%t is absent", test, external)
+	return nil
 }
 
 func TestAnalyzeTestPackageLoadsEachTestView(t *testing.T) {
