@@ -25,26 +25,33 @@ func containedTypeParameters(
 	merge := func(nested types.Type) {
 		mergeZeroParameters(result, containedTypeParameters(nested, parameters, seen))
 	}
-	switch typ := typ.(type) {
-	case *types.TypeParam:
-		if parameter, ok := parameters[typ]; ok {
+	classified := goTypeOf(typ)
+	switch classified.Tag() {
+	case goTypeTagTypeParameter:
+		parameterType := classified.TypeParameterPayload().Value
+		if parameter, ok := parameters[parameterType]; ok {
 			result[parameter] = true
 		}
-	case *types.Named:
-		for index := 0; index < typ.TypeArgs().Len(); index++ {
-			merge(typ.TypeArgs().At(index))
+	case goTypeTagNamed:
+		named := classified.NamedPayload().Value
+		for index := 0; index < named.TypeArgs().Len(); index++ {
+			merge(named.TypeArgs().At(index))
 		}
-	case *types.Pointer:
-		merge(typ.Elem())
-	case *types.Array:
-		merge(typ.Elem())
-	case *types.Slice:
-		merge(typ.Elem())
-	case *types.Map:
-		merge(typ.Key())
-		merge(typ.Elem())
-	case *types.Chan:
-		merge(typ.Elem())
+	case goTypeTagPointer:
+		merge(classified.PointerPayload().Value.Elem())
+	case goTypeTagArray:
+		merge(classified.ArrayPayload().Value.Elem())
+	case goTypeTagSlice:
+		merge(classified.SlicePayload().Value.Elem())
+	case goTypeTagMap:
+		mapping := classified.MapPayload().Value
+		merge(mapping.Key())
+		merge(mapping.Elem())
+	case goTypeTagChannel:
+		merge(classified.ChannelPayload().Value.Elem())
+	case goTypeTagNil, goTypeTagBasic, goTypeTagStruct, goTypeTagTuple,
+		goTypeTagSignature, goTypeTagInterface, goTypeTagUnion, goTypeTagOther:
+	exhaustive:
 	}
 	return result
 }

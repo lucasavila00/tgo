@@ -67,13 +67,16 @@ func typeCanBeNil(typ types.Type) bool {
 	if _, parameter := types.Unalias(typ).(*types.TypeParam); parameter {
 		return true
 	}
-	switch coreType(typ).(type) {
-	case *types.Pointer, *types.Slice, *types.Map, *types.Chan,
-		*types.Signature, *types.Interface:
+	classified := goTypeOf(coreType(typ))
+	switch classified.Tag() {
+	case goTypeTagPointer, goTypeTagSlice, goTypeTagMap, goTypeTagChannel,
+		goTypeTagSignature, goTypeTagInterface:
 		return true
-	case *types.Basic:
-		basic, _ := coreType(typ).(*types.Basic)
-		return basic != nil && basic.Kind() == types.UnsafePointer
+	case goTypeTagBasic:
+		return classified.BasicPayload().Value.Kind() == types.UnsafePointer
+	case goTypeTagNil, goTypeTagArray, goTypeTagStruct, goTypeTagTuple,
+		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
+	exhaustive:
 	}
 	return false
 }
