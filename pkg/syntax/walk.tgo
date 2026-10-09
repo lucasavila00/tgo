@@ -66,7 +66,7 @@ func ExtensionAt(file *File, position token.Pos) *Node {
 		start := NodePosition(node)
 		end := NodeEnd(node)
 		if start <= position && position < end &&
-			(result == nil || end - start < NodeEnd(result) - NodePosition(result)) {
+			(result == nil || end-start < NodeEnd(result)-NodePosition(result)) {
 			result = node
 		}
 	}

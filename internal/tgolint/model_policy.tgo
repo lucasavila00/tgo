@@ -94,8 +94,7 @@ func (c %checker) enumPayloadMethodReceiver(
 	node %syntax.Node,
 	identifier %syntax.Identifier,
 ) bool {
-	for current := syntax.Parent(c.file, node); current != nil;
-		current = syntax.Parent(c.file, current) {
+	for current := syntax.Parent(c.file, node); current != nil; current = syntax.Parent(c.file, current) {
 		declaration, ok := syntax.FunctionDeclarationOf(current)
 		if !ok {
 			continue

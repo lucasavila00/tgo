@@ -150,13 +150,17 @@ func (c %checker) checkedFieldChange(expression %syntax.Expression) bool {
 			return unary != nil && unary.Operator == token.AND
 		}
 		statement, ok := syntax.StatementOf(parent)
-		if !ok { return false }
+		if !ok {
+			return false
+		}
 		if increment := syntax.IncrementStatementOf(statement); increment != nil {
 			return sameExpressionRange(increment.Expression, expression)
 		}
 		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
 			for _, left := range assignment.Left {
-				if sameExpressionRange(left, expression) { return true }
+				if sameExpressionRange(left, expression) {
+					return true
+				}
 			}
 		}
 		if ranged := syntax.RangeStatementOf(statement); ranged != nil &&
@@ -186,7 +190,7 @@ func privateRepresentation(model *model, name string) bool {
 		return true
 	}
 	for _, variant := range modelVariants(model) {
-		if name == "tgo" + variant {
+		if name == "tgo"+variant {
 			return true
 		}
 	}

@@ -184,7 +184,9 @@ func (c %checker) mapEffectCondition(
 	targetType types.Type,
 ) (*GenericEffectCondition, effectOutcome) {
 	call := syntax.CallExpressionOf(callExpression)
-	if call == nil { return nil, unknownEffectOutcome() }
+	if call == nil {
+		return nil, unknownEffectOutcome()
+	}
 	if condition.ValueParameter < 0 || condition.ValueParameter >= len(call.Args) {
 		return nil, unknownEffectOutcome()
 	}
@@ -214,7 +216,9 @@ func (c %checker) mapParameterEffectCondition(
 	condition GenericEffectCondition,
 ) (*GenericEffectCondition, effectOutcome) {
 	call := syntax.CallExpressionOf(callExpression)
-	if call == nil { return nil, unknownEffectOutcome() }
+	if call == nil {
+		return nil, unknownEffectOutcome()
+	}
 	if parentheses := syntax.ParenthesizedExpressionOf(expression); parentheses != nil {
 		expression = parentheses.Expression
 	}

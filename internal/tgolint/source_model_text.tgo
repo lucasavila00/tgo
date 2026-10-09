@@ -1,6 +1,47 @@
 package tgolint
 
-import "tgo/pkg/format"
+import (
+	"tgo/pkg/format"
+	"tgo/pkg/syntax"
+)
+
+func sameFields(
+	source []sourceField,
+	generated []%syntax.Field,
+	file %syntax.File,
+) bool {
+	if len(source) != len(generated) {
+		return false
+	}
+	for index, field := range source {
+		other := generated[index]
+		if other == nil {
+			return false
+		}
+		typeText := syntax.SourceText(
+			file,
+			syntax.Span{
+				Start: syntax.ExpressionPosition(other.Type),
+				Stop:  syntax.ExpressionEnd(other.Type),
+			},
+		)
+		tagText := ""
+		if other.Tag != nil {
+			tagText = syntax.SourceText(file, other.Tag.Span)
+		}
+		if !sameTypeText(field.typeExpression, typeText) ||
+			!sameTagText(field.tag, tagText) {
+			return false
+		}
+		if field.name == "" && len(other.Names) == 0 {
+			continue
+		}
+		if len(other.Names) != 1 || other.Names[0].Name != field.name {
+			return false
+		}
+	}
+	return true
+}
 
 func sameTypeText(left string, right string) bool {
 	return sameFormattedText(

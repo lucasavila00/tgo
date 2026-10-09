@@ -81,7 +81,9 @@ func (e *Engine) DocumentSymbols(
 	index := e.load(ctx)!!
 	result := make([]Symbol, 0)
 	for _, symbol := range index.symbols {
-		if symbol.Range.URI == uri { result = append(result, symbol) }
+		if symbol.Range.URI == uri {
+			result = append(result, symbol)
+		}
 	}
 	return result,
 }
@@ -140,7 +142,9 @@ func (e *Engine) Definition(
 		if item.location.URI == uri && item.location.Start <= offset &&
 			offset < item.location.End {
 			definition, ok := index.definitions[item.key]
-			if !ok { return nil, }
+			if !ok {
+				return nil,
+			}
 			return []Location{definition},
 		}
 	}
@@ -158,7 +162,9 @@ func (e *Engine) Hover(
 		if item.location.URI == uri && item.location.Start <= offset &&
 			offset < item.location.End {
 			contents, ok := index.hovers[item.key]
-			if !ok { return nil, }
+			if !ok {
+				return nil,
+			}
 			return &Hover{Contents: contents, Range: item.location},
 		}
 	}
@@ -175,12 +181,16 @@ func (e *Engine) References(
 	index := e.load(ctx)!!
 	for _, item := range index.occurrences {
 		if item.location.URI != uri || offset < item.location.Start ||
-			item.location.End <= offset { continue }
+			item.location.End <= offset {
+			continue
+		}
 		result := make([]Location, 0, len(index.references[item.key]))
 		definition, hasDefinition := index.definitions[item.key]
 		seen := make(map[Location]bool)
 		for _, location := range index.references[item.key] {
-			if hasDefinition && location == definition { continue }
+			if hasDefinition && location == definition {
+				continue
+			}
 			result = append(result, location)
 			seen[location] = true
 		}
@@ -211,7 +221,8 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 			ready := e.ready
 			e.mu.Unlock()
 			select {
-			case <-ctx.Done(): return , ctx.Err()
+			case <-ctx.Done():
+				return , ctx.Err()
 			case <-ready:
 			}
 			continue
@@ -229,31 +240,38 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		close(e.ready)
 		e.ready = nil
 		e.mu.Unlock()
-		if err != nil { return , err }
-		if current { return index, }
+		if err != nil {
+			return , err
+		}
+		if current {
+			return index,
+		}
 	}
 }
 
 func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	select {
-	case <-ctx.Done(): return , ctx.Err()
+	case <-ctx.Done():
+		return , ctx.Err()
 	default:
 	}
 	packages := sourceanalysis.AnalyzeAvailableWorkspaceContext(ctx, e.root)!!
 	select {
-	case <-ctx.Done(): return , ctx.Err()
+	case <-ctx.Done():
+		return , ctx.Err()
 	default:
 	}
 	index := &workspaceIndex{
 		occurrences: nil,
 		definitions: make(map[string]Location),
-		hovers: make(map[string]string),
-		references: make(map[string][]Location),
-		symbols: nil,
+		hovers:      make(map[string]string),
+		references:  make(map[string][]Location),
+		symbols:     nil,
 	}
 	for view, pkg := range packages {
 		select {
-		case <-ctx.Done(): return , ctx.Err()
+		case <-ctx.Done():
+			return , ctx.Err()
 		default:
 		}
 		keys := newObjectKeys(pkg.Package, view)
@@ -266,21 +284,29 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 			fileURI := pathURI(source.Path)!!
 			syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
 				identifier, ok := syntax.IdentifierOf(node)
-				if !ok || identifier == nil { return true }
+				if !ok || identifier == nil {
+					return true
+				}
 				start := pkg.Files.Position(identifier.Start).Offset
 				end := pkg.Files.Position(identifier.Stop).Offset
-				if start < 0 || end <= start { return true }
+				if start < 0 || end <= start {
+					return true
+				}
 				location := Location{URI: fileURI, Start: start, End: end}
 				ownerLocations[identifier.Start] = location
 				object, definition := pkg.Facts.IdentifierFact(source.Syntax, node)
 				if object == nil {
 					object = generatedUses[positionKey(pkg.Files.Position(identifier.Start))]
 				}
-				if object == nil { return true }
+				if object == nil {
+					return true
+				}
 				key := keys.key(object)
 				qualifier := types.RelativeTo(object.Pkg())
 				contents := pkg.OwnerHovers[object]
-				if contents == "" { contents = types.ObjectString(object, qualifier) }
+				if contents == "" {
+					contents = types.ObjectString(object, qualifier)
+				}
 				if function, ok := object.(*types.Func); ok && pkg.OwnerHovers[object] == "" {
 					signature := function.Type().(*types.Signature)
 					if receiver := signature.Recv(); receiver != nil {
@@ -296,7 +322,9 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 					location: location, key: key,
 				})
 				index.references[key] = append(index.references[key], location)
-				if definition { index.definitions[key] = location }
+				if definition {
+					index.definitions[key] = location
+				}
 				return true
 			})
 			index.symbols = append(
@@ -306,7 +334,9 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		}
 		for object, position := range pkg.Owners {
 			location, ok := ownerLocations[position]
-			if ok { index.definitions[keys.key(object)] = location }
+			if ok {
+				index.definitions[keys.key(object)] = location
+			}
 		}
 	}
 	sort.Slice(index.symbols, func(left, right int) bool {
@@ -337,7 +367,9 @@ func newObjectKeys(root *types.Package, view int) *objectKeys {
 }
 
 func (k *objectKeys) addPackage(pkg *types.Package, seen map[*types.Package]bool) {
-	if pkg == nil || seen[pkg] { return }
+	if pkg == nil || seen[pkg] {
+		return
+	}
 	seen[pkg] = true
 	scope := pkg.Scope()
 	for _, name := range scope.Names() {
@@ -345,12 +377,18 @@ func (k *objectKeys) addPackage(pkg *types.Package, seen map[*types.Package]bool
 		prefix := "package:" + pkg.Path() + ":" + name
 		k.known[object] = prefix
 		typeName, ok := object.(*types.TypeName)
-		if !ok { continue }
+		if !ok {
+			continue
+		}
 		named, ok := types.Unalias(typeName.Type()).(*types.Named)
-		if !ok { continue }
+		if !ok {
+			continue
+		}
 		k.addNamed(prefix, named)
 	}
-	for _, imported := range pkg.Imports() { k.addPackage(imported, seen) }
+	for _, imported := range pkg.Imports() {
+		k.addPackage(imported, seen)
+	}
 }
 
 func (k *objectKeys) addNamed(prefix string, named *types.Named) {
@@ -375,9 +413,13 @@ func (k *objectKeys) addNamed(prefix string, named *types.Named) {
 }
 
 func (k *objectKeys) key(object types.Object) string {
-	if key := k.known[object]; key != "" { return key }
+	if key := k.known[object]; key != "" {
+		return key
+	}
 	packagePath := "universe"
-	if object.Pkg() != nil { packagePath = object.Pkg().Path() }
+	if object.Pkg() != nil {
+		packagePath = object.Pkg().Path()
+	}
 	k.next++
 	key := fmt.Sprintf("local:%s:%d:%d", packagePath, k.view, k.next)
 	k.known[object] = key

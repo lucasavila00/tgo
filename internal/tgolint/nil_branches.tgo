@@ -54,9 +54,9 @@ func (e %nilEnvironment) conditionNilBranches(
 			leftTrue, leftFalse := e.conditionNilBranches(binary.Left, state)
 			rightTrue, rightFalse := e.conditionNilBranches(binary.Right, state)
 			return e.orNilBranches(
-					state, leftTrue,
-					e.andNilBranches(state, leftFalse, rightTrue),
-				), e.andNilBranches(state, leftFalse, rightFalse)
+				state, leftTrue,
+				e.andNilBranches(state, leftFalse, rightTrue),
+			), e.andNilBranches(state, leftFalse, rightFalse)
 		}
 	}
 	return unconstrainedNilBranches(), unconstrainedNilBranches()
