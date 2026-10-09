@@ -9,7 +9,7 @@ import (
 )
 
 // parseAnalysisFiles converts each active Go file to the public syntax ADT.
-func parseAnalysisFiles(pass *analysis.Pass) ([]%syntax.File, error) {
+func parseAnalysisFiles(pass %analysis.Pass) ([]%syntax.File, error) {
 	result := make([]%syntax.File, 0, len(pass.Files))
 	for _, file := range pass.Files {
 		filename := pass.Fset.Position(file.Pos()).Filename
@@ -23,12 +23,13 @@ func parseAnalysisFiles(pass *analysis.Pass) ([]%syntax.File, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parse analysis file %s: %w", filename, err)
 		}
+		if parsed == nil { return nil, fmt.Errorf("parse analysis file %s: no syntax", filename) }
 		result = append(result, parsed)
 	}
 	return result, nil
 }
 
-func syntaxFileGenerated(file *syntax.File) bool {
+func syntaxFileGenerated(file %syntax.File) bool {
 	for _, group := range file.Comments {
 		for _, comment := range group.List {
 			if comment.Start < file.Package && comment.Text == generatedHeader {

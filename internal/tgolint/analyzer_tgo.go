@@ -5,6 +5,7 @@
 package tgolint
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
@@ -55,7 +56,8 @@ type checker struct {
 	reported      map[diagnosticKey]bool
 	function      ast.Node
 	zeroTypes     map[*types.TypeParam]*model
-	capture       func(*model, ast.Expr)
+	captureResult func(*model)
+	captureSource func(*model, ast.Expr)
 	scalarFlows   map[ast.Node]*scalarFlow
 	invalid       bool
 }
@@ -78,15 +80,30 @@ type diagnosticKey struct {
 
 // run verifies generated code, loads model facts, and checks user Go code.
 func run(pass *analysis.Pass) (any, error) {
+	if pass == nil {
+		return nil, fmt.Errorf("tgolint received a nil analysis pass")
+	}
 	pass = suppressDiagnostics(pass)
 	files, err := parseAnalysisFiles(pass)
 	if err != nil {
 		return nil, err
 	}
+	if len(files) == 0 {
+		return nil, nil
+	}
+	info := pass.TypesInfo
+	fileSet := pass.Fset
+	if info == nil || fileSet == nil {
+		return nil, fmt.Errorf("tgolint requires type and position facts")
+	}
+	facts := sourcefacts.New(files[0], info, fileSet)
+	for _, file := range files[1:] {
+		facts.AddFile(file)
+	}
 	c := &checker{
 		pass:          pass,
 		files:         files,
-		facts:         sourcefacts.New(files, pass.TypesInfo, pass.Fset),
+		facts:         facts,
 		models:        make(map[objectKey]*model),
 		validated:     make(map[types.Object]bool),
 		callTarget:    make(map[types.Object]types.Object),
@@ -101,7 +118,8 @@ func run(pass *analysis.Pass) (any, error) {
 		reported:      make(map[diagnosticKey]bool),
 		function:      nil,
 		zeroTypes:     nil,
-		capture:       nil,
+		captureResult: nil,
+		captureSource: nil,
 		scalarFlows:   make(map[ast.Node]*scalarFlow),
 		invalid:       false,
 	}

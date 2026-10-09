@@ -145,7 +145,11 @@ func (c *checker) statementsTerminateWith(
 		Span:       syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Expression: &identifier,
 	}}.Statement()
-	list := append(append([]*syntax.Statement(nil), statements...), &sentinel)
+	list := make([]*syntax.Statement, 0, len(statements)+1)
+	for _, statement := range statements {
+		list = append(list, statement)
+	}
+	list = append(list, &sentinel)
 	body := &syntax.BlockStatement{
 		Span:   syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Lbrace: token.NoPos,
@@ -291,6 +295,9 @@ func (c *checker) syntaxCallMayReturn(expression *syntax.Expression) bool {
 func (c *checker) tagCall(
 	expression *syntax.Expression,
 ) (*syntax.Expression, *syntax.Expression, *syntax.SelectorExpression, *model, types.Type) {
+	if expression == nil {
+		return nil, nil, nil, nil, nil
+	}
 	for expression != nil {
 		parenthesized := syntax.ParenthesizedExpressionOf(expression)
 		if parenthesized == nil {
@@ -440,6 +447,9 @@ func (c *checker) tagDefaultSentinel(
 	receiver *syntax.Expression,
 	model *model,
 ) bool {
+	if clause == nil || receiver == nil {
+		return false
+	}
 	if len(clause.Body) != 1 {
 		return false
 	}
@@ -533,6 +543,9 @@ func (c *checker) checkCaseAccessors(
 	flowType variantflow.Type,
 	defaultClause bool,
 ) {
+	if clause == nil || receiver == nil {
+		return
+	}
 	if clauseAssignsReceiver(c.facts, clause, receiver) {
 		return
 	}

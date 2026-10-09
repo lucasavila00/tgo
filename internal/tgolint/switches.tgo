@@ -128,7 +128,9 @@ func (c %checker) statementsTerminateWith(
 		Span: syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Expression: &identifier,
 	}}.Statement()
-	list := append(append([]%syntax.Statement(nil), statements...), &sentinel)
+	list := make([]%syntax.Statement, 0, len(statements)+1)
+	for _, statement := range statements { list = append(list, statement) }
+	list = append(list, &sentinel)
 	body := &syntax.BlockStatement{
 		Span: syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Lbrace: token.NoPos,
@@ -235,6 +237,7 @@ func (c %checker) syntaxCallMayReturn(expression *syntax.Expression) bool {
 func (c %checker) tagCall(
 	expression *syntax.Expression,
 ) (*syntax.Expression, *syntax.Expression, *syntax.SelectorExpression, *model, types.Type) {
+	if expression == nil { return nil, nil, nil, nil, nil }
 	for expression != nil {
 		parenthesized := syntax.ParenthesizedExpressionOf(expression)
 		if parenthesized == nil { break }
@@ -362,10 +365,11 @@ func tagConstant(model *model, tag int) string {
 
 func (c %checker) tagDefaultSentinel(
 	file %syntax.File,
-	clause %syntax.CaseClause,
-	receiver %syntax.Expression,
+	clause *syntax.CaseClause,
+	receiver *syntax.Expression,
 	model *model,
 ) bool {
+	if clause == nil || receiver == nil { return false }
 	if len(clause.Body) != 1 { return false }
 	expressionStatement := syntax.ExpressionStatementOf(clause.Body[0])
 	if expressionStatement == nil { return false }
@@ -426,13 +430,14 @@ func (c %checker) modelForSourceSelector(
 // checkCaseAccessors permits only the payload selected by the active tag.
 func (c %checker) checkCaseAccessors(
 	file %syntax.File,
-	clause %syntax.CaseClause,
+	clause *syntax.CaseClause,
 	tagSwitch %syntax.Statement,
-	receiver %syntax.Expression,
+	receiver *syntax.Expression,
 	model *model,
 	flowType variantflow.Type,
 	defaultClause bool,
 ) {
+	if clause == nil || receiver == nil { return }
 	if clauseAssignsReceiver(c.facts, clause, receiver) { return }
 	for _, statement := range clause.Body {
 		syntax.InspectStatement(statement, func(node *syntax.Node) bool {

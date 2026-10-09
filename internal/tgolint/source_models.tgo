@@ -583,7 +583,7 @@ func sourceRange(
 
 func sameFields(
 	source []sourceField,
-	generated []%syntax.Field,
+	generated []*syntax.Field,
 	file %syntax.File,
 ) bool {
 	if len(source) != len(generated) {
@@ -591,6 +591,7 @@ func sameFields(
 	}
 	for index, field := range source {
 		other := generated[index]
+		if other == nil { return false }
 		typeText := syntax.SourceText(file, syntax.Span{
 			Start: syntax.ExpressionPosition(other.Type),
 			Stop:  syntax.ExpressionEnd(other.Type),
