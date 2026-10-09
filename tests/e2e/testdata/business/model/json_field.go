@@ -65,3 +65,13 @@ func (value *JSONNonNilInternalValue) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+func (value *JSONNonNilRecursive) UnmarshalJSON(data []byte) error {
+	if string(data) == `"cycle"` {
+		value.Required = &JSONNonNilTarget{}
+		value.Next = value
+		return nil
+	}
+	type plain JSONNonNilRecursive
+	return json.Unmarshal(data, (*plain)(value))
+}

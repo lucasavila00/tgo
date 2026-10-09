@@ -25,7 +25,7 @@ func (p *packageUnit) addEnumJSONNonNilChecks() bool {
 			for _, item := range declaration.Variants {
 				name := declaration.Name + item.Name
 				object, _ := p.typed.Scope().Lookup(name).(*types.TypeName)
-				if contract := engine.objectContract(object); len(contract) != 0 {
+				if contract := engine.finalContract(engine.objectContract(object)); len(contract) != 0 {
 					contracts[name] = contract
 				}
 			}
@@ -52,6 +52,7 @@ func (p *packageUnit) addEnumJSONNonNilChecks() bool {
 					source.File,
 					declaration,
 					contracts,
+					engine,
 					enumJSONErrorFunction(source.File),
 				) || changed
 			}
@@ -65,6 +66,7 @@ type enumJSONInjection struct {
 	file        *ast.File
 	declaration *model
 	contracts   map[string]enumJSONNilContract
+	engine      *enumJSONContractEngine
 	errorFunc   string
 	untagged    bool
 	errorName   string
@@ -78,10 +80,12 @@ func (p *packageUnit) addEnumJSONChecksToFunction(
 	file *ast.File,
 	declaration *model,
 	contracts map[string]enumJSONNilContract,
+	engine *enumJSONContractEngine,
 	errorFunction string,
 ) bool {
 	injection := &enumJSONInjection{
 		unit: p, file: file, declaration: declaration, contracts: contracts,
+		engine:    engine,
 		errorFunc: errorFunction,
 		untagged: declaration.JSON.Form == "untagged" &&
 			function.Name.Name == "UnmarshalJSON",
@@ -217,10 +221,13 @@ func (i *enumJSONInjection) validationStatements(
 	emitter := enumJSONValidationEmitter{
 		unit: i.unit, errorFunc: i.errorFunc,
 		prefix: "invalid " + i.declaration.Name + "." + variant + " JSON payload: ",
+		state: &enumJSONValidationState{
+			engine: i.engine, recursive: make(map[string]string),
+		},
 	}
 	emitter.emit(object.Type(), contract, "payload", "")
-	code := emitter.output.String()
-	if emitter.needsReflect {
+	code := emitter.state.helperCode() + emitter.output.String()
+	if emitter.state.needsReflect {
 		qualifier, changed := enumJSONReflectQualifier(i.unit.fs, i.file)
 		i.changed = i.changed || changed
 		code = strings.ReplaceAll(code, "tgoJSONReflect.", qualifier)
@@ -349,12 +356,21 @@ func enumJSONParseStatements(files *token.FileSet, code string) ([]ast.Stmt, err
 }
 
 type enumJSONValidationEmitter struct {
-	unit         *packageUnit
-	errorFunc    string
-	prefix       string
+	unit      *packageUnit
+	errorFunc string
+	prefix    string
+	next      int
+	state     *enumJSONValidationState
+	output    strings.Builder
+}
+
+type enumJSONValidationState struct {
+	engine       *enumJSONContractEngine
+	recursive    map[string]string
 	next         int
 	needsReflect bool
-	output       strings.Builder
+	helperOrder  []string
+	helperBodies map[string]string
 }
 
 func (e *enumJSONValidationEmitter) emit(
@@ -365,6 +381,22 @@ func (e *enumJSONValidationEmitter) emit(
 ) {
 	if typ == nil || len(contract) == 0 {
 		return
+	}
+	if enumJSONHasRecursiveContract(contract) {
+		e.state.needsReflect = true
+		helper := e.recursiveHelper(typ)
+		if path == "" {
+			path = "value"
+		}
+		fmt.Fprintf(
+			&e.output,
+			"if err := %s(tgoJSONReflect.ValueOf(&(%s)).Elem(), %s); err != nil { return err }\n",
+			helper, value, strconv.Quote(path),
+		)
+		if len(contract) == 1 {
+			return
+		}
+		contract = enumJSONWithoutRecursiveContract(contract)
 	}
 	if contract[""] {
 		e.failure(value+" == nil", path)
@@ -456,7 +488,7 @@ func (e *enumJSONValidationEmitter) emitStruct(
 			continue
 		}
 		if !field.Exported() && field.Pkg() != nil && field.Pkg().Path() != e.unit.Path {
-			e.needsReflect = true
+			e.state.needsReflect = true
 			e.emitReflect(
 				field.Type(), child,
 				fmt.Sprintf("tgoJSONReflect.ValueOf(%s).Field(%d)", value, index),
@@ -476,6 +508,21 @@ func (e *enumJSONValidationEmitter) emitReflect(
 ) {
 	if typ == nil || len(contract) == 0 {
 		return
+	}
+	if enumJSONHasRecursiveContract(contract) {
+		helper := e.recursiveHelper(typ)
+		if path == "" {
+			path = "value"
+		}
+		fmt.Fprintf(
+			&e.output,
+			"if err := %s(%s, %s); err != nil { return err }\n",
+			helper, value, strconv.Quote(path),
+		)
+		if len(contract) == 1 {
+			return
+		}
+		contract = enumJSONWithoutRecursiveContract(contract)
 	}
 	if contract[""] {
 		e.failure(value+".IsNil()", path)
@@ -508,6 +555,190 @@ func (e *enumJSONValidationEmitter) emitReflect(
 			)
 		}
 	}
+}
+
+func enumJSONWithoutRecursiveContract(
+	contract enumJSONNilContract,
+) enumJSONNilContract {
+	result := enumJSONCopyContract(contract)
+	for path := range result {
+		if strings.HasPrefix(path, enumJSONRecursiveContractPrefix) {
+			delete(result, path)
+		}
+	}
+	return result
+}
+
+func (e *enumJSONValidationEmitter) recursiveHelper(typ types.Type) string {
+	key := types.TypeString(typ, func(pkg *types.Package) string { return pkg.Path() })
+	if name := e.state.recursive[key]; name != "" {
+		return name
+	}
+	name := fmt.Sprintf("tgoJSONValidate%d", e.state.next)
+	e.state.next++
+	e.state.recursive[key] = name
+	e.state.helperOrder = append(e.state.helperOrder, name)
+	if e.state.helperBodies == nil {
+		e.state.helperBodies = make(map[string]string)
+	}
+	e.state.needsReflect = true
+
+	contract := e.state.engine.finalContract(e.state.engine.typeContract(typ))
+	body := enumJSONValidationEmitter{
+		unit: e.unit, errorFunc: e.errorFunc, prefix: e.prefix, state: e.state,
+	}
+	body.emitReflectDynamic(typ, contract, "tgoJSONValue", "tgoJSONPath")
+	e.state.helperBodies[name] = fmt.Sprintf(
+		"%s = func(tgoJSONValue tgoJSONReflect.Value, tgoJSONPath string) error {\n"+
+			"if tgoJSONValue.CanAddr() {\n"+
+			"tgoJSONPointer := tgoJSONValue.Addr().Pointer()\n"+
+			"if tgoJSONVisited[tgoJSONPointer] { return nil }\n"+
+			"tgoJSONVisited[tgoJSONPointer] = true\n"+
+			"}\n"+
+			"%sreturn nil\n}\n",
+		name, body.output.String(),
+	)
+	return name
+}
+
+func (s *enumJSONValidationState) helperCode() string {
+	if len(s.helperOrder) == 0 {
+		return ""
+	}
+	var output strings.Builder
+	output.WriteString("tgoJSONVisited := make(map[uintptr]bool)\n")
+	output.WriteString("var (\n")
+	for _, name := range s.helperOrder {
+		fmt.Fprintf(&output, "%s func(tgoJSONReflect.Value, string) error\n", name)
+	}
+	output.WriteString(")\n")
+	for _, name := range s.helperOrder {
+		output.WriteString(s.helperBodies[name])
+	}
+	return output.String()
+}
+
+func (e *enumJSONValidationEmitter) emitReflectDynamic(
+	typ types.Type,
+	contract enumJSONNilContract,
+	value string,
+	path string,
+) {
+	if typ == nil || len(contract) == 0 {
+		return
+	}
+	if enumJSONHasRecursiveContract(contract) {
+		helper := e.recursiveHelper(typ)
+		fmt.Fprintf(
+			&e.output,
+			"if err := %s(%s, %s); err != nil { return err }\n",
+			helper, value, path,
+		)
+		if len(contract) == 1 {
+			return
+		}
+		contract = enumJSONWithoutRecursiveContract(contract)
+	}
+	if contract[""] {
+		e.failureDynamic(value+".IsNil()", path)
+	}
+	switch item := enumJSONValidationType(typ).(type) {
+	case *types.Pointer:
+		child := enumJSONNilChild(contract, "e")
+		if len(child) != 0 {
+			fmt.Fprintf(&e.output, "if !%s.IsNil() {\n", value)
+			e.emitReflectDynamic(item.Elem(), child, value+".Elem()", path)
+			e.output.WriteString("}\n")
+		}
+	case *types.Array:
+		e.emitReflectDynamicElements(
+			item.Elem(), enumJSONNilChild(contract, "e"), value,
+			path+" + "+strconv.Quote("[]"),
+		)
+	case *types.Slice:
+		e.emitReflectDynamicElements(
+			item.Elem(), enumJSONNilChild(contract, "e"), value,
+			path+" + "+strconv.Quote("[]"),
+		)
+	case *types.Map:
+		e.emitReflectDynamicMap(item, contract, value, path)
+	case *types.Struct:
+		for index := range item.NumFields() {
+			child := enumJSONNilChild(contract, "f"+strconv.Itoa(index))
+			if len(child) == 0 {
+				continue
+			}
+			field := item.Field(index)
+			fieldPath := path + " + " + strconv.Quote("."+field.Name())
+			if field.Name() == "_" {
+				if enumJSONZeroViolates(field.Type(), child) {
+					e.failureDynamic("true", fieldPath)
+				}
+				continue
+			}
+			e.emitReflectDynamic(
+				field.Type(), child,
+				fmt.Sprintf("%s.Field(%d)", value, index), fieldPath,
+			)
+		}
+	}
+}
+
+func (e *enumJSONValidationEmitter) emitReflectDynamicElements(
+	typ types.Type,
+	contract enumJSONNilContract,
+	value string,
+	path string,
+) {
+	if len(contract) == 0 {
+		return
+	}
+	index := e.freshValue()
+	fmt.Fprintf(
+		&e.output,
+		"for %s := 0; %s < %s.Len(); %s++ {\n",
+		index, index, value, index,
+	)
+	e.emitReflectDynamic(typ, contract, value+".Index("+index+")", path)
+	e.output.WriteString("}\n")
+}
+
+func (e *enumJSONValidationEmitter) emitReflectDynamicMap(
+	mapping *types.Map,
+	contract enumJSONNilContract,
+	value string,
+	path string,
+) {
+	keyContract := enumJSONNilChild(contract, "k")
+	valueContract := enumJSONNilChild(contract, "v")
+	if len(keyContract) == 0 && len(valueContract) == 0 {
+		return
+	}
+	iterator := e.freshValue()
+	fmt.Fprintf(&e.output, "%s := %s.MapRange()\n", iterator, value)
+	fmt.Fprintf(&e.output, "for %s.Next() {\n", iterator)
+	if len(keyContract) != 0 {
+		e.emitReflectDynamic(
+			mapping.Key(), keyContract, iterator+".Key()",
+			path+" + "+strconv.Quote("<key>"),
+		)
+	}
+	if len(valueContract) != 0 {
+		e.emitReflectDynamic(
+			mapping.Elem(), valueContract, iterator+".Value()",
+			path+" + "+strconv.Quote("[]"),
+		)
+	}
+	e.output.WriteString("}\n")
+}
+
+func (e *enumJSONValidationEmitter) failureDynamic(condition string, path string) {
+	fmt.Fprintf(
+		&e.output,
+		"if %s { return %s(%s, %s) }\n",
+		condition, e.errorFunc,
+		strconv.Quote(e.prefix+"%s must not be nil"), path,
+	)
 }
 
 func (e *enumJSONValidationEmitter) emitReflectElements(

@@ -2,11 +2,14 @@
 
 package model
 
-import "encoding/json"
-import jsonv2 "encoding/json/v2"
-import "encoding/json/jsontext"
-import "fmt"
-import "strings"
+import (
+	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+	"fmt"
+	"reflect"
+	"strings"
+)
 
 func tgoJSONExternalExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
 	if err := out.WriteToken(jsontext.BeginObject); err != nil {
@@ -2603,4 +2606,237 @@ func (v *JSONNonNilUntagged) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return err
 	}
 	return v.UnmarshalJSON(data)
+}
+
+type JSONNonNilRecursive struct {
+	Next     *JSONNonNilRecursive
+	Required *JSONNonNilTarget
+}
+
+type JSONNonNilRequired struct {
+	Item *JSONNonNilTarget
+}
+
+type JSONNonNilBox[T any] struct{ Value T }
+
+// JSONNonNilAdvanced requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type JSONNonNilAdvancedTag uint8
+
+const (
+	JSONNonNilAdvancedTagValue JSONNonNilAdvancedTag = iota + 1
+)
+
+type JSONNonNilAdvanced struct {
+	tgoTag   JSONNonNilAdvancedTag
+	tgoValue JSONNonNilAdvancedValue
+}
+
+// Tag returns the active tag.
+func (v JSONNonNilAdvanced) Tag() JSONNonNilAdvancedTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v JSONNonNilAdvanced) UnknownTag() string {
+	return fmt.Sprintf("JSONNonNilAdvanced: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// JSONNonNilAdvancedValue is the Value payload.
+type JSONNonNilAdvancedValue struct {
+	Recursive JSONNonNilRecursive
+	Generic   JSONNonNilBox[JSONNonNilRequired]
+}
+
+// JSONNonNilAdvanced constructs JSONNonNilAdvanced. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value JSONNonNilAdvancedValue) JSONNonNilAdvanced() JSONNonNilAdvanced {
+	return JSONNonNilAdvanced{tgoTag: JSONNonNilAdvancedTagValue, tgoValue: value}
+}
+
+// ValuePayload requires Value. No tag check.
+func (v JSONNonNilAdvanced) ValuePayload() JSONNonNilAdvancedValue { return v.tgoValue }
+
+func (v JSONNonNilAdvanced) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case JSONNonNilAdvancedTagValue:
+		payload := v.ValuePayload()
+		return json.Marshal(struct {
+			Payload JSONNonNilAdvancedValue `json:"Value"`
+		}{Payload: payload})
+	default:
+		return nil, fmt.Errorf("invalid JSONNonNilAdvanced JSON tag")
+	}
+}
+
+func (v JSONNonNilAdvanced) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case JSONNonNilAdvancedTagValue:
+		payload := v.ValuePayload()
+		return tgoJSONExternalExternalJSONTo(out, "Value", payload)
+	default:
+		return fmt.Errorf("invalid JSONNonNilAdvanced JSON tag")
+	}
+}
+
+func (v *JSONNonNilAdvanced) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return fmt.Errorf("expected one JSONNonNilAdvanced JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Value":
+		var payload JSONNonNilAdvancedValue
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		tgoJSONVisited := make(map[uintptr]bool)
+		var (
+			tgoJSONValidate0 func(reflect.Value, string) error
+		)
+		tgoJSONValidate0 = func(tgoJSONValue reflect.Value, tgoJSONPath string) error {
+			if tgoJSONValue.CanAddr() {
+				tgoJSONPointer := tgoJSONValue.Addr().Pointer()
+				if tgoJSONVisited[tgoJSONPointer] {
+					return nil
+				}
+				tgoJSONVisited[tgoJSONPointer] = true
+			}
+			if !tgoJSONValue.Field(0).IsNil() {
+				if err := tgoJSONValidate0(tgoJSONValue.Field(0).Elem(), tgoJSONPath+".Next"); err != nil {
+					return err
+				}
+			}
+			if tgoJSONValue.Field(1).IsNil() {
+				return fmt.Errorf("invalid JSONNonNilAdvanced.Value JSON payload: %s must not be nil", tgoJSONPath+".Required")
+			}
+			return nil
+		}
+		if payload.Recursive.Next != nil {
+			if err := tgoJSONValidate0(reflect.ValueOf(&(*payload.Recursive.Next)).Elem(), "Recursive.Next"); err != nil {
+				return err
+			}
+		}
+		if payload.Recursive.Required == nil {
+			return fmt.Errorf("invalid JSONNonNilAdvanced.Value JSON payload: Recursive.Required must not be nil")
+		}
+		if payload.Generic.Value.Item == nil {
+			return fmt.Errorf("invalid JSONNonNilAdvanced.Value JSON payload: Generic.Value.Item must not be nil")
+		}
+
+		*v = payload.JSONNonNilAdvanced()
+		return nil
+	default:
+		return fmt.Errorf("unknown JSONNonNilAdvanced JSON variant %q", variant)
+	}
+}
+
+func (v *JSONNonNilAdvanced) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return fmt.Errorf("expected one JSONNonNilAdvanced JSON variant")
+	}
+	var payloadData jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Value":
+			current = 1
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return fmt.Errorf("expected one JSONNonNilAdvanced JSON variant")
+	}
+	if selected == 0 {
+		return fmt.Errorf("unknown JSONNonNilAdvanced JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload JSONNonNilAdvancedValue
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		tgoJSONVisited := make(map[uintptr]bool)
+		var (
+			tgoJSONValidate0 func(reflect.Value, string) error
+		)
+		tgoJSONValidate0 = func(tgoJSONValue reflect.Value, tgoJSONPath string) error {
+			if tgoJSONValue.CanAddr() {
+				tgoJSONPointer := tgoJSONValue.Addr().Pointer()
+				if tgoJSONVisited[tgoJSONPointer] {
+					return nil
+				}
+				tgoJSONVisited[tgoJSONPointer] = true
+			}
+			if !tgoJSONValue.Field(0).IsNil() {
+				if err := tgoJSONValidate0(tgoJSONValue.Field(0).Elem(), tgoJSONPath+".Next"); err != nil {
+					return err
+				}
+			}
+			if tgoJSONValue.Field(1).IsNil() {
+				return fmt.Errorf("invalid JSONNonNilAdvanced.Value JSON payload: %s must not be nil", tgoJSONPath+".Required")
+			}
+			return nil
+		}
+		if payload.Recursive.Next != nil {
+			if err := tgoJSONValidate0(reflect.ValueOf(&(*payload.Recursive.Next)).Elem(), "Recursive.Next"); err != nil {
+				return err
+			}
+		}
+		if payload.Recursive.Required == nil {
+			return fmt.Errorf("invalid JSONNonNilAdvanced.Value JSON payload: Recursive.Required must not be nil")
+		}
+		if payload.Generic.Value.Item == nil {
+			return fmt.Errorf("invalid JSONNonNilAdvanced.Value JSON payload: Generic.Value.Item must not be nil")
+		}
+
+		*v = payload.JSONNonNilAdvanced()
+		return nil
+	default:
+		return fmt.Errorf("invalid JSONNonNilAdvanced JSON tag")
+	}
 }

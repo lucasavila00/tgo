@@ -107,3 +107,19 @@ type JSONNonNilUntagged enum `json:"untagged"` {
     First struct { Required %JSONNonNilTarget }
     Second struct { Count int }
 }
+
+type JSONNonNilRecursive struct {
+    Next *JSONNonNilRecursive
+    Required %JSONNonNilTarget
+}
+
+type JSONNonNilRequired struct { Item %JSONNonNilTarget }
+
+type JSONNonNilBox[T any] struct { Value T }
+
+type JSONNonNilAdvanced enum {
+    Value struct {
+        Recursive JSONNonNilRecursive
+        Generic JSONNonNilBox[JSONNonNilRequired]
+    }
+}

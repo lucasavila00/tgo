@@ -427,3 +427,41 @@ type E enum { Value struct { Item model.Required; Hidden model.Hidden } }
 		t.Fatalf("generated imported private path checks are incomplete\n%s", output)
 	}
 }
+
+func TestEnumJSONValidatesRecursiveAndInstantiatedTypes(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+type Target struct{}
+type Recursive struct {
+	Next *Recursive
+	Required %Target
+}
+type Required struct { Item %Target }
+type Box[T any] struct { Value T }
+type E enum {
+	Value struct {
+		Recursive Recursive
+		Generic Box[Required]
+	}
+}
+`)
+	for _, text := range []string{
+		"tgoJSONValidate",
+		"tgoJSONVisited",
+		"tgoJSONPath+\".Next\"",
+		"Generic.Value.Item must not be nil",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("generated recursive or generic check does not contain %q\n%s", text, output)
+		}
+	}
+}
+
+func TestEnumJSONIgnoresRecursiveTypesWithoutNonNilFields(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+type Recursive struct { Next *Recursive }
+type E enum { Value struct { Recursive Recursive } }
+`)
+	if strings.Contains(output, "tgoJSONValidate") || strings.Contains(output, `"reflect"`) {
+		t.Fatalf("generated an unnecessary recursive check\n%s", output)
+	}
+}

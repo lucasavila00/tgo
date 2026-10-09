@@ -95,6 +95,105 @@ func TestEnumJSONRejectsNilNonNilPayloads(t *testing.T) {
 	}
 }
 
+func TestEnumJSONRejectsRecursiveAndInstantiatedNilPayloads(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"recursive",
+			`{"Value":{"Recursive":{"Required":{},"Next":{}},"Generic":{"Value":{"Item":{}}}}}`,
+			"Recursive.Next.Required",
+		},
+		{
+			"generic",
+			`{"Value":{"Recursive":{"Required":{}},"Generic":{"Value":{}}}}`,
+			"Generic.Value.Item",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for _, decode := range []func([]byte, any) error{
+				func(data []byte, value any) error {
+					return value.(*JSONNonNilAdvanced).UnmarshalJSON(data)
+				},
+				func(data []byte, value any) error { return json.Unmarshal(data, value) },
+				func(data []byte, value any) error { return jsonv2.Unmarshal(data, value) },
+			} {
+				var value JSONNonNilAdvanced
+				err := decode([]byte(test.input), &value)
+				if err == nil || !strings.Contains(err.Error(), test.want) {
+					t.Fatalf("error = %v, want %q", err, test.want)
+				}
+			}
+		})
+	}
+
+	for _, decode := range []func([]byte, any) error{
+		func(data []byte, value any) error {
+			return value.(*JSONNonNilAdvanced).UnmarshalJSON(data)
+		},
+		func(data []byte, value any) error { return json.Unmarshal(data, value) },
+		func(data []byte, value any) error { return jsonv2.Unmarshal(data, value) },
+	} {
+		var value JSONNonNilAdvanced
+		data := []byte(`{"Value":{"Recursive":"cycle","Generic":{"Value":{"Item":{}}}}}`)
+		if err := decode(data, &value); err != nil {
+			t.Fatalf("valid recursive cycle failed: %v", err)
+		}
+		got := value.ValuePayload().Recursive
+		if got.Next == nil || got.Next.Next != got.Next {
+			t.Fatal("recursive cycle was not preserved")
+		}
+	}
+}
+
+func TestEnumJSONNonNilFailureKeepsTaggedAndUntaggedReceivers(t *testing.T) {
+	tests := []struct {
+		name    string
+		valid   string
+		invalid string
+		value   func() any
+	}{
+		{
+			"internal", `{"type":"value","Required":{}}`, `{"type":"value"}`,
+			func() any { return new(JSONNonNilInternal) },
+		},
+		{
+			"adjacent", `{"type":"value","data":{"Required":{}}}`, `{"type":"value","data":{}}`,
+			func() any { return new(JSONNonNilAdjacent) },
+		},
+		{
+			"untagged", `{"Required":{}}`, `{"Count":"bad"}`,
+			func() any { return new(JSONNonNilUntagged) },
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for _, decode := range []func([]byte, any) error{
+				func(data []byte, value any) error {
+					return value.(interface{ UnmarshalJSON([]byte) error }).UnmarshalJSON(data)
+				},
+				func(data []byte, value any) error { return json.Unmarshal(data, value) },
+				func(data []byte, value any) error { return jsonv2.Unmarshal(data, value) },
+			} {
+				value := test.value()
+				if err := decode([]byte(test.valid), value); err != nil {
+					t.Fatal(err)
+				}
+				before := reflect.ValueOf(value).Elem().Interface()
+				if err := decode([]byte(test.invalid), value); err == nil {
+					t.Fatal("invalid payload succeeded")
+				}
+				if !reflect.DeepEqual(reflect.ValueOf(value).Elem().Interface(), before) {
+					t.Fatal("failed decode changed the receiver")
+				}
+			}
+		})
+	}
+}
+
 func TestEnumJSONForms(t *testing.T) {
 	tests := []struct {
 		name     string

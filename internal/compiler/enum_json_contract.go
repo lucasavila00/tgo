@@ -16,12 +16,16 @@ type enumJSONTypeDeclaration struct {
 }
 
 type enumJSONContractEngine struct {
-	unit         *packageUnit
-	engines      map[*packageUnit]*enumJSONContractEngine
-	declarations map[string]enumJSONTypeDeclaration
-	contracts    map[string]enumJSONNilContract
-	resolving    map[string]bool
+	unit          *packageUnit
+	engines       map[*packageUnit]*enumJSONContractEngine
+	declarations  map[string]enumJSONTypeDeclaration
+	contracts     map[string]enumJSONNilContract
+	resolving     map[string]bool
+	typeContracts map[string]enumJSONNilContract
+	typeResolving map[string]bool
 }
+
+const enumJSONRecursiveContractPrefix = "@"
 
 func newEnumJSONContractEngine(unit *packageUnit) *enumJSONContractEngine {
 	engines := make(map[*packageUnit]*enumJSONContractEngine)
@@ -37,9 +41,11 @@ func enumJSONEngineFor(
 	}
 	engine := &enumJSONContractEngine{
 		unit: unit, engines: engines,
-		declarations: make(map[string]enumJSONTypeDeclaration),
-		contracts:    make(map[string]enumJSONNilContract),
-		resolving:    make(map[string]bool),
+		declarations:  make(map[string]enumJSONTypeDeclaration),
+		contracts:     make(map[string]enumJSONNilContract),
+		resolving:     make(map[string]bool),
+		typeContracts: make(map[string]enumJSONNilContract),
+		typeResolving: make(map[string]bool),
 	}
 	engines[unit] = engine
 	sources := make(map[*ast.File]*source)
@@ -76,13 +82,27 @@ func (e *enumJSONContractEngine) typeContract(typ types.Type) enumJSONNilContrac
 		return nil
 	}
 	if alias, ok := typ.(*types.Alias); ok {
-		if contract := e.objectContract(alias.Obj()); len(contract) != 0 {
-			return contract
-		}
-		return e.typeContract(alias.Rhs())
+		result := enumJSONCopyContract(e.objectContract(alias.Obj()))
+		enumJSONMergeContract(result, e.typeContract(alias.Rhs()))
+		return enumJSONContractOrNil(result)
 	}
 	if named, ok := typ.(*types.Named); ok {
-		return e.objectContract(named.Obj())
+		key := enumJSONContractTypeKey(types.TypeString(named, func(pkg *types.Package) string {
+			return pkg.Path()
+		}))
+		if contract, ok := e.typeContracts[key]; ok {
+			return contract
+		}
+		if e.typeResolving[key] {
+			return enumJSONNilContract{enumJSONRecursiveContractPrefix + key: true}
+		}
+		e.typeResolving[key] = true
+		result := enumJSONCopyContract(e.objectContract(named.Obj()))
+		enumJSONMergeContract(result, e.typeContract(named.Underlying()))
+		delete(e.typeResolving, key)
+		result = enumJSONContractOrNil(result)
+		e.typeContracts[key] = result
+		return result
 	}
 	result := make(enumJSONNilContract)
 	switch value := typ.Underlying().(type) {
@@ -128,7 +148,8 @@ func (e *enumJSONContractEngine) objectContract(
 		return contract
 	}
 	if e.resolving[name] {
-		return nil
+		key := enumJSONContractTypeKey(object.Pkg().Path() + "." + name)
+		return enumJSONNilContract{enumJSONRecursiveContractPrefix + key: true}
 	}
 	declaration, ok := e.declarations[name]
 	if !ok {
@@ -139,6 +160,75 @@ func (e *enumJSONContractEngine) objectContract(
 	delete(e.resolving, name)
 	e.contracts[name] = contract
 	return contract
+}
+
+func (e *enumJSONContractEngine) finalContract(
+	contract enumJSONNilContract,
+) enumJSONNilContract {
+	result := make(enumJSONNilContract)
+	for path := range contract {
+		marker := enumJSONRecursiveMarker(path)
+		if marker == "" || e.typeHasConcreteContract(marker, make(map[string]bool)) {
+			result[path] = true
+		}
+	}
+	return enumJSONContractOrNil(result)
+}
+
+func (e *enumJSONContractEngine) typeHasConcreteContract(
+	key string,
+	visiting map[string]bool,
+) bool {
+	if visiting[key] {
+		return false
+	}
+	visiting[key] = true
+	defer delete(visiting, key)
+	for path := range e.typeContracts[key] {
+		marker := enumJSONRecursiveMarker(path)
+		if marker == "" || e.typeHasConcreteContract(marker, visiting) {
+			return true
+		}
+	}
+	return false
+}
+
+func enumJSONRecursiveMarker(path string) string {
+	segment := path
+	if index := strings.LastIndexByte(path, '/'); index >= 0 {
+		segment = path[index+1:]
+	}
+	if !strings.HasPrefix(segment, enumJSONRecursiveContractPrefix) {
+		return ""
+	}
+	return strings.TrimPrefix(segment, enumJSONRecursiveContractPrefix)
+}
+
+func enumJSONContractTypeKey(key string) string {
+	return strings.ReplaceAll(key, "/", "\x00")
+}
+
+func enumJSONHasRecursiveContract(contract enumJSONNilContract) bool {
+	for path := range contract {
+		if strings.HasPrefix(path, enumJSONRecursiveContractPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func enumJSONCopyContract(source enumJSONNilContract) enumJSONNilContract {
+	result := make(enumJSONNilContract, len(source))
+	for path := range source {
+		result[path] = true
+	}
+	return result
+}
+
+func enumJSONMergeContract(target, source enumJSONNilContract) {
+	for path := range source {
+		target[path] = true
+	}
 }
 
 func (e *enumJSONContractEngine) expressionContract(
