@@ -79,6 +79,7 @@ func (c *checker) checkTagSwitch(
 		}
 		c.checkCaseAccessors(
 			file, clause, statement, receiver, model, flowType, defaultClause,
+			syntax.ExpressionEnd(tagSwitch.Tag),
 		)
 	}
 	if labelsResolved && hasSentinelDefault {
@@ -553,11 +554,9 @@ func (c *checker) checkCaseAccessors(
 	model *model,
 	flowType variantflow.Type,
 	defaultClause bool,
+	proof token.Pos,
 ) {
 	if clause == nil || receiver == nil {
-		return
-	}
-	if clauseAssignsReceiver(c.facts, clause, receiver) {
 		return
 	}
 	for _, statement := range clause.Body {
@@ -586,10 +585,7 @@ func (c *checker) checkCaseAccessors(
 			if tag == 0 {
 				return true
 			}
-			parent := syntax.Parent(file, node)
-			parentExpression, direct := syntax.ExpressionOf(parent)
-			call := syntax.CallExpressionOf(parentExpression)
-			if !direct || call == nil || call.Callee != expression {
+			if !c.enumReceiverStableBefore(file, clause, expression, receiver, proof) {
 				return true
 			}
 			c.syntaxHandled[expression] = true
@@ -632,48 +628,6 @@ func capturesObject(
 		return !captured
 	})
 	return captured
-}
-
-func clauseAssignsReceiver(
-	facts *sourcefacts.Index,
-	clause *syntax.CaseClause,
-	receiver *syntax.Expression,
-) bool {
-	assigned := false
-	for _, statement := range clause.Body {
-		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			if assigned {
-				return false
-			}
-			if _, nested := syntax.FunctionLiteralOf(node); nested {
-				return false
-			}
-			value, ok := syntax.StatementOf(node)
-			if !ok {
-				return true
-			}
-			if assignment := syntax.AssignmentStatementOf(value); assignment != nil {
-				for _, target := range assignment.Left {
-					if receiverWrite(facts, target, receiver) {
-						assigned = true
-						return false
-					}
-				}
-			}
-			if increment := syntax.IncrementStatementOf(value); increment != nil {
-				assigned = receiverWrite(facts, increment.Expression, receiver)
-			}
-			if rangeStatement := syntax.RangeStatementOf(value); rangeStatement != nil {
-				assigned = receiverWrite(facts, rangeStatement.Key, receiver) ||
-					receiverWrite(facts, rangeStatement.Value, receiver)
-			}
-			return !assigned
-		})
-		if assigned {
-			break
-		}
-	}
-	return assigned
 }
 
 func receiverWrite(

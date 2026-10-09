@@ -398,12 +398,11 @@ box a large payload; construction can then allocate when the box escapes.
 Payload accessors do not check the tag and do not allocate. An inline accessor for the wrong
 variant returns the inactive inline slot. A value from another variant constructor normally has
 the zero value in that slot. A boxed accessor for the wrong variant panics during its type
-assertion. An empty-payload accessor returns an empty value for each tag. The contextual checks
-below prevent these calls in checked source.
+assertion. An empty-payload accessor returns an empty value for each tag. `tgolint` requires a
+variant proof for each payload call or method value.
 
 A tgo file may not build a declared variant with an enum struct literal or conversion.
-It may not read representation fields. Contextual payload checks apply only in the checked tag
-switch below. Calls outside that switch are unchecked Go calls.
+It may not read representation fields. A payload read must have one of the proofs below.
 Embedding an enum does not expose its representation fields or generated accessors.
 A canonical switch does not recognize these generated methods through an interface or an open or
 mixed type parameter. An exact enum constraint can use them in a checked tag switch.
@@ -431,8 +430,8 @@ exhaustive:
 ```
 
 The switch tag must be a direct `Tag()` call on an enum value or pointer. Parentheses are valid.
-The receiver can be a local value, package value, field, alias, or captured value. An exact enum
-type constraint can use the switch. An interface or open or mixed type parameter cannot.
+The receiver can be a local value, pointer, field, or direct alias. An exact enum type constraint
+can use the switch. An interface or open or mixed type parameter cannot.
 
 An `exhaustive:` clause requires the switch to cover every declared tag with generated tag
 constants. Parentheses, a
@@ -458,12 +457,25 @@ A case cannot use `fallthrough`.
 
 A case with one possible variant permits only that variant's payload accessor on the same receiver.
 A case with multiple tags has their union type. A default with one omitted variant permits that
-variant's accessor; a default with multiple omitted variants permits no accessor. If a clause assigns
-the receiver or a selector-prefix receiver, the clause gets no payload proof. A nested function literal does not
-inherit the proof. Direct calls in `go` and `defer` statements do inherit it. Method values do not.
-A nested switch on the same `Tag()` receiver supplies its own proof.
+variant's accessor; a default with multiple omitted variants permits no accessor. A payload call and
+a payload method value use the same rule. Direct calls in `go` and `defer` statements inherit the
+proof. A nested switch on the same `Tag()` receiver supplies its own proof.
 
-The compiler does not analyze a `Tag` or payload call outside a recognized canonical switch.
+A simple early-exit guard also proves one variant:
+
+```text
+if account.Tag() != AccountTagPersonal { return "" }
+return account.PersonalPayload().Name
+```
+
+The tag constant and the accessor must use the same enum and stable receiver. The guard body must
+stop before the payload read. The receiver root must belong to the current function. A package value
+or a value captured from an outer function cannot hold a proof. An assignment to the receiver or a
+selector prefix ends the proof. Taking a writable address, passing pointer storage to a call, calling
+a pointer method, or capturing the receiver in a function ends the proof. A nested function does not
+inherit a proof. A proof from outside a loop ends when a loop iteration can change the receiver. A
+`goto` cannot enter the source region between a proof and its payload read.
+
 The accessor returns a Go value copy. Reference fields keep their Go aliases.
 
 ## Checked structs

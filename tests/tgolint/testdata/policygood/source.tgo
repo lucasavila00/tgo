@@ -1,9 +1,14 @@
 package policygood
 
-type Quantity struct { value int } checked
+type Quantity struct{ value int } checked
+
+type Choice enum {
+	Text struct { Value string }
+	Number struct { Value int }
+}
 
 func (value Quantity) check() (Quantity, error) { return value, }
-func (value Quantity) Value() int { return value.value }
+func (value Quantity) Value() int               { return value.value }
 
 type Request struct {
 	ID   string
@@ -36,4 +41,19 @@ func read(items map[string]Quantity, input any, channel <-chan Quantity) int {
 		return value.Value()
 	}
 	return len(values[:len(values)])
+}
+
+func readChoice(value Choice) string {
+	if value.Tag() != ChoiceTagText {
+		return ""
+	}
+	return value.TextPayload().Value
+}
+
+func choicePayload(value Choice) string {
+	if ChoiceTagText != value.Tag() {
+		return ""
+	}
+	payload := value.TextPayload
+	return payload().Value
 }

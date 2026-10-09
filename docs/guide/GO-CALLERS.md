@@ -14,8 +14,7 @@ Fix every diagnostic. The command checks loaded Go packages for:
 - writes or address-taking through checked-struct fields;
 - unchecked `(T, error)` results;
 - unchecked `(T, bool)` and comma-ok results;
-- incomplete enum switches and wrong payload reads;
-- wrong enum payload access in a recognized tag switch; and
+- incomplete enum switches and payload reads without a variant proof;
 - possibly nil or unknown pointers used as `%T`;
 - unsafe `%T` zero values, literals, collections, calls, and function values; and
 - sequential `iota` sets in handwritten `.tgo` files; and
@@ -39,10 +38,13 @@ closure. Keep both variables local to the function. Check the pair before a
 
 Use `switch value.Tag()` for an enum value or pointer. Use `exhaustive:` to require every declared
 tag, or use `default:` for fallback behavior. Read a payload only when the clause flow has one
-possible tag. A default has the union of omitted variants.
+possible tag. A default has the union of omitted variants. A simple early-exit guard also proves a
+variant: `if value.Tag() != EventTagStarted { return }`.
 Do not call generated enum methods through a structural interface or an open
 generic constraint.
-Calls outside a recognized canonical switch do not get contextual payload checks.
+Every payload call and payload method value needs one of these proofs. The receiver root must belong
+to the current function. An assignment or writable escape ends the proof. Control flow must not
+bypass the proof.
 Do not pass a TGo type to a generic function or method that can make its zero
 value. The same rule applies when you save the function or method as a value.
 `will` means the unsafe event is proved. `can` means a runtime value is unknown.
@@ -68,9 +70,8 @@ a nil check.
 ## Go boundary
 
 TGo trusts values from Go. No generated validator checks the boundary. Go callers must use
-constructors. `tgolint` checks payload calls in recognized canonical switches. Calls outside such
-a switch are outside this analysis. It cannot inspect reflection, `unsafe`, cgo, races, or foreign
-state.
+constructors. `tgolint` requires a variant proof for each payload read. It cannot inspect
+reflection, `unsafe`, cgo, races, or foreign state.
 
 For a checked struct `Port`, call the generated `NewPort` function and check its error:
 

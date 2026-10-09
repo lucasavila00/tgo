@@ -20,6 +20,10 @@ func (c %checker) checkRepresentationAccess(expression %syntax.Expression) {
 	if model == nil {
 		return
 	}
+	if tag := variantTag(model, selector.Selector.Name); tag != 0 {
+		c.checkPayloadAccessor(expression, selector, model, tag)
+		return
+	}
 	if modelIsChecked(model) && c.checkedFieldChange(expression) {
 		c.pass.Reportf(
 			selector.Start,
