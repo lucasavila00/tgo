@@ -4,12 +4,15 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"path/filepath"
 
 	"tgo/pkg/syntax"
 )
 
 // AnalysisSource pairs source syntax with its typed Go projection.
 type AnalysisSource struct {
+	Name      string
+	Output    []byte
 	Syntax    *syntax.File
 	Projected *ast.File
 	Generated map[ast.Decl]bool
@@ -58,6 +61,10 @@ func AnalyzePackage(
 	if err := unit.checkAndLower(); err != nil {
 		return nil, err
 	}
+	outputs, err := unit.generatedOutputs()
+	if err != nil {
+		return nil, err
+	}
 	sources := make([]AnalysisSource, 0, len(unit.Sources))
 	nonNil := make(map[token.Pos]bool)
 	for _, source := range unit.Sources {
@@ -68,6 +75,7 @@ func AnalyzePackage(
 			}
 		}
 		sources = append(sources, AnalysisSource{
+			Name: filepath.Base(source.Name), Output: outputs[unit.outputPath(source.Name)],
 			Syntax: source.Tree, Projected: source.File, Generated: generated,
 		})
 		for position := range source.NonNil {
