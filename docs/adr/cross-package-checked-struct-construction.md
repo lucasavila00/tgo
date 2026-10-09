@@ -1,70 +1,68 @@
-# Use one checked struct literal across packages
+# Generate one checked struct constructor
 
 ## Context
 
-Checked structs now require private fields and lower each literal to a private
-`check` method. Another TGo package cannot set those fields or call that method.
-An exported factory gives the same type a second construction form and makes
-each package author define language support by hand.
+A checked struct is an opaque value whose usable instances passed validation.
+Private fields protect its representation, but the current literal form cannot
+cross a package boundary. A project-defined factory gives different packages
+different construction APIs and does not make the language enforce one path.
 
 ## Decision
 
-Use a keyed checked-struct literal as the only TGo construction form, in the
-declaring package and in other TGo packages.
-
-Checked structs can contain exported and unexported fields. Field names keep
-normal Go visibility in literals and selectors. Code in another package can set
-and select only exported fields.
+Keep every checked-struct field private. Generate one exported fallible
+constructor as the only construction API for TGo and Go code:
 
 ```tgo
-// package model
 type Port struct {
-	Number int
+	number int
 } checked
 
 func (value Port) check() (Port, error) {
-	if value.Number < 1 || value.Number > 65535 {
+	if value.number < 1 || value.number > 65535 {
 		return Port{}, ErrInvalidPort
 	}
 	return value,
 }
 ```
 
-```tgo
-// package server
-port, err := model.Port{Number: number}
-```
-
-All checked-struct literals must use field keys. Positional literals are
-invalid in all packages. An embedded field uses its Go field name and normal
-visibility. `..default` fills omitted defaulted fields before validation.
-
-The compiler emits one exported ABI method for each checked struct:
-
 ```go
-func (value Port) TGoCheck() (Port, error) {
-	return value.check()
+func NewPort(number int) (Port, error) {
+	return Port{number: number}.check()
 }
 ```
 
-The compiler lowers every checked literal, local or imported, to
-`Port{Number: number}.TGoCheck()`. The method calls `check` once and returns its
-value and error. A raw literal in the type's own `check` method keeps the
-existing trusted exemption.
+Code in the declaring package, another TGo package, or a Go package calls
+`NewPort`. TGo error propagation applies to that call without special syntax.
 
-The receiver carries the type arguments for a generic checked struct, so the
-same method shape applies without a separate generic helper.
+The generated signature follows these rules:
 
-`TGoCheck` is generated Go ABI, not TGo source API. TGo source cannot name or
-call it, navigation does not expose it, and the compiler rejects a user method
-with that reserved name. Generated fields keep their declared names and normal
-Go visibility.
+- Its name is `New<Type>` and that package-level name is reserved.
+- It has one parameter for each nonblank field, in declaration order.
+- A named field gives the parameter its name and type.
+- An embedded field gives the parameter its declared field name and type.
+- A blank field has no parameter and keeps its zero value.
+- A generic constructor repeats the type parameters and constraints of the
+  checked struct.
+
+Checked structs cannot declare field defaults. One fixed function cannot both
+accept an override and omit the same argument without another API or an options
+mechanism. Approval of this decision includes this restriction.
+
+The constructor evaluates its arguments once, builds the private value, calls
+the package-local `check` method once, and returns its value and error. It does
+not generate readers, setters, or another validation entry point.
+
+TGo rejects a checked-struct literal outside its own `check` method. It also
+rejects field assignment after construction, including in the declaring
+package. The private `check` method can build and normalize its local raw value.
+Package-local code can read private fields, and copying a validated value keeps
+normal Go value semantics.
 
 ## Consequences
 
-- Existing private fields remain private. Cross-package callers can omit them
-  only when their zero value, a default, or `check` supplies valid state.
-- Handwritten Go can still bypass validation with a direct literal. `tgolint`
-  reports that bypass; a call to the generated ABI method performs validation.
-- The compiler, specification, guides, navigation, hover, and syntax support
-  must describe and recognize the same keyed literal form.
+- Existing checked literals must become `New<Type>` calls.
+- Other packages can construct the value but cannot access its representation.
+- Handwritten Go in the declaring package can still bypass these rules, so
+  `tgolint` reports raw literals, field writes, and unchecked constructor
+  errors.
+- The zero value remains invalid and subject to the existing use checks.
