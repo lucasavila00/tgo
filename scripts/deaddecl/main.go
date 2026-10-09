@@ -47,6 +47,16 @@ func main() {
 	if len(patterns) == 0 {
 		patterns = []string{"./..."}
 	}
+	deadFunctions := readDeadFunctions()
+	root, loaded := loadPackages(patterns)
+	nodes, roots := buildGraph(root, loaded, deadFunctions)
+	result := unreachableDeclarations(nodes, roots)
+	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
+		fail(err)
+	}
+}
+
+func readDeadFunctions() map[string]bool {
 	var deadPackages []deadcodePackage
 	if err := json.NewDecoder(os.Stdin).Decode(&deadPackages); err != nil {
 		fail(err)
@@ -57,7 +67,10 @@ func main() {
 			deadFunctions[reportedFunctionKey(function.Position, function.Name)] = true
 		}
 	}
+	return deadFunctions
+}
 
+func loadPackages(patterns []string) (string, []*packages.Package) {
 	root, err := os.Getwd()
 	if err != nil {
 		fail(err)
@@ -75,7 +88,14 @@ func main() {
 	if packages.PrintErrors(loaded) > 0 {
 		os.Exit(1)
 	}
+	return root, loaded
+}
 
+func buildGraph(
+	root string,
+	loaded []*packages.Package,
+	deadFunctions map[string]bool,
+) (map[string]*node, map[string]bool) {
 	nodes := make(map[string]*node)
 	roots := make(map[string]bool)
 	for _, pkg := range loaded {
@@ -97,7 +117,13 @@ func main() {
 			}
 		}
 	}
+	return nodes, roots
+}
 
+func unreachableDeclarations(
+	nodes map[string]*node,
+	roots map[string]bool,
+) []declaration {
 	reachable := make(map[string]bool)
 	queue := make([]string, 0, len(roots))
 	for key := range roots {
@@ -133,9 +159,7 @@ func main() {
 		}
 		return left.Name < right.Name
 	})
-	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
-		fail(err)
-	}
+	return result
 }
 
 func addGeneralDeclaration(
@@ -146,20 +170,60 @@ func addGeneralDeclaration(
 	path string,
 	generated bool,
 ) {
+	previousConstUses := make(map[string]bool)
 	for _, specification := range declarationValue.Specs {
 		switch value := specification.(type) {
 		case *ast.TypeSpec:
 			addObject(nodes, pkg, pkg.TypesInfo.Defs[value.Name], value, path, generated)
 		case *ast.ValueSpec:
-			for _, name := range value.Names {
-				addObject(nodes, pkg, pkg.TypesInfo.Defs[name], value, path, generated)
-			}
-			if declarationValue.Tok == token.VAR {
-				for _, expression := range value.Values {
-					addUses(roots, pkg, expression)
-				}
-			}
+			previousConstUses = addValueSpecification(
+				nodes, roots, pkg, declarationValue.Tok, value,
+				path, generated, previousConstUses,
+			)
 		}
+	}
+}
+
+func addValueSpecification(
+	nodes map[string]*node,
+	roots map[string]bool,
+	pkg *packages.Package,
+	tokenValue token.Token,
+	value *ast.ValueSpec,
+	path string,
+	generated bool,
+	previousConstUses map[string]bool,
+) map[string]bool {
+	implicitConst := tokenValue == token.CONST &&
+		value.Type == nil && len(value.Values) == 0
+	for _, name := range value.Names {
+		object := pkg.TypesInfo.Defs[name]
+		addObject(nodes, pkg, object, value, path, generated)
+		if implicitConst {
+			addEdges(nodes, object, previousConstUses)
+		}
+	}
+	if tokenValue == token.CONST && !implicitConst {
+		currentConstUses := make(map[string]bool)
+		addUses(currentConstUses, pkg, value)
+		return currentConstUses
+	}
+	if tokenValue == token.VAR {
+		for _, expression := range value.Values {
+			addUses(roots, pkg, expression)
+		}
+	}
+	return previousConstUses
+}
+
+func addEdges(nodes map[string]*node, object types.Object, edges map[string]bool) {
+	key, _ := objectKey(object)
+	current := nodes[key]
+	if current == nil {
+		return
+	}
+	for dependency := range edges {
+		current.edges[dependency] = true
 	}
 }
 
@@ -181,7 +245,9 @@ func addObject(
 		current = &node{
 			declaration: declaration{
 				Name: object.Name(), Kind: kind,
-				Position:  position{File: path, Line: positionValue.Line, Col: positionValue.Column},
+				Position: position{
+					File: path, Line: positionValue.Line, Col: positionValue.Column,
+				},
 				Generated: generated,
 			},
 			edges: make(map[string]bool),
@@ -210,18 +276,16 @@ func objectKey(object types.Object) (string, string) {
 		!repositoryPackage(object.Pkg().Path()) {
 		return "", ""
 	}
-	kind := ""
 	switch object.(type) {
 	case *types.TypeName:
-		kind = "type"
+		return object.Pkg().Path() + ":" + object.Name(), "type"
 	case *types.Var:
-		kind = "var"
+		return object.Pkg().Path() + ":" + object.Name(), "var"
 	case *types.Const:
-		kind = "const"
+		return object.Pkg().Path() + ":" + object.Name(), "const"
 	default:
 		return "", ""
 	}
-	return object.Pkg().Path() + ":" + object.Name(), kind
 }
 
 func repositoryPackage(path string) bool {
@@ -229,20 +293,34 @@ func repositoryPackage(path string) bool {
 }
 
 func deadFunctionKey(pkg *packages.Package, declarationValue *ast.FuncDecl, path string) string {
-	name := declarationValue.Name.Name
-	if object, ok := pkg.TypesInfo.Defs[declarationValue.Name].(*types.Func); ok {
-		if signature, ok := object.Type().(*types.Signature); ok && signature.Recv() != nil {
-			typ := signature.Recv().Type()
-			if pointer, ok := typ.(*types.Pointer); ok {
-				typ = pointer.Elem()
-			}
-			if named, ok := typ.(*types.Named); ok {
-				name = named.Obj().Name() + "." + name
-			}
-		}
-	}
 	positionValue := pkg.Fset.Position(declarationValue.Name.Pos())
-	return deadFunctionKeyValue(path, positionValue.Line, positionValue.Column, name)
+	return deadFunctionKeyValue(
+		path,
+		positionValue.Line,
+		positionValue.Column,
+		functionName(pkg, declarationValue),
+	)
+}
+
+func functionName(pkg *packages.Package, declarationValue *ast.FuncDecl) string {
+	name := declarationValue.Name.Name
+	object, ok := pkg.TypesInfo.Defs[declarationValue.Name].(*types.Func)
+	if !ok {
+		return name
+	}
+	signature, ok := object.Type().(*types.Signature)
+	if !ok || signature.Recv() == nil {
+		return name
+	}
+	typ := signature.Recv().Type()
+	if pointer, ok := typ.(*types.Pointer); ok {
+		typ = pointer.Elem()
+	}
+	named, ok := typ.(*types.Named)
+	if !ok {
+		return name
+	}
+	return named.Obj().Name() + "." + name
 }
 
 func deadFunctionKeyValue(file string, line int, column int, name string) string {

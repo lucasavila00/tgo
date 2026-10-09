@@ -5,7 +5,7 @@ func main() {
 	platformOnly()
 }
 
-func live() {}
+func live() { _ = implicitReachable }
 
 func testOnly() {}
 
@@ -19,6 +19,15 @@ type deadGoType struct{}
 var deadGoVar int
 
 const deadGoConst = 1
+
+type implicitType int
+
+const implicitBase implicitType = 1
+
+const (
+	implicitSeed implicitType = implicitBase
+	implicitReachable
+)
 
 type testOnlyType struct{}
 

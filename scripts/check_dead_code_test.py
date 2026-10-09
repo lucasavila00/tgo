@@ -58,9 +58,11 @@ class DeadCodeTest(unittest.TestCase):
                 "deadGoVar (Go source)",
                 "scripts/testdata/deadcode/main.go:21: unreachable const: "
                 "deadGoConst (Go source)",
+                "scripts/testdata/deadcode/main.go:28: unreachable const: "
+                "implicitSeed (Go source)",
                 "scripts/testdata/deadcode/model.tgo:3: unreachable func: "
                 "fixtureOwner.deadGeneratedSupport (TGo source; generated at "
-                "scripts/testdata/deadcode/model_tgo.go:9)",
+                "scripts/testdata/deadcode/model_tgo.go:15)",
                 "scripts/testdata/deadcode/model.tgo:3: unreachable type: "
                 "fixtureOwner (TGo source; generated at "
                 "scripts/testdata/deadcode/model_tgo.go:5)",
@@ -68,14 +70,32 @@ class DeadCodeTest(unittest.TestCase):
                 "deadTGo (TGo source; generated at "
                 "scripts/testdata/deadcode/model_tgo.go:7)",
                 "scripts/testdata/deadcode/model.tgo:7: unreachable type: "
-                "deadTGoType (TGo source; generated at "
+                "firstOwner (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:9)",
+                "scripts/testdata/deadcode/model.tgo:8: unreachable type: "
+                "secondOwner (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:10)",
+                "scripts/testdata/deadcode/model.tgo:10: unreachable func: "
+                "firstOwner.sharedDead (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:12)",
+                "scripts/testdata/deadcode/model.tgo:11: unreachable func: "
+                "secondOwner.sharedDead (TGo source; generated at "
                 "scripts/testdata/deadcode/model_tgo.go:13)",
-                "scripts/testdata/deadcode/model.tgo:9: unreachable var: "
+                "scripts/testdata/deadcode/model.tgo:13: unreachable type: "
+                "deadTGoType (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:19)",
+                "scripts/testdata/deadcode/model.tgo:16: unreachable var: "
                 "deadTGoVar (TGo source; generated at "
-                "scripts/testdata/deadcode/model_tgo.go:15)",
-                "scripts/testdata/deadcode/model.tgo:11: unreachable const: "
+                "scripts/testdata/deadcode/model_tgo.go:22)",
+                "scripts/testdata/deadcode/model.tgo:16: unreachable var: "
+                "deadTGoVarSecond (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:22)",
+                "scripts/testdata/deadcode/model.tgo:20: unreachable const: "
                 "deadTGoConst (TGo source; generated at "
-                "scripts/testdata/deadcode/model_tgo.go:17)",
+                "scripts/testdata/deadcode/model_tgo.go:26)",
+                "scripts/testdata/deadcode/model.tgo:20: unreachable const: "
+                "deadTGoConstSecond (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:26)",
             ],
         )
 

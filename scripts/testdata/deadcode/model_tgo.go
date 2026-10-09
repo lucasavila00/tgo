@@ -6,15 +6,25 @@ type fixtureOwner struct{}
 
 func deadTGo() {}
 
+type firstOwner struct{}
+type secondOwner struct{}
+
+func (firstOwner) sharedDead()  {}
+func (secondOwner) sharedDead() {}
+
 func (fixtureOwner) deadGeneratedSupport() {}
 
 func (fixtureOwner) MarshalJSON() ([]byte, error) { return nil, nil }
 
 type deadTGoType struct{}
 
-var deadTGoVar int
+var (
+	deadTGoVar, deadTGoVarSecond int
+)
 
-const deadTGoConst = 1
+const (
+	deadTGoConst, deadTGoConstSecond = 1, 2
+)
 
 type fixtureOwnerTag uint8
 

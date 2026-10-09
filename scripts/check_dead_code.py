@@ -44,13 +44,24 @@ def tgo_owner(path: str) -> str | None:
 
 def declaration_line(source: Path, name: str) -> int | None:
     """Find a named function or method in one TGo source file."""
-    short_name = name.rsplit(".", 1)[-1]
-    pattern = re.compile(
-        rf"^\s*func\s+(?:\([^)]*\)\s*)?{re.escape(short_name)}(?:\s*\[|\s*\()"
+    receiver, separator, short_name = name.rpartition(".")
+    function = re.compile(
+        rf"^\s*func\s+{re.escape(short_name)}(?:\s*\[|\s*\()"
+    )
+    method = re.compile(
+        rf"^\s*func\s+\(([^)]*)\)\s*{re.escape(short_name)}(?:\s*\[|\s*\()"
+    )
+    receiver_type = re.compile(
+        r"(?:^|\s)[%*]?([A-Za-z_]\w*)(?:\[[^]]+\])?\s*$"
     )
     for line, text in enumerate(source.read_text().splitlines(), 1):
-        if pattern.search(text):
+        if not separator and function.search(text):
             return line
+        found = method.search(text)
+        if separator and found is not None:
+            found_receiver = receiver_type.search(found.group(1))
+            if found_receiver is not None and found_receiver.group(1) == receiver:
+                return line
     return None
 
 
@@ -114,8 +125,9 @@ def source_declaration_line(source: Path, name: str, kind: str) -> int | None:
         if grouped and re.match(r"^\s*\)", text):
             grouped = False
             continue
-        if direct.search(text) or (
-            grouped and re.match(rf"^\s*{re.escape(name)}(?:\s|,|=)", text)
+        grouped_names = text.split("=", 1)[0] if grouped else ""
+        if direct.search(text) or re.search(
+            rf"\b{re.escape(name)}\b", grouped_names
         ):
             return line
     return None
