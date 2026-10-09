@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,13 @@ func TestRunWritesAndListsFiles(t *testing.T) {
 	}
 	if info.Mode().Perm() != 0o640 {
 		t.Fatalf("written mode = %v, want 0640", info.Mode().Perm())
+	}
+	backups, err := filepath.Glob(filepath.Join(directory, ".sample.tgo.tgofmt-*"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(backups) != 0 {
+		t.Fatalf("successful write kept backups: %v", backups)
 	}
 }
 
@@ -95,4 +103,58 @@ func TestRunRejectsWriteForStandardInput(t *testing.T) {
 	if err == nil {
 		t.Fatal("write accepted standard input")
 	}
+}
+
+func TestReplaceContentsRestoresAfterPartialWrite(t *testing.T) {
+	t.Parallel()
+	original := []byte("original source")
+	target := &failingRewriteTarget{
+		data:      append([]byte(nil), original...),
+		failAfter: 4,
+	}
+	restored, err := replaceContents(target, original, []byte("formatted source"))
+	if !errors.Is(err, errInjectedWrite) {
+		t.Fatalf("replace error = %v, want injected write error", err)
+	}
+	if !restored {
+		t.Fatal("replace did not report a restored source")
+	}
+	if !bytes.Equal(target.data, original) {
+		t.Fatalf("restored source = %q, want %q", target.data, original)
+	}
+}
+
+var errInjectedWrite = errors.New("injected write failure")
+
+type failingRewriteTarget struct {
+	data      []byte
+	failAfter int
+	failed    bool
+}
+
+func (f *failingRewriteTarget) Write(data []byte) (int, error) {
+	if f.failed {
+		return 0, errInjectedWrite
+	}
+	f.failed = true
+	written := min(f.failAfter, len(data))
+	copy(f.data, data[:written])
+	return written, errInjectedWrite
+}
+
+func (f *failingRewriteTarget) WriteAt(data []byte, offset int64) (int, error) {
+	stop := int(offset) + len(data)
+	if stop > len(f.data) {
+		f.data = append(f.data, make([]byte, stop-len(f.data))...)
+	}
+	return copy(f.data[int(offset):], data), nil
+}
+
+func (f *failingRewriteTarget) Truncate(size int64) error {
+	if size <= int64(len(f.data)) {
+		f.data = f.data[:size]
+		return nil
+	}
+	f.data = append(f.data, make([]byte, int(size)-len(f.data))...)
+	return nil
 }

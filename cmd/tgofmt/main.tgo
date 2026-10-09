@@ -6,7 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 
 	"tgo/pkg/format"
 )
@@ -57,11 +59,112 @@ func formatPath(path string, write bool, list bool, output io.Writer) error {
 	}
 	if write && changed {
 		info := os.Stat(path)!!
-		return os.WriteFile(path, formatted, info.Mode().Perm())
+		return writeFormattedFile(path, source, formatted, info.Mode().Perm())
 	}
 	if !write && !list {
 		_, err := output.Write(formatted)
 		return err
+	}
+	return nil
+}
+
+type rewriteTarget interface {
+	Write(data []byte) (int, error)
+	WriteAt(data []byte, offset int64) (int, error)
+	Truncate(size int64) error
+}
+
+func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.FileMode) error {
+	backup := createBackup(path, source, mode)!!
+	target, err := os.OpenFile(path, os.O_WRONLY, mode)
+	if err != nil {
+		_ = os.Remove(backup)
+		return err
+	}
+	restored, writeErr := replaceContents(target, source, formatted)
+	closeErr := target.Close()
+	if writeErr != nil {
+		if restored && closeErr == nil {
+			_ = os.Remove(backup)
+			return writeErr
+		}
+		return fmt.Errorf("%w; original source is in %s", writeErr, backup)
+	}
+	if closeErr != nil {
+		return fmt.Errorf("%w; original source is in %s", closeErr, backup)
+	}
+	return os.Remove(backup)
+}
+
+func createBackup(path string, source []byte, mode fs.FileMode) (string, error) {
+	backup := os.CreateTemp(
+		filepath.Dir(path),
+		"."+filepath.Base(path)+".tgofmt-",
+	)!!
+	name := backup.Name()
+	if err := backup.Chmod(mode); err != nil {
+		_ = backup.Close()
+		_ = os.Remove(name)
+		return "", err
+	}
+	if err := writeAll(backup, source); err != nil {
+		_ = backup.Close()
+		_ = os.Remove(name)
+		return "", err
+	}
+	if err := backup.Sync(); err != nil {
+		_ = backup.Close()
+		_ = os.Remove(name)
+		return "", err
+	}
+	if err := backup.Close(); err != nil {
+		_ = os.Remove(name)
+		return "", err
+	}
+	return name, nil
+}
+
+func replaceContents(target rewriteTarget, source []byte, formatted []byte) (bool, error) {
+	if err := writeAll(target, formatted); err == nil {
+		if err := target.Truncate(int64(len(formatted))); err == nil {
+			return false, nil
+		} else if restoreErr := restoreContents(target, source); restoreErr != nil {
+			return false, fmt.Errorf("%w; restore failed: %v", err, restoreErr)
+		} else {
+			return true, err
+		}
+	} else if restoreErr := restoreContents(target, source); restoreErr != nil {
+		return false, fmt.Errorf("%w; restore failed: %v", err, restoreErr)
+	} else {
+		return true, err
+	}
+}
+
+func restoreContents(target rewriteTarget, source []byte) error {
+	offset := 0
+	for offset < len(source) {
+		written, err := target.WriteAt(source[offset:], int64(offset))
+		offset += written
+		if err != nil {
+			return err
+		}
+		if written == 0 {
+			return io.ErrShortWrite
+		}
+	}
+	return target.Truncate(int64(len(source)))
+}
+
+func writeAll(target io.Writer, data []byte) error {
+	for len(data) > 0 {
+		written, err := target.Write(data)
+		data = data[written:]
+		if err != nil {
+			return err
+		}
+		if written == 0 {
+			return io.ErrShortWrite
+		}
 	}
 	return nil
 }
