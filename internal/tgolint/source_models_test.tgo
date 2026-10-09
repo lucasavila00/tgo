@@ -134,6 +134,7 @@ func sourceModelTestChecker(
 		callTarget:      make(map[types.Object]types.Object),
 		generated:       make(map[*syntax.File]bool),
 		generatedSource: make(map[*syntax.File]string),
+		sourceFiles:     nil,
 		outputs:         make(map[string][]byte),
 		parents:         make(map[syntax.Node]*syntax.Node),
 		syntaxSafe:      make(map[*syntax.Expression]bool),
