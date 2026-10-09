@@ -47,6 +47,8 @@ type frontFile struct {
 	Comments          []*ast.CommentGroup
 	GoVersion         string
 	goFile            *ast.File
+	tokenFile         *token.File
+	source            []byte
 	children          map[frontNode][]frontNode
 	parents           map[frontNode]frontNode
 	extensions        []frontExtension

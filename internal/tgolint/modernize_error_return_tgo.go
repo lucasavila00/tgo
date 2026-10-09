@@ -24,12 +24,11 @@ func (c *checker) checkErrorReturnModernization(analysis *compiler.AnalysisPacka
 		return
 	}
 	for _, source := range analysis.Sources {
-		projected := source.Projected
-		if projected == nil {
+		if source.Syntax == nil {
 			continue
 		}
 		index := sourcefacts.New(
-			projected, info, files,
+			source.Syntax, info, files,
 		)
 		syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
 			statements, ok := sourceStatementList(node)

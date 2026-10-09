@@ -4,10 +4,11 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/token"
 	"go/types"
 	"strings"
+
+	"tgo/pkg/syntax"
 )
 
 // validationFact marks a generated operation that returns a validated model.
@@ -26,11 +27,10 @@ type objectKey struct {
 // findModels verifies generated files before it exports any model facts.
 func (c *checker) findModels() {
 	var verified []*verifiedSource = nil
-	for _, file := range c.pass.Files {
-		if !c.hasGeneratedHeader(file) {
+	for _, file := range c.files {
+		if !syntaxFileGenerated(file) {
 			continue
 		}
-		c.generated[file] = true
 		if source := c.verifySourceModels(file); source != nil {
 			verified = append(verified, source)
 		}
@@ -41,15 +41,6 @@ func (c *checker) findModels() {
 	for _, source := range verified {
 		c.exportSourceModels(source)
 	}
-}
-
-func (c *checker) hasGeneratedHeader(file *ast.File) bool {
-	if len(file.Comments) == 0 || len(file.Comments[0].List) == 0 {
-		return false
-	}
-	comment := file.Comments[0].List[0]
-	position := c.pass.Fset.Position(comment.Pos())
-	return position.Line == 1 && position.Column == 1 && comment.Text == generatedHeader
 }
 
 func (c *checker) exportGeneratedValidator(object *types.TypeName) {
@@ -115,29 +106,29 @@ func (c *checker) findValidationWrappers() {
 	changed := true
 	for changed {
 		changed = false
-		for _, file := range c.pass.Files {
-			for _, declaration := range file.Decls {
+		for _, file := range c.files {
+			for _, declaration := range file.Declarations {
 				changed = c.exportValidationWrapper(declaration) || changed
 			}
 		}
 	}
 }
 
-func (c *checker) exportValidationWrapper(declaration ast.Decl) bool {
-	function, ok := declaration.(*ast.FuncDecl)
-	if !ok || function.Body == nil || len(function.Body.List) != 1 {
+func (c *checker) exportValidationWrapper(declaration *syntax.Declaration) bool {
+	function := syntax.FunctionDeclarationValueOf(declaration)
+	if function == nil || function.Body == nil || len(function.Body.List) != 1 {
 		return false
 	}
-	object, ok := c.pass.TypesInfo.Defs[function.Name].(*types.Func)
+	object, ok := c.facts.DefinitionName(function.Name).(*types.Func)
 	if !ok || c.validated[object] {
 		return false
 	}
-	statement, ok := function.Body.List[0].(*ast.ReturnStmt)
-	if !ok || len(statement.Results) != 1 {
+	statement := syntax.ReturnStatementOf(function.Body.List[0])
+	if statement == nil || len(statement.Results) != 1 {
 		return false
 	}
-	call, ok := statement.Results[0].(*ast.CallExpr)
-	if !ok || !c.callHasValidationFact(call) {
+	call := syntax.CallExpressionOf(statement.Results[0])
+	if call == nil || !c.sourceCallHasValidationFact(call) {
 		return false
 	}
 	fact := &validationFact{}
@@ -146,8 +137,8 @@ func (c *checker) exportValidationWrapper(declaration ast.Decl) bool {
 	return true
 }
 
-func (c *checker) callHasValidationFact(call *ast.CallExpr) bool {
-	object := calledObject(c.pass.TypesInfo, call.Fun)
+func (c *checker) sourceCallHasValidationFact(call *syntax.CallExpression) bool {
+	var object types.Object = c.facts.CalledFunction(call.Callee)
 	if object == nil {
 		return false
 	}
@@ -170,11 +161,11 @@ func (c *checker) findValidationFunctionValues() {
 	candidates := make(map[types.Object]types.Object)
 	writes := make(map[types.Object]int)
 	escaped := make(map[types.Object]bool)
-	for _, file := range c.pass.Files {
-		if c.generated[file] {
+	for _, file := range c.files {
+		if syntaxFileGenerated(file) {
 			continue
 		}
-		ast.Inspect(file, func(node ast.Node) bool {
+		syntax.Inspect(file, func(node *syntax.Node) bool {
 			c.scanValidationFunctionValue(node, candidates, writes, escaped)
 			return true
 		})
@@ -187,56 +178,73 @@ func (c *checker) findValidationFunctionValues() {
 }
 
 func (c *checker) scanValidationFunctionValue(
-	node ast.Node,
+	node *syntax.Node,
 	candidates map[types.Object]types.Object,
 	writes map[types.Object]int,
 	escaped map[types.Object]bool,
 ) {
-	switch node := node.(type) {
-	case *ast.AssignStmt:
-		c.recordFunctionWrites(node.Lhs, writes)
-		if len(node.Lhs) == 1 && len(node.Rhs) == 1 {
-			c.recordValidationFunctionValue(candidates, node.Lhs[0], node.Rhs[0])
+	if statement, ok := syntax.StatementOf(node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			c.recordFunctionWrites(assignment.Left, writes)
+			if len(assignment.Left) == 1 && len(assignment.Right) == 1 {
+				c.recordValidationFunctionValue(
+					candidates, assignment.Left[0], assignment.Right[0],
+				)
+			}
 		}
-	case *ast.ValueSpec:
-		for _, name := range node.Names {
-			writes[c.pass.TypesInfo.ObjectOf(name)]++
+		if rangeStatement := syntax.RangeStatementOf(statement); rangeStatement != nil {
+			var expressions []*syntax.Expression = nil
+			if rangeStatement.Key != nil {
+				expressions = append(expressions, rangeStatement.Key)
+			}
+			if rangeStatement.Value != nil {
+				expressions = append(expressions, rangeStatement.Value)
+			}
+			c.recordFunctionWrites(expressions, writes)
 		}
-		if len(node.Names) == 1 && len(node.Values) == 1 {
-			c.recordValidationFunctionValue(candidates, node.Names[0], node.Values[0])
+	}
+	if specification, ok := syntax.SpecificationOf(node); ok {
+		value := syntax.ValueSpecificationOf(specification)
+		if value != nil {
+			for _, name := range value.Names {
+				writes[c.facts.DefinitionName(name)]++
+			}
+			if len(value.Names) == 1 && len(value.Values) == 1 {
+				left := syntax.ExpressionIdentifier{Value: value.Names[0]}.Expression()
+				c.recordValidationFunctionValue(candidates, &left, value.Values[0])
+			}
 		}
-	case *ast.RangeStmt:
-		c.recordFunctionWrites([]ast.Expr{node.Key, node.Value}, writes)
-	case *ast.UnaryExpr:
-		if node.Op == token.AND {
-			escaped[c.pass.TypesInfo.ObjectOf(identifier(node.X))] = true
+	}
+	if expression, ok := syntax.ExpressionOf(node); ok {
+		unary := syntax.UnaryExpressionOf(expression)
+		if unary != nil && unary.Operator == token.AND {
+			escaped[c.facts.IdentifierObject(unary.Expression)] = true
 		}
 	}
 }
 
 func (c *checker) recordFunctionWrites(
-	expressions []ast.Expr,
+	expressions []*syntax.Expression,
 	writes map[types.Object]int,
 ) {
 	for _, expression := range expressions {
-		if name, ok := expression.(*ast.Ident); ok {
-			writes[c.pass.TypesInfo.ObjectOf(name)]++
+		if syntax.IdentifierExpressionOf(expression) != nil {
+			writes[c.facts.IdentifierObject(expression)]++
 		}
 	}
 }
 
 func (c *checker) recordValidationFunctionValue(
 	candidates map[types.Object]types.Object,
-	left ast.Expr,
-	right ast.Expr,
+	left *syntax.Expression,
+	right *syntax.Expression,
 ) {
-	name, ok := left.(*ast.Ident)
-	if !ok {
+	if syntax.IdentifierExpressionOf(left) == nil {
 		return
 	}
-	target := calledObject(c.pass.TypesInfo, right)
+	target := c.facts.CalledFunction(right)
 	if target != nil && c.objectHasValidationFact(target) {
-		candidates[c.pass.TypesInfo.ObjectOf(name)] = target
+		candidates[c.facts.IdentifierObject(left)] = target
 	}
 }
 
@@ -252,7 +260,7 @@ func (c *checker) objectHasValidationFact(object types.Object) bool {
 	return true
 }
 
-func emittedCheckedModel(name string, structure *ast.StructType, typ types.Type) *model {
+func emittedCheckedModel(name string, structure *syntax.StructType, typ types.Type) *model {
 	fields := structure.Fields.List
 	underlying, ok := typ.Underlying().(*types.Struct)
 	if !ok || underlying.NumFields() != len(fields) {
@@ -266,7 +274,7 @@ func emittedCheckedModel(name string, structure *ast.StructType, typ types.Type)
 	return nil
 }
 
-func fieldName(field *ast.Field) string {
+func fieldName(field *syntax.Field) string {
 	if len(field.Names) != 1 {
 		return ""
 	}
@@ -394,39 +402,9 @@ func (c *checker) modelForTypeParameter(parameter *types.TypeParam) *model {
 	return found
 }
 
-func (c *checker) modelForSelector(selector *ast.SelectorExpr) *model {
-	if model := c.modelForReceiver(c.pass.TypesInfo.TypeOf(selector.X)); model != nil {
-		return model
-	}
-	selection := c.pass.TypesInfo.Selections[selector]
-	if selection == nil {
-		return nil
-	}
-	if function, ok := selection.Obj().(*types.Func); ok {
-		signature, _ := function.Type().(*types.Signature)
-		if signature != nil && signature.Recv() != nil {
-			return c.modelForReceiver(signature.Recv().Type())
-		}
-	}
-	current := selection.Recv()
-	for offset, index := range selection.Index() {
-		current = dereference(current)
-		structure, ok := current.Underlying().(*types.Struct)
-		if !ok || index >= structure.NumFields() {
-			return nil
-		}
-		if offset == len(selection.Index())-1 {
-			return c.modelForReceiver(current)
-		}
-		current = structure.Field(index).Type()
-	}
-	return nil
-}
-
 // structuralModel finds a generated enum behind an interface method set.
 // It returns nil when the receiver cannot admit that enum.
-func (c *checker) structuralModel(selector *ast.SelectorExpr) *model {
-	receiver := c.pass.TypesInfo.TypeOf(selector.X)
+func (c *checker) structuralModel(receiver types.Type) *model {
 	if !c.receiverCanHideModel(receiver) {
 		return nil
 	}

@@ -290,7 +290,7 @@ func parameterChangedAt(
 ) (bool, bool) {
 	switch node := node.(type) {
 	case *ast.FuncLit:
-		return capturesObject(info, node.Body, object), false
+		return astCapturesObject(info, node.Body, object), false
 	case *ast.AssignStmt:
 		for _, target := range node.Lhs {
 			if expressionUsesObject(info, target, object) {
@@ -360,7 +360,7 @@ func scalarEscapesInExpression(
 				return false
 			}
 		case *ast.FuncLit:
-			if capturesObject(info, node.Body, object) {
+			if astCapturesObject(info, node.Body, object) {
 				escapes = true
 				return false
 			}
@@ -581,9 +581,9 @@ func (c *checker) blockEffectConditions(
 			}
 			continue
 		}
-		trueStops := c.statementsTerminate(conditional.Body.List)
+		trueStops := c.astStatementsTerminate(conditional.Body.List)
 		falseStops := conditional.Else != nil &&
-			c.statementsTerminate([]ast.Stmt{conditional.Else})
+			c.astStatementsTerminate([]ast.Stmt{conditional.Else})
 		if trueStops == falseStops {
 			continue
 		}
