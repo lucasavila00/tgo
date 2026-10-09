@@ -206,6 +206,15 @@ func functionDeclarationOf(value *syntax.Declaration) *syntax.FunctionDeclaratio
 	}
 }
 
+func generalDeclarationOf(value *syntax.Declaration) *syntax.GeneralDeclaration {
+	switch declarationValue := *value; declarationValue.Tag() {
+	case syntax.DeclarationTagGeneral:
+		return declarationValue.GeneralPayload().Value
+	default:
+		return nil
+	}
+}
+
 func declarationKind(value *syntax.Declaration) token.Token {
 	switch declarationValue := *value; declarationValue.Tag() {
 	case syntax.DeclarationTagGeneral:

@@ -57,7 +57,10 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 			)
 		}
 		previousCommentColumn := p.commentColumn
-		if p.hasTrailingComment(syntax.SpecificationEnd(item)) &&
+		if !p.multiline(
+			syntax.SpecificationPosition(item),
+			syntax.SpecificationEnd(item),
+		) && p.hasTrailingComment(syntax.SpecificationEnd(item)) &&
 			len(columns[index]) > 0 {
 			p.commentColumn = p.indent*8 + columns[index][len(columns[index])-1]
 		}
@@ -147,6 +150,12 @@ func (p *printer) specificationCells(
 				typeWidth = p.formattedExpressionWidth(item.Type)
 			}
 			cells = append(cells, typeWidth)
+			if item.Type != nil && p.multiline(
+				syntax.ExpressionPosition(item.Type),
+				syntax.ExpressionEnd(item.Type),
+			) {
+				return cells
+			}
 		}
 		if len(item.Values) > 0 {
 			cells = append(cells, 2+p.formattedExpressionListWidth(item.Values))

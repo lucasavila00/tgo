@@ -393,8 +393,9 @@ func (p *printer) declarationCommentAlignment(
 		stop := syntax.DeclarationEnd(value)
 		header, end := p.outerCommentPositions(start, stop)
 		isMultiline := p.multiline(start, stop)
-		if isMultiline && functionDeclarationOf(value) == nil {
-			header = token.NoPos
+		if general := generalDeclarationOf(value); general != nil &&
+			general.Lparen.IsValid() {
+			header = p.trailingCommentPosition(p.tokenEnd(general.Lparen, 1))
 		}
 		widths := map[token.Pos]int(nil)
 		if header.IsValid() || end.IsValid() {
@@ -405,7 +406,7 @@ func (p *printer) declarationCommentAlignment(
 				end,
 			)
 		}
-		breakBefore := isMultiline
+		breakBefore := functionDeclarationOf(value) != nil
 		if index > 0 {
 			previous := values[index-1]
 			previousStop := syntax.DeclarationEnd(previous)
