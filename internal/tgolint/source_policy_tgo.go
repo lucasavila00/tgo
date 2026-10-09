@@ -142,6 +142,9 @@ func (c *checker) literalInOwnCheckMethod(
 	expression *syntax.Expression,
 	typ types.Type,
 ) bool {
+	if expression == nil {
+		return false
+	}
 	if model := c.modelFor(typ); model == nil || !modelIsChecked(model) {
 		return false
 	}

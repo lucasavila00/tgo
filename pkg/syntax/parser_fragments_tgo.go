@@ -122,7 +122,8 @@ func (p *sourceParser) sanitize(
 			}
 		case *ast.CompositeLit:
 			p.buildPropagation(node, &ast.CallExpr{
-				Fun: node.Type, Lparen: node.Rbrace, Rparen: node.Rbrace,
+				Fun: node.Type, Lparen: node.Rbrace, Args: nil,
+				Ellipsis: token.NoPos, Rparen: node.Rbrace,
 			})
 			if defaultAt == nil {
 				break
