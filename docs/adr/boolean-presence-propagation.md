@@ -14,7 +14,7 @@ for each path component: [nil_facts.tgo](../../internal/tgolint/nil_facts.tgo#L2
 
 ## Decision
 
-Extend postfix `?` to calls whose final result is `bool`:
+Add postfix `?` to calls whose final result is `bool`:
 
 ```go
 expression := ExpressionOf(node)?
