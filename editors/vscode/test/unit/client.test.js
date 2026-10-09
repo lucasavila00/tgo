@@ -111,3 +111,12 @@ test("rejects a request when helper input is closed", async () => {
   await assert.rejects(client.request("definition", {}), /input is closed/);
   client.dispose();
 });
+
+test("cancels pending work when the client is disposed", async () => {
+  const process = fakeProcess();
+  const client = new NavigationClient("tgonav", "/workspace", { append() {} },
+    () => process);
+  const result = client.request("definition", {});
+  client.dispose();
+  await assert.rejects(result, RequestCancelled);
+});

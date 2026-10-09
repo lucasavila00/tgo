@@ -330,8 +330,27 @@ func (k *objectKeys) key(object types.Object) string {
 
 func pathURI(path string) (string, error) {
 	absolute := filepath.Abs(path)!!
+	return pathURIValue(absolute, filepath.VolumeName(absolute)),
+}
+
+func pathURIValue(absolute string, volume string) string {
+	slashPath := filepath.ToSlash(absolute)
+	slashVolume := filepath.ToSlash(volume)
 	value := new(url.URL)
 	value.Scheme = "file"
-	value.Path = filepath.ToSlash(absolute)
-	return value.String(),
+	if strings.HasPrefix(slashVolume, "//") {
+		authority := strings.TrimPrefix(slashVolume, "//")
+		separator := strings.IndexByte(authority, '/')
+		if separator >= 0 {
+			value.Host = authority[:separator]
+			value.Path = "/" + authority[separator+1:] +
+				strings.TrimPrefix(slashPath, slashVolume)
+			return value.String()
+		}
+	}
+	if slashVolume != "" && !strings.HasPrefix(slashPath, "/") {
+		slashPath = "/" + slashPath
+	}
+	value.Path = slashPath
+	return value.String()
 }
