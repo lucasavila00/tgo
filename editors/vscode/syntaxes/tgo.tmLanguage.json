@@ -88,9 +88,9 @@
         {
           "begin": "^([ \\t]*)(type[ \\t]+[A-Za-z_]\\w*(?:[ \\t]*\\[[^\\]\\r\\n]*\\])?[ \\t]+(?:=[ \\t]*)?(?:[^=/\\r\\n]|/(?![/*])|/\\*[^\\r\\n]*?\\*/)*\\bfunc[ \\t]*\\([ \\t]*$)",
           "name": "meta.function.type.tgo",
-          "end": "(^\\1\\))(?![ \\t]+func[ \\t]*\\([ \\t]*$)([ \\t]*)([^=\\r\\n]*)",
+          "end": "(^\\1\\)(?=[ \\t]+func[ \\t]*\\([ \\t]*$))|(^\\1\\))([ \\t]*)([^=\\r\\n]*)",
           "endCaptures": {
-            "3": {
+            "4": {
               "patterns": [
                 {
                   "name": "storage.modifier.non-nil.tgo",
@@ -109,31 +109,12 @@
           ]
         },
         {
-          "begin": "(^[ \\t]*type[ \\t]+[A-Za-z_]\\w*(?:[ \\t]*\\[[^\\]\\r\\n]*\\])?[ \\t]+(?:=[ \\t]*)?)(interface)\\b",
+          "begin": "(^[ \\t]*type[ \\t]+[A-Za-z_]\\w*(?:[ \\t]*\\[[^\\]\\r\\n]*\\])?[ \\t]+(?:=[ \\t]*)?)(interface)\\b(?:[ \\t]*\\{)?",
+          "name": "meta.interface.tgo",
           "end": "\\}",
           "patterns": [
             {
-              "begin": "^([ \\t]*)[A-Za-z_]\\w*[ \\t]*\\(",
-              "name": "meta.function.type.tgo",
-              "end": "(^\\1\\))(?![ \\t]+func[ \\t]*\\([ \\t]*$)([ \\t]*)([^=\\r\\n]*)",
-              "endCaptures": {
-                "3": {
-                  "patterns": [
-                    {
-                      "name": "storage.modifier.non-nil.tgo",
-                      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                    },
-                    {
-                      "include": "source.go"
-                    }
-                  ]
-                }
-              },
-              "patterns": [
-                {
-                  "include": "#function-type-contents"
-                }
-              ]
+              "match": "^[ \\t]*\\{"
             },
             {
               "include": "source.go"
@@ -188,9 +169,9 @@
         {
           "begin": "^([ \\t]*)(var[ \\t]+(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+(?:[^=/\\r\\n]|/(?![/*])|/\\*[^\\r\\n]*?\\*/)*\\bfunc[ \\t]*\\([ \\t]*$)",
           "name": "meta.function.type.tgo",
-          "end": "(^\\1\\))(?![ \\t]+func[ \\t]*\\([ \\t]*$)([ \\t]*)([^=\\r\\n]*)",
+          "end": "(^\\1\\)(?=[ \\t]+func[ \\t]*\\([ \\t]*$))|(^\\1\\))([ \\t]*)([^=\\r\\n]*)",
           "endCaptures": {
-            "3": {
+            "4": {
               "patterns": [
                 {
                   "name": "storage.modifier.non-nil.tgo",
@@ -238,9 +219,9 @@
             {
               "begin": "^([ \\t]*)((?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+(?:[^=/\\r\\n]|/(?![/*])|/\\*[^\\r\\n]*?\\*/)*\\bfunc[ \\t]*\\([ \\t]*$)",
               "name": "meta.function.type.tgo",
-              "end": "(^\\1\\))(?![ \\t]+func[ \\t]*\\([ \\t]*$)([ \\t]*)([^=\\r\\n]*)",
+              "end": "(^\\1\\)(?=[ \\t]+func[ \\t]*\\([ \\t]*$))|(^\\1\\))([ \\t]*)([^=\\r\\n]*)",
               "endCaptures": {
-                "3": {
+                "4": {
                   "patterns": [
                     {
                       "name": "storage.modifier.non-nil.tgo",
@@ -314,10 +295,18 @@
           }
         },
         {
-          "begin": "(?=^\\s*func\\b)",
-          "end": "(?=\\{)",
+          "begin": "^(\\s*)(func)\\b",
+          "end": "\\{",
           "name": "meta.function.signature.tgo",
+          "beginCaptures": {
+            "2": {
+              "name": "keyword.function.go"
+            }
+          },
           "patterns": [
+            {
+              "include": "source.go#function_param_types"
+            },
             {
               "include": "source.go"
             }
@@ -329,6 +318,20 @@
       "patterns": [
         {
           "include": "#multiline-function-type"
+        }
+      ]
+    },
+    "L:meta.function.type.tgo -comment -string": {
+      "patterns": [
+        {
+          "include": "#non-nil-type-modifier"
+        }
+      ]
+    },
+    "L:meta.interface.tgo -comment -string": {
+      "patterns": [
+        {
+          "include": "#non-nil-type-modifier"
         }
       ]
     },
@@ -371,13 +374,16 @@
           }
         },
         {
-          "name": "storage.modifier.non-nil.tgo",
-          "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
+          "include": "#non-nil-type-modifier"
         }
       ]
     }
   },
   "repository": {
+    "non-nil-type-modifier": {
+      "name": "storage.modifier.non-nil.tgo",
+      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
+    },
     "multiline-function-type": {
       "begin": "\\bfunc[ \\t]*\\([ \\t]*$",
       "end": "(^[ \\t]*\\)(?=[ \\t]+func[ \\t]*\\([ \\t]*$))|(^[ \\t]*\\))([ \\t]*)([^=\\r\\n]*)",
@@ -407,8 +413,7 @@
     "function-type-contents": {
       "patterns": [
         {
-          "name": "storage.modifier.non-nil.tgo",
-          "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
+          "include": "#non-nil-type-modifier"
         },
         {
           "include": "source.go"
@@ -460,9 +465,9 @@
             {
               "begin": "^([ \\t]*)((?:(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)?(?:[^=/\\r\\n]|/(?![/*])|/\\*[^\\r\\n]*?\\*/)*\\bfunc[ \\t]*\\([ \\t]*$)",
               "name": "meta.function.type.tgo",
-              "end": "(^\\1\\))(?![ \\t]+func[ \\t]*\\([ \\t]*$)([ \\t]*)([^=\\r\\n]*)",
+              "end": "(^\\1\\)(?=[ \\t]+func[ \\t]*\\([ \\t]*$))|(^\\1\\))([ \\t]*)([^=\\r\\n]*)",
               "endCaptures": {
-                "3": {
+                "4": {
                   "patterns": [
                     {
                       "name": "storage.modifier.non-nil.tgo",

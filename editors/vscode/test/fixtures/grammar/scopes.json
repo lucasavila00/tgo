@@ -76,7 +76,6 @@
   {
     "line": "type WhereAlias where",
     "token": "where",
-    "has": "identifier.go",
     "not": "keyword.declaration.checked.tgo"
   },
   {
@@ -107,7 +106,7 @@
   {
     "line": "_ = !ok",
     "token": "!",
-    "has": "keyword.operator.go",
+    "has": "keyword.operator.logical.go",
     "not": "keyword.operator.propagation.tgo"
   },
   {
@@ -149,37 +148,32 @@
   {
     "line": "exhaustive:",
     "token": "exhaustive",
-    "has": "entity.name.label.go",
+    "has": "variable.other.label.go",
     "not": "keyword.control.exhaustive.tgo"
   },
   {
     "line": "where := 1",
     "token": "where",
-    "has": "identifier.go",
     "not": "keyword.declaration.checked.tgo"
   },
   {
     "line": "checked := true",
     "token": "checked",
-    "has": "identifier.go",
     "not": "keyword.declaration.checked.tgo"
   },
   {
     "line": "enum := 2",
     "token": "enum",
-    "has": "identifier.go",
     "not": "keyword.declaration.enum.tgo"
   },
   {
     "line": "_ = enum{}",
     "token": "enum",
-    "has": "identifier.go",
     "not": "keyword.declaration.enum.tgo"
   },
   {
     "line": "_ = append(values, defaults...)",
     "token": "defaults",
-    "has": "identifier.go",
     "not": "keyword.other.default.tgo"
   },
   {
@@ -383,21 +377,21 @@
   {
     "line": "type CommentedType int // func(",
     "token": "func",
-    "has": "comment.line.go"
+    "has": "comment.line.double-slash.go"
   },
   {
     "line": "var commentedVariable int // func(",
     "token": "func",
-    "has": "comment.line.go"
+    "has": "comment.line.double-slash.go"
   },
   {
     "line": "commentedField int // func(",
     "token": "func",
-    "has": "comment.line.go"
+    "has": "comment.line.double-slash.go"
   },
   {
     "line": "groupedCommented int // func(",
     "token": "func",
-    "has": "comment.line.go"
+    "has": "comment.line.double-slash.go"
   }
 ]
