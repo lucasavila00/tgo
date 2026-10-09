@@ -1,9 +1,0 @@
-package invalid
-
-func invalidResult(values []int) (result int) {
-    for range values {
-        return
-    }
-    result = 1
-    return
-}

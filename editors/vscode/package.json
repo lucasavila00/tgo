@@ -5,6 +5,7 @@
   "description": "Read and navigate TGo source.",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "extensionKind": [
     "workspace"
   ],
@@ -44,19 +45,23 @@
       "properties": {
         "tgo.navigation.helperPath": {
           "type": "string",
-          "default": "tgonav",
+          "default": "",
           "scope": "resource",
-          "description": "Path to the tgonav helper."
+          "description": "Absolute path to a tgonav helper. Leave empty to use the bundled helper."
         }
       }
     }
   },
   "scripts": {
+    "package": "test -x bin/tgonav && vsce package --skip-license --allow-missing-repository --out tgo-navigation.vsix",
     "test": "node --test test/unit/*.test.js",
     "test:integration": "node test/run-integration.js",
     "test:all": "npm test && npm run test:integration"
   },
   "devDependencies": {
-    "@vscode/test-electron": "3.1.0"
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "vscode-oniguruma": "2.0.1",
+    "vscode-textmate": "9.2.1"
   }
 }

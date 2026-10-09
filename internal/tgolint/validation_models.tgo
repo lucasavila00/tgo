@@ -23,7 +23,7 @@ type objectKey struct {
 func (c %checker) findModels() {
 	var verified []*verifiedSource = nil
 	for _, file := range c.files {
-		if !syntaxFileGenerated(file) {
+		if !c.generated[file] {
 			continue
 		}
 		if source := c.verifySourceModels(file); source != nil {
@@ -157,7 +157,7 @@ func (c %checker) findValidationFunctionValues() {
 	writes := make(map[types.Object]int)
 	escaped := make(map[types.Object]bool)
 	for _, file := range c.files {
-		if syntaxFileGenerated(file) {
+		if c.generated[file] {
 			continue
 		}
 		syntax.Inspect(file, func(node *syntax.Node) bool {
@@ -353,6 +353,13 @@ func (c %checker) modelFor(typ types.Type) *model {
 	key := objectKey{pkg: named.Obj().Pkg(), name: named.Obj().Name()}
 	if fact, ok := c.models[key]; ok {
 		return fact
+	}
+	for candidate, fact := range c.models {
+		if candidate.pkg != nil && candidate.name == key.name &&
+			candidate.pkg.Path() == key.pkg.Path() {
+			c.models[key] = fact
+			return fact
+		}
 	}
 	fact := new(modelWireFact)
 	if !c.pass.ImportObjectFact(named.Obj(), fact) {

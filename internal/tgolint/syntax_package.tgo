@@ -26,16 +26,5 @@ func parseAnalysisFiles(pass %analysis.Pass) ([]%syntax.File, error) {
 		if parsed == nil { return nil, fmt.Errorf("parse analysis file %s: no syntax", filename) }
 		result = append(result, parsed)
 	}
-	return result, nil
-}
-
-func syntaxFileGenerated(file %syntax.File) bool {
-	for _, group := range file.Comments {
-		for _, comment := range group.List {
-			if comment.Start < file.Package && comment.Text == generatedHeader {
-				return true
-			}
-		}
-	}
-	return false
+	return result,
 }

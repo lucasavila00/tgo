@@ -58,7 +58,9 @@ def check_stale_output_cleanup(compiler, work):
     source.unlink()
     invalid = work / "z_invalid"
     invalid.mkdir()
-    (invalid / "invalid.tgo").write_text("package invalid\n\nvar missing int\n")
+    (invalid / "invalid.tgo").write_text(
+        "package invalid\n\nvar missing MissingType = MissingType{}\n"
+    )
     run([str(compiler), "build", "./..."], work, success=False)
     assert output.exists(), "failed build did not restore stale output"
     shutil.rmtree(invalid)
@@ -69,7 +71,12 @@ def check_stale_output_cleanup(compiler, work):
     user_file = work / "app" / "manual_tgo.go"
     user_file.write_text("package app\n\nfunc Manual() int { return 1 }\n")
     run([str(compiler), "build", "./app"], work)
-    assert user_file.exists(), "compiler removed a user-owned _tgo.go file"
+    assert not user_file.exists(), "compiler kept a file in its reserved output namespace"
+
+    helper = work / "app" / "notes_tgo_helper.go"
+    helper.write_text("package app\n\nfunc NotesHelper() int { return 1 }\n")
+    run([str(compiler), "build", "./app"], work)
+    assert helper.exists(), "compiler removed a user file with a non-target suffix"
 
 
 def check_package_discovery(compiler, temporary):
@@ -163,10 +170,9 @@ def check_package_discovery(compiler, temporary):
     generated = (app / "app_tgo.go").read_bytes()
     manual = app / "manual_tgo.go"
     manual.write_text("package app\n\nvar Broken MissingType\n")
-    output = run([str(compiler), "build", "./app"], work, success=False)
-    assert "undefined: MissingType" in output, output
+    run([str(compiler), "build", "./app"], work)
+    assert not manual.exists(), "compiler kept a reserved output file"
     assert (app / "app_tgo.go").read_bytes() == generated
-    manual.unlink()
 
     orphan = work / "orphan"
     orphan.mkdir()
@@ -235,7 +241,9 @@ def check_output_safety(compiler, temporary):
         assert "refusing non-regular output" in result, result
         assert stale_link.is_symlink(), "compiler removed an orphan symlink"
 
+    output.write_text("package model\n\nfunc UserFile() {}\n")
     run([str(compiler), "build", "./model"], work)
+    assert output.read_bytes() == source.read_bytes(), "compiler kept a reserved collision"
     output.chmod(0o600)
     output_mode = stat.S_IMODE(output.stat().st_mode)
     run([str(compiler), "build", "./model"], work)
@@ -340,7 +348,7 @@ def check_fresh_build(compiler, temporary):
     for output in required:
         assert output.exists(), f"fresh build missed {output.relative_to(work)}"
     assert not stale.exists(), "fresh build kept an orphan bridge output"
-    assert (work / "gobridge" / "bridge_tgo.go").exists()
+    assert (work / "gobridge" / "bridge.go").exists()
     run(["go", "test", "./..."], work)
     print("PASS fresh dependency build")
 
@@ -534,7 +542,12 @@ def normalize_output(output, work):
 
 
 def check_fixture_format():
-    files = sorted(str(path) for path in FIXTURES.rglob("*.go"))
+    files = sorted(
+        str(path)
+        for path in FIXTURES.rglob("*.go")
+        if "_tgo" not in path.stem
+        or path.read_bytes().startswith(GENERATED_HEADER)
+    )
     output = run(["gofmt", "-d", *files], ROOT)
     assert output == "", f"format committed fixture Go files\n{output}"
     print("PASS fixture Go formatting")

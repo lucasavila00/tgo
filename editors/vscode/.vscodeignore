@@ -1,0 +1,5 @@
+.vscode-test/**
+node_modules/**
+test/**
+package-lock.json
+tgo-navigation.vsix

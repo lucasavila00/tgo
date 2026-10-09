@@ -1,8 +1,0 @@
-package sample
-
-type Request struct {
-    ID string
-    Count int
-}
-
-var request = Request{ID: "one"}

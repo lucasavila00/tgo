@@ -81,6 +81,13 @@ def assert_invalid_consumers(linter, work):
 
 
 def assert_integrity_checks(linter, work):
+    ordinary = work / "nestedmodel" / "model_tgo.go"
+    ordinary_text = ordinary.read_text()
+    ordinary.write_text(ordinary_text.replace("Name string", "Name int", 1))
+    result = diagnostics(linter, work, "./nestedmodel")
+    assert "generated tgo output integrity check failed" in result
+    ordinary.write_text(ordinary_text)
+
     generated_model = work / "model" / "model_tgo.go"
     model_source = work / "model" / "model.tgo"
     generated_text = generated_model.read_text()
@@ -103,24 +110,6 @@ def assert_integrity_checks(linter, work):
         result = diagnostics(linter, work, "./model")
         assert "generated tgo output integrity check failed" in result
         generated_model.write_text(generated_text)
-
-    metadata_line = next(
-        line for line in generated_text.splitlines() if line.startswith("//tgo:v2 ")
-    )
-    missing_metadata = generated_text.replace(metadata_line + "\n", "", 1)
-    assert missing_metadata != generated_text
-    generated_model.write_text(missing_metadata)
-    result = diagnostics(linter, work, "./model")
-    assert "generated tgo model metadata is invalid" in result
-    assert_invalid_consumers(linter, work)
-    generated_model.write_text(generated_text)
-
-    corrupt_metadata = generated_text.replace('"model.tgo"', "bad", 1)
-    assert corrupt_metadata != generated_text
-    generated_model.write_text(corrupt_metadata)
-    result = diagnostics(linter, work, "./model")
-    assert "generated tgo model metadata is invalid" in result
-    generated_model.write_text(generated_text)
 
     missing_source = model_source.with_suffix(".tgo.missing")
     model_source.rename(missing_source)

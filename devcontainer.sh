@@ -15,6 +15,14 @@ fi
 
 devcontainer up --workspace-folder "$repository"
 
+if ! docker exec tgo-devcontainer test -d /workspaces/tgo/.git; then
+	origin=$(git -C "$repository" remote get-url origin)
+	docker exec \
+		--env SSH_AUTH_SOCK=/tmp/ssh-agent \
+		--workdir /workspaces/tgo \
+		tgo-devcontainer sh -c 'git clone "$1" .' sh "$origin"
+fi
+
 exec docker exec -it \
 	--env SSH_AUTH_SOCK=/tmp/ssh-agent \
 	--workdir /workspaces/tgo \

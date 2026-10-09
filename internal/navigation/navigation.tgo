@@ -61,7 +61,7 @@ func (e *Engine) DocumentSymbols(
 	for _, symbol := range index.symbols {
 		if symbol.Range.URI == uri { result = append(result, symbol) }
 	}
-	return result, nil
+	return result,
 }
 
 // WorkspaceSymbols returns declarations whose names contain the query.
@@ -77,7 +77,7 @@ func (e *Engine) WorkspaceSymbols(
 			result = append(result, symbol)
 		}
 	}
-	return result, nil
+	return result,
 }
 
 // Engine owns one invalidatable workspace index.
@@ -96,7 +96,7 @@ func New(root string) (%Engine, error) {
 	return &Engine{
 		root: absolute, mu: new(sync.Mutex), index: nil, generation: 0,
 		building: false, ready: nil,
-	}, nil
+	},
 }
 
 // Invalidate removes all cached facts after a source or module change.
@@ -118,11 +118,11 @@ func (e *Engine) Definition(
 		if item.location.URI == uri && item.location.Start <= offset &&
 			offset < item.location.End {
 			definition, ok := index.definitions[item.key]
-			if !ok { return nil, nil }
-			return []Location{definition}, nil
+			if !ok { return nil, }
+			return []Location{definition},
 		}
 	}
-	return nil, nil
+	return nil,
 }
 
 // References returns all exact uses of the name at a byte offset.
@@ -153,9 +153,9 @@ func (e *Engine) References(
 			}
 			return result[left].Start < result[right].Start
 		})
-		return result, nil
+		return result,
 	}
-	return nil, nil
+	return nil,
 }
 
 func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
@@ -164,7 +164,7 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		if e.index != nil {
 			index := e.index
 			e.mu.Unlock()
-			return index, nil
+			return index,
 		}
 		generation := e.generation
 		if e.building {
@@ -190,7 +190,7 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		e.ready = nil
 		e.mu.Unlock()
 		if err != nil { return nil, err }
-		if current { return index, nil }
+		if current { return index, }
 	}
 }
 
@@ -260,7 +260,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		}
 		return index.symbols[left].Selection.Start < index.symbols[right].Selection.Start
 	})
-	return index, nil
+	return index,
 }
 
 func positionKey(position token.Position) sourcePosition {
@@ -330,8 +330,27 @@ func (k *objectKeys) key(object types.Object) string {
 
 func pathURI(path string) (string, error) {
 	absolute := filepath.Abs(path)!!
+	return pathURIValue(absolute, filepath.VolumeName(absolute)),
+}
+
+func pathURIValue(absolute string, volume string) string {
+	slashPath := filepath.ToSlash(absolute)
+	slashVolume := filepath.ToSlash(volume)
 	value := new(url.URL)
 	value.Scheme = "file"
-	value.Path = filepath.ToSlash(absolute)
-	return value.String(), nil
+	if strings.HasPrefix(slashVolume, "//") {
+		authority := strings.TrimPrefix(slashVolume, "//")
+		separator := strings.IndexByte(authority, '/')
+		if separator >= 0 {
+			value.Host = authority[:separator]
+			value.Path = "/" + authority[separator+1:] +
+				strings.TrimPrefix(slashPath, slashVolume)
+			return value.String()
+		}
+	}
+	if slashVolume != "" && !strings.HasPrefix(slashPath, "/") {
+		slashPath = "/" + slashPath
+	}
+	value.Path = slashPath
+	return value.String()
 }

@@ -7,14 +7,20 @@ tgo build ./...
 tgolint ./...
 ```
 
-`tgolint` checks ordinary Go code that uses generated tgo types. It gets model
-data from generated packages and uses it in packages that import them. It does
-not check generated files.
+`tgolint` checks TGo source and ordinary Go code that uses generated tgo types.
+It gets model data from generated packages and uses it in packages that import
+them. It does not check generated files.
+
+The compiler does not enforce these usage rules. A build can succeed when
+`tgolint` reports a policy error.
 
 ## Checked by tgolint
 
 A clean run means that the loaded Go packages do not contain these errors:
 
+- a TGo variable declaration without an initializer;
+- a TGo struct, array, or slice literal with an omitted field or element;
+- a TGo named result read or returned before assignment;
 - an invalid checked-type zero from a declaration, named result, literal, `new`, `make`,
   `clear`, map read, channel read, type assertion, or longer reslice;
 - a new defined Go type or conversion that bypasses a tgo constructor;
@@ -27,6 +33,7 @@ A clean run means that the loaded Go packages do not contain these errors:
 - a map read, channel receive, or pointer assertion used without its required proof; or
 - a sequential `iota` set that uses one defined integer type in handwritten TGo source; or
 - a manual error return that has the exact behavior of postfix `!` or `!!`; or
+- an explicit final `nil` return value that can use TGo's trailing comma; or
 - the same errors hidden by embedding, wrappers, function values, control flow,
   or generic constraints.
 
@@ -106,6 +113,10 @@ The wrapper text must contain the full static call name and `: %w`. Thus, `repo.
 `fmt.Errorf("repo.Find: %w", err)`. It does not match `fmt.Errorf("Find: %w", err)`. The check does
 not report function values, assignments to existing variables, extra branch work, named results,
 nonzero returns, or different error text. It does not check `.go` files or offer a fix.
+
+The successful-return modernization check reports `return value, nil` in handwritten `.tgo`
+source. It also accepts parenthesized `nil` and returns with more than two values. It does not
+report one-result returns, a non-final `nil`, a shadowed `nil`, or an existing trailing comma.
 
 ## Go boundary
 
