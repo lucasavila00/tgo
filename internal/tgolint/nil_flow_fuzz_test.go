@@ -37,7 +37,9 @@ func checkNilAssignmentProperty(t testing.TB, data []byte) {
 		},
 	}
 	for _, item := range cases {
-		diagnostics, err := runNilAnalysis(item.body)
+		diagnostics, err := runNilAnalysis(
+			"value, other, alias *Item, a, b bool", item.body,
+		)
 		if err != nil {
 			t.Fatalf("%s: %v\n%s", item.name, err, item.body)
 		}
