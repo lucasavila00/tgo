@@ -83,14 +83,14 @@ func (p *sourceParser) makeComprehension(
 		Rbrace: p.pos(p.tokens[raw.close].start),
 	}
 	for _, clause := range raw.clauses {
-		expression, found, err := p.parseExpression(
+		expression, found, tgoErr := p.parseExpression(
 			p.tokens[clause.expressionStart].start,
 			p.tokens[clause.expressionEnd].start,
 			matchAt,
 			defaultAt,
 		)
-		if err != nil {
-			return nil, nil, err
+		if tgoErr != nil {
+			return nil, nil, tgoErr
 		}
 		for child, parent := range found {
 			anchors[child] = parent
@@ -231,9 +231,9 @@ func (p *sourceParser) makeDeclaration(
 			Comment:   nil,
 		}
 		for _, rawVariant := range raw.variants {
-			fields, fieldAnchors, err := p.makeFields(rawVariant.fields, matchAt, defaultAt)
-			if err != nil {
-				return nil, nil, err
+			fields, fieldAnchors, tgoErr := p.makeFields(rawVariant.fields, matchAt, defaultAt)
+			if tgoErr != nil {
+				return nil, nil, tgoErr
 			}
 			variant := &frontVariantDecl{
 				frontSpan: frontSpan{
@@ -260,9 +260,9 @@ func (p *sourceParser) makeDeclaration(
 		}
 		return node, anchors, nil
 	case "struct":
-		fields, fieldAnchors, err := p.makeFields(raw.fields, matchAt, defaultAt)
-		if err != nil {
-			return nil, nil, err
+		fields, fieldAnchors, tgoErr2 := p.makeFields(raw.fields, matchAt, defaultAt)
+		if tgoErr2 != nil {
+			return nil, nil, tgoErr2
 		}
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
@@ -341,14 +341,14 @@ func (p *sourceParser) makeFields(
 				return nil, nil, p.tokenError(raw.start, "embedded fields cannot have defaults")
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
-			parsedDefault, expressionAnchors, parseErr := p.parseExpression(
+			parsedDefault, expressionAnchors, tgoErr := p.parseExpression(
 				p.tokens[raw.assign+1].start,
 				p.tokens[raw.end-1].end,
 				matchAt,
 				defaultAt,
 			)
-			if parseErr != nil {
-				return nil, nil, parseErr
+			if tgoErr != nil {
+				return nil, nil, tgoErr
 			}
 			defaultValue = parsedDefault
 			for extension, parent := range expressionAnchors {

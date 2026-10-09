@@ -122,6 +122,7 @@ store.Flush()!
 ```
 
 On failure, TGo adds the call name, wraps the cause, and returns zero values with the error.
+Use `call()!!` to return the original error with no context or wrapper allocation.
 Use a normal error check when the caller must recover, change the error, or add runtime data.
 
 [Language specification](../spec/README.md).

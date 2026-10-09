@@ -47,6 +47,14 @@ func useSelector(repository store) (*record, error) {
 	return value, nil
 }
 
+func useTransparent() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
 func useQualifiedCall(text string) (int, error) {
 	value, err := strconv.Atoi(text)
 	if err != nil {

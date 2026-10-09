@@ -105,9 +105,10 @@ type rawDefault struct {
 }
 
 type rawPropagation struct {
-	callEnd int
-	bang    int
-	node    *frontPropagateExpr
+	callEnd   int
+	bang      int
+	secondBang int
+	node      *frontPropagateExpr
 }
 
 type rawComprehension struct {
@@ -347,10 +348,7 @@ func (p %sourceParser) discoverDeclarations() error {
 	for cursor := 0; cursor < len(p.tokens); {
 		if p.tokens[cursor].kind == token.TYPE && cursor+1 < len(p.tokens) &&
 			p.tokens[cursor+1].kind == token.IDENT {
-			declaration, next, err := p.declaration(cursor)
-			if err != nil {
-				return err
-			}
+			declaration, next := p.declaration(cursor)!!
 			if declaration != nil {
 				p.decls = append(p.decls, declaration)
 				p.edits = append(p.edits, sourceEdit{
@@ -363,10 +361,7 @@ func (p %sourceParser) discoverDeclarations() error {
 			}
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return err
-			}
+			end := p.closeToken(cursor)!!
 			cursor = end + 1
 			continue
 		}
@@ -392,10 +387,7 @@ func (p %sourceParser) declaration(start int) (*rawDecl, int, error) {
 			return p.enumDeclaration(start, cursor, open)
 		}
 	}
-	declarationEnd, err := p.declarationEnd(cursor)
-	if err != nil {
-		return nil, 0, err
-	}
+	declarationEnd := p.declarationEnd(cursor)!!
 	ordinary := p.goDeclarationSyntax(start, declarationEnd)
 	baseStart := cursor
 	if ordinary && p.tokens[baseStart].kind != token.STRUCT {
@@ -407,10 +399,7 @@ func (p %sourceParser) declaration(start int) (*rawDecl, int, error) {
 			return p.checkedDeclaration(start, baseStart, cursor)
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return nil, 0, err
-			}
+			end := p.closeToken(cursor)!!
 			cursor = end + 1
 			continue
 		}
@@ -427,10 +416,7 @@ func (p %sourceParser) declarationEnd(start int) (int, error) {
 	cursor := start
 	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON {
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return 0, err
-			}
+			end := p.closeToken(cursor)!!
 			cursor = end + 1
 			continue
 		}
@@ -575,10 +561,7 @@ func (p %sourceParser) checkedDeclaration(
 	cursor := predicateStart
 	for cursor < len(p.tokens) && p.tokens[cursor].kind != token.SEMICOLON {
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
-			if err != nil {
-				return nil, 0, err
-			}
+			end := p.closeToken(cursor)!!
 			cursor = end + 1
 			continue
 		}
@@ -622,10 +605,7 @@ func (p %sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 				field.assign = cursor
 			}
 			if opening(p.tokens[cursor].kind) {
-				end, err := p.closeToken(cursor)
-				if err != nil {
-					return nil, err
-				}
+				end := p.closeToken(cursor)!!
 				cursor = end + 1
 				continue
 			}

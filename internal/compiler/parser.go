@@ -194,28 +194,30 @@ func lowerSourceExtensions(
 			continue
 		}
 		marker := freshIdentifier("__tgo_propagate", used)
-		callName, ok := syntax.StaticCallName(node.Call.Callee)
-		if !ok {
-			return nil, nil, nil, fmt.Errorf(
-				"%s: error propagation needs a short static call name",
-				files.Position(node.Bang),
-			)
+		metadata, err := propagationMetadata(files, node)
+		if err != nil {
+			return nil, nil, nil, err
 		}
 		start := file.Offset(syntax.ExpressionPosition(node.Expression))
 		bang := file.Offset(node.Bang)
+		operatorEnd := bang + 1
+		endPosition := files.Position(node.Bang)
+		if metadata.Transparent {
+			operatorEnd = file.Offset(node.SecondBang) + 1
+			endPosition = files.Position(node.SecondBang)
+		}
 		startPosition := files.Position(syntax.ExpressionPosition(node.Expression))
-		bangPosition := files.Position(node.Bang)
 		opening := marker + "(" + inlineLineDirective(
 			name, startPosition.Line, startPosition.Column,
 		)
 		closing := ")" + inlineLineDirective(
-			name, bangPosition.Line, bangPosition.Column+1,
+			name, endPosition.Line, endPosition.Column+1,
 		)
 		edits = append(edits,
 			edit{start: start, end: start, text: opening},
-			edit{start: bang, end: bang + 1, text: closing},
+			edit{start: bang, end: operatorEnd, text: closing},
 		)
-		propagations[marker] = propagationSource{Bang: node.Bang, Name: callName}
+		propagations[marker] = metadata
 	}
 	comprehensions := make(map[string]comprehensionSource)
 	for _, node := range comprehensionNodes {
@@ -241,6 +243,23 @@ func lowerSourceExtensions(
 		}
 	}
 	return edits, propagations, comprehensions, nil
+}
+
+func propagationMetadata(
+	files *token.FileSet,
+	node *syntax.PropagationExpression,
+) (propagationSource, error) {
+	transparent := node.SecondBang != token.NoPos
+	name, static := syntax.StaticCallName(node.Call.Callee)
+	if !transparent && !static {
+		return propagationSource{}, fmt.Errorf(
+			"%s: error propagation needs a short static call name",
+			files.Position(node.Bang),
+		)
+	}
+	return propagationSource{
+		Bang: node.Bang, Name: name, Transparent: transparent,
+	}, nil
 }
 
 // comprehensionProjection makes valid Go for type checking before direct lowering.
