@@ -6,6 +6,11 @@ Write small business packages in `.tgo` files. Write their tests in
 `_test.tgo` files. Keep tests for Go packages in `_test.go` files.
 Use one Go module. Keep normal Go imports, package names, and tests.
 
+Make each package either TGo or Go. Do not put handwritten `.tgo` and `.go`
+files in one package. Generated `*_tgo.go` files belong in a TGo package and do
+not change its language. Build constraints select active files before this
+rule applies. A Go package can import a TGo package through its generated API.
+
 ## Build and check
 
 ```sh

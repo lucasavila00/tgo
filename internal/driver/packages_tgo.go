@@ -8,7 +8,6 @@ import (
 	"go/build"
 	"go/token"
 	"go/types"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -17,6 +16,7 @@ import (
 
 	"tgo/internal/compiler"
 	"tgo/internal/outputname"
+	"tgo/internal/packagelanguage"
 	"tgo/pkg/syntax"
 )
 
@@ -25,7 +25,6 @@ type packageUnit struct {
 	Path              string
 	Module            string
 	Sources           []compiler.File
-	GoFiles           []compiler.File
 	Files             []*syntax.File
 	Imports           map[string]*packageUnit
 	sourcePaths       []string
@@ -38,6 +37,8 @@ type packageUnit struct {
 	sourcesMatched    bool
 	testsMatched      bool
 	loaded            bool
+	languageMatched   bool
+	language          packagelanguage.Language
 	matchError        error
 	loadError         error
 	fs                *token.FileSet
@@ -167,7 +168,6 @@ func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
 			Path:              importPath,
 			Module:            d.module,
 			Sources:           nil,
-			GoFiles:           nil,
 			Files:             nil,
 			Imports:           nil,
 			sourcePaths:       nil,
@@ -180,6 +180,8 @@ func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
 			sourcesMatched:    false,
 			testsMatched:      false,
 			loaded:            false,
+			languageMatched:   false,
+			language:          packagelanguage.Unknown,
 			matchError:        nil,
 			loadError:         nil,
 			fs:                token.NewFileSet(),
@@ -199,14 +201,25 @@ func (p *packageUnit) matchingTestSources() ([]string, error) {
 	}
 	p.testsMatched = true
 	for _, path := range p.testSourcePaths {
-		match, err := matchTgoFile(p.context, path)
+		match, err := packagelanguage.MatchFile(
+			p.context, path, packagelanguage.TGo,
+		)
 		if err != nil {
 			p.matchError = err
 			return nil, err
 		}
-		if match {
-			p.matchingTestPaths = append(p.matchingTestPaths, path)
+		if !match {
+			continue
 		}
+		cgo, err := fileImportsC(path)
+		if err != nil {
+			p.matchError = err
+			return nil, err
+		}
+		if cgo && !p.context.CgoEnabled {
+			continue
+		}
+		p.matchingTestPaths = append(p.matchingTestPaths, path)
 	}
 	return p.matchingTestPaths, nil
 }
@@ -294,7 +307,9 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 	}
 	p.sourcesMatched = true
 	for _, path := range p.sourcePaths {
-		match, err := matchTgoFile(p.context, path)
+		match, err := packagelanguage.MatchFile(
+			p.context, path, packagelanguage.TGo,
+		)
 		if err != nil {
 			p.matchError = err
 			return nil, err
@@ -316,43 +331,22 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 	return p.matchingPaths, nil
 }
 
-// matchTgoFile applies Go build constraints to one tgo file.
-func matchTgoFile(context *build.Context, path string) (bool, error) {
-	directory := filepath.Dir(path)
-	name := filepath.Base(path)
-	fakeName := strings.TrimSuffix(name, ".tgo") + ".s"
-	fakePath := filepath.Clean(filepath.Join(directory, fakeName))
-	realPath := filepath.Clean(path)
-	fileContext := *context
-	fileContext.OpenFile = func(requested string) (io.ReadCloser, error) {
-		if filepath.Clean(requested) == fakePath {
-			return os.Open(realPath)
-		}
-		return os.Open(requested)
-	}
-	match, err := fileContext.MatchFile(directory, fakeName)
-	if err == nil {
-		return match, nil
-	}
-	message := err.Error()
-	if detail, ok := strings.CutPrefix(message, fakeName); ok {
-		message = path + detail
-	}
-	return false, errors.New(message)
-}
-
 // available reports whether this package has active source or orphan output.
 func (p *packageUnit) available() (bool, error) {
-	paths, err := p.matchingSources()
+	_, err := p.packageLanguage()
 	if err != nil {
 		return false, err
+	}
+	paths, err_1 := p.matchingSources()
+	if err_1 != nil {
+		return false, err_1
 	}
 	if len(paths) > 0 {
 		return true, nil
 	}
-	tests, err_1 := p.matchingTestSources()
-	if err_1 != nil {
-		return false, err_1
+	tests, err_2 := p.matchingTestSources()
+	if err_2 != nil {
+		return false, err_2
 	}
 	if len(tests) > 0 {
 		return false, fmt.Errorf(
@@ -361,15 +355,26 @@ func (p *packageUnit) available() (bool, error) {
 		)
 	}
 	for _, path := range p.generatedPaths {
-		owned, err_2 := generatedFile(path)
-		if err_2 != nil {
-			return false, err_2
+		owned, err_3 := generatedFile(path)
+		if err_3 != nil {
+			return false, err_3
 		}
 		if owned && !p.sourceOwnsOutput(path) {
 			return true, nil
 		}
 	}
 	return false, nil
+}
+
+// packageLanguage returns the active handwritten package language.
+func (p *packageUnit) packageLanguage() (packagelanguage.Language, error) {
+	if p.languageMatched {
+		return p.language, p.matchError
+	}
+	p.languageMatched = true
+	context := packagelanguage.ContextFromBuild(p.context)
+	p.language, p.matchError = packagelanguage.Classify(context, p.Dir)
+	return p.language, p.matchError
 }
 
 // sourceOwnsOutput reports whether a current source owns one generated path.
@@ -387,12 +392,16 @@ func (p *packageUnit) sourceOwnsOutput(path string) bool {
 	return false
 }
 
-// load parses one selected package and its active Go files.
+// load parses one selected package and its active TGo files.
 func (p *packageUnit) load() error {
 	if p.loaded {
 		return p.loadError
 	}
 	p.loaded = true
+	if _, err := p.packageLanguage(); err != nil {
+		p.loadError = err
+		return err
+	}
 	paths, err := p.matchingSources()
 	if err != nil {
 		p.loadError = err
@@ -404,32 +413,7 @@ func (p *packageUnit) load() error {
 			return err
 		}
 	}
-	if len(paths) > 0 {
-		p.loadError = p.readGoFiles()
-	}
 	return p.loadError
-}
-
-// readGoFiles loads user Go files that take part in package type checks.
-func (p *packageUnit) readGoFiles() error {
-	entries, err := os.ReadDir(p.Dir)
-	if err != nil {
-		return err
-	}
-	for _, entry := range entries {
-		file, data, cgo, err_1 := activeGoFile(p.context, p.Dir, entry)
-		if err_1 != nil {
-			return err_1
-		}
-		if file == nil {
-			continue
-		}
-		path := filepath.Join(p.Dir, entry.Name())
-		p.usesC = p.usesC || cgo
-		p.Files = append(p.Files, file)
-		p.GoFiles = append(p.GoFiles, compiler.File{Name: path, Data: data})
-	}
-	return nil
 }
 
 // generatedFile reports whether a reserved output is a regular file.

@@ -10,7 +10,11 @@ const grammar = JSON.parse(fs.readFileSync(
   "utf8"
 ));
 function pattern(name) {
-  const item = grammar.repository.tgo.patterns.find((value) => value.name === name);
+  const patterns = [
+    ...grammar.repository.tgo.patterns,
+    ...Object.values(grammar.injections).flatMap((value) => value.patterns)
+  ];
+  const item = patterns.find((value) => value.name === name);
   assert.ok(item, `missing ${name}`);
   return new RegExp(item.match);
 }

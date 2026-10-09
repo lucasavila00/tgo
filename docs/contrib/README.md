@@ -5,3 +5,6 @@
 
 Architecture-specific contributor guides belong in this directory. User
 behavior belongs in the specification or user guides.
+
+Run `make source-size` after you add or split handwritten Go or TGo source.
+The check enforces the 700-line limit and validates each fixture exclusion.

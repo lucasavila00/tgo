@@ -128,7 +128,9 @@ func copyGoCorpusPackage(
 			continue
 		}
 		copyCorpusFile(t, root, "original", packagePath, entry.Name(), data)
-		copyCorpusFile(t, root, "generated", packagePath, entry.Name(), data)
+		tgoName := strings.TrimSuffix(entry.Name(), ".go") + ".tgo"
+		copyCorpusFile(t, root, "generated", packagePath, tgoName, data)
+		sources[filepath.Join(packagePath, tgoName)] = data
 		includedTests++
 	}
 	if packageName == "" {

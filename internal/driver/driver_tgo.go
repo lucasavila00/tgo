@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"tgo/internal/compiler"
+	"tgo/internal/packagelanguage"
 )
 
 // Build checks tgo packages and writes Go source beside each input file.
@@ -139,7 +140,8 @@ func compileWorkspaceContext(
 		default:
 		}
 		if err := builder.build(path); err != nil {
-			if !continueAfterError {
+			var boundary *packagelanguage.BoundaryError = nil
+			if !continueAfterError || errors.As(err, &boundary) {
 				return nil, err
 			}
 			resetActiveBuilds(builder)
@@ -179,7 +181,8 @@ func compileWorkspaceViewsContext(
 		}
 		unit := packages[path]
 		if err := builder.build(path); err != nil {
-			if !continueAfterError {
+			var boundary *packagelanguage.BoundaryError = nil
+			if !continueAfterError || errors.As(err, &boundary) {
 				return nil, err
 			}
 			resetActiveBuilds(builder)
@@ -194,7 +197,8 @@ func compileWorkspaceViewsContext(
 		})
 		internal, external, err := unit.readTests()
 		if err != nil {
-			if !continueAfterError {
+			var boundary *packagelanguage.BoundaryError = nil
+			if !continueAfterError || errors.As(err, &boundary) {
 				return nil, err
 			}
 			continue
@@ -218,7 +222,8 @@ func compileWorkspaceViewsContext(
 				unit, test.files, test.external, token.NewFileSet(),
 			)
 			if err != nil {
-				if !continueAfterError {
+				var boundary *packagelanguage.BoundaryError = nil
+				if !continueAfterError || errors.As(err, &boundary) {
 					return nil, err
 				}
 				resetActiveBuilds(builder)
@@ -395,7 +400,7 @@ func effectiveBuildContext(directory string) (build.Context, error) {
 		return build.Default, err
 	}
 	context.ToolTags = toolTags
-	tags, err := buildTagsFromGoFlags(environment.GOFlags)
+	tags, err := packagelanguage.BuildTagsFromGoFlags(environment.GOFlags)
 	if err != nil {
 		return build.Default, fmt.Errorf("read GOFLAGS: %w", err)
 	}
@@ -569,64 +574,4 @@ func singleFeatureTag(architecture string, value string, valid ...string) ([]str
 		}
 	}
 	return nil, fmt.Errorf("invalid %s feature %q", architecture, value)
-}
-
-// buildTagsFromGoFlags gets tags from each Go -tags flag.
-func buildTagsFromGoFlags(flags string) ([]string, error) {
-	fields, err := splitGoFlags(flags)
-	if err != nil {
-		return nil, err
-	}
-	var tags []string = nil
-	for index := 0; index < len(fields); index++ {
-		field := fields[index]
-		value, found := strings.CutPrefix(field, "-tags=")
-		if !found && field == "-tags" {
-			if index+1 >= len(fields) {
-				return nil, errors.New("-tags needs a value")
-			}
-			index++
-			value = fields[index]
-			found = true
-		}
-		if !found {
-			continue
-		}
-		tags = strings.FieldsFunc(
-			value,
-			func(character rune) bool {
-				return character == ',' || character == ' '
-			},
-		)
-	}
-	return tags, nil
-}
-
-// splitGoFlags separates flags and removes matching outer quotes.
-func splitGoFlags(value string) ([]string, error) {
-	var fields []string = nil
-	for len(value) > 0 {
-		value = strings.TrimLeft(value, " \t\n\r")
-		if value == "" {
-			break
-		}
-		if value[0] == '\'' || value[0] == '"' {
-			quote := value[0]
-			end := strings.IndexByte(value[1:], quote)
-			if end < 0 {
-				return nil, fmt.Errorf("unterminated %c string", quote)
-			}
-			fields = append(fields, value[1:end+1])
-			value = value[end+2:]
-			continue
-		}
-		end := strings.IndexAny(value, " \t\n\r")
-		if end < 0 {
-			fields = append(fields, value)
-			break
-		}
-		fields = append(fields, value[:end])
-		value = value[end:]
-	}
-	return fields, nil
 }

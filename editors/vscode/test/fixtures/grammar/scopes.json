@@ -5,14 +5,77 @@
     "has": "keyword.declaration.enum.tgo"
   },
   {
+    "line": "type MultilineEvent enum",
+    "token": "enum",
+    "has": "keyword.declaration.enum.tgo"
+  },
+  {
     "line": "type Port struct { number int } checked",
     "token": "checked",
     "has": "keyword.declaration.checked.tgo"
   },
   {
+    "line": "} checked",
+    "token": "checked",
+    "has": "keyword.declaration.checked.tgo"
+  },
+  {
+    "line": "owner %User",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
+    "line": "history []%User",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
+    "line": "lookup map[string]%User",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
+    "line": "updates chan %User",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
+    "line": "callback func(%User) %User",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
+    "line": "type UserPointer = %User",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
+    "line": "type UserPointerMap = map[string][]%*User",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
+    "line": "type DirectUserPointerMap = map[string]%User",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
+    "line": "var currentUser %User",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
     "line": "type WhereAlias where",
     "token": "where",
-    "has": "identifier.go",
     "not": "keyword.declaration.checked.tgo"
   },
   {
@@ -36,9 +99,14 @@
     "has": "keyword.operator.propagation.tgo"
   },
   {
+    "line": "value = CheckedRecord{value: 1}!",
+    "token": "!",
+    "has": "keyword.operator.propagation.tgo"
+  },
+  {
     "line": "_ = !ok",
     "token": "!",
-    "has": "keyword.operator.go",
+    "has": "keyword.operator.logical.go",
     "not": "keyword.operator.propagation.tgo"
   },
   {
@@ -80,26 +148,33 @@
   {
     "line": "exhaustive:",
     "token": "exhaustive",
-    "has": "entity.name.label.go",
+    "has": "variable.other.label.go",
     "not": "keyword.control.exhaustive.tgo"
   },
   {
     "line": "where := 1",
     "token": "where",
-    "has": "identifier.go",
+    "not": "keyword.declaration.checked.tgo"
+  },
+  {
+    "line": "checked := true",
+    "token": "checked",
     "not": "keyword.declaration.checked.tgo"
   },
   {
     "line": "enum := 2",
     "token": "enum",
-    "has": "identifier.go",
     "not": "keyword.declaration.enum.tgo"
   },
   {
     "line": "_ = enum{}",
     "token": "enum",
-    "has": "identifier.go",
     "not": "keyword.declaration.enum.tgo"
+  },
+  {
+    "line": "_ = append(values, defaults...)",
+    "token": "defaults",
+    "not": "keyword.other.default.tgo"
   },
   {
     "line": "func pointerParameter(value *Record) {}",
@@ -131,6 +206,18 @@
     "line": "func nonNilParameter(value %Record) {}",
     "token": "Record",
     "has": "entity.name.type.go"
+  },
+  {
+    "line": "func nonNilResult() %Record { return currentUser }",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
+  },
+  {
+    "line": "func nonNilResults() (%Record, error) { return currentUser, nil }",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo",
+    "not": "keyword.operator.arithmetic.go"
   },
   {
     "line": "func (value *Record) pointerReceiver() {}",
@@ -286,5 +373,25 @@
     "token": "%",
     "has": "keyword.operator.arithmetic.go",
     "not": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "type CommentedType int // func(",
+    "token": "func",
+    "has": "comment.line.double-slash.go"
+  },
+  {
+    "line": "var commentedVariable int // func(",
+    "token": "func",
+    "has": "comment.line.double-slash.go"
+  },
+  {
+    "line": "commentedField int // func(",
+    "token": "func",
+    "has": "comment.line.double-slash.go"
+  },
+  {
+    "line": "groupedCommented int // func(",
+    "token": "func",
+    "has": "comment.line.double-slash.go"
   }
 ]
