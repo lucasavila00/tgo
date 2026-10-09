@@ -1,4 +1,4 @@
-package compiler
+package driver
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"tgo/internal/compiler"
 	"tgo/internal/outputname"
 )
 
@@ -43,11 +44,11 @@ func TestGeneratedOrdinaryGoIdentity(t *testing.T) {
 
 func TestVerifyOrdinaryGoIdentity(t *testing.T) {
 	source := []byte("package sample\n\ntype Pair struct{}\n")
-	if err := VerifyGeneratedModels("sample.tgo", source, source, nil); err != nil {
+	if err := compiler.VerifyGeneratedModels("sample.tgo", source, source, nil); err != nil {
 		t.Fatal(err)
 	}
 	changed := bytes.Replace(source, []byte("struct{}"), []byte("struct{ Value int }"), 1)
-	if err := VerifyGeneratedModels("sample.tgo", source, changed, nil); err == nil {
+	if err := compiler.VerifyGeneratedModels("sample.tgo", source, changed, nil); err == nil {
 		t.Fatal("ownership verification accepted changed ordinary Go")
 	}
 }
