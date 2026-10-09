@@ -114,6 +114,7 @@ func New(root string) (*Engine, error) {
 		root: absolute, mu: new(sync.Mutex), index: nil, generation: 0,
 		building: false, ready: nil,
 	}, nil
+
 }
 
 // Invalidate removes all cached facts after a source or module change.

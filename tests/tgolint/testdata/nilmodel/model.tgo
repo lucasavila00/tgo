@@ -46,7 +46,7 @@ func Give(value %Item) %Item {
 }
 
 func Load() (%Item, error) {
-	return &Item{Name: ""}, nil
+	return &Item{Name: ""},
 }
 
 func AcceptOptional(value *Item) %Item {

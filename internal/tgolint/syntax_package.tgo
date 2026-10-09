@@ -26,7 +26,7 @@ func parseAnalysisFiles(pass %analysis.Pass) ([]%syntax.File, error) {
 		if parsed == nil { return nil, fmt.Errorf("parse analysis file %s: no syntax", filename) }
 		result = append(result, parsed)
 	}
-	return result, nil
+	return result,
 }
 
 func syntaxFileGenerated(file %syntax.File) bool {

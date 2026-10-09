@@ -15,11 +15,11 @@ func (e %nilEnvironment) blockNilFacts(
 	state *nilFlowState,
 ) (nilFacts, nilFacts) {
 	if block == nil || state == nil || len(block.Nodes) == 0 {
-		return nil, nil
+		return nil,
 	}
 	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
 	if !ok || condition == nil {
-		return nil, nil
+		return nil,
 	}
 	conditionNode := syntax.ExpressionNode(condition)
 	if clauseNode := e.parents[conditionNode]; clauseNode != nil {

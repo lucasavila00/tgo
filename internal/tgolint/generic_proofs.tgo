@@ -469,14 +469,14 @@ func (c %checker) genericCall(
 	expression %syntax.Expression,
 ) (*types.Func, []types.Type, []types.Type) {
 	call := syntax.CallExpressionOf(expression)
-	if call == nil { return nil, nil, nil }
+	if call == nil { return nil, nil, }
 	identifier := genericCallIdentifier(call.Callee)
 	if identifier == nil {
-		return nil, nil, nil
+		return nil, nil,
 	}
 	function, ok := c.genericCallObject(call.Callee).(*types.Func)
 	if !ok {
-		return nil, nil, nil
+		return nil, nil,
 	}
 	var typeArguments []types.Type = nil
 	if instance, ok := c.facts.Instance(identifier); ok {

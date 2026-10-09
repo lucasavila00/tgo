@@ -360,7 +360,7 @@ func readTGoSource(pass *analysis.Pass, path string) ([]byte, error) {
 		pass.OtherFiles = append(pass.OtherFiles, path)
 	}
 	data := pass.ReadFile(path)!
-	return data, nil
+	return data,
 }
 
 func generatedTypeSpec(file *syntax.File, name string) *syntax.TypeSpecification {

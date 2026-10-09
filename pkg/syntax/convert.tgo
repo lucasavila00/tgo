@@ -22,7 +22,7 @@ func ParseFile(
 	if err != nil {
 		return result, err
 	}
-	return result, nil
+	return result,
 }
 
 // ParseGoFile parses one Go source file into the public syntax ADT.

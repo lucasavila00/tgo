@@ -80,7 +80,7 @@ func run(pass *analysis.Pass) (any, error) {
 	pass = suppressDiagnostics(pass)
 	files := parseAnalysisFiles(pass)!!
 	if len(files) == 0 {
-		return nil, nil
+		return nil,
 	}
 	info := pass.TypesInfo
 	fileSet := pass.Fset
@@ -120,13 +120,13 @@ func run(pass *analysis.Pass) (any, error) {
 		if syntaxFileGenerated(file) { c.generated[file] = true }
 	}
 	if c.rejectInvalidDependencies() {
-		return nil, nil
+		return nil,
 	}
 	analysis := c.analyzeTGoPackage()
 	c.setGeneratedOutputs(analysis)
 	c.findModels()
 	if c.invalid {
-		return nil, nil
+		return nil,
 	}
 	c.findValidationWrappers()
 	c.findValidationFunctionValues()
@@ -159,7 +159,7 @@ func run(pass *analysis.Pass) (any, error) {
 		})
 	}
 	c.checkGenericZeroSafety()
-	return nil, nil
+	return nil,
 }
 
 // rejectInvalidDependencies stops analysis when an imported package failed verification.

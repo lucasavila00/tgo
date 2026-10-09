@@ -27,6 +27,7 @@ A clean run means that the loaded Go packages do not contain these errors:
 - a map read, channel receive, or pointer assertion used without its required proof; or
 - a sequential `iota` set that uses one defined integer type in handwritten TGo source; or
 - a manual error return that has the exact behavior of postfix `!` or `!!`; or
+- an explicit final `nil` return value that can use TGo's trailing comma; or
 - the same errors hidden by embedding, wrappers, function values, control flow,
   or generic constraints.
 
@@ -106,6 +107,10 @@ The wrapper text must contain the full static call name and `: %w`. Thus, `repo.
 `fmt.Errorf("repo.Find: %w", err)`. It does not match `fmt.Errorf("Find: %w", err)`. The check does
 not report function values, assignments to existing variables, extra branch work, named results,
 nonzero returns, or different error text. It does not check `.go` files or offer a fix.
+
+The successful-return modernization check reports `return value, nil` in handwritten `.tgo`
+source. It also accepts parenthesized `nil` and returns with more than two values. It does not
+report one-result returns, a non-final `nil`, a shadowed `nil`, or an existing trailing comma.
 
 ## Go boundary
 

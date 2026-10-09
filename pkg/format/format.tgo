@@ -16,5 +16,5 @@ func Source(filename string, source []byte) ([]byte, error) {
 		source,
 		syntax.ParseComments|syntax.AllErrors,
 	)!!
-	return newPrinter(files, file, source).printFile(), nil
+	return newPrinter(files, file, source).printFile(),
 }
