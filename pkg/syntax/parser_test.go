@@ -580,11 +580,11 @@ if value > row { value }
 	}
 	if len(outer.Bindings) != 2 || outer.Bindings[0].Name != "row" ||
 		outer.Bindings[1].Name != "values" {
-		t.Fatalf("outer bindings = %#v", outer.Bindings)
+		t.Fatal("outer bindings are wrong")
 	}
 	if len(inner.Bindings) != 2 || inner.Bindings[0].Name != "_" ||
 		inner.Bindings[1].Name != "value" {
-		t.Fatalf("inner bindings = %#v", inner.Bindings)
+		t.Fatal("inner bindings are wrong")
 	}
 
 	positions := []struct {
