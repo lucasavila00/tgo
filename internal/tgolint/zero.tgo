@@ -444,28 +444,6 @@ func (c %checker) checkTypeAssertion(
 	// Go can provide an invalid model value. The caller owns this boundary.
 }
 
-func (c %checker) assertionValidator(expression %syntax.Expression) bool {
-	current := expression
-	for {
-		node := syntax.ExpressionNode(current)
-		parent, ok := syntax.ExpressionOf(c.parents[node])
-		if !ok || parent == nil || syntax.ParenthesizedExpressionOf(parent) == nil {
-			break
-		}
-		current = parent
-	}
-	node := syntax.ExpressionNode(current)
-	parent, ok := syntax.ExpressionOf(c.parents[node])
-	if !ok || parent == nil {
-		return false
-	}
-	call := syntax.CallExpressionOf(parent)
-	if call == nil || len(call.Args) != 1 || call.Args[0] != current {
-		return false
-	}
-	return c.sourceCallHasValidationFact(call)
-}
-
 func firstType(typ types.Type) types.Type {
 	if tuple, ok := typ.(*types.Tuple); ok && tuple.Len() > 0 {
 		return tuple.At(0).Type()

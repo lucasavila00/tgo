@@ -4,98 +4,9 @@ package syntax
 
 import (
 	"go/ast"
-	"go/token"
 	"reflect"
 	"slices"
 )
-
-// frontVisitor is called for each Go and tgo node in a file.
-type frontVisitor interface {
-	Visit(frontNode) frontVisitor
-}
-
-// frontChildren returns the direct source children of a node in a read-only tree.
-func frontChildren(file *frontFile, node frontNode) []frontNode {
-	if file == nil || node == nil {
-		return nil
-	}
-	return append([]frontNode(nil), file.children[node]...)
-}
-
-// frontParent returns the direct source parent of a node.
-func frontParent(file *frontFile, node frontNode) frontNode {
-	if file == nil || node == nil {
-		return nil
-	}
-	return file.parents[node]
-}
-
-// frontExtensions returns all tgo nodes in source order.
-func frontExtensions(file *frontFile) []frontExtension {
-	if file == nil {
-		return nil
-	}
-	return append([]frontExtension(nil), file.extensions...)
-}
-
-// frontExtensionAt returns the smallest tgo node that contains a position.
-func frontExtensionAt(file *frontFile, position token.Pos) frontExtension {
-	if file == nil {
-		return nil
-	}
-	var found frontExtension = nil
-	for _, extension := range file.extensions {
-		if extension.Pos() <= position && position < extension.End() &&
-			(found == nil || extension.End()-extension.Pos() < found.End()-found.Pos()) {
-			found = extension
-		}
-	}
-	return found
-}
-
-// frontAttachedComments returns leading and trailing comments for a node.
-func frontAttachedComments(file *frontFile, node frontNode) []*ast.CommentGroup {
-	if file == nil || node == nil {
-		return nil
-	}
-	return append([]*ast.CommentGroup(nil), file.attached[node]...)
-}
-
-// frontWalk visits the complete source tree.
-func frontWalk(visitor frontVisitor, file *frontFile) {
-	if visitor == nil || file == nil {
-		return
-	}
-	walkNode(visitor, file, file)
-}
-
-func walkNode(visitor frontVisitor, file *frontFile, node frontNode) {
-	next := visitor.Visit(node)
-	if next == nil {
-		return
-	}
-	for _, child := range file.children[node] {
-		walkNode(next, file, child)
-	}
-	next.Visit(nil)
-}
-
-// frontInspect calls visit for each node. A false result skips that node's children.
-func frontInspect(file *frontFile, visit func(frontNode) bool) {
-	if file == nil || visit == nil {
-		return
-	}
-	walkNode(inspector(visit), file, file)
-}
-
-type inspector func(frontNode) bool
-
-func (inspect inspector) Visit(node frontNode) frontVisitor {
-	if node == nil || inspect(node) {
-		return inspect
-	}
-	return nil
-}
 
 func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 	file.children = make(map[frontNode][]frontNode)

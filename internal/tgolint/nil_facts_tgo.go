@@ -67,15 +67,6 @@ func (e *nilEnvironment) comparisonNilFacts(
 	return commonNilBranchFacts(trueBranches), commonNilBranchFacts(falseBranches)
 }
 
-func nilFactsImpossible(facts nilFacts) bool {
-	for _, value := range facts {
-		if isNeverNilType(value) {
-			return true
-		}
-	}
-	return false
-}
-
 func impossibleNilFacts() nilFacts {
 	return nilFacts{{object: nil, path: "$never"}: neverNilType()}
 }

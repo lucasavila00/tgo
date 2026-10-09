@@ -38,27 +38,6 @@ func (c %checker) findModels() {
 	}
 }
 
-func (c %checker) exportGeneratedValidator(object *types.TypeName) {
-	function, ok := object.Pkg().Scope().Lookup("Validate" + object.Name()).(*types.Func)
-	if !ok || !validValidatorAPI(function, object.Type()) {
-		return
-	}
-	fact := &validationFact{}
-	c.validated[function] = true
-	c.pass.ExportObjectFact(function, fact)
-}
-
-func validValidatorAPI(function *types.Func, typ types.Type) bool {
-	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Params().Len() != 1 || signature.Results().Len() != 2 {
-		return false
-	}
-	errorType := types.Universe.Lookup("error").Type()
-	return types.Identical(signature.Params().At(0).Type(), typ) &&
-		types.Identical(signature.Results().At(0).Type(), typ) &&
-		types.Identical(signature.Results().At(1).Type(), errorType)
-}
-
 // exportValidationFacts marks verified constructors as trusted value sources.
 func (c %checker) exportValidationFacts(object *types.TypeName, value *model) {
 	scope := object.Pkg().Scope()
@@ -279,12 +258,6 @@ func method(typ types.Type, name string) *types.Signature {
 	return signature
 }
 
-func validTagMethod(typ, tag types.Type) bool {
-	method := method(typ, "Tag")
-	return method != nil && method.Params().Len() == 0 && method.Results().Len() == 1 &&
-		types.Identical(method.Results().At(0).Type(), tag)
-}
-
 func validEnumAPI(typ, payload types.Type, accessor, constructorName string) bool {
 	read := method(typ, accessor)
 	return read != nil && validEnumConstructor(typ, payload, constructorName) &&
@@ -350,31 +323,6 @@ func (c %checker) modelForTypeParameter(parameter *types.TypeParam) *model {
 	var found *model = nil
 	for _, term := range terms {
 		model := c.modelForReceiver(term.Type())
-		if model == nil {
-			continue
-		}
-		if found != nil && !sameModel(found, model) {
-			return mixedModel()
-		}
-		found = model
-	}
-	return found
-}
-
-// structuralModel finds a generated enum behind an interface method set.
-// It returns nil when the receiver cannot admit that enum.
-func (c %checker) structuralModel(receiver types.Type) *model {
-	if !c.receiverCanHideModel(receiver) {
-		return nil
-	}
-	methods := types.NewMethodSet(receiver)
-	var found *model = nil
-	for index := 0; index < methods.Len(); index++ {
-		function, ok := methods.At(index).Obj().(*types.Func)
-		if !ok {
-			continue
-		}
-		model := c.modelForAccessor(function)
 		if model == nil {
 			continue
 		}

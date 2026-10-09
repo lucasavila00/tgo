@@ -56,6 +56,18 @@ payload storage.
 ## Repository checks
 
 Production source in this repository does not use `tgolint` suppression directives. The main CI
-target checks generated files, the syntax boundary, allocation budgets, Markdown, lint, and tests.
+target checks generated files, the syntax boundary, allocation budgets, dead code, Markdown, lint,
+and tests.
+
+Run `make dead-code` to find unreachable functions in commands, packages, tests, and tools. The
+check analyzes generated Go after `make generated`. A TGo diagnostic uses its `.tgo` declaration as
+the primary location and includes the generated Go location. The check ignores only generated enum
+tag, payload, Gob, and JSON protocol functions because source authors cannot remove them. Other
+dead generated support reports its owning TGo type.
+
+The exclusion list is in `scripts/check_dead_code.py`. Each entry names one function and gives its
+reason. The check rejects an exclusion when the analyzer no longer reports that function. Build
+constraints select the current platform implementation. Keep each platform entry point reachable
+from code in the same build configuration.
 
 The [Go printer port](go-printer-port.md) defines the staged formatter replacement.

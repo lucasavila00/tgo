@@ -113,18 +113,6 @@ func (c %converter) identifierRequired(value *ast.Ident) %Identifier {
 	return &Identifier{Span: span(value), Name: value.Name}
 }
 
-func (c %converter) comment(value *ast.Comment) *Comment {
-	if value == nil {
-		return nil
-	}
-	if found, ok := c.comments[value]; ok {
-		return found
-	}
-	result := &Comment{Span: span(value), Text: value.Text}
-	c.comments[value] = result
-	return result
-}
-
 func (c %converter) commentRequired(value *ast.Comment) %Comment {
 	if found, ok := c.comments[value]; ok {
 		return found
@@ -151,13 +139,6 @@ func (c %converter) commentGroupRequired(value *ast.CommentGroup) %CommentGroup 
 		result.List = append(result.List, c.commentRequired(item))
 	}
 	return result
-}
-
-func (c %converter) field(value *ast.Field) *Field {
-	if value == nil {
-		return nil
-	}
-	return c.fieldRequired(value)
 }
 
 func (c %converter) fieldRequired(value *ast.Field) %Field {
@@ -433,26 +414,12 @@ func (c %converter) basicLiteralRequired(value *ast.BasicLit) %BasicLiteral {
 	}
 }
 
-func (c %converter) functionType(value *ast.FuncType) *FunctionType {
-	if value == nil {
-		return nil
-	}
-	return c.functionTypeRequired(value)
-}
-
 func (c %converter) functionTypeRequired(value *ast.FuncType) %FunctionType {
 	return &FunctionType{
 		Span: span(value), Function: value.Func,
 		TypeParams: c.fieldList(value.TypeParams),
 		Params: c.fieldListRequired(value.Params), Results: c.fieldList(value.Results),
 	}
-}
-
-func (c %converter) call(value *ast.CallExpr) *CallExpression {
-	if value == nil {
-		return nil
-	}
-	return c.callRequired(value)
 }
 
 func (c %converter) callRequired(value *ast.CallExpr) %CallExpression {

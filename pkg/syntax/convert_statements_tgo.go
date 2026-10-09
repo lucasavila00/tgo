@@ -316,13 +316,6 @@ func (c *converter) identifiers(values []*ast.Ident) []*Identifier {
 	return result
 }
 
-func (c *converter) importSpecification(value *ast.ImportSpec) *ImportSpecification {
-	if value == nil {
-		return nil
-	}
-	return c.importSpecificationRequired(value)
-}
-
 func (c *converter) importSpecificationRequired(
 	value *ast.ImportSpec,
 ) *ImportSpecification {

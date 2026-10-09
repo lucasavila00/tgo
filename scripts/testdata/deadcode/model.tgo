@@ -1,0 +1,5 @@
+package main
+
+type fixtureOwner struct{}
+
+func deadTGo() {}
