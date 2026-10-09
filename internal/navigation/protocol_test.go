@@ -27,7 +27,8 @@ func TestRequestJSONVariants(t *testing.T) {
 		},
 		{
 			"references",
-			`{"id":3,"method":"references","params":{"uri":"file:///a.tgo","offset":6,"includeDeclaration":true}}`,
+			`{"id":3,"method":"references","params":{` +
+				`"uri":"file:///a.tgo","offset":6,"includeDeclaration":true}}`,
 			RequestTagReferences,
 		},
 		{
@@ -78,14 +79,30 @@ func TestRequestJSONRejectsInvalidInput(t *testing.T) {
 		errorText string
 	}{
 		{"missing method", `{"id":1,"params":{}}`, "missing Request JSON tag"},
-		{"unknown method", `{"id":1,"method":"rename","params":{}}`, "unknown Request JSON variant"},
-		{"hover params", `{"id":1,"method":"hover","params":{"offset":"four"}}`, "cannot unmarshal"},
+		{
+			"unknown method", `{"id":1,"method":"rename","params":{}}`,
+			"unknown Request JSON variant",
+		},
+		{
+			"hover params", `{"id":1,"method":"hover","params":{"offset":"four"}}`,
+			"cannot unmarshal",
+		},
 		{"definition params", `{"id":1,"method":"definition","params":false}`, "cannot unmarshal"},
 		{"references params", `{"id":1,"method":"references","params":[]}`, "cannot unmarshal"},
-		{"document params", `{"id":1,"method":"documentSymbols","params":{"uri":2}}`, "cannot unmarshal"},
-		{"workspace params", `{"id":1,"method":"workspaceSymbols","params":{"query":true}}`, "cannot unmarshal"},
+		{
+			"document params", `{"id":1,"method":"documentSymbols","params":{"uri":2}}`,
+			"cannot unmarshal",
+		},
+		{
+			"workspace params",
+			`{"id":1,"method":"workspaceSymbols","params":{"query":true}}`,
+			"cannot unmarshal",
+		},
 		{"cancel params", `{"id":1,"method":"cancel","params":{"id":"one"}}`, "cannot unmarshal"},
-		{"invalidate params", `{"id":1,"method":"invalidate","params":{"uri":2}}`, "cannot unmarshal"},
+		{
+			"invalidate params", `{"id":1,"method":"invalidate","params":{"uri":2}}`,
+			"cannot unmarshal",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
