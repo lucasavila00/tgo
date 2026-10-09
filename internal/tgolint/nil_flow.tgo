@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"tgo/internal/compiler"
+	"tgo/internal/driver"
 	"tgo/internal/outputname"
 	"tgo/pkg/syntax"
 	"tgo/pkg/syntax/cfg"
@@ -79,7 +80,7 @@ func (c %checker) analyzeTGoPackage() *compiler.AnalysisPackage {
 	if directory == "" {
 		return nil
 	}
-	analysis, err := compiler.AnalyzePackage(
+	analysis, err := driver.AnalyzePackage(
 		directory, c.pass.Pkg.Path(), c.pass.Fset,
 	)
 	if err != nil {

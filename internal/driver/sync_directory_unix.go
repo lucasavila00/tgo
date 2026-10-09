@@ -1,6 +1,6 @@
 //go:build unix
 
-package compiler
+package driver
 
 import "os"
 

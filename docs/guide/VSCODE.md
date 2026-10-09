@@ -1,7 +1,8 @@
 # Navigate TGo in VS Code
 
-The TGo extension provides syntax highlighting, go to definition, find references, document
-symbols, and workspace symbols. It does not edit source or report diagnostics.
+The TGo extension provides syntax highlighting, symbol hover information, go to definition,
+find references, document symbols, and workspace symbols. It does not edit source or report
+diagnostics.
 
 On macOS, Linux, or another Unix system, build and install the private extension for the
 current host:
@@ -37,8 +38,8 @@ code --extensionDevelopmentPath="$PWD/editors/vscode" "$PWD"
 The extension updates its index after changes to `.tgo`, `.go`, `go.mod`, or `go.work` files. It
 uses active Go build constraints and target file suffixes.
 
-Navigation reads saved source. Save a changed document before you request a definition,
-references, or symbols.
+Navigation reads saved source. Save a changed document before you request hover information,
+a definition, references, or symbols.
 
 The extension runs in desktop VS Code and in desktop remote workspaces such as SSH and
 containers. In a remote workspace, run `vscode.sh` in the environment that runs the workspace

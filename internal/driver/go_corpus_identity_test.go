@@ -1,4 +1,4 @@
-package compiler
+package driver
 
 import (
 	"bytes"
@@ -57,7 +57,7 @@ func goCorpusRoot(t *testing.T) string {
 
 func readGoCorpusManifest(t *testing.T) []string {
 	t.Helper()
-	data, err := os.ReadFile("testdata/go-corpus/packages.txt")
+	data, err := os.ReadFile("../compiler/testdata/go-corpus/packages.txt")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,6 @@
 //go:build !unix
 
-package compiler
+package driver
 
 // syncDirectory has no portable operation on this platform.
 func syncDirectory(string) error {
