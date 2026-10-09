@@ -9,3 +9,8 @@ func generate() {}
 
 //line external.tgo:100
 var located = 1
+
+func nested() {
+//line nested.tgo:200
+	return
+}

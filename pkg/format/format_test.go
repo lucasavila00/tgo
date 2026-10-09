@@ -3,6 +3,7 @@ package format_test
 import (
 	"bytes"
 	goformat "go/format"
+	"go/scanner"
 	"go/token"
 	"io/fs"
 	"os"
@@ -141,6 +142,35 @@ func TestSourceMatchesGoFormatForOrdinarySyntax(t *testing.T) {
 				t.Fatalf("formatted source:\n%s\nwant Go format:\n%s", got, want)
 			}
 		})
+	}
+}
+
+func TestSourceKeepsNestedLineDirectiveActive(t *testing.T) {
+	t.Parallel()
+	source, err := os.ReadFile("testdata/directives.input.tgo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	formatted, err := format.Source("directives.tgo", source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := token.NewFileSet()
+	file := files.AddFile("directives.tgo", -1, len(formatted))
+	var lexer scanner.Scanner
+	lexer.Init(file, formatted, nil, scanner.ScanComments)
+	for {
+		position, kind, _ := lexer.Scan()
+		if kind == token.RETURN {
+			got := files.Position(position)
+			if got.Filename != "nested.tgo" || got.Line != 200 {
+				t.Fatalf("return position = %s, want nested.tgo:200", got)
+			}
+			return
+		}
+		if kind == token.EOF {
+			t.Fatal("formatted source has no return statement")
+		}
 	}
 }
 

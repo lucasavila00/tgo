@@ -114,7 +114,13 @@ func (p *printer) before(position token.Pos) {
 				p.blankline()
 			}
 		}
-		p.text(item.text)
+		if p.lineStart && strings.HasPrefix(item.text, "//line ") {
+			p.output.WriteString(item.text)
+			p.lineStart = false
+			p.lineBreaks = 0
+		} else {
+			p.text(item.text)
+		}
 		stop := p.position(item.stop)
 		next := p.position(position)
 		if strings.HasPrefix(item.text, "//") || !next.IsValid() || stop.Line != next.Line {
