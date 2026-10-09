@@ -1,12 +1,13 @@
 package compiler
 
 import (
+	"bytes"
 	"go/ast"
 	"go/constant"
+	"go/format"
 	"go/token"
 	"go/types"
-
-	"golang.org/x/tools/go/cfg"
+	"strings"
 )
 
 // checkEnumSwitches checks exhaustive enum tag switches and records permitted accessors.
@@ -26,81 +27,100 @@ func (p *packageUnit) checkEnumSwitches(
 	return safe, handled
 }
 
-// checkEnumSwitch checks one switch whose tag is a generated TgoTag call.
+const enumDefaultComment = "// unreachable: tgolint requires a case per tag"
+
+// checkEnumSwitch checks one switch whose tag is a generated Tag call.
 func (p *packageUnit) checkEnumSwitch(
 	statement *ast.SwitchStmt,
 	parents map[ast.Node]ast.Node,
 	safe map[*ast.SelectorExpr]bool,
 	handled map[*ast.SelectorExpr]bool,
 ) {
-	receiver, selector, model := p.enumTagCall(statement.Tag)
+	receiver, selector, model, tagType := p.enumTagCall(statement.Tag)
 	if model == nil {
 		return
 	}
 	safe[selector] = true
-	if p.enumTagReceiverUnsafe(receiver, selector, parents) {
-		p.fail(selector, "%s.TgoTag needs an unaliased local value receiver", model.Name)
-	}
 	seen := make(map[int]bool)
-	hasSafeDefault := false
-	incomingFallthrough := false
+	hasSentinelDefault := false
+	hasDefault := false
+	labelsResolved := true
 	for _, item := range statement.Body.List {
 		clause := item.(*ast.CaseClause)
 		fallthroughBranch := enumClauseFallthrough(clause)
 		if fallthroughBranch != nil {
-			p.fail(fallthroughBranch, "TgoTag switch cases cannot fall through")
+			p.fail(fallthroughBranch, "%s: fallthrough is not allowed in a tag switch", model.Name)
 		}
 		if len(clause.List) == 0 {
-			hasSafeDefault = p.enumStatementsTerminate(clause.Body, parents)
-			incomingFallthrough = fallthroughBranch != nil
+			hasDefault = true
+			hasSentinelDefault = p.enumDefaultSentinel(clause, receiver, model)
 			continue
 		}
-		tags := p.enumCaseTags(clause, len(model.Variants), seen)
+		tags, resolved := p.enumCaseTags(clause, model, tagType, seen)
+		labelsResolved = labelsResolved && resolved
 		for tag := range tags {
 			seen[tag] = true
 		}
 		p.checkEnumCaseAccessors(
-			clause, receiver, model, tags, incomingFallthrough,
+			clause, statement, receiver, model, tags,
 			parents, safe, handled,
 		)
-		incomingFallthrough = fallthroughBranch != nil
 	}
-	for index, variant := range model.Variants {
-		tag := index + 1
-		if !seen[tag] {
-			p.fail(statement, "switch on %s.TgoTag is missing tag %d (%s)",
-				model.Name, tag, variant.Name)
+	if labelsResolved {
+		var missing []string
+		for tag := 0; tag <= len(model.Variants); tag++ {
+			if !seen[tag] {
+				missing = append(missing, enumTagConstant(model, tag))
+			}
+		}
+		if len(missing) > 0 {
+			p.fail(statement, "%s: switch is missing cases: %s",
+				model.Name, strings.Join(missing, ", "))
 		}
 	}
-	if !hasSafeDefault {
+	if !hasDefault {
+		p.fail(statement, "%s: switch must have a default clause", model.Name)
+	} else if !hasSentinelDefault {
+		receiverText := p.enumExpressionText(receiver)
 		p.fail(statement,
-			"switch on %s.TgoTag needs a default path that cannot continue",
-			model.Name,
+			"%s: default must be exactly %q",
+			model.Name, "panic("+receiverText+".UnknownTag()) "+enumDefaultComment,
 		)
 	}
 }
 
 // enumTagCall resolves a generated tag call and its receiver model.
-func (p *packageUnit) enumTagCall(expression ast.Expr) (ast.Expr, *ast.SelectorExpr, *model) {
+//
+//nolint:cyclop // Each guard rejects one noncanonical form.
+func (p *packageUnit) enumTagCall(
+	expression ast.Expr,
+) (ast.Expr, *ast.SelectorExpr, *model, types.Type) {
+	for {
+		parenthesized, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expression = parenthesized.X
+	}
 	call, ok := expression.(*ast.CallExpr)
 	if !ok || len(call.Args) != 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	selector, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || selector.Sel.Name != "TgoTag" {
-		return nil, nil, nil
+	if !ok || selector.Sel.Name != "Tag" {
+		return nil, nil, nil, nil
 	}
 	selection := p.info.Selections[selector]
 	if selection == nil || !p.enumAccessor(selection, selector.Sel.Name) {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	function, ok := selection.Obj().(*types.Func)
 	if !ok {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Recv() == nil {
-		return nil, nil, nil
+	if !ok || signature.Recv() == nil || signature.Results().Len() != 1 {
+		return nil, nil, nil, nil
 	}
 	model := p.modelForType(dereference(signature.Recv().Type()))
 	if model == nil {
@@ -109,53 +129,231 @@ func (p *packageUnit) enumTagCall(expression ast.Expr) (ast.Expr, *ast.SelectorE
 		}
 	}
 	if model == nil || len(model.Variants) == 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
-	return selector.X, selector, model
+	return selector.X, selector, model, signature.Results().At(0).Type()
 }
 
 func (p *packageUnit) enumCaseTags(
 	clause *ast.CaseClause,
-	variants int,
+	model *model,
+	tagType types.Type,
 	seen map[int]bool,
-) map[int]bool {
+) (map[int]bool, bool) {
+	resolved := true
 	tags := make(map[int]bool)
 	for _, expression := range clause.List {
 		value := p.info.Types[expression].Value
-		if value == nil || value.Kind() != constant.Int {
-			p.fail(expression, "tgo enum tag case must be a constant integer")
+		if value == nil || value.Kind() != constant.Int ||
+			!p.enumTagExpression(expression, model, tagType) {
+			p.fail(expression, "%s: case label must be a tag constant", model.Name)
+			resolved = false
 			continue
 		}
 		tag64, exact := constant.Int64Val(value)
-		if !exact || tag64 < 1 || tag64 > int64(variants) {
-			p.fail(expression, "tgo enum tag case is outside the variant range")
+		if !exact || tag64 < 0 || tag64 > int64(len(model.Variants)) {
+			p.fail(expression, "%s: case label must be a tag constant", model.Name)
+			resolved = false
 			continue
 		}
 		tag := int(tag64)
 		if tags[tag] || seen[tag] {
-			p.fail(expression, "tgo enum tag %d occurs more than once", tag)
+			p.fail(expression, "%s occurs more than once", enumTagConstant(model, tag))
 			continue
 		}
 		tags[tag] = true
 	}
-	return tags
+	return tags, resolved
 }
 
-func (p *packageUnit) checkEnumCaseAccessors(
+func (p *packageUnit) enumExpressionText(expression ast.Expr) string {
+	var output bytes.Buffer
+	if format.Node(&output, p.fs, expression) != nil {
+		return "value"
+	}
+	return output.String()
+}
+
+func (p *packageUnit) enumTagExpression(
+	expression ast.Expr, model *model, tagType types.Type,
+) bool {
+	return p.enumTagExpressionSeen(expression, model, tagType, make(map[*types.Const]bool))
+}
+
+func (p *packageUnit) enumTagExpressionSeen(
+	expression ast.Expr,
+	model *model,
+	tagType types.Type,
+	seen map[*types.Const]bool,
+) bool {
+	for {
+		parenthesized, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expression = parenthesized.X
+	}
+	switch expression := expression.(type) {
+	case *ast.Ident:
+		constantObject, ok := p.info.Uses[expression].(*types.Const)
+		return ok && p.enumTagConstantExpression(constantObject, model, tagType, seen)
+	case *ast.SelectorExpr:
+		constantObject, ok := p.info.Uses[expression.Sel].(*types.Const)
+		return ok && p.enumTagConstantExpression(constantObject, model, tagType, seen)
+	case *ast.CallExpr:
+		return len(expression.Args) == 1 && p.info.Types[expression.Fun].IsType() &&
+			types.Identical(p.info.TypeOf(expression.Fun), tagType)
+	default:
+		return false
+	}
+}
+
+//nolint:cyclop,gocognit // The scan follows Go constant declarations and aliases.
+func (p *packageUnit) enumTagConstantExpression(
+	object *types.Const,
+	model *model,
+	tagType types.Type,
+	seen map[*types.Const]bool,
+) bool {
+	if !types.Identical(object.Type(), tagType) || seen[object] {
+		return false
+	}
+	named, ok := types.Unalias(tagType).(*types.Named)
+	if ok && named.Obj().Pkg() == object.Pkg() {
+		for tag := 0; tag <= len(model.Variants); tag++ {
+			if object.Name() == enumTagConstant(model, tag) {
+				return true
+			}
+		}
+	}
+	seen[object] = true
+	defer delete(seen, object)
+	for _, file := range p.Files {
+		for _, declaration := range file.Decls {
+			general, ok := declaration.(*ast.GenDecl)
+			if !ok || general.Tok != token.CONST {
+				continue
+			}
+			for _, specification := range general.Specs {
+				value := specification.(*ast.ValueSpec)
+				for index, name := range value.Names {
+					if p.info.Defs[name] != object || len(value.Values) == 0 {
+						continue
+					}
+					right := value.Values[len(value.Values)-1]
+					if index < len(value.Values) {
+						right = value.Values[index]
+					}
+					return p.enumTagExpressionSeen(right, model, tagType, seen)
+				}
+			}
+		}
+	}
+	return false
+}
+
+func enumTagConstant(model *model, tag int) string {
+	if tag == 0 {
+		return model.Name + "TagZero"
+	}
+	return model.Name + "Tag" + model.Variants[tag-1].Name
+}
+
+//nolint:cyclop,gocognit // Each guard checks one required sentinel token.
+func (p *packageUnit) enumDefaultSentinel(
 	clause *ast.CaseClause,
 	receiver ast.Expr,
 	model *model,
+) bool {
+	if len(clause.Body) != 1 {
+		return false
+	}
+	expression, ok := clause.Body[0].(*ast.ExprStmt)
+	if !ok {
+		return false
+	}
+	panicCall, ok := expression.X.(*ast.CallExpr)
+	if !ok || len(panicCall.Args) != 1 {
+		return false
+	}
+	panicName, ok := panicCall.Fun.(*ast.Ident)
+	if !ok || panicName.Name != "panic" {
+		return false
+	}
+	if _, ok := p.info.Uses[panicName].(*types.Builtin); !ok {
+		return false
+	}
+	unknownCall, ok := panicCall.Args[0].(*ast.CallExpr)
+	if !ok || len(unknownCall.Args) != 0 {
+		return false
+	}
+	selector, ok := unknownCall.Fun.(*ast.SelectorExpr)
+	if !ok || selector.Sel.Name != "UnknownTag" ||
+		!sameEnumReceiver(p.info, receiver, selector.X) {
+		return false
+	}
+	selection := p.info.Selections[selector]
+	if selection == nil {
+		return false
+	}
+	function, ok := selection.Obj().(*types.Func)
+	if !ok || function.Name() != "UnknownTag" {
+		return false
+	}
+	signature, ok := function.Type().(*types.Signature)
+	if !ok || signature.Recv() == nil {
+		return false
+	}
+	unknownModel := p.modelForType(dereference(signature.Recv().Type()))
+	if unknownModel == nil {
+		if parameter, ok := types.Unalias(p.info.TypeOf(selector.X)).(*types.TypeParam); ok {
+			unknownModel = p.enumTypeParameterModel(parameter)
+		}
+	}
+	if unknownModel != model {
+		return false
+	}
+	expressionPosition := p.fs.Position(expression.End())
+	for _, file := range p.Files {
+		for _, group := range file.Comments {
+			for _, comment := range group.List {
+				commentPosition := p.fs.Position(comment.Slash)
+				if comment.Text == enumDefaultComment &&
+					commentPosition.Filename == expressionPosition.Filename &&
+					commentPosition.Line == expressionPosition.Line &&
+					comment.Slash > expression.End() {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+//nolint:cyclop,gocognit // The walk enforces each canonical switch boundary.
+func (p *packageUnit) checkEnumCaseAccessors(
+	clause *ast.CaseClause,
+	tagSwitch *ast.SwitchStmt,
+	receiver ast.Expr,
+	model *model,
 	tags map[int]bool,
-	incomingFallthrough bool,
 	parents map[ast.Node]ast.Node,
 	safe map[*ast.SelectorExpr]bool,
 	handled map[*ast.SelectorExpr]bool,
 ) {
+	if enumClauseAssignsReceiver(p.info, clause, receiver) {
+		return
+	}
 	for _, statement := range clause.Body {
 		ast.Inspect(statement, func(node ast.Node) bool {
-			switch node.(type) {
-			case *ast.FuncLit, *ast.GoStmt, *ast.DeferStmt:
+			if _, nested := node.(*ast.FuncLit); nested {
 				return false
+			}
+			if nested, ok := node.(*ast.SwitchStmt); ok && nested != tagSwitch {
+				nestedReceiver, _, nestedModel, _ := p.enumTagCall(nested.Tag)
+				if nestedModel == model && sameEnumReceiver(p.info, receiver, nestedReceiver) {
+					return false
+				}
 			}
 			selector, ok := node.(*ast.SelectorExpr)
 			if !ok || !sameEnumReceiver(p.info, receiver, selector.X) {
@@ -165,28 +363,23 @@ func (p *packageUnit) checkEnumCaseAccessors(
 			if tag == 0 {
 				return true
 			}
+			call, direct := parents[selector].(*ast.CallExpr)
+			if !direct || call.Fun != selector {
+				return true
+			}
 			handled[selector] = true
-			if p.enumReceiverUnsafe(receiver, selector, parents) {
-				p.fail(selector, "%s.%s needs an unaliased local value receiver",
-					model.Name, selector.Sel.Name)
-				return true
-			}
-			if enumReceiverChangedBefore(p.info, clause.Body, receiver, selector.Pos()) {
-				p.fail(selector, "%s.%s receiver changed after its TgoTag read",
-					model.Name, selector.Sel.Name)
-				return true
-			}
-			if incomingFallthrough {
-				p.fail(selector, "%s.%s can run after fallthrough from another tag",
-					model.Name, selector.Sel.Name)
-				return true
-			}
 			if len(tags) == 1 && tags[tag] {
 				safe[selector] = true
 				return true
 			}
-			p.fail(selector, "%s.%s access does not match its TgoTag case %d",
-				model.Name, selector.Sel.Name, tag)
+			caseName := "a multi-tag case"
+			if len(tags) == 1 {
+				for active := range tags {
+					caseName = "case " + enumTagConstant(model, active)
+				}
+			}
+			p.fail(selector, "%s: %s called under %s",
+				model.Name, selector.Sel.Name, caseName)
 			return true
 		})
 	}
@@ -194,7 +387,7 @@ func (p *packageUnit) checkEnumCaseAccessors(
 
 func enumVariantTag(model *model, method string) int {
 	for index, variant := range model.Variants {
-		if method == "Tgo"+variant.Name {
+		if method == variant.Name+"Payload" {
 			return index + 1
 		}
 	}
@@ -223,194 +416,39 @@ func enumClauseFallthrough(clause *ast.CaseClause) *ast.BranchStmt {
 	return nil
 }
 
-func (p *packageUnit) enumStatementsTerminate(
-	statements []ast.Stmt,
-	parents map[ast.Node]ast.Node,
+func enumClauseAssignsReceiver(
+	info *types.Info,
+	clause *ast.CaseClause,
+	receiver ast.Expr,
 ) bool {
-	if len(statements) == 0 || p.enumHasEscapingBranch(statements, parents) {
-		return false
-	}
-	sentinel := &ast.ExprStmt{X: ast.NewIdent("__tgo_reached")}
-	body := &ast.BlockStmt{List: append(append([]ast.Stmt(nil), statements...), sentinel)}
-	graph := cfg.New(body, func(call *ast.CallExpr) bool {
-		name, ok := call.Fun.(*ast.Ident)
-		if !ok || name.Name != "panic" {
-			return true
-		}
-		_, builtin := p.info.Uses[name].(*types.Builtin)
-		return !builtin
-	})
-	for _, block := range graph.Blocks {
-		if !block.Live {
-			continue
-		}
-		for _, node := range block.Nodes {
-			if node == sentinel {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-func (p *packageUnit) enumHasEscapingBranch(
-	statements []ast.Stmt,
-	parents map[ast.Node]ast.Node,
-) bool {
-	roots := make(map[ast.Node]bool, len(statements))
-	labels := make(map[types.Object]bool)
-	for _, statement := range statements {
-		roots[statement] = true
-		ast.Inspect(statement, func(node ast.Node) bool {
-			if _, nested := node.(*ast.FuncLit); nested {
-				return false
-			}
-			label, ok := node.(*ast.LabeledStmt)
-			if ok {
-				labels[p.info.Defs[label.Label]] = true
-			}
-			return true
-		})
-	}
-	for _, statement := range statements {
-		escapes := false
-		ast.Inspect(statement, func(node ast.Node) bool {
-			if escapes {
-				return false
-			}
-			if _, nested := node.(*ast.FuncLit); nested {
-				return false
-			}
-			branch, ok := node.(*ast.BranchStmt)
-			if !ok {
-				return true
-			}
-			escapes = p.enumBranchEscapes(branch, roots, labels, parents)
-			return !escapes
-		})
-		if escapes {
-			return true
-		}
-	}
-	return false
-}
-
-func (p *packageUnit) enumBranchEscapes(
-	branch *ast.BranchStmt,
-	roots map[ast.Node]bool,
-	labels map[types.Object]bool,
-	parents map[ast.Node]ast.Node,
-) bool {
-	if branch.Tok == token.RETURN {
-		return false
-	}
-	if branch.Label != nil {
-		return !labels[p.info.Uses[branch.Label]]
-	}
-	if branch.Tok != token.BREAK && branch.Tok != token.CONTINUE {
-		return true
-	}
-	if roots[branch] {
-		return true
-	}
-	for node := parents[branch]; node != nil; node = parents[node] {
-		if enumBranchTarget(node, branch.Tok) {
+	assigned := false
+	ast.Inspect(clause, func(node ast.Node) bool {
+		if node == nil || assigned {
 			return false
 		}
-		if roots[node] {
-			return true
+		if _, nested := node.(*ast.FuncLit); nested {
+			return false
 		}
-	}
-	return false
-}
-
-func enumBranchTarget(node ast.Node, branch token.Token) bool {
-	switch node.(type) {
-	case *ast.ForStmt, *ast.RangeStmt:
-		return true
-	case *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
-		return branch == token.BREAK
-	default:
-		return false
-	}
-}
-
-func (p *packageUnit) enumReceiverUnsafe(
-	receiver ast.Expr,
-	accessor *ast.SelectorExpr,
-	parents map[ast.Node]ast.Node,
-) bool {
-	root, _, ok := enumReceiverPath(p.info, receiver)
-	variable, variableOK := root.(*types.Var)
-	if !ok || !variableOK || variable.IsField() || variable.Parent() == p.typed.Scope() ||
-		p.enumTypeMayBePointer(variable.Type()) {
-		return true
-	}
-	selection := p.info.Selections[accessor]
-	if selection != nil && selection.Indirect() {
-		return true
-	}
-	var function ast.Node = accessor
-	for parents[function] != nil {
-		function = parents[function]
-		switch function.(type) {
-		case *ast.FuncDecl, *ast.FuncLit:
-			if variable.Pos() < function.Pos() || variable.Pos() > function.End() {
-				return true
+		switch node := node.(type) {
+		case *ast.AssignStmt:
+			for _, target := range node.Lhs {
+				if enumReceiverWrite(info, target, receiver) {
+					assigned = true
+					return false
+				}
 			}
-			if enumReceiverChangesInCycle(p.info, receiver, accessor, function, parents) ||
-				enumReceiverChangesThroughGoto(p.info, receiver, accessor, function, parents) {
-				return true
-			}
-			return enumReceiverCanChangeBefore(p.info, function, receiver, accessor.Pos())
+		case *ast.IncDecStmt:
+			assigned = enumReceiverWrite(info, node.X, receiver)
+		case *ast.RangeStmt:
+			assigned = enumReceiverWrite(info, node.Key, receiver) ||
+				enumReceiverWrite(info, node.Value, receiver)
 		}
-	}
-	return true
+		return !assigned
+	})
+	return assigned
 }
 
-// enumTagReceiverUnsafe rejects receivers that cannot keep one stable tag proof.
-func (p *packageUnit) enumTagReceiverUnsafe(
-	receiver ast.Expr,
-	selector *ast.SelectorExpr,
-	parents map[ast.Node]ast.Node,
-) bool {
-	root, _, ok := enumReceiverPath(p.info, receiver)
-	variable, variableOK := root.(*types.Var)
-	if !ok || !variableOK || variable.IsField() || variable.Parent() == p.typed.Scope() ||
-		p.enumTypeMayBePointer(variable.Type()) {
-		return true
-	}
-	selection := p.info.Selections[selector]
-	if selection != nil && selection.Indirect() {
-		return true
-	}
-	var function ast.Node = selector
-	for parents[function] != nil {
-		function = parents[function]
-		switch function.(type) {
-		case *ast.FuncDecl, *ast.FuncLit:
-			if variable.Pos() < function.Pos() || variable.Pos() > function.End() {
-				return true
-			}
-			return enumReceiverCanChangeBefore(p.info, function, receiver, selector.Pos())
-		}
-	}
-	return true
-}
-
-func (p *packageUnit) enumTypeMayBePointer(typ types.Type) bool {
-	typ = types.Unalias(typ)
-	if _, pointer := typ.(*types.Pointer); pointer {
-		return true
-	}
-	parameter, ok := typ.(*types.TypeParam)
-	if !ok {
-		return false
-	}
-	return p.enumTypeParameterModel(parameter) == nil
-}
-
-// enumTypeParameterModel gets one exact non-pointer enum constraint.
+// enumTypeParameterModel gets one exact enum constraint.
 func (p *packageUnit) enumTypeParameterModel(parameter *types.TypeParam) *model {
 	return p.enumConstraintModel(parameter.Constraint(), make(map[types.Type]bool))
 }
@@ -442,205 +480,6 @@ func (p *packageUnit) enumConstraintModel(
 		}
 	}
 	return nil
-}
-
-func enumReceiverChangesThroughGoto(
-	info *types.Info,
-	receiver ast.Expr,
-	accessor *ast.SelectorExpr,
-	function ast.Node,
-	parents map[ast.Node]ast.Node,
-) bool {
-	var clause *ast.CaseClause
-	for node := parents[accessor]; node != nil && node != function; node = parents[node] {
-		if current, ok := node.(*ast.CaseClause); ok {
-			clause = current
-			break
-		}
-	}
-	if clause == nil || !enumReceiverCanChangeIn(info, clause, receiver) {
-		return false
-	}
-	backward := false
-	ast.Inspect(clause, func(node ast.Node) bool {
-		branch, ok := node.(*ast.BranchStmt)
-		if !ok || branch.Tok != token.GOTO || branch.Label == nil {
-			return !backward
-		}
-		target := info.Uses[branch.Label]
-		backward = target != nil && target.Pos() <= accessor.Pos() && branch.Pos() > accessor.Pos()
-		return !backward
-	})
-	return backward
-}
-
-func enumReceiverChangesInCycle(
-	info *types.Info,
-	receiver ast.Expr,
-	accessor *ast.SelectorExpr,
-	function ast.Node,
-	parents map[ast.Node]ast.Node,
-) bool {
-	for node := parents[accessor]; node != nil && node != function; node = parents[node] {
-		if _, clause := node.(*ast.CaseClause); clause {
-			return false
-		}
-		switch node := node.(type) {
-		case *ast.ForStmt:
-			if enumReceiverCanChangeIn(info, node, receiver) {
-				return true
-			}
-		case *ast.RangeStmt:
-			if enumReceiverCanChangeIn(info, node, receiver) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func enumReceiverCanChangeIn(info *types.Info, scope ast.Node, receiver ast.Expr) bool {
-	root, _, ok := enumReceiverPath(info, receiver)
-	if !ok {
-		return true
-	}
-	unsafe := false
-	ast.Inspect(scope, func(node ast.Node) bool {
-		if node == nil || unsafe {
-			return false
-		}
-		if literal, ok := node.(*ast.FuncLit); ok {
-			unsafe = enumCapturesObject(info, literal.Body, root)
-			return false
-		}
-		switch node := node.(type) {
-		case *ast.AssignStmt:
-			for _, left := range node.Lhs {
-				if enumReceiverWrite(info, left, receiver) {
-					unsafe = true
-					return false
-				}
-			}
-		case *ast.IncDecStmt:
-			unsafe = enumReceiverWrite(info, node.X, receiver)
-		case *ast.RangeStmt:
-			unsafe = enumReceiverWrite(info, node.Key, receiver) ||
-				enumReceiverWrite(info, node.Value, receiver)
-		case *ast.UnaryExpr:
-			unsafe = node.Op == token.AND && enumReceiverWrite(info, node.X, receiver)
-		case *ast.CallExpr:
-			unsafe = enumPointerMethodCall(info, node, receiver)
-		}
-		return !unsafe
-	})
-	return unsafe
-}
-
-func enumReceiverCanChangeBefore(
-	info *types.Info,
-	function ast.Node,
-	receiver ast.Expr,
-	before token.Pos,
-) bool {
-	root, _, ok := enumReceiverPath(info, receiver)
-	if !ok {
-		return true
-	}
-	unsafe := false
-	ast.Inspect(function, func(node ast.Node) bool {
-		if node == nil || node.Pos() >= before || unsafe {
-			return false
-		}
-		literal, nested := node.(*ast.FuncLit)
-		if nested && literal != function {
-			unsafe = enumCapturesObject(info, literal.Body, root)
-			return false
-		}
-		unary, ok := node.(*ast.UnaryExpr)
-		if ok && unary.Op == token.AND && enumReceiverWrite(info, unary.X, receiver) {
-			unsafe = true
-			return false
-		}
-		call, ok := node.(*ast.CallExpr)
-		if ok && enumPointerMethodCall(info, call, receiver) {
-			unsafe = true
-			return false
-		}
-		return true
-	})
-	return unsafe
-}
-
-func enumCapturesObject(info *types.Info, body *ast.BlockStmt, object types.Object) bool {
-	captured := false
-	ast.Inspect(body, func(node ast.Node) bool {
-		if captured {
-			return false
-		}
-		name, ok := node.(*ast.Ident)
-		if ok && info.Uses[name] == object {
-			captured = true
-		}
-		return !captured
-	})
-	return captured
-}
-
-func enumPointerMethodCall(info *types.Info, call *ast.CallExpr, receiver ast.Expr) bool {
-	selector, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || !enumReceiverWrite(info, selector.X, receiver) {
-		return false
-	}
-	selection := info.Selections[selector]
-	if selection == nil || selection.Kind() != types.MethodVal {
-		return false
-	}
-	function, ok := selection.Obj().(*types.Func)
-	if !ok {
-		return false
-	}
-	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Recv() == nil {
-		return false
-	}
-	_, pointer := types.Unalias(signature.Recv().Type()).(*types.Pointer)
-	return pointer
-}
-
-func enumReceiverChangedBefore(
-	info *types.Info,
-	statements []ast.Stmt,
-	receiver ast.Expr,
-	before token.Pos,
-) bool {
-	changed := false
-	for _, statement := range statements {
-		ast.Inspect(statement, func(node ast.Node) bool {
-			if node == nil || node.Pos() >= before || changed {
-				return false
-			}
-			switch node.(type) {
-			case *ast.FuncLit, *ast.GoStmt, *ast.DeferStmt:
-				return false
-			}
-			switch node := node.(type) {
-			case *ast.AssignStmt:
-				for _, left := range node.Lhs {
-					if enumReceiverWrite(info, left, receiver) {
-						changed = true
-						return false
-					}
-				}
-			case *ast.IncDecStmt:
-				changed = enumReceiverWrite(info, node.X, receiver)
-			}
-			return !changed
-		})
-		if changed {
-			return true
-		}
-	}
-	return false
 }
 
 func enumReceiverWrite(info *types.Info, target, receiver ast.Expr) bool {

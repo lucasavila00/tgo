@@ -23,7 +23,7 @@ func (p *packageUnit) zero(t types.Type, seen map[types.Type]bool) bool {
 		return true
 	}
 	seen[t] = true
-	if model := p.modelForType(t); model != nil && model.requiresConstructor() {
+	if model := p.modelForType(t); model != nil && model.Predicate != "" {
 		return false
 	}
 	switch x := t.(type) {
@@ -276,17 +276,10 @@ func (p *packageUnit) checkSelector(
 	}
 	if model := p.representationModel(selection); model != nil {
 		p.fail(selector,
-			"%s representation is private; use constructors and a checked TgoTag switch",
+			"%s representation is private; use payload constructors and a checked Tag switch",
 			model.Name,
 		)
 		return
-	}
-	if p.enumAccessor(selection, selector.Sel.Name) {
-		if selector.Sel.Name == "TgoTag" {
-			p.fail(selector, "TgoTag must be the tag of an exhaustive switch")
-		} else {
-			p.fail(selector, "enum payload access requires its matching TgoTag case")
-		}
 	}
 }
 
@@ -373,10 +366,13 @@ func (p *packageUnit) enumAccessor(selection *types.Selection, name string) bool
 	}
 	receiver := dereference(signature.Recv().Type())
 	if model := p.modelForType(receiver); model != nil {
-		return generatedEnumMethod(model.Name, name, model)
+		if name == "Tag" {
+			return true
+		}
+		return enumVariantTag(model, name) != 0
 	}
 	_, dynamic := receiver.Underlying().(*types.Interface)
-	return dynamic && strings.HasPrefix(name, "Tgo")
+	return dynamic && (name == "Tag" || strings.HasSuffix(name, "Payload"))
 }
 
 // dereference removes aliases and one or more pointer layers.

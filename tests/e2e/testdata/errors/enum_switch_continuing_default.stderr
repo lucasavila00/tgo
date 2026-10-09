@@ -1,1 +1,1 @@
-<WORK>/input.tgo:9:2: switch on Account.TgoTag needs a default path that cannot continue
+<WORK>/input.tgo:9:2: Account: default must be exactly "panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag"

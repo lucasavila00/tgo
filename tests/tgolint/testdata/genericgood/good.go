@@ -20,9 +20,10 @@ type eventChoices interface {
 type events interface {
 	eventChoices
 	model.Event
-	TgoTag() uint8
-	TgoStarted() model.EventStarted
-	TgoStopped() model.EventStopped
+	Tag() model.EventTag
+	UnknownTag() string
+	StartedPayload() model.EventStarted
+	StoppedPayload() model.EventStopped
 }
 
 func EmptyCounts[S countSlices]() S {
@@ -30,12 +31,14 @@ func EmptyCounts[S countSlices]() S {
 }
 
 func Describe[E events](event E) string {
-	switch event.TgoTag() {
-	case 1:
-		return event.TgoStarted().ID
-	case 2:
-		return event.TgoStopped().Reason
+	switch event.Tag() {
+	case model.EventTagZero:
+		panic("zero Event")
+	case model.EventTagStarted:
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
 	default:
-		panic("invalid Event variant")
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }

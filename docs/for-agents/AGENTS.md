@@ -25,18 +25,21 @@ func NewBusiness(company string) Account {
 }
 ```
 
-Use a checked `switch value.TgoTag()` to read the active payload. Cover every numeric tag.
-Add a default that returns or panics. Read a payload only in its single-tag case.
-Do not use `fallthrough` or select `Tgo*` methods through interfaces.
+Use a checked `switch value.Tag()` to read the active payload. Cover `Zero` and every declared
+variant with generated tag constants. Read a payload only in its single-tag case.
+Use the exact generated `UnknownTag` panic in the default. Do not use `fallthrough` or select
+generated enum methods through interfaces.
 Type aliases can construct variants. Go name resolution selects the aliased type.
 Do not shadow generated payload, constructor, or default helper names at a construction.
 
 ```text
 func Label(account Account) string {
-    switch account.TgoTag() {
-    case 1: return account.TgoPersonal().Name
-    case 2: return account.TgoBusiness().Company
-    default: panic("invalid Account variant")
+    switch account.Tag() {
+    case AccountTagZero: return "missing"
+    case AccountTagPersonal: return account.PersonalPayload().Name
+    case AccountTagBusiness: return account.BusinessPayload().Company
+    default:
+        panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 ```
@@ -98,8 +101,8 @@ Struct copies share reference data. Do not assume a deep copy.
 
 ## Collections
 
-Start enum and checked-value slices with length zero. Append constructed values.
-Do not zero-fill or clear their elements. Supply every index in array and slice literals.
+Start checked-value slices with length zero. Append constructed values.
+Do not zero-fill or clear checked values. Supply every index in array and slice literals.
 
 ```text
 func Accounts(name string) []Account {
@@ -136,7 +139,7 @@ quantity, err := model.NewQuantity(3)
 if err != nil {
     return err
 }
-account := model.NewAccountPersonal(model.AccountPersonal{Name: "Lucas"})
+account := model.AccountPersonal{Name: "Lucas"}.Account()
 ```
 
 Test constructor success and failure, every tag branch, and shared collection changes.

@@ -7,12 +7,14 @@ type Result enum {
 
 func use(value Result) {
 	panic := func(any) {}
-	switch value.TgoTag() {
-	case 1:
+	switch value.Tag() {
+	case ResultTagZero:
+		panic("zero Result")
+	case ResultTagSuccess:
 		return
-	case 2:
+	case ResultTagFailure:
 		return
 	default:
-		panic("invalid Result variant")
+		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }

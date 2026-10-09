@@ -16,9 +16,10 @@ type AccountAlias = Account
 
 type Accounts interface {
     Account
-    TgoTag() uint8
-    TgoPersonal() AccountPersonal
-    TgoBusiness() AccountBusiness
+    Tag() AccountTag
+    UnknownTag() string
+    PersonalPayload() AccountPersonal
+    BusinessPayload() AccountBusiness
 }
 
 type CounterRecord (struct {
@@ -97,39 +98,45 @@ func Business(company string, members []Account, tags map[string]string) Account
 }
 
 func Label(account Account) string {
-    switch enumValue3 := account; enumValue3.TgoTag() {
-    case 1:
-        person := enumValue3.TgoPersonal()
+    switch enumValue3 := account; enumValue3.Tag() {
+    case AccountTagZero:
+	panic("zero Account")
+    case AccountTagPersonal:
+        person := enumValue3.PersonalPayload()
         return person.Name
-    case 2:
-        company := enumValue3.TgoBusiness()
+    case AccountTagBusiness:
+        company := enumValue3.BusinessPayload()
         return company.Company
     default:
-        panic("invalid Account variant")
+        panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 
 func AliasLabel(account AccountAlias) string {
-    switch enumValue4 := account; enumValue4.TgoTag() {
-    case 1:
-        person := enumValue4.TgoPersonal()
+    switch enumValue4 := account; enumValue4.Tag() {
+    case AccountTagZero:
+	panic("zero Account")
+    case AccountTagPersonal:
+        person := enumValue4.PersonalPayload()
         return person.Name
-    case 2:
-        company := enumValue4.TgoBusiness()
+    case AccountTagBusiness:
+        company := enumValue4.BusinessPayload()
         return company.Company
     default:
-        panic("invalid Account variant")
+        panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 
 func GenericLabel[T Accounts](account T) string {
-    switch account.TgoTag() {
-    case 1:
-        return account.TgoPersonal().Name
-    case 2:
-        return account.TgoBusiness().Company
+    switch account.Tag() {
+    case AccountTagZero:
+	panic("zero Account")
+    case AccountTagPersonal:
+        return account.PersonalPayload().Name
+    case AccountTagBusiness:
+        return account.BusinessPayload().Company
     default:
-        panic("invalid Account variant")
+        panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 
@@ -184,57 +191,67 @@ match:
 }
 
 func FunctionTagSubject(account Account) string {
-    switch enumValue6 := func() Account { return account }(); enumValue6.TgoTag() {
-    case 1:
-        person := enumValue6.TgoPersonal()
+    switch enumValue6 := func() Account { return account }(); enumValue6.Tag() {
+    case AccountTagZero:
+        panic("zero Account")
+    case AccountTagPersonal:
+        person := enumValue6.PersonalPayload()
         return person.Name
-    case 2:
-        business := enumValue6.TgoBusiness()
+    case AccountTagBusiness:
+        business := enumValue6.BusinessPayload()
         return business.Company
     default:
-        panic("invalid Account variant")
+        panic(enumValue6.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 
 func LiteralTagSubject(name string) string {
-    switch enumValue7 := (Account.Personal{Name: name}); enumValue7.TgoTag() {
-    case 1:
-        person := enumValue7.TgoPersonal()
+    switch enumValue7 := (Account.Personal{Name: name}); enumValue7.Tag() {
+    case AccountTagZero:
+        panic("zero Account")
+    case AccountTagPersonal:
+        person := enumValue7.PersonalPayload()
         return person.Name
-    case 2:
-        business := enumValue7.TgoBusiness()
+    case AccountTagBusiness:
+        business := enumValue7.BusinessPayload()
         return business.Company
     default:
-        panic("invalid Account variant")
+        panic(enumValue7.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 
 func SignalName(signal Signal) string {
-    switch enumValue8 := signal; enumValue8.TgoTag() {
-    case 1:
+    switch enumValue8 := signal; enumValue8.Tag() {
+    case SignalTagZero:
+	panic("zero Signal")
+    case SignalTagOn:
         return "on"
-    case 2:
+    case SignalTagOff:
         return "off"
     default:
-        panic("invalid Signal variant")
+        panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 
 func SignalState(signal Signal) string {
-    switch signal.TgoTag() {
-    case 1, 2:
+    switch signal.Tag() {
+    case SignalTagZero:
+	panic("zero Signal")
+    case SignalTagOn, SignalTagOff:
         return "known"
     default:
-        panic("invalid Signal variant")
+        panic(signal.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 
 func SignalStateOrInvalid(signal Signal) string {
-    switch signal.TgoTag() {
-    case 1, 2:
+    switch signal.Tag() {
+    case SignalTagZero:
+        return "invalid"
+    case SignalTagOn, SignalTagOff:
         return "known"
     default:
-        return "invalid"
+        panic(signal.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 
@@ -256,24 +273,28 @@ func AliasAccount(name string) Account {
 
 func LabeledTagSwitch(account Account) string {
 Done:
-    switch enumValue9 := account; enumValue9.TgoTag() {
-    case 1:
+    switch enumValue9 := account; enumValue9.Tag() {
+    case AccountTagZero:
+	panic("zero Account")
+    case AccountTagPersonal:
         break Done
-    case 2:
+    case AccountTagBusiness:
         break Done
     default:
-        panic("invalid Account variant")
+        panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
     return "done"
 }
 
 func NoticeLabels(notice Notice) map[string]string {
-    switch enumValue10 := notice; enumValue10.TgoTag() {
-    case 1:
-        text := enumValue10.TgoText()
+    switch enumValue10 := notice; enumValue10.Tag() {
+    case NoticeTagZero:
+	panic("zero Notice")
+    case NoticeTagText:
+        text := enumValue10.TextPayload()
         return text.Labels
     default:
-        panic("invalid Notice variant")
+        panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 

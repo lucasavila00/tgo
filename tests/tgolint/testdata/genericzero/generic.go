@@ -205,23 +205,24 @@ func OmittedSlice[T any](value T) []T {
 }
 
 type eventLike interface {
-	TgoTag() uint8
-	TgoStarted() model.EventStarted
+	Tag() model.EventTag
+	UnknownTag() string
+	StartedPayload() model.EventStarted
 }
 
 type Reader[T eventLike] struct{}
 
 func (Reader[T]) Started(event T) string {
-	return event.TgoStarted().ID
+	return event.StartedPayload().ID
 }
 
 func Started[T eventLike](event T) string {
-	return event.TgoStarted().ID
+	return event.StartedPayload().ID
 }
 
 func MaybeStarted[T eventLike](enabled bool, event T) string {
 	if enabled {
-		return event.TgoStarted().ID
+		return event.StartedPayload().ID
 	}
 	return ""
 }
@@ -230,7 +231,7 @@ func UnlessStarted[T eventLike](skip bool, event T) string {
 	if skip {
 		return ""
 	}
-	return event.TgoStarted().ID
+	return event.StartedPayload().ID
 }
 
 func EmptySlice[T any]() []T {

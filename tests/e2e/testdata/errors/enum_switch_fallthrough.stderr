@@ -1,1 +1,1 @@
-<WORK>/input.tgo:11:3: TgoTag switch cases cannot fall through
+<WORK>/input.tgo:13:3: Account: fallthrough is not allowed in a tag switch

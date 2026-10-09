@@ -6,12 +6,14 @@ type Account enum {
 }
 
 func label(account Account) string {
-	switch account.TgoTag() {
-	case 1:
+	switch account.Tag() {
+	case AccountTagZero:
+		panic("zero Account")
+	case AccountTagPersonal:
 		fallthrough
-	case 2:
-		return account.TgoBusiness().Company
+	case AccountTagBusiness:
+		return account.BusinessPayload().Company
 	default:
-		panic("invalid Account variant")
+		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }

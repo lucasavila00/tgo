@@ -52,17 +52,19 @@ type Account enum {
 }
 
 func Label(account Account) string {
-    switch account.TgoTag() {
-    case 1: return account.TgoPersonal().Name
-    case 2: return account.TgoBusiness().Company
-    default: panic("invalid Account variant")
+    switch account.Tag() {
+    case AccountTagZero: return "missing"
+    case AccountTagPersonal: return account.PersonalPayload().Name
+    case AccountTagBusiness: return account.BusinessPayload().Company
+    default:
+        panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
     }
 }
 ```
 
-Construct with `Account.Personal{Name: "Lucas"}`. Cover each numeric tag in a tag switch.
-Add a default that returns or panics. Duplicate or missing cases fail compilation.
-Do not use `fallthrough` or select `Tgo*` methods through an interface.
+Construct with `Account.Personal{Name: "Lucas"}`. Cover `Zero` and each declared variant with
+generated tag constants. Use the exact `UnknownTag` panic in the default. Duplicate or missing
+cases fail compilation. Do not use `fallthrough` or select generated enum methods through an interface.
 Type aliases can construct variants. Go name resolution selects the aliased type.
 Do not shadow generated payload, constructor, or default helper names at a construction.
 The value uses a tag and typed Go fields. Reads do not run validation.
@@ -105,7 +107,7 @@ Import Go packages and call them directly. Keep their types, callbacks, and erro
 Go code can call generated functions. Variant constructors use these names:
 
 ```go
-account := model.NewAccountPersonal(model.AccountPersonal{Name: "Lucas"})
+account := model.AccountPersonal{Name: "Lucas"}.Account()
 quantity, err := model.NewQuantity(3)
 ```
 

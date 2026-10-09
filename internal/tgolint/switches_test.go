@@ -12,9 +12,13 @@ import (
 func TestCaseTagsRejectsRepeatedTags(t *testing.T) {
 	first := ast.NewIdent("first")
 	second := ast.NewIdent("second")
+	tagType := testTagType()
 	info := &types.Info{Types: map[ast.Expr]types.TypeAndValue{
 		first:  {Value: constant.MakeInt64(1)},
 		second: {Value: constant.MakeInt64(1)},
+	}, Uses: map[*ast.Ident]types.Object{
+		first:  types.NewConst(0, nil, "AccountTagPersonal", tagType, constant.MakeInt64(1)),
+		second: types.NewConst(0, nil, "AccountTagPersonal", tagType, constant.MakeInt64(1)),
 	}}
 	reports := 0
 	c := &checker{pass: &analysis.Pass{
@@ -23,7 +27,7 @@ func TestCaseTagsRejectsRepeatedTags(t *testing.T) {
 	}}
 	clause := &ast.CaseClause{List: []ast.Expr{first, second}}
 
-	tags := c.caseTags(clause, 2, map[int]bool{})
+	tags, _ := c.caseTags(clause, testTagModel(), tagType, map[int]bool{})
 
 	if !tags[1] || len(tags) != 1 || reports != 1 {
 		t.Fatalf("tags=%v reports=%d", tags, reports)
@@ -32,8 +36,11 @@ func TestCaseTagsRejectsRepeatedTags(t *testing.T) {
 
 func TestCaseTagsRejectsTagFromEarlierCase(t *testing.T) {
 	expression := ast.NewIdent("repeated")
+	tagType := testTagType()
 	info := &types.Info{Types: map[ast.Expr]types.TypeAndValue{
 		expression: {Value: constant.MakeInt64(1)},
+	}, Uses: map[*ast.Ident]types.Object{
+		expression: types.NewConst(0, nil, "AccountTagPersonal", tagType, constant.MakeInt64(1)),
 	}}
 	reports := 0
 	c := &checker{pass: &analysis.Pass{
@@ -42,9 +49,17 @@ func TestCaseTagsRejectsTagFromEarlierCase(t *testing.T) {
 	}}
 	clause := &ast.CaseClause{List: []ast.Expr{expression}}
 
-	tags := c.caseTags(clause, 2, map[int]bool{1: true})
+	tags, _ := c.caseTags(clause, testTagModel(), tagType, map[int]bool{1: true})
 
 	if len(tags) != 0 || reports != 1 {
 		t.Fatalf("tags=%v reports=%d", tags, reports)
 	}
+}
+
+func testTagType() types.Type {
+	return types.NewNamed(types.NewTypeName(0, nil, "AccountTag", nil), types.Typ[types.Uint8], nil)
+}
+
+func testTagModel() *model {
+	return enumModel("", "Account", []string{"Personal", "Business"})
 }

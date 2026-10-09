@@ -22,54 +22,62 @@ func nonNilValue() nilValue { return nilValue.NonNil{} }
 func provenNilValue() nilValue { return nilValue.Nil{} }
 
 func isUnknownNilValue(value nilValue) bool {
-	switch enumValue21 := value; enumValue21.TgoTag() {
-	case 1:
+	switch enumValue21 := value; enumValue21.Tag() {
+	case nilValueTagZero:
+		panic("zero nilValue")
+	case nilValueTagUnknown:
 		return true
-	case 2:
+	case nilValueTagNonNil:
 		return false
-	case 3:
+	case nilValueTagNil:
 		return false
 	default:
-		panic("invalid nilValue variant")
+		panic(enumValue21.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func isNonNilValue(value nilValue) bool {
-	switch enumValue22 := value; enumValue22.TgoTag() {
-	case 1:
+	switch enumValue22 := value; enumValue22.Tag() {
+	case nilValueTagZero:
+		panic("zero nilValue")
+	case nilValueTagUnknown:
 		return false
-	case 2:
+	case nilValueTagNonNil:
 		return true
-	case 3:
+	case nilValueTagNil:
 		return false
 	default:
-		panic("invalid nilValue variant")
+		panic(enumValue22.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func isProvenNilValue(value nilValue) bool {
-	switch enumValue23 := value; enumValue23.TgoTag() {
-	case 1:
+	switch enumValue23 := value; enumValue23.Tag() {
+	case nilValueTagZero:
+		panic("zero nilValue")
+	case nilValueTagUnknown:
 		return false
-	case 2:
+	case nilValueTagNonNil:
 		return false
-	case 3:
+	case nilValueTagNil:
 		return true
 	default:
-		panic("invalid nilValue variant")
+		panic(enumValue23.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func equalNilValue(left nilValue, right nilValue) bool {
-	switch enumValue24 := left; enumValue24.TgoTag() {
-	case 1:
+	switch enumValue24 := left; enumValue24.Tag() {
+	case nilValueTagZero:
+		panic("zero nilValue")
+	case nilValueTagUnknown:
 		return isUnknownNilValue(right)
-	case 2:
+	case nilValueTagNonNil:
 		return isNonNilValue(right)
-	case 3:
+	case nilValueTagNil:
 		return isProvenNilValue(right)
 	default:
-		panic("invalid nilValue variant")
+		panic(enumValue24.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

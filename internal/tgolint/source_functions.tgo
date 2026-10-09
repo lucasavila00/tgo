@@ -28,117 +28,123 @@ func sourceFunctionPosition(node *syntax.Node) (token.Pos, bool) {
 	if node == nil {
 		return token.NoPos, false
 	}
-	switch enumValue35 := *node; enumValue35.TgoTag() {
-	case 2:
-		value := enumValue35.TgoDeclaration()
+	switch enumValue35 := *node; enumValue35.Tag() {
+	case syntax.NodeTagZero:
+		panic("zero Node")
+	case syntax.NodeTagDeclaration:
+		value := enumValue35.DeclarationPayload()
 		return declarationFunctionPosition(value.Value)
-	case 5:
-		value := enumValue35.TgoExpression()
+	case syntax.NodeTagExpression:
+		value := enumValue35.ExpressionPayload()
 		return expressionFunctionPosition(value.Value)
-	case 1:
+	case syntax.NodeTagFile:
 		return token.NoPos, false
-	case 3:
+	case syntax.NodeTagSpecification:
 		return token.NoPos, false
-	case 4:
+	case syntax.NodeTagStatement:
 		return token.NoPos, false
-	case 6:
+	case syntax.NodeTagField:
 		return token.NoPos, false
-	case 7:
+	case syntax.NodeTagFieldList:
 		return token.NoPos, false
-	case 8:
+	case syntax.NodeTagTGoField:
 		return token.NoPos, false
-	case 9:
+	case syntax.NodeTagEnumVariant:
 		return token.NoPos, false
-case 10:
+case syntax.NodeTagIdentifier:
 		return token.NoPos, false
-	case 11:
+	case syntax.NodeTagComment:
 		return token.NoPos, false
-	case 12:
+	case syntax.NodeTagCommentGroup:
 		return token.NoPos, false
 	default:
-		panic("invalid Node variant")
+		panic(enumValue35.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // declarationFunctionPosition gets a named function position.
 func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
-	switch enumValue36 := *value; enumValue36.TgoTag() {
-	case 3:
-		function := enumValue36.TgoFunction()
+	switch enumValue36 := *value; enumValue36.Tag() {
+	case syntax.DeclarationTagZero:
+		panic("zero Declaration")
+	case syntax.DeclarationTagFunction:
+		function := enumValue36.FunctionPayload()
 		return function.Value.Start, true
-	case 1:
+	case syntax.DeclarationTagBad:
 		return token.NoPos, false
-	case 2:
+	case syntax.DeclarationTagGeneral:
 		return token.NoPos, false
-	case 4:
+	case syntax.DeclarationTagEnum:
 		return token.NoPos, false
-	case 5:
+	case syntax.DeclarationTagStruct:
 		return token.NoPos, false
-	case 6:
+	case syntax.DeclarationTagChecked:
 		return token.NoPos, false
 	default:
-		panic("invalid Declaration variant")
+		panic(enumValue36.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // expressionFunctionPosition gets a function literal position.
 func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
-	switch enumValue37 := *value; enumValue37.TgoTag() {
-	case 5:
-		function := enumValue37.TgoFunctionLiteral()
+	switch enumValue37 := *value; enumValue37.Tag() {
+	case syntax.ExpressionTagZero:
+		panic("zero Expression")
+	case syntax.ExpressionTagFunctionLiteral:
+		function := enumValue37.FunctionLiteralPayload()
 		return function.Value.Start, true
-	case 1:
+	case syntax.ExpressionTagBad:
 		return token.NoPos, false
-	case 2:
+	case syntax.ExpressionTagIdentifier:
 		return token.NoPos, false
-	case 3:
+	case syntax.ExpressionTagEllipsis:
 		return token.NoPos, false
-	case 4:
+	case syntax.ExpressionTagBasicLiteral:
 		return token.NoPos, false
-	case 6:
+	case syntax.ExpressionTagCompositeLiteral:
 		return token.NoPos, false
-	case 7:
+	case syntax.ExpressionTagParenthesized:
 		return token.NoPos, false
-	case 8:
+	case syntax.ExpressionTagSelector:
 		return token.NoPos, false
-	case 9:
+	case syntax.ExpressionTagIndex:
 		return token.NoPos, false
-	case 10:
+	case syntax.ExpressionTagIndexList:
 		return token.NoPos, false
-	case 11:
+	case syntax.ExpressionTagSlice:
 		return token.NoPos, false
-	case 12:
+	case syntax.ExpressionTagTypeAssertion:
 		return token.NoPos, false
-	case 13:
+	case syntax.ExpressionTagCall:
 		return token.NoPos, false
-	case 14:
+	case syntax.ExpressionTagStar:
 		return token.NoPos, false
-	case 15:
+	case syntax.ExpressionTagNonNilPointer:
 		return token.NoPos, false
-	case 16:
+	case syntax.ExpressionTagUnary:
 		return token.NoPos, false
-	case 17:
+	case syntax.ExpressionTagBinary:
 		return token.NoPos, false
-	case 18:
+	case syntax.ExpressionTagKeyValue:
 		return token.NoPos, false
-	case 19:
+	case syntax.ExpressionTagArrayType:
 		return token.NoPos, false
-	case 20:
+	case syntax.ExpressionTagStructType:
 		return token.NoPos, false
-	case 21:
+	case syntax.ExpressionTagFunctionType:
 		return token.NoPos, false
-	case 22:
+	case syntax.ExpressionTagInterfaceType:
 		return token.NoPos, false
-	case 23:
+	case syntax.ExpressionTagMapType:
 		return token.NoPos, false
-	case 24:
+	case syntax.ExpressionTagChannelType:
 		return token.NoPos, false
-	case 25:
+	case syntax.ExpressionTagDefault:
 		return token.NoPos, false
-	case 26:
+	case syntax.ExpressionTagPropagation:
 		return token.NoPos, false
 	default:
-		panic("invalid Expression variant")
+		panic(enumValue37.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -146,22 +152,24 @@ func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
 func sourceGeneralDeclaration(
 	value *syntax.Declaration,
 ) (*syntax.GeneralDeclaration, bool) {
-	switch enumValue38 := *value; enumValue38.TgoTag() {
-	case 2:
-		declaration := enumValue38.TgoGeneral()
+	switch enumValue38 := *value; enumValue38.Tag() {
+	case syntax.DeclarationTagZero:
+		panic("zero Declaration")
+	case syntax.DeclarationTagGeneral:
+		declaration := enumValue38.GeneralPayload()
 		return declaration.Value, true
-	case 1:
+	case syntax.DeclarationTagBad:
 		return nil, false
-	case 3:
+	case syntax.DeclarationTagFunction:
 		return nil, false
-	case 4:
+	case syntax.DeclarationTagEnum:
 		return nil, false
-	case 5:
+	case syntax.DeclarationTagStruct:
 		return nil, false
-	case 6:
+	case syntax.DeclarationTagChecked:
 		return nil, false
 	default:
-		panic("invalid Declaration variant")
+		panic(enumValue38.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -169,15 +177,17 @@ func sourceGeneralDeclaration(
 func sourceValueSpecification(
 	value *syntax.Specification,
 ) (*syntax.ValueSpecification, bool) {
-	switch enumValue39 := *value; enumValue39.TgoTag() {
-	case 2:
-		specification := enumValue39.TgoValue()
+	switch enumValue39 := *value; enumValue39.Tag() {
+	case syntax.SpecificationTagZero:
+		panic("zero Specification")
+	case syntax.SpecificationTagValue:
+		specification := enumValue39.ValuePayload()
 		return specification.Value, true
-	case 1:
+	case syntax.SpecificationTagImport:
 		return nil, false
-	case 3:
+	case syntax.SpecificationTagType:
 		return nil, false
 	default:
-		panic("invalid Specification variant")
+		panic(enumValue39.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }

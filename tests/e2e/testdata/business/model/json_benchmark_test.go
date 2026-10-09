@@ -8,32 +8,35 @@ import (
 var benchmarkJSONData []byte
 
 func BenchmarkEnumJSONMarshal(b *testing.B) {
+	b.Run("zero", func(b *testing.B) {
+		benchmarkEnumJSONMarshal(b, JSONExternal{})
+	})
 	b.Run("external", func(b *testing.B) {
 		benchmarkEnumJSONMarshal(b,
-			NewJSONExternalCreated(JSONExternalCreated{ID: "a1"}))
+			JSONExternalCreated{ID: "a1"}.JSONExternal())
 	})
 	b.Run("internal", func(b *testing.B) {
 		benchmarkEnumJSONMarshal(b,
-			NewJSONInternalCreated(JSONInternalCreated{ID: "a1"}))
+			JSONInternalCreated{ID: "a1"}.JSONInternal())
 	})
 	b.Run("adjacent", func(b *testing.B) {
 		benchmarkEnumJSONMarshal(b,
-			NewJSONAdjacentCreated(JSONAdjacentCreated{ID: "a1"}))
+			JSONAdjacentCreated{ID: "a1"}.JSONAdjacent())
 	})
 	b.Run("untagged", func(b *testing.B) {
 		benchmarkEnumJSONMarshal(b,
-			NewJSONUntaggedText(JSONUntaggedText{Value: "text"}))
+			JSONUntaggedText{Value: "text"}.JSONUntagged())
 	})
 	b.Run("escaped-external", func(b *testing.B) {
 		benchmarkEnumJSONMarshal(b,
-			NewJSONEscapedExternalValue(JSONEscapedExternalValue{ID: "a1"}))
+			JSONEscapedExternalValue{ID: "a1"}.JSONEscapedExternal())
 	})
 	b.Run("escaped-internal", func(b *testing.B) {
-		benchmarkEnumJSONMarshal(b, NewJSONEscapedValue(JSONEscapedValue{ID: "a1"}))
+		benchmarkEnumJSONMarshal(b, JSONEscapedValue{ID: "a1"}.JSONEscaped())
 	})
 	b.Run("escaped-adjacent", func(b *testing.B) {
 		benchmarkEnumJSONMarshal(b,
-			NewJSONEscapedAdjacentValue(JSONEscapedAdjacentValue{ID: "a1"}))
+			JSONEscapedAdjacentValue{ID: "a1"}.JSONEscapedAdjacent())
 	})
 }
 
@@ -53,6 +56,9 @@ func BenchmarkEnumJSONUnmarshal(b *testing.B) {
 		data []byte
 		new  func() any
 	}{
+		{"zero", []byte(" \nnull\t"), func() any {
+			return new(JSONExternal)
+		}},
 		{"external", []byte(`{"created":{"account_id":"a1"}}`), func() any {
 			return new(JSONExternal)
 		}},

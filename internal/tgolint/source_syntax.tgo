@@ -7,34 +7,36 @@ func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch enumValue25 := *node; enumValue25.TgoTag() {
-	case 4:
-		value := enumValue25.TgoStatement()
+	switch enumValue25 := *node; enumValue25.Tag() {
+	case syntax.NodeTagZero:
+		panic("zero Node")
+	case syntax.NodeTagStatement:
+		value := enumValue25.StatementPayload()
 		return statementList(value.Value)
-case 1:
+case syntax.NodeTagFile:
 		return nil, false
-	case 2:
+	case syntax.NodeTagDeclaration:
 		return nil, false
-	case 3:
+	case syntax.NodeTagSpecification:
 		return nil, false
-	case 5:
+	case syntax.NodeTagExpression:
 		return nil, false
-	case 6:
+	case syntax.NodeTagField:
 		return nil, false
-	case 7:
+	case syntax.NodeTagFieldList:
 		return nil, false
-	case 8:
+	case syntax.NodeTagTGoField:
 		return nil, false
-	case 9:
+	case syntax.NodeTagEnumVariant:
 		return nil, false
-	case 10:
+	case syntax.NodeTagIdentifier:
 		return nil, false
-	case 11:
+	case syntax.NodeTagComment:
 		return nil, false
-	case 12:
+	case syntax.NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic("invalid Node variant")
+		panic(enumValue25.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -43,54 +45,56 @@ func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
 	if statement == nil {
 		return nil, false
 	}
-	switch enumValue26 := *statement; enumValue26.TgoTag() {
-	case 13:
-		value := enumValue26.TgoBlock()
+	switch enumValue26 := *statement; enumValue26.Tag() {
+	case syntax.StatementTagZero:
+		panic("zero Statement")
+	case syntax.StatementTagBlock:
+		value := enumValue26.BlockPayload()
 		return value.Value.List, true
-	case 15:
-		value := enumValue26.TgoCase()
+	case syntax.StatementTagCase:
+		value := enumValue26.CasePayload()
 		return value.Value.Body, true
-	case 18:
-		value := enumValue26.TgoCommunication()
+	case syntax.StatementTagCommunication:
+		value := enumValue26.CommunicationPayload()
 		return value.Value.Body, true
-	case 1:
+	case syntax.StatementTagBad:
 		return nil, false
-	case 2:
+	case syntax.StatementTagDeclaration:
 		return nil, false
-	case 3:
+	case syntax.StatementTagEmpty:
 		return nil, false
-	case 4:
+	case syntax.StatementTagLabeled:
 		return nil, false
-	case 5:
+	case syntax.StatementTagExpression:
 		return nil, false
-	case 6:
+	case syntax.StatementTagSend:
 		return nil, false
-	case 7:
+	case syntax.StatementTagIncrement:
 		return nil, false
-	case 8:
+	case syntax.StatementTagAssignment:
 		return nil, false
-	case 9:
+	case syntax.StatementTagGo:
 		return nil, false
-	case 10:
+	case syntax.StatementTagDefer:
 		return nil, false
-	case 11:
+	case syntax.StatementTagReturn:
 		return nil, false
-	case 12:
+	case syntax.StatementTagBranch:
 		return nil, false
-	case 14:
+	case syntax.StatementTagIf:
 		return nil, false
-	case 16:
+	case syntax.StatementTagSwitch:
 		return nil, false
-	case 17:
+	case syntax.StatementTagTypeSwitch:
 		return nil, false
-	case 19:
+	case syntax.StatementTagSelect:
 		return nil, false
-	case 20:
+	case syntax.StatementTagFor:
 		return nil, false
-	case 21:
+	case syntax.StatementTagRange:
 		return nil, false
 default:
-		panic("invalid Statement variant")
+		panic(enumValue26.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -99,52 +103,54 @@ func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement,
 	if statement == nil {
 		return nil, false
 	}
-	switch enumValue27 := *statement; enumValue27.TgoTag() {
-	case 8:
-		value := enumValue27.TgoAssignment()
+	switch enumValue27 := *statement; enumValue27.Tag() {
+	case syntax.StatementTagZero:
+		panic("zero Statement")
+	case syntax.StatementTagAssignment:
+		value := enumValue27.AssignmentPayload()
 		return value.Value, true
-	case 1:
+	case syntax.StatementTagBad:
 		return nil, false
-	case 2:
+	case syntax.StatementTagDeclaration:
 		return nil, false
-	case 3:
+	case syntax.StatementTagEmpty:
 		return nil, false
-	case 4:
+	case syntax.StatementTagLabeled:
 		return nil, false
-	case 5:
+	case syntax.StatementTagExpression:
 		return nil, false
-	case 6:
+	case syntax.StatementTagSend:
 		return nil, false
-	case 7:
+	case syntax.StatementTagIncrement:
 		return nil, false
-	case 9:
+	case syntax.StatementTagGo:
 		return nil, false
-	case 10:
+	case syntax.StatementTagDefer:
 		return nil, false
-	case 11:
+	case syntax.StatementTagReturn:
 		return nil, false
-	case 12:
+	case syntax.StatementTagBranch:
 		return nil, false
-	case 13:
+	case syntax.StatementTagBlock:
 		return nil, false
-	case 14:
+	case syntax.StatementTagIf:
 		return nil, false
-	case 15:
+	case syntax.StatementTagCase:
 		return nil, false
-	case 16:
+	case syntax.StatementTagSwitch:
 		return nil, false
-	case 17:
+	case syntax.StatementTagTypeSwitch:
 		return nil, false
-	case 18:
+	case syntax.StatementTagCommunication:
 		return nil, false
-	case 19:
+	case syntax.StatementTagSelect:
 		return nil, false
-	case 20:
+	case syntax.StatementTagFor:
 		return nil, false
-	case 21:
+	case syntax.StatementTagRange:
 		return nil, false
 default:
-		panic("invalid Statement variant")
+		panic(enumValue27.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -153,52 +159,54 @@ func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
 	if statement == nil {
 		return nil, false
 	}
-	switch enumValue28 := *statement; enumValue28.TgoTag() {
-	case 14:
-		value := enumValue28.TgoIf()
+	switch enumValue28 := *statement; enumValue28.Tag() {
+	case syntax.StatementTagZero:
+		panic("zero Statement")
+	case syntax.StatementTagIf:
+		value := enumValue28.IfPayload()
 		return value.Value, true
-	case 1:
+	case syntax.StatementTagBad:
 		return nil, false
-	case 2:
+	case syntax.StatementTagDeclaration:
 		return nil, false
-	case 3:
+	case syntax.StatementTagEmpty:
 		return nil, false
-	case 4:
+	case syntax.StatementTagLabeled:
 		return nil, false
-	case 5:
+	case syntax.StatementTagExpression:
 		return nil, false
-	case 6:
+	case syntax.StatementTagSend:
 		return nil, false
-	case 7:
+	case syntax.StatementTagIncrement:
 		return nil, false
-	case 8:
+	case syntax.StatementTagAssignment:
 		return nil, false
-	case 9:
+	case syntax.StatementTagGo:
 		return nil, false
-	case 10:
+	case syntax.StatementTagDefer:
 		return nil, false
-	case 11:
+	case syntax.StatementTagReturn:
 		return nil, false
-	case 12:
+	case syntax.StatementTagBranch:
 		return nil, false
-	case 13:
+	case syntax.StatementTagBlock:
 		return nil, false
-	case 15:
+	case syntax.StatementTagCase:
 		return nil, false
-	case 16:
+	case syntax.StatementTagSwitch:
 		return nil, false
-	case 17:
+	case syntax.StatementTagTypeSwitch:
 		return nil, false
-	case 18:
+	case syntax.StatementTagCommunication:
 		return nil, false
-	case 19:
+	case syntax.StatementTagSelect:
 		return nil, false
-	case 20:
+	case syntax.StatementTagFor:
 		return nil, false
-	case 21:
+	case syntax.StatementTagRange:
 		return nil, false
 default:
-		panic("invalid Statement variant")
+		panic(enumValue28.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -207,52 +215,54 @@ func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
 	if statement == nil {
 		return nil, false
 	}
-	switch enumValue29 := *statement; enumValue29.TgoTag() {
-	case 11:
-		value := enumValue29.TgoReturn()
+	switch enumValue29 := *statement; enumValue29.Tag() {
+	case syntax.StatementTagZero:
+		panic("zero Statement")
+	case syntax.StatementTagReturn:
+		value := enumValue29.ReturnPayload()
 		return value.Value, true
-	case 1:
+	case syntax.StatementTagBad:
 		return nil, false
-	case 2:
+	case syntax.StatementTagDeclaration:
 		return nil, false
-	case 3:
+	case syntax.StatementTagEmpty:
 		return nil, false
-	case 4:
+	case syntax.StatementTagLabeled:
 		return nil, false
-	case 5:
+	case syntax.StatementTagExpression:
 		return nil, false
-	case 6:
+	case syntax.StatementTagSend:
 		return nil, false
-	case 7:
+	case syntax.StatementTagIncrement:
 		return nil, false
-	case 8:
+	case syntax.StatementTagAssignment:
 		return nil, false
-	case 9:
+	case syntax.StatementTagGo:
 		return nil, false
-	case 10:
+	case syntax.StatementTagDefer:
 		return nil, false
-	case 12:
+	case syntax.StatementTagBranch:
 		return nil, false
-	case 13:
+	case syntax.StatementTagBlock:
 		return nil, false
-	case 14:
+	case syntax.StatementTagIf:
 		return nil, false
-	case 15:
+	case syntax.StatementTagCase:
 		return nil, false
-	case 16:
+	case syntax.StatementTagSwitch:
 		return nil, false
-	case 17:
+	case syntax.StatementTagTypeSwitch:
 		return nil, false
-	case 18:
+	case syntax.StatementTagCommunication:
 		return nil, false
-	case 19:
+	case syntax.StatementTagSelect:
 		return nil, false
-	case 20:
+	case syntax.StatementTagFor:
 		return nil, false
-	case 21:
+	case syntax.StatementTagRange:
 		return nil, false
 default:
-		panic("invalid Statement variant")
+		panic(enumValue29.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -261,63 +271,65 @@ func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
 	if expression == nil {
 		return nil, false
 	}
-	switch enumValue30 := *expression; enumValue30.TgoTag() {
-	case 13:
-		value := enumValue30.TgoCall()
+	switch enumValue30 := *expression; enumValue30.Tag() {
+	case syntax.ExpressionTagZero:
+		panic("zero Expression")
+	case syntax.ExpressionTagCall:
+		value := enumValue30.CallPayload()
 		return value.Value, true
-	case 7:
-		value := enumValue30.TgoParenthesized()
+	case syntax.ExpressionTagParenthesized:
+		value := enumValue30.ParenthesizedPayload()
 		return sourceCall(value.Value.Expression)
-	case 1:
+	case syntax.ExpressionTagBad:
 		return nil, false
-	case 2:
+	case syntax.ExpressionTagIdentifier:
 		return nil, false
-	case 3:
+	case syntax.ExpressionTagEllipsis:
 		return nil, false
-	case 4:
+	case syntax.ExpressionTagBasicLiteral:
 		return nil, false
-	case 5:
+	case syntax.ExpressionTagFunctionLiteral:
 		return nil, false
-	case 6:
+	case syntax.ExpressionTagCompositeLiteral:
 		return nil, false
-	case 8:
+	case syntax.ExpressionTagSelector:
 		return nil, false
-	case 9:
+	case syntax.ExpressionTagIndex:
 		return nil, false
-	case 10:
+	case syntax.ExpressionTagIndexList:
 		return nil, false
-	case 11:
+	case syntax.ExpressionTagSlice:
 		return nil, false
-	case 12:
+	case syntax.ExpressionTagTypeAssertion:
 		return nil, false
-	case 14:
+	case syntax.ExpressionTagStar:
 		return nil, false
-	case 15:
+	case syntax.ExpressionTagNonNilPointer:
 		return nil, false
-	case 16:
+	case syntax.ExpressionTagUnary:
 		return nil, false
-	case 17:
+	case syntax.ExpressionTagBinary:
 		return nil, false
-	case 18:
+	case syntax.ExpressionTagKeyValue:
 		return nil, false
-	case 19:
+	case syntax.ExpressionTagArrayType:
 		return nil, false
-	case 20:
+	case syntax.ExpressionTagStructType:
 		return nil, false
-	case 21:
+	case syntax.ExpressionTagFunctionType:
 		return nil, false
-	case 22:
+	case syntax.ExpressionTagInterfaceType:
 		return nil, false
-	case 23:
+	case syntax.ExpressionTagMapType:
 		return nil, false
-	case 24:
+	case syntax.ExpressionTagChannelType:
 		return nil, false
-	case 25:
+	case syntax.ExpressionTagDefault:
 		return nil, false
-	case 26:
+	case syntax.ExpressionTagPropagation:
 		return nil, false
 	default:
-		panic("invalid Expression variant")
+		panic(enumValue30.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -326,62 +338,64 @@ func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) 
 	if expression == nil {
 		return nil, false
 	}
-	switch enumValue31 := *expression; enumValue31.TgoTag() {
-	case 2:
-		value := enumValue31.TgoIdentifier()
+	switch enumValue31 := *expression; enumValue31.Tag() {
+	case syntax.ExpressionTagZero:
+		panic("zero Expression")
+	case syntax.ExpressionTagIdentifier:
+		value := enumValue31.IdentifierPayload()
 		return value.Value, true
-	case 1:
+	case syntax.ExpressionTagBad:
 		return nil, false
-	case 3:
+	case syntax.ExpressionTagEllipsis:
 		return nil, false
-	case 4:
+	case syntax.ExpressionTagBasicLiteral:
 		return nil, false
-	case 5:
+	case syntax.ExpressionTagFunctionLiteral:
 		return nil, false
-	case 6:
+	case syntax.ExpressionTagCompositeLiteral:
 		return nil, false
-	case 7:
+	case syntax.ExpressionTagParenthesized:
 		return nil, false
-	case 8:
+	case syntax.ExpressionTagSelector:
 		return nil, false
-	case 9:
+	case syntax.ExpressionTagIndex:
 		return nil, false
-	case 10:
+	case syntax.ExpressionTagIndexList:
 		return nil, false
-	case 11:
+	case syntax.ExpressionTagSlice:
 		return nil, false
-	case 12:
+	case syntax.ExpressionTagTypeAssertion:
 		return nil, false
-	case 13:
+	case syntax.ExpressionTagCall:
 		return nil, false
-	case 14:
+	case syntax.ExpressionTagStar:
 		return nil, false
-	case 15:
+	case syntax.ExpressionTagNonNilPointer:
 		return nil, false
-	case 16:
+	case syntax.ExpressionTagUnary:
 		return nil, false
-	case 17:
+	case syntax.ExpressionTagBinary:
 		return nil, false
-	case 18:
+	case syntax.ExpressionTagKeyValue:
 		return nil, false
-	case 19:
+	case syntax.ExpressionTagArrayType:
 		return nil, false
-	case 20:
+	case syntax.ExpressionTagStructType:
 		return nil, false
-	case 21:
+	case syntax.ExpressionTagFunctionType:
 		return nil, false
-	case 22:
+	case syntax.ExpressionTagInterfaceType:
 		return nil, false
-	case 23:
+	case syntax.ExpressionTagMapType:
 		return nil, false
-	case 24:
+	case syntax.ExpressionTagChannelType:
 		return nil, false
-	case 25:
+	case syntax.ExpressionTagDefault:
 		return nil, false
-	case 26:
+	case syntax.ExpressionTagPropagation:
 		return nil, false
 	default:
-		panic("invalid Expression variant")
+		panic(enumValue31.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -390,62 +404,64 @@ func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool
 	if expression == nil {
 		return nil, false
 	}
-	switch enumValue32 := *expression; enumValue32.TgoTag() {
-	case 17:
-		value := enumValue32.TgoBinary()
+	switch enumValue32 := *expression; enumValue32.Tag() {
+	case syntax.ExpressionTagZero:
+		panic("zero Expression")
+	case syntax.ExpressionTagBinary:
+		value := enumValue32.BinaryPayload()
 		return value.Value, true
-	case 1:
+	case syntax.ExpressionTagBad:
 		return nil, false
-	case 2:
+	case syntax.ExpressionTagIdentifier:
 		return nil, false
-	case 3:
+	case syntax.ExpressionTagEllipsis:
 		return nil, false
-	case 4:
+	case syntax.ExpressionTagBasicLiteral:
 		return nil, false
-	case 5:
+	case syntax.ExpressionTagFunctionLiteral:
 		return nil, false
-	case 6:
+	case syntax.ExpressionTagCompositeLiteral:
 		return nil, false
-	case 7:
+	case syntax.ExpressionTagParenthesized:
 		return nil, false
-	case 8:
+	case syntax.ExpressionTagSelector:
 		return nil, false
-	case 9:
+	case syntax.ExpressionTagIndex:
 		return nil, false
-	case 10:
+	case syntax.ExpressionTagIndexList:
 		return nil, false
-	case 11:
+	case syntax.ExpressionTagSlice:
 		return nil, false
-	case 12:
+	case syntax.ExpressionTagTypeAssertion:
 		return nil, false
-	case 13:
+	case syntax.ExpressionTagCall:
 		return nil, false
-	case 14:
+	case syntax.ExpressionTagStar:
 		return nil, false
-	case 15:
+	case syntax.ExpressionTagNonNilPointer:
 		return nil, false
-	case 16:
+	case syntax.ExpressionTagUnary:
 		return nil, false
-	case 18:
+	case syntax.ExpressionTagKeyValue:
 		return nil, false
-	case 19:
+	case syntax.ExpressionTagArrayType:
 		return nil, false
-	case 20:
+	case syntax.ExpressionTagStructType:
 		return nil, false
-	case 21:
+	case syntax.ExpressionTagFunctionType:
 		return nil, false
-	case 22:
+	case syntax.ExpressionTagInterfaceType:
 		return nil, false
-	case 23:
+	case syntax.ExpressionTagMapType:
 		return nil, false
-	case 24:
+	case syntax.ExpressionTagChannelType:
 		return nil, false
-	case 25:
+	case syntax.ExpressionTagDefault:
 		return nil, false
-	case 26:
+	case syntax.ExpressionTagPropagation:
 		return nil, false
 	default:
-		panic("invalid Expression variant")
+		panic(enumValue32.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -456,124 +472,128 @@ func sourceCompositeLiteral(
 	if expression == nil {
 		return nil, false
 	}
-	switch enumValue33 := *expression; enumValue33.TgoTag() {
-	case 6:
-		value := enumValue33.TgoCompositeLiteral()
+	switch enumValue33 := *expression; enumValue33.Tag() {
+	case syntax.ExpressionTagZero:
+		panic("zero Expression")
+	case syntax.ExpressionTagCompositeLiteral:
+		value := enumValue33.CompositeLiteralPayload()
 		return value.Value, true
-	case 1:
+	case syntax.ExpressionTagBad:
 		return nil, false
-	case 2:
+	case syntax.ExpressionTagIdentifier:
 		return nil, false
-	case 3:
+	case syntax.ExpressionTagEllipsis:
 		return nil, false
-	case 4:
+	case syntax.ExpressionTagBasicLiteral:
 		return nil, false
-	case 5:
+	case syntax.ExpressionTagFunctionLiteral:
 		return nil, false
-	case 7:
+	case syntax.ExpressionTagParenthesized:
 		return nil, false
-	case 8:
+	case syntax.ExpressionTagSelector:
 		return nil, false
-	case 9:
+	case syntax.ExpressionTagIndex:
 		return nil, false
-	case 10:
+	case syntax.ExpressionTagIndexList:
 		return nil, false
-	case 11:
+	case syntax.ExpressionTagSlice:
 		return nil, false
-	case 12:
+	case syntax.ExpressionTagTypeAssertion:
 		return nil, false
-	case 13:
+	case syntax.ExpressionTagCall:
 		return nil, false
-	case 14:
+	case syntax.ExpressionTagStar:
 		return nil, false
-	case 15:
+	case syntax.ExpressionTagNonNilPointer:
 		return nil, false
-	case 16:
+	case syntax.ExpressionTagUnary:
 		return nil, false
-	case 17:
+	case syntax.ExpressionTagBinary:
 		return nil, false
-	case 18:
+	case syntax.ExpressionTagKeyValue:
 		return nil, false
-	case 19:
+	case syntax.ExpressionTagArrayType:
 		return nil, false
-	case 20:
+	case syntax.ExpressionTagStructType:
 		return nil, false
-	case 21:
+	case syntax.ExpressionTagFunctionType:
 		return nil, false
-	case 22:
+	case syntax.ExpressionTagInterfaceType:
 		return nil, false
-	case 23:
+	case syntax.ExpressionTagMapType:
 		return nil, false
-	case 24:
+	case syntax.ExpressionTagChannelType:
 		return nil, false
-	case 25:
+	case syntax.ExpressionTagDefault:
 		return nil, false
-	case 26:
+	case syntax.ExpressionTagPropagation:
 		return nil, false
 	default:
-		panic("invalid Expression variant")
+		panic(enumValue33.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // sourceUnparenthesized removes all outer source parentheses.
 func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
 	for expression != nil {
-		switch enumValue34 := *expression; enumValue34.TgoTag() {
-		case 7:
-			value := enumValue34.TgoParenthesized()
+		switch enumValue34 := *expression; enumValue34.Tag() {
+		case syntax.ExpressionTagZero:
+			panic("zero Expression")
+		case syntax.ExpressionTagParenthesized:
+			value := enumValue34.ParenthesizedPayload()
 			expression = value.Value.Expression
-		case 1:
+		case syntax.ExpressionTagBad:
 			return expression
-		case 2:
+		case syntax.ExpressionTagIdentifier:
 			return expression
-		case 3:
+		case syntax.ExpressionTagEllipsis:
 			return expression
-		case 4:
+		case syntax.ExpressionTagBasicLiteral:
 			return expression
-		case 5:
+		case syntax.ExpressionTagFunctionLiteral:
 			return expression
-		case 6:
+		case syntax.ExpressionTagCompositeLiteral:
 			return expression
-		case 8:
+		case syntax.ExpressionTagSelector:
 			return expression
-		case 9:
+		case syntax.ExpressionTagIndex:
 			return expression
-		case 10:
+		case syntax.ExpressionTagIndexList:
 			return expression
-		case 11:
+		case syntax.ExpressionTagSlice:
 			return expression
-		case 12:
+		case syntax.ExpressionTagTypeAssertion:
 			return expression
-		case 13:
+		case syntax.ExpressionTagCall:
 			return expression
-		case 14:
+		case syntax.ExpressionTagStar:
 			return expression
-		case 15:
+		case syntax.ExpressionTagNonNilPointer:
 			return expression
-		case 16:
+		case syntax.ExpressionTagUnary:
 			return expression
-		case 17:
+		case syntax.ExpressionTagBinary:
 			return expression
-		case 18:
+		case syntax.ExpressionTagKeyValue:
 			return expression
-		case 19:
+		case syntax.ExpressionTagArrayType:
 			return expression
-		case 20:
+		case syntax.ExpressionTagStructType:
 			return expression
-		case 21:
+		case syntax.ExpressionTagFunctionType:
 			return expression
-		case 22:
+		case syntax.ExpressionTagInterfaceType:
 			return expression
-		case 23:
+		case syntax.ExpressionTagMapType:
 			return expression
-		case 24:
+		case syntax.ExpressionTagChannelType:
 			return expression
-		case 25:
+		case syntax.ExpressionTagDefault:
 			return expression
-		case 26:
+		case syntax.ExpressionTagPropagation:
 			return expression
 		default:
-			panic("invalid Expression variant")
+			panic(enumValue34.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
 	}
 	return nil

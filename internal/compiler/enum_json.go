@@ -131,8 +131,10 @@ func emitEnumJSONMarshal(
 	name := declaration.Name
 	config := declaration.JSON
 	fmt.Fprintf(out, "func (v %s) MarshalJSON() ([]byte, error) {\nswitch v.tgoTag {\n", name)
-	for index, variant := range declaration.Variants {
-		fmt.Fprintf(out, "case %d:\npayload := v.Tgo%s()\n", index+1, variant.Name)
+	fmt.Fprintf(out, "case %sTagZero:\nreturn []byte(\"null\"), nil\n", name)
+	for _, variant := range declaration.Variants {
+		fmt.Fprintf(out, "case %sTag%s:\npayload := v.%sPayload()\n",
+			name, variant.Name, variant.Name)
 		switch config.Form {
 		case "external":
 			emitExternalJSONMarshal(out, name, variant, jsonPackage)
@@ -157,17 +159,24 @@ func emitEnumJSONUnmarshal(
 	config := declaration.JSON
 	q := strconv.Quote
 	fmt.Fprintf(out, "func (v *%s) UnmarshalJSON(data []byte) error {\n", name)
+	fmt.Fprintf(out, "start, end := 0, len(data)\n"+
+		"for start < end && (data[start] == ' ' || data[start] == '\\n' || "+
+		"data[start] == '\\r' || data[start] == '\\t') { start++ }\n"+
+		"for start < end && (data[end-1] == ' ' || data[end-1] == '\\n' || "+
+		"data[end-1] == '\\r' || data[end-1] == '\\t') { end-- }\n"+
+		"if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && "+
+		"data[start+2] == 'l' && data[start+3] == 'l' { *v = %s{}; return nil }\n",
+		name)
 	if config.Form == "untagged" {
 		for _, variant := range declaration.Variants {
 			fmt.Fprintf(out,
 				"{ var payload %s%s\n"+
 					"if err := %s.Unmarshal(data, &payload); err == nil {\n"+
-					"*v = New%s%s(payload); return nil } }\n",
+					"*v = payload.%s(); return nil } }\n",
 				name,
 				variant.Name,
 				jsonPackage,
-				name,
-				variant.Name)
+				name)
 		}
 		fmt.Fprintf(out,
 			"return %s.Errorf(%s)\n}\n",
@@ -223,28 +232,26 @@ func emitEnumJSONUnmarshal(
 				"case %s:\n"+
 					"var payload %s%s\n"+
 					"if err := %s.Unmarshal(data, &payload); err != nil { return err }\n"+
-					"*v = New%s%s(payload)\n"+
+					"*v = payload.%s()\n"+
 					"return nil\n",
 				q(variant.JSONName),
 				name,
 				variant.Name,
 				jsonPackage,
-				name,
-				variant.Name)
+				name)
 			continue
 		}
 		fmt.Fprintf(out,
 			"case %s:\n"+
 				"var payload %s%s\n"+
 				"if err := %s.Unmarshal(payloadData, &payload); err != nil { return err }\n"+
-				"*v = New%s%s(payload)\n"+
+				"*v = payload.%s()\n"+
 				"return nil\n",
 			q(variant.JSONName),
 			name,
 			variant.Name,
 			jsonPackage,
-			name,
-			variant.Name)
+			name)
 	}
 	fmt.Fprintf(out,
 		"default: return %s.Errorf(%s, variant)\n}\n}\n",

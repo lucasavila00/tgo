@@ -1,0 +1,5 @@
+package invalid
+
+type E enum {
+	Tag struct{}
+}

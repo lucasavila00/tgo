@@ -6,11 +6,13 @@ type Account enum {
 }
 
 func label(account Account) string {
-	switch account.TgoTag() {
-	case 1:
-		return account.TgoPersonal().Name
-	case 2:
-		return account.TgoBusiness().Company
+	switch account.Tag() {
+	case AccountTagZero:
+		panic("zero Account")
+	case AccountTagPersonal:
+		return account.PersonalPayload().Name
+	case AccountTagBusiness:
+		return account.BusinessPayload().Company
 	default:
 		break
 	}

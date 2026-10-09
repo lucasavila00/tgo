@@ -1,0 +1,16 @@
+package invalid
+
+type E enum {
+	A struct{}
+}
+
+func use(value E) {
+	switch value.Tag() {
+	case 0:
+		return
+	case ETagA:
+		return
+	default:
+		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}

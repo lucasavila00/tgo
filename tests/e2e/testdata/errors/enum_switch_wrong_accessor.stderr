@@ -1,1 +1,1 @@
-<WORK>/input.tgo:11:10: Account.TgoBusiness access does not match its TgoTag case 2
+<WORK>/input.tgo:13:10: Account: BusinessPayload called under case AccountTagPersonal

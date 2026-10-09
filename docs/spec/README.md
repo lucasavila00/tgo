@@ -189,8 +189,8 @@ type Account enum {
 }
 ```
 
-The zero value of an enum is invalid. No variant is implicit.
-A variant literal constructs one valid value:
+The zero value is the implicit `Zero` variant. Each declared variant has a nonzero tag in
+declaration order. A variant literal constructs one declared variant:
 
 ```text
 account := Account.Personal{Name: "Lucas"}
@@ -239,7 +239,9 @@ Unknown forms, unknown options, and repeated options are errors. An internal tag
 conflict with a payload field's effective Go JSON name, including promoted embedded fields.
 Ignored fields and fields that Go JSON omits because of an ambiguous name do not conflict.
 
-Encoding rejects a zero or unknown enum tag. Tagged decoding requires an object. External decoding
+Encoding writes the `Zero` variant as JSON `null`. Decoding JSON `null`, including surrounding
+JSON whitespace, sets the receiver to `Zero`. Encoding rejects an unknown enum tag. Tagged
+decoding requires an object. External decoding
 requires one variant entry. Internal and adjacent decoding require a known variant name;
 adjacent decoding also requires its content field.
 Payload decoding uses standard Go JSON field rules, custom methods, and errors. As with Go
@@ -248,7 +250,7 @@ The receiver changes only after payload decoding succeeds and the constructor re
 
 Untagged decoding tries payloads in declaration order and selects the first successful decode.
 Go JSON ignores unknown fields and permits missing fields, so an object can match more than
-one payload. A `null` value selects the first successful payload decode. Variant order is part
+one payload. A non-null value uses this selection. Variant order is part
 of the wire contract. JSON controls and variant wire names are also wire contracts; changes
 can break stored data or clients.
 
@@ -300,8 +302,10 @@ pointer values, and custom `MarshalJSON` methods. A custom method can also retai
 data.
 
 The generated typed wrappers and local payload variables do not contain an explicit heap
-allocation. Escape analysis can move them to the heap. An inline enum payload is copied during
-construction. A boxed enum payload can allocate its interface box. A zero or unknown tag, a
+allocation. Escape analysis can move them to the heap. `Tag`, `IsZero`, inline construction, and
+inline payload access add no heap allocation. A boxed enum payload can allocate its interface box
+when it escapes. `UnknownTag` formats a new string on the unreachable default path. Zero
+`MarshalJSON` returns byte storage. Zero `UnmarshalJSON` adds no allocation. An unknown tag, a
 missing field, an unknown variant, and a failed untagged match can allocate an error. JSON syntax,
 type, and custom-method errors can allocate before the generated method returns them.
 
@@ -316,6 +320,7 @@ not include allocations that a different payload type or a custom JSON method ad
 
 | Operation | Maximum allocations | Maximum bytes |
 | --- | ---: | ---: |
+| Zero marshal | 4 | 176 B/op |
 | External marshal | 6 | 320 B/op |
 | Internal marshal | 7 | 344 B/op |
 | Adjacent marshal | 6 | 352 B/op |
@@ -323,6 +328,7 @@ not include allocations that a different payload type or a custom JSON method ad
 | Escaped external marshal | 7 | 160 B/op |
 | Escaped internal marshal | 7 | 192 B/op |
 | Escaped adjacent marshal | 7 | 224 B/op |
+| Zero unmarshal | 0 | 0 B/op |
 | External unmarshal | 7 | 520 B/op |
 | Internal unmarshal | 2 | 64 B/op |
 | Adjacent unmarshal | 3 | 120 B/op |
@@ -336,22 +342,34 @@ not include allocations that a different payload type or a custom JSON method ad
 The example above emits these public types and operations:
 
 ```text
+type AccountTag uint8
+const (
+    AccountTagZero AccountTag = iota
+    AccountTagPersonal
+    AccountTagBusiness
+)
+type AccountZero struct{}
 type AccountPersonal struct { Name string }
 type AccountBusiness struct {
     Company string
     Members []Account
 }
 
-func NewAccountPersonal(value AccountPersonal) Account
-func (value Account) TgoTag() uint8
-func (value Account) TgoPersonal() AccountPersonal
+func (AccountZero) Account() Account
+func (AccountPersonal) Account() Account
+func (AccountBusiness) Account() Account
+func (value Account) Tag() AccountTag
+func (value Account) IsZero() bool
+func (value Account) UnknownTag() string
+func (value Account) PersonalPayload() AccountPersonal
+func (value Account) BusinessPayload() AccountBusiness
 ```
 
-The compiler emits one constructor and one payload accessor per variant. Payload types,
-constructors, the tag accessor, and payload accessors are exported for Go calls.
+The compiler emits `Zero`, one constructor method, and one payload accessor per declared variant.
+Payload types, constructors, the tag API, tag constants, and payload accessors are exported.
 Representation fields and their layout are private. Go callers must use the exported operations.
 
-Tag zero is invalid. Variant tags start at one in declaration order.
+Tag zero selects `Zero`. Declared variant tags start at one in declaration order.
 The tag uses `uint8` below 256 variants, `uint16` below 65,536 variants,
 and `uint32` otherwise.
 
@@ -371,12 +389,12 @@ the zero value in that slot. A boxed accessor for the wrong variant panics durin
 assertion. An empty-payload accessor returns an empty value for each tag. The contextual checks
 below prevent these calls in checked source.
 
-A tgo file may not build an enum with a struct literal, conversion, or `new`.
-It may not read representation fields. It can call generated `Tgo*` methods only in the checked
-tag switch below.
+A tgo file may not build a declared variant with an enum struct literal or conversion.
+It may not read representation fields. Contextual payload checks apply only in the checked tag
+switch below. Calls outside that switch are unchecked Go calls.
 Embedding an enum does not expose its representation fields or generated accessors.
-A tgo file may not select a `Tgo`-prefixed method through an interface or an open or mixed type
-parameter. An exact enum constraint can use these methods in a checked tag switch.
+A canonical switch does not recognize these generated methods through an interface or an open or
+mixed type parameter. An exact enum constraint can use them in a checked tag switch.
 A new defined type may not derive from an enum, including through pointer layers.
 A type alias may name the enum or pointer and keeps all model rules.
 A tgo file may not convert an enum value or pointer to expose its representation.
@@ -389,32 +407,43 @@ The conversion rules also apply to a type parameter whose type set admits the en
 A TGo file reads an enum payload with a checked tag switch:
 
 ```text
-switch account.TgoTag() {
-case 1:
-    return account.TgoPersonal().Name
-case 2:
-    return account.TgoBusiness().Company
+switch account.Tag() {
+case AccountTagZero:
+    return "missing"
+case AccountTagPersonal:
+    return account.PersonalPayload().Name
+case AccountTagBusiness:
+    return account.BusinessPayload().Company
 default:
-    panic("invalid Account variant")
+    panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
 }
 ```
 
-The switch tag must be a direct `TgoTag()` call on a stable enum value. The value must be an
-unaliased local value or a field path that starts at one. A pointer, package variable, interface
-value, or open type parameter cannot supply the proof. A switch initializer can bind an
-expression once: `switch value := load(); value.TgoTag() {`.
+The switch tag must be a direct `Tag()` call on an enum value or pointer. Parentheses are valid.
+The receiver can be a local value, package value, field, alias, or captured value. An exact enum
+type constraint can use the switch. An interface or open or mixed type parameter cannot.
 
-Cases use the one-based numeric tags in declaration order. Each case value must be a constant in
-the tag range. The switch must cover each tag. It must have a default path that cannot continue
-after the switch. A case cannot use `fallthrough`. TGo does not generate tag constants.
+The switch must cover `Zero` and every declared tag with generated tag constants. Parentheses, a
+constant conversion, and a same-value constant alias are valid labels. An unrelated numeric
+constant is invalid, even when its value is equal to a tag. An unresolved label suppresses the
+missing-case diagnostic. A repeated tag is invalid. The switch must have this exact default for
+the same receiver:
+
+```text
+default:
+    panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+```
+
+A case cannot use `fallthrough`.
 
 A case with one tag permits only that variant's payload accessor on the same receiver. A case
-with multiple tags permits no payload accessor. An assignment to the receiver invalidates the
-proof for later payload reads. A nested closure does not inherit the proof. It needs its own
-checked tag switch.
+with multiple tags permits no payload accessor. If a clause assigns the receiver or a
+selector-prefix receiver, the clause gets no payload proof. A nested function literal does not
+inherit the proof. Direct calls in `go` and `defer` statements do inherit it. Method values do not.
+A nested switch on the same `Tag()` receiver supplies its own proof.
 
-`TgoTag()` is invalid outside a checked switch. A payload accessor is invalid outside its proven
-case. The accessor returns a Go value copy. Reference fields keep their Go aliases.
+The compiler does not analyze a `Tag` or payload call outside a recognized canonical switch.
+The accessor returns a Go value copy. Reference fields keep their Go aliases.
 
 ## Checked types
 
@@ -592,7 +621,7 @@ Pointers, aliases, methods, interfaces, callbacks, channels, variadic calls, gen
 errors, typed nils, and object identity keep their Go behavior.
 
 TGo trusts values that cross the Go boundary. The compiler does not scan, copy, reconstruct, or
-validate them. Go can create a zero enum, change private storage with `unsafe`, or return a value
+validate them. Go can create an unknown enum tag, change private storage with `unsafe`, or return a value
 that breaks a checked type rule. The Go caller owns these risks.
 
 `tgolint` checks unsafe Go patterns that it can prove from source. It does not make the Go
@@ -609,9 +638,15 @@ For a type `T`, variant `V`, and defaulted field `F`, tgo generates or reserves:
 ```text
 T
 TV
-NewTV
-TgoTag
-TgoV
+TTag
+TTagZero
+TTagV
+TZero
+Tag
+IsZero
+UnknownTag
+VPayload
+T
 tgoTag
 tgoV
 NewT
@@ -623,6 +658,8 @@ TgoDefaultTF
 A source declaration that collides with a generated name is a compile error.
 An inserted reference must resolve to its generated declaration. A local name cannot capture it.
 An enum reserves its emitted `uint8`, `uint16`, or `uint32` tag name.
+An enum cannot declare variants named `Zero` or `Tag`. A payload field cannot have the enum name
+because that name belongs to the constructor method.
 A checked type reserves the predeclared `string`, `error`, and `nil` names.
 
 ## Build command and diagnostics

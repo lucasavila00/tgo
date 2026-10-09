@@ -24,27 +24,44 @@ func TestBoxedEnumLayout(t *testing.T) {
 	}
 	first := model.LargeFirst{Data: [64]byte{1, 2}}
 	second := model.LargeSecond{Data: [64]byte{3, 4}}
-	a := model.NewLargeFirst(first)
-	b := model.NewLargeSecond(second)
-	empty := model.NewLargeEmpty(model.LargeEmpty{})
-	if a.TgoTag() != 1 || a.TgoFirst() != first {
+	a := first.Large()
+	b := second.Large()
+	empty := model.LargeEmpty{}.Large()
+	if a.Tag() != model.LargeTagFirst || a.FirstPayload() != first {
 		t.Fatal("first boxed payload")
 	}
-	if b.TgoTag() != 2 || b.TgoSecond() != second {
+	if b.Tag() != model.LargeTagSecond || b.SecondPayload() != second {
 		t.Fatal("second boxed payload")
 	}
-	if empty.TgoTag() != 3 || empty.TgoEmpty() != (model.LargeEmpty{}) {
+	if empty.Tag() != model.LargeTagEmpty || empty.EmptyPayload() != (model.LargeEmpty{}) {
 		t.Fatal("empty variant")
 	}
 	mixed := model.EqualSecond{Data: [40]byte{5}}
-	if model.NewEqualSecond(mixed).TgoSecond() != mixed {
+	if mixed.Equal().SecondPayload() != mixed {
 		t.Fatal("inline payload")
 	}
 	var read model.LargeFirst
 	allocations := testing.AllocsPerRun(1000, func() {
-		read = a.TgoFirst()
+		read = a.FirstPayload()
 	})
 	if allocations != 0 || read != first {
 		t.Fatalf("boxed accessor cost: %f allocations", allocations)
 	}
+}
+
+func TestEnumPublicAPI(t *testing.T) {
+	zero := model.LargeZero{}.Large()
+	if !zero.IsZero() || zero.Tag() != model.LargeTagZero {
+		t.Fatal("zero constructor")
+	}
+	inline := model.EqualFirst{}.Equal().SecondPayload()
+	if inline != (model.EqualSecond{}) {
+		t.Fatal("wrong inline accessor did not return its inactive slot")
+	}
+	defer func() {
+		if recover() == nil {
+			t.Fatal("wrong boxed accessor did not panic")
+		}
+	}()
+	_ = model.EqualSecond{}.Equal().FirstPayload()
 }

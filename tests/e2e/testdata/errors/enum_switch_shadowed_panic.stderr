@@ -1,1 +1,1 @@
-<WORK>/input.tgo:10:2: switch on Result.TgoTag needs a default path that cannot continue
+<WORK>/input.tgo:10:2: Result: default must be exactly "panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag"

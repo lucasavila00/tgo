@@ -86,13 +86,13 @@ func TestBusiness(t *testing.T) {
 	if model.LiteralTagSubject("Literal") != "Literal" {
 		t.Fatal("literal tag subject used the wrong body")
 	}
-	if model.SignalName(model.NewSignalOn(model.SignalOn{})) != "on" {
+	if model.SignalName(model.SignalOn{}.Signal()) != "on" {
 		t.Fatal("multiline enum declaration has the wrong tag")
 	}
-	if model.SignalState(model.NewSignalOff(model.SignalOff{})) != "known" {
+	if model.SignalState(model.SignalOff{}.Signal()) != "known" {
 		t.Fatal("multi-tag case rejected a known tag")
 	}
-	if model.SignalStateOrInvalid(model.NewSignalOn(model.SignalOn{})) != "known" {
+	if model.SignalStateOrInvalid(model.SignalOn{}.Signal()) != "known" {
 		t.Fatal("returning default rejected a known tag")
 	}
 	explicitFlag, explicitName := model.MarkerValues(model.ExplicitMarker())

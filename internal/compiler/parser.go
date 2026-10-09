@@ -41,11 +41,15 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		var replacement string
 		if node, ok := syntax.EnumDeclarationOf(declaration); ok {
 			item = enumModel(files, erasedData, node)
+			if err := validateEnumPublicNames(item, node); err != nil {
+				return nil, fmt.Errorf("%s: %w", files.Position(node.Name.Start), err)
+			}
 			if err := configureEnumJSON(item, node); err != nil {
 				return nil, fmt.Errorf("%s: %w", files.Position(node.Name.Start), err)
 			}
 			hasEnum = true
-			replacement = enumGo(name, item) + enumJSONGo(item, jsonPackage, fmtPackage)
+			replacement = enumGo(name, item, fmtPackage) +
+				enumJSONGo(item, jsonPackage, fmtPackage)
 		} else if node, ok := syntax.StructDeclarationOf(declaration); ok {
 			item = structModel(files, erasedData, node)
 			replacement = "type " + item.Name + " struct {\n" +
@@ -117,6 +121,24 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		Propagations:  propagations,
 		NonNil:        nonNil,
 	}, nil
+}
+
+func validateEnumPublicNames(declaration *model, node *syntax.EnumDeclaration) error {
+	for _, item := range node.Variants {
+		if item.Name.Name == "Zero" || item.Name.Name == "Tag" {
+			return fmt.Errorf("enum variant name %s conflicts with generated %s API",
+				item.Name.Name, declaration.Name)
+		}
+		for _, field := range item.Fields {
+			for _, name := range field.Field.Names {
+				if name.Name == declaration.Name {
+					return fmt.Errorf("enum payload field %s conflicts with its constructor method",
+						declaration.Name)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // eraseNonNilTypes makes the Go spelling used inside generated model declarations.
