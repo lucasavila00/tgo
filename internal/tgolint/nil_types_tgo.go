@@ -62,9 +62,10 @@ func (v *nilType) GobDecode(data []byte) error {
 	if len(data) != 4 {
 		return __tgo_fmt.Errorf("nilType: invalid gob data length %d", len(data))
 	}
-	tag := nilTypeTag(uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3]))
-	if tag < nilTypeTagNever || tag > nilTypeTagOptional {
-		return __tgo_fmt.Errorf("nilType: cannot gob decode unknown tag %d", tag)
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := nilTypeTag(number)
+	if uint32(tag) != number || tag < nilTypeTagNever || tag > nilTypeTagOptional {
+		return __tgo_fmt.Errorf("nilType: cannot gob decode unknown tag %d", number)
 	}
 	*v = nilType{tgoTag: tag}
 	return nil

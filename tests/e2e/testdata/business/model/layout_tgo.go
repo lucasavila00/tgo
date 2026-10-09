@@ -478,9 +478,10 @@ func (v *NamedZero) GobDecode(data []byte) error {
 	if len(data) != 4 {
 		return __tgo_fmt.Errorf("NamedZero: invalid gob data length %d", len(data))
 	}
-	tag := NamedZeroTag(uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3]))
-	if tag < NamedZeroTagZero || tag > NamedZeroTagOther {
-		return __tgo_fmt.Errorf("NamedZero: cannot gob decode unknown tag %d", tag)
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := NamedZeroTag(number)
+	if uint32(tag) != number || tag < NamedZeroTagZero || tag > NamedZeroTagOther {
+		return __tgo_fmt.Errorf("NamedZero: cannot gob decode unknown tag %d", number)
 	}
 	*v = NamedZero{tgoTag: tag}
 	return nil

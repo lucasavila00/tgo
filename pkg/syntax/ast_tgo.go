@@ -110,9 +110,10 @@ func (v *ChannelDirection) GobDecode(data []byte) error {
 	if len(data) != 4 {
 		return __tgo_fmt.Errorf("ChannelDirection: invalid gob data length %d", len(data))
 	}
-	tag := ChannelDirectionTag(uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3]))
-	if tag < ChannelDirectionTagSendReceive || tag > ChannelDirectionTagReceiveOnly {
-		return __tgo_fmt.Errorf("ChannelDirection: cannot gob decode unknown tag %d", tag)
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := ChannelDirectionTag(number)
+	if uint32(tag) != number || tag < ChannelDirectionTagSendReceive || tag > ChannelDirectionTagReceiveOnly {
+		return __tgo_fmt.Errorf("ChannelDirection: cannot gob decode unknown tag %d", number)
 	}
 	*v = ChannelDirection{tgoTag: tag}
 	return nil

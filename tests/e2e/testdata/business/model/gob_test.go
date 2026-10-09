@@ -45,6 +45,9 @@ func TestPayloadFreeEnumGobWire(t *testing.T) {
 	if err := decoded.GobDecode([]byte{0, 0, 0, 3}); err == nil {
 		t.Fatal("GobDecode accepted an unknown tag")
 	}
+	if err := decoded.GobDecode([]byte{0, 0, 1, 1}); err == nil {
+		t.Fatal("GobDecode accepted a truncated tag")
+	}
 	if decoded.Tag() != SignalTagOff {
 		t.Fatal("failed GobDecode changed the receiver")
 	}

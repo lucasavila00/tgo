@@ -85,14 +85,20 @@ func emitEnumGob(output *strings.Builder, declaration *model, fmtPackage string)
 	)
 	fmt.Fprintf(
 		output,
-		"tag := %sTag(uint32(data[0]) << 24 | uint32(data[1]) << 16 | "+
-			"uint32(data[2]) << 8 | uint32(data[3]))\n",
+		"number := uint32(data[0]) << 24 | uint32(data[1]) << 16 | "+
+			"uint32(data[2]) << 8 | uint32(data[3])\n"+
+			"tag := %sTag(number)\n",
 		name,
 	)
-	fmt.Fprintf(output, "if tag < %s || tag > %s {\n", first, last)
 	fmt.Fprintf(
 		output,
-		"return %s.Errorf(%q, tag)\n}\n",
+		"if uint32(tag) != number || tag < %s || tag > %s {\n",
+		first,
+		last,
+	)
+	fmt.Fprintf(
+		output,
+		"return %s.Errorf(%q, number)\n}\n",
 		fmtPackage,
 		name+": cannot gob decode unknown tag %d",
 	)

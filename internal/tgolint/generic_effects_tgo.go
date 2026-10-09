@@ -87,9 +87,10 @@ func (v *EffectKind) GobDecode(data []byte) error {
 	if len(data) != 4 {
 		return __tgo_fmt.Errorf("EffectKind: invalid gob data length %d", len(data))
 	}
-	tag := EffectKindTag(uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3]))
-	if tag < EffectKindTagBoolean || tag > EffectKindTagResliceExtends {
-		return __tgo_fmt.Errorf("EffectKind: cannot gob decode unknown tag %d", tag)
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := EffectKindTag(number)
+	if uint32(tag) != number || tag < EffectKindTagBoolean || tag > EffectKindTagResliceExtends {
+		return __tgo_fmt.Errorf("EffectKind: cannot gob decode unknown tag %d", number)
 	}
 	*v = EffectKind{tgoTag: tag}
 	return nil

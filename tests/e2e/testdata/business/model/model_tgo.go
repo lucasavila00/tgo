@@ -491,9 +491,10 @@ func (v *Signal) GobDecode(data []byte) error {
 	if len(data) != 4 {
 		return __tgo_fmt.Errorf("Signal: invalid gob data length %d", len(data))
 	}
-	tag := SignalTag(uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3]))
-	if tag < SignalTagOn || tag > SignalTagOff {
-		return __tgo_fmt.Errorf("Signal: cannot gob decode unknown tag %d", tag)
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := SignalTag(number)
+	if uint32(tag) != number || tag < SignalTagOn || tag > SignalTagOff {
+		return __tgo_fmt.Errorf("Signal: cannot gob decode unknown tag %d", number)
 	}
 	*v = Signal{tgoTag: tag}
 	return nil

@@ -68,9 +68,10 @@ func (v *effectOutcome) GobDecode(data []byte) error {
 	if len(data) != 4 {
 		return __tgo_fmt.Errorf("effectOutcome: invalid gob data length %d", len(data))
 	}
-	tag := effectOutcomeTag(uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3]))
-	if tag < effectOutcomeTagUnknown || tag > effectOutcomeTagConditional {
-		return __tgo_fmt.Errorf("effectOutcome: cannot gob decode unknown tag %d", tag)
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := effectOutcomeTag(number)
+	if uint32(tag) != number || tag < effectOutcomeTagUnknown || tag > effectOutcomeTagConditional {
+		return __tgo_fmt.Errorf("effectOutcome: cannot gob decode unknown tag %d", number)
 	}
 	*v = effectOutcome{tgoTag: tag}
 	return nil
