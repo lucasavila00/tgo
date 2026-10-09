@@ -21,7 +21,7 @@ func copyItems(groups [][]*item) {
 	}
 	_ = result
 	for _, value := range groups[0] {
-		_ = value
+		requireItem(value)
 	}
 }
 
@@ -29,3 +29,5 @@ func copyItem(value *item) *item {
 	_ = value
 	return &item{}
 }
+
+func requireItem(value *item) { _ = value }
