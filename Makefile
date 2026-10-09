@@ -1,5 +1,5 @@
 .PHONY: ci ci-unlocked fast-ci fast-ci-unlocked fast-checks slow-ci slow-ci-unlocked \
-	generated ast-boundary lint test unit-test unit-test-fast tgolint-unit-test \
+	generated ast-boundary tgolint-boundary lint test unit-test unit-test-fast tgolint-unit-test \
 	e2e-test tgolint-test \
 	allocation-test dogfood markdown tgo-size vscode-test build install-hooks install-tools
 
@@ -22,6 +22,9 @@ slow-ci-unlocked: tgolint-unit-test tgolint-test
 
 ast-boundary:
 	python3 scripts/check_ast_boundary.py
+
+tgolint-boundary:
+	python3 scripts/check_tgolint_boundary.py
 
 dogfood:
 	! grep -R -n -E --include='*.go' --include='*.tgo' \
