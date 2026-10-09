@@ -52,3 +52,14 @@ func AcceptOptional(value *Item) *Item {
 func RequireAndReturn(value *Item) *Item {
 	return value
 }
+
+type Lookup struct {
+}
+
+func NewLookup() *Lookup {
+	return &Lookup{}
+}
+
+func (l *Lookup) Find(value *Item) *Item {
+	return nil
+}

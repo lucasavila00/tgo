@@ -100,3 +100,135 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 		t.Fatalf("diagnostic: %q", message)
 	}
 }
+
+func TestCheckedSourceDeclarationFactRoundTrip(t *testing.T) {
+	t.Parallel()
+	models := sourceModelShapes(t)
+	if sourceModelName(models[0]) != "Count" {
+		t.Fatalf("checked source model: %#v", models[0])
+	}
+	checked := *models[0]
+	switch checked.TgoTag() {
+	case 1:
+		shape := checked.TgoChecked()
+		if shape.Base != "int" {
+			t.Fatalf("checked base: %q", shape.Base)
+		}
+		assertSourceModelFactRoundTrip(t, shape.Fact, checkedModelWire, "Count", nil)
+	case 2, 3:
+		t.Fatal("checked source has a different variant")
+		return
+	default:
+		panic("invalid sourceModel variant")
+	}
+}
+
+func TestEnumSourceDeclarationFactRoundTrip(t *testing.T) {
+	t.Parallel()
+	models := sourceModelShapes(t)
+	if sourceModelName(models[1]) != "Event" {
+		t.Fatalf("enum source model: %#v", models[1])
+	}
+	enum := *models[1]
+	switch enum.TgoTag() {
+	case 1, 3:
+		t.Fatal("enum source has a different variant")
+		return
+	case 2:
+		shape := enum.TgoEnum()
+		wantVariants := []string{"Started", "Stopped"}
+		if len(shape.Variants) != 2 ||
+			shape.Variants[0].name != wantVariants[0] ||
+			shape.Variants[1].name != wantVariants[1] {
+			t.Fatalf("enum variants: %#v", shape.Variants)
+		}
+		assertSourceModelFactRoundTrip(
+			t, shape.Fact, enumModelWire, "Event", wantVariants,
+		)
+	default:
+		panic("invalid sourceModel variant")
+	}
+}
+
+func TestStructSourceDeclaration(t *testing.T) {
+	t.Parallel()
+	models := sourceModelShapes(t)
+	if sourceModelName(models[2]) != "Options" {
+		t.Fatalf("struct source model: %#v", models[2])
+	}
+	structure := *models[2]
+	switch structure.TgoTag() {
+	case 1, 2:
+		t.Fatal("struct source has a different variant")
+		return
+	case 3:
+		shape := structure.TgoStruct()
+		if len(shape.Fields) != 1 || shape.Fields[0].name != "Limit" ||
+			shape.Fields[0].typeExpression != "int" {
+			t.Fatalf("struct fields: %#v", shape.Fields)
+		}
+	default:
+		panic("invalid sourceModel variant")
+	}
+	if sourceModelFact(&structure) != nil {
+		t.Fatal("struct source model has a fact")
+	}
+}
+
+func sourceModelShapes(t *testing.T) []*sourceModel {
+	t.Helper()
+	data := []byte(`package sample
+
+type Count int where value > 0
+
+type Event enum {
+	Started struct { ID string }
+	Stopped struct { Reason string }
+}
+
+type Options struct { Limit int }
+`)
+	files := token.NewFileSet()
+	file, err := syntax.ParseFile(files, "model.tgo", data, syntax.AllErrors)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	tokenFile := files.File(file.Package)
+	models := make([]*sourceModel, 0, len(file.Declarations))
+	for _, declaration := range file.Declarations {
+		model := sourceDeclaration(
+			declaration, "example.com/sample", file, tokenFile, data,
+		)
+		if model != nil {
+			models = append(models, model)
+		}
+	}
+	if len(models) != 3 {
+		t.Fatalf("source models: %d", len(models))
+	}
+	return models
+}
+
+func assertSourceModelFactRoundTrip(
+	t *testing.T,
+	fact *model,
+	wantKind uint8,
+	wantName string,
+	wantVariants []string,
+) {
+	t.Helper()
+	wire := encodeModelFact(fact)
+	if wire == nil || wire.Kind != wantKind || wire.Package != "example.com/sample" ||
+		wire.Name != wantName || len(wire.Variants) != len(wantVariants) {
+		t.Fatalf("wire fact: %#v", wire)
+	}
+	for index := range wantVariants {
+		if wire.Variants[index] != wantVariants[index] {
+			t.Fatalf("wire variants: %v", wire.Variants)
+		}
+	}
+	decoded := decodeModelFact(wire, "example.com/sample")
+	if !sameModelFact(fact, decoded) {
+		t.Fatalf("fact round trip: %#v -> %#v", fact, decoded)
+	}
+}
