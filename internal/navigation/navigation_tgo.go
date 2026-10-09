@@ -281,13 +281,13 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		references:  make(map[string][]Location),
 		symbols:     nil,
 	}
-	for _, pkg := range packages {
+	for view, pkg := range packages {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
 		}
-		keys := newObjectKeys(pkg.Package)
+		keys := newObjectKeys(pkg.Package, view)
 		ownerLocations := make(map[token.Pos]Location)
 		generatedUses := make(map[sourcePosition]types.Object)
 		for position, object := range pkg.GeneratedUses {
@@ -369,11 +369,12 @@ func positionKey(position token.Position) sourcePosition {
 
 type objectKeys struct {
 	known map[types.Object]string
+	view  int
 	next  int
 }
 
-func newObjectKeys(root *types.Package) *objectKeys {
-	keys := &objectKeys{known: make(map[types.Object]string), next: 0}
+func newObjectKeys(root *types.Package, view int) *objectKeys {
+	keys := &objectKeys{known: make(map[types.Object]string), view: view, next: 0}
 	keys.addPackage(root, make(map[*types.Package]bool))
 	return keys
 }
@@ -433,7 +434,7 @@ func (k *objectKeys) key(object types.Object) string {
 		packagePath = object.Pkg().Path()
 	}
 	k.next++
-	key := fmt.Sprintf("local:%s:%d", packagePath, k.next)
+	key := fmt.Sprintf("local:%s:%d:%d", packagePath, k.view, k.next)
 	k.known[object] = key
 	return key
 }

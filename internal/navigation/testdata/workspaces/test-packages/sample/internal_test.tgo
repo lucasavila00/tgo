@@ -1,5 +1,6 @@
 package sample
 
 func internalOnly() string {
-	return Production(Record{Name: "internal"})
+	value := Production(Record{Name: "internal"})
+	return value
 }

@@ -3,5 +3,6 @@ package sample_test
 import "example.test/test-navigation/sample"
 
 func externalOnly() string {
-	return sample.Production(sample.Record{Name: "external"})
+	value := sample.Record{Name: "external"}
+	return sample.Production(value)
 }

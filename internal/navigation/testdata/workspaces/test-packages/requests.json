@@ -5,6 +5,11 @@
     "hover": "func Production(value Record) string"
   },
   {
+    "method": "hover",
+    "position": {"file": "sample/internal_test.tgo", "text": "value", "occurrence": 1},
+    "hover": "var value string"
+  },
+  {
     "method": "definition",
     "position": {"file": "sample/internal_test.tgo", "text": "Production", "occurrence": 1},
     "locations": [
