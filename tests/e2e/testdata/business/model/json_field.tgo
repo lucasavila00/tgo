@@ -38,15 +38,3 @@ func (value *JSONObject) UnmarshalJSON(data []byte) error {
 	value.Seen = string(data)
 	return nil
 }
-
-func (value JSONInternalPayloadMethodValue) MarshalJSON() ([]byte, error) {
-	if value.Seen == "scalar" {
-		return []byte(`"scalar"`), nil
-	}
-	return []byte(`{"custom":"payload"}`), nil
-}
-
-func (value *JSONInternalPayloadMethodValue) UnmarshalJSON(data []byte) error {
-	value.Seen = string(data)
-	return nil
-}
