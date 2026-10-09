@@ -57,3 +57,5 @@ payload storage.
 
 Production source in this repository does not use `tgolint` suppression directives. The main CI
 target checks generated files, the syntax boundary, allocation budgets, Markdown, lint, and tests.
+
+The [Go printer port](go-printer-port.md) defines the staged formatter replacement.
