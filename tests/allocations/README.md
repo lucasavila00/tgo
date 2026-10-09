@@ -21,20 +21,16 @@ exclude the outer decoder.
 ## Allocation sources
 
 The Go version, payload type, input data, and escape analysis determine the measured count.
-The generated paths have these main allocation sources:
+Streaming methods avoid a complete envelope buffer or map when the wire form permits it.
+Measured allocations can come from:
 
-- Public `encoding/json` calls allocate encoder or decoder state and can convert the enum to an
-  interface. Direct generated methods exclude the outer encoder or decoder.
-- Byte-slice marshal methods allocate their returned buffer. Byte-slice external decoding uses a
-  map and a copied raw payload. Adjacent decoding copies raw content. Internal decoding reads the
-  tag and then decodes the original object.
-- External and adjacent streaming writes emit the envelope around one payload encode.
-- External streaming reads copy the selected payload. Adjacent streaming reads copy its content.
-- Internal streaming writes can buffer the complete enum when the payload has a custom JSON or text
-  method. Internal streaming reads buffer the complete value before normal decoding.
-- Untagged decoding tries payload decoders in declaration order. Each failed attempt can allocate.
-- Payload fields, custom methods, returned buffers, decoded names, copied values, boxes, and errors
-  can allocate.
+- public encoder or decoder state and interface conversion;
+- marshaled result buffers;
+- copied raw payload or content values and decoded member names;
+- each untagged decode attempt;
+- payload fields and custom methods;
+- boxed payloads that escape and returned errors; and
+- compatibility buffers and maps used by direct methods.
 
 `budgets.json` is the only list of numeric limits. Keep it next to the runner because these values
 measure this implementation. They are not part of the TGo language specification.

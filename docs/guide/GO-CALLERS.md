@@ -32,7 +32,7 @@ possible tag. A default has the union of omitted variants.
 Do not call generated enum methods through a structural interface or an open
 generic constraint.
 Calls outside a recognized canonical switch do not get contextual payload checks.
-Do not pass a tgo type to a generic function or method that can make its zero
+Do not pass a TGo type to a generic function or method that can make its zero
 value. The same rule applies when you save the function or method as a value.
 `will` means the unsafe event is proved. `can` means a runtime value is unknown.
 Local Boolean and integer assignments can change `can` to `will` or remove the
