@@ -233,47 +233,11 @@ func (p *packageUnit) checkedConstructorCall(
 		return literal
 	}
 
-	values := make([]ast.Expr, structure.NumFields())
-	evaluation := make([]ast.Expr, 0, len(literal.Elts))
-	indices := make([]int, 0, len(literal.Elts))
-	keyed := false
-	unkeyed := false
-	supplied := make(map[int]bool)
-	for index, element := range literal.Elts {
-		fieldIndex := index
-		value := element
-		if pair, pairOK := element.(*ast.KeyValueExpr); pairOK {
-			keyed = true
-			name, nameOK := pair.Key.(*ast.Ident)
-			if !nameOK {
-				return literal
-			}
-			fieldIndex = structFieldIndex(structure, name.Name)
-			value = pair.Value
-		} else {
-			unkeyed = true
-		}
-		if keyed && unkeyed {
-			p.fail(literal, "mixture of field:value and value elements in struct literal")
-			return literal
-		}
-		if fieldIndex < 0 || fieldIndex >= len(values) {
-			return literal
-		}
-		if supplied[fieldIndex] {
-			p.fail(element, "duplicate field %s in struct literal", structure.Field(fieldIndex).Name())
-			return literal
-		}
-		supplied[fieldIndex] = true
-		values[fieldIndex] = value
-		evaluation = append(evaluation, value)
-		indices = append(indices, fieldIndex)
-	}
-	for index, value := range values {
-		if value == nil {
-			p.fail(literal, "missing required field %s", structure.Field(index).Name())
-			return literal
-		}
+	values, evaluation, indices, keyed, valid := p.checkedLiteralValues(
+		literal, structure,
+	)
+	if !valid {
+		return literal
 	}
 
 	prefix := p.ownerQualifier(file, named.Obj().Pkg())
@@ -333,6 +297,63 @@ func (p *packageUnit) checkedConstructorCall(
 	return call(function, &ast.CompositeLit{
 		Type: carrierLiteralType, Elts: carrierElements,
 	})
+}
+
+func (p *packageUnit) checkedLiteralValues(
+	literal *ast.CompositeLit,
+	structure *types.Struct,
+) ([]ast.Expr, []ast.Expr, []int, bool, bool) {
+	values := make([]ast.Expr, structure.NumFields())
+	evaluation := make([]ast.Expr, 0, len(literal.Elts))
+	indices := make([]int, 0, len(literal.Elts))
+	keyed, unkeyed := false, false
+	supplied := make(map[int]bool)
+	for index, element := range literal.Elts {
+		fieldIndex, value, pair := checkedLiteralElement(structure, index, element)
+		keyed, unkeyed = keyed || pair, unkeyed || !pair
+		if keyed && unkeyed {
+			p.fail(literal, "mixture of field:value and value elements in struct literal")
+			return nil, nil, nil, false, false
+		}
+		if fieldIndex < 0 || fieldIndex >= len(values) {
+			return nil, nil, nil, false, false
+		}
+		if supplied[fieldIndex] {
+			p.fail(
+				element,
+				"duplicate field %s in struct literal",
+				structure.Field(fieldIndex).Name(),
+			)
+			return nil, nil, nil, false, false
+		}
+		supplied[fieldIndex] = true
+		values[fieldIndex] = value
+		evaluation = append(evaluation, value)
+		indices = append(indices, fieldIndex)
+	}
+	for index, value := range values {
+		if value == nil {
+			p.fail(literal, "missing required field %s", structure.Field(index).Name())
+			return nil, nil, nil, false, false
+		}
+	}
+	return values, evaluation, indices, keyed, true
+}
+
+func checkedLiteralElement(
+	structure *types.Struct,
+	index int,
+	element ast.Expr,
+) (int, ast.Expr, bool) {
+	pair, ok := element.(*ast.KeyValueExpr)
+	if !ok {
+		return index, element, false
+	}
+	name, ok := pair.Key.(*ast.Ident)
+	if !ok {
+		return -1, pair.Value, true
+	}
+	return structFieldIndex(structure, name.Name), pair.Value, true
 }
 
 func structFieldIndex(structure *types.Struct, name string) int {

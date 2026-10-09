@@ -111,7 +111,7 @@
   },
   {
     "method": "definition",
-    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 3},
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 6},
     "locations": [
       {"file": "app/app.tgo", "text": "value", "occurrence": 5}
     ]
