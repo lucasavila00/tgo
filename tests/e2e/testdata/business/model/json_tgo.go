@@ -2061,11 +2061,28 @@ type JSONNonNilExternalValue struct {
 	}
 	Custom JSONNonNilCustom
 }
+type TgoJSONNonNilExternalValueInput struct {
+	FieldDirect *JSONNonNilTarget
+	FieldAlias  JSONNonNilAlias
+	FieldNested struct {
+		Array    [1]*JSONNonNilTarget
+		Slice    []*JSONNonNilTarget
+		Map      map[string]*JSONNonNilTarget
+		Optional *struct{ Value *JSONNonNilTarget }
+	}
+	FieldCustom JSONNonNilCustom
+}
 
-// JSONNonNilExternal constructs JSONNonNilExternal. Model fields must be valid.
+// NewJSONNonNilExternalValue constructs JSONNonNilExternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONNonNilExternalValue) JSONNonNilExternal() JSONNonNilExternal {
-	return JSONNonNilExternal{tgoTag: JSONNonNilExternalTagValue, tgoValue: value}
+func NewJSONNonNilExternalValue(Direct *JSONNonNilTarget, Alias JSONNonNilAlias, Nested struct {
+	Array    [1]*JSONNonNilTarget
+	Slice    []*JSONNonNilTarget
+	Map      map[string]*JSONNonNilTarget
+	Optional *struct{ Value *JSONNonNilTarget }
+}, Custom JSONNonNilCustom) JSONNonNilExternal {
+	tgoValue := JSONNonNilExternalValue{Direct, Alias, Nested, Custom}
+	return JSONNonNilExternal{tgoTag: JSONNonNilExternalTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -2143,7 +2160,7 @@ func (v *JSONNonNilExternal) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Custom.Value must not be nil")
 		}
 
-		*v = payload.JSONNonNilExternal()
+		*v = NewJSONNonNilExternalValue(payload.Direct, payload.Alias, payload.Nested, payload.Custom)
 		return nil
 	default:
 		return fmt.Errorf("unknown JSONNonNilExternal JSON variant %q", variant)
@@ -2242,7 +2259,7 @@ func (v *JSONNonNilExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Custom.Value must not be nil")
 		}
 
-		*v = payload.JSONNonNilExternal()
+		*v = NewJSONNonNilExternalValue(payload.Direct, payload.Alias, payload.Nested, payload.Custom)
 		return nil
 	default:
 		return fmt.Errorf("invalid JSONNonNilExternal JSON tag")
@@ -2274,11 +2291,15 @@ func (v JSONNonNilInternal) UnknownTag() string {
 type JSONNonNilInternalValue struct {
 	Required *JSONNonNilTarget
 }
+type TgoJSONNonNilInternalValueInput struct {
+	FieldRequired *JSONNonNilTarget
+}
 
-// JSONNonNilInternal constructs JSONNonNilInternal. Model fields must be valid.
+// NewJSONNonNilInternalValue constructs JSONNonNilInternal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONNonNilInternalValue) JSONNonNilInternal() JSONNonNilInternal {
-	return JSONNonNilInternal{tgoTag: JSONNonNilInternalTagValue, tgoValue: value}
+func NewJSONNonNilInternalValue(Required *JSONNonNilTarget) JSONNonNilInternal {
+	tgoValue := JSONNonNilInternalValue{Required}
+	return JSONNonNilInternal{tgoTag: JSONNonNilInternalTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -2353,7 +2374,7 @@ func (v *JSONNonNilInternal) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("invalid JSONNonNilInternal.Value JSON payload: Required must not be nil")
 		}
 
-		*v = payload.JSONNonNilInternal()
+		*v = NewJSONNonNilInternalValue(payload.Required)
 		return nil
 	default:
 		return fmt.Errorf("unknown JSONNonNilInternal JSON variant %q", variant)
@@ -2393,11 +2414,15 @@ func (v JSONNonNilAdjacent) UnknownTag() string {
 type JSONNonNilAdjacentValue struct {
 	Required *JSONNonNilTarget
 }
+type TgoJSONNonNilAdjacentValueInput struct {
+	FieldRequired *JSONNonNilTarget
+}
 
-// JSONNonNilAdjacent constructs JSONNonNilAdjacent. Model fields must be valid.
+// NewJSONNonNilAdjacentValue constructs JSONNonNilAdjacent. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONNonNilAdjacentValue) JSONNonNilAdjacent() JSONNonNilAdjacent {
-	return JSONNonNilAdjacent{tgoTag: JSONNonNilAdjacentTagValue, tgoValue: value}
+func NewJSONNonNilAdjacentValue(Required *JSONNonNilTarget) JSONNonNilAdjacent {
+	tgoValue := JSONNonNilAdjacentValue{Required}
+	return JSONNonNilAdjacent{tgoTag: JSONNonNilAdjacentTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -2454,7 +2479,7 @@ func (v *JSONNonNilAdjacent) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("invalid JSONNonNilAdjacent.Value JSON payload: Required must not be nil")
 		}
 
-		*v = payload.JSONNonNilAdjacent()
+		*v = NewJSONNonNilAdjacentValue(payload.Required)
 		return nil
 	default:
 		return fmt.Errorf("unknown JSONNonNilAdjacent JSON variant %q", variant)
@@ -2550,7 +2575,7 @@ func (v *JSONNonNilAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return fmt.Errorf("invalid JSONNonNilAdjacent.Value JSON payload: Required must not be nil")
 		}
 
-		*v = payload.JSONNonNilAdjacent()
+		*v = NewJSONNonNilAdjacentValue(payload.Required)
 		return nil
 	default:
 		return fmt.Errorf("invalid JSONNonNilAdjacent JSON tag")
@@ -2584,11 +2609,15 @@ func (v JSONNonNilUntagged) UnknownTag() string {
 type JSONNonNilUntaggedFirst struct {
 	Required *JSONNonNilTarget
 }
+type TgoJSONNonNilUntaggedFirstInput struct {
+	FieldRequired *JSONNonNilTarget
+}
 
-// JSONNonNilUntagged constructs JSONNonNilUntagged. Model fields must be valid.
+// NewJSONNonNilUntaggedFirst constructs JSONNonNilUntagged. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONNonNilUntaggedFirst) JSONNonNilUntagged() JSONNonNilUntagged {
-	return JSONNonNilUntagged{tgoTag: JSONNonNilUntaggedTagFirst, tgoFirst: value}
+func NewJSONNonNilUntaggedFirst(Required *JSONNonNilTarget) JSONNonNilUntagged {
+	tgoValue := JSONNonNilUntaggedFirst{Required}
+	return JSONNonNilUntagged{tgoTag: JSONNonNilUntaggedTagFirst, tgoFirst: tgoValue}
 }
 
 // FirstPayload requires First. No tag check.
@@ -2598,11 +2627,15 @@ func (v JSONNonNilUntagged) FirstPayload() JSONNonNilUntaggedFirst { return v.tg
 type JSONNonNilUntaggedSecond struct {
 	Count int
 }
+type TgoJSONNonNilUntaggedSecondInput struct {
+	FieldCount int
+}
 
-// JSONNonNilUntagged constructs JSONNonNilUntagged. Model fields must be valid.
+// NewJSONNonNilUntaggedSecond constructs JSONNonNilUntagged. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONNonNilUntaggedSecond) JSONNonNilUntagged() JSONNonNilUntagged {
-	return JSONNonNilUntagged{tgoTag: JSONNonNilUntaggedTagSecond, tgoSecond: value}
+func NewJSONNonNilUntaggedSecond(Count int) JSONNonNilUntagged {
+	tgoValue := JSONNonNilUntaggedSecond{Count}
+	return JSONNonNilUntagged{tgoTag: JSONNonNilUntaggedTagSecond, tgoSecond: tgoValue}
 }
 
 // SecondPayload requires Second. No tag check.
@@ -2646,7 +2679,7 @@ func (v *JSONNonNilUntagged) UnmarshalJSON(data []byte) error {
 				return nil
 			}(); tgoJSONError == nil {
 
-				*v = payload.JSONNonNilUntagged()
+				*v = NewJSONNonNilUntaggedFirst(payload.Required)
 				return nil
 			} else if tgoJSONNonNilError == nil {
 				tgoJSONNonNilError = tgoJSONError
@@ -2656,7 +2689,7 @@ func (v *JSONNonNilUntagged) UnmarshalJSON(data []byte) error {
 	{
 		var payload JSONNonNilUntaggedSecond
 		if err := json.Unmarshal(data, &payload); err == nil {
-			*v = payload.JSONNonNilUntagged()
+			*v = NewJSONNonNilUntaggedSecond(payload.Count)
 			return nil
 		}
 	}
@@ -2711,11 +2744,16 @@ type JSONNonNilAdvancedValue struct {
 	Recursive JSONNonNilRecursive
 	Generic   JSONNonNilBox[JSONNonNilRequired]
 }
+type TgoJSONNonNilAdvancedValueInput struct {
+	FieldRecursive JSONNonNilRecursive
+	FieldGeneric   JSONNonNilBox[JSONNonNilRequired]
+}
 
-// JSONNonNilAdvanced constructs JSONNonNilAdvanced. Model fields must be valid.
+// NewJSONNonNilAdvancedValue constructs JSONNonNilAdvanced. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value JSONNonNilAdvancedValue) JSONNonNilAdvanced() JSONNonNilAdvanced {
-	return JSONNonNilAdvanced{tgoTag: JSONNonNilAdvancedTagValue, tgoValue: value}
+func NewJSONNonNilAdvancedValue(Recursive JSONNonNilRecursive, Generic JSONNonNilBox[JSONNonNilRequired]) JSONNonNilAdvanced {
+	tgoValue := JSONNonNilAdvancedValue{Recursive, Generic}
+	return JSONNonNilAdvanced{tgoTag: JSONNonNilAdvancedTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -2797,7 +2835,7 @@ func (v *JSONNonNilAdvanced) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("invalid JSONNonNilAdvanced.Value JSON payload: Generic.Value.Item must not be nil")
 		}
 
-		*v = payload.JSONNonNilAdvanced()
+		*v = NewJSONNonNilAdvancedValue(payload.Recursive, payload.Generic)
 		return nil
 	default:
 		return fmt.Errorf("unknown JSONNonNilAdvanced JSON variant %q", variant)
@@ -2900,7 +2938,7 @@ func (v *JSONNonNilAdvanced) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return fmt.Errorf("invalid JSONNonNilAdvanced.Value JSON payload: Generic.Value.Item must not be nil")
 		}
 
-		*v = payload.JSONNonNilAdvanced()
+		*v = NewJSONNonNilAdvancedValue(payload.Recursive, payload.Generic)
 		return nil
 	default:
 		return fmt.Errorf("invalid JSONNonNilAdvanced JSON tag")

@@ -143,6 +143,20 @@ func (v *ComprehensionClause) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid ComprehensionClause.Range JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Bindings {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid ComprehensionClause.Range JSON payload: Value.Bindings[] must not be nil")
+				}
+			}
+			if (*payload.Value).Source == nil {
+				return fmt.Errorf("invalid ComprehensionClause.Range JSON payload: Value.Source must not be nil")
+			}
+		}
+
 		*v = NewComprehensionClauseRange(payload.Value)
 		return nil
 	case "Filter":
@@ -150,6 +164,15 @@ func (v *ComprehensionClause) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid ComprehensionClause.Filter JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Condition == nil {
+				return fmt.Errorf("invalid ComprehensionClause.Filter JSON payload: Value.Condition must not be nil")
+			}
+		}
+
 		*v = NewComprehensionClauseFilter(payload.Value)
 		return nil
 	default:
@@ -221,6 +244,20 @@ func (v *ComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid ComprehensionClause.Range JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			for _, tgoJSONValue0 := range (*payload.Value).Bindings {
+				if tgoJSONValue0 == nil {
+					return fmt.Errorf("invalid ComprehensionClause.Range JSON payload: Value.Bindings[] must not be nil")
+				}
+			}
+			if (*payload.Value).Source == nil {
+				return fmt.Errorf("invalid ComprehensionClause.Range JSON payload: Value.Source must not be nil")
+			}
+		}
+
 		*v = NewComprehensionClauseRange(payload.Value)
 		return nil
 	case 2:
@@ -228,6 +265,15 @@ func (v *ComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid ComprehensionClause.Filter JSON payload: Value must not be nil")
+		}
+		if payload.Value != nil {
+			if (*payload.Value).Condition == nil {
+				return fmt.Errorf("invalid ComprehensionClause.Filter JSON payload: Value.Condition must not be nil")
+			}
+		}
+
 		*v = NewComprehensionClauseFilter(payload.Value)
 		return nil
 	default:

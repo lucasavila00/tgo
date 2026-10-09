@@ -456,6 +456,19 @@ type E enum {
 	}
 }
 
+func TestEnumJSONValidationDoesNotInspectRecursiveEnumStorage(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+type Target struct{}
+type Recursive enum {
+	Bad struct { Required %Target; Padding [100]byte }
+	Link struct { Next *Recursive }
+}
+`)
+	if strings.Contains(output, ".tgoBad") {
+		t.Fatalf("generated validation uses temporary enum storage\n%s", output)
+	}
+}
+
 func TestEnumJSONIgnoresRecursiveTypesWithoutNonNilFields(t *testing.T) {
 	output := compileSourceOutput(t, `package sample
 type Recursive struct { Next *Recursive }
