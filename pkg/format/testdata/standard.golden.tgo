@@ -5,7 +5,7 @@ import (
 	alias "strings"
 )
 
-type Fixture struct {} checked
+type Fixture struct{} checked
 
 const (
 	one = 1
@@ -15,10 +15,8 @@ const (
 var global int = 2
 
 type Number = int
-
 type Set[T comparable] map[T]struct{}
-
-type Text interface { String() string; ~string }
+type Text interface{ String() string; ~string }
 
 func all[T any](values []T, channel chan<- T, input <-chan T) (result int) {
 label:
@@ -52,8 +50,6 @@ label:
 	array := [2]int{0: 1, 1: 2}
 	_ = array[:1:2]
 	_ = alias.TrimSpace(" x ")
-	_ = func(value int) int {
-		return value
-	}(result)
+	_ = func(value int) int { return value }(result)
 	return
 }

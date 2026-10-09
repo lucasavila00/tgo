@@ -5,6 +5,7 @@ package format
 import (
 	"bytes"
 	"go/token"
+	"sort"
 	"strings"
 
 	"tgo/pkg/syntax"
@@ -16,17 +17,53 @@ type sourceComment struct {
 	text  string
 }
 
+type sourceGap struct {
+	lineBreak              bool
+	blank                  bool
+	leadingComment         bool
+	leadingCommentIndented bool
+}
+
 type printer struct {
-	files      *token.FileSet
-	file       *syntax.File
-	source     []byte
-	output     bytes.Buffer
-	comments   []sourceComment
-	comment    int
-	indent     int
-	lineStart  bool
-	lineBreaks int
-	lastSource token.Pos
+	files               *token.FileSet
+	file                *syntax.File
+	source              []byte
+	output              bytes.Buffer
+	comments            []sourceComment
+	comment             int
+	indent              int
+	lineStart           bool
+	lineBreaks          int
+	lastSource          token.Pos
+	commentColumn       int
+	commentColumns      map[token.Pos]int
+	fixedCommentColumns map[token.Pos]int
+	measureComments     map[token.Pos]int
+	functionBodyColumn  int
+	sourceCommentIndent bool
+}
+
+func (p *printer) outputColumn() int {
+	data := p.output.Bytes()
+	column := 0
+	start := bytes.LastIndexByte(data, '\n') + 1
+	for _, value := range string(data[start:]) {
+		if value == '\t' {
+			column += 8 - column%8
+		} else {
+			column++
+		}
+	}
+	return column
+}
+
+func (p *printer) padTo(column int) {
+	current := p.outputColumn()
+	if current >= column {
+		p.space()
+		return
+	}
+	p.text(strings.Repeat(" ", column-current))
 }
 
 func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer {
@@ -43,18 +80,37 @@ func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer
 			)
 		}
 	}
+	return newPrinterState(files, file, source, comments)
+}
+
+func newPrinterState(
+	files *token.FileSet,
+	file *syntax.File,
+	source []byte,
+	comments []sourceComment,
+) *printer {
 	return &printer{
-		files:      files,
-		file:       file,
-		source:     source,
-		output:     *new(bytes.Buffer),
-		comments:   comments,
-		comment:    0,
-		indent:     0,
-		lineStart:  true,
-		lineBreaks: 0,
-		lastSource: token.NoPos,
+		files:               files,
+		file:                file,
+		source:              source,
+		output:              *new(bytes.Buffer),
+		comments:            comments,
+		comment:             0,
+		indent:              0,
+		lineStart:           true,
+		lineBreaks:          0,
+		lastSource:          token.NoPos,
+		commentColumn:       0,
+		commentColumns:      nil,
+		fixedCommentColumns: make(map[token.Pos]int),
+		measureComments:     nil,
+		functionBodyColumn:  0,
+		sourceCommentIndent: false,
 	}
+}
+
+func (p *printer) newProbe(comments []sourceComment) *printer {
+	return newPrinterState(p.files, p.file, p.source, comments)
 }
 
 func (p *printer) printFile() []byte {
@@ -74,17 +130,135 @@ func (p *printer) printFile() []byte {
 	if len(p.file.Declarations) > 0 {
 		p.blankline()
 	}
+	functionBodyColumns := p.functionBodyColumns(p.file.Declarations)
+	commentColumns := p.declarationCommentAlignment(
+		p.file.Declarations,
+		functionBodyColumns,
+	)
 	for index, declaration := range p.file.Declarations {
 		if index > 0 {
-			p.blankline()
+			previous := p.file.Declarations[index-1]
+			start := syntax.DeclarationPosition(declaration)
+			stop := syntax.DeclarationEnd(previous)
+			if declarationKind(previous) != declarationKind(declaration) &&
+				!p.trailingCommentPosition(stop).IsValid() ||
+				p.sourceGap(stop, start).blank || p.sourceGap(stop, start).leadingComment {
+				p.blankline()
+			}
 		}
+		p.functionBodyColumn = functionBodyColumns[index]
+		previousCommentColumns := p.commentColumns
+		p.commentColumns = commentColumns[index]
 		p.declaration(declaration)
 		p.trailingLine(syntax.DeclarationEnd(declaration))
+		p.commentColumns = previousCommentColumns
 		p.newline()
 	}
 	p.before(token.Pos(^uint(0) >> 1))
 	p.finish()
 	return append([]byte(nil), p.output.Bytes()...)
+}
+
+func (p *printer) functionBodyColumns(values []*syntax.Declaration) []int {
+	columns := make([]int, len(values))
+	for first := 0; first < len(values); {
+		declaration := functionDeclarationOf(values[first])
+		if declaration == nil || declaration.Body == nil ||
+			!p.compactFunctionBody(
+				declaration.Body,
+				p.formattedFunctionHeaderWidth(declaration),
+			) {
+			first++
+			continue
+		}
+		last := first + 1
+		for last < len(values) {
+			next := functionDeclarationOf(values[last])
+			if next == nil || next.Body == nil ||
+				!p.compactFunctionBody(next.Body, p.formattedFunctionHeaderWidth(next)) ||
+				p.blankBetween(
+					syntax.DeclarationEnd(values[last-1]),
+					syntax.DeclarationPosition(values[last]),
+				) || p.hasCommentBetween(
+				syntax.DeclarationEnd(values[last-1]),
+				syntax.DeclarationPosition(values[last]),
+			) {
+				break
+			}
+			last++
+		}
+		column := 0
+		for _, value := range values[first:last] {
+			column = max(column, p.formattedFunctionHeaderWidth(functionDeclarationOf(value))+1)
+		}
+		for index := first; index < last; index++ {
+			columns[index] = column
+		}
+		first = last
+	}
+	return columns
+}
+
+func functionDeclarationOf(value *syntax.Declaration) *syntax.FunctionDeclaration {
+	switch declarationValue := *value; declarationValue.Tag() {
+	case syntax.DeclarationTagFunction:
+		return declarationValue.FunctionPayload().Value
+	default:
+		return nil
+	}
+}
+
+func generalDeclarationOf(value *syntax.Declaration) *syntax.GeneralDeclaration {
+	switch declarationValue := *value; declarationValue.Tag() {
+	case syntax.DeclarationTagGeneral:
+		return declarationValue.GeneralPayload().Value
+	default:
+		return nil
+	}
+}
+
+func declarationKind(value *syntax.Declaration) token.Token {
+	switch declarationValue := *value; declarationValue.Tag() {
+	case syntax.DeclarationTagGeneral:
+		return declarationValue.GeneralPayload().Value.Kind
+	case syntax.DeclarationTagFunction:
+		return token.FUNC
+	case syntax.DeclarationTagEnum, syntax.DeclarationTagStruct:
+		return token.TYPE
+	default:
+		return token.ILLEGAL
+	}
+}
+
+func (p *printer) hasCommentBetween(stop token.Pos, start token.Pos) bool {
+	for _, comment := range p.comments[p.commentStartingAfter(stop):] {
+		if comment.start >= start {
+			return false
+		}
+		if comment.start > stop {
+			if p.position(comment.start).Line == p.position(stop).Line {
+				continue
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func (p *printer) hasInlineCommentBetween(stop token.Pos, start token.Pos) bool {
+	line := p.position(stop).Line
+	if line == 0 || p.position(start).Line != line {
+		return false
+	}
+	for _, comment := range p.comments[p.commentStartingAfter(stop):] {
+		if comment.start >= start {
+			return false
+		}
+		if comment.start > stop && p.position(comment.stop).Line == line {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *printer) finish() {
@@ -100,7 +274,49 @@ func (p *printer) finish() {
 }
 
 func (p *printer) before(position token.Pos) {
+	p.beforeComments(position, p.tightDelimiter(position))
+}
+
+func (p *printer) skipCommentsBefore(position token.Pos) {
+	p.comment = p.commentEndingAfter(position)
+}
+
+func (p *printer) commentStartingAtOrAfter(position token.Pos) int {
+	return sort.Search(len(p.comments), func(index int) bool {
+		return p.comments[index].start >= position
+	})
+}
+
+func (p *printer) commentStartingAfter(position token.Pos) int {
+	return sort.Search(len(p.comments), func(index int) bool {
+		return p.comments[index].start > position
+	})
+}
+
+func (p *printer) commentEndingAfter(position token.Pos) int {
+	return sort.Search(len(p.comments), func(index int) bool {
+		return p.comments[index].stop > position
+	})
+}
+
+func (p *printer) commentAt(position token.Pos) *sourceComment {
+	index := p.commentStartingAtOrAfter(position)
+	if index < len(p.comments) && p.comments[index].start == position {
+		return &p.comments[index]
+	}
+	return nil
+}
+
+func (p *printer) beforeComments(position token.Pos, tight bool) {
 	wroteComment := false
+	preserveSpace := false
+	data := p.output.Bytes()
+	file := p.files.File(position)
+	if len(data) > 0 && file != nil {
+		offset := file.Offset(position)
+		preserveSpace = (data[len(data)-1] == ' ' || data[len(data)-1] == '\t') &&
+			0 <= offset && offset < len(p.source) && p.source[offset] == '}'
+	}
 	for p.comment < len(p.comments) && p.comments[p.comment].start < position {
 		wroteComment = true
 		item := p.comments[p.comment]
@@ -109,35 +325,95 @@ func (p *printer) before(position token.Pos) {
 		last := p.position(p.lastSource)
 		inline := !p.lineStart && last.IsValid() && last.Line == start.Line
 		if inline {
-			p.space()
+			if _, ok := p.measureComments[item.start]; ok {
+				p.measureComments[item.start] = p.outputColumn()
+			}
+			if _, ok := p.fixedCommentColumns[item.start]; ok {
+				// trailingLine applied the persistent list alignment.
+			} else if column, ok := p.commentColumns[item.start]; ok {
+				p.padTo(column)
+			} else {
+				p.space()
+			}
 		} else {
 			p.newline()
-			if last.IsValid() && start.Line > last.Line+1 {
+			if last.IsValid() && p.sourceBlankBetween(p.lastSource, item.start) {
 				p.blankline()
 			}
 		}
-		if p.lineStart && strings.HasPrefix(item.text, "//line ") {
+		previousIndent := p.indent
+		if p.lineStart && p.sourceCommentIndent {
+			p.indent = max(p.indent, p.sourceIndent(item.start))
+		}
+		if p.lineStart && start.Column == 1 && strings.HasPrefix(item.text, "//line ") {
 			p.output.WriteString(item.text)
 			p.lineStart = false
 			p.lineBreaks = 0
 		} else {
 			p.text(item.text)
 		}
+		p.indent = previousIndent
 		stop := p.position(item.stop)
-		next := p.position(position)
+		nextPosition := position
+		if p.comment < len(p.comments) && p.comments[p.comment].start < position {
+			nextPosition = p.comments[p.comment].start
+		}
+		next := p.position(nextPosition)
 		if strings.HasPrefix(item.text, "//") || !next.IsValid() || stop.Line != next.Line {
 			p.newline()
-		} else {
+		} else if !tight {
 			p.space()
 		}
 		p.lastSource = item.stop
 	}
 	if wroteComment {
-		last := p.position(p.lastSource)
-		next := p.position(position)
-		if last.IsValid() && next.IsValid() && next.Line > last.Line+1 {
+		if preserveSpace && !p.lineStart {
+			p.space()
+		}
+		if p.sourceBlankBetween(p.lastSource, position) {
 			p.blankline()
 		}
+	}
+}
+
+func (p *printer) sourceIndent(position token.Pos) int {
+	file := p.files.File(position)
+	if file == nil {
+		return 0
+	}
+	offset := file.Offset(position)
+	if offset < 0 || offset > len(p.source) {
+		return 0
+	}
+	start := bytes.LastIndexByte(p.source[:offset], '\n') + 1
+	column := 0
+	for _, value := range p.source[start:offset] {
+		switch value {
+		case '\t':
+			column += 8 - column%8
+		case ' ':
+			column++
+		default:
+			return column / 8
+		}
+	}
+	return (column + 7) / 8
+}
+
+func (p *printer) tightDelimiter(position token.Pos) bool {
+	file := p.files.File(position)
+	if file == nil {
+		return false
+	}
+	offset := file.Offset(position)
+	if offset < 0 || offset >= len(p.source) {
+		return false
+	}
+	switch p.source[offset] {
+	case ',', ')', ']', '}':
+		return true
+	default:
+		return false
 	}
 }
 
@@ -205,8 +481,27 @@ func (p *printer) trailingLine(position token.Pos) {
 	if line > 0 && p.position(comment.start).Line == line &&
 		start >= 0 && stop >= start && stop <= len(p.source) &&
 		strings.TrimSpace(string(p.source[start:stop])) == "" {
-		p.before(comment.stop + 1)
+		if column, ok := p.commentAlignment(comment.start); ok {
+			p.padTo(column)
+		} else if p.commentColumn > 0 {
+			p.padTo(p.commentColumn)
+		}
+		end := comment.stop
+		for index := p.comment + 1; index < len(p.comments); index++ {
+			next := p.comments[index]
+			if strings.HasPrefix(p.comments[index-1].text, "//") ||
+				p.position(next.start).Line != line ||
+				!p.sourceWhitespaceBetween(end, next.start) {
+				break
+			}
+			end = next.stop
+		}
+		p.before(end + 1)
 	}
+}
+
+func (p *printer) hasTrailingComment(position token.Pos) bool {
+	return p.trailingCommentPosition(position).IsValid()
 }
 
 func (p *printer) trailingToken(position token.Pos, width int) {
@@ -217,31 +512,83 @@ func (p *printer) trailingToken(position token.Pos, width int) {
 	p.trailingLine(file.Pos(file.Offset(position) + width))
 }
 
-func (p *printer) commaEnd(position token.Pos, following token.Pos) token.Pos {
-	if p.comment >= len(p.comments) {
+func (p *printer) sourceCommaEnd(position token.Pos, following token.Pos) token.Pos {
+	comma := p.sourceComma(position, following)
+	if !comma.IsValid() {
 		return position
 	}
-	comment := p.comments[p.comment]
-	if !strings.HasPrefix(comment.text, "//") {
-		commentStop := p.position(comment.stop)
-		next := p.position(following)
-		if next.IsValid() && commentStop.Line == next.Line {
-			return position
-		}
-	}
+	return p.tokenEnd(comma, 1)
+}
+
+func (p *printer) sourceComma(position token.Pos, following token.Pos) token.Pos {
 	file := p.files.File(position)
-	if file == nil {
-		return position
+	if file == nil || p.files.File(following) != file {
+		return token.NoPos
 	}
 	offset := file.Offset(position)
-	for offset < len(p.source) &&
-		(p.source[offset] == ' ' || p.source[offset] == '\t' || p.source[offset] == '\r') {
+	limit := file.Offset(following)
+	comment := p.commentEndingAfter(position)
+	for offset < limit && offset < len(p.source) {
+		for comment < len(p.comments) && file.Offset(p.comments[comment].stop) <= offset {
+			comment++
+		}
+		if comment < len(p.comments) {
+			start := file.Offset(p.comments[comment].start)
+			stop := file.Offset(p.comments[comment].stop)
+			if offset >= start && offset < stop {
+				offset = stop
+				continue
+			}
+		}
+		if p.source[offset] == ',' {
+			return file.Pos(offset)
+		}
 		offset++
 	}
-	if offset < len(p.source) && p.source[offset] == ',' {
-		return file.Pos(offset + 1)
+	return token.NoPos
+}
+
+func (p *printer) separatorCommentPosition(position token.Pos, following token.Pos) token.Pos {
+	if p.position(position).Line == p.position(following).Line {
+		return following
 	}
 	return position
+}
+
+func (p *printer) comma(position token.Pos, following token.Pos) token.Pos {
+	comma := p.sourceComma(position, following)
+	if !comma.IsValid() {
+		p.text(",")
+		return position
+	}
+	commentLimit := comma
+	line := p.position(position).Line
+	for index := p.comment; index < len(p.comments); index++ {
+		item := p.comments[index]
+		if item.start >= following || strings.HasPrefix(item.text, "//") ||
+			p.position(item.start).Line != line || p.position(item.stop).Line != line {
+			break
+		}
+		commentLimit = item.stop
+	}
+	if commentLimit < comma {
+		commentLimit = comma
+	}
+	commentPosition := p.separatorCommentPosition(position, following)
+	if commentPosition == following {
+		p.beforeComments(commentLimit, true)
+	}
+	p.text(",")
+	p.lastSource = comma
+	if commentPosition == position {
+		p.beforeComments(commentLimit, true)
+	}
+	end := p.tokenEnd(comma, 1)
+	if p.lastSource > end {
+		return p.lastSource
+	}
+	p.lastSource = end
+	return end
 }
 
 func (p *printer) tokenEnd(position token.Pos, width int) token.Pos {
@@ -259,9 +606,81 @@ func (p *printer) multiline(start token.Pos, stop token.Pos) bool {
 }
 
 func (p *printer) blankBetween(stop token.Pos, start token.Pos) bool {
-	left := p.position(stop)
-	right := p.position(start)
-	return left.IsValid() && right.IsValid() && right.Line > left.Line+1
+	return p.sourceBlankBetween(stop, start)
+}
+
+func (p *printer) sourceBlankBetween(stop token.Pos, start token.Pos) bool {
+	file := p.files.File(stop)
+	if file == nil || p.files.File(start) != file {
+		return false
+	}
+	left := file.Offset(stop)
+	right := file.Offset(start)
+	if left < 0 || right < left || right > len(p.source) {
+		return false
+	}
+	lines := strings.Split(string(p.source[left:right]), "\n")
+	firstLine := p.position(stop).Line
+	comment := p.commentEndingAfter(stop)
+	for index, line := range lines[1:max(1, len(lines)-1)] {
+		lineNumber := firstLine + index + 1
+		for comment < len(p.comments) &&
+			p.position(p.comments[comment].stop).Line < lineNumber {
+			comment++
+		}
+		covered := comment < len(p.comments) && p.comments[comment].start < start &&
+			p.position(p.comments[comment].start).Line <= lineNumber &&
+			lineNumber <= p.position(p.comments[comment].stop).Line
+		if covered {
+			continue
+		}
+		if strings.TrimSpace(line) == "" {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *printer) sourceGap(stop token.Pos, start token.Pos) sourceGap {
+	left := stop
+	comment := p.comment
+	for comment < len(p.comments) && p.comments[comment].start < start &&
+		p.position(p.comments[comment].start).Line == p.position(left).Line {
+		left = p.comments[comment].stop
+		comment++
+	}
+	right := start
+	leadingComment := comment < len(p.comments) && p.comments[comment].start < start
+	if leadingComment {
+		right = p.comments[comment].start
+	}
+	return sourceGap{
+		lineBreak:      p.position(left).Line < p.position(start).Line,
+		blank:          p.sourceBlankBetween(left, right),
+		leadingComment: leadingComment,
+		leadingCommentIndented: leadingComment &&
+			p.position(right).Column > p.position(start).Column,
+	}
+}
+
+func (p *printer) breakSourceGap(stop token.Pos, start token.Pos) {
+	gap := p.sourceGap(stop, start)
+	if gap.lineBreak {
+		p.newline()
+	}
+	if gap.blank {
+		p.blankline()
+	}
+}
+
+func (p *printer) breakClosingGap(stop token.Pos, start token.Pos) {
+	gap := p.sourceGap(stop, start)
+	if gap.lineBreak {
+		p.newline()
+	}
+	if gap.blank && p.hasTrailingComment(stop) {
+		p.blankline()
+	}
 }
 
 func (p *printer) blankline() {
@@ -277,24 +696,4 @@ func (p *printer) sourceSpan(span syntax.Span) {
 	p.before(span.Start)
 	p.text(syntax.SourceText(p.file, span))
 	p.lastSource = span.Stop
-}
-
-func (p *printer) commaList(values []*syntax.Expression) {
-	for index, value := range values {
-		if index > 0 {
-			p.text(",")
-			p.space()
-		}
-		p.expression(value, 0)
-	}
-}
-
-func (p *printer) identifiers(values []*syntax.Identifier) {
-	for index, value := range values {
-		if index > 0 {
-			p.text(",")
-			p.space()
-		}
-		p.token(value.Start, value.Name)
-	}
 }
