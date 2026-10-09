@@ -18,45 +18,58 @@ func (p *packageUnit) addEnumJSONNonNilChecks() bool {
 	changed := false
 	for _, source := range p.Sources {
 		for _, declaration := range source.Models {
-			if !declaration.Enum {
-				continue
-			}
-			contracts := make(map[string]enumJSONNilContract)
-			for _, item := range declaration.Variants {
-				name := declaration.Name + item.Name
-				object, _ := p.typed.Scope().Lookup(name).(*types.TypeName)
-				if contract := engine.finalContract(engine.objectContract(object)); len(contract) != 0 {
-					contracts[name] = contract
-				}
-			}
-			if len(contracts) == 0 {
-				continue
-			}
-			functions := []*ast.FuncDecl(nil)
-			for _, item := range source.File.Decls {
-				function, ok := item.(*ast.FuncDecl)
-				if !ok || function.Body == nil || function.Name == nil {
-					continue
-				}
-				receiver, ok := receiverName(function)
-				if !ok || receiver != declaration.Name ||
-					(function.Name.Name != "UnmarshalJSON" &&
-						function.Name.Name != "UnmarshalJSONFrom") {
-					continue
-				}
-				functions = append(functions, function)
-			}
-			for _, function := range functions {
-				changed = p.addEnumJSONChecksToFunction(
-					function,
-					source.File,
-					declaration,
-					contracts,
-					engine,
-					enumJSONErrorFunction(source.File),
-				) || changed
-			}
+			changed = p.addEnumJSONNonNilChecksToModel(
+				source, declaration, engine,
+			) || changed
 		}
+	}
+	return changed
+}
+
+func (p *packageUnit) addEnumJSONNonNilChecksToModel(
+	source *source,
+	declaration *model,
+	engine *enumJSONContractEngine,
+) bool {
+	if !declaration.Enum {
+		return false
+	}
+	contracts := make(map[string]enumJSONNilContract)
+	for _, item := range declaration.Variants {
+		name := declaration.Name + item.Name
+		object, _ := p.typed.Scope().Lookup(name).(*types.TypeName)
+		contract := engine.finalContract(engine.objectContract(object))
+		if len(contract) != 0 {
+			contracts[name] = contract
+		}
+	}
+	if len(contracts) == 0 {
+		return false
+	}
+	functions := []*ast.FuncDecl(nil)
+	for _, item := range source.File.Decls {
+		function, ok := item.(*ast.FuncDecl)
+		if !ok || function.Body == nil || function.Name == nil {
+			continue
+		}
+		receiver, ok := receiverName(function)
+		if !ok || receiver != declaration.Name ||
+			(function.Name.Name != "UnmarshalJSON" &&
+				function.Name.Name != "UnmarshalJSONFrom") {
+			continue
+		}
+		functions = append(functions, function)
+	}
+	changed := false
+	for _, function := range functions {
+		changed = p.addEnumJSONChecksToFunction(
+			function,
+			source.File,
+			declaration,
+			contracts,
+			engine,
+			enumJSONErrorFunction(source.File),
+		) || changed
 	}
 	return changed
 }
@@ -134,28 +147,40 @@ func (p *packageUnit) addEnumJSONChecksToFunction(
 func (i *enumJSONInjection) statements(statements *[]ast.Stmt) {
 	items := *statements
 	for index := 0; index < len(items); index++ {
-		payloadType, ok := i.payloadDeclaration(items[index])
-		if ok && index+1 < len(items) {
-			decode, decodeOK := items[index+1].(*ast.IfStmt)
-			contract := i.contracts[payloadType]
-			if decodeOK && len(contract) != 0 {
-				checks := i.validationStatements(payloadType, contract)
-				if len(checks) != 0 {
-					if i.untagged && enumJSONNilComparison(decode.Cond, token.EQL) {
-						i.wrapUntagged(decode, checks)
-					} else if enumJSONNilComparison(decode.Cond, token.NEQ) &&
-						index+2 < len(items) && enumJSONReceiverAssignment(items[index+2]) {
-						position := index + 2
-						items = enumJSONInsertStatements(items, position, checks)
-						index += len(checks)
-						i.changed = true
-					}
-				}
-			}
-		}
+		items, index = i.injectValidation(items, index)
 		i.nested(items[index])
 	}
 	*statements = items
+}
+
+func (i *enumJSONInjection) injectValidation(
+	items []ast.Stmt,
+	index int,
+) ([]ast.Stmt, int) {
+	payloadType, ok := i.payloadDeclaration(items[index])
+	if !ok || index+1 >= len(items) {
+		return items, index
+	}
+	decode, ok := items[index+1].(*ast.IfStmt)
+	contract := i.contracts[payloadType]
+	if !ok || len(contract) == 0 {
+		return items, index
+	}
+	checks := i.validationStatements(payloadType, contract)
+	if len(checks) == 0 {
+		return items, index
+	}
+	if i.untagged && enumJSONNilComparison(decode.Cond, token.EQL) {
+		i.wrapUntagged(decode, checks)
+		return items, index
+	}
+	if !enumJSONNilComparison(decode.Cond, token.NEQ) ||
+		index+2 >= len(items) || !enumJSONReceiverAssignment(items[index+2]) {
+		return items, index
+	}
+	items = enumJSONInsertStatements(items, index+2, checks)
+	i.changed = true
+	return items, index + len(checks)
 }
 
 func (i *enumJSONInjection) nested(statement ast.Stmt) {
@@ -663,24 +688,33 @@ func (e *enumJSONValidationEmitter) emitReflectDynamic(
 	case *types.Map:
 		e.emitReflectDynamicMap(item, contract, value, path)
 	case *types.Struct:
-		for index := range item.NumFields() {
-			child := enumJSONNilChild(contract, "f"+strconv.Itoa(index))
-			if len(child) == 0 {
-				continue
-			}
-			field := item.Field(index)
-			fieldPath := path + " + " + strconv.Quote("."+field.Name())
-			if field.Name() == "_" {
-				if enumJSONZeroViolates(field.Type(), child) {
-					e.failureDynamic("true", fieldPath)
-				}
-				continue
-			}
-			e.emitReflectDynamic(
-				field.Type(), child,
-				fmt.Sprintf("%s.Field(%d)", value, index), fieldPath,
-			)
+		e.emitReflectDynamicStruct(item, contract, value, path)
+	}
+}
+
+func (e *enumJSONValidationEmitter) emitReflectDynamicStruct(
+	structure *types.Struct,
+	contract enumJSONNilContract,
+	value string,
+	path string,
+) {
+	for index := range structure.NumFields() {
+		child := enumJSONNilChild(contract, "f"+strconv.Itoa(index))
+		if len(child) == 0 {
+			continue
 		}
+		field := structure.Field(index)
+		fieldPath := path + " + " + strconv.Quote("."+field.Name())
+		if field.Name() == "_" {
+			if enumJSONZeroViolates(field.Type(), child) {
+				e.failureDynamic("true", fieldPath)
+			}
+			continue
+		}
+		e.emitReflectDynamic(
+			field.Type(), child,
+			fmt.Sprintf("%s.Field(%d)", value, index), fieldPath,
+		)
 	}
 }
 
