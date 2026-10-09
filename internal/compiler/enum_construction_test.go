@@ -191,6 +191,44 @@ var empty = dep.Event.Empty{}
 	}
 }
 
+func TestExactEnumConstraintGetsGeneratedMethodSet(t *testing.T) {
+	t.Parallel()
+	data := []byte(`package sample
+type Event enum {
+	Ready struct { value string }
+	Empty struct{}
+}
+type Events interface { Event }
+func label[T Events](value T) string {
+	switch value.Tag() {
+	case EventTagReady:
+		return value.ReadyPayload().value
+	case EventTagEmpty:
+		return ""
+	exhaustive:
+	}
+}
+`)
+	compiled, problems := Compile(PackageInput{
+		Path: "sample", Sources: []File{{Name: "sample.tgo", Data: data}},
+		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	output := string(compiled.Outputs["sample.tgo"])
+	for _, text := range []string{
+		"Tag() EventTag",
+		"UnknownTag() string",
+		"ReadyPayload() EventReady",
+		"EmptyPayload() EventEmpty",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("exact enum constraint does not contain %q\n%s", text, output)
+		}
+	}
+}
+
 type enumTestImporter struct {
 	path     string
 	pkg      *types.Package
@@ -207,18 +245,62 @@ func (i enumTestImporter) Import(path string) (*types.Package, error) {
 	return i.fallback.Import(path)
 }
 
-func TestEnumGeneratedConstructorNameIsReserved(t *testing.T) {
+func TestEnumGeneratedNamesAreReservedAcrossFiles(t *testing.T) {
 	t.Parallel()
-	data := []byte(`package sample
-type Event enum { Ready struct { value string } }
-func NewEventReady(value string) Event { return Event.Ready{value: value} }
-`)
-	_, problems := Compile(PackageInput{
-		Path: "sample", Sources: []File{{Name: "sample.tgo", Data: data}},
-		FileSet: token.NewFileSet(), Importer: importer.Default(),
-	})
-	want := "name NewEventReady is reserved by enum Event"
-	if len(problems) == 0 || !strings.Contains(problems[0].Error(), want) {
-		t.Fatalf("error = %v, want %q", problems, want)
+	enumSource := File{
+		Name: "enum.tgo",
+		Data: []byte("package sample\ntype Event enum { Ready struct { value string } }\n"),
+	}
+	tests := []struct {
+		name   string
+		source *File
+		goFile *File
+		want   string
+	}{
+		{
+			name: "TGo constructor", source: &File{
+				Name: "other.tgo", Data: []byte("package sample\nfunc NewEventReady() {}\n"),
+			},
+			want: "other.tgo:2:6: name NewEventReady is reserved by enum Event",
+		},
+		{
+			name: "TGo carrier", source: &File{
+				Name: "other.tgo", Data: []byte("package sample\ntype TgoEventReadyInput struct{}\n"),
+			},
+			want: "other.tgo:2:6: name TgoEventReadyInput is reserved by enum Event",
+		},
+		{
+			name: "Go constructor", goFile: &File{
+				Name: "other.go", Data: []byte("package sample\nfunc NewEventReady() {}\n"),
+			},
+			want: "other.go:2:6: name NewEventReady is reserved by enum Event",
+		},
+		{
+			name: "Go carrier", goFile: &File{
+				Name: "other.go", Data: []byte("package sample\ntype TgoEventReadyInput struct{}\n"),
+			},
+			want: "other.go:2:6: name TgoEventReadyInput is reserved by enum Event",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			for range 3 {
+				input := PackageInput{
+					Path: "sample", Sources: []File{enumSource},
+					FileSet: token.NewFileSet(), Importer: importer.Default(),
+				}
+				if test.source != nil {
+					input.Sources = append(input.Sources, *test.source)
+				}
+				if test.goFile != nil {
+					input.GoFiles = append(input.GoFiles, *test.goFile)
+				}
+				_, problems := Compile(input)
+				if len(problems) != 1 || problems[0].Error() != test.want {
+					t.Fatalf("error = %v, want %q", problems, test.want)
+				}
+			}
+		})
 	}
 }

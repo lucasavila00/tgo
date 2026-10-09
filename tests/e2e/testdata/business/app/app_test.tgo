@@ -87,13 +87,13 @@ func TestBusiness(t *testing.T) {
 	if model.LiteralTagSubject("Literal") != "Literal" {
 		t.Fatal("literal tag subject used the wrong body")
 	}
-	if model.SignalName(model.NewSignalOn()) != "on" {
+	if model.SignalName(model.Signal.On{}) != "on" {
 		t.Fatal("multiline enum declaration has the wrong tag")
 	}
-	if model.SignalState(model.NewSignalOff()) != "known" {
+	if model.SignalState(model.Signal.Off{}) != "known" {
 		t.Fatal("multi-tag case rejected a known tag")
 	}
-	if model.SignalStateOrInvalid(model.NewSignalOn()) != "known" {
+	if model.SignalStateOrInvalid(model.Signal.On{}) != "known" {
 		t.Fatal("returning default rejected a known tag")
 	}
 	explicitFlag, explicitName := model.MarkerValues(model.ExplicitMarker())
@@ -206,8 +206,12 @@ func TestGeneratedCost(t *testing.T) {
 	}
 	type accountLayout struct {
 		tag      uint8
-		personal model.AccountPersonal
-		business model.AccountBusiness
+		personal struct{ Name string }
+		business struct {
+			Company string
+			Members []model.Account
+			Tags    map[string]string
+		}
 	}
 	if unsafe.Sizeof(*new(model.Account)) != unsafe.Sizeof(accountLayout{}) {
 		t.Fatal("enum layout differs from the direct Go layout")

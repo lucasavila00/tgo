@@ -67,6 +67,14 @@ type EnumAlias enum
 
 type AccountAlias = Account
 
+type Accounts interface {
+	Account
+	Tag() AccountTag
+	UnknownTag() string
+	PersonalPayload() AccountPersonal
+	BusinessPayload() AccountBusiness
+}
+
 type CounterRecord (struct {
 	value int
 })
@@ -1133,7 +1141,7 @@ func AliasLabel(account AccountAlias) string {
 	}
 }
 
-func GenericLabel(account Account) string {
+func GenericLabel[T Accounts](account T) string {
 	switch account.Tag() {
 	case AccountTagPersonal:
 		return account.PersonalPayload().Name

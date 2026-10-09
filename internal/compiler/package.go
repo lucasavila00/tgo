@@ -143,6 +143,9 @@ func (p *packageUnit) generatedOutputs() (map[string][]byte, error) {
 func (p *packageUnit) checkAndLower() error {
 	p.prepare()
 	p.typecheck()
+	if p.addExactEnumConstraintMethods() {
+		p.typecheck()
+	}
 	p.checkGeneratedPredeclaredNames()
 	p.checkGeneratedEnumNameCollisions()
 	p.checkCheckedStructs()

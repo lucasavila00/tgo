@@ -407,6 +407,8 @@ switch below. Calls outside that switch are unchecked Go calls.
 Embedding an enum does not expose its representation fields or generated accessors.
 A canonical switch does not recognize these generated methods through an interface or an open or
 mixed type parameter. An exact enum constraint can use them in a checked tag switch.
+Write the exact constraint by embedding the enum. The compiler adds its generated method set to
+the Go projection. TGo source does not list payload accessor signatures or payload result types.
 A new defined type may not derive from an enum, including through pointer layers.
 A type alias may name the enum or pointer and keeps all model rules.
 A tgo file may not convert an enum value or pointer to expose its representation.
@@ -692,8 +694,8 @@ T
 TV
 TTag
 TTagV
-	NewTV
-	TgoTVInput
+NewTV
+TgoTVInput
 Tag
 UnknownTag
 VPayload
