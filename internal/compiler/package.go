@@ -24,8 +24,6 @@ type packageUnit struct {
 	typed            *types.Package
 	generated        map[ast.Decl]bool
 	generatedValues  map[*ast.ValueSpec]bool
-	checkedLiterals  map[*ast.CompositeLit]bool
-	checkedCalls     map[*ast.CallExpr]bool
 	sourceReferences map[token.Pos]types.Object
 	erasedImports    map[*ast.ImportSpec]bool
 	references       []generatedReference
@@ -106,6 +104,18 @@ func (p *packageUnit) modelForType(t types.Type) *model {
 	return declaration
 }
 
+// dereference removes aliases and one or more pointer layers.
+func dereference(typ types.Type) types.Type {
+	typ = types.Unalias(typ)
+	for {
+		pointer, ok := typ.(*types.Pointer)
+		if !ok {
+			return typ
+		}
+		typ = types.Unalias(pointer.Elem())
+	}
+}
+
 // call makes a Go call expression.
 func call(e ast.Expr, args ...ast.Expr) *ast.CallExpr { return &ast.CallExpr{Fun: e, Args: args} }
 
@@ -147,6 +157,7 @@ func (p *packageUnit) checkAndLower() error {
 	p.typecheck()
 	p.checkGeneratedPredeclaredNames()
 	p.checkCheckedStructs()
+	p.validateNonNilPointerForms()
 	if len(p.errors) > 0 {
 		return p.errors[0]
 	}
@@ -182,10 +193,6 @@ func (p *packageUnit) checkAndLower() error {
 	p.typecheck()
 	if len(p.typeErrors) > 0 {
 		return p.typeErrors[0]
-	}
-	p.checkRules()
-	if len(p.errors) > 0 {
-		return p.errors[0]
 	}
 	return nil
 }

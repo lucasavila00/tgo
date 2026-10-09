@@ -22,7 +22,8 @@ func (c *checker) checkRepresentationAccess(expression *syntax.Expression) {
 	if model == nil {
 		return
 	}
-	if modelIsChecked(model) && c.checkedFieldChange(expression) {
+	if modelIsChecked(model) && c.checkedFieldChange(expression) &&
+		!c.checkedReceiverMutation(expression, model) {
 		c.pass.Reportf(
 			selector.Start,
 			"checked field %s cannot be changed after construction",
@@ -39,6 +40,93 @@ func (c *checker) checkRepresentationAccess(expression *syntax.Expression) {
 		)
 		return
 	}
+}
+
+// checkedReceiverMutation permits normalization in the model check method.
+func (c *checker) checkedReceiverMutation(
+	expression *syntax.Expression,
+	model *model,
+) bool {
+	selector := syntax.SelectorExpressionOf(expression)
+	if selector == nil {
+		return false
+	}
+	receiver := sourceUnparenthesized(selector.Expression)
+	receiverName := syntax.IdentifierExpressionOf(receiver)
+	if receiverName == nil {
+		return false
+	}
+	receiverObject := c.facts.Object(receiverName)
+	target := syntax.ExpressionNode(expression)
+	current := syntax.Parent(c.file, &target)
+	for current != nil {
+		declaration, ok := syntax.FunctionDeclarationOf(current)
+		if ok {
+			return declaration != nil && declaration.Name.Name == "check" &&
+				c.matchesCheckedReceiver(
+					declaration, model, receiverName, receiverObject,
+				)
+		}
+		current = syntax.Parent(c.file, current)
+	}
+	return false
+}
+
+func (c *checker) matchesCheckedReceiver(
+	declaration *syntax.FunctionDeclaration,
+	model *model,
+	name *syntax.Identifier,
+	object types.Object,
+) bool {
+	declared := c.checkedReceiverObject(declaration, model)
+	if sameSourceObject(declared, object) {
+		return true
+	}
+	if variable, ok := object.(*types.Var); ok && !variable.IsField() {
+		return false
+	}
+	if declared == nil || declaration.Receiver == nil ||
+		len(declaration.Receiver.List) != 1 {
+		return false
+	}
+	field := declaration.Receiver.List[0]
+	return len(field.Names) == 1 && field.Names[0].Name == name.Name
+}
+
+func sameSourceObject(left types.Object, right types.Object) bool {
+	return left != nil && right != nil &&
+		(left == right || left.Name() == right.Name() && left.Pos() == right.Pos())
+}
+
+func (c *checker) checkedReceiverObject(
+	declaration *syntax.FunctionDeclaration,
+	model *model,
+) types.Object {
+	if declaration.Receiver == nil || len(declaration.Receiver.List) != 1 {
+		return nil
+	}
+	field := declaration.Receiver.List[0]
+	if len(field.Names) != 1 {
+		return nil
+	}
+	object := c.facts.Object(field.Names[0])
+	if object == nil || !sameModelForType(object.Type(), model) {
+		return nil
+	}
+	return object
+}
+
+func sameModelForType(
+	typ types.Type,
+	model *model,
+) bool {
+	if model == nil || typ == nil {
+		return false
+	}
+	named, ok := dereference(typ).(*types.Named)
+	return ok && named.Obj().Pkg() != nil &&
+		named.Obj().Pkg().Path() == modelPackage(model) &&
+		named.Obj().Name() == modelName(model)
 }
 
 func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {

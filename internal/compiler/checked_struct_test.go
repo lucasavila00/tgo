@@ -126,9 +126,8 @@ func Invalid(number int) (model.Port, error) { return model.NewPort(number) }
 			fallback: importer.Default(),
 		},
 	})
-	if len(problems) == 0 ||
-		!strings.Contains(problems[0].Error(), "NewPort is generated Go ABI") {
-		t.Fatalf("error = %v, want imported generated Go ABI diagnostic", problems)
+	if len(problems) != 0 {
+		t.Fatalf("compiler applied imported constructor policy: %v", problems)
 	}
 	_, problems = Compile(PackageInput{
 		Path: "invalid",
@@ -146,9 +145,8 @@ func Invalid(number int) (model.Port, error) {
 			fallback: importer.Default(),
 		},
 	})
-	if len(problems) == 0 ||
-		!strings.Contains(problems[0].Error(), "NewPort is generated Go ABI") {
-		t.Fatalf("error = %v, want imported constructor reference diagnostic", problems)
+	if len(problems) != 0 {
+		t.Fatalf("compiler applied imported constructor alias policy: %v", problems)
 	}
 }
 
@@ -201,7 +199,7 @@ func TestCheckedStructCarrierIsGeneratedOnly(t *testing.T) {
 		{
 			name: "source reference",
 			body: "var invalid TgoPortInput",
-			want: "TgoPortInput is generated staging ABI",
+			want: "",
 		},
 		{
 			name: "name collision",
@@ -221,14 +219,18 @@ func (value Port) check() (Port, error) { return value, nil }
 ` + test.body + "\n")}},
 				FileSet: token.NewFileSet(), Importer: importer.Default(),
 			})
-			if len(problems) == 0 || !strings.Contains(problems[0].Error(), test.want) {
+			if test.want == "" && len(problems) != 0 {
+				t.Fatalf("compiler applied staging ABI policy: %v", problems)
+			}
+			if test.want != "" &&
+				(len(problems) == 0 || !strings.Contains(problems[0].Error(), test.want)) {
 				t.Fatalf("error = %v, want %q", problems, test.want)
 			}
 		})
 	}
 }
 
-func TestCheckedStructConstructorIsNotTGoAPI(t *testing.T) {
+func TestCompilerLeavesCheckedConstructorPolicyToTgolint(t *testing.T) {
 	t.Parallel()
 	for _, body := range []string{
 		"return NewPort(number)",
@@ -244,14 +246,13 @@ func Invalid(number int) (Port, error) { ` + body + ` }
 `)}},
 			FileSet: token.NewFileSet(), Importer: importer.Default(),
 		})
-		if len(problems) == 0 ||
-			!strings.Contains(problems[0].Error(), "NewPort is generated Go ABI") {
-			t.Fatalf("error = %v, want generated Go ABI diagnostic", problems)
+		if len(problems) != 0 {
+			t.Fatalf("compiler applied generated ABI policy: %v", problems)
 		}
 	}
 }
 
-func TestCheckedStructFieldsCannotBeChangedAfterConstruction(t *testing.T) {
+func TestCompilerLeavesCheckedFieldPolicyToTgolint(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name string
@@ -275,15 +276,14 @@ func Invalid(value Port) { ` + test.body + ` }
 `)}},
 				FileSet: token.NewFileSet(), Importer: importer.Default(),
 			})
-			if len(problems) == 0 ||
-				!strings.Contains(problems[0].Error(), "checked field number cannot be changed") {
-				t.Fatalf("error = %v, want checked field diagnostic", problems)
+			if len(problems) != 0 {
+				t.Fatalf("compiler applied checked field policy: %v", problems)
 			}
 		})
 	}
 }
 
-func TestCheckedStructCheckCanOnlyNormalizeItsReceiver(t *testing.T) {
+func TestCompilerLeavesCheckedReceiverPolicyToTgolint(t *testing.T) {
 	t.Parallel()
 	_, problems := Compile(PackageInput{
 		Path: "sample",
@@ -299,9 +299,8 @@ func (value Port) check() (Port, error) {
 `)}},
 		FileSet: token.NewFileSet(), Importer: importer.Default(),
 	})
-	if len(problems) == 0 ||
-		!strings.Contains(problems[0].Error(), "checked field number cannot be changed") {
-		t.Fatalf("error = %v, want non-receiver mutation diagnostic", problems)
+	if len(problems) != 0 {
+		t.Fatalf("compiler applied checked receiver policy: %v", problems)
 	}
 }
 

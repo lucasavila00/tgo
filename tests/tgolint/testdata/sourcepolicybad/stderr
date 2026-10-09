@@ -1,0 +1,22 @@
+sourcepolicybad/source.tgo:14:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:17:3: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:28:18: cannot define a new type from Local; use an alias
+sourcepolicybad/source.tgo:29:21: cannot define a new type from Event; use an alias
+sourcepolicybad/source.tgo:36:9: use a constructor for Local
+sourcepolicybad/source.tgo:40:9: use a constructor for Local
+sourcepolicybad/source.tgo:44:9: cannot convert Local to expose its representation
+sourcepolicybad/source.tgo:48:9: cannot convert Local to expose its representation
+sourcepolicybad/source.tgo:52:9: use a constructor for Local
+sourcepolicybad/source.tgo:56:9: cannot convert Local to expose its representation
+sourcepolicybad/source.tgo:60:14: Local representation type is private
+sourcepolicybad/source.tgo:64:9: Local representation type is private
+sourcepolicybad/source.tgo:70:9: Local.tgoTag is private tgo representation
+sourcepolicybad/source.tgo:74:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:75:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:76:7: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:77:6: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:81:24: NewPort is generated Go ABI; use a checked literal
+sourcepolicybad/source.tgo:82:20: TgoPortInput is generated staging ABI; use a checked literal
+sourcepolicybad/source.tgo:83:33: NewCount is generated Go ABI; use a checked literal
+sourcepolicybad/source.tgo:84:29: TgoCountInput is generated staging ABI; use a checked literal
+sourcepolicybad/source.tgo:87:9: use a constructor for Event
