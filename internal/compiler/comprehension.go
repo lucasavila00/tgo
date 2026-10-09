@@ -36,6 +36,7 @@ func (l *propagationLowerer) comprehension(
 		l.unit.failAt(metadata.Position, "invalid comprehension projection")
 		return original, nil
 	}
+	l.renameComprehensionResult(metadata, function.Body)
 	l.prepareComprehension(metadata, function.Body)
 	statements := l.statements(function.Body.List)
 	if len(statements) < 2 {
@@ -48,6 +49,20 @@ func (l *propagationLowerer) comprehension(
 		return original, nil
 	}
 	return last.Results[0], statements[:len(statements)-1]
+}
+
+func (l *propagationLowerer) renameComprehensionResult(
+	metadata comprehensionSource,
+	body *ast.BlockStmt,
+) {
+	delete(l.names, metadata.Result)
+	name := l.freshName("result").Name
+	ast.Inspect(body, func(node ast.Node) bool {
+		if identifier, ok := node.(*ast.Ident); ok && identifier.Name == metadata.Result {
+			identifier.Name = name
+		}
+		return true
+	})
 }
 
 // prepareComprehension binds generated built-ins and selects the proven allocation plan.
@@ -111,7 +126,7 @@ func (l *propagationLowerer) optimizeExactSlice(
 		return false
 	}
 	if index.Name == "_" {
-		index = ast.NewIdent(l.unit.freshIdentifier("__tgo_index"))
+		index = l.freshName("index")
 		outer.Key = index
 	}
 	assignment.Lhs[0] = &ast.IndexExpr{X: assignment.Lhs[0], Index: index}
@@ -127,7 +142,7 @@ func (l *propagationLowerer) stableComprehensionSource(
 	if _, stable := source.(*ast.Ident); stable {
 		return source
 	}
-	name := ast.NewIdent(l.unit.freshIdentifier("__tgo_source"))
+	name := l.freshName("source")
 	body.List = append([]ast.Stmt{&ast.AssignStmt{
 		Lhs: []ast.Expr{name}, Tok: token.DEFINE, Rhs: []ast.Expr{source},
 	}}, body.List...)

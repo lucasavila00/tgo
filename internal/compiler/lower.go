@@ -12,7 +12,6 @@ func (p *packageUnit) prepare() {
 	p.checkedLiterals = make(map[*ast.CompositeLit]bool)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
-	p.usedIdentifiers = nil
 	for _, source := range p.Sources {
 		p.markGenerated(source)
 		p.lowerSuccessReturns(source)

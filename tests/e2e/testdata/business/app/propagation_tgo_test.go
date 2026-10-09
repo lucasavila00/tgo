@@ -293,9 +293,7 @@ func TestPropagationGeneratedGoUsesDirectNames(t *testing.T) {
 			t.Fatalf("generated Go lacks %q", required)
 		}
 	}
-	for _, oldName := range []string{"__tgo_value", "__tgo_error", "__tgo_zero"} {
-		if strings.Contains(text, oldName) {
-			t.Fatalf("generated Go contains old local name %q", oldName)
-		}
+	if strings.Contains(text, "__tgo_") {
+		t.Fatal("generated Go contains an old synthetic name")
 	}
 }

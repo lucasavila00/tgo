@@ -2,10 +2,10 @@
 
 package tgolint
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
 import (
 	"go/constant"
@@ -16,17 +16,17 @@ import (
 	"tgo/pkg/syntax/cfg"
 )
 
-func __tgo_scalarValue_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoscalarValueExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // scalarValue requires a variant constructor. Its zero value is invalid.
@@ -53,7 +53,7 @@ func (v scalarValue) Tag() scalarValueTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v scalarValue) UnknownTag() string {
-	return __tgo_fmt.Sprintf("scalarValue: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("scalarValue: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // scalarValueBoolean is the Boolean payload.
@@ -121,57 +121,57 @@ func (v scalarValue) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case scalarValueTagBoolean:
 		payload := v.BooleanPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload scalarValueBoolean `json:"Boolean"`
 		}{Payload: payload})
 	case scalarValueTagInteger:
 		payload := v.IntegerPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload scalarValueInteger `json:"Integer"`
 		}{Payload: payload})
 	case scalarValueTagBooleanParameter:
 		payload := v.BooleanParameterPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload scalarValueBooleanParameter `json:"BooleanParameter"`
 		}{Payload: payload})
 	case scalarValueTagIntegerParameter:
 		payload := v.IntegerParameterPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload scalarValueIntegerParameter `json:"IntegerParameter"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid scalarValue JSON tag")
+		return nil, fmt.Errorf("invalid scalarValue JSON tag")
 	}
 }
 
-func (v scalarValue) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v scalarValue) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case scalarValueTagBoolean:
 		payload := v.BooleanPayload()
-		return __tgo_scalarValue_external_json_to(out, "Boolean", payload)
+		return tgoscalarValueExternalJSONTo(out, "Boolean", payload)
 	case scalarValueTagInteger:
 		payload := v.IntegerPayload()
-		return __tgo_scalarValue_external_json_to(out, "Integer", payload)
+		return tgoscalarValueExternalJSONTo(out, "Integer", payload)
 	case scalarValueTagBooleanParameter:
 		payload := v.BooleanParameterPayload()
-		return __tgo_scalarValue_external_json_to(out, "BooleanParameter", payload)
+		return tgoscalarValueExternalJSONTo(out, "BooleanParameter", payload)
 	case scalarValueTagIntegerParameter:
 		payload := v.IntegerParameterPayload()
-		return __tgo_scalarValue_external_json_to(out, "IntegerParameter", payload)
+		return tgoscalarValueExternalJSONTo(out, "IntegerParameter", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid scalarValue JSON tag")
+		return fmt.Errorf("invalid scalarValue JSON tag")
 	}
 }
 
 func (v *scalarValue) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one scalarValue JSON variant")
+		return fmt.Errorf("expected one scalarValue JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -180,46 +180,46 @@ func (v *scalarValue) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Boolean":
 		var payload scalarValueBoolean
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.scalarValue()
 		return nil
 	case "Integer":
 		var payload scalarValueInteger
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.scalarValue()
 		return nil
 	case "BooleanParameter":
 		var payload scalarValueBooleanParameter
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.scalarValue()
 		return nil
 	case "IntegerParameter":
 		var payload scalarValueIntegerParameter
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.scalarValue()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown scalarValue JSON variant %q", variant)
+		return fmt.Errorf("unknown scalarValue JSON variant %q", variant)
 	}
 }
 
-func (v *scalarValue) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one scalarValue JSON variant")
+		return fmt.Errorf("expected one scalarValue JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -268,42 +268,42 @@ func (v *scalarValue) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one scalarValue JSON variant")
+		return fmt.Errorf("expected one scalarValue JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown scalarValue JSON variant %q", unknown)
+		return fmt.Errorf("unknown scalarValue JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload scalarValueBoolean
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.scalarValue()
 		return nil
 	case 2:
 		var payload scalarValueInteger
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.scalarValue()
 		return nil
 	case 3:
 		var payload scalarValueBooleanParameter
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.scalarValue()
 		return nil
 	case 4:
 		var payload scalarValueIntegerParameter
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.scalarValue()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid scalarValue JSON tag")
+		return fmt.Errorf("invalid scalarValue JSON tag")
 	}
 }
 

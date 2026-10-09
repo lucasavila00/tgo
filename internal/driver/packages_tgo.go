@@ -350,9 +350,9 @@ func (p *packageUnit) available() (bool, error) {
 	if len(paths) > 0 {
 		return true, nil
 	}
-	tests, tgoErr := p.matchingTestSources()
-	if tgoErr != nil {
-		return false, tgoErr
+	tests, err_1 := p.matchingTestSources()
+	if err_1 != nil {
+		return false, err_1
 	}
 	if len(tests) > 0 {
 		return false, fmt.Errorf(
@@ -361,9 +361,9 @@ func (p *packageUnit) available() (bool, error) {
 		)
 	}
 	for _, path := range p.generatedPaths {
-		owned, tgoErr2 := generatedFile(path)
-		if tgoErr2 != nil {
-			return false, tgoErr2
+		owned, err_2 := generatedFile(path)
+		if err_2 != nil {
+			return false, err_2
 		}
 		if owned && !p.sourceOwnsOutput(path) {
 			return true, nil
@@ -417,9 +417,9 @@ func (p *packageUnit) readGoFiles() error {
 		return err
 	}
 	for _, entry := range entries {
-		file, data, cgo, tgoErr := activeGoFile(p.context, p.Dir, entry)
-		if tgoErr != nil {
-			return tgoErr
+		file, data, cgo, err_1 := activeGoFile(p.context, p.Dir, entry)
+		if err_1 != nil {
+			return err_1
 		}
 		if file == nil {
 			continue

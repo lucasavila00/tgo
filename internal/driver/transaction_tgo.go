@@ -41,9 +41,9 @@ func (b *packageBuilder) removeStaleOutputs(
 	unit *packageUnit,
 	outputs map[string]bool,
 ) error {
-	entries, tgoErr := os.ReadDir(unit.Dir)
-	if tgoErr != nil {
-		return tgoErr
+	entries, err_1 := os.ReadDir(unit.Dir)
+	if err_1 != nil {
+		return err_1
 	}
 	for _, entry := range entries {
 		path := filepath.Join(unit.Dir, entry.Name())
