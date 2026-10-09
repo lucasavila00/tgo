@@ -62,7 +62,7 @@ func (p *packageUnit) fillDefaults() {
 			}
 			ast.Inspect(declaration, func(node ast.Node) bool {
 				if literal, ok := node.(*ast.CompositeLit); ok {
-					p.fillLiteralDefaults(source.File, literal, source.DefaultMarker)
+					p.fillLiteralDefaults(source, literal, source.DefaultMarker)
 				}
 				return true
 			})
@@ -72,7 +72,7 @@ func (p *packageUnit) fillDefaults() {
 
 // fillLiteralDefaults adds omitted default fields to one composite literal.
 func (p *packageUnit) fillLiteralDefaults(
-	file *ast.File,
+	source *source,
 	literal *ast.CompositeLit,
 	marker string,
 ) {
@@ -94,6 +94,7 @@ func (p *packageUnit) fillLiteralDefaults(
 	if !marked {
 		return
 	}
+	source.Lowered = true
 	owner, name, fields := p.literalFields(p.info.TypeOf(literal))
 	if name == "" {
 		p.fail(literal, "..default needs a tgo struct with declared defaults")
@@ -111,7 +112,7 @@ func (p *packageUnit) fillLiteralDefaults(
 		}
 		if !qualified {
 			named := types.Unalias(p.info.TypeOf(literal)).(*types.Named)
-			prefix = p.ownerQualifier(file, named.Obj().Pkg())
+			prefix = p.ownerQualifier(source.File, named.Obj().Pkg())
 			qualified = true
 		}
 		helper := p.generatedObject(

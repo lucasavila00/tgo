@@ -191,10 +191,18 @@ func (p *packageUnit) compile() (map[string][]byte, error) {
 func (p *packageUnit) generatedOutputs() (map[string][]byte, error) {
 	outputs := map[string][]byte{}
 	for _, s := range p.Sources {
-		removeLineDirectives(s.File)
 		var body bytes.Buffer
-		if err := format.Node(&body, p.fs, s.File); err != nil {
-			return nil, err
+		if !s.Lowered {
+			formatted, err := format.Source(s.Data)
+			if err != nil {
+				return nil, err
+			}
+			body.Write(formatted)
+		} else {
+			removeLineDirectives(s.File)
+			if err := format.Node(&body, p.fs, s.File); err != nil {
+				return nil, err
+			}
 		}
 		var b bytes.Buffer
 		b.WriteString(generatedHeader + "\n")

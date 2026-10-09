@@ -22,7 +22,11 @@ func (p *packageUnit) prepare() {
 func (p *packageUnit) lowerConstructions() {
 	for _, source := range p.Sources {
 		transform(source.File, func(node ast.Node) ast.Node {
-			return p.lowerConstruction(source.File, node)
+			replacement := p.lowerConstruction(source.File, node)
+			if replacement != node {
+				source.Lowered = true
+			}
+			return replacement
 		})
 	}
 }
