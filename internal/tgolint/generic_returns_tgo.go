@@ -154,7 +154,7 @@ func (c *checker) collectReturnedExpression(
 			}
 		}
 	}
-	if function != nil && summaries[function.Origin()] != nil {
+	if function != nil && c.genericZeroFact(function.Origin(), summaries) != nil {
 		summary.returnedCalls = append(summary.returnedCalls, returnedGenericCall{
 			expression: value,
 			maySkip:    maySkip,

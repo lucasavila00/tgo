@@ -268,15 +268,41 @@ func (c %checker) collectReturnedGenericEffects(
 ) {
 	bindings := c.returnedClosureBindings(summary.body)
 	signature := summary.function.Type().(*types.Signature)
+	namedResults := returnedNamedResultExpressions(summary.declaration)
 	inspectGenericBlock(summary.body, func(node %syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
 		statement, ok := syntax.StatementOf(node)
-		if !ok || syntax.ReturnStatementOf(statement) == nil {
+		if !ok {
 			return true
 		}
-		for index, expression := range syntax.ReturnStatementOf(statement).Results {
+		returned := syntax.ReturnStatementOf(statement)
+		if returned == nil {
+			return true
+		}
+		results := returned.Results
+		if len(results) == 0 {
+			results = namedResults
+		}
+		if len(results) == 1 {
+			if _, tuple := c.facts.Type(results[0]).(*types.Tuple); tuple {
+				for index := range signature.Results().Len() {
+					if returnedFunctionType(signature.Results().At(index).Type()) {
+						c.collectReturnedExpression(
+							summary, results[0], bindings, summaries, declarations,
+							true, false, make(map[types.Object]bool),
+						)
+						break
+					}
+				}
+				return false
+			}
+		}
+		for index, expression := range results {
+			if expression == nil {
+				continue
+			}
 			if index >= signature.Results().Len() ||
 				!returnedFunctionType(signature.Results().At(index).Type()) {
 				continue
@@ -288,6 +314,26 @@ func (c %checker) collectReturnedGenericEffects(
 		}
 		return false
 	})
+}
+
+func returnedNamedResultExpressions(
+	declaration %syntax.FunctionDeclaration,
+) []%syntax.Expression {
+	if declaration.Type.Results == nil {
+		return nil
+	}
+	var results []%syntax.Expression = nil
+	for _, field := range declaration.Type.Results.List {
+		if len(field.Names) == 0 {
+			results = append(results, nil)
+			continue
+		}
+		for _, name := range field.Names {
+			expression := syntax.ExpressionIdentifier{Value: name}.Expression()
+			results = append(results, &expression)
+		}
+	}
+	return results
 }
 
 func returnedFunctionType(typ types.Type) bool {

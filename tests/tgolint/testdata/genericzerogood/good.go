@@ -70,6 +70,10 @@ func Safe() {
 	genericzero.AliasedNested[int]()()
 	genericzero.ForwardedNested[int]()()
 	genericzero.FactoryNested[int]()()
+	genericzero.NamedNested[int]()()
+	_, paired := genericzero.PairedNested[int]()
+	paired()
+	genericzerowrap.Nested[int]()()
 	genericzero.SafeAliasedNested[model.Event]()()
 	genericzero.SafeForwardedNested[model.Event]()()
 }

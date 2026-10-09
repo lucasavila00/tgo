@@ -118,6 +118,10 @@ func FunctionValues(event model.Event) {
 	genericzero.AliasedNested[model.Event]()()
 	genericzero.ForwardedNested[model.Event]()()
 	genericzero.FactoryNested[model.Event]()()
+	genericzero.NamedNested[model.Event]()()
+	_, paired := genericzero.PairedNested[model.Event]()
+	paired()
+	genericzerowrap.Nested[model.Event]()()
 }
 
 func unresolvedNested[T any](forward func(func()) func()) func() {

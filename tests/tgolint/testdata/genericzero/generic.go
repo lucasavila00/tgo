@@ -153,6 +153,25 @@ func FactoryNested[T any]() func() {
 	return Nested[T]()
 }
 
+func NamedNested[T any]() (nested func()) {
+	nested = func() {
+		var value T
+		_ = value
+	}
+	return
+}
+
+func nestedPair[T any]() (int, func()) {
+	return 0, func() {
+		var value T
+		_ = value
+	}
+}
+
+func PairedNested[T any]() (int, func()) {
+	return nestedPair[T]()
+}
+
 func SafeAliasedNested[T any]() func() {
 	nested := func() {}
 	return nested
