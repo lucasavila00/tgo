@@ -54,7 +54,16 @@ func (p *printer) expressionAt(
 		item := expressionValue.SelectorPayload().Value
 		p.expressionAt(item.Expression, token.HighestPrec, depth)
 		p.text(".")
+		lineBreak := p.position(syntax.ExpressionEnd(item.Expression)).Line <
+			p.position(item.Selector.Start).Line
+		if lineBreak {
+			p.newline()
+			p.indent++
+		}
 		p.token(item.Selector.Start, item.Selector.Name)
+		if lineBreak {
+			p.indent--
+		}
 	case syntax.ExpressionTagIndex:
 		item := expressionValue.IndexPayload().Value
 		p.expressionAt(item.Expression, token.HighestPrec, 1)
