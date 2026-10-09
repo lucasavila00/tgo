@@ -35,7 +35,7 @@ func (p *printer) outputColumn() int {
 	data := p.output.Bytes()
 	column := 0
 	start := bytes.LastIndexByte(data, '\n') + 1
-	for _, value := range data[start:] {
+	for _, value := range string(data[start:]) {
 		if value == '\t' {
 			column += 8 - column%8
 		} else {
@@ -102,19 +102,26 @@ func (p *printer) printFile() []byte {
 		p.blankline()
 	}
 	functionBodyColumns := p.functionBodyColumns(p.file.Declarations)
+	commentWidths := p.declarationCommentWidths(p.file.Declarations)
 	for index, declaration := range p.file.Declarations {
 		if index > 0 {
 			previous := p.file.Declarations[index-1]
 			start := syntax.DeclarationPosition(declaration)
 			stop := syntax.DeclarationEnd(previous)
-			if declarationKind(previous) != declarationKind(declaration) ||
+			if declarationKind(previous) != declarationKind(declaration) &&
+				(commentWidths[index-1] == 0 || commentWidths[index] == 0) ||
 				p.blankBetween(stop, start) || p.hasCommentBetween(stop, start) {
 				p.blankline()
 			}
 		}
 		p.functionBodyColumn = functionBodyColumns[index]
+		previousCommentColumn := p.commentColumn
+		if commentWidths[index] > 0 {
+			p.commentColumn = commentWidths[index] + 1
+		}
 		p.declaration(declaration)
 		p.trailingLine(syntax.DeclarationEnd(declaration))
+		p.commentColumn = previousCommentColumn
 		p.newline()
 	}
 	p.before(token.Pos(^uint(0) >> 1))
@@ -122,12 +129,53 @@ func (p *printer) printFile() []byte {
 	return append([]byte(nil), p.output.Bytes()...)
 }
 
+func (p *printer) declarationCommentWidths(values []*syntax.Declaration) []int {
+	widths := make([]int, len(values))
+	for first := 0; first < len(values); {
+		if !p.hasTrailingComment(syntax.DeclarationEnd(values[first])) {
+			first++
+			continue
+		}
+		last := first + 1
+		for last < len(values) &&
+			p.hasTrailingComment(syntax.DeclarationEnd(values[last])) &&
+			!p.blankBetween(
+				syntax.DeclarationEnd(values[last-1]),
+				syntax.DeclarationPosition(values[last]),
+			) && !p.hasCommentBetween(
+			syntax.DeclarationEnd(values[last-1]),
+			syntax.DeclarationPosition(values[last]),
+		) {
+			last++
+		}
+		width := 0
+		for _, value := range values[first:last] {
+			width = max(width, p.formattedDeclarationWidth(value))
+		}
+		for index := first; index < last; index++ {
+			widths[index] = width
+		}
+		first = last
+	}
+	return widths
+}
+
+func (p *printer) formattedDeclarationWidth(value *syntax.Declaration) int {
+	probe := newPrinter(p.files, p.file, p.source)
+	probe.comments = nil
+	probe.declaration(value)
+	return probe.outputColumn()
+}
+
 func (p *printer) functionBodyColumns(values []*syntax.Declaration) []int {
 	columns := make([]int, len(values))
 	for first := 0; first < len(values); {
 		declaration := functionDeclarationOf(values[first])
 		if declaration == nil || declaration.Body == nil ||
-			!p.compactFunctionBody(declaration.Body, declaration.Start) {
+			!p.compactFunctionBody(
+				declaration.Body,
+				p.formattedFunctionHeaderWidth(declaration),
+			) {
 			first++
 			continue
 		}
@@ -135,7 +183,7 @@ func (p *printer) functionBodyColumns(values []*syntax.Declaration) []int {
 		for last < len(values) {
 			next := functionDeclarationOf(values[last])
 			if next == nil || next.Body == nil ||
-				!p.compactFunctionBody(next.Body, next.Start) ||
+				!p.compactFunctionBody(next.Body, p.formattedFunctionHeaderWidth(next)) ||
 				p.blankBetween(
 					syntax.DeclarationEnd(values[last-1]),
 					syntax.DeclarationPosition(values[last]),
@@ -229,7 +277,7 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 				p.blankline()
 			}
 		}
-		if p.lineStart && strings.HasPrefix(item.text, "//line ") {
+		if p.lineStart && start.Column == 1 && strings.HasPrefix(item.text, "//line ") {
 			p.output.WriteString(item.text)
 			p.lineStart = false
 			p.lineBreaks = 0
@@ -364,6 +412,33 @@ func (p *printer) trailingToken(position token.Pos, width int) {
 	p.trailingLine(file.Pos(file.Offset(position) + width))
 }
 
+func (p *printer) commaEnd(position token.Pos, following token.Pos) token.Pos {
+	if p.comment >= len(p.comments) {
+		return position
+	}
+	comment := p.comments[p.comment]
+	if !strings.HasPrefix(comment.text, "//") {
+		commentStop := p.position(comment.stop)
+		next := p.position(following)
+		if next.IsValid() && commentStop.Line == next.Line {
+			return position
+		}
+	}
+	file := p.files.File(position)
+	if file == nil {
+		return position
+	}
+	offset := file.Offset(position)
+	for offset < len(p.source) &&
+		(p.source[offset] == ' ' || p.source[offset] == '\t' || p.source[offset] == '\r') {
+		offset++
+	}
+	if offset < len(p.source) && p.source[offset] == ',' {
+		return file.Pos(offset + 1)
+	}
+	return position
+}
+
 func (p *printer) comma(position token.Pos, following token.Pos) token.Pos {
 	file := p.files.File(position)
 	if file == nil || p.files.File(following) != file {
@@ -440,7 +515,23 @@ func (p *printer) blankBetween(stop token.Pos, start token.Pos) bool {
 		return false
 	}
 	lines := strings.Split(string(p.source[left:right]), "\n")
-	for _, line := range lines[1:max(1, len(lines)-1)] {
+	firstLine := p.position(stop).Line
+	for index, line := range lines[1:max(1, len(lines)-1)] {
+		lineNumber := firstLine + index + 1
+		covered := false
+		for _, comment := range p.comments {
+			startLine := p.position(comment.start).Line
+			if startLine > lineNumber {
+				break
+			}
+			if startLine <= lineNumber && lineNumber <= p.position(comment.stop).Line {
+				covered = true
+				break
+			}
+		}
+		if covered {
+			continue
+		}
 		if strings.TrimSpace(line) == "" {
 			return true
 		}

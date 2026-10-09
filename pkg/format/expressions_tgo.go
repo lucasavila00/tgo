@@ -37,10 +37,12 @@ func (p *printer) expressionAt(
 		p.token(item.ValuePosition, item.Value)
 	case syntax.ExpressionTagFunctionLiteral:
 		item := expressionValue.FunctionLiteralPayload().Value
+		startColumn := p.outputColumn()
 		p.token(item.Type.Function, "func")
 		p.functionSignature(item.Type)
+		headerWidth := p.outputColumn() - startColumn
 		p.space()
-		p.functionBody(item.Body, item.Start)
+		p.functionBody(item.Body, headerWidth)
 	case syntax.ExpressionTagCompositeLiteral:
 		p.compositeLiteral(expressionValue.CompositeLiteralPayload().Value)
 	case syntax.ExpressionTagParenthesized:
@@ -296,6 +298,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		return
 	}
 	keyWidths := p.compositeKeyWidths(value.Elements, value.Lbrace)
+	commentWidths := p.compositeCommentWidths(value.Elements, keyWidths)
 	previous := value.Lbrace
 	indented := false
 	for index, element := range value.Elements {
@@ -313,6 +316,10 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		} else if index > 0 {
 			p.space()
 		}
+		previousCommentColumn := p.commentColumn
+		if commentWidths[index] > 0 {
+			p.commentColumn = p.indent*8 + commentWidths[index] + 1
+		}
 		p.compositeElement(element, keyWidths[index])
 		previous = syntax.ExpressionEnd(element)
 		following := value.Rbrace
@@ -324,6 +331,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 			previous = p.comma(previous, following)
 			p.trailingLine(previous)
 		}
+		p.commentColumn = previousCommentColumn
 	}
 	if p.position(previous).Line < p.position(value.Rbrace).Line {
 		p.newline()
@@ -346,14 +354,26 @@ func (p *printer) compositeKeyWidths(
 			previous = syntax.ExpressionEnd(values[first-1])
 		}
 		if compositeKeyWidth(values[first]) == 0 ||
+			p.multiline(
+				syntax.ExpressionPosition(values[first]),
+				syntax.ExpressionEnd(values[first]),
+			) ||
 			p.position(previous).Line >= p.position(syntax.ExpressionPosition(values[first])).Line {
 			first++
 			continue
 		}
 		last := first + 1
 		for last < len(values) && compositeKeyWidth(values[last]) > 0 &&
+			!p.multiline(
+				syntax.ExpressionPosition(values[last]),
+				syntax.ExpressionEnd(values[last]),
+			) &&
 			p.position(syntax.ExpressionEnd(values[last-1])).Line <
 				p.position(syntax.ExpressionPosition(values[last])).Line &&
+			!p.hasCommentBetween(
+				syntax.ExpressionEnd(values[last-1]),
+				syntax.ExpressionPosition(values[last]),
+			) &&
 			!p.blankBetween(
 				syntax.ExpressionEnd(values[last-1]),
 				syntax.ExpressionPosition(values[last]),
@@ -469,6 +489,7 @@ func (p *printer) formattedFieldWidth(value *syntax.Field, nameWidth int) int {
 
 func (p *printer) fieldBlock(value *syntax.FieldList) {
 	p.token(value.Opening, "{")
+	p.trailingToken(value.Opening, 1)
 	if len(value.List) == 0 {
 		if p.multiline(value.Opening, value.Closing) {
 			p.newline()
@@ -494,6 +515,7 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 	}
 	p.newline()
 	p.indent++
+	commentWidths := p.fieldCommentWidths(value.List)
 	for first := 0; first < len(value.List); {
 		last := first + 1
 		for last < len(value.List) &&
@@ -508,21 +530,15 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 				width = itemWidth
 			}
 		}
-		commentWidth := 0
-		for _, item := range value.List[first:last] {
-			if item.Comment != nil || p.hasTrailingComment(fieldContentEnd(item)) {
-				commentWidth = max(commentWidth, p.formattedFieldWidth(item, width))
+		for index, item := range value.List[first:last] {
+			previousCommentColumn := p.commentColumn
+			if commentWidths[first+index] > 0 {
+				p.commentColumn = p.indent*8 + commentWidths[first+index] + 1
 			}
-		}
-		previousCommentColumn := p.commentColumn
-		if commentWidth > 0 {
-			p.commentColumn = p.indent*8 + commentWidth + 1
-		}
-		for _, item := range value.List[first:last] {
 			p.alignedField(item, width)
+			p.commentColumn = previousCommentColumn
 			p.newline()
 		}
-		p.commentColumn = previousCommentColumn
 		first = last
 		if first < len(value.List) && p.blankBetween(
 			value.List[first-1].Stop,

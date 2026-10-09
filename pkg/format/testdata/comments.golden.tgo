@@ -28,3 +28,7 @@ func label(value int) int {
 		return 0
 	}
 } // label
+func ordinaryLineComment() {
+	//line ordinary.go:40
+	return
+}

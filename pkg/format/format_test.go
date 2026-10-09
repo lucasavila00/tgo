@@ -176,6 +176,13 @@ func TestSourceMatchesGoFormatForOrdinarySyntax(t *testing.T) {
 			if !bytes.Equal(got, want) {
 				t.Fatalf("formatted source:\n%s\nwant Go format:\n%s", got, want)
 			}
+			again, err := format.Source(inputPath, got)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(again, got) {
+				t.Fatalf("second pass changed output:\n%s", again)
+			}
 		})
 	}
 }

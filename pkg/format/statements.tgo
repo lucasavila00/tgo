@@ -1,7 +1,7 @@
 package format
 
 import (
-	"go/token"
+	"bytes"
 
 	"tgo/pkg/syntax"
 )
@@ -113,6 +113,14 @@ func (p *printer) statement(value *syntax.Statement) {
 }
 
 func (p *printer) statementList(values []%syntax.Statement) {
+	printed := make([]%syntax.Statement, 0, len(values))
+	for _, value := range values {
+		if !implicitEmptyStatement(value) {
+			printed = append(printed, value)
+		}
+	}
+	values = printed
+	commentWidths := p.statementCommentWidths(values)
 	for first := 0; first < len(values); {
 		last := first + 1
 		for last < len(values) && !p.blankBetween(
@@ -124,23 +132,21 @@ func (p *printer) statementList(values []%syntax.Statement) {
 		) {
 			last++
 		}
-		commentWidth := 0
-		for _, value := range values[first:last] {
-			if !p.multiline(syntax.StatementPosition(value), syntax.StatementEnd(value)) &&
-				p.hasTrailingComment(syntax.StatementEnd(value)) {
-				commentWidth = max(commentWidth, p.formattedStatementWidth(value))
+		for index, value := range values[first:last] {
+			previousCommentColumn := p.commentColumn
+			if commentWidths[first+index] > 0 {
+				p.commentColumn = p.indent*8 + commentWidths[first+index] + 1
 			}
-		}
-		previousCommentColumn := p.commentColumn
-		if commentWidth > 0 {
-			p.commentColumn = p.indent*8 + commentWidth + 1
-		}
-		for _, value := range values[first:last] {
 			p.statement(value)
 			p.trailingLine(syntax.StatementEnd(value))
+			p.commentColumn = previousCommentColumn
+			if emptyClauseStatement(value) && first+index+1 < len(values) {
+				p.indent++
+				p.before(syntax.StatementPosition(values[first+index+1]))
+				p.indent--
+			}
 			p.newline()
 		}
-		p.commentColumn = previousCommentColumn
 		first = last
 		if first < len(values) && p.blankBetween(
 			syntax.StatementEnd(values[first-1]),
@@ -149,6 +155,59 @@ func (p *printer) statementList(values []%syntax.Statement) {
 			p.blankline()
 		}
 	}
+}
+
+func implicitEmptyStatement(value *syntax.Statement) bool {
+	switch statementValue := *value; statementValue.Tag() {
+	case syntax.StatementTagEmpty:
+		return statementValue.EmptyPayload().Value.Implicit
+	default:
+		return false
+	}
+}
+
+func emptyClauseStatement(value *syntax.Statement) bool {
+	switch statementValue := *value; statementValue.Tag() {
+	case syntax.StatementTagCase:
+		return len(statementValue.CasePayload().Value.Body) == 0
+	case syntax.StatementTagCommunication:
+		return len(statementValue.CommunicationPayload().Value.Body) == 0
+	default:
+		return false
+	}
+}
+
+func (p *printer) statementCommentWidths(values []%syntax.Statement) []int {
+	widths := make([]int, len(values))
+	for first := 0; first < len(values); {
+		if p.multiline(syntax.StatementPosition(values[first]), syntax.StatementEnd(values[first])) ||
+			!p.hasTrailingComment(syntax.StatementEnd(values[first])) {
+			first++
+			continue
+		}
+		last := first + 1
+		for last < len(values) &&
+			!p.multiline(syntax.StatementPosition(values[last]), syntax.StatementEnd(values[last])) &&
+			p.hasTrailingComment(syntax.StatementEnd(values[last])) &&
+			!p.blankBetween(
+				syntax.StatementEnd(values[last-1]),
+				syntax.StatementPosition(values[last]),
+			) && !p.hasCommentBetween(
+			syntax.StatementEnd(values[last-1]),
+			syntax.StatementPosition(values[last]),
+		) {
+			last++
+		}
+		width := 0
+		for _, value := range values[first:last] {
+			width = max(width, p.formattedStatementWidth(value))
+		}
+		for index := first; index < last; index++ {
+			widths[index] = width
+		}
+		first = last
+	}
+	return widths
 }
 
 func (p *printer) formattedStatementWidth(value *syntax.Statement) int {
@@ -174,13 +233,16 @@ func (p *printer) block(value *syntax.BlockStatement) {
 	p.newline()
 	p.indent++
 	p.statementList(value.List)
+	if p.blankBetween(syntax.StatementEnd(value.List[len(value.List)-1]), value.Rbrace) {
+		p.blankline()
+	}
 	p.before(value.Rbrace)
 	p.indent--
 	p.token(value.Rbrace, "}")
 }
 
-func (p *printer) functionBody(value *syntax.BlockStatement, start token.Pos) {
-	if p.compactFunctionBody(value, start) {
+func (p *printer) functionBody(value *syntax.BlockStatement, headerWidth int) {
+	if p.compactFunctionBody(value, headerWidth) {
 		p.token(value.Lbrace, "{")
 		if len(value.List) > 0 {
 			p.space()
@@ -199,17 +261,24 @@ func (p *printer) functionBody(value *syntax.BlockStatement, start token.Pos) {
 	p.block(value)
 }
 
-func (p *printer) compactFunctionBody(value *syntax.BlockStatement, start token.Pos) bool {
+func (p *printer) compactFunctionBody(value *syntax.BlockStatement, headerWidth int) bool {
 	if p.multiline(value.Lbrace, value.Rbrace) || len(value.List) > 5 {
 		return false
 	}
-	file := p.files.File(start)
-	if file == nil || p.files.File(value.Rbrace) != file {
-		return false
+	bodyWidth := 0
+	for index, statement := range value.List {
+		probe := newPrinter(p.files, p.file, p.source)
+		probe.comments = nil
+		probe.statement(statement)
+		if bytes.IndexByte(probe.output.Bytes(), '\n') >= 0 {
+			return false
+		}
+		if index > 0 {
+			bodyWidth += 2
+		}
+		bodyWidth += probe.output.Len()
 	}
-	from := file.Offset(start)
-	to := file.Offset(value.Rbrace) + 1
-	return from >= 0 && to >= from && to-from <= 100
+	return headerWidth+bodyWidth <= 100
 }
 
 func (p *printer) clauseBlock(value *syntax.BlockStatement) {
@@ -227,7 +296,13 @@ func (p *printer) clauseBlock(value *syntax.BlockStatement) {
 	}
 	p.newline()
 	p.statementList(value.List)
-	p.before(value.Rbrace)
+	if emptyClauseStatement(value.List[len(value.List)-1]) {
+		p.indent++
+		p.before(value.Rbrace)
+		p.indent--
+	} else {
+		p.before(value.Rbrace)
+	}
 	p.token(value.Rbrace, "}")
 }
 

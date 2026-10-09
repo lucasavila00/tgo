@@ -44,7 +44,7 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 	}
 	p.newline()
 	p.indent++
-	nameWidths, typeWidths := p.valueSpecificationWidths(value)
+	nameWidths, typeWidths, commentWidths := p.valueSpecificationWidths(value)
 	for index, item := range value.Specs {
 		if index > 0 && p.blankBetween(
 			syntax.SpecificationEnd(value.Specs[index-1]),
@@ -52,12 +52,71 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 		) {
 			p.blankline()
 		}
+		previousCommentColumn := p.commentColumn
+		if commentWidths[index] > 0 {
+			p.commentColumn = p.indent*8 + commentWidths[index] + 1
+		}
 		p.alignedSpecification(item, nameWidths[index], typeWidths[index])
+		p.commentColumn = previousCommentColumn
 		p.trailingLine(syntax.SpecificationEnd(item))
 		p.newline()
 	}
 	p.indent--
 	p.token(value.Rparen, ")")
+}
+
+func (p *printer) specificationCommentWidths(
+	declaration *syntax.GeneralDeclaration,
+	nameWidths []int,
+	typeWidths []int,
+) []int {
+	values := declaration.Specs
+	widths := make([]int, len(values))
+	for first := 0; first < len(values); {
+		if !p.hasTrailingComment(syntax.SpecificationEnd(values[first])) {
+			first++
+			continue
+		}
+		last := first + 1
+		for last < len(values) &&
+			p.hasTrailingComment(syntax.SpecificationEnd(values[last])) &&
+			!p.blankBetween(
+				syntax.SpecificationEnd(values[last-1]),
+				syntax.SpecificationPosition(values[last]),
+			) && !p.hasCommentBetween(
+			syntax.SpecificationEnd(values[last-1]),
+			syntax.SpecificationPosition(values[last]),
+		) {
+			last++
+		}
+		width := 0
+		for index := first; index < last; index++ {
+			width = max(
+				width,
+				p.formattedSpecificationWidth(
+					values[index],
+					nameWidths[index],
+					typeWidths[index],
+				),
+			)
+		}
+		for index := first; index < last; index++ {
+			widths[index] = width
+		}
+		first = last
+	}
+	return widths
+}
+
+func (p *printer) formattedSpecificationWidth(
+	value *syntax.Specification,
+	nameWidth int,
+	typeWidth int,
+) int {
+	probe := newPrinter(p.files, p.file, p.source)
+	probe.comments = nil
+	probe.alignedSpecification(value, nameWidth, typeWidth)
+	return probe.outputColumn()
 }
 
 func (p *printer) specification(value *syntax.Specification) {
@@ -83,7 +142,7 @@ func (p *printer) alignedSpecification(
 
 func (p *printer) valueSpecificationWidths(
 	declaration *syntax.GeneralDeclaration,
-) ([]int, []int) {
+) ([]int, []int, []int) {
 	values := declaration.Specs
 	nameWidths := make([]int, len(values))
 	typeWidths := make([]int, len(values))
@@ -119,7 +178,11 @@ func (p *printer) valueSpecificationWidths(
 		}
 		first = last
 	}
-	return nameWidths, typeWidths
+	return nameWidths, typeWidths, p.specificationCommentWidths(
+		declaration,
+		nameWidths,
+		typeWidths,
+	)
 }
 
 func valueSpecificationOf(value *syntax.Specification) *syntax.ValueSpecification {
@@ -161,8 +224,6 @@ func (p *printer) valueSpecification(
 		padding := nameWidth - actualNameWidth + 1
 		if value.Type != nil {
 			padding = typeWidth - actualTypeWidth + 1
-		} else if typeWidth > 0 {
-			padding += typeWidth + 1
 		}
 		p.text(strings.Repeat(" ", padding))
 		p.text("=")
@@ -219,7 +280,7 @@ func (p *printer) functionDeclaration(value *syntax.FunctionDeclaration) {
 		} else {
 			p.space()
 		}
-		p.functionBody(value.Body, value.Start)
+		p.functionBody(value.Body, p.formattedFunctionHeaderWidth(value))
 	}
 }
 
@@ -299,7 +360,7 @@ func (p *printer) enumVariant(value *syntax.EnumVariant) {
 		return
 	}
 	if len(value.Fields) > 0 {
-		p.tgoFields(value.Fields)
+		p.tgoFields(value.Fields, value.Rbrace)
 	}
 	p.token(value.Rbrace, "}")
 	if value.Tag != nil {
@@ -314,7 +375,9 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 	p.token(value.Name.Start, value.Name.Name)
 	p.space()
 	p.token(value.Struct, "struct")
-	p.space()
+	if len(value.Fields) > 1 || p.multiline(value.Lbrace, value.Rbrace) {
+		p.space()
+	}
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
 	if len(value.Fields) == 0 && p.multiline(value.Lbrace, value.Rbrace) {
@@ -331,7 +394,7 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 		return
 	}
 	if len(value.Fields) > 0 {
-		p.tgoFields(value.Fields)
+		p.tgoFields(value.Fields, value.Rbrace)
 	}
 	p.token(value.Rbrace, "}")
 }
@@ -353,9 +416,10 @@ func (p *printer) formattedTGoFieldWidth(value *syntax.TGoField, nameWidth int) 
 	return probe.outputColumn()
 }
 
-func (p *printer) tgoFields(values []*syntax.TGoField) {
+func (p *printer) tgoFields(values []*syntax.TGoField, closing token.Pos) {
 	p.newline()
 	p.indent++
+	commentWidths := p.tgoFieldCommentWidths(values)
 	for first := 0; first < len(values); {
 		last := first + 1
 		for last < len(values) &&
@@ -369,29 +433,66 @@ func (p *printer) tgoFields(values []*syntax.TGoField) {
 				width = itemWidth
 			}
 		}
-		commentWidth := 0
-		for _, value := range values[first:last] {
-			if p.hasTrailingComment(fieldContentEnd(value.Field)) {
-				commentWidth = max(commentWidth, p.formattedTGoFieldWidth(value, width))
+		for index, value := range values[first:last] {
+			previousCommentColumn := p.commentColumn
+			if commentWidths[first+index] > 0 {
+				p.commentColumn = p.indent*8 + commentWidths[first+index] + 1
 			}
-		}
-		previousCommentColumn := p.commentColumn
-		if commentWidth > 0 {
-			p.commentColumn = p.indent*8 + commentWidth + 1
-		}
-		for _, value := range values[first:last] {
 			p.tgoField(value, width)
 			p.trailingLine(value.Stop)
+			p.commentColumn = previousCommentColumn
 			p.newline()
 		}
-		p.commentColumn = previousCommentColumn
 		first = last
 		if first < len(values) &&
 			p.blankBetween(values[first-1].Stop, values[first].Start) {
 			p.blankline()
 		}
 	}
+	p.before(closing)
 	p.indent--
+}
+
+func (p *printer) tgoFieldCommentWidths(values []*syntax.TGoField) []int {
+	widths := make([]int, len(values))
+	for first := 0; first < len(values); {
+		if !p.hasTrailingComment(fieldContentEnd(values[first].Field)) {
+			first++
+			continue
+		}
+		last := first + 1
+		for last < len(values) &&
+			p.hasTrailingComment(fieldContentEnd(values[last].Field)) &&
+			!p.blankBetween(values[last-1].Stop, values[last].Start) &&
+			!p.hasCommentBetween(values[last-1].Stop, values[last].Start) {
+			last++
+		}
+		sectionFirst := first
+		for sectionFirst > 0 &&
+			!p.blankBetween(values[sectionFirst-1].Stop, values[sectionFirst].Start) &&
+			!p.hasCommentBetween(values[sectionFirst-1].Stop, values[sectionFirst].Start) {
+			sectionFirst--
+		}
+		sectionLast := last
+		for sectionLast < len(values) &&
+			!p.blankBetween(values[sectionLast-1].Stop, values[sectionLast].Start) &&
+			!p.hasCommentBetween(values[sectionLast-1].Stop, values[sectionLast].Start) {
+			sectionLast++
+		}
+		nameWidth := 0
+		for _, value := range values[sectionFirst:sectionLast] {
+			nameWidth = max(nameWidth, fieldNameWidth(value.Field))
+		}
+		width := 0
+		for _, value := range values[first:last] {
+			width = max(width, p.formattedTGoFieldWidth(value, nameWidth))
+		}
+		for index := first; index < last; index++ {
+			widths[index] = width
+		}
+		first = last
+	}
+	return widths
 }
 
 func (p *printer) checkedDeclaration(value *syntax.CheckedDeclaration) {

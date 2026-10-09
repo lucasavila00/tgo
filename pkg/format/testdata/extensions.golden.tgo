@@ -14,7 +14,7 @@ type Options struct {
 	Name string
 	Tags []string = []string{}
 }
-type Single struct { Name string }
+type Single struct{ Name string }
 type Port int where value > 0
 type SmallPort int where value > 0 &&
 	value < 1024
