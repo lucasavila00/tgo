@@ -38,7 +38,7 @@ test("TextMate scopes distinguish TGo syntax from Go syntax", async () => {
   const grammar = await registry.loadGrammar("source.tgo");
   assert.ok(grammar);
 
-  const source = fs.readFileSync(path.join(fixtures, "source.tgo"), "utf8");
+  const source = fs.readFileSync(path.join(fixtures, "source.txt"), "utf8");
   const expectations = JSON.parse(fs.readFileSync(
     path.join(fixtures, "scopes.json"), "utf8"
   ));
