@@ -167,11 +167,19 @@ func (p *sourceParser) buildPropagation(expression ast.Expr, call *ast.CallExpr)
 			continue
 		}
 		bang := p.tokens[item.bang]
+		stop := bang.end
+		secondBang := token.NoPos
+		if item.secondBang >= 0 {
+			second := p.tokens[item.secondBang]
+			stop = second.end
+			secondBang = p.pos(second.start)
+		}
 		item.node = &frontPropagateExpr{
-			frontSpan:  frontSpan{Start: expression.Pos(), Stop: p.pos(bang.end)},
+			frontSpan:  frontSpan{Start: expression.Pos(), Stop: p.pos(stop)},
 			Expression: expression,
 			Call:       call,
 			Bang:       p.pos(bang.start),
+			SecondBang: secondBang,
 		}
 		return
 	}

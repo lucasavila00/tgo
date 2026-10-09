@@ -875,16 +875,19 @@ func (l *propagationLowerer) errorBranch(
 		body = append(body, declaration)
 		zeroValues = append(zeroValues, name)
 	}
-	formatError := l.unit.generatedObject(
-		l.formatQualifier(), "fmt", "Errorf", metadata.Bang,
-	)
-	wrapped := call(formatError,
-		&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(metadata.Name + ": %w")},
-		errorName,
-	)
+	returnedError := ast.Expr(errorName)
+	if !metadata.Transparent {
+		formatError := l.unit.generatedObject(
+			l.formatQualifier(), "fmt", "Errorf", metadata.Bang,
+		)
+		returnedError = call(formatError,
+			&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(metadata.Name + ": %w")},
+			errorName,
+		)
+	}
 	results := make([]ast.Expr, 0, len(zeroValues)+1)
 	results = append(results, zeroValues...)
-	results = append(results, wrapped)
+	results = append(results, returnedError)
 	body = append(body, &ast.ReturnStmt{Results: results})
 	return &ast.IfStmt{
 		Cond: &ast.BinaryExpr{

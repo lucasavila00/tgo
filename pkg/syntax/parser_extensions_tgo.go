@@ -20,17 +20,29 @@ func (p *sourceParser) discoverExtensions() error {
 			})
 		}
 		if p.atPropagation(cursor) {
+			secondBang := -1
+			end := p.tokens[cursor].end
+			if cursor+1 < len(p.tokens) &&
+				p.tokens[cursor+1].kind == token.NOT &&
+				p.tokens[cursor].end == p.tokens[cursor+1].start {
+				secondBang = cursor + 1
+				end = p.tokens[secondBang].end
+			}
 			item := &rawPropagation{
-				callEnd: p.tokens[cursor-1].end,
-				bang:    cursor,
-				node:    nil,
+				callEnd:    p.tokens[cursor-1].end,
+				bang:       cursor,
+				secondBang: secondBang,
+				node:       nil,
 			}
 			p.propagations = append(p.propagations, item)
 			p.edits = append(p.edits, sourceEdit{
 				start: p.tokens[cursor].start,
-				end:   p.tokens[cursor].end,
+				end:   end,
 				text:  "",
 			})
+			if secondBang >= 0 {
+				cursor++
+			}
 			continue
 		}
 		if p.atDefault(cursor) {
@@ -376,28 +388,28 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		matchAt[raw.root.Pos()] = raw.root
 	}
 	for _, raw := range p.matches {
-		subject, subjectAnchors, err := p.parseExpression(
+		subject, subjectAnchors, tgoErr := p.parseExpression(
 			p.tokens[raw.subjectStart].start,
 			p.tokens[raw.subjectEnd].start,
 			matchAt,
 			defaultAt,
 		)
-		if err != nil {
-			return nil, err
+		if tgoErr != nil {
+			return nil, tgoErr
 		}
 		raw.node.Subject = subject
 		for child, parent := range subjectAnchors {
 			anchors[child] = parent
 		}
 		for index, rawCase := range raw.cases {
-			body, bodyAnchors, err := p.parseStatements(
+			body, bodyAnchors, tgoErr2 := p.parseStatements(
 				p.caseBodyStart(rawCase),
 				p.tokens[rawCase.bodyEnd].start,
 				matchAt,
 				defaultAt,
 			)
-			if err != nil {
-				return nil, err
+			if tgoErr2 != nil {
+				return nil, tgoErr2
 			}
 			raw.node.Cases[index].Body = body
 			for extension, parent := range bodyAnchors {
@@ -407,9 +419,9 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 	}
 	customDecls := make([]frontNode, 0, len(p.decls))
 	for _, raw := range p.decls {
-		declaration, declarationAnchors, err := p.makeDeclaration(raw, matchAt, defaultAt)
-		if err != nil {
-			return nil, err
+		declaration, declarationAnchors, tgoErr3 := p.makeDeclaration(raw, matchAt, defaultAt)
+		if tgoErr3 != nil {
+			return nil, tgoErr3
 		}
 		customDecls = append(customDecls, declaration)
 		for extension, parent := range declarationAnchors {

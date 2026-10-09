@@ -1155,13 +1155,14 @@ type DefaultExpression struct {
 	Default  token.Pos
 }
 
-// PropagationExpression returns a call error with automatic context.
+// PropagationExpression returns a call error from the current function.
 
 type PropagationExpression struct {
 	Span
 	Expression *Expression
 	Call       *CallExpression
 	Bang       token.Pos
+	SecondBang token.Pos
 }
 
 // Statement contains every Go statement form plus TGo match.
