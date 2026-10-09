@@ -90,7 +90,6 @@ func (p *packageUnit) fillEnumDefaults() {
 				if named == nil {
 					return true
 				}
-				prefix := p.ownerQualifier(source.File, named.Obj().Pkg())
 				p.fillLiteralDefaultsFor(
 					source,
 					literal,
@@ -98,7 +97,9 @@ func (p *packageUnit) fillEnumDefaults() {
 					owner,
 					model.Name+variant.Name,
 					variant.Fields,
-					prefix,
+					func() string {
+						return p.ownerQualifier(source.File, named.Obj().Pkg())
+					},
 				)
 				return true
 			})
@@ -120,8 +121,9 @@ func (p *packageUnit) fillLiteralDefaults(
 		return
 	}
 	named := types.Unalias(p.info.TypeOf(literal)).(*types.Named)
-	prefix := p.ownerQualifier(source.File, named.Obj().Pkg())
-	p.fillLiteralDefaultsFor(source, literal, marker, owner, name, fields, prefix)
+	p.fillLiteralDefaultsFor(source, literal, marker, owner, name, fields, func() string {
+		return p.ownerQualifier(source.File, named.Obj().Pkg())
+	})
 }
 
 func (p *packageUnit) fillLiteralDefaultsFor(
@@ -131,7 +133,7 @@ func (p *packageUnit) fillLiteralDefaultsFor(
 	owner *packageUnit,
 	name string,
 	fields []field,
-	prefix string,
+	prefix func() string,
 ) {
 	marked := false
 	supplied := make(map[string]bool)
@@ -152,6 +154,8 @@ func (p *packageUnit) fillLiteralDefaultsFor(
 		return
 	}
 	source.Lowered = true
+	qualified := ""
+	qualifiedSet := false
 	for _, field := range fields {
 		if supplied[field.Name] {
 			continue
@@ -159,8 +163,12 @@ func (p *packageUnit) fillLiteralDefaultsFor(
 		if field.Default == "" {
 			continue
 		}
+		if !qualifiedSet {
+			qualified = prefix()
+			qualifiedSet = true
+		}
 		helper := p.generatedObject(
-			prefix,
+			qualified,
 			owner.Path,
 			"TgoDefault"+name+field.Name,
 			literal.Lbrace,

@@ -259,19 +259,21 @@ func (c *converter) comprehensionExpression(
 		case frontComprehensionClauseTagFilter:
 			clause := item.FilterPayload()
 			payload.Clauses = append(
-				payload.Clauses, ComprehensionClauseFilter{Value: &ComprehensionFilterClause{
+				payload.Clauses, func(tgoInput_1 TgoComprehensionClauseFilterInput) ComprehensionClause {
+					return NewComprehensionClauseFilter(tgoInput_1.FieldValue)
+				}(TgoComprehensionClauseFilterInput{FieldValue: &ComprehensionFilterClause{
 					Span:      Span{Start: clause.Pos(), Stop: clause.End()},
 					If:        clause.If,
 					Condition: c.expressionRequired(clause.Condition),
 					Lbrace:    clause.Lbrace, Rbrace: clause.Rbrace,
-				}}.ComprehensionClause(),
+				}}),
 			)
 		default:
 			panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
 	}
-	result := func(tgoInput TgoExpressionComprehensionInput) Expression {
-		return NewExpressionComprehension(tgoInput.FieldValue)
+	result := func(tgoInput_2 TgoExpressionComprehensionInput) Expression {
+		return NewExpressionComprehension(tgoInput_2.FieldValue)
 	}(TgoExpressionComprehensionInput{FieldValue: payload})
 	return &result
 }

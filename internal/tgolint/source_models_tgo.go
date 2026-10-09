@@ -291,8 +291,8 @@ type TgosourceModelEnumInput struct {
 // NewsourceModelEnum constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewsourceModelEnum(Name string, Fact *model, Variants []sourceVariant) sourceModel {
-	value := sourceModelEnum{Name, Fact, Variants}
-	return sourceModel{tgoTag: sourceModelTagEnum, tgoPayload: value}
+	tgoValue := sourceModelEnum{Name, Fact, Variants}
+	return sourceModel{tgoTag: sourceModelTagEnum, tgoPayload: tgoValue}
 }
 
 // EnumPayload requires Enum. No tag check.
@@ -313,8 +313,8 @@ type TgosourceModelStructInput struct {
 // NewsourceModelStruct constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewsourceModelStruct(Name string, Fact *model, Fields []sourceField) sourceModel {
-	value := sourceModelStruct{Name, Fact, Fields}
-	return sourceModel{tgoTag: sourceModelTagStruct, tgoStruct: value}
+	tgoValue := sourceModelStruct{Name, Fact, Fields}
+	return sourceModel{tgoTag: sourceModelTagStruct, tgoStruct: tgoValue}
 }
 
 // StructPayload requires Struct. No tag check.

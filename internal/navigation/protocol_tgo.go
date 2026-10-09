@@ -52,8 +52,8 @@ type TgoResponseSuccessInput struct {
 // NewResponseSuccess constructs Response. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewResponseSuccess(ID int64, Result any) Response {
-	value := ResponseSuccess{ID, Result}
-	return Response{tgoTag: ResponseTagSuccess, tgoSuccess: value}
+	tgoValue := ResponseSuccess{ID, Result}
+	return Response{tgoTag: ResponseTagSuccess, tgoSuccess: tgoValue}
 }
 
 // SuccessPayload requires Success. No tag check.
@@ -72,8 +72,8 @@ type TgoResponseFailureInput struct {
 // NewResponseFailure constructs Response. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewResponseFailure(ID int64, Error string) Response {
-	value := ResponseFailure{ID, Error}
-	return Response{tgoTag: ResponseTagFailure, tgoFailure: value}
+	tgoValue := ResponseFailure{ID, Error}
+	return Response{tgoTag: ResponseTagFailure, tgoFailure: tgoValue}
 }
 
 // FailurePayload requires Failure. No tag check.
@@ -197,8 +197,8 @@ type TgoRequestHoverInput struct {
 // NewRequestHover constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewRequestHover(ID int64, Params *positionParams) Request {
-	value := RequestHover{ID, Params}
-	return Request{tgoTag: RequestTagHover, tgoPayload: value}
+	tgoValue := RequestHover{ID, Params}
+	return Request{tgoTag: RequestTagHover, tgoPayload: tgoValue}
 }
 
 // HoverPayload requires Hover. No tag check.
@@ -217,8 +217,8 @@ type TgoRequestDefinitionInput struct {
 // NewRequestDefinition constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewRequestDefinition(ID int64, Params *positionParams) Request {
-	value := RequestDefinition{ID, Params}
-	return Request{tgoTag: RequestTagDefinition, tgoPayload: value}
+	tgoValue := RequestDefinition{ID, Params}
+	return Request{tgoTag: RequestTagDefinition, tgoPayload: tgoValue}
 }
 
 // DefinitionPayload requires Definition. No tag check.
@@ -237,8 +237,8 @@ type TgoRequestReferencesInput struct {
 // NewRequestReferences constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewRequestReferences(ID int64, Params *positionParams) Request {
-	value := RequestReferences{ID, Params}
-	return Request{tgoTag: RequestTagReferences, tgoPayload: value}
+	tgoValue := RequestReferences{ID, Params}
+	return Request{tgoTag: RequestTagReferences, tgoPayload: tgoValue}
 }
 
 // ReferencesPayload requires References. No tag check.
@@ -257,8 +257,8 @@ type TgoRequestDocumentSymbolsInput struct {
 // NewRequestDocumentSymbols constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewRequestDocumentSymbols(ID int64, Params *documentParams) Request {
-	value := RequestDocumentSymbols{ID, Params}
-	return Request{tgoTag: RequestTagDocumentSymbols, tgoPayload: value}
+	tgoValue := RequestDocumentSymbols{ID, Params}
+	return Request{tgoTag: RequestTagDocumentSymbols, tgoPayload: tgoValue}
 }
 
 // DocumentSymbolsPayload requires DocumentSymbols. No tag check.
@@ -279,8 +279,8 @@ type TgoRequestWorkspaceSymbolsInput struct {
 // NewRequestWorkspaceSymbols constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewRequestWorkspaceSymbols(ID int64, Params *workspaceParams) Request {
-	value := RequestWorkspaceSymbols{ID, Params}
-	return Request{tgoTag: RequestTagWorkspaceSymbols, tgoWorkspaceSymbols: value}
+	tgoValue := RequestWorkspaceSymbols{ID, Params}
+	return Request{tgoTag: RequestTagWorkspaceSymbols, tgoWorkspaceSymbols: tgoValue}
 }
 
 // WorkspaceSymbolsPayload requires WorkspaceSymbols. No tag check.
@@ -299,8 +299,8 @@ type TgoRequestCancelInput struct {
 // NewRequestCancel constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewRequestCancel(ID int64, Params *cancelParams) Request {
-	value := RequestCancel{ID, Params}
-	return Request{tgoTag: RequestTagCancel, tgoCancel: value}
+	tgoValue := RequestCancel{ID, Params}
+	return Request{tgoTag: RequestTagCancel, tgoCancel: tgoValue}
 }
 
 // CancelPayload requires Cancel. No tag check.
@@ -319,8 +319,8 @@ type TgoRequestInvalidateInput struct {
 // NewRequestInvalidate constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewRequestInvalidate(ID int64, Params *invalidateParams) Request {
-	value := RequestInvalidate{ID, Params}
-	return Request{tgoTag: RequestTagInvalidate, tgoInvalidate: value}
+	tgoValue := RequestInvalidate{ID, Params}
+	return Request{tgoTag: RequestTagInvalidate, tgoInvalidate: tgoValue}
 }
 
 // InvalidatePayload requires Invalidate. No tag check.

@@ -189,11 +189,10 @@ func (p *sourceParser) rawComprehensionClause(
 		if start+1 >= open {
 			return nil, p.tokenError(start, "comprehension if needs a condition")
 		}
-		clause := rawComprehensionClauseFilter{
-			start: start, end: close + 1, ifToken: start,
-			conditionStart: start + 1, conditionEnd: open,
-			open: open, close: close,
-		}.rawComprehensionClause()
+		clause := func(tgoInput_62 TgorawComprehensionClauseFilterInput) rawComprehensionClause {
+			return NewrawComprehensionClauseFilter(tgoInput_62.FieldStart, tgoInput_62.FieldEnd, tgoInput_62.FieldIfToken, tgoInput_62.FieldConditionStart, tgoInput_62.FieldConditionEnd, tgoInput_62.FieldOpen, tgoInput_62.FieldClose)
+		}(TgorawComprehensionClauseFilterInput{FieldStart: start, FieldEnd: close + 1, FieldIfToken: start, FieldConditionStart: start + 1, FieldConditionEnd: open, FieldOpen: open, FieldClose: close})
+
 		return &clause, nil
 	}
 	define, rangeToken := -1, -1
@@ -216,12 +215,10 @@ func (p *sourceParser) rawComprehensionClause(
 	if rangeToken+1 >= open {
 		return nil, p.tokenError(rangeToken, "comprehension range needs a source")
 	}
-	clause := rawComprehensionClauseRange{
-		start: start, end: close + 1, forToken: start,
-		bindings: bindings, define: define, rangeToken: rangeToken,
-		sourceStart: rangeToken + 1, sourceEnd: open,
-		open: open, close: close,
-	}.rawComprehensionClause()
+	clause := func(tgoInput_63 TgorawComprehensionClauseRangeInput) rawComprehensionClause {
+		return NewrawComprehensionClauseRange(tgoInput_63.FieldStart, tgoInput_63.FieldEnd, tgoInput_63.FieldForToken, tgoInput_63.FieldBindings, tgoInput_63.FieldDefine, tgoInput_63.FieldRangeToken, tgoInput_63.FieldSourceStart, tgoInput_63.FieldSourceEnd, tgoInput_63.FieldOpen, tgoInput_63.FieldClose)
+	}(TgorawComprehensionClauseRangeInput{FieldStart: start, FieldEnd: close + 1, FieldForToken: start, FieldBindings: bindings, FieldDefine: define, FieldRangeToken: rangeToken, FieldSourceStart: rangeToken + 1, FieldSourceEnd: open, FieldOpen: open, FieldClose: close})
+
 	return &clause, nil
 }
 

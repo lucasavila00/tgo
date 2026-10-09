@@ -112,6 +112,7 @@ func (p *packageUnit) checkNode(
 	}
 	switch node := node.(type) {
 	case *ast.Ident:
+		p.checkEnumGeneratedConstructorReference(node)
 		p.checkEnumGeneratedType(node)
 	case *ast.TypeSpec:
 		p.checkTypeSpec(node)
@@ -179,7 +180,7 @@ func (p *packageUnit) checkSelector(selector *ast.SelectorExpr) {
 	}
 	if model := p.representationModel(selection); model != nil {
 		p.fail(selector,
-			"%s representation is private; use payload constructors and a checked Tag switch",
+			"%s representation is private; use payload accessors in a checked Tag switch",
 			model.Name,
 		)
 		return
@@ -282,33 +283,26 @@ func (p *packageUnit) checkLiteral(lit *ast.CompositeLit) {
 
 // checkCall applies tgo rules to conversions.
 func (p *packageUnit) checkCall(c *ast.CallExpr) {
-	if c.Fun.Pos() != token.NoPos {
-		if function, ok := p.calledFunction(c.Fun); ok {
-			if enum, variant := p.generatedEnumConstructor(function); enum != nil {
-				p.fail(
-					c,
-					"%s is generated Go ABI; use %s.%s{...}",
-					function.Name(),
-					enum.Name,
-					variant.Name,
-				)
-				return
-			}
-		}
-	}
 	p.checkConversion(c)
 }
 
-func (p *packageUnit) calledFunction(expression ast.Expr) (*types.Func, bool) {
-	var object types.Object
-	switch expression := expression.(type) {
-	case *ast.Ident:
-		object = p.info.Uses[expression]
-	case *ast.SelectorExpr:
-		object = p.info.Uses[expression.Sel]
+func (p *packageUnit) checkEnumGeneratedConstructorReference(identifier *ast.Ident) {
+	if identifier.Pos() == token.NoPos {
+		return
 	}
-	function, ok := object.(*types.Func)
-	return function, ok
+	function, ok := p.info.Uses[identifier].(*types.Func)
+	if !ok {
+		return
+	}
+	if enum, variant := p.generatedEnumConstructor(function); enum != nil {
+		p.fail(
+			identifier,
+			"%s is generated Go ABI; use %s.%s{...}",
+			function.Name(),
+			enum.Name,
+			variant.Name,
+		)
+	}
 }
 
 func (p *packageUnit) generatedEnumConstructor(

@@ -60,16 +60,21 @@ func (v *Result) GobDecode(data []byte) error {
 	if uint32(tag) != number || tag < ResultTagSuccess || tag > ResultTagFailure {
 		return __tgo_fmt.Errorf("Result: cannot gob decode unknown tag %d", number)
 	}
-	*v = Result{tgoTag: tag}
+	switch tag {
+	case ResultTagSuccess:
+		*v = NewResultSuccess()
+	case ResultTagFailure:
+		*v = NewResultFailure()
+	}
 	return nil
 }
 
 // ResultSuccess is the Success payload.
 type ResultSuccess struct{}
 
-// Result constructs Result. Model fields must be valid.
+// NewResultSuccess constructs Result. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResultSuccess) Result() Result {
+func NewResultSuccess() Result {
 	return Result{tgoTag: ResultTagSuccess}
 }
 
@@ -79,9 +84,9 @@ func (Result) SuccessPayload() ResultSuccess { return ResultSuccess{} }
 // ResultFailure is the Failure payload.
 type ResultFailure struct{}
 
-// Result constructs Result. Model fields must be valid.
+// NewResultFailure constructs Result. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResultFailure) Result() Result {
+func NewResultFailure() Result {
 	return Result{tgoTag: ResultTagFailure}
 }
 
@@ -138,14 +143,14 @@ func (v *Result) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Result()
+		*v = NewResultSuccess()
 		return nil
 	case "Failure":
 		var payload ResultFailure
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Result()
+		*v = NewResultFailure()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Result JSON variant %q", variant)
@@ -216,14 +221,14 @@ func (v *Result) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Result()
+		*v = NewResultSuccess()
 		return nil
 	case 2:
 		var payload ResultFailure
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Result()
+		*v = NewResultFailure()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Result JSON tag")

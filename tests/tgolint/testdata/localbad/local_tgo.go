@@ -61,11 +61,15 @@ func (v Event) UnknownTag() string {
 type EventStarted struct {
 	ID string
 }
+type TgoEventStartedInput struct {
+	FieldID string
+}
 
-// Event constructs Event. Model fields must be valid.
+// NewEventStarted constructs Event. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EventStarted) Event() Event {
-	return Event{tgoTag: EventTagStarted, tgoStarted: value}
+func NewEventStarted(ID string) Event {
+	tgoValue := EventStarted{ID}
+	return Event{tgoTag: EventTagStarted, tgoStarted: tgoValue}
 }
 
 // StartedPayload requires Started. No tag check.
@@ -75,11 +79,15 @@ func (v Event) StartedPayload() EventStarted { return v.tgoStarted }
 type EventStopped struct {
 	Reason string
 }
+type TgoEventStoppedInput struct {
+	FieldReason string
+}
 
-// Event constructs Event. Model fields must be valid.
+// NewEventStopped constructs Event. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EventStopped) Event() Event {
-	return Event{tgoTag: EventTagStopped, tgoStopped: value}
+func NewEventStopped(Reason string) Event {
+	tgoValue := EventStopped{Reason}
+	return Event{tgoTag: EventTagStopped, tgoStopped: tgoValue}
 }
 
 // StoppedPayload requires Stopped. No tag check.
@@ -135,14 +143,14 @@ func (v *Event) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStarted(payload.ID)
 		return nil
 	case "Stopped":
 		var payload EventStopped
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStopped(payload.Reason)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Event JSON variant %q", variant)
@@ -213,14 +221,14 @@ func (v *Event) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStarted(payload.ID)
 		return nil
 	case 2:
 		var payload EventStopped
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStopped(payload.Reason)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Event JSON tag")

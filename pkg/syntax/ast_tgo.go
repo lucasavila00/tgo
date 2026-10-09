@@ -397,8 +397,8 @@ type TgoExpressionBadInput struct {
 // NewExpressionBad constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionBad(Value *BadExpression) Expression {
-	value := ExpressionBad{Value}
-	return Expression{tgoTag: ExpressionTagBad, tgoPayload: value}
+	tgoValue := ExpressionBad{Value}
+	return Expression{tgoTag: ExpressionTagBad, tgoPayload: tgoValue}
 }
 
 // BadPayload requires Bad. No tag check.
@@ -415,8 +415,8 @@ type TgoExpressionIdentifierInput struct {
 // NewExpressionIdentifier constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionIdentifier(Value *Identifier) Expression {
-	value := ExpressionIdentifier{Value}
-	return Expression{tgoTag: ExpressionTagIdentifier, tgoPayload: value}
+	tgoValue := ExpressionIdentifier{Value}
+	return Expression{tgoTag: ExpressionTagIdentifier, tgoPayload: tgoValue}
 }
 
 // IdentifierPayload requires Identifier. No tag check.
@@ -435,8 +435,8 @@ type TgoExpressionEllipsisInput struct {
 // NewExpressionEllipsis constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionEllipsis(Value *EllipsisExpression) Expression {
-	value := ExpressionEllipsis{Value}
-	return Expression{tgoTag: ExpressionTagEllipsis, tgoPayload: value}
+	tgoValue := ExpressionEllipsis{Value}
+	return Expression{tgoTag: ExpressionTagEllipsis, tgoPayload: tgoValue}
 }
 
 // EllipsisPayload requires Ellipsis. No tag check.
@@ -453,8 +453,8 @@ type TgoExpressionBasicLiteralInput struct {
 // NewExpressionBasicLiteral constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionBasicLiteral(Value *BasicLiteral) Expression {
-	value := ExpressionBasicLiteral{Value}
-	return Expression{tgoTag: ExpressionTagBasicLiteral, tgoPayload: value}
+	tgoValue := ExpressionBasicLiteral{Value}
+	return Expression{tgoTag: ExpressionTagBasicLiteral, tgoPayload: tgoValue}
 }
 
 // BasicLiteralPayload requires BasicLiteral. No tag check.
@@ -473,8 +473,8 @@ type TgoExpressionFunctionLiteralInput struct {
 // NewExpressionFunctionLiteral constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionFunctionLiteral(Value *FunctionLiteral) Expression {
-	value := ExpressionFunctionLiteral{Value}
-	return Expression{tgoTag: ExpressionTagFunctionLiteral, tgoPayload: value}
+	tgoValue := ExpressionFunctionLiteral{Value}
+	return Expression{tgoTag: ExpressionTagFunctionLiteral, tgoPayload: tgoValue}
 }
 
 // FunctionLiteralPayload requires FunctionLiteral. No tag check.
@@ -493,8 +493,8 @@ type TgoExpressionCompositeLiteralInput struct {
 // NewExpressionCompositeLiteral constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionCompositeLiteral(Value *CompositeLiteral) Expression {
-	value := ExpressionCompositeLiteral{Value}
-	return Expression{tgoTag: ExpressionTagCompositeLiteral, tgoPayload: value}
+	tgoValue := ExpressionCompositeLiteral{Value}
+	return Expression{tgoTag: ExpressionTagCompositeLiteral, tgoPayload: tgoValue}
 }
 
 // CompositeLiteralPayload requires CompositeLiteral. No tag check.
@@ -513,8 +513,8 @@ type TgoExpressionParenthesizedInput struct {
 // NewExpressionParenthesized constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionParenthesized(Value *ParenthesizedExpression) Expression {
-	value := ExpressionParenthesized{Value}
-	return Expression{tgoTag: ExpressionTagParenthesized, tgoPayload: value}
+	tgoValue := ExpressionParenthesized{Value}
+	return Expression{tgoTag: ExpressionTagParenthesized, tgoPayload: tgoValue}
 }
 
 // ParenthesizedPayload requires Parenthesized. No tag check.
@@ -533,8 +533,8 @@ type TgoExpressionSelectorInput struct {
 // NewExpressionSelector constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionSelector(Value *SelectorExpression) Expression {
-	value := ExpressionSelector{Value}
-	return Expression{tgoTag: ExpressionTagSelector, tgoPayload: value}
+	tgoValue := ExpressionSelector{Value}
+	return Expression{tgoTag: ExpressionTagSelector, tgoPayload: tgoValue}
 }
 
 // SelectorPayload requires Selector. No tag check.
@@ -551,8 +551,8 @@ type TgoExpressionIndexInput struct {
 // NewExpressionIndex constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionIndex(Value *IndexExpression) Expression {
-	value := ExpressionIndex{Value}
-	return Expression{tgoTag: ExpressionTagIndex, tgoPayload: value}
+	tgoValue := ExpressionIndex{Value}
+	return Expression{tgoTag: ExpressionTagIndex, tgoPayload: tgoValue}
 }
 
 // IndexPayload requires Index. No tag check.
@@ -569,8 +569,8 @@ type TgoExpressionIndexListInput struct {
 // NewExpressionIndexList constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionIndexList(Value *IndexListExpression) Expression {
-	value := ExpressionIndexList{Value}
-	return Expression{tgoTag: ExpressionTagIndexList, tgoPayload: value}
+	tgoValue := ExpressionIndexList{Value}
+	return Expression{tgoTag: ExpressionTagIndexList, tgoPayload: tgoValue}
 }
 
 // IndexListPayload requires IndexList. No tag check.
@@ -587,8 +587,8 @@ type TgoExpressionSliceInput struct {
 // NewExpressionSlice constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionSlice(Value *SliceExpression) Expression {
-	value := ExpressionSlice{Value}
-	return Expression{tgoTag: ExpressionTagSlice, tgoPayload: value}
+	tgoValue := ExpressionSlice{Value}
+	return Expression{tgoTag: ExpressionTagSlice, tgoPayload: tgoValue}
 }
 
 // SlicePayload requires Slice. No tag check.
@@ -605,8 +605,8 @@ type TgoExpressionTypeAssertionInput struct {
 // NewExpressionTypeAssertion constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionTypeAssertion(Value *TypeAssertionExpression) Expression {
-	value := ExpressionTypeAssertion{Value}
-	return Expression{tgoTag: ExpressionTagTypeAssertion, tgoPayload: value}
+	tgoValue := ExpressionTypeAssertion{Value}
+	return Expression{tgoTag: ExpressionTagTypeAssertion, tgoPayload: tgoValue}
 }
 
 // TypeAssertionPayload requires TypeAssertion. No tag check.
@@ -625,8 +625,8 @@ type TgoExpressionCallInput struct {
 // NewExpressionCall constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionCall(Value *CallExpression) Expression {
-	value := ExpressionCall{Value}
-	return Expression{tgoTag: ExpressionTagCall, tgoPayload: value}
+	tgoValue := ExpressionCall{Value}
+	return Expression{tgoTag: ExpressionTagCall, tgoPayload: tgoValue}
 }
 
 // CallPayload requires Call. No tag check.
@@ -643,8 +643,8 @@ type TgoExpressionStarInput struct {
 // NewExpressionStar constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionStar(Value *StarExpression) Expression {
-	value := ExpressionStar{Value}
-	return Expression{tgoTag: ExpressionTagStar, tgoPayload: value}
+	tgoValue := ExpressionStar{Value}
+	return Expression{tgoTag: ExpressionTagStar, tgoPayload: tgoValue}
 }
 
 // StarPayload requires Star. No tag check.
@@ -661,8 +661,8 @@ type TgoExpressionNonNilPointerInput struct {
 // NewExpressionNonNilPointer constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionNonNilPointer(Value *NonNilPointerType) Expression {
-	value := ExpressionNonNilPointer{Value}
-	return Expression{tgoTag: ExpressionTagNonNilPointer, tgoPayload: value}
+	tgoValue := ExpressionNonNilPointer{Value}
+	return Expression{tgoTag: ExpressionTagNonNilPointer, tgoPayload: tgoValue}
 }
 
 // NonNilPointerPayload requires NonNilPointer. No tag check.
@@ -681,8 +681,8 @@ type TgoExpressionUnaryInput struct {
 // NewExpressionUnary constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionUnary(Value *UnaryExpression) Expression {
-	value := ExpressionUnary{Value}
-	return Expression{tgoTag: ExpressionTagUnary, tgoPayload: value}
+	tgoValue := ExpressionUnary{Value}
+	return Expression{tgoTag: ExpressionTagUnary, tgoPayload: tgoValue}
 }
 
 // UnaryPayload requires Unary. No tag check.
@@ -699,8 +699,8 @@ type TgoExpressionBinaryInput struct {
 // NewExpressionBinary constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionBinary(Value *BinaryExpression) Expression {
-	value := ExpressionBinary{Value}
-	return Expression{tgoTag: ExpressionTagBinary, tgoPayload: value}
+	tgoValue := ExpressionBinary{Value}
+	return Expression{tgoTag: ExpressionTagBinary, tgoPayload: tgoValue}
 }
 
 // BinaryPayload requires Binary. No tag check.
@@ -717,8 +717,8 @@ type TgoExpressionKeyValueInput struct {
 // NewExpressionKeyValue constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionKeyValue(Value *KeyValueExpression) Expression {
-	value := ExpressionKeyValue{Value}
-	return Expression{tgoTag: ExpressionTagKeyValue, tgoPayload: value}
+	tgoValue := ExpressionKeyValue{Value}
+	return Expression{tgoTag: ExpressionTagKeyValue, tgoPayload: tgoValue}
 }
 
 // KeyValuePayload requires KeyValue. No tag check.
@@ -735,8 +735,8 @@ type TgoExpressionArrayTypeInput struct {
 // NewExpressionArrayType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionArrayType(Value *ArrayType) Expression {
-	value := ExpressionArrayType{Value}
-	return Expression{tgoTag: ExpressionTagArrayType, tgoPayload: value}
+	tgoValue := ExpressionArrayType{Value}
+	return Expression{tgoTag: ExpressionTagArrayType, tgoPayload: tgoValue}
 }
 
 // ArrayTypePayload requires ArrayType. No tag check.
@@ -753,8 +753,8 @@ type TgoExpressionStructTypeInput struct {
 // NewExpressionStructType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionStructType(Value *StructType) Expression {
-	value := ExpressionStructType{Value}
-	return Expression{tgoTag: ExpressionTagStructType, tgoPayload: value}
+	tgoValue := ExpressionStructType{Value}
+	return Expression{tgoTag: ExpressionTagStructType, tgoPayload: tgoValue}
 }
 
 // StructTypePayload requires StructType. No tag check.
@@ -773,8 +773,8 @@ type TgoExpressionFunctionTypeInput struct {
 // NewExpressionFunctionType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionFunctionType(Value *FunctionType) Expression {
-	value := ExpressionFunctionType{Value}
-	return Expression{tgoTag: ExpressionTagFunctionType, tgoFunctionType: value}
+	tgoValue := ExpressionFunctionType{Value}
+	return Expression{tgoTag: ExpressionTagFunctionType, tgoFunctionType: tgoValue}
 }
 
 // FunctionTypePayload requires FunctionType. No tag check.
@@ -791,8 +791,8 @@ type TgoExpressionInterfaceTypeInput struct {
 // NewExpressionInterfaceType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionInterfaceType(Value *InterfaceType) Expression {
-	value := ExpressionInterfaceType{Value}
-	return Expression{tgoTag: ExpressionTagInterfaceType, tgoInterfaceType: value}
+	tgoValue := ExpressionInterfaceType{Value}
+	return Expression{tgoTag: ExpressionTagInterfaceType, tgoInterfaceType: tgoValue}
 }
 
 // InterfaceTypePayload requires InterfaceType. No tag check.
@@ -809,8 +809,8 @@ type TgoExpressionMapTypeInput struct {
 // NewExpressionMapType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionMapType(Value *MapType) Expression {
-	value := ExpressionMapType{Value}
-	return Expression{tgoTag: ExpressionTagMapType, tgoMapType: value}
+	tgoValue := ExpressionMapType{Value}
+	return Expression{tgoTag: ExpressionTagMapType, tgoMapType: tgoValue}
 }
 
 // MapTypePayload requires MapType. No tag check.
@@ -827,8 +827,8 @@ type TgoExpressionChannelTypeInput struct {
 // NewExpressionChannelType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionChannelType(Value *ChannelType) Expression {
-	value := ExpressionChannelType{Value}
-	return Expression{tgoTag: ExpressionTagChannelType, tgoChannelType: value}
+	tgoValue := ExpressionChannelType{Value}
+	return Expression{tgoTag: ExpressionTagChannelType, tgoChannelType: tgoValue}
 }
 
 // ChannelTypePayload requires ChannelType. No tag check.
@@ -845,8 +845,8 @@ type TgoExpressionDefaultInput struct {
 // NewExpressionDefault constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionDefault(Value *DefaultExpression) Expression {
-	value := ExpressionDefault{Value}
-	return Expression{tgoTag: ExpressionTagDefault, tgoDefault: value}
+	tgoValue := ExpressionDefault{Value}
+	return Expression{tgoTag: ExpressionTagDefault, tgoDefault: tgoValue}
 }
 
 // DefaultPayload requires Default. No tag check.
@@ -863,8 +863,8 @@ type TgoExpressionPropagationInput struct {
 // NewExpressionPropagation constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionPropagation(Value *PropagationExpression) Expression {
-	value := ExpressionPropagation{Value}
-	return Expression{tgoTag: ExpressionTagPropagation, tgoPropagation: value}
+	tgoValue := ExpressionPropagation{Value}
+	return Expression{tgoTag: ExpressionTagPropagation, tgoPropagation: tgoValue}
 }
 
 // PropagationPayload requires Propagation. No tag check.
@@ -881,8 +881,8 @@ type TgoExpressionComprehensionInput struct {
 // NewExpressionComprehension constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewExpressionComprehension(Value *ComprehensionExpression) Expression {
-	value := ExpressionComprehension{Value}
-	return Expression{tgoTag: ExpressionTagComprehension, tgoComprehension: value}
+	tgoValue := ExpressionComprehension{Value}
+	return Expression{tgoTag: ExpressionTagComprehension, tgoComprehension: tgoValue}
 }
 
 // ComprehensionPayload requires Comprehension. No tag check.
@@ -1925,8 +1925,8 @@ type TgoStatementBadInput struct {
 // NewStatementBad constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementBad(Value *BadStatement) Statement {
-	value := StatementBad{Value}
-	return Statement{tgoTag: StatementTagBad, tgoPayload: value}
+	tgoValue := StatementBad{Value}
+	return Statement{tgoTag: StatementTagBad, tgoPayload: tgoValue}
 }
 
 // BadPayload requires Bad. No tag check.
@@ -1943,8 +1943,8 @@ type TgoStatementDeclarationInput struct {
 // NewStatementDeclaration constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementDeclaration(Value *DeclarationStatement) Statement {
-	value := StatementDeclaration{Value}
-	return Statement{tgoTag: StatementTagDeclaration, tgoPayload: value}
+	tgoValue := StatementDeclaration{Value}
+	return Statement{tgoTag: StatementTagDeclaration, tgoPayload: tgoValue}
 }
 
 // DeclarationPayload requires Declaration. No tag check.
@@ -1963,8 +1963,8 @@ type TgoStatementEmptyInput struct {
 // NewStatementEmpty constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementEmpty(Value *EmptyStatement) Statement {
-	value := StatementEmpty{Value}
-	return Statement{tgoTag: StatementTagEmpty, tgoPayload: value}
+	tgoValue := StatementEmpty{Value}
+	return Statement{tgoTag: StatementTagEmpty, tgoPayload: tgoValue}
 }
 
 // EmptyPayload requires Empty. No tag check.
@@ -1981,8 +1981,8 @@ type TgoStatementLabeledInput struct {
 // NewStatementLabeled constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementLabeled(Value *LabeledStatement) Statement {
-	value := StatementLabeled{Value}
-	return Statement{tgoTag: StatementTagLabeled, tgoPayload: value}
+	tgoValue := StatementLabeled{Value}
+	return Statement{tgoTag: StatementTagLabeled, tgoPayload: tgoValue}
 }
 
 // LabeledPayload requires Labeled. No tag check.
@@ -1999,8 +1999,8 @@ type TgoStatementExpressionInput struct {
 // NewStatementExpression constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementExpression(Value *ExpressionStatement) Statement {
-	value := StatementExpression{Value}
-	return Statement{tgoTag: StatementTagExpression, tgoPayload: value}
+	tgoValue := StatementExpression{Value}
+	return Statement{tgoTag: StatementTagExpression, tgoPayload: tgoValue}
 }
 
 // ExpressionPayload requires Expression. No tag check.
@@ -2017,8 +2017,8 @@ type TgoStatementSendInput struct {
 // NewStatementSend constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementSend(Value *SendStatement) Statement {
-	value := StatementSend{Value}
-	return Statement{tgoTag: StatementTagSend, tgoPayload: value}
+	tgoValue := StatementSend{Value}
+	return Statement{tgoTag: StatementTagSend, tgoPayload: tgoValue}
 }
 
 // SendPayload requires Send. No tag check.
@@ -2035,8 +2035,8 @@ type TgoStatementIncrementInput struct {
 // NewStatementIncrement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementIncrement(Value *IncrementStatement) Statement {
-	value := StatementIncrement{Value}
-	return Statement{tgoTag: StatementTagIncrement, tgoPayload: value}
+	tgoValue := StatementIncrement{Value}
+	return Statement{tgoTag: StatementTagIncrement, tgoPayload: tgoValue}
 }
 
 // IncrementPayload requires Increment. No tag check.
@@ -2053,8 +2053,8 @@ type TgoStatementAssignmentInput struct {
 // NewStatementAssignment constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementAssignment(Value *AssignmentStatement) Statement {
-	value := StatementAssignment{Value}
-	return Statement{tgoTag: StatementTagAssignment, tgoPayload: value}
+	tgoValue := StatementAssignment{Value}
+	return Statement{tgoTag: StatementTagAssignment, tgoPayload: tgoValue}
 }
 
 // AssignmentPayload requires Assignment. No tag check.
@@ -2071,8 +2071,8 @@ type TgoStatementGoInput struct {
 // NewStatementGo constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementGo(Value *GoStatement) Statement {
-	value := StatementGo{Value}
-	return Statement{tgoTag: StatementTagGo, tgoPayload: value}
+	tgoValue := StatementGo{Value}
+	return Statement{tgoTag: StatementTagGo, tgoPayload: tgoValue}
 }
 
 // GoPayload requires Go. No tag check.
@@ -2089,8 +2089,8 @@ type TgoStatementDeferInput struct {
 // NewStatementDefer constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementDefer(Value *DeferStatement) Statement {
-	value := StatementDefer{Value}
-	return Statement{tgoTag: StatementTagDefer, tgoPayload: value}
+	tgoValue := StatementDefer{Value}
+	return Statement{tgoTag: StatementTagDefer, tgoPayload: tgoValue}
 }
 
 // DeferPayload requires Defer. No tag check.
@@ -2107,8 +2107,8 @@ type TgoStatementReturnInput struct {
 // NewStatementReturn constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementReturn(Value *ReturnStatement) Statement {
-	value := StatementReturn{Value}
-	return Statement{tgoTag: StatementTagReturn, tgoPayload: value}
+	tgoValue := StatementReturn{Value}
+	return Statement{tgoTag: StatementTagReturn, tgoPayload: tgoValue}
 }
 
 // ReturnPayload requires Return. No tag check.
@@ -2125,8 +2125,8 @@ type TgoStatementBranchInput struct {
 // NewStatementBranch constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementBranch(Value *BranchStatement) Statement {
-	value := StatementBranch{Value}
-	return Statement{tgoTag: StatementTagBranch, tgoPayload: value}
+	tgoValue := StatementBranch{Value}
+	return Statement{tgoTag: StatementTagBranch, tgoPayload: tgoValue}
 }
 
 // BranchPayload requires Branch. No tag check.
@@ -2143,8 +2143,8 @@ type TgoStatementBlockInput struct {
 // NewStatementBlock constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementBlock(Value *BlockStatement) Statement {
-	value := StatementBlock{Value}
-	return Statement{tgoTag: StatementTagBlock, tgoPayload: value}
+	tgoValue := StatementBlock{Value}
+	return Statement{tgoTag: StatementTagBlock, tgoPayload: tgoValue}
 }
 
 // BlockPayload requires Block. No tag check.
@@ -2161,8 +2161,8 @@ type TgoStatementIfInput struct {
 // NewStatementIf constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementIf(Value *IfStatement) Statement {
-	value := StatementIf{Value}
-	return Statement{tgoTag: StatementTagIf, tgoPayload: value}
+	tgoValue := StatementIf{Value}
+	return Statement{tgoTag: StatementTagIf, tgoPayload: tgoValue}
 }
 
 // IfPayload requires If. No tag check.
@@ -2179,8 +2179,8 @@ type TgoStatementCaseInput struct {
 // NewStatementCase constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementCase(Value *CaseClause) Statement {
-	value := StatementCase{Value}
-	return Statement{tgoTag: StatementTagCase, tgoCase: value}
+	tgoValue := StatementCase{Value}
+	return Statement{tgoTag: StatementTagCase, tgoCase: tgoValue}
 }
 
 // CasePayload requires Case. No tag check.
@@ -2197,8 +2197,8 @@ type TgoStatementSwitchInput struct {
 // NewStatementSwitch constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementSwitch(Value *SwitchStatement) Statement {
-	value := StatementSwitch{Value}
-	return Statement{tgoTag: StatementTagSwitch, tgoSwitch: value}
+	tgoValue := StatementSwitch{Value}
+	return Statement{tgoTag: StatementTagSwitch, tgoSwitch: tgoValue}
 }
 
 // SwitchPayload requires Switch. No tag check.
@@ -2215,8 +2215,8 @@ type TgoStatementTypeSwitchInput struct {
 // NewStatementTypeSwitch constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementTypeSwitch(Value *TypeSwitchStatement) Statement {
-	value := StatementTypeSwitch{Value}
-	return Statement{tgoTag: StatementTagTypeSwitch, tgoTypeSwitch: value}
+	tgoValue := StatementTypeSwitch{Value}
+	return Statement{tgoTag: StatementTagTypeSwitch, tgoTypeSwitch: tgoValue}
 }
 
 // TypeSwitchPayload requires TypeSwitch. No tag check.
@@ -2233,8 +2233,8 @@ type TgoStatementCommunicationInput struct {
 // NewStatementCommunication constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementCommunication(Value *CommunicationClause) Statement {
-	value := StatementCommunication{Value}
-	return Statement{tgoTag: StatementTagCommunication, tgoCommunication: value}
+	tgoValue := StatementCommunication{Value}
+	return Statement{tgoTag: StatementTagCommunication, tgoCommunication: tgoValue}
 }
 
 // CommunicationPayload requires Communication. No tag check.
@@ -2251,8 +2251,8 @@ type TgoStatementSelectInput struct {
 // NewStatementSelect constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementSelect(Value *SelectStatement) Statement {
-	value := StatementSelect{Value}
-	return Statement{tgoTag: StatementTagSelect, tgoSelect: value}
+	tgoValue := StatementSelect{Value}
+	return Statement{tgoTag: StatementTagSelect, tgoSelect: tgoValue}
 }
 
 // SelectPayload requires Select. No tag check.
@@ -2269,8 +2269,8 @@ type TgoStatementForInput struct {
 // NewStatementFor constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementFor(Value *ForStatement) Statement {
-	value := StatementFor{Value}
-	return Statement{tgoTag: StatementTagFor, tgoFor: value}
+	tgoValue := StatementFor{Value}
+	return Statement{tgoTag: StatementTagFor, tgoFor: tgoValue}
 }
 
 // ForPayload requires For. No tag check.
@@ -2287,8 +2287,8 @@ type TgoStatementRangeInput struct {
 // NewStatementRange constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewStatementRange(Value *RangeStatement) Statement {
-	value := StatementRange{Value}
-	return Statement{tgoTag: StatementTagRange, tgoRange: value}
+	tgoValue := StatementRange{Value}
+	return Statement{tgoTag: StatementTagRange, tgoRange: tgoValue}
 }
 
 // RangePayload requires Range. No tag check.
@@ -3127,8 +3127,8 @@ type TgoSpecificationImportInput struct {
 // NewSpecificationImport constructs Specification. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewSpecificationImport(Value *ImportSpecification) Specification {
-	value := SpecificationImport{Value}
-	return Specification{tgoTag: SpecificationTagImport, tgoImport: value}
+	tgoValue := SpecificationImport{Value}
+	return Specification{tgoTag: SpecificationTagImport, tgoImport: tgoValue}
 }
 
 // ImportPayload requires Import. No tag check.
@@ -3145,8 +3145,8 @@ type TgoSpecificationValueInput struct {
 // NewSpecificationValue constructs Specification. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewSpecificationValue(Value *ValueSpecification) Specification {
-	value := SpecificationValue{Value}
-	return Specification{tgoTag: SpecificationTagValue, tgoValue: value}
+	tgoValue := SpecificationValue{Value}
+	return Specification{tgoTag: SpecificationTagValue, tgoValue: tgoValue}
 }
 
 // ValuePayload requires Value. No tag check.
@@ -3163,8 +3163,8 @@ type TgoSpecificationTypeInput struct {
 // NewSpecificationType constructs Specification. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewSpecificationType(Value *TypeSpecification) Specification {
-	value := SpecificationType{Value}
-	return Specification{tgoTag: SpecificationTagType, tgoType: value}
+	tgoValue := SpecificationType{Value}
+	return Specification{tgoTag: SpecificationTagType, tgoType: tgoValue}
 }
 
 // TypePayload requires Type. No tag check.
@@ -3411,8 +3411,8 @@ type TgoDeclarationBadInput struct {
 // NewDeclarationBad constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewDeclarationBad(Value *BadDeclaration) Declaration {
-	value := DeclarationBad{Value}
-	return Declaration{tgoTag: DeclarationTagBad, tgoBad: value}
+	tgoValue := DeclarationBad{Value}
+	return Declaration{tgoTag: DeclarationTagBad, tgoBad: tgoValue}
 }
 
 // BadPayload requires Bad. No tag check.
@@ -3429,8 +3429,8 @@ type TgoDeclarationGeneralInput struct {
 // NewDeclarationGeneral constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewDeclarationGeneral(Value *GeneralDeclaration) Declaration {
-	value := DeclarationGeneral{Value}
-	return Declaration{tgoTag: DeclarationTagGeneral, tgoGeneral: value}
+	tgoValue := DeclarationGeneral{Value}
+	return Declaration{tgoTag: DeclarationTagGeneral, tgoGeneral: tgoValue}
 }
 
 // GeneralPayload requires General. No tag check.
@@ -3447,8 +3447,8 @@ type TgoDeclarationFunctionInput struct {
 // NewDeclarationFunction constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewDeclarationFunction(Value *FunctionDeclaration) Declaration {
-	value := DeclarationFunction{Value}
-	return Declaration{tgoTag: DeclarationTagFunction, tgoFunction: value}
+	tgoValue := DeclarationFunction{Value}
+	return Declaration{tgoTag: DeclarationTagFunction, tgoFunction: tgoValue}
 }
 
 // FunctionPayload requires Function. No tag check.
@@ -3465,8 +3465,8 @@ type TgoDeclarationEnumInput struct {
 // NewDeclarationEnum constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewDeclarationEnum(Value *EnumDeclaration) Declaration {
-	value := DeclarationEnum{Value}
-	return Declaration{tgoTag: DeclarationTagEnum, tgoEnum: value}
+	tgoValue := DeclarationEnum{Value}
+	return Declaration{tgoTag: DeclarationTagEnum, tgoEnum: tgoValue}
 }
 
 // EnumPayload requires Enum. No tag check.
@@ -3483,8 +3483,8 @@ type TgoDeclarationStructInput struct {
 // NewDeclarationStruct constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewDeclarationStruct(Value *StructDeclaration) Declaration {
-	value := DeclarationStruct{Value}
-	return Declaration{tgoTag: DeclarationTagStruct, tgoStruct: value}
+	tgoValue := DeclarationStruct{Value}
+	return Declaration{tgoTag: DeclarationTagStruct, tgoStruct: tgoValue}
 }
 
 // StructPayload requires Struct. No tag check.
@@ -3857,8 +3857,8 @@ type TgoNodeFileInput struct {
 // NewNodeFile constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeFile(Value *File) Node {
-	value := NodeFile{Value}
-	return Node{tgoTag: NodeTagFile, tgoPayload: value}
+	tgoValue := NodeFile{Value}
+	return Node{tgoTag: NodeTagFile, tgoPayload: tgoValue}
 }
 
 // FilePayload requires File. No tag check.
@@ -3875,8 +3875,8 @@ type TgoNodeDeclarationInput struct {
 // NewNodeDeclaration constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeDeclaration(Value *Declaration) Node {
-	value := NodeDeclaration{Value}
-	return Node{tgoTag: NodeTagDeclaration, tgoPayload: value}
+	tgoValue := NodeDeclaration{Value}
+	return Node{tgoTag: NodeTagDeclaration, tgoPayload: tgoValue}
 }
 
 // DeclarationPayload requires Declaration. No tag check.
@@ -3893,8 +3893,8 @@ type TgoNodeSpecificationInput struct {
 // NewNodeSpecification constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeSpecification(Value *Specification) Node {
-	value := NodeSpecification{Value}
-	return Node{tgoTag: NodeTagSpecification, tgoPayload: value}
+	tgoValue := NodeSpecification{Value}
+	return Node{tgoTag: NodeTagSpecification, tgoPayload: tgoValue}
 }
 
 // SpecificationPayload requires Specification. No tag check.
@@ -3911,8 +3911,8 @@ type TgoNodeStatementInput struct {
 // NewNodeStatement constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeStatement(Value *Statement) Node {
-	value := NodeStatement{Value}
-	return Node{tgoTag: NodeTagStatement, tgoPayload: value}
+	tgoValue := NodeStatement{Value}
+	return Node{tgoTag: NodeTagStatement, tgoPayload: tgoValue}
 }
 
 // StatementPayload requires Statement. No tag check.
@@ -3929,8 +3929,8 @@ type TgoNodeExpressionInput struct {
 // NewNodeExpression constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeExpression(Value *Expression) Node {
-	value := NodeExpression{Value}
-	return Node{tgoTag: NodeTagExpression, tgoPayload: value}
+	tgoValue := NodeExpression{Value}
+	return Node{tgoTag: NodeTagExpression, tgoPayload: tgoValue}
 }
 
 // ExpressionPayload requires Expression. No tag check.
@@ -3947,8 +3947,8 @@ type TgoNodeFieldInput struct {
 // NewNodeField constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeField(Value *Field) Node {
-	value := NodeField{Value}
-	return Node{tgoTag: NodeTagField, tgoField: value}
+	tgoValue := NodeField{Value}
+	return Node{tgoTag: NodeTagField, tgoField: tgoValue}
 }
 
 // FieldPayload requires Field. No tag check.
@@ -3965,8 +3965,8 @@ type TgoNodeFieldListInput struct {
 // NewNodeFieldList constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeFieldList(Value *FieldList) Node {
-	value := NodeFieldList{Value}
-	return Node{tgoTag: NodeTagFieldList, tgoFieldList: value}
+	tgoValue := NodeFieldList{Value}
+	return Node{tgoTag: NodeTagFieldList, tgoFieldList: tgoValue}
 }
 
 // FieldListPayload requires FieldList. No tag check.
@@ -3983,8 +3983,8 @@ type TgoNodeTGoFieldInput struct {
 // NewNodeTGoField constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeTGoField(Value *TGoField) Node {
-	value := NodeTGoField{Value}
-	return Node{tgoTag: NodeTagTGoField, tgoTGoField: value}
+	tgoValue := NodeTGoField{Value}
+	return Node{tgoTag: NodeTagTGoField, tgoTGoField: tgoValue}
 }
 
 // TGoFieldPayload requires TGoField. No tag check.
@@ -4001,8 +4001,8 @@ type TgoNodeEnumVariantInput struct {
 // NewNodeEnumVariant constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeEnumVariant(Value *EnumVariant) Node {
-	value := NodeEnumVariant{Value}
-	return Node{tgoTag: NodeTagEnumVariant, tgoEnumVariant: value}
+	tgoValue := NodeEnumVariant{Value}
+	return Node{tgoTag: NodeTagEnumVariant, tgoEnumVariant: tgoValue}
 }
 
 // EnumVariantPayload requires EnumVariant. No tag check.
@@ -4019,8 +4019,8 @@ type TgoNodeIdentifierInput struct {
 // NewNodeIdentifier constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeIdentifier(Value *Identifier) Node {
-	value := NodeIdentifier{Value}
-	return Node{tgoTag: NodeTagIdentifier, tgoIdentifier: value}
+	tgoValue := NodeIdentifier{Value}
+	return Node{tgoTag: NodeTagIdentifier, tgoIdentifier: tgoValue}
 }
 
 // IdentifierPayload requires Identifier. No tag check.
@@ -4037,8 +4037,8 @@ type TgoNodeCommentInput struct {
 // NewNodeComment constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeComment(Value *Comment) Node {
-	value := NodeComment{Value}
-	return Node{tgoTag: NodeTagComment, tgoComment: value}
+	tgoValue := NodeComment{Value}
+	return Node{tgoTag: NodeTagComment, tgoComment: tgoValue}
 }
 
 // CommentPayload requires Comment. No tag check.
@@ -4055,8 +4055,8 @@ type TgoNodeCommentGroupInput struct {
 // NewNodeCommentGroup constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewNodeCommentGroup(Value *CommentGroup) Node {
-	value := NodeCommentGroup{Value}
-	return Node{tgoTag: NodeTagCommentGroup, tgoCommentGroup: value}
+	tgoValue := NodeCommentGroup{Value}
+	return Node{tgoTag: NodeTagCommentGroup, tgoCommentGroup: tgoValue}
 }
 
 // CommentGroupPayload requires CommentGroup. No tag check.

@@ -8,7 +8,9 @@ import (
 )
 
 func GoReexportedAccount(name string) any {
-	return __tgo_import_1.AccountPersonal{Name: name}.Account()
+	return func(tgoInput_7 __tgo_import_1.TgoAccountPersonalInput) __tgo_import_1.Account {
+		return __tgo_import_1.NewAccountPersonal(tgoInput_7.FieldName)
+	}(__tgo_import_1.TgoAccountPersonalInput{FieldName: name})
 }
 
 func GoReexportedRequest(id string) any {

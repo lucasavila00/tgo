@@ -68,8 +68,8 @@ type TgoComprehensionClauseRangeInput struct {
 // NewComprehensionClauseRange constructs ComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewComprehensionClauseRange(Value *ComprehensionRangeClause) ComprehensionClause {
-	value := ComprehensionClauseRange{Value}
-	return ComprehensionClause{tgoTag: ComprehensionClauseTagRange, tgoRange: value}
+	tgoValue := ComprehensionClauseRange{Value}
+	return ComprehensionClause{tgoTag: ComprehensionClauseTagRange, tgoRange: tgoValue}
 }
 
 // RangePayload requires Range. No tag check.
@@ -86,8 +86,8 @@ type TgoComprehensionClauseFilterInput struct {
 // NewComprehensionClauseFilter constructs ComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewComprehensionClauseFilter(Value *ComprehensionFilterClause) ComprehensionClause {
-	value := ComprehensionClauseFilter{Value}
-	return ComprehensionClause{tgoTag: ComprehensionClauseTagFilter, tgoFilter: value}
+	tgoValue := ComprehensionClauseFilter{Value}
+	return ComprehensionClause{tgoTag: ComprehensionClauseTagFilter, tgoFilter: tgoValue}
 }
 
 // FilterPayload requires Filter. No tag check.

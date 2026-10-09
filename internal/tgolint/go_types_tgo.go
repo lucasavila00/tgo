@@ -89,8 +89,8 @@ type TgogoTypeBasicInput struct {
 // NewgoTypeBasic constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeBasic(Value *types.Basic) goType {
-	value := goTypeBasic{Value}
-	return goType{tgoTag: goTypeTagBasic, tgoPayload: value}
+	tgoValue := goTypeBasic{Value}
+	return goType{tgoTag: goTypeTagBasic, tgoPayload: tgoValue}
 }
 
 // BasicPayload requires Basic. No tag check.
@@ -107,8 +107,8 @@ type TgogoTypeArrayInput struct {
 // NewgoTypeArray constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeArray(Value *types.Array) goType {
-	value := goTypeArray{Value}
-	return goType{tgoTag: goTypeTagArray, tgoPayload: value}
+	tgoValue := goTypeArray{Value}
+	return goType{tgoTag: goTypeTagArray, tgoPayload: tgoValue}
 }
 
 // ArrayPayload requires Array. No tag check.
@@ -125,8 +125,8 @@ type TgogoTypeSliceInput struct {
 // NewgoTypeSlice constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeSlice(Value *types.Slice) goType {
-	value := goTypeSlice{Value}
-	return goType{tgoTag: goTypeTagSlice, tgoPayload: value}
+	tgoValue := goTypeSlice{Value}
+	return goType{tgoTag: goTypeTagSlice, tgoPayload: tgoValue}
 }
 
 // SlicePayload requires Slice. No tag check.
@@ -143,8 +143,8 @@ type TgogoTypeStructInput struct {
 // NewgoTypeStruct constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeStruct(Value *types.Struct) goType {
-	value := goTypeStruct{Value}
-	return goType{tgoTag: goTypeTagStruct, tgoPayload: value}
+	tgoValue := goTypeStruct{Value}
+	return goType{tgoTag: goTypeTagStruct, tgoPayload: tgoValue}
 }
 
 // StructPayload requires Struct. No tag check.
@@ -161,8 +161,8 @@ type TgogoTypePointerInput struct {
 // NewgoTypePointer constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypePointer(Value *types.Pointer) goType {
-	value := goTypePointer{Value}
-	return goType{tgoTag: goTypeTagPointer, tgoPayload: value}
+	tgoValue := goTypePointer{Value}
+	return goType{tgoTag: goTypeTagPointer, tgoPayload: tgoValue}
 }
 
 // PointerPayload requires Pointer. No tag check.
@@ -179,8 +179,8 @@ type TgogoTypeTupleInput struct {
 // NewgoTypeTuple constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeTuple(Value *types.Tuple) goType {
-	value := goTypeTuple{Value}
-	return goType{tgoTag: goTypeTagTuple, tgoPayload: value}
+	tgoValue := goTypeTuple{Value}
+	return goType{tgoTag: goTypeTagTuple, tgoPayload: tgoValue}
 }
 
 // TuplePayload requires Tuple. No tag check.
@@ -197,8 +197,8 @@ type TgogoTypeSignatureInput struct {
 // NewgoTypeSignature constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeSignature(Value *types.Signature) goType {
-	value := goTypeSignature{Value}
-	return goType{tgoTag: goTypeTagSignature, tgoSignature: value}
+	tgoValue := goTypeSignature{Value}
+	return goType{tgoTag: goTypeTagSignature, tgoSignature: tgoValue}
 }
 
 // SignaturePayload requires Signature. No tag check.
@@ -215,8 +215,8 @@ type TgogoTypeMapInput struct {
 // NewgoTypeMap constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeMap(Value *types.Map) goType {
-	value := goTypeMap{Value}
-	return goType{tgoTag: goTypeTagMap, tgoMap: value}
+	tgoValue := goTypeMap{Value}
+	return goType{tgoTag: goTypeTagMap, tgoMap: tgoValue}
 }
 
 // MapPayload requires Map. No tag check.
@@ -233,8 +233,8 @@ type TgogoTypeChannelInput struct {
 // NewgoTypeChannel constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeChannel(Value *types.Chan) goType {
-	value := goTypeChannel{Value}
-	return goType{tgoTag: goTypeTagChannel, tgoChannel: value}
+	tgoValue := goTypeChannel{Value}
+	return goType{tgoTag: goTypeTagChannel, tgoChannel: tgoValue}
 }
 
 // ChannelPayload requires Channel. No tag check.
@@ -251,8 +251,8 @@ type TgogoTypeInterfaceInput struct {
 // NewgoTypeInterface constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeInterface(Value *types.Interface) goType {
-	value := goTypeInterface{Value}
-	return goType{tgoTag: goTypeTagInterface, tgoInterface: value}
+	tgoValue := goTypeInterface{Value}
+	return goType{tgoTag: goTypeTagInterface, tgoInterface: tgoValue}
 }
 
 // InterfacePayload requires Interface. No tag check.
@@ -269,8 +269,8 @@ type TgogoTypeNamedInput struct {
 // NewgoTypeNamed constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeNamed(Value *types.Named) goType {
-	value := goTypeNamed{Value}
-	return goType{tgoTag: goTypeTagNamed, tgoNamed: value}
+	tgoValue := goTypeNamed{Value}
+	return goType{tgoTag: goTypeTagNamed, tgoNamed: tgoValue}
 }
 
 // NamedPayload requires Named. No tag check.
@@ -287,8 +287,8 @@ type TgogoTypeTypeParameterInput struct {
 // NewgoTypeTypeParameter constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeTypeParameter(Value *types.TypeParam) goType {
-	value := goTypeTypeParameter{Value}
-	return goType{tgoTag: goTypeTagTypeParameter, tgoTypeParameter: value}
+	tgoValue := goTypeTypeParameter{Value}
+	return goType{tgoTag: goTypeTagTypeParameter, tgoTypeParameter: tgoValue}
 }
 
 // TypeParameterPayload requires TypeParameter. No tag check.
@@ -305,8 +305,8 @@ type TgogoTypeUnionInput struct {
 // NewgoTypeUnion constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewgoTypeUnion(Value *types.Union) goType {
-	value := goTypeUnion{Value}
-	return goType{tgoTag: goTypeTagUnion, tgoUnion: value}
+	tgoValue := goTypeUnion{Value}
+	return goType{tgoTag: goTypeTagUnion, tgoUnion: tgoValue}
 }
 
 // UnionPayload requires Union. No tag check.

@@ -67,8 +67,8 @@ type TgoscalarValueBooleanInput struct {
 // NewscalarValueBoolean constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewscalarValueBoolean(Value bool) scalarValue {
-	value := scalarValueBoolean{Value}
-	return scalarValue{tgoTag: scalarValueTagBoolean, tgoBoolean: value}
+	tgoValue := scalarValueBoolean{Value}
+	return scalarValue{tgoTag: scalarValueTagBoolean, tgoBoolean: tgoValue}
 }
 
 // BooleanPayload requires Boolean. No tag check.
@@ -85,8 +85,8 @@ type TgoscalarValueIntegerInput struct {
 // NewscalarValueInteger constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewscalarValueInteger(Value int64) scalarValue {
-	value := scalarValueInteger{Value}
-	return scalarValue{tgoTag: scalarValueTagInteger, tgoInteger: value}
+	tgoValue := scalarValueInteger{Value}
+	return scalarValue{tgoTag: scalarValueTagInteger, tgoInteger: tgoValue}
 }
 
 // IntegerPayload requires Integer. No tag check.
@@ -105,8 +105,8 @@ type TgoscalarValueBooleanParameterInput struct {
 // NewscalarValueBooleanParameter constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewscalarValueBooleanParameter(Index int, Negated bool) scalarValue {
-	value := scalarValueBooleanParameter{Index, Negated}
-	return scalarValue{tgoTag: scalarValueTagBooleanParameter, tgoBooleanParameter: value}
+	tgoValue := scalarValueBooleanParameter{Index, Negated}
+	return scalarValue{tgoTag: scalarValueTagBooleanParameter, tgoBooleanParameter: tgoValue}
 }
 
 // BooleanParameterPayload requires BooleanParameter. No tag check.
@@ -125,8 +125,8 @@ type TgoscalarValueIntegerParameterInput struct {
 // NewscalarValueIntegerParameter constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewscalarValueIntegerParameter(Index int) scalarValue {
-	value := scalarValueIntegerParameter{Index}
-	return scalarValue{tgoTag: scalarValueTagIntegerParameter, tgoIntegerParameter: value}
+	tgoValue := scalarValueIntegerParameter{Index}
+	return scalarValue{tgoTag: scalarValueTagIntegerParameter, tgoIntegerParameter: tgoValue}
 }
 
 // IntegerParameterPayload requires IntegerParameter. No tag check.

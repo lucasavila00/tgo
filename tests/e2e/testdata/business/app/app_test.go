@@ -3,6 +3,7 @@ package app_test
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 	"unsafe"
 
@@ -111,7 +112,7 @@ func TestBusiness(t *testing.T) {
 		t.Fatal("imported private variant construction failed")
 	}
 	order := []string{}
-	ordered := model.OrderedChoiceValue(&order)
+	ordered := model.MakeOrderedChoice(&order)
 	if !reflect.DeepEqual(order, []string{"second", "first"}) ||
 		ordered.ValuePayload().First != "first" ||
 		ordered.ValuePayload().Second != "second" {

@@ -83,14 +83,16 @@
     "includeDeclaration": true,
     "locations": [
       {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 1},
-      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1}
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 2}
     ]
   },
   {
     "method": "references",
     "position": {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
     "locations": [
-      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1}
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 2}
     ]
   },
   {

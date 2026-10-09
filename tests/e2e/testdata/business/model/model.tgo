@@ -44,10 +44,6 @@ type EnumAlias enum
 
 type AccountAlias = Account
 
-type Accounts interface {
-    Account
-}
-
 type CounterRecord (struct {
     value int
 })
@@ -125,7 +121,7 @@ func appendOrder(order *[]string, value string) string {
     return value
 }
 
-func OrderedChoiceValue(order *[]string) OrderedChoice {
+func MakeOrderedChoice(order *[]string) OrderedChoice {
     return OrderedChoice.Value{
         Second: appendOrder(order, "second"),
         First: appendOrder(order, "first"),
@@ -192,7 +188,7 @@ func AliasLabel(account AccountAlias) string {
     }
 }
 
-func GenericLabel[T Accounts](account T) string {
+func GenericLabel(account Account) string {
     switch account.Tag() {
     case AccountTagPersonal:
         return account.PersonalPayload().Name

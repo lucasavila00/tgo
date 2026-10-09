@@ -1,8 +1,10 @@
 package compiler
 
 import (
+	"fmt"
 	"go/importer"
 	"go/token"
+	"go/types"
 	"strings"
 	"testing"
 )
@@ -59,6 +61,14 @@ func TestEnumGeneratedConstructionSurfaceIsPrivateToTGo(t *testing.T) {
 			want: "NewEventReady is generated Go ABI; use Event.Ready{...}",
 		},
 		{
+			name: "constructor function value",
+			use: `func makeEvent() Event {
+	constructor := NewEventReady
+	return constructor("value")
+}`,
+			want: "NewEventReady is generated Go ABI; use Event.Ready{...}",
+		},
+		{
 			name: "payload",
 			use:  `var _ EventReady`,
 			want: "EventReady is generated enum representation; use Event.Ready{...}",
@@ -78,11 +88,111 @@ func TestEnumGeneratedConstructionSurfaceIsPrivateToTGo(t *testing.T) {
 				Path: "sample", Sources: []File{{Name: "sample.tgo", Data: data}},
 				FileSet: token.NewFileSet(), Importer: importer.Default(),
 			})
-			if len(problems) == 0 || !strings.Contains(problems[0].Error(), test.want) {
+			if len(problems) != 1 || !strings.Contains(problems[0].Error(), test.want) {
 				t.Fatalf("error = %v, want %q", problems, test.want)
 			}
 		})
 	}
+}
+
+func TestImportedEnumConstructionSurface(t *testing.T) {
+	t.Parallel()
+	dependency, problems := Compile(PackageInput{
+		Path: "example.test/dep",
+		Sources: []File{{Name: "dep.tgo", Data: []byte(`package dep
+type Event enum {
+	Ready struct { value string; pointer *int }
+	Empty struct{}
+}
+`)}},
+		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	load := enumTestImporter{
+		path: "example.test/dep", pkg: dependency.Package,
+		fallback: importer.Default(),
+	}
+	valid := []byte(`package sample
+import "example.test/dep"
+var ready = dep.Event.Ready{value: "value", pointer: nil}
+var empty = dep.Event.Empty{}
+`)
+	compiled, problems := Compile(PackageInput{
+		Path: "sample", Sources: []File{{Name: "sample.tgo", Data: valid}},
+		Imports: map[string]*CompiledPackage{"example.test/dep": dependency},
+		FileSet: token.NewFileSet(), Importer: load,
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	output := string(compiled.Outputs["sample.tgo"])
+	for _, text := range []string{"dep.NewEventReady", "dep.NewEventEmpty"} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("imported enum output does not contain %q\n%s", text, output)
+		}
+	}
+
+	tests := []struct {
+		name string
+		use  string
+		want string
+	}{
+		{
+			name: "constructor",
+			use:  `var _ = dep.NewEventReady("value", nil)`,
+			want: "NewEventReady is generated Go ABI; use Event.Ready{...}",
+		},
+		{
+			name: "constructor function value",
+			use: `func makeEvent() dep.Event {
+	constructor := dep.NewEventReady
+	return constructor("value", nil)
+}`,
+			want: "NewEventReady is generated Go ABI; use Event.Ready{...}",
+		},
+		{
+			name: "payload",
+			use:  `var _ dep.EventReady`,
+			want: "EventReady is generated enum representation; use Event.Ready{...}",
+		},
+		{
+			name: "carrier",
+			use:  `var _ dep.TgoEventReadyInput`,
+			want: "TgoEventReadyInput is generated staging ABI; use Event.Ready{...}",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			data := []byte("package sample\nimport \"example.test/dep\"\n" + test.use + "\n")
+			_, problems := Compile(PackageInput{
+				Path: "sample", Sources: []File{{Name: "sample.tgo", Data: data}},
+				Imports: map[string]*CompiledPackage{"example.test/dep": dependency},
+				FileSet: token.NewFileSet(), Importer: load,
+			})
+			if len(problems) != 1 || !strings.Contains(problems[0].Error(), test.want) {
+				t.Fatalf("error = %v, want %q", problems, test.want)
+			}
+		})
+	}
+}
+
+type enumTestImporter struct {
+	path     string
+	pkg      *types.Package
+	fallback types.Importer
+}
+
+func (i enumTestImporter) Import(path string) (*types.Package, error) {
+	if path == i.path {
+		return i.pkg, nil
+	}
+	if i.fallback == nil {
+		return nil, fmt.Errorf("cannot import %s", path)
+	}
+	return i.fallback.Import(path)
 }
 
 func TestEnumGeneratedConstructorNameIsReserved(t *testing.T) {

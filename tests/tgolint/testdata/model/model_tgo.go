@@ -71,11 +71,16 @@ type EventStarted struct {
 	ID    string `json:"event"`
 	Alias string `json:"event"`
 }
+type TgoEventStartedInput struct {
+	FieldID    string
+	FieldAlias string
+}
 
-// Event constructs Event. Model fields must be valid.
+// NewEventStarted constructs Event. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EventStarted) Event() Event {
-	return Event{tgoTag: EventTagStarted, tgoStarted: value}
+func NewEventStarted(ID string, Alias string) Event {
+	tgoValue := EventStarted{ID, Alias}
+	return Event{tgoTag: EventTagStarted, tgoStarted: tgoValue}
 }
 
 // StartedPayload requires Started. No tag check.
@@ -85,11 +90,15 @@ func (v Event) StartedPayload() EventStarted { return v.tgoStarted }
 type EventStopped struct {
 	Reason string
 }
+type TgoEventStoppedInput struct {
+	FieldReason string
+}
 
-// Event constructs Event. Model fields must be valid.
+// NewEventStopped constructs Event. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EventStopped) Event() Event {
-	return Event{tgoTag: EventTagStopped, tgoStopped: value}
+func NewEventStopped(Reason string) Event {
+	tgoValue := EventStopped{Reason}
+	return Event{tgoTag: EventTagStopped, tgoStopped: tgoValue}
 }
 
 // StoppedPayload requires Stopped. No tag check.
@@ -145,14 +154,14 @@ func (v *Event) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStarted(payload.ID, payload.Alias)
 		return nil
 	case "Stopped":
 		var payload EventStopped
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStopped(payload.Reason)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Event JSON variant %q", variant)
@@ -223,14 +232,14 @@ func (v *Event) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStarted(payload.ID, payload.Alias)
 		return nil
 	case 2:
 		var payload EventStopped
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStopped(payload.Reason)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Event JSON tag")
@@ -276,16 +285,19 @@ func (v *Signal) GobDecode(data []byte) error {
 	if uint32(tag) != number || tag < SignalTagOn || tag > SignalTagOn {
 		return __tgo_fmt.Errorf("Signal: cannot gob decode unknown tag %d", number)
 	}
-	*v = Signal{tgoTag: tag}
+	switch tag {
+	case SignalTagOn:
+		*v = NewSignalOn()
+	}
 	return nil
 }
 
 // SignalOn is the On payload.
 type SignalOn struct{}
 
-// Signal constructs Signal. Model fields must be valid.
+// NewSignalOn constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SignalOn) Signal() Signal {
+func NewSignalOn() Signal {
 	return Signal{tgoTag: SignalTagOn}
 }
 
@@ -334,7 +346,7 @@ func (v *Signal) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Signal()
+		*v = NewSignalOn()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Signal JSON variant %q", variant)
@@ -403,7 +415,7 @@ func (v *Signal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Signal()
+		*v = NewSignalOn()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Signal JSON tag")

@@ -36,7 +36,9 @@ func FirstStreamLabel(accounts ...model.Account) string {
 
 func Replace(account *model.Account, name string) {
 	legacy.Update(account, func(target *model.Account) {
-		*target = model.AccountPersonal{Name: name}.Account()
+		*target = func(tgoInput_6 model.TgoAccountPersonalInput) model.Account {
+			return model.NewAccountPersonal(tgoInput_6.FieldName)
+		}(model.TgoAccountPersonalInput{FieldName: name})
 	})
 }
 

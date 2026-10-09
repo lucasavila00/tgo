@@ -284,9 +284,11 @@ func validTagMethod(typ, tag types.Type) bool {
 }
 
 func validEnumAPI(typ, payload types.Type, accessor, constructorName string) bool {
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok { return false }
 	read := method(typ, accessor)
 	return read != nil && validEnumConstructor(typ, payload, constructorName) &&
-		method(payload, types.Unalias(typ).(*types.Named).Obj().Name()) == nil &&
+		method(payload, named.Obj().Name()) == nil &&
 		read.Params().Len() == 0 && read.Results().Len() == 1 &&
 		types.Identical(read.Results().At(0).Type(), payload)
 }

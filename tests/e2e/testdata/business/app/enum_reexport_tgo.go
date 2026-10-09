@@ -8,5 +8,7 @@ import (
 )
 
 func OnlyReexportedAccount(name string) any {
-	return __tgo_import.AccountPersonal{Name: name}.Account()
+	return func(tgoInput_5 __tgo_import.TgoAccountPersonalInput) __tgo_import.Account {
+		return __tgo_import.NewAccountPersonal(tgoInput_5.FieldName)
+	}(__tgo_import.TgoAccountPersonalInput{FieldName: name})
 }

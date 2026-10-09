@@ -58,8 +58,8 @@ type TgomodelCheckedInput struct {
 // NewmodelChecked constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewmodelChecked(Package string, Name string) model {
-	value := modelChecked{Package, Name}
-	return model{tgoTag: modelTagChecked, tgoChecked: value}
+	tgoValue := modelChecked{Package, Name}
+	return model{tgoTag: modelTagChecked, tgoChecked: tgoValue}
 }
 
 // CheckedPayload requires Checked. No tag check.
@@ -80,8 +80,8 @@ type TgomodelEnumInput struct {
 // NewmodelEnum constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func NewmodelEnum(Package string, Name string, Variants []string) model {
-	value := modelEnum{Package, Name, Variants}
-	return model{tgoTag: modelTagEnum, tgoPayload: value}
+	tgoValue := modelEnum{Package, Name, Variants}
+	return model{tgoTag: modelTagEnum, tgoPayload: tgoValue}
 }
 
 // EnumPayload requires Enum. No tag check.

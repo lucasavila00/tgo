@@ -550,73 +550,73 @@ func specificationSpan(value *Specification) Span {
 }
 
 func nodeFile(value *File) Node {
-	return func(tgoInput_60 TgoNodeFileInput) Node {
-		return NewNodeFile(tgoInput_60.FieldValue)
+	return func(tgoInput_64 TgoNodeFileInput) Node {
+		return NewNodeFile(tgoInput_64.FieldValue)
 	}(TgoNodeFileInput{FieldValue: value})
 }
 
 func nodeDeclaration(value *Declaration) Node {
-	return func(tgoInput_61 TgoNodeDeclarationInput) Node {
-		return NewNodeDeclaration(tgoInput_61.FieldValue)
+	return func(tgoInput_65 TgoNodeDeclarationInput) Node {
+		return NewNodeDeclaration(tgoInput_65.FieldValue)
 	}(TgoNodeDeclarationInput{FieldValue: value})
 }
 
 func nodeSpecification(value *Specification) Node {
-	return func(tgoInput_62 TgoNodeSpecificationInput) Node {
-		return NewNodeSpecification(tgoInput_62.FieldValue)
+	return func(tgoInput_66 TgoNodeSpecificationInput) Node {
+		return NewNodeSpecification(tgoInput_66.FieldValue)
 	}(TgoNodeSpecificationInput{FieldValue: value})
 }
 
 func nodeStatement(value *Statement) Node {
-	return func(tgoInput_63 TgoNodeStatementInput) Node {
-		return NewNodeStatement(tgoInput_63.FieldValue)
+	return func(tgoInput_67 TgoNodeStatementInput) Node {
+		return NewNodeStatement(tgoInput_67.FieldValue)
 	}(TgoNodeStatementInput{FieldValue: value})
 }
 
 func nodeExpression(value *Expression) Node {
-	return func(tgoInput_64 TgoNodeExpressionInput) Node {
-		return NewNodeExpression(tgoInput_64.FieldValue)
+	return func(tgoInput_68 TgoNodeExpressionInput) Node {
+		return NewNodeExpression(tgoInput_68.FieldValue)
 	}(TgoNodeExpressionInput{FieldValue: value})
 }
 
 func nodeField(value *Field) Node {
-	return func(tgoInput_65 TgoNodeFieldInput) Node {
-		return NewNodeField(tgoInput_65.FieldValue)
+	return func(tgoInput_69 TgoNodeFieldInput) Node {
+		return NewNodeField(tgoInput_69.FieldValue)
 	}(TgoNodeFieldInput{FieldValue: value})
 }
 
 func nodeFieldList(value *FieldList) Node {
-	return func(tgoInput_66 TgoNodeFieldListInput) Node {
-		return NewNodeFieldList(tgoInput_66.FieldValue)
+	return func(tgoInput_70 TgoNodeFieldListInput) Node {
+		return NewNodeFieldList(tgoInput_70.FieldValue)
 	}(TgoNodeFieldListInput{FieldValue: value})
 }
 
 func nodeTGoField(value *TGoField) Node {
-	return func(tgoInput_67 TgoNodeTGoFieldInput) Node {
-		return NewNodeTGoField(tgoInput_67.FieldValue)
+	return func(tgoInput_71 TgoNodeTGoFieldInput) Node {
+		return NewNodeTGoField(tgoInput_71.FieldValue)
 	}(TgoNodeTGoFieldInput{FieldValue: value})
 }
 
 func nodeEnumVariant(value *EnumVariant) Node {
-	return func(tgoInput_68 TgoNodeEnumVariantInput) Node {
-		return NewNodeEnumVariant(tgoInput_68.FieldValue)
+	return func(tgoInput_72 TgoNodeEnumVariantInput) Node {
+		return NewNodeEnumVariant(tgoInput_72.FieldValue)
 	}(TgoNodeEnumVariantInput{FieldValue: value})
 }
 
 func nodeIdentifier(value *Identifier) Node {
-	return func(tgoInput_69 TgoNodeIdentifierInput) Node {
-		return NewNodeIdentifier(tgoInput_69.FieldValue)
+	return func(tgoInput_73 TgoNodeIdentifierInput) Node {
+		return NewNodeIdentifier(tgoInput_73.FieldValue)
 	}(TgoNodeIdentifierInput{FieldValue: value})
 }
 
 func nodeComment(value *Comment) Node {
-	return func(tgoInput_70 TgoNodeCommentInput) Node {
-		return NewNodeComment(tgoInput_70.FieldValue)
+	return func(tgoInput_74 TgoNodeCommentInput) Node {
+		return NewNodeComment(tgoInput_74.FieldValue)
 	}(TgoNodeCommentInput{FieldValue: value})
 }
 
 func nodeCommentGroup(value *CommentGroup) Node {
-	return func(tgoInput_71 TgoNodeCommentGroupInput) Node {
-		return NewNodeCommentGroup(tgoInput_71.FieldValue)
+	return func(tgoInput_75 TgoNodeCommentGroupInput) Node {
+		return NewNodeCommentGroup(tgoInput_75.FieldValue)
 	}(TgoNodeCommentGroupInput{FieldValue: value})
 }
