@@ -39,7 +39,7 @@ proof. The receiver root must belong to the current function. An assignment or w
 ends the proof. Do not use `fallthrough` or select generated enum methods through interfaces.
 Control flow must not bypass the proof.
 Type aliases can construct variants. Go name resolution selects the aliased type.
-Do not shadow generated payload, constructor, or default helper names at a construction.
+Do not shadow generated constructor, carrier, or default helper names at a construction.
 
 ```text
 func Label(account Account) string {
@@ -163,7 +163,7 @@ quantity, err := model.NewQuantity(3)
 if err != nil {
     return err
 }
-account := model.AccountPersonal{Name: "Lucas"}.Account()
+account := model.NewAccountPersonal("Lucas")
 ```
 
 `NewQuantity` in this example is generated Go ABI. Test check success and failure, every tag

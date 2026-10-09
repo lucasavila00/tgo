@@ -54,9 +54,14 @@ func generatedNames(models []*model) map[string]bool {
 	names := make(map[string]bool)
 	for _, model := range models {
 		if len(model.Variants) > 0 {
+			names[model.Name] = true
 			names[model.Name+"Tag"] = true
 			for _, variant := range model.Variants {
 				names[model.Name+variant.Name] = true
+				names[enumConstructorName(model.Name, variant.Name)] = true
+				if len(variant.Fields) > 0 {
+					names[enumCarrierName(model.Name, variant.Name)] = true
+				}
 			}
 		}
 		if model.CheckedStruct {
@@ -136,11 +141,6 @@ func generatedEnumMethod(receiver, method string, model *model) bool {
 	if len(model.Variants) == 0 {
 		return false
 	}
-	for _, variant := range model.Variants {
-		if method == model.Name && receiver == model.Name+variant.Name {
-			return true
-		}
-	}
 	if receiver != model.Name {
 		return false
 	}
@@ -181,32 +181,182 @@ func (p *packageUnit) lowerConstruction(
 		p.checkedLiterals[literal] = true
 		return p.checkedConstructorCall(file, literal, owner, declaration)
 	}
-	selector, ok := literal.Type.(*ast.SelectorExpr)
-	if !ok {
-		return node
-	}
-	if !p.info.Types[selector.X].IsType() {
+	selector, owner, declaration, variant := p.enumLiteral(literal)
+	if declaration == nil {
 		return node
 	}
 	typ = p.info.TypeOf(selector.X)
-	owner, model := p.modelOwner(typ)
-	if model == nil || len(model.Variants) == 0 {
-		return node
-	}
 	named := types.Unalias(typ).(*types.Named)
 	path := owner.Path
 	p.markErasedOwnerImport(file, selector.X, named.Obj().Pkg())
 	prefix := p.ownerQualifier(file, named.Obj().Pkg())
-	at := selector.Sel.Pos()
-	for _, variant := range model.Variants {
-		if selector.Sel.Name == variant.Name {
-			payload := model.Name + variant.Name
-			literal.Type = p.generatedObject(prefix, path, payload, at)
-			return call(&ast.SelectorExpr{X: literal, Sel: ast.NewIdent(model.Name)})
+	return p.enumConstructorCall(
+		literal, prefix, path, declaration, variant, selector.Sel.Pos(),
+	)
+}
+
+func (p *packageUnit) enumLiteral(
+	literal *ast.CompositeLit,
+) (*ast.SelectorExpr, *packageUnit, *model, *variant) {
+	selector, ok := literal.Type.(*ast.SelectorExpr)
+	if !ok || !p.info.Types[selector.X].IsType() {
+		return nil, nil, nil, nil
+	}
+	typ := p.info.TypeOf(selector.X)
+	owner, declaration := p.modelOwner(typ)
+	if declaration == nil || len(declaration.Variants) == 0 {
+		return nil, nil, nil, nil
+	}
+	for index := range declaration.Variants {
+		if selector.Sel.Name == declaration.Variants[index].Name {
+			return selector, owner, declaration, &declaration.Variants[index]
 		}
 	}
-	p.fail(literal, "unknown variant %s.%s", model.Name, selector.Sel.Name)
-	return node
+	p.fail(literal, "unknown variant %s.%s", declaration.Name, selector.Sel.Name)
+	return selector, owner, nil, nil
+}
+
+func (p *packageUnit) enumConstructorCall(
+	literal *ast.CompositeLit,
+	prefix string,
+	path string,
+	declaration *model,
+	variant *variant,
+	at token.Pos,
+) ast.Expr {
+	payloadObject := p.enumPayloadObject(path, declaration.Name+variant.Name)
+	if payloadObject == nil {
+		return literal
+	}
+	structure, ok := payloadObject.Type().Underlying().(*types.Struct)
+	if !ok || structure.NumFields() != len(variant.Fields) {
+		return literal
+	}
+	values, evaluation, indices, keyed, valid := p.enumLiteralValues(literal, structure)
+	if !valid {
+		return literal
+	}
+	constructor := p.generatedObject(
+		prefix,
+		path,
+		enumConstructorName(declaration.Name, variant.Name),
+		at,
+	)
+	if !keyed {
+		return call(constructor, values...)
+	}
+	carrierNames := enumCarrierFieldNames(variant.Fields)
+	carrier := enumCarrierName(declaration.Name, variant.Name)
+	carrierElements := make([]ast.Expr, 0, len(evaluation))
+	for index, value := range evaluation {
+		carrierElements = append(carrierElements, &ast.KeyValueExpr{
+			Key:   ast.NewIdent(carrierNames[indices[index]]),
+			Value: value,
+		})
+	}
+	inputName := freshASTIdentifier(literal, "input")
+	arguments := make([]ast.Expr, len(values))
+	for index := range arguments {
+		arguments[index] = &ast.SelectorExpr{
+			X: ast.NewIdent(inputName), Sel: ast.NewIdent(carrierNames[index]),
+		}
+	}
+	return call(
+		&ast.FuncLit{
+			Type: &ast.FuncType{
+				Params: &ast.FieldList{List: []*ast.Field{{
+					Names: []*ast.Ident{ast.NewIdent(inputName)},
+					Type:  p.generatedObject(prefix, path, carrier, literal.Lbrace),
+				}}},
+				Results: &ast.FieldList{List: []*ast.Field{{
+					Type: p.generatedObject(
+						prefix, path, declaration.Name, literal.Lbrace,
+					),
+				}}},
+			},
+			Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{
+				Results: []ast.Expr{call(constructor, arguments...)},
+			}}},
+		},
+		&ast.CompositeLit{
+			Type: p.generatedObject(prefix, path, carrier, literal.Lbrace),
+			Elts: carrierElements,
+		},
+	)
+}
+
+func (p *packageUnit) enumPayloadObject(path string, name string) *types.TypeName {
+	owner := packageByPath(p.typed, path, make(map[*types.Package]bool))
+	if owner == nil {
+		return nil
+	}
+	object, _ := owner.Scope().Lookup(name).(*types.TypeName)
+	return object
+}
+
+func (p *packageUnit) enumLiteralValues(
+	literal *ast.CompositeLit,
+	structure *types.Struct,
+) ([]ast.Expr, []ast.Expr, []int, bool, bool) {
+	values := make([]ast.Expr, structure.NumFields())
+	evaluation := make([]ast.Expr, 0, len(literal.Elts))
+	indices := make([]int, 0, len(literal.Elts))
+	keyed := false
+	unkeyed := false
+	supplied := make(map[int]bool)
+	for index, element := range literal.Elts {
+		fieldIndex, value, pair := enumLiteralElement(structure, index, element)
+		keyed = keyed || pair
+		unkeyed = unkeyed || !pair
+		if keyed && unkeyed {
+			p.fail(literal, "mixture of field:value and value elements in struct literal")
+			return nil, nil, nil, false, false
+		}
+		if fieldIndex < 0 || fieldIndex >= len(values) {
+			p.fail(element, "unknown field in enum variant literal")
+			return nil, nil, nil, false, false
+		}
+		if supplied[fieldIndex] {
+			p.fail(
+				element,
+				"duplicate field %s in enum variant literal",
+				structure.Field(fieldIndex).Name(),
+			)
+			return nil, nil, nil, false, false
+		}
+		supplied[fieldIndex] = true
+		values[fieldIndex] = value
+		evaluation = append(evaluation, value)
+		indices = append(indices, fieldIndex)
+	}
+	for index, value := range values {
+		if value == nil {
+			p.fail(literal, "missing required field %s", structure.Field(index).Name())
+			return nil, nil, nil, false, false
+		}
+	}
+	return values, evaluation, indices, keyed, true
+}
+
+func enumLiteralElement(
+	structure *types.Struct,
+	index int,
+	element ast.Expr,
+) (int, ast.Expr, bool) {
+	pair, ok := element.(*ast.KeyValueExpr)
+	if !ok {
+		return index, element, false
+	}
+	name, ok := pair.Key.(*ast.Ident)
+	if !ok {
+		return -1, pair.Value, true
+	}
+	for fieldIndex := 0; fieldIndex < structure.NumFields(); fieldIndex++ {
+		if structure.Field(fieldIndex).Name() == name.Name {
+			return fieldIndex, pair.Value, true
+		}
+	}
+	return -1, pair.Value, true
 }
 
 // checkedConstructorCall lowers one checked literal to its generated Go ABI.
