@@ -396,4 +396,3 @@ func packageMatches(
 	childPrefix := target + string(filepath.Separator)
 	return recursive && strings.HasPrefix(unit.Dir, childPrefix)
 }
-
