@@ -1,7 +1,18 @@
 # ADR template
 
-Use this template for one architectural decision. Delete all instruction text
+Use this template for one architectural proposal. Delete all instruction text
 when you create the ADR.
+
+Follow this lifecycle:
+
+1. Create a small proposal ADR and link its issue.
+2. Get agreement before implementation.
+3. In the implementation pull request, move the current contract to the
+   specification, guide, or implementation notes.
+4. Delete the proposal ADR in that pull request.
+
+Do not add a `Status:` field. Every ADR is a proposal. An implemented decision
+does not belong in this directory.
 
 Keep the ADR small:
 
@@ -22,6 +33,8 @@ Use only the sections that help the decision.
 
 ```markdown
 # <Decision title>
+
+Issue: [#<number>](https://github.com/lucasavila00/tgo/issues/<number>)
 
 ## Context
 

@@ -15,6 +15,19 @@ Each committed `.tgo` source file has a generated `*_tgo.go` file in the same di
 tool uses these generated files as normal Go source. `make generated` verifies that the committed
 files match the current compiler output.
 
+## Ordinary Go source identity
+
+The driver copies an active `.tgo` file byte for byte when it has no TGo
+construct. It does not format the file or add a generated-code notice. A
+contextual TGo construct, such as `exhaustive:` in a tag switch, selects the
+lowering path even when the Go parser can accept its tokens.
+
+Focused fixtures protect comments, directives, build constraints, semicolons,
+line endings, and final-newline behavior. A fixed-seed source sample adds
+ordinary Go shapes. A manifest selects a bounded Go standard-library corpus for
+byte comparison and same-package tests. Add each fixed identity failure as a
+focused fixture.
+
 ## Compiler boundary
 
 `internal/compiler` is the Go bootstrap core. Its job ends when it returns ordinary Go source and
@@ -52,6 +65,24 @@ The compiler starts with each payload in inline storage. It uses the 64-bit Go l
 the enum size. While the size exceeds 80 bytes, it boxes the largest inline payload. An equal size
 selects the first declared variant. Boxed variants share one interface field. Empty variants add no
 payload storage.
+
+## Code navigation
+
+The VS Code extension uses a TextMate grammar for token colors and direct VS
+Code providers for read-only navigation. The providers use the JSON-lines
+protocol of the bundled `tgonav` helper. The helper is written in TGo and uses
+`pkg/syntax` and shared source analysis. It does not copy the parser.
+
+The helper accepts file URIs and UTF-8 byte offsets and returns exact source
+ranges. The extension converts between byte offsets and VS Code UTF-16
+positions. The navigation index uses type-object identity instead of name
+matching. It maps generated members back to their owning TGo declaration.
+
+The index follows the active Go build configuration. A change to `.tgo`, `.go`,
+`go.mod`, or `go.work` invalidates the affected workspace index. Helper tests
+exercise the JSON protocol and semantic results. VS Code integration tests
+cover provider registration, helper startup, cancellation, and range
+conversion.
 
 ## Repository checks
 
