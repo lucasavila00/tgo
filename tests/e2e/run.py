@@ -83,9 +83,9 @@ def check_stale_output_cleanup(compiler, work):
     run([str(compiler), "build", "./app"], work)
     assert not user_file.exists(), "compiler kept a file in its reserved output namespace"
 
-    helper = work / "app" / "notes_tgo_helper.go"
-    helper.write_text("package app\n\nfunc NotesHelper() int { return 1 }\n")
-    run([str(compiler), "build", "./app"], work)
+    helper = work / "gobridge" / "notes_tgo_helper.go"
+    helper.write_text("package gobridge\n\nfunc NotesHelper() int { return 1 }\n")
+    run([str(compiler), "build", "./..."], work)
     assert helper.exists(), "compiler removed a user file with a non-target suffix"
 
 
