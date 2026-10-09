@@ -42,8 +42,7 @@ func (c *checker) checkSourceGeneratedName(identifier *syntax.Identifier) {
 	if object == nil || object.Name() != identifier.Name {
 		return
 	}
-	switch value := object.(type) {
-	case *types.Func:
+	if value, ok := object.(*types.Func); ok {
 		if model, variant := c.enumConstructorModel(value); model != nil {
 			c.reportResult(
 				identifier.Start,
@@ -59,7 +58,9 @@ func (c *checker) checkSourceGeneratedName(identifier *syntax.Identifier) {
 				value.Name(),
 			)
 		}
-	case *types.TypeName:
+		return
+	}
+	if value, ok := object.(*types.TypeName); ok {
 		if model, variant, carrier := c.enumGeneratedType(value); model != nil {
 			name := modelName(model) + variant
 			kind := "enum representation"
