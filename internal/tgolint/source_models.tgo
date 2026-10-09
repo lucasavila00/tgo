@@ -2,8 +2,6 @@ package tgolint
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -21,12 +19,10 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-const metadataPrefix = "//tgo:v1 "
-const integritySeparator = "\x00tgo generated body\x00"
+const metadataPrefix = "//tgo:v2 "
 
 type generatedMetadata struct {
 	source string
-	digest []byte
 	body   []byte
 }
 
@@ -62,7 +58,7 @@ func (c %checker) verifySourceModels(generated *ast.File) *verifiedSource {
 		)
 		return nil
 	}
-	if !validGeneratedIntegrity(metadata, data) {
+	if !bytes.Equal(generatedData, c.outputs[sourceName]) {
 		c.failVerification(generated.Package, "generated tgo output integrity check failed")
 		return nil
 	}
@@ -120,7 +116,7 @@ func (c %checker) exportSourceModels(source *verifiedSource) {
 	}
 }
 
-// parseGeneratedMetadata reads the source name, digest, and generated body.
+// parseGeneratedMetadata reads the source name and generated body.
 func parseGeneratedMetadata(data []byte) *generatedMetadata {
 	parts := bytes.SplitN(data, []byte("\n"), 4)
 	if len(parts) != 4 || string(parts[0]) != generatedHeader || len(parts[2]) != 0 {
@@ -130,22 +126,12 @@ func parseGeneratedMetadata(data []byte) *generatedMetadata {
 	if !strings.HasPrefix(line, metadataPrefix) {
 		return nil
 	}
-	value := strings.TrimPrefix(line, metadataPrefix)
-	separator := strings.LastIndex(value, " ")
-	if separator < 0 {
-		return nil
-	}
-	quotedSource := value[:separator]
+	quotedSource := strings.TrimPrefix(line, metadataPrefix)
 	source, err := strconv.Unquote(quotedSource)
 	if err != nil || strconv.Quote(source) != quotedSource || filepath.Base(source) != source {
 		return nil
 	}
-	digestText := value[separator+1:]
-	digest, err := hex.DecodeString(digestText)
-	if err != nil || len(digest) != sha256.Size || hex.EncodeToString(digest) != digestText {
-		return nil
-	}
-	return &generatedMetadata{source: source, digest: digest, body: parts[3]}
+	return &generatedMetadata{source: source, body: parts[3]}
 }
 
 func sourceMatchesGenerated(source string, generatedPath string) bool {
@@ -187,14 +173,6 @@ func (c %checker) reportExtraGeneratedModels(
 			}
 		}
 	}
-}
-
-func validGeneratedIntegrity(metadata %generatedMetadata, source []byte) bool {
-	hash := sha256.New()
-	_, _ = hash.Write(source)
-	_, _ = hash.Write([]byte(integritySeparator))
-	_, _ = hash.Write(metadata.body)
-	return bytes.Equal(metadata.digest, hash.Sum(nil))
 }
 
 // checkSourceDeclaration compares one TGo model with its generated Go API.

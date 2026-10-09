@@ -12,10 +12,8 @@ import (
 )
 
 func TestParseGeneratedMetadataUsesOnlyFixedHeaderLine(t *testing.T) {
-	digest := bytes.Repeat([]byte("01"), 32)
 	body := []byte("package p\n\n//tgo:v1 this is an ordinary source comment\n")
-	data := append([]byte(generatedHeader+"\n//tgo:v1 \"model.tgo\" "), digest...)
-	data = append(data, []byte("\n\n")...)
+	data := []byte(generatedHeader + "\n//tgo:v2 \"model.tgo\"\n\n")
 	data = append(data, body...)
 	metadata := parseGeneratedMetadata(data)
 	if metadata == nil || metadata.source != "model.tgo" ||
@@ -24,10 +22,8 @@ func TestParseGeneratedMetadataUsesOnlyFixedHeaderLine(t *testing.T) {
 	}
 }
 
-func TestParseGeneratedMetadataRejectsUppercaseDigest(t *testing.T) {
-	digest := bytes.Repeat([]byte("AB"), 32)
-	data := append([]byte(generatedHeader+"\n//tgo:v1 \"model.tgo\" "), digest...)
-	data = append(data, []byte("\n\npackage p\n")...)
+func TestParseGeneratedMetadataRejectsTrailingData(t *testing.T) {
+	data := []byte(generatedHeader + "\n//tgo:v2 \"model.tgo\" stale\n\npackage p\n")
 	if metadata := parseGeneratedMetadata(data); metadata != nil {
 		t.Fatalf("metadata: %#v", metadata)
 	}

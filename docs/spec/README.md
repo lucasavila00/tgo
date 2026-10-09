@@ -597,9 +597,9 @@ that breaks a checked type rule. The Go caller owns these risks.
 `tgolint` checks unsafe Go patterns that it can prove from source. It does not make the Go
 boundary sound. It cannot inspect reflection, `unsafe`, cgo memory, races, or foreign state.
 
-Each generated model file has integrity metadata. It binds the TGo source bytes to the formatted
-Go body. Before it exports model facts, `tgolint` checks the source, output name, digest, and
-generated declarations against the current compiler emitter.
+Each generated model file has stable metadata that names its TGo source. Before it exports model
+facts, `tgolint` compiles the current package in memory. It checks the output name and requires the
+complete generated file to equal the current compiler output.
 
 ## Reserved generated names
 

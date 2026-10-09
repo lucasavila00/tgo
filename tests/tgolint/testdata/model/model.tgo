@@ -14,3 +14,5 @@ type Event enum {
 type Signal enum {
 	On struct{}
 }
+
+func Identity(value int) int { return value }
