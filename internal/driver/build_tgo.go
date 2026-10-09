@@ -95,6 +95,9 @@ func (b *packageBuilder) build(path string) error {
 				return err
 			}
 		}
+		if err := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs)); err != nil {
+			return err
+		}
 		testOutputs, tgoErr3 := b.compileTests(unit)
 		if tgoErr3 != nil {
 			return tgoErr3
@@ -104,10 +107,6 @@ func (b *packageBuilder) build(path string) error {
 			if err := b.writeFile(name, data); err != nil {
 				return err
 			}
-			outputs[name] = data
-		}
-		if err := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs)); err != nil {
-			return err
 		}
 	}
 	b.states[path] = buildDone

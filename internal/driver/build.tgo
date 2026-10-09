@@ -87,16 +87,15 @@ func (b *packageBuilder) build(path string) error {
 				return err
 			}
 		}
+		if err := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs)); err != nil {
+			return err
+		}
 		testOutputs := b.compileTests(unit)!!
 		for _, name := range sortedOutputPaths(testOutputs) {
 			data := testOutputs[name]
 			if err := b.writeFile(name, data); err != nil {
 				return err
 			}
-			outputs[name] = data
-		}
-		if err := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs)); err != nil {
-			return err
 		}
 	}
 	b.states[path] = buildDone
