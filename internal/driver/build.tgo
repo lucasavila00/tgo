@@ -23,9 +23,9 @@ import (
 type buildState uint8
 
 const (
-	buildNew buildState = iota
-	buildActive
-	buildDone
+	buildNew buildState = 0
+	buildActive buildState = 1
+	buildDone buildState = 2
 )
 
 type previousFile struct {
@@ -60,10 +60,7 @@ func (b *packageBuilder) build(path string) error {
 		return err
 	}
 	if len(unit.Sources) == 0 {
-		imports, err := b.localGoImports(path)
-		if err != nil {
-			return err
-		}
+		imports := b.localGoImports(path)!!
 		for _, dependency := range imports {
 			if err := b.buildImport(dependency); err != nil {
 				return err
@@ -82,10 +79,7 @@ func (b *packageBuilder) build(path string) error {
 			return err
 		}
 	}
-	outputs, err := b.compile(unit)
-	if err != nil {
-		return err
-	}
+	outputs := b.compile(unit)!!
 	if b.write {
 		for _, name := range sortedOutputPaths(outputs) {
 			data := outputs[name]
@@ -108,7 +102,9 @@ func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 		return nil, err
 	}
 	packageImporter := importer.ForCompiler(
-		unit.fs, "gc", func(path string) (io.ReadCloser, error) {
+		unit.fs,
+		"gc",
+		func(path string) (io.ReadCloser, error) {
 			export := paths[path]
 			if export == "" {
 				export, err = loadExportPath(unit.Dir, path)
@@ -126,16 +122,18 @@ func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 			imports[path] = dependency.compiled
 		}
 	}
-	compiled, diagnostics := compiler.Compile(compiler.PackageInput{
-		Directory: unit.Dir,
-		Path:      unit.Path,
-		Sources:   unit.Sources,
-		GoFiles:   unit.GoFiles,
-		Imports:   imports,
-		FileSet:   unit.fs,
-		Importer:  packageImporter,
-		UsesC:     unit.usesC,
-	})
+	compiled, diagnostics := compiler.Compile(
+		compiler.PackageInput{
+			Directory: unit.Dir,
+			Path:      unit.Path,
+			Sources:   unit.Sources,
+			GoFiles:   unit.GoFiles,
+			Imports:   imports,
+			FileSet:   unit.fs,
+			Importer:  packageImporter,
+			UsesC:     unit.usesC,
+		},
+	)
 	if len(diagnostics) != 0 {
 		return nil, errors.Join(diagnostics...)
 	}
@@ -144,7 +142,7 @@ func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 	for sourcePath, data := range compiled.Outputs {
 		outputs[unit.outputPath(sourcePath)] = data
 	}
-	return outputs, nil
+	return outputs,
 }
 
 // loadExportPath finds one import file requested during type checking.
@@ -159,19 +157,22 @@ func loadExportPath(directory string, path string) (string, error) {
 	if export == "" {
 		return "", fmt.Errorf("load %s: missing export data", path)
 	}
-	return export, nil
+	return export,
 }
 
 // loadExportPaths finds import files with one Go command.
 func loadExportPaths(unit *packageUnit) (map[string]string, error) {
 	imports := importsOf(unit.Files)
 	if len(imports) == 0 {
-		return map[string]string{}, nil
+		return map[string]string{},
 	}
-	arguments := make([]string, 0, 5+len(imports))
+	arguments := make([]string, 0, 5 + len(imports))
 	arguments = append(
 		arguments,
-		"list", "-deps", "-export", "-f",
+		"list",
+		"-deps",
+		"-export",
+		"-f",
 		"{{if .Export}}{{.ImportPath}}\t{{.Export}}{{end}}",
 	)
 	command := exec.Command("go", append(arguments, imports...)...)
@@ -187,21 +188,18 @@ func loadExportPaths(unit *packageUnit) (map[string]string, error) {
 			paths[path] = export
 		}
 	}
-	return paths, nil
+	return paths,
 }
 
 // buildImport follows local Go packages until it reaches each tgo package.
 func (b *packageBuilder) buildImport(path string) error {
 	if dependency := b.packages[path]; dependency != nil {
-		available, err := dependency.available()
-		if err != nil {
-			return err
-		}
+		available := dependency.available()!!
 		if available {
 			return b.build(path)
 		}
 	}
-	if path != b.module && !strings.HasPrefix(path, b.module+"/") {
+	if path != b.module && !strings.HasPrefix(path, b.module + "/") {
 		return nil
 	}
 	switch b.states[path] {
@@ -211,10 +209,7 @@ func (b *packageBuilder) buildImport(path string) error {
 		return fmt.Errorf("import cycle at %s", path)
 	}
 	b.states[path] = buildActive
-	imports, err := b.localGoImports(path)
-	if err != nil {
-		return err
-	}
+	imports := b.localGoImports(path)!!
 	for _, dependency := range imports {
 		if err := b.buildImport(dependency); err != nil {
 			return err
@@ -233,34 +228,31 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if inside == ".." || strings.HasPrefix(inside, ".."+string(filepath.Separator)) {
-		return nil, nil
+	if inside == ".." || strings.HasPrefix(inside, ".." + string(filepath.Separator)) {
+		return nil,
 	}
 	nested, err := nestedModule(directory, b.root)
 	if err != nil {
 		return nil, err
 	}
 	if nested {
-		return nil, nil
+		return nil,
 	}
 	entries, err := os.ReadDir(directory)
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+		return nil,
 	}
 	if err != nil {
 		return nil, err
 	}
 	files := make([]*syntax.File, 0)
 	for _, entry := range entries {
-		file, _, _, err := activeGoFile(b.context, directory, entry)
-		if err != nil {
-			return nil, err
-		}
+		file, _, _ := activeGoFile(b.context, directory, entry)!!
 		if file != nil {
 			files = append(files, file)
 		}
 	}
-	return importsOf(files), nil
+	return importsOf(files),
 }
 
 // activeGoFile parses one active user Go file.
@@ -272,7 +264,7 @@ func activeGoFile(
 	name := entry.Name()
 	if entry.IsDir() || !strings.HasSuffix(name, ".go") ||
 		strings.HasSuffix(name, "_test.go") {
-		return nil, nil, false, nil
+		return nil, nil, false,
 	}
 	path := filepath.Join(directory, name)
 	if outputname.Reserved(name) {
@@ -295,30 +287,30 @@ func activeGoFile(
 	}
 	cgo := importsC(file)
 	if cgo && !context.CgoEnabled {
-		return nil, nil, false, nil
+		return nil, nil, false,
 	}
-	return file, data, cgo, nil
+	return file, data, cgo,
 }
 
 // nestedModule reports whether a directory belongs to another module.
 func nestedModule(directory string, root string) (bool, error) {
 	for current := directory; current != root; current = filepath.Dir(current) {
 		if _, err := os.Stat(filepath.Join(current, "go.mod")); err == nil {
-			return true, nil
+			return true,
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return false, err
 		}
 		parent := filepath.Dir(current)
 		if parent == current {
-			return true, nil
+			return true,
 		}
 	}
-	return false, nil
+	return false,
 }
 
 // expectedOutputs includes active output and output owned by inactive source.
 func expectedOutputs(unit *packageUnit, outputs map[string][]byte) map[string]bool {
-	expected := make(map[string]bool, len(outputs)+len(unit.sourcePaths))
+	expected := make(map[string]bool, len(outputs) + len(unit.sourcePaths))
 	for path := range outputs {
 		expected[path] = true
 	}
@@ -367,7 +359,7 @@ func fileImportsC(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return importsC(file), nil
+	return importsC(file),
 }
 
 // importsC reports whether one parsed file imports C.

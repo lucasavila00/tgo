@@ -1,3 +1,4 @@
+// Package driver tests workspace analysis orchestration.
 package driver
 
 import (
