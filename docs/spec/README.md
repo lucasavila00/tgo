@@ -466,6 +466,46 @@ Conversion to a concrete interface type remains valid.
 An unnamed struct identical to the checked representation is reserved and rejected.
 The conversion rules also apply to a type parameter whose type set admits the checked type.
 
+## Checked structs
+
+A checked struct keeps its ordinary Go representation and adds fallible literal construction:
+
+```text
+type Port struct {
+    number int
+} checked
+
+func (value Port) check() (Port, error) {
+    if value.number < 1 || value.number > 65535 {
+        return Port{}, ErrInvalidPort
+    }
+    return value,
+}
+```
+
+All fields must be private. The type must declare a value-receiver method with the exact signature
+`check() (Port, error)`. The compiler reports a missing method or a different signature.
+
+The compiler removes the `checked` marker and keeps the struct and method. It changes each literal
+of that type to a call to `check`:
+
+```text
+port, err := Port{number: number}
+port := Port{number: number}!
+port := Port{number: number}!!
+```
+
+Each field expression runs once in source order. The `!` and `!!` operators keep their normal error
+behavior. A raw literal of the same type is permitted inside its own `check` method. This trusted
+exception lets a failed check return the invalid zero value with a non-nil error.
+
+The zero value is invalid. A checked struct can contain another checked struct. Code in the same
+package can read its private fields. A package must provide its own fallible exported factory when
+another package must construct the type. TGo does not generate a public constructor or accessor.
+
+Handwritten Go can bypass validation with a direct literal. `tgolint` reports this bypass and the
+same invalid-zero uses that it reports for other checked types.
+
 ## Field defaults
 
 A tgo struct or enum payload may declare a field default:
@@ -673,46 +713,6 @@ Generated payload types and tag constants must have different names. Thus, a var
 is invalid, but a variant named `Zero` is valid. A payload field cannot have the enum name because
 that name belongs to the constructor method.
 A checked type reserves the predeclared `string`, `error`, and `nil` names.
-
-## Checked structs
-
-A checked struct keeps its ordinary Go representation and adds fallible literal construction:
-
-```text
-type Port struct {
-    number int
-} checked
-
-func (value Port) check() (Port, error) {
-    if value.number < 1 || value.number > 65535 {
-        return Port{}, ErrInvalidPort
-    }
-    return value,
-}
-```
-
-All fields must be private. The type must declare a value-receiver method with the exact signature
-`check() (Port, error)`. The compiler reports a missing method or a different signature.
-
-The compiler removes the `checked` marker and keeps the struct and method. It changes each literal
-of that type to a call to `check`:
-
-```text
-port, err := Port{number: number}
-port := Port{number: number}!
-port := Port{number: number}!!
-```
-
-Each field expression runs once in source order. The `!` and `!!` operators keep their normal error
-behavior. A raw literal of the same type is permitted inside its own `check` method. This trusted
-exception lets a failed check return the invalid zero value with a non-nil error.
-
-The zero value is invalid. A checked struct can contain another checked struct. Code in the same
-package can read its private fields. A package must provide its own fallible exported factory when
-another package must construct the type. TGo does not generate a public constructor or accessor.
-
-Handwritten Go can bypass validation with a direct literal. `tgolint` reports this bypass and the
-same invalid-zero uses that it reports for other checked types.
 
 ## Build command and diagnostics
 
