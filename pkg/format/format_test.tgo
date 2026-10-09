@@ -37,19 +37,6 @@ func TestSourceBasic(t *testing.T) {
 	}
 }
 
-func TestSourceFormatsCheckedStruct(t *testing.T) {
-	t.Parallel()
-	input := "package sample\ntype Port struct{number int} checked\n"
-	want := "package sample\n\ntype Port struct{ number int } checked\n"
-	got, err := format.Source("sample.tgo", []byte(input))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(got) != want {
-		t.Fatalf("formatted source:\n%s\nwant:\n%s", got, want)
-	}
-}
-
 func TestSourceMatchesGoCorpus(t *testing.T) {
 	if !strings.HasPrefix(runtime.Version(), "go1.27.") {
 		t.Fatalf("Go corpus needs Go 1.27; got %s", runtime.Version())

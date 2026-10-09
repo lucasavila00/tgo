@@ -22,43 +22,23 @@ test("grammar includes Go after TGo rules", () => {
   ]);
 });
 
-test("grammar matches TGo-only tokens", () => {
-  const cases = [
-    ["keyword.other.default.tgo", "..default"]
+test("grammar leaves contextual syntax to the Go grammar", () => {
+  const scopes = [
+    "keyword.operator.propagation.tgo",
+    "storage.modifier.non-nil.tgo",
+    "keyword.control.comprehension.tgo",
+    "keyword.declaration.checked.tgo",
+    "keyword.control.exhaustive.tgo"
   ];
-  for (const [name, source] of cases) {
-    assert.equal(pattern(name).test(source), true, source);
+  for (const scope of scopes) {
+    assert.equal(grammar.repository.tgo.patterns.some(
+      (item) => item.name === scope
+    ), false, scope);
   }
-});
-
-test("TGo rules do not take ordinary Go operators", () => {
-  assert.equal(grammar.repository.tgo.patterns.some(
-    (item) => item.name === "keyword.operator.propagation.tgo"
-  ), false);
-  assert.equal(grammar.repository.tgo.patterns.some(
-    (item) => item.name === "storage.modifier.non-nil.tgo"
-  ), false);
 });
 
 test("default marker has exactly two dots", () => {
   const marker = pattern("keyword.other.default.tgo");
   assert.equal(marker.test("..default"), true);
   assert.equal(marker.test("...default"), false);
-});
-
-test("comprehension control words keep their Go scopes", () => {
-  assert.equal(grammar.repository.tgo.patterns.some(
-    (item) => item.name === "keyword.control.comprehension.tgo"
-  ), false);
-});
-
-test("contextual words do not use broad top-level rules", () => {
-  for (const name of [
-    "keyword.declaration.checked.tgo",
-    "keyword.control.exhaustive.tgo"
-  ]) {
-    assert.equal(grammar.repository.tgo.patterns.some(
-      (item) => item.name === name
-    ), false);
-  }
 });
