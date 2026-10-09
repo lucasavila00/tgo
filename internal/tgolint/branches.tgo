@@ -111,6 +111,8 @@ func (c %checker) branchConstruct(
 		case syntax.StatementTagSwitch, syntax.StatementTagTypeSwitch,
 			syntax.StatementTagSelect:
 			if branch.Token == token.BREAK { return value }
+		default:
+			continue
 		}
 	}
 	return nil
@@ -143,8 +145,9 @@ func controlTargetKind(statement *syntax.Statement, branch token.Token) cfg.Bloc
 		return cfg.KindSwitchDone
 	case syntax.StatementTagSelect:
 		return cfg.KindSelectDone
+	default:
+		return cfg.KindInvalid
 	}
-	return cfg.KindInvalid
 }
 
 func (c %checker) gotoTargetBlock(graph *cfg.CFG, branch *syntax.BranchStatement) *cfg.Block {
