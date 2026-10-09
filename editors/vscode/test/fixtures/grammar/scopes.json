@@ -168,5 +168,123 @@
     "token": "%",
     "has": "keyword.operator.arithmetic.go",
     "not": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "parameter %ParameterRecord,",
+    "token": "parameter",
+    "has": "variable.parameter.go"
+  },
+  {
+    "line": "parameter %ParameterRecord,",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "parameter %ParameterRecord,",
+    "token": "ParameterRecord",
+    "has": "entity.name.type.go"
+  },
+  {
+    "line": "receiver %ReceiverRecord,",
+    "token": "receiver",
+    "has": "variable.parameter.go"
+  },
+  {
+    "line": "receiver %ReceiverRecord,",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "receiver %ReceiverRecord,",
+    "token": "ReceiverRecord",
+    "has": "entity.name.type.go"
+  },
+  {
+    "line": "func unnamedParameter(%UnnamedRecord) {}",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "func unnamedParameter(%UnnamedRecord) {}",
+    "token": "UnnamedRecord",
+    "has": "entity.name.type.go"
+  },
+  {
+    "line": "func (%UnnamedReceiver) unnamedReceiver() {}",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "func (%UnnamedReceiver) unnamedReceiver() {}",
+    "token": "UnnamedReceiver",
+    "has": "entity.name.type.go"
+  },
+  {
+    "line": "func composedParameter(first %*OuterRecord, second %%NestedRecord) {}",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "func composedParameter(first %*OuterRecord, second %%NestedRecord) {}",
+    "token": "*",
+    "has": "keyword.operator.address.go"
+  },
+  {
+    "line": "func composedParameter(first %*OuterRecord, second %%NestedRecord) {}",
+    "token": "OuterRecord",
+    "has": "entity.name.type.go"
+  },
+  {
+    "line": "func composedParameter(first %*OuterRecord, second %%NestedRecord) {}",
+    "token": "%%",
+    "has": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "func composedParameter(first %*OuterRecord, second %%NestedRecord) {}",
+    "token": "NestedRecord",
+    "has": "entity.name.type.go"
+  },
+  {
+    "line": "func (receiver %*ReceiverRecord) composedReceiver() {}",
+    "token": "%",
+    "has": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "func (receiver %*ReceiverRecord) composedReceiver() {}",
+    "token": "*",
+    "has": "keyword.operator.address.go"
+  },
+  {
+    "line": "func (receiver %*ReceiverRecord) composedReceiver() {}",
+    "token": "ReceiverRecord",
+    "has": "entity.name.type.go"
+  },
+  {
+    "line": "func (receiver %%DeepRecord) doubleReceiver() {}",
+    "token": "%%",
+    "has": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "func (receiver %%DeepRecord) doubleReceiver() {}",
+    "token": "DeepRecord",
+    "has": "entity.name.type.go"
+  },
+  {
+    "line": "func signatureModulo(value [(Left %Right)]Record) {}",
+    "token": "%",
+    "has": "keyword.operator.arithmetic.go",
+    "not": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "func bodyModulo() { _ = left %Thing }",
+    "token": "%",
+    "has": "keyword.operator.arithmetic.go",
+    "not": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "_ = bodyLeft %BodyThing",
+    "token": "%",
+    "has": "keyword.operator.arithmetic.go",
+    "not": "storage.modifier.non-nil.tgo"
   }
 ]

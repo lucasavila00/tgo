@@ -30,3 +30,24 @@ func nonNilParameter(value %Record) {}
 func (value *Record) pointerReceiver() {}
 func (value %Record) nonNilReceiver() {}
 func inlineModulo() { _ = left % Thing }
+
+func multilineParameter(
+	parameter %ParameterRecord,
+) {}
+
+func (
+	receiver %ReceiverRecord,
+) multilineReceiver() {}
+
+func unnamedParameter(%UnnamedRecord) {}
+func (%UnnamedReceiver) unnamedReceiver() {}
+
+func composedParameter(first %*OuterRecord, second %%NestedRecord) {}
+func (receiver %*ReceiverRecord) composedReceiver() {}
+func (receiver %%DeepRecord) doubleReceiver() {}
+
+func signatureModulo(value [(Left %Right)]Record) {}
+func bodyModulo() { _ = left %Thing }
+func multilineBodyModulo() {
+	_ = bodyLeft %BodyThing
+}

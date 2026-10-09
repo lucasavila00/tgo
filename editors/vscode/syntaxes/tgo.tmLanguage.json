@@ -11,15 +11,46 @@
     }
   ],
   "injections": {
-    "L:source.tgo -comment -string": {
+    "L:source.tgo -meta.function.signature.tgo -comment -string": {
       "patterns": [
         {
-          "match": "(?<=^\\s*func\\b[^{\\r\\n]*)(\\b[A-Za-z_]\\w*)([ \\t]+)(%)(?=[A-Za-z_(\\[])",
+          "begin": "(?=^\\s*func\\b)",
+          "end": "(?=\\{)",
+          "name": "meta.function.signature.tgo",
+          "patterns": [
+            {
+              "include": "source.go"
+            }
+          ]
+        }
+      ]
+    },
+    "L:meta.function.signature.tgo -comment -string": {
+      "patterns": [
+        {
+          "match": "(?<!\\[[^\\]\\r\\n]*)(?:(?<=^)|(?<=[(,]))([ \\t]*)([A-Za-z_]\\w*(?:[ \\t]*,[ \\t]*[A-Za-z_]\\w*)*)([ \\t]+)(%+)(?=[*A-Za-z_(\\[])",
           "captures": {
-            "1": {
-              "name": "variable.parameter.go"
+            "2": {
+              "patterns": [
+                {
+                  "name": "punctuation.other.comma.go",
+                  "match": ","
+                },
+                {
+                  "name": "variable.parameter.go",
+                  "match": "[A-Za-z_]\\w*"
+                }
+              ]
             },
-            "3": {
+            "4": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        },
+        {
+          "match": "(?<!\\[[^\\]\\r\\n]*)(?:(?<=^)|(?<=[(,]))([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "2": {
               "name": "storage.modifier.non-nil.tgo"
             }
           }

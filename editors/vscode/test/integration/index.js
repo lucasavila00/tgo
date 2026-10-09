@@ -4,6 +4,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vscode = require("vscode");
+const oniguruma = require("vscode-oniguruma");
+const textmate = require("vscode-textmate");
 const { NavigationClient, RequestCancelled } = require("../../src/client");
 const { documentSelector, WorkspaceClient } = require("../../src/extension");
 
@@ -11,6 +13,7 @@ async function run() {
   const extension = vscode.extensions.getExtension("tgo.tgo-navigation");
   assert.ok(extension, "TGo extension is absent");
   const api = await extension.activate();
+  await checkBundledGoGrammar(extension.extensionPath);
   const folder = vscode.workspace.workspaceFolders[0];
   assert.ok(folder, "test workspace is absent");
   const uri = vscode.Uri.joinPath(folder.uri, "main.tgo");
@@ -35,6 +38,93 @@ async function run() {
   await checkCancellation();
   await checkDirtyDocument(document);
   await checkWorkspaceFolderRemoval(api);
+}
+
+async function checkBundledGoGrammar(extension) {
+  const wasm = fs.readFileSync(require.resolve("vscode-oniguruma/release/onig.wasm"));
+  await oniguruma.loadWASM(wasm.buffer.slice(
+    wasm.byteOffset,
+    wasm.byteOffset + wasm.byteLength
+  ));
+  const paths = {
+    "source.tgo": path.join(extension, "syntaxes", "tgo.tmLanguage.json"),
+    "source.go": path.join(
+      vscode.env.appRoot,
+      "extensions",
+      "go",
+      "syntaxes",
+      "go.tmLanguage.json"
+    )
+  };
+  const registry = new textmate.Registry({
+    onigLib: Promise.resolve({
+      createOnigScanner(patterns) {
+        return new oniguruma.OnigScanner(patterns);
+      },
+      createOnigString(source) {
+        return new oniguruma.OnigString(source);
+      }
+    }),
+    loadGrammar(scope) {
+      const file = paths[scope];
+      return file
+        ? textmate.parseRawGrammar(fs.readFileSync(file, "utf8"), file)
+        : undefined;
+    }
+  });
+  const grammar = await registry.loadGrammar("source.tgo");
+  assert.ok(grammar, "TGo TextMate grammar is absent");
+  const fixtures = path.join(extension, "test", "fixtures", "grammar");
+  const source = fs.readFileSync(path.join(fixtures, "source.txt"), "utf8");
+  const expectations = JSON.parse(fs.readFileSync(
+    path.join(fixtures, "scopes.json"), "utf8"
+  ));
+  const checked = new Set([
+    "entity.name.type.go",
+    "keyword.operator.address.go",
+    "keyword.operator.arithmetic.go",
+    "storage.modifier.non-nil.tgo",
+    "variable.parameter.go"
+  ]);
+  const lines = tokenizeGrammar(grammar, source);
+  for (const expectation of expectations) {
+    if (!checked.has(expectation.has)) {
+      continue;
+    }
+    assertGrammarScope(
+      lines, expectation.line, expectation.token, expectation.has, true
+    );
+    if (expectation.not) {
+      assertGrammarScope(
+        lines, expectation.line, expectation.token, expectation.not, false
+      );
+    }
+  }
+}
+
+function tokenizeGrammar(grammar, source) {
+  let ruleStack = textmate.INITIAL;
+  return source.split("\n").map((text) => {
+    const result = grammar.tokenizeLine(text, ruleStack);
+    ruleStack = result.ruleStack;
+    return { text, tokens: result.tokens };
+  });
+}
+
+function assertGrammarScope(lines, lineText, text, scope, present) {
+  const line = lines.find((item) => item.text.includes(lineText));
+  assert.ok(line, `missing grammar line ${lineText}`);
+  const offset = line.text.indexOf(text);
+  assert.notEqual(offset, -1, `missing grammar token ${text}`);
+  const value = line.tokens.find(
+    (item) => item.startIndex <= offset && offset < item.endIndex
+  );
+  assert.ok(value, `missing grammar scopes for ${text}`);
+  assert.equal(
+    value.scopes.includes(scope),
+    present,
+    `${text} scopes ${value.scopes.join(", ")}`
+  );
 }
 
 async function checkRepositoryHovers() {
