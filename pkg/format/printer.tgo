@@ -296,6 +296,14 @@ func (p *printer) commentAt(position token.Pos) *sourceComment {
 
 func (p *printer) beforeComments(position token.Pos, tight bool) {
 	wroteComment := false
+	preserveSpace := false
+	data := p.output.Bytes()
+	file := p.files.File(position)
+	if len(data) > 0 && file != nil {
+		offset := file.Offset(position)
+		preserveSpace = (data[len(data)-1] == ' ' || data[len(data)-1] == '\t') &&
+			0 <= offset && offset < len(p.source) && p.source[offset] == '}'
+	}
 	for p.comment < len(p.comments) && p.comments[p.comment].start < position {
 		wroteComment = true
 		item := p.comments[p.comment]
@@ -331,7 +339,11 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		}
 		p.indent = previousIndent
 		stop := p.position(item.stop)
-		next := p.position(position)
+		nextPosition := position
+		if p.comment < len(p.comments) && p.comments[p.comment].start < position {
+			nextPosition = p.comments[p.comment].start
+		}
+		next := p.position(nextPosition)
 		if strings.HasPrefix(item.text, "//") || !next.IsValid() || stop.Line != next.Line {
 			p.newline()
 		} else if !tight {
@@ -340,6 +352,9 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		p.lastSource = item.stop
 	}
 	if wroteComment {
+		if preserveSpace && !p.lineStart {
+			p.space()
+		}
 		if p.sourceBlankBetween(p.lastSource, position) {
 			p.blankline()
 		}
@@ -456,7 +471,43 @@ func (p *printer) trailingLine(position token.Pos) {
 		} else if p.commentColumn > 0 {
 			p.padTo(p.commentColumn)
 		}
+		end := comment.stop
+		for index := p.comment + 1; index < len(p.comments); index++ {
+			next := p.comments[index]
+			if strings.HasPrefix(p.comments[index-1].text, "//") ||
+				p.position(next.start).Line != line ||
+				!p.sourceWhitespaceBetween(end, next.start) {
+				break
+			}
+			end = next.stop
+		}
+		p.before(end + 1)
+	}
+}
+
+func (p *printer) sourceWhitespaceBetween(stop token.Pos, start token.Pos) bool {
+	file := p.files.File(stop)
+	if file == nil || p.files.File(start) != file {
+		return false
+	}
+	left := file.Offset(stop)
+	right := file.Offset(start)
+	return 0 <= left && left <= right && right <= len(p.source) &&
+		strings.TrimSpace(string(p.source[left:right])) == ""
+}
+
+func (p *printer) trailingContinuationComments(position token.Pos) {
+	line := p.position(position).Line
+	for p.comment < len(p.comments) {
+		comment := p.comments[p.comment]
+		if p.position(comment.start).Line != line+1 ||
+			p.sourceIndent(comment.start) < p.indent ||
+			p.sourceBlankBetween(position, comment.start) {
+			return
+		}
 		p.before(comment.stop + 1)
+		position = comment.stop
+		line = p.position(position).Line
 	}
 }
 

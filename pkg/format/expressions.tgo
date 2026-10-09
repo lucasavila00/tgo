@@ -93,7 +93,7 @@ func (p *printer) expressionAt(
 	case syntax.ExpressionTagStar:
 		item := expressionValue.StarPayload().Value
 		p.token(item.Star, "*")
-		p.expressionAt(item.Expression, token.UnaryPrec, depth)
+		p.expression(item.Expression, token.UnaryPrec)
 	case syntax.ExpressionTagNonNilPointer:
 		item := expressionValue.NonNilPointerPayload().Value
 		p.token(item.Percent, "%")

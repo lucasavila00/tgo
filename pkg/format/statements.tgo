@@ -25,6 +25,10 @@ func (p *printer) statement(value *syntax.Statement) {
 		p.text(item.Label.Name)
 		p.lastSource = item.Label.Start
 		p.token(item.Colon, ":")
+		previousCommentColumns := p.commentColumns
+		p.commentColumns = nil
+		p.trailingToken(item.Colon, 1)
+		p.commentColumns = previousCommentColumns
 		p.indent++
 		gap := p.sourceGap(item.Colon, syntax.StatementPosition(item.Statement))
 		p.newline()
