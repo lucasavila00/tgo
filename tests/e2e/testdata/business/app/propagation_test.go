@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"testing"
 )
@@ -249,5 +250,28 @@ func TestPropagationUsesGoTypedNilRule(t *testing.T) {
 	var typed *propagationTypedError
 	if !errors.As(err, &typed) {
 		t.Fatalf("typed cause=%v", err)
+	}
+}
+
+func TestPropagationGeneratedGoUsesDirectNames(t *testing.T) {
+	data, err := os.ReadFile("propagation_tgo.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	for _, required := range []string{
+		"value, err := propagationLoad(events, found)",
+		`return 0, fmt.Errorf("propagationLoad: %w", err)`,
+		"var name, value, err = propagationPair(found)",
+		"var zero T",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("generated Go lacks %q", required)
+		}
+	}
+	for _, oldName := range []string{"__tgo_value", "__tgo_error", "__tgo_zero"} {
+		if strings.Contains(text, oldName) {
+			t.Fatalf("generated Go contains old local name %q", oldName)
+		}
 	}
 }

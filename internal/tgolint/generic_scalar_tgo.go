@@ -28,7 +28,7 @@ type scalarValue struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v scalarValue) TgoTag() uint8 { return v.tgoTag }
 
-// scalarValueBoolean holds the variant fields. Supply every field.
+// scalarValueBoolean is the Boolean payload.
 type scalarValueBoolean struct {
 	Value bool
 }
@@ -39,12 +39,10 @@ func NewscalarValueBoolean(value scalarValueBoolean) scalarValue {
 	return scalarValue{tgoTag: 1, tgoBoolean: value}
 }
 
-// TgoBoolean requires Boolean. No tag check.
-func (v scalarValue) TgoBoolean() scalarValueBoolean {
-	return v.tgoBoolean
-}
+// TgoBoolean returns the Boolean payload. Check TgoTag first.
+func (v scalarValue) TgoBoolean() scalarValueBoolean { return v.tgoBoolean }
 
-// scalarValueInteger holds the variant fields. Supply every field.
+// scalarValueInteger is the Integer payload.
 type scalarValueInteger struct {
 	Value int64
 }
@@ -55,12 +53,10 @@ func NewscalarValueInteger(value scalarValueInteger) scalarValue {
 	return scalarValue{tgoTag: 2, tgoInteger: value}
 }
 
-// TgoInteger requires Integer. No tag check.
-func (v scalarValue) TgoInteger() scalarValueInteger {
-	return v.tgoInteger
-}
+// TgoInteger returns the Integer payload. Check TgoTag first.
+func (v scalarValue) TgoInteger() scalarValueInteger { return v.tgoInteger }
 
-// scalarValueBooleanParameter holds the variant fields. Supply every field.
+// scalarValueBooleanParameter is the BooleanParameter payload.
 type scalarValueBooleanParameter struct {
 	Index   int
 	Negated bool
@@ -72,12 +68,10 @@ func NewscalarValueBooleanParameter(value scalarValueBooleanParameter) scalarVal
 	return scalarValue{tgoTag: 3, tgoBooleanParameter: value}
 }
 
-// TgoBooleanParameter requires BooleanParameter. No tag check.
-func (v scalarValue) TgoBooleanParameter() scalarValueBooleanParameter {
-	return v.tgoBooleanParameter
-}
+// TgoBooleanParameter returns the BooleanParameter payload. Check TgoTag first.
+func (v scalarValue) TgoBooleanParameter() scalarValueBooleanParameter { return v.tgoBooleanParameter }
 
-// scalarValueIntegerParameter holds the variant fields. Supply every field.
+// scalarValueIntegerParameter is the IntegerParameter payload.
 type scalarValueIntegerParameter struct {
 	Index int
 }
@@ -88,10 +82,9 @@ func NewscalarValueIntegerParameter(value scalarValueIntegerParameter) scalarVal
 	return scalarValue{tgoTag: 4, tgoIntegerParameter: value}
 }
 
-// TgoIntegerParameter requires IntegerParameter. No tag check.
-func (v scalarValue) TgoIntegerParameter() scalarValueIntegerParameter {
-	return v.tgoIntegerParameter
-}
+// TgoIntegerParameter returns the IntegerParameter payload. Check TgoTag first.
+func (v scalarValue) TgoIntegerParameter() scalarValueIntegerParameter { return v.tgoIntegerParameter }
+
 func (v scalarValue) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -118,6 +111,7 @@ func (v scalarValue) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid scalarValue JSON tag")
 	}
 }
+
 func (v *scalarValue) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

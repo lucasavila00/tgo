@@ -13,6 +13,7 @@ type propagationFunction struct {
 	body       *ast.BlockStmt
 	resultAST  []ast.Expr
 	resultType *types.Tuple
+	names      map[string]bool
 }
 
 type propagationLowerer struct {
@@ -21,6 +22,7 @@ type propagationLowerer struct {
 	function propagationFunction
 	fmtAlias string
 	gotos    map[string]bool
+	names    map[string]bool
 }
 
 // lowerPropagations lowers postfix errors and comprehensions into direct control flow.
@@ -30,7 +32,7 @@ func (p *packageUnit) lowerPropagations() {
 		for _, function := range functions {
 			lowerer := &propagationLowerer{
 				unit: p, source: source, function: function, fmtAlias: "",
-				gotos: functionGotoLabels(function.body),
+				gotos: functionGotoLabels(function.body), names: function.names,
 			}
 			function.body.List = lowerer.statements(function.body.List)
 		}
@@ -90,6 +92,7 @@ func appendLoweringFunction(
 		body:       body,
 		resultAST:  flattenedResultTypes(typeNode.Results),
 		resultType: signature.Results(),
+		names:      functionNames(body, signature),
 	})
 }
 
@@ -180,25 +183,27 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		}
 		condition, prefix := l.expression(node.Cond)
 		node.Cond = condition
+		scopedInitializer := node.Init != nil
 		if len(prefix) > 0 || l.statementHasLowering(node.Init) {
 			prefix = append(l.simpleStatement(node.Init), prefix...)
 			node.Init = nil
 		}
-		return wrapStatement(prefix, node)
+		return l.prefixedStatement(prefix, node, scopedInitializer)
 	case *ast.RangeStmt:
 		node.Body.List = l.statements(node.Body.List)
 		value, prefix := l.expression(node.X)
 		node.X = value
-		return wrapStatement(prefix, node)
+		return l.prefixedStatement(prefix, node, false)
 	case *ast.SwitchStmt:
 		l.caseBodies(node.Body)
 		value, prefix := l.optionalExpression(node.Tag)
 		node.Tag = value
+		scopedInitializer := node.Init != nil
 		if len(prefix) > 0 || l.statementHasLowering(node.Init) {
 			prefix = append(l.simpleStatement(node.Init), prefix...)
 			node.Init = nil
 		}
-		return wrapStatement(prefix, node)
+		return l.prefixedStatement(prefix, node, scopedInitializer)
 	case *ast.TypeSwitchStmt:
 		l.caseBodies(node.Body)
 		l.rejectStatement(node.Init, "type switch initializer")
@@ -278,10 +283,10 @@ func (l *propagationLowerer) labeledStatement(node *ast.LabeledStmt) []ast.Stmt 
 			Colon: node.Colon,
 			Stmt:  block.List[last],
 		}
-		return []ast.Stmt{block}
+		return block.List
 	}
 
-	controlLabel := l.unit.freshIdentifier("__tgo_control")
+	controlLabel := l.freshName("control", "tgoControl").Name
 	if !rewriteControlBranches(block.List[last], node.Label.Name, controlLabel) {
 		node.Stmt = block
 		return []ast.Stmt{node}
@@ -319,6 +324,9 @@ func rewriteControlBranches(node ast.Node, oldLabel string, newLabel string) boo
 func (l *propagationLowerer) assignment(node *ast.AssignStmt) []ast.Stmt {
 	if !l.assignmentHasLowering(node) {
 		return []ast.Stmt{node}
+	}
+	if statements, fused := l.directShortAssignment(node); fused {
+		return statements
 	}
 	left, prefix := l.assignmentTargets(node.Lhs)
 	node.Lhs = left
@@ -482,6 +490,9 @@ func (l *propagationLowerer) declaration(node *ast.DeclStmt) []ast.Stmt {
 	if !ok {
 		return []ast.Stmt{node}
 	}
+	if statements, fused := l.directVariableDeclaration(node, general); fused {
+		return statements
+	}
 	prefix := []ast.Stmt(nil)
 	for _, item := range general.Specs {
 		value, ok := item.(*ast.ValueSpec)
@@ -566,11 +577,19 @@ func oneStatement(statements []ast.Stmt) ast.Stmt {
 	return &ast.BlockStmt{List: statements}
 }
 
-func wrapStatement(prefix []ast.Stmt, statement ast.Stmt) []ast.Stmt {
+// prefixedStatement adds a block only when source scope or goto rules need it.
+func (l *propagationLowerer) prefixedStatement(
+	prefix []ast.Stmt,
+	statement ast.Stmt,
+	scopedInitializer bool,
+) []ast.Stmt {
 	if len(prefix) == 0 {
 		return []ast.Stmt{statement}
 	}
 	prefix = append(prefix, statement)
+	if !scopedInitializer && len(l.gotos) == 0 {
+		return prefix
+	}
 	return []ast.Stmt{&ast.BlockStmt{List: prefix}}
 }
 
@@ -711,17 +730,13 @@ func (l *propagationLowerer) indexedOperand(
 // shortCircuit keeps conditional right-side evaluation around propagation branches.
 func (l *propagationLowerer) shortCircuit(node *ast.BinaryExpr) (ast.Expr, []ast.Stmt) {
 	left, prefix := l.expression(node.X)
-	leftName := ast.NewIdent(l.unit.freshIdentifier("__tgo_left"))
-	prefix = append(prefix, &ast.AssignStmt{
-		Lhs: []ast.Expr{leftName}, Tok: token.DEFINE, Rhs: []ast.Expr{left},
-	})
 	defaultValue := "false"
-	condition := ast.Expr(leftName)
+	condition := left
 	if node.Op == token.LOR {
 		defaultValue = "true"
-		condition = &ast.UnaryExpr{Op: token.NOT, X: leftName}
+		condition = &ast.UnaryExpr{Op: token.NOT, X: left}
 	}
-	resultName := ast.NewIdent(l.unit.freshIdentifier("__tgo_condition"))
+	resultName := l.freshName("condition", "tgoCondition")
 	prefix = append(prefix, &ast.AssignStmt{
 		Lhs: []ast.Expr{resultName},
 		Tok: token.DEFINE,
@@ -803,11 +818,11 @@ func (l *propagationLowerer) propagation(
 	values := make([]ast.Expr, 0, signature.Results().Len()-1)
 	left := make([]ast.Expr, 0, signature.Results().Len())
 	for range signature.Results().Len() - 1 {
-		name := ast.NewIdent(l.unit.freshIdentifier("__tgo_value"))
+		name := l.freshName("result", "tgoResult")
 		values = append(values, name)
 		left = append(left, name)
 	}
-	errorName := ast.NewIdent(l.unit.freshIdentifier("__tgo_error"))
+	errorName := l.freshName("err", "tgoErr")
 	left = append(left, errorName)
 	assignment := &ast.AssignStmt{Lhs: left, Tok: token.DEFINE, Rhs: []ast.Expr{call}}
 	prefix = append(prefix, assignment, l.errorBranch(metadata, errorName))
@@ -835,10 +850,22 @@ func (l *propagationLowerer) errorBranch(
 	metadata propagationSource,
 	errorName *ast.Ident,
 ) ast.Stmt {
-	zeroNames := make([]ast.Expr, 0, len(l.function.resultAST)-1)
+	zeroValues := make([]ast.Expr, 0, len(l.function.resultAST)-1)
 	body := make([]ast.Stmt, 0, len(l.function.resultAST))
-	for _, resultType := range l.function.resultAST[:len(l.function.resultAST)-1] {
-		name := ast.NewIdent(l.unit.freshIdentifier("__tgo_zero"))
+	for index, resultType := range l.function.resultAST[:len(l.function.resultAST)-1] {
+		valueType := l.function.resultType.At(index).Type()
+		if value, ok := l.zeroExpression(
+			valueType,
+			resultType,
+			metadata.Bang,
+		); ok {
+			zeroValues = append(zeroValues, value)
+			continue
+		}
+		name := l.freshName("zero", "tgoZero")
+		if parameter, ok := types.Unalias(valueType).(*types.TypeParam); ok {
+			resultType = ast.NewIdent(parameter.Obj().Name())
+		}
 		specification := &ast.ValueSpec{Names: []*ast.Ident{name}, Type: resultType}
 		l.unit.generatedValues[specification] = true
 		declaration := &ast.DeclStmt{Decl: &ast.GenDecl{
@@ -846,7 +873,7 @@ func (l *propagationLowerer) errorBranch(
 			Specs: []ast.Spec{specification},
 		}}
 		body = append(body, declaration)
-		zeroNames = append(zeroNames, name)
+		zeroValues = append(zeroValues, name)
 	}
 	formatError := l.unit.generatedObject(
 		l.formatQualifier(), "fmt", "Errorf", metadata.Bang,
@@ -855,8 +882,8 @@ func (l *propagationLowerer) errorBranch(
 		&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(metadata.Name + ": %w")},
 		errorName,
 	)
-	results := make([]ast.Expr, 0, len(zeroNames)+1)
-	results = append(results, zeroNames...)
+	results := make([]ast.Expr, 0, len(zeroValues)+1)
+	results = append(results, zeroValues...)
 	results = append(results, wrapped)
 	body = append(body, &ast.ReturnStmt{Results: results})
 	return &ast.IfStmt{
@@ -901,7 +928,7 @@ func (l *propagationLowerer) materialize(expression ast.Expr) (ast.Expr, []ast.S
 	if expression == nil || !l.canMaterialize(expression) {
 		return expression, nil
 	}
-	name := ast.NewIdent(l.unit.freshIdentifier("__tgo_operand"))
+	name := l.freshName("operand", "tgoOperand")
 	statement := &ast.AssignStmt{
 		Lhs: []ast.Expr{name}, Tok: token.DEFINE, Rhs: []ast.Expr{expression},
 	}

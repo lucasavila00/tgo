@@ -31,7 +31,7 @@ type ComprehensionClause struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v ComprehensionClause) TgoTag() uint8 { return v.tgoTag }
 
-// ComprehensionClauseRange holds the variant fields. Supply every field.
+// ComprehensionClauseRange is the Range payload.
 type ComprehensionClauseRange struct {
 	Value *ComprehensionRangeClause
 }
@@ -42,12 +42,10 @@ func NewComprehensionClauseRange(value ComprehensionClauseRange) ComprehensionCl
 	return ComprehensionClause{tgoTag: 1, tgoRange: value}
 }
 
-// TgoRange requires Range. No tag check.
-func (v ComprehensionClause) TgoRange() ComprehensionClauseRange {
-	return v.tgoRange
-}
+// TgoRange returns the Range payload. Check TgoTag first.
+func (v ComprehensionClause) TgoRange() ComprehensionClauseRange { return v.tgoRange }
 
-// ComprehensionClauseFilter holds the variant fields. Supply every field.
+// ComprehensionClauseFilter is the Filter payload.
 type ComprehensionClauseFilter struct {
 	Value *ComprehensionFilterClause
 }
@@ -58,10 +56,9 @@ func NewComprehensionClauseFilter(value ComprehensionClauseFilter) Comprehension
 	return ComprehensionClause{tgoTag: 2, tgoFilter: value}
 }
 
-// TgoFilter requires Filter. No tag check.
-func (v ComprehensionClause) TgoFilter() ComprehensionClauseFilter {
-	return v.tgoFilter
-}
+// TgoFilter returns the Filter payload. Check TgoTag first.
+func (v ComprehensionClause) TgoFilter() ComprehensionClauseFilter { return v.tgoFilter }
+
 func (v ComprehensionClause) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -78,6 +75,7 @@ func (v ComprehensionClause) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid ComprehensionClause JSON tag")
 	}
 }
+
 func (v *ComprehensionClause) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

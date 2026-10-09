@@ -26,9 +26,8 @@ type nilValue struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v nilValue) TgoTag() uint8 { return v.tgoTag }
 
-// nilValueUnknown holds the variant fields. Supply every field.
-type nilValueUnknown struct {
-}
+// nilValueUnknown is the Unknown payload.
+type nilValueUnknown struct{}
 
 // NewnilValueUnknown constructs nilValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -36,14 +35,11 @@ func NewnilValueUnknown(_ nilValueUnknown) nilValue {
 	return nilValue{tgoTag: 1}
 }
 
-// TgoUnknown requires Unknown. No tag check.
-func (v nilValue) TgoUnknown() nilValueUnknown {
-	return nilValueUnknown{}
-}
+// TgoUnknown returns the Unknown payload. Check TgoTag first.
+func (nilValue) TgoUnknown() nilValueUnknown { return nilValueUnknown{} }
 
-// nilValueNonNil holds the variant fields. Supply every field.
-type nilValueNonNil struct {
-}
+// nilValueNonNil is the NonNil payload.
+type nilValueNonNil struct{}
 
 // NewnilValueNonNil constructs nilValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -51,14 +47,11 @@ func NewnilValueNonNil(_ nilValueNonNil) nilValue {
 	return nilValue{tgoTag: 2}
 }
 
-// TgoNonNil requires NonNil. No tag check.
-func (v nilValue) TgoNonNil() nilValueNonNil {
-	return nilValueNonNil{}
-}
+// TgoNonNil returns the NonNil payload. Check TgoTag first.
+func (nilValue) TgoNonNil() nilValueNonNil { return nilValueNonNil{} }
 
-// nilValueNil holds the variant fields. Supply every field.
-type nilValueNil struct {
-}
+// nilValueNil is the Nil payload.
+type nilValueNil struct{}
 
 // NewnilValueNil constructs nilValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -66,10 +59,9 @@ func NewnilValueNil(_ nilValueNil) nilValue {
 	return nilValue{tgoTag: 3}
 }
 
-// TgoNil requires Nil. No tag check.
-func (v nilValue) TgoNil() nilValueNil {
-	return nilValueNil{}
-}
+// TgoNil returns the Nil payload. Check TgoTag first.
+func (nilValue) TgoNil() nilValueNil { return nilValueNil{} }
+
 func (v nilValue) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -91,6 +83,7 @@ func (v nilValue) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid nilValue JSON tag")
 	}
 }
+
 func (v *nilValue) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

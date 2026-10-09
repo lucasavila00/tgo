@@ -121,6 +121,7 @@ func jsonString(value string) string {
 func enumJSONGo(declaration *model, jsonPackage, fmtPackage string) string {
 	var out strings.Builder
 	emitEnumJSONMarshal(&out, declaration, jsonPackage, fmtPackage)
+	out.WriteByte('\n')
 	emitEnumJSONUnmarshal(&out, declaration, jsonPackage, fmtPackage)
 	return out.String()
 }

@@ -464,13 +464,10 @@ func (p *sourceParser) enumDeclaration(
 	keyword int,
 	open int,
 ) (*rawDecl, int, error) {
-	__tgo_value, __tgo_error := p.closeToken(open)
-	if __tgo_error != nil {
-		var __tgo_zero *rawDecl
-		var __tgo_zero_1 int
-		return __tgo_zero, __tgo_zero_1, fmt.Errorf("p.closeToken: %w", __tgo_error)
+	closing, err := p.closeToken(open)
+	if err != nil {
+		return nil, 0, fmt.Errorf("p.closeToken: %w", err)
 	}
-	closing := __tgo_value
 	declaration := new(rawDecl)
 	declaration.kind = "enum"
 	declaration.start = p.tokens[start].start
@@ -495,14 +492,10 @@ func (p *sourceParser) enumDeclaration(
 			cursor++
 			continue
 		}
-		__tgo_value_1, __tgo_value_2, __tgo_error_1 := p.variant(cursor, closing)
-		if __tgo_error_1 != nil {
-			var __tgo_zero_2 *rawDecl
-			var __tgo_zero_3 int
-			return __tgo_zero_2, __tgo_zero_3, fmt.Errorf("p.variant: %w", __tgo_error_1)
+		variant, next, tgoErr := p.variant(cursor, closing)
+		if tgoErr != nil {
+			return nil, 0, fmt.Errorf("p.variant: %w", tgoErr)
 		}
-
-		variant, next := __tgo_value_1, __tgo_value_2
 		name := p.tokens[variant.name].text
 		if names[name] {
 			return nil, 0, p.tokenError(variant.name, "duplicate variant %s", name)

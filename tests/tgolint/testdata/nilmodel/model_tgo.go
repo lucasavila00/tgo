@@ -37,7 +37,7 @@ type Syntax struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v Syntax) TgoTag() uint8 { return v.tgoTag }
 
-// SyntaxItem holds the variant fields. Supply every field.
+// SyntaxItem is the Item payload.
 type SyntaxItem struct {
 	Value *Item
 }
@@ -48,10 +48,9 @@ func NewSyntaxItem(value SyntaxItem) Syntax {
 	return Syntax{tgoTag: 1, tgoItem: value}
 }
 
-// TgoItem requires Item. No tag check.
-func (v Syntax) TgoItem() SyntaxItem {
-	return v.tgoItem
-}
+// TgoItem returns the Item payload. Check TgoTag first.
+func (v Syntax) TgoItem() SyntaxItem { return v.tgoItem }
+
 func (v Syntax) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -63,6 +62,7 @@ func (v Syntax) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid Syntax JSON tag")
 	}
 }
+
 func (v *Syntax) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
