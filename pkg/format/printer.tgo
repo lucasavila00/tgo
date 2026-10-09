@@ -67,16 +67,18 @@ func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer
 		}
 	}
 	return &printer{
-		files:      files,
-		file:       file,
-		source:     source,
-		output:     *new(bytes.Buffer),
-		comments:   comments,
-		comment:    0,
-		indent:     0,
-		lineStart:  true,
-		lineBreaks: 0,
-		lastSource: token.NoPos,
+		files:              files,
+		file:               file,
+		source:             source,
+		output:             *new(bytes.Buffer),
+		comments:           comments,
+		comment:            0,
+		indent:             0,
+		lineStart:          true,
+		lineBreaks:         0,
+		lastSource:         token.NoPos,
+		commentColumn:      0,
+		functionBodyColumn: 0,
 	}
 }
 
