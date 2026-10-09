@@ -97,3 +97,12 @@ checks for data or boundaries that the user declared trusted.
 Do not run the full CI suite locally. Push the branch and use GitHub Actions
 for full validation. Run focused local tests only to validate the changed area
 or debug a CI failure.
+
+## 10. Do Not Post Comments Without a Request
+
+Do not create a GitHub issue comment, pull request comment, review comment, or
+discussion reply unless the user explicitly asks for that comment. Do not post
+comments under the user's identity on your own initiative.
+
+This rule does not prevent the creation or update of an issue body or pull
+request body when the user requests that issue or pull request.
