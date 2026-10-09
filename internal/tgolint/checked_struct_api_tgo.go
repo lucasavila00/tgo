@@ -8,13 +8,19 @@ import (
 
 func validCheckedCarrier(typ types.Type, fields []sourceField) bool {
 	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil { return false }
+	if !ok || named.Obj().Pkg() == nil {
+		return false
+	}
 	object, ok := named.Obj().Pkg().Scope().Lookup(
 		"Tgo" + named.Obj().Name() + "Input",
 	).(*types.TypeName)
-	if !ok { return false }
+	if !ok {
+		return false
+	}
 	carrier, ok := types.Unalias(object.Type()).(*types.Named)
-	if !ok { return false }
+	if !ok {
+		return false
+	}
 	staging, ok := carrier.Underlying().(*types.Struct)
 	value, valueOK := named.Underlying().(*types.Struct)
 	if !ok || !valueOK || staging.NumFields() != value.NumFields() ||
