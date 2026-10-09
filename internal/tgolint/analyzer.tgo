@@ -138,15 +138,18 @@ func run(pass *analysis.Pass) (any, error) {
 			return true
 		})
 		syntax.Inspect(file, func(node *syntax.Node) bool {
-			expression, expressionOK := syntax.ExpressionOf(node)
-			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
-				c.checkRepresentationAccess(expression)
-			}
 			if statement, ok := syntax.StatementOf(node); ok {
 				tagSwitch := syntax.SwitchStatementOf(statement)
 				if tagSwitch != nil {
 					c.checkTagSwitch(file, statement, tagSwitch)
 				}
+			}
+			return true
+		})
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			expression, expressionOK := syntax.ExpressionOf(node)
+			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
+				c.checkRepresentationAccess(expression)
 			}
 			c.checkNode(node)
 			return true
