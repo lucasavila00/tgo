@@ -15,6 +15,11 @@
   },
   {
     "method": "definition",
+    "position": {"file": "active_windows.tgo", "text": "Active", "occurrence": 1},
+    "locations": []
+  },
+  {
+    "method": "definition",
     "position": {"file": "main.tgo", "text": "Before()", "occurrence": 2},
     "locations": [
       {"file": "main.tgo", "text": "Before", "occurrence": 1}

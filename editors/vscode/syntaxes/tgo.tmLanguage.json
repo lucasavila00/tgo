@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "TGo",
+  "scopeName": "source.tgo",
+  "patterns": [
+    {
+      "include": "#tgo"
+    },
+    {
+      "include": "source.go"
+    }
+  ],
+  "repository": {
+    "tgo": {
+      "patterns": [
+        {
+          "name": "keyword.declaration.enum.tgo",
+          "match": "\\benum\\b"
+        },
+        {
+          "name": "keyword.control.where.tgo",
+          "match": "\\bwhere\\b"
+        },
+        {
+          "name": "keyword.control.exhaustive.tgo",
+          "match": "\\bexhaustive(?=\\s*:)"
+        },
+        {
+          "name": "keyword.other.default.tgo",
+          "match": "(?<=\\.\\.\\.)default\\b"
+        },
+        {
+          "name": "keyword.operator.propagation.tgo",
+          "match": "!!?(?!=)"
+        },
+        {
+          "name": "storage.modifier.non-nil.tgo",
+          "match": "%(?=[A-Za-z_(\\[])"
+        },
+        {
+          "name": "keyword.control.comprehension.tgo",
+          "match": "\\b(for|if|range)\\b(?=[^}]*})"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "name": "tgo-navigation",
+  "displayName": "TGo Navigation",
+  "publisher": "tgo",
+  "description": "Read and navigate TGo source.",
+  "version": "0.1.0",
+  "private": true,
+  "extensionKind": [
+    "workspace"
+  ],
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:tgo"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "tgo",
+        "aliases": [
+          "TGo",
+          "tgo"
+        ],
+        "extensions": [
+          ".tgo"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tgo",
+        "scopeName": "source.tgo",
+        "path": "./syntaxes/tgo.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "TGo Navigation",
+      "properties": {
+        "tgo.navigation.helperPath": {
+          "type": "string",
+          "default": "tgonav",
+          "scope": "resource",
+          "description": "Path to the tgonav helper."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/unit/*.test.js",
+    "test:integration": "node test/run-integration.js",
+    "test:all": "npm test && npm run test:integration"
+  },
+  "devDependencies": {
+    "@vscode/test-electron": "3.1.0"
+  }
+}
