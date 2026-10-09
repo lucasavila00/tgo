@@ -12,7 +12,10 @@ collection operations.
 Ignore `.tgo.lock`. Do not replace it with a link.
 Use Go build constraints and target suffixes on tgo files.
 For example, `store_linux.tgo` emits `store_tgo_linux.go`.
-Do not put tgo source in `_test.tgo`, hidden, `_`, `testdata`, or `vendor` paths.
+Write tests for a TGo package in `_test.tgo` files. The compiler emits
+`_tgo_test.go` files for the Go tool. Keep tests for a Go package in
+`_test.go` files. Do not put TGo source in hidden, `_`, `testdata`, or
+`vendor` paths.
 
 ## Sum types
 
@@ -62,7 +65,8 @@ func (value Quantity) check() (Quantity, error) {
 Each literal returns `(Quantity, error)`. Use postfix `!` when the surrounding function returns an
 error. The same literal form works from another TGo package. The compiler generates a fallible
 `NewQuantity` ABI for Go callers, but TGo source cannot call it. It generates no field accessor.
-On failure, the zero value is invalid.
+TGo permits package-local field reads, but it rejects field changes and address-taking after
+construction. On failure, the zero value is invalid.
 
 ## Error propagation
 
@@ -147,9 +151,9 @@ Map `clear` removes entries and is allowed. Native `copy` keeps Go overlap behav
 
 ## Go callers and tests
 
-Go calls use the original Go types. Constructors and reads do not run boundary validation.
-Keep named Go types, callbacks, interfaces, channels, pointers, variadic calls, generic calls,
-and typed nil behavior.
+Go calls use the original Go types. A checked-struct constructor runs `check`. Reads and other Go
+calls do not add boundary validation. Keep named Go types, callbacks, interfaces, channels,
+pointers, variadic calls, generic calls, and typed nil behavior.
 
 ```go
 quantity, err := model.NewQuantity(3)

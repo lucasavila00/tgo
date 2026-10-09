@@ -9,8 +9,11 @@ A tgo source file ends in `.tgo`. It starts with a Go package clause.
 Imports, declarations, statements, expressions, and types use Go syntax.
 
 A package may contain `.tgo` and `.go` files. The compiler checks both.
-It does not compile `_test.tgo` or `_test.go` files.
-The Go tool compiles Go tests after tgo emits Go.
+A TGo package writes tests in `_test.tgo` files. The compiler checks internal
+tests with the package and external tests as the normal `package_name_test`
+package. A Go package keeps `_test.go` files. The Go tool compiles generated
+tests after TGo emits Go. An active `_test.tgo` file needs an active non-test
+TGo source file in the same package.
 
 Go build constraints and target suffixes select tgo source files.
 An excluded source file is not parsed. It does not add declarations to its package.
@@ -23,6 +26,8 @@ Target suffixes stay at the end of the Go name:
 ```text
 name_linux.tgo       -> name_tgo_linux.go
 name_linux_amd64.tgo -> name_tgo_linux_amd64.go
+name_test.tgo        -> name_tgo_test.go
+name_linux_test.tgo  -> name_tgo_linux_test.go
 ```
 
 This lets the Go tool select the same target files.
@@ -487,19 +492,25 @@ cross-package field access remains invalid. Each explicit field expression runs 
 order. Selected defaults run once in field order. The `!` and `!!` operators keep their normal
 error behavior.
 
-The declaring package generates a fallible `NewPort` function for Go callers. The compiler lowers
-each checked literal to this ABI. The generated function builds the raw value and calls `check`
-exactly once. TGo source cannot call `NewPort`, and navigation does not expose it as TGo API.
+The declaring package generates a fallible `NewPort` function for Go callers. In general, a
+checked type `T` reserves `NewT`. Its parameters follow field declaration order. The compiler
+lowers each validated checked literal to this ABI. The generated function builds the raw value
+and calls `check` exactly once. TGo source cannot refer to `NewT`, and navigation does not expose
+it as TGo API.
+
+A keyed literal lowers through a reserved `TgoTInput` carrier. Its exported staging fields preserve
+contextual typing and source evaluation order across a package boundary. This carrier is compiler
+output, not TGo API. TGo source cannot refer to it, and navigation hides it.
 
 A raw literal is permitted only inside its own `check` method and the generated constructor. The
 method can normalize its local raw value. This trusted exception also lets a failed check return
 the invalid zero value with a non-nil error.
 
 The zero value is invalid. A checked struct can contain another checked struct. Code in the same
-package can read its private fields. TGo rejects direct field writes and address-taking after
-construction, including in the declaring package. It permits normal value copies. Reference fields
-keep normal Go aliases, so this rule does not provide deep immutability. No field accessor or setter
-is generated.
+package can read its private fields. TGo rejects assignment, increment, decrement, range assignment,
+and address-taking through a checked field after construction, including in the declaring package.
+It permits normal value copies. Reference fields keep normal Go aliases, so this rule does not
+provide deep immutability. No field accessor or setter is generated.
 
 Handwritten Go can call the generated constructor. `tgolint` reports direct Go literals, field
 writes, discarded constructor errors, and the same invalid-zero uses that it reports for enums and

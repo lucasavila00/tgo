@@ -2,7 +2,8 @@
 
 Copy [these rules](../for-agents/AGENTS.md) into a TGo user repository's `AGENTS.md`.
 
-Write small business packages in `.tgo` files. Keep tests and other Go code in `.go` files.
+Write small business packages in `.tgo` files. Write their tests in
+`_test.tgo` files. Keep tests for Go packages in `_test.go` files.
 Use one Go module. Keep normal Go imports, package names, and tests.
 
 ## Build and check
@@ -27,7 +28,8 @@ Ignore `.tgo.lock`. It serializes builds in one module.
 Use Go build constraints and target suffixes on TGo files.
 For example, `store_linux.tgo` emits `store_tgo_linux.go`.
 The compiler keeps outputs for other targets when it builds the current target.
-It ignores `_test.tgo`, hidden, `_`, `testdata`, and `vendor` paths.
+It compiles `_test.tgo` to `_tgo_test.go`, so the Go tool recognizes the
+generated test. It ignores hidden, `_`, `testdata`, and `vendor` paths.
 It stops at nested Go modules.
 
 ## Parse TGo source
@@ -74,8 +76,10 @@ Do not shadow generated payload, constructor, or default helper names at a const
 The value uses a tag and typed Go fields. Reads do not run validation.
 
 Each `Port` literal returns `(Port, error)`. Use postfix `!` to handle the error. All fields must be
-private, and `check` must have the exact value-receiver signature shown above. TGo does not
-generate a constructor or accessor.
+private, and `check` must have the exact value-receiver signature shown above. The same literal
+works across TGo packages. Go callers use the generated `NewPort` function. TGo source cannot call
+that function. The compiler does not generate a field accessor. TGo permits package-local field
+reads, but it rejects field changes and address-taking after construction.
 
 ## Supply initial values
 

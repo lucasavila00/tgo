@@ -1,0 +1,37 @@
+package checkedstruct
+
+import (
+	"errors"
+	"strings"
+	"testing"
+)
+
+func TestCheckedStructConstruction(t *testing.T) {
+	port, err := Port{number: 8080}
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	if Number(port) != 8080 {
+		t.Fatalf("Port literal = %d, %v", Number(port), err)
+	}
+	_, err = Port{number: 0}
+	if !errors.Is(err, ErrInvalidPort) {
+		t.Fatalf("Port literal error = %v", err)
+	}
+}
+
+func TestNestedCheckedStructConstruction(t *testing.T) {
+	port, err := ServicePortFromNumber(443)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	if ServiceNumber(port) != 443 {
+		t.Fatalf("NewServicePort = %d, %v", ServiceNumber(port), err)
+	}
+	_, err = ServicePortFromNumber(0)
+	if !errors.Is(err, ErrInvalidPort) || !strings.Contains(err.Error(), "Port: ") {
+		t.Fatalf("NewServicePort error = %v", err)
+	}
+}
