@@ -183,14 +183,6 @@ func KeyValueExpressionOf(value *Expression) *KeyValueExpression {
 	return value.KeyValuePayload().Value
 }
 
-// BasicLiteralExpressionOf returns a basic literal payload.
-func BasicLiteralExpressionOf(value *Expression) *BasicLiteral {
-	if value == nil || value.Tag() != ExpressionTagBasicLiteral {
-		return nil
-	}
-	return value.BasicLiteralPayload().Value
-}
-
 // FunctionLiteralExpressionOf returns a function literal payload.
 func FunctionLiteralExpressionOf(value *Expression) *FunctionLiteral {
 	if value == nil || value.Tag() != ExpressionTagFunctionLiteral {
