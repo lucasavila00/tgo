@@ -17,9 +17,9 @@ func (value PortValue) Validate() error {
 }
 ```
 
-A `newtype T struct` declaration creates the source payload name `TValue). It
+A `newtype T struct` declaration creates the source payload name `TValue`. It
 requires `func (TValue) Validate() error`. The fields are inputs. They are not
-fields of `T).
+fields of `T`.
 
 A checked literal has the static result type `(T, error)`:
 
@@ -55,8 +55,8 @@ func (port Port) Value() PortValue
 `PortValue{Number: number}.Port()`. The helper calls `Validate` once. On
 failure, it returns `Port{}` and the same error. On success, it stores the payload.
 
-The source and generated names follow one rule: `T`, `TValue), `NewT), and
-`TValue.T). Go callers can discover and use the same payload and constructor.
+The source and generated names follow one rule: `T`, `TValue`, `NewT`, and
+`TValue.T`. Go callers can discover and use the same payload and constructor.
 
 ## Value rules
 
@@ -81,7 +81,7 @@ newtype Range[T cmp.Ordered] struct {
 }
 ```
 
-This emits `RangeValue[T]), `Range[T]), and `NewRange[T]).
+This emits `RangeValue[T]`, `Range[T]`, and `NewRange[T]`.
 
 ## Chaining
 
