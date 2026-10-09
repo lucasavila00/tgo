@@ -12,8 +12,15 @@ test("extension contributes only read-only language features", () => {
   assert.equal(manifest.contributes.commands, undefined);
   assert.deepEqual(manifest.extensionKind, ["workspace"]);
   assert.equal(manifest.browser, undefined);
+  assert.equal(manifest.license, "UNLICENSED");
+  assert.match(manifest.scripts.package, /test -x bin\/tgonav/);
+  assert.match(manifest.scripts.package, /vsce package /);
   assert.equal(
     manifest.contributes.configuration.properties["tgo.navigation.helperPath"].scope,
     "resource"
+  );
+  assert.equal(
+    manifest.contributes.configuration.properties["tgo.navigation.helperPath"].default,
+    ""
   );
 });

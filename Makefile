@@ -35,7 +35,9 @@ tgo-size:
 	python3 scripts/check_tgo_size.py
 
 vscode-test:
-	cd editors/vscode && npm ci && xvfb-run -a npm run test:all
+	./vscode.sh --package-only
+	python3 editors/vscode/test/package.py editors/vscode/tgo-navigation.vsix
+	cd editors/vscode && xvfb-run -a npm run test:all
 
 generated:
 	python3 scripts/check_generated.py
