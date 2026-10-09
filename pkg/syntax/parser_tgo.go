@@ -329,18 +329,214 @@ type rawComprehension struct {
 	node    *frontComprehensionExpr
 }
 
+// rawComprehensionClause requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type rawComprehensionClauseTag uint8
+
+const (
+	rawComprehensionClauseTagRange rawComprehensionClauseTag = iota + 1
+	rawComprehensionClauseTagFilter
+)
+
 type rawComprehensionClause struct {
-	kind            string
-	start           int
-	end             int
-	keyword         int
-	bindings        []int
-	define          int
-	rangeToken      int
-	expressionStart int
-	expressionEnd   int
-	open            int
-	close           int
+	tgoTag     rawComprehensionClauseTag
+	tgoFilter  rawComprehensionClauseFilter
+	tgoPayload interface{}
+}
+
+// Tag returns the active tag.
+func (v rawComprehensionClause) Tag() rawComprehensionClauseTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v rawComprehensionClause) UnknownTag() string {
+	return __tgo_fmt.Sprintf("rawComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// rawComprehensionClauseRange is the Range payload.
+type rawComprehensionClauseRange struct {
+	start       int
+	end         int
+	forToken    int
+	bindings    []int
+	define      int
+	rangeToken  int
+	sourceStart int
+	sourceEnd   int
+	open        int
+	close       int
+}
+
+// rawComprehensionClause constructs rawComprehensionClause. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value rawComprehensionClauseRange) rawComprehensionClause() rawComprehensionClause {
+	return rawComprehensionClause{tgoTag: rawComprehensionClauseTagRange, tgoPayload: value}
+}
+
+// RangePayload requires Range. No tag check.
+func (v rawComprehensionClause) RangePayload() rawComprehensionClauseRange {
+	return v.tgoPayload.(rawComprehensionClauseRange)
+}
+
+// rawComprehensionClauseFilter is the Filter payload.
+type rawComprehensionClauseFilter struct {
+	start          int
+	end            int
+	ifToken        int
+	conditionStart int
+	conditionEnd   int
+	open           int
+	close          int
+}
+
+// rawComprehensionClause constructs rawComprehensionClause. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value rawComprehensionClauseFilter) rawComprehensionClause() rawComprehensionClause {
+	return rawComprehensionClause{tgoTag: rawComprehensionClauseTagFilter, tgoFilter: value}
+}
+
+// FilterPayload requires Filter. No tag check.
+func (v rawComprehensionClause) FilterPayload() rawComprehensionClauseFilter { return v.tgoFilter }
+
+func (v rawComprehensionClause) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case rawComprehensionClauseTagRange:
+		payload := v.RangePayload()
+		return __tgo_json.Marshal(struct {
+			Payload rawComprehensionClauseRange `json:"Range"`
+		}{Payload: payload})
+	case rawComprehensionClauseTagFilter:
+		payload := v.FilterPayload()
+		return __tgo_json.Marshal(struct {
+			Payload rawComprehensionClauseFilter `json:"Filter"`
+		}{Payload: payload})
+	default:
+		return nil, __tgo_fmt.Errorf("invalid rawComprehensionClause JSON tag")
+	}
+}
+
+func (v rawComprehensionClause) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case rawComprehensionClauseTagRange:
+		payload := v.RangePayload()
+		return __tgo_rawDecl_external_json_to(out, "Range", payload)
+	case rawComprehensionClauseTagFilter:
+		payload := v.FilterPayload()
+		return __tgo_rawDecl_external_json_to(out, "Filter", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid rawComprehensionClause JSON tag")
+	}
+}
+
+func (v *rawComprehensionClause) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]__tgo_json.RawMessage
+	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return __tgo_fmt.Errorf("expected one rawComprehensionClause JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Range":
+		var payload rawComprehensionClauseRange
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.rawComprehensionClause()
+		return nil
+	case "Filter":
+		var payload rawComprehensionClauseFilter
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.rawComprehensionClause()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("unknown rawComprehensionClause JSON variant %q", variant)
+	}
+}
+
+func (v *rawComprehensionClause) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one rawComprehensionClause JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Range":
+			current = 1
+		case "Filter":
+			current = 2
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one rawComprehensionClause JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown rawComprehensionClause JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload rawComprehensionClauseRange
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.rawComprehensionClause()
+		return nil
+	case 2:
+		var payload rawComprehensionClauseFilter
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.rawComprehensionClause()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid rawComprehensionClause JSON tag")
+	}
 }
 
 type rawComprehensionResult struct {

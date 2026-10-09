@@ -1,4 +1,4 @@
-package invalid
+package switchpackagepanicbad
 
 type Result enum {
 	Success struct{}
@@ -6,7 +6,6 @@ type Result enum {
 }
 
 func use(value Result) {
-	panic := func(any) {}
 	switch value.Tag() {
 	case ResultTagSuccess:
 		return

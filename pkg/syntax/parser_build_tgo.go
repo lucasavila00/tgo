@@ -84,46 +84,72 @@ func (p *sourceParser) makeComprehension(
 		Rbrace: p.pos(p.tokens[raw.close].start),
 	}
 	for _, clause := range raw.clauses {
-		expression, found, tgoErr := p.parseExpression(
-			p.tokens[clause.expressionStart].start,
-			p.tokens[clause.expressionEnd].start,
-			defaultAt,
-		)
-		if tgoErr != nil {
-			return nil, nil, tgoErr
-		}
-		for child, parent := range found {
-			anchors[child] = parent
-		}
-		item := frontComprehensionClause{
-			frontSpan: frontSpan{
-				Start: p.pos(p.tokens[clause.start].start),
-				Stop:  p.pos(p.tokens[clause.end-1].end),
-			},
-			Kind:       clause.kind,
-			Keyword:    p.pos(p.tokens[clause.keyword].start),
-			Bindings:   nil,
-			Define:     token.NoPos,
-			Range:      token.NoPos,
-			Expression: expression,
-			Lbrace:     p.pos(p.tokens[clause.open].start),
-			Rbrace:     p.pos(p.tokens[clause.close].start),
-		}
-		for _, binding := range clause.bindings {
-			item.Bindings = append(
-				item.Bindings,
-				&ast.Ident{
-					NamePos: p.pos(p.tokens[binding].start),
-					Name:    p.tokens[binding].text,
-					Obj:     nil,
-				},
+		switch rawClause := *clause; rawClause.Tag() {
+		case rawComprehensionClauseTagRange:
+			rawRange := rawClause.RangePayload()
+			source, found, tgoErr := p.parseExpression(
+				p.tokens[rawRange.sourceStart].start,
+				p.tokens[rawRange.sourceEnd].start,
+				defaultAt,
 			)
+			if tgoErr != nil {
+				return nil, nil, tgoErr
+			}
+			for child, parent := range found {
+				anchors[child] = parent
+			}
+			bindings := []*ast.Ident(nil)
+			for _, binding := range rawRange.bindings {
+				bindings = append(
+					bindings,
+					&ast.Ident{
+						NamePos: p.pos(p.tokens[binding].start),
+						Name:    p.tokens[binding].text,
+						Obj:     nil,
+					},
+				)
+			}
+			item := frontComprehensionClauseRange{
+				frontSpan: frontSpan{
+					Start: p.pos(p.tokens[rawRange.start].start),
+					Stop:  p.pos(p.tokens[rawRange.end-1].end),
+				},
+				For:      p.pos(p.tokens[rawRange.forToken].start),
+				Bindings: bindings,
+				Define:   p.pos(p.tokens[rawRange.define].start),
+				Range:    p.pos(p.tokens[rawRange.rangeToken].start),
+				Source:   source,
+				Lbrace:   p.pos(p.tokens[rawRange.open].start),
+				Rbrace:   p.pos(p.tokens[rawRange.close].start),
+			}.frontComprehensionClause()
+			result.Clauses = append(result.Clauses, item)
+		case rawComprehensionClauseTagFilter:
+			rawFilter := rawClause.FilterPayload()
+			condition, found, tgoErr2 := p.parseExpression(
+				p.tokens[rawFilter.conditionStart].start,
+				p.tokens[rawFilter.conditionEnd].start,
+				defaultAt,
+			)
+			if tgoErr2 != nil {
+				return nil, nil, tgoErr2
+			}
+			for child, parent := range found {
+				anchors[child] = parent
+			}
+			item := frontComprehensionClauseFilter{
+				frontSpan: frontSpan{
+					Start: p.pos(p.tokens[rawFilter.start].start),
+					Stop:  p.pos(p.tokens[rawFilter.end-1].end),
+				},
+				If:        p.pos(p.tokens[rawFilter.ifToken].start),
+				Condition: condition,
+				Lbrace:    p.pos(p.tokens[rawFilter.open].start),
+				Rbrace:    p.pos(p.tokens[rawFilter.close].start),
+			}.frontComprehensionClause()
+			result.Clauses = append(result.Clauses, item)
+		default:
+			panic(rawClause.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
-		if clause.define >= 0 {
-			item.Define = p.pos(p.tokens[clause.define].start)
-			item.Range = p.pos(p.tokens[clause.rangeToken].start)
-		}
-		result.Clauses = append(result.Clauses, item)
 	}
 	rawResult := raw.result
 	value, found, err := p.parseExpression(

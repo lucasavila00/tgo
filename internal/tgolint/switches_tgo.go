@@ -46,8 +46,16 @@ func (c *checker) checkTagSwitch(
 		}
 		if len(clause.List) == 0 {
 			hasDefault = true
-			hasSentinelDefault = clause.Exhaustive.IsValid() ||
-				c.tagDefaultSentinel(file, clause, receiver, model)
+			if clause.Exhaustive.IsValid() {
+				hasSentinelDefault = true
+				if c.panicIsShadowed(file, clause.Exhaustive) {
+					c.pass.Reportf(clause.Exhaustive,
+						"%s: exhaustive clause requires the predeclared panic",
+						modelName(model))
+				}
+			} else {
+				hasSentinelDefault = c.tagDefaultSentinel(file, clause, receiver, model)
+			}
 			continue
 		}
 		tags, resolved := c.caseTags(clause, model, tagType, seen)

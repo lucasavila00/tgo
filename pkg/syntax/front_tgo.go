@@ -4,6 +4,11 @@
 // Parsed trees are read-only. Mutation makes the traversal indexes invalid.
 package syntax
 
+import __tgo_json "encoding/json"
+import __tgo_jsonv2 "encoding/json/v2"
+import __tgo_jsontext "encoding/json/jsontext"
+import __tgo_fmt "fmt"
+
 import (
 	"go/ast"
 	"go/token"
@@ -162,16 +167,223 @@ type frontComprehensionExpr struct {
 
 func (*frontComprehensionExpr) extensionNode() {}
 
+func __tgo_frontComprehensionClause_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(__tgo_jsontext.EndObject)
+}
+
+// frontComprehensionClause requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type frontComprehensionClauseTag uint8
+
+const (
+	frontComprehensionClauseTagRange frontComprehensionClauseTag = iota + 1
+	frontComprehensionClauseTagFilter
+)
+
 type frontComprehensionClause struct {
+	tgoTag     frontComprehensionClauseTag
+	tgoFilter  frontComprehensionClauseFilter
+	tgoPayload interface{}
+}
+
+// Tag returns the active tag.
+func (v frontComprehensionClause) Tag() frontComprehensionClauseTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v frontComprehensionClause) UnknownTag() string {
+	return __tgo_fmt.Sprintf("frontComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// frontComprehensionClauseRange is the Range payload.
+type frontComprehensionClauseRange struct {
 	frontSpan
-	Kind       string
-	Keyword    token.Pos
-	Bindings   []*ast.Ident
-	Define     token.Pos
-	Range      token.Pos
-	Expression ast.Expr
-	Lbrace     token.Pos
-	Rbrace     token.Pos
+	For      token.Pos
+	Bindings []*ast.Ident
+	Define   token.Pos
+	Range    token.Pos
+	Source   ast.Expr
+	Lbrace   token.Pos
+	Rbrace   token.Pos
+}
+
+// frontComprehensionClause constructs frontComprehensionClause. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value frontComprehensionClauseRange) frontComprehensionClause() frontComprehensionClause {
+	return frontComprehensionClause{tgoTag: frontComprehensionClauseTagRange, tgoPayload: value}
+}
+
+// RangePayload requires Range. No tag check.
+func (v frontComprehensionClause) RangePayload() frontComprehensionClauseRange {
+	return v.tgoPayload.(frontComprehensionClauseRange)
+}
+
+// frontComprehensionClauseFilter is the Filter payload.
+type frontComprehensionClauseFilter struct {
+	frontSpan
+	If        token.Pos
+	Condition ast.Expr
+	Lbrace    token.Pos
+	Rbrace    token.Pos
+}
+
+// frontComprehensionClause constructs frontComprehensionClause. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value frontComprehensionClauseFilter) frontComprehensionClause() frontComprehensionClause {
+	return frontComprehensionClause{tgoTag: frontComprehensionClauseTagFilter, tgoFilter: value}
+}
+
+// FilterPayload requires Filter. No tag check.
+func (v frontComprehensionClause) FilterPayload() frontComprehensionClauseFilter { return v.tgoFilter }
+
+func (v frontComprehensionClause) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case frontComprehensionClauseTagRange:
+		payload := v.RangePayload()
+		return __tgo_json.Marshal(struct {
+			Payload frontComprehensionClauseRange `json:"Range"`
+		}{Payload: payload})
+	case frontComprehensionClauseTagFilter:
+		payload := v.FilterPayload()
+		return __tgo_json.Marshal(struct {
+			Payload frontComprehensionClauseFilter `json:"Filter"`
+		}{Payload: payload})
+	default:
+		return nil, __tgo_fmt.Errorf("invalid frontComprehensionClause JSON tag")
+	}
+}
+
+func (v frontComprehensionClause) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case frontComprehensionClauseTagRange:
+		payload := v.RangePayload()
+		return __tgo_frontComprehensionClause_external_json_to(out, "Range", payload)
+	case frontComprehensionClauseTagFilter:
+		payload := v.FilterPayload()
+		return __tgo_frontComprehensionClause_external_json_to(out, "Filter", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid frontComprehensionClause JSON tag")
+	}
+}
+
+func (v *frontComprehensionClause) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]__tgo_json.RawMessage
+	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return __tgo_fmt.Errorf("expected one frontComprehensionClause JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Range":
+		var payload frontComprehensionClauseRange
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.frontComprehensionClause()
+		return nil
+	case "Filter":
+		var payload frontComprehensionClauseFilter
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.frontComprehensionClause()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("unknown frontComprehensionClause JSON variant %q", variant)
+	}
+}
+
+func (v *frontComprehensionClause) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one frontComprehensionClause JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Range":
+			current = 1
+		case "Filter":
+			current = 2
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one frontComprehensionClause JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown frontComprehensionClause JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload frontComprehensionClauseRange
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.frontComprehensionClause()
+		return nil
+	case 2:
+		var payload frontComprehensionClauseFilter
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.frontComprehensionClause()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid frontComprehensionClause JSON tag")
+	}
 }
 
 type frontComprehensionResult struct {

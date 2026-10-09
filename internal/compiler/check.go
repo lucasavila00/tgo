@@ -4,7 +4,6 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"strings"
 )
 
 // checkRules applies tgo safety rules after Go type checking.
@@ -15,10 +14,9 @@ func (p *packageUnit) checkRules() {
 				continue
 			}
 			parents := parentNodes(declaration)
-			safe, handled := p.checkEnumSwitches(declaration, parents, source.Exhaustive)
 			ast.Inspect(declaration, func(node ast.Node) bool {
 				p.checkNonNilType(source, node)
-				p.checkNode(node, parents, safe, handled)
+				p.checkNode(node, parents)
 				return true
 			})
 		}
@@ -108,8 +106,6 @@ func parentNodes(root ast.Node) map[ast.Node]ast.Node {
 func (p *packageUnit) checkNode(
 	node ast.Node,
 	parents map[ast.Node]ast.Node,
-	safe map[*ast.SelectorExpr]bool,
-	handled map[*ast.SelectorExpr]bool,
 ) {
 	if expression, ok := node.(ast.Expr); ok {
 		p.checkRepresentationExpression(expression, parents)
@@ -124,7 +120,7 @@ func (p *packageUnit) checkNode(
 	case *ast.CallExpr:
 		p.checkCall(node)
 	case *ast.SelectorExpr:
-		p.checkSelector(node, safe, handled)
+		p.checkSelector(node)
 	}
 }
 
@@ -173,14 +169,7 @@ func (p *packageUnit) checkTypeSpec(specification *ast.TypeSpec) {
 }
 
 // checkSelector blocks direct access to generated model representation.
-func (p *packageUnit) checkSelector(
-	selector *ast.SelectorExpr,
-	safe map[*ast.SelectorExpr]bool,
-	handled map[*ast.SelectorExpr]bool,
-) {
-	if safe[selector] || handled[selector] {
-		return
-	}
+func (p *packageUnit) checkSelector(selector *ast.SelectorExpr) {
 	if selector.Sel.Pos() == token.NoPos {
 		return
 	}
@@ -263,27 +252,6 @@ func modelField(model *model, name string) bool {
 		}
 	}
 	return false
-}
-
-// enumAccessor identifies generated accessors, including promoted methods.
-func (p *packageUnit) enumAccessor(selection *types.Selection, name string) bool {
-	function, ok := selection.Obj().(*types.Func)
-	if !ok {
-		return false
-	}
-	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Recv() == nil {
-		return false
-	}
-	receiver := dereference(signature.Recv().Type())
-	if model := p.modelForType(receiver); model != nil {
-		if name == "Tag" {
-			return true
-		}
-		return enumVariantTag(model, name) != 0
-	}
-	_, dynamic := receiver.Underlying().(*types.Interface)
-	return dynamic && (name == "Tag" || strings.HasSuffix(name, "Payload"))
 }
 
 // dereference removes aliases and one or more pointer layers.
