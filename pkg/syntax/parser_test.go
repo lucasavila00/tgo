@@ -2,11 +2,72 @@ package syntax_test
 
 import (
 	"go/token"
+	"os"
 	"reflect"
 	"testing"
 
 	"tgo/pkg/syntax"
 )
+
+func TestParseFileMarksSuccessfulReturns(t *testing.T) {
+	t.Parallel()
+	source, err := os.ReadFile("testdata/success-return/valid.tgo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := token.NewFileSet()
+	file, err := syntax.ParseFile(
+		files, "valid.tgo", source, syntax.ParseComments|syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marked := 0
+	ordinary := 0
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		statement, ok := syntax.StatementOf(node)
+		if !ok {
+			return true
+		}
+		returned := syntax.ReturnStatementOf(statement)
+		if returned == nil {
+			return true
+		}
+		if !returned.SuccessComma.IsValid() {
+			ordinary++
+			return true
+		}
+		marked++
+		if source[files.File(returned.SuccessComma).Offset(returned.SuccessComma)] != ',' {
+			t.Fatalf("success marker is not a comma")
+		}
+		if text := syntax.SourceText(file, returned.Span); text[len(text)-1] != ',' {
+			t.Fatalf("return span = %q", text)
+		}
+		return true
+	})
+	if marked != 5 || ordinary != 1 {
+		t.Fatalf("marked returns = %d, ordinary returns = %d", marked, ordinary)
+	}
+}
+
+func TestParseFileRejectsEmptySuccessfulReturn(t *testing.T) {
+	t.Parallel()
+	source, err := os.ReadFile("testdata/success-return/empty.tgo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = syntax.ParseFile(
+		token.NewFileSet(), "empty.tgo", source, syntax.AllErrors,
+	)
+	if err == nil {
+		t.Fatal("ParseFile accepted an empty successful return")
+	}
+	const want = "empty.tgo:4:9: successful return needs at least one expression"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err, want)
+	}
+}
 
 func TestParseFileConvertsAllPublicForms(t *testing.T) {
 	t.Parallel()

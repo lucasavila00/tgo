@@ -56,9 +56,11 @@ func projectedSuccessReturns(
 // lowerSuccessReturns appends the predeclared nil before the first type check.
 func (p *packageUnit) lowerSuccessReturns(source *source) {
 	for _, statement := range source.SuccessReturns {
+		nilValue := p.generatedUniverse("nil", statement.Return)
+		nilValue.NamePos = statement.Return
 		statement.Results = append(
 			statement.Results,
-			p.generatedUniverse("nil", statement.Return),
+			nilValue,
 		)
 	}
 }

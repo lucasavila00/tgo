@@ -4,7 +4,6 @@
 package syntax
 
 import (
-	__tgo_fmt_1 "fmt"
 	"go/ast"
 	"go/token"
 	"slices"
@@ -13,7 +12,7 @@ import (
 func (p *sourceParser) discoverExtensions() error {
 	err := p.discoverSuccessReturns()
 	if err != nil {
-		return __tgo_fmt_1.Errorf("p.discoverSuccessReturns: %w", err)
+		return err
 	}
 	exhaustiveTokens := p.exhaustiveTokens()
 	for cursor := 0; cursor < len(p.tokens); cursor++ {
