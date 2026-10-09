@@ -1,6 +1,7 @@
 package model
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 )
@@ -48,5 +49,19 @@ func (value JSONInternalPayloadMethodValue) MarshalJSON() ([]byte, error) {
 
 func (value *JSONInternalPayloadMethodValue) UnmarshalJSON(data []byte) error {
 	value.Seen = string(data)
+	return nil
+}
+
+func (value *JSONNonNilCustom) UnmarshalJSON(data []byte) error {
+	if string(data) == `"valid"` {
+		value.Value = &JSONNonNilTarget{}
+	}
+	return nil
+}
+
+func (value *JSONNonNilInternalValue) UnmarshalJSON(data []byte) error {
+	if bytes.Contains(data, []byte(`"Required":{}`)) {
+		value.Required = &JSONNonNilTarget{}
+	}
 	return nil
 }

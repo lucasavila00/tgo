@@ -2,11 +2,98 @@ package model
 
 import (
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"reflect"
 	"strings"
 	"testing"
 	"unsafe"
 )
+
+func TestEnumJSONRejectsNilNonNilPayloads(t *testing.T) {
+	validExternal := `{"Value":{"Direct":{},"Alias":{},"Nested":{"Array":[{}],"Slice":[{}],"Map":{"item":{}},"Optional":{"Value":{}}},"Custom":"valid"}}`
+	tests := []struct {
+		name        string
+		input       string
+		newValue    func() interface{ UnmarshalJSON([]byte) error }
+		streamValue func() any
+		want        string
+	}{
+		{"external direct", `{"Value":{}}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilExternal) }, func() any { return new(JSONNonNilExternal) }, "JSONNonNilExternal.Value JSON payload: Direct"},
+		{"external null", `{"Value":{"Direct":null}}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilExternal) }, func() any { return new(JSONNonNilExternal) }, "JSONNonNilExternal.Value JSON payload: Direct"},
+		{"external alias", `{"Value":{"Direct":{}}}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilExternal) }, func() any { return new(JSONNonNilExternal) }, "JSONNonNilExternal.Value JSON payload: Alias"},
+		{"external array", `{"Value":{"Direct":{},"Alias":{},"Nested":{"Array":[null]}}}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilExternal) }, func() any { return new(JSONNonNilExternal) }, "Nested.Array[]"},
+		{"external slice", `{"Value":{"Direct":{},"Alias":{},"Nested":{"Array":[{}],"Slice":[null]}}}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilExternal) }, func() any { return new(JSONNonNilExternal) }, "Nested.Slice[]"},
+		{"external map", `{"Value":{"Direct":{},"Alias":{},"Nested":{"Array":[{}],"Map":{"item":null}}}}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilExternal) }, func() any { return new(JSONNonNilExternal) }, "Nested.Map[]"},
+		{"external optional pointer", `{"Value":{"Direct":{},"Alias":{},"Nested":{"Array":[{}],"Optional":{}}}}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilExternal) }, func() any { return new(JSONNonNilExternal) }, "Nested.Optional.Value"},
+		{"external custom method", `{"Value":{"Direct":{},"Alias":{},"Nested":{"Array":[{}]},"Custom":"invalid"}}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilExternal) }, func() any { return new(JSONNonNilExternal) }, "Custom.Value"},
+		{"internal", `{"type":"value"}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilInternal) }, func() any { return new(JSONNonNilInternal) }, "JSONNonNilInternal.Value JSON payload: Required"},
+		{"internal custom payload method", `{"type":"value","Required":7}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilInternal) }, func() any { return new(JSONNonNilInternal) }, "JSONNonNilInternal.Value JSON payload: Required"},
+		{"adjacent", `{"type":"value","data":{}}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilAdjacent) }, func() any { return new(JSONNonNilAdjacent) }, "JSONNonNilAdjacent.Value JSON payload: Required"},
+		{"untagged", `{"Count":"bad"}`, func() interface{ UnmarshalJSON([]byte) error } { return new(JSONNonNilUntagged) }, func() any { return new(JSONNonNilUntagged) }, "JSONNonNilUntagged.First JSON payload: Required"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			direct := test.newValue()
+			if err := direct.UnmarshalJSON([]byte(test.input)); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("direct error = %v, want %q", err, test.want)
+			}
+			streamed := test.streamValue()
+			if err := jsonv2.Unmarshal([]byte(test.input), streamed); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("stream error = %v, want %q", err, test.want)
+			}
+		})
+	}
+
+	for _, decode := range []func([]byte, any) error{
+		func(data []byte, value any) error { return value.(*JSONNonNilExternal).UnmarshalJSON(data) },
+		func(data []byte, value any) error { return json.Unmarshal(data, value) },
+		func(data []byte, value any) error { return jsonv2.Unmarshal(data, value) },
+	} {
+		var value JSONNonNilExternal
+		if err := decode([]byte(validExternal), &value); err != nil {
+			t.Fatal(err)
+		}
+		before := value
+		if err := decode([]byte(`{"Value":{}}`), &value); err == nil {
+			t.Fatal("invalid payload succeeded")
+		}
+		if !reflect.DeepEqual(value, before) {
+			t.Fatal("failed decode changed the receiver")
+		}
+		if err := decode([]byte(validExternal), &value); err != nil {
+			t.Fatal(err)
+		}
+		if value.ValuePayload().Direct == nil || value.ValuePayload().Custom.Value == nil {
+			t.Fatal("valid payload lost a non-null field")
+		}
+	}
+
+	for _, decode := range []func([]byte, any) error{
+		func(data []byte, value any) error { return json.Unmarshal(data, value) },
+		func(data []byte, value any) error { return jsonv2.Unmarshal(data, value) },
+	} {
+		for _, valid := range []struct {
+			input string
+			value any
+		}{
+			{`{"type":"value","Required":{}}`, new(JSONNonNilInternal)},
+			{`{"type":"value","data":{"Required":{}}}`, new(JSONNonNilAdjacent)},
+			{`{"Required":{}}`, new(JSONNonNilUntagged)},
+		} {
+			if err := decode([]byte(valid.input), valid.value); err != nil {
+				t.Fatalf("valid payload failed: %v", err)
+			}
+		}
+	}
+
+	var untagged JSONNonNilUntagged
+	if err := json.Unmarshal([]byte(`{"Count":2}`), &untagged); err != nil {
+		t.Fatal(err)
+	}
+	if untagged.Tag() != JSONNonNilUntaggedTagSecond || untagged.SecondPayload().Count != 2 {
+		t.Fatal("untagged decode did not continue after an invalid non-null payload")
+	}
+}
 
 func TestEnumJSONForms(t *testing.T) {
 	tests := []struct {

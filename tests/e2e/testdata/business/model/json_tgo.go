@@ -1948,3 +1948,659 @@ func (v *JSONInternalPromotedMethod) UnmarshalJSONFrom(in *jsontext.Decoder) err
 	}
 	return v.UnmarshalJSON(data)
 }
+
+type JSONNonNilTarget struct {
+	Name string `json:"name,omitempty"`
+}
+
+type JSONNonNilAlias = *JSONNonNilTarget
+
+type JSONNonNilCustom struct {
+	Value *JSONNonNilTarget
+}
+
+// JSONNonNilExternal requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type JSONNonNilExternalTag uint8
+
+const (
+	JSONNonNilExternalTagValue JSONNonNilExternalTag = iota + 1
+)
+
+type JSONNonNilExternal struct {
+	tgoTag   JSONNonNilExternalTag
+	tgoValue JSONNonNilExternalValue
+}
+
+// Tag returns the active tag.
+func (v JSONNonNilExternal) Tag() JSONNonNilExternalTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v JSONNonNilExternal) UnknownTag() string {
+	return fmt.Sprintf("JSONNonNilExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// JSONNonNilExternalValue is the Value payload.
+type JSONNonNilExternalValue struct {
+	Direct *JSONNonNilTarget
+	Alias  JSONNonNilAlias
+	Nested struct {
+		Array    [1]*JSONNonNilTarget
+		Slice    []*JSONNonNilTarget
+		Map      map[string]*JSONNonNilTarget
+		Optional *struct{ Value *JSONNonNilTarget }
+	}
+	Custom JSONNonNilCustom
+}
+
+// JSONNonNilExternal constructs JSONNonNilExternal. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value JSONNonNilExternalValue) JSONNonNilExternal() JSONNonNilExternal {
+	return JSONNonNilExternal{tgoTag: JSONNonNilExternalTagValue, tgoValue: value}
+}
+
+// ValuePayload requires Value. No tag check.
+func (v JSONNonNilExternal) ValuePayload() JSONNonNilExternalValue { return v.tgoValue }
+
+func (v JSONNonNilExternal) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case JSONNonNilExternalTagValue:
+		payload := v.ValuePayload()
+		return json.Marshal(struct {
+			Payload JSONNonNilExternalValue `json:"Value"`
+		}{Payload: payload})
+	default:
+		return nil, fmt.Errorf("invalid JSONNonNilExternal JSON tag")
+	}
+}
+
+func (v JSONNonNilExternal) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case JSONNonNilExternalTagValue:
+		payload := v.ValuePayload()
+		return tgoJSONExternalExternalJSONTo(out, "Value", payload)
+	default:
+		return fmt.Errorf("invalid JSONNonNilExternal JSON tag")
+	}
+}
+
+func (v *JSONNonNilExternal) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return fmt.Errorf("expected one JSONNonNilExternal JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Value":
+		var payload JSONNonNilExternalValue
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		if payload.Direct == nil {
+			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Direct must not be nil")
+		}
+		if payload.Alias == nil {
+			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Alias must not be nil")
+		}
+		for _, tgoJSONValue0 := range payload.Nested.Array {
+			if tgoJSONValue0 == nil {
+				return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Nested.Array[] must not be nil")
+			}
+		}
+		for _, tgoJSONValue1 := range payload.Nested.Slice {
+			if tgoJSONValue1 == nil {
+				return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Nested.Slice[] must not be nil")
+			}
+		}
+		for _, tgoJSONValue2 := range payload.Nested.Map {
+			if tgoJSONValue2 == nil {
+				return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Nested.Map[] must not be nil")
+			}
+		}
+		if payload.Nested.Optional != nil {
+			if (*payload.Nested.Optional).Value == nil {
+				return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Nested.Optional.Value must not be nil")
+			}
+		}
+		if payload.Custom.Value == nil {
+			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Custom.Value must not be nil")
+		}
+
+		*v = payload.JSONNonNilExternal()
+		return nil
+	default:
+		return fmt.Errorf("unknown JSONNonNilExternal JSON variant %q", variant)
+	}
+}
+
+func (v *JSONNonNilExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return fmt.Errorf("expected one JSONNonNilExternal JSON variant")
+	}
+	var payloadData jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Value":
+			current = 1
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return fmt.Errorf("expected one JSONNonNilExternal JSON variant")
+	}
+	if selected == 0 {
+		return fmt.Errorf("unknown JSONNonNilExternal JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload JSONNonNilExternalValue
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		if payload.Direct == nil {
+			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Direct must not be nil")
+		}
+		if payload.Alias == nil {
+			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Alias must not be nil")
+		}
+		for _, tgoJSONValue0 := range payload.Nested.Array {
+			if tgoJSONValue0 == nil {
+				return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Nested.Array[] must not be nil")
+			}
+		}
+		for _, tgoJSONValue1 := range payload.Nested.Slice {
+			if tgoJSONValue1 == nil {
+				return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Nested.Slice[] must not be nil")
+			}
+		}
+		for _, tgoJSONValue2 := range payload.Nested.Map {
+			if tgoJSONValue2 == nil {
+				return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Nested.Map[] must not be nil")
+			}
+		}
+		if payload.Nested.Optional != nil {
+			if (*payload.Nested.Optional).Value == nil {
+				return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Nested.Optional.Value must not be nil")
+			}
+		}
+		if payload.Custom.Value == nil {
+			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Custom.Value must not be nil")
+		}
+
+		*v = payload.JSONNonNilExternal()
+		return nil
+	default:
+		return fmt.Errorf("invalid JSONNonNilExternal JSON tag")
+	}
+}
+
+// JSONNonNilInternal requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type JSONNonNilInternalTag uint8
+
+const (
+	JSONNonNilInternalTagValue JSONNonNilInternalTag = iota + 1
+)
+
+type JSONNonNilInternal struct {
+	tgoTag   JSONNonNilInternalTag
+	tgoValue JSONNonNilInternalValue
+}
+
+// Tag returns the active tag.
+func (v JSONNonNilInternal) Tag() JSONNonNilInternalTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v JSONNonNilInternal) UnknownTag() string {
+	return fmt.Sprintf("JSONNonNilInternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// JSONNonNilInternalValue is the Value payload.
+type JSONNonNilInternalValue struct {
+	Required *JSONNonNilTarget
+}
+
+// JSONNonNilInternal constructs JSONNonNilInternal. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value JSONNonNilInternalValue) JSONNonNilInternal() JSONNonNilInternal {
+	return JSONNonNilInternal{tgoTag: JSONNonNilInternalTagValue, tgoValue: value}
+}
+
+// ValuePayload requires Value. No tag check.
+func (v JSONNonNilInternal) ValuePayload() JSONNonNilInternalValue { return v.tgoValue }
+
+func (v JSONNonNilInternal) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case JSONNonNilInternalTagValue:
+		payload := v.ValuePayload()
+		payloadData, err := json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+			return nil, fmt.Errorf("expected JSONNonNilInternal JSON payload object")
+		}
+		if len(payloadData) == 2 {
+			return []byte("{\"type\":\"value\"}"), nil
+		}
+		result := make([]byte, 0, len(payloadData)+15)
+		result = append(result, "{\"type\":\"value\""...)
+		result = append(result, ',')
+		result = append(result, payloadData[1:]...)
+		return result, nil
+	default:
+		return nil, fmt.Errorf("invalid JSONNonNilInternal JSON tag")
+	}
+}
+
+func (v JSONNonNilInternal) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case JSONNonNilInternalTagValue:
+		payload := v.ValuePayload()
+		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
+		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
+		if marshalsJSON || marshalsText || marshalsJSONTo {
+			data, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			return out.WriteValue(data)
+		}
+		return jsonv2.MarshalEncode(out, struct {
+			Variant string `json:"type"`
+			JSONNonNilInternalValue
+		}{Variant: "value", JSONNonNilInternalValue: payload})
+	default:
+		return fmt.Errorf("invalid JSONNonNilInternal JSON tag")
+	}
+}
+
+func (v *JSONNonNilInternal) UnmarshalJSON(data []byte) error {
+	var variant string
+	var object struct {
+		Tag string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if object.Tag == "" {
+		return fmt.Errorf("missing JSONNonNilInternal JSON tag")
+	}
+	variant = object.Tag
+	switch variant {
+	case "value":
+		var payload JSONNonNilInternalValue
+		if err := json.Unmarshal(data, &payload); err != nil {
+			return err
+		}
+		if payload.Required == nil {
+			return fmt.Errorf("invalid JSONNonNilInternal.Value JSON payload: Required must not be nil")
+		}
+
+		*v = payload.JSONNonNilInternal()
+		return nil
+	default:
+		return fmt.Errorf("unknown JSONNonNilInternal JSON variant %q", variant)
+	}
+}
+
+func (v *JSONNonNilInternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	data, err := in.ReadValue()
+	if err != nil {
+		return err
+	}
+	return v.UnmarshalJSON(data)
+}
+
+// JSONNonNilAdjacent requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type JSONNonNilAdjacentTag uint8
+
+const (
+	JSONNonNilAdjacentTagValue JSONNonNilAdjacentTag = iota + 1
+)
+
+type JSONNonNilAdjacent struct {
+	tgoTag   JSONNonNilAdjacentTag
+	tgoValue JSONNonNilAdjacentValue
+}
+
+// Tag returns the active tag.
+func (v JSONNonNilAdjacent) Tag() JSONNonNilAdjacentTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v JSONNonNilAdjacent) UnknownTag() string {
+	return fmt.Sprintf("JSONNonNilAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// JSONNonNilAdjacentValue is the Value payload.
+type JSONNonNilAdjacentValue struct {
+	Required *JSONNonNilTarget
+}
+
+// JSONNonNilAdjacent constructs JSONNonNilAdjacent. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value JSONNonNilAdjacentValue) JSONNonNilAdjacent() JSONNonNilAdjacent {
+	return JSONNonNilAdjacent{tgoTag: JSONNonNilAdjacentTagValue, tgoValue: value}
+}
+
+// ValuePayload requires Value. No tag check.
+func (v JSONNonNilAdjacent) ValuePayload() JSONNonNilAdjacentValue { return v.tgoValue }
+
+func (v JSONNonNilAdjacent) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case JSONNonNilAdjacentTagValue:
+		payload := v.ValuePayload()
+		return json.Marshal(struct {
+			Variant string                  `json:"type"`
+			Payload JSONNonNilAdjacentValue `json:"data"`
+		}{Variant: "value", Payload: payload})
+	default:
+		return nil, fmt.Errorf("invalid JSONNonNilAdjacent JSON tag")
+	}
+}
+
+func (v JSONNonNilAdjacent) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case JSONNonNilAdjacentTagValue:
+		payload := v.ValuePayload()
+		return tgoJSONExternalAdjacentJSONTo(out, "type", "value", "data", payload)
+	default:
+		return fmt.Errorf("invalid JSONNonNilAdjacent JSON tag")
+	}
+}
+
+func (v *JSONNonNilAdjacent) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object struct {
+		Tag     string          `json:"type"`
+		Content json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if object.Tag == "" {
+		return fmt.Errorf("missing JSONNonNilAdjacent JSON tag")
+	}
+	variant = object.Tag
+	payloadData = object.Content
+	if payloadData == nil {
+		return fmt.Errorf("missing JSONNonNilAdjacent JSON content")
+	}
+	switch variant {
+	case "value":
+		var payload JSONNonNilAdjacentValue
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		if payload.Required == nil {
+			return fmt.Errorf("invalid JSONNonNilAdjacent.Value JSON payload: Required must not be nil")
+		}
+
+		*v = payload.JSONNonNilAdjacent()
+		return nil
+	default:
+		return fmt.Errorf("unknown JSONNonNilAdjacent JSON variant %q", variant)
+	}
+}
+
+func (v *JSONNonNilAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return fmt.Errorf("missing JSONNonNilAdjacent JSON tag")
+	}
+	var contentData jsontext.Value
+	selected := 0
+	var unknown string
+	contentPresent := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		field := 0
+		switch {
+		case wireName == "type":
+			field = 1
+		case wireName == "data":
+			field = 2
+		case strings.EqualFold(wireName, "type"):
+			field = 1
+		case strings.EqualFold(wireName, "data"):
+			field = 2
+		}
+		switch field {
+		case 1:
+			if in.PeekKind() == 'n' {
+				if _, err := in.ReadToken(); err != nil {
+					return err
+				}
+				break
+			}
+			if in.PeekKind() != '"' {
+				var invalid string
+				return jsonv2.UnmarshalDecode(in, &invalid)
+			}
+			tagToken, err := in.ReadToken()
+			if err != nil {
+				return err
+			}
+			variantName := tagToken.String()
+			selected = 0
+			unknown = ""
+			switch variantName {
+			case "value":
+				selected = 1
+			default:
+				unknown = string(append([]byte(nil), variantName...))
+			}
+		case 2:
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			contentData = append(contentData[:0], raw...)
+			contentPresent = true
+		default:
+			if err := in.SkipValue(); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if selected == 0 && unknown == "" {
+		return fmt.Errorf("missing JSONNonNilAdjacent JSON tag")
+	}
+	if !contentPresent {
+		return fmt.Errorf("missing JSONNonNilAdjacent JSON content")
+	}
+	if selected == 0 {
+		return fmt.Errorf("unknown JSONNonNilAdjacent JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload JSONNonNilAdjacentValue
+		if err := jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
+			return err
+		}
+		if payload.Required == nil {
+			return fmt.Errorf("invalid JSONNonNilAdjacent.Value JSON payload: Required must not be nil")
+		}
+
+		*v = payload.JSONNonNilAdjacent()
+		return nil
+	default:
+		return fmt.Errorf("invalid JSONNonNilAdjacent JSON tag")
+	}
+}
+
+// JSONNonNilUntagged requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type JSONNonNilUntaggedTag uint8
+
+const (
+	JSONNonNilUntaggedTagFirst JSONNonNilUntaggedTag = iota + 1
+	JSONNonNilUntaggedTagSecond
+)
+
+type JSONNonNilUntagged struct {
+	tgoTag    JSONNonNilUntaggedTag
+	tgoFirst  JSONNonNilUntaggedFirst
+	tgoSecond JSONNonNilUntaggedSecond
+}
+
+// Tag returns the active tag.
+func (v JSONNonNilUntagged) Tag() JSONNonNilUntaggedTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v JSONNonNilUntagged) UnknownTag() string {
+	return fmt.Sprintf("JSONNonNilUntagged: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// JSONNonNilUntaggedFirst is the First payload.
+type JSONNonNilUntaggedFirst struct {
+	Required *JSONNonNilTarget
+}
+
+// JSONNonNilUntagged constructs JSONNonNilUntagged. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value JSONNonNilUntaggedFirst) JSONNonNilUntagged() JSONNonNilUntagged {
+	return JSONNonNilUntagged{tgoTag: JSONNonNilUntaggedTagFirst, tgoFirst: value}
+}
+
+// FirstPayload requires First. No tag check.
+func (v JSONNonNilUntagged) FirstPayload() JSONNonNilUntaggedFirst { return v.tgoFirst }
+
+// JSONNonNilUntaggedSecond is the Second payload.
+type JSONNonNilUntaggedSecond struct {
+	Count int
+}
+
+// JSONNonNilUntagged constructs JSONNonNilUntagged. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value JSONNonNilUntaggedSecond) JSONNonNilUntagged() JSONNonNilUntagged {
+	return JSONNonNilUntagged{tgoTag: JSONNonNilUntaggedTagSecond, tgoSecond: value}
+}
+
+// SecondPayload requires Second. No tag check.
+func (v JSONNonNilUntagged) SecondPayload() JSONNonNilUntaggedSecond { return v.tgoSecond }
+
+func (v JSONNonNilUntagged) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case JSONNonNilUntaggedTagFirst:
+		payload := v.FirstPayload()
+		return json.Marshal(payload)
+	case JSONNonNilUntaggedTagSecond:
+		payload := v.SecondPayload()
+		return json.Marshal(payload)
+	default:
+		return nil, fmt.Errorf("invalid JSONNonNilUntagged JSON tag")
+	}
+}
+
+func (v JSONNonNilUntagged) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case JSONNonNilUntaggedTagFirst:
+		payload := v.FirstPayload()
+		return jsonv2.MarshalEncode(out, payload)
+	case JSONNonNilUntaggedTagSecond:
+		payload := v.SecondPayload()
+		return jsonv2.MarshalEncode(out, payload)
+	default:
+		return fmt.Errorf("invalid JSONNonNilUntagged JSON tag")
+	}
+}
+
+func (v *JSONNonNilUntagged) UnmarshalJSON(data []byte) error {
+	var tgoJSONNonNilError error
+	{
+		var payload JSONNonNilUntaggedFirst
+		if err := json.Unmarshal(data, &payload); err == nil {
+			if tgoJSONError := func() error {
+				if payload.Required == nil {
+					return fmt.Errorf("invalid JSONNonNilUntagged.First JSON payload: Required must not be nil")
+				}
+				return nil
+			}(); tgoJSONError == nil {
+
+				*v = payload.JSONNonNilUntagged()
+				return nil
+			} else if tgoJSONNonNilError == nil {
+				tgoJSONNonNilError = tgoJSONError
+			}
+		}
+	}
+	{
+		var payload JSONNonNilUntaggedSecond
+		if err := json.Unmarshal(data, &payload); err == nil {
+			*v = payload.JSONNonNilUntagged()
+			return nil
+		}
+	}
+	if tgoJSONNonNilError != nil {
+		return tgoJSONNonNilError
+	}
+	return fmt.Errorf("no matching JSONNonNilUntagged JSON variant")
+}
+
+func (v *JSONNonNilUntagged) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	data, err := in.ReadValue()
+	if err != nil {
+		return err
+	}
+	return v.UnmarshalJSON(data)
+}

@@ -108,7 +108,8 @@ func Save(account %Account) error
 
 Check a possibly nil pointer before you pass it to `%T`. For `map[K]%T` and `chan %T`, use comma-ok
 or another proof before use. A pointer type assertion needs both `ok` and a nil check. `%T`
-becomes `*T` in generated Go and adds no runtime check.
+becomes `*T` in generated Go. Generated enum JSON decoders check payload construction. Other uses
+add no runtime check.
 
 ## Call Go
 

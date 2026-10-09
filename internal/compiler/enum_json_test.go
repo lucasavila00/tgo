@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/importer"
 	"go/token"
+	"go/types"
 	"strings"
 	"testing"
 )
@@ -349,5 +350,80 @@ func TestEnumJSONMethodsGenerated(t *testing.T) {
 		if !strings.Contains(output, method) {
 			t.Fatalf("generated output does not contain %s", method)
 		}
+	}
+}
+
+func TestEnumJSONValidatesNonNilPayloadPaths(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+type Target struct{}
+type Required = %Target
+type E enum {
+	Value struct {
+		Direct %Target
+		Alias Required
+		Nested struct {
+			Items []map[string]%Target
+			Optional *struct { Item %Target }
+		}
+	}
+}
+`)
+	for _, path := range []string{
+		"Direct must not be nil",
+		"Alias must not be nil",
+		"Nested.Items[][] must not be nil",
+		"Nested.Optional.Item must not be nil",
+	} {
+		if count := strings.Count(output, path); count != 2 {
+			t.Fatalf("generated %q checks = %d, want 2\n%s", path, count, output)
+		}
+	}
+	assignment := strings.Index(output, "*v = payload.E()")
+	check := strings.Index(output, "Direct must not be nil")
+	if check < 0 || assignment < check {
+		t.Fatalf("receiver assignment occurs before validation\n%s", output)
+	}
+}
+
+func TestEnumJSONValidatesImportedNonNilAlias(t *testing.T) {
+	files := token.NewFileSet()
+	modelPackage, problems := Compile(PackageInput{
+		Path: "model",
+		Sources: []File{{Name: "model.tgo", Data: []byte(`package model
+type Target struct{}
+type Required = %Target
+type Hidden struct { item %Target }
+`)}},
+		FileSet:  files,
+		Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	compiled, problems := Compile(PackageInput{
+		Path: "app",
+		Sources: []File{{Name: "app.tgo", Data: []byte(`package app
+import _ "reflect"
+import "model"
+type E enum { Value struct { Item model.Required; Hidden model.Hidden } }
+`)}},
+		Imports: map[string]*CompiledPackage{"model": modelPackage},
+		FileSet: token.NewFileSet(),
+		Importer: checkedPackageImporter{
+			packages: map[string]*types.Package{"model": modelPackage.Package},
+			fallback: importer.Default(),
+		},
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	output := string(compiled.Outputs["app.tgo"])
+	if count := strings.Count(output, "Item must not be nil"); count != 2 {
+		t.Fatalf("generated imported alias checks = %d, want 2\n%s", count, output)
+	}
+	if !strings.Contains(output, `"reflect"`) ||
+		strings.Count(output, "Hidden.item must not be nil") != 2 ||
+		strings.Count(output, "reflect.ValueOf(payload.Hidden).Field(0).IsNil()") != 2 {
+		t.Fatalf("generated imported private path checks are incomplete\n%s", output)
 	}
 }

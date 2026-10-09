@@ -144,6 +144,9 @@ func (p *packageUnit) generatedOutputs() (map[string][]byte, error) {
 func (p *packageUnit) checkAndLower() error {
 	p.prepare()
 	p.typecheck()
+	if p.addEnumJSONNonNilChecks() {
+		p.typecheck()
+	}
 	p.checkGeneratedPredeclaredNames()
 	p.checkCheckedStructs()
 	if len(p.errors) > 0 {
