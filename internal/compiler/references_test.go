@@ -20,16 +20,16 @@ type Record struct { Value int = 7 }
 	if len(problems) != 0 {
 		t.Fatal(problems[0])
 	}
-	aliasFile := File{Name: "alias.go", Data: []byte(`package sample
+	aliasFile := File{Name: "alias.tgo", Data: []byte(`package sample
 import records "example.com/model"
 type Record = records.Record
 `)}
 	tests := []struct {
-		name      string
-		source    string
-		goFiles   []File
-		want      string
-		forbidden string
+		name         string
+		source       string
+		extraSources []File
+		want         string
+		forbidden    string
 	}{
 		{
 			name: "normal", source: `package sample
@@ -47,7 +47,7 @@ func makeRecord() records.Record { return records.Record{..default} }
 			name: "blank", source: `package sample
 import _ "example.com/model"
 func makeRecord() Record { return Record{..default} }
-`, goFiles: []File{aliasFile}, want: `model.TgoDefaultRecordValue()`,
+`, extraSources: []File{aliasFile}, want: `model.TgoDefaultRecordValue()`,
 			forbidden: `import _ "example.com/model"`,
 		},
 		{
@@ -60,16 +60,17 @@ func makeRecord() Record { return Record{..default} }
 			name: "collision", source: `package sample
 var model, model_1 int
 func makeRecord() Record { return Record{..default} }
-`, goFiles: []File{aliasFile}, want: `model_2.TgoDefaultRecordValue()`,
+`, extraSources: []File{aliasFile}, want: `model_2.TgoDefaultRecordValue()`,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
+			sources := []File{{Name: "sample.tgo", Data: []byte(test.source)}}
+			sources = append(sources, test.extraSources...)
 			compiled, problems := Compile(PackageInput{
 				Path:    "sample",
-				Sources: []File{{Name: "sample.tgo", Data: []byte(test.source)}},
-				GoFiles: test.goFiles,
+				Sources: sources,
 				Imports: map[string]*CompiledPackage{"example.com/model": model},
 				FileSet: token.NewFileSet(),
 				Importer: packageImporter{
@@ -105,7 +106,7 @@ type Account enum { Personal struct { Name string } }
 	}
 	bridge, problems := Compile(PackageInput{
 		Path: "example.com/bridge",
-		GoFiles: []File{{Name: "bridge.go", Data: []byte(`package bridge
+		Sources: []File{{Name: "bridge.tgo", Data: []byte(`package bridge
 import "example.com/model"
 type Account = model.Account
 `)}},

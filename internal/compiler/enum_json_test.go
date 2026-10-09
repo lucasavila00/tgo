@@ -267,43 +267,24 @@ func tgoEExternalJSONTo() {}
 func tgoEExternalJSONTo_1() {}
 var tgoEAdjacentJSONTo, tgoEAdjacentJSONTo_1 func()
 `)
-	tests := []struct {
-		name    string
-		sources []File
-		goFiles []File
-	}{
-		{
-			name: "tgo declarations",
-			sources: []File{
-				enumSource,
-				{Name: "names.tgo", Data: declarations},
-			},
+	compiled, problems := Compile(PackageInput{
+		Path: "sample",
+		Sources: []File{
+			enumSource,
+			{Name: "names.tgo", Data: declarations},
 		},
-		{
-			name:    "go declarations",
-			sources: []File{enumSource},
-			goFiles: []File{{Name: "names.go", Data: declarations}},
-		},
+		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			compiled, problems := Compile(PackageInput{
-				Path: "sample", Sources: test.sources, GoFiles: test.goFiles,
-				FileSet: token.NewFileSet(), Importer: importer.Default(),
-			})
-			if len(problems) != 0 {
-				t.Fatal(problems[0])
-			}
-			output := string(compiled.Outputs["enum.tgo"])
-			for _, name := range []string{
-				"tgoEExternalJSONTo_3", "tgoEAdjacentJSONTo_3",
-			} {
-				if !strings.Contains(output, name) {
-					t.Fatalf("generated output does not contain %s\n%s", name, output)
-				}
-			}
-		})
+	output := string(compiled.Outputs["enum.tgo"])
+	for _, name := range []string{
+		"tgoEExternalJSONTo_3", "tgoEAdjacentJSONTo_3",
+	} {
+		if !strings.Contains(output, name) {
+			t.Fatalf("generated output does not contain %s\n%s", name, output)
+		}
 	}
 }
 
