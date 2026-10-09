@@ -17,7 +17,12 @@
   {
     "method": "hover",
     "position": {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
-    "hover": "func (Account) PersonalPayload() AccountPersonal"
+    "hover": "func (Account) PersonalPayload() Account.Personal"
+  },
+  {
+    "method": "hover",
+    "position": {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 7},
+    "hover": "variant Account.Personal"
   },
   {
     "method": "hover",
@@ -42,7 +47,7 @@
     "method": "definition",
     "position": {"file": "app/app.tgo", "text": "value", "occurrence": 2},
     "locations": [
-      {"file": "lib/lib.tgo", "text": "value", "occurrence": 11}
+      {"file": "lib/lib.tgo", "text": "value", "occurrence": 12}
     ]
   },
   {
@@ -91,13 +96,6 @@
   },
   {
     "method": "definition",
-    "position": {"file": "lib/lib.tgo", "text": "AccountPersonal", "occurrence": 1},
-    "locations": [
-      {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 1}
-    ]
-  },
-  {
-    "method": "definition",
     "position": {"file": "lib/lib.tgo", "text": "Personal{", "occurrence": 1},
     "locations": [
       {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 1}
@@ -109,14 +107,16 @@
     "includeDeclaration": true,
     "locations": [
       {"file": "lib/lib.tgo", "text": "Personal", "occurrence": 1},
-      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1}
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 2}
     ]
   },
   {
     "method": "references",
     "position": {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
     "locations": [
-      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1}
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
+      {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 2}
     ]
   },
   {

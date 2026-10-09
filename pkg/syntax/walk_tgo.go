@@ -550,49 +550,73 @@ func specificationSpan(value *Specification) Span {
 }
 
 func nodeFile(value *File) Node {
-	return NodeFile{Value: value}.Node()
+	return func(input TgoNodeFileInput) Node {
+		return NewNodeFile(input.FieldValue)
+	}(TgoNodeFileInput{FieldValue: value})
 }
 
 func nodeDeclaration(value *Declaration) Node {
-	return NodeDeclaration{Value: value}.Node()
+	return func(input TgoNodeDeclarationInput) Node {
+		return NewNodeDeclaration(input.FieldValue)
+	}(TgoNodeDeclarationInput{FieldValue: value})
 }
 
 func nodeSpecification(value *Specification) Node {
-	return NodeSpecification{Value: value}.Node()
+	return func(input TgoNodeSpecificationInput) Node {
+		return NewNodeSpecification(input.FieldValue)
+	}(TgoNodeSpecificationInput{FieldValue: value})
 }
 
 func nodeStatement(value *Statement) Node {
-	return NodeStatement{Value: value}.Node()
+	return func(input TgoNodeStatementInput) Node {
+		return NewNodeStatement(input.FieldValue)
+	}(TgoNodeStatementInput{FieldValue: value})
 }
 
 func nodeExpression(value *Expression) Node {
-	return NodeExpression{Value: value}.Node()
+	return func(input TgoNodeExpressionInput) Node {
+		return NewNodeExpression(input.FieldValue)
+	}(TgoNodeExpressionInput{FieldValue: value})
 }
 
 func nodeField(value *Field) Node {
-	return NodeField{Value: value}.Node()
+	return func(input TgoNodeFieldInput) Node {
+		return NewNodeField(input.FieldValue)
+	}(TgoNodeFieldInput{FieldValue: value})
 }
 
 func nodeFieldList(value *FieldList) Node {
-	return NodeFieldList{Value: value}.Node()
+	return func(input TgoNodeFieldListInput) Node {
+		return NewNodeFieldList(input.FieldValue)
+	}(TgoNodeFieldListInput{FieldValue: value})
 }
 
 func nodeTGoField(value *TGoField) Node {
-	return NodeTGoField{Value: value}.Node()
+	return func(input TgoNodeTGoFieldInput) Node {
+		return NewNodeTGoField(input.FieldValue)
+	}(TgoNodeTGoFieldInput{FieldValue: value})
 }
 
 func nodeEnumVariant(value *EnumVariant) Node {
-	return NodeEnumVariant{Value: value}.Node()
+	return func(input TgoNodeEnumVariantInput) Node {
+		return NewNodeEnumVariant(input.FieldValue)
+	}(TgoNodeEnumVariantInput{FieldValue: value})
 }
 
 func nodeIdentifier(value *Identifier) Node {
-	return NodeIdentifier{Value: value}.Node()
+	return func(input TgoNodeIdentifierInput) Node {
+		return NewNodeIdentifier(input.FieldValue)
+	}(TgoNodeIdentifierInput{FieldValue: value})
 }
 
 func nodeComment(value *Comment) Node {
-	return NodeComment{Value: value}.Node()
+	return func(input TgoNodeCommentInput) Node {
+		return NewNodeComment(input.FieldValue)
+	}(TgoNodeCommentInput{FieldValue: value})
 }
 
 func nodeCommentGroup(value *CommentGroup) Node {
-	return NodeCommentGroup{Value: value}.Node()
+	return func(input TgoNodeCommentGroupInput) Node {
+		return NewNodeCommentGroup(input.FieldValue)
+	}(TgoNodeCommentGroupInput{FieldValue: value})
 }

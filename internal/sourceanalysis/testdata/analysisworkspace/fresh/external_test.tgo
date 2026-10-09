@@ -1,0 +1,7 @@
+package fresh_test
+
+import "example.test/analysis/fresh"
+
+func externalFreshValue() string {
+	return fresh.Value()
+}
