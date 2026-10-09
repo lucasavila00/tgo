@@ -13,6 +13,7 @@ test("extension contributes only read-only language features", () => {
   assert.deepEqual(manifest.extensionKind, ["workspace"]);
   assert.equal(manifest.browser, undefined);
   assert.equal(manifest.license, "UNLICENSED");
+  assert.equal(manifest.icon, "images/icon.png");
   assert.match(manifest.scripts.package, /test -x bin\/tgonav/);
   assert.match(manifest.scripts.package, /vsce package /);
   assert.equal(
