@@ -36,6 +36,13 @@ func TestNilBranchAlternativesKeepRelations(t *testing.T) {
 				"checked := (other != nil || value == nil) || value == nil\n" +
 				"value = nil\nif checked { need(value) }",
 		},
+		{
+			name: "saved proof follows surviving alias",
+			body: "alias = nil\nvalue = other\nalias = value\n" +
+				"value = alias\nvalue = other\nvalue = other\n" +
+				"other = &Item{}\nchecked := value != nil\n" +
+				"value = &Item{}\nif checked { need(alias) }",
+		},
 	}
 	for _, test := range tests {
 		diagnostics, err := runNilAnalysis(

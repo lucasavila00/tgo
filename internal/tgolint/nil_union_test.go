@@ -99,7 +99,7 @@ func TestNilBooleanReachability(t *testing.T) {
 }
 
 func runNilAnalysis(
-	t *testing.T,
+	t testing.TB,
 	parameters string,
 	body string,
 ) ([]analysis.Diagnostic, error) {
