@@ -105,6 +105,41 @@ func TestRunRejectsWriteForStandardInput(t *testing.T) {
 	}
 }
 
+func TestRunWritePreservesHardLink(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	original := filepath.Join(directory, "source.tgo")
+	linked := filepath.Join(directory, "linked.tgo")
+	if err := os.WriteFile(original, []byte("package sample\nfunc value()int{return 1}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Link(original, linked); err != nil {
+		t.Skipf("hard links are unavailable: %v", err)
+	}
+	if err := run([]string{linked}, true, false, strings.NewReader(""), new(bytes.Buffer)); err != nil {
+		t.Fatal(err)
+	}
+	originalInfo, err := os.Stat(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	linkedInfo, err := os.Stat(linked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(originalInfo, linkedInfo) {
+		t.Fatal("formatter replaced the linked inode")
+	}
+	want := "package sample\n\nfunc value() int {\n\treturn 1\n}\n"
+	got, err := os.ReadFile(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != want {
+		t.Fatalf("linked source:\n%s\nwant:\n%s", got, want)
+	}
+}
+
 func TestReplaceContentsRestoresAfterPartialWrite(t *testing.T) {
 	t.Parallel()
 	original := []byte("original source")

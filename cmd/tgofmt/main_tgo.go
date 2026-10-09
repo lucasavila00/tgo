@@ -92,6 +92,7 @@ type rewriteTarget interface {
 }
 
 func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.FileMode) error {
+	// Rewrite the existing inode so hard links and symbolic links keep their identity.
 	backup, tgoErr := createBackup(path, source, mode)
 	if tgoErr != nil {
 		return tgoErr

@@ -75,6 +75,7 @@ type rewriteTarget interface {
 }
 
 func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.FileMode) error {
+	// Rewrite the existing inode so hard links and symbolic links keep their identity.
 	backup := createBackup(path, source, mode)!!
 	target, err := os.OpenFile(path, os.O_WRONLY, mode)
 	if err != nil {
@@ -121,13 +122,13 @@ func createBackup(path string, source []byte, mode fs.FileMode) (string, error) 
 		_ = os.Remove(name)
 		return "", err
 	}
-	return name, nil
+	return name,
 }
 
 func replaceContents(target rewriteTarget, source []byte, formatted []byte) (bool, error) {
 	if err := writeAll(target, formatted); err == nil {
 		if err := target.Truncate(int64(len(formatted))); err == nil {
-			return false, nil
+			return false,
 		} else if restoreErr := restoreContents(target, source); restoreErr != nil {
 			return false, fmt.Errorf("%w; restore failed: %v", err, restoreErr)
 		} else {
