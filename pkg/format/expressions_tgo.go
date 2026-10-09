@@ -106,7 +106,9 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 		p.fieldBlock(item.Fields)
 	case syntax.ExpressionTagFunctionType:
 		item := expressionValue.FunctionTypePayload().Value
-		p.token(item.Function, "func")
+		if item.Function.IsValid() {
+			p.token(item.Function, "func")
+		}
 		p.functionSignature(item)
 	case syntax.ExpressionTagInterfaceType:
 		item := expressionValue.InterfaceTypePayload().Value
@@ -273,11 +275,12 @@ func (p *printer) channelType(value *syntax.ChannelType) {
 		p.space()
 	case syntax.ChannelDirectionTagSendOnly:
 		p.token(value.Begin, "chan")
-		p.space()
 		p.token(value.Arrow, "<-")
+		p.space()
 	case syntax.ChannelDirectionTagReceiveOnly:
 		p.token(value.Arrow, "<-")
 		p.token(value.Begin, "chan")
+		p.space()
 	default:
 		panic(direction.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}

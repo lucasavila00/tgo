@@ -83,7 +83,7 @@ func (p *printer) statement(value *syntax.Statement) {
 		item := statementValue.SelectPayload().Value
 		p.token(item.Select, "select")
 		p.space()
-		p.block(item.Body)
+		p.clauseBlock(item.Body)
 	case syntax.StatementTagFor:
 		p.forStatement(statementValue.ForPayload().Value)
 	case syntax.StatementTagRange:
@@ -110,6 +110,17 @@ func (p *printer) block(value *syntax.BlockStatement) {
 	p.indent++
 	p.statementList(value.List)
 	p.indent--
+	p.token(value.Rbrace, "}")
+}
+
+func (p *printer) clauseBlock(value *syntax.BlockStatement) {
+	p.token(value.Lbrace, "{")
+	if len(value.List) == 0 {
+		p.token(value.Rbrace, "}")
+		return
+	}
+	p.newline()
+	p.statementList(value.List)
 	p.token(value.Rbrace, "}")
 }
 
@@ -168,7 +179,7 @@ func (p *printer) switchStatement(value *syntax.SwitchStatement) {
 		p.expression(value.Tag, 0)
 	}
 	p.space()
-	p.block(value.Body)
+	p.clauseBlock(value.Body)
 }
 
 func (p *printer) typeSwitchStatement(value *syntax.TypeSwitchStatement) {
@@ -181,7 +192,7 @@ func (p *printer) typeSwitchStatement(value *syntax.TypeSwitchStatement) {
 	}
 	p.statement(value.Assignment)
 	p.space()
-	p.block(value.Body)
+	p.clauseBlock(value.Body)
 }
 
 func (p *printer) communicationClause(value *syntax.CommunicationClause) {

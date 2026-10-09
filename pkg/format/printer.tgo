@@ -59,11 +59,11 @@ func (p *printer) printFile() []byte {
 	p.token(p.file.Name.Start, p.file.Name.Name)
 	p.newline()
 	if len(p.file.Declarations) > 0 {
-		p.newline()
+		p.blankline()
 	}
 	for index, declaration := range p.file.Declarations {
 		if index > 0 {
-			p.newline()
+			p.blankline()
 		}
 		p.declaration(declaration)
 		p.newline()
@@ -97,7 +97,7 @@ func (p *printer) before(position token.Pos) {
 		} else {
 			p.newline()
 			if last.IsValid() && start.Line > last.Line+1 {
-				p.newline()
+				p.blankline()
 			}
 		}
 		p.text(item.text)
@@ -149,9 +149,18 @@ func (p *printer) newline() {
 		p.output.Truncate(len(data) - 1)
 		data = p.output.Bytes()
 	}
+	if p.lineBreaks < 1 {
+		p.output.WriteByte('\n')
+		p.lineBreaks = 1
+	}
+	p.lineStart = true
+}
+
+func (p *printer) blankline() {
+	p.newline()
 	if p.lineBreaks < 2 {
 		p.output.WriteByte('\n')
-		p.lineBreaks++
+		p.lineBreaks = 2
 	}
 	p.lineStart = true
 }
