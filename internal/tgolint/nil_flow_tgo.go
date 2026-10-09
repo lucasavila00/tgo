@@ -77,10 +77,10 @@ func (c *checker) setGeneratedOutputs(analysis *sourceanalysis.Package) {
 }
 
 // analyzeTGoPackage loads TGo source once for all source checks.
-func (c *checker) analyzeTGoPackage() *sourceanalysis.Package {
+func (c *checker) analyzeTGoPackage() (*sourceanalysis.Package, error) {
 	directory := c.packageDirectory()
 	if directory == "" {
-		return nil
+		return nil, nil
 	}
 	test, external := c.tgoTestPackage()
 	path := c.pass.Pkg.Path()
@@ -98,11 +98,7 @@ func (c *checker) analyzeTGoPackage() *sourceanalysis.Package {
 			directory, path, c.pass.Fset,
 		)
 	}
-	if err != nil {
-		c.reportResult(c.pass.Files[0].Package, "analyze TGo source: %v", err)
-		return nil
-	}
-	return analysis
+	return analysis, err
 }
 
 // tgoTestPackage reports whether the pass contains generated TGo tests.

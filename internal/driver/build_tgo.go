@@ -176,7 +176,6 @@ func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 		unit,
 		unit.Path,
 		unit.Sources,
-		unit.GoFiles,
 		unit.Files,
 		unit.usesC,
 		unit.fs,
@@ -232,12 +231,10 @@ func (b *packageBuilder) compileTestPackage(
 ) (*compiler.CompiledPackage, error) {
 	path := unit.Path
 	sources := tests.Sources
-	goFiles := []compiler.File(nil)
 	syntaxFiles := tests.Files
 	usesC := tests.UsesC
 	if !external {
 		sources = append(append([]compiler.File(nil), unit.Sources...), sources...)
-		goFiles = unit.GoFiles
 		syntaxFiles = append(
 			append([]*syntax.File(nil), unit.Files...),
 			syntaxFiles...,
@@ -255,7 +252,7 @@ func (b *packageBuilder) compileTestPackage(
 		}
 	}
 	return b.compileFiles(
-		unit, path, sources, goFiles, syntaxFiles, usesC, files,
+		unit, path, sources, syntaxFiles, usesC, files,
 	)
 }
 
@@ -264,7 +261,6 @@ func (b *packageBuilder) compileFiles(
 	unit *packageUnit,
 	path string,
 	sources []compiler.File,
-	goFiles []compiler.File,
 	files []*syntax.File,
 	usesC bool,
 	fileSet *token.FileSet,
@@ -294,7 +290,6 @@ func (b *packageBuilder) compileFiles(
 			Directory: unit.Dir,
 			Path:      path,
 			Sources:   sources,
-			GoFiles:   goFiles,
 			Imports:   imports,
 			FileSet:   fileSet,
 			Importer:  packageImporter,

@@ -1,0 +1,24 @@
+nilgobad/bad.go:97:43: value requires an incompatible non-nil contract at p0
+nilgobad/bad.go:6:16: value is not proven non-nil for %T
+nilgobad/bad.go:10:21: value is not proven non-nil for %T
+nilgobad/bad.go:11:21: value does not preserve nested non-nil contract at e
+nilgobad/bad.go:12:20: value is not proven non-nil for %T
+nilgobad/bad.go:12:20: value does not preserve nested non-nil contract at e
+nilgobad/bad.go:21:16: value is not proven non-nil for %T
+nilgobad/bad.go:28:17: value is not proven non-nil for %T
+nilgobad/bad.go:34:16: value is not proven non-nil for %T
+nilgobad/bad.go:40:17: value is not proven non-nil for %T
+nilgobad/bad.go:50:16: value is not proven non-nil for %T
+nilgobad/bad.go:59:16: value is not proven non-nil for %T
+nilgobad/bad.go:64:16: value is not proven non-nil for %T
+nilgobad/bad.go:72:16: value is not proven non-nil for %T
+nilgobad/bad.go:76:6: omitted field Required has an invalid zero value
+nilgobad/bad.go:77:32: value is not proven non-nil for %T
+nilgobad/bad.go:78:6: array literal leaves a non-nil element at zero
+nilgobad/bad.go:79:25: value is not proven non-nil for %T
+nilgobad/bad.go:80:31: value is not proven non-nil for %T
+nilgobad/bad.go:84:12: make creates nil elements in a non-nil slice
+nilgobad/bad.go:85:2: clear creates nil elements in a non-nil slice
+nilgobad/bad.go:94:16: value is not proven non-nil for %T
+nilgobad/bad.go:103:6: value is not proven non-nil for %T
+nilgobad/bad.go:103:18: value is not proven non-nil for %T

@@ -121,7 +121,15 @@ func run(pass *analysis.Pass) (any, error) {
 	if c.rejectInvalidDependencies() {
 		return nil,
 	}
-	analysis := c.analyzeTGoPackage()
+	analysis, err := c.analyzeTGoPackage()
+	if err != nil {
+		c.failVerification(
+			c.pass.Files[0].Package,
+			"analyze TGo source: %v",
+			err,
+		)
+		return nil,
+	}
 	c.setGeneratedOutputs(analysis)
 	c.findModels()
 	if c.invalid {

@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"fmt"
-	"go/parser"
 	"go/token"
 	"go/types"
 
@@ -22,7 +21,6 @@ type PackageInput struct {
 	Directory string
 	Path      string
 	Sources   []File
-	GoFiles   []File
 	Imports   map[string]*CompiledPackage
 	FileSet   *token.FileSet
 	Importer  types.Importer
@@ -80,16 +78,6 @@ func Compile(input PackageInput) (*CompiledPackage, []error) {
 		}
 		unit.Sources = append(unit.Sources, source)
 		unit.Files = append(unit.Files, source.File)
-	}
-	for _, file := range input.GoFiles {
-		parsed, err := parser.ParseFile(
-			files, file.Name, file.Data,
-			parser.ParseComments|parser.SkipObjectResolution,
-		)
-		if err != nil {
-			return nil, []error{err}
-		}
-		unit.Files = append(unit.Files, parsed)
 	}
 	unit.resolveEnumJSONHelperNames()
 	outputs, err := unit.compile()

@@ -26,32 +26,35 @@ type BlockKind uint8
 
 // BlockKind values identify control-flow block roles.
 const (
-	KindInvalid BlockKind = iota
-	KindUnreachable
-	KindBody
-	KindForBody
-	KindForDone
-	KindForLoop
-	KindForPost
-	KindIfDone
-	KindIfElse
-	KindIfThen
-	KindLabel
-	KindRangeBody
-	KindRangeDone
-	KindRangeLoop
-	KindSelectCaseBody
-	KindSelectDone
-	KindSelectAfterCase
-	KindSwitchCaseBody
-	KindSwitchDone
-	KindSwitchNextCase
+	KindInvalid         BlockKind = 0
+	KindUnreachable     BlockKind = 1
+	KindBody            BlockKind = 2
+	KindForBody         BlockKind = 3
+	KindForDone         BlockKind = 4
+	KindForLoop         BlockKind = 5
+	KindForPost         BlockKind = 6
+	KindIfDone          BlockKind = 7
+	KindIfElse          BlockKind = 8
+	KindIfThen          BlockKind = 9
+	KindLabel           BlockKind = 10
+	KindRangeBody       BlockKind = 11
+	KindRangeDone       BlockKind = 12
+	KindRangeLoop       BlockKind = 13
+	KindSelectCaseBody  BlockKind = 14
+	KindSelectDone      BlockKind = 15
+	KindSelectAfterCase BlockKind = 16
+	KindSwitchCaseBody  BlockKind = 17
+	KindSwitchDone      BlockKind = 18
+	KindSwitchNextCase  BlockKind = 19
 )
 
 // New builds a control-flow graph from one syntax block.
 func New(body *syntax.BlockStatement, mayReturn func(*syntax.Expression) bool) *CFG {
-	builder := graphBuilder{mayReturn: mayReturn}
-	bodyNode := syntax.NewStatementBlock(body)
+	builder := graphBuilder{
+		blocks: nil, mayReturn: mayReturn, current: nil,
+		labels: nil, targets: nil,
+	}
+	bodyNode := syntax.Statement.Block{Value: body}
 	builder.current = builder.newBlock(KindBody, &bodyNode)
 	builder.statement(&bodyNode)
 
