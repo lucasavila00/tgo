@@ -10,6 +10,7 @@ async function main() {
   const cache = path.join(extension, ".vscode-test");
   const workspace = path.join(cache, "workspace with spaces");
   const secondWorkspace = path.join(cache, "second workspace");
+  const partialWorkspace = path.join(cache, "partial workspace");
   const workspaceFile = path.join(cache, "navigation.code-workspace");
   fs.mkdirSync(cache, { recursive: true });
   fs.rmSync(workspace, { recursive: true, force: true });
@@ -30,10 +31,20 @@ async function main() {
     "workspaces",
     "basic"
   ), secondWorkspace, { recursive: true });
+  fs.rmSync(partialWorkspace, { recursive: true, force: true });
+  fs.cpSync(path.join(
+    repository,
+    "internal",
+    "navigation",
+    "testdata",
+    "workspaces",
+    "partial"
+  ), partialWorkspace, { recursive: true });
   fs.writeFileSync(workspaceFile, JSON.stringify({
     folders: [
       { path: workspace },
       { path: secondWorkspace },
+      { path: partialWorkspace },
       { path: repository }
     ]
   }));

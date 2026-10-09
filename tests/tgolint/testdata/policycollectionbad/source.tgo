@@ -2,7 +2,7 @@ package policycollectionbad
 
 type Quantity struct { value int } checked
 
-func (value Quantity) check() (Quantity, error) { return value, nil }
+func (value Quantity) check() (Quantity, error) { return value, }
 func (value Quantity) Value() int { return value.value }
 
 var pointer = new(Quantity)

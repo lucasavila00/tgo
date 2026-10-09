@@ -224,7 +224,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	case <-ctx.Done(): return , ctx.Err()
 	default:
 	}
-	packages := sourceanalysis.AnalyzeWorkspaceContext(ctx, e.root)!!
+	packages := sourceanalysis.AnalyzeAvailableWorkspaceContext(ctx, e.root)!!
 	select {
 	case <-ctx.Done(): return , ctx.Err()
 	default:
