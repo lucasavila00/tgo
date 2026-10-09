@@ -106,7 +106,6 @@ func (p *packageUnit) fillLiteralDefaults(
 			continue
 		}
 		if field.Default == "" {
-			p.fail(literal, "missing required field %s", field.Name)
 			continue
 		}
 		if !qualified {
