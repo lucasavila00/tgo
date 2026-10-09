@@ -14,6 +14,7 @@ func (p *packageUnit) prepare() {
 	p.usedIdentifiers = nil
 	for _, source := range p.Sources {
 		p.markGenerated(source)
+		p.lowerSuccessReturns(source)
 		p.addDefaults(source)
 	}
 }

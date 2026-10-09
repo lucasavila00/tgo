@@ -66,6 +66,7 @@ type source struct {
 	Comprehensions   map[string]comprehensionSource
 	Exhaustive       map[token.Pos]bool
 	NonNil           map[token.Pos]bool
+	SuccessReturns   []*ast.ReturnStmt
 	GeneratedHelpers map[string]bool
 	Lowered          bool
 }

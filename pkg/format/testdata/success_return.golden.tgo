@@ -1,0 +1,25 @@
+package successreturn
+
+func load() (int, error) {
+	return 1, nil
+}
+
+func one() (int, error) {
+	return 1,
+}
+
+func commented() (string, error) {
+	return "ok", // success
+}
+
+func many() (int, string, error) {
+	return 2, "two",
+}
+
+func propagated() (int, error) {
+	return load()!,
+}
+
+func transparent() (int, error) {
+	return load()!!,
+}

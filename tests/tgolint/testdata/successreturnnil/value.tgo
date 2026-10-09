@@ -1,0 +1,5 @@
+package successreturnnil
+
+func Invalid() (int, %int) {
+	return 1,
+}

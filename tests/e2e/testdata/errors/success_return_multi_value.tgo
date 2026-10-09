@@ -1,0 +1,9 @@
+package errors
+
+func pair() (int, string) {
+	return 1, "one"
+}
+
+func invalid() (int, string, error) {
+	return pair(),
+}

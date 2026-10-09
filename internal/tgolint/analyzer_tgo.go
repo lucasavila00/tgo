@@ -135,6 +135,7 @@ func run(pass *analysis.Pass) (any, error) {
 	if c.invalid {
 		return nil, nil
 	}
+	c.checkSourcePolicies(analysis)
 	c.findValidationWrappers()
 	c.findValidationFunctionValues()
 	c.checkTGoSource(analysis)

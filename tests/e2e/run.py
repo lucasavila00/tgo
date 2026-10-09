@@ -58,7 +58,9 @@ def check_stale_output_cleanup(compiler, work):
     source.unlink()
     invalid = work / "z_invalid"
     invalid.mkdir()
-    (invalid / "invalid.tgo").write_text("package invalid\n\nvar missing int\n")
+    (invalid / "invalid.tgo").write_text(
+        "package invalid\n\nvar missing MissingType = MissingType{}\n"
+    )
     run([str(compiler), "build", "./..."], work, success=False)
     assert output.exists(), "failed build did not restore stale output"
     shutil.rmtree(invalid)

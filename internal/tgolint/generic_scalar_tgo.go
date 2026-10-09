@@ -608,7 +608,11 @@ func (c *checker) transferScalarAssignment(
 	known := make([]bool, 0, len(statement.Right))
 	for _, expression := range statement.Right {
 		value, valueKnown := c.evaluateScalar(expression, state)
-		values = append(values, value)
+		if valueKnown {
+			values = append(values, value)
+		} else {
+			values = append(values, scalarValueBoolean{Value: false}.scalarValue())
+		}
 		known = append(known, valueKnown)
 	}
 	for index, target := range statement.Left {

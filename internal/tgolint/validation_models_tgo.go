@@ -363,6 +363,13 @@ func (c *checker) modelFor(typ types.Type) *model {
 	if fact, ok := c.models[key]; ok {
 		return fact
 	}
+	for candidate, fact := range c.models {
+		if candidate.pkg != nil && candidate.name == key.name &&
+			candidate.pkg.Path() == key.pkg.Path() {
+			c.models[key] = fact
+			return fact
+		}
+	}
 	fact := new(modelWireFact)
 	if !c.pass.ImportObjectFact(named.Obj(), fact) {
 		c.models[key] = nil
