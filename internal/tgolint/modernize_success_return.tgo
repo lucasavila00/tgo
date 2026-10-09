@@ -1,0 +1,45 @@
+package tgolint
+
+import (
+	"go/types"
+
+	"tgo/internal/compiler"
+	"tgo/pkg/syntax"
+)
+
+// checkSuccessReturnModernization finds explicit final nil return values.
+func (c %checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPackage) {
+	if analysis == nil || analysis.Facts == nil {
+		return
+	}
+	for _, source := range analysis.Sources {
+		file := source.Syntax
+		if file == nil {
+			continue
+		}
+		facts := analysis.Facts
+		syntax.Inspect(
+			file,
+			func(node *syntax.Node) bool {
+				statement, ok := syntax.StatementOf(node)
+				if !ok {
+					return true
+				}
+				returned := syntax.ReturnStatementOf(statement)
+				if returned == nil || returned.SuccessComma.IsValid() || len(returned.Results) < 2 {
+					return true
+				}
+				last := sourceUnparenthesized(returned.Results[len(returned.Results) - 1])
+				name, ok := sourceIdentifier(last)
+				if !ok || name.Name != "nil" || facts.IdentifierObject(last) != types.Universe.Lookup("nil") {
+					return true
+				}
+				c.reportResult(
+					syntax.ExpressionPosition(last),
+					"return with final nil can use a trailing comma",
+				)
+				return true
+			},
+		)
+	}
+}

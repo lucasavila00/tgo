@@ -89,10 +89,10 @@ func (c %checker) resultProofs(
 	}
 	failure, successOnTrue := c.atomicResultProof(expression, state)
 	if failure == nil {
-		return nil, nil
+		return nil,
 	}
 	if successOnTrue {
-		return proofSet{failure: true}, nil
+		return proofSet{failure: true},
 	}
 	return nil, proofSet{failure: true}
 }
@@ -218,11 +218,11 @@ func (c %checker) hasValidPresenceProof(state checkedState, object types.Object)
 func errorAndNil(errorExpression, nilExpression %syntax.Expression) (*syntax.Identifier, *syntax.Identifier) {
 	name := syntax.IdentifierExpressionOf(errorExpression)
 	if name == nil {
-		return nil, nil
+		return nil,
 	}
 	nilName := syntax.IdentifierExpressionOf(nilExpression)
 	if nilName == nil || nilName.Name != "nil" {
-		return nil, nil
+		return nil,
 	}
 	return name, nilName
 }

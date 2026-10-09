@@ -226,6 +226,7 @@ func (p *sourceParser) makeDeclaration(
 			Rbrace:    p.pos(p.tokens[raw.close].start),
 			Comment:   nil,
 		}, anchors, nil
+
 	case "checked":
 		base, baseAnchors, err := p.parseExpression(
 			p.tokens[raw.baseStart].start,
@@ -259,6 +260,7 @@ func (p *sourceParser) makeDeclaration(
 			Predicate: predicate,
 			Comment:   nil,
 		}, anchors, nil
+
 	default:
 		return nil, nil, fmt.Errorf("unknown declaration kind %q", raw.kind)
 	}

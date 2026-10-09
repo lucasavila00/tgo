@@ -49,6 +49,7 @@ func (c *checker) checkTGoSource(analysis *compiler.AnalysisPackage) {
 	c.checkNilSafety(analysis)
 	c.checkIotaModernization(analysis)
 	c.checkErrorReturnModernization(analysis)
+	c.checkSuccessReturnModernization(analysis)
 }
 
 // setGeneratedOutputs records the current compiler output for integrity checks.

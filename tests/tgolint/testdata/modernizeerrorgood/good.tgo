@@ -11,20 +11,20 @@ type store struct {
 	load func() (*record, error)
 }
 
-func load() (*record, error) { return nil, nil }
+func load() (*record, error) { return nil, }
 
-func loadSlice() ([]int, error) { return nil, nil }
+func loadSlice() ([]int, error) { return nil, }
 
-func loadMap() (map[string]int, error) { return nil, nil }
+func loadMap() (map[string]int, error) { return nil, }
 
-func (store) Find() (*record, error) { return nil, nil }
+func (store) Find() (*record, error) { return nil, }
 
 func differentContext() (*record, error) {
 	value, err := load()
 	if err != nil {
 		return nil, fmt.Errorf("load record: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func shortSelector(repository store) (*record, error) {
@@ -32,7 +32,7 @@ func shortSelector(repository store) (*record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Find: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func wrongVerb() (*record, error) {
@@ -40,7 +40,7 @@ func wrongVerb() (*record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load: %v", err)
 	}
-	return value, nil
+	return value,
 }
 
 func extraArgument() (*record, error) {
@@ -48,7 +48,7 @@ func extraArgument() (*record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load: %w: %s", err, "failed")
 	}
-	return value, nil
+	return value,
 }
 
 func anotherWrapper() (*record, error) {
@@ -56,7 +56,7 @@ func anotherWrapper() (*record, error) {
 	if err != nil {
 		return nil, errors.Join(err)
 	}
-	return value, nil
+	return value,
 }
 
 func extraStatement() (*record, error) {
@@ -65,7 +65,7 @@ func extraStatement() (*record, error) {
 		_ = err
 		return nil, fmt.Errorf("load: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func branchElse() (*record, error) {
@@ -73,7 +73,7 @@ func branchElse() (*record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	} else {
-		return value, nil
+		return value,
 	}
 }
 
@@ -82,7 +82,7 @@ func branchInitializer() (*record, error) {
 	if checked := err; checked != nil {
 		return nil, fmt.Errorf("load: %w", checked)
 	}
-	return value, nil
+	return value,
 }
 
 func changedSuccessValue() (*record, error) {
@@ -90,7 +90,7 @@ func changedSuccessValue() (*record, error) {
 	if err != nil {
 		return &record{}, fmt.Errorf("load: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func namedResult() (result *record, final error) {
@@ -98,7 +98,7 @@ func namedResult() (result *record, final error) {
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func normalAssignment() (*record, error) {
@@ -108,7 +108,7 @@ func normalAssignment() (*record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func mixedDeclaration() (*record, error) {
@@ -117,7 +117,7 @@ func mixedDeclaration() (*record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func dynamicCall() (*record, error) {
@@ -126,7 +126,7 @@ func dynamicCall() (*record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("loader: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func functionField(repository store) (*record, error) {
@@ -134,7 +134,7 @@ func functionField(repository store) (*record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("repository.load: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func wrongError() (*record, error) {
@@ -143,7 +143,7 @@ func wrongError() (*record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", other)
 	}
-	return value, nil
+	return value,
 }
 
 func reusedError() (*record, error) {
@@ -152,7 +152,7 @@ func reusedError() (*record, error) {
 		return nil, fmt.Errorf("load: %w", err)
 	}
 	if err == nil {
-		return value, nil
+		return value,
 	}
 	return nil, err
 }
@@ -162,7 +162,7 @@ func nonzeroSlice() ([]int, error) {
 	if err != nil {
 		return []int{}, fmt.Errorf("loadSlice: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func nonzeroMap() (map[string]int, error) {
@@ -170,10 +170,10 @@ func nonzeroMap() (map[string]int, error) {
 	if err != nil {
 		return map[string]int{}, fmt.Errorf("loadMap: %w", err)
 	}
-	return value, nil
+	return value,
 }
 
 func propagated() (*record, error) {
 	value := load()!
-	return value, nil
+	return value,
 }

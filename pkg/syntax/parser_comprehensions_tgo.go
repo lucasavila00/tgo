@@ -140,6 +140,7 @@ func (p *sourceParser) rawComprehension(
 		result:  result,
 		node:    nil,
 	}, nil
+
 }
 
 func (p *sourceParser) rawComprehensionBody(
@@ -188,6 +189,7 @@ func (p *sourceParser) rawComprehensionClause(
 			expressionStart: start + 1, expressionEnd: open,
 			open: open, close: close,
 		}, nil
+
 	}
 	define, rangeToken := -1, -1
 	for cursor := start + 1; cursor < open; cursor++ {
@@ -215,6 +217,7 @@ func (p *sourceParser) rawComprehensionClause(
 		expressionStart: rangeToken + 1, expressionEnd: open,
 		open: open, close: close,
 	}, nil
+
 }
 
 func (p *sourceParser) comprehensionBindings(start int, end int) ([]int, error) {
