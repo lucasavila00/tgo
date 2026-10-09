@@ -31,6 +31,9 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	})
 	matchMarker := freshIdentifier("__tgo_match", used)
 	defaultMarker := freshIdentifier("__tgo_defaults", used)
+	jsonPackage := freshIdentifier("__tgo_json", used)
+	fmtPackage := freshIdentifier("__tgo_fmt", used)
+	hasEnum := false
 	file := files.File(tree.Package)
 	erasedData, nonNilLocations := eraseNonNilTypes(files, file, tree, data)
 	edits := []edit(nil)
@@ -40,7 +43,11 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		var replacement string
 		if node, ok := syntax.EnumDeclarationOf(declaration); ok {
 			item = enumModel(files, erasedData, node)
-			replacement = enumGo(name, item)
+			if err := configureEnumJSON(item, node); err != nil {
+				return nil, fmt.Errorf("%s: %w", files.Position(node.Name.Start), err)
+			}
+			hasEnum = true
+			replacement = enumGo(name, item) + enumJSONGo(item, jsonPackage, fmtPackage)
 		} else if node, ok := syntax.StructDeclarationOf(declaration); ok {
 			item = structModel(files, erasedData, node)
 			replacement = "type " + item.Name + " struct {\n" +
@@ -76,6 +83,12 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	if err != nil {
 		return nil, err
 	}
+	if hasEnum {
+		offset := file.Offset(tree.Name.Stop)
+		imports := fmt.Sprintf("\nimport %s \"encoding/json\"\nimport %s \"fmt\"\n",
+			jsonPackage, fmtPackage)
+		edits = append(edits, edit{start: offset, end: offset, text: imports})
+	}
 	input := applyEdits(string(data), edits)
 	mode := parser.ParseComments | parser.AllErrors | parser.SkipObjectResolution
 	goFile, err := parser.ParseFile(files, name, input, mode)
@@ -95,6 +108,8 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		return true
 	})
 	return &source{
+		JSONPackage:    jsonPackage,
+		FmtPackage:     fmtPackage,
 		Name:           name,
 		Data:           append([]byte(nil), data...),
 		Tree:           tree,

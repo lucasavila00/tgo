@@ -212,6 +212,46 @@ func TestParentAndChildrenUseTGoNodes(t *testing.T) {
 	}
 }
 
+func TestParseFilePropagationKeepsParserErrorPosition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			name: "one result",
+			source: "package sample\n" +
+				"type Result enum {\n" +
+				"\tBad struct { Value (int] }\n" +
+				"}\n",
+			want: "bad.tgo:p.closeToken: 3:25: unmatched ]",
+		},
+		{
+			name: "two results",
+			source: "package sample\n" +
+				"type Result enum {\n" +
+				"\tBad int\n" +
+				"}\n",
+			want: "bad.tgo:p.variant: 3:2: variant needs Name struct { fields }",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := syntax.ParseFile(
+				token.NewFileSet(), "bad.tgo", []byte(test.source), syntax.AllErrors,
+			)
+			if err == nil {
+				t.Fatal("ParseFile succeeded")
+			}
+			if got := err.Error(); got != test.want {
+				t.Fatalf("error = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
 func requireKinds(t *testing.T, found map[string]bool, expected []string) {
 	t.Helper()
 	missing := []string(nil)
@@ -222,5 +262,49 @@ func requireKinds(t *testing.T, found map[string]bool, expected []string) {
 	}
 	if len(missing) != 0 {
 		t.Fatalf("missing kinds %v; found %v", missing, found)
+	}
+}
+
+func TestEnumJSONTags(t *testing.T) {
+	source := []byte("package sample\n" +
+		"type Event enum `json:\"adjacent,tag=type,content=data\"`\n{\n" +
+		" Created struct { ID string `json:\"id\"` } `json:\"created\"` // variant\n" +
+		" Empty struct {}\n}\n")
+	files := token.NewFileSet()
+	tree, err := syntax.ParseFile(files, "sample.tgo", source, syntax.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	enum, ok := syntax.EnumDeclarationOf(tree.Declarations[0])
+	if !ok || enum.Tag == nil || enum.Tag.Value != "`json:\"adjacent,tag=type,content=data\"`" {
+		t.Fatal("enum tag was not parsed")
+	}
+	variant := enum.Variants[0]
+	if variant.Tag == nil || variant.Tag.Value != "`json:\"created\"`" {
+		t.Fatal("variant tag was not parsed")
+	}
+	if variant.Stop != variant.Tag.Stop {
+		t.Fatal("variant span does not include its tag")
+	}
+	if enum.Variants[1].Tag != nil {
+		t.Fatal("untagged variant has a tag")
+	}
+	positions := map[token.Pos]bool{
+		enum.Tag.Start:                    true,
+		variant.Tag.Start:                 true,
+		variant.Fields[0].Field.Tag.Start: true,
+	}
+	tags := 0
+	syntax.Inspect(tree, func(node *syntax.Node) bool {
+		if positions[syntax.NodePosition(node)] {
+			tags++
+			if syntax.Parent(tree, node) == nil {
+				t.Fatal("tag has no parent")
+			}
+		}
+		return true
+	})
+	if tags != 3 {
+		t.Fatalf("walk found %d tags, want 3", tags)
 	}
 }

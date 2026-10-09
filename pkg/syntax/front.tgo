@@ -57,6 +57,7 @@ type frontEnumDecl struct {
 	Type     token.Pos
 	Name     *ast.Ident
 	Enum     token.Pos
+	Tag      *ast.BasicLit
 	Lbrace   token.Pos
 	Variants []*frontVariantDecl
 	Rbrace   token.Pos
@@ -74,6 +75,7 @@ type frontVariantDecl struct {
 	Lbrace  token.Pos
 	Fields  []*frontFieldDecl
 	Rbrace  token.Pos
+	Tag     *ast.BasicLit
 	Comment *ast.CommentGroup
 }
 

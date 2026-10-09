@@ -39,6 +39,7 @@ type rawField struct {
 }
 
 type rawVariant struct {
+	tag         int
 	start       int
 	end         int
 	name        int
@@ -49,6 +50,7 @@ type rawVariant struct {
 }
 
 type rawDecl struct {
+	tag            int
 	kind           string
 	start          int
 	end            int
@@ -380,6 +382,9 @@ func (p %sourceParser) declaration(start int) (*rawDecl, int, error) {
 	}
 	if p.tokens[cursor].text == "enum" {
 		open := cursor + 1
+		if open < len(p.tokens) && p.tokens[open].kind == token.STRING {
+			open++
+		}
 		if p.implicitSemicolon(open) {
 			open++
 		}
@@ -456,10 +461,7 @@ func (p %sourceParser) enumDeclaration(
 	keyword int,
 	open int,
 ) (*rawDecl, int, error) {
-	closing, err := p.closeToken(open)
-	if err != nil {
-		return nil, 0, err
-	}
+	closing := p.closeToken(open)!
 	declaration := new(rawDecl)
 	declaration.kind = "enum"
 	declaration.start = p.tokens[start].start
@@ -467,6 +469,10 @@ func (p %sourceParser) enumDeclaration(
 	declaration.typeToken = start
 	declaration.name = start + 1
 	declaration.keyword = keyword
+	declaration.tag = -1
+	if keyword+1 < open && p.tokens[keyword+1].kind == token.STRING {
+		declaration.tag = keyword + 1
+	}
 	declaration.open = open
 	declaration.close = closing
 	declaration.baseStart = -1
@@ -480,10 +486,7 @@ func (p %sourceParser) enumDeclaration(
 			cursor++
 			continue
 		}
-		variant, next, err := p.variant(cursor, closing)
-		if err != nil {
-			return nil, 0, err
-		}
+		variant, next := p.variant(cursor, closing)!
 		name := p.tokens[variant.name].text
 		if names[name] {
 			return nil, 0, p.tokenError(variant.name, "duplicate variant %s", name)
@@ -520,7 +523,14 @@ func (p %sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	variant.open = start + 2
 	variant.close = closing
 	variant.fields = fields
-	return variant, skipSemicolon(p.tokens, closing+1), nil
+	variant.tag = -1
+	next := closing + 1
+	if next < limit && p.tokens[next].kind == token.STRING {
+		variant.tag = next
+		variant.end = p.tokens[next].end
+		next++
+	}
+	return variant, skipSemicolon(p.tokens, next), nil
 }
 
 func (p %sourceParser) structDeclaration(
