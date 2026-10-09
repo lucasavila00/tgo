@@ -21,7 +21,7 @@ func sourceSymbols(
 		result,
 		pkg,
 		uri,
-		file.Name.Name, SymbolKindPackage{}.SymbolKind(), pkg.Path,
+		file.Name.Name, NewSymbolKindPackage(), pkg.Path,
 		file.Name.Span,
 		file.Name.Span,
 	)
@@ -37,10 +37,10 @@ func sourceSymbols(
 			)
 		case syntax.FunctionDeclarationValueOf(declaration) != nil:
 			value := syntax.FunctionDeclarationValueOf(declaration)
-			kind := SymbolKindFunction{}.SymbolKind()
+			kind := NewSymbolKindFunction()
 			container := pkg.Path
 			if value.Receiver != nil {
-				kind = SymbolKindMethod{}.SymbolKind()
+				kind = NewSymbolKindMethod()
 				container = receiverName(pkg, value)
 			}
 			result = appendSymbol(
@@ -59,7 +59,7 @@ func sourceSymbols(
 				result,
 				pkg,
 				uri,
-				value.Name.Name, SymbolKindEnum{}.SymbolKind(), pkg.Path,
+				value.Name.Name, NewSymbolKindEnum(), pkg.Path,
 				value.Span,
 				value.Name.Span,
 			)
@@ -68,7 +68,7 @@ func sourceSymbols(
 					result,
 					pkg,
 					uri,
-					variant.Name.Name, SymbolKindEnumMember{}.SymbolKind(), value.Name.Name,
+					variant.Name.Name, NewSymbolKindEnumMember(), value.Name.Name,
 					variant.Span,
 					variant.Name.Span,
 				)
@@ -86,7 +86,7 @@ func sourceSymbols(
 				result,
 				pkg,
 				uri,
-				value.Name.Name, SymbolKindStruct{}.SymbolKind(), pkg.Path,
+				value.Name.Name, NewSymbolKindStruct(), pkg.Path,
 				value.Span,
 				value.Name.Span,
 			)
@@ -111,9 +111,9 @@ func appendGeneralSymbols(
 ) []Symbol {
 	for _, specification := range declaration.Specs {
 		if value := syntax.ValueSpecificationOf(specification); value != nil {
-			kind := SymbolKindVariable{}.SymbolKind()
+			kind := NewSymbolKindVariable()
 			if declaration.Kind == token.CONST {
-				kind = SymbolKindConstant{}.SymbolKind()
+				kind = NewSymbolKindConstant()
 			}
 			for _, name := range value.Names {
 				result = appendSymbol(
@@ -154,7 +154,7 @@ func appendGeneralSymbols(
 					pkg,
 					uri,
 					methods.List,
-					value.Name.Name, SymbolKindMethod{}.SymbolKind(),
+					value.Name.Name, NewSymbolKindMethod(),
 				)
 			}
 		}
@@ -164,15 +164,15 @@ func appendGeneralSymbols(
 
 func typeKind(value *syntax.Expression) SymbolKind {
 	if value == nil {
-		return SymbolKindType{}.SymbolKind()
+		return NewSymbolKindType()
 	}
 	switch value.Tag() {
 	case syntax.ExpressionTagStructType:
-		return SymbolKindStruct{}.SymbolKind()
+		return NewSymbolKindStruct()
 	case syntax.ExpressionTagInterfaceType:
-		return SymbolKindInterface{}.SymbolKind()
+		return NewSymbolKindInterface()
 	default:
-		return SymbolKindType{}.SymbolKind()
+		return NewSymbolKindType()
 	}
 }
 
@@ -216,7 +216,7 @@ func appendTGoFieldSymbols(
 				result,
 				pkg,
 				uri,
-				name.Name, SymbolKindField{}.SymbolKind(), container,
+				name.Name, NewSymbolKindField(), container,
 				field.Field.Span,
 				name.Span,
 			)
@@ -233,7 +233,7 @@ func appendFieldSymbols(
 	container string,
 ) []Symbol {
 	return appendNamedFields(
-		result, pkg, uri, fields, container, SymbolKindField{}.SymbolKind(),
+		result, pkg, uri, fields, container, NewSymbolKindField(),
 	)
 }
 
