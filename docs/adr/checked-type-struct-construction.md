@@ -19,8 +19,10 @@ func (value PortValue) Validate() error {
 }
 ```
 
-A `where` expression may return `bool` or `error`. A Boolean expression keeps the current
-behavior. An error expression accepts nil and returns a non-nil error unchanged.
+A `where` expression must return `bool` or `error`. A Boolean result accepts the value when it
+is true. When it is false, construction returns the zero checked value and the generated
+`invalid Port` error. An error result accepts the value when it is nil. When it is non-nil,
+construction returns the zero checked value and that error unchanged.
 
 A checked struct literal is a fallible expression:
 
