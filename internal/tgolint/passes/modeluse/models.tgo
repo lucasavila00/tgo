@@ -1,0 +1,245 @@
+package modeluse
+
+type model enum {
+	Checked struct { Package string; Name string }
+	Enum struct { Package string; Name string; Variants []string }
+	Mixed struct{}
+	Parameter struct{}
+}
+
+// modelWireFact is the stable fact format used by go/analysis.
+// The checker decodes it before it uses the model.
+type modelWireFact struct {
+	Kind     uint8
+	Package  string
+	Name     string
+	Variants []string
+}
+
+// AFact marks modelWireFact as a Go analysis fact.
+func (%modelWireFact) AFact() {}
+
+const (
+	checkedModelWire uint8 = 1
+	enumModelWire    uint8 = 2
+)
+
+func checkedModel(packagePath string, name string) %model {
+	value := model.Checked{Package: packagePath, Name: name}
+	return &value
+}
+
+func enumModel(packagePath string, name string, variants []string) %model {
+	value := model.Enum{
+		Package: packagePath, Name: name, Variants: variants,
+	}
+	return &value
+}
+
+func mixedModel() %model {
+	value := model.Mixed{}
+	return &value
+}
+
+func parameterModel() %model {
+	value := model.Parameter{}
+	return &value
+}
+
+func modelDescription(value *model) (string, string) {
+	if value == nil {
+		return "", ""
+	}
+	switch enumValue13 := *value; enumValue13.Tag() {
+	case modelTagChecked:
+		checked := enumValue13.CheckedPayload()
+		return "checked", checked.Name
+	case modelTagEnum:
+		enum := enumValue13.EnumPayload()
+		return "enum", enum.Name
+	case modelTagMixed:
+		return "", ""
+	case modelTagParameter:
+		return "generic", "type argument"
+	exhaustive:
+	}
+}
+
+func modelKind(value *model) string {
+	kind, _ := modelDescription(value)
+	return kind
+}
+
+func modelName(value *model) string {
+	_, name := modelDescription(value)
+	return name
+}
+
+func modelPackage(value *model) string {
+	if value == nil {
+		return ""
+	}
+	switch enumValue14 := *value; enumValue14.Tag() {
+	case modelTagChecked:
+		checked := enumValue14.CheckedPayload()
+		return checked.Package
+	case modelTagEnum:
+		enum := enumValue14.EnumPayload()
+		return enum.Package
+	case modelTagMixed:
+		return ""
+	case modelTagParameter:
+		return ""
+	exhaustive:
+	}
+}
+
+func modelVariants(value *model) []string {
+	if value == nil {
+		return nil
+	}
+	switch enumValue15 := *value; enumValue15.Tag() {
+	case modelTagChecked:
+		return nil
+	case modelTagEnum:
+		enum := enumValue15.EnumPayload()
+		return enum.Variants
+	case modelTagMixed:
+		return nil
+	case modelTagParameter:
+		return nil
+	exhaustive:
+	}
+}
+
+func modelIsChecked(value *model) bool {
+	if value == nil {
+		return false
+	}
+	switch enumValue16 := *value; enumValue16.Tag() {
+	case modelTagChecked:
+		return true
+	case modelTagEnum:
+		return false
+	case modelTagMixed:
+		return false
+	case modelTagParameter:
+		return false
+	exhaustive:
+	}
+}
+
+func modelIsEnum(value *model) bool {
+	if value == nil {
+		return false
+	}
+	switch enumValue17 := *value; enumValue17.Tag() {
+	case modelTagChecked:
+		return false
+	case modelTagEnum:
+		return true
+	case modelTagMixed:
+		return false
+	case modelTagParameter:
+		return false
+	exhaustive:
+	}
+}
+
+func modelIsMixed(value *model) bool {
+	if value == nil {
+		return false
+	}
+	switch enumValue18 := *value; enumValue18.Tag() {
+	case modelTagChecked:
+		return false
+	case modelTagEnum:
+		return false
+	case modelTagMixed:
+		return true
+	case modelTagParameter:
+		return false
+	exhaustive:
+	}
+}
+
+func sameModel(left *model, right *model) bool {
+	if left == nil || right == nil {
+		return left == right
+	}
+	if modelIsChecked(left) {
+		return modelIsChecked(right) && modelPackage(left) == modelPackage(right) &&
+			modelName(left) == modelName(right)
+	}
+	if modelIsEnum(left) {
+		return modelIsEnum(right) && modelPackage(left) == modelPackage(right) &&
+			modelName(left) == modelName(right)
+	}
+	if modelIsMixed(left) {
+		return modelIsMixed(right)
+	}
+	return modelIsParameter(right)
+}
+
+func modelIsParameter(value *model) bool {
+	if value == nil {
+		return false
+	}
+	switch enumValue19 := *value; enumValue19.Tag() {
+	case modelTagChecked:
+		return false
+	case modelTagEnum:
+		return false
+	case modelTagMixed:
+		return false
+	case modelTagParameter:
+		return true
+	exhaustive:
+	}
+}
+
+// encodeModelFact converts the internal ADT to its package fact form.
+func encodeModelFact(value *model) *modelWireFact {
+	if value == nil {
+		return nil
+	}
+	switch enumValue20 := *value; enumValue20.Tag() {
+	case modelTagChecked:
+		checked := enumValue20.CheckedPayload()
+		return &modelWireFact{
+			Kind: checkedModelWire, Package: checked.Package,
+			Name: checked.Name, Variants: nil,
+		}
+	case modelTagEnum:
+		enum := enumValue20.EnumPayload()
+		return &modelWireFact{
+			Kind: enumModelWire, Package: enum.Package, Name: enum.Name,
+			Variants: append([]string(nil), enum.Variants...),
+		}
+	case modelTagMixed:
+		return nil
+	case modelTagParameter:
+		return nil
+	exhaustive:
+	}
+}
+
+// decodeModelFact validates a wire fact before it enters the checker.
+func decodeModelFact(fact *modelWireFact, expectedPackage string) *model {
+	if fact == nil || fact.Package != expectedPackage || fact.Name == "" {
+		return nil
+	}
+	switch fact.Kind {
+	case checkedModelWire:
+		if len(fact.Variants) == 0 {
+			return checkedModel(fact.Package, fact.Name)
+		}
+	case enumModelWire:
+		if len(fact.Variants) != 0 {
+			return enumModel(
+				fact.Package, fact.Name, append([]string(nil), fact.Variants...),
+			)
+		}
+	}
+	return nil
+}

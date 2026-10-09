@@ -1,0 +1,638 @@
+package modeluse
+
+import (
+	"go/constant"
+	"go/token"
+	"go/types"
+	"sort"
+
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
+)
+
+type effectOutcome enum {
+	Unknown struct{}
+	Never struct{}
+	Always struct{}
+	Conditional struct{}
+}
+
+func unknownEffectOutcome() effectOutcome { return effectOutcome.Unknown{} }
+func neverEffectOutcome() effectOutcome { return effectOutcome.Never{} }
+func alwaysEffectOutcome() effectOutcome { return effectOutcome.Always{} }
+func conditionalEffectOutcome() effectOutcome { return effectOutcome.Conditional{} }
+
+// reachableNodes returns syntax nodes from live CFG blocks.
+func (c %checker) reachableNodes(body %syntax.BlockStatement) map[syntax.Node]bool {
+	reachable := make(map[syntax.Node]bool)
+	graph := cfg.New(body, c.callMayReturn)
+	for _, block := range graph.Blocks {
+		if !block.Live {
+			continue
+		}
+		for _, node := range block.Nodes {
+			reachable[node] = true
+		}
+	}
+	return reachable
+}
+
+func (c %checker) markGenericZeroAt(
+	summary %genericEffectSummary,
+	node %syntax.Node,
+	typ types.Type,
+) {
+	c.markGenericZeroWith(summary, node, typ, nil, false)
+}
+
+// markGenericZeroWith adds one zero effect with its path conditions.
+func (c %checker) markGenericZeroWith(
+	summary %genericEffectSummary,
+	node %syntax.Node,
+	typ types.Type,
+	extra *GenericEffectCondition,
+	unknown bool,
+) {
+	conditions, maySkip, reachable := c.genericEffectPath(summary, node)
+	if !reachable {
+		return
+	}
+	if extra != nil {
+		conditions = append(conditions, *extra)
+	}
+	effect := GenericEffect{
+		Receiver: false, TypeParameter: 0,
+		Conditions: conditions, MaySkip: maySkip || unknown,
+	}
+	for parameter := range zeroTypeParameters(typ, summary.parameters, make(map[types.Type]bool)) {
+		c.addGenericEffect(summary, true, parameter, effect)
+	}
+}
+
+func (c %checker) markConditionalGenericZero(
+	summary %genericEffectSummary,
+	node %syntax.Node,
+	typ types.Type,
+	kind EffectKind,
+	value %syntax.Expression,
+	other *syntax.Expression,
+) {
+	valueIndex, valueOK := c.expressionParameter(summary, value)
+	otherIndex, otherOK := -1, true
+	if other != nil {
+		otherIndex, otherOK = c.expressionParameter(summary, other)
+	}
+	if !valueOK || !otherOK ||
+		!c.parameterStableBefore(summary, valueIndex, syntax.NodePosition(node)) ||
+		(otherIndex >= 0 &&
+			!c.parameterStableBefore(summary, otherIndex, syntax.NodePosition(node))) {
+		c.markGenericZeroWith(summary, node, typ, nil, true)
+		return
+	}
+	condition := GenericEffectCondition{
+		ValueParameter: valueIndex,
+		OtherParameter: otherIndex,
+		Kind:           kind,
+		Expected:       true,
+	}
+	c.markGenericZeroWith(summary, node, typ, &condition, false)
+}
+
+func (c %checker) expressionParameter(
+	summary %genericEffectSummary,
+	expression %syntax.Expression,
+) (int, bool) {
+	name := syntax.IdentifierExpressionOf(expression)
+	if name == nil {
+		return 0, false
+	}
+	object := c.facts.Object(name)
+	return c.valueParameter(summary, object)
+}
+
+// parameterStableBefore rejects a condition after mutation or escape.
+func (c %checker) parameterStableBefore(
+	summary %genericEffectSummary,
+	index int,
+	before token.Pos,
+) bool {
+	if _, returned := syntax.FunctionLiteralOf(summary.root); returned {
+		return false
+	}
+	signature := summary.function.Type().(*types.Signature)
+	if index < 0 || index >= signature.Params().Len() {
+		return false
+	}
+	object := signature.Params().At(index)
+	stable := true
+	inspectGenericBlock(summary.body, func(node %syntax.Node) bool {
+		if node == nil || syntax.NodePosition(node) >= before || !stable {
+			return false
+		}
+		changed, descend := c.parameterChangedAt(node, object)
+		stable = !changed
+		return stable && descend
+	})
+	return stable
+}
+
+func (c %checker) parameterChangedAt(
+	node %syntax.Node,
+	object types.Object,
+) (bool, bool) {
+	if literal, ok := syntax.FunctionLiteralOf(node); ok {
+		if literal == nil || literal.Body == nil { return false, false }
+		return c.syntaxCapturesObject(literal.Body, object), false
+	}
+	if statement, ok := syntax.StatementOf(node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			for _, target := range assignment.Left {
+				if c.expressionUsesObject(target, object) {
+					return true, false
+				}
+			}
+		}
+		if increment := syntax.IncrementStatementOf(statement); increment != nil {
+			return c.expressionUsesObject(increment.Expression, object), true
+		}
+		if rangeStatement := syntax.RangeStatementOf(statement); rangeStatement != nil {
+			return c.expressionUsesObject(rangeStatement.Key, object) ||
+				c.expressionUsesObject(rangeStatement.Value, object), true
+		}
+	}
+	expression, ok := syntax.ExpressionOf(node)
+	if !ok {
+		return false, true
+	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+		return unary.Operator == token.AND &&
+			c.expressionUsesObject(unary.Expression, object), true
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		return c.callUsesObject(call, object), true
+	}
+	return false, true
+}
+
+func (c %checker) syntaxCapturesObject(
+	body %syntax.BlockStatement,
+	object types.Object,
+) bool {
+	captured := false
+	inspectGenericBlock(body, func(node %syntax.Node) bool {
+		name, ok := syntax.IdentifierOf(node)
+		if ok && c.facts.Object(name) == object {
+			captured = true
+		}
+		return !captured
+	})
+	return captured
+}
+
+func (c %checker) callUsesObject(
+	call %syntax.CallExpression,
+	object types.Object,
+) bool {
+	if name := syntax.IdentifierExpressionOf(call.Callee); name != nil &&
+		(name.Name == "len" || name.Name == "cap") {
+		if _, builtin := c.facts.Object(name).(*types.Builtin); builtin {
+			return false
+		}
+	}
+	if c.scalarEscapesInExpression(call.Callee, object) {
+		return true
+	}
+	for _, argument := range call.Args {
+		if c.expressionUsesObject(argument, object) {
+			if variable, ok := object.(*types.Var); ok &&
+				(isBoolean(variable.Type()) || isInteger(variable.Type())) &&
+				!c.scalarEscapesInExpression(argument, object) {
+				continue
+			}
+			return true
+		}
+	}
+	return false
+}
+
+// scalarEscapesInExpression finds address and pointer-receiver escapes.
+func (c %checker) scalarEscapesInExpression(
+	expression %syntax.Expression,
+	object types.Object,
+) bool {
+	escapes := false
+	inspectGenericExpression(expression, func(node %syntax.Node) bool {
+		if value, ok := syntax.ExpressionOf(node); ok {
+			if unary := syntax.UnaryExpressionOf(value); unary != nil &&
+				unary.Operator == token.AND &&
+				c.expressionUsesObject(unary.Expression, object) {
+				escapes = true
+				return false
+			}
+			if selector := syntax.SelectorExpressionOf(value); selector != nil &&
+				c.pointerMethodSelection(value) &&
+				c.expressionUsesObject(selector.Expression, object) {
+				escapes = true
+				return false
+			}
+		}
+		if literal, ok := syntax.FunctionLiteralOf(node); ok {
+			if c.syntaxCapturesObject(literal.Body, object) {
+				escapes = true
+				return false
+			}
+		}
+		return !escapes
+	})
+	return escapes
+}
+
+func (c %checker) pointerMethodSelection(expression %syntax.Expression) bool {
+	selection := c.facts.Selection(expression)
+	if selection == nil || selection.Kind() == types.FieldVal {
+		return false
+	}
+	function, ok := selection.Obj().(*types.Func)
+	if !ok {
+		return false
+	}
+	signature, ok := function.Type().(*types.Signature)
+	if !ok || signature.Recv() == nil {
+		return false
+	}
+	_, pointer := types.Unalias(signature.Recv().Type()).(*types.Pointer)
+	return pointer
+}
+
+func (c %checker) markGenericAccessAt(
+	summary %genericEffectSummary,
+	node %syntax.Node,
+	typ types.Type,
+) {
+	conditions, maySkip, reachable := c.genericEffectPath(summary, node)
+	if !reachable {
+		return
+	}
+	effect := GenericEffect{
+		Receiver: false, TypeParameter: 0, Conditions: conditions, MaySkip: maySkip,
+	}
+	for parameter := range containedTypeParameters(
+		typ,
+		summary.parameters,
+		make(map[types.Type]bool),
+	) {
+		c.addGenericEffect(summary, false, parameter, effect)
+	}
+}
+
+// addGenericEffect normalizes and deduplicates one summary effect.
+func (c %checker) addGenericEffect(
+	summary %genericEffectSummary,
+	zero bool,
+	parameter zeroParameter,
+	effect GenericEffect,
+) bool {
+	effect.Receiver = parameter.receiver
+	effect.TypeParameter = parameter.index
+	normalized, possible := normalizeGenericEffect(effect)
+	if !possible {
+		return false
+	}
+	effect = normalized
+	target := &summary.accessEffects
+	if zero {
+		target = &summary.zeroEffects
+	}
+	for _, current := range *target {
+		if equalGenericEffect(current, effect) {
+			return false
+		}
+	}
+	*target = append(*target, effect)
+	return true
+}
+
+// normalizeGenericEffect sorts conditions and rejects contradictions.
+func normalizeGenericEffect(effect GenericEffect) (GenericEffect, bool) {
+	sort.Slice(effect.Conditions, func(left, right int) bool {
+		if effect.Conditions[left].ValueParameter !=
+			effect.Conditions[right].ValueParameter {
+			return effect.Conditions[left].ValueParameter <
+				effect.Conditions[right].ValueParameter
+		}
+		leftKind := effect.Conditions[left].Kind.Tag()
+		rightKind := effect.Conditions[right].Kind.Tag()
+		if leftKind != rightKind {
+			return leftKind < rightKind
+		}
+		if effect.Conditions[left].OtherParameter !=
+			effect.Conditions[right].OtherParameter {
+			return effect.Conditions[left].OtherParameter <
+				effect.Conditions[right].OtherParameter
+		}
+		return !effect.Conditions[left].Expected && effect.Conditions[right].Expected
+	})
+	output := effect.Conditions[:0]
+	for _, condition := range effect.Conditions {
+		if len(output) == 0 {
+			output = append(output, condition)
+			continue
+		}
+		previous := output[len(output)-1]
+		if previous.ValueParameter != condition.ValueParameter ||
+			previous.OtherParameter != condition.OtherParameter ||
+			previous.Kind.Tag() != condition.Kind.Tag() {
+			output = append(output, condition)
+			continue
+		}
+		if previous.Expected != condition.Expected {
+			return noGenericEffect(), false
+		}
+	}
+	effect.Conditions = output
+	return effect, true
+}
+
+func equalGenericEffect(left, right GenericEffect) bool {
+	if left.Receiver != right.Receiver || left.TypeParameter != right.TypeParameter ||
+		left.MaySkip != right.MaySkip || len(left.Conditions) != len(right.Conditions) {
+		return false
+	}
+	for index := range left.Conditions {
+		if left.Conditions[index] != right.Conditions[index] {
+			return false
+		}
+	}
+	return true
+}
+
+// genericEffectPath gets conditions that guard one operation.
+func (c %checker) genericEffectPath(
+	summary %genericEffectSummary,
+	node %syntax.Node,
+) ([]GenericEffectCondition, bool, bool) {
+	reachable := false
+	var conditions []GenericEffectCondition = nil
+	maySkip := false
+	var current *syntax.Node = node
+	for current != nil && *current != *summary.root {
+		if summary.reachable[*current] {
+			reachable = true
+		}
+		parent := c.parents[*current]
+		if parent != nil && *parent == *summary.root {
+			current = summary.root
+			continue
+		}
+		path, unknown, possible := c.parentEffectConditions(
+			summary,
+			parent,
+			current,
+		)
+		if !possible {
+			return nil, false, false
+		}
+		conditions = append(conditions, path...)
+		maySkip = maySkip || unknown
+		if parent == nil { break }
+		current = parent
+	}
+	return conditions, maySkip, reachable
+}
+
+func (c %checker) parentEffectConditions(
+	summary %genericEffectSummary,
+	parent *syntax.Node,
+	node %syntax.Node,
+) ([]GenericEffectCondition, bool, bool) {
+	if _, literal := syntax.FunctionLiteralOf(parent); literal {
+		return nil, false, false
+	}
+	statement, ok := syntax.StatementOf(parent)
+	if !ok {
+		return nil, false, true
+	}
+	if block := syntax.BlockStatementOf(statement); block != nil {
+		return c.blockEffectConditions(summary, block, node)
+	}
+	if conditional := syntax.IfStatementOf(statement); conditional != nil {
+		condition, outcome := c.ifEffectCondition(conditional, node)
+		if outcome == neverEffectOutcome() {
+			return nil, false, false
+		}
+		if outcome == conditionalEffectOutcome() {
+			return []GenericEffectCondition{*condition}, false, true
+		}
+		return nil, outcome == unknownEffectOutcome(), true
+	}
+	if syntax.RangeStatementOf(statement) != nil ||
+		syntax.SwitchStatementOf(statement) != nil ||
+		syntax.TypeSwitchStatementOf(statement) != nil ||
+		syntax.SelectStatementOf(statement) != nil {
+		return nil, true, true
+	}
+	if loop := syntax.ForStatementOf(statement); loop != nil {
+		if loop.Condition == nil {
+			return nil, false, true
+		}
+		value := c.facts.Constant(loop.Condition)
+		unknown := value == nil || value.Kind() != constant.Bool || !constant.BoolVal(value)
+		return nil, unknown, true
+	}
+	return nil, false, true
+}
+
+func (c %checker) blockEffectConditions(
+	summary %genericEffectSummary,
+	block %syntax.BlockStatement,
+	node %syntax.Node,
+) ([]GenericEffectCondition, bool, bool) {
+	var conditions []GenericEffectCondition = nil
+	unknown := false
+	for _, statement := range block.List {
+		if syntax.StatementPosition(statement) >= syntax.NodePosition(node) {
+			break
+		}
+		conditional := syntax.IfStatementOf(statement)
+		if conditional == nil {
+			if syntax.ForStatementOf(statement) != nil ||
+				syntax.RangeStatementOf(statement) != nil ||
+				syntax.SwitchStatementOf(statement) != nil ||
+				syntax.TypeSwitchStatementOf(statement) != nil ||
+				syntax.SelectStatementOf(statement) != nil ||
+				syntax.BranchStatementOf(statement) != nil ||
+				syntax.LabeledStatementOf(statement) != nil ||
+				syntax.BlockStatementOf(statement) != nil {
+				unknown = true
+			}
+			continue
+		}
+		trueStops := c.statementsTerminate(summary.file, conditional.Body.List)
+		falseStops := false
+		if conditional.Else != nil {
+			falseStops = c.statementsTerminate(
+				summary.file, []%syntax.Statement{conditional.Else},
+			)
+		}
+		if trueStops == falseStops {
+			continue
+		}
+		conditionExpression := conditional.Condition
+		if conditionExpression == nil {
+			unknown = true
+			continue
+		}
+		condition, outcome := c.booleanEffectCondition(conditionExpression, falseStops)
+		if outcome == neverEffectOutcome() {
+			return nil, false, false
+		}
+		if outcome == conditionalEffectOutcome() {
+			if condition == nil {
+				unknown = true
+				continue
+			}
+			conditions = append(conditions, *condition)
+			continue
+		}
+		if outcome == unknownEffectOutcome() {
+			unknown = true
+		}
+	}
+	return conditions, unknown, true
+}
+
+func (c %checker) ifEffectCondition(
+	statement %syntax.IfStatement,
+	node %syntax.Node,
+) (*GenericEffectCondition, effectOutcome) {
+	inBody := syntax.NodePosition(node) >= statement.Body.Start &&
+		syntax.NodeEnd(node) <= statement.Body.Stop
+	inElse := statement.Else != nil &&
+		syntax.NodePosition(node) >= syntax.StatementPosition(statement.Else) &&
+		syntax.NodeEnd(node) <= syntax.StatementEnd(statement.Else)
+	if !inBody && !inElse {
+		return nil, alwaysEffectOutcome()
+	}
+	return c.booleanEffectCondition(statement.Condition, inBody)
+}
+
+func (c %checker) booleanEffectCondition(
+	expression %syntax.Expression,
+	wantTrue bool,
+) (*GenericEffectCondition, effectOutcome) {
+	if value, known := c.scalarValueAt(syntaxNode(expression), expression); known {
+		if boolean, constantValue := scalarBoolean(value); constantValue {
+			if boolean == wantTrue {
+				return nil, alwaysEffectOutcome()
+			}
+			return nil, neverEffectOutcome()
+		}
+		index, negated, parameter := scalarParameter(value)
+		if parameter {
+			return &GenericEffectCondition{
+				ValueParameter: index, OtherParameter: -1,
+				Kind: booleanEffectCondition(), Expected: wantTrue != negated,
+			}, conditionalEffectOutcome()
+		}
+	}
+	if value := c.facts.Constant(expression); value != nil &&
+		value.Kind() == constant.Bool {
+		if constant.BoolVal(value) == wantTrue {
+			return nil, alwaysEffectOutcome()
+		}
+		return nil, neverEffectOutcome()
+	}
+	return nil, unknownEffectOutcome()
+}
+
+func (c %checker) nonzeroEffectCondition(
+	expression %syntax.Expression,
+) (*GenericEffectCondition, effectOutcome) {
+	if value, known := c.scalarValueAt(syntaxNode(expression), expression); known {
+		if integer, constantValue := scalarInteger(value); constantValue {
+			if integer == 0 {
+				return nil, neverEffectOutcome()
+			}
+			return nil, alwaysEffectOutcome()
+		}
+		index, _, parameter := scalarParameter(value)
+		if parameter {
+			return &GenericEffectCondition{
+				ValueParameter: index, OtherParameter: -1,
+				Kind: nonzeroEffectConditionKind(), Expected: true,
+			}, conditionalEffectOutcome()
+		}
+	}
+	if value := c.facts.Constant(expression); value != nil &&
+		value.Kind() == constant.Int {
+		if constant.Sign(value) == 0 {
+			return nil, neverEffectOutcome()
+		}
+		return nil, alwaysEffectOutcome()
+	}
+	return nil, unknownEffectOutcome()
+}
+
+func (c %checker) valueParameter(
+	summary %genericEffectSummary,
+	object types.Object,
+) (int, bool) {
+	signature := summary.function.Type().(*types.Signature)
+	for index := 0; index < signature.Params().Len(); index++ {
+		if signature.Params().At(index) == object {
+			return index, true
+		}
+	}
+	return 0, false
+}
+
+func zeroTypeParameters(
+	typ types.Type,
+	parameters map[*types.TypeParam]zeroParameter,
+	seen map[types.Type]bool,
+) map[zeroParameter]bool {
+	result := make(map[zeroParameter]bool)
+	if typ == nil {
+		return result
+	}
+	typ = types.Unalias(typ)
+	if seen[typ] {
+		return result
+	}
+	seen[typ] = true
+	classified := goTypeOf(typ)
+	switch classified.Tag() {
+	case goTypeTagTypeParameter:
+		parameterType := classified.TypeParameterPayload().Value
+		if parameter, ok := parameters[parameterType]; ok {
+			result[parameter] = true
+		}
+	case goTypeTagNamed:
+		named := classified.NamedPayload().Value
+		mergeZeroParameters(result, zeroTypeParameters(named.Underlying(), parameters, seen))
+	case goTypeTagStruct:
+		structure := classified.StructPayload().Value
+		for index := 0; index < structure.NumFields(); index++ {
+			mergeZeroParameters(
+				result,
+				zeroTypeParameters(structure.Field(index).Type(), parameters, seen),
+			)
+		}
+	case goTypeTagArray:
+		array := classified.ArrayPayload().Value
+		if array.Len() > 0 {
+			mergeZeroParameters(result, zeroTypeParameters(array.Elem(), parameters, seen))
+		}
+	case goTypeTagNil, goTypeTagBasic, goTypeTagSlice, goTypeTagPointer,
+		goTypeTagTuple, goTypeTagSignature, goTypeTagMap, goTypeTagChannel,
+		goTypeTagInterface, goTypeTagUnion, goTypeTagOther:
+	exhaustive:
+	}
+	return result
+}
+
+func mergeZeroParameters(target, source map[zeroParameter]bool) {
+	for parameter := range source {
+		target[parameter] = true
+	}
+}

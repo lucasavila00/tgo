@@ -1,0 +1,60 @@
+// Package typefacts classifies the Go types used by lint passes.
+package typefacts
+
+import "go/types"
+
+// Type closes the go/types.Type implementations used by tgolint.
+// Of is the only open Go type switch in this package.
+type Type enum {
+	Nil struct{}
+	Basic struct { Value *types.Basic }
+	Array struct { Value *types.Array }
+	Slice struct { Value *types.Slice }
+	Struct struct { Value *types.Struct }
+	Pointer struct { Value *types.Pointer }
+	Tuple struct { Value *types.Tuple }
+	Signature struct { Value *types.Signature }
+	Map struct { Value *types.Map }
+	Channel struct { Value *types.Chan }
+	Interface struct { Value *types.Interface }
+	Named struct { Value *types.Named }
+	TypeParameter struct { Value *types.TypeParam }
+	Union struct { Value *types.Union }
+	Other struct{}
+}
+
+// Of closes one Go type into the TGo type model.
+func Of(typ types.Type) Type {
+	switch value := typ.(type) {
+	case nil:
+		return Type.Nil{}
+	case *types.Basic:
+		return Type.Basic{Value: value}
+	case *types.Array:
+		return Type.Array{Value: value}
+	case *types.Slice:
+		return Type.Slice{Value: value}
+	case *types.Struct:
+		return Type.Struct{Value: value}
+	case *types.Pointer:
+		return Type.Pointer{Value: value}
+	case *types.Tuple:
+		return Type.Tuple{Value: value}
+	case *types.Signature:
+		return Type.Signature{Value: value}
+	case *types.Map:
+		return Type.Map{Value: value}
+	case *types.Chan:
+		return Type.Channel{Value: value}
+	case *types.Interface:
+		return Type.Interface{Value: value}
+	case *types.Named:
+		return Type.Named{Value: value}
+	case *types.TypeParam:
+		return Type.TypeParameter{Value: value}
+	case *types.Union:
+		return Type.Union{Value: value}
+	default:
+		return Type.Other{}
+	}
+}

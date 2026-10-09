@@ -61,10 +61,10 @@ unit-test:
 	go test ./...
 
 unit-test-fast:
-	go test $$(go list ./... | grep -vx 'tgo/internal/tgolint')
+	go test $$(go list ./... | grep -v '^tgo/internal/tgolint\($$\|/\)')
 
 tgolint-unit-test:
-	go test ./internal/tgolint
+	go test ./internal/tgolint/...
 
 e2e-test:
 	python3 tests/e2e/run.py

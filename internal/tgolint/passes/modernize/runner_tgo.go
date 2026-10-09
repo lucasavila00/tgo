@@ -1,0 +1,42 @@
+// Package modernize reports TGo source forms that have shorter equivalents.
+package modernize
+
+import (
+	"go/token"
+
+	"tgo/internal/sourceanalysis"
+	"tgo/internal/tgolint/report"
+)
+
+// Runner runs the related modernization checks with one reporter.
+type Runner struct {
+	reporter *report.Reporter
+}
+
+// New creates the modernization pass family.
+func New(reporter *report.Reporter) *Runner {
+	return &Runner{reporter: reporter}
+}
+
+// CheckIota reports closed iota groups that can be TGo enums.
+func (r *Runner) CheckIota(analysis *sourceanalysis.Package) {
+	r.checkIotaModernization(analysis)
+}
+
+// CheckErrorReturns reports manual error propagation.
+func (r *Runner) CheckErrorReturns(analysis *sourceanalysis.Package) {
+	r.checkErrorReturnModernization(analysis)
+}
+
+// CheckSuccessReturns reports explicit success and failure return values.
+func (r *Runner) CheckSuccessReturns(analysis *sourceanalysis.Package) {
+	r.checkSuccessReturnModernization(analysis)
+}
+
+func (r *Runner) reportResult(
+	position token.Pos,
+	format string,
+	arguments ...any,
+) {
+	r.reporter.Reportf(position, format, arguments...)
+}

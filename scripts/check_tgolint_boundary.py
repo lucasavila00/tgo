@@ -7,7 +7,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 TGOLINT = ROOT / "internal" / "tgolint"
-TYPE_ADAPTER = Path("internal/tgolint/go_types.tgo")
+TYPE_ADAPTER = Path("internal/tgolint/typefacts/go_types.tgo")
 TYPE_CHECKER_IMPORTS = {
     "go/constant",
     "go/token",
@@ -20,7 +20,9 @@ SYNTAX_ASSERTION = re.compile(r"\.\(\s*\*?\s*syntax\.")
 
 def main() -> None:
     violations: list[str] = []
-    for path in sorted(TGOLINT.glob("*.tgo")):
+    for path in sorted(TGOLINT.rglob("*.tgo")):
+        if "testdata" in path.parts:
+            continue
         relative = path.relative_to(ROOT)
         source = path.read_text()
         for package in IMPORT.findall(source):
@@ -32,7 +34,9 @@ def main() -> None:
         if SYNTAX_ASSERTION.search(source):
             violations.append(f"{relative}: use pkg/syntax enum accessors")
 
-    for path in sorted(TGOLINT.glob("*.go")):
+    for path in sorted(TGOLINT.rglob("*.go")):
+        if "testdata" in path.parts:
+            continue
         if not path.name.endswith(("_test.go", "_tgo.go")):
             relative = path.relative_to(ROOT)
             violations.append(f"{relative}: production tgolint source must be TGo")

@@ -1,0 +1,28 @@
+// Package source loads the Go syntax that the analysis driver selected.
+package source
+
+import (
+	"fmt"
+
+	"tgo/pkg/syntax"
+
+	"golang.org/x/tools/go/analysis"
+)
+
+// Parse converts each active Go file to the public syntax ADT.
+func Parse(pass %analysis.Pass) ([]%syntax.File, error) {
+	result := make([]%syntax.File, 0, len(pass.Files))
+	for _, file := range pass.Files {
+		filename := pass.Fset.Position(file.Pos()).Filename
+		data := pass.ReadFile(filename)!!
+		parsed, err := syntax.ParseGoFile(
+			pass.Fset, filename, data, syntax.ParseComments|syntax.AllErrors,
+		)
+		if err != nil {
+			return , fmt.Errorf("parse analysis file %s: %w", filename, err)
+		}
+		if parsed == nil { return , fmt.Errorf("parse analysis file %s: no syntax", filename) }
+		result = append(result, parsed)
+	}
+	return result,
+}

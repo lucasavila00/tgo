@@ -82,7 +82,7 @@ def main() -> None:
             "./internal/driver",
             "./internal/sourceanalysis",
             "./internal/navigation",
-            "./internal/tgolint",
+            "./internal/tgolint/...",
             "./cmd/tgonav",
         )
         generated = generated_files(repository)

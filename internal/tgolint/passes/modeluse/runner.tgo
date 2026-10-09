@@ -1,0 +1,301 @@
+// Package modeluse checks generated TGo models and generic zero safety.
+package modeluse
+
+import (
+	"fmt"
+	"go/token"
+	"go/types"
+	"strconv"
+
+	"tgo/internal/sourceanalysis"
+	"tgo/internal/sourcefacts"
+	"tgo/internal/tgolint/report"
+	"tgo/pkg/syntax"
+
+	"golang.org/x/tools/go/analysis"
+)
+
+// FactTypes returns the facts that cross package boundaries.
+func FactTypes() []analysis.Fact {
+	return []analysis.Fact{
+		new(modelWireFact),
+		new(validationFact),
+		new(GenericEffectFact),
+		new(invalidPackageFact),
+	}
+}
+
+type checker struct {
+	pass       %analysis.Pass
+	files      []%syntax.File
+	facts      %sourcefacts.Index
+	models     map[objectKey]*model
+	validated  map[types.Object]bool
+	callTarget map[types.Object]types.Object
+	generated  map[*syntax.File]bool
+	generatedSource map[*syntax.File]string
+	sourceFiles []%syntax.File
+	outputs    map[string][]byte
+	parents    map[syntax.Node]*syntax.Node
+	syntaxSafe map[*syntax.Expression]bool
+	syntaxHandled map[*syntax.Expression]bool
+	checked    map[*syntax.Expression]bool
+	presence   map[*syntax.Expression]bool
+	escaped    map[types.Object]token.Pos
+	reporter   *report.Reporter
+	function   *syntax.Node
+	file       *syntax.File
+	zeroTypes  map[*types.TypeParam]*model
+	captureResult func(%model)
+	captureSource func(%model, *syntax.Expression)
+	scalarFlows map[syntax.Node]*scalarFlow
+	invalid    bool
+}
+
+const invalidPackageVersion = 1
+
+// invalidPackageFact stops analysis across an unverified package boundary.
+type invalidPackageFact struct {
+	Version int
+}
+
+// AFact marks invalidPackageFact as a Go analysis fact.
+func (%invalidPackageFact) AFact() {}
+
+// Context contains the model facts that later lint passes share.
+type Context struct {
+	checker  *checker
+	analysis *sourceanalysis.Package
+	stopped  bool
+}
+
+// New loads model facts and typed TGo source for the pass stack.
+func New(
+	pass *analysis.Pass,
+	files []%syntax.File,
+	reporter *report.Reporter,
+) (*Context, error) {
+	if pass == nil { return , fmt.Errorf("tgolint received a nil analysis pass") }
+	if len(files) == 0 {
+		return &Context{checker: nil, analysis: nil, stopped: true},
+	}
+	info := pass.TypesInfo
+	fileSet := pass.Fset
+	if info == nil {
+		return , fmt.Errorf("tgolint requires type facts")
+	}
+	if fileSet == nil {
+		return , fmt.Errorf("tgolint requires type and position facts")
+	}
+	facts := sourcefacts.New(files[0], info, fileSet)
+	for _, file := range files[1:] { facts.AddFile(file) }
+	c := &checker{
+		pass:       pass,
+		files:      files,
+		facts:      facts,
+		models:     make(map[objectKey]*model),
+		validated:  make(map[types.Object]bool),
+		callTarget: make(map[types.Object]types.Object),
+		generated:  make(map[*syntax.File]bool),
+		generatedSource: make(map[*syntax.File]string),
+		sourceFiles: nil,
+		outputs:    make(map[string][]byte),
+		parents:    make(map[syntax.Node]*syntax.Node),
+		syntaxSafe: make(map[*syntax.Expression]bool),
+		syntaxHandled: make(map[*syntax.Expression]bool),
+		checked:    make(map[*syntax.Expression]bool),
+		presence:   make(map[*syntax.Expression]bool),
+		escaped:    make(map[types.Object]token.Pos),
+		reporter:   reporter,
+		function:   nil,
+		file:       nil,
+		zeroTypes:  nil,
+		captureResult: nil,
+		captureSource: nil,
+		scalarFlows: make(map[syntax.Node]*scalarFlow),
+		invalid:    false,
+	}
+	if c.rejectInvalidDependencies() {
+		return &Context{checker: c, analysis: nil, stopped: true},
+	}
+	analysis := c.analyzeTGoPackage()
+	c.setGeneratedOutputs(analysis)
+	c.findModels()
+	if c.invalid {
+		return &Context{checker: c, analysis: analysis, stopped: true},
+	}
+	return &Context{checker: c, analysis: analysis, stopped: false},
+}
+
+// Stopped reports whether package verification stopped the remaining passes.
+func (c *Context) Stopped() bool { return c == nil || c.stopped }
+
+// Analysis returns the typed TGo source package, if the package has TGo source.
+func (c *Context) Analysis() *sourceanalysis.Package {
+	if c == nil { return nil }
+	return c.analysis
+}
+
+// Facts returns the syntax and type fact index for active Go files.
+func (c *Context) Facts() *sourcefacts.Index {
+	if c == nil || c.checker == nil { return nil }
+	return c.checker.facts
+}
+
+// CheckSourcePolicy checks policy in typed TGo source.
+func (c *Context) CheckSourcePolicy() {
+	c.checker.checkSourcePolicies(c.analysis)
+}
+
+// DiscoverValidationModels collects wrapper and function-value facts.
+func (c *Context) DiscoverValidationModels() {
+	c.checker.findValidationWrappers()
+	c.checker.findValidationFunctionValues()
+}
+
+// CheckGoModelUse checks handwritten Go use of generated models.
+func (c *Context) CheckGoModelUse() {
+	checker := c.checker
+	for _, file := range checker.files {
+		if checker.generated[file] {
+			continue
+		}
+		checker.file = file
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			checker.addParent(node)
+			return true
+		})
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			if statement, ok := syntax.StatementOf(node); ok {
+				tagSwitch := syntax.SwitchStatementOf(statement)
+				if tagSwitch != nil {
+					checker.checkTagSwitch(file, statement, tagSwitch)
+				}
+			}
+			return true
+		})
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			expression, expressionOK := syntax.ExpressionOf(node)
+			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
+				checker.checkRepresentationAccess(expression)
+			}
+			checker.checkNode(node)
+			return true
+		})
+	}
+}
+
+// CheckGenericZeroSafety checks exported generic zero-value effects.
+func (c *Context) CheckGenericZeroSafety() {
+	c.checker.checkGenericZeroSafety()
+}
+
+// rejectInvalidDependencies stops analysis when an imported package failed verification.
+func (c %checker) rejectInvalidDependencies() bool {
+	found := false
+	for _, imported := range c.pass.Pkg.Imports() {
+		fact := new(invalidPackageFact)
+		if !c.pass.ImportPackageFact(imported, fact) || fact.Version != invalidPackageVersion {
+			continue
+		}
+		found = true
+		c.reportInvalidImport(imported.Path())
+	}
+	if found {
+		c.markInvalid()
+	}
+	return found
+}
+
+func (c %checker) reportInvalidImport(path string) {
+	for _, file := range c.pass.Files {
+		for _, specification := range file.Imports {
+			imported, err := strconv.Unquote(specification.Path.Value)
+			if err == nil && imported == path {
+				c.reporter.Reportf(
+					specification.Path.Pos(),
+					"dependency %s failed tgo verification",
+					path,
+				)
+			}
+		}
+	}
+}
+
+func (c %checker) failVerification(position token.Pos, format string, arguments ...any) {
+	c.reporter.Reportf(position, format, arguments...)
+	c.markInvalid()
+}
+
+// markInvalid records one package failure and exports it to importers.
+func (c %checker) markInvalid() {
+	if c.invalid {
+		return
+	}
+	c.invalid = true
+	c.pass.ExportPackageFact(&invalidPackageFact{Version: invalidPackageVersion})
+}
+
+// addParents builds the upward AST links used by local flow checks.
+
+func (c %checker) addParent(node %syntax.Node) {
+	if c.file == nil { return }
+	for _, child := range syntax.Children(c.file, node) {
+		c.parents[*child] = node
+	}
+}
+
+// checkNode sends one AST node to each check that applies to its form.
+func (c %checker) checkNode(node %syntax.Node) {
+	if function, ok := syntax.FunctionDeclarationOf(node); ok {
+		if function != nil {
+			functionType := function.Type
+			body := function.Body
+			if functionType != nil && body != nil {
+				c.checkNamedResults(functionType)
+				c.checkConstructors(node, body)
+			}
+		}
+		return
+	}
+	if literal, ok := syntax.FunctionLiteralOf(node); ok {
+		if literal == nil { return }
+		functionType := literal.Type
+		if functionType != nil { c.checkNamedResults(functionType) }
+		body := literal.Body
+		if body != nil { c.checkConstructors(node, body) }
+		return
+	}
+	if specification, ok := syntax.SpecificationOf(node); ok {
+		if value := syntax.TypeSpecificationOf(specification); value != nil {
+			c.checkTypeSpec(value)
+		}
+		if value := syntax.ValueSpecificationOf(specification); value != nil {
+			c.checkValueSpec(value)
+		}
+		return
+	}
+	expression, ok := syntax.ExpressionOf(node)
+	if !ok || expression == nil {
+		return
+	}
+	if value := syntax.CompositeLiteralOf(expression); value != nil {
+		c.checkLiteral(expression, value)
+	}
+	if value := syntax.CallExpressionOf(expression); value != nil {
+		c.checkCall(expression, value)
+	}
+	if value := syntax.IndexExpressionOf(expression); value != nil {
+		c.checkMapRead(expression, value)
+	}
+	if value := syntax.UnaryExpressionOf(expression); value != nil &&
+		value.Operator == token.ARROW {
+		c.checkPresenceRead(expression, value)
+	}
+	if value := syntax.TypeAssertionExpressionOf(expression); value != nil {
+		c.checkTypeAssertion(expression, value)
+	}
+	if value := syntax.SliceExpressionOf(expression); value != nil {
+		c.checkReslice(expression, value)
+	}
+}
