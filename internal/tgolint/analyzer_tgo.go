@@ -84,9 +84,9 @@ func run(pass *analysis.Pass) (any, error) {
 		return nil, fmt.Errorf("tgolint received a nil analysis pass")
 	}
 	pass = suppressDiagnostics(pass)
-	files, err := parseAnalysisFiles(pass)
-	if err != nil {
-		return nil, err
+	files, err_1 := parseAnalysisFiles(pass)
+	if err_1 != nil {
+		return nil, err_1
 	}
 	if len(files) == 0 {
 		return nil, nil
@@ -133,7 +133,15 @@ func run(pass *analysis.Pass) (any, error) {
 	if c.rejectInvalidDependencies() {
 		return nil, nil
 	}
-	analysis := c.analyzeTGoPackage()
+	analysis, err := c.analyzeTGoPackage()
+	if err != nil {
+		c.failVerification(
+			c.pass.Files[0].Package,
+			"analyze TGo source: %v",
+			err,
+		)
+		return nil, nil
+	}
 	c.setGeneratedOutputs(analysis)
 	c.findModels()
 	if c.invalid {

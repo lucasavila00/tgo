@@ -587,7 +587,6 @@ func TestEnumJSONInternalPayloadMethods(t *testing.T) {
 	invalid := func(input TgoJSONInternalPayloadMethodValueInput) JSONInternalPayloadMethod {
 		return NewJSONInternalPayloadMethodValue(input.FieldSeen)
 	}(TgoJSONInternalPayloadMethodValueInput{FieldSeen: "scalar"})
-
 	if _, err := json.Marshal(invalid); err == nil ||
 		!strings.Contains(err.Error(), "expected JSONInternalPayloadMethod JSON payload object") {
 		t.Fatalf("scalar payload error = %v", err)

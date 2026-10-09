@@ -11,7 +11,7 @@ import (
 // checkSourceModelPolicy checks model use in one TGo source node.
 func (c %checker) checkSourceModelPolicy(node %syntax.Node) {
 	if identifier, ok := syntax.IdentifierOf(node); ok && identifier != nil {
-		c.checkSourceGeneratedName(identifier)
+		c.checkSourceGeneratedName(node, identifier)
 	}
 	if specification, ok := syntax.SpecificationOf(node); ok {
 		if typeSpec := syntax.TypeSpecificationOf(specification); typeSpec != nil {
@@ -35,7 +35,10 @@ func (c %checker) checkSourceModelPolicy(node %syntax.Node) {
 }
 
 // checkSourceGeneratedName hides generated Go ABI names from TGo.
-func (c %checker) checkSourceGeneratedName(identifier %syntax.Identifier) {
+func (c %checker) checkSourceGeneratedName(
+	node %syntax.Node,
+	identifier %syntax.Identifier,
+) {
 	object := c.facts.Object(identifier)
 	if object == nil || object.Name() != identifier.Name {
 		return
@@ -60,6 +63,9 @@ func (c %checker) checkSourceGeneratedName(identifier %syntax.Identifier) {
 	}
 	if value, ok := object.(*types.TypeName); ok {
 		if model, variant, carrier := c.enumGeneratedType(value); model != nil {
+			if !carrier && c.enumPayloadMethodReceiver(node, identifier) {
+				return
+			}
 			name := modelName(model) + variant
 			kind := "enum representation"
 			if carrier {
@@ -81,6 +87,26 @@ func (c %checker) checkSourceGeneratedName(identifier %syntax.Identifier) {
 			)
 		}
 	}
+}
+
+// enumPayloadMethodReceiver permits behavior on a generated payload type.
+func (c %checker) enumPayloadMethodReceiver(
+	node %syntax.Node,
+	identifier %syntax.Identifier,
+) bool {
+	for current := syntax.Parent(c.file, node); current != nil;
+		current = syntax.Parent(c.file, current) {
+		declaration, ok := syntax.FunctionDeclarationOf(current)
+		if !ok {
+			continue
+		}
+		if declaration == nil || declaration.Receiver == nil {
+			return false
+		}
+		receiver := declaration.Receiver
+		return identifier.Start >= receiver.Start && identifier.Stop <= receiver.Stop
+	}
+	return false
 }
 
 func (c %checker) enumConstructorModel(

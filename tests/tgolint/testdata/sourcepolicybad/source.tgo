@@ -103,3 +103,9 @@ func validChecked(number int) (Port, error) {
 func validVariant(id string) Local {
 	return Local.Ready{ID: id}
 }
+
+func (value LocalReady) Label() string { return value.ID }
+
+func (value *LocalReady) Clear() { value.ID = "" }
+
+type LocalAlias = Local

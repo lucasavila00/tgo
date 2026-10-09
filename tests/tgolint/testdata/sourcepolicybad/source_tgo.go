@@ -296,3 +296,9 @@ func validVariant(id string) Local {
 		return NewLocalReady(input.FieldID)
 	}(TgoLocalReadyInput{FieldID: id})
 }
+
+func (value LocalReady) Label() string { return value.ID }
+
+func (value *LocalReady) Clear() { value.ID = "" }
+
+type LocalAlias = Local

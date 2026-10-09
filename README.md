@@ -138,6 +138,9 @@ on a checked value.
 
 ## Use TGo with Go
 
+Each package is either TGo or Go. Do not mix handwritten `.tgo` and `.go`
+files in one package.
+
 TGo emits normal Go types. A Go package can import a TGo package and use its
 generated API. TGo adds no automatic runtime guard at the Go boundary. Go code
 can bypass generated constructors and other TGo checks. Run `tgolint` on TGo

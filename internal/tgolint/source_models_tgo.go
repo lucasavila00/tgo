@@ -137,7 +137,7 @@ func (c *checker) reportExtraGeneratedModels(
 				continue
 			}
 			object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
-			if !objectOK {
+			if !objectOK || object.IsAlias() {
 				continue
 			}
 			if c.hasModelAPIs(object) {

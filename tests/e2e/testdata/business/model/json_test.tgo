@@ -531,9 +531,7 @@ func TestEnumJSONInternalPayloadMethods(t *testing.T) {
 		t.Fatalf("promoted method input = %q", decodedPromoted.ValuePayload().Seen)
 	}
 
-	invalid :=
-		JSONInternalPayloadMethod.Value{Seen: "scalar"}
-
+	invalid := JSONInternalPayloadMethod.Value{Seen: "scalar"}
 	if _, err := json.Marshal(invalid); err == nil ||
 		!strings.Contains(err.Error(), "expected JSONInternalPayloadMethod JSON payload object") {
 		t.Fatalf("scalar payload error = %v", err)
