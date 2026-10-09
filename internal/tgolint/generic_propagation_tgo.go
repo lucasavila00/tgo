@@ -96,7 +96,7 @@ func (c *checker) propagateGenericZeroFacts(
 func (c *checker) propagateGenericEffects(
 	summary *genericEffectSummary,
 	callExpression *syntax.Expression,
-	effects []genericEffect,
+	effects []GenericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 	zero bool,
@@ -127,13 +127,13 @@ func (c *checker) propagateGenericEffects(
 func (c *checker) propagatedGenericEffect(
 	summary *genericEffectSummary,
 	callExpression *syntax.Expression,
-	effect genericEffect,
+	effect GenericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
-	pathConditions []genericEffectCondition,
+	pathConditions []GenericEffectCondition,
 	pathMaySkip bool,
 	zero bool,
-) (genericEffect, map[zeroParameter]bool, bool) {
+) (GenericEffect, map[zeroParameter]bool, bool) {
 	arguments := typeArguments
 	if effect.Receiver {
 		arguments = receiverArguments
@@ -141,7 +141,7 @@ func (c *checker) propagatedGenericEffect(
 	if effect.TypeParameter < 0 || effect.TypeParameter >= len(arguments) {
 		return noGenericEffect(), nil, false
 	}
-	conditions := append([]genericEffectCondition(nil), pathConditions...)
+	conditions := append([]GenericEffectCondition(nil), pathConditions...)
 	maySkip := pathMaySkip || effect.MaySkip
 	targetType := arguments[effect.TypeParameter]
 	for _, condition := range effect.Conditions {
@@ -158,7 +158,7 @@ func (c *checker) propagatedGenericEffect(
 			maySkip = true
 		}
 	}
-	mapped := genericEffect{
+	mapped := GenericEffect{
 		Receiver: false, TypeParameter: 0, Conditions: conditions, MaySkip: maySkip,
 	}
 	if zero {
@@ -175,9 +175,9 @@ func (c *checker) propagatedGenericEffect(
 func (c *checker) mapEffectCondition(
 	summary *genericEffectSummary,
 	callExpression *syntax.Expression,
-	condition genericEffectCondition,
+	condition GenericEffectCondition,
 	targetType types.Type,
-) (*genericEffectCondition, effectOutcome) {
+) (*GenericEffectCondition, effectOutcome) {
 	call := syntax.CallExpressionOf(callExpression)
 	if call == nil {
 		return nil, unknownEffectOutcome()
@@ -208,8 +208,8 @@ func (c *checker) mapParameterEffectCondition(
 	summary *genericEffectSummary,
 	callExpression *syntax.Expression,
 	expression *syntax.Expression,
-	condition genericEffectCondition,
-) (*genericEffectCondition, effectOutcome) {
+	condition GenericEffectCondition,
+) (*GenericEffectCondition, effectOutcome) {
 	call := syntax.CallExpressionOf(callExpression)
 	if call == nil {
 		return nil, unknownEffectOutcome()
@@ -240,7 +240,7 @@ func (c *checker) mapParameterEffectCondition(
 			return nil, unknownEffectOutcome()
 		}
 	}
-	mapped := genericEffectCondition{
+	mapped := GenericEffectCondition{
 		ValueParameter: index,
 		OtherParameter: otherIndex,
 		Kind:           condition.Kind,
@@ -252,8 +252,8 @@ func (c *checker) mapParameterEffectCondition(
 func (c *checker) mappedScalarEffectCondition(
 	callExpression *syntax.Expression,
 	expression *syntax.Expression,
-	condition genericEffectCondition,
-) *genericEffectCondition {
+	condition GenericEffectCondition,
+) *GenericEffectCondition {
 	if !isScalarEffectCondition(condition.Kind) {
 		return nil
 	}
@@ -269,27 +269,27 @@ func (c *checker) mappedScalarEffectCondition(
 	if condition.Kind == booleanEffectCondition() && negated {
 		expected = !expected
 	}
-	return &genericEffectCondition{
+	return &GenericEffectCondition{
 		ValueParameter: index, OtherParameter: -1,
 		Kind: condition.Kind, Expected: expected,
 	}
 }
 
-func isScalarEffectCondition(kind effectKind) bool {
+func isScalarEffectCondition(kind EffectKind) bool {
 	switch enumValue6 := kind; enumValue6.Tag() {
-	case effectKindTagBoolean:
+	case EffectKindTagBoolean:
 		return true
-	case effectKindTagNonzero:
+	case EffectKindTagNonzero:
 		return true
-	case effectKindTagNonempty:
+	case EffectKindTagNonempty:
 		return false
-	case effectKindTagMapMiss:
+	case EffectKindTagMapMiss:
 		return false
-	case effectKindTagChannelClosed:
+	case EffectKindTagChannelClosed:
 		return false
-	case effectKindTagAssertionFails:
+	case EffectKindTagAssertionFails:
 		return false
-	case effectKindTagResliceExtends:
+	case EffectKindTagResliceExtends:
 		return false
 	default:
 		panic(enumValue6.UnknownTag()) // unreachable: tgolint requires a case per tag
@@ -299,53 +299,48 @@ func isScalarEffectCondition(kind effectKind) bool {
 func (c *checker) genericZeroFact(
 	function *types.Func,
 	summaries map[*types.Func]*genericEffectSummary,
-) *genericEffectSet {
+) *GenericEffectFact {
 	if summary := summaries[function]; summary != nil {
 		return summary.effects()
 	}
-	fact := new(genericEffectWireFact)
+	fact := new(GenericEffectFact)
 	if c.pass.ImportObjectFact(function, fact) {
-		return decodeGenericEffectFact(fact)
+		return fact
 	}
 	return nil
 }
 
-func (summary *genericEffectSummary) effects() *genericEffectSet {
-	return &genericEffectSet{
-		ZeroEffects: append([]genericEffect(nil), summary.zeroEffects...),
+func (summary *genericEffectSummary) effects() *GenericEffectFact {
+	return &GenericEffectFact{
+		ZeroEffects: append([]GenericEffect(nil), summary.zeroEffects...),
 		AccessEffects: append(
-			[]genericEffect(nil), summary.accessEffects...,
+			[]GenericEffect(nil), summary.accessEffects...,
 		),
 		ReturnedZeroEffects: append(
-			[]genericEffect(nil), summary.returnedZeroEffects...,
+			[]GenericEffect(nil), summary.returnedZeroEffects...,
 		),
 		ReturnedAccessEffects: append(
-			[]genericEffect(nil), summary.returnedAccessEffects...,
+			[]GenericEffect(nil), summary.returnedAccessEffects...,
 		),
 	}
 }
 
-// fact sorts and encodes a local summary for package export.
-func (summary *genericEffectSummary) fact() *genericEffectWireFact {
+// fact sorts a local summary for package export.
+func (summary *genericEffectSummary) fact() *GenericEffectFact {
 	effects := summary.effects()
 	sortGenericEffects(effects.ZeroEffects)
 	sortGenericEffects(effects.AccessEffects)
 	sortGenericEffects(effects.ReturnedZeroEffects)
 	sortGenericEffects(effects.ReturnedAccessEffects)
-	return &genericEffectWireFact{
-		ZeroEffects:           encodeGenericEffects(effects.ZeroEffects),
-		AccessEffects:         encodeGenericEffects(effects.AccessEffects),
-		ReturnedZeroEffects:   encodeGenericEffects(effects.ReturnedZeroEffects),
-		ReturnedAccessEffects: encodeGenericEffects(effects.ReturnedAccessEffects),
-	}
+	return effects
 }
 
-func (fact *genericEffectWireFact) hasEffects() bool {
+func (fact *GenericEffectFact) hasEffects() bool {
 	return len(fact.ZeroEffects) != 0 || len(fact.AccessEffects) != 0 ||
 		len(fact.ReturnedZeroEffects) != 0 || len(fact.ReturnedAccessEffects) != 0
 }
 
-func sortGenericEffects(effects []genericEffect) {
+func sortGenericEffects(effects []GenericEffect) {
 	sort.Slice(effects, func(left, right int) bool {
 		if effects[left].Receiver != effects[right].Receiver {
 			return !effects[left].Receiver
@@ -365,8 +360,8 @@ func sortGenericEffects(effects []genericEffect) {
 			if leftCondition.ValueParameter != rightCondition.ValueParameter {
 				return leftCondition.ValueParameter < rightCondition.ValueParameter
 			}
-			leftKind := effectConditionCode(leftCondition.Kind)
-			rightKind := effectConditionCode(rightCondition.Kind)
+			leftKind := leftCondition.Kind.Tag()
+			rightKind := rightCondition.Kind.Tag()
 			if leftKind != rightKind {
 				return leftKind < rightKind
 			}

@@ -222,6 +222,14 @@ Every payload field follows the struct literal rules in this specification.
 Payloads may use Go types, including pointers, slices, maps, channels, and interfaces.
 Go rejects a direct recursive payload when its size is infinite.
 
+### Payload-free enum gob
+
+An enum whose variants all have empty payloads implements `gob.GobEncoder` and
+`gob.GobDecoder`. Its stable form is the four-byte big-endian numeric tag. Encoding and decoding
+reject zero and unknown tags without changing the decode receiver. Variant order defines the tag
+and is part of this wire contract. `GobEncode` allocates its returned four-byte slice.
+`GobDecode` adds no allocation on a valid input. Enums with payload fields do not add these methods.
+
 ### Enum JSON
 
 Every enum has generated `MarshalJSON`, `MarshalJSONTo`, `UnmarshalJSON`, and

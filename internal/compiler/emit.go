@@ -46,11 +46,76 @@ func enumGo(sourceName string, declaration *model, fmtPackage string) string {
 		"func (v %s) UnknownTag() string { return %s.Sprintf(%q, v.tgoTag) }\n",
 		name, fmtPackage,
 		name+": unknown tag %d — tgolint proves every tag has a case, so this is unreachable")
+	if payloadFreeEnum(declaration) {
+		emitEnumGob(&output, declaration, fmtPackage)
+	}
 	for _, variant := range declaration.Variants {
 		emitVariant(&output, sourceName, name, variant)
 	}
 	output.WriteByte('\n')
 	return output.String()
+}
+
+// emitEnumGob emits a stable gob representation for a payload-free enum.
+func emitEnumGob(output *strings.Builder, declaration *model, fmtPackage string) {
+	name := declaration.Name
+	first := name + "Tag" + declaration.Variants[0].Name
+	last := name + "Tag" + declaration.Variants[len(declaration.Variants)-1].Name
+	output.WriteString("// GobEncode returns the stable four-byte enum tag.\n")
+	fmt.Fprintf(output, "func (v %s) GobEncode() ([]byte, error) {\n", name)
+	fmt.Fprintf(output, "if v.tgoTag < %s || v.tgoTag > %s {\n", first, last)
+	fmt.Fprintf(
+		output,
+		"return nil, %s.Errorf(%q, v.tgoTag)\n}\n",
+		fmtPackage,
+		name+": cannot gob encode invalid tag %d",
+	)
+	output.WriteString("tag := uint32(v.tgoTag)\n")
+	output.WriteString(
+		"return []byte{byte(tag >> 24), byte(tag >> 16), " +
+			"byte(tag >> 8), byte(tag)}, nil\n}\n",
+	)
+	output.WriteString("// GobDecode replaces the value with a valid four-byte enum tag.\n")
+	fmt.Fprintf(output, "func (v *%s) GobDecode(data []byte) error {\n", name)
+	fmt.Fprintf(
+		output,
+		"if len(data) != 4 { return %s.Errorf(%q, len(data)) }\n",
+		fmtPackage,
+		name+": invalid gob data length %d",
+	)
+	fmt.Fprintf(
+		output,
+		"number := uint32(data[0]) << 24 | uint32(data[1]) << 16 | "+
+			"uint32(data[2]) << 8 | uint32(data[3])\n"+
+			"tag := %sTag(number)\n",
+		name,
+	)
+	fmt.Fprintf(
+		output,
+		"if uint32(tag) != number || tag < %s || tag > %s {\n",
+		first,
+		last,
+	)
+	fmt.Fprintf(
+		output,
+		"return %s.Errorf(%q, number)\n}\n",
+		fmtPackage,
+		name+": cannot gob decode unknown tag %d",
+	)
+	fmt.Fprintf(output, "*v = %s{tgoTag: tag}\nreturn nil\n}\n", name)
+}
+
+// payloadFreeEnum reports whether every variant has no payload field.
+func payloadFreeEnum(declaration *model) bool {
+	if len(declaration.Variants) == 0 {
+		return false
+	}
+	for _, variant := range declaration.Variants {
+		if len(variant.Fields) != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // emitVariant emits one payload type, constructor, and payload accessor.

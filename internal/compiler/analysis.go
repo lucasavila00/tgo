@@ -1,12 +1,14 @@
 package compiler
 
 import (
+	"context"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
 	"maps"
 	"path/filepath"
+	"sort"
 
 	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
@@ -15,16 +17,73 @@ import (
 // AnalysisSource contains source syntax and its generated output.
 type AnalysisSource struct {
 	Name   string
+	Path   string
 	Output []byte
 	Syntax *syntax.File
 }
 
 // AnalysisPackage contains checked TGo source and indexed type facts.
 type AnalysisPackage struct {
-	Sources []AnalysisSource
-	Facts   *sourcefacts.Index
-	Package *types.Package
-	NonNil  map[token.Pos]bool
+	Directory     string
+	Path          string
+	Sources       []AnalysisSource
+	Facts         *sourcefacts.Index
+	Files         *token.FileSet
+	Package       *types.Package
+	Owners        map[types.Object]token.Pos
+	GeneratedUses map[token.Pos]types.Object
+	NonNil        map[token.Pos]bool
+}
+
+// AnalyzeWorkspace loads and checks all active TGo packages in one module.
+func AnalyzeWorkspace(directory string) ([]*AnalysisPackage, error) {
+	return AnalyzeWorkspaceContext(context.Background(), directory)
+}
+
+// AnalyzeWorkspaceContext stops before the next package after cancellation.
+func AnalyzeWorkspaceContext(
+	ctx context.Context,
+	directory string,
+) ([]*AnalysisPackage, error) {
+	root, module, err := moduleRoot(directory)
+	if err != nil {
+		return nil, err
+	}
+	context, err := effectiveBuildContext(directory)
+	if err != nil {
+		return nil, err
+	}
+	packages, err := discover(root, module, &context)
+	if err != nil {
+		return nil, err
+	}
+	paths := make([]string, 0, len(packages))
+	for path := range packages {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	loaded := make(map[string]bool)
+	result := make([]*AnalysisPackage, 0, len(paths))
+	for _, path := range paths {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		unit := packages[path]
+		if err := loadAnalysisPackage(unit, packages, loaded); err != nil {
+			return nil, err
+		}
+		if len(unit.Sources) == 0 {
+			continue
+		}
+		analysis, err := analyzeUnit(unit)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, analysis)
+	}
+	return result, nil
 }
 
 // AnalyzePackage loads and checks one TGo package without writing output files.
@@ -58,6 +117,10 @@ func AnalyzePackage(
 	if len(unit.Sources) == 0 {
 		return nil, nil
 	}
+	return analyzeUnit(unit)
+}
+
+func analyzeUnit(unit *packageUnit) (*AnalysisPackage, error) {
 	if err := unit.checkAndLower(); err != nil {
 		return nil, err
 	}
@@ -70,9 +133,119 @@ func AnalyzePackage(
 		return nil, err
 	}
 	return &AnalysisPackage{
-		Sources: sources, Facts: facts,
-		Package: unit.typed, NonNil: nonNil,
+		Directory:     unit.Dir,
+		Path:          unit.Path,
+		Sources:       sources,
+		Facts:         facts,
+		Files:         unit.fs,
+		Package:       unit.typed,
+		Owners:        analysisOwners(unit),
+		GeneratedUses: analysisGeneratedUses(unit),
+		NonNil:        nonNil,
 	}, nil
+}
+
+func analysisGeneratedUses(unit *packageUnit) map[token.Pos]types.Object {
+	uses := make(map[token.Pos]types.Object)
+	for _, reference := range unit.references {
+		if object := unit.info.Uses[reference.Name]; object != nil {
+			uses[reference.At] = object
+		}
+	}
+	return uses
+}
+
+// analysisOwners maps generated public objects to their TGo declarations.
+func analysisOwners(unit *packageUnit) map[types.Object]token.Pos {
+	owners := make(map[types.Object]token.Pos)
+	for _, source := range unit.Sources {
+		for _, declaration := range source.Tree.Declarations {
+			if enum, ok := syntax.EnumDeclarationOf(declaration); ok {
+				addEnumOwners(owners, unit.typed, enum)
+			}
+			if checked, ok := syntax.CheckedDeclarationOf(declaration); ok {
+				addCheckedOwners(owners, unit.typed, checked)
+			}
+		}
+	}
+	return owners
+}
+
+func addEnumOwners(
+	owners map[types.Object]token.Pos,
+	pkg *types.Package,
+	declaration *syntax.EnumDeclaration,
+) {
+	name := declaration.Name.Name
+	owner := declaration.Name.Start
+	scope := pkg.Scope()
+	addOwnedObject(owners, scope.Lookup(name+"Tag"), owner)
+	named := namedObject(scope.Lookup(name))
+	for _, method := range []string{
+		"Tag", "UnknownTag", "MarshalJSON", "MarshalJSONTo",
+		"UnmarshalJSON", "UnmarshalJSONFrom",
+	} {
+		addOwnedObject(owners, namedMethod(named, method), owner)
+	}
+	for _, variant := range declaration.Variants {
+		variantOwner := variant.Name.Start
+		addOwnedObject(owners, scope.Lookup(name+"Tag"+variant.Name.Name), variantOwner)
+		payload := namedObject(scope.Lookup(name + variant.Name.Name))
+		if payload != nil {
+			addOwnedObject(owners, payload.Obj(), variantOwner)
+		}
+		addOwnedObject(
+			owners, namedMethod(named, variant.Name.Name+"Payload"), variantOwner,
+		)
+		addOwnedObject(owners, namedMethod(payload, name), variantOwner)
+	}
+}
+
+func addCheckedOwners(
+	owners map[types.Object]token.Pos,
+	pkg *types.Package,
+	declaration *syntax.CheckedDeclaration,
+) {
+	owner := declaration.Name.Start
+	scope := pkg.Scope()
+	addOwnedObject(owners, scope.Lookup("New"+declaration.Name.Name), owner)
+	addOwnedObject(
+		owners,
+		namedMethod(namedObject(scope.Lookup(declaration.Name.Name)), "Value"),
+		owner,
+	)
+}
+
+func namedObject(object types.Object) *types.Named {
+	typeName, ok := object.(*types.TypeName)
+	if !ok {
+		return nil
+	}
+	named, _ := types.Unalias(typeName.Type()).(*types.Named)
+	return named
+}
+
+func namedMethod(named *types.Named, name string) *types.Func {
+	if named == nil {
+		return nil
+	}
+	for index := 0; index < named.NumMethods(); index++ {
+		method := named.Method(index)
+		if method.Name() == name {
+			return method
+		}
+	}
+	return nil
+}
+
+func addOwnedObject(
+	owners map[types.Object]token.Pos,
+	object types.Object,
+	owner token.Pos,
+) {
+	if object != nil {
+		owners[object] = owner
+	}
 }
 
 func analysisSources(
@@ -92,7 +265,8 @@ func analysisSources(
 			return nil, nil, nil, fmt.Errorf("analysis source %s has no syntax", source.Name)
 		}
 		sources = append(sources, AnalysisSource{
-			Name: filepath.Base(source.Name), Output: outputs[unit.outputPath(source.Name)],
+			Name: filepath.Base(source.Name), Path: source.Name,
+			Output: outputs[unit.outputPath(source.Name)],
 			Syntax: tree,
 		})
 		if facts == nil {

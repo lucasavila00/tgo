@@ -15,7 +15,9 @@ GENERATED_ROOTS = (
     Path("pkg/format"),
     Path("pkg/syntax"),
     Path("internal/sourcefacts"),
+    Path("internal/navigation"),
     Path("internal/tgolint"),
+    Path("cmd/tgonav"),
 )
 
 
@@ -74,7 +76,9 @@ def main() -> None:
             "./pkg/format",
             "./pkg/syntax",
             "./internal/sourcefacts",
+            "./internal/navigation",
             "./internal/tgolint",
+            "./cmd/tgonav",
         )
         generated = generated_files(repository)
         require_equal(committed, generated, "committed generated output is stale")

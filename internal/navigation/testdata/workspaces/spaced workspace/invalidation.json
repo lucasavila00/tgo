@@ -1,0 +1,14 @@
+[
+  {
+    "file": "main.tgo",
+    "old": "Before",
+    "new": "After",
+    "request": {
+      "method": "definition",
+      "position": {"file": "main.tgo", "text": "After()", "occurrence": 2},
+      "locations": [
+        {"file": "main.tgo", "text": "After", "occurrence": 1}
+      ]
+    }
+  }
+]

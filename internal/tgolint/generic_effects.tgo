@@ -8,23 +8,24 @@ import (
 	"tgo/pkg/syntax"
 )
 
-// genericEffectWireFact carries generic effects between analysis packages.
-type genericEffectWireFact struct {
-	ZeroEffects           []genericEffectWire
-	AccessEffects         []genericEffectWire
-	ReturnedZeroEffects   []genericEffectWire
-	ReturnedAccessEffects []genericEffectWire
+// GenericEffectFact carries generic effects between analysis packages.
+type GenericEffectFact struct {
+	ZeroEffects           []GenericEffect
+	AccessEffects         []GenericEffect
+	ReturnedZeroEffects   []GenericEffect
+	ReturnedAccessEffects []GenericEffect
 }
 
-// AFact marks genericEffectWireFact as a Go analysis fact.
-func (%genericEffectWireFact) AFact() {}
+// AFact marks GenericEffectFact as a Go analysis fact.
+func (%GenericEffectFact) AFact() {}
 
 type zeroParameter struct {
 	receiver bool
 	index    int
 }
 
-type effectKind enum {
+// EffectKind identifies the condition that controls a generic effect.
+type EffectKind enum {
 	Boolean struct{}
 	Nonzero struct{}
 	Nonempty struct{}
@@ -34,168 +35,42 @@ type effectKind enum {
 	ResliceExtends struct{}
 }
 
-func booleanEffectCondition() effectKind {
-	return effectKind.Boolean{}
+func booleanEffectCondition() EffectKind {
+	return EffectKind.Boolean{}
 }
-func nonzeroEffectConditionKind() effectKind {
-	return effectKind.Nonzero{}
+func nonzeroEffectConditionKind() EffectKind {
+	return EffectKind.Nonzero{}
 }
-func nonemptyEffectCondition() effectKind {
-	return effectKind.Nonempty{}
+func nonemptyEffectCondition() EffectKind {
+	return EffectKind.Nonempty{}
 }
-func mapMissEffectCondition() effectKind {
-	return effectKind.MapMiss{}
+func mapMissEffectCondition() EffectKind {
+	return EffectKind.MapMiss{}
 }
-func closedChannelEffectCondition() effectKind {
-	return effectKind.ChannelClosed{}
+func closedChannelEffectCondition() EffectKind {
+	return EffectKind.ChannelClosed{}
 }
-func failedAssertionEffectCondition() effectKind {
-	return effectKind.AssertionFails{}
+func failedAssertionEffectCondition() EffectKind {
+	return EffectKind.AssertionFails{}
 }
-func extendingResliceEffectCondition() effectKind {
-	return effectKind.ResliceExtends{}
+func extendingResliceEffectCondition() EffectKind {
+	return EffectKind.ResliceExtends{}
 }
 
-// genericEffect is a serializable condition for one type argument effect.
-type genericEffect struct {
+// GenericEffect is a serializable condition for one type argument effect.
+type GenericEffect struct {
 	Receiver      bool
 	TypeParameter int
-	Conditions    []genericEffectCondition
+	Conditions    []GenericEffectCondition
 	MaySkip       bool
 }
 
-type genericEffectCondition struct {
+// GenericEffectCondition describes one value condition for a generic effect.
+type GenericEffectCondition struct {
 	ValueParameter int
 	OtherParameter int
-	Kind           effectKind
+	Kind           EffectKind
 	Expected       bool
-}
-
-type genericEffectSet struct {
-	ZeroEffects           []genericEffect
-	AccessEffects         []genericEffect
-	ReturnedZeroEffects   []genericEffect
-	ReturnedAccessEffects []genericEffect
-}
-
-type genericEffectWire struct {
-	Receiver      bool
-	TypeParameter int
-	Conditions    []genericEffectConditionWire
-	MaySkip       bool
-}
-
-type genericEffectConditionWire struct {
-	ValueParameter int
-	OtherParameter int
-	Kind           uint8
-	Expected       bool
-}
-
-const (
-	booleanConditionWire       uint8 = 1
-	nonzeroConditionWire       uint8 = 2
-	nonemptyConditionWire      uint8 = 3
-	mapMissConditionWire       uint8 = 4
-	channelClosedConditionWire uint8 = 5
-	assertionFailsConditionWire uint8 = 6
-	resliceExtendsConditionWire uint8 = 7
-)
-
-func effectConditionCode(kind effectKind) uint8 {
-	switch enumValue1 := kind; enumValue1.Tag() {
-	case effectKindTagBoolean:
-		return booleanConditionWire
-	case effectKindTagNonzero:
-		return nonzeroConditionWire
-	case effectKindTagNonempty:
-		return nonemptyConditionWire
-	case effectKindTagMapMiss:
-		return mapMissConditionWire
-	case effectKindTagChannelClosed:
-		return channelClosedConditionWire
-	case effectKindTagAssertionFails:
-		return assertionFailsConditionWire
-	case effectKindTagResliceExtends:
-		return resliceExtendsConditionWire
-	exhaustive:
-	}
-}
-
-func decodeEffectConditionKind(code uint8) (effectKind, bool) {
-	switch code {
-	case booleanConditionWire: return booleanEffectCondition(), true
-	case nonzeroConditionWire: return nonzeroEffectConditionKind(), true
-	case nonemptyConditionWire: return nonemptyEffectCondition(), true
-	case mapMissConditionWire: return mapMissEffectCondition(), true
-	case channelClosedConditionWire: return closedChannelEffectCondition(), true
-	case assertionFailsConditionWire: return failedAssertionEffectCondition(), true
-	case resliceExtendsConditionWire: return extendingResliceEffectCondition(), true
-	default: return booleanEffectCondition(), false
-	}
-}
-
-// encodeGenericEffects converts internal ADTs to serializable package facts.
-func encodeGenericEffects(effects []genericEffect) []genericEffectWire {
-	encoded := make([]genericEffectWire, 0, len(effects))
-	for _, effect := range effects {
-		conditions := make([]genericEffectConditionWire, 0, len(effect.Conditions))
-		for _, condition := range effect.Conditions {
-			conditions = append(conditions, genericEffectConditionWire{
-				ValueParameter: condition.ValueParameter,
-				OtherParameter: condition.OtherParameter,
-				Kind: effectConditionCode(condition.Kind),
-				Expected: condition.Expected,
-			})
-		}
-		encoded = append(encoded, genericEffectWire{
-			Receiver: effect.Receiver, TypeParameter: effect.TypeParameter,
-			Conditions: conditions, MaySkip: effect.MaySkip,
-		})
-	}
-	return encoded
-}
-
-func decodeGenericEffects(encoded []genericEffectWire) ([]genericEffect, bool) {
-	effects := make([]genericEffect, 0, len(encoded))
-	for _, item := range encoded {
-		conditions := make([]genericEffectCondition, 0, len(item.Conditions))
-		for _, encodedCondition := range item.Conditions {
-			kind, ok := decodeEffectConditionKind(encodedCondition.Kind)
-			if !ok {
-				return nil, false
-			}
-			conditions = append(conditions, genericEffectCondition{
-				ValueParameter: encodedCondition.ValueParameter,
-				OtherParameter: encodedCondition.OtherParameter,
-				Kind: kind, Expected: encodedCondition.Expected,
-			})
-		}
-		effects = append(effects, genericEffect{
-			Receiver: item.Receiver, TypeParameter: item.TypeParameter,
-			Conditions: conditions, MaySkip: item.MaySkip,
-		})
-	}
-	return effects, true
-}
-
-// decodeGenericEffectFact validates all effect codes at the package boundary.
-func decodeGenericEffectFact(fact %genericEffectWireFact) *genericEffectSet {
-	if fact == nil {
-		return nil
-	}
-	zero, zeroOK := decodeGenericEffects(fact.ZeroEffects)
-	access, accessOK := decodeGenericEffects(fact.AccessEffects)
-	returnedZero, returnedZeroOK := decodeGenericEffects(fact.ReturnedZeroEffects)
-	returnedAccess, returnedAccessOK := decodeGenericEffects(fact.ReturnedAccessEffects)
-	if !zeroOK || !accessOK || !returnedZeroOK || !returnedAccessOK {
-		return nil
-	}
-	return &genericEffectSet{
-		ZeroEffects: zero, AccessEffects: access,
-		ReturnedZeroEffects: returnedZero,
-		ReturnedAccessEffects: returnedAccess,
-	}
 }
 
 type genericEffectSummary struct {
@@ -203,10 +78,10 @@ type genericEffectSummary struct {
 	file                  %syntax.File
 	declaration           %syntax.FunctionDeclaration
 	parameters            map[*types.TypeParam]zeroParameter
-	zeroEffects           []genericEffect
-	accessEffects         []genericEffect
-	returnedZeroEffects   []genericEffect
-	returnedAccessEffects []genericEffect
+	zeroEffects           []GenericEffect
+	accessEffects         []GenericEffect
+	returnedZeroEffects   []GenericEffect
+	returnedAccessEffects []GenericEffect
 	calls                 []%syntax.Expression
 	reachable             map[syntax.Node]bool
 	root                  %syntax.Node
@@ -445,7 +320,7 @@ func (c %checker) collectGenericPresenceZeros(summary %genericEffectSummary) {
 		c.checkConstructors(summary.root, summary.body)
 		for _, source := range sources {
 			if source == nil {
-				c.addGenericEffect(summary, true, reference, genericEffect{
+				c.addGenericEffect(summary, true, reference, GenericEffect{
 					Receiver: false, TypeParameter: 0, Conditions: nil, MaySkip: true,
 				})
 				continue
@@ -640,8 +515,8 @@ func (c %checker) collectGenericAccess(
 	c.markGenericAccessAt(summary, node, c.facts.Type(selector.Expression))
 }
 
-func noGenericEffect() genericEffect {
-	return genericEffect{
+func noGenericEffect() GenericEffect {
+	return GenericEffect{
 		Receiver: false, TypeParameter: 0, Conditions: nil, MaySkip: false,
 	}
 }

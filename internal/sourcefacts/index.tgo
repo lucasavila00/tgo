@@ -163,6 +163,115 @@ func (i %Index) Object(identifier %syntax.Identifier) types.Object {
 	return i.lineDefinition(identifier, position)
 }
 
+// IdentifierFact returns the object and reports whether the source name defines it.
+func (i %Index) IdentifierFact(file %syntax.File, node %syntax.Node) (types.Object, bool) {
+	identifier, ok := syntax.IdentifierOf(node)
+	if !ok || identifier == nil { return nil, false }
+	position := i.location(identifier.Start)
+	if object := i.definitions[position]; object != nil { return object, true }
+	if object := i.uses[position]; object != nil { return object, false }
+	object := i.lineDefinition(identifier, position)
+	return object, object != nil && sourceDefinition(file, node, identifier)
+}
+
+func sourceDefinition(file %syntax.File, node %syntax.Node, name %syntax.Identifier) bool {
+	parent := syntax.Parent(file, node)
+	if parent == nil { return false }
+	if declaration, ok := syntax.DeclarationOf(parent); ok {
+		if function := syntax.FunctionDeclarationValueOf(declaration); function != nil {
+			return sameIdentifier(function.Name, name)
+		}
+		if value, ok := syntax.EnumDeclarationOf(declaration); ok {
+			return sameIdentifier(value.Name, name)
+		}
+		if value, ok := syntax.StructDeclarationOf(declaration); ok {
+			return sameIdentifier(value.Name, name)
+		}
+		if value, ok := syntax.CheckedDeclarationOf(declaration); ok {
+			return sameIdentifier(value.Name, name)
+		}
+	}
+	if specification, ok := syntax.SpecificationOf(parent); ok {
+		if value := syntax.ValueSpecificationOf(specification); value != nil {
+			return identifierIn(value.Names, name)
+		}
+		if value := syntax.TypeSpecificationOf(specification); value != nil {
+			return sameIdentifier(value.Name, name)
+		}
+		if value := importSpecification(specification); value != nil && value.Name != nil {
+			return sameIdentifier(value.Name, name)
+		}
+	}
+	if field, ok := syntax.FieldOf(parent); ok {
+		return identifierIn(field.Names, name)
+	}
+	if variant, ok := enumVariant(parent); ok {
+		return sameIdentifier(variant.Name, name)
+	}
+	if statement, ok := syntax.StatementOf(parent); ok {
+		if value := syntax.AssignmentStatementOf(statement); value != nil &&
+			value.Operator == token.DEFINE {
+			return expressionListHasIdentifier(value.Left, name)
+		}
+		if value := syntax.RangeStatementOf(statement); value != nil &&
+			value.Operator == token.DEFINE {
+			return expressionHasIdentifier(value.Key, name) ||
+				expressionHasIdentifier(value.Value, name)
+		}
+		if value := syntax.LabeledStatementOf(statement); value != nil {
+			return sameIdentifier(value.Label, name)
+		}
+	}
+	if comprehension, ok := syntax.ComprehensionExpressionOf(parent); ok {
+		for _, clause := range comprehension.Clauses {
+			value, rangeOK := syntax.ComprehensionRangeClauseOf(&clause)
+			if rangeOK && identifierIn(value.Bindings, name) { return true }
+		}
+	}
+	return false
+}
+
+func importSpecification(value %syntax.Specification) *syntax.ImportSpecification {
+	if value == nil || value.Tag() != syntax.SpecificationTagImport { return nil }
+	return value.ImportPayload().Value
+}
+
+func enumVariant(node %syntax.Node) (*syntax.EnumVariant, bool) {
+	if node == nil || node.Tag() != syntax.NodeTagEnumVariant { return nil, false }
+	return node.EnumVariantPayload().Value, true
+}
+
+func identifierIn(values []%syntax.Identifier, target %syntax.Identifier) bool {
+	for _, value := range values {
+		if sameIdentifier(value, target) { return true }
+	}
+	return false
+}
+
+func expressionListHasIdentifier(
+	values []%syntax.Expression,
+	target %syntax.Identifier,
+) bool {
+	for _, value := range values {
+		if expressionHasIdentifier(value, target) { return true }
+	}
+	return false
+}
+
+func expressionHasIdentifier(
+	value *syntax.Expression,
+	target %syntax.Identifier,
+) bool {
+	if value == nil { return false }
+	name := syntax.IdentifierExpressionOf(value)
+	if name == nil { return false }
+	return sameIdentifier(name, target)
+}
+
+func sameIdentifier(left, right %syntax.Identifier) bool {
+	return left.Start == right.Start && left.Stop == right.Stop
+}
+
 // Definition returns the object defined by a source identifier expression.
 func (i %Index) Definition(expression %syntax.Expression) types.Object {
 	identifier := syntax.IdentifierExpressionOf(expression)

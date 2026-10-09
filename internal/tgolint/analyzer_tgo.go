@@ -27,7 +27,7 @@ func newAnalyzer() *analysis.Analyzer {
 	analyzer.FactTypes = []analysis.Fact{
 		new(modelWireFact),
 		new(validationFact),
-		new(genericEffectWireFact),
+		new(GenericEffectFact),
 		new(nilContractWireFactV2),
 		new(invalidPackageFact),
 	}

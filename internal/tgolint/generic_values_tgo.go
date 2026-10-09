@@ -11,7 +11,7 @@ import (
 
 type genericValue struct {
 	function          *types.Func
-	fact              *genericEffectSet
+	fact              *GenericEffectFact
 	receiverArguments []types.Type
 	typeArguments     []types.Type
 	conditionCall     *syntax.Expression

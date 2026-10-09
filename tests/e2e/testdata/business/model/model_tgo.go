@@ -476,6 +476,29 @@ func (v Signal) UnknownTag() string {
 	return __tgo_fmt.Sprintf("Signal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
+// GobEncode returns the stable four-byte enum tag.
+func (v Signal) GobEncode() ([]byte, error) {
+	if v.tgoTag < SignalTagOn || v.tgoTag > SignalTagOff {
+		return nil, __tgo_fmt.Errorf("Signal: cannot gob encode invalid tag %d", v.tgoTag)
+	}
+	tag := uint32(v.tgoTag)
+	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
+}
+
+// GobDecode replaces the value with a valid four-byte enum tag.
+func (v *Signal) GobDecode(data []byte) error {
+	if len(data) != 4 {
+		return __tgo_fmt.Errorf("Signal: invalid gob data length %d", len(data))
+	}
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := SignalTag(number)
+	if uint32(tag) != number || tag < SignalTagOn || tag > SignalTagOff {
+		return __tgo_fmt.Errorf("Signal: cannot gob decode unknown tag %d", number)
+	}
+	*v = Signal{tgoTag: tag}
+	return nil
+}
+
 // SignalOn is the On payload.
 type SignalOn struct{}
 
