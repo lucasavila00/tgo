@@ -63,8 +63,8 @@ func (e %nilEnvironment) conditionNilBranches(
 }
 
 func (e %nilEnvironment) comparisonNilBranches(
-	left *syntax.Expression,
-	right *syntax.Expression,
+	left %syntax.Expression,
+	right %syntax.Expression,
 	operator token.Token,
 	state *nilFlowState,
 ) (nilBranches, nilBranches) {
@@ -275,7 +275,7 @@ func nilBranchesInformative(branches nilBranches) bool {
 func (e %nilEnvironment) remapNilBranches(
 	state *nilFlowState,
 	branches nilBranches,
-	targets []*syntax.Expression,
+	targets []%syntax.Expression,
 	sources []*nilPlace,
 ) nilBranches {
 	if branches == nil {

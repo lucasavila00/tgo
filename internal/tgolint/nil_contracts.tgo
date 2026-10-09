@@ -108,8 +108,8 @@ func decodeNilContract(fact *nilContractWireFact) nilContract {
 
 type nilEnvironment struct {
 	pass      *analysis.Pass
-	files     []*syntax.File
-	facts     *sourcefacts.Index
+	files     []%syntax.File
+	facts     %sourcefacts.Index
 	pkg       *types.Package
 	markers   map[token.Pos]bool
 	contracts map[types.Object]nilContract
@@ -119,8 +119,8 @@ type nilEnvironment struct {
 
 func newNilEnvironment(
 	pass *analysis.Pass,
-	files []*syntax.File,
-	facts *sourcefacts.Index,
+	files []%syntax.File,
+	facts %sourcefacts.Index,
 	pkg *types.Package,
 	markers map[token.Pos]bool,
 ) %nilEnvironment {
@@ -130,6 +130,11 @@ func newNilEnvironment(
 		parents: make(map[syntax.Node]*syntax.Node),
 		reported: make(map[diagnosticKey]bool),
 	}
+}
+
+func singleNilEnvironmentFile(file %syntax.File) []%syntax.File {
+	files := make([]%syntax.File, 0, 1)
+	return append(files, file)
 }
 
 // collectNilContracts records every declared `%T` contract in this package.
@@ -208,7 +213,7 @@ func (e %nilEnvironment) structDeclarationContract(
 }
 
 // collectRangeContracts gives range variables the source element contracts.
-func (e %nilEnvironment) collectRangeContracts(statement *syntax.RangeStatement) {
+func (e %nilEnvironment) collectRangeContracts(statement %syntax.RangeStatement) {
 	if statement == nil || statement.Operator != token.DEFINE {
 		return
 	}
@@ -253,7 +258,7 @@ func (e %nilEnvironment) valueContract(expression *syntax.Expression) nilContrac
 	return result
 }
 
-func (e %nilEnvironment) addParents(file *syntax.File) {
+func (e %nilEnvironment) addParents(file %syntax.File) {
 	syntax.Inspect(file, func(node *syntax.Node) bool {
 		if parent := syntax.Parent(file, node); parent != nil {
 			e.parents[*node] = parent
@@ -268,7 +273,7 @@ func (e %nilEnvironment) setContract(object types.Object, contract nilContract) 
 	}
 }
 
-func (e %nilEnvironment) collectFieldContract(field *syntax.Field) {
+func (e %nilEnvironment) collectFieldContract(field %syntax.Field) {
 	contract := e.valueContract(field.Type)
 	for _, name := range field.Names {
 		e.setContract(e.facts.DefinitionName(name), contract)
@@ -278,7 +283,7 @@ func (e %nilEnvironment) collectFieldContract(field *syntax.Field) {
 	}
 }
 
-func (e %nilEnvironment) collectValueContract(specification *syntax.ValueSpecification) {
+func (e %nilEnvironment) collectValueContract(specification %syntax.ValueSpecification) {
 	contract := e.valueContract(specification.Type)
 	for _, name := range specification.Names {
 		e.setContract(e.facts.DefinitionName(name), contract)

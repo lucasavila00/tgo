@@ -54,6 +54,9 @@ func (e %nilEnvironment) contractForExpression(expression *syntax.Expression) ni
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
 		return e.contractForExpression(parenthesized.Expression)
 	}
+	if propagation := nilPropagationExpressionOf(expression); propagation != nil {
+		return e.resultContract(propagation.Expression, 0)
+	}
 	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
 		return e.contractForObject(e.facts.Object(identifier))
 	}
@@ -107,8 +110,8 @@ func (e %nilEnvironment) contractForExpression(expression *syntax.Expression) ni
 }
 
 func (e %nilEnvironment) selectorContract(
-	expression *syntax.Expression,
-	selector *syntax.SelectorExpression,
+	expression %syntax.Expression,
+	selector %syntax.SelectorExpression,
 ) nilContract {
 	selection := e.facts.Selection(expression)
 	if selection == nil {
@@ -135,7 +138,7 @@ func (e %nilEnvironment) selectorContract(
 
 // resultContract returns one result contract from a multi-value expression.
 func (e %nilEnvironment) resultContract(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	index int,
 ) nilContract {
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
@@ -201,7 +204,7 @@ func (e %nilEnvironment) builtinResultContract(
 }
 
 func (e %nilEnvironment) resultNilType(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	index int,
 	state *nilFlowState,
 ) nilType {
@@ -231,7 +234,7 @@ func (e %nilEnvironment) resultNilType(
 }
 
 func (e %nilEnvironment) resultGoType(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	index int,
 ) types.Type {
 	typ := e.facts.Type(expression)
@@ -245,7 +248,7 @@ func (e %nilEnvironment) resultGoType(
 	return nil
 }
 
-func (e %nilEnvironment) callContract(call *syntax.CallExpression) nilContract {
+func (e %nilEnvironment) callContract(call %syntax.CallExpression) nilContract {
 	if call == nil {
 		return nil
 	}
@@ -273,6 +276,9 @@ func (e %nilEnvironment) expressionNilType(
 	}
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
 		return e.expressionNilType(parenthesized.Expression, state)
+	}
+	if propagation := nilPropagationExpressionOf(expression); propagation != nil {
+		return e.resultNilType(propagation.Expression, 0, state)
 	}
 	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
 		if unary.Operator == token.AND {
@@ -310,6 +316,15 @@ func (e %nilEnvironment) expressionNilType(
 	return declaredNilType(e.facts.Type(expression))
 }
 
+func nilPropagationExpressionOf(
+	expression *syntax.Expression,
+) *syntax.PropagationExpression {
+	if expression == nil || expression.Tag() != syntax.ExpressionTagPropagation {
+		return nil
+	}
+	return expression.PropagationPayload().Value
+}
+
 // checkNilExpression checks calls, literals, and pointer reads below an expression.
 func (e %nilEnvironment) checkNilExpression(
 	expression *syntax.Expression,
@@ -336,8 +351,8 @@ func (e %nilEnvironment) checkNilExpression(
 
 // checkNilCall checks the receiver and each call argument.
 func (e %nilEnvironment) checkNilCall(
-	expression *syntax.Expression,
-	call *syntax.CallExpression,
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
 	state *nilFlowState,
 ) {
 	if call == nil {
@@ -378,7 +393,7 @@ func (e %nilEnvironment) checkNilCall(
 
 // checkNilBuiltin applies nil rules for Go built-in functions.
 func (e %nilEnvironment) checkNilBuiltin(
-	call *syntax.CallExpression,
+	call %syntax.CallExpression,
 	state *nilFlowState,
 ) bool {
 	name := syntax.IdentifierExpressionOf(call.Callee)
@@ -451,7 +466,7 @@ func (e %nilEnvironment) nilZeroInvalid(
 	return false
 }
 
-func (e %nilEnvironment) checkNilMake(call *syntax.CallExpression) {
+func (e %nilEnvironment) checkNilMake(call %syntax.CallExpression) {
 	if len(call.Args) < 2 {
 		return
 	}
@@ -467,8 +482,8 @@ func (e %nilEnvironment) checkNilMake(call *syntax.CallExpression) {
 
 // checkNilLiteral checks all initialized and omitted composite values.
 func (e %nilEnvironment) checkNilLiteral(
-	expression *syntax.Expression,
-	literal *syntax.CompositeLiteral,
+	expression %syntax.Expression,
+	literal %syntax.CompositeLiteral,
 	state *nilFlowState,
 ) {
 	contract := e.contractForExpression(expression)
@@ -488,7 +503,7 @@ func (e %nilEnvironment) checkNilLiteral(
 }
 
 func (e %nilEnvironment) checkNilStructLiteral(
-	literal *syntax.CompositeLiteral,
+	literal %syntax.CompositeLiteral,
 	typ *types.Struct,
 	contract nilContract,
 	state *nilFlowState,
@@ -531,7 +546,7 @@ func (e %nilEnvironment) checkNilStructLiteral(
 	}
 }
 
-func nilStructFieldIndex(typ *types.Struct, key *syntax.Expression) int {
+func nilStructFieldIndex(typ *types.Struct, key %syntax.Expression) int {
 	name := syntax.IdentifierExpressionOf(key)
 	if name == nil {
 		return -1
@@ -545,7 +560,7 @@ func nilStructFieldIndex(typ *types.Struct, key *syntax.Expression) int {
 }
 
 func (e %nilEnvironment) checkNilArrayLiteral(
-	literal *syntax.CompositeLiteral,
+	literal %syntax.CompositeLiteral,
 	length int64,
 	contract nilContract,
 	state *nilFlowState,
@@ -581,7 +596,7 @@ func (e %nilEnvironment) checkNilArrayLiteral(
 }
 
 func (e %nilEnvironment) checkNilSequenceLiteral(
-	literal *syntax.CompositeLiteral,
+	literal %syntax.CompositeLiteral,
 	elementContract nilContract,
 	state *nilFlowState,
 ) {
@@ -594,7 +609,7 @@ func (e %nilEnvironment) checkNilSequenceLiteral(
 }
 
 func (e %nilEnvironment) checkNilMapLiteral(
-	literal *syntax.CompositeLiteral,
+	literal %syntax.CompositeLiteral,
 	contract nilContract,
 	state *nilFlowState,
 ) {

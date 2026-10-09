@@ -17,11 +17,11 @@ func (e *nilEnvironment) blockNilFacts(
 	block *cfg.Block,
 	state *nilFlowState,
 ) (nilFacts, nilFacts) {
-	if len(block.Nodes) == 0 {
+	if block == nil || state == nil || len(block.Nodes) == 0 {
 		return nil, nil
 	}
 	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
-	if !ok {
+	if !ok || condition == nil {
 		return nil, nil
 	}
 	conditionNode := syntax.ExpressionNode(condition)
@@ -240,7 +240,10 @@ func (e *nilEnvironment) stableIndex(expression *syntax.Expression) (string, boo
 
 func (e *nilEnvironment) isNil(expression *syntax.Expression) bool {
 	name := syntax.IdentifierExpressionOf(expression)
-	return name != nil && e.facts.Object(name) == types.Universe.Lookup("nil")
+	if name == nil {
+		return false
+	}
+	return e.facts.Object(name) == types.Universe.Lookup("nil")
 }
 
 // prepareNilBlock sets the range value contract at a range body entry.
@@ -248,7 +251,7 @@ func (e *nilEnvironment) prepareNilBlock(
 	state *nilFlowState,
 	block *cfg.Block,
 ) {
-	if block.Kind != cfg.KindRangeBody {
+	if state == nil || block == nil || block.Kind != cfg.KindRangeBody {
 		return
 	}
 	statement := syntax.RangeStatementOf(block.Stmt)

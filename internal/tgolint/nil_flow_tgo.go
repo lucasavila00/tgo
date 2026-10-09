@@ -93,7 +93,12 @@ func (c *checker) checkNilSafety(analysis *compiler.AnalysisPackage) {
 	if analysis != nil {
 		sourceFiles := make([]*syntax.File, 0, len(analysis.Sources))
 		for _, source := range analysis.Sources {
-			sourceFiles = append(sourceFiles, source.Syntax)
+			if source.Syntax != nil {
+				sourceFiles = append(sourceFiles, source.Syntax)
+			}
+		}
+		if analysis.Facts == nil || analysis.Package == nil {
+			return
 		}
 		sourceEnvironment := newNilEnvironment(
 			c.pass, sourceFiles, analysis.Facts, analysis.Package,
@@ -188,11 +193,17 @@ func (e *nilEnvironment) checkNilFunction(
 	flow := &nilFlow{before: make(map[syntax.Node]*nilFlowState)}
 	e.recordNilEntries(flow, graph, entries)
 	for _, block := range graph.Blocks {
+		if block == nil {
+			continue
+		}
 		entry := entries[block.Index]
 		if entry == nil {
 			continue
 		}
 		state := cloneNilState(entry)
+		if state == nil {
+			continue
+		}
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			e.transferNilNode(state, node, root, true)
@@ -304,8 +315,14 @@ func (e *nilEnvironment) solveNilEntries(
 	for len(queue) != 0 {
 		block := queue[0]
 		queue = queue[1:]
+		if block == nil {
+			continue
+		}
 		queued[block.Index] = false
 		state := cloneNilState(entries[block.Index])
+		if state == nil {
+			continue
+		}
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			e.transferNilNode(state, node, nil, false)
@@ -343,10 +360,16 @@ func (e *nilEnvironment) recordNilEntries(
 	entries []*nilFlowState,
 ) {
 	for _, block := range graph.Blocks {
+		if block == nil {
+			continue
+		}
 		if entries[block.Index] == nil {
 			continue
 		}
 		state := cloneNilState(entries[block.Index])
+		if state == nil {
+			continue
+		}
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			flow.before[node] = cloneNilState(state)
