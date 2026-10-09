@@ -160,6 +160,34 @@ func inspect(value int) {
 	exhaustive:
 	}
 }
+
+func TestParseGoFileKeepsGoStructTypeSpecification(t *testing.T) {
+	t.Parallel()
+	source := []byte("package sample\n\ntype Value struct { Field int }\n")
+	file, err := syntax.ParseGoFile(
+		token.NewFileSet(), "value.go", source, syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("ParseGoFile: %v", err)
+	}
+	if len(file.Declarations) != 1 {
+		t.Fatalf("declarations = %d, want 1", len(file.Declarations))
+	}
+	general := syntax.GeneralDeclarationOf(file.Declarations[0])
+	if general == nil || len(general.Specs) != 1 {
+		t.Fatalf("general declaration: %#v", general)
+	}
+	specification := syntax.TypeSpecificationOf(general.Specs[0])
+	if specification == nil || specification.Name.Name != "Value" {
+		t.Fatalf("type specification: %#v", specification)
+	}
+	if got := syntax.SourceText(file, syntax.Span{
+		Start: syntax.ExpressionPosition(specification.Type),
+		Stop:  syntax.ExpressionEnd(specification.Type),
+	}); got != "struct { Field int }" {
+		t.Fatalf("source text = %q", got)
+	}
+}
 `)
 	file, err := syntax.ParseFile(
 		token.NewFileSet(), "exhaustive.tgo", source, syntax.AllErrors,
@@ -278,6 +306,46 @@ func TestParseFilePropagationKeepsParserErrorPosition(t *testing.T) {
 				t.Fatalf("error = %q, want %q", got, test.want)
 			}
 		})
+	}
+}
+
+func TestParseFileTransparentPropagation(t *testing.T) {
+	t.Parallel()
+	source := []byte("package sample\nfunc load() (int, error) { return 0, nil }\n" +
+		"func use() (int, error) { return load()!!, nil }\n")
+	files := token.NewFileSet()
+	file, err := syntax.ParseFile(files, "transparent.tgo", source, syntax.AllErrors)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	var propagation *syntax.PropagationExpression
+	for _, extension := range syntax.Extensions(file) {
+		if value, ok := syntax.PropagationExpressionOf(extension); ok {
+			propagation = value
+		}
+	}
+	if propagation == nil {
+		t.Fatal("transparent propagation is absent")
+	}
+	first := files.Position(propagation.Bang)
+	second := files.Position(propagation.SecondBang)
+	end := files.Position(propagation.Stop)
+	if first.Line != 3 || first.Column != 40 ||
+		second.Line != 3 || second.Column != 41 ||
+		end.Line != 3 || end.Column != 42 {
+		t.Fatalf("positions = %v, %v, %v", first, second, end)
+	}
+}
+
+func TestParseFileTransparentPropagationNeedsAdjacentMarks(t *testing.T) {
+	t.Parallel()
+	source := []byte("package sample\nfunc load() (int, error) { return 0, nil }\n" +
+		"func use() (int, error) { return load()! !, nil }\n")
+	_, err := syntax.ParseFile(
+		token.NewFileSet(), "spaced.tgo", source, syntax.AllErrors,
+	)
+	if err == nil {
+		t.Fatal("ParseFile accepted spaced propagation marks")
 	}
 }
 

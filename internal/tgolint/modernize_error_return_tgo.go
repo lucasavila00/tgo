@@ -13,7 +13,7 @@ import (
 	"tgo/pkg/syntax"
 )
 
-// checkErrorReturnModernization finds manual branches that postfix ! replaces exactly.
+// checkErrorReturnModernization finds manual branches that propagation replaces exactly.
 func (c *checker) checkErrorReturnModernization(analysis *compiler.AnalysisPackage) {
 	if analysis == nil {
 		return
@@ -22,16 +22,17 @@ func (c *checker) checkErrorReturnModernization(analysis *compiler.AnalysisPacka
 		return
 	}
 	for _, source := range analysis.Sources {
-		if source.Syntax == nil {
+		file := source.Syntax
+		if file == nil {
 			continue
 		}
 		index := analysis.Facts
-		syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
+		syntax.Inspect(file, func(node *syntax.Node) bool {
 			statements, ok := sourceStatementList(node)
 			if !ok || len(statements) < 2 {
 				return true
 			}
-			signature := sourceFunctionSignature(source.Syntax, node, index)
+			signature := sourceFunctionSignature(file, node, index)
 			for position := 0; position+1 < len(statements); position++ {
 				c.checkErrorReturnPair(
 					statements[position], statements[position+1],
@@ -57,7 +58,7 @@ func unnamedErrorResults(signature *types.Signature) bool {
 	return predeclaredError(results.At(results.Len() - 1).Type())
 }
 
-// checkErrorReturnPair reports one exact manual expansion of postfix !.
+// checkErrorReturnPair reports one exact manual propagation expansion.
 func (c *checker) checkErrorReturnPair(
 	first *syntax.Statement,
 	second *syntax.Statement,
@@ -88,7 +89,18 @@ func (c *checker) checkErrorReturnPair(
 		return
 	}
 	name, ok := syntax.StaticCallName(call.Callee)
-	if !ok || !errorReturnFormat(branch, errorObject, name, index) {
+	if !ok {
+		return
+	}
+	if errorReturnIdentity(branch, errorObject, index) {
+		c.reportResult(
+			assignment.Start,
+			"manual %s error return matches postfix !!; use postfix !!",
+			name,
+		)
+		return
+	}
+	if !errorReturnFormat(branch, errorObject, name, index) {
 		return
 	}
 	c.reportResult(
@@ -96,6 +108,21 @@ func (c *checker) checkErrorReturnPair(
 		"manual %s error wrapper matches postfix !; use postfix !",
 		name,
 	)
+}
+
+// errorReturnIdentity proves that the final return is the original error.
+func errorReturnIdentity(
+	branch *syntax.IfStatement,
+	errorObject types.Object,
+	index *sourcefacts.Index,
+) bool {
+	result, ok := sourceReturn(branch.Body.List[0])
+	if !ok || result == nil || len(result.Results) == 0 {
+		return false
+	}
+	last := sourceUnparenthesized(result.Results[len(result.Results)-1])
+	_, sourceName := sourceIdentifier(last)
+	return sourceName && index.IdentifierObject(last) == errorObject
 }
 
 // errorReturnAssignment proves the short declaration and its static call.

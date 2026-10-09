@@ -29,17 +29,29 @@ func (p *sourceParser) discoverExtensions() error {
 			})
 		}
 		if p.atPropagation(cursor) {
+			secondBang := -1
+			end := p.tokens[cursor].end
+			if cursor+1 < len(p.tokens) &&
+				p.tokens[cursor+1].kind == token.NOT &&
+				p.tokens[cursor].end == p.tokens[cursor+1].start {
+				secondBang = cursor + 1
+				end = p.tokens[secondBang].end
+			}
 			item := &rawPropagation{
-				callEnd: p.tokens[cursor-1].end,
-				bang:    cursor,
-				node:    nil,
+				callEnd:    p.tokens[cursor-1].end,
+				bang:       cursor,
+				secondBang: secondBang,
+				node:       nil,
 			}
 			p.propagations = append(p.propagations, item)
 			p.edits = append(p.edits, sourceEdit{
 				start: p.tokens[cursor].start,
-				end:   p.tokens[cursor].end,
+				end:   end,
 				text:  "",
 			})
+			if secondBang >= 0 {
+				cursor++
+			}
 			continue
 		}
 		if p.atDefault(cursor) {
@@ -207,9 +219,9 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 	}
 	customDecls := make([]frontNode, 0, len(p.decls))
 	for _, raw := range p.decls {
-		declaration, declarationAnchors, err := p.makeDeclaration(raw, defaultAt)
-		if err != nil {
-			return nil, err
+		declaration, declarationAnchors, tgoErr := p.makeDeclaration(raw, defaultAt)
+		if tgoErr != nil {
+			return nil, tgoErr
 		}
 		customDecls = append(customDecls, declaration)
 		for extension, parent := range declarationAnchors {

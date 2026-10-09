@@ -203,34 +203,51 @@ func (e *nilEnvironment) builtinResultContract(
 	return nil
 }
 
-func (e *nilEnvironment) resultNilValue(
+func (e *nilEnvironment) resultNilType(
 	expression *syntax.Expression,
 	index int,
 	state *nilFlowState,
-) nilValue {
+) nilType {
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.resultNilValue(parenthesized.Expression, index, state)
+		return e.resultNilType(parenthesized.Expression, index, state)
 	}
 	if item := syntax.IndexExpressionOf(expression); item != nil {
 		if _, mapping := coreType(e.facts.Type(item.Expression)).(*types.Map); mapping &&
 			index == 0 {
-			return unknownNilValue()
+			return optionalNilType()
 		}
 	}
 	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
 		if unary.Operator == token.ARROW && index == 0 {
-			return unknownNilValue()
+			return optionalNilType()
 		}
 	}
 	if syntax.TypeAssertionExpressionOf(expression) != nil {
 		if index == 0 {
-			return unknownNilValue()
+			return optionalNilType()
 		}
 	}
 	if e.resultContract(expression, index)[""] {
-		return nonNilValue()
+		return nonNilType()
 	}
-	return unknownNilValue()
+	return declaredNilType(e.resultGoType(expression, index))
+}
+
+func (e *nilEnvironment) resultGoType(
+	expression *syntax.Expression,
+	index int,
+) types.Type {
+	typ := e.facts.Type(expression)
+	if tuple, ok := typ.(*types.Tuple); ok {
+		if index >= 0 && index < tuple.Len() {
+			return tuple.At(index).Type()
+		}
+		return nil
+	}
+	if index == 0 {
+		return typ
+	}
+	return nil
 }
 
 func (e *nilEnvironment) callContract(call *syntax.CallExpression) nilContract {
@@ -243,16 +260,16 @@ func (e *nilEnvironment) callContract(call *syntax.CallExpression) nilContract {
 	return e.contractForExpression(call.Callee)
 }
 
-// expressionNilValue returns the proved nil state of an expression.
-func (e *nilEnvironment) expressionNilValue(
+// expressionNilType returns the proved nil state of an expression.
+func (e *nilEnvironment) expressionNilType(
 	expression *syntax.Expression,
 	state *nilFlowState,
-) nilValue {
+) nilType {
 	if expression == nil {
-		return unknownNilValue()
+		return neverNilType()
 	}
 	if e.isNil(expression) {
-		return provenNilValue()
+		return nilOnlyType()
 	}
 	if place, ok := e.nilPlace(expression); ok {
 		if value, exists := state.values[place]; exists {
@@ -260,42 +277,42 @@ func (e *nilEnvironment) expressionNilValue(
 		}
 	}
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.expressionNilValue(parenthesized.Expression, state)
+		return e.expressionNilType(parenthesized.Expression, state)
 	}
 	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
 		if unary.Operator == token.AND {
-			return nonNilValue()
+			return nonNilType()
 		}
 		if unary.Operator == token.ARROW {
-			return unknownNilValue()
+			return optionalNilType()
 		}
 	}
 	if syntax.TypeAssertionExpressionOf(expression) != nil {
-		return unknownNilValue()
+		return optionalNilType()
 	}
 	if index := syntax.IndexExpressionOf(expression); index != nil {
 		if _, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map); mapping {
-			return unknownNilValue()
+			return optionalNilType()
 		}
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
 		if name := syntax.IdentifierExpressionOf(call.Callee); name != nil {
 			if builtin, ok := e.facts.Object(name).(*types.Builtin); ok &&
-				builtin.Name() == "new" {
-				return nonNilValue()
+				(builtin.Name() == "new" || builtin.Name() == "make") {
+				return nonNilType()
 			}
 		}
 		if e.facts.IsType(call.Callee) && len(call.Args) == 1 {
 			if e.contractForType(e.facts.Type(expression))[""] {
-				return nonNilValue()
+				return nonNilType()
 			}
-			return e.expressionNilValue(call.Args[0], state)
+			return e.expressionNilType(call.Args[0], state)
 		}
 	}
 	if e.contractForExpression(expression)[""] {
-		return nonNilValue()
+		return nonNilType()
 	}
-	return unknownNilValue()
+	return declaredNilType(e.facts.Type(expression))
 }
 
 // checkNilExpression checks calls, literals, and pointer reads below an expression.

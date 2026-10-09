@@ -75,8 +75,12 @@ func AnalyzePackage(
 			nonNil[position] = true
 		}
 	}
+	facts := sourcefacts.New(sourceFiles[0], unit.info, unit.fs)
+	for _, file := range sourceFiles[1:] {
+		facts.AddFile(file)
+	}
 	return &AnalysisPackage{
-		Sources: sources, Facts: sourcefacts.New(sourceFiles, unit.info, unit.fs),
+		Sources: sources, Facts: facts,
 		Package: unit.typed, NonNil: nonNil,
 	}, nil
 }

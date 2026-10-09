@@ -15,8 +15,8 @@ type graphBuilder struct {
 	targets   *branchTargets
 }
 
-func (b *graphBuilder) statement(statement *syntax.Statement) {
-	var label *labelBlocks
+func (b *graphBuilder) statement(statement %syntax.Statement) {
+	var label *labelBlocks = nil
 start:
 	switch statement.Tag() {
 	case syntax.StatementTagBad,
@@ -79,14 +79,14 @@ start:
 	}
 }
 
-func (b *graphBuilder) statementList(list []*syntax.Statement) {
+func (b *graphBuilder) statementList(list []%syntax.Statement) {
 	for _, statement := range list {
 		b.statement(statement)
 	}
 }
 
 func (b *graphBuilder) branch(item *syntax.BranchStatement, statement *syntax.Statement) {
-	var block *Block
+	var block *Block = nil
 	switch item.Token {
 	case token.BREAK:
 		if item.Label != nil {
@@ -158,10 +158,10 @@ func (b *graphBuilder) switchStatement(
 	if label != nil {
 		label.breakTo = done
 	}
-	var defaultBody []*syntax.Statement
-	var defaultFallthrough *Block
-	var fallthroughBlock *Block
-	var defaultBlock *Block
+	var defaultBody []%syntax.Statement = nil
+	var defaultFallthrough *Block = nil
+	var fallthroughBlock *Block = nil
+	var defaultBlock *Block = nil
 	for index, clauseStatement := range item.Body.List {
 		body := fallthroughBlock
 		if body == nil {
@@ -181,7 +181,7 @@ func (b *graphBuilder) switchStatement(
 			defaultBlock = body
 			continue
 		}
-		var next *Block
+		var next *Block = nil
 		for _, condition := range clause.List {
 			next = b.newBlock(KindSwitchNextCase, clauseStatement)
 			b.addExpression(condition)
@@ -190,7 +190,8 @@ func (b *graphBuilder) switchStatement(
 		}
 		b.current = body
 		b.targets = &branchTargets{
-			tail: b.targets, breakTo: done, fallthroughTo: fallthroughBlock,
+			tail: b.targets, breakTo: done, continueTo: nil,
+			fallthroughTo: fallthroughBlock,
 		}
 		b.statementList(clause.Body)
 		b.targets = b.targets.tail
@@ -201,7 +202,8 @@ func (b *graphBuilder) switchStatement(
 		b.jump(defaultBlock)
 		b.current = defaultBlock
 		b.targets = &branchTargets{
-			tail: b.targets, breakTo: done, fallthroughTo: defaultFallthrough,
+			tail: b.targets, breakTo: done, continueTo: nil,
+			fallthroughTo: defaultFallthrough,
 		}
 		b.statementList(defaultBody)
 		b.targets = b.targets.tail
@@ -225,7 +227,7 @@ func (b *graphBuilder) typeSwitchStatement(
 	if label != nil {
 		label.breakTo = done
 	}
-	var defaultClause *syntax.CaseClause
+	var defaultClause *syntax.CaseClause = nil
 	for _, clauseStatement := range item.Body.List {
 		clause := syntax.CaseClauseOf(clauseStatement)
 		if clause == nil {
@@ -236,7 +238,7 @@ func (b *graphBuilder) typeSwitchStatement(
 			continue
 		}
 		body := b.newBlock(KindSwitchCaseBody, clauseStatement)
-		var next *Block
+		var next *Block = nil
 		for range clause.List {
 			next = b.newBlock(KindSwitchNextCase, clauseStatement)
 			b.ifElse(body, next)
@@ -255,7 +257,9 @@ func (b *graphBuilder) typeSwitchStatement(
 }
 
 func (b *graphBuilder) typeCaseBody(clause *syntax.CaseClause, done *Block) {
-	b.targets = &branchTargets{tail: b.targets, breakTo: done}
+	b.targets = &branchTargets{
+		tail: b.targets, breakTo: done, continueTo: nil, fallthroughTo: nil,
+	}
 	b.statementList(clause.Body)
 	b.targets = b.targets.tail
 	b.jump(done)
@@ -276,7 +280,7 @@ func (b *graphBuilder) selectStatement(
 	if label != nil {
 		label.breakTo = done
 	}
-	var defaultBody []*syntax.Statement
+	var defaultBody []%syntax.Statement = nil
 	for _, clauseStatement := range item.Body.List {
 		clause := syntax.CommunicationClauseOf(clauseStatement)
 		if clause == nil {
@@ -290,7 +294,9 @@ func (b *graphBuilder) selectStatement(
 		next := b.newBlock(KindSelectAfterCase, clauseStatement)
 		b.ifElse(body, next)
 		b.current = body
-		b.targets = &branchTargets{tail: b.targets, breakTo: done}
+		b.targets = &branchTargets{
+			tail: b.targets, breakTo: done, continueTo: nil, fallthroughTo: nil,
+		}
 		if assignment := syntax.AssignmentStatementOf(clause.Communication); assignment != nil &&
 			len(assignment.Left) > 0 {
 			b.addExpression(assignment.Left[0])
@@ -301,7 +307,9 @@ func (b *graphBuilder) selectStatement(
 		b.current = next
 	}
 	if defaultBody != nil {
-		b.targets = &branchTargets{tail: b.targets, breakTo: done}
+		b.targets = &branchTargets{
+			tail: b.targets, breakTo: done, continueTo: nil, fallthroughTo: nil,
+		}
 		b.statementList(defaultBody)
 		b.targets = b.targets.tail
 		b.jump(done)
@@ -333,13 +341,14 @@ func (b *graphBuilder) forStatement(
 	}
 	b.jump(loop)
 	b.current = loop
-	if loop != body {
+	if item.Condition != nil {
 		b.addExpression(item.Condition)
 		b.ifElse(body, done)
 		b.current = body
 	}
 	b.targets = &branchTargets{
 		tail: b.targets, breakTo: done, continueTo: continueBlock,
+		fallthroughTo: nil,
 	}
 	b.statementList(item.Body.List)
 	b.targets = b.targets.tail
@@ -375,7 +384,9 @@ func (b *graphBuilder) rangeStatement(
 		label.breakTo = done
 		label.continueTo = loop
 	}
-	b.targets = &branchTargets{tail: b.targets, breakTo: done, continueTo: loop}
+	b.targets = &branchTargets{
+		tail: b.targets, breakTo: done, continueTo: loop, fallthroughTo: nil,
+	}
 	b.statementList(item.Body.List)
 	b.targets = b.targets.tail
 	b.jump(loop)
@@ -398,7 +409,9 @@ type labelBlocks struct {
 func (b *graphBuilder) label(identifier *syntax.Identifier, statement *syntax.Statement) *labelBlocks {
 	value := b.labels[identifier.Name]
 	if value == nil {
-		value = &labelBlocks{goTo: b.newBlock(KindLabel, nil)}
+		value = &labelBlocks{
+			goTo: b.newBlock(KindLabel, nil), breakTo: nil, continueTo: nil,
+		}
 		if b.labels == nil {
 			b.labels = make(map[string]*labelBlocks)
 		}
@@ -411,21 +424,25 @@ func (b *graphBuilder) label(identifier *syntax.Identifier, statement *syntax.St
 }
 
 func (b *graphBuilder) newBlock(kind BlockKind, statement *syntax.Statement) *Block {
-	block := &Block{Index: int32(len(b.blocks)), Kind: kind, Stmt: statement}
+	block := &Block{
+		Nodes: nil, Succs: nil, Index: int32(len(b.blocks)), Live: false,
+		Kind: kind, Stmt: statement, returns: false,
+		succs: [2]*Block{nil, nil},
+	}
 	block.Succs = block.succs[:0]
 	b.blocks = append(b.blocks, block)
 	return block
 }
 
-func (b *graphBuilder) addStatement(value *syntax.Statement) {
+func (b *graphBuilder) addStatement(value %syntax.Statement) {
 	b.current.Nodes = append(b.current.Nodes, syntax.StatementNode(value))
 }
 
-func (b *graphBuilder) addExpression(value *syntax.Expression) {
+func (b *graphBuilder) addExpression(value %syntax.Expression) {
 	b.current.Nodes = append(b.current.Nodes, syntax.ExpressionNode(value))
 }
 
-func (b *graphBuilder) addSpecification(value *syntax.Specification) {
+func (b *graphBuilder) addSpecification(value %syntax.Specification) {
 	b.current.Nodes = append(b.current.Nodes, syntax.SpecificationNode(value))
 }
 

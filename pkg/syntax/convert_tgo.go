@@ -518,6 +518,7 @@ func (c *converter) propagationExpression(value *frontPropagateExpr) *Expression
 		Span:       Span{Start: value.Pos(), Stop: value.End()},
 		Expression: c.expressionRaw(value.Expression),
 		Call:       c.callRequired(value.Call), Bang: value.Bang,
+		SecondBang: value.SecondBang,
 	}
 	result := ExpressionPropagation{Value: payload}.Expression()
 	converted := &result

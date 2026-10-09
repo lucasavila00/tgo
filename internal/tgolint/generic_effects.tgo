@@ -392,12 +392,14 @@ func (c %checker) collectReturnedGenericEffects(summary %genericEffectSummary) {
 // collectGenericPresenceZeros records zero values from failed presence operations.
 func (c %checker) collectGenericPresenceZeros(summary %genericEffectSummary) {
 	previousZeroTypes := c.zeroTypes
-	previousCapture := c.capture
+	previousCaptureResult := c.captureResult
+	previousCaptureSource := c.captureSource
 	previousChecked := c.checked
 	previousPresence := c.presence
 	defer func() {
 		c.zeroTypes = previousZeroTypes
-		c.capture = previousCapture
+		c.captureResult = previousCaptureResult
+		c.captureSource = previousCaptureSource
 		c.checked = previousChecked
 		c.presence = previousPresence
 	}()
@@ -406,11 +408,17 @@ func (c %checker) collectGenericPresenceZeros(summary %genericEffectSummary) {
 		currentModel := parameterModel()
 		var sources []ast.Expr = nil
 		c.zeroTypes = map[*types.TypeParam]*model{parameter: currentModel}
-		c.capture = func(candidate *model, source ast.Expr) {
+		record := func(candidate %model, source ast.Expr) {
+			if source == nil {
+				if candidate == currentModel { sources = append(sources, nil) }
+				return
+			}
 			if candidate == currentModel {
 				sources = append(sources, source)
 			}
 		}
+		c.captureResult = func(candidate %model) { record(candidate, nil) }
+		c.captureSource = record
 		c.checked = make(map[*ast.CallExpr]bool)
 		c.presence = make(map[ast.Expr]bool)
 		c.checkConstructors(summary.root, summary.body)

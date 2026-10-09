@@ -40,13 +40,16 @@ func use(account Account) {
 
 func TestEnumDefaultAllowsFallback(t *testing.T) {
 	layoutPackage(t, `package sample
-type Account enum { Personal struct{}; Business struct{} }
+type Account enum {
+	Personal struct { Name string }
+	Business struct { Company string }
+}
 func use(account Account) string {
 	switch account.Tag() {
 	case AccountTagPersonal:
-		return "personal"
+		return account.PersonalPayload().Name
 	default:
-		return "fallback"
+		return account.BusinessPayload().Company
 	}
 }
 `)

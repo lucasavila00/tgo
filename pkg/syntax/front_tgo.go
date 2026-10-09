@@ -145,13 +145,14 @@ type frontDefaultMarker struct {
 
 func (*frontDefaultMarker) extensionNode() {}
 
-// frontPropagateExpr returns a wrapped Go error from the current function.
+// frontPropagateExpr returns a Go error from the current function.
 
 type frontPropagateExpr struct {
 	frontSpan
 	Expression ast.Expr
 	Call       *ast.CallExpr
 	Bang       token.Pos
+	SecondBang token.Pos
 }
 
 func (*frontPropagateExpr) extensionNode() {}

@@ -193,14 +193,8 @@ func (c *checker) scanValidationFunctionValue(
 			}
 		}
 		if rangeStatement := syntax.RangeStatementOf(statement); rangeStatement != nil {
-			var expressions []*syntax.Expression = nil
-			if rangeStatement.Key != nil {
-				expressions = append(expressions, rangeStatement.Key)
-			}
-			if rangeStatement.Value != nil {
-				expressions = append(expressions, rangeStatement.Value)
-			}
-			c.recordFunctionWrites(expressions, writes)
+			c.recordFunctionWrite(rangeStatement.Key, writes)
+			c.recordFunctionWrite(rangeStatement.Value, writes)
 		}
 	}
 	if specification, ok := syntax.SpecificationOf(node); ok {
@@ -220,6 +214,15 @@ func (c *checker) scanValidationFunctionValue(
 		if unary != nil && unary.Operator == token.AND {
 			escaped[c.facts.IdentifierObject(unary.Expression)] = true
 		}
+	}
+}
+
+func (c *checker) recordFunctionWrite(
+	expression *syntax.Expression,
+	writes map[types.Object]int,
+) {
+	if expression != nil && syntax.IdentifierExpressionOf(expression) != nil {
+		writes[c.facts.IdentifierObject(expression)]++
 	}
 }
 
@@ -275,6 +278,9 @@ func emittedCheckedModel(name string, structure *syntax.StructType, typ types.Ty
 }
 
 func fieldName(field *syntax.Field) string {
+	if field == nil {
+		return ""
+	}
 	if len(field.Names) != 1 {
 		return ""
 	}

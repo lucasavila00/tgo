@@ -731,6 +731,9 @@ func sameFields(
 	}
 	for index, field := range source {
 		other := generated[index]
+		if other == nil {
+			return false
+		}
 		typeText := syntax.SourceText(file, syntax.Span{
 			Start: syntax.ExpressionPosition(other.Type),
 			Stop:  syntax.ExpressionEnd(other.Type),
@@ -754,6 +757,9 @@ func sameFields(
 }
 
 func sameExpressionText(left string, right string) bool {
+	if left == right {
+		return true
+	}
 	if left == "" || right == "" {
 		return left == right
 	}

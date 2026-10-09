@@ -3,7 +3,7 @@ package tgolint
 import "tgo/pkg/syntax"
 
 // checkRepresentationAccess blocks private fields and unchecked payload methods.
-func (c %checker) checkRepresentationAccess(expression *syntax.Expression) {
+func (c %checker) checkRepresentationAccess(expression %syntax.Expression) {
 	if c.syntaxSafe[expression] || c.syntaxHandled[expression] {
 		return
 	}

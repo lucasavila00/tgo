@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"tgo/internal/sourcefacts"
+	"tgo/internal/variantflow"
 	"tgo/pkg/syntax"
 	syntaxcfg "tgo/pkg/syntax/cfg"
 )
@@ -28,6 +29,9 @@ func (c *checker) checkTagSwitch(
 	}
 	c.syntaxSafe[selectorExpression] = true
 	seen := make(map[int]bool)
+	clauseTypes := make(map[*syntax.CaseClause]variantflow.Type)
+	declaredType := variantflow.All(len(modelVariants(model)))
+	explicitType := variantflow.Never()
 	hasSentinelDefault := false
 	hasDefault := false
 	labelsResolved := true
@@ -45,22 +49,35 @@ func (c *checker) checkTagSwitch(
 			hasDefault = true
 			hasSentinelDefault = clause.Exhaustive.IsValid() ||
 				c.tagDefaultSentinel(file, clause, receiver, model)
-			c.checkCaseAccessors(file, clause, statement, receiver, model, nil, true)
 			continue
 		}
 		tags, resolved := c.caseTags(clause, model, tagType, seen)
 		labelsResolved = labelsResolved && resolved
+		clauseTypes[clause] = variantflow.Intersect(declaredType, tagVariantType(tags))
+		explicitType = variantflow.Union(explicitType, clauseTypes[clause])
 		for tag := range tags {
 			seen[tag] = true
 		}
-		c.checkCaseAccessors(file, clause, statement, receiver, model, tags, false)
+	}
+	defaultType := variantflow.Without(declaredType, explicitType)
+	for _, item := range tagSwitch.Body.List {
+		clause := syntax.CaseClauseOf(item)
+		if clause == nil {
+			continue
+		}
+		flowType, explicitClause := clauseTypes[clause]
+		defaultClause := !explicitClause
+		if defaultClause {
+			flowType = defaultType
+		}
+		c.checkCaseAccessors(
+			file, clause, statement, receiver, model, flowType, defaultClause,
+		)
 	}
 	if labelsResolved && hasSentinelDefault {
 		var missing []string = nil
-		for tag := 1; tag <= len(modelVariants(model)); tag++ {
-			if !seen[tag] {
-				missing = append(missing, tagConstant(model, tag))
-			}
+		for _, tag := range variantflow.Tags(defaultType) {
+			missing = append(missing, tagConstant(model, tag))
 		}
 		if len(missing) > 0 {
 			c.pass.Reportf(tagSwitch.Switch, "%s: switch is missing cases: %s",
@@ -72,6 +89,14 @@ func (c *checker) checkTagSwitch(
 			modelName(model))
 	}
 	_ = selector
+}
+
+func tagVariantType(tags map[int]bool) variantflow.Type {
+	result := variantflow.Never()
+	for tag := range tags {
+		result = variantflow.Union(result, variantflow.Variant(tag))
+	}
+	return result
 }
 
 func clauseFallthrough(clause *syntax.CaseClause) *syntax.BranchStatement {
@@ -120,7 +145,11 @@ func (c *checker) statementsTerminateWith(
 		Span:       syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Expression: &identifier,
 	}}.Statement()
-	list := append(append([]*syntax.Statement(nil), statements...), &sentinel)
+	list := make([]*syntax.Statement, 0, len(statements)+1)
+	for _, statement := range statements {
+		list = append(list, statement)
+	}
+	list = append(list, &sentinel)
 	body := &syntax.BlockStatement{
 		Span:   syntax.Span{Start: token.NoPos, Stop: token.NoPos},
 		Lbrace: token.NoPos,
@@ -266,6 +295,9 @@ func (c *checker) syntaxCallMayReturn(expression *syntax.Expression) bool {
 func (c *checker) tagCall(
 	expression *syntax.Expression,
 ) (*syntax.Expression, *syntax.Expression, *syntax.SelectorExpression, *model, types.Type) {
+	if expression == nil {
+		return nil, nil, nil, nil, nil
+	}
 	for expression != nil {
 		parenthesized := syntax.ParenthesizedExpressionOf(expression)
 		if parenthesized == nil {
@@ -415,6 +447,9 @@ func (c *checker) tagDefaultSentinel(
 	receiver *syntax.Expression,
 	model *model,
 ) bool {
+	if clause == nil || receiver == nil {
+		return false
+	}
 	if len(clause.Body) != 1 {
 		return false
 	}
@@ -505,9 +540,12 @@ func (c *checker) checkCaseAccessors(
 	tagSwitch *syntax.Statement,
 	receiver *syntax.Expression,
 	model *model,
-	tags map[int]bool,
+	flowType variantflow.Type,
 	defaultClause bool,
 ) {
+	if clause == nil || receiver == nil {
+		return
+	}
 	if clauseAssignsReceiver(c.facts, clause, receiver) {
 		return
 	}
@@ -544,18 +582,17 @@ func (c *checker) checkCaseAccessors(
 				return true
 			}
 			c.syntaxHandled[expression] = true
-			if len(tags) == 1 && tags[tag] {
+			active, narrowed := variantflow.Singleton(flowType)
+			if narrowed && active == tag {
 				c.syntaxSafe[expression] = true
 				return true
 			}
 			caseName := "default"
-			if !defaultClause && len(tags) != 1 {
+			if !defaultClause && !narrowed {
 				caseName = "a multi-tag case"
 			}
-			if !defaultClause && len(tags) == 1 {
-				for active := range tags {
-					caseName = "case " + tagConstant(model, active)
-				}
+			if !defaultClause && narrowed {
+				caseName = "case " + tagConstant(model, active)
 			}
 			c.pass.Reportf(selector.Start, "%s: %s called under %s",
 				modelName(model), selector.Selector.Name, caseName)

@@ -26,7 +26,7 @@ A clean run means that the loaded Go packages do not contain these errors:
 - a `%T` value that is nil, unknown, zero-filled, omitted, or lost at a control-flow join;
 - a map read, channel receive, or pointer assertion used without its required proof; or
 - a sequential `iota` set that uses one defined integer type in handwritten TGo source; or
-- a manual error wrapper that has the exact behavior of postfix `!`; or
+- a manual error return that has the exact behavior of postfix `!` or `!!`; or
 - the same errors hidden by embedding, wrappers, function values, control flow,
   or generic constraints.
 
@@ -85,7 +85,8 @@ an effect from the checker.
 An enum payload read needs a tag switch on the same syntactic receiver. A TGo `exhaustive:` clause
 requires all declared tags and emits the generated `UnknownTag` panic and required comment. A normal
 default clause is fallback behavior and can cover omitted tags. A clause assignment to the receiver
-or its selector prefix removes the clause proof.
+or its selector prefix removes the clause proof. Each clause has the union of its possible variants.
+A default has the union of omitted variants and proves a payload when only one variant remains.
 A function literal does not inherit the proof. Direct `go` and `defer` calls do inherit it.
 The checker does not analyze `Tag` calls, payload calls, or payload method values outside a
 recognized canonical switch.
@@ -97,9 +98,9 @@ does not check `.go` files and does not offer a fix because integer values can c
 
 The error-return modernization check reports two adjacent statements in handwritten `.tgo`
 source. The first statement must declare only new variables from one static call. The second must
-check its error and return the same zero values and `fmt.Errorf` wrapper that postfix `!` emits.
-The function must have unnamed results that end in the Go `error` type. The local error variable
-must have no use after the branch.
+check its error and return the same zero values. Its final value must be the same error for `!!`,
+or the `fmt.Errorf` wrapper that `!` emits. The function must have unnamed results that end in the
+Go `error` type. The local error variable must have no use after the branch.
 
 The wrapper text must contain the full static call name and `: %w`. Thus, `repo.Find(id)!` matches
 `fmt.Errorf("repo.Find: %w", err)`. It does not match `fmt.Errorf("Find: %w", err)`. The check does

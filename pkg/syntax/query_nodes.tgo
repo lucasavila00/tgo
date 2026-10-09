@@ -1,13 +1,13 @@
 package syntax
 
 // ExpressionNode wraps an expression as a public node.
-func ExpressionNode(value *Expression) Node { return nodeExpression(value) }
+func ExpressionNode(value %Expression) Node { return nodeExpression(value) }
 
 // StatementNode wraps a statement as a public node.
-func StatementNode(value *Statement) Node { return nodeStatement(value) }
+func StatementNode(value %Statement) Node { return nodeStatement(value) }
 
 // SpecificationNode wraps a specification as a public node.
-func SpecificationNode(value *Specification) Node { return nodeSpecification(value) }
+func SpecificationNode(value %Specification) Node { return nodeSpecification(value) }
 
 // FieldOf returns a field node payload.
 func FieldOf(node *Node) (*Field, bool) {

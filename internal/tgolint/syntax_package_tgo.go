@@ -26,6 +26,9 @@ func parseAnalysisFiles(pass *analysis.Pass) ([]*syntax.File, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parse analysis file %s: %w", filename, err)
 		}
+		if parsed == nil {
+			return nil, fmt.Errorf("parse analysis file %s: no syntax", filename)
+		}
 		result = append(result, parsed)
 	}
 	return result, nil

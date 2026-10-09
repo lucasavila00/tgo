@@ -27,11 +27,12 @@ func (c %checker) checkIotaModernization(analysis *compiler.AnalysisPackage) {
 		return
 	}
 	for _, source := range analysis.Sources {
-		if source.Syntax == nil {
+		file := source.Syntax
+		if file == nil {
 			continue
 		}
 		index := analysis.Facts
-		for _, declaration := range source.Syntax.Declarations {
+		for _, declaration := range file.Declarations {
 			general, ok := sourceGeneralDeclaration(declaration)
 			if !ok || general == nil || general.Kind != token.CONST {
 				continue

@@ -2,6 +2,7 @@
 package tgolint
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
@@ -35,9 +36,9 @@ func newAnalyzer() %analysis.Analyzer {
 }
 
 type checker struct {
-	pass       *analysis.Pass
-	files      []*syntax.File
-	facts      *sourcefacts.Index
+	pass       %analysis.Pass
+	files      []%syntax.File
+	facts      %sourcefacts.Index
 	models     map[objectKey]*model
 	validated  map[types.Object]bool
 	callTarget map[types.Object]types.Object
@@ -52,7 +53,8 @@ type checker struct {
 	reported   map[diagnosticKey]bool
 	function   ast.Node
 	zeroTypes  map[*types.TypeParam]*model
-	capture    func(*model, ast.Expr)
+	captureResult func(%model)
+	captureSource func(%model, ast.Expr)
 	scalarFlows map[ast.Node]*scalarFlow
 	invalid    bool
 }
@@ -74,15 +76,23 @@ type diagnosticKey struct {
 
 // run verifies generated code, loads model facts, and checks user Go code.
 func run(pass *analysis.Pass) (any, error) {
+	if pass == nil { return nil, fmt.Errorf("tgolint received a nil analysis pass") }
 	pass = suppressDiagnostics(pass)
-	files, err := parseAnalysisFiles(pass)
-	if err != nil {
-		return nil, err
+	files := parseAnalysisFiles(pass)!!
+	if len(files) == 0 {
+		return nil, nil
 	}
+	info := pass.TypesInfo
+	fileSet := pass.Fset
+	if info == nil || fileSet == nil {
+		return nil, fmt.Errorf("tgolint requires type and position facts")
+	}
+	facts := sourcefacts.New(files[0], info, fileSet)
+	for _, file := range files[1:] { facts.AddFile(file) }
 	c := &checker{
 		pass:       pass,
 		files:      files,
-		facts:      sourcefacts.New(files, pass.TypesInfo, pass.Fset),
+		facts:      facts,
 		models:     make(map[objectKey]*model),
 		validated:  make(map[types.Object]bool),
 		callTarget: make(map[types.Object]types.Object),
@@ -97,7 +107,8 @@ func run(pass *analysis.Pass) (any, error) {
 		reported:   make(map[diagnosticKey]bool),
 		function:   nil,
 		zeroTypes:  nil,
-		capture:    nil,
+		captureResult: nil,
+		captureSource: nil,
 		scalarFlows: make(map[ast.Node]*scalarFlow),
 		invalid:    false,
 	}
@@ -116,6 +127,7 @@ func run(pass *analysis.Pass) (any, error) {
 	c.findValidationWrappers()
 	c.findValidationFunctionValues()
 	c.checkTGoSource(analysis)
+	representationAt := make(map[token.Position]*syntax.Expression)
 	for _, file := range c.files {
 		if syntaxFileGenerated(file) {
 			continue
@@ -123,7 +135,9 @@ func run(pass *analysis.Pass) (any, error) {
 		syntax.Inspect(file, func(node *syntax.Node) bool {
 			expression, expressionOK := syntax.ExpressionOf(node)
 			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
-				c.checkRepresentationAccess(expression)
+				representationAt[c.pass.Fset.Position(
+					syntax.ExpressionPosition(expression),
+				)] = expression
 			}
 			statement, ok := syntax.StatementOf(node)
 			if !ok {
@@ -142,6 +156,11 @@ func run(pass *analysis.Pass) (any, error) {
 		}
 		c.addParents(file)
 		ast.Inspect(file, func(node ast.Node) bool {
+			if _, ok := node.(*ast.SelectorExpr); ok {
+				if expression := representationAt[c.pass.Fset.Position(node.Pos())]; expression != nil {
+					c.checkRepresentationAccess(expression)
+				}
+			}
 			c.checkNode(node)
 			return true
 		})

@@ -34,7 +34,7 @@ type Index struct {
 }
 
 // New copies typed facts into a syntax position index.
-func New(sourceFiles []%syntax.File, info %types.Info, files %token.FileSet) %Index {
+func New(file %syntax.File, info %types.Info, files %token.FileSet) %Index {
 	index := &Index{
 		files: files,
 		types: make(map[span]types.TypeAndValue),
@@ -69,7 +69,7 @@ func New(sourceFiles []%syntax.File, info %types.Info, files %token.FileSet) %In
 	for node, object := range info.Implicits {
 		index.implicits[index.nodeSpan(node.Pos(), node.End())] = object
 	}
-	for _, file := range sourceFiles { index.indexFunctionSignatures(file) }
+	index.indexFunctionSignatures(file)
 	return index
 }
 
@@ -77,6 +77,9 @@ func New(sourceFiles []%syntax.File, info %types.Info, files %token.FileSet) %In
 func (i %Index) ImplicitField(field %syntax.Field) types.Object {
 	return i.implicits[i.nodeSpan(field.Start, field.Stop)]
 }
+
+// AddFile indexes function signatures from one more package file.
+func (i %Index) AddFile(file %syntax.File) { i.indexFunctionSignatures(file) }
 
 func (i %Index) indexFunctionSignatures(file %syntax.File) {
 	syntax.Inspect(file, func(node *syntax.Node) bool {

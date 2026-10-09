@@ -3,9 +3,6 @@
 
 package tgolint
 
-import __tgo_json "encoding/json"
-import __tgo_fmt "fmt"
-
 import (
 	"go/token"
 	"go/types"
@@ -16,193 +13,18 @@ import (
 	"tgo/pkg/syntax/cfg"
 )
 
-// nilValue requires a variant constructor. Its zero value is invalid.
-// Shared data keeps Go aliases. Callers must keep model values valid.
-type nilValueTag uint8
-
-const (
-	nilValueTagUnknown nilValueTag = iota + 1
-	nilValueTagNonNil
-	nilValueTagNil
-)
-
-type nilValue struct {
-	tgoTag nilValueTag
-}
-
-// Tag returns the active tag.
-func (v nilValue) Tag() nilValueTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v nilValue) UnknownTag() string {
-	return __tgo_fmt.Sprintf("nilValue: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
-// nilValueUnknown is the Unknown payload.
-type nilValueUnknown struct{}
-
-// nilValue constructs nilValue. Model fields must be valid.
-// Shared fields keep their aliases and caller duties.
-func (value nilValueUnknown) nilValue() nilValue {
-	return nilValue{tgoTag: nilValueTagUnknown}
-}
-
-// UnknownPayload requires Unknown. No tag check.
-func (nilValue) UnknownPayload() nilValueUnknown { return nilValueUnknown{} }
-
-// nilValueNonNil is the NonNil payload.
-type nilValueNonNil struct{}
-
-// nilValue constructs nilValue. Model fields must be valid.
-// Shared fields keep their aliases and caller duties.
-func (value nilValueNonNil) nilValue() nilValue {
-	return nilValue{tgoTag: nilValueTagNonNil}
-}
-
-// NonNilPayload requires NonNil. No tag check.
-func (nilValue) NonNilPayload() nilValueNonNil { return nilValueNonNil{} }
-
-// nilValueNil is the Nil payload.
-type nilValueNil struct{}
-
-// nilValue constructs nilValue. Model fields must be valid.
-// Shared fields keep their aliases and caller duties.
-func (value nilValueNil) nilValue() nilValue {
-	return nilValue{tgoTag: nilValueTagNil}
-}
-
-// NilPayload requires Nil. No tag check.
-func (nilValue) NilPayload() nilValueNil { return nilValueNil{} }
-
-func (v nilValue) MarshalJSON() ([]byte, error) {
-	switch v.tgoTag {
-	case nilValueTagUnknown:
-		payload := v.UnknownPayload()
-		return __tgo_json.Marshal(struct {
-			Payload nilValueUnknown `json:"Unknown"`
-		}{Payload: payload})
-	case nilValueTagNonNil:
-		payload := v.NonNilPayload()
-		return __tgo_json.Marshal(struct {
-			Payload nilValueNonNil `json:"NonNil"`
-		}{Payload: payload})
-	case nilValueTagNil:
-		payload := v.NilPayload()
-		return __tgo_json.Marshal(struct {
-			Payload nilValueNil `json:"Nil"`
-		}{Payload: payload})
-	default:
-		return nil, __tgo_fmt.Errorf("invalid nilValue JSON tag")
-	}
-}
-
-func (v *nilValue) UnmarshalJSON(data []byte) error {
-	var variant string
-	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
-		return err
-	}
-	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one nilValue JSON variant")
-	}
-	for key, value := range object {
-		variant = key
-		payloadData = value
-	}
-	switch variant {
-	case "Unknown":
-		var payload nilValueUnknown
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
-			return err
-		}
-		*v = payload.nilValue()
-		return nil
-	case "NonNil":
-		var payload nilValueNonNil
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
-			return err
-		}
-		*v = payload.nilValue()
-		return nil
-	case "Nil":
-		var payload nilValueNil
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
-			return err
-		}
-		*v = payload.nilValue()
-		return nil
-	default:
-		return __tgo_fmt.Errorf("unknown nilValue JSON variant %q", variant)
-	}
-}
-
-func unknownNilValue() nilValue { return nilValueUnknown{}.nilValue() }
-func nonNilValue() nilValue     { return nilValueNonNil{}.nilValue() }
-func provenNilValue() nilValue  { return nilValueNil{}.nilValue() }
-
-func isUnknownNilValue(value nilValue) bool {
-	switch enumValue21 := value; enumValue21.Tag() {
-	case nilValueTagUnknown:
-		return true
-	case nilValueTagNonNil:
-		return false
-	case nilValueTagNil:
-		return false
-	default:
-		panic(enumValue21.UnknownTag()) // unreachable: tgolint requires a case per tag
-	}
-}
-
-func isNonNilValue(value nilValue) bool {
-	switch enumValue22 := value; enumValue22.Tag() {
-	case nilValueTagUnknown:
-		return false
-	case nilValueTagNonNil:
-		return true
-	case nilValueTagNil:
-		return false
-	default:
-		panic(enumValue22.UnknownTag()) // unreachable: tgolint requires a case per tag
-	}
-}
-
-func isProvenNilValue(value nilValue) bool {
-	switch enumValue23 := value; enumValue23.Tag() {
-	case nilValueTagUnknown:
-		return false
-	case nilValueTagNonNil:
-		return false
-	case nilValueTagNil:
-		return true
-	default:
-		panic(enumValue23.UnknownTag()) // unreachable: tgolint requires a case per tag
-	}
-}
-
-func equalNilValue(left nilValue, right nilValue) bool {
-	switch enumValue24 := left; enumValue24.Tag() {
-	case nilValueTagUnknown:
-		return isUnknownNilValue(right)
-	case nilValueTagNonNil:
-		return isNonNilValue(right)
-	case nilValueTagNil:
-		return isProvenNilValue(right)
-	default:
-		panic(enumValue24.UnknownTag()) // unreachable: tgolint requires a case per tag
-	}
-}
-
 type nilPlace struct {
 	object types.Object
 	path   string
 }
 
-type nilFacts map[nilPlace]nilValue
+type nilFacts map[nilPlace]nilType
 
 type nilGuard struct {
-	trueFacts  nilFacts
-	falseFacts nilFacts
+	trueFacts     nilFacts
+	falseFacts    nilFacts
+	truePossible  bool
+	falsePossible bool
 }
 
 type nilPresence struct {
@@ -211,10 +33,11 @@ type nilPresence struct {
 }
 
 type nilFlowState struct {
-	values   map[nilPlace]nilValue
-	aliases  map[nilPlace]nilPlace
-	guards   map[types.Object]nilGuard
-	presence map[types.Object]nilPresence
+	reachable bool
+	values    map[nilPlace]nilType
+	aliases   map[nilPlace]nilPlace
+	guards    map[types.Object]nilGuard
+	presence  map[types.Object]nilPresence
 }
 
 type nilFlow struct {
@@ -400,7 +223,7 @@ func (e *nilEnvironment) nilEntryState(
 			for _, name := range field.Names {
 				object := e.facts.DefinitionName(name)
 				if e.contractForObject(object)[""] {
-					e.setNilValue(state, nilPlace{object: object, path: ""}, nonNilValue())
+					e.setNilType(state, nilPlace{object: object, path: ""}, nonNilType())
 				}
 			}
 		}
@@ -412,7 +235,7 @@ func (e *nilEnvironment) nilEntryState(
 		for _, name := range field.Names {
 			object := e.facts.DefinitionName(name)
 			if len(e.contractForObject(object)) != 0 {
-				e.setNilValue(state, nilPlace{object: object, path: ""}, nonNilValue())
+				e.setNilType(state, nilPlace{object: object, path: ""}, nonNilType())
 			}
 		}
 	}
@@ -421,10 +244,11 @@ func (e *nilEnvironment) nilEntryState(
 
 func newNilState() *nilFlowState {
 	return &nilFlowState{
-		values:   make(map[nilPlace]nilValue),
-		aliases:  make(map[nilPlace]nilPlace),
-		guards:   make(map[types.Object]nilGuard),
-		presence: make(map[types.Object]nilPresence),
+		reachable: true,
+		values:    make(map[nilPlace]nilType),
+		aliases:   make(map[nilPlace]nilPlace),
+		guards:    make(map[types.Object]nilGuard),
+		presence:  make(map[types.Object]nilPresence),
 	}
 }
 
@@ -433,6 +257,7 @@ func cloneNilState(source *nilFlowState) *nilFlowState {
 		return nil
 	}
 	result := newNilState()
+	result.reachable = source.reachable
 	for place, value := range source.values {
 		result.values[place] = value
 	}
@@ -450,8 +275,10 @@ func cloneNilState(source *nilFlowState) *nilFlowState {
 
 func cloneNilGuard(guard nilGuard) nilGuard {
 	return nilGuard{
-		trueFacts:  cloneNilFacts(guard.trueFacts),
-		falseFacts: cloneNilFacts(guard.falseFacts),
+		trueFacts:     cloneNilFacts(guard.trueFacts),
+		falseFacts:    cloneNilFacts(guard.falseFacts),
+		truePossible:  guard.truePossible,
+		falsePossible: guard.falsePossible,
 	}
 }
 
@@ -495,6 +322,9 @@ func (e *nilEnvironment) solveNilEntries(
 					e.applyNilFacts(next, falseFacts)
 				}
 			}
+			if !next.reachable {
+				continue
+			}
 			joined, changed := joinNilStates(entries[successor.Index], next)
 			if !changed {
 				continue
@@ -532,14 +362,18 @@ func joinNilStates(
 	current *nilFlowState,
 	incoming *nilFlowState,
 ) (*nilFlowState, bool) {
+	if incoming == nil || !incoming.reachable {
+		return current, false
+	}
 	if current == nil {
 		return cloneNilState(incoming), true
 	}
 	joined := newNilState()
 	for place, value := range current.values {
 		if incomingValue, exists := incoming.values[place]; exists {
-			if equalNilValue(incomingValue, value) {
-				joined.values[place] = value
+			combined := unionNilTypes(value, incomingValue)
+			if !isOptionalNilType(combined) {
+				joined.values[place] = combined
 			}
 		}
 	}
@@ -578,13 +412,14 @@ func joinNilStates(
 }
 
 func equalNilStates(left, right *nilFlowState) bool {
-	if len(left.values) != len(right.values) || len(left.aliases) != len(right.aliases) ||
+	if left.reachable != right.reachable ||
+		len(left.values) != len(right.values) || len(left.aliases) != len(right.aliases) ||
 		len(left.guards) != len(right.guards) || len(left.presence) != len(right.presence) {
 		return false
 	}
 	for place, value := range left.values {
 		if other, found := right.values[place]; found {
-			if !equalNilValue(other, value) {
+			if !equalNilType(other, value) {
 				return false
 			}
 		} else {
@@ -610,7 +445,9 @@ func equalNilStates(left, right *nilFlowState) bool {
 }
 
 func equalNilGuard(left, right nilGuard) bool {
-	return equalNilFacts(left.trueFacts, right.trueFacts) &&
+	return left.truePossible == right.truePossible &&
+		left.falsePossible == right.falsePossible &&
+		equalNilFacts(left.trueFacts, right.trueFacts) &&
 		equalNilFacts(left.falseFacts, right.falseFacts)
 }
 
@@ -620,7 +457,7 @@ func equalNilFacts(left, right nilFacts) bool {
 	}
 	for place, value := range left {
 		if other, found := right[place]; found {
-			if !equalNilValue(other, value) {
+			if !equalNilType(other, value) {
 				return false
 			}
 		} else {

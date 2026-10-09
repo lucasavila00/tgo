@@ -1,0 +1,79 @@
+package tgolint
+
+import "go/types"
+
+// nilType is the part of a value type that control flow can narrow.
+// Optional is T | nil. Never is an impossible value.
+type nilType enum {
+	Never struct{}
+	NonNil struct{}
+	Nil struct{}
+	Optional struct{}
+}
+
+func neverNilType() nilType { return nilType.Never{} }
+func nonNilType() nilType { return nilType.NonNil{} }
+func nilOnlyType() nilType { return nilType.Nil{} }
+func optionalNilType() nilType { return nilType.Optional{} }
+
+func nilTypeMembers(value nilType) uint8 {
+	switch value.Tag() {
+	case nilTypeTagNever: return 0
+	case nilTypeTagNonNil: return 1
+	case nilTypeTagNil: return 2
+	case nilTypeTagOptional: return 3
+	exhaustive:
+	}
+}
+
+func nilTypeFromMembers(members uint8) nilType {
+	switch members & 3 {
+	case 0: return neverNilType()
+	case 1: return nonNilType()
+	case 2: return nilOnlyType()
+	default: return optionalNilType()
+	}
+}
+
+func unionNilTypes(left nilType, right nilType) nilType {
+	return nilTypeFromMembers(nilTypeMembers(left) | nilTypeMembers(right))
+}
+
+func intersectNilTypes(left nilType, right nilType) nilType {
+	return nilTypeFromMembers(nilTypeMembers(left) & nilTypeMembers(right))
+}
+
+func equalNilType(left nilType, right nilType) bool {
+	return nilTypeMembers(left) == nilTypeMembers(right)
+}
+
+func isNeverNilType(value nilType) bool { return nilTypeMembers(value) == 0 }
+func isNonNilType(value nilType) bool { return nilTypeMembers(value) == 1 }
+func isNilOnlyType(value nilType) bool { return nilTypeMembers(value) == 2 }
+func isOptionalNilType(value nilType) bool { return nilTypeMembers(value) == 3 }
+
+// declaredNilType maps a Go type to T or T | nil.
+func declaredNilType(typ types.Type) nilType {
+	if typeCanBeNil(typ) {
+		return optionalNilType()
+	}
+	return nonNilType()
+}
+
+func typeCanBeNil(typ types.Type) bool {
+	if typ == nil {
+		return false
+	}
+	if _, parameter := types.Unalias(typ).(*types.TypeParam); parameter {
+		return true
+	}
+	switch coreType(typ).(type) {
+	case *types.Pointer, *types.Slice, *types.Map, *types.Chan,
+		*types.Signature, *types.Interface:
+		return true
+	case *types.Basic:
+		basic, _ := coreType(typ).(*types.Basic)
+		return basic != nil && basic.Kind() == types.UnsafePointer
+	}
+	return false
+}
