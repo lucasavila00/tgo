@@ -1,0 +1,1 @@
+switchpackagepanicbad/source.tgo:16:2: Result: exhaustive clause requires the predeclared panic

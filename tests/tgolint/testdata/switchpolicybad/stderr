@@ -1,0 +1,10 @@
+switchpolicybad/source.tgo:11:2: Account: switch must have a default clause
+switchpolicybad/source.tgo:22:3: Account: fallthrough is not allowed in a tag switch
+switchpolicybad/source.tgo:30:2: Account: switch is missing cases: AccountTagBusiness
+switchpolicybad/source.tgo:40:10: Account: PersonalPayload called under a multi-tag case
+switchpolicybad/source.tgo:47:7: Account: case label must be a tag constant
+switchpolicybad/source.tgo:59:7: Account: case label must be a tag constant
+switchpolicybad/source.tgo:70:10: Account: BusinessPayload called under case AccountTagPersonal
+switchpolicybad/source.tgo:72:10: Account: PersonalPayload called under case AccountTagBusiness
+switchpolicybad/source.tgo:82:10: Account: PersonalPayload called under default
+switchpolicybad/source.tgo:93:2: Account: exhaustive clause requires the predeclared panic
