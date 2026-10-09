@@ -15,7 +15,7 @@ import (
 	"strings"
 	"sync"
 
-	"tgo/internal/compiler"
+	"tgo/internal/driver"
 	"tgo/pkg/syntax"
 )
 
@@ -265,7 +265,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		return nil, ctx.Err()
 	default:
 	}
-	packages, err := compiler.AnalyzeWorkspaceContext(ctx, e.root)
+	packages, err := driver.AnalyzeWorkspaceContext(ctx, e.root)
 	if err != nil {
 		return nil, err
 	}

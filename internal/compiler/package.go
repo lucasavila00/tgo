@@ -4,38 +4,22 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/format"
-	"go/importer"
 	"go/token"
 	"go/types"
-	"io"
-	"os"
-	"os/exec"
-	"strings"
-
-	"tgo/internal/outputname"
 
 	"golang.org/x/tools/go/ast/astutil"
 )
 
 type packageUnit struct {
 	Dir, Path       string
-	Module          string
 	Sources         []*source
 	Files           []*ast.File
 	Models          map[string]*model
 	Imports         map[string]*packageUnit
-	sourcePaths     []string
-	matchingPaths   []string
-	generatedPaths  []string
-	context         *build.Context
 	usesC           bool
-	sourcesMatched  bool
-	loaded          bool
-	matchError      error
-	loadError       error
 	fs              *token.FileSet
+	importer        types.Importer
 	info            *types.Info
 	typed           *types.Package
 	generated       map[ast.Decl]bool
@@ -44,14 +28,8 @@ type packageUnit struct {
 	erasedImports   map[*ast.ImportSpec]bool
 	references      []generatedReference
 	usedIdentifiers map[string]bool
-	exportPaths     map[string]string
 	typeErrors      []error
 	errors          []error
-}
-
-// outputPath returns the Go output path while preserving target suffixes.
-func (p *packageUnit) outputPath(sourcePath string) string {
-	return outputname.Path(sourcePath)
 }
 
 // fail records a source error for later reporting.
@@ -82,59 +60,13 @@ func newInfo() *types.Info {
 func (p *packageUnit) typecheck() {
 	p.info = newInfo()
 	var problems []error
-	exportError := p.loadExportPaths()
-	imp := importer.ForCompiler(p.fs, "gc", func(path string) (io.ReadCloser, error) {
-		if exportError != nil {
-			return nil, exportError
-		}
-		export := p.exportPaths[path]
-		if export == "" {
-			return nil, fmt.Errorf("load %s: missing export data", path)
-		}
-		return os.Open(export)
-	})
 	conf := types.Config{
-		Importer:    imp,
+		Importer:    p.importer,
 		FakeImportC: p.usesC,
 		Error:       func(e error) { problems = append(problems, e) },
 	}
 	p.typed, _ = conf.Check(p.Path, p.fs, p.Files, p.info)
 	p.typeErrors = problems
-}
-
-// loadExportPaths finds import files with one Go command.
-func (p *packageUnit) loadExportPaths() error {
-	if p.exportPaths == nil {
-		p.exportPaths = make(map[string]string)
-	}
-	missing := make([]string, 0)
-	for _, path := range importsOf(p.Files) {
-		if p.exportPaths[path] == "" {
-			missing = append(missing, path)
-		}
-	}
-	if len(missing) == 0 {
-		return nil
-	}
-	arguments := make([]string, 0, 5+len(missing))
-	arguments = append(
-		arguments,
-		"list", "-deps", "-export", "-f",
-		"{{if .Export}}{{.ImportPath}}\t{{.Export}}{{end}}",
-	)
-	command := exec.Command("go", append(arguments, missing...)...)
-	command.Dir = p.Dir
-	output, err := command.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("load imports: %s", output)
-	}
-	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
-		path, export, found := strings.Cut(line, "\t")
-		if found {
-			p.exportPaths[path] = export
-		}
-	}
-	return nil
 }
 
 // transform replaces nodes after visiting their children.
@@ -191,7 +123,7 @@ func (p *packageUnit) generatedOutputs() (map[string][]byte, error) {
 	outputs := map[string][]byte{}
 	for _, s := range p.Sources {
 		if !s.Lowered {
-			outputs[p.outputPath(s.Name)] = append([]byte(nil), s.Data...)
+			outputs[s.Name] = append([]byte(nil), s.Data...)
 			continue
 		}
 		var body bytes.Buffer
@@ -202,7 +134,7 @@ func (p *packageUnit) generatedOutputs() (map[string][]byte, error) {
 		var b bytes.Buffer
 		b.WriteString(generatedHeader + "\n\n")
 		b.Write(body.Bytes())
-		outputs[p.outputPath(s.Name)] = b.Bytes()
+		outputs[s.Name] = b.Bytes()
 	}
 	return outputs, nil
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"tgo/internal/compiler"
+	"tgo/internal/driver"
 )
 
 func main() {
@@ -15,7 +15,7 @@ func main() {
 	}
 	directory, err := os.Getwd()
 	if err == nil {
-		err = compiler.Build(directory, os.Args[2:])
+		err = driver.Build(directory, os.Args[2:])
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
