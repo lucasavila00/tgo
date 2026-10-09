@@ -1,10 +1,10 @@
 .PHONY: ci ci-unlocked generated lint test unit-test e2e-test tgolint-test \
-	dogfood markdown tgo-size build install-hooks install-tools
+	allocation-test dogfood markdown tgo-size build install-hooks install-tools
 
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
 
-ci-unlocked: generated dogfood e2e-test tgolint-test lint unit-test markdown tgo-size
+ci-unlocked: generated dogfood e2e-test tgolint-test allocation-test lint unit-test markdown tgo-size
 
 dogfood:
 	! rg -n '//[[:space:]]*tgolint:ignore' cmd internal pkg
@@ -23,7 +23,7 @@ lint:
 	golangci-lint run ./...
 	golangci-lint fmt --diff
 
-test: unit-test e2e-test tgolint-test
+test: unit-test e2e-test tgolint-test allocation-test
 
 unit-test:
 	go test ./...
@@ -33,6 +33,9 @@ e2e-test:
 
 tgolint-test:
 	python3 tests/tgolint/run.py
+
+allocation-test:
+	python3 tests/allocations/run.py
 
 build:
 	go build -o bin/tgo ./cmd/tgo

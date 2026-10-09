@@ -166,13 +166,15 @@ func syntaxChildren(file %frontFile, node frontNode) []frontNode {
 			}
 		}
 	case *frontEnumDecl:
-		children = make([]frontNode, 1, 1+len(node.Variants))
+		children = make([]frontNode, 1, 2+len(node.Variants))
+		children = append(children, node.Tag)
 		children[0] = node.Name
 		for _, variant := range node.Variants {
 			children = append(children, variant)
 		}
 	case *frontVariantDecl:
-		children = make([]frontNode, 1, 1+len(node.Fields))
+		children = make([]frontNode, 1, 2+len(node.Fields))
+		children = append(children, node.Tag)
 		children[0] = node.Name
 		for _, field := range node.Fields {
 			children = append(children, field)
