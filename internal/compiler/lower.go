@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 )
 
@@ -11,6 +12,7 @@ func (p *packageUnit) prepare() {
 	p.generatedValues = make(map[*ast.ValueSpec]bool)
 	p.checkedLiterals = make(map[*ast.CompositeLit]bool)
 	p.checkedCalls = make(map[*ast.CallExpr]bool)
+	p.sourceReferences = make(map[token.Pos]types.Object)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
 	p.usedIdentifiers = nil
@@ -239,6 +241,7 @@ func (p *packageUnit) checkedConstructorCall(
 	if !valid {
 		return literal
 	}
+	p.recordCheckedLiteralReferences(literal, named, structure, indices)
 
 	prefix := p.ownerQualifier(file, named.Obj().Pkg())
 	constructor := p.generatedObject(
@@ -297,6 +300,35 @@ func (p *packageUnit) checkedConstructorCall(
 	return call(function, &ast.CompositeLit{
 		Type: carrierLiteralType, Elts: carrierElements,
 	})
+}
+
+// recordCheckedLiteralReferences keeps navigation on lowered source names.
+func (p *packageUnit) recordCheckedLiteralReferences(
+	literal *ast.CompositeLit,
+	named *types.Named,
+	structure *types.Struct,
+	indices []int,
+) {
+	var typeName *ast.Ident
+	switch expression := literal.Type.(type) {
+	case *ast.Ident:
+		typeName = expression
+	case *ast.SelectorExpr:
+		typeName = expression.Sel
+	}
+	if typeName != nil && typeName.Pos() != token.NoPos {
+		p.sourceReferences[typeName.Pos()] = named.Obj()
+	}
+	for index, element := range literal.Elts {
+		pair, ok := element.(*ast.KeyValueExpr)
+		if !ok || pair.Key.Pos() == token.NoPos || index >= len(indices) {
+			continue
+		}
+		field := indices[index]
+		if field >= 0 && field < structure.NumFields() {
+			p.sourceReferences[pair.Key.Pos()] = structure.Field(field)
+		}
+	}
 }
 
 func (p *packageUnit) checkedLiteralValues(

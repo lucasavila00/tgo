@@ -5,4 +5,5 @@ localbad/local.go:23:9: cannot construct tgo checked Port with a Go literal
 localbad/local.go:27:2: checked field value cannot be changed after construction
 localbad/local.go:28:2: checked field value cannot be changed after construction
 localbad/local.go:29:7: checked field value cannot be changed after construction
-localbad/local.go:33:9: Event.tgoTag is private tgo representation
+localbad/local.go:30:6: checked field value cannot be changed after construction
+localbad/local.go:35:9: Event.tgoTag is private tgo representation

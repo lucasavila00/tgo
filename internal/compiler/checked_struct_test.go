@@ -130,6 +130,26 @@ func Invalid(number int) (model.Port, error) { return model.NewPort(number) }
 		!strings.Contains(problems[0].Error(), "NewPort is generated Go ABI") {
 		t.Fatalf("error = %v, want imported generated Go ABI diagnostic", problems)
 	}
+	_, problems = Compile(PackageInput{
+		Path: "invalid",
+		Sources: []File{{Name: "invalid.tgo", Data: []byte(`package invalid
+import "model"
+func Invalid(number int) (model.Port, error) {
+	constructor := model.NewPort
+	return constructor(number)
+}
+`)}},
+		Imports: map[string]*CompiledPackage{"model": modelPackage},
+		FileSet: token.NewFileSet(),
+		Importer: packageImporter{
+			packages: map[string]*types.Package{"model": modelPackage.Package},
+			fallback: importer.Default(),
+		},
+	})
+	if len(problems) == 0 ||
+		!strings.Contains(problems[0].Error(), "NewPort is generated Go ABI") {
+		t.Fatalf("error = %v, want imported constructor reference diagnostic", problems)
+	}
 }
 
 func TestCheckedStructLiteralPreservesEvaluationOrder(t *testing.T) {
@@ -210,19 +230,24 @@ func (value Port) check() (Port, error) { return value, nil }
 
 func TestCheckedStructConstructorIsNotTGoAPI(t *testing.T) {
 	t.Parallel()
-	_, problems := Compile(PackageInput{
-		Path: "sample",
-		Sources: []File{{Name: "sample.tgo", Data: []byte(`package sample
+	for _, body := range []string{
+		"return NewPort(number)",
+		"constructor := NewPort; return constructor(number)",
+	} {
+		_, problems := Compile(PackageInput{
+			Path: "sample",
+			Sources: []File{{Name: "sample.tgo", Data: []byte(`package sample
 
 type Port struct { number int } checked
 func (value Port) check() (Port, error) { return value, nil }
-func Invalid(number int) (Port, error) { return NewPort(number) }
+func Invalid(number int) (Port, error) { ` + body + ` }
 `)}},
-		FileSet: token.NewFileSet(), Importer: importer.Default(),
-	})
-	if len(problems) == 0 ||
-		!strings.Contains(problems[0].Error(), "NewPort is generated Go ABI") {
-		t.Fatalf("error = %v, want generated Go ABI diagnostic", problems)
+			FileSet: token.NewFileSet(), Importer: importer.Default(),
+		})
+		if len(problems) == 0 ||
+			!strings.Contains(problems[0].Error(), "NewPort is generated Go ABI") {
+			t.Fatalf("error = %v, want generated Go ABI diagnostic", problems)
+		}
 	}
 }
 
@@ -235,6 +260,7 @@ func TestCheckedStructFieldsCannotBeChangedAfterConstruction(t *testing.T) {
 		{name: "assignment", body: "value.number = 2"},
 		{name: "increment", body: "value.number++"},
 		{name: "address", body: "_ = &value.number"},
+		{name: "range assignment", body: "for value.number = range []int{1} {}"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

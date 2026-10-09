@@ -84,7 +84,10 @@ func (p *ProjectionFacts) RangeImplicits(
 }
 
 func projectionReferences(unit *packageUnit) map[token.Pos]types.Object {
-	references := make(map[token.Pos]types.Object)
+	references := make(map[token.Pos]types.Object, len(unit.sourceReferences))
+	for position, object := range unit.sourceReferences {
+		references[position] = object
+	}
 	for _, reference := range unit.references {
 		if object := unit.info.Uses[reference.Name]; object != nil {
 			references[reference.At] = object

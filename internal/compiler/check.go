@@ -140,6 +140,7 @@ func (p *packageUnit) checkNode(
 	switch node := node.(type) {
 	case *ast.Ident:
 		p.checkCheckedCarrier(node)
+		p.checkCheckedConstructorReference(node, parents)
 	case *ast.TypeSpec:
 		p.checkTypeSpec(node)
 	case *ast.CompositeLit:
@@ -361,26 +362,41 @@ func (p *packageUnit) checkLiteral(lit *ast.CompositeLit) {
 
 // checkCall applies tgo rules to conversions.
 func (p *packageUnit) checkCall(c *ast.CallExpr) {
-	if !p.checkedCalls[c] {
-		if function, ok := p.calledFunction(c.Fun); ok &&
-			p.generatedCheckedConstructor(function) {
-			p.fail(c, "%s is generated Go ABI; use a checked literal", function.Name())
-			return
-		}
-	}
 	p.checkConversion(c)
 }
 
-func (p *packageUnit) calledFunction(expression ast.Expr) (*types.Func, bool) {
-	var object types.Object
-	switch expression := expression.(type) {
-	case *ast.Ident:
-		object = p.info.Uses[expression]
-	case *ast.SelectorExpr:
-		object = p.info.Uses[expression.Sel]
+// checkCheckedConstructorReference hides the generated Go ABI from TGo.
+func (p *packageUnit) checkCheckedConstructorReference(
+	identifier *ast.Ident,
+	parents map[ast.Node]ast.Node,
+) {
+	function, ok := p.info.Uses[identifier].(*types.Func)
+	if !ok || !p.generatedCheckedConstructor(function) ||
+		p.generatedReference(identifier) || p.checkedCallReference(identifier, parents) {
+		return
 	}
-	function, ok := object.(*types.Func)
-	return function, ok
+	p.fail(identifier, "%s is generated Go ABI; use a checked literal", function.Name())
+}
+
+func (p *packageUnit) generatedReference(identifier *ast.Ident) bool {
+	for _, reference := range p.references {
+		if reference.Name == identifier {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *packageUnit) checkedCallReference(
+	identifier *ast.Ident,
+	parents map[ast.Node]ast.Node,
+) bool {
+	parent := parents[identifier]
+	if selector, ok := parent.(*ast.SelectorExpr); ok && selector.Sel == identifier {
+		parent = parents[selector]
+	}
+	call, ok := parent.(*ast.CallExpr)
+	return ok && p.checkedCalls[call]
 }
 
 func (p *packageUnit) generatedCheckedConstructor(function *types.Func) bool {
@@ -422,25 +438,32 @@ func (p *packageUnit) checkCheckedFieldChange(
 		}
 		parent = parents[wrapped]
 	}
-	changed := false
+	if !checkedFieldChanged(selector, parent) {
+		return
+	}
+	if checkedSelectorObject(p.info, selector) == trusted {
+		return
+	}
+	p.fail(selector, "checked field %s cannot be changed after construction", selector.Sel.Name)
+}
+
+func checkedFieldChanged(selector *ast.SelectorExpr, parent ast.Node) bool {
 	switch node := parent.(type) {
 	case *ast.AssignStmt:
 		for _, left := range node.Lhs {
 			if left == selector {
-				changed = true
+				return true
 			}
 		}
 	case *ast.IncDecStmt:
-		changed = node.X == selector
+		return node.X == selector
 	case *ast.UnaryExpr:
-		changed = node.Op == token.AND
+		return node.Op == token.AND
+	case *ast.RangeStmt:
+		return node.Tok == token.ASSIGN &&
+			(node.Key == selector || node.Value == selector)
 	}
-	if changed {
-		if checkedSelectorObject(p.info, selector) == trusted {
-			return
-		}
-		p.fail(selector, "checked field %s cannot be changed after construction", selector.Sel.Name)
-	}
+	return false
 }
 
 func checkedSelectorObject(info *types.Info, selector *ast.SelectorExpr) types.Object {

@@ -6,6 +6,16 @@
   },
   {
     "method": "hover",
+    "position": {"file": "app/app.tgo", "text": "UserID", "occurrence": 2},
+    "hover": "type UserID struct{value int}"
+  },
+  {
+    "method": "hover",
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 2},
+    "hover": "field value int"
+  },
+  {
+    "method": "hover",
     "position": {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
     "hover": "func (Account) PersonalPayload() AccountPersonal"
   },
@@ -19,6 +29,20 @@
     "position": {"file": "app/app.tgo", "text": "Target", "occurrence": 1},
     "locations": [
       {"file": "lib/lib.tgo", "text": "Target", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "app/app.tgo", "text": "UserID", "occurrence": 2},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "UserID", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 2},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "value", "occurrence": 11}
     ]
   },
   {

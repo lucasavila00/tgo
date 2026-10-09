@@ -12,25 +12,26 @@ import (
 )
 
 type packageUnit struct {
-	Dir, Path       string
-	Sources         []*source
-	Files           []*ast.File
-	Models          map[string]*model
-	Imports         map[string]*packageUnit
-	usesC           bool
-	fs              *token.FileSet
-	importer        types.Importer
-	info            *types.Info
-	typed           *types.Package
-	generated       map[ast.Decl]bool
-	generatedValues map[*ast.ValueSpec]bool
-	checkedLiterals map[*ast.CompositeLit]bool
-	checkedCalls    map[*ast.CallExpr]bool
-	erasedImports   map[*ast.ImportSpec]bool
-	references      []generatedReference
-	usedIdentifiers map[string]bool
-	typeErrors      []error
-	errors          []error
+	Dir, Path        string
+	Sources          []*source
+	Files            []*ast.File
+	Models           map[string]*model
+	Imports          map[string]*packageUnit
+	usesC            bool
+	fs               *token.FileSet
+	importer         types.Importer
+	info             *types.Info
+	typed            *types.Package
+	generated        map[ast.Decl]bool
+	generatedValues  map[*ast.ValueSpec]bool
+	checkedLiterals  map[*ast.CompositeLit]bool
+	checkedCalls     map[*ast.CallExpr]bool
+	sourceReferences map[token.Pos]types.Object
+	erasedImports    map[*ast.ImportSpec]bool
+	references       []generatedReference
+	usedIdentifiers  map[string]bool
+	typeErrors       []error
+	errors           []error
 }
 
 // fail records a source error for later reporting.

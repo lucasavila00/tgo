@@ -73,6 +73,15 @@ func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {
 				}
 			}
 		}
+		if ranged := syntax.RangeStatementOf(statement); ranged != nil &&
+			ranged.Operator == token.ASSIGN {
+			if ranged.Key != nil && sameExpressionRange(ranged.Key, expression) {
+				return true
+			}
+			if ranged.Value != nil && sameExpressionRange(ranged.Value, expression) {
+				return true
+			}
+		}
 		return false
 	}
 	return false
