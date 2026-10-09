@@ -12,6 +12,20 @@ var names = map[string]int{
 	"long": 2,
 }
 
+var grouped = map[string]int{
+	"a":    1,
+	"long": 2,
+
+	"b":      3,
+	"longer": 4,
+}
+
+var mixed = []int{
+	0: 1,
+	2,
+	10: 4,
+}
+
 func use[
 	T any, /* first type parameter */
 	U any, // second type parameter

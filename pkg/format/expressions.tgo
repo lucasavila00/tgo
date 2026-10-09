@@ -283,12 +283,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	}
 	p.newline()
 	p.indent++
-	keyWidth := 0
-	for _, element := range value.Elements {
-		if width := compositeKeyWidth(element); width > keyWidth {
-			keyWidth = width
-		}
-	}
+	keyWidths := p.compositeKeyWidths(value.Elements)
 	for index, element := range value.Elements {
 		if index > 0 && p.blankBetween(
 			syntax.ExpressionEnd(value.Elements[index-1]),
@@ -296,7 +291,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		) {
 			p.blankline()
 		}
-		p.compositeElement(element, keyWidth)
+		p.compositeElement(element, keyWidths[index])
 		p.text(",")
 		following := value.Rbrace
 		if index+1 < len(value.Elements) {
@@ -307,6 +302,35 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	}
 	p.indent--
 	p.token(value.Rbrace, "}")
+}
+
+func (p *printer) compositeKeyWidths(values []%syntax.Expression) []int {
+	widths := make([]int, len(values))
+	for first := 0; first < len(values); {
+		if compositeKeyWidth(values[first]) == 0 {
+			first++
+			continue
+		}
+		last := first + 1
+		for last < len(values) && compositeKeyWidth(values[last]) > 0 &&
+			!p.blankBetween(
+				syntax.ExpressionEnd(values[last-1]),
+				syntax.ExpressionPosition(values[last]),
+			) {
+			last++
+		}
+		width := 0
+		for _, value := range values[first:last] {
+			if keyWidth := compositeKeyWidth(value); keyWidth > width {
+				width = keyWidth
+			}
+		}
+		for index := first; index < last; index++ {
+			widths[index] = width
+		}
+		first = last
+	}
+	return widths
 }
 
 func (p *printer) compositeElement(value *syntax.Expression, keyWidth int) {
