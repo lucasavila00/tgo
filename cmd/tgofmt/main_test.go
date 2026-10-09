@@ -67,3 +67,32 @@ func TestRunListsChangedStandardInput(t *testing.T) {
 		t.Fatalf("listed input = %q", output.String())
 	}
 }
+
+func TestRunDoesNotWriteMalformedFile(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	path := filepath.Join(directory, "bad.tgo")
+	input := []byte("package sample\nfunc {")
+	if err := os.WriteFile(path, input, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := run([]string{path}, true, false, strings.NewReader(""), new(bytes.Buffer))
+	if err == nil {
+		t.Fatal("write accepted malformed input")
+	}
+	got, readErr := os.ReadFile(path)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if !bytes.Equal(got, input) {
+		t.Fatalf("malformed file changed to %q", got)
+	}
+}
+
+func TestRunRejectsWriteForStandardInput(t *testing.T) {
+	t.Parallel()
+	err := run(nil, true, false, strings.NewReader("package sample\n"), new(bytes.Buffer))
+	if err == nil {
+		t.Fatal("write accepted standard input")
+	}
+}
