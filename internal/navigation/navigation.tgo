@@ -24,10 +24,25 @@ type Location struct {
 	End   int    `json:"end"`
 }
 
+// SymbolKind identifies one closed class of source declaration.
+type SymbolKind enum {
+	Package struct {}
+	Type struct {}
+	Struct struct {}
+	Interface struct {}
+	Function struct {}
+	Method struct {}
+	Field struct {}
+	Enum struct {}
+	EnumMember struct {}
+	Constant struct {}
+	Variable struct {}
+}
+
 // Symbol is one named source declaration.
 type Symbol struct {
-	Name      string   `json:"name"`
-	Kind      string   `json:"kind"`
+	Name      string `json:"name"`
+	Kind      SymbolKind
 	Container string   `json:"container,omitempty"`
 	Range     Location `json:"range"`
 	Selection Location `json:"selection"`
@@ -236,12 +251,12 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		references: make(map[string][]Location),
 		symbols: nil,
 	}
-	for _, pkg := range packages {
+	for view, pkg := range packages {
 		select {
 		case <-ctx.Done(): return , ctx.Err()
 		default:
 		}
-		keys := newObjectKeys(pkg.Package)
+		keys := newObjectKeys(pkg.Package, view)
 		ownerLocations := make(map[token.Pos]Location)
 		generatedUses := make(map[sourcePosition]types.Object)
 		for position, object := range pkg.GeneratedUses {
@@ -264,8 +279,9 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 				if object == nil { return true }
 				key := keys.key(object)
 				qualifier := types.RelativeTo(object.Pkg())
-				contents := types.ObjectString(object, qualifier)
-				if function, ok := object.(*types.Func); ok {
+				contents := pkg.OwnerHovers[object]
+				if contents == "" { contents = types.ObjectString(object, qualifier) }
+				if function, ok := object.(*types.Func); ok && pkg.OwnerHovers[object] == "" {
 					signature := function.Type().(*types.Signature)
 					if receiver := signature.Recv(); receiver != nil {
 						contents = "func (" + types.TypeString(
@@ -310,11 +326,12 @@ func positionKey(position token.Position) sourcePosition {
 
 type objectKeys struct {
 	known map[types.Object]string
+	view  int
 	next  int
 }
 
-func newObjectKeys(root *types.Package) *objectKeys {
-	keys := &objectKeys{known: make(map[types.Object]string), next: 0}
+func newObjectKeys(root *types.Package, view int) *objectKeys {
+	keys := &objectKeys{known: make(map[types.Object]string), view: view, next: 0}
 	keys.addPackage(root, make(map[*types.Package]bool))
 	return keys
 }
@@ -362,7 +379,7 @@ func (k *objectKeys) key(object types.Object) string {
 	packagePath := "universe"
 	if object.Pkg() != nil { packagePath = object.Pkg().Path() }
 	k.next++
-	key := fmt.Sprintf("local:%s:%d", packagePath, k.next)
+	key := fmt.Sprintf("local:%s:%d:%d", packagePath, k.view, k.next)
 	k.known[object] = key
 	return key
 }

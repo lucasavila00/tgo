@@ -12,7 +12,7 @@ const { documentSelector, WorkspaceClient } = require("../../src/extension");
 async function run() {
   const extension = vscode.extensions.getExtension("tgo.tgo-navigation");
   assert.ok(extension, "TGo extension is absent");
-  const api = await extension.activate();
+  const api = await checkWorkspaceSymbolsBeforeDocumentOpen(extension);
   await checkBundledGoGrammar(extension.extensionPath);
   const folder = vscode.workspace.workspaceFolders[0];
   assert.ok(folder, "test workspace is absent");
@@ -39,6 +39,21 @@ async function run() {
   await checkCancellation();
   await checkDirtyDocument(document);
   await checkWorkspaceFolderRemoval(api);
+}
+
+async function checkWorkspaceSymbolsBeforeDocumentOpen(extension) {
+  assert.equal(
+    vscode.workspace.textDocuments.some((document) => document.languageId === "tgo"),
+    false,
+    "a TGo document is already open"
+  );
+  const symbols = await vscode.commands.executeCommand(
+    "vscode.executeWorkspaceSymbolProvider", "Café"
+  );
+  assert.ok(symbols.some((symbol) => symbol.name === "Café"));
+  assert.equal(extension.isActive, true);
+  assert.ok(extension.exports, "TGo extension API is absent");
+  return extension.exports;
 }
 
 async function checkBundledGoGrammar(extension) {
@@ -266,10 +281,23 @@ async function checkConfigurationRestart(api, folder, original) {
 }
 
 async function checkDirtyDocument(document) {
-  const edit = new vscode.WorkspaceEdit();
-  edit.insert(document.uri, new vscode.Position(0, 0), "// unsaved\n");
-  assert.equal(await vscode.workspace.applyEdit(edit), true);
-  assert.equal(document.isDirty, true);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const version = document.version;
+    const edit = new vscode.WorkspaceEdit();
+    edit.insert(document.uri, new vscode.Position(0, 0), `// unsaved ${attempt}\n`);
+    const applied = await vscode.workspace.applyEdit(edit);
+    assert.equal(
+      applied,
+      true,
+      `dirty edit ${attempt} failed: version ${document.version}, ` +
+        `started at ${version}, dirty ${document.isDirty}`
+    );
+    assert.equal(document.isDirty, true);
+    if (attempt < 3) {
+      assert.equal(await document.save(), true);
+      assert.equal(document.isDirty, false);
+    }
+  }
   const use = document.getText().lastIndexOf("Café");
   const definitions = await vscode.commands.executeCommand(
     "vscode.executeDefinitionProvider", document.uri, document.positionAt(use + 1)
@@ -389,6 +417,7 @@ async function checkWatchers(folder, client, invalidations) {
     await vscode.workspace.fs.writeFile(goMod, originalGoMod);
     await vscode.workspace.fs.writeFile(main, original);
     client.invalidate(main);
+    await waitForDocument(main, original.toString(), true);
   }
 }
 
@@ -436,12 +465,22 @@ function rangeText(range) {
   return `${range.start.line}:${range.start.character}-${range.end.line}:${range.end.character}`;
 }
 
-async function waitForDocument(uri, text) {
+async function waitForDocument(uri, text, exact = false) {
   let document;
-  await waitFor(async () => {
-    document = await vscode.workspace.openTextDocument(uri);
-    return document.getText().includes(text);
-  });
+  try {
+    await waitFor(async () => {
+      document = await vscode.workspace.openTextDocument(uri);
+      const current = document.getText();
+      return exact ? current === text : current.includes(text);
+    });
+  } catch (error) {
+    const state = document
+      ? `version ${document.version}, dirty ${document.isDirty}`
+      : "document not open";
+    throw new Error(`timed out while waiting for ${uri}: ${state}`, {
+      cause: error
+    });
+  }
   return document;
 }
 

@@ -45,11 +45,15 @@ func (v Event) UnknownTag() string {
 type EventStarted struct {
 	Code int
 }
+type TgoEventStartedInput struct {
+	FieldCode int
+}
 
-// Event constructs Event. Model fields must be valid.
+// NewEventStarted constructs Event. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EventStarted) Event() Event {
-	return Event{tgoTag: EventTagStarted, tgoStarted: value}
+func NewEventStarted(Code int) Event {
+	tgoValue := EventStarted{Code}
+	return Event{tgoTag: EventTagStarted, tgoStarted: tgoValue}
 }
 
 // StartedPayload requires Started. No tag check.
@@ -97,7 +101,7 @@ func (v *Event) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStarted(payload.Code)
 		return nil
 	default:
 		return fmt.Errorf("unknown Event JSON variant %q", variant)
@@ -166,7 +170,7 @@ func (v *Event) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Event()
+		*v = NewEventStarted(payload.Code)
 		return nil
 	default:
 		return fmt.Errorf("invalid Event JSON tag")
