@@ -29,6 +29,7 @@ async function run() {
 
   await checkRepositoryHovers();
   await checkProviders(document);
+  await checkPartialWorkspace(api);
   await checkWatchers(folder, client, invalidations);
   checkRemoteURITranslation();
   await checkConfigurationRestart(api, folder, client);
@@ -71,6 +72,73 @@ async function checkHover(uri, text, contents) {
   assert.ok(hovers[0].contents.some(
     (content) => content.value.includes(contents)
   ));
+}
+
+async function checkPartialWorkspace(api) {
+  const folder = vscode.workspace.workspaceFolders.find(
+    (item) => path.basename(item.uri.fsPath) === "partial workspace"
+  );
+  assert.ok(folder, "partial workspace is absent");
+  const good = vscode.Uri.joinPath(folder.uri, "good", "good.tgo");
+  const goodDocument = await vscode.workspace.openTextDocument(good);
+  const target = goodDocument.getText().lastIndexOf("Target");
+  const position = goodDocument.positionAt(target + 1);
+  const hovers = await vscode.commands.executeCommand(
+    "vscode.executeHoverProvider", good, position
+  );
+  assert.ok(hovers[0].contents.some(
+    (content) => content.value.includes("func Target() string")
+  ));
+  const definitions = await vscode.commands.executeCommand(
+    "vscode.executeDefinitionProvider", good, position
+  );
+  assert.equal(definitions.length, 1);
+  assert.equal(targetText(definitions[0]), "Target");
+  const references = await vscode.commands.executeCommand(
+    "vscode.executeReferenceProvider", good, position
+  );
+  assert.equal(references.length, 2);
+  const documentSymbols = await vscode.commands.executeCommand(
+    "vscode.executeDocumentSymbolProvider", good
+  );
+  assert.deepEqual(
+    documentSymbols.map((symbol) => symbol.name), ["good", "Target", "Use"]
+  );
+  const workspaceSymbols = await vscode.commands.executeCommand(
+    "vscode.executeWorkspaceSymbolProvider", "Target"
+  );
+  assert.ok(workspaceSymbols.some(
+    (symbol) => symbol.location.uri.toString() === good.toString()
+  ));
+
+  const bad = vscode.Uri.joinPath(folder.uri, "bad", "bad.tgo");
+  const badDocument = await vscode.workspace.openTextDocument(bad);
+  const broken = badDocument.getText().lastIndexOf("Broken");
+  const badPosition = badDocument.positionAt(broken + 1);
+  assert.deepEqual(await vscode.commands.executeCommand(
+    "vscode.executeDefinitionProvider", bad, badPosition
+  ), []);
+  assert.deepEqual(await vscode.commands.executeCommand(
+    "vscode.executeHoverProvider", bad, badPosition
+  ) || [], []);
+
+  const original = await vscode.workspace.fs.readFile(bad);
+  const fixed = Buffer.from(
+    original.toString().replace("return Missing", "return \"value\"")
+  );
+  const client = api.clients.forURI(bad);
+  try {
+    await vscode.workspace.fs.writeFile(bad, fixed);
+    client.invalidate(bad);
+    const fixedDefinitions = await vscode.commands.executeCommand(
+      "vscode.executeDefinitionProvider", bad, badPosition
+    );
+    assert.equal(fixedDefinitions.length, 1);
+    assert.equal(targetText(fixedDefinitions[0]), "Broken");
+  } finally {
+    await vscode.workspace.fs.writeFile(bad, original);
+    client.invalidate(bad);
+  }
 }
 
 function checkRemoteURITranslation() {
@@ -129,7 +197,7 @@ async function checkDirtyDocument(document) {
 
 async function checkWorkspaceFolderRemoval(api) {
   const folders = vscode.workspace.workspaceFolders;
-  assert.equal(folders.length, 3);
+  assert.equal(folders.length, 4);
   const removed = folders[1];
   const client = api.clients.forURI(removed.uri);
   assert.ok(client);

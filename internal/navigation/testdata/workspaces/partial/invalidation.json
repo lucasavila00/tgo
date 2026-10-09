@@ -1,0 +1,14 @@
+[
+  {
+    "file": "bad/bad.tgo",
+    "old": "return Missing",
+    "new": "return \"value\"",
+    "request": {
+      "method": "definition",
+      "position": {"file": "bad/bad.tgo", "text": "Broken", "occurrence": 2},
+      "locations": [
+        {"file": "bad/bad.tgo", "text": "Broken", "occurrence": 1}
+      ]
+    }
+  }
+]
