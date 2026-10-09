@@ -2,9 +2,137 @@ package format
 
 import (
 	"go/token"
+	"unicode/utf8"
 
 	"tgo/pkg/syntax"
 )
+
+type alignmentRow struct {
+	breakBefore bool
+	cells       []int
+}
+
+func alignmentColumns(rows []alignmentRow) [][]int {
+	columns := make([][]int, len(rows))
+	for index, row := range rows {
+		if len(row.cells) > 1 {
+			columns[index] = make([]int, len(row.cells)-1)
+		}
+	}
+	for first := 0; first < len(rows); {
+		last := first + 1
+		for last < len(rows) && !rows[last].breakBefore {
+			last++
+		}
+		starts := make([]int, last-first)
+		for cell := 0; ; cell++ {
+			found := false
+			for _, row := range rows[first:last] {
+				if len(row.cells) > cell+1 {
+					found = true
+				}
+			}
+			if !found {
+				break
+			}
+			for run := first; run < last; {
+				for run < last && len(rows[run].cells) <= cell+1 {
+					run++
+				}
+				end := run
+				width := 0
+				for end < last && len(rows[end].cells) > cell+1 {
+					width = max(width, rows[end].cells[cell])
+					end++
+				}
+				if run == end {
+					break
+				}
+				if width == 0 {
+					for index := run; index < end; index++ {
+						columns[index][cell] = starts[index-first]
+					}
+				} else {
+					column := 0
+					for index := run; index < end; index++ {
+						column = max(
+							column,
+							starts[index-first]+rows[index].cells[cell]+1,
+						)
+					}
+					for index := run; index < end; index++ {
+						columns[index][cell] = column
+					}
+				}
+				for index := run; index < end; index++ {
+					starts[index-first] = columns[index][cell]
+				}
+				run = end
+			}
+		}
+		first = last
+	}
+	return columns
+}
+
+func (p *printer) fieldAlignment(values []%syntax.Field) [][]int {
+	if len(values) == 1 {
+		return make([][]int, 1)
+	}
+	rows := make([]alignmentRow, len(values))
+	for index, value := range values {
+		if index > 0 {
+			previous := values[index-1]
+			rows[index].breakBefore = value.Doc != nil ||
+				p.blankBetween(previous.Stop, value.Start) ||
+				p.hasCommentBetween(previous.Stop, value.Start) ||
+				p.multiline(previous.Start, previous.Stop)
+		}
+		rows[index].cells = p.fieldCells(value)
+	}
+	return alignmentColumns(rows)
+}
+
+func (p *printer) fieldCells(value *syntax.Field) []int {
+	cells := p.fieldSyntaxCells(value)
+	if p.hasTrailingComment(fieldContentEnd(value)) {
+		return fieldCommentCells(cells, value)
+	}
+	return cells
+}
+
+func (p *printer) fieldSyntaxCells(value *syntax.Field) []int {
+	functionType := syntax.FunctionTypeExpressionOf(value.Type)
+	if len(value.Names) > 0 && functionType != nil && !functionType.Function.IsValid() {
+		return []int{p.formattedFieldContentWidth(value)}
+	}
+	cells := make([]int, 0)
+	if len(value.Names) > 0 {
+		cells = append(cells, fieldNameWidth(value))
+	}
+	cells = append(cells, p.formattedExpressionWidth(value.Type))
+	if value.Tag != nil {
+		if len(value.Names) > 0 {
+			cells = append(cells, 0)
+		}
+		cells = append(cells, utf8.RuneCountInString(value.Tag.Value))
+	}
+	return cells
+}
+
+func fieldCommentCells(cells []int, value *syntax.Field) []int {
+	if value.Tag == nil && len(value.Names) == 0 {
+		cells = append(cells, 0)
+	}
+	return append(cells, 0)
+}
+
+func (p *printer) formattedFieldContentWidth(value *syntax.Field) int {
+	probe := newPrinter(p.files, p.file, p.source)
+	probe.comments = nil
+	probe.fieldContent(value, 0, nil, false)
+	return probe.outputColumn()
+}
 
 func (p *printer) compositeCommentWidths(
 	values []%syntax.Expression,
@@ -58,45 +186,4 @@ func (p *printer) formattedCompositeElementWidth(
 	probe.comments = nil
 	probe.compositeElement(value, keyWidth)
 	return probe.outputColumn()
-}
-
-func (p *printer) fieldCommentWidths(values []%syntax.Field) []int {
-	widths := make([]int, len(values))
-	for first := 0; first < len(values); {
-		if !p.hasTrailingComment(fieldContentEnd(values[first])) {
-			first++
-			continue
-		}
-		last := first + 1
-		for last < len(values) && p.hasTrailingComment(fieldContentEnd(values[last])) &&
-			!p.blankBetween(values[last-1].Stop, values[last].Start) &&
-			!p.hasCommentBetween(values[last-1].Stop, values[last].Start) {
-			last++
-		}
-		sectionFirst := first
-		for sectionFirst > 0 && values[sectionFirst].Doc == nil &&
-			!p.blankBetween(values[sectionFirst-1].Stop, values[sectionFirst].Start) &&
-			!p.hasCommentBetween(values[sectionFirst-1].Stop, values[sectionFirst].Start) {
-			sectionFirst--
-		}
-		sectionLast := last
-		for sectionLast < len(values) && values[sectionLast].Doc == nil &&
-			!p.blankBetween(values[sectionLast-1].Stop, values[sectionLast].Start) &&
-			!p.hasCommentBetween(values[sectionLast-1].Stop, values[sectionLast].Start) {
-			sectionLast++
-		}
-		nameWidth := 0
-		for _, value := range values[sectionFirst:sectionLast] {
-			nameWidth = max(nameWidth, fieldNameWidth(value))
-		}
-		width := 0
-		for _, value := range values[first:last] {
-			width = max(width, p.formattedFieldWidth(value, nameWidth))
-		}
-		for index := first; index < last; index++ {
-			widths[index] = width
-		}
-		first = last
-	}
-	return widths
 }
