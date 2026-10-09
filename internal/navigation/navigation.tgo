@@ -4,6 +4,7 @@ package navigation
 import (
 	"context"
 	"fmt"
+	"go/token"
 	"go/types"
 	"net/url"
 	"path/filepath"
@@ -29,6 +30,7 @@ type occurrence struct {
 type workspaceIndex struct {
 	occurrences []occurrence
 	definitions map[string]Location
+	references  map[string][]Location
 }
 
 // Engine owns one invalidatable workspace index.
@@ -71,6 +73,29 @@ func (e *Engine) Definition(
 	return nil, nil
 }
 
+// References returns all exact uses of the name at a byte offset.
+func (e *Engine) References(
+	ctx context.Context,
+	uri string,
+	offset int,
+	includeDeclaration bool,
+) ([]Location, error) {
+	index, err := e.load(ctx)
+	if err != nil { return nil, err }
+	for _, item := range index.occurrences {
+		if item.location.URI != uri || offset < item.location.Start ||
+			item.location.End <= offset { continue }
+		result := make([]Location, 0, len(index.references[item.key]))
+		definition, hasDefinition := index.definitions[item.key]
+		for _, location := range index.references[item.key] {
+			if !includeDeclaration && hasDefinition && location == definition { continue }
+			result = append(result, location)
+		}
+		return result, nil
+	}
+	return nil, nil
+}
+
 func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -84,6 +109,7 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 	index := &workspaceIndex{
 		occurrences: nil,
 		definitions: make(map[string]Location),
+		references: make(map[string][]Location),
 	}
 	for _, pkg := range packages {
 		select {
@@ -91,6 +117,7 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		default:
 		}
 		keys := newObjectKeys(pkg.Package)
+		ownerLocations := make(map[token.Pos]Location)
 		for _, source := range pkg.Sources {
 			fileURI, err := pathURI(source.Path)
 			if err != nil { return nil, err }
@@ -107,9 +134,15 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 				index.occurrences = append(index.occurrences, occurrence{
 					location: location, key: key,
 				})
+				index.references[key] = append(index.references[key], location)
+				ownerLocations[identifier.Start] = location
 				if definition { index.definitions[key] = location }
 				return true
 			})
+		}
+		for object, position := range pkg.Owners {
+			location, ok := ownerLocations[position]
+			if ok { index.definitions[keys.key(object)] = location }
 		}
 	}
 	e.index = index

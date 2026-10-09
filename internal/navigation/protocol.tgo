@@ -24,8 +24,9 @@ type Response struct {
 }
 
 type positionParams struct {
-	URI    string `json:"uri"`
-	Offset int    `json:"offset"`
+	URI                string `json:"uri"`
+	Offset             int    `json:"offset"`
+	IncludeDeclaration bool   `json:"includeDeclaration,omitempty"`
 }
 
 // Serve reads newline-delimited requests and writes matching responses.
@@ -43,11 +44,26 @@ func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Write
 		response := Response{ID: request.ID, Result: nil, Error: ""}
 		switch request.Method {
 		case "definition":
-			params := positionParams{URI: "", Offset: 0}
+			params := positionParams{
+				URI: "", Offset: 0, IncludeDeclaration: false,
+			}
 			if err := json.Unmarshal(request.Params, &params); err != nil {
 				response.Error = err.Error()
 			} else {
 				result, err := engine.Definition(ctx, params.URI, params.Offset)
+				response.Result = result
+				if err != nil { response.Error = err.Error() }
+			}
+		case "references":
+			params := positionParams{
+				URI: "", Offset: 0, IncludeDeclaration: false,
+			}
+			if err := json.Unmarshal(request.Params, &params); err != nil {
+				response.Error = err.Error()
+			} else {
+				result, err := engine.References(
+					ctx, params.URI, params.Offset, params.IncludeDeclaration,
+				)
 				response.Result = result
 				if err != nil { response.Error = err.Error() }
 			}

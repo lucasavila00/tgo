@@ -29,6 +29,7 @@ type AnalysisPackage struct {
 	Facts     *sourcefacts.Index
 	Files     *token.FileSet
 	Package   *types.Package
+	Owners    map[types.Object]token.Pos
 	NonNil    map[token.Pos]bool
 }
 
@@ -123,8 +124,102 @@ func analyzeUnit(unit *packageUnit) (*AnalysisPackage, error) {
 		Facts:     facts,
 		Files:     unit.fs,
 		Package:   unit.typed,
+		Owners:    analysisOwners(unit),
 		NonNil:    nonNil,
 	}, nil
+}
+
+// analysisOwners maps generated public objects to their TGo declarations.
+func analysisOwners(unit *packageUnit) map[types.Object]token.Pos {
+	owners := make(map[types.Object]token.Pos)
+	for _, source := range unit.Sources {
+		for _, declaration := range source.Tree.Declarations {
+			if enum, ok := syntax.EnumDeclarationOf(declaration); ok {
+				addEnumOwners(owners, unit.typed, enum)
+			}
+			if checked, ok := syntax.CheckedDeclarationOf(declaration); ok {
+				addCheckedOwners(owners, unit.typed, checked)
+			}
+		}
+	}
+	return owners
+}
+
+func addEnumOwners(
+	owners map[types.Object]token.Pos,
+	pkg *types.Package,
+	declaration *syntax.EnumDeclaration,
+) {
+	name := declaration.Name.Name
+	owner := declaration.Name.Start
+	scope := pkg.Scope()
+	addOwnedObject(owners, scope.Lookup(name+"Tag"), owner)
+	named := namedObject(scope.Lookup(name))
+	for _, method := range []string{
+		"Tag", "UnknownTag", "MarshalJSON", "MarshalJSONTo",
+		"UnmarshalJSON", "UnmarshalJSONFrom",
+	} {
+		addOwnedObject(owners, namedMethod(named, method), owner)
+	}
+	for _, variant := range declaration.Variants {
+		variantOwner := variant.Name.Start
+		addOwnedObject(owners, scope.Lookup(name+"Tag"+variant.Name.Name), variantOwner)
+		payload := namedObject(scope.Lookup(name + variant.Name.Name))
+		if payload != nil {
+			addOwnedObject(owners, payload.Obj(), variantOwner)
+		}
+		addOwnedObject(
+			owners, namedMethod(named, variant.Name.Name+"Payload"), variantOwner,
+		)
+		addOwnedObject(owners, namedMethod(payload, name), variantOwner)
+	}
+}
+
+func addCheckedOwners(
+	owners map[types.Object]token.Pos,
+	pkg *types.Package,
+	declaration *syntax.CheckedDeclaration,
+) {
+	owner := declaration.Name.Start
+	scope := pkg.Scope()
+	addOwnedObject(owners, scope.Lookup("New"+declaration.Name.Name), owner)
+	addOwnedObject(
+		owners,
+		namedMethod(namedObject(scope.Lookup(declaration.Name.Name)), "Value"),
+		owner,
+	)
+}
+
+func namedObject(object types.Object) *types.Named {
+	typeName, ok := object.(*types.TypeName)
+	if !ok {
+		return nil
+	}
+	named, _ := types.Unalias(typeName.Type()).(*types.Named)
+	return named
+}
+
+func namedMethod(named *types.Named, name string) *types.Func {
+	if named == nil {
+		return nil
+	}
+	for index := 0; index < named.NumMethods(); index++ {
+		method := named.Method(index)
+		if method.Name() == name {
+			return method
+		}
+	}
+	return nil
+}
+
+func addOwnedObject(
+	owners map[types.Object]token.Pos,
+	object types.Object,
+	owner token.Pos,
+) {
+	if object != nil {
+		owners[object] = owner
+	}
 }
 
 func analysisSources(
