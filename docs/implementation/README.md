@@ -59,3 +59,4 @@ Production source in this repository does not use `tgolint` suppression directiv
 target checks generated files, the syntax boundary, allocation budgets, Markdown, lint, and tests.
 
 The [Go printer port](go-printer-port.md) defines the staged formatter replacement.
+The [CFG source map](cfg-port.md) records the upstream control-flow graph sources.
