@@ -440,8 +440,6 @@ func (c %checker) blockEffectConditions(
 		}
 		condition, outcome := c.booleanEffectCondition(conditional.Cond, falseStops)
 		switch enumValue3 := outcome; enumValue3.Tag() {
-		case effectOutcomeTagZero:
-			panic("zero effectOutcome")
 		case effectOutcomeTagNever:
 			return nil, false, false
 		case effectOutcomeTagConditional:

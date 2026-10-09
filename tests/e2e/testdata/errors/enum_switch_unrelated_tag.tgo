@@ -8,8 +8,6 @@ const unrelated ETag = 1
 
 func use(value E) {
 	switch value.Tag() {
-	case ETagZero:
-		return
 	case unrelated:
 		return
 	default:

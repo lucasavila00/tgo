@@ -92,13 +92,12 @@ type MarkerRecord struct {
 	Name           string
 }
 
-// Account has Zero as its valid zero value.
+// Account requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type AccountTag uint8
 
 const (
-	AccountTagZero AccountTag = iota
-	AccountTagPersonal
+	AccountTagPersonal AccountTag = iota + 1
 	AccountTagBusiness
 )
 
@@ -108,16 +107,8 @@ type Account struct {
 	tgoBusiness AccountBusiness
 }
 
-// AccountZero constructs the Zero variant.
-type AccountZero struct{}
-
-func (AccountZero) Account() Account { return Account{} }
-
 // Tag returns the active tag.
 func (v Account) Tag() AccountTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Account) IsZero() bool { return v.tgoTag == AccountTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Account) UnknownTag() string {
@@ -159,8 +150,6 @@ func (v Account) BusinessPayload() AccountBusiness {
 }
 func (v Account) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case AccountTagZero:
-		return []byte("null"), nil
 	case AccountTagPersonal:
 		payload := v.PersonalPayload()
 		return __tgo_json.Marshal(struct {
@@ -176,17 +165,6 @@ func (v Account) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Account) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Account{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -220,13 +198,12 @@ func (v *Account) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// Notice has Zero as its valid zero value.
+// Notice requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type NoticeTag uint8
 
 const (
-	NoticeTagZero NoticeTag = iota
-	NoticeTagText
+	NoticeTagText NoticeTag = iota + 1
 )
 
 type Notice struct {
@@ -234,16 +211,8 @@ type Notice struct {
 	tgoText NoticeText
 }
 
-// NoticeZero constructs the Zero variant.
-type NoticeZero struct{}
-
-func (NoticeZero) Notice() Notice { return Notice{} }
-
 // Tag returns the active tag.
 func (v Notice) Tag() NoticeTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Notice) IsZero() bool { return v.tgoTag == NoticeTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Notice) UnknownTag() string {
@@ -268,8 +237,6 @@ func (v Notice) TextPayload() NoticeText {
 }
 func (v Notice) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case NoticeTagZero:
-		return []byte("null"), nil
 	case NoticeTagText:
 		payload := v.TextPayload()
 		return __tgo_json.Marshal(struct {
@@ -280,17 +247,6 @@ func (v Notice) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Notice) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Notice{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -317,13 +273,12 @@ func (v *Notice) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// Signal has Zero as its valid zero value.
+// Signal requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type SignalTag uint8
 
 const (
-	SignalTagZero SignalTag = iota
-	SignalTagOn
+	SignalTagOn SignalTag = iota + 1
 	SignalTagOff
 )
 
@@ -331,16 +286,8 @@ type Signal struct {
 	tgoTag SignalTag
 }
 
-// SignalZero constructs the Zero variant.
-type SignalZero struct{}
-
-func (SignalZero) Signal() Signal { return Signal{} }
-
 // Tag returns the active tag.
 func (v Signal) Tag() SignalTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Signal) IsZero() bool { return v.tgoTag == SignalTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Signal) UnknownTag() string {
@@ -378,8 +325,6 @@ func (v Signal) OffPayload() SignalOff {
 }
 func (v Signal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case SignalTagZero:
-		return []byte("null"), nil
 	case SignalTagOn:
 		payload := v.OnPayload()
 		return __tgo_json.Marshal(struct {
@@ -395,17 +340,6 @@ func (v Signal) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Signal) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Signal{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -477,8 +411,6 @@ func Business(company string, members []Account, tags map[string]string) Account
 
 func Label(account Account) string {
 	switch enumValue3 := account; enumValue3.Tag() {
-	case AccountTagZero:
-		panic("zero Account")
 	case AccountTagPersonal:
 		person := enumValue3.PersonalPayload()
 		return person.Name
@@ -492,8 +424,6 @@ func Label(account Account) string {
 
 func AliasLabel(account AccountAlias) string {
 	switch enumValue4 := account; enumValue4.Tag() {
-	case AccountTagZero:
-		panic("zero Account")
 	case AccountTagPersonal:
 		person := enumValue4.PersonalPayload()
 		return person.Name
@@ -507,8 +437,6 @@ func AliasLabel(account AccountAlias) string {
 
 func GenericLabel[T Accounts](account T) string {
 	switch account.Tag() {
-	case AccountTagZero:
-		panic("zero Account")
 	case AccountTagPersonal:
 		return account.PersonalPayload().Name
 	case AccountTagBusiness:
@@ -571,8 +499,6 @@ match:
 
 func FunctionTagSubject(account Account) string {
 	switch enumValue6 := func() Account { return account }(); enumValue6.Tag() {
-	case AccountTagZero:
-		panic("zero Account")
 	case AccountTagPersonal:
 		person := enumValue6.PersonalPayload()
 		return person.Name
@@ -586,8 +512,6 @@ func FunctionTagSubject(account Account) string {
 
 func LiteralTagSubject(name string) string {
 	switch enumValue7 := (AccountPersonal{Name: name}.Account()); enumValue7.Tag() {
-	case AccountTagZero:
-		panic("zero Account")
 	case AccountTagPersonal:
 		person := enumValue7.PersonalPayload()
 		return person.Name
@@ -601,8 +525,6 @@ func LiteralTagSubject(name string) string {
 
 func SignalName(signal Signal) string {
 	switch enumValue8 := signal; enumValue8.Tag() {
-	case SignalTagZero:
-		panic("zero Signal")
 	case SignalTagOn:
 		return "on"
 	case SignalTagOff:
@@ -614,8 +536,6 @@ func SignalName(signal Signal) string {
 
 func SignalState(signal Signal) string {
 	switch signal.Tag() {
-	case SignalTagZero:
-		panic("zero Signal")
 	case SignalTagOn, SignalTagOff:
 		return "known"
 	default:
@@ -625,8 +545,6 @@ func SignalState(signal Signal) string {
 
 func SignalStateOrInvalid(signal Signal) string {
 	switch signal.Tag() {
-	case SignalTagZero:
-		return "invalid"
 	case SignalTagOn, SignalTagOff:
 		return "known"
 	default:
@@ -653,8 +571,6 @@ func AliasAccount(name string) Account {
 func LabeledTagSwitch(account Account) string {
 Done:
 	switch enumValue9 := account; enumValue9.Tag() {
-	case AccountTagZero:
-		panic("zero Account")
 	case AccountTagPersonal:
 		break Done
 	case AccountTagBusiness:
@@ -667,8 +583,6 @@ Done:
 
 func NoticeLabels(notice Notice) map[string]string {
 	switch enumValue10 := notice; enumValue10.Tag() {
-	case NoticeTagZero:
-		panic("zero Notice")
 	case NoticeTagText:
 		text := enumValue10.TextPayload()
 		return text.Labels

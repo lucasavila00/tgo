@@ -23,8 +23,6 @@ func provenNilValue() nilValue { return nilValue.Nil{} }
 
 func isUnknownNilValue(value nilValue) bool {
 	switch enumValue21 := value; enumValue21.Tag() {
-	case nilValueTagZero:
-		panic("zero nilValue")
 	case nilValueTagUnknown:
 		return true
 	case nilValueTagNonNil:
@@ -38,8 +36,6 @@ func isUnknownNilValue(value nilValue) bool {
 
 func isNonNilValue(value nilValue) bool {
 	switch enumValue22 := value; enumValue22.Tag() {
-	case nilValueTagZero:
-		panic("zero nilValue")
 	case nilValueTagUnknown:
 		return false
 	case nilValueTagNonNil:
@@ -53,8 +49,6 @@ func isNonNilValue(value nilValue) bool {
 
 func isProvenNilValue(value nilValue) bool {
 	switch enumValue23 := value; enumValue23.Tag() {
-	case nilValueTagZero:
-		panic("zero nilValue")
 	case nilValueTagUnknown:
 		return false
 	case nilValueTagNonNil:
@@ -68,8 +62,6 @@ func isProvenNilValue(value nilValue) bool {
 
 func equalNilValue(left nilValue, right nilValue) bool {
 	switch enumValue24 := left; enumValue24.Tag() {
-	case nilValueTagZero:
-		panic("zero nilValue")
 	case nilValueTagUnknown:
 		return isUnknownNilValue(right)
 	case nilValueTagNonNil:

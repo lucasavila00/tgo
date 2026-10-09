@@ -496,8 +496,6 @@ func scalarLogicalOr(
 
 func scalarBoolean(value scalarValue) (bool, bool) {
 	switch enumValue7 := value; enumValue7.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		boolean := enumValue7.BooleanPayload()
 		return boolean.Value, true
@@ -514,8 +512,6 @@ func scalarBoolean(value scalarValue) (bool, bool) {
 
 func scalarInteger(value scalarValue) (int64, bool) {
 	switch enumValue8 := value; enumValue8.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		return 0, false
 	case scalarValueTagInteger:
@@ -532,8 +528,6 @@ func scalarInteger(value scalarValue) (int64, bool) {
 
 func scalarParameter(value scalarValue) (int, bool, bool) {
 	switch enumValue9 := value; enumValue9.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		return 0, false, false
 	case scalarValueTagInteger:
@@ -551,8 +545,6 @@ func scalarParameter(value scalarValue) (int, bool, bool) {
 
 func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
 	switch enumValue10 := value; enumValue10.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		boolean := enumValue10.BooleanPayload()
 		return scalarValue.Boolean{Value: !boolean.Value}, true
@@ -590,8 +582,6 @@ func scalarValuesEqual(left scalarValue, right scalarValue) bool {
 
 func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
 	switch enumValue11 := value; enumValue11.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		return 0, false, false
 	case scalarValueTagInteger:
@@ -608,8 +598,6 @@ func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
 
 func scalarIntegerParameter(value scalarValue) (int, bool) {
 	switch enumValue12 := value; enumValue12.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		return 0, false
 	case scalarValueTagInteger:

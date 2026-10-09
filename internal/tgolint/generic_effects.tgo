@@ -104,8 +104,6 @@ const (
 
 func effectConditionCode(kind effectKind) uint8 {
 	switch enumValue1 := kind; enumValue1.Tag() {
-	case effectKindTagZero:
-		panic("zero effectKind")
 	case effectKindTagBoolean:
 		return booleanConditionWire
 	case effectKindTagNonzero:
@@ -530,8 +528,6 @@ func (c %checker) collectMakeZeros(
 	}
 	condition, outcome := c.nonzeroEffectCondition(call.Args[1])
 	switch enumValue2 := outcome; enumValue2.Tag() {
-	case effectOutcomeTagZero:
-		panic("zero effectOutcome")
 	case effectOutcomeTagNever:
 		return
 	case effectOutcomeTagAlways:

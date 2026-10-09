@@ -6,13 +6,12 @@ package tgolint
 import __tgo_json "encoding/json"
 import __tgo_fmt "fmt"
 
-// model has Zero as its valid zero value.
+// model requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type modelTag uint8
 
 const (
-	modelTagZero modelTag = iota
-	modelTagChecked
+	modelTagChecked modelTag = iota + 1
 	modelTagEnum
 	modelTagMixed
 	modelTagParameter
@@ -24,16 +23,8 @@ type model struct {
 	tgoPayload interface{}
 }
 
-// modelZero constructs the Zero variant.
-type modelZero struct{}
-
-func (modelZero) model() model { return model{} }
-
 // Tag returns the active tag.
 func (v model) Tag() modelTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v model) IsZero() bool { return v.tgoTag == modelTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v model) UnknownTag() string {
@@ -106,8 +97,6 @@ func (v model) ParameterPayload() modelParameter {
 }
 func (v model) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case modelTagZero:
-		return []byte("null"), nil
 	case modelTagChecked:
 		payload := v.CheckedPayload()
 		return __tgo_json.Marshal(struct {
@@ -133,17 +122,6 @@ func (v model) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *model) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = model{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -236,8 +214,6 @@ func modelDescription(value *model) (string, string) {
 		return "", ""
 	}
 	switch enumValue13 := *value; enumValue13.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		checked := enumValue13.CheckedPayload()
 		return "checked", checked.Name
@@ -268,8 +244,6 @@ func modelPackage(value *model) string {
 		return ""
 	}
 	switch enumValue14 := *value; enumValue14.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		checked := enumValue14.CheckedPayload()
 		return checked.Package
@@ -290,8 +264,6 @@ func modelVariants(value *model) []string {
 		return nil
 	}
 	switch enumValue15 := *value; enumValue15.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return nil
 	case modelTagEnum:
@@ -311,8 +283,6 @@ func modelIsChecked(value *model) bool {
 		return false
 	}
 	switch enumValue16 := *value; enumValue16.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return true
 	case modelTagEnum:
@@ -331,8 +301,6 @@ func modelIsEnum(value *model) bool {
 		return false
 	}
 	switch enumValue17 := *value; enumValue17.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return false
 	case modelTagEnum:
@@ -351,8 +319,6 @@ func modelIsMixed(value *model) bool {
 		return false
 	}
 	switch enumValue18 := *value; enumValue18.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return false
 	case modelTagEnum:
@@ -389,8 +355,6 @@ func modelIsParameter(value *model) bool {
 		return false
 	}
 	switch enumValue19 := *value; enumValue19.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return false
 	case modelTagEnum:
@@ -410,8 +374,6 @@ func encodeModelFact(value *model) *modelWireFact {
 		return nil
 	}
 	switch enumValue20 := *value; enumValue20.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		checked := enumValue20.CheckedPayload()
 		return &modelWireFact{

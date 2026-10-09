@@ -16,13 +16,12 @@ import (
 	"golang.org/x/tools/go/cfg"
 )
 
-// effectOutcome has Zero as its valid zero value.
+// effectOutcome requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type effectOutcomeTag uint8
 
 const (
-	effectOutcomeTagZero effectOutcomeTag = iota
-	effectOutcomeTagUnknown
+	effectOutcomeTagUnknown effectOutcomeTag = iota + 1
 	effectOutcomeTagNever
 	effectOutcomeTagAlways
 	effectOutcomeTagConditional
@@ -32,16 +31,8 @@ type effectOutcome struct {
 	tgoTag effectOutcomeTag
 }
 
-// effectOutcomeZero constructs the Zero variant.
-type effectOutcomeZero struct{}
-
-func (effectOutcomeZero) effectOutcome() effectOutcome { return effectOutcome{} }
-
 // Tag returns the active tag.
 func (v effectOutcome) Tag() effectOutcomeTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v effectOutcome) IsZero() bool { return v.tgoTag == effectOutcomeTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v effectOutcome) UnknownTag() string {
@@ -109,8 +100,6 @@ func (v effectOutcome) ConditionalPayload() effectOutcomeConditional {
 }
 func (v effectOutcome) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case effectOutcomeTagZero:
-		return []byte("null"), nil
 	case effectOutcomeTagUnknown:
 		payload := v.UnknownPayload()
 		return __tgo_json.Marshal(struct {
@@ -136,17 +125,6 @@ func (v effectOutcome) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *effectOutcome) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = effectOutcome{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -621,8 +599,6 @@ func (c *checker) blockEffectConditions(
 		}
 		condition, outcome := c.booleanEffectCondition(conditional.Cond, falseStops)
 		switch enumValue3 := outcome; enumValue3.Tag() {
-		case effectOutcomeTagZero:
-			panic("zero effectOutcome")
 		case effectOutcomeTagNever:
 			return nil, false, false
 		case effectOutcomeTagConditional:

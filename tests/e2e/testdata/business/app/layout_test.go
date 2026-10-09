@@ -50,9 +50,9 @@ func TestBoxedEnumLayout(t *testing.T) {
 }
 
 func TestEnumPublicAPI(t *testing.T) {
-	zero := model.LargeZero{}.Large()
-	if !zero.IsZero() || zero.Tag() != model.LargeTagZero {
-		t.Fatal("zero constructor")
+	namedZero := model.NamedZeroZero{}.NamedZero()
+	if namedZero.Tag() != model.NamedZeroTagZero || namedZero.Tag() == 0 {
+		t.Fatal("declared Zero variant tag")
 	}
 	inline := model.EqualFirst{}.Equal().SecondPayload()
 	if inline != (model.EqualSecond{}) {

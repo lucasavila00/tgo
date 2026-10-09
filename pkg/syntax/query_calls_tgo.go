@@ -9,8 +9,6 @@ func StaticCallName(value *Expression) (string, bool) {
 		return "", false
 	}
 	switch enumValue19 := *value; enumValue19.Tag() {
-	case ExpressionTagZero:
-		panic("zero Expression")
 	case ExpressionTagIdentifier:
 		item := enumValue19.IdentifierPayload()
 		return item.Value.Name, true

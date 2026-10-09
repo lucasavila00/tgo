@@ -308,8 +308,6 @@ func sourceModelName(value *sourceModel) string {
 		return ""
 	}
 	switch item := *value; item.Tag() {
-	case sourceModelTagZero:
-		panic("zero sourceModel")
 	case sourceModelTagChecked:
 		return item.CheckedPayload().Name
 	case sourceModelTagEnum:
@@ -326,8 +324,6 @@ func sourceModelFact(value *sourceModel) *model {
 		return nil
 	}
 	switch item := *value; item.Tag() {
-	case sourceModelTagZero:
-		panic("zero sourceModel")
 	case sourceModelTagChecked:
 		return item.CheckedPayload().Fact
 	case sourceModelTagEnum:
@@ -381,8 +377,6 @@ func sourceShapeMatches(
 		return false
 	}
 	switch item := *source; item.Tag() {
-	case sourceModelTagZero:
-		panic("zero sourceModel")
 	case sourceModelTagStruct:
 		sourceStruct := item.StructPayload()
 		structure, ok := representation.(*ast.StructType)
@@ -432,10 +426,6 @@ func generatedEnumShape(
 	if !ok || !validGeneratedTagAPI(typ, tag, name, variants) {
 		return false
 	}
-	zero, ok := typeInPackage(typ, name+"Zero")
-	if !ok || !validEnumConstructor(typ, zero, name) {
-		return false
-	}
 	for _, variant := range variants {
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
@@ -455,12 +445,9 @@ func validGeneratedTagAPI(
 	variants []sourceVariant,
 ) bool {
 	tag := method(typ, "Tag")
-	isZero := method(typ, "IsZero")
 	unknown := method(typ, "UnknownTag")
 	if tag == nil || tag.Params().Len() != 0 || tag.Results().Len() != 1 ||
 		!types.Identical(tag.Results().At(0).Type(), tagType) ||
-		isZero == nil || isZero.Params().Len() != 0 || isZero.Results().Len() != 1 ||
-		!types.Identical(isZero.Results().At(0).Type(), types.Typ[types.Bool]) ||
 		unknown == nil || unknown.Params().Len() != 0 || unknown.Results().Len() != 1 ||
 		!types.Identical(unknown.Results().At(0).Type(), types.Typ[types.String]) {
 		return false
@@ -473,14 +460,14 @@ func validGeneratedTagAPI(
 	if !ok || named.Obj().Pkg() == nil {
 		return false
 	}
-	names := []string{name + "TagZero"}
+	names := []string(nil)
 	for _, variant := range variants {
 		names = append(names, name+"Tag"+variant.name)
 	}
 	for index, constantName := range names {
 		constant, ok := named.Obj().Pkg().Scope().Lookup(constantName).(*types.Const)
 		if !ok || !types.Identical(constant.Type(), tagType) ||
-			constant.Val().ExactString() != strconv.Itoa(index) {
+			constant.Val().ExactString() != strconv.Itoa(index+1) {
 			return false
 		}
 	}

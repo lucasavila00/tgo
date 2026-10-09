@@ -7,8 +7,6 @@ type Account enum {
 
 func label(account Account) string {
 	switch account.Tag() {
-	case AccountTagZero:
-		panic("zero Account")
 	case AccountTagPersonal:
 		fallthrough
 	case AccountTagBusiness:

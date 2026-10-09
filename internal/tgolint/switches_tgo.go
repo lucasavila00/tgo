@@ -49,7 +49,7 @@ func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
 	}
 	if labelsResolved {
 		var missing []string = nil
-		for tag := 0; tag <= len(modelVariants(model)); tag++ {
+		for tag := 1; tag <= len(modelVariants(model)); tag++ {
 			if !seen[tag] {
 				missing = append(missing, tagConstant(model, tag))
 			}
@@ -256,7 +256,7 @@ func (c *checker) caseTags(
 			continue
 		}
 		tag64, exact := constant.Int64Val(value)
-		if !exact || tag64 < 0 || tag64 > int64(len(modelVariants(model))) {
+		if !exact || tag64 < 1 || tag64 > int64(len(modelVariants(model))) {
 			c.pass.Reportf(expression.Pos(), "%s: case label must be a tag constant",
 				modelName(model))
 			resolved = false
@@ -317,7 +317,7 @@ func (c *checker) tagConstantExpression(
 	}
 	named, ok := types.Unalias(tagType).(*types.Named)
 	if ok && named.Obj().Pkg() == object.Pkg() {
-		for tag := 0; tag <= len(modelVariants(model)); tag++ {
+		for tag := 1; tag <= len(modelVariants(model)); tag++ {
 			if object.Name() == tagConstant(model, tag) {
 				return true
 			}
@@ -351,9 +351,6 @@ func (c *checker) tagConstantExpression(
 
 func tagConstant(model *model, tag int) string {
 	name := modelName(model) + "Tag"
-	if tag == 0 {
-		return name + "Zero"
-	}
 	return name + modelVariants(model)[tag-1]
 }
 

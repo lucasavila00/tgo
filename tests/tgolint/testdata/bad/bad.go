@@ -90,8 +90,6 @@ func InterfaceTag(event model.Event) model.EventTag {
 
 func Incomplete(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		fallthrough
 	case model.EventTagStopped:
@@ -106,8 +104,6 @@ func NamedResult() (event model.Event) {
 
 func EmptyDefault(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
@@ -119,8 +115,6 @@ func EmptyDefault(event model.Event) string {
 
 func EscapingDefault(event model.Event, escape bool) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
@@ -244,8 +238,6 @@ type Embedded struct {
 
 func ChangedReceiver(envelope Envelope) string {
 	switch envelope.Event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		envelope.Event = model.EventStopped{Reason: "changed"}.Event()
 		return envelope.Event.StartedPayload().ID
@@ -258,8 +250,6 @@ func ChangedReceiver(envelope Envelope) string {
 
 func WrongPromoted(embedded Embedded) string {
 	switch embedded.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return embedded.StoppedPayload().Reason
 	case model.EventTagStopped:
@@ -328,8 +318,6 @@ func GenericAssert[T Counts](value any) T {
 
 func GenericWrongAccessor[E Events](event E) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StoppedPayload().Reason
 	case model.EventTagStopped:
@@ -341,8 +329,6 @@ func GenericWrongAccessor[E Events](event E) string {
 
 func GotoDefault(event model.Event, escape bool) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
@@ -549,8 +535,6 @@ func PresenceAliasBefore(values map[string]model.Event, key string) model.Event 
 
 func PointerReceiver(event *model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
@@ -566,8 +550,6 @@ func mutateEvent(event *model.Event) {
 
 func AddressedReceiver(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		mutateEvent(&event)
 		return event.StartedPayload().ID
@@ -582,8 +564,6 @@ func AddressedReceiver(event model.Event) string {
 func AliasedReceiver(event model.Event) string {
 	pointer := &event
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		*pointer = model.EventStopped{}.Event()
 		return event.StartedPayload().ID
@@ -596,8 +576,6 @@ func AliasedReceiver(event model.Event) string {
 
 func DelayedClosure(event model.Event) func() string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return func() string { return event.StartedPayload().ID }
 	case model.EventTagStopped:
@@ -611,8 +589,6 @@ func useEventStarted(model.EventStarted) {}
 
 func DelayedDefer(event model.Event) {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		defer useEventStarted(event.StartedPayload())
 		return
@@ -626,8 +602,6 @@ func DelayedDefer(event model.Event) {
 
 func DelayedGo(event model.Event) {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		go useEventStarted(event.StartedPayload())
 		return
@@ -644,8 +618,6 @@ func CapturedReceiver(event model.Event) string {
 		event = model.EventStopped{}.Event()
 	}
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		mutate()
 		return event.StartedPayload().ID
@@ -666,8 +638,6 @@ func (event *MutableEmbedded) stop() {
 
 func PointerMethodMutation(event MutableEmbedded) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		event.stop()
 		return event.StartedPayload().ID
@@ -683,8 +653,6 @@ func OuterCapture(
 ) (func() string, func()) {
 	read := func() string {
 		switch event.Tag() {
-		case model.EventTagZero:
-			panic("zero Event")
 		case model.EventTagStarted:
 			return event.StartedPayload().ID
 		case model.EventTagStopped:
@@ -701,8 +669,6 @@ func OuterCapture(
 
 func ReceiverLoop(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		for range 2 {
 			_ = event.StartedPayload()
@@ -718,8 +684,6 @@ func ReceiverLoop(event model.Event) string {
 
 func ReceiverRange(event model.Event, events []model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		for _, event = range events {
 			_ = event.StartedPayload()
@@ -734,8 +698,6 @@ func ReceiverRange(event model.Event, events []model.Event) string {
 
 func ReceiverGoto(event model.Event, repeat bool) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 	again:
 		result := event.StartedPayload().ID
@@ -758,8 +720,6 @@ type PointerEmbedded struct {
 
 func PointerField(event PointerEmbedded) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
@@ -786,8 +746,6 @@ func NumericTag(event model.Event) string {
 
 func UnrelatedTag(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return "zero"
 	case unrelatedStarted:
 		return "started"
 	case model.EventTagStopped:
@@ -799,8 +757,6 @@ func UnrelatedTag(event model.Event) string {
 
 func MultiTagPayload(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return "zero"
 	case model.EventTagStarted, model.EventTagStopped:
 		return event.StartedPayload().ID
 	default:
@@ -810,8 +766,6 @@ func MultiTagPayload(event model.Event) string {
 
 func PayloadMethodValue(event model.Event) func() model.EventStarted {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return nil
 	case model.EventTagStarted:
 		return event.StartedPayload
 	case model.EventTagStopped:
@@ -823,8 +777,6 @@ func PayloadMethodValue(event model.Event) func() model.EventStarted {
 
 func MissingTag(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return "zero"
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	default:
@@ -834,8 +786,6 @@ func MissingTag(event model.Event) string {
 
 func WrongGoPayload(event model.Event) {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return
 	case model.EventTagStarted:
 		return
 	case model.EventTagStopped:
@@ -847,8 +797,6 @@ func WrongGoPayload(event model.Event) {
 
 func WrongDeferPayload(event model.Event) {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return
 	case model.EventTagStarted:
 		return
 	case model.EventTagStopped:

@@ -8,9 +8,6 @@ import (
 var benchmarkJSONData []byte
 
 func BenchmarkEnumJSONMarshal(b *testing.B) {
-	b.Run("zero", func(b *testing.B) {
-		benchmarkEnumJSONMarshal(b, JSONExternal{})
-	})
 	b.Run("external", func(b *testing.B) {
 		benchmarkEnumJSONMarshal(b,
 			JSONExternalCreated{ID: "a1"}.JSONExternal())
@@ -56,9 +53,6 @@ func BenchmarkEnumJSONUnmarshal(b *testing.B) {
 		data []byte
 		new  func() any
 	}{
-		{"zero", []byte(" \nnull\t"), func() any {
-			return new(JSONExternal)
-		}},
 		{"external", []byte(`{"created":{"account_id":"a1"}}`), func() any {
 			return new(JSONExternal)
 		}},

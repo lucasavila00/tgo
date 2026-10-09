@@ -30,8 +30,6 @@ func ReadInt(values <-chan int) (int, bool) {
 
 func Nested(account model.Account) string {
     switch enumValue2 := account; enumValue2.Tag() {
-    case model.AccountTagZero:
-	panic("zero Account")
     case model.AccountTagPersonal:
         person := enumValue2.PersonalPayload()
         return person.Name
@@ -41,8 +39,6 @@ func Nested(account model.Account) string {
             return company.Company
         }
         switch enumValue3 := company.Members[0]; enumValue3.Tag() {
-        case model.AccountTagZero:
-	panic("zero Account")
         case model.AccountTagPersonal:
             person := enumValue3.PersonalPayload()
             return person.Name

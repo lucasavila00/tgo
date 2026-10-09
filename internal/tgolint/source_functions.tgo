@@ -29,8 +29,6 @@ func sourceFunctionPosition(node *syntax.Node) (token.Pos, bool) {
 		return token.NoPos, false
 	}
 	switch enumValue35 := *node; enumValue35.Tag() {
-	case syntax.NodeTagZero:
-		panic("zero Node")
 	case syntax.NodeTagDeclaration:
 		value := enumValue35.DeclarationPayload()
 		return declarationFunctionPosition(value.Value)
@@ -65,8 +63,6 @@ case syntax.NodeTagIdentifier:
 // declarationFunctionPosition gets a named function position.
 func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
 	switch enumValue36 := *value; enumValue36.Tag() {
-	case syntax.DeclarationTagZero:
-		panic("zero Declaration")
 	case syntax.DeclarationTagFunction:
 		function := enumValue36.FunctionPayload()
 		return function.Value.Start, true
@@ -88,8 +84,6 @@ func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
 // expressionFunctionPosition gets a function literal position.
 func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
 	switch enumValue37 := *value; enumValue37.Tag() {
-	case syntax.ExpressionTagZero:
-		panic("zero Expression")
 	case syntax.ExpressionTagFunctionLiteral:
 		function := enumValue37.FunctionLiteralPayload()
 		return function.Value.Start, true
@@ -153,8 +147,6 @@ func sourceGeneralDeclaration(
 	value *syntax.Declaration,
 ) (*syntax.GeneralDeclaration, bool) {
 	switch enumValue38 := *value; enumValue38.Tag() {
-	case syntax.DeclarationTagZero:
-		panic("zero Declaration")
 	case syntax.DeclarationTagGeneral:
 		declaration := enumValue38.GeneralPayload()
 		return declaration.Value, true
@@ -178,8 +170,6 @@ func sourceValueSpecification(
 	value *syntax.Specification,
 ) (*syntax.ValueSpecification, bool) {
 	switch enumValue39 := *value; enumValue39.Tag() {
-	case syntax.SpecificationTagZero:
-		panic("zero Specification")
 	case syntax.SpecificationTagValue:
 		specification := enumValue39.ValuePayload()
 		return specification.Value, true

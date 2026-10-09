@@ -31,13 +31,12 @@ type zeroParameter struct {
 	index    int
 }
 
-// effectKind has Zero as its valid zero value.
+// effectKind requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type effectKindTag uint8
 
 const (
-	effectKindTagZero effectKindTag = iota
-	effectKindTagBoolean
+	effectKindTagBoolean effectKindTag = iota + 1
 	effectKindTagNonzero
 	effectKindTagNonempty
 	effectKindTagMapMiss
@@ -50,16 +49,8 @@ type effectKind struct {
 	tgoTag effectKindTag
 }
 
-// effectKindZero constructs the Zero variant.
-type effectKindZero struct{}
-
-func (effectKindZero) effectKind() effectKind { return effectKind{} }
-
 // Tag returns the active tag.
 func (v effectKind) Tag() effectKindTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v effectKind) IsZero() bool { return v.tgoTag == effectKindTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v effectKind) UnknownTag() string {
@@ -172,8 +163,6 @@ func (v effectKind) ResliceExtendsPayload() effectKindResliceExtends {
 }
 func (v effectKind) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case effectKindTagZero:
-		return []byte("null"), nil
 	case effectKindTagBoolean:
 		payload := v.BooleanPayload()
 		return __tgo_json.Marshal(struct {
@@ -214,17 +203,6 @@ func (v effectKind) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *effectKind) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = effectKind{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -365,8 +343,6 @@ const (
 
 func effectConditionCode(kind effectKind) uint8 {
 	switch enumValue1 := kind; enumValue1.Tag() {
-	case effectKindTagZero:
-		panic("zero effectKind")
 	case effectKindTagBoolean:
 		return booleanConditionWire
 	case effectKindTagNonzero:
@@ -799,8 +775,6 @@ func (c *checker) collectMakeZeros(
 	}
 	condition, outcome := c.nonzeroEffectCondition(call.Args[1])
 	switch enumValue2 := outcome; enumValue2.Tag() {
-	case effectOutcomeTagZero:
-		panic("zero effectOutcome")
 	case effectOutcomeTagNever:
 		return
 	case effectOutcomeTagAlways:

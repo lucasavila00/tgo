@@ -23,7 +23,7 @@ func (p *packageUnit) zero(t types.Type, seen map[types.Type]bool) bool {
 		return true
 	}
 	seen[t] = true
-	if model := p.modelForType(t); model != nil && model.Predicate != "" {
+	if model := p.modelForType(t); model != nil && model.requiresConstructor() {
 		return false
 	}
 	switch x := t.(type) {

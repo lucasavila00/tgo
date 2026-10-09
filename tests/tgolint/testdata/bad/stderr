@@ -1,44 +1,61 @@
-bad/bad.go:96:3: Event: fallthrough is not allowed in a tag switch
+bad/bad.go:94:3: Event: fallthrough is not allowed in a tag switch
 bad/bad.go:92:2: Event: switch must have a default clause
-bad/bad.go:108:2: Event: default must be exactly "panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag"
-bad/bad.go:121:2: Event: default must be exactly "panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag"
-bad/bad.go:264:10: Event: StoppedPayload called under case EventTagStarted
-bad/bad.go:334:10: Event: StoppedPayload called under case EventTagStarted
-bad/bad.go:343:2: Event: default must be exactly "panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag"
-bad/bad.go:776:7: Event: case label must be a tag constant
-bad/bad.go:791:7: Event: case label must be a tag constant
-bad/bad.go:805:10: Event: StartedPayload called under a multi-tag case
-bad/bad.go:825:2: Event: switch is missing cases: EventTagStopped
-bad/bad.go:842:22: Event: StartedPayload called under case EventTagStopped
-bad/bad.go:855:25: Event: StartedPayload called under case EventTagStopped
+bad/bad.go:106:2: Event: default must be exactly "panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag"
+bad/bad.go:117:2: Event: default must be exactly "panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag"
+bad/bad.go:254:10: Event: StoppedPayload called under case EventTagStarted
+bad/bad.go:322:10: Event: StoppedPayload called under case EventTagStarted
+bad/bad.go:331:2: Event: default must be exactly "panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag"
+bad/bad.go:736:7: Event: case label must be a tag constant
+bad/bad.go:749:7: Event: case label must be a tag constant
+bad/bad.go:761:10: Event: StartedPayload called under a multi-tag case
+bad/bad.go:779:2: Event: switch is missing cases: EventTagStopped
+bad/bad.go:792:22: Event: StartedPayload called under case EventTagStopped
+bad/bad.go:803:25: Event: StartedPayload called under case EventTagStopped
+bad/bad.go:35:5: zero declaration contains invalid tgo enum Event; construct it first
 bad/bad.go:45:17: cannot define a new Go type from tgo enum Event; use an alias
 bad/bad.go:48:6: cannot construct tgo enum Event with a Go literal
+bad/bad.go:49:6: field Event defaults to invalid tgo enum Event; supply it
 bad/bad.go:50:6: new creates invalid tgo checked Count
-bad/bad.go:138:5: error for tgo checked Count result must not be discarded
-bad/bad.go:142:2: tgo checked Count result error must be checked or returned
+bad/bad.go:51:6: make creates invalid tgo enum Event values; use length zero
+bad/bad.go:52:6: map read can return invalid tgo enum Event; use comma-ok
+bad/bad.go:53:6: reslice can expose invalid tgo enum Event values; keep the current length
+bad/bad.go:101:21: named result contains invalid tgo enum Event zero; use an unnamed result
+bad/bad.go:132:5: error for tgo checked Count result must not be discarded
+bad/bad.go:136:2: tgo checked Count result error must be checked or returned
+bad/bad.go:144:9: error for tgo checked Count result must not be discarded
 bad/bad.go:150:9: error for tgo checked Count result must not be discarded
-bad/bad.go:156:9: error for tgo checked Count result must not be discarded
-bad/bad.go:197:9: tgo checked Count value is used before its error is proved nil
-bad/bad.go:202:15: tgo checked Count value is used before its error is proved nil
-bad/bad.go:214:10: tgo checked Count value is used before its error is proved nil
-bad/bad.go:222:10: tgo checked Count value is used before its error is proved nil
-bad/bad.go:232:10: tgo checked Count value is used before its error is proved nil
-bad/bad.go:297:6: zero declaration contains invalid tgo checked Count; construct it first
-bad/bad.go:301:32: named result contains invalid tgo checked Count zero; use an unnamed result
-bad/bad.go:306:9: new creates invalid tgo checked Count
-bad/bad.go:310:9: make creates invalid tgo checked Count values; use length zero
-bad/bad.go:314:2: clear creates invalid tgo checked Count values
-bad/bad.go:318:9: map read can return invalid tgo checked Count; use comma-ok
-bad/bad.go:322:9: read can return invalid tgo checked Count; use comma-ok
-bad/bad.go:412:9: tgo checked Count value is used before its error is proved nil
-bad/bad.go:425:9: tgo checked Count value is used before its error is proved nil
-bad/bad.go:437:3: fallthrough moves tgo checked Count before its error is proved nil
-bad/bad.go:439:10: tgo checked Count value is used before its error is proved nil
-bad/bad.go:454:9: tgo checked Count value is used before its error is proved nil
-bad/bad.go:459:2: goto moves tgo checked Count before its error is proved nil
-bad/bad.go:478:3: goto moves tgo checked Count before its error is proved nil
-bad/bad.go:487:3: break moves tgo checked Count before its error is proved nil
-bad/bad.go:501:3: continue moves tgo checked Count before its error is proved nil
-bad/bad.go:506:9: tgo checked Count value is used before its error is proved nil
-bad/bad.go:522:2: tgo checked Count result variables must not have aliases
-bad/bad.go:534:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:159:9: error for tgo enum Event result must not be discarded
+bad/bad.go:164:2: tgo enum Event result variables must be local to this function
+bad/bad.go:171:2: tgo enum Event presence variables must be local to this function
+bad/bad.go:181:3: tgo enum Event result variables must be local to this function
+bad/bad.go:191:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:196:15: tgo checked Count value is used before its error is proved nil
+bad/bad.go:208:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:216:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:226:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:287:6: zero declaration contains invalid tgo checked Count; construct it first
+bad/bad.go:291:32: named result contains invalid tgo checked Count zero; use an unnamed result
+bad/bad.go:296:9: new creates invalid tgo checked Count
+bad/bad.go:300:9: make creates invalid tgo checked Count values; use length zero
+bad/bad.go:304:2: clear creates invalid tgo checked Count values
+bad/bad.go:308:9: map read can return invalid tgo checked Count; use comma-ok
+bad/bad.go:312:9: read can return invalid tgo checked Count; use comma-ok
+bad/bad.go:347:9: ok result for tgo enum Event presence read must not be discarded
+bad/bad.go:353:12: tgo enum Event presence value is used before ok is proved true
+bad/bad.go:362:6: tgo enum Event presence value is used before ok is proved true
+bad/bad.go:371:12: tgo enum Event presence value is used before ok is proved true
+bad/bad.go:384:9: ok result for tgo enum Event presence read must not be discarded
+bad/bad.go:398:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:411:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:423:3: fallthrough moves tgo checked Count before its error is proved nil
+bad/bad.go:425:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:440:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:445:2: goto moves tgo checked Count before its error is proved nil
+bad/bad.go:464:3: goto moves tgo checked Count before its error is proved nil
+bad/bad.go:473:3: break moves tgo checked Count before its error is proved nil
+bad/bad.go:487:3: continue moves tgo checked Count before its error is proved nil
+bad/bad.go:492:9: tgo checked Count value is used before its error is proved nil
+bad/bad.go:502:9: tgo enum Event presence value is used before ok is proved true
+bad/bad.go:508:2: tgo checked Count result variables must not have aliases
+bad/bad.go:520:10: tgo checked Count value is used before its error is proved nil
+bad/bad.go:528:2: tgo enum Event presence variables must not have aliases

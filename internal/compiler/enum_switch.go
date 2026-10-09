@@ -68,7 +68,7 @@ func (p *packageUnit) checkEnumSwitch(
 	}
 	if labelsResolved {
 		var missing []string
-		for tag := 0; tag <= len(model.Variants); tag++ {
+		for tag := 1; tag <= len(model.Variants); tag++ {
 			if !seen[tag] {
 				missing = append(missing, enumTagConstant(model, tag))
 			}
@@ -151,7 +151,7 @@ func (p *packageUnit) enumCaseTags(
 			continue
 		}
 		tag64, exact := constant.Int64Val(value)
-		if !exact || tag64 < 0 || tag64 > int64(len(model.Variants)) {
+		if !exact || tag64 < 1 || tag64 > int64(len(model.Variants)) {
 			p.fail(expression, "%s: case label must be a tag constant", model.Name)
 			resolved = false
 			continue
@@ -220,7 +220,7 @@ func (p *packageUnit) enumTagConstantExpression(
 	}
 	named, ok := types.Unalias(tagType).(*types.Named)
 	if ok && named.Obj().Pkg() == object.Pkg() {
-		for tag := 0; tag <= len(model.Variants); tag++ {
+		for tag := 1; tag <= len(model.Variants); tag++ {
 			if object.Name() == enumTagConstant(model, tag) {
 				return true
 			}
@@ -253,9 +253,6 @@ func (p *packageUnit) enumTagConstantExpression(
 }
 
 func enumTagConstant(model *model, tag int) string {
-	if tag == 0 {
-		return model.Name + "TagZero"
-	}
 	return model.Name + "Tag" + model.Variants[tag-1].Name
 }
 

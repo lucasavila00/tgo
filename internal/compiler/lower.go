@@ -33,7 +33,6 @@ func generatedNames(models []*model) map[string]bool {
 	for _, model := range models {
 		if len(model.Variants) > 0 {
 			names[model.Name+"Tag"] = true
-			names[model.Name+"Zero"] = true
 			for _, variant := range model.Variants {
 				names[model.Name+variant.Name] = true
 			}
@@ -124,9 +123,6 @@ func generatedEnumMethod(receiver, method string, model *model) bool {
 	if len(model.Variants) == 0 {
 		return false
 	}
-	if method == model.Name && receiver == model.Name+"Zero" {
-		return true
-	}
 	for _, variant := range model.Variants {
 		if method == model.Name && receiver == model.Name+variant.Name {
 			return true
@@ -135,7 +131,7 @@ func generatedEnumMethod(receiver, method string, model *model) bool {
 	if receiver != model.Name {
 		return false
 	}
-	if method == "Tag" || method == "IsZero" || method == "UnknownTag" {
+	if method == "Tag" || method == "UnknownTag" {
 		return true
 	}
 	for _, variant := range model.Variants {

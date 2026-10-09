@@ -15,13 +15,12 @@ import (
 	"golang.org/x/tools/go/cfg"
 )
 
-// scalarValue has Zero as its valid zero value.
+// scalarValue requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type scalarValueTag uint8
 
 const (
-	scalarValueTagZero scalarValueTag = iota
-	scalarValueTagBoolean
+	scalarValueTagBoolean scalarValueTag = iota + 1
 	scalarValueTagInteger
 	scalarValueTagBooleanParameter
 	scalarValueTagIntegerParameter
@@ -35,16 +34,8 @@ type scalarValue struct {
 	tgoIntegerParameter scalarValueIntegerParameter
 }
 
-// scalarValueZero constructs the Zero variant.
-type scalarValueZero struct{}
-
-func (scalarValueZero) scalarValue() scalarValue { return scalarValue{} }
-
 // Tag returns the active tag.
 func (v scalarValue) Tag() scalarValueTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v scalarValue) IsZero() bool { return v.tgoTag == scalarValueTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v scalarValue) UnknownTag() string {
@@ -117,8 +108,6 @@ func (v scalarValue) IntegerParameterPayload() scalarValueIntegerParameter {
 }
 func (v scalarValue) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case scalarValueTagZero:
-		return []byte("null"), nil
 	case scalarValueTagBoolean:
 		payload := v.BooleanPayload()
 		return __tgo_json.Marshal(struct {
@@ -144,17 +133,6 @@ func (v scalarValue) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *scalarValue) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = scalarValue{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -682,8 +660,6 @@ func scalarLogicalOr(
 
 func scalarBoolean(value scalarValue) (bool, bool) {
 	switch enumValue7 := value; enumValue7.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		boolean := enumValue7.BooleanPayload()
 		return boolean.Value, true
@@ -700,8 +676,6 @@ func scalarBoolean(value scalarValue) (bool, bool) {
 
 func scalarInteger(value scalarValue) (int64, bool) {
 	switch enumValue8 := value; enumValue8.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		return 0, false
 	case scalarValueTagInteger:
@@ -718,8 +692,6 @@ func scalarInteger(value scalarValue) (int64, bool) {
 
 func scalarParameter(value scalarValue) (int, bool, bool) {
 	switch enumValue9 := value; enumValue9.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		return 0, false, false
 	case scalarValueTagInteger:
@@ -737,8 +709,6 @@ func scalarParameter(value scalarValue) (int, bool, bool) {
 
 func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
 	switch enumValue10 := value; enumValue10.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		boolean := enumValue10.BooleanPayload()
 		return scalarValueBoolean{Value: !boolean.Value}.scalarValue(), true
@@ -776,8 +746,6 @@ func scalarValuesEqual(left scalarValue, right scalarValue) bool {
 
 func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
 	switch enumValue11 := value; enumValue11.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		return 0, false, false
 	case scalarValueTagInteger:
@@ -794,8 +762,6 @@ func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
 
 func scalarIntegerParameter(value scalarValue) (int, bool) {
 	switch enumValue12 := value; enumValue12.Tag() {
-	case scalarValueTagZero:
-		panic("zero scalarValue")
 	case scalarValueTagBoolean:
 		return 0, false
 	case scalarValueTagInteger:

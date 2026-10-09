@@ -10,3 +10,8 @@ type Equal enum {
 	First struct { Data [40]byte }
 	Second struct { Data [40]byte }
 }
+
+type NamedZero enum {
+	Zero struct{}
+	Other struct{}
+}

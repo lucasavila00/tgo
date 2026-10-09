@@ -24,7 +24,7 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 		return nil, false
 	}
 	seen[typ] = true
-	if model := c.modelFor(typ); modelIsChecked(model) {
+	if model := c.modelFor(typ); model != nil {
 		return model, true
 	}
 	switch typ := typ.(type) {

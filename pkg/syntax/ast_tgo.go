@@ -59,13 +59,12 @@ type FieldList struct {
 }
 
 // ChannelDirection is a channel type direction.
-// ChannelDirection has Zero as its valid zero value.
+// ChannelDirection requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type ChannelDirectionTag uint8
 
 const (
-	ChannelDirectionTagZero ChannelDirectionTag = iota
-	ChannelDirectionTagSendReceive
+	ChannelDirectionTagSendReceive ChannelDirectionTag = iota + 1
 	ChannelDirectionTagSendOnly
 	ChannelDirectionTagReceiveOnly
 )
@@ -74,16 +73,8 @@ type ChannelDirection struct {
 	tgoTag ChannelDirectionTag
 }
 
-// ChannelDirectionZero constructs the Zero variant.
-type ChannelDirectionZero struct{}
-
-func (ChannelDirectionZero) ChannelDirection() ChannelDirection { return ChannelDirection{} }
-
 // Tag returns the active tag.
 func (v ChannelDirection) Tag() ChannelDirectionTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v ChannelDirection) IsZero() bool { return v.tgoTag == ChannelDirectionTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v ChannelDirection) UnknownTag() string {
@@ -136,8 +127,6 @@ func (v ChannelDirection) ReceiveOnlyPayload() ChannelDirectionReceiveOnly {
 }
 func (v ChannelDirection) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case ChannelDirectionTagZero:
-		return []byte("null"), nil
 	case ChannelDirectionTagSendReceive:
 		payload := v.SendReceivePayload()
 		return __tgo_json.Marshal(struct {
@@ -158,17 +147,6 @@ func (v ChannelDirection) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = ChannelDirection{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -210,13 +188,12 @@ func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 }
 
 // Expression contains every Go expression and type form plus TGo expressions.
-// Expression has Zero as its valid zero value.
+// Expression requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type ExpressionTag uint8
 
 const (
-	ExpressionTagZero ExpressionTag = iota
-	ExpressionTagBad
+	ExpressionTagBad ExpressionTag = iota + 1
 	ExpressionTagIdentifier
 	ExpressionTagEllipsis
 	ExpressionTagBasicLiteral
@@ -256,16 +233,8 @@ type Expression struct {
 	tgoPayload       interface{}
 }
 
-// ExpressionZero constructs the Zero variant.
-type ExpressionZero struct{}
-
-func (ExpressionZero) Expression() Expression { return Expression{} }
-
 // Tag returns the active tag.
 func (v Expression) Tag() ExpressionTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Expression) IsZero() bool { return v.tgoTag == ExpressionTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Expression) UnknownTag() string {
@@ -689,8 +658,6 @@ func (v Expression) PropagationPayload() ExpressionPropagation {
 }
 func (v Expression) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case ExpressionTagZero:
-		return []byte("null"), nil
 	case ExpressionTagBad:
 		payload := v.BadPayload()
 		return __tgo_json.Marshal(struct {
@@ -826,17 +793,6 @@ func (v Expression) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Expression) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Expression{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -1273,13 +1229,12 @@ type PropagationExpression struct {
 }
 
 // Statement contains every Go statement form.
-// Statement has Zero as its valid zero value.
+// Statement requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type StatementTag uint8
 
 const (
-	StatementTagZero StatementTag = iota
-	StatementTagBad
+	StatementTagBad StatementTag = iota + 1
 	StatementTagDeclaration
 	StatementTagEmpty
 	StatementTagLabeled
@@ -1314,16 +1269,8 @@ type Statement struct {
 	tgoPayload       interface{}
 }
 
-// StatementZero constructs the Zero variant.
-type StatementZero struct{}
-
-func (StatementZero) Statement() Statement { return Statement{} }
-
 // Tag returns the active tag.
 func (v Statement) Tag() StatementTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Statement) IsZero() bool { return v.tgoTag == StatementTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Statement) UnknownTag() string {
@@ -1667,8 +1614,6 @@ func (v Statement) RangePayload() StatementRange {
 }
 func (v Statement) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case StatementTagZero:
-		return []byte("null"), nil
 	case StatementTagBad:
 		payload := v.BadPayload()
 		return __tgo_json.Marshal(struct {
@@ -1779,17 +1724,6 @@ func (v Statement) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Statement) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Statement{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -2150,13 +2084,12 @@ type RangeStatement struct {
 }
 
 // Specification contains every Go declaration specification.
-// Specification has Zero as its valid zero value.
+// Specification requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type SpecificationTag uint8
 
 const (
-	SpecificationTagZero SpecificationTag = iota
-	SpecificationTagImport
+	SpecificationTagImport SpecificationTag = iota + 1
 	SpecificationTagValue
 	SpecificationTagType
 )
@@ -2168,16 +2101,8 @@ type Specification struct {
 	tgoType   SpecificationType
 }
 
-// SpecificationZero constructs the Zero variant.
-type SpecificationZero struct{}
-
-func (SpecificationZero) Specification() Specification { return Specification{} }
-
 // Tag returns the active tag.
 func (v Specification) Tag() SpecificationTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Specification) IsZero() bool { return v.tgoTag == SpecificationTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Specification) UnknownTag() string {
@@ -2233,8 +2158,6 @@ func (v Specification) TypePayload() SpecificationType {
 }
 func (v Specification) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case SpecificationTagZero:
-		return []byte("null"), nil
 	case SpecificationTagImport:
 		payload := v.ImportPayload()
 		return __tgo_json.Marshal(struct {
@@ -2255,17 +2178,6 @@ func (v Specification) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Specification) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Specification{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -2341,13 +2253,12 @@ type TypeSpecification struct {
 }
 
 // Declaration contains every Go declaration plus TGo declarations.
-// Declaration has Zero as its valid zero value.
+// Declaration requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type DeclarationTag uint8
 
 const (
-	DeclarationTagZero DeclarationTag = iota
-	DeclarationTagBad
+	DeclarationTagBad DeclarationTag = iota + 1
 	DeclarationTagGeneral
 	DeclarationTagFunction
 	DeclarationTagEnum
@@ -2365,16 +2276,8 @@ type Declaration struct {
 	tgoChecked  DeclarationChecked
 }
 
-// DeclarationZero constructs the Zero variant.
-type DeclarationZero struct{}
-
-func (DeclarationZero) Declaration() Declaration { return Declaration{} }
-
 // Tag returns the active tag.
 func (v Declaration) Tag() DeclarationTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Declaration) IsZero() bool { return v.tgoTag == DeclarationTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Declaration) UnknownTag() string {
@@ -2478,8 +2381,6 @@ func (v Declaration) CheckedPayload() DeclarationChecked {
 }
 func (v Declaration) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case DeclarationTagZero:
-		return []byte("null"), nil
 	case DeclarationTagBad:
 		payload := v.BadPayload()
 		return __tgo_json.Marshal(struct {
@@ -2515,17 +2416,6 @@ func (v Declaration) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Declaration) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Declaration{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -2702,13 +2592,12 @@ type File struct {
 }
 
 // Node contains every public TGo syntax node category.
-// Node has Zero as its valid zero value.
+// Node requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type NodeTag uint8
 
 const (
-	NodeTagZero NodeTag = iota
-	NodeTagFile
+	NodeTagFile NodeTag = iota + 1
 	NodeTagDeclaration
 	NodeTagSpecification
 	NodeTagStatement
@@ -2734,16 +2623,8 @@ type Node struct {
 	tgoPayload      interface{}
 }
 
-// NodeZero constructs the Zero variant.
-type NodeZero struct{}
-
-func (NodeZero) Node() Node { return Node{} }
-
 // Tag returns the active tag.
 func (v Node) Tag() NodeTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Node) IsZero() bool { return v.tgoTag == NodeTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Node) UnknownTag() string {
@@ -2943,8 +2824,6 @@ func (v Node) CommentGroupPayload() NodeCommentGroup {
 }
 func (v Node) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case NodeTagZero:
-		return []byte("null"), nil
 	case NodeTagFile:
 		payload := v.FilePayload()
 		return __tgo_json.Marshal(struct {
@@ -3010,17 +2889,6 @@ func (v Node) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Node) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Node{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage

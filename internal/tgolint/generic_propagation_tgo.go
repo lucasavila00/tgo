@@ -259,8 +259,6 @@ func (c *checker) mappedScalarEffectCondition(
 
 func isScalarEffectCondition(kind effectKind) bool {
 	switch enumValue6 := kind; enumValue6.Tag() {
-	case effectKindTagZero:
-		panic("zero effectKind")
 	case effectKindTagBoolean:
 		return true
 	case effectKindTagNonzero:

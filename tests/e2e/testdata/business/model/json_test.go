@@ -65,9 +65,9 @@ func TestEnumJSONDecodeFailureKeepsReceiver(t *testing.T) {
 		receiver any
 		inputs   []string
 	}{
-		{"external", &external, []string{`[]`, `0`, `{}`, `{"unknown":{}}`, `{"Empty":{},"created":{}}`, `{"created":[]}`, `{"created":{"account_id":1}}`, `{`}},
-		{"internal", &internal, []string{`[]`, `{}`, `{"type":"unknown"}`, `{"type":1}`, `{"type":null}`, `{"type":"created","account_id":1}`}},
-		{"adjacent", &adjacent, []string{`{}`, `{"type":"unknown","data":{}}`, `{"type":"created"}`, `{"type":1,"data":{}}`, `{"type":"created","data":[]}`, `{"type":"created","data":{"account_id":1}}`}},
+		{"external", &external, []string{`null`, `[]`, `0`, `{}`, `{"unknown":{}}`, `{"Empty":{},"created":{}}`, `{"created":[]}`, `{"created":{"account_id":1}}`, `{`}},
+		{"internal", &internal, []string{`null`, `[]`, `{}`, `{"type":"unknown"}`, `{"type":1}`, `{"type":null}`, `{"type":"created","account_id":1}`}},
+		{"adjacent", &adjacent, []string{`null`, `{}`, `{"type":"unknown","data":{}}`, `{"type":"created"}`, `{"type":1,"data":{}}`, `{"type":"created","data":[]}`, `{"type":"created","data":{"account_id":1}}`}},
 		{"untagged", &untagged, []string{`[]`, `0`, `{"value":[]}`}},
 	}
 	for _, test := range tests {
@@ -149,11 +149,12 @@ func TestEnumJSONCustomFields(t *testing.T) {
 }
 
 func TestEnumJSONInvalidTags(t *testing.T) {
-	for _, value := range []JSONExternal{{tgoTag: 255}} {
-		want := "JSONExternal: unknown tag 255 — tgolint proves every tag has a case, so this is unreachable"
-		if value.UnknownTag() != want {
-			t.Fatalf("UnknownTag = %q", value.UnknownTag())
-		}
+	zero := JSONExternal{}
+	want := "JSONExternal: unknown tag 0 — tgolint proves every tag has a case, so this is unreachable"
+	if zero.UnknownTag() != want {
+		t.Fatalf("UnknownTag = %q", zero.UnknownTag())
+	}
+	for _, value := range []JSONExternal{{}, {tgoTag: 255}} {
 		if _, err := json.Marshal(value); err == nil {
 			t.Fatal("invalid tag was accepted")
 		}
@@ -216,38 +217,8 @@ func TestEnumJSONNullPayloads(t *testing.T) {
 	if err := json.Unmarshal([]byte(`null`), &untagged); err != nil {
 		t.Fatal(err)
 	}
-	if !untagged.IsZero() {
-		t.Fatal("null did not select Zero")
-	}
-}
-
-func TestEnumJSONZero(t *testing.T) {
-	tests := []struct {
-		name     string
-		value    any
-		receiver any
-	}{
-		{"external", JSONExternal{}, new(JSONExternal)},
-		{"internal", JSONInternal{}, new(JSONInternal)},
-		{"adjacent", JSONAdjacent{}, new(JSONAdjacent)},
-		{"untagged", JSONUntagged{}, new(JSONUntagged)},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			data, err := json.Marshal(test.value)
-			if err != nil || string(data) != "null" {
-				t.Fatalf("marshal Zero = %q, %v", data, err)
-			}
-			for _, input := range []string{"null", " \nnull\t"} {
-				if err := json.Unmarshal([]byte(input), test.receiver); err != nil {
-					t.Fatalf("unmarshal %q: %v", input, err)
-				}
-				value := reflect.ValueOf(test.receiver).Elem().Interface()
-				if !reflect.DeepEqual(value, reflect.Zero(reflect.TypeOf(value)).Interface()) {
-					t.Fatalf("unmarshal %q = %#v", input, value)
-				}
-			}
-		})
+	if untagged.Tag() != JSONUntaggedTagNumber {
+		t.Fatal("null did not select the first payload decode")
 	}
 }
 

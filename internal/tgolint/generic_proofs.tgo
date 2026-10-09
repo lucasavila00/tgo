@@ -92,8 +92,6 @@ func (c %checker) reportGenericEffects(
 
 func effectOutcomeRank(outcome effectOutcome) int {
 	switch enumValue4 := outcome; enumValue4.Tag() {
-	case effectOutcomeTagZero:
-		panic("zero effectOutcome")
 	case effectOutcomeTagUnknown:
 		return 1
 	case effectOutcomeTagNever:
@@ -244,8 +242,6 @@ func (c %checker) compositeEffectCondition(
 ) (bool, bool) {
 	expression := call.Args[condition.ValueParameter]
 	switch enumValue5 := condition.Kind; enumValue5.Tag() {
-	case effectKindTagZero:
-		panic("zero effectKind")
 	case effectKindTagNonempty:
 		length, _, known := c.knownSliceBounds(expression)
 		return (length != 0) == condition.Expected, known

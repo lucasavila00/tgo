@@ -51,8 +51,6 @@ func modelDescription(value *model) (string, string) {
 		return "", ""
 	}
 	switch enumValue13 := *value; enumValue13.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		checked := enumValue13.CheckedPayload()
 		return "checked", checked.Name
@@ -83,8 +81,6 @@ func modelPackage(value *model) string {
 		return ""
 	}
 	switch enumValue14 := *value; enumValue14.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		checked := enumValue14.CheckedPayload()
 		return checked.Package
@@ -105,8 +101,6 @@ func modelVariants(value *model) []string {
 		return nil
 	}
 	switch enumValue15 := *value; enumValue15.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return nil
 	case modelTagEnum:
@@ -126,8 +120,6 @@ func modelIsChecked(value *model) bool {
 		return false
 	}
 	switch enumValue16 := *value; enumValue16.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return true
 	case modelTagEnum:
@@ -146,8 +138,6 @@ func modelIsEnum(value *model) bool {
 		return false
 	}
 	switch enumValue17 := *value; enumValue17.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return false
 	case modelTagEnum:
@@ -166,8 +156,6 @@ func modelIsMixed(value *model) bool {
 		return false
 	}
 	switch enumValue18 := *value; enumValue18.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return false
 	case modelTagEnum:
@@ -204,8 +192,6 @@ func modelIsParameter(value *model) bool {
 		return false
 	}
 	switch enumValue19 := *value; enumValue19.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		return false
 	case modelTagEnum:
@@ -225,8 +211,6 @@ func encodeModelFact(value *model) *modelWireFact {
 		return nil
 	}
 	switch enumValue20 := *value; enumValue20.Tag() {
-	case modelTagZero:
-		panic("zero model")
 	case modelTagChecked:
 		checked := enumValue20.CheckedPayload()
 		return &modelWireFact{

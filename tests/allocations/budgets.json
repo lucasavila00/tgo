@@ -2,7 +2,6 @@
   "directory": "tests/e2e/testdata/business",
   "package": "./model",
   "benchmarks": {
-    "BenchmarkEnumJSONMarshal/zero": {"bytes": 176, "allocations": 4},
     "BenchmarkEnumJSONMarshal/external": {"bytes": 320, "allocations": 6},
     "BenchmarkEnumJSONMarshal/internal": {"bytes": 344, "allocations": 7},
     "BenchmarkEnumJSONMarshal/adjacent": {"bytes": 352, "allocations": 6},
@@ -10,7 +9,6 @@
     "BenchmarkEnumJSONMarshal/escaped-external": {"bytes": 160, "allocations": 7},
     "BenchmarkEnumJSONMarshal/escaped-internal": {"bytes": 192, "allocations": 7},
     "BenchmarkEnumJSONMarshal/escaped-adjacent": {"bytes": 224, "allocations": 7},
-    "BenchmarkEnumJSONUnmarshal/zero": {"bytes": 0, "allocations": 0},
     "BenchmarkEnumJSONUnmarshal/external": {"bytes": 520, "allocations": 7},
     "BenchmarkEnumJSONUnmarshal/internal": {"bytes": 64, "allocations": 2},
     "BenchmarkEnumJSONUnmarshal/adjacent": {"bytes": 120, "allocations": 3},

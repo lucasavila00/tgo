@@ -52,8 +52,6 @@ type ValidationOpaqueNumberEnvelope struct {
 func Summary(name string) string {
 	account := model.AccountPersonal{Name: name}.Account()
 	switch enumValue1 := account; enumValue1.Tag() {
-	case model.AccountTagZero:
-		panic("zero Account")
 	case model.AccountTagPersonal:
 		person := enumValue1.PersonalPayload()
 		return fmt.Sprintf("person %s", person.Name)

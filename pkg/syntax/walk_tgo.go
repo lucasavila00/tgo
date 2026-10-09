@@ -117,8 +117,6 @@ func NodePosition(node *Node) token.Pos {
 		return token.NoPos
 	}
 	switch enumValue20 := *node; enumValue20.Tag() {
-	case NodeTagZero:
-		panic("zero Node")
 	case NodeTagFile:
 		value := enumValue20.FilePayload()
 		return value.Value.Start
@@ -166,8 +164,6 @@ func NodeEnd(node *Node) token.Pos {
 		return token.NoPos
 	}
 	switch enumValue21 := *node; enumValue21.Tag() {
-	case NodeTagZero:
-		panic("zero Node")
 	case NodeTagFile:
 		value := enumValue21.FilePayload()
 		return value.Value.Stop
@@ -215,8 +211,6 @@ func ExpressionPosition(value *Expression) token.Pos {
 		return token.NoPos
 	}
 	switch enumValue22 := *value; enumValue22.Tag() {
-	case ExpressionTagZero:
-		panic("zero Expression")
 	case ExpressionTagBad:
 		item := enumValue22.BadPayload()
 		return item.Value.Start
@@ -306,8 +300,6 @@ func ExpressionEnd(value *Expression) token.Pos {
 		return token.NoPos
 	}
 	switch enumValue23 := *value; enumValue23.Tag() {
-	case ExpressionTagZero:
-		panic("zero Expression")
 	case ExpressionTagBad:
 		item := enumValue23.BadPayload()
 		return item.Value.Stop
@@ -406,8 +398,6 @@ func statementSpan(value *Statement) Span {
 		return Span{Start: token.NoPos, Stop: token.NoPos}
 	}
 	switch enumValue24 := *value; enumValue24.Tag() {
-	case StatementTagZero:
-		panic("zero Statement")
 	case StatementTagBad:
 		item := enumValue24.BadPayload()
 		return item.Value.Span
@@ -491,8 +481,6 @@ func declarationSpan(value *Declaration) Span {
 		return Span{Start: token.NoPos, Stop: token.NoPos}
 	}
 	switch enumValue25 := *value; enumValue25.Tag() {
-	case DeclarationTagZero:
-		panic("zero Declaration")
 	case DeclarationTagBad:
 		item := enumValue25.BadPayload()
 		return item.Value.Span
@@ -531,8 +519,6 @@ func specificationSpan(value *Specification) Span {
 		return Span{Start: token.NoPos, Stop: token.NoPos}
 	}
 	switch enumValue26 := *value; enumValue26.Tag() {
-	case SpecificationTagZero:
-		panic("zero Specification")
 	case SpecificationTagImport:
 		item := enumValue26.ImportPayload()
 		return item.Value.Span

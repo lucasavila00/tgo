@@ -29,13 +29,12 @@ type Pair struct {
 	Right string `json:"pair"`
 }
 
-// Event has Zero as its valid zero value.
+// Event requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type EventTag uint8
 
 const (
-	EventTagZero EventTag = iota
-	EventTagStarted
+	EventTagStarted EventTag = iota + 1
 	EventTagStopped
 )
 
@@ -45,16 +44,8 @@ type Event struct {
 	tgoStopped EventStopped
 }
 
-// EventZero constructs the Zero variant.
-type EventZero struct{}
-
-func (EventZero) Event() Event { return Event{} }
-
 // Tag returns the active tag.
 func (v Event) Tag() EventTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Event) IsZero() bool { return v.tgoTag == EventTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Event) UnknownTag() string {
@@ -95,8 +86,6 @@ func (v Event) StoppedPayload() EventStopped {
 }
 func (v Event) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case EventTagZero:
-		return []byte("null"), nil
 	case EventTagStarted:
 		payload := v.StartedPayload()
 		return __tgo_json.Marshal(struct {
@@ -112,17 +101,6 @@ func (v Event) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Event) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Event{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -156,29 +134,20 @@ func (v *Event) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// Signal has Zero as its valid zero value.
+// Signal requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type SignalTag uint8
 
 const (
-	SignalTagZero SignalTag = iota
-	SignalTagOn
+	SignalTagOn SignalTag = iota + 1
 )
 
 type Signal struct {
 	tgoTag SignalTag
 }
 
-// SignalZero constructs the Zero variant.
-type SignalZero struct{}
-
-func (SignalZero) Signal() Signal { return Signal{} }
-
 // Tag returns the active tag.
 func (v Signal) Tag() SignalTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Signal) IsZero() bool { return v.tgoTag == SignalTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Signal) UnknownTag() string {
@@ -201,8 +170,6 @@ func (v Signal) OnPayload() SignalOn {
 }
 func (v Signal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case SignalTagZero:
-		return []byte("null"), nil
 	case SignalTagOn:
 		payload := v.OnPayload()
 		return __tgo_json.Marshal(struct {
@@ -213,17 +180,6 @@ func (v Signal) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Signal) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Signal{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage

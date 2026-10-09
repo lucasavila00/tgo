@@ -131,7 +131,6 @@ func emitEnumJSONMarshal(
 	name := declaration.Name
 	config := declaration.JSON
 	fmt.Fprintf(out, "func (v %s) MarshalJSON() ([]byte, error) {\nswitch v.tgoTag {\n", name)
-	fmt.Fprintf(out, "case %sTagZero:\nreturn []byte(\"null\"), nil\n", name)
 	for _, variant := range declaration.Variants {
 		fmt.Fprintf(out, "case %sTag%s:\npayload := v.%sPayload()\n",
 			name, variant.Name, variant.Name)
@@ -159,14 +158,6 @@ func emitEnumJSONUnmarshal(
 	config := declaration.JSON
 	q := strconv.Quote
 	fmt.Fprintf(out, "func (v *%s) UnmarshalJSON(data []byte) error {\n", name)
-	fmt.Fprintf(out, "start, end := 0, len(data)\n"+
-		"for start < end && (data[start] == ' ' || data[start] == '\\n' || "+
-		"data[start] == '\\r' || data[start] == '\\t') { start++ }\n"+
-		"for start < end && (data[end-1] == ' ' || data[end-1] == '\\n' || "+
-		"data[end-1] == '\\r' || data[end-1] == '\\t') { end-- }\n"+
-		"if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && "+
-		"data[start+2] == 'l' && data[start+3] == 'l' { *v = %s{}; return nil }\n",
-		name)
 	if config.Form == "untagged" {
 		for _, variant := range declaration.Variants {
 			fmt.Fprintf(out,

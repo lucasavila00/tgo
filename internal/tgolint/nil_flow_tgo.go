@@ -17,13 +17,12 @@ import (
 	"golang.org/x/tools/go/cfg"
 )
 
-// nilValue has Zero as its valid zero value.
+// nilValue requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type nilValueTag uint8
 
 const (
-	nilValueTagZero nilValueTag = iota
-	nilValueTagUnknown
+	nilValueTagUnknown nilValueTag = iota + 1
 	nilValueTagNonNil
 	nilValueTagNil
 )
@@ -32,16 +31,8 @@ type nilValue struct {
 	tgoTag nilValueTag
 }
 
-// nilValueZero constructs the Zero variant.
-type nilValueZero struct{}
-
-func (nilValueZero) nilValue() nilValue { return nilValue{} }
-
 // Tag returns the active tag.
 func (v nilValue) Tag() nilValueTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v nilValue) IsZero() bool { return v.tgoTag == nilValueTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v nilValue) UnknownTag() string {
@@ -94,8 +85,6 @@ func (v nilValue) NilPayload() nilValueNil {
 }
 func (v nilValue) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case nilValueTagZero:
-		return []byte("null"), nil
 	case nilValueTagUnknown:
 		payload := v.UnknownPayload()
 		return __tgo_json.Marshal(struct {
@@ -116,17 +105,6 @@ func (v nilValue) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *nilValue) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = nilValue{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -173,8 +151,6 @@ func provenNilValue() nilValue  { return nilValueNil{}.nilValue() }
 
 func isUnknownNilValue(value nilValue) bool {
 	switch enumValue21 := value; enumValue21.Tag() {
-	case nilValueTagZero:
-		panic("zero nilValue")
 	case nilValueTagUnknown:
 		return true
 	case nilValueTagNonNil:
@@ -188,8 +164,6 @@ func isUnknownNilValue(value nilValue) bool {
 
 func isNonNilValue(value nilValue) bool {
 	switch enumValue22 := value; enumValue22.Tag() {
-	case nilValueTagZero:
-		panic("zero nilValue")
 	case nilValueTagUnknown:
 		return false
 	case nilValueTagNonNil:
@@ -203,8 +177,6 @@ func isNonNilValue(value nilValue) bool {
 
 func isProvenNilValue(value nilValue) bool {
 	switch enumValue23 := value; enumValue23.Tag() {
-	case nilValueTagZero:
-		panic("zero nilValue")
 	case nilValueTagUnknown:
 		return false
 	case nilValueTagNonNil:
@@ -218,8 +190,6 @@ func isProvenNilValue(value nilValue) bool {
 
 func equalNilValue(left nilValue, right nilValue) bool {
 	switch enumValue24 := left; enumValue24.Tag() {
-	case nilValueTagZero:
-		panic("zero nilValue")
 	case nilValueTagUnknown:
 		return isUnknownNilValue(right)
 	case nilValueTagNonNil:

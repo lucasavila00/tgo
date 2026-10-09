@@ -15,8 +15,6 @@ func CrossPackageValidation(event model.Event) string {
 		return ""
 	}
 	switch value.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return value.StartedPayload().ID
 	case model.EventTagStopped:
@@ -45,8 +43,6 @@ func TrustAssertion(input any) (model.Event, error) {
 
 func Describe(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		started := event.StartedPayload()
 		return started.ID
@@ -60,8 +56,6 @@ func Describe(event model.Event) string {
 
 func DescribeOrInvalid(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return "invalid"
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
@@ -75,8 +69,6 @@ const eventStartedAlias = model.EventTagStarted
 
 func DescribeAlias(event model.Event) string {
 	switch event.Tag() {
-	case (model.EventTagZero):
-		return "zero"
 	case eventStartedAlias:
 		return event.StartedPayload().ID
 	case model.EventTag(model.EventTagStopped):
@@ -88,7 +80,7 @@ func DescribeAlias(event model.Event) string {
 
 func DescribeMultiTag(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero, model.EventTagStarted:
+	case model.EventTagStarted:
 		return "none"
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
@@ -99,12 +91,8 @@ func DescribeMultiTag(event model.Event) string {
 
 func DescribeNested(event model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return "zero"
 	case model.EventTagStarted:
 		switch event.Tag() {
-		case model.EventTagZero:
-			return "zero"
 		case model.EventTagStarted:
 			return event.StartedPayload().ID
 		case model.EventTagStopped:
@@ -121,8 +109,6 @@ func DescribeNested(event model.Event) string {
 
 func AssignedClause(event model.Event, replacement model.Event) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return "zero"
 	case model.EventTagStarted:
 		event = replacement
 		return event.StartedPayload().ID
@@ -135,8 +121,6 @@ func AssignedClause(event model.Event, replacement model.Event) string {
 
 func ClosureClause(event model.Event) func() string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return nil
 	case model.EventTagStarted:
 		return func() string { return event.StoppedPayload().Reason }
 	case model.EventTagStopped:
@@ -148,8 +132,6 @@ func ClosureClause(event model.Event) func() string {
 
 func PayloadMethod(event model.Event) func() model.EventStarted {
 	switch event.Tag() {
-	case model.EventTagZero:
-		return nil
 	case model.EventTagStarted:
 		return event.StartedPayload
 	case model.EventTagStopped:
@@ -198,8 +180,6 @@ type Embedded struct {
 
 func DescribeEnvelope(envelope Envelope) string {
 	switch envelope.Event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return envelope.Event.StartedPayload().ID
 	case model.EventTagStopped:
@@ -211,8 +191,6 @@ func DescribeEnvelope(envelope Envelope) string {
 
 func DescribeEmbedded(embedded Embedded) string {
 	switch embedded.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return embedded.StartedPayload().ID
 	case model.EventTagStopped:
@@ -422,8 +400,6 @@ func GenericMap[M CountMaps](values M, key string) (model.Count, bool) {
 
 func DescribeGeneric[E Events](event E) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
@@ -469,8 +445,6 @@ func PresenceWrapper(values map[string]model.Event, key string) string {
 	}
 	value = validated
 	switch value.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return value.StartedPayload().ID
 	case model.EventTagStopped:
@@ -489,8 +463,6 @@ func PresenceBoolean(values map[string]model.Event, key string, ready bool) stri
 		}
 		value = validated
 		switch value.Tag() {
-		case model.EventTagZero:
-			panic("zero Event")
 		case model.EventTagStarted:
 			return value.StartedPayload().ID
 		case model.EventTagStopped:
@@ -509,8 +481,6 @@ func DescribeSnapshot(event model.Event) string {
 	}
 	event = validated
 	switch snapshot := event; snapshot.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return snapshot.StartedPayload().ID
 	case model.EventTagStopped:
@@ -527,8 +497,6 @@ func DescribeWithInternalBreak(event model.Event) string {
 	}
 	event = validated
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:
@@ -545,8 +513,6 @@ func DescribeWithInternalGoto(event model.Event) string {
 	}
 	event = validated
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:

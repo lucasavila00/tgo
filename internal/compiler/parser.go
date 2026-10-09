@@ -124,12 +124,36 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 }
 
 func validateEnumPublicNames(declaration *model, node *syntax.EnumDeclaration) error {
+	type generatedName struct {
+		variant string
+	}
+	generated := map[string]generatedName{
+		declaration.Name:         {},
+		declaration.Name + "Tag": {},
+	}
 	for _, item := range node.Variants {
-		if item.Name.Name == "Zero" || item.Name.Name == "Tag" {
-			return fmt.Errorf("enum variant name %s conflicts with generated %s API",
-				item.Name.Name, declaration.Name)
+		for _, name := range []string{
+			declaration.Name + item.Name.Name,
+			declaration.Name + "Tag" + item.Name.Name,
+		} {
+			previous, exists := generated[name]
+			if !exists {
+				generated[name] = generatedName{variant: item.Name.Name}
+				continue
+			}
+			if previous.variant != "" {
+				return fmt.Errorf("enum variants %s and %s both generate %s",
+					previous.variant, item.Name.Name, name)
+			}
+			return fmt.Errorf("enum variant %s generates %s, which conflicts with generated %s API",
+				item.Name.Name, name, declaration.Name)
 		}
 		for _, field := range item.Fields {
+			if len(field.Field.Names) == 0 &&
+				embeddedFieldName(field.Field.Type) == declaration.Name {
+				return fmt.Errorf("enum payload field %s conflicts with its constructor method",
+					declaration.Name)
+			}
 			for _, name := range field.Field.Names {
 				if name.Name == declaration.Name {
 					return fmt.Errorf("enum payload field %s conflicts with its constructor method",
@@ -139,6 +163,34 @@ func validateEnumPublicNames(declaration *model, node *syntax.EnumDeclaration) e
 		}
 	}
 	return nil
+}
+
+func embeddedFieldName(expression *syntax.Expression) string {
+	if expression == nil {
+		return ""
+	}
+	if expression.Tag() == syntax.ExpressionTagIdentifier {
+		return expression.IdentifierPayload().Value.Name
+	}
+	if expression.Tag() == syntax.ExpressionTagSelector {
+		return expression.SelectorPayload().Value.Selector.Name
+	}
+	if expression.Tag() == syntax.ExpressionTagStar {
+		return embeddedFieldName(expression.StarPayload().Value.Expression)
+	}
+	if expression.Tag() == syntax.ExpressionTagNonNilPointer {
+		return embeddedFieldName(expression.NonNilPointerPayload().Value.Type)
+	}
+	if expression.Tag() == syntax.ExpressionTagParenthesized {
+		return embeddedFieldName(expression.ParenthesizedPayload().Value.Expression)
+	}
+	if expression.Tag() == syntax.ExpressionTagIndex {
+		return embeddedFieldName(expression.IndexPayload().Value.Expression)
+	}
+	if expression.Tag() == syntax.ExpressionTagIndexList {
+		return embeddedFieldName(expression.IndexListPayload().Value.Expression)
+	}
+	return ""
 }
 
 // eraseNonNilTypes makes the Go spelling used inside generated model declarations.

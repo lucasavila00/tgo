@@ -37,8 +37,6 @@ func ZeroEvent[E events]() {
 
 func WrongPayload[E events](event E) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StoppedPayload().Reason
 	case model.EventTagStopped:
@@ -86,8 +84,6 @@ type eventPointers interface {
 
 func PointerGeneric[E eventPointers](event E) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:

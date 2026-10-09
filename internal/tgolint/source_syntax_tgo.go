@@ -11,8 +11,6 @@ func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
 		return nil, false
 	}
 	switch enumValue25 := *node; enumValue25.Tag() {
-	case syntax.NodeTagZero:
-		panic("zero Node")
 	case syntax.NodeTagStatement:
 		value := enumValue25.StatementPayload()
 		return statementList(value.Value)
@@ -46,8 +44,6 @@ func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
 // statementList gets the child list from one source statement container.
 func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
 	switch enumValue26 := *statement; enumValue26.Tag() {
-	case syntax.StatementTagZero:
-		panic("zero Statement")
 	case syntax.StatementTagBlock:
 		value := enumValue26.BlockPayload()
 		return value.Value.List, true
@@ -101,8 +97,6 @@ func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
 // sourceAssignment gets an assignment that the user wrote.
 func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement, bool) {
 	switch enumValue27 := *statement; enumValue27.Tag() {
-	case syntax.StatementTagZero:
-		panic("zero Statement")
 	case syntax.StatementTagAssignment:
 		value := enumValue27.AssignmentPayload()
 		return value.Value, true
@@ -154,8 +148,6 @@ func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement,
 // sourceIf gets an if statement that the user wrote.
 func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
 	switch enumValue28 := *statement; enumValue28.Tag() {
-	case syntax.StatementTagZero:
-		panic("zero Statement")
 	case syntax.StatementTagIf:
 		value := enumValue28.IfPayload()
 		return value.Value, true
@@ -207,8 +199,6 @@ func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
 // sourceReturn gets a return statement that the user wrote.
 func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
 	switch enumValue29 := *statement; enumValue29.Tag() {
-	case syntax.StatementTagZero:
-		panic("zero Statement")
 	case syntax.StatementTagReturn:
 		value := enumValue29.ReturnPayload()
 		return value.Value, true
@@ -260,8 +250,6 @@ func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
 // sourceCall gets a direct or parenthesized call from TGo source.
 func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
 	switch enumValue30 := *expression; enumValue30.Tag() {
-	case syntax.ExpressionTagZero:
-		panic("zero Expression")
 	case syntax.ExpressionTagCall:
 		value := enumValue30.CallPayload()
 		return value.Value, true
@@ -324,8 +312,6 @@ func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
 // sourceIdentifier gets a direct identifier expression.
 func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) {
 	switch enumValue31 := *expression; enumValue31.Tag() {
-	case syntax.ExpressionTagZero:
-		panic("zero Expression")
 	case syntax.ExpressionTagIdentifier:
 		value := enumValue31.IdentifierPayload()
 		return value.Value, true
@@ -387,8 +373,6 @@ func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) 
 // sourceBinary gets a direct binary expression.
 func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool) {
 	switch enumValue32 := *expression; enumValue32.Tag() {
-	case syntax.ExpressionTagZero:
-		panic("zero Expression")
 	case syntax.ExpressionTagBinary:
 		value := enumValue32.BinaryPayload()
 		return value.Value, true
@@ -452,8 +436,6 @@ func sourceCompositeLiteral(
 	expression *syntax.Expression,
 ) (*syntax.CompositeLiteral, bool) {
 	switch enumValue33 := *expression; enumValue33.Tag() {
-	case syntax.ExpressionTagZero:
-		panic("zero Expression")
 	case syntax.ExpressionTagCompositeLiteral:
 		value := enumValue33.CompositeLiteralPayload()
 		return value.Value, true
@@ -516,8 +498,6 @@ func sourceCompositeLiteral(
 func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
 	for {
 		switch enumValue34 := *expression; enumValue34.Tag() {
-		case syntax.ExpressionTagZero:
-			panic("zero Expression")
 		case syntax.ExpressionTagParenthesized:
 			value := enumValue34.ParenthesizedPayload()
 			expression = value.Value.Expression

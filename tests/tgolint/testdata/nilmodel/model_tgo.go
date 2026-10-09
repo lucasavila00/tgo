@@ -27,13 +27,12 @@ type BothRequired = **Item
 type RequiredHandler = func(*Item) *Item
 type OptionalHandler = func(*Item) *Item
 
-// Syntax has Zero as its valid zero value.
+// Syntax requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type SyntaxTag uint8
 
 const (
-	SyntaxTagZero SyntaxTag = iota
-	SyntaxTagItem
+	SyntaxTagItem SyntaxTag = iota + 1
 )
 
 type Syntax struct {
@@ -41,16 +40,8 @@ type Syntax struct {
 	tgoItem SyntaxItem
 }
 
-// SyntaxZero constructs the Zero variant.
-type SyntaxZero struct{}
-
-func (SyntaxZero) Syntax() Syntax { return Syntax{} }
-
 // Tag returns the active tag.
 func (v Syntax) Tag() SyntaxTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Syntax) IsZero() bool { return v.tgoTag == SyntaxTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Syntax) UnknownTag() string {
@@ -74,8 +65,6 @@ func (v Syntax) ItemPayload() SyntaxItem {
 }
 func (v Syntax) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case SyntaxTagZero:
-		return []byte("null"), nil
 	case SyntaxTagItem:
 		payload := v.ItemPayload()
 		return __tgo_json.Marshal(struct {
@@ -86,17 +75,6 @@ func (v Syntax) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Syntax) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Syntax{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage

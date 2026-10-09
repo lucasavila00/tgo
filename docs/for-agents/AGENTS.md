@@ -25,8 +25,8 @@ func NewBusiness(company string) Account {
 }
 ```
 
-Use a checked `switch value.Tag()` to read the active payload. Cover `Zero` and every declared
-variant with generated tag constants. Read a payload only in its single-tag case.
+Use a checked `switch value.Tag()` to read the active payload. Cover every declared variant with
+generated tag constants. Read a payload only in its single-tag case.
 Use the exact generated `UnknownTag` panic in the default. Do not use `fallthrough` or select
 generated enum methods through interfaces.
 Type aliases can construct variants. Go name resolution selects the aliased type.
@@ -35,7 +35,6 @@ Do not shadow generated payload, constructor, or default helper names at a const
 ```text
 func Label(account Account) string {
     switch account.Tag() {
-    case AccountTagZero: return "missing"
     case AccountTagPersonal: return account.PersonalPayload().Name
     case AccountTagBusiness: return account.BusinessPayload().Company
     default:

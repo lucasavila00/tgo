@@ -6,13 +6,12 @@ package model
 import __tgo_json "encoding/json"
 import __tgo_fmt "fmt"
 
-// Large has Zero as its valid zero value.
+// Large requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type LargeTag uint8
 
 const (
-	LargeTagZero LargeTag = iota
-	LargeTagFirst
+	LargeTagFirst LargeTag = iota + 1
 	LargeTagSecond
 	LargeTagEmpty
 )
@@ -22,16 +21,8 @@ type Large struct {
 	tgoPayload interface{}
 }
 
-// LargeZero constructs the Zero variant.
-type LargeZero struct{}
-
-func (LargeZero) Large() Large { return Large{} }
-
 // Tag returns the active tag.
 func (v Large) Tag() LargeTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Large) IsZero() bool { return v.tgoTag == LargeTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Large) UnknownTag() string {
@@ -86,8 +77,6 @@ func (v Large) EmptyPayload() LargeEmpty {
 }
 func (v Large) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case LargeTagZero:
-		return []byte("null"), nil
 	case LargeTagFirst:
 		payload := v.FirstPayload()
 		return __tgo_json.Marshal(struct {
@@ -108,17 +97,6 @@ func (v Large) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Large) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Large{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -159,13 +137,12 @@ func (v *Large) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// Equal has Zero as its valid zero value.
+// Equal requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type EqualTag uint8
 
 const (
-	EqualTagZero EqualTag = iota
-	EqualTagFirst
+	EqualTagFirst EqualTag = iota + 1
 	EqualTagSecond
 )
 
@@ -175,16 +152,8 @@ type Equal struct {
 	tgoPayload interface{}
 }
 
-// EqualZero constructs the Zero variant.
-type EqualZero struct{}
-
-func (EqualZero) Equal() Equal { return Equal{} }
-
 // Tag returns the active tag.
 func (v Equal) Tag() EqualTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v Equal) IsZero() bool { return v.tgoTag == EqualTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v Equal) UnknownTag() string {
@@ -224,8 +193,6 @@ func (v Equal) SecondPayload() EqualSecond {
 }
 func (v Equal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case EqualTagZero:
-		return []byte("null"), nil
 	case EqualTagFirst:
 		payload := v.FirstPayload()
 		return __tgo_json.Marshal(struct {
@@ -241,17 +208,6 @@ func (v Equal) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *Equal) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = Equal{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -282,5 +238,105 @@ func (v *Equal) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Equal JSON variant %q", variant)
+	}
+}
+
+// NamedZero requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type NamedZeroTag uint8
+
+const (
+	NamedZeroTagZero NamedZeroTag = iota + 1
+	NamedZeroTagOther
+)
+
+type NamedZero struct {
+	tgoTag NamedZeroTag
+}
+
+// Tag returns the active tag.
+func (v NamedZero) Tag() NamedZeroTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v NamedZero) UnknownTag() string {
+	return __tgo_fmt.Sprintf("NamedZero: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// NamedZeroZero holds the variant fields. Supply every field.
+type NamedZeroZero struct {
+}
+
+// NamedZero constructs NamedZero. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value NamedZeroZero) NamedZero() NamedZero {
+	return NamedZero{tgoTag: NamedZeroTagZero}
+}
+
+// ZeroPayload requires Zero. No tag check.
+func (v NamedZero) ZeroPayload() NamedZeroZero {
+	return NamedZeroZero{}
+}
+
+// NamedZeroOther holds the variant fields. Supply every field.
+type NamedZeroOther struct {
+}
+
+// NamedZero constructs NamedZero. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value NamedZeroOther) NamedZero() NamedZero {
+	return NamedZero{tgoTag: NamedZeroTagOther}
+}
+
+// OtherPayload requires Other. No tag check.
+func (v NamedZero) OtherPayload() NamedZeroOther {
+	return NamedZeroOther{}
+}
+func (v NamedZero) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case NamedZeroTagZero:
+		payload := v.ZeroPayload()
+		return __tgo_json.Marshal(struct {
+			Payload NamedZeroZero `json:"Zero"`
+		}{Payload: payload})
+	case NamedZeroTagOther:
+		payload := v.OtherPayload()
+		return __tgo_json.Marshal(struct {
+			Payload NamedZeroOther `json:"Other"`
+		}{Payload: payload})
+	default:
+		return nil, __tgo_fmt.Errorf("invalid NamedZero JSON tag")
+	}
+}
+func (v *NamedZero) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]__tgo_json.RawMessage
+	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return __tgo_fmt.Errorf("expected one NamedZero JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Zero":
+		var payload NamedZeroZero
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.NamedZero()
+		return nil
+	case "Other":
+		var payload NamedZeroOther
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.NamedZero()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("unknown NamedZero JSON variant %q", variant)
 	}
 }

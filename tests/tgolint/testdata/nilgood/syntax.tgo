@@ -5,8 +5,6 @@ import "example.com/tgolint/nilmodel"
 func syntaxFacts(values nilmodel.SyntaxList) {
 	for _, value := range values {
 		switch value.Tag() {
-		case nilmodel.SyntaxTagZero:
-			continue
 		case nilmodel.SyntaxTagItem:
 			payload := value.ItemPayload()
 			nilmodel.Need(payload.Value)

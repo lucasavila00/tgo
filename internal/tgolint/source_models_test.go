@@ -109,8 +109,6 @@ func TestCheckedSourceDeclarationFactRoundTrip(t *testing.T) {
 	}
 	checked := *models[0]
 	switch checked.Tag() {
-	case sourceModelTagZero:
-		t.Fatal("checked source is Zero")
 	case sourceModelTagChecked:
 		shape := checked.CheckedPayload()
 		if shape.Base != "int" {
@@ -132,8 +130,6 @@ func TestEnumSourceDeclarationFactRoundTrip(t *testing.T) {
 	}
 	enum := *models[1]
 	switch enum.Tag() {
-	case sourceModelTagZero:
-		t.Fatal("enum source is Zero")
 	case sourceModelTagChecked, sourceModelTagStruct:
 		t.Fatal("enum source has a different variant")
 	case sourceModelTagEnum:
@@ -160,8 +156,6 @@ func TestStructSourceDeclaration(t *testing.T) {
 	}
 	structure := *models[2]
 	switch structure.Tag() {
-	case sourceModelTagZero:
-		t.Fatal("struct source is Zero")
 	case sourceModelTagChecked, sourceModelTagEnum:
 		t.Fatal("struct source has a different variant")
 	case sourceModelTagStruct:

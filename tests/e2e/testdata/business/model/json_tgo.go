@@ -6,13 +6,12 @@ package model
 import __tgo_json "encoding/json"
 import __tgo_fmt "fmt"
 
-// JSONExternal has Zero as its valid zero value.
+// JSONExternal requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONExternalTag uint8
 
 const (
-	JSONExternalTagZero JSONExternalTag = iota
-	JSONExternalTagCreated
+	JSONExternalTagCreated JSONExternalTag = iota + 1
 	JSONExternalTagEmpty
 	JSONExternalTagLarge
 )
@@ -23,16 +22,8 @@ type JSONExternal struct {
 	tgoPayload interface{}
 }
 
-// JSONExternalZero constructs the Zero variant.
-type JSONExternalZero struct{}
-
-func (JSONExternalZero) JSONExternal() JSONExternal { return JSONExternal{} }
-
 // Tag returns the active tag.
 func (v JSONExternal) Tag() JSONExternalTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONExternal) IsZero() bool { return v.tgoTag == JSONExternalTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONExternal) UnknownTag() string {
@@ -89,8 +80,6 @@ func (v JSONExternal) LargePayload() JSONExternalLarge {
 }
 func (v JSONExternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONExternalTagZero:
-		return []byte("null"), nil
 	case JSONExternalTagCreated:
 		payload := v.CreatedPayload()
 		return __tgo_json.Marshal(struct {
@@ -111,17 +100,6 @@ func (v JSONExternal) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONExternal) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONExternal{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -162,13 +140,12 @@ func (v *JSONExternal) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// JSONInternal has Zero as its valid zero value.
+// JSONInternal requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONInternalTag uint8
 
 const (
-	JSONInternalTagZero JSONInternalTag = iota
-	JSONInternalTagCreated
+	JSONInternalTagCreated JSONInternalTag = iota + 1
 	JSONInternalTagEmpty
 )
 
@@ -177,16 +154,8 @@ type JSONInternal struct {
 	tgoCreated JSONInternalCreated
 }
 
-// JSONInternalZero constructs the Zero variant.
-type JSONInternalZero struct{}
-
-func (JSONInternalZero) JSONInternal() JSONInternal { return JSONInternal{} }
-
 // Tag returns the active tag.
 func (v JSONInternal) Tag() JSONInternalTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONInternal) IsZero() bool { return v.tgoTag == JSONInternalTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONInternal) UnknownTag() string {
@@ -227,8 +196,6 @@ func (v JSONInternal) EmptyPayload() JSONInternalEmpty {
 }
 func (v JSONInternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONInternalTagZero:
-		return []byte("null"), nil
 	case JSONInternalTagCreated:
 		payload := v.CreatedPayload()
 		payloadData, err := __tgo_json.Marshal(payload)
@@ -268,17 +235,6 @@ func (v JSONInternal) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONInternal) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONInternal{}
-		return nil
-	}
 	var variant string
 	var object struct {
 		Tag string `json:"type"`
@@ -310,13 +266,12 @@ func (v *JSONInternal) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// JSONAdjacent has Zero as its valid zero value.
+// JSONAdjacent requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONAdjacentTag uint8
 
 const (
-	JSONAdjacentTagZero JSONAdjacentTag = iota
-	JSONAdjacentTagCreated
+	JSONAdjacentTagCreated JSONAdjacentTag = iota + 1
 	JSONAdjacentTagEmpty
 )
 
@@ -325,16 +280,8 @@ type JSONAdjacent struct {
 	tgoCreated JSONAdjacentCreated
 }
 
-// JSONAdjacentZero constructs the Zero variant.
-type JSONAdjacentZero struct{}
-
-func (JSONAdjacentZero) JSONAdjacent() JSONAdjacent { return JSONAdjacent{} }
-
 // Tag returns the active tag.
 func (v JSONAdjacent) Tag() JSONAdjacentTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONAdjacent) IsZero() bool { return v.tgoTag == JSONAdjacentTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONAdjacent) UnknownTag() string {
@@ -375,8 +322,6 @@ func (v JSONAdjacent) EmptyPayload() JSONAdjacentEmpty {
 }
 func (v JSONAdjacent) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONAdjacentTagZero:
-		return []byte("null"), nil
 	case JSONAdjacentTagCreated:
 		payload := v.CreatedPayload()
 		return __tgo_json.Marshal(struct {
@@ -394,17 +339,6 @@ func (v JSONAdjacent) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONAdjacent) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONAdjacent{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object struct {
@@ -442,13 +376,12 @@ func (v *JSONAdjacent) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// JSONUntagged has Zero as its valid zero value.
+// JSONUntagged requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONUntaggedTag uint8
 
 const (
-	JSONUntaggedTagZero JSONUntaggedTag = iota
-	JSONUntaggedTagNumber
+	JSONUntaggedTagNumber JSONUntaggedTag = iota + 1
 	JSONUntaggedTagText
 	JSONUntaggedTagOther
 )
@@ -460,16 +393,8 @@ type JSONUntagged struct {
 	tgoOther  JSONUntaggedOther
 }
 
-// JSONUntaggedZero constructs the Zero variant.
-type JSONUntaggedZero struct{}
-
-func (JSONUntaggedZero) JSONUntagged() JSONUntagged { return JSONUntagged{} }
-
 // Tag returns the active tag.
 func (v JSONUntagged) Tag() JSONUntaggedTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONUntagged) IsZero() bool { return v.tgoTag == JSONUntaggedTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONUntagged) UnknownTag() string {
@@ -525,8 +450,6 @@ func (v JSONUntagged) OtherPayload() JSONUntaggedOther {
 }
 func (v JSONUntagged) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONUntaggedTagZero:
-		return []byte("null"), nil
 	case JSONUntaggedTagNumber:
 		payload := v.NumberPayload()
 		return __tgo_json.Marshal(payload)
@@ -541,17 +464,6 @@ func (v JSONUntagged) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONUntagged) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONUntagged{}
-		return nil
-	}
 	{
 		var payload JSONUntaggedNumber
 		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
@@ -576,13 +488,12 @@ func (v *JSONUntagged) UnmarshalJSON(data []byte) error {
 	return __tgo_fmt.Errorf("no matching JSONUntagged JSON variant")
 }
 
-// JSONNested has Zero as its valid zero value.
+// JSONNested requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONNestedTag uint8
 
 const (
-	JSONNestedTagZero JSONNestedTag = iota
-	JSONNestedTagNested
+	JSONNestedTagNested JSONNestedTag = iota + 1
 )
 
 type JSONNested struct {
@@ -590,16 +501,8 @@ type JSONNested struct {
 	tgoNested JSONNestedNested
 }
 
-// JSONNestedZero constructs the Zero variant.
-type JSONNestedZero struct{}
-
-func (JSONNestedZero) JSONNested() JSONNested { return JSONNested{} }
-
 // Tag returns the active tag.
 func (v JSONNested) Tag() JSONNestedTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONNested) IsZero() bool { return v.tgoTag == JSONNestedTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONNested) UnknownTag() string {
@@ -623,8 +526,6 @@ func (v JSONNested) NestedPayload() JSONNestedNested {
 }
 func (v JSONNested) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONNestedTagZero:
-		return []byte("null"), nil
 	case JSONNestedTagNested:
 		payload := v.NestedPayload()
 		return __tgo_json.Marshal(struct {
@@ -635,17 +536,6 @@ func (v JSONNested) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONNested) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONNested{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -672,13 +562,12 @@ func (v *JSONNested) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// JSONCustom has Zero as its valid zero value.
+// JSONCustom requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONCustomTag uint8
 
 const (
-	JSONCustomTagZero JSONCustomTag = iota
-	JSONCustomTagValue
+	JSONCustomTagValue JSONCustomTag = iota + 1
 )
 
 type JSONCustom struct {
@@ -686,16 +575,8 @@ type JSONCustom struct {
 	tgoValue JSONCustomValue
 }
 
-// JSONCustomZero constructs the Zero variant.
-type JSONCustomZero struct{}
-
-func (JSONCustomZero) JSONCustom() JSONCustom { return JSONCustom{} }
-
 // Tag returns the active tag.
 func (v JSONCustom) Tag() JSONCustomTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONCustom) IsZero() bool { return v.tgoTag == JSONCustomTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONCustom) UnknownTag() string {
@@ -719,8 +600,6 @@ func (v JSONCustom) ValuePayload() JSONCustomValue {
 }
 func (v JSONCustom) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONCustomTagZero:
-		return []byte("null"), nil
 	case JSONCustomTagValue:
 		payload := v.ValuePayload()
 		return __tgo_json.Marshal(struct {
@@ -731,17 +610,6 @@ func (v JSONCustom) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONCustom) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONCustom{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -774,13 +642,12 @@ type JSONPlain struct {
 	Custom JSONField `json:"custom,omitempty"`
 }
 
-// JSONEscaped has Zero as its valid zero value.
+// JSONEscaped requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONEscapedTag uint8
 
 const (
-	JSONEscapedTagZero JSONEscapedTag = iota
-	JSONEscapedTagValue
+	JSONEscapedTagValue JSONEscapedTag = iota + 1
 )
 
 type JSONEscaped struct {
@@ -788,16 +655,8 @@ type JSONEscaped struct {
 	tgoValue JSONEscapedValue
 }
 
-// JSONEscapedZero constructs the Zero variant.
-type JSONEscapedZero struct{}
-
-func (JSONEscapedZero) JSONEscaped() JSONEscaped { return JSONEscaped{} }
-
 // Tag returns the active tag.
 func (v JSONEscaped) Tag() JSONEscapedTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONEscaped) IsZero() bool { return v.tgoTag == JSONEscapedTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONEscaped) UnknownTag() string {
@@ -821,8 +680,6 @@ func (v JSONEscaped) ValuePayload() JSONEscapedValue {
 }
 func (v JSONEscaped) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONEscapedTagZero:
-		return []byte("null"), nil
 	case JSONEscapedTagValue:
 		payload := v.ValuePayload()
 		payloadData, err := __tgo_json.Marshal(payload)
@@ -845,17 +702,6 @@ func (v JSONEscaped) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONEscaped) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONEscaped{}
-		return nil
-	}
 	var variant string
 	var object map[string]__tgo_json.RawMessage
 	if err := __tgo_json.Unmarshal(data, &object); err != nil {
@@ -881,13 +727,12 @@ func (v *JSONEscaped) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// JSONEscapedExternal has Zero as its valid zero value.
+// JSONEscapedExternal requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONEscapedExternalTag uint8
 
 const (
-	JSONEscapedExternalTagZero JSONEscapedExternalTag = iota
-	JSONEscapedExternalTagValue
+	JSONEscapedExternalTagValue JSONEscapedExternalTag = iota + 1
 )
 
 type JSONEscapedExternal struct {
@@ -895,18 +740,8 @@ type JSONEscapedExternal struct {
 	tgoValue JSONEscapedExternalValue
 }
 
-// JSONEscapedExternalZero constructs the Zero variant.
-type JSONEscapedExternalZero struct{}
-
-func (JSONEscapedExternalZero) JSONEscapedExternal() JSONEscapedExternal {
-	return JSONEscapedExternal{}
-}
-
 // Tag returns the active tag.
 func (v JSONEscapedExternal) Tag() JSONEscapedExternalTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONEscapedExternal) IsZero() bool { return v.tgoTag == JSONEscapedExternalTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONEscapedExternal) UnknownTag() string {
@@ -930,8 +765,6 @@ func (v JSONEscapedExternal) ValuePayload() JSONEscapedExternalValue {
 }
 func (v JSONEscapedExternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONEscapedExternalTagZero:
-		return []byte("null"), nil
 	case JSONEscapedExternalTagValue:
 		payload := v.ValuePayload()
 		payloadData, err := __tgo_json.Marshal(payload)
@@ -948,17 +781,6 @@ func (v JSONEscapedExternal) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONEscapedExternal) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONEscapedExternal{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -985,13 +807,12 @@ func (v *JSONEscapedExternal) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// JSONEscapedAdjacent has Zero as its valid zero value.
+// JSONEscapedAdjacent requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONEscapedAdjacentTag uint8
 
 const (
-	JSONEscapedAdjacentTagZero JSONEscapedAdjacentTag = iota
-	JSONEscapedAdjacentTagValue
+	JSONEscapedAdjacentTagValue JSONEscapedAdjacentTag = iota + 1
 )
 
 type JSONEscapedAdjacent struct {
@@ -999,18 +820,8 @@ type JSONEscapedAdjacent struct {
 	tgoValue JSONEscapedAdjacentValue
 }
 
-// JSONEscapedAdjacentZero constructs the Zero variant.
-type JSONEscapedAdjacentZero struct{}
-
-func (JSONEscapedAdjacentZero) JSONEscapedAdjacent() JSONEscapedAdjacent {
-	return JSONEscapedAdjacent{}
-}
-
 // Tag returns the active tag.
 func (v JSONEscapedAdjacent) Tag() JSONEscapedAdjacentTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONEscapedAdjacent) IsZero() bool { return v.tgoTag == JSONEscapedAdjacentTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONEscapedAdjacent) UnknownTag() string {
@@ -1034,8 +845,6 @@ func (v JSONEscapedAdjacent) ValuePayload() JSONEscapedAdjacentValue {
 }
 func (v JSONEscapedAdjacent) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONEscapedAdjacentTagZero:
-		return []byte("null"), nil
 	case JSONEscapedAdjacentTagValue:
 		payload := v.ValuePayload()
 		payloadData, err := __tgo_json.Marshal(payload)
@@ -1052,17 +861,6 @@ func (v JSONEscapedAdjacent) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONEscapedAdjacent) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONEscapedAdjacent{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -1094,13 +892,12 @@ func (v *JSONEscapedAdjacent) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// JSONStringField has Zero as its valid zero value.
+// JSONStringField requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONStringFieldTag uint8
 
 const (
-	JSONStringFieldTagZero JSONStringFieldTag = iota
-	JSONStringFieldTagValue
+	JSONStringFieldTagValue JSONStringFieldTag = iota + 1
 )
 
 type JSONStringField struct {
@@ -1108,16 +905,8 @@ type JSONStringField struct {
 	tgoValue JSONStringFieldValue
 }
 
-// JSONStringFieldZero constructs the Zero variant.
-type JSONStringFieldZero struct{}
-
-func (JSONStringFieldZero) JSONStringField() JSONStringField { return JSONStringField{} }
-
 // Tag returns the active tag.
 func (v JSONStringField) Tag() JSONStringFieldTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONStringField) IsZero() bool { return v.tgoTag == JSONStringFieldTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONStringField) UnknownTag() string {
@@ -1141,8 +930,6 @@ func (v JSONStringField) ValuePayload() JSONStringFieldValue {
 }
 func (v JSONStringField) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONStringFieldTagZero:
-		return []byte("null"), nil
 	case JSONStringFieldTagValue:
 		payload := v.ValuePayload()
 		return __tgo_json.Marshal(struct {
@@ -1153,17 +940,6 @@ func (v JSONStringField) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONStringField) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONStringField{}
-		return nil
-	}
 	var variant string
 	var payloadData []byte
 	var object map[string]__tgo_json.RawMessage
@@ -1190,13 +966,12 @@ func (v *JSONStringField) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// JSONInternalPayloadMethod has Zero as its valid zero value.
+// JSONInternalPayloadMethod requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONInternalPayloadMethodTag uint8
 
 const (
-	JSONInternalPayloadMethodTagZero JSONInternalPayloadMethodTag = iota
-	JSONInternalPayloadMethodTagValue
+	JSONInternalPayloadMethodTagValue JSONInternalPayloadMethodTag = iota + 1
 )
 
 type JSONInternalPayloadMethod struct {
@@ -1204,18 +979,8 @@ type JSONInternalPayloadMethod struct {
 	tgoValue JSONInternalPayloadMethodValue
 }
 
-// JSONInternalPayloadMethodZero constructs the Zero variant.
-type JSONInternalPayloadMethodZero struct{}
-
-func (JSONInternalPayloadMethodZero) JSONInternalPayloadMethod() JSONInternalPayloadMethod {
-	return JSONInternalPayloadMethod{}
-}
-
 // Tag returns the active tag.
 func (v JSONInternalPayloadMethod) Tag() JSONInternalPayloadMethodTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONInternalPayloadMethod) IsZero() bool { return v.tgoTag == JSONInternalPayloadMethodTagZero }
 
 // UnknownTag describes an invalid tag.
 func (v JSONInternalPayloadMethod) UnknownTag() string {
@@ -1239,8 +1004,6 @@ func (v JSONInternalPayloadMethod) ValuePayload() JSONInternalPayloadMethodValue
 }
 func (v JSONInternalPayloadMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONInternalPayloadMethodTagZero:
-		return []byte("null"), nil
 	case JSONInternalPayloadMethodTagValue:
 		payload := v.ValuePayload()
 		payloadData, err := __tgo_json.Marshal(payload)
@@ -1263,17 +1026,6 @@ func (v JSONInternalPayloadMethod) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONInternalPayloadMethod) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONInternalPayloadMethod{}
-		return nil
-	}
 	var variant string
 	var object struct {
 		Tag string `json:"type"`
@@ -1298,13 +1050,12 @@ func (v *JSONInternalPayloadMethod) UnmarshalJSON(data []byte) error {
 	}
 }
 
-// JSONInternalPromotedMethod has Zero as its valid zero value.
+// JSONInternalPromotedMethod requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONInternalPromotedMethodTag uint8
 
 const (
-	JSONInternalPromotedMethodTagZero JSONInternalPromotedMethodTag = iota
-	JSONInternalPromotedMethodTagValue
+	JSONInternalPromotedMethodTagValue JSONInternalPromotedMethodTag = iota + 1
 )
 
 type JSONInternalPromotedMethod struct {
@@ -1312,20 +1063,8 @@ type JSONInternalPromotedMethod struct {
 	tgoValue JSONInternalPromotedMethodValue
 }
 
-// JSONInternalPromotedMethodZero constructs the Zero variant.
-type JSONInternalPromotedMethodZero struct{}
-
-func (JSONInternalPromotedMethodZero) JSONInternalPromotedMethod() JSONInternalPromotedMethod {
-	return JSONInternalPromotedMethod{}
-}
-
 // Tag returns the active tag.
 func (v JSONInternalPromotedMethod) Tag() JSONInternalPromotedMethodTag { return v.tgoTag }
-
-// IsZero reports whether v is the Zero variant.
-func (v JSONInternalPromotedMethod) IsZero() bool {
-	return v.tgoTag == JSONInternalPromotedMethodTagZero
-}
 
 // UnknownTag describes an invalid tag.
 func (v JSONInternalPromotedMethod) UnknownTag() string {
@@ -1349,8 +1088,6 @@ func (v JSONInternalPromotedMethod) ValuePayload() JSONInternalPromotedMethodVal
 }
 func (v JSONInternalPromotedMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case JSONInternalPromotedMethodTagZero:
-		return []byte("null"), nil
 	case JSONInternalPromotedMethodTagValue:
 		payload := v.ValuePayload()
 		payloadData, err := __tgo_json.Marshal(payload)
@@ -1373,17 +1110,6 @@ func (v JSONInternalPromotedMethod) MarshalJSON() ([]byte, error) {
 	}
 }
 func (v *JSONInternalPromotedMethod) UnmarshalJSON(data []byte) error {
-	start, end := 0, len(data)
-	for start < end && (data[start] == ' ' || data[start] == '\n' || data[start] == '\r' || data[start] == '\t') {
-		start++
-	}
-	for start < end && (data[end-1] == ' ' || data[end-1] == '\n' || data[end-1] == '\r' || data[end-1] == '\t') {
-		end--
-	}
-	if end-start == 4 && data[start] == 'n' && data[start+1] == 'u' && data[start+2] == 'l' && data[start+3] == 'l' {
-		*v = JSONInternalPromotedMethod{}
-		return nil
-	}
 	var variant string
 	var object struct {
 		Tag string `json:"type"`

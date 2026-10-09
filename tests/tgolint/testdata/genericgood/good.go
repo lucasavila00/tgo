@@ -32,8 +32,6 @@ func EmptyCounts[S countSlices]() S {
 
 func Describe[E events](event E) string {
 	switch event.Tag() {
-	case model.EventTagZero:
-		panic("zero Event")
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	case model.EventTagStopped:

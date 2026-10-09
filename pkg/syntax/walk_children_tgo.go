@@ -47,13 +47,9 @@ func buildPublicIndex(file *File) {
 
 func isExtension(node Node) bool {
 	switch enumValue27 := node; enumValue27.Tag() {
-	case NodeTagZero:
-		panic("zero Node")
 	case NodeTagDeclaration:
 		value := enumValue27.DeclarationPayload()
 		switch enumValue28 := *value.Value; enumValue28.Tag() {
-		case DeclarationTagZero:
-			panic("zero Declaration")
 		case DeclarationTagBad:
 			return false
 		case DeclarationTagGeneral:
@@ -72,8 +68,6 @@ func isExtension(node Node) bool {
 	case NodeTagStatement:
 		value := enumValue27.StatementPayload()
 		switch enumValue29 := *value.Value; enumValue29.Tag() {
-		case StatementTagZero:
-			panic("zero Statement")
 		case StatementTagBad:
 			return false
 		case StatementTagDeclaration:
@@ -122,8 +116,6 @@ func isExtension(node Node) bool {
 	case NodeTagExpression:
 		value := enumValue27.ExpressionPayload()
 		switch enumValue30 := *value.Value; enumValue30.Tag() {
-		case ExpressionTagZero:
-			panic("zero Expression")
 		case ExpressionTagBad:
 			return false
 		case ExpressionTagIdentifier:
@@ -204,8 +196,6 @@ func isExtension(node Node) bool {
 
 func publicChildren(node Node) []Node {
 	switch enumValue31 := node; enumValue31.Tag() {
-	case NodeTagZero:
-		panic("zero Node")
 	case NodeTagFile:
 		value := enumValue31.FilePayload()
 		return fileChildren(value.Value)
@@ -272,8 +262,6 @@ func expressionChildren(value *Expression) []Node {
 		}
 	}
 	switch enumValue32 := *value; enumValue32.Tag() {
-	case ExpressionTagZero:
-		panic("zero Expression")
 	case ExpressionTagBad:
 		return result
 	case ExpressionTagIdentifier:
@@ -409,8 +397,6 @@ func statementChildren(value *Statement) []Node {
 		}
 	}
 	switch enumValue33 := *value; enumValue33.Tag() {
-	case StatementTagZero:
-		panic("zero Statement")
 	case StatementTagBad:
 		return result
 	case StatementTagEmpty:
@@ -523,8 +509,6 @@ func statementChildren(value *Statement) []Node {
 func declarationChildren(value *Declaration) []Node {
 	result := []Node(nil)
 	switch enumValue34 := *value; enumValue34.Tag() {
-	case DeclarationTagZero:
-		panic("zero Declaration")
 	case DeclarationTagBad:
 		return result
 	case DeclarationTagGeneral:
@@ -582,8 +566,6 @@ func declarationChildren(value *Declaration) []Node {
 func specificationChildren(value *Specification) []Node {
 	result := []Node(nil)
 	switch enumValue35 := *value; enumValue35.Tag() {
-	case SpecificationTagZero:
-		panic("zero Specification")
 	case SpecificationTagImport:
 		item := enumValue35.ImportPayload()
 		result = addComment(result, item.Value.Doc)

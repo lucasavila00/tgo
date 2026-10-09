@@ -54,7 +54,6 @@ type Account enum {
 
 func Label(account Account) string {
     switch account.Tag() {
-    case AccountTagZero: return "missing"
     case AccountTagPersonal: return account.PersonalPayload().Name
     case AccountTagBusiness: return account.BusinessPayload().Company
     default:
@@ -63,8 +62,8 @@ func Label(account Account) string {
 }
 ```
 
-Construct with `Account.Personal{Name: "Lucas"}`. Cover `Zero` and each declared variant with
-generated tag constants. Use the exact `UnknownTag` panic in the default. Duplicate or missing
+Construct with `Account.Personal{Name: "Lucas"}`. Cover each declared variant with generated tag
+constants. Use the exact `UnknownTag` panic in the default. Duplicate or missing
 cases fail compilation. Do not use `fallthrough` or select generated enum methods through an interface.
 Type aliases can construct variants. Go name resolution selects the aliased type.
 Do not shadow generated payload, constructor, or default helper names at a construction.

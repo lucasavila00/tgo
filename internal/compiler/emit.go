@@ -10,12 +10,16 @@ import (
 func enumGo(sourceName string, declaration *model, fmtPackage string) string {
 	var output strings.Builder
 	name := declaration.Name
-	fmt.Fprintf(&output, "// %s has Zero as its valid zero value.\n", name)
+	fmt.Fprintf(&output, "// %s requires a variant constructor. Its zero value is invalid.\n", name)
 	output.WriteString("// Shared data keeps Go aliases. Callers must keep model values valid.\n")
 	tagType := enumTagType(len(declaration.Variants))
 	fmt.Fprintf(&output, "type %sTag %s\n", name, tagType)
-	fmt.Fprintf(&output, "const (\n%sTagZero %sTag = iota\n", name, name)
-	for _, variant := range declaration.Variants {
+	fmt.Fprintf(&output, "const (\n")
+	for index, variant := range declaration.Variants {
+		if index == 0 {
+			fmt.Fprintf(&output, "%sTag%s %sTag = iota + 1\n", name, variant.Name, name)
+			continue
+		}
 		fmt.Fprintf(&output, "%sTag%s\n", name, variant.Name)
 	}
 	output.WriteString(")\n")
@@ -35,13 +39,8 @@ func enumGo(sourceName string, declaration *model, fmtPackage string) string {
 		output.WriteString("tgoPayload interface{}\n")
 	}
 	output.WriteString("}\n")
-	fmt.Fprintf(&output, "// %sZero constructs the Zero variant.\n", name)
-	fmt.Fprintf(&output, "type %sZero struct{}\n", name)
-	fmt.Fprintf(&output, "func (%sZero) %s() %s { return %s{} }\n", name, name, name, name)
 	output.WriteString("// Tag returns the active tag.\n")
 	fmt.Fprintf(&output, "func (v %s) Tag() %sTag { return v.tgoTag }\n", name, name)
-	output.WriteString("// IsZero reports whether v is the Zero variant.\n")
-	fmt.Fprintf(&output, "func (v %s) IsZero() bool { return v.tgoTag == %sTagZero }\n", name, name)
 	output.WriteString("// UnknownTag describes an invalid tag.\n")
 	fmt.Fprintf(&output,
 		"func (v %s) UnknownTag() string { return %s.Sprintf(%q, v.tgoTag) }\n",

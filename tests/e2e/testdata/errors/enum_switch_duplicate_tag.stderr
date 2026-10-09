@@ -1,1 +1,1 @@
-<WORK>/input.tgo:14:7: duplicate case AccountTagPersonal (constant 1 of uint8 type AccountTag) in expression switch
+<WORK>/input.tgo:12:7: duplicate case AccountTagPersonal (constant 1 of uint8 type AccountTag) in expression switch

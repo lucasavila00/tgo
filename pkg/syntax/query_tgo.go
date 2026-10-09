@@ -9,16 +9,12 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 		return nil, false
 	}
 	switch enumValue1 := *node; enumValue1.Tag() {
-	case NodeTagZero:
-		panic("zero Node")
 	case NodeTagIdentifier:
 		value := enumValue1.IdentifierPayload()
 		return value.Value, true
 	case NodeTagExpression:
 		value := enumValue1.ExpressionPayload()
 		switch enumValue2 := *value.Value; enumValue2.Tag() {
-		case ExpressionTagZero:
-			panic("zero Expression")
 		case ExpressionTagIdentifier:
 			item := enumValue2.IdentifierPayload()
 			return item.Value, true
@@ -106,8 +102,6 @@ func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 		return nil, false
 	}
 	switch enumValue3 := *value; enumValue3.Tag() {
-	case DeclarationTagZero:
-		panic("zero Declaration")
 	case DeclarationTagEnum:
 		item := enumValue3.EnumPayload()
 		return item.Value, true
@@ -132,8 +126,6 @@ func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 		return nil, false
 	}
 	switch enumValue4 := *value; enumValue4.Tag() {
-	case DeclarationTagZero:
-		panic("zero Declaration")
 	case DeclarationTagStruct:
 		item := enumValue4.StructPayload()
 		return item.Value, true
@@ -158,8 +150,6 @@ func CheckedDeclarationOf(value *Declaration) (*CheckedDeclaration, bool) {
 		return nil, false
 	}
 	switch enumValue5 := *value; enumValue5.Tag() {
-	case DeclarationTagZero:
-		panic("zero Declaration")
 	case DeclarationTagChecked:
 		item := enumValue5.CheckedPayload()
 		return item.Value, true
@@ -185,8 +175,6 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 		return nil, false
 	}
 	switch enumValue8 := *expression; enumValue8.Tag() {
-	case ExpressionTagZero:
-		panic("zero Expression")
 	case ExpressionTagDefault:
 		item := enumValue8.DefaultPayload()
 		return item.Value, true
@@ -252,8 +240,6 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 		return nil, false
 	}
 	switch enumValue9 := *expression; enumValue9.Tag() {
-	case ExpressionTagZero:
-		panic("zero Expression")
 	case ExpressionTagPropagation:
 		item := enumValue9.PropagationPayload()
 		return item.Value, true
@@ -319,8 +305,6 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 		return nil, false
 	}
 	switch enumValue10 := *expression; enumValue10.Tag() {
-	case ExpressionTagZero:
-		panic("zero Expression")
 	case ExpressionTagNonNilPointer:
 		item := enumValue10.NonNilPointerPayload()
 		return item.Value, true
@@ -385,8 +369,6 @@ func ExpressionOf(node *Node) (*Expression, bool) {
 		return nil, false
 	}
 	switch enumValue11 := *node; enumValue11.Tag() {
-	case NodeTagZero:
-		panic("zero Node")
 	case NodeTagExpression:
 		value := enumValue11.ExpressionPayload()
 		return value.Value, true
@@ -423,8 +405,6 @@ func StatementOf(node *Node) (*Statement, bool) {
 		return nil, false
 	}
 	switch enumValue12 := *node; enumValue12.Tag() {
-	case NodeTagZero:
-		panic("zero Node")
 	case NodeTagStatement:
 		value := enumValue12.StatementPayload()
 		return value.Value, true
@@ -461,8 +441,6 @@ func DeclarationOf(node *Node) (*Declaration, bool) {
 		return nil, false
 	}
 	switch enumValue13 := *node; enumValue13.Tag() {
-	case NodeTagZero:
-		panic("zero Node")
 	case NodeTagDeclaration:
 		value := enumValue13.DeclarationPayload()
 		return value.Value, true
@@ -499,8 +477,6 @@ func SpecificationOf(node *Node) (*Specification, bool) {
 		return nil, false
 	}
 	switch enumValue14 := *node; enumValue14.Tag() {
-	case NodeTagZero:
-		panic("zero Node")
 	case NodeTagSpecification:
 		value := enumValue14.SpecificationPayload()
 		return value.Value, true
@@ -534,8 +510,6 @@ func SpecificationOf(node *Node) (*Specification, bool) {
 // ExpressionKind returns the closed expression variant name.
 func ExpressionKind(value *Expression) string {
 	switch enumValue15 := *value; enumValue15.Tag() {
-	case ExpressionTagZero:
-		panic("zero Expression")
 	case ExpressionTagBad:
 		return "Bad"
 	case ExpressionTagIdentifier:
@@ -596,8 +570,6 @@ func ExpressionKind(value *Expression) string {
 // StatementKind returns the closed statement variant name.
 func StatementKind(value *Statement) string {
 	switch enumValue16 := *value; enumValue16.Tag() {
-	case StatementTagZero:
-		panic("zero Statement")
 	case StatementTagBad:
 		return "Bad"
 	case StatementTagDeclaration:
@@ -648,8 +620,6 @@ func StatementKind(value *Statement) string {
 // DeclarationKind returns the closed declaration variant name.
 func DeclarationKind(value *Declaration) string {
 	switch enumValue17 := *value; enumValue17.Tag() {
-	case DeclarationTagZero:
-		panic("zero Declaration")
 	case DeclarationTagBad:
 		return "Bad"
 	case DeclarationTagGeneral:
@@ -670,8 +640,6 @@ func DeclarationKind(value *Declaration) string {
 // SpecificationKind returns the closed specification variant name.
 func SpecificationKind(value *Specification) string {
 	switch enumValue18 := *value; enumValue18.Tag() {
-	case SpecificationTagZero:
-		panic("zero Specification")
 	case SpecificationTagImport:
 		return "Import"
 	case SpecificationTagValue:

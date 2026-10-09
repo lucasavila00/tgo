@@ -1,5 +1,6 @@
 package invalid
 
 type E enum {
-	Zero struct{}
+	A struct{}
+	TagA struct{}
 }
