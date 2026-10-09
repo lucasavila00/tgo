@@ -1,205 +1,190 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/token"
 	"go/types"
 	"sort"
 
-	"golang.org/x/tools/go/cfg"
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
 )
 
-func (c %checker) callMayReturn(call *ast.CallExpr) bool {
-	name, ok := call.Fun.(*ast.Ident)
-	if !ok || name.Name != "panic" {
-		return true
-	}
-	_, builtin := c.pass.TypesInfo.Uses[name].(*types.Builtin)
+func (c %checker) callMayReturn(expression *syntax.Expression) bool {
+	call := syntax.CallExpressionOf(expression)
+	if call == nil { return true }
+	name := syntax.IdentifierExpressionOf(call.Callee)
+	if name == nil || name.Name != "panic" { return true }
+	_, builtin := c.facts.Object(name).(*types.Builtin)
 	return !builtin
 }
 
 // checkBranch rejects a jump that moves a value before its proof.
-// A guard must run before goto, break, continue, or fallthrough.
-func (c %checker) checkBranch(statement *ast.BranchStmt, state checkedState) {
-	if statement.Tok != token.GOTO && statement.Tok != token.BREAK &&
-		statement.Tok != token.CONTINUE && statement.Tok != token.FALLTHROUGH {
-		return
-	}
+func (c %checker) checkBranch(
+	statement *syntax.Statement,
+	branch *syntax.BranchStatement,
+	state checkedState,
+) {
+	if branch.Token != token.GOTO && branch.Token != token.BREAK &&
+		branch.Token != token.CONTINUE && branch.Token != token.FALLTHROUGH { return }
 	objects := make([]types.Object, 0, len(state))
-	for object := range state {
-		objects = append(objects, object)
-	}
+	for object := range state { objects = append(objects, object) }
 	sort.Slice(objects, func(left, right int) bool {
 		return objects[left].Pos() < objects[right].Pos()
 	})
 	for _, object := range objects {
 		result := state[object]
-		if result.safe || !c.branchHasUnsafeUse(statement, object, result) {
-			continue
-		}
+		if result.safe || !c.branchHasUnsafeUse(statement, branch, object, result) { continue }
 		if result.presence {
-			c.reportModelSource(statement.Pos(), result.model, result.source,
+			c.reportModelSource(branch.Start, result.model, result.source,
 				"%s moves tgo %s %s before ok is proved true",
-				statement.Tok, modelKind(result.model), modelName(result.model))
+				branch.Token, modelKind(result.model), modelName(result.model))
 		} else {
-			c.reportModelResult(statement.Pos(), result.model,
+			c.reportModelResult(branch.Start, result.model,
 				"%s moves tgo %s %s before its error is proved nil",
-				statement.Tok, modelKind(result.model), modelName(result.model))
+				branch.Token, modelKind(result.model), modelName(result.model))
 		}
 	}
 }
 
-// branchHasUnsafeUse follows a jump target until the value is proved or replaced.
 func (c %checker) branchHasUnsafeUse(
-	branch *ast.BranchStmt,
+	statement *syntax.Statement,
+	branch *syntax.BranchStatement,
 	object types.Object,
 	result checkedResult,
 ) bool {
 	body := functionBody(c.function)
-	if body == nil {
-		return false
-	}
+	if body == nil { return false }
 	graph := cfg.New(body, c.callMayReturn)
-	start := c.branchTargetBlock(graph, branch)
-	if start == nil {
-		return false
-	}
+	start := c.branchTargetBlock(graph, statement, branch)
+	if start == nil { return false }
 	return c.unsafeUseFromBlock(
 		start, object, result, result.validProof, make(map[branchFlow]bool),
 	)
 }
 
-// functionBody gets the body from a declaration or literal.
-func functionBody(function ast.Node) *ast.BlockStmt {
-	switch function := function.(type) {
-	case *ast.FuncDecl:
-		return function.Body
-	case *ast.FuncLit:
-		return function.Body
-	}
+func functionBody(function *syntax.Node) *syntax.BlockStatement {
+	if declaration, ok := syntax.FunctionDeclarationOf(function); ok { return declaration.Body }
+	if literal, ok := syntax.FunctionLiteralOf(function); ok { return literal.Body }
 	return nil
 }
 
-// branchTargetBlock resolves the CFG block reached by one branch statement.
 func (c %checker) branchTargetBlock(
 	graph *cfg.CFG,
-	branch *ast.BranchStmt,
+	statement *syntax.Statement,
+	branch *syntax.BranchStatement,
 ) *cfg.Block {
-	if branch.Tok == token.GOTO {
-		return c.gotoTargetBlock(graph, branch)
-	}
-	if branch.Tok == token.FALLTHROUGH {
-		return c.fallthroughTargetBlock(graph, branch)
-	}
-	target := c.branchConstruct(branch)
-	return controlTargetBlock(graph, target, branch.Tok)
+	if branch.Token == token.GOTO { return c.gotoTargetBlock(graph, branch) }
+	if branch.Token == token.FALLTHROUGH { return c.fallthroughTargetBlock(graph, statement) }
+	target := c.branchConstruct(statement, branch)
+	return controlTargetBlock(graph, target, branch.Token)
 }
 
-func (c %checker) branchConstruct(branch *ast.BranchStmt) ast.Stmt {
+func (c %checker) branchConstruct(
+	statement *syntax.Statement,
+	branch *syntax.BranchStatement,
+) *syntax.Statement {
 	if branch.Label != nil {
-		label := c.pass.TypesInfo.Uses[branch.Label]
-		var target ast.Stmt = nil
-		ast.Inspect(c.function, func(node ast.Node) bool {
-			statement, ok := node.(*ast.LabeledStmt)
-			if ok && c.pass.TypesInfo.Defs[statement.Label] == label {
-				target = statement.Stmt
+		label := c.facts.Object(branch.Label)
+		var target *syntax.Statement = nil
+		body := functionBody(c.function)
+		if body == nil { return nil }
+		wrapped := syntax.StatementBlock{Value: body}.Statement()
+		syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
+			value, ok := syntax.StatementOf(node)
+			if !ok { return true }
+			labeled := syntax.LabeledStatementOf(value)
+			if labeled != nil && c.facts.DefinitionName(labeled.Label) == label {
+				target = labeled.Statement
 				return false
 			}
 			return target == nil
 		})
 		return target
 	}
-	for current := c.parents[branch]; current != nil; current = c.parents[current] {
-		switch current.(type) {
-		case *ast.ForStmt, *ast.RangeStmt:
-			return current.(ast.Stmt)
-		case *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
-			if branch.Tok == token.BREAK {
-				return current.(ast.Stmt)
-			}
+	node := syntax.StatementNode(statement)
+	for current := c.parents[node]; current != nil; current = c.parents[*current] {
+		value, ok := syntax.StatementOf(current)
+		if !ok { continue }
+		switch value.Tag() {
+		case syntax.StatementTagFor, syntax.StatementTagRange:
+			return value
+		case syntax.StatementTagSwitch, syntax.StatementTagTypeSwitch,
+			syntax.StatementTagSelect:
+			if branch.Token == token.BREAK { return value }
 		}
 	}
 	return nil
 }
 
-func controlTargetBlock(graph *cfg.CFG, statement ast.Stmt, branch token.Token) *cfg.Block {
+func controlTargetBlock(
+	graph *cfg.CFG,
+	statement *syntax.Statement,
+	branch token.Token,
+) *cfg.Block {
 	kind := controlTargetKind(statement, branch)
 	for _, block := range graph.Blocks {
-		if block.Stmt == statement && block.Kind == kind {
-			return block
-		}
+		if block.Stmt == statement && block.Kind == kind { return block }
 	}
 	return nil
 }
 
-func controlTargetKind(statement ast.Stmt, branch token.Token) cfg.BlockKind {
-	switch statement := statement.(type) {
-	case *ast.ForStmt:
-		if branch == token.CONTINUE && statement.Post != nil {
-			return cfg.KindForPost
-		}
-		if branch == token.CONTINUE {
-			return cfg.KindForLoop
-		}
+func controlTargetKind(statement *syntax.Statement, branch token.Token) cfg.BlockKind {
+	if statement == nil { return cfg.KindInvalid }
+	switch statement.Tag() {
+	case syntax.StatementTagFor:
+		value := syntax.ForStatementOf(statement)
+		if branch == token.CONTINUE && value.Post != nil { return cfg.KindForPost }
+		if branch == token.CONTINUE { return cfg.KindForLoop }
 		return cfg.KindForDone
-	case *ast.RangeStmt:
-		if branch == token.CONTINUE {
-			return cfg.KindRangeLoop
-		}
+	case syntax.StatementTagRange:
+		if branch == token.CONTINUE { return cfg.KindRangeLoop }
 		return cfg.KindRangeDone
-	case *ast.SwitchStmt, *ast.TypeSwitchStmt:
+	case syntax.StatementTagSwitch, syntax.StatementTagTypeSwitch:
 		return cfg.KindSwitchDone
-	case *ast.SelectStmt:
+	case syntax.StatementTagSelect:
 		return cfg.KindSelectDone
 	}
 	return cfg.KindInvalid
 }
 
-func (c %checker) gotoTargetBlock(graph *cfg.CFG, branch *ast.BranchStmt) *cfg.Block {
-	label := c.pass.TypesInfo.Uses[branch.Label]
+func (c %checker) gotoTargetBlock(graph *cfg.CFG, branch *syntax.BranchStatement) *cfg.Block {
+	if branch.Label == nil { return nil }
+	label := c.facts.Object(branch.Label)
 	for _, block := range graph.Blocks {
-		statement, ok := block.Stmt.(*ast.LabeledStmt)
-		if ok && block.Kind == cfg.KindLabel &&
-			c.pass.TypesInfo.Defs[statement.Label] == label {
-			return block
-		}
+		if block.Stmt == nil || block.Kind != cfg.KindLabel { continue }
+		statement := syntax.LabeledStatementOf(block.Stmt)
+		if statement != nil && c.facts.DefinitionName(statement.Label) == label { return block }
 	}
 	return nil
 }
 
 func (c %checker) fallthroughTargetBlock(
 	graph *cfg.CFG,
-	branch *ast.BranchStmt,
+	branch *syntax.Statement,
 ) *cfg.Block {
-	clause, ok := c.parents[branch].(*ast.CaseClause)
-	if !ok {
-		return nil
-	}
-	body, ok := c.parents[clause].(*ast.BlockStmt)
-	if !ok {
-		return nil
-	}
-	var next ast.Stmt = nil
+	node := syntax.StatementNode(branch)
+	parent := c.parents[node]
+	if parent == nil { return nil }
+	clauseStatement, ok := syntax.StatementOf(parent)
+	if !ok || syntax.CaseClauseOf(clauseStatement) == nil { return nil }
+	container := c.parents[*parent]
+	if container == nil { return nil }
+	bodyStatement, ok := syntax.StatementOf(container)
+	if !ok { return nil }
+	body := syntax.BlockStatementOf(bodyStatement)
+	if body == nil { return nil }
+	var next *syntax.Statement = nil
 	for index, item := range body.List {
-		if item == clause && index+1 < len(body.List) {
-			next = body.List[index+1]
-			break
-		}
+		if item == clauseStatement && index+1 < len(body.List) { next = body.List[index+1]; break }
 	}
 	for _, block := range graph.Blocks {
-		if block.Kind == cfg.KindSwitchCaseBody && block.Stmt == next {
-			return block
-		}
+		if block.Kind == cfg.KindSwitchCaseBody && block.Stmt == next { return block }
 	}
 	return nil
 }
 
-type branchFlow struct {
-	block      *cfg.Block
-	proofAlive bool
-}
+type branchFlow struct { block *cfg.Block; proofAlive bool }
 
-// unsafeUseFromBlock searches all reachable blocks for use before proof.
 func (c %checker) unsafeUseFromBlock(
 	block *cfg.Block,
 	object types.Object,
@@ -208,148 +193,135 @@ func (c %checker) unsafeUseFromBlock(
 	visited map[branchFlow]bool,
 ) bool {
 	flow := branchFlow{block: block, proofAlive: proofAlive}
-	if visited[flow] {
-		return false
-	}
+	if visited[flow] { return false }
 	visited[flow] = true
 	for _, node := range block.Nodes {
-		unsafe, valueKilled, proofKilled := c.branchNodeEffect(
-			node, object, result.failure,
-		)
-		if unsafe {
-			return true
-		}
-		if valueKilled {
-			return false
-		}
+		unsafe, valueKilled, proofKilled := c.branchNodeEffect(node, object, result.failure)
+		if unsafe { return true }
+		if valueKilled { return false }
 		proofAlive = proofAlive && !proofKilled
 	}
 	trueSafe, falseSafe := c.blockProofSuccessors(block, object, result, proofAlive)
 	for index, successor := range block.Succs {
-		if (index == 0 && trueSafe) || (index == 1 && falseSafe) {
-			continue
-		}
-		if c.unsafeUseFromBlock(successor, object, result, proofAlive, visited) {
-			return true
-		}
+		if index == 0 && trueSafe || index == 1 && falseSafe { continue }
+		if c.unsafeUseFromBlock(successor, object, result, proofAlive, visited) { return true }
 	}
 	return false
 }
 
-// blockProofSuccessors keeps only CFG edges allowed by a proved condition.
 func (c %checker) blockProofSuccessors(
 	block *cfg.Block,
 	object types.Object,
 	result checkedResult,
 	proofAlive bool,
 ) (bool, bool) {
-	if !proofAlive || len(block.Succs) != 2 || len(block.Nodes) == 0 {
-		return false, false
-	}
-	condition, ok := block.Nodes[len(block.Nodes)-1].(ast.Expr)
-	if !ok {
-		return false, false
-	}
+	if !proofAlive || len(block.Succs) != 2 || len(block.Nodes) == 0 { return false, false }
+	expression, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
+	if !ok { return false, false }
 	state := checkedState{object: result}
-	trueProofs, falseProofs := c.resultProofs(condition, state)
+	trueProofs, falseProofs := c.resultProofs(expression, state)
 	return trueProofs[result.failure], falseProofs[result.failure]
 }
 
-// branchNodeEffect updates proof state for one node after a branch.
 func (c %checker) branchNodeEffect(
-	node ast.Node,
+	node syntax.Node,
 	value types.Object,
 	failure types.Object,
 ) (bool, bool, bool) {
-	unsafe := c.branchNodeUnsafe(node, value, failure)
+	unsafe := c.branchNodeUnsafe(&node, value, failure)
 	valueKilled := false
 	proofKilled := false
-	switch node := node.(type) {
-	case *ast.AssignStmt:
-		for _, target := range node.Lhs {
-			name, direct := target.(*ast.Ident)
-			if !direct {
-				continue
+	if statement, ok := syntax.StatementOf(&node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			for _, target := range assignment.Left {
+				name := syntax.IdentifierExpressionOf(target)
+				if name == nil { continue }
+				assigned := c.facts.Object(name)
+				valueKilled = valueKilled || assigned == value
+				proofKilled = proofKilled || assigned == failure
 			}
-			assigned := c.pass.TypesInfo.ObjectOf(name)
-			valueKilled = valueKilled || assigned == value
-			proofKilled = proofKilled || assigned == failure
 		}
-	case *ast.ValueSpec:
-		for _, name := range node.Names {
-			defined := c.pass.TypesInfo.ObjectOf(name)
-			valueKilled = valueKilled || defined == value
-			proofKilled = proofKilled || defined == failure
+	}
+	if specification, ok := syntax.SpecificationOf(&node); ok {
+		if values := syntax.ValueSpecificationOf(specification); values != nil {
+			for _, name := range values.Names {
+				defined := c.facts.DefinitionName(name)
+				valueKilled = valueKilled || defined == value
+				proofKilled = proofKilled || defined == failure
+			}
 		}
 	}
 	return unsafe, valueKilled, proofKilled
 }
 
 func (c %checker) branchNodeUnsafe(
-	node ast.Node,
+	node *syntax.Node,
 	value types.Object,
 	failure types.Object,
 ) bool {
-	switch node := node.(type) {
-	case *ast.AssignStmt:
-		unsafe := expressionsUseObject(c.pass.TypesInfo, node.Rhs, value)
-		for _, target := range node.Lhs {
-			if _, direct := target.(*ast.Ident); !direct {
-				unsafe = unsafe || expressionUsesObject(c.pass.TypesInfo, target, value)
+	if statement, ok := syntax.StatementOf(node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			unsafe := c.expressionsUseObject(assignment.Right, value)
+			for _, target := range assignment.Left {
+				if syntax.IdentifierExpressionOf(target) == nil {
+					unsafe = unsafe || c.expressionUsesObject(target, value)
+				}
 			}
+			return unsafe
 		}
-		return unsafe
-	case *ast.ValueSpec:
-		return expressionsUseObject(c.pass.TypesInfo, node.Values, value)
-	case *ast.ReturnStmt:
-		return c.returnUsesPendingValue(node, value, failure)
-	default:
-		return nodeUsesObject(c.pass.TypesInfo, node, value)
+		if returned := syntax.ReturnStatementOf(statement); returned != nil {
+			return c.returnUsesPendingValue(returned, value, failure)
+		}
 	}
+	if specification, ok := syntax.SpecificationOf(node); ok {
+		if values := syntax.ValueSpecificationOf(specification); values != nil {
+			return c.expressionsUseObject(values.Values, value)
+		}
+	}
+	return c.nodeUsesObject(node, value)
 }
 
-func expressionsUseObject(info *types.Info, expressions []ast.Expr, object types.Object) bool {
+func (c %checker) expressionsUseObject(expressions []*syntax.Expression, object types.Object) bool {
 	for _, expression := range expressions {
-		if expressionUsesObject(info, expression, object) {
-			return true
-		}
+		if c.expressionUsesObject(expression, object) { return true }
 	}
 	return false
 }
 
-func nodeUsesObject(info *types.Info, node ast.Node, object types.Object) bool {
+func (c %checker) expressionUsesObject(expression *syntax.Expression, object types.Object) bool {
 	used := false
-	ast.Inspect(node, func(node ast.Node) bool {
-		name, ok := node.(*ast.Ident)
-		if ok && info.Uses[name] == object {
-			used = true
-			return false
-		}
+	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+		name, ok := syntax.IdentifierOf(node)
+		if ok && c.facts.Object(name) == object { used = true }
 		return !used
 	})
 	return used
 }
 
+func (c %checker) nodeUsesObject(node *syntax.Node, object types.Object) bool {
+	name, ok := syntax.IdentifierOf(node)
+	if ok && c.facts.Object(name) == object { return true }
+	for _, child := range syntax.Children(c.file, node) {
+		childValue := child
+		if c.nodeUsesObject(&childValue, object) { return true }
+	}
+	return false
+}
+
 func (c %checker) returnUsesPendingValue(
-	statement *ast.ReturnStmt,
+	statement *syntax.ReturnStatement,
 	value types.Object,
 	failure types.Object,
 ) bool {
 	for index, expression := range statement.Results {
-		valueName, direct := expression.(*ast.Ident)
-		if !direct || c.pass.TypesInfo.ObjectOf(valueName) != value {
-			if expressionUsesObject(c.pass.TypesInfo, expression, value) {
-				return true
-			}
+		name := syntax.IdentifierExpressionOf(expression)
+		if name == nil || c.facts.Object(name) != value {
+			if c.expressionUsesObject(expression, value) { return true }
 			continue
 		}
-		if index+1 >= len(statement.Results) {
-			return true
-		}
-		failureName, ok := statement.Results[index+1].(*ast.Ident)
-		if !ok || c.pass.TypesInfo.ObjectOf(failureName) != failure {
-			return true
-		}
+		if index+1 >= len(statement.Results) { return true }
+		failureName := syntax.IdentifierExpressionOf(statement.Results[index+1])
+		if failureName == nil || c.facts.Object(failureName) != failure { return true }
 	}
 	return false
 }
