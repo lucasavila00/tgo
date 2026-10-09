@@ -11,10 +11,6 @@ tgolint ./...
 data from generated packages and uses it in packages that import them. It does
 not check generated files.
 
-Downstream analysis uses only `pkg/syntax` nodes. The compiler implementation and
-the private `pkg/syntax` parser and converter can use `go/ast`. Downstream packages
-must not import or expose `go/ast` types.
-
 ## Checked by tgolint
 
 A clean run means that the loaded Go packages do not contain these errors:
@@ -128,4 +124,4 @@ typed nil through reflection. These operations are outside the proof.
 
 The rule set has no configuration. `//tgolint:ignore` suppresses diagnostics on its line and the
 next line. `//tgolint:ignore-file` suppresses diagnostics in its file. Both directives work in Go
-and TGo source. This repository uses neither directive in production code.
+and TGo source.

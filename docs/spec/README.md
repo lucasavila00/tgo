@@ -66,9 +66,9 @@ The public `tgo/pkg/syntax` package parses this grammar. `ParseFile` accepts a G
 `AllErrors` reports independent scanner and Go parser errors. A tgo production error stops
 extension parsing at its first error.
 
-The parser uses the Go parser as a private front end. It converts every Go and TGo form before
-`ParseFile` returns. The public tree contains closed `Expression`, `Statement`, `Declaration`,
-and `Specification` enums. It does not expose `go/ast` nodes.
+The parser converts every Go and TGo form before `ParseFile` returns. The public tree contains
+closed `Expression`, `Statement`, `Declaration`, and `Specification` enums. It does not expose
+`go/ast` nodes.
 
 `PropagationExpression` contains the source call and the positions of the postfix marks.
 `SecondBang` is `token.NoPos` for `!`. The two marks in `!!` must be adjacent. All positions
@@ -315,14 +315,8 @@ The tag uses `uint8` below 256 variants, `uint16` below 65,536 variants,
 and `uint32` otherwise.
 
 The compiler may change payload storage without changing this API. A variant with no payload
-fields adds no storage. The representation does not use an unsafe memory union.
-
-Payloads start in inline storage. The compiler uses the 64-bit Go compiler layout
-to calculate the enum size. If the size exceeds 80 bytes, it boxes the largest
-inline payload and repeats the calculation. Equal sizes select the first variant
-in declaration order. Boxed variants share one interface field. Construction can
-allocate when the payload escapes. A boxed payload accessor can panic on the wrong
-variant. Enums with no payload fields store only their tag.
+fields adds no storage. The representation does not use an unsafe memory union. The compiler can
+box a large payload; construction can then allocate when the box escapes.
 
 Payload accessors do not check the tag and do not allocate. An inline accessor for the wrong
 variant returns the inactive inline slot. A value from another variant constructor normally has
