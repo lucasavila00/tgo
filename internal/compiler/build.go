@@ -19,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 
+	"tgo/internal/outputname"
+
 	"github.com/gofrs/flock"
 )
 
@@ -455,7 +457,7 @@ func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) 
 			return nil
 		}
 		return d.addSource(path)
-	case generatedFileName(entry.Name()):
+	case outputname.Reserved(entry.Name()):
 		return d.addGeneratedCandidate(path)
 	default:
 		return nil
@@ -688,7 +690,7 @@ func (p *packageUnit) readGoFiles() error {
 	return nil
 }
 
-// generatedFile reports whether a regular file has the tgo ownership header.
+// generatedFile reports whether a reserved output is a regular file.
 func generatedFile(path string) (bool, error) {
 	info, err := os.Lstat(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -700,25 +702,7 @@ func generatedFile(path string) (bool, error) {
 	if !info.Mode().IsRegular() {
 		return false, fmt.Errorf("refusing non-regular output %s", path)
 	}
-	file, err := readFileSnapshot(path)
-	if err != nil {
-		return false, err
-	}
-	return hasGeneratedHeader(file.data), nil
-}
-
-// hasGeneratedHeader reports whether data starts with the exact ownership line.
-func hasGeneratedHeader(data []byte) bool {
-	return bytes.HasPrefix(data, []byte(generatedHeader+"\n"))
-}
-
-// generatedFileName reports whether a name can be emitted by tgo.
-func generatedFileName(name string) bool {
-	if !strings.HasSuffix(name, ".go") {
-		return false
-	}
-	stem := strings.TrimSuffix(name, ".go")
-	return strings.HasSuffix(stem, "_tgo") || strings.Contains(stem, "_tgo_")
+	return true, nil
 }
 
 // selectPackages expands command patterns to tgo package paths.
@@ -969,7 +953,7 @@ func activeGoFile(
 		return nil, false, nil
 	}
 	path := filepath.Join(directory, name)
-	if generatedFileName(name) {
+	if outputname.Reserved(name) {
 		owned, err := generatedFile(path)
 		if err != nil || owned {
 			return nil, false, err
@@ -1076,9 +1060,6 @@ func (b *packageBuilder) write(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	if previous.exists && !hasGeneratedHeader(previous.data) {
-		return fmt.Errorf("refusing to replace user file %s", path)
-	}
 	mode := fs.FileMode(0o644)
 	if previous.exists {
 		mode = previous.mode
@@ -1115,7 +1096,7 @@ func (b *packageBuilder) removeStaleOutputs(
 
 // staleOutput reports whether a generated file is absent from new outputs.
 func staleOutput(entry os.DirEntry, path string, outputs map[string]bool) bool {
-	if !generatedFileName(entry.Name()) {
+	if !outputname.Reserved(entry.Name()) {
 		return false
 	}
 	return !outputs[path]
@@ -1137,7 +1118,7 @@ func (b *packageBuilder) removeGenerated(path string) error {
 	if err != nil {
 		return err
 	}
-	if !previous.exists || !hasGeneratedHeader(previous.data) {
+	if !previous.exists {
 		return fmt.Errorf("output changed during build: %s", path)
 	}
 	changed, err := atomicRemoveFile(path)

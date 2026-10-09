@@ -12,8 +12,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strconv"
 	"strings"
 
 	"tgo/internal/outputname"
@@ -179,7 +177,7 @@ func call(e ast.Expr, args ...ast.Expr) *ast.CallExpr { return &ast.CallExpr{Fun
 // generatedDecl reports whether tgo created a declaration.
 func (p *packageUnit) generatedDecl(d ast.Decl) bool { return p.generated[d] }
 
-// compile lowers one tgo package and formats its Go output files.
+// compile lowers one tgo package and emits its Go output files.
 func (p *packageUnit) compile() (map[string][]byte, error) {
 	if err := p.checkAndLower(); err != nil {
 		return nil, err
@@ -187,22 +185,21 @@ func (p *packageUnit) compile() (map[string][]byte, error) {
 	return p.generatedOutputs()
 }
 
-// generatedOutputs formats each checked source with stable ownership metadata.
+// generatedOutputs emits each checked source to its reserved output name.
 func (p *packageUnit) generatedOutputs() (map[string][]byte, error) {
 	outputs := map[string][]byte{}
 	for _, s := range p.Sources {
-		removeLineDirectives(s.File)
+		if !s.Lowered {
+			outputs[p.outputPath(s.Name)] = append([]byte(nil), s.Data...)
+			continue
+		}
 		var body bytes.Buffer
+		removeLineDirectives(s.File)
 		if err := format.Node(&body, p.fs, s.File); err != nil {
 			return nil, err
 		}
 		var b bytes.Buffer
-		b.WriteString(generatedHeader + "\n")
-		fmt.Fprintf(
-			&b,
-			"//tgo:v2 %s\n\n",
-			strconv.Quote(filepath.Base(s.Name)),
-		)
+		b.WriteString(generatedHeader + "\n\n")
 		b.Write(body.Bytes())
 		outputs[p.outputPath(s.Name)] = b.Bytes()
 	}

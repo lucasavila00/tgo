@@ -68,6 +68,7 @@ type source struct {
 	NonNil           map[token.Pos]bool
 	SuccessReturns   []*ast.ReturnStmt
 	GeneratedHelpers map[string]bool
+	Lowered          bool
 }
 
 type propagationSource struct {
@@ -79,6 +80,25 @@ type propagationSource struct {
 type comprehensionSource struct {
 	Position token.Pos
 	Map      bool
+}
+
+// initiallyNeedsLowering reports whether parsed TGo syntax changes Go output.
+func (s *source) initiallyNeedsLowering() bool {
+	if len(s.Propagations) > 0 || len(s.Comprehensions) > 0 ||
+		len(s.Exhaustive) > 0 || len(s.NonNil) > 0 {
+		return true
+	}
+	for _, declaration := range s.Models {
+		if declaration.Enum || declaration.Predicate != "" {
+			return true
+		}
+		for _, field := range declaration.Fields {
+			if field.Default != "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // requiresConstructor reports whether a model type has an invalid zero value.

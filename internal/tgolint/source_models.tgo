@@ -7,21 +7,12 @@ import (
 	"go/types"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"tgo/internal/compiler"
-	"tgo/internal/outputname"
 	"tgo/pkg/syntax"
 
 	"golang.org/x/tools/go/analysis"
 )
-
-const metadataPrefix = "//tgo:v2 "
-
-type generatedMetadata struct {
-	source string
-	body   []byte
-}
 
 type verifiedSource struct {
 	generated *syntax.File
@@ -34,14 +25,9 @@ type verifiedSource struct {
 func (c %checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 	generatedPath := c.pass.Fset.Position(generated.Package).Filename
 	generatedData, readErr := c.pass.ReadFile(generatedPath)
-	metadata := parseGeneratedMetadata(generatedData)
-	if readErr != nil || metadata == nil {
-		c.failVerification(generated.Package, "generated tgo model metadata is invalid")
-		return nil
-	}
-	sourceName := metadata.source
-	if !sourceMatchesGenerated(sourceName, generatedPath) {
-		c.failVerification(generated.Package, "generated tgo model metadata is invalid")
+	sourceName := c.generatedSource[generated]
+	if readErr != nil || sourceName == "" {
+		c.failVerification(generated.Package, "generated tgo source mapping is invalid")
 		return nil
 	}
 	sourcePath := filepath.Join(filepath.Dir(generatedPath), sourceName)
@@ -59,7 +45,7 @@ func (c %checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 		c.failVerification(generated.Package, "generated tgo output integrity check failed")
 		return nil
 	}
-	if err := compiler.VerifyGeneratedModels(sourceName, data, metadata.body, c.pass.Pkg); err != nil {
+	if err := compiler.VerifyGeneratedModels(sourceName, data, generatedData, c.pass.Pkg); err != nil {
 		c.failVerification(
 			generated.Package,
 			"generated tgo output does not match the current compiler emitter: %v",
@@ -111,28 +97,6 @@ func (c %checker) exportSourceModels(source *verifiedSource) {
 			source.generated, source.file, declaration, source.tokenFile, source.data,
 		)
 	}
-}
-
-// parseGeneratedMetadata reads the source name and generated body.
-func parseGeneratedMetadata(data []byte) *generatedMetadata {
-	parts := bytes.SplitN(data, []byte("\n"), 4)
-	if len(parts) != 4 || string(parts[0]) != generatedHeader || len(parts[2]) != 0 {
-		return nil
-	}
-	line := string(parts[1])
-	if !strings.HasPrefix(line, metadataPrefix) {
-		return nil
-	}
-	quotedSource := strings.TrimPrefix(line, metadataPrefix)
-	source, err := strconv.Unquote(quotedSource)
-	if err != nil || strconv.Quote(source) != quotedSource || filepath.Base(source) != source {
-		return nil
-	}
-	return &generatedMetadata{source: source, body: parts[3]}
-}
-
-func sourceMatchesGenerated(source string, generatedPath string) bool {
-	return outputname.Matches(source, generatedPath)
 }
 
 func (c %checker) hasModelAPIs(object *types.TypeName) bool {
@@ -360,7 +324,7 @@ func readTGoSource(pass *analysis.Pass, path string) ([]byte, error) {
 		pass.OtherFiles = append(pass.OtherFiles, path)
 	}
 	data := pass.ReadFile(path)!
-	return data, nil
+	return data,
 }
 
 func generatedTypeSpec(file *syntax.File, name string) *syntax.TypeSpecification {

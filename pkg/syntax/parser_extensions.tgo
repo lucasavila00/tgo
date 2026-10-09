@@ -335,5 +335,5 @@ func (p %sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 	buildIndex(result, anchors)
 	p.attachComments(result)
 	buildIndex(result, anchors)
-	return result, nil
+	return result,
 }

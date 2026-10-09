@@ -72,6 +72,8 @@ def main() -> None:
             repository,
             str(compiler),
             "build",
+            "./cmd/tgofmt",
+            "./pkg/format",
             "./pkg/syntax",
             "./internal/sourcefacts",
             "./internal/navigation",

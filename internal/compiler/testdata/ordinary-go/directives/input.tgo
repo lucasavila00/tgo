@@ -1,0 +1,9 @@
+//go:build !tgo_never
+// +build !tgo_never
+
+//go:generate echo generated
+package sample
+
+//go:noinline
+//line virtual.go:20
+func Value() int { return 1 }
