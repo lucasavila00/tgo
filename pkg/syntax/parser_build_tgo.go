@@ -109,19 +109,13 @@ func (p *sourceParser) makeComprehension(
 					},
 				)
 			}
-			item := frontComprehensionClauseRange{
-				frontSpan: frontSpan{
-					Start: p.pos(p.tokens[rawRange.start].start),
-					Stop:  p.pos(p.tokens[rawRange.end-1].end),
-				},
-				For:      p.pos(p.tokens[rawRange.forToken].start),
-				Bindings: bindings,
-				Define:   p.pos(p.tokens[rawRange.define].start),
-				Range:    p.pos(p.tokens[rawRange.rangeToken].start),
-				Source:   source,
-				Lbrace:   p.pos(p.tokens[rawRange.open].start),
-				Rbrace:   p.pos(p.tokens[rawRange.close].start),
-			}.frontComprehensionClause()
+			item := func(input TgofrontComprehensionClauseRangeInput) frontComprehensionClause {
+				return NewfrontComprehensionClauseRange(input.Field0, input.FieldFor, input.FieldBindings, input.FieldDefine, input.FieldRange, input.FieldSource, input.FieldLbrace, input.FieldRbrace)
+			}(TgofrontComprehensionClauseRangeInput{Field0: frontSpan{
+				Start: p.pos(p.tokens[rawRange.start].start),
+				Stop:  p.pos(p.tokens[rawRange.end-1].end),
+			}, FieldFor: p.pos(p.tokens[rawRange.forToken].start), FieldBindings: bindings, FieldDefine: p.pos(p.tokens[rawRange.define].start), FieldRange: p.pos(p.tokens[rawRange.rangeToken].start), FieldSource: source, FieldLbrace: p.pos(p.tokens[rawRange.open].start), FieldRbrace: p.pos(p.tokens[rawRange.close].start)})
+
 			result.Clauses = append(result.Clauses, item)
 		case rawComprehensionClauseTagFilter:
 			rawFilter := rawClause.FilterPayload()
@@ -136,16 +130,13 @@ func (p *sourceParser) makeComprehension(
 			for child, parent := range found {
 				anchors[child] = parent
 			}
-			item := frontComprehensionClauseFilter{
-				frontSpan: frontSpan{
-					Start: p.pos(p.tokens[rawFilter.start].start),
-					Stop:  p.pos(p.tokens[rawFilter.end-1].end),
-				},
-				If:        p.pos(p.tokens[rawFilter.ifToken].start),
-				Condition: condition,
-				Lbrace:    p.pos(p.tokens[rawFilter.open].start),
-				Rbrace:    p.pos(p.tokens[rawFilter.close].start),
-			}.frontComprehensionClause()
+			item := func(input TgofrontComprehensionClauseFilterInput) frontComprehensionClause {
+				return NewfrontComprehensionClauseFilter(input.Field0, input.FieldIf, input.FieldCondition, input.FieldLbrace, input.FieldRbrace)
+			}(TgofrontComprehensionClauseFilterInput{Field0: frontSpan{
+				Start: p.pos(p.tokens[rawFilter.start].start),
+				Stop:  p.pos(p.tokens[rawFilter.end-1].end),
+			}, FieldIf: p.pos(p.tokens[rawFilter.ifToken].start), FieldCondition: condition, FieldLbrace: p.pos(p.tokens[rawFilter.open].start), FieldRbrace: p.pos(p.tokens[rawFilter.close].start)})
+
 			result.Clauses = append(result.Clauses, item)
 		default:
 			panic(rawClause.UnknownTag()) // unreachable: tgolint requires a case per tag

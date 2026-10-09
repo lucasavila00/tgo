@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Check that self-hosted generated Go matches its source."""
+"""Check that committed production Go matches current TGo output."""
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import tempfile
@@ -10,17 +11,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-GENERATED_ROOTS = (
-    Path("cmd/tgofmt"),
-    Path("pkg/format"),
-    Path("pkg/syntax"),
-    Path("internal/sourcefacts"),
-    Path("internal/driver"),
-    Path("internal/sourceanalysis"),
-    Path("internal/navigation"),
-    Path("internal/tgolint"),
-    Path("cmd/tgonav"),
-)
+# These names match the build driver's package walk. The copied Go corpus and
+# all repository fixtures are below testdata or the explicit third-party tree.
+SKIPPED_DIRECTORY_NAMES = frozenset({"bin", "testdata", "vendor", "__pycache__"})
+SKIPPED_TREES = (Path("third_party/go"),)
 
 
 def copy_repository(destination: Path) -> Path:
@@ -39,27 +33,44 @@ def run(repository: Path, *command: str) -> None:
     subprocess.run(command, cwd=repository, check=True)
 
 
-def generated_files(repository: Path) -> dict[Path, bytes]:
+def skip_directory(repository: Path, path: Path) -> bool:
+    relative = path.relative_to(repository)
+    name = path.name
+    if name.startswith((".", "_")) or name in SKIPPED_DIRECTORY_NAMES:
+        return True
+    if any(relative == tree or tree in relative.parents for tree in SKIPPED_TREES):
+        return True
+    return relative != Path(".") and (path / "go.mod").is_file()
+
+
+def production_files(repository: Path, suffix: str) -> dict[Path, bytes]:
     files: dict[Path, bytes] = {}
-    for relative_root in GENERATED_ROOTS:
-        root = repository / relative_root
-        if not root.is_dir():
-            continue
-        paths = set(root.rglob("*_tgo.go")) | set(root.rglob("*_tgo_*.go"))
-        for path in sorted(paths):
-            files[path.relative_to(repository)] = path.read_bytes()
+    for directory, names, filenames in os.walk(repository):
+        path = Path(directory)
+        names[:] = sorted(
+            name
+            for name in names
+            if not skip_directory(repository, path / name)
+        )
+        for name in sorted(filenames):
+            if not name.endswith(suffix):
+                continue
+            file_path = path / name
+            files[file_path.relative_to(repository)] = file_path.read_bytes()
     return files
 
 
-def require_equal(
-    expected: dict[Path, bytes],
-    actual: dict[Path, bytes],
-    description: str,
-) -> None:
-    paths = sorted(set(expected) | set(actual))
-    for path in paths:
-        if expected.get(path) != actual.get(path):
-            raise SystemExit(f"{description}: {path}")
+def require_equal(committed: dict[Path, bytes], generated: dict[Path, bytes]) -> None:
+    failures: list[str] = []
+    for path in sorted(set(committed) | set(generated)):
+        if path not in committed:
+            failures.append(f"missing generated output: {path}")
+        elif path not in generated:
+            failures.append(f"orphan generated output: {path}")
+        elif committed[path] != generated[path]:
+            failures.append(f"stale or edited generated output: {path}")
+    if failures:
+        raise SystemExit("\n".join(failures))
 
 
 def main() -> None:
@@ -68,25 +79,11 @@ def main() -> None:
         repository = copy_repository(work)
         compiler = work / "tgo"
 
-        committed = generated_files(repository)
+        committed = production_files(repository, ".go")
         run(repository, "go", "build", "-o", str(compiler), "./cmd/tgo")
-
-        run(
-            repository,
-            str(compiler),
-            "build",
-            "./cmd/tgofmt",
-            "./pkg/format",
-            "./pkg/syntax",
-            "./internal/sourcefacts",
-            "./internal/driver",
-            "./internal/sourceanalysis",
-            "./internal/navigation",
-            "./internal/tgolint",
-            "./cmd/tgonav",
-        )
-        generated = generated_files(repository)
-        require_equal(committed, generated, "committed generated output is stale")
+        run(repository, str(compiler), "build", "./...")
+        generated = production_files(repository, ".go")
+        require_equal(committed, generated)
 
 
 if __name__ == "__main__":
