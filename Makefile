@@ -1,7 +1,7 @@
 .PHONY: ci ci-unlocked fast-ci fast-ci-unlocked fast-checks slow-ci slow-ci-unlocked \
 	generated ast-boundary formatter-boundary formatter-ci tgolint-boundary lint test unit-test unit-test-fast tgolint-unit-test \
 	e2e-test tgolint-test formatter-go-corpus tgofmt-check tgofmt-check-test \
-	allocation-test dogfood markdown source-size pre-commit-boundary vscode-test build install-hooks install-tools
+	allocation-test dogfood markdown source-size upstream-provenance pre-commit-boundary vscode-test build install-hooks install-tools
 
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
@@ -13,7 +13,7 @@ fast-ci:
 
 fast-ci-unlocked: fast-checks unit-test-fast e2e-test allocation-test
 
-fast-checks: generated ast-boundary formatter-boundary formatter-ci tgolint-boundary dogfood lint markdown source-size pre-commit-boundary tgofmt-check tgofmt-check-test
+fast-checks: generated ast-boundary formatter-boundary formatter-ci tgolint-boundary dogfood lint markdown source-size upstream-provenance pre-commit-boundary tgofmt-check tgofmt-check-test
 
 slow-ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 slow-ci-unlocked
@@ -53,6 +53,10 @@ markdown:
 source-size:
 	python3 -m unittest scripts.check_source_size_test
 	python3 scripts/check_source_size.py
+
+upstream-provenance:
+	python3 -m unittest scripts.check_upstream_provenance_test
+	python3 scripts/check_upstream_provenance.py
 
 pre-commit-boundary:
 	python3 scripts/check_pre_commit.py

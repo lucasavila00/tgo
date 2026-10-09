@@ -113,6 +113,9 @@ func (c *checker) exportSourceModels(source *verifiedSource) {
 }
 
 func (c *checker) hasModelAPIs(object *types.TypeName) bool {
+	if _, ok := object.Type().Underlying().(*types.Interface); ok {
+		return false
+	}
 	return method(object.Type(), "Tag") != nil ||
 		method(object.Type(), "check") != nil
 }
@@ -134,7 +137,7 @@ func (c *checker) reportExtraGeneratedModels(
 				continue
 			}
 			object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
-			if !objectOK {
+			if !objectOK || object.IsAlias() {
 				continue
 			}
 			if c.hasModelAPIs(object) {

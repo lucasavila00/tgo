@@ -60,17 +60,15 @@ func shadowPayloadName() Event {
 	}
 }
 
-func TestEnumGeneratedConstructionSurfaceIsPrivateToTGo(t *testing.T) {
+func TestCompilerLeavesEnumConstructionPolicyToTgolint(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name string
 		use  string
-		want string
 	}{
 		{
 			name: "constructor",
 			use:  `var _ = NewEventReady("value")`,
-			want: "NewEventReady is generated Go ABI; use Event.Ready{...}",
 		},
 		{
 			name: "constructor function value",
@@ -78,17 +76,14 @@ func TestEnumGeneratedConstructionSurfaceIsPrivateToTGo(t *testing.T) {
 	constructor := NewEventReady
 	return constructor("value")
 }`,
-			want: "NewEventReady is generated Go ABI; use Event.Ready{...}",
 		},
 		{
 			name: "payload",
 			use:  `var _ EventReady`,
-			want: "EventReady is generated enum representation; use Event.Ready{...}",
 		},
 		{
 			name: "carrier",
 			use:  `var _ TgoEventReadyInput`,
-			want: "TgoEventReadyInput is generated staging ABI; use Event.Ready{...}",
 		},
 	}
 	for _, test := range tests {
@@ -100,8 +95,8 @@ func TestEnumGeneratedConstructionSurfaceIsPrivateToTGo(t *testing.T) {
 				Path: "sample", Sources: []File{{Name: "sample.tgo", Data: data}},
 				FileSet: token.NewFileSet(), Importer: importer.Default(),
 			})
-			if len(problems) != 1 || !strings.Contains(problems[0].Error(), test.want) {
-				t.Fatalf("error = %v, want %q", problems, test.want)
+			if len(problems) != 0 {
+				t.Fatalf("compiler applied enum construction policy: %v", problems)
 			}
 		})
 	}
@@ -183,12 +178,10 @@ var empty = dep.Event.Empty{}
 	tests := []struct {
 		name string
 		use  string
-		want string
 	}{
 		{
 			name: "constructor",
 			use:  `var _ = dep.NewEventReady("value", nil)`,
-			want: "NewEventReady is generated Go ABI; use Event.Ready{...}",
 		},
 		{
 			name: "constructor function value",
@@ -196,17 +189,14 @@ var empty = dep.Event.Empty{}
 	constructor := dep.NewEventReady
 	return constructor("value", nil)
 }`,
-			want: "NewEventReady is generated Go ABI; use Event.Ready{...}",
 		},
 		{
 			name: "payload",
 			use:  `var _ dep.EventReady`,
-			want: "EventReady is generated enum representation; use Event.Ready{...}",
 		},
 		{
 			name: "carrier",
 			use:  `var _ dep.TgoEventReadyInput`,
-			want: "TgoEventReadyInput is generated staging ABI; use Event.Ready{...}",
 		},
 	}
 	for _, test := range tests {
@@ -218,8 +208,8 @@ var empty = dep.Event.Empty{}
 				Imports: map[string]*CompiledPackage{"example.test/dep": dependency},
 				FileSet: token.NewFileSet(), Importer: load,
 			})
-			if len(problems) != 1 || !strings.Contains(problems[0].Error(), test.want) {
-				t.Fatalf("error = %v, want %q", problems, test.want)
+			if len(problems) != 0 {
+				t.Fatalf("compiler applied imported enum construction policy: %v", problems)
 			}
 		})
 	}
