@@ -821,9 +821,9 @@ func scalarLogicalOr(
 }
 
 func scalarBoolean(value scalarValue) (bool, bool) {
-	switch enumValue7 := value; enumValue7.Tag() {
+	switch classified := value; classified.Tag() {
 	case scalarValueTagBoolean:
-		boolean := enumValue7.BooleanPayload()
+		boolean := classified.BooleanPayload()
 		return boolean.Value, true
 	case scalarValueTagInteger:
 		return false, false
@@ -832,59 +832,59 @@ func scalarBoolean(value scalarValue) (bool, bool) {
 	case scalarValueTagIntegerParameter:
 		return false, false
 	default:
-		panic(enumValue7.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func scalarInteger(value scalarValue) (int64, bool) {
-	switch enumValue8 := value; enumValue8.Tag() {
+	switch classified := value; classified.Tag() {
 	case scalarValueTagBoolean:
 		return 0, false
 	case scalarValueTagInteger:
-		integer := enumValue8.IntegerPayload()
+		integer := classified.IntegerPayload()
 		return integer.Value, true
 	case scalarValueTagBooleanParameter:
 		return 0, false
 	case scalarValueTagIntegerParameter:
 		return 0, false
 	default:
-		panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func scalarParameter(value scalarValue) (int, bool, bool) {
-	switch enumValue9 := value; enumValue9.Tag() {
+	switch classified := value; classified.Tag() {
 	case scalarValueTagBoolean:
 		return 0, false, false
 	case scalarValueTagInteger:
 		return 0, false, false
 	case scalarValueTagBooleanParameter:
-		parameter := enumValue9.BooleanParameterPayload()
+		parameter := classified.BooleanParameterPayload()
 		return parameter.Index, parameter.Negated, true
 	case scalarValueTagIntegerParameter:
-		parameter := enumValue9.IntegerParameterPayload()
+		parameter := classified.IntegerParameterPayload()
 		return parameter.Index, false, true
 	default:
-		panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
-	switch enumValue10 := value; enumValue10.Tag() {
+	switch classified := value; classified.Tag() {
 	case scalarValueTagBoolean:
-		boolean := enumValue10.BooleanPayload()
+		boolean := classified.BooleanPayload()
 		return scalarValueBoolean{Value: !boolean.Value}.scalarValue(), true
 	case scalarValueTagInteger:
 		return scalarValueBoolean{Value: false}.scalarValue(), false
 	case scalarValueTagBooleanParameter:
-		parameter := enumValue10.BooleanParameterPayload()
+		parameter := classified.BooleanParameterPayload()
 		return scalarValueBooleanParameter{
 			Index: parameter.Index, Negated: !parameter.Negated,
 		}.scalarValue(), true
 	case scalarValueTagIntegerParameter:
 		return scalarValueBoolean{Value: false}.scalarValue(), false
 	default:
-		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -907,23 +907,23 @@ func scalarValuesEqual(left scalarValue, right scalarValue) bool {
 }
 
 func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
-	switch enumValue11 := value; enumValue11.Tag() {
+	switch classified := value; classified.Tag() {
 	case scalarValueTagBoolean:
 		return 0, false, false
 	case scalarValueTagInteger:
 		return 0, false, false
 	case scalarValueTagBooleanParameter:
-		parameter := enumValue11.BooleanParameterPayload()
+		parameter := classified.BooleanParameterPayload()
 		return parameter.Index, parameter.Negated, true
 	case scalarValueTagIntegerParameter:
 		return 0, false, false
 	default:
-		panic(enumValue11.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func scalarIntegerParameter(value scalarValue) (int, bool) {
-	switch enumValue12 := value; enumValue12.Tag() {
+	switch classified := value; classified.Tag() {
 	case scalarValueTagBoolean:
 		return 0, false
 	case scalarValueTagInteger:
@@ -931,10 +931,10 @@ func scalarIntegerParameter(value scalarValue) (int, bool) {
 	case scalarValueTagBooleanParameter:
 		return 0, false
 	case scalarValueTagIntegerParameter:
-		parameter := enumValue12.IntegerParameterPayload()
+		parameter := classified.IntegerParameterPayload()
 		return parameter.Index, true
 	default:
-		panic(enumValue12.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

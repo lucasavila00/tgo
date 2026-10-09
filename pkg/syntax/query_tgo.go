@@ -7,15 +7,15 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch enumValue1 := *node; enumValue1.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case NodeTagIdentifier:
-		value := enumValue1.IdentifierPayload()
+		value := nodeValue.IdentifierPayload()
 		return value.Value, true
 	case NodeTagExpression:
-		value := enumValue1.ExpressionPayload()
-		switch enumValue2 := *value.Value; enumValue2.Tag() {
+		value := nodeValue.ExpressionPayload()
+		switch expressionValue := *value.Value; expressionValue.Tag() {
 		case ExpressionTagIdentifier:
-			item := enumValue2.IdentifierPayload()
+			item := expressionValue.IdentifierPayload()
 			return item.Value, true
 		case ExpressionTagBad:
 			return nil, false
@@ -70,7 +70,7 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 		case ExpressionTagComprehension:
 			return nil, false
 		default:
-			panic(enumValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
 	case NodeTagFile:
 		return nil, false
@@ -93,7 +93,7 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(enumValue1.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -102,9 +102,9 @@ func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 	if value == nil {
 		return nil, false
 	}
-	switch enumValue3 := *value; enumValue3.Tag() {
+	switch declarationValue := *value; declarationValue.Tag() {
 	case DeclarationTagEnum:
-		item := enumValue3.EnumPayload()
+		item := declarationValue.EnumPayload()
 		return item.Value, true
 	case DeclarationTagBad:
 		return nil, false
@@ -115,7 +115,7 @@ func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 	case DeclarationTagStruct:
 		return nil, false
 	default:
-		panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -124,9 +124,9 @@ func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 	if value == nil {
 		return nil, false
 	}
-	switch enumValue4 := *value; enumValue4.Tag() {
+	switch declarationValue := *value; declarationValue.Tag() {
 	case DeclarationTagStruct:
-		item := enumValue4.StructPayload()
+		item := declarationValue.StructPayload()
 		return item.Value, true
 	case DeclarationTagBad:
 		return nil, false
@@ -137,7 +137,7 @@ func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 	case DeclarationTagEnum:
 		return nil, false
 	default:
-		panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -147,9 +147,9 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 	if !ok {
 		return nil, false
 	}
-	switch enumValue8 := *expression; enumValue8.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case ExpressionTagDefault:
-		item := enumValue8.DefaultPayload()
+		item := expressionValue.DefaultPayload()
 		return item.Value, true
 	case ExpressionTagBad:
 		return nil, false
@@ -204,7 +204,7 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 	case ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -214,9 +214,9 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	if !ok {
 		return nil, false
 	}
-	switch enumValue9 := *expression; enumValue9.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case ExpressionTagPropagation:
-		item := enumValue9.PropagationPayload()
+		item := expressionValue.PropagationPayload()
 		return item.Value, true
 	case ExpressionTagBad:
 		return nil, false
@@ -271,7 +271,7 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	case ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -331,9 +331,9 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	if !ok {
 		return nil, false
 	}
-	switch enumValue10 := *expression; enumValue10.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case ExpressionTagNonNilPointer:
-		item := enumValue10.NonNilPointerPayload()
+		item := expressionValue.NonNilPointerPayload()
 		return item.Value, true
 	case ExpressionTagBad:
 		return nil, false
@@ -388,7 +388,7 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	case ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -397,9 +397,9 @@ func ExpressionOf(node *Node) (*Expression, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch enumValue11 := *node; enumValue11.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case NodeTagExpression:
-		value := enumValue11.ExpressionPayload()
+		value := nodeValue.ExpressionPayload()
 		return value.Value, true
 	case NodeTagFile:
 		return nil, false
@@ -424,7 +424,7 @@ func ExpressionOf(node *Node) (*Expression, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(enumValue11.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -433,9 +433,9 @@ func StatementOf(node *Node) (*Statement, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch enumValue12 := *node; enumValue12.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case NodeTagStatement:
-		value := enumValue12.StatementPayload()
+		value := nodeValue.StatementPayload()
 		return value.Value, true
 	case NodeTagFile:
 		return nil, false
@@ -460,7 +460,7 @@ func StatementOf(node *Node) (*Statement, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(enumValue12.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -469,9 +469,9 @@ func DeclarationOf(node *Node) (*Declaration, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch enumValue13 := *node; enumValue13.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case NodeTagDeclaration:
-		value := enumValue13.DeclarationPayload()
+		value := nodeValue.DeclarationPayload()
 		return value.Value, true
 	case NodeTagFile:
 		return nil, false
@@ -496,7 +496,7 @@ func DeclarationOf(node *Node) (*Declaration, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(enumValue13.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -505,9 +505,9 @@ func SpecificationOf(node *Node) (*Specification, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch enumValue14 := *node; enumValue14.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case NodeTagSpecification:
-		value := enumValue14.SpecificationPayload()
+		value := nodeValue.SpecificationPayload()
 		return value.Value, true
 	case NodeTagFile:
 		return nil, false
@@ -532,13 +532,13 @@ func SpecificationOf(node *Node) (*Specification, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(enumValue14.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // ExpressionKind returns the closed expression variant name.
 func ExpressionKind(value *Expression) string {
-	switch enumValue15 := *value; enumValue15.Tag() {
+	switch expressionValue := *value; expressionValue.Tag() {
 	case ExpressionTagBad:
 		return "Bad"
 	case ExpressionTagIdentifier:
@@ -594,13 +594,13 @@ func ExpressionKind(value *Expression) string {
 	case ExpressionTagComprehension:
 		return "Comprehension"
 	default:
-		panic(enumValue15.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // StatementKind returns the closed statement variant name.
 func StatementKind(value *Statement) string {
-	switch enumValue16 := *value; enumValue16.Tag() {
+	switch statementValue := *value; statementValue.Tag() {
 	case StatementTagBad:
 		return "Bad"
 	case StatementTagDeclaration:
@@ -644,13 +644,13 @@ func StatementKind(value *Statement) string {
 	case StatementTagRange:
 		return "Range"
 	default:
-		panic(enumValue16.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // DeclarationKind returns the closed declaration variant name.
 func DeclarationKind(value *Declaration) string {
-	switch enumValue17 := *value; enumValue17.Tag() {
+	switch declarationValue := *value; declarationValue.Tag() {
 	case DeclarationTagBad:
 		return "Bad"
 	case DeclarationTagGeneral:
@@ -662,13 +662,13 @@ func DeclarationKind(value *Declaration) string {
 	case DeclarationTagStruct:
 		return "Struct"
 	default:
-		panic(enumValue17.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // SpecificationKind returns the closed specification variant name.
 func SpecificationKind(value *Specification) string {
-	switch enumValue18 := *value; enumValue18.Tag() {
+	switch specificationValue := *value; specificationValue.Tag() {
 	case SpecificationTagImport:
 		return "Import"
 	case SpecificationTagValue:
@@ -676,6 +676,6 @@ func SpecificationKind(value *Specification) string {
 	case SpecificationTagType:
 		return "Type"
 	default:
-		panic(enumValue18.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(specificationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }

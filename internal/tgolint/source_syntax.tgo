@@ -7,9 +7,9 @@ func sourceStatementList(node *syntax.Node) ([]%syntax.Statement, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch enumValue25 := *node; enumValue25.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case syntax.NodeTagStatement:
-		value := enumValue25.StatementPayload()
+		value := nodeValue.StatementPayload()
 		if value.Value == nil { return nil, false }
 		return statementList(value.Value)
 case syntax.NodeTagFile:
@@ -40,15 +40,15 @@ case syntax.NodeTagFile:
 
 // statementList gets the child list from one source statement container.
 func statementList(statement %syntax.Statement) ([]%syntax.Statement, bool) {
-	switch enumValue26 := *statement; enumValue26.Tag() {
+	switch statementValue := *statement; statementValue.Tag() {
 	case syntax.StatementTagBlock:
-		value := enumValue26.BlockPayload()
+		value := statementValue.BlockPayload()
 		return value.Value.List, true
 	case syntax.StatementTagCase:
-		value := enumValue26.CasePayload()
+		value := statementValue.CasePayload()
 		return value.Value.Body, true
 	case syntax.StatementTagCommunication:
-		value := enumValue26.CommunicationPayload()
+		value := statementValue.CommunicationPayload()
 		return value.Value.Body, true
 	case syntax.StatementTagBad:
 		return nil, false
@@ -92,9 +92,9 @@ exhaustive:
 
 // sourceAssignment gets an assignment that the user wrote.
 func sourceAssignment(statement %syntax.Statement) (*syntax.AssignmentStatement, bool) {
-	switch enumValue27 := *statement; enumValue27.Tag() {
+	switch statementValue := *statement; statementValue.Tag() {
 	case syntax.StatementTagAssignment:
-		value := enumValue27.AssignmentPayload()
+		value := statementValue.AssignmentPayload()
 		return value.Value, true
 	case syntax.StatementTagBad:
 		return nil, false
@@ -142,9 +142,9 @@ exhaustive:
 
 // sourceIf gets an if statement that the user wrote.
 func sourceIf(statement %syntax.Statement) (*syntax.IfStatement, bool) {
-	switch enumValue28 := *statement; enumValue28.Tag() {
+	switch statementValue := *statement; statementValue.Tag() {
 	case syntax.StatementTagIf:
-		value := enumValue28.IfPayload()
+		value := statementValue.IfPayload()
 		return value.Value, true
 	case syntax.StatementTagBad:
 		return nil, false
@@ -192,9 +192,9 @@ exhaustive:
 
 // sourceReturn gets a return statement that the user wrote.
 func sourceReturn(statement %syntax.Statement) (*syntax.ReturnStatement, bool) {
-	switch enumValue29 := *statement; enumValue29.Tag() {
+	switch statementValue := *statement; statementValue.Tag() {
 	case syntax.StatementTagReturn:
-		value := enumValue29.ReturnPayload()
+		value := statementValue.ReturnPayload()
 		return value.Value, true
 	case syntax.StatementTagBad:
 		return nil, false
@@ -242,12 +242,12 @@ exhaustive:
 
 // sourceCall gets a direct or parenthesized call from TGo source.
 func sourceCall(expression %syntax.Expression) (*syntax.CallExpression, bool) {
-	switch enumValue30 := *expression; enumValue30.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case syntax.ExpressionTagCall:
-		value := enumValue30.CallPayload()
+		value := expressionValue.CallPayload()
 		return value.Value, true
 	case syntax.ExpressionTagParenthesized:
-		value := enumValue30.ParenthesizedPayload()
+		value := expressionValue.ParenthesizedPayload()
 		return sourceCall(value.Value.Expression)
 	case syntax.ExpressionTagBad:
 		return nil, false
@@ -305,9 +305,9 @@ func sourceCall(expression %syntax.Expression) (*syntax.CallExpression, bool) {
 
 // sourceIdentifier gets a direct identifier expression.
 func sourceIdentifier(expression %syntax.Expression) (*syntax.Identifier, bool) {
-	switch enumValue31 := *expression; enumValue31.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case syntax.ExpressionTagIdentifier:
-		value := enumValue31.IdentifierPayload()
+		value := expressionValue.IdentifierPayload()
 		return value.Value, true
 	case syntax.ExpressionTagBad:
 		return nil, false
@@ -367,9 +367,9 @@ func sourceIdentifier(expression %syntax.Expression) (*syntax.Identifier, bool) 
 
 // sourceBinary gets a direct binary expression.
 func sourceBinary(expression %syntax.Expression) (*syntax.BinaryExpression, bool) {
-	switch enumValue32 := *expression; enumValue32.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case syntax.ExpressionTagBinary:
-		value := enumValue32.BinaryPayload()
+		value := expressionValue.BinaryPayload()
 		return value.Value, true
 	case syntax.ExpressionTagBad:
 		return nil, false
@@ -431,9 +431,9 @@ func sourceBinary(expression %syntax.Expression) (*syntax.BinaryExpression, bool
 func sourceCompositeLiteral(
 	expression %syntax.Expression,
 ) (*syntax.CompositeLiteral, bool) {
-	switch enumValue33 := *expression; enumValue33.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case syntax.ExpressionTagCompositeLiteral:
-		value := enumValue33.CompositeLiteralPayload()
+		value := expressionValue.CompositeLiteralPayload()
 		return value.Value, true
 	case syntax.ExpressionTagBad:
 		return nil, false
@@ -494,9 +494,9 @@ func sourceCompositeLiteral(
 // sourceUnparenthesized removes all outer source parentheses.
 func sourceUnparenthesized(expression %syntax.Expression) %syntax.Expression {
 	for {
-		switch enumValue34 := *expression; enumValue34.Tag() {
+		switch expressionValue := *expression; expressionValue.Tag() {
 		case syntax.ExpressionTagParenthesized:
-			value := enumValue34.ParenthesizedPayload()
+			value := expressionValue.ParenthesizedPayload()
 			expression = value.Value.Expression
 		case syntax.ExpressionTagBad:
 			return expression

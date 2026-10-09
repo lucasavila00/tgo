@@ -242,7 +242,7 @@ func (c %checker) compositeEffectCondition(
 	call := syntax.CallExpressionOf(callExpression)
 	if call == nil { return false, false }
 	value := call.Args[condition.ValueParameter]
-	switch enumValue5 := condition.Kind; enumValue5.Tag() {
+	switch conditionKind := condition.Kind; conditionKind.Tag() {
 	case EffectKindTagNonempty:
 		length, _, known := c.knownSliceBounds(value)
 		return (length != 0) == condition.Expected, known
