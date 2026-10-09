@@ -183,8 +183,8 @@ return. A diagnostic for the generated `nil` uses the original `return` position
 A leading comma before one error expression adds the zero value of every earlier result:
 
 ```text
-return , err                 -> return 0, err
-return , fmt.Errorf("bad")   -> return nil, "", fmt.Errorf("bad")
+(int, error):          return , err                -> return 0, err
+(*Item, string, error): return , fmt.Errorf("bad") -> return nil, "", fmt.Errorf("bad")
 ```
 
 The function must have at least two results. Its final result must be the predeclared Go `error`
