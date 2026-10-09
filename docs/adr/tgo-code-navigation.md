@@ -46,7 +46,7 @@ The written Go file names its owner, but it has no complete source map.
 
 | Option | Highlighting | Navigation | Main cost or limit |
 | --- | --- | --- | --- |
-| VS Code and helper | TextMate | Direct providers | One editor; Go helper required. |
+| VS Code and helper | TextMate | Direct providers | One editor; TGo helper required. |
 | TGo language server | Editor grammar | LSP methods | More protocol and process state. |
 | Tree-sitter grammar | Highlight queries | Tags and helper | Duplicates the TGo parser. |
 | Monaco web browser | Monarch | Monaco providers | Needs a service, hosting, and repository access. |
@@ -71,13 +71,14 @@ Monaco also has a definition provider, but the host must supply its result
 ## Decision
 
 Start with a desktop and remote-workspace VS Code extension. Use a TextMate grammar for
-color and direct VS Code providers for navigation. Run a small Go helper that uses the
-existing compiler analysis.
+color and direct VS Code providers for navigation. Run a small native helper written in
+`.tgo`. Compile it through generated Go into an ordinary executable. The helper can
+import and use the existing Go compiler and syntax packages.
 
 This is the smallest sound path to highlighting and F12. The extension stays thin, and
-the semantic rules stay in Go beside the compiler. The helper must run where the
-workspace files are. VS Code has local and remote Node.js extension hosts for this
-model. Browser extension hosts cannot start an executable
+the helper does not copy compiler rules. It also makes the navigation tool use TGo. The
+helper executable must run where the workspace files are. VS Code has local and remote
+Node.js extension hosts for this model. Browser extension hosts cannot start an executable
 ([extension hosts](https://code.visualstudio.com/api/advanced-topics/extension-host),
 [web extension limits](https://code.visualstudio.com/api/extension-guides/web-extensions)).
 
@@ -90,7 +91,7 @@ not change the protocol or the editor providers.
 ```text
 .tgo document
   -> TextMate grammar -> token colors
-  -> VS Code provider -> TGo helper -> compiler.AnalyzePackage
+  -> VS Code provider -> native TGo helper -> compiler.AnalyzePackage
                                   -> syntax tree + source facts
   <- exact file and range <- navigation index
 ```
@@ -139,8 +140,9 @@ the same general build-configuration limit for reference results
 
 ## Staged work
 
-1. Add a small helper protocol and tests for symbols, definition, references, generated
-   member ownership, build selection, and non-ASCII offsets.
+1. Add a small `.tgo` helper command and protocol. Test symbols, definition, references,
+   generated member ownership, build selection, and non-ASCII offsets. Build its
+   generated Go as a native executable.
 2. Add the VS Code language ID, TextMate grammar, and direct providers. Test local and
    remote workspaces with the helper on `PATH`.
 3. Measure use. Add an LSP adapter only when another editor needs the same operations.
