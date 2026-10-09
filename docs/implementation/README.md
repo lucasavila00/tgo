@@ -42,7 +42,8 @@ The remaining exceptions have migration issues:
 
 The public `pkg/syntax` tree is the common source model for tools that analyze TGo code. Downstream
 packages must use its nodes and must not import or expose `go/ast` types. Only the compiler and the
-private parser and converter in `pkg/syntax` can use `go/ast`.
+private parser and converter in `pkg/syntax` can use `go/ast`. The dead-declaration quality checker
+can inspect Go syntax to build its repository graph.
 
 Run `make ast-boundary` to check this boundary.
 

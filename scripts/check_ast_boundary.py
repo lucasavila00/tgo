@@ -6,12 +6,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPILER = Path("internal/compiler")
+DEAD_DECLARATIONS = Path("scripts/deaddecl")
 SYNTAX = Path("pkg/syntax")
 SYNTAX_PREFIXES = ("convert", "front", "parser_")
 
 
 def allowed(path: Path) -> bool:
-    if path.is_relative_to(COMPILER):
+    if path.is_relative_to(COMPILER) or path.is_relative_to(DEAD_DECLARATIONS):
         return True
     return path.parent == SYNTAX and path.name.startswith(SYNTAX_PREFIXES)
 
