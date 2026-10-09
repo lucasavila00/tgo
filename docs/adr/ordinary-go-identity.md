@@ -8,16 +8,15 @@ TGo accepts Go syntax and adds constructs that lower to Go. An accidental
 rewrite of source that needs no lowering is a compiler defect. Source formatting
 belongs to `tgofmt`.
 
-TGo intentionally rejects some valid Go. Its specified checks require initial
-values for `var` declarations, complete struct and collection literals, assigned
-named results, and safe invalid-zero collection operations. This decision does
-not remove those checks.
+Source usage policy runs in `tgolint`. It does not narrow the compiler's Go
+compatibility.
 
 ## Decision
 
-For each active `.tgo` file that passes TGo checks and needs no lowering, the
-compiler must write the input bytes directly to its Go output. It must add no
-notice or ownership comment and must not call a formatter.
+The compiler must accept valid Go in the selected build context. For each active
+`.tgo` file that uses no TGo construct, it must write the input bytes directly
+to its Go output. It must add no notice or ownership comment and must not call a
+formatter.
 
 This contract preserves spacing, comments, directives, build constraints,
 explicit semicolons, line endings, and the presence or absence of a final
@@ -49,8 +48,9 @@ Normal CI checks three samples through the real `tgo build` path:
 The Go corpus has 16 active source files. The test compares each output byte for
 byte with its input and runs 9 same-package Go tests against both forms. It
 excludes 9 external tests because they import the installed standard package.
-The manifest excludes packages that fail TGo checks, need cgo or compiler-only
-source, or import Go `internal` packages that a copied module cannot use.
+The manifest is a small reproducible subset. It excludes packages that need cgo
+or compiler-only source, or import Go `internal` packages that a copied module
+cannot use.
 
 These tests give bounded evidence. They do not prove the invariant for every Go
 program. A failure prints the fixed seed, file name, source, and first changed
