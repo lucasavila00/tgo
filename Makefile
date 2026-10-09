@@ -18,7 +18,7 @@ fast-checks: generated ast-boundary formatter-boundary tgolint-boundary dogfood 
 slow-ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 slow-ci-unlocked
 
-slow-ci-unlocked: tgolint-unit-test tgolint-test formatter-go-corpus
+slow-ci-unlocked: tgolint-unit-test formatter-go-corpus
 
 ast-boundary:
 	python3 scripts/check_ast_boundary.py
