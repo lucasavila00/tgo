@@ -13,6 +13,12 @@ func LoadName(repo Repo, id ID) (string, error) {
 
 `!` returns the error with `repo.Find: ` context. It keeps `errors.Is` and `errors.As` working.
 
+Use `!!` to return the original error without context or wrapping:
+
+```go
+user := repo.Find(id)!!
+```
+
 ## Require non-nil pointers
 
 ```go
