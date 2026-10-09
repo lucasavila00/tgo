@@ -214,11 +214,22 @@ type frontComprehensionClauseRange struct {
 	Lbrace   token.Pos
 	Rbrace   token.Pos
 }
+type TgofrontComprehensionClauseRangeInput struct {
+	Field0        frontSpan
+	FieldFor      token.Pos
+	FieldBindings []*ast.Ident
+	FieldDefine   token.Pos
+	FieldRange    token.Pos
+	FieldSource   ast.Expr
+	FieldLbrace   token.Pos
+	FieldRbrace   token.Pos
+}
 
-// frontComprehensionClause constructs frontComprehensionClause. Model fields must be valid.
+// NewfrontComprehensionClauseRange constructs frontComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value frontComprehensionClauseRange) frontComprehensionClause() frontComprehensionClause {
-	return frontComprehensionClause{tgoTag: frontComprehensionClauseTagRange, tgoPayload: value}
+func NewfrontComprehensionClauseRange(tgoField0 frontSpan, For token.Pos, Bindings []*ast.Ident, Define token.Pos, Range token.Pos, Source ast.Expr, Lbrace token.Pos, Rbrace token.Pos) frontComprehensionClause {
+	tgoValue := frontComprehensionClauseRange{tgoField0, For, Bindings, Define, Range, Source, Lbrace, Rbrace}
+	return frontComprehensionClause{tgoTag: frontComprehensionClauseTagRange, tgoPayload: tgoValue}
 }
 
 // RangePayload requires Range. No tag check.
@@ -234,11 +245,19 @@ type frontComprehensionClauseFilter struct {
 	Lbrace    token.Pos
 	Rbrace    token.Pos
 }
+type TgofrontComprehensionClauseFilterInput struct {
+	Field0         frontSpan
+	FieldIf        token.Pos
+	FieldCondition ast.Expr
+	FieldLbrace    token.Pos
+	FieldRbrace    token.Pos
+}
 
-// frontComprehensionClause constructs frontComprehensionClause. Model fields must be valid.
+// NewfrontComprehensionClauseFilter constructs frontComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value frontComprehensionClauseFilter) frontComprehensionClause() frontComprehensionClause {
-	return frontComprehensionClause{tgoTag: frontComprehensionClauseTagFilter, tgoFilter: value}
+func NewfrontComprehensionClauseFilter(tgoField0 frontSpan, If token.Pos, Condition ast.Expr, Lbrace token.Pos, Rbrace token.Pos) frontComprehensionClause {
+	tgoValue := frontComprehensionClauseFilter{tgoField0, If, Condition, Lbrace, Rbrace}
+	return frontComprehensionClause{tgoTag: frontComprehensionClauseTagFilter, tgoFilter: tgoValue}
 }
 
 // FilterPayload requires Filter. No tag check.
@@ -294,14 +313,14 @@ func (v *frontComprehensionClause) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.frontComprehensionClause()
+		*v = NewfrontComprehensionClauseRange(payload.frontSpan, payload.For, payload.Bindings, payload.Define, payload.Range, payload.Source, payload.Lbrace, payload.Rbrace)
 		return nil
 	case "Filter":
 		var payload frontComprehensionClauseFilter
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.frontComprehensionClause()
+		*v = NewfrontComprehensionClauseFilter(payload.frontSpan, payload.If, payload.Condition, payload.Lbrace, payload.Rbrace)
 		return nil
 	default:
 		return fmt.Errorf("unknown frontComprehensionClause JSON variant %q", variant)
@@ -372,14 +391,14 @@ func (v *frontComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.frontComprehensionClause()
+		*v = NewfrontComprehensionClauseRange(payload.frontSpan, payload.For, payload.Bindings, payload.Define, payload.Range, payload.Source, payload.Lbrace, payload.Rbrace)
 		return nil
 	case 2:
 		var payload frontComprehensionClauseFilter
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.frontComprehensionClause()
+		*v = NewfrontComprehensionClauseFilter(payload.frontSpan, payload.If, payload.Condition, payload.Lbrace, payload.Rbrace)
 		return nil
 	default:
 		return fmt.Errorf("invalid frontComprehensionClause JSON tag")

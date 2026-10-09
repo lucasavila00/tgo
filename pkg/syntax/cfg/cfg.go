@@ -51,7 +51,7 @@ const (
 // New builds a control-flow graph from one syntax block.
 func New(body *syntax.BlockStatement, mayReturn func(*syntax.Expression) bool) *CFG {
 	builder := graphBuilder{mayReturn: mayReturn}
-	bodyNode := syntax.StatementBlock{Value: body}.Statement()
+	bodyNode := syntax.NewStatementBlock(body)
 	builder.current = builder.newBlock(KindBody, &bodyNode)
 	builder.statement(&bodyNode)
 

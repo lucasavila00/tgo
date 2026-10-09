@@ -136,6 +136,8 @@ func (p *packageUnit) checkNode(
 	}
 	switch node := node.(type) {
 	case *ast.Ident:
+		p.checkEnumGeneratedConstructorReference(node)
+		p.checkEnumGeneratedType(node)
 		p.checkCheckedCarrier(node)
 		p.checkCheckedConstructorReference(node, parents)
 	case *ast.TypeSpec:
@@ -228,7 +230,7 @@ func (p *packageUnit) checkSelector(selector *ast.SelectorExpr) {
 	}
 	if model := p.representationModel(selection); model != nil {
 		p.fail(selector,
-			"%s representation is private; use payload constructors and a checked Tag switch",
+			"%s representation is private; use payload accessors in a checked Tag switch",
 			model.Name,
 		)
 		return
@@ -332,6 +334,94 @@ func (p *packageUnit) checkLiteral(lit *ast.CompositeLit) {
 // checkCall applies tgo rules to conversions.
 func (p *packageUnit) checkCall(c *ast.CallExpr) {
 	p.checkConversion(c)
+}
+
+func (p *packageUnit) checkEnumGeneratedConstructorReference(identifier *ast.Ident) {
+	if identifier.Pos() == token.NoPos {
+		return
+	}
+	function, ok := p.info.Uses[identifier].(*types.Func)
+	if !ok {
+		return
+	}
+	if enum, variant := p.generatedEnumConstructor(function); enum != nil {
+		p.fail(
+			identifier,
+			"%s is generated Go ABI; use %s.%s{...}",
+			function.Name(),
+			enum.Name,
+			variant.Name,
+		)
+	}
+}
+
+func (p *packageUnit) generatedEnumConstructor(
+	function *types.Func,
+) (*model, *variant) {
+	if function == nil || function.Pkg() == nil {
+		return nil, nil
+	}
+	owner := p
+	if function.Pkg().Path() != p.Path {
+		owner = p.Imports[function.Pkg().Path()]
+	}
+	if owner == nil {
+		return nil, nil
+	}
+	for _, declaration := range owner.Models {
+		for index := range declaration.Variants {
+			item := &declaration.Variants[index]
+			if function.Name() == enumConstructorName(declaration.Name, item.Name) {
+				return declaration, item
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (p *packageUnit) checkEnumGeneratedType(identifier *ast.Ident) {
+	if identifier.Pos() == token.NoPos {
+		return
+	}
+	object, ok := p.info.Uses[identifier].(*types.TypeName)
+	if !ok {
+		return
+	}
+	named, ok := types.Unalias(object.Type()).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return
+	}
+	owner := p
+	if named.Obj().Pkg().Path() != p.Path {
+		owner = p.Imports[named.Obj().Pkg().Path()]
+	}
+	if owner == nil {
+		return
+	}
+	for _, declaration := range owner.Models {
+		for _, item := range declaration.Variants {
+			payload := declaration.Name + item.Name
+			carrier := enumCarrierName(declaration.Name, item.Name)
+			switch named.Obj().Name() {
+			case payload:
+				p.fail(
+					identifier,
+					"%s is generated enum representation; use %s.%s{...}",
+					payload,
+					declaration.Name,
+					item.Name,
+				)
+			case carrier:
+				p.fail(
+					identifier,
+					"%s is generated staging ABI; use %s.%s{...}",
+					carrier,
+					declaration.Name,
+					item.Name,
+				)
+			}
+		}
+	}
 }
 
 // checkCheckedConstructorReference hides the generated Go ABI from TGo.
