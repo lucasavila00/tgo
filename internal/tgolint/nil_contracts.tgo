@@ -107,16 +107,16 @@ func decodeNilContract(fact *nilContractWireFactV2) nilContract {
 }
 
 type nilEnvironment struct {
-	pass      *analysis.Pass
-	files     []%syntax.File
-	facts     %sourcefacts.Index
-	pkg       *types.Package
-	markers   map[token.Pos]bool
-	contracts map[types.Object]nilContract
-	exports   map[types.Object]nilContract
-	parents   map[syntax.Node]*syntax.Node
+	pass           *analysis.Pass
+	files          []%syntax.File
+	facts          %sourcefacts.Index
+	pkg            *types.Package
+	markers        map[token.Pos]bool
+	contracts      map[types.Object]nilContract
+	exports        map[types.Object]nilContract
+	parents        map[syntax.Node]*syntax.Node
 	comprehensions map[token.Pos][]%syntax.ComprehensionExpression
-	reported  map[diagnosticKey]bool
+	reported       map[diagnosticKey]bool
 }
 
 func newNilEnvironment(
@@ -128,11 +128,11 @@ func newNilEnvironment(
 ) %nilEnvironment {
 	return &nilEnvironment{
 		pass: pass, files: files, facts: facts, pkg: pkg, markers: markers,
-		contracts: make(map[types.Object]nilContract),
-		exports: make(map[types.Object]nilContract),
-		parents: make(map[syntax.Node]*syntax.Node),
+		contracts:      make(map[types.Object]nilContract),
+		exports:        make(map[types.Object]nilContract),
+		parents:        make(map[syntax.Node]*syntax.Node),
 		comprehensions: make(map[token.Pos][]%syntax.ComprehensionExpression),
-		reported: make(map[diagnosticKey]bool),
+		reported:       make(map[diagnosticKey]bool),
 	}
 }
 
@@ -245,7 +245,9 @@ func (e %nilEnvironment) structDeclarationContract(
 			e.declaredContract(field.Field.Type),
 		)
 	}
-	if len(result) == 0 { return nil }
+	if len(result) == 0 {
+		return nil
+	}
 	return result
 }
 
@@ -286,7 +288,9 @@ func (e %nilEnvironment) setRangeContract(expression *syntax.Expression, contrac
 
 // valueContract adds contracts supplied by a named value type.
 func (e %nilEnvironment) valueContract(expression *syntax.Expression) nilContract {
-	if expression == nil { return nil }
+	if expression == nil {
+		return nil
+	}
 	result := cloneNilContract(e.declaredContract(expression))
 	if result == nil {
 		result = make(nilContract)
@@ -312,8 +316,7 @@ func (e %nilEnvironment) addParents(file %syntax.File) {
 		if !ok || comprehension == nil {
 			continue
 		}
-		for parent := syntax.Parent(file, node); parent != nil;
-			parent = syntax.Parent(file, parent) {
+		for parent := syntax.Parent(file, node); parent != nil; parent = syntax.Parent(file, parent) {
 			expression, expressionOK := syntax.ExpressionOf(parent)
 			if expressionOK && syntax.CompositeLiteralOf(expression) != nil {
 				position := syntax.ExpressionPosition(expression)

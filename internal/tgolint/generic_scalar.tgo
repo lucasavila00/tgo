@@ -12,7 +12,10 @@ import (
 type scalarValue enum {
 	Boolean struct { Value bool }
 	Integer struct { Value int64 }
-	BooleanParameter struct { Index int; Negated bool }
+	BooleanParameter struct {
+		Index   int
+		Negated bool
+	}
 	IntegerParameter struct { Index int }
 }
 
@@ -56,9 +59,13 @@ func (c %checker) enclosingFunction(node %syntax.Node) *syntax.Node {
 		if _, declaration := syntax.FunctionDeclarationOf(current); declaration {
 			return current
 		}
-		if _, literal := syntax.FunctionLiteralOf(current); literal { return current }
+		if _, literal := syntax.FunctionLiteralOf(current); literal {
+			return current
+		}
 		parent := c.parents[*current]
-		if parent == nil { return nil }
+		if parent == nil {
+			return nil
+		}
 		current = parent
 	}
 	return nil
@@ -271,7 +278,9 @@ func (c %checker) transferScalarNode(
 			if general != nil {
 				for _, specification := range general.Specs {
 					values := syntax.ValueSpecificationOf(specification)
-					if values == nil { continue }
+					if values == nil {
+						continue
+					}
 					c.transferScalarValues(state, values.Names, values.Values, owned)
 				}
 			}
@@ -284,9 +293,9 @@ func (c %checker) transferScalarNode(
 	}
 	if specification, ok := syntax.SpecificationOf(&node); ok {
 		if values := syntax.ValueSpecificationOf(specification); values != nil {
-				c.transferScalarValues(
-					state, values.Names, values.Values, owned,
-				)
+			c.transferScalarValues(
+				state, values.Names, values.Values, owned,
+			)
 		}
 	}
 	c.invalidateScalarEscapes(state, &node)
@@ -633,61 +642,4 @@ func scalarIntegerParameter(value scalarValue) (int, bool) {
 		return parameter.Index, true
 	exhaustive:
 	}
-}
-
-func cloneScalarState(state scalarState) scalarState {
-	cloned := make(scalarState, len(state))
-	for object, value := range state {
-		cloned[object] = value
-	}
-	return cloned
-}
-
-// joinScalarState keeps facts that are equal on every incoming path.
-func joinScalarState(current scalarState, incoming scalarState) (scalarState, bool) {
-	if current == nil {
-		return cloneScalarState(incoming), true
-	}
-	joined := make(scalarState)
-	for object, value := range current {
-		if other, ok := incoming[object]; ok {
-			if scalarValuesEqual(value, other) {
-				joined[object] = value
-			}
-		}
-	}
-	if scalarStatesEqual(current, joined) {
-		return current, false
-	}
-	return joined, true
-}
-
-func scalarStatesEqual(left scalarState, right scalarState) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for object, value := range left {
-		if other, ok := right[object]; ok {
-			if !scalarValuesEqual(value, other) {
-				return false
-			}
-		} else {
-			return false
-		}
-	}
-	return true
-}
-
-func recordScalarState(
-	target map[syntax.Node]scalarState,
-	root syntax.Node,
-	state scalarState,
-) {
-	inspectGenericNode(&root, func(node %syntax.Node) bool {
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
-		}
-		target[*node] = cloneScalarState(state)
-		return true
-	})
 }

@@ -36,7 +36,7 @@ func (c %checker) checkSuccessReturnModernization(analysis *sourceanalysis.Packa
 				if propagationReturns[returned.Return] {
 					return true
 				}
-				last := sourceUnparenthesized(returned.Results[len(returned.Results) - 1])
+				last := sourceUnparenthesized(returned.Results[len(returned.Results)-1])
 				name, ok := sourceIdentifier(last)
 				if ok && name.Name == "nil" && facts.IdentifierObject(last) == types.Universe.Lookup("nil") {
 					c.reportResult(

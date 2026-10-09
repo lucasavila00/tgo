@@ -397,9 +397,9 @@ type DeferStatement struct {
 // FailureCommas record explicit leading commas. Each comma adds one zero result.
 type ReturnStatement struct {
 	Span
-	Return       token.Pos
-	Results      []%Expression
-	SuccessComma token.Pos
+	Return        token.Pos
+	Results       []%Expression
+	SuccessComma  token.Pos
 	FailureCommas []token.Pos
 }
 

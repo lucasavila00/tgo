@@ -9,7 +9,7 @@ import (
 )
 
 // validationFact marks a generated operation that returns a validated model.
-type validationFact struct {}
+type validationFact struct{}
 
 // AFact marks validationFact as a Go analysis fact.
 func (%validationFact) AFact() {}
@@ -279,7 +279,9 @@ func validTagMethod(typ, tag types.Type) bool {
 
 func validEnumAPI(typ, payload types.Type, accessor, constructorName string) bool {
 	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok { return false }
+	if !ok {
+		return false
+	}
 	read := method(typ, accessor)
 	return read != nil && validEnumConstructor(typ, payload, constructorName) &&
 		method(payload, named.Obj().Name()) == nil &&

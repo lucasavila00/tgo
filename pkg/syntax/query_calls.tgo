@@ -2,7 +2,9 @@ package syntax
 
 // StaticCallName returns the source name for a supported static call.
 func StaticCallName(value *Expression) (string, bool) {
-	if value == nil { return "", false }
+	if value == nil {
+		return "", false
+	}
 	switch enumValue19 := *value; enumValue19.Tag() {
 	case ExpressionTagIdentifier:
 		item := enumValue19.IdentifierPayload()

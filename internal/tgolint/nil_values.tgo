@@ -254,7 +254,9 @@ func (e %nilEnvironment) resultGoType(
 		}
 		return nil
 	}
-	if index == 0 { return typ }
+	if index == 0 {
+		return typ
+	}
 	return nil
 }
 
@@ -354,7 +356,9 @@ func (e %nilEnvironment) checkNilExpression(
 	}
 	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
 		value, ok := syntax.ExpressionOf(node)
-		if !ok { return true }
+		if !ok {
+			return true
+		}
 		if literal := syntax.FunctionLiteralExpressionOf(value); literal != nil {
 			return value == expression
 		}

@@ -1,6 +1,6 @@
 .PHONY: ci ci-unlocked fast-ci fast-ci-unlocked fast-checks slow-ci slow-ci-unlocked \
 	generated ast-boundary formatter-boundary tgolint-boundary lint test unit-test unit-test-fast tgolint-unit-test \
-	e2e-test tgolint-test formatter-go-corpus adr \
+	e2e-test tgolint-test formatter-go-corpus adr tgofmt-check tgofmt-check-test \
 	allocation-test dogfood markdown source-size pre-commit-boundary vscode-test build install-hooks install-tools
 
 ci:
@@ -13,7 +13,7 @@ fast-ci:
 
 fast-ci-unlocked: fast-checks unit-test-fast e2e-test allocation-test
 
-fast-checks: generated ast-boundary formatter-boundary tgolint-boundary dogfood lint markdown adr source-size pre-commit-boundary
+fast-checks: generated ast-boundary formatter-boundary tgolint-boundary dogfood lint markdown adr source-size pre-commit-boundary tgofmt-check tgofmt-check-test
 
 slow-ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 slow-ci-unlocked
@@ -28,6 +28,12 @@ formatter-boundary:
 
 formatter-go-corpus:
 	TGO_FULL_GO_FORMAT_CORPUS=1 go test ./pkg/format -run TestSourceMatchesFullGoTree -count=1
+
+tgofmt-check:
+	python3 -m scripts.check_tgofmt
+
+tgofmt-check-test:
+	python3 -m unittest scripts.check_tgofmt_test
 
 tgolint-boundary:
 	python3 scripts/check_tgolint_boundary.py

@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"tgo/pkg/format"
 	"tgo/pkg/syntax"
 
 	"golang.org/x/tools/go/analysis"
@@ -854,81 +853,4 @@ func sourceRange(
 	end token.Pos,
 ) string {
 	return string(data[sourceFile.Offset(start):sourceFile.Offset(end)])
-}
-
-func sameFields(
-	source []sourceField,
-	generated []*syntax.Field,
-	file *syntax.File,
-) bool {
-	if len(source) != len(generated) {
-		return false
-	}
-	for index, field := range source {
-		other := generated[index]
-		if other == nil {
-			return false
-		}
-		typeText := syntax.SourceText(
-			file,
-			syntax.Span{
-				Start: syntax.ExpressionPosition(other.Type),
-				Stop:  syntax.ExpressionEnd(other.Type),
-			},
-		)
-		tagText := ""
-		if other.Tag != nil {
-			tagText = syntax.SourceText(file, other.Tag.Span)
-		}
-		if !sameTypeText(field.typeExpression, typeText) ||
-			!sameTagText(field.tag, tagText) {
-			return false
-		}
-		if field.name == "" && len(other.Names) == 0 {
-			continue
-		}
-		if len(other.Names) != 1 || other.Names[0].Name != field.name {
-			return false
-		}
-	}
-	return true
-}
-
-func sameTypeText(left string, right string) bool {
-	return sameFormattedText(
-		left,
-		right,
-		func(text string) string {
-			return "package p\ntype value " + text + "\n"
-		},
-	)
-}
-
-func sameTagText(left string, right string) bool {
-	return sameFormattedText(
-		left,
-		right,
-		func(text string) string {
-			return "package p\ntype value struct { Field int " + text + " }\n"
-		},
-	)
-}
-
-func sameFormattedText(
-	left string,
-	right string,
-	wrap func(string) string,
-) bool {
-	if left == right {
-		return true
-	}
-	if left == "" || right == "" {
-		return left == right
-	}
-	leftText, leftErr := format.Source("left.tgo", []byte(wrap(left)))
-	rightText, rightErr := format.Source("right.tgo", []byte(wrap(right)))
-	if leftErr != nil || rightErr != nil {
-		return false
-	}
-	return string(leftText) == string(rightText)
 }

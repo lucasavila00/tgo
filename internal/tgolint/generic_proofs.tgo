@@ -175,7 +175,9 @@ func (c %checker) effectConditionValue(
 	targetType types.Type,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(callExpression)
-	if call == nil { return false, false }
+	if call == nil {
+		return false, false
+	}
 	if condition.ValueParameter < 0 || condition.ValueParameter >= len(call.Args) {
 		return false, false
 	}
@@ -240,7 +242,9 @@ func (c %checker) compositeEffectCondition(
 	targetType types.Type,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(callExpression)
-	if call == nil { return false, false }
+	if call == nil {
+		return false, false
+	}
 	value := call.Args[condition.ValueParameter]
 	switch enumValue5 := condition.Kind; enumValue5.Tag() {
 	case EffectKindTagNonempty:
@@ -337,7 +341,9 @@ func (c %checker) mapMissCondition(
 	condition GenericEffectCondition,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(expression)
-	if call == nil { return false, false }
+	if call == nil {
+		return false, false
+	}
 	if condition.OtherParameter < 0 || condition.OtherParameter >= len(call.Args) {
 		return false, false
 	}
@@ -414,7 +420,9 @@ func (c %checker) resliceExtends(
 	condition GenericEffectCondition,
 ) (bool, bool) {
 	call := syntax.CallExpressionOf(expression)
-	if call == nil { return false, false }
+	if call == nil {
+		return false, false
+	}
 	if condition.OtherParameter < 0 || condition.OtherParameter >= len(call.Args) {
 		return false, false
 	}
@@ -469,7 +477,9 @@ func (c %checker) genericCall(
 	expression %syntax.Expression,
 ) (*types.Func, []types.Type, []types.Type) {
 	call := syntax.CallExpressionOf(expression)
-	if call == nil { return nil, nil, }
+	if call == nil {
+		return nil, nil,
+	}
 	identifier := genericCallIdentifier(call.Callee)
 	if identifier == nil {
 		return nil, nil,
