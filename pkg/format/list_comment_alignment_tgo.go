@@ -37,7 +37,7 @@ func (p *printer) sourceVisualColumn(position token.Pos) int {
 	offset := file.Offset(position)
 	start := bytes.LastIndexByte(p.source[:offset], '\n') + 1
 	column := 0
-	for _, value := range p.source[start:offset] {
+	for _, value := range string(p.source[start:offset]) {
 		if value == '\t' {
 			column += 8 - column%8
 		} else {
