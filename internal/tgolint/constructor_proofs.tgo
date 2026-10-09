@@ -334,7 +334,8 @@ func (c %checker) invalidateEscapedProofs(expression *syntax.Expression, state c
 		if ok {
 			unary := syntax.UnaryExpressionOf(value)
 			if unary != nil && unary.Operator == token.AND {
-				c.invalidateProof(c.facts.Object(identifier(unary.Expression)), state)
+				name := identifier(unary.Expression)
+				if name != nil { c.invalidateProof(c.facts.Object(name), state) }
 			}
 		}
 		return true
