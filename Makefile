@@ -24,7 +24,8 @@ ast-boundary:
 	python3 scripts/check_ast_boundary.py
 
 dogfood:
-	! rg -n '//[[:space:]]*tgolint:ignore' cmd internal pkg
+	! grep -R -n -E --include='*.go' --include='*.tgo' \
+		'//[[:space:]]*tgolint:ignore' cmd internal pkg
 	go run ./cmd/tgolint ./cmd/... ./internal/... ./pkg/...
 
 markdown:
