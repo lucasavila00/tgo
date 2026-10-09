@@ -77,6 +77,10 @@ func generatedMethod(function *ast.FuncDecl, models []*model) bool {
 		if generatedCheckedMethod(receiver, function.Name.Name, model) {
 			return true
 		}
+		if model.Enum && receiver == model.Name &&
+			(function.Name.Name == "MarshalJSON" || function.Name.Name == "UnmarshalJSON") {
+			return true
+		}
 		if generatedEnumMethod(receiver, function.Name.Name, model) {
 			return true
 		}
