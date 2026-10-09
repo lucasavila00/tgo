@@ -66,11 +66,15 @@ func (v Syntax) UnknownTag() string {
 type SyntaxItem struct {
 	Value *Item
 }
+type TgoSyntaxItemInput struct {
+	FieldValue *Item
+}
 
-// Syntax constructs Syntax. Model fields must be valid.
+// NewSyntaxItem constructs Syntax. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SyntaxItem) Syntax() Syntax {
-	return Syntax{tgoTag: SyntaxTagItem, tgoItem: value}
+func NewSyntaxItem(Value *Item) Syntax {
+	tgoValue := SyntaxItem{Value}
+	return Syntax{tgoTag: SyntaxTagItem, tgoItem: tgoValue}
 }
 
 // ItemPayload requires Item. No tag check.
@@ -118,7 +122,7 @@ func (v *Syntax) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Syntax()
+		*v = NewSyntaxItem(payload.Value)
 		return nil
 	default:
 		return fmt.Errorf("unknown Syntax JSON variant %q", variant)
@@ -187,7 +191,7 @@ func (v *Syntax) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Syntax()
+		*v = NewSyntaxItem(payload.Value)
 		return nil
 	default:
 		return fmt.Errorf("invalid Syntax JSON tag")

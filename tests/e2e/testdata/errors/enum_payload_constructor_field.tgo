@@ -1,7 +1,0 @@
-package invalid
-
-type E enum {
-	A struct {
-		E string
-	}
-}

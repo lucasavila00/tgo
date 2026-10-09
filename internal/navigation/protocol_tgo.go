@@ -43,11 +43,16 @@ type ResponseSuccess struct {
 	ID     int64 `json:"id"`
 	Result any   `json:"result,omitempty"`
 }
+type TgoResponseSuccessInput struct {
+	FieldID     int64
+	FieldResult any
+}
 
-// Response constructs Response. Model fields must be valid.
+// NewResponseSuccess constructs Response. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResponseSuccess) Response() Response {
-	return Response{tgoTag: ResponseTagSuccess, tgoSuccess: value}
+func NewResponseSuccess(ID int64, Result any) Response {
+	tgoValue := ResponseSuccess{ID, Result}
+	return Response{tgoTag: ResponseTagSuccess, tgoSuccess: tgoValue}
 }
 
 // SuccessPayload requires Success. No tag check.
@@ -58,11 +63,16 @@ type ResponseFailure struct {
 	ID    int64  `json:"id"`
 	Error string `json:"error,omitempty"`
 }
+type TgoResponseFailureInput struct {
+	FieldID    int64
+	FieldError string
+}
 
-// Response constructs Response. Model fields must be valid.
+// NewResponseFailure constructs Response. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResponseFailure) Response() Response {
-	return Response{tgoTag: ResponseTagFailure, tgoFailure: value}
+func NewResponseFailure(ID int64, Error string) Response {
+	tgoValue := ResponseFailure{ID, Error}
+	return Response{tgoTag: ResponseTagFailure, tgoFailure: tgoValue}
 }
 
 // FailurePayload requires Failure. No tag check.
@@ -98,14 +108,14 @@ func (v *Response) UnmarshalJSON(data []byte) error {
 	{
 		var payload ResponseSuccess
 		if err := json.Unmarshal(data, &payload); err == nil {
-			*v = payload.Response()
+			*v = NewResponseSuccess(payload.ID, payload.Result)
 			return nil
 		}
 	}
 	{
 		var payload ResponseFailure
 		if err := json.Unmarshal(data, &payload); err == nil {
-			*v = payload.Response()
+			*v = NewResponseFailure(payload.ID, payload.Error)
 			return nil
 		}
 	}
@@ -178,11 +188,16 @@ type RequestHover struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *positionParams `json:"params"`
 }
+type TgoRequestHoverInput struct {
+	FieldID     int64
+	FieldParams *positionParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestHover constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestHover) Request() Request {
-	return Request{tgoTag: RequestTagHover, tgoPayload: value}
+func NewRequestHover(ID int64, Params *positionParams) Request {
+	tgoValue := RequestHover{ID, Params}
+	return Request{tgoTag: RequestTagHover, tgoPayload: tgoValue}
 }
 
 // HoverPayload requires Hover. No tag check.
@@ -193,11 +208,16 @@ type RequestDefinition struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *positionParams `json:"params"`
 }
+type TgoRequestDefinitionInput struct {
+	FieldID     int64
+	FieldParams *positionParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestDefinition constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestDefinition) Request() Request {
-	return Request{tgoTag: RequestTagDefinition, tgoPayload: value}
+func NewRequestDefinition(ID int64, Params *positionParams) Request {
+	tgoValue := RequestDefinition{ID, Params}
+	return Request{tgoTag: RequestTagDefinition, tgoPayload: tgoValue}
 }
 
 // DefinitionPayload requires Definition. No tag check.
@@ -208,11 +228,16 @@ type RequestReferences struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *positionParams `json:"params"`
 }
+type TgoRequestReferencesInput struct {
+	FieldID     int64
+	FieldParams *positionParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestReferences constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestReferences) Request() Request {
-	return Request{tgoTag: RequestTagReferences, tgoPayload: value}
+func NewRequestReferences(ID int64, Params *positionParams) Request {
+	tgoValue := RequestReferences{ID, Params}
+	return Request{tgoTag: RequestTagReferences, tgoPayload: tgoValue}
 }
 
 // ReferencesPayload requires References. No tag check.
@@ -223,11 +248,16 @@ type RequestDocumentSymbols struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *documentParams `json:"params"`
 }
+type TgoRequestDocumentSymbolsInput struct {
+	FieldID     int64
+	FieldParams *documentParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestDocumentSymbols constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestDocumentSymbols) Request() Request {
-	return Request{tgoTag: RequestTagDocumentSymbols, tgoPayload: value}
+func NewRequestDocumentSymbols(ID int64, Params *documentParams) Request {
+	tgoValue := RequestDocumentSymbols{ID, Params}
+	return Request{tgoTag: RequestTagDocumentSymbols, tgoPayload: tgoValue}
 }
 
 // DocumentSymbolsPayload requires DocumentSymbols. No tag check.
@@ -240,11 +270,16 @@ type RequestWorkspaceSymbols struct {
 	ID     int64            `json:"id,omitempty"`
 	Params *workspaceParams `json:"params"`
 }
+type TgoRequestWorkspaceSymbolsInput struct {
+	FieldID     int64
+	FieldParams *workspaceParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestWorkspaceSymbols constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestWorkspaceSymbols) Request() Request {
-	return Request{tgoTag: RequestTagWorkspaceSymbols, tgoWorkspaceSymbols: value}
+func NewRequestWorkspaceSymbols(ID int64, Params *workspaceParams) Request {
+	tgoValue := RequestWorkspaceSymbols{ID, Params}
+	return Request{tgoTag: RequestTagWorkspaceSymbols, tgoWorkspaceSymbols: tgoValue}
 }
 
 // WorkspaceSymbolsPayload requires WorkspaceSymbols. No tag check.
@@ -255,11 +290,16 @@ type RequestCancel struct {
 	ID     int64         `json:"id,omitempty"`
 	Params *cancelParams `json:"params"`
 }
+type TgoRequestCancelInput struct {
+	FieldID     int64
+	FieldParams *cancelParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestCancel constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestCancel) Request() Request {
-	return Request{tgoTag: RequestTagCancel, tgoCancel: value}
+func NewRequestCancel(ID int64, Params *cancelParams) Request {
+	tgoValue := RequestCancel{ID, Params}
+	return Request{tgoTag: RequestTagCancel, tgoCancel: tgoValue}
 }
 
 // CancelPayload requires Cancel. No tag check.
@@ -270,11 +310,16 @@ type RequestInvalidate struct {
 	ID     int64             `json:"id,omitempty"`
 	Params *invalidateParams `json:"params"`
 }
+type TgoRequestInvalidateInput struct {
+	FieldID     int64
+	FieldParams *invalidateParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestInvalidate constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestInvalidate) Request() Request {
-	return Request{tgoTag: RequestTagInvalidate, tgoInvalidate: value}
+func NewRequestInvalidate(ID int64, Params *invalidateParams) Request {
+	tgoValue := RequestInvalidate{ID, Params}
+	return Request{tgoTag: RequestTagInvalidate, tgoInvalidate: tgoValue}
 }
 
 // InvalidatePayload requires Invalidate. No tag check.
@@ -543,49 +588,49 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestHover(payload.ID, payload.Params)
 		return nil
 	case "definition":
 		var payload RequestDefinition
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestDefinition(payload.ID, payload.Params)
 		return nil
 	case "references":
 		var payload RequestReferences
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestReferences(payload.ID, payload.Params)
 		return nil
 	case "documentSymbols":
 		var payload RequestDocumentSymbols
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestDocumentSymbols(payload.ID, payload.Params)
 		return nil
 	case "workspaceSymbols":
 		var payload RequestWorkspaceSymbols
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestWorkspaceSymbols(payload.ID, payload.Params)
 		return nil
 	case "cancel":
 		var payload RequestCancel
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestCancel(payload.ID, payload.Params)
 		return nil
 	case "invalidate":
 		var payload RequestInvalidate
 		if err := json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestInvalidate(payload.ID, payload.Params)
 		return nil
 	default:
 		return fmt.Errorf("unknown Request JSON variant %q", variant)
@@ -637,12 +682,12 @@ func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Write
 			server.stop()
 			return err
 		}
-		request := RequestHover{
-			ID: 0,
-			Params: &positionParams{
-				URI: "", Offset: 0, IncludeDeclaration: false,
-			},
-		}.Request()
+		request := func(input TgoRequestHoverInput) Request {
+			return NewRequestHover(input.FieldID, input.FieldParams)
+		}(TgoRequestHoverInput{FieldID: 0, FieldParams: &positionParams{
+			URI: "", Offset: 0, IncludeDeclaration: false,
+		}})
+
 		if err := json.Unmarshal(data, &request); err != nil {
 			if header.Method != "cancel" || header.ID != 0 {
 				server.send(protocolError(header.ID, err.Error()))
@@ -716,7 +761,7 @@ func (s *protocolServer) dispatch(request Request) {
 			}
 			return
 		}
-		s.cancel(payload)
+		s.cancel(payload.ID, payload.Params)
 	case RequestTagInvalidate:
 		payload := request.InvalidatePayload()
 		if payload.Params == nil {
@@ -758,22 +803,26 @@ func protocolResult(id int64, result any, err error) Response {
 }
 
 func protocolSuccess(id int64, result any) Response {
-	return ResponseSuccess{ID: id, Result: result}.Response()
+	return func(input TgoResponseSuccessInput) Response {
+		return NewResponseSuccess(input.FieldID, input.FieldResult)
+	}(TgoResponseSuccessInput{FieldID: id, FieldResult: result})
 }
 
 func protocolError(id int64, message string) Response {
-	return ResponseFailure{ID: id, Error: message}.Response()
+	return func(input TgoResponseFailureInput) Response {
+		return NewResponseFailure(input.FieldID, input.FieldError)
+	}(TgoResponseFailureInput{FieldID: id, FieldError: message})
 }
 
-func (s *protocolServer) cancel(request RequestCancel) {
+func (s *protocolServer) cancel(id int64, params *cancelParams) {
 	s.activeMu.Lock()
-	cancel := s.active[request.Params.ID]
+	cancel := s.active[params.ID]
 	s.activeMu.Unlock()
 	if cancel != nil {
 		cancel()
 	}
-	if request.ID != 0 {
-		s.send(protocolSuccess(request.ID, true))
+	if id != 0 {
+		s.send(protocolSuccess(id, true))
 	}
 }
 

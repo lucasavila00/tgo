@@ -36,6 +36,7 @@ type Package struct {
 	Files         *token.FileSet
 	Package       *types.Package
 	Owners        map[types.Object]token.Pos
+	OwnerHovers   map[types.Object]string
 	GeneratedUses map[token.Pos]types.Object
 	NonNil        map[token.Pos]bool
 }
@@ -159,6 +160,7 @@ func analyzePackage(compiled *compiler.CompiledPackage, testSourcesOnly bool) *P
 			nonNil[position] = true
 		}
 	}
+	owners, ownerHovers := analysisOwners(sources, pkg)
 	return &Package{
 		Path:          compiled.Path,
 		Test:          false,
@@ -167,36 +169,46 @@ func analyzePackage(compiled *compiler.CompiledPackage, testSourcesOnly bool) *P
 		Facts:         facts,
 		Files:         files,
 		Package:       pkg,
-		Owners:        analysisOwners(sources, pkg),
+		Owners:        owners,
+		OwnerHovers:   ownerHovers,
 		GeneratedUses: compiled.References,
 		NonNil:        nonNil,
 	}
 }
 
 // analysisOwners maps generated public objects to their TGo declarations.
-func analysisOwners(sources []Source, pkg *types.Package) map[types.Object]token.Pos {
+func analysisOwners(
+	sources []Source,
+	pkg *types.Package,
+) (map[types.Object]token.Pos, map[types.Object]string) {
 	owners := make(map[types.Object]token.Pos)
+	hovers := make(map[types.Object]string)
 	for _, source := range sources {
 		for _, declaration := range source.Syntax.Declarations {
 			enum, _ := syntax.EnumDeclarationOf(declaration)
 			if enum != nil {
-				addEnumOwners(owners, pkg, enum)
+				addEnumOwners(owners, hovers, pkg, enum)
 			}
 		}
 	}
-	return owners
+	return owners, hovers
 }
 
 func addEnumOwners(
 	owners map[types.Object]token.Pos,
+	hovers map[types.Object]string,
 	pkg *types.Package,
 	declaration *syntax.EnumDeclaration,
 ) {
 	name := declaration.Name.Name
 	owner := declaration.Name.Start
 	scope := pkg.Scope()
+	enumObject := scope.Lookup(name)
+	if enumObject != nil {
+		hovers[enumObject] = "enum " + name
+	}
 	addOwnedObject(owners, scope.Lookup(name+"Tag"), owner)
-	named := namedObject(scope.Lookup(name))
+	named := namedObject(enumObject)
 	for _, method := range []string{
 		"Tag",
 		"UnknownTag",
@@ -219,7 +231,16 @@ func addEnumOwners(
 			namedMethod(named, variant.Name.Name+"Payload"),
 			variantOwner,
 		)
-		addOwnedObject(owners, namedMethod(payload, name), variantOwner)
+		accessor := namedMethod(named, variant.Name.Name+"Payload")
+		if accessor != nil {
+			hovers[accessor] = "func (" + name + ") " + variant.Name.Name +
+				"Payload() " + name + "." + variant.Name.Name
+		}
+		constructor := scope.Lookup("New" + name + variant.Name.Name)
+		addOwnedObject(owners, constructor, variantOwner)
+		if constructor != nil {
+			hovers[constructor] = "variant " + name + "." + variant.Name.Name
+		}
 	}
 }
 

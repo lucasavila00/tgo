@@ -61,7 +61,7 @@ func TestRequestJSONVariants(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := RequestHover{ID: 0, Params: new(positionParams)}.Request()
+			request := Request.Hover{ID: 0, Params: new(positionParams)}
 			if err := json.Unmarshal([]byte(test.wire), &request); err != nil {
 				t.Fatal(err)
 			}
@@ -113,7 +113,7 @@ func TestRequestJSONRejectsInvalidInput(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := RequestHover{ID: 0, Params: new(positionParams)}.Request()
+			request := Request.Hover{ID: 0, Params: new(positionParams)}
 			err := json.Unmarshal([]byte(test.wire), &request)
 			if err == nil || !strings.Contains(err.Error(), test.errorText) {
 				t.Fatalf("error = %v, want text %q", err, test.errorText)

@@ -319,8 +319,11 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 				}
 				key := keys.key(object)
 				qualifier := types.RelativeTo(object.Pkg())
-				contents := types.ObjectString(object, qualifier)
-				if function, ok := object.(*types.Func); ok {
+				contents := pkg.OwnerHovers[object]
+				if contents == "" {
+					contents = types.ObjectString(object, qualifier)
+				}
+				if function, ok := object.(*types.Func); ok && pkg.OwnerHovers[object] == "" {
 					signature := function.Type().(*types.Signature)
 					if receiver := signature.Recv(); receiver != nil {
 						contents = "func (" + types.TypeString(
