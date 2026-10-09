@@ -23,3 +23,10 @@ func read(ok bool, owner %User) error {
 	_ = enum{}
 	return nil
 }
+
+func pointerParameter(value *Record) {}
+func nonNilParameter(value %Record) {}
+
+func (value *Record) pointerReceiver() {}
+func (value %Record) nonNilReceiver() {}
+func inlineModulo() { _ = left % Thing }

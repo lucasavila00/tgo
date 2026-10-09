@@ -10,6 +10,23 @@
       "include": "source.go"
     }
   ],
+  "injections": {
+    "L:source.tgo -comment -string": {
+      "patterns": [
+        {
+          "match": "(?<=^\\s*func\\b[^{\\r\\n]*)(\\b[A-Za-z_]\\w*)([ \\t]+)(%)(?=[A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "name": "variable.parameter.go"
+            },
+            "3": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        }
+      ]
+    }
+  },
   "repository": {
     "tgo": {
       "patterns": [
