@@ -41,7 +41,7 @@ func (c *checker) checkIotaModernization(analysis *compiler.AnalysisPackage) {
 		)
 		for _, declaration := range source.Syntax.Declarations {
 			general, ok := sourceGeneralDeclaration(declaration)
-			if !ok || general.Kind != token.CONST {
+			if !ok || general == nil || general.Kind != token.CONST {
 				continue
 			}
 			c.checkIotaGroup(general, index)
@@ -56,17 +56,18 @@ func (c *checker) checkIotaGroup(
 ) {
 	candidates := make(map[*types.Named]*iotaCandidate)
 	ordered := make([]*iotaCandidate, 0)
-	values := []*syntax.Expression(nil)
+	var valueSource *syntax.ValueSpecification = nil
 	for _, specification := range group.Specs {
 		item, ok := sourceValueSpecification(specification)
 		if !ok || item == nil {
 			continue
 		}
 		if len(item.Values) != 0 {
-			values = item.Values
+			valueSource = item
 		}
 		for position, identifier := range item.Names {
-			if identifier == nil || identifier.Name == "_" || position >= len(values) {
+			if identifier.Name == "_" || valueSource == nil ||
+				position >= len(valueSource.Values) {
 				continue
 			}
 			object, ok := facts.DefinitionName(identifier).(*types.Const)
@@ -81,15 +82,11 @@ func (c *checker) checkIotaGroup(
 			if created {
 				ordered = append(ordered, candidate)
 			}
-			expression := values[position]
-			if expression == nil {
-				continue
-			}
-			iotaPosition, usesIota := facts.IotaPosition(expression)
+			iotaPosition, usesIota := facts.IotaPosition(valueSource.Values[position])
 			candidate.values = append(candidate.values, object.Val())
 			candidate.allIota = candidate.allIota && usesIota
 			candidate.bitSet = candidate.bitSet ||
-				(usesIota && facts.HasBitSetOperator(expression))
+				(usesIota && facts.HasBitSetOperator(valueSource.Values[position]))
 			if candidate.position == token.NoPos && usesIota {
 				candidate.position = iotaPosition
 			}

@@ -9,7 +9,7 @@ import (
 )
 
 // sourceStatementList gets a statement list that exists in TGo source.
-func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
+func sourceStatementList(node *syntax.Node) ([]%syntax.Statement, bool) {
 	if node == nil {
 		return nil, false
 	}
@@ -31,10 +31,7 @@ func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
 }
 
 // statementList gets the child list from one source statement container.
-func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
-	if statement == nil {
-		return nil, false
-	}
+func statementList(statement %syntax.Statement) ([]%syntax.Statement, bool) {
 	match *statement {
 	case Block(value): return value.Value.List, true
 	case Case(value): return value.Value.Body, true
@@ -62,10 +59,7 @@ func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
 }
 
 // sourceAssignment gets an assignment that the user wrote.
-func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement, bool) {
-	if statement == nil {
-		return nil, false
-	}
+func sourceAssignment(statement %syntax.Statement) (*syntax.AssignmentStatement, bool) {
 	match *statement {
 	case Assignment(value): return value.Value, true
 	case Bad(_): return nil, false
@@ -93,10 +87,7 @@ func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement,
 }
 
 // sourceIf gets an if statement that the user wrote.
-func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
-	if statement == nil {
-		return nil, false
-	}
+func sourceIf(statement %syntax.Statement) (*syntax.IfStatement, bool) {
 	match *statement {
 	case If(value): return value.Value, true
 	case Bad(_): return nil, false
@@ -124,10 +115,7 @@ func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
 }
 
 // sourceReturn gets a return statement that the user wrote.
-func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
-	if statement == nil {
-		return nil, false
-	}
+func sourceReturn(statement %syntax.Statement) (*syntax.ReturnStatement, bool) {
 	match *statement {
 	case Return(value): return value.Value, true
 	case Bad(_): return nil, false
@@ -155,10 +143,7 @@ func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
 }
 
 // sourceCall gets a direct or parenthesized call from TGo source.
-func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
-	if expression == nil {
-		return nil, false
-	}
+func sourceCall(expression %syntax.Expression) (*syntax.CallExpression, bool) {
 	match *expression {
 	case Call(value): return value.Value, true
 	case Parenthesized(value): return sourceCall(value.Value.Expression)
@@ -190,10 +175,7 @@ func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
 }
 
 // sourceIdentifier gets a direct identifier expression.
-func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) {
-	if expression == nil {
-		return nil, false
-	}
+func sourceIdentifier(expression %syntax.Expression) (*syntax.Identifier, bool) {
 	match *expression {
 	case Identifier(value): return value.Value, true
 	case Bad(_): return nil, false
@@ -225,10 +207,7 @@ func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) 
 }
 
 // sourceBinary gets a direct binary expression.
-func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool) {
-	if expression == nil {
-		return nil, false
-	}
+func sourceBinary(expression %syntax.Expression) (*syntax.BinaryExpression, bool) {
 	match *expression {
 	case Binary(value): return value.Value, true
 	case Bad(_): return nil, false
@@ -261,11 +240,8 @@ func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool
 
 // sourceCompositeLiteral gets a direct composite literal.
 func sourceCompositeLiteral(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 ) (*syntax.CompositeLiteral, bool) {
-	if expression == nil {
-		return nil, false
-	}
 	match *expression {
 	case CompositeLiteral(value): return value.Value, true
 	case Bad(_): return nil, false
@@ -297,45 +273,42 @@ func sourceCompositeLiteral(
 }
 
 // sourceUnparenthesized removes all outer source parentheses.
-func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
-	for expression != nil {
-		match *expression {
-		case Parenthesized(value): expression = value.Value.Expression
-		case Bad(_): return expression
-		case Identifier(_): return expression
-		case Ellipsis(_): return expression
-		case BasicLiteral(_): return expression
-		case FunctionLiteral(_): return expression
-		case CompositeLiteral(_): return expression
-		case Selector(_): return expression
-		case Index(_): return expression
-		case IndexList(_): return expression
-		case Slice(_): return expression
-		case TypeAssertion(_): return expression
-		case Call(_): return expression
-		case Star(_): return expression
-		case NonNilPointer(_): return expression
-		case Unary(_): return expression
-		case Binary(_): return expression
-		case KeyValue(_): return expression
-		case ArrayType(_): return expression
-		case StructType(_): return expression
-		case FunctionType(_): return expression
-		case InterfaceType(_): return expression
-		case MapType(_): return expression
-		case ChannelType(_): return expression
-		case Default(_): return expression
-		case Propagation(_): return expression
-		}
+func sourceUnparenthesized(expression %syntax.Expression) %syntax.Expression {
+	match *expression {
+	case Parenthesized(value): return sourceUnparenthesized(value.Value.Expression)
+	case Bad(_): return expression
+	case Identifier(_): return expression
+	case Ellipsis(_): return expression
+	case BasicLiteral(_): return expression
+	case FunctionLiteral(_): return expression
+	case CompositeLiteral(_): return expression
+	case Selector(_): return expression
+	case Index(_): return expression
+	case IndexList(_): return expression
+	case Slice(_): return expression
+	case TypeAssertion(_): return expression
+	case Call(_): return expression
+	case Star(_): return expression
+	case NonNilPointer(_): return expression
+	case Unary(_): return expression
+	case Binary(_): return expression
+	case KeyValue(_): return expression
+	case ArrayType(_): return expression
+	case StructType(_): return expression
+	case FunctionType(_): return expression
+	case InterfaceType(_): return expression
+	case MapType(_): return expression
+	case ChannelType(_): return expression
+	case Default(_): return expression
+	case Propagation(_): return expression
 	}
-	return nil
 }
 
 // sourceFunctionSignature finds the nearest source function around a node.
 func sourceFunctionSignature(
 	file *syntax.File,
 	node *syntax.Node,
-	index *sourcefacts.Index,
+	index %sourcefacts.Index,
 ) *types.Signature {
 	for current := node; current != nil; current = syntax.Parent(file, current) {
 		position, ok := sourceFunctionPosition(current)
@@ -369,7 +342,7 @@ func sourceFunctionPosition(node *syntax.Node) (token.Pos, bool) {
 }
 
 // declarationFunctionPosition gets a named function position.
-func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
+func declarationFunctionPosition(value %syntax.Declaration) (token.Pos, bool) {
 	match *value {
 	case Function(function): return function.Value.Start, true
 	case Bad(_): return token.NoPos, false
@@ -381,7 +354,7 @@ func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
 }
 
 // expressionFunctionPosition gets a function literal position.
-func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
+func expressionFunctionPosition(value %syntax.Expression) (token.Pos, bool) {
 	match *value {
 	case FunctionLiteral(function): return function.Value.Start, true
 	case Bad(_): return token.NoPos, false
@@ -414,7 +387,7 @@ func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
 
 // sourceGeneralDeclaration gets one Go-style source declaration.
 func sourceGeneralDeclaration(
-	value *syntax.Declaration,
+	value %syntax.Declaration,
 ) (*syntax.GeneralDeclaration, bool) {
 	match *value {
 	case General(declaration): return declaration.Value, true
@@ -428,7 +401,7 @@ func sourceGeneralDeclaration(
 
 // sourceValueSpecification gets one const or variable source specification.
 func sourceValueSpecification(
-	value *syntax.Specification,
+	value %syntax.Specification,
 ) (*syntax.ValueSpecification, bool) {
 	match *value {
 	case Value(specification): return specification.Value, true
