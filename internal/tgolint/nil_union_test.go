@@ -82,7 +82,7 @@ func TestNilBooleanReachability(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		diagnostics, err := runNilUnionAnalysis(test.body)
+		diagnostics, err := runNilAnalysis("value *Item", test.body)
 		if err != nil {
 			t.Fatalf("%s: %v", test.name, err)
 		}
@@ -95,14 +95,14 @@ func TestNilBooleanReachability(t *testing.T) {
 	}
 }
 
-func runNilUnionAnalysis(body string) ([]analysis.Diagnostic, error) {
+func runNilAnalysis(parameters string, body string) ([]analysis.Diagnostic, error) {
 	source := fmt.Sprintf(`package sample
 type Item struct{}
 func need(value *Item) {}
-func subject(value *Item) {
+func subject(%s) {
 %s
 }
-`, body)
+`, parameters, body)
 	set := token.NewFileSet()
 	file, err := parser.ParseFile(set, "sample.go", source, parser.ParseComments)
 	if err != nil {
