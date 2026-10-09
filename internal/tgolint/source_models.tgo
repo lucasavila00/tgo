@@ -139,7 +139,7 @@ func sourceMatchesGenerated(source string, generatedPath string) bool {
 }
 
 func (c %checker) hasModelAPIs(object *types.TypeName) bool {
-	return method(object.Type(), "TgoTag") != nil ||
+	return method(object.Type(), "Tag") != nil ||
 		method(object.Type(), "Value") != nil
 }
 
@@ -307,10 +307,14 @@ func sourceModelName(value *sourceModel) string {
 	if value == nil {
 		return ""
 	}
-	match *value {
-	case Checked(checked): return checked.Name
-	case Enum(enum): return enum.Name
-	case Struct(structure): return structure.Name
+	switch item := *value; item.Tag() {
+	case sourceModelTagChecked:
+		return item.CheckedPayload().Name
+	case sourceModelTagEnum:
+		return item.EnumPayload().Name
+	case sourceModelTagStruct:
+		return item.StructPayload().Name
+	exhaustive:
 	}
 }
 
@@ -318,10 +322,14 @@ func sourceModelFact(value *sourceModel) *model {
 	if value == nil {
 		return nil
 	}
-	match *value {
-	case Checked(checked): return checked.Fact
-	case Enum(enum): return enum.Fact
-	case Struct(_): return nil
+	switch item := *value; item.Tag() {
+	case sourceModelTagChecked:
+		return item.CheckedPayload().Fact
+	case sourceModelTagEnum:
+		return item.EnumPayload().Fact
+	case sourceModelTagStruct:
+		return nil
+	exhaustive:
 	}
 }
 
@@ -366,14 +374,16 @@ func sourceShapeMatches(
 	if source == nil {
 		return false
 	}
-	match *source {
-	case Struct(sourceStruct):
+	switch item := *source; item.Tag() {
+	case sourceModelTagStruct:
+		sourceStruct := item.StructPayload()
 		structure, ok := representation.(*ast.StructType)
 		if !ok {
 			return false
 		}
 		return sameFields(sourceStruct.Fields, structure.Fields)
-	case Checked(checked):
+	case sourceModelTagChecked:
+		checked := item.CheckedPayload()
 		structure, ok := representation.(*ast.StructType)
 		if !ok {
 			return false
@@ -383,7 +393,8 @@ func sourceShapeMatches(
 		) &&
 			len(structure.Fields.List) == 1 &&
 			sameExpressionText(checked.Base, structure.Fields.List[0].Type)
-	case Enum(enum):
+	case sourceModelTagEnum:
+		enum := item.EnumPayload()
 		if !generatedEnumShape(typ, enum.Name, enum.Variants) {
 			return false
 		}
@@ -398,24 +409,25 @@ func sourceShapeMatches(
 			}
 		}
 		return true
+	exhaustive:
 	}
 }
 
-// generatedEnumShape checks source variants against the public ABI.
 // generatedEnumShape checks enum operations without reading private storage.
 func generatedEnumShape(
 	typ types.Type,
 	name string,
 	variants []sourceVariant,
 ) bool {
-	if !validGeneratedTagMethod(typ) {
+	tag, ok := typeInPackage(typ, name+"Tag")
+	if !ok || !validGeneratedTagAPI(typ, tag, name, variants) {
 		return false
 	}
 	for _, variant := range variants {
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
 		if !ok || !validEnumAPI(
-			typ, payload, "Tgo"+variant.name, "New"+payloadName,
+			typ, payload, variant.name+"Payload", name,
 		) {
 			return false
 		}
@@ -423,13 +435,40 @@ func generatedEnumShape(
 	return true
 }
 
-func validGeneratedTagMethod(typ types.Type) bool {
-	tag := method(typ, "TgoTag")
-	if tag == nil || tag.Params().Len() != 0 || tag.Results().Len() != 1 {
+func validGeneratedTagAPI(
+	typ types.Type,
+	tagType types.Type,
+	name string,
+	variants []sourceVariant,
+) bool {
+	tag := method(typ, "Tag")
+	unknown := method(typ, "UnknownTag")
+	if tag == nil || tag.Params().Len() != 0 || tag.Results().Len() != 1 ||
+		!types.Identical(tag.Results().At(0).Type(), tagType) ||
+		unknown == nil || unknown.Params().Len() != 0 || unknown.Results().Len() != 1 ||
+		!types.Identical(unknown.Results().At(0).Type(), types.Typ[types.String]) {
 		return false
 	}
-	basic, ok := coreType(tag.Results().At(0).Type()).(*types.Basic)
-	return ok && basic.Info()&types.IsUnsigned != 0
+	basic, ok := coreType(tagType).(*types.Basic)
+	if !ok || basic.Info()&types.IsUnsigned == 0 {
+		return false
+	}
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return false
+	}
+	names := []string(nil)
+	for _, variant := range variants {
+		names = append(names, name+"Tag"+variant.name)
+	}
+	for index, constantName := range names {
+		constant, ok := named.Obj().Pkg().Scope().Lookup(constantName).(*types.Const)
+		if !ok || !types.Identical(constant.Type(), tagType) ||
+			constant.Val().ExactString() != strconv.Itoa(index+1) {
+			return false
+		}
+	}
+	return true
 }
 
 func typeInPackage(typ types.Type, name string) (types.Type, bool) {

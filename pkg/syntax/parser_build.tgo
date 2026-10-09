@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"slices"
 )
 
 // anchorPropagations replaces each call with its tgo expression in the public tree.
@@ -65,7 +64,6 @@ func (p %sourceParser) anchorComprehensions(file %frontFile, anchors map[frontNo
 func (p %sourceParser) makeComprehension(
 	raw *rawComprehension,
 	projection *ast.CompositeLit,
-	matchAt map[token.Pos]frontNode,
 	defaultAt map[token.Pos]%frontDefaultMarker,
 ) (*frontComprehensionExpr, map[frontNode]frontNode, error) {
 	anchors := make(map[frontNode]frontNode)
@@ -83,7 +81,6 @@ func (p %sourceParser) makeComprehension(
 		expression, found := p.parseExpression(
 			p.tokens[clause.expressionStart].start,
 			p.tokens[clause.expressionEnd].start,
-			matchAt,
 			defaultAt,
 		)!!
 		for child, parent := range found {
@@ -117,7 +114,6 @@ func (p %sourceParser) makeComprehension(
 	value, found, err := p.parseExpression(
 		p.tokens[rawResult.valueStart].start,
 		p.tokens[rawResult.valueEnd-1].end,
-		matchAt,
 		defaultAt,
 	)
 	if err != nil {
@@ -132,7 +128,6 @@ func (p %sourceParser) makeComprehension(
 		key, found, err = p.parseExpression(
 			p.tokens[rawResult.keyStart].start,
 			p.tokens[rawResult.keyEnd-1].end,
-			matchAt,
 			defaultAt,
 		)
 		if err != nil {
@@ -153,55 +148,8 @@ func (p %sourceParser) makeComprehension(
 	return result, anchors, nil
 }
 
-func (p %sourceParser) makeMatch(
-	raw *rawMatch,
-) %frontMatchStmt {
-	node := &frontMatchStmt{
-		frontSpan:    frontSpan{Start: p.pos(p.tokens[raw.matchToken].start), Stop: p.pos(raw.end)},
-		Match:   p.pos(p.tokens[raw.matchToken].start),
-		Subject: nil,
-		Lbrace:  p.pos(p.tokens[raw.open].start),
-		Cases:   nil,
-		Rbrace:  p.pos(p.tokens[raw.close].start),
-	}
-	for _, item := range raw.cases {
-		matchCase := &frontMatchCase{
-			frontSpan: frontSpan{
-				Start: p.pos(item.start),
-				Stop:  p.pos(item.end),
-			},
-			Case: p.pos(p.tokens[item.caseToken].start),
-			Variant: &ast.Ident{
-				NamePos: p.pos(p.tokens[item.variant].start),
-				Name:    p.tokens[item.variant].text,
-				Obj:     nil,
-			},
-			Lparen: p.pos(p.tokens[item.open].start),
-			Binding: &ast.Ident{
-				NamePos: p.pos(p.tokens[item.binding].start),
-				Name:    p.tokens[item.binding].text,
-				Obj:     nil,
-			},
-			Rparen:   p.pos(p.tokens[item.close].start),
-			Colon:    p.pos(p.tokens[item.colon].start),
-			Body:     nil,
-			Comments: nil,
-		}
-		node.Cases = append(node.Cases, matchCase)
-	}
-	return node
-}
-
-func (p %sourceParser) caseBodyStart(item *rawCase) int {
-	if item.bodyStart < item.bodyEnd {
-		return p.tokens[item.bodyStart].start
-	}
-	return p.tokens[item.colon].end
-}
-
 func (p %sourceParser) makeDeclaration(
 	raw *rawDecl,
-	matchAt map[token.Pos]frontNode,
 	defaultAt map[token.Pos]%frontDefaultMarker,
 ) (frontNode, map[frontNode]frontNode, error) {
 	anchors := make(map[frontNode]frontNode)
@@ -225,7 +173,7 @@ func (p %sourceParser) makeDeclaration(
 			Comment:  nil,
 		}
 		for _, rawVariant := range raw.variants {
-			fields, fieldAnchors := p.makeFields(rawVariant.fields, matchAt, defaultAt)!!
+			fields, fieldAnchors := p.makeFields(rawVariant.fields, defaultAt)!!
 			variant := &frontVariantDecl{
 				frontSpan: frontSpan{
 					Start: p.pos(rawVariant.start),
@@ -251,7 +199,7 @@ func (p %sourceParser) makeDeclaration(
 		}
 		return node, anchors, nil
 	case "struct":
-		fields, fieldAnchors := p.makeFields(raw.fields, matchAt, defaultAt)!!
+		fields, fieldAnchors := p.makeFields(raw.fields, defaultAt)!!
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
 		}
@@ -270,7 +218,6 @@ func (p %sourceParser) makeDeclaration(
 		base, baseAnchors, err := p.parseExpression(
 			p.tokens[raw.baseStart].start,
 			p.tokens[raw.baseEnd].start,
-			matchAt,
 			defaultAt,
 		)
 		if err != nil {
@@ -279,7 +226,6 @@ func (p %sourceParser) makeDeclaration(
 		predicate, predicateAnchors, err := p.parseExpression(
 			p.tokens[raw.predicateStart].start,
 			p.tokens[raw.predicateEnd-1].end,
-			matchAt,
 			defaultAt,
 		)
 		if err != nil {
@@ -308,7 +254,6 @@ func (p %sourceParser) makeDeclaration(
 
 func (p %sourceParser) makeFields(
 	rawFields []*rawField,
-	matchAt map[token.Pos]frontNode,
 	defaultAt map[token.Pos]%frontDefaultMarker,
 ) ([]*frontFieldDecl, map[frontNode]frontNode, error) {
 	fields := make([]*frontFieldDecl, 0, len(rawFields))
@@ -329,7 +274,6 @@ func (p %sourceParser) makeFields(
 			parsedDefault, expressionAnchors := p.parseExpression(
 				p.tokens[raw.assign+1].start,
 				p.tokens[raw.end-1].end,
-				matchAt,
 				defaultAt,
 			)!!
 			defaultValue = parsedDefault
@@ -386,7 +330,6 @@ func (p %sourceParser) parseField(start int, end int) (*ast.Field, error) {
 	shiftTokenPositions(field, delta)
 	p.sanitize(
 		field,
-		nil,
 		make(map[token.Pos]%frontDefaultMarker),
 		make(map[frontNode]frontNode),
 	)
@@ -396,7 +339,6 @@ func (p %sourceParser) parseField(start int, end int) (*ast.Field, error) {
 func (p %sourceParser) parseExpression(
 	start int,
 	end int,
-	matchAt map[token.Pos]frontNode,
 	defaultAt map[token.Pos]%frontDefaultMarker,
 ) (ast.Expr, map[frontNode]frontNode, error) {
 	if start >= end {
@@ -422,52 +364,8 @@ func (p %sourceParser) parseExpression(
 	delta := int(p.pos(start)) - int(temporary.Pos(len(prefix)))
 	shiftTokenPositions(value, delta)
 	anchors := make(map[frontNode]frontNode)
-	p.sanitize(value, matchAt, defaultAt, anchors)
+	p.sanitize(value, defaultAt, anchors)
 	return value, anchors, nil
-}
-
-func (p %sourceParser) parseStatements(
-	start int,
-	end int,
-	matchAt map[token.Pos]frontNode,
-	defaultAt map[token.Pos]%frontDefaultMarker,
-) ([]frontNode, map[frontNode]frontNode, error) {
-	if start > end {
-		return nil, nil, fmt.Errorf("invalid statement range")
-	}
-	const prefix = "package p\nfunc _() {\n"
-	edits := p.editsInRange(start, end)
-	projection := p.project(start, end, edits)
-	wrapper := append([]byte(prefix), projection...)
-	wrapper = append(wrapper, []byte("\n}")...)
-	set := token.NewFileSet()
-	file, err := parser.ParseFile(
-		set,
-		p.filename+" (statements)",
-		wrapper,
-		parser.ParseComments|parser.SkipObjectResolution|parser.AllErrors,
-	)
-	if err != nil {
-		return nil, nil, p.mapFragmentError(err, len(prefix), start, end)
-	}
-	function := file.Decls[0].(*ast.FuncDecl)
-	temporary := set.File(file.Package)
-	delta := int(p.pos(start)) - int(temporary.Pos(len(prefix)))
-	shiftTokenPositions(function.Body, delta)
-	anchors := make(map[frontNode]frontNode)
-	p.sanitize(function.Body, matchAt, defaultAt, anchors)
-	children := make([]frontNode, 0, len(function.Body.List))
-	for _, statement := range function.Body.List {
-		children = append(children, statement)
-	}
-	for extension, parent := range anchors {
-		if parent == function.Body {
-			children = append(children, extension)
-			delete(anchors, extension)
-		}
-	}
-	slices.SortStableFunc(children, compareNodes)
-	return children, anchors, nil
 }
 
 func (p %sourceParser) enumTag(index int) *ast.BasicLit {

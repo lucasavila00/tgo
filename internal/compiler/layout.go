@@ -21,7 +21,7 @@ func enumLayout(declaration *model, pkg *types.Package) *types.Struct {
 
 // enumStorage builds the tag, inline fields, and shared box field.
 func enumStorage(declaration *model, payloads []types.Type, pkg *types.Package) *types.Struct {
-	tag := types.Universe.Lookup(enumTagType(len(payloads))).Type()
+	tag := pkg.Scope().Lookup(declaration.Name + "Tag").Type()
 	fields := []*types.Var{types.NewVar(0, pkg, "tgoTag", tag)}
 	boxed := false
 	for index, variant := range declaration.Variants {

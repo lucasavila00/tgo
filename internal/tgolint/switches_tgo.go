@@ -9,51 +9,81 @@ import (
 	"go/token"
 	"go/types"
 	"strings"
+	"tgo/internal/variantflow"
 
 	"golang.org/x/tools/go/cfg"
 )
 
+const enumDefaultComment = "// unreachable: tgolint requires a case per tag"
+
 // checkTagSwitch checks exhaustive tag cases and payload access.
 func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
-	receiver, selector, model := c.tagCall(statement.Tag)
+	receiver, selector, model, tagType := c.tagCall(statement.Tag)
 	if model == nil {
 		return
 	}
 	c.safe[selector] = true
 	seen := make(map[int]bool)
-	hasSafeDefault := false
-	incomingFallthrough := false
+	clauseTypes := make(map[*ast.CaseClause]variantflow.Type)
+	declaredType := variantflow.All(len(modelVariants(model)))
+	explicitType := variantflow.Never()
+	hasSentinelDefault := false
+	hasDefault := false
+	labelsResolved := true
 	for _, item := range statement.Body.List {
 		clause := item.(*ast.CaseClause)
 		fallthroughBranch := clauseFallthrough(clause)
 		if fallthroughBranch != nil {
-			c.pass.Reportf(fallthroughBranch.Pos(), "TgoTag switch cases cannot fall through")
+			c.pass.Reportf(fallthroughBranch.Pos(),
+				"%s: fallthrough is not allowed in a tag switch", modelName(model))
 		}
 		if len(clause.List) == 0 {
-			hasSafeDefault = c.defaultStops(clause)
-			incomingFallthrough = fallthroughBranch != nil
+			hasDefault = true
+			hasSentinelDefault = c.tagDefaultSentinel(clause, receiver, model)
 			continue
 		}
-		tags := c.caseTags(clause, len(modelVariants(model)))
+		tags, resolved := c.caseTags(clause, model, tagType, seen)
+		labelsResolved = labelsResolved && resolved
+		clauseTypes[clause] = variantflow.Intersect(declaredType, tagVariantType(tags))
+		explicitType = variantflow.Union(explicitType, clauseTypes[clause])
 		for tag := range tags {
 			seen[tag] = true
 		}
-		c.checkCaseAccessors(clause, receiver, model, tags, incomingFallthrough)
-		incomingFallthrough = fallthroughBranch != nil
 	}
-	for index, variant := range modelVariants(model) {
-		tag := index + 1
-		if !seen[tag] {
-			c.pass.Reportf(statement.Switch,
-				"switch on %s.TgoTag is missing tag %d (%s)",
-				modelName(model), tag, variant)
+	defaultType := variantflow.Without(declaredType, explicitType)
+	for _, item := range statement.Body.List {
+		clause := item.(*ast.CaseClause)
+		flowType, explicitClause := clauseTypes[clause]
+		defaultClause := !explicitClause
+		if defaultClause {
+			flowType = defaultType
+		}
+		c.checkCaseAccessors(
+			clause, statement, receiver, model, flowType, defaultClause,
+		)
+	}
+	if labelsResolved && hasSentinelDefault {
+		var missing []string = nil
+		for _, tag := range variantflow.Tags(defaultType) {
+			missing = append(missing, tagConstant(model, tag))
+		}
+		if len(missing) > 0 {
+			c.pass.Reportf(statement.Switch, "%s: switch is missing cases: %s",
+				modelName(model), strings.Join(missing, ", "))
 		}
 	}
-	if !hasSafeDefault {
-		c.pass.Reportf(statement.Switch,
-			"switch on %s.TgoTag needs a default path that cannot continue",
+	if !hasDefault {
+		c.pass.Reportf(statement.Switch, "%s: switch must have a default clause",
 			modelName(model))
 	}
+}
+
+func tagVariantType(tags map[int]bool) variantflow.Type {
+	result := variantflow.Never()
+	for tag := range tags {
+		result = variantflow.Union(result, variantflow.Variant(tag))
+	}
+	return result
 }
 
 func clauseFallthrough(clause *ast.CaseClause) *ast.BranchStmt {
@@ -79,12 +109,16 @@ func clauseFallthrough(clause *ast.CaseClause) *ast.BranchStmt {
 }
 
 func (c *checker) defaultStops(clause *ast.CaseClause) bool {
-	return c.statementsTerminate(clause.Body)
+	return c.statementsTerminateWith(clause.Body, true)
 }
 
 // statementsTerminate reports whether all paths leave the current switch.
 func (c *checker) statementsTerminate(statements []ast.Stmt) bool {
-	if len(statements) == 0 || c.hasEscapingBranch(statements) {
+	return c.statementsTerminateWith(statements, false)
+}
+
+func (c *checker) statementsTerminateWith(statements []ast.Stmt, tagDefault bool) bool {
+	if len(statements) == 0 || c.hasEscapingBranch(statements, tagDefault) {
 		return false
 	}
 	sentinel := &ast.ExprStmt{X: ast.NewIdent("__tgolint_reached")}
@@ -107,7 +141,7 @@ func (c *checker) statementsTerminate(statements []ast.Stmt) bool {
 	return true
 }
 
-func (c *checker) hasEscapingBranch(statements []ast.Stmt) bool {
+func (c *checker) hasEscapingBranch(statements []ast.Stmt, tagDefault bool) bool {
 	roots := make(map[ast.Node]bool, len(statements))
 	labels := make(map[types.Object]bool)
 	for _, statement := range statements {
@@ -136,7 +170,7 @@ func (c *checker) hasEscapingBranch(statements []ast.Stmt) bool {
 			if !ok {
 				return true
 			}
-			escapes = c.branchEscapes(branch, roots, labels)
+			escapes = c.branchEscapes(branch, roots, labels, tagDefault)
 			return !escapes
 		})
 		if escapes {
@@ -150,11 +184,18 @@ func (c *checker) branchEscapes(
 	branch *ast.BranchStmt,
 	roots map[ast.Node]bool,
 	labels map[types.Object]bool,
+	tagDefault bool,
 ) bool {
+	if tagDefault && branch.Tok == token.RETURN {
+		return false
+	}
 	if branch.Label != nil {
 		return !labels[c.pass.TypesInfo.Uses[branch.Label]]
 	}
 	if branch.Tok != token.BREAK && branch.Tok != token.CONTINUE {
+		return true
+	}
+	if tagDefault && roots[branch] {
 		return true
 	}
 	for node := c.parents[branch]; node != nil; node = c.parents[node] {
@@ -189,53 +230,228 @@ func (c *checker) callMayReturn(call *ast.CallExpr) bool {
 }
 
 // tagCall resolves a generated tag call and its stable receiver.
-func (c *checker) tagCall(expression ast.Expr) (ast.Expr, *ast.SelectorExpr, *model) {
+func (c *checker) tagCall(
+	expression ast.Expr,
+) (ast.Expr, *ast.SelectorExpr, *model, types.Type) {
+	for {
+		parenthesized, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expression = parenthesized.X
+	}
 	call, ok := expression.(*ast.CallExpr)
 	if !ok || len(call.Args) != 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	selector, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || selector.Sel.Name != "TgoTag" {
-		return nil, nil, nil
+	if !ok || selector.Sel.Name != "Tag" {
+		return nil, nil, nil, nil
 	}
 	model := c.modelForSelector(selector)
 	if !modelIsEnum(model) {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
-	return selector.X, selector, model
+	return selector.X, selector, model, c.pass.TypesInfo.TypeOf(expression)
 }
 
-func (c *checker) caseTags(clause *ast.CaseClause, variants int) map[int]bool {
+func (c *checker) caseTags(
+	clause *ast.CaseClause,
+	model *model,
+	tagType types.Type,
+	seen map[int]bool,
+) (map[int]bool, bool) {
+	resolved := true
 	tags := make(map[int]bool)
 	for _, expression := range clause.List {
 		value := c.pass.TypesInfo.Types[expression].Value
-		if value == nil || value.Kind() != constant.Int {
-			c.pass.Reportf(expression.Pos(), "tgo enum tag case must be a constant integer")
+		if value == nil || value.Kind() != constant.Int ||
+			!c.tagExpression(expression, model, tagType) {
+			c.pass.Reportf(expression.Pos(), "%s: case label must be a tag constant",
+				modelName(model))
+			resolved = false
 			continue
 		}
 		tag64, exact := constant.Int64Val(value)
-		if !exact || tag64 < 1 || tag64 > int64(variants) {
-			c.pass.Reportf(expression.Pos(), "tgo enum tag case is outside the variant range")
+		if !exact || tag64 < 1 || tag64 > int64(len(modelVariants(model))) {
+			c.pass.Reportf(expression.Pos(), "%s: case label must be a tag constant",
+				modelName(model))
+			resolved = false
 			continue
 		}
-		tags[int(tag64)] = true
+		tag := int(tag64)
+		if tags[tag] || seen[tag] {
+			c.pass.Reportf(expression.Pos(), "%s occurs more than once", tagConstant(model, tag))
+			continue
+		}
+		tags[tag] = true
 	}
-	return tags
+	return tags, resolved
+}
+
+func (c *checker) tagExpression(
+	expression ast.Expr, model *model, tagType types.Type,
+) bool {
+	return c.tagExpressionSeen(expression, model, tagType, make(map[*types.Const]bool))
+}
+
+func (c *checker) tagExpressionSeen(
+	expression ast.Expr,
+	model *model,
+	tagType types.Type,
+	seen map[*types.Const]bool,
+) bool {
+	for {
+		parenthesized, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expression = parenthesized.X
+	}
+	switch expression := expression.(type) {
+	case *ast.Ident:
+		constantObject, ok := c.pass.TypesInfo.Uses[expression].(*types.Const)
+		return ok && c.tagConstantExpression(constantObject, model, tagType, seen)
+	case *ast.SelectorExpr:
+		constantObject, ok := c.pass.TypesInfo.Uses[expression.Sel].(*types.Const)
+		return ok && c.tagConstantExpression(constantObject, model, tagType, seen)
+	case *ast.CallExpr:
+		return len(expression.Args) == 1 && c.pass.TypesInfo.Types[expression.Fun].IsType() &&
+			types.Identical(c.pass.TypesInfo.TypeOf(expression.Fun), tagType)
+	default:
+		return false
+	}
+}
+
+func (c *checker) tagConstantExpression(
+	object *types.Const,
+	model *model,
+	tagType types.Type,
+	seen map[*types.Const]bool,
+) bool {
+	if !types.Identical(object.Type(), tagType) || seen[object] {
+		return false
+	}
+	named, ok := types.Unalias(tagType).(*types.Named)
+	if ok && named.Obj().Pkg() == object.Pkg() {
+		for tag := 1; tag <= len(modelVariants(model)); tag++ {
+			if object.Name() == tagConstant(model, tag) {
+				return true
+			}
+		}
+	}
+	seen[object] = true
+	defer delete(seen, object)
+	for _, file := range c.pass.Files {
+		for _, declaration := range file.Decls {
+			general, ok := declaration.(*ast.GenDecl)
+			if !ok || general.Tok != token.CONST {
+				continue
+			}
+			for _, specification := range general.Specs {
+				value := specification.(*ast.ValueSpec)
+				for index, name := range value.Names {
+					if c.pass.TypesInfo.Defs[name] != object || len(value.Values) == 0 {
+						continue
+					}
+					right := value.Values[len(value.Values)-1]
+					if index < len(value.Values) {
+						right = value.Values[index]
+					}
+					return c.tagExpressionSeen(right, model, tagType, seen)
+				}
+			}
+		}
+	}
+	return false
+}
+
+func tagConstant(model *model, tag int) string {
+	name := modelName(model) + "Tag"
+	return name + modelVariants(model)[tag-1]
+}
+
+func (c *checker) tagDefaultSentinel(
+	clause *ast.CaseClause,
+	receiver ast.Expr,
+	model *model,
+) bool {
+	if len(clause.Body) != 1 {
+		return false
+	}
+	expression, ok := clause.Body[0].(*ast.ExprStmt)
+	if !ok {
+		return false
+	}
+	panicCall, ok := expression.X.(*ast.CallExpr)
+	if !ok || len(panicCall.Args) != 1 {
+		return false
+	}
+	panicName, ok := panicCall.Fun.(*ast.Ident)
+	if !ok || panicName.Name != "panic" {
+		return false
+	}
+	if _, ok := c.pass.TypesInfo.Uses[panicName].(*types.Builtin); !ok {
+		return false
+	}
+	unknownCall, ok := panicCall.Args[0].(*ast.CallExpr)
+	if !ok || len(unknownCall.Args) != 0 {
+		return false
+	}
+	selector, ok := unknownCall.Fun.(*ast.SelectorExpr)
+	if !ok || selector.Sel.Name != "UnknownTag" ||
+		!sameReceiver(c.pass.TypesInfo, receiver, selector.X) {
+		return false
+	}
+	selection := c.pass.TypesInfo.Selections[selector]
+	if selection == nil {
+		return false
+	}
+	function, ok := selection.Obj().(*types.Func)
+	if !ok || function.Name() != "UnknownTag" ||
+		!sameModel(c.modelForSelector(selector), model) {
+		return false
+	}
+	expressionPosition := c.pass.Fset.Position(expression.End())
+	for _, file := range c.pass.Files {
+		for _, group := range file.Comments {
+			for _, comment := range group.List {
+				commentPosition := c.pass.Fset.Position(comment.Slash)
+				if comment.Text == enumDefaultComment &&
+					commentPosition.Filename == expressionPosition.Filename &&
+					commentPosition.Line == expressionPosition.Line &&
+					comment.Slash > expression.End() {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // checkCaseAccessors permits only the payload selected by the active tag.
 func (c *checker) checkCaseAccessors(
 	clause *ast.CaseClause,
+	tagSwitch *ast.SwitchStmt,
 	receiver ast.Expr,
 	model *model,
-	tags map[int]bool,
-	incomingFallthrough bool,
+	flowType variantflow.Type,
+	defaultClause bool,
 ) {
+	if clauseAssignsReceiver(c.pass.TypesInfo, clause, receiver) {
+		return
+	}
 	for _, statement := range clause.Body {
 		ast.Inspect(statement, func(node ast.Node) bool {
-			switch node.(type) {
-			case *ast.FuncLit, *ast.GoStmt, *ast.DeferStmt:
+			if _, nested := node.(*ast.FuncLit); nested {
 				return false
+			}
+			if nested, ok := node.(*ast.SwitchStmt); ok && nested != tagSwitch {
+				nestedReceiver, _, nestedModel, _ := c.tagCall(nested.Tag)
+				if sameModel(nestedModel, model) &&
+					sameReceiver(c.pass.TypesInfo, receiver, nestedReceiver) {
+					return false
+				}
 			}
 			selector, ok := node.(*ast.SelectorExpr)
 			if !ok || !sameReceiver(c.pass.TypesInfo, receiver, selector.X) {
@@ -245,224 +461,28 @@ func (c *checker) checkCaseAccessors(
 			if tag == 0 {
 				return true
 			}
+			call, direct := c.parents[selector].(*ast.CallExpr)
+			if !direct || call.Fun != selector {
+				return true
+			}
 			c.handled[selector] = true
-			if c.receiverUnsafe(receiver, selector) {
-				c.pass.Reportf(selector.Pos(),
-					"%s.%s needs an unaliased local value receiver",
-					modelName(model), selector.Sel.Name)
-				return true
-			}
-			if receiverChangedBefore(c.pass.TypesInfo, clause.Body, receiver, selector.Pos()) {
-				c.pass.Reportf(selector.Pos(),
-					"%s.%s receiver changed after its TgoTag read",
-					modelName(model), selector.Sel.Name)
-				return true
-			}
-			if incomingFallthrough {
-				c.pass.Reportf(selector.Pos(),
-					"%s.%s can run after fallthrough from another tag",
-					modelName(model), selector.Sel.Name)
-				return true
-			}
-			if len(tags) == 1 && tags[tag] {
+			active, narrowed := variantflow.Singleton(flowType)
+			if narrowed && active == tag {
 				c.safe[selector] = true
 				return true
 			}
-			c.pass.Reportf(selector.Pos(),
-				"%s.%s access does not match its TgoTag case %d",
-				modelName(model), selector.Sel.Name, tag)
+			caseName := "default"
+			if !defaultClause && !narrowed {
+				caseName = "a multi-tag case"
+			}
+			if !defaultClause && narrowed {
+				caseName = "case " + tagConstant(model, active)
+			}
+			c.pass.Reportf(selector.Pos(), "%s: %s called under %s",
+				modelName(model), selector.Sel.Name, caseName)
 			return true
 		})
 	}
-}
-
-// receiverUnsafe reports a receiver that can change between tag and payload reads.
-func (c *checker) receiverUnsafe(receiver ast.Expr, accessor *ast.SelectorExpr) bool {
-	root, _, ok := receiverPath(c.pass.TypesInfo, receiver)
-	variable, variableOK := root.(*types.Var)
-	if !ok || !variableOK || variable.IsField() ||
-		variable.Parent() == c.pass.Pkg.Scope() {
-		return true
-	}
-	if typeMayBePointer(variable.Type()) {
-		return true
-	}
-	selection := c.pass.TypesInfo.Selections[accessor]
-	if selection != nil && selection.Indirect() {
-		return true
-	}
-	var function ast.Node = accessor
-	for c.parents[function] != nil {
-		function = c.parents[function]
-		switch function.(type) {
-		case *ast.FuncDecl, *ast.FuncLit:
-			if variable.Pos() < function.Pos() || variable.Pos() > function.End() {
-				return true
-			}
-			if c.receiverChangesInCycle(receiver, accessor, function) {
-				return true
-			}
-			if c.receiverChangesThroughGoto(receiver, accessor, function) {
-				return true
-			}
-			return receiverCanChangeBefore(
-				c.pass.TypesInfo,
-				function,
-				receiver,
-				accessor.Pos(),
-			)
-		}
-	}
-	return true
-}
-
-// receiverChangesThroughGoto finds a write on a backward path to an accessor.
-// A repeated payload read needs a new tag read after each receiver change.
-func (c *checker) receiverChangesThroughGoto(
-	receiver ast.Expr,
-	accessor *ast.SelectorExpr,
-	function ast.Node,
-) bool {
-	var clause *ast.CaseClause = nil
-	for node := c.parents[accessor]; node != nil && node != function; node = c.parents[node] {
-		if current, ok := node.(*ast.CaseClause); ok {
-			clause = current
-			break
-		}
-	}
-	if clause == nil || !receiverCanChangeIn(c.pass.TypesInfo, clause, receiver) {
-		return false
-	}
-	backward := false
-	ast.Inspect(clause, func(node ast.Node) bool {
-		branch, ok := node.(*ast.BranchStmt)
-		if !ok || branch.Tok != token.GOTO || branch.Label == nil {
-			return !backward
-		}
-		target := c.pass.TypesInfo.Uses[branch.Label]
-		backward = target != nil && target.Pos() <= accessor.Pos() &&
-			branch.Pos() > accessor.Pos()
-		return !backward
-	})
-	return backward
-}
-
-func typeMayBePointer(typ types.Type) bool {
-	typ = types.Unalias(typ)
-	if _, pointer := typ.(*types.Pointer); pointer {
-		return true
-	}
-	parameter, ok := typ.(*types.TypeParam)
-	if !ok {
-		return false
-	}
-	terms, supported := simpleTerms(parameter.Constraint())
-	if !supported {
-		return true
-	}
-	for _, term := range terms {
-		if typeMayBePointer(term.Type()) {
-			return true
-		}
-	}
-	return false
-}
-
-// receiverChangesInCycle finds a write that can run before a later iteration.
-// The tag proof cannot survive a loop that can change or alias the receiver.
-func (c *checker) receiverChangesInCycle(
-	receiver ast.Expr,
-	accessor *ast.SelectorExpr,
-	function ast.Node,
-) bool {
-	for node := c.parents[accessor]; node != nil && node != function; node = c.parents[node] {
-		switch node := node.(type) {
-		case *ast.ForStmt:
-			if receiverCanChangeIn(c.pass.TypesInfo, node, receiver) {
-				return true
-			}
-		case *ast.RangeStmt:
-			if receiverCanChangeIn(c.pass.TypesInfo, node, receiver) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// receiverCanChangeIn finds writes, escapes, and captures in one scope.
-func receiverCanChangeIn(info *types.Info, scope ast.Node, receiver ast.Expr) bool {
-	root, _, ok := receiverPath(info, receiver)
-	if !ok {
-		return true
-	}
-	unsafe := false
-	ast.Inspect(scope, func(node ast.Node) bool {
-		if node == nil || unsafe {
-			return false
-		}
-		if literal, ok := node.(*ast.FuncLit); ok {
-			unsafe = capturesObject(info, literal.Body, root)
-			return false
-		}
-		switch node := node.(type) {
-		case *ast.AssignStmt:
-			for _, left := range node.Lhs {
-				if receiverWrite(info, left, receiver) {
-					unsafe = true
-					return false
-				}
-			}
-		case *ast.IncDecStmt:
-			unsafe = receiverWrite(info, node.X, receiver)
-		case *ast.RangeStmt:
-			unsafe = receiverWrite(info, node.Key, receiver) ||
-				receiverWrite(info, node.Value, receiver)
-		case *ast.UnaryExpr:
-			unsafe = node.Op == token.AND && receiverWrite(info, node.X, receiver)
-		case *ast.CallExpr:
-			unsafe = pointerMethodCall(info, node, receiver)
-		}
-		return !unsafe
-	})
-	return unsafe
-}
-
-// receiverCanChangeBefore reports paths that can mutate a receiver through an alias.
-// It includes explicit addresses, captures, and pointer receiver calls.
-func receiverCanChangeBefore(
-	info *types.Info,
-	function ast.Node,
-	receiver ast.Expr,
-	before token.Pos,
-) bool {
-	root, _, ok := receiverPath(info, receiver)
-	if !ok {
-		return true
-	}
-	unsafe := false
-	ast.Inspect(function, func(node ast.Node) bool {
-		if node == nil || node.Pos() >= before || unsafe {
-			return false
-		}
-		literal, nested := node.(*ast.FuncLit)
-		if nested && literal != function {
-			unsafe = capturesObject(info, literal.Body, root)
-			return false
-		}
-		unary, ok := node.(*ast.UnaryExpr)
-		if ok && unary.Op == token.AND && receiverWrite(info, unary.X, receiver) {
-			unsafe = true
-			return false
-		}
-		call, ok := node.(*ast.CallExpr)
-		if ok && pointerMethodCall(info, call, receiver) {
-			unsafe = true
-			return false
-		}
-		return true
-	})
-	return unsafe
 }
 
 func capturesObject(info *types.Info, body *ast.BlockStmt, object types.Object) bool {
@@ -480,61 +500,36 @@ func capturesObject(info *types.Info, body *ast.BlockStmt, object types.Object) 
 	return captured
 }
 
-func pointerMethodCall(info *types.Info, call *ast.CallExpr, receiver ast.Expr) bool {
-	selector, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || !receiverWrite(info, selector.X, receiver) {
-		return false
-	}
-	selection := info.Selections[selector]
-	if selection == nil || selection.Kind() != types.MethodVal {
-		return false
-	}
-	function, ok := selection.Obj().(*types.Func)
-	if !ok {
-		return false
-	}
-	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Recv() == nil {
-		return false
-	}
-	_, pointer := types.Unalias(signature.Recv().Type()).(*types.Pointer)
-	return pointer
-}
-
-func receiverChangedBefore(
+func clauseAssignsReceiver(
 	info *types.Info,
-	statements []ast.Stmt,
+	clause *ast.CaseClause,
 	receiver ast.Expr,
-	before token.Pos,
 ) bool {
-	changed := false
-	for _, statement := range statements {
-		ast.Inspect(statement, func(node ast.Node) bool {
-			if node == nil || node.Pos() >= before || changed {
-				return false
-			}
-			switch node.(type) {
-			case *ast.FuncLit, *ast.GoStmt, *ast.DeferStmt:
-				return false
-			}
-			switch node := node.(type) {
-			case *ast.AssignStmt:
-				for _, left := range node.Lhs {
-					if receiverWrite(info, left, receiver) {
-						changed = true
-						return false
-					}
-				}
-			case *ast.IncDecStmt:
-				changed = receiverWrite(info, node.X, receiver)
-			}
-			return !changed
-		})
-		if changed {
-			return true
+	assigned := false
+	ast.Inspect(clause, func(node ast.Node) bool {
+		if node == nil || assigned {
+			return false
 		}
-	}
-	return false
+		if _, nested := node.(*ast.FuncLit); nested {
+			return false
+		}
+		switch node := node.(type) {
+		case *ast.AssignStmt:
+			for _, target := range node.Lhs {
+				if receiverWrite(info, target, receiver) {
+					assigned = true
+					return false
+				}
+			}
+		case *ast.IncDecStmt:
+			assigned = receiverWrite(info, node.X, receiver)
+		case *ast.RangeStmt:
+			assigned = receiverWrite(info, node.Key, receiver) ||
+				receiverWrite(info, node.Value, receiver)
+		}
+		return !assigned
+	})
+	return assigned
 }
 
 func receiverWrite(info *types.Info, target, receiver ast.Expr) bool {
@@ -554,7 +549,7 @@ func receiverWrite(info *types.Info, target, receiver ast.Expr) bool {
 
 func variantTag(model *model, method string) int {
 	for index, variant := range modelVariants(model) {
-		if method == "Tgo"+variant {
+		if method == variant+"Payload" {
 			return index + 1
 		}
 	}
@@ -601,65 +596,4 @@ func receiverPath(info *types.Info, expression ast.Expr) (types.Object, []types.
 		}
 	}
 	return nil, nil, false
-}
-
-// checkRepresentationAccess blocks private fields and unchecked payload methods.
-func (c *checker) checkRepresentationAccess(selector *ast.SelectorExpr) {
-	if c.safe[selector] || c.handled[selector] {
-		return
-	}
-	model := c.modelForSelector(selector)
-	if model == nil {
-		model = c.structuralModel(selector)
-		if model != nil {
-			c.pass.Reportf(selector.Pos(),
-				"%s.%s access through an interface or open type parameter is unsafe",
-				modelName(model), selector.Sel.Name)
-		} else if c.receiverCanHideModel(c.pass.TypesInfo.TypeOf(selector.X)) &&
-			strings.HasPrefix(selector.Sel.Name, "Tgo") {
-			c.pass.Reportf(selector.Pos(),
-				"%s access through an interface or open type parameter is unsafe",
-				selector.Sel.Name)
-		}
-		return
-	}
-	if modelIsMixed(model) {
-		c.pass.Reportf(selector.Pos(),
-			"Tgo access through a type parameter cannot mix tgo models")
-		return
-	}
-	if privateRepresentation(model, selector.Sel.Name) {
-		c.pass.Reportf(selector.Pos(),
-			"%s.%s is private tgo representation",
-			modelName(model), selector.Sel.Name)
-		return
-	}
-	if !modelIsEnum(model) {
-		return
-	}
-	if selector.Sel.Name == "TgoTag" {
-		c.pass.Reportf(selector.Pos(),
-			"%s.TgoTag must be the tag of an exhaustive switch", modelName(model))
-		return
-	}
-	if variantTag(model, selector.Sel.Name) != 0 {
-		c.pass.Reportf(selector.Pos(),
-			"%s.%s requires the matching case of an exhaustive TgoTag switch",
-			modelName(model), selector.Sel.Name)
-	}
-}
-
-func privateRepresentation(model *model, name string) bool {
-	if modelIsChecked(model) {
-		return name == "value"
-	}
-	if name == "tgoTag" {
-		return true
-	}
-	for _, variant := range modelVariants(model) {
-		if name == "tgo"+variant {
-			return true
-		}
-	}
-	return false
 }

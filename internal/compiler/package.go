@@ -48,7 +48,6 @@ type packageUnit struct {
 	exportPaths     map[string]string
 	typeErrors      []error
 	errors          []error
-	serial          int
 }
 
 // outputPath returns the Go output path while preserving target suffixes.
@@ -233,10 +232,6 @@ func (p *packageUnit) checkAndLower() error {
 		return p.errors[0]
 	}
 	p.fillDefaults()
-	p.lowerMatches()
-	if len(p.errors) > 0 {
-		return p.errors[0]
-	}
 	p.typecheck()
 	p.validateGeneratedReferences()
 	if len(p.errors) > 0 {

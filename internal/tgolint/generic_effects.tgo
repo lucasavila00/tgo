@@ -103,14 +103,22 @@ const (
 )
 
 func effectConditionCode(kind effectKind) uint8 {
-	match kind {
-	case Boolean(_): return booleanConditionWire
-	case Nonzero(_): return nonzeroConditionWire
-	case Nonempty(_): return nonemptyConditionWire
-	case MapMiss(_): return mapMissConditionWire
-	case ChannelClosed(_): return channelClosedConditionWire
-	case AssertionFails(_): return assertionFailsConditionWire
-	case ResliceExtends(_): return resliceExtendsConditionWire
+	switch enumValue1 := kind; enumValue1.Tag() {
+	case effectKindTagBoolean:
+		return booleanConditionWire
+	case effectKindTagNonzero:
+		return nonzeroConditionWire
+	case effectKindTagNonempty:
+		return nonemptyConditionWire
+	case effectKindTagMapMiss:
+		return mapMissConditionWire
+	case effectKindTagChannelClosed:
+		return channelClosedConditionWire
+	case effectKindTagAssertionFails:
+		return assertionFailsConditionWire
+	case effectKindTagResliceExtends:
+		return resliceExtendsConditionWire
+	exhaustive:
 	}
 }
 
@@ -518,12 +526,16 @@ func (c %checker) collectMakeZeros(
 		return
 	}
 	condition, outcome := c.nonzeroEffectCondition(call.Args[1])
-	match outcome {
-	case Never(_): return
-	case Always(_): c.markGenericZeroAt(summary, call, slice.Elem())
-	case Conditional(_):
+	switch enumValue2 := outcome; enumValue2.Tag() {
+	case effectOutcomeTagNever:
+		return
+	case effectOutcomeTagAlways:
+		c.markGenericZeroAt(summary, call, slice.Elem())
+	case effectOutcomeTagConditional:
 		c.markGenericZeroWith(summary, call, slice.Elem(), condition, false)
-	case Unknown(_): c.markGenericZeroWith(summary, call, slice.Elem(), nil, true)
+	case effectOutcomeTagUnknown:
+		c.markGenericZeroWith(summary, call, slice.Elem(), nil, true)
+	exhaustive:
 	}
 }
 

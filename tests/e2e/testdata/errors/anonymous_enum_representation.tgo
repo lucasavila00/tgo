@@ -6,7 +6,7 @@ type Account enum {
 
 func expose(account Account) AccountPersonal {
     var exposed struct {
-        tgoTag uint8
+        tgoTag AccountTag
         tgoPersonal AccountPersonal
     } = account
     return exposed.tgoPersonal

@@ -145,7 +145,7 @@ func sourceMatchesGenerated(source string, generatedPath string) bool {
 }
 
 func (c *checker) hasModelAPIs(object *types.TypeName) bool {
-	return method(object.Type(), "TgoTag") != nil ||
+	return method(object.Type(), "Tag") != nil ||
 		method(object.Type(), "Value") != nil
 }
 
@@ -262,14 +262,27 @@ func (c *checker) packagePath() string {
 
 // sourceModel requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type sourceModelTag uint8
+
+const (
+	sourceModelTagChecked sourceModelTag = iota + 1
+	sourceModelTagEnum
+	sourceModelTagStruct
+)
+
 type sourceModel struct {
-	tgoTag     uint8
+	tgoTag     sourceModelTag
 	tgoStruct  sourceModelStruct
 	tgoPayload interface{}
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v sourceModel) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v sourceModel) Tag() sourceModelTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v sourceModel) UnknownTag() string {
+	return __tgo_fmt.Sprintf("sourceModel: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // sourceModelChecked is the Checked payload.
 type sourceModelChecked struct {
@@ -278,14 +291,14 @@ type sourceModelChecked struct {
 	Base string
 }
 
-// NewsourceModelChecked constructs sourceModel. Model fields must be valid.
+// sourceModel constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewsourceModelChecked(value sourceModelChecked) sourceModel {
-	return sourceModel{tgoTag: 1, tgoPayload: value}
+func (value sourceModelChecked) sourceModel() sourceModel {
+	return sourceModel{tgoTag: sourceModelTagChecked, tgoPayload: value}
 }
 
-// TgoChecked returns the Checked payload. Check TgoTag first.
-func (v sourceModel) TgoChecked() sourceModelChecked { return v.tgoPayload.(sourceModelChecked) }
+// CheckedPayload requires Checked. No tag check.
+func (v sourceModel) CheckedPayload() sourceModelChecked { return v.tgoPayload.(sourceModelChecked) }
 
 // sourceModelEnum is the Enum payload.
 type sourceModelEnum struct {
@@ -294,14 +307,14 @@ type sourceModelEnum struct {
 	Variants []sourceVariant
 }
 
-// NewsourceModelEnum constructs sourceModel. Model fields must be valid.
+// sourceModel constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewsourceModelEnum(value sourceModelEnum) sourceModel {
-	return sourceModel{tgoTag: 2, tgoPayload: value}
+func (value sourceModelEnum) sourceModel() sourceModel {
+	return sourceModel{tgoTag: sourceModelTagEnum, tgoPayload: value}
 }
 
-// TgoEnum returns the Enum payload. Check TgoTag first.
-func (v sourceModel) TgoEnum() sourceModelEnum { return v.tgoPayload.(sourceModelEnum) }
+// EnumPayload requires Enum. No tag check.
+func (v sourceModel) EnumPayload() sourceModelEnum { return v.tgoPayload.(sourceModelEnum) }
 
 // sourceModelStruct is the Struct payload.
 type sourceModelStruct struct {
@@ -309,29 +322,29 @@ type sourceModelStruct struct {
 	Fields []sourceField
 }
 
-// NewsourceModelStruct constructs sourceModel. Model fields must be valid.
+// sourceModel constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewsourceModelStruct(value sourceModelStruct) sourceModel {
-	return sourceModel{tgoTag: 3, tgoStruct: value}
+func (value sourceModelStruct) sourceModel() sourceModel {
+	return sourceModel{tgoTag: sourceModelTagStruct, tgoStruct: value}
 }
 
-// TgoStruct returns the Struct payload. Check TgoTag first.
-func (v sourceModel) TgoStruct() sourceModelStruct { return v.tgoStruct }
+// StructPayload requires Struct. No tag check.
+func (v sourceModel) StructPayload() sourceModelStruct { return v.tgoStruct }
 
 func (v sourceModel) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoChecked()
+	case sourceModelTagChecked:
+		payload := v.CheckedPayload()
 		return __tgo_json.Marshal(struct {
 			Payload sourceModelChecked `json:"Checked"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoEnum()
+	case sourceModelTagEnum:
+		payload := v.EnumPayload()
 		return __tgo_json.Marshal(struct {
 			Payload sourceModelEnum `json:"Enum"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoStruct()
+	case sourceModelTagStruct:
+		payload := v.StructPayload()
 		return __tgo_json.Marshal(struct {
 			Payload sourceModelStruct `json:"Struct"`
 		}{Payload: payload})
@@ -360,21 +373,21 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewsourceModelChecked(payload)
+		*v = payload.sourceModel()
 		return nil
 	case "Enum":
 		var payload sourceModelEnum
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewsourceModelEnum(payload)
+		*v = payload.sourceModel()
 		return nil
 	case "Struct":
 		var payload sourceModelStruct
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewsourceModelStruct(payload)
+		*v = payload.sourceModel()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown sourceModel JSON variant %q", variant)
@@ -390,11 +403,11 @@ func sourceDeclaration(
 	data []byte,
 ) *sourceModel {
 	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
-		result := NewsourceModelChecked(sourceModelChecked{
+		result := sourceModelChecked{
 			Name: node.Name.Name,
 			Fact: checkedModel(packagePath, node.Name.Name),
 			Base: sourceExpression(file, sourceFile, data, node.Base),
-		})
+		}.sourceModel()
 		return &result
 	}
 	if node, ok := syntax.EnumDeclarationOf(declaration); ok {
@@ -407,18 +420,18 @@ func sourceDeclaration(
 				fields: sourceFields(file, sourceFile, data, variant.Fields),
 			})
 		}
-		result := NewsourceModelEnum(sourceModelEnum{
+		result := sourceModelEnum{
 			Name:     node.Name.Name,
 			Fact:     enumModel(packagePath, node.Name.Name, variants),
 			Variants: sourceVariants,
-		})
+		}.sourceModel()
 		return &result
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
-		result := NewsourceModelStruct(sourceModelStruct{
+		result := sourceModelStruct{
 			Name:   node.Name.Name,
 			Fields: sourceFields(file, sourceFile, data, node.Fields),
-		})
+		}.sourceModel()
 		return &result
 	}
 	return nil
@@ -428,18 +441,15 @@ func sourceModelName(value *sourceModel) string {
 	if value == nil {
 		return ""
 	}
-	switch __tgo_match_22 := *value; __tgo_match_22.TgoTag() {
-	case 1:
-		checked := __tgo_match_22.TgoChecked()
-		return checked.Name
-	case 2:
-		enum := __tgo_match_22.TgoEnum()
-		return enum.Name
-	case 3:
-		structure := __tgo_match_22.TgoStruct()
-		return structure.Name
+	switch item := *value; item.Tag() {
+	case sourceModelTagChecked:
+		return item.CheckedPayload().Name
+	case sourceModelTagEnum:
+		return item.EnumPayload().Name
+	case sourceModelTagStruct:
+		return item.StructPayload().Name
 	default:
-		panic("invalid sourceModel variant")
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -447,17 +457,15 @@ func sourceModelFact(value *sourceModel) *model {
 	if value == nil {
 		return nil
 	}
-	switch __tgo_match_23 := *value; __tgo_match_23.TgoTag() {
-	case 1:
-		checked := __tgo_match_23.TgoChecked()
-		return checked.Fact
-	case 2:
-		enum := __tgo_match_23.TgoEnum()
-		return enum.Fact
-	case 3:
+	switch item := *value; item.Tag() {
+	case sourceModelTagChecked:
+		return item.CheckedPayload().Fact
+	case sourceModelTagEnum:
+		return item.EnumPayload().Fact
+	case sourceModelTagStruct:
 		return nil
 	default:
-		panic("invalid sourceModel variant")
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -505,16 +513,16 @@ func sourceShapeMatches(
 	if source == nil {
 		return false
 	}
-	switch __tgo_match_24 := *source; __tgo_match_24.TgoTag() {
-	case 3:
-		sourceStruct := __tgo_match_24.TgoStruct()
+	switch item := *source; item.Tag() {
+	case sourceModelTagStruct:
+		sourceStruct := item.StructPayload()
 		structure, ok := representation.(*ast.StructType)
 		if !ok {
 			return false
 		}
 		return sameFields(sourceStruct.Fields, structure.Fields)
-	case 1:
-		checked := __tgo_match_24.TgoChecked()
+	case sourceModelTagChecked:
+		checked := item.CheckedPayload()
 		structure, ok := representation.(*ast.StructType)
 		if !ok {
 			return false
@@ -524,8 +532,8 @@ func sourceShapeMatches(
 		) &&
 			len(structure.Fields.List) == 1 &&
 			sameExpressionText(checked.Base, structure.Fields.List[0].Type)
-	case 2:
-		enum := __tgo_match_24.TgoEnum()
+	case sourceModelTagEnum:
+		enum := item.EnumPayload()
 		if !generatedEnumShape(typ, enum.Name, enum.Variants) {
 			return false
 		}
@@ -541,26 +549,25 @@ func sourceShapeMatches(
 		}
 		return true
 	default:
-
-		// generatedEnumShape checks source variants against the public ABI.
-		// generatedEnumShape checks enum operations without reading private storage.
-		panic("invalid sourceModel variant")
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// generatedEnumShape checks enum operations without reading private storage.
 func generatedEnumShape(
 	typ types.Type,
 	name string,
 	variants []sourceVariant,
 ) bool {
-	if !validGeneratedTagMethod(typ) {
+	tag, ok := typeInPackage(typ, name+"Tag")
+	if !ok || !validGeneratedTagAPI(typ, tag, name, variants) {
 		return false
 	}
 	for _, variant := range variants {
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
 		if !ok || !validEnumAPI(
-			typ, payload, "Tgo"+variant.name, "New"+payloadName,
+			typ, payload, variant.name+"Payload", name,
 		) {
 			return false
 		}
@@ -568,13 +575,40 @@ func generatedEnumShape(
 	return true
 }
 
-func validGeneratedTagMethod(typ types.Type) bool {
-	tag := method(typ, "TgoTag")
-	if tag == nil || tag.Params().Len() != 0 || tag.Results().Len() != 1 {
+func validGeneratedTagAPI(
+	typ types.Type,
+	tagType types.Type,
+	name string,
+	variants []sourceVariant,
+) bool {
+	tag := method(typ, "Tag")
+	unknown := method(typ, "UnknownTag")
+	if tag == nil || tag.Params().Len() != 0 || tag.Results().Len() != 1 ||
+		!types.Identical(tag.Results().At(0).Type(), tagType) ||
+		unknown == nil || unknown.Params().Len() != 0 || unknown.Results().Len() != 1 ||
+		!types.Identical(unknown.Results().At(0).Type(), types.Typ[types.String]) {
 		return false
 	}
-	basic, ok := coreType(tag.Results().At(0).Type()).(*types.Basic)
-	return ok && basic.Info()&types.IsUnsigned != 0
+	basic, ok := coreType(tagType).(*types.Basic)
+	if !ok || basic.Info()&types.IsUnsigned == 0 {
+		return false
+	}
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return false
+	}
+	names := []string(nil)
+	for _, variant := range variants {
+		names = append(names, name+"Tag"+variant.name)
+	}
+	for index, constantName := range names {
+		constant, ok := named.Obj().Pkg().Scope().Lookup(constantName).(*types.Const)
+		if !ok || !types.Identical(constant.Type(), tagType) ||
+			constant.Val().ExactString() != strconv.Itoa(index+1) {
+			return false
+		}
+	}
+	return true
 }
 
 func typeInPackage(typ types.Type, name string) (types.Type, bool) {

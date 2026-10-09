@@ -18,80 +18,94 @@ import (
 
 // effectOutcome requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type effectOutcomeTag uint8
+
+const (
+	effectOutcomeTagUnknown effectOutcomeTag = iota + 1
+	effectOutcomeTagNever
+	effectOutcomeTagAlways
+	effectOutcomeTagConditional
+)
+
 type effectOutcome struct {
-	tgoTag uint8
+	tgoTag effectOutcomeTag
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v effectOutcome) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v effectOutcome) Tag() effectOutcomeTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v effectOutcome) UnknownTag() string {
+	return __tgo_fmt.Sprintf("effectOutcome: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // effectOutcomeUnknown is the Unknown payload.
 type effectOutcomeUnknown struct{}
 
-// NeweffectOutcomeUnknown constructs effectOutcome. Model fields must be valid.
+// effectOutcome constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NeweffectOutcomeUnknown(_ effectOutcomeUnknown) effectOutcome {
-	return effectOutcome{tgoTag: 1}
+func (value effectOutcomeUnknown) effectOutcome() effectOutcome {
+	return effectOutcome{tgoTag: effectOutcomeTagUnknown}
 }
 
-// TgoUnknown returns the Unknown payload. Check TgoTag first.
-func (effectOutcome) TgoUnknown() effectOutcomeUnknown { return effectOutcomeUnknown{} }
+// UnknownPayload requires Unknown. No tag check.
+func (effectOutcome) UnknownPayload() effectOutcomeUnknown { return effectOutcomeUnknown{} }
 
 // effectOutcomeNever is the Never payload.
 type effectOutcomeNever struct{}
 
-// NeweffectOutcomeNever constructs effectOutcome. Model fields must be valid.
+// effectOutcome constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NeweffectOutcomeNever(_ effectOutcomeNever) effectOutcome {
-	return effectOutcome{tgoTag: 2}
+func (value effectOutcomeNever) effectOutcome() effectOutcome {
+	return effectOutcome{tgoTag: effectOutcomeTagNever}
 }
 
-// TgoNever returns the Never payload. Check TgoTag first.
-func (effectOutcome) TgoNever() effectOutcomeNever { return effectOutcomeNever{} }
+// NeverPayload requires Never. No tag check.
+func (effectOutcome) NeverPayload() effectOutcomeNever { return effectOutcomeNever{} }
 
 // effectOutcomeAlways is the Always payload.
 type effectOutcomeAlways struct{}
 
-// NeweffectOutcomeAlways constructs effectOutcome. Model fields must be valid.
+// effectOutcome constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NeweffectOutcomeAlways(_ effectOutcomeAlways) effectOutcome {
-	return effectOutcome{tgoTag: 3}
+func (value effectOutcomeAlways) effectOutcome() effectOutcome {
+	return effectOutcome{tgoTag: effectOutcomeTagAlways}
 }
 
-// TgoAlways returns the Always payload. Check TgoTag first.
-func (effectOutcome) TgoAlways() effectOutcomeAlways { return effectOutcomeAlways{} }
+// AlwaysPayload requires Always. No tag check.
+func (effectOutcome) AlwaysPayload() effectOutcomeAlways { return effectOutcomeAlways{} }
 
 // effectOutcomeConditional is the Conditional payload.
 type effectOutcomeConditional struct{}
 
-// NeweffectOutcomeConditional constructs effectOutcome. Model fields must be valid.
+// effectOutcome constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NeweffectOutcomeConditional(_ effectOutcomeConditional) effectOutcome {
-	return effectOutcome{tgoTag: 4}
+func (value effectOutcomeConditional) effectOutcome() effectOutcome {
+	return effectOutcome{tgoTag: effectOutcomeTagConditional}
 }
 
-// TgoConditional returns the Conditional payload. Check TgoTag first.
-func (effectOutcome) TgoConditional() effectOutcomeConditional { return effectOutcomeConditional{} }
+// ConditionalPayload requires Conditional. No tag check.
+func (effectOutcome) ConditionalPayload() effectOutcomeConditional { return effectOutcomeConditional{} }
 
 func (v effectOutcome) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoUnknown()
+	case effectOutcomeTagUnknown:
+		payload := v.UnknownPayload()
 		return __tgo_json.Marshal(struct {
 			Payload effectOutcomeUnknown `json:"Unknown"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoNever()
+	case effectOutcomeTagNever:
+		payload := v.NeverPayload()
 		return __tgo_json.Marshal(struct {
 			Payload effectOutcomeNever `json:"Never"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoAlways()
+	case effectOutcomeTagAlways:
+		payload := v.AlwaysPayload()
 		return __tgo_json.Marshal(struct {
 			Payload effectOutcomeAlways `json:"Always"`
 		}{Payload: payload})
-	case 4:
-		payload := v.TgoConditional()
+	case effectOutcomeTagConditional:
+		payload := v.ConditionalPayload()
 		return __tgo_json.Marshal(struct {
 			Payload effectOutcomeConditional `json:"Conditional"`
 		}{Payload: payload})
@@ -120,42 +134,44 @@ func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NeweffectOutcomeUnknown(payload)
+		*v = payload.effectOutcome()
 		return nil
 	case "Never":
 		var payload effectOutcomeNever
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NeweffectOutcomeNever(payload)
+		*v = payload.effectOutcome()
 		return nil
 	case "Always":
 		var payload effectOutcomeAlways
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NeweffectOutcomeAlways(payload)
+		*v = payload.effectOutcome()
 		return nil
 	case "Conditional":
 		var payload effectOutcomeConditional
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NeweffectOutcomeConditional(payload)
+		*v = payload.effectOutcome()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown effectOutcome JSON variant %q", variant)
 	}
 }
 
-func unknownEffectOutcome() effectOutcome { return NeweffectOutcomeUnknown(effectOutcomeUnknown{}) }
-func neverEffectOutcome() effectOutcome   { return NeweffectOutcomeNever(effectOutcomeNever{}) }
-func alwaysEffectOutcome() effectOutcome  { return NeweffectOutcomeAlways(effectOutcomeAlways{}) }
+func unknownEffectOutcome() effectOutcome { return effectOutcomeUnknown{}.effectOutcome() }
+func neverEffectOutcome() effectOutcome   { return effectOutcomeNever{}.effectOutcome() }
+func alwaysEffectOutcome() effectOutcome  { return effectOutcomeAlways{}.effectOutcome() }
 func conditionalEffectOutcome() effectOutcome {
-	return NeweffectOutcomeConditional(effectOutcomeConditional{})
+	return effectOutcomeConditional{}.effectOutcome(
+
+	// reachableNodes returns AST nodes from live CFG blocks.
+	)
 }
 
-// reachableNodes returns AST nodes from live CFG blocks.
 func (c *checker) reachableNodes(body *ast.BlockStmt) map[ast.Node]bool {
 	reachable := make(map[ast.Node]bool)
 	graph := cfg.New(body, c.callMayReturn)
@@ -572,16 +588,16 @@ func (c *checker) blockEffectConditions(
 			continue
 		}
 		condition, outcome := c.booleanEffectCondition(conditional.Cond, falseStops)
-		switch __tgo_match_3 := outcome; __tgo_match_3.TgoTag() {
-		case 2:
+		switch enumValue3 := outcome; enumValue3.Tag() {
+		case effectOutcomeTagNever:
 			return nil, false, false
-		case 4:
+		case effectOutcomeTagConditional:
 			conditions = append(conditions, *condition)
-		case 1:
+		case effectOutcomeTagUnknown:
 			unknown = true
-		case 3:
+		case effectOutcomeTagAlways:
 		default:
-			panic("invalid effectOutcome variant")
+			panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
 	}
 	return conditions, unknown, true

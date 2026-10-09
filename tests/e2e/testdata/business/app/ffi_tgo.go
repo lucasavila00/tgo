@@ -37,7 +37,7 @@ func FirstStreamLabel(accounts ...model.Account) string {
 
 func Replace(account *model.Account, name string) {
 	legacy.Update(account, func(target *model.Account) {
-		*target = model.NewAccountPersonal(model.AccountPersonal{Name: name})
+		*target = model.AccountPersonal{Name: name}.Account()
 	})
 }
 

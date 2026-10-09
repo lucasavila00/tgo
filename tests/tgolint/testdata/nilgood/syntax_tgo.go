@@ -7,12 +7,12 @@ import "example.com/tgolint/nilmodel"
 
 func syntaxFacts(values nilmodel.SyntaxList) {
 	for _, value := range values {
-		switch __tgo_match_1 := *value; __tgo_match_1.TgoTag() {
-		case 1:
-			payload := __tgo_match_1.TgoItem()
+		switch value.Tag() {
+		case nilmodel.SyntaxTagItem:
+			payload := value.ItemPayload()
 			nilmodel.Need(payload.Value)
 		default:
-			panic("invalid Syntax variant")
+			panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
 	}
 }

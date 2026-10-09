@@ -77,7 +77,7 @@ func expectedModelText(sourceName string, parsed *source) string {
 	for _, declaration := range parsed.Models {
 		switch {
 		case declaration.Enum:
-			output.WriteString(enumGo(sourceName, declaration))
+			output.WriteString(enumGo(sourceName, declaration, parsed.FmtPackage))
 			output.WriteString(enumJSONGo(declaration, parsed.JSONPackage, parsed.FmtPackage))
 		case declaration.Predicate != "":
 			output.WriteString(checkedGo(sourceName, declaration))

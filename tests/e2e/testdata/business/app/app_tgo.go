@@ -50,16 +50,16 @@ type ValidationOpaqueNumberEnvelope struct {
 }
 
 func Summary(name string) string {
-	account := model.NewAccountPersonal(model.AccountPersonal{Name: name})
-	switch __tgo_match_1 := account; __tgo_match_1.TgoTag() {
-	case 1:
-		person := __tgo_match_1.TgoPersonal()
+	account := model.AccountPersonal{Name: name}.Account()
+	switch enumValue1 := account; enumValue1.Tag() {
+	case model.AccountTagPersonal:
+		person := enumValue1.PersonalPayload()
 		return fmt.Sprintf("person %s", person.Name)
-	case 2:
-		company := __tgo_match_1.TgoBusiness()
+	case model.AccountTagBusiness:
+		company := enumValue1.BusinessPayload()
 		return company.Company
 	default:
-		panic("invalid Account variant")
+		panic(enumValue1.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -68,7 +68,7 @@ func Request(id string) model.Request {
 }
 
 func Notice(body string) model.Notice {
-	return model.NewNoticeText(model.NoticeText{Body: body, Labels: model.TgoDefaultNoticeTextLabels()})
+	return model.NoticeText{Body: body, Labels: model.TgoDefaultNoticeTextLabels()}.Notice()
 }
 
 func Sorted(values []int) []int {
@@ -78,11 +78,11 @@ func Sorted(values []int) []int {
 }
 
 func ImportedAlias(name string) model.Account {
-	return model.NewAccountPersonal(model.AccountPersonal{Name: name})
+	return model.AccountPersonal{Name: name}.Account()
 }
 
 func LocalImportedAlias(name string) model.Account {
-	return model.NewAccountPersonal(model.AccountPersonal{Name: name})
+	return model.AccountPersonal{Name: name}.Account()
 }
 
 func LocalImportedRequest(id string) model.Request {

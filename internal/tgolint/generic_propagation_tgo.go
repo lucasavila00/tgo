@@ -258,23 +258,23 @@ func (c *checker) mappedScalarEffectCondition(
 }
 
 func isScalarEffectCondition(kind effectKind) bool {
-	switch __tgo_match_6 := kind; __tgo_match_6.TgoTag() {
-	case 1:
+	switch enumValue6 := kind; enumValue6.Tag() {
+	case effectKindTagBoolean:
 		return true
-	case 2:
+	case effectKindTagNonzero:
 		return true
-	case 3:
+	case effectKindTagNonempty:
 		return false
-	case 4:
+	case effectKindTagMapMiss:
 		return false
-	case 5:
+	case effectKindTagChannelClosed:
 		return false
-	case 6:
+	case effectKindTagAssertionFails:
 		return false
-	case 7:
+	case effectKindTagResliceExtends:
 		return false
 	default:
-		panic("invalid effectKind variant")
+		panic(enumValue6.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

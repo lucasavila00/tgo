@@ -56,10 +56,10 @@ type source struct {
 	Tree           *syntax.File
 	File           *ast.File
 	Models         []*model
-	MatchMarker    string
 	DefaultMarker  string
 	Propagations   map[string]propagationSource
 	Comprehensions map[string]comprehensionSource
+	Exhaustive     map[token.Pos]bool
 	NonNil         map[token.Pos]bool
 }
 

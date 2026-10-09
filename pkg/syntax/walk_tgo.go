@@ -5,6 +5,20 @@ package syntax
 
 import "go/token"
 
+// SourceText returns the source text in one syntax span.
+func SourceText(file *File, span Span) string {
+	if file == nil || file.front == nil || file.front.tokenFile == nil ||
+		span.Start < file.front.tokenFile.Pos(0) || span.Stop < span.Start {
+		return ""
+	}
+	start := file.front.tokenFile.Offset(span.Start)
+	stop := file.front.tokenFile.Offset(span.Stop)
+	if start < 0 || stop < start || stop > len(file.front.source) {
+		return ""
+	}
+	return string(file.front.source[start:stop])
+}
+
 // Visitor visits each node in source order.
 type Visitor interface {
 	Visit(*Node) Visitor
@@ -116,292 +130,280 @@ func NodePosition(node *Node) token.Pos {
 	if node == nil {
 		return token.NoPos
 	}
-	switch __tgo_match_23 := *node; __tgo_match_23.TgoTag() {
-	case 1:
-		value := __tgo_match_23.TgoFile()
+	switch enumValue20 := *node; enumValue20.Tag() {
+	case NodeTagFile:
+		value := enumValue20.FilePayload()
 		return value.Value.Start
-	case 2:
-		value := __tgo_match_23.TgoDeclaration()
+	case NodeTagDeclaration:
+		value := enumValue20.DeclarationPayload()
 		return DeclarationPosition(value.Value)
-	case 3:
-		value := __tgo_match_23.TgoSpecification()
+	case NodeTagSpecification:
+		value := enumValue20.SpecificationPayload()
 		return SpecificationPosition(value.Value)
-	case 4:
-		value := __tgo_match_23.TgoStatement()
+	case NodeTagStatement:
+		value := enumValue20.StatementPayload()
 		return StatementPosition(value.Value)
-	case 5:
-		value := __tgo_match_23.TgoExpression()
+	case NodeTagExpression:
+		value := enumValue20.ExpressionPayload()
 		return ExpressionPosition(value.Value)
-	case 6:
-		value := __tgo_match_23.TgoField()
+	case NodeTagField:
+		value := enumValue20.FieldPayload()
 		return value.Value.Start
-	case 7:
-		value := __tgo_match_23.TgoFieldList()
+	case NodeTagFieldList:
+		value := enumValue20.FieldListPayload()
 		return value.Value.Start
-	case 8:
-		value := __tgo_match_23.TgoTGoField()
+	case NodeTagTGoField:
+		value := enumValue20.TGoFieldPayload()
 		return value.Value.Start
-	case 9:
-		value := __tgo_match_23.TgoEnumVariant()
+	case NodeTagEnumVariant:
+		value := enumValue20.EnumVariantPayload()
 		return value.Value.Start
-	case 10:
-		value := __tgo_match_23.TgoMatchCase()
+	case NodeTagIdentifier:
+		value := enumValue20.IdentifierPayload()
 		return value.Value.Start
-	case 11:
-		value := __tgo_match_23.TgoIdentifier()
+	case NodeTagComment:
+		value := enumValue20.CommentPayload()
 		return value.Value.Start
-	case 12:
-		value := __tgo_match_23.TgoComment()
-		return value.Value.Start
-	case 13:
-		value := __tgo_match_23.TgoCommentGroup()
+	case NodeTagCommentGroup:
+		value := enumValue20.CommentGroupPayload()
 		return value.Value.Start
 	default:
-
-		// NodeEnd returns the first source position after a node.
-		panic("invalid Node variant")
+		panic(enumValue20.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// NodeEnd returns the first source position after a node.
 func NodeEnd(node *Node) token.Pos {
 	if node == nil {
 		return token.NoPos
 	}
-	switch __tgo_match_24 := *node; __tgo_match_24.TgoTag() {
-	case 1:
-		value := __tgo_match_24.TgoFile()
+	switch enumValue21 := *node; enumValue21.Tag() {
+	case NodeTagFile:
+		value := enumValue21.FilePayload()
 		return value.Value.Stop
-	case 2:
-		value := __tgo_match_24.TgoDeclaration()
+	case NodeTagDeclaration:
+		value := enumValue21.DeclarationPayload()
 		return DeclarationEnd(value.Value)
-	case 3:
-		value := __tgo_match_24.TgoSpecification()
+	case NodeTagSpecification:
+		value := enumValue21.SpecificationPayload()
 		return SpecificationEnd(value.Value)
-	case 4:
-		value := __tgo_match_24.TgoStatement()
+	case NodeTagStatement:
+		value := enumValue21.StatementPayload()
 		return StatementEnd(value.Value)
-	case 5:
-		value := __tgo_match_24.TgoExpression()
+	case NodeTagExpression:
+		value := enumValue21.ExpressionPayload()
 		return ExpressionEnd(value.Value)
-	case 6:
-		value := __tgo_match_24.TgoField()
+	case NodeTagField:
+		value := enumValue21.FieldPayload()
 		return value.Value.Stop
-	case 7:
-		value := __tgo_match_24.TgoFieldList()
+	case NodeTagFieldList:
+		value := enumValue21.FieldListPayload()
 		return value.Value.Stop
-	case 8:
-		value := __tgo_match_24.TgoTGoField()
+	case NodeTagTGoField:
+		value := enumValue21.TGoFieldPayload()
 		return value.Value.Stop
-	case 9:
-		value := __tgo_match_24.TgoEnumVariant()
+	case NodeTagEnumVariant:
+		value := enumValue21.EnumVariantPayload()
 		return value.Value.Stop
-	case 10:
-		value := __tgo_match_24.TgoMatchCase()
+	case NodeTagIdentifier:
+		value := enumValue21.IdentifierPayload()
 		return value.Value.Stop
-	case 11:
-		value := __tgo_match_24.TgoIdentifier()
+	case NodeTagComment:
+		value := enumValue21.CommentPayload()
 		return value.Value.Stop
-	case 12:
-		value := __tgo_match_24.TgoComment()
-		return value.Value.Stop
-	case 13:
-		value := __tgo_match_24.TgoCommentGroup()
+	case NodeTagCommentGroup:
+		value := enumValue21.CommentGroupPayload()
 		return value.Value.Stop
 	default:
-
-		// ExpressionPosition returns the first expression position.
-		panic("invalid Node variant")
+		panic(enumValue21.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// ExpressionPosition returns the first expression position.
 func ExpressionPosition(value *Expression) token.Pos {
 	if value == nil {
 		return token.NoPos
 	}
-	switch __tgo_match_25 := *value; __tgo_match_25.TgoTag() {
-	case 1:
-		item := __tgo_match_25.TgoBad()
+	switch enumValue22 := *value; enumValue22.Tag() {
+	case ExpressionTagBad:
+		item := enumValue22.BadPayload()
 		return item.Value.Start
-	case 2:
-		item := __tgo_match_25.TgoIdentifier()
+	case ExpressionTagIdentifier:
+		item := enumValue22.IdentifierPayload()
 		return item.Value.Start
-	case 3:
-		item := __tgo_match_25.TgoEllipsis()
+	case ExpressionTagEllipsis:
+		item := enumValue22.EllipsisPayload()
 		return item.Value.Start
-	case 4:
-		item := __tgo_match_25.TgoBasicLiteral()
+	case ExpressionTagBasicLiteral:
+		item := enumValue22.BasicLiteralPayload()
 		return item.Value.Start
-	case 5:
-		item := __tgo_match_25.TgoFunctionLiteral()
+	case ExpressionTagFunctionLiteral:
+		item := enumValue22.FunctionLiteralPayload()
 		return item.Value.Start
-	case 6:
-		item := __tgo_match_25.TgoCompositeLiteral()
+	case ExpressionTagCompositeLiteral:
+		item := enumValue22.CompositeLiteralPayload()
 		return item.Value.Start
-	case 7:
-		item := __tgo_match_25.TgoParenthesized()
+	case ExpressionTagParenthesized:
+		item := enumValue22.ParenthesizedPayload()
 		return item.Value.Start
-	case 8:
-		item := __tgo_match_25.TgoSelector()
+	case ExpressionTagSelector:
+		item := enumValue22.SelectorPayload()
 		return item.Value.Start
-	case 9:
-		item := __tgo_match_25.TgoIndex()
+	case ExpressionTagIndex:
+		item := enumValue22.IndexPayload()
 		return item.Value.Start
-	case 10:
-		item := __tgo_match_25.TgoIndexList()
+	case ExpressionTagIndexList:
+		item := enumValue22.IndexListPayload()
 		return item.Value.Start
-	case 11:
-		item := __tgo_match_25.TgoSlice()
+	case ExpressionTagSlice:
+		item := enumValue22.SlicePayload()
 		return item.Value.Start
-	case 12:
-		item := __tgo_match_25.TgoTypeAssertion()
+	case ExpressionTagTypeAssertion:
+		item := enumValue22.TypeAssertionPayload()
 		return item.Value.Start
-	case 13:
-		item := __tgo_match_25.TgoCall()
+	case ExpressionTagCall:
+		item := enumValue22.CallPayload()
 		return item.Value.Start
-	case 14:
-		item := __tgo_match_25.TgoStar()
+	case ExpressionTagStar:
+		item := enumValue22.StarPayload()
 		return item.Value.Start
-	case 15:
-		item := __tgo_match_25.TgoNonNilPointer()
+	case ExpressionTagNonNilPointer:
+		item := enumValue22.NonNilPointerPayload()
 		return item.Value.Start
-	case 16:
-		item := __tgo_match_25.TgoUnary()
+	case ExpressionTagUnary:
+		item := enumValue22.UnaryPayload()
 		return item.Value.Start
-	case 17:
-		item := __tgo_match_25.TgoBinary()
+	case ExpressionTagBinary:
+		item := enumValue22.BinaryPayload()
 		return item.Value.Start
-	case 18:
-		item := __tgo_match_25.TgoKeyValue()
+	case ExpressionTagKeyValue:
+		item := enumValue22.KeyValuePayload()
 		return item.Value.Start
-	case 19:
-		item := __tgo_match_25.TgoArrayType()
+	case ExpressionTagArrayType:
+		item := enumValue22.ArrayTypePayload()
 		return item.Value.Start
-	case 20:
-		item := __tgo_match_25.TgoStructType()
+	case ExpressionTagStructType:
+		item := enumValue22.StructTypePayload()
 		return item.Value.Start
-	case 21:
-		item := __tgo_match_25.TgoFunctionType()
+	case ExpressionTagFunctionType:
+		item := enumValue22.FunctionTypePayload()
 		return item.Value.Start
-	case 22:
-		item := __tgo_match_25.TgoInterfaceType()
+	case ExpressionTagInterfaceType:
+		item := enumValue22.InterfaceTypePayload()
 		return item.Value.Start
-	case 23:
-		item := __tgo_match_25.TgoMapType()
+	case ExpressionTagMapType:
+		item := enumValue22.MapTypePayload()
 		return item.Value.Start
-	case 24:
-		item := __tgo_match_25.TgoChannelType()
+	case ExpressionTagChannelType:
+		item := enumValue22.ChannelTypePayload()
 		return item.Value.Start
-	case 25:
-		item := __tgo_match_25.TgoDefault()
+	case ExpressionTagDefault:
+		item := enumValue22.DefaultPayload()
 		return item.Value.Start
-	case 26:
-		item := __tgo_match_25.TgoPropagation()
+	case ExpressionTagPropagation:
+		item := enumValue22.PropagationPayload()
 		return item.Value.Start
-	case 27:
-		item := __tgo_match_25.TgoComprehension(
-
-		// ExpressionEnd returns the first position after an expression.
-		)
+	case ExpressionTagComprehension:
+		item := enumValue22.ComprehensionPayload()
 		return item.Value.Start
 	default:
-		panic("invalid Expression variant")
+		panic(enumValue22.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// ExpressionEnd returns the first position after an expression.
 func ExpressionEnd(value *Expression) token.Pos {
 	if value == nil {
 		return token.NoPos
 	}
-	switch __tgo_match_26 := *value; __tgo_match_26.TgoTag() {
-	case 1:
-		item := __tgo_match_26.TgoBad()
+	switch enumValue23 := *value; enumValue23.Tag() {
+	case ExpressionTagBad:
+		item := enumValue23.BadPayload()
 		return item.Value.Stop
-	case 2:
-		item := __tgo_match_26.TgoIdentifier()
+	case ExpressionTagIdentifier:
+		item := enumValue23.IdentifierPayload()
 		return item.Value.Stop
-	case 3:
-		item := __tgo_match_26.TgoEllipsis()
+	case ExpressionTagEllipsis:
+		item := enumValue23.EllipsisPayload()
 		return item.Value.Stop
-	case 4:
-		item := __tgo_match_26.TgoBasicLiteral()
+	case ExpressionTagBasicLiteral:
+		item := enumValue23.BasicLiteralPayload()
 		return item.Value.Stop
-	case 5:
-		item := __tgo_match_26.TgoFunctionLiteral()
+	case ExpressionTagFunctionLiteral:
+		item := enumValue23.FunctionLiteralPayload()
 		return item.Value.Stop
-	case 6:
-		item := __tgo_match_26.TgoCompositeLiteral()
+	case ExpressionTagCompositeLiteral:
+		item := enumValue23.CompositeLiteralPayload()
 		return item.Value.Stop
-	case 7:
-		item := __tgo_match_26.TgoParenthesized()
+	case ExpressionTagParenthesized:
+		item := enumValue23.ParenthesizedPayload()
 		return item.Value.Stop
-	case 8:
-		item := __tgo_match_26.TgoSelector()
+	case ExpressionTagSelector:
+		item := enumValue23.SelectorPayload()
 		return item.Value.Stop
-	case 9:
-		item := __tgo_match_26.TgoIndex()
+	case ExpressionTagIndex:
+		item := enumValue23.IndexPayload()
 		return item.Value.Stop
-	case 10:
-		item := __tgo_match_26.TgoIndexList()
+	case ExpressionTagIndexList:
+		item := enumValue23.IndexListPayload()
 		return item.Value.Stop
-	case 11:
-		item := __tgo_match_26.TgoSlice()
+	case ExpressionTagSlice:
+		item := enumValue23.SlicePayload()
 		return item.Value.Stop
-	case 12:
-		item := __tgo_match_26.TgoTypeAssertion()
+	case ExpressionTagTypeAssertion:
+		item := enumValue23.TypeAssertionPayload()
 		return item.Value.Stop
-	case 13:
-		item := __tgo_match_26.TgoCall()
+	case ExpressionTagCall:
+		item := enumValue23.CallPayload()
 		return item.Value.Stop
-	case 14:
-		item := __tgo_match_26.TgoStar()
+	case ExpressionTagStar:
+		item := enumValue23.StarPayload()
 		return item.Value.Stop
-	case 15:
-		item := __tgo_match_26.TgoNonNilPointer()
+	case ExpressionTagNonNilPointer:
+		item := enumValue23.NonNilPointerPayload()
 		return item.Value.Stop
-	case 16:
-		item := __tgo_match_26.TgoUnary()
+	case ExpressionTagUnary:
+		item := enumValue23.UnaryPayload()
 		return item.Value.Stop
-	case 17:
-		item := __tgo_match_26.TgoBinary()
+	case ExpressionTagBinary:
+		item := enumValue23.BinaryPayload()
 		return item.Value.Stop
-	case 18:
-		item := __tgo_match_26.TgoKeyValue()
+	case ExpressionTagKeyValue:
+		item := enumValue23.KeyValuePayload()
 		return item.Value.Stop
-	case 19:
-		item := __tgo_match_26.TgoArrayType()
+	case ExpressionTagArrayType:
+		item := enumValue23.ArrayTypePayload()
 		return item.Value.Stop
-	case 20:
-		item := __tgo_match_26.TgoStructType()
+	case ExpressionTagStructType:
+		item := enumValue23.StructTypePayload()
 		return item.Value.Stop
-	case 21:
-		item := __tgo_match_26.TgoFunctionType()
+	case ExpressionTagFunctionType:
+		item := enumValue23.FunctionTypePayload()
 		return item.Value.Stop
-	case 22:
-		item := __tgo_match_26.TgoInterfaceType()
+	case ExpressionTagInterfaceType:
+		item := enumValue23.InterfaceTypePayload()
 		return item.Value.Stop
-	case 23:
-		item := __tgo_match_26.TgoMapType()
+	case ExpressionTagMapType:
+		item := enumValue23.MapTypePayload()
 		return item.Value.Stop
-	case 24:
-		item := __tgo_match_26.TgoChannelType()
+	case ExpressionTagChannelType:
+		item := enumValue23.ChannelTypePayload()
 		return item.Value.Stop
-	case 25:
-		item := __tgo_match_26.TgoDefault()
+	case ExpressionTagDefault:
+		item := enumValue23.DefaultPayload()
 		return item.Value.Stop
-	case 26:
-		item := __tgo_match_26.TgoPropagation()
+	case ExpressionTagPropagation:
+		item := enumValue23.PropagationPayload()
 		return item.Value.Stop
-	case 27:
-		item := __tgo_match_26.TgoComprehension(
-
-		// StatementPosition returns the first statement position.
-		)
+	case ExpressionTagComprehension:
+		item := enumValue23.ComprehensionPayload()
 		return item.Value.Stop
 	default:
-		panic("invalid Expression variant")
+		panic(enumValue23.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// StatementPosition returns the first statement position.
 func StatementPosition(value *Statement) token.Pos {
 	return statementSpan(value).Start
 }
@@ -415,80 +417,76 @@ func statementSpan(value *Statement) Span {
 	if value == nil {
 		return Span{Start: token.NoPos, Stop: token.NoPos}
 	}
-	switch __tgo_match_27 := *value; __tgo_match_27.TgoTag() {
-	case 1:
-		item := __tgo_match_27.TgoBad()
+	switch enumValue24 := *value; enumValue24.Tag() {
+	case StatementTagBad:
+		item := enumValue24.BadPayload()
 		return item.Value.Span
-	case 2:
-		item := __tgo_match_27.TgoDeclaration()
+	case StatementTagDeclaration:
+		item := enumValue24.DeclarationPayload()
 		return item.Value.Span
-	case 3:
-		item := __tgo_match_27.TgoEmpty()
+	case StatementTagEmpty:
+		item := enumValue24.EmptyPayload()
 		return item.Value.Span
-	case 4:
-		item := __tgo_match_27.TgoLabeled()
+	case StatementTagLabeled:
+		item := enumValue24.LabeledPayload()
 		return item.Value.Span
-	case 5:
-		item := __tgo_match_27.TgoExpression()
+	case StatementTagExpression:
+		item := enumValue24.ExpressionPayload()
 		return item.Value.Span
-	case 6:
-		item := __tgo_match_27.TgoSend()
+	case StatementTagSend:
+		item := enumValue24.SendPayload()
 		return item.Value.Span
-	case 7:
-		item := __tgo_match_27.TgoIncrement()
+	case StatementTagIncrement:
+		item := enumValue24.IncrementPayload()
 		return item.Value.Span
-	case 8:
-		item := __tgo_match_27.TgoAssignment()
+	case StatementTagAssignment:
+		item := enumValue24.AssignmentPayload()
 		return item.Value.Span
-	case 9:
-		item := __tgo_match_27.TgoGo()
+	case StatementTagGo:
+		item := enumValue24.GoPayload()
 		return item.Value.Span
-	case 10:
-		item := __tgo_match_27.TgoDefer()
+	case StatementTagDefer:
+		item := enumValue24.DeferPayload()
 		return item.Value.Span
-	case 11:
-		item := __tgo_match_27.TgoReturn()
+	case StatementTagReturn:
+		item := enumValue24.ReturnPayload()
 		return item.Value.Span
-	case 12:
-		item := __tgo_match_27.TgoBranch()
+	case StatementTagBranch:
+		item := enumValue24.BranchPayload()
 		return item.Value.Span
-	case 13:
-		item := __tgo_match_27.TgoBlock()
+	case StatementTagBlock:
+		item := enumValue24.BlockPayload()
 		return item.Value.Span
-	case 14:
-		item := __tgo_match_27.TgoIf()
+	case StatementTagIf:
+		item := enumValue24.IfPayload()
 		return item.Value.Span
-	case 15:
-		item := __tgo_match_27.TgoCase()
+	case StatementTagCase:
+		item := enumValue24.CasePayload()
 		return item.Value.Span
-	case 16:
-		item := __tgo_match_27.TgoSwitch()
+	case StatementTagSwitch:
+		item := enumValue24.SwitchPayload()
 		return item.Value.Span
-	case 17:
-		item := __tgo_match_27.TgoTypeSwitch()
+	case StatementTagTypeSwitch:
+		item := enumValue24.TypeSwitchPayload()
 		return item.Value.Span
-	case 18:
-		item := __tgo_match_27.TgoCommunication()
+	case StatementTagCommunication:
+		item := enumValue24.CommunicationPayload()
 		return item.Value.Span
-	case 19:
-		item := __tgo_match_27.TgoSelect()
+	case StatementTagSelect:
+		item := enumValue24.SelectPayload()
 		return item.Value.Span
-	case 20:
-		item := __tgo_match_27.TgoFor()
+	case StatementTagFor:
+		item := enumValue24.ForPayload()
 		return item.Value.Span
-	case 21:
-		item := __tgo_match_27.TgoRange()
-		return item.Value.Span
-	case 22:
-		item := __tgo_match_27.TgoMatch()
+	case StatementTagRange:
+		item := enumValue24.RangePayload()
 		return item.Value.Span
 	default:
-
-		// DeclarationPosition returns the first declaration position.
-		panic("invalid Statement variant")
+		panic(enumValue24.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// DeclarationPosition returns the first declaration position.
 func DeclarationPosition(value *Declaration) token.Pos {
 	return declarationSpan(value).Start
 }
@@ -502,32 +500,31 @@ func declarationSpan(value *Declaration) Span {
 	if value == nil {
 		return Span{Start: token.NoPos, Stop: token.NoPos}
 	}
-	switch __tgo_match_28 := *value; __tgo_match_28.TgoTag() {
-	case 1:
-		item := __tgo_match_28.TgoBad()
+	switch enumValue25 := *value; enumValue25.Tag() {
+	case DeclarationTagBad:
+		item := enumValue25.BadPayload()
 		return item.Value.Span
-	case 2:
-		item := __tgo_match_28.TgoGeneral()
+	case DeclarationTagGeneral:
+		item := enumValue25.GeneralPayload()
 		return item.Value.Span
-	case 3:
-		item := __tgo_match_28.TgoFunction()
+	case DeclarationTagFunction:
+		item := enumValue25.FunctionPayload()
 		return item.Value.Span
-	case 4:
-		item := __tgo_match_28.TgoEnum()
+	case DeclarationTagEnum:
+		item := enumValue25.EnumPayload()
 		return item.Value.Span
-	case 5:
-		item := __tgo_match_28.TgoStruct()
+	case DeclarationTagStruct:
+		item := enumValue25.StructPayload()
 		return item.Value.Span
-	case 6:
-		item := __tgo_match_28.TgoChecked()
+	case DeclarationTagChecked:
+		item := enumValue25.CheckedPayload()
 		return item.Value.Span
 	default:
-
-		// SpecificationPosition returns the first specification position.
-		panic("invalid Declaration variant")
+		panic(enumValue25.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// SpecificationPosition returns the first specification position.
 func SpecificationPosition(value *Specification) token.Pos {
 	return specificationSpan(value).Start
 }
@@ -541,47 +538,46 @@ func specificationSpan(value *Specification) Span {
 	if value == nil {
 		return Span{Start: token.NoPos, Stop: token.NoPos}
 	}
-	switch __tgo_match_29 := *value; __tgo_match_29.TgoTag() {
-	case 1:
-		item := __tgo_match_29.TgoImport()
+	switch enumValue26 := *value; enumValue26.Tag() {
+	case SpecificationTagImport:
+		item := enumValue26.ImportPayload()
 		return item.Value.Span
-	case 2:
-		item := __tgo_match_29.TgoValue()
+	case SpecificationTagValue:
+		item := enumValue26.ValuePayload()
 		return item.Value.Span
-	case 3:
-		item := __tgo_match_29.TgoType()
+	case SpecificationTagType:
+		item := enumValue26.TypePayload()
 		return item.Value.Span
 	default:
-		panic("invalid Specification variant")
+		panic(enumValue26.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 func nodeFile(value *File) Node {
-	return NewNodeFile(NodeFile{Value: value})
+	return NodeFile{Value: value}.Node()
 }
 func nodeDeclaration(value *Declaration) Node {
-	return NewNodeDeclaration(NodeDeclaration{Value: value})
+	return NodeDeclaration{Value: value}.Node()
 }
 func nodeSpecification(value *Specification) Node {
-	return NewNodeSpecification(NodeSpecification{Value: value})
+	return NodeSpecification{Value: value}.Node()
 }
 func nodeStatement(value *Statement) Node {
-	return NewNodeStatement(NodeStatement{Value: value})
+	return NodeStatement{Value: value}.Node()
 }
 func nodeExpression(value *Expression) Node {
-	return NewNodeExpression(NodeExpression{Value: value})
+	return NodeExpression{Value: value}.Node()
 }
-func nodeField(value *Field) Node         { return NewNodeField(NodeField{Value: value}) }
-func nodeFieldList(value *FieldList) Node { return NewNodeFieldList(NodeFieldList{Value: value}) }
-func nodeTGoField(value *TGoField) Node   { return NewNodeTGoField(NodeTGoField{Value: value}) }
+func nodeField(value *Field) Node         { return NodeField{Value: value}.Node() }
+func nodeFieldList(value *FieldList) Node { return NodeFieldList{Value: value}.Node() }
+func nodeTGoField(value *TGoField) Node   { return NodeTGoField{Value: value}.Node() }
 func nodeEnumVariant(value *EnumVariant) Node {
-	return NewNodeEnumVariant(NodeEnumVariant{Value: value})
+	return NodeEnumVariant{Value: value}.Node()
 }
-func nodeMatchCase(value *MatchCase) Node { return NewNodeMatchCase(NodeMatchCase{Value: value}) }
 func nodeIdentifier(value *Identifier) Node {
-	return NewNodeIdentifier(NodeIdentifier{Value: value})
+	return NodeIdentifier{Value: value}.Node()
 }
-func nodeComment(value *Comment) Node { return NewNodeComment(NodeComment{Value: value}) }
+func nodeComment(value *Comment) Node { return NodeComment{Value: value}.Node() }
 func nodeCommentGroup(value *CommentGroup) Node {
-	return NewNodeCommentGroup(NodeCommentGroup{Value: value})
+	return NodeCommentGroup{Value: value}.Node()
 }

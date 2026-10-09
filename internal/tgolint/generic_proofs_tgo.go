@@ -94,17 +94,17 @@ func (c *checker) reportGenericEffects(
 }
 
 func effectOutcomeRank(outcome effectOutcome) int {
-	switch __tgo_match_4 := outcome; __tgo_match_4.TgoTag() {
-	case 1:
+	switch enumValue4 := outcome; enumValue4.Tag() {
+	case effectOutcomeTagUnknown:
 		return 1
-	case 2:
+	case effectOutcomeTagNever:
 		return 0
-	case 3:
+	case effectOutcomeTagAlways:
 		return 2
-	case 4:
+	case effectOutcomeTagConditional:
 		return 1
 	default:
-		panic("invalid effectOutcome variant")
+		panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -244,29 +244,28 @@ func (c *checker) compositeEffectCondition(
 	targetType types.Type,
 ) (bool, bool) {
 	expression := call.Args[condition.ValueParameter]
-	switch __tgo_match_5 := condition.Kind; __tgo_match_5.TgoTag() {
-	case 3:
+	switch enumValue5 := condition.Kind; enumValue5.Tag() {
+	case effectKindTagNonempty:
 		length, _, known := c.knownSliceBounds(expression)
 		return (length != 0) == condition.Expected, known
-	case 4:
+	case effectKindTagMapMiss:
 		return c.mapMissCondition(call, condition)
-	case 5:
+	case effectKindTagChannelClosed:
 		return false, c.freshChannel(expression)
-	case 6:
+	case effectKindTagAssertionFails:
 		return c.assertionFails(expression, targetType)
-	case 7:
+	case effectKindTagResliceExtends:
 		return c.resliceExtends(call, condition)
-	case 1:
+	case effectKindTagBoolean:
 		return false, false
-	case 2:
+	case effectKindTagNonzero:
 		return false, false
 	default:
-
-		// knownSliceBounds reads exact length and capacity from literals and make calls.
-		panic("invalid effectKind variant")
+		panic(enumValue5.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// knownSliceBounds reads exact length and capacity from literals and make calls.
 func (c *checker) knownSliceBounds(expression ast.Expr) (int64, int64, bool) {
 	if parentheses, ok := expression.(*ast.ParenExpr); ok {
 		return c.knownSliceBounds(parentheses.X)

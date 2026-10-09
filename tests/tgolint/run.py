@@ -82,7 +82,7 @@ def assert_integrity_checks(linter, work):
     replacements = (
         ("return Count{value: value}, nil", "return Count{}, nil"),
         (
-            "return Event{tgoTag: 1, tgoStarted: value}",
+            "return Event{tgoTag: EventTagStarted, tgoStarted: value}",
             "_ = value\n\treturn Event{}",
         ),
         (

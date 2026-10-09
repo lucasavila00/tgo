@@ -109,9 +109,10 @@ func (p *packageUnit) checkRules() {
 				continue
 			}
 			parents := parentNodes(declaration)
+			safe, handled := p.checkEnumSwitches(declaration, parents, source.Exhaustive)
 			ast.Inspect(declaration, func(node ast.Node) bool {
 				p.checkNonNilType(source, node)
-				p.checkNode(node, parents)
+				p.checkNode(node, parents, safe, handled)
 				if literal, ok := node.(*ast.FuncLit); ok {
 					p.checkFunctionResults(literal.Type.Results, literal.Body)
 				}
@@ -151,7 +152,12 @@ func parentNodes(root ast.Node) map[ast.Node]ast.Node {
 }
 
 // checkNode sends one source node to its applicable tgo checks.
-func (p *packageUnit) checkNode(node ast.Node, parents map[ast.Node]ast.Node) {
+func (p *packageUnit) checkNode(
+	node ast.Node,
+	parents map[ast.Node]ast.Node,
+	safe map[*ast.SelectorExpr]bool,
+	handled map[*ast.SelectorExpr]bool,
+) {
 	if expression, ok := node.(ast.Expr); ok {
 		p.checkRepresentationExpression(expression, parents)
 	}
@@ -165,7 +171,7 @@ func (p *packageUnit) checkNode(node ast.Node, parents map[ast.Node]ast.Node) {
 	case *ast.CallExpr:
 		p.checkCall(node)
 	case *ast.SelectorExpr:
-		p.checkSelector(node)
+		p.checkSelector(node, safe, handled)
 	default:
 		p.checkCollectionNode(node, parents)
 	}
@@ -253,7 +259,14 @@ func (p *packageUnit) checkCollectionNode(
 }
 
 // checkSelector blocks direct access to generated model representation.
-func (p *packageUnit) checkSelector(selector *ast.SelectorExpr) {
+func (p *packageUnit) checkSelector(
+	selector *ast.SelectorExpr,
+	safe map[*ast.SelectorExpr]bool,
+	handled map[*ast.SelectorExpr]bool,
+) {
+	if safe[selector] || handled[selector] {
+		return
+	}
 	if selector.Sel.Pos() == token.NoPos {
 		return
 	}
@@ -262,11 +275,11 @@ func (p *packageUnit) checkSelector(selector *ast.SelectorExpr) {
 		return
 	}
 	if model := p.representationModel(selection); model != nil {
-		p.fail(selector, "%s representation is private; use constructors and match", model.Name)
+		p.fail(selector,
+			"%s representation is private; use payload constructors and a checked Tag switch",
+			model.Name,
+		)
 		return
-	}
-	if p.enumAccessor(selection, selector.Sel.Name) {
-		p.fail(selector, "use match to read an enum payload")
 	}
 }
 
@@ -353,10 +366,13 @@ func (p *packageUnit) enumAccessor(selection *types.Selection, name string) bool
 	}
 	receiver := dereference(signature.Recv().Type())
 	if model := p.modelForType(receiver); model != nil {
-		return generatedEnumMethod(model.Name, name, model)
+		if name == "Tag" {
+			return true
+		}
+		return enumVariantTag(model, name) != 0
 	}
 	_, dynamic := receiver.Underlying().(*types.Interface)
-	return dynamic && strings.HasPrefix(name, "Tgo")
+	return dynamic && (name == "Tag" || strings.HasSuffix(name, "Payload"))
 }
 
 // dereference removes aliases and one or more pointer layers.

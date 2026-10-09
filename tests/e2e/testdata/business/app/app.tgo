@@ -48,9 +48,14 @@ type ValidationOpaqueNumberEnvelope struct {
 
 func Summary(name string) string {
     account := model.Account.Personal{Name: name}
-    match account {
-    case Personal(person): return fmt.Sprintf("person %s", person.Name)
-    case Business(company): return company.Company
+    switch enumValue1 := account; enumValue1.Tag() {
+    case model.AccountTagPersonal:
+        person := enumValue1.PersonalPayload()
+        return fmt.Sprintf("person %s", person.Name)
+    case model.AccountTagBusiness:
+        company := enumValue1.BusinessPayload()
+        return company.Company
+    exhaustive:
     }
 }
 
@@ -69,13 +74,13 @@ func Sorted(values []int) []int {
 }
 
 func ImportedAlias(name string) model.Account {
-	return model.AccountAlias.Personal{Name: name}
+    return model.AccountAlias.Personal{Name: name}
 }
 
 func LocalImportedAlias(name string) model.Account {
-	return LocalAccountAlias.Personal{Name: name}
+    return LocalAccountAlias.Personal{Name: name}
 }
 
 func LocalImportedRequest(id string) model.Request {
-	return LocalRequestAlias{ID: id, ..default}
+    return LocalRequestAlias{ID: id, ..default}
 }

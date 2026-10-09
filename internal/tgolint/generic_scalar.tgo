@@ -495,42 +495,66 @@ func scalarLogicalOr(
 }
 
 func scalarBoolean(value scalarValue) (bool, bool) {
-	match value {
-	case Boolean(boolean): return boolean.Value, true
-	case Integer(_): return false, false
-	case BooleanParameter(_): return false, false
-	case IntegerParameter(_): return false, false
+	switch enumValue7 := value; enumValue7.Tag() {
+	case scalarValueTagBoolean:
+		boolean := enumValue7.BooleanPayload()
+		return boolean.Value, true
+	case scalarValueTagInteger:
+		return false, false
+	case scalarValueTagBooleanParameter:
+		return false, false
+	case scalarValueTagIntegerParameter:
+		return false, false
+	exhaustive:
 	}
 }
 
 func scalarInteger(value scalarValue) (int64, bool) {
-	match value {
-	case Boolean(_): return 0, false
-	case Integer(integer): return integer.Value, true
-	case BooleanParameter(_): return 0, false
-	case IntegerParameter(_): return 0, false
+	switch enumValue8 := value; enumValue8.Tag() {
+	case scalarValueTagBoolean:
+		return 0, false
+	case scalarValueTagInteger:
+		integer := enumValue8.IntegerPayload()
+		return integer.Value, true
+	case scalarValueTagBooleanParameter:
+		return 0, false
+	case scalarValueTagIntegerParameter:
+		return 0, false
+	exhaustive:
 	}
 }
 
 func scalarParameter(value scalarValue) (int, bool, bool) {
-	match value {
-	case Boolean(_): return 0, false, false
-	case Integer(_): return 0, false, false
-	case BooleanParameter(parameter):
+	switch enumValue9 := value; enumValue9.Tag() {
+	case scalarValueTagBoolean:
+		return 0, false, false
+	case scalarValueTagInteger:
+		return 0, false, false
+	case scalarValueTagBooleanParameter:
+		parameter := enumValue9.BooleanParameterPayload()
 		return parameter.Index, parameter.Negated, true
-	case IntegerParameter(parameter): return parameter.Index, false, true
+	case scalarValueTagIntegerParameter:
+		parameter := enumValue9.IntegerParameterPayload()
+		return parameter.Index, false, true
+	exhaustive:
 	}
 }
 
 func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
-	match value {
-	case Boolean(boolean): return scalarValue.Boolean{Value: !boolean.Value}, true
-	case Integer(_): return scalarValue.Boolean{Value: false}, false
-	case BooleanParameter(parameter):
+	switch enumValue10 := value; enumValue10.Tag() {
+	case scalarValueTagBoolean:
+		boolean := enumValue10.BooleanPayload()
+		return scalarValue.Boolean{Value: !boolean.Value}, true
+	case scalarValueTagInteger:
+		return scalarValue.Boolean{Value: false}, false
+	case scalarValueTagBooleanParameter:
+		parameter := enumValue10.BooleanParameterPayload()
 		return scalarValue.BooleanParameter{
 			Index: parameter.Index, Negated: !parameter.Negated,
 		}, true
-	case IntegerParameter(_): return scalarValue.Boolean{Value: false}, false
+	case scalarValueTagIntegerParameter:
+		return scalarValue.Boolean{Value: false}, false
+	exhaustive:
 	}
 }
 
@@ -553,21 +577,32 @@ func scalarValuesEqual(left scalarValue, right scalarValue) bool {
 }
 
 func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
-	match value {
-	case Boolean(_): return 0, false, false
-	case Integer(_): return 0, false, false
-	case BooleanParameter(parameter):
+	switch enumValue11 := value; enumValue11.Tag() {
+	case scalarValueTagBoolean:
+		return 0, false, false
+	case scalarValueTagInteger:
+		return 0, false, false
+	case scalarValueTagBooleanParameter:
+		parameter := enumValue11.BooleanParameterPayload()
 		return parameter.Index, parameter.Negated, true
-	case IntegerParameter(_): return 0, false, false
+	case scalarValueTagIntegerParameter:
+		return 0, false, false
+	exhaustive:
 	}
 }
 
 func scalarIntegerParameter(value scalarValue) (int, bool) {
-	match value {
-	case Boolean(_): return 0, false
-	case Integer(_): return 0, false
-	case BooleanParameter(_): return 0, false
-	case IntegerParameter(parameter): return parameter.Index, true
+	switch enumValue12 := value; enumValue12.Tag() {
+	case scalarValueTagBoolean:
+		return 0, false
+	case scalarValueTagInteger:
+		return 0, false
+	case scalarValueTagBooleanParameter:
+		return 0, false
+	case scalarValueTagIntegerParameter:
+		parameter := enumValue12.IntegerParameterPayload()
+		return parameter.Index, true
+	exhaustive:
 	}
 }
 

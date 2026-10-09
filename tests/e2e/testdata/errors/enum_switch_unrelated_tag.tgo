@@ -1,0 +1,15 @@
+package invalid
+
+type E enum {
+	A struct{}
+}
+
+const unrelated ETag = 1
+
+func use(value E) {
+	switch value.Tag() {
+	case unrelated:
+		return
+	exhaustive:
+	}
+}
