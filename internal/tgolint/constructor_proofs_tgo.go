@@ -27,13 +27,20 @@ func (c *checker) checkedIf(statement *syntax.IfStatement, state checkedState) b
 	for failure := range falseProofs {
 		proveResult(falseState, failure)
 	}
-	trueStops := c.checkedBlock(statement.Body.List, trueState) ||
-		c.statementsTerminate(c.file, statement.Body.List)
+	trueStops := c.checkedBlock(statement.Body.List, trueState)
+	if !trueStops && c.file != nil {
+		trueStops = c.statementsTerminate(c.file, statement.Body.List)
+	}
 	falseStops := false
 	if statement.Else != nil {
 		falseStops = c.checkedStatement(statement.Else, falseState)
 		if !falseStops {
-			falseStops = c.statementsTerminate(c.file, []*syntax.Statement{statement.Else})
+			if c.file != nil {
+				other := statement.Else
+				if other != nil {
+					falseStops = c.statementsTerminate(c.file, []*syntax.Statement{other})
+				}
+			}
 		}
 	}
 	switch {
@@ -122,8 +129,10 @@ func (c *checker) binaryErrorProof(
 	if name == nil {
 		name, nilName = errorAndNil(binary.Right, binary.Left)
 	}
-	if name == nil || nilName == nil ||
-		c.facts.Object(nilName) != types.Universe.Lookup("nil") {
+	if name == nil || nilName == nil {
+		return nil, false
+	}
+	if c.facts.Object(nilName) != types.Universe.Lookup("nil") {
 		return nil, false
 	}
 	object := c.facts.Object(name)
@@ -140,10 +149,10 @@ func (c *checker) binaryPresenceProof(
 	state checkedState,
 ) (types.Object, bool) {
 	name, value, ok := booleanComparison(c.facts, binary.Left, binary.Right)
-	if !ok {
+	if !ok || name == nil {
 		name, value, ok = booleanComparison(c.facts, binary.Right, binary.Left)
 	}
-	if !ok {
+	if !ok || name == nil {
 		return nil, false
 	}
 	object := c.facts.Object(name)
@@ -385,7 +394,9 @@ func (c *checker) checkedSwitch(statement *syntax.SwitchStatement, state checked
 	if statement.Init != nil {
 		c.checkedStatement(statement.Init, state)
 	}
-	c.checkResultUses([]*syntax.Expression{statement.Tag}, state, nil)
+	if statement.Tag != nil {
+		c.checkResultUses([]*syntax.Expression{statement.Tag}, state, nil)
+	}
 	entry := cloneCheckedState(state)
 	var exits []checkedState = nil
 	var carried checkedState = nil

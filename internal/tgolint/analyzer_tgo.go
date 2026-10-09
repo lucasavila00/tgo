@@ -93,7 +93,10 @@ func run(pass *analysis.Pass) (any, error) {
 	}
 	info := pass.TypesInfo
 	fileSet := pass.Fset
-	if info == nil || fileSet == nil {
+	if info == nil {
+		return nil, fmt.Errorf("tgolint requires type facts")
+	}
+	if fileSet == nil {
 		return nil, fmt.Errorf("tgolint requires type and position facts")
 	}
 	facts := sourcefacts.New(files[0], info, fileSet)
@@ -219,7 +222,11 @@ func (c *checker) markInvalid() {
 }
 
 // addParents builds the upward AST links used by local flow checks.
+
 func (c *checker) addParent(node *syntax.Node) {
+	if c.file == nil {
+		return
+	}
 	for _, child := range syntax.Children(c.file, node) {
 		c.parents[*child] = node
 	}
@@ -228,15 +235,24 @@ func (c *checker) addParent(node *syntax.Node) {
 // checkNode sends one AST node to each check that applies to its form.
 func (c *checker) checkNode(node *syntax.Node) {
 	if function, ok := syntax.FunctionDeclarationOf(node); ok {
-		if function.Body != nil {
-			c.checkNamedResults(function.Type)
-			c.checkConstructors(node, function.Body)
+		if function != nil {
+			body := function.Body
+			if body != nil {
+				c.checkNamedResults(function.Type)
+				c.checkConstructors(node, body)
+			}
 		}
 		return
 	}
 	if literal, ok := syntax.FunctionLiteralOf(node); ok {
+		if literal == nil {
+			return
+		}
 		c.checkNamedResults(literal.Type)
-		c.checkConstructors(node, literal.Body)
+		body := literal.Body
+		if body != nil {
+			c.checkConstructors(node, body)
+		}
 		return
 	}
 	if specification, ok := syntax.SpecificationOf(node); ok {

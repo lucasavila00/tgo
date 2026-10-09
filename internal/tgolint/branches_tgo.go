@@ -13,6 +13,9 @@ import (
 )
 
 func (c *checker) callMayReturn(expression *syntax.Expression) bool {
+	if expression == nil {
+		return true
+	}
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
 		return true
@@ -65,18 +68,22 @@ func (c *checker) branchHasUnsafeUse(
 	object types.Object,
 	result checkedResult,
 ) bool {
+	if c.function == nil {
+		return false
+	}
 	body := functionBody(c.function)
-	if body == nil {
-		return false
+	if body != nil {
+		graph := cfg.New(body, c.callMayReturn)
+		if graph != nil {
+			start := c.branchTargetBlock(graph, statement, branch)
+			if start != nil {
+				return c.unsafeUseFromBlock(
+					start, object, result, result.validProof, make(map[branchFlow]bool),
+				)
+			}
+		}
 	}
-	graph := cfg.New(body, c.callMayReturn)
-	start := c.branchTargetBlock(graph, statement, branch)
-	if start == nil {
-		return false
-	}
-	return c.unsafeUseFromBlock(
-		start, object, result, result.validProof, make(map[branchFlow]bool),
-	)
+	return false
 }
 
 func functionBody(function *syntax.Node) *syntax.BlockStatement {
@@ -282,6 +289,9 @@ func (c *checker) unsafeUseFromBlock(
 		if index == 0 && trueSafe || index == 1 && falseSafe {
 			continue
 		}
+		if successor == nil {
+			continue
+		}
 		if c.unsafeUseFromBlock(successor, object, result, proofAlive, visited) {
 			return true
 		}
@@ -390,8 +400,13 @@ func (c *checker) expressionUsesObject(expression *syntax.Expression, object typ
 
 func (c *checker) nodeUsesObject(node *syntax.Node, object types.Object) bool {
 	name, ok := syntax.IdentifierOf(node)
-	if ok && c.facts.Object(name) == object {
-		return true
+	if ok && name != nil {
+		if c.facts.Object(name) == object {
+			return true
+		}
+	}
+	if c.file == nil {
+		return false
 	}
 	for _, child := range syntax.Children(c.file, node) {
 		if c.nodeUsesObject(child, object) {
@@ -408,7 +423,13 @@ func (c *checker) returnUsesPendingValue(
 ) bool {
 	for index, expression := range statement.Results {
 		name := syntax.IdentifierExpressionOf(expression)
-		if name == nil || c.facts.Object(name) != value {
+		if name == nil {
+			if c.expressionUsesObject(expression, value) {
+				return true
+			}
+			continue
+		}
+		if c.facts.Object(name) != value {
 			if c.expressionUsesObject(expression, value) {
 				return true
 			}
@@ -418,7 +439,10 @@ func (c *checker) returnUsesPendingValue(
 			return true
 		}
 		failureName := syntax.IdentifierExpressionOf(statement.Results[index+1])
-		if failureName == nil || c.facts.Object(failureName) != failure {
+		if failureName == nil {
+			return true
+		}
+		if c.facts.Object(failureName) != failure {
 			return true
 		}
 	}

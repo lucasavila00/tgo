@@ -176,8 +176,10 @@ func (c *checker) checkedBlock(statements []*syntax.Statement, state checkedStat
 		if c.checkedStatement(statement, state) {
 			return true
 		}
-		if c.statementsTerminate(c.file, []*syntax.Statement{statement}) {
-			return true
+		if c.file != nil {
+			if c.statementsTerminate(c.file, []*syntax.Statement{statement}) {
+				return true
+			}
 		}
 	}
 	return false
@@ -256,7 +258,9 @@ func (c *checker) checkedLoop(statement *syntax.ForStatement, state checkedState
 	entry := cloneCheckedState(state)
 	loop := cloneCheckedState(entry)
 	for {
-		c.checkResultUses([]*syntax.Expression{statement.Condition}, loop, nil)
+		if statement.Condition != nil {
+			c.checkResultUses([]*syntax.Expression{statement.Condition}, loop, nil)
+		}
 		iteration := cloneCheckedState(loop)
 		trueProofs, falseProofs := c.resultProofs(statement.Condition, loop)
 		for failure := range trueProofs {
@@ -283,7 +287,14 @@ func (c *checker) checkedRange(statement *syntax.RangeStatement, state checkedSt
 	loop := cloneCheckedState(entry)
 	for {
 		iteration := cloneCheckedState(loop)
-		c.invalidateAssignments([]*syntax.Expression{statement.Key, statement.Value}, iteration)
+		var targets []*syntax.Expression = nil
+		if statement.Key != nil {
+			targets = append(targets, statement.Key)
+		}
+		if statement.Value != nil {
+			targets = append(targets, statement.Value)
+		}
+		c.invalidateAssignments(targets, iteration)
 		c.checkedBlock(statement.Body.List, iteration)
 		next := joinCheckedStates(entry, iteration)
 		if equalCheckedStates(loop, next) {
