@@ -17,5 +17,5 @@ devcontainer up --workspace-folder "$repository"
 
 exec docker exec -it \
 	--env SSH_AUTH_SOCK=/tmp/ssh-agent \
-	--workdir /workspaces/go2 \
-	go2-devcontainer byobu
+	--workdir /workspaces/tgo \
+	tgo-devcontainer byobu
