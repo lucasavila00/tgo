@@ -28,7 +28,8 @@ func work(value %int, event Event) (%int, error) {
 	_ = []int{for _, number := range []int{1, 2} {
 		if number > 0 {
 			number
-		}}}
+		}
+	}}
 	switch event.Tag() {
 	case EventTagCreated:
 		return next, nil

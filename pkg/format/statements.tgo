@@ -16,8 +16,10 @@ func (p *printer) statement(value *syntax.Statement) {
 		}
 	case syntax.StatementTagLabeled:
 		item := statementValue.LabeledPayload().Value
+		p.before(item.Label.Start)
 		p.indent--
-		p.token(item.Label.Start, item.Label.Name)
+		p.text(item.Label.Name)
+		p.lastSource = item.Label.Start
 		p.token(item.Colon, ":")
 		p.indent++
 		p.newline()

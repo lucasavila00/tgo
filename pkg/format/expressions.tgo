@@ -426,6 +426,9 @@ func (p *printer) comprehension(value *syntax.ComprehensionExpression) {
 	for index := len(value.Clauses) - 1; index >= 0; index-- {
 		p.indent--
 		p.text("}")
+		if index > 0 {
+			p.newline()
+		}
 	}
 	p.token(value.Rbrace, "}")
 }
