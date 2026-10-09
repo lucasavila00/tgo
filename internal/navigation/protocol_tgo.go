@@ -2,6 +2,11 @@
 
 package navigation
 
+import __tgo_json "encoding/json"
+import __tgo_jsonv2 "encoding/json/v2"
+import __tgo_jsontext "encoding/json/jsontext"
+import __tgo_fmt "fmt"
+
 import (
 	"bufio"
 	"context"
@@ -9,14 +14,6 @@ import (
 	"io"
 	"sync"
 )
-
-// Request is one helper protocol request.
-
-type Request struct {
-	ID     int64           `json:"id,omitempty"`
-	Method string          `json:"method"`
-	Params json.RawMessage `json:"params,omitempty"`
-}
 
 // Response is one helper protocol response.
 
@@ -44,6 +41,482 @@ type cancelParams struct {
 	ID int64 `json:"id"`
 }
 
+type invalidateParams struct {
+	URI string `json:"uri"`
+}
+
+// Request is one helper protocol request.
+// Request requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type RequestTag uint8
+
+const (
+	RequestTagHover RequestTag = iota + 1
+	RequestTagDefinition
+	RequestTagReferences
+	RequestTagDocumentSymbols
+	RequestTagWorkspaceSymbols
+	RequestTagCancel
+	RequestTagInvalidate
+)
+
+type Request struct {
+	tgoTag              RequestTag
+	tgoWorkspaceSymbols RequestWorkspaceSymbols
+	tgoCancel           RequestCancel
+	tgoInvalidate       RequestInvalidate
+	tgoPayload          interface{}
+}
+
+// Tag returns the active tag.
+func (v Request) Tag() RequestTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Request) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Request: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// RequestHover is the Hover payload.
+type RequestHover struct {
+	ID     int64           `json:"id,omitempty"`
+	Params *positionParams `json:"params"`
+}
+
+// Request constructs Request. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value RequestHover) Request() Request {
+	return Request{tgoTag: RequestTagHover, tgoPayload: value}
+}
+
+// HoverPayload requires Hover. No tag check.
+func (v Request) HoverPayload() RequestHover { return v.tgoPayload.(RequestHover) }
+
+// RequestDefinition is the Definition payload.
+type RequestDefinition struct {
+	ID     int64           `json:"id,omitempty"`
+	Params *positionParams `json:"params"`
+}
+
+// Request constructs Request. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value RequestDefinition) Request() Request {
+	return Request{tgoTag: RequestTagDefinition, tgoPayload: value}
+}
+
+// DefinitionPayload requires Definition. No tag check.
+func (v Request) DefinitionPayload() RequestDefinition { return v.tgoPayload.(RequestDefinition) }
+
+// RequestReferences is the References payload.
+type RequestReferences struct {
+	ID     int64           `json:"id,omitempty"`
+	Params *positionParams `json:"params"`
+}
+
+// Request constructs Request. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value RequestReferences) Request() Request {
+	return Request{tgoTag: RequestTagReferences, tgoPayload: value}
+}
+
+// ReferencesPayload requires References. No tag check.
+func (v Request) ReferencesPayload() RequestReferences { return v.tgoPayload.(RequestReferences) }
+
+// RequestDocumentSymbols is the DocumentSymbols payload.
+type RequestDocumentSymbols struct {
+	ID     int64           `json:"id,omitempty"`
+	Params *documentParams `json:"params"`
+}
+
+// Request constructs Request. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value RequestDocumentSymbols) Request() Request {
+	return Request{tgoTag: RequestTagDocumentSymbols, tgoPayload: value}
+}
+
+// DocumentSymbolsPayload requires DocumentSymbols. No tag check.
+func (v Request) DocumentSymbolsPayload() RequestDocumentSymbols {
+	return v.tgoPayload.(RequestDocumentSymbols)
+}
+
+// RequestWorkspaceSymbols is the WorkspaceSymbols payload.
+type RequestWorkspaceSymbols struct {
+	ID     int64            `json:"id,omitempty"`
+	Params *workspaceParams `json:"params"`
+}
+
+// Request constructs Request. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value RequestWorkspaceSymbols) Request() Request {
+	return Request{tgoTag: RequestTagWorkspaceSymbols, tgoWorkspaceSymbols: value}
+}
+
+// WorkspaceSymbolsPayload requires WorkspaceSymbols. No tag check.
+func (v Request) WorkspaceSymbolsPayload() RequestWorkspaceSymbols { return v.tgoWorkspaceSymbols }
+
+// RequestCancel is the Cancel payload.
+type RequestCancel struct {
+	ID     int64         `json:"id,omitempty"`
+	Params *cancelParams `json:"params"`
+}
+
+// Request constructs Request. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value RequestCancel) Request() Request {
+	return Request{tgoTag: RequestTagCancel, tgoCancel: value}
+}
+
+// CancelPayload requires Cancel. No tag check.
+func (v Request) CancelPayload() RequestCancel { return v.tgoCancel }
+
+// RequestInvalidate is the Invalidate payload.
+type RequestInvalidate struct {
+	ID     int64             `json:"id,omitempty"`
+	Params *invalidateParams `json:"params"`
+}
+
+// Request constructs Request. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value RequestInvalidate) Request() Request {
+	return Request{tgoTag: RequestTagInvalidate, tgoInvalidate: value}
+}
+
+// InvalidatePayload requires Invalidate. No tag check.
+func (v Request) InvalidatePayload() RequestInvalidate { return v.tgoInvalidate }
+
+func (v Request) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case RequestTagHover:
+		payload := v.HoverPayload()
+		payloadData, err := __tgo_json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+		}
+		if len(payloadData) == 2 {
+			return []byte("{\"method\":\"hover\"}"), nil
+		}
+		result := make([]byte, 0, len(payloadData)+17)
+		result = append(result, "{\"method\":\"hover\""...)
+		result = append(result, ',')
+		result = append(result, payloadData[1:]...)
+		return result, nil
+	case RequestTagDefinition:
+		payload := v.DefinitionPayload()
+		payloadData, err := __tgo_json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+		}
+		if len(payloadData) == 2 {
+			return []byte("{\"method\":\"definition\"}"), nil
+		}
+		result := make([]byte, 0, len(payloadData)+22)
+		result = append(result, "{\"method\":\"definition\""...)
+		result = append(result, ',')
+		result = append(result, payloadData[1:]...)
+		return result, nil
+	case RequestTagReferences:
+		payload := v.ReferencesPayload()
+		payloadData, err := __tgo_json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+		}
+		if len(payloadData) == 2 {
+			return []byte("{\"method\":\"references\"}"), nil
+		}
+		result := make([]byte, 0, len(payloadData)+22)
+		result = append(result, "{\"method\":\"references\""...)
+		result = append(result, ',')
+		result = append(result, payloadData[1:]...)
+		return result, nil
+	case RequestTagDocumentSymbols:
+		payload := v.DocumentSymbolsPayload()
+		payloadData, err := __tgo_json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+		}
+		if len(payloadData) == 2 {
+			return []byte("{\"method\":\"documentSymbols\"}"), nil
+		}
+		result := make([]byte, 0, len(payloadData)+27)
+		result = append(result, "{\"method\":\"documentSymbols\""...)
+		result = append(result, ',')
+		result = append(result, payloadData[1:]...)
+		return result, nil
+	case RequestTagWorkspaceSymbols:
+		payload := v.WorkspaceSymbolsPayload()
+		payloadData, err := __tgo_json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+		}
+		if len(payloadData) == 2 {
+			return []byte("{\"method\":\"workspaceSymbols\"}"), nil
+		}
+		result := make([]byte, 0, len(payloadData)+28)
+		result = append(result, "{\"method\":\"workspaceSymbols\""...)
+		result = append(result, ',')
+		result = append(result, payloadData[1:]...)
+		return result, nil
+	case RequestTagCancel:
+		payload := v.CancelPayload()
+		payloadData, err := __tgo_json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+		}
+		if len(payloadData) == 2 {
+			return []byte("{\"method\":\"cancel\"}"), nil
+		}
+		result := make([]byte, 0, len(payloadData)+18)
+		result = append(result, "{\"method\":\"cancel\""...)
+		result = append(result, ',')
+		result = append(result, payloadData[1:]...)
+		return result, nil
+	case RequestTagInvalidate:
+		payload := v.InvalidatePayload()
+		payloadData, err := __tgo_json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+			return nil, __tgo_fmt.Errorf("expected Request JSON payload object")
+		}
+		if len(payloadData) == 2 {
+			return []byte("{\"method\":\"invalidate\"}"), nil
+		}
+		result := make([]byte, 0, len(payloadData)+22)
+		result = append(result, "{\"method\":\"invalidate\""...)
+		result = append(result, ',')
+		result = append(result, payloadData[1:]...)
+		return result, nil
+	default:
+		return nil, __tgo_fmt.Errorf("invalid Request JSON tag")
+	}
+}
+
+func (v Request) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case RequestTagHover:
+		payload := v.HoverPayload()
+		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
+		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
+		_, marshalsJSONTo := interface{}(payload).(interface {
+			MarshalJSONTo(*__tgo_jsontext.Encoder) error
+		})
+		if marshalsJSON || marshalsText || marshalsJSONTo {
+			data, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			return out.WriteValue(data)
+		}
+		return __tgo_jsonv2.MarshalEncode(out, struct {
+			Variant string `json:"method"`
+			RequestHover
+		}{Variant: "hover", RequestHover: payload})
+	case RequestTagDefinition:
+		payload := v.DefinitionPayload()
+		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
+		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
+		_, marshalsJSONTo := interface{}(payload).(interface {
+			MarshalJSONTo(*__tgo_jsontext.Encoder) error
+		})
+		if marshalsJSON || marshalsText || marshalsJSONTo {
+			data, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			return out.WriteValue(data)
+		}
+		return __tgo_jsonv2.MarshalEncode(out, struct {
+			Variant string `json:"method"`
+			RequestDefinition
+		}{Variant: "definition", RequestDefinition: payload})
+	case RequestTagReferences:
+		payload := v.ReferencesPayload()
+		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
+		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
+		_, marshalsJSONTo := interface{}(payload).(interface {
+			MarshalJSONTo(*__tgo_jsontext.Encoder) error
+		})
+		if marshalsJSON || marshalsText || marshalsJSONTo {
+			data, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			return out.WriteValue(data)
+		}
+		return __tgo_jsonv2.MarshalEncode(out, struct {
+			Variant string `json:"method"`
+			RequestReferences
+		}{Variant: "references", RequestReferences: payload})
+	case RequestTagDocumentSymbols:
+		payload := v.DocumentSymbolsPayload()
+		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
+		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
+		_, marshalsJSONTo := interface{}(payload).(interface {
+			MarshalJSONTo(*__tgo_jsontext.Encoder) error
+		})
+		if marshalsJSON || marshalsText || marshalsJSONTo {
+			data, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			return out.WriteValue(data)
+		}
+		return __tgo_jsonv2.MarshalEncode(out, struct {
+			Variant string `json:"method"`
+			RequestDocumentSymbols
+		}{Variant: "documentSymbols", RequestDocumentSymbols: payload})
+	case RequestTagWorkspaceSymbols:
+		payload := v.WorkspaceSymbolsPayload()
+		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
+		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
+		_, marshalsJSONTo := interface{}(payload).(interface {
+			MarshalJSONTo(*__tgo_jsontext.Encoder) error
+		})
+		if marshalsJSON || marshalsText || marshalsJSONTo {
+			data, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			return out.WriteValue(data)
+		}
+		return __tgo_jsonv2.MarshalEncode(out, struct {
+			Variant string `json:"method"`
+			RequestWorkspaceSymbols
+		}{Variant: "workspaceSymbols", RequestWorkspaceSymbols: payload})
+	case RequestTagCancel:
+		payload := v.CancelPayload()
+		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
+		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
+		_, marshalsJSONTo := interface{}(payload).(interface {
+			MarshalJSONTo(*__tgo_jsontext.Encoder) error
+		})
+		if marshalsJSON || marshalsText || marshalsJSONTo {
+			data, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			return out.WriteValue(data)
+		}
+		return __tgo_jsonv2.MarshalEncode(out, struct {
+			Variant string `json:"method"`
+			RequestCancel
+		}{Variant: "cancel", RequestCancel: payload})
+	case RequestTagInvalidate:
+		payload := v.InvalidatePayload()
+		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
+		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
+		_, marshalsJSONTo := interface{}(payload).(interface {
+			MarshalJSONTo(*__tgo_jsontext.Encoder) error
+		})
+		if marshalsJSON || marshalsText || marshalsJSONTo {
+			data, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			return out.WriteValue(data)
+		}
+		return __tgo_jsonv2.MarshalEncode(out, struct {
+			Variant string `json:"method"`
+			RequestInvalidate
+		}{Variant: "invalidate", RequestInvalidate: payload})
+	default:
+		return __tgo_fmt.Errorf("invalid Request JSON tag")
+	}
+}
+
+func (v *Request) UnmarshalJSON(data []byte) error {
+	var variant string
+	var object struct {
+		Tag string `json:"method"`
+	}
+	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if object.Tag == "" {
+		return __tgo_fmt.Errorf("missing Request JSON tag")
+	}
+	variant = object.Tag
+	switch variant {
+	case "hover":
+		var payload RequestHover
+		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+			return err
+		}
+		*v = payload.Request()
+		return nil
+	case "definition":
+		var payload RequestDefinition
+		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+			return err
+		}
+		*v = payload.Request()
+		return nil
+	case "references":
+		var payload RequestReferences
+		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+			return err
+		}
+		*v = payload.Request()
+		return nil
+	case "documentSymbols":
+		var payload RequestDocumentSymbols
+		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+			return err
+		}
+		*v = payload.Request()
+		return nil
+	case "workspaceSymbols":
+		var payload RequestWorkspaceSymbols
+		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+			return err
+		}
+		*v = payload.Request()
+		return nil
+	case "cancel":
+		var payload RequestCancel
+		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+			return err
+		}
+		*v = payload.Request()
+		return nil
+	case "invalidate":
+		var payload RequestInvalidate
+		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
+			return err
+		}
+		*v = payload.Request()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("unknown Request JSON variant %q", variant)
+	}
+}
+
+func (v *Request) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	data, err := in.ReadValue()
+	if err != nil {
+		return err
+	}
+	return v.UnmarshalJSON(data)
+}
+
 type protocolServer struct {
 	context  context.Context
 	engine   *Engine
@@ -64,8 +537,8 @@ func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Write
 		activeMu: new(sync.Mutex), workers: new(sync.WaitGroup), writeErr: nil,
 	}
 	for {
-		request := Request{ID: 0, Method: "", Params: nil}
-		if err := decoder.Decode(&request); err != nil {
+		data := json.RawMessage(nil)
+		if err := decoder.Decode(&data); err != nil {
 			if err == io.EOF {
 				server.stop()
 				return server.writeErr
@@ -73,121 +546,142 @@ func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Write
 			server.stop()
 			return err
 		}
-		if request.Method == "cancel" {
-			server.cancel(request)
+		header := struct {
+			ID     int64  `json:"id"`
+			Method string `json:"method"`
+		}{ID: 0, Method: ""}
+		if err := json.Unmarshal(data, &header); err != nil {
+			server.stop()
+			return err
+		}
+		request := RequestHover{
+			ID: 0,
+			Params: &positionParams{
+				URI: "", Offset: 0, IncludeDeclaration: false,
+			},
+		}.Request()
+		if err := json.Unmarshal(data, &request); err != nil {
+			if header.Method != "cancel" || header.ID != 0 {
+				server.send(Response{ID: header.ID, Result: nil, Error: err.Error()})
+			}
 			continue
 		}
-		if request.Method == "invalidate" {
-			engine.Invalidate()
-			server.send(Response{ID: request.ID, Result: true, Error: ""})
-			continue
-		}
-		server.start(request)
+		server.dispatch(request)
 	}
 }
 
-func (s *protocolServer) start(request Request) {
+func (s *protocolServer) dispatch(request Request) {
+	switch request.Tag() {
+	case RequestTagHover:
+		payload := request.HoverPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for hover"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.Hover(ctx, payload.Params.URI, payload.Params.Offset)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagDefinition:
+		payload := request.DefinitionPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for definition"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.Definition(ctx, payload.Params.URI, payload.Params.Offset)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagReferences:
+		payload := request.ReferencesPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for references"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.References(
+				ctx, payload.Params.URI, payload.Params.Offset,
+				payload.Params.IncludeDeclaration,
+			)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagDocumentSymbols:
+		payload := request.DocumentSymbolsPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for documentSymbols"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.DocumentSymbols(ctx, payload.Params.URI)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagWorkspaceSymbols:
+		payload := request.WorkspaceSymbolsPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for workspaceSymbols"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.WorkspaceSymbols(ctx, payload.Params.Query)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagCancel:
+		payload := request.CancelPayload()
+		if payload.Params == nil {
+			if payload.ID != 0 {
+				s.send(protocolError(payload.ID, "missing params for cancel"))
+			}
+			return
+		}
+		s.cancel(payload)
+	case RequestTagInvalidate:
+		payload := request.InvalidatePayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for invalidate"))
+			return
+		}
+		s.engine.Invalidate()
+		s.send(Response{ID: payload.ID, Result: true, Error: ""})
+	default:
+		panic(request.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func (s *protocolServer) start(
+	id int64,
+	handle func(context.Context) Response,
+) {
 	requestContext, cancel := context.WithCancel(s.context)
 	s.activeMu.Lock()
-	s.active[request.ID] = cancel
+	s.active[id] = cancel
 	s.activeMu.Unlock()
 	s.workers.Add(1)
 	go func() {
 		defer s.workers.Done()
 		defer cancel()
-		response := s.handle(requestContext, request)
+		response := handle(requestContext)
 		s.activeMu.Lock()
-		delete(s.active, request.ID)
+		delete(s.active, id)
 		s.activeMu.Unlock()
 		s.send(response)
 	}()
 }
 
-func (s *protocolServer) handle(
-	ctx context.Context,
-	request Request,
-) Response {
-	response := Response{ID: request.ID, Result: nil, Error: ""}
-	switch request.Method {
-	case "hover":
-		params := positionParams{
-			URI: "", Offset: 0, IncludeDeclaration: false,
-		}
-		if err := json.Unmarshal(request.Params, &params); err != nil {
-			response.Error = err.Error()
-		} else {
-			result, err := s.engine.Hover(ctx, params.URI, params.Offset)
-			response.Result = result
-			if err != nil {
-				response.Error = err.Error()
-			}
-		}
-	case "definition":
-		params := positionParams{
-			URI: "", Offset: 0, IncludeDeclaration: false,
-		}
-		if err := json.Unmarshal(request.Params, &params); err != nil {
-			response.Error = err.Error()
-		} else {
-			result, err := s.engine.Definition(ctx, params.URI, params.Offset)
-			response.Result = result
-			if err != nil {
-				response.Error = err.Error()
-			}
-		}
-	case "references":
-		params := positionParams{
-			URI: "", Offset: 0, IncludeDeclaration: false,
-		}
-		if err := json.Unmarshal(request.Params, &params); err != nil {
-			response.Error = err.Error()
-		} else {
-			result, err := s.engine.References(
-				ctx, params.URI, params.Offset, params.IncludeDeclaration,
-			)
-			response.Result = result
-			if err != nil {
-				response.Error = err.Error()
-			}
-		}
-	case "documentSymbols":
-		params := documentParams{URI: ""}
-		if err := json.Unmarshal(request.Params, &params); err != nil {
-			response.Error = err.Error()
-		} else {
-			result, err := s.engine.DocumentSymbols(ctx, params.URI)
-			response.Result = result
-			if err != nil {
-				response.Error = err.Error()
-			}
-		}
-	case "workspaceSymbols":
-		params := workspaceParams{Query: ""}
-		if err := json.Unmarshal(request.Params, &params); err != nil {
-			response.Error = err.Error()
-		} else {
-			result, err := s.engine.WorkspaceSymbols(ctx, params.Query)
-			response.Result = result
-			if err != nil {
-				response.Error = err.Error()
-			}
-		}
-	default:
-		response.Error = "unknown method " + request.Method
+func protocolResult(id int64, result any, err error) Response {
+	response := Response{ID: id, Result: result, Error: ""}
+	if err != nil {
+		response.Error = err.Error()
 	}
 	return response
 }
 
-func (s *protocolServer) cancel(request Request) {
-	params := cancelParams{ID: 0}
-	if err := json.Unmarshal(request.Params, &params); err != nil {
-		if request.ID != 0 {
-			s.send(Response{ID: request.ID, Result: nil, Error: err.Error()})
-		}
-		return
-	}
+func protocolError(id int64, message string) Response {
+	return Response{ID: id, Result: nil, Error: message}
+}
+
+func (s *protocolServer) cancel(request RequestCancel) {
 	s.activeMu.Lock()
-	cancel := s.active[params.ID]
+	cancel := s.active[request.Params.ID]
 	s.activeMu.Unlock()
 	if cancel != nil {
 		cancel()

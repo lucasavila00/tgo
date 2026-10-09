@@ -8,13 +8,6 @@ import (
 	"sync"
 )
 
-// Request is one helper protocol request.
-type Request struct {
-	ID     int64           `json:"id,omitempty"`
-	Method string          `json:"method"`
-	Params json.RawMessage `json:"params,omitempty"`
-}
-
 // Response is one helper protocol response.
 type Response struct {
 	ID     int64 `json:"id"`
@@ -31,6 +24,39 @@ type positionParams struct {
 type documentParams struct { URI string `json:"uri"` }
 type workspaceParams struct { Query string `json:"query"` }
 type cancelParams struct { ID int64 `json:"id"` }
+type invalidateParams struct { URI string `json:"uri"` }
+
+// Request is one helper protocol request.
+type Request enum `json:"internal,tag=method"` {
+	Hover struct {
+		ID int64 `json:"id,omitempty"`
+		Params %positionParams `json:"params"`
+	} `json:"hover"`
+	Definition struct {
+		ID int64 `json:"id,omitempty"`
+		Params %positionParams `json:"params"`
+	} `json:"definition"`
+	References struct {
+		ID int64 `json:"id,omitempty"`
+		Params %positionParams `json:"params"`
+	} `json:"references"`
+	DocumentSymbols struct {
+		ID int64 `json:"id,omitempty"`
+		Params %documentParams `json:"params"`
+	} `json:"documentSymbols"`
+	WorkspaceSymbols struct {
+		ID int64 `json:"id,omitempty"`
+		Params %workspaceParams `json:"params"`
+	} `json:"workspaceSymbols"`
+	Cancel struct {
+		ID int64 `json:"id,omitempty"`
+		Params %cancelParams `json:"params"`
+	} `json:"cancel"`
+	Invalidate struct {
+		ID int64 `json:"id,omitempty"`
+		Params %invalidateParams `json:"params"`
+	} `json:"invalidate"`
+}
 
 type protocolServer struct {
 	context  context.Context
@@ -52,8 +78,8 @@ func Serve(ctx context.Context, engine %Engine, input io.Reader, output io.Write
 		activeMu: new(sync.Mutex), workers: new(sync.WaitGroup), writeErr: nil,
 	}
 	for {
-		request := Request{ID: 0, Method: "", Params: nil}
-		if err := decoder.Decode(&request); err != nil {
+		data := json.RawMessage(nil)
+		if err := decoder.Decode(&data); err != nil {
 			if err == io.EOF {
 				server.stop()
 				return server.writeErr
@@ -61,111 +87,139 @@ func Serve(ctx context.Context, engine %Engine, input io.Reader, output io.Write
 			server.stop()
 			return err
 		}
-		if request.Method == "cancel" {
-			server.cancel(request)
+		header := struct {
+			ID int64 `json:"id"`
+			Method string `json:"method"`
+		}{ID: 0, Method: ""}
+		if err := json.Unmarshal(data, &header); err != nil {
+			server.stop()
+			return err
+		}
+		request := Request.Hover{
+			ID: 0,
+			Params: &positionParams{
+				URI: "", Offset: 0, IncludeDeclaration: false,
+			},
+		}
+		if err := json.Unmarshal(data, &request); err != nil {
+			if header.Method != "cancel" || header.ID != 0 {
+				server.send(Response{ID: header.ID, Result: nil, Error: err.Error()})
+			}
 			continue
 		}
-		if request.Method == "invalidate" {
-			engine.Invalidate()
-			server.send(Response{ID: request.ID, Result: true, Error: ""})
-			continue
-		}
-		server.start(request)
+		server.dispatch(request)
 	}
 }
 
-func (s %protocolServer) start(request Request) {
+func (s %protocolServer) dispatch(request Request) {
+	switch request.Tag() {
+	case RequestTagHover:
+		payload := request.HoverPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for hover"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.Hover(ctx, payload.Params.URI, payload.Params.Offset)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagDefinition:
+		payload := request.DefinitionPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for definition"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.Definition(ctx, payload.Params.URI, payload.Params.Offset)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagReferences:
+		payload := request.ReferencesPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for references"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.References(
+				ctx, payload.Params.URI, payload.Params.Offset,
+				payload.Params.IncludeDeclaration,
+			)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagDocumentSymbols:
+		payload := request.DocumentSymbolsPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for documentSymbols"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.DocumentSymbols(ctx, payload.Params.URI)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagWorkspaceSymbols:
+		payload := request.WorkspaceSymbolsPayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for workspaceSymbols"))
+			return
+		}
+		s.start(payload.ID, func(ctx context.Context) Response {
+			result, err := s.engine.WorkspaceSymbols(ctx, payload.Params.Query)
+			return protocolResult(payload.ID, result, err)
+		})
+	case RequestTagCancel:
+		payload := request.CancelPayload()
+		if payload.Params == nil {
+			if payload.ID != 0 {
+				s.send(protocolError(payload.ID, "missing params for cancel"))
+			}
+			return
+		}
+		s.cancel(payload)
+	case RequestTagInvalidate:
+		payload := request.InvalidatePayload()
+		if payload.Params == nil {
+			s.send(protocolError(payload.ID, "missing params for invalidate"))
+			return
+		}
+		s.engine.Invalidate()
+		s.send(Response{ID: payload.ID, Result: true, Error: ""})
+	exhaustive:
+	}
+}
+
+func (s %protocolServer) start(
+	id int64,
+	handle func(context.Context) Response,
+) {
 	requestContext, cancel := context.WithCancel(s.context)
 	s.activeMu.Lock()
-	s.active[request.ID] = cancel
+	s.active[id] = cancel
 	s.activeMu.Unlock()
 	s.workers.Add(1)
 	go func() {
 		defer s.workers.Done()
 		defer cancel()
-		response := s.handle(requestContext, request)
+		response := handle(requestContext)
 		s.activeMu.Lock()
-		delete(s.active, request.ID)
+		delete(s.active, id)
 		s.activeMu.Unlock()
 		s.send(response)
 	}()
 }
 
-func (s %protocolServer) handle(
-	ctx context.Context,
-	request Request,
-) Response {
-	response := Response{ID: request.ID, Result: nil, Error: ""}
-	switch request.Method {
-		case "hover":
-			params := positionParams{
-				URI: "", Offset: 0, IncludeDeclaration: false,
-			}
-			if err := json.Unmarshal(request.Params, &params); err != nil {
-				response.Error = err.Error()
-			} else {
-				result, err := s.engine.Hover(ctx, params.URI, params.Offset)
-				response.Result = result
-				if err != nil { response.Error = err.Error() }
-			}
-		case "definition":
-			params := positionParams{
-				URI: "", Offset: 0, IncludeDeclaration: false,
-			}
-			if err := json.Unmarshal(request.Params, &params); err != nil {
-				response.Error = err.Error()
-			} else {
-				result, err := s.engine.Definition(ctx, params.URI, params.Offset)
-				response.Result = result
-				if err != nil { response.Error = err.Error() }
-			}
-		case "references":
-			params := positionParams{
-				URI: "", Offset: 0, IncludeDeclaration: false,
-			}
-			if err := json.Unmarshal(request.Params, &params); err != nil {
-				response.Error = err.Error()
-			} else {
-				result, err := s.engine.References(
-					ctx, params.URI, params.Offset, params.IncludeDeclaration,
-				)
-				response.Result = result
-				if err != nil { response.Error = err.Error() }
-			}
-		case "documentSymbols":
-			params := documentParams{URI: ""}
-			if err := json.Unmarshal(request.Params, &params); err != nil {
-				response.Error = err.Error()
-			} else {
-				result, err := s.engine.DocumentSymbols(ctx, params.URI)
-				response.Result = result
-				if err != nil { response.Error = err.Error() }
-			}
-		case "workspaceSymbols":
-			params := workspaceParams{Query: ""}
-			if err := json.Unmarshal(request.Params, &params); err != nil {
-				response.Error = err.Error()
-			} else {
-				result, err := s.engine.WorkspaceSymbols(ctx, params.Query)
-				response.Result = result
-				if err != nil { response.Error = err.Error() }
-			}
-		default:
-			response.Error = "unknown method " + request.Method
-		}
+func protocolResult(id int64, result any, err error) Response {
+	response := Response{ID: id, Result: result, Error: ""}
+	if err != nil { response.Error = err.Error() }
 	return response
 	}
 
-func (s %protocolServer) cancel(request Request) {
-	params := cancelParams{ID: 0}
-	if err := json.Unmarshal(request.Params, &params); err != nil {
-		if request.ID != 0 {
-			s.send(Response{ID: request.ID, Result: nil, Error: err.Error()})
-		}
-		return
-	}
+func protocolError(id int64, message string) Response {
+	return Response{ID: id, Result: nil, Error: message}
+}
+
+func (s %protocolServer) cancel(request RequestCancel) {
 	s.activeMu.Lock()
-	cancel := s.active[params.ID]
+	cancel := s.active[request.Params.ID]
 	s.activeMu.Unlock()
 	if cancel != nil { cancel() }
 	if request.ID != 0 {
