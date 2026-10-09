@@ -35,62 +35,13 @@ func (e *nilEnvironment) blockNilFacts(
 	return e.conditionNilFacts(condition, state)
 }
 
-// conditionNilFacts returns facts for the true and false condition paths.
+// conditionNilFacts returns facts that hold on every branch alternative.
 func (e *nilEnvironment) conditionNilFacts(
 	expression ast.Expr,
 	state *nilFlowState,
 ) (nilFacts, nilFacts) {
-	switch expression := expression.(type) {
-	case *ast.ParenExpr:
-		return e.conditionNilFacts(expression.X, state)
-	case *ast.UnaryExpr:
-		if expression.Op == token.NOT {
-			trueFacts, falseFacts := e.conditionNilFacts(expression.X, state)
-			return falseFacts, trueFacts
-		}
-	case *ast.Ident:
-		guard, ok := state.guards[e.info.ObjectOf(expression)]
-		if ok {
-			trueFacts := cloneNilFacts(guard.trueFacts)
-			falseFacts := cloneNilFacts(guard.falseFacts)
-			if !guard.truePossible {
-				trueFacts = impossibleNilFacts()
-			}
-			if !guard.falsePossible {
-				falseFacts = impossibleNilFacts()
-			}
-			return trueFacts, falseFacts
-		}
-		if presence, ok := state.presence[e.info.ObjectOf(expression)]; ok {
-			if presence.nonNil {
-				return nilFacts{presence.value: nonNilType()}, nil
-			}
-		}
-	case *ast.BinaryExpr:
-		switch expression.Op {
-		case token.EQL, token.NEQ:
-			return e.comparisonNilFacts(
-				expression.X, expression.Y, expression.Op, state,
-			)
-		case token.LAND:
-			leftTrue, leftFalse := e.conditionNilFacts(expression.X, state)
-			trueState := cloneNilState(state)
-			e.applyNilFacts(trueState, leftTrue)
-			rightTrue, rightFalse := e.conditionNilFacts(expression.Y, trueState)
-			return conjoinNilFacts(leftTrue, rightTrue), alternateNilFacts(
-				leftFalse, conjoinNilFacts(leftTrue, rightFalse),
-			)
-		case token.LOR:
-			leftTrue, leftFalse := e.conditionNilFacts(expression.X, state)
-			falseState := cloneNilState(state)
-			e.applyNilFacts(falseState, leftFalse)
-			rightTrue, rightFalse := e.conditionNilFacts(expression.Y, falseState)
-			return alternateNilFacts(
-				leftTrue, conjoinNilFacts(leftFalse, rightTrue),
-			), conjoinNilFacts(leftFalse, rightFalse)
-		}
-	}
-	return nil, nil
+	trueBranches, falseBranches := e.conditionNilBranches(expression, state)
+	return commonNilBranchFacts(trueBranches), commonNilBranchFacts(falseBranches)
 }
 
 func (e *nilEnvironment) comparisonNilFacts(
@@ -99,61 +50,10 @@ func (e *nilEnvironment) comparisonNilFacts(
 	operator token.Token,
 	state *nilFlowState,
 ) (nilFacts, nilFacts) {
-	place, ok := e.nilPlace(left)
-	if !ok || !e.isNil(right) {
-		place, ok = e.nilPlace(right)
-		if !ok || !e.isNil(left) {
-			return nil, nil
-		}
-	}
-	nonNil := nilFacts{place: nonNilType()}
-	nilFact := nilFacts{place: nilOnlyType()}
-	if operator == token.NEQ {
-		return nonNil, nilFact
-	}
-	return nilFact, nonNil
-}
-
-// conjoinNilFacts applies both sets of branch constraints.
-func conjoinNilFacts(left, right nilFacts) nilFacts {
-	result := cloneNilFacts(left)
-	if result == nil {
-		result = make(nilFacts)
-	}
-	for place, value := range right {
-		if current, found := result[place]; found {
-			result[place] = intersectNilTypes(current, value)
-		} else {
-			result[place] = value
-		}
-	}
-	if len(result) == 0 {
-		return nil
-	}
-	return result
-}
-
-// alternateNilFacts keeps constraints that hold on both possible paths.
-func alternateNilFacts(left, right nilFacts) nilFacts {
-	if nilFactsImpossible(left) {
-		return cloneNilFacts(right)
-	}
-	if nilFactsImpossible(right) {
-		return cloneNilFacts(left)
-	}
-	result := make(nilFacts)
-	for place, value := range left {
-		if other, found := right[place]; found {
-			combined := unionNilTypes(value, other)
-			if !isOptionalNilType(combined) {
-				result[place] = combined
-			}
-		}
-	}
-	if len(result) == 0 {
-		return nil
-	}
-	return result
+	trueBranches, falseBranches := e.comparisonNilBranches(
+		left, right, operator, state,
+	)
+	return commonNilBranchFacts(trueBranches), commonNilBranchFacts(falseBranches)
 }
 
 func nilFactsImpossible(facts nilFacts) bool {
@@ -169,15 +69,6 @@ func impossibleNilFacts() nilFacts {
 	return nilFacts{
 		{object: nil, path: "$never"}: neverNilType(),
 	}
-}
-
-func (e *nilEnvironment) nilFactsPossible(
-	state *nilFlowState,
-	facts nilFacts,
-) bool {
-	candidate := cloneNilState(state)
-	e.applyNilFacts(candidate, facts)
-	return candidate != nil && candidate.reachable
 }
 
 func (e *nilEnvironment) applyNilFacts(state *nilFlowState, facts nilFacts) {
