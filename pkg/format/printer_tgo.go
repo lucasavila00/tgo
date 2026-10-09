@@ -445,9 +445,17 @@ func (p *printer) trailingToken(position token.Pos, width int) {
 }
 
 func (p *printer) sourceCommaEnd(position token.Pos, following token.Pos) token.Pos {
+	comma := p.sourceComma(position, following)
+	if !comma.IsValid() {
+		return position
+	}
+	return p.tokenEnd(comma, 1)
+}
+
+func (p *printer) sourceComma(position token.Pos, following token.Pos) token.Pos {
 	file := p.files.File(position)
 	if file == nil || p.files.File(following) != file {
-		return position
+		return token.NoPos
 	}
 	offset := file.Offset(position)
 	limit := file.Offset(following)
@@ -465,41 +473,22 @@ func (p *printer) sourceCommaEnd(position token.Pos, following token.Pos) token.
 			}
 		}
 		if p.source[offset] == ',' {
-			return file.Pos(offset + 1)
+			return file.Pos(offset)
 		}
 		offset++
+	}
+	return token.NoPos
+}
+
+func (p *printer) separatorCommentPosition(position token.Pos, following token.Pos) token.Pos {
+	if p.position(position).Line == p.position(following).Line {
+		return following
 	}
 	return position
 }
 
 func (p *printer) comma(position token.Pos, following token.Pos) token.Pos {
-	file := p.files.File(position)
-	if file == nil || p.files.File(following) != file {
-		p.text(",")
-		return position
-	}
-	offset := file.Offset(position)
-	limit := file.Offset(following)
-	comment := p.comment
-	comma := token.NoPos
-	for offset < limit && offset < len(p.source) {
-		for comment < len(p.comments) && file.Offset(p.comments[comment].stop) <= offset {
-			comment++
-		}
-		if comment < len(p.comments) {
-			start := file.Offset(p.comments[comment].start)
-			stop := file.Offset(p.comments[comment].stop)
-			if offset >= start && offset < stop {
-				offset = stop
-				continue
-			}
-		}
-		if p.source[offset] == ',' {
-			comma = file.Pos(offset)
-			break
-		}
-		offset++
-	}
+	comma := p.sourceComma(position, following)
 	if !comma.IsValid() {
 		p.text(",")
 		return position
@@ -517,10 +506,21 @@ func (p *printer) comma(position token.Pos, following token.Pos) token.Pos {
 	if commentLimit < comma {
 		commentLimit = comma
 	}
-	p.beforeComments(commentLimit, true)
+	commentPosition := p.separatorCommentPosition(position, following)
+	if commentPosition == following {
+		p.beforeComments(commentLimit, true)
+	}
 	p.text(",")
 	p.lastSource = comma
-	return p.tokenEnd(comma, 1)
+	if commentPosition == position {
+		p.beforeComments(commentLimit, true)
+	}
+	end := p.tokenEnd(comma, 1)
+	if p.lastSource > end {
+		return p.lastSource
+	}
+	p.lastSource = end
+	return end
 }
 
 func (p *printer) tokenEnd(position token.Pos, width int) token.Pos {
