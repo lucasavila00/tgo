@@ -24,6 +24,12 @@ func TestParseSourceDerivesLoweredFromProjectionEdits(t *testing.T) {
 			lowered: true,
 		},
 		{
+			name: "failure return",
+			source: "package sample\n\n" +
+				"func value(err error) (int, error) { return , err }\n",
+			lowered: true,
+		},
+		{
 			name: "non-nil struct field",
 			source: "package sample\n\n" +
 				"type Item struct { Value %int }\n",

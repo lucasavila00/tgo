@@ -173,7 +173,7 @@ func atomicWriteFile(
 		mode,
 	)
 	if err != nil {
-		return false, 0, err
+		return ,, err
 	}
 	closed := false
 	published := false
@@ -189,28 +189,28 @@ func atomicWriteFile(
 		}
 	}()
 	if _, err := temporary.Write(data); err != nil {
-		return false, 0, err
+		return ,, err
 	}
 	if preserveMode {
 		if err := temporary.Chmod(mode); err != nil {
-			return false, 0, err
+			return ,, err
 		}
 	}
 	if err := temporary.Sync(); err != nil {
-		return false, 0, err
+		return ,, err
 	}
 	temporaryInfo, err := temporary.Stat()
 	if err != nil {
-		return false, 0, err
+		return ,, err
 	}
 	writtenMode = chmodMode(temporaryInfo.Mode())
 	closeErr := temporary.Close()
 	closed = true
 	if closeErr != nil {
-		return false, 0, closeErr
+		return ,, closeErr
 	}
 	if err := replaceFile(temporaryPath, path); err != nil {
-		return false, 0, err
+		return ,, err
 	}
 	published = true
 	if err := syncDirectory(filepath.Dir(path)); err != nil {
@@ -230,7 +230,7 @@ func atomicRemoveFile(path string) (bool, error) {
 		if errors.Is(err, os.ErrNotExist) {
 			return false,
 		}
-		return false, err
+		return , err
 	}
 	if err := syncDirectory(filepath.Dir(path)); err != nil {
 		return true, err

@@ -185,7 +185,7 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 		match, err := matchTgoFile(p.context, path)
 		if err != nil {
 			p.matchError = err
-			return nil, err
+			return , err
 		}
 		if !match {
 			continue
@@ -193,7 +193,7 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 		cgo, err := fileImportsC(path)
 		if err != nil {
 			p.matchError = err
-			return nil, err
+			return , err
 		}
 		if cgo && !p.context.CgoEnabled {
 			continue
@@ -226,7 +226,7 @@ func matchTgoFile(context *build.Context, path string) (bool, error) {
 	if detail, ok := strings.CutPrefix(message, fakeName); ok {
 		message = path + detail
 	}
-	return false, errors.New(message)
+	return , errors.New(message)
 }
 
 // available reports whether this package has active source or orphan output.
@@ -300,10 +300,10 @@ func generatedFile(path string) (bool, error) {
 		return false,
 	}
 	if err != nil {
-		return false, err
+		return , err
 	}
 	if !info.Mode().IsRegular() {
-		return false, fmt.Errorf("refusing non-regular output %s", path)
+		return , fmt.Errorf("refusing non-regular output %s", path)
 	}
 	return true,
 }
@@ -334,7 +334,7 @@ func selectPackages(
 			matched = true
 		}
 		if !matched {
-			return nil, fmt.Errorf("%s: no tgo packages", pattern)
+			return , fmt.Errorf("%s: no tgo packages", pattern)
 		}
 	}
 	paths := make([]string, 0, len(selected))

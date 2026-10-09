@@ -104,7 +104,7 @@ func (p %sourceParser) rawComprehension(
 	for _, clause := range clauses {
 		if clause.kind == "filter" {
 			if seenFilter {
-				return nil, p.tokenError(
+				return , p.tokenError(
 					clause.keyword,
 					"combine comprehension filters with &&",
 				)
@@ -113,7 +113,7 @@ func (p %sourceParser) rawComprehension(
 			continue
 		}
 		if seenFilter {
-			return nil, p.tokenError(
+			return , p.tokenError(
 				clause.keyword,
 				"comprehension ranges must precede the filter",
 			)
@@ -136,7 +136,8 @@ func (p %sourceParser) rawComprehensionBody(
 ) ([]*rawComprehensionClause, *rawComprehensionResult, error) {
 	start, limit = p.trimComprehensionSemicolons(start, limit)
 	if start >= limit {
-		return nil, nil, p.tokenError(limit, "comprehension block needs one item")
+		failure := p.tokenError(limit, "comprehension block needs one item")
+		return ,, failure
 	}
 	if p.tokens[start].kind != token.FOR && p.tokens[start].kind != token.IF {
 		result, err := p.rawComprehensionResult(start, limit)
@@ -144,19 +145,20 @@ func (p %sourceParser) rawComprehensionBody(
 	}
 	bodyClose := limit - 1
 	if p.tokens[bodyClose].kind != token.RBRACE {
-		return nil, nil, p.tokenError(start, "comprehension clause needs a block")
+		failure := p.tokenError(start, "comprehension clause needs a block")
+		return ,, failure
 	}
 	bodyOpen, err := p.openToken(bodyClose)
 	if err != nil {
-		return nil, nil, err
+		return ,, err
 	}
 	clause, err := p.rawComprehensionClause(start, bodyOpen, bodyClose)
 	if err != nil {
-		return nil, nil, err
+		return ,, err
 	}
 	children, result, err := p.rawComprehensionBody(bodyOpen+1, bodyClose)
 	if err != nil {
-		return nil, nil, err
+		return ,, err
 	}
 	return append([]*rawComprehensionClause{clause}, children...), result,
 }
@@ -168,7 +170,7 @@ func (p %sourceParser) rawComprehensionClause(
 ) (*rawComprehensionClause, error) {
 	if p.tokens[start].kind == token.IF {
 		if start+1 >= open {
-			return nil, p.tokenError(start, "comprehension if needs a condition")
+			return , p.tokenError(start, "comprehension if needs a condition")
 		}
 		return &rawComprehensionClause{
 			kind: "filter", start: start, end: close + 1, keyword: start,
@@ -188,11 +190,11 @@ func (p %sourceParser) rawComprehensionClause(
 		}
 	}
 	if define < 0 || rangeToken != define+1 {
-		return nil, p.tokenError(start, "comprehension range must use :=")
+		return , p.tokenError(start, "comprehension range must use :=")
 	}
 	bindings := p.comprehensionBindings(start+1, define)!!
 	if rangeToken+1 >= open {
-		return nil, p.tokenError(rangeToken, "comprehension range needs a source")
+		return , p.tokenError(rangeToken, "comprehension range needs a source")
 	}
 	return &rawComprehensionClause{
 		kind: "range", start: start, end: close + 1, keyword: start,
@@ -215,10 +217,10 @@ func (p %sourceParser) comprehensionBindings(start int, end int) ([]int, error) 
 			expectName = true
 			continue
 		}
-		return nil, p.tokenError(cursor, "comprehension range needs one or two names")
+		return , p.tokenError(cursor, "comprehension range needs one or two names")
 	}
 	if expectName || len(bindings) == 0 || len(bindings) > 2 {
-		return nil, p.tokenError(start, "comprehension range needs one or two names")
+		return , p.tokenError(start, "comprehension range needs one or two names")
 	}
 	return bindings,
 }
@@ -238,7 +240,7 @@ func (p %sourceParser) rawComprehensionResult(
 		case token.COLON:
 			if depth == 0 {
 				if colon >= 0 {
-					return nil, p.tokenError(cursor, "comprehension result has two colons")
+					return , p.tokenError(cursor, "comprehension result has two colons")
 				}
 				colon = cursor
 			}
@@ -250,7 +252,7 @@ func (p %sourceParser) rawComprehensionResult(
 	}
 	if colon >= 0 {
 		if colon == start || colon+1 == end {
-			return nil, p.tokenError(colon, "map comprehension needs a key and value")
+			return , p.tokenError(colon, "map comprehension needs a key and value")
 		}
 		result.keyStart, result.keyEnd = start, colon
 		result.valueStart = colon + 1
@@ -281,5 +283,5 @@ func (p %sourceParser) openToken(close int) (int, error) {
 			}
 		}
 	}
-	return 0, p.tokenError(close, "unmatched %s", p.tokens[close].text)
+	return , p.tokenError(close, "unmatched %s", p.tokens[close].text)
 }

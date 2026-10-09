@@ -1,0 +1,1 @@
+<WORK>/input.tgo:4:10: cannot use "failure" (constant of type string) as error value in return statement: string does not implement error (missing method Error)

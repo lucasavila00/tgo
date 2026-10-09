@@ -284,7 +284,8 @@ func (p *sourceParser) makeFields(
 		assign := token.NoPos
 		if raw.assign >= 0 {
 			if len(field.Names) == 0 {
-				return nil, nil, p.tokenError(raw.start, "embedded fields cannot have defaults")
+				failure := p.tokenError(raw.start, "embedded fields cannot have defaults")
+				return nil, nil, failure
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
 			parsedDefault, expressionAnchors, tgoErr := p.parseExpression(
@@ -375,7 +376,8 @@ func (p *sourceParser) parseExpression(
 		parser.ParseComments|parser.SkipObjectResolution,
 	)
 	if err != nil {
-		return nil, nil, p.mapFragmentError(err, len(prefix), start, end)
+		failure := p.mapFragmentError(err, len(prefix), start, end)
+		return nil, nil, failure
 	}
 	general := file.Decls[0].(*ast.GenDecl)
 	value := general.Specs[0].(*ast.ValueSpec).Values[0]
