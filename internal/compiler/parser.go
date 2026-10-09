@@ -114,8 +114,8 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 			externalJSONTo: jsonUse.external,
 			adjacentJSONTo: jsonUse.adjacent,
 		},
+		Lowered: len(edits) > 0,
 	}
-	result.Lowered = result.initiallyNeedsLowering()
 	return result, nil
 }
 
@@ -176,6 +176,10 @@ func sourceModels(
 		if item == nil {
 			continue
 		}
+		models = append(models, item)
+		if replacement == "" {
+			continue
+		}
 		startPositionValue := syntax.DeclarationPosition(declaration)
 		endPositionValue := syntax.DeclarationEnd(declaration)
 		if item.Enum && firstEnumEdit < 0 {
@@ -189,7 +193,6 @@ func sourceModels(
 				files.Position(endPositionValue).Line, replacement,
 			),
 		})
-		models = append(models, item)
 	}
 	return models, edits, use, firstEnumEdit, nil
 }
@@ -230,8 +233,13 @@ func sourceModel(
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
 		item := structModel(files, erasedData, node)
-		return item, "type " + item.Name + " struct {\n" +
-			fieldDecls(sourceName, item.Fields) + "}\n", enumJSONUse{}, nil
+		for _, field := range item.Fields {
+			if field.Default != "" {
+				return item, "type " + item.Name + " struct {\n" +
+					fieldDecls(sourceName, item.Fields) + "}\n", enumJSONUse{}, nil
+			}
+		}
+		return item, "", enumJSONUse{}, nil
 	}
 	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
 		item := checkedModel(files, erasedData, node)

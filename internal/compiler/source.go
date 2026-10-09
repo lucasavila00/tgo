@@ -82,25 +82,6 @@ type comprehensionSource struct {
 	Map      bool
 }
 
-// initiallyNeedsLowering reports whether parsed TGo syntax changes Go output.
-func (s *source) initiallyNeedsLowering() bool {
-	if len(s.Propagations) > 0 || len(s.Comprehensions) > 0 ||
-		len(s.Exhaustive) > 0 || len(s.NonNil) > 0 || len(s.SuccessReturns) > 0 {
-		return true
-	}
-	for _, declaration := range s.Models {
-		if declaration.Enum || declaration.Predicate != "" {
-			return true
-		}
-		for _, field := range declaration.Fields {
-			if field.Default != "" {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // requiresConstructor reports whether a model type has an invalid zero value.
 func (m *model) requiresConstructor() bool {
 	return len(m.Variants) > 0 || m.Predicate != ""
