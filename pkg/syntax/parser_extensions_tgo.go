@@ -217,9 +217,9 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 	}
 	customDecls := make([]frontNode, 0, len(p.decls))
 	for _, raw := range p.decls {
-		declaration, declarationAnchors, err := p.makeDeclaration(raw, defaultAt)
-		if err != nil {
-			return nil, err
+		declaration, declarationAnchors, tgoErr := p.makeDeclaration(raw, defaultAt)
+		if tgoErr != nil {
+			return nil, tgoErr
 		}
 		customDecls = append(customDecls, declaration)
 		for extension, parent := range declarationAnchors {

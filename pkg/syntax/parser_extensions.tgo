@@ -203,10 +203,7 @@ func (p %sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		if projection == nil {
 			return nil, p.tokenError(raw.open, "cannot project comprehension literal")
 		}
-		node, found, err := p.makeComprehension(raw, projection, defaultAt)
-		if err != nil {
-			return nil, err
-		}
+		node, found := p.makeComprehension(raw, projection, defaultAt)!!
 		raw.node = node
 		for child, parent := range found {
 			anchors[child] = parent
@@ -214,10 +211,7 @@ func (p %sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 	}
 	customDecls := make([]frontNode, 0, len(p.decls))
 	for _, raw := range p.decls {
-		declaration, declarationAnchors, err := p.makeDeclaration(raw, defaultAt)
-		if err != nil {
-			return nil, err
-		}
+		declaration, declarationAnchors := p.makeDeclaration(raw, defaultAt)!!
 		customDecls = append(customDecls, declaration)
 		for extension, parent := range declarationAnchors {
 			anchors[extension] = parent
