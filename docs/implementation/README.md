@@ -11,9 +11,11 @@ compiler.
 Repository tools outside the compiler bootstrap path can use tgo. For example, `tgolint` uses
 tgo source files.
 
-Each committed `.tgo` source file has a generated `*_tgo.go` file in the same directory. The Go
-tool uses these generated files as normal Go source. `make generated` verifies that the committed
-files match the current compiler output.
+Each production `.tgo` source file has a generated `*_tgo.go` file in the same directory. The Go
+tool uses these generated files as normal Go source. `make generated` uses the build driver's
+package and output rules to verify that the committed files match the current compiler output.
+It skips hidden directories, underscore-prefixed directories, `vendor`, `testdata`, nested modules,
+temporary `bin` output, and the copied Go corpus in `third_party/go`.
 
 ## Compiler boundary
 
