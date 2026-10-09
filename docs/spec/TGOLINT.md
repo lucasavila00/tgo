@@ -7,14 +7,17 @@ tgo build ./...
 tgolint ./...
 ```
 
-`tgolint` checks ordinary Go code that uses generated tgo types. It gets model
-data from generated packages and uses it in packages that import them. It does
-not check generated files.
+`tgolint` checks TGo source and ordinary Go code that uses generated tgo types.
+It gets model data from generated packages and uses it in packages that import
+them. It does not check generated files.
 
 ## Checked by tgolint
 
 A clean run means that the loaded Go packages do not contain these errors:
 
+- a TGo variable declaration without an initializer;
+- a TGo struct, array, or slice literal with an omitted field or element;
+- a TGo named result read or returned before assignment;
 - an invalid checked-type zero from a declaration, named result, literal, `new`, `make`,
   `clear`, map read, channel read, type assertion, or longer reslice;
 - a new defined Go type or conversion that bypasses a tgo constructor;

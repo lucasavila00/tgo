@@ -1,3 +1,0 @@
-package sample
-
-var values = []int{2: 3}

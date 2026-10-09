@@ -1,8 +1,0 @@
-package invalid
-
-func invalidResult(value any) (result int) {
-    switch value.(type) {
-    default:
-        return
-    }
-}
