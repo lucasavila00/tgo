@@ -84,6 +84,9 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 	case syntax.ExpressionTagUnary:
 		item := expressionValue.UnaryPayload().Value
 		p.token(item.OperatorPosition, item.Operator.String())
+		if unaryNeedsSpace(item.Operator, item.Expression) {
+			p.space()
+		}
 		p.expression(item.Expression, token.UnaryPrec)
 	case syntax.ExpressionTagBinary:
 		p.binaryExpression(expressionValue.BinaryPayload().Value, parentPrecedence)
@@ -145,6 +148,17 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 	default:
 		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
+}
+
+func unaryNeedsSpace(operator token.Token, operand *syntax.Expression) bool {
+	inner := syntax.UnaryExpressionOf(operand)
+	if inner == nil {
+		return false
+	}
+	return operator == token.ADD && inner.Operator == token.ADD ||
+		operator == token.SUB && inner.Operator == token.SUB ||
+		operator == token.AND &&
+			(inner.Operator == token.AND || inner.Operator == token.XOR)
 }
 
 func (p *printer) binaryExpression(value *syntax.BinaryExpression, parentPrecedence int) {
