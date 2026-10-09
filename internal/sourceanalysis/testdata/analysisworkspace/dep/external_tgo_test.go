@@ -5,5 +5,7 @@ package dep_test
 import "example.test/analysis/dep"
 
 func externalTestValue() dep.Choice {
-	return dep.ChoiceOne{Name: "external"}.Choice()
+	return func(input dep.TgoChoiceOneInput) dep.Choice {
+		return dep.NewChoiceOne(input.FieldName)
+	}(dep.TgoChoiceOneInput{FieldName: "external"})
 }

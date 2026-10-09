@@ -11,9 +11,11 @@ compiler.
 Repository tools outside the compiler bootstrap path can use tgo. For example, `tgolint` uses
 tgo source files.
 
-Each committed `.tgo` source file has a generated `*_tgo.go` file in the same directory. The Go
-tool uses these generated files as normal Go source. `make generated` verifies that the committed
-files match the current compiler output.
+Each production `.tgo` source file has a generated `*_tgo.go` file in the same directory. The Go
+tool uses these generated files as normal Go source. `make generated` uses the build driver's
+package and output rules to verify that the committed files match the current compiler output.
+It skips hidden directories, underscore-prefixed directories, `vendor`, `testdata`, nested modules,
+temporary `bin` output, and the copied Go corpus in `third_party/go`.
 
 ## Compiler boundary
 
@@ -30,13 +32,12 @@ Source policy, modernization advice, navigation, generated-output integrity, pac
 locking, file transactions, and stale-output cleanup stay outside the compiler. Production code
 for these tasks must be `.tgo` and must use `pkg/syntax` instead of `go/ast`.
 
-The remaining exceptions have migration issues:
+The remaining exception has a migration issue. The pull request that completes
+the migration must remove its row. Remove this table when no exception remains.
 
 | Compiler code | Destination | Issue |
 | --- | --- | --- |
-| `check.go` model usage policy | `tgolint` | [#61](https://github.com/lucasavila00/go2/issues/61) |
-| `enum_switch.go` switch policy | `tgolint` | [#60](https://github.com/lucasavila00/go2/issues/60) |
-| `build.go` and file transaction helpers | TGo build driver | [#64](https://github.com/lucasavila00/go2/issues/64) |
+| [`check.go`](../../internal/compiler/check.go) | `tgolint` | [#61](https://github.com/lucasavila00/tgo/issues/61) |
 
 ## Syntax boundary
 
@@ -57,6 +58,10 @@ payload storage.
 
 Production source in this repository does not use `tgolint` suppression directives. The main CI
 target checks generated files, the syntax boundary, allocation budgets, Markdown, lint, and tests.
+
+Run `make install-hooks` to install the repository pre-commit hook. The hook checks staged
+whitespace and Markdown line width only. It does not build the repository or run tests. Hosted CI
+runs the complete validation suite after a branch is pushed.
 
 The [Go printer port](go-printer-port.md) defines the staged formatter replacement.
 The [CFG source map](cfg-port.md) records the upstream control-flow graph sources.

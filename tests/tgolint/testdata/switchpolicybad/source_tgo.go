@@ -47,11 +47,15 @@ func (v Account) UnknownTag() string {
 type AccountPersonal struct {
 	Name string
 }
+type TgoAccountPersonalInput struct {
+	FieldName string
+}
 
-// Account constructs Account. Model fields must be valid.
+// NewAccountPersonal constructs Account. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value AccountPersonal) Account() Account {
-	return Account{tgoTag: AccountTagPersonal, tgoPersonal: value}
+func NewAccountPersonal(Name string) Account {
+	tgoValue := AccountPersonal{Name}
+	return Account{tgoTag: AccountTagPersonal, tgoPersonal: tgoValue}
 }
 
 // PersonalPayload requires Personal. No tag check.
@@ -61,11 +65,15 @@ func (v Account) PersonalPayload() AccountPersonal { return v.tgoPersonal }
 type AccountBusiness struct {
 	Company string
 }
+type TgoAccountBusinessInput struct {
+	FieldCompany string
+}
 
-// Account constructs Account. Model fields must be valid.
+// NewAccountBusiness constructs Account. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value AccountBusiness) Account() Account {
-	return Account{tgoTag: AccountTagBusiness, tgoBusiness: value}
+func NewAccountBusiness(Company string) Account {
+	tgoValue := AccountBusiness{Company}
+	return Account{tgoTag: AccountTagBusiness, tgoBusiness: tgoValue}
 }
 
 // BusinessPayload requires Business. No tag check.
@@ -121,14 +129,14 @@ func (v *Account) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Account()
+		*v = NewAccountPersonal(payload.Name)
 		return nil
 	case "Business":
 		var payload AccountBusiness
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Account()
+		*v = NewAccountBusiness(payload.Company)
 		return nil
 	default:
 		return fmt.Errorf("unknown Account JSON variant %q", variant)
@@ -199,14 +207,14 @@ func (v *Account) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Account()
+		*v = NewAccountPersonal(payload.Name)
 		return nil
 	case 2:
 		var payload AccountBusiness
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Account()
+		*v = NewAccountBusiness(payload.Company)
 		return nil
 	default:
 		return fmt.Errorf("invalid Account JSON tag")

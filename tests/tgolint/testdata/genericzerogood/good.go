@@ -24,23 +24,23 @@ func Safe() {
 	_ = genericzero.Make[model.Event](0)
 	genericzero.Clear([]model.Event{})
 	_ = genericzero.MapRead(
-		map[string]model.Event{"event": model.EventStarted{}.Event()},
+		map[string]model.Event{"event": model.NewEventStarted("", "")},
 		"event",
 	)
 	_ = genericzero.ChannelRead(make(chan model.Event))
-	_ = genericzero.Assert[model.Event](model.EventStarted{}.Event())
+	_ = genericzero.Assert[model.Event](model.NewEventStarted("", ""))
 	_ = genericzero.Assert[model.Event](1)
 	_ = genericzero.Reslice(
-		[]model.Event{model.EventStarted{}.Event()},
+		[]model.Event{model.NewEventStarted("", "")},
 		1,
 	)
 	_ = genericzero.MapDiscarded(
-		map[string]model.Event{"event": model.EventStarted{}.Event()},
+		map[string]model.Event{"event": model.NewEventStarted("", "")},
 		"event",
 	)
 	_ = genericzero.ChannelDiscarded(make(chan model.Event))
 	_ = genericzero.AssertDiscarded[model.Event](
-		model.EventStarted{}.Event(),
+		model.NewEventStarted("", ""),
 	)
 	genericzero.Maybe[model.Event](false)
 	genericzero.Mutated[model.Event](true)
@@ -53,8 +53,8 @@ func Safe() {
 	_ = genericzero.Nested[model.Event]()
 	genericzerowrap.Maybe[model.Event](true)
 	genericzerowrap.Make[model.Event](0)
-	_ = genericzero.MaybeStarted(false, model.EventStarted{}.Event())
-	_ = genericzero.UnlessStarted(true, model.EventStarted{}.Event())
+	_ = genericzero.MaybeStarted(false, model.NewEventStarted("", ""))
+	_ = genericzero.UnlessStarted(true, model.NewEventStarted("", ""))
 	enabled := false
 	genericzero.Maybe[model.Event](enabled)
 	length := 0

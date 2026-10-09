@@ -203,11 +203,11 @@ func emitEnumJSONUnmarshal(
 			fmt.Fprintf(out,
 				"{ var payload %s%s\n"+
 					"if err := %s.Unmarshal(data, &payload); err == nil {\n"+
-					"*v = payload.%s(); return nil } }\n",
+					"*v = %s; return nil } }\n",
 				name,
 				variant.Name,
 				jsonPackage,
-				name)
+				enumPayloadConstructorCall(name, variant))
 		}
 		fmt.Fprintf(out,
 			"return %s.Errorf(%s)\n}\n",
@@ -263,26 +263,26 @@ func emitEnumJSONUnmarshal(
 				"case %s:\n"+
 					"var payload %s%s\n"+
 					"if err := %s.Unmarshal(data, &payload); err != nil { return err }\n"+
-					"*v = payload.%s()\n"+
+					"*v = %s\n"+
 					"return nil\n",
 				q(variant.JSONName),
 				name,
 				variant.Name,
 				jsonPackage,
-				name)
+				enumPayloadConstructorCall(name, variant))
 			continue
 		}
 		fmt.Fprintf(out,
 			"case %s:\n"+
 				"var payload %s%s\n"+
 				"if err := %s.Unmarshal(payloadData, &payload); err != nil { return err }\n"+
-				"*v = payload.%s()\n"+
+				"*v = %s\n"+
 				"return nil\n",
 			q(variant.JSONName),
 			name,
 			variant.Name,
 			jsonPackage,
-			name)
+			enumPayloadConstructorCall(name, variant))
 	}
 	fmt.Fprintf(out,
 		"default: return %s.Errorf(%s, variant)\n}\n}\n",

@@ -1,0 +1,9 @@
+package sample
+
+type Record struct {
+	Name string
+}
+
+func Production(value Record) string {
+	return value.Name
+}

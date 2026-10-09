@@ -112,11 +112,17 @@ type rawDeclEnum struct {
 	tag      int
 	variants []*rawVariant
 }
+type TgorawDeclEnumInput struct {
+	Field0        rawDeclBase
+	FieldTag      int
+	FieldVariants []*rawVariant
+}
 
-// rawDecl constructs rawDecl. Model fields must be valid.
+// NewrawDeclEnum constructs rawDecl. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value rawDeclEnum) rawDecl() rawDecl {
-	return rawDecl{tgoTag: rawDeclTagEnum, tgoPayload: value}
+func NewrawDeclEnum(tgoField0 rawDeclBase, tag int, variants []*rawVariant) rawDecl {
+	tgoValue := rawDeclEnum{tgoField0, tag, variants}
+	return rawDecl{tgoTag: rawDeclTagEnum, tgoPayload: tgoValue}
 }
 
 // EnumPayload requires Enum. No tag check.
@@ -128,11 +134,17 @@ type rawDeclStruct struct {
 	checked int
 	fields  []*rawField
 }
+type TgorawDeclStructInput struct {
+	Field0       rawDeclBase
+	FieldChecked int
+	FieldFields  []*rawField
+}
 
-// rawDecl constructs rawDecl. Model fields must be valid.
+// NewrawDeclStruct constructs rawDecl. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value rawDeclStruct) rawDecl() rawDecl {
-	return rawDecl{tgoTag: rawDeclTagStruct, tgoPayload: value}
+func NewrawDeclStruct(tgoField0 rawDeclBase, checked int, fields []*rawField) rawDecl {
+	tgoValue := rawDeclStruct{tgoField0, checked, fields}
+	return rawDecl{tgoTag: rawDeclTagStruct, tgoPayload: tgoValue}
 }
 
 // StructPayload requires Struct. No tag check.
@@ -188,14 +200,14 @@ func (v *rawDecl) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.rawDecl()
+		*v = NewrawDeclEnum(payload.rawDeclBase, payload.tag, payload.variants)
 		return nil
 	case "Struct":
 		var payload rawDeclStruct
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.rawDecl()
+		*v = NewrawDeclStruct(payload.rawDeclBase, payload.checked, payload.fields)
 		return nil
 	default:
 		return fmt.Errorf("unknown rawDecl JSON variant %q", variant)
@@ -266,14 +278,14 @@ func (v *rawDecl) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.rawDecl()
+		*v = NewrawDeclEnum(payload.rawDeclBase, payload.tag, payload.variants)
 		return nil
 	case 2:
 		var payload rawDeclStruct
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.rawDecl()
+		*v = NewrawDeclStruct(payload.rawDeclBase, payload.checked, payload.fields)
 		return nil
 	default:
 		return fmt.Errorf("invalid rawDecl JSON tag")
@@ -352,11 +364,24 @@ type rawComprehensionClauseRange struct {
 	open        int
 	close       int
 }
+type TgorawComprehensionClauseRangeInput struct {
+	FieldStart       int
+	FieldEnd         int
+	FieldForToken    int
+	FieldBindings    []int
+	FieldDefine      int
+	FieldRangeToken  int
+	FieldSourceStart int
+	FieldSourceEnd   int
+	FieldOpen        int
+	FieldClose       int
+}
 
-// rawComprehensionClause constructs rawComprehensionClause. Model fields must be valid.
+// NewrawComprehensionClauseRange constructs rawComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value rawComprehensionClauseRange) rawComprehensionClause() rawComprehensionClause {
-	return rawComprehensionClause{tgoTag: rawComprehensionClauseTagRange, tgoPayload: value}
+func NewrawComprehensionClauseRange(start int, end int, forToken int, bindings []int, define int, rangeToken int, sourceStart int, sourceEnd int, open int, close int) rawComprehensionClause {
+	tgoValue := rawComprehensionClauseRange{start, end, forToken, bindings, define, rangeToken, sourceStart, sourceEnd, open, close}
+	return rawComprehensionClause{tgoTag: rawComprehensionClauseTagRange, tgoPayload: tgoValue}
 }
 
 // RangePayload requires Range. No tag check.
@@ -374,11 +399,21 @@ type rawComprehensionClauseFilter struct {
 	open           int
 	close          int
 }
+type TgorawComprehensionClauseFilterInput struct {
+	FieldStart          int
+	FieldEnd            int
+	FieldIfToken        int
+	FieldConditionStart int
+	FieldConditionEnd   int
+	FieldOpen           int
+	FieldClose          int
+}
 
-// rawComprehensionClause constructs rawComprehensionClause. Model fields must be valid.
+// NewrawComprehensionClauseFilter constructs rawComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value rawComprehensionClauseFilter) rawComprehensionClause() rawComprehensionClause {
-	return rawComprehensionClause{tgoTag: rawComprehensionClauseTagFilter, tgoFilter: value}
+func NewrawComprehensionClauseFilter(start int, end int, ifToken int, conditionStart int, conditionEnd int, open int, close int) rawComprehensionClause {
+	tgoValue := rawComprehensionClauseFilter{start, end, ifToken, conditionStart, conditionEnd, open, close}
+	return rawComprehensionClause{tgoTag: rawComprehensionClauseTagFilter, tgoFilter: tgoValue}
 }
 
 // FilterPayload requires Filter. No tag check.
@@ -434,14 +469,14 @@ func (v *rawComprehensionClause) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.rawComprehensionClause()
+		*v = NewrawComprehensionClauseRange(payload.start, payload.end, payload.forToken, payload.bindings, payload.define, payload.rangeToken, payload.sourceStart, payload.sourceEnd, payload.open, payload.close)
 		return nil
 	case "Filter":
 		var payload rawComprehensionClauseFilter
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.rawComprehensionClause()
+		*v = NewrawComprehensionClauseFilter(payload.start, payload.end, payload.ifToken, payload.conditionStart, payload.conditionEnd, payload.open, payload.close)
 		return nil
 	default:
 		return fmt.Errorf("unknown rawComprehensionClause JSON variant %q", variant)
@@ -512,14 +547,14 @@ func (v *rawComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.rawComprehensionClause()
+		*v = NewrawComprehensionClauseRange(payload.start, payload.end, payload.forToken, payload.bindings, payload.define, payload.rangeToken, payload.sourceStart, payload.sourceEnd, payload.open, payload.close)
 		return nil
 	case 2:
 		var payload rawComprehensionClauseFilter
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.rawComprehensionClause()
+		*v = NewrawComprehensionClauseFilter(payload.start, payload.end, payload.ifToken, payload.conditionStart, payload.conditionEnd, payload.open, payload.close)
 		return nil
 	default:
 		return fmt.Errorf("invalid rawComprehensionClause JSON tag")
@@ -891,19 +926,18 @@ func (p *sourceParser) enumDeclaration(
 		failure := p.tokenError(keyword, "enum %s has no variants", p.tokens[start+1].text)
 		return nil, 0, failure
 	}
-	declaration := rawDeclEnum{
-		rawDeclBase: rawDeclBase{
-			start:     p.tokens[start].start,
-			end:       p.tokens[closing].end,
-			typeToken: start,
-			name:      start + 1,
-			keyword:   keyword,
-			open:      open,
-			close:     closing,
-		},
-		tag:      tag,
-		variants: variants,
-	}.rawDecl()
+	declaration := func(input TgorawDeclEnumInput) rawDecl {
+		return NewrawDeclEnum(input.Field0, input.FieldTag, input.FieldVariants)
+	}(TgorawDeclEnumInput{Field0: rawDeclBase{
+		start:     p.tokens[start].start,
+		end:       p.tokens[closing].end,
+		typeToken: start,
+		name:      start + 1,
+		keyword:   keyword,
+		open:      open,
+		close:     closing,
+	}, FieldTag: tag, FieldVariants: variants})
+
 	return &declaration, skipSemicolon(p.tokens, closing+1), nil
 }
 
@@ -964,19 +998,18 @@ func (p *sourceParser) structDeclaration(
 	if checked >= 0 {
 		end = p.tokens[checked].end
 	}
-	declaration := rawDeclStruct{
-		rawDeclBase: rawDeclBase{
-			start:     p.tokens[start].start,
-			end:       end,
-			typeToken: start,
-			name:      start + 1,
-			keyword:   keyword,
-			open:      open,
-			close:     closing,
-		},
-		checked: checked,
-		fields:  fields,
-	}.rawDecl()
+	declaration := func(input TgorawDeclStructInput) rawDecl {
+		return NewrawDeclStruct(input.Field0, input.FieldChecked, input.FieldFields)
+	}(TgorawDeclStructInput{Field0: rawDeclBase{
+		start:     p.tokens[start].start,
+		end:       end,
+		typeToken: start,
+		name:      start + 1,
+		keyword:   keyword,
+		open:      open,
+		close:     closing,
+	}, FieldChecked: checked, FieldFields: fields})
+
 	return &declaration, skipSemicolon(p.tokens, next), nil
 }
 
