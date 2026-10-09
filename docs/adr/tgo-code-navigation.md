@@ -3,7 +3,8 @@
 ## Decision
 
 Build a VS Code extension for reading `.tgo` files. It provides syntax highlighting,
-go to definition, find references, document symbols, and workspace symbols.
+symbol hover information, go to definition, find references, document symbols, and workspace
+symbols.
 
 It does not provide completion, rename, formatting, code actions, or diagnostics.
 
@@ -38,6 +39,7 @@ package after a `.tgo`, `.go`, `go.mod`, or `go.work` change.
 - Document and workspace symbols include package declarations, types, functions,
   methods, fields, enum variants, constants, and variables.
 - Definition navigation supports identifiers and selectors in workspace files.
+- Hover information shows the declaration and type of a resolved identifier.
 - A generated member resolves to its owning TGo type, field, or variant.
 - References use resolved object identity across analyzed workspace packages.
 - Highlighting covers `%`, `!`, `!!`, `enum`, `where`, `exhaustive`, defaults, and
@@ -51,6 +53,7 @@ Use end-to-end workspace fixtures for every provider. Tests must start the compi
 helper and exercise the same JSON protocol as the extension. Cover:
 
 - definitions and references across files and packages;
+- hover information for source and generated identifiers;
 - local scope, shadowing, methods, selectors, fields, and enum variants;
 - generated member ownership;
 - document and workspace symbol kinds and ranges;
