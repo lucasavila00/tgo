@@ -7,15 +7,72 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"go/token"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
+
+	"tgo/pkg/syntax"
 )
 
 type protocolWireResponse struct {
 	ID     int64           `json:"id"`
 	Result json.RawMessage `json:"result"`
 	Error  string          `json:"error"`
+}
+
+func TestSymbolKindProtocolContract(t *testing.T) {
+	contractData, err := os.ReadFile("testdata/symbol-kinds.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	contract := []struct {
+		Variant string `json:"variant"`
+		Wire    string `json:"wire"`
+	}{}
+	if err := json.Unmarshal(contractData, &contract); err != nil {
+		t.Fatal(err)
+	}
+	values := []SymbolKind{SymbolKindPackage{}.SymbolKind(), SymbolKindType{}.SymbolKind(), SymbolKindStruct{}.SymbolKind(), SymbolKindInterface{}.SymbolKind(), SymbolKindFunction{}.SymbolKind(), SymbolKindMethod{}.SymbolKind(), SymbolKindField{}.SymbolKind(), SymbolKindEnum{}.SymbolKind(), SymbolKindEnumMember{}.SymbolKind(), SymbolKindConstant{}.SymbolKind(), SymbolKindVariable{}.SymbolKind()}
+	got := make([]string, 0, len(values))
+	for _, value := range values {
+		got = append(got, protocolSymbolKind(value))
+	}
+	want := make([]string, 0, len(contract))
+	for _, value := range contract {
+		want = append(want, value.Wire)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("server symbol kinds = %#v, want contract %#v", got, want)
+	}
+	source, err := os.ReadFile("navigation.tgo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := syntax.ParseFile(
+		token.NewFileSet(), "navigation.tgo", source, syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	variants := make([]string, 0)
+	for _, declaration := range file.Declarations {
+		value, _ := syntax.EnumDeclarationOf(declaration)
+		if value == nil || value.Name.Name != "SymbolKind" {
+			continue
+		}
+		for _, variant := range value.Variants {
+			variants = append(variants, variant.Name.Name)
+		}
+	}
+	wantVariants := make([]string, 0, len(contract))
+	for _, value := range contract {
+		wantVariants = append(wantVariants, value.Variant)
+	}
+	if !reflect.DeepEqual(variants, wantVariants) {
+		t.Fatalf("server symbol variants = %#v, want contract %#v", variants, wantVariants)
+	}
 }
 
 func TestRequestJSONVariants(t *testing.T) {
