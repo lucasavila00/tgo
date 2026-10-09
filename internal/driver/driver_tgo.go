@@ -81,6 +81,22 @@ func CompileWorkspaceContext(
 	ctx context.Context,
 	directory string,
 ) ([]*compiler.CompiledPackage, error) {
+	return compileWorkspaceContext(ctx, directory, false)
+}
+
+// CompileAvailableWorkspaceContext generates each valid active TGo package.
+func CompileAvailableWorkspaceContext(
+	ctx context.Context,
+	directory string,
+) ([]*compiler.CompiledPackage, error) {
+	return compileWorkspaceContext(ctx, directory, true)
+}
+
+func compileWorkspaceContext(
+	ctx context.Context,
+	directory string,
+	continueAfterError bool,
+) ([]*compiler.CompiledPackage, error) {
 	root, module, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
@@ -103,7 +119,15 @@ func CompileWorkspaceContext(
 		default:
 		}
 		if err := builder.build(path); err != nil {
-			return nil, err
+			if !continueAfterError {
+				return nil, err
+			}
+			for failed, state := range builder.states {
+				if state == buildActive {
+					delete(builder.states, failed)
+				}
+			}
+			continue
 		}
 		if packages[path].compiled != nil {
 			result = append(result, packages[path].compiled)

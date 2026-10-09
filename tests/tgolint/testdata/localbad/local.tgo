@@ -2,7 +2,7 @@ package localbad
 
 type Count struct { value int } checked
 
-func (value Count) check() (Count, error) { return value, nil }
+func (value Count) check() (Count, error) { return value, }
 
 type Port struct {
 	number int

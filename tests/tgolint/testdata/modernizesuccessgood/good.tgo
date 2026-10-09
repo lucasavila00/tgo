@@ -9,13 +9,13 @@ func oneResult() error {
 }
 
 func failure(err error) (int, error) {
-	return 0, err
+	return , err
 }
 
 func shadow(nil error) (int, error) {
-	return 0, nil
+	return , nil
 }
 
 func earlierNil(err error) (*int, error) {
-	return nil, err
+	return , err
 }

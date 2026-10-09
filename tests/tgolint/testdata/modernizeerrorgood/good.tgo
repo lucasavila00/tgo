@@ -22,7 +22,7 @@ func (store) Find() (*record, error) { return nil, }
 func differentContext() (*record, error) {
 	value, err := load()
 	if err != nil {
-		return nil, fmt.Errorf("load record: %w", err)
+		return , fmt.Errorf("load record: %w", err)
 	}
 	return value,
 }
@@ -30,7 +30,7 @@ func differentContext() (*record, error) {
 func shortSelector(repository store) (*record, error) {
 	value, err := repository.Find()
 	if err != nil {
-		return nil, fmt.Errorf("Find: %w", err)
+		return , fmt.Errorf("Find: %w", err)
 	}
 	return value,
 }
@@ -38,7 +38,7 @@ func shortSelector(repository store) (*record, error) {
 func wrongVerb() (*record, error) {
 	value, err := load()
 	if err != nil {
-		return nil, fmt.Errorf("load: %v", err)
+		return , fmt.Errorf("load: %v", err)
 	}
 	return value,
 }
@@ -46,7 +46,7 @@ func wrongVerb() (*record, error) {
 func extraArgument() (*record, error) {
 	value, err := load()
 	if err != nil {
-		return nil, fmt.Errorf("load: %w: %s", err, "failed")
+		return , fmt.Errorf("load: %w: %s", err, "failed")
 	}
 	return value,
 }
@@ -54,7 +54,7 @@ func extraArgument() (*record, error) {
 func anotherWrapper() (*record, error) {
 	value, err := load()
 	if err != nil {
-		return nil, errors.Join(err)
+		return , errors.Join(err)
 	}
 	return value,
 }
@@ -63,7 +63,7 @@ func extraStatement() (*record, error) {
 	value, err := load()
 	if err != nil {
 		_ = err
-		return nil, fmt.Errorf("load: %w", err)
+		return , fmt.Errorf("load: %w", err)
 	}
 	return value,
 }
@@ -71,7 +71,7 @@ func extraStatement() (*record, error) {
 func branchElse() (*record, error) {
 	value, err := load()
 	if err != nil {
-		return nil, fmt.Errorf("load: %w", err)
+		return , fmt.Errorf("load: %w", err)
 	} else {
 		return value,
 	}
@@ -80,7 +80,7 @@ func branchElse() (*record, error) {
 func branchInitializer() (*record, error) {
 	value, err := load()
 	if checked := err; checked != nil {
-		return nil, fmt.Errorf("load: %w", checked)
+		return , fmt.Errorf("load: %w", checked)
 	}
 	return value,
 }
@@ -96,7 +96,7 @@ func changedSuccessValue() (*record, error) {
 func namedResult() (result *record, final error) {
 	value, err := load()
 	if err != nil {
-		return nil, fmt.Errorf("load: %w", err)
+		return , fmt.Errorf("load: %w", err)
 	}
 	return value,
 }
@@ -106,7 +106,7 @@ func normalAssignment() (*record, error) {
 	var err error = nil
 	value, err = load()
 	if err != nil {
-		return nil, fmt.Errorf("load: %w", err)
+		return , fmt.Errorf("load: %w", err)
 	}
 	return value,
 }
@@ -115,7 +115,7 @@ func mixedDeclaration() (*record, error) {
 	var value *record = nil
 	value, err := load()
 	if err != nil {
-		return nil, fmt.Errorf("load: %w", err)
+		return , fmt.Errorf("load: %w", err)
 	}
 	return value,
 }
@@ -124,7 +124,7 @@ func dynamicCall() (*record, error) {
 	loader := load
 	value, err := loader()
 	if err != nil {
-		return nil, fmt.Errorf("loader: %w", err)
+		return , fmt.Errorf("loader: %w", err)
 	}
 	return value,
 }
@@ -132,7 +132,7 @@ func dynamicCall() (*record, error) {
 func functionField(repository store) (*record, error) {
 	value, err := repository.load()
 	if err != nil {
-		return nil, fmt.Errorf("repository.load: %w", err)
+		return , fmt.Errorf("repository.load: %w", err)
 	}
 	return value,
 }
@@ -141,7 +141,7 @@ func wrongError() (*record, error) {
 	other := errors.New("other")
 	value, err := load()
 	if err != nil {
-		return nil, fmt.Errorf("load: %w", other)
+		return , fmt.Errorf("load: %w", other)
 	}
 	return value,
 }
@@ -149,12 +149,12 @@ func wrongError() (*record, error) {
 func reusedError() (*record, error) {
 	value, err := load()
 	if err != nil {
-		return nil, fmt.Errorf("load: %w", err)
+		return , fmt.Errorf("load: %w", err)
 	}
 	if err == nil {
 		return value,
 	}
-	return nil, err
+	return , err
 }
 
 func nonzeroSlice() ([]int, error) {

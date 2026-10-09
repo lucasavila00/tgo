@@ -265,7 +265,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		return nil, ctx.Err()
 	default:
 	}
-	packages, err := sourceanalysis.AnalyzeWorkspaceContext(ctx, e.root)
+	packages, err := sourceanalysis.AnalyzeAvailableWorkspaceContext(ctx, e.root)
 	if err != nil {
 		return nil, err
 	}
