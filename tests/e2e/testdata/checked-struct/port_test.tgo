@@ -7,17 +7,17 @@ import (
 )
 
 func TestCheckedStructConstruction(t *testing.T) {
-	port, err := NewPort(8080)
+	port, err := Port{number: 8080}
 	if err != nil {
 		t.Fatal(err)
 		return
 	}
 	if Number(port) != 8080 {
-		t.Fatalf("NewPort = %d, %v", Number(port), err)
+		t.Fatalf("Port literal = %d, %v", Number(port), err)
 	}
-	_, err = NewPort(0)
+	_, err = Port{number: 0}
 	if !errors.Is(err, ErrInvalidPort) {
-		t.Fatalf("NewPort error = %v", err)
+		t.Fatalf("Port literal error = %v", err)
 	}
 }
 
