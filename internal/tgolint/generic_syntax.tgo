@@ -1,0 +1,47 @@
+package tgolint
+
+import "tgo/pkg/syntax"
+
+// inspectGenericBlock visits a function body in source order.
+func inspectGenericBlock(body *syntax.BlockStatement, visit func(*syntax.Node) bool) {
+	if body == nil || visit == nil { return }
+	statement := syntax.Statement.Block{Value: body}
+	syntax.InspectStatement(&statement, visit)
+}
+
+func inspectGenericNode(node *syntax.Node, visit func(*syntax.Node) bool) {
+	if node == nil || visit == nil { return }
+	if expression, ok := syntax.ExpressionOf(node); ok {
+		syntax.InspectExpression(expression, visit)
+		return
+	}
+	if statement, ok := syntax.StatementOf(node); ok {
+		syntax.InspectStatement(statement, visit)
+		return
+	}
+	if !visit(node) { return }
+	if specification, ok := syntax.SpecificationOf(node); ok {
+		if value := syntax.ValueSpecificationOf(specification); value != nil {
+			if value.Type != nil { syntax.InspectExpression(value.Type, visit) }
+			for _, expression := range value.Values {
+				syntax.InspectExpression(expression, visit)
+			}
+		}
+	}
+}
+
+func genericFunctionBody(node *syntax.Node) *syntax.BlockStatement {
+	if declaration, ok := syntax.FunctionDeclarationOf(node); ok {
+		return declaration.Body
+	}
+	if literal, ok := syntax.FunctionLiteralOf(node); ok {
+		return literal.Body
+	}
+	return nil
+}
+
+func syntaxNode(expression *syntax.Expression) *syntax.Node {
+	if expression == nil { return nil }
+	node := syntax.ExpressionNode(expression)
+	return &node
+}

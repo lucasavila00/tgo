@@ -7,13 +7,13 @@ import __tgo_json "encoding/json"
 import __tgo_fmt "fmt"
 
 import (
-	"go/ast"
 	"go/constant"
 	"go/token"
 	"go/types"
 	"sort"
 
-	"golang.org/x/tools/go/cfg"
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
 )
 
 // effectOutcome requires a variant constructor. Its zero value is invalid.
@@ -168,12 +168,12 @@ func alwaysEffectOutcome() effectOutcome  { return effectOutcomeAlways{}.effectO
 func conditionalEffectOutcome() effectOutcome {
 	return effectOutcomeConditional{}.effectOutcome(
 
-	// reachableNodes returns AST nodes from live CFG blocks.
+	// reachableNodes returns syntax nodes from live CFG blocks.
 	)
 }
 
-func (c *checker) reachableNodes(body *ast.BlockStmt) map[ast.Node]bool {
-	reachable := make(map[ast.Node]bool)
+func (c *checker) reachableNodes(body *syntax.BlockStatement) map[syntax.Node]bool {
+	reachable := make(map[syntax.Node]bool)
 	graph := cfg.New(body, c.callMayReturn)
 	for _, block := range graph.Blocks {
 		if !block.Live {
@@ -188,7 +188,7 @@ func (c *checker) reachableNodes(body *ast.BlockStmt) map[ast.Node]bool {
 
 func (c *checker) markGenericZeroAt(
 	summary *genericEffectSummary,
-	node ast.Node,
+	node *syntax.Node,
 	typ types.Type,
 ) {
 	c.markGenericZeroWith(summary, node, typ, nil, false)
@@ -197,7 +197,7 @@ func (c *checker) markGenericZeroAt(
 // markGenericZeroWith adds one zero effect with its path conditions.
 func (c *checker) markGenericZeroWith(
 	summary *genericEffectSummary,
-	node ast.Node,
+	node *syntax.Node,
 	typ types.Type,
 	extra *genericEffectCondition,
 	unknown bool,
@@ -220,11 +220,11 @@ func (c *checker) markGenericZeroWith(
 
 func (c *checker) markConditionalGenericZero(
 	summary *genericEffectSummary,
-	node ast.Node,
+	node *syntax.Node,
 	typ types.Type,
 	kind effectKind,
-	value ast.Expr,
-	other ast.Expr,
+	value *syntax.Expression,
+	other *syntax.Expression,
 ) {
 	valueIndex, valueOK := c.expressionParameter(summary, value)
 	otherIndex, otherOK := -1, true
@@ -232,8 +232,9 @@ func (c *checker) markConditionalGenericZero(
 		otherIndex, otherOK = c.expressionParameter(summary, other)
 	}
 	if !valueOK || !otherOK ||
-		!c.parameterStableBefore(summary, valueIndex, node.Pos()) ||
-		(otherIndex >= 0 && !c.parameterStableBefore(summary, otherIndex, node.Pos())) {
+		!c.parameterStableBefore(summary, valueIndex, syntax.NodePosition(node)) ||
+		(otherIndex >= 0 &&
+			!c.parameterStableBefore(summary, otherIndex, syntax.NodePosition(node))) {
 		c.markGenericZeroWith(summary, node, typ, nil, true)
 		return
 	}
@@ -248,13 +249,13 @@ func (c *checker) markConditionalGenericZero(
 
 func (c *checker) expressionParameter(
 	summary *genericEffectSummary,
-	expression ast.Expr,
+	expression *syntax.Expression,
 ) (int, bool) {
-	name, ok := expression.(*ast.Ident)
-	if !ok {
+	name := syntax.IdentifierExpressionOf(expression)
+	if name == nil {
 		return 0, false
 	}
-	return c.valueParameter(summary, c.pass.TypesInfo.ObjectOf(name))
+	return c.valueParameter(summary, c.facts.Object(name))
 }
 
 // parameterStableBefore rejects a condition after mutation or escape.
@@ -263,7 +264,7 @@ func (c *checker) parameterStableBefore(
 	index int,
 	before token.Pos,
 ) bool {
-	if _, returned := summary.root.(*ast.FuncLit); returned {
+	if _, returned := syntax.FunctionLiteralOf(summary.root); returned {
 		return false
 	}
 	signature := summary.function.Type().(*types.Signature)
@@ -272,71 +273,87 @@ func (c *checker) parameterStableBefore(
 	}
 	object := signature.Params().At(index)
 	stable := true
-	ast.Inspect(summary.body, func(node ast.Node) bool {
-		if node == nil || node.Pos() >= before || !stable {
+	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
+		if node == nil || syntax.NodePosition(node) >= before || !stable {
 			return false
 		}
-		changed, descend := parameterChangedAt(c.pass.TypesInfo, node, object)
+		changed, descend := c.parameterChangedAt(node, object)
 		stable = !changed
 		return stable && descend
 	})
 	return stable
 }
 
-func parameterChangedAt(
-	info *types.Info,
-	node ast.Node,
+func (c *checker) parameterChangedAt(
+	node *syntax.Node,
 	object types.Object,
 ) (bool, bool) {
-	switch node := node.(type) {
-	case *ast.FuncLit:
-		return astCapturesObject(info, node.Body, object), false
-	case *ast.AssignStmt:
-		for _, target := range node.Lhs {
-			if expressionUsesObject(info, target, object) {
-				return true, false
+	if literal, ok := syntax.FunctionLiteralOf(node); ok {
+		return c.syntaxCapturesObject(literal.Body, object), false
+	}
+	if statement, ok := syntax.StatementOf(node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			for _, target := range assignment.Left {
+				if c.expressionUsesObject(target, object) {
+					return true, false
+				}
 			}
 		}
-	case *ast.IncDecStmt:
-		return expressionUsesObject(info, node.X, object), true
-	case *ast.RangeStmt:
-		return expressionUsesObject(info, node.Key, object) ||
-			expressionUsesObject(info, node.Value, object), true
-	case *ast.UnaryExpr:
-		return node.Op == token.AND && expressionUsesObject(info, node.X, object), true
-	case *ast.CallExpr:
-		return callUsesObject(info, node, object), true
+		if increment := syntax.IncrementStatementOf(statement); increment != nil {
+			return c.expressionUsesObject(increment.Expression, object), true
+		}
+		if rangeStatement := syntax.RangeStatementOf(statement); rangeStatement != nil {
+			return c.expressionUsesObject(rangeStatement.Key, object) ||
+				c.expressionUsesObject(rangeStatement.Value, object), true
+		}
+	}
+	expression, ok := syntax.ExpressionOf(node)
+	if !ok {
+		return false, true
+	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+		return unary.Operator == token.AND &&
+			c.expressionUsesObject(unary.Expression, object), true
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		return c.callUsesObject(call, object), true
 	}
 	return false, true
 }
 
-func expressionUsesObject(info *types.Info, expression ast.Expr, object types.Object) bool {
-	used := false
-	ast.Inspect(expression, func(node ast.Node) bool {
-		name, ok := node.(*ast.Ident)
-		if ok && info.ObjectOf(name) == object {
-			used = true
-			return false
+func (c *checker) syntaxCapturesObject(
+	body *syntax.BlockStatement,
+	object types.Object,
+) bool {
+	captured := false
+	inspectGenericBlock(body, func(node *syntax.Node) bool {
+		name, ok := syntax.IdentifierOf(node)
+		if ok && c.facts.Object(name) == object {
+			captured = true
 		}
-		return !used
+		return !captured
 	})
-	return used
+	return captured
 }
 
-func callUsesObject(info *types.Info, call *ast.CallExpr, object types.Object) bool {
-	if name, ok := call.Fun.(*ast.Ident); ok && (name.Name == "len" || name.Name == "cap") {
-		if _, builtin := info.Uses[name].(*types.Builtin); builtin {
+func (c *checker) callUsesObject(
+	call *syntax.CallExpression,
+	object types.Object,
+) bool {
+	if name := syntax.IdentifierExpressionOf(call.Callee); name != nil &&
+		(name.Name == "len" || name.Name == "cap") {
+		if _, builtin := c.facts.Object(name).(*types.Builtin); builtin {
 			return false
 		}
 	}
-	if scalarEscapesInExpression(info, call.Fun, object) {
+	if c.scalarEscapesInExpression(call.Callee, object) {
 		return true
 	}
 	for _, argument := range call.Args {
-		if expressionUsesObject(info, argument, object) {
+		if c.expressionUsesObject(argument, object) {
 			if variable, ok := object.(*types.Var); ok &&
 				(isBoolean(variable.Type()) || isInteger(variable.Type())) &&
-				!scalarEscapesInExpression(info, argument, object) {
+				!c.scalarEscapesInExpression(argument, object) {
 				continue
 			}
 			return true
@@ -346,27 +363,28 @@ func callUsesObject(info *types.Info, call *ast.CallExpr, object types.Object) b
 }
 
 // scalarEscapesInExpression finds address and pointer-receiver escapes.
-func scalarEscapesInExpression(
-	info *types.Info,
-	expression ast.Expr,
+func (c *checker) scalarEscapesInExpression(
+	expression *syntax.Expression,
 	object types.Object,
 ) bool {
 	escapes := false
-	ast.Inspect(expression, func(node ast.Node) bool {
-		switch node := node.(type) {
-		case *ast.UnaryExpr:
-			if node.Op == token.AND && expressionUsesObject(info, node.X, object) {
+	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+		if value, ok := syntax.ExpressionOf(node); ok {
+			if unary := syntax.UnaryExpressionOf(value); unary != nil &&
+				unary.Operator == token.AND &&
+				c.expressionUsesObject(unary.Expression, object) {
 				escapes = true
 				return false
 			}
-		case *ast.FuncLit:
-			if astCapturesObject(info, node.Body, object) {
+			if selector := syntax.SelectorExpressionOf(value); selector != nil &&
+				c.pointerMethodSelection(value) &&
+				c.expressionUsesObject(selector.Expression, object) {
 				escapes = true
 				return false
 			}
-		case *ast.SelectorExpr:
-			if pointerMethodSelection(info, node) &&
-				expressionUsesObject(info, node.X, object) {
+		}
+		if literal, ok := syntax.FunctionLiteralOf(node); ok {
+			if c.syntaxCapturesObject(literal.Body, object) {
 				escapes = true
 				return false
 			}
@@ -376,8 +394,8 @@ func scalarEscapesInExpression(
 	return escapes
 }
 
-func pointerMethodSelection(info *types.Info, selector *ast.SelectorExpr) bool {
-	selection := info.Selections[selector]
+func (c *checker) pointerMethodSelection(expression *syntax.Expression) bool {
+	selection := c.facts.Selection(expression)
 	if selection == nil || selection.Kind() == types.FieldVal {
 		return false
 	}
@@ -395,7 +413,7 @@ func pointerMethodSelection(info *types.Info, selector *ast.SelectorExpr) bool {
 
 func (c *checker) markGenericAccessAt(
 	summary *genericEffectSummary,
-	node ast.Node,
+	node *syntax.Node,
 	typ types.Type,
 ) {
 	conditions, maySkip, reachable := c.genericEffectPath(summary, node)
@@ -498,23 +516,24 @@ func equalGenericEffect(left, right genericEffect) bool {
 // genericEffectPath gets conditions that guard one operation.
 func (c *checker) genericEffectPath(
 	summary *genericEffectSummary,
-	node ast.Node,
+	node *syntax.Node,
 ) ([]genericEffectCondition, bool, bool) {
 	reachable := false
 	var conditions []genericEffectCondition = nil
 	maySkip := false
 	current := node
-	for current != nil && current != summary.root {
-		if summary.reachable[current] {
+	for current != nil && *current != *summary.root {
+		if summary.reachable[*current] {
 			reachable = true
 		}
-		if c.parents[current] == summary.root {
+		parent := c.parents[*current]
+		if parent != nil && *parent == *summary.root {
 			current = summary.root
 			continue
 		}
 		path, unknown, possible := c.parentEffectConditions(
 			summary,
-			c.parents[current],
+			parent,
 			current,
 		)
 		if !possible {
@@ -522,23 +541,28 @@ func (c *checker) genericEffectPath(
 		}
 		conditions = append(conditions, path...)
 		maySkip = maySkip || unknown
-		current = c.parents[current]
+		current = parent
 	}
 	return conditions, maySkip, reachable
 }
 
 func (c *checker) parentEffectConditions(
 	summary *genericEffectSummary,
-	parent ast.Node,
-	node ast.Node,
+	parent *syntax.Node,
+	node *syntax.Node,
 ) ([]genericEffectCondition, bool, bool) {
-	switch parent := parent.(type) {
-	case *ast.FuncLit:
+	if _, literal := syntax.FunctionLiteralOf(parent); literal {
 		return nil, false, false
-	case *ast.BlockStmt:
-		return c.blockEffectConditions(summary, parent, node)
-	case *ast.IfStmt:
-		condition, outcome := c.ifEffectCondition(parent, node)
+	}
+	statement, ok := syntax.StatementOf(parent)
+	if !ok {
+		return nil, false, true
+	}
+	if block := syntax.BlockStatementOf(statement); block != nil {
+		return c.blockEffectConditions(summary, block, node)
+	}
+	if conditional := syntax.IfStatementOf(statement); conditional != nil {
+		condition, outcome := c.ifEffectCondition(conditional, node)
 		if outcome == neverEffectOutcome() {
 			return nil, false, false
 		}
@@ -546,48 +570,56 @@ func (c *checker) parentEffectConditions(
 			return []genericEffectCondition{*condition}, false, true
 		}
 		return nil, outcome == unknownEffectOutcome(), true
-	case *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
+	}
+	if syntax.RangeStatementOf(statement) != nil ||
+		syntax.SwitchStatementOf(statement) != nil ||
+		syntax.TypeSwitchStatementOf(statement) != nil ||
+		syntax.SelectStatementOf(statement) != nil {
 		return nil, true, true
-	case *ast.ForStmt:
-		if parent.Cond == nil {
+	}
+	if loop := syntax.ForStatementOf(statement); loop != nil {
+		if loop.Condition == nil {
 			return nil, false, true
 		}
-		value := c.pass.TypesInfo.Types[parent.Cond].Value
+		value := c.facts.Constant(loop.Condition)
 		unknown := value == nil || value.Kind() != constant.Bool || !constant.BoolVal(value)
 		return nil, unknown, true
-	default:
-		return nil, false, true
 	}
+	return nil, false, true
 }
 
 func (c *checker) blockEffectConditions(
 	summary *genericEffectSummary,
-	block *ast.BlockStmt,
-	node ast.Node,
+	block *syntax.BlockStatement,
+	node *syntax.Node,
 ) ([]genericEffectCondition, bool, bool) {
 	var conditions []genericEffectCondition = nil
 	unknown := false
 	for _, statement := range block.List {
-		if statement.Pos() >= node.Pos() {
+		if syntax.StatementPosition(statement) >= syntax.NodePosition(node) {
 			break
 		}
-		conditional, ok := statement.(*ast.IfStmt)
-		if !ok {
-			switch statement.(type) {
-			case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt,
-				*ast.TypeSwitchStmt, *ast.SelectStmt, *ast.BranchStmt,
-				*ast.LabeledStmt, *ast.BlockStmt:
+		conditional := syntax.IfStatementOf(statement)
+		if conditional == nil {
+			if syntax.ForStatementOf(statement) != nil ||
+				syntax.RangeStatementOf(statement) != nil ||
+				syntax.SwitchStatementOf(statement) != nil ||
+				syntax.TypeSwitchStatementOf(statement) != nil ||
+				syntax.SelectStatementOf(statement) != nil ||
+				syntax.BranchStatementOf(statement) != nil ||
+				syntax.LabeledStatementOf(statement) != nil ||
+				syntax.BlockStatementOf(statement) != nil {
 				unknown = true
 			}
 			continue
 		}
-		trueStops := c.astStatementsTerminate(conditional.Body.List)
+		trueStops := c.statementsTerminate(summary.file, conditional.Body.List)
 		falseStops := conditional.Else != nil &&
-			c.astStatementsTerminate([]ast.Stmt{conditional.Else})
+			c.statementsTerminate(summary.file, []*syntax.Statement{conditional.Else})
 		if trueStops == falseStops {
 			continue
 		}
-		condition, outcome := c.booleanEffectCondition(conditional.Cond, falseStops)
+		condition, outcome := c.booleanEffectCondition(conditional.Condition, falseStops)
 		switch enumValue3 := outcome; enumValue3.Tag() {
 		case effectOutcomeTagNever:
 			return nil, false, false
@@ -604,23 +636,25 @@ func (c *checker) blockEffectConditions(
 }
 
 func (c *checker) ifEffectCondition(
-	statement *ast.IfStmt,
-	node ast.Node,
+	statement *syntax.IfStatement,
+	node *syntax.Node,
 ) (*genericEffectCondition, effectOutcome) {
-	inBody := node.Pos() >= statement.Body.Pos() && node.End() <= statement.Body.End()
-	inElse := statement.Else != nil && node.Pos() >= statement.Else.Pos() &&
-		node.End() <= statement.Else.End()
+	inBody := syntax.NodePosition(node) >= statement.Body.Start &&
+		syntax.NodeEnd(node) <= statement.Body.Stop
+	inElse := statement.Else != nil &&
+		syntax.NodePosition(node) >= syntax.StatementPosition(statement.Else) &&
+		syntax.NodeEnd(node) <= syntax.StatementEnd(statement.Else)
 	if !inBody && !inElse {
 		return nil, alwaysEffectOutcome()
 	}
-	return c.booleanEffectCondition(statement.Cond, inBody)
+	return c.booleanEffectCondition(statement.Condition, inBody)
 }
 
 func (c *checker) booleanEffectCondition(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	wantTrue bool,
 ) (*genericEffectCondition, effectOutcome) {
-	if value, known := c.scalarValueAt(expression, expression); known {
+	if value, known := c.scalarValueAt(syntaxNode(expression), expression); known {
 		if boolean, constantValue := scalarBoolean(value); constantValue {
 			if boolean == wantTrue {
 				return nil, alwaysEffectOutcome()
@@ -635,7 +669,7 @@ func (c *checker) booleanEffectCondition(
 			}, conditionalEffectOutcome()
 		}
 	}
-	if value := c.pass.TypesInfo.Types[expression].Value; value != nil &&
+	if value := c.facts.Constant(expression); value != nil &&
 		value.Kind() == constant.Bool {
 		if constant.BoolVal(value) == wantTrue {
 			return nil, alwaysEffectOutcome()
@@ -646,9 +680,9 @@ func (c *checker) booleanEffectCondition(
 }
 
 func (c *checker) nonzeroEffectCondition(
-	expression ast.Expr,
+	expression *syntax.Expression,
 ) (*genericEffectCondition, effectOutcome) {
-	if value, known := c.scalarValueAt(expression, expression); known {
+	if value, known := c.scalarValueAt(syntaxNode(expression), expression); known {
 		if integer, constantValue := scalarInteger(value); constantValue {
 			if integer == 0 {
 				return nil, neverEffectOutcome()
@@ -663,7 +697,7 @@ func (c *checker) nonzeroEffectCondition(
 			}, conditionalEffectOutcome()
 		}
 	}
-	if value := c.pass.TypesInfo.Types[expression].Value; value != nil &&
+	if value := c.facts.Constant(expression); value != nil &&
 		value.Kind() == constant.Int {
 		if constant.Sign(value) == 0 {
 			return nil, neverEffectOutcome()
