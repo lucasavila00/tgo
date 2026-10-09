@@ -869,3 +869,60 @@ func LiteralHoles() {
 	_ = [2]model.Event{0: model.EventStopped{}.Event()}
 	_ = []model.Event{1: model.EventStopped{}.Event()}
 }
+
+func BypassedEarlyExitPayload(event model.Event) string {
+	goto payload
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+payload:
+	return event.StartedPayload().ID
+}
+
+func EscapedReceiverLoop(event model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		for range 2 {
+			_ = event.StartedPayload()
+			mutateEvent(&event)
+		}
+		return ""
+	case model.EventTagStopped:
+		return ""
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func EscapedReceiverGoto(event model.Event, repeat bool) string {
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+again:
+	result := event.StartedPayload().ID
+	mutateEvent(&event)
+	if repeat {
+		repeat = false
+		goto again
+	}
+	return result
+}
+
+func EmbeddedAssignment(event MutableEmbedded) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		event.Event = model.EventStopped{}.Event()
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return ""
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func PackageReceiverPayload() string {
+	if publishedEvent.Tag() != model.EventTagStopped {
+		return ""
+	}
+	return publishedEvent.StoppedPayload().Reason
+}

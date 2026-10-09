@@ -32,8 +32,9 @@ possible tag. A default has the union of omitted variants. A simple early-exit g
 variant: `if value.Tag() != EventTagStarted { return }`.
 Do not call generated enum methods through a structural interface or an open
 generic constraint.
-Every payload call and payload method value needs one of these proofs. An assignment or writable
-escape ends the proof.
+Every payload call and payload method value needs one of these proofs. The receiver root must belong
+to the current function. An assignment or writable escape ends the proof. Control flow must not
+bypass the proof.
 Do not pass a TGo type to a generic function or method that can make its zero
 value. The same rule applies when you save the function or method as a value.
 `will` means the unsafe event is proved. `can` means a runtime value is unknown.

@@ -96,8 +96,10 @@ An enum payload call or method value needs a variant proof on the same syntactic
 required comment. A normal default clause is fallback behavior and can cover omitted tags. Each
 clause has the union of its possible variants. A default has the union of omitted variants and
 proves a payload when only one variant remains. A simple `Tag() != TagConstant` guard also proves
-the tag after its body stops. A receiver assignment or writable escape ends the proof. A function
-literal does not inherit the proof. Direct `go` and `defer` calls do inherit it.
+the tag after its body stops. The receiver root must belong to the current function. A receiver
+assignment or writable escape ends the proof. A function literal does not inherit the proof. Direct
+`go` and `defer` calls do inherit it. A `goto` cannot enter the source region between a proof and its
+payload read.
 
 The `iota` modernization check requires two or more unique values. Their values must increase by
 one from one common offset. Every value must come from `iota` or its repeated expression. The

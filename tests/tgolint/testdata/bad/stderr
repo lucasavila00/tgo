@@ -81,7 +81,14 @@ bad/bad.go:632:33: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:673:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:675:10: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:693:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:707:11: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:709:11: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:724:8: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:739:8: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:869:6: literal holes contain invalid tgo enum Event values
 bad/bad.go:870:6: literal holes contain invalid tgo enum Event values
+bad/bad.go:879:9: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:886:8: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:902:12: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:915:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:927:9: Event: StoppedPayload requires proof of EventTagStopped

@@ -460,10 +460,12 @@ return account.PersonalPayload().Name
 ```
 
 The tag constant and the accessor must use the same enum and stable receiver. The guard body must
-stop before the payload read. An assignment to the receiver or a selector prefix ends the proof.
-Taking a writable address, passing pointer storage to a call, calling a pointer method, or capturing
-the receiver in a function ends the proof. A nested function does not inherit a proof. A proof from
-outside a loop ends when a loop iteration can change the receiver.
+stop before the payload read. The receiver root must belong to the current function. A package value
+or a value captured from an outer function cannot hold a proof. An assignment to the receiver or a
+selector prefix ends the proof. Taking a writable address, passing pointer storage to a call, calling
+a pointer method, or capturing the receiver in a function ends the proof. A nested function does not
+inherit a proof. A proof from outside a loop ends when a loop iteration can change the receiver. A
+`goto` cannot enter the source region between a proof and its payload read.
 
 The accessor returns a Go value copy. Reference fields keep their Go aliases.
 
