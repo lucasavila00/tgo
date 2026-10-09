@@ -16,8 +16,9 @@ tgolint ./...
 `tgo build` checks the current package. `tgo build ./...` checks packages below it.
 Local tgo imports build first. Output goes beside each input: `model.tgo` becomes `model_tgo.go`.
 Commit each generated file beside its tgo source. Do not edit generated files.
-A generated model file contains versioned integrity metadata for its source and Go body.
-`tgolint` verifies generated declarations before it trusts model facts.
+A generated model file contains stable versioned metadata that names its source.
+`tgolint` recompiles the package in memory and verifies the complete output before it trusts model
+facts.
 Run `tgo build` again when an integrity diagnostic reports stale or changed output.
 A failed build restores the output files that it changed.
 The compiler removes generated files after their source is deleted.
