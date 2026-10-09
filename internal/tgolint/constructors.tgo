@@ -70,7 +70,7 @@ type checkedResult struct {
 type checkedState map[types.Object]checkedResult
 
 // checkConstructors tracks validation and presence proofs through one function.
-func (c %checker) checkConstructors(function *syntax.Node, body *syntax.BlockStatement) {
+func (c %checker) checkConstructors(function %syntax.Node, body %syntax.BlockStatement) {
 	previousEscaped := c.escaped
 	previousFunction := c.function
 	c.escaped = escapedObjects(c.facts, body)
@@ -85,7 +85,7 @@ func (c %checker) checkConstructors(function *syntax.Node, body *syntax.BlockSta
 }
 
 // seedBoundaryParameters marks direct Go model parameters as untrusted input.
-func (c %checker) seedBoundaryParameters(function *syntax.Node, state checkedState) {
+func (c %checker) seedBoundaryParameters(function %syntax.Node, state checkedState) {
 	var fields []*syntax.FieldList = nil
 	if declaration, ok := syntax.FunctionDeclarationOf(function); ok {
 		fields = append(fields, declaration.Receiver, declaration.Type.Params)
@@ -121,7 +121,7 @@ func (c %checker) boundaryModel(typ types.Type) *model {
 // escapedObjects finds local variables that an address or nested function can use.
 // A result pair cannot use these variables as a stable proof.
 // escapedObjects records the first address or closure escape for each local object.
-func escapedObjects(facts *sourcefacts.Index, body *syntax.BlockStatement) map[types.Object]token.Pos {
+func escapedObjects(facts %sourcefacts.Index, body %syntax.BlockStatement) map[types.Object]token.Pos {
 	escaped := make(map[types.Object]token.Pos)
 	record := func(object types.Object, position token.Pos) {
 		if object == nil {
@@ -156,20 +156,20 @@ func escapedObjects(facts *sourcefacts.Index, body *syntax.BlockStatement) map[t
 }
 
 // checkedBlock applies statements in order until control flow stops.
-func (c %checker) checkedBlock(statements []*syntax.Statement, state checkedState) bool {
+func (c %checker) checkedBlock(statements []%syntax.Statement, state checkedState) bool {
 	for _, statement := range statements {
 		if c.checkedStatement(statement, state) {
 			return true
 		}
-		if c.statementsTerminate(c.file, []*syntax.Statement{statement}) {
-			return true
+		if c.file != nil {
+			if c.statementsTerminate(c.file, []%syntax.Statement{statement}) { return true }
 		}
 	}
 	return false
 }
 
 // checkedStatement updates proof state for one statement.
-func (c %checker) checkedStatement(statement *syntax.Statement, state checkedState) bool {
+func (c %checker) checkedStatement(statement %syntax.Statement, state checkedState) bool {
 	if value := syntax.AssignmentStatementOf(statement); value != nil {
 		if c.checkedAssignment(statement, state) {
 			return false
@@ -194,7 +194,7 @@ func (c %checker) checkedStatement(statement *syntax.Statement, state checkedSta
 	return false
 }
 
-func (c %checker) checkedControlStatement(statement *syntax.Statement, state checkedState) bool {
+func (c %checker) checkedControlStatement(statement %syntax.Statement, state checkedState) bool {
 	if value := syntax.ForStatementOf(statement); value != nil {
 		if value.Init != nil {
 			c.checkedStatement(value.Init, state)
@@ -228,18 +228,20 @@ func (c %checker) checkedControlStatement(statement *syntax.Statement, state che
 	} else if statement.Tag() == syntax.StatementTagEmpty {
 		return false
 	} else if value := syntax.SendStatementOf(statement); value != nil {
-		c.checkResultUses([]*syntax.Expression{value.Channel, value.Value}, state, nil)
+		c.checkResultUses([]%syntax.Expression{value.Channel, value.Value}, state, nil)
 	} else if expression := statementExpression(statement); expression != nil {
-		c.checkResultUses([]*syntax.Expression{expression}, state, nil)
+		c.checkResultUses([]%syntax.Expression{expression}, state, nil)
 	}
 	return false
 }
 
-func (c %checker) checkedLoop(statement *syntax.ForStatement, state checkedState) {
+func (c %checker) checkedLoop(statement %syntax.ForStatement, state checkedState) {
 	entry := cloneCheckedState(state)
 	loop := cloneCheckedState(entry)
 	for {
-		c.checkResultUses([]*syntax.Expression{statement.Condition}, loop, nil)
+		if statement.Condition != nil {
+			c.checkResultUses([]%syntax.Expression{statement.Condition}, loop, nil)
+		}
 		iteration := cloneCheckedState(loop)
 		trueProofs, falseProofs := c.resultProofs(statement.Condition, loop)
 		for failure := range trueProofs {
@@ -260,13 +262,16 @@ func (c %checker) checkedLoop(statement *syntax.ForStatement, state checkedState
 	}
 }
 
-func (c %checker) checkedRange(statement *syntax.RangeStatement, state checkedState) {
-	c.checkResultUses([]*syntax.Expression{statement.Source}, state, nil)
+func (c %checker) checkedRange(statement %syntax.RangeStatement, state checkedState) {
+	c.checkResultUses([]%syntax.Expression{statement.Source}, state, nil)
 	entry := cloneCheckedState(state)
 	loop := cloneCheckedState(entry)
 	for {
 		iteration := cloneCheckedState(loop)
-		c.invalidateAssignments([]*syntax.Expression{statement.Key, statement.Value}, iteration)
+		var targets []%syntax.Expression = nil
+		if statement.Key != nil { targets = append(targets, statement.Key) }
+		if statement.Value != nil { targets = append(targets, statement.Value) }
+		c.invalidateAssignments(targets, iteration)
 		c.checkedBlock(statement.Body.List, iteration)
 		next := joinCheckedStates(entry, iteration)
 		if equalCheckedStates(loop, next) {
@@ -277,7 +282,7 @@ func (c %checker) checkedRange(statement *syntax.RangeStatement, state checkedSt
 	}
 }
 
-func statementExpression(statement *syntax.Statement) *syntax.Expression {
+func statementExpression(statement %syntax.Statement) *syntax.Expression {
 	if value := syntax.ExpressionStatementOf(statement); value != nil { return value.Expression }
 	if value := syntax.GoStatementOf(statement); value != nil { return value.Call }
 	if value := syntax.DeferStatementOf(statement); value != nil { return value.Call }
@@ -286,7 +291,7 @@ func statementExpression(statement *syntax.Statement) *syntax.Expression {
 }
 
 // checkedAssignment binds result pairs and invalidates values that are replaced.
-func (c %checker) checkedAssignment(statement *syntax.Statement, state checkedState) bool {
+func (c %checker) checkedAssignment(statement %syntax.Statement, state checkedState) bool {
 	assignment := syntax.AssignmentStatementOf(statement)
 	if assignment == nil || len(assignment.Right) != 1 {
 		return false
@@ -306,7 +311,7 @@ func (c %checker) checkedAssignment(statement *syntax.Statement, state checkedSt
 		return false
 	}
 	c.presence[expression] = true
-	c.checkResultUses([]*syntax.Expression{expression}, state, nil)
+	c.checkResultUses([]%syntax.Expression{expression}, state, nil)
 	if len(assignment.Left) != 2 {
 		return true
 	}
@@ -317,8 +322,8 @@ func (c %checker) checkedAssignment(statement *syntax.Statement, state checkedSt
 }
 
 func (c %checker) bindBoundaryValue(
-	left []*syntax.Expression,
-	call *syntax.Expression,
+	left []%syntax.Expression,
+	call %syntax.Expression,
 	model *model,
 	state checkedState,
 ) {
@@ -341,8 +346,8 @@ func (c %checker) bindBoundaryValue(
 }
 
 func (c %checker) checkedCallAssignment(
-	assignment *syntax.AssignmentStatement,
-	call *syntax.Expression,
+	assignment %syntax.AssignmentStatement,
+	call %syntax.Expression,
 	model *model,
 	state checkedState,
 ) bool {
@@ -358,7 +363,7 @@ func (c %checker) checkedCallAssignment(
 	return true
 }
 
-func (c %checker) checkedDeclaration(statement *syntax.Statement, state checkedState) {
+func (c %checker) checkedDeclaration(statement %syntax.Statement, state checkedState) {
 	wrapped := syntax.DeclarationStatementOf(statement)
 	if wrapped == nil { return }
 	declaration := syntax.GeneralDeclarationOf(wrapped.Declaration)
@@ -370,12 +375,12 @@ func (c %checker) checkedDeclaration(statement *syntax.Statement, state checkedS
 	}
 }
 
-func (c %checker) checkedValueSpec(specification *syntax.ValueSpecification, state checkedState) {
+func (c %checker) checkedValueSpec(specification %syntax.ValueSpecification, state checkedState) {
 	if len(specification.Values) == 1 && len(specification.Names) == 1 {
 		if syntax.CallExpressionOf(specification.Values[0]) != nil {
 			if model := c.boundarySingleCall(specification.Values[0]); model != nil {
 				name := syntax.ExpressionIdentifier{Value: specification.Names[0]}.Expression()
-				c.bindBoundaryValue([]*syntax.Expression{&name}, specification.Values[0], model, state)
+				c.bindBoundaryValue([]%syntax.Expression{&name}, specification.Values[0], model, state)
 				return
 			}
 		}
@@ -402,7 +407,7 @@ func (c %checker) checkedValueSpec(specification *syntax.ValueSpecification, sta
 		return
 	}
 	c.presence[expression] = true
-	c.checkResultUses([]*syntax.Expression{expression}, state, nil)
+	c.checkResultUses([]%syntax.Expression{expression}, state, nil)
 	value := syntax.ExpressionIdentifier{Value: specification.Names[0]}.Expression()
 	present := syntax.ExpressionIdentifier{Value: specification.Names[1]}.Expression()
 	c.bindPresenceResults(
@@ -411,8 +416,8 @@ func (c %checker) checkedValueSpec(specification *syntax.ValueSpecification, sta
 }
 
 func (c %checker) markValidatedResult(
-	call *syntax.Expression,
-	value *syntax.Expression,
+	call %syntax.Expression,
+	value %syntax.Expression,
 	state checkedState,
 ) {
 	if !c.validatedCall(call) {
@@ -431,12 +436,12 @@ func (c %checker) markValidatedResult(
 
 // bindCheckedResults joins a model result with its matching error object.
 func (c %checker) bindCheckedResults(
-	valueExpression *syntax.Expression,
-	errorExpression *syntax.Expression,
+	valueExpression %syntax.Expression,
+	errorExpression %syntax.Expression,
 	model *model,
 	state checkedState,
 ) {
-	c.invalidateAssignments([]*syntax.Expression{valueExpression, errorExpression}, state)
+	c.invalidateAssignments([]%syntax.Expression{valueExpression, errorExpression}, state)
 	errorName := syntax.IdentifierExpressionOf(errorExpression)
 	if errorName == nil || errorName.Name == "_" {
 		c.reportModelResult(syntax.ExpressionPosition(errorExpression), model,
@@ -482,7 +487,7 @@ func (c %checker) bindCheckedResults(
 	}
 }
 
-func (c %checker) presenceModel(expression *syntax.Expression) *model {
+func (c %checker) presenceModel(expression %syntax.Expression) *model {
 	var valueType types.Type = nil
 	if tuple, ok := c.facts.Type(expression).(*types.Tuple); ok &&
 		tuple.Len() == 2 && isBoolean(tuple.At(1).Type()) {
@@ -528,13 +533,13 @@ func isBoolean(typ types.Type) bool {
 
 // bindPresenceResults joins a value with its matching Boolean presence result.
 func (c %checker) bindPresenceResults(
-	valueExpression *syntax.Expression,
-	presenceExpression *syntax.Expression,
-	source *syntax.Expression,
+	valueExpression %syntax.Expression,
+	presenceExpression %syntax.Expression,
+	source %syntax.Expression,
 	model *model,
 	state checkedState,
 ) {
-	c.invalidateAssignments([]*syntax.Expression{valueExpression, presenceExpression}, state)
+	c.invalidateAssignments([]%syntax.Expression{valueExpression, presenceExpression}, state)
 	presenceName := syntax.IdentifierExpressionOf(presenceExpression)
 	if presenceName == nil || presenceName.Name == "_" {
 		c.reportModelSource(syntax.ExpressionPosition(presenceExpression), model, source,
@@ -580,7 +585,7 @@ func (c %checker) bindPresenceResults(
 	}
 }
 
-func presenceBoundary(source *syntax.Expression) bool {
+func presenceBoundary(source %syntax.Expression) bool {
 	return syntax.TypeAssertionExpressionOf(source) != nil ||
 		syntax.CallExpressionOf(source) != nil
 }
@@ -614,7 +619,7 @@ func sourcePositionBefore(left, right token.Position) bool {
 }
 
 // checkedReturn permits direct forwarding and checks all other returned values.
-func (c %checker) checkedReturn(statement *syntax.ReturnStatement, state checkedState) {
+func (c %checker) checkedReturn(statement %syntax.ReturnStatement, state checkedState) {
 	if c.forwardedCallResult(statement, state) {
 		return
 	}
@@ -634,7 +639,7 @@ func (c %checker) checkedReturn(statement *syntax.ReturnStatement, state checked
 }
 
 func (c %checker) forwardedCallResult(
-	statement *syntax.ReturnStatement,
+	statement %syntax.ReturnStatement,
 	state checkedState,
 ) bool {
 	if len(statement.Results) != 1 {

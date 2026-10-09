@@ -10,6 +10,7 @@ func sourceStatementList(node *syntax.Node) ([]%syntax.Statement, bool) {
 	switch enumValue25 := *node; enumValue25.Tag() {
 	case syntax.NodeTagStatement:
 		value := enumValue25.StatementPayload()
+		if value.Value == nil { return nil, false }
 		return statementList(value.Value)
 case syntax.NodeTagFile:
 		return nil, false

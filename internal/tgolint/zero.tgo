@@ -57,7 +57,7 @@ func (c %checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 }
 
 // checkValueSpec rejects declarations that create an invalid model zero.
-func (c %checker) checkValueSpec(specification *syntax.ValueSpecification) {
+func (c %checker) checkValueSpec(specification %syntax.ValueSpecification) {
 	if len(specification.Values) != 0 {
 		return
 	}
@@ -75,7 +75,7 @@ func (c %checker) checkValueSpec(specification *syntax.ValueSpecification) {
 }
 
 // checkNamedResults rejects implicit zero values in named function results.
-func (c %checker) checkNamedResults(function *syntax.FunctionType) {
+func (c %checker) checkNamedResults(function %syntax.FunctionType) {
 	if function.Results == nil {
 		return
 	}
@@ -96,8 +96,8 @@ func (c %checker) checkNamedResults(function *syntax.FunctionType) {
 
 // checkLiteral finds omitted elements that receive an invalid model zero.
 func (c %checker) checkLiteral(
-	expression *syntax.Expression,
-	literal *syntax.CompositeLiteral,
+	expression %syntax.Expression,
+	literal %syntax.CompositeLiteral,
 ) {
 	typ := c.facts.Type(expression)
 	if model := c.modelFor(typ); model != nil {
@@ -121,7 +121,7 @@ func (c %checker) checkLiteral(
 }
 
 func (c %checker) checkStructLiteral(
-	literal *syntax.CompositeLiteral,
+	literal %syntax.CompositeLiteral,
 	structure *types.Struct,
 ) {
 	if len(literal.Elements) == 0 && structure.NumFields() == 0 {
@@ -154,7 +154,7 @@ func (c %checker) checkStructLiteral(
 }
 
 func (c %checker) checkLiteralElements(
-	literal *syntax.CompositeLiteral,
+	literal %syntax.CompositeLiteral,
 	length int64,
 	model *model,
 ) {
@@ -191,8 +191,8 @@ func (c %checker) checkLiteralElements(
 
 // checkCall checks conversions and built-ins that can create model zero values.
 func (c %checker) checkCall(
-	expression *syntax.Expression,
-	call *syntax.CallExpression,
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
 ) {
 	if model := c.checkedSourceCall(expression); model != nil {
 		if !c.checked[expression] {
@@ -230,7 +230,7 @@ func (c %checker) checkCall(
 	}
 }
 
-func (c %checker) checkedSourceCall(expression *syntax.Expression) *model {
+func (c %checker) checkedSourceCall(expression %syntax.Expression) *model {
 	tuple, ok := c.facts.Type(expression).(*types.Tuple)
 	if !ok || tuple.Len() != 2 {
 		return nil
@@ -246,8 +246,8 @@ func (c %checker) checkedSourceCall(expression *syntax.Expression) *model {
 }
 
 func (c %checker) identityConversion(
-	expression *syntax.Expression,
-	call *syntax.CallExpression,
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
 ) bool {
 	if len(call.Args) != 1 {
 		return false
@@ -273,7 +273,7 @@ func (c %checker) identityConversion(
 	return true
 }
 
-func (c %checker) checkTypeSpec(specification *syntax.TypeSpecification) {
+func (c %checker) checkTypeSpec(specification %syntax.TypeSpecification) {
 	if specification.Assign != token.NoPos {
 		return
 	}
@@ -285,8 +285,8 @@ func (c %checker) checkTypeSpec(specification *syntax.TypeSpecification) {
 }
 
 func (c %checker) checkNew(
-	expression *syntax.Expression,
-	call *syntax.CallExpression,
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
 ) {
 	if len(call.Args) != 1 {
 		return
@@ -298,8 +298,8 @@ func (c %checker) checkNew(
 }
 
 func (c %checker) checkMake(
-	expression *syntax.Expression,
-	call *syntax.CallExpression,
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
 ) {
 	if len(call.Args) < 2 {
 		return
@@ -326,8 +326,8 @@ func constantZero(value constant.Value) bool {
 }
 
 func (c %checker) checkClear(
-	expression *syntax.Expression,
-	call *syntax.CallExpression,
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
 ) {
 	if len(call.Args) != 1 {
 		return
@@ -345,8 +345,8 @@ func (c %checker) checkClear(
 
 // checkMapRead requires presence proof when a miss returns an invalid zero.
 func (c %checker) checkMapRead(
-	expression *syntax.Expression,
-	index *syntax.IndexExpression,
+	expression %syntax.Expression,
+	index %syntax.IndexExpression,
 ) {
 	typ := c.facts.Type(index.Expression)
 	mapping, ok := coreType(typ).(*types.Map)
@@ -365,7 +365,7 @@ func (c %checker) checkMapRead(
 		modelKind(model), modelName(model))
 }
 
-func (c %checker) assignmentTarget(expression *syntax.Expression) bool {
+func (c %checker) assignmentTarget(expression %syntax.Expression) bool {
 	node := syntax.ExpressionNode(expression)
 	statement, ok := syntax.StatementOf(c.parents[node])
 	if !ok {
@@ -383,7 +383,7 @@ func (c %checker) assignmentTarget(expression *syntax.Expression) bool {
 	return false
 }
 
-func (c %checker) commaOK(expression *syntax.Expression) bool {
+func (c %checker) commaOK(expression %syntax.Expression) bool {
 	node := syntax.ExpressionNode(expression)
 	parent := c.parents[node]
 	if statement, ok := syntax.StatementOf(parent); ok {
@@ -400,7 +400,7 @@ func (c %checker) commaOK(expression *syntax.Expression) bool {
 
 // checkPresenceRead checks channel and other reads that need a comma-ok proof.
 func (c %checker) checkPresenceRead(
-	expression *syntax.Expression,
+	expression %syntax.Expression,
 	_ *syntax.UnaryExpression,
 ) {
 	model, invalid := c.zeroInvalid(firstType(c.facts.Type(expression)))
@@ -418,8 +418,8 @@ func (c %checker) checkPresenceRead(
 // checkTypeAssertion checks the zero result from the comma-ok form.
 // A failed one-result assertion stops with a panic and returns no zero.
 func (c %checker) checkTypeAssertion(
-	expression *syntax.Expression,
-	assertion *syntax.TypeAssertionExpression,
+	expression %syntax.Expression,
+	assertion %syntax.TypeAssertionExpression,
 ) {
 	if assertion.Type == nil {
 		return
@@ -431,19 +431,19 @@ func (c %checker) checkTypeAssertion(
 	// Go can provide an invalid model value. The caller owns this boundary.
 }
 
-func (c %checker) assertionValidator(expression *syntax.Expression) bool {
+func (c %checker) assertionValidator(expression %syntax.Expression) bool {
 	current := expression
 	for {
 		node := syntax.ExpressionNode(current)
 		parent, ok := syntax.ExpressionOf(c.parents[node])
-		if !ok || syntax.ParenthesizedExpressionOf(parent) == nil {
+		if !ok || parent == nil || syntax.ParenthesizedExpressionOf(parent) == nil {
 			break
 		}
 		current = parent
 	}
 	node := syntax.ExpressionNode(current)
 	parent, ok := syntax.ExpressionOf(c.parents[node])
-	if !ok {
+	if !ok || parent == nil {
 		return false
 	}
 	call := syntax.CallExpressionOf(parent)
@@ -462,10 +462,11 @@ func firstType(typ types.Type) types.Type {
 
 // checkReslice rejects length growth that exposes invalid zero elements.
 func (c %checker) checkReslice(
-	expression *syntax.Expression,
-	slicing *syntax.SliceExpression,
+	expression %syntax.Expression,
+	slicing %syntax.SliceExpression,
 ) {
-	if slicing.High == nil {
+	high := slicing.High
+	if high == nil {
 		return
 	}
 	typ := c.facts.Type(slicing.Expression)
@@ -474,8 +475,8 @@ func (c %checker) checkReslice(
 		return
 	}
 	model, invalid := c.zeroInvalid(slice.Elem())
-	if !invalid || c.currentLength(slicing.High, slicing.Expression) ||
-		constantZero(c.facts.Constant(slicing.High)) {
+	if !invalid || c.currentLength(high, slicing.Expression) ||
+		constantZero(c.facts.Constant(high)) {
 		return
 	}
 	c.pass.Reportf(syntax.ExpressionPosition(expression),
@@ -483,7 +484,7 @@ func (c %checker) checkReslice(
 		modelKind(model), modelName(model))
 }
 
-func (c %checker) currentLength(expression, slice *syntax.Expression) bool {
+func (c %checker) currentLength(expression, slice %syntax.Expression) bool {
 	call := syntax.CallExpressionOf(expression)
 	if call == nil || len(call.Args) != 1 {
 		return false
@@ -497,5 +498,6 @@ func (c %checker) currentLength(expression, slice *syntax.Expression) bool {
 	}
 	left := syntax.IdentifierExpressionOf(call.Args[0])
 	right := syntax.IdentifierExpressionOf(slice)
-	return left != nil && right != nil && c.facts.Object(left) == c.facts.Object(right)
+	if left == nil || right == nil { return false }
+	return c.facts.Object(left) == c.facts.Object(right)
 }

@@ -82,7 +82,7 @@ func (c *checker) analyzeTGoPackage() *compiler.AnalysisPackage {
 func (c *checker) checkNilSafety(analysis *compiler.AnalysisPackage) {
 	goFiles := make([]*ast.File, 0, len(c.pass.Files))
 	for _, file := range c.pass.Files {
-		if !c.generated[file] {
+		if !c.astGenerated[file] {
 			goFiles = append(goFiles, file)
 		}
 	}
