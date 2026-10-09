@@ -14,6 +14,108 @@
     "L:source.tgo -meta.function.signature.tgo -comment -string": {
       "patterns": [
         {
+          "name": "keyword.other.default.tgo",
+          "match": "(?<!\\.)\\.\\.default\\b"
+        },
+        {
+          "match": "(?<=[)}])((?:[ \\t]|/\\*[^\\r\\n]*\\*/)*)(!!?)(?!=)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "source.go"
+                }
+              ]
+            },
+            "2": {
+              "name": "keyword.operator.propagation.tgo"
+            }
+          }
+        },
+        {
+          "match": "(?<![A-Za-z0-9_.)\\]][ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        },
+        {
+          "match": "(\\[\\s*\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "source.go"
+                }
+              ]
+            },
+            "3": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        },
+        {
+          "match": "(\\bmap[ \\t]*\\[[^\\]\\r\\n]+\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "source.go"
+                }
+              ]
+            },
+            "3": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        },
+        {
+          "match": "(\\b(?:chan|case|return)\\b)([ \\t]+)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "source.go"
+                }
+              ]
+            },
+            "3": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        },
+        {
+          "match": "(^[ \\t]*type[ \\t]+[A-Za-z_]\\w*(?:[ \\t]*\\[[^\\]\\r\\n]*\\])?[ \\t]+(?:=[ \\t]*)?)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "source.go"
+                }
+              ]
+            },
+            "2": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        },
+        {
+          "match": "(^[ \\t]*var[ \\t]+(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "source.go"
+                }
+              ]
+            },
+            "2": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        },
+        {
           "begin": "(?=^\\s*func\\b)",
           "end": "(?=\\{)",
           "name": "meta.function.signature.tgo",
@@ -54,6 +156,14 @@
               "name": "storage.modifier.non-nil.tgo"
             }
           }
+        },
+        {
+          "match": "(?<=\\))([ \\t]+)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "2": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
         }
       ]
     }
@@ -62,44 +172,101 @@
     "tgo": {
       "patterns": [
         {
-          "begin": "(?=\\btype\\s+[A-Za-z_]\\w*\\s+enum\\b\\s*(?:`[^`\\n]*`\\s*)?\\{)",
-          "end": "(?=\\r?$)",
-          "patterns": [
-            {
-              "name": "keyword.declaration.enum.tgo",
-              "match": "\\benum\\b"
+          "match": "(\\btype\\b)(\\s+)([A-Za-z_]\\w*)(\\s+)(enum)\\b(?=[ \\t]*(?:`[^`\\n]*`[ \\t]*)?(?:\\{|$))",
+          "captures": {
+            "1": {
+              "name": "keyword.type.go"
             },
-            {
-              "include": "source.go"
-            }
-          ]
-        },
-        {
-          "begin": "(?=\\btype\\s+[A-Za-z_]\\w*\\s+struct[ \\t]*\\{[^\\r\\n]*\\}[ \\t]+\\bchecked\\b)",
-          "end": "(?=\\r?$)",
-          "patterns": [
-            {
-              "name": "keyword.declaration.checked.tgo",
-              "match": "\\bchecked\\b"
+            "3": {
+              "name": "entity.name.type.go"
             },
-            {
-              "include": "source.go"
+            "5": {
+              "name": "keyword.declaration.enum.tgo"
             }
-          ]
+          }
         },
         {
-          "name": "keyword.other.default.tgo",
-          "match": "(?<!\\.)\\.\\.default\\b"
-        },
-        {
-          "begin": "(?<=\\))(?=[ \\t]*(?:/\\*[^\\r\\n]*\\*/[ \\t]*)*!!?(?!=))",
-          "end": "(!!?)(?!=)",
+          "begin": "^(\\s*)(type)(\\s+)([A-Za-z_]\\w*(?:[ \\t]*\\[[^\\]\\r\\n]*\\])?)(\\s+)(struct)([ \\t]*)(\\{)",
+          "beginCaptures": {
+            "2": {
+              "name": "keyword.type.go"
+            },
+            "4": {
+              "name": "entity.name.type.go"
+            },
+            "6": {
+              "name": "keyword.struct.go"
+            },
+            "8": {
+              "name": "punctuation.definition.begin.bracket.curly.go"
+            }
+          },
+          "end": "(\\})(?:([ \\t]+)(checked)\\b)?",
           "endCaptures": {
             "1": {
-              "name": "keyword.operator.propagation.tgo"
+              "name": "punctuation.definition.end.bracket.curly.go"
+            },
+            "3": {
+              "name": "keyword.declaration.checked.tgo"
             }
           },
           "patterns": [
+            {
+              "match": "(^[ \\t]*(?:(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)?)([^=\\r\\n]+)",
+              "captures": {
+                "1": {
+                  "patterns": [
+                    {
+                      "name": "punctuation.other.comma.go",
+                      "match": ","
+                    },
+                    {
+                      "name": "variable.other.property.go",
+                      "match": "[A-Za-z_]\\w*"
+                    }
+                  ]
+                },
+                "2": {
+                  "patterns": [
+                    {
+                      "name": "storage.modifier.non-nil.tgo",
+                      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
+                    },
+                    {
+                      "include": "source.go"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "match": "((?:(?<=\\{)|(?<=;))[ \\t]*(?:(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)?)([^=;\\r\\n}]+)",
+              "captures": {
+                "1": {
+                  "patterns": [
+                    {
+                      "name": "punctuation.other.comma.go",
+                      "match": ","
+                    },
+                    {
+                      "name": "variable.other.property.go",
+                      "match": "[A-Za-z_]\\w*"
+                    }
+                  ]
+                },
+                "2": {
+                  "patterns": [
+                    {
+                      "name": "storage.modifier.non-nil.tgo",
+                      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
+                    },
+                    {
+                      "include": "source.go"
+                    }
+                  ]
+                }
+              }
+            },
             {
               "include": "source.go"
             }

@@ -4,13 +4,32 @@ type Event enum {
 	Ready struct{}
 }
 
+type MultilineEvent enum
+{
+	Waiting struct{}
+}
+
 type Port struct { number int } checked
+type CheckedRecord struct {
+	value int
+	owner %User
+	history []%User
+	lookup map[string]%User
+	updates chan %User
+	callback func(%User) %User
+} checked
+
+type UserPointer = %User
+type UserPointerMap = map[string][]%*User
+type DirectUserPointerMap = map[string]%User
+var currentUser %User
 type WhereAlias where
 
 func read(ok bool, owner %User) error {
 	_ = Request{..default}
 	value := load() /* keep */ !
 	value = load()!!
+	value = CheckedRecord{value: 1}!
 	_ = !ok
 	_ = left%right
 	_ = left % Thing
@@ -19,13 +38,17 @@ func read(ok bool, owner %User) error {
 	exhaustive:
 	}
 	where := 1
+	checked := true
 	enum := 2
 	_ = enum{}
+	_ = append(values, defaults...)
 	return nil
 }
 
 func pointerParameter(value *Record) {}
 func nonNilParameter(value %Record) {}
+func nonNilResult() %Record { return currentUser }
+func nonNilResults() (%Record, error) { return currentUser, nil }
 
 func (value *Record) pointerReceiver() {}
 func (value %Record) nonNilReceiver() {}

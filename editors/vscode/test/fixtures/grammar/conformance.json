@@ -1,0 +1,102 @@
+{
+  "enum declaration": {
+    "positive": [
+      {
+        "line": "type MultilineEvent enum",
+        "token": "enum",
+        "has": "keyword.declaration.enum.tgo"
+      }
+    ],
+    "negative": [
+      {
+        "line": "enum := 2",
+        "token": "enum",
+        "not": "keyword.declaration.enum.tgo"
+      }
+    ]
+  },
+  "checked declaration": {
+    "positive": [
+      {
+        "line": "} checked",
+        "token": "checked",
+        "has": "keyword.declaration.checked.tgo"
+      }
+    ],
+    "negative": [
+      {
+        "line": "checked := true",
+        "token": "checked",
+        "not": "keyword.declaration.checked.tgo"
+      }
+    ]
+  },
+  "default marker": {
+    "positive": [
+      {
+        "line": "_ = Request{..default}",
+        "token": "..default",
+        "has": "keyword.other.default.tgo"
+      }
+    ],
+    "negative": [
+      {
+        "line": "_ = append(values, defaults...)",
+        "token": "defaults",
+        "not": "keyword.other.default.tgo"
+      }
+    ]
+  },
+  "error propagation": {
+    "positive": [
+      {
+        "line": "value = CheckedRecord{value: 1}!",
+        "token": "!",
+        "has": "keyword.operator.propagation.tgo"
+      }
+    ],
+    "negative": [
+      {
+        "line": "_ = !ok",
+        "token": "!",
+        "not": "keyword.operator.propagation.tgo"
+      }
+    ]
+  },
+  "non-nil pointer": {
+    "positive": [
+      {
+        "line": "owner %User",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "func nonNilResult() %Record { return currentUser }",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "type UserPointer = %User",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "type UserPointerMap = map[string][]%*User",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "type DirectUserPointerMap = map[string]%User",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo"
+      }
+    ],
+    "negative": [
+      {
+        "line": "_ = left % Thing",
+        "token": "%",
+        "not": "storage.modifier.non-nil.tgo"
+      }
+    ]
+  }
+}
