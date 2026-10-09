@@ -227,10 +227,26 @@ func (e %nilEnvironment) callContract(call *ast.CallExpr) nilContract {
 	if call == nil {
 		return nil
 	}
-	if object := calledObject(e.info, call.Fun); object != nil {
+	if object := nilCalledObject(e.info, call.Fun); object != nil {
 		return e.contractForObject(object)
 	}
 	return e.contractForExpression(call.Fun)
+}
+
+func nilCalledObject(info *types.Info, expression ast.Expr) types.Object {
+	switch expression := expression.(type) {
+	case *ast.Ident:
+		return info.ObjectOf(expression)
+	case *ast.SelectorExpr:
+		return info.ObjectOf(expression.Sel)
+	case *ast.IndexExpr:
+		return nilCalledObject(info, expression.X)
+	case *ast.IndexListExpr:
+		return nilCalledObject(info, expression.X)
+	case *ast.ParenExpr:
+		return nilCalledObject(info, expression.X)
+	}
+	return nil
 }
 
 // expressionNilType returns the proved nil state of an expression.

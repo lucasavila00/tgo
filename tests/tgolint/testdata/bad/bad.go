@@ -814,3 +814,8 @@ func DefaultPayload(event model.Event) string {
 		return event.StartedPayload().ID
 	}
 }
+
+func LiteralHoles() {
+	_ = [2]model.Event{0: model.EventStopped{}.Event()}
+	_ = []model.Event{1: model.EventStopped{}.Event()}
+}

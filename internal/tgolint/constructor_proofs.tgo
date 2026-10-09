@@ -1,34 +1,43 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/constant"
 	"go/token"
 	"go/types"
+
+	"tgo/internal/sourcefacts"
+	"tgo/pkg/syntax"
 )
 
 // checkedIf applies branch proofs and joins all paths that continue.
-func (c %checker) checkedIf(statement *ast.IfStmt, state checkedState) bool {
+func (c %checker) checkedIf(statement %syntax.IfStatement, state checkedState) bool {
 	if statement.Init != nil {
 		c.checkedStatement(statement.Init, state)
 	}
-	c.checkResultUses([]ast.Expr{statement.Cond}, state, nil)
+	c.checkResultUses([]%syntax.Expression{statement.Condition}, state, nil)
 	trueState := cloneCheckedState(state)
 	falseState := cloneCheckedState(state)
-	trueProofs, falseProofs := c.resultProofs(statement.Cond, state)
+	trueProofs, falseProofs := c.resultProofs(statement.Condition, state)
 	for failure := range trueProofs {
 		proveResult(trueState, failure)
 	}
 	for failure := range falseProofs {
 		proveResult(falseState, failure)
 	}
-	trueStops := c.checkedBlock(statement.Body.List, trueState) ||
-		c.astStatementsTerminate(statement.Body.List)
+	trueStops := c.checkedBlock(statement.Body.List, trueState)
+	if !trueStops && c.file != nil {
+		trueStops = c.statementsTerminate(c.file, statement.Body.List)
+	}
 	falseStops := false
 	if statement.Else != nil {
 		falseStops = c.checkedStatement(statement.Else, falseState)
 		if !falseStops {
-			falseStops = c.astStatementsTerminate([]ast.Stmt{statement.Else})
+			if c.file != nil {
+				other := statement.Else
+				if other != nil {
+					falseStops = c.statementsTerminate(c.file, []%syntax.Statement{other})
+				}
+			}
 		}
 	}
 	switch {
@@ -50,28 +59,28 @@ type proofSet map[types.Object]bool
 // It follows short-circuit Boolean control flow.
 // resultProofs derives success and failure facts from one Boolean condition.
 func (c %checker) resultProofs(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	state checkedState,
 ) (proofSet, proofSet) {
-	if parentheses, ok := expression.(*ast.ParenExpr); ok {
-		return c.resultProofs(parentheses.X, state)
+	if parentheses := syntax.ParenthesizedExpressionOf(expression); parentheses != nil {
+		return c.resultProofs(parentheses.Expression, state)
 	}
-	if negation, ok := expression.(*ast.UnaryExpr); ok && negation.Op == token.NOT {
-		trueProofs, falseProofs := c.resultProofs(negation.X, state)
+	if negation := syntax.UnaryExpressionOf(expression); negation != nil && negation.Operator == token.NOT {
+		trueProofs, falseProofs := c.resultProofs(negation.Expression, state)
 		return falseProofs, trueProofs
 	}
-	if binary, ok := expression.(*ast.BinaryExpr); ok {
-		switch binary.Op {
+	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
+		switch binary.Operator {
 		case token.LAND:
-			leftTrue, leftFalse := c.resultProofs(binary.X, state)
-			rightTrue, rightFalse := c.resultProofs(binary.Y, state)
+			leftTrue, leftFalse := c.resultProofs(binary.Left, state)
+			rightTrue, rightFalse := c.resultProofs(binary.Right, state)
 			return unionProofs(leftTrue, rightTrue), intersectProofs(
 				leftFalse,
 				unionProofs(leftTrue, rightFalse),
 			)
 		case token.LOR:
-			leftTrue, leftFalse := c.resultProofs(binary.X, state)
-			rightTrue, rightFalse := c.resultProofs(binary.Y, state)
+			leftTrue, leftFalse := c.resultProofs(binary.Left, state)
+			rightTrue, rightFalse := c.resultProofs(binary.Right, state)
 			return intersectProofs(
 				leftTrue,
 				unionProofs(leftFalse, rightTrue),
@@ -89,18 +98,18 @@ func (c %checker) resultProofs(
 }
 
 func (c %checker) atomicResultProof(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	state checkedState,
 ) (types.Object, bool) {
-	if name, ok := expression.(*ast.Ident); ok {
-		object := c.pass.TypesInfo.ObjectOf(name)
+	if name := syntax.IdentifierExpressionOf(expression); name != nil {
+		object := c.facts.Object(name)
 		if c.hasValidPresenceProof(state, object) {
 			return object, true
 		}
 		return nil, false
 	}
-	binary, ok := expression.(*ast.BinaryExpr)
-	if !ok || binary.Op != token.EQL && binary.Op != token.NEQ {
+	binary := syntax.BinaryExpressionOf(expression)
+	if binary == nil || binary.Operator != token.EQL && binary.Operator != token.NEQ {
 		return nil, false
 	}
 	if failure, success := c.binaryErrorProof(binary, state); failure != nil {
@@ -110,58 +119,60 @@ func (c %checker) atomicResultProof(
 }
 
 func (c %checker) binaryErrorProof(
-	binary *ast.BinaryExpr,
+	binary %syntax.BinaryExpression,
 	state checkedState,
 ) (types.Object, bool) {
-	name, nilName := errorAndNil(binary.X, binary.Y)
+	name, nilName := errorAndNil(binary.Left, binary.Right)
 	if name == nil {
-		name, nilName = errorAndNil(binary.Y, binary.X)
+		name, nilName = errorAndNil(binary.Right, binary.Left)
 	}
-	if name == nil || nilName == nil ||
-		c.pass.TypesInfo.Uses[nilName] != types.Universe.Lookup("nil") {
+	if name == nil || nilName == nil {
 		return nil, false
 	}
-	object := c.pass.TypesInfo.ObjectOf(name)
+	if c.facts.Object(nilName) != types.Universe.Lookup("nil") {
+		return nil, false
+	}
+	object := c.facts.Object(name)
 	for _, result := range state {
 		if !result.presence && result.failure == object && result.validProof {
-			return object, binary.Op == token.EQL
+			return object, binary.Operator == token.EQL
 		}
 	}
 	return nil, false
 }
 
 func (c %checker) binaryPresenceProof(
-	binary *ast.BinaryExpr,
+	binary %syntax.BinaryExpression,
 	state checkedState,
 ) (types.Object, bool) {
-	name, value, ok := booleanComparison(c.pass.TypesInfo, binary.X, binary.Y)
-	if !ok {
-		name, value, ok = booleanComparison(c.pass.TypesInfo, binary.Y, binary.X)
+	name, value, ok := booleanComparison(c.facts, binary.Left, binary.Right)
+	if !ok || name == nil {
+		name, value, ok = booleanComparison(c.facts, binary.Right, binary.Left)
 	}
-	if !ok {
+	if !ok || name == nil {
 		return nil, false
 	}
-	object := c.pass.TypesInfo.ObjectOf(name)
+	object := c.facts.Object(name)
 	if !c.hasValidPresenceProof(state, object) {
 		return nil, false
 	}
 	successOnTrue := value
-	if binary.Op == token.NEQ {
+	if binary.Operator == token.NEQ {
 		successOnTrue = !successOnTrue
 	}
 	return object, successOnTrue
 }
 
 func booleanComparison(
-	info *types.Info,
-	nameExpression ast.Expr,
-	valueExpression ast.Expr,
-) (*ast.Ident, bool, bool) {
-	name, ok := nameExpression.(*ast.Ident)
-	if !ok {
+	facts %sourcefacts.Index,
+	nameExpression %syntax.Expression,
+	valueExpression %syntax.Expression,
+) (*syntax.Identifier, bool, bool) {
+	name := syntax.IdentifierExpressionOf(nameExpression)
+	if name == nil {
 		return nil, false, false
 	}
-	value := info.Types[valueExpression].Value
+	value := facts.Constant(valueExpression)
 	if value == nil || value.Kind() != constant.Bool {
 		return nil, false, false
 	}
@@ -204,13 +215,13 @@ func (c %checker) hasValidPresenceProof(state checkedState, object types.Object)
 	return false
 }
 
-func errorAndNil(errorExpression, nilExpression ast.Expr) (*ast.Ident, *ast.Ident) {
-	name, ok := errorExpression.(*ast.Ident)
-	if !ok {
+func errorAndNil(errorExpression, nilExpression %syntax.Expression) (*syntax.Identifier, *syntax.Identifier) {
+	name := syntax.IdentifierExpressionOf(errorExpression)
+	if name == nil {
 		return nil, nil
 	}
-	nilName, ok := nilExpression.(*ast.Ident)
-	if !ok || nilName.Name != "nil" {
+	nilName := syntax.IdentifierExpressionOf(nilExpression)
+	if nilName == nil || nilName.Name != "nil" {
 		return nil, nil
 	}
 	return name, nilName
@@ -227,9 +238,9 @@ func proveResult(state checkedState, failure types.Object) {
 
 // checkResultUses rejects pending values read before their matching proof.
 func (c %checker) checkResultUses(
-	expressions []ast.Expr,
+	expressions []%syntax.Expression,
 	state checkedState,
-	skip map[*ast.Ident]bool,
+	skip map[*syntax.Identifier]bool,
 ) {
 	for _, expression := range expressions {
 		if expression == nil {
@@ -237,22 +248,22 @@ func (c %checker) checkResultUses(
 		}
 		c.invalidateEscapedProofs(expression, state)
 		validatorInput := c.validatorInput(expression, state)
-		ast.Inspect(expression, func(node ast.Node) bool {
-			name, ok := node.(*ast.Ident)
+		syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+			name, ok := syntax.IdentifierOf(node)
 			if !ok || skip[name] {
 				return true
 			}
-			result, found := state[c.pass.TypesInfo.Uses[name]]
+			result, found := state[c.facts.Object(name)]
 			if validatorInput[name] {
 				return true
 			}
 			if found && !result.safe {
 				if result.presence {
-					c.reportModelSource(name.Pos(), result.model, result.source,
+					c.reportModelSource(name.Start, result.model, result.source,
 						"tgo %s %s presence value is used before ok is proved true",
 						modelKind(result.model), modelName(result.model))
 				} else {
-					c.reportModelResult(name.Pos(), result.model,
+					c.reportModelResult(name.Start, result.model,
 						"tgo %s %s value is used before its error is proved nil",
 						modelKind(result.model), modelName(result.model))
 				}
@@ -262,89 +273,90 @@ func (c %checker) checkResultUses(
 	}
 }
 
-func (c %checker) validatorInput(expression ast.Expr, state checkedState) map[*ast.Ident]bool {
-	call, ok := expression.(*ast.CallExpr)
-	if !ok || len(call.Args) != 1 {
+func (c %checker) validatorInput(expression %syntax.Expression, state checkedState) map[*syntax.Identifier]bool {
+	call := syntax.CallExpressionOf(expression)
+	if call == nil || len(call.Args) != 1 {
 		return nil
 	}
-	model := c.checkedCall(call)
-	if model == nil || !c.validatedCall(call) {
+	model := c.checkedCall(expression)
+	if model == nil || !c.validatedCall(expression) {
 		return nil
 	}
 	name := c.boundaryArgumentName(call.Args[0])
 	if name == nil {
 		return nil
 	}
-	result, found := state[c.pass.TypesInfo.ObjectOf(name)]
+	result, found := state[c.facts.Object(name)]
 	if !found || !result.safe {
 		return nil
 	}
-	return map[*ast.Ident]bool{name: true}
+	return map[*syntax.Identifier]bool{name: true}
 }
 
-func (c %checker) boundaryArgumentName(expression ast.Expr) *ast.Ident {
+func (c %checker) boundaryArgumentName(expression %syntax.Expression) *syntax.Identifier {
 	if name := identifier(expression); name != nil {
 		return name
 	}
-	call, ok := expression.(*ast.CallExpr)
-	if !ok || len(call.Args) != 1 || !c.pass.TypesInfo.Types[call.Fun].IsType() {
+	call := syntax.CallExpressionOf(expression)
+	if call == nil || len(call.Args) != 1 || !c.facts.IsType(call.Callee) {
 		return nil
 	}
-	if !c.identityConversion(call) {
+	if !c.identityConversion(expression, call) {
 		return nil
 	}
 	return identifier(call.Args[0])
 }
 
 func (c %checker) validatorArgumentSkip(
-	call *ast.CallExpr,
+	call %syntax.Expression,
 	state checkedState,
-) map[*ast.Ident]bool {
-	if len(call.Args) != 1 || !c.validatedCall(call) {
+) map[*syntax.Identifier]bool {
+	value := syntax.CallExpressionOf(call)
+	if value == nil || len(value.Args) != 1 || !c.validatedCall(call) {
 		return nil
 	}
-	name := identifier(call.Args[0])
+	name := identifier(value.Args[0])
 	if name == nil {
 		return nil
 	}
-	result, found := state[c.pass.TypesInfo.ObjectOf(name)]
+	result, found := state[c.facts.Object(name)]
 	if !found || !result.safe {
 		return nil
 	}
-	return map[*ast.Ident]bool{name: true}
+	return map[*syntax.Identifier]bool{name: true}
 }
 
 // invalidateEscapedProofs rejects a later proof through a writable alias.
 // An address or closure can change an error or ok value before the test.
 // invalidateEscapedProofs drops facts after an address or closure escape.
-func (c %checker) invalidateEscapedProofs(expression ast.Expr, state checkedState) {
-	ast.Inspect(expression, func(node ast.Node) bool {
-		switch node := node.(type) {
-		case *ast.UnaryExpr:
-			if node.Op == token.AND {
-				c.invalidateProof(c.pass.TypesInfo.ObjectOf(identifier(node.X)), state)
-			}
-		case *ast.FuncLit:
+func (c %checker) invalidateEscapedProofs(expression %syntax.Expression, state checkedState) {
+	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+		if nested, ok := syntax.FunctionLiteralOf(node); ok {
 			for _, result := range state {
-				if astCapturesObject(c.pass.TypesInfo, node.Body, result.failure) {
+				if capturesObject(c.facts, nested.Body, result.failure) {
 					c.invalidateProof(result.failure, state)
 				}
 			}
 			return false
 		}
+		value, ok := syntax.ExpressionOf(node)
+		if ok {
+			unary := syntax.UnaryExpressionOf(value)
+			if unary != nil && unary.Operator == token.AND {
+				name := identifier(unary.Expression)
+				if name != nil { c.invalidateProof(c.facts.Object(name), state) }
+			}
+		}
 		return true
 	})
 }
 
-func identifier(expression ast.Expr) *ast.Ident {
-	switch expression := expression.(type) {
-	case *ast.Ident:
-		return expression
-	case *ast.ParenExpr:
-		return identifier(expression.X)
-	default:
-		return nil
+func identifier(expression %syntax.Expression) *syntax.Identifier {
+	if name := syntax.IdentifierExpressionOf(expression); name != nil { return name }
+	if value := syntax.ParenthesizedExpressionOf(expression); value != nil {
+		return identifier(value.Expression)
 	}
+	return nil
 }
 
 func (c %checker) invalidateProof(object types.Object, state checkedState) {
@@ -359,29 +371,32 @@ func (c %checker) invalidateProof(object types.Object, state checkedState) {
 	}
 }
 
-func (c %checker) invalidateAssignments(expressions []ast.Expr, state checkedState) {
+func (c %checker) invalidateAssignments(expressions []%syntax.Expression, state checkedState) {
 	for _, expression := range expressions {
-		name, ok := expression.(*ast.Ident)
-		if !ok || name.Name == "_" {
+		name := syntax.IdentifierExpressionOf(expression)
+		if name == nil || name.Name == "_" {
 			continue
 		}
-		object := c.pass.TypesInfo.ObjectOf(name)
+		object := c.facts.Object(name)
 		delete(state, object)
 		c.invalidateProof(object, state)
 	}
 }
 
-func (c %checker) checkedSwitch(statement *ast.SwitchStmt, state checkedState) bool {
+func (c %checker) checkedSwitch(statement %syntax.SwitchStatement, state checkedState) bool {
 	if statement.Init != nil {
 		c.checkedStatement(statement.Init, state)
 	}
-	c.checkResultUses([]ast.Expr{statement.Tag}, state, nil)
+	if statement.Tag != nil {
+		c.checkResultUses([]%syntax.Expression{statement.Tag}, state, nil)
+	}
 	entry := cloneCheckedState(state)
 	var exits []checkedState = nil
 	var carried checkedState = nil
 	hasDefault := false
 	for _, item := range statement.Body.List {
-		clause := item.(*ast.CaseClause)
+		clause := syntax.CaseClauseOf(item)
+		if clause == nil { continue }
 		branch := cloneCheckedState(entry)
 		if carried != nil {
 			branch = joinCheckedStates(branch, carried)
@@ -391,7 +406,7 @@ func (c %checker) checkedSwitch(statement *ast.SwitchStmt, state checkedState) b
 		if len(clause.List) == 0 {
 			hasDefault = true
 		}
-		if astClauseFallthrough(clause) != nil {
+		if clauseFallthrough(clause) != nil {
 			carried = branch
 			continue
 		}
@@ -406,18 +421,19 @@ func (c %checker) checkedSwitch(statement *ast.SwitchStmt, state checkedState) b
 	return replaceWithJoinedStates(state, exits)
 }
 
-func (c %checker) checkedTypeSwitch(statement *ast.TypeSwitchStmt, state checkedState) bool {
+func (c %checker) checkedTypeSwitch(statement %syntax.TypeSwitchStatement, state checkedState) bool {
 	if statement.Init != nil {
 		c.checkedStatement(statement.Init, state)
 	}
-	if statement.Assign != nil {
-		c.checkedStatement(statement.Assign, state)
+	if statement.Assignment != nil {
+		c.checkedStatement(statement.Assignment, state)
 	}
 	entry := cloneCheckedState(state)
 	var exits []checkedState = nil
 	hasDefault := false
 	for _, item := range statement.Body.List {
-		clause := item.(*ast.CaseClause)
+		clause := syntax.CaseClauseOf(item)
+		if clause == nil { continue }
 		branch := cloneCheckedState(entry)
 		if !c.checkedBlock(clause.Body, branch) {
 			exits = append(exits, branch)
@@ -512,8 +528,8 @@ func equalCheckedStates(left, right checkedState) bool {
 
 // checkedCall finds a call that returns a zero-invalid tgo value and an error.
 // It includes constructors, decoders, wrappers, and function values.
-func (c %checker) checkedCall(call *ast.CallExpr) *model {
-	tuple, ok := c.pass.TypesInfo.TypeOf(call).(*types.Tuple)
+func (c %checker) checkedCall(call %syntax.Expression) *model {
+	tuple, ok := c.facts.Type(call).(*types.Tuple)
 	if !ok || tuple.Len() != 2 {
 		return nil
 	}
@@ -527,13 +543,14 @@ func (c %checker) checkedCall(call *ast.CallExpr) *model {
 	return model
 }
 
-func (c %checker) boundarySingleCall(call *ast.CallExpr) *model {
-	typ := c.pass.TypesInfo.TypeOf(call)
+func (c %checker) boundarySingleCall(call %syntax.Expression) *model {
+	typ := c.facts.Type(call)
 	if typ == nil {
 		return nil
 	}
 	_, tuple := typ.(*types.Tuple)
-	if tuple || c.pass.TypesInfo.Types[call.Fun].IsType() {
+	value := syntax.CallExpressionOf(call)
+	if value == nil || tuple || c.facts.IsType(value.Callee) {
 		return nil
 	}
 	model, invalid := c.zeroInvalid(typ)
@@ -543,9 +560,15 @@ func (c %checker) boundarySingleCall(call *ast.CallExpr) *model {
 	return model
 }
 
+func (c %checker) callHasValidationFact(call %syntax.Expression) bool {
+	return c.validatedCall(call)
+}
+
 // validatedCall identifies a generated validator or trusted direct wrapper.
-func (c %checker) validatedCall(call *ast.CallExpr) bool {
-	object := calledObject(c.pass.TypesInfo, call.Fun)
+func (c %checker) validatedCall(call %syntax.Expression) bool {
+	value := syntax.CallExpressionOf(call)
+	if value == nil { return false }
+	object := calledObject(c.facts, value.Callee)
 	if object == nil {
 		return false
 	}
@@ -563,28 +586,29 @@ func (c %checker) validatedCall(call *ast.CallExpr) bool {
 	return true
 }
 
-func calledObject(info *types.Info, expression ast.Expr) types.Object {
-	switch expression := expression.(type) {
-	case *ast.Ident:
-		return info.ObjectOf(expression)
-	case *ast.SelectorExpr:
-		return info.ObjectOf(expression.Sel)
-	case *ast.IndexExpr:
-		return calledObject(info, expression.X)
-	case *ast.IndexListExpr:
-		return calledObject(info, expression.X)
-	case *ast.ParenExpr:
-		return calledObject(info, expression.X)
+func calledObject(facts %sourcefacts.Index, expression %syntax.Expression) types.Object {
+	if name := syntax.IdentifierExpressionOf(expression); name != nil { return facts.Object(name) }
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		return facts.Object(selector.Selector)
+	}
+	if index := syntax.IndexExpressionOf(expression); index != nil {
+		return calledObject(facts, index.Expression)
+	}
+	if index := syntax.IndexListExpressionOf(expression); index != nil {
+		return calledObject(facts, index.Expression)
+	}
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return calledObject(facts, parenthesized.Expression)
 	}
 	return nil
 }
 
-func (c %checker) reportCheckedCall(call *ast.CallExpr) {
+func (c %checker) reportCheckedCall(call %syntax.Expression) {
 	model := c.checkedCall(call)
 	if model == nil {
 		return
 	}
-	c.reportModelResult(call.Pos(), model,
+	c.reportModelResult(syntax.ExpressionPosition(call), model,
 		"tgo %s %s result error must be checked or returned",
 		modelKind(model), modelName(model))
 }
