@@ -65,32 +65,29 @@ func (i %Index) FunctionSignature(position token.Pos) *types.Signature {
 }
 
 // Type returns the projected type of a source expression.
-func (i %Index) Type(expression *syntax.Expression) types.Type {
+func (i %Index) Type(expression %syntax.Expression) types.Type {
 	return i.info.TypeOf(i.expression(expression))
 }
 
 // Constant returns the projected constant value of a source expression.
-func (i %Index) Constant(expression *syntax.Expression) constant.Value {
+func (i %Index) Constant(expression %syntax.Expression) constant.Value {
 	return i.info.Types[i.expression(expression)].Value
 }
 
 // IdentifierObject returns the object used by a source identifier.
-func (i %Index) IdentifierObject(expression *syntax.Expression) types.Object {
+func (i %Index) IdentifierObject(expression %syntax.Expression) types.Object {
 	identifier, _ := i.expression(expression).(*ast.Ident)
 	return i.info.ObjectOf(identifier)
 }
 
 // Definition returns the object defined by a source identifier expression.
-func (i %Index) Definition(expression *syntax.Expression) types.Object {
+func (i %Index) Definition(expression %syntax.Expression) types.Object {
 	identifier, _ := i.expression(expression).(*ast.Ident)
 	return i.info.Defs[identifier]
 }
 
 // DefinitionName returns the object defined by a source identifier node.
-func (i %Index) DefinitionName(identifier *syntax.Identifier) types.Object {
-	if identifier == nil {
-		return nil
-	}
+func (i %Index) DefinitionName(identifier %syntax.Identifier) types.Object {
 	projected, _ := i.expressions[i.nodeSpan(
 		identifier.Start, identifier.Stop,
 	)].(*ast.Ident)
@@ -98,7 +95,7 @@ func (i %Index) DefinitionName(identifier *syntax.Identifier) types.Object {
 }
 
 // CalledFunction returns the static function called by a source expression.
-func (i %Index) CalledFunction(expression *syntax.Expression) *types.Func {
+func (i %Index) CalledFunction(expression %syntax.Expression) *types.Func {
 	function, _ := calledObject(i.info, i.expression(expression)).(*types.Func)
 	return function
 }
@@ -115,7 +112,7 @@ func (i %Index) UseCount(target types.Object) int {
 }
 
 // IotaPosition returns the predeclared iota in one source expression.
-func (i %Index) IotaPosition(expression *syntax.Expression) (token.Pos, bool) {
+func (i %Index) IotaPosition(expression %syntax.Expression) (token.Pos, bool) {
 	position := token.NoPos
 	ast.Inspect(i.expression(expression), func(node ast.Node) bool {
 		identifier, ok := node.(*ast.Ident)
@@ -129,7 +126,7 @@ func (i %Index) IotaPosition(expression *syntax.Expression) (token.Pos, bool) {
 }
 
 // HasBitSetOperator reports bit operators in one source expression.
-func (i %Index) HasBitSetOperator(expression *syntax.Expression) bool {
+func (i %Index) HasBitSetOperator(expression %syntax.Expression) bool {
 	found := false
 	ast.Inspect(i.expression(expression), func(node ast.Node) bool {
 		switch item := node.(type) {
@@ -148,10 +145,7 @@ func (i %Index) HasBitSetOperator(expression *syntax.Expression) bool {
 	return found
 }
 
-func (i %Index) expression(source *syntax.Expression) ast.Expr {
-	if source == nil {
-		return nil
-	}
+func (i %Index) expression(source %syntax.Expression) ast.Expr {
 	return i.expressions[i.nodeSpan(
 		syntax.ExpressionPosition(source), syntax.ExpressionEnd(source),
 	)]

@@ -24,3 +24,5 @@ nilbad/bad.go:80:31: value is not proven non-nil for %T
 nilbad/bad.go:84:12: make creates nil elements in a non-nil slice
 nilbad/bad.go:85:2: clear creates nil elements in a non-nil slice
 nilbad/bad.go:94:16: value is not proven non-nil for %T
+nilbad/bad.go:103:6: value is not proven non-nil for %T
+nilbad/bad.go:103:18: value is not proven non-nil for %T
