@@ -1,4 +1,4 @@
-package driver
+package sourceanalysis
 
 import (
 	"go/token"
@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"tgo/internal/compiler"
 	"tgo/pkg/syntax"
 )
 
@@ -16,7 +15,7 @@ func TestAnalysisOwnersCoverGeneratedPublicSurface(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var analysis *compiler.AnalysisPackage
+	var analysis *Package
 	for _, pkg := range packages {
 		if pkg.Path == "example.test/analysis/dep" {
 			analysis = pkg
@@ -63,7 +62,7 @@ func TestAnalysisOwnersCoverGeneratedPublicSurface(t *testing.T) {
 
 func modelOwnerPositions(
 	t *testing.T,
-	analysis *compiler.AnalysisPackage,
+	analysis *Package,
 ) map[string]token.Pos {
 	t.Helper()
 	result := make(map[string]token.Pos)
@@ -104,13 +103,4 @@ func TestAnalyzeWorkspaceUsesStablePackageOrder(t *testing.T) {
 			t.Fatalf("incomplete analysis for %s", pkg.Path)
 		}
 	}
-}
-
-func namedObject(object types.Object) *types.Named {
-	typeName, ok := object.(*types.TypeName)
-	if !ok {
-		return nil
-	}
-	named, _ := types.Unalias(typeName.Type()).(*types.Named)
-	return named
 }

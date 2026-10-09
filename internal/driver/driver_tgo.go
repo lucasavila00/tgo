@@ -68,16 +68,16 @@ func Build(directory string, patterns []string) (err error) {
 	return nil
 }
 
-// AnalyzeWorkspace loads and checks all active TGo packages in one module.
-func AnalyzeWorkspace(directory string) ([]*compiler.AnalysisPackage, error) {
-	return AnalyzeWorkspaceContext(context.Background(), directory)
+// CompileWorkspace generates all active TGo packages in one module.
+func CompileWorkspace(directory string) ([]*compiler.CompiledPackage, error) {
+	return CompileWorkspaceContext(context.Background(), directory)
 }
 
-// AnalyzeWorkspaceContext stops before the next package after cancellation.
-func AnalyzeWorkspaceContext(
+// CompileWorkspaceContext stops before the next package after cancellation.
+func CompileWorkspaceContext(
 	ctx context.Context,
 	directory string,
-) ([]*compiler.AnalysisPackage, error) {
+) ([]*compiler.CompiledPackage, error) {
 	root, module, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
@@ -90,9 +90,9 @@ func AnalyzeWorkspaceContext(
 	if err != nil {
 		return nil, err
 	}
-	builder := newAnalysisBuilder(packages, root, module, &buildContext)
+	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	paths := sortedPackagePaths(packages)
-	result := make([]*compiler.AnalysisPackage, 0, len(paths))
+	result := make([]*compiler.CompiledPackage, 0, len(paths))
 	for _, path := range paths {
 		select {
 		case <-ctx.Done():
@@ -103,18 +103,18 @@ func AnalyzeWorkspaceContext(
 			return nil, err
 		}
 		if packages[path].compiled != nil {
-			result = append(result, packages[path].compiled.Analysis)
+			result = append(result, packages[path].compiled)
 		}
 	}
 	return result, nil
 }
 
-// AnalyzePackage loads and checks one TGo package without writing output files.
-func AnalyzePackage(
+// CompilePackage generates one TGo package without writing output files.
+func CompilePackage(
 	directory string,
 	importPath string,
 	files *token.FileSet,
-) (*compiler.AnalysisPackage, error) {
+) (*compiler.CompiledPackage, error) {
 	root, module, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
@@ -134,17 +134,17 @@ func AnalyzePackage(
 	if files != nil {
 		unit.fs = files
 	}
-	builder := newAnalysisBuilder(packages, root, module, &buildContext)
+	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	if err := builder.build(importPath); err != nil {
 		return nil, err
 	}
 	if unit.compiled == nil {
 		return nil, nil
 	}
-	return unit.compiled.Analysis, nil
+	return unit.compiled, nil
 }
 
-func newAnalysisBuilder(
+func newMemoryBuilder(
 	packages map[string]*packageUnit,
 	root string,
 	module string,

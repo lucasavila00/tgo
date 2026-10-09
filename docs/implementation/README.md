@@ -36,7 +36,6 @@ The remaining exceptions have migration issues:
 | --- | --- | --- |
 | `check.go` model usage policy | `tgolint` | [#61](https://github.com/lucasavila00/go2/issues/61) |
 | `enum_switch.go` switch policy | `tgolint` | [#60](https://github.com/lucasavila00/go2/issues/60) |
-| `analysis.go` tooling | TGo analysis package | [#63](https://github.com/lucasavila00/go2/issues/63) |
 | `build.go` and file transaction helpers | TGo build driver | [#64](https://github.com/lucasavila00/go2/issues/64) |
 | `verify.go` verification | Remove from compiler | [#65](https://github.com/lucasavila00/go2/issues/65) |
 

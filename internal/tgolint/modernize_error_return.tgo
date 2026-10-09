@@ -5,13 +5,13 @@ import (
 	"go/token"
 	"go/types"
 
-	"tgo/internal/compiler"
+	"tgo/internal/sourceanalysis"
 	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
 )
 
 // checkErrorReturnModernization finds manual branches that propagation replaces exactly.
-func (c %checker) checkErrorReturnModernization(analysis *compiler.AnalysisPackage) {
+func (c %checker) checkErrorReturnModernization(analysis *sourceanalysis.Package) {
 	if analysis == nil {
 		return
 	}
