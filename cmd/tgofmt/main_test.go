@@ -21,10 +21,13 @@ func TestRunWritesAndListsFiles(t *testing.T) {
 	standardOutput := os.Stdout
 	os.Stdout = write
 	err = run([]string{path}, false, true)
-	write.Close()
+	closeErr := write.Close()
 	os.Stdout = standardOutput
 	if err != nil {
 		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
 	}
 	listed, err := io.ReadAll(read)
 	if err != nil {

@@ -29,15 +29,15 @@ func run(paths []string, write bool, list bool) error {
 		if write {
 			return fmt.Errorf("cannot use -w with standard input")
 		}
-		source, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return err
+		source, tgoErr := io.ReadAll(os.Stdin)
+		if tgoErr != nil {
+			return tgoErr
 		}
-		formatted, err := format.Source("<standard input>", source)
-		if err != nil {
-			return err
+		formatted, tgoErr2 := format.Source("<standard input>", source)
+		if tgoErr2 != nil {
+			return tgoErr2
 		}
-		_, err = os.Stdout.Write(formatted)
+		_, err := os.Stdout.Write(formatted)
 		return err
 	}
 	for _, path := range paths {
@@ -49,27 +49,28 @@ func run(paths []string, write bool, list bool) error {
 }
 
 func formatPath(path string, write bool, list bool) error {
-	source, err := os.ReadFile(path)
-	if err != nil {
-		return err
+	source, tgoErr := os.ReadFile(path)
+	if tgoErr != nil {
+		return tgoErr
 	}
-	formatted, err := format.Source(path, source)
-	if err != nil {
-		return err
+	formatted, tgoErr2 := format.Source(path, source)
+	if tgoErr2 != nil {
+		return tgoErr2
 	}
 	changed := !bytes.Equal(source, formatted)
 	if list && changed {
 		fmt.Fprintln(os.Stdout, path)
 	}
 	if write && changed {
-		info, err := os.Stat(path)
-		if err != nil {
-			return err
+		info, tgoErr3 := os.Stat(path)
+		if tgoErr3 != nil {
+			return tgoErr3
 		}
 		return os.WriteFile(path, formatted, info.Mode().Perm())
 	}
 	if !write && !list {
-		_, err = os.Stdout.Write(formatted)
+		_, err := os.Stdout.Write(formatted)
+		return err
 	}
-	return err
+	return nil
 }
