@@ -5,7 +5,6 @@ package tgolint
 import (
 	"go/token"
 	"go/types"
-	"reflect"
 	"testing"
 
 	"tgo/internal/sourcefacts"
@@ -100,16 +99,6 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 		message = diagnostic.Message
 	}
 	pass.ExportPackageFact = func(analysis.Fact) {}
-	check := reflect.New(
-		reflect.TypeOf((*checker)(nil)).Elem(),
-	).Interface().(*checker)
-	facts := reflect.New(
-		reflect.TypeOf((*sourcefacts.Index)(nil)).Elem(),
-	).Interface().(*sourcefacts.Index)
-	nonNilCheck := requireTestChecker(t, check)
-	nonNilFacts := requireTestFacts(t, facts)
-	nonNilCheck.pass = pass
-	nonNilCheck.facts = nonNilFacts
 	data := []byte("package sample\ntype Missing struct {}\n")
 	files := token.NewFileSet()
 	generated, err := syntax.ParseGoFile(
@@ -122,7 +111,9 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseFile: %v", err)
 	}
-	nonNilCheck.checkSourceDeclaration(
+	facts := sourcefacts.New(generated, new(types.Info), files)
+	check := sourceModelTestChecker(pass, facts)
+	check.checkSourceDeclaration(
 		generated, "model.tgo", source, source.Declarations[0],
 		files.File(source.Package), data,
 	)
@@ -132,20 +123,35 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 	}
 }
 
-func requireTestChecker(t *testing.T, value *checker) *checker {
-	t.Helper()
-	if value == nil {
-		t.Fatal("checker allocation returned nil")
+func sourceModelTestChecker(
+	pass *analysis.Pass,
+	facts *sourcefacts.Index,
+) *checker {
+	return &checker{
+		pass:            pass,
+		files:           nil,
+		facts:           facts,
+		models:          make(map[objectKey]*model),
+		validated:       make(map[types.Object]bool),
+		callTarget:      make(map[types.Object]types.Object),
+		generated:       make(map[*syntax.File]bool),
+		generatedSource: make(map[*syntax.File]string),
+		outputs:         make(map[string][]byte),
+		parents:         make(map[syntax.Node]*syntax.Node),
+		syntaxSafe:      make(map[*syntax.Expression]bool),
+		syntaxHandled:   make(map[*syntax.Expression]bool),
+		checked:         make(map[*syntax.Expression]bool),
+		presence:        make(map[*syntax.Expression]bool),
+		escaped:         make(map[types.Object]token.Pos),
+		reported:        make(map[diagnosticKey]bool),
+		function:        nil,
+		file:            nil,
+		zeroTypes:       nil,
+		captureResult:   nil,
+		captureSource:   nil,
+		scalarFlows:     make(map[syntax.Node]*scalarFlow),
+		invalid:         false,
 	}
-	return value
-}
-
-func requireTestFacts(t *testing.T, value *sourcefacts.Index) *sourcefacts.Index {
-	t.Helper()
-	if value == nil {
-		t.Fatal("facts allocation returned nil")
-	}
-	return value
 }
 
 func TestCheckedStructSourceDeclarationFactRoundTrip(t *testing.T) {

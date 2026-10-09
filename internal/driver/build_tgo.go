@@ -95,12 +95,6 @@ func (b *packageBuilder) build(path string) error {
 				return err
 			}
 		}
-		if err := b.removeStaleOutputs(
-			unit,
-			expectedOutputs(unit, outputs),
-		); err != nil {
-			return err
-		}
 		testOutputs, tgoErr3 := b.compileTests(unit)
 		if tgoErr3 != nil {
 			return tgoErr3

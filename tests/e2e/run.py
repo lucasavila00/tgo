@@ -51,11 +51,19 @@ def check_direct_ffi(work):
 def check_stale_output_cleanup(compiler, work):
     source = work / "app" / "obsolete.tgo"
     output = work / "app" / "obsolete_tgo.go"
+    test_source = work / "app" / "obsolete_test.tgo"
+    test_output = work / "app" / "obsolete_tgo_test.go"
     source.write_text("package app\n\nfunc Obsolete() int { return 1 }\n")
+    test_source.write_text(
+        'package app\n\nimport "testing"\n\n'
+        "func TestObsolete(t *testing.T) {}\n"
+    )
     run([str(compiler), "build", "./app"], work)
     assert output.exists(), "compiler did not write the temporary output"
+    assert test_output.exists(), "compiler did not write the temporary test output"
 
     source.unlink()
+    test_source.unlink()
     invalid = work / "z_invalid"
     invalid.mkdir()
     (invalid / "invalid.tgo").write_text(
@@ -63,10 +71,12 @@ def check_stale_output_cleanup(compiler, work):
     )
     run([str(compiler), "build", "./..."], work, success=False)
     assert output.exists(), "failed build did not restore stale output"
+    assert test_output.exists(), "failed build did not restore stale test output"
     shutil.rmtree(invalid)
 
     run([str(compiler), "build", "./app"], work)
     assert not output.exists(), "compiler kept stale generated output"
+    assert not test_output.exists(), "compiler kept stale generated test output"
 
     user_file = work / "app" / "manual_tgo.go"
     user_file.write_text("package app\n\nfunc Manual() int { return 1 }\n")
