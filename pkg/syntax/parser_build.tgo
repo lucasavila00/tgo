@@ -11,14 +11,14 @@ import (
 // anchorPropagations replaces each call with its tgo expression in the public tree.
 func (p %sourceParser) anchorPropagations(file %frontFile, anchors map[frontNode]frontNode) {
 	parents := make(map[frontNode]frontNode)
+	anchoredChildren := make(map[frontNode][]frontNode, len(anchors))
+	for child, parent := range anchors {
+		anchoredChildren[parent] = append(anchoredChildren[parent], child)
+	}
 	var visit func(frontNode) = nil
 	visit = func(node frontNode) {
 		children := syntaxChildren(file, node)
-		for child, parent := range anchors {
-			if parent == node {
-				children = append(children, child)
-			}
-		}
+		children = append(children, anchoredChildren[node]...)
 		for _, child := range children {
 			if child == nil {
 				continue

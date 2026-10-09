@@ -101,6 +101,11 @@ func TestComprehensionGeneratedLoops(t *testing.T) {
 		!strings.Contains(text, "for _, sale := range account.Sales") {
 		t.Fatal("generated output does not contain the fused loop nest")
 	}
+	for _, required := range []string{"copy(__tgo_result_4, values)", "] = comprehensionRecord("} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("generated output lacks exact slice lowering: %s", required)
+		}
+	}
 	values := []int{1, 2, 3, 4}
 	var copied []int
 	allocations := testing.AllocsPerRun(1000, func() {

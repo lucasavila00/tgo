@@ -403,9 +403,10 @@ The compiler emits one direct Go loop nest. It emits no closure, iterator, runti
 intermediate collection. Each range source runs once when its containing loop reaches it. Each
 accepted result runs once. Map keys run before their values. An empty slice result is non-nil.
 
-A single unfiltered range gets initial capacity from `len` when its source supports it. Other
-slices grow with normal Go `append`. Postfix `!` can occur in a source, condition, key, value, or
-slice result. It returns from the surrounding function.
+A single unfiltered range over a slice allocates the exact result length and writes by index.
+An identity result uses Go `copy`. Other sources can use `len` as an initial capacity. Filtered
+and nested slices grow with Go `append`. Postfix `!` can occur in a source, condition, key, value,
+or slice result. It returns from the surrounding function.
 
 Use a Go loop when the body needs mutation, `break`, `continue`, or more than one result path.
 Comprehensions add no reducer, grouping, sorting, lazy result, parallel work, or collector.

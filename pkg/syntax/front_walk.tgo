@@ -99,9 +99,11 @@ func buildIndex(file %frontFile, anchors map[frontNode]frontNode) {
 	file.children = make(map[frontNode][]frontNode)
 	file.parents = make(map[frontNode]frontNode)
 	file.extensions = nil
+	anchoredChildren := make(map[frontNode][]frontNode, len(anchors))
 	for child, parent := range anchors {
 		if nodePresent(child) && nodePresent(parent) {
 			file.parents[child] = parent
+			anchoredChildren[parent] = append(anchoredChildren[parent], child)
 		}
 	}
 	visited := make(map[frontNode]bool)
@@ -112,11 +114,7 @@ func buildIndex(file %frontFile, anchors map[frontNode]frontNode) {
 		}
 		visited[node] = true
 		children := syntaxChildren(file, node)
-		for child, parent := range anchors {
-			if parent == node {
-				children = append(children, child)
-			}
-		}
+		children = append(children, anchoredChildren[node]...)
 		filtered := children[:0]
 		seenChild := make(map[frontNode]bool)
 		for _, child := range children {
