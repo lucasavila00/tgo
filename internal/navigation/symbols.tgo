@@ -20,7 +20,7 @@ func sourceSymbols(
 		pkg,
 		uri,
 		file.Name.Name,
-		"package",
+		SymbolKind.Package{},
 		pkg.Path,
 		file.Name.Span,
 		file.Name.Span,
@@ -37,10 +37,10 @@ func sourceSymbols(
 			)
 		case syntax.FunctionDeclarationValueOf(declaration) != nil:
 			value := syntax.FunctionDeclarationValueOf(declaration)
-			kind := "function"
+			kind := SymbolKind.Function{}
 			container := pkg.Path
 			if value.Receiver != nil {
-				kind = "method"
+				kind = SymbolKind.Method{}
 				container = receiverName(pkg, value)
 			}
 			result = appendSymbol(
@@ -60,7 +60,7 @@ func sourceSymbols(
 				pkg,
 				uri,
 				value.Name.Name,
-				"enum",
+				SymbolKind.Enum{},
 				pkg.Path,
 				value.Span,
 				value.Name.Span,
@@ -71,7 +71,7 @@ func sourceSymbols(
 					pkg,
 					uri,
 					variant.Name.Name,
-					"enumMember",
+					SymbolKind.EnumMember{},
 					value.Name.Name,
 					variant.Span,
 					variant.Name.Span,
@@ -91,7 +91,7 @@ func sourceSymbols(
 				pkg,
 				uri,
 				value.Name.Name,
-				"struct",
+				SymbolKind.Struct{},
 				pkg.Path,
 				value.Span,
 				value.Name.Span,
@@ -117,9 +117,9 @@ func appendGeneralSymbols(
 ) []Symbol {
 	for _, specification := range declaration.Specs {
 		if value := syntax.ValueSpecificationOf(specification); value != nil {
-			kind := "variable"
+			kind := SymbolKind.Variable{}
 			if declaration.Kind == token.CONST {
-				kind = "constant"
+				kind = SymbolKind.Constant{}
 			}
 			for _, name := range value.Names {
 				result = appendSymbol(
@@ -161,7 +161,7 @@ func appendGeneralSymbols(
 					uri,
 					methods.List,
 					value.Name.Name,
-					"method",
+					SymbolKind.Method{},
 				)
 			}
 		}
@@ -169,17 +169,17 @@ func appendGeneralSymbols(
 	return result
 }
 
-func typeKind(value %syntax.Expression) string {
+func typeKind(value %syntax.Expression) SymbolKind {
 	if value == nil {
-		return "type"
+		return SymbolKind.Type{}
 	}
 	switch value.Tag() {
 	case syntax.ExpressionTagStructType:
-		return "struct"
+		return SymbolKind.Struct{}
 	case syntax.ExpressionTagInterfaceType:
-		return "interface"
+		return SymbolKind.Interface{}
 	default:
-		return "type"
+		return SymbolKind.Type{}
 	}
 }
 
@@ -224,7 +224,7 @@ func appendTGoFieldSymbols(
 				pkg,
 				uri,
 				name.Name,
-				"field",
+				SymbolKind.Field{},
 				container,
 				field.Field.Span,
 				name.Span,
@@ -241,7 +241,9 @@ func appendFieldSymbols(
 	fields []%syntax.Field,
 	container string,
 ) []Symbol {
-	return appendNamedFields(result, pkg, uri, fields, container, "field")
+	return appendNamedFields(
+		result, pkg, uri, fields, container, SymbolKind.Field{},
+	)
 }
 
 func appendNamedFields(
@@ -250,7 +252,7 @@ func appendNamedFields(
 	uri string,
 	fields []%syntax.Field,
 	container string,
-	kind string,
+	kind SymbolKind,
 ) []Symbol {
 	for _, field := range fields {
 		for _, name := range field.Names {
@@ -281,7 +283,7 @@ func appendSymbol(
 	pkg *sourceanalysis.Package,
 	uri string,
 	name string,
-	kind string,
+	kind SymbolKind,
 	container string,
 	span syntax.Span,
 	selection syntax.Span,

@@ -24,10 +24,25 @@ type Location struct {
 	End   int    `json:"end"`
 }
 
+// SymbolKind identifies one closed class of source declaration.
+type SymbolKind enum {
+	Package struct {}
+	Type struct {}
+	Struct struct {}
+	Interface struct {}
+	Function struct {}
+	Method struct {}
+	Field struct {}
+	Enum struct {}
+	EnumMember struct {}
+	Constant struct {}
+	Variable struct {}
+}
+
 // Symbol is one named source declaration.
 type Symbol struct {
-	Name      string   `json:"name"`
-	Kind      string   `json:"kind"`
+	Name      string `json:"name"`
+	Kind      SymbolKind
 	Container string   `json:"container,omitempty"`
 	Range     Location `json:"range"`
 	Selection Location `json:"selection"`

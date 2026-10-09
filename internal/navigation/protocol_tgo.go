@@ -142,6 +142,55 @@ type invalidateParams struct {
 	URI string `json:"uri"`
 }
 
+type protocolSymbol struct {
+	Name      string   `json:"name"`
+	Kind      string   `json:"kind"`
+	Container string   `json:"container,omitempty"`
+	Range     Location `json:"range"`
+	Selection Location `json:"selection"`
+}
+
+func protocolSymbols(values []Symbol) []protocolSymbol {
+	result := make([]protocolSymbol, 0, len(values))
+	for _, value := range values {
+		result = append(result, protocolSymbol{
+			Name: value.Name, Kind: protocolSymbolKind(value.Kind),
+			Container: value.Container, Range: value.Range,
+			Selection: value.Selection,
+		})
+	}
+	return result
+}
+
+func protocolSymbolKind(value SymbolKind) string {
+	switch value.Tag() {
+	case SymbolKindTagPackage:
+		return "package"
+	case SymbolKindTagType:
+		return "type"
+	case SymbolKindTagStruct:
+		return "struct"
+	case SymbolKindTagInterface:
+		return "interface"
+	case SymbolKindTagFunction:
+		return "function"
+	case SymbolKindTagMethod:
+		return "method"
+	case SymbolKindTagField:
+		return "field"
+	case SymbolKindTagEnum:
+		return "enum"
+	case SymbolKindTagEnumMember:
+		return "enumMember"
+	case SymbolKindTagConstant:
+		return "constant"
+	case SymbolKindTagVariable:
+		return "variable"
+	default:
+		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
 // Request is one helper protocol request.
 // Request requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
@@ -696,7 +745,7 @@ func (s *protocolServer) dispatch(request Request) {
 		}
 		s.start(payload.ID, func(ctx context.Context) Response {
 			result, err := s.engine.DocumentSymbols(ctx, payload.Params.URI)
-			return protocolResult(payload.ID, result, err)
+			return protocolResult(payload.ID, protocolSymbols(result), err)
 		})
 	case RequestTagWorkspaceSymbols:
 		payload := request.WorkspaceSymbolsPayload()
@@ -706,7 +755,7 @@ func (s *protocolServer) dispatch(request Request) {
 		}
 		s.start(payload.ID, func(ctx context.Context) Response {
 			result, err := s.engine.WorkspaceSymbols(ctx, payload.Params.Query)
-			return protocolResult(payload.ID, result, err)
+			return protocolResult(payload.ID, protocolSymbols(result), err)
 		})
 	case RequestTagCancel:
 		payload := request.CancelPayload()

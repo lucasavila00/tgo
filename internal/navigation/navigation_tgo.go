@@ -3,6 +3,10 @@
 // Package navigation indexes typed TGo source for read-only code navigation.
 package navigation
 
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+
 import (
 	"context"
 	"fmt"
@@ -27,11 +31,568 @@ type Location struct {
 	End   int    `json:"end"`
 }
 
+// SymbolKind identifies one closed class of source declaration.
+func tgoSymbolKindExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(jsontext.EndObject)
+}
+
+// SymbolKind requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type SymbolKindTag uint8
+
+const (
+	SymbolKindTagPackage SymbolKindTag = iota + 1
+	SymbolKindTagType
+	SymbolKindTagStruct
+	SymbolKindTagInterface
+	SymbolKindTagFunction
+	SymbolKindTagMethod
+	SymbolKindTagField
+	SymbolKindTagEnum
+	SymbolKindTagEnumMember
+	SymbolKindTagConstant
+	SymbolKindTagVariable
+)
+
+type SymbolKind struct {
+	tgoTag SymbolKindTag
+}
+
+// Tag returns the active tag.
+func (v SymbolKind) Tag() SymbolKindTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v SymbolKind) UnknownTag() string {
+	return fmt.Sprintf("SymbolKind: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// GobEncode returns the stable four-byte enum tag.
+func (v SymbolKind) GobEncode() ([]byte, error) {
+	if v.tgoTag < SymbolKindTagPackage || v.tgoTag > SymbolKindTagVariable {
+		return nil, fmt.Errorf("SymbolKind: cannot gob encode invalid tag %d", v.tgoTag)
+	}
+	tag := uint32(v.tgoTag)
+	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
+}
+
+// GobDecode replaces the value with a valid four-byte enum tag.
+func (v *SymbolKind) GobDecode(data []byte) error {
+	if len(data) != 4 {
+		return fmt.Errorf("SymbolKind: invalid gob data length %d", len(data))
+	}
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := SymbolKindTag(number)
+	if uint32(tag) != number || tag < SymbolKindTagPackage || tag > SymbolKindTagVariable {
+		return fmt.Errorf("SymbolKind: cannot gob decode unknown tag %d", number)
+	}
+	*v = SymbolKind{tgoTag: tag}
+	return nil
+}
+
+// SymbolKindPackage is the Package payload.
+type SymbolKindPackage struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindPackage) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagPackage}
+}
+
+// PackagePayload requires Package. No tag check.
+func (SymbolKind) PackagePayload() SymbolKindPackage { return SymbolKindPackage{} }
+
+// SymbolKindType is the Type payload.
+type SymbolKindType struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindType) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagType}
+}
+
+// TypePayload requires Type. No tag check.
+func (SymbolKind) TypePayload() SymbolKindType { return SymbolKindType{} }
+
+// SymbolKindStruct is the Struct payload.
+type SymbolKindStruct struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindStruct) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagStruct}
+}
+
+// StructPayload requires Struct. No tag check.
+func (SymbolKind) StructPayload() SymbolKindStruct { return SymbolKindStruct{} }
+
+// SymbolKindInterface is the Interface payload.
+type SymbolKindInterface struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindInterface) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagInterface}
+}
+
+// InterfacePayload requires Interface. No tag check.
+func (SymbolKind) InterfacePayload() SymbolKindInterface { return SymbolKindInterface{} }
+
+// SymbolKindFunction is the Function payload.
+type SymbolKindFunction struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindFunction) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagFunction}
+}
+
+// FunctionPayload requires Function. No tag check.
+func (SymbolKind) FunctionPayload() SymbolKindFunction { return SymbolKindFunction{} }
+
+// SymbolKindMethod is the Method payload.
+type SymbolKindMethod struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindMethod) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagMethod}
+}
+
+// MethodPayload requires Method. No tag check.
+func (SymbolKind) MethodPayload() SymbolKindMethod { return SymbolKindMethod{} }
+
+// SymbolKindField is the Field payload.
+type SymbolKindField struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindField) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagField}
+}
+
+// FieldPayload requires Field. No tag check.
+func (SymbolKind) FieldPayload() SymbolKindField { return SymbolKindField{} }
+
+// SymbolKindEnum is the Enum payload.
+type SymbolKindEnum struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindEnum) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagEnum}
+}
+
+// EnumPayload requires Enum. No tag check.
+func (SymbolKind) EnumPayload() SymbolKindEnum { return SymbolKindEnum{} }
+
+// SymbolKindEnumMember is the EnumMember payload.
+type SymbolKindEnumMember struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindEnumMember) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagEnumMember}
+}
+
+// EnumMemberPayload requires EnumMember. No tag check.
+func (SymbolKind) EnumMemberPayload() SymbolKindEnumMember { return SymbolKindEnumMember{} }
+
+// SymbolKindConstant is the Constant payload.
+type SymbolKindConstant struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindConstant) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagConstant}
+}
+
+// ConstantPayload requires Constant. No tag check.
+func (SymbolKind) ConstantPayload() SymbolKindConstant { return SymbolKindConstant{} }
+
+// SymbolKindVariable is the Variable payload.
+type SymbolKindVariable struct{}
+
+// SymbolKind constructs SymbolKind. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value SymbolKindVariable) SymbolKind() SymbolKind {
+	return SymbolKind{tgoTag: SymbolKindTagVariable}
+}
+
+// VariablePayload requires Variable. No tag check.
+func (SymbolKind) VariablePayload() SymbolKindVariable { return SymbolKindVariable{} }
+
+func (v SymbolKind) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case SymbolKindTagPackage:
+		payload := v.PackagePayload()
+		return json.Marshal(struct {
+			Payload SymbolKindPackage `json:"Package"`
+		}{Payload: payload})
+	case SymbolKindTagType:
+		payload := v.TypePayload()
+		return json.Marshal(struct {
+			Payload SymbolKindType `json:"Type"`
+		}{Payload: payload})
+	case SymbolKindTagStruct:
+		payload := v.StructPayload()
+		return json.Marshal(struct {
+			Payload SymbolKindStruct `json:"Struct"`
+		}{Payload: payload})
+	case SymbolKindTagInterface:
+		payload := v.InterfacePayload()
+		return json.Marshal(struct {
+			Payload SymbolKindInterface `json:"Interface"`
+		}{Payload: payload})
+	case SymbolKindTagFunction:
+		payload := v.FunctionPayload()
+		return json.Marshal(struct {
+			Payload SymbolKindFunction `json:"Function"`
+		}{Payload: payload})
+	case SymbolKindTagMethod:
+		payload := v.MethodPayload()
+		return json.Marshal(struct {
+			Payload SymbolKindMethod `json:"Method"`
+		}{Payload: payload})
+	case SymbolKindTagField:
+		payload := v.FieldPayload()
+		return json.Marshal(struct {
+			Payload SymbolKindField `json:"Field"`
+		}{Payload: payload})
+	case SymbolKindTagEnum:
+		payload := v.EnumPayload()
+		return json.Marshal(struct {
+			Payload SymbolKindEnum `json:"Enum"`
+		}{Payload: payload})
+	case SymbolKindTagEnumMember:
+		payload := v.EnumMemberPayload()
+		return json.Marshal(struct {
+			Payload SymbolKindEnumMember `json:"EnumMember"`
+		}{Payload: payload})
+	case SymbolKindTagConstant:
+		payload := v.ConstantPayload()
+		return json.Marshal(struct {
+			Payload SymbolKindConstant `json:"Constant"`
+		}{Payload: payload})
+	case SymbolKindTagVariable:
+		payload := v.VariablePayload()
+		return json.Marshal(struct {
+			Payload SymbolKindVariable `json:"Variable"`
+		}{Payload: payload})
+	default:
+		return nil, fmt.Errorf("invalid SymbolKind JSON tag")
+	}
+}
+
+func (v SymbolKind) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case SymbolKindTagPackage:
+		payload := v.PackagePayload()
+		return tgoSymbolKindExternalJSONTo(out, "Package", payload)
+	case SymbolKindTagType:
+		payload := v.TypePayload()
+		return tgoSymbolKindExternalJSONTo(out, "Type", payload)
+	case SymbolKindTagStruct:
+		payload := v.StructPayload()
+		return tgoSymbolKindExternalJSONTo(out, "Struct", payload)
+	case SymbolKindTagInterface:
+		payload := v.InterfacePayload()
+		return tgoSymbolKindExternalJSONTo(out, "Interface", payload)
+	case SymbolKindTagFunction:
+		payload := v.FunctionPayload()
+		return tgoSymbolKindExternalJSONTo(out, "Function", payload)
+	case SymbolKindTagMethod:
+		payload := v.MethodPayload()
+		return tgoSymbolKindExternalJSONTo(out, "Method", payload)
+	case SymbolKindTagField:
+		payload := v.FieldPayload()
+		return tgoSymbolKindExternalJSONTo(out, "Field", payload)
+	case SymbolKindTagEnum:
+		payload := v.EnumPayload()
+		return tgoSymbolKindExternalJSONTo(out, "Enum", payload)
+	case SymbolKindTagEnumMember:
+		payload := v.EnumMemberPayload()
+		return tgoSymbolKindExternalJSONTo(out, "EnumMember", payload)
+	case SymbolKindTagConstant:
+		payload := v.ConstantPayload()
+		return tgoSymbolKindExternalJSONTo(out, "Constant", payload)
+	case SymbolKindTagVariable:
+		payload := v.VariablePayload()
+		return tgoSymbolKindExternalJSONTo(out, "Variable", payload)
+	default:
+		return fmt.Errorf("invalid SymbolKind JSON tag")
+	}
+}
+
+func (v *SymbolKind) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return fmt.Errorf("expected one SymbolKind JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Package":
+		var payload SymbolKindPackage
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "Type":
+		var payload SymbolKindType
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "Struct":
+		var payload SymbolKindStruct
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "Interface":
+		var payload SymbolKindInterface
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "Function":
+		var payload SymbolKindFunction
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "Method":
+		var payload SymbolKindMethod
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "Field":
+		var payload SymbolKindField
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "Enum":
+		var payload SymbolKindEnum
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "EnumMember":
+		var payload SymbolKindEnumMember
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "Constant":
+		var payload SymbolKindConstant
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case "Variable":
+		var payload SymbolKindVariable
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	default:
+		return fmt.Errorf("unknown SymbolKind JSON variant %q", variant)
+	}
+}
+
+func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return fmt.Errorf("expected one SymbolKind JSON variant")
+	}
+	var payloadData jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Package":
+			current = 1
+		case "Type":
+			current = 2
+		case "Struct":
+			current = 3
+		case "Interface":
+			current = 4
+		case "Function":
+			current = 5
+		case "Method":
+			current = 6
+		case "Field":
+			current = 7
+		case "Enum":
+			current = 8
+		case "EnumMember":
+			current = 9
+		case "Constant":
+			current = 10
+		case "Variable":
+			current = 11
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return fmt.Errorf("expected one SymbolKind JSON variant")
+	}
+	if selected == 0 {
+		return fmt.Errorf("unknown SymbolKind JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload SymbolKindPackage
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 2:
+		var payload SymbolKindType
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 3:
+		var payload SymbolKindStruct
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 4:
+		var payload SymbolKindInterface
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 5:
+		var payload SymbolKindFunction
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 6:
+		var payload SymbolKindMethod
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 7:
+		var payload SymbolKindField
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 8:
+		var payload SymbolKindEnum
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 9:
+		var payload SymbolKindEnumMember
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 10:
+		var payload SymbolKindConstant
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	case 11:
+		var payload SymbolKindVariable
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.SymbolKind()
+		return nil
+	default:
+		return fmt.Errorf("invalid SymbolKind JSON tag")
+	}
+}
+
 // Symbol is one named source declaration.
 
 type Symbol struct {
-	Name      string   `json:"name"`
-	Kind      string   `json:"kind"`
+	Name      string `json:"name"`
+	Kind      SymbolKind
 	Container string   `json:"container,omitempty"`
 	Range     Location `json:"range"`
 	Selection Location `json:"selection"`
