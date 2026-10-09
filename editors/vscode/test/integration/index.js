@@ -12,7 +12,7 @@ const { documentSelector, WorkspaceClient } = require("../../src/extension");
 async function run() {
   const extension = vscode.extensions.getExtension("tgo.tgo-navigation");
   assert.ok(extension, "TGo extension is absent");
-  const api = await extension.activate();
+  const api = await checkWorkspaceSymbolsBeforeDocumentOpen(extension);
   await checkBundledGoGrammar(extension.extensionPath);
   const folder = vscode.workspace.workspaceFolders[0];
   assert.ok(folder, "test workspace is absent");
@@ -39,6 +39,21 @@ async function run() {
   await checkCancellation();
   await checkDirtyDocument(document);
   await checkWorkspaceFolderRemoval(api);
+}
+
+async function checkWorkspaceSymbolsBeforeDocumentOpen(extension) {
+  assert.equal(
+    vscode.workspace.textDocuments.some((document) => document.languageId === "tgo"),
+    false,
+    "a TGo document is already open"
+  );
+  const symbols = await vscode.commands.executeCommand(
+    "vscode.executeWorkspaceSymbolProvider", "Café"
+  );
+  assert.ok(symbols.some((symbol) => symbol.name === "Café"));
+  assert.equal(extension.isActive, true);
+  assert.ok(extension.exports, "TGo extension API is absent");
+  return extension.exports;
 }
 
 async function checkBundledGoGrammar(extension) {
