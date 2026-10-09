@@ -91,14 +91,15 @@ Returned-function effects are complete only for a function literal returned
 directly. A closure returned through a local variable or another helper can hide
 an effect from the checker.
 
-An enum payload read needs a tag switch on the same syntactic receiver. A TGo `exhaustive:` clause
-requires all declared tags and emits the generated `UnknownTag` panic and required comment. A normal
-default clause is fallback behavior and can cover omitted tags. A clause assignment to the receiver
-or its selector prefix removes the clause proof. Each clause has the union of its possible variants.
-A default has the union of omitted variants and proves a payload when only one variant remains.
-A function literal does not inherit the proof. Direct `go` and `defer` calls do inherit it.
-The checker does not analyze `Tag` calls, payload calls, or payload method values outside a
-recognized canonical switch.
+An enum payload call or method value needs a variant proof on the same syntactic receiver. A TGo
+`exhaustive:` clause requires all declared tags and emits the generated `UnknownTag` panic and
+required comment. A normal default clause is fallback behavior and can cover omitted tags. Each
+clause has the union of its possible variants. A default has the union of omitted variants and
+proves a payload when only one variant remains. A simple `Tag() != TagConstant` guard also proves
+the tag after its body stops. The receiver root must belong to the current function. A receiver
+assignment or writable escape ends the proof. A function literal does not inherit the proof. Direct
+`go` and `defer` calls do inherit it. A `goto` cannot enter the source region between a proof and its
+payload read.
 
 The `iota` modernization check requires two or more unique values. Their values must increase by
 one from one common offset. Every value must come from `iota` or its repeated expression. The

@@ -107,29 +107,6 @@ func DescribeNested(event model.Event) string {
 	}
 }
 
-func AssignedClause(event model.Event, replacement model.Event) string {
-	switch event.Tag() {
-	case model.EventTagStarted:
-		event = replacement
-		return event.StartedPayload().ID
-	case model.EventTagStopped:
-		return event.StoppedPayload().Reason
-	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
-	}
-}
-
-func ClosureClause(event model.Event) func() string {
-	switch event.Tag() {
-	case model.EventTagStarted:
-		return func() string { return event.StoppedPayload().Reason }
-	case model.EventTagStopped:
-		return nil
-	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
-	}
-}
-
 func PayloadMethod(event model.Event) func() model.EventStarted {
 	switch event.Tag() {
 	case model.EventTagStarted:
@@ -139,6 +116,41 @@ func PayloadMethod(event model.Event) func() model.EventStarted {
 	default:
 		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
+}
+
+func EarlyExitPayload(event model.Event) string {
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	return event.StartedPayload().ID
+}
+
+func EarlyExitPayloadMethod(event model.Event) func() model.EventStarted {
+	if model.EventTagStarted != event.Tag() {
+		return nil
+	}
+	return event.StartedPayload
+}
+
+func CompoundEarlyExitPayload(event model.Event, ready bool) string {
+	if !ready || event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	return event.StartedPayload().ID
+}
+
+func IfPayload(event model.Event) string {
+	if event.Tag() == model.EventTagStarted {
+		return event.StartedPayload().ID
+	}
+	return ""
+}
+
+func ForPayload(event model.Event, ready bool) string {
+	for ready && event.Tag() == model.EventTagStarted {
+		return event.StartedPayload().ID
+	}
+	return ""
 }
 
 func Values() ([]model.Event, error) {
