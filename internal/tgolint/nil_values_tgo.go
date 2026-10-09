@@ -109,6 +109,9 @@ func (e *nilEnvironment) contractForExpression(expression *syntax.Expression) ni
 	if literal := syntax.FunctionLiteralExpressionOf(expression); literal != nil {
 		return e.functionContract(literal.Type)
 	}
+	if comprehension := nilComprehensionExpressionOf(expression); comprehension != nil {
+		return e.valueContract(comprehension.Type)
+	}
 	return e.contractForType(e.facts.Type(expression))
 }
 
@@ -321,6 +324,15 @@ func (e *nilEnvironment) expressionNilType(
 	return declaredNilType(e.facts.Type(expression))
 }
 
+func nilComprehensionExpressionOf(
+	expression *syntax.Expression,
+) *syntax.ComprehensionExpression {
+	if expression == nil || expression.Tag() != syntax.ExpressionTagComprehension {
+		return nil
+	}
+	return expression.ComprehensionPayload().Value
+}
+
 func nilPropagationExpressionOf(
 	expression *syntax.Expression,
 ) *syntax.PropagationExpression {
@@ -354,6 +366,20 @@ func (e *nilEnvironment) checkNilExpression(
 		}
 		return true
 	})
+}
+
+// checkNilComprehension checks each value emitted into its result collection.
+func (e *nilEnvironment) checkNilComprehension(
+	comprehension *syntax.ComprehensionExpression,
+	state *nilFlowState,
+) {
+	contract := e.valueContract(comprehension.Type)
+	if comprehension.Result.Key == nil {
+		e.checkNilFlow(comprehension.Result.Value, nilChild(contract, "e"), state)
+		return
+	}
+	e.checkNilFlow(comprehension.Result.Key, nilChild(contract, "k"), state)
+	e.checkNilFlow(comprehension.Result.Value, nilChild(contract, "v"), state)
 }
 
 // checkNilCall checks the receiver and each call argument.
@@ -493,6 +519,9 @@ func (e *nilEnvironment) checkNilLiteral(
 	literal *syntax.CompositeLiteral,
 	state *nilFlowState,
 ) {
+	for _, comprehension := range e.comprehensions[syntax.ExpressionPosition(expression)] {
+		e.checkNilComprehension(comprehension, state)
+	}
 	contract := e.contractForExpression(expression)
 	if len(contract) == 0 {
 		return
