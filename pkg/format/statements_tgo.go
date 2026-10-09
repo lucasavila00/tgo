@@ -64,6 +64,9 @@ func (p *printer) statement(value *syntax.Statement) {
 			p.space()
 			p.commaList(item.Results)
 		}
+		if item.SuccessComma.IsValid() {
+			p.token(item.SuccessComma, ",")
+		}
 	case syntax.StatementTagBranch:
 		item := statementValue.BranchPayload().Value
 		p.token(item.TokenPosition, item.Token.String())

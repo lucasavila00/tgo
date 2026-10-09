@@ -2778,11 +2778,13 @@ type DeferStatement struct {
 }
 
 // ReturnStatement returns zero or more values.
+// SuccessComma marks an explicit trailing comma that adds one final nil.
 
 type ReturnStatement struct {
 	Span
-	Return  token.Pos
-	Results []*Expression
+	Return       token.Pos
+	Results      []*Expression
+	SuccessComma token.Pos
 }
 
 // BranchStatement is one branch statement.

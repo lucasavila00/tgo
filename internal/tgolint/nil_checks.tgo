@@ -220,6 +220,15 @@ func (e %nilEnvironment) checkNilReturn(
 	for _, expression := range statement.Results {
 		e.checkNilExpression(expression, state)
 	}
+	if statement.SuccessComma.IsValid() {
+		expected := nilChild(contract, "r"+strconv.Itoa(len(statement.Results)))
+		if expected[""] {
+			e.reportNil(
+				statement.SuccessComma,
+				"value is not proven non-nil for %%T",
+			)
+		}
+	}
 	if len(statement.Results) == 1 {
 		if _, tuple := e.facts.Type(statement.Results[0]).(*types.Tuple); tuple {
 			signature := e.functionSignature(function)

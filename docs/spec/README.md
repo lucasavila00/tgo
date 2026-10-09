@@ -46,6 +46,7 @@ TgoFieldDecl   = GoFieldDecl [ "=" GoExpression ] .
 VariantLiteral = TypeName "." VariantName GoLiteralValue .
 DefaultMarker  = "..default" .
 PropagateExpr  = GoCallExpr ( "!" | "!!" ) .
+SuccessReturn  = "return" GoExpressionList "," .
 NonNilPointer = "%" GoType .
 ```
 
@@ -146,6 +147,32 @@ Generated Go keeps the source function signature. Its success path has the call,
 branch of a manual Go error check. `!` calls `fmt.Errorf` only on failure and can allocate its
 wrapper. `!!` has no added call or explicit allocation. The propagated call and Go escape analysis
 can still allocate.
+
+## Successful returns
+
+A trailing comma after a non-empty return expression list adds one final untyped `nil`:
+
+```text
+return value,        -> return value, nil
+return left, right,  -> return left, right, nil
+return load()!,      -> return the propagated value, nil
+```
+
+This syntax applies in functions, methods, and function literals. Named and generic results do not
+change it. `!` and `!!` lower before the final Go output is formatted.
+
+The comma is explicit TGo syntax. The compiler does not inspect result types or infer a missing
+result. It appends `nil`, and the normal Go type check validates the complete return list. Thus, a
+direct multi-value call can fail because Go does not permit `return pair(), nil`; bind its results
+and list them in the return instead.
+
+`return ,` is invalid because the expression list is empty. Comments do not change the rule. A line
+break after a comma continues the expression list when another expression follows. The final comma
+ends the successful return.
+
+Valid Go returns have no trailing comma and remain unchanged. Explicit expressions keep their
+source positions. `ReturnStatement.SuccessComma` is the comma position, or `token.NoPos` for a Go
+return. A diagnostic for the generated `nil` uses the original `return` position.
 
 ## Non-nil pointers
 
