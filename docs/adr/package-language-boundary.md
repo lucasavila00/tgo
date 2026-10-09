@@ -36,10 +36,11 @@ loads TGo model facts and validates protected model use in that Go caller. The
 boundary removes mixed source from one package; it does not remove cross-package
 validation.
 
-Test sources do not classify the non-test package. All Go tests are authored as
-`_test.tgo`, as required by issue #86. This applies to internal tests and to
-external test packages. Generated test output must end in `_test.go` so that
-`go test` recognizes it, and it does not take part in package classification.
+Test sources do not classify the non-test package. All tests run by `go test`
+are authored as `_test.tgo`, as required by issue #86. This applies to internal
+tests and to external test packages. The compiler maps `model_test.tgo` to
+`model_tgo_test.go`. Generated test output does not take part in package
+classification.
 
 Thus, the compiler implementation remains a pure Go package for self-hosting,
 while its tests can use TGo. This ADR does not implement test compilation or the
