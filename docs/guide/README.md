@@ -16,7 +16,7 @@ tgolint ./...
 `tgo build` checks the current package. `tgo build ./...` checks packages below it.
 Local TGo imports build first. Output goes beside each input: `model.tgo` becomes `model_tgo.go`.
 Commit each generated file beside its TGo source. Do not edit generated files.
-A generated model file contains stable versioned metadata that names its source.
+The generated output name identifies its TGo source.
 `tgolint` recompiles the package in memory and verifies the complete output before it trusts model
 facts.
 Run `tgo build` again when an integrity diagnostic reports stale or changed output.

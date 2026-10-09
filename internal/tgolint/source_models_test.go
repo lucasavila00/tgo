@@ -1,7 +1,6 @@
 package tgolint
 
 import (
-	"bytes"
 	"go/token"
 	"testing"
 
@@ -9,24 +8,6 @@ import (
 
 	"golang.org/x/tools/go/analysis"
 )
-
-func TestParseGeneratedMetadataUsesOnlyFixedHeaderLine(t *testing.T) {
-	body := []byte("package p\n\n//tgo:v1 this is an ordinary source comment\n")
-	data := []byte(generatedHeader + "\n//tgo:v2 \"model.tgo\"\n\n")
-	data = append(data, body...)
-	metadata := parseGeneratedMetadata(data)
-	if metadata == nil || metadata.source != "model.tgo" ||
-		!bytes.Equal(metadata.body, body) {
-		t.Fatalf("metadata: %#v", metadata)
-	}
-}
-
-func TestParseGeneratedMetadataRejectsTrailingData(t *testing.T) {
-	data := []byte(generatedHeader + "\n//tgo:v2 \"model.tgo\" stale\n\npackage p\n")
-	if metadata := parseGeneratedMetadata(data); metadata != nil {
-		t.Fatalf("metadata: %#v", metadata)
-	}
-}
 
 func TestReadTGoSourceUsesPassReader(t *testing.T) {
 	called := false
@@ -46,31 +27,6 @@ func TestReadTGoSourceUsesPassReader(t *testing.T) {
 	}
 	if len(pass.OtherFiles) != 1 || pass.OtherFiles[0] != "/work/model.tgo" {
 		t.Fatalf("other files: %v", pass.OtherFiles)
-	}
-}
-
-func TestSourceMatchesGenerated(t *testing.T) {
-	tests := []struct {
-		source    string
-		generated string
-		want      bool
-	}{
-		{source: "model.tgo", generated: "/work/model_tgo.go", want: true},
-		{
-			source: "model_linux.tgo", generated: "/work/model_tgo_linux.go", want: true,
-		},
-		{
-			source:    "foo_tgo_bar_linux.tgo",
-			generated: "/work/foo_tgo_bar_tgo_linux.go",
-			want:      true,
-		},
-		{source: "foo_hack.tgo", generated: "/work/foo_tgo_hack.go", want: false},
-	}
-	for _, test := range tests {
-		got := sourceMatchesGenerated(test.source, test.generated)
-		if got != test.want {
-			t.Errorf("mapping %s -> %s: got %v", test.source, test.generated, got)
-		}
 	}
 }
 

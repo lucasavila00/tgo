@@ -2,9 +2,7 @@ package compiler
 
 import (
 	"bytes"
-	"fmt"
 	"go/build"
-	"go/format"
 	"go/parser"
 	"go/token"
 	"os"
@@ -194,14 +192,7 @@ func compareGoCorpusOutput(
 			continue
 		}
 		active++
-		formatted, err := format.Source(sources[sourcePath])
-		if err != nil {
-			t.Fatal(err)
-		}
-		want := append(
-			[]byte(fmt.Sprintf(generatedPrefix, name)),
-			formatted...,
-		)
+		want := sources[sourcePath]
 		got, err := os.ReadFile(output)
 		if err != nil {
 			t.Fatal(err)

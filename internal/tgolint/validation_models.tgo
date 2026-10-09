@@ -23,7 +23,7 @@ type objectKey struct {
 func (c %checker) findModels() {
 	var verified []*verifiedSource = nil
 	for _, file := range c.files {
-		if !syntaxFileGenerated(file) {
+		if !c.generated[file] {
 			continue
 		}
 		if source := c.verifySourceModels(file); source != nil {
@@ -157,7 +157,7 @@ func (c %checker) findValidationFunctionValues() {
 	writes := make(map[types.Object]int)
 	escaped := make(map[types.Object]bool)
 	for _, file := range c.files {
-		if syntaxFileGenerated(file) {
+		if c.generated[file] {
 			continue
 		}
 		syntax.Inspect(file, func(node *syntax.Node) bool {

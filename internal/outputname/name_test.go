@@ -57,3 +57,16 @@ func TestMatches(t *testing.T) {
 		}
 	}
 }
+
+func TestReserved(t *testing.T) {
+	for _, name := range []string{"model_tgo.go", "model_tgo_linux.go"} {
+		if !Reserved(name) {
+			t.Errorf("Reserved(%q) = false", name)
+		}
+	}
+	for _, name := range []string{"model.go", "model_tgo.txt"} {
+		if Reserved(name) {
+			t.Errorf("Reserved(%q) = true", name)
+		}
+	}
+}

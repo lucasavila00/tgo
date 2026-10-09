@@ -76,12 +76,8 @@ func VerifyGeneratedModels(
 }
 
 func verifyOrdinaryGoOutput(sourceData, generatedBody []byte) error {
-	expected, err := format.Source(sourceData)
-	if err != nil {
-		return fmt.Errorf("format Go source: %w", err)
-	}
-	if !bytes.Equal(expected, generatedBody) {
-		return fmt.Errorf("ordinary Go output does not match formatted source")
+	if !bytes.Equal(sourceData, generatedBody) {
+		return fmt.Errorf("ordinary Go output does not match source")
 	}
 	return nil
 }
