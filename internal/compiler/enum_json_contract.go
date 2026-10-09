@@ -87,7 +87,8 @@ func (e *enumJSONContractEngine) typeContract(typ types.Type) enumJSONNilContrac
 		return enumJSONContractOrNil(result)
 	}
 	if named, ok := typ.(*types.Named); ok {
-		if declaration := e.unit.modelForType(named); declaration != nil && declaration.Enum {
+		_, declaration := e.unit.modelOwner(named)
+		if declaration != nil && declaration.Enum {
 			return nil
 		}
 		key := enumJSONContractTypeKey(types.TypeString(named, func(pkg *types.Package) string {

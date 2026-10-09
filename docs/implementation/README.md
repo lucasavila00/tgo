@@ -51,13 +51,6 @@ Source policy, modernization advice, navigation, generated-output integrity, pac
 locking, file transactions, and stale-output cleanup stay outside the compiler. Production code
 for these tasks must be `.tgo` and must use `pkg/syntax` instead of `go/ast`.
 
-The remaining exception has a migration issue. The pull request that completes
-the migration must remove its row. Remove this table when no exception remains.
-
-| Compiler code | Destination | Issue |
-| --- | --- | --- |
-| [`check.go`](../../internal/compiler/check.go) | `tgolint` | [#61](https://github.com/lucasavila00/tgo/issues/61) |
-
 ## Syntax boundary
 
 The public `pkg/syntax` tree is the common source model for tools that analyze TGo code. Downstream

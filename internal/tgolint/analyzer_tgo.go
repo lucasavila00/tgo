@@ -54,6 +54,7 @@ type checker struct {
 	reported        map[diagnosticKey]bool
 	function        *syntax.Node
 	file            *syntax.File
+	sourcePackage   *types.Package
 	zeroTypes       map[*types.TypeParam]*model
 	captureResult   func(*model)
 	captureSource   func(*model, *syntax.Expression)
@@ -122,6 +123,7 @@ func run(pass *analysis.Pass) (any, error) {
 		reported:        make(map[diagnosticKey]bool),
 		function:        nil,
 		file:            nil,
+		sourcePackage:   nil,
 		zeroTypes:       nil,
 		captureResult:   nil,
 		captureSource:   nil,

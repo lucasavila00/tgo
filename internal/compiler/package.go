@@ -24,8 +24,6 @@ type packageUnit struct {
 	typed            *types.Package
 	generated        map[ast.Decl]bool
 	generatedValues  map[*ast.ValueSpec]bool
-	checkedLiterals  map[*ast.CompositeLit]bool
-	checkedCalls     map[*ast.CallExpr]bool
 	sourceReferences map[token.Pos]types.Object
 	erasedImports    map[*ast.ImportSpec]bool
 	references       []generatedReference
@@ -99,10 +97,16 @@ func (p *packageUnit) modelOwner(t types.Type) (*packageUnit, *model) {
 	return owner, owner.Models[n.Obj().Name()]
 }
 
-// modelForType returns tgo metadata for a local or imported named type.
-func (p *packageUnit) modelForType(t types.Type) *model {
-	_, declaration := p.modelOwner(t)
-	return declaration
+// dereference removes aliases and one or more pointer layers.
+func dereference(typ types.Type) types.Type {
+	typ = types.Unalias(typ)
+	for {
+		pointer, ok := typ.(*types.Pointer)
+		if !ok {
+			return typ
+		}
+		typ = types.Unalias(pointer.Elem())
+	}
 }
 
 // call makes a Go call expression.
@@ -153,6 +157,7 @@ func (p *packageUnit) checkAndLower() error {
 	p.checkGeneratedPredeclaredNames()
 	p.checkGeneratedEnumNameCollisions()
 	p.checkCheckedStructs()
+	p.validateNonNilPointerForms()
 	if len(p.errors) > 0 {
 		return p.errors[0]
 	}
@@ -188,10 +193,6 @@ func (p *packageUnit) checkAndLower() error {
 	p.typecheck()
 	if len(p.typeErrors) > 0 {
 		return p.typeErrors[0]
-	}
-	p.checkRules()
-	if len(p.errors) > 0 {
-		return p.errors[0]
 	}
 	return nil
 }
