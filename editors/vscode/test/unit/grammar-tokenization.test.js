@@ -84,7 +84,17 @@ function fallbackGoGrammar() {
       { match: "//.*$", name: "comment.line.go" },
       { match: "\\b[A-Za-z_]\\w*(?=\\s*:(?!=))", name: "entity.name.label.go" },
       { match: "\\b(for|if|range)\\b", name: "keyword.control.go" },
-      { match: "!!?|%", name: "keyword.operator.go" },
+      {
+        match: "(?<=^\\s*func\\b[^{\\r\\n]*)(\\b[A-Za-z_]\\w*)([ \\t]+)(\\*)(?=[A-Za-z_(\\[])",
+        captures: {
+          1: { name: "variable.parameter.go" },
+          3: { name: "keyword.operator.address.go" }
+        }
+      },
+      { match: "\\*(?=[A-Za-z_])", name: "keyword.operator.address.go" },
+      { match: "%", name: "keyword.operator.arithmetic.go" },
+      { match: "\\b[A-Z]\\w*\\b", name: "entity.name.type.go" },
+      { match: "!!?", name: "keyword.operator.go" },
       { match: "\\b[A-Za-z_]\\w*\\b", name: "identifier.go" }
     ]
   };
