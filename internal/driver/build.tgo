@@ -99,7 +99,7 @@ func (b *packageBuilder) build(path string) error {
 func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 	paths, err := loadExportPaths(unit)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	packageImporter := importer.ForCompiler(
 		unit.fs,
@@ -109,7 +109,7 @@ func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 			if export == "" {
 				export, err = loadExportPath(unit.Dir, path)
 				if err != nil {
-					return nil, err
+					return , err
 				}
 				paths[path] = export
 			}
@@ -135,7 +135,7 @@ func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 		},
 	)
 	if len(diagnostics) != 0 {
-		return nil, errors.Join(diagnostics...)
+		return , errors.Join(diagnostics...)
 	}
 	unit.compiled = compiled
 	outputs := make(map[string][]byte, len(compiled.Outputs))
@@ -151,11 +151,11 @@ func loadExportPath(directory string, path string) (string, error) {
 	command.Dir = directory
 	output, err := command.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("load %s: %s", path, output)
+		return , fmt.Errorf("load %s: %s", path, output)
 	}
 	export := strings.TrimSpace(string(output))
 	if export == "" {
-		return "", fmt.Errorf("load %s: missing export data", path)
+		return , fmt.Errorf("load %s: missing export data", path)
 	}
 	return export,
 }
@@ -179,7 +179,7 @@ func loadExportPaths(unit *packageUnit) (map[string]string, error) {
 	command.Dir = unit.Dir
 	output, err := command.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("load imports: %s", output)
+		return , fmt.Errorf("load imports: %s", output)
 	}
 	paths := make(map[string]string)
 	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
@@ -226,14 +226,14 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 	directory := filepath.Clean(filepath.Join(b.root, filepath.FromSlash(relative)))
 	inside, err := filepath.Rel(b.root, directory)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	if inside == ".." || strings.HasPrefix(inside, ".." + string(filepath.Separator)) {
 		return nil,
 	}
 	nested, err := nestedModule(directory, b.root)
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	if nested {
 		return nil,
@@ -243,7 +243,7 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 		return nil,
 	}
 	if err != nil {
-		return nil, err
+		return , err
 	}
 	files := make([]*syntax.File, 0)
 	for _, entry := range entries {
@@ -270,20 +270,20 @@ func activeGoFile(
 	if outputname.Reserved(name) {
 		owned, err := generatedFile(path)
 		if err != nil || owned {
-			return nil, nil, false, err
+			return ,,, err
 		}
 	}
 	matches, err := context.MatchFile(directory, name)
 	if err != nil || !matches {
-		return nil, nil, false, err
+		return ,,, err
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, nil, false, err
+		return ,,, err
 	}
 	file, err := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
 	if err != nil {
-		return nil, nil, false, err
+		return ,,, err
 	}
 	cgo := importsC(file)
 	if cgo && !context.CgoEnabled {
@@ -298,7 +298,7 @@ func nestedModule(directory string, root string) (bool, error) {
 		if _, err := os.Stat(filepath.Join(current, "go.mod")); err == nil {
 			return true,
 		} else if !errors.Is(err, os.ErrNotExist) {
-			return false, err
+			return , err
 		}
 		parent := filepath.Dir(current)
 		if parent == current {
@@ -353,11 +353,11 @@ func importsOf(files []*syntax.File) []string {
 func fileImportsC(path string) (bool, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return false, err
+		return , err
 	}
 	file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
 	if err != nil {
-		return false, err
+		return , err
 	}
 	return importsC(file),
 }
