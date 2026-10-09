@@ -6,13 +6,13 @@ import (
 	"go/token"
 	"go/types"
 
-	"tgo/internal/compiler"
+	"tgo/internal/sourceanalysis"
 	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
 )
 
 // checkSuccessReturnModernization finds explicit return values that TGo can elide.
-func (c *checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPackage) {
+func (c *checker) checkSuccessReturnModernization(analysis *sourceanalysis.Package) {
 	if analysis == nil || analysis.Facts == nil {
 		return
 	}

@@ -7,12 +7,12 @@ import (
 	"go/token"
 	"go/types"
 
-	"tgo/internal/compiler"
+	"tgo/internal/sourceanalysis"
 	"tgo/pkg/syntax"
 )
 
 // checkSourcePolicies checks usage policy in TGo source after compilation.
-func (c *checker) checkSourcePolicies(analysis *compiler.AnalysisPackage) {
+func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
 	if analysis == nil || analysis.Facts == nil {
 		return
 	}

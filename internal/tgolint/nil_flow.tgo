@@ -5,9 +5,8 @@ import (
 	"go/types"
 	"path/filepath"
 
-	"tgo/internal/compiler"
-	"tgo/internal/driver"
 	"tgo/internal/outputname"
+	"tgo/internal/sourceanalysis"
 	"tgo/pkg/syntax"
 	"tgo/pkg/syntax/cfg"
 )
@@ -44,7 +43,7 @@ type nilFlow struct {
 }
 
 // checkTGoSource runs checks that need the typed TGo source package.
-func (c %checker) checkTGoSource(analysis *compiler.AnalysisPackage) {
+func (c %checker) checkTGoSource(analysis *sourceanalysis.Package) {
 	c.checkNilSafety(analysis)
 	c.checkIotaModernization(analysis)
 	c.checkErrorReturnModernization(analysis)
@@ -52,7 +51,7 @@ func (c %checker) checkTGoSource(analysis *compiler.AnalysisPackage) {
 }
 
 // setGeneratedOutputs records the current compiler output for integrity checks.
-func (c %checker) setGeneratedOutputs(analysis *compiler.AnalysisPackage) {
+func (c %checker) setGeneratedOutputs(analysis *sourceanalysis.Package) {
 	for _, file := range c.files {
 		path := c.pass.Fset.Position(file.Package).Filename
 		if outputname.Reserved(path) {
@@ -75,12 +74,12 @@ func (c %checker) setGeneratedOutputs(analysis *compiler.AnalysisPackage) {
 }
 
 // analyzeTGoPackage loads TGo source once for all source checks.
-func (c %checker) analyzeTGoPackage() *compiler.AnalysisPackage {
+func (c %checker) analyzeTGoPackage() *sourceanalysis.Package {
 	directory := c.packageDirectory()
 	if directory == "" {
 		return nil
 	}
-	analysis, err := driver.AnalyzePackage(
+	analysis, err := sourceanalysis.AnalyzePackage(
 		directory, c.pass.Pkg.Path(), c.pass.Fset,
 	)
 	if err != nil {
@@ -91,7 +90,7 @@ func (c %checker) analyzeTGoPackage() *compiler.AnalysisPackage {
 }
 
 // checkNilSafety checks `%T` contracts in TGo and Go source.
-func (c %checker) checkNilSafety(analysis *compiler.AnalysisPackage) {
+func (c %checker) checkNilSafety(analysis *sourceanalysis.Package) {
 	goFiles := make([]%syntax.File, 0, len(c.files))
 	for _, file := range c.files {
 		if !c.generated[file] {

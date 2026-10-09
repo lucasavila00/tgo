@@ -44,42 +44,97 @@ type Index struct {
 	signatures           map[location]*types.Signature
 }
 
+// Projection visits typed facts without exposing Go syntax nodes.
+type Projection interface {
+	RangeTypes(func(token.Pos, token.Pos, types.TypeAndValue, bool))
+	RangeDefinitions(func(token.Pos, string, types.Object, bool))
+	RangeUses(func(token.Pos, types.Object, bool))
+	RangeSelections(func(token.Pos, token.Pos, *types.Selection, bool))
+	RangeInstances(func(token.Pos, types.Instance, bool))
+	RangeImplicits(func(token.Pos, token.Pos, types.Object, bool))
+}
+
+// NewProjection copies source facts from a typed Go projection.
+func NewProjection(
+	file *syntax.File,
+	facts Projection,
+	files *token.FileSet,
+) *Index {
+	if facts == nil {
+		panic("source facts require type facts")
+	}
+	index := newIndex(files)
+	facts.RangeTypes(func(
+		start token.Pos,
+		stop token.Pos,
+		value types.TypeAndValue,
+		synthetic bool,
+	) {
+		if !synthetic {
+			index.types[index.nodeSpan(start, stop)] = value
+		}
+	})
+	facts.RangeDefinitions(func(
+		position token.Pos,
+		name string,
+		object types.Object,
+		synthetic bool,
+	) {
+		if object != nil && !synthetic {
+			index.addDefinition(position, name, object)
+		}
+	})
+	facts.RangeUses(func(position token.Pos, object types.Object, synthetic bool) {
+		if object != nil && !synthetic {
+			index.uses[index.location(position)] = object
+			index.useCounts[object]++
+		}
+	})
+	facts.RangeSelections(func(
+		start token.Pos,
+		stop token.Pos,
+		selection *types.Selection,
+		synthetic bool,
+	) {
+		if !synthetic {
+			index.selections[index.nodeSpan(start, stop)] = selection
+		}
+	})
+	facts.RangeInstances(func(
+		position token.Pos,
+		instance types.Instance,
+		synthetic bool,
+	) {
+		if !synthetic {
+			index.instances[index.location(position)] = instance
+		}
+	})
+	facts.RangeImplicits(func(
+		start token.Pos,
+		stop token.Pos,
+		object types.Object,
+		synthetic bool,
+	) {
+		if !synthetic {
+			index.implicits[index.nodeSpan(start, stop)] = object
+		}
+	})
+	index.indexFunctionSignatures(file)
+	return index
+}
+
 // New copies typed facts into a syntax position index.
 func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
 	if info == nil {
 		panic("source facts require type facts")
 	}
-	if files == nil {
-		panic("source facts require position facts")
-	}
-	index := &Index{
-		files:                files,
-		types:                make(map[span]types.TypeAndValue),
-		definitions:          make(map[location]types.Object),
-		lineDefinitions:      make(map[definitionLocation]types.Object),
-		ambiguousDefinitions: make(map[definitionLocation]bool),
-		uses:                 make(map[location]types.Object),
-		selections:           make(map[span]*types.Selection),
-		instances:            make(map[location]types.Instance),
-		implicits:            make(map[span]types.Object),
-		useCounts:            make(map[types.Object]int),
-		signatures:           make(map[location]*types.Signature),
-	}
+	index := newIndex(files)
 	for expression, value := range info.Types {
 		index.types[index.nodeSpan(expression.Pos(), expression.End())] = value
 	}
 	for identifier, object := range info.Defs {
 		if object != nil {
-			location := index.location(identifier.Pos())
-			index.definitions[location] = object
-			key := definitionLocation{
-				file: location.file, line: location.line, name: identifier.Name,
-			}
-			if current := index.lineDefinitions[key]; current != nil && current != object {
-				index.ambiguousDefinitions[key] = true
-			} else {
-				index.lineDefinitions[key] = object
-			}
+			index.addDefinition(identifier.Pos(), identifier.Name, object)
 		}
 	}
 	for identifier, object := range info.Uses {
@@ -99,6 +154,40 @@ func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
 	}
 	index.indexFunctionSignatures(file)
 	return index
+}
+
+func newIndex(files *token.FileSet) *Index {
+	if files == nil {
+		panic("source facts require position facts")
+	}
+	return &Index{
+		files:                files,
+		types:                make(map[span]types.TypeAndValue),
+		definitions:          make(map[location]types.Object),
+		lineDefinitions:      make(map[definitionLocation]types.Object),
+		ambiguousDefinitions: make(map[definitionLocation]bool),
+		uses:                 make(map[location]types.Object),
+		selections:           make(map[span]*types.Selection),
+		instances:            make(map[location]types.Instance),
+		implicits:            make(map[span]types.Object),
+		useCounts:            make(map[types.Object]int),
+		signatures:           make(map[location]*types.Signature),
+	}
+}
+
+func (i *Index) addDefinition(
+	position token.Pos,
+	name string,
+	object types.Object,
+) {
+	location := i.location(position)
+	i.definitions[location] = object
+	key := definitionLocation{file: location.file, line: location.line, name: name}
+	if current := i.lineDefinitions[key]; current != nil && current != object {
+		i.ambiguousDefinitions[key] = true
+	} else {
+		i.lineDefinitions[key] = object
+	}
 }
 
 // ImplicitField returns the object for one anonymous field.

@@ -27,7 +27,7 @@ The helper runs in the VS Code workspace environment. It accepts a file URI and 
 offset. It returns file URIs and byte ranges. The extension converts these ranges to VS
 Code UTF-16 positions.
 
-The helper uses `pkg/syntax`, `compiler.AnalyzePackage`, and source facts. It resolves
+The helper uses `pkg/syntax`, source analysis, and source facts. It resolves
 symbols by type object identity. It returns no result when it cannot find an exact
 range. It does not guess by name.
 
