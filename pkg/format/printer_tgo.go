@@ -404,12 +404,14 @@ func (p *printer) comma(position token.Pos, following token.Pos) token.Pos {
 			p.position(item.start).Line != line || p.position(item.stop).Line != line {
 			break
 		}
-		commentLimit = item.stop + 1
+		commentLimit = item.stop
 	}
-	if commentLimit > comma {
-		p.beforeComments(commentLimit, true)
+	if commentLimit < comma {
+		commentLimit = comma
 	}
-	p.token(comma, ",")
+	p.beforeComments(commentLimit, true)
+	p.text(",")
+	p.lastSource = comma
 	return p.tokenEnd(comma, 1)
 }
 

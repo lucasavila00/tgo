@@ -408,6 +408,11 @@ func (p *printer) field(value *syntax.Field) {
 }
 
 func (p *printer) alignedField(value *syntax.Field, nameWidth int) {
+	p.fieldContent(value, nameWidth)
+	p.trailingLine(fieldContentEnd(value))
+}
+
+func (p *printer) fieldContent(value *syntax.Field, nameWidth int) {
 	if len(value.Names) > 0 {
 		p.identifiers(value.Names)
 		functionType := syntax.FunctionTypeExpressionOf(value.Type)
@@ -424,7 +429,6 @@ func (p *printer) alignedField(value *syntax.Field, nameWidth int) {
 		p.space()
 		p.token(value.Tag.ValuePosition, value.Tag.Value)
 	}
-	p.trailingLine(fieldContentEnd(value))
 }
 
 func fieldContentEnd(value *syntax.Field) token.Pos {
@@ -543,7 +547,7 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 		p.newline()
 		p.indent++
 		for index, item := range value.List {
-			p.field(item)
+			p.fieldContent(item, 0)
 			following := value.Closing
 			if index+1 < len(value.List) {
 				following = value.List[index+1].Start
