@@ -83,9 +83,12 @@ func ParsePort(text string) (Port, error) {
 }
 ```
 
-The compiler calls `check` for each `Port` literal. All fields must be private. TGo does not
-generate a constructor or accessor. Add an exported fallible factory when another package must
-construct the value.
+The compiler calls `check` for each `Port` literal. The same literal form works from another TGo
+package even though all fields are private. A checked value permits field reads in its package,
+but TGo rejects field writes and address-taking after construction.
+
+The compiler generates `NewPort(number int) (Port, error)` for Go callers. TGo source must use the
+literal form and cannot call this generated ABI. The compiler does not generate field accessors.
 
 ## Declare field defaults
 

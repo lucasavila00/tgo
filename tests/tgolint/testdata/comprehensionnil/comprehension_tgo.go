@@ -10,13 +10,13 @@ type holder struct {
 }
 
 func copyItems(groups [][]*item) {
-	__tgo_source := groups[0]
-	__tgo_result := make([]*item, len(__tgo_source))
-	for __tgo_index, value := range __tgo_source {
-		__tgo_result[__tgo_index] = copyItem(value)
+	source := groups[0]
+	result_1 := make([]*item, len(source))
+	for index, value := range source {
+		result_1[index] = copyItem(value)
 	}
 	result := holder{
-		Body: __tgo_result,
+		Body: result_1,
 	}
 	_ = result
 	for _, value := range groups[0] {

@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"strconv"
 	"strings"
 
 	"tgo/pkg/syntax"
@@ -29,21 +28,19 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		}
 		return true
 	})
-	defaultMarker := freshIdentifier("__tgo_defaults", used)
-	jsonPackage := freshIdentifier("__tgo_json", used)
-	jsonV2Package := freshIdentifier("__tgo_jsonv2", used)
-	jsonTextPackage := freshIdentifier("__tgo_jsontext", used)
-	stringsPackage := freshIdentifier("__tgo_strings", used)
-	fmtPackage := freshIdentifier("__tgo_fmt", used)
+	reserveImportNames(tree, used)
+	defaultMarker := freshIdentifier("tgoDefaults", used)
+	imports := planEnumImports(tree, used)
 	externalJSONTo, adjacentJSONTo := enumJSONHelperNames(tree, used)
 	file := files.File(tree.Package)
 	erasedData, nonNilLocations := eraseNonNilTypes(files, file, tree, data)
 	models, edits, jsonUse, firstEnumEdit, err := sourceModels(
 		files, file, tree, name, data, erasedData,
 		sourceModelConfig{
-			jsonPackage: jsonPackage, jsonV2Package: jsonV2Package,
-			jsonTextPackage: jsonTextPackage, stringsPackage: stringsPackage,
-			fmtPackage: fmtPackage, externalJSONTo: externalJSONTo,
+			jsonPackage: imports.json.name, jsonV2Package: imports.jsonV2.name,
+			jsonTextPackage: imports.jsonText.name,
+			stringsPackage:  imports.strings.name,
+			fmtPackage:      imports.fmt.name, externalJSONTo: externalJSONTo,
 			adjacentJSONTo: adjacentJSONTo,
 		},
 	)
@@ -52,7 +49,8 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	}
 	if firstEnumEdit >= 0 {
 		edits[firstEnumEdit].text = enumJSONHelpers(
-			jsonV2Package, jsonTextPackage, externalJSONTo, adjacentJSONTo,
+			imports.jsonV2.name, imports.jsonText.name,
+			externalJSONTo, adjacentJSONTo,
 			jsonUse.external, jsonUse.adjacent,
 		) + edits[firstEnumEdit].text
 	}
@@ -64,20 +62,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	if err != nil {
 		return nil, err
 	}
-	if jsonUse.enum {
-		offset := file.Offset(tree.Name.Stop)
-		imports := fmt.Sprintf(
-			"\nimport %s \"encoding/json\"\n"+
-				"import %s \"encoding/json/v2\"\n"+
-				"import %s \"encoding/json/jsontext\"\n"+
-				"import %s \"fmt\"\n",
-			jsonPackage, jsonV2Package, jsonTextPackage, fmtPackage,
-		)
-		if jsonUse.foldedAdjacent {
-			imports += fmt.Sprintf("import %s \"strings\"\n", stringsPackage)
-		}
-		edits = append(edits, edit{start: offset, end: offset, text: imports})
-	}
+	edits = imports.addEdits(edits, file, tree.Name.Stop, jsonUse)
 	input := applyEdits(string(data), edits)
 	mode := parser.ParseComments | parser.AllErrors | parser.SkipObjectResolution
 	goFile, err := parser.ParseFile(files, name, input, mode)
@@ -105,9 +90,10 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		return true
 	})
 	result := &source{
-		JSONPackage: jsonPackage, JSONV2Package: jsonV2Package,
-		JSONTextPackage: jsonTextPackage, StringsPackage: stringsPackage,
-		FmtPackage: fmtPackage, ExternalJSONTo: externalJSONTo,
+		JSONPackage: imports.json.name, JSONV2Package: imports.jsonV2.name,
+		JSONTextPackage: imports.jsonText.name,
+		StringsPackage:  imports.strings.name,
+		FmtPackage:      imports.fmt.name, ExternalJSONTo: externalJSONTo,
 		AdjacentJSONTo: adjacentJSONTo,
 		Name:           name, Data: append([]byte(nil), data...), Tree: tree, File: goFile,
 		Models: models, DefaultMarker: defaultMarker, Propagations: propagations,
@@ -147,8 +133,8 @@ func enumJSONHelperNames(tree *syntax.File, used map[string]bool) (string, strin
 		if !ok {
 			continue
 		}
-		return freshIdentifier("__tgo_"+node.Name.Name+"_external_json_to", used),
-			freshIdentifier("__tgo_"+node.Name.Name+"_adjacent_json_to", used)
+		return freshIdentifier("tgo"+node.Name.Name+"ExternalJSONTo", used),
+			freshIdentifier("tgo"+node.Name.Name+"AdjacentJSONTo", used)
 	}
 	return "", ""
 }
@@ -240,6 +226,7 @@ func sourceModel(
 			if err := validateCheckedStructFields(files, node); err != nil {
 				return nil, "", enumJSONUse{}, err
 			}
+			return item, checkedStructGo(sourceName, item), enumJSONUse{}, nil
 		}
 		return item, "type " + item.Name + " struct {\n" +
 			fieldDecls(sourceName, item.Fields) + "}\n", enumJSONUse{}, nil
@@ -401,7 +388,7 @@ func lowerSourceExtensions(
 		if !ok {
 			continue
 		}
-		marker := freshIdentifier("__tgo_propagate", used)
+		marker := freshIdentifier("tgoPropagate", used)
 		metadata, err := propagationMetadata(files, node)
 		if err != nil {
 			return nil, nil, nil, err
@@ -429,8 +416,8 @@ func lowerSourceExtensions(
 	}
 	comprehensions := make(map[string]comprehensionSource)
 	for _, node := range comprehensionNodes {
-		marker := freshIdentifier("__tgo_comprehension", used)
-		result := freshIdentifier("__tgo_result", used)
+		marker := freshIdentifier("tgoComprehension", used)
+		result := freshIdentifier("tgoResult", used)
 		replacement := comprehensionProjection(
 			files, file, node, data, edits, marker, result,
 		)
@@ -446,8 +433,7 @@ func lowerSourceExtensions(
 		edits = kept
 		edits = append(edits, edit{start: start, end: end, text: replacement})
 		comprehensions[marker] = comprehensionSource{
-			Position: node.Start,
-			Map:      node.Result.Key != nil,
+			Position: node.Start, Result: result, Map: node.Result.Key != nil,
 		}
 	}
 	return edits, propagations, comprehensions, nil
@@ -767,13 +753,4 @@ func lineDirective(name string, line int, column int) string {
 
 func inlineLineDirective(name string, line int, column int) string {
 	return fmt.Sprintf("/*line %s:%d:%d*/", name, line, column)
-}
-
-func freshIdentifier(base string, used map[string]bool) string {
-	name := base
-	for suffix := 1; used[name]; suffix++ {
-		name = base + "_" + strconv.Itoa(suffix)
-	}
-	used[name] = true
-	return name
 }

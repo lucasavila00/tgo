@@ -23,11 +23,7 @@ func (value ServicePort) check() (ServicePort, error) {
 	return value,
 }
 
-func NewPort(number int) (Port, error) {
-	return Port{number: number}
-}
-
-func NewServicePort(number int) (ServicePort, error) {
+func ServicePortFromNumber(number int) (ServicePort, error) {
 	port := Port{number: number}!
 	return ServicePort{port: port}
 }

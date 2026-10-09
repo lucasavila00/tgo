@@ -345,16 +345,16 @@ func (p *packageUnit) available() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	paths, tgoErr := p.matchingSources()
-	if tgoErr != nil {
-		return false, tgoErr
+	paths, err_1 := p.matchingSources()
+	if err_1 != nil {
+		return false, err_1
 	}
 	if len(paths) > 0 {
 		return true, nil
 	}
-	tests, tgoErr2 := p.matchingTestSources()
-	if tgoErr2 != nil {
-		return false, tgoErr2
+	tests, err_2 := p.matchingTestSources()
+	if err_2 != nil {
+		return false, err_2
 	}
 	if len(tests) > 0 {
 		return false, fmt.Errorf(
@@ -363,9 +363,9 @@ func (p *packageUnit) available() (bool, error) {
 		)
 	}
 	for _, path := range p.generatedPaths {
-		owned, tgoErr3 := generatedFile(path)
-		if tgoErr3 != nil {
-			return false, tgoErr3
+		owned, err_3 := generatedFile(path)
+		if err_3 != nil {
+			return false, err_3
 		}
 		if owned && !p.sourceOwnsOutput(path) {
 			return true, nil
@@ -412,7 +412,7 @@ func (p *packageUnit) sourceOwnsOutput(path string) bool {
 	return false
 }
 
-// load parses one selected package and its active Go files.
+// load parses one selected package and its active TGo files.
 func (p *packageUnit) load() error {
 	if p.loaded {
 		return p.loadError

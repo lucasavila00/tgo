@@ -4,7 +4,7 @@ package app
 
 import (
 	"errors"
-	__tgo_fmt "fmt"
+	"fmt"
 )
 
 type comprehensionAccount struct {
@@ -20,61 +20,61 @@ var errComprehension = errors.New("comprehension failure")
 
 func ComprehensionNames(accounts []comprehensionAccount) comprehensionNames {
 
-	__tgo_result := make(comprehensionNames, 0)
+	result := make(comprehensionNames, 0)
 	for _, account := range accounts {
 		if account.Active {
-			__tgo_result = append(__tgo_result, account.ID)
+			result = append(result, account.ID)
 		}
 	}
-	return __tgo_result
+	return result
 
 }
 
 func ComprehensionPairs(accounts []comprehensionAccount) [][2]int {
 
-	__tgo_result_1 := make([][2]int, 0)
+	result := make([][2]int, 0)
 	for _, account := range accounts {
 		for _, sale := range account.Sales {
-			__tgo_result_1 = append(__tgo_result_1, [2]int{len(account.ID), sale})
+			result = append(result, [2]int{len(account.ID), sale})
 		}
 	}
-	return __tgo_result_1
+	return result
 
 }
 
 func ComprehensionByID(accounts []comprehensionAccount) comprehensionByID {
 
-	__tgo_result_2 := make(comprehensionByID)
+	result := make(comprehensionByID)
 	for _, account := range accounts {
-		__tgo_result_2[account.ID] = account
+		result[account.ID] = account
 	}
-	return __tgo_result_2
+	return result
 
 }
 
 func ComprehensionEmpty() []string {
-	__tgo_source := []string{}
-	__tgo_result_3 := make([]string, len(__tgo_source))
-	copy(__tgo_result_3, __tgo_source)
-	return __tgo_result_3
+	source := []string{}
+	result := make([]string, len(source))
+	copy(result, source)
+	return result
 
 }
 
 func ComprehensionCopy(values []int) []int {
 
-	__tgo_result_4 := make([]int, len(values))
-	copy(__tgo_result_4, values)
-	return __tgo_result_4
+	result := make([]int, len(values))
+	copy(result, values)
+	return result
 
 }
 
 func ComprehensionIndexes(count int) []int {
 
-	__tgo_result_5 := make([]int, 0)
+	result := make([]int, 0)
 	for index := range count {
-		__tgo_result_5 = append(__tgo_result_5, index)
+		result = append(result, index)
 	}
-	return __tgo_result_5
+	return result
 
 }
 
@@ -82,11 +82,11 @@ func comprehensionMapValue(value string) string { return "value:" + value }
 
 func ComprehensionMapCall(values []string) map[string]string {
 
-	__tgo_result_6 := make(map[string]string)
+	result := make(map[string]string)
 	for _, value := range values {
-		__tgo_result_6[value] = comprehensionMapValue(value)
+		result[value] = comprehensionMapValue(value)
 	}
-	return __tgo_result_6
+	return result
 
 }
 
@@ -109,54 +109,54 @@ func comprehensionLoad(events *[]string, name string, fail bool) (string, error)
 }
 
 func ComprehensionOrder(events *[]string) []string {
-	__tgo_source_1 := comprehensionSource(events, []int{1, 2})
-	__tgo_result_7 := make([]string, len(__tgo_source_1))
-	for __tgo_index, value := range __tgo_source_1 {
-		__tgo_result_7[__tgo_index] = comprehensionRecord(events, "value") + string(rune('0'+value))
+	source := comprehensionSource(events, []int{1, 2})
+	result := make([]string, len(source))
+	for index, value := range source {
+		result[index] = comprehensionRecord(events, "value") + string(rune('0'+value))
 	}
-	return __tgo_result_7
+	return result
 
 }
 
 func ComprehensionSourceError(events *[]string, fail bool) ([]string, error) {
-	result, err := comprehensionLoad(events, "source", fail)
+	result_1, err := comprehensionLoad(events, "source", fail)
 	if err != nil {
-		return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", err)
+		return nil, fmt.Errorf("comprehensionLoad: %w", err)
 	}
-	__tgo_source_2 := []string{result}
-	__tgo_result_8 := make([]string, len(__tgo_source_2))
-	copy(__tgo_result_8, __tgo_source_2)
-	return __tgo_result_8,
+	source := []string{result_1}
+	result := make([]string, len(source))
+	copy(result, source)
+	return result,
 		nil
 }
 
 func ComprehensionFilterError(events *[]string, fail bool) ([]string, error) {
 
-	__tgo_result_9 := make([]string, 0)
+	result := make([]string, 0)
 	for _, value := range []string{"value"} {
-		result, err := comprehensionLoad(events, "filter", fail)
+		result_1, err := comprehensionLoad(events, "filter", fail)
 		if err != nil {
-			return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", err)
+			return nil, fmt.Errorf("comprehensionLoad: %w", err)
 		}
-		if result != "" {
-			__tgo_result_9 = append(__tgo_result_9, value)
+		if result_1 != "" {
+			result = append(result, value)
 		}
 	}
-	return __tgo_result_9,
+	return result,
 		nil
 }
 
 func ComprehensionResultError(events *[]string, fail bool) ([]string, error) {
-	__tgo_source_3 := []string{"value"}
-	__tgo_result_10 := make([]string, len(__tgo_source_3))
-	for __tgo_index_1, value := range __tgo_source_3 {
-		result, err := comprehensionLoad(events, "result", fail)
+	source := []string{"value"}
+	result := make([]string, len(source))
+	for index, value := range source {
+		result_1, err := comprehensionLoad(events, "result", fail)
 		if err != nil {
-			return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", err)
+			return nil, fmt.Errorf("comprehensionLoad: %w", err)
 		}
-		__tgo_result_10[__tgo_index_1] = value + result
+		result[index] = value + result_1
 	}
-	return __tgo_result_10,
+	return result,
 		nil
 }
 
@@ -166,18 +166,18 @@ func ComprehensionMapError(
 	failValue bool,
 ) (map[string]string, error) {
 
-	__tgo_result_11 := make(map[string]string)
+	result := make(map[string]string)
 	for _, value := range []string{"value"} {
-		result, err := comprehensionLoad(events, "key", failKey)
+		result_1, err := comprehensionLoad(events, "key", failKey)
 		if err != nil {
-			return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", err)
+			return nil, fmt.Errorf("comprehensionLoad: %w", err)
 		}
-		tgoResult, tgoErr := comprehensionLoad(events, "value", failValue)
-		if tgoErr != nil {
-			return nil, __tgo_fmt.Errorf("comprehensionLoad: %w", tgoErr)
+		result_2, err_1 := comprehensionLoad(events, "value", failValue)
+		if err_1 != nil {
+			return nil, fmt.Errorf("comprehensionLoad: %w", err_1)
 		}
-		__tgo_result_11[result] = value + tgoResult
+		result[result_1] = value + result_2
 	}
-	return __tgo_result_11,
+	return result,
 		nil
 }

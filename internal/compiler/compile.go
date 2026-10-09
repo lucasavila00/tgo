@@ -79,6 +79,7 @@ func Compile(input PackageInput) (*CompiledPackage, []error) {
 		unit.Sources = append(unit.Sources, source)
 		unit.Files = append(unit.Files, source.File)
 	}
+	unit.resolveEnumJSONHelperNames()
 	outputs, err := unit.compile()
 	if err != nil {
 		return nil, []error{err}

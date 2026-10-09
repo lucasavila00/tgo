@@ -68,15 +68,23 @@ func (p *packageUnit) ownerQualifier(file *ast.File, owner *types.Package) strin
 		case ".":
 			return ""
 		case "_":
-			alias := p.freshIdentifier("__tgo_import")
-			specification.Name = ast.NewIdent(alias)
+			alias := freshASTIdentifier(file, owner.Name())
+			if alias == owner.Name() {
+				specification.Name = nil
+			} else {
+				specification.Name = ast.NewIdent(alias)
+			}
 			return alias
 		default:
 			return specification.Name.Name
 		}
 	}
-	alias := p.freshIdentifier("__tgo_import")
-	astutil.AddNamedImport(p.fs, file, alias, owner.Path())
+	alias := freshASTIdentifier(file, owner.Name())
+	if alias == owner.Name() {
+		astutil.AddImport(p.fs, file, owner.Path())
+	} else {
+		astutil.AddNamedImport(p.fs, file, alias, owner.Path())
+	}
 	return alias
 }
 
@@ -162,38 +170,6 @@ func (p *packageUnit) importUsed(specification *ast.ImportSpec) bool {
 		}
 	}
 	return false
-}
-
-// freshIdentifier claims a package-wide name that source does not contain.
-func (p *packageUnit) freshIdentifier(base string) string {
-	p.collectUsedIdentifiers()
-	if !p.usedIdentifiers[base] {
-		p.usedIdentifiers[base] = true
-		return base
-	}
-	for suffix := 1; ; suffix++ {
-		name := base + "_" + strconv.Itoa(suffix)
-		if !p.usedIdentifiers[name] {
-			p.usedIdentifiers[name] = true
-			return name
-		}
-	}
-}
-
-// collectUsedIdentifiers records all names in the package syntax.
-func (p *packageUnit) collectUsedIdentifiers() {
-	if p.usedIdentifiers != nil {
-		return
-	}
-	p.usedIdentifiers = make(map[string]bool)
-	for _, file := range p.Files {
-		ast.Inspect(file, func(node ast.Node) bool {
-			if name, ok := node.(*ast.Ident); ok {
-				p.usedIdentifiers[name.Name] = true
-			}
-			return true
-		})
-	}
 }
 
 // validateGeneratedReferences rejects a source name that captures inserted code.

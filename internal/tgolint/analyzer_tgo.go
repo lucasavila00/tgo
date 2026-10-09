@@ -83,9 +83,9 @@ func run(pass *analysis.Pass) (any, error) {
 		return nil, fmt.Errorf("tgolint received a nil analysis pass")
 	}
 	pass = suppressDiagnostics(pass)
-	files, tgoErr := parseAnalysisFiles(pass)
-	if tgoErr != nil {
-		return nil, tgoErr
+	files, err_1 := parseAnalysisFiles(pass)
+	if err_1 != nil {
+		return nil, err_1
 	}
 	if len(files) == 0 {
 		return nil, nil

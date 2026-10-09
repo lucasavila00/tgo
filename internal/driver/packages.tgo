@@ -375,7 +375,7 @@ func (p *packageUnit) sourceOwnsOutput(path string) bool {
 	return false
 }
 
-// load parses one selected package and its active Go files.
+// load parses one selected package and its active TGo files.
 func (p *packageUnit) load() error {
 	if p.loaded {
 		return p.loadError

@@ -65,8 +65,10 @@ func (value Quantity) check() (Quantity, error) {
 ```
 
 Each literal returns `(Quantity, error)`. Use postfix `!` when the surrounding function returns an
-error. TGo does not generate a public constructor or accessor. Add a fallible factory when another
-package must construct the value. On failure, the zero value is invalid.
+error. The same literal form works from another TGo package. The compiler generates a fallible
+`NewQuantity` ABI for Go callers, but TGo source cannot call it. It generates no field accessor.
+TGo permits package-local field reads, but it rejects field changes and address-taking after
+construction. On failure, the zero value is invalid.
 
 ## Error propagation
 
@@ -151,9 +153,9 @@ Map `clear` removes entries and is allowed. Native `copy` keeps Go overlap behav
 
 ## Go callers and tests
 
-Go calls use the original Go types. Constructors and reads do not run boundary validation.
-Keep named Go types, callbacks, interfaces, channels, pointers, variadic calls, generic calls,
-and typed nil behavior.
+Go calls use the original Go types. A checked-struct constructor runs `check`. Reads and other Go
+calls do not add boundary validation. Keep named Go types, callbacks, interfaces, channels,
+pointers, variadic calls, generic calls, and typed nil behavior.
 
 ```go
 quantity, err := model.NewQuantity(3)
@@ -163,8 +165,8 @@ if err != nil {
 account := model.AccountPersonal{Name: "Lucas"}.Account()
 ```
 
-`NewQuantity` in this example is a project-defined factory. Test check success and failure, every
-tag branch, and shared collection changes.
+`NewQuantity` in this example is generated Go ABI. Test check success and failure, every tag
+branch, and shared collection changes.
 Test calls in both directions. Include Go error results and invalid foreign values. Run
 `tgolint` to check Go construction, result pairs, and enum access.
 
