@@ -17,23 +17,29 @@ func TestSourceFactsFindShiftedDefinition(t *testing.T) {
 	projected, err := parser.ParseFile(
 		files, "sample.tgo", "package sample\ntype value struct {\n      field int\n}\n", 0,
 	)
-	if err != nil { t.Fatalf("parse projected Go: %v", err) }
-	info := &types.Info{
-		Types: make(map[ast.Expr]types.TypeAndValue),
-		Defs: make(map[*ast.Ident]types.Object),
-		Uses: make(map[*ast.Ident]types.Object),
-		Selections: make(map[*ast.SelectorExpr]*types.Selection),
-		Instances: make(map[*ast.Ident]types.Instance),
-		Implicits: make(map[ast.Node]types.Object),
+	if err != nil {
+		t.Fatalf("parse projected Go: %v", err)
 	}
-	if _, err := new(types.Config).Check("sample", files, []*ast.File{projected}, info); err != nil {
+	info := &types.Info{
+		Types:      make(map[ast.Expr]types.TypeAndValue),
+		Defs:       make(map[*ast.Ident]types.Object),
+		Uses:       make(map[*ast.Ident]types.Object),
+		Selections: make(map[*ast.SelectorExpr]*types.Selection),
+		Instances:  make(map[*ast.Ident]types.Instance),
+		Implicits:  make(map[ast.Node]types.Object),
+	}
+	if _, err := new(types.Config).Check(
+		"sample", files, []*ast.File{projected}, info,
+	); err != nil {
 		t.Fatalf("check projected Go: %v", err)
 	}
 	parsed, err := syntax.ParseGoFile(
 		files, "sample.tgo", []byte("package sample\ntype value struct {\n\tfield int\n}\n"),
 		syntax.AllErrors,
 	)
-	if err != nil { t.Fatalf("parse source syntax: %v", err) }
+	if err != nil {
+		t.Fatalf("parse source syntax: %v", err)
+	}
 	if parsed == nil {
 		t.Fatal("parse source syntax returned nil")
 		return

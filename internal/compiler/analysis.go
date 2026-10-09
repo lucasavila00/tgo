@@ -63,8 +63,22 @@ func AnalyzePackage(
 	if err != nil {
 		return nil, err
 	}
+	sources, facts, nonNil, err := analysisSources(unit, outputs)
+	if err != nil {
+		return nil, err
+	}
+	return &AnalysisPackage{
+		Sources: sources, Facts: facts,
+		Package: unit.typed, NonNil: nonNil,
+	}, nil
+}
+
+func analysisSources(
+	unit *packageUnit,
+	outputs map[string][]byte,
+) ([]AnalysisSource, *sourcefacts.Index, map[token.Pos]bool, error) {
 	if unit.info == nil || unit.fs == nil {
-		return nil, fmt.Errorf("analysis package has no type or position facts")
+		return nil, nil, nil, fmt.Errorf("analysis package has no type or position facts")
 	}
 	sources := make([]AnalysisSource, 0, len(unit.Sources))
 	nonNil := make(map[token.Pos]bool)
@@ -72,7 +86,7 @@ func AnalyzePackage(
 	for _, source := range unit.Sources {
 		tree := source.Tree
 		if tree == nil {
-			return nil, fmt.Errorf("analysis source %s has no syntax", source.Name)
+			return nil, nil, nil, fmt.Errorf("analysis source %s has no syntax", source.Name)
 		}
 		sources = append(sources, AnalysisSource{
 			Name: filepath.Base(source.Name), Output: outputs[unit.outputPath(source.Name)],
@@ -87,10 +101,7 @@ func AnalyzePackage(
 			nonNil[position] = true
 		}
 	}
-	return &AnalysisPackage{
-		Sources: sources, Facts: facts,
-		Package: unit.typed, NonNil: nonNil,
-	}, nil
+	return sources, facts, nonNil, nil
 }
 
 func loadAnalysisPackage(
