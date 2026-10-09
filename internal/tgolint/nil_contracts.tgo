@@ -115,7 +115,7 @@ type nilEnvironment struct {
 	contracts map[types.Object]nilContract
 	exports   map[types.Object]nilContract
 	parents   map[syntax.Node]*syntax.Node
-	comprehensions map[token.Pos][]*syntax.ComprehensionExpression
+	comprehensions map[token.Pos][]%syntax.ComprehensionExpression
 	reported  map[diagnosticKey]bool
 }
 
@@ -131,7 +131,7 @@ func newNilEnvironment(
 		contracts: make(map[types.Object]nilContract),
 		exports: make(map[types.Object]nilContract),
 		parents: make(map[syntax.Node]*syntax.Node),
-		comprehensions: make(map[token.Pos][]*syntax.ComprehensionExpression),
+		comprehensions: make(map[token.Pos][]%syntax.ComprehensionExpression),
 		reported: make(map[diagnosticKey]bool),
 	}
 }
@@ -304,7 +304,7 @@ func (e %nilEnvironment) addParents(file %syntax.File) {
 	})
 	for _, node := range syntax.Extensions(file) {
 		comprehension, ok := syntax.ComprehensionExpressionOf(node)
-		if !ok {
+		if !ok || comprehension == nil {
 			continue
 		}
 		for parent := syntax.Parent(file, node); parent != nil;

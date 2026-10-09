@@ -312,7 +312,7 @@ func (e *nilEnvironment) addParents(file *syntax.File) {
 	})
 	for _, node := range syntax.Extensions(file) {
 		comprehension, ok := syntax.ComprehensionExpressionOf(node)
-		if !ok {
+		if !ok || comprehension == nil {
 			continue
 		}
 		for parent := syntax.Parent(file, node); parent != nil; parent = syntax.Parent(file, parent) {

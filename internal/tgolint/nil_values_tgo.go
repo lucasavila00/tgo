@@ -373,9 +373,6 @@ func (e *nilEnvironment) checkNilComprehension(
 	comprehension *syntax.ComprehensionExpression,
 	state *nilFlowState,
 ) {
-	if comprehension == nil {
-		return
-	}
 	contract := e.valueContract(comprehension.Type)
 	if comprehension.Result.Key == nil {
 		e.checkNilFlow(comprehension.Result.Value, nilChild(contract, "e"), state)
