@@ -10,7 +10,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-GENERATED_ROOTS = (Path("pkg/syntax"), Path("internal/tgolint"))
+GENERATED_ROOTS = (
+    Path("pkg/syntax"),
+    Path("internal/sourcefacts"),
+    Path("internal/tgolint"),
+)
 
 
 def copy_repository(destination: Path) -> Path:
@@ -60,7 +64,14 @@ def main() -> None:
         committed = generated_files(repository)
         run(repository, "go", "build", "-o", str(compiler), "./cmd/tgo")
 
-        run(repository, str(compiler), "build", "./pkg/syntax", "./internal/tgolint")
+        run(
+            repository,
+            str(compiler),
+            "build",
+            "./pkg/syntax",
+            "./internal/sourcefacts",
+            "./internal/tgolint",
+        )
         generated = generated_files(repository)
         require_equal(committed, generated, "committed generated output is stale")
 
