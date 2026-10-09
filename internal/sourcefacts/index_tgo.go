@@ -47,6 +47,12 @@ type Index struct {
 
 // New copies typed facts into a syntax position index.
 func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
+	if info == nil {
+		panic("source facts require type facts")
+	}
+	if files == nil {
+		panic("source facts require position facts")
+	}
 	index := &Index{
 		files:                files,
 		types:                make(map[span]types.TypeAndValue),

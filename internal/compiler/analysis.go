@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"fmt"
 	"go/token"
 	"go/types"
 	"path/filepath"
@@ -62,22 +63,29 @@ func AnalyzePackage(
 	if err != nil {
 		return nil, err
 	}
+	if unit.info == nil || unit.fs == nil {
+		return nil, fmt.Errorf("analysis package has no type or position facts")
+	}
 	sources := make([]AnalysisSource, 0, len(unit.Sources))
-	sourceFiles := make([]*syntax.File, 0, len(unit.Sources))
 	nonNil := make(map[token.Pos]bool)
+	var facts *sourcefacts.Index
 	for _, source := range unit.Sources {
+		tree := source.Tree
+		if tree == nil {
+			return nil, fmt.Errorf("analysis source %s has no syntax", source.Name)
+		}
 		sources = append(sources, AnalysisSource{
 			Name: filepath.Base(source.Name), Output: outputs[unit.outputPath(source.Name)],
-			Syntax: source.Tree,
+			Syntax: tree,
 		})
-		sourceFiles = append(sourceFiles, source.Tree)
+		if facts == nil {
+			facts = sourcefacts.New(tree, unit.info, unit.fs)
+		} else {
+			facts.AddFile(tree)
+		}
 		for position := range source.NonNil {
 			nonNil[position] = true
 		}
-	}
-	facts := sourcefacts.New(sourceFiles[0], unit.info, unit.fs)
-	for _, file := range sourceFiles[1:] {
-		facts.AddFile(file)
 	}
 	return &AnalysisPackage{
 		Sources: sources, Facts: facts,

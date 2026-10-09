@@ -34,12 +34,15 @@ func TestSourceFactsFindShiftedDefinition(t *testing.T) {
 		syntax.AllErrors,
 	)
 	if err != nil { t.Fatalf("parse source syntax: %v", err) }
-	if parsed == nil { t.Fatal("parse source syntax returned nil") }
+	if parsed == nil {
+		t.Fatal("parse source syntax returned nil")
+		return
+	}
+	index := sourcefacts.New(parsed, info, files)
 	declaration := syntax.GeneralDeclarationOf(parsed.Declarations[0])
 	specification := syntax.TypeSpecificationOf(declaration.Specs[0])
 	structure := syntax.StructTypeExpressionOf(specification.Type)
 	name := structure.Fields.List[0].Names[0]
-	index := sourcefacts.New(parsed, info, files)
 	object := index.DefinitionName(name)
 	if object == nil || object.Name() != "field" {
 		t.Fatalf("shifted field definition = %v, want field", object)

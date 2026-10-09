@@ -399,7 +399,16 @@ func sourceDeclaration(
 	sourceFile *token.File,
 	data []byte,
 ) *sourceModel {
+	if file == nil {
+		return nil
+	}
+	if sourceFile == nil {
+		return nil
+	}
 	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
+		if node == nil {
+			return nil
+		}
 		result := sourceModelChecked{
 			Name: node.Name.Name,
 			Fact: checkedModel(packagePath, node.Name.Name),
@@ -408,13 +417,25 @@ func sourceDeclaration(
 		return &result
 	}
 	if node, ok := syntax.EnumDeclarationOf(declaration); ok {
+		if node == nil {
+			return nil
+		}
 		variants := make([]string, 0, len(node.Variants))
 		sourceVariants := make([]sourceVariant, 0, len(node.Variants))
 		for _, variant := range node.Variants {
+			if variant == nil {
+				continue
+			}
 			variants = append(variants, variant.Name.Name)
+			fields := []sourceField(nil)
+			for _, field := range variant.Fields {
+				if field != nil {
+					fields = append(fields, sourceFields(file, sourceFile, data, field)...)
+				}
+			}
 			sourceVariants = append(sourceVariants, sourceVariant{
 				name:   variant.Name.Name,
-				fields: sourceFields(file, sourceFile, data, variant.Fields...),
+				fields: fields,
 			})
 		}
 		result := sourceModelEnum{
@@ -425,9 +446,18 @@ func sourceDeclaration(
 		return &result
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
+		if node == nil {
+			return nil
+		}
+		fields := []sourceField(nil)
+		for _, field := range node.Fields {
+			if field != nil {
+				fields = append(fields, sourceFields(file, sourceFile, data, field)...)
+			}
+		}
 		result := sourceModelStruct{
 			Name:   node.Name.Name,
-			Fields: sourceFields(file, sourceFile, data, node.Fields...),
+			Fields: fields,
 		}.sourceModel()
 		return &result
 	}
@@ -657,32 +687,24 @@ func sourceFields(
 	file *syntax.File,
 	sourceFile *token.File,
 	data []byte,
-	fields ...*syntax.TGoField,
+	declaration *syntax.TGoField,
 ) []sourceField {
 	result := []sourceField(nil)
-	for _, declaration := range fields {
-		if declaration == nil {
-			continue
-		}
-		typeText := sourceExpression(file, sourceFile, data, declaration.Field.Type)
-		tagText := ""
-		if declaration.Field.Tag != nil {
-			tagText = sourceRange(
-				sourceFile, data, declaration.Field.Tag.Start,
-				declaration.Field.Tag.Stop,
-			)
-		}
-		if len(declaration.Field.Names) == 0 {
-			result = append(result, sourceField{
-				name: "", typeExpression: typeText, tag: tagText,
-			})
-			continue
-		}
-		for _, name := range declaration.Field.Names {
-			result = append(result, sourceField{
-				name: name.Name, typeExpression: typeText, tag: tagText,
-			})
-		}
+	typeText := sourceExpression(file, sourceFile, data, declaration.Field.Type)
+	tagText := ""
+	if declaration.Field.Tag != nil {
+		tagText = sourceRange(
+			sourceFile, data, declaration.Field.Tag.Start,
+			declaration.Field.Tag.Stop,
+		)
+	}
+	if len(declaration.Field.Names) == 0 {
+		return []sourceField{{name: "", typeExpression: typeText, tag: tagText}}
+	}
+	for _, name := range declaration.Field.Names {
+		result = append(result, sourceField{
+			name: name.Name, typeExpression: typeText, tag: tagText,
+		})
 	}
 	return result
 }
@@ -702,9 +724,6 @@ func sourceExpression(
 		sourceFile, data, syntax.ExpressionPosition(expression),
 		syntax.ExpressionEnd(expression),
 	))
-	if file == nil {
-		return string(result)
-	}
 	for _, extension := range syntax.Extensions(file) {
 		node, ok := syntax.NonNilPointerTypeOf(extension)
 		if !ok || node.Percent < start || node.Percent >= end {
