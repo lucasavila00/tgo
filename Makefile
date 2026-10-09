@@ -1,10 +1,10 @@
 .PHONY: ci ci-unlocked generated ast-boundary lint test unit-test e2e-test tgolint-test \
-	allocation-test dogfood markdown tgo-size build install-hooks install-tools
+	allocation-test dogfood markdown tgo-size vscode-test build install-hooks install-tools
 
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
 
-ci-unlocked: generated ast-boundary dogfood e2e-test tgolint-test allocation-test lint unit-test markdown tgo-size
+ci-unlocked: generated ast-boundary dogfood e2e-test tgolint-test allocation-test lint unit-test markdown tgo-size vscode-test
 
 ast-boundary:
 	python3 scripts/check_ast_boundary.py
@@ -18,6 +18,9 @@ markdown:
 
 tgo-size:
 	python3 scripts/check_tgo_size.py
+
+vscode-test:
+	cd editors/vscode && npm ci && xvfb-run -a npm run test:all
 
 generated:
 	python3 scripts/check_generated.py
@@ -43,6 +46,7 @@ allocation-test:
 build:
 	go build -o bin/tgo ./cmd/tgo
 	go build -o bin/tgolint ./cmd/tgolint
+	go build -o bin/tgonav ./cmd/tgonav
 
 install-tools:
 	sh scripts/install-lint.sh
