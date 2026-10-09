@@ -323,12 +323,13 @@ func (p *printer) statementCommentAlignment(
 			widths = p.formattedStatementCommentWidths(value, header, end)
 		}
 		isMultiline := p.multiline(start, stop)
-		breakBefore := false
+		breakBefore := clauseStatement(value)
 		if index > 0 {
 			previous := values[index-1]
 			previousStart := syntax.StatementPosition(previous)
 			previousStop := syntax.StatementEnd(previous)
-			breakBefore = p.multiline(previousStart, previousStop) ||
+			breakBefore = breakBefore ||
+				p.multiline(previousStart, previousStop) ||
 				p.blankBetween(previousStop, start) ||
 				p.hasCommentBetween(previousStop, start)
 			if clauseStatement(previous) || clauseStatement(value) {
@@ -342,6 +343,9 @@ func (p *printer) statementCommentAlignment(
 				breakBefore: breakBefore,
 				cells:       nil,
 			},
+		}
+		if !header.IsValid() && !isMultiline && end.IsValid() {
+			header = end
 		}
 		if header.IsValid() {
 			headerRow.position = header
@@ -510,10 +514,6 @@ func (p *printer) compositeAlignment(
 		if commaEnd != stop {
 			commaWidth = 1
 		}
-		if comment := p.commentAt(comments[index]); comment != nil &&
-			!strings.HasPrefix(comment.text, "//") {
-			comments[index] = token.NoPos
-		}
 		if keyValue == nil {
 			if comments[index].IsValid() {
 				rows[index].cells = []int{
@@ -548,6 +548,7 @@ func (p *printer) expressionListCommentAlignment(
 	opening token.Pos,
 	closing token.Pos,
 	baseColumn int,
+	depth int,
 ) []map[token.Pos]int {
 	rows := make([]alignmentRow, len(values))
 	sizes := make([]int, len(values))
@@ -572,7 +573,7 @@ func (p *printer) expressionListCommentAlignment(
 		if p.multiline(start, stop) {
 			continue
 		}
-		sizes[index] = p.formattedExpressionWidth(value)
+		sizes[index] = p.formattedExpressionWidthAt(value, depth)
 		if !lineBreak {
 			continue
 		}

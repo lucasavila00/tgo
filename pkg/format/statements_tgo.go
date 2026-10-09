@@ -266,6 +266,7 @@ func (p *printer) functionBody(value *syntax.BlockStatement, headerWidth int) {
 					p.space()
 				}
 				p.statement(statement)
+				p.trailingLine(syntax.StatementEnd(statement))
 			}
 			p.space()
 		}

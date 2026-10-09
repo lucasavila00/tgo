@@ -29,6 +29,7 @@ func (p *printer) expressionList(
 		opening,
 		closing,
 		listIndent*8,
+		depth,
 	)
 	previous := opening
 	indented := false

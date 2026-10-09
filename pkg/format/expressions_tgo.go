@@ -38,8 +38,8 @@ func (p *printer) expressionAt(
 		p.lastSource = item.Stop
 	case syntax.ExpressionTagFunctionLiteral:
 		item := expressionValue.FunctionLiteralPayload().Value
-		startColumn := p.outputColumn()
 		p.token(item.Type.Function, "func")
+		startColumn := p.outputColumn() - len("func")
 		p.functionSignature(item.Type)
 		headerWidth := p.outputColumn() - startColumn
 		p.space()
@@ -389,8 +389,15 @@ func identifierWidth(values []*syntax.Identifier) int {
 }
 
 func (p *printer) formattedExpressionWidth(value *syntax.Expression) int {
+	return p.formattedExpressionWidthAt(value, 1)
+}
+
+func (p *printer) formattedExpressionWidthAt(
+	value *syntax.Expression,
+	depth int,
+) int {
 	probe := p.newProbe(nil)
-	probe.expression(value, 0)
+	probe.expressionAt(value, 0, depth)
 	return probe.outputColumn()
 }
 
