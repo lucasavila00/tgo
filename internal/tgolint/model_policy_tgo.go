@@ -12,7 +12,7 @@ import (
 
 // checkSourceModelPolicy checks model use in one TGo source node.
 func (c *checker) checkSourceModelPolicy(node *syntax.Node) {
-	if identifier, ok := syntax.IdentifierOf(node); ok {
+	if identifier, ok := syntax.IdentifierOf(node); ok && identifier != nil {
 		c.checkSourceGeneratedName(identifier)
 	}
 	if specification, ok := syntax.SpecificationOf(node); ok {

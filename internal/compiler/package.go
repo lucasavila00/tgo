@@ -97,12 +97,6 @@ func (p *packageUnit) modelOwner(t types.Type) (*packageUnit, *model) {
 	return owner, owner.Models[n.Obj().Name()]
 }
 
-// modelForType returns tgo metadata for a local or imported named type.
-func (p *packageUnit) modelForType(t types.Type) *model {
-	_, declaration := p.modelOwner(t)
-	return declaration
-}
-
 // dereference removes aliases and one or more pointer layers.
 func dereference(typ types.Type) types.Type {
 	typ = types.Unalias(typ)

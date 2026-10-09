@@ -10,7 +10,7 @@ import (
 
 // checkSourceModelPolicy checks model use in one TGo source node.
 func (c %checker) checkSourceModelPolicy(node %syntax.Node) {
-	if identifier, ok := syntax.IdentifierOf(node); ok {
+	if identifier, ok := syntax.IdentifierOf(node); ok && identifier != nil {
 		c.checkSourceGeneratedName(identifier)
 	}
 	if specification, ok := syntax.SpecificationOf(node); ok {
@@ -373,7 +373,7 @@ func (c %checker) sourceTypeParameterModel(
 // sourceLayoutModel matches a local protected model layout.
 func (c %checker) sourceLayoutModel(typ types.Type) (*model, types.Type) {
 	if typ == nil || c.sourcePackage == nil {
-		return nil, nil
+		return nil,
 	}
 	for _, name := range c.sourcePackage.Scope().Names() {
 		object, ok := c.sourcePackage.Scope().Lookup(name).(*types.TypeName)
@@ -388,5 +388,5 @@ func (c %checker) sourceLayoutModel(typ types.Type) (*model, types.Type) {
 			return model, object.Type()
 		}
 	}
-	return nil, nil
+	return nil,
 }

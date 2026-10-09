@@ -89,8 +89,3 @@ type comprehensionSource struct {
 	Result   string
 	Map      bool
 }
-
-// requiresConstructor reports whether a model type has an invalid zero value.
-func (m *model) requiresConstructor() bool {
-	return len(m.Variants) > 0 || m.CheckedStruct
-}
