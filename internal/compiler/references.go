@@ -19,58 +19,96 @@ type enumNameReservation struct {
 
 // checkGeneratedEnumNameCollisions reserves the package-level enum ABI.
 func (p *packageUnit) checkGeneratedEnumNameCollisions() {
+	reserved := p.generatedEnumNameReservations()
+	p.checkTGoEnumNameCollisions(reserved)
+	p.checkGoEnumNameCollisions(reserved)
+}
+
+func (p *packageUnit) generatedEnumNameReservations() map[string]enumNameReservation {
 	reserved := make(map[string]enumNameReservation)
-	reserve := func(name string, allowed token.Pos, owner string, at token.Pos) {
-		if previous, exists := reserved[name]; exists {
-			if previous.allowed != allowed || previous.owner != owner {
-				p.failAt(at, "generated enum name %s conflicts with %s", name, previous.owner)
-			}
-			return
-		}
-		reserved[name] = enumNameReservation{allowed: allowed, owner: owner}
-	}
 	for _, source := range p.Sources {
 		for _, declaration := range source.Tree.Declarations {
 			node, ok := syntax.EnumDeclarationOf(declaration)
 			if !ok || node == nil {
 				continue
 			}
-			owner := "enum " + node.Name.Name
-			reserve(node.Name.Name, node.Name.Start, owner, node.Name.Start)
-			reserve(node.Name.Name+"Tag", token.NoPos, owner, node.Name.Start)
-			for _, item := range node.Variants {
-				reserve(node.Name.Name+item.Name.Name, token.NoPos, owner, item.Name.Start)
-				reserve(node.Name.Name+"Tag"+item.Name.Name, token.NoPos, owner, item.Name.Start)
-				reserve(
-					enumConstructorName(node.Name.Name, item.Name.Name),
-					token.NoPos,
-					owner,
-					item.Name.Start,
-				)
-				if len(item.Fields) > 0 {
-					reserve(
-						enumCarrierName(node.Name.Name, item.Name.Name),
-						token.NoPos,
-						owner,
-						item.Name.Start,
-					)
-				}
-				for _, itemField := range item.Fields {
-					if itemField.Default == nil {
-						continue
-					}
-					for _, fieldName := range itemField.Field.Names {
-						reserve(
-							"TgoDefault"+node.Name.Name+item.Name.Name+fieldName.Name,
-							token.NoPos,
-							owner,
-							fieldName.Start,
-						)
-					}
-				}
-			}
+			p.reserveEnumDeclarationNames(reserved, node)
 		}
 	}
+	return reserved
+}
+
+func (p *packageUnit) reserveEnumDeclarationNames(
+	reserved map[string]enumNameReservation,
+	node *syntax.EnumDeclaration,
+) {
+	owner := "enum " + node.Name.Name
+	p.reserveEnumName(reserved, node.Name.Name, node.Name.Start, owner, node.Name.Start)
+	p.reserveEnumName(reserved, node.Name.Name+"Tag", token.NoPos, owner, node.Name.Start)
+	for _, item := range node.Variants {
+		p.reserveEnumVariantNames(reserved, node.Name.Name, owner, item)
+	}
+}
+
+func (p *packageUnit) reserveEnumVariantNames(
+	reserved map[string]enumNameReservation,
+	enum string,
+	owner string,
+	item *syntax.EnumVariant,
+) {
+	p.reserveEnumName(reserved, enum+item.Name.Name, token.NoPos, owner, item.Name.Start)
+	p.reserveEnumName(reserved, enum+"Tag"+item.Name.Name, token.NoPos, owner, item.Name.Start)
+	p.reserveEnumName(
+		reserved,
+		enumConstructorName(enum, item.Name.Name),
+		token.NoPos,
+		owner,
+		item.Name.Start,
+	)
+	if len(item.Fields) > 0 {
+		p.reserveEnumName(
+			reserved,
+			enumCarrierName(enum, item.Name.Name),
+			token.NoPos,
+			owner,
+			item.Name.Start,
+		)
+	}
+	for _, itemField := range item.Fields {
+		if itemField.Default == nil {
+			continue
+		}
+		for _, fieldName := range itemField.Field.Names {
+			p.reserveEnumName(
+				reserved,
+				"TgoDefault"+enum+item.Name.Name+fieldName.Name,
+				token.NoPos,
+				owner,
+				fieldName.Start,
+			)
+		}
+	}
+}
+
+func (p *packageUnit) reserveEnumName(
+	reserved map[string]enumNameReservation,
+	name string,
+	allowed token.Pos,
+	owner string,
+	at token.Pos,
+) {
+	if previous, exists := reserved[name]; exists {
+		if previous.allowed != allowed || previous.owner != owner {
+			p.failAt(at, "generated enum name %s conflicts with %s", name, previous.owner)
+		}
+		return
+	}
+	reserved[name] = enumNameReservation{allowed: allowed, owner: owner}
+}
+
+func (p *packageUnit) checkTGoEnumNameCollisions(
+	reserved map[string]enumNameReservation,
+) {
 	for _, source := range p.Sources {
 		for _, declaration := range source.Tree.Declarations {
 			for _, declared := range sourceDeclarationNames(declaration) {
@@ -86,6 +124,11 @@ func (p *packageUnit) checkGeneratedEnumNameCollisions() {
 			}
 		}
 	}
+}
+
+func (p *packageUnit) checkGoEnumNameCollisions(
+	reserved map[string]enumNameReservation,
+) {
 	tgoFiles := make(map[*ast.File]bool)
 	for _, source := range p.Sources {
 		tgoFiles[source.File] = true

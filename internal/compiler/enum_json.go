@@ -207,7 +207,7 @@ func emitEnumJSONUnmarshal(
 				name,
 				variant.Name,
 				jsonPackage,
-				enumPayloadConstructorCall(name, variant, "payload"))
+				enumPayloadConstructorCall(name, variant))
 		}
 		fmt.Fprintf(out,
 			"return %s.Errorf(%s)\n}\n",
@@ -269,7 +269,7 @@ func emitEnumJSONUnmarshal(
 				name,
 				variant.Name,
 				jsonPackage,
-				enumPayloadConstructorCall(name, variant, "payload"))
+				enumPayloadConstructorCall(name, variant))
 			continue
 		}
 		fmt.Fprintf(out,
@@ -282,7 +282,7 @@ func emitEnumJSONUnmarshal(
 			name,
 			variant.Name,
 			jsonPackage,
-			enumPayloadConstructorCall(name, variant, "payload"))
+			enumPayloadConstructorCall(name, variant))
 	}
 	fmt.Fprintf(out,
 		"default: return %s.Errorf(%s, variant)\n}\n}\n",

@@ -245,7 +245,7 @@ func emitExternalJSONUnmarshalFrom(
 			name,
 			variant.Name,
 			jsonV2Package,
-			enumPayloadConstructorCall(name, variant, "payload"),
+			enumPayloadConstructorCall(name, variant),
 		)
 	}
 	fmt.Fprintf(
@@ -377,7 +377,7 @@ func emitAdjacentJSONUnmarshalFrom(
 			name,
 			variant.Name,
 			jsonV2Package,
-			enumPayloadConstructorCall(name, variant, "payload"),
+			enumPayloadConstructorCall(name, variant),
 		)
 	}
 	fmt.Fprintf(

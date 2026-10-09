@@ -185,7 +185,13 @@ func emitVariant(
 	case len(variant.Fields) == 0:
 		fmt.Fprintf(output, "return %s{tgoTag: %s}\n}\n", enum, tagName)
 	case variant.Boxed:
-		fmt.Fprintf(output, "return %s{tgoTag: %s, tgoPayload: %s}\n}\n", enum, tagName, payloadValue)
+		fmt.Fprintf(
+			output,
+			"return %s{tgoTag: %s, tgoPayload: %s}\n}\n",
+			enum,
+			tagName,
+			payloadValue,
+		)
 	default:
 		fmt.Fprintf(
 			output,
@@ -287,7 +293,7 @@ func enumCarrierFieldNames(fields []field) []string {
 	return names
 }
 
-func enumPayloadConstructorCall(enum string, value variant, payload string) string {
+func enumPayloadConstructorCall(enum string, value variant) string {
 	arguments := make([]string, len(value.Fields))
 	for index, field := range value.Fields {
 		name := field.Name
@@ -298,7 +304,7 @@ func enumPayloadConstructorCall(enum string, value variant, payload string) stri
 		case "", "_":
 			arguments[index] = "*new(" + field.Type + ")"
 		default:
-			arguments[index] = payload + "." + name
+			arguments[index] = "payload." + name
 		}
 	}
 	return enumConstructorName(enum, value.Name) + "(" + strings.Join(arguments, ", ") + ")"

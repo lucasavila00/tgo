@@ -311,7 +311,11 @@ func (p *packageUnit) enumLiteralValues(
 			return nil, nil, nil, false, false
 		}
 		if supplied[fieldIndex] {
-			p.fail(element, "duplicate field %s in enum variant literal", structure.Field(fieldIndex).Name())
+			p.fail(
+				element,
+				"duplicate field %s in enum variant literal",
+				structure.Field(fieldIndex).Name(),
+			)
 			return nil, nil, nil, false, false
 		}
 		supplied[fieldIndex] = true
