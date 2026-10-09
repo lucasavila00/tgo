@@ -14,7 +14,7 @@ func (c %checker) checkedIf(statement *syntax.IfStatement, state checkedState) b
 	if statement.Init != nil {
 		c.checkedStatement(statement.Init, state)
 	}
-	c.checkResultUses([]*syntax.Expression{statement.Condition}, state, nil)
+	c.checkResultUses([]%syntax.Expression{statement.Condition}, state, nil)
 	trueState := cloneCheckedState(state)
 	falseState := cloneCheckedState(state)
 	trueProofs, falseProofs := c.resultProofs(statement.Condition, state)
@@ -30,7 +30,7 @@ func (c %checker) checkedIf(statement *syntax.IfStatement, state checkedState) b
 	if statement.Else != nil {
 		falseStops = c.checkedStatement(statement.Else, falseState)
 		if !falseStops {
-			falseStops = c.statementsTerminate(c.file, []*syntax.Statement{statement.Else})
+			falseStops = c.statementsTerminate(c.file, []%syntax.Statement{statement.Else})
 		}
 	}
 	switch {
@@ -229,7 +229,7 @@ func proveResult(state checkedState, failure types.Object) {
 
 // checkResultUses rejects pending values read before their matching proof.
 func (c %checker) checkResultUses(
-	expressions []*syntax.Expression,
+	expressions []%syntax.Expression,
 	state checkedState,
 	skip map[*syntax.Identifier]bool,
 ) {
@@ -362,7 +362,7 @@ func (c %checker) invalidateProof(object types.Object, state checkedState) {
 	}
 }
 
-func (c %checker) invalidateAssignments(expressions []*syntax.Expression, state checkedState) {
+func (c %checker) invalidateAssignments(expressions []%syntax.Expression, state checkedState) {
 	for _, expression := range expressions {
 		name := syntax.IdentifierExpressionOf(expression)
 		if name == nil || name.Name == "_" {
@@ -378,7 +378,7 @@ func (c %checker) checkedSwitch(statement *syntax.SwitchStatement, state checked
 	if statement.Init != nil {
 		c.checkedStatement(statement.Init, state)
 	}
-	c.checkResultUses([]*syntax.Expression{statement.Tag}, state, nil)
+	c.checkResultUses([]%syntax.Expression{statement.Tag}, state, nil)
 	entry := cloneCheckedState(state)
 	var exits []checkedState = nil
 	var carried checkedState = nil
