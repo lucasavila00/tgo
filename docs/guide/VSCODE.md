@@ -29,6 +29,9 @@ code --extensionDevelopmentPath="$PWD/editors/vscode" "$PWD"
 The extension updates its index after changes to `.tgo`, `.go`, `go.mod`, or `go.work` files. It
 uses active Go build constraints and target file suffixes.
 
+Navigation reads saved source. Save a changed document before you request a definition,
+references, or symbols.
+
 The extension runs in desktop VS Code and in desktop remote workspaces such as SSH and
 containers. In a remote workspace, build `tgonav` on the remote system and use its remote path.
 The extension does not run in browser-only VS Code.

@@ -1,10 +1,50 @@
 "use strict";
 
+const path = require("node:path");
 const vscode = require("vscode");
 const { NavigationClient, RequestCancelled } = require("./client");
 const { byteOffsetToPosition, positionToByteOffset } = require("./positions");
+const { helperURI, relativeHelperPath } = require("./uris");
 
 const watchedPatterns = ["**/*.tgo", "**/*.go", "**/go.mod", "**/go.work"];
+const documentSelector = [
+  { language: "tgo", scheme: "file" },
+  { language: "tgo", scheme: "vscode-remote" }
+];
+
+class WorkspaceClient {
+  constructor(folder, command, output) {
+    this.folder = folder;
+    this.client = new NavigationClient(command, folder.uri.fsPath, output);
+  }
+
+  request(method, params, token) {
+    return this.client.request(method, params, token);
+  }
+
+  invalidate(uri) {
+    this.client.invalidate(uri ? this.toHelperURI(uri) : "");
+  }
+
+  toHelperURI(uri) {
+    return helperURI(uri.fsPath);
+  }
+
+  fromHelperURI(uri) {
+    const relative = relativeHelperPath(this.folder.uri.fsPath, uri);
+    if (relative === undefined) {
+      return vscode.Uri.parse(uri);
+    }
+    if (relative === "") {
+      return this.folder.uri;
+    }
+    return vscode.Uri.joinPath(this.folder.uri, ...relative.split(path.sep));
+  }
+
+  dispose() {
+    this.client.dispose();
+  }
+}
 
 class ClientManager {
   constructor(output) {
@@ -24,7 +64,7 @@ class ClientManager {
         .getConfiguration("tgo.navigation", folder.uri)
         .get("helperPath", "tgonav");
       const command = process.env.TGO_NAV_HELPER || configured;
-      client = new NavigationClient(command, folder.uri.fsPath, this.output);
+      client = new WorkspaceClient(folder, command, this.output);
       this.clients.set(key, client);
     }
     return client;
@@ -35,12 +75,34 @@ class ClientManager {
     if (folder) {
       const client = this.clients.get(folder.uri.toString());
       if (client) {
-        client.invalidate(uri.toString());
+        client.invalidate(uri);
       }
       return;
     }
     for (const client of this.clients.values()) {
-      client.invalidate(uri.toString());
+      client.invalidate(uri);
+    }
+  }
+
+  configurationChanged(event) {
+    for (const [key, client] of this.clients) {
+      if (event.affectsConfiguration(
+        "tgo.navigation.helperPath", client.folder.uri
+      )) {
+        client.dispose();
+        this.clients.delete(key);
+      }
+    }
+  }
+
+  workspaceFoldersChanged(event) {
+    for (const folder of event.removed) {
+      const key = folder.uri.toString();
+      const client = this.clients.get(key);
+      if (client) {
+        client.dispose();
+        this.clients.delete(key);
+      }
     }
   }
 
@@ -57,6 +119,14 @@ function activate(context) {
   const clients = new ClientManager(output);
   context.subscriptions.push(output, clients);
   registerProviders(context, clients);
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(
+      (event) => clients.configurationChanged(event)
+    ),
+    vscode.workspace.onDidChangeWorkspaceFolders(
+      (event) => clients.workspaceFoldersChanged(event)
+    )
+  );
   for (const pattern of watchedPatterns) {
     const watcher = vscode.workspace.createFileSystemWatcher(pattern);
     watcher.onDidCreate((uri) => clients.invalidate(uri));
@@ -68,49 +138,57 @@ function activate(context) {
 }
 
 function registerProviders(context, clients) {
-  const selector = [{ language: "tgo", scheme: "file" }];
   context.subscriptions.push(
-    vscode.languages.registerDefinitionProvider(selector, {
+    vscode.languages.registerDefinitionProvider(documentSelector, {
       async provideDefinition(document, position, token) {
+        if (document.isDirty) {
+          return [];
+        }
         const client = clients.forURI(document.uri);
         const offset = positionToByteOffset(document.getText(), position);
         if (!client || offset === undefined) {
           return [];
         }
         const values = await request(client, "definition", {
-          uri: document.uri.toString(), offset
+          uri: client.toHelperURI(document.uri), offset
         }, token);
-        return convertLocations(values, token);
+        return convertLocations(values, token, client);
       }
     }),
-    vscode.languages.registerReferenceProvider(selector, {
+    vscode.languages.registerReferenceProvider(documentSelector, {
       async provideReferences(document, position, referenceContext, token) {
+        if (document.isDirty) {
+          return [];
+        }
         const client = clients.forURI(document.uri);
         const offset = positionToByteOffset(document.getText(), position);
         if (!client || offset === undefined) {
           return [];
         }
         const values = await request(client, "references", {
-          uri: document.uri.toString(),
+          uri: client.toHelperURI(document.uri),
           offset,
           includeDeclaration: referenceContext.includeDeclaration
         }, token);
-        return convertLocations(values, token);
+        return convertLocations(values, token, client);
       }
     }),
-    vscode.languages.registerDocumentSymbolProvider(selector, {
+    vscode.languages.registerDocumentSymbolProvider(documentSelector, {
       async provideDocumentSymbols(document, token) {
+        if (document.isDirty) {
+          return [];
+        }
         const client = clients.forURI(document.uri);
         if (!client) {
           return [];
         }
         const values = await request(client, "documentSymbols", {
-          uri: document.uri.toString()
+          uri: client.toHelperURI(document.uri)
         }, token);
         const result = [];
         for (const value of values || []) {
-          const range = await convertRange(value.range, token);
-          const selection = await convertRange(value.selection, token);
+          const range = await convertRange(value.range, token, client);
+          const selection = await convertRange(value.selection, token, client);
           if (range && selection) {
             result.push(new vscode.DocumentSymbol(
               value.name,
@@ -132,20 +210,28 @@ function registerProviders(context, clients) {
         }
         const batches = await Promise.all(folders.map(async (folder) => {
           const client = clients.forURI(folder.uri);
-          return client
-            ? request(client, "workspaceSymbols", { query }, token)
+          const values = client
+            ? await request(client, "workspaceSymbols", { query }, token)
             : [];
+          return { client, values };
         }));
         const result = [];
-        for (const values of batches) {
-          for (const value of values || []) {
-            const range = await convertRange(value.selection, token);
+        const seen = new Set();
+        for (const batch of batches) {
+          for (const value of batch.values || []) {
+            const range = await convertRange(value.selection, token, batch.client);
             if (range) {
+              const uri = batch.client.fromHelperURI(value.selection.uri);
+              const key = symbolKey(value, uri, range);
+              if (seen.has(key)) {
+                continue;
+              }
+              seen.add(key);
               result.push(new vscode.SymbolInformation(
                 value.name,
                 symbolKind(value.kind),
                 value.container || "",
-                new vscode.Location(vscode.Uri.parse(value.selection.uri), range)
+                new vscode.Location(uri, range)
               ));
             }
           }
@@ -167,23 +253,28 @@ async function request(client, method, params, token) {
   }
 }
 
-async function convertLocations(values, token) {
+async function convertLocations(values, token, client) {
   const result = [];
   for (const value of values || []) {
-    const range = await convertRange(value, token);
+    const range = await convertRange(value, token, client);
     if (range) {
-      result.push(new vscode.Location(vscode.Uri.parse(value.uri), range));
+      result.push(new vscode.Location(client.fromHelperURI(value.uri), range));
     }
   }
   return result;
 }
 
-async function convertRange(value, token) {
+async function convertRange(value, token, client) {
   if (!value || token.isCancellationRequested) {
     return undefined;
   }
-  const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(value.uri));
+  const document = await vscode.workspace.openTextDocument(
+    client.fromHelperURI(value.uri)
+  );
   if (token.isCancellationRequested) {
+    return undefined;
+  }
+  if (document.isDirty) {
     return undefined;
   }
   const text = document.getText();
@@ -196,6 +287,18 @@ async function convertRange(value, token) {
     new vscode.Position(start.line, start.character),
     new vscode.Position(end.line, end.character)
   );
+}
+
+function symbolKey(value, uri, range) {
+  return [
+    value.name,
+    value.kind,
+    uri.toString(),
+    range.start.line,
+    range.start.character,
+    range.end.line,
+    range.end.character
+  ].join("\u0000");
 }
 
 function symbolKind(kind) {
@@ -219,6 +322,8 @@ function deactivate() {}
 module.exports = {
   activate,
   deactivate,
+  documentSelector,
   registerProviders,
-  watchedPatterns
+  watchedPatterns,
+  WorkspaceClient
 };

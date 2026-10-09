@@ -19,5 +19,6 @@ func read(ok bool, owner %User) error {
 	}
 	where := 1
 	enum := 2
+	_ = enum{}
 	return nil
 }

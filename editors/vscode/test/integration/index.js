@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vscode = require("vscode");
 const { NavigationClient, RequestCancelled } = require("../../src/client");
+const { documentSelector, WorkspaceClient } = require("../../src/extension");
 
 async function run() {
   const extension = vscode.extensions.getExtension("tgo.tgo-navigation");
@@ -22,13 +23,80 @@ async function run() {
   const invalidations = [];
   const originalInvalidate = client.invalidate.bind(client);
   client.invalidate = (changed) => {
-    invalidations.push(changed);
+    invalidations.push(changed.toString());
     originalInvalidate(changed);
   };
 
   await checkProviders(document);
   await checkWatchers(folder, client, invalidations);
+  checkRemoteURITranslation();
+  await checkConfigurationRestart(api, folder, client);
   await checkCancellation();
+  await checkDirtyDocument(document);
+  await checkWorkspaceFolderRemoval(api);
+}
+
+function checkRemoteURITranslation() {
+  assert.ok(documentSelector.some(
+    (selector) => selector.language === "tgo" && selector.scheme === "vscode-remote"
+  ));
+  const output = vscode.window.createOutputChannel("TGo URI test");
+  const folder = {
+    uri: vscode.Uri.parse("vscode-remote://ssh-remote+host/workspace%20with%20spaces")
+  };
+  const client = new WorkspaceClient(folder, "tgonav", output);
+  const source = vscode.Uri.joinPath(folder.uri, "pkg", "Café.tgo");
+  const helper = client.toHelperURI(source);
+  assert.equal(helper, "file:///workspace%20with%20spaces/pkg/Caf%C3%A9.tgo");
+  assert.equal(client.fromHelperURI(helper).toString(), source.toString());
+  client.dispose();
+  output.dispose();
+}
+
+async function checkConfigurationRestart(api, folder, original) {
+  const configuration = vscode.workspace.getConfiguration("tgo.navigation", folder.uri);
+  await configuration.update(
+    "helperPath", process.env.TGO_NAV_HELPER, vscode.ConfigurationTarget.WorkspaceFolder
+  );
+  let restarted;
+  await waitFor(() => {
+    restarted = api.clients.forURI(folder.uri);
+    return restarted !== original;
+  });
+  await configuration.update(
+    "helperPath", undefined, vscode.ConfigurationTarget.WorkspaceFolder
+  );
+  await waitFor(() => api.clients.forURI(folder.uri) !== restarted);
+}
+
+async function checkDirtyDocument(document) {
+  const edit = new vscode.WorkspaceEdit();
+  edit.insert(document.uri, new vscode.Position(0, 0), "// unsaved\n");
+  assert.equal(await vscode.workspace.applyEdit(edit), true);
+  assert.equal(document.isDirty, true);
+  const use = document.getText().lastIndexOf("Café");
+  const definitions = await vscode.commands.executeCommand(
+    "vscode.executeDefinitionProvider", document.uri, document.positionAt(use + 1)
+  );
+  assert.deepEqual(definitions, []);
+  const symbols = await vscode.commands.executeCommand(
+    "vscode.executeDocumentSymbolProvider", document.uri
+  );
+  assert.deepEqual(symbols, []);
+}
+
+async function checkWorkspaceFolderRemoval(api) {
+  const folders = vscode.workspace.workspaceFolders;
+  assert.equal(folders.length, 2);
+  const removed = folders[1];
+  const client = api.clients.forURI(removed.uri);
+  assert.ok(client);
+  assert.equal(vscode.workspace.updateWorkspaceFolders(1, 1), true);
+  await waitFor(() => !api.clients.clients.has(removed.uri.toString()));
+  await assert.rejects(
+    client.request("workspaceSymbols", { query: "" }),
+    /navigation helper is closed/
+  );
 }
 
 async function checkProviders(document) {
@@ -112,7 +180,7 @@ async function checkWatchers(folder, client, invalidations) {
   } finally {
     await vscode.workspace.fs.writeFile(goMod, originalGoMod);
     await vscode.workspace.fs.writeFile(main, original);
-    client.invalidate(main.toString());
+    client.invalidate(main);
   }
 }
 

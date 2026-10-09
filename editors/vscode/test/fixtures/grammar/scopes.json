@@ -88,5 +88,11 @@
     "token": "enum",
     "has": "identifier.go",
     "not": "keyword.declaration.enum.tgo"
+  },
+  {
+    "line": "_ = enum{}",
+    "token": "enum",
+    "has": "identifier.go",
+    "not": "keyword.declaration.enum.tgo"
   }
 ]

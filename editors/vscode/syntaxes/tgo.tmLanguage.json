@@ -14,8 +14,17 @@
     "tgo": {
       "patterns": [
         {
-          "name": "keyword.declaration.enum.tgo",
-          "match": "\\benum\\b(?=\\s*(?:`[^`\\n]*`\\s*)?\\{)"
+          "begin": "(?=\\btype\\s+[A-Za-z_]\\w*\\s+enum\\b\\s*(?:`[^`\\n]*`\\s*)?\\{)",
+          "end": "(?=\\r?$)",
+          "patterns": [
+            {
+              "name": "keyword.declaration.enum.tgo",
+              "match": "\\benum\\b"
+            },
+            {
+              "include": "source.go"
+            }
+          ]
         },
         {
           "begin": "(?=\\btype\\s+[A-Za-z_]\\w*\\s+[^\\r\\n{}=]*?\\bwhere\\b)",

@@ -24,7 +24,6 @@ test("grammar includes Go after TGo rules", () => {
 
 test("grammar matches TGo-only tokens", () => {
   const cases = [
-    ["keyword.declaration.enum.tgo", "enum {"],
     ["keyword.other.default.tgo", "..default"]
   ];
   for (const [name, source] of cases) {
