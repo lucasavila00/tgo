@@ -11,6 +11,13 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+func TestAnalyzerDescriptionCoversTGoAndGo(t *testing.T) {
+	want := "check TGo source rules and Go use of generated TGo types"
+	if Analyzer.Doc != want {
+		t.Fatalf("Analyzer.Doc = %q, want %q", Analyzer.Doc, want)
+	}
+}
+
 func TestTGoTestPackageUsesGeneratedTestName(t *testing.T) {
 	tests := []struct {
 		name         string
