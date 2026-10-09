@@ -24,9 +24,9 @@ func TestBoxedEnumLayout(t *testing.T) {
 	}
 	first := model.LargeFirst{Data: [64]byte{1, 2}}
 	second := model.LargeSecond{Data: [64]byte{3, 4}}
-	a := first.Large()
-	b := second.Large()
-	empty := model.LargeEmpty{}.Large()
+	a := model.NewLargeFirst(first.Data)
+	b := model.NewLargeSecond(second.Data)
+	empty := model.NewLargeEmpty()
 	if a.Tag() != model.LargeTagFirst || a.FirstPayload() != first {
 		t.Fatal("first boxed payload")
 	}
@@ -37,7 +37,7 @@ func TestBoxedEnumLayout(t *testing.T) {
 		t.Fatal("empty variant")
 	}
 	mixed := model.EqualSecond{Data: [40]byte{5}}
-	if mixed.Equal().SecondPayload() != mixed {
+	if model.NewEqualSecond(mixed.Data).SecondPayload() != mixed {
 		t.Fatal("inline payload")
 	}
 	var read model.LargeFirst
@@ -50,11 +50,11 @@ func TestBoxedEnumLayout(t *testing.T) {
 }
 
 func TestEnumPublicAPI(t *testing.T) {
-	namedZero := model.NamedZeroZero{}.NamedZero()
+	namedZero := model.NewNamedZeroZero()
 	if namedZero.Tag() != model.NamedZeroTagZero || namedZero.Tag() == 0 {
 		t.Fatal("declared Zero variant tag")
 	}
-	inline := model.EqualFirst{}.Equal().SecondPayload()
+	inline := model.NewEqualFirst([40]byte{}).SecondPayload()
 	if inline != (model.EqualSecond{}) {
 		t.Fatal("wrong inline accessor did not return its inactive slot")
 	}
@@ -63,5 +63,5 @@ func TestEnumPublicAPI(t *testing.T) {
 			t.Fatal("wrong boxed accessor did not panic")
 		}
 	}()
-	_ = model.EqualSecond{}.Equal().FirstPayload()
+	_ = model.NewEqualSecond([40]byte{}).FirstPayload()
 }

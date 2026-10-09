@@ -4,19 +4,29 @@ package syntax
 
 // functionTypeNode wraps one required function type as an expression.
 func functionTypeNode(value *FunctionType) *Expression {
-	result := ExpressionFunctionType{Value: value}.Expression()
+	result := func(tgoInput_72 TgoExpressionFunctionTypeInput) Expression {
+		return NewExpressionFunctionType(
+
+		// basicLiteralNode wraps one required literal as an expression.
+		tgoInput_72.FieldValue)
+	}(TgoExpressionFunctionTypeInput{FieldValue: value})
 	return &result
 }
 
-// basicLiteralNode wraps one required literal as an expression.
 func basicLiteralNode(value *BasicLiteral) *Expression {
-	result := ExpressionBasicLiteral{Value: value}.Expression()
+	result := func(tgoInput_73 TgoExpressionBasicLiteralInput) Expression {
+		return NewExpressionBasicLiteral(
+
+		// blockStatementNode wraps one required block as a statement.
+		tgoInput_73.FieldValue)
+	}(TgoExpressionBasicLiteralInput{FieldValue: value})
 	return &result
 }
 
-// blockStatementNode wraps one required block as a statement.
 func blockStatementNode(value *BlockStatement) *Statement {
-	result := StatementBlock{Value: value}.Statement()
+	result := func(tgoInput_74 TgoStatementBlockInput) Statement {
+		return NewStatementBlock(tgoInput_74.FieldValue)
+	}(TgoStatementBlockInput{FieldValue: value})
 	return &result
 }
 
@@ -555,7 +565,9 @@ func declarationChildren(value *Declaration) []Node {
 		item := enumValue34.EnumPayload()
 		result = addComment(result, item.Value.Doc)
 		if item.Value.Tag != nil {
-			tag := ExpressionBasicLiteral{Value: item.Value.Tag}.Expression()
+			tag := func(tgoInput_75 TgoExpressionBasicLiteralInput) Expression {
+				return NewExpressionBasicLiteral(tgoInput_75.FieldValue)
+			}(TgoExpressionBasicLiteralInput{FieldValue: item.Value.Tag})
 			result = append(result, nodeExpression(&tag))
 		}
 		result = append(result, nodeIdentifier(item.Value.Name))
@@ -648,7 +660,9 @@ func tgoFieldChildren(value *TGoField) []Node {
 func enumVariantChildren(value *EnumVariant) []Node {
 	result := addComment(nil, value.Doc)
 	if value.Tag != nil {
-		tag := ExpressionBasicLiteral{Value: value.Tag}.Expression()
+		tag := func(tgoInput_76 TgoExpressionBasicLiteralInput) Expression {
+			return NewExpressionBasicLiteral(tgoInput_76.FieldValue)
+		}(TgoExpressionBasicLiteralInput{FieldValue: value.Tag})
 		result = append(result, nodeExpression(&tag))
 	}
 	result = append(result, nodeIdentifier(value.Name))

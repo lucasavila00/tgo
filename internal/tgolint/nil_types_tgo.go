@@ -66,16 +66,25 @@ func (v *nilType) GobDecode(data []byte) error {
 	if uint32(tag) != number || tag < nilTypeTagNever || tag > nilTypeTagOptional {
 		return __tgo_fmt.Errorf("nilType: cannot gob decode unknown tag %d", number)
 	}
-	*v = nilType{tgoTag: tag}
+	switch tag {
+	case nilTypeTagNever:
+		*v = NewnilTypeNever()
+	case nilTypeTagNonNil:
+		*v = NewnilTypeNonNil()
+	case nilTypeTagNil:
+		*v = NewnilTypeNil()
+	case nilTypeTagOptional:
+		*v = NewnilTypeOptional()
+	}
 	return nil
 }
 
 // nilTypeNever is the Never payload.
 type nilTypeNever struct{}
 
-// nilType constructs nilType. Model fields must be valid.
+// NewnilTypeNever constructs nilType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value nilTypeNever) nilType() nilType {
+func NewnilTypeNever() nilType {
 	return nilType{tgoTag: nilTypeTagNever}
 }
 
@@ -85,9 +94,9 @@ func (nilType) NeverPayload() nilTypeNever { return nilTypeNever{} }
 // nilTypeNonNil is the NonNil payload.
 type nilTypeNonNil struct{}
 
-// nilType constructs nilType. Model fields must be valid.
+// NewnilTypeNonNil constructs nilType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value nilTypeNonNil) nilType() nilType {
+func NewnilTypeNonNil() nilType {
 	return nilType{tgoTag: nilTypeTagNonNil}
 }
 
@@ -97,9 +106,9 @@ func (nilType) NonNilPayload() nilTypeNonNil { return nilTypeNonNil{} }
 // nilTypeNil is the Nil payload.
 type nilTypeNil struct{}
 
-// nilType constructs nilType. Model fields must be valid.
+// NewnilTypeNil constructs nilType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value nilTypeNil) nilType() nilType {
+func NewnilTypeNil() nilType {
 	return nilType{tgoTag: nilTypeTagNil}
 }
 
@@ -109,9 +118,9 @@ func (nilType) NilPayload() nilTypeNil { return nilTypeNil{} }
 // nilTypeOptional is the Optional payload.
 type nilTypeOptional struct{}
 
-// nilType constructs nilType. Model fields must be valid.
+// NewnilTypeOptional constructs nilType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value nilTypeOptional) nilType() nilType {
+func NewnilTypeOptional() nilType {
 	return nilType{tgoTag: nilTypeTagOptional}
 }
 
@@ -184,28 +193,28 @@ func (v *nilType) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.nilType()
+		*v = NewnilTypeNever()
 		return nil
 	case "NonNil":
 		var payload nilTypeNonNil
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.nilType()
+		*v = NewnilTypeNonNil()
 		return nil
 	case "Nil":
 		var payload nilTypeNil
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.nilType()
+		*v = NewnilTypeNil()
 		return nil
 	case "Optional":
 		var payload nilTypeOptional
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.nilType()
+		*v = NewnilTypeOptional()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown nilType JSON variant %q", variant)
@@ -280,38 +289,38 @@ func (v *nilType) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.nilType()
+		*v = NewnilTypeNever()
 		return nil
 	case 2:
 		var payload nilTypeNonNil
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.nilType()
+		*v = NewnilTypeNonNil()
 		return nil
 	case 3:
 		var payload nilTypeNil
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.nilType()
+		*v = NewnilTypeNil()
 		return nil
 	case 4:
 		var payload nilTypeOptional
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.nilType()
+		*v = NewnilTypeOptional()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid nilType JSON tag")
 	}
 }
 
-func neverNilType() nilType    { return nilTypeNever{}.nilType() }
-func nonNilType() nilType      { return nilTypeNonNil{}.nilType() }
-func nilOnlyType() nilType     { return nilTypeNil{}.nilType() }
-func optionalNilType() nilType { return nilTypeOptional{}.nilType() }
+func neverNilType() nilType    { return NewnilTypeNever() }
+func nonNilType() nilType      { return NewnilTypeNonNil() }
+func nilOnlyType() nilType     { return NewnilTypeNil() }
+func optionalNilType() nilType { return NewnilTypeOptional() }
 
 func nilTypeMembers(value nilType) uint8 {
 	switch value.Tag() {

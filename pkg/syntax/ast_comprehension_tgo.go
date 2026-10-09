@@ -61,10 +61,14 @@ func (v ComprehensionClause) UnknownTag() string {
 type ComprehensionClauseRange struct {
 	Value *ComprehensionRangeClause
 }
+type TgoComprehensionClauseRangeInput struct {
+	FieldValue *ComprehensionRangeClause
+}
 
-// ComprehensionClause constructs ComprehensionClause. Model fields must be valid.
+// NewComprehensionClauseRange constructs ComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ComprehensionClauseRange) ComprehensionClause() ComprehensionClause {
+func NewComprehensionClauseRange(Value *ComprehensionRangeClause) ComprehensionClause {
+	value := ComprehensionClauseRange{Value}
 	return ComprehensionClause{tgoTag: ComprehensionClauseTagRange, tgoRange: value}
 }
 
@@ -75,10 +79,14 @@ func (v ComprehensionClause) RangePayload() ComprehensionClauseRange { return v.
 type ComprehensionClauseFilter struct {
 	Value *ComprehensionFilterClause
 }
+type TgoComprehensionClauseFilterInput struct {
+	FieldValue *ComprehensionFilterClause
+}
 
-// ComprehensionClause constructs ComprehensionClause. Model fields must be valid.
+// NewComprehensionClauseFilter constructs ComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ComprehensionClauseFilter) ComprehensionClause() ComprehensionClause {
+func NewComprehensionClauseFilter(Value *ComprehensionFilterClause) ComprehensionClause {
+	value := ComprehensionClauseFilter{Value}
 	return ComprehensionClause{tgoTag: ComprehensionClauseTagFilter, tgoFilter: value}
 }
 
@@ -135,14 +143,14 @@ func (v *ComprehensionClause) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.ComprehensionClause()
+		*v = NewComprehensionClauseRange(payload.Value)
 		return nil
 	case "Filter":
 		var payload ComprehensionClauseFilter
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.ComprehensionClause()
+		*v = NewComprehensionClauseFilter(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown ComprehensionClause JSON variant %q", variant)
@@ -213,14 +221,14 @@ func (v *ComprehensionClause) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) erro
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.ComprehensionClause()
+		*v = NewComprehensionClauseRange(payload.Value)
 		return nil
 	case 2:
 		var payload ComprehensionClauseFilter
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.ComprehensionClause()
+		*v = NewComprehensionClauseFilter(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid ComprehensionClause JSON tag")

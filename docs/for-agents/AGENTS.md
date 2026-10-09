@@ -155,7 +155,7 @@ quantity, err := model.NewQuantity(3)
 if err != nil {
     return err
 }
-account := model.AccountPersonal{Name: "Lucas"}.Account()
+account := model.NewAccountPersonal("Lucas")
 ```
 
 `NewQuantity` in this example is a project-defined factory. Test check success and failure, every

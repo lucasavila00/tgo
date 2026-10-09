@@ -44,10 +44,15 @@ type ResponseSuccess struct {
 	ID     int64 `json:"id"`
 	Result any   `json:"result,omitempty"`
 }
+type TgoResponseSuccessInput struct {
+	FieldID     int64
+	FieldResult any
+}
 
-// Response constructs Response. Model fields must be valid.
+// NewResponseSuccess constructs Response. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResponseSuccess) Response() Response {
+func NewResponseSuccess(ID int64, Result any) Response {
+	value := ResponseSuccess{ID, Result}
 	return Response{tgoTag: ResponseTagSuccess, tgoSuccess: value}
 }
 
@@ -59,10 +64,15 @@ type ResponseFailure struct {
 	ID    int64  `json:"id"`
 	Error string `json:"error,omitempty"`
 }
+type TgoResponseFailureInput struct {
+	FieldID    int64
+	FieldError string
+}
 
-// Response constructs Response. Model fields must be valid.
+// NewResponseFailure constructs Response. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ResponseFailure) Response() Response {
+func NewResponseFailure(ID int64, Error string) Response {
+	value := ResponseFailure{ID, Error}
 	return Response{tgoTag: ResponseTagFailure, tgoFailure: value}
 }
 
@@ -99,14 +109,14 @@ func (v *Response) UnmarshalJSON(data []byte) error {
 	{
 		var payload ResponseSuccess
 		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
-			*v = payload.Response()
+			*v = NewResponseSuccess(payload.ID, payload.Result)
 			return nil
 		}
 	}
 	{
 		var payload ResponseFailure
 		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
-			*v = payload.Response()
+			*v = NewResponseFailure(payload.ID, payload.Error)
 			return nil
 		}
 	}
@@ -179,10 +189,15 @@ type RequestHover struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *positionParams `json:"params"`
 }
+type TgoRequestHoverInput struct {
+	FieldID     int64
+	FieldParams *positionParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestHover constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestHover) Request() Request {
+func NewRequestHover(ID int64, Params *positionParams) Request {
+	value := RequestHover{ID, Params}
 	return Request{tgoTag: RequestTagHover, tgoPayload: value}
 }
 
@@ -194,10 +209,15 @@ type RequestDefinition struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *positionParams `json:"params"`
 }
+type TgoRequestDefinitionInput struct {
+	FieldID     int64
+	FieldParams *positionParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestDefinition constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestDefinition) Request() Request {
+func NewRequestDefinition(ID int64, Params *positionParams) Request {
+	value := RequestDefinition{ID, Params}
 	return Request{tgoTag: RequestTagDefinition, tgoPayload: value}
 }
 
@@ -209,10 +229,15 @@ type RequestReferences struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *positionParams `json:"params"`
 }
+type TgoRequestReferencesInput struct {
+	FieldID     int64
+	FieldParams *positionParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestReferences constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestReferences) Request() Request {
+func NewRequestReferences(ID int64, Params *positionParams) Request {
+	value := RequestReferences{ID, Params}
 	return Request{tgoTag: RequestTagReferences, tgoPayload: value}
 }
 
@@ -224,10 +249,15 @@ type RequestDocumentSymbols struct {
 	ID     int64           `json:"id,omitempty"`
 	Params *documentParams `json:"params"`
 }
+type TgoRequestDocumentSymbolsInput struct {
+	FieldID     int64
+	FieldParams *documentParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestDocumentSymbols constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestDocumentSymbols) Request() Request {
+func NewRequestDocumentSymbols(ID int64, Params *documentParams) Request {
+	value := RequestDocumentSymbols{ID, Params}
 	return Request{tgoTag: RequestTagDocumentSymbols, tgoPayload: value}
 }
 
@@ -241,10 +271,15 @@ type RequestWorkspaceSymbols struct {
 	ID     int64            `json:"id,omitempty"`
 	Params *workspaceParams `json:"params"`
 }
+type TgoRequestWorkspaceSymbolsInput struct {
+	FieldID     int64
+	FieldParams *workspaceParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestWorkspaceSymbols constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestWorkspaceSymbols) Request() Request {
+func NewRequestWorkspaceSymbols(ID int64, Params *workspaceParams) Request {
+	value := RequestWorkspaceSymbols{ID, Params}
 	return Request{tgoTag: RequestTagWorkspaceSymbols, tgoWorkspaceSymbols: value}
 }
 
@@ -256,10 +291,15 @@ type RequestCancel struct {
 	ID     int64         `json:"id,omitempty"`
 	Params *cancelParams `json:"params"`
 }
+type TgoRequestCancelInput struct {
+	FieldID     int64
+	FieldParams *cancelParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestCancel constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestCancel) Request() Request {
+func NewRequestCancel(ID int64, Params *cancelParams) Request {
+	value := RequestCancel{ID, Params}
 	return Request{tgoTag: RequestTagCancel, tgoCancel: value}
 }
 
@@ -271,10 +311,15 @@ type RequestInvalidate struct {
 	ID     int64             `json:"id,omitempty"`
 	Params *invalidateParams `json:"params"`
 }
+type TgoRequestInvalidateInput struct {
+	FieldID     int64
+	FieldParams *invalidateParams
+}
 
-// Request constructs Request. Model fields must be valid.
+// NewRequestInvalidate constructs Request. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value RequestInvalidate) Request() Request {
+func NewRequestInvalidate(ID int64, Params *invalidateParams) Request {
+	value := RequestInvalidate{ID, Params}
 	return Request{tgoTag: RequestTagInvalidate, tgoInvalidate: value}
 }
 
@@ -558,49 +603,49 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestHover(payload.ID, payload.Params)
 		return nil
 	case "definition":
 		var payload RequestDefinition
 		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestDefinition(payload.ID, payload.Params)
 		return nil
 	case "references":
 		var payload RequestReferences
 		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestReferences(payload.ID, payload.Params)
 		return nil
 	case "documentSymbols":
 		var payload RequestDocumentSymbols
 		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestDocumentSymbols(payload.ID, payload.Params)
 		return nil
 	case "workspaceSymbols":
 		var payload RequestWorkspaceSymbols
 		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestWorkspaceSymbols(payload.ID, payload.Params)
 		return nil
 	case "cancel":
 		var payload RequestCancel
 		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestCancel(payload.ID, payload.Params)
 		return nil
 	case "invalidate":
 		var payload RequestInvalidate
 		if err := __tgo_json.Unmarshal(data, &payload); err != nil {
 			return err
 		}
-		*v = payload.Request()
+		*v = NewRequestInvalidate(payload.ID, payload.Params)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Request JSON variant %q", variant)
@@ -652,12 +697,12 @@ func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Write
 			server.stop()
 			return err
 		}
-		request := RequestHover{
-			ID: 0,
-			Params: &positionParams{
-				URI: "", Offset: 0, IncludeDeclaration: false,
-			},
-		}.Request()
+		request := func(tgoInput TgoRequestHoverInput) Request {
+			return NewRequestHover(tgoInput.FieldID, tgoInput.FieldParams)
+		}(TgoRequestHoverInput{FieldID: 0, FieldParams: &positionParams{
+			URI: "", Offset: 0, IncludeDeclaration: false,
+		}})
+
 		if err := json.Unmarshal(data, &request); err != nil {
 			if header.Method != "cancel" || header.ID != 0 {
 				server.send(protocolError(header.ID, err.Error()))
@@ -731,7 +776,7 @@ func (s *protocolServer) dispatch(request Request) {
 			}
 			return
 		}
-		s.cancel(payload)
+		s.cancel(payload.ID, payload.Params)
 	case RequestTagInvalidate:
 		payload := request.InvalidatePayload()
 		if payload.Params == nil {
@@ -773,22 +818,26 @@ func protocolResult(id int64, result any, err error) Response {
 }
 
 func protocolSuccess(id int64, result any) Response {
-	return ResponseSuccess{ID: id, Result: result}.Response()
+	return func(tgoInput_1 TgoResponseSuccessInput) Response {
+		return NewResponseSuccess(tgoInput_1.FieldID, tgoInput_1.FieldResult)
+	}(TgoResponseSuccessInput{FieldID: id, FieldResult: result})
 }
 
 func protocolError(id int64, message string) Response {
-	return ResponseFailure{ID: id, Error: message}.Response()
+	return func(tgoInput_2 TgoResponseFailureInput) Response {
+		return NewResponseFailure(tgoInput_2.FieldID, tgoInput_2.FieldError)
+	}(TgoResponseFailureInput{FieldID: id, FieldError: message})
 }
 
-func (s *protocolServer) cancel(request RequestCancel) {
+func (s *protocolServer) cancel(id int64, params *cancelParams) {
 	s.activeMu.Lock()
-	cancel := s.active[request.Params.ID]
+	cancel := s.active[params.ID]
 	s.activeMu.Unlock()
 	if cancel != nil {
 		cancel()
 	}
-	if request.ID != 0 {
-		s.send(protocolSuccess(request.ID, true))
+	if id != 0 {
+		s.send(protocolSuccess(id, true))
 	}
 }
 

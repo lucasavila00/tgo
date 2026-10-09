@@ -50,10 +50,15 @@ type modelChecked struct {
 	Package string
 	Name    string
 }
+type TgomodelCheckedInput struct {
+	FieldPackage string
+	FieldName    string
+}
 
-// model constructs model. Model fields must be valid.
+// NewmodelChecked constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value modelChecked) model() model {
+func NewmodelChecked(Package string, Name string) model {
+	value := modelChecked{Package, Name}
 	return model{tgoTag: modelTagChecked, tgoChecked: value}
 }
 
@@ -66,10 +71,16 @@ type modelEnum struct {
 	Name     string
 	Variants []string
 }
+type TgomodelEnumInput struct {
+	FieldPackage  string
+	FieldName     string
+	FieldVariants []string
+}
 
-// model constructs model. Model fields must be valid.
+// NewmodelEnum constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value modelEnum) model() model {
+func NewmodelEnum(Package string, Name string, Variants []string) model {
+	value := modelEnum{Package, Name, Variants}
 	return model{tgoTag: modelTagEnum, tgoPayload: value}
 }
 
@@ -79,9 +90,9 @@ func (v model) EnumPayload() modelEnum { return v.tgoPayload.(modelEnum) }
 // modelMixed is the Mixed payload.
 type modelMixed struct{}
 
-// model constructs model. Model fields must be valid.
+// NewmodelMixed constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value modelMixed) model() model {
+func NewmodelMixed() model {
 	return model{tgoTag: modelTagMixed}
 }
 
@@ -91,9 +102,9 @@ func (model) MixedPayload() modelMixed { return modelMixed{} }
 // modelParameter is the Parameter payload.
 type modelParameter struct{}
 
-// model constructs model. Model fields must be valid.
+// NewmodelParameter constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value modelParameter) model() model {
+func NewmodelParameter() model {
 	return model{tgoTag: modelTagParameter}
 }
 
@@ -166,28 +177,28 @@ func (v *model) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.model()
+		*v = NewmodelChecked(payload.Package, payload.Name)
 		return nil
 	case "Enum":
 		var payload modelEnum
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.model()
+		*v = NewmodelEnum(payload.Package, payload.Name, payload.Variants)
 		return nil
 	case "Mixed":
 		var payload modelMixed
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.model()
+		*v = NewmodelMixed()
 		return nil
 	case "Parameter":
 		var payload modelParameter
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.model()
+		*v = NewmodelParameter()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown model JSON variant %q", variant)
@@ -262,28 +273,28 @@ func (v *model) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.model()
+		*v = NewmodelChecked(payload.Package, payload.Name)
 		return nil
 	case 2:
 		var payload modelEnum
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.model()
+		*v = NewmodelEnum(payload.Package, payload.Name, payload.Variants)
 		return nil
 	case 3:
 		var payload modelMixed
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.model()
+		*v = NewmodelMixed()
 		return nil
 	case 4:
 		var payload modelParameter
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.model()
+		*v = NewmodelParameter()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid model JSON tag")
@@ -309,24 +320,27 @@ const (
 )
 
 func checkedModel(packagePath string, name string) *model {
-	value := modelChecked{Package: packagePath, Name: name}.model()
+	value := func(tgoInput_48 TgomodelCheckedInput) model {
+		return NewmodelChecked(tgoInput_48.FieldPackage, tgoInput_48.FieldName)
+	}(TgomodelCheckedInput{FieldPackage: packagePath, FieldName: name})
 	return &value
 }
 
 func enumModel(packagePath string, name string, variants []string) *model {
-	value := modelEnum{
-		Package: packagePath, Name: name, Variants: variants,
-	}.model()
+	value := func(tgoInput_49 TgomodelEnumInput) model {
+		return NewmodelEnum(tgoInput_49.FieldPackage, tgoInput_49.FieldName, tgoInput_49.FieldVariants)
+	}(TgomodelEnumInput{FieldPackage: packagePath, FieldName: name, FieldVariants: variants})
+
 	return &value
 }
 
 func mixedModel() *model {
-	value := modelMixed{}.model()
+	value := NewmodelMixed()
 	return &value
 }
 
 func parameterModel() *model {
-	value := modelParameter{}.model()
+	value := NewmodelParameter()
 	return &value
 }
 

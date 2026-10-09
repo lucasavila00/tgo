@@ -29,8 +29,13 @@ func TestAnalysisOwnersCoverGeneratedPublicSurface(t *testing.T) {
 	scope := analysis.Package.Scope()
 	for _, name := range []string{
 		"ChoiceTag", "ChoiceTagOne", "ChoiceTagTwo", "ChoiceOne", "ChoiceTwo",
+		"NewChoiceOne", "NewChoiceTwo",
 	} {
-		objects[scope.Lookup(name)] = positions[name]
+		owner := positions[name]
+		if strings.HasPrefix(name, "NewChoice") {
+			owner = positions[strings.TrimPrefix(name, "NewChoice")]
+		}
+		objects[scope.Lookup(name)] = owner
 	}
 	for _, name := range []string{"Choice", "ChoiceOne", "ChoiceTwo"} {
 		named := namedObject(scope.Lookup(name))

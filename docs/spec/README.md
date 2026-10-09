@@ -363,17 +363,24 @@ type AccountBusiness struct {
     Members []Account
 }
 
-func (AccountPersonal) Account() Account
-func (AccountBusiness) Account() Account
+func NewAccountPersonal(name string) Account
+func NewAccountBusiness(company string, members []Account) Account
 func (value Account) Tag() AccountTag
 func (value Account) UnknownTag() string
 func (value Account) PersonalPayload() AccountPersonal
 func (value Account) BusinessPayload() AccountBusiness
 ```
 
-The compiler emits one constructor method and one payload accessor per declared variant.
-Payload types, constructors, the tag API, tag constants, and payload accessors are exported.
-Representation fields and their layout are private. Go callers must use the exported operations.
+The compiler emits one package constructor and one payload accessor per declared variant.
+The constructor name is `New<Enum><Variant>`. It receives fields in declaration order.
+Payload types, constructors, the tag API, tag constants, and payload accessors are exported for
+Go. Representation fields and their layout are private. Go callers must use the constructor.
+
+TGo uses only `Enum.Variant{...}`. This form also works across packages and can supply private
+payload fields. TGo rejects source references to generated constructors, payload types, and input
+carrier types. A keyed literal keeps the contextual type and source evaluation order of each
+field. Explicit fields run once in source order. Selected defaults then run once in declaration
+order.
 
 Tag zero is invalid. Declared variant tags start at one in declaration order.
 The tag uses `uint8` below 256 variants, `uint16` below 65,536 variants,
@@ -680,6 +687,8 @@ T
 TV
 TTag
 TTagV
+	NewTV
+	TgoTVInput
 Tag
 UnknownTag
 VPayload
@@ -692,9 +701,8 @@ TgoDefaultTF
 A source declaration that collides with a generated name is a compile error.
 An inserted reference must resolve to its generated declaration. A local name cannot capture it.
 An enum reserves its emitted `uint8`, `uint16`, or `uint32` tag name.
-Generated payload types and tag constants must have different names. Thus, a variant named `Tag`
-is invalid, but a variant named `Zero` is valid. A payload field cannot have the enum name because
-that name belongs to the constructor method.
+Generated payload types, constructors, carriers, and tag constants must have different names.
+Thus, a variant named `Tag` is invalid, but a variant named `Zero` is valid.
 
 ## Build command and diagnostics
 

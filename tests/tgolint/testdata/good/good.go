@@ -33,8 +33,8 @@ func ValidationFunctionValue(event model.Event) string {
 }
 
 func ConstructorFunctionValue() string {
-	construct := model.EventStopped.Event
-	return Describe(construct(model.EventStopped{}))
+	construct := model.NewEventStopped
+	return Describe(construct(""))
 }
 
 func TrustAssertion(input any) (model.Event, error) {
@@ -148,7 +148,7 @@ func Values() ([]model.Event, error) {
 	}
 	_ = count.Value()
 	return []model.Event{
-		model.EventStarted{ID: "one"}.Event(),
+		model.NewEventStarted("one", ""),
 	}, nil
 }
 
@@ -413,13 +413,13 @@ func PresenceMap(values map[string]model.Event, key string) (model.Event, bool) 
 	if value, ok := values[key]; ok {
 		return value, true
 	}
-	return model.EventStopped{}.Event(), false
+	return model.NewEventStopped(""), false
 }
 
 func PresenceChannel(values <-chan model.Event) (model.Event, bool) {
 	value, ok := <-values
 	if !ok {
-		return model.EventStopped{}.Event(), false
+		return model.NewEventStopped(""), false
 	}
 	return value, true
 }

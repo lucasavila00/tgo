@@ -21,6 +21,16 @@ Fix every diagnostic. The command checks loaded Go packages for:
 - manual error returns that postfix `!` or `!!` replaces exactly; and
 - the same errors through control flow, wrappers, embedding, and generics.
 
+Construct an enum with its generated package function. The function name is
+`New<Enum><Variant>`, and its arguments follow field declaration order:
+
+```go
+account := model.NewAccountPersonal("Lucas")
+```
+
+Do not construct a generated payload type and convert it to the enum. TGo source uses only
+`Account.Personal{Name: "Lucas"}`.
+
 You can return an unchanged result pair. Otherwise, check `err` or `ok` before you
 use the value. Do not take an address of a pending pair variable or capture it in a
 closure. Keep both variables local to the function. Check the pair before a

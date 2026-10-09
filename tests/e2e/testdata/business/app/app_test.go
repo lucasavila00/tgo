@@ -86,13 +86,13 @@ func TestBusiness(t *testing.T) {
 	if model.LiteralTagSubject("Literal") != "Literal" {
 		t.Fatal("literal tag subject used the wrong body")
 	}
-	if model.SignalName(model.SignalOn{}.Signal()) != "on" {
+	if model.SignalName(model.NewSignalOn()) != "on" {
 		t.Fatal("multiline enum declaration has the wrong tag")
 	}
-	if model.SignalState(model.SignalOff{}.Signal()) != "known" {
+	if model.SignalState(model.NewSignalOff()) != "known" {
 		t.Fatal("multi-tag case rejected a known tag")
 	}
-	if model.SignalStateOrInvalid(model.SignalOn{}.Signal()) != "known" {
+	if model.SignalStateOrInvalid(model.NewSignalOn()) != "known" {
 		t.Fatal("returning default rejected a known tag")
 	}
 	explicitFlag, explicitName := model.MarkerValues(model.ExplicitMarker())
@@ -104,6 +104,18 @@ func TestBusiness(t *testing.T) {
 		model.Label(app.ImportedAlias("Imported")) != "Imported" ||
 		model.Label(app.LocalImportedAlias("Local")) != "Local" {
 		t.Fatal("alias variant construction failed")
+	}
+	privateChoice := app.ImportedPrivateChoice("private")
+	if model.PrivateChoiceText(privateChoice) != "private" ||
+		model.PrivateChoiceValueCount(privateChoice) != 1 {
+		t.Fatal("imported private variant construction failed")
+	}
+	order := []string{}
+	ordered := model.OrderedChoiceValue(&order)
+	if !reflect.DeepEqual(order, []string{"second", "first"}) ||
+		ordered.ValuePayload().First != "first" ||
+		ordered.ValuePayload().Second != "second" {
+		t.Fatal("enum construction changed source evaluation order")
 	}
 	if request := app.LocalImportedRequest("local"); request.ID != "local" || len(request.Tags) != 0 {
 		t.Fatal("alias default construction failed")

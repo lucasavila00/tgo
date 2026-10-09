@@ -14,7 +14,7 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 			Conditions: []GenericEffectCondition{{
 				ValueParameter: 2,
 				OtherParameter: -1,
-				Kind:           EffectKindBoolean{}.EffectKind(),
+				Kind:           NewEffectKindBoolean(),
 				Expected:       true,
 			}},
 		}},

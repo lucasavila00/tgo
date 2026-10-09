@@ -179,7 +179,7 @@ func (s %protocolServer) dispatch(request Request) {
 			}
 			return
 		}
-		s.cancel(payload)
+		s.cancel(payload.ID, payload.Params)
 	case RequestTagInvalidate:
 		payload := request.InvalidatePayload()
 		if payload.Params == nil {
@@ -218,20 +218,20 @@ func protocolResult(id int64, result any, err error) Response {
 	}
 
 func protocolSuccess(id int64, result any) Response {
-	return ResponseSuccess{ID: id, Result: result}.Response()
+	return Response.Success{ID: id, Result: result}
 }
 
 func protocolError(id int64, message string) Response {
-	return ResponseFailure{ID: id, Error: message}.Response()
+	return Response.Failure{ID: id, Error: message}
 }
 
-func (s %protocolServer) cancel(request RequestCancel) {
+func (s %protocolServer) cancel(id int64, params %cancelParams) {
 	s.activeMu.Lock()
-	cancel := s.active[request.Params.ID]
+	cancel := s.active[params.ID]
 	s.activeMu.Unlock()
 	if cancel != nil { cancel() }
-	if request.ID != 0 {
-		s.send(protocolSuccess(request.ID, true))
+	if id != 0 {
+		s.send(protocolSuccess(id, true))
 	}
 	}
 

@@ -70,11 +70,68 @@ func (p *packageUnit) fillDefaults() {
 	}
 }
 
+// fillEnumDefaults expands selected defaults before namespace literals lower.
+func (p *packageUnit) fillEnumDefaults() {
+	for _, source := range p.Sources {
+		for _, declaration := range source.File.Decls {
+			if p.generatedDecl(declaration) {
+				continue
+			}
+			ast.Inspect(declaration, func(node ast.Node) bool {
+				literal, ok := node.(*ast.CompositeLit)
+				if !ok {
+					return true
+				}
+				selector, owner, model, variant := p.enumLiteral(literal)
+				if model == nil {
+					return true
+				}
+				named, _ := types.Unalias(p.info.TypeOf(selector.X)).(*types.Named)
+				if named == nil {
+					return true
+				}
+				prefix := p.ownerQualifier(source.File, named.Obj().Pkg())
+				p.fillLiteralDefaultsFor(
+					source,
+					literal,
+					source.DefaultMarker,
+					owner,
+					model.Name+variant.Name,
+					variant.Fields,
+					prefix,
+				)
+				return true
+			})
+		}
+	}
+}
+
 // fillLiteralDefaults adds omitted default fields to one composite literal.
 func (p *packageUnit) fillLiteralDefaults(
 	source *source,
 	literal *ast.CompositeLit,
 	marker string,
+) {
+	owner, name, fields := p.literalFields(p.info.TypeOf(literal))
+	if name == "" {
+		if hasDefaultMarker(literal, marker) {
+			p.fail(literal, "..default needs a tgo struct with declared defaults")
+		}
+		return
+	}
+	named := types.Unalias(p.info.TypeOf(literal)).(*types.Named)
+	prefix := p.ownerQualifier(source.File, named.Obj().Pkg())
+	p.fillLiteralDefaultsFor(source, literal, marker, owner, name, fields, prefix)
+}
+
+func (p *packageUnit) fillLiteralDefaultsFor(
+	source *source,
+	literal *ast.CompositeLit,
+	marker string,
+	owner *packageUnit,
+	name string,
+	fields []field,
+	prefix string,
 ) {
 	marked := false
 	supplied := make(map[string]bool)
@@ -95,24 +152,12 @@ func (p *packageUnit) fillLiteralDefaults(
 		return
 	}
 	source.Lowered = true
-	owner, name, fields := p.literalFields(p.info.TypeOf(literal))
-	if name == "" {
-		p.fail(literal, "..default needs a tgo struct with declared defaults")
-		return
-	}
-	prefix := ""
-	qualified := false
 	for _, field := range fields {
 		if supplied[field.Name] {
 			continue
 		}
 		if field.Default == "" {
 			continue
-		}
-		if !qualified {
-			named := types.Unalias(p.info.TypeOf(literal)).(*types.Named)
-			prefix = p.ownerQualifier(source.File, named.Obj().Pkg())
-			qualified = true
 		}
 		helper := p.generatedObject(
 			prefix,
@@ -126,6 +171,15 @@ func (p *packageUnit) fillLiteralDefaults(
 		})
 	}
 	literal.Elts = elements
+}
+
+func hasDefaultMarker(literal *ast.CompositeLit, marker string) bool {
+	for _, element := range literal.Elts {
+		if fieldName(element) == marker {
+			return true
+		}
+	}
+	return false
 }
 
 // fieldName returns the key name from a keyed literal element.

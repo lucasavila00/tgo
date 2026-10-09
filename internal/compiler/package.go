@@ -144,10 +144,12 @@ func (p *packageUnit) checkAndLower() error {
 	p.prepare()
 	p.typecheck()
 	p.checkGeneratedPredeclaredNames()
+	p.checkGeneratedEnumNameCollisions()
 	p.checkCheckedStructs()
 	if len(p.errors) > 0 {
 		return p.errors[0]
 	}
+	p.fillEnumDefaults()
 	p.lowerConstructions()
 	p.typecheck()
 	p.lowerPropagations()

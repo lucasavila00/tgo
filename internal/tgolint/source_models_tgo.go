@@ -282,10 +282,16 @@ type sourceModelEnum struct {
 	Fact     *model
 	Variants []sourceVariant
 }
+type TgosourceModelEnumInput struct {
+	FieldName     string
+	FieldFact     *model
+	FieldVariants []sourceVariant
+}
 
-// sourceModel constructs sourceModel. Model fields must be valid.
+// NewsourceModelEnum constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value sourceModelEnum) sourceModel() sourceModel {
+func NewsourceModelEnum(Name string, Fact *model, Variants []sourceVariant) sourceModel {
+	value := sourceModelEnum{Name, Fact, Variants}
 	return sourceModel{tgoTag: sourceModelTagEnum, tgoPayload: value}
 }
 
@@ -298,10 +304,16 @@ type sourceModelStruct struct {
 	Fact   *model
 	Fields []sourceField
 }
+type TgosourceModelStructInput struct {
+	FieldName   string
+	FieldFact   *model
+	FieldFields []sourceField
+}
 
-// sourceModel constructs sourceModel. Model fields must be valid.
+// NewsourceModelStruct constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value sourceModelStruct) sourceModel() sourceModel {
+func NewsourceModelStruct(Name string, Fact *model, Fields []sourceField) sourceModel {
+	value := sourceModelStruct{Name, Fact, Fields}
 	return sourceModel{tgoTag: sourceModelTagStruct, tgoStruct: value}
 }
 
@@ -358,14 +370,14 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.sourceModel()
+		*v = NewsourceModelEnum(payload.Name, payload.Fact, payload.Variants)
 		return nil
 	case "Struct":
 		var payload sourceModelStruct
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.sourceModel()
+		*v = NewsourceModelStruct(payload.Name, payload.Fact, payload.Fields)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown sourceModel JSON variant %q", variant)
@@ -436,14 +448,14 @@ func (v *sourceModel) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.sourceModel()
+		*v = NewsourceModelEnum(payload.Name, payload.Fact, payload.Variants)
 		return nil
 	case 2:
 		var payload sourceModelStruct
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.sourceModel()
+		*v = NewsourceModelStruct(payload.Name, payload.Fact, payload.Fields)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid sourceModel JSON tag")
@@ -489,11 +501,10 @@ func sourceDeclaration(
 				},
 			)
 		}
-		result := sourceModelEnum{
-			Name:     node.Name.Name,
-			Fact:     enumModel(packagePath, node.Name.Name, variants),
-			Variants: sourceVariants,
-		}.sourceModel()
+		result := func(tgoInput_54 TgosourceModelEnumInput) sourceModel {
+			return NewsourceModelEnum(tgoInput_54.FieldName, tgoInput_54.FieldFact, tgoInput_54.FieldVariants)
+		}(TgosourceModelEnumInput{FieldName: node.Name.Name, FieldFact: enumModel(packagePath, node.Name.Name, variants), FieldVariants: sourceVariants})
+
 		return &result
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
@@ -510,11 +521,10 @@ func sourceDeclaration(
 		if node.Checked != token.NoPos {
 			fact = checkedModel(packagePath, node.Name.Name)
 		}
-		result := sourceModelStruct{
-			Name:   node.Name.Name,
-			Fact:   fact,
-			Fields: fields,
-		}.sourceModel()
+		result := func(tgoInput_55 TgosourceModelStructInput) sourceModel {
+			return NewsourceModelStruct(tgoInput_55.FieldName, tgoInput_55.FieldFact, tgoInput_55.FieldFields)
+		}(TgosourceModelStructInput{FieldName: node.Name.Name, FieldFact: fact, FieldFields: fields})
+
 		return &result
 	}
 	return nil
@@ -653,9 +663,15 @@ func generatedEnumShape(
 			typ,
 			payload,
 			variant.name+"Payload",
-			name,
+			"New"+payloadName,
 		) {
 			return false
+		}
+		if len(variant.fields) > 0 {
+			carrier, ok := typeInPackage(typ, "Tgo"+payloadName+"Input")
+			if !ok || !validEnumCarrier(payload, carrier) {
+				return false
+			}
 		}
 	}
 	return true

@@ -46,10 +46,6 @@ type AccountAlias = Account
 
 type Accounts interface {
     Account
-    Tag() AccountTag
-    UnknownTag() string
-    PersonalPayload() AccountPersonal
-    BusinessPayload() AccountBusiness
 }
 
 type CounterRecord (struct {
@@ -89,6 +85,51 @@ type Signal enum
 {
     On struct{}
     Off struct{}
+}
+
+type PrivateChoice enum {
+    Value struct {
+        text string
+        pointer *int
+        values []int = []int{1}
+    }
+    Empty struct{}
+}
+
+func PrivateChoiceText(value PrivateChoice) string {
+    switch value.Tag() {
+    case PrivateChoiceTagValue:
+        return value.ValuePayload().text
+    case PrivateChoiceTagEmpty:
+        return ""
+    exhaustive:
+    }
+}
+
+func PrivateChoiceValueCount(value PrivateChoice) int {
+    switch value.Tag() {
+    case PrivateChoiceTagValue:
+        return len(value.ValuePayload().values)
+    case PrivateChoiceTagEmpty:
+        return 0
+    exhaustive:
+    }
+}
+
+type OrderedChoice enum {
+    Value struct { First, Second string }
+}
+
+func appendOrder(order *[]string, value string) string {
+    *order = append(*order, value)
+    return value
+}
+
+func OrderedChoiceValue(order *[]string) OrderedChoice {
+    return OrderedChoice.Value{
+        Second: appendOrder(order, "second"),
+        First: appendOrder(order, "first"),
+    }
 }
 
 type Request struct {

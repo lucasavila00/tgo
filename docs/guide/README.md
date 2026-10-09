@@ -112,7 +112,7 @@ Import Go packages and call them directly. Keep their types, callbacks, and erro
 Go code can call generated enum functions and project-defined checked struct factories:
 
 ```go
-account := model.AccountPersonal{Name: "Lucas"}.Account()
+account := model.NewAccountPersonal("Lucas")
 port, err := model.NewPort(3)
 ```
 

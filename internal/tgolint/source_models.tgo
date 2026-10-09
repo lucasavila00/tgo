@@ -443,9 +443,15 @@ func generatedEnumShape(
 			typ,
 			payload,
 			variant.name + "Payload",
-			name,
+			"New" + payloadName,
 		) {
 			return false
+		}
+		if len(variant.fields) > 0 {
+			carrier, ok := typeInPackage(typ, "Tgo" + payloadName + "Input")
+			if !ok || !validEnumCarrier(payload, carrier) {
+				return false
+			}
 		}
 	}
 	return true

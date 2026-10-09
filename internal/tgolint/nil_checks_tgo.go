@@ -295,7 +295,9 @@ func (e *nilEnvironment) checkNilNamedResults(
 					e.reportNil(statement.Start, "bare return cannot set a non-nil result")
 				} else {
 					name := field.Names[fieldIndex]
-					nameExpression := syntax.ExpressionIdentifier{Value: name}.Expression()
+					nameExpression := func(tgoInput_50 syntax.TgoExpressionIdentifierInput) syntax.Expression {
+						return syntax.NewExpressionIdentifier(tgoInput_50.FieldValue)
+					}(syntax.TgoExpressionIdentifierInput{FieldValue: name})
 					if !isNonNilType(e.expressionNilType(&nameExpression, state)) {
 						e.reportNil(name.Start, "named result is not proven non-nil")
 					}

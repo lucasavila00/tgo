@@ -250,68 +250,92 @@ func (c *converter) comprehensionExpression(
 				)
 			}
 			payload.Clauses = append(
-				payload.Clauses, ComprehensionClauseRange{Value: rangeClause}.ComprehensionClause(),
+				payload.Clauses, func(tgoInput TgoComprehensionClauseRangeInput) ComprehensionClause {
+					return NewComprehensionClauseRange(tgoInput.FieldValue)
+				}(TgoComprehensionClauseRangeInput{FieldValue: rangeClause}),
 			)
 			continue
 		}
 		payload.Clauses = append(
-			payload.Clauses, ComprehensionClauseFilter{Value: &ComprehensionFilterClause{
+			payload.Clauses, func(tgoInput_1 TgoComprehensionClauseFilterInput) ComprehensionClause {
+				return NewComprehensionClauseFilter(tgoInput_1.FieldValue)
+			}(TgoComprehensionClauseFilterInput{FieldValue: &ComprehensionFilterClause{
 				Span:      Span{Start: clause.Pos(), Stop: clause.End()},
 				If:        clause.Keyword,
 				Condition: c.expressionRequired(clause.Expression),
 				Lbrace:    clause.Lbrace, Rbrace: clause.Rbrace,
-			}}.ComprehensionClause(),
+			}}),
 		)
 	}
-	result := ExpressionComprehension{Value: payload}.Expression()
+	result := func(tgoInput_2 TgoExpressionComprehensionInput) Expression {
+		return NewExpressionComprehension(tgoInput_2.FieldValue)
+	}(TgoExpressionComprehensionInput{FieldValue: payload})
 	return &result
 }
 
 func (c *converter) expressionRaw(value ast.Expr) *Expression {
 	switch item := value.(type) {
 	case *ast.BadExpr:
-		result := ExpressionBad{Value: &BadExpression{
+		result := func(tgoInput_3 TgoExpressionBadInput) Expression {
+			return NewExpressionBad(tgoInput_3.FieldValue)
+		}(TgoExpressionBadInput{FieldValue: &BadExpression{
 			Span: span(item), From: item.From, To: item.To,
-		}}.Expression()
+		}})
 		return &result
 	case *ast.Ident:
-		result := ExpressionIdentifier{Value: c.identifierRequired(item)}.Expression()
+		result := func(tgoInput_4 TgoExpressionIdentifierInput) Expression {
+			return NewExpressionIdentifier(tgoInput_4.FieldValue)
+		}(TgoExpressionIdentifierInput{FieldValue: c.identifierRequired(item)})
 		return &result
 	case *ast.Ellipsis:
-		result := ExpressionEllipsis{Value: &EllipsisExpression{
+		result := func(tgoInput_5 TgoExpressionEllipsisInput) Expression {
+			return NewExpressionEllipsis(tgoInput_5.FieldValue)
+		}(TgoExpressionEllipsisInput{FieldValue: &EllipsisExpression{
 			Span: span(item), Ellipsis: item.Ellipsis, Element: c.expression(item.Elt),
-		}}.Expression()
+		}})
 		return &result
 	case *ast.BasicLit:
-		result := ExpressionBasicLiteral{Value: c.basicLiteralRequired(item)}.Expression()
+		result := func(tgoInput_6 TgoExpressionBasicLiteralInput) Expression {
+			return NewExpressionBasicLiteral(tgoInput_6.FieldValue)
+		}(TgoExpressionBasicLiteralInput{FieldValue: c.basicLiteralRequired(item)})
 		return &result
 	case *ast.FuncLit:
-		result := ExpressionFunctionLiteral{Value: &FunctionLiteral{
+		result := func(tgoInput_7 TgoExpressionFunctionLiteralInput) Expression {
+			return NewExpressionFunctionLiteral(tgoInput_7.FieldValue)
+		}(TgoExpressionFunctionLiteralInput{FieldValue: &FunctionLiteral{
 			Span: span(item), Type: c.functionTypeRequired(item.Type),
 			Body: c.blockRequired(item.Body),
-		}}.Expression()
+		}})
 		return &result
 	case *ast.CompositeLit:
-		result := ExpressionCompositeLiteral{Value: c.compositeLiteral(item)}.Expression()
+		result := func(tgoInput_8 TgoExpressionCompositeLiteralInput) Expression {
+			return NewExpressionCompositeLiteral(tgoInput_8.FieldValue)
+		}(TgoExpressionCompositeLiteralInput{FieldValue: c.compositeLiteral(item)})
 		return &result
 	case *ast.ParenExpr:
-		result := ExpressionParenthesized{Value: &ParenthesizedExpression{
+		result := func(tgoInput_9 TgoExpressionParenthesizedInput) Expression {
+			return NewExpressionParenthesized(tgoInput_9.FieldValue)
+		}(TgoExpressionParenthesizedInput{FieldValue: &ParenthesizedExpression{
 			Span: span(item), Lparen: item.Lparen,
 			Expression: c.expressionRequired(item.X), Rparen: item.Rparen,
-		}}.Expression()
+		}})
 		return &result
 	case *ast.SelectorExpr:
-		result := ExpressionSelector{Value: &SelectorExpression{
+		result := func(tgoInput_10 TgoExpressionSelectorInput) Expression {
+			return NewExpressionSelector(tgoInput_10.FieldValue)
+		}(TgoExpressionSelectorInput{FieldValue: &SelectorExpression{
 			Span: span(item), Expression: c.expressionRequired(item.X),
 			Selector: c.identifierRequired(item.Sel),
-		}}.Expression()
+		}})
 		return &result
 	case *ast.IndexExpr:
-		result := ExpressionIndex{Value: &IndexExpression{
+		result := func(tgoInput_11 TgoExpressionIndexInput) Expression {
+			return NewExpressionIndex(tgoInput_11.FieldValue)
+		}(TgoExpressionIndexInput{FieldValue: &IndexExpression{
 			Span: span(item), Expression: c.expressionRequired(item.X),
 			Lbrack: item.Lbrack, Index: c.expressionRequired(item.Index),
 			Rbrack: item.Rbrack,
-		}}.Expression()
+		}})
 		return &result
 	case *ast.IndexListExpr:
 		value := &IndexListExpression{
@@ -319,91 +343,121 @@ func (c *converter) expressionRaw(value ast.Expr) *Expression {
 			Lbrack: item.Lbrack, Indices: nil, Rbrack: item.Rbrack,
 		}
 		value.Indices = c.expressions(item.Indices)
-		result := ExpressionIndexList{Value: value}.Expression()
+		result := func(tgoInput_12 TgoExpressionIndexListInput) Expression {
+			return NewExpressionIndexList(tgoInput_12.FieldValue)
+		}(TgoExpressionIndexListInput{FieldValue: value})
 		return &result
 	case *ast.SliceExpr:
-		result := ExpressionSlice{Value: &SliceExpression{
+		result := func(tgoInput_13 TgoExpressionSliceInput) Expression {
+			return NewExpressionSlice(tgoInput_13.FieldValue)
+		}(TgoExpressionSliceInput{FieldValue: &SliceExpression{
 			Span: span(item), Expression: c.expressionRequired(item.X),
 			Lbrack: item.Lbrack, Low: c.expression(item.Low),
 			High: c.expression(item.High), Max: c.expression(item.Max),
 			Slice3: item.Slice3, Rbrack: item.Rbrack,
-		}}.Expression()
+		}})
 		return &result
 	case *ast.TypeAssertExpr:
-		result := ExpressionTypeAssertion{Value: &TypeAssertionExpression{
+		result := func(tgoInput_14 TgoExpressionTypeAssertionInput) Expression {
+			return NewExpressionTypeAssertion(tgoInput_14.FieldValue)
+		}(TgoExpressionTypeAssertionInput{FieldValue: &TypeAssertionExpression{
 			Span: span(item), Expression: c.expressionRequired(item.X),
 			Lparen: item.Lparen, Type: c.expression(item.Type), Rparen: item.Rparen,
-		}}.Expression()
+		}})
 		return &result
 	case *ast.CallExpr:
-		result := ExpressionCall{Value: c.callRequired(item)}.Expression()
+		result := func(tgoInput_15 TgoExpressionCallInput) Expression {
+			return NewExpressionCall(tgoInput_15.FieldValue)
+		}(TgoExpressionCallInput{FieldValue: c.callRequired(item)})
 		return &result
 	case *ast.StarExpr:
 		if c.front.nonNil[item.Star] {
-			result := ExpressionNonNilPointer{Value: &NonNilPointerType{
+			result := func(tgoInput_16 TgoExpressionNonNilPointerInput) Expression {
+				return NewExpressionNonNilPointer(tgoInput_16.FieldValue)
+			}(TgoExpressionNonNilPointerInput{FieldValue: &NonNilPointerType{
 				Span: span(item), Percent: item.Star,
 				Type: c.expressionRequired(item.X),
-			}}.Expression()
+			}})
 			return &result
 		}
-		result := ExpressionStar{Value: &StarExpression{
+		result := func(tgoInput_17 TgoExpressionStarInput) Expression {
+			return NewExpressionStar(tgoInput_17.FieldValue)
+		}(TgoExpressionStarInput{FieldValue: &StarExpression{
 			Span: span(item), Star: item.Star,
 			Expression: c.expressionRequired(item.X),
-		}}.Expression()
+		}})
 		return &result
 	case *ast.UnaryExpr:
-		result := ExpressionUnary{Value: &UnaryExpression{
+		result := func(tgoInput_18 TgoExpressionUnaryInput) Expression {
+			return NewExpressionUnary(tgoInput_18.FieldValue)
+		}(TgoExpressionUnaryInput{FieldValue: &UnaryExpression{
 			Span: span(item), OperatorPosition: item.OpPos,
 			Operator: item.Op, Expression: c.expressionRequired(item.X),
-		}}.Expression()
+		}})
 		return &result
 	case *ast.BinaryExpr:
-		result := ExpressionBinary{Value: &BinaryExpression{
+		result := func(tgoInput_19 TgoExpressionBinaryInput) Expression {
+			return NewExpressionBinary(tgoInput_19.FieldValue)
+		}(TgoExpressionBinaryInput{FieldValue: &BinaryExpression{
 			Span: span(item), Left: c.expressionRequired(item.X),
 			OperatorPosition: item.OpPos, Operator: item.Op,
 			Right: c.expressionRequired(item.Y),
-		}}.Expression()
+		}})
 		return &result
 	case *ast.KeyValueExpr:
-		result := ExpressionKeyValue{Value: &KeyValueExpression{
+		result := func(tgoInput_20 TgoExpressionKeyValueInput) Expression {
+			return NewExpressionKeyValue(tgoInput_20.FieldValue)
+		}(TgoExpressionKeyValueInput{FieldValue: &KeyValueExpression{
 			Span: span(item), Key: c.expressionRequired(item.Key),
 			Colon: item.Colon, Value: c.expressionRequired(item.Value),
-		}}.Expression()
+		}})
 		return &result
 	case *ast.ArrayType:
-		result := ExpressionArrayType{Value: &ArrayType{
+		result := func(tgoInput_21 TgoExpressionArrayTypeInput) Expression {
+			return NewExpressionArrayType(tgoInput_21.FieldValue)
+		}(TgoExpressionArrayTypeInput{FieldValue: &ArrayType{
 			Span: span(item), Lbrack: item.Lbrack,
 			Length: c.expression(item.Len), Element: c.expressionRequired(item.Elt),
-		}}.Expression()
+		}})
 		return &result
 	case *ast.StructType:
-		result := ExpressionStructType{Value: &StructType{
+		result := func(tgoInput_22 TgoExpressionStructTypeInput) Expression {
+			return NewExpressionStructType(tgoInput_22.FieldValue)
+		}(TgoExpressionStructTypeInput{FieldValue: &StructType{
 			Span: span(item), Struct: item.Struct,
 			Fields: c.fieldListRequired(item.Fields), Incomplete: item.Incomplete,
-		}}.Expression()
+		}})
 		return &result
 	case *ast.FuncType:
-		result := ExpressionFunctionType{Value: c.functionTypeRequired(item)}.Expression()
+		result := func(tgoInput_23 TgoExpressionFunctionTypeInput) Expression {
+			return NewExpressionFunctionType(tgoInput_23.FieldValue)
+		}(TgoExpressionFunctionTypeInput{FieldValue: c.functionTypeRequired(item)})
 		return &result
 	case *ast.InterfaceType:
-		result := ExpressionInterfaceType{Value: &InterfaceType{
+		result := func(tgoInput_24 TgoExpressionInterfaceTypeInput) Expression {
+			return NewExpressionInterfaceType(tgoInput_24.FieldValue)
+		}(TgoExpressionInterfaceTypeInput{FieldValue: &InterfaceType{
 			Span: span(item), Interface: item.Interface,
 			Methods: c.fieldListRequired(item.Methods), Incomplete: item.Incomplete,
-		}}.Expression()
+		}})
 		return &result
 	case *ast.MapType:
-		result := ExpressionMapType{Value: &MapType{
+		result := func(tgoInput_25 TgoExpressionMapTypeInput) Expression {
+			return NewExpressionMapType(tgoInput_25.FieldValue)
+		}(TgoExpressionMapTypeInput{FieldValue: &MapType{
 			Span: span(item), Map: item.Map,
 			Key:   c.expressionRequired(item.Key),
 			Value: c.expressionRequired(item.Value),
-		}}.Expression()
+		}})
 		return &result
 	case *ast.ChanType:
-		result := ExpressionChannelType{Value: &ChannelType{
+		result := func(tgoInput_26 TgoExpressionChannelTypeInput) Expression {
+			return NewExpressionChannelType(tgoInput_26.FieldValue)
+		}(TgoExpressionChannelTypeInput{FieldValue: &ChannelType{
 			Span: span(item), Begin: item.Begin, Arrow: item.Arrow,
 			Direction: channelDirection(item.Dir),
 			Value:     c.expressionRequired(item.Value),
-		}}.Expression()
+		}})
 		return &result
 	default:
 		panic(fmt.Sprintf("unsupported go/ast expression %T", value))
@@ -465,12 +519,12 @@ func (c *converter) callRequired(value *ast.CallExpr) *CallExpression {
 
 func channelDirection(value ast.ChanDir) ChannelDirection {
 	if value == ast.SEND {
-		return ChannelDirectionSendOnly{}.ChannelDirection()
+		return NewChannelDirectionSendOnly()
 	}
 	if value == ast.RECV {
-		return ChannelDirectionReceiveOnly{}.ChannelDirection()
+		return NewChannelDirectionReceiveOnly()
 	}
-	return ChannelDirectionSendReceive{}.ChannelDirection()
+	return NewChannelDirectionSendReceive()
 }
 
 func (c *converter) compositeLiteral(value *ast.CompositeLit) *CompositeLiteral {
@@ -490,7 +544,9 @@ func (c *converter) compositeLiteral(value *ast.CompositeLit) *CompositeLiteral 
 			Span:     Span{Start: marker.Pos(), Stop: marker.End()},
 			FirstDot: marker.FirstDot, LastDot: marker.LastDot, Default: marker.Default,
 		}
-		expression := ExpressionDefault{Value: expressionValue}.Expression()
+		expression := func(tgoInput_27 TgoExpressionDefaultInput) Expression {
+			return NewExpressionDefault(tgoInput_27.FieldValue)
+		}(TgoExpressionDefaultInput{FieldValue: expressionValue})
 		result.Elements = insertExpression(result.Elements, &expression)
 	}
 	return result
@@ -519,7 +575,9 @@ func (c *converter) propagationExpression(value *frontPropagateExpr) *Expression
 		Call:       c.callRequired(value.Call), Bang: value.Bang,
 		SecondBang: value.SecondBang,
 	}
-	result := ExpressionPropagation{Value: payload}.Expression()
+	result := func(tgoInput_28 TgoExpressionPropagationInput) Expression {
+		return NewExpressionPropagation(tgoInput_28.FieldValue)
+	}(TgoExpressionPropagationInput{FieldValue: payload})
 	converted := &result
 	c.convertedPropagation[value] = converted
 	return converted

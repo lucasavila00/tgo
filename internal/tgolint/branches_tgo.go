@@ -121,7 +121,9 @@ func (c *checker) branchConstruct(
 		if body == nil {
 			return nil
 		}
-		wrapped := syntax.StatementBlock{Value: body}.Statement()
+		wrapped := func(tgoInput syntax.TgoStatementBlockInput) syntax.Statement {
+			return syntax.NewStatementBlock(tgoInput.FieldValue)
+		}(syntax.TgoStatementBlockInput{FieldValue: body})
 		syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
 			value, ok := syntax.StatementOf(node)
 			if !ok {

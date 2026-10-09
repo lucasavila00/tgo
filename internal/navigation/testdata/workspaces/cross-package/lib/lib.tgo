@@ -39,8 +39,14 @@ func AccountName(value Account) string {
 	}
 }
 
-func PersonalName(value AccountPersonal) string {
-	return value.Name
+func PersonalName(value Account) string {
+	switch value.Tag() {
+	case AccountTagPersonal:
+		return value.PersonalPayload().Name
+	case AccountTagBusiness:
+		return ""
+	exhaustive:
+	}
 }
 
 func MakeAccount() Account {

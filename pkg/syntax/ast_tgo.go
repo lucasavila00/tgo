@@ -114,16 +114,23 @@ func (v *ChannelDirection) GobDecode(data []byte) error {
 	if uint32(tag) != number || tag < ChannelDirectionTagSendReceive || tag > ChannelDirectionTagReceiveOnly {
 		return __tgo_fmt.Errorf("ChannelDirection: cannot gob decode unknown tag %d", number)
 	}
-	*v = ChannelDirection{tgoTag: tag}
+	switch tag {
+	case ChannelDirectionTagSendReceive:
+		*v = NewChannelDirectionSendReceive()
+	case ChannelDirectionTagSendOnly:
+		*v = NewChannelDirectionSendOnly()
+	case ChannelDirectionTagReceiveOnly:
+		*v = NewChannelDirectionReceiveOnly()
+	}
 	return nil
 }
 
 // ChannelDirectionSendReceive is the SendReceive payload.
 type ChannelDirectionSendReceive struct{}
 
-// ChannelDirection constructs ChannelDirection. Model fields must be valid.
+// NewChannelDirectionSendReceive constructs ChannelDirection. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ChannelDirectionSendReceive) ChannelDirection() ChannelDirection {
+func NewChannelDirectionSendReceive() ChannelDirection {
 	return ChannelDirection{tgoTag: ChannelDirectionTagSendReceive}
 }
 
@@ -135,9 +142,9 @@ func (ChannelDirection) SendReceivePayload() ChannelDirectionSendReceive {
 // ChannelDirectionSendOnly is the SendOnly payload.
 type ChannelDirectionSendOnly struct{}
 
-// ChannelDirection constructs ChannelDirection. Model fields must be valid.
+// NewChannelDirectionSendOnly constructs ChannelDirection. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ChannelDirectionSendOnly) ChannelDirection() ChannelDirection {
+func NewChannelDirectionSendOnly() ChannelDirection {
 	return ChannelDirection{tgoTag: ChannelDirectionTagSendOnly}
 }
 
@@ -147,9 +154,9 @@ func (ChannelDirection) SendOnlyPayload() ChannelDirectionSendOnly { return Chan
 // ChannelDirectionReceiveOnly is the ReceiveOnly payload.
 type ChannelDirectionReceiveOnly struct{}
 
-// ChannelDirection constructs ChannelDirection. Model fields must be valid.
+// NewChannelDirectionReceiveOnly constructs ChannelDirection. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ChannelDirectionReceiveOnly) ChannelDirection() ChannelDirection {
+func NewChannelDirectionReceiveOnly() ChannelDirection {
 	return ChannelDirection{tgoTag: ChannelDirectionTagReceiveOnly}
 }
 
@@ -216,21 +223,21 @@ func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.ChannelDirection()
+		*v = NewChannelDirectionSendReceive()
 		return nil
 	case "SendOnly":
 		var payload ChannelDirectionSendOnly
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.ChannelDirection()
+		*v = NewChannelDirectionSendOnly()
 		return nil
 	case "ReceiveOnly":
 		var payload ChannelDirectionReceiveOnly
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.ChannelDirection()
+		*v = NewChannelDirectionReceiveOnly()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown ChannelDirection JSON variant %q", variant)
@@ -303,21 +310,21 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.ChannelDirection()
+		*v = NewChannelDirectionSendReceive()
 		return nil
 	case 2:
 		var payload ChannelDirectionSendOnly
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.ChannelDirection()
+		*v = NewChannelDirectionSendOnly()
 		return nil
 	case 3:
 		var payload ChannelDirectionReceiveOnly
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.ChannelDirection()
+		*v = NewChannelDirectionReceiveOnly()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid ChannelDirection JSON tag")
@@ -383,10 +390,14 @@ func (v Expression) UnknownTag() string {
 type ExpressionBad struct {
 	Value *BadExpression
 }
+type TgoExpressionBadInput struct {
+	FieldValue *BadExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionBad constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionBad) Expression() Expression {
+func NewExpressionBad(Value *BadExpression) Expression {
+	value := ExpressionBad{Value}
 	return Expression{tgoTag: ExpressionTagBad, tgoPayload: value}
 }
 
@@ -397,10 +408,14 @@ func (v Expression) BadPayload() ExpressionBad { return v.tgoPayload.(Expression
 type ExpressionIdentifier struct {
 	Value *Identifier
 }
+type TgoExpressionIdentifierInput struct {
+	FieldValue *Identifier
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionIdentifier constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionIdentifier) Expression() Expression {
+func NewExpressionIdentifier(Value *Identifier) Expression {
+	value := ExpressionIdentifier{Value}
 	return Expression{tgoTag: ExpressionTagIdentifier, tgoPayload: value}
 }
 
@@ -413,10 +428,14 @@ func (v Expression) IdentifierPayload() ExpressionIdentifier {
 type ExpressionEllipsis struct {
 	Value *EllipsisExpression
 }
+type TgoExpressionEllipsisInput struct {
+	FieldValue *EllipsisExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionEllipsis constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionEllipsis) Expression() Expression {
+func NewExpressionEllipsis(Value *EllipsisExpression) Expression {
+	value := ExpressionEllipsis{Value}
 	return Expression{tgoTag: ExpressionTagEllipsis, tgoPayload: value}
 }
 
@@ -427,10 +446,14 @@ func (v Expression) EllipsisPayload() ExpressionEllipsis { return v.tgoPayload.(
 type ExpressionBasicLiteral struct {
 	Value *BasicLiteral
 }
+type TgoExpressionBasicLiteralInput struct {
+	FieldValue *BasicLiteral
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionBasicLiteral constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionBasicLiteral) Expression() Expression {
+func NewExpressionBasicLiteral(Value *BasicLiteral) Expression {
+	value := ExpressionBasicLiteral{Value}
 	return Expression{tgoTag: ExpressionTagBasicLiteral, tgoPayload: value}
 }
 
@@ -443,10 +466,14 @@ func (v Expression) BasicLiteralPayload() ExpressionBasicLiteral {
 type ExpressionFunctionLiteral struct {
 	Value *FunctionLiteral
 }
+type TgoExpressionFunctionLiteralInput struct {
+	FieldValue *FunctionLiteral
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionFunctionLiteral constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionFunctionLiteral) Expression() Expression {
+func NewExpressionFunctionLiteral(Value *FunctionLiteral) Expression {
+	value := ExpressionFunctionLiteral{Value}
 	return Expression{tgoTag: ExpressionTagFunctionLiteral, tgoPayload: value}
 }
 
@@ -459,10 +486,14 @@ func (v Expression) FunctionLiteralPayload() ExpressionFunctionLiteral {
 type ExpressionCompositeLiteral struct {
 	Value *CompositeLiteral
 }
+type TgoExpressionCompositeLiteralInput struct {
+	FieldValue *CompositeLiteral
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionCompositeLiteral constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionCompositeLiteral) Expression() Expression {
+func NewExpressionCompositeLiteral(Value *CompositeLiteral) Expression {
+	value := ExpressionCompositeLiteral{Value}
 	return Expression{tgoTag: ExpressionTagCompositeLiteral, tgoPayload: value}
 }
 
@@ -475,10 +506,14 @@ func (v Expression) CompositeLiteralPayload() ExpressionCompositeLiteral {
 type ExpressionParenthesized struct {
 	Value *ParenthesizedExpression
 }
+type TgoExpressionParenthesizedInput struct {
+	FieldValue *ParenthesizedExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionParenthesized constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionParenthesized) Expression() Expression {
+func NewExpressionParenthesized(Value *ParenthesizedExpression) Expression {
+	value := ExpressionParenthesized{Value}
 	return Expression{tgoTag: ExpressionTagParenthesized, tgoPayload: value}
 }
 
@@ -491,10 +526,14 @@ func (v Expression) ParenthesizedPayload() ExpressionParenthesized {
 type ExpressionSelector struct {
 	Value *SelectorExpression
 }
+type TgoExpressionSelectorInput struct {
+	FieldValue *SelectorExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionSelector constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionSelector) Expression() Expression {
+func NewExpressionSelector(Value *SelectorExpression) Expression {
+	value := ExpressionSelector{Value}
 	return Expression{tgoTag: ExpressionTagSelector, tgoPayload: value}
 }
 
@@ -505,10 +544,14 @@ func (v Expression) SelectorPayload() ExpressionSelector { return v.tgoPayload.(
 type ExpressionIndex struct {
 	Value *IndexExpression
 }
+type TgoExpressionIndexInput struct {
+	FieldValue *IndexExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionIndex constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionIndex) Expression() Expression {
+func NewExpressionIndex(Value *IndexExpression) Expression {
+	value := ExpressionIndex{Value}
 	return Expression{tgoTag: ExpressionTagIndex, tgoPayload: value}
 }
 
@@ -519,10 +562,14 @@ func (v Expression) IndexPayload() ExpressionIndex { return v.tgoPayload.(Expres
 type ExpressionIndexList struct {
 	Value *IndexListExpression
 }
+type TgoExpressionIndexListInput struct {
+	FieldValue *IndexListExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionIndexList constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionIndexList) Expression() Expression {
+func NewExpressionIndexList(Value *IndexListExpression) Expression {
+	value := ExpressionIndexList{Value}
 	return Expression{tgoTag: ExpressionTagIndexList, tgoPayload: value}
 }
 
@@ -533,10 +580,14 @@ func (v Expression) IndexListPayload() ExpressionIndexList { return v.tgoPayload
 type ExpressionSlice struct {
 	Value *SliceExpression
 }
+type TgoExpressionSliceInput struct {
+	FieldValue *SliceExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionSlice constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionSlice) Expression() Expression {
+func NewExpressionSlice(Value *SliceExpression) Expression {
+	value := ExpressionSlice{Value}
 	return Expression{tgoTag: ExpressionTagSlice, tgoPayload: value}
 }
 
@@ -547,10 +598,14 @@ func (v Expression) SlicePayload() ExpressionSlice { return v.tgoPayload.(Expres
 type ExpressionTypeAssertion struct {
 	Value *TypeAssertionExpression
 }
+type TgoExpressionTypeAssertionInput struct {
+	FieldValue *TypeAssertionExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionTypeAssertion constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionTypeAssertion) Expression() Expression {
+func NewExpressionTypeAssertion(Value *TypeAssertionExpression) Expression {
+	value := ExpressionTypeAssertion{Value}
 	return Expression{tgoTag: ExpressionTagTypeAssertion, tgoPayload: value}
 }
 
@@ -563,10 +618,14 @@ func (v Expression) TypeAssertionPayload() ExpressionTypeAssertion {
 type ExpressionCall struct {
 	Value *CallExpression
 }
+type TgoExpressionCallInput struct {
+	FieldValue *CallExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionCall constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionCall) Expression() Expression {
+func NewExpressionCall(Value *CallExpression) Expression {
+	value := ExpressionCall{Value}
 	return Expression{tgoTag: ExpressionTagCall, tgoPayload: value}
 }
 
@@ -577,10 +636,14 @@ func (v Expression) CallPayload() ExpressionCall { return v.tgoPayload.(Expressi
 type ExpressionStar struct {
 	Value *StarExpression
 }
+type TgoExpressionStarInput struct {
+	FieldValue *StarExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionStar constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionStar) Expression() Expression {
+func NewExpressionStar(Value *StarExpression) Expression {
+	value := ExpressionStar{Value}
 	return Expression{tgoTag: ExpressionTagStar, tgoPayload: value}
 }
 
@@ -591,10 +654,14 @@ func (v Expression) StarPayload() ExpressionStar { return v.tgoPayload.(Expressi
 type ExpressionNonNilPointer struct {
 	Value *NonNilPointerType
 }
+type TgoExpressionNonNilPointerInput struct {
+	FieldValue *NonNilPointerType
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionNonNilPointer constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionNonNilPointer) Expression() Expression {
+func NewExpressionNonNilPointer(Value *NonNilPointerType) Expression {
+	value := ExpressionNonNilPointer{Value}
 	return Expression{tgoTag: ExpressionTagNonNilPointer, tgoPayload: value}
 }
 
@@ -607,10 +674,14 @@ func (v Expression) NonNilPointerPayload() ExpressionNonNilPointer {
 type ExpressionUnary struct {
 	Value *UnaryExpression
 }
+type TgoExpressionUnaryInput struct {
+	FieldValue *UnaryExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionUnary constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionUnary) Expression() Expression {
+func NewExpressionUnary(Value *UnaryExpression) Expression {
+	value := ExpressionUnary{Value}
 	return Expression{tgoTag: ExpressionTagUnary, tgoPayload: value}
 }
 
@@ -621,10 +692,14 @@ func (v Expression) UnaryPayload() ExpressionUnary { return v.tgoPayload.(Expres
 type ExpressionBinary struct {
 	Value *BinaryExpression
 }
+type TgoExpressionBinaryInput struct {
+	FieldValue *BinaryExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionBinary constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionBinary) Expression() Expression {
+func NewExpressionBinary(Value *BinaryExpression) Expression {
+	value := ExpressionBinary{Value}
 	return Expression{tgoTag: ExpressionTagBinary, tgoPayload: value}
 }
 
@@ -635,10 +710,14 @@ func (v Expression) BinaryPayload() ExpressionBinary { return v.tgoPayload.(Expr
 type ExpressionKeyValue struct {
 	Value *KeyValueExpression
 }
+type TgoExpressionKeyValueInput struct {
+	FieldValue *KeyValueExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionKeyValue constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionKeyValue) Expression() Expression {
+func NewExpressionKeyValue(Value *KeyValueExpression) Expression {
+	value := ExpressionKeyValue{Value}
 	return Expression{tgoTag: ExpressionTagKeyValue, tgoPayload: value}
 }
 
@@ -649,10 +728,14 @@ func (v Expression) KeyValuePayload() ExpressionKeyValue { return v.tgoPayload.(
 type ExpressionArrayType struct {
 	Value *ArrayType
 }
+type TgoExpressionArrayTypeInput struct {
+	FieldValue *ArrayType
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionArrayType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionArrayType) Expression() Expression {
+func NewExpressionArrayType(Value *ArrayType) Expression {
+	value := ExpressionArrayType{Value}
 	return Expression{tgoTag: ExpressionTagArrayType, tgoPayload: value}
 }
 
@@ -663,10 +746,14 @@ func (v Expression) ArrayTypePayload() ExpressionArrayType { return v.tgoPayload
 type ExpressionStructType struct {
 	Value *StructType
 }
+type TgoExpressionStructTypeInput struct {
+	FieldValue *StructType
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionStructType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionStructType) Expression() Expression {
+func NewExpressionStructType(Value *StructType) Expression {
+	value := ExpressionStructType{Value}
 	return Expression{tgoTag: ExpressionTagStructType, tgoPayload: value}
 }
 
@@ -679,10 +766,14 @@ func (v Expression) StructTypePayload() ExpressionStructType {
 type ExpressionFunctionType struct {
 	Value *FunctionType
 }
+type TgoExpressionFunctionTypeInput struct {
+	FieldValue *FunctionType
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionFunctionType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionFunctionType) Expression() Expression {
+func NewExpressionFunctionType(Value *FunctionType) Expression {
+	value := ExpressionFunctionType{Value}
 	return Expression{tgoTag: ExpressionTagFunctionType, tgoFunctionType: value}
 }
 
@@ -693,10 +784,14 @@ func (v Expression) FunctionTypePayload() ExpressionFunctionType { return v.tgoF
 type ExpressionInterfaceType struct {
 	Value *InterfaceType
 }
+type TgoExpressionInterfaceTypeInput struct {
+	FieldValue *InterfaceType
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionInterfaceType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionInterfaceType) Expression() Expression {
+func NewExpressionInterfaceType(Value *InterfaceType) Expression {
+	value := ExpressionInterfaceType{Value}
 	return Expression{tgoTag: ExpressionTagInterfaceType, tgoInterfaceType: value}
 }
 
@@ -707,10 +802,14 @@ func (v Expression) InterfaceTypePayload() ExpressionInterfaceType { return v.tg
 type ExpressionMapType struct {
 	Value *MapType
 }
+type TgoExpressionMapTypeInput struct {
+	FieldValue *MapType
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionMapType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionMapType) Expression() Expression {
+func NewExpressionMapType(Value *MapType) Expression {
+	value := ExpressionMapType{Value}
 	return Expression{tgoTag: ExpressionTagMapType, tgoMapType: value}
 }
 
@@ -721,10 +820,14 @@ func (v Expression) MapTypePayload() ExpressionMapType { return v.tgoMapType }
 type ExpressionChannelType struct {
 	Value *ChannelType
 }
+type TgoExpressionChannelTypeInput struct {
+	FieldValue *ChannelType
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionChannelType constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionChannelType) Expression() Expression {
+func NewExpressionChannelType(Value *ChannelType) Expression {
+	value := ExpressionChannelType{Value}
 	return Expression{tgoTag: ExpressionTagChannelType, tgoChannelType: value}
 }
 
@@ -735,10 +838,14 @@ func (v Expression) ChannelTypePayload() ExpressionChannelType { return v.tgoCha
 type ExpressionDefault struct {
 	Value *DefaultExpression
 }
+type TgoExpressionDefaultInput struct {
+	FieldValue *DefaultExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionDefault constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionDefault) Expression() Expression {
+func NewExpressionDefault(Value *DefaultExpression) Expression {
+	value := ExpressionDefault{Value}
 	return Expression{tgoTag: ExpressionTagDefault, tgoDefault: value}
 }
 
@@ -749,10 +856,14 @@ func (v Expression) DefaultPayload() ExpressionDefault { return v.tgoDefault }
 type ExpressionPropagation struct {
 	Value *PropagationExpression
 }
+type TgoExpressionPropagationInput struct {
+	FieldValue *PropagationExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionPropagation constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionPropagation) Expression() Expression {
+func NewExpressionPropagation(Value *PropagationExpression) Expression {
+	value := ExpressionPropagation{Value}
 	return Expression{tgoTag: ExpressionTagPropagation, tgoPropagation: value}
 }
 
@@ -763,10 +874,14 @@ func (v Expression) PropagationPayload() ExpressionPropagation { return v.tgoPro
 type ExpressionComprehension struct {
 	Value *ComprehensionExpression
 }
+type TgoExpressionComprehensionInput struct {
+	FieldValue *ComprehensionExpression
+}
 
-// Expression constructs Expression. Model fields must be valid.
+// NewExpressionComprehension constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value ExpressionComprehension) Expression() Expression {
+func NewExpressionComprehension(Value *ComprehensionExpression) Expression {
+	value := ExpressionComprehension{Value}
 	return Expression{tgoTag: ExpressionTagComprehension, tgoComprehension: value}
 }
 
@@ -1023,189 +1138,189 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionBad(payload.Value)
 		return nil
 	case "Identifier":
 		var payload ExpressionIdentifier
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionIdentifier(payload.Value)
 		return nil
 	case "Ellipsis":
 		var payload ExpressionEllipsis
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionEllipsis(payload.Value)
 		return nil
 	case "BasicLiteral":
 		var payload ExpressionBasicLiteral
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionBasicLiteral(payload.Value)
 		return nil
 	case "FunctionLiteral":
 		var payload ExpressionFunctionLiteral
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionFunctionLiteral(payload.Value)
 		return nil
 	case "CompositeLiteral":
 		var payload ExpressionCompositeLiteral
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionCompositeLiteral(payload.Value)
 		return nil
 	case "Parenthesized":
 		var payload ExpressionParenthesized
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionParenthesized(payload.Value)
 		return nil
 	case "Selector":
 		var payload ExpressionSelector
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionSelector(payload.Value)
 		return nil
 	case "Index":
 		var payload ExpressionIndex
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionIndex(payload.Value)
 		return nil
 	case "IndexList":
 		var payload ExpressionIndexList
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionIndexList(payload.Value)
 		return nil
 	case "Slice":
 		var payload ExpressionSlice
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionSlice(payload.Value)
 		return nil
 	case "TypeAssertion":
 		var payload ExpressionTypeAssertion
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionTypeAssertion(payload.Value)
 		return nil
 	case "Call":
 		var payload ExpressionCall
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionCall(payload.Value)
 		return nil
 	case "Star":
 		var payload ExpressionStar
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionStar(payload.Value)
 		return nil
 	case "NonNilPointer":
 		var payload ExpressionNonNilPointer
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionNonNilPointer(payload.Value)
 		return nil
 	case "Unary":
 		var payload ExpressionUnary
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionUnary(payload.Value)
 		return nil
 	case "Binary":
 		var payload ExpressionBinary
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionBinary(payload.Value)
 		return nil
 	case "KeyValue":
 		var payload ExpressionKeyValue
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionKeyValue(payload.Value)
 		return nil
 	case "ArrayType":
 		var payload ExpressionArrayType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionArrayType(payload.Value)
 		return nil
 	case "StructType":
 		var payload ExpressionStructType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionStructType(payload.Value)
 		return nil
 	case "FunctionType":
 		var payload ExpressionFunctionType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionFunctionType(payload.Value)
 		return nil
 	case "InterfaceType":
 		var payload ExpressionInterfaceType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionInterfaceType(payload.Value)
 		return nil
 	case "MapType":
 		var payload ExpressionMapType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionMapType(payload.Value)
 		return nil
 	case "ChannelType":
 		var payload ExpressionChannelType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionChannelType(payload.Value)
 		return nil
 	case "Default":
 		var payload ExpressionDefault
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionDefault(payload.Value)
 		return nil
 	case "Propagation":
 		var payload ExpressionPropagation
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionPropagation(payload.Value)
 		return nil
 	case "Comprehension":
 		var payload ExpressionComprehension
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionComprehension(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Expression JSON variant %q", variant)
@@ -1326,189 +1441,189 @@ func (v *Expression) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionBad(payload.Value)
 		return nil
 	case 2:
 		var payload ExpressionIdentifier
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionIdentifier(payload.Value)
 		return nil
 	case 3:
 		var payload ExpressionEllipsis
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionEllipsis(payload.Value)
 		return nil
 	case 4:
 		var payload ExpressionBasicLiteral
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionBasicLiteral(payload.Value)
 		return nil
 	case 5:
 		var payload ExpressionFunctionLiteral
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionFunctionLiteral(payload.Value)
 		return nil
 	case 6:
 		var payload ExpressionCompositeLiteral
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionCompositeLiteral(payload.Value)
 		return nil
 	case 7:
 		var payload ExpressionParenthesized
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionParenthesized(payload.Value)
 		return nil
 	case 8:
 		var payload ExpressionSelector
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionSelector(payload.Value)
 		return nil
 	case 9:
 		var payload ExpressionIndex
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionIndex(payload.Value)
 		return nil
 	case 10:
 		var payload ExpressionIndexList
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionIndexList(payload.Value)
 		return nil
 	case 11:
 		var payload ExpressionSlice
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionSlice(payload.Value)
 		return nil
 	case 12:
 		var payload ExpressionTypeAssertion
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionTypeAssertion(payload.Value)
 		return nil
 	case 13:
 		var payload ExpressionCall
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionCall(payload.Value)
 		return nil
 	case 14:
 		var payload ExpressionStar
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionStar(payload.Value)
 		return nil
 	case 15:
 		var payload ExpressionNonNilPointer
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionNonNilPointer(payload.Value)
 		return nil
 	case 16:
 		var payload ExpressionUnary
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionUnary(payload.Value)
 		return nil
 	case 17:
 		var payload ExpressionBinary
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionBinary(payload.Value)
 		return nil
 	case 18:
 		var payload ExpressionKeyValue
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionKeyValue(payload.Value)
 		return nil
 	case 19:
 		var payload ExpressionArrayType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionArrayType(payload.Value)
 		return nil
 	case 20:
 		var payload ExpressionStructType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionStructType(payload.Value)
 		return nil
 	case 21:
 		var payload ExpressionFunctionType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionFunctionType(payload.Value)
 		return nil
 	case 22:
 		var payload ExpressionInterfaceType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionInterfaceType(payload.Value)
 		return nil
 	case 23:
 		var payload ExpressionMapType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionMapType(payload.Value)
 		return nil
 	case 24:
 		var payload ExpressionChannelType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionChannelType(payload.Value)
 		return nil
 	case 25:
 		var payload ExpressionDefault
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionDefault(payload.Value)
 		return nil
 	case 26:
 		var payload ExpressionPropagation
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionPropagation(payload.Value)
 		return nil
 	case 27:
 		var payload ExpressionComprehension
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Expression()
+		*v = NewExpressionComprehension(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Expression JSON tag")
@@ -1803,10 +1918,14 @@ func (v Statement) UnknownTag() string {
 type StatementBad struct {
 	Value *BadStatement
 }
+type TgoStatementBadInput struct {
+	FieldValue *BadStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementBad constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementBad) Statement() Statement {
+func NewStatementBad(Value *BadStatement) Statement {
+	value := StatementBad{Value}
 	return Statement{tgoTag: StatementTagBad, tgoPayload: value}
 }
 
@@ -1817,10 +1936,14 @@ func (v Statement) BadPayload() StatementBad { return v.tgoPayload.(StatementBad
 type StatementDeclaration struct {
 	Value *DeclarationStatement
 }
+type TgoStatementDeclarationInput struct {
+	FieldValue *DeclarationStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementDeclaration constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementDeclaration) Statement() Statement {
+func NewStatementDeclaration(Value *DeclarationStatement) Statement {
+	value := StatementDeclaration{Value}
 	return Statement{tgoTag: StatementTagDeclaration, tgoPayload: value}
 }
 
@@ -1833,10 +1956,14 @@ func (v Statement) DeclarationPayload() StatementDeclaration {
 type StatementEmpty struct {
 	Value *EmptyStatement
 }
+type TgoStatementEmptyInput struct {
+	FieldValue *EmptyStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementEmpty constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementEmpty) Statement() Statement {
+func NewStatementEmpty(Value *EmptyStatement) Statement {
+	value := StatementEmpty{Value}
 	return Statement{tgoTag: StatementTagEmpty, tgoPayload: value}
 }
 
@@ -1847,10 +1974,14 @@ func (v Statement) EmptyPayload() StatementEmpty { return v.tgoPayload.(Statemen
 type StatementLabeled struct {
 	Value *LabeledStatement
 }
+type TgoStatementLabeledInput struct {
+	FieldValue *LabeledStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementLabeled constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementLabeled) Statement() Statement {
+func NewStatementLabeled(Value *LabeledStatement) Statement {
+	value := StatementLabeled{Value}
 	return Statement{tgoTag: StatementTagLabeled, tgoPayload: value}
 }
 
@@ -1861,10 +1992,14 @@ func (v Statement) LabeledPayload() StatementLabeled { return v.tgoPayload.(Stat
 type StatementExpression struct {
 	Value *ExpressionStatement
 }
+type TgoStatementExpressionInput struct {
+	FieldValue *ExpressionStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementExpression constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementExpression) Statement() Statement {
+func NewStatementExpression(Value *ExpressionStatement) Statement {
+	value := StatementExpression{Value}
 	return Statement{tgoTag: StatementTagExpression, tgoPayload: value}
 }
 
@@ -1875,10 +2010,14 @@ func (v Statement) ExpressionPayload() StatementExpression { return v.tgoPayload
 type StatementSend struct {
 	Value *SendStatement
 }
+type TgoStatementSendInput struct {
+	FieldValue *SendStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementSend constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementSend) Statement() Statement {
+func NewStatementSend(Value *SendStatement) Statement {
+	value := StatementSend{Value}
 	return Statement{tgoTag: StatementTagSend, tgoPayload: value}
 }
 
@@ -1889,10 +2028,14 @@ func (v Statement) SendPayload() StatementSend { return v.tgoPayload.(StatementS
 type StatementIncrement struct {
 	Value *IncrementStatement
 }
+type TgoStatementIncrementInput struct {
+	FieldValue *IncrementStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementIncrement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementIncrement) Statement() Statement {
+func NewStatementIncrement(Value *IncrementStatement) Statement {
+	value := StatementIncrement{Value}
 	return Statement{tgoTag: StatementTagIncrement, tgoPayload: value}
 }
 
@@ -1903,10 +2046,14 @@ func (v Statement) IncrementPayload() StatementIncrement { return v.tgoPayload.(
 type StatementAssignment struct {
 	Value *AssignmentStatement
 }
+type TgoStatementAssignmentInput struct {
+	FieldValue *AssignmentStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementAssignment constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementAssignment) Statement() Statement {
+func NewStatementAssignment(Value *AssignmentStatement) Statement {
+	value := StatementAssignment{Value}
 	return Statement{tgoTag: StatementTagAssignment, tgoPayload: value}
 }
 
@@ -1917,10 +2064,14 @@ func (v Statement) AssignmentPayload() StatementAssignment { return v.tgoPayload
 type StatementGo struct {
 	Value *GoStatement
 }
+type TgoStatementGoInput struct {
+	FieldValue *GoStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementGo constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementGo) Statement() Statement {
+func NewStatementGo(Value *GoStatement) Statement {
+	value := StatementGo{Value}
 	return Statement{tgoTag: StatementTagGo, tgoPayload: value}
 }
 
@@ -1931,10 +2082,14 @@ func (v Statement) GoPayload() StatementGo { return v.tgoPayload.(StatementGo) }
 type StatementDefer struct {
 	Value *DeferStatement
 }
+type TgoStatementDeferInput struct {
+	FieldValue *DeferStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementDefer constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementDefer) Statement() Statement {
+func NewStatementDefer(Value *DeferStatement) Statement {
+	value := StatementDefer{Value}
 	return Statement{tgoTag: StatementTagDefer, tgoPayload: value}
 }
 
@@ -1945,10 +2100,14 @@ func (v Statement) DeferPayload() StatementDefer { return v.tgoPayload.(Statemen
 type StatementReturn struct {
 	Value *ReturnStatement
 }
+type TgoStatementReturnInput struct {
+	FieldValue *ReturnStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementReturn constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementReturn) Statement() Statement {
+func NewStatementReturn(Value *ReturnStatement) Statement {
+	value := StatementReturn{Value}
 	return Statement{tgoTag: StatementTagReturn, tgoPayload: value}
 }
 
@@ -1959,10 +2118,14 @@ func (v Statement) ReturnPayload() StatementReturn { return v.tgoPayload.(Statem
 type StatementBranch struct {
 	Value *BranchStatement
 }
+type TgoStatementBranchInput struct {
+	FieldValue *BranchStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementBranch constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementBranch) Statement() Statement {
+func NewStatementBranch(Value *BranchStatement) Statement {
+	value := StatementBranch{Value}
 	return Statement{tgoTag: StatementTagBranch, tgoPayload: value}
 }
 
@@ -1973,10 +2136,14 @@ func (v Statement) BranchPayload() StatementBranch { return v.tgoPayload.(Statem
 type StatementBlock struct {
 	Value *BlockStatement
 }
+type TgoStatementBlockInput struct {
+	FieldValue *BlockStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementBlock constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementBlock) Statement() Statement {
+func NewStatementBlock(Value *BlockStatement) Statement {
+	value := StatementBlock{Value}
 	return Statement{tgoTag: StatementTagBlock, tgoPayload: value}
 }
 
@@ -1987,10 +2154,14 @@ func (v Statement) BlockPayload() StatementBlock { return v.tgoPayload.(Statemen
 type StatementIf struct {
 	Value *IfStatement
 }
+type TgoStatementIfInput struct {
+	FieldValue *IfStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementIf constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementIf) Statement() Statement {
+func NewStatementIf(Value *IfStatement) Statement {
+	value := StatementIf{Value}
 	return Statement{tgoTag: StatementTagIf, tgoPayload: value}
 }
 
@@ -2001,10 +2172,14 @@ func (v Statement) IfPayload() StatementIf { return v.tgoPayload.(StatementIf) }
 type StatementCase struct {
 	Value *CaseClause
 }
+type TgoStatementCaseInput struct {
+	FieldValue *CaseClause
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementCase constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementCase) Statement() Statement {
+func NewStatementCase(Value *CaseClause) Statement {
+	value := StatementCase{Value}
 	return Statement{tgoTag: StatementTagCase, tgoCase: value}
 }
 
@@ -2015,10 +2190,14 @@ func (v Statement) CasePayload() StatementCase { return v.tgoCase }
 type StatementSwitch struct {
 	Value *SwitchStatement
 }
+type TgoStatementSwitchInput struct {
+	FieldValue *SwitchStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementSwitch constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementSwitch) Statement() Statement {
+func NewStatementSwitch(Value *SwitchStatement) Statement {
+	value := StatementSwitch{Value}
 	return Statement{tgoTag: StatementTagSwitch, tgoSwitch: value}
 }
 
@@ -2029,10 +2208,14 @@ func (v Statement) SwitchPayload() StatementSwitch { return v.tgoSwitch }
 type StatementTypeSwitch struct {
 	Value *TypeSwitchStatement
 }
+type TgoStatementTypeSwitchInput struct {
+	FieldValue *TypeSwitchStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementTypeSwitch constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementTypeSwitch) Statement() Statement {
+func NewStatementTypeSwitch(Value *TypeSwitchStatement) Statement {
+	value := StatementTypeSwitch{Value}
 	return Statement{tgoTag: StatementTagTypeSwitch, tgoTypeSwitch: value}
 }
 
@@ -2043,10 +2226,14 @@ func (v Statement) TypeSwitchPayload() StatementTypeSwitch { return v.tgoTypeSwi
 type StatementCommunication struct {
 	Value *CommunicationClause
 }
+type TgoStatementCommunicationInput struct {
+	FieldValue *CommunicationClause
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementCommunication constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementCommunication) Statement() Statement {
+func NewStatementCommunication(Value *CommunicationClause) Statement {
+	value := StatementCommunication{Value}
 	return Statement{tgoTag: StatementTagCommunication, tgoCommunication: value}
 }
 
@@ -2057,10 +2244,14 @@ func (v Statement) CommunicationPayload() StatementCommunication { return v.tgoC
 type StatementSelect struct {
 	Value *SelectStatement
 }
+type TgoStatementSelectInput struct {
+	FieldValue *SelectStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementSelect constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementSelect) Statement() Statement {
+func NewStatementSelect(Value *SelectStatement) Statement {
+	value := StatementSelect{Value}
 	return Statement{tgoTag: StatementTagSelect, tgoSelect: value}
 }
 
@@ -2071,10 +2262,14 @@ func (v Statement) SelectPayload() StatementSelect { return v.tgoSelect }
 type StatementFor struct {
 	Value *ForStatement
 }
+type TgoStatementForInput struct {
+	FieldValue *ForStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementFor constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementFor) Statement() Statement {
+func NewStatementFor(Value *ForStatement) Statement {
+	value := StatementFor{Value}
 	return Statement{tgoTag: StatementTagFor, tgoFor: value}
 }
 
@@ -2085,10 +2280,14 @@ func (v Statement) ForPayload() StatementFor { return v.tgoFor }
 type StatementRange struct {
 	Value *RangeStatement
 }
+type TgoStatementRangeInput struct {
+	FieldValue *RangeStatement
+}
 
-// Statement constructs Statement. Model fields must be valid.
+// NewStatementRange constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value StatementRange) Statement() Statement {
+func NewStatementRange(Value *RangeStatement) Statement {
+	value := StatementRange{Value}
 	return Statement{tgoTag: StatementTagRange, tgoRange: value}
 }
 
@@ -2297,147 +2496,147 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementBad(payload.Value)
 		return nil
 	case "Declaration":
 		var payload StatementDeclaration
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementDeclaration(payload.Value)
 		return nil
 	case "Empty":
 		var payload StatementEmpty
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementEmpty(payload.Value)
 		return nil
 	case "Labeled":
 		var payload StatementLabeled
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementLabeled(payload.Value)
 		return nil
 	case "Expression":
 		var payload StatementExpression
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementExpression(payload.Value)
 		return nil
 	case "Send":
 		var payload StatementSend
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementSend(payload.Value)
 		return nil
 	case "Increment":
 		var payload StatementIncrement
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementIncrement(payload.Value)
 		return nil
 	case "Assignment":
 		var payload StatementAssignment
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementAssignment(payload.Value)
 		return nil
 	case "Go":
 		var payload StatementGo
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementGo(payload.Value)
 		return nil
 	case "Defer":
 		var payload StatementDefer
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementDefer(payload.Value)
 		return nil
 	case "Return":
 		var payload StatementReturn
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementReturn(payload.Value)
 		return nil
 	case "Branch":
 		var payload StatementBranch
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementBranch(payload.Value)
 		return nil
 	case "Block":
 		var payload StatementBlock
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementBlock(payload.Value)
 		return nil
 	case "If":
 		var payload StatementIf
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementIf(payload.Value)
 		return nil
 	case "Case":
 		var payload StatementCase
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementCase(payload.Value)
 		return nil
 	case "Switch":
 		var payload StatementSwitch
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementSwitch(payload.Value)
 		return nil
 	case "TypeSwitch":
 		var payload StatementTypeSwitch
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementTypeSwitch(payload.Value)
 		return nil
 	case "Communication":
 		var payload StatementCommunication
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementCommunication(payload.Value)
 		return nil
 	case "Select":
 		var payload StatementSelect
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementSelect(payload.Value)
 		return nil
 	case "For":
 		var payload StatementFor
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementFor(payload.Value)
 		return nil
 	case "Range":
 		var payload StatementRange
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementRange(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Statement JSON variant %q", variant)
@@ -2546,147 +2745,147 @@ func (v *Statement) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementBad(payload.Value)
 		return nil
 	case 2:
 		var payload StatementDeclaration
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementDeclaration(payload.Value)
 		return nil
 	case 3:
 		var payload StatementEmpty
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementEmpty(payload.Value)
 		return nil
 	case 4:
 		var payload StatementLabeled
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementLabeled(payload.Value)
 		return nil
 	case 5:
 		var payload StatementExpression
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementExpression(payload.Value)
 		return nil
 	case 6:
 		var payload StatementSend
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementSend(payload.Value)
 		return nil
 	case 7:
 		var payload StatementIncrement
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementIncrement(payload.Value)
 		return nil
 	case 8:
 		var payload StatementAssignment
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementAssignment(payload.Value)
 		return nil
 	case 9:
 		var payload StatementGo
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementGo(payload.Value)
 		return nil
 	case 10:
 		var payload StatementDefer
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementDefer(payload.Value)
 		return nil
 	case 11:
 		var payload StatementReturn
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementReturn(payload.Value)
 		return nil
 	case 12:
 		var payload StatementBranch
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementBranch(payload.Value)
 		return nil
 	case 13:
 		var payload StatementBlock
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementBlock(payload.Value)
 		return nil
 	case 14:
 		var payload StatementIf
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementIf(payload.Value)
 		return nil
 	case 15:
 		var payload StatementCase
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementCase(payload.Value)
 		return nil
 	case 16:
 		var payload StatementSwitch
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementSwitch(payload.Value)
 		return nil
 	case 17:
 		var payload StatementTypeSwitch
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementTypeSwitch(payload.Value)
 		return nil
 	case 18:
 		var payload StatementCommunication
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementCommunication(payload.Value)
 		return nil
 	case 19:
 		var payload StatementSelect
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementSelect(payload.Value)
 		return nil
 	case 20:
 		var payload StatementFor
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementFor(payload.Value)
 		return nil
 	case 21:
 		var payload StatementRange
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Statement()
+		*v = NewStatementRange(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Statement JSON tag")
@@ -2921,10 +3120,14 @@ func (v Specification) UnknownTag() string {
 type SpecificationImport struct {
 	Value *ImportSpecification
 }
+type TgoSpecificationImportInput struct {
+	FieldValue *ImportSpecification
+}
 
-// Specification constructs Specification. Model fields must be valid.
+// NewSpecificationImport constructs Specification. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SpecificationImport) Specification() Specification {
+func NewSpecificationImport(Value *ImportSpecification) Specification {
+	value := SpecificationImport{Value}
 	return Specification{tgoTag: SpecificationTagImport, tgoImport: value}
 }
 
@@ -2935,10 +3138,14 @@ func (v Specification) ImportPayload() SpecificationImport { return v.tgoImport 
 type SpecificationValue struct {
 	Value *ValueSpecification
 }
+type TgoSpecificationValueInput struct {
+	FieldValue *ValueSpecification
+}
 
-// Specification constructs Specification. Model fields must be valid.
+// NewSpecificationValue constructs Specification. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SpecificationValue) Specification() Specification {
+func NewSpecificationValue(Value *ValueSpecification) Specification {
+	value := SpecificationValue{Value}
 	return Specification{tgoTag: SpecificationTagValue, tgoValue: value}
 }
 
@@ -2949,10 +3156,14 @@ func (v Specification) ValuePayload() SpecificationValue { return v.tgoValue }
 type SpecificationType struct {
 	Value *TypeSpecification
 }
+type TgoSpecificationTypeInput struct {
+	FieldValue *TypeSpecification
+}
 
-// Specification constructs Specification. Model fields must be valid.
+// NewSpecificationType constructs Specification. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value SpecificationType) Specification() Specification {
+func NewSpecificationType(Value *TypeSpecification) Specification {
+	value := SpecificationType{Value}
 	return Specification{tgoTag: SpecificationTagType, tgoType: value}
 }
 
@@ -3017,21 +3228,21 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Specification()
+		*v = NewSpecificationImport(payload.Value)
 		return nil
 	case "Value":
 		var payload SpecificationValue
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Specification()
+		*v = NewSpecificationValue(payload.Value)
 		return nil
 	case "Type":
 		var payload SpecificationType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Specification()
+		*v = NewSpecificationType(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Specification JSON variant %q", variant)
@@ -3104,21 +3315,21 @@ func (v *Specification) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Specification()
+		*v = NewSpecificationImport(payload.Value)
 		return nil
 	case 2:
 		var payload SpecificationValue
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Specification()
+		*v = NewSpecificationValue(payload.Value)
 		return nil
 	case 3:
 		var payload SpecificationType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Specification()
+		*v = NewSpecificationType(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Specification JSON tag")
@@ -3193,10 +3404,14 @@ func (v Declaration) UnknownTag() string {
 type DeclarationBad struct {
 	Value *BadDeclaration
 }
+type TgoDeclarationBadInput struct {
+	FieldValue *BadDeclaration
+}
 
-// Declaration constructs Declaration. Model fields must be valid.
+// NewDeclarationBad constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value DeclarationBad) Declaration() Declaration {
+func NewDeclarationBad(Value *BadDeclaration) Declaration {
+	value := DeclarationBad{Value}
 	return Declaration{tgoTag: DeclarationTagBad, tgoBad: value}
 }
 
@@ -3207,10 +3422,14 @@ func (v Declaration) BadPayload() DeclarationBad { return v.tgoBad }
 type DeclarationGeneral struct {
 	Value *GeneralDeclaration
 }
+type TgoDeclarationGeneralInput struct {
+	FieldValue *GeneralDeclaration
+}
 
-// Declaration constructs Declaration. Model fields must be valid.
+// NewDeclarationGeneral constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value DeclarationGeneral) Declaration() Declaration {
+func NewDeclarationGeneral(Value *GeneralDeclaration) Declaration {
+	value := DeclarationGeneral{Value}
 	return Declaration{tgoTag: DeclarationTagGeneral, tgoGeneral: value}
 }
 
@@ -3221,10 +3440,14 @@ func (v Declaration) GeneralPayload() DeclarationGeneral { return v.tgoGeneral }
 type DeclarationFunction struct {
 	Value *FunctionDeclaration
 }
+type TgoDeclarationFunctionInput struct {
+	FieldValue *FunctionDeclaration
+}
 
-// Declaration constructs Declaration. Model fields must be valid.
+// NewDeclarationFunction constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value DeclarationFunction) Declaration() Declaration {
+func NewDeclarationFunction(Value *FunctionDeclaration) Declaration {
+	value := DeclarationFunction{Value}
 	return Declaration{tgoTag: DeclarationTagFunction, tgoFunction: value}
 }
 
@@ -3235,10 +3458,14 @@ func (v Declaration) FunctionPayload() DeclarationFunction { return v.tgoFunctio
 type DeclarationEnum struct {
 	Value *EnumDeclaration
 }
+type TgoDeclarationEnumInput struct {
+	FieldValue *EnumDeclaration
+}
 
-// Declaration constructs Declaration. Model fields must be valid.
+// NewDeclarationEnum constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value DeclarationEnum) Declaration() Declaration {
+func NewDeclarationEnum(Value *EnumDeclaration) Declaration {
+	value := DeclarationEnum{Value}
 	return Declaration{tgoTag: DeclarationTagEnum, tgoEnum: value}
 }
 
@@ -3249,10 +3476,14 @@ func (v Declaration) EnumPayload() DeclarationEnum { return v.tgoEnum }
 type DeclarationStruct struct {
 	Value *StructDeclaration
 }
+type TgoDeclarationStructInput struct {
+	FieldValue *StructDeclaration
+}
 
-// Declaration constructs Declaration. Model fields must be valid.
+// NewDeclarationStruct constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value DeclarationStruct) Declaration() Declaration {
+func NewDeclarationStruct(Value *StructDeclaration) Declaration {
+	value := DeclarationStruct{Value}
 	return Declaration{tgoTag: DeclarationTagStruct, tgoStruct: value}
 }
 
@@ -3333,35 +3564,35 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationBad(payload.Value)
 		return nil
 	case "General":
 		var payload DeclarationGeneral
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationGeneral(payload.Value)
 		return nil
 	case "Function":
 		var payload DeclarationFunction
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationFunction(payload.Value)
 		return nil
 	case "Enum":
 		var payload DeclarationEnum
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationEnum(payload.Value)
 		return nil
 	case "Struct":
 		var payload DeclarationStruct
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationStruct(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Declaration JSON variant %q", variant)
@@ -3438,35 +3669,35 @@ func (v *Declaration) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationBad(payload.Value)
 		return nil
 	case 2:
 		var payload DeclarationGeneral
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationGeneral(payload.Value)
 		return nil
 	case 3:
 		var payload DeclarationFunction
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationFunction(payload.Value)
 		return nil
 	case 4:
 		var payload DeclarationEnum
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationEnum(payload.Value)
 		return nil
 	case 5:
 		var payload DeclarationStruct
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Declaration()
+		*v = NewDeclarationStruct(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Declaration JSON tag")
@@ -3619,10 +3850,14 @@ func (v Node) UnknownTag() string {
 type NodeFile struct {
 	Value *File
 }
+type TgoNodeFileInput struct {
+	FieldValue *File
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeFile constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeFile) Node() Node {
+func NewNodeFile(Value *File) Node {
+	value := NodeFile{Value}
 	return Node{tgoTag: NodeTagFile, tgoPayload: value}
 }
 
@@ -3633,10 +3868,14 @@ func (v Node) FilePayload() NodeFile { return v.tgoPayload.(NodeFile) }
 type NodeDeclaration struct {
 	Value *Declaration
 }
+type TgoNodeDeclarationInput struct {
+	FieldValue *Declaration
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeDeclaration constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeDeclaration) Node() Node {
+func NewNodeDeclaration(Value *Declaration) Node {
+	value := NodeDeclaration{Value}
 	return Node{tgoTag: NodeTagDeclaration, tgoPayload: value}
 }
 
@@ -3647,10 +3886,14 @@ func (v Node) DeclarationPayload() NodeDeclaration { return v.tgoPayload.(NodeDe
 type NodeSpecification struct {
 	Value *Specification
 }
+type TgoNodeSpecificationInput struct {
+	FieldValue *Specification
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeSpecification constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeSpecification) Node() Node {
+func NewNodeSpecification(Value *Specification) Node {
+	value := NodeSpecification{Value}
 	return Node{tgoTag: NodeTagSpecification, tgoPayload: value}
 }
 
@@ -3661,10 +3904,14 @@ func (v Node) SpecificationPayload() NodeSpecification { return v.tgoPayload.(No
 type NodeStatement struct {
 	Value *Statement
 }
+type TgoNodeStatementInput struct {
+	FieldValue *Statement
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeStatement constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeStatement) Node() Node {
+func NewNodeStatement(Value *Statement) Node {
+	value := NodeStatement{Value}
 	return Node{tgoTag: NodeTagStatement, tgoPayload: value}
 }
 
@@ -3675,10 +3922,14 @@ func (v Node) StatementPayload() NodeStatement { return v.tgoPayload.(NodeStatem
 type NodeExpression struct {
 	Value *Expression
 }
+type TgoNodeExpressionInput struct {
+	FieldValue *Expression
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeExpression constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeExpression) Node() Node {
+func NewNodeExpression(Value *Expression) Node {
+	value := NodeExpression{Value}
 	return Node{tgoTag: NodeTagExpression, tgoPayload: value}
 }
 
@@ -3689,10 +3940,14 @@ func (v Node) ExpressionPayload() NodeExpression { return v.tgoPayload.(NodeExpr
 type NodeField struct {
 	Value *Field
 }
+type TgoNodeFieldInput struct {
+	FieldValue *Field
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeField constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeField) Node() Node {
+func NewNodeField(Value *Field) Node {
+	value := NodeField{Value}
 	return Node{tgoTag: NodeTagField, tgoField: value}
 }
 
@@ -3703,10 +3958,14 @@ func (v Node) FieldPayload() NodeField { return v.tgoField }
 type NodeFieldList struct {
 	Value *FieldList
 }
+type TgoNodeFieldListInput struct {
+	FieldValue *FieldList
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeFieldList constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeFieldList) Node() Node {
+func NewNodeFieldList(Value *FieldList) Node {
+	value := NodeFieldList{Value}
 	return Node{tgoTag: NodeTagFieldList, tgoFieldList: value}
 }
 
@@ -3717,10 +3976,14 @@ func (v Node) FieldListPayload() NodeFieldList { return v.tgoFieldList }
 type NodeTGoField struct {
 	Value *TGoField
 }
+type TgoNodeTGoFieldInput struct {
+	FieldValue *TGoField
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeTGoField constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeTGoField) Node() Node {
+func NewNodeTGoField(Value *TGoField) Node {
+	value := NodeTGoField{Value}
 	return Node{tgoTag: NodeTagTGoField, tgoTGoField: value}
 }
 
@@ -3731,10 +3994,14 @@ func (v Node) TGoFieldPayload() NodeTGoField { return v.tgoTGoField }
 type NodeEnumVariant struct {
 	Value *EnumVariant
 }
+type TgoNodeEnumVariantInput struct {
+	FieldValue *EnumVariant
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeEnumVariant constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeEnumVariant) Node() Node {
+func NewNodeEnumVariant(Value *EnumVariant) Node {
+	value := NodeEnumVariant{Value}
 	return Node{tgoTag: NodeTagEnumVariant, tgoEnumVariant: value}
 }
 
@@ -3745,10 +4012,14 @@ func (v Node) EnumVariantPayload() NodeEnumVariant { return v.tgoEnumVariant }
 type NodeIdentifier struct {
 	Value *Identifier
 }
+type TgoNodeIdentifierInput struct {
+	FieldValue *Identifier
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeIdentifier constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeIdentifier) Node() Node {
+func NewNodeIdentifier(Value *Identifier) Node {
+	value := NodeIdentifier{Value}
 	return Node{tgoTag: NodeTagIdentifier, tgoIdentifier: value}
 }
 
@@ -3759,10 +4030,14 @@ func (v Node) IdentifierPayload() NodeIdentifier { return v.tgoIdentifier }
 type NodeComment struct {
 	Value *Comment
 }
+type TgoNodeCommentInput struct {
+	FieldValue *Comment
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeComment constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeComment) Node() Node {
+func NewNodeComment(Value *Comment) Node {
+	value := NodeComment{Value}
 	return Node{tgoTag: NodeTagComment, tgoComment: value}
 }
 
@@ -3773,10 +4048,14 @@ func (v Node) CommentPayload() NodeComment { return v.tgoComment }
 type NodeCommentGroup struct {
 	Value *CommentGroup
 }
+type TgoNodeCommentGroupInput struct {
+	FieldValue *CommentGroup
+}
 
-// Node constructs Node. Model fields must be valid.
+// NewNodeCommentGroup constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value NodeCommentGroup) Node() Node {
+func NewNodeCommentGroup(Value *CommentGroup) Node {
+	value := NodeCommentGroup{Value}
 	return Node{tgoTag: NodeTagCommentGroup, tgoCommentGroup: value}
 }
 
@@ -3913,84 +4192,84 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeFile(payload.Value)
 		return nil
 	case "Declaration":
 		var payload NodeDeclaration
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeDeclaration(payload.Value)
 		return nil
 	case "Specification":
 		var payload NodeSpecification
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeSpecification(payload.Value)
 		return nil
 	case "Statement":
 		var payload NodeStatement
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeStatement(payload.Value)
 		return nil
 	case "Expression":
 		var payload NodeExpression
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeExpression(payload.Value)
 		return nil
 	case "Field":
 		var payload NodeField
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeField(payload.Value)
 		return nil
 	case "FieldList":
 		var payload NodeFieldList
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeFieldList(payload.Value)
 		return nil
 	case "TGoField":
 		var payload NodeTGoField
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeTGoField(payload.Value)
 		return nil
 	case "EnumVariant":
 		var payload NodeEnumVariant
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeEnumVariant(payload.Value)
 		return nil
 	case "Identifier":
 		var payload NodeIdentifier
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeIdentifier(payload.Value)
 		return nil
 	case "Comment":
 		var payload NodeComment
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeComment(payload.Value)
 		return nil
 	case "CommentGroup":
 		var payload NodeCommentGroup
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeCommentGroup(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Node JSON variant %q", variant)
@@ -4081,84 +4360,84 @@ func (v *Node) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeFile(payload.Value)
 		return nil
 	case 2:
 		var payload NodeDeclaration
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeDeclaration(payload.Value)
 		return nil
 	case 3:
 		var payload NodeSpecification
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeSpecification(payload.Value)
 		return nil
 	case 4:
 		var payload NodeStatement
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeStatement(payload.Value)
 		return nil
 	case 5:
 		var payload NodeExpression
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeExpression(payload.Value)
 		return nil
 	case 6:
 		var payload NodeField
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeField(payload.Value)
 		return nil
 	case 7:
 		var payload NodeFieldList
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeFieldList(payload.Value)
 		return nil
 	case 8:
 		var payload NodeTGoField
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeTGoField(payload.Value)
 		return nil
 	case 9:
 		var payload NodeEnumVariant
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeEnumVariant(payload.Value)
 		return nil
 	case 10:
 		var payload NodeIdentifier
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeIdentifier(payload.Value)
 		return nil
 	case 11:
 		var payload NodeComment
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeComment(payload.Value)
 		return nil
 	case 12:
 		var payload NodeCommentGroup
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Node()
+		*v = NewNodeCommentGroup(payload.Value)
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Node JSON tag")

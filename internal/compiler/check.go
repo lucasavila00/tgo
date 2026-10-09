@@ -115,6 +115,8 @@ func (p *packageUnit) checkNode(
 		p.checkRepresentationExpression(expression, parents)
 	}
 	switch node := node.(type) {
+	case *ast.Ident:
+		p.checkEnumGeneratedType(node)
 	case *ast.TypeSpec:
 		p.checkTypeSpec(node)
 	case *ast.CompositeLit:
@@ -312,7 +314,102 @@ func (p *packageUnit) checkLiteral(lit *ast.CompositeLit) {
 
 // checkCall applies tgo rules to conversions.
 func (p *packageUnit) checkCall(c *ast.CallExpr) {
+	if c.Fun.Pos() != token.NoPos {
+		if function, ok := p.calledFunction(c.Fun); ok {
+			if enum, variant := p.generatedEnumConstructor(function); enum != nil {
+				p.fail(
+					c,
+					"%s is generated Go ABI; use %s.%s{...}",
+					function.Name(),
+					enum.Name,
+					variant.Name,
+				)
+				return
+			}
+		}
+	}
 	p.checkConversion(c)
+}
+
+func (p *packageUnit) calledFunction(expression ast.Expr) (*types.Func, bool) {
+	var object types.Object
+	switch expression := expression.(type) {
+	case *ast.Ident:
+		object = p.info.Uses[expression]
+	case *ast.SelectorExpr:
+		object = p.info.Uses[expression.Sel]
+	}
+	function, ok := object.(*types.Func)
+	return function, ok
+}
+
+func (p *packageUnit) generatedEnumConstructor(
+	function *types.Func,
+) (*model, *variant) {
+	if function == nil || function.Pkg() == nil {
+		return nil, nil
+	}
+	owner := p
+	if function.Pkg().Path() != p.Path {
+		owner = p.Imports[function.Pkg().Path()]
+	}
+	if owner == nil {
+		return nil, nil
+	}
+	for _, declaration := range owner.Models {
+		for index := range declaration.Variants {
+			item := &declaration.Variants[index]
+			if function.Name() == enumConstructorName(declaration.Name, item.Name) {
+				return declaration, item
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (p *packageUnit) checkEnumGeneratedType(identifier *ast.Ident) {
+	if identifier.Pos() == token.NoPos {
+		return
+	}
+	object, ok := p.info.Uses[identifier].(*types.TypeName)
+	if !ok {
+		return
+	}
+	named, ok := types.Unalias(object.Type()).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return
+	}
+	owner := p
+	if named.Obj().Pkg().Path() != p.Path {
+		owner = p.Imports[named.Obj().Pkg().Path()]
+	}
+	if owner == nil {
+		return
+	}
+	for _, declaration := range owner.Models {
+		for _, item := range declaration.Variants {
+			payload := declaration.Name + item.Name
+			carrier := enumCarrierName(declaration.Name, item.Name)
+			switch named.Obj().Name() {
+			case payload:
+				p.fail(
+					identifier,
+					"%s is generated enum representation; use %s.%s{...}",
+					payload,
+					declaration.Name,
+					item.Name,
+				)
+			case carrier:
+				p.fail(
+					identifier,
+					"%s is generated staging ABI; use %s.%s{...}",
+					carrier,
+					declaration.Name,
+					item.Name,
+				)
+			}
+		}
+	}
 }
 
 // checkConversion rejects conversions that bypass a model constructor.

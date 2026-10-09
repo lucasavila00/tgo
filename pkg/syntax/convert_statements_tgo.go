@@ -18,97 +18,107 @@ func (c *converter) statement(value frontNode) *Statement {
 func (c *converter) statementRequired(value frontNode) *Statement {
 	switch item := value.(type) {
 	case *ast.BadStmt:
-		result := StatementBad{
-			Value: &BadStatement{
-				Span: span(item),
-				From: item.From,
-				To:   item.To,
-			},
-		}.Statement()
+		result := func(tgoInput_29 TgoStatementBadInput) Statement {
+			return NewStatementBad(tgoInput_29.FieldValue)
+		}(TgoStatementBadInput{FieldValue: &BadStatement{
+			Span: span(item),
+			From: item.From,
+			To:   item.To,
+		}})
+
 		return &result
 	case *ast.DeclStmt:
-		result := StatementDeclaration{
-			Value: &DeclarationStatement{
-				Span:        span(item),
-				Declaration: c.declarationMust(item.Decl),
-			},
-		}.Statement()
+		result := func(tgoInput_30 TgoStatementDeclarationInput) Statement {
+			return NewStatementDeclaration(tgoInput_30.FieldValue)
+		}(TgoStatementDeclarationInput{FieldValue: &DeclarationStatement{
+			Span:        span(item),
+			Declaration: c.declarationMust(item.Decl),
+		}})
+
 		return &result
 	case *ast.EmptyStmt:
-		result := StatementEmpty{
-			Value: &EmptyStatement{
-				Span:      span(item),
-				Semicolon: item.Semicolon,
-				Implicit:  item.Implicit,
-			},
-		}.Statement()
+		result := func(tgoInput_31 TgoStatementEmptyInput) Statement {
+			return NewStatementEmpty(tgoInput_31.FieldValue)
+		}(TgoStatementEmptyInput{FieldValue: &EmptyStatement{
+			Span:      span(item),
+			Semicolon: item.Semicolon,
+			Implicit:  item.Implicit,
+		}})
+
 		return &result
 	case *ast.LabeledStmt:
-		result := StatementLabeled{
-			Value: &LabeledStatement{
-				Span:      span(item),
-				Label:     c.identifierRequired(item.Label),
-				Colon:     item.Colon,
-				Statement: c.statementRequired(item.Stmt),
-			},
-		}.Statement()
+		result := func(tgoInput_32 TgoStatementLabeledInput) Statement {
+			return NewStatementLabeled(tgoInput_32.FieldValue)
+		}(TgoStatementLabeledInput{FieldValue: &LabeledStatement{
+			Span:      span(item),
+			Label:     c.identifierRequired(item.Label),
+			Colon:     item.Colon,
+			Statement: c.statementRequired(item.Stmt),
+		}})
+
 		return &result
 	case *ast.ExprStmt:
-		result := StatementExpression{
-			Value: &ExpressionStatement{
-				Span:       span(item),
-				Expression: c.expressionRequired(item.X),
-			},
-		}.Statement()
+		result := func(tgoInput_33 TgoStatementExpressionInput) Statement {
+			return NewStatementExpression(tgoInput_33.FieldValue)
+		}(TgoStatementExpressionInput{FieldValue: &ExpressionStatement{
+			Span:       span(item),
+			Expression: c.expressionRequired(item.X),
+		}})
+
 		return &result
 	case *ast.SendStmt:
-		result := StatementSend{
-			Value: &SendStatement{
-				Span:    span(item),
-				Channel: c.expressionRequired(item.Chan),
-				Arrow:   item.Arrow,
-				Value:   c.expressionRequired(item.Value),
-			},
-		}.Statement()
+		result := func(tgoInput_34 TgoStatementSendInput) Statement {
+			return NewStatementSend(tgoInput_34.FieldValue)
+		}(TgoStatementSendInput{FieldValue: &SendStatement{
+			Span:    span(item),
+			Channel: c.expressionRequired(item.Chan),
+			Arrow:   item.Arrow,
+			Value:   c.expressionRequired(item.Value),
+		}})
+
 		return &result
 	case *ast.IncDecStmt:
-		result := StatementIncrement{
-			Value: &IncrementStatement{
-				Span:       span(item),
-				Expression: c.expressionRequired(item.X),
-				Token:      item.TokPos,
-				Operator:   item.Tok,
-			},
-		}.Statement()
+		result := func(tgoInput_35 TgoStatementIncrementInput) Statement {
+			return NewStatementIncrement(tgoInput_35.FieldValue)
+		}(TgoStatementIncrementInput{FieldValue: &IncrementStatement{
+			Span:       span(item),
+			Expression: c.expressionRequired(item.X),
+			Token:      item.TokPos,
+			Operator:   item.Tok,
+		}})
+
 		return &result
 	case *ast.AssignStmt:
-		result := StatementAssignment{
-			Value: &AssignmentStatement{
-				Span:     span(item),
-				Left:     c.expressions(item.Lhs),
-				Token:    item.TokPos,
-				Operator: item.Tok,
-				Right:    c.expressions(item.Rhs),
-			},
-		}.Statement()
+		result := func(tgoInput_36 TgoStatementAssignmentInput) Statement {
+			return NewStatementAssignment(tgoInput_36.FieldValue)
+		}(TgoStatementAssignmentInput{FieldValue: &AssignmentStatement{
+			Span:     span(item),
+			Left:     c.expressions(item.Lhs),
+			Token:    item.TokPos,
+			Operator: item.Tok,
+			Right:    c.expressions(item.Rhs),
+		}})
+
 		return &result
 	case *ast.GoStmt:
-		result := StatementGo{
-			Value: &GoStatement{
-				Span: span(item),
-				Go:   item.Go,
-				Call: c.expressionRequired(item.Call),
-			},
-		}.Statement()
+		result := func(tgoInput_37 TgoStatementGoInput) Statement {
+			return NewStatementGo(tgoInput_37.FieldValue)
+		}(TgoStatementGoInput{FieldValue: &GoStatement{
+			Span: span(item),
+			Go:   item.Go,
+			Call: c.expressionRequired(item.Call),
+		}})
+
 		return &result
 	case *ast.DeferStmt:
-		result := StatementDefer{
-			Value: &DeferStatement{
-				Span:  span(item),
-				Defer: item.Defer,
-				Call:  c.expressionRequired(item.Call),
-			},
-		}.Statement()
+		result := func(tgoInput_38 TgoStatementDeferInput) Statement {
+			return NewStatementDefer(tgoInput_38.FieldValue)
+		}(TgoStatementDeferInput{FieldValue: &DeferStatement{
+			Span:  span(item),
+			Defer: item.Defer,
+			Call:  c.expressionRequired(item.Call),
+		}})
+
 		return &result
 	case *ast.ReturnStmt:
 		comma := c.front.successReturns[item.Return]
@@ -117,129 +127,141 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 		if comma.IsValid() {
 			itemSpan.Stop = comma + 1
 		}
-		result := StatementReturn{
-			Value: &ReturnStatement{
-				Span:          itemSpan,
-				Return:        item.Return,
-				Results:       c.expressions(item.Results),
-				SuccessComma:  comma,
-				FailureCommas: failureCommas,
-			},
-		}.Statement()
+		result := func(tgoInput_39 TgoStatementReturnInput) Statement {
+			return NewStatementReturn(tgoInput_39.FieldValue)
+		}(TgoStatementReturnInput{FieldValue: &ReturnStatement{
+			Span:          itemSpan,
+			Return:        item.Return,
+			Results:       c.expressions(item.Results),
+			SuccessComma:  comma,
+			FailureCommas: failureCommas,
+		}})
+
 		return &result
 	case *ast.BranchStmt:
-		result := StatementBranch{
-			Value: &BranchStatement{
-				Span:          span(item),
-				TokenPosition: item.TokPos,
-				Token:         item.Tok,
-				Label:         c.identifier(item.Label),
-			},
-		}.Statement()
+		result := func(tgoInput_40 TgoStatementBranchInput) Statement {
+			return NewStatementBranch(tgoInput_40.FieldValue)
+		}(TgoStatementBranchInput{FieldValue: &BranchStatement{
+			Span:          span(item),
+			TokenPosition: item.TokPos,
+			Token:         item.Tok,
+			Label:         c.identifier(item.Label),
+		}})
+
 		return &result
 	case *ast.BlockStmt:
-		result := StatementBlock{Value: c.blockRequired(item)}.Statement()
+		result := func(tgoInput_41 TgoStatementBlockInput) Statement {
+			return NewStatementBlock(tgoInput_41.FieldValue)
+		}(TgoStatementBlockInput{FieldValue: c.blockRequired(item)})
 		return &result
 	case *ast.IfStmt:
-		result := StatementIf{
-			Value: &IfStatement{
-				Span:      span(item),
-				If:        item.If,
-				Init:      c.statement(item.Init),
-				Condition: c.expressionRequired(item.Cond),
-				Body:      c.blockRequired(item.Body),
-				Else:      c.statement(item.Else),
-			},
-		}.Statement()
+		result := func(tgoInput_42 TgoStatementIfInput) Statement {
+			return NewStatementIf(tgoInput_42.FieldValue)
+		}(TgoStatementIfInput{FieldValue: &IfStatement{
+			Span:      span(item),
+			If:        item.If,
+			Init:      c.statement(item.Init),
+			Condition: c.expressionRequired(item.Cond),
+			Body:      c.blockRequired(item.Body),
+			Else:      c.statement(item.Else),
+		}})
+
 		return &result
 	case *ast.CaseClause:
 		exhaustive := token.NoPos
 		if c.front.exhaustiveClauses[item.Case] {
 			exhaustive = item.Case
 		}
-		result := StatementCase{
-			Value: &CaseClause{
-				Span:       span(item),
-				Case:       item.Case,
-				Exhaustive: exhaustive,
-				List:       c.expressions(item.List),
-				Colon:      item.Colon,
-				Body:       c.statementList(item),
-			},
-		}.Statement()
+		result := func(tgoInput_43 TgoStatementCaseInput) Statement {
+			return NewStatementCase(tgoInput_43.FieldValue)
+		}(TgoStatementCaseInput{FieldValue: &CaseClause{
+			Span:       span(item),
+			Case:       item.Case,
+			Exhaustive: exhaustive,
+			List:       c.expressions(item.List),
+			Colon:      item.Colon,
+			Body:       c.statementList(item),
+		}})
+
 		return &result
 	case *ast.SwitchStmt:
-		result := StatementSwitch{
-			Value: &SwitchStatement{
-				Span:   span(item),
-				Switch: item.Switch,
-				Init:   c.statement(item.Init),
-				Tag:    c.expression(item.Tag),
-				Body:   c.blockRequired(item.Body),
-			},
-		}.Statement()
+		result := func(tgoInput_44 TgoStatementSwitchInput) Statement {
+			return NewStatementSwitch(tgoInput_44.FieldValue)
+		}(TgoStatementSwitchInput{FieldValue: &SwitchStatement{
+			Span:   span(item),
+			Switch: item.Switch,
+			Init:   c.statement(item.Init),
+			Tag:    c.expression(item.Tag),
+			Body:   c.blockRequired(item.Body),
+		}})
+
 		return &result
 	case *ast.TypeSwitchStmt:
-		result := StatementTypeSwitch{
-			Value: &TypeSwitchStatement{
-				Span:       span(item),
-				Switch:     item.Switch,
-				Init:       c.statement(item.Init),
-				Assignment: c.statementRequired(item.Assign),
-				Body:       c.blockRequired(item.Body),
-			},
-		}.Statement()
+		result := func(tgoInput_45 TgoStatementTypeSwitchInput) Statement {
+			return NewStatementTypeSwitch(tgoInput_45.FieldValue)
+		}(TgoStatementTypeSwitchInput{FieldValue: &TypeSwitchStatement{
+			Span:       span(item),
+			Switch:     item.Switch,
+			Init:       c.statement(item.Init),
+			Assignment: c.statementRequired(item.Assign),
+			Body:       c.blockRequired(item.Body),
+		}})
+
 		return &result
 	case *ast.CommClause:
 		body := make([]*Statement, 0, len(item.Body))
 		for _, statement := range item.Body {
 			body = append(body, c.statementRequired(statement))
 		}
-		result := StatementCommunication{
-			Value: &CommunicationClause{
-				Span:          span(item),
-				Case:          item.Case,
-				Communication: c.statement(item.Comm),
-				Colon:         item.Colon,
-				Body:          body,
-			},
-		}.Statement()
+		result := func(tgoInput_46 TgoStatementCommunicationInput) Statement {
+			return NewStatementCommunication(tgoInput_46.FieldValue)
+		}(TgoStatementCommunicationInput{FieldValue: &CommunicationClause{
+			Span:          span(item),
+			Case:          item.Case,
+			Communication: c.statement(item.Comm),
+			Colon:         item.Colon,
+			Body:          body,
+		}})
+
 		return &result
 	case *ast.SelectStmt:
-		result := StatementSelect{
-			Value: &SelectStatement{
-				Span:   span(item),
-				Select: item.Select,
-				Body:   c.blockRequired(item.Body),
-			},
-		}.Statement()
+		result := func(tgoInput_47 TgoStatementSelectInput) Statement {
+			return NewStatementSelect(tgoInput_47.FieldValue)
+		}(TgoStatementSelectInput{FieldValue: &SelectStatement{
+			Span:   span(item),
+			Select: item.Select,
+			Body:   c.blockRequired(item.Body),
+		}})
+
 		return &result
 	case *ast.ForStmt:
-		result := StatementFor{
-			Value: &ForStatement{
-				Span:      span(item),
-				For:       item.For,
-				Init:      c.statement(item.Init),
-				Condition: c.expression(item.Cond),
-				Post:      c.statement(item.Post),
-				Body:      c.blockRequired(item.Body),
-			},
-		}.Statement()
+		result := func(tgoInput_48 TgoStatementForInput) Statement {
+			return NewStatementFor(tgoInput_48.FieldValue)
+		}(TgoStatementForInput{FieldValue: &ForStatement{
+			Span:      span(item),
+			For:       item.For,
+			Init:      c.statement(item.Init),
+			Condition: c.expression(item.Cond),
+			Post:      c.statement(item.Post),
+			Body:      c.blockRequired(item.Body),
+		}})
+
 		return &result
 	case *ast.RangeStmt:
-		result := StatementRange{
-			Value: &RangeStatement{
-				Span:     span(item),
-				For:      item.For,
-				Key:      c.expression(item.Key),
-				Value:    c.expression(item.Value),
-				Token:    item.TokPos,
-				Operator: item.Tok,
-				Range:    item.Range,
-				Source:   c.expressionRequired(item.X),
-				Body:     c.blockRequired(item.Body),
-			},
-		}.Statement()
+		result := func(tgoInput_49 TgoStatementRangeInput) Statement {
+			return NewStatementRange(tgoInput_49.FieldValue)
+		}(TgoStatementRangeInput{FieldValue: &RangeStatement{
+			Span:     span(item),
+			For:      item.For,
+			Key:      c.expression(item.Key),
+			Value:    c.expression(item.Value),
+			Token:    item.TokPos,
+			Operator: item.Tok,
+			Range:    item.Range,
+			Source:   c.expressionRequired(item.X),
+			Body:     c.blockRequired(item.Body),
+		}})
+
 		return &result
 	default:
 		panic(fmt.Sprintf("unsupported go/ast statement %T", value))
@@ -276,32 +298,36 @@ func (c *converter) blockRequired(value *ast.BlockStmt) *BlockStatement {
 func (c *converter) specification(value ast.Spec) *Specification {
 	switch item := value.(type) {
 	case *ast.ImportSpec:
-		result := SpecificationImport{Value: c.importSpecificationRequired(item)}.Specification()
+		result := func(tgoInput_50 TgoSpecificationImportInput) Specification {
+			return NewSpecificationImport(tgoInput_50.FieldValue)
+		}(TgoSpecificationImportInput{FieldValue: c.importSpecificationRequired(item)})
 		return &result
 	case *ast.ValueSpec:
-		result := SpecificationValue{
-			Value: &ValueSpecification{
-				Span:    span(item),
-				Doc:     c.commentGroup(item.Doc),
-				Names:   c.identifiers(item.Names),
-				Type:    c.expression(item.Type),
-				Values:  c.expressions(item.Values),
-				Comment: c.commentGroup(item.Comment),
-			},
-		}.Specification()
+		result := func(tgoInput_51 TgoSpecificationValueInput) Specification {
+			return NewSpecificationValue(tgoInput_51.FieldValue)
+		}(TgoSpecificationValueInput{FieldValue: &ValueSpecification{
+			Span:    span(item),
+			Doc:     c.commentGroup(item.Doc),
+			Names:   c.identifiers(item.Names),
+			Type:    c.expression(item.Type),
+			Values:  c.expressions(item.Values),
+			Comment: c.commentGroup(item.Comment),
+		}})
+
 		return &result
 	case *ast.TypeSpec:
-		result := SpecificationType{
-			Value: &TypeSpecification{
-				Span:       span(item),
-				Doc:        c.commentGroup(item.Doc),
-				Name:       c.identifierRequired(item.Name),
-				TypeParams: c.fieldList(item.TypeParams),
-				Assign:     item.Assign,
-				Type:       c.expressionRequired(item.Type),
-				Comment:    c.commentGroup(item.Comment),
-			},
-		}.Specification()
+		result := func(tgoInput_52 TgoSpecificationTypeInput) Specification {
+			return NewSpecificationType(tgoInput_52.FieldValue)
+		}(TgoSpecificationTypeInput{FieldValue: &TypeSpecification{
+			Span:       span(item),
+			Doc:        c.commentGroup(item.Doc),
+			Name:       c.identifierRequired(item.Name),
+			TypeParams: c.fieldList(item.TypeParams),
+			Assign:     item.Assign,
+			Type:       c.expressionRequired(item.Type),
+			Comment:    c.commentGroup(item.Comment),
+		}})
+
 		return &result
 	default:
 		panic(fmt.Sprintf("unsupported go/ast specification %T", value))
@@ -344,13 +370,14 @@ func (c *converter) importSpecificationRequired(
 func (c *converter) declarationMust(value frontNode) *Declaration {
 	switch item := value.(type) {
 	case *ast.BadDecl:
-		result := DeclarationBad{
-			Value: &BadDeclaration{
-				Span: span(item),
-				From: item.From,
-				To:   item.To,
-			},
-		}.Declaration()
+		result := func(tgoInput_53 TgoDeclarationBadInput) Declaration {
+			return NewDeclarationBad(tgoInput_53.FieldValue)
+		}(TgoDeclarationBadInput{FieldValue: &BadDeclaration{
+			Span: span(item),
+			From: item.From,
+			To:   item.To,
+		}})
+
 		return &result
 	case *ast.GenDecl:
 		value := &GeneralDeclaration{
@@ -365,25 +392,32 @@ func (c *converter) declarationMust(value frontNode) *Declaration {
 		for _, spec := range item.Specs {
 			value.Specs = append(value.Specs, c.specification(spec))
 		}
-		result := DeclarationGeneral{Value: value}.Declaration()
+		result := func(tgoInput_54 TgoDeclarationGeneralInput) Declaration {
+			return NewDeclarationGeneral(tgoInput_54.FieldValue)
+		}(TgoDeclarationGeneralInput{FieldValue: value})
 		return &result
 	case *ast.FuncDecl:
-		result := DeclarationFunction{
-			Value: &FunctionDeclaration{
-				Span:     span(item),
-				Doc:      c.commentGroup(item.Doc),
-				Receiver: c.fieldList(item.Recv),
-				Name:     c.identifierRequired(item.Name),
-				Type:     c.functionTypeRequired(item.Type),
-				Body:     c.block(item.Body),
-			},
-		}.Declaration()
+		result := func(tgoInput_55 TgoDeclarationFunctionInput) Declaration {
+			return NewDeclarationFunction(tgoInput_55.FieldValue)
+		}(TgoDeclarationFunctionInput{FieldValue: &FunctionDeclaration{
+			Span:     span(item),
+			Doc:      c.commentGroup(item.Doc),
+			Receiver: c.fieldList(item.Recv),
+			Name:     c.identifierRequired(item.Name),
+			Type:     c.functionTypeRequired(item.Type),
+			Body:     c.block(item.Body),
+		}})
+
 		return &result
 	case *frontEnumDecl:
-		result := DeclarationEnum{Value: c.enumDeclaration(item)}.Declaration()
+		result := func(tgoInput_56 TgoDeclarationEnumInput) Declaration {
+			return NewDeclarationEnum(tgoInput_56.FieldValue)
+		}(TgoDeclarationEnumInput{FieldValue: c.enumDeclaration(item)})
 		return &result
 	case *frontStructDecl:
-		result := DeclarationStruct{Value: c.structDeclaration(item)}.Declaration()
+		result := func(tgoInput_57 TgoDeclarationStructInput) Declaration {
+			return NewDeclarationStruct(tgoInput_57.FieldValue)
+		}(TgoDeclarationStructInput{FieldValue: c.structDeclaration(item)})
 		return &result
 	default:
 		panic(fmt.Sprintf("unsupported parser declaration %T", value))
