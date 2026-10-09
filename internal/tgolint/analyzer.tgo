@@ -28,7 +28,7 @@ func newAnalyzer() %analysis.Analyzer {
 		new(modelWireFact),
 		new(validationFact),
 		new(genericEffectWireFact),
-		new(nilContractWireFact),
+		new(nilContractWireFactV2),
 		new(invalidPackageFact),
 	}
 	return analyzer

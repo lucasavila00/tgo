@@ -16,17 +16,17 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-const nilContractVersion = 1
+const nilContractVersion = 2
 
-// nilContractWireFact carries non-nil pointer paths across packages.
+// nilContractWireFactV2 carries non-nil pointer paths across packages.
 
-type nilContractWireFact struct {
+type nilContractWireFactV2 struct {
 	Version int
 	Paths   []string
 }
 
-// AFact marks nilContractWireFact as a Go analysis fact.
-func (*nilContractWireFact) AFact() {}
+// AFact marks nilContractWireFactV2 as a Go analysis fact.
+func (*nilContractWireFactV2) AFact() {}
 
 type nilContract map[string]bool
 
@@ -82,7 +82,7 @@ func nilWithoutChild(source nilContract, prefix string) nilContract {
 	return result
 }
 
-func nilContractFact(value nilContract) *nilContractWireFact {
+func nilContractFact(value nilContract) *nilContractWireFactV2 {
 	if len(value) == 0 {
 		return nil
 	}
@@ -91,10 +91,10 @@ func nilContractFact(value nilContract) *nilContractWireFact {
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)
-	return &nilContractWireFact{Version: nilContractVersion, Paths: paths}
+	return &nilContractWireFactV2{Version: nilContractVersion, Paths: paths}
 }
 
-func decodeNilContract(fact *nilContractWireFact) nilContract {
+func decodeNilContract(fact *nilContractWireFactV2) nilContract {
 	if fact == nil || fact.Version != nilContractVersion || len(fact.Paths) == 0 {
 		return nil
 	}
@@ -380,7 +380,7 @@ func (e *nilEnvironment) contractForObject(object types.Object) nilContract {
 	if contract := e.contracts[object]; len(contract) != 0 {
 		return contract
 	}
-	fact := new(nilContractWireFact)
+	fact := new(nilContractWireFactV2)
 	factObject := e.analysisFactObject(object)
 	if factObject != nil && factObject.Pkg() != e.pkg &&
 		e.pass.ImportObjectFact(factObject, fact) {
