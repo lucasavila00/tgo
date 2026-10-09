@@ -194,10 +194,19 @@ func syntaxChildren(file *frontFile, node frontNode) []frontNode {
 	case *frontComprehensionExpr:
 		children = []frontNode{node.Type}
 		for _, clause := range node.Clauses {
-			for _, binding := range clause.Bindings {
-				children = append(children, binding)
+			switch item := clause; item.Tag() {
+			case frontComprehensionClauseTagRange:
+				rangeClause := item.RangePayload()
+				for _, binding := range rangeClause.Bindings {
+					children = append(children, binding)
+				}
+				children = append(children, rangeClause.Source)
+			case frontComprehensionClauseTagFilter:
+				filter := item.FilterPayload()
+				children = append(children, filter.Condition)
+			default:
+				panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 			}
-			children = append(children, clause.Expression)
 		}
 		children = append(children, node.Result.Key, node.Result.Value)
 	default:

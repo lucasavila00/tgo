@@ -4,6 +4,7 @@ import (
 	"go/token"
 	"go/types"
 	"path/filepath"
+	"strings"
 
 	"tgo/internal/outputname"
 	"tgo/internal/sourceanalysis"
@@ -79,14 +80,45 @@ func (c %checker) analyzeTGoPackage() *sourceanalysis.Package {
 	if directory == "" {
 		return nil
 	}
-	analysis, err := sourceanalysis.AnalyzePackage(
-		directory, c.pass.Pkg.Path(), c.pass.Fset,
-	)
+	test, external := c.tgoTestPackage()
+	path := c.pass.Pkg.Path()
+	if external {
+		path = strings.TrimSuffix(path, "_test")
+	}
+	var analysis *sourceanalysis.Package = nil
+	var err error = nil
+	if test {
+		analysis, err = sourceanalysis.AnalyzeTestPackage(
+			directory, path, external, c.pass.Fset,
+		)
+	} else {
+		analysis, err = sourceanalysis.AnalyzePackage(
+			directory, path, c.pass.Fset,
+		)
+	}
 	if err != nil {
 		c.reportResult(c.pass.Files[0].Package, "analyze TGo source: %v", err)
 		return nil
 	}
 	return analysis
+}
+
+// tgoTestPackage reports whether the pass contains generated TGo tests.
+func (c %checker) tgoTestPackage() (bool, bool) {
+	test := false
+	production := false
+	for _, file := range c.files {
+		path := c.pass.Fset.Position(file.Package).Filename
+		if !outputname.Reserved(path) {
+			continue
+		}
+		if strings.HasSuffix(path, "_test.go") {
+			test = true
+		} else {
+			production = true
+		}
+	}
+	return test, test && !production
 }
 
 // checkNilSafety checks `%T` contracts in TGo and Go source.

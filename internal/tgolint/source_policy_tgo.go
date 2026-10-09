@@ -19,6 +19,12 @@ func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
 	savedFacts, savedFile := c.facts, c.file
 	savedParents := c.parents
 	c.facts = analysis.Facts
+	c.sourceFiles = nil
+	for _, source := range analysis.Sources {
+		if source.Syntax != nil {
+			c.sourceFiles = append(c.sourceFiles, source.Syntax)
+		}
+	}
 	for _, source := range analysis.Sources {
 		if source.Syntax == nil {
 			continue
@@ -35,6 +41,11 @@ func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
 		syntax.Inspect(
 			c.file,
 			func(node *syntax.Node) bool {
+				if statement, ok := syntax.StatementOf(node); ok {
+					if tagSwitch := syntax.SwitchStatementOf(statement); tagSwitch != nil {
+						c.checkTagSwitch(c.file, statement, tagSwitch)
+					}
+				}
 				c.checkSourcePolicyNode(node)
 				return true
 			},

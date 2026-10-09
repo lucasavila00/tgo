@@ -235,12 +235,14 @@ func (c *converter) comprehensionExpression(
 		Rbrace: value.Rbrace,
 	}
 	for _, clause := range value.Clauses {
-		if clause.Kind == "range" {
+		switch item := clause; item.Tag() {
+		case frontComprehensionClauseTagRange:
+			clause := item.RangePayload()
 			rangeClause := &ComprehensionRangeClause{
 				Span: Span{Start: clause.Pos(), Stop: clause.End()},
-				For:  clause.Keyword, Bindings: nil,
+				For:  clause.For, Bindings: nil,
 				Define: clause.Define, Range: clause.Range,
-				Source: c.expressionRequired(clause.Expression),
+				Source: c.expressionRequired(clause.Source),
 				Lbrace: clause.Lbrace, Rbrace: clause.Rbrace,
 			}
 			for _, binding := range clause.Bindings {
@@ -252,16 +254,19 @@ func (c *converter) comprehensionExpression(
 			payload.Clauses = append(
 				payload.Clauses, ComprehensionClauseRange{Value: rangeClause}.ComprehensionClause(),
 			)
-			continue
+		case frontComprehensionClauseTagFilter:
+			clause := item.FilterPayload()
+			payload.Clauses = append(
+				payload.Clauses, ComprehensionClauseFilter{Value: &ComprehensionFilterClause{
+					Span:      Span{Start: clause.Pos(), Stop: clause.End()},
+					If:        clause.If,
+					Condition: c.expressionRequired(clause.Condition),
+					Lbrace:    clause.Lbrace, Rbrace: clause.Rbrace,
+				}}.ComprehensionClause(),
+			)
+		default:
+			panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
-		payload.Clauses = append(
-			payload.Clauses, ComprehensionClauseFilter{Value: &ComprehensionFilterClause{
-				Span:      Span{Start: clause.Pos(), Stop: clause.End()},
-				If:        clause.Keyword,
-				Condition: c.expressionRequired(clause.Expression),
-				Lbrace:    clause.Lbrace, Rbrace: clause.Rbrace,
-			}}.ComprehensionClause(),
-		)
 	}
 	result := ExpressionComprehension{Value: payload}.Expression()
 	return &result

@@ -11,9 +11,16 @@ func TestPath(t *testing.T) {
 		want   string
 	}{
 		{source: "model.tgo", want: "model_tgo.go"},
+		{source: "model_test.tgo", want: "model_tgo_test.go"},
 		{source: "model_linux.tgo", want: "model_tgo_linux.go"},
+		{source: "model_linux_test.tgo", want: "model_tgo_linux_test.go"},
 		{source: "model_amd64.tgo", want: "model_tgo_amd64.go"},
+		{source: "model_amd64_test.tgo", want: "model_tgo_amd64_test.go"},
 		{source: "model_linux_amd64.tgo", want: "model_tgo_linux_amd64.go"},
+		{
+			source: "model_linux_amd64_test.tgo",
+			want:   "model_tgo_linux_amd64_test.go",
+		},
 		{source: "foo_tgo_bar_linux.tgo", want: "foo_tgo_bar_tgo_linux.go"},
 		{source: "model_hack.tgo", want: "model_hack_tgo.go"},
 		{
@@ -35,6 +42,11 @@ func TestMatches(t *testing.T) {
 		want      bool
 	}{
 		{source: "model.tgo", generated: "/work/model_tgo.go", want: true},
+		{
+			source:    "model_test.tgo",
+			generated: "/work/model_tgo_test.go",
+			want:      true,
+		},
 		{
 			source:    "foo_tgo_bar_linux.tgo",
 			generated: "/work/foo_tgo_bar_tgo_linux.go",
@@ -61,7 +73,9 @@ func TestMatches(t *testing.T) {
 func TestReserved(t *testing.T) {
 	for _, name := range []string{
 		"model_tgo.go",
+		"model_tgo_test.go",
 		"model_tgo_linux.go",
+		"model_tgo_linux_test.go",
 		"model_tgo_amd64.go",
 		"model_tgo_linux_amd64.go",
 		"model_tgo_js_wasm.go",
@@ -80,6 +94,7 @@ func TestReserved(t *testing.T) {
 		"model_tgo_linux_amd64_extra.go",
 		"model_tgo__linux.go",
 		"model_tgo_linux_.go",
+		"model_tgo_helper_test.go",
 	} {
 		if Reserved(name) {
 			t.Errorf("Reserved(%q) = true", name)
