@@ -95,25 +95,18 @@ async function checkBundledGoGrammar(extension) {
   const expectations = JSON.parse(fs.readFileSync(
     path.join(fixtures, "scopes.json"), "utf8"
   ));
-  const checked = new Set([
-    "entity.name.type.go",
-    "keyword.operator.address.go",
-    "keyword.operator.arithmetic.go",
-    "storage.modifier.non-nil.tgo",
-    "variable.parameter.go"
-  ]);
   const lines = tokenizeGrammar(grammar, source);
   for (const expectation of expectations) {
-    if (!checked.has(expectation.has)) {
-      continue;
-    }
-    assertGrammarScope(
-      lines, expectation.line, expectation.token, expectation.has, true
-    );
-    if (expectation.not) {
-      assertGrammarScope(
-        lines, expectation.line, expectation.token, expectation.not, false
-      );
+    assertGrammarScope(lines, expectation);
+  }
+  const matrix = JSON.parse(fs.readFileSync(
+    path.join(fixtures, "conformance.json"), "utf8"
+  ));
+  for (const [feature, cases] of Object.entries(matrix)) {
+    assert.ok(cases.positive.length > 0, `${feature} needs a positive case`);
+    assert.ok(cases.negative.length > 0, `${feature} needs a negative case`);
+    for (const expectation of [...cases.positive, ...cases.negative]) {
+      assertGrammarScope(lines, expectation);
     }
   }
 }
@@ -127,20 +120,22 @@ function tokenizeGrammar(grammar, source) {
   });
 }
 
-function assertGrammarScope(lines, lineText, text, scope, present) {
-  const line = lines.find((item) => item.text.includes(lineText));
-  assert.ok(line, `missing grammar line ${lineText}`);
-  const offset = line.text.indexOf(text);
-  assert.notEqual(offset, -1, `missing grammar token ${text}`);
+function assertGrammarScope(lines, expectation) {
+  const line = lines.find((item) => item.text.includes(expectation.line));
+  assert.ok(line, `missing grammar line ${expectation.line}`);
+  const offset = line.text.indexOf(expectation.token);
+  assert.notEqual(offset, -1, `missing grammar token ${expectation.token}`);
   const value = line.tokens.find(
     (item) => item.startIndex <= offset && offset < item.endIndex
   );
-  assert.ok(value, `missing grammar scopes for ${text}`);
-  assert.equal(
-    value.scopes.includes(scope),
-    present,
-    `${text} scopes ${value.scopes.join(", ")}`
-  );
+  assert.ok(value, `missing grammar scopes for ${expectation.token}`);
+  const message = `${expectation.line}: ${expectation.token} scopes ${value.scopes.join(", ")}`;
+  if (expectation.has) {
+    assert.equal(value.scopes.includes(expectation.has), true, message);
+  }
+  if (expectation.not) {
+    assert.equal(value.scopes.includes(expectation.not), false, message);
+  }
 }
 
 async function checkRepositoryHovers() {

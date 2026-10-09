@@ -7,6 +7,8 @@ not language behavior.
 
 The tgo compiler is implemented in Go. A compiler build does not require an existing tgo
 compiler.
+The `internal/compiler` package and its tests stay in Go for this bootstrap
+reason. Other packages still follow the one-language package boundary.
 
 Repository tools outside the compiler bootstrap path can use tgo. For example, `tgolint` uses
 tgo source files.
@@ -29,6 +31,10 @@ line endings, and final-newline behavior. A fixed-seed source sample adds
 ordinary Go shapes. A manifest selects a bounded Go standard-library corpus for
 byte comparison and same-package tests. Add each fixed identity failure as a
 focused fixture.
+
+Each package has active handwritten production source in only one language.
+TGo packages use `.tgo` and `_test.tgo`; Go packages use `.go` and `_test.go`.
+Generated Go output is excluded from this classification.
 
 ## Compiler boundary
 

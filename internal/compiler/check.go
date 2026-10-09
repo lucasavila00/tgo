@@ -137,7 +137,7 @@ func (p *packageUnit) checkNode(
 	switch node := node.(type) {
 	case *ast.Ident:
 		p.checkEnumGeneratedConstructorReference(node)
-		p.checkEnumGeneratedType(node)
+		p.checkEnumGeneratedType(node, parents)
 		p.checkCheckedCarrier(node)
 		p.checkCheckedConstructorReference(node, parents)
 	case *ast.TypeSpec:
@@ -379,7 +379,10 @@ func (p *packageUnit) generatedEnumConstructor(
 	return nil, nil
 }
 
-func (p *packageUnit) checkEnumGeneratedType(identifier *ast.Ident) {
+func (p *packageUnit) checkEnumGeneratedType(
+	identifier *ast.Ident,
+	parents map[ast.Node]ast.Node,
+) {
 	if identifier.Pos() == token.NoPos {
 		return
 	}
@@ -404,6 +407,9 @@ func (p *packageUnit) checkEnumGeneratedType(identifier *ast.Ident) {
 			carrier := enumCarrierName(declaration.Name, item.Name)
 			switch named.Obj().Name() {
 			case payload:
+				if enumPayloadMethodReceiver(identifier, parents) {
+					return
+				}
 				p.fail(
 					identifier,
 					"%s is generated enum representation; use %s.%s{...}",
@@ -422,6 +428,28 @@ func (p *packageUnit) checkEnumGeneratedType(identifier *ast.Ident) {
 			}
 		}
 	}
+}
+
+// enumPayloadMethodReceiver reports whether an identifier declares a method
+// receiver. A TGo package can add behavior to its generated payload type.
+func enumPayloadMethodReceiver(
+	identifier *ast.Ident,
+	parents map[ast.Node]ast.Node,
+) bool {
+	node := ast.Node(identifier)
+	if pointer, ok := parents[node].(*ast.StarExpr); ok && pointer.X == identifier {
+		node = pointer
+	}
+	field, ok := parents[node].(*ast.Field)
+	if !ok || field.Type != node {
+		return false
+	}
+	list, ok := parents[field].(*ast.FieldList)
+	if !ok {
+		return false
+	}
+	function, ok := parents[list].(*ast.FuncDecl)
+	return ok && function.Recv == list
 }
 
 // checkCheckedConstructorReference hides the generated Go ABI from TGo.

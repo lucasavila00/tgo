@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from scripts import check_source_size
+
+
+class SourceSizeTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.repository = Path(self.temporary.name)
+
+    def tearDown(self) -> None:
+        self.temporary.cleanup()
+
+    def write_lines(self, relative: str, count: int) -> Path:
+        path = self.repository / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("line\n" * count, encoding="utf-8")
+        return path
+
+    def test_rejects_oversized_handwritten_go_and_tgo(self) -> None:
+        self.write_lines("package/model.go", check_source_size.MAX_LINES + 1)
+        self.write_lines("package/model.tgo", check_source_size.MAX_LINES + 1)
+
+        result = check_source_size.failures(self.repository, {})
+
+        self.assertEqual(len(result), 2)
+        self.assertIn("package/model.go", result[0])
+        self.assertIn("package/model.tgo", result[1])
+
+    def test_ignores_generated_go(self) -> None:
+        names = [
+            "model_tgo.go",
+            "model_tgo_test.go",
+            "model_tgo_linux.go",
+            "model_tgo_linux_test.go",
+            "model_tgo_amd64.go",
+            "model_tgo_linux_amd64.go",
+            "model_tgo_linux_amd64_test.go",
+            "foo_tgo_bar_tgo_linux.go",
+        ]
+        for name in names:
+            self.write_lines(f"package/{name}", check_source_size.MAX_LINES + 1)
+
+        self.assertEqual(check_source_size.failures(self.repository, {}), [])
+
+    def test_checks_ordinary_go_names_that_contain_tgo(self) -> None:
+        names = [
+            "model_tgo_helper.go",
+            "model_tgo_linux_helper.go",
+            "model_tgo_helper_amd64.go",
+            "model_tgo_linux_amd64_extra.go",
+            "model_tgo__linux.go",
+            "model_tgo_linux_.go",
+            "model_tgo_helper_test.go",
+        ]
+        for name in names:
+            self.write_lines(f"package/{name}", check_source_size.MAX_LINES + 1)
+
+        result = check_source_size.failures(self.repository, {})
+
+        self.assertEqual(len(result), len(names))
+        for name in names:
+            self.assertTrue(any(name in failure for failure in result))
+
+    def test_requires_an_explicit_fixture_exclusion(self) -> None:
+        relative = Path("package/testdata/large.go")
+        self.write_lines(str(relative), check_source_size.MAX_LINES + 1)
+
+        result = check_source_size.failures(self.repository, {})
+
+        self.assertEqual(len(result), 1)
+        self.assertIn(str(relative), result[0])
+
+    def test_accepts_a_documented_fixture_exclusion(self) -> None:
+        relative = Path("package/testdata/large.go")
+        self.write_lines(str(relative), check_source_size.MAX_LINES + 1)
+
+        result = check_source_size.failures(
+            self.repository,
+            {relative: "The parser stress fixture must have more than 700 lines."},
+        )
+
+        self.assertEqual(result, [])
+
+    def test_rejects_an_exclusion_without_a_reason(self) -> None:
+        relative = Path("package/testdata/large.go")
+        self.write_lines(str(relative), check_source_size.MAX_LINES + 1)
+
+        result = check_source_size.failures(self.repository, {relative: ""})
+
+        self.assertTrue(any("needs a reason" in failure for failure in result))
+        self.assertTrue(any("maximum is" in failure for failure in result))
+
+    def test_rejects_a_stale_exclusion(self) -> None:
+        relative = Path("package/testdata/small.go")
+        self.write_lines(str(relative), check_source_size.MAX_LINES)
+
+        result = check_source_size.failures(
+            self.repository,
+            {relative: "This reason is now stale."},
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("stale fixture exclusion", result[0])
+
+    def test_rejects_an_exclusion_for_a_missing_file(self) -> None:
+        relative = Path("package/testdata/missing.go")
+
+        result = check_source_size.failures(
+            self.repository,
+            {relative: "This file no longer exists."},
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("stale fixture exclusion", result[0])
+
+    def test_rejects_a_production_exclusion(self) -> None:
+        relative = Path("package/large.go")
+        self.write_lines(str(relative), check_source_size.MAX_LINES + 1)
+
+        result = check_source_size.failures(
+            self.repository,
+            {relative: "Production source cannot use a fixture exclusion."},
+        )
+
+        self.assertTrue(any("not a source fixture" in failure for failure in result))
+        self.assertTrue(any("maximum is" in failure for failure in result))
+
+
+if __name__ == "__main__":
+    unittest.main()

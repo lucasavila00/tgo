@@ -83,9 +83,9 @@ def check_stale_output_cleanup(compiler, work):
     run([str(compiler), "build", "./app"], work)
     assert not user_file.exists(), "compiler kept a file in its reserved output namespace"
 
-    helper = work / "app" / "notes_tgo_helper.go"
-    helper.write_text("package app\n\nfunc NotesHelper() int { return 1 }\n")
-    run([str(compiler), "build", "./app"], work)
+    helper = work / "gobridge" / "notes_tgo_helper.go"
+    helper.write_text("package gobridge\n\nfunc NotesHelper() int { return 1 }\n")
+    run([str(compiler), "build", "./..."], work)
     assert helper.exists(), "compiler removed a user file with a non-target suffix"
 
 
@@ -419,7 +419,7 @@ def check_build_context_and_cgo(compiler, temporary):
         "//go:build audit_tag\n\npackage tagged\n\n"
         "func Feature() int { return taggedValue() }\n"
     )
-    (tagged / "feature.go").write_text(
+    (tagged / "feature_helper.tgo").write_text(
         "//go:build audit_tag\n\npackage tagged\n\n"
         "func taggedValue() int { return 2 }\n"
     )
@@ -561,19 +561,22 @@ def check_build_context_and_cgo(compiler, temporary):
     cgo = work / "cgo"
     cgo.mkdir()
     (cgo / "value.tgo").write_text(
-        "package cgotest\n\nfunc Value() int { return cValue() }\n"
+        'package cgotest\n\nimport "context.test/native"\n\n'
+        "func Value() int { return native.Value() }\n"
     )
     (cgo / "direct.tgo").write_text(
         'package cgotest\n\n/* static int direct(void) { return 4; } */\n'
         'import "C"\n\nfunc Direct() int { return int(C.direct()) }\n'
     )
-    (cgo / "native.go").write_text(
-        'package cgotest\n\n/* static int value(void) { return 5; } */\n'
-        'import "C"\n\nfunc cValue() int { return int(C.value()) }\n'
+    native = work / "native"
+    native.mkdir()
+    (native / "native.go").write_text(
+        'package native\n\n/* static int value(void) { return 5; } */\n'
+        'import "C"\n\nfunc Value() int { return int(C.value()) }\n'
     )
-    (cgo / "fallback.go").write_text(
-        "//go:build !cgo\n\npackage cgotest\n\n"
-        "func cValue() int { return 6 }\n"
+    (native / "fallback.go").write_text(
+        "//go:build !cgo\n\npackage native\n\n"
+        "func Value() int { return 6 }\n"
     )
     cgo_off = {**os.environ, "CGO_ENABLED": "0"}
     run([str(compiler), "build", "./cgo"], work, env=cgo_off)

@@ -107,6 +107,40 @@ func TestEnumGeneratedConstructionSurfaceIsPrivateToTGo(t *testing.T) {
 	}
 }
 
+func TestEnumPayloadMethodsCanBeDeclaredInTGo(t *testing.T) {
+	t.Parallel()
+	sources := []File{
+		{
+			Name: "enum.tgo",
+			Data: []byte("package sample\n" +
+				"type Event enum { Ready struct { value string } }\n"),
+		},
+		{
+			Name: "methods.tgo",
+			Data: []byte(`package sample
+func (value EventReady) Label() string { return value.value }
+func (value *EventReady) Clear() { value.value = "" }
+`),
+		},
+	}
+	compiled, problems := Compile(PackageInput{
+		Path: "sample", Sources: sources,
+		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	output := string(compiled.Outputs["methods.tgo"])
+	for _, text := range []string{
+		"func (value EventReady) Label() string",
+		"func (value *EventReady) Clear()",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("generated methods do not contain %q\n%s", text, output)
+		}
+	}
+}
+
 func TestImportedEnumConstructionSurface(t *testing.T) {
 	t.Parallel()
 	dependency, problems := Compile(PackageInput{
@@ -254,7 +288,6 @@ func TestEnumGeneratedNamesAreReservedAcrossFiles(t *testing.T) {
 	tests := []struct {
 		name   string
 		source *File
-		goFile *File
 		want   string
 	}{
 		{
@@ -270,19 +303,6 @@ func TestEnumGeneratedNamesAreReservedAcrossFiles(t *testing.T) {
 			},
 			want: "other.tgo:2:6: name TgoEventReadyInput is reserved by enum Event",
 		},
-		{
-			name: "Go constructor", goFile: &File{
-				Name: "other.go", Data: []byte("package sample\nfunc NewEventReady() {}\n"),
-			},
-			want: "other.go:2:6: name NewEventReady is reserved by enum Event",
-		},
-		{
-			name: "Go carrier", goFile: &File{
-				Name: "other.go",
-				Data: []byte("package sample\ntype TgoEventReadyInput struct{}\n"),
-			},
-			want: "other.go:2:6: name TgoEventReadyInput is reserved by enum Event",
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -294,9 +314,6 @@ func TestEnumGeneratedNamesAreReservedAcrossFiles(t *testing.T) {
 				}
 				if test.source != nil {
 					input.Sources = append(input.Sources, *test.source)
-				}
-				if test.goFile != nil {
-					input.GoFiles = append(input.GoFiles, *test.goFile)
 				}
 				_, problems := Compile(input)
 				if len(problems) != 1 || problems[0].Error() != test.want {
