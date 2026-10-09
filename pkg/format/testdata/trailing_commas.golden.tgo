@@ -3,8 +3,13 @@ package comments
 type item[T, U any] struct { First T; Second U }
 
 var value = item[int, int]{
-	First: 1, /* first field */
+	First:  1, /* first field */
 	Second: 2, // second field
+}
+
+var names = map[string]int{
+	"x":    1,
+	"long": 2,
 }
 
 func use[

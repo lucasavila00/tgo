@@ -4,6 +4,10 @@ var value=item[int,int]{
 First:1, /* first field */
 Second:2, // second field
 }
+var names=map[string]int{
+"x":1,
+"long":2,
+}
 func use[
 T any, /* first type parameter */
 U any, // second type parameter

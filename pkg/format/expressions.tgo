@@ -283,6 +283,12 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	}
 	p.newline()
 	p.indent++
+	keyWidth := 0
+	for _, element := range value.Elements {
+		if width := compositeKeyWidth(element); width > keyWidth {
+			keyWidth = width
+		}
+	}
 	for index, element := range value.Elements {
 		if index > 0 && p.blankBetween(
 			syntax.ExpressionEnd(value.Elements[index-1]),
@@ -290,7 +296,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		) {
 			p.blankline()
 		}
-		p.expression(element, 0)
+		p.compositeElement(element, keyWidth)
 		p.text(",")
 		following := value.Rbrace
 		if index+1 < len(value.Elements) {
@@ -301,6 +307,35 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	}
 	p.indent--
 	p.token(value.Rbrace, "}")
+}
+
+func (p *printer) compositeElement(value *syntax.Expression, keyWidth int) {
+	keyValue := syntax.KeyValueExpressionOf(value)
+	width := compositeKeyWidth(value)
+	if keyValue == nil || width == 0 {
+		p.expression(value, 0)
+		return
+	}
+	p.expression(keyValue.Key, 0)
+	p.token(keyValue.Colon, ":")
+	p.text(strings.Repeat(" ", keyWidth-width+1))
+	p.expression(keyValue.Value, 0)
+}
+
+func compositeKeyWidth(value *syntax.Expression) int {
+	keyValue := syntax.KeyValueExpressionOf(value)
+	if keyValue == nil {
+		return 0
+	}
+	if name := syntax.IdentifierExpressionOf(keyValue.Key); name != nil {
+		return utf8.RuneCountInString(name.Name)
+	}
+	switch key := *keyValue.Key; key.Tag() {
+	case syntax.ExpressionTagBasicLiteral:
+		return utf8.RuneCountInString(key.BasicLiteralPayload().Value.Value)
+	default:
+		return 0
+	}
 }
 
 func (p *printer) field(value *syntax.Field) {
