@@ -12,10 +12,7 @@ import (
 type scalarValue enum {
 	Boolean struct { Value bool }
 	Integer struct { Value int64 }
-	BooleanParameter struct {
-		Index   int
-		Negated bool
-	}
+	BooleanParameter struct { Index int; Negated bool }
 	IntegerParameter struct { Index int }
 }
 
@@ -59,13 +56,9 @@ func (c %checker) enclosingFunction(node %syntax.Node) *syntax.Node {
 		if _, declaration := syntax.FunctionDeclarationOf(current); declaration {
 			return current
 		}
-		if _, literal := syntax.FunctionLiteralOf(current); literal {
-			return current
-		}
+		if _, literal := syntax.FunctionLiteralOf(current); literal { return current }
 		parent := c.parents[*current]
-		if parent == nil {
-			return nil
-		}
+		if parent == nil { return nil }
 		current = parent
 	}
 	return nil
@@ -138,7 +131,7 @@ func (c %checker) scalarSuccessors(
 	if len(block.Succs) != 2 || len(block.Nodes) == 0 {
 		return block.Succs
 	}
-	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes) - 1])
+	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
 	if !ok || condition == nil {
 		return block.Succs
 	}
@@ -187,22 +180,19 @@ func (c %checker) ownedScalars(
 			owned[signature.Params().At(index)] = true
 		}
 	}
-	inspectGenericBlock(
-		body,
-		func(node %syntax.Node) bool {
-			if _, nested := syntax.FunctionLiteralOf(node); nested {
-				return false
-			}
-			name, ok := syntax.IdentifierOf(node)
-			if !ok {
-				return true
-			}
-			if variable, ok := c.facts.DefinitionName(name).(*types.Var); ok {
-				owned[variable] = true
-			}
+	inspectGenericBlock(body, func(node %syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
+			return false
+		}
+		name, ok := syntax.IdentifierOf(node)
+		if !ok {
 			return true
-		},
-	)
+		}
+		if variable, ok := c.facts.DefinitionName(name).(*types.Var); ok {
+			owned[variable] = true
+		}
+		return true
+	})
 	return owned
 }
 
@@ -219,8 +209,7 @@ func (c %checker) scalarEntryState(
 		parameter := signature.Params().At(index)
 		if isBoolean(parameter.Type()) {
 			state[parameter] = scalarValue.BooleanParameter{
-				Index: index,
-				Negated: false,
+				Index: index, Negated: false,
 			}
 			continue
 		}
@@ -246,7 +235,7 @@ func (c %checker) functionSignature(root %syntax.Node) *types.Signature {
 
 func isInteger(typ types.Type) bool {
 	basic, ok := coreType(typ).(*types.Basic)
-	return ok && basic.Info() & types.IsInteger != 0
+	return ok && basic.Info()&types.IsInteger != 0
 }
 
 func (c %checker) clearRangeScalars(
@@ -282,9 +271,7 @@ func (c %checker) transferScalarNode(
 			if general != nil {
 				for _, specification := range general.Specs {
 					values := syntax.ValueSpecificationOf(specification)
-					if values == nil {
-						continue
-					}
+					if values == nil { continue }
 					c.transferScalarValues(state, values.Names, values.Values, owned)
 				}
 			}
@@ -297,12 +284,9 @@ func (c %checker) transferScalarNode(
 	}
 	if specification, ok := syntax.SpecificationOf(&node); ok {
 		if values := syntax.ValueSpecificationOf(specification); values != nil {
-			c.transferScalarValues(
-				state,
-				values.Names,
-				values.Values,
-				owned,
-			)
+				c.transferScalarValues(
+					state, values.Names, values.Values, owned,
+				)
 		}
 	}
 	c.invalidateScalarEscapes(state, &node)
@@ -314,7 +298,8 @@ func (c %checker) transferScalarAssignment(
 	statement *syntax.AssignmentStatement,
 	owned map[types.Object]bool,
 ) {
-	if statement.Operator != token.ASSIGN && statement.Operator != token.DEFINE || len(statement.Left) != len(statement.Right) {
+	if statement.Operator != token.ASSIGN && statement.Operator != token.DEFINE ||
+		len(statement.Left) != len(statement.Right) {
 		for _, target := range statement.Left {
 			if name := syntax.IdentifierExpressionOf(target); name != nil {
 				delete(state, c.facts.Object(name))
@@ -372,38 +357,34 @@ func (c %checker) transferScalarValues(
 
 // invalidateScalarEscapes drops facts after an address or closure captures a value.
 func (c %checker) invalidateScalarEscapes(state scalarState, root %syntax.Node) {
-	inspectGenericNode(
-		root,
-		func(node %syntax.Node) bool {
-			if expression, ok := syntax.ExpressionOf(node); ok {
-				if unary := syntax.UnaryExpressionOf(expression); unary != nil && unary.Operator == token.AND {
-					if name := syntax.IdentifierExpressionOf(unary.Expression); name != nil {
-						delete(state, c.facts.Object(name))
-					}
-				}
-				if selector := syntax.SelectorExpressionOf(expression); selector != nil && c.pointerMethodSelection(expression) {
-					if name := syntax.IdentifierExpressionOf(selector.Expression); name != nil {
-						delete(state, c.facts.Object(name))
-					}
+	inspectGenericNode(root, func(node %syntax.Node) bool {
+		if expression, ok := syntax.ExpressionOf(node); ok {
+			if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
+				unary.Operator == token.AND {
+				if name := syntax.IdentifierExpressionOf(unary.Expression); name != nil {
+					delete(state, c.facts.Object(name))
 				}
 			}
-			literal, ok := syntax.FunctionLiteralOf(node)
-			if !ok {
-				return true
+			if selector := syntax.SelectorExpressionOf(expression); selector != nil &&
+				c.pointerMethodSelection(expression) {
+				if name := syntax.IdentifierExpressionOf(selector.Expression); name != nil {
+					delete(state, c.facts.Object(name))
+				}
 			}
-			inspectGenericBlock(
-				literal.Body,
-				func(nested *syntax.Node) bool {
-					name, ok := syntax.IdentifierOf(nested)
-					if ok {
-						delete(state, c.facts.Object(name))
-					}
-					return true
-				},
-			)
-			return false
-		},
-	)
+		}
+		literal, ok := syntax.FunctionLiteralOf(node)
+		if !ok {
+			return true
+		}
+		inspectGenericBlock(literal.Body, func(nested *syntax.Node) bool {
+			name, ok := syntax.IdentifierOf(nested)
+			if ok {
+				delete(state, c.facts.Object(name))
+			}
+			return true
+		})
+		return false
+	})
 }
 
 // evaluateScalar reduces constants, aliases, and supported Boolean expressions.
@@ -463,10 +444,11 @@ func (c %checker) valuePreservingConversion(
 	expression %syntax.Expression,
 	call %syntax.CallExpression,
 ) bool {
-	return len(call.Args) == 1 && c.facts.IsType(call.Callee) && types.Identical(
-		c.facts.Type(expression),
-		c.facts.Type(call.Args[0]),
-	)
+	return len(call.Args) == 1 && c.facts.IsType(call.Callee) &&
+		types.Identical(
+			c.facts.Type(expression),
+			c.facts.Type(call.Args[0]),
+		)
 }
 
 // evaluateScalarBinary evaluates safe Boolean operations and equality.
@@ -484,21 +466,13 @@ func (c %checker) evaluateScalarBinary(
 	switch expression.Operator {
 	case token.LAND:
 		return scalarLogicalAnd(
-			left,
-			leftBoolean,
-			leftBooleanKnown,
-			right,
-			rightBoolean,
-			rightBooleanKnown,
+			left, leftBoolean, leftBooleanKnown,
+			right, rightBoolean, rightBooleanKnown,
 		)
 	case token.LOR:
 		return scalarLogicalOr(
-			left,
-			leftBoolean,
-			leftBooleanKnown,
-			right,
-			rightBoolean,
-			rightBooleanKnown,
+			left, leftBoolean, leftBooleanKnown,
+			right, rightBoolean, rightBooleanKnown,
 		)
 	case token.EQL, token.NEQ:
 		if scalarValuesEqual(left, right) {
@@ -605,8 +579,7 @@ func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
 	case scalarValueTagBooleanParameter:
 		parameter := enumValue10.BooleanParameterPayload()
 		return scalarValue.BooleanParameter{
-			Index: parameter.Index,
-			Negated: !parameter.Negated,
+			Index: parameter.Index, Negated: !parameter.Negated,
 		}, true
 	case scalarValueTagIntegerParameter:
 		return scalarValue.Boolean{Value: false}, false
@@ -710,14 +683,11 @@ func recordScalarState(
 	root syntax.Node,
 	state scalarState,
 ) {
-	inspectGenericNode(
-		&root,
-		func(node %syntax.Node) bool {
-			if _, nested := syntax.FunctionLiteralOf(node); nested {
-				return false
-			}
-			target[*node] = cloneScalarState(state)
-			return true
-		},
-	)
+	inspectGenericNode(&root, func(node %syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
+			return false
+		}
+		target[*node] = cloneScalarState(state)
+		return true
+	})
 }
