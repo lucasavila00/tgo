@@ -83,6 +83,8 @@ func (c *checker) propagateGenericZeroFacts(
 					receiverArguments,
 					typeArguments,
 					true,
+					false,
+					false,
 				) {
 					changed = true
 				}
@@ -93,6 +95,32 @@ func (c *checker) propagateGenericZeroFacts(
 					receiverArguments,
 					typeArguments,
 					false,
+					false,
+					false,
+				) {
+					changed = true
+				}
+			}
+			for _, returned := range summary.returnedCalls {
+				function, receiverArguments, typeArguments := c.genericCall(
+					returned.expression,
+				)
+				if function == nil {
+					continue
+				}
+				fact := c.genericZeroFact(function, summaries)
+				if fact == nil {
+					continue
+				}
+				if c.propagateGenericEffects(
+					summary, returned.expression, fact.ReturnedZeroEffects,
+					receiverArguments, typeArguments, true, true, returned.maySkip,
+				) {
+					changed = true
+				}
+				if c.propagateGenericEffects(
+					summary, returned.expression, fact.ReturnedAccessEffects,
+					receiverArguments, typeArguments, false, true, returned.maySkip,
 				) {
 					changed = true
 				}
@@ -108,6 +136,8 @@ func (c *checker) propagateGenericEffects(
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 	zero bool,
+	returned bool,
+	additionalMaySkip bool,
 ) bool {
 	changed := false
 	pathConditions, pathMaySkip, reachable := c.genericEffectPath(
@@ -124,8 +154,15 @@ func (c *checker) propagateGenericEffects(
 		if !possible {
 			continue
 		}
+		mapped.MaySkip = mapped.MaySkip || additionalMaySkip
 		for parameter := range parameters {
-			changed = c.addGenericEffect(summary, zero, parameter, mapped) || changed
+			if returned {
+				mapped.Receiver = parameter.receiver
+				mapped.TypeParameter = parameter.index
+				changed = c.addReturnedGenericEffect(summary, zero, mapped) || changed
+			} else {
+				changed = c.addGenericEffect(summary, zero, parameter, mapped) || changed
+			}
 		}
 	}
 	return changed

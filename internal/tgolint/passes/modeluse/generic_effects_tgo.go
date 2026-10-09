@@ -91,16 +91,31 @@ func (v *EffectKind) GobDecode(data []byte) error {
 	if uint32(tag) != number || tag < EffectKindTagBoolean || tag > EffectKindTagResliceExtends {
 		return fmt.Errorf("EffectKind: cannot gob decode unknown tag %d", number)
 	}
-	*v = EffectKind{tgoTag: tag}
+	switch tag {
+	case EffectKindTagBoolean:
+		*v = NewEffectKindBoolean()
+	case EffectKindTagNonzero:
+		*v = NewEffectKindNonzero()
+	case EffectKindTagNonempty:
+		*v = NewEffectKindNonempty()
+	case EffectKindTagMapMiss:
+		*v = NewEffectKindMapMiss()
+	case EffectKindTagChannelClosed:
+		*v = NewEffectKindChannelClosed()
+	case EffectKindTagAssertionFails:
+		*v = NewEffectKindAssertionFails()
+	case EffectKindTagResliceExtends:
+		*v = NewEffectKindResliceExtends()
+	}
 	return nil
 }
 
 // EffectKindBoolean is the Boolean payload.
 type EffectKindBoolean struct{}
 
-// EffectKind constructs EffectKind. Model fields must be valid.
+// NewEffectKindBoolean constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EffectKindBoolean) EffectKind() EffectKind {
+func NewEffectKindBoolean() EffectKind {
 	return EffectKind{tgoTag: EffectKindTagBoolean}
 }
 
@@ -110,9 +125,9 @@ func (EffectKind) BooleanPayload() EffectKindBoolean { return EffectKindBoolean{
 // EffectKindNonzero is the Nonzero payload.
 type EffectKindNonzero struct{}
 
-// EffectKind constructs EffectKind. Model fields must be valid.
+// NewEffectKindNonzero constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EffectKindNonzero) EffectKind() EffectKind {
+func NewEffectKindNonzero() EffectKind {
 	return EffectKind{tgoTag: EffectKindTagNonzero}
 }
 
@@ -122,9 +137,9 @@ func (EffectKind) NonzeroPayload() EffectKindNonzero { return EffectKindNonzero{
 // EffectKindNonempty is the Nonempty payload.
 type EffectKindNonempty struct{}
 
-// EffectKind constructs EffectKind. Model fields must be valid.
+// NewEffectKindNonempty constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EffectKindNonempty) EffectKind() EffectKind {
+func NewEffectKindNonempty() EffectKind {
 	return EffectKind{tgoTag: EffectKindTagNonempty}
 }
 
@@ -134,9 +149,9 @@ func (EffectKind) NonemptyPayload() EffectKindNonempty { return EffectKindNonemp
 // EffectKindMapMiss is the MapMiss payload.
 type EffectKindMapMiss struct{}
 
-// EffectKind constructs EffectKind. Model fields must be valid.
+// NewEffectKindMapMiss constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EffectKindMapMiss) EffectKind() EffectKind {
+func NewEffectKindMapMiss() EffectKind {
 	return EffectKind{tgoTag: EffectKindTagMapMiss}
 }
 
@@ -146,9 +161,9 @@ func (EffectKind) MapMissPayload() EffectKindMapMiss { return EffectKindMapMiss{
 // EffectKindChannelClosed is the ChannelClosed payload.
 type EffectKindChannelClosed struct{}
 
-// EffectKind constructs EffectKind. Model fields must be valid.
+// NewEffectKindChannelClosed constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EffectKindChannelClosed) EffectKind() EffectKind {
+func NewEffectKindChannelClosed() EffectKind {
 	return EffectKind{tgoTag: EffectKindTagChannelClosed}
 }
 
@@ -158,9 +173,9 @@ func (EffectKind) ChannelClosedPayload() EffectKindChannelClosed { return Effect
 // EffectKindAssertionFails is the AssertionFails payload.
 type EffectKindAssertionFails struct{}
 
-// EffectKind constructs EffectKind. Model fields must be valid.
+// NewEffectKindAssertionFails constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EffectKindAssertionFails) EffectKind() EffectKind {
+func NewEffectKindAssertionFails() EffectKind {
 	return EffectKind{tgoTag: EffectKindTagAssertionFails}
 }
 
@@ -170,9 +185,9 @@ func (EffectKind) AssertionFailsPayload() EffectKindAssertionFails { return Effe
 // EffectKindResliceExtends is the ResliceExtends payload.
 type EffectKindResliceExtends struct{}
 
-// EffectKind constructs EffectKind. Model fields must be valid.
+// NewEffectKindResliceExtends constructs EffectKind. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value EffectKindResliceExtends) EffectKind() EffectKind {
+func NewEffectKindResliceExtends() EffectKind {
 	return EffectKind{tgoTag: EffectKindTagResliceExtends}
 }
 
@@ -269,49 +284,49 @@ func (v *EffectKind) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindBoolean()
 		return nil
 	case "Nonzero":
 		var payload EffectKindNonzero
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindNonzero()
 		return nil
 	case "Nonempty":
 		var payload EffectKindNonempty
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindNonempty()
 		return nil
 	case "MapMiss":
 		var payload EffectKindMapMiss
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindMapMiss()
 		return nil
 	case "ChannelClosed":
 		var payload EffectKindChannelClosed
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindChannelClosed()
 		return nil
 	case "AssertionFails":
 		var payload EffectKindAssertionFails
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindAssertionFails()
 		return nil
 	case "ResliceExtends":
 		var payload EffectKindResliceExtends
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindResliceExtends()
 		return nil
 	default:
 		return fmt.Errorf("unknown EffectKind JSON variant %q", variant)
@@ -392,49 +407,49 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindBoolean()
 		return nil
 	case 2:
 		var payload EffectKindNonzero
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindNonzero()
 		return nil
 	case 3:
 		var payload EffectKindNonempty
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindNonempty()
 		return nil
 	case 4:
 		var payload EffectKindMapMiss
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindMapMiss()
 		return nil
 	case 5:
 		var payload EffectKindChannelClosed
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindChannelClosed()
 		return nil
 	case 6:
 		var payload EffectKindAssertionFails
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindAssertionFails()
 		return nil
 	case 7:
 		var payload EffectKindResliceExtends
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.EffectKind()
+		*v = NewEffectKindResliceExtends()
 		return nil
 	default:
 		return fmt.Errorf("invalid EffectKind JSON tag")
@@ -442,29 +457,28 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 }
 
 func booleanEffectCondition() EffectKind {
-	return EffectKindBoolean{}.EffectKind()
+	return NewEffectKindBoolean()
 }
 func nonzeroEffectConditionKind() EffectKind {
-	return EffectKindNonzero{}.EffectKind()
+	return NewEffectKindNonzero()
 }
 func nonemptyEffectCondition() EffectKind {
-	return EffectKindNonempty{}.EffectKind()
+	return NewEffectKindNonempty()
 }
 func mapMissEffectCondition() EffectKind {
-	return EffectKindMapMiss{}.EffectKind()
+	return NewEffectKindMapMiss()
 }
 func closedChannelEffectCondition() EffectKind {
-	return EffectKindChannelClosed{}.EffectKind()
+	return NewEffectKindChannelClosed()
 }
 func failedAssertionEffectCondition() EffectKind {
-	return EffectKindAssertionFails{}.EffectKind()
+	return NewEffectKindAssertionFails()
 }
 func extendingResliceEffectCondition() EffectKind {
-	return EffectKindResliceExtends{}.EffectKind(
-
-	// GenericEffect is a serializable condition for one type argument effect.
-	)
+	return NewEffectKindResliceExtends()
 }
+
+// GenericEffect is a serializable condition for one type argument effect.
 
 type GenericEffect struct {
 	Receiver      bool
@@ -492,9 +506,20 @@ type genericEffectSummary struct {
 	returnedZeroEffects   []GenericEffect
 	returnedAccessEffects []GenericEffect
 	calls                 []*syntax.Expression
+	returnedCalls         []returnedGenericCall
 	reachable             map[syntax.Node]bool
 	root                  *syntax.Node
 	body                  *syntax.BlockStatement
+}
+
+type returnedGenericCall struct {
+	expression *syntax.Expression
+	maySkip    bool
+}
+
+type returnedClosureBinding struct {
+	sources  []*syntax.Expression
+	unstable bool
 }
 
 // checkGenericZeroSafety exports generic zero facts and checks each use.
@@ -540,6 +565,7 @@ func (c *checker) checkGenericZeroSafety() {
 // collectGenericZeroSummaries creates one local effect summary per generic function.
 func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSummary {
 	summaries := make(map[*types.Func]*genericEffectSummary)
+	declarations := make(map[*types.Func]*syntax.FunctionDeclaration)
 	for _, file := range c.files {
 		if c.generated[file] {
 			continue
@@ -553,6 +579,7 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 			if !ok {
 				return false
 			}
+			declarations[object.Origin()] = function
 			signature, ok := object.Type().(*types.Signature)
 			if !ok {
 				return false
@@ -565,15 +592,17 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 			summary := &genericEffectSummary{
 				function: object, file: file, declaration: function, parameters: parameters,
 				zeroEffects: nil, accessEffects: nil, returnedZeroEffects: nil,
-				returnedAccessEffects: nil, calls: nil,
+				returnedAccessEffects: nil, calls: nil, returnedCalls: nil,
 				reachable: c.reachableNodes(function.Body), root: &root,
 				body: function.Body,
 			}
 			c.collectDirectGenericZeros(summary)
-			c.collectReturnedGenericEffects(summary)
 			summaries[object] = summary
 			return false
 		})
+	}
+	for _, summary := range summaries {
+		c.collectReturnedGenericEffects(summary, summaries, declarations)
 	}
 	return summaries
 }
@@ -654,42 +683,87 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 	})
 }
 
-// collectReturnedGenericEffects records effects in a directly returned closure.
-func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
+// collectReturnedGenericEffects records effects in returned closure values.
+func (c *checker) collectReturnedGenericEffects(
+	summary *genericEffectSummary,
+	summaries map[*types.Func]*genericEffectSummary,
+	declarations map[*types.Func]*syntax.FunctionDeclaration,
+) {
+	bindings := c.returnedClosureBindings(summary.body)
+	signature := summary.function.Type().(*types.Signature)
+	namedResults := returnedNamedResultExpressions(summary.declaration)
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
 		statement, ok := syntax.StatementOf(node)
-		if !ok || syntax.ReturnStatementOf(statement) == nil {
+		if !ok {
 			return true
 		}
-		for _, expression := range syntax.ReturnStatementOf(statement).Results {
-			value := unparenthesized(expression)
-			literal := syntax.FunctionLiteralExpressionOf(value)
-			if literal == nil {
+		returned := syntax.ReturnStatementOf(statement)
+		if returned == nil {
+			return true
+		}
+		results := returned.Results
+		if len(results) == 0 {
+			results = namedResults
+		}
+		if len(results) == 1 {
+			if _, tuple := c.facts.Type(results[0]).(*types.Tuple); tuple {
+				for index := range signature.Results().Len() {
+					if returnedFunctionType(signature.Results().At(index).Type()) {
+						c.collectReturnedExpression(
+							summary, results[0], bindings, summaries, declarations,
+							true, false, make(map[types.Object]bool),
+						)
+						break
+					}
+				}
+				return false
+			}
+		}
+		for index, expression := range results {
+			if expression == nil {
 				continue
 			}
-			root := syntax.ExpressionNode(value)
-			returned := &genericEffectSummary{
-				function: summary.function, file: summary.file,
-				declaration: summary.declaration,
-				parameters:  summary.parameters, zeroEffects: nil,
-				accessEffects: nil, returnedZeroEffects: nil,
-				returnedAccessEffects: nil, calls: nil,
-				reachable: c.reachableNodes(literal.Body), root: &root,
-				body: literal.Body,
+			if index >= signature.Results().Len() ||
+				!returnedFunctionType(signature.Results().At(index).Type()) {
+				continue
 			}
-			c.collectGenericNodes(returned)
-			summary.returnedZeroEffects = append(
-				summary.returnedZeroEffects, returned.zeroEffects...,
-			)
-			summary.returnedAccessEffects = append(
-				summary.returnedAccessEffects, returned.accessEffects...,
+			c.collectReturnedExpression(
+				summary, expression, bindings, summaries, declarations,
+				true, false, make(map[types.Object]bool),
 			)
 		}
 		return false
 	})
+}
+
+func returnedNamedResultExpressions(
+	declaration *syntax.FunctionDeclaration,
+) []*syntax.Expression {
+	if declaration.Type.Results == nil {
+		return nil
+	}
+	var results []*syntax.Expression = nil
+	for _, field := range declaration.Type.Results.List {
+		if len(field.Names) == 0 {
+			results = append(results, nil)
+			continue
+		}
+		for _, name := range field.Names {
+			expression := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+				return syntax.NewExpressionIdentifier(input.FieldValue)
+			}(syntax.TgoExpressionIdentifierInput{FieldValue: name})
+			results = append(results, &expression)
+		}
+	}
+	return results
+}
+
+func returnedFunctionType(typ types.Type) bool {
+	_, ok := types.Unalias(typ).Underlying().(*types.Signature)
+	return ok
 }
 
 // collectGenericPresenceZeros runs the normal pair proof for each type parameter.

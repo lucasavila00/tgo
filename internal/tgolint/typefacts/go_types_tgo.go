@@ -70,9 +70,9 @@ func (v Type) UnknownTag() string {
 // TypeNil is the Nil payload.
 type TypeNil struct{}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeNil constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeNil) Type() Type {
+func NewTypeNil() Type {
 	return Type{tgoTag: TypeTagNil}
 }
 
@@ -83,11 +83,15 @@ func (Type) NilPayload() TypeNil { return TypeNil{} }
 type TypeBasic struct {
 	Value *types.Basic
 }
+type TgoTypeBasicInput struct {
+	FieldValue *types.Basic
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeBasic constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeBasic) Type() Type {
-	return Type{tgoTag: TypeTagBasic, tgoPayload: value}
+func NewTypeBasic(Value *types.Basic) Type {
+	tgoValue := TypeBasic{Value}
+	return Type{tgoTag: TypeTagBasic, tgoPayload: tgoValue}
 }
 
 // BasicPayload requires Basic. No tag check.
@@ -97,11 +101,15 @@ func (v Type) BasicPayload() TypeBasic { return v.tgoPayload.(TypeBasic) }
 type TypeArray struct {
 	Value *types.Array
 }
+type TgoTypeArrayInput struct {
+	FieldValue *types.Array
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeArray constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeArray) Type() Type {
-	return Type{tgoTag: TypeTagArray, tgoPayload: value}
+func NewTypeArray(Value *types.Array) Type {
+	tgoValue := TypeArray{Value}
+	return Type{tgoTag: TypeTagArray, tgoPayload: tgoValue}
 }
 
 // ArrayPayload requires Array. No tag check.
@@ -111,11 +119,15 @@ func (v Type) ArrayPayload() TypeArray { return v.tgoPayload.(TypeArray) }
 type TypeSlice struct {
 	Value *types.Slice
 }
+type TgoTypeSliceInput struct {
+	FieldValue *types.Slice
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeSlice constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeSlice) Type() Type {
-	return Type{tgoTag: TypeTagSlice, tgoPayload: value}
+func NewTypeSlice(Value *types.Slice) Type {
+	tgoValue := TypeSlice{Value}
+	return Type{tgoTag: TypeTagSlice, tgoPayload: tgoValue}
 }
 
 // SlicePayload requires Slice. No tag check.
@@ -125,11 +137,15 @@ func (v Type) SlicePayload() TypeSlice { return v.tgoPayload.(TypeSlice) }
 type TypeStruct struct {
 	Value *types.Struct
 }
+type TgoTypeStructInput struct {
+	FieldValue *types.Struct
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeStruct constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeStruct) Type() Type {
-	return Type{tgoTag: TypeTagStruct, tgoPayload: value}
+func NewTypeStruct(Value *types.Struct) Type {
+	tgoValue := TypeStruct{Value}
+	return Type{tgoTag: TypeTagStruct, tgoPayload: tgoValue}
 }
 
 // StructPayload requires Struct. No tag check.
@@ -139,11 +155,15 @@ func (v Type) StructPayload() TypeStruct { return v.tgoPayload.(TypeStruct) }
 type TypePointer struct {
 	Value *types.Pointer
 }
+type TgoTypePointerInput struct {
+	FieldValue *types.Pointer
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypePointer constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypePointer) Type() Type {
-	return Type{tgoTag: TypeTagPointer, tgoPayload: value}
+func NewTypePointer(Value *types.Pointer) Type {
+	tgoValue := TypePointer{Value}
+	return Type{tgoTag: TypeTagPointer, tgoPayload: tgoValue}
 }
 
 // PointerPayload requires Pointer. No tag check.
@@ -153,11 +173,15 @@ func (v Type) PointerPayload() TypePointer { return v.tgoPayload.(TypePointer) }
 type TypeTuple struct {
 	Value *types.Tuple
 }
+type TgoTypeTupleInput struct {
+	FieldValue *types.Tuple
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeTuple constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeTuple) Type() Type {
-	return Type{tgoTag: TypeTagTuple, tgoPayload: value}
+func NewTypeTuple(Value *types.Tuple) Type {
+	tgoValue := TypeTuple{Value}
+	return Type{tgoTag: TypeTagTuple, tgoPayload: tgoValue}
 }
 
 // TuplePayload requires Tuple. No tag check.
@@ -167,11 +191,15 @@ func (v Type) TuplePayload() TypeTuple { return v.tgoPayload.(TypeTuple) }
 type TypeSignature struct {
 	Value *types.Signature
 }
+type TgoTypeSignatureInput struct {
+	FieldValue *types.Signature
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeSignature constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeSignature) Type() Type {
-	return Type{tgoTag: TypeTagSignature, tgoSignature: value}
+func NewTypeSignature(Value *types.Signature) Type {
+	tgoValue := TypeSignature{Value}
+	return Type{tgoTag: TypeTagSignature, tgoSignature: tgoValue}
 }
 
 // SignaturePayload requires Signature. No tag check.
@@ -181,11 +209,15 @@ func (v Type) SignaturePayload() TypeSignature { return v.tgoSignature }
 type TypeMap struct {
 	Value *types.Map
 }
+type TgoTypeMapInput struct {
+	FieldValue *types.Map
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeMap constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeMap) Type() Type {
-	return Type{tgoTag: TypeTagMap, tgoMap: value}
+func NewTypeMap(Value *types.Map) Type {
+	tgoValue := TypeMap{Value}
+	return Type{tgoTag: TypeTagMap, tgoMap: tgoValue}
 }
 
 // MapPayload requires Map. No tag check.
@@ -195,11 +227,15 @@ func (v Type) MapPayload() TypeMap { return v.tgoMap }
 type TypeChannel struct {
 	Value *types.Chan
 }
+type TgoTypeChannelInput struct {
+	FieldValue *types.Chan
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeChannel constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeChannel) Type() Type {
-	return Type{tgoTag: TypeTagChannel, tgoChannel: value}
+func NewTypeChannel(Value *types.Chan) Type {
+	tgoValue := TypeChannel{Value}
+	return Type{tgoTag: TypeTagChannel, tgoChannel: tgoValue}
 }
 
 // ChannelPayload requires Channel. No tag check.
@@ -209,11 +245,15 @@ func (v Type) ChannelPayload() TypeChannel { return v.tgoChannel }
 type TypeInterface struct {
 	Value *types.Interface
 }
+type TgoTypeInterfaceInput struct {
+	FieldValue *types.Interface
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeInterface constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeInterface) Type() Type {
-	return Type{tgoTag: TypeTagInterface, tgoInterface: value}
+func NewTypeInterface(Value *types.Interface) Type {
+	tgoValue := TypeInterface{Value}
+	return Type{tgoTag: TypeTagInterface, tgoInterface: tgoValue}
 }
 
 // InterfacePayload requires Interface. No tag check.
@@ -223,11 +263,15 @@ func (v Type) InterfacePayload() TypeInterface { return v.tgoInterface }
 type TypeNamed struct {
 	Value *types.Named
 }
+type TgoTypeNamedInput struct {
+	FieldValue *types.Named
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeNamed constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeNamed) Type() Type {
-	return Type{tgoTag: TypeTagNamed, tgoNamed: value}
+func NewTypeNamed(Value *types.Named) Type {
+	tgoValue := TypeNamed{Value}
+	return Type{tgoTag: TypeTagNamed, tgoNamed: tgoValue}
 }
 
 // NamedPayload requires Named. No tag check.
@@ -237,11 +281,15 @@ func (v Type) NamedPayload() TypeNamed { return v.tgoNamed }
 type TypeTypeParameter struct {
 	Value *types.TypeParam
 }
+type TgoTypeTypeParameterInput struct {
+	FieldValue *types.TypeParam
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeTypeParameter constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeTypeParameter) Type() Type {
-	return Type{tgoTag: TypeTagTypeParameter, tgoTypeParameter: value}
+func NewTypeTypeParameter(Value *types.TypeParam) Type {
+	tgoValue := TypeTypeParameter{Value}
+	return Type{tgoTag: TypeTagTypeParameter, tgoTypeParameter: tgoValue}
 }
 
 // TypeParameterPayload requires TypeParameter. No tag check.
@@ -251,11 +299,15 @@ func (v Type) TypeParameterPayload() TypeTypeParameter { return v.tgoTypeParamet
 type TypeUnion struct {
 	Value *types.Union
 }
+type TgoTypeUnionInput struct {
+	FieldValue *types.Union
+}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeUnion constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeUnion) Type() Type {
-	return Type{tgoTag: TypeTagUnion, tgoUnion: value}
+func NewTypeUnion(Value *types.Union) Type {
+	tgoValue := TypeUnion{Value}
+	return Type{tgoTag: TypeTagUnion, tgoUnion: tgoValue}
 }
 
 // UnionPayload requires Union. No tag check.
@@ -264,9 +316,9 @@ func (v Type) UnionPayload() TypeUnion { return v.tgoUnion }
 // TypeOther is the Other payload.
 type TypeOther struct{}
 
-// Type constructs Type. Model fields must be valid.
+// NewTypeOther constructs Type. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value TypeOther) Type() Type {
+func NewTypeOther() Type {
 	return Type{tgoTag: TypeTagOther}
 }
 
@@ -427,105 +479,105 @@ func (v *Type) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeNil()
 		return nil
 	case "Basic":
 		var payload TypeBasic
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeBasic(payload.Value)
 		return nil
 	case "Array":
 		var payload TypeArray
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeArray(payload.Value)
 		return nil
 	case "Slice":
 		var payload TypeSlice
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeSlice(payload.Value)
 		return nil
 	case "Struct":
 		var payload TypeStruct
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeStruct(payload.Value)
 		return nil
 	case "Pointer":
 		var payload TypePointer
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypePointer(payload.Value)
 		return nil
 	case "Tuple":
 		var payload TypeTuple
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeTuple(payload.Value)
 		return nil
 	case "Signature":
 		var payload TypeSignature
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeSignature(payload.Value)
 		return nil
 	case "Map":
 		var payload TypeMap
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeMap(payload.Value)
 		return nil
 	case "Channel":
 		var payload TypeChannel
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeChannel(payload.Value)
 		return nil
 	case "Interface":
 		var payload TypeInterface
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeInterface(payload.Value)
 		return nil
 	case "Named":
 		var payload TypeNamed
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeNamed(payload.Value)
 		return nil
 	case "TypeParameter":
 		var payload TypeTypeParameter
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeTypeParameter(payload.Value)
 		return nil
 	case "Union":
 		var payload TypeUnion
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeUnion(payload.Value)
 		return nil
 	case "Other":
 		var payload TypeOther
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeOther()
 		return nil
 	default:
 		return fmt.Errorf("unknown Type JSON variant %q", variant)
@@ -622,105 +674,105 @@ func (v *Type) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeNil()
 		return nil
 	case 2:
 		var payload TypeBasic
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeBasic(payload.Value)
 		return nil
 	case 3:
 		var payload TypeArray
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeArray(payload.Value)
 		return nil
 	case 4:
 		var payload TypeSlice
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeSlice(payload.Value)
 		return nil
 	case 5:
 		var payload TypeStruct
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeStruct(payload.Value)
 		return nil
 	case 6:
 		var payload TypePointer
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypePointer(payload.Value)
 		return nil
 	case 7:
 		var payload TypeTuple
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeTuple(payload.Value)
 		return nil
 	case 8:
 		var payload TypeSignature
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeSignature(payload.Value)
 		return nil
 	case 9:
 		var payload TypeMap
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeMap(payload.Value)
 		return nil
 	case 10:
 		var payload TypeChannel
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeChannel(payload.Value)
 		return nil
 	case 11:
 		var payload TypeInterface
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeInterface(payload.Value)
 		return nil
 	case 12:
 		var payload TypeNamed
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeNamed(payload.Value)
 		return nil
 	case 13:
 		var payload TypeTypeParameter
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeTypeParameter(payload.Value)
 		return nil
 	case 14:
 		var payload TypeUnion
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeUnion(payload.Value)
 		return nil
 	case 15:
 		var payload TypeOther
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.Type()
+		*v = NewTypeOther()
 		return nil
 	default:
 		return fmt.Errorf("invalid Type JSON tag")
@@ -731,34 +783,60 @@ func (v *Type) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 func Of(typ types.Type) Type {
 	switch value := typ.(type) {
 	case nil:
-		return TypeNil{}.Type()
+		return NewTypeNil()
 	case *types.Basic:
-		return TypeBasic{Value: value}.Type()
+		return func(input TgoTypeBasicInput) Type {
+			return NewTypeBasic(input.FieldValue)
+		}(TgoTypeBasicInput{FieldValue: value})
 	case *types.Array:
-		return TypeArray{Value: value}.Type()
+		return func(input TgoTypeArrayInput) Type {
+			return NewTypeArray(input.FieldValue)
+		}(TgoTypeArrayInput{FieldValue: value})
 	case *types.Slice:
-		return TypeSlice{Value: value}.Type()
+		return func(input TgoTypeSliceInput) Type {
+			return NewTypeSlice(input.FieldValue)
+		}(TgoTypeSliceInput{FieldValue: value})
 	case *types.Struct:
-		return TypeStruct{Value: value}.Type()
+		return func(input TgoTypeStructInput) Type {
+			return NewTypeStruct(input.FieldValue)
+		}(TgoTypeStructInput{FieldValue: value})
 	case *types.Pointer:
-		return TypePointer{Value: value}.Type()
+		return func(input TgoTypePointerInput) Type {
+			return NewTypePointer(input.FieldValue)
+		}(TgoTypePointerInput{FieldValue: value})
 	case *types.Tuple:
-		return TypeTuple{Value: value}.Type()
+		return func(input TgoTypeTupleInput) Type {
+			return NewTypeTuple(input.FieldValue)
+		}(TgoTypeTupleInput{FieldValue: value})
 	case *types.Signature:
-		return TypeSignature{Value: value}.Type()
+		return func(input TgoTypeSignatureInput) Type {
+			return NewTypeSignature(input.FieldValue)
+		}(TgoTypeSignatureInput{FieldValue: value})
 	case *types.Map:
-		return TypeMap{Value: value}.Type()
+		return func(input TgoTypeMapInput) Type {
+			return NewTypeMap(input.FieldValue)
+		}(TgoTypeMapInput{FieldValue: value})
 	case *types.Chan:
-		return TypeChannel{Value: value}.Type()
+		return func(input TgoTypeChannelInput) Type {
+			return NewTypeChannel(input.FieldValue)
+		}(TgoTypeChannelInput{FieldValue: value})
 	case *types.Interface:
-		return TypeInterface{Value: value}.Type()
+		return func(input TgoTypeInterfaceInput) Type {
+			return NewTypeInterface(input.FieldValue)
+		}(TgoTypeInterfaceInput{FieldValue: value})
 	case *types.Named:
-		return TypeNamed{Value: value}.Type()
+		return func(input TgoTypeNamedInput) Type {
+			return NewTypeNamed(input.FieldValue)
+		}(TgoTypeNamedInput{FieldValue: value})
 	case *types.TypeParam:
-		return TypeTypeParameter{Value: value}.Type()
+		return func(input TgoTypeTypeParameterInput) Type {
+			return NewTypeTypeParameter(input.FieldValue)
+		}(TgoTypeTypeParameterInput{FieldValue: value})
 	case *types.Union:
-		return TypeUnion{Value: value}.Type()
+		return func(input TgoTypeUnionInput) Type {
+			return NewTypeUnion(input.FieldValue)
+		}(TgoTypeUnionInput{FieldValue: value})
 	default:
-		return TypeOther{}.Type()
+		return NewTypeOther()
 	}
 }

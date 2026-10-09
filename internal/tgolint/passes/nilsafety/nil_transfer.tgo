@@ -302,7 +302,7 @@ func (e %nilEnvironment) inferNilContracts(
 ) {
 	targets := make([]%syntax.Expression, 0, len(names))
 	for _, name := range names {
-		value := syntax.ExpressionIdentifier{Value: name}.Expression()
+		value := syntax.Expression.Identifier{Value: name}
 		targets = append(targets, &value)
 	}
 	e.inferNilExpressionContracts(targets, values)
@@ -364,7 +364,7 @@ func (e %nilEnvironment) transferNilValues(
 ) {
 	left := make([]%syntax.Expression, 0, len(names))
 	for _, name := range names {
-		value := syntax.ExpressionIdentifier{Value: name}.Expression()
+		value := syntax.Expression.Identifier{Value: name}
 		left = append(left, &value)
 	}
 	e.transferNilAssignmentLists(state, left, values, token.DEFINE)
@@ -596,7 +596,7 @@ func (e %nilEnvironment) closureMayWriteNilPlace(
 	tracked nilPlace,
 ) bool {
 	writes := false
-	statement := syntax.StatementBlock{Value: body}.Statement()
+	statement := syntax.Statement.Block{Value: body}
 	syntax.InspectStatement(&statement, func(node *syntax.Node) bool {
 		if writes {
 			return false

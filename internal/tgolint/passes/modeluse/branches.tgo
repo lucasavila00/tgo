@@ -95,7 +95,7 @@ func (c %checker) branchConstruct(
 		var target *syntax.Statement = nil
 		body := functionBody(c.function)
 		if body == nil { return nil }
-		wrapped := syntax.StatementBlock{Value: body}.Statement()
+		wrapped := syntax.Statement.Block{Value: body}
 		syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
 			value, ok := syntax.StatementOf(node)
 			if !ok { return true }

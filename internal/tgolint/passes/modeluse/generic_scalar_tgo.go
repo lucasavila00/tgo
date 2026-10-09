@@ -60,11 +60,15 @@ func (v scalarValue) UnknownTag() string {
 type scalarValueBoolean struct {
 	Value bool
 }
+type TgoscalarValueBooleanInput struct {
+	FieldValue bool
+}
 
-// scalarValue constructs scalarValue. Model fields must be valid.
+// NewscalarValueBoolean constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value scalarValueBoolean) scalarValue() scalarValue {
-	return scalarValue{tgoTag: scalarValueTagBoolean, tgoBoolean: value}
+func NewscalarValueBoolean(Value bool) scalarValue {
+	tgoValue := scalarValueBoolean{Value}
+	return scalarValue{tgoTag: scalarValueTagBoolean, tgoBoolean: tgoValue}
 }
 
 // BooleanPayload requires Boolean. No tag check.
@@ -74,11 +78,15 @@ func (v scalarValue) BooleanPayload() scalarValueBoolean { return v.tgoBoolean }
 type scalarValueInteger struct {
 	Value int64
 }
+type TgoscalarValueIntegerInput struct {
+	FieldValue int64
+}
 
-// scalarValue constructs scalarValue. Model fields must be valid.
+// NewscalarValueInteger constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value scalarValueInteger) scalarValue() scalarValue {
-	return scalarValue{tgoTag: scalarValueTagInteger, tgoInteger: value}
+func NewscalarValueInteger(Value int64) scalarValue {
+	tgoValue := scalarValueInteger{Value}
+	return scalarValue{tgoTag: scalarValueTagInteger, tgoInteger: tgoValue}
 }
 
 // IntegerPayload requires Integer. No tag check.
@@ -89,11 +97,16 @@ type scalarValueBooleanParameter struct {
 	Index   int
 	Negated bool
 }
+type TgoscalarValueBooleanParameterInput struct {
+	FieldIndex   int
+	FieldNegated bool
+}
 
-// scalarValue constructs scalarValue. Model fields must be valid.
+// NewscalarValueBooleanParameter constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value scalarValueBooleanParameter) scalarValue() scalarValue {
-	return scalarValue{tgoTag: scalarValueTagBooleanParameter, tgoBooleanParameter: value}
+func NewscalarValueBooleanParameter(Index int, Negated bool) scalarValue {
+	tgoValue := scalarValueBooleanParameter{Index, Negated}
+	return scalarValue{tgoTag: scalarValueTagBooleanParameter, tgoBooleanParameter: tgoValue}
 }
 
 // BooleanParameterPayload requires BooleanParameter. No tag check.
@@ -105,11 +118,15 @@ func (v scalarValue) BooleanParameterPayload() scalarValueBooleanParameter {
 type scalarValueIntegerParameter struct {
 	Index int
 }
+type TgoscalarValueIntegerParameterInput struct {
+	FieldIndex int
+}
 
-// scalarValue constructs scalarValue. Model fields must be valid.
+// NewscalarValueIntegerParameter constructs scalarValue. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value scalarValueIntegerParameter) scalarValue() scalarValue {
-	return scalarValue{tgoTag: scalarValueTagIntegerParameter, tgoIntegerParameter: value}
+func NewscalarValueIntegerParameter(Index int) scalarValue {
+	tgoValue := scalarValueIntegerParameter{Index}
+	return scalarValue{tgoTag: scalarValueTagIntegerParameter, tgoIntegerParameter: tgoValue}
 }
 
 // IntegerParameterPayload requires IntegerParameter. No tag check.
@@ -183,28 +200,28 @@ func (v *scalarValue) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.scalarValue()
+		*v = NewscalarValueBoolean(payload.Value)
 		return nil
 	case "Integer":
 		var payload scalarValueInteger
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.scalarValue()
+		*v = NewscalarValueInteger(payload.Value)
 		return nil
 	case "BooleanParameter":
 		var payload scalarValueBooleanParameter
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.scalarValue()
+		*v = NewscalarValueBooleanParameter(payload.Index, payload.Negated)
 		return nil
 	case "IntegerParameter":
 		var payload scalarValueIntegerParameter
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.scalarValue()
+		*v = NewscalarValueIntegerParameter(payload.Index)
 		return nil
 	default:
 		return fmt.Errorf("unknown scalarValue JSON variant %q", variant)
@@ -279,28 +296,28 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.scalarValue()
+		*v = NewscalarValueBoolean(payload.Value)
 		return nil
 	case 2:
 		var payload scalarValueInteger
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.scalarValue()
+		*v = NewscalarValueInteger(payload.Value)
 		return nil
 	case 3:
 		var payload scalarValueBooleanParameter
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.scalarValue()
+		*v = NewscalarValueBooleanParameter(payload.Index, payload.Negated)
 		return nil
 	case 4:
 		var payload scalarValueIntegerParameter
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.scalarValue()
+		*v = NewscalarValueIntegerParameter(payload.Index)
 		return nil
 	default:
 		return fmt.Errorf("invalid scalarValue JSON tag")
@@ -319,11 +336,15 @@ func (c *checker) scalarValueAt(
 	expression *syntax.Expression,
 ) (scalarValue, bool) {
 	if c == nil || node == nil || expression == nil {
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
 	root := c.enclosingFunction(node)
 	if root == nil {
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
 	flow := c.scalarFlows[*root]
 	if flow == nil {
@@ -331,7 +352,9 @@ func (c *checker) scalarValueAt(
 		c.scalarFlows[*root] = flow
 	}
 	if flow == nil {
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
 	state := flow.before[syntax.ExpressionNode(expression)]
 	if state == nil {
@@ -503,15 +526,17 @@ func (c *checker) scalarEntryState(
 	for index := 0; index < signature.Params().Len(); index++ {
 		parameter := signature.Params().At(index)
 		if isBoolean(parameter.Type()) {
-			state[parameter] = scalarValueBooleanParameter{
-				Index: index, Negated: false,
-			}.scalarValue()
+			state[parameter] = func(input TgoscalarValueBooleanParameterInput) scalarValue {
+				return NewscalarValueBooleanParameter(input.FieldIndex, input.FieldNegated)
+			}(TgoscalarValueBooleanParameterInput{FieldIndex: index, FieldNegated: false})
+
 			continue
 		}
 		if isInteger(parameter.Type()) {
-			state[parameter] = scalarValueIntegerParameter{
-				Index: index,
-			}.scalarValue()
+			state[parameter] = func(input TgoscalarValueIntegerParameterInput) scalarValue {
+				return NewscalarValueIntegerParameter(input.FieldIndex)
+			}(TgoscalarValueIntegerParameterInput{FieldIndex: index})
+
 		}
 	}
 	return state
@@ -611,7 +636,9 @@ func (c *checker) transferScalarAssignment(
 		if valueKnown {
 			values = append(values, value)
 		} else {
-			values = append(values, scalarValueBoolean{Value: false}.scalarValue())
+			values = append(values, func(input TgoscalarValueBooleanInput) scalarValue {
+				return NewscalarValueBoolean(input.FieldValue)
+			}(TgoscalarValueBooleanInput{FieldValue: false}))
 		}
 		known = append(known, valueKnown)
 	}
@@ -690,7 +717,9 @@ func (c *checker) evaluateScalar(
 	state scalarState,
 ) (scalarValue, bool) {
 	if expression == nil {
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
 	if exact, known := exactScalar(c.facts.Constant(expression)); known {
 		return exact, true
@@ -702,12 +731,16 @@ func (c *checker) evaluateScalar(
 		if value, ok := state[c.facts.Object(identifier)]; ok {
 			return value, true
 		}
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
 	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
 		value, ok := c.evaluateScalar(unary.Expression, state)
 		if !ok || unary.Operator != token.NOT {
-			return scalarValueBoolean{Value: false}.scalarValue(), false
+			return func(input TgoscalarValueBooleanInput) scalarValue {
+				return NewscalarValueBoolean(input.FieldValue)
+			}(TgoscalarValueBooleanInput{FieldValue: false}), false
 		}
 		return negateScalarBoolean(value)
 	}
@@ -719,21 +752,31 @@ func (c *checker) evaluateScalar(
 			return c.evaluateScalar(call.Args[0], state)
 		}
 	}
-	return scalarValueBoolean{Value: false}.scalarValue(), false
+	return func(input TgoscalarValueBooleanInput) scalarValue {
+		return NewscalarValueBoolean(input.FieldValue)
+	}(TgoscalarValueBooleanInput{FieldValue: false}), false
 }
 
 func exactScalar(value constant.Value) (scalarValue, bool) {
 	if value == nil {
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
 	switch value.Kind() {
 	case constant.Bool:
-		return scalarValueBoolean{Value: constant.BoolVal(value)}.scalarValue(), true
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: constant.BoolVal(value)}), true
 	case constant.Int:
 		integer, ok := constant.Int64Val(value)
-		return scalarValueInteger{Value: integer}.scalarValue(), ok
+		return func(input TgoscalarValueIntegerInput) scalarValue {
+			return NewscalarValueInteger(input.FieldValue)
+		}(TgoscalarValueIntegerInput{FieldValue: integer}), ok
 	default:
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
 }
 
@@ -756,7 +799,9 @@ func (c *checker) evaluateScalarBinary(
 	left, leftKnown := c.evaluateScalar(expression.Left, state)
 	right, rightKnown := c.evaluateScalar(expression.Right, state)
 	if !leftKnown || !rightKnown {
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
 	leftBoolean, leftBooleanKnown := scalarBoolean(left)
 	rightBoolean, rightBooleanKnown := scalarBoolean(right)
@@ -774,10 +819,14 @@ func (c *checker) evaluateScalarBinary(
 	case token.EQL, token.NEQ:
 		if scalarValuesEqual(left, right) {
 			equal := expression.Operator == token.EQL
-			return scalarValueBoolean{Value: equal}.scalarValue(), true
+			return func(input TgoscalarValueBooleanInput) scalarValue {
+				return NewscalarValueBoolean(input.FieldValue)
+			}(TgoscalarValueBooleanInput{FieldValue: equal}), true
 		}
 	}
-	return scalarValueBoolean{Value: false}.scalarValue(), false
+	return func(input TgoscalarValueBooleanInput) scalarValue {
+		return NewscalarValueBoolean(input.FieldValue)
+	}(TgoscalarValueBooleanInput{FieldValue: false}), false
 }
 
 func scalarLogicalAnd(
@@ -789,7 +838,9 @@ func scalarLogicalAnd(
 	rightKnown bool,
 ) (scalarValue, bool) {
 	if leftKnown && !leftBoolean || rightKnown && !rightBoolean {
-		return scalarValueBoolean{Value: false}.scalarValue(), true
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), true
 	}
 	if leftKnown && leftBoolean {
 		return right, true
@@ -797,7 +848,9 @@ func scalarLogicalAnd(
 	if rightKnown && rightBoolean {
 		return left, true
 	}
-	return scalarValueBoolean{Value: false}.scalarValue(), false
+	return func(input TgoscalarValueBooleanInput) scalarValue {
+		return NewscalarValueBoolean(input.FieldValue)
+	}(TgoscalarValueBooleanInput{FieldValue: false}), false
 }
 
 func scalarLogicalOr(
@@ -809,7 +862,9 @@ func scalarLogicalOr(
 	rightKnown bool,
 ) (scalarValue, bool) {
 	if leftKnown && leftBoolean || rightKnown && rightBoolean {
-		return scalarValueBoolean{Value: true}.scalarValue(), true
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: true}), true
 	}
 	if leftKnown && !leftBoolean {
 		return right, true
@@ -817,7 +872,9 @@ func scalarLogicalOr(
 	if rightKnown && !rightBoolean {
 		return left, true
 	}
-	return scalarValueBoolean{Value: false}.scalarValue(), false
+	return func(input TgoscalarValueBooleanInput) scalarValue {
+		return NewscalarValueBoolean(input.FieldValue)
+	}(TgoscalarValueBooleanInput{FieldValue: false}), false
 }
 
 func scalarBoolean(value scalarValue) (bool, bool) {
@@ -873,18 +930,25 @@ func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
 	switch enumValue10 := value; enumValue10.Tag() {
 	case scalarValueTagBoolean:
 		boolean := enumValue10.BooleanPayload()
-		return scalarValueBoolean{Value: !boolean.Value}.scalarValue(), true
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: !boolean.Value}), true
 	case scalarValueTagInteger:
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	case scalarValueTagBooleanParameter:
 		parameter := enumValue10.BooleanParameterPayload()
-		return scalarValueBooleanParameter{
-			Index: parameter.Index, Negated: !parameter.Negated,
-		}.scalarValue(), true
+		return func(input TgoscalarValueBooleanParameterInput) scalarValue {
+			return NewscalarValueBooleanParameter(input.FieldIndex, input.FieldNegated)
+		}(TgoscalarValueBooleanParameterInput{FieldIndex: parameter.Index, FieldNegated: !parameter.Negated}), true
 	case scalarValueTagIntegerParameter:
-		return scalarValueBoolean{Value: false}.scalarValue(), false
+		return func(input TgoscalarValueBooleanInput) scalarValue {
+			return NewscalarValueBoolean(input.FieldValue)
+			// unreachable: tgolint requires a case per tag
+		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	default:
-		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(enumValue10.UnknownTag())
 	}
 }
 

@@ -22,6 +22,16 @@ Fix every diagnostic. The command checks loaded Go packages for:
 - manual error returns that postfix `!` or `!!` replaces exactly; and
 - the same errors through control flow, wrappers, embedding, and generics.
 
+Construct an enum with its generated package function. The function name is
+`New<Enum><Variant>`, and its arguments follow field declaration order:
+
+```go
+account := model.NewAccountPersonal("Lucas")
+```
+
+Do not construct a generated payload type and convert it to the enum. TGo source uses only
+`Account.Personal{Name: "Lucas"}`.
+
 You can return an unchanged result pair. Otherwise, check `err` or `ok` before you
 use the value. Do not take an address of a pending pair variable or capture it in a
 closure. Keep both variables local to the function. Check the pair before a
@@ -40,8 +50,9 @@ Local Boolean and integer assignments can change `can` to `will` or remove the
 diagnostic. Package variables, captured values, addresses, narrowing conversions,
 and unsupported expressions stay `can`. Fix both. Keep a generic function value local
 so the linter can check each call.
-Return a generic closure as a direct function literal. The checker does not yet
-follow that closure through a local variable or another helper.
+Return a generic closure directly, through stable local aliases, or through one
+statically resolved local helper. The checker rejects a call or escape when an
+unresolved helper can return a visible effectful closure.
 
 Replace a reported `iota` set with a TGo enum. Keep explicit integer conversion code when the
 old values are part of a stored format, protocol, or Go boundary. Bit sets remain valid.

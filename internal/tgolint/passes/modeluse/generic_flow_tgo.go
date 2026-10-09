@@ -72,16 +72,25 @@ func (v *effectOutcome) GobDecode(data []byte) error {
 	if uint32(tag) != number || tag < effectOutcomeTagUnknown || tag > effectOutcomeTagConditional {
 		return fmt.Errorf("effectOutcome: cannot gob decode unknown tag %d", number)
 	}
-	*v = effectOutcome{tgoTag: tag}
+	switch tag {
+	case effectOutcomeTagUnknown:
+		*v = NeweffectOutcomeUnknown()
+	case effectOutcomeTagNever:
+		*v = NeweffectOutcomeNever()
+	case effectOutcomeTagAlways:
+		*v = NeweffectOutcomeAlways()
+	case effectOutcomeTagConditional:
+		*v = NeweffectOutcomeConditional()
+	}
 	return nil
 }
 
 // effectOutcomeUnknown is the Unknown payload.
 type effectOutcomeUnknown struct{}
 
-// effectOutcome constructs effectOutcome. Model fields must be valid.
+// NeweffectOutcomeUnknown constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectOutcomeUnknown) effectOutcome() effectOutcome {
+func NeweffectOutcomeUnknown() effectOutcome {
 	return effectOutcome{tgoTag: effectOutcomeTagUnknown}
 }
 
@@ -91,9 +100,9 @@ func (effectOutcome) UnknownPayload() effectOutcomeUnknown { return effectOutcom
 // effectOutcomeNever is the Never payload.
 type effectOutcomeNever struct{}
 
-// effectOutcome constructs effectOutcome. Model fields must be valid.
+// NeweffectOutcomeNever constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectOutcomeNever) effectOutcome() effectOutcome {
+func NeweffectOutcomeNever() effectOutcome {
 	return effectOutcome{tgoTag: effectOutcomeTagNever}
 }
 
@@ -103,9 +112,9 @@ func (effectOutcome) NeverPayload() effectOutcomeNever { return effectOutcomeNev
 // effectOutcomeAlways is the Always payload.
 type effectOutcomeAlways struct{}
 
-// effectOutcome constructs effectOutcome. Model fields must be valid.
+// NeweffectOutcomeAlways constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectOutcomeAlways) effectOutcome() effectOutcome {
+func NeweffectOutcomeAlways() effectOutcome {
 	return effectOutcome{tgoTag: effectOutcomeTagAlways}
 }
 
@@ -115,9 +124,9 @@ func (effectOutcome) AlwaysPayload() effectOutcomeAlways { return effectOutcomeA
 // effectOutcomeConditional is the Conditional payload.
 type effectOutcomeConditional struct{}
 
-// effectOutcome constructs effectOutcome. Model fields must be valid.
+// NeweffectOutcomeConditional constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func (value effectOutcomeConditional) effectOutcome() effectOutcome {
+func NeweffectOutcomeConditional() effectOutcome {
 	return effectOutcome{tgoTag: effectOutcomeTagConditional}
 }
 
@@ -190,28 +199,28 @@ func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeUnknown()
 		return nil
 	case "Never":
 		var payload effectOutcomeNever
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeNever()
 		return nil
 	case "Always":
 		var payload effectOutcomeAlways
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeAlways()
 		return nil
 	case "Conditional":
 		var payload effectOutcomeConditional
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeConditional()
 		return nil
 	default:
 		return fmt.Errorf("unknown effectOutcome JSON variant %q", variant)
@@ -286,44 +295,40 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeUnknown()
 		return nil
 	case 2:
 		var payload effectOutcomeNever
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeNever()
 		return nil
 	case 3:
 		var payload effectOutcomeAlways
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeAlways()
 		return nil
 	case 4:
 		var payload effectOutcomeConditional
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = payload.effectOutcome()
+		*v = NeweffectOutcomeConditional()
 		return nil
 	default:
 		return fmt.Errorf("invalid effectOutcome JSON tag")
 	}
 }
 
-func unknownEffectOutcome() effectOutcome { return effectOutcomeUnknown{}.effectOutcome() }
-func neverEffectOutcome() effectOutcome   { return effectOutcomeNever{}.effectOutcome() }
-func alwaysEffectOutcome() effectOutcome  { return effectOutcomeAlways{}.effectOutcome() }
-func conditionalEffectOutcome() effectOutcome {
-	return effectOutcomeConditional{}.effectOutcome(
+func unknownEffectOutcome() effectOutcome     { return NeweffectOutcomeUnknown() }
+func neverEffectOutcome() effectOutcome       { return NeweffectOutcomeNever() }
+func alwaysEffectOutcome() effectOutcome      { return NeweffectOutcomeAlways() }
+func conditionalEffectOutcome() effectOutcome { return NeweffectOutcomeConditional() }
 
-	// reachableNodes returns syntax nodes from live CFG blocks.
-	)
-}
-
+// reachableNodes returns syntax nodes from live CFG blocks.
 func (c *checker) reachableNodes(body *syntax.BlockStatement) map[syntax.Node]bool {
 	reachable := make(map[syntax.Node]bool)
 	graph := cfg.New(body, c.callMayReturn)
@@ -597,6 +602,24 @@ func (c *checker) addGenericEffect(
 ) bool {
 	effect.Receiver = parameter.receiver
 	effect.TypeParameter = parameter.index
+	return c.addSummaryGenericEffect(summary, zero, false, effect)
+}
+
+// addReturnedGenericEffect adds one effect to the returned function value.
+func (c *checker) addReturnedGenericEffect(
+	summary *genericEffectSummary,
+	zero bool,
+	effect GenericEffect,
+) bool {
+	return c.addSummaryGenericEffect(summary, zero, true, effect)
+}
+
+func (c *checker) addSummaryGenericEffect(
+	summary *genericEffectSummary,
+	zero bool,
+	returned bool,
+	effect GenericEffect,
+) bool {
 	normalized, possible := normalizeGenericEffect(effect)
 	if !possible {
 		return false
@@ -605,6 +628,12 @@ func (c *checker) addGenericEffect(
 	target := &summary.accessEffects
 	if zero {
 		target = &summary.zeroEffects
+	}
+	if returned {
+		target = &summary.returnedAccessEffects
+		if zero {
+			target = &summary.returnedZeroEffects
+		}
 	}
 	for _, current := range *target {
 		if equalGenericEffect(current, effect) {

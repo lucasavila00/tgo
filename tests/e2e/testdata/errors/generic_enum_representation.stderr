@@ -1,1 +1,1 @@
-<WORK>/input.tgo:17:12: cannot convert Account to expose its representation
+<WORK>/input.tgo:9:17: AccountPersonal is generated enum representation; use Account.Personal{...}

@@ -21,6 +21,10 @@ func Make[T any](length int) {
 	_ = genericzero.Make[T](length)
 }
 
+func Nested[T any]() func() {
+	return genericzero.Nested[T]()
+}
+
 type eventLike interface {
 	Tag() model.EventTag
 	UnknownTag() string

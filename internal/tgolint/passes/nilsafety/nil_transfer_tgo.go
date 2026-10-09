@@ -330,13 +330,17 @@ func (e *nilEnvironment) inferNilContracts(
 ) {
 	targets := make([]*syntax.Expression, 0, len(names))
 	for _, name := range names {
-		value := syntax.ExpressionIdentifier{Value: name}.Expression()
+		value := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+			return syntax.NewExpressionIdentifier(input.FieldValue)
+		}(syntax.TgoExpressionIdentifierInput{
+
+			// inferNilExpressionContracts keeps contracts on inferred local values.
+			FieldValue: name})
 		targets = append(targets, &value)
 	}
 	e.inferNilExpressionContracts(targets, values)
 }
 
-// inferNilExpressionContracts keeps contracts on inferred local values.
 func (e *nilEnvironment) inferNilExpressionContracts(
 	targets []*syntax.Expression,
 	values []*syntax.Expression,
@@ -392,7 +396,9 @@ func (e *nilEnvironment) transferNilValues(
 ) {
 	left := make([]*syntax.Expression, 0, len(names))
 	for _, name := range names {
-		value := syntax.ExpressionIdentifier{Value: name}.Expression()
+		value := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+			return syntax.NewExpressionIdentifier(input.FieldValue)
+		}(syntax.TgoExpressionIdentifierInput{FieldValue: name})
 		left = append(left, &value)
 	}
 	e.transferNilAssignmentLists(state, left, values, token.DEFINE)
@@ -632,7 +638,9 @@ func (e *nilEnvironment) closureMayWriteNilPlace(
 	tracked nilPlace,
 ) bool {
 	writes := false
-	statement := syntax.StatementBlock{Value: body}.Statement()
+	statement := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
+	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&statement, func(node *syntax.Node) bool {
 		if writes {
 			return false
