@@ -66,19 +66,19 @@ func validValidatorAPI(function *types.Func, typ types.Type) bool {
 // exportValidationFacts marks verified constructors as trusted value sources.
 func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
 	scope := object.Pkg().Scope()
-	var names []string = nil
 	_, name := modelDescription(value)
 	if modelIsChecked(value) {
 		function, _, _ := types.LookupFieldOrMethod(
-			object.Type(), false, object.Pkg(), "check",
+			object.Type(),
+			false,
+			object.Pkg(),
+			"check",
 		)
 		if method, ok := function.(*types.Func); ok &&
 			validCheckedStructAPI(object.Type()) {
 			fact := &validationFact{}
 			c.validated[method] = true
 			c.pass.ExportObjectFact(method, fact)
-		} else {
-			names = append(names, "New"+name)
 		}
 	}
 	if modelIsEnum(value) {
@@ -89,7 +89,10 @@ func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
 				continue
 			}
 			function, _, _ := types.LookupFieldOrMethod(
-				payload.Type(), true, object.Pkg(), name,
+				payload.Type(),
+				true,
+				object.Pkg(),
+				name,
 			)
 			if function == nil {
 				continue
@@ -98,15 +101,6 @@ func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
 			c.validated[function] = true
 			c.pass.ExportObjectFact(function, fact)
 		}
-	}
-	for _, name := range names {
-		function, ok := scope.Lookup(name).(*types.Func)
-		if !ok {
-			continue
-		}
-		fact := &validationFact{}
-		c.validated[function] = true
-		c.pass.ExportObjectFact(function, fact)
 	}
 }
 
@@ -174,10 +168,13 @@ func (c *checker) findValidationFunctionValues() {
 		if c.generated[file] {
 			continue
 		}
-		syntax.Inspect(file, func(node *syntax.Node) bool {
-			c.scanValidationFunctionValue(node, candidates, writes, escaped)
-			return true
-		})
+		syntax.Inspect(
+			file,
+			func(node *syntax.Node) bool {
+				c.scanValidationFunctionValue(node, candidates, writes, escaped)
+				return true
+			},
+		)
 	}
 	for object, target := range candidates {
 		if object != nil && writes[object] == 1 && !escaped[object] {
@@ -197,7 +194,9 @@ func (c *checker) scanValidationFunctionValue(
 			c.recordFunctionWrites(assignment.Left, writes)
 			if len(assignment.Left) == 1 && len(assignment.Right) == 1 {
 				c.recordValidationFunctionValue(
-					candidates, assignment.Left[0], assignment.Right[0],
+					candidates,
+					assignment.Left[0],
+					assignment.Right[0],
 				)
 			}
 		}
@@ -272,30 +271,6 @@ func (c *checker) objectHasValidationFact(object types.Object) bool {
 	return true
 }
 
-func emittedCheckedModel(name string, structure *syntax.StructType, typ types.Type) *model {
-	fields := structure.Fields.List
-	underlying, ok := typ.Underlying().(*types.Struct)
-	if !ok || underlying.NumFields() != len(fields) {
-		return nil
-	}
-	if len(fields) == 1 && fieldName(fields[0]) == "value" &&
-		validCheckedAPI(typ, underlying.Field(0).Type(), "New"+name) {
-		named, _ := types.Unalias(typ).(*types.Named)
-		return checkedModel(named.Obj().Pkg().Path(), name)
-	}
-	return nil
-}
-
-func fieldName(field *syntax.Field) string {
-	if field == nil {
-		return ""
-	}
-	if len(field.Names) != 1 {
-		return ""
-	}
-	return field.Names[0].Name
-}
-
 func method(typ types.Type, name string) *types.Signature {
 	receiver := types.Unalias(typ)
 	if pointer, ok := receiver.(*types.Pointer); ok {
@@ -312,34 +287,6 @@ func method(typ types.Type, name string) *types.Signature {
 	}
 	signature, _ := function.Type().(*types.Signature)
 	return signature
-}
-
-func constructor(typ types.Type, name string) *types.Signature {
-	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil {
-		return nil
-	}
-	function, ok := named.Obj().Pkg().Scope().Lookup(name).(*types.Func)
-	if !ok {
-		return nil
-	}
-	signature, _ := function.Type().(*types.Signature)
-	return signature
-}
-
-func validCheckedAPI(typ, base types.Type, constructorName string) bool {
-	value := method(typ, "Value")
-	makeValue := constructor(typ, constructorName)
-	if value == nil || makeValue == nil {
-		return false
-	}
-	errorType := types.Universe.Lookup("error").Type()
-	return value.Params().Len() == 0 && value.Results().Len() == 1 &&
-		types.Identical(value.Results().At(0).Type(), base) &&
-		makeValue.Params().Len() == 1 && makeValue.Results().Len() == 2 &&
-		types.Identical(makeValue.Params().At(0).Type(), base) &&
-		types.Identical(makeValue.Results().At(0).Type(), typ) &&
-		types.Identical(makeValue.Results().At(1).Type(), errorType)
 }
 
 func validTagMethod(typ, tag types.Type) bool {

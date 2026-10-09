@@ -252,9 +252,6 @@ func (p *packageUnit) representationType(typ types.Type) *model {
 
 // modelField reports whether a name is part of a generated private value.
 func modelField(model *model, name string) bool {
-	if model.Predicate != "" {
-		return name == "value"
-	}
 	if name == "tgoTag" {
 		return true
 	}

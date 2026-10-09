@@ -7,59 +7,58 @@ import __tgo_jsonv2 "encoding/json/v2"
 import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
-// Quantity requires NewQuantity success. Zero is invalid.
-// Shared data keeps Go aliases. Callers must keep the rule.
-type Quantity struct{ value int }
-type tgoQuantityError struct{}
-
-func (tgoQuantityError) Error() string { return "invalid Quantity" }
-
-// NewQuantity checks the rule. Check the error before use.
-func NewQuantity(value int) (Quantity, error) {
-	if !(value > 0) {
-		return Quantity{}, tgoQuantityError{}
-	}
-	return Quantity{value: value}, nil
+type Quantity struct {
+	value int
 }
 
-// Value requires construction success. Shared data keeps its aliases.
-func (v Quantity) Value() int { return v.value }
+type quantityError struct {
+}
 
-// PositivePoint requires NewPositivePoint success. Zero is invalid.
-// Shared data keeps Go aliases. Callers must keep the rule.
-type PositivePoint struct{ value struct{ X int } }
-type tgoPositivePointError struct{}
+func (quantityError) Error() string { return "invalid Quantity" }
+func (value Quantity) check() (Quantity, error) {
+	if value.value <= 0 {
+		return Quantity{}, quantityError{}
+	}
+	return value, nil
+}
+func NewQuantity(value int) (Quantity, error) { return Quantity{value: value}.check() }
+func (value Quantity) Value() int             { return value.value }
 
-func (tgoPositivePointError) Error() string { return "invalid PositivePoint" }
+type PositivePoint struct {
+	value struct{ X int }
+}
 
-// NewPositivePoint checks the rule. Check the error before use.
+type positivePointError struct {
+}
+
+func (positivePointError) Error() string { return "invalid PositivePoint" }
+func (value PositivePoint) check() (PositivePoint, error) {
+	if value.value.X <= 0 {
+		return PositivePoint{}, positivePointError{}
+	}
+	return value, nil
+}
 func NewPositivePoint(value struct{ X int }) (PositivePoint, error) {
-	if !(value.X > 0) {
-		return PositivePoint{}, tgoPositivePointError{}
-	}
-	return PositivePoint{value: value}, nil
+	return PositivePoint{value: value}.check()
+}
+func (value PositivePoint) Value() struct{ X int } { return value.value }
+
+type Multiline struct {
+	value int
 }
 
-// Value requires construction success. Shared data keeps its aliases.
-func (v PositivePoint) Value() struct{ X int } { return v.value }
-
-// Multiline requires NewMultiline success. Zero is invalid.
-// Shared data keeps Go aliases. Callers must keep the rule.
-type Multiline struct{ value int }
-type tgoMultilineError struct{}
-
-func (tgoMultilineError) Error() string { return "invalid Multiline" }
-
-// NewMultiline checks the rule. Check the error before use.
-func NewMultiline(value int) (Multiline, error) {
-	if !(value > 0) {
-		return Multiline{}, tgoMultilineError{}
-	}
-	return Multiline{value: value}, nil
+type multilineError struct {
 }
 
-// Value requires construction success. Shared data keeps its aliases.
-func (v Multiline) Value() int { return v.value }
+func (multilineError) Error() string { return "invalid Multiline" }
+func (value Multiline) check() (Multiline, error) {
+	if value.value <= 0 {
+		return Multiline{}, multilineError{}
+	}
+	return value, nil
+}
+func NewMultiline(value int) (Multiline, error) { return Multiline{value: value}.check() }
+func (value Multiline) Value() int              { return value.value }
 
 type where int
 type enum int

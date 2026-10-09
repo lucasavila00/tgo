@@ -80,12 +80,21 @@ func (c *checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 	sourceToken := sourceFiles.File(file.Package)
 	for _, declaration := range file.Declarations {
 		if source := sourceDeclaration(
-			declaration, c.packagePath(), file, sourceToken, data,
+			declaration,
+			c.packagePath(),
+			file,
+			sourceToken,
+			data,
 		); source != nil {
 			sourceNames[sourceModelName(source)] = true
 		}
 		c.checkSourceDeclaration(
-			generated, sourceName, file, declaration, sourceToken, data,
+			generated,
+			sourceName,
+			file,
+			declaration,
+			sourceToken,
+			data,
 		)
 	}
 	c.reportExtraGeneratedModels(generated, sourceName, sourceNames)
@@ -93,7 +102,10 @@ func (c *checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 		return nil
 	}
 	return &verifiedSource{
-		generated: generated, file: file, tokenFile: sourceToken, data: data,
+		generated: generated,
+		file:      file,
+		tokenFile: sourceToken,
+		data:      data,
 	}
 }
 
@@ -101,14 +113,18 @@ func (c *checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 func (c *checker) exportSourceModels(source *verifiedSource) {
 	for _, declaration := range source.file.Declarations {
 		c.exportSourceDeclaration(
-			source.generated, source.file, declaration, source.tokenFile, source.data,
+			source.generated,
+			source.file,
+			declaration,
+			source.tokenFile,
+			source.data,
 		)
 	}
 }
 
 func (c *checker) hasModelAPIs(object *types.TypeName) bool {
 	return method(object.Type(), "Tag") != nil ||
-		method(object.Type(), "Value") != nil
+		method(object.Type(), "check") != nil
 }
 
 // reportExtraGeneratedModels rejects model APIs with no matching TGo declaration.
@@ -153,7 +169,11 @@ func (c *checker) checkSourceDeclaration(
 	data []byte,
 ) {
 	source := sourceDeclaration(
-		declaration, c.packagePath(), file, sourceFile, data,
+		declaration,
+		c.packagePath(),
+		file,
+		sourceFile,
+		data,
 	)
 	if source == nil {
 		return
@@ -171,7 +191,10 @@ func (c *checker) checkSourceDeclaration(
 	}
 	object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
 	if !objectOK || !sourceShapeMatches(
-		generated, specification.Type, object.Type(), source,
+		generated,
+		specification.Type,
+		object.Type(),
+		source,
 	) {
 		c.failVerification(
 			specification.Start,
@@ -192,7 +215,11 @@ func (c *checker) exportSourceDeclaration(
 	data []byte,
 ) {
 	source := sourceDeclaration(
-		declaration, c.packagePath(), file, sourceFile, data,
+		declaration,
+		c.packagePath(),
+		file,
+		sourceFile,
+		data,
 	)
 	if source == nil {
 		return
@@ -240,14 +267,13 @@ func __tgo_sourceModel_external_json_to[T interface{}](out *__tgo_jsontext.Encod
 type sourceModelTag uint8
 
 const (
-	sourceModelTagChecked sourceModelTag = iota + 1
-	sourceModelTagEnum
+	sourceModelTagEnum sourceModelTag = iota + 1
 	sourceModelTagStruct
 )
 
 type sourceModel struct {
 	tgoTag     sourceModelTag
-	tgoChecked sourceModelChecked
+	tgoStruct  sourceModelStruct
 	tgoPayload interface{}
 }
 
@@ -258,22 +284,6 @@ func (v sourceModel) Tag() sourceModelTag { return v.tgoTag }
 func (v sourceModel) UnknownTag() string {
 	return __tgo_fmt.Sprintf("sourceModel: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
-
-// sourceModelChecked is the Checked payload.
-type sourceModelChecked struct {
-	Name string
-	Fact *model
-	Base string
-}
-
-// sourceModel constructs sourceModel. Model fields must be valid.
-// Shared fields keep their aliases and caller duties.
-func (value sourceModelChecked) sourceModel() sourceModel {
-	return sourceModel{tgoTag: sourceModelTagChecked, tgoChecked: value}
-}
-
-// CheckedPayload requires Checked. No tag check.
-func (v sourceModel) CheckedPayload() sourceModelChecked { return v.tgoChecked }
 
 // sourceModelEnum is the Enum payload.
 type sourceModelEnum struct {
@@ -301,19 +311,14 @@ type sourceModelStruct struct {
 // sourceModel constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func (value sourceModelStruct) sourceModel() sourceModel {
-	return sourceModel{tgoTag: sourceModelTagStruct, tgoPayload: value}
+	return sourceModel{tgoTag: sourceModelTagStruct, tgoStruct: value}
 }
 
 // StructPayload requires Struct. No tag check.
-func (v sourceModel) StructPayload() sourceModelStruct { return v.tgoPayload.(sourceModelStruct) }
+func (v sourceModel) StructPayload() sourceModelStruct { return v.tgoStruct }
 
 func (v sourceModel) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case sourceModelTagChecked:
-		payload := v.CheckedPayload()
-		return __tgo_json.Marshal(struct {
-			Payload sourceModelChecked `json:"Checked"`
-		}{Payload: payload})
 	case sourceModelTagEnum:
 		payload := v.EnumPayload()
 		return __tgo_json.Marshal(struct {
@@ -331,9 +336,6 @@ func (v sourceModel) MarshalJSON() ([]byte, error) {
 
 func (v sourceModel) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case sourceModelTagChecked:
-		payload := v.CheckedPayload()
-		return __tgo_sourceModel_external_json_to(out, "Checked", payload)
 	case sourceModelTagEnum:
 		payload := v.EnumPayload()
 		return __tgo_sourceModel_external_json_to(out, "Enum", payload)
@@ -360,13 +362,6 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 		payloadData = value
 	}
 	switch variant {
-	case "Checked":
-		var payload sourceModelChecked
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
-			return err
-		}
-		*v = payload.sourceModel()
-		return nil
 	case "Enum":
 		var payload sourceModelEnum
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
@@ -407,12 +402,10 @@ func (v *sourceModel) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		wireName := nameToken.String()
 		current := 0
 		switch wireName {
-		case "Checked":
-			current = 1
 		case "Enum":
-			current = 2
+			current = 1
 		case "Struct":
-			current = 3
+			current = 2
 		}
 		same := haveName && current == selected
 		if same && current == 0 {
@@ -448,20 +441,13 @@ func (v *sourceModel) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 	}
 	switch selected {
 	case 1:
-		var payload sourceModelChecked
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
-		}
-		*v = payload.sourceModel()
-		return nil
-	case 2:
 		var payload sourceModelEnum
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.sourceModel()
 		return nil
-	case 3:
+	case 2:
 		var payload sourceModelStruct
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
@@ -487,17 +473,6 @@ func sourceDeclaration(
 	if sourceFile == nil {
 		return nil
 	}
-	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
-		if node == nil {
-			return nil
-		}
-		result := sourceModelChecked{
-			Name: node.Name.Name,
-			Fact: checkedModel(packagePath, node.Name.Name),
-			Base: sourceExpression(file, sourceFile, data, node.Base),
-		}.sourceModel()
-		return &result
-	}
 	if node, ok := syntax.EnumDeclarationOf(declaration); ok {
 		if node == nil {
 			return nil
@@ -515,10 +490,13 @@ func sourceDeclaration(
 					fields = append(fields, sourceFields(file, sourceFile, data, field)...)
 				}
 			}
-			sourceVariants = append(sourceVariants, sourceVariant{
-				name:   variant.Name.Name,
-				fields: fields,
-			})
+			sourceVariants = append(
+				sourceVariants,
+				sourceVariant{
+					name:   variant.Name.Name,
+					fields: fields,
+				},
+			)
 		}
 		result := sourceModelEnum{
 			Name:     node.Name.Name,
@@ -556,8 +534,6 @@ func sourceModelName(value *sourceModel) string {
 		return ""
 	}
 	switch item := *value; item.Tag() {
-	case sourceModelTagChecked:
-		return item.CheckedPayload().Name
 	case sourceModelTagEnum:
 		return item.EnumPayload().Name
 	case sourceModelTagStruct:
@@ -572,8 +548,6 @@ func sourceModelFact(value *sourceModel) *model {
 		return nil
 	}
 	switch item := *value; item.Tag() {
-	case sourceModelTagChecked:
-		return item.CheckedPayload().Fact
 	case sourceModelTagEnum:
 		return item.EnumPayload().Fact
 	case sourceModelTagStruct:
@@ -638,21 +612,6 @@ func sourceShapeMatches(
 			return false
 		}
 		return sourceStruct.Fact == nil || validCheckedStructAPI(typ)
-	case sourceModelTagChecked:
-		checked := item.CheckedPayload()
-		structure := syntax.StructTypeExpressionOf(representation)
-		if structure == nil {
-			return false
-		}
-		return sameModelFact(
-			checked.Fact, emittedCheckedModel(checked.Name, structure, typ),
-		) &&
-			len(structure.Fields.List) == 1 && sameTypeText(
-			checked.Base, syntax.SourceText(generated, syntax.Span{
-				Start: syntax.ExpressionPosition(structure.Fields.List[0].Type),
-				Stop:  syntax.ExpressionEnd(structure.Fields.List[0].Type),
-			}),
-		)
 	case sourceModelTagEnum:
 		enum := item.EnumPayload()
 		if !generatedEnumShape(typ, enum.Name, enum.Variants) {
@@ -700,7 +659,10 @@ func generatedEnumShape(
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
 		if !ok || !validEnumAPI(
-			typ, payload, variant.name+"Payload", name,
+			typ,
+			payload,
+			variant.name+"Payload",
+			name,
 		) {
 			return false
 		}
@@ -796,7 +758,9 @@ func sourceFields(
 	tagText := ""
 	if declaration.Field.Tag != nil {
 		tagText = sourceRange(
-			sourceFile, data, declaration.Field.Tag.Start,
+			sourceFile,
+			data,
+			declaration.Field.Tag.Start,
 			declaration.Field.Tag.Stop,
 		)
 	}
@@ -804,9 +768,14 @@ func sourceFields(
 		return []sourceField{{name: "", typeExpression: typeText, tag: tagText}}
 	}
 	for _, name := range declaration.Field.Names {
-		result = append(result, sourceField{
-			name: name.Name, typeExpression: typeText, tag: tagText,
-		})
+		result = append(
+			result,
+			sourceField{
+				name:           name.Name,
+				typeExpression: typeText,
+				tag:            tagText,
+			},
+		)
 	}
 	return result
 }
@@ -822,10 +791,14 @@ func sourceExpression(
 	}
 	start := syntax.ExpressionPosition(expression)
 	end := syntax.ExpressionEnd(expression)
-	result := []byte(sourceRange(
-		sourceFile, data, syntax.ExpressionPosition(expression),
-		syntax.ExpressionEnd(expression),
-	))
+	result := []byte(
+		sourceRange(
+			sourceFile,
+			data,
+			syntax.ExpressionPosition(expression),
+			syntax.ExpressionEnd(expression),
+		),
+	)
 	for _, extension := range syntax.Extensions(file) {
 		node, ok := syntax.NonNilPointerTypeOf(extension)
 		if !ok || node.Percent < start || node.Percent >= end {
@@ -858,10 +831,13 @@ func sameFields(
 		if other == nil {
 			return false
 		}
-		typeText := syntax.SourceText(file, syntax.Span{
-			Start: syntax.ExpressionPosition(other.Type),
-			Stop:  syntax.ExpressionEnd(other.Type),
-		})
+		typeText := syntax.SourceText(
+			file,
+			syntax.Span{
+				Start: syntax.ExpressionPosition(other.Type),
+				Stop:  syntax.ExpressionEnd(other.Type),
+			},
+		)
 		tagText := ""
 		if other.Tag != nil {
 			tagText = syntax.SourceText(file, other.Tag.Span)
@@ -884,7 +860,9 @@ func sameTypeText(left string, right string) bool {
 	return sameFormattedText(
 		left,
 		right,
-		func(text string) string { return "package p\ntype value " + text + "\n" },
+		func(text string) string {
+			return "package p\ntype value " + text + "\n"
+		},
 	)
 }
 

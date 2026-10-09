@@ -76,8 +76,6 @@ func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
 		return token.NoPos, false
 	case syntax.DeclarationTagStruct:
 		return token.NoPos, false
-	case syntax.DeclarationTagChecked:
-		return token.NoPos, false
 	default:
 		panic(enumValue36.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -161,8 +159,6 @@ func sourceGeneralDeclaration(
 	case syntax.DeclarationTagEnum:
 		return nil, false
 	case syntax.DeclarationTagStruct:
-		return nil, false
-	case syntax.DeclarationTagChecked:
 		return nil, false
 	default:
 		panic(enumValue38.UnknownTag()) // unreachable: tgolint requires a case per tag

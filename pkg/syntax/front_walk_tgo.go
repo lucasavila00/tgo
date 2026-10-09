@@ -185,8 +185,6 @@ func syntaxChildren(file *frontFile, node frontNode) []frontNode {
 		for _, field := range node.Fields {
 			children = append(children, field)
 		}
-	case *frontCheckedDecl:
-		children = []frontNode{node.Name, node.Base, node.Predicate}
 	case *frontFieldDecl:
 		children = []frontNode{node.Field, node.Default}
 	case *frontDefaultMarker:

@@ -239,10 +239,6 @@ func sourceModel(
 		return item, "type " + item.Name + " struct {\n" +
 			fieldDecls(sourceName, item.Fields) + "}\n", enumJSONUse{}, nil
 	}
-	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
-		item := checkedModel(files, erasedData, node)
-		return item, checkedGo(sourceName, item), enumJSONUse{}, nil
-	}
 	return nil, "", enumJSONUse{}, nil
 }
 
@@ -621,7 +617,7 @@ func coveringEdit(edits []edit, offset int) int {
 }
 
 func plainStructProjection(item *model) bool {
-	if item.Enum || item.Predicate != "" || item.CheckedStruct {
+	if item.Enum || item.CheckedStruct {
 		return false
 	}
 	for _, field := range item.Fields {
@@ -650,12 +646,6 @@ func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDeclar
 		Enum:            true,
 		Line:            position.Line,
 		Column:          position.Column,
-		Base:            "",
-		BaseLine:        0,
-		BaseColumn:      0,
-		Predicate:       "",
-		PredicateLine:   0,
-		PredicateColumn: 0,
 		Variants:        nil,
 		Fields:          nil,
 	}
@@ -684,12 +674,6 @@ func structModel(files *token.FileSet, data []byte, declaration *syntax.StructDe
 		CheckedStruct:   declaration.Checked != token.NoPos,
 		Line:            position.Line,
 		Column:          position.Column,
-		Base:            "",
-		BaseLine:        0,
-		BaseColumn:      0,
-		Predicate:       "",
-		PredicateLine:   0,
-		PredicateColumn: 0,
 		Variants:        nil,
 		Fields:          fields,
 	}
@@ -720,36 +704,6 @@ func validateCheckedStructFields(
 		}
 	}
 	return nil
-}
-
-func checkedModel(
-	files *token.FileSet,
-	data []byte,
-	declaration *syntax.CheckedDeclaration,
-) *model {
-	position := files.Position(declaration.Name.Start)
-	basePosition := files.Position(syntax.ExpressionPosition(declaration.Base))
-	predicatePosition := files.Position(syntax.ExpressionPosition(declaration.Predicate))
-	return &model{
-		Name:   declaration.Name.Name,
-		Enum:   false,
-		Line:   position.Line,
-		Column: position.Column,
-		Base: sourceText(
-			files, data, syntax.ExpressionPosition(declaration.Base),
-			syntax.ExpressionEnd(declaration.Base),
-		),
-		BaseLine:   basePosition.Line,
-		BaseColumn: basePosition.Column,
-		Predicate: sourceText(
-			files, data, syntax.ExpressionPosition(declaration.Predicate),
-			syntax.ExpressionEnd(declaration.Predicate),
-		),
-		PredicateLine:   predicatePosition.Line,
-		PredicateColumn: predicatePosition.Column,
-		Variants:        nil,
-		Fields:          nil,
-	}
 }
 
 func sourceModelField(files *token.FileSet, data []byte, declaration *syntax.TGoField) []field {

@@ -1,3 +1,0 @@
-package sample
-
-type Value Missing where value != nil

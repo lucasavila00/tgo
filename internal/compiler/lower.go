@@ -54,10 +54,6 @@ func generatedNames(models []*model) map[string]bool {
 				names[model.Name+variant.Name] = true
 			}
 		}
-		if model.Predicate != "" {
-			names["New"+model.Name] = true
-			names["tgo"+model.Name+"Error"] = true
-		}
 	}
 	return names
 }
@@ -92,9 +88,6 @@ func generatedMethod(function *ast.FuncDecl, models []*model) bool {
 	}
 
 	for _, model := range models {
-		if generatedCheckedMethod(receiver, function.Name.Name, model) {
-			return true
-		}
 		if model.Enum && receiver == model.Name &&
 			(function.Name.Name == "MarshalJSON" ||
 				function.Name.Name == "MarshalJSONTo" ||
@@ -127,16 +120,6 @@ func receiverName(function *ast.FuncDecl) (string, bool) {
 		return "", false
 	}
 	return receiver.Name, true
-}
-
-// generatedCheckedMethod recognizes checked-value support methods.
-func generatedCheckedMethod(receiver, method string, model *model) bool {
-	if model.Predicate == "" {
-		return false
-	}
-	valueMethod := receiver == model.Name && method == "Value"
-	errorMethod := receiver == "tgo"+model.Name+"Error" && method == "Error"
-	return valueMethod || errorMethod
 }
 
 // generatedEnumMethod recognizes tag and payload accessor methods.

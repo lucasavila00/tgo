@@ -49,7 +49,7 @@ func sourceFunctionPosition(node *syntax.Node) (token.Pos, bool) {
 		return token.NoPos, false
 	case syntax.NodeTagEnumVariant:
 		return token.NoPos, false
-case syntax.NodeTagIdentifier:
+	case syntax.NodeTagIdentifier:
 		return token.NoPos, false
 	case syntax.NodeTagComment:
 		return token.NoPos, false
@@ -72,8 +72,6 @@ func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
 	case syntax.DeclarationTagEnum:
 		return token.NoPos, false
 	case syntax.DeclarationTagStruct:
-		return token.NoPos, false
-	case syntax.DeclarationTagChecked:
 		return token.NoPos, false
 	exhaustive:
 	}
@@ -156,8 +154,6 @@ func sourceGeneralDeclaration(
 	case syntax.DeclarationTagEnum:
 		return nil, false
 	case syntax.DeclarationTagStruct:
-		return nil, false
-	case syntax.DeclarationTagChecked:
 		return nil, false
 	exhaustive:
 	}

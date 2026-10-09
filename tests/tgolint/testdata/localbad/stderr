@@ -1,4 +1,3 @@
-localbad/local.go:12:6: Count.value is private tgo representation
 localbad/local.go:13:6: Event.tgoTag is private tgo representation
 localbad/local.go:14:6: Event.tgoStarted is private tgo representation
 localbad/local.go:19:9: conversion bypasses the tgo checked Count constructor

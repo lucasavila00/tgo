@@ -43,7 +43,6 @@ Names starting with `Go` refer to the matching Go grammar production.
 ```text
 EnumDecl       = "type" TypeName "enum" [ GoStringLiteral ] "{" { VariantDecl ";" } "}" .
 VariantDecl    = VariantName "struct" "{" { TgoFieldDecl ";" } "}" [ GoStringLiteral ] .
-CheckedDecl    = "type" TypeName GoType "where" GoExpression .
 TgoStructDecl  = "type" TypeName "struct" "{" { TgoFieldDecl ";" } "}" [ "checked" ] .
 TgoFieldDecl   = GoFieldDecl [ "=" GoExpression ] .
 VariantLiteral = TypeName "." VariantName GoLiteralValue .
@@ -427,45 +426,6 @@ A nested switch on the same `Tag()` receiver supplies its own proof.
 The compiler does not analyze a `Tag` or payload call outside a recognized canonical switch.
 The accessor returns a Go value copy. Reference fields keep their Go aliases.
 
-## Checked types
-
-A checked type wraps a Go base type and declares a construction predicate:
-
-```text
-type Quantity int where value > 0
-```
-
-`value` is the proposed base value. The predicate is a Go boolean expression.
-The zero value of a checked type is invalid, even when the predicate accepts zero.
-
-The declaration emits this shape:
-
-```go
-type Quantity struct { value int }
-
-func NewQuantity(value int) (Quantity, error) {
-    if !(value > 0) {
-        return Quantity{}, tgoQuantityError{}
-    }
-    return Quantity{value: value}, nil
-}
-
-func (value Quantity) Value() int { return value.value }
-```
-
-The private error has the text `invalid Quantity`.
-The predicate runs once in the constructor. No read repeats it.
-Constructor failure returns an invalid zero wrapper and a non-nil error.
-
-A tgo file may not build a checked type with a literal, conversion, or `new`.
-Use `Value()` to read the base value. Construct a new checked value after arithmetic.
-The compiler does not prove that a caller checks the constructor error.
-A new defined type may not derive from a checked type, including through pointer layers.
-A tgo file may not convert a checked value or pointer to expose its representation.
-Conversion to a concrete interface type remains valid.
-An unnamed struct identical to the checked representation is reserved and rejected.
-The conversion rules also apply to a type parameter whose type set admits the checked type.
-
 ## Checked structs
 
 A checked struct keeps its ordinary Go representation and adds fallible literal construction:
@@ -504,7 +464,7 @@ package can read its private fields. A package must provide its own fallible exp
 another package must construct the type. TGo does not generate a public constructor or accessor.
 
 Handwritten Go can bypass validation with a direct literal. `tgolint` reports this bypass and the
-same invalid-zero uses that it reports for other checked types.
+same invalid-zero uses that it reports for enums and non-nil pointer types.
 
 ## Field defaults
 
@@ -596,7 +556,7 @@ tgo classifies a type by whether Go zero filling makes a valid tgo value.
 - A struct is valid when every field type is valid.
 - A nonempty array is valid when its element type is valid.
 - A zero-length array is valid.
-- An enum or checked type is invalid.
+- An enum or checked struct is invalid.
 - A type parameter is valid only when every admitted type has a valid zero.
 
 Named types and aliases use the rule for their underlying type unless they are tgo models.
@@ -676,7 +636,7 @@ errors, typed nils, and object identity keep their Go behavior.
 
 TGo trusts values that cross the Go boundary. The compiler does not scan, copy, reconstruct, or
 validate them. Go can create an unknown enum tag, change private storage with `unsafe`, or return a value
-that breaks a checked type rule. The Go caller owns these risks.
+that breaks a checked struct rule. The Go caller owns these risks.
 
 `tgolint` checks unsafe Go patterns that it can prove from source. It does not make the Go
 boundary sound. It cannot inspect reflection, `unsafe`, cgo memory, races, or foreign state.
@@ -700,9 +660,6 @@ VPayload
 T
 tgoTag
 tgoV
-NewT
-Value
-tgoTError
 TgoDefaultTF
 ```
 
@@ -712,7 +669,6 @@ An enum reserves its emitted `uint8`, `uint16`, or `uint32` tag name.
 Generated payload types and tag constants must have different names. Thus, a variant named `Tag`
 is invalid, but a variant named `Zero` is valid. A payload field cannot have the enum name because
 that name belongs to the constructor method.
-A checked type reserves the predeclared `string`, `error`, and `nil` names.
 
 ## Build command and diagnostics
 

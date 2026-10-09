@@ -59,8 +59,6 @@ func isExtension(node Node) bool {
 			return true
 		case DeclarationTagStruct:
 			return true
-		case DeclarationTagChecked:
-			return true
 		default:
 			panic(enumValue28.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
@@ -280,7 +278,8 @@ func expressionChildren(value *Expression) []Node {
 		item := enumValue32.FunctionLiteralPayload()
 		addExpression(functionTypeNode(item.Value.Type))
 		result = append(
-			result, nodeStatement(blockStatementNode(item.Value.Body)),
+			result,
+			nodeStatement(blockStatementNode(item.Value.Body)),
 		)
 	case ExpressionTagCompositeLiteral:
 		item := enumValue32.CompositeLiteralPayload()
@@ -548,7 +547,8 @@ func declarationChildren(value *Declaration) []Node {
 		result = append(result, nodeExpression(functionTypeNode(item.Value.Type)))
 		if item.Value.Body != nil {
 			result = append(
-				result, nodeStatement(blockStatementNode(item.Value.Body)),
+				result,
+				nodeStatement(blockStatementNode(item.Value.Body)),
 			)
 		}
 	case DeclarationTagEnum:
@@ -570,13 +570,6 @@ func declarationChildren(value *Declaration) []Node {
 		for _, field := range item.Value.Fields {
 			result = append(result, nodeTGoField(field))
 		}
-		result = addComment(result, item.Value.Comment)
-	case DeclarationTagChecked:
-		item := enumValue34.CheckedPayload()
-		result = addComment(result, item.Value.Doc)
-		result = append(result, nodeIdentifier(item.Value.Name))
-		result = append(result, nodeExpression(item.Value.Base))
-		result = append(result, nodeExpression(item.Value.Predicate))
 		result = addComment(result, item.Value.Comment)
 	default:
 		panic(enumValue34.UnknownTag()) // unreachable: tgolint requires a case per tag

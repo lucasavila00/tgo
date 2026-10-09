@@ -85,15 +85,18 @@ func (p *sourceParser) mapFragmentError(
 			offset = end
 		}
 		line, column := lineColumn(p.source, offset)
-		mapped = append(mapped, &scanner.Error{
-			Pos: token.Position{
-				Filename: p.filename,
-				Offset:   offset,
-				Line:     line,
-				Column:   column,
+		mapped = append(
+			mapped,
+			&scanner.Error{
+				Pos: token.Position{
+					Filename: p.filename,
+					Offset:   offset,
+					Line:     line,
+					Column:   column,
+				},
+				Msg: problem.Msg,
 			},
-			Msg: problem.Msg,
-		})
+		)
 	}
 	return mapped
 }
@@ -103,45 +106,54 @@ func (p *sourceParser) sanitize(
 	defaultAt map[token.Pos]*frontDefaultMarker,
 	anchors map[frontNode]frontNode,
 ) {
-	ast.Inspect(root, func(node ast.Node) bool {
-		switch node := node.(type) {
-		case *ast.CallExpr:
-			p.buildPropagation(node, node)
-		case *ast.BinaryExpr:
-			if node.Op == token.MUL && p.sourceToken(node.OpPos) == '%' {
-				node.Op = token.REM
-			}
-		case *ast.StarExpr:
-			if p.sourceToken(node.Star) == '%' {
-				p.nonNil[node.Star] = true
-			}
-		case *ast.ParenExpr:
-			call, ok := unwrappedCall(node)
-			if ok {
-				p.buildPropagation(node, call)
-			}
-		case *ast.CompositeLit:
-			p.buildPropagation(node, &ast.CallExpr{
-				Fun: node.Type, Lparen: node.Rbrace, Args: nil,
-				Ellipsis: token.NoPos, Rparen: node.Rbrace,
-			})
-			if defaultAt == nil {
-				break
-			}
-			elements := node.Elts[:0]
-			for _, element := range node.Elts {
-				marker, present := defaultAt[element.Pos()]
-				literal, artificial := element.(*ast.BasicLit)
-				if present && artificial && literal.Value == "0" {
-					anchors[marker] = node
-					continue
+	ast.Inspect(
+		root,
+		func(node ast.Node) bool {
+			switch node := node.(type) {
+			case *ast.CallExpr:
+				p.buildPropagation(node, node)
+			case *ast.BinaryExpr:
+				if node.Op == token.MUL && p.sourceToken(node.OpPos) == '%' {
+					node.Op = token.REM
 				}
-				elements = append(elements, element)
+			case *ast.StarExpr:
+				if p.sourceToken(node.Star) == '%' {
+					p.nonNil[node.Star] = true
+				}
+			case *ast.ParenExpr:
+				call, ok := unwrappedCall(node)
+				if ok {
+					p.buildPropagation(node, call)
+				}
+			case *ast.CompositeLit:
+				p.buildPropagation(
+					node,
+					&ast.CallExpr{
+						Fun:      node.Type,
+						Lparen:   node.Rbrace,
+						Args:     nil,
+						Ellipsis: token.NoPos,
+						Rparen:   node.Rbrace,
+					},
+				)
+				if defaultAt == nil {
+					break
+				}
+				elements := node.Elts[:0]
+				for _, element := range node.Elts {
+					marker, present := defaultAt[element.Pos()]
+					literal, artificial := element.(*ast.BasicLit)
+					if present && artificial && literal.Value == "0" {
+						anchors[marker] = node
+						continue
+					}
+					elements = append(elements, element)
+				}
+				node.Elts = elements
 			}
-			node.Elts = elements
-		}
-		return true
-	})
+			return true
+		},
+	)
 }
 
 func (p *sourceParser) sourceToken(position token.Pos) byte {
@@ -309,9 +321,6 @@ func (p *sourceParser) setNodeComments(node frontNode, comments []*ast.CommentGr
 		node.Doc = leading
 		node.Comment = trailing
 	case *frontStructDecl:
-		node.Doc = leading
-		node.Comment = trailing
-	case *frontCheckedDecl:
 		node.Doc = leading
 		node.Comment = trailing
 	case *frontFieldDecl:

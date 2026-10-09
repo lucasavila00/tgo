@@ -209,21 +209,3 @@ func (v *Choice) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return __tgo_fmt.Errorf("invalid Choice JSON tag")
 	}
 }
-
-// Positive requires NewPositive success. Zero is invalid.
-// Shared data keeps Go aliases. Callers must keep the rule.
-type Positive struct{ value int }
-type tgoPositiveError struct{}
-
-func (tgoPositiveError) Error() string { return "invalid Positive" }
-
-// NewPositive checks the rule. Check the error before use.
-func NewPositive(value int) (Positive, error) {
-	if !(value > 0) {
-		return Positive{}, tgoPositiveError{}
-	}
-	return Positive{value: value}, nil
-}
-
-// Value requires construction success. Shared data keeps its aliases.
-func (v Positive) Value() int { return v.value }

@@ -34,7 +34,7 @@ port := Port{number: number}!!
 ## Lowering
 
 The compiler emits the ordinary Go struct and method. It removes only the `checked` marker.
-It adds `.check()` after every composite literal of that checked type:
+It adds `.check()` after every composite literal of that checked struct:
 
 ```go
 port, err := Port{number: number}.check()

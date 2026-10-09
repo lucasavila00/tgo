@@ -7,23 +7,22 @@ import __tgo_jsonv2 "encoding/json/v2"
 import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
-// Count requires NewCount success. Zero is invalid.
-// Shared data keeps Go aliases. Callers must keep the rule.
-type Count struct{ value int }
-type tgoCountError struct{}
-
-func (tgoCountError) Error() string { return "invalid Count" }
-
-// NewCount checks the rule. Check the error before use.
-func NewCount(value int) (Count, error) {
-	if !(value > 0) {
-		return Count{}, tgoCountError{}
-	}
-	return Count{value: value}, nil
+type Count struct {
+	value int
 }
 
-// Value requires construction success. Shared data keeps its aliases.
-func (v Count) Value() int { return v.value }
+type countError struct {
+}
+
+func (countError) Error() string { return "invalid Count" }
+func (value Count) check() (Count, error) {
+	if value.value <= 0 {
+		return Count{}, countError{}
+	}
+	return value, nil
+}
+func NewCount(value int) (Count, error) { return Count{value: value}.check() }
+func (value Count) Value() int          { return value.value }
 
 type Pair struct {
 	Left  string `json:"pair"`

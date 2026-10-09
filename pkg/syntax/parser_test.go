@@ -69,6 +69,18 @@ func TestParseFileRejectsEmptySuccessfulReturn(t *testing.T) {
 	}
 }
 
+func TestParseFileRejectsRemovedWhereDeclaration(t *testing.T) {
+	t.Parallel()
+	_, err := syntax.ParseFile(
+		token.NewFileSet(), "removed.tgo",
+		[]byte("package sample\n\ntype Port int where value > 0\n"),
+		syntax.AllErrors,
+	)
+	if err == nil {
+		t.Fatal("ParseFile accepted a removed where declaration")
+	}
+}
+
 func TestParseFileConvertsAllPublicForms(t *testing.T) {
 	t.Parallel()
 	source := []byte(`package sample
@@ -86,7 +98,7 @@ type Result enum {
 	Error struct { Message string }
 }
 type Options struct { Limit int = 10 }
-type Port int where value > 0
+type Port struct { value int } checked
 
 func work[T any](receiver int, values ...T) (result int) {
 	var local int
@@ -203,7 +215,7 @@ func load() (int, error) { return 0, nil }
 		"Switch", "TypeSwitch", "Communication", "Select", "For", "Range",
 	})
 	requireKinds(t, declarations, []string{
-		"General", "Function", "Enum", "Struct", "Checked",
+		"General", "Function", "Enum", "Struct",
 	})
 	requireKinds(t, specifications, []string{"Import", "Value", "Type"})
 }

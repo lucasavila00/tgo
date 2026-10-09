@@ -47,7 +47,20 @@ func MakeAccount() Account {
 	return Account.Personal{Name: "person"}
 }
 
-type UserID int where value > 0
+type UserID struct { value int } checked
+
+type userIDError struct{}
+
+func (userIDError) Error() string { return "invalid UserID" }
+
+func (value UserID) check() (UserID, error) {
+	if value.value < 1 { return UserID{}, userIDError{} }
+	return value, nil
+}
+
+func NewUserID(value int) (UserID, error) { return UserID{value: value} }
+
+func (value UserID) Value() int { return value.value }
 
 func ReadID(value UserID) int {
 	return value.Value()

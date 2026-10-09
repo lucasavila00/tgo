@@ -17,10 +17,14 @@ type frontSpan struct {
 }
 
 // Pos returns the first position in the range.
-func (s frontSpan) Pos() token.Pos { return s.Start }
+func (s frontSpan) Pos() token.Pos {
+	return s.Start
+}
 
 // End returns the first position after the range.
-func (s frontSpan) End() token.Pos { return s.Stop }
+func (s frontSpan) End() token.Pos {
+	return s.Stop
+}
 
 // frontNode is a Go or tgo syntax node.
 type frontNode interface {
@@ -106,21 +110,6 @@ type frontStructDecl struct {
 }
 
 func (*frontStructDecl) extensionNode() {}
-
-// frontCheckedDecl declares a type and its construction predicate.
-
-type frontCheckedDecl struct {
-	frontSpan
-	Doc       *ast.CommentGroup
-	Type      token.Pos
-	Name      *ast.Ident
-	Base      ast.Expr
-	Where     token.Pos
-	Predicate ast.Expr
-	Comment   *ast.CommentGroup
-}
-
-func (*frontCheckedDecl) extensionNode() {}
 
 // frontFieldDecl is one tgo field group and its optional default.
 

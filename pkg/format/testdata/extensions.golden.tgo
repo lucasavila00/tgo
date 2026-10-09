@@ -18,10 +18,7 @@ type Options struct {
 
 type Single struct { Name string }
 
-type Port int where value > 0
-
-type SmallPort int where value > 0 &&
-	value < 1024
+type Port struct { number int } checked
 
 func load() (*int, error) {
 	return nil, errors.New("x")

@@ -86,13 +86,20 @@ func analyzePackage(compiled *compiler.CompiledPackage) *Package {
 		if tree == nil {
 			panic("compiled source has no syntax")
 		}
-		sources = append(sources, Source{
-			Name: filepath.Base(source.Name), Path: source.Name,
-			Output: compiled.Outputs[source.Name], Syntax: tree,
-		})
+		sources = append(
+			sources,
+			Source{
+				Name:   filepath.Base(source.Name),
+				Path:   source.Name,
+				Output: compiled.Outputs[source.Name],
+				Syntax: tree,
+			},
+		)
 		if facts == nil {
 			facts = sourcefacts.NewProjection(
-				tree, projection, files,
+				tree,
+				projection,
+				files,
 			)
 		} else {
 			facts.AddFile(tree)
@@ -102,10 +109,14 @@ func analyzePackage(compiled *compiler.CompiledPackage) *Package {
 		}
 	}
 	return &Package{
-		Path: compiled.Path, Sources: sources, Facts: facts,
-		Files: files, Package: pkg,
+		Path:          compiled.Path,
+		Sources:       sources,
+		Facts:         facts,
+		Files:         files,
+		Package:       pkg,
 		Owners:        analysisOwners(sources, pkg),
-		GeneratedUses: compiled.References, NonNil: nonNil,
+		GeneratedUses: compiled.References,
+		NonNil:        nonNil,
 	}
 }
 
@@ -117,10 +128,6 @@ func analysisOwners(sources []Source, pkg *types.Package) map[types.Object]token
 			enum, _ := syntax.EnumDeclarationOf(declaration)
 			if enum != nil {
 				addEnumOwners(owners, pkg, enum)
-			}
-			checked, _ := syntax.CheckedDeclarationOf(declaration)
-			if checked != nil {
-				addCheckedOwners(owners, pkg, checked)
 			}
 		}
 	}
@@ -138,8 +145,12 @@ func addEnumOwners(
 	addOwnedObject(owners, scope.Lookup(name+"Tag"), owner)
 	named := namedObject(scope.Lookup(name))
 	for _, method := range []string{
-		"Tag", "UnknownTag", "MarshalJSON", "MarshalJSONTo",
-		"UnmarshalJSON", "UnmarshalJSONFrom",
+		"Tag",
+		"UnknownTag",
+		"MarshalJSON",
+		"MarshalJSONTo",
+		"UnmarshalJSON",
+		"UnmarshalJSONFrom",
 	} {
 		addOwnedObject(owners, namedMethod(named, method), owner)
 	}
@@ -151,25 +162,12 @@ func addEnumOwners(
 			addOwnedObject(owners, payload.Obj(), variantOwner)
 		}
 		addOwnedObject(
-			owners, namedMethod(named, variant.Name.Name+"Payload"), variantOwner,
+			owners,
+			namedMethod(named, variant.Name.Name+"Payload"),
+			variantOwner,
 		)
 		addOwnedObject(owners, namedMethod(payload, name), variantOwner)
 	}
-}
-
-func addCheckedOwners(
-	owners map[types.Object]token.Pos,
-	pkg *types.Package,
-	declaration *syntax.CheckedDeclaration,
-) {
-	owner := declaration.Name.Start
-	scope := pkg.Scope()
-	addOwnedObject(owners, scope.Lookup("New"+declaration.Name.Name), owner)
-	addOwnedObject(
-		owners,
-		namedMethod(namedObject(scope.Lookup(declaration.Name.Name)), "Value"),
-		owner,
-	)
 }
 
 func namedObject(object types.Object) *types.Named {

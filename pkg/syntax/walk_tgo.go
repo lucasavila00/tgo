@@ -515,9 +515,6 @@ func declarationSpan(value *Declaration) Span {
 	case DeclarationTagStruct:
 		item := enumValue25.StructPayload()
 		return item.Value.Span
-	case DeclarationTagChecked:
-		item := enumValue25.CheckedPayload()
-		return item.Value.Span
 	default:
 		panic(enumValue25.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -555,28 +552,47 @@ func specificationSpan(value *Specification) Span {
 func nodeFile(value *File) Node {
 	return NodeFile{Value: value}.Node()
 }
+
 func nodeDeclaration(value *Declaration) Node {
 	return NodeDeclaration{Value: value}.Node()
 }
+
 func nodeSpecification(value *Specification) Node {
 	return NodeSpecification{Value: value}.Node()
 }
+
 func nodeStatement(value *Statement) Node {
 	return NodeStatement{Value: value}.Node()
 }
+
 func nodeExpression(value *Expression) Node {
 	return NodeExpression{Value: value}.Node()
 }
-func nodeField(value *Field) Node         { return NodeField{Value: value}.Node() }
-func nodeFieldList(value *FieldList) Node { return NodeFieldList{Value: value}.Node() }
-func nodeTGoField(value *TGoField) Node   { return NodeTGoField{Value: value}.Node() }
+
+func nodeField(value *Field) Node {
+	return NodeField{Value: value}.Node()
+}
+
+func nodeFieldList(value *FieldList) Node {
+	return NodeFieldList{Value: value}.Node()
+}
+
+func nodeTGoField(value *TGoField) Node {
+	return NodeTGoField{Value: value}.Node()
+}
+
 func nodeEnumVariant(value *EnumVariant) Node {
 	return NodeEnumVariant{Value: value}.Node()
 }
+
 func nodeIdentifier(value *Identifier) Node {
 	return NodeIdentifier{Value: value}.Node()
 }
-func nodeComment(value *Comment) Node { return NodeComment{Value: value}.Node() }
+
+func nodeComment(value *Comment) Node {
+	return NodeComment{Value: value}.Node()
+}
+
 func nodeCommentGroup(value *CommentGroup) Node {
 	return NodeCommentGroup{Value: value}.Node()
 }

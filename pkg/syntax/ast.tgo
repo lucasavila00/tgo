@@ -48,9 +48,9 @@ type FieldList struct {
 
 // ChannelDirection is a channel type direction.
 type ChannelDirection enum {
-	SendReceive struct{}
-	SendOnly struct{}
-	ReceiveOnly struct{}
+	SendReceive struct {}
+	SendOnly struct {}
+	ReceiveOnly struct {}
 }
 
 // Expression contains every Go expression and type form plus TGo expressions.
@@ -320,13 +320,24 @@ type Statement enum {
 }
 
 // BadStatement is an invalid statement range.
-type BadStatement struct { Span; From token.Pos; To token.Pos }
+type BadStatement struct {
+	Span
+	From token.Pos
+	To   token.Pos
+}
 
 // DeclarationStatement wraps a declaration in a statement list.
-type DeclarationStatement struct { Span; Declaration %Declaration }
+type DeclarationStatement struct {
+	Span
+	Declaration %Declaration
+}
 
 // EmptyStatement is one empty statement.
-type EmptyStatement struct { Span; Semicolon token.Pos; Implicit bool }
+type EmptyStatement struct {
+	Span
+	Semicolon token.Pos
+	Implicit  bool
+}
 
 // LabeledStatement is one labeled statement.
 type LabeledStatement struct {
@@ -337,7 +348,10 @@ type LabeledStatement struct {
 }
 
 // ExpressionStatement is one expression statement.
-type ExpressionStatement struct { Span; Expression %Expression }
+type ExpressionStatement struct {
+	Span
+	Expression %Expression
+}
 
 // SendStatement sends a value to a channel.
 type SendStatement struct {
@@ -365,10 +379,18 @@ type AssignmentStatement struct {
 }
 
 // GoStatement starts one call in a goroutine.
-type GoStatement struct { Span; Go token.Pos; Call %Expression }
+type GoStatement struct {
+	Span
+	Go   token.Pos
+	Call %Expression
+}
 
 // DeferStatement defers one call.
-type DeferStatement struct { Span; Defer token.Pos; Call %Expression }
+type DeferStatement struct {
+	Span
+	Defer token.Pos
+	Call  %Expression
+}
 
 // ReturnStatement returns zero or more values.
 // SuccessComma marks an explicit trailing comma that adds one final nil.
@@ -517,11 +539,14 @@ type Declaration enum {
 	Function struct { Value %FunctionDeclaration }
 	Enum struct { Value %EnumDeclaration }
 	Struct struct { Value %StructDeclaration }
-	Checked struct { Value %CheckedDeclaration }
 }
 
 // BadDeclaration is an invalid declaration range.
-type BadDeclaration struct { Span; From token.Pos; To token.Pos }
+type BadDeclaration struct {
+	Span
+	From token.Pos
+	To   token.Pos
+}
 
 // GeneralDeclaration is one import, const, type, or var declaration.
 type GeneralDeclaration struct {
@@ -593,18 +618,6 @@ type StructDeclaration struct {
 	Comment *CommentGroup
 }
 
-// CheckedDeclaration declares a type with a construction predicate.
-type CheckedDeclaration struct {
-	Span
-	Doc       *CommentGroup
-	Type      token.Pos
-	Name      %Identifier
-	Base      %Expression
-	Where     token.Pos
-	Predicate %Expression
-	Comment   *CommentGroup
-}
-
 // File is one complete TGo source file.
 type File struct {
 	Span
@@ -638,4 +651,3 @@ type Node enum {
 	Comment struct { Value %Comment }
 	CommentGroup struct { Value %CommentGroup }
 }
-
