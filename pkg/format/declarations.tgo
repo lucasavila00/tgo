@@ -40,7 +40,13 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 	}
 	p.newline()
 	p.indent++
-	for _, item := range value.Specs {
+	for index, item := range value.Specs {
+		if index > 0 && p.blankBetween(
+			syntax.SpecificationEnd(value.Specs[index-1]),
+			syntax.SpecificationPosition(item),
+		) {
+			p.blankline()
+		}
 		p.specification(item)
 		p.trailingLine(syntax.SpecificationEnd(item))
 		p.newline()
@@ -133,7 +139,10 @@ func (p *printer) enumDeclaration(value *syntax.EnumDeclaration) {
 	}
 	p.newline()
 	p.indent++
-	for _, variant := range value.Variants {
+	for index, variant := range value.Variants {
+		if index > 0 && p.blankBetween(value.Variants[index-1].Stop, variant.Start) {
+			p.blankline()
+		}
 		p.enumVariant(variant)
 		p.newline()
 	}
@@ -151,7 +160,10 @@ func (p *printer) enumVariant(value *syntax.EnumVariant) {
 	if len(value.Fields) > 0 {
 		p.newline()
 		p.indent++
-		for _, field := range value.Fields {
+		for index, field := range value.Fields {
+			if index > 0 && p.blankBetween(value.Fields[index-1].Stop, field.Start) {
+				p.blankline()
+			}
 			p.tgoField(field)
 			p.newline()
 		}
@@ -176,7 +188,10 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 	if len(value.Fields) > 0 {
 		p.newline()
 		p.indent++
-		for _, field := range value.Fields {
+		for index, field := range value.Fields {
+			if index > 0 && p.blankBetween(value.Fields[index-1].Stop, field.Start) {
+				p.blankline()
+			}
 			p.tgoField(field)
 			p.newline()
 		}

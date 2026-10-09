@@ -96,7 +96,13 @@ func (p *printer) statement(value *syntax.Statement) {
 }
 
 func (p *printer) statementList(values []*syntax.Statement) {
-	for _, value := range values {
+	for index, value := range values {
+		if index > 0 && p.blankBetween(
+			syntax.StatementEnd(values[index-1]),
+			syntax.StatementPosition(value),
+		) {
+			p.blankline()
+		}
 		p.statement(value)
 		p.trailingLine(syntax.StatementEnd(value))
 		p.newline()

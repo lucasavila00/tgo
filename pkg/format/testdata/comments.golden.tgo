@@ -5,6 +5,7 @@ package fixtures
 
 import (
 	"fmt" // standard
+
 	// next
 	"strings"
 )
@@ -15,5 +16,6 @@ func Work( // first
 	/* second */ other int,
 ) int { // body
 	result := value + other // result
+
 	return result
 }

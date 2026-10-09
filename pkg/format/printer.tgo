@@ -190,6 +190,12 @@ func (p *printer) multiline(start token.Pos, stop token.Pos) bool {
 	return first.IsValid() && last.IsValid() && first.Line != last.Line
 }
 
+func (p *printer) blankBetween(stop token.Pos, start token.Pos) bool {
+	left := p.files.Position(stop)
+	right := p.files.Position(start)
+	return left.IsValid() && right.IsValid() && right.Line > left.Line+1
+}
+
 func (p *printer) blankline() {
 	p.newline()
 	if p.lineBreaks < 2 {
