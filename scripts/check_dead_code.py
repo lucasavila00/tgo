@@ -27,6 +27,7 @@ class Finding:
     """One deadcode result with its source owner."""
 
     name: str
+    kind: str
     file: str
     line: int
     generated_file: str | None = None
@@ -84,24 +85,66 @@ def source_finding(item: dict[str, object], root: Path) -> Finding | None:
     line = int(position["Line"])
     name = str(item["Name"])
     if not bool(item["Generated"]):
-        return Finding(name, file, line)
+        return Finding(name, "func", file, line)
 
     owner = tgo_owner(file)
     if owner is None or not (root / owner).is_file():
-        return Finding(name, file, line, file, line)
+        return Finding(name, "func", file, line, file, line)
     owner_line = declaration_line(root / owner, name)
     if owner_line is not None:
-        return Finding(name, owner, owner_line, file, line)
+        return Finding(name, "func", owner, owner_line, file, line)
     if generated_protocol_function(name):
         # These functions form the model ABI. A source author cannot remove one.
         return None
     receiver = name.split(".", 1)[0] if "." in name else ""
     owner_line = type_line(root / owner, receiver) if receiver else None
-    return Finding(name, owner, owner_line or 1, file, line)
+    return Finding(name, "func", owner, owner_line or 1, file, line)
+
+
+def source_declaration_line(source: Path, name: str, kind: str) -> int | None:
+    """Find one package-level type, variable, or constant in TGo source."""
+    if kind == "type":
+        return type_line(source, name)
+    direct = re.compile(rf"^{kind}\s+[^/=]*\b{re.escape(name)}\b")
+    grouped = False
+    for line, text in enumerate(source.read_text().splitlines(), 1):
+        if re.match(rf"^{kind}\s*\(", text):
+            grouped = True
+            continue
+        if grouped and re.match(r"^\s*\)", text):
+            grouped = False
+            continue
+        if direct.search(text) or (
+            grouped and re.match(rf"^\s*{re.escape(name)}(?:\s|,|=)", text)
+        ):
+            return line
+    return None
+
+
+def declaration_finding(item: dict[str, object], root: Path) -> Finding:
+    """Map one dead declaration to Go source or its owning TGo declaration."""
+    position = item["Position"]
+    if not isinstance(position, dict):
+        raise ValueError("declaration analysis returned an invalid position")
+    file = str(position["File"])
+    line = int(position["Line"])
+    name = str(item["Name"])
+    kind = str(item["Kind"])
+    if not bool(item["Generated"]):
+        return Finding(name, kind, file, line)
+
+    owner = tgo_owner(file)
+    if owner is None or not (root / owner).is_file():
+        return Finding(name, kind, file, line, file, line)
+    owner_line = source_declaration_line(root / owner, name, kind)
+    if owner_line is None:
+        return Finding(name, kind, file, line, file, line)
+    return Finding(name, kind, owner, owner_line, file, line)
 
 
 def check(
     records: list[dict[str, object]],
+    declarations: list[dict[str, object]],
     root: Path,
     exclusions: dict[tuple[str, str], str],
 ) -> list[str]:
@@ -122,8 +165,12 @@ def check(
             finding = source_finding(item, root)
             if finding is not None:
                 findings.append(finding)
+    for item in declarations:
+        findings.append(declaration_finding(item, root))
 
-    for finding in sorted(findings, key=lambda item: (item.file, item.line, item.name)):
+    for finding in sorted(
+        findings, key=lambda item: (item.file, item.line, item.kind, item.name)
+    ):
         key = (finding.file, finding.name)
         if key in exclusions:
             used_exclusions.add(key)
@@ -135,7 +182,8 @@ def check(
                 f"{finding.generated_file}:{finding.generated_line}"
             )
         diagnostics.append(
-            f"{finding.file}:{finding.line}: unreachable func: {finding.name} ({kind})"
+            f"{finding.file}:{finding.line}: unreachable {finding.kind}: "
+            f"{finding.name} ({kind})"
         )
 
     for key in sorted(set(exclusions) - used_exclusions):
@@ -160,9 +208,28 @@ def deadcode(packages: list[str]) -> list[dict[str, object]]:
     return [] if records is None else records
 
 
+def dead_declarations(
+    records: list[dict[str, object]], packages: list[str]
+) -> list[dict[str, object]]:
+    """Find unreachable package-level types, variables, and constants."""
+    result = subprocess.run(
+        ["go", "run", "./scripts/deaddecl", *packages],
+        cwd=ROOT,
+        check=True,
+        input=json.dumps(records),
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    declarations = json.loads(result.stdout)
+    return [] if declarations is None else declarations
+
+
 def main() -> int:
     """Check all repository packages and commands."""
-    diagnostics = check(deadcode(["./..."]), ROOT, EXCLUSIONS)
+    packages = ["./..."]
+    records = deadcode(packages)
+    declarations = dead_declarations(records, packages)
+    diagnostics = check(records, declarations, ROOT, EXCLUSIONS)
     for diagnostic in diagnostics:
         print(diagnostic)
     return 1 if diagnostics else 0

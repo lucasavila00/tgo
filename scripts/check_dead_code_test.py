@@ -18,7 +18,9 @@ class DeadCodeTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.records = check_dead_code.deadcode(["./scripts/testdata/deadcode"])
+        packages = ["./scripts/testdata/deadcode"]
+        cls.records = check_dead_code.deadcode(packages)
+        cls.declarations = check_dead_code.dead_declarations(cls.records, packages)
 
     def names(self) -> set[str]:
         return {
@@ -31,19 +33,49 @@ class DeadCodeTest(unittest.TestCase):
         exclusions = {
             ("scripts/testdata/deadcode/main.go", "PublicAPI"):
                 "approved public fixture API",
+            ("scripts/testdata/deadcode/main.go", "PublicType"):
+                "approved public fixture type",
+            ("scripts/testdata/deadcode/main.go", "PublicVar"):
+                "approved public fixture variable",
+            ("scripts/testdata/deadcode/main.go", "PublicConst"):
+                "approved public fixture constant",
+            ("scripts/testdata/deadcode/model_tgo.go", "fixtureOwnerTag"):
+                "generated fixture protocol type",
+            ("scripts/testdata/deadcode/model_tgo.go", "fixtureOwnerTagValue"):
+                "generated fixture protocol constant",
         }
-        diagnostics = check_dead_code.check(self.records, ROOT, exclusions)
+        diagnostics = check_dead_code.check(
+            self.records, self.declarations, ROOT, exclusions
+        )
         self.assertEqual(
             diagnostics,
             [
                 "scripts/testdata/deadcode/main.go:15: unreachable func: "
                 "deadGo (Go source)",
+                "scripts/testdata/deadcode/main.go:17: unreachable type: "
+                "deadGoType (Go source)",
+                "scripts/testdata/deadcode/main.go:19: unreachable var: "
+                "deadGoVar (Go source)",
+                "scripts/testdata/deadcode/main.go:21: unreachable const: "
+                "deadGoConst (Go source)",
                 "scripts/testdata/deadcode/model.tgo:3: unreachable func: "
                 "fixtureOwner.deadGeneratedSupport (TGo source; generated at "
                 "scripts/testdata/deadcode/model_tgo.go:9)",
+                "scripts/testdata/deadcode/model.tgo:3: unreachable type: "
+                "fixtureOwner (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:5)",
                 "scripts/testdata/deadcode/model.tgo:5: unreachable func: "
                 "deadTGo (TGo source; generated at "
                 "scripts/testdata/deadcode/model_tgo.go:7)",
+                "scripts/testdata/deadcode/model.tgo:7: unreachable type: "
+                "deadTGoType (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:13)",
+                "scripts/testdata/deadcode/model.tgo:9: unreachable var: "
+                "deadTGoVar (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:15)",
+                "scripts/testdata/deadcode/model.tgo:11: unreachable const: "
+                "deadTGoConst (TGo source; generated at "
+                "scripts/testdata/deadcode/model_tgo.go:17)",
             ],
         )
 
@@ -54,6 +86,16 @@ class DeadCodeTest(unittest.TestCase):
         self.assertNotIn("testOnly", self.names())
         self.assertNotIn("platformOnly", self.names())
         self.assertIn("fixtureOwner.MarshalJSON", self.names())
+
+    def test_exclusions_need_reasons_and_live_findings(self) -> None:
+        with self.assertRaises(ValueError):
+            check_dead_code.check([], [], ROOT, {("source.go", "Value"): ""})
+        self.assertEqual(
+            check_dead_code.check(
+                [], [], ROOT, {("source.go", "Value"): "public fixture API"}
+            ),
+            ["stale dead-code exclusion: source.go: Value"],
+        )
 
 
 if __name__ == "__main__":

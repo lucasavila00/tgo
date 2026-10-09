@@ -9,3 +9,13 @@ func deadTGo() {}
 func (fixtureOwner) deadGeneratedSupport() {}
 
 func (fixtureOwner) MarshalJSON() ([]byte, error) { return nil, nil }
+
+type deadTGoType struct{}
+
+var deadTGoVar int
+
+const deadTGoConst = 1
+
+type fixtureOwnerTag uint8
+
+const fixtureOwnerTagValue fixtureOwnerTag = 1

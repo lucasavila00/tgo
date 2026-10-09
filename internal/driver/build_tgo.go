@@ -25,7 +25,6 @@ import (
 type buildState uint8
 
 const (
-	buildNew    buildState = 0
 	buildActive buildState = 1
 	buildDone   buildState = 2
 )

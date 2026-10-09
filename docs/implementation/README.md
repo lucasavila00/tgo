@@ -59,15 +59,23 @@ Production source in this repository does not use `tgolint` suppression directiv
 target checks generated files, the syntax boundary, allocation budgets, dead code, Markdown, lint,
 and tests.
 
-Run `make dead-code` to find unreachable functions in commands, packages, tests, and tools. The
-check analyzes generated Go after `make generated`. A TGo diagnostic uses its `.tgo` declaration as
-the primary location and includes the generated Go location. The check ignores only generated enum
-tag, payload, Gob, and JSON protocol functions because source authors cannot remove them. Other
-dead generated support reports its owning TGo type.
+Run `make dead-code` to find unreachable functions and package-level types, variables, and
+constants in commands, packages, tests, and tools. The check analyzes generated Go after
+`make generated`. The Go `deadcode` tool supplies function reachability. A declaration graph uses
+the reachable functions, package initialization, and tests as roots. A TGo diagnostic uses its
+`.tgo` declaration as the primary location and includes the generated Go location.
 
-The exclusion list is in `scripts/check_dead_code.py`. Each entry names one function and gives its
-reason. The check rejects an exclusion when the analyzer no longer reports that function. Build
-constraints select the current platform implementation. Keep each platform entry point reachable
-from code in the same build configuration.
+The normal `golangci-lint` `unused` check is not sufficient for this rule. Repository lint excludes
+generated Go, and `unused` does not prove that exported declarations are reachable from repository
+commands and tests.
+
+The check ignores only generated enum tag, payload, Gob, and JSON protocol functions because source
+authors cannot remove them. Other dead generated functions report their owning TGo type. A dead
+generated type, variable, or constant needs a named exclusion when it has no TGo declaration.
+
+The exclusion list is in `scripts/check_dead_code.py`. Each entry names one declaration and gives
+its reason. The check rejects an exclusion when the analyzer no longer reports that declaration.
+Build constraints select the current platform implementation. Keep each platform entry point
+reachable from code in the same build configuration.
 
 The [Go printer port](go-printer-port.md) defines the staged formatter replacement.

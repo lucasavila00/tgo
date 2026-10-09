@@ -3,3 +3,9 @@ package main
 type fixtureOwner struct{}
 
 func deadTGo() {}
+
+type deadTGoType struct{}
+
+var deadTGoVar int
+
+const deadTGoConst = 1
