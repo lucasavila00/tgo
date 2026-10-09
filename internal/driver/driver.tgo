@@ -70,7 +70,7 @@ func Build(directory string, patterns []string) (err error) {
 }
 
 // CompileWorkspace generates all active TGo packages in one module.
-func CompileWorkspace(directory string) ([]*compiler.CompiledPackage, error) {
+func CompileWorkspace(directory string) ([]%compiler.CompiledPackage, error) {
 	return CompileWorkspaceContext(context.Background(), directory)
 }
 
@@ -78,7 +78,7 @@ func CompileWorkspace(directory string) ([]*compiler.CompiledPackage, error) {
 func CompileWorkspaceContext(
 	ctx context.Context,
 	directory string,
-) ([]*compiler.CompiledPackage, error) {
+) ([]%compiler.CompiledPackage, error) {
 	root, module, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func CompileWorkspaceContext(
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	paths := sortedPackagePaths(packages)
-	result := make([]*compiler.CompiledPackage, 0, len(paths))
+	result := make([]%compiler.CompiledPackage, 0, len(paths))
 	for _, path := range paths {
 		select {
 		case <-ctx.Done():

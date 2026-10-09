@@ -72,20 +72,30 @@ func AnalyzePackage(
 }
 
 func analyzePackage(compiled *compiler.CompiledPackage) *Package {
+	projection := compiled.Facts
+	files := compiled.Files
+	pkg := compiled.Package
+	if projection == nil || files == nil || pkg == nil {
+		panic("compiled package has incomplete projection facts")
+	}
 	sources := make([]Source, 0, len(compiled.Sources))
 	nonNil := make(map[token.Pos]bool)
-	var facts *sourcefacts.Index
+	var facts *sourcefacts.Index = nil
 	for _, source := range compiled.Sources {
+		tree := source.Syntax
+		if tree == nil {
+			panic("compiled source has no syntax")
+		}
 		sources = append(sources, Source{
 			Name: filepath.Base(source.Name), Path: source.Name,
-			Output: compiled.Outputs[source.Name], Syntax: source.Syntax,
+			Output: compiled.Outputs[source.Name], Syntax: tree,
 		})
 		if facts == nil {
 			facts = sourcefacts.NewProjection(
-				source.Syntax, compiled.Facts, compiled.Files,
+				tree, projection, files,
 			)
 		} else {
-			facts.AddFile(source.Syntax)
+			facts.AddFile(tree)
 		}
 		for position := range source.NonNil {
 			nonNil[position] = true
@@ -93,8 +103,8 @@ func analyzePackage(compiled *compiler.CompiledPackage) *Package {
 	}
 	return &Package{
 		Path: compiled.Path, Sources: sources, Facts: facts,
-		Files: compiled.Files, Package: compiled.Package,
-		Owners:        analysisOwners(sources, compiled.Package),
+		Files: files, Package: pkg,
+		Owners:        analysisOwners(sources, pkg),
 		GeneratedUses: compiled.References, NonNil: nonNil,
 	}
 }
@@ -104,10 +114,12 @@ func analysisOwners(sources []Source, pkg *types.Package) map[types.Object]token
 	owners := make(map[types.Object]token.Pos)
 	for _, source := range sources {
 		for _, declaration := range source.Syntax.Declarations {
-			if enum, ok := syntax.EnumDeclarationOf(declaration); ok {
+			enum, _ := syntax.EnumDeclarationOf(declaration)
+			if enum != nil {
 				addEnumOwners(owners, pkg, enum)
 			}
-			if checked, ok := syntax.CheckedDeclarationOf(declaration); ok {
+			checked, _ := syntax.CheckedDeclarationOf(declaration)
+			if checked != nil {
 				addCheckedOwners(owners, pkg, checked)
 			}
 		}
