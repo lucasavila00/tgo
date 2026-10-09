@@ -37,6 +37,7 @@ type checker struct {
 	validated  map[types.Object]bool
 	callTarget map[types.Object]types.Object
 	generated  map[*ast.File]bool
+	outputs    map[string][]byte
 	parents    map[ast.Node]ast.Node
 	safe       map[*ast.SelectorExpr]bool
 	handled    map[*ast.SelectorExpr]bool
@@ -75,6 +76,7 @@ func run(pass *analysis.Pass) (any, error) {
 		validated:  make(map[types.Object]bool),
 		callTarget: make(map[types.Object]types.Object),
 		generated:  make(map[*ast.File]bool),
+		outputs:    make(map[string][]byte),
 		parents:    make(map[ast.Node]ast.Node),
 		safe:       make(map[*ast.SelectorExpr]bool),
 		handled:    make(map[*ast.SelectorExpr]bool),
@@ -91,13 +93,15 @@ func run(pass *analysis.Pass) (any, error) {
 	if c.rejectInvalidDependencies() {
 		return nil, nil
 	}
+	analysis := c.analyzeTGoPackage()
+	c.setGeneratedOutputs(analysis)
 	c.findModels()
 	if c.invalid {
 		return nil, nil
 	}
 	c.findValidationWrappers()
 	c.findValidationFunctionValues()
-	c.checkTGoSource()
+	c.checkTGoSource(analysis)
 	for _, file := range pass.Files {
 		if c.generated[file] {
 			continue
