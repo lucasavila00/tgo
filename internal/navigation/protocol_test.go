@@ -4,10 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+type protocolWireResponse struct {
+	ID     int64           `json:"id"`
+	Result json.RawMessage `json:"result"`
+	Error  string          `json:"error"`
+}
 
 func TestRequestJSONVariants(t *testing.T) {
 	tests := []struct {
@@ -151,7 +158,7 @@ func TestServeReportsProtocolErrors(t *testing.T) {
 		{9, "cannot unmarshal"},
 	}
 	for _, test := range tests {
-		var response Response
+		var response protocolWireResponse
 		if err := decoder.Decode(&response); err != nil {
 			t.Fatal(err)
 		}
@@ -159,6 +166,41 @@ func TestServeReportsProtocolErrors(t *testing.T) {
 			t.Fatalf("response = %#v, want ID %d and error %q", response, test.id, test.errorText)
 		}
 	}
+}
+
+func TestResponseJSONLines(t *testing.T) {
+	tests := []struct {
+		name     string
+		response Response
+		want     string
+	}{
+		{"success", protocolResult(10, true, nil), `{"id":10,"result":true}`},
+		{
+			"failure", protocolResult(11, true, errors.New("failed")),
+			`{"id":11,"error":"failed"}`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			if err := json.NewEncoder(&output).Encode(test.response); err != nil {
+				t.Fatal(err)
+			}
+			assertJSONLine(t, output.String(), test.want)
+		})
+	}
+}
+
+func TestServeCancellationResponseJSONLine(t *testing.T) {
+	output := serveProtocolLine(t,
+		`{"id":12,"method":"cancel","params":{"id":99}}`)
+	assertJSONLine(t, output, `{"id":12,"result":true}`)
+}
+
+func TestServeInvalidationResponseJSONLine(t *testing.T) {
+	output := serveProtocolLine(t,
+		`{"id":13,"method":"invalidate","params":{"uri":"file:///a.tgo"}}`)
+	assertJSONLine(t, output, `{"id":13,"result":true}`)
 }
 
 func TestServeDoesNotReplyToInvalidCancelNotification(t *testing.T) {
@@ -176,6 +218,30 @@ func TestServeDoesNotReplyToInvalidCancelNotification(t *testing.T) {
 	}
 	if output.Len() != 0 {
 		t.Fatalf("cancel notification output = %s, want empty output", &output)
+	}
+}
+
+func serveProtocolLine(t *testing.T, request string) string {
+	t.Helper()
+	engine, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	if err := Serve(context.Background(), engine,
+		strings.NewReader(request+"\n"), &output); err != nil {
+		t.Fatal(err)
+	}
+	return output.String()
+}
+
+func assertJSONLine(t *testing.T, got, want string) {
+	t.Helper()
+	if !strings.HasSuffix(got, "\n") || strings.Count(got, "\n") != 1 {
+		t.Fatalf("response output = %q, want one JSON line", got)
+	}
+	if !sameJSON(t, []byte(strings.TrimSuffix(got, "\n")), []byte(want)) {
+		t.Fatalf("response JSON = %s, want %s", got, want)
 	}
 }
 

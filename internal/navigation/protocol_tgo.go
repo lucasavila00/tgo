@@ -16,11 +16,109 @@ import (
 )
 
 // Response is one helper protocol response.
+// Response requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type ResponseTag uint8
+
+const (
+	ResponseTagSuccess ResponseTag = iota + 1
+	ResponseTagFailure
+)
 
 type Response struct {
-	ID     int64  `json:"id"`
-	Result any    `json:"result,omitempty"`
-	Error  string `json:"error,omitempty"`
+	tgoTag     ResponseTag
+	tgoSuccess ResponseSuccess
+	tgoFailure ResponseFailure
+}
+
+// Tag returns the active tag.
+func (v Response) Tag() ResponseTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Response) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Response: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// ResponseSuccess is the Success payload.
+type ResponseSuccess struct {
+	ID     int64 `json:"id"`
+	Result any   `json:"result,omitempty"`
+}
+
+// Response constructs Response. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value ResponseSuccess) Response() Response {
+	return Response{tgoTag: ResponseTagSuccess, tgoSuccess: value}
+}
+
+// SuccessPayload requires Success. No tag check.
+func (v Response) SuccessPayload() ResponseSuccess { return v.tgoSuccess }
+
+// ResponseFailure is the Failure payload.
+type ResponseFailure struct {
+	ID    int64  `json:"id"`
+	Error string `json:"error,omitempty"`
+}
+
+// Response constructs Response. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value ResponseFailure) Response() Response {
+	return Response{tgoTag: ResponseTagFailure, tgoFailure: value}
+}
+
+// FailurePayload requires Failure. No tag check.
+func (v Response) FailurePayload() ResponseFailure { return v.tgoFailure }
+
+func (v Response) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case ResponseTagSuccess:
+		payload := v.SuccessPayload()
+		return __tgo_json.Marshal(payload)
+	case ResponseTagFailure:
+		payload := v.FailurePayload()
+		return __tgo_json.Marshal(payload)
+	default:
+		return nil, __tgo_fmt.Errorf("invalid Response JSON tag")
+	}
+}
+
+func (v Response) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case ResponseTagSuccess:
+		payload := v.SuccessPayload()
+		return __tgo_jsonv2.MarshalEncode(out, payload)
+	case ResponseTagFailure:
+		payload := v.FailurePayload()
+		return __tgo_jsonv2.MarshalEncode(out, payload)
+	default:
+		return __tgo_fmt.Errorf("invalid Response JSON tag")
+	}
+}
+
+func (v *Response) UnmarshalJSON(data []byte) error {
+	{
+		var payload ResponseSuccess
+		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
+			*v = payload.Response()
+			return nil
+		}
+	}
+	{
+		var payload ResponseFailure
+		if err := __tgo_json.Unmarshal(data, &payload); err == nil {
+			*v = payload.Response()
+			return nil
+		}
+	}
+	return __tgo_fmt.Errorf("no matching Response JSON variant")
+}
+
+func (v *Response) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	data, err := in.ReadValue()
+	if err != nil {
+		return err
+	}
+	return v.UnmarshalJSON(data)
 }
 
 type positionParams struct {
@@ -562,7 +660,7 @@ func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Write
 		}.Request()
 		if err := json.Unmarshal(data, &request); err != nil {
 			if header.Method != "cancel" || header.ID != 0 {
-				server.send(Response{ID: header.ID, Result: nil, Error: err.Error()})
+				server.send(protocolError(header.ID, err.Error()))
 			}
 			continue
 		}
@@ -641,7 +739,7 @@ func (s *protocolServer) dispatch(request Request) {
 			return
 		}
 		s.engine.Invalidate()
-		s.send(Response{ID: payload.ID, Result: true, Error: ""})
+		s.send(protocolSuccess(payload.ID, true))
 	default:
 		panic(request.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -668,15 +766,18 @@ func (s *protocolServer) start(
 }
 
 func protocolResult(id int64, result any, err error) Response {
-	response := Response{ID: id, Result: result, Error: ""}
 	if err != nil {
-		response.Error = err.Error()
+		return protocolError(id, err.Error())
 	}
-	return response
+	return protocolSuccess(id, result)
+}
+
+func protocolSuccess(id int64, result any) Response {
+	return ResponseSuccess{ID: id, Result: result}.Response()
 }
 
 func protocolError(id int64, message string) Response {
-	return Response{ID: id, Result: nil, Error: message}
+	return ResponseFailure{ID: id, Error: message}.Response()
 }
 
 func (s *protocolServer) cancel(request RequestCancel) {
@@ -687,7 +788,7 @@ func (s *protocolServer) cancel(request RequestCancel) {
 		cancel()
 	}
 	if request.ID != 0 {
-		s.send(Response{ID: request.ID, Result: true, Error: ""})
+		s.send(protocolSuccess(request.ID, true))
 	}
 }
 
