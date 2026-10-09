@@ -23,6 +23,7 @@ A clean run means that the loaded Go packages do not contain these errors:
 - a TGo named result read or returned before assignment;
 - an invalid checked-type zero from a declaration, named result, literal, `new`, `make`,
   `clear`, map read, channel read, type assertion, or longer reslice;
+- a direct checked-struct literal in a Go file;
 - a new defined Go type or conversion that bypasses a tgo constructor;
 - direct access to private generated representation;
 - a tgo result used before its matching error is proved nil;

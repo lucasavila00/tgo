@@ -65,7 +65,17 @@ func (c %checker) exportValidationFacts(object *types.TypeName, value *model) {
 	var names []string = nil
 	_, name := modelDescription(value)
 	if modelIsChecked(value) {
-		names = append(names, "New"+name)
+		function, _, _ := types.LookupFieldOrMethod(
+			object.Type(), false, object.Pkg(), "check",
+		)
+		if method, ok := function.(*types.Func); ok &&
+			validCheckedStructAPI(object.Type()) {
+			fact := &validationFact{}
+			c.validated[method] = true
+			c.pass.ExportObjectFact(method, fact)
+		} else {
+			names = append(names, "New"+name)
+		}
 	}
 	if modelIsEnum(value) {
 		payloads := append([]string{"Zero"}, modelVariants(value)...)

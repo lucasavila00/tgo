@@ -249,6 +249,7 @@ func TestParseGoFileKeepsGoStructTypeSpecification(t *testing.T) {
 		t.Fatalf("source text = %q", got)
 	}
 }
+
 `)
 	file, err := syntax.ParseFile(
 		token.NewFileSet(), "exhaustive.tgo", source, syntax.AllErrors,
@@ -269,6 +270,43 @@ func TestParseGoFileKeepsGoStructTypeSpecification(t *testing.T) {
 	})
 	if marked != 1 {
 		t.Fatalf("marked exhaustive clauses = %d, want 1", marked)
+	}
+}
+
+func TestParseFileMarksCheckedStructAndLiteralPropagation(t *testing.T) {
+	t.Parallel()
+	source := []byte(`package sample
+
+type Port struct { number int } checked
+
+func makePort(number int) (Port, error) {
+	return Port{number: number}!
+}
+`)
+	file, err := syntax.ParseFile(
+		token.NewFileSet(), "checked.tgo", source, syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	structure, ok := syntax.StructDeclarationOf(file.Declarations[0])
+	if !ok || structure.Checked == token.NoPos {
+		t.Fatal("checked struct marker is missing")
+	}
+	propagations := 0
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		propagation, ok := syntax.PropagationExpressionOf(node)
+		if !ok {
+			return true
+		}
+		propagations++
+		if syntax.CompositeLiteralOf(propagation.Expression) == nil {
+			t.Fatal("propagation does not contain the checked struct literal")
+		}
+		return true
+	})
+	if propagations != 1 {
+		t.Fatalf("propagations = %d, want 1", propagations)
 	}
 }
 

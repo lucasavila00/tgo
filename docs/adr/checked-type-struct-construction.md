@@ -1,6 +1,6 @@
 # Add checked struct construction
 
-Status: Proposed
+Status: Accepted
 
 ## Decision
 
@@ -42,16 +42,17 @@ port, err := Port{number: number}.check()
 
 The compiler first records the checked struct names in the package. The expression pass then
 rewrites their literals. It does not generate a wrapper, payload type, constructor, accessor, or
-validation helper.
+validation helper. The type's own `check` method can use raw literals of that type. This trusted
+exception lets a failed check return the invalid zero value with its non-nil error.
 
 A field expression runs once in source order because the compiler does not copy or rebuild the
 literal. `!` and `!!` keep their normal propagation behavior on the result of `check`.
 
 ## Rules
 
-The private fields stop another package from constructing the value without `check`. Handwritten Go
-in the declaring package can bypass the rule, so `tgolint` reports a direct checked literal in a Go
-file. TGo source always rewrites one.
+The private fields stop another package from setting representation fields. Handwritten Go can
+bypass the rule with a direct literal, so `tgolint` reports one in a Go file. TGo source rewrites all
+checked literals except the trusted literals in that type's own `check` method.
 
 The zero value is invalid. Ordinary selectors read fields inside the declaring package. A checked
 struct may contain another checked struct and therefore forms nominal chains without more syntax:

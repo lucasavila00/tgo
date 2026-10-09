@@ -218,7 +218,7 @@ func (c %checker) packagePath() string {
 type sourceModel enum {
 	Checked struct { Name string; Fact %model; Base string }
 	Enum struct { Name string; Fact %model; Variants []sourceVariant }
-	Struct struct { Name string; Fields []sourceField }
+	Struct struct { Name string; Fact *model; Fields []sourceField }
 }
 
 // sourceDeclaration converts one syntax declaration to verified model metadata.
@@ -273,8 +273,13 @@ func sourceDeclaration(
 				fields = append(fields, sourceFields(file, sourceFile, data, field)...)
 			}
 		}
+		var fact *model = nil
+		if node.Checked != token.NoPos {
+			fact = checkedModel(packagePath, node.Name.Name)
+		}
 		result := sourceModel.Struct{
 			Name: node.Name.Name,
+			Fact: fact,
 			Fields: fields,
 		}
 		return &result
@@ -307,7 +312,7 @@ func sourceModelFact(value *sourceModel) *model {
 	case sourceModelTagEnum:
 		return item.EnumPayload().Fact
 	case sourceModelTagStruct:
-		return nil
+		return item.StructPayload().Fact
 	exhaustive:
 	}
 }
@@ -360,7 +365,10 @@ func sourceShapeMatches(
 		if structure == nil {
 			return false
 		}
-		return sameFields(sourceStruct.Fields, structure.Fields.List, generated)
+		if !sameFields(sourceStruct.Fields, structure.Fields.List, generated) {
+			return false
+		}
+		return sourceStruct.Fact == nil || validCheckedStructAPI(typ)
 	case sourceModelTagChecked:
 		checked := item.CheckedPayload()
 		structure := syntax.StructTypeExpressionOf(representation)
@@ -394,6 +402,18 @@ func sourceShapeMatches(
 		return true
 	exhaustive:
 	}
+}
+
+func validCheckedStructAPI(typ types.Type) bool {
+	signature := method(typ, "check")
+	if signature == nil || signature.Recv() == nil || signature.Params().Len() != 0 ||
+		signature.Results().Len() != 2 || signature.Variadic() {
+		return false
+	}
+	errorObject := types.Universe.Lookup("error")
+	return errorObject != nil && types.Identical(signature.Recv().Type(), typ) &&
+		types.Identical(signature.Results().At(0).Type(), typ) &&
+		types.Identical(signature.Results().At(1).Type(), errorObject.Type())
 }
 
 // generatedEnumShape checks enum operations without reading private storage.

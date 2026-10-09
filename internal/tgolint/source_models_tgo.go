@@ -247,7 +247,7 @@ const (
 
 type sourceModel struct {
 	tgoTag     sourceModelTag
-	tgoStruct  sourceModelStruct
+	tgoChecked sourceModelChecked
 	tgoPayload interface{}
 }
 
@@ -269,11 +269,11 @@ type sourceModelChecked struct {
 // sourceModel constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func (value sourceModelChecked) sourceModel() sourceModel {
-	return sourceModel{tgoTag: sourceModelTagChecked, tgoPayload: value}
+	return sourceModel{tgoTag: sourceModelTagChecked, tgoChecked: value}
 }
 
 // CheckedPayload requires Checked. No tag check.
-func (v sourceModel) CheckedPayload() sourceModelChecked { return v.tgoPayload.(sourceModelChecked) }
+func (v sourceModel) CheckedPayload() sourceModelChecked { return v.tgoChecked }
 
 // sourceModelEnum is the Enum payload.
 type sourceModelEnum struct {
@@ -294,17 +294,18 @@ func (v sourceModel) EnumPayload() sourceModelEnum { return v.tgoPayload.(source
 // sourceModelStruct is the Struct payload.
 type sourceModelStruct struct {
 	Name   string
+	Fact   *model
 	Fields []sourceField
 }
 
 // sourceModel constructs sourceModel. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func (value sourceModelStruct) sourceModel() sourceModel {
-	return sourceModel{tgoTag: sourceModelTagStruct, tgoStruct: value}
+	return sourceModel{tgoTag: sourceModelTagStruct, tgoPayload: value}
 }
 
 // StructPayload requires Struct. No tag check.
-func (v sourceModel) StructPayload() sourceModelStruct { return v.tgoStruct }
+func (v sourceModel) StructPayload() sourceModelStruct { return v.tgoPayload.(sourceModelStruct) }
 
 func (v sourceModel) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
@@ -536,8 +537,13 @@ func sourceDeclaration(
 				fields = append(fields, sourceFields(file, sourceFile, data, field)...)
 			}
 		}
+		var fact *model = nil
+		if node.Checked != token.NoPos {
+			fact = checkedModel(packagePath, node.Name.Name)
+		}
 		result := sourceModelStruct{
 			Name:   node.Name.Name,
+			Fact:   fact,
 			Fields: fields,
 		}.sourceModel()
 		return &result
@@ -571,7 +577,7 @@ func sourceModelFact(value *sourceModel) *model {
 	case sourceModelTagEnum:
 		return item.EnumPayload().Fact
 	case sourceModelTagStruct:
-		return nil
+		return item.StructPayload().Fact
 	default:
 		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
@@ -628,7 +634,10 @@ func sourceShapeMatches(
 		if structure == nil {
 			return false
 		}
-		return sameFields(sourceStruct.Fields, structure.Fields.List, generated)
+		if !sameFields(sourceStruct.Fields, structure.Fields.List, generated) {
+			return false
+		}
+		return sourceStruct.Fact == nil || validCheckedStructAPI(typ)
 	case sourceModelTagChecked:
 		checked := item.CheckedPayload()
 		structure := syntax.StructTypeExpressionOf(representation)
@@ -663,6 +672,18 @@ func sourceShapeMatches(
 	default:
 		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
+}
+
+func validCheckedStructAPI(typ types.Type) bool {
+	signature := method(typ, "check")
+	if signature == nil || signature.Recv() == nil || signature.Params().Len() != 0 ||
+		signature.Results().Len() != 2 || signature.Variadic() {
+		return false
+	}
+	errorObject := types.Universe.Lookup("error")
+	return errorObject != nil && types.Identical(signature.Recv().Type(), typ) &&
+		types.Identical(signature.Results().At(0).Type(), typ) &&
+		types.Identical(signature.Results().At(1).Type(), errorObject.Type())
 }
 
 // generatedEnumShape checks enum operations without reading private storage.

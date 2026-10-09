@@ -178,8 +178,12 @@ func (p *packageUnit) lowerConstruction(
 	}
 	typ := p.info.TypeOf(literal)
 	owner, declaration := p.modelOwner(typ)
+	if declaration == nil {
+		owner, declaration = p.namedLiteralModel(literal.Type)
+	}
 	if declaration != nil && declaration.CheckedStruct {
 		if owner == p && declaration == exempt {
+			p.checkedLiterals[literal] = true
 			return node
 		}
 		p.checkedLiterals[literal] = true
@@ -213,4 +217,28 @@ func (p *packageUnit) lowerConstruction(
 	}
 	p.fail(literal, "unknown variant %s.%s", model.Name, selector.Sel.Name)
 	return node
+}
+
+// namedLiteralModel resolves a named literal when an outer marker blocks type information.
+func (p *packageUnit) namedLiteralModel(expression ast.Expr) (*packageUnit, *model) {
+	switch node := expression.(type) {
+	case *ast.Ident:
+		return p, p.Models[node.Name]
+	case *ast.SelectorExpr:
+		name, ok := node.X.(*ast.Ident)
+		if !ok {
+			return nil, nil
+		}
+		ownerName, ok := p.info.Uses[name].(*types.PkgName)
+		if !ok {
+			return nil, nil
+		}
+		owner := p.Imports[ownerName.Imported().Path()]
+		if owner == nil {
+			return nil, nil
+		}
+		return owner, owner.Models[node.Sel.Name]
+	default:
+		return nil, nil
+	}
 }

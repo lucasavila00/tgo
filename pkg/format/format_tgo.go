@@ -46,6 +46,10 @@ func usesTGoSyntax(file *syntax.File) bool {
 					return false
 				}
 				if structure, model := syntax.StructDeclarationOf(declaration); model {
+					if structure.Checked.IsValid() {
+						found = true
+						return false
+					}
 					for _, field := range structure.Fields {
 						if field.Default != nil {
 							found = true

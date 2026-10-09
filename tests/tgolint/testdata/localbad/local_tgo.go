@@ -25,6 +25,14 @@ func NewCount(value int) (Count, error) {
 // Value requires construction success. Shared data keeps its aliases.
 func (v Count) Value() int { return v.value }
 
+type Port struct {
+	number int
+}
+
+func (value Port) check() (Port, error) {
+	return value, nil
+}
+
 func __tgo_Event_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
 	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
 		return err
