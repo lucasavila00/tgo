@@ -1,0 +1,17 @@
+//go:build linux
+
+// Package fixtures tests comments.
+package fixtures // package
+import("fmt" // standard
+// next
+"strings")
+// Work keeps comments.
+func Work( // first
+value int, /* second */ other int)int { // body
+result:=value+other // result
+
+return result
+}
+func label(value int)int{switch value{case 1: // one
+return 1
+default:return 0}} // label

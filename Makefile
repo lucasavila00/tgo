@@ -42,6 +42,7 @@ allocation-test:
 
 build:
 	go build -o bin/tgo ./cmd/tgo
+	go build -o bin/tgofmt ./cmd/tgofmt
 	go build -o bin/tgolint ./cmd/tgolint
 
 install-tools:
