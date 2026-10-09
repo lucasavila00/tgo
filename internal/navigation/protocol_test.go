@@ -175,7 +175,10 @@ func TestResponseJSONLines(t *testing.T) {
 		want     string
 	}{
 		{"success", protocolResult(10, true, nil), `{"id":10,"result":true}`},
-		{"failure", protocolResult(11, nil, errors.New("failed")), `{"id":11,"error":"failed"}`},
+		{
+			"failure", protocolResult(11, true, errors.New("failed")),
+			`{"id":11,"error":"failed"}`,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
