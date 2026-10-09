@@ -50,7 +50,7 @@ func (l *propagationLowerer) comprehension(
 	return last.Results[0], statements[:len(statements)-1]
 }
 
-// prepareComprehension binds generated built-ins and adds a slice capacity hint.
+// prepareComprehension binds generated built-ins and selects the proven allocation plan.
 func (l *propagationLowerer) prepareComprehension(
 	metadata comprehensionSource,
 	body *ast.BlockStmt,
@@ -61,9 +61,120 @@ func (l *propagationLowerer) prepareComprehension(
 	}
 	makeCall.Fun = l.unit.generatedUniverse("make", metadata.Position)
 	if !metadata.Map {
+		if l.optimizeExactSlice(metadata, body, makeCall, outer) {
+			return
+		}
 		l.bindComprehensionAppend(metadata, outer.Body)
 	}
 	l.addComprehensionCapacity(metadata, body, makeCall, outer)
+}
+
+// optimizeExactSlice uses the fixed range indexes when a slice gives the exact result length.
+// An identity projection uses Go's bulk copy operation.
+func (l *propagationLowerer) optimizeExactSlice(
+	metadata comprehensionSource,
+	body *ast.BlockStmt,
+	makeCall *ast.CallExpr,
+	outer *ast.RangeStmt,
+) bool {
+	if len(makeCall.Args) != 2 || len(body.List) != 3 || len(outer.Body.List) != 1 {
+		return false
+	}
+	sourceType := underlyingSlice(l.unit.info.TypeOf(outer.X))
+	outputType := underlyingSlice(l.unit.info.TypeOf(makeCall.Args[0]))
+	assignment, appendCall, ok := comprehensionAppend(outer.Body)
+	if sourceType == nil || outputType == nil || !ok {
+		return false
+	}
+	source := l.stableComprehensionSource(body, outer)
+	makeCall.Args[1] = call(
+		l.unit.generatedUniverse("len", metadata.Position),
+		source,
+	)
+	if l.identityComprehension(outer, appendCall, sourceType, outputType) {
+		result := assignment.Lhs[0]
+		copyStatement := &ast.ExprStmt{X: call(
+			l.unit.generatedUniverse("copy", metadata.Position),
+			result,
+			source,
+		)}
+		for index, statement := range body.List {
+			if statement == outer {
+				body.List[index] = copyStatement
+				break
+			}
+		}
+		return true
+	}
+	index, ok := outer.Key.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	if index.Name == "_" {
+		index = ast.NewIdent(l.unit.freshIdentifier("__tgo_index"))
+		outer.Key = index
+	}
+	assignment.Lhs[0] = &ast.IndexExpr{X: assignment.Lhs[0], Index: index}
+	assignment.Rhs[0] = appendCall.Args[1]
+	return true
+}
+
+func (l *propagationLowerer) stableComprehensionSource(
+	body *ast.BlockStmt,
+	outer *ast.RangeStmt,
+) ast.Expr {
+	source := outer.X
+	if _, stable := source.(*ast.Ident); stable {
+		return source
+	}
+	name := ast.NewIdent(l.unit.freshIdentifier("__tgo_source"))
+	body.List = append([]ast.Stmt{&ast.AssignStmt{
+		Lhs: []ast.Expr{name}, Tok: token.DEFINE, Rhs: []ast.Expr{source},
+	}}, body.List...)
+	outer.X = name
+	return name
+}
+
+func (l *propagationLowerer) identityComprehension(
+	outer *ast.RangeStmt,
+	appendCall *ast.CallExpr,
+	source *types.Slice,
+	output *types.Slice,
+) bool {
+	value, valueOK := outer.Value.(*ast.Ident)
+	result, resultOK := appendCall.Args[1].(*ast.Ident)
+	return valueOK && resultOK &&
+		l.unit.info.ObjectOf(value) == l.unit.info.ObjectOf(result) &&
+		types.Identical(source.Elem(), output.Elem())
+}
+
+func comprehensionAppend(
+	body *ast.BlockStmt,
+) (*ast.AssignStmt, *ast.CallExpr, bool) {
+	if len(body.List) != 1 {
+		return nil, nil, false
+	}
+	assignment, ok := body.List[0].(*ast.AssignStmt)
+	if !ok || len(assignment.Lhs) != 1 || len(assignment.Rhs) != 1 {
+		return nil, nil, false
+	}
+	appendCall, ok := assignment.Rhs[0].(*ast.CallExpr)
+	if !ok || len(appendCall.Args) != 2 {
+		return nil, nil, false
+	}
+	return assignment, appendCall, true
+}
+
+func underlyingSlice(value types.Type) *types.Slice {
+	if value == nil {
+		return nil
+	}
+	value = types.Unalias(value)
+	if named, ok := value.(*types.Named); ok {
+		value = named.Underlying()
+	}
+	slice, _ := value.(*types.Slice)
+	return slice
 }
 
 func (l *propagationLowerer) comprehensionParts(
@@ -129,12 +240,7 @@ func (l *propagationLowerer) addComprehensionCapacity(
 	}
 	source := outer.X
 	if _, cheap := source.(*ast.Ident); !cheap {
-		name := ast.NewIdent(l.unit.freshIdentifier("__tgo_source"))
-		body.List = append([]ast.Stmt{&ast.AssignStmt{
-			Lhs: []ast.Expr{name}, Tok: token.DEFINE, Rhs: []ast.Expr{source},
-		}}, body.List...)
-		outer.X = name
-		source = name
+		source = l.stableComprehensionSource(body, outer)
 	}
 	makeCall.Args = append(makeCall.Args, call(
 		l.unit.generatedUniverse("len", metadata.Position),

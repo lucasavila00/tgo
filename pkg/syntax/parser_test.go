@@ -252,6 +252,32 @@ func TestParseFilePropagationKeepsParserErrorPosition(t *testing.T) {
 	}
 }
 
+func TestComprehensionDiscoveryInsideLeadingLoop(t *testing.T) {
+	t.Parallel()
+	source := []byte(`package sample
+func collect(values []int) {
+	for range values {
+		_ = []int{for _, value := range values { value }}
+	}
+}
+`)
+	file, err := syntax.ParseFile(
+		token.NewFileSet(), "nested.tgo", source, syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	count := 0
+	for _, extension := range syntax.Extensions(file) {
+		if _, ok := syntax.ComprehensionExpressionOf(extension); ok {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("found %d comprehensions", count)
+	}
+}
+
 func requireKinds(t *testing.T, found map[string]bool, expected []string) {
 	t.Helper()
 	missing := []string(nil)
