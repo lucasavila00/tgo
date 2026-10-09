@@ -292,12 +292,14 @@ func expressionHasIdentifier(
 		return false
 	}
 	name := syntax.IdentifierExpressionOf(value)
-	return name != nil && sameIdentifier(name, target)
+	if name == nil {
+		return false
+	}
+	return sameIdentifier(name, target)
 }
 
 func sameIdentifier(left, right *syntax.Identifier) bool {
-	return left != nil && right != nil &&
-		left.Start == right.Start && left.Stop == right.Stop
+	return left.Start == right.Start && left.Stop == right.Stop
 }
 
 // Definition returns the object defined by a source identifier expression.

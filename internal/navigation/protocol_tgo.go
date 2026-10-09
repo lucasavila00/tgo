@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"sync"
 )
@@ -59,9 +58,6 @@ type protocolServer struct {
 
 // Serve reads newline-delimited requests and writes matching responses.
 func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Writer) error {
-	if engine == nil {
-		return fmt.Errorf("navigation server needs an engine")
-	}
 	decoder := json.NewDecoder(bufio.NewReader(input))
 	server := &protocolServer{
 		context: ctx, engine: engine, encoder: json.NewEncoder(output),

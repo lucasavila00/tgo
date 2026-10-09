@@ -262,9 +262,9 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 			generatedUses[positionKey(pkg.Files.Position(position))] = object
 		}
 		for _, source := range pkg.Sources {
-			fileURI, err := pathURI(source.Path)
-			if err != nil {
-				return nil, err
+			fileURI, tgoErr := pathURI(source.Path)
+			if tgoErr != nil {
+				return nil, tgoErr
 			}
 			syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
 				identifier, ok := syntax.IdentifierOf(node)

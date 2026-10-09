@@ -170,26 +170,9 @@ func TestSourceFactsDoNotClassifySameLineUseAsDefinition(t *testing.T) {
 	); err != nil {
 		t.Fatalf("check projected Go: %v", err)
 	}
-	parsed, err := syntax.ParseGoFile(
-		files,
-		"sample.tgo",
-		[]byte("package sample\nvar value = 1; var copy = value\n"),
-		syntax.AllErrors,
+	definitionObject, definitionFact, useObject, useFact := sameLineIdentifierFacts(
+		t, files, info,
 	)
-	if err != nil {
-		t.Fatalf("parse source syntax: %v", err)
-	}
-	index := sourcefacts.New(parsed, info, files)
-	first := syntax.GeneralDeclarationOf(parsed.Declarations[0])
-	definition := syntax.ValueSpecificationOf(first.Specs[0]).Names[0]
-	second := syntax.GeneralDeclarationOf(parsed.Declarations[1])
-	use := syntax.IdentifierExpressionOf(
-		syntax.ValueSpecificationOf(second.Specs[0]).Values[0],
-	)
-	definitionNode := identifierNode(parsed, definition)
-	useNode := identifierNode(parsed, use)
-	definitionObject, definitionFact := index.IdentifierFact(parsed, definitionNode)
-	useObject, useFact := index.IdentifierFact(parsed, useNode)
 	if definitionObject == nil || useObject != definitionObject {
 		t.Fatalf("objects = %v, %v", definitionObject, useObject)
 	}
@@ -199,6 +182,66 @@ func TestSourceFactsDoNotClassifySameLineUseAsDefinition(t *testing.T) {
 	if useFact {
 		t.Fatal("same-line use is classified as a definition")
 	}
+}
+
+func sameLineIdentifierFacts(
+	t *testing.T,
+	files *token.FileSet,
+	info *types.Info,
+) (types.Object, bool, types.Object, bool) {
+	t.Helper()
+	parsed, err := syntax.ParseGoFile(
+		files,
+		"sample.tgo",
+		[]byte("package sample\nvar value = 1; var copy = value\n"),
+		syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("parse source syntax: %v", err)
+		return nil, false, nil, false
+	}
+	if parsed == nil {
+		t.Fatal("parse source syntax returned nil")
+		return nil, false, nil, false
+	}
+	index := sourcefacts.New(parsed, info, files)
+	first := syntax.GeneralDeclarationOf(parsed.Declarations[0])
+	if first == nil {
+		t.Fatal("first declaration is not general")
+		return nil, false, nil, false
+	}
+	firstValue := syntax.ValueSpecificationOf(first.Specs[0])
+	if firstValue == nil {
+		t.Fatal("first declaration is not a value")
+		return nil, false, nil, false
+	}
+	definition := firstValue.Names[0]
+	second := syntax.GeneralDeclarationOf(parsed.Declarations[1])
+	if second == nil {
+		t.Fatal("second declaration is not general")
+		return nil, false, nil, false
+	}
+	secondValue := syntax.ValueSpecificationOf(second.Specs[0])
+	if secondValue == nil {
+		t.Fatal("second declaration is not a value")
+		return nil, false, nil, false
+	}
+	use := syntax.IdentifierExpressionOf(
+		secondValue.Values[0],
+	)
+	if use == nil {
+		t.Fatal("second declaration value is not an identifier")
+		return nil, false, nil, false
+	}
+	definitionNode := identifierNode(parsed, definition)
+	useNode := identifierNode(parsed, use)
+	if definitionNode == nil || useNode == nil {
+		t.Fatal("identifier node is absent")
+		return nil, false, nil, false
+	}
+	definitionObject, definitionFact := index.IdentifierFact(parsed, definitionNode)
+	useObject, useFact := index.IdentifierFact(parsed, useNode)
+	return definitionObject, definitionFact, useObject, useFact
 }
 
 func identifierNode(file *syntax.File, identifier *syntax.Identifier) *syntax.Node {

@@ -56,8 +56,7 @@ func (e *Engine) DocumentSymbols(
 	ctx context.Context,
 	uri string,
 ) ([]Symbol, error) {
-	index, err := e.load(ctx)
-	if err != nil { return nil, err }
+	index := e.load(ctx)!!
 	result := make([]Symbol, 0)
 	for _, symbol := range index.symbols {
 		if symbol.Range.URI == uri { result = append(result, symbol) }
@@ -70,8 +69,7 @@ func (e *Engine) WorkspaceSymbols(
 	ctx context.Context,
 	query string,
 ) ([]Symbol, error) {
-	index, err := e.load(ctx)
-	if err != nil { return nil, err }
+	index := e.load(ctx)!!
 	query = strings.ToLower(query)
 	result := make([]Symbol, 0)
 	for _, symbol := range index.symbols {
@@ -93,9 +91,8 @@ type Engine struct {
 }
 
 // New makes an engine for one workspace directory.
-func New(root string) (*Engine, error) {
-	absolute, err := filepath.Abs(root)
-	if err != nil { return nil, err }
+func New(root string) (%Engine, error) {
+	absolute := filepath.Abs(root)!!
 	return &Engine{
 		root: absolute, mu: new(sync.Mutex), index: nil, generation: 0,
 		building: false, ready: nil,
@@ -116,8 +113,7 @@ func (e *Engine) Definition(
 	uri string,
 	offset int,
 ) ([]Location, error) {
-	index, err := e.load(ctx)
-	if err != nil { return nil, err }
+	index := e.load(ctx)!!
 	for _, item := range index.occurrences {
 		if item.location.URI == uri && item.location.Start <= offset &&
 			offset < item.location.End {
@@ -136,8 +132,7 @@ func (e *Engine) References(
 	offset int,
 	includeDeclaration bool,
 ) ([]Location, error) {
-	index, err := e.load(ctx)
-	if err != nil { return nil, err }
+	index := e.load(ctx)!!
 	for _, item := range index.occurrences {
 		if item.location.URI != uri || offset < item.location.Start ||
 			item.location.End <= offset { continue }
@@ -204,8 +199,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	case <-ctx.Done(): return nil, ctx.Err()
 	default:
 	}
-	packages, err := compiler.AnalyzeWorkspaceContext(ctx, e.root)
-	if err != nil { return nil, err }
+	packages := compiler.AnalyzeWorkspaceContext(ctx, e.root)!!
 	select {
 	case <-ctx.Done(): return nil, ctx.Err()
 	default:
@@ -228,8 +222,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 			generatedUses[positionKey(pkg.Files.Position(position))] = object
 		}
 		for _, source := range pkg.Sources {
-			fileURI, err := pathURI(source.Path)
-			if err != nil { return nil, err }
+			fileURI := pathURI(source.Path)!!
 			syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
 				identifier, ok := syntax.IdentifierOf(node)
 				if !ok || identifier == nil { return true }
@@ -336,8 +329,7 @@ func (k *objectKeys) key(object types.Object) string {
 }
 
 func pathURI(path string) (string, error) {
-	absolute, err := filepath.Abs(path)
-	if err != nil { return "", err }
+	absolute := filepath.Abs(path)!!
 	value := new(url.URL)
 	value.Scheme = "file"
 	value.Path = filepath.ToSlash(absolute)

@@ -150,9 +150,12 @@ func appendTGoFieldSymbols(
 	container string,
 ) []Symbol {
 	for _, field := range fields {
-		result = appendFieldSymbols(
-			result, pkg, uri, []%syntax.Field{field.Field}, container,
-		)
+		for _, name := range field.Field.Names {
+			result = appendSymbol(
+				result, pkg, uri, name.Name, "field", container,
+				field.Field.Span, name.Span,
+			)
+		}
 	}
 	return result
 }
