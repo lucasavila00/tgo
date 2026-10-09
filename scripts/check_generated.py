@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERATED_ROOTS = (
+    Path("cmd/tgofmt"),
+    Path("pkg/format"),
     Path("pkg/syntax"),
     Path("internal/sourcefacts"),
     Path("internal/navigation"),

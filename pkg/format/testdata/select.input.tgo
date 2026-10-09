@@ -1,0 +1,2 @@
+package fixtures
+func choose(input <-chan int,output chan<- int)int{select{case value:=<-input:return value;case output<-1:return 1;default:return 0}}
