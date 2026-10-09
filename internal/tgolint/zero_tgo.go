@@ -28,24 +28,28 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 	if model := c.modelFor(typ); model != nil {
 		return model, true
 	}
-	switch typ := typ.(type) {
-	case *types.Named:
-		return c.zero(typ.Underlying(), seen)
-	case *types.Struct:
-		for index := 0; index < typ.NumFields(); index++ {
-			if model, invalid := c.zero(typ.Field(index).Type(), seen); invalid {
+	classified := goTypeOf(typ)
+	switch classified.Tag() {
+	case goTypeTagNamed:
+		return c.zero(classified.NamedPayload().Value.Underlying(), seen)
+	case goTypeTagStruct:
+		structure := classified.StructPayload().Value
+		for index := 0; index < structure.NumFields(); index++ {
+			if model, invalid := c.zero(structure.Field(index).Type(), seen); invalid {
 				return model, true
 			}
 		}
-	case *types.Array:
-		if typ.Len() > 0 {
-			return c.zero(typ.Elem(), seen)
+	case goTypeTagArray:
+		array := classified.ArrayPayload().Value
+		if array.Len() > 0 {
+			return c.zero(array.Elem(), seen)
 		}
-	case *types.TypeParam:
-		if model := c.zeroTypes[typ]; model != nil {
+	case goTypeTagTypeParameter:
+		parameter := classified.TypeParameterPayload().Value
+		if model := c.zeroTypes[parameter]; model != nil {
 			return model, true
 		}
-		terms, supported := simpleTerms(typ.Constraint())
+		terms, supported := simpleTerms(parameter.Constraint())
 		if !supported {
 			return nil, false
 		}
@@ -54,6 +58,11 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 				return model, true
 			}
 		}
+	case goTypeTagNil, goTypeTagBasic, goTypeTagSlice, goTypeTagPointer,
+		goTypeTagTuple, goTypeTagSignature, goTypeTagMap, goTypeTagChannel,
+		goTypeTagInterface, goTypeTagUnion, goTypeTagOther:
+	default:
+		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	return nil, false
 }
@@ -107,18 +116,24 @@ func (c *checker) checkLiteral(
 			modelKind(model), modelName(model))
 		return
 	}
-	underlying := coreType(typ)
-	switch underlying := underlying.(type) {
-	case *types.Struct:
-		c.checkStructLiteral(literal, underlying)
-	case *types.Array:
-		if model, invalid := c.zeroInvalid(underlying.Elem()); invalid {
-			c.checkLiteralElements(literal, underlying.Len(), model)
+	underlying := goTypeOf(coreType(typ))
+	switch underlying.Tag() {
+	case goTypeTagStruct:
+		c.checkStructLiteral(literal, underlying.StructPayload().Value)
+	case goTypeTagArray:
+		array := underlying.ArrayPayload().Value
+		if model, invalid := c.zeroInvalid(array.Elem()); invalid {
+			c.checkLiteralElements(literal, array.Len(), model)
 		}
-	case *types.Slice:
-		if model, invalid := c.zeroInvalid(underlying.Elem()); invalid {
+	case goTypeTagSlice:
+		if model, invalid := c.zeroInvalid(underlying.SlicePayload().Value.Elem()); invalid {
 			c.checkLiteralElements(literal, -1, model)
 		}
+	case goTypeTagNil, goTypeTagBasic, goTypeTagPointer, goTypeTagTuple,
+		goTypeTagSignature, goTypeTagMap, goTypeTagChannel, goTypeTagInterface,
+		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
+	default:
+		panic(underlying.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

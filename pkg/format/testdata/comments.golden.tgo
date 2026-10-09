@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+type Positive int where value > 0
+
 // Work keeps comments.
 func Work( // first
 	value int,

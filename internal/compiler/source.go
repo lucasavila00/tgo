@@ -9,9 +9,21 @@ import (
 )
 
 type edit struct {
-	start int
-	end   int
-	text  string
+	start          int
+	end            int
+	text           string
+	projectionOnly bool
+}
+
+// editsNeedOutput reports whether an edit must appear in emitted Go.
+// New edits affect output unless their creator marks an internal parser projection.
+func editsNeedOutput(edits []edit) bool {
+	for _, edit := range edits {
+		if !edit.projectionOnly {
+			return true
+		}
+	}
+	return false
 }
 
 type field struct {
@@ -80,25 +92,6 @@ type propagationSource struct {
 type comprehensionSource struct {
 	Position token.Pos
 	Map      bool
-}
-
-// initiallyNeedsLowering reports whether parsed TGo syntax changes Go output.
-func (s *source) initiallyNeedsLowering() bool {
-	if len(s.Propagations) > 0 || len(s.Comprehensions) > 0 ||
-		len(s.Exhaustive) > 0 || len(s.NonNil) > 0 || len(s.SuccessReturns) > 0 {
-		return true
-	}
-	for _, declaration := range s.Models {
-		if declaration.Enum || declaration.Predicate != "" {
-			return true
-		}
-		for _, field := range declaration.Fields {
-			if field.Default != "" {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // requiresConstructor reports whether a model type has an invalid zero value.

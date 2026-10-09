@@ -19,6 +19,9 @@ const (
 	// AllErrors reports independent scanner and Go parser errors.
 	// A tgo production error stops extension parsing at the first error.
 	AllErrors
+	// AllowInvalidModels keeps syntactically complete enum declarations when
+	// their variant set is empty or has duplicate names.
+	AllowInvalidModels
 	goSource
 )
 
@@ -479,14 +482,14 @@ func (p *sourceParser) enumDeclaration(
 			return nil, 0, fmt.Errorf("p.variant: %w", tgoErr)
 		}
 		name := p.tokens[variant.name].text
-		if names[name] {
+		if names[name] && p.mode&AllowInvalidModels == 0 {
 			return nil, 0, p.tokenError(variant.name, "duplicate variant %s", name)
 		}
 		names[name] = true
 		declaration.variants = append(declaration.variants, variant)
 		cursor = next
 	}
-	if len(declaration.variants) == 0 {
+	if len(declaration.variants) == 0 && p.mode&AllowInvalidModels == 0 {
 		return nil, 0, p.tokenError(keyword, "enum %s has no variants", p.tokens[start+1].text)
 	}
 	return declaration, skipSemicolon(p.tokens, closing+1), nil

@@ -1,7 +1,7 @@
 # TGo Navigation
 
-This extension adds TGo syntax highlighting, go to definition, find references,
-document symbols, and workspace symbols to desktop VS Code.
+This extension adds TGo syntax highlighting, symbol hover information, go to definition,
+find references, document symbols, and workspace symbols to desktop VS Code.
 
 On macOS, Linux, or another Unix system, run `./vscode.sh` from the TGo repository.
 The script builds the `tgonav` helper for the current host, puts it in a private
