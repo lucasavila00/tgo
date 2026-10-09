@@ -1780,6 +1780,125 @@ func (v *JSONStringField) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	}
 }
 
+// JSONInternalPayloadMethod requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type JSONInternalPayloadMethodTag uint8
+
+const (
+	JSONInternalPayloadMethodTagValue JSONInternalPayloadMethodTag = iota + 1
+)
+
+type JSONInternalPayloadMethod struct {
+	tgoTag   JSONInternalPayloadMethodTag
+	tgoValue JSONInternalPayloadMethodValue
+}
+
+// Tag returns the active tag.
+func (v JSONInternalPayloadMethod) Tag() JSONInternalPayloadMethodTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v JSONInternalPayloadMethod) UnknownTag() string {
+	return fmt.Sprintf("JSONInternalPayloadMethod: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// JSONInternalPayloadMethodValue is the Value payload.
+type JSONInternalPayloadMethodValue struct {
+	Seen string `json:"-"`
+}
+type TgoJSONInternalPayloadMethodValueInput struct {
+	FieldSeen string
+}
+
+// NewJSONInternalPayloadMethodValue constructs JSONInternalPayloadMethod. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func NewJSONInternalPayloadMethodValue(Seen string) JSONInternalPayloadMethod {
+	tgoValue := JSONInternalPayloadMethodValue{Seen}
+	return JSONInternalPayloadMethod{tgoTag: JSONInternalPayloadMethodTagValue, tgoValue: tgoValue}
+}
+
+// ValuePayload requires Value. No tag check.
+func (v JSONInternalPayloadMethod) ValuePayload() JSONInternalPayloadMethodValue { return v.tgoValue }
+
+func (v JSONInternalPayloadMethod) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case JSONInternalPayloadMethodTagValue:
+		payload := v.ValuePayload()
+		payloadData, err := json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+			return nil, fmt.Errorf("expected JSONInternalPayloadMethod JSON payload object")
+		}
+		if len(payloadData) == 2 {
+			return []byte("{\"type\":\"value\"}"), nil
+		}
+		result := make([]byte, 0, len(payloadData)+15)
+		result = append(result, "{\"type\":\"value\""...)
+		result = append(result, ',')
+		result = append(result, payloadData[1:]...)
+		return result, nil
+	default:
+		return nil, fmt.Errorf("invalid JSONInternalPayloadMethod JSON tag")
+	}
+}
+
+func (v JSONInternalPayloadMethod) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case JSONInternalPayloadMethodTagValue:
+		payload := v.ValuePayload()
+		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
+		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
+		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
+		if marshalsJSON || marshalsText || marshalsJSONTo {
+			data, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
+			return out.WriteValue(data)
+		}
+		return jsonv2.MarshalEncode(out, struct {
+			Variant string `json:"type"`
+			JSONInternalPayloadMethodValue
+		}{Variant: "value", JSONInternalPayloadMethodValue: payload})
+	default:
+		return fmt.Errorf("invalid JSONInternalPayloadMethod JSON tag")
+	}
+}
+
+func (v *JSONInternalPayloadMethod) UnmarshalJSON(data []byte) error {
+	var variant string
+	var object struct {
+		Tag string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if object.Tag == "" {
+		return fmt.Errorf("missing JSONInternalPayloadMethod JSON tag")
+	}
+	variant = object.Tag
+	switch variant {
+	case "value":
+		var payload JSONInternalPayloadMethodValue
+		if err := json.Unmarshal(data, &payload); err != nil {
+			return err
+		}
+		*v = NewJSONInternalPayloadMethodValue(payload.Seen)
+		return nil
+	default:
+		return fmt.Errorf("unknown JSONInternalPayloadMethod JSON variant %q", variant)
+	}
+}
+
+func (v *JSONInternalPayloadMethod) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	data, err := in.ReadValue()
+	if err != nil {
+		return err
+	}
+	return v.UnmarshalJSON(data)
+}
+
 // JSONInternalPromotedMethod requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type JSONInternalPromotedMethodTag uint8

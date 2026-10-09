@@ -107,6 +107,40 @@ func TestEnumGeneratedConstructionSurfaceIsPrivateToTGo(t *testing.T) {
 	}
 }
 
+func TestEnumPayloadMethodsCanBeDeclaredInTGo(t *testing.T) {
+	t.Parallel()
+	sources := []File{
+		{
+			Name: "enum.tgo",
+			Data: []byte("package sample\n" +
+				"type Event enum { Ready struct { value string } }\n"),
+		},
+		{
+			Name: "methods.tgo",
+			Data: []byte(`package sample
+func (value EventReady) Label() string { return value.value }
+func (value *EventReady) Clear() { value.value = "" }
+`),
+		},
+	}
+	compiled, problems := Compile(PackageInput{
+		Path: "sample", Sources: sources,
+		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	output := string(compiled.Outputs["methods.tgo"])
+	for _, text := range []string{
+		"func (value EventReady) Label() string",
+		"func (value *EventReady) Clear()",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("generated methods do not contain %q\n%s", text, output)
+		}
+	}
+}
+
 func TestImportedEnumConstructionSurface(t *testing.T) {
 	t.Parallel()
 	dependency, problems := Compile(PackageInput{

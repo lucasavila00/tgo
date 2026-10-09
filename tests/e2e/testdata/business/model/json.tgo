@@ -65,6 +65,10 @@ type JSONStringField enum {
     Value struct { Count int `json:"count,string"` }
 }
 
+type JSONInternalPayloadMethod enum `json:"internal,tag=type"` {
+    Value struct { Seen string `json:"-"` } `json:"value"`
+}
+
 type JSONInternalPromotedMethod enum `json:"internal,tag=type"` {
     Value struct { JSONObject } `json:"value"`
 }
