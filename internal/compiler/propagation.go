@@ -132,8 +132,8 @@ func (p *packageUnit) reportUnloweredExtensions(source *source) {
 		if !ok {
 			return true
 		}
-		if comma, found := source.FailureReturns[statement]; found {
-			p.failAt(comma, "failure return needs a valid function signature")
+		if commas, found := source.FailureReturns[statement]; found {
+			p.failAt(commas[0], "failure return needs a valid function signature")
 		}
 		return true
 	})
@@ -178,9 +178,9 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 	case *ast.ReturnStmt:
 		values, prefix := l.expressions(node.Results)
 		node.Results = values
-		if comma, ok := l.source.FailureReturns[node]; ok {
+		if commas, ok := l.source.FailureReturns[node]; ok {
 			delete(l.source.FailureReturns, node)
-			return l.failureReturn(node, prefix, comma)
+			return l.failureReturn(node, prefix, commas)
 		}
 		return append(prefix, node)
 	case *ast.SendStmt:
@@ -864,7 +864,7 @@ func (l *propagationLowerer) errorBranch(
 	metadata propagationSource,
 	errorName *ast.Ident,
 ) ast.Stmt {
-	zeroValues, body := l.zeroReturnValues(metadata.Bang)
+	zeroValues, body := l.zeroReturnValues(metadata.Bang, len(l.function.resultAST)-1)
 	returnedError := ast.Expr(errorName)
 	if !metadata.Transparent {
 		formatError := l.unit.generatedObject(
@@ -888,18 +888,26 @@ func (l *propagationLowerer) errorBranch(
 	}
 }
 
-// failureReturn adds zero values before one explicit error result.
+// failureReturn adds one zero value for each leading comma.
 func (l *propagationLowerer) failureReturn(
 	statement *ast.ReturnStmt,
 	prefix []ast.Stmt,
-	comma token.Pos,
+	commas []token.Pos,
 ) []ast.Stmt {
+	comma := commas[0]
 	if len(statement.Results) != 1 {
 		l.unit.failAt(comma, "failure return error expression must produce one value")
 		return append(prefix, statement)
 	}
-	if l.function.resultType.Len() < 2 {
-		l.unit.failAt(comma, "failure return needs at least two function results")
+	if len(commas) >= l.function.resultType.Len() {
+		excess := l.function.resultType.Len() - 1
+		if excess < 0 {
+			excess = 0
+		}
+		l.unit.failAt(
+			commas[excess],
+			"failure return has more commas than preceding results",
+		)
 		return append(prefix, statement)
 	}
 	last := l.function.resultType.Len() - 1
@@ -907,18 +915,21 @@ func (l *propagationLowerer) failureReturn(
 		l.unit.failAt(comma, "failure return function must end in the Go error type")
 		return append(prefix, statement)
 	}
-	zeroValues, declarations := l.zeroReturnValues(comma)
+	zeroValues, declarations := l.zeroReturnValues(comma, len(commas))
 	zeroValues = append(zeroValues, statement.Results[0])
 	statement.Results = zeroValues
 	prefix = append(prefix, declarations...)
 	return append(prefix, statement)
 }
 
-// zeroReturnValues makes exact zero values for all results before error.
-func (l *propagationLowerer) zeroReturnValues(position token.Pos) ([]ast.Expr, []ast.Stmt) {
-	zeroValues := make([]ast.Expr, 0, len(l.function.resultAST)-1)
-	declarations := make([]ast.Stmt, 0, len(l.function.resultAST)-1)
-	for index, resultType := range l.function.resultAST[:len(l.function.resultAST)-1] {
+// zeroReturnValues makes exact zero values for the requested leading results.
+func (l *propagationLowerer) zeroReturnValues(
+	position token.Pos,
+	count int,
+) ([]ast.Expr, []ast.Stmt) {
+	zeroValues := make([]ast.Expr, 0, count)
+	declarations := make([]ast.Stmt, 0, count)
+	for index, resultType := range l.function.resultAST[:count] {
 		valueType := l.function.resultType.At(index).Type()
 		if value, ok := l.zeroExpression(
 			valueType,

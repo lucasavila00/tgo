@@ -34,6 +34,10 @@ func Named(err error) (value int, returned error) {
 	return 0, err
 }
 
+func Two(err error) (int, string, error) {
+	return 0, "", err
+}
+
 func (loader) Method(err error) (int, error) {
 	return 0, err
 }

@@ -136,7 +136,8 @@ func (p %sourceParser) rawComprehensionBody(
 ) ([]*rawComprehensionClause, *rawComprehensionResult, error) {
 	start, limit = p.trimComprehensionSemicolons(start, limit)
 	if start >= limit {
-		return , p.tokenError(limit, "comprehension block needs one item")
+		failure := p.tokenError(limit, "comprehension block needs one item")
+		return ,, failure
 	}
 	if p.tokens[start].kind != token.FOR && p.tokens[start].kind != token.IF {
 		result, err := p.rawComprehensionResult(start, limit)
@@ -144,19 +145,20 @@ func (p %sourceParser) rawComprehensionBody(
 	}
 	bodyClose := limit - 1
 	if p.tokens[bodyClose].kind != token.RBRACE {
-		return , p.tokenError(start, "comprehension clause needs a block")
+		failure := p.tokenError(start, "comprehension clause needs a block")
+		return ,, failure
 	}
 	bodyOpen, err := p.openToken(bodyClose)
 	if err != nil {
-		return , err
+		return ,, err
 	}
 	clause, err := p.rawComprehensionClause(start, bodyOpen, bodyClose)
 	if err != nil {
-		return , err
+		return ,, err
 	}
 	children, result, err := p.rawComprehensionBody(bodyOpen+1, bodyClose)
 	if err != nil {
-		return , err
+		return ,, err
 	}
 	return append([]*rawComprehensionClause{clause}, children...), result,
 }

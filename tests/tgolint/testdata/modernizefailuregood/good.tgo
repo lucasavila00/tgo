@@ -27,6 +27,10 @@ func alreadyElided(err error) (int, error) {
 	return , err
 }
 
+func multipleElided(err error) (int, string, error) {
+	return ,, err
+}
+
 func success() (int, error) {
 	return 0,
 }

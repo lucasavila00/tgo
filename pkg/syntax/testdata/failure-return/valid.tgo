@@ -4,8 +4,12 @@ func one(err error) (int, error) {
 	return , err
 }
 
-func nested(err error) func() (string, error) {
-	return func() (string, error) {
-		return /* keep */ , err
+func two(err error) (int, string, error) {
+	return ,, err
+}
+
+func nested(err error) func() (int, string, bool, error) {
+	return func() (int, string, bool, error) {
+		return /* keep */ ,,, err
 	}
 }

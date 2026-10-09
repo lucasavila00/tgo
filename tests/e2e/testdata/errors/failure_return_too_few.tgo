@@ -1,0 +1,5 @@
+package errors
+
+func invalid(err error) (int, string, error) {
+	return , err
+}

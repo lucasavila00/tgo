@@ -55,7 +55,7 @@ type frontFile struct {
 	nonNil            map[token.Pos]bool
 	exhaustiveClauses map[token.Pos]bool
 	successReturns    map[token.Pos]token.Pos
-	failureReturns    map[token.Pos]token.Pos
+	failureReturns    map[token.Pos][]token.Pos
 }
 
 // frontEnumDecl declares a closed enum.

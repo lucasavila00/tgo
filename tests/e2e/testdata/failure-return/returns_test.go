@@ -27,6 +27,10 @@ func TestFailureReturns(t *testing.T) {
 	if value != 0 || err != want {
 		t.Fatalf("Named = %d, %v", value, err)
 	}
+	integer, text, err = Two(want)
+	if integer != 0 || text != "" || err != want {
+		t.Fatalf("Two = %d, %q, %v", integer, text, err)
+	}
 	value, err = (loader{}).Method(want)
 	if value != 0 || err != want {
 		t.Fatalf("Method = %d, %v", value, err)

@@ -224,7 +224,7 @@ func (e *nilEnvironment) checkNilReturn(
 	for _, expression := range statement.Results {
 		e.checkNilExpression(expression, state)
 	}
-	if statement.FailureComma.IsValid() {
+	if len(statement.FailureCommas) > 0 {
 		signature := e.functionSignature(function)
 		if signature != nil && len(statement.Results) == 1 {
 			last := signature.Results().Len() - 1

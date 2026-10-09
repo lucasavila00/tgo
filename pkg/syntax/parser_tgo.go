@@ -96,7 +96,7 @@ type rawSuccessReturn struct {
 
 type rawFailureReturn struct {
 	keyword int
-	comma   int
+	commas  []int
 }
 
 type rawComprehension struct {
@@ -490,14 +490,16 @@ func (p *sourceParser) enumDeclaration(
 		}
 		name := p.tokens[variant.name].text
 		if names[name] && p.mode&AllowInvalidModels == 0 {
-			return nil, 0, p.tokenError(variant.name, "duplicate variant %s", name)
+			failure := p.tokenError(variant.name, "duplicate variant %s", name)
+			return nil, 0, failure
 		}
 		names[name] = true
 		declaration.variants = append(declaration.variants, variant)
 		cursor = next
 	}
 	if len(declaration.variants) == 0 && p.mode&AllowInvalidModels == 0 {
-		return nil, 0, p.tokenError(keyword, "enum %s has no variants", p.tokens[start+1].text)
+		failure := p.tokenError(keyword, "enum %s has no variants", p.tokens[start+1].text)
+		return nil, 0, failure
 	}
 	return declaration, skipSemicolon(p.tokens, closing+1), nil
 }
@@ -506,7 +508,8 @@ func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	if start+2 >= limit || p.tokens[start].kind != token.IDENT ||
 		p.tokens[start+1].kind != token.STRUCT ||
 		p.tokens[start+2].kind != token.LBRACE {
-		return nil, 0, p.tokenError(start, "variant needs Name struct { fields }")
+		failure := p.tokenError(start, "variant needs Name struct { fields }")
+		return nil, 0, failure
 	}
 	closing, err := p.closeToken(start + 2)
 	if err != nil {
@@ -586,7 +589,8 @@ func (p *sourceParser) checkedDeclaration(
 		cursor++
 	}
 	if predicateStart == cursor {
-		return nil, 0, p.tokenError(where, "checked type needs a predicate")
+		failure := p.tokenError(where, "checked type needs a predicate")
+		return nil, 0, failure
 	}
 	declaration := new(rawDecl)
 	declaration.kind = "checked"

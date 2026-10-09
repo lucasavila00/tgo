@@ -64,27 +64,29 @@ func TestParseFileMarksFailureReturns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	marked := 0
+	counts := []int(nil)
 	syntax.Inspect(file, func(node *syntax.Node) bool {
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			return true
 		}
 		returned := syntax.ReturnStatementOf(statement)
-		if returned == nil || !returned.FailureComma.IsValid() {
+		if returned == nil || len(returned.FailureCommas) == 0 {
 			return true
 		}
-		marked++
+		counts = append(counts, len(returned.FailureCommas))
 		if len(returned.Results) != 1 {
 			t.Fatalf("failure return has %d expressions", len(returned.Results))
 		}
-		if source[files.File(returned.FailureComma).Offset(returned.FailureComma)] != ',' {
-			t.Fatal("failure marker is not a comma")
+		for _, comma := range returned.FailureCommas {
+			if source[files.File(comma).Offset(comma)] != ',' {
+				t.Fatal("failure marker is not a comma")
+			}
 		}
 		return true
 	})
-	if marked != 2 {
-		t.Fatalf("marked returns = %d", marked)
+	if !reflect.DeepEqual(counts, []int{1, 2, 3}) {
+		t.Fatalf("failure comma counts = %v", counts)
 	}
 }
 

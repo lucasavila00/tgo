@@ -1,7 +1,7 @@
-modernizefailure/bad.tgo:8:9: return with zero values before final error can use a leading comma
-modernizefailure/bad.tgo:12:9: return with zero values before final error can use a leading comma
-modernizefailure/bad.tgo:16:9: return with zero values before final error can use a leading comma
-modernizefailure/bad.tgo:20:9: return with zero values before final error can use a leading comma
-modernizefailure/bad.tgo:24:9: return with zero values before final error can use a leading comma
-modernizefailure/bad.tgo:28:9: return with zero values before final error can use a leading comma
-modernizefailure/bad.tgo:32:9: return with zero values before final error can use a leading comma
+modernizefailure/bad.tgo:8:9: return with zero values before final error can use leading commas
+modernizefailure/bad.tgo:12:9: return with zero values before final error can use leading commas
+modernizefailure/bad.tgo:16:9: return with zero values before final error can use leading commas
+modernizefailure/bad.tgo:20:9: return with zero values before final error can use leading commas
+modernizefailure/bad.tgo:24:9: return with zero values before final error can use leading commas
+modernizefailure/bad.tgo:28:9: return with zero values before final error can use leading commas
+modernizefailure/bad.tgo:32:9: return with zero values before final error can use leading commas

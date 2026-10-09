@@ -106,12 +106,18 @@ func (p *sourceParser) discoverSuccessReturns() error {
 	return nil
 }
 
-// discoverFailureReturn projects a leading comma out of the return statement.
+// discoverFailureReturn projects leading commas out of the return statement.
 func (p *sourceParser) discoverFailureReturn(keyword int) error {
-	comma := keyword + 1
+	firstComma := keyword + 1
+	commas := []int(nil)
+	cursor := firstComma
+	for cursor < len(p.tokens) && p.tokens[cursor].kind == token.COMMA {
+		commas = append(commas, cursor)
+		cursor++
+	}
 	stack := []token.Token(nil)
 	hasExpression := false
-	for cursor := comma + 1; cursor < len(p.tokens); cursor++ {
+	for ; cursor < len(p.tokens); cursor++ {
 		kind := p.tokens[cursor].kind
 		if len(stack) == 0 {
 			if kind == token.SEMICOLON || kind == token.RBRACE {
@@ -137,17 +143,19 @@ func (p *sourceParser) discoverFailureReturn(keyword int) error {
 		hasExpression = true
 	}
 	if !hasExpression {
-		return p.tokenError(comma, "failure return needs one error expression")
+		return p.tokenError(firstComma, "failure return needs one error expression")
 	}
 	p.failureReturns = append(p.failureReturns, &rawFailureReturn{
 		keyword: keyword,
-		comma:   comma,
+		commas:  commas,
 	})
-	p.edits = append(p.edits, sourceEdit{
-		start: p.tokens[comma].start,
-		end:   p.tokens[comma].end,
-		text:  "",
-	})
+	for _, comma := range commas {
+		p.edits = append(p.edits, sourceEdit{
+			start: p.tokens[comma].start,
+			end:   p.tokens[comma].end,
+			text:  "",
+		})
+	}
 	return nil
 }
 
@@ -298,10 +306,13 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		successReturns[p.pos(p.tokens[item.keyword].start)] =
 			p.pos(p.tokens[item.comma].start)
 	}
-	failureReturns := make(map[token.Pos]token.Pos)
+	failureReturns := make(map[token.Pos][]token.Pos)
 	for _, item := range p.failureReturns {
-		failureReturns[p.pos(p.tokens[item.keyword].start)] =
-			p.pos(p.tokens[item.comma].start)
+		commas := make([]token.Pos, len(item.commas))
+		for index, comma := range item.commas {
+			commas[index] = p.pos(p.tokens[comma].start)
+		}
+		failureReturns[p.pos(p.tokens[item.keyword].start)] = commas
 	}
 	result := &frontFile{
 		frontSpan:         frontSpan{Start: p.file.Pos(0), Stop: p.file.Pos(len(p.source))},

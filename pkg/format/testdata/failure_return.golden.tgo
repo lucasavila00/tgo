@@ -4,6 +4,14 @@ func simple(err error) (int, error) {
 	return , err
 }
 
+func two(err error) (int, string, error) {
+	return ,, err
+}
+
+func separated(err error) (int, string, error) {
+	return , /* zero */ , err
+}
+
 func commented(err error) (string, error) {
 	return /* failure */ , err
 }
@@ -13,8 +21,8 @@ func generic[T any](err error) (T, error) {
 	err
 }
 
-func nested(err error) func() (int, error) {
-	return func() (int, error) {
-		return , err
+func nested(err error) func() (int, string, bool, error) {
+	return func() (int, string, bool, error) {
+		return ,,, err
 	}
 }

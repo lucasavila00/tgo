@@ -120,8 +120,8 @@ report one-result returns, a non-final `nil`, a shadowed `nil`, or an existing t
 
 The same check reports an explicit failure return when every result before the final error is the
 exact zero for its declared type. For example, it reports `return nil, err`, `return 0, err`, and
-longer zero prefixes in favor of `return , err`. It does not report an existing leading comma, a
-nonzero prefix, a final `nil`, or a value that it cannot prove is zero.
+longer zero prefixes in favor of one leading comma per zero result. It does not report existing
+leading commas, a nonzero prefix, a final `nil`, or a value that it cannot prove is zero.
 
 ## Go boundary
 

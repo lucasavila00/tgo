@@ -79,7 +79,7 @@ type source struct {
 	Exhaustive       map[token.Pos]bool
 	NonNil           map[token.Pos]bool
 	SuccessReturns   []*ast.ReturnStmt
-	FailureReturns   map[*ast.ReturnStmt]token.Pos
+	FailureReturns   map[*ast.ReturnStmt][]token.Pos
 	GeneratedHelpers map[string]bool
 	Lowered          bool
 }

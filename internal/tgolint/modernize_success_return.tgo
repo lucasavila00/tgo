@@ -30,7 +30,7 @@ func (c %checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPac
 				}
 				returned := syntax.ReturnStatementOf(statement)
 				if returned == nil || returned.SuccessComma.IsValid() ||
-					returned.FailureComma.IsValid() || len(returned.Results) < 2 {
+					len(returned.FailureCommas) > 0 || len(returned.Results) < 2 {
 					return true
 				}
 				if propagationReturns[returned.Return] {
@@ -51,7 +51,7 @@ func (c %checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPac
 				}
 				c.reportResult(
 					syntax.ExpressionPosition(returned.Results[0]),
-					"return with zero values before final error can use a leading comma",
+					"return with zero values before final error can use leading commas",
 				)
 				return true
 			},
