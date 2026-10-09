@@ -14,6 +14,9 @@ go test ./...
 tgolint ./...
 ```
 
+`tgolint` checks TGo source rules and Go use of generated TGo types. It does
+not check generated files.
+
 `tgo build` checks the current package. `tgo build ./...` checks packages below it.
 Local TGo imports build first. Output goes beside each input: `model.tgo` becomes `model_tgo.go`.
 Commit each generated file beside its TGo source. Do not edit generated files.
