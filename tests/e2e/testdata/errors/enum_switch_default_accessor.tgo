@@ -1,0 +1,15 @@
+package invalid
+
+type A enum {
+	One struct { Name string }
+	Two struct { Name string }
+}
+
+func name(value A) string {
+	switch value.Tag() {
+	case ATagOne:
+		return value.OnePayload().Name
+	default:
+		return value.OnePayload().Name
+	}
+}

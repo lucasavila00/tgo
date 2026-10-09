@@ -811,6 +811,6 @@ func DefaultPayload(event model.Event) string {
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	default:
-		return event.StoppedPayload().Reason
+		return event.StartedPayload().ID
 	}
 }

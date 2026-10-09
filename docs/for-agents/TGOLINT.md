@@ -18,7 +18,7 @@ Fix every diagnostic. The command checks loaded Go packages for:
 - possibly nil or unknown pointers used as `%T`;
 - unsafe `%T` zero values, literals, collections, calls, and function values; and
 - sequential `iota` sets in handwritten `.tgo` files; and
-- manual error wrappers that postfix `!` replaces exactly; and
+- manual error returns that postfix `!` or `!!` replaces exactly; and
 - the same errors through control flow, wrappers, embedding, and generics.
 
 You can return an unchanged result pair. Otherwise, check `err` or `ok` before you
@@ -27,7 +27,8 @@ closure. Keep both variables local to the function. Check the pair before a
 `goto`, `break`, `continue`, or `fallthrough`.
 
 Use `switch value.Tag()` for an enum value or pointer. Use `exhaustive:` to require every declared
-tag, or use `default:` for fallback behavior. Read only the payload for one explicit tag.
+tag, or use `default:` for fallback behavior. Read a payload only when the clause flow has one
+possible tag. A default has the union of omitted variants.
 Do not call generated enum methods through a structural interface or an open
 generic constraint.
 Calls outside a recognized canonical switch do not get contextual payload checks.
@@ -44,9 +45,9 @@ follow that closure through a local variable or another helper.
 Replace a reported `iota` set with a TGo enum. Keep explicit integer conversion code when the
 old values are part of a stored format, protocol, or Go boundary. Bit sets remain valid.
 
-Replace a reported manual error branch with postfix `!`. The diagnostic proves that the call,
-zero return values, wrapper text, and control flow match the generated code. Keep a manual branch
-when `tgolint` does not report it.
+Replace a reported manual error branch with the postfix form in the diagnostic. The diagnostic
+proves that the call, zero return values, error value or wrapper text, and control flow match the
+generated code. Keep a manual branch when `tgolint` does not report it.
 
 For `%T`, prove a possibly nil pointer non-nil before use. The checker follows nil comparisons,
 Boolean guards, direct aliases, branches, loops, and early exits. A comma-ok map read or channel

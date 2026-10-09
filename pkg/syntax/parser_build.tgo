@@ -78,14 +78,11 @@ func (p %sourceParser) makeComprehension(
 		Rbrace: p.pos(p.tokens[raw.close].start),
 	}
 	for _, clause := range raw.clauses {
-		expression, found, err := p.parseExpression(
+		expression, found := p.parseExpression(
 			p.tokens[clause.expressionStart].start,
 			p.tokens[clause.expressionEnd].start,
 			defaultAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
+		)!!
 		for child, parent := range found {
 			anchors[child] = parent
 		}
@@ -176,10 +173,7 @@ func (p %sourceParser) makeDeclaration(
 			Comment:  nil,
 		}
 		for _, rawVariant := range raw.variants {
-			fields, fieldAnchors, err := p.makeFields(rawVariant.fields, defaultAt)
-			if err != nil {
-				return nil, nil, err
-			}
+			fields, fieldAnchors := p.makeFields(rawVariant.fields, defaultAt)!!
 			variant := &frontVariantDecl{
 				frontSpan: frontSpan{
 					Start: p.pos(rawVariant.start),
@@ -205,10 +199,7 @@ func (p %sourceParser) makeDeclaration(
 		}
 		return node, anchors, nil
 	case "struct":
-		fields, fieldAnchors, err := p.makeFields(raw.fields, defaultAt)
-		if err != nil {
-			return nil, nil, err
-		}
+		fields, fieldAnchors := p.makeFields(raw.fields, defaultAt)!!
 		for extension, parent := range fieldAnchors {
 			anchors[extension] = parent
 		}
@@ -272,10 +263,7 @@ func (p %sourceParser) makeFields(
 		if raw.assign >= 0 {
 			declarationEnd = raw.assign
 		}
-		field, err := p.parseField(raw.start, declarationEnd)
-		if err != nil {
-			return nil, nil, err
-		}
+		field := p.parseField(raw.start, declarationEnd)!!
 		var defaultValue ast.Expr = nil
 		assign := token.NoPos
 		if raw.assign >= 0 {
@@ -283,14 +271,11 @@ func (p %sourceParser) makeFields(
 				return nil, nil, p.tokenError(raw.start, "embedded fields cannot have defaults")
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
-			parsedDefault, expressionAnchors, parseErr := p.parseExpression(
+			parsedDefault, expressionAnchors := p.parseExpression(
 				p.tokens[raw.assign+1].start,
 				p.tokens[raw.end-1].end,
 				defaultAt,
-			)
-			if parseErr != nil {
-				return nil, nil, parseErr
-			}
+			)!!
 			defaultValue = parsedDefault
 			for extension, parent := range expressionAnchors {
 				anchors[extension] = parent

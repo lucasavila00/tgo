@@ -19,6 +19,9 @@ func (e *nilEnvironment) transferNilNode(
 	function ast.Node,
 	report bool,
 ) {
+	if state == nil || !state.reachable {
+		return
+	}
 	if report {
 		e.checkNilNode(state, node, function)
 	}
@@ -234,7 +237,7 @@ func (e *nilEnvironment) checkNilNamedResults(
 					e.reportNil(statement.Pos(), "bare return cannot set a non-nil result")
 				} else {
 					name := field.Names[fieldIndex]
-					if !isNonNilValue(e.expressionNilValue(name, state)) {
+					if !isNonNilType(e.expressionNilType(name, state)) {
 						e.reportNil(name.Pos(), "named result is not proven non-nil")
 					}
 				}
@@ -296,11 +299,11 @@ func (e *nilEnvironment) checkNilFlow(
 		return
 	}
 	actual := e.contractForExpression(expression)
-	value := e.expressionNilValue(expression, state)
-	if expected[""] && !isNonNilValue(value) {
+	value := e.expressionNilType(expression, state)
+	if expected[""] && !isNonNilType(value) {
 		e.reportNil(expression.Pos(), "value is not proven non-nil for %%T")
 	}
-	if !expected[""] && isProvenNilValue(value) {
+	if !expected[""] && isNilOnlyType(value) {
 		return
 	}
 	e.checkNilContractCompatibility(expression.Pos(), expected, actual)

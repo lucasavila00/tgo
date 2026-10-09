@@ -6,6 +6,8 @@ import (
 	"go/token"
 	"go/types"
 	"strings"
+
+	"tgo/internal/variantflow"
 )
 
 // checkEnumSwitches checks exhaustive enum tag switches and records permitted accessors.
@@ -42,6 +44,9 @@ func (p *packageUnit) checkEnumSwitch(
 	}
 	safe[selector] = true
 	seen := make(map[int]bool)
+	clauseTypes := make(map[*ast.CaseClause]variantflow.Type)
+	declaredType := variantflow.All(len(model.Variants))
+	explicitType := variantflow.Never()
 	hasSentinelDefault := false
 	hasDefault := false
 	labelsResolved := true
@@ -56,28 +61,33 @@ func (p *packageUnit) checkEnumSwitch(
 			hasSentinelDefault = p.enumDefaultIsExhaustive(
 				clause, receiver, model, exhaustive[clause.Case],
 			)
-			p.checkEnumCaseAccessors(
-				clause, statement, receiver, model, nil, true,
-				parents, safe, handled,
-			)
 			continue
 		}
 		tags, resolved := p.enumCaseTags(clause, model, tagType, seen)
 		labelsResolved = labelsResolved && resolved
+		clauseTypes[clause] = variantflow.Intersect(declaredType, enumVariantType(tags))
+		explicitType = variantflow.Union(explicitType, clauseTypes[clause])
 		for tag := range tags {
 			seen[tag] = true
 		}
+	}
+	defaultType := variantflow.Without(declaredType, explicitType)
+	for _, item := range statement.Body.List {
+		clause := item.(*ast.CaseClause)
+		flowType, explicitClause := clauseTypes[clause]
+		defaultClause := !explicitClause
+		if defaultClause {
+			flowType = defaultType
+		}
 		p.checkEnumCaseAccessors(
-			clause, statement, receiver, model, tags, false,
+			clause, statement, receiver, model, flowType, defaultClause,
 			parents, safe, handled,
 		)
 	}
 	if labelsResolved && hasSentinelDefault {
 		var missing []string
-		for tag := 1; tag <= len(model.Variants); tag++ {
-			if !seen[tag] {
-				missing = append(missing, enumTagConstant(model, tag))
-			}
+		for _, tag := range variantflow.Tags(defaultType) {
+			missing = append(missing, enumTagConstant(model, tag))
 		}
 		if len(missing) > 0 {
 			p.fail(statement, "%s: switch is missing cases: %s",
@@ -87,6 +97,14 @@ func (p *packageUnit) checkEnumSwitch(
 	if !hasDefault {
 		p.fail(statement, "%s: switch must have a default clause", model.Name)
 	}
+}
+
+func enumVariantType(tags map[int]bool) variantflow.Type {
+	result := variantflow.Never()
+	for tag := range tags {
+		result = variantflow.Union(result, variantflow.Variant(tag))
+	}
+	return result
 }
 
 func (p *packageUnit) enumDefaultIsExhaustive(
@@ -338,7 +356,7 @@ func (p *packageUnit) checkEnumCaseAccessors(
 	tagSwitch *ast.SwitchStmt,
 	receiver ast.Expr,
 	model *model,
-	tags map[int]bool,
+	flowType variantflow.Type,
 	defaultClause bool,
 	parents map[ast.Node]ast.Node,
 	safe map[*ast.SelectorExpr]bool,
@@ -371,18 +389,17 @@ func (p *packageUnit) checkEnumCaseAccessors(
 				return true
 			}
 			handled[selector] = true
-			if len(tags) == 1 && tags[tag] {
+			active, narrowed := variantflow.Singleton(flowType)
+			if narrowed && active == tag {
 				safe[selector] = true
 				return true
 			}
 			caseName := "default"
-			if !defaultClause && len(tags) != 1 {
+			if !defaultClause && !narrowed {
 				caseName = "a multi-tag case"
 			}
-			if !defaultClause && len(tags) == 1 {
-				for active := range tags {
-					caseName = "case " + enumTagConstant(model, active)
-				}
+			if !defaultClause && narrowed {
+				caseName = "case " + enumTagConstant(model, active)
 			}
 			p.fail(selector, "%s: %s called under %s",
 				model.Name, selector.Sel.Name, caseName)
