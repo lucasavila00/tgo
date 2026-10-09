@@ -3,12 +3,12 @@ package tgolint
 import (
 	"go/types"
 
-	"tgo/internal/compiler"
+	"tgo/internal/sourceanalysis"
 	"tgo/pkg/syntax"
 )
 
 // checkSuccessReturnModernization finds explicit final nil return values.
-func (c %checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPackage) {
+func (c %checker) checkSuccessReturnModernization(analysis *sourceanalysis.Package) {
 	if analysis == nil || analysis.Facts == nil {
 		return
 	}
