@@ -6,6 +6,8 @@ when you create the ADR.
 Keep the ADR small:
 
 - Target 30 to 80 lines.
+- Wrap prose at 80 characters. Do not put multiple sentences on one long line
+  to reduce the line count.
 - If the ADR exceeds 100 lines, remove detail or split the decision.
 - State one decision. Do not combine independent proposals.
 - Show the exact public API or data shape when it is the decision.
@@ -20,8 +22,6 @@ Use only the sections that help the decision.
 
 ```markdown
 # <Decision title>
-
-Status: proposed
 
 ## Context
 
@@ -41,11 +41,4 @@ boundary when applicable. Include one or two short examples.>
 
 <Optional. Include only serious alternatives that affect approval. Give each
 alternative one short paragraph.>
-
-## Implementation status
-
-<State whether implementation is deferred, active, or complete.>
 ```
-
-Before review, remove empty optional sections and verify that each remaining
-paragraph helps a reviewer approve or reject the decision.
