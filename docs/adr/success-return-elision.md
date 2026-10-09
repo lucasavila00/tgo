@@ -1,69 +1,67 @@
-# Elide the final nil error on success
+# Mark an elided success error with a trailing comma
 
 ## Problem
 
-Postfix `!` and `!!` remove the repeated failure branch. The success return still repeats `, nil`
-in each function that returns a value and an error.
+Postfix `!` and `!!` remove repeated failure branches. Successful returns still repeat `nil`:
 
 ```go
 func LoadName(repo Repo, id ID) (string, error) {
 	user := repo.Find(id)!
-	return user.Name
+	return user.Name, nil
 }
 ```
 
-## Decision
+Changing `return user.Name` would assign new behavior to Go syntax. It would also need type
+information to distinguish one value from a call that returns the complete result tuple. TGo must
+preserve valid Go source when it contains no TGo syntax.
 
-A return can omit exactly one final result when that result is the predeclared `error` type. An
-alias of `error` qualifies. A new defined error type and a type parameter constrained by `error`
-do not qualify.
+## Proposal
 
-The return must have one or more expressions. They must supply all results before the final error
-under Go assignment rules. This rule applies to functions, methods, and function literals. It
-also applies to named results and generic earlier results.
+A trailing comma in a non-empty return list marks one elided `nil`:
 
 ```go
-func Keep[T any](value T) (T, error) { return value }
-func Named(value string) (result string, err error) { return value }
+func LoadName(repo Repo, id ID) (string, error) {
+	user := repo.Find(id)!
+	return user.Name,
+}
 ```
 
-A bare `return` keeps its Go meaning. A function that returns only `error` must use `return nil`.
-The rule does not omit two or more results.
-
-A single multi-value expression can supply all earlier results:
+The compiler lowers it mechanically:
 
 ```go
-func Pair() (int, string)
-func LoadPair() (int, string, error) { return Pair() }
+return user.Name, nil
 ```
 
-The compiler evaluates `Pair` once, stores its results in fresh values, and returns those values
-followed by `nil`.
+The grammar extension is:
 
-## Resolution and lowering
+```text
+TGoReturn = "return" ExpressionList "," .
+```
 
-The compiler first tests the return against the complete result tuple. If it is valid Go, the
-compiler does not change it. Thus, `return load()` stays unchanged when `load` already returns
-every result, including its error.
+The comma is required. Bare `return`, `return value`, and `return value, nil` keep their Go
+behavior. All valid Go return statements remain unchanged.
 
-If the complete test fails, the compiler tests the expressions against the result tuple without
-its final error. It uses the existing package `types.Info`, Go assignability, and inferred generic
-instances. It does not add a checker or a type inference system.
+The rule does not inspect the enclosing result list or the expression types. It works in a
+function, method, or function literal when the lowered return is valid Go. The normal package
+check reports a result count, assignment, or `nil` error at the original return when it is not
+valid.
 
-The pass records eligible source returns after the first package type check. Existing expression
-lowering then runs. The pass appends a generated `nil` after scalar results. For one multi-value
-expression, it emits one direct assignment to fresh values before the return. This adds no
-closure, helper call, or allocation.
+The compiler inserts exactly one `nil`. For example, `return first, second,` becomes
+`return first, second, nil`. A call remains one expression, so `return Pair(),` becomes
+`return Pair(), nil`; Go accepts or rejects that output by its normal return rules. A caller can
+bind multiple results first when needed.
 
-Propagation lowering runs before the final return is emitted. Thus, `return load()!` uses the same
-rule, and its generated failure branch keeps its wrapped error. The normal post-lowering package
-check validates the emitted Go.
+Postfix propagation lowers before the return is emitted:
 
-Explicit expressions keep their source positions. Generated values and `nil` use the return
-statement position. Diagnostics do not report a synthetic file or line.
+```go
+return repo.Find(id)!,
+return repo.Find(id)!!,
+```
 
-## Diagnostics and compatibility
+Each propagation operator keeps its current failure behavior. The trailing comma adds only the
+success `nil`.
 
-This change adds no token and does not change a valid Go return. If the final result is not
-`error`, the result count differs by more than one, or an earlier value is not assignable, the
-compiler reports the normal Go return diagnostic at the original statement.
+The parser records the trailing comma as TGo syntax and creates the synthetic `nil` at the comma
+position. No new type query, inference pass, helper, closure, or runtime operation is required.
+Because the source contains an explicit TGo token, ordinary-Go byte identity does not apply to
+this return.
