@@ -221,8 +221,10 @@ Go rejects a direct recursive payload when its size is infinite.
 
 ### Enum JSON
 
-Every enum has generated `MarshalJSON` and `UnmarshalJSON` methods. Go callers use
-`encoding/json` with the enum value. Normal structs keep the standard Go JSON behavior.
+Every enum has generated `MarshalJSON`, `MarshalJSONTo`, `UnmarshalJSON`, and
+`UnmarshalJSONFrom` methods. Go callers use `encoding/json` with the enum value. Go 1.27 uses
+the streaming methods. Direct method calls keep the byte-slice API. Normal structs keep the
+standard Go JSON behavior.
 
 An optional Go struct tag after `enum` selects the JSON form. A tag after a variant payload
 sets its wire name. The default wire name is the variant name. Wire names must be nonempty
@@ -266,15 +268,19 @@ can break stored data or clients.
 
 #### Allocation behavior
 
-Generated enum JSON must not marshal the selected payload more than once. Tagged decoding must not
-decode the selected payload more than once. Untagged decoding can try each payload in declaration
-order. Generated code must not build an intermediate map unless the wire form or Go JSON
-compatibility requires one. Payload fields and custom methods keep their normal `encoding/json`
-allocation behavior. Go escape analysis and the Go version can change measured counts, so numeric
-limits are not language behavior.
+Generated enum JSON must stream the envelope through the active Go 1.27 encoder or decoder when
+the wire form permits it. It must not build a complete enum buffer or map only to encode or decode
+that envelope.
 
-JSON decoding uses reflection. It does not enforce `%T` contracts. Missing or null data can produce
-an invalid TGo value without a JSON error.
+Allocations can come from public `encoding/json` state and interface conversion, marshaled byte
+slices, payload fields and custom JSON methods, copied raw payload or content values, decoded
+member names, each untagged decode attempt, boxed payloads that escape, and returned errors. `Tag`,
+inline construction, and inline payload access add no explicit heap allocation. Go escape analysis
+can still move values to the heap.
+
+JSON decoding uses reflection. It does not enforce `%T` contracts. Input for a `%T` payload field
+must contain a non-null value. Missing or null data can produce an invalid TGo value without a JSON
+error.
 
 ### Go API
 

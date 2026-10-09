@@ -85,6 +85,85 @@ func TestEnumJSONDecodeFailureKeepsReceiver(t *testing.T) {
 	}
 }
 
+func TestEnumJSONExternalDuplicateNames(t *testing.T) {
+	var value JSONExternal
+	if err := json.Unmarshal(
+		[]byte(`{"created":{"account_id":7},"created":{"account_id":"last"}}`),
+		&value,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if value.Tag() != JSONExternalTagCreated || value.CreatedPayload().ID != "last" {
+		t.Fatalf("last duplicate value was not selected: %#v", value)
+	}
+
+	value = (JSONExternalCreated{ID: "old"}).JSONExternal()
+	err := json.Unmarshal(
+		[]byte(`{"created":{"account_id":"first"},"created":{"account_id":7}}`),
+		&value,
+	)
+	if err == nil {
+		t.Fatal("invalid last duplicate value succeeded")
+	}
+	if value.Tag() != JSONExternalTagCreated || value.CreatedPayload().ID != "old" {
+		t.Fatalf("failed duplicate decode changed the receiver: %#v", value)
+	}
+
+	for _, test := range []struct {
+		input string
+		want  string
+	}{
+		{`{"other":{},"other":{}}`, "unknown JSONExternal JSON variant"},
+		{`{"created":{},"Empty":{}}`, "expected one JSONExternal JSON variant"},
+	} {
+		if err := json.Unmarshal([]byte(test.input), &value); err == nil ||
+			!strings.Contains(err.Error(), test.want) {
+			t.Fatalf("Unmarshal(%s) error = %v, want %q", test.input, err, test.want)
+		}
+	}
+}
+
+func TestEnumJSONDirectMethods(t *testing.T) {
+	value := (JSONAdjacentCreated{ID: "a1"}).JSONAdjacent()
+	data, err := value.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	const wire = `{"type":"created","data":{"account_id":"a1"}}`
+	if string(data) != wire {
+		t.Fatalf("MarshalJSON() = %s, want %s", data, wire)
+	}
+	var decoded JSONAdjacent
+	if err := decoded.UnmarshalJSON([]byte(wire)); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Tag() != JSONAdjacentTagCreated || decoded.CreatedPayload().ID != "a1" {
+		t.Fatalf("UnmarshalJSON() = %#v", decoded)
+	}
+}
+
+func TestEnumJSONAdjacentStreamMatchesDirectMethod(t *testing.T) {
+	for _, input := range []string{
+		`{"TYPE":"created","DATA":{"account_id":"folded"}}`,
+		`{"type":"created","type":null,"data":{"account_id":"null"}}`,
+		`{"type":"created","data":7,"data":{"account_id":"last"}}`,
+		`{"type":7,"type":"created","data":{}}`,
+		`{"type":"other","data":{}}`,
+		`{"type":"created"}`,
+	} {
+		var streamed JSONAdjacent
+		streamErr := json.Unmarshal([]byte(input), &streamed)
+		var direct JSONAdjacent
+		directErr := direct.UnmarshalJSON([]byte(input))
+		if (streamErr == nil) != (directErr == nil) {
+			t.Fatalf("Unmarshal(%s) stream error = %v, direct error = %v", input, streamErr, directErr)
+		}
+		if streamErr == nil && streamed != direct {
+			t.Fatalf("Unmarshal(%s) stream = %#v, direct = %#v", input, streamed, direct)
+		}
+	}
+}
+
 func TestEnumJSONOrderAndPayloadRules(t *testing.T) {
 	var value JSONUntagged
 	if err := json.Unmarshal([]byte(`{"value":"text"}`), &value); err != nil {

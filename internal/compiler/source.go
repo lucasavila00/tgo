@@ -49,18 +49,24 @@ type model struct {
 }
 
 type source struct {
-	JSONPackage    string
-	FmtPackage     string
-	Name           string
-	Data           []byte
-	Tree           *syntax.File
-	File           *ast.File
-	Models         []*model
-	DefaultMarker  string
-	Propagations   map[string]propagationSource
-	Comprehensions map[string]comprehensionSource
-	Exhaustive     map[token.Pos]bool
-	NonNil         map[token.Pos]bool
+	JSONPackage      string
+	JSONV2Package    string
+	JSONTextPackage  string
+	StringsPackage   string
+	FmtPackage       string
+	ExternalJSONTo   string
+	AdjacentJSONTo   string
+	Name             string
+	Data             []byte
+	Tree             *syntax.File
+	File             *ast.File
+	Models           []*model
+	DefaultMarker    string
+	Propagations     map[string]propagationSource
+	Comprehensions   map[string]comprehensionSource
+	Exhaustive       map[token.Pos]bool
+	NonNil           map[token.Pos]bool
+	GeneratedHelpers map[string]bool
 }
 
 type propagationSource struct {

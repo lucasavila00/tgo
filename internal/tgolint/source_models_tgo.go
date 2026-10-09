@@ -4,6 +4,8 @@
 package tgolint
 
 import __tgo_json "encoding/json"
+import __tgo_jsonv2 "encoding/json/v2"
+import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
 import (
@@ -257,6 +259,19 @@ func (c *checker) packagePath() string {
 	return c.pass.Pkg.Path()
 }
 
+func __tgo_sourceModel_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(__tgo_jsontext.EndObject)
+}
+
 // sourceModel requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type sourceModelTag uint8
@@ -350,6 +365,22 @@ func (v sourceModel) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v sourceModel) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case sourceModelTagChecked:
+		payload := v.CheckedPayload()
+		return __tgo_sourceModel_external_json_to(out, "Checked", payload)
+	case sourceModelTagEnum:
+		payload := v.EnumPayload()
+		return __tgo_sourceModel_external_json_to(out, "Enum", payload)
+	case sourceModelTagStruct:
+		payload := v.StructPayload()
+		return __tgo_sourceModel_external_json_to(out, "Struct", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid sourceModel JSON tag")
+	}
+}
+
 func (v *sourceModel) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -388,6 +419,93 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown sourceModel JSON variant %q", variant)
+	}
+}
+
+func (v *sourceModel) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one sourceModel JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Checked":
+			current = 1
+		case "Enum":
+			current = 2
+		case "Struct":
+			current = 3
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one sourceModel JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown sourceModel JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload sourceModelChecked
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.sourceModel()
+		return nil
+	case 2:
+		var payload sourceModelEnum
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.sourceModel()
+		return nil
+	case 3:
+		var payload sourceModelStruct
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.sourceModel()
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid sourceModel JSON tag")
 	}
 }
 
