@@ -111,15 +111,16 @@ func decodeNilContract(fact *nilContractWireFactV2) nilContract {
 }
 
 type nilEnvironment struct {
-	pass      *analysis.Pass
-	files     []*syntax.File
-	facts     *sourcefacts.Index
-	pkg       *types.Package
-	markers   map[token.Pos]bool
-	contracts map[types.Object]nilContract
-	exports   map[types.Object]nilContract
-	parents   map[syntax.Node]*syntax.Node
-	reported  map[diagnosticKey]bool
+	pass           *analysis.Pass
+	files          []*syntax.File
+	facts          *sourcefacts.Index
+	pkg            *types.Package
+	markers        map[token.Pos]bool
+	contracts      map[types.Object]nilContract
+	exports        map[types.Object]nilContract
+	parents        map[syntax.Node]*syntax.Node
+	comprehensions map[token.Pos][]*syntax.ComprehensionExpression
+	reported       map[diagnosticKey]bool
 }
 
 func newNilEnvironment(
@@ -131,10 +132,11 @@ func newNilEnvironment(
 ) *nilEnvironment {
 	return &nilEnvironment{
 		pass: pass, files: files, facts: facts, pkg: pkg, markers: markers,
-		contracts: make(map[types.Object]nilContract),
-		exports:   make(map[types.Object]nilContract),
-		parents:   make(map[syntax.Node]*syntax.Node),
-		reported:  make(map[diagnosticKey]bool),
+		contracts:      make(map[types.Object]nilContract),
+		exports:        make(map[types.Object]nilContract),
+		parents:        make(map[syntax.Node]*syntax.Node),
+		comprehensions: make(map[token.Pos][]*syntax.ComprehensionExpression),
+		reported:       make(map[diagnosticKey]bool),
 	}
 }
 
@@ -308,6 +310,22 @@ func (e *nilEnvironment) addParents(file *syntax.File) {
 		}
 		return true
 	})
+	for _, node := range syntax.Extensions(file) {
+		comprehension, ok := syntax.ComprehensionExpressionOf(node)
+		if !ok || comprehension == nil {
+			continue
+		}
+		for parent := syntax.Parent(file, node); parent != nil; parent = syntax.Parent(file, parent) {
+			expression, expressionOK := syntax.ExpressionOf(parent)
+			if expressionOK && syntax.CompositeLiteralOf(expression) != nil {
+				position := syntax.ExpressionPosition(expression)
+				e.comprehensions[position] = append(
+					e.comprehensions[position], comprehension,
+				)
+				break
+			}
+		}
+	}
 }
 
 func (e *nilEnvironment) setContract(object types.Object, contract nilContract) {

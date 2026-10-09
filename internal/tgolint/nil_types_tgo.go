@@ -346,7 +346,7 @@ func declaredNilType(typ types.Type) nilType {
 
 func typeCanBeNil(typ types.Type) bool {
 	if typ == nil {
-		return false
+		return true
 	}
 	if _, parameter := types.Unalias(typ).(*types.TypeParam); parameter {
 		return true
