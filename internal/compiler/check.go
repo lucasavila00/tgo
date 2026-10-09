@@ -418,8 +418,3 @@ func interfaceType(typ types.Type) bool {
 	_, ok := typ.Underlying().(*types.Interface)
 	return ok
 }
-
-type presenceGuard struct {
-	branch *ast.IfStmt
-	value  *ast.Ident
-}

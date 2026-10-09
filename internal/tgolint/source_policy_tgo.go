@@ -46,16 +46,22 @@ func (c *checker) checkSourcePolicies(analysis *compiler.AnalysisPackage) {
 
 func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
 	if function, ok := syntax.FunctionDeclarationOf(node); ok {
-		if function != nil && function.Body != nil {
-			c.checkConstructors(node, function.Body)
-			c.checkNamedResultAssignments(function.Type, function.Body)
+		if function != nil {
+			functionType, body := function.Type, function.Body
+			if functionType != nil && body != nil {
+				c.checkConstructors(node, body)
+				c.checkNamedResultAssignments(functionType, body)
+			}
 		}
 		return
 	}
 	if literal, ok := syntax.FunctionLiteralOf(node); ok {
-		if literal != nil && literal.Body != nil {
-			c.checkConstructors(node, literal.Body)
-			c.checkNamedResultAssignments(literal.Type, literal.Body)
+		if literal != nil {
+			functionType, body := literal.Type, literal.Body
+			if functionType != nil && body != nil {
+				c.checkConstructors(node, body)
+				c.checkNamedResultAssignments(functionType, body)
+			}
 		}
 		return
 	}
