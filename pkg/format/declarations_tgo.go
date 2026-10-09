@@ -35,6 +35,7 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 	}
 	p.space()
 	p.token(value.Lparen, "(")
+	p.trailingToken(value.Lparen, 1)
 	if len(value.Specs) == 0 {
 		gap := p.sourceGap(value.Lparen, value.Rparen)
 		if gap.leadingComment {
