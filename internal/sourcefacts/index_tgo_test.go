@@ -93,7 +93,7 @@ func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
 		definitions: []objectFact{{
 			position: definitionPosition, name: "value", object: object,
 		}},
-		uses: []objectFact{{position: usePosition, object: object}},
+		uses: []objectFact{{position: usePosition, name: "", object: object}},
 	}, files)
 	definition, use := sourceIdentifiers(t, parsed)
 	if definition == nil || use == nil {

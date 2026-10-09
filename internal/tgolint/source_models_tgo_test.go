@@ -107,20 +107,29 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseFile generated: %v", err)
 	}
+	checkedGenerated := requireSourceModelFile(t, generated)
 	source, err := syntax.ParseFile(files, "model.tgo", data, syntax.AllErrors)
 	if err != nil {
 		t.Fatalf("ParseFile: %v", err)
 	}
-	facts := sourcefacts.New(generated, new(types.Info), files)
+	facts := sourcefacts.New(checkedGenerated, new(types.Info), files)
 	check := sourceModelTestChecker(pass, facts)
 	check.checkSourceDeclaration(
-		generated, "model.tgo", source, source.Declarations[0],
+		checkedGenerated, "model.tgo", source, source.Declarations[0],
 		files.File(source.Package), data,
 	)
 	want := "generated tgo output for Missing does not match model.tgo"
 	if message != want {
 		t.Fatalf("diagnostic: %q", message)
 	}
+}
+
+func requireSourceModelFile(t *testing.T, value *syntax.File) *syntax.File {
+	t.Helper()
+	if value == nil {
+		t.Fatal("syntax file is nil")
+	}
+	return value
 }
 
 func sourceModelTestChecker(
