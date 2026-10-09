@@ -62,9 +62,9 @@ func (b *packageBuilder) build(path string) error {
 		return err
 	}
 	if len(unit.Sources) == 0 {
-		imports, tgoErr := b.localGoImports(path)
-		if tgoErr != nil {
-			return tgoErr
+		imports, err_1 := b.localGoImports(path)
+		if err_1 != nil {
+			return err_1
 		}
 		for _, dependency := range imports {
 			if err := b.buildImport(dependency); err != nil {
@@ -84,9 +84,9 @@ func (b *packageBuilder) build(path string) error {
 			return err
 		}
 	}
-	outputs, tgoErr2 := b.compile(unit)
-	if tgoErr2 != nil {
-		return tgoErr2
+	outputs, err_2 := b.compile(unit)
+	if err_2 != nil {
+		return err_2
 	}
 	if b.write {
 		for _, name := range sortedOutputPaths(outputs) {
@@ -202,9 +202,9 @@ func loadExportPaths(unit *packageUnit) (map[string]string, error) {
 // buildImport follows local Go packages until it reaches each tgo package.
 func (b *packageBuilder) buildImport(path string) error {
 	if dependency := b.packages[path]; dependency != nil {
-		available, tgoErr := dependency.available()
-		if tgoErr != nil {
-			return tgoErr
+		available, err_1 := dependency.available()
+		if err_1 != nil {
+			return err_1
 		}
 		if available {
 			return b.build(path)
@@ -220,9 +220,9 @@ func (b *packageBuilder) buildImport(path string) error {
 		return fmt.Errorf("import cycle at %s", path)
 	}
 	b.states[path] = buildActive
-	imports, tgoErr2 := b.localGoImports(path)
-	if tgoErr2 != nil {
-		return tgoErr2
+	imports, err_2 := b.localGoImports(path)
+	if err_2 != nil {
+		return err_2
 	}
 	for _, dependency := range imports {
 		if err := b.buildImport(dependency); err != nil {
@@ -261,9 +261,9 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 	}
 	files := make([]*syntax.File, 0)
 	for _, entry := range entries {
-		file, _, _, tgoErr := activeGoFile(b.context, directory, entry)
-		if tgoErr != nil {
-			return nil, tgoErr
+		file, _, _, err_1 := activeGoFile(b.context, directory, entry)
+		if err_1 != nil {
+			return nil, err_1
 		}
 		if file != nil {
 			files = append(files, file)

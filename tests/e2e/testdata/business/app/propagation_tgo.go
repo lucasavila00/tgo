@@ -161,12 +161,12 @@ func PropagationNested(events *[]string, found bool) (string, error) {
 func PropagationAssignment(events *[]string, found bool) ([]int, error) {
 	values := []int{0}
 	operand := propagationTarget(events, values)
-	tgoOperand := propagationIndex(events)
+	operand_1 := propagationIndex(events)
 	result, err := propagationLoad(events, found)
 	if err != nil {
 		return nil, fmt.Errorf("propagationLoad: %w", err)
 	}
-	operand[tgoOperand] = result
+	operand[operand_1] = result
 
 	return values, nil
 }
@@ -387,12 +387,12 @@ func PropagationSwitchInitializer(events *[]string, found bool) (string, error) 
 
 func PropagationLabeledSwitch(found bool) (string, error) {
 	result := "before"
-	tgoResult, err := propagationCode(found)
+	result_1, err := propagationCode(found)
 	if err != nil {
 		return "", fmt.Errorf("propagationCode: %w", err)
 	}
 outer:
-	switch tgoResult {
+	switch result_1 {
 	case 2:
 		result = "two"
 		break outer
@@ -407,12 +407,12 @@ func PropagationGotoLabeledSwitch(found bool) (string, error) {
 	goto outer
 outer:
 	{
-		tgoResult, err := propagationCode(found)
+		result_1, err := propagationCode(found)
 		if err != nil {
 			return "", fmt.Errorf("propagationCode: %w", err)
 		}
 	control:
-		switch tgoResult {
+		switch result_1 {
 		case 2:
 			result = "two"
 			break control
@@ -442,9 +442,9 @@ func PropagationFunctionValue(events *[]string, found bool) (int, error) {
 
 func PropagationNamed(events *[]string, found bool) (value int, err error) {
 	value = 99
-	loaded, tgoErr := propagationLoad(events, found)
-	if tgoErr != nil {
-		return 0, fmt.Errorf("propagationLoad: %w", tgoErr)
+	loaded, err_1 := propagationLoad(events, found)
+	if err_1 != nil {
+		return 0, fmt.Errorf("propagationLoad: %w", err_1)
 	}
 	return loaded, nil
 }

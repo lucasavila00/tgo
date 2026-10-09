@@ -4,13 +4,13 @@ package app
 
 import (
 	"example.com/business/bridge"
-	__tgo_import_2 "example.com/business/model"
+	"example.com/business/model"
 )
 
 func ReexportedAccount(name string) any {
-	return __tgo_import_2.AccountPersonal{Name: name}.Account()
+	return model.AccountPersonal{Name: name}.Account()
 }
 
 func ReexportedRequest(id string) any {
-	return bridge.Request{ID: id, Tags: __tgo_import_2.TgoDefaultRequestTags()}
+	return bridge.Request{ID: id, Tags: model.TgoDefaultRequestTags()}
 }

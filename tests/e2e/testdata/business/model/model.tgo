@@ -65,7 +65,7 @@ type Tagged struct {
 }
 
 type MarkerRecord struct {
-    __tgo_defaults bool
+    tgoDefaults bool
     Name string = "default"
 }
 
@@ -262,15 +262,15 @@ func SignalStateOrInvalid(signal Signal) string {
 }
 
 func ExplicitMarker() MarkerRecord {
-    return MarkerRecord{__tgo_defaults: true, Name: "set"}
+    return MarkerRecord{tgoDefaults: true, Name: "set"}
 }
 
 func SelectedMarker() MarkerRecord {
-    return MarkerRecord{__tgo_defaults: false, ..default}
+    return MarkerRecord{tgoDefaults: false, ..default}
 }
 
 func MarkerValues(value MarkerRecord) (bool, string) {
-    return value.__tgo_defaults, value.Name
+    return value.tgoDefaults, value.Name
 }
 
 func AliasAccount(name string) Account {

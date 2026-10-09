@@ -256,9 +256,9 @@ func (p *packageUnit) available() (bool, error) {
 		return true, nil
 	}
 	for _, path := range p.generatedPaths {
-		owned, tgoErr := generatedFile(path)
-		if tgoErr != nil {
-			return false, tgoErr
+		owned, err_1 := generatedFile(path)
+		if err_1 != nil {
+			return false, err_1
 		}
 		if owned && !p.sourceOwnsOutput(path) {
 			return true, nil
@@ -307,9 +307,9 @@ func (p *packageUnit) readGoFiles() error {
 		return err
 	}
 	for _, entry := range entries {
-		file, data, cgo, tgoErr := activeGoFile(p.context, p.Dir, entry)
-		if tgoErr != nil {
-			return tgoErr
+		file, data, cgo, err_1 := activeGoFile(p.context, p.Dir, entry)
+		if err_1 != nil {
+			return err_1
 		}
 		if file == nil {
 			continue

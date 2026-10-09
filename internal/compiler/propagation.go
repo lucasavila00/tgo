@@ -300,7 +300,7 @@ func (l *propagationLowerer) labeledStatement(node *ast.LabeledStmt) []ast.Stmt 
 		return block.List
 	}
 
-	controlLabel := l.freshName("control", "tgoControl").Name
+	controlLabel := l.freshName("control").Name
 	if !rewriteControlBranches(block.List[last], node.Label.Name, controlLabel) {
 		node.Stmt = block
 		return []ast.Stmt{node}
@@ -750,7 +750,7 @@ func (l *propagationLowerer) shortCircuit(node *ast.BinaryExpr) (ast.Expr, []ast
 		defaultValue = "true"
 		condition = &ast.UnaryExpr{Op: token.NOT, X: left}
 	}
-	resultName := l.freshName("condition", "tgoCondition")
+	resultName := l.freshName("condition")
 	prefix = append(prefix, &ast.AssignStmt{
 		Lhs: []ast.Expr{resultName},
 		Tok: token.DEFINE,
@@ -832,11 +832,11 @@ func (l *propagationLowerer) propagation(
 	values := make([]ast.Expr, 0, signature.Results().Len()-1)
 	left := make([]ast.Expr, 0, signature.Results().Len())
 	for range signature.Results().Len() - 1 {
-		name := l.freshName("result", "tgoResult")
+		name := l.freshName("result")
 		values = append(values, name)
 		left = append(left, name)
 	}
-	errorName := l.freshName("err", "tgoErr")
+	errorName := l.freshName("err")
 	left = append(left, errorName)
 	assignment := &ast.AssignStmt{Lhs: left, Tok: token.DEFINE, Rhs: []ast.Expr{call}}
 	prefix = append(prefix, assignment, l.errorBranch(metadata, errorName))
@@ -939,7 +939,7 @@ func (l *propagationLowerer) zeroReturnValues(
 			zeroValues = append(zeroValues, value)
 			continue
 		}
-		name := l.freshName("zero", "tgoZero")
+		name := l.freshName("zero")
 		if parameter, ok := types.Unalias(valueType).(*types.TypeParam); ok {
 			resultType = ast.NewIdent(parameter.Obj().Name())
 		}
@@ -969,8 +969,12 @@ func (l *propagationLowerer) formatQualifier() string {
 			return l.fmtAlias
 		}
 		if specification.Name.Name == "_" {
-			l.fmtAlias = l.unit.freshIdentifier("__tgo_fmt")
-			specification.Name = ast.NewIdent(l.fmtAlias)
+			l.fmtAlias = freshASTIdentifier(l.source.File, "fmt")
+			if l.fmtAlias == "fmt" {
+				specification.Name = nil
+			} else {
+				specification.Name = ast.NewIdent(l.fmtAlias)
+			}
 			return l.fmtAlias
 		}
 		if specification.Name.Name == "." {
@@ -979,8 +983,12 @@ func (l *propagationLowerer) formatQualifier() string {
 		l.fmtAlias = specification.Name.Name
 		return l.fmtAlias
 	}
-	l.fmtAlias = l.unit.freshIdentifier("__tgo_fmt")
-	astutil.AddNamedImport(l.unit.fs, l.source.File, l.fmtAlias, "fmt")
+	l.fmtAlias = freshASTIdentifier(l.source.File, "fmt")
+	if l.fmtAlias == "fmt" {
+		astutil.AddImport(l.unit.fs, l.source.File, "fmt")
+	} else {
+		astutil.AddNamedImport(l.unit.fs, l.source.File, l.fmtAlias, "fmt")
+	}
 	return l.fmtAlias
 }
 
@@ -988,7 +996,7 @@ func (l *propagationLowerer) materialize(expression ast.Expr) (ast.Expr, []ast.S
 	if expression == nil || !l.canMaterialize(expression) {
 		return expression, nil
 	}
-	name := l.freshName("operand", "tgoOperand")
+	name := l.freshName("operand")
 	statement := &ast.AssignStmt{
 		Lhs: []ast.Expr{name}, Tok: token.DEFINE, Rhs: []ast.Expr{expression},
 	}

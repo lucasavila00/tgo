@@ -154,21 +154,114 @@ func TestEnumJSONInternalFields(t *testing.T) {
 }
 
 func TestEnumJSONImportNames(t *testing.T) {
-	layoutPackage(t, `package sample
-import "encoding/json"
-import __tgo_json "fmt"
-import __tgo_jsonv2 "strings"
-import __tgo_jsontext "bytes"
-type E enum { A struct{} }
-func __tgo_E_external_json_to() {}
-func __tgo_E_adjacent_json_to() {}
-func use(value E) ([]byte,error) {
-    __tgo_json.Println(value)
-	_ = __tgo_jsonv2.Compare
-	_ = __tgo_jsontext.Compare
-    return json.Marshal(value)
+	output := compileSourceOutput(t, `package sample
+import json "math"
+import jsonv2 "bytes"
+import jsontext "io"
+import fmt "errors"
+import strings "strconv"
+type E enum `+"`json:\"adjacent,tag=type,content=data\"`"+` {
+	A struct { Name string `+"`json:\"name\"`"+` }
+}
+type F enum `+"`json:\"external\"`"+` { B struct{} }
+func tgoEExternalJSONTo() {}
+func tgoEAdjacentJSONTo() {}
+func use(value E) {
+	_ = json.Abs(1)
+	_ = jsonv2.Compare
+	_ = jsontext.EOF
+	_ = fmt.New
+	_ = strings.Itoa
 }
 `)
+	for _, name := range []string{
+		"json_1", "jsonv2_1", "jsontext_1", "fmt_1", "strings_1",
+		"tgoEExternalJSONTo_1", "tgoEAdjacentJSONTo_1",
+	} {
+		if !strings.Contains(output, name) {
+			t.Fatalf("generated output does not contain fallback %s\n%s", name, output)
+		}
+	}
+}
+
+func TestEnumJSONReusesCompatibleImports(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+import standardjson "encoding/json"
+import "fmt"
+type E enum { A struct{} }
+`)
+	if strings.Count(output, `"encoding/json"`) != 1 ||
+		strings.Count(output, `"fmt"`) != 1 ||
+		!strings.Contains(output, "standardjson.Marshal") ||
+		!strings.Contains(output, "fmt.Sprintf") {
+		t.Fatalf("generated output did not reuse compatible imports\n%s", output)
+	}
+}
+
+func TestEnumJSONRewritesBlankImport(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+import _ "encoding/json"
+type E enum { A struct{} }
+`)
+	if strings.Count(output, `"encoding/json"`) != 1 ||
+		!strings.Contains(output, `import "encoding/json"`) ||
+		!strings.Contains(output, "json.Marshal") {
+		t.Fatalf("generated output did not reuse the blank import\n%s", output)
+	}
+}
+
+func TestEnumJSONReusesDotImport(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+import . "encoding/json"
+type E enum { A struct{} }
+`)
+	if strings.Count(output, `"encoding/json"`) != 1 ||
+		!strings.Contains(output, `. "encoding/json"`) ||
+		!strings.Contains(output, "return Marshal(") ||
+		strings.Contains(output, "tgoDotImport") {
+		t.Fatalf("generated output did not reuse the dot import\n%s", output)
+	}
+}
+
+func TestGeneratedNamesAreReadable(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+type E enum { A struct{} }
+func values() []int { return []int{1} }
+func read(result int, index int) []int {
+	source := 1
+	_ = source
+	return []int{for _, value := range values() { value + 1 }}
+}
+`)
+	for _, text := range []string{
+		`"encoding/json"`,
+		`jsonv2 "encoding/json/v2"`,
+		`"encoding/json/jsontext"`,
+		`"fmt"`,
+		"func tgoEExternalJSONTo",
+		"result_1",
+		"index_1",
+		"source_1",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("generated output does not contain %q\n%s", text, output)
+		}
+	}
+	if strings.Contains(output, "__tgo_") {
+		t.Fatalf("generated output contains an old synthetic name\n%s", output)
+	}
+}
+
+func compileSourceOutput(t *testing.T, source string) string {
+	t.Helper()
+	compiled, problems := Compile(PackageInput{
+		Path: "sample", Sources: []File{{Name: "sample.tgo", Data: []byte(source)}},
+		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	return string(compiled.Outputs["sample.tgo"])
 }
 
 func TestEnumJSONMethodsGenerated(t *testing.T) {

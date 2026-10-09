@@ -11,9 +11,9 @@ type holder struct {
 
 func copyItems(values []*item) holder {
 
-	__tgo_result := make([]*item, len(values))
-	copy(__tgo_result, values)
+	result := make([]*item, len(values))
+	copy(result, values)
 	return holder{
-		Body: __tgo_result,
+		Body: result,
 	}
 }

@@ -2,22 +2,22 @@
 
 package model
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
-func __tgo_Large_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoLargeExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // Large requires a variant constructor. Its zero value is invalid.
@@ -40,7 +40,7 @@ func (v Large) Tag() LargeTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Large) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Large: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Large: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // LargeFirst is the First payload.
@@ -87,49 +87,49 @@ func (v Large) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case LargeTagFirst:
 		payload := v.FirstPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload LargeFirst `json:"First"`
 		}{Payload: payload})
 	case LargeTagSecond:
 		payload := v.SecondPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload LargeSecond `json:"Second"`
 		}{Payload: payload})
 	case LargeTagEmpty:
 		payload := v.EmptyPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload LargeEmpty `json:"Empty"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Large JSON tag")
+		return nil, fmt.Errorf("invalid Large JSON tag")
 	}
 }
 
-func (v Large) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Large) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case LargeTagFirst:
 		payload := v.FirstPayload()
-		return __tgo_Large_external_json_to(out, "First", payload)
+		return tgoLargeExternalJSONTo(out, "First", payload)
 	case LargeTagSecond:
 		payload := v.SecondPayload()
-		return __tgo_Large_external_json_to(out, "Second", payload)
+		return tgoLargeExternalJSONTo(out, "Second", payload)
 	case LargeTagEmpty:
 		payload := v.EmptyPayload()
-		return __tgo_Large_external_json_to(out, "Empty", payload)
+		return tgoLargeExternalJSONTo(out, "Empty", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Large JSON tag")
+		return fmt.Errorf("invalid Large JSON tag")
 	}
 }
 
 func (v *Large) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Large JSON variant")
+		return fmt.Errorf("expected one Large JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -138,39 +138,39 @@ func (v *Large) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "First":
 		var payload LargeFirst
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.Large()
 		return nil
 	case "Second":
 		var payload LargeSecond
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.Large()
 		return nil
 	case "Empty":
 		var payload LargeEmpty
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.Large()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Large JSON variant %q", variant)
+		return fmt.Errorf("unknown Large JSON variant %q", variant)
 	}
 }
 
-func (v *Large) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Large) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Large JSON variant")
+		return fmt.Errorf("expected one Large JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -217,35 +217,35 @@ func (v *Large) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Large JSON variant")
+		return fmt.Errorf("expected one Large JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Large JSON variant %q", unknown)
+		return fmt.Errorf("unknown Large JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload LargeFirst
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.Large()
 		return nil
 	case 2:
 		var payload LargeSecond
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.Large()
 		return nil
 	case 3:
 		var payload LargeEmpty
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.Large()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Large JSON tag")
+		return fmt.Errorf("invalid Large JSON tag")
 	}
 }
 
@@ -269,7 +269,7 @@ func (v Equal) Tag() EqualTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Equal) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Equal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Equal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // EqualFirst is the First payload.
@@ -304,41 +304,41 @@ func (v Equal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case EqualTagFirst:
 		payload := v.FirstPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload EqualFirst `json:"First"`
 		}{Payload: payload})
 	case EqualTagSecond:
 		payload := v.SecondPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload EqualSecond `json:"Second"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Equal JSON tag")
+		return nil, fmt.Errorf("invalid Equal JSON tag")
 	}
 }
 
-func (v Equal) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Equal) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case EqualTagFirst:
 		payload := v.FirstPayload()
-		return __tgo_Large_external_json_to(out, "First", payload)
+		return tgoLargeExternalJSONTo(out, "First", payload)
 	case EqualTagSecond:
 		payload := v.SecondPayload()
-		return __tgo_Large_external_json_to(out, "Second", payload)
+		return tgoLargeExternalJSONTo(out, "Second", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Equal JSON tag")
+		return fmt.Errorf("invalid Equal JSON tag")
 	}
 }
 
 func (v *Equal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Equal JSON variant")
+		return fmt.Errorf("expected one Equal JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -347,32 +347,32 @@ func (v *Equal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "First":
 		var payload EqualFirst
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.Equal()
 		return nil
 	case "Second":
 		var payload EqualSecond
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.Equal()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Equal JSON variant %q", variant)
+		return fmt.Errorf("unknown Equal JSON variant %q", variant)
 	}
 }
 
-func (v *Equal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Equal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Equal JSON variant")
+		return fmt.Errorf("expected one Equal JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -417,28 +417,28 @@ func (v *Equal) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Equal JSON variant")
+		return fmt.Errorf("expected one Equal JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Equal JSON variant %q", unknown)
+		return fmt.Errorf("unknown Equal JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload EqualFirst
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.Equal()
 		return nil
 	case 2:
 		var payload EqualSecond
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.Equal()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Equal JSON tag")
+		return fmt.Errorf("invalid Equal JSON tag")
 	}
 }
 
@@ -460,13 +460,13 @@ func (v NamedZero) Tag() NamedZeroTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v NamedZero) UnknownTag() string {
-	return __tgo_fmt.Sprintf("NamedZero: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("NamedZero: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v NamedZero) GobEncode() ([]byte, error) {
 	if v.tgoTag < NamedZeroTagZero || v.tgoTag > NamedZeroTagOther {
-		return nil, __tgo_fmt.Errorf("NamedZero: cannot gob encode invalid tag %d", v.tgoTag)
+		return nil, fmt.Errorf("NamedZero: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
 	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
@@ -475,12 +475,12 @@ func (v NamedZero) GobEncode() ([]byte, error) {
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *NamedZero) GobDecode(data []byte) error {
 	if len(data) != 4 {
-		return __tgo_fmt.Errorf("NamedZero: invalid gob data length %d", len(data))
+		return fmt.Errorf("NamedZero: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := NamedZeroTag(number)
 	if uint32(tag) != number || tag < NamedZeroTagZero || tag > NamedZeroTagOther {
-		return __tgo_fmt.Errorf("NamedZero: cannot gob decode unknown tag %d", number)
+		return fmt.Errorf("NamedZero: cannot gob decode unknown tag %d", number)
 	}
 	*v = NamedZero{tgoTag: tag}
 	return nil
@@ -514,41 +514,41 @@ func (v NamedZero) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case NamedZeroTagZero:
 		payload := v.ZeroPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload NamedZeroZero `json:"Zero"`
 		}{Payload: payload})
 	case NamedZeroTagOther:
 		payload := v.OtherPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload NamedZeroOther `json:"Other"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid NamedZero JSON tag")
+		return nil, fmt.Errorf("invalid NamedZero JSON tag")
 	}
 }
 
-func (v NamedZero) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v NamedZero) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case NamedZeroTagZero:
 		payload := v.ZeroPayload()
-		return __tgo_Large_external_json_to(out, "Zero", payload)
+		return tgoLargeExternalJSONTo(out, "Zero", payload)
 	case NamedZeroTagOther:
 		payload := v.OtherPayload()
-		return __tgo_Large_external_json_to(out, "Other", payload)
+		return tgoLargeExternalJSONTo(out, "Other", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid NamedZero JSON tag")
+		return fmt.Errorf("invalid NamedZero JSON tag")
 	}
 }
 
 func (v *NamedZero) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one NamedZero JSON variant")
+		return fmt.Errorf("expected one NamedZero JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -557,32 +557,32 @@ func (v *NamedZero) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Zero":
 		var payload NamedZeroZero
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.NamedZero()
 		return nil
 	case "Other":
 		var payload NamedZeroOther
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.NamedZero()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown NamedZero JSON variant %q", variant)
+		return fmt.Errorf("unknown NamedZero JSON variant %q", variant)
 	}
 }
 
-func (v *NamedZero) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *NamedZero) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one NamedZero JSON variant")
+		return fmt.Errorf("expected one NamedZero JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -627,27 +627,27 @@ func (v *NamedZero) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one NamedZero JSON variant")
+		return fmt.Errorf("expected one NamedZero JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown NamedZero JSON variant %q", unknown)
+		return fmt.Errorf("unknown NamedZero JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload NamedZeroZero
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.NamedZero()
 		return nil
 	case 2:
 		var payload NamedZeroOther
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.NamedZero()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid NamedZero JSON tag")
+		return fmt.Errorf("invalid NamedZero JSON tag")
 	}
 }

@@ -2,10 +2,10 @@
 
 package nilmodel
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+import "fmt"
 
 type Item struct {
 	Name string
@@ -28,17 +28,17 @@ type BothRequired = **Item
 type RequiredHandler = func(*Item) *Item
 type OptionalHandler = func(*Item) *Item
 
-func __tgo_Syntax_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgoSyntaxExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // Syntax requires a variant constructor. Its zero value is invalid.
@@ -59,7 +59,7 @@ func (v Syntax) Tag() SyntaxTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v Syntax) UnknownTag() string {
-	return __tgo_fmt.Sprintf("Syntax: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("Syntax: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // SyntaxItem is the Item payload.
@@ -80,33 +80,33 @@ func (v Syntax) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case SyntaxTagItem:
 		payload := v.ItemPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload SyntaxItem `json:"Item"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid Syntax JSON tag")
+		return nil, fmt.Errorf("invalid Syntax JSON tag")
 	}
 }
 
-func (v Syntax) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v Syntax) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case SyntaxTagItem:
 		payload := v.ItemPayload()
-		return __tgo_Syntax_external_json_to(out, "Item", payload)
+		return tgoSyntaxExternalJSONTo(out, "Item", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid Syntax JSON tag")
+		return fmt.Errorf("invalid Syntax JSON tag")
 	}
 }
 
 func (v *Syntax) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one Syntax JSON variant")
+		return fmt.Errorf("expected one Syntax JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -115,25 +115,25 @@ func (v *Syntax) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Item":
 		var payload SyntaxItem
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.Syntax()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown Syntax JSON variant %q", variant)
+		return fmt.Errorf("unknown Syntax JSON variant %q", variant)
 	}
 }
 
-func (v *Syntax) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *Syntax) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one Syntax JSON variant")
+		return fmt.Errorf("expected one Syntax JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -176,21 +176,21 @@ func (v *Syntax) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one Syntax JSON variant")
+		return fmt.Errorf("expected one Syntax JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown Syntax JSON variant %q", unknown)
+		return fmt.Errorf("unknown Syntax JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload SyntaxItem
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.Syntax()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid Syntax JSON tag")
+		return fmt.Errorf("invalid Syntax JSON tag")
 	}
 }
 
