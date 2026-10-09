@@ -138,6 +138,9 @@ func generatedEnumMethod(receiver, method string, model *model) bool {
 	if method == "Tag" || method == "UnknownTag" {
 		return true
 	}
+	if payloadFreeEnum(model) && (method == "GobEncode" || method == "GobDecode") {
+		return true
+	}
 	for _, variant := range model.Variants {
 		if method == variant.Name+"Payload" {
 			return true

@@ -54,6 +54,29 @@ func (v effectOutcome) UnknownTag() string {
 	return __tgo_fmt.Sprintf("effectOutcome: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
+// GobEncode returns the stable four-byte enum tag.
+func (v effectOutcome) GobEncode() ([]byte, error) {
+	if v.tgoTag < effectOutcomeTagUnknown || v.tgoTag > effectOutcomeTagConditional {
+		return nil, __tgo_fmt.Errorf("effectOutcome: cannot gob encode invalid tag %d", v.tgoTag)
+	}
+	tag := uint32(v.tgoTag)
+	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
+}
+
+// GobDecode replaces the value with a valid four-byte enum tag.
+func (v *effectOutcome) GobDecode(data []byte) error {
+	if len(data) != 4 {
+		return __tgo_fmt.Errorf("effectOutcome: invalid gob data length %d", len(data))
+	}
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := effectOutcomeTag(number)
+	if uint32(tag) != number || tag < effectOutcomeTagUnknown || tag > effectOutcomeTagConditional {
+		return __tgo_fmt.Errorf("effectOutcome: cannot gob decode unknown tag %d", number)
+	}
+	*v = effectOutcome{tgoTag: tag}
+	return nil
+}
+
 // effectOutcomeUnknown is the Unknown payload.
 type effectOutcomeUnknown struct{}
 
@@ -329,7 +352,7 @@ func (c *checker) markGenericZeroWith(
 	summary *genericEffectSummary,
 	node *syntax.Node,
 	typ types.Type,
-	extra *genericEffectCondition,
+	extra *GenericEffectCondition,
 	unknown bool,
 ) {
 	conditions, maySkip, reachable := c.genericEffectPath(summary, node)
@@ -339,7 +362,7 @@ func (c *checker) markGenericZeroWith(
 	if extra != nil {
 		conditions = append(conditions, *extra)
 	}
-	effect := genericEffect{
+	effect := GenericEffect{
 		Receiver: false, TypeParameter: 0,
 		Conditions: conditions, MaySkip: maySkip || unknown,
 	}
@@ -352,7 +375,7 @@ func (c *checker) markConditionalGenericZero(
 	summary *genericEffectSummary,
 	node *syntax.Node,
 	typ types.Type,
-	kind effectKind,
+	kind EffectKind,
 	value *syntax.Expression,
 	other *syntax.Expression,
 ) {
@@ -368,7 +391,7 @@ func (c *checker) markConditionalGenericZero(
 		c.markGenericZeroWith(summary, node, typ, nil, true)
 		return
 	}
-	condition := genericEffectCondition{
+	condition := GenericEffectCondition{
 		ValueParameter: valueIndex,
 		OtherParameter: otherIndex,
 		Kind:           kind,
@@ -554,7 +577,7 @@ func (c *checker) markGenericAccessAt(
 	if !reachable {
 		return
 	}
-	effect := genericEffect{
+	effect := GenericEffect{
 		Receiver: false, TypeParameter: 0, Conditions: conditions, MaySkip: maySkip,
 	}
 	for parameter := range containedTypeParameters(
@@ -571,7 +594,7 @@ func (c *checker) addGenericEffect(
 	summary *genericEffectSummary,
 	zero bool,
 	parameter zeroParameter,
-	effect genericEffect,
+	effect GenericEffect,
 ) bool {
 	effect.Receiver = parameter.receiver
 	effect.TypeParameter = parameter.index
@@ -594,15 +617,15 @@ func (c *checker) addGenericEffect(
 }
 
 // normalizeGenericEffect sorts conditions and rejects contradictions.
-func normalizeGenericEffect(effect genericEffect) (genericEffect, bool) {
+func normalizeGenericEffect(effect GenericEffect) (GenericEffect, bool) {
 	sort.Slice(effect.Conditions, func(left, right int) bool {
 		if effect.Conditions[left].ValueParameter !=
 			effect.Conditions[right].ValueParameter {
 			return effect.Conditions[left].ValueParameter <
 				effect.Conditions[right].ValueParameter
 		}
-		leftKind := effectConditionCode(effect.Conditions[left].Kind)
-		rightKind := effectConditionCode(effect.Conditions[right].Kind)
+		leftKind := effect.Conditions[left].Kind.Tag()
+		rightKind := effect.Conditions[right].Kind.Tag()
 		if leftKind != rightKind {
 			return leftKind < rightKind
 		}
@@ -622,7 +645,7 @@ func normalizeGenericEffect(effect genericEffect) (genericEffect, bool) {
 		previous := output[len(output)-1]
 		if previous.ValueParameter != condition.ValueParameter ||
 			previous.OtherParameter != condition.OtherParameter ||
-			effectConditionCode(previous.Kind) != effectConditionCode(condition.Kind) {
+			previous.Kind.Tag() != condition.Kind.Tag() {
 			output = append(output, condition)
 			continue
 		}
@@ -634,7 +657,7 @@ func normalizeGenericEffect(effect genericEffect) (genericEffect, bool) {
 	return effect, true
 }
 
-func equalGenericEffect(left, right genericEffect) bool {
+func equalGenericEffect(left, right GenericEffect) bool {
 	if left.Receiver != right.Receiver || left.TypeParameter != right.TypeParameter ||
 		left.MaySkip != right.MaySkip || len(left.Conditions) != len(right.Conditions) {
 		return false
@@ -651,9 +674,9 @@ func equalGenericEffect(left, right genericEffect) bool {
 func (c *checker) genericEffectPath(
 	summary *genericEffectSummary,
 	node *syntax.Node,
-) ([]genericEffectCondition, bool, bool) {
+) ([]GenericEffectCondition, bool, bool) {
 	reachable := false
-	var conditions []genericEffectCondition = nil
+	var conditions []GenericEffectCondition = nil
 	maySkip := false
 	var current *syntax.Node = node
 	for current != nil && *current != *summary.root {
@@ -687,7 +710,7 @@ func (c *checker) parentEffectConditions(
 	summary *genericEffectSummary,
 	parent *syntax.Node,
 	node *syntax.Node,
-) ([]genericEffectCondition, bool, bool) {
+) ([]GenericEffectCondition, bool, bool) {
 	if _, literal := syntax.FunctionLiteralOf(parent); literal {
 		return nil, false, false
 	}
@@ -704,7 +727,7 @@ func (c *checker) parentEffectConditions(
 			return nil, false, false
 		}
 		if outcome == conditionalEffectOutcome() {
-			return []genericEffectCondition{*condition}, false, true
+			return []GenericEffectCondition{*condition}, false, true
 		}
 		return nil, outcome == unknownEffectOutcome(), true
 	}
@@ -729,8 +752,8 @@ func (c *checker) blockEffectConditions(
 	summary *genericEffectSummary,
 	block *syntax.BlockStatement,
 	node *syntax.Node,
-) ([]genericEffectCondition, bool, bool) {
-	var conditions []genericEffectCondition = nil
+) ([]GenericEffectCondition, bool, bool) {
+	var conditions []GenericEffectCondition = nil
 	unknown := false
 	for _, statement := range block.List {
 		if syntax.StatementPosition(statement) >= syntax.NodePosition(node) {
@@ -787,7 +810,7 @@ func (c *checker) blockEffectConditions(
 func (c *checker) ifEffectCondition(
 	statement *syntax.IfStatement,
 	node *syntax.Node,
-) (*genericEffectCondition, effectOutcome) {
+) (*GenericEffectCondition, effectOutcome) {
 	inBody := syntax.NodePosition(node) >= statement.Body.Start &&
 		syntax.NodeEnd(node) <= statement.Body.Stop
 	inElse := statement.Else != nil &&
@@ -802,7 +825,7 @@ func (c *checker) ifEffectCondition(
 func (c *checker) booleanEffectCondition(
 	expression *syntax.Expression,
 	wantTrue bool,
-) (*genericEffectCondition, effectOutcome) {
+) (*GenericEffectCondition, effectOutcome) {
 	if value, known := c.scalarValueAt(syntaxNode(expression), expression); known {
 		if boolean, constantValue := scalarBoolean(value); constantValue {
 			if boolean == wantTrue {
@@ -812,7 +835,7 @@ func (c *checker) booleanEffectCondition(
 		}
 		index, negated, parameter := scalarParameter(value)
 		if parameter {
-			return &genericEffectCondition{
+			return &GenericEffectCondition{
 				ValueParameter: index, OtherParameter: -1,
 				Kind: booleanEffectCondition(), Expected: wantTrue != negated,
 			}, conditionalEffectOutcome()
@@ -830,7 +853,7 @@ func (c *checker) booleanEffectCondition(
 
 func (c *checker) nonzeroEffectCondition(
 	expression *syntax.Expression,
-) (*genericEffectCondition, effectOutcome) {
+) (*GenericEffectCondition, effectOutcome) {
 	if value, known := c.scalarValueAt(syntaxNode(expression), expression); known {
 		if integer, constantValue := scalarInteger(value); constantValue {
 			if integer == 0 {
@@ -840,7 +863,7 @@ func (c *checker) nonzeroEffectCondition(
 		}
 		index, _, parameter := scalarParameter(value)
 		if parameter {
-			return &genericEffectCondition{
+			return &GenericEffectCondition{
 				ValueParameter: index, OtherParameter: -1,
 				Kind: nonzeroEffectConditionKind(), Expected: true,
 			}, conditionalEffectOutcome()
