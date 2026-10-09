@@ -6,6 +6,8 @@
 package syntax
 
 import __tgo_json "encoding/json"
+import __tgo_jsonv2 "encoding/json/v2"
+import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
 import "go/token"
@@ -59,6 +61,19 @@ type FieldList struct {
 }
 
 // ChannelDirection is a channel type direction.
+func __tgo_ChannelDirection_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(__tgo_jsontext.EndObject)
+}
+
 // ChannelDirection requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
 type ChannelDirection struct {
@@ -130,6 +145,22 @@ func (v ChannelDirection) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v ChannelDirection) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case 1:
+		payload := v.TgoSendReceive()
+		return __tgo_ChannelDirection_external_json_to(out, "SendReceive", payload)
+	case 2:
+		payload := v.TgoSendOnly()
+		return __tgo_ChannelDirection_external_json_to(out, "SendOnly", payload)
+	case 3:
+		payload := v.TgoReceiveOnly()
+		return __tgo_ChannelDirection_external_json_to(out, "ReceiveOnly", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid ChannelDirection JSON tag")
+	}
+}
+
 func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -168,6 +199,93 @@ func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown ChannelDirection JSON variant %q", variant)
+	}
+}
+
+func (v *ChannelDirection) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one ChannelDirection JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "SendReceive":
+			current = 1
+		case "SendOnly":
+			current = 2
+		case "ReceiveOnly":
+			current = 3
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one ChannelDirection JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown ChannelDirection JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload ChannelDirectionSendReceive
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewChannelDirectionSendReceive(payload)
+		return nil
+	case 2:
+		var payload ChannelDirectionSendOnly
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewChannelDirectionSendOnly(payload)
+		return nil
+	case 3:
+		var payload ChannelDirectionReceiveOnly
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewChannelDirectionReceiveOnly(payload)
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid ChannelDirection JSON tag")
 	}
 }
 
@@ -721,6 +839,94 @@ func (v Expression) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v Expression) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case 1:
+		payload := v.TgoBad()
+		return __tgo_ChannelDirection_external_json_to(out, "Bad", payload)
+	case 2:
+		payload := v.TgoIdentifier()
+		return __tgo_ChannelDirection_external_json_to(out, "Identifier", payload)
+	case 3:
+		payload := v.TgoEllipsis()
+		return __tgo_ChannelDirection_external_json_to(out, "Ellipsis", payload)
+	case 4:
+		payload := v.TgoBasicLiteral()
+		return __tgo_ChannelDirection_external_json_to(out, "BasicLiteral", payload)
+	case 5:
+		payload := v.TgoFunctionLiteral()
+		return __tgo_ChannelDirection_external_json_to(out, "FunctionLiteral", payload)
+	case 6:
+		payload := v.TgoCompositeLiteral()
+		return __tgo_ChannelDirection_external_json_to(out, "CompositeLiteral", payload)
+	case 7:
+		payload := v.TgoParenthesized()
+		return __tgo_ChannelDirection_external_json_to(out, "Parenthesized", payload)
+	case 8:
+		payload := v.TgoSelector()
+		return __tgo_ChannelDirection_external_json_to(out, "Selector", payload)
+	case 9:
+		payload := v.TgoIndex()
+		return __tgo_ChannelDirection_external_json_to(out, "Index", payload)
+	case 10:
+		payload := v.TgoIndexList()
+		return __tgo_ChannelDirection_external_json_to(out, "IndexList", payload)
+	case 11:
+		payload := v.TgoSlice()
+		return __tgo_ChannelDirection_external_json_to(out, "Slice", payload)
+	case 12:
+		payload := v.TgoTypeAssertion()
+		return __tgo_ChannelDirection_external_json_to(out, "TypeAssertion", payload)
+	case 13:
+		payload := v.TgoCall()
+		return __tgo_ChannelDirection_external_json_to(out, "Call", payload)
+	case 14:
+		payload := v.TgoStar()
+		return __tgo_ChannelDirection_external_json_to(out, "Star", payload)
+	case 15:
+		payload := v.TgoNonNilPointer()
+		return __tgo_ChannelDirection_external_json_to(out, "NonNilPointer", payload)
+	case 16:
+		payload := v.TgoUnary()
+		return __tgo_ChannelDirection_external_json_to(out, "Unary", payload)
+	case 17:
+		payload := v.TgoBinary()
+		return __tgo_ChannelDirection_external_json_to(out, "Binary", payload)
+	case 18:
+		payload := v.TgoKeyValue()
+		return __tgo_ChannelDirection_external_json_to(out, "KeyValue", payload)
+	case 19:
+		payload := v.TgoArrayType()
+		return __tgo_ChannelDirection_external_json_to(out, "ArrayType", payload)
+	case 20:
+		payload := v.TgoStructType()
+		return __tgo_ChannelDirection_external_json_to(out, "StructType", payload)
+	case 21:
+		payload := v.TgoFunctionType()
+		return __tgo_ChannelDirection_external_json_to(out, "FunctionType", payload)
+	case 22:
+		payload := v.TgoInterfaceType()
+		return __tgo_ChannelDirection_external_json_to(out, "InterfaceType", payload)
+	case 23:
+		payload := v.TgoMapType()
+		return __tgo_ChannelDirection_external_json_to(out, "MapType", payload)
+	case 24:
+		payload := v.TgoChannelType()
+		return __tgo_ChannelDirection_external_json_to(out, "ChannelType", payload)
+	case 25:
+		payload := v.TgoDefault()
+		return __tgo_ChannelDirection_external_json_to(out, "Default", payload)
+	case 26:
+		payload := v.TgoPropagation()
+		return __tgo_ChannelDirection_external_json_to(out, "Propagation", payload)
+	case 27:
+		payload := v.TgoComprehension()
+		return __tgo_ChannelDirection_external_json_to(out, "Comprehension", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid Expression JSON tag")
+	}
+}
+
 func (v *Expression) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -927,6 +1133,309 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Expression JSON variant %q", variant)
+	}
+}
+
+func (v *Expression) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one Expression JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Bad":
+			current = 1
+		case "Identifier":
+			current = 2
+		case "Ellipsis":
+			current = 3
+		case "BasicLiteral":
+			current = 4
+		case "FunctionLiteral":
+			current = 5
+		case "CompositeLiteral":
+			current = 6
+		case "Parenthesized":
+			current = 7
+		case "Selector":
+			current = 8
+		case "Index":
+			current = 9
+		case "IndexList":
+			current = 10
+		case "Slice":
+			current = 11
+		case "TypeAssertion":
+			current = 12
+		case "Call":
+			current = 13
+		case "Star":
+			current = 14
+		case "NonNilPointer":
+			current = 15
+		case "Unary":
+			current = 16
+		case "Binary":
+			current = 17
+		case "KeyValue":
+			current = 18
+		case "ArrayType":
+			current = 19
+		case "StructType":
+			current = 20
+		case "FunctionType":
+			current = 21
+		case "InterfaceType":
+			current = 22
+		case "MapType":
+			current = 23
+		case "ChannelType":
+			current = 24
+		case "Default":
+			current = 25
+		case "Propagation":
+			current = 26
+		case "Comprehension":
+			current = 27
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one Expression JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown Expression JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload ExpressionBad
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionBad(payload)
+		return nil
+	case 2:
+		var payload ExpressionIdentifier
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionIdentifier(payload)
+		return nil
+	case 3:
+		var payload ExpressionEllipsis
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionEllipsis(payload)
+		return nil
+	case 4:
+		var payload ExpressionBasicLiteral
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionBasicLiteral(payload)
+		return nil
+	case 5:
+		var payload ExpressionFunctionLiteral
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionFunctionLiteral(payload)
+		return nil
+	case 6:
+		var payload ExpressionCompositeLiteral
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionCompositeLiteral(payload)
+		return nil
+	case 7:
+		var payload ExpressionParenthesized
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionParenthesized(payload)
+		return nil
+	case 8:
+		var payload ExpressionSelector
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionSelector(payload)
+		return nil
+	case 9:
+		var payload ExpressionIndex
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionIndex(payload)
+		return nil
+	case 10:
+		var payload ExpressionIndexList
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionIndexList(payload)
+		return nil
+	case 11:
+		var payload ExpressionSlice
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionSlice(payload)
+		return nil
+	case 12:
+		var payload ExpressionTypeAssertion
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionTypeAssertion(payload)
+		return nil
+	case 13:
+		var payload ExpressionCall
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionCall(payload)
+		return nil
+	case 14:
+		var payload ExpressionStar
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionStar(payload)
+		return nil
+	case 15:
+		var payload ExpressionNonNilPointer
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionNonNilPointer(payload)
+		return nil
+	case 16:
+		var payload ExpressionUnary
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionUnary(payload)
+		return nil
+	case 17:
+		var payload ExpressionBinary
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionBinary(payload)
+		return nil
+	case 18:
+		var payload ExpressionKeyValue
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionKeyValue(payload)
+		return nil
+	case 19:
+		var payload ExpressionArrayType
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionArrayType(payload)
+		return nil
+	case 20:
+		var payload ExpressionStructType
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionStructType(payload)
+		return nil
+	case 21:
+		var payload ExpressionFunctionType
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionFunctionType(payload)
+		return nil
+	case 22:
+		var payload ExpressionInterfaceType
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionInterfaceType(payload)
+		return nil
+	case 23:
+		var payload ExpressionMapType
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionMapType(payload)
+		return nil
+	case 24:
+		var payload ExpressionChannelType
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionChannelType(payload)
+		return nil
+	case 25:
+		var payload ExpressionDefault
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionDefault(payload)
+		return nil
+	case 26:
+		var payload ExpressionPropagation
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionPropagation(payload)
+		return nil
+	case 27:
+		var payload ExpressionComprehension
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewExpressionComprehension(payload)
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid Expression JSON tag")
 	}
 }
 
@@ -1608,6 +2117,79 @@ func (v Statement) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v Statement) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case 1:
+		payload := v.TgoBad()
+		return __tgo_ChannelDirection_external_json_to(out, "Bad", payload)
+	case 2:
+		payload := v.TgoDeclaration()
+		return __tgo_ChannelDirection_external_json_to(out, "Declaration", payload)
+	case 3:
+		payload := v.TgoEmpty()
+		return __tgo_ChannelDirection_external_json_to(out, "Empty", payload)
+	case 4:
+		payload := v.TgoLabeled()
+		return __tgo_ChannelDirection_external_json_to(out, "Labeled", payload)
+	case 5:
+		payload := v.TgoExpression()
+		return __tgo_ChannelDirection_external_json_to(out, "Expression", payload)
+	case 6:
+		payload := v.TgoSend()
+		return __tgo_ChannelDirection_external_json_to(out, "Send", payload)
+	case 7:
+		payload := v.TgoIncrement()
+		return __tgo_ChannelDirection_external_json_to(out, "Increment", payload)
+	case 8:
+		payload := v.TgoAssignment()
+		return __tgo_ChannelDirection_external_json_to(out, "Assignment", payload)
+	case 9:
+		payload := v.TgoGo()
+		return __tgo_ChannelDirection_external_json_to(out, "Go", payload)
+	case 10:
+		payload := v.TgoDefer()
+		return __tgo_ChannelDirection_external_json_to(out, "Defer", payload)
+	case 11:
+		payload := v.TgoReturn()
+		return __tgo_ChannelDirection_external_json_to(out, "Return", payload)
+	case 12:
+		payload := v.TgoBranch()
+		return __tgo_ChannelDirection_external_json_to(out, "Branch", payload)
+	case 13:
+		payload := v.TgoBlock()
+		return __tgo_ChannelDirection_external_json_to(out, "Block", payload)
+	case 14:
+		payload := v.TgoIf()
+		return __tgo_ChannelDirection_external_json_to(out, "If", payload)
+	case 15:
+		payload := v.TgoCase()
+		return __tgo_ChannelDirection_external_json_to(out, "Case", payload)
+	case 16:
+		payload := v.TgoSwitch()
+		return __tgo_ChannelDirection_external_json_to(out, "Switch", payload)
+	case 17:
+		payload := v.TgoTypeSwitch()
+		return __tgo_ChannelDirection_external_json_to(out, "TypeSwitch", payload)
+	case 18:
+		payload := v.TgoCommunication()
+		return __tgo_ChannelDirection_external_json_to(out, "Communication", payload)
+	case 19:
+		payload := v.TgoSelect()
+		return __tgo_ChannelDirection_external_json_to(out, "Select", payload)
+	case 20:
+		payload := v.TgoFor()
+		return __tgo_ChannelDirection_external_json_to(out, "For", payload)
+	case 21:
+		payload := v.TgoRange()
+		return __tgo_ChannelDirection_external_json_to(out, "Range", payload)
+	case 22:
+		payload := v.TgoMatch()
+		return __tgo_ChannelDirection_external_json_to(out, "Match", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid Statement JSON tag")
+	}
+}
+
 func (v *Statement) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -1779,6 +2361,264 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Statement JSON variant %q", variant)
+	}
+}
+
+func (v *Statement) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one Statement JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Bad":
+			current = 1
+		case "Declaration":
+			current = 2
+		case "Empty":
+			current = 3
+		case "Labeled":
+			current = 4
+		case "Expression":
+			current = 5
+		case "Send":
+			current = 6
+		case "Increment":
+			current = 7
+		case "Assignment":
+			current = 8
+		case "Go":
+			current = 9
+		case "Defer":
+			current = 10
+		case "Return":
+			current = 11
+		case "Branch":
+			current = 12
+		case "Block":
+			current = 13
+		case "If":
+			current = 14
+		case "Case":
+			current = 15
+		case "Switch":
+			current = 16
+		case "TypeSwitch":
+			current = 17
+		case "Communication":
+			current = 18
+		case "Select":
+			current = 19
+		case "For":
+			current = 20
+		case "Range":
+			current = 21
+		case "Match":
+			current = 22
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one Statement JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown Statement JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload StatementBad
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementBad(payload)
+		return nil
+	case 2:
+		var payload StatementDeclaration
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementDeclaration(payload)
+		return nil
+	case 3:
+		var payload StatementEmpty
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementEmpty(payload)
+		return nil
+	case 4:
+		var payload StatementLabeled
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementLabeled(payload)
+		return nil
+	case 5:
+		var payload StatementExpression
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementExpression(payload)
+		return nil
+	case 6:
+		var payload StatementSend
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementSend(payload)
+		return nil
+	case 7:
+		var payload StatementIncrement
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementIncrement(payload)
+		return nil
+	case 8:
+		var payload StatementAssignment
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementAssignment(payload)
+		return nil
+	case 9:
+		var payload StatementGo
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementGo(payload)
+		return nil
+	case 10:
+		var payload StatementDefer
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementDefer(payload)
+		return nil
+	case 11:
+		var payload StatementReturn
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementReturn(payload)
+		return nil
+	case 12:
+		var payload StatementBranch
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementBranch(payload)
+		return nil
+	case 13:
+		var payload StatementBlock
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementBlock(payload)
+		return nil
+	case 14:
+		var payload StatementIf
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementIf(payload)
+		return nil
+	case 15:
+		var payload StatementCase
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementCase(payload)
+		return nil
+	case 16:
+		var payload StatementSwitch
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementSwitch(payload)
+		return nil
+	case 17:
+		var payload StatementTypeSwitch
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementTypeSwitch(payload)
+		return nil
+	case 18:
+		var payload StatementCommunication
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementCommunication(payload)
+		return nil
+	case 19:
+		var payload StatementSelect
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementSelect(payload)
+		return nil
+	case 20:
+		var payload StatementFor
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementFor(payload)
+		return nil
+	case 21:
+		var payload StatementRange
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementRange(payload)
+		return nil
+	case 22:
+		var payload StatementMatch
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewStatementMatch(payload)
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid Statement JSON tag")
 	}
 }
 
@@ -2077,6 +2917,22 @@ func (v Specification) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v Specification) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case 1:
+		payload := v.TgoImport()
+		return __tgo_ChannelDirection_external_json_to(out, "Import", payload)
+	case 2:
+		payload := v.TgoValue()
+		return __tgo_ChannelDirection_external_json_to(out, "Value", payload)
+	case 3:
+		payload := v.TgoType()
+		return __tgo_ChannelDirection_external_json_to(out, "Type", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid Specification JSON tag")
+	}
+}
+
 func (v *Specification) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -2115,6 +2971,93 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Specification JSON variant %q", variant)
+	}
+}
+
+func (v *Specification) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one Specification JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Import":
+			current = 1
+		case "Value":
+			current = 2
+		case "Type":
+			current = 3
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one Specification JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown Specification JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload SpecificationImport
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewSpecificationImport(payload)
+		return nil
+	case 2:
+		var payload SpecificationValue
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewSpecificationValue(payload)
+		return nil
+	case 3:
+		var payload SpecificationType
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewSpecificationType(payload)
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid Specification JSON tag")
 	}
 }
 
@@ -2289,6 +3232,31 @@ func (v Declaration) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v Declaration) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case 1:
+		payload := v.TgoBad()
+		return __tgo_ChannelDirection_external_json_to(out, "Bad", payload)
+	case 2:
+		payload := v.TgoGeneral()
+		return __tgo_ChannelDirection_external_json_to(out, "General", payload)
+	case 3:
+		payload := v.TgoFunction()
+		return __tgo_ChannelDirection_external_json_to(out, "Function", payload)
+	case 4:
+		payload := v.TgoEnum()
+		return __tgo_ChannelDirection_external_json_to(out, "Enum", payload)
+	case 5:
+		payload := v.TgoStruct()
+		return __tgo_ChannelDirection_external_json_to(out, "Struct", payload)
+	case 6:
+		payload := v.TgoChecked()
+		return __tgo_ChannelDirection_external_json_to(out, "Checked", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid Declaration JSON tag")
+	}
+}
+
 func (v *Declaration) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -2348,6 +3316,120 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Declaration JSON variant %q", variant)
+	}
+}
+
+func (v *Declaration) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one Declaration JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Bad":
+			current = 1
+		case "General":
+			current = 2
+		case "Function":
+			current = 3
+		case "Enum":
+			current = 4
+		case "Struct":
+			current = 5
+		case "Checked":
+			current = 6
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one Declaration JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown Declaration JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload DeclarationBad
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewDeclarationBad(payload)
+		return nil
+	case 2:
+		var payload DeclarationGeneral
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewDeclarationGeneral(payload)
+		return nil
+	case 3:
+		var payload DeclarationFunction
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewDeclarationFunction(payload)
+		return nil
+	case 4:
+		var payload DeclarationEnum
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewDeclarationEnum(payload)
+		return nil
+	case 5:
+		var payload DeclarationStruct
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewDeclarationStruct(payload)
+		return nil
+	case 6:
+		var payload DeclarationChecked
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewDeclarationChecked(payload)
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid Declaration JSON tag")
 	}
 }
 
@@ -2737,6 +3819,52 @@ func (v Node) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v Node) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case 1:
+		payload := v.TgoFile()
+		return __tgo_ChannelDirection_external_json_to(out, "File", payload)
+	case 2:
+		payload := v.TgoDeclaration()
+		return __tgo_ChannelDirection_external_json_to(out, "Declaration", payload)
+	case 3:
+		payload := v.TgoSpecification()
+		return __tgo_ChannelDirection_external_json_to(out, "Specification", payload)
+	case 4:
+		payload := v.TgoStatement()
+		return __tgo_ChannelDirection_external_json_to(out, "Statement", payload)
+	case 5:
+		payload := v.TgoExpression()
+		return __tgo_ChannelDirection_external_json_to(out, "Expression", payload)
+	case 6:
+		payload := v.TgoField()
+		return __tgo_ChannelDirection_external_json_to(out, "Field", payload)
+	case 7:
+		payload := v.TgoFieldList()
+		return __tgo_ChannelDirection_external_json_to(out, "FieldList", payload)
+	case 8:
+		payload := v.TgoTGoField()
+		return __tgo_ChannelDirection_external_json_to(out, "TGoField", payload)
+	case 9:
+		payload := v.TgoEnumVariant()
+		return __tgo_ChannelDirection_external_json_to(out, "EnumVariant", payload)
+	case 10:
+		payload := v.TgoMatchCase()
+		return __tgo_ChannelDirection_external_json_to(out, "MatchCase", payload)
+	case 11:
+		payload := v.TgoIdentifier()
+		return __tgo_ChannelDirection_external_json_to(out, "Identifier", payload)
+	case 12:
+		payload := v.TgoComment()
+		return __tgo_ChannelDirection_external_json_to(out, "Comment", payload)
+	case 13:
+		payload := v.TgoCommentGroup()
+		return __tgo_ChannelDirection_external_json_to(out, "CommentGroup", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid Node JSON tag")
+	}
+}
+
 func (v *Node) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -2845,5 +3973,182 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Node JSON variant %q", variant)
+	}
+}
+
+func (v *Node) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one Node JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "File":
+			current = 1
+		case "Declaration":
+			current = 2
+		case "Specification":
+			current = 3
+		case "Statement":
+			current = 4
+		case "Expression":
+			current = 5
+		case "Field":
+			current = 6
+		case "FieldList":
+			current = 7
+		case "TGoField":
+			current = 8
+		case "EnumVariant":
+			current = 9
+		case "MatchCase":
+			current = 10
+		case "Identifier":
+			current = 11
+		case "Comment":
+			current = 12
+		case "CommentGroup":
+			current = 13
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one Node JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown Node JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload NodeFile
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeFile(payload)
+		return nil
+	case 2:
+		var payload NodeDeclaration
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeDeclaration(payload)
+		return nil
+	case 3:
+		var payload NodeSpecification
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeSpecification(payload)
+		return nil
+	case 4:
+		var payload NodeStatement
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeStatement(payload)
+		return nil
+	case 5:
+		var payload NodeExpression
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeExpression(payload)
+		return nil
+	case 6:
+		var payload NodeField
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeField(payload)
+		return nil
+	case 7:
+		var payload NodeFieldList
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeFieldList(payload)
+		return nil
+	case 8:
+		var payload NodeTGoField
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeTGoField(payload)
+		return nil
+	case 9:
+		var payload NodeEnumVariant
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeEnumVariant(payload)
+		return nil
+	case 10:
+		var payload NodeMatchCase
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeMatchCase(payload)
+		return nil
+	case 11:
+		var payload NodeIdentifier
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeIdentifier(payload)
+		return nil
+	case 12:
+		var payload NodeComment
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeComment(payload)
+		return nil
+	case 13:
+		var payload NodeCommentGroup
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NewNodeCommentGroup(payload)
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid Node JSON tag")
 	}
 }

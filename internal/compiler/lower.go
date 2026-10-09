@@ -59,7 +59,8 @@ func (p *packageUnit) markGenerated(source *source) {
 				p.generated[declaration] = true
 			}
 		case *ast.FuncDecl:
-			if names[node.Name.Name] || generatedMethod(node, source.Models) {
+			if names[node.Name.Name] || source.GeneratedHelpers[node.Name.Name] ||
+				generatedMethod(node, source.Models) {
 				p.generated[declaration] = true
 			}
 		}
@@ -78,7 +79,10 @@ func generatedMethod(function *ast.FuncDecl, models []*model) bool {
 			return true
 		}
 		if model.Enum && receiver == model.Name &&
-			(function.Name.Name == "MarshalJSON" || function.Name.Name == "UnmarshalJSON") {
+			(function.Name.Name == "MarshalJSON" ||
+				function.Name.Name == "MarshalJSONTo" ||
+				function.Name.Name == "UnmarshalJSON" ||
+				function.Name.Name == "UnmarshalJSONFrom") {
 			return true
 		}
 		if generatedEnumMethod(receiver, function.Name.Name, model) {

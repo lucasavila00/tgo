@@ -118,11 +118,50 @@ func jsonString(value string) string {
 }
 
 // enumJSONGo emits JSON methods without a change to enum storage.
-func enumJSONGo(declaration *model, jsonPackage, fmtPackage string) string {
+func enumJSONGo(
+	declaration *model,
+	jsonPackage string,
+	jsonV2Package string,
+	jsonTextPackage string,
+	stringsPackage string,
+	fmtPackage string,
+	externalJSONTo string,
+	adjacentJSONTo string,
+) string {
 	var out strings.Builder
 	emitEnumJSONMarshal(&out, declaration, jsonPackage, fmtPackage)
 	out.WriteByte('\n')
+	emitEnumJSONMarshalTo(
+		&out,
+		declaration,
+		jsonV2Package,
+		jsonTextPackage,
+		fmtPackage,
+		externalJSONTo,
+		adjacentJSONTo,
+	)
+	out.WriteByte('\n')
 	emitEnumJSONUnmarshal(&out, declaration, jsonPackage, fmtPackage)
+	switch declaration.JSON.Form {
+	case "external":
+		out.WriteByte('\n')
+		emitExternalJSONUnmarshalFrom(
+			&out, declaration, jsonV2Package, jsonTextPackage, fmtPackage,
+		)
+	case "adjacent":
+		out.WriteByte('\n')
+		emitAdjacentJSONUnmarshalFrom(
+			&out,
+			declaration,
+			jsonV2Package,
+			jsonTextPackage,
+			stringsPackage,
+			fmtPackage,
+		)
+	default:
+		out.WriteByte('\n')
+		emitJSONUnmarshalFrom(&out, declaration.Name, jsonTextPackage)
+	}
 	return out.String()
 }
 

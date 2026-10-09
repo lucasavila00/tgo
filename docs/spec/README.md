@@ -225,8 +225,10 @@ Go rejects a direct recursive payload when its size is infinite.
 
 ### Enum JSON
 
-Every enum has generated `MarshalJSON` and `UnmarshalJSON` methods. Go callers use
-`encoding/json` with the enum value. Normal structs keep the standard Go JSON behavior.
+Every enum has generated `MarshalJSON`, `MarshalJSONTo`, `UnmarshalJSON`, and
+`UnmarshalJSONFrom` methods. Go callers use `encoding/json` with the enum value. Go 1.27 uses
+the streaming methods. Direct method calls keep the byte-slice API. Normal structs keep the
+standard Go JSON behavior.
 
 An optional Go struct tag after `enum` selects the JSON form. A tag after a variant payload
 sets its wire name. The default wire name is the variant name. Wire names must be nonempty
@@ -270,45 +272,45 @@ can break stored data or clients.
 
 #### Allocation behavior
 
-Generated enum JSON uses standard `encoding/json` behavior. It avoids a map or a second marshal
-when the wire form does not require one. Payload methods and field methods keep their normal Go
-JSON behavior.
+Generated enum JSON uses standard `encoding/json` behavior. Its Go 1.27 stream methods write into
+the active encoder and read from the active decoder. This removes intermediate enum buffers and
+maps where the wire form permits it. Payload methods and field methods keep their normal Go JSON
+behavior.
 
 Go does not specify which values escape to the heap. The tables below list each logical allocation
 site in the generated path. The Go version, the payload type, the JSON data, and escape analysis
 determine the final count.
 
-Each successful `json.Marshal` call allocates its returned byte slice. A public
-`json.Marshal(enumValue)` call can also allocate its own output buffer after the generated
-`MarshalJSON` method returns. Each `json.Unmarshal` call can allocate decoder state and destination
-values. The normal-name paths use these operations:
+`json.Marshal(enumValue)` allocates its returned byte slice and can allocate encoder state or an
+interface box. `MarshalJSONTo` writes the envelope and payload into that encoder. It does not make
+an enum result buffer. Internal encoding uses one flattened typed wrapper when the payload has no
+JSON or text method. If the payload has such a method, it uses `MarshalJSON` so that the payload
+keeps its method behavior.
 
-- External encoding has one typed-wrapper marshal. Decoding has one map, each decoded key string,
-  one copied payload `RawMessage`, and one payload decode.
-- Internal encoding marshals the payload and allocates the combined object. This operation keeps
-  payload-level and promoted JSON methods. Decoding reads the tag directly into a string. It then
-  decodes the payload from the original object, so a custom method receives the original member
-  order.
-- Adjacent encoding has one typed-wrapper marshal. Decoding reads the tag directly into a string,
-  copies the content into one `RawMessage`, and decodes that content.
-- Untagged encoding has one direct payload marshal. Decoding has one payload decode for each
-  attempted variant. A failed attempt can allocate values before it returns an error.
+`json.Unmarshal(data, &enumValue)` can allocate decoder state and method-dispatch state.
+`UnmarshalJSONFrom` reads from that decoder. The selected payload decode can allocate its own
+decoder state and destination values.
 
-External decoding needs the map to find an arbitrary key and to require exactly one entry.
-`RawMessage.UnmarshalJSON` allocates and copies its JSON value. Internal decoding reads the input
-twice. It does not allocate a map or an intermediate payload document.
+External `UnmarshalJSONFrom` copies only the selected raw payload, then decodes it. The copy keeps
+the last value for a repeated variant name. A repeated different name still fails the one-variant
+rule. Internal decoding reads the input twice. The second read uses the original object, so a
+custom method receives the original member order. Normal adjacent streaming maps the tag token
+directly to a variant and copies the content value. Untagged decoding tries each payload in
+declaration order. Each failed attempt can allocate values before it returns an error.
 
-A name such as `-` cannot be represented safely in a JSON struct tag. Such a name uses these
-compatibility sites:
+A name such as `-` cannot be represented safely in a Go JSON struct tag. Streaming encoding writes
+such names as JSON tokens and adds no fallback envelope allocation. Streaming external decoding
+uses the same selected-payload copy as normal external decoding. Streaming adjacent decoding
+maps the last tag token and copies the last content value. Escaped member names can allocate
+decoded key strings. Internal decoding still uses a map to find an arbitrary tag name, then passes
+the original input to the payload decoder. It does not delete the tag or marshal an intermediate
+map.
 
-- External and adjacent encoding first allocate the payload marshal result. A generated `make`
-  then allocates the envelope byte slice.
-- Internal encoding first allocates the payload marshal result. For an empty object, conversion
-  of the complete constant JSON string can allocate a byte slice. For a nonempty object, a
-  generated `make` allocates the combined byte slice.
-- Internal and adjacent decoding allocate a map, decoded key strings, and copied `RawMessage`
-  values. Internal decoding passes the original input to the payload decoder. It does not delete
-  the tag or marshal an intermediate map.
+Direct `MarshalJSON` calls return their own byte slice. External and adjacent normal-name paths use
+one typed-wrapper marshal. Their unusual-name paths marshal the payload and allocate an envelope.
+Internal direct calls marshal the payload and allocate the combined object. Direct external
+`UnmarshalJSON` uses a map, decoded key strings, a copied `RawMessage`, and one payload decode.
+Direct unusual-name internal and adjacent decoding also use a map and copied raw values.
 
 Payload decoding can allocate strings, pointers, slices, maps, interfaces, and values that custom
 `UnmarshalJSON` methods create. Payload encoding can allocate inside maps, slices, interfaces,
@@ -325,20 +327,37 @@ JSON decoding uses reflection. It does not enforce `%T` contracts. Input for a `
 must contain a non-null value. Missing or null data can produce an invalid TGo value without a JSON
 error.
 
-CI measures public `encoding/json` calls with a representative small payload. The marshal
-benchmarks convert the typed enum to the interface in the timed loop. These limits include that
-conversion. The escaped-name cases use a nonempty payload and cover each fallback. The limits do
-not include allocations that a different payload type or a custom JSON method adds.
+CI measures public `encoding/json` calls and direct byte-slice method calls with a representative
+small payload. The public marshal benchmarks convert the typed enum to the interface in the timed
+loop. The escaped-name cases use a nonempty payload. The limits do not include allocations that a
+different payload type or a custom JSON method adds.
 
-| Operation | Maximum allocations | Maximum bytes |
+| Public operation | Maximum allocations | Maximum bytes |
 | --- | ---: | ---: |
-| External marshal | 6 | 320 B/op |
-| Internal marshal | 7 | 344 B/op |
-| Adjacent marshal | 6 | 352 B/op |
-| Untagged marshal | 6 | 160 B/op |
-| Escaped external marshal | 7 | 160 B/op |
-| Escaped internal marshal | 7 | 192 B/op |
-| Escaped adjacent marshal | 7 | 224 B/op |
+| External marshal | 5 | 288 B/op |
+| Internal marshal | 5 | 304 B/op |
+| Adjacent marshal | 5 | 272 B/op |
+| Untagged marshal | 5 | 144 B/op |
+| Escaped external marshal | 5 | 112 B/op |
+| Escaped internal marshal | 5 | 160 B/op |
+| Escaped adjacent marshal | 5 | 144 B/op |
+| External unmarshal | 2 | 72 B/op |
+| Internal unmarshal | 2 | 64 B/op |
+| Adjacent unmarshal | 2 | 72 B/op |
+| Untagged unmarshal | 6 | 248 B/op |
+| Escaped external unmarshal | 3 | 56 B/op |
+| Escaped internal unmarshal | 12 | 568 B/op |
+| Escaped adjacent unmarshal | 5 | 88 B/op |
+
+| Direct method operation | Maximum allocations | Maximum bytes |
+| --- | ---: | ---: |
+| External marshal | 3 | 128 B/op |
+| Internal marshal | 4 | 168 B/op |
+| Adjacent marshal | 3 | 176 B/op |
+| Untagged marshal | 3 | 48 B/op |
+| Escaped external marshal | 4 | 80 B/op |
+| Escaped internal marshal | 4 | 96 B/op |
+| Escaped adjacent marshal | 4 | 112 B/op |
 | External unmarshal | 7 | 520 B/op |
 | Internal unmarshal | 2 | 64 B/op |
 | Adjacent unmarshal | 3 | 120 B/op |

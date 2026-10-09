@@ -4,6 +4,8 @@
 package tgolint
 
 import __tgo_json "encoding/json"
+import __tgo_jsonv2 "encoding/json/v2"
+import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
 import (
@@ -15,6 +17,19 @@ import (
 
 	"golang.org/x/tools/go/cfg"
 )
+
+func __tgo_effectOutcome_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(__tgo_jsontext.EndObject)
+}
 
 // effectOutcome requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
@@ -100,6 +115,25 @@ func (v effectOutcome) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (v effectOutcome) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+	switch v.tgoTag {
+	case 1:
+		payload := v.TgoUnknown()
+		return __tgo_effectOutcome_external_json_to(out, "Unknown", payload)
+	case 2:
+		payload := v.TgoNever()
+		return __tgo_effectOutcome_external_json_to(out, "Never", payload)
+	case 3:
+		payload := v.TgoAlways()
+		return __tgo_effectOutcome_external_json_to(out, "Always", payload)
+	case 4:
+		payload := v.TgoConditional()
+		return __tgo_effectOutcome_external_json_to(out, "Conditional", payload)
+	default:
+		return __tgo_fmt.Errorf("invalid effectOutcome JSON tag")
+	}
+}
+
 func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
@@ -145,6 +179,102 @@ func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown effectOutcome JSON variant %q", variant)
+	}
+}
+
+func (v *effectOutcome) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return __tgo_fmt.Errorf("expected one effectOutcome JSON variant")
+	}
+	var payloadData __tgo_jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "Unknown":
+			current = 1
+		case "Never":
+			current = 2
+		case "Always":
+			current = 3
+		case "Conditional":
+			current = 4
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return __tgo_fmt.Errorf("expected one effectOutcome JSON variant")
+	}
+	if selected == 0 {
+		return __tgo_fmt.Errorf("unknown effectOutcome JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload effectOutcomeUnknown
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NeweffectOutcomeUnknown(payload)
+		return nil
+	case 2:
+		var payload effectOutcomeNever
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NeweffectOutcomeNever(payload)
+		return nil
+	case 3:
+		var payload effectOutcomeAlways
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NeweffectOutcomeAlways(payload)
+		return nil
+	case 4:
+		var payload effectOutcomeConditional
+		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = NeweffectOutcomeConditional(payload)
+		return nil
+	default:
+		return __tgo_fmt.Errorf("invalid effectOutcome JSON tag")
 	}
 }
 
