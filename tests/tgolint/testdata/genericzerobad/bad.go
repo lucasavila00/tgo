@@ -115,6 +115,13 @@ func FunctionValues(event model.Event) {
 	genericzero.Nested[model.Event]()()
 	nested := genericzero.Nested[model.Event]()
 	nested()
+	genericzero.AliasedNested[model.Event]()()
+	genericzero.ForwardedNested[model.Event]()()
+}
+
+func UnresolvedEscape(forward func(func()) func()) {
+	nested := genericzero.UnresolvedNested[model.Event](forward)
+	keep(nested)
 }
 
 func keep(any) {}

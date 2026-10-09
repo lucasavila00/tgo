@@ -602,6 +602,24 @@ func (c *checker) addGenericEffect(
 ) bool {
 	effect.Receiver = parameter.receiver
 	effect.TypeParameter = parameter.index
+	return c.addSummaryGenericEffect(summary, zero, false, effect)
+}
+
+// addReturnedGenericEffect adds one effect to the returned function value.
+func (c *checker) addReturnedGenericEffect(
+	summary *genericEffectSummary,
+	zero bool,
+	effect GenericEffect,
+) bool {
+	return c.addSummaryGenericEffect(summary, zero, true, effect)
+}
+
+func (c *checker) addSummaryGenericEffect(
+	summary *genericEffectSummary,
+	zero bool,
+	returned bool,
+	effect GenericEffect,
+) bool {
 	normalized, possible := normalizeGenericEffect(effect)
 	if !possible {
 		return false
@@ -610,6 +628,12 @@ func (c *checker) addGenericEffect(
 	target := &summary.accessEffects
 	if zero {
 		target = &summary.zeroEffects
+	}
+	if returned {
+		target = &summary.returnedAccessEffects
+		if zero {
+			target = &summary.returnedZeroEffects
+		}
 	}
 	for _, current := range *target {
 		if equalGenericEffect(current, effect) {

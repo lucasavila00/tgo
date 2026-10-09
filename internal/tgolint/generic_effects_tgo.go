@@ -506,9 +506,20 @@ type genericEffectSummary struct {
 	returnedZeroEffects   []GenericEffect
 	returnedAccessEffects []GenericEffect
 	calls                 []*syntax.Expression
+	returnedCalls         []returnedGenericCall
 	reachable             map[syntax.Node]bool
 	root                  *syntax.Node
 	body                  *syntax.BlockStatement
+}
+
+type returnedGenericCall struct {
+	expression *syntax.Expression
+	maySkip    bool
+}
+
+type returnedClosureBinding struct {
+	sources  []*syntax.Expression
+	unstable bool
 }
 
 // checkGenericZeroSafety exports generic zero facts and checks each use.
@@ -554,6 +565,7 @@ func (c *checker) checkGenericZeroSafety() {
 // collectGenericZeroSummaries creates one local effect summary per generic function.
 func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSummary {
 	summaries := make(map[*types.Func]*genericEffectSummary)
+	declarations := c.genericFunctionDeclarations()
 	for _, file := range c.files {
 		if c.generated[file] {
 			continue
@@ -579,17 +591,40 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 			summary := &genericEffectSummary{
 				function: object, file: file, declaration: function, parameters: parameters,
 				zeroEffects: nil, accessEffects: nil, returnedZeroEffects: nil,
-				returnedAccessEffects: nil, calls: nil,
+				returnedAccessEffects: nil, calls: nil, returnedCalls: nil,
 				reachable: c.reachableNodes(function.Body), root: &root,
 				body: function.Body,
 			}
 			c.collectDirectGenericZeros(summary)
-			c.collectReturnedGenericEffects(summary)
 			summaries[object] = summary
 			return false
 		})
 	}
+	for _, summary := range summaries {
+		c.collectReturnedGenericEffects(summary, summaries, declarations)
+	}
 	return summaries
+}
+
+func (c *checker) genericFunctionDeclarations() map[*types.Func]*syntax.FunctionDeclaration {
+	declarations := make(map[*types.Func]*syntax.FunctionDeclaration)
+	for _, file := range c.files {
+		if c.generated[file] {
+			continue
+		}
+		inspectGenericFile(file, func(node *syntax.Node) bool {
+			function, ok := syntax.FunctionDeclarationOf(node)
+			if !ok || function.Body == nil {
+				return true
+			}
+			object, ok := c.facts.DefinitionName(function.Name).(*types.Func)
+			if ok {
+				declarations[object.Origin()] = function
+			}
+			return false
+		})
+	}
+	return declarations
 }
 
 func genericParameters(signature *types.Signature) map[*types.TypeParam]zeroParameter {
@@ -668,38 +703,29 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 	})
 }
 
-// collectReturnedGenericEffects records effects in a directly returned closure.
-func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
+// collectReturnedGenericEffects records effects in returned closure values.
+func (c *checker) collectReturnedGenericEffects(
+	summary *genericEffectSummary,
+	summaries map[*types.Func]*genericEffectSummary,
+	declarations map[*types.Func]*syntax.FunctionDeclaration,
+) {
+	bindings := c.returnedClosureBindings(summary.body)
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
 		statement, ok := syntax.StatementOf(node)
-		if !ok || syntax.ReturnStatementOf(statement) == nil {
+		if !ok {
 			return true
 		}
-		for _, expression := range syntax.ReturnStatementOf(statement).Results {
-			value := unparenthesized(expression)
-			literal := syntax.FunctionLiteralExpressionOf(value)
-			if literal == nil {
-				continue
-			}
-			root := syntax.ExpressionNode(value)
-			returned := &genericEffectSummary{
-				function: summary.function, file: summary.file,
-				declaration: summary.declaration,
-				parameters:  summary.parameters, zeroEffects: nil,
-				accessEffects: nil, returnedZeroEffects: nil,
-				returnedAccessEffects: nil, calls: nil,
-				reachable: c.reachableNodes(literal.Body), root: &root,
-				body: literal.Body,
-			}
-			c.collectGenericNodes(returned)
-			summary.returnedZeroEffects = append(
-				summary.returnedZeroEffects, returned.zeroEffects...,
-			)
-			summary.returnedAccessEffects = append(
-				summary.returnedAccessEffects, returned.accessEffects...,
+		returned := syntax.ReturnStatementOf(statement)
+		if returned == nil {
+			return true
+		}
+		for _, expression := range returned.Results {
+			c.collectReturnedExpression(
+				summary, expression, bindings, summaries, declarations,
+				true, false, make(map[types.Object]bool),
 			)
 		}
 		return false
