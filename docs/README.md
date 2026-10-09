@@ -2,7 +2,8 @@
 
 - [Language specification](spec/README.md): TGo syntax and behavior.
 - [`tgolint` specification](spec/TGOLINT.md): checks for TGo source and Go callers.
-- [TGo user guide](for-agents/README.md): short rules and examples for agents and users.
+- [User guide](guide/README.md): setup, examples, and Go interoperability.
+- [Agent rules](for-agents/AGENTS.md): copyable rules for TGo repositories.
 - [Project problem](problem/README.md): the problems that guide language design.
 - [Implementation notes](implementation/README.md): repository architecture and bootstrap rules.
 

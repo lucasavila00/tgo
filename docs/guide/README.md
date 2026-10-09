@@ -1,6 +1,6 @@
 # Use tgo
 
-Copy [these rules](AGENTS.md) into a tgo user repository's `AGENTS.md`.
+Copy [these rules](../for-agents/AGENTS.md) into a tgo user repository's `AGENTS.md`.
 
 Write small business packages in `.tgo` files. Keep tests and other Go code in `.go` files.
 Use one Go module. Keep normal Go imports, package names, and tests.
