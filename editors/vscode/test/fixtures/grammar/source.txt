@@ -4,28 +4,172 @@ type Event enum {
 	Ready struct{}
 }
 
+type MultilineEvent enum
+{
+	Waiting struct{}
+}
+
 type Port struct { number int } checked
+type CheckedRecord struct {
+	value int
+	owner %User
+	history []%User
+	lookup map[string]%User
+	updates chan %User
+	callback func(%User) %User
+	multilineCallback func(
+		value %StructCallbackInput,
+	) %StructCallbackResult
+	returnedCallback func() func(
+		value %StructReturnedInput,
+	) %StructReturnedResult
+	wrappedCallback map[string]func(
+		value %StructWrappedInput,
+	) %StructWrappedResult
+	blockCommentCallback [] /*
+		keep
+	*/ func(
+		value %StructBlockCommentInput,
+	) %StructBlockCommentResult
+	commentedField int // func(
+} checked
+
+type UserPointer = %User
+type UserPointerMap = map[string][]%*User
+type DirectUserPointerMap = map[string]%User
+type UserArray [2]%User
+type MultilineUserArray [
+	2
+]%User
+type ModuloArray [Left % Right]Thing
+type UserFactory func() %User
+type ModuloFactory func(value [Left % Right]Thing)
+type MultilineFactory func(
+	value %FactoryInput,
+	array [2]%FactoryArrayInput,
+) %FactoryResult
+type NestedFactory func(
+	callback func(
+		value %NestedInput,
+	) %NestedOutput,
+) %NestedResult
+type ReturnedFactory func() func(
+	value %ReturnedInput,
+) %ReturnedResult
+type MultilineReturnedFactory func(
+	input int,
+) func(
+	value %MultilineReturnedInput,
+) %MultilineReturnedResult
+type WrappedFactory map[string]func(
+	value %WrappedInput,
+) %WrappedResult
+type BlockCommentFactory map[string] /* keep */ func(
+	value %BlockCommentInput,
+) %BlockCommentResult
+type MultilineBlockCommentFactory map[string] /*
+	keep
+*/ func(
+	callback func(
+		value %MultilineBlockCommentNestedInput,
+	) %MultilineBlockCommentNestedResult,
+	value %MultilineBlockCommentInput,
+) %MultilineBlockCommentResult
+type ReturnedBlockCommentFactory map[string] /*
+	keep
+*/ func(
+	input int,
+) func(
+	value %ReturnedBlockCommentInput,
+) %ReturnedBlockCommentResult
+type CommentedType int // func(
+type UserReader interface {
+	Read() %User
+	Put(value %User)
+	PutArray(value [2]%User)
+	Measure(value [Left % Right]Thing)
+	Transform(
+		value %TransformInput,
+	) %TransformResult
+	Return(
+		input int,
+	) func(
+		value %InterfaceReturnedInput,
+	) %InterfaceReturnedResult
+}
+type MultilineReader interface
+{
+	Transform(
+		value %MultilineTransformInput,
+	) %MultilineTransformResult
+}
+var currentUser %User
+var multilineVariableFactory func(
+	value %VariableInput,
+) %VariableResult
+var returnedVariableFactory func() func(
+	value %VariableReturnedInput,
+) %VariableReturnedResult
+var wrappedVariableFactory []func(
+	value %VariableWrappedInput,
+) %VariableWrappedResult
+var blockCommentVariableFactory [] /*
+	keep
+*/ func(
+	value %VariableBlockCommentInput,
+) %VariableBlockCommentResult
+var commentedVariable int // func(
+var (
+	groupedUser %User
+	groupedArray [2]%User
+	groupedFactory func(
+		value %GroupedInput,
+	) %GroupedResult
+	groupedNestedFactory func(
+		callback func(
+			value %GroupedNestedInput,
+		) %GroupedNestedOutput,
+	) %GroupedNestedResult
+	groupedReturnedFactory func() func(
+		value %GroupedReturnedInput,
+	) %GroupedReturnedResult
+	groupedWrappedFactory [2]func(
+		value %GroupedWrappedInput,
+	) %GroupedWrappedResult
+	groupedBlockCommentFactory [2] /*
+		keep
+	*/ func(
+		value %GroupedBlockCommentInput,
+	) %GroupedBlockCommentResult
+	groupedCommented int // func(
+)
 type WhereAlias where
 
 func read(ok bool, owner %User) error {
 	_ = Request{..default}
 	value := load() /* keep */ !
 	value = load()!!
+	value = CheckedRecord{value: 1}!
 	_ = !ok
 	_ = left%right
 	_ = left % Thing
+	_ = values[2] % Thing
 	_ = []int{for _, item := range values { if item > 0 { item } }}
 	switch event.Tag() {
 	exhaustive:
 	}
 	where := 1
+	checked := true
 	enum := 2
 	_ = enum{}
+	_ = append(values, defaults...)
 	return nil
 }
 
 func pointerParameter(value *Record) {}
 func nonNilParameter(value %Record) {}
+func nonNilResult() %Record { return currentUser }
+func nonNilResults() (%Record, error) { return currentUser, nil }
 
 func (value *Record) pointerReceiver() {}
 func (value %Record) nonNilReceiver() {}
