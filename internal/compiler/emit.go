@@ -8,6 +8,80 @@ import (
 	"unicode"
 )
 
+// checkedStructGo emits the checked value and its Go construction ABI.
+func checkedStructGo(sourceName string, declaration *model) string {
+	var output strings.Builder
+	parameters := checkedParameterNames(declaration.Fields)
+	fmt.Fprintf(
+		&output,
+		"type %s struct {\n%s}\n",
+		declaration.Name,
+		fieldDecls(sourceName, declaration.Fields),
+	)
+	fmt.Fprintf(&output, "type %s struct {\n", checkedCarrierName(declaration.Name))
+	for index, field := range declaration.Fields {
+		fmt.Fprintf(&output, "%s %s\n", checkedCarrierFieldName(field, index), field.Type)
+	}
+	output.WriteString("}\n")
+	fmt.Fprintf(
+		&output,
+		"// New%s constructs and checks %s.\nfunc New%s(",
+		declaration.Name,
+		declaration.Name,
+		declaration.Name,
+	)
+	for index, field := range declaration.Fields {
+		if index != 0 {
+			output.WriteString(", ")
+		}
+		fmt.Fprintf(&output, "%s %s", parameters[index], field.Type)
+	}
+	fmt.Fprintf(&output, ") (%s, error) {\nreturn %s{", declaration.Name, declaration.Name)
+	for index := range declaration.Fields {
+		if index != 0 {
+			output.WriteString(", ")
+		}
+		fmt.Fprint(&output, parameters[index])
+	}
+	output.WriteString("}.check()\n}\n")
+	return output.String()
+}
+
+func checkedCarrierName(name string) string { return "Tgo" + name + "Input" }
+
+func checkedCarrierFieldName(value field, index int) string {
+	if value.Name == "" || value.Name == "_" {
+		return fmt.Sprintf("Field%d", index)
+	}
+	runes := []rune(value.Name)
+	runes[0] = unicode.ToUpper(runes[0])
+	return "Field" + string(runes)
+}
+
+func checkedParameterNames(fields []field) []string {
+	names := make([]string, len(fields))
+	used := make(map[string]bool)
+	for index, field := range fields {
+		if field.Name != "" && field.Name != "_" {
+			names[index] = field.Name
+			used[field.Name] = true
+		}
+	}
+	for index := range fields {
+		if names[index] != "" {
+			continue
+		}
+		base := fmt.Sprintf("tgoField%d", index)
+		name := base
+		for suffix := 1; used[name]; suffix++ {
+			name = fmt.Sprintf("%s_%d", base, suffix)
+		}
+		names[index] = name
+		used[name] = true
+	}
+	return names
+}
+
 // enumGo emits the tagged Go representation for one tgo enum.
 func enumGo(sourceName string, declaration *model, fmtPackage string) string {
 	var output strings.Builder

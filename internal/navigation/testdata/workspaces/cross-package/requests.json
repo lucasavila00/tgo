@@ -6,6 +6,16 @@
   },
   {
     "method": "hover",
+    "position": {"file": "app/app.tgo", "text": "UserID", "occurrence": 2},
+    "hover": "type UserID struct{value int}"
+  },
+  {
+    "method": "hover",
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 2},
+    "hover": "field value int"
+  },
+  {
+    "method": "hover",
     "position": {"file": "lib/lib.tgo", "text": "PersonalPayload", "occurrence": 1},
     "hover": "func (Account) PersonalPayload() Account.Personal"
   },
@@ -16,7 +26,7 @@
   },
   {
     "method": "hover",
-    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 3},
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 6},
     "hover": "var value string"
   },
   {
@@ -24,6 +34,20 @@
     "position": {"file": "app/app.tgo", "text": "Target", "occurrence": 1},
     "locations": [
       {"file": "lib/lib.tgo", "text": "Target", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "app/app.tgo", "text": "UserID", "occurrence": 2},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "UserID", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 2},
+    "locations": [
+      {"file": "lib/lib.tgo", "text": "value", "occurrence": 12}
     ]
   },
   {
@@ -111,23 +135,16 @@
   },
   {
     "method": "definition",
-    "position": {"file": "lib/lib.tgo", "text": "NewUserID", "occurrence": 2},
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 6},
     "locations": [
-      {"file": "lib/lib.tgo", "text": "NewUserID", "occurrence": 1}
+      {"file": "app/app.tgo", "text": "value", "occurrence": 5}
     ]
   },
   {
     "method": "definition",
-    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 3},
+    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 7},
     "locations": [
-      {"file": "app/app.tgo", "text": "value", "occurrence": 2}
-    ]
-  },
-  {
-    "method": "definition",
-    "position": {"file": "app/app.tgo", "text": "value", "occurrence": 4},
-    "locations": [
-      {"file": "app/app.tgo", "text": "value", "occurrence": 1}
+      {"file": "app/app.tgo", "text": "value", "occurrence": 4}
     ]
   }
 ]

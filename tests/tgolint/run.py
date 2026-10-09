@@ -106,7 +106,7 @@ def assert_integrity_checks(linter, work):
     generated_text = generated_model.read_text()
 
     replacements = (
-        ("return Count{value: value}.check()", "return Count{}.check()"),
+        ("return Count{value}.check()", "return Count{}.check()"),
         (
             "return Event{tgoTag: EventTagStarted, tgoStarted: tgoValue}",
             "_ = tgoValue\n\treturn Event{}",

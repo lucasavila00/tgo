@@ -272,6 +272,14 @@ func MakeAccount() Account {
 type UserID struct {
 	value int
 }
+type TgoUserIDInput struct {
+	FieldValue int
+}
+
+// NewUserID constructs and checks UserID.
+func NewUserID(value int) (UserID, error) {
+	return UserID{value}.check()
+}
 
 type userIDError struct {
 }
@@ -285,8 +293,6 @@ func (value UserID) check() (UserID, error) {
 	return value, nil
 }
 
-func NewUserID(value int) (UserID, error) { return UserID{value: value}.check() }
-
 func (value UserID) Value() int { return value.value }
 
 func ReadID(value UserID) int {
@@ -294,5 +300,7 @@ func ReadID(value UserID) int {
 }
 
 func MakeID() (UserID, error) {
-	return NewUserID(1)
+	return func(tgoInput TgoUserIDInput) (UserID, error) {
+		return NewUserID(tgoInput.FieldValue)
+	}(TgoUserIDInput{FieldValue: 1})
 }

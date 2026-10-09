@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"strings"
 )
 
 // checkRules applies tgo safety rules after Go type checking.
@@ -13,14 +14,36 @@ func (p *packageUnit) checkRules() {
 			if p.generatedDecl(declaration) {
 				continue
 			}
+			trusted := p.checkedMethodReceiver(declaration)
 			parents := parentNodes(declaration)
 			ast.Inspect(declaration, func(node ast.Node) bool {
 				p.checkNonNilType(source, node)
-				p.checkNode(node, parents)
+				p.checkNode(node, parents, trusted)
 				return true
 			})
 		}
 	}
+}
+
+// checkedMethodReceiver returns the local value that check can normalize.
+func (p *packageUnit) checkedMethodReceiver(declaration ast.Decl) types.Object {
+	function, ok := declaration.(*ast.FuncDecl)
+	if !ok || function.Name.Name != "check" {
+		return nil
+	}
+	receiver, ok := receiverName(function)
+	if !ok {
+		return nil
+	}
+	value := p.Models[receiver]
+	if value == nil || !value.CheckedStruct {
+		return nil
+	}
+	if function.Recv == nil || len(function.Recv.List) != 1 ||
+		len(function.Recv.List[0].Names) != 1 {
+		return nil
+	}
+	return p.info.Defs[function.Recv.List[0].Names[0]]
 }
 
 // checkCheckedStructs checks the required local validation method.
@@ -106,6 +129,7 @@ func parentNodes(root ast.Node) map[ast.Node]ast.Node {
 func (p *packageUnit) checkNode(
 	node ast.Node,
 	parents map[ast.Node]ast.Node,
+	trusted types.Object,
 ) {
 	if expression, ok := node.(ast.Expr); ok {
 		p.checkRepresentationExpression(expression, parents)
@@ -114,6 +138,8 @@ func (p *packageUnit) checkNode(
 	case *ast.Ident:
 		p.checkEnumGeneratedConstructorReference(node)
 		p.checkEnumGeneratedType(node)
+		p.checkCheckedCarrier(node)
+		p.checkCheckedConstructorReference(node, parents)
 	case *ast.TypeSpec:
 		p.checkTypeSpec(node)
 	case *ast.CompositeLit:
@@ -122,6 +148,30 @@ func (p *packageUnit) checkNode(
 		p.checkCall(node)
 	case *ast.SelectorExpr:
 		p.checkSelector(node)
+		p.checkCheckedFieldChange(node, parents, trusted)
+	}
+}
+
+func (p *packageUnit) checkCheckedCarrier(identifier *ast.Ident) {
+	if identifier.Pos() == token.NoPos {
+		return
+	}
+	object, ok := p.info.Uses[identifier].(*types.TypeName)
+	if !ok || object.Pkg() == nil {
+		return
+	}
+	owner := p
+	if object.Pkg().Path() != p.Path {
+		owner = p.Imports[object.Pkg().Path()]
+	}
+	if owner == nil {
+		return
+	}
+	for _, value := range owner.Models {
+		if value.CheckedStruct && object.Name() == checkedCarrierName(value.Name) {
+			p.fail(identifier, "%s is generated staging ABI; use a checked literal", object.Name())
+			return
+		}
 	}
 }
 
@@ -372,6 +422,123 @@ func (p *packageUnit) checkEnumGeneratedType(identifier *ast.Ident) {
 			}
 		}
 	}
+}
+
+// checkCheckedConstructorReference hides the generated Go ABI from TGo.
+func (p *packageUnit) checkCheckedConstructorReference(
+	identifier *ast.Ident,
+	parents map[ast.Node]ast.Node,
+) {
+	function, ok := p.info.Uses[identifier].(*types.Func)
+	if !ok || !p.generatedCheckedConstructor(function) ||
+		p.generatedReference(identifier) || p.checkedCallReference(identifier, parents) {
+		return
+	}
+	p.fail(identifier, "%s is generated Go ABI; use a checked literal", function.Name())
+}
+
+func (p *packageUnit) generatedReference(identifier *ast.Ident) bool {
+	for _, reference := range p.references {
+		if reference.Name == identifier {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *packageUnit) checkedCallReference(
+	identifier *ast.Ident,
+	parents map[ast.Node]ast.Node,
+) bool {
+	parent := parents[identifier]
+	if selector, ok := parent.(*ast.SelectorExpr); ok && selector.Sel == identifier {
+		parent = parents[selector]
+	}
+	call, ok := parent.(*ast.CallExpr)
+	return ok && p.checkedCalls[call]
+}
+
+func (p *packageUnit) generatedCheckedConstructor(function *types.Func) bool {
+	if function == nil || function.Pkg() == nil ||
+		!strings.HasPrefix(function.Name(), "New") {
+		return false
+	}
+	owner := p
+	if function.Pkg().Path() != p.Path {
+		owner = p.Imports[function.Pkg().Path()]
+	}
+	if owner == nil {
+		return false
+	}
+	value := owner.Models[strings.TrimPrefix(function.Name(), "New")]
+	return value != nil && value.CheckedStruct
+}
+
+// checkCheckedFieldChange keeps a checked value valid after construction.
+func (p *packageUnit) checkCheckedFieldChange(
+	selector *ast.SelectorExpr,
+	parents map[ast.Node]ast.Node,
+	trusted types.Object,
+) {
+	selection := p.info.Selections[selector]
+	if selection == nil || selection.Kind() != types.FieldVal ||
+		len(selection.Index()) != 1 {
+		return
+	}
+	value := p.modelForType(dereference(selection.Recv()))
+	if value == nil || !value.CheckedStruct {
+		return
+	}
+	parent := parents[selector]
+	for {
+		wrapped, ok := parent.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		parent = parents[wrapped]
+	}
+	if !checkedFieldChanged(selector, parent) {
+		return
+	}
+	if checkedSelectorObject(p.info, selector) == trusted {
+		return
+	}
+	p.fail(selector, "checked field %s cannot be changed after construction", selector.Sel.Name)
+}
+
+func checkedFieldChanged(selector *ast.SelectorExpr, parent ast.Node) bool {
+	switch node := parent.(type) {
+	case *ast.AssignStmt:
+		for _, left := range node.Lhs {
+			if left == selector {
+				return true
+			}
+		}
+	case *ast.IncDecStmt:
+		return node.X == selector
+	case *ast.UnaryExpr:
+		return node.Op == token.AND
+	case *ast.RangeStmt:
+		return node.Tok == token.ASSIGN &&
+			(node.Key == selector || node.Value == selector)
+	}
+	return false
+}
+
+func checkedSelectorObject(info *types.Info, selector *ast.SelectorExpr) types.Object {
+	expression := selector.X
+	for {
+		parentheses, ok := expression.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expression = parentheses.X
+	}
+	identifier, ok := expression.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	return info.Uses[identifier]
 }
 
 // checkConversion rejects conversions that bypass a model constructor.

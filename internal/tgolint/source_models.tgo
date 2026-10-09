@@ -393,7 +393,8 @@ func sourceShapeMatches(
 		if !sameFields(sourceStruct.Fields, structure.Fields.List, generated) {
 			return false
 		}
-		return sourceStruct.Fact == nil || validCheckedStructAPI(typ)
+		return sourceStruct.Fact == nil ||
+			validCheckedStructAPI(typ) && validCheckedCarrier(typ, sourceStruct.Fields)
 	case sourceModelTagEnum:
 		enum := item.EnumPayload()
 		if !generatedEnumShape(typ, enum.Name, enum.Variants) {
@@ -421,9 +422,30 @@ func validCheckedStructAPI(typ types.Type) bool {
 		return false
 	}
 	errorObject := types.Universe.Lookup("error")
-	return errorObject != nil && types.Identical(signature.Recv().Type(), typ) &&
-		types.Identical(signature.Results().At(0).Type(), typ) &&
-		types.Identical(signature.Results().At(1).Type(), errorObject.Type())
+	if errorObject == nil || !types.Identical(signature.Recv().Type(), typ) ||
+		!types.Identical(signature.Results().At(0).Type(), typ) ||
+		!types.Identical(signature.Results().At(1).Type(), errorObject.Type()) {
+		return false
+	}
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil { return false }
+	constructor, ok := named.Obj().Pkg().Scope().Lookup(
+		"New" + named.Obj().Name(),
+	).(*types.Func)
+	if !ok { return false }
+	created, ok := constructor.Type().(*types.Signature)
+	structure, structureOK := named.Underlying().(*types.Struct)
+	if !ok || !structureOK || created.Recv() != nil || created.Variadic() ||
+		created.Params().Len() != structure.NumFields() || created.Results().Len() != 2 {
+		return false
+	}
+	for index := 0; index < structure.NumFields(); index++ {
+		if !types.Identical(created.Params().At(index).Type(), structure.Field(index).Type()) {
+			return false
+		}
+	}
+	return types.Identical(created.Results().At(0).Type(), typ) &&
+		types.Identical(created.Results().At(1).Type(), errorObject.Type())
 }
 
 // generatedEnumShape checks enum operations without reading private storage.

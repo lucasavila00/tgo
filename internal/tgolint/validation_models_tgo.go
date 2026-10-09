@@ -68,17 +68,11 @@ func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
 	scope := object.Pkg().Scope()
 	_, name := modelDescription(value)
 	if modelIsChecked(value) {
-		function, _, _ := types.LookupFieldOrMethod(
-			object.Type(),
-			false,
-			object.Pkg(),
-			"check",
-		)
-		if method, ok := function.(*types.Func); ok &&
-			validCheckedStructAPI(object.Type()) {
+		constructor, ok := scope.Lookup("New" + object.Name()).(*types.Func)
+		if ok && validCheckedStructAPI(object.Type()) {
 			fact := &validationFact{}
-			c.validated[method] = true
-			c.pass.ExportObjectFact(method, fact)
+			c.validated[constructor] = true
+			c.pass.ExportObjectFact(constructor, fact)
 		}
 	}
 	if modelIsEnum(value) {

@@ -64,8 +64,6 @@ func (value UserID) check() (UserID, error) {
 	return value, nil
 }
 
-func NewUserID(value int) (UserID, error) { return UserID{value: value} }
-
 func (value UserID) Value() int { return value.value }
 
 func ReadID(value UserID) int {
@@ -73,5 +71,5 @@ func ReadID(value UserID) int {
 }
 
 func MakeID() (UserID, error) {
-	return NewUserID(1)
+	return UserID{value: 1}
 }

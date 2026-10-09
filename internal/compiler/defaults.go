@@ -70,8 +70,8 @@ func (p *packageUnit) fillDefaults() {
 	}
 }
 
-// fillEnumDefaults expands selected defaults before namespace literals lower.
-func (p *packageUnit) fillEnumDefaults() {
+// fillConstructionDefaults expands defaults before constructor lowering.
+func (p *packageUnit) fillConstructionDefaults() {
 	for _, source := range p.Sources {
 		for _, declaration := range source.File.Decls {
 			if p.generatedDecl(declaration) {
@@ -82,28 +82,42 @@ func (p *packageUnit) fillEnumDefaults() {
 				if !ok {
 					return true
 				}
-				selector, owner, model, variant := p.enumLiteral(literal)
-				if model == nil {
-					return true
-				}
-				named, _ := types.Unalias(p.info.TypeOf(selector.X)).(*types.Named)
-				if named == nil {
-					return true
-				}
-				p.fillLiteralDefaultsFor(
-					source,
-					literal,
-					source.DefaultMarker,
-					owner,
-					model.Name+variant.Name,
-					variant.Fields,
-					func() string {
-						return p.ownerQualifier(source.File, named.Obj().Pkg())
-					},
-				)
+				p.fillConstructionLiteralDefaults(source, literal)
 				return true
 			})
 		}
+	}
+}
+
+func (p *packageUnit) fillConstructionLiteralDefaults(
+	source *source,
+	literal *ast.CompositeLit,
+) {
+	selector, owner, model, variant := p.enumLiteral(literal)
+	if model != nil {
+		named, _ := types.Unalias(p.info.TypeOf(selector.X)).(*types.Named)
+		if named == nil {
+			return
+		}
+		p.fillLiteralDefaultsFor(
+			source,
+			literal,
+			source.DefaultMarker,
+			owner,
+			model.Name+variant.Name,
+			variant.Fields,
+			func() string {
+				return p.ownerQualifier(source.File, named.Obj().Pkg())
+			},
+		)
+		return
+	}
+	_, value := p.modelOwner(p.info.TypeOf(literal))
+	if value == nil {
+		_, value = p.namedLiteralModel(literal.Type)
+	}
+	if value != nil && value.CheckedStruct {
+		p.fillLiteralDefaults(source, literal, source.DefaultMarker)
 	}
 }
 
