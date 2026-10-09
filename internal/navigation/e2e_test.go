@@ -3,6 +3,7 @@ package navigation_test
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"net/url"
 	"os"
 	"os/exec"
@@ -25,6 +26,22 @@ type fixtureRequest struct {
 	Position           fixturePoint   `json:"position"`
 	IncludeDeclaration bool           `json:"includeDeclaration"`
 	Locations          []fixturePoint `json:"locations"`
+}
+
+type fixtureSymbol struct {
+	Name      string       `json:"name"`
+	Kind      string       `json:"kind"`
+	Container string       `json:"container"`
+	Range     fixturePoint `json:"range"`
+	Selection fixturePoint `json:"selection"`
+}
+
+type fixtureSymbolRequest struct {
+	Method  string          `json:"method"`
+	File    string          `json:"file"`
+	Query   string          `json:"query"`
+	Names   []string        `json:"names"`
+	Symbols []fixtureSymbol `json:"symbols"`
 }
 
 type helperProcess struct {
@@ -53,6 +70,9 @@ func TestHelperWorkspaceFixtures(t *testing.T) {
 			server := startHelper(t, helper, workspace)
 			for _, request := range readRequests(t, workspace) {
 				server.check(t, workspace, request)
+			}
+			for _, request := range readSymbolRequests(t, workspace) {
+				server.checkSymbols(t, workspace, request)
 			}
 		})
 	}
@@ -106,22 +126,93 @@ func (h *helperProcess) check(
 	t.Helper()
 	positionPath := filepath.Join(workspace, fixture.Position.File)
 	offset := pointOffset(t, positionPath, fixture.Position)
-	request := navigation.Request{
-		ID:     h.nextID,
-		Method: fixture.Method,
-		Params: mustJSON(t, map[string]any{
-			"uri":                fileURI(t, positionPath),
-			"offset":             offset,
-			"includeDeclaration": fixture.IncludeDeclaration,
-		}),
+	params := mustJSON(t, map[string]any{
+		"uri":                fileURI(t, positionPath),
+		"offset":             offset,
+		"includeDeclaration": fixture.IncludeDeclaration,
+	})
+	var result []navigation.Location
+	h.call(t, fixture.Method, params, &result)
+	want := make([]navigation.Location, 0, len(fixture.Locations))
+	for _, point := range fixture.Locations {
+		path := filepath.Join(workspace, point.File)
+		start := pointOffset(t, path, point)
+		want = append(want, navigation.Location{
+			URI: fileURI(t, path), Start: start, End: start + len(point.Text),
+		})
 	}
+	if !equalLocations(result, want) {
+		t.Fatalf(
+			"%s at %#v result = %#v, want %#v",
+			fixture.Method, fixture.Position, result, want,
+		)
+	}
+}
+
+func (h *helperProcess) checkSymbols(
+	t *testing.T,
+	workspace string,
+	fixture fixtureSymbolRequest,
+) {
+	t.Helper()
+	params := map[string]any{"query": fixture.Query}
+	if fixture.File != "" {
+		params["uri"] = fileURI(t, filepath.Join(workspace, fixture.File))
+	}
+	var result []navigation.Symbol
+	h.call(t, fixture.Method, mustJSON(t, params), &result)
+	names := make([]string, 0, len(result))
+	for _, symbol := range result {
+		names = append(names, symbol.Name)
+	}
+	if !equalStrings(names, fixture.Names) {
+		t.Fatalf("%s names = %#v, want %#v", fixture.Method, names, fixture.Names)
+	}
+	byName := make(map[string]navigation.Symbol)
+	for _, symbol := range result {
+		byName[symbol.Name] = symbol
+	}
+	for _, expected := range fixture.Symbols {
+		actual, ok := byName[expected.Name]
+		if !ok {
+			t.Fatalf("symbol %q is absent", expected.Name)
+		}
+		rangePath := filepath.Join(workspace, expected.Range.File)
+		rangeStart := pointOffset(t, rangePath, expected.Range)
+		selectionPath := filepath.Join(workspace, expected.Selection.File)
+		selectionStart := pointOffset(t, selectionPath, expected.Selection)
+		want := navigation.Symbol{
+			Name: expected.Name, Kind: expected.Kind, Container: expected.Container,
+			Range: navigation.Location{
+				URI: fileURI(t, rangePath), Start: rangeStart,
+				End: rangeStart + len(expected.Range.Text),
+			},
+			Selection: navigation.Location{
+				URI: fileURI(t, selectionPath), Start: selectionStart,
+				End: selectionStart + len(expected.Selection.Text),
+			},
+		}
+		if actual != want {
+			t.Fatalf("symbol %q = %#v, want %#v", expected.Name, actual, want)
+		}
+	}
+}
+
+func (h *helperProcess) call(
+	t *testing.T,
+	method string,
+	params json.RawMessage,
+	result any,
+) {
+	t.Helper()
+	request := navigation.Request{ID: h.nextID, Method: method, Params: params}
 	if err := h.input.Encode(request); err != nil {
 		t.Fatal(err)
 	}
 	var response struct {
-		ID     int64                 `json:"id"`
-		Result []navigation.Location `json:"result"`
-		Error  string                `json:"error"`
+		ID     int64           `json:"id"`
+		Result json.RawMessage `json:"result"`
+		Error  string          `json:"error"`
 	}
 	if err := h.output.Decode(&response); err != nil {
 		t.Fatal(err)
@@ -133,19 +224,8 @@ func (h *helperProcess) check(
 		t.Fatalf("response ID = %d, want %d", response.ID, h.nextID)
 	}
 	h.nextID++
-	want := make([]navigation.Location, 0, len(fixture.Locations))
-	for _, point := range fixture.Locations {
-		path := filepath.Join(workspace, point.File)
-		start := pointOffset(t, path, point)
-		want = append(want, navigation.Location{
-			URI: fileURI(t, path), Start: start, End: start + len(point.Text),
-		})
-	}
-	if !equalLocations(response.Result, want) {
-		t.Fatalf(
-			"%s at %#v result = %#v, want %#v",
-			fixture.Method, fixture.Position, response.Result, want,
-		)
+	if err := json.Unmarshal(response.Result, result); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -165,6 +245,23 @@ func readRequests(t *testing.T, workspace string) []fixtureRequest {
 		t.Fatal(err)
 	}
 	var result []fixtureRequest
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatal(err)
+	}
+	return result
+}
+
+func readSymbolRequests(t *testing.T, workspace string) []fixtureSymbolRequest {
+	t.Helper()
+	path := filepath.Join(workspace, "symbols.json")
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result []fixtureSymbolRequest
 	if err := json.Unmarshal(data, &result); err != nil {
 		t.Fatal(err)
 	}
@@ -219,6 +316,18 @@ func mustJSON(t *testing.T, value any) json.RawMessage {
 }
 
 func equalLocations(left, right []navigation.Location) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
+}
+
+func equalStrings(left, right []string) bool {
 	if len(left) != len(right) {
 		return false
 	}

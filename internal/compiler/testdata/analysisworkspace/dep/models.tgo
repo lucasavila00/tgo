@@ -1,0 +1,10 @@
+package dep
+
+type Choice enum {
+	One struct {
+		Name string
+	}
+	Two struct{}
+}
+
+type Positive int where value > 0

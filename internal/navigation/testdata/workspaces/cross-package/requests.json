@@ -26,7 +26,7 @@
     "method": "definition",
     "position": {"file": "app/app.tgo", "text": "Name:", "occurrence": 1},
     "locations": [
-      {"file": "lib/lib.tgo", "text": "Name", "occurrence": 1}
+      {"file": "lib/lib.tgo", "text": "Name", "occurrence": 2}
     ]
   },
   {

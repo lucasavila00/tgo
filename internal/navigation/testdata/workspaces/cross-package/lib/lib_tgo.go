@@ -8,8 +8,16 @@ import __tgo_jsonv2 "encoding/json/v2"
 import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
+const Limit = 10
+
+var DefaultName = "default"
+
 type Record struct {
 	Name string
+}
+
+type Printer interface {
+	Print() string
 }
 
 func (value Record) Text() string {

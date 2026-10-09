@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 
 	"tgo/internal/compiler"
@@ -25,6 +26,16 @@ type Location struct {
 	URI   string `json:"uri"`
 	Start int    `json:"start"`
 	End   int    `json:"end"`
+}
+
+// Symbol is one named source declaration.
+
+type Symbol struct {
+	Name      string   `json:"name"`
+	Kind      string   `json:"kind"`
+	Container string   `json:"container,omitempty"`
+	Range     Location `json:"range"`
+	Selection Location `json:"selection"`
 }
 
 type occurrence struct {
@@ -42,6 +53,44 @@ type workspaceIndex struct {
 	occurrences []occurrence
 	definitions map[string]Location
 	references  map[string][]Location
+	symbols     []Symbol
+}
+
+// DocumentSymbols returns all declarations in one TGo source file.
+func (e *Engine) DocumentSymbols(
+	ctx context.Context,
+	uri string,
+) ([]Symbol, error) {
+	index, err := e.load(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]Symbol, 0)
+	for _, symbol := range index.symbols {
+		if symbol.Range.URI == uri {
+			result = append(result, symbol)
+		}
+	}
+	return result, nil
+}
+
+// WorkspaceSymbols returns declarations whose names contain the query.
+func (e *Engine) WorkspaceSymbols(
+	ctx context.Context,
+	query string,
+) ([]Symbol, error) {
+	index, err := e.load(ctx)
+	if err != nil {
+		return nil, err
+	}
+	query = strings.ToLower(query)
+	result := make([]Symbol, 0)
+	for _, symbol := range index.symbols {
+		if query == "" || strings.Contains(strings.ToLower(symbol.Name), query) {
+			result = append(result, symbol)
+		}
+	}
+	return result, nil
 }
 
 // Engine owns one invalidatable workspace index.
@@ -150,6 +199,7 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		occurrences: nil,
 		definitions: make(map[string]Location),
 		references:  make(map[string][]Location),
+		symbols:     nil,
 	}
 	for _, pkg := range packages {
 		select {
@@ -197,6 +247,10 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 				}
 				return true
 			})
+			index.symbols = append(
+				index.symbols,
+				sourceSymbols(pkg, source, fileURI)...,
+			)
 		}
 		for object, position := range pkg.Owners {
 			location, ok := ownerLocations[position]
@@ -205,6 +259,12 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 			}
 		}
 	}
+	sort.Slice(index.symbols, func(left, right int) bool {
+		if index.symbols[left].Selection.URI != index.symbols[right].Selection.URI {
+			return index.symbols[left].Selection.URI < index.symbols[right].Selection.URI
+		}
+		return index.symbols[left].Selection.Start < index.symbols[right].Selection.Start
+	})
 	e.index = index
 	return index, nil
 }

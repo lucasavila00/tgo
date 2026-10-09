@@ -1,7 +1,15 @@
 package lib
 
+const Limit = 10
+
+var DefaultName = "default"
+
 type Record struct {
 	Name string
+}
+
+type Printer interface {
+	Print() string
 }
 
 func (value Record) Text() string {
