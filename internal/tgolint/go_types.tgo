@@ -19,7 +19,7 @@ type goType enum {
 	Named struct { Value *types.Named }
 	TypeParameter struct { Value *types.TypeParam }
 	Union struct { Value *types.Union }
-	Other struct { Value types.Type }
+	Other struct{}
 }
 
 func goTypeOf(typ types.Type) goType {
@@ -53,6 +53,6 @@ func goTypeOf(typ types.Type) goType {
 	case *types.Union:
 		return goType.Union{Value: value}
 	default:
-		return goType.Other{Value: value}
+		return goType.Other{}
 	}
 }

@@ -261,18 +261,16 @@ func (value goTypeUnion) goType() goType {
 func (v goType) UnionPayload() goTypeUnion { return v.tgoUnion }
 
 // goTypeOther is the Other payload.
-type goTypeOther struct {
-	Value types.Type
-}
+type goTypeOther struct{}
 
 // goType constructs goType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
 func (value goTypeOther) goType() goType {
-	return goType{tgoTag: goTypeTagOther, tgoPayload: value}
+	return goType{tgoTag: goTypeTagOther}
 }
 
 // OtherPayload requires Other. No tag check.
-func (v goType) OtherPayload() goTypeOther { return v.tgoPayload.(goTypeOther) }
+func (goType) OtherPayload() goTypeOther { return goTypeOther{} }
 
 func (v goType) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
@@ -759,6 +757,6 @@ func goTypeOf(typ types.Type) goType {
 	case *types.Union:
 		return goTypeUnion{Value: value}.goType()
 	default:
-		return goTypeOther{Value: value}.goType()
+		return goTypeOther{}.goType()
 	}
 }

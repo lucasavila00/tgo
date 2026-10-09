@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+var testedGoType goType
+
 func TestGoTypeOf(t *testing.T) {
 	tuple := types.NewTuple()
 	named := types.NewNamed(
@@ -54,6 +56,12 @@ func TestGoTypeOf(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if got := goTypeOf(test.typ).Tag(); got != test.want {
 				t.Fatalf("goTypeOf().Tag() = %v, want %v", got, test.want)
+			}
+			allocations := testing.AllocsPerRun(100, func() {
+				testedGoType = goTypeOf(test.typ)
+			})
+			if allocations != 0 {
+				t.Fatalf("goTypeOf() allocations = %v, want 0", allocations)
 			}
 		})
 	}
