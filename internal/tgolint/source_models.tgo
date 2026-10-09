@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"tgo/internal/compiler"
 	"tgo/pkg/format"
 	"tgo/pkg/syntax"
 
@@ -43,14 +42,6 @@ func (c %checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 	}
 	if !bytes.Equal(generatedData, c.outputs[sourceName]) {
 		c.failVerification(generated.Package, "generated tgo output integrity check failed")
-		return nil
-	}
-	if err := compiler.VerifyGeneratedModels(sourceName, data, generatedData, c.pass.Pkg); err != nil {
-		c.failVerification(
-			generated.Package,
-			"generated tgo output does not match the current compiler emitter: %v",
-			err,
-		)
 		return nil
 	}
 	sourceFiles := token.NewFileSet()

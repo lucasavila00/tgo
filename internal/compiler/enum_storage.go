@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 )
 
@@ -39,8 +40,12 @@ func boxEnumDeclarations(file *ast.File, declaration *model) {
 	for _, node := range file.Decls {
 		switch node := node.(type) {
 		case *ast.GenDecl:
-			if declarationKey(node) == "type "+declaration.Name {
-				structure := node.Specs[0].(*ast.TypeSpec).Type.(*ast.StructType)
+			if node.Tok != token.TYPE || len(node.Specs) != 1 {
+				continue
+			}
+			specification, ok := node.Specs[0].(*ast.TypeSpec)
+			if ok && specification.Name.Name == declaration.Name {
+				structure := specification.Type.(*ast.StructType)
 				boxEnumFields(structure, declaration)
 			}
 		case *ast.FuncDecl:
