@@ -139,19 +139,16 @@ func run(pass *analysis.Pass) (any, error) {
 			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
 				c.checkRepresentationAccess(expression)
 			}
-			statement, ok := syntax.StatementOf(node)
-			if !ok {
-				return true
-			}
-			tagSwitch := syntax.SwitchStatementOf(statement)
-			if tagSwitch != nil {
-				c.checkTagSwitch(file, statement, tagSwitch)
+			if statement, ok := syntax.StatementOf(node); ok {
+				tagSwitch := syntax.SwitchStatementOf(statement)
+				if tagSwitch != nil {
+					c.checkTagSwitch(file, statement, tagSwitch)
+				}
 			}
 			c.checkNode(node)
 			return true
 		})
 	}
-	c.checkGenericZeroSafety()
 	return nil, nil
 }
 
@@ -203,8 +200,8 @@ func (c %checker) markInvalid() {
 
 // addParents builds the upward AST links used by local flow checks.
 func (c %checker) addParent(node *syntax.Node) {
-	for _, child := range syntax.Children(node) {
-		c.parents[child] = node
+	for _, child := range syntax.Children(c.file, node) {
+		c.parents[*child] = node
 	}
 }
 
@@ -212,29 +209,12 @@ func (c %checker) addParent(node *syntax.Node) {
 func (c %checker) checkNode(node *syntax.Node) {
 	if function, ok := syntax.FunctionDeclarationOf(node); ok {
 		if function.Body != nil {
-			c.checkNamedResults(&function.Type)
 			c.checkConstructors(node, function.Body)
 		}
 		return
 	}
 	if literal, ok := syntax.FunctionLiteralOf(node); ok {
-		c.checkNamedResults(&literal.Type)
-		c.checkConstructors(node, &literal.Body)
+		c.checkConstructors(node, literal.Body)
 		return
 	}
-	if specification, ok := syntax.SpecificationOf(node); ok {
-		if value := syntax.TypeSpecificationOf(specification); value != nil { c.checkTypeSpec(value) }
-		if value := syntax.ValueSpecificationOf(specification); value != nil { c.checkValueSpec(value) }
-		return
-	}
-	expression, ok := syntax.ExpressionOf(node)
-	if !ok { return }
-	if value := syntax.CompositeLiteralOf(expression); value != nil { c.checkLiteral(expression, value) }
-	if value := syntax.CallExpressionOf(expression); value != nil { c.checkCall(expression, value) }
-	if value := syntax.IndexExpressionOf(expression); value != nil { c.checkMapRead(expression, value) }
-	if value := syntax.UnaryExpressionOf(expression); value != nil && value.Operator == token.ARROW {
-		c.checkPresenceRead(expression, value)
-	}
-	if value := syntax.TypeAssertionExpressionOf(expression); value != nil { c.checkTypeAssertion(expression, value) }
-	if value := syntax.SliceExpressionOf(expression); value != nil { c.checkReslice(expression, value) }
 }
