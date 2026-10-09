@@ -153,7 +153,7 @@ func (c *checker) checkedBlock(statements []ast.Stmt, state checkedState) bool {
 		if c.checkedStatement(statement, state) {
 			return true
 		}
-		if c.statementsTerminate([]ast.Stmt{statement}) {
+		if c.astStatementsTerminate([]ast.Stmt{statement}) {
 			return true
 		}
 	}

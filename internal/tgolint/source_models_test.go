@@ -2,7 +2,6 @@ package tgolint
 
 import (
 	"bytes"
-	"go/ast"
 	"go/token"
 	"testing"
 
@@ -84,15 +83,20 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 		ExportPackageFact: func(analysis.Fact) {},
 	}
 	checker := &checker{pass: pass}
-	file := &ast.File{Package: token.Pos(1)}
 	data := []byte("package sample\ntype Missing struct {}\n")
 	files := token.NewFileSet()
+	generated, err := syntax.ParseGoFile(
+		files, "model_tgo.go", []byte("package sample\n"), syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("ParseFile generated: %v", err)
+	}
 	source, err := syntax.ParseFile(files, "model.tgo", data, syntax.AllErrors)
 	if err != nil {
 		t.Fatalf("ParseFile: %v", err)
 	}
 	checker.checkSourceDeclaration(
-		file, "model.tgo", source, source.Declarations[0],
+		generated, "model.tgo", source, source.Declarations[0],
 		files.File(source.Package), data,
 	)
 	want := "generated tgo output for Missing does not match model.tgo"

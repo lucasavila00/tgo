@@ -3,23 +3,25 @@
 
 package tgolint
 
-import (
-	"go/ast"
-)
+import "tgo/pkg/syntax"
 
 // checkRepresentationAccess blocks private fields and unchecked payload methods.
-func (c *checker) checkRepresentationAccess(selector *ast.SelectorExpr) {
-	if c.safe[selector] || c.handled[selector] {
+func (c *checker) checkRepresentationAccess(expression *syntax.Expression) {
+	if c.syntaxSafe[expression] || c.syntaxHandled[expression] {
 		return
 	}
-	model := c.modelForSelector(selector)
+	selector := syntax.SelectorExpressionOf(expression)
+	if selector == nil {
+		return
+	}
+	model := c.modelForSourceSelector(expression, selector)
 	if model == nil {
 		return
 	}
-	if privateRepresentation(model, selector.Sel.Name) {
-		c.pass.Reportf(selector.Pos(),
+	if privateRepresentation(model, selector.Selector.Name) {
+		c.pass.Reportf(selector.Start,
 			"%s.%s is private tgo representation",
-			modelName(model), selector.Sel.Name)
+			modelName(model), selector.Selector.Name)
 		return
 	}
 }

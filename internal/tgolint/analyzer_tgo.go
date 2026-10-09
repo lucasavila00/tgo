@@ -10,6 +10,9 @@ import (
 	"go/types"
 	"strconv"
 
+	"tgo/internal/sourcefacts"
+	"tgo/pkg/syntax"
+
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -35,24 +38,26 @@ func newAnalyzer() *analysis.Analyzer {
 }
 
 type checker struct {
-	pass        *analysis.Pass
-	models      map[objectKey]*model
-	validated   map[types.Object]bool
-	callTarget  map[types.Object]types.Object
-	generated   map[*ast.File]bool
-	outputs     map[string][]byte
-	parents     map[ast.Node]ast.Node
-	safe        map[*ast.SelectorExpr]bool
-	handled     map[*ast.SelectorExpr]bool
-	checked     map[*ast.CallExpr]bool
-	presence    map[ast.Expr]bool
-	escaped     map[types.Object]token.Pos
-	reported    map[diagnosticKey]bool
-	function    ast.Node
-	zeroTypes   map[*types.TypeParam]*model
-	capture     func(*model, ast.Expr)
-	scalarFlows map[ast.Node]*scalarFlow
-	invalid     bool
+	pass          *analysis.Pass
+	files         []*syntax.File
+	facts         *sourcefacts.Index
+	models        map[objectKey]*model
+	validated     map[types.Object]bool
+	callTarget    map[types.Object]types.Object
+	generated     map[*ast.File]bool
+	outputs       map[string][]byte
+	parents       map[ast.Node]ast.Node
+	syntaxSafe    map[*syntax.Expression]bool
+	syntaxHandled map[*syntax.Expression]bool
+	checked       map[*ast.CallExpr]bool
+	presence      map[ast.Expr]bool
+	escaped       map[types.Object]token.Pos
+	reported      map[diagnosticKey]bool
+	function      ast.Node
+	zeroTypes     map[*types.TypeParam]*model
+	capture       func(*model, ast.Expr)
+	scalarFlows   map[ast.Node]*scalarFlow
+	invalid       bool
 }
 
 const invalidPackageVersion = 1
@@ -74,25 +79,36 @@ type diagnosticKey struct {
 // run verifies generated code, loads model facts, and checks user Go code.
 func run(pass *analysis.Pass) (any, error) {
 	pass = suppressDiagnostics(pass)
+	files, err := parseAnalysisFiles(pass)
+	if err != nil {
+		return nil, err
+	}
 	c := &checker{
-		pass:        pass,
-		models:      make(map[objectKey]*model),
-		validated:   make(map[types.Object]bool),
-		callTarget:  make(map[types.Object]types.Object),
-		generated:   make(map[*ast.File]bool),
-		outputs:     make(map[string][]byte),
-		parents:     make(map[ast.Node]ast.Node),
-		safe:        make(map[*ast.SelectorExpr]bool),
-		handled:     make(map[*ast.SelectorExpr]bool),
-		checked:     make(map[*ast.CallExpr]bool),
-		presence:    make(map[ast.Expr]bool),
-		escaped:     make(map[types.Object]token.Pos),
-		reported:    make(map[diagnosticKey]bool),
-		function:    nil,
-		zeroTypes:   nil,
-		capture:     nil,
-		scalarFlows: make(map[ast.Node]*scalarFlow),
-		invalid:     false,
+		pass:          pass,
+		files:         files,
+		facts:         sourcefacts.New(files, pass.TypesInfo, pass.Fset),
+		models:        make(map[objectKey]*model),
+		validated:     make(map[types.Object]bool),
+		callTarget:    make(map[types.Object]types.Object),
+		generated:     make(map[*ast.File]bool),
+		outputs:       make(map[string][]byte),
+		parents:       make(map[ast.Node]ast.Node),
+		syntaxSafe:    make(map[*syntax.Expression]bool),
+		syntaxHandled: make(map[*syntax.Expression]bool),
+		checked:       make(map[*ast.CallExpr]bool),
+		presence:      make(map[ast.Expr]bool),
+		escaped:       make(map[types.Object]token.Pos),
+		reported:      make(map[diagnosticKey]bool),
+		function:      nil,
+		zeroTypes:     nil,
+		capture:       nil,
+		scalarFlows:   make(map[ast.Node]*scalarFlow),
+		invalid:       false,
+	}
+	for index, file := range files {
+		if syntaxFileGenerated(file) {
+			c.generated[pass.Files[index]] = true
+		}
 	}
 	if c.rejectInvalidDependencies() {
 		return nil, nil
@@ -106,18 +122,40 @@ func run(pass *analysis.Pass) (any, error) {
 	c.findValidationWrappers()
 	c.findValidationFunctionValues()
 	c.checkTGoSource(analysis)
+	representationAt := make(map[token.Position]*syntax.Expression)
+	for _, file := range c.files {
+		if syntaxFileGenerated(file) {
+			continue
+		}
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			expression, expressionOK := syntax.ExpressionOf(node)
+			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
+				representationAt[c.pass.Fset.Position(
+					syntax.ExpressionPosition(expression),
+				)] = expression
+			}
+			statement, ok := syntax.StatementOf(node)
+			if !ok {
+				return true
+			}
+			tagSwitch := syntax.SwitchStatementOf(statement)
+			if tagSwitch != nil {
+				c.checkTagSwitch(file, statement, tagSwitch)
+			}
+			return true
+		})
+	}
 	for _, file := range pass.Files {
 		if c.generated[file] {
 			continue
 		}
 		c.addParents(file)
 		ast.Inspect(file, func(node ast.Node) bool {
-			if statement, ok := node.(*ast.SwitchStmt); ok {
-				c.checkTagSwitch(statement)
+			if _, ok := node.(*ast.SelectorExpr); ok {
+				if expression := representationAt[c.pass.Fset.Position(node.Pos())]; expression != nil {
+					c.checkRepresentationAccess(expression)
+				}
 			}
-			return true
-		})
-		ast.Inspect(file, func(node ast.Node) bool {
 			c.checkNode(node)
 			return true
 		})
@@ -215,8 +253,6 @@ func (c *checker) checkNode(node ast.Node) {
 		}
 	case *ast.TypeAssertExpr:
 		c.checkTypeAssertion(node)
-	case *ast.SelectorExpr:
-		c.checkRepresentationAccess(node)
 	case *ast.SliceExpr:
 		c.checkReslice(node)
 	}
