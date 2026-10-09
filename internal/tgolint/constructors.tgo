@@ -156,12 +156,12 @@ func escapedObjects(facts *sourcefacts.Index, body *syntax.BlockStatement) map[t
 }
 
 // checkedBlock applies statements in order until control flow stops.
-func (c %checker) checkedBlock(statements []*syntax.Statement, state checkedState) bool {
+func (c %checker) checkedBlock(statements []%syntax.Statement, state checkedState) bool {
 	for _, statement := range statements {
 		if c.checkedStatement(statement, state) {
 			return true
 		}
-		if c.statementsTerminate(c.file, []*syntax.Statement{statement}) {
+		if c.statementsTerminate(c.file, []%syntax.Statement{statement}) {
 			return true
 		}
 	}
@@ -228,9 +228,9 @@ func (c %checker) checkedControlStatement(statement *syntax.Statement, state che
 	} else if statement.Tag() == syntax.StatementTagEmpty {
 		return false
 	} else if value := syntax.SendStatementOf(statement); value != nil {
-		c.checkResultUses([]*syntax.Expression{value.Channel, value.Value}, state, nil)
+		c.checkResultUses([]%syntax.Expression{value.Channel, value.Value}, state, nil)
 	} else if expression := statementExpression(statement); expression != nil {
-		c.checkResultUses([]*syntax.Expression{expression}, state, nil)
+		c.checkResultUses([]%syntax.Expression{expression}, state, nil)
 	}
 	return false
 }
@@ -239,7 +239,7 @@ func (c %checker) checkedLoop(statement *syntax.ForStatement, state checkedState
 	entry := cloneCheckedState(state)
 	loop := cloneCheckedState(entry)
 	for {
-		c.checkResultUses([]*syntax.Expression{statement.Condition}, loop, nil)
+		c.checkResultUses([]%syntax.Expression{statement.Condition}, loop, nil)
 		iteration := cloneCheckedState(loop)
 		trueProofs, falseProofs := c.resultProofs(statement.Condition, loop)
 		for failure := range trueProofs {
@@ -261,12 +261,12 @@ func (c %checker) checkedLoop(statement *syntax.ForStatement, state checkedState
 }
 
 func (c %checker) checkedRange(statement *syntax.RangeStatement, state checkedState) {
-	c.checkResultUses([]*syntax.Expression{statement.Source}, state, nil)
+	c.checkResultUses([]%syntax.Expression{statement.Source}, state, nil)
 	entry := cloneCheckedState(state)
 	loop := cloneCheckedState(entry)
 	for {
 		iteration := cloneCheckedState(loop)
-		c.invalidateAssignments([]*syntax.Expression{statement.Key, statement.Value}, iteration)
+		c.invalidateAssignments([]%syntax.Expression{statement.Key, statement.Value}, iteration)
 		c.checkedBlock(statement.Body.List, iteration)
 		next := joinCheckedStates(entry, iteration)
 		if equalCheckedStates(loop, next) {
@@ -306,7 +306,7 @@ func (c %checker) checkedAssignment(statement *syntax.Statement, state checkedSt
 		return false
 	}
 	c.presence[expression] = true
-	c.checkResultUses([]*syntax.Expression{expression}, state, nil)
+	c.checkResultUses([]%syntax.Expression{expression}, state, nil)
 	if len(assignment.Left) != 2 {
 		return true
 	}
@@ -317,7 +317,7 @@ func (c %checker) checkedAssignment(statement *syntax.Statement, state checkedSt
 }
 
 func (c %checker) bindBoundaryValue(
-	left []*syntax.Expression,
+	left []%syntax.Expression,
 	call *syntax.Expression,
 	model *model,
 	state checkedState,
@@ -375,7 +375,7 @@ func (c %checker) checkedValueSpec(specification *syntax.ValueSpecification, sta
 		if syntax.CallExpressionOf(specification.Values[0]) != nil {
 			if model := c.boundarySingleCall(specification.Values[0]); model != nil {
 				name := syntax.ExpressionIdentifier{Value: specification.Names[0]}.Expression()
-				c.bindBoundaryValue([]*syntax.Expression{&name}, specification.Values[0], model, state)
+				c.bindBoundaryValue([]%syntax.Expression{&name}, specification.Values[0], model, state)
 				return
 			}
 		}
@@ -402,7 +402,7 @@ func (c %checker) checkedValueSpec(specification *syntax.ValueSpecification, sta
 		return
 	}
 	c.presence[expression] = true
-	c.checkResultUses([]*syntax.Expression{expression}, state, nil)
+	c.checkResultUses([]%syntax.Expression{expression}, state, nil)
 	value := syntax.ExpressionIdentifier{Value: specification.Names[0]}.Expression()
 	present := syntax.ExpressionIdentifier{Value: specification.Names[1]}.Expression()
 	c.bindPresenceResults(
@@ -436,7 +436,7 @@ func (c %checker) bindCheckedResults(
 	model *model,
 	state checkedState,
 ) {
-	c.invalidateAssignments([]*syntax.Expression{valueExpression, errorExpression}, state)
+	c.invalidateAssignments([]%syntax.Expression{valueExpression, errorExpression}, state)
 	errorName := syntax.IdentifierExpressionOf(errorExpression)
 	if errorName == nil || errorName.Name == "_" {
 		c.reportModelResult(syntax.ExpressionPosition(errorExpression), model,
@@ -534,7 +534,7 @@ func (c %checker) bindPresenceResults(
 	model *model,
 	state checkedState,
 ) {
-	c.invalidateAssignments([]*syntax.Expression{valueExpression, presenceExpression}, state)
+	c.invalidateAssignments([]%syntax.Expression{valueExpression, presenceExpression}, state)
 	presenceName := syntax.IdentifierExpressionOf(presenceExpression)
 	if presenceName == nil || presenceName.Name == "_" {
 		c.reportModelSource(syntax.ExpressionPosition(presenceExpression), model, source,
