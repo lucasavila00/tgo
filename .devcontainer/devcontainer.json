@@ -4,7 +4,9 @@
     "dockerfile": "Dockerfile"
   },
   "runArgs": ["--name=tgo-devcontainer"],
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/tgo,type=bind",
+  // Do not bind the host checkout. devcontainer.sh clones into this volume.
+  // "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/tgo,type=bind",
+  "workspaceMount": "source=tgo-devcontainer-workspace,target=/workspaces/tgo,type=volume",
   "workspaceFolder": "/workspaces/tgo",
   "mounts": [
     "source=${localEnv:HOME}/.codex/auth.json,target=/root/.codex/auth.json,type=bind,readonly",
