@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import io
+import os
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 from scripts import formatter_ci
+
+
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW = ROOT / ".github" / "workflows" / "formatter-ci.yml"
 
 
 class ClassificationTest(unittest.TestCase):
@@ -20,6 +28,11 @@ class ClassificationTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(formatter_ci.affects_formatter([path]))
 
+    def test_ci_workflow_requires_the_corpus(self) -> None:
+        self.assertTrue(
+            formatter_ci.affects_formatter([".github/workflows/ci.yml"])
+        )
+
     def test_unrelated_documentation_does_not_require_the_corpus(self) -> None:
         self.assertFalse(formatter_ci.affects_formatter(["docs/guide/README.md"]))
 
@@ -30,6 +43,16 @@ class ClassificationTest(unittest.TestCase):
         paths = ["docs/guide/README.md", "pkg/format/printer.tgo"]
 
         self.assertTrue(formatter_ci.affects_formatter(paths))
+
+    def test_real_classifier_reports_formatter_change(self) -> None:
+        output = self.classify_change("pkg/format/printer.tgo")
+
+        self.assertEqual(output, "formatter=true\n")
+
+    def test_real_classifier_reports_unrelated_change(self) -> None:
+        output = self.classify_change("docs/guide/README.md")
+
+        self.assertEqual(output, "formatter=false\n")
 
     def test_changed_paths_uses_the_pull_request_merge_base(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -56,6 +79,25 @@ class ClassificationTest(unittest.TestCase):
 
             self.assertEqual(paths, ["docs/README.md"])
 
+    @classmethod
+    def classify_change(cls, relative: str) -> str:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository = Path(temporary)
+            cls.git(repository, "init", "-q")
+            (repository / "README.md").write_text("initial\n")
+            cls.commit(repository, "Initial source")
+            base = cls.git(repository, "rev-parse", "HEAD")
+            path = repository / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("change\n")
+            cls.commit(repository, "Feature change")
+            head = cls.git(repository, "rev-parse", "HEAD")
+            output = io.StringIO()
+            environment = {"BASE_SHA": base, "HEAD_SHA": head}
+            with mock.patch.dict(os.environ, environment), redirect_stdout(output):
+                formatter_ci.classify(repository)
+            return output.getvalue()
+
     @staticmethod
     def git(repository: Path, *arguments: str) -> str:
         return subprocess.check_output(
@@ -77,6 +119,39 @@ class ClassificationTest(unittest.TestCase):
             "-q",
             "-m",
             message,
+        )
+
+
+class WorkflowVerificationTest(unittest.TestCase):
+    def test_accepts_active_workflow(self) -> None:
+        failures = formatter_ci.formatter_workflow_failures(WORKFLOW.read_text())
+
+        self.assertEqual(failures, [])
+
+    def test_rejects_commented_classifier_command(self) -> None:
+        source = WORKFLOW.read_text().replace(
+            '        run: python3 scripts/formatter_ci.py classify >> "$GITHUB_OUTPUT"',
+            '        # run: python3 scripts/formatter_ci.py classify >> "$GITHUB_OUTPUT"',
+        )
+
+        failures = formatter_ci.formatter_workflow_failures(source)
+
+        self.assertTrue(
+            any("changes job needs" in failure for failure in failures),
+            failures,
+        )
+
+    def test_rejects_wrongly_indented_corpus_condition(self) -> None:
+        source = WORKFLOW.read_text().replace(
+            "    if: needs.changes.outputs.formatter == 'true'",
+            "      if: needs.changes.outputs.formatter == 'true'",
+        )
+
+        failures = formatter_ci.formatter_workflow_failures(source)
+
+        self.assertTrue(
+            any("formatter-go-corpus job needs" in failure for failure in failures),
+            failures,
         )
 
 

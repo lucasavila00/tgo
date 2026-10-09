@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEPENDENCY_FILES = frozenset(
     {
+        ".github/workflows/ci.yml",
         ".github/workflows/formatter-ci.yml",
         ".github/workflows/slow-ci.yml",
         "Makefile",
@@ -102,26 +103,80 @@ def local_formatter_packages(repository: Path) -> list[Path]:
     return packages
 
 
+def workflow_section(source: str, header: str) -> list[str] | None:
+    """Return lines nested below one exact YAML mapping key."""
+    lines = source.splitlines()
+    try:
+        start = lines.index(header)
+    except ValueError:
+        return None
+    indentation = len(header) - len(header.lstrip())
+    section: list[str] = []
+    for line in lines[start + 1 :]:
+        if line.strip() and len(line) - len(line.lstrip()) <= indentation:
+            break
+        section.append(line)
+    return section
+
+
+def formatter_workflow_failures(source: str) -> list[str]:
+    """Return failures in active formatter workflow sections."""
+    failures: list[str] = []
+    event = workflow_section(source, "on:")
+    pull_request = (
+        None
+        if event is None
+        else workflow_section("\n".join(event), "  pull_request:")
+    )
+    if pull_request is None:
+        failures.append("formatter workflow needs an active pull_request event")
+    elif "    paths:" in pull_request:
+        failures.append("formatter workflow must not use a pull request path filter")
+
+    jobs = workflow_section(source, "jobs:")
+    required_jobs = {
+        "  changes:": (
+            "      formatter: ${{ steps.classify.outputs.formatter }}",
+            "          fetch-depth: 0",
+            "          BASE_SHA: ${{ github.event.pull_request.base.sha }}",
+            "          HEAD_SHA: ${{ github.event.pull_request.head.sha }}",
+            '        run: python3 scripts/formatter_ci.py classify >> "$GITHUB_OUTPUT"',
+        ),
+        "  formatter-go-corpus:": (
+            "    needs: changes",
+            "    if: needs.changes.outputs.formatter == 'true'",
+            "      - run: make formatter-go-corpus",
+        ),
+        "  formatter-corpus-gate:": (
+            "    name: formatter-corpus",
+            "    needs: [changes, formatter-go-corpus]",
+            "    if: always()",
+            "          CLASSIFIER_RESULT: ${{ needs.changes.result }}",
+            "          FORMATTER_REQUIRED: ${{ needs.changes.outputs.formatter }}",
+            "          CORPUS_RESULT: ${{ needs.formatter-go-corpus.result }}",
+            "        run: python3 scripts/formatter_ci.py gate",
+        ),
+    }
+    if jobs is None:
+        failures.append("formatter workflow needs an active jobs section")
+        return failures
+    jobs_source = "\n".join(jobs)
+    for header, required_lines in required_jobs.items():
+        job = workflow_section(jobs_source, header)
+        name = header.strip().removesuffix(":")
+        if job is None:
+            failures.append(f"formatter workflow needs an active {name} job")
+            continue
+        for line in required_lines:
+            if line not in job:
+                failures.append(f"formatter {name} job needs {line.strip()!r}")
+    return failures
+
+
 def repository_failures(repository: Path) -> list[str]:
     """Return formatter CI configuration failures."""
-    failures: list[str] = []
     workflow = (repository / ".github/workflows/formatter-ci.yml").read_text()
-    required_fragments = (
-        "  pull_request:\n",
-        "python3 scripts/formatter_ci.py classify",
-        "if: needs.changes.outputs.formatter == 'true'",
-        "run: make formatter-go-corpus",
-        "formatter-corpus-gate:\n"
-        "    name: formatter-corpus\n"
-        "    needs: [changes, formatter-go-corpus]\n"
-        "    if: always()",
-        "python3 scripts/formatter_ci.py gate",
-    )
-    for fragment in required_fragments:
-        if fragment not in workflow:
-            failures.append(f"formatter workflow needs {fragment.strip()!r}")
-    if "\n    paths:" in workflow:
-        failures.append("formatter workflow must not use a pull request path filter")
+    failures = formatter_workflow_failures(workflow)
 
     makefile = (repository / "Makefile").read_text()
     if "formatter-go-corpus:" not in makefile:
@@ -143,13 +198,13 @@ def repository_failures(repository: Path) -> list[str]:
     return failures
 
 
-def classify() -> None:
+def classify(repository: Path = ROOT) -> None:
     """Write the GitHub Actions output for the current pull request."""
     base = os.environ.get("BASE_SHA", "")
     head = os.environ.get("HEAD_SHA", "")
     if not base or not head:
         raise SystemExit("BASE_SHA and HEAD_SHA are required")
-    required = affects_formatter(changed_paths(ROOT, base, head))
+    required = affects_formatter(changed_paths(repository, base, head))
     print(f"formatter={str(required).lower()}")
 
 
