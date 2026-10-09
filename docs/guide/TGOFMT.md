@@ -7,7 +7,7 @@ the result to standard output.
 tgofmt < input.tgo
 tgofmt file.tgo
 tgofmt -w file.tgo
-tgofmt -l .
+tgofmt -l file.tgo
 ```
 
 `-w` replaces each named file and keeps its permission bits. It cannot write standard input.
