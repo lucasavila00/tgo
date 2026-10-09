@@ -1,14 +1,6 @@
 name: Slow CI
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/slow-ci.yml"
-      - "Makefile"
-      - "cmd/tgofmt/**"
-      - "pkg/format/**"
-      - "pkg/syntax/**"
-      - "scripts/check_formatter_boundary.py"
   schedule:
     - cron: "0 4 * * 1"
   workflow_dispatch:
