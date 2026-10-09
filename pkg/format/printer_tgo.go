@@ -555,25 +555,60 @@ func (p *printer) sourceSpan(span syntax.Span) {
 }
 
 func (p *printer) commaList(values []*syntax.Expression) {
-	p.commaListAt(values, 1)
+	p.commaListAt(values, 1, false)
 }
 
-func (p *printer) commaListAt(values []*syntax.Expression, depth int) {
+func (p *printer) commaListAt(
+	values []*syntax.Expression,
+	depth int,
+	alreadyIndented bool,
+) {
+	indented := false
 	for index, value := range values {
 		if index > 0 {
-			p.text(",")
-			p.space()
+			previous := syntax.ExpressionEnd(values[index-1])
+			start := syntax.ExpressionPosition(value)
+			p.trailingLine(p.comma(previous, start))
+			if p.position(previous).Line < p.position(start).Line {
+				p.newline()
+				if !alreadyIndented && !indented {
+					p.indent++
+					indented = true
+				}
+			} else {
+				p.space()
+			}
 		}
 		p.expressionAt(value, 0, depth)
+	}
+	if indented {
+		p.indent--
 	}
 }
 
 func (p *printer) identifiers(values []*syntax.Identifier) {
+	p.identifiersAt(values, false)
+}
+
+func (p *printer) identifiersAt(values []*syntax.Identifier, alreadyIndented bool) {
+	indented := false
 	for index, value := range values {
 		if index > 0 {
-			p.text(",")
-			p.space()
+			previous := values[index-1].Stop
+			p.trailingLine(p.comma(previous, value.Start))
+			if p.position(previous).Line < p.position(value.Start).Line {
+				p.newline()
+				if !alreadyIndented && !indented {
+					p.indent++
+					indented = true
+				}
+			} else {
+				p.space()
+			}
 		}
 		p.token(value.Start, value.Name)
+	}
+	if indented {
+		p.indent--
 	}
 }

@@ -47,18 +47,18 @@ func (p *printer) statement(value *syntax.Statement) {
 		if len(item.Left) > 1 && len(item.Right) > 1 {
 			depth++
 		}
-		p.commaListAt(item.Left, depth)
+		p.commaListAt(item.Left, depth, false)
 		p.space()
 		p.token(item.Token, item.Operator.String())
 		if len(item.Right) > 0 && p.position(item.Token).Line <
 			p.position(syntax.ExpressionPosition(item.Right[0])).Line {
 			p.newline()
 			p.indent++
-			p.commaListAt(item.Right, depth)
+			p.commaListAt(item.Right, depth, true)
 			p.indent--
 		} else {
 			p.space()
-			p.commaListAt(item.Right, depth)
+			p.commaListAt(item.Right, depth, false)
 		}
 	case syntax.StatementTagGo:
 		item := statementValue.GoPayload().Value

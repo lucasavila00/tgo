@@ -13,9 +13,7 @@ type Positive int where value > 0
 
 // Work keeps comments.
 func Work( // first
-	value int /* second */,
-	other int,
-) int { // body
+	value int /* second */, other int) int { // body
 	result := value + other // result
 
 	return result
