@@ -23,4 +23,8 @@ test("extension contributes only read-only language features", () => {
     manifest.contributes.configuration.properties["tgo.navigation.helperPath"].default,
     ""
   );
+  assert.deepEqual(manifest.contributes.configurationDefaults["files.exclude"], {
+    "**/*_tgo.go": true,
+    "**/*_tgo_*.go": true
+  });
 });
