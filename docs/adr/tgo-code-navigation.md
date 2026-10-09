@@ -42,7 +42,7 @@ package after a `.tgo`, `.go`, `go.mod`, or `go.work` change.
 - References use resolved object identity across analyzed workspace packages.
 - Highlighting covers `%`, `!`, `!!`, `enum`, `where`, `exhaustive`, defaults, and
   comprehensions.
-- The first release can require a matching `tgo` executable on `PATH`.
+- The first release can require a matching `tgonav` executable on `PATH`.
 - The first release does not navigate into downloaded dependencies.
 
 ## Verification
