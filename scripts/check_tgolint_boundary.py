@@ -15,7 +15,6 @@ TYPE_CHECKER_IMPORTS = {
 }
 SOURCE_IMPORTS = {
     "go/format": Path("internal/tgolint/source_models.tgo"),
-    "go/scanner": Path("internal/tgolint/suppressions.tgo"),
 }
 IMPORT = re.compile(r'"(go/[^"]+)"')
 SYNTAX_ASSERTION = re.compile(r"\.\(\*?syntax\.")
