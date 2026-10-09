@@ -1,6 +1,7 @@
 package format
 
 import (
+	"bytes"
 	"go/token"
 	"strings"
 )
@@ -22,6 +23,24 @@ func (p *printer) sourceWhitespaceBetween(stop token.Pos, start token.Pos) bool 
 	right := file.Offset(start)
 	return 0 <= left && left <= right && right <= len(p.source) &&
 		strings.TrimSpace(string(p.source[left:right])) == ""
+}
+
+func (p *printer) sourceLineEndsAt(position token.Pos) bool {
+	file := p.files.File(position)
+	if file == nil {
+		return false
+	}
+	offset := file.Offset(position)
+	if offset < 0 || offset > len(p.source) {
+		return false
+	}
+	end := bytes.IndexByte(p.source[offset:], '\n')
+	if end < 0 {
+		end = len(p.source)
+	} else {
+		end += offset
+	}
+	return strings.TrimSpace(string(p.source[offset:end])) == ""
 }
 
 func (p *printer) trailingContinuationComments(position token.Pos) {

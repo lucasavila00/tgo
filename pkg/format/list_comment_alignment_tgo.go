@@ -82,7 +82,12 @@ func (p *printer) expressionListCommentAlignment(
 	depth int,
 ) []map[token.Pos]int {
 	aligned := p.listCommentAlignment(values, opening, closing, baseColumn, depth)
-	if closing.IsValid() {
+	if closing.IsValid() && p.sourceToken(closing) == ':' {
+		position := p.trailingCommentPosition(p.tokenEnd(closing, 1))
+		if position.IsValid() && p.sourceCommentPadding(position) > 1 {
+			p.fixedCommentColumns[position] = p.sourceVisualColumn(position)
+		}
+	} else if closing.IsValid() {
 		position := p.trailingCommentPosition(p.tokenEnd(closing, 1))
 		target := 0
 		for _, columns := range aligned {
@@ -97,6 +102,18 @@ func (p *printer) expressionListCommentAlignment(
 		}
 	}
 	return aligned
+}
+
+func (p *printer) sourceToken(position token.Pos) byte {
+	file := p.files.File(position)
+	if file == nil {
+		return 0
+	}
+	offset := file.Offset(position)
+	if offset < 0 || offset >= len(p.source) {
+		return 0
+	}
+	return p.source[offset]
 }
 
 func (p *printer) listCommentAlignment(
@@ -155,7 +172,10 @@ func (p *printer) listCommentAlignment(
 		}
 		if comment.IsValid() && startLine > p.position(opening).Line {
 			lineComment := strings.HasPrefix(p.commentAt(comment).text, "//")
-			row := alignmentRow{cells: []int{lineWidth + suffixWidth, 0}}
+			row := alignmentRow{
+				breakBefore: false,
+				cells:       []int{lineWidth + suffixWidth, 0},
+			}
 			if len(commentRows) > 0 {
 				row.breakBefore = lineComment != previousLineComment ||
 					previousCommentLine+1 < startLine ||

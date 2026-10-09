@@ -442,7 +442,23 @@ func (p *printer) declarationCommentAlignment(
 			rows = append(rows, endRow)
 		}
 	}
-	return commentAlignmentColumns(rows, len(values), 0)
+	result := commentAlignmentColumns(rows, len(values), 0)
+	for index, value := range values {
+		start := syntax.DeclarationPosition(value)
+		stop := syntax.DeclarationEnd(value)
+		if functionDeclarationOf(value) == nil || !p.multiline(start, stop) {
+			continue
+		}
+		_, end := p.outerCommentPositions(start, stop)
+		if !end.IsValid() || p.sourceCommentPadding(end) <= 1 {
+			continue
+		}
+		if result[index] == nil {
+			result[index] = make(map[token.Pos]int)
+		}
+		result[index][end] = p.sourceVisualColumn(end)
+	}
+	return result
 }
 
 func (p *printer) formattedDeclarationCommentWidths(

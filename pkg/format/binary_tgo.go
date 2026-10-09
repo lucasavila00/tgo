@@ -28,7 +28,10 @@ func (p *printer) binaryExpressionAt(
 		p.indent++
 		p.breakSourceGap(operatorEnd, syntax.ExpressionPosition(value.Right))
 		p.binaryOperand(value.Right, precedence+1, depth+1)
-		p.trailingContinuationComments(syntax.ExpressionEnd(value.Right))
+		rightEnd := syntax.ExpressionEnd(value.Right)
+		if p.sourceLineEndsAt(rightEnd) {
+			p.trailingContinuationComments(rightEnd)
+		}
 		p.indent--
 	} else {
 		if spaces {

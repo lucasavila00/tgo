@@ -4,6 +4,7 @@ package format
 
 import (
 	"go/token"
+	"strings"
 
 	"tgo/pkg/syntax"
 )
@@ -113,6 +114,9 @@ func (p *printer) specificationAlignment(
 	for index, value := range declaration.Specs {
 		if index > 0 {
 			previous := declaration.Specs[index-1]
+			comment := p.commentAt(
+				p.trailingCommentPosition(syntax.SpecificationEnd(previous)),
+			)
 			rows[index].breakBefore = p.blankBetween(
 				syntax.SpecificationEnd(previous),
 				syntax.SpecificationPosition(value),
@@ -122,7 +126,7 @@ func (p *printer) specificationAlignment(
 			) || p.multiline(
 				syntax.SpecificationPosition(previous),
 				syntax.SpecificationEnd(previous),
-			)
+			) || comment != nil && strings.Contains(comment.text, "\n")
 		}
 		rows[index].cells = p.specificationCells(value, keepTypes[index])
 	}
