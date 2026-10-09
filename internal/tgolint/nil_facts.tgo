@@ -48,11 +48,19 @@ func (e %nilEnvironment) conditionNilFacts(
 	case *ast.Ident:
 		guard, ok := state.guards[e.info.ObjectOf(expression)]
 		if ok {
-			return cloneNilFacts(guard.trueFacts), cloneNilFacts(guard.falseFacts)
+			trueFacts := cloneNilFacts(guard.trueFacts)
+			falseFacts := cloneNilFacts(guard.falseFacts)
+			if !guard.truePossible {
+				trueFacts = impossibleNilFacts()
+			}
+			if !guard.falsePossible {
+				falseFacts = impossibleNilFacts()
+			}
+			return trueFacts, falseFacts
 		}
 		if presence, ok := state.presence[e.info.ObjectOf(expression)]; ok {
 			if presence.nonNil {
-				return nilFacts{presence.value: nonNilValue()}, nil
+				return nilFacts{presence.value: nonNilType()}, nil
 			}
 		}
 	case *ast.BinaryExpr:
@@ -66,17 +74,17 @@ func (e %nilEnvironment) conditionNilFacts(
 			trueState := cloneNilState(state)
 			e.applyNilFacts(trueState, leftTrue)
 			rightTrue, rightFalse := e.conditionNilFacts(expression.Y, trueState)
-			return unionNilFacts(leftTrue, rightTrue), intersectNilFacts(
-				leftFalse, unionNilFacts(leftTrue, rightFalse),
+			return conjoinNilFacts(leftTrue, rightTrue), alternateNilFacts(
+				leftFalse, conjoinNilFacts(leftTrue, rightFalse),
 			)
 		case token.LOR:
 			leftTrue, leftFalse := e.conditionNilFacts(expression.X, state)
 			falseState := cloneNilState(state)
 			e.applyNilFacts(falseState, leftFalse)
 			rightTrue, rightFalse := e.conditionNilFacts(expression.Y, falseState)
-			return intersectNilFacts(
-				leftTrue, unionNilFacts(leftFalse, rightTrue),
-			), unionNilFacts(leftFalse, rightFalse)
+			return alternateNilFacts(
+				leftTrue, conjoinNilFacts(leftFalse, rightTrue),
+			), conjoinNilFacts(leftFalse, rightFalse)
 		}
 	}
 	return nil, nil
@@ -95,21 +103,26 @@ func (e %nilEnvironment) comparisonNilFacts(
 			return nil, nil
 		}
 	}
-	nonNil := nilFacts{place: nonNilValue()}
-	nilFact := nilFacts{place: provenNilValue()}
+	nonNil := nilFacts{place: nonNilType()}
+	nilFact := nilFacts{place: nilOnlyType()}
 	if operator == token.NEQ {
 		return nonNil, nilFact
 	}
 	return nilFact, nonNil
 }
 
-func unionNilFacts(left, right nilFacts) nilFacts {
+// conjoinNilFacts applies both sets of branch constraints.
+func conjoinNilFacts(left, right nilFacts) nilFacts {
 	result := cloneNilFacts(left)
 	if result == nil {
 		result = make(nilFacts)
 	}
 	for place, value := range right {
-		result[place] = value
+		if current, found := result[place]; found {
+			result[place] = intersectNilTypes(current, value)
+		} else {
+			result[place] = value
+		}
 	}
 	if len(result) == 0 {
 		return nil
@@ -117,12 +130,20 @@ func unionNilFacts(left, right nilFacts) nilFacts {
 	return result
 }
 
-func intersectNilFacts(left, right nilFacts) nilFacts {
+// alternateNilFacts keeps constraints that hold on both possible paths.
+func alternateNilFacts(left, right nilFacts) nilFacts {
+	if nilFactsImpossible(left) {
+		return cloneNilFacts(right)
+	}
+	if nilFactsImpossible(right) {
+		return cloneNilFacts(left)
+	}
 	result := make(nilFacts)
 	for place, value := range left {
 		if other, found := right[place]; found {
-			if equalNilValue(other, value) {
-				result[place] = value
+			combined := unionNilTypes(value, other)
+			if !isOptionalNilType(combined) {
+				result[place] = combined
 			}
 		}
 	}
@@ -132,16 +153,52 @@ func intersectNilFacts(left, right nilFacts) nilFacts {
 	return result
 }
 
-func (e %nilEnvironment) applyNilFacts(state *nilFlowState, facts nilFacts) {
-	for place, value := range facts {
-		e.setNilValue(state, place, value)
+func nilFactsImpossible(facts nilFacts) bool {
+	for _, value := range facts {
+		if isNeverNilType(value) {
+			return true
+		}
+	}
+	return false
+}
+
+func impossibleNilFacts() nilFacts {
+	return nilFacts{
+		{object: nil, path: "$never"}: neverNilType(),
 	}
 }
 
-func (e %nilEnvironment) setNilValue(
+func (e %nilEnvironment) nilFactsPossible(
+	state *nilFlowState,
+	facts nilFacts,
+) bool {
+	candidate := cloneNilState(state)
+	e.applyNilFacts(candidate, facts)
+	return candidate != nil && candidate.reachable
+}
+
+func (e %nilEnvironment) applyNilFacts(state *nilFlowState, facts nilFacts) {
+	if state == nil || !state.reachable {
+		return
+	}
+	for place, value := range facts {
+		current := optionalNilType()
+		if known, found := state.values[place]; found {
+			current = known
+		}
+		narrowed := intersectNilTypes(current, value)
+		if isNeverNilType(narrowed) {
+			state.reachable = false
+			return
+		}
+		e.setNilType(state, place, narrowed)
+	}
+}
+
+func (e %nilEnvironment) setNilType(
 	state *nilFlowState,
 	place nilPlace,
-	value nilValue,
+	value nilType,
 ) {
 	state.values[place] = value
 	for other := range state.aliases {
@@ -299,7 +356,7 @@ func (e %nilEnvironment) prepareNilBlock(
 	if statement.Value != nil {
 		e.assignNilTarget(state, statement.Value, nil)
 		if place, ok := e.nilPlace(statement.Value); ok && valueContract[""] {
-			e.setNilValue(state, place, nonNilValue())
+			e.setNilType(state, place, nonNilType())
 		}
 	}
 }
