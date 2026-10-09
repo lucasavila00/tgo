@@ -2,6 +2,8 @@
 
 - [Feature documentation](feature-documentation.md): feature inventory and the
   required documentation updates for each change.
+- [Upstream adaptations](upstream-adaptations.md): attribution and source maps
+  for code that TGo adapts from other projects.
 
 Architecture-specific contributor guides belong in this directory. User
 behavior belongs in the specification or user guides.

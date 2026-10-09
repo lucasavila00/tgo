@@ -352,13 +352,47 @@ func (c *checker) modelFor(typ types.Type) *model {
 		}
 	}
 	fact := new(modelWireFact)
-	if !c.pass.ImportObjectFact(named.Obj(), fact) {
+	factObject := c.analysisModelObject(named.Obj())
+	if factObject == nil || !c.pass.ImportObjectFact(factObject, fact) {
 		c.models[key] = nil
 		return nil
 	}
 	value := decodeModelFact(fact, named.Obj().Pkg().Path())
 	c.models[key] = value
 	return value
+}
+
+// analysisModelObject maps a projected source object to the analysis graph.
+func (c *checker) analysisModelObject(object *types.TypeName) *types.TypeName {
+	if object == nil || object.Pkg() == nil || c.pass == nil {
+		return nil
+	}
+	pkg := analysisPackage(c.pass.Pkg, object.Pkg().Path(), make(map[*types.Package]bool))
+	if pkg == nil {
+		return nil
+	}
+	result, _ := pkg.Scope().Lookup(object.Name()).(*types.TypeName)
+	return result
+}
+
+func analysisPackage(
+	pkg *types.Package,
+	path string,
+	seen map[*types.Package]bool,
+) *types.Package {
+	if pkg == nil || seen[pkg] {
+		return nil
+	}
+	seen[pkg] = true
+	if pkg.Path() == path {
+		return pkg
+	}
+	for _, imported := range pkg.Imports() {
+		if found := analysisPackage(imported, path, seen); found != nil {
+			return found
+		}
+	}
+	return nil
 }
 
 func (c *checker) modelForReceiver(typ types.Type) *model {

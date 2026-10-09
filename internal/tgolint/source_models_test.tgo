@@ -161,6 +161,7 @@ func sourceModelTestChecker(
 		reported:        make(map[diagnosticKey]bool),
 		function:        nil,
 		file:            nil,
+		sourcePackage:   nil,
 		zeroTypes:       nil,
 		captureResult:   nil,
 		captureSource:   nil,

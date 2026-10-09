@@ -10,8 +10,6 @@ import (
 func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
 	p.generatedValues = make(map[*ast.ValueSpec]bool)
-	p.checkedLiterals = make(map[*ast.CompositeLit]bool)
-	p.checkedCalls = make(map[*ast.CallExpr]bool)
 	p.sourceReferences = make(map[token.Pos]types.Object)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
@@ -175,10 +173,8 @@ func (p *packageUnit) lowerConstruction(
 	}
 	if declaration != nil && declaration.CheckedStruct {
 		if owner == p && declaration == exempt {
-			p.checkedLiterals[literal] = true
 			return node
 		}
-		p.checkedLiterals[literal] = true
 		return p.checkedConstructorCall(file, literal, owner, declaration)
 	}
 	selector, owner, declaration, variant := p.enumLiteral(literal)
@@ -397,9 +393,7 @@ func (p *packageUnit) checkedConstructorCall(
 		prefix, owner.Path, "New"+declaration.Name, literal.Lbrace,
 	)
 	if !keyed {
-		result := call(constructor, values...)
-		p.checkedCalls[result] = true
-		return result
+		return call(constructor, values...)
 	}
 
 	carrierType := p.generatedObject(
@@ -424,7 +418,6 @@ func (p *packageUnit) checkedConstructorCall(
 		}
 	}
 	constructorCall := call(constructor, arguments...)
-	p.checkedCalls[constructorCall] = true
 	resultType := p.generatedObject(
 		prefix, owner.Path, declaration.Name, literal.Lbrace,
 	)
@@ -449,6 +442,24 @@ func (p *packageUnit) checkedConstructorCall(
 	return call(function, &ast.CompositeLit{
 		Type: carrierLiteralType, Elts: carrierElements,
 	})
+}
+
+// validateNonNilPointerForms rejects a percent marker outside a type.
+func (p *packageUnit) validateNonNilPointerForms() {
+	for _, source := range p.Sources {
+		ast.Inspect(source.File, func(node ast.Node) bool {
+			pointer, ok := node.(*ast.StarExpr)
+			if !ok || !source.NonNil[pointer.Star] {
+				return true
+			}
+			fact, found := p.info.Types[pointer]
+			if !found || fact.IsType() {
+				return true
+			}
+			p.failAt(pointer.Star, "%% is only valid in a pointer type")
+			return true
+		})
+	}
 }
 
 // recordCheckedLiteralReferences keeps navigation on lowered source names.
