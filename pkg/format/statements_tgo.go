@@ -353,6 +353,7 @@ func (p *printer) caseClause(value *syntax.CaseClause) {
 				value.Case,
 				value.Colon,
 				p.indent*8,
+				0,
 			)
 			p.commaListWithComments(value.List, 1, true, comments)
 			p.indent--
