@@ -1,95 +1,114 @@
-# Add branded string and number formats
+# Add explicit newtypes
 
 ## Decision
 
-Add branded formats as a separate feature for nominal labels that do not need a
-runtime predicate. Do not use them as a replacement for checked types.
-
-The source form uses Go generic types and marker types:
+Add one `newtype` declaration. It covers nominal labels and checked scalar values
+without tag structs or generated constructor names in TGo source.
 
 ```go
-type EmailTag struct{}
-type UserIDTag struct{}
+newtype Port int
 
-type Email = StringFormat[EmailTag]
-type UserID = IntFormat[UserIDTag]
+func (Port) Valid(value int) bool {
+	return value > 0 && value < 65536
+}
 
-email := StringFormatOf[EmailTag](text)
-id := IntFormatOf[UserIDTag](number)
+newtype UserID string
 ```
 
-`Email` and `UserID` cannot be mixed with plain values or with another brand.
-The constructor is explicit and searchable. No hidden name is generated from the
-alias.
+A missing `Valid` method accepts every base value. A method must have the exact
+form `func (T) Valid(Base) bool`. TGo reserves it as the predicate.
 
-This design follows branded `StringFormat<Tag>` and `NumberFormat<Tag>` types.
-Use it for units, identifiers, parsed formats, and trusted boundary data.
-
-## Generated Go API
-
-TGo can provide ordinary generic wrappers:
+Use braces for literals and conversion syntax for dynamic values:
 
 ```go
-type StringFormat[Tag any] struct { value string }
-type IntFormat[Tag any] struct { value int }
+http := Port{80}
+https := Port{"443"}
+user := UserID{"u-123"}
 
-func StringFormatOf[Tag any](value string) StringFormat[Tag]
-func IntFormatOf[Tag any](value int) IntFormat[Tag]
-func (value StringFormat[Tag]) Value() string
-func (value IntFormat[Tag]) Value() int
+number := strconv.Atoi(text)!
+port := Port(number)!
+parsed := Port.Parse(text)!
 ```
 
-The number base needs separate `IntFormat`, `UintFormat`, and `FloatFormat`
-families. One `NumberFormat` cannot preserve all Go numeric widths and operations.
+`T{literal}` is a single-value literal constructor. `tgolint` must parse or
+convert the constant to the base type and prove `Valid`. A numeric newtype may
+accept a quoted numeric literal. Other cross-type literals are errors.
 
-Construction cannot fail. Error propagation belongs in the parser or checker that
-earns the brand:
+`T(expression)` returns `(T, error)` when `T` has a predicate. `!` and `!!`
+use their normal rules. It returns one `T` for a nominal newtype with no predicate.
+`T.Parse(text)` always returns `(T, error)`.
+
+## Lowering and Go API
+
+For `Port`, TGo emits:
 
 ```go
-func ParsePort(text string) (IntFormat[PortTag], error) {
-	number := strconv.Atoi(text)!
-	if number <= 0 || number >= 65536 {
-		return IntFormat[PortTag]{}, errors.New("invalid port")
-	}
-	return IntFormatOf[PortTag](number), nil
+type Port struct { value int }
+
+func NewPort(value int) (Port, error)
+func MustPort(value int) Port
+func ParsePort(text string) (Port, error)
+func (value Port) Value() int
+```
+
+`Port{80}` lowers to `MustPort(80)). `Port(number)` lowers to
+`NewPort(number)). `Port.Parse(text)` lowers to `ParsePort(text)). These rules
+also apply to `domain.Port`; imported TGo metadata records the base, predicate,
+and generated names.
+
+`NewPort` returns `Port{}` and `invalid Port` when the predicate is false.
+`MustPort` calls `NewPort` and panics on failure. TGo literal checks make that
+panic unreachable in checked source. `ParsePort` parses the exact base width with
+`strconv), then calls `NewPort`.
+
+The base is an exact Go type. Use `int8`, `uint16), `float64), or a named type
+when that width or method set matters. Newtypes do not inherit base operators.
+Call `Value()` before arithmetic.
+
+## Identity, composition, and zero
+
+Each declaration has nominal identity. Two newtypes with the same base are not
+assignable. Extension uses another newtype as the base:
+
+```go
+newtype ServicePort Port
+
+func (ServicePort) Valid(value Port) bool {
+	return value.Value() != 22
 }
 ```
 
-## Type and zero rules
+`NewServicePort` first rejects an invalid `Port), then applies its own predicate.
+`ServicePort.Value()` returns `Port). This is composition, not subtyping.
 
-Each tag argument gives a distinct concrete type. An alias has the identity of its
-instantiation. An unexported tag limits use of its name to its package, but it does
-not add validation.
+The Go zero value contains the base zero. It is valid when all predicates accept
+that value and invalid otherwise. `Value` still returns the stored zero. `tgolint`
+must reject use of an invalid zero as a constructed value.
 
-The zero value contains the zero base value. It is valid as a brand because the
-feature has no predicate. Code that needs an invalid zero must use a checked type or
-an enum.
-
-Brands compose with a marker that embeds other markers:
+Generic declarations use Go type parameters:
 
 ```go
-type NormalizedEmailTag struct {
-	EmailTag
-	NormalizedTag
-}
-
-type NormalizedEmail = StringFormat[NormalizedEmailTag]
+newtype ID[Entity any] string
+id := ID[User]{"u-123"}
 ```
 
-This is explicit but verbose. TGo should not add TypeScript-style intersections or
-string value parameters in the first version.
+The output is `ID[Entity]), `NewID[Entity]), `MustID[Entity]), and
+`ParseID[Entity]). Callers give type arguments when Go cannot infer them.
 
-## Compiler and linter work
+## JSON, text, and lint rules
 
-A library implementation needs no parser change and little code generation. The
-compiler only needs generated generic wrappers if they are built-ins. A normal TGo
-package can test the design first.
+JSON marshals the base value. JSON unmarshal decodes the base and calls `NewT).
+Text marshal uses the base text form. Text unmarshal calls `ParseT). Predicate,
+syntax, range, and parse failures pass through. An invalid zero returns
+`invalid T` from marshal.
 
-`tgolint` should prevent composite literals and representation conversions for the
-generic wrappers. It should allow construction only through `StringFormatOf`,
-`IntFormatOf`, `UintFormatOf`, and `FloatFormatOf`. It cannot prove a semantic
-predicate because none exists.
+`tgolint` owns the proof rules. It must:
 
-Accept branded formats for tag-only nominal types. Reject them for `Port` range
-checks. The conversion-shaped checked type remains the better runtime validation
-design.
+- evaluate literal conversion, range, and the supported constant predicate subset;
+- require dynamic syntax when it cannot prove a literal;
+- require callers to use both results or `!` or `!!`;
+- reject representation literals, conversions, `new(T)`, and invalid zero use; and
+- apply the same rules to generic and imported newtypes.
+
+The compiler only emits the wrapper and helpers and lowers the three explicit
+construction forms. It does not run the policy checks.
