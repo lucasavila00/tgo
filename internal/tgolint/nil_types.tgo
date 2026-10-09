@@ -2,7 +2,7 @@ package tgolint
 
 import "go/types"
 
-// nilType is the part of a value type that control flow can narrow.
+// Go types stores T. nilType stores the current union of T and nil.
 // Optional is T | nil. Never is an impossible value.
 type nilType enum {
 	Never struct{}

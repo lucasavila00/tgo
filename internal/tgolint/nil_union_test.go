@@ -32,7 +32,17 @@ func TestNilTypeLatticeProperties(t *testing.T) {
 				intersectNilTypes(left, intersectNilTypes(middle, right)),
 			) &&
 			equalNilType(unionNilTypes(left, left), left) &&
-			equalNilType(intersectNilTypes(left, left), left)
+			equalNilType(intersectNilTypes(left, left), left) &&
+			equalNilType(
+				intersectNilTypes(left, unionNilTypes(left, middle)), left,
+			) &&
+			equalNilType(
+				unionNilTypes(left, intersectNilTypes(left, middle)), left,
+			) &&
+			equalNilType(unionNilTypes(left, neverNilType()), left) &&
+			equalNilType(intersectNilTypes(left, optionalNilType()), left) &&
+			isOptionalNilType(unionNilTypes(left, optionalNilType())) &&
+			isNeverNilType(intersectNilTypes(left, neverNilType()))
 	}
 	configuration := &quick.Config{
 		MaxCount: 1_000,
@@ -52,8 +62,9 @@ func TestDeclaredNilTypeSeparatesStringAndOptionalString(t *testing.T) {
 	if !isOptionalNilType(declaredNilType(optionalString)) {
 		t.Fatal("*string must contain string and nil")
 	}
-	if !isNonNilType(intersectNilTypes(optionalNilType(), nonNilType())) {
-		t.Fatal("a nil check must remove nil from *string")
+	narrowed := intersectNilTypes(declaredNilType(optionalString), nonNilType())
+	if !isNonNilType(narrowed) {
+		t.Fatal("a nil check must narrow *string to string")
 	}
 }
 

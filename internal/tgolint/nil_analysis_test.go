@@ -2,15 +2,30 @@ package tgolint
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 
 	"golang.org/x/tools/go/analysis"
 )
 
+func TestNilBooleanNarrowingProperties(t *testing.T) {
+	random := rand.New(rand.NewSource(2)) //nolint:gosec // Tests need stable data.
+	for range 300 {
+		data := make([]byte, 12)
+		if _, err := random.Read(data); err != nil {
+			t.Fatal(err)
+		}
+		checkNilBooleanProperty(t, data)
+	}
+}
+
 func FuzzNilBooleanNarrowing(f *testing.F) {
 	f.Add([]byte{0})
 	f.Add([]byte{1})
+	f.Add([]byte{6, 1, 0})
+	f.Add([]byte{7, 0, 1})
+	f.Add([]byte{8, 6, 0, 1})
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		if len(data) > 64 {
