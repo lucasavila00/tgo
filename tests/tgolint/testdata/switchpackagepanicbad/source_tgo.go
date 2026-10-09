@@ -7,8 +7,6 @@ import __tgo_jsonv2 "encoding/json/v2"
 import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
-var panic = func(any) {}
-
 func __tgo_Result_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
 	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
 		return err

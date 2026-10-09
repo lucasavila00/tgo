@@ -1,7 +1,5 @@
 package switchpackagepanicbad
 
-var panic = func(any) {}
-
 type Result enum {
 	Success struct{}
 	Failure struct{}
