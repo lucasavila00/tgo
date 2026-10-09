@@ -42,85 +42,166 @@ type workspaceParams struct {
 	Query string `json:"query"`
 }
 
+type cancelParams struct {
+	ID int64 `json:"id"`
+}
+
+type protocolServer struct {
+	context  context.Context
+	engine   *Engine
+	encoder  *json.Encoder
+	write    *sync.Mutex
+	active   map[int64]context.CancelFunc
+	activeMu *sync.Mutex
+	workers  *sync.WaitGroup
+	writeErr error
+}
+
 // Serve reads newline-delimited requests and writes matching responses.
 func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Writer) error {
 	if engine == nil {
 		return fmt.Errorf("navigation server needs an engine")
 	}
 	decoder := json.NewDecoder(bufio.NewReader(input))
-	encoder := json.NewEncoder(output)
-	write := new(sync.Mutex)
+	server := &protocolServer{
+		context: ctx, engine: engine, encoder: json.NewEncoder(output),
+		write: new(sync.Mutex), active: make(map[int64]context.CancelFunc),
+		activeMu: new(sync.Mutex), workers: new(sync.WaitGroup), writeErr: nil,
+	}
 	for {
 		request := Request{ID: 0, Method: "", Params: nil}
 		if err := decoder.Decode(&request); err != nil {
 			if err == io.EOF {
-				return nil
+				server.stop()
+				return server.writeErr
 			}
+			server.stop()
 			return err
 		}
-		response := Response{ID: request.ID, Result: nil, Error: ""}
-		switch request.Method {
-		case "definition":
-			params := positionParams{
-				URI: "", Offset: 0, IncludeDeclaration: false,
-			}
-			if err := json.Unmarshal(request.Params, &params); err != nil {
-				response.Error = err.Error()
-			} else {
-				result, err := engine.Definition(ctx, params.URI, params.Offset)
-				response.Result = result
-				if err != nil {
-					response.Error = err.Error()
-				}
-			}
-		case "references":
-			params := positionParams{
-				URI: "", Offset: 0, IncludeDeclaration: false,
-			}
-			if err := json.Unmarshal(request.Params, &params); err != nil {
-				response.Error = err.Error()
-			} else {
-				result, err := engine.References(
-					ctx, params.URI, params.Offset, params.IncludeDeclaration,
-				)
-				response.Result = result
-				if err != nil {
-					response.Error = err.Error()
-				}
-			}
-		case "documentSymbols":
-			params := documentParams{URI: ""}
-			if err := json.Unmarshal(request.Params, &params); err != nil {
-				response.Error = err.Error()
-			} else {
-				result, err := engine.DocumentSymbols(ctx, params.URI)
-				response.Result = result
-				if err != nil {
-					response.Error = err.Error()
-				}
-			}
-		case "workspaceSymbols":
-			params := workspaceParams{Query: ""}
-			if err := json.Unmarshal(request.Params, &params); err != nil {
-				response.Error = err.Error()
-			} else {
-				result, err := engine.WorkspaceSymbols(ctx, params.Query)
-				response.Result = result
-				if err != nil {
-					response.Error = err.Error()
-				}
-			}
-		case "invalidate":
+		if request.Method == "cancel" {
+			server.cancel(request)
+			continue
+		}
+		if request.Method == "invalidate" {
 			engine.Invalidate()
-			response.Result = true
-		default:
-			response.Error = "unknown method " + request.Method
+			server.send(Response{ID: request.ID, Result: true, Error: ""})
+			continue
 		}
-		write.Lock()
-		err := encoder.Encode(response)
-		write.Unlock()
-		if err != nil {
-			return err
-		}
+		server.start(request)
 	}
+}
+
+func (s *protocolServer) start(request Request) {
+	requestContext, cancel := context.WithCancel(s.context)
+	s.activeMu.Lock()
+	s.active[request.ID] = cancel
+	s.activeMu.Unlock()
+	s.workers.Add(1)
+	go func() {
+		defer s.workers.Done()
+		defer cancel()
+		response := s.handle(requestContext, request)
+		s.activeMu.Lock()
+		delete(s.active, request.ID)
+		s.activeMu.Unlock()
+		s.send(response)
+	}()
+}
+
+func (s *protocolServer) handle(
+	ctx context.Context,
+	request Request,
+) Response {
+	response := Response{ID: request.ID, Result: nil, Error: ""}
+	switch request.Method {
+	case "definition":
+		params := positionParams{
+			URI: "", Offset: 0, IncludeDeclaration: false,
+		}
+		if err := json.Unmarshal(request.Params, &params); err != nil {
+			response.Error = err.Error()
+		} else {
+			result, err := s.engine.Definition(ctx, params.URI, params.Offset)
+			response.Result = result
+			if err != nil {
+				response.Error = err.Error()
+			}
+		}
+	case "references":
+		params := positionParams{
+			URI: "", Offset: 0, IncludeDeclaration: false,
+		}
+		if err := json.Unmarshal(request.Params, &params); err != nil {
+			response.Error = err.Error()
+		} else {
+			result, err := s.engine.References(
+				ctx, params.URI, params.Offset, params.IncludeDeclaration,
+			)
+			response.Result = result
+			if err != nil {
+				response.Error = err.Error()
+			}
+		}
+	case "documentSymbols":
+		params := documentParams{URI: ""}
+		if err := json.Unmarshal(request.Params, &params); err != nil {
+			response.Error = err.Error()
+		} else {
+			result, err := s.engine.DocumentSymbols(ctx, params.URI)
+			response.Result = result
+			if err != nil {
+				response.Error = err.Error()
+			}
+		}
+	case "workspaceSymbols":
+		params := workspaceParams{Query: ""}
+		if err := json.Unmarshal(request.Params, &params); err != nil {
+			response.Error = err.Error()
+		} else {
+			result, err := s.engine.WorkspaceSymbols(ctx, params.Query)
+			response.Result = result
+			if err != nil {
+				response.Error = err.Error()
+			}
+		}
+	default:
+		response.Error = "unknown method " + request.Method
+	}
+	return response
+}
+
+func (s *protocolServer) cancel(request Request) {
+	params := cancelParams{ID: 0}
+	if err := json.Unmarshal(request.Params, &params); err != nil {
+		if request.ID != 0 {
+			s.send(Response{ID: request.ID, Result: nil, Error: err.Error()})
+		}
+		return
+	}
+	s.activeMu.Lock()
+	cancel := s.active[params.ID]
+	s.activeMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if request.ID != 0 {
+		s.send(Response{ID: request.ID, Result: true, Error: ""})
+	}
+}
+
+func (s *protocolServer) send(response Response) {
+	s.write.Lock()
+	defer s.write.Unlock()
+	if s.writeErr == nil {
+		s.writeErr = s.encoder.Encode(response)
+	}
+}
+
+func (s *protocolServer) stop() {
+	s.activeMu.Lock()
+	for _, cancel := range s.active {
+		cancel()
+	}
+	s.activeMu.Unlock()
+	s.workers.Wait()
 }

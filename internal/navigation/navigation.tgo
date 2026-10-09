@@ -84,16 +84,22 @@ func (e *Engine) WorkspaceSymbols(
 
 // Engine owns one invalidatable workspace index.
 type Engine struct {
-	root  string
-	mu    %sync.Mutex
-	index *workspaceIndex
+	root       string
+	mu         %sync.Mutex
+	index      *workspaceIndex
+	generation uint64
+	building   bool
+	ready      chan struct{}
 }
 
 // New makes an engine for one workspace directory.
 func New(root string) (*Engine, error) {
 	absolute, err := filepath.Abs(root)
 	if err != nil { return nil, err }
-	return &Engine{root: absolute, mu: new(sync.Mutex), index: nil}, nil
+	return &Engine{
+		root: absolute, mu: new(sync.Mutex), index: nil, generation: 0,
+		building: false, ready: nil,
+	}, nil
 }
 
 // Invalidate removes all cached facts after a source or module change.
@@ -101,6 +107,7 @@ func (e *Engine) Invalidate() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.index = nil
+	e.generation++
 }
 
 // Definition returns the exact declaration for the name at a byte offset.
@@ -157,15 +164,52 @@ func (e *Engine) References(
 }
 
 func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if e.index != nil { return e.index, nil }
+	for {
+		e.mu.Lock()
+		if e.index != nil {
+			index := e.index
+			e.mu.Unlock()
+			return index, nil
+		}
+		generation := e.generation
+		if e.building {
+			ready := e.ready
+			e.mu.Unlock()
+			select {
+			case <-ctx.Done(): return nil, ctx.Err()
+			case <-ready:
+			}
+			continue
+		}
+		e.building = true
+		e.ready = make(chan struct{})
+		e.mu.Unlock()
+		index, err := e.buildIndex(ctx)
+		e.mu.Lock()
+		current := err == nil && generation == e.generation
+		if current {
+			e.index = index
+		}
+		e.building = false
+		close(e.ready)
+		e.ready = nil
+		e.mu.Unlock()
+		if err != nil { return nil, err }
+		if current { return index, nil }
+	}
+}
+
+func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	select {
 	case <-ctx.Done(): return nil, ctx.Err()
 	default:
 	}
-	packages, err := compiler.AnalyzeWorkspace(e.root)
+	packages, err := compiler.AnalyzeWorkspaceContext(ctx, e.root)
 	if err != nil { return nil, err }
+	select {
+	case <-ctx.Done(): return nil, ctx.Err()
+	default:
+	}
 	index := &workspaceIndex{
 		occurrences: nil,
 		definitions: make(map[string]Location),
@@ -223,7 +267,6 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		}
 		return index.symbols[left].Selection.Start < index.symbols[right].Selection.Start
 	})
-	e.index = index
 	return index, nil
 }
 

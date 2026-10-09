@@ -1,0 +1,23 @@
+[
+  {
+    "method": "definition",
+    "position": {"file": "main.tgo", "text": "Café()", "occurrence": 2},
+    "locations": [
+      {"file": "main.tgo", "text": "Café", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "main.tgo", "text": "Active()", "occurrence": 1},
+    "locations": [
+      {"file": "active_linux.tgo", "text": "Active", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "main.tgo", "text": "Before()", "occurrence": 2},
+    "locations": [
+      {"file": "main.tgo", "text": "Before", "occurrence": 1}
+    ]
+  }
+]

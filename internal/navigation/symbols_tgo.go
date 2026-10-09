@@ -5,6 +5,7 @@ package navigation
 
 import (
 	"go/token"
+	"go/types"
 
 	"tgo/internal/compiler"
 	"tgo/pkg/syntax"
@@ -30,11 +31,13 @@ func sourceSymbols(
 		case syntax.FunctionDeclarationValueOf(declaration) != nil:
 			value := syntax.FunctionDeclarationValueOf(declaration)
 			kind := "function"
+			container := pkg.Path
 			if value.Receiver != nil {
 				kind = "method"
+				container = receiverName(pkg, value)
 			}
 			result = appendSymbol(
-				result, pkg, uri, value.Name.Name, kind, pkg.Path,
+				result, pkg, uri, value.Name.Name, kind, container,
 				value.Span, value.Name.Span,
 			)
 		case enumDeclaration(declaration) != nil:
@@ -56,7 +59,7 @@ func sourceSymbols(
 		case structDeclaration(declaration) != nil:
 			value := structDeclaration(declaration)
 			result = appendSymbol(
-				result, pkg, uri, value.Name.Name, "type", pkg.Path,
+				result, pkg, uri, value.Name.Name, "struct", pkg.Path,
 				value.Span, value.Name.Span,
 			)
 			result = appendTGoFieldSymbols(
@@ -95,7 +98,7 @@ func appendGeneralSymbols(
 		}
 		if value := syntax.TypeSpecificationOf(specification); value != nil {
 			result = appendSymbol(
-				result, pkg, uri, value.Name.Name, "type", container,
+				result, pkg, uri, value.Name.Name, typeKind(value.Type), container,
 				value.Span, value.Name.Span,
 			)
 			if structure := syntax.StructTypeExpressionOf(value.Type); structure != nil {
@@ -111,6 +114,47 @@ func appendGeneralSymbols(
 		}
 	}
 	return result
+}
+
+func typeKind(value *syntax.Expression) string {
+	if value == nil {
+		return "type"
+	}
+	switch value.Tag() {
+	case syntax.ExpressionTagStructType:
+		return "struct"
+	case syntax.ExpressionTagInterfaceType:
+		return "interface"
+	default:
+		return "type"
+	}
+}
+
+func receiverName(
+	pkg *compiler.AnalysisPackage,
+	declaration *syntax.FunctionDeclaration,
+) string {
+	object, _ := pkg.Facts.DefinitionName(declaration.Name).(*types.Func)
+	if object == nil {
+		return pkg.Path
+	}
+	signature, _ := object.Type().(*types.Signature)
+	if signature == nil || signature.Recv() == nil {
+		return pkg.Path
+	}
+	value := signature.Recv().Type()
+	for {
+		pointer, ok := value.(*types.Pointer)
+		if !ok {
+			break
+		}
+		value = pointer.Elem()
+	}
+	named, _ := types.Unalias(value).(*types.Named)
+	if named == nil {
+		return pkg.Path
+	}
+	return named.Obj().Name()
 }
 
 func appendTGoFieldSymbols(

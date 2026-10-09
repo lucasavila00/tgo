@@ -48,10 +48,17 @@
       },
       {
         "name": "Record",
-        "kind": "type",
+        "kind": "struct",
         "container": "example.test/navigation/lib",
         "range": {"file": "lib/lib.tgo", "text": "type Record struct {\n\tName string\n}", "occurrence": 1},
         "selection": {"file": "lib/lib.tgo", "text": "Record", "occurrence": 1}
+      },
+      {
+        "name": "Printer",
+        "kind": "interface",
+        "container": "example.test/navigation/lib",
+        "range": {"file": "lib/lib.tgo", "text": "Printer interface {\n\tPrint() string\n}", "occurrence": 1},
+        "selection": {"file": "lib/lib.tgo", "text": "Printer", "occurrence": 1}
       },
       {
         "name": "Print",
@@ -63,7 +70,7 @@
       {
         "name": "Text",
         "kind": "method",
-        "container": "example.test/navigation/lib",
+        "container": "Record",
         "range": {"file": "lib/lib.tgo", "text": "func (value Record) Text() string {\n\treturn value.Name\n}", "occurrence": 1},
         "selection": {"file": "lib/lib.tgo", "text": "Text", "occurrence": 1}
       },

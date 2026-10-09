@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"context"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -36,6 +37,14 @@ type AnalysisPackage struct {
 
 // AnalyzeWorkspace loads and checks all active TGo packages in one module.
 func AnalyzeWorkspace(directory string) ([]*AnalysisPackage, error) {
+	return AnalyzeWorkspaceContext(context.Background(), directory)
+}
+
+// AnalyzeWorkspaceContext stops before the next package after cancellation.
+func AnalyzeWorkspaceContext(
+	ctx context.Context,
+	directory string,
+) ([]*AnalysisPackage, error) {
 	root, module, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
@@ -56,6 +65,11 @@ func AnalyzeWorkspace(directory string) ([]*AnalysisPackage, error) {
 	loaded := make(map[string]bool)
 	result := make([]*AnalysisPackage, 0, len(paths))
 	for _, path := range paths {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
 		unit := packages[path]
 		if err := loadAnalysisPackage(unit, packages, loaded); err != nil {
 			return nil, err

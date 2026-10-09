@@ -2,8 +2,10 @@ package navigation_test
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"net/url"
 	"os"
 	"os/exec"
@@ -44,6 +46,13 @@ type fixtureSymbolRequest struct {
 	Symbols []fixtureSymbol `json:"symbols"`
 }
 
+type fixtureMutation struct {
+	File    string         `json:"file"`
+	Old     string         `json:"old"`
+	New     string         `json:"new"`
+	Request fixtureRequest `json:"request"`
+}
+
 type helperProcess struct {
 	command *exec.Cmd
 	input   *json.Encoder
@@ -66,7 +75,8 @@ func TestHelperWorkspaceFixtures(t *testing.T) {
 			continue
 		}
 		t.Run(entry.Name(), func(t *testing.T) {
-			workspace := filepath.Join(workspaces, entry.Name())
+			workspace := filepath.Join(t.TempDir(), entry.Name())
+			copyWorkspace(t, filepath.Join(workspaces, entry.Name()), workspace)
 			server := startHelper(t, helper, workspace)
 			for _, request := range readRequests(t, workspace) {
 				server.check(t, workspace, request)
@@ -74,8 +84,69 @@ func TestHelperWorkspaceFixtures(t *testing.T) {
 			for _, request := range readSymbolRequests(t, workspace) {
 				server.checkSymbols(t, workspace, request)
 			}
+			for _, mutation := range readMutations(t, workspace) {
+				server.checkMutation(t, workspace, mutation)
+			}
 		})
 	}
+}
+
+func TestHelperCancellationStopsBeforeInvalidPackage(t *testing.T) {
+	repository := repositoryRoot(t)
+	helper := buildHelper(t, repository)
+	source := filepath.Join(
+		repository, "internal", "navigation", "testdata", "workspaces", "cancellation",
+	)
+	workspace := filepath.Join(t.TempDir(), "cancellation")
+	copyWorkspace(t, source, workspace)
+	server := startHelper(t, helper, workspace)
+	if err := server.input.Encode(navigation.Request{
+		ID: 1, Method: "workspaceSymbols",
+		Params: mustJSON(t, map[string]any{"query": ""}),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.input.Encode(navigation.Request{
+		ID: 0, Method: "cancel",
+		Params: mustJSON(t, map[string]any{"id": 1}),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var response navigation.Response
+	if err := server.output.Decode(&response); err != nil {
+		t.Fatal(err)
+	}
+	if response.ID != 1 || response.Error != context.Canceled.Error() {
+		t.Fatalf("canceled response = %#v", response)
+	}
+}
+
+func (h *helperProcess) checkMutation(
+	t *testing.T,
+	workspace string,
+	fixture fixtureMutation,
+) {
+	t.Helper()
+	path := filepath.Join(workspace, fixture.File)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(string(data), fixture.Old) == 0 {
+		t.Fatalf("mutation text %q is absent from %s", fixture.Old, fixture.File)
+	}
+	changed := strings.ReplaceAll(string(data), fixture.Old, fixture.New)
+	if err := os.WriteFile(path, []byte(changed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var invalidated bool
+	h.call(t, "invalidate", mustJSON(t, map[string]any{
+		"uri": fileURI(t, path),
+	}), &invalidated)
+	if !invalidated {
+		t.Fatal("helper did not confirm invalidation")
+	}
+	h.check(t, workspace, fixture.Request)
 }
 
 func buildHelper(t *testing.T, repository string) string {
@@ -266,6 +337,48 @@ func readSymbolRequests(t *testing.T, workspace string) []fixtureSymbolRequest {
 		t.Fatal(err)
 	}
 	return result
+}
+
+func readMutations(t *testing.T, workspace string) []fixtureMutation {
+	t.Helper()
+	path := filepath.Join(workspace, "invalidation.json")
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result []fixtureMutation
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatal(err)
+	}
+	return result
+}
+
+func copyWorkspace(t *testing.T, source, destination string) {
+	t.Helper()
+	err := filepath.WalkDir(source, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		relative, err := filepath.Rel(source, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(destination, relative)
+		if entry.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, data, 0o644)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func pointOffset(t *testing.T, path string, point fixturePoint) int {
