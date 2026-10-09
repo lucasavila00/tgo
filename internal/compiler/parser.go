@@ -99,7 +99,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		}
 		return true
 	})
-	return &source{
+	result := &source{
 		JSONPackage: jsonPackage, JSONV2Package: jsonV2Package,
 		JSONTextPackage: jsonTextPackage, StringsPackage: stringsPackage,
 		FmtPackage: fmtPackage, ExternalJSONTo: externalJSONTo,
@@ -114,7 +114,9 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 			externalJSONTo: jsonUse.external,
 			adjacentJSONTo: jsonUse.adjacent,
 		},
-	}, nil
+	}
+	result.Lowered = result.initiallyNeedsLowering()
+	return result, nil
 }
 
 type enumJSONUse struct {
