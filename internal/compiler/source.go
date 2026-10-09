@@ -9,9 +9,21 @@ import (
 )
 
 type edit struct {
-	start int
-	end   int
-	text  string
+	start          int
+	end            int
+	text           string
+	projectionOnly bool
+}
+
+// editsNeedOutput reports whether an edit must appear in emitted Go.
+// New edits affect output unless their creator marks an internal parser projection.
+func editsNeedOutput(edits []edit) bool {
+	for _, edit := range edits {
+		if !edit.projectionOnly {
+			return true
+		}
+	}
+	return false
 }
 
 type field struct {

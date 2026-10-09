@@ -114,7 +114,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 			externalJSONTo: jsonUse.external,
 			adjacentJSONTo: jsonUse.adjacent,
 		},
-		Lowered: len(edits) > 0,
+		Lowered: editsNeedOutput(edits),
 	}
 	return result, nil
 }
@@ -176,10 +176,6 @@ func sourceModels(
 		if item == nil {
 			continue
 		}
-		models = append(models, item)
-		if replacement == "" {
-			continue
-		}
 		startPositionValue := syntax.DeclarationPosition(declaration)
 		endPositionValue := syntax.DeclarationEnd(declaration)
 		if item.Enum && firstEnumEdit < 0 {
@@ -192,7 +188,9 @@ func sourceModels(
 				sourceName, files.Position(startPositionValue).Line,
 				files.Position(endPositionValue).Line, replacement,
 			),
+			projectionOnly: plainStructProjection(item),
 		})
+		models = append(models, item)
 	}
 	return models, edits, use, firstEnumEdit, nil
 }
@@ -233,13 +231,8 @@ func sourceModel(
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
 		item := structModel(files, erasedData, node)
-		for _, field := range item.Fields {
-			if field.Default != "" {
-				return item, "type " + item.Name + " struct {\n" +
-					fieldDecls(sourceName, item.Fields) + "}\n", enumJSONUse{}, nil
-			}
-		}
-		return item, "", enumJSONUse{}, nil
+		return item, "type " + item.Name + " struct {\n" +
+			fieldDecls(sourceName, item.Fields) + "}\n", enumJSONUse{}, nil
 	}
 	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
 		item := checkedModel(files, erasedData, node)
@@ -405,7 +398,9 @@ func lowerSourceExtensions(
 		}
 		if node, ok := syntax.NonNilPointerTypeOf(extension); ok {
 			start := file.Offset(node.Percent)
-			if !coveredByEdit(edits, start) {
+			if index := coveringEdit(edits, start); index >= 0 {
+				edits[index].projectionOnly = false
+			} else {
 				edits = append(edits, edit{start: start, end: start + 1, text: "*"})
 			}
 			continue
@@ -611,13 +606,25 @@ func editedSourceText(
 	return inlineLineDirective(position.Filename, position.Line, position.Column) + text
 }
 
-func coveredByEdit(edits []edit, offset int) bool {
-	for _, change := range edits {
+func coveringEdit(edits []edit, offset int) int {
+	for index, change := range edits {
 		if change.start <= offset && offset < change.end {
-			return true
+			return index
 		}
 	}
-	return false
+	return -1
+}
+
+func plainStructProjection(item *model) bool {
+	if item.Enum || item.Predicate != "" {
+		return false
+	}
+	for _, field := range item.Fields {
+		if field.Default != "" {
+			return false
+		}
+	}
+	return true
 }
 
 func declarationEditEnd(data []byte, end int) int {
