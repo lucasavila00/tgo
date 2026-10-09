@@ -1,3 +1,4 @@
+// Package format tests formatter alignment planning.
 package format
 
 import (
