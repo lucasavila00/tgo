@@ -324,7 +324,7 @@ func (c *checker) reportBoundGenericValueUse(
 	bindings map[types.Object]*genericValueBinding,
 ) {
 	name := syntax.IdentifierExpressionOf(expression)
-	if name == nil {
+	if name == nil || c.facts.DefinitionName(name) != nil {
 		return
 	}
 	binding, found := bindings[c.facts.Object(name)]
