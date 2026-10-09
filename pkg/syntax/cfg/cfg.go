@@ -24,6 +24,7 @@ type Block struct {
 // BlockKind identifies a block's role.
 type BlockKind uint8
 
+// BlockKind values identify control-flow block roles.
 const (
 	KindInvalid BlockKind = iota
 	KindUnreachable

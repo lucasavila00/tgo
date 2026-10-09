@@ -30,10 +30,14 @@ func choose(value bool) int {
 	graph := cfg.New(function.Body, func(*syntax.Expression) bool { return true })
 	liveReturns := 0
 	for _, block := range graph.Blocks {
-		if !block.Live { continue }
+		if !block.Live {
+			continue
+		}
 		for _, node := range block.Nodes {
 			statement, ok := syntax.StatementOf(&node)
-			if ok && syntax.ReturnStatementOf(statement) != nil { liveReturns++ }
+			if ok && syntax.ReturnStatementOf(statement) != nil {
+				liveReturns++
+			}
 		}
 	}
 	if liveReturns != 2 {
