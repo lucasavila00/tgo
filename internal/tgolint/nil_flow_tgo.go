@@ -20,11 +20,11 @@ type nilPlace struct {
 
 type nilFacts map[nilPlace]nilType
 
+type nilBranches []nilFacts
+
 type nilGuard struct {
-	trueFacts     nilFacts
-	falseFacts    nilFacts
-	truePossible  bool
-	falsePossible bool
+	trueBranches  nilBranches
+	falseBranches nilBranches
 }
 
 type nilPresence struct {
@@ -275,10 +275,8 @@ func cloneNilState(source *nilFlowState) *nilFlowState {
 
 func cloneNilGuard(guard nilGuard) nilGuard {
 	return nilGuard{
-		trueFacts:     cloneNilFacts(guard.trueFacts),
-		falseFacts:    cloneNilFacts(guard.falseFacts),
-		truePossible:  guard.truePossible,
-		falsePossible: guard.falsePossible,
+		trueBranches:  cloneNilBranches(guard.trueBranches),
+		falseBranches: cloneNilBranches(guard.falseBranches),
 	}
 }
 
@@ -445,10 +443,31 @@ func equalNilStates(left, right *nilFlowState) bool {
 }
 
 func equalNilGuard(left, right nilGuard) bool {
-	return left.truePossible == right.truePossible &&
-		left.falsePossible == right.falsePossible &&
-		equalNilFacts(left.trueFacts, right.trueFacts) &&
-		equalNilFacts(left.falseFacts, right.falseFacts)
+	return equalNilBranches(left.trueBranches, right.trueBranches) &&
+		equalNilBranches(left.falseBranches, right.falseBranches)
+}
+
+func cloneNilBranches(source nilBranches) nilBranches {
+	if source == nil {
+		return nil
+	}
+	result := make(nilBranches, len(source))
+	for index, facts := range source {
+		result[index] = cloneNilFacts(facts)
+	}
+	return result
+}
+
+func equalNilBranches(left, right nilBranches) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if !equalNilFacts(left[index], right[index]) {
+			return false
+		}
+	}
+	return true
 }
 
 func equalNilFacts(left, right nilFacts) bool {
