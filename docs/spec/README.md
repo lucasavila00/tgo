@@ -435,14 +435,20 @@ default:
     panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
 ```
 
-A normal `default:` clause is a fallback and may cover omitted variants. Its body is ordinary Go
-control flow. A tag switch must have either `default:` or `exhaustive:`.
+A normal `default:` clause is a fallback and may cover omitted variants. Its flow type is the union
+of those omitted variants. Its body is ordinary Go control flow. A tag switch must have either
+`default:` or `exhaustive:`.
+
+The switch starts with the union of all declared variants. An explicit case intersects that type
+with the union of its labels. The default removes all explicit-case variants. `exhaustive:` requires
+that remaining type to be `never`.
 
 A case cannot use `fallthrough`.
 
-A case with one tag permits only that variant's payload accessor on the same receiver. A case
-with multiple tags and a default clause permit no payload accessor. If a clause assigns the receiver or a
-selector-prefix receiver, the clause gets no payload proof. A nested function literal does not
+A case with one possible variant permits only that variant's payload accessor on the same receiver.
+A case with multiple tags has their union type. A default with one omitted variant permits that
+variant's accessor; a default with multiple omitted variants permits no accessor. If a clause assigns
+the receiver or a selector-prefix receiver, the clause gets no payload proof. A nested function literal does not
 inherit the proof. Direct calls in `go` and `defer` statements do inherit it. Method values do not.
 A nested switch on the same `Tag()` receiver supplies its own proof.
 

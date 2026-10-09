@@ -527,6 +527,6 @@ func DefaultFallback(event model.Event) string {
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	default:
-		return "fallback"
+		return event.StoppedPayload().Reason
 	}
 }
