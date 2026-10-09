@@ -42,7 +42,7 @@ type checker struct {
 	checked    map[*syntax.Expression]bool
 	presence   map[*syntax.Expression]bool
 	escaped    map[types.Object]token.Pos
-	reporter   *report.Reporter
+	reporter   %report.Reporter
 	function   *syntax.Node
 	file       *syntax.File
 	zeroTypes  map[*types.TypeParam]*model
@@ -73,8 +73,8 @@ type Context struct {
 func New(
 	pass *analysis.Pass,
 	files []%syntax.File,
-	reporter *report.Reporter,
-) (*Context, error) {
+	reporter %report.Reporter,
+) (%Context, error) {
 	if pass == nil { return , fmt.Errorf("tgolint received a nil analysis pass") }
 	if len(files) == 0 {
 		return &Context{checker: nil, analysis: nil, stopped: true},
@@ -144,17 +144,21 @@ func (c *Context) Facts() *sourcefacts.Index {
 
 // CheckSourcePolicy checks policy in typed TGo source.
 func (c *Context) CheckSourcePolicy() {
+	if c == nil || c.checker == nil { return }
 	c.checker.checkSourcePolicies(c.analysis)
 }
 
 // DiscoverValidationModels collects wrapper and function-value facts.
 func (c *Context) DiscoverValidationModels() {
-	c.checker.findValidationWrappers()
-	c.checker.findValidationFunctionValues()
+	if c == nil || c.checker == nil { return }
+	checker := c.checker
+	checker.findValidationWrappers()
+	checker.findValidationFunctionValues()
 }
 
 // CheckGoModelUse checks handwritten Go use of generated models.
 func (c *Context) CheckGoModelUse() {
+	if c == nil || c.checker == nil { return }
 	checker := c.checker
 	for _, file := range checker.files {
 		if checker.generated[file] {
@@ -187,6 +191,7 @@ func (c *Context) CheckGoModelUse() {
 
 // CheckGenericZeroSafety checks exported generic zero-value effects.
 func (c *Context) CheckGenericZeroSafety() {
+	if c == nil || c.checker == nil { return }
 	c.checker.checkGenericZeroSafety()
 }
 

@@ -57,7 +57,7 @@ func Run(
 	files []%syntax.File,
 	facts *sourcefacts.Index,
 	tgoPackage *sourceanalysis.Package,
-	reporter *report.Reporter,
+	reporter %report.Reporter,
 ) {
 	generated := generatedFiles(pass, files, tgoPackage)
 	goFiles := make([]%syntax.File, 0, len(files))

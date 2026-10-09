@@ -109,7 +109,7 @@ func decodeNilContract(fact *nilContractWireFactV2) nilContract {
 
 type nilEnvironment struct {
 	pass      *analysis.Pass
-	reporter  *report.Reporter
+	reporter  %report.Reporter
 	files     []%syntax.File
 	facts     %sourcefacts.Index
 	pkg       *types.Package
@@ -122,7 +122,7 @@ type nilEnvironment struct {
 
 func newNilEnvironment(
 	pass *analysis.Pass,
-	reporter *report.Reporter,
+	reporter %report.Reporter,
 	files []%syntax.File,
 	facts %sourcefacts.Index,
 	pkg *types.Package,

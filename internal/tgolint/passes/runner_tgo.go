@@ -3,7 +3,13 @@
 // Package passes registers and runs the independent tgolint pass families.
 package passes
 
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
+
 import (
+	"fmt"
+
 	"tgo/internal/tgolint/passes/modeluse"
 	"tgo/internal/tgolint/passes/modernize"
 	"tgo/internal/tgolint/passes/nilsafety"
@@ -22,8 +28,459 @@ type stack struct {
 }
 
 type registeredPass struct {
+	id   passID
 	name string
-	run  func(*stack)
+}
+
+func tgopassIDExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
+		return err
+	}
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
+		return err
+	}
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
+		return err
+	}
+	return out.WriteToken(jsontext.EndObject)
+}
+
+// passID requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type passIDTag uint8
+
+const (
+	passIDTagSourcePolicy passIDTag = iota + 1
+	passIDTagValidationDiscovery
+	passIDTagNilSafety
+	passIDTagIotaModernization
+	passIDTagErrorReturnModernization
+	passIDTagSuccessReturnModernization
+	passIDTagGoModelUse
+	passIDTagGenericZeroSafety
+)
+
+type passID struct {
+	tgoTag passIDTag
+}
+
+// Tag returns the active tag.
+func (v passID) Tag() passIDTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v passID) UnknownTag() string {
+	return fmt.Sprintf("passID: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
+
+// GobEncode returns the stable four-byte enum tag.
+func (v passID) GobEncode() ([]byte, error) {
+	if v.tgoTag < passIDTagSourcePolicy || v.tgoTag > passIDTagGenericZeroSafety {
+		return nil, fmt.Errorf("passID: cannot gob encode invalid tag %d", v.tgoTag)
+	}
+	tag := uint32(v.tgoTag)
+	return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil
+}
+
+// GobDecode replaces the value with a valid four-byte enum tag.
+func (v *passID) GobDecode(data []byte) error {
+	if len(data) != 4 {
+		return fmt.Errorf("passID: invalid gob data length %d", len(data))
+	}
+	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+	tag := passIDTag(number)
+	if uint32(tag) != number || tag < passIDTagSourcePolicy || tag > passIDTagGenericZeroSafety {
+		return fmt.Errorf("passID: cannot gob decode unknown tag %d", number)
+	}
+	*v = passID{tgoTag: tag}
+	return nil
+}
+
+// passIDSourcePolicy is the SourcePolicy payload.
+type passIDSourcePolicy struct{}
+
+// passID constructs passID. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value passIDSourcePolicy) passID() passID {
+	return passID{tgoTag: passIDTagSourcePolicy}
+}
+
+// SourcePolicyPayload requires SourcePolicy. No tag check.
+func (passID) SourcePolicyPayload() passIDSourcePolicy { return passIDSourcePolicy{} }
+
+// passIDValidationDiscovery is the ValidationDiscovery payload.
+type passIDValidationDiscovery struct{}
+
+// passID constructs passID. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value passIDValidationDiscovery) passID() passID {
+	return passID{tgoTag: passIDTagValidationDiscovery}
+}
+
+// ValidationDiscoveryPayload requires ValidationDiscovery. No tag check.
+func (passID) ValidationDiscoveryPayload() passIDValidationDiscovery {
+	return passIDValidationDiscovery{}
+}
+
+// passIDNilSafety is the NilSafety payload.
+type passIDNilSafety struct{}
+
+// passID constructs passID. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value passIDNilSafety) passID() passID {
+	return passID{tgoTag: passIDTagNilSafety}
+}
+
+// NilSafetyPayload requires NilSafety. No tag check.
+func (passID) NilSafetyPayload() passIDNilSafety { return passIDNilSafety{} }
+
+// passIDIotaModernization is the IotaModernization payload.
+type passIDIotaModernization struct{}
+
+// passID constructs passID. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value passIDIotaModernization) passID() passID {
+	return passID{tgoTag: passIDTagIotaModernization}
+}
+
+// IotaModernizationPayload requires IotaModernization. No tag check.
+func (passID) IotaModernizationPayload() passIDIotaModernization { return passIDIotaModernization{} }
+
+// passIDErrorReturnModernization is the ErrorReturnModernization payload.
+type passIDErrorReturnModernization struct{}
+
+// passID constructs passID. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value passIDErrorReturnModernization) passID() passID {
+	return passID{tgoTag: passIDTagErrorReturnModernization}
+}
+
+// ErrorReturnModernizationPayload requires ErrorReturnModernization. No tag check.
+func (passID) ErrorReturnModernizationPayload() passIDErrorReturnModernization {
+	return passIDErrorReturnModernization{}
+}
+
+// passIDSuccessReturnModernization is the SuccessReturnModernization payload.
+type passIDSuccessReturnModernization struct{}
+
+// passID constructs passID. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value passIDSuccessReturnModernization) passID() passID {
+	return passID{tgoTag: passIDTagSuccessReturnModernization}
+}
+
+// SuccessReturnModernizationPayload requires SuccessReturnModernization. No tag check.
+func (passID) SuccessReturnModernizationPayload() passIDSuccessReturnModernization {
+	return passIDSuccessReturnModernization{}
+}
+
+// passIDGoModelUse is the GoModelUse payload.
+type passIDGoModelUse struct{}
+
+// passID constructs passID. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value passIDGoModelUse) passID() passID {
+	return passID{tgoTag: passIDTagGoModelUse}
+}
+
+// GoModelUsePayload requires GoModelUse. No tag check.
+func (passID) GoModelUsePayload() passIDGoModelUse { return passIDGoModelUse{} }
+
+// passIDGenericZeroSafety is the GenericZeroSafety payload.
+type passIDGenericZeroSafety struct{}
+
+// passID constructs passID. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func (value passIDGenericZeroSafety) passID() passID {
+	return passID{tgoTag: passIDTagGenericZeroSafety}
+}
+
+// GenericZeroSafetyPayload requires GenericZeroSafety. No tag check.
+func (passID) GenericZeroSafetyPayload() passIDGenericZeroSafety { return passIDGenericZeroSafety{} }
+
+func (v passID) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case passIDTagSourcePolicy:
+		payload := v.SourcePolicyPayload()
+		return json.Marshal(struct {
+			Payload passIDSourcePolicy `json:"SourcePolicy"`
+		}{Payload: payload})
+	case passIDTagValidationDiscovery:
+		payload := v.ValidationDiscoveryPayload()
+		return json.Marshal(struct {
+			Payload passIDValidationDiscovery `json:"ValidationDiscovery"`
+		}{Payload: payload})
+	case passIDTagNilSafety:
+		payload := v.NilSafetyPayload()
+		return json.Marshal(struct {
+			Payload passIDNilSafety `json:"NilSafety"`
+		}{Payload: payload})
+	case passIDTagIotaModernization:
+		payload := v.IotaModernizationPayload()
+		return json.Marshal(struct {
+			Payload passIDIotaModernization `json:"IotaModernization"`
+		}{Payload: payload})
+	case passIDTagErrorReturnModernization:
+		payload := v.ErrorReturnModernizationPayload()
+		return json.Marshal(struct {
+			Payload passIDErrorReturnModernization `json:"ErrorReturnModernization"`
+		}{Payload: payload})
+	case passIDTagSuccessReturnModernization:
+		payload := v.SuccessReturnModernizationPayload()
+		return json.Marshal(struct {
+			Payload passIDSuccessReturnModernization `json:"SuccessReturnModernization"`
+		}{Payload: payload})
+	case passIDTagGoModelUse:
+		payload := v.GoModelUsePayload()
+		return json.Marshal(struct {
+			Payload passIDGoModelUse `json:"GoModelUse"`
+		}{Payload: payload})
+	case passIDTagGenericZeroSafety:
+		payload := v.GenericZeroSafetyPayload()
+		return json.Marshal(struct {
+			Payload passIDGenericZeroSafety `json:"GenericZeroSafety"`
+		}{Payload: payload})
+	default:
+		return nil, fmt.Errorf("invalid passID JSON tag")
+	}
+}
+
+func (v passID) MarshalJSONTo(out *jsontext.Encoder) error {
+	switch v.tgoTag {
+	case passIDTagSourcePolicy:
+		payload := v.SourcePolicyPayload()
+		return tgopassIDExternalJSONTo(out, "SourcePolicy", payload)
+	case passIDTagValidationDiscovery:
+		payload := v.ValidationDiscoveryPayload()
+		return tgopassIDExternalJSONTo(out, "ValidationDiscovery", payload)
+	case passIDTagNilSafety:
+		payload := v.NilSafetyPayload()
+		return tgopassIDExternalJSONTo(out, "NilSafety", payload)
+	case passIDTagIotaModernization:
+		payload := v.IotaModernizationPayload()
+		return tgopassIDExternalJSONTo(out, "IotaModernization", payload)
+	case passIDTagErrorReturnModernization:
+		payload := v.ErrorReturnModernizationPayload()
+		return tgopassIDExternalJSONTo(out, "ErrorReturnModernization", payload)
+	case passIDTagSuccessReturnModernization:
+		payload := v.SuccessReturnModernizationPayload()
+		return tgopassIDExternalJSONTo(out, "SuccessReturnModernization", payload)
+	case passIDTagGoModelUse:
+		payload := v.GoModelUsePayload()
+		return tgopassIDExternalJSONTo(out, "GoModelUse", payload)
+	case passIDTagGenericZeroSafety:
+		payload := v.GenericZeroSafetyPayload()
+		return tgopassIDExternalJSONTo(out, "GenericZeroSafety", payload)
+	default:
+		return fmt.Errorf("invalid passID JSON tag")
+	}
+}
+
+func (v *passID) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return fmt.Errorf("expected one passID JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "SourcePolicy":
+		var payload passIDSourcePolicy
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case "ValidationDiscovery":
+		var payload passIDValidationDiscovery
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case "NilSafety":
+		var payload passIDNilSafety
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case "IotaModernization":
+		var payload passIDIotaModernization
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case "ErrorReturnModernization":
+		var payload passIDErrorReturnModernization
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case "SuccessReturnModernization":
+		var payload passIDSuccessReturnModernization
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case "GoModelUse":
+		var payload passIDGoModelUse
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case "GenericZeroSafety":
+		var payload passIDGenericZeroSafety
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	default:
+		return fmt.Errorf("unknown passID JSON variant %q", variant)
+	}
+}
+
+func (v *passID) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	token, err := in.ReadToken()
+	if err != nil {
+		return err
+	}
+	if token.Kind() != '{' {
+		return fmt.Errorf("expected one passID JSON variant")
+	}
+	var payloadData jsontext.Value
+	var unknown string
+	selected := 0
+	haveName := false
+	multiple := false
+	for in.PeekKind() != '}' {
+		nameToken, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
+		wireName := nameToken.String()
+		current := 0
+		switch wireName {
+		case "SourcePolicy":
+			current = 1
+		case "ValidationDiscovery":
+			current = 2
+		case "NilSafety":
+			current = 3
+		case "IotaModernization":
+			current = 4
+		case "ErrorReturnModernization":
+			current = 5
+		case "SuccessReturnModernization":
+			current = 6
+		case "GoModelUse":
+			current = 7
+		case "GenericZeroSafety":
+			current = 8
+		}
+		same := haveName && current == selected
+		if same && current == 0 {
+			same = wireName == unknown
+		}
+		if !haveName {
+			haveName = true
+			selected = current
+			if current == 0 {
+				unknown = string(append([]byte(nil), wireName...))
+			}
+		} else if !same {
+			multiple = true
+		}
+		if !multiple && current > 0 && current == selected {
+			raw, err := in.ReadValue()
+			if err != nil {
+				return err
+			}
+			payloadData = append(payloadData[:0], raw...)
+		} else if err := in.SkipValue(); err != nil {
+			return err
+		}
+	}
+	if _, err := in.ReadToken(); err != nil {
+		return err
+	}
+	if !haveName || multiple {
+		return fmt.Errorf("expected one passID JSON variant")
+	}
+	if selected == 0 {
+		return fmt.Errorf("unknown passID JSON variant %q", unknown)
+	}
+	switch selected {
+	case 1:
+		var payload passIDSourcePolicy
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case 2:
+		var payload passIDValidationDiscovery
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case 3:
+		var payload passIDNilSafety
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case 4:
+		var payload passIDIotaModernization
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case 5:
+		var payload passIDErrorReturnModernization
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case 6:
+		var payload passIDSuccessReturnModernization
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case 7:
+		var payload passIDGoModelUse
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	case 8:
+		var payload passIDGenericZeroSafety
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+			return err
+		}
+		*v = payload.passID()
+		return nil
+	default:
+		return fmt.Errorf("invalid passID JSON tag")
+	}
 }
 
 // FactTypes returns all facts that pass families exchange across packages.
@@ -44,14 +501,14 @@ func PassNames() []string {
 
 func registeredPasses() []registeredPass {
 	return []registeredPass{
-		{name: "TGo source policy", run: runSourcePolicy},
-		{name: "validation model discovery", run: runValidationDiscovery},
-		{name: "nil safety", run: runNilSafety},
-		{name: "iota modernization", run: runIotaModernization},
-		{name: "error return modernization", run: runErrorReturnModernization},
-		{name: "success return modernization", run: runSuccessReturnModernization},
-		{name: "Go model use", run: runGoModelUse},
-		{name: "generic zero safety", run: runGenericZeroSafety},
+		{id: passIDSourcePolicy{}.passID(), name: "TGo source policy"},
+		{id: passIDValidationDiscovery{}.passID(), name: "validation model discovery"},
+		{id: passIDNilSafety{}.passID(), name: "nil safety"},
+		{id: passIDIotaModernization{}.passID(), name: "iota modernization"},
+		{id: passIDErrorReturnModernization{}.passID(), name: "error return modernization"},
+		{id: passIDSuccessReturnModernization{}.passID(), name: "success return modernization"},
+		{id: passIDGoModelUse{}.passID(), name: "Go model use"},
+		{id: passIDGenericZeroSafety{}.passID(), name: "generic zero safety"},
 	}
 }
 
@@ -61,6 +518,9 @@ func Run(
 	files []*syntax.File,
 	reporter *report.Reporter,
 ) (any, error) {
+	if pass == nil {
+		return nil, fmt.Errorf("tgolint pass stack received a nil analysis pass")
+	}
 	model, err := modeluse.New(pass, files, reporter)
 	if err != nil {
 		return nil, err
@@ -76,9 +536,32 @@ func Run(
 		modernizer: modernize.New(reporter),
 	}
 	for _, item := range registeredPasses() {
-		item.run(state)
+		runRegisteredPass(state, item.id)
 	}
 	return nil, nil
+}
+
+func runRegisteredPass(state *stack, id passID) {
+	switch id.Tag() {
+	case passIDTagSourcePolicy:
+		runSourcePolicy(state)
+	case passIDTagValidationDiscovery:
+		runValidationDiscovery(state)
+	case passIDTagNilSafety:
+		runNilSafety(state)
+	case passIDTagIotaModernization:
+		runIotaModernization(state)
+	case passIDTagErrorReturnModernization:
+		runErrorReturnModernization(state)
+	case passIDTagSuccessReturnModernization:
+		runSuccessReturnModernization(state)
+	case passIDTagGoModelUse:
+		runGoModelUse(state)
+	case passIDTagGenericZeroSafety:
+		runGenericZeroSafety(state)
+	default:
+		panic(id.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
 }
 
 func runSourcePolicy(state *stack) {

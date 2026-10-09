@@ -4,6 +4,8 @@
 package tgolint
 
 import (
+	"errors"
+
 	"tgo/internal/tgolint/passes"
 	"tgo/internal/tgolint/report"
 	"tgo/internal/tgolint/source"
@@ -26,7 +28,7 @@ func newAnalyzer() *analysis.Analyzer {
 
 func run(pass *analysis.Pass) (any, error) {
 	if pass == nil {
-		return passes.Run(nil, nil, nil)
+		return nil, errors.New("tgolint received a nil analysis pass")
 	}
 	filtered := report.Filter(pass)
 	files, err := source.Parse(filtered)

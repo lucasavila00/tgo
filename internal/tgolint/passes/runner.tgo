@@ -2,6 +2,8 @@
 package passes
 
 import (
+	"fmt"
+
 	"tgo/internal/tgolint/passes/modeluse"
 	"tgo/internal/tgolint/passes/modernize"
 	"tgo/internal/tgolint/passes/nilsafety"
@@ -12,16 +14,27 @@ import (
 )
 
 type stack struct {
-	pass       *analysis.Pass
+	pass       %analysis.Pass
 	files      []%syntax.File
-	reporter   *report.Reporter
-	model      *modeluse.Context
-	modernizer *modernize.Runner
+	reporter   %report.Reporter
+	model      %modeluse.Context
+	modernizer %modernize.Runner
 }
 
 type registeredPass struct {
+	id   passID
 	name string
-	run  func(*stack)
+}
+
+type passID enum {
+	SourcePolicy struct{}
+	ValidationDiscovery struct{}
+	NilSafety struct{}
+	IotaModernization struct{}
+	ErrorReturnModernization struct{}
+	SuccessReturnModernization struct{}
+	GoModelUse struct{}
+	GenericZeroSafety struct{}
 }
 
 // FactTypes returns all facts that pass families exchange across packages.
@@ -42,14 +55,14 @@ func PassNames() []string {
 
 func registeredPasses() []registeredPass {
 	return []registeredPass{
-		{name: "TGo source policy", run: runSourcePolicy},
-		{name: "validation model discovery", run: runValidationDiscovery},
-		{name: "nil safety", run: runNilSafety},
-		{name: "iota modernization", run: runIotaModernization},
-		{name: "error return modernization", run: runErrorReturnModernization},
-		{name: "success return modernization", run: runSuccessReturnModernization},
-		{name: "Go model use", run: runGoModelUse},
-		{name: "generic zero safety", run: runGenericZeroSafety},
+		{id: passID.SourcePolicy{}, name: "TGo source policy"},
+		{id: passID.ValidationDiscovery{}, name: "validation model discovery"},
+		{id: passID.NilSafety{}, name: "nil safety"},
+		{id: passID.IotaModernization{}, name: "iota modernization"},
+		{id: passID.ErrorReturnModernization{}, name: "error return modernization"},
+		{id: passID.SuccessReturnModernization{}, name: "success return modernization"},
+		{id: passID.GoModelUse{}, name: "Go model use"},
+		{id: passID.GenericZeroSafety{}, name: "generic zero safety"},
 	}
 }
 
@@ -57,8 +70,11 @@ func registeredPasses() []registeredPass {
 func Run(
 	pass *analysis.Pass,
 	files []%syntax.File,
-	reporter *report.Reporter,
+	reporter %report.Reporter,
 ) (any, error) {
+	if pass == nil {
+		return , fmt.Errorf("tgolint pass stack received a nil analysis pass")
+	}
 	model, err := modeluse.New(pass, files, reporter)
 	if err != nil { return , err }
 	if model.Stopped() { return nil, }
@@ -70,20 +86,42 @@ func Run(
 		modernizer: modernize.New(reporter),
 	}
 	for _, item := range registeredPasses() {
-		item.run(state)
+		runRegisteredPass(state, item.id)
 	}
 	return nil,
 }
 
-func runSourcePolicy(state *stack) {
+func runRegisteredPass(state %stack, id passID) {
+	switch id.Tag() {
+	case passIDTagSourcePolicy:
+		runSourcePolicy(state)
+	case passIDTagValidationDiscovery:
+		runValidationDiscovery(state)
+	case passIDTagNilSafety:
+		runNilSafety(state)
+	case passIDTagIotaModernization:
+		runIotaModernization(state)
+	case passIDTagErrorReturnModernization:
+		runErrorReturnModernization(state)
+	case passIDTagSuccessReturnModernization:
+		runSuccessReturnModernization(state)
+	case passIDTagGoModelUse:
+		runGoModelUse(state)
+	case passIDTagGenericZeroSafety:
+		runGenericZeroSafety(state)
+	exhaustive:
+	}
+}
+
+func runSourcePolicy(state %stack) {
 	state.model.CheckSourcePolicy()
 }
 
-func runValidationDiscovery(state *stack) {
+func runValidationDiscovery(state %stack) {
 	state.model.DiscoverValidationModels()
 }
 
-func runNilSafety(state *stack) {
+func runNilSafety(state %stack) {
 	nilsafety.Run(
 		state.pass,
 		state.files,
@@ -93,22 +131,22 @@ func runNilSafety(state *stack) {
 	)
 }
 
-func runIotaModernization(state *stack) {
+func runIotaModernization(state %stack) {
 	state.modernizer.CheckIota(state.model.Analysis())
 }
 
-func runErrorReturnModernization(state *stack) {
+func runErrorReturnModernization(state %stack) {
 	state.modernizer.CheckErrorReturns(state.model.Analysis())
 }
 
-func runSuccessReturnModernization(state *stack) {
+func runSuccessReturnModernization(state %stack) {
 	state.modernizer.CheckSuccessReturns(state.model.Analysis())
 }
 
-func runGoModelUse(state *stack) {
+func runGoModelUse(state %stack) {
 	state.model.CheckGoModelUse()
 }
 
-func runGenericZeroSafety(state *stack) {
+func runGenericZeroSafety(state %stack) {
 	state.model.CheckGenericZeroSafety()
 }

@@ -28,12 +28,15 @@ type diagnosticKey struct {
 
 // Reporter collects diagnostics and emits each position and message once.
 type Reporter struct {
-	pass     *analysis.Pass
+	pass     %analysis.Pass
 	reported map[diagnosticKey]bool
 }
 
 // New creates a diagnostic reporter for one analysis pass.
-func New(pass *analysis.Pass) *Reporter {
+func New(pass *analysis.Pass) %Reporter {
+	if pass == nil {
+		panic("diagnostic reporter received a nil analysis pass")
+	}
 	return &Reporter{
 		pass: pass,
 		reported: make(map[diagnosticKey]bool),
@@ -56,7 +59,10 @@ func (r *Reporter) Reportf(
 }
 
 // Filter returns a pass that filters diagnostics with source directives.
-func Filter(pass %analysis.Pass) %analysis.Pass {
+func Filter(pass *analysis.Pass) *analysis.Pass {
+	if pass == nil {
+		return nil
+	}
 	suppressions := collectDiagnosticSuppressions(pass)
 	originalReport := pass.Report
 	pass.Report = func(diagnostic analysis.Diagnostic) {

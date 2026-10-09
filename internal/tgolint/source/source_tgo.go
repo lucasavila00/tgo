@@ -4,6 +4,7 @@
 package source
 
 import (
+	"errors"
 	"fmt"
 
 	"tgo/pkg/syntax"
@@ -13,6 +14,9 @@ import (
 
 // Parse converts each active Go file to the public syntax ADT.
 func Parse(pass *analysis.Pass) ([]*syntax.File, error) {
+	if pass == nil {
+		return nil, errors.New("source parser received a nil analysis pass")
+	}
 	result := make([]*syntax.File, 0, len(pass.Files))
 	for _, file := range pass.Files {
 		filename := pass.Fset.Position(file.Pos()).Filename

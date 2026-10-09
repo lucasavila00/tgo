@@ -3,6 +3,7 @@
 package source
 
 import (
+	"errors"
 	"testing"
 
 	"golang.org/x/tools/go/analysis"
@@ -14,14 +15,17 @@ func TestParseUsesAnalysisSource(t *testing.T) {
 	analyzer.Name = "sourceparse"
 	analyzer.Doc = "test source parsing"
 	analyzer.Run = func(pass *analysis.Pass) (any, error) {
-		parsed, err := Parse(pass)
-		if err != nil {
-			return nil, err
+		if pass != nil {
+			parsed, err := Parse(pass)
+			if err != nil {
+				return nil, err
+			}
+			if len(parsed) != 1 || parsed[0].Name.Name != "sourceparse" {
+				t.Fatal("Parse did not return one sourceparse package file")
+			}
+			return nil, nil
 		}
-		if len(parsed) != 1 || parsed[0].Name.Name != "sourceparse" {
-			t.Fatalf("Parse() = %v, want one sourceparse package file", parsed)
-		}
-		return nil, nil
+		return nil, errors.New("analysis pass is nil")
 	}
 	analysistest.Run(t, analysistest.TestData(), analyzer, "sourceparse")
 }

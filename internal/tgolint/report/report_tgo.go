@@ -37,6 +37,9 @@ type Reporter struct {
 
 // New creates a diagnostic reporter for one analysis pass.
 func New(pass *analysis.Pass) *Reporter {
+	if pass == nil {
+		panic("diagnostic reporter received a nil analysis pass")
+	}
 	return &Reporter{
 		pass:     pass,
 		reported: make(map[diagnosticKey]bool),
@@ -60,6 +63,9 @@ func (r *Reporter) Reportf(
 
 // Filter returns a pass that filters diagnostics with source directives.
 func Filter(pass *analysis.Pass) *analysis.Pass {
+	if pass == nil {
+		return nil
+	}
 	suppressions := collectDiagnosticSuppressions(pass)
 	originalReport := pass.Report
 	pass.Report = func(diagnostic analysis.Diagnostic) {

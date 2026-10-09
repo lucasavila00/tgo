@@ -3,6 +3,7 @@
 package report
 
 import (
+	"errors"
 	"testing"
 
 	"golang.org/x/tools/go/analysis"
@@ -14,10 +15,13 @@ func TestReporterKeepsPositionsAndDeduplicates(t *testing.T) {
 	analyzer.Name = "reportfilter"
 	analyzer.Doc = "test diagnostic filtering"
 	analyzer.Run = func(pass *analysis.Pass) (any, error) {
-		reporter := New(Filter(pass))
-		reporter.Reportf(pass.Files[0].Package, "visible")
-		reporter.Reportf(pass.Files[0].Package, "visible")
-		return nil, nil
+		if pass != nil {
+			reporter := New(Filter(pass))
+			reporter.Reportf(pass.Files[0].Package, "visible")
+			reporter.Reportf(pass.Files[0].Package, "visible")
+			return nil, nil
+		}
+		return nil, errors.New("analysis pass is nil")
 	}
 	analysistest.Run(t, analysistest.TestData(), analyzer, "reportfilter")
 }

@@ -9,7 +9,7 @@ import (
 )
 
 // setGeneratedOutputs records the compiler output for integrity checks.
-func (c *checker) setGeneratedOutputs(analysis *sourceanalysis.Package) {
+func (c %checker) setGeneratedOutputs(analysis *sourceanalysis.Package) {
 	for _, file := range c.files {
 		path := c.pass.Fset.Position(file.Package).Filename
 		if outputname.Reserved(path) {
@@ -32,7 +32,7 @@ func (c *checker) setGeneratedOutputs(analysis *sourceanalysis.Package) {
 }
 
 // analyzeTGoPackage loads TGo source once for all source checks.
-func (c *checker) analyzeTGoPackage() *sourceanalysis.Package {
+func (c %checker) analyzeTGoPackage() *sourceanalysis.Package {
 	directory := c.packageDirectory()
 	if directory == "" {
 		return nil
@@ -61,7 +61,7 @@ func (c *checker) analyzeTGoPackage() *sourceanalysis.Package {
 }
 
 // tgoTestPackage reports whether the pass contains generated TGo tests.
-func (c *checker) tgoTestPackage() (bool, bool) {
+func (c %checker) tgoTestPackage() (bool, bool) {
 	test := false
 	production := false
 	for _, file := range c.files {
@@ -79,7 +79,7 @@ func (c *checker) tgoTestPackage() (bool, bool) {
 }
 
 // packageDirectory returns the directory that owns the loaded package.
-func (c *checker) packageDirectory() string {
+func (c %checker) packageDirectory() string {
 	for _, file := range c.pass.Files {
 		name := c.pass.Fset.Position(file.Package).Filename
 		if name == "" {

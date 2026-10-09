@@ -156,17 +156,27 @@ func (c *Context) Facts() *sourcefacts.Index {
 
 // CheckSourcePolicy checks policy in typed TGo source.
 func (c *Context) CheckSourcePolicy() {
+	if c == nil || c.checker == nil {
+		return
+	}
 	c.checker.checkSourcePolicies(c.analysis)
 }
 
 // DiscoverValidationModels collects wrapper and function-value facts.
 func (c *Context) DiscoverValidationModels() {
-	c.checker.findValidationWrappers()
-	c.checker.findValidationFunctionValues()
+	if c == nil || c.checker == nil {
+		return
+	}
+	checker := c.checker
+	checker.findValidationWrappers()
+	checker.findValidationFunctionValues()
 }
 
 // CheckGoModelUse checks handwritten Go use of generated models.
 func (c *Context) CheckGoModelUse() {
+	if c == nil || c.checker == nil {
+		return
+	}
 	checker := c.checker
 	for _, file := range checker.files {
 		if checker.generated[file] {
@@ -199,6 +209,9 @@ func (c *Context) CheckGoModelUse() {
 
 // CheckGenericZeroSafety checks exported generic zero-value effects.
 func (c *Context) CheckGenericZeroSafety() {
+	if c == nil || c.checker == nil {
+		return
+	}
 	c.checker.checkGenericZeroSafety()
 }
 
