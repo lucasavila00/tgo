@@ -50,6 +50,12 @@
           "description": "Absolute path to a tgonav helper. Leave empty to use the bundled helper."
         }
       }
+    },
+    "configurationDefaults": {
+      "files.exclude": {
+        "**/*_tgo.go": true,
+        "**/*_tgo_*.go": true
+      }
     }
   },
   "scripts": {
