@@ -70,8 +70,8 @@ func (p *packageUnit) fillDefaults() {
 	}
 }
 
-// fillCheckedDefaults expands checked literals before constructor lowering.
-func (p *packageUnit) fillCheckedDefaults() {
+// fillConstructionDefaults expands defaults before constructor lowering.
+func (p *packageUnit) fillConstructionDefaults() {
 	for _, source := range p.Sources {
 		for _, declaration := range source.File.Decls {
 			if p.generatedDecl(declaration) {
@@ -82,16 +82,42 @@ func (p *packageUnit) fillCheckedDefaults() {
 				if !ok {
 					return true
 				}
-				_, value := p.modelOwner(p.info.TypeOf(literal))
-				if value == nil {
-					_, value = p.namedLiteralModel(literal.Type)
-				}
-				if value != nil && value.CheckedStruct {
-					p.fillLiteralDefaults(source, literal, source.DefaultMarker)
-				}
+				p.fillConstructionLiteralDefaults(source, literal)
 				return true
 			})
 		}
+	}
+}
+
+func (p *packageUnit) fillConstructionLiteralDefaults(
+	source *source,
+	literal *ast.CompositeLit,
+) {
+	selector, owner, model, variant := p.enumLiteral(literal)
+	if model != nil {
+		named, _ := types.Unalias(p.info.TypeOf(selector.X)).(*types.Named)
+		if named == nil {
+			return
+		}
+		p.fillLiteralDefaultsFor(
+			source,
+			literal,
+			source.DefaultMarker,
+			owner,
+			model.Name+variant.Name,
+			variant.Fields,
+			func() string {
+				return p.ownerQualifier(source.File, named.Obj().Pkg())
+			},
+		)
+		return
+	}
+	_, value := p.modelOwner(p.info.TypeOf(literal))
+	if value == nil {
+		_, value = p.namedLiteralModel(literal.Type)
+	}
+	if value != nil && value.CheckedStruct {
+		p.fillLiteralDefaults(source, literal, source.DefaultMarker)
 	}
 }
 
@@ -100,6 +126,28 @@ func (p *packageUnit) fillLiteralDefaults(
 	source *source,
 	literal *ast.CompositeLit,
 	marker string,
+) {
+	owner, name, fields := p.literalFields(p.info.TypeOf(literal))
+	if name == "" {
+		if hasDefaultMarker(literal, marker) {
+			p.fail(literal, "..default needs a tgo struct with declared defaults")
+		}
+		return
+	}
+	named := types.Unalias(p.info.TypeOf(literal)).(*types.Named)
+	p.fillLiteralDefaultsFor(source, literal, marker, owner, name, fields, func() string {
+		return p.ownerQualifier(source.File, named.Obj().Pkg())
+	})
+}
+
+func (p *packageUnit) fillLiteralDefaultsFor(
+	source *source,
+	literal *ast.CompositeLit,
+	marker string,
+	owner *packageUnit,
+	name string,
+	fields []field,
+	prefix func() string,
 ) {
 	marked := false
 	supplied := make(map[string]bool)
@@ -120,13 +168,8 @@ func (p *packageUnit) fillLiteralDefaults(
 		return
 	}
 	source.Lowered = true
-	owner, name, fields := p.literalFields(p.info.TypeOf(literal))
-	if name == "" {
-		p.fail(literal, "..default needs a tgo struct with declared defaults")
-		return
-	}
-	prefix := ""
-	qualified := false
+	qualified := ""
+	qualifiedSet := false
 	for _, field := range fields {
 		if supplied[field.Name] {
 			continue
@@ -134,13 +177,12 @@ func (p *packageUnit) fillLiteralDefaults(
 		if field.Default == "" {
 			continue
 		}
-		if !qualified {
-			named := types.Unalias(p.info.TypeOf(literal)).(*types.Named)
-			prefix = p.ownerQualifier(source.File, named.Obj().Pkg())
-			qualified = true
+		if !qualifiedSet {
+			qualified = prefix()
+			qualifiedSet = true
 		}
 		helper := p.generatedObject(
-			prefix,
+			qualified,
 			owner.Path,
 			"TgoDefault"+name+field.Name,
 			literal.Lbrace,
@@ -151,6 +193,15 @@ func (p *packageUnit) fillLiteralDefaults(
 		})
 	}
 	literal.Elts = elements
+}
+
+func hasDefaultMarker(literal *ast.CompositeLit, marker string) bool {
+	for _, element := range literal.Elts {
+		if fieldName(element) == marker {
+			return true
+		}
+	}
+	return false
 }
 
 // fieldName returns the key name from a keyed literal element.

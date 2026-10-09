@@ -201,20 +201,20 @@ func TestEnumJSONForms(t *testing.T) {
 		receiver any
 		wire     string
 	}{
-		{"external", JSONExternalCreated{ID: "a1"}.JSONExternal(), new(JSONExternal), `{"created":{"account_id":"a1"}}`},
-		{"internal", JSONInternalCreated{ID: "a1"}.JSONInternal(), new(JSONInternal), `{"type":"created","account_id":"a1"}`},
-		{"adjacent", JSONAdjacentCreated{ID: "a1"}.JSONAdjacent(), new(JSONAdjacent), `{"type":"created","data":{"account_id":"a1"}}`},
-		{"untagged number", JSONUntaggedNumber{Value: 42}.JSONUntagged(), new(JSONUntagged), `{"value":42}`},
-		{"escaped", JSONEscapedValue{}.JSONEscaped(), new(JSONEscaped), `{"kind\u0001":"name\u0001\"end"}`},
-		{"escaped external", JSONEscapedExternalValue{}.JSONEscapedExternal(), new(JSONEscapedExternal), `{"name\u0001\"end":{}}`},
-		{"escaped adjacent", JSONEscapedAdjacentValue{}.JSONEscapedAdjacent(), new(JSONEscapedAdjacent), `{"kind\u0001":"name\u0001\"end","data\u0002":{}}`},
-		{"string field", JSONStringFieldValue{Count: 42}.JSONStringField(), new(JSONStringField), `{"Value":{"count":"42"}}`},
-		{"optional field", JSONExternalCreated{ID: "a1", Reason: "closed"}.JSONExternal(), new(JSONExternal), `{"created":{"account_id":"a1","reason":"closed"}}`},
-		{"untagged", JSONUntaggedText{Value: "text"}.JSONUntagged(), new(JSONUntagged), `{"value":"text"}`},
-		{"external empty", JSONExternalEmpty{}.JSONExternal(), new(JSONExternal), `{"Empty":{}}`},
-		{"internal empty", JSONInternalEmpty{}.JSONInternal(), new(JSONInternal), `{"type":"Empty"}`},
-		{"adjacent empty", JSONAdjacentEmpty{}.JSONAdjacent(), new(JSONAdjacent), `{"type":"Empty","data":{}}`},
-		{"nested", JSONNestedNested{Value: JSONExternalCreated{ID: "a1"}.JSONExternal()}.JSONNested(), new(JSONNested), `{"Nested":{"value":{"created":{"account_id":"a1"}}}}`},
+		{"external", JSONExternal.Created{ID: "a1", Reason: "", Custom: ""}, new(JSONExternal), `{"created":{"account_id":"a1"}}`},
+		{"internal", JSONInternal.Created{ID: "a1", Reason: "", Custom: ""}, new(JSONInternal), `{"type":"created","account_id":"a1"}`},
+		{"adjacent", JSONAdjacent.Created{ID: "a1", Reason: "", Custom: ""}, new(JSONAdjacent), `{"type":"created","data":{"account_id":"a1"}}`},
+		{"untagged number", JSONUntagged.Number{Value: 42}, new(JSONUntagged), `{"value":42}`},
+		{"escaped", JSONEscaped.Value{ID: ""}, new(JSONEscaped), `{"kind\u0001":"name\u0001\"end"}`},
+		{"escaped external", JSONEscapedExternal.Value{ID: ""}, new(JSONEscapedExternal), `{"name\u0001\"end":{}}`},
+		{"escaped adjacent", JSONEscapedAdjacent.Value{ID: ""}, new(JSONEscapedAdjacent), `{"kind\u0001":"name\u0001\"end","data\u0002":{}}`},
+		{"string field", JSONStringField.Value{Count: 42}, new(JSONStringField), `{"Value":{"count":"42"}}`},
+		{"optional field", JSONExternal.Created{ID: "a1", Reason: "closed", Custom: ""}, new(JSONExternal), `{"created":{"account_id":"a1","reason":"closed"}}`},
+		{"untagged", JSONUntagged.Text{Value: "text"}, new(JSONUntagged), `{"value":"text"}`},
+		{"external empty", JSONExternal.Empty{}, new(JSONExternal), `{"Empty":{}}`},
+		{"internal empty", JSONInternal.Empty{}, new(JSONInternal), `{"type":"Empty"}`},
+		{"adjacent empty", JSONAdjacent.Empty{}, new(JSONAdjacent), `{"type":"Empty","data":{}}`},
+		{"nested", JSONNested.Nested{Value: JSONExternal.Created{ID: "a1", Reason: "", Custom: ""}}, new(JSONNested), `{"Nested":{"value":{"created":{"account_id":"a1"}}}}`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -243,10 +243,10 @@ func TestEnumJSONForms(t *testing.T) {
 }
 
 func TestEnumJSONDecodeFailureKeepsReceiver(t *testing.T) {
-	external := JSONExternalCreated{ID: "old"}.JSONExternal()
-	internal := JSONInternalCreated{ID: "old"}.JSONInternal()
-	adjacent := JSONAdjacentCreated{ID: "old"}.JSONAdjacent()
-	untagged := JSONUntaggedText{Value: "old"}.JSONUntagged()
+	external := JSONExternal.Created{ID: "old", Reason: "", Custom: ""}
+	internal := JSONInternal.Created{ID: "old", Reason: "", Custom: ""}
+	adjacent := JSONAdjacent.Created{ID: "old", Reason: "", Custom: ""}
+	untagged := JSONUntagged.Text{Value: "old"}
 	tests := []struct {
 		name     string
 		receiver any
@@ -284,7 +284,7 @@ func TestEnumJSONExternalDuplicateNames(t *testing.T) {
 		t.Fatalf("last duplicate value was not selected: %#v", value)
 	}
 
-	value = (JSONExternalCreated{ID: "old"}).JSONExternal()
+	value = JSONExternal.Created{ID: "old", Reason: "", Custom: ""}
 	err := json.Unmarshal(
 		[]byte(`{"created":{"account_id":"first"},"created":{"account_id":7}}`),
 		&value,
@@ -311,7 +311,7 @@ func TestEnumJSONExternalDuplicateNames(t *testing.T) {
 }
 
 func TestEnumJSONDirectMethods(t *testing.T) {
-	value := (JSONAdjacentCreated{ID: "a1"}).JSONAdjacent()
+	value := JSONAdjacent.Created{ID: "a1", Reason: "", Custom: ""}
 	data, err := value.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
@@ -372,7 +372,7 @@ func TestEnumJSONOrderAndPayloadRules(t *testing.T) {
 	if external.CreatedPayload().ID != "a1" {
 		t.Fatal("wrong payload")
 	}
-	large := JSONExternalLarge{}.JSONExternal()
+	large := JSONExternal.Large{Data: [100]byte{}}
 	data, err := json.Marshal(large)
 	if err != nil {
 		t.Fatal(err)
@@ -391,7 +391,7 @@ func TestEnumJSONOrderAndPayloadRules(t *testing.T) {
 }
 
 func TestEnumJSONCustomFields(t *testing.T) {
-	value := JSONCustomValue{Value: "ok"}.JSONCustom()
+	value := JSONCustom.Value{Value: "ok"}
 	data, err := json.Marshal(value)
 	if err != nil || string(data) != `{"Value":{"value":"custom:ok"}}` {
 		t.Fatalf("custom field: %s, %v", data, err)
@@ -409,7 +409,7 @@ func TestEnumJSONCustomFields(t *testing.T) {
 	if value != before {
 		t.Fatal("receiver changed after field error")
 	}
-	if _, err := json.Marshal(JSONCustomValue{Value: "bad"}.JSONCustom()); err == nil {
+	if _, err := json.Marshal(JSONCustom.Value{Value: "bad"}); err == nil {
 		t.Fatal("field encode error was lost")
 	}
 }
@@ -442,9 +442,9 @@ func TestEnumJSONCustomFieldsInTaggedForms(t *testing.T) {
 		receiver  any
 		wire, bad string
 	}{
-		{"external", JSONExternalCreated{Custom: "ok"}.JSONExternal(), new(JSONExternal), `{"created":{"custom":"ok"}}`, `{"created":{"custom":"bad"}}`},
-		{"internal", JSONInternalCreated{Custom: "ok"}.JSONInternal(), new(JSONInternal), `{"type":"created","custom":"ok"}`, `{"type":"created","custom":"bad"}`},
-		{"adjacent", JSONAdjacentCreated{Custom: "ok"}.JSONAdjacent(), new(JSONAdjacent), `{"type":"created","data":{"custom":"ok"}}`, `{"type":"created","data":{"custom":"bad"}}`},
+		{"external", JSONExternal.Created{ID: "", Reason: "", Custom: "ok"}, new(JSONExternal), `{"created":{"custom":"ok"}}`, `{"created":{"custom":"bad"}}`},
+		{"internal", JSONInternal.Created{ID: "", Reason: "", Custom: "ok"}, new(JSONInternal), `{"type":"created","custom":"ok"}`, `{"type":"created","custom":"bad"}`},
+		{"adjacent", JSONAdjacent.Created{ID: "", Reason: "", Custom: "ok"}, new(JSONAdjacent), `{"type":"created","data":{"custom":"ok"}}`, `{"type":"created","data":{"custom":"bad"}}`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -477,14 +477,18 @@ func TestEnumJSONNullPayloads(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{"created":null}`), &external); err != nil {
 		t.Fatal(err)
 	}
-	if external.Tag() != JSONExternalTagCreated || external.CreatedPayload() != (JSONExternalCreated{}) {
+	externalPayload := external.CreatedPayload()
+	if external.Tag() != JSONExternalTagCreated || externalPayload.ID != "" ||
+		externalPayload.Reason != "" || externalPayload.Custom != "" {
 		t.Fatal("wrong null payload")
 	}
 	var adjacent JSONAdjacent
 	if err := json.Unmarshal([]byte(`{"type":"created","data":null}`), &adjacent); err != nil {
 		t.Fatal(err)
 	}
-	if adjacent.Tag() != JSONAdjacentTagCreated || adjacent.CreatedPayload() != (JSONAdjacentCreated{}) {
+	adjacentPayload := adjacent.CreatedPayload()
+	if adjacent.Tag() != JSONAdjacentTagCreated || adjacentPayload.ID != "" ||
+		adjacentPayload.Reason != "" || adjacentPayload.Custom != "" {
 		t.Fatal("wrong null payload")
 	}
 	var untagged JSONUntagged
@@ -497,7 +501,7 @@ func TestEnumJSONNullPayloads(t *testing.T) {
 }
 
 func TestEnumJSONInternalPayloadMethods(t *testing.T) {
-	direct := JSONInternalPayloadMethodValue{}.JSONInternalPayloadMethod()
+	direct := JSONInternalPayloadMethod.Value{Seen: ""}
 	data, err := json.Marshal(direct)
 	if err != nil || string(data) != `{"type":"value","custom":"payload"}` {
 		t.Fatalf("direct method: %s, %v", data, err)
@@ -512,7 +516,7 @@ func TestEnumJSONInternalPayloadMethods(t *testing.T) {
 	}
 
 	promoted :=
-		JSONInternalPromotedMethodValue{JSONObject: JSONObject{}}.JSONInternalPromotedMethod()
+		JSONInternalPromotedMethod.Value{JSONObject: JSONObject{}}
 
 	data, err = json.Marshal(promoted)
 	if err != nil || string(data) != `{"type":"value","custom":"promoted"}` {
@@ -528,7 +532,7 @@ func TestEnumJSONInternalPayloadMethods(t *testing.T) {
 	}
 
 	invalid :=
-		JSONInternalPayloadMethodValue{Seen: "scalar"}.JSONInternalPayloadMethod()
+		JSONInternalPayloadMethod.Value{Seen: "scalar"}
 
 	if _, err := json.Marshal(invalid); err == nil ||
 		!strings.Contains(err.Error(), "expected JSONInternalPayloadMethod JSON payload object") {

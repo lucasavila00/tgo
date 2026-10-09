@@ -378,7 +378,7 @@ type E enum {
 			t.Fatalf("generated %q checks = %d, want 2\n%s", path, count, output)
 		}
 	}
-	assignment := strings.Index(output, "*v = payload.E()")
+	assignment := strings.Index(output, "*v = NewEValue(")
 	check := strings.Index(output, "Direct must not be nil")
 	if check < 0 || assignment < check {
 		t.Fatalf("receiver assignment occurs before validation\n%s", output)

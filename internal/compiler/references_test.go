@@ -142,7 +142,8 @@ func makeAccount() any {
 	output := string(compiled.Outputs["sample.tgo"])
 	for _, want := range []string{
 		`model_2 "example.com/model"`,
-		`model_2.AccountPersonal{Name: "name"}.Account()`,
+		`model_2.NewAccountPersonal(input.FieldName)`,
+		`model_2.TgoAccountPersonalInput{FieldName: "name"}`,
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("generated output does not contain %q\n%s", want, output)
