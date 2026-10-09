@@ -5,10 +5,12 @@ package tgolint
 
 import "go/types"
 
-// coreType returns the common underlying type of an explicit constraint.
-// It returns nil when the type set has no common underlying type.
-// coreType returns one shared underlying type for a concrete or constrained type.
+// coreType returns the shared underlying type of a concrete or constrained type.
+// It returns nil if no type fact or common underlying type is available.
 func coreType(typ types.Type) types.Type {
+	if typ == nil {
+		return nil
+	}
 	typ = types.Unalias(typ)
 	if parameter, ok := typ.(*types.TypeParam); ok {
 		terms, supported := simpleTerms(parameter.Constraint())
