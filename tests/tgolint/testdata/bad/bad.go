@@ -58,6 +58,56 @@ func Direct(event model.Event) string {
 	return event.StartedPayload().ID
 }
 
+func DirectPayloadMethod(event model.Event) func() model.EventStarted {
+	return event.StartedPayload
+}
+
+func WrongEarlyExitPayload(event model.Event) string {
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	return event.StoppedPayload().Reason
+}
+
+func AssignedEarlyExitPayload(event, replacement model.Event) string {
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	event = replacement
+	return event.StartedPayload().ID
+}
+
+func EscapedEarlyExitPayload(event model.Event) string {
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	mutateEvent(&event)
+	return event.StartedPayload().ID
+}
+
+func AssignedSwitchPayload(event, replacement model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		event = replacement
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return ""
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func ClosureSwitchPayload(event model.Event) func() string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return func() string { return event.StartedPayload().ID }
+	case model.EventTagStopped:
+		return nil
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
 type EventView interface {
 	Tag() model.EventTag
 	UnknownTag() string
@@ -818,4 +868,75 @@ func DefaultPayload(event model.Event) string {
 func LiteralHoles() {
 	_ = [2]model.Event{0: model.NewEventStopped("")}
 	_ = []model.Event{1: model.NewEventStopped("")}
+}
+
+func BypassedEarlyExitPayload(event model.Event) string {
+	goto payload
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+payload:
+	return event.StartedPayload().ID
+}
+
+func EscapedReceiverLoop(event model.Event) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		for range 2 {
+			_ = event.StartedPayload()
+			mutateEvent(&event)
+		}
+		return ""
+	case model.EventTagStopped:
+		return ""
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func EscapedReceiverGoto(event model.Event, repeat bool) string {
+	if event.Tag() != model.EventTagStarted {
+		return ""
+	}
+again:
+	result := event.StartedPayload().ID
+	mutateEvent(&event)
+	if repeat {
+		repeat = false
+		goto again
+	}
+	return result
+}
+
+func EmbeddedAssignment(event MutableEmbedded) string {
+	switch event.Tag() {
+	case model.EventTagStarted:
+		event.Event = model.NewEventStopped("")
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return ""
+	default:
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func PackageReceiverPayload() string {
+	if publishedEvent.Tag() != model.EventTagStopped {
+		return ""
+	}
+	return publishedEvent.StoppedPayload().Reason
+}
+
+func InsufficientIfProof(event model.Event, ready bool) string {
+	if ready || event.Tag() == model.EventTagStarted {
+		return event.StartedPayload().ID
+	}
+	return ""
+}
+
+func InsufficientEarlyExitProof(event model.Event, ready bool) string {
+	if ready && event.Tag() != model.EventTagStarted {
+		return ""
+	}
+	return event.StartedPayload().ID
 }

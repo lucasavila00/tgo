@@ -34,7 +34,10 @@ func NewBusiness(company string) Account {
 
 Use a checked `switch value.Tag()` to read the active payload. Use `exhaustive:` to require every
 declared variant, or use `default:` for fallback behavior. Read a payload only in its single-tag
-case. Do not use `fallthrough` or select generated enum methods through interfaces.
+case. A simple early-exit guard can also prove one tag. Every payload call or method value needs a
+proof. The receiver root must belong to the current function. An assignment or writable escape
+ends the proof. Do not use `fallthrough` or select generated enum methods through interfaces.
+Control flow must not bypass the proof.
 Type aliases can construct variants. Go name resolution selects the aliased type.
 Do not shadow generated constructor, carrier, or default helper names at a construction.
 
