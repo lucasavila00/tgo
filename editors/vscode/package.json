@@ -5,6 +5,16 @@
   "description": "Read and navigate TGo source.",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lucasavila00/go2.git",
+    "directory": "editors/vscode"
+  },
+  "homepage": "https://github.com/lucasavila00/go2/blob/main/docs/guide/VSCODE.md",
+  "bugs": {
+    "url": "https://github.com/lucasavila00/go2/issues"
+  },
   "extensionKind": [
     "workspace"
   ],
@@ -52,11 +62,15 @@
     }
   },
   "scripts": {
+    "package": "vsce package --skip-license --out tgo-navigation.vsix",
     "test": "node --test test/unit/*.test.js",
     "test:integration": "node test/run-integration.js",
-    "test:all": "npm test && npm run test:integration"
+    "test:all": "npm test && npm run package && npm run test:integration"
   },
   "devDependencies": {
-    "@vscode/test-electron": "3.1.0"
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "vscode-oniguruma": "2.0.1",
+    "vscode-textmate": "9.2.1"
   }
 }

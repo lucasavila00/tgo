@@ -1,0 +1,92 @@
+[
+  {
+    "line": "type Event enum {",
+    "token": "enum",
+    "has": "keyword.declaration.enum.tgo"
+  },
+  {
+    "line": "type Port int where value > 0",
+    "token": "where",
+    "has": "keyword.control.where.tgo"
+  },
+  {
+    "line": "_ = Request{..default}",
+    "token": "..default",
+    "has": "keyword.other.default.tgo"
+  },
+  {
+    "line": "value := load() /* keep */ !",
+    "token": "!",
+    "has": "keyword.operator.propagation.tgo"
+  },
+  {
+    "line": "value := load() /* keep */ !",
+    "token": "keep",
+    "has": "comment.block.go"
+  },
+  {
+    "line": "value = load()!!",
+    "token": "!!",
+    "has": "keyword.operator.propagation.tgo"
+  },
+  {
+    "line": "_ = !ok",
+    "token": "!",
+    "has": "keyword.operator.go",
+    "not": "keyword.operator.propagation.tgo"
+  },
+  {
+    "line": "_ = left%right",
+    "token": "%",
+    "has": "keyword.operator.go",
+    "not": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "_ = left % Thing",
+    "token": "%",
+    "has": "keyword.operator.go",
+    "not": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "func read(ok bool, owner %User) error {",
+    "token": "%",
+    "has": "keyword.operator.go",
+    "not": "storage.modifier.non-nil.tgo"
+  },
+  {
+    "line": "_ = []int{for _, item := range values { if item > 0 { item } }}",
+    "token": "for",
+    "has": "keyword.control.go",
+    "not": "keyword.control.comprehension.tgo"
+  },
+  {
+    "line": "_ = []int{for _, item := range values { if item > 0 { item } }}",
+    "token": "range",
+    "has": "keyword.control.go",
+    "not": "keyword.control.comprehension.tgo"
+  },
+  {
+    "line": "_ = []int{for _, item := range values { if item > 0 { item } }}",
+    "token": "if",
+    "has": "keyword.control.go",
+    "not": "keyword.control.comprehension.tgo"
+  },
+  {
+    "line": "exhaustive:",
+    "token": "exhaustive",
+    "has": "entity.name.label.go",
+    "not": "keyword.control.exhaustive.tgo"
+  },
+  {
+    "line": "where := 1",
+    "token": "where",
+    "has": "identifier.go",
+    "not": "keyword.control.where.tgo"
+  },
+  {
+    "line": "enum := 2",
+    "token": "enum",
+    "has": "identifier.go",
+    "not": "keyword.declaration.enum.tgo"
+  }
+]

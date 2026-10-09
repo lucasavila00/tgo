@@ -1,0 +1,23 @@
+package grammar
+
+type Event enum {
+	Ready struct{}
+}
+
+type Port int where value > 0
+
+func read(ok bool, owner %User) error {
+	_ = Request{..default}
+	value := load() /* keep */ !
+	value = load()!!
+	_ = !ok
+	_ = left%right
+	_ = left % Thing
+	_ = []int{for _, item := range values { if item > 0 { item } }}
+	switch event.Tag() {
+	exhaustive:
+	}
+	where := 1
+	enum := 2
+	return nil
+}

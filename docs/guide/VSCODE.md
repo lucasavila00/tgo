@@ -3,11 +3,13 @@
 The TGo extension provides syntax highlighting, go to definition, find references, document
 symbols, and workspace symbols. It does not edit source or report diagnostics.
 
-Build the native helper and install the extension dependencies:
+Build the native helper and package the extension:
 
 ```sh
 go build -o bin/tgonav ./cmd/tgonav
 npm ci --prefix editors/vscode
+npm run --prefix editors/vscode package
+code --install-extension editors/vscode/tgo-navigation.vsix
 ```
 
 Set the helper path in the workspace settings. Use an absolute path:
@@ -18,7 +20,7 @@ Set the helper path in the workspace settings. Use an absolute path:
 }
 ```
 
-Start an Extension Development Host from the repository root:
+For extension development, start an Extension Development Host from the repository root:
 
 ```sh
 code --extensionDevelopmentPath="$PWD/editors/vscode" "$PWD"
