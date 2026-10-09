@@ -1,10 +1,13 @@
-.PHONY: ci ci-unlocked generated lint test unit-test e2e-test tgolint-test \
+.PHONY: ci ci-unlocked generated ast-boundary lint test unit-test e2e-test tgolint-test \
 	allocation-test dogfood markdown tgo-size build install-hooks install-tools
 
 ci:
 	flock "$$(git rev-parse --git-path tgo-ci.lock)" $(MAKE) -j2 ci-unlocked
 
-ci-unlocked: generated dogfood e2e-test tgolint-test allocation-test lint unit-test markdown tgo-size
+ci-unlocked: generated ast-boundary dogfood e2e-test tgolint-test allocation-test lint unit-test markdown tgo-size
+
+ast-boundary:
+	python3 scripts/check_ast_boundary.py
 
 dogfood:
 	! rg -n '//[[:space:]]*tgolint:ignore' cmd internal pkg
