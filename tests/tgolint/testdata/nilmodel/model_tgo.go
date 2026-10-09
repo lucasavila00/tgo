@@ -3,6 +3,9 @@
 
 package nilmodel
 
+import __tgo_json "encoding/json"
+import __tgo_fmt "fmt"
+
 type Item struct {
 	Name string
 }
@@ -23,6 +26,71 @@ type BothRequired = **Item
 
 type RequiredHandler = func(*Item) *Item
 type OptionalHandler = func(*Item) *Item
+
+// Syntax requires a variant constructor. Its zero value is invalid.
+// Shared data keeps Go aliases. Callers must keep model values valid.
+type Syntax struct {
+	tgoTag  uint8
+	tgoItem SyntaxItem
+}
+
+// TgoTag returns the tag. Use only on a constructed value.
+func (v Syntax) TgoTag() uint8 { return v.tgoTag }
+
+// SyntaxItem holds the variant fields. Supply every field.
+type SyntaxItem struct {
+	Value *Item
+}
+
+// NewSyntaxItem constructs Syntax. Model fields must be valid.
+// Shared fields keep their aliases and caller duties.
+func NewSyntaxItem(value SyntaxItem) Syntax {
+	return Syntax{tgoTag: 1, tgoItem: value}
+}
+
+// TgoItem requires Item. No tag check.
+func (v Syntax) TgoItem() SyntaxItem {
+	return v.tgoItem
+}
+func (v Syntax) MarshalJSON() ([]byte, error) {
+	switch v.tgoTag {
+	case 1:
+		payload := v.TgoItem()
+		return __tgo_json.Marshal(struct {
+			Payload SyntaxItem `json:"Item"`
+		}{Payload: payload})
+	default:
+		return nil, __tgo_fmt.Errorf("invalid Syntax JSON tag")
+	}
+}
+func (v *Syntax) UnmarshalJSON(data []byte) error {
+	var variant string
+	var payloadData []byte
+	var object map[string]__tgo_json.RawMessage
+	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	if len(object) != 1 {
+		return __tgo_fmt.Errorf("expected one Syntax JSON variant")
+	}
+	for key, value := range object {
+		variant = key
+		payloadData = value
+	}
+	switch variant {
+	case "Item":
+		var payload SyntaxItem
+		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+			return err
+		}
+		*v = NewSyntaxItem(payload)
+		return nil
+	default:
+		return __tgo_fmt.Errorf("unknown Syntax JSON variant %q", variant)
+	}
+}
+
+type SyntaxList = []*Syntax
 
 func Need(value *Item) {}
 

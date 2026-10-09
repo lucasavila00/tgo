@@ -111,6 +111,9 @@ func (e *nilEnvironment) selectorContract(selector *ast.SelectorExpr) nilContrac
 	if selection.Kind() != types.FieldVal {
 		return e.contractForObject(selection.Obj())
 	}
+	if _, pointer := coreType(e.info.TypeOf(selector.X)).(*types.Pointer); pointer {
+		contract = nilChild(contract, "e")
+	}
 	for _, index := range selection.Index() {
 		contract = nilChild(contract, "f"+strconv.Itoa(index))
 	}

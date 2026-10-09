@@ -53,9 +53,6 @@ func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
 }
 
 func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
-	if statement == nil {
-		return nil, false
-	}
 	switch __tgo_match_29 := *statement; __tgo_match_29.TgoTag() {
 	case 13:
 		value := __tgo_match_29.TgoBlock()
@@ -112,9 +109,6 @@ func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
 }
 
 func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement, bool) {
-	if statement == nil {
-		return nil, false
-	}
 	switch __tgo_match_30 := *statement; __tgo_match_30.TgoTag() {
 	case 8:
 		value := __tgo_match_30.TgoAssignment()
@@ -169,9 +163,6 @@ func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement,
 }
 
 func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
-	if statement == nil {
-		return nil, false
-	}
 	switch __tgo_match_31 := *statement; __tgo_match_31.TgoTag() {
 	case 14:
 		value := __tgo_match_31.TgoIf()
@@ -226,9 +217,6 @@ func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
 }
 
 func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
-	if statement == nil {
-		return nil, false
-	}
 	switch __tgo_match_32 := *statement; __tgo_match_32.TgoTag() {
 	case 11:
 		value := __tgo_match_32.TgoReturn()
@@ -283,9 +271,6 @@ func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
 }
 
 func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
-	if expression == nil {
-		return nil, false
-	}
 	switch __tgo_match_33 := *expression; __tgo_match_33.TgoTag() {
 	case 13:
 		value := __tgo_match_33.TgoCall()
@@ -351,9 +336,6 @@ func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
 }
 
 func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) {
-	if expression == nil {
-		return nil, false
-	}
 	switch __tgo_match_34 := *expression; __tgo_match_34.TgoTag() {
 	case 2:
 		value := __tgo_match_34.TgoIdentifier()
@@ -418,9 +400,6 @@ func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) 
 }
 
 func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool) {
-	if expression == nil {
-		return nil, false
-	}
 	switch __tgo_match_35 := *expression; __tgo_match_35.TgoTag() {
 	case 17:
 		value := __tgo_match_35.TgoBinary()
@@ -487,9 +466,6 @@ func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool
 func sourceCompositeLiteral(
 	expression *syntax.Expression,
 ) (*syntax.CompositeLiteral, bool) {
-	if expression == nil {
-		return nil, false
-	}
 	switch __tgo_match_36 := *expression; __tgo_match_36.TgoTag() {
 	case 6:
 		value := __tgo_match_36.TgoCompositeLiteral()
@@ -554,7 +530,7 @@ func sourceCompositeLiteral(
 }
 
 func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
-	for expression != nil {
+	for {
 		switch __tgo_match_37 := *expression; __tgo_match_37.TgoTag() {
 		case 7:
 			value := __tgo_match_37.TgoParenthesized()
@@ -612,13 +588,14 @@ func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
 		case 27:
 			return expression
 		default:
-			panic("invalid Expression variant")
+			panic(
+
+				// sourceFunctionSignature finds the nearest source function around a node.
+				"invalid Expression variant")
 		}
 	}
-	return nil
 }
 
-// sourceFunctionSignature finds the nearest source function around a node.
 func sourceFunctionSignature(
 	file *syntax.File,
 	node *syntax.Node,

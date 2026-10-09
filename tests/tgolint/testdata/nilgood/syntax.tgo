@@ -1,0 +1,11 @@
+package nilgood
+
+import "example.com/tgolint/nilmodel"
+
+func syntaxFacts(values nilmodel.SyntaxList) {
+	for _, value := range values {
+		match *value {
+		case Item(payload): nilmodel.Need(payload.Value)
+		}
+	}
+}
