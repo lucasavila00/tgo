@@ -1,3 +1,4 @@
+// Package driver tests compiler driver behavior.
 package driver
 
 import (
