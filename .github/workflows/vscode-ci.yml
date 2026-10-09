@@ -1,4 +1,4 @@
-name: Slow CI
+name: VS Code CI
 
 on:
   workflow_dispatch:
