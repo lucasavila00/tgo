@@ -11,6 +11,9 @@ tgolint ./...
 It gets model data from generated packages and uses it in packages that import
 them. It does not check generated files.
 
+The compiler does not enforce these usage rules. A build can succeed when
+`tgolint` reports a policy error.
+
 ## Checked by tgolint
 
 A clean run means that the loaded Go packages do not contain these errors:
