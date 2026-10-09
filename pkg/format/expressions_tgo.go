@@ -11,6 +11,14 @@ import (
 )
 
 func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
+	p.expressionAt(value, parentPrecedence, 1)
+}
+
+func (p *printer) expressionAt(
+	value *syntax.Expression,
+	parentPrecedence int,
+	depth int,
+) {
 	switch expressionValue := *value; expressionValue.Tag() {
 	case syntax.ExpressionTagBad:
 		item := expressionValue.BadPayload().Value
@@ -22,7 +30,7 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 		item := expressionValue.EllipsisPayload().Value
 		p.token(item.Ellipsis, "...")
 		if item.Element != nil {
-			p.expression(item.Element, token.UnaryPrec)
+			p.expressionAt(item.Element, token.UnaryPrec, depth)
 		}
 	case syntax.ExpressionTagBasicLiteral:
 		item := expressionValue.BasicLiteralPayload().Value
@@ -32,36 +40,36 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 		p.token(item.Type.Function, "func")
 		p.functionSignature(item.Type)
 		p.space()
-		p.block(item.Body)
+		p.functionBody(item.Body, item.Start)
 	case syntax.ExpressionTagCompositeLiteral:
 		p.compositeLiteral(expressionValue.CompositeLiteralPayload().Value)
 	case syntax.ExpressionTagParenthesized:
 		item := expressionValue.ParenthesizedPayload().Value
 		p.token(item.Lparen, "(")
-		p.expression(item.Expression, 0)
+		p.expressionAt(item.Expression, 0, max(1, depth-1))
 		p.token(item.Rparen, ")")
 	case syntax.ExpressionTagSelector:
 		item := expressionValue.SelectorPayload().Value
-		p.expression(item.Expression, token.HighestPrec)
+		p.expressionAt(item.Expression, token.HighestPrec, depth)
 		p.text(".")
 		p.token(item.Selector.Start, item.Selector.Name)
 	case syntax.ExpressionTagIndex:
 		item := expressionValue.IndexPayload().Value
-		p.expression(item.Expression, token.HighestPrec)
+		p.expressionAt(item.Expression, token.HighestPrec, 1)
 		p.token(item.Lbrack, "[")
-		p.expression(item.Index, 0)
+		p.expressionAt(item.Index, 0, depth+1)
 		p.token(item.Rbrack, "]")
 	case syntax.ExpressionTagIndexList:
 		item := expressionValue.IndexListPayload().Value
-		p.expression(item.Expression, token.HighestPrec)
+		p.expressionAt(item.Expression, token.HighestPrec, 1)
 		p.token(item.Lbrack, "[")
-		p.delimitedExpressions(item.Indices, item.Lbrack, item.Rbrack, false)
+		p.delimitedExpressions(item.Indices, item.Lbrack, item.Rbrack, false, depth+1)
 		p.token(item.Rbrack, "]")
 	case syntax.ExpressionTagSlice:
-		p.sliceExpression(expressionValue.SlicePayload().Value)
+		p.sliceExpression(expressionValue.SlicePayload().Value, depth)
 	case syntax.ExpressionTagTypeAssertion:
 		item := expressionValue.TypeAssertionPayload().Value
-		p.expression(item.Expression, token.HighestPrec)
+		p.expressionAt(item.Expression, token.HighestPrec, depth)
 		p.text(".")
 		p.token(item.Lparen, "(")
 		if item.Type == nil {
@@ -71,24 +79,24 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 		}
 		p.token(item.Rparen, ")")
 	case syntax.ExpressionTagCall:
-		p.callExpression(expressionValue.CallPayload().Value)
+		p.callExpression(expressionValue.CallPayload().Value, depth)
 	case syntax.ExpressionTagStar:
 		item := expressionValue.StarPayload().Value
 		p.token(item.Star, "*")
-		p.expression(item.Expression, token.UnaryPrec)
+		p.expressionAt(item.Expression, token.UnaryPrec, depth)
 	case syntax.ExpressionTagNonNilPointer:
 		item := expressionValue.NonNilPointerPayload().Value
 		p.token(item.Percent, "%")
-		p.expression(item.Type, token.UnaryPrec)
+		p.expressionAt(item.Type, token.UnaryPrec, depth)
 	case syntax.ExpressionTagUnary:
 		item := expressionValue.UnaryPayload().Value
 		p.token(item.OperatorPosition, item.Operator.String())
 		if unaryNeedsSpace(item.Operator, item.Expression) {
 			p.space()
 		}
-		p.expression(item.Expression, token.UnaryPrec)
+		p.expressionAt(item.Expression, token.UnaryPrec, depth)
 	case syntax.ExpressionTagBinary:
-		p.binaryExpression(expressionValue.BinaryPayload().Value, parentPrecedence)
+		p.binaryExpressionAt(expressionValue.BinaryPayload().Value, parentPrecedence, depth)
 	case syntax.ExpressionTagKeyValue:
 		item := expressionValue.KeyValuePayload().Value
 		p.expression(item.Key, 0)
@@ -106,7 +114,7 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 	case syntax.ExpressionTagStructType:
 		item := expressionValue.StructTypePayload().Value
 		p.token(item.Struct, "struct")
-		if len(item.Fields.List) > 0 {
+		if p.multiline(item.Fields.Opening, item.Fields.Closing) {
 			p.space()
 		}
 		p.fieldBlock(item.Fields)
@@ -119,7 +127,7 @@ func (p *printer) expression(value *syntax.Expression, parentPrecedence int) {
 	case syntax.ExpressionTagInterfaceType:
 		item := expressionValue.InterfaceTypePayload().Value
 		p.token(item.Interface, "interface")
-		if len(item.Methods.List) > 0 {
+		if p.multiline(item.Methods.Opening, item.Methods.Closing) {
 			p.space()
 		}
 		p.fieldBlock(item.Methods)
@@ -160,85 +168,202 @@ func unaryNeedsSpace(operator token.Token, operand *syntax.Expression) bool {
 			(inner.Operator == token.AND || inner.Operator == token.XOR)
 }
 
-func (p *printer) binaryExpression(value *syntax.BinaryExpression, parentPrecedence int) {
+func (p *printer) binaryExpressionAt(
+	value *syntax.BinaryExpression,
+	parentPrecedence int,
+	depth int,
+) {
 	precedence := value.Operator.Precedence()
 	parenthesize := precedence < parentPrecedence
 	if parenthesize {
 		p.text("(")
 	}
-	p.expression(value.Left, precedence)
-	p.space()
+	p.binaryOperand(value.Left, precedence, depth+binaryDepthChange(value.Left, precedence))
+	spaces := precedence < binaryCutoff(value, depth)
+	if spaces {
+		p.space()
+	}
 	p.token(value.OperatorPosition, value.Operator.String())
 	if p.multiline(syntax.ExpressionEnd(value.Left), syntax.ExpressionPosition(value.Right)) {
 		p.newline()
 		p.indent++
-		p.expression(value.Right, precedence+1)
+		p.binaryOperand(value.Right, precedence+1, depth+1)
 		p.indent--
 	} else {
-		p.space()
-		p.expression(value.Right, precedence+1)
+		if spaces {
+			p.space()
+		}
+		p.binaryOperand(value.Right, precedence+1, depth+1)
 	}
 	if parenthesize {
 		p.text(")")
 	}
 }
 
-func (p *printer) sliceExpression(value *syntax.SliceExpression) {
-	p.expression(value.Expression, token.HighestPrec)
+func (p *printer) binaryOperand(value *syntax.Expression, precedence int, depth int) {
+	if binary := syntax.BinaryExpressionOf(value); binary != nil {
+		p.binaryExpressionAt(binary, precedence, depth)
+		return
+	}
+	p.expressionAt(value, precedence, depth)
+}
+
+func binaryDepthChange(value *syntax.Expression, precedence int) int {
+	binary := syntax.BinaryExpressionOf(value)
+	if binary != nil && binary.Operator.Precedence() == precedence {
+		return 0
+	}
+	return 1
+}
+
+func binaryCutoff(value *syntax.BinaryExpression, depth int) int {
+	has4, has5, problem := binaryShape(value)
+	if problem > 0 {
+		return problem + 1
+	}
+	if has4 && has5 {
+		if depth == 1 {
+			return 5
+		}
+		return 4
+	}
+	if depth == 1 {
+		return 6
+	}
+	return 4
+}
+
+func binaryShape(value *syntax.BinaryExpression) (bool, bool, int) {
+	has4 := value.Operator.Precedence() == 4
+	has5 := value.Operator.Precedence() == 5
+	problem := 0
+	if left := syntax.BinaryExpressionOf(value.Left); left != nil &&
+		left.Operator.Precedence() >= value.Operator.Precedence() {
+		left4, left5, leftProblem := binaryShape(left)
+		has4 = has4 || left4
+		has5 = has5 || left5
+		problem = max(problem, leftProblem)
+	}
+	if right := syntax.BinaryExpressionOf(value.Right); right != nil &&
+		right.Operator.Precedence() > value.Operator.Precedence() {
+		right4, right5, rightProblem := binaryShape(right)
+		has4 = has4 || right4
+		has5 = has5 || right5
+		problem = max(problem, rightProblem)
+	} else if syntax.StarExpressionOf(value.Right) != nil && value.Operator == token.QUO {
+		problem = 5
+	} else if unary := syntax.UnaryExpressionOf(value.Right); unary != nil {
+		switch value.Operator.String() + unary.Operator.String() {
+		case "/*", "&&", "&^":
+			problem = 5
+		case "++", "--":
+			problem = max(problem, 4)
+		}
+	}
+	return has4, has5, problem
+}
+
+func (p *printer) sliceExpression(value *syntax.SliceExpression, depth int) {
+	p.expressionAt(value.Expression, token.HighestPrec, 1)
 	p.token(value.Lbrack, "[")
+	indices := []*syntax.Expression{value.Low, value.High}
+	if value.Slice3 {
+		indices = append(indices, value.Max)
+	}
+	count := 0
+	hasBinary := false
+	for _, index := range indices {
+		if index != nil {
+			count++
+			hasBinary = hasBinary || syntax.BinaryExpressionOf(index) != nil
+		}
+	}
+	spaces := depth <= 1 && count > 1 && hasBinary
 	if value.Low != nil {
-		p.expression(value.Low, 0)
+		p.expressionAt(value.Low, 0, depth+1)
+	}
+	if value.Low != nil && spaces {
+		p.space()
 	}
 	p.text(":")
 	if value.High != nil {
-		p.expression(value.High, 0)
+		if spaces {
+			p.space()
+		}
+		p.expressionAt(value.High, 0, depth+1)
 	}
 	if value.Slice3 {
+		if value.High != nil && spaces {
+			p.space()
+		}
 		p.text(":")
 		if value.Max != nil {
-			p.expression(value.Max, 0)
+			if spaces {
+				p.space()
+			}
+			p.expressionAt(value.Max, 0, depth+1)
 		}
 	}
 	p.token(value.Rbrack, "]")
 }
 
-func (p *printer) callExpression(value *syntax.CallExpression) {
-	p.expression(value.Callee, token.HighestPrec)
+func (p *printer) callExpression(value *syntax.CallExpression, depth int) {
+	if len(value.Args) > 1 {
+		depth++
+	}
+	p.expressionAt(value.Callee, token.HighestPrec, depth)
 	p.token(value.Lparen, "(")
 	p.trailingToken(value.Lparen, 1)
-	if p.multiline(value.Lparen, value.Rparen) {
-		p.newline()
-		p.indent++
-		for index, argument := range value.Args {
-			p.expression(argument, 0)
-			end := syntax.ExpressionEnd(argument)
-			if index == len(value.Args)-1 && value.Ellipsis != token.NoPos {
-				p.token(value.Ellipsis, "...")
-				end = p.tokenEnd(value.Ellipsis, 3)
-			}
-			p.text(",")
-			following := value.Rparen
-			if index+1 < len(value.Args) {
-				following = syntax.ExpressionPosition(value.Args[index+1])
-			}
-			p.trailingLine(p.commaEnd(end, following))
-			p.newline()
-		}
-		p.indent--
-		p.token(value.Rparen, ")")
+	p.expressionList(value.Args, value.Lparen, value.Rparen, value.Ellipsis, depth)
+	p.token(value.Rparen, ")")
+}
+
+func (p *printer) expressionList(
+	values []*syntax.Expression,
+	opening token.Pos,
+	closing token.Pos,
+	ellipsis token.Pos,
+	depth int,
+) {
+	if len(values) == 0 {
 		return
 	}
-	for index, argument := range value.Args {
-		if index > 0 {
-			p.text(",")
+	previous := opening
+	indented := false
+	for index, value := range values {
+		start := syntax.ExpressionPosition(value)
+		lineBreak := p.position(previous).Line < p.position(start).Line
+		if lineBreak {
+			p.newline()
+			if !indented {
+				p.indent++
+				indented = true
+			}
+		} else if index > 0 {
 			p.space()
 		}
-		p.expression(argument, 0)
-		if index == len(value.Args)-1 && value.Ellipsis != token.NoPos {
-			p.token(value.Ellipsis, "...")
+		p.expressionAt(value, 0, depth)
+		previous = syntax.ExpressionEnd(value)
+		if index == len(values)-1 && ellipsis.IsValid() {
+			p.token(ellipsis, "...")
+			previous = p.tokenEnd(ellipsis, 3)
 		}
+		following := closing
+		if index+1 < len(values) {
+			following = syntax.ExpressionPosition(values[index+1])
+		}
+		if index+1 < len(values) || p.position(previous).Line < p.position(closing).Line {
+			p.text(",")
+		}
+		p.trailingLine(p.commaEnd(previous, following))
 	}
-	p.token(value.Rparen, ")")
+	if p.position(previous).Line < p.position(closing).Line {
+		p.newline()
+	}
+	if indented {
+		p.before(closing)
+		p.indent--
+	}
 }
 
 func (p *printer) delimitedExpressions(
@@ -246,28 +371,13 @@ func (p *printer) delimitedExpressions(
 	opening token.Pos,
 	closing token.Pos,
 	ellipsis bool,
+	depth int,
 ) {
-	if !p.multiline(opening, closing) {
-		p.commaList(values)
-		return
+	ellipsisPosition := token.NoPos
+	if ellipsis && len(values) > 0 {
+		ellipsisPosition = syntax.ExpressionEnd(values[len(values)-1])
 	}
-	p.newline()
-	p.indent++
-	for index, value := range values {
-		p.expression(value, 0)
-		end := syntax.ExpressionEnd(value)
-		if ellipsis && index == len(values)-1 {
-			p.text("...")
-		}
-		p.text(",")
-		following := closing
-		if index+1 < len(values) {
-			following = syntax.ExpressionPosition(values[index+1])
-		}
-		p.trailingLine(p.commaEnd(end, following))
-		p.newline()
-	}
-	p.indent--
+	p.expressionList(values, opening, closing, ellipsisPosition, depth)
 }
 
 func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
@@ -280,49 +390,65 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		p.token(value.Rbrace, "}")
 		return
 	}
-	if !p.multiline(value.Lbrace, value.Rbrace) {
-		for index, element := range value.Elements {
-			if index > 0 {
-				p.text(",")
-				p.space()
-			}
-			p.expression(element, 0)
-		}
-		p.token(value.Rbrace, "}")
-		return
-	}
-	p.newline()
-	p.indent++
-	keyWidths := p.compositeKeyWidths(value.Elements)
+	keyWidths := p.compositeKeyWidths(value.Elements, value.Lbrace)
+	previous := value.Lbrace
+	indented := false
 	for index, element := range value.Elements {
-		if index > 0 && p.blankBetween(
-			syntax.ExpressionEnd(value.Elements[index-1]),
-			syntax.ExpressionPosition(element),
-		) {
-			p.blankline()
+		start := syntax.ExpressionPosition(element)
+		lineBreak := p.position(previous).Line < p.position(start).Line
+		if lineBreak {
+			p.newline()
+			if !indented {
+				p.indent++
+				indented = true
+			}
+			if index > 0 && p.blankBetween(previous, start) {
+				p.blankline()
+			}
+		} else if index > 0 {
+			p.space()
 		}
 		p.compositeElement(element, keyWidths[index])
-		p.text(",")
+		previous = syntax.ExpressionEnd(element)
 		following := value.Rbrace
 		if index+1 < len(value.Elements) {
 			following = syntax.ExpressionPosition(value.Elements[index+1])
 		}
-		p.trailingLine(p.commaEnd(syntax.ExpressionEnd(element), following))
+		if index+1 < len(value.Elements) ||
+			p.position(previous).Line < p.position(value.Rbrace).Line {
+			p.text(",")
+		}
+		p.trailingLine(p.commaEnd(previous, following))
+	}
+	if p.position(previous).Line < p.position(value.Rbrace).Line {
 		p.newline()
 	}
-	p.indent--
+	if indented {
+		p.before(value.Rbrace)
+		p.indent--
+	}
 	p.token(value.Rbrace, "}")
 }
 
-func (p *printer) compositeKeyWidths(values []*syntax.Expression) []int {
+func (p *printer) compositeKeyWidths(
+	values []*syntax.Expression,
+	opening token.Pos,
+) []int {
 	widths := make([]int, len(values))
 	for first := 0; first < len(values); {
-		if compositeKeyWidth(values[first]) == 0 {
+		previous := opening
+		if first > 0 {
+			previous = syntax.ExpressionEnd(values[first-1])
+		}
+		if compositeKeyWidth(values[first]) == 0 ||
+			p.position(previous).Line >= p.position(syntax.ExpressionPosition(values[first])).Line {
 			first++
 			continue
 		}
 		last := first + 1
 		for last < len(values) && compositeKeyWidth(values[last]) > 0 &&
+			p.position(syntax.ExpressionEnd(values[last-1])).Line <
+				p.position(syntax.ExpressionPosition(values[last])).Line &&
 			!p.blankBetween(
 				syntax.ExpressionEnd(values[last-1]),
 				syntax.ExpressionPosition(values[last]),
@@ -346,7 +472,7 @@ func (p *printer) compositeKeyWidths(values []*syntax.Expression) []int {
 func (p *printer) compositeElement(value *syntax.Expression, keyWidth int) {
 	keyValue := syntax.KeyValueExpressionOf(value)
 	width := compositeKeyWidth(value)
-	if keyValue == nil || width == 0 {
+	if keyValue == nil || width == 0 || keyWidth == 0 {
 		p.expression(value, 0)
 		return
 	}
@@ -393,23 +519,54 @@ func (p *printer) alignedField(value *syntax.Field, nameWidth int) {
 		p.space()
 		p.token(value.Tag.ValuePosition, value.Tag.Value)
 	}
-	p.trailingLine(value.Stop)
+	p.trailingLine(fieldContentEnd(value))
+}
+
+func fieldContentEnd(value *syntax.Field) token.Pos {
+	if value.Tag != nil {
+		return value.Tag.Stop
+	}
+	return syntax.ExpressionEnd(value.Type)
 }
 
 func fieldNameWidth(value *syntax.Field) int {
+	return identifierWidth(value.Names)
+}
+
+func identifierWidth(values []*syntax.Identifier) int {
 	width := 0
-	for index, name := range value.Names {
+	for index, value := range values {
 		if index > 0 {
 			width += 2
 		}
-		width += utf8.RuneCountInString(name.Name)
+		width += utf8.RuneCountInString(value.Name)
 	}
 	return width
+}
+
+func (p *printer) formattedExpressionWidth(value *syntax.Expression) int {
+	probe := newPrinter(p.files, p.file, p.source)
+	probe.comments = nil
+	probe.expression(value, 0)
+	return probe.outputColumn()
+}
+
+func (p *printer) formattedFieldWidth(value *syntax.Field, nameWidth int) int {
+	probe := newPrinter(p.files, p.file, p.source)
+	probe.comments = nil
+	probe.alignedField(value, nameWidth)
+	return probe.outputColumn()
 }
 
 func (p *printer) fieldBlock(value *syntax.FieldList) {
 	p.token(value.Opening, "{")
 	if len(value.List) == 0 {
+		if p.multiline(value.Opening, value.Closing) {
+			p.newline()
+			p.indent++
+			p.before(value.Closing)
+			p.indent--
+		}
 		p.token(value.Closing, "}")
 		return
 	}
@@ -431,7 +588,9 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 	for first := 0; first < len(value.List); {
 		last := first + 1
 		for last < len(value.List) &&
-			!p.blankBetween(value.List[last-1].Stop, value.List[last].Start) {
+			!p.blankBetween(value.List[last-1].Stop, value.List[last].Start) &&
+			value.List[last].Doc == nil &&
+			!p.hasCommentBetween(value.List[last-1].Stop, value.List[last].Start) {
 			last++
 		}
 		width := 0
@@ -440,15 +599,27 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 				width = itemWidth
 			}
 		}
+		commentWidth := 0
+		for _, item := range value.List[first:last] {
+			if item.Comment != nil {
+				commentWidth = max(commentWidth, p.formattedFieldWidth(item, width))
+			}
+		}
+		previousCommentColumn := p.commentColumn
+		if commentWidth > 0 {
+			p.commentColumn = p.indent*8 + commentWidth + 1
+		}
 		for _, item := range value.List[first:last] {
 			p.alignedField(item, width)
 			p.newline()
 		}
+		p.commentColumn = previousCommentColumn
 		first = last
 		if first < len(value.List) {
 			p.blankline()
 		}
 	}
+	p.before(value.Closing)
 	p.indent--
 	p.token(value.Closing, "}")
 }

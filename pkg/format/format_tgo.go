@@ -4,7 +4,6 @@
 package format
 
 import (
-	goformat "go/format"
 	"go/token"
 
 	"tgo/pkg/syntax"
@@ -12,18 +11,15 @@ import (
 
 // Source formats one complete TGo source file.
 func Source(filename string, source []byte) ([]byte, error) {
-	if formatted, err := goformat.Source(source); err == nil {
-		return formatted, nil
-	}
 	files := token.NewFileSet()
-	file, tgoErr := syntax.ParseFile(
+	file, err := syntax.ParseFile(
 		files,
 		filename,
 		source,
 		syntax.ParseComments|syntax.AllErrors|syntax.AllowInvalidModels,
 	)
-	if tgoErr != nil {
-		return nil, tgoErr
+	if err != nil {
+		return nil, err
 	}
 	return newPrinter(files, file, source).printFile(), nil
 }

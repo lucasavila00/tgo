@@ -2,7 +2,11 @@
 
 package format
 
-import "tgo/pkg/syntax"
+import (
+	"go/token"
+
+	"tgo/pkg/syntax"
+)
 
 func (p *printer) statement(value *syntax.Statement) {
 	switch statementValue := *value; statementValue.Tag() {
@@ -41,11 +45,15 @@ func (p *printer) statement(value *syntax.Statement) {
 		p.token(item.Token, item.Operator.String())
 	case syntax.StatementTagAssignment:
 		item := statementValue.AssignmentPayload().Value
-		p.commaList(item.Left)
+		depth := 1
+		if len(item.Left) > 1 && len(item.Right) > 1 {
+			depth++
+		}
+		p.commaListAt(item.Left, depth)
 		p.space()
 		p.token(item.Token, item.Operator.String())
 		p.space()
-		p.commaList(item.Right)
+		p.commaListAt(item.Right, depth)
 	case syntax.StatementTagGo:
 		item := statementValue.GoPayload().Value
 		p.token(item.Go, "go")
@@ -117,25 +125,72 @@ func (p *printer) block(value *syntax.BlockStatement) {
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
 	if len(value.List) == 0 {
+		if p.multiline(value.Lbrace, value.Rbrace) {
+			p.newline()
+			p.indent++
+			p.before(value.Rbrace)
+			p.indent--
+		}
 		p.token(value.Rbrace, "}")
 		return
 	}
 	p.newline()
 	p.indent++
 	p.statementList(value.List)
+	p.before(value.Rbrace)
 	p.indent--
 	p.token(value.Rbrace, "}")
+}
+
+func (p *printer) functionBody(value *syntax.BlockStatement, start token.Pos) {
+	if p.compactFunctionBody(value, start) {
+		p.token(value.Lbrace, "{")
+		if len(value.List) > 0 {
+			p.space()
+			for index, statement := range value.List {
+				if index > 0 {
+					p.text(";")
+					p.space()
+				}
+				p.statement(statement)
+			}
+			p.space()
+		}
+		p.token(value.Rbrace, "}")
+		return
+	}
+	p.block(value)
+}
+
+func (p *printer) compactFunctionBody(value *syntax.BlockStatement, start token.Pos) bool {
+	if p.multiline(value.Lbrace, value.Rbrace) || len(value.List) > 5 {
+		return false
+	}
+	file := p.files.File(start)
+	if file == nil || p.files.File(value.Rbrace) != file {
+		return false
+	}
+	from := file.Offset(start)
+	to := file.Offset(value.Rbrace) + 1
+	return from >= 0 && to >= from && to-from <= 100
 }
 
 func (p *printer) clauseBlock(value *syntax.BlockStatement) {
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
 	if len(value.List) == 0 {
+		if p.multiline(value.Lbrace, value.Rbrace) {
+			p.newline()
+			p.indent++
+			p.before(value.Rbrace)
+			p.indent--
+		}
 		p.token(value.Rbrace, "}")
 		return
 	}
 	p.newline()
 	p.statementList(value.List)
+	p.before(value.Rbrace)
 	p.token(value.Rbrace, "}")
 }
 

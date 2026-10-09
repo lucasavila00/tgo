@@ -17,16 +17,41 @@ type sourceComment struct {
 }
 
 type printer struct {
-	files      *token.FileSet
-	file       *syntax.File
-	source     []byte
-	output     bytes.Buffer
-	comments   []sourceComment
-	comment    int
-	indent     int
-	lineStart  bool
-	lineBreaks int
-	lastSource token.Pos
+	files              *token.FileSet
+	file               *syntax.File
+	source             []byte
+	output             bytes.Buffer
+	comments           []sourceComment
+	comment            int
+	indent             int
+	lineStart          bool
+	lineBreaks         int
+	lastSource         token.Pos
+	commentColumn      int
+	functionBodyColumn int
+}
+
+func (p *printer) outputColumn() int {
+	data := p.output.Bytes()
+	column := 0
+	start := bytes.LastIndexByte(data, '\n') + 1
+	for _, value := range data[start:] {
+		if value == '\t' {
+			column += 8 - column%8
+		} else {
+			column++
+		}
+	}
+	return column
+}
+
+func (p *printer) padTo(column int) {
+	current := p.outputColumn()
+	if current >= column {
+		p.space()
+		return
+	}
+	p.text(strings.Repeat(" ", column-current))
 }
 
 func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer {
@@ -74,10 +99,20 @@ func (p *printer) printFile() []byte {
 	if len(p.file.Declarations) > 0 {
 		p.blankline()
 	}
+	functionBodyColumns := p.functionBodyColumns(p.file.Declarations)
 	for index, declaration := range p.file.Declarations {
 		if index > 0 {
-			p.blankline()
+			previous := p.file.Declarations[index-1]
+			start := syntax.DeclarationPosition(declaration)
+			stop := syntax.DeclarationEnd(previous)
+			if declarationKind(previous) != declarationKind(declaration) ||
+				p.blankBetween(stop, start) || p.hasCommentBetween(stop, start) ||
+				declarationKind(declaration) == token.FUNC &&
+					p.multiline(start, syntax.DeclarationEnd(declaration)) {
+				p.blankline()
+			}
 		}
+		p.functionBodyColumn = functionBodyColumns[index]
 		p.declaration(declaration)
 		p.trailingLine(syntax.DeclarationEnd(declaration))
 		p.newline()
@@ -85,6 +120,80 @@ func (p *printer) printFile() []byte {
 	p.before(token.Pos(^uint(0) >> 1))
 	p.finish()
 	return append([]byte(nil), p.output.Bytes()...)
+}
+
+func (p *printer) functionBodyColumns(values []*syntax.Declaration) []int {
+	columns := make([]int, len(values))
+	for first := 0; first < len(values); {
+		declaration := functionDeclarationOf(values[first])
+		if declaration == nil || declaration.Body == nil ||
+			!p.compactFunctionBody(declaration.Body, declaration.Start) {
+			first++
+			continue
+		}
+		last := first + 1
+		for last < len(values) {
+			next := functionDeclarationOf(values[last])
+			if next == nil || next.Body == nil ||
+				!p.compactFunctionBody(next.Body, next.Start) ||
+				p.blankBetween(
+					syntax.DeclarationEnd(values[last-1]),
+					syntax.DeclarationPosition(values[last]),
+				) || p.hasCommentBetween(
+				syntax.DeclarationEnd(values[last-1]),
+				syntax.DeclarationPosition(values[last]),
+			) {
+				break
+			}
+			last++
+		}
+		column := 0
+		for _, value := range values[first:last] {
+			column = max(column, p.formattedFunctionHeaderWidth(functionDeclarationOf(value))+1)
+		}
+		for index := first; index < last; index++ {
+			columns[index] = column
+		}
+		first = last
+	}
+	return columns
+}
+
+func functionDeclarationOf(value *syntax.Declaration) *syntax.FunctionDeclaration {
+	switch declarationValue := *value; declarationValue.Tag() {
+	case syntax.DeclarationTagFunction:
+		return declarationValue.FunctionPayload().Value
+	default:
+		return nil
+	}
+}
+
+func declarationKind(value *syntax.Declaration) token.Token {
+	switch declarationValue := *value; declarationValue.Tag() {
+	case syntax.DeclarationTagGeneral:
+		return declarationValue.GeneralPayload().Value.Kind
+	case syntax.DeclarationTagFunction:
+		return token.FUNC
+	case syntax.DeclarationTagEnum, syntax.DeclarationTagStruct, syntax.DeclarationTagChecked:
+		return token.TYPE
+	default:
+		return token.ILLEGAL
+	}
+}
+
+func (p *printer) hasCommentBetween(stop token.Pos, start token.Pos) bool {
+	for _, comment := range p.comments {
+		if comment.start >= start {
+			return false
+		}
+		if comment.start > stop {
+			if p.position(comment.start).Line == p.position(stop).Line {
+				continue
+			}
+			return true
+		}
+	}
+	return false
 }
 
 func (p *printer) finish() {
@@ -205,8 +314,25 @@ func (p *printer) trailingLine(position token.Pos) {
 	if line > 0 && p.position(comment.start).Line == line &&
 		start >= 0 && stop >= start && stop <= len(p.source) &&
 		strings.TrimSpace(string(p.source[start:stop])) == "" {
+		if p.commentColumn > 0 {
+			p.padTo(p.commentColumn)
+		}
 		p.before(comment.stop + 1)
 	}
+}
+
+func (p *printer) hasTrailingComment(position token.Pos) bool {
+	line := p.position(position).Line
+	start := p.position(position).Offset
+	for _, comment := range p.comments {
+		if p.position(comment.start).Line != line {
+			continue
+		}
+		stop := p.position(comment.start).Offset
+		return start >= 0 && stop >= start && stop <= len(p.source) &&
+			strings.TrimSpace(string(p.source[start:stop])) == ""
+	}
+	return false
 }
 
 func (p *printer) trailingToken(position token.Pos, width int) {
@@ -259,9 +385,22 @@ func (p *printer) multiline(start token.Pos, stop token.Pos) bool {
 }
 
 func (p *printer) blankBetween(stop token.Pos, start token.Pos) bool {
-	left := p.position(stop)
-	right := p.position(start)
-	return left.IsValid() && right.IsValid() && right.Line > left.Line+1
+	file := p.files.File(stop)
+	if file == nil || p.files.File(start) != file {
+		return false
+	}
+	left := file.Offset(stop)
+	right := file.Offset(start)
+	if left < 0 || right < left || right > len(p.source) {
+		return false
+	}
+	lines := strings.Split(string(p.source[left:right]), "\n")
+	for _, line := range lines[1:max(1, len(lines)-1)] {
+		if strings.TrimSpace(line) == "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *printer) blankline() {
@@ -280,12 +419,16 @@ func (p *printer) sourceSpan(span syntax.Span) {
 }
 
 func (p *printer) commaList(values []*syntax.Expression) {
+	p.commaListAt(values, 1)
+}
+
+func (p *printer) commaListAt(values []*syntax.Expression, depth int) {
 	for index, value := range values {
 		if index > 0 {
 			p.text(",")
 			p.space()
 		}
-		p.expression(value, 0)
+		p.expressionAt(value, 0, depth)
 	}
 }
 

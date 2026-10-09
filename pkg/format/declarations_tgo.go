@@ -4,6 +4,7 @@ package format
 
 import (
 	"go/token"
+	"strings"
 
 	"tgo/pkg/syntax"
 )
@@ -43,6 +44,7 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 	}
 	p.newline()
 	p.indent++
+	nameWidths, typeWidths := p.valueSpecificationWidths(value.Specs)
 	for index, item := range value.Specs {
 		if index > 0 && p.blankBetween(
 			syntax.SpecificationEnd(value.Specs[index-1]),
@@ -50,7 +52,7 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 		) {
 			p.blankline()
 		}
-		p.specification(item)
+		p.alignedSpecification(item, nameWidths[index], typeWidths[index])
 		p.trailingLine(syntax.SpecificationEnd(item))
 		p.newline()
 	}
@@ -59,15 +61,72 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 }
 
 func (p *printer) specification(value *syntax.Specification) {
+	p.alignedSpecification(value, 0, 0)
+}
+
+func (p *printer) alignedSpecification(
+	value *syntax.Specification,
+	nameWidth int,
+	typeWidth int,
+) {
 	switch specificationValue := *value; specificationValue.Tag() {
 	case syntax.SpecificationTagImport:
 		p.importSpecification(specificationValue.ImportPayload().Value)
 	case syntax.SpecificationTagValue:
-		p.valueSpecification(specificationValue.ValuePayload().Value)
+		p.valueSpecification(specificationValue.ValuePayload().Value, nameWidth, typeWidth)
 	case syntax.SpecificationTagType:
 		p.typeSpecification(specificationValue.TypePayload().Value)
 	default:
 		panic(specificationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+	}
+}
+
+func (p *printer) valueSpecificationWidths(
+	values []*syntax.Specification,
+) ([]int, []int) {
+	nameWidths := make([]int, len(values))
+	typeWidths := make([]int, len(values))
+	for first := 0; first < len(values); {
+		firstValue := valueSpecificationOf(values[first])
+		if firstValue == nil {
+			first++
+			continue
+		}
+		last := first + 1
+		for last < len(values) && valueSpecificationOf(values[last]) != nil &&
+			!p.blankBetween(
+				syntax.SpecificationEnd(values[last-1]),
+				syntax.SpecificationPosition(values[last]),
+			) && !p.hasCommentBetween(
+			syntax.SpecificationEnd(values[last-1]),
+			syntax.SpecificationPosition(values[last]),
+		) {
+			last++
+		}
+		nameWidth := 0
+		typeWidth := 0
+		for _, item := range values[first:last] {
+			specification := valueSpecificationOf(item)
+			nameWidth = max(nameWidth, identifierWidth(specification.Names))
+			if specification.Type != nil {
+				typeWidth = max(typeWidth, p.formattedExpressionWidth(specification.Type))
+			}
+		}
+		for index := first; index < last; index++ {
+			nameWidths[index] = nameWidth
+			typeWidths[index] = typeWidth
+		}
+		first = last
+	}
+	return nameWidths, typeWidths
+}
+
+func valueSpecificationOf(value *syntax.Specification) *syntax.ValueSpecification {
+	switch specificationValue := *value; specificationValue.Tag() {
+	case syntax.SpecificationTagValue:
+		return specificationValue.ValuePayload().Value
+	default:
+		return nil
 	}
 }
 
@@ -80,14 +139,31 @@ func (p *printer) importSpecification(value *syntax.ImportSpecification) {
 	p.trailingLine(value.Stop)
 }
 
-func (p *printer) valueSpecification(value *syntax.ValueSpecification) {
+func (p *printer) valueSpecification(
+	value *syntax.ValueSpecification,
+	nameWidth int,
+	typeWidth int,
+) {
 	p.identifiers(value.Names)
+	actualNameWidth := identifierWidth(value.Names)
+	nameWidth = max(nameWidth, actualNameWidth)
+	actualTypeWidth := 0
 	if value.Type != nil {
-		p.space()
+		actualTypeWidth = p.formattedExpressionWidth(value.Type)
+		typeWidth = max(typeWidth, actualTypeWidth)
+	}
+	if value.Type != nil {
+		p.text(strings.Repeat(" ", nameWidth-actualNameWidth+1))
 		p.expression(value.Type, 0)
 	}
 	if len(value.Values) > 0 {
-		p.space()
+		padding := nameWidth - actualNameWidth + 1
+		if value.Type != nil {
+			padding = typeWidth - actualTypeWidth + 1
+		} else if typeWidth > 0 {
+			padding += typeWidth + 1
+		}
+		p.text(strings.Repeat(" ", padding))
 		p.text("=")
 		p.space()
 		p.commaList(value.Values)
@@ -105,11 +181,48 @@ func (p *printer) typeSpecification(value *syntax.TypeSpecification) {
 		p.token(value.Assign, "=")
 		p.space()
 	}
-	p.expression(value.Type, 0)
+	if value.Assign != token.NoPos || !p.namedTypeExpression(value.Type) {
+		p.expression(value.Type, 0)
+	}
 	p.trailingLine(value.Stop)
 }
 
+func (p *printer) namedTypeExpression(value *syntax.Expression) bool {
+	switch expressionValue := *value; expressionValue.Tag() {
+	case syntax.ExpressionTagStructType:
+		item := expressionValue.StructTypePayload().Value
+		p.token(item.Struct, "struct")
+		if p.multiline(item.Fields.Opening, item.Fields.Closing) {
+			p.space()
+		}
+		p.fieldBlock(item.Fields)
+		return true
+	case syntax.ExpressionTagInterfaceType:
+		item := expressionValue.InterfaceTypePayload().Value
+		p.token(item.Interface, "interface")
+		if p.multiline(item.Methods.Opening, item.Methods.Closing) {
+			p.space()
+		}
+		p.fieldBlock(item.Methods)
+		return true
+	default:
+		return false
+	}
+}
+
 func (p *printer) functionDeclaration(value *syntax.FunctionDeclaration) {
+	p.functionHeader(value)
+	if value.Body != nil {
+		if p.functionBodyColumn > 0 {
+			p.padTo(p.functionBodyColumn)
+		} else {
+			p.space()
+		}
+		p.functionBody(value.Body, value.Start)
+	}
+}
+
+func (p *printer) functionHeader(value *syntax.FunctionDeclaration) {
 	p.token(value.Type.Function, "func")
 	p.space()
 	if value.Receiver != nil {
@@ -118,10 +231,15 @@ func (p *printer) functionDeclaration(value *syntax.FunctionDeclaration) {
 	}
 	p.token(value.Name.Start, value.Name.Name)
 	p.functionSignature(value.Type)
-	if value.Body != nil {
-		p.space()
-		p.block(value.Body)
-	}
+}
+
+func (p *printer) formattedFunctionHeaderWidth(
+	value *syntax.FunctionDeclaration,
+) int {
+	probe := newPrinter(p.files, p.file, p.source)
+	probe.comments = nil
+	probe.functionHeader(value)
+	return probe.outputColumn()
 }
 
 func (p *printer) enumDeclaration(value *syntax.EnumDeclaration) {
@@ -162,6 +280,12 @@ func (p *printer) enumVariant(value *syntax.EnumVariant) {
 	p.space()
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
+	if len(value.Fields) == 0 && p.multiline(value.Lbrace, value.Rbrace) {
+		p.newline()
+		p.indent++
+		p.before(value.Rbrace)
+		p.indent--
+	}
 	if len(value.Fields) == 1 && !p.multiline(value.Lbrace, value.Rbrace) {
 		p.space()
 		p.tgoField(value.Fields[0], 0)
@@ -192,6 +316,12 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 	p.space()
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
+	if len(value.Fields) == 0 && p.multiline(value.Lbrace, value.Rbrace) {
+		p.newline()
+		p.indent++
+		p.before(value.Rbrace)
+		p.indent--
+	}
 	if len(value.Fields) == 1 && !p.multiline(value.Lbrace, value.Rbrace) {
 		p.space()
 		p.tgoField(value.Fields[0], 0)
