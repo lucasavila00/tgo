@@ -331,6 +331,9 @@ func (p *printer) statementCommentAlignment(
 			breakBefore = p.multiline(previousStart, previousStop) ||
 				p.blankBetween(previousStop, start) ||
 				p.hasCommentBetween(previousStop, start)
+			if clauseStatement(previous) || clauseStatement(value) {
+				breakBefore = true
+			}
 		}
 		headerRow := commentAlignmentRow{
 			owner:    index,

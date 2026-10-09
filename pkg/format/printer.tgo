@@ -23,20 +23,21 @@ type sourceGap struct {
 }
 
 type printer struct {
-	files              *token.FileSet
-	file               *syntax.File
-	source             []byte
-	output             bytes.Buffer
-	comments           []sourceComment
-	comment            int
-	indent             int
-	lineStart          bool
-	lineBreaks         int
-	lastSource         token.Pos
-	commentColumn      int
-	commentColumns     map[token.Pos]int
-	measureComments    map[token.Pos]int
-	functionBodyColumn int
+	files               *token.FileSet
+	file                *syntax.File
+	source              []byte
+	output              bytes.Buffer
+	comments            []sourceComment
+	comment             int
+	indent              int
+	lineStart           bool
+	lineBreaks          int
+	lastSource          token.Pos
+	commentColumn       int
+	commentColumns      map[token.Pos]int
+	measureComments     map[token.Pos]int
+	functionBodyColumn  int
+	sourceCommentIndent bool
 }
 
 func (p *printer) outputColumn() int {
@@ -86,20 +87,21 @@ func newPrinterState(
 	comments []sourceComment,
 ) *printer {
 	return &printer{
-		files:              files,
-		file:               file,
-		source:             source,
-		output:             *new(bytes.Buffer),
-		comments:           comments,
-		comment:            0,
-		indent:             0,
-		lineStart:          true,
-		lineBreaks:         0,
-		lastSource:         token.NoPos,
-		commentColumn:      0,
-		commentColumns:     nil,
-		measureComments:    nil,
-		functionBodyColumn: 0,
+		files:               files,
+		file:                file,
+		source:              source,
+		output:              *new(bytes.Buffer),
+		comments:            comments,
+		comment:             0,
+		indent:              0,
+		lineStart:           true,
+		lineBreaks:          0,
+		lastSource:          token.NoPos,
+		commentColumn:       0,
+		commentColumns:      nil,
+		measureComments:     nil,
+		functionBodyColumn:  0,
+		sourceCommentIndent: false,
 	}
 }
 
@@ -135,9 +137,8 @@ func (p *printer) printFile() []byte {
 			start := syntax.DeclarationPosition(declaration)
 			stop := syntax.DeclarationEnd(previous)
 			if declarationKind(previous) != declarationKind(declaration) &&
-				(!p.trailingCommentPosition(stop).IsValid() ||
-					!p.trailingCommentPosition(syntax.DeclarationEnd(declaration)).IsValid()) ||
-				p.sourceGap(stop, start).blank || p.hasCommentBetween(stop, start) {
+				!p.trailingCommentPosition(stop).IsValid() ||
+				p.sourceGap(stop, start).blank || p.sourceGap(stop, start).leadingComment {
 				p.blankline()
 			}
 		}
@@ -317,6 +318,10 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 				p.blankline()
 			}
 		}
+		previousIndent := p.indent
+		if p.lineStart && p.sourceCommentIndent {
+			p.indent = max(p.indent, p.sourceIndent(item.start))
+		}
 		if p.lineStart && start.Column == 1 && strings.HasPrefix(item.text, "//line ") {
 			p.output.WriteString(item.text)
 			p.lineStart = false
@@ -324,6 +329,7 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		} else {
 			p.text(item.text)
 		}
+		p.indent = previousIndent
 		stop := p.position(item.stop)
 		next := p.position(position)
 		if strings.HasPrefix(item.text, "//") || !next.IsValid() || stop.Line != next.Line {
@@ -338,6 +344,30 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 			p.blankline()
 		}
 	}
+}
+
+func (p *printer) sourceIndent(position token.Pos) int {
+	file := p.files.File(position)
+	if file == nil {
+		return 0
+	}
+	offset := file.Offset(position)
+	if offset < 0 || offset > len(p.source) {
+		return 0
+	}
+	start := bytes.LastIndexByte(p.source[:offset], '\n') + 1
+	column := 0
+	for _, value := range p.source[start:offset] {
+		switch value {
+		case '\t':
+			column += 8 - column%8
+		case ' ':
+			column++
+		default:
+			return column / 8
+		}
+	}
+	return (column + 7) / 8
 }
 
 func (p *printer) tightDelimiter(position token.Pos) bool {
@@ -626,63 +656,4 @@ func (p *printer) sourceSpan(span syntax.Span) {
 	p.before(span.Start)
 	p.text(syntax.SourceText(p.file, span))
 	p.lastSource = span.Stop
-}
-
-func (p *printer) commaList(values []%syntax.Expression) {
-	p.commaListAt(values, 1, false)
-}
-
-func (p *printer) commaListAt(
-	values []%syntax.Expression,
-	depth int,
-	alreadyIndented bool,
-) {
-	indented := false
-	for index, value := range values {
-		if index > 0 {
-			previous := syntax.ExpressionEnd(values[index-1])
-			start := syntax.ExpressionPosition(value)
-			p.trailingLine(p.comma(previous, start))
-			if p.position(previous).Line < p.position(start).Line {
-				p.newline()
-				if !alreadyIndented && !indented {
-					p.indent++
-					indented = true
-				}
-			} else {
-				p.space()
-			}
-		}
-		p.expressionAt(value, 0, depth)
-	}
-	if indented {
-		p.indent--
-	}
-}
-
-func (p *printer) identifiers(values []%syntax.Identifier) {
-	p.identifiersAt(values, false)
-}
-
-func (p *printer) identifiersAt(values []%syntax.Identifier, alreadyIndented bool) {
-	indented := false
-	for index, value := range values {
-		if index > 0 {
-			previous := values[index-1].Stop
-			p.trailingLine(p.comma(previous, value.Start))
-			if p.position(previous).Line < p.position(value.Start).Line {
-				p.newline()
-				if !alreadyIndented && !indented {
-					p.indent++
-					indented = true
-				}
-			} else {
-				p.space()
-			}
-		}
-		p.token(value.Start, value.Name)
-	}
-	if indented {
-		p.indent--
-	}
 }

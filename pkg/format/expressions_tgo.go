@@ -35,6 +35,7 @@ func (p *printer) expressionAt(
 	case syntax.ExpressionTagBasicLiteral:
 		item := expressionValue.BasicLiteralPayload().Value
 		p.token(item.ValuePosition, item.Value)
+		p.lastSource = item.Stop
 	case syntax.ExpressionTagFunctionLiteral:
 		item := expressionValue.FunctionLiteralPayload().Value
 		startColumn := p.outputColumn()

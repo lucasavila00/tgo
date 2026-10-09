@@ -28,7 +28,11 @@ func (p *printer) statement(value *syntax.Statement) {
 		p.lastSource = item.Label.Start
 		p.token(item.Colon, ":")
 		p.indent++
+		gap := p.sourceGap(item.Colon, syntax.StatementPosition(item.Statement))
 		p.newline()
+		if gap.blank {
+			p.blankline()
+		}
 		p.statement(item.Statement)
 	case syntax.StatementTagExpression:
 		p.expression(statementValue.ExpressionPayload().Value.Expression, 0)
@@ -83,7 +87,14 @@ func (p *printer) statement(value *syntax.Statement) {
 		}
 		if len(item.Results) > 0 {
 			p.space()
-			p.commaList(item.Results)
+			indent := p.indentReturnList(item.Results)
+			if indent {
+				p.indent++
+			}
+			p.commaListAt(item.Results, 1, indent)
+			if indent {
+				p.indent--
+			}
 		}
 		if item.SuccessComma.IsValid() {
 			p.token(item.SuccessComma, ",")
@@ -131,24 +142,22 @@ func (p *printer) statementList(values []*syntax.Statement) {
 	values = printed
 	commentColumns := p.statementCommentAlignment(values)
 	for index, value := range values {
+		sourceCommentIndent := false
 		if index > 0 {
 			previous := values[index-1]
 			stop := syntax.StatementEnd(previous)
 			start := syntax.StatementPosition(value)
-			gap := p.sourceGap(stop, start)
-			if clauseStatement(previous) && gap.leadingCommentIndented {
-				p.indent++
-				p.before(start)
-				p.indent--
-			} else {
-				p.breakSourceGap(stop, start)
-			}
+			p.breakSourceGap(stop, start)
+			sourceCommentIndent = clauseStatement(previous)
 		}
 		previousCommentColumns := p.commentColumns
+		previousSourceCommentIndent := p.sourceCommentIndent
 		p.commentColumns = commentColumns[index]
+		p.sourceCommentIndent = sourceCommentIndent
 		p.statement(value)
 		p.trailingLine(syntax.StatementEnd(value))
 		p.commentColumns = previousCommentColumns
+		p.sourceCommentIndent = previousSourceCommentIndent
 		p.newline()
 	}
 }
@@ -169,6 +178,52 @@ func clauseStatement(value *syntax.Statement) bool {
 	case syntax.StatementTagCommunication:
 		return true
 	default:
+		return false
+	}
+}
+
+func (p *printer) indentReturnList(values []*syntax.Expression) bool {
+	if len(values) < 2 {
+		return false
+	}
+	first := p.position(syntax.ExpressionPosition(values[0])).Line
+	last := p.position(syntax.ExpressionEnd(values[len(values)-1])).Line
+	if first <= 0 || first >= last {
+		return false
+	}
+	multiline := 0
+	line := first
+	for _, value := range values {
+		start := p.position(syntax.ExpressionPosition(value)).Line
+		stop := p.position(syntax.ExpressionEnd(value)).Line
+		if line < start {
+			return true
+		}
+		if start < stop && !compositeLiteralLike(value) {
+			multiline++
+		}
+		line = stop
+	}
+	return multiline > 1
+}
+
+func compositeLiteralLike(value *syntax.Expression) bool {
+	for {
+		if syntax.CompositeLiteralOf(value) != nil {
+			return true
+		}
+		if parenthesized := syntax.ParenthesizedExpressionOf(value); parenthesized != nil {
+			value = parenthesized.Expression
+			continue
+		}
+		unary := syntax.UnaryExpressionOf(value)
+		if unary != nil && unary.Operator.String() == "&" {
+			value = unary.Expression
+			if parenthesized := syntax.ParenthesizedExpressionOf(value); parenthesized != nil {
+				value = parenthesized.Expression
+			}
+			return syntax.CompositeLiteralOf(value) != nil
+		}
 		return false
 	}
 }
@@ -250,16 +305,11 @@ func (p *printer) clauseBlock(value *syntax.BlockStatement) {
 	p.breakSourceGap(value.Lbrace, syntax.StatementPosition(value.List[0]))
 	p.statementList(value.List)
 	last := syntax.StatementEnd(value.List[len(value.List)-1])
-	gap := p.sourceGap(last, value.Rbrace)
-	if clauseStatement(value.List[len(value.List)-1]) && gap.leadingCommentIndented {
-		p.indent++
-		p.breakSourceGap(last, value.Rbrace)
-		p.before(value.Rbrace)
-		p.indent--
-	} else {
-		p.breakSourceGap(last, value.Rbrace)
-		p.before(value.Rbrace)
-	}
+	p.breakSourceGap(last, value.Rbrace)
+	previousSourceCommentIndent := p.sourceCommentIndent
+	p.sourceCommentIndent = clauseStatement(value.List[len(value.List)-1])
+	p.before(value.Rbrace)
+	p.sourceCommentIndent = previousSourceCommentIndent
 	p.token(value.Rbrace, "}")
 }
 
@@ -289,8 +339,22 @@ func (p *printer) caseClause(value *syntax.CaseClause) {
 		p.token(value.Case, "default")
 	} else {
 		p.token(value.Case, "case")
-		p.space()
-		p.commaList(value.List)
+		first := syntax.ExpressionPosition(value.List[0])
+		if p.position(value.Case).Line < p.position(first).Line {
+			p.indent++
+			p.breakSourceGap(p.tokenEnd(value.Case, 4), first)
+			comments := p.expressionListCommentAlignment(
+				value.List,
+				value.Case,
+				value.Colon,
+				p.indent*8,
+			)
+			p.commaListWithComments(value.List, 1, true, comments)
+			p.indent--
+		} else {
+			p.space()
+			p.commaList(value.List)
+		}
 	}
 	p.token(value.Colon, ":")
 	p.trailingToken(value.Colon, 1)

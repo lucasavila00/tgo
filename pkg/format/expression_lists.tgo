@@ -86,3 +86,82 @@ func (p *printer) delimitedExpressions(
 	}
 	p.expressionList(values, opening, closing, ellipsisPosition, depth)
 }
+
+func (p *printer) commaList(values []%syntax.Expression) {
+	p.commaListAt(values, 1, false)
+}
+
+func (p *printer) commaListAt(
+	values []%syntax.Expression,
+	depth int,
+	alreadyIndented bool,
+) {
+	p.commaListWithComments(values, depth, alreadyIndented, nil)
+}
+
+func (p *printer) commaListWithComments(
+	values []%syntax.Expression,
+	depth int,
+	alreadyIndented bool,
+	commentColumns []map[token.Pos]int,
+) {
+	indented := false
+	for index, value := range values {
+		if index > 0 {
+			previous := syntax.ExpressionEnd(values[index-1])
+			start := syntax.ExpressionPosition(value)
+			previousCommentColumns := p.commentColumns
+			if commentColumns != nil {
+				p.commentColumns = commentColumns[index-1]
+			}
+			separator := p.comma(previous, start)
+			p.trailingLine(separator)
+			p.commentColumns = previousCommentColumns
+			if p.position(previous).Line < p.position(start).Line {
+				if !alreadyIndented && !indented {
+					p.indent++
+					indented = true
+				}
+				p.breakSourceGap(separator, start)
+			} else {
+				p.space()
+			}
+		}
+		previousCommentColumns := p.commentColumns
+		if commentColumns != nil {
+			p.commentColumns = commentColumns[index]
+		}
+		p.expressionAt(value, 0, depth)
+		p.commentColumns = previousCommentColumns
+	}
+	if indented {
+		p.indent--
+	}
+}
+
+func (p *printer) identifiers(values []%syntax.Identifier) {
+	p.identifiersAt(values, false)
+}
+
+func (p *printer) identifiersAt(values []%syntax.Identifier, alreadyIndented bool) {
+	indented := false
+	for index, value := range values {
+		if index > 0 {
+			previous := values[index-1].Stop
+			p.trailingLine(p.comma(previous, value.Start))
+			if p.position(previous).Line < p.position(value.Start).Line {
+				p.newline()
+				if !alreadyIndented && !indented {
+					p.indent++
+					indented = true
+				}
+			} else {
+				p.space()
+			}
+		}
+		p.token(value.Start, value.Name)
+	}
+	if indented {
+		p.indent--
+	}
+}
