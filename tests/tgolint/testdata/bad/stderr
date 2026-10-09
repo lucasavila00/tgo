@@ -8,7 +8,7 @@ bad/bad.go:761:10: Event: StartedPayload called under a multi-tag case
 bad/bad.go:779:2: Event: switch is missing cases: EventTagStopped
 bad/bad.go:792:22: Event: StartedPayload called under case EventTagStopped
 bad/bad.go:803:25: Event: StartedPayload called under case EventTagStopped
-bad/bad.go:814:10: Event: StoppedPayload called under default
+bad/bad.go:814:10: Event: StartedPayload called under default
 bad/bad.go:35:5: zero declaration contains invalid tgo enum Event; construct it first
 bad/bad.go:45:17: cannot define a new Go type from tgo enum Event; use an alias
 bad/bad.go:48:6: cannot construct tgo enum Event with a Go literal

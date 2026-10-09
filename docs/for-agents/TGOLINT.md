@@ -27,7 +27,8 @@ closure. Keep both variables local to the function. Check the pair before a
 `goto`, `break`, `continue`, or `fallthrough`.
 
 Use `switch value.Tag()` for an enum value or pointer. Use `exhaustive:` to require every declared
-tag, or use `default:` for fallback behavior. Read only the payload for one explicit tag.
+tag, or use `default:` for fallback behavior. Read a payload only when the clause flow has one
+possible tag. A default has the union of omitted variants.
 Do not call generated enum methods through a structural interface or an open
 generic constraint.
 Calls outside a recognized canonical switch do not get contextual payload checks.

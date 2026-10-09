@@ -660,6 +660,14 @@ def main():
                 "} }",
                 "A: switch is missing cases: ATagTwo",
             ),
+            (
+                "type A enum { One struct { Name string }; Two struct { Name string } }\n"
+                "func f(a A) string { switch a.Tag() {\n"
+                "case ATagOne: return a.OnePayload().Name\n"
+                "default: return a.OnePayload().Name\n"
+                "} }",
+                "A: OnePayload called under default",
+            ),
         ]
         for source, message in cases:
             (invalid / "bad.tgo").write_text("package invalid\n" + source + "\n")

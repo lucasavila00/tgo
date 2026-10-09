@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"go/types"
 	"strings"
+	"tgo/internal/variantflow"
 
 	"golang.org/x/tools/go/cfg"
 )
@@ -23,6 +24,9 @@ func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
 	}
 	c.safe[selector] = true
 	seen := make(map[int]bool)
+	clauseTypes := make(map[*ast.CaseClause]variantflow.Type)
+	declaredType := variantflow.All(len(modelVariants(model)))
+	explicitType := variantflow.Never()
 	hasSentinelDefault := false
 	hasDefault := false
 	labelsResolved := true
@@ -36,22 +40,32 @@ func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
 		if len(clause.List) == 0 {
 			hasDefault = true
 			hasSentinelDefault = c.tagDefaultSentinel(clause, receiver, model)
-			c.checkCaseAccessors(clause, statement, receiver, model, nil, true)
 			continue
 		}
 		tags, resolved := c.caseTags(clause, model, tagType, seen)
 		labelsResolved = labelsResolved && resolved
+		clauseTypes[clause] = variantflow.Intersect(declaredType, tagVariantType(tags))
+		explicitType = variantflow.Union(explicitType, clauseTypes[clause])
 		for tag := range tags {
 			seen[tag] = true
 		}
-		c.checkCaseAccessors(clause, statement, receiver, model, tags, false)
+	}
+	defaultType := variantflow.Without(declaredType, explicitType)
+	for _, item := range statement.Body.List {
+		clause := item.(*ast.CaseClause)
+		flowType, explicitClause := clauseTypes[clause]
+		defaultClause := !explicitClause
+		if defaultClause {
+			flowType = defaultType
+		}
+		c.checkCaseAccessors(
+			clause, statement, receiver, model, flowType, defaultClause,
+		)
 	}
 	if labelsResolved && hasSentinelDefault {
 		var missing []string = nil
-		for tag := 1; tag <= len(modelVariants(model)); tag++ {
-			if !seen[tag] {
-				missing = append(missing, tagConstant(model, tag))
-			}
+		for _, tag := range variantflow.Tags(defaultType) {
+			missing = append(missing, tagConstant(model, tag))
 		}
 		if len(missing) > 0 {
 			c.pass.Reportf(statement.Switch, "%s: switch is missing cases: %s",
@@ -62,6 +76,14 @@ func (c *checker) checkTagSwitch(statement *ast.SwitchStmt) {
 		c.pass.Reportf(statement.Switch, "%s: switch must have a default clause",
 			modelName(model))
 	}
+}
+
+func tagVariantType(tags map[int]bool) variantflow.Type {
+	result := variantflow.Never()
+	for tag := range tags {
+		result = variantflow.Union(result, variantflow.Variant(tag))
+	}
+	return result
 }
 
 func clauseFallthrough(clause *ast.CaseClause) *ast.BranchStmt {
@@ -413,7 +435,7 @@ func (c *checker) checkCaseAccessors(
 	tagSwitch *ast.SwitchStmt,
 	receiver ast.Expr,
 	model *model,
-	tags map[int]bool,
+	flowType variantflow.Type,
 	defaultClause bool,
 ) {
 	if clauseAssignsReceiver(c.pass.TypesInfo, clause, receiver) {
@@ -444,18 +466,17 @@ func (c *checker) checkCaseAccessors(
 				return true
 			}
 			c.handled[selector] = true
-			if len(tags) == 1 && tags[tag] {
+			active, narrowed := variantflow.Singleton(flowType)
+			if narrowed && active == tag {
 				c.safe[selector] = true
 				return true
 			}
 			caseName := "default"
-			if !defaultClause && len(tags) != 1 {
+			if !defaultClause && !narrowed {
 				caseName = "a multi-tag case"
 			}
-			if !defaultClause && len(tags) == 1 {
-				for active := range tags {
-					caseName = "case " + tagConstant(model, active)
-				}
+			if !defaultClause && narrowed {
+				caseName = "case " + tagConstant(model, active)
 			}
 			c.pass.Reportf(selector.Pos(), "%s: %s called under %s",
 				modelName(model), selector.Sel.Name, caseName)
