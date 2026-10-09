@@ -71,7 +71,10 @@ func emitEnumGob(output *strings.Builder, declaration *model, fmtPackage string)
 		name+": cannot gob encode invalid tag %d",
 	)
 	output.WriteString("tag := uint32(v.tgoTag)\n")
-	output.WriteString("return []byte{byte(tag >> 24), byte(tag >> 16), byte(tag >> 8), byte(tag)}, nil\n}\n")
+	output.WriteString(
+		"return []byte{byte(tag >> 24), byte(tag >> 16), " +
+			"byte(tag >> 8), byte(tag)}, nil\n}\n",
+	)
 	output.WriteString("// GobDecode replaces the value with a valid four-byte enum tag.\n")
 	fmt.Fprintf(output, "func (v *%s) GobDecode(data []byte) error {\n", name)
 	fmt.Fprintf(
@@ -82,7 +85,8 @@ func emitEnumGob(output *strings.Builder, declaration *model, fmtPackage string)
 	)
 	fmt.Fprintf(
 		output,
-		"tag := %sTag(uint32(data[0]) << 24 | uint32(data[1]) << 16 | uint32(data[2]) << 8 | uint32(data[3]))\n",
+		"tag := %sTag(uint32(data[0]) << 24 | uint32(data[1]) << 16 | "+
+			"uint32(data[2]) << 8 | uint32(data[3]))\n",
 		name,
 	)
 	fmt.Fprintf(output, "if tag < %s || tag > %s {\n", first, last)
