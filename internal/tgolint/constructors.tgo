@@ -147,7 +147,8 @@ func escapedObjects(facts *sourcefacts.Index, body *syntax.BlockStatement) map[t
 		if !ok { return true }
 		unary := syntax.UnaryExpressionOf(expression)
 		if unary != nil && unary.Operator == token.AND {
-			record(facts.Object(identifier(unary.Expression)), unary.Start)
+			name := identifier(unary.Expression)
+			if name != nil { record(facts.Object(name), unary.Start) }
 		}
 		return true
 	})
@@ -417,7 +418,9 @@ func (c %checker) markValidatedResult(
 	if !c.validatedCall(call) {
 		return
 	}
-	object := c.facts.Object(identifier(value))
+	name := identifier(value)
+	if name == nil { return }
+	object := c.facts.Object(name)
 	result, found := state[object]
 	if object == nil || !found {
 		return
@@ -597,8 +600,17 @@ func (c %checker) localResultObject(object types.Object) bool {
 		c.function == nil {
 		return false
 	}
-	return variable.Pos() >= syntax.NodePosition(c.function) &&
-		variable.Pos() <= syntax.NodeEnd(c.function)
+	position := c.pass.Fset.Position(variable.Pos())
+	start := c.pass.Fset.Position(syntax.NodePosition(c.function))
+	stop := c.pass.Fset.Position(syntax.NodeEnd(c.function))
+	if position.Filename != start.Filename || position.Filename != stop.Filename {
+		return false
+	}
+	return !sourcePositionBefore(position, start) && !sourcePositionBefore(stop, position)
+}
+
+func sourcePositionBefore(left, right token.Position) bool {
+	return left.Line < right.Line || left.Line == right.Line && left.Column < right.Column
 }
 
 // checkedReturn permits direct forwarding and checks all other returned values.

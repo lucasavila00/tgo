@@ -4,9 +4,10 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/token"
 	"go/types"
+
+	"tgo/pkg/syntax"
 )
 
 type genericValue struct {
@@ -14,56 +15,60 @@ type genericValue struct {
 	fact              *genericEffectSet
 	receiverArguments []types.Type
 	typeArguments     []types.Type
-	conditionCall     *ast.CallExpr
+	conditionCall     *syntax.Expression
 	returned          bool
 }
 
 type genericValueBinding struct {
 	value     genericValue
-	source    ast.Expr
+	source    *syntax.Expression
 	ambiguous bool
 }
 
 // collectGenericValueBindings finds stable local generic function values.
 func (c *checker) collectGenericValueBindings(
 	summaries map[*types.Func]*genericEffectSummary,
-) (map[types.Object]*genericValueBinding, map[ast.Expr]bool) {
+) (map[types.Object]*genericValueBinding, map[*syntax.Expression]bool) {
 	bindings := make(map[types.Object]*genericValueBinding)
-	sources := make(map[ast.Expr]bool)
-	for _, file := range c.pass.Files {
+	sources := make(map[*syntax.Expression]bool)
+	for _, file := range c.files {
 		if c.generated[file] {
 			continue
 		}
 		c.collectFileGenericValueBindings(file, summaries, bindings, sources)
 	}
-	for _, file := range c.pass.Files {
+	for _, file := range c.files {
 		c.markAmbiguousGenericValueBindings(file, bindings)
 	}
 	return bindings, sources
 }
 
 func (c *checker) collectFileGenericValueBindings(
-	file *ast.File,
+	file *syntax.File,
 	summaries map[*types.Func]*genericEffectSummary,
 	bindings map[types.Object]*genericValueBinding,
-	sources map[ast.Expr]bool,
+	sources map[*syntax.Expression]bool,
 ) {
-	ast.Inspect(file, func(node ast.Node) bool {
-		switch node := node.(type) {
-		case *ast.AssignStmt:
-			if node.Tok == token.DEFINE {
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		if statement, ok := syntax.StatementOf(node); ok {
+			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil &&
+				assignment.Operator == token.DEFINE {
 				c.collectAssignedGenericValues(
-					node.Lhs, node.Rhs, summaries, bindings, sources,
+					assignment.Left, assignment.Right, summaries, bindings, sources,
 				)
 			}
-		case *ast.ValueSpec:
-			left := make([]ast.Expr, len(node.Names))
-			for index := range node.Names {
-				left[index] = node.Names[index]
+		}
+		if specification, ok := syntax.SpecificationOf(node); ok {
+			if value := syntax.ValueSpecificationOf(specification); value != nil {
+				left := make([]*syntax.Expression, len(value.Names))
+				for index := range value.Names {
+					item := syntax.ExpressionIdentifier{Value: value.Names[index]}.Expression()
+					left[index] = &item
+				}
+				c.collectAssignedGenericValues(
+					left, value.Values, summaries, bindings, sources,
+				)
 			}
-			c.collectAssignedGenericValues(
-				left, node.Values, summaries, bindings, sources,
-			)
 		}
 		return true
 	})
@@ -71,16 +76,23 @@ func (c *checker) collectFileGenericValueBindings(
 
 // markAmbiguousGenericValueBindings rejects values changed after their first binding.
 func (c *checker) markAmbiguousGenericValueBindings(
-	file *ast.File,
+	file *syntax.File,
 	bindings map[types.Object]*genericValueBinding,
 ) {
-	ast.Inspect(file, func(node ast.Node) bool {
-		switch statement := node.(type) {
-		case *ast.AssignStmt:
-			c.markAmbiguousGenericTargets(statement.Lhs, statement.Tok, bindings)
-		case *ast.RangeStmt:
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		statement, ok := syntax.StatementOf(node)
+		if !ok {
+			return true
+		}
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
 			c.markAmbiguousGenericTargets(
-				[]ast.Expr{statement.Key, statement.Value}, statement.Tok, bindings,
+				assignment.Left, assignment.Operator, bindings,
+			)
+		}
+		if rangeStatement := syntax.RangeStatementOf(statement); rangeStatement != nil {
+			c.markAmbiguousGenericTargets(
+				[]*syntax.Expression{rangeStatement.Key, rangeStatement.Value},
+				rangeStatement.Operator, bindings,
 			)
 		}
 		return true
@@ -88,41 +100,41 @@ func (c *checker) markAmbiguousGenericValueBindings(
 }
 
 func (c *checker) markAmbiguousGenericTargets(
-	targets []ast.Expr,
+	targets []*syntax.Expression,
 	operator token.Token,
 	bindings map[types.Object]*genericValueBinding,
 ) {
 	for _, target := range targets {
-		name, ok := target.(*ast.Ident)
-		if !ok || name == nil {
+		name := syntax.IdentifierExpressionOf(target)
+		if name == nil {
 			continue
 		}
-		if operator == token.DEFINE && c.pass.TypesInfo.Defs[name] != nil {
+		if operator == token.DEFINE && c.facts.DefinitionName(name) != nil {
 			continue
 		}
-		if binding, found := bindings[c.pass.TypesInfo.ObjectOf(name)]; found {
+		if binding, found := bindings[c.facts.Object(name)]; found {
 			binding.ambiguous = true
 		}
 	}
 }
 
 func (c *checker) collectAssignedGenericValues(
-	left []ast.Expr,
-	right []ast.Expr,
+	left []*syntax.Expression,
+	right []*syntax.Expression,
 	summaries map[*types.Func]*genericEffectSummary,
 	bindings map[types.Object]*genericValueBinding,
-	sources map[ast.Expr]bool,
+	sources map[*syntax.Expression]bool,
 ) {
 	if len(left) != len(right) {
 		return
 	}
 	for index, expression := range right {
 		value, ok := c.genericValue(expression, summaries)
-		name, named := left[index].(*ast.Ident)
-		if !ok || !named || name.Name == "_" {
+		name := syntax.IdentifierExpressionOf(left[index])
+		if !ok || name == nil || name.Name == "_" {
 			continue
 		}
-		object := c.pass.TypesInfo.ObjectOf(name)
+		object := c.facts.Object(name)
 		if object == nil {
 			continue
 		}
@@ -139,11 +151,11 @@ func (c *checker) collectAssignedGenericValues(
 
 // genericValue resolves the effects carried by a function value expression.
 func (c *checker) genericValue(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	summaries map[*types.Func]*genericEffectSummary,
 ) (genericValue, bool) {
-	if call, ok := unparenthesized(expression).(*ast.CallExpr); ok {
-		function, receiverArguments, typeArguments := c.genericCall(call)
+	if callExpression := unparenthesized(expression); syntax.CallExpressionOf(callExpression) != nil {
+		function, receiverArguments, typeArguments := c.genericCall(callExpression)
 		if function == nil {
 			return noGenericValue(), false
 		}
@@ -153,7 +165,8 @@ func (c *checker) genericValue(
 			return genericValue{
 				function: function, fact: fact,
 				receiverArguments: receiverArguments,
-				typeArguments:     typeArguments, conditionCall: call, returned: true,
+				typeArguments:     typeArguments, conditionCall: callExpression,
+				returned: true,
 			}, true
 		}
 		return noGenericValue(), false
@@ -171,7 +184,7 @@ func (c *checker) genericValue(
 		return noGenericValue(), false
 	}
 	var typeArguments []types.Type = nil
-	if instance, ok := c.pass.TypesInfo.Instances[identifier]; ok {
+	if instance, ok := c.facts.Instance(identifier); ok {
 		typeArguments = typeList(instance.TypeArgs)
 	}
 	return genericValue{
@@ -185,9 +198,9 @@ func (c *checker) genericValue(
 
 // reportDirectGenericValueEscape rejects an effectful value with no checked call site.
 func (c *checker) reportDirectGenericValueEscape(
-	expression ast.Expr,
+	expression *syntax.Expression,
 	summaries map[*types.Func]*genericEffectSummary,
-	sources map[ast.Expr]bool,
+	sources map[*syntax.Expression]bool,
 ) {
 	if sources[expression] || c.calledDirectly(expression) || c.discardedValue(expression) ||
 		c.genericInstantiationPart(expression) {
@@ -199,105 +212,141 @@ func (c *checker) reportDirectGenericValueEscape(
 	}
 }
 
-func (c *checker) genericInstantiationPart(expression ast.Expr) bool {
-	switch parent := c.parents[expression].(type) {
-	case *ast.IndexExpr:
-		return parent.X == expression
-	case *ast.IndexListExpr:
-		return parent.X == expression
+func (c *checker) genericInstantiationPart(expression *syntax.Expression) bool {
+	parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(expression)])
+	if !ok {
+		return false
 	}
-	return false
+	if index := syntax.IndexExpressionOf(parent); index != nil {
+		return index.Expression == expression
+	}
+	index := syntax.IndexListExpressionOf(parent)
+	return index != nil && index.Expression == expression
 }
 
 func (c *checker) reportReturnedGenericCall(
-	call *ast.CallExpr,
+	expression *syntax.Expression,
 	summaries map[*types.Func]*genericEffectSummary,
-	sources map[ast.Expr]bool,
+	sources map[*syntax.Expression]bool,
 ) {
-	value, ok := c.genericValue(call, summaries)
-	if !ok || !value.returned || sources[call] {
+	value, ok := c.genericValue(expression, summaries)
+	if !ok || !value.returned || sources[expression] {
 		return
 	}
-	if invocation := c.directCallOf(call); invocation != nil {
+	if invocation := c.directCallOf(expression); invocation != nil {
 		c.reportGenericValueCall(invocation, value)
 		return
 	}
-	if c.discardedValue(call) || c.expressionStatement(call) {
+	if c.discardedValue(expression) || c.expressionStatement(expression) {
 		return
 	}
-	c.reportGenericValueEscape(call, value)
+	c.reportGenericValueEscape(expression, value)
 }
 
-func (c *checker) directCallOf(expression ast.Expr) *ast.CallExpr {
-	current := ast.Node(expression)
+func (c *checker) directCallOf(expression *syntax.Expression) *syntax.Expression {
+	current := expression
 	for {
-		parentheses, ok := c.parents[current].(*ast.ParenExpr)
+		parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
 		if !ok {
+			return nil
+		}
+		parentheses := syntax.ParenthesizedExpressionOf(parent)
+		if parentheses == nil || parentheses.Expression != current {
 			break
 		}
-		current = parentheses
+		current = parent
 	}
-	call, ok := c.parents[current].(*ast.CallExpr)
-	if ok && call.Fun == current {
-		return call
+	parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
+	if !ok {
+		return nil
+	}
+	call := syntax.CallExpressionOf(parent)
+	if call != nil && call.Callee == current {
+		return parent
 	}
 	return nil
 }
 
-func (c *checker) discardedValue(expression ast.Expr) bool {
-	current := ast.Node(expression)
+func (c *checker) discardedValue(expression *syntax.Expression) bool {
+	current := expression
 	for {
-		parentheses, ok := c.parents[current].(*ast.ParenExpr)
+		parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
 		if !ok {
 			break
 		}
-		current = parentheses
+		parentheses := syntax.ParenthesizedExpressionOf(parent)
+		if parentheses == nil || parentheses.Expression != current {
+			break
+		}
+		current = parent
 	}
-	assignment, ok := c.parents[current].(*ast.AssignStmt)
-	if !ok || len(assignment.Lhs) != len(assignment.Rhs) {
+	statement, ok := syntax.StatementOf(c.parents[syntax.ExpressionNode(current)])
+	if !ok {
 		return false
 	}
-	for index, right := range assignment.Rhs {
+	assignment := syntax.AssignmentStatementOf(statement)
+	if assignment == nil || len(assignment.Left) != len(assignment.Right) {
+		return false
+	}
+	for index, right := range assignment.Right {
 		if right != current {
 			continue
 		}
-		name, blank := assignment.Lhs[index].(*ast.Ident)
-		return blank && name.Name == "_"
+		name := syntax.IdentifierExpressionOf(assignment.Left[index])
+		return name != nil && name.Name == "_"
 	}
 	return false
 }
 
-func (c *checker) expressionStatement(expression ast.Expr) bool {
-	current := ast.Node(expression)
+func (c *checker) expressionStatement(expression *syntax.Expression) bool {
+	current := expression
 	for {
-		parentheses, ok := c.parents[current].(*ast.ParenExpr)
+		parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
 		if !ok {
 			break
 		}
-		current = parentheses
+		parentheses := syntax.ParenthesizedExpressionOf(parent)
+		if parentheses == nil || parentheses.Expression != current {
+			break
+		}
+		current = parent
 	}
-	statement, ok := c.parents[current].(*ast.ExprStmt)
-	return ok && statement.X == current
+	statement, ok := syntax.StatementOf(c.parents[syntax.ExpressionNode(current)])
+	if !ok {
+		return false
+	}
+	expressionStatement := syntax.ExpressionStatementOf(statement)
+	return expressionStatement != nil && expressionStatement.Expression == current
 }
 
 func (c *checker) reportBoundGenericValueUse(
-	name *ast.Ident,
+	expression *syntax.Expression,
 	bindings map[types.Object]*genericValueBinding,
 ) {
-	binding, found := bindings[c.pass.TypesInfo.Uses[name]]
-	if !found || c.discardedValue(name) {
+	name := syntax.IdentifierExpressionOf(expression)
+	if name == nil {
 		return
 	}
-	if call := c.directCallOf(name); call != nil && !binding.ambiguous {
+	binding, found := bindings[c.facts.Object(name)]
+	if !found || c.discardedValue(expression) {
+		return
+	}
+	if call := c.directCallOf(expression); call != nil && !binding.ambiguous {
 		c.reportGenericValueCall(call, binding.value)
 		return
 	}
-	c.reportGenericValueEscape(name, binding.value)
+	c.reportGenericValueEscape(expression, binding.value)
 }
 
 // reportGenericValueCall checks saved effects with the current call arguments.
-func (c *checker) reportGenericValueCall(call *ast.CallExpr, value genericValue) {
-	conditionCall := call
+func (c *checker) reportGenericValueCall(
+	expression *syntax.Expression,
+	value genericValue,
+) {
+	if syntax.CallExpressionOf(expression) == nil {
+		return
+	}
+	conditionCall := expression
 	effectsZero := value.fact.ZeroEffects
 	effectsAccess := value.fact.AccessEffects
 	description := "call to " + value.function.Name()
@@ -307,14 +356,14 @@ func (c *checker) reportGenericValueCall(call *ast.CallExpr, value genericValue)
 		effectsAccess = value.fact.ReturnedAccessEffects
 		description = "call to function returned by " + value.function.Name()
 	}
-	c.reportGenericEffects(call, conditionCall, effectsZero,
+	c.reportGenericEffects(expression, conditionCall, effectsZero,
 		value.receiverArguments, value.typeArguments, true, description)
-	c.reportGenericEffects(call, conditionCall, effectsAccess,
+	c.reportGenericEffects(expression, conditionCall, effectsAccess,
 		value.receiverArguments, value.typeArguments, false, description)
 }
 
 // reportGenericValueEscape reports effects that escape local call analysis.
-func (c *checker) reportGenericValueEscape(position ast.Expr, value genericValue) {
+func (c *checker) reportGenericValueEscape(position *syntax.Expression, value genericValue) {
 	if !c.genericValueAffectsModel(value) {
 		return
 	}
@@ -323,7 +372,7 @@ func (c *checker) reportGenericValueEscape(position ast.Expr, value genericValue
 		description = "function returned by " + value.function.Name()
 	}
 	c.reportResult(
-		position.Pos(),
+		syntax.ExpressionPosition(position),
 		"%s escapes; its effects cannot be checked at a call site",
 		description,
 	)
@@ -350,16 +399,19 @@ func (c *checker) genericValueAffectsModel(value genericValue) bool {
 	return false
 }
 
-func (c *checker) calledDirectly(expression ast.Expr) bool {
+func (c *checker) calledDirectly(expression *syntax.Expression) bool {
 	current := expression
 	for {
-		parent := c.parents[current]
-		parentheses, ok := parent.(*ast.ParenExpr)
+		parent, ok := syntax.ExpressionOf(c.parents[syntax.ExpressionNode(current)])
 		if !ok {
-			call, called := parent.(*ast.CallExpr)
-			return called && call.Fun == current
+			return false
 		}
-		current = parentheses
+		parentheses := syntax.ParenthesizedExpressionOf(parent)
+		if parentheses == nil || parentheses.Expression != current {
+			call := syntax.CallExpressionOf(parent)
+			return call != nil && call.Callee == current
+		}
+		current = parent
 	}
 }
 
