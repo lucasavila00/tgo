@@ -249,6 +249,10 @@ func (p *packageUnit) checkAndLower() error {
 	if len(p.typeErrors) > 0 {
 		return p.typeErrors[0]
 	}
+	p.checkEnumJSONFields()
+	if len(p.errors) > 0 {
+		return p.errors[0]
+	}
 	p.applyEnumLayouts()
 	p.typecheck()
 	if len(p.typeErrors) > 0 {

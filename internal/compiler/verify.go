@@ -39,7 +39,7 @@ func VerifyGeneratedModels(
 	expected, err := parser.ParseFile(
 		expectedFiles,
 		sourceName+".expected.go",
-		"package verify\n"+expectedModelText(sourceName, parsed.Models),
+		"package verify\n"+expectedModelText(sourceName, parsed),
 		parser.SkipObjectResolution,
 	)
 	if err != nil {
@@ -72,12 +72,13 @@ func VerifyGeneratedModels(
 	return nil
 }
 
-func expectedModelText(sourceName string, models []*model) string {
+func expectedModelText(sourceName string, parsed *source) string {
 	var output bytes.Buffer
-	for _, declaration := range models {
+	for _, declaration := range parsed.Models {
 		switch {
 		case declaration.Enum:
 			output.WriteString(enumGo(sourceName, declaration))
+			output.WriteString(enumJSONGo(declaration, parsed.JSONPackage, parsed.FmtPackage))
 		case declaration.Predicate != "":
 			output.WriteString(checkedGo(sourceName, declaration))
 		default:
