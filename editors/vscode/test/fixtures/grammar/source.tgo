@@ -5,6 +5,10 @@ type Event enum {
 }
 
 type Port int where value > 0
+type PositivePoint struct { X int } where value.X > 0
+type Multiline int where
+	value > 0
+type WhereAlias where
 
 func read(ok bool, owner %User) error {
 	_ = Request{..default}

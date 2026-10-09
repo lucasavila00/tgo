@@ -27,7 +27,7 @@
           ]
         },
         {
-          "begin": "(?=\\btype\\s+[A-Za-z_]\\w*\\s+[^\\r\\n{}=]*?\\bwhere\\b)",
+          "begin": "(?=\\btype\\s+[A-Za-z_]\\w*\\s+(?:(?:struct|interface)[ \\t]*\\{[^\\r\\n]*\\}|[^{}=\\r\\n]+?)[ \\t]+\\bwhere\\b)",
           "end": "(?=\\r?$)",
           "patterns": [
             {

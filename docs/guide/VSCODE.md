@@ -3,7 +3,8 @@
 The TGo extension provides syntax highlighting, go to definition, find references, document
 symbols, and workspace symbols. It does not edit source or report diagnostics.
 
-Build and install the private extension for the current host:
+On macOS, Linux, or another Unix system, build and install the private extension for the
+current host:
 
 ```sh
 ./vscode.sh

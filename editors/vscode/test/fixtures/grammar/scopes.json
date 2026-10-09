@@ -10,6 +10,22 @@
     "has": "keyword.control.where.tgo"
   },
   {
+    "line": "type PositivePoint struct { X int } where value.X > 0",
+    "token": "where",
+    "has": "keyword.control.where.tgo"
+  },
+  {
+    "line": "type Multiline int where",
+    "token": "where",
+    "has": "keyword.control.where.tgo"
+  },
+  {
+    "line": "type WhereAlias where",
+    "token": "where",
+    "has": "identifier.go",
+    "not": "keyword.control.where.tgo"
+  },
+  {
     "line": "_ = Request{..default}",
     "token": "..default",
     "has": "keyword.other.default.tgo"
