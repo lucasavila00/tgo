@@ -165,6 +165,7 @@ func (p *printer) caseClause(value *syntax.CaseClause) {
 		p.commaList(value.List)
 	}
 	p.token(value.Colon, ":")
+	p.trailingToken(value.Colon, 1)
 	if len(value.Body) == 0 {
 		return
 	}
@@ -215,6 +216,7 @@ func (p *printer) communicationClause(value *syntax.CommunicationClause) {
 		p.statement(value.Communication)
 	}
 	p.token(value.Colon, ":")
+	p.trailingToken(value.Colon, 1)
 	if len(value.Body) == 0 {
 		return
 	}

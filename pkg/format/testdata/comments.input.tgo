@@ -12,3 +12,6 @@ result:=value+other // result
 
 return result
 }
+func label(value int)int{switch value{case 1: // one
+return 1
+default:return 0}} // label

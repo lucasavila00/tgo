@@ -69,6 +69,7 @@ func (p *printer) printFile() []byte {
 			p.blankline()
 		}
 		p.declaration(declaration)
+		p.trailingLine(syntax.DeclarationEnd(declaration))
 		p.newline()
 	}
 	p.before(token.Pos(^uint(0) >> 1))

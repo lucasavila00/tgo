@@ -149,6 +149,7 @@ func (p *printer) enumDeclaration(value *syntax.EnumDeclaration) {
 			p.blankline()
 		}
 		p.enumVariant(variant)
+		p.trailingLine(variant.Stop)
 		p.newline()
 	}
 	p.indent--
@@ -170,6 +171,7 @@ func (p *printer) enumVariant(value *syntax.EnumVariant) {
 				p.blankline()
 			}
 			p.tgoField(field)
+			p.trailingLine(field.Stop)
 			p.newline()
 		}
 		p.indent--
@@ -198,6 +200,7 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 				p.blankline()
 			}
 			p.tgoField(field)
+			p.trailingLine(field.Stop)
 			p.newline()
 		}
 		p.indent--
