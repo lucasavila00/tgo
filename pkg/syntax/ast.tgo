@@ -552,6 +552,7 @@ type EnumVariant struct {
 	Lbrace  token.Pos
 	Fields  []%TGoField
 	Rbrace  token.Pos
+	Tag     *BasicLiteral
 	Comment *CommentGroup
 }
 
@@ -562,6 +563,7 @@ type EnumDeclaration struct {
 	Type     token.Pos
 	Name     %Identifier
 	Enum     token.Pos
+	Tag      *BasicLiteral
 	Lbrace   token.Pos
 	Variants []%EnumVariant
 	Rbrace   token.Pos

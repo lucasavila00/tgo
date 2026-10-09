@@ -279,6 +279,7 @@ func (c %converter) enumDeclaration(value *frontEnumDecl) %EnumDeclaration {
 		Span: Span{Start: value.Pos(), Stop: value.End()},
 		Doc: c.commentGroup(value.Doc), Type: value.Type,
 		Name: c.identifierRequired(value.Name), Enum: value.Enum, Lbrace: value.Lbrace,
+		Tag: c.basicLiteral(value.Tag),
 		Variants: nil, Rbrace: value.Rbrace, Comment: c.commentGroup(value.Comment),
 	}
 	for _, variant := range value.Variants {
@@ -287,6 +288,7 @@ func (c %converter) enumDeclaration(value *frontEnumDecl) %EnumDeclaration {
 			Doc: c.commentGroup(variant.Doc),
 			Name: c.identifierRequired(variant.Name),
 			Struct: variant.Struct, Lbrace: variant.Lbrace,
+			Tag: c.basicLiteral(variant.Tag),
 			Fields: c.tgoFields(variant.Fields), Rbrace: variant.Rbrace,
 			Comment: c.commentGroup(variant.Comment),
 		}

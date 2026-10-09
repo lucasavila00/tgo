@@ -12,6 +12,7 @@ import (
 type AnalysisSource struct {
 	Syntax    *syntax.File
 	Projected *ast.File
+	Generated map[ast.Decl]bool
 }
 
 // AnalysisPackage contains checked TGo source and its typed projection.
@@ -60,8 +61,14 @@ func AnalyzePackage(
 	sources := make([]AnalysisSource, 0, len(unit.Sources))
 	nonNil := make(map[token.Pos]bool)
 	for _, source := range unit.Sources {
+		generated := make(map[ast.Decl]bool)
+		for _, declaration := range source.File.Decls {
+			if unit.generatedDecl(declaration) {
+				generated[declaration] = true
+			}
+		}
 		sources = append(sources, AnalysisSource{
-			Syntax: source.Tree, Projected: source.File,
+			Syntax: source.Tree, Projected: source.File, Generated: generated,
 		})
 		for position := range source.NonNil {
 			nonNil[position] = true

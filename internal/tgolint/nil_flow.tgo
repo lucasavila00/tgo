@@ -148,11 +148,28 @@ func (c %checker) checkNilSafety(analysis *compiler.AnalysisPackage) {
 			analysis.NonNil,
 		)
 		sourceEnvironment.collectNilContracts()
+		sourceEnvironment.files = userSourceFiles(analysis)
 		sourceEnvironment.copyPackageContracts(goEnvironment)
 		sourceEnvironment.exportContracts(c.pass)
 		sourceEnvironment.checkNilFiles()
 	}
 	goEnvironment.checkNilFiles()
+}
+
+// userSourceFiles removes generated declarations from source checks.
+func userSourceFiles(analysis %compiler.AnalysisPackage) []*ast.File {
+	result := make([]*ast.File, 0, len(analysis.Sources))
+	for _, source := range analysis.Sources {
+		file := *source.Projected
+		file.Decls = make([]ast.Decl, 0, len(source.Projected.Decls))
+		for _, declaration := range source.Projected.Decls {
+			if !source.Generated[declaration] {
+				file.Decls = append(file.Decls, declaration)
+			}
+		}
+		result = append(result, &file)
+	}
+	return result
 }
 
 // packageDirectory returns the directory that owns the loaded package.

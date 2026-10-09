@@ -17,7 +17,7 @@ func TestCaseTagsRejectsRepeatedTags(t *testing.T) {
 		second: {Value: constant.MakeInt64(1)},
 	}}
 	reports := 0
-	c := checker{pass: &analysis.Pass{
+	c := &checker{pass: &analysis.Pass{
 		TypesInfo: info,
 		Report:    func(analysis.Diagnostic) { reports++ },
 	}}
@@ -36,7 +36,7 @@ func TestCaseTagsRejectsTagFromEarlierCase(t *testing.T) {
 		expression: {Value: constant.MakeInt64(1)},
 	}}
 	reports := 0
-	c := checker{pass: &analysis.Pass{
+	c := &checker{pass: &analysis.Pass{
 		TypesInfo: info,
 		Report:    func(analysis.Diagnostic) { reports++ },
 	}}

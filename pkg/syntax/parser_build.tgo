@@ -49,6 +49,7 @@ func (p %sourceParser) makeDeclaration(
 			Type:     p.pos(p.tokens[raw.typeToken].start),
 			Name:     name,
 			Enum:     p.pos(p.tokens[raw.keyword].start),
+			Tag:      p.enumTag(raw.tag),
 			Lbrace:   p.pos(p.tokens[raw.open].start),
 			Variants: nil,
 			Rbrace:   p.pos(p.tokens[raw.close].start),
@@ -71,6 +72,7 @@ func (p %sourceParser) makeDeclaration(
 					Obj:     nil,
 				},
 				Struct:  p.pos(p.tokens[rawVariant.structToken].start),
+				Tag:     p.enumTag(rawVariant.tag),
 				Lbrace:  p.pos(p.tokens[rawVariant.open].start),
 				Fields:  fields,
 				Rbrace:  p.pos(p.tokens[rawVariant.close].start),
@@ -259,4 +261,16 @@ func (p %sourceParser) parseExpression(
 	anchors := make(map[frontNode]frontNode)
 	p.sanitize(value, defaultAt, anchors)
 	return value, anchors, nil
+}
+
+func (p %sourceParser) enumTag(index int) *ast.BasicLit {
+	if index < 0 {
+		return nil
+	}
+	return &ast.BasicLit{
+		ValuePos: p.pos(p.tokens[index].start),
+		Kind:     token.STRING,
+		Value:    p.tokens[index].text,
+		ValueEnd: token.NoPos,
+	}
 }
