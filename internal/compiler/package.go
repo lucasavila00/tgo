@@ -29,7 +29,6 @@ type packageUnit struct {
 	sourceReferences map[token.Pos]types.Object
 	erasedImports    map[*ast.ImportSpec]bool
 	references       []generatedReference
-	usedIdentifiers  map[string]bool
 	typeErrors       []error
 	errors           []error
 }

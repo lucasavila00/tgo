@@ -15,7 +15,6 @@ func (p *packageUnit) prepare() {
 	p.sourceReferences = make(map[token.Pos]types.Object)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
-	p.usedIdentifiers = nil
 	for _, source := range p.Sources {
 		p.markGenerated(source)
 		p.lowerSuccessReturns(source)
@@ -266,7 +265,7 @@ func (p *packageUnit) checkedConstructorCall(
 			Value: value,
 		})
 	}
-	inputName := p.freshIdentifier("tgoInput")
+	inputName := freshASTIdentifier(file, "tgoInput")
 	arguments := make([]ast.Expr, len(values))
 	for index := range arguments {
 		arguments[index] = &ast.SelectorExpr{

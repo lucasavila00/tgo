@@ -87,13 +87,13 @@ func (p *sourceParser) makeComprehension(
 		switch rawClause := *clause; rawClause.Tag() {
 		case rawComprehensionClauseTagRange:
 			rawRange := rawClause.RangePayload()
-			source, found, tgoErr := p.parseExpression(
+			source, found, err_1 := p.parseExpression(
 				p.tokens[rawRange.sourceStart].start,
 				p.tokens[rawRange.sourceEnd].start,
 				defaultAt,
 			)
-			if tgoErr != nil {
-				return nil, nil, tgoErr
+			if err_1 != nil {
+				return nil, nil, err_1
 			}
 			for child, parent := range found {
 				anchors[child] = parent
@@ -125,13 +125,13 @@ func (p *sourceParser) makeComprehension(
 			result.Clauses = append(result.Clauses, item)
 		case rawComprehensionClauseTagFilter:
 			rawFilter := rawClause.FilterPayload()
-			condition, found, tgoErr2 := p.parseExpression(
+			condition, found, err_2 := p.parseExpression(
 				p.tokens[rawFilter.conditionStart].start,
 				p.tokens[rawFilter.conditionEnd].start,
 				defaultAt,
 			)
-			if tgoErr2 != nil {
-				return nil, nil, tgoErr2
+			if err_2 != nil {
+				return nil, nil, err_2
 			}
 			for child, parent := range found {
 				anchors[child] = parent
@@ -253,9 +253,9 @@ func (p *sourceParser) makeDeclaration(
 			Name:    p.tokens[rawStruct.name].text,
 			Obj:     nil,
 		}
-		fields, fieldAnchors, tgoErr := p.makeFields(rawStruct.fields, defaultAt)
-		if tgoErr != nil {
-			return nil, nil, tgoErr
+		fields, fieldAnchors, err_1 := p.makeFields(rawStruct.fields, defaultAt)
+		if err_1 != nil {
+			return nil, nil, err_1
 		}
 		checked := token.NoPos
 		if rawStruct.checked >= 0 {
@@ -305,13 +305,13 @@ func (p *sourceParser) makeFields(
 				return nil, nil, failure
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
-			parsedDefault, expressionAnchors, tgoErr := p.parseExpression(
+			parsedDefault, expressionAnchors, err_1 := p.parseExpression(
 				p.tokens[raw.assign+1].start,
 				p.tokens[raw.end-1].end,
 				defaultAt,
 			)
-			if tgoErr != nil {
-				return nil, nil, tgoErr
+			if err_1 != nil {
+				return nil, nil, err_1
 			}
 			defaultValue = parsedDefault
 			for extension, parent := range expressionAnchors {

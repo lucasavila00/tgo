@@ -3,7 +3,6 @@ package compiler
 import (
 	"go/ast"
 	"go/types"
-	"strconv"
 )
 
 // functionNames collects names that generated locals must not capture.
@@ -32,19 +31,6 @@ func addTupleNames(names map[string]bool, tuple *types.Tuple) {
 }
 
 // freshName returns a short local name without changing source name resolution.
-func (l *propagationLowerer) freshName(preferred string, fallback string) *ast.Ident {
-	if !l.names[preferred] {
-		l.names[preferred] = true
-		return ast.NewIdent(preferred)
-	}
-	for suffix := 1; ; suffix++ {
-		name := fallback
-		if suffix > 1 {
-			name += strconv.Itoa(suffix)
-		}
-		if !l.names[name] {
-			l.names[name] = true
-			return ast.NewIdent(name)
-		}
-	}
+func (l *propagationLowerer) freshName(preferred string) *ast.Ident {
+	return ast.NewIdent(freshIdentifier(preferred, l.names))
 }

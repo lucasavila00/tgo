@@ -2,10 +2,9 @@
 
 package syntax
 
-import __tgo_json "encoding/json"
-import __tgo_jsonv2 "encoding/json/v2"
-import __tgo_jsontext "encoding/json/jsontext"
-import __tgo_fmt "fmt"
+import "encoding/json"
+import jsonv2 "encoding/json/v2"
+import "encoding/json/jsontext"
 
 import (
 	"fmt"
@@ -72,17 +71,17 @@ type rawDeclBase struct {
 	close     int
 }
 
-func __tgo_rawDecl_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
+func tgorawDeclExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
+	if err := out.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
-	if err := out.WriteToken(__tgo_jsontext.String(name)); err != nil {
+	if err := out.WriteToken(jsontext.String(name)); err != nil {
 		return err
 	}
-	if err := __tgo_jsonv2.MarshalEncode(out, payload); err != nil {
+	if err := jsonv2.MarshalEncode(out, payload); err != nil {
 		return err
 	}
-	return out.WriteToken(__tgo_jsontext.EndObject)
+	return out.WriteToken(jsontext.EndObject)
 }
 
 // rawDecl requires a variant constructor. Its zero value is invalid.
@@ -104,7 +103,7 @@ func (v rawDecl) Tag() rawDeclTag { return v.tgoTag }
 
 // UnknownTag describes an invalid tag.
 func (v rawDecl) UnknownTag() string {
-	return __tgo_fmt.Sprintf("rawDecl: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("rawDecl: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // rawDeclEnum is the Enum payload.
@@ -143,41 +142,41 @@ func (v rawDecl) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case rawDeclTagEnum:
 		payload := v.EnumPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload rawDeclEnum `json:"Enum"`
 		}{Payload: payload})
 	case rawDeclTagStruct:
 		payload := v.StructPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload rawDeclStruct `json:"Struct"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid rawDecl JSON tag")
+		return nil, fmt.Errorf("invalid rawDecl JSON tag")
 	}
 }
 
-func (v rawDecl) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v rawDecl) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case rawDeclTagEnum:
 		payload := v.EnumPayload()
-		return __tgo_rawDecl_external_json_to(out, "Enum", payload)
+		return tgorawDeclExternalJSONTo(out, "Enum", payload)
 	case rawDeclTagStruct:
 		payload := v.StructPayload()
-		return __tgo_rawDecl_external_json_to(out, "Struct", payload)
+		return tgorawDeclExternalJSONTo(out, "Struct", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid rawDecl JSON tag")
+		return fmt.Errorf("invalid rawDecl JSON tag")
 	}
 }
 
 func (v *rawDecl) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one rawDecl JSON variant")
+		return fmt.Errorf("expected one rawDecl JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -186,32 +185,32 @@ func (v *rawDecl) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Enum":
 		var payload rawDeclEnum
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.rawDecl()
 		return nil
 	case "Struct":
 		var payload rawDeclStruct
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.rawDecl()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown rawDecl JSON variant %q", variant)
+		return fmt.Errorf("unknown rawDecl JSON variant %q", variant)
 	}
 }
 
-func (v *rawDecl) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *rawDecl) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one rawDecl JSON variant")
+		return fmt.Errorf("expected one rawDecl JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -256,28 +255,28 @@ func (v *rawDecl) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one rawDecl JSON variant")
+		return fmt.Errorf("expected one rawDecl JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown rawDecl JSON variant %q", unknown)
+		return fmt.Errorf("unknown rawDecl JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload rawDeclEnum
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.rawDecl()
 		return nil
 	case 2:
 		var payload rawDeclStruct
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.rawDecl()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid rawDecl JSON tag")
+		return fmt.Errorf("invalid rawDecl JSON tag")
 	}
 }
 
@@ -337,7 +336,7 @@ func (v rawComprehensionClause) Tag() rawComprehensionClauseTag { return v.tgoTa
 
 // UnknownTag describes an invalid tag.
 func (v rawComprehensionClause) UnknownTag() string {
-	return __tgo_fmt.Sprintf("rawComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+	return fmt.Sprintf("rawComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
 }
 
 // rawComprehensionClauseRange is the Range payload.
@@ -389,41 +388,41 @@ func (v rawComprehensionClause) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case rawComprehensionClauseTagRange:
 		payload := v.RangePayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload rawComprehensionClauseRange `json:"Range"`
 		}{Payload: payload})
 	case rawComprehensionClauseTagFilter:
 		payload := v.FilterPayload()
-		return __tgo_json.Marshal(struct {
+		return json.Marshal(struct {
 			Payload rawComprehensionClauseFilter `json:"Filter"`
 		}{Payload: payload})
 	default:
-		return nil, __tgo_fmt.Errorf("invalid rawComprehensionClause JSON tag")
+		return nil, fmt.Errorf("invalid rawComprehensionClause JSON tag")
 	}
 }
 
-func (v rawComprehensionClause) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
+func (v rawComprehensionClause) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case rawComprehensionClauseTagRange:
 		payload := v.RangePayload()
-		return __tgo_rawDecl_external_json_to(out, "Range", payload)
+		return tgorawDeclExternalJSONTo(out, "Range", payload)
 	case rawComprehensionClauseTagFilter:
 		payload := v.FilterPayload()
-		return __tgo_rawDecl_external_json_to(out, "Filter", payload)
+		return tgorawDeclExternalJSONTo(out, "Filter", payload)
 	default:
-		return __tgo_fmt.Errorf("invalid rawComprehensionClause JSON tag")
+		return fmt.Errorf("invalid rawComprehensionClause JSON tag")
 	}
 }
 
 func (v *rawComprehensionClause) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
-	var object map[string]__tgo_json.RawMessage
-	if err := __tgo_json.Unmarshal(data, &object); err != nil {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
 	if len(object) != 1 {
-		return __tgo_fmt.Errorf("expected one rawComprehensionClause JSON variant")
+		return fmt.Errorf("expected one rawComprehensionClause JSON variant")
 	}
 	for key, value := range object {
 		variant = key
@@ -432,32 +431,32 @@ func (v *rawComprehensionClause) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Range":
 		var payload rawComprehensionClauseRange
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.rawComprehensionClause()
 		return nil
 	case "Filter":
 		var payload rawComprehensionClauseFilter
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
+		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
 		*v = payload.rawComprehensionClause()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("unknown rawComprehensionClause JSON variant %q", variant)
+		return fmt.Errorf("unknown rawComprehensionClause JSON variant %q", variant)
 	}
 }
 
-func (v *rawComprehensionClause) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
+func (v *rawComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
 	}
 	if token.Kind() != '{' {
-		return __tgo_fmt.Errorf("expected one rawComprehensionClause JSON variant")
+		return fmt.Errorf("expected one rawComprehensionClause JSON variant")
 	}
-	var payloadData __tgo_jsontext.Value
+	var payloadData jsontext.Value
 	var unknown string
 	selected := 0
 	haveName := false
@@ -502,28 +501,28 @@ func (v *rawComprehensionClause) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) e
 		return err
 	}
 	if !haveName || multiple {
-		return __tgo_fmt.Errorf("expected one rawComprehensionClause JSON variant")
+		return fmt.Errorf("expected one rawComprehensionClause JSON variant")
 	}
 	if selected == 0 {
-		return __tgo_fmt.Errorf("unknown rawComprehensionClause JSON variant %q", unknown)
+		return fmt.Errorf("unknown rawComprehensionClause JSON variant %q", unknown)
 	}
 	switch selected {
 	case 1:
 		var payload rawComprehensionClauseRange
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.rawComprehensionClause()
 		return nil
 	case 2:
 		var payload rawComprehensionClauseFilter
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
+		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
 		*v = payload.rawComprehensionClause()
 		return nil
 	default:
-		return __tgo_fmt.Errorf("invalid rawComprehensionClause JSON tag")
+		return fmt.Errorf("invalid rawComprehensionClause JSON tag")
 	}
 }
 
@@ -784,9 +783,9 @@ func (p *sourceParser) discoverDeclarations() error {
 			}
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, tgoErr := p.closeToken(cursor)
-			if tgoErr != nil {
-				return tgoErr
+			end, err_1 := p.closeToken(cursor)
+			if err_1 != nil {
+				return err_1
 			}
 			cursor = end + 1
 			continue
@@ -861,7 +860,7 @@ func (p *sourceParser) enumDeclaration(
 ) (*rawDecl, int, error) {
 	closing, err := p.closeToken(open)
 	if err != nil {
-		return nil, 0, __tgo_fmt.Errorf("p.closeToken: %w", err)
+		return nil, 0, fmt.Errorf("p.closeToken: %w", err)
 	}
 	tag := -1
 	if keyword+1 < open && p.tokens[keyword+1].kind == token.STRING {
@@ -875,9 +874,9 @@ func (p *sourceParser) enumDeclaration(
 			cursor++
 			continue
 		}
-		variant, next, tgoErr := p.variant(cursor, closing)
-		if tgoErr != nil {
-			return nil, 0, __tgo_fmt.Errorf("p.variant: %w", tgoErr)
+		variant, next, err_1 := p.variant(cursor, closing)
+		if err_1 != nil {
+			return nil, 0, fmt.Errorf("p.variant: %w", err_1)
 		}
 		name := p.tokens[variant.name].text
 		if names[name] && p.mode&AllowInvalidModels == 0 {

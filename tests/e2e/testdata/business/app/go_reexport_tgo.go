@@ -4,13 +4,13 @@ package app
 
 import (
 	bridge "example.com/business/gobridge"
-	__tgo_import_1 "example.com/business/model"
+	"example.com/business/model"
 )
 
 func GoReexportedAccount(name string) any {
-	return __tgo_import_1.AccountPersonal{Name: name}.Account()
+	return model.AccountPersonal{Name: name}.Account()
 }
 
 func GoReexportedRequest(id string) any {
-	return bridge.Request{ID: id, Tags: __tgo_import_1.TgoDefaultRequestTags()}
+	return bridge.Request{ID: id, Tags: model.TgoDefaultRequestTags()}
 }

@@ -86,6 +86,7 @@ type propagationSource struct {
 
 type comprehensionSource struct {
 	Position token.Pos
+	Result   string
 	Map      bool
 }
 
