@@ -19,6 +19,8 @@ Boolean guards, early exits, loops, assignments, swaps, saved guards, and later 
    proofs through two aliases do not survive the branch join.
 7. An early branch join collapses related alternatives. A later nil check cannot remove
    an impossible alternative, so the remaining proof is lost.
+8. A saved compound guard can lose its known false result after a source value changes.
+   Its body then reports an error even though the body cannot run.
 
 The fixes use three independent branches from `main`. One fixes nil unions and Boolean
 reachability. One fixes parallel assignment identities. One keeps relational branch
