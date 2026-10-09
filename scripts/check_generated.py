@@ -45,7 +45,8 @@ def generated_files(repository: Path) -> dict[Path, bytes]:
         root = repository / relative_root
         if not root.is_dir():
             continue
-        for path in sorted(root.rglob("*_tgo.go")):
+        paths = set(root.rglob("*_tgo.go")) | set(root.rglob("*_tgo_*.go"))
+        for path in sorted(paths):
             files[path.relative_to(repository)] = path.read_bytes()
     return files
 

@@ -12,7 +12,10 @@ collection operations.
 Ignore `.tgo.lock`. Do not replace it with a link.
 Use Go build constraints and target suffixes on tgo files.
 For example, `store_linux.tgo` emits `store_tgo_linux.go`.
-Do not put tgo source in `_test.tgo`, hidden, `_`, `testdata`, or `vendor` paths.
+Write tests for a TGo package in `_test.tgo` files. The compiler emits
+`_tgo_test.go` files for the Go tool. Keep tests for a Go package in
+`_test.go` files. Do not put TGo source in hidden, `_`, `testdata`, or
+`vendor` paths.
 
 ## Sum types
 
