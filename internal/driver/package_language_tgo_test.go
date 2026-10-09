@@ -168,6 +168,32 @@ func TestBuildIgnoresInactiveOtherLanguage(t *testing.T) {
 	}
 }
 
+func TestMatchingTestSourcesIgnoresCgoWhenDisabled(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	path := filepath.Join(directory, "app_test.tgo")
+	writePackageLanguageFile(
+		t,
+		directory,
+		"app_test.tgo",
+		"package app\n\nimport \"C\"\n",
+	)
+	buildContext := build.Default
+	buildContext.CgoEnabled = false
+	unit := packageUnit{
+		Dir:             directory,
+		testSourcePaths: []string{path},
+		context:         &buildContext,
+	}
+	paths, err := unit.matchingTestSources()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 0 {
+		t.Fatalf("matching test sources = %v, want none", paths)
+	}
+}
+
 func writePackageLanguageFile(t *testing.T, directory, name, data string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(directory, name), []byte(data), 0o600); err != nil {

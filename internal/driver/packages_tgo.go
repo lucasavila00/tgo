@@ -208,9 +208,18 @@ func (p *packageUnit) matchingTestSources() ([]string, error) {
 			p.matchError = err
 			return nil, err
 		}
-		if match {
-			p.matchingTestPaths = append(p.matchingTestPaths, path)
+		if !match {
+			continue
 		}
+		cgo, err := fileImportsC(path)
+		if err != nil {
+			p.matchError = err
+			return nil, err
+		}
+		if cgo && !p.context.CgoEnabled {
+			continue
+		}
+		p.matchingTestPaths = append(p.matchingTestPaths, path)
 	}
 	return p.matchingTestPaths, nil
 }
