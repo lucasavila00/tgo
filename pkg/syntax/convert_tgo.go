@@ -28,6 +28,16 @@ func ParseFile(
 	return result, nil
 }
 
+// ParseGoFile parses one Go source file into the public syntax ADT.
+func ParseGoFile(
+	files *token.FileSet,
+	filename string,
+	source []byte,
+	mode Mode,
+) (*File, error) {
+	return ParseFile(files, filename, source, mode|goSource)
+}
+
 type converter struct {
 	front                *frontFile
 	propagation          map[ast.Expr]*frontPropagateExpr
@@ -241,68 +251,68 @@ func (c *converter) comprehensionExpression(
 				)
 			}
 			payload.Clauses = append(
-				payload.Clauses, NewComprehensionClauseRange(ComprehensionClauseRange{Value: rangeClause}),
+				payload.Clauses, ComprehensionClauseRange{Value: rangeClause}.ComprehensionClause(),
 			)
 			continue
 		}
 		payload.Clauses = append(
-			payload.Clauses, NewComprehensionClauseFilter(ComprehensionClauseFilter{Value: &ComprehensionFilterClause{
+			payload.Clauses, ComprehensionClauseFilter{Value: &ComprehensionFilterClause{
 				Span:      Span{Start: clause.Pos(), Stop: clause.End()},
 				If:        clause.Keyword,
 				Condition: c.expressionRequired(clause.Expression),
 				Lbrace:    clause.Lbrace, Rbrace: clause.Rbrace,
-			}}),
+			}}.ComprehensionClause(),
 		)
 	}
-	result := NewExpressionComprehension(ExpressionComprehension{Value: payload})
+	result := ExpressionComprehension{Value: payload}.Expression()
 	return &result
 }
 
 func (c *converter) expressionRaw(value ast.Expr) *Expression {
 	switch item := value.(type) {
 	case *ast.BadExpr:
-		result := NewExpressionBad(ExpressionBad{Value: &BadExpression{
+		result := ExpressionBad{Value: &BadExpression{
 			Span: span(item), From: item.From, To: item.To,
-		}})
+		}}.Expression()
 		return &result
 	case *ast.Ident:
-		result := NewExpressionIdentifier(ExpressionIdentifier{Value: c.identifierRequired(item)})
+		result := ExpressionIdentifier{Value: c.identifierRequired(item)}.Expression()
 		return &result
 	case *ast.Ellipsis:
-		result := NewExpressionEllipsis(ExpressionEllipsis{Value: &EllipsisExpression{
+		result := ExpressionEllipsis{Value: &EllipsisExpression{
 			Span: span(item), Ellipsis: item.Ellipsis, Element: c.expression(item.Elt),
-		}})
+		}}.Expression()
 		return &result
 	case *ast.BasicLit:
-		result := NewExpressionBasicLiteral(ExpressionBasicLiteral{Value: c.basicLiteralRequired(item)})
+		result := ExpressionBasicLiteral{Value: c.basicLiteralRequired(item)}.Expression()
 		return &result
 	case *ast.FuncLit:
-		result := NewExpressionFunctionLiteral(ExpressionFunctionLiteral{Value: &FunctionLiteral{
+		result := ExpressionFunctionLiteral{Value: &FunctionLiteral{
 			Span: span(item), Type: c.functionTypeRequired(item.Type),
 			Body: c.blockRequired(item.Body),
-		}})
+		}}.Expression()
 		return &result
 	case *ast.CompositeLit:
-		result := NewExpressionCompositeLiteral(ExpressionCompositeLiteral{Value: c.compositeLiteral(item)})
+		result := ExpressionCompositeLiteral{Value: c.compositeLiteral(item)}.Expression()
 		return &result
 	case *ast.ParenExpr:
-		result := NewExpressionParenthesized(ExpressionParenthesized{Value: &ParenthesizedExpression{
+		result := ExpressionParenthesized{Value: &ParenthesizedExpression{
 			Span: span(item), Lparen: item.Lparen,
 			Expression: c.expressionRequired(item.X), Rparen: item.Rparen,
-		}})
+		}}.Expression()
 		return &result
 	case *ast.SelectorExpr:
-		result := NewExpressionSelector(ExpressionSelector{Value: &SelectorExpression{
+		result := ExpressionSelector{Value: &SelectorExpression{
 			Span: span(item), Expression: c.expressionRequired(item.X),
 			Selector: c.identifierRequired(item.Sel),
-		}})
+		}}.Expression()
 		return &result
 	case *ast.IndexExpr:
-		result := NewExpressionIndex(ExpressionIndex{Value: &IndexExpression{
+		result := ExpressionIndex{Value: &IndexExpression{
 			Span: span(item), Expression: c.expressionRequired(item.X),
 			Lbrack: item.Lbrack, Index: c.expressionRequired(item.Index),
 			Rbrack: item.Rbrack,
-		}})
+		}}.Expression()
 		return &result
 	case *ast.IndexListExpr:
 		value := &IndexListExpression{
@@ -310,91 +320,91 @@ func (c *converter) expressionRaw(value ast.Expr) *Expression {
 			Lbrack: item.Lbrack, Indices: nil, Rbrack: item.Rbrack,
 		}
 		value.Indices = c.expressions(item.Indices)
-		result := NewExpressionIndexList(ExpressionIndexList{Value: value})
+		result := ExpressionIndexList{Value: value}.Expression()
 		return &result
 	case *ast.SliceExpr:
-		result := NewExpressionSlice(ExpressionSlice{Value: &SliceExpression{
+		result := ExpressionSlice{Value: &SliceExpression{
 			Span: span(item), Expression: c.expressionRequired(item.X),
 			Lbrack: item.Lbrack, Low: c.expression(item.Low),
 			High: c.expression(item.High), Max: c.expression(item.Max),
 			Slice3: item.Slice3, Rbrack: item.Rbrack,
-		}})
+		}}.Expression()
 		return &result
 	case *ast.TypeAssertExpr:
-		result := NewExpressionTypeAssertion(ExpressionTypeAssertion{Value: &TypeAssertionExpression{
+		result := ExpressionTypeAssertion{Value: &TypeAssertionExpression{
 			Span: span(item), Expression: c.expressionRequired(item.X),
 			Lparen: item.Lparen, Type: c.expression(item.Type), Rparen: item.Rparen,
-		}})
+		}}.Expression()
 		return &result
 	case *ast.CallExpr:
-		result := NewExpressionCall(ExpressionCall{Value: c.callRequired(item)})
+		result := ExpressionCall{Value: c.callRequired(item)}.Expression()
 		return &result
 	case *ast.StarExpr:
 		if c.front.nonNil[item.Star] {
-			result := NewExpressionNonNilPointer(ExpressionNonNilPointer{Value: &NonNilPointerType{
+			result := ExpressionNonNilPointer{Value: &NonNilPointerType{
 				Span: span(item), Percent: item.Star,
 				Type: c.expressionRequired(item.X),
-			}})
+			}}.Expression()
 			return &result
 		}
-		result := NewExpressionStar(ExpressionStar{Value: &StarExpression{
+		result := ExpressionStar{Value: &StarExpression{
 			Span: span(item), Star: item.Star,
 			Expression: c.expressionRequired(item.X),
-		}})
+		}}.Expression()
 		return &result
 	case *ast.UnaryExpr:
-		result := NewExpressionUnary(ExpressionUnary{Value: &UnaryExpression{
+		result := ExpressionUnary{Value: &UnaryExpression{
 			Span: span(item), OperatorPosition: item.OpPos,
 			Operator: item.Op, Expression: c.expressionRequired(item.X),
-		}})
+		}}.Expression()
 		return &result
 	case *ast.BinaryExpr:
-		result := NewExpressionBinary(ExpressionBinary{Value: &BinaryExpression{
+		result := ExpressionBinary{Value: &BinaryExpression{
 			Span: span(item), Left: c.expressionRequired(item.X),
 			OperatorPosition: item.OpPos, Operator: item.Op,
 			Right: c.expressionRequired(item.Y),
-		}})
+		}}.Expression()
 		return &result
 	case *ast.KeyValueExpr:
-		result := NewExpressionKeyValue(ExpressionKeyValue{Value: &KeyValueExpression{
+		result := ExpressionKeyValue{Value: &KeyValueExpression{
 			Span: span(item), Key: c.expressionRequired(item.Key),
 			Colon: item.Colon, Value: c.expressionRequired(item.Value),
-		}})
+		}}.Expression()
 		return &result
 	case *ast.ArrayType:
-		result := NewExpressionArrayType(ExpressionArrayType{Value: &ArrayType{
+		result := ExpressionArrayType{Value: &ArrayType{
 			Span: span(item), Lbrack: item.Lbrack,
 			Length: c.expression(item.Len), Element: c.expressionRequired(item.Elt),
-		}})
+		}}.Expression()
 		return &result
 	case *ast.StructType:
-		result := NewExpressionStructType(ExpressionStructType{Value: &StructType{
+		result := ExpressionStructType{Value: &StructType{
 			Span: span(item), Struct: item.Struct,
 			Fields: c.fieldListRequired(item.Fields), Incomplete: item.Incomplete,
-		}})
+		}}.Expression()
 		return &result
 	case *ast.FuncType:
-		result := NewExpressionFunctionType(ExpressionFunctionType{Value: c.functionTypeRequired(item)})
+		result := ExpressionFunctionType{Value: c.functionTypeRequired(item)}.Expression()
 		return &result
 	case *ast.InterfaceType:
-		result := NewExpressionInterfaceType(ExpressionInterfaceType{Value: &InterfaceType{
+		result := ExpressionInterfaceType{Value: &InterfaceType{
 			Span: span(item), Interface: item.Interface,
 			Methods: c.fieldListRequired(item.Methods), Incomplete: item.Incomplete,
-		}})
+		}}.Expression()
 		return &result
 	case *ast.MapType:
-		result := NewExpressionMapType(ExpressionMapType{Value: &MapType{
+		result := ExpressionMapType{Value: &MapType{
 			Span: span(item), Map: item.Map,
 			Key:   c.expressionRequired(item.Key),
 			Value: c.expressionRequired(item.Value),
-		}})
+		}}.Expression()
 		return &result
 	case *ast.ChanType:
-		result := NewExpressionChannelType(ExpressionChannelType{Value: &ChannelType{
+		result := ExpressionChannelType{Value: &ChannelType{
 			Span: span(item), Begin: item.Begin, Arrow: item.Arrow,
 			Direction: channelDirection(item.Dir),
 			Value:     c.expressionRequired(item.Value),
-		}})
+		}}.Expression()
 		return &result
 	default:
 		panic(fmt.Sprintf("unsupported go/ast expression %T", value))
@@ -456,12 +466,12 @@ func (c *converter) callRequired(value *ast.CallExpr) *CallExpression {
 
 func channelDirection(value ast.ChanDir) ChannelDirection {
 	if value == ast.SEND {
-		return NewChannelDirectionSendOnly(ChannelDirectionSendOnly{})
+		return ChannelDirectionSendOnly{}.ChannelDirection()
 	}
 	if value == ast.RECV {
-		return NewChannelDirectionReceiveOnly(ChannelDirectionReceiveOnly{})
+		return ChannelDirectionReceiveOnly{}.ChannelDirection()
 	}
-	return NewChannelDirectionSendReceive(ChannelDirectionSendReceive{})
+	return ChannelDirectionSendReceive{}.ChannelDirection()
 }
 
 func (c *converter) compositeLiteral(value *ast.CompositeLit) *CompositeLiteral {
@@ -481,7 +491,7 @@ func (c *converter) compositeLiteral(value *ast.CompositeLit) *CompositeLiteral 
 			Span:     Span{Start: marker.Pos(), Stop: marker.End()},
 			FirstDot: marker.FirstDot, LastDot: marker.LastDot, Default: marker.Default,
 		}
-		expression := NewExpressionDefault(ExpressionDefault{Value: expressionValue})
+		expression := ExpressionDefault{Value: expressionValue}.Expression()
 		result.Elements = insertExpression(result.Elements, &expression)
 	}
 	return result
@@ -510,7 +520,7 @@ func (c *converter) propagationExpression(value *frontPropagateExpr) *Expression
 		Call:       c.callRequired(value.Call), Bang: value.Bang,
 		SecondBang: value.SecondBang,
 	}
-	result := NewExpressionPropagation(ExpressionPropagation{Value: payload})
+	result := ExpressionPropagation{Value: payload}.Expression()
 	converted := &result
 	c.convertedPropagation[value] = converted
 	return converted

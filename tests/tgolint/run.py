@@ -42,6 +42,12 @@ def assert_case(linter, work, fixture):
     assert stderr == expected_stderr, stderr
 
 
+def assert_nil_fact_cache_sequence(linter, work):
+    """Keep imported nil facts after an unrelated TGo package analysis."""
+    assert_case(linter, work, FIXTURE / "modernizegood")
+    assert_case(linter, work, FIXTURE / "nilbad")
+
+
 def write_invalid_consumers(work):
     sources = {
         "invaliddirect": 'package invaliddirect\nimport _ "example.com/tgolint/model"\n',
@@ -82,7 +88,7 @@ def assert_integrity_checks(linter, work):
     replacements = (
         ("return Count{value: value}, nil", "return Count{}, nil"),
         (
-            "return Event{tgoTag: 1, tgoStarted: value}",
+            "return Event{tgoTag: EventTagStarted, tgoStarted: value}",
             "_ = value\n\treturn Event{}",
         ),
         (
@@ -160,6 +166,8 @@ def main():
 
         for fixture in fixture_directories():
             assert_case(linter, work, fixture)
+
+        assert_nil_fact_cache_sequence(linter, work)
 
         assert_integrity_checks(linter, work)
 

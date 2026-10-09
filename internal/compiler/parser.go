@@ -29,7 +29,6 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		}
 		return true
 	})
-	matchMarker := freshIdentifier("__tgo_match", used)
 	defaultMarker := freshIdentifier("__tgo_defaults", used)
 	jsonPackage := freshIdentifier("__tgo_json", used)
 	jsonV2Package := freshIdentifier("__tgo_jsonv2", used)
@@ -40,38 +39,25 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	file := files.File(tree.Package)
 	erasedData, nonNilLocations := eraseNonNilTypes(files, file, tree, data)
 	models, edits, jsonUse, firstEnumEdit, err := sourceModels(
-		files,
-		file,
-		tree,
-		name,
-		data,
-		erasedData,
+		files, file, tree, name, data, erasedData,
 		sourceModelConfig{
-			jsonPackage:     jsonPackage,
-			jsonV2Package:   jsonV2Package,
-			jsonTextPackage: jsonTextPackage,
-			stringsPackage:  stringsPackage,
-			fmtPackage:      fmtPackage,
-			externalJSONTo:  externalJSONTo,
-			adjacentJSONTo:  adjacentJSONTo,
+			jsonPackage: jsonPackage, jsonV2Package: jsonV2Package,
+			jsonTextPackage: jsonTextPackage, stringsPackage: stringsPackage,
+			fmtPackage: fmtPackage, externalJSONTo: externalJSONTo,
+			adjacentJSONTo: adjacentJSONTo,
 		},
 	)
 	if err != nil {
 		return nil, err
 	}
 	if firstEnumEdit >= 0 {
-		helpers := enumJSONHelpers(
-			jsonV2Package,
-			jsonTextPackage,
-			externalJSONTo,
-			adjacentJSONTo,
-			jsonUse.external,
-			jsonUse.adjacent,
-		)
-		edits[firstEnumEdit].text = helpers + edits[firstEnumEdit].text
+		edits[firstEnumEdit].text = enumJSONHelpers(
+			jsonV2Package, jsonTextPackage, externalJSONTo, adjacentJSONTo,
+			jsonUse.external, jsonUse.adjacent,
+		) + edits[firstEnumEdit].text
 	}
-	edits, propagations, comprehensions, err := lowerSourceExtensions(
-		files, file, tree, name, data, matchMarker, defaultMarker, used, edits,
+	edits, propagations, comprehensions, exhaustiveLocations, err := lowerCheckedExtensions(
+		files, file, tree, name, data, defaultMarker, used, edits,
 	)
 	if err != nil {
 		return nil, err
@@ -109,23 +95,15 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		return true
 	})
 	return &source{
-		JSONPackage:     jsonPackage,
-		JSONV2Package:   jsonV2Package,
-		JSONTextPackage: jsonTextPackage,
-		StringsPackage:  stringsPackage,
-		FmtPackage:      fmtPackage,
-		ExternalJSONTo:  externalJSONTo,
-		AdjacentJSONTo:  adjacentJSONTo,
-		Name:            name,
-		Data:            append([]byte(nil), data...),
-		Tree:            tree,
-		File:            goFile,
-		Models:          models,
-		MatchMarker:     matchMarker,
-		DefaultMarker:   defaultMarker,
-		Propagations:    propagations,
-		Comprehensions:  comprehensions,
-		NonNil:          nonNil,
+		JSONPackage: jsonPackage, JSONV2Package: jsonV2Package,
+		JSONTextPackage: jsonTextPackage, StringsPackage: stringsPackage,
+		FmtPackage: fmtPackage, ExternalJSONTo: externalJSONTo,
+		AdjacentJSONTo: adjacentJSONTo,
+		Name:           name, Data: append([]byte(nil), data...), Tree: tree, File: goFile,
+		Models: models, DefaultMarker: defaultMarker, Propagations: propagations,
+		Comprehensions: comprehensions,
+		Exhaustive:     exhaustiveClausePositions(files, goFile, exhaustiveLocations),
+		NonNil:         nonNil,
 		GeneratedHelpers: map[string]bool{
 			externalJSONTo: jsonUse.external,
 			adjacentJSONTo: jsonUse.adjacent,
@@ -199,10 +177,8 @@ func sourceModels(
 			start: file.Offset(startPositionValue),
 			end:   declarationEditEnd(data, file.Offset(endPositionValue)),
 			text: generatedSource(
-				sourceName,
-				files.Position(startPositionValue).Line,
-				files.Position(endPositionValue).Line,
-				replacement,
+				sourceName, files.Position(startPositionValue).Line,
+				files.Position(endPositionValue).Line, replacement,
 			),
 		})
 		models = append(models, item)
@@ -220,42 +196,156 @@ func sourceModel(
 ) (*model, string, enumJSONUse, error) {
 	if node, ok := syntax.EnumDeclarationOf(declaration); ok {
 		item := enumModel(files, erasedData, node)
+		if err := validateEnumPublicNames(item, node); err != nil {
+			return nil, "", enumJSONUse{}, fmt.Errorf(
+				"%s: %w", files.Position(node.Name.Start), err,
+			)
+		}
 		if err := configureEnumJSON(item, node); err != nil {
 			return nil, "", enumJSONUse{}, fmt.Errorf(
 				"%s: %w", files.Position(node.Name.Start), err,
 			)
 		}
 		use := enumJSONUse{
-			enum:     true,
-			external: item.JSON.Form == "external",
+			enum: true, external: item.JSON.Form == "external",
 			adjacent: item.JSON.Form == "adjacent",
 			foldedAdjacent: item.JSON.Form == "adjacent" &&
 				jsonStructFieldName(item.JSON.Tag) &&
 				jsonStructFieldName(item.JSON.Content),
 		}
-		replacement := enumGo(sourceName, item) + enumJSONGo(
-			item,
-			config.jsonPackage,
-			config.jsonV2Package,
-			config.jsonTextPackage,
-			config.stringsPackage,
-			config.fmtPackage,
-			config.externalJSONTo,
-			config.adjacentJSONTo,
+		replacement := enumGo(sourceName, item, config.fmtPackage) + enumJSONGo(
+			item, config.jsonPackage, config.jsonV2Package,
+			config.jsonTextPackage, config.stringsPackage, config.fmtPackage,
+			config.externalJSONTo, config.adjacentJSONTo,
 		)
 		return item, replacement, use, nil
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
 		item := structModel(files, erasedData, node)
-		replacement := "type " + item.Name + " struct {\n" +
-			fieldDecls(sourceName, item.Fields) + "}\n"
-		return item, replacement, enumJSONUse{}, nil
+		return item, "type " + item.Name + " struct {\n" +
+			fieldDecls(sourceName, item.Fields) + "}\n", enumJSONUse{}, nil
 	}
 	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
 		item := checkedModel(files, erasedData, node)
 		return item, checkedGo(sourceName, item), enumJSONUse{}, nil
 	}
 	return nil, "", enumJSONUse{}, nil
+}
+
+func lowerCheckedExtensions(
+	files *token.FileSet,
+	file *token.File,
+	tree *syntax.File,
+	name string,
+	data []byte,
+	defaultMarker string,
+	used map[string]bool,
+	edits []edit,
+) (
+	[]edit,
+	map[string]propagationSource,
+	map[string]comprehensionSource,
+	map[[2]int]bool,
+	error,
+) {
+	edits, exhaustive, err := lowerExhaustiveClauses(files, file, tree, data, edits)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	edits, propagations, comprehensions, err := lowerSourceExtensions(
+		files, file, tree, name, data, defaultMarker, used, edits,
+	)
+	return edits, propagations, comprehensions, exhaustive, err
+}
+
+func exhaustiveClausePositions(
+	files *token.FileSet,
+	file *ast.File,
+	locations map[[2]int]bool,
+) map[token.Pos]bool {
+	result := make(map[token.Pos]bool)
+	ast.Inspect(file, func(node ast.Node) bool {
+		clause, ok := node.(*ast.CaseClause)
+		if !ok || len(clause.List) != 0 {
+			return true
+		}
+		position := files.Position(clause.Case)
+		if locations[[2]int{position.Line, position.Column}] {
+			result[clause.Case] = true
+		}
+		return true
+	})
+	return result
+}
+
+func validateEnumPublicNames(declaration *model, node *syntax.EnumDeclaration) error {
+	type generatedName struct {
+		variant string
+	}
+	generated := map[string]generatedName{
+		declaration.Name:         {},
+		declaration.Name + "Tag": {},
+	}
+	for _, item := range node.Variants {
+		for _, name := range []string{
+			declaration.Name + item.Name.Name,
+			declaration.Name + "Tag" + item.Name.Name,
+		} {
+			previous, exists := generated[name]
+			if !exists {
+				generated[name] = generatedName{variant: item.Name.Name}
+				continue
+			}
+			if previous.variant != "" {
+				return fmt.Errorf("enum variants %s and %s both generate %s",
+					previous.variant, item.Name.Name, name)
+			}
+			return fmt.Errorf("enum variant %s generates %s, which conflicts with generated %s API",
+				item.Name.Name, name, declaration.Name)
+		}
+		for _, field := range item.Fields {
+			if len(field.Field.Names) == 0 &&
+				embeddedFieldName(field.Field.Type) == declaration.Name {
+				return fmt.Errorf("enum payload field %s conflicts with its constructor method",
+					declaration.Name)
+			}
+			for _, name := range field.Field.Names {
+				if name.Name == declaration.Name {
+					return fmt.Errorf("enum payload field %s conflicts with its constructor method",
+						declaration.Name)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func embeddedFieldName(expression *syntax.Expression) string {
+	if expression == nil {
+		return ""
+	}
+	if expression.Tag() == syntax.ExpressionTagIdentifier {
+		return expression.IdentifierPayload().Value.Name
+	}
+	if expression.Tag() == syntax.ExpressionTagSelector {
+		return expression.SelectorPayload().Value.Selector.Name
+	}
+	if expression.Tag() == syntax.ExpressionTagStar {
+		return embeddedFieldName(expression.StarPayload().Value.Expression)
+	}
+	if expression.Tag() == syntax.ExpressionTagNonNilPointer {
+		return embeddedFieldName(expression.NonNilPointerPayload().Value.Type)
+	}
+	if expression.Tag() == syntax.ExpressionTagParenthesized {
+		return embeddedFieldName(expression.ParenthesizedPayload().Value.Expression)
+	}
+	if expression.Tag() == syntax.ExpressionTagIndex {
+		return embeddedFieldName(expression.IndexPayload().Value.Expression)
+	}
+	if expression.Tag() == syntax.ExpressionTagIndexList {
+		return embeddedFieldName(expression.IndexListPayload().Value.Expression)
+	}
+	return ""
 }
 
 // eraseNonNilTypes makes the Go spelling used inside generated model declarations.
@@ -286,7 +376,6 @@ func lowerSourceExtensions(
 	tree *syntax.File,
 	name string,
 	data []byte,
-	matchMarker string,
 	defaultMarker string,
 	used map[string]bool,
 	edits []edit,
@@ -303,18 +392,6 @@ func lowerSourceExtensions(
 			if !coveredByEdit(edits, start) {
 				edits = append(edits, edit{start: start, end: start + 1, text: "*"})
 			}
-			continue
-		}
-		if node, ok := syntax.MatchStatementOf(extension); ok {
-			matchStart := file.Offset(node.Match)
-			brace := file.Offset(node.Lbrace)
-			edits = append(edits,
-				edit{
-					start: matchStart, end: matchStart + len("match"),
-					text: "switch " + matchMarker + "(",
-				},
-				edit{start: brace, end: brace, text: ") "},
-			)
 			continue
 		}
 		if node, ok := syntax.DefaultExpressionOf(extension); ok {

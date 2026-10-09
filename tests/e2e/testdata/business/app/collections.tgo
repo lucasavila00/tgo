@@ -29,16 +29,25 @@ func ReadInt(values <-chan int) (int, bool) {
 }
 
 func Nested(account model.Account) string {
-    match account {
-    case Personal(person): return person.Name
-    case Business(company):
+    switch enumValue2 := account; enumValue2.Tag() {
+    case model.AccountTagPersonal:
+        person := enumValue2.PersonalPayload()
+        return person.Name
+    case model.AccountTagBusiness:
+        company := enumValue2.BusinessPayload()
         if len(company.Members) == 0 {
             return company.Company
         }
-        match company.Members[0] {
-        case Personal(person): return person.Name
-        case Business(child): return child.Company
+        switch enumValue3 := company.Members[0]; enumValue3.Tag() {
+        case model.AccountTagPersonal:
+            person := enumValue3.PersonalPayload()
+            return person.Name
+        case model.AccountTagBusiness:
+            child := enumValue3.BusinessPayload()
+            return child.Company
+        exhaustive:
         }
+    exhaustive:
     }
 }
 

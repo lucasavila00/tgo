@@ -9,5 +9,5 @@ import (
 )
 
 func OnlyReexportedAccount(name string) any {
-	return __tgo_import.NewAccountPersonal(__tgo_import.AccountPersonal{Name: name})
+	return __tgo_import.AccountPersonal{Name: name}.Account()
 }

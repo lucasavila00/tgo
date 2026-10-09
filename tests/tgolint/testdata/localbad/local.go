@@ -19,6 +19,6 @@ func Convert(value countRepresentation) Count {
 	return Count(value)
 }
 
-func ReadPromoted(value embedded) uint8 {
+func ReadPromoted(value embedded) EventTag {
 	return value.tgoTag
 }

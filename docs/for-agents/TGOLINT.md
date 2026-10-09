@@ -9,12 +9,12 @@ tgolint ./...
 
 Fix every diagnostic. The command checks loaded Go packages for:
 
-- invalid tgo zero values;
+- invalid checked-type zero values;
 - constructor bypasses;
 - unchecked `(T, error)` results;
 - unchecked `(T, bool)` and comma-ok results;
 - incomplete enum switches and wrong payload reads;
-- changed, aliased, captured, or pointer enum receivers; and
+- wrong enum payload access in a recognized tag switch; and
 - possibly nil or unknown pointers used as `%T`;
 - unsafe `%T` zero values, literals, collections, calls, and function values; and
 - sequential `iota` sets in handwritten `.tgo` files; and
@@ -26,10 +26,12 @@ use the value. Do not take an address of a pending pair variable or capture it i
 closure. Keep both variables local to the function. Check the pair before a
 `goto`, `break`, `continue`, or `fallthrough`.
 
-Use a local value in an enum tag switch. Cover each numeric tag. Read only the
-payload for that tag. Add a default that returns or panics.
-Do not call generated `Tgo*` methods through a structural interface or an open
+Use `switch value.Tag()` for an enum value or pointer. Use `exhaustive:` to require every declared
+tag, or use `default:` for fallback behavior. Read a payload only when the clause flow has one
+possible tag. A default has the union of omitted variants.
+Do not call generated enum methods through a structural interface or an open
 generic constraint.
+Calls outside a recognized canonical switch do not get contextual payload checks.
 Do not pass a tgo type to a generic function or method that can make its zero
 value. The same rule applies when you save the function or method as a value.
 `will` means the unsafe event is proved. `can` means a runtime value is unknown.
@@ -55,9 +57,9 @@ a nil check.
 ## Go boundary
 
 TGo trusts values from Go. No generated validator checks the boundary. Go callers must use
-constructors and must read enum payloads only after the matching tag check. `tgolint` reports
-unsafe patterns that it can prove from Go source. It cannot inspect reflection, `unsafe`, cgo,
-races, or foreign state.
+constructors. `tgolint` checks payload calls in recognized canonical switches. Calls outside such
+a switch are outside this analysis. It cannot inspect reflection, `unsafe`, cgo, races, or foreign
+state.
 
 `%T` has the Go `*T` representation. Unchecked Go can still pass nil. The linter adds no runtime
 check and cannot prove code that runs through reflection, `unsafe`, cgo, or a data race.

@@ -5,10 +5,13 @@
 package tgolint
 
 import (
-	"go/ast"
+	"fmt"
 	"go/token"
 	"go/types"
 	"strconv"
+
+	"tgo/internal/sourcefacts"
+	"tgo/pkg/syntax"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -28,31 +31,35 @@ func newAnalyzer() *analysis.Analyzer {
 		new(modelWireFact),
 		new(validationFact),
 		new(genericEffectWireFact),
-		new(nilContractWireFact),
+		new(nilContractWireFactV2),
 		new(invalidPackageFact),
 	}
 	return analyzer
 }
 
 type checker struct {
-	pass        *analysis.Pass
-	models      map[objectKey]*model
-	validated   map[types.Object]bool
-	callTarget  map[types.Object]types.Object
-	generated   map[*ast.File]bool
-	outputs     map[string][]byte
-	parents     map[ast.Node]ast.Node
-	safe        map[*ast.SelectorExpr]bool
-	handled     map[*ast.SelectorExpr]bool
-	checked     map[*ast.CallExpr]bool
-	presence    map[ast.Expr]bool
-	escaped     map[types.Object]token.Pos
-	reported    map[diagnosticKey]bool
-	function    ast.Node
-	zeroTypes   map[*types.TypeParam]*model
-	capture     func(*model, ast.Expr)
-	scalarFlows map[ast.Node]*scalarFlow
-	invalid     bool
+	pass          *analysis.Pass
+	files         []*syntax.File
+	facts         *sourcefacts.Index
+	models        map[objectKey]*model
+	validated     map[types.Object]bool
+	callTarget    map[types.Object]types.Object
+	generated     map[*syntax.File]bool
+	outputs       map[string][]byte
+	parents       map[syntax.Node]*syntax.Node
+	syntaxSafe    map[*syntax.Expression]bool
+	syntaxHandled map[*syntax.Expression]bool
+	checked       map[*syntax.Expression]bool
+	presence      map[*syntax.Expression]bool
+	escaped       map[types.Object]token.Pos
+	reported      map[diagnosticKey]bool
+	function      *syntax.Node
+	file          *syntax.File
+	zeroTypes     map[*types.TypeParam]*model
+	captureResult func(*model)
+	captureSource func(*model, *syntax.Expression)
+	scalarFlows   map[syntax.Node]*scalarFlow
+	invalid       bool
 }
 
 const invalidPackageVersion = 1
@@ -73,26 +80,57 @@ type diagnosticKey struct {
 
 // run verifies generated code, loads model facts, and checks user Go code.
 func run(pass *analysis.Pass) (any, error) {
+	if pass == nil {
+		return nil, fmt.Errorf("tgolint received a nil analysis pass")
+	}
 	pass = suppressDiagnostics(pass)
+	files, err := parseAnalysisFiles(pass)
+	if err != nil {
+		return nil, err
+	}
+	if len(files) == 0 {
+		return nil, nil
+	}
+	info := pass.TypesInfo
+	fileSet := pass.Fset
+	if info == nil {
+		return nil, fmt.Errorf("tgolint requires type facts")
+	}
+	if fileSet == nil {
+		return nil, fmt.Errorf("tgolint requires type and position facts")
+	}
+	facts := sourcefacts.New(files[0], info, fileSet)
+	for _, file := range files[1:] {
+		facts.AddFile(file)
+	}
 	c := &checker{
-		pass:        pass,
-		models:      make(map[objectKey]*model),
-		validated:   make(map[types.Object]bool),
-		callTarget:  make(map[types.Object]types.Object),
-		generated:   make(map[*ast.File]bool),
-		outputs:     make(map[string][]byte),
-		parents:     make(map[ast.Node]ast.Node),
-		safe:        make(map[*ast.SelectorExpr]bool),
-		handled:     make(map[*ast.SelectorExpr]bool),
-		checked:     make(map[*ast.CallExpr]bool),
-		presence:    make(map[ast.Expr]bool),
-		escaped:     make(map[types.Object]token.Pos),
-		reported:    make(map[diagnosticKey]bool),
-		function:    nil,
-		zeroTypes:   nil,
-		capture:     nil,
-		scalarFlows: make(map[ast.Node]*scalarFlow),
-		invalid:     false,
+		pass:          pass,
+		files:         files,
+		facts:         facts,
+		models:        make(map[objectKey]*model),
+		validated:     make(map[types.Object]bool),
+		callTarget:    make(map[types.Object]types.Object),
+		generated:     make(map[*syntax.File]bool),
+		outputs:       make(map[string][]byte),
+		parents:       make(map[syntax.Node]*syntax.Node),
+		syntaxSafe:    make(map[*syntax.Expression]bool),
+		syntaxHandled: make(map[*syntax.Expression]bool),
+		checked:       make(map[*syntax.Expression]bool),
+		presence:      make(map[*syntax.Expression]bool),
+		escaped:       make(map[types.Object]token.Pos),
+		reported:      make(map[diagnosticKey]bool),
+		function:      nil,
+		file:          nil,
+		zeroTypes:     nil,
+		captureResult: nil,
+		captureSource: nil,
+		scalarFlows:   make(map[syntax.Node]*scalarFlow),
+		invalid:       false,
+	}
+	for _, file := range files {
+		if syntaxFileGenerated(file) {
+			c.generated[file] = true
+		}
 	}
 	if c.rejectInvalidDependencies() {
 		return nil, nil
@@ -106,18 +144,29 @@ func run(pass *analysis.Pass) (any, error) {
 	c.findValidationWrappers()
 	c.findValidationFunctionValues()
 	c.checkTGoSource(analysis)
-	for _, file := range pass.Files {
-		if c.generated[file] {
+	for _, file := range c.files {
+		if syntaxFileGenerated(file) {
 			continue
 		}
-		c.addParents(file)
-		ast.Inspect(file, func(node ast.Node) bool {
-			if statement, ok := node.(*ast.SwitchStmt); ok {
-				c.checkTagSwitch(statement)
+		c.file = file
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			c.addParent(node)
+			return true
+		})
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			if statement, ok := syntax.StatementOf(node); ok {
+				tagSwitch := syntax.SwitchStatementOf(statement)
+				if tagSwitch != nil {
+					c.checkTagSwitch(file, statement, tagSwitch)
+				}
 			}
 			return true
 		})
-		ast.Inspect(file, func(node ast.Node) bool {
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			expression, expressionOK := syntax.ExpressionOf(node)
+			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
+				c.checkRepresentationAccess(expression)
+			}
 			c.checkNode(node)
 			return true
 		})
@@ -173,51 +222,73 @@ func (c *checker) markInvalid() {
 }
 
 // addParents builds the upward AST links used by local flow checks.
-func (c *checker) addParents(file *ast.File) {
-	var stack []ast.Node = nil
-	ast.Inspect(file, func(node ast.Node) bool {
-		if node == nil {
-			stack = stack[:len(stack)-1]
-			return false
-		}
-		if len(stack) > 0 {
-			c.parents[node] = stack[len(stack)-1]
-		}
-		stack = append(stack, node)
-		return true
-	})
+
+func (c *checker) addParent(node *syntax.Node) {
+	if c.file == nil {
+		return
+	}
+	for _, child := range syntax.Children(c.file, node) {
+		c.parents[*child] = node
+	}
 }
 
 // checkNode sends one AST node to each check that applies to its form.
-func (c *checker) checkNode(node ast.Node) {
-	switch node := node.(type) {
-	case *ast.FuncDecl:
-		if node.Body != nil {
-			c.checkNamedResults(node.Type)
-			c.checkConstructors(node, node.Body)
+func (c *checker) checkNode(node *syntax.Node) {
+	if function, ok := syntax.FunctionDeclarationOf(node); ok {
+		if function != nil {
+			functionType := function.Type
+			body := function.Body
+			if functionType != nil && body != nil {
+				c.checkNamedResults(functionType)
+				c.checkConstructors(node, body)
+			}
 		}
-	case *ast.FuncLit:
-		c.checkNamedResults(node.Type)
-		c.checkConstructors(node, node.Body)
-	case *ast.TypeSpec:
-		c.checkTypeSpec(node)
-	case *ast.ValueSpec:
-		c.checkValueSpec(node)
-	case *ast.CompositeLit:
-		c.checkLiteral(node)
-	case *ast.CallExpr:
-		c.checkCall(node)
-	case *ast.IndexExpr:
-		c.checkMapRead(node)
-	case *ast.UnaryExpr:
-		if node.Op == token.ARROW {
-			c.checkPresenceRead(node)
+		return
+	}
+	if literal, ok := syntax.FunctionLiteralOf(node); ok {
+		if literal == nil {
+			return
 		}
-	case *ast.TypeAssertExpr:
-		c.checkTypeAssertion(node)
-	case *ast.SelectorExpr:
-		c.checkRepresentationAccess(node)
-	case *ast.SliceExpr:
-		c.checkReslice(node)
+		functionType := literal.Type
+		if functionType != nil {
+			c.checkNamedResults(functionType)
+		}
+		body := literal.Body
+		if body != nil {
+			c.checkConstructors(node, body)
+		}
+		return
+	}
+	if specification, ok := syntax.SpecificationOf(node); ok {
+		if value := syntax.TypeSpecificationOf(specification); value != nil {
+			c.checkTypeSpec(value)
+		}
+		if value := syntax.ValueSpecificationOf(specification); value != nil {
+			c.checkValueSpec(value)
+		}
+		return
+	}
+	expression, ok := syntax.ExpressionOf(node)
+	if !ok || expression == nil {
+		return
+	}
+	if value := syntax.CompositeLiteralOf(expression); value != nil {
+		c.checkLiteral(expression, value)
+	}
+	if value := syntax.CallExpressionOf(expression); value != nil {
+		c.checkCall(expression, value)
+	}
+	if value := syntax.IndexExpressionOf(expression); value != nil {
+		c.checkMapRead(expression, value)
+	}
+	if value := syntax.UnaryExpressionOf(expression); value != nil &&
+		value.Operator == token.ARROW {
+		c.checkPresenceRead(expression, value)
+	}
+	if value := syntax.TypeAssertionExpressionOf(expression); value != nil {
+		c.checkTypeAssertion(expression, value)
+	}
+	if value := syntax.SliceExpressionOf(expression); value != nil {
+		c.checkReslice(expression, value)
 	}
 }

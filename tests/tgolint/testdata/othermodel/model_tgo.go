@@ -8,32 +8,43 @@ import __tgo_fmt "fmt"
 
 // Event requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type EventTag uint8
+
+const (
+	EventTagStarted EventTag = iota + 1
+)
+
 type Event struct {
-	tgoTag     uint8
+	tgoTag     EventTag
 	tgoStarted EventStarted
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Event) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Event) Tag() EventTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Event) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Event: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // EventStarted is the Started payload.
 type EventStarted struct {
 	Code int
 }
 
-// NewEventStarted constructs Event. Model fields must be valid.
+// Event constructs Event. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewEventStarted(value EventStarted) Event {
-	return Event{tgoTag: 1, tgoStarted: value}
+func (value EventStarted) Event() Event {
+	return Event{tgoTag: EventTagStarted, tgoStarted: value}
 }
 
-// TgoStarted returns the Started payload. Check TgoTag first.
-func (v Event) TgoStarted() EventStarted { return v.tgoStarted }
+// StartedPayload requires Started. No tag check.
+func (v Event) StartedPayload() EventStarted { return v.tgoStarted }
 
 func (v Event) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoStarted()
+	case EventTagStarted:
+		payload := v.StartedPayload()
 		return __tgo_json.Marshal(struct {
 			Payload EventStarted `json:"Started"`
 		}{Payload: payload})
@@ -62,7 +73,7 @@ func (v *Event) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewEventStarted(payload)
+		*v = payload.Event()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Event JSON variant %q", variant)

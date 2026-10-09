@@ -4,8 +4,17 @@ import "example.com/tgolint/nilmodel"
 
 func syntaxFacts(values nilmodel.SyntaxList) {
 	for _, value := range values {
-		match *value {
-		case Item(payload): nilmodel.Need(payload.Value)
+		switch value.Tag() {
+		case nilmodel.SyntaxTagItem:
+			payload := value.ItemPayload()
+			nilmodel.Need(payload.Value)
+		exhaustive:
 		}
 	}
+}
+
+func propagationContract() error {
+	item := nilmodel.Load()!!
+	nilmodel.Need(item)
+	return nil
 }

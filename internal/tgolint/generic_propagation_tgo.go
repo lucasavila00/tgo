@@ -4,10 +4,11 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/token"
 	"go/types"
 	"sort"
+
+	"tgo/pkg/syntax"
 )
 
 func containedTypeParameters(
@@ -95,20 +96,22 @@ func (c *checker) propagateGenericZeroFacts(
 
 func (c *checker) propagateGenericEffects(
 	summary *genericEffectSummary,
-	call *ast.CallExpr,
+	callExpression *syntax.Expression,
 	effects []genericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 	zero bool,
 ) bool {
 	changed := false
-	pathConditions, pathMaySkip, reachable := c.genericEffectPath(summary, call)
+	pathConditions, pathMaySkip, reachable := c.genericEffectPath(
+		summary, syntaxNode(callExpression),
+	)
 	if !reachable {
 		return false
 	}
 	for _, effect := range effects {
 		mapped, parameters, possible := c.propagatedGenericEffect(
-			summary, call, effect, receiverArguments, typeArguments,
+			summary, callExpression, effect, receiverArguments, typeArguments,
 			pathConditions, pathMaySkip, zero,
 		)
 		if !possible {
@@ -124,7 +127,7 @@ func (c *checker) propagateGenericEffects(
 // propagatedGenericEffect maps one callee effect into its caller.
 func (c *checker) propagatedGenericEffect(
 	summary *genericEffectSummary,
-	call *ast.CallExpr,
+	callExpression *syntax.Expression,
 	effect genericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
@@ -143,7 +146,9 @@ func (c *checker) propagatedGenericEffect(
 	maySkip := pathMaySkip || effect.MaySkip
 	targetType := arguments[effect.TypeParameter]
 	for _, condition := range effect.Conditions {
-		mapped, outcome := c.mapEffectCondition(summary, call, condition, targetType)
+		mapped, outcome := c.mapEffectCondition(
+			summary, callExpression, condition, targetType,
+		)
 		if outcome == neverEffectOutcome() {
 			return noGenericEffect(), nil, false
 		}
@@ -170,43 +175,57 @@ func (c *checker) propagatedGenericEffect(
 // mapEffectCondition evaluates or remaps one callee condition.
 func (c *checker) mapEffectCondition(
 	summary *genericEffectSummary,
-	call *ast.CallExpr,
+	callExpression *syntax.Expression,
 	condition genericEffectCondition,
 	targetType types.Type,
 ) (*genericEffectCondition, effectOutcome) {
+	call := syntax.CallExpressionOf(callExpression)
+	if call == nil {
+		return nil, unknownEffectOutcome()
+	}
 	if condition.ValueParameter < 0 || condition.ValueParameter >= len(call.Args) {
 		return nil, unknownEffectOutcome()
 	}
-	if matches, known := c.effectConditionValue(call, condition, targetType); known {
+	if matches, known := c.effectConditionValue(
+		callExpression, condition, targetType,
+	); known {
 		if matches {
 			return nil, alwaysEffectOutcome()
 		}
 		return nil, neverEffectOutcome()
 	}
 	expression := call.Args[condition.ValueParameter]
-	if mapped := c.mappedScalarEffectCondition(call, expression, condition); mapped != nil {
+	if mapped := c.mappedScalarEffectCondition(
+		callExpression, expression, condition,
+	); mapped != nil {
 		return mapped, conditionalEffectOutcome()
 	}
-	return c.mapParameterEffectCondition(summary, call, expression, condition)
+	return c.mapParameterEffectCondition(
+		summary, callExpression, expression, condition,
+	)
 }
 
 func (c *checker) mapParameterEffectCondition(
 	summary *genericEffectSummary,
-	call *ast.CallExpr,
-	expression ast.Expr,
+	callExpression *syntax.Expression,
+	expression *syntax.Expression,
 	condition genericEffectCondition,
 ) (*genericEffectCondition, effectOutcome) {
-	if parentheses, ok := expression.(*ast.ParenExpr); ok {
-		expression = parentheses.X
+	call := syntax.CallExpressionOf(callExpression)
+	if call == nil {
+		return nil, unknownEffectOutcome()
+	}
+	if parentheses := syntax.ParenthesizedExpressionOf(expression); parentheses != nil {
+		expression = parentheses.Expression
 	}
 	expected := condition.Expected
-	if negation, ok := expression.(*ast.UnaryExpr); ok &&
-		negation.Op == token.NOT && condition.Kind == booleanEffectCondition() {
-		expression = negation.X
+	if negation := syntax.UnaryExpressionOf(expression); negation != nil &&
+		negation.Operator == token.NOT && condition.Kind == booleanEffectCondition() {
+		expression = negation.Expression
 		expected = !expected
 	}
 	index, ok := c.expressionParameter(summary, expression)
-	if !ok || !c.parameterStableBefore(summary, index, call.Pos()) {
+	if !ok || !c.parameterStableBefore(summary, index, call.Start) {
 		return nil, unknownEffectOutcome()
 	}
 	otherIndex := -1
@@ -218,7 +237,7 @@ func (c *checker) mapParameterEffectCondition(
 			summary,
 			call.Args[condition.OtherParameter],
 		)
-		if !ok || !c.parameterStableBefore(summary, otherIndex, call.Pos()) {
+		if !ok || !c.parameterStableBefore(summary, otherIndex, call.Start) {
 			return nil, unknownEffectOutcome()
 		}
 	}
@@ -232,14 +251,14 @@ func (c *checker) mapParameterEffectCondition(
 }
 
 func (c *checker) mappedScalarEffectCondition(
-	call *ast.CallExpr,
-	expression ast.Expr,
+	callExpression *syntax.Expression,
+	expression *syntax.Expression,
 	condition genericEffectCondition,
 ) *genericEffectCondition {
 	if !isScalarEffectCondition(condition.Kind) {
 		return nil
 	}
-	value, known := c.scalarValueAt(call, expression)
+	value, known := c.scalarValueAt(syntaxNode(callExpression), expression)
 	if !known {
 		return nil
 	}
@@ -258,23 +277,23 @@ func (c *checker) mappedScalarEffectCondition(
 }
 
 func isScalarEffectCondition(kind effectKind) bool {
-	switch __tgo_match_6 := kind; __tgo_match_6.TgoTag() {
-	case 1:
+	switch enumValue6 := kind; enumValue6.Tag() {
+	case effectKindTagBoolean:
 		return true
-	case 2:
+	case effectKindTagNonzero:
 		return true
-	case 3:
+	case effectKindTagNonempty:
 		return false
-	case 4:
+	case effectKindTagMapMiss:
 		return false
-	case 5:
+	case effectKindTagChannelClosed:
 		return false
-	case 6:
+	case effectKindTagAssertionFails:
 		return false
-	case 7:
+	case effectKindTagResliceExtends:
 		return false
 	default:
-		panic("invalid effectKind variant")
+		panic(enumValue6.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

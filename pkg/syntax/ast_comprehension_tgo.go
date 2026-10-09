@@ -37,52 +37,64 @@ func __tgo_ComprehensionClause_external_json_to[T interface{}](out *__tgo_jsonte
 
 // ComprehensionClause requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type ComprehensionClauseTag uint8
+
+const (
+	ComprehensionClauseTagRange ComprehensionClauseTag = iota + 1
+	ComprehensionClauseTagFilter
+)
+
 type ComprehensionClause struct {
-	tgoTag    uint8
+	tgoTag    ComprehensionClauseTag
 	tgoRange  ComprehensionClauseRange
 	tgoFilter ComprehensionClauseFilter
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v ComprehensionClause) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v ComprehensionClause) Tag() ComprehensionClauseTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v ComprehensionClause) UnknownTag() string {
+	return __tgo_fmt.Sprintf("ComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // ComprehensionClauseRange is the Range payload.
 type ComprehensionClauseRange struct {
 	Value *ComprehensionRangeClause
 }
 
-// NewComprehensionClauseRange constructs ComprehensionClause. Model fields must be valid.
+// ComprehensionClause constructs ComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewComprehensionClauseRange(value ComprehensionClauseRange) ComprehensionClause {
-	return ComprehensionClause{tgoTag: 1, tgoRange: value}
+func (value ComprehensionClauseRange) ComprehensionClause() ComprehensionClause {
+	return ComprehensionClause{tgoTag: ComprehensionClauseTagRange, tgoRange: value}
 }
 
-// TgoRange returns the Range payload. Check TgoTag first.
-func (v ComprehensionClause) TgoRange() ComprehensionClauseRange { return v.tgoRange }
+// RangePayload requires Range. No tag check.
+func (v ComprehensionClause) RangePayload() ComprehensionClauseRange { return v.tgoRange }
 
 // ComprehensionClauseFilter is the Filter payload.
 type ComprehensionClauseFilter struct {
 	Value *ComprehensionFilterClause
 }
 
-// NewComprehensionClauseFilter constructs ComprehensionClause. Model fields must be valid.
+// ComprehensionClause constructs ComprehensionClause. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewComprehensionClauseFilter(value ComprehensionClauseFilter) ComprehensionClause {
-	return ComprehensionClause{tgoTag: 2, tgoFilter: value}
+func (value ComprehensionClauseFilter) ComprehensionClause() ComprehensionClause {
+	return ComprehensionClause{tgoTag: ComprehensionClauseTagFilter, tgoFilter: value}
 }
 
-// TgoFilter returns the Filter payload. Check TgoTag first.
-func (v ComprehensionClause) TgoFilter() ComprehensionClauseFilter { return v.tgoFilter }
+// FilterPayload requires Filter. No tag check.
+func (v ComprehensionClause) FilterPayload() ComprehensionClauseFilter { return v.tgoFilter }
 
 func (v ComprehensionClause) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoRange()
+	case ComprehensionClauseTagRange:
+		payload := v.RangePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ComprehensionClauseRange `json:"Range"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoFilter()
+	case ComprehensionClauseTagFilter:
+		payload := v.FilterPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ComprehensionClauseFilter `json:"Filter"`
 		}{Payload: payload})
@@ -93,11 +105,11 @@ func (v ComprehensionClause) MarshalJSON() ([]byte, error) {
 
 func (v ComprehensionClause) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoRange()
+	case ComprehensionClauseTagRange:
+		payload := v.RangePayload()
 		return __tgo_ComprehensionClause_external_json_to(out, "Range", payload)
-	case 2:
-		payload := v.TgoFilter()
+	case ComprehensionClauseTagFilter:
+		payload := v.FilterPayload()
 		return __tgo_ComprehensionClause_external_json_to(out, "Filter", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid ComprehensionClause JSON tag")
@@ -124,14 +136,14 @@ func (v *ComprehensionClause) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewComprehensionClauseRange(payload)
+		*v = payload.ComprehensionClause()
 		return nil
 	case "Filter":
 		var payload ComprehensionClauseFilter
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewComprehensionClauseFilter(payload)
+		*v = payload.ComprehensionClause()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown ComprehensionClause JSON variant %q", variant)
@@ -202,14 +214,14 @@ func (v *ComprehensionClause) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) erro
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewComprehensionClauseRange(payload)
+		*v = payload.ComprehensionClause()
 		return nil
 	case 2:
 		var payload ComprehensionClauseFilter
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewComprehensionClauseFilter(payload)
+		*v = payload.ComprehensionClause()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid ComprehensionClause JSON tag")

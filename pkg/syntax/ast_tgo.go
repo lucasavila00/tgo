@@ -76,67 +76,80 @@ func __tgo_ChannelDirection_external_json_to[T interface{}](out *__tgo_jsontext.
 
 // ChannelDirection requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type ChannelDirectionTag uint8
+
+const (
+	ChannelDirectionTagSendReceive ChannelDirectionTag = iota + 1
+	ChannelDirectionTagSendOnly
+	ChannelDirectionTagReceiveOnly
+)
+
 type ChannelDirection struct {
-	tgoTag uint8
+	tgoTag ChannelDirectionTag
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v ChannelDirection) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v ChannelDirection) Tag() ChannelDirectionTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v ChannelDirection) UnknownTag() string {
+	return __tgo_fmt.Sprintf("ChannelDirection: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // ChannelDirectionSendReceive is the SendReceive payload.
 type ChannelDirectionSendReceive struct{}
 
-// NewChannelDirectionSendReceive constructs ChannelDirection. Model fields must be valid.
+// ChannelDirection constructs ChannelDirection. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewChannelDirectionSendReceive(_ ChannelDirectionSendReceive) ChannelDirection {
-	return ChannelDirection{tgoTag: 1}
+func (value ChannelDirectionSendReceive) ChannelDirection() ChannelDirection {
+	return ChannelDirection{tgoTag: ChannelDirectionTagSendReceive}
 }
 
-// TgoSendReceive returns the SendReceive payload. Check TgoTag first.
-func (ChannelDirection) TgoSendReceive() ChannelDirectionSendReceive {
+// SendReceivePayload requires SendReceive. No tag check.
+func (ChannelDirection) SendReceivePayload() ChannelDirectionSendReceive {
 	return ChannelDirectionSendReceive{}
 }
 
 // ChannelDirectionSendOnly is the SendOnly payload.
 type ChannelDirectionSendOnly struct{}
 
-// NewChannelDirectionSendOnly constructs ChannelDirection. Model fields must be valid.
+// ChannelDirection constructs ChannelDirection. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewChannelDirectionSendOnly(_ ChannelDirectionSendOnly) ChannelDirection {
-	return ChannelDirection{tgoTag: 2}
+func (value ChannelDirectionSendOnly) ChannelDirection() ChannelDirection {
+	return ChannelDirection{tgoTag: ChannelDirectionTagSendOnly}
 }
 
-// TgoSendOnly returns the SendOnly payload. Check TgoTag first.
-func (ChannelDirection) TgoSendOnly() ChannelDirectionSendOnly { return ChannelDirectionSendOnly{} }
+// SendOnlyPayload requires SendOnly. No tag check.
+func (ChannelDirection) SendOnlyPayload() ChannelDirectionSendOnly { return ChannelDirectionSendOnly{} }
 
 // ChannelDirectionReceiveOnly is the ReceiveOnly payload.
 type ChannelDirectionReceiveOnly struct{}
 
-// NewChannelDirectionReceiveOnly constructs ChannelDirection. Model fields must be valid.
+// ChannelDirection constructs ChannelDirection. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewChannelDirectionReceiveOnly(_ ChannelDirectionReceiveOnly) ChannelDirection {
-	return ChannelDirection{tgoTag: 3}
+func (value ChannelDirectionReceiveOnly) ChannelDirection() ChannelDirection {
+	return ChannelDirection{tgoTag: ChannelDirectionTagReceiveOnly}
 }
 
-// TgoReceiveOnly returns the ReceiveOnly payload. Check TgoTag first.
-func (ChannelDirection) TgoReceiveOnly() ChannelDirectionReceiveOnly {
+// ReceiveOnlyPayload requires ReceiveOnly. No tag check.
+func (ChannelDirection) ReceiveOnlyPayload() ChannelDirectionReceiveOnly {
 	return ChannelDirectionReceiveOnly{}
 }
 
 func (v ChannelDirection) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoSendReceive()
+	case ChannelDirectionTagSendReceive:
+		payload := v.SendReceivePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ChannelDirectionSendReceive `json:"SendReceive"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoSendOnly()
+	case ChannelDirectionTagSendOnly:
+		payload := v.SendOnlyPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ChannelDirectionSendOnly `json:"SendOnly"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoReceiveOnly()
+	case ChannelDirectionTagReceiveOnly:
+		payload := v.ReceiveOnlyPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ChannelDirectionReceiveOnly `json:"ReceiveOnly"`
 		}{Payload: payload})
@@ -147,14 +160,14 @@ func (v ChannelDirection) MarshalJSON() ([]byte, error) {
 
 func (v ChannelDirection) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoSendReceive()
+	case ChannelDirectionTagSendReceive:
+		payload := v.SendReceivePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "SendReceive", payload)
-	case 2:
-		payload := v.TgoSendOnly()
+	case ChannelDirectionTagSendOnly:
+		payload := v.SendOnlyPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "SendOnly", payload)
-	case 3:
-		payload := v.TgoReceiveOnly()
+	case ChannelDirectionTagReceiveOnly:
+		payload := v.ReceiveOnlyPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "ReceiveOnly", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid ChannelDirection JSON tag")
@@ -181,21 +194,21 @@ func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewChannelDirectionSendReceive(payload)
+		*v = payload.ChannelDirection()
 		return nil
 	case "SendOnly":
 		var payload ChannelDirectionSendOnly
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewChannelDirectionSendOnly(payload)
+		*v = payload.ChannelDirection()
 		return nil
 	case "ReceiveOnly":
 		var payload ChannelDirectionReceiveOnly
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewChannelDirectionReceiveOnly(payload)
+		*v = payload.ChannelDirection()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown ChannelDirection JSON variant %q", variant)
@@ -268,21 +281,21 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewChannelDirectionSendReceive(payload)
+		*v = payload.ChannelDirection()
 		return nil
 	case 2:
 		var payload ChannelDirectionSendOnly
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewChannelDirectionSendOnly(payload)
+		*v = payload.ChannelDirection()
 		return nil
 	case 3:
 		var payload ChannelDirectionReceiveOnly
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewChannelDirectionReceiveOnly(payload)
+		*v = payload.ChannelDirection()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid ChannelDirection JSON tag")
@@ -292,8 +305,40 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 // Expression contains every Go expression and type form plus TGo expressions.
 // Expression requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type ExpressionTag uint8
+
+const (
+	ExpressionTagBad ExpressionTag = iota + 1
+	ExpressionTagIdentifier
+	ExpressionTagEllipsis
+	ExpressionTagBasicLiteral
+	ExpressionTagFunctionLiteral
+	ExpressionTagCompositeLiteral
+	ExpressionTagParenthesized
+	ExpressionTagSelector
+	ExpressionTagIndex
+	ExpressionTagIndexList
+	ExpressionTagSlice
+	ExpressionTagTypeAssertion
+	ExpressionTagCall
+	ExpressionTagStar
+	ExpressionTagNonNilPointer
+	ExpressionTagUnary
+	ExpressionTagBinary
+	ExpressionTagKeyValue
+	ExpressionTagArrayType
+	ExpressionTagStructType
+	ExpressionTagFunctionType
+	ExpressionTagInterfaceType
+	ExpressionTagMapType
+	ExpressionTagChannelType
+	ExpressionTagDefault
+	ExpressionTagPropagation
+	ExpressionTagComprehension
+)
+
 type Expression struct {
-	tgoTag           uint8
+	tgoTag           ExpressionTag
 	tgoFunctionType  ExpressionFunctionType
 	tgoInterfaceType ExpressionInterfaceType
 	tgoMapType       ExpressionMapType
@@ -304,64 +349,71 @@ type Expression struct {
 	tgoPayload       interface{}
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Expression) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Expression) Tag() ExpressionTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Expression) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Expression: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // ExpressionBad is the Bad payload.
 type ExpressionBad struct {
 	Value *BadExpression
 }
 
-// NewExpressionBad constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionBad(value ExpressionBad) Expression {
-	return Expression{tgoTag: 1, tgoPayload: value}
+func (value ExpressionBad) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagBad, tgoPayload: value}
 }
 
-// TgoBad returns the Bad payload. Check TgoTag first.
-func (v Expression) TgoBad() ExpressionBad { return v.tgoPayload.(ExpressionBad) }
+// BadPayload requires Bad. No tag check.
+func (v Expression) BadPayload() ExpressionBad { return v.tgoPayload.(ExpressionBad) }
 
 // ExpressionIdentifier is the Identifier payload.
 type ExpressionIdentifier struct {
 	Value *Identifier
 }
 
-// NewExpressionIdentifier constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionIdentifier(value ExpressionIdentifier) Expression {
-	return Expression{tgoTag: 2, tgoPayload: value}
+func (value ExpressionIdentifier) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagIdentifier, tgoPayload: value}
 }
 
-// TgoIdentifier returns the Identifier payload. Check TgoTag first.
-func (v Expression) TgoIdentifier() ExpressionIdentifier { return v.tgoPayload.(ExpressionIdentifier) }
+// IdentifierPayload requires Identifier. No tag check.
+func (v Expression) IdentifierPayload() ExpressionIdentifier {
+	return v.tgoPayload.(ExpressionIdentifier)
+}
 
 // ExpressionEllipsis is the Ellipsis payload.
 type ExpressionEllipsis struct {
 	Value *EllipsisExpression
 }
 
-// NewExpressionEllipsis constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionEllipsis(value ExpressionEllipsis) Expression {
-	return Expression{tgoTag: 3, tgoPayload: value}
+func (value ExpressionEllipsis) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagEllipsis, tgoPayload: value}
 }
 
-// TgoEllipsis returns the Ellipsis payload. Check TgoTag first.
-func (v Expression) TgoEllipsis() ExpressionEllipsis { return v.tgoPayload.(ExpressionEllipsis) }
+// EllipsisPayload requires Ellipsis. No tag check.
+func (v Expression) EllipsisPayload() ExpressionEllipsis { return v.tgoPayload.(ExpressionEllipsis) }
 
 // ExpressionBasicLiteral is the BasicLiteral payload.
 type ExpressionBasicLiteral struct {
 	Value *BasicLiteral
 }
 
-// NewExpressionBasicLiteral constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionBasicLiteral(value ExpressionBasicLiteral) Expression {
-	return Expression{tgoTag: 4, tgoPayload: value}
+func (value ExpressionBasicLiteral) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagBasicLiteral, tgoPayload: value}
 }
 
-// TgoBasicLiteral returns the BasicLiteral payload. Check TgoTag first.
-func (v Expression) TgoBasicLiteral() ExpressionBasicLiteral {
+// BasicLiteralPayload requires BasicLiteral. No tag check.
+func (v Expression) BasicLiteralPayload() ExpressionBasicLiteral {
 	return v.tgoPayload.(ExpressionBasicLiteral)
 }
 
@@ -370,14 +422,14 @@ type ExpressionFunctionLiteral struct {
 	Value *FunctionLiteral
 }
 
-// NewExpressionFunctionLiteral constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionFunctionLiteral(value ExpressionFunctionLiteral) Expression {
-	return Expression{tgoTag: 5, tgoPayload: value}
+func (value ExpressionFunctionLiteral) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagFunctionLiteral, tgoPayload: value}
 }
 
-// TgoFunctionLiteral returns the FunctionLiteral payload. Check TgoTag first.
-func (v Expression) TgoFunctionLiteral() ExpressionFunctionLiteral {
+// FunctionLiteralPayload requires FunctionLiteral. No tag check.
+func (v Expression) FunctionLiteralPayload() ExpressionFunctionLiteral {
 	return v.tgoPayload.(ExpressionFunctionLiteral)
 }
 
@@ -386,14 +438,14 @@ type ExpressionCompositeLiteral struct {
 	Value *CompositeLiteral
 }
 
-// NewExpressionCompositeLiteral constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionCompositeLiteral(value ExpressionCompositeLiteral) Expression {
-	return Expression{tgoTag: 6, tgoPayload: value}
+func (value ExpressionCompositeLiteral) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagCompositeLiteral, tgoPayload: value}
 }
 
-// TgoCompositeLiteral returns the CompositeLiteral payload. Check TgoTag first.
-func (v Expression) TgoCompositeLiteral() ExpressionCompositeLiteral {
+// CompositeLiteralPayload requires CompositeLiteral. No tag check.
+func (v Expression) CompositeLiteralPayload() ExpressionCompositeLiteral {
 	return v.tgoPayload.(ExpressionCompositeLiteral)
 }
 
@@ -402,14 +454,14 @@ type ExpressionParenthesized struct {
 	Value *ParenthesizedExpression
 }
 
-// NewExpressionParenthesized constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionParenthesized(value ExpressionParenthesized) Expression {
-	return Expression{tgoTag: 7, tgoPayload: value}
+func (value ExpressionParenthesized) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagParenthesized, tgoPayload: value}
 }
 
-// TgoParenthesized returns the Parenthesized payload. Check TgoTag first.
-func (v Expression) TgoParenthesized() ExpressionParenthesized {
+// ParenthesizedPayload requires Parenthesized. No tag check.
+func (v Expression) ParenthesizedPayload() ExpressionParenthesized {
 	return v.tgoPayload.(ExpressionParenthesized)
 }
 
@@ -418,70 +470,70 @@ type ExpressionSelector struct {
 	Value *SelectorExpression
 }
 
-// NewExpressionSelector constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionSelector(value ExpressionSelector) Expression {
-	return Expression{tgoTag: 8, tgoPayload: value}
+func (value ExpressionSelector) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagSelector, tgoPayload: value}
 }
 
-// TgoSelector returns the Selector payload. Check TgoTag first.
-func (v Expression) TgoSelector() ExpressionSelector { return v.tgoPayload.(ExpressionSelector) }
+// SelectorPayload requires Selector. No tag check.
+func (v Expression) SelectorPayload() ExpressionSelector { return v.tgoPayload.(ExpressionSelector) }
 
 // ExpressionIndex is the Index payload.
 type ExpressionIndex struct {
 	Value *IndexExpression
 }
 
-// NewExpressionIndex constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionIndex(value ExpressionIndex) Expression {
-	return Expression{tgoTag: 9, tgoPayload: value}
+func (value ExpressionIndex) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagIndex, tgoPayload: value}
 }
 
-// TgoIndex returns the Index payload. Check TgoTag first.
-func (v Expression) TgoIndex() ExpressionIndex { return v.tgoPayload.(ExpressionIndex) }
+// IndexPayload requires Index. No tag check.
+func (v Expression) IndexPayload() ExpressionIndex { return v.tgoPayload.(ExpressionIndex) }
 
 // ExpressionIndexList is the IndexList payload.
 type ExpressionIndexList struct {
 	Value *IndexListExpression
 }
 
-// NewExpressionIndexList constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionIndexList(value ExpressionIndexList) Expression {
-	return Expression{tgoTag: 10, tgoPayload: value}
+func (value ExpressionIndexList) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagIndexList, tgoPayload: value}
 }
 
-// TgoIndexList returns the IndexList payload. Check TgoTag first.
-func (v Expression) TgoIndexList() ExpressionIndexList { return v.tgoPayload.(ExpressionIndexList) }
+// IndexListPayload requires IndexList. No tag check.
+func (v Expression) IndexListPayload() ExpressionIndexList { return v.tgoPayload.(ExpressionIndexList) }
 
 // ExpressionSlice is the Slice payload.
 type ExpressionSlice struct {
 	Value *SliceExpression
 }
 
-// NewExpressionSlice constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionSlice(value ExpressionSlice) Expression {
-	return Expression{tgoTag: 11, tgoPayload: value}
+func (value ExpressionSlice) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagSlice, tgoPayload: value}
 }
 
-// TgoSlice returns the Slice payload. Check TgoTag first.
-func (v Expression) TgoSlice() ExpressionSlice { return v.tgoPayload.(ExpressionSlice) }
+// SlicePayload requires Slice. No tag check.
+func (v Expression) SlicePayload() ExpressionSlice { return v.tgoPayload.(ExpressionSlice) }
 
 // ExpressionTypeAssertion is the TypeAssertion payload.
 type ExpressionTypeAssertion struct {
 	Value *TypeAssertionExpression
 }
 
-// NewExpressionTypeAssertion constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionTypeAssertion(value ExpressionTypeAssertion) Expression {
-	return Expression{tgoTag: 12, tgoPayload: value}
+func (value ExpressionTypeAssertion) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagTypeAssertion, tgoPayload: value}
 }
 
-// TgoTypeAssertion returns the TypeAssertion payload. Check TgoTag first.
-func (v Expression) TgoTypeAssertion() ExpressionTypeAssertion {
+// TypeAssertionPayload requires TypeAssertion. No tag check.
+func (v Expression) TypeAssertionPayload() ExpressionTypeAssertion {
 	return v.tgoPayload.(ExpressionTypeAssertion)
 }
 
@@ -490,42 +542,42 @@ type ExpressionCall struct {
 	Value *CallExpression
 }
 
-// NewExpressionCall constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionCall(value ExpressionCall) Expression {
-	return Expression{tgoTag: 13, tgoPayload: value}
+func (value ExpressionCall) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagCall, tgoPayload: value}
 }
 
-// TgoCall returns the Call payload. Check TgoTag first.
-func (v Expression) TgoCall() ExpressionCall { return v.tgoPayload.(ExpressionCall) }
+// CallPayload requires Call. No tag check.
+func (v Expression) CallPayload() ExpressionCall { return v.tgoPayload.(ExpressionCall) }
 
 // ExpressionStar is the Star payload.
 type ExpressionStar struct {
 	Value *StarExpression
 }
 
-// NewExpressionStar constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionStar(value ExpressionStar) Expression {
-	return Expression{tgoTag: 14, tgoPayload: value}
+func (value ExpressionStar) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagStar, tgoPayload: value}
 }
 
-// TgoStar returns the Star payload. Check TgoTag first.
-func (v Expression) TgoStar() ExpressionStar { return v.tgoPayload.(ExpressionStar) }
+// StarPayload requires Star. No tag check.
+func (v Expression) StarPayload() ExpressionStar { return v.tgoPayload.(ExpressionStar) }
 
 // ExpressionNonNilPointer is the NonNilPointer payload.
 type ExpressionNonNilPointer struct {
 	Value *NonNilPointerType
 }
 
-// NewExpressionNonNilPointer constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionNonNilPointer(value ExpressionNonNilPointer) Expression {
-	return Expression{tgoTag: 15, tgoPayload: value}
+func (value ExpressionNonNilPointer) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagNonNilPointer, tgoPayload: value}
 }
 
-// TgoNonNilPointer returns the NonNilPointer payload. Check TgoTag first.
-func (v Expression) TgoNonNilPointer() ExpressionNonNilPointer {
+// NonNilPointerPayload requires NonNilPointer. No tag check.
+func (v Expression) NonNilPointerPayload() ExpressionNonNilPointer {
 	return v.tgoPayload.(ExpressionNonNilPointer)
 }
 
@@ -534,303 +586,305 @@ type ExpressionUnary struct {
 	Value *UnaryExpression
 }
 
-// NewExpressionUnary constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionUnary(value ExpressionUnary) Expression {
-	return Expression{tgoTag: 16, tgoPayload: value}
+func (value ExpressionUnary) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagUnary, tgoPayload: value}
 }
 
-// TgoUnary returns the Unary payload. Check TgoTag first.
-func (v Expression) TgoUnary() ExpressionUnary { return v.tgoPayload.(ExpressionUnary) }
+// UnaryPayload requires Unary. No tag check.
+func (v Expression) UnaryPayload() ExpressionUnary { return v.tgoPayload.(ExpressionUnary) }
 
 // ExpressionBinary is the Binary payload.
 type ExpressionBinary struct {
 	Value *BinaryExpression
 }
 
-// NewExpressionBinary constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionBinary(value ExpressionBinary) Expression {
-	return Expression{tgoTag: 17, tgoPayload: value}
+func (value ExpressionBinary) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagBinary, tgoPayload: value}
 }
 
-// TgoBinary returns the Binary payload. Check TgoTag first.
-func (v Expression) TgoBinary() ExpressionBinary { return v.tgoPayload.(ExpressionBinary) }
+// BinaryPayload requires Binary. No tag check.
+func (v Expression) BinaryPayload() ExpressionBinary { return v.tgoPayload.(ExpressionBinary) }
 
 // ExpressionKeyValue is the KeyValue payload.
 type ExpressionKeyValue struct {
 	Value *KeyValueExpression
 }
 
-// NewExpressionKeyValue constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionKeyValue(value ExpressionKeyValue) Expression {
-	return Expression{tgoTag: 18, tgoPayload: value}
+func (value ExpressionKeyValue) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagKeyValue, tgoPayload: value}
 }
 
-// TgoKeyValue returns the KeyValue payload. Check TgoTag first.
-func (v Expression) TgoKeyValue() ExpressionKeyValue { return v.tgoPayload.(ExpressionKeyValue) }
+// KeyValuePayload requires KeyValue. No tag check.
+func (v Expression) KeyValuePayload() ExpressionKeyValue { return v.tgoPayload.(ExpressionKeyValue) }
 
 // ExpressionArrayType is the ArrayType payload.
 type ExpressionArrayType struct {
 	Value *ArrayType
 }
 
-// NewExpressionArrayType constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionArrayType(value ExpressionArrayType) Expression {
-	return Expression{tgoTag: 19, tgoPayload: value}
+func (value ExpressionArrayType) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagArrayType, tgoPayload: value}
 }
 
-// TgoArrayType returns the ArrayType payload. Check TgoTag first.
-func (v Expression) TgoArrayType() ExpressionArrayType { return v.tgoPayload.(ExpressionArrayType) }
+// ArrayTypePayload requires ArrayType. No tag check.
+func (v Expression) ArrayTypePayload() ExpressionArrayType { return v.tgoPayload.(ExpressionArrayType) }
 
 // ExpressionStructType is the StructType payload.
 type ExpressionStructType struct {
 	Value *StructType
 }
 
-// NewExpressionStructType constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionStructType(value ExpressionStructType) Expression {
-	return Expression{tgoTag: 20, tgoPayload: value}
+func (value ExpressionStructType) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagStructType, tgoPayload: value}
 }
 
-// TgoStructType returns the StructType payload. Check TgoTag first.
-func (v Expression) TgoStructType() ExpressionStructType { return v.tgoPayload.(ExpressionStructType) }
+// StructTypePayload requires StructType. No tag check.
+func (v Expression) StructTypePayload() ExpressionStructType {
+	return v.tgoPayload.(ExpressionStructType)
+}
 
 // ExpressionFunctionType is the FunctionType payload.
 type ExpressionFunctionType struct {
 	Value *FunctionType
 }
 
-// NewExpressionFunctionType constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionFunctionType(value ExpressionFunctionType) Expression {
-	return Expression{tgoTag: 21, tgoFunctionType: value}
+func (value ExpressionFunctionType) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagFunctionType, tgoFunctionType: value}
 }
 
-// TgoFunctionType returns the FunctionType payload. Check TgoTag first.
-func (v Expression) TgoFunctionType() ExpressionFunctionType { return v.tgoFunctionType }
+// FunctionTypePayload requires FunctionType. No tag check.
+func (v Expression) FunctionTypePayload() ExpressionFunctionType { return v.tgoFunctionType }
 
 // ExpressionInterfaceType is the InterfaceType payload.
 type ExpressionInterfaceType struct {
 	Value *InterfaceType
 }
 
-// NewExpressionInterfaceType constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionInterfaceType(value ExpressionInterfaceType) Expression {
-	return Expression{tgoTag: 22, tgoInterfaceType: value}
+func (value ExpressionInterfaceType) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagInterfaceType, tgoInterfaceType: value}
 }
 
-// TgoInterfaceType returns the InterfaceType payload. Check TgoTag first.
-func (v Expression) TgoInterfaceType() ExpressionInterfaceType { return v.tgoInterfaceType }
+// InterfaceTypePayload requires InterfaceType. No tag check.
+func (v Expression) InterfaceTypePayload() ExpressionInterfaceType { return v.tgoInterfaceType }
 
 // ExpressionMapType is the MapType payload.
 type ExpressionMapType struct {
 	Value *MapType
 }
 
-// NewExpressionMapType constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionMapType(value ExpressionMapType) Expression {
-	return Expression{tgoTag: 23, tgoMapType: value}
+func (value ExpressionMapType) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagMapType, tgoMapType: value}
 }
 
-// TgoMapType returns the MapType payload. Check TgoTag first.
-func (v Expression) TgoMapType() ExpressionMapType { return v.tgoMapType }
+// MapTypePayload requires MapType. No tag check.
+func (v Expression) MapTypePayload() ExpressionMapType { return v.tgoMapType }
 
 // ExpressionChannelType is the ChannelType payload.
 type ExpressionChannelType struct {
 	Value *ChannelType
 }
 
-// NewExpressionChannelType constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionChannelType(value ExpressionChannelType) Expression {
-	return Expression{tgoTag: 24, tgoChannelType: value}
+func (value ExpressionChannelType) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagChannelType, tgoChannelType: value}
 }
 
-// TgoChannelType returns the ChannelType payload. Check TgoTag first.
-func (v Expression) TgoChannelType() ExpressionChannelType { return v.tgoChannelType }
+// ChannelTypePayload requires ChannelType. No tag check.
+func (v Expression) ChannelTypePayload() ExpressionChannelType { return v.tgoChannelType }
 
 // ExpressionDefault is the Default payload.
 type ExpressionDefault struct {
 	Value *DefaultExpression
 }
 
-// NewExpressionDefault constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionDefault(value ExpressionDefault) Expression {
-	return Expression{tgoTag: 25, tgoDefault: value}
+func (value ExpressionDefault) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagDefault, tgoDefault: value}
 }
 
-// TgoDefault returns the Default payload. Check TgoTag first.
-func (v Expression) TgoDefault() ExpressionDefault { return v.tgoDefault }
+// DefaultPayload requires Default. No tag check.
+func (v Expression) DefaultPayload() ExpressionDefault { return v.tgoDefault }
 
 // ExpressionPropagation is the Propagation payload.
 type ExpressionPropagation struct {
 	Value *PropagationExpression
 }
 
-// NewExpressionPropagation constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionPropagation(value ExpressionPropagation) Expression {
-	return Expression{tgoTag: 26, tgoPropagation: value}
+func (value ExpressionPropagation) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagPropagation, tgoPropagation: value}
 }
 
-// TgoPropagation returns the Propagation payload. Check TgoTag first.
-func (v Expression) TgoPropagation() ExpressionPropagation { return v.tgoPropagation }
+// PropagationPayload requires Propagation. No tag check.
+func (v Expression) PropagationPayload() ExpressionPropagation { return v.tgoPropagation }
 
 // ExpressionComprehension is the Comprehension payload.
 type ExpressionComprehension struct {
 	Value *ComprehensionExpression
 }
 
-// NewExpressionComprehension constructs Expression. Model fields must be valid.
+// Expression constructs Expression. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewExpressionComprehension(value ExpressionComprehension) Expression {
-	return Expression{tgoTag: 27, tgoComprehension: value}
+func (value ExpressionComprehension) Expression() Expression {
+	return Expression{tgoTag: ExpressionTagComprehension, tgoComprehension: value}
 }
 
-// TgoComprehension returns the Comprehension payload. Check TgoTag first.
-func (v Expression) TgoComprehension() ExpressionComprehension { return v.tgoComprehension }
+// ComprehensionPayload requires Comprehension. No tag check.
+func (v Expression) ComprehensionPayload() ExpressionComprehension { return v.tgoComprehension }
 
 func (v Expression) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoBad()
+	case ExpressionTagBad:
+		payload := v.BadPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionBad `json:"Bad"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoIdentifier()
+	case ExpressionTagIdentifier:
+		payload := v.IdentifierPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionIdentifier `json:"Identifier"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoEllipsis()
+	case ExpressionTagEllipsis:
+		payload := v.EllipsisPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionEllipsis `json:"Ellipsis"`
 		}{Payload: payload})
-	case 4:
-		payload := v.TgoBasicLiteral()
+	case ExpressionTagBasicLiteral:
+		payload := v.BasicLiteralPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionBasicLiteral `json:"BasicLiteral"`
 		}{Payload: payload})
-	case 5:
-		payload := v.TgoFunctionLiteral()
+	case ExpressionTagFunctionLiteral:
+		payload := v.FunctionLiteralPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionFunctionLiteral `json:"FunctionLiteral"`
 		}{Payload: payload})
-	case 6:
-		payload := v.TgoCompositeLiteral()
+	case ExpressionTagCompositeLiteral:
+		payload := v.CompositeLiteralPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionCompositeLiteral `json:"CompositeLiteral"`
 		}{Payload: payload})
-	case 7:
-		payload := v.TgoParenthesized()
+	case ExpressionTagParenthesized:
+		payload := v.ParenthesizedPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionParenthesized `json:"Parenthesized"`
 		}{Payload: payload})
-	case 8:
-		payload := v.TgoSelector()
+	case ExpressionTagSelector:
+		payload := v.SelectorPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionSelector `json:"Selector"`
 		}{Payload: payload})
-	case 9:
-		payload := v.TgoIndex()
+	case ExpressionTagIndex:
+		payload := v.IndexPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionIndex `json:"Index"`
 		}{Payload: payload})
-	case 10:
-		payload := v.TgoIndexList()
+	case ExpressionTagIndexList:
+		payload := v.IndexListPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionIndexList `json:"IndexList"`
 		}{Payload: payload})
-	case 11:
-		payload := v.TgoSlice()
+	case ExpressionTagSlice:
+		payload := v.SlicePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionSlice `json:"Slice"`
 		}{Payload: payload})
-	case 12:
-		payload := v.TgoTypeAssertion()
+	case ExpressionTagTypeAssertion:
+		payload := v.TypeAssertionPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionTypeAssertion `json:"TypeAssertion"`
 		}{Payload: payload})
-	case 13:
-		payload := v.TgoCall()
+	case ExpressionTagCall:
+		payload := v.CallPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionCall `json:"Call"`
 		}{Payload: payload})
-	case 14:
-		payload := v.TgoStar()
+	case ExpressionTagStar:
+		payload := v.StarPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionStar `json:"Star"`
 		}{Payload: payload})
-	case 15:
-		payload := v.TgoNonNilPointer()
+	case ExpressionTagNonNilPointer:
+		payload := v.NonNilPointerPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionNonNilPointer `json:"NonNilPointer"`
 		}{Payload: payload})
-	case 16:
-		payload := v.TgoUnary()
+	case ExpressionTagUnary:
+		payload := v.UnaryPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionUnary `json:"Unary"`
 		}{Payload: payload})
-	case 17:
-		payload := v.TgoBinary()
+	case ExpressionTagBinary:
+		payload := v.BinaryPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionBinary `json:"Binary"`
 		}{Payload: payload})
-	case 18:
-		payload := v.TgoKeyValue()
+	case ExpressionTagKeyValue:
+		payload := v.KeyValuePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionKeyValue `json:"KeyValue"`
 		}{Payload: payload})
-	case 19:
-		payload := v.TgoArrayType()
+	case ExpressionTagArrayType:
+		payload := v.ArrayTypePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionArrayType `json:"ArrayType"`
 		}{Payload: payload})
-	case 20:
-		payload := v.TgoStructType()
+	case ExpressionTagStructType:
+		payload := v.StructTypePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionStructType `json:"StructType"`
 		}{Payload: payload})
-	case 21:
-		payload := v.TgoFunctionType()
+	case ExpressionTagFunctionType:
+		payload := v.FunctionTypePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionFunctionType `json:"FunctionType"`
 		}{Payload: payload})
-	case 22:
-		payload := v.TgoInterfaceType()
+	case ExpressionTagInterfaceType:
+		payload := v.InterfaceTypePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionInterfaceType `json:"InterfaceType"`
 		}{Payload: payload})
-	case 23:
-		payload := v.TgoMapType()
+	case ExpressionTagMapType:
+		payload := v.MapTypePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionMapType `json:"MapType"`
 		}{Payload: payload})
-	case 24:
-		payload := v.TgoChannelType()
+	case ExpressionTagChannelType:
+		payload := v.ChannelTypePayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionChannelType `json:"ChannelType"`
 		}{Payload: payload})
-	case 25:
-		payload := v.TgoDefault()
+	case ExpressionTagDefault:
+		payload := v.DefaultPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionDefault `json:"Default"`
 		}{Payload: payload})
-	case 26:
-		payload := v.TgoPropagation()
+	case ExpressionTagPropagation:
+		payload := v.PropagationPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionPropagation `json:"Propagation"`
 		}{Payload: payload})
-	case 27:
-		payload := v.TgoComprehension()
+	case ExpressionTagComprehension:
+		payload := v.ComprehensionPayload()
 		return __tgo_json.Marshal(struct {
 			Payload ExpressionComprehension `json:"Comprehension"`
 		}{Payload: payload})
@@ -841,86 +895,86 @@ func (v Expression) MarshalJSON() ([]byte, error) {
 
 func (v Expression) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoBad()
+	case ExpressionTagBad:
+		payload := v.BadPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Bad", payload)
-	case 2:
-		payload := v.TgoIdentifier()
+	case ExpressionTagIdentifier:
+		payload := v.IdentifierPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Identifier", payload)
-	case 3:
-		payload := v.TgoEllipsis()
+	case ExpressionTagEllipsis:
+		payload := v.EllipsisPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Ellipsis", payload)
-	case 4:
-		payload := v.TgoBasicLiteral()
+	case ExpressionTagBasicLiteral:
+		payload := v.BasicLiteralPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "BasicLiteral", payload)
-	case 5:
-		payload := v.TgoFunctionLiteral()
+	case ExpressionTagFunctionLiteral:
+		payload := v.FunctionLiteralPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "FunctionLiteral", payload)
-	case 6:
-		payload := v.TgoCompositeLiteral()
+	case ExpressionTagCompositeLiteral:
+		payload := v.CompositeLiteralPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "CompositeLiteral", payload)
-	case 7:
-		payload := v.TgoParenthesized()
+	case ExpressionTagParenthesized:
+		payload := v.ParenthesizedPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Parenthesized", payload)
-	case 8:
-		payload := v.TgoSelector()
+	case ExpressionTagSelector:
+		payload := v.SelectorPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Selector", payload)
-	case 9:
-		payload := v.TgoIndex()
+	case ExpressionTagIndex:
+		payload := v.IndexPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Index", payload)
-	case 10:
-		payload := v.TgoIndexList()
+	case ExpressionTagIndexList:
+		payload := v.IndexListPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "IndexList", payload)
-	case 11:
-		payload := v.TgoSlice()
+	case ExpressionTagSlice:
+		payload := v.SlicePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Slice", payload)
-	case 12:
-		payload := v.TgoTypeAssertion()
+	case ExpressionTagTypeAssertion:
+		payload := v.TypeAssertionPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "TypeAssertion", payload)
-	case 13:
-		payload := v.TgoCall()
+	case ExpressionTagCall:
+		payload := v.CallPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Call", payload)
-	case 14:
-		payload := v.TgoStar()
+	case ExpressionTagStar:
+		payload := v.StarPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Star", payload)
-	case 15:
-		payload := v.TgoNonNilPointer()
+	case ExpressionTagNonNilPointer:
+		payload := v.NonNilPointerPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "NonNilPointer", payload)
-	case 16:
-		payload := v.TgoUnary()
+	case ExpressionTagUnary:
+		payload := v.UnaryPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Unary", payload)
-	case 17:
-		payload := v.TgoBinary()
+	case ExpressionTagBinary:
+		payload := v.BinaryPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Binary", payload)
-	case 18:
-		payload := v.TgoKeyValue()
+	case ExpressionTagKeyValue:
+		payload := v.KeyValuePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "KeyValue", payload)
-	case 19:
-		payload := v.TgoArrayType()
+	case ExpressionTagArrayType:
+		payload := v.ArrayTypePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "ArrayType", payload)
-	case 20:
-		payload := v.TgoStructType()
+	case ExpressionTagStructType:
+		payload := v.StructTypePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "StructType", payload)
-	case 21:
-		payload := v.TgoFunctionType()
+	case ExpressionTagFunctionType:
+		payload := v.FunctionTypePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "FunctionType", payload)
-	case 22:
-		payload := v.TgoInterfaceType()
+	case ExpressionTagInterfaceType:
+		payload := v.InterfaceTypePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "InterfaceType", payload)
-	case 23:
-		payload := v.TgoMapType()
+	case ExpressionTagMapType:
+		payload := v.MapTypePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "MapType", payload)
-	case 24:
-		payload := v.TgoChannelType()
+	case ExpressionTagChannelType:
+		payload := v.ChannelTypePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "ChannelType", payload)
-	case 25:
-		payload := v.TgoDefault()
+	case ExpressionTagDefault:
+		payload := v.DefaultPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Default", payload)
-	case 26:
-		payload := v.TgoPropagation()
+	case ExpressionTagPropagation:
+		payload := v.PropagationPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Propagation", payload)
-	case 27:
-		payload := v.TgoComprehension()
+	case ExpressionTagComprehension:
+		payload := v.ComprehensionPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Comprehension", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid Expression JSON tag")
@@ -947,189 +1001,189 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionBad(payload)
+		*v = payload.Expression()
 		return nil
 	case "Identifier":
 		var payload ExpressionIdentifier
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionIdentifier(payload)
+		*v = payload.Expression()
 		return nil
 	case "Ellipsis":
 		var payload ExpressionEllipsis
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionEllipsis(payload)
+		*v = payload.Expression()
 		return nil
 	case "BasicLiteral":
 		var payload ExpressionBasicLiteral
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionBasicLiteral(payload)
+		*v = payload.Expression()
 		return nil
 	case "FunctionLiteral":
 		var payload ExpressionFunctionLiteral
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionFunctionLiteral(payload)
+		*v = payload.Expression()
 		return nil
 	case "CompositeLiteral":
 		var payload ExpressionCompositeLiteral
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionCompositeLiteral(payload)
+		*v = payload.Expression()
 		return nil
 	case "Parenthesized":
 		var payload ExpressionParenthesized
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionParenthesized(payload)
+		*v = payload.Expression()
 		return nil
 	case "Selector":
 		var payload ExpressionSelector
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionSelector(payload)
+		*v = payload.Expression()
 		return nil
 	case "Index":
 		var payload ExpressionIndex
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionIndex(payload)
+		*v = payload.Expression()
 		return nil
 	case "IndexList":
 		var payload ExpressionIndexList
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionIndexList(payload)
+		*v = payload.Expression()
 		return nil
 	case "Slice":
 		var payload ExpressionSlice
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionSlice(payload)
+		*v = payload.Expression()
 		return nil
 	case "TypeAssertion":
 		var payload ExpressionTypeAssertion
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionTypeAssertion(payload)
+		*v = payload.Expression()
 		return nil
 	case "Call":
 		var payload ExpressionCall
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionCall(payload)
+		*v = payload.Expression()
 		return nil
 	case "Star":
 		var payload ExpressionStar
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionStar(payload)
+		*v = payload.Expression()
 		return nil
 	case "NonNilPointer":
 		var payload ExpressionNonNilPointer
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionNonNilPointer(payload)
+		*v = payload.Expression()
 		return nil
 	case "Unary":
 		var payload ExpressionUnary
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionUnary(payload)
+		*v = payload.Expression()
 		return nil
 	case "Binary":
 		var payload ExpressionBinary
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionBinary(payload)
+		*v = payload.Expression()
 		return nil
 	case "KeyValue":
 		var payload ExpressionKeyValue
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionKeyValue(payload)
+		*v = payload.Expression()
 		return nil
 	case "ArrayType":
 		var payload ExpressionArrayType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionArrayType(payload)
+		*v = payload.Expression()
 		return nil
 	case "StructType":
 		var payload ExpressionStructType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionStructType(payload)
+		*v = payload.Expression()
 		return nil
 	case "FunctionType":
 		var payload ExpressionFunctionType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionFunctionType(payload)
+		*v = payload.Expression()
 		return nil
 	case "InterfaceType":
 		var payload ExpressionInterfaceType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionInterfaceType(payload)
+		*v = payload.Expression()
 		return nil
 	case "MapType":
 		var payload ExpressionMapType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionMapType(payload)
+		*v = payload.Expression()
 		return nil
 	case "ChannelType":
 		var payload ExpressionChannelType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionChannelType(payload)
+		*v = payload.Expression()
 		return nil
 	case "Default":
 		var payload ExpressionDefault
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionDefault(payload)
+		*v = payload.Expression()
 		return nil
 	case "Propagation":
 		var payload ExpressionPropagation
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionPropagation(payload)
+		*v = payload.Expression()
 		return nil
 	case "Comprehension":
 		var payload ExpressionComprehension
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewExpressionComprehension(payload)
+		*v = payload.Expression()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Expression JSON variant %q", variant)
@@ -1250,189 +1304,189 @@ func (v *Expression) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionBad(payload)
+		*v = payload.Expression()
 		return nil
 	case 2:
 		var payload ExpressionIdentifier
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionIdentifier(payload)
+		*v = payload.Expression()
 		return nil
 	case 3:
 		var payload ExpressionEllipsis
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionEllipsis(payload)
+		*v = payload.Expression()
 		return nil
 	case 4:
 		var payload ExpressionBasicLiteral
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionBasicLiteral(payload)
+		*v = payload.Expression()
 		return nil
 	case 5:
 		var payload ExpressionFunctionLiteral
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionFunctionLiteral(payload)
+		*v = payload.Expression()
 		return nil
 	case 6:
 		var payload ExpressionCompositeLiteral
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionCompositeLiteral(payload)
+		*v = payload.Expression()
 		return nil
 	case 7:
 		var payload ExpressionParenthesized
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionParenthesized(payload)
+		*v = payload.Expression()
 		return nil
 	case 8:
 		var payload ExpressionSelector
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionSelector(payload)
+		*v = payload.Expression()
 		return nil
 	case 9:
 		var payload ExpressionIndex
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionIndex(payload)
+		*v = payload.Expression()
 		return nil
 	case 10:
 		var payload ExpressionIndexList
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionIndexList(payload)
+		*v = payload.Expression()
 		return nil
 	case 11:
 		var payload ExpressionSlice
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionSlice(payload)
+		*v = payload.Expression()
 		return nil
 	case 12:
 		var payload ExpressionTypeAssertion
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionTypeAssertion(payload)
+		*v = payload.Expression()
 		return nil
 	case 13:
 		var payload ExpressionCall
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionCall(payload)
+		*v = payload.Expression()
 		return nil
 	case 14:
 		var payload ExpressionStar
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionStar(payload)
+		*v = payload.Expression()
 		return nil
 	case 15:
 		var payload ExpressionNonNilPointer
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionNonNilPointer(payload)
+		*v = payload.Expression()
 		return nil
 	case 16:
 		var payload ExpressionUnary
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionUnary(payload)
+		*v = payload.Expression()
 		return nil
 	case 17:
 		var payload ExpressionBinary
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionBinary(payload)
+		*v = payload.Expression()
 		return nil
 	case 18:
 		var payload ExpressionKeyValue
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionKeyValue(payload)
+		*v = payload.Expression()
 		return nil
 	case 19:
 		var payload ExpressionArrayType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionArrayType(payload)
+		*v = payload.Expression()
 		return nil
 	case 20:
 		var payload ExpressionStructType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionStructType(payload)
+		*v = payload.Expression()
 		return nil
 	case 21:
 		var payload ExpressionFunctionType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionFunctionType(payload)
+		*v = payload.Expression()
 		return nil
 	case 22:
 		var payload ExpressionInterfaceType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionInterfaceType(payload)
+		*v = payload.Expression()
 		return nil
 	case 23:
 		var payload ExpressionMapType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionMapType(payload)
+		*v = payload.Expression()
 		return nil
 	case 24:
 		var payload ExpressionChannelType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionChannelType(payload)
+		*v = payload.Expression()
 		return nil
 	case 25:
 		var payload ExpressionDefault
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionDefault(payload)
+		*v = payload.Expression()
 		return nil
 	case 26:
 		var payload ExpressionPropagation
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionPropagation(payload)
+		*v = payload.Expression()
 		return nil
 	case 27:
 		var payload ExpressionComprehension
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewExpressionComprehension(payload)
+		*v = payload.Expression()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Expression JSON tag")
@@ -1674,443 +1728,457 @@ type PropagationExpression struct {
 	SecondBang token.Pos
 }
 
-// Statement contains every Go statement form plus TGo match.
+// Statement contains every Go statement form.
 // Statement requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type StatementTag uint8
+
+const (
+	StatementTagBad StatementTag = iota + 1
+	StatementTagDeclaration
+	StatementTagEmpty
+	StatementTagLabeled
+	StatementTagExpression
+	StatementTagSend
+	StatementTagIncrement
+	StatementTagAssignment
+	StatementTagGo
+	StatementTagDefer
+	StatementTagReturn
+	StatementTagBranch
+	StatementTagBlock
+	StatementTagIf
+	StatementTagCase
+	StatementTagSwitch
+	StatementTagTypeSwitch
+	StatementTagCommunication
+	StatementTagSelect
+	StatementTagFor
+	StatementTagRange
+)
+
 type Statement struct {
-	tgoTag           uint8
+	tgoTag           StatementTag
+	tgoCase          StatementCase
 	tgoSwitch        StatementSwitch
 	tgoTypeSwitch    StatementTypeSwitch
 	tgoCommunication StatementCommunication
 	tgoSelect        StatementSelect
 	tgoFor           StatementFor
 	tgoRange         StatementRange
-	tgoMatch         StatementMatch
 	tgoPayload       interface{}
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Statement) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Statement) Tag() StatementTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Statement) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Statement: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // StatementBad is the Bad payload.
 type StatementBad struct {
 	Value *BadStatement
 }
 
-// NewStatementBad constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementBad(value StatementBad) Statement {
-	return Statement{tgoTag: 1, tgoPayload: value}
+func (value StatementBad) Statement() Statement {
+	return Statement{tgoTag: StatementTagBad, tgoPayload: value}
 }
 
-// TgoBad returns the Bad payload. Check TgoTag first.
-func (v Statement) TgoBad() StatementBad { return v.tgoPayload.(StatementBad) }
+// BadPayload requires Bad. No tag check.
+func (v Statement) BadPayload() StatementBad { return v.tgoPayload.(StatementBad) }
 
 // StatementDeclaration is the Declaration payload.
 type StatementDeclaration struct {
 	Value *DeclarationStatement
 }
 
-// NewStatementDeclaration constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementDeclaration(value StatementDeclaration) Statement {
-	return Statement{tgoTag: 2, tgoPayload: value}
+func (value StatementDeclaration) Statement() Statement {
+	return Statement{tgoTag: StatementTagDeclaration, tgoPayload: value}
 }
 
-// TgoDeclaration returns the Declaration payload. Check TgoTag first.
-func (v Statement) TgoDeclaration() StatementDeclaration { return v.tgoPayload.(StatementDeclaration) }
+// DeclarationPayload requires Declaration. No tag check.
+func (v Statement) DeclarationPayload() StatementDeclaration {
+	return v.tgoPayload.(StatementDeclaration)
+}
 
 // StatementEmpty is the Empty payload.
 type StatementEmpty struct {
 	Value *EmptyStatement
 }
 
-// NewStatementEmpty constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementEmpty(value StatementEmpty) Statement {
-	return Statement{tgoTag: 3, tgoPayload: value}
+func (value StatementEmpty) Statement() Statement {
+	return Statement{tgoTag: StatementTagEmpty, tgoPayload: value}
 }
 
-// TgoEmpty returns the Empty payload. Check TgoTag first.
-func (v Statement) TgoEmpty() StatementEmpty { return v.tgoPayload.(StatementEmpty) }
+// EmptyPayload requires Empty. No tag check.
+func (v Statement) EmptyPayload() StatementEmpty { return v.tgoPayload.(StatementEmpty) }
 
 // StatementLabeled is the Labeled payload.
 type StatementLabeled struct {
 	Value *LabeledStatement
 }
 
-// NewStatementLabeled constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementLabeled(value StatementLabeled) Statement {
-	return Statement{tgoTag: 4, tgoPayload: value}
+func (value StatementLabeled) Statement() Statement {
+	return Statement{tgoTag: StatementTagLabeled, tgoPayload: value}
 }
 
-// TgoLabeled returns the Labeled payload. Check TgoTag first.
-func (v Statement) TgoLabeled() StatementLabeled { return v.tgoPayload.(StatementLabeled) }
+// LabeledPayload requires Labeled. No tag check.
+func (v Statement) LabeledPayload() StatementLabeled { return v.tgoPayload.(StatementLabeled) }
 
 // StatementExpression is the Expression payload.
 type StatementExpression struct {
 	Value *ExpressionStatement
 }
 
-// NewStatementExpression constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementExpression(value StatementExpression) Statement {
-	return Statement{tgoTag: 5, tgoPayload: value}
+func (value StatementExpression) Statement() Statement {
+	return Statement{tgoTag: StatementTagExpression, tgoPayload: value}
 }
 
-// TgoExpression returns the Expression payload. Check TgoTag first.
-func (v Statement) TgoExpression() StatementExpression { return v.tgoPayload.(StatementExpression) }
+// ExpressionPayload requires Expression. No tag check.
+func (v Statement) ExpressionPayload() StatementExpression { return v.tgoPayload.(StatementExpression) }
 
 // StatementSend is the Send payload.
 type StatementSend struct {
 	Value *SendStatement
 }
 
-// NewStatementSend constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementSend(value StatementSend) Statement {
-	return Statement{tgoTag: 6, tgoPayload: value}
+func (value StatementSend) Statement() Statement {
+	return Statement{tgoTag: StatementTagSend, tgoPayload: value}
 }
 
-// TgoSend returns the Send payload. Check TgoTag first.
-func (v Statement) TgoSend() StatementSend { return v.tgoPayload.(StatementSend) }
+// SendPayload requires Send. No tag check.
+func (v Statement) SendPayload() StatementSend { return v.tgoPayload.(StatementSend) }
 
 // StatementIncrement is the Increment payload.
 type StatementIncrement struct {
 	Value *IncrementStatement
 }
 
-// NewStatementIncrement constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementIncrement(value StatementIncrement) Statement {
-	return Statement{tgoTag: 7, tgoPayload: value}
+func (value StatementIncrement) Statement() Statement {
+	return Statement{tgoTag: StatementTagIncrement, tgoPayload: value}
 }
 
-// TgoIncrement returns the Increment payload. Check TgoTag first.
-func (v Statement) TgoIncrement() StatementIncrement { return v.tgoPayload.(StatementIncrement) }
+// IncrementPayload requires Increment. No tag check.
+func (v Statement) IncrementPayload() StatementIncrement { return v.tgoPayload.(StatementIncrement) }
 
 // StatementAssignment is the Assignment payload.
 type StatementAssignment struct {
 	Value *AssignmentStatement
 }
 
-// NewStatementAssignment constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementAssignment(value StatementAssignment) Statement {
-	return Statement{tgoTag: 8, tgoPayload: value}
+func (value StatementAssignment) Statement() Statement {
+	return Statement{tgoTag: StatementTagAssignment, tgoPayload: value}
 }
 
-// TgoAssignment returns the Assignment payload. Check TgoTag first.
-func (v Statement) TgoAssignment() StatementAssignment { return v.tgoPayload.(StatementAssignment) }
+// AssignmentPayload requires Assignment. No tag check.
+func (v Statement) AssignmentPayload() StatementAssignment { return v.tgoPayload.(StatementAssignment) }
 
 // StatementGo is the Go payload.
 type StatementGo struct {
 	Value *GoStatement
 }
 
-// NewStatementGo constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementGo(value StatementGo) Statement {
-	return Statement{tgoTag: 9, tgoPayload: value}
+func (value StatementGo) Statement() Statement {
+	return Statement{tgoTag: StatementTagGo, tgoPayload: value}
 }
 
-// TgoGo returns the Go payload. Check TgoTag first.
-func (v Statement) TgoGo() StatementGo { return v.tgoPayload.(StatementGo) }
+// GoPayload requires Go. No tag check.
+func (v Statement) GoPayload() StatementGo { return v.tgoPayload.(StatementGo) }
 
 // StatementDefer is the Defer payload.
 type StatementDefer struct {
 	Value *DeferStatement
 }
 
-// NewStatementDefer constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementDefer(value StatementDefer) Statement {
-	return Statement{tgoTag: 10, tgoPayload: value}
+func (value StatementDefer) Statement() Statement {
+	return Statement{tgoTag: StatementTagDefer, tgoPayload: value}
 }
 
-// TgoDefer returns the Defer payload. Check TgoTag first.
-func (v Statement) TgoDefer() StatementDefer { return v.tgoPayload.(StatementDefer) }
+// DeferPayload requires Defer. No tag check.
+func (v Statement) DeferPayload() StatementDefer { return v.tgoPayload.(StatementDefer) }
 
 // StatementReturn is the Return payload.
 type StatementReturn struct {
 	Value *ReturnStatement
 }
 
-// NewStatementReturn constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementReturn(value StatementReturn) Statement {
-	return Statement{tgoTag: 11, tgoPayload: value}
+func (value StatementReturn) Statement() Statement {
+	return Statement{tgoTag: StatementTagReturn, tgoPayload: value}
 }
 
-// TgoReturn returns the Return payload. Check TgoTag first.
-func (v Statement) TgoReturn() StatementReturn { return v.tgoPayload.(StatementReturn) }
+// ReturnPayload requires Return. No tag check.
+func (v Statement) ReturnPayload() StatementReturn { return v.tgoPayload.(StatementReturn) }
 
 // StatementBranch is the Branch payload.
 type StatementBranch struct {
 	Value *BranchStatement
 }
 
-// NewStatementBranch constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementBranch(value StatementBranch) Statement {
-	return Statement{tgoTag: 12, tgoPayload: value}
+func (value StatementBranch) Statement() Statement {
+	return Statement{tgoTag: StatementTagBranch, tgoPayload: value}
 }
 
-// TgoBranch returns the Branch payload. Check TgoTag first.
-func (v Statement) TgoBranch() StatementBranch { return v.tgoPayload.(StatementBranch) }
+// BranchPayload requires Branch. No tag check.
+func (v Statement) BranchPayload() StatementBranch { return v.tgoPayload.(StatementBranch) }
 
 // StatementBlock is the Block payload.
 type StatementBlock struct {
 	Value *BlockStatement
 }
 
-// NewStatementBlock constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementBlock(value StatementBlock) Statement {
-	return Statement{tgoTag: 13, tgoPayload: value}
+func (value StatementBlock) Statement() Statement {
+	return Statement{tgoTag: StatementTagBlock, tgoPayload: value}
 }
 
-// TgoBlock returns the Block payload. Check TgoTag first.
-func (v Statement) TgoBlock() StatementBlock { return v.tgoPayload.(StatementBlock) }
+// BlockPayload requires Block. No tag check.
+func (v Statement) BlockPayload() StatementBlock { return v.tgoPayload.(StatementBlock) }
 
 // StatementIf is the If payload.
 type StatementIf struct {
 	Value *IfStatement
 }
 
-// NewStatementIf constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementIf(value StatementIf) Statement {
-	return Statement{tgoTag: 14, tgoPayload: value}
+func (value StatementIf) Statement() Statement {
+	return Statement{tgoTag: StatementTagIf, tgoPayload: value}
 }
 
-// TgoIf returns the If payload. Check TgoTag first.
-func (v Statement) TgoIf() StatementIf { return v.tgoPayload.(StatementIf) }
+// IfPayload requires If. No tag check.
+func (v Statement) IfPayload() StatementIf { return v.tgoPayload.(StatementIf) }
 
 // StatementCase is the Case payload.
 type StatementCase struct {
 	Value *CaseClause
 }
 
-// NewStatementCase constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementCase(value StatementCase) Statement {
-	return Statement{tgoTag: 15, tgoPayload: value}
+func (value StatementCase) Statement() Statement {
+	return Statement{tgoTag: StatementTagCase, tgoCase: value}
 }
 
-// TgoCase returns the Case payload. Check TgoTag first.
-func (v Statement) TgoCase() StatementCase { return v.tgoPayload.(StatementCase) }
+// CasePayload requires Case. No tag check.
+func (v Statement) CasePayload() StatementCase { return v.tgoCase }
 
 // StatementSwitch is the Switch payload.
 type StatementSwitch struct {
 	Value *SwitchStatement
 }
 
-// NewStatementSwitch constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementSwitch(value StatementSwitch) Statement {
-	return Statement{tgoTag: 16, tgoSwitch: value}
+func (value StatementSwitch) Statement() Statement {
+	return Statement{tgoTag: StatementTagSwitch, tgoSwitch: value}
 }
 
-// TgoSwitch returns the Switch payload. Check TgoTag first.
-func (v Statement) TgoSwitch() StatementSwitch { return v.tgoSwitch }
+// SwitchPayload requires Switch. No tag check.
+func (v Statement) SwitchPayload() StatementSwitch { return v.tgoSwitch }
 
 // StatementTypeSwitch is the TypeSwitch payload.
 type StatementTypeSwitch struct {
 	Value *TypeSwitchStatement
 }
 
-// NewStatementTypeSwitch constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementTypeSwitch(value StatementTypeSwitch) Statement {
-	return Statement{tgoTag: 17, tgoTypeSwitch: value}
+func (value StatementTypeSwitch) Statement() Statement {
+	return Statement{tgoTag: StatementTagTypeSwitch, tgoTypeSwitch: value}
 }
 
-// TgoTypeSwitch returns the TypeSwitch payload. Check TgoTag first.
-func (v Statement) TgoTypeSwitch() StatementTypeSwitch { return v.tgoTypeSwitch }
+// TypeSwitchPayload requires TypeSwitch. No tag check.
+func (v Statement) TypeSwitchPayload() StatementTypeSwitch { return v.tgoTypeSwitch }
 
 // StatementCommunication is the Communication payload.
 type StatementCommunication struct {
 	Value *CommunicationClause
 }
 
-// NewStatementCommunication constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementCommunication(value StatementCommunication) Statement {
-	return Statement{tgoTag: 18, tgoCommunication: value}
+func (value StatementCommunication) Statement() Statement {
+	return Statement{tgoTag: StatementTagCommunication, tgoCommunication: value}
 }
 
-// TgoCommunication returns the Communication payload. Check TgoTag first.
-func (v Statement) TgoCommunication() StatementCommunication { return v.tgoCommunication }
+// CommunicationPayload requires Communication. No tag check.
+func (v Statement) CommunicationPayload() StatementCommunication { return v.tgoCommunication }
 
 // StatementSelect is the Select payload.
 type StatementSelect struct {
 	Value *SelectStatement
 }
 
-// NewStatementSelect constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementSelect(value StatementSelect) Statement {
-	return Statement{tgoTag: 19, tgoSelect: value}
+func (value StatementSelect) Statement() Statement {
+	return Statement{tgoTag: StatementTagSelect, tgoSelect: value}
 }
 
-// TgoSelect returns the Select payload. Check TgoTag first.
-func (v Statement) TgoSelect() StatementSelect { return v.tgoSelect }
+// SelectPayload requires Select. No tag check.
+func (v Statement) SelectPayload() StatementSelect { return v.tgoSelect }
 
 // StatementFor is the For payload.
 type StatementFor struct {
 	Value *ForStatement
 }
 
-// NewStatementFor constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementFor(value StatementFor) Statement {
-	return Statement{tgoTag: 20, tgoFor: value}
+func (value StatementFor) Statement() Statement {
+	return Statement{tgoTag: StatementTagFor, tgoFor: value}
 }
 
-// TgoFor returns the For payload. Check TgoTag first.
-func (v Statement) TgoFor() StatementFor { return v.tgoFor }
+// ForPayload requires For. No tag check.
+func (v Statement) ForPayload() StatementFor { return v.tgoFor }
 
 // StatementRange is the Range payload.
 type StatementRange struct {
 	Value *RangeStatement
 }
 
-// NewStatementRange constructs Statement. Model fields must be valid.
+// Statement constructs Statement. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewStatementRange(value StatementRange) Statement {
-	return Statement{tgoTag: 21, tgoRange: value}
+func (value StatementRange) Statement() Statement {
+	return Statement{tgoTag: StatementTagRange, tgoRange: value}
 }
 
-// TgoRange returns the Range payload. Check TgoTag first.
-func (v Statement) TgoRange() StatementRange { return v.tgoRange }
-
-// StatementMatch is the Match payload.
-type StatementMatch struct {
-	Value *MatchStatement
-}
-
-// NewStatementMatch constructs Statement. Model fields must be valid.
-// Shared fields keep their aliases and caller duties.
-func NewStatementMatch(value StatementMatch) Statement {
-	return Statement{tgoTag: 22, tgoMatch: value}
-}
-
-// TgoMatch returns the Match payload. Check TgoTag first.
-func (v Statement) TgoMatch() StatementMatch { return v.tgoMatch }
+// RangePayload requires Range. No tag check.
+func (v Statement) RangePayload() StatementRange { return v.tgoRange }
 
 func (v Statement) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoBad()
+	case StatementTagBad:
+		payload := v.BadPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementBad `json:"Bad"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoDeclaration()
+	case StatementTagDeclaration:
+		payload := v.DeclarationPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementDeclaration `json:"Declaration"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoEmpty()
+	case StatementTagEmpty:
+		payload := v.EmptyPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementEmpty `json:"Empty"`
 		}{Payload: payload})
-	case 4:
-		payload := v.TgoLabeled()
+	case StatementTagLabeled:
+		payload := v.LabeledPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementLabeled `json:"Labeled"`
 		}{Payload: payload})
-	case 5:
-		payload := v.TgoExpression()
+	case StatementTagExpression:
+		payload := v.ExpressionPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementExpression `json:"Expression"`
 		}{Payload: payload})
-	case 6:
-		payload := v.TgoSend()
+	case StatementTagSend:
+		payload := v.SendPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementSend `json:"Send"`
 		}{Payload: payload})
-	case 7:
-		payload := v.TgoIncrement()
+	case StatementTagIncrement:
+		payload := v.IncrementPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementIncrement `json:"Increment"`
 		}{Payload: payload})
-	case 8:
-		payload := v.TgoAssignment()
+	case StatementTagAssignment:
+		payload := v.AssignmentPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementAssignment `json:"Assignment"`
 		}{Payload: payload})
-	case 9:
-		payload := v.TgoGo()
+	case StatementTagGo:
+		payload := v.GoPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementGo `json:"Go"`
 		}{Payload: payload})
-	case 10:
-		payload := v.TgoDefer()
+	case StatementTagDefer:
+		payload := v.DeferPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementDefer `json:"Defer"`
 		}{Payload: payload})
-	case 11:
-		payload := v.TgoReturn()
+	case StatementTagReturn:
+		payload := v.ReturnPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementReturn `json:"Return"`
 		}{Payload: payload})
-	case 12:
-		payload := v.TgoBranch()
+	case StatementTagBranch:
+		payload := v.BranchPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementBranch `json:"Branch"`
 		}{Payload: payload})
-	case 13:
-		payload := v.TgoBlock()
+	case StatementTagBlock:
+		payload := v.BlockPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementBlock `json:"Block"`
 		}{Payload: payload})
-	case 14:
-		payload := v.TgoIf()
+	case StatementTagIf:
+		payload := v.IfPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementIf `json:"If"`
 		}{Payload: payload})
-	case 15:
-		payload := v.TgoCase()
+	case StatementTagCase:
+		payload := v.CasePayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementCase `json:"Case"`
 		}{Payload: payload})
-	case 16:
-		payload := v.TgoSwitch()
+	case StatementTagSwitch:
+		payload := v.SwitchPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementSwitch `json:"Switch"`
 		}{Payload: payload})
-	case 17:
-		payload := v.TgoTypeSwitch()
+	case StatementTagTypeSwitch:
+		payload := v.TypeSwitchPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementTypeSwitch `json:"TypeSwitch"`
 		}{Payload: payload})
-	case 18:
-		payload := v.TgoCommunication()
+	case StatementTagCommunication:
+		payload := v.CommunicationPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementCommunication `json:"Communication"`
 		}{Payload: payload})
-	case 19:
-		payload := v.TgoSelect()
+	case StatementTagSelect:
+		payload := v.SelectPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementSelect `json:"Select"`
 		}{Payload: payload})
-	case 20:
-		payload := v.TgoFor()
+	case StatementTagFor:
+		payload := v.ForPayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementFor `json:"For"`
 		}{Payload: payload})
-	case 21:
-		payload := v.TgoRange()
+	case StatementTagRange:
+		payload := v.RangePayload()
 		return __tgo_json.Marshal(struct {
 			Payload StatementRange `json:"Range"`
-		}{Payload: payload})
-	case 22:
-		payload := v.TgoMatch()
-		return __tgo_json.Marshal(struct {
-			Payload StatementMatch `json:"Match"`
 		}{Payload: payload})
 	default:
 		return nil, __tgo_fmt.Errorf("invalid Statement JSON tag")
@@ -2119,72 +2187,69 @@ func (v Statement) MarshalJSON() ([]byte, error) {
 
 func (v Statement) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoBad()
+	case StatementTagBad:
+		payload := v.BadPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Bad", payload)
-	case 2:
-		payload := v.TgoDeclaration()
+	case StatementTagDeclaration:
+		payload := v.DeclarationPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Declaration", payload)
-	case 3:
-		payload := v.TgoEmpty()
+	case StatementTagEmpty:
+		payload := v.EmptyPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Empty", payload)
-	case 4:
-		payload := v.TgoLabeled()
+	case StatementTagLabeled:
+		payload := v.LabeledPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Labeled", payload)
-	case 5:
-		payload := v.TgoExpression()
+	case StatementTagExpression:
+		payload := v.ExpressionPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Expression", payload)
-	case 6:
-		payload := v.TgoSend()
+	case StatementTagSend:
+		payload := v.SendPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Send", payload)
-	case 7:
-		payload := v.TgoIncrement()
+	case StatementTagIncrement:
+		payload := v.IncrementPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Increment", payload)
-	case 8:
-		payload := v.TgoAssignment()
+	case StatementTagAssignment:
+		payload := v.AssignmentPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Assignment", payload)
-	case 9:
-		payload := v.TgoGo()
+	case StatementTagGo:
+		payload := v.GoPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Go", payload)
-	case 10:
-		payload := v.TgoDefer()
+	case StatementTagDefer:
+		payload := v.DeferPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Defer", payload)
-	case 11:
-		payload := v.TgoReturn()
+	case StatementTagReturn:
+		payload := v.ReturnPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Return", payload)
-	case 12:
-		payload := v.TgoBranch()
+	case StatementTagBranch:
+		payload := v.BranchPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Branch", payload)
-	case 13:
-		payload := v.TgoBlock()
+	case StatementTagBlock:
+		payload := v.BlockPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Block", payload)
-	case 14:
-		payload := v.TgoIf()
+	case StatementTagIf:
+		payload := v.IfPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "If", payload)
-	case 15:
-		payload := v.TgoCase()
+	case StatementTagCase:
+		payload := v.CasePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Case", payload)
-	case 16:
-		payload := v.TgoSwitch()
+	case StatementTagSwitch:
+		payload := v.SwitchPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Switch", payload)
-	case 17:
-		payload := v.TgoTypeSwitch()
+	case StatementTagTypeSwitch:
+		payload := v.TypeSwitchPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "TypeSwitch", payload)
-	case 18:
-		payload := v.TgoCommunication()
+	case StatementTagCommunication:
+		payload := v.CommunicationPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Communication", payload)
-	case 19:
-		payload := v.TgoSelect()
+	case StatementTagSelect:
+		payload := v.SelectPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Select", payload)
-	case 20:
-		payload := v.TgoFor()
+	case StatementTagFor:
+		payload := v.ForPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "For", payload)
-	case 21:
-		payload := v.TgoRange()
+	case StatementTagRange:
+		payload := v.RangePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Range", payload)
-	case 22:
-		payload := v.TgoMatch()
-		return __tgo_ChannelDirection_external_json_to(out, "Match", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid Statement JSON tag")
 	}
@@ -2210,154 +2275,147 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementBad(payload)
+		*v = payload.Statement()
 		return nil
 	case "Declaration":
 		var payload StatementDeclaration
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementDeclaration(payload)
+		*v = payload.Statement()
 		return nil
 	case "Empty":
 		var payload StatementEmpty
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementEmpty(payload)
+		*v = payload.Statement()
 		return nil
 	case "Labeled":
 		var payload StatementLabeled
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementLabeled(payload)
+		*v = payload.Statement()
 		return nil
 	case "Expression":
 		var payload StatementExpression
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementExpression(payload)
+		*v = payload.Statement()
 		return nil
 	case "Send":
 		var payload StatementSend
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementSend(payload)
+		*v = payload.Statement()
 		return nil
 	case "Increment":
 		var payload StatementIncrement
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementIncrement(payload)
+		*v = payload.Statement()
 		return nil
 	case "Assignment":
 		var payload StatementAssignment
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementAssignment(payload)
+		*v = payload.Statement()
 		return nil
 	case "Go":
 		var payload StatementGo
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementGo(payload)
+		*v = payload.Statement()
 		return nil
 	case "Defer":
 		var payload StatementDefer
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementDefer(payload)
+		*v = payload.Statement()
 		return nil
 	case "Return":
 		var payload StatementReturn
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementReturn(payload)
+		*v = payload.Statement()
 		return nil
 	case "Branch":
 		var payload StatementBranch
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementBranch(payload)
+		*v = payload.Statement()
 		return nil
 	case "Block":
 		var payload StatementBlock
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementBlock(payload)
+		*v = payload.Statement()
 		return nil
 	case "If":
 		var payload StatementIf
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementIf(payload)
+		*v = payload.Statement()
 		return nil
 	case "Case":
 		var payload StatementCase
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementCase(payload)
+		*v = payload.Statement()
 		return nil
 	case "Switch":
 		var payload StatementSwitch
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementSwitch(payload)
+		*v = payload.Statement()
 		return nil
 	case "TypeSwitch":
 		var payload StatementTypeSwitch
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementTypeSwitch(payload)
+		*v = payload.Statement()
 		return nil
 	case "Communication":
 		var payload StatementCommunication
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementCommunication(payload)
+		*v = payload.Statement()
 		return nil
 	case "Select":
 		var payload StatementSelect
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementSelect(payload)
+		*v = payload.Statement()
 		return nil
 	case "For":
 		var payload StatementFor
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementFor(payload)
+		*v = payload.Statement()
 		return nil
 	case "Range":
 		var payload StatementRange
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewStatementRange(payload)
-		return nil
-	case "Match":
-		var payload StatementMatch
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
-			return err
-		}
-		*v = NewStatementMatch(payload)
+		*v = payload.Statement()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Statement JSON variant %q", variant)
@@ -2427,8 +2485,6 @@ func (v *Statement) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 			current = 20
 		case "Range":
 			current = 21
-		case "Match":
-			current = 22
 		}
 		same := haveName && current == selected
 		if same && current == 0 {
@@ -2468,154 +2524,147 @@ func (v *Statement) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementBad(payload)
+		*v = payload.Statement()
 		return nil
 	case 2:
 		var payload StatementDeclaration
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementDeclaration(payload)
+		*v = payload.Statement()
 		return nil
 	case 3:
 		var payload StatementEmpty
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementEmpty(payload)
+		*v = payload.Statement()
 		return nil
 	case 4:
 		var payload StatementLabeled
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementLabeled(payload)
+		*v = payload.Statement()
 		return nil
 	case 5:
 		var payload StatementExpression
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementExpression(payload)
+		*v = payload.Statement()
 		return nil
 	case 6:
 		var payload StatementSend
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementSend(payload)
+		*v = payload.Statement()
 		return nil
 	case 7:
 		var payload StatementIncrement
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementIncrement(payload)
+		*v = payload.Statement()
 		return nil
 	case 8:
 		var payload StatementAssignment
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementAssignment(payload)
+		*v = payload.Statement()
 		return nil
 	case 9:
 		var payload StatementGo
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementGo(payload)
+		*v = payload.Statement()
 		return nil
 	case 10:
 		var payload StatementDefer
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementDefer(payload)
+		*v = payload.Statement()
 		return nil
 	case 11:
 		var payload StatementReturn
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementReturn(payload)
+		*v = payload.Statement()
 		return nil
 	case 12:
 		var payload StatementBranch
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementBranch(payload)
+		*v = payload.Statement()
 		return nil
 	case 13:
 		var payload StatementBlock
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementBlock(payload)
+		*v = payload.Statement()
 		return nil
 	case 14:
 		var payload StatementIf
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementIf(payload)
+		*v = payload.Statement()
 		return nil
 	case 15:
 		var payload StatementCase
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementCase(payload)
+		*v = payload.Statement()
 		return nil
 	case 16:
 		var payload StatementSwitch
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementSwitch(payload)
+		*v = payload.Statement()
 		return nil
 	case 17:
 		var payload StatementTypeSwitch
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementTypeSwitch(payload)
+		*v = payload.Statement()
 		return nil
 	case 18:
 		var payload StatementCommunication
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementCommunication(payload)
+		*v = payload.Statement()
 		return nil
 	case 19:
 		var payload StatementSelect
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementSelect(payload)
+		*v = payload.Statement()
 		return nil
 	case 20:
 		var payload StatementFor
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementFor(payload)
+		*v = payload.Statement()
 		return nil
 	case 21:
 		var payload StatementRange
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewStatementRange(payload)
-		return nil
-	case 22:
-		var payload StatementMatch
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
-		}
-		*v = NewStatementMatch(payload)
+		*v = payload.Statement()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Statement JSON tag")
@@ -2746,10 +2795,11 @@ type IfStatement struct {
 
 type CaseClause struct {
 	Span
-	Case  token.Pos
-	List  []*Expression
-	Colon token.Pos
-	Body  []*Statement
+	Case       token.Pos
+	Exhaustive token.Pos
+	List       []*Expression
+	Colon      token.Pos
+	Body       []*Statement
 }
 
 // SwitchStatement is one expression switch.
@@ -2815,100 +2865,88 @@ type RangeStatement struct {
 	Body     *BlockStatement
 }
 
-// MatchStatement selects one TGo enum variant.
-
-type MatchStatement struct {
-	Span
-	Match   token.Pos
-	Subject *Expression
-	Lbrace  token.Pos
-	Cases   []*MatchCase
-	Rbrace  token.Pos
-}
-
-// MatchCase binds one enum variant payload.
-
-type MatchCase struct {
-	Span
-	Case     token.Pos
-	Variant  *Identifier
-	Lparen   token.Pos
-	Binding  *Identifier
-	Rparen   token.Pos
-	Colon    token.Pos
-	Body     []*Statement
-	Comments []*CommentGroup
-}
-
 // Specification contains every Go declaration specification.
 // Specification requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type SpecificationTag uint8
+
+const (
+	SpecificationTagImport SpecificationTag = iota + 1
+	SpecificationTagValue
+	SpecificationTagType
+)
+
 type Specification struct {
-	tgoTag    uint8
+	tgoTag    SpecificationTag
 	tgoImport SpecificationImport
 	tgoValue  SpecificationValue
 	tgoType   SpecificationType
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Specification) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Specification) Tag() SpecificationTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Specification) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Specification: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // SpecificationImport is the Import payload.
 type SpecificationImport struct {
 	Value *ImportSpecification
 }
 
-// NewSpecificationImport constructs Specification. Model fields must be valid.
+// Specification constructs Specification. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewSpecificationImport(value SpecificationImport) Specification {
-	return Specification{tgoTag: 1, tgoImport: value}
+func (value SpecificationImport) Specification() Specification {
+	return Specification{tgoTag: SpecificationTagImport, tgoImport: value}
 }
 
-// TgoImport returns the Import payload. Check TgoTag first.
-func (v Specification) TgoImport() SpecificationImport { return v.tgoImport }
+// ImportPayload requires Import. No tag check.
+func (v Specification) ImportPayload() SpecificationImport { return v.tgoImport }
 
 // SpecificationValue is the Value payload.
 type SpecificationValue struct {
 	Value *ValueSpecification
 }
 
-// NewSpecificationValue constructs Specification. Model fields must be valid.
+// Specification constructs Specification. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewSpecificationValue(value SpecificationValue) Specification {
-	return Specification{tgoTag: 2, tgoValue: value}
+func (value SpecificationValue) Specification() Specification {
+	return Specification{tgoTag: SpecificationTagValue, tgoValue: value}
 }
 
-// TgoValue returns the Value payload. Check TgoTag first.
-func (v Specification) TgoValue() SpecificationValue { return v.tgoValue }
+// ValuePayload requires Value. No tag check.
+func (v Specification) ValuePayload() SpecificationValue { return v.tgoValue }
 
 // SpecificationType is the Type payload.
 type SpecificationType struct {
 	Value *TypeSpecification
 }
 
-// NewSpecificationType constructs Specification. Model fields must be valid.
+// Specification constructs Specification. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewSpecificationType(value SpecificationType) Specification {
-	return Specification{tgoTag: 3, tgoType: value}
+func (value SpecificationType) Specification() Specification {
+	return Specification{tgoTag: SpecificationTagType, tgoType: value}
 }
 
-// TgoType returns the Type payload. Check TgoTag first.
-func (v Specification) TgoType() SpecificationType { return v.tgoType }
+// TypePayload requires Type. No tag check.
+func (v Specification) TypePayload() SpecificationType { return v.tgoType }
 
 func (v Specification) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoImport()
+	case SpecificationTagImport:
+		payload := v.ImportPayload()
 		return __tgo_json.Marshal(struct {
 			Payload SpecificationImport `json:"Import"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoValue()
+	case SpecificationTagValue:
+		payload := v.ValuePayload()
 		return __tgo_json.Marshal(struct {
 			Payload SpecificationValue `json:"Value"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoType()
+	case SpecificationTagType:
+		payload := v.TypePayload()
 		return __tgo_json.Marshal(struct {
 			Payload SpecificationType `json:"Type"`
 		}{Payload: payload})
@@ -2919,14 +2957,14 @@ func (v Specification) MarshalJSON() ([]byte, error) {
 
 func (v Specification) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoImport()
+	case SpecificationTagImport:
+		payload := v.ImportPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Import", payload)
-	case 2:
-		payload := v.TgoValue()
+	case SpecificationTagValue:
+		payload := v.ValuePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Value", payload)
-	case 3:
-		payload := v.TgoType()
+	case SpecificationTagType:
+		payload := v.TypePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Type", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid Specification JSON tag")
@@ -2953,21 +2991,21 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewSpecificationImport(payload)
+		*v = payload.Specification()
 		return nil
 	case "Value":
 		var payload SpecificationValue
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewSpecificationValue(payload)
+		*v = payload.Specification()
 		return nil
 	case "Type":
 		var payload SpecificationType
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewSpecificationType(payload)
+		*v = payload.Specification()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Specification JSON variant %q", variant)
@@ -3040,21 +3078,21 @@ func (v *Specification) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewSpecificationImport(payload)
+		*v = payload.Specification()
 		return nil
 	case 2:
 		var payload SpecificationValue
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewSpecificationValue(payload)
+		*v = payload.Specification()
 		return nil
 	case 3:
 		var payload SpecificationType
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewSpecificationType(payload)
+		*v = payload.Specification()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Specification JSON tag")
@@ -3098,8 +3136,19 @@ type TypeSpecification struct {
 // Declaration contains every Go declaration plus TGo declarations.
 // Declaration requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type DeclarationTag uint8
+
+const (
+	DeclarationTagBad DeclarationTag = iota + 1
+	DeclarationTagGeneral
+	DeclarationTagFunction
+	DeclarationTagEnum
+	DeclarationTagStruct
+	DeclarationTagChecked
+)
+
 type Declaration struct {
-	tgoTag      uint8
+	tgoTag      DeclarationTag
 	tgoBad      DeclarationBad
 	tgoGeneral  DeclarationGeneral
 	tgoFunction DeclarationFunction
@@ -3108,122 +3157,127 @@ type Declaration struct {
 	tgoChecked  DeclarationChecked
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Declaration) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Declaration) Tag() DeclarationTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Declaration) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Declaration: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // DeclarationBad is the Bad payload.
 type DeclarationBad struct {
 	Value *BadDeclaration
 }
 
-// NewDeclarationBad constructs Declaration. Model fields must be valid.
+// Declaration constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewDeclarationBad(value DeclarationBad) Declaration {
-	return Declaration{tgoTag: 1, tgoBad: value}
+func (value DeclarationBad) Declaration() Declaration {
+	return Declaration{tgoTag: DeclarationTagBad, tgoBad: value}
 }
 
-// TgoBad returns the Bad payload. Check TgoTag first.
-func (v Declaration) TgoBad() DeclarationBad { return v.tgoBad }
+// BadPayload requires Bad. No tag check.
+func (v Declaration) BadPayload() DeclarationBad { return v.tgoBad }
 
 // DeclarationGeneral is the General payload.
 type DeclarationGeneral struct {
 	Value *GeneralDeclaration
 }
 
-// NewDeclarationGeneral constructs Declaration. Model fields must be valid.
+// Declaration constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewDeclarationGeneral(value DeclarationGeneral) Declaration {
-	return Declaration{tgoTag: 2, tgoGeneral: value}
+func (value DeclarationGeneral) Declaration() Declaration {
+	return Declaration{tgoTag: DeclarationTagGeneral, tgoGeneral: value}
 }
 
-// TgoGeneral returns the General payload. Check TgoTag first.
-func (v Declaration) TgoGeneral() DeclarationGeneral { return v.tgoGeneral }
+// GeneralPayload requires General. No tag check.
+func (v Declaration) GeneralPayload() DeclarationGeneral { return v.tgoGeneral }
 
 // DeclarationFunction is the Function payload.
 type DeclarationFunction struct {
 	Value *FunctionDeclaration
 }
 
-// NewDeclarationFunction constructs Declaration. Model fields must be valid.
+// Declaration constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewDeclarationFunction(value DeclarationFunction) Declaration {
-	return Declaration{tgoTag: 3, tgoFunction: value}
+func (value DeclarationFunction) Declaration() Declaration {
+	return Declaration{tgoTag: DeclarationTagFunction, tgoFunction: value}
 }
 
-// TgoFunction returns the Function payload. Check TgoTag first.
-func (v Declaration) TgoFunction() DeclarationFunction { return v.tgoFunction }
+// FunctionPayload requires Function. No tag check.
+func (v Declaration) FunctionPayload() DeclarationFunction { return v.tgoFunction }
 
 // DeclarationEnum is the Enum payload.
 type DeclarationEnum struct {
 	Value *EnumDeclaration
 }
 
-// NewDeclarationEnum constructs Declaration. Model fields must be valid.
+// Declaration constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewDeclarationEnum(value DeclarationEnum) Declaration {
-	return Declaration{tgoTag: 4, tgoEnum: value}
+func (value DeclarationEnum) Declaration() Declaration {
+	return Declaration{tgoTag: DeclarationTagEnum, tgoEnum: value}
 }
 
-// TgoEnum returns the Enum payload. Check TgoTag first.
-func (v Declaration) TgoEnum() DeclarationEnum { return v.tgoEnum }
+// EnumPayload requires Enum. No tag check.
+func (v Declaration) EnumPayload() DeclarationEnum { return v.tgoEnum }
 
 // DeclarationStruct is the Struct payload.
 type DeclarationStruct struct {
 	Value *StructDeclaration
 }
 
-// NewDeclarationStruct constructs Declaration. Model fields must be valid.
+// Declaration constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewDeclarationStruct(value DeclarationStruct) Declaration {
-	return Declaration{tgoTag: 5, tgoStruct: value}
+func (value DeclarationStruct) Declaration() Declaration {
+	return Declaration{tgoTag: DeclarationTagStruct, tgoStruct: value}
 }
 
-// TgoStruct returns the Struct payload. Check TgoTag first.
-func (v Declaration) TgoStruct() DeclarationStruct { return v.tgoStruct }
+// StructPayload requires Struct. No tag check.
+func (v Declaration) StructPayload() DeclarationStruct { return v.tgoStruct }
 
 // DeclarationChecked is the Checked payload.
 type DeclarationChecked struct {
 	Value *CheckedDeclaration
 }
 
-// NewDeclarationChecked constructs Declaration. Model fields must be valid.
+// Declaration constructs Declaration. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewDeclarationChecked(value DeclarationChecked) Declaration {
-	return Declaration{tgoTag: 6, tgoChecked: value}
+func (value DeclarationChecked) Declaration() Declaration {
+	return Declaration{tgoTag: DeclarationTagChecked, tgoChecked: value}
 }
 
-// TgoChecked returns the Checked payload. Check TgoTag first.
-func (v Declaration) TgoChecked() DeclarationChecked { return v.tgoChecked }
+// CheckedPayload requires Checked. No tag check.
+func (v Declaration) CheckedPayload() DeclarationChecked { return v.tgoChecked }
 
 func (v Declaration) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoBad()
+	case DeclarationTagBad:
+		payload := v.BadPayload()
 		return __tgo_json.Marshal(struct {
 			Payload DeclarationBad `json:"Bad"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoGeneral()
+	case DeclarationTagGeneral:
+		payload := v.GeneralPayload()
 		return __tgo_json.Marshal(struct {
 			Payload DeclarationGeneral `json:"General"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoFunction()
+	case DeclarationTagFunction:
+		payload := v.FunctionPayload()
 		return __tgo_json.Marshal(struct {
 			Payload DeclarationFunction `json:"Function"`
 		}{Payload: payload})
-	case 4:
-		payload := v.TgoEnum()
+	case DeclarationTagEnum:
+		payload := v.EnumPayload()
 		return __tgo_json.Marshal(struct {
 			Payload DeclarationEnum `json:"Enum"`
 		}{Payload: payload})
-	case 5:
-		payload := v.TgoStruct()
+	case DeclarationTagStruct:
+		payload := v.StructPayload()
 		return __tgo_json.Marshal(struct {
 			Payload DeclarationStruct `json:"Struct"`
 		}{Payload: payload})
-	case 6:
-		payload := v.TgoChecked()
+	case DeclarationTagChecked:
+		payload := v.CheckedPayload()
 		return __tgo_json.Marshal(struct {
 			Payload DeclarationChecked `json:"Checked"`
 		}{Payload: payload})
@@ -3234,23 +3288,23 @@ func (v Declaration) MarshalJSON() ([]byte, error) {
 
 func (v Declaration) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoBad()
+	case DeclarationTagBad:
+		payload := v.BadPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Bad", payload)
-	case 2:
-		payload := v.TgoGeneral()
+	case DeclarationTagGeneral:
+		payload := v.GeneralPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "General", payload)
-	case 3:
-		payload := v.TgoFunction()
+	case DeclarationTagFunction:
+		payload := v.FunctionPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Function", payload)
-	case 4:
-		payload := v.TgoEnum()
+	case DeclarationTagEnum:
+		payload := v.EnumPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Enum", payload)
-	case 5:
-		payload := v.TgoStruct()
+	case DeclarationTagStruct:
+		payload := v.StructPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Struct", payload)
-	case 6:
-		payload := v.TgoChecked()
+	case DeclarationTagChecked:
+		payload := v.CheckedPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Checked", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid Declaration JSON tag")
@@ -3277,42 +3331,42 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewDeclarationBad(payload)
+		*v = payload.Declaration()
 		return nil
 	case "General":
 		var payload DeclarationGeneral
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewDeclarationGeneral(payload)
+		*v = payload.Declaration()
 		return nil
 	case "Function":
 		var payload DeclarationFunction
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewDeclarationFunction(payload)
+		*v = payload.Declaration()
 		return nil
 	case "Enum":
 		var payload DeclarationEnum
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewDeclarationEnum(payload)
+		*v = payload.Declaration()
 		return nil
 	case "Struct":
 		var payload DeclarationStruct
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewDeclarationStruct(payload)
+		*v = payload.Declaration()
 		return nil
 	case "Checked":
 		var payload DeclarationChecked
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewDeclarationChecked(payload)
+		*v = payload.Declaration()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Declaration JSON variant %q", variant)
@@ -3391,42 +3445,42 @@ func (v *Declaration) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewDeclarationBad(payload)
+		*v = payload.Declaration()
 		return nil
 	case 2:
 		var payload DeclarationGeneral
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewDeclarationGeneral(payload)
+		*v = payload.Declaration()
 		return nil
 	case 3:
 		var payload DeclarationFunction
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewDeclarationFunction(payload)
+		*v = payload.Declaration()
 		return nil
 	case 4:
 		var payload DeclarationEnum
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewDeclarationEnum(payload)
+		*v = payload.Declaration()
 		return nil
 	case 5:
 		var payload DeclarationStruct
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewDeclarationStruct(payload)
+		*v = payload.Declaration()
 		return nil
 	case 6:
 		var payload DeclarationChecked
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewDeclarationChecked(payload)
+		*v = payload.Declaration()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Declaration JSON tag")
@@ -3550,267 +3604,270 @@ type File struct {
 // Node contains every public TGo syntax node category.
 // Node requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type NodeTag uint8
+
+const (
+	NodeTagFile NodeTag = iota + 1
+	NodeTagDeclaration
+	NodeTagSpecification
+	NodeTagStatement
+	NodeTagExpression
+	NodeTagField
+	NodeTagFieldList
+	NodeTagTGoField
+	NodeTagEnumVariant
+	NodeTagIdentifier
+	NodeTagComment
+	NodeTagCommentGroup
+)
+
 type Node struct {
-	tgoTag          uint8
+	tgoTag          NodeTag
+	tgoField        NodeField
 	tgoFieldList    NodeFieldList
 	tgoTGoField     NodeTGoField
 	tgoEnumVariant  NodeEnumVariant
-	tgoMatchCase    NodeMatchCase
 	tgoIdentifier   NodeIdentifier
 	tgoComment      NodeComment
 	tgoCommentGroup NodeCommentGroup
 	tgoPayload      interface{}
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Node) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Node) Tag() NodeTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Node) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Node: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // NodeFile is the File payload.
 type NodeFile struct {
 	Value *File
 }
 
-// NewNodeFile constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeFile(value NodeFile) Node {
-	return Node{tgoTag: 1, tgoPayload: value}
+func (value NodeFile) Node() Node {
+	return Node{tgoTag: NodeTagFile, tgoPayload: value}
 }
 
-// TgoFile returns the File payload. Check TgoTag first.
-func (v Node) TgoFile() NodeFile { return v.tgoPayload.(NodeFile) }
+// FilePayload requires File. No tag check.
+func (v Node) FilePayload() NodeFile { return v.tgoPayload.(NodeFile) }
 
 // NodeDeclaration is the Declaration payload.
 type NodeDeclaration struct {
 	Value *Declaration
 }
 
-// NewNodeDeclaration constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeDeclaration(value NodeDeclaration) Node {
-	return Node{tgoTag: 2, tgoPayload: value}
+func (value NodeDeclaration) Node() Node {
+	return Node{tgoTag: NodeTagDeclaration, tgoPayload: value}
 }
 
-// TgoDeclaration returns the Declaration payload. Check TgoTag first.
-func (v Node) TgoDeclaration() NodeDeclaration { return v.tgoPayload.(NodeDeclaration) }
+// DeclarationPayload requires Declaration. No tag check.
+func (v Node) DeclarationPayload() NodeDeclaration { return v.tgoPayload.(NodeDeclaration) }
 
 // NodeSpecification is the Specification payload.
 type NodeSpecification struct {
 	Value *Specification
 }
 
-// NewNodeSpecification constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeSpecification(value NodeSpecification) Node {
-	return Node{tgoTag: 3, tgoPayload: value}
+func (value NodeSpecification) Node() Node {
+	return Node{tgoTag: NodeTagSpecification, tgoPayload: value}
 }
 
-// TgoSpecification returns the Specification payload. Check TgoTag first.
-func (v Node) TgoSpecification() NodeSpecification { return v.tgoPayload.(NodeSpecification) }
+// SpecificationPayload requires Specification. No tag check.
+func (v Node) SpecificationPayload() NodeSpecification { return v.tgoPayload.(NodeSpecification) }
 
 // NodeStatement is the Statement payload.
 type NodeStatement struct {
 	Value *Statement
 }
 
-// NewNodeStatement constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeStatement(value NodeStatement) Node {
-	return Node{tgoTag: 4, tgoPayload: value}
+func (value NodeStatement) Node() Node {
+	return Node{tgoTag: NodeTagStatement, tgoPayload: value}
 }
 
-// TgoStatement returns the Statement payload. Check TgoTag first.
-func (v Node) TgoStatement() NodeStatement { return v.tgoPayload.(NodeStatement) }
+// StatementPayload requires Statement. No tag check.
+func (v Node) StatementPayload() NodeStatement { return v.tgoPayload.(NodeStatement) }
 
 // NodeExpression is the Expression payload.
 type NodeExpression struct {
 	Value *Expression
 }
 
-// NewNodeExpression constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeExpression(value NodeExpression) Node {
-	return Node{tgoTag: 5, tgoPayload: value}
+func (value NodeExpression) Node() Node {
+	return Node{tgoTag: NodeTagExpression, tgoPayload: value}
 }
 
-// TgoExpression returns the Expression payload. Check TgoTag first.
-func (v Node) TgoExpression() NodeExpression { return v.tgoPayload.(NodeExpression) }
+// ExpressionPayload requires Expression. No tag check.
+func (v Node) ExpressionPayload() NodeExpression { return v.tgoPayload.(NodeExpression) }
 
 // NodeField is the Field payload.
 type NodeField struct {
 	Value *Field
 }
 
-// NewNodeField constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeField(value NodeField) Node {
-	return Node{tgoTag: 6, tgoPayload: value}
+func (value NodeField) Node() Node {
+	return Node{tgoTag: NodeTagField, tgoField: value}
 }
 
-// TgoField returns the Field payload. Check TgoTag first.
-func (v Node) TgoField() NodeField { return v.tgoPayload.(NodeField) }
+// FieldPayload requires Field. No tag check.
+func (v Node) FieldPayload() NodeField { return v.tgoField }
 
 // NodeFieldList is the FieldList payload.
 type NodeFieldList struct {
 	Value *FieldList
 }
 
-// NewNodeFieldList constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeFieldList(value NodeFieldList) Node {
-	return Node{tgoTag: 7, tgoFieldList: value}
+func (value NodeFieldList) Node() Node {
+	return Node{tgoTag: NodeTagFieldList, tgoFieldList: value}
 }
 
-// TgoFieldList returns the FieldList payload. Check TgoTag first.
-func (v Node) TgoFieldList() NodeFieldList { return v.tgoFieldList }
+// FieldListPayload requires FieldList. No tag check.
+func (v Node) FieldListPayload() NodeFieldList { return v.tgoFieldList }
 
 // NodeTGoField is the TGoField payload.
 type NodeTGoField struct {
 	Value *TGoField
 }
 
-// NewNodeTGoField constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeTGoField(value NodeTGoField) Node {
-	return Node{tgoTag: 8, tgoTGoField: value}
+func (value NodeTGoField) Node() Node {
+	return Node{tgoTag: NodeTagTGoField, tgoTGoField: value}
 }
 
-// TgoTGoField returns the TGoField payload. Check TgoTag first.
-func (v Node) TgoTGoField() NodeTGoField { return v.tgoTGoField }
+// TGoFieldPayload requires TGoField. No tag check.
+func (v Node) TGoFieldPayload() NodeTGoField { return v.tgoTGoField }
 
 // NodeEnumVariant is the EnumVariant payload.
 type NodeEnumVariant struct {
 	Value *EnumVariant
 }
 
-// NewNodeEnumVariant constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeEnumVariant(value NodeEnumVariant) Node {
-	return Node{tgoTag: 9, tgoEnumVariant: value}
+func (value NodeEnumVariant) Node() Node {
+	return Node{tgoTag: NodeTagEnumVariant, tgoEnumVariant: value}
 }
 
-// TgoEnumVariant returns the EnumVariant payload. Check TgoTag first.
-func (v Node) TgoEnumVariant() NodeEnumVariant { return v.tgoEnumVariant }
-
-// NodeMatchCase is the MatchCase payload.
-type NodeMatchCase struct {
-	Value *MatchCase
-}
-
-// NewNodeMatchCase constructs Node. Model fields must be valid.
-// Shared fields keep their aliases and caller duties.
-func NewNodeMatchCase(value NodeMatchCase) Node {
-	return Node{tgoTag: 10, tgoMatchCase: value}
-}
-
-// TgoMatchCase returns the MatchCase payload. Check TgoTag first.
-func (v Node) TgoMatchCase() NodeMatchCase { return v.tgoMatchCase }
+// EnumVariantPayload requires EnumVariant. No tag check.
+func (v Node) EnumVariantPayload() NodeEnumVariant { return v.tgoEnumVariant }
 
 // NodeIdentifier is the Identifier payload.
 type NodeIdentifier struct {
 	Value *Identifier
 }
 
-// NewNodeIdentifier constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeIdentifier(value NodeIdentifier) Node {
-	return Node{tgoTag: 11, tgoIdentifier: value}
+func (value NodeIdentifier) Node() Node {
+	return Node{tgoTag: NodeTagIdentifier, tgoIdentifier: value}
 }
 
-// TgoIdentifier returns the Identifier payload. Check TgoTag first.
-func (v Node) TgoIdentifier() NodeIdentifier { return v.tgoIdentifier }
+// IdentifierPayload requires Identifier. No tag check.
+func (v Node) IdentifierPayload() NodeIdentifier { return v.tgoIdentifier }
 
 // NodeComment is the Comment payload.
 type NodeComment struct {
 	Value *Comment
 }
 
-// NewNodeComment constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeComment(value NodeComment) Node {
-	return Node{tgoTag: 12, tgoComment: value}
+func (value NodeComment) Node() Node {
+	return Node{tgoTag: NodeTagComment, tgoComment: value}
 }
 
-// TgoComment returns the Comment payload. Check TgoTag first.
-func (v Node) TgoComment() NodeComment { return v.tgoComment }
+// CommentPayload requires Comment. No tag check.
+func (v Node) CommentPayload() NodeComment { return v.tgoComment }
 
 // NodeCommentGroup is the CommentGroup payload.
 type NodeCommentGroup struct {
 	Value *CommentGroup
 }
 
-// NewNodeCommentGroup constructs Node. Model fields must be valid.
+// Node constructs Node. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewNodeCommentGroup(value NodeCommentGroup) Node {
-	return Node{tgoTag: 13, tgoCommentGroup: value}
+func (value NodeCommentGroup) Node() Node {
+	return Node{tgoTag: NodeTagCommentGroup, tgoCommentGroup: value}
 }
 
-// TgoCommentGroup returns the CommentGroup payload. Check TgoTag first.
-func (v Node) TgoCommentGroup() NodeCommentGroup { return v.tgoCommentGroup }
+// CommentGroupPayload requires CommentGroup. No tag check.
+func (v Node) CommentGroupPayload() NodeCommentGroup { return v.tgoCommentGroup }
 
 func (v Node) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoFile()
+	case NodeTagFile:
+		payload := v.FilePayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeFile `json:"File"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoDeclaration()
+	case NodeTagDeclaration:
+		payload := v.DeclarationPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeDeclaration `json:"Declaration"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoSpecification()
+	case NodeTagSpecification:
+		payload := v.SpecificationPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeSpecification `json:"Specification"`
 		}{Payload: payload})
-	case 4:
-		payload := v.TgoStatement()
+	case NodeTagStatement:
+		payload := v.StatementPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeStatement `json:"Statement"`
 		}{Payload: payload})
-	case 5:
-		payload := v.TgoExpression()
+	case NodeTagExpression:
+		payload := v.ExpressionPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeExpression `json:"Expression"`
 		}{Payload: payload})
-	case 6:
-		payload := v.TgoField()
+	case NodeTagField:
+		payload := v.FieldPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeField `json:"Field"`
 		}{Payload: payload})
-	case 7:
-		payload := v.TgoFieldList()
+	case NodeTagFieldList:
+		payload := v.FieldListPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeFieldList `json:"FieldList"`
 		}{Payload: payload})
-	case 8:
-		payload := v.TgoTGoField()
+	case NodeTagTGoField:
+		payload := v.TGoFieldPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeTGoField `json:"TGoField"`
 		}{Payload: payload})
-	case 9:
-		payload := v.TgoEnumVariant()
+	case NodeTagEnumVariant:
+		payload := v.EnumVariantPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeEnumVariant `json:"EnumVariant"`
 		}{Payload: payload})
-	case 10:
-		payload := v.TgoMatchCase()
-		return __tgo_json.Marshal(struct {
-			Payload NodeMatchCase `json:"MatchCase"`
-		}{Payload: payload})
-	case 11:
-		payload := v.TgoIdentifier()
+	case NodeTagIdentifier:
+		payload := v.IdentifierPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeIdentifier `json:"Identifier"`
 		}{Payload: payload})
-	case 12:
-		payload := v.TgoComment()
+	case NodeTagComment:
+		payload := v.CommentPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeComment `json:"Comment"`
 		}{Payload: payload})
-	case 13:
-		payload := v.TgoCommentGroup()
+	case NodeTagCommentGroup:
+		payload := v.CommentGroupPayload()
 		return __tgo_json.Marshal(struct {
 			Payload NodeCommentGroup `json:"CommentGroup"`
 		}{Payload: payload})
@@ -3821,44 +3878,41 @@ func (v Node) MarshalJSON() ([]byte, error) {
 
 func (v Node) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoFile()
+	case NodeTagFile:
+		payload := v.FilePayload()
 		return __tgo_ChannelDirection_external_json_to(out, "File", payload)
-	case 2:
-		payload := v.TgoDeclaration()
+	case NodeTagDeclaration:
+		payload := v.DeclarationPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Declaration", payload)
-	case 3:
-		payload := v.TgoSpecification()
+	case NodeTagSpecification:
+		payload := v.SpecificationPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Specification", payload)
-	case 4:
-		payload := v.TgoStatement()
+	case NodeTagStatement:
+		payload := v.StatementPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Statement", payload)
-	case 5:
-		payload := v.TgoExpression()
+	case NodeTagExpression:
+		payload := v.ExpressionPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Expression", payload)
-	case 6:
-		payload := v.TgoField()
+	case NodeTagField:
+		payload := v.FieldPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Field", payload)
-	case 7:
-		payload := v.TgoFieldList()
+	case NodeTagFieldList:
+		payload := v.FieldListPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "FieldList", payload)
-	case 8:
-		payload := v.TgoTGoField()
+	case NodeTagTGoField:
+		payload := v.TGoFieldPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "TGoField", payload)
-	case 9:
-		payload := v.TgoEnumVariant()
+	case NodeTagEnumVariant:
+		payload := v.EnumVariantPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "EnumVariant", payload)
-	case 10:
-		payload := v.TgoMatchCase()
-		return __tgo_ChannelDirection_external_json_to(out, "MatchCase", payload)
-	case 11:
-		payload := v.TgoIdentifier()
+	case NodeTagIdentifier:
+		payload := v.IdentifierPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Identifier", payload)
-	case 12:
-		payload := v.TgoComment()
+	case NodeTagComment:
+		payload := v.CommentPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "Comment", payload)
-	case 13:
-		payload := v.TgoCommentGroup()
+	case NodeTagCommentGroup:
+		payload := v.CommentGroupPayload()
 		return __tgo_ChannelDirection_external_json_to(out, "CommentGroup", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid Node JSON tag")
@@ -3885,91 +3939,84 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeFile(payload)
+		*v = payload.Node()
 		return nil
 	case "Declaration":
 		var payload NodeDeclaration
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeDeclaration(payload)
+		*v = payload.Node()
 		return nil
 	case "Specification":
 		var payload NodeSpecification
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeSpecification(payload)
+		*v = payload.Node()
 		return nil
 	case "Statement":
 		var payload NodeStatement
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeStatement(payload)
+		*v = payload.Node()
 		return nil
 	case "Expression":
 		var payload NodeExpression
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeExpression(payload)
+		*v = payload.Node()
 		return nil
 	case "Field":
 		var payload NodeField
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeField(payload)
+		*v = payload.Node()
 		return nil
 	case "FieldList":
 		var payload NodeFieldList
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeFieldList(payload)
+		*v = payload.Node()
 		return nil
 	case "TGoField":
 		var payload NodeTGoField
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeTGoField(payload)
+		*v = payload.Node()
 		return nil
 	case "EnumVariant":
 		var payload NodeEnumVariant
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeEnumVariant(payload)
-		return nil
-	case "MatchCase":
-		var payload NodeMatchCase
-		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
-			return err
-		}
-		*v = NewNodeMatchCase(payload)
+		*v = payload.Node()
 		return nil
 	case "Identifier":
 		var payload NodeIdentifier
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeIdentifier(payload)
+		*v = payload.Node()
 		return nil
 	case "Comment":
 		var payload NodeComment
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeComment(payload)
+		*v = payload.Node()
 		return nil
 	case "CommentGroup":
 		var payload NodeCommentGroup
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewNodeCommentGroup(payload)
+		*v = payload.Node()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Node JSON variant %q", variant)
@@ -4015,14 +4062,12 @@ func (v *Node) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 			current = 8
 		case "EnumVariant":
 			current = 9
-		case "MatchCase":
-			current = 10
 		case "Identifier":
-			current = 11
+			current = 10
 		case "Comment":
-			current = 12
+			current = 11
 		case "CommentGroup":
-			current = 13
+			current = 12
 		}
 		same := haveName && current == selected
 		if same && current == 0 {
@@ -4062,91 +4107,84 @@ func (v *Node) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeFile(payload)
+		*v = payload.Node()
 		return nil
 	case 2:
 		var payload NodeDeclaration
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeDeclaration(payload)
+		*v = payload.Node()
 		return nil
 	case 3:
 		var payload NodeSpecification
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeSpecification(payload)
+		*v = payload.Node()
 		return nil
 	case 4:
 		var payload NodeStatement
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeStatement(payload)
+		*v = payload.Node()
 		return nil
 	case 5:
 		var payload NodeExpression
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeExpression(payload)
+		*v = payload.Node()
 		return nil
 	case 6:
 		var payload NodeField
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeField(payload)
+		*v = payload.Node()
 		return nil
 	case 7:
 		var payload NodeFieldList
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeFieldList(payload)
+		*v = payload.Node()
 		return nil
 	case 8:
 		var payload NodeTGoField
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeTGoField(payload)
+		*v = payload.Node()
 		return nil
 	case 9:
 		var payload NodeEnumVariant
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeEnumVariant(payload)
+		*v = payload.Node()
 		return nil
 	case 10:
-		var payload NodeMatchCase
-		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
-		}
-		*v = NewNodeMatchCase(payload)
-		return nil
-	case 11:
 		var payload NodeIdentifier
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeIdentifier(payload)
+		*v = payload.Node()
 		return nil
-	case 12:
+	case 11:
 		var payload NodeComment
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeComment(payload)
+		*v = payload.Node()
 		return nil
-	case 13:
+	case 12:
 		var payload NodeCommentGroup
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewNodeCommentGroup(payload)
+		*v = payload.Node()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid Node JSON tag")

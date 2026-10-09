@@ -27,80 +27,94 @@ func __tgo_nilType_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, 
 
 // nilType requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type nilTypeTag uint8
+
+const (
+	nilTypeTagNever nilTypeTag = iota + 1
+	nilTypeTagNonNil
+	nilTypeTagNil
+	nilTypeTagOptional
+)
+
 type nilType struct {
-	tgoTag uint8
+	tgoTag nilTypeTag
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v nilType) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v nilType) Tag() nilTypeTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v nilType) UnknownTag() string {
+	return __tgo_fmt.Sprintf("nilType: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // nilTypeNever is the Never payload.
 type nilTypeNever struct{}
 
-// NewnilTypeNever constructs nilType. Model fields must be valid.
+// nilType constructs nilType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewnilTypeNever(_ nilTypeNever) nilType {
-	return nilType{tgoTag: 1}
+func (value nilTypeNever) nilType() nilType {
+	return nilType{tgoTag: nilTypeTagNever}
 }
 
-// TgoNever returns the Never payload. Check TgoTag first.
-func (nilType) TgoNever() nilTypeNever { return nilTypeNever{} }
+// NeverPayload requires Never. No tag check.
+func (nilType) NeverPayload() nilTypeNever { return nilTypeNever{} }
 
 // nilTypeNonNil is the NonNil payload.
 type nilTypeNonNil struct{}
 
-// NewnilTypeNonNil constructs nilType. Model fields must be valid.
+// nilType constructs nilType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewnilTypeNonNil(_ nilTypeNonNil) nilType {
-	return nilType{tgoTag: 2}
+func (value nilTypeNonNil) nilType() nilType {
+	return nilType{tgoTag: nilTypeTagNonNil}
 }
 
-// TgoNonNil returns the NonNil payload. Check TgoTag first.
-func (nilType) TgoNonNil() nilTypeNonNil { return nilTypeNonNil{} }
+// NonNilPayload requires NonNil. No tag check.
+func (nilType) NonNilPayload() nilTypeNonNil { return nilTypeNonNil{} }
 
 // nilTypeNil is the Nil payload.
 type nilTypeNil struct{}
 
-// NewnilTypeNil constructs nilType. Model fields must be valid.
+// nilType constructs nilType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewnilTypeNil(_ nilTypeNil) nilType {
-	return nilType{tgoTag: 3}
+func (value nilTypeNil) nilType() nilType {
+	return nilType{tgoTag: nilTypeTagNil}
 }
 
-// TgoNil returns the Nil payload. Check TgoTag first.
-func (nilType) TgoNil() nilTypeNil { return nilTypeNil{} }
+// NilPayload requires Nil. No tag check.
+func (nilType) NilPayload() nilTypeNil { return nilTypeNil{} }
 
 // nilTypeOptional is the Optional payload.
 type nilTypeOptional struct{}
 
-// NewnilTypeOptional constructs nilType. Model fields must be valid.
+// nilType constructs nilType. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewnilTypeOptional(_ nilTypeOptional) nilType {
-	return nilType{tgoTag: 4}
+func (value nilTypeOptional) nilType() nilType {
+	return nilType{tgoTag: nilTypeTagOptional}
 }
 
-// TgoOptional returns the Optional payload. Check TgoTag first.
-func (nilType) TgoOptional() nilTypeOptional { return nilTypeOptional{} }
+// OptionalPayload requires Optional. No tag check.
+func (nilType) OptionalPayload() nilTypeOptional { return nilTypeOptional{} }
 
 func (v nilType) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoNever()
+	case nilTypeTagNever:
+		payload := v.NeverPayload()
 		return __tgo_json.Marshal(struct {
 			Payload nilTypeNever `json:"Never"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoNonNil()
+	case nilTypeTagNonNil:
+		payload := v.NonNilPayload()
 		return __tgo_json.Marshal(struct {
 			Payload nilTypeNonNil `json:"NonNil"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoNil()
+	case nilTypeTagNil:
+		payload := v.NilPayload()
 		return __tgo_json.Marshal(struct {
 			Payload nilTypeNil `json:"Nil"`
 		}{Payload: payload})
-	case 4:
-		payload := v.TgoOptional()
+	case nilTypeTagOptional:
+		payload := v.OptionalPayload()
 		return __tgo_json.Marshal(struct {
 			Payload nilTypeOptional `json:"Optional"`
 		}{Payload: payload})
@@ -111,17 +125,17 @@ func (v nilType) MarshalJSON() ([]byte, error) {
 
 func (v nilType) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoNever()
+	case nilTypeTagNever:
+		payload := v.NeverPayload()
 		return __tgo_nilType_external_json_to(out, "Never", payload)
-	case 2:
-		payload := v.TgoNonNil()
+	case nilTypeTagNonNil:
+		payload := v.NonNilPayload()
 		return __tgo_nilType_external_json_to(out, "NonNil", payload)
-	case 3:
-		payload := v.TgoNil()
+	case nilTypeTagNil:
+		payload := v.NilPayload()
 		return __tgo_nilType_external_json_to(out, "Nil", payload)
-	case 4:
-		payload := v.TgoOptional()
+	case nilTypeTagOptional:
+		payload := v.OptionalPayload()
 		return __tgo_nilType_external_json_to(out, "Optional", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid nilType JSON tag")
@@ -148,28 +162,28 @@ func (v *nilType) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewnilTypeNever(payload)
+		*v = payload.nilType()
 		return nil
 	case "NonNil":
 		var payload nilTypeNonNil
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewnilTypeNonNil(payload)
+		*v = payload.nilType()
 		return nil
 	case "Nil":
 		var payload nilTypeNil
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewnilTypeNil(payload)
+		*v = payload.nilType()
 		return nil
 	case "Optional":
 		var payload nilTypeOptional
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewnilTypeOptional(payload)
+		*v = payload.nilType()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown nilType JSON variant %q", variant)
@@ -244,51 +258,51 @@ func (v *nilType) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewnilTypeNever(payload)
+		*v = payload.nilType()
 		return nil
 	case 2:
 		var payload nilTypeNonNil
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewnilTypeNonNil(payload)
+		*v = payload.nilType()
 		return nil
 	case 3:
 		var payload nilTypeNil
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewnilTypeNil(payload)
+		*v = payload.nilType()
 		return nil
 	case 4:
 		var payload nilTypeOptional
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewnilTypeOptional(payload)
+		*v = payload.nilType()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid nilType JSON tag")
 	}
 }
 
-func neverNilType() nilType    { return NewnilTypeNever(nilTypeNever{}) }
-func nonNilType() nilType      { return NewnilTypeNonNil(nilTypeNonNil{}) }
-func nilOnlyType() nilType     { return NewnilTypeNil(nilTypeNil{}) }
-func optionalNilType() nilType { return NewnilTypeOptional(nilTypeOptional{}) }
+func neverNilType() nilType    { return nilTypeNever{}.nilType() }
+func nonNilType() nilType      { return nilTypeNonNil{}.nilType() }
+func nilOnlyType() nilType     { return nilTypeNil{}.nilType() }
+func optionalNilType() nilType { return nilTypeOptional{}.nilType() }
 
 func nilTypeMembers(value nilType) uint8 {
-	switch __tgo_match_21 := value; __tgo_match_21.TgoTag() {
-	case 1:
+	switch value.Tag() {
+	case nilTypeTagNever:
 		return 0
-	case 2:
+	case nilTypeTagNonNil:
 		return 1
-	case 3:
+	case nilTypeTagNil:
 		return 2
-	case 4:
+	case nilTypeTagOptional:
 		return 3
 	default:
-		panic("invalid nilType variant")
+		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

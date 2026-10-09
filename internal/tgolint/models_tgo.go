@@ -8,13 +8,6 @@ import __tgo_jsonv2 "encoding/json/v2"
 import __tgo_jsontext "encoding/json/jsontext"
 import __tgo_fmt "fmt"
 
-import (
-	"go/ast"
-	"go/token"
-	"go/types"
-	"strings"
-)
-
 func __tgo_model_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, name string, payload T) error {
 	if err := out.WriteToken(__tgo_jsontext.BeginObject); err != nil {
 		return err
@@ -30,14 +23,28 @@ func __tgo_model_external_json_to[T interface{}](out *__tgo_jsontext.Encoder, na
 
 // model requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type modelTag uint8
+
+const (
+	modelTagChecked modelTag = iota + 1
+	modelTagEnum
+	modelTagMixed
+	modelTagParameter
+)
+
 type model struct {
-	tgoTag     uint8
+	tgoTag     modelTag
 	tgoChecked modelChecked
 	tgoPayload interface{}
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v model) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v model) Tag() modelTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v model) UnknownTag() string {
+	return __tgo_fmt.Sprintf("model: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // modelChecked is the Checked payload.
 type modelChecked struct {
@@ -45,14 +52,14 @@ type modelChecked struct {
 	Name    string
 }
 
-// NewmodelChecked constructs model. Model fields must be valid.
+// model constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewmodelChecked(value modelChecked) model {
-	return model{tgoTag: 1, tgoChecked: value}
+func (value modelChecked) model() model {
+	return model{tgoTag: modelTagChecked, tgoChecked: value}
 }
 
-// TgoChecked returns the Checked payload. Check TgoTag first.
-func (v model) TgoChecked() modelChecked { return v.tgoChecked }
+// CheckedPayload requires Checked. No tag check.
+func (v model) CheckedPayload() modelChecked { return v.tgoChecked }
 
 // modelEnum is the Enum payload.
 type modelEnum struct {
@@ -61,58 +68,58 @@ type modelEnum struct {
 	Variants []string
 }
 
-// NewmodelEnum constructs model. Model fields must be valid.
+// model constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewmodelEnum(value modelEnum) model {
-	return model{tgoTag: 2, tgoPayload: value}
+func (value modelEnum) model() model {
+	return model{tgoTag: modelTagEnum, tgoPayload: value}
 }
 
-// TgoEnum returns the Enum payload. Check TgoTag first.
-func (v model) TgoEnum() modelEnum { return v.tgoPayload.(modelEnum) }
+// EnumPayload requires Enum. No tag check.
+func (v model) EnumPayload() modelEnum { return v.tgoPayload.(modelEnum) }
 
 // modelMixed is the Mixed payload.
 type modelMixed struct{}
 
-// NewmodelMixed constructs model. Model fields must be valid.
+// model constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewmodelMixed(_ modelMixed) model {
-	return model{tgoTag: 3}
+func (value modelMixed) model() model {
+	return model{tgoTag: modelTagMixed}
 }
 
-// TgoMixed returns the Mixed payload. Check TgoTag first.
-func (model) TgoMixed() modelMixed { return modelMixed{} }
+// MixedPayload requires Mixed. No tag check.
+func (model) MixedPayload() modelMixed { return modelMixed{} }
 
 // modelParameter is the Parameter payload.
 type modelParameter struct{}
 
-// NewmodelParameter constructs model. Model fields must be valid.
+// model constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewmodelParameter(_ modelParameter) model {
-	return model{tgoTag: 4}
+func (value modelParameter) model() model {
+	return model{tgoTag: modelTagParameter}
 }
 
-// TgoParameter returns the Parameter payload. Check TgoTag first.
-func (model) TgoParameter() modelParameter { return modelParameter{} }
+// ParameterPayload requires Parameter. No tag check.
+func (model) ParameterPayload() modelParameter { return modelParameter{} }
 
 func (v model) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoChecked()
+	case modelTagChecked:
+		payload := v.CheckedPayload()
 		return __tgo_json.Marshal(struct {
 			Payload modelChecked `json:"Checked"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoEnum()
+	case modelTagEnum:
+		payload := v.EnumPayload()
 		return __tgo_json.Marshal(struct {
 			Payload modelEnum `json:"Enum"`
 		}{Payload: payload})
-	case 3:
-		payload := v.TgoMixed()
+	case modelTagMixed:
+		payload := v.MixedPayload()
 		return __tgo_json.Marshal(struct {
 			Payload modelMixed `json:"Mixed"`
 		}{Payload: payload})
-	case 4:
-		payload := v.TgoParameter()
+	case modelTagParameter:
+		payload := v.ParameterPayload()
 		return __tgo_json.Marshal(struct {
 			Payload modelParameter `json:"Parameter"`
 		}{Payload: payload})
@@ -123,17 +130,17 @@ func (v model) MarshalJSON() ([]byte, error) {
 
 func (v model) MarshalJSONTo(out *__tgo_jsontext.Encoder) error {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoChecked()
+	case modelTagChecked:
+		payload := v.CheckedPayload()
 		return __tgo_model_external_json_to(out, "Checked", payload)
-	case 2:
-		payload := v.TgoEnum()
+	case modelTagEnum:
+		payload := v.EnumPayload()
 		return __tgo_model_external_json_to(out, "Enum", payload)
-	case 3:
-		payload := v.TgoMixed()
+	case modelTagMixed:
+		payload := v.MixedPayload()
 		return __tgo_model_external_json_to(out, "Mixed", payload)
-	case 4:
-		payload := v.TgoParameter()
+	case modelTagParameter:
+		payload := v.ParameterPayload()
 		return __tgo_model_external_json_to(out, "Parameter", payload)
 	default:
 		return __tgo_fmt.Errorf("invalid model JSON tag")
@@ -160,28 +167,28 @@ func (v *model) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewmodelChecked(payload)
+		*v = payload.model()
 		return nil
 	case "Enum":
 		var payload modelEnum
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewmodelEnum(payload)
+		*v = payload.model()
 		return nil
 	case "Mixed":
 		var payload modelMixed
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewmodelMixed(payload)
+		*v = payload.model()
 		return nil
 	case "Parameter":
 		var payload modelParameter
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewmodelParameter(payload)
+		*v = payload.model()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown model JSON variant %q", variant)
@@ -256,28 +263,28 @@ func (v *model) UnmarshalJSONFrom(in *__tgo_jsontext.Decoder) error {
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewmodelChecked(payload)
+		*v = payload.model()
 		return nil
 	case 2:
 		var payload modelEnum
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewmodelEnum(payload)
+		*v = payload.model()
 		return nil
 	case 3:
 		var payload modelMixed
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewmodelMixed(payload)
+		*v = payload.model()
 		return nil
 	case 4:
 		var payload modelParameter
 		if err := __tgo_jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
-		*v = NewmodelParameter(payload)
+		*v = payload.model()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("invalid model JSON tag")
@@ -303,24 +310,24 @@ const (
 )
 
 func checkedModel(packagePath string, name string) *model {
-	value := NewmodelChecked(modelChecked{Package: packagePath, Name: name})
+	value := modelChecked{Package: packagePath, Name: name}.model()
 	return &value
 }
 
 func enumModel(packagePath string, name string, variants []string) *model {
-	value := NewmodelEnum(modelEnum{
+	value := modelEnum{
 		Package: packagePath, Name: name, Variants: variants,
-	})
+	}.model()
 	return &value
 }
 
 func mixedModel() *model {
-	value := NewmodelMixed(modelMixed{})
+	value := modelMixed{}.model()
 	return &value
 }
 
 func parameterModel() *model {
-	value := NewmodelParameter(modelParameter{})
+	value := modelParameter{}.model()
 	return &value
 }
 
@@ -328,19 +335,19 @@ func modelDescription(value *model) (string, string) {
 	if value == nil {
 		return "", ""
 	}
-	switch __tgo_match_13 := *value; __tgo_match_13.TgoTag() {
-	case 1:
-		checked := __tgo_match_13.TgoChecked()
+	switch enumValue13 := *value; enumValue13.Tag() {
+	case modelTagChecked:
+		checked := enumValue13.CheckedPayload()
 		return "checked", checked.Name
-	case 2:
-		enum := __tgo_match_13.TgoEnum()
+	case modelTagEnum:
+		enum := enumValue13.EnumPayload()
 		return "enum", enum.Name
-	case 3:
+	case modelTagMixed:
 		return "", ""
-	case 4:
+	case modelTagParameter:
 		return "generic", "type argument"
 	default:
-		panic("invalid model variant")
+		panic(enumValue13.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -358,19 +365,19 @@ func modelPackage(value *model) string {
 	if value == nil {
 		return ""
 	}
-	switch __tgo_match_14 := *value; __tgo_match_14.TgoTag() {
-	case 1:
-		checked := __tgo_match_14.TgoChecked()
+	switch enumValue14 := *value; enumValue14.Tag() {
+	case modelTagChecked:
+		checked := enumValue14.CheckedPayload()
 		return checked.Package
-	case 2:
-		enum := __tgo_match_14.TgoEnum()
+	case modelTagEnum:
+		enum := enumValue14.EnumPayload()
 		return enum.Package
-	case 3:
+	case modelTagMixed:
 		return ""
-	case 4:
+	case modelTagParameter:
 		return ""
 	default:
-		panic("invalid model variant")
+		panic(enumValue14.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -378,18 +385,18 @@ func modelVariants(value *model) []string {
 	if value == nil {
 		return nil
 	}
-	switch __tgo_match_15 := *value; __tgo_match_15.TgoTag() {
-	case 1:
+	switch enumValue15 := *value; enumValue15.Tag() {
+	case modelTagChecked:
 		return nil
-	case 2:
-		enum := __tgo_match_15.TgoEnum()
+	case modelTagEnum:
+		enum := enumValue15.EnumPayload()
 		return enum.Variants
-	case 3:
+	case modelTagMixed:
 		return nil
-	case 4:
+	case modelTagParameter:
 		return nil
 	default:
-		panic("invalid model variant")
+		panic(enumValue15.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -397,17 +404,17 @@ func modelIsChecked(value *model) bool {
 	if value == nil {
 		return false
 	}
-	switch __tgo_match_16 := *value; __tgo_match_16.TgoTag() {
-	case 1:
+	switch enumValue16 := *value; enumValue16.Tag() {
+	case modelTagChecked:
 		return true
-	case 2:
+	case modelTagEnum:
 		return false
-	case 3:
+	case modelTagMixed:
 		return false
-	case 4:
+	case modelTagParameter:
 		return false
 	default:
-		panic("invalid model variant")
+		panic(enumValue16.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -415,17 +422,17 @@ func modelIsEnum(value *model) bool {
 	if value == nil {
 		return false
 	}
-	switch __tgo_match_17 := *value; __tgo_match_17.TgoTag() {
-	case 1:
+	switch enumValue17 := *value; enumValue17.Tag() {
+	case modelTagChecked:
 		return false
-	case 2:
+	case modelTagEnum:
 		return true
-	case 3:
+	case modelTagMixed:
 		return false
-	case 4:
+	case modelTagParameter:
 		return false
 	default:
-		panic("invalid model variant")
+		panic(enumValue17.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -433,17 +440,17 @@ func modelIsMixed(value *model) bool {
 	if value == nil {
 		return false
 	}
-	switch __tgo_match_18 := *value; __tgo_match_18.TgoTag() {
-	case 1:
+	switch enumValue18 := *value; enumValue18.Tag() {
+	case modelTagChecked:
 		return false
-	case 2:
+	case modelTagEnum:
 		return false
-	case 3:
+	case modelTagMixed:
 		return true
-	case 4:
+	case modelTagParameter:
 		return false
 	default:
-		panic("invalid model variant")
+		panic(enumValue18.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -469,50 +476,48 @@ func modelIsParameter(value *model) bool {
 	if value == nil {
 		return false
 	}
-	switch __tgo_match_19 := *value; __tgo_match_19.TgoTag() {
-	case 1:
+	switch enumValue19 := *value; enumValue19.Tag() {
+	case modelTagChecked:
 		return false
-	case 2:
+	case modelTagEnum:
 		return false
-	case 3:
+	case modelTagMixed:
 		return false
-	case 4:
+	case modelTagParameter:
 		return true
 	default:
-
-		// encodeModelFact converts the internal ADT to its package fact form.
-		panic("invalid model variant")
+		panic(enumValue19.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// encodeModelFact converts the internal ADT to its package fact form.
 func encodeModelFact(value *model) *modelWireFact {
 	if value == nil {
 		return nil
 	}
-	switch __tgo_match_20 := *value; __tgo_match_20.TgoTag() {
-	case 1:
-		checked := __tgo_match_20.TgoChecked()
+	switch enumValue20 := *value; enumValue20.Tag() {
+	case modelTagChecked:
+		checked := enumValue20.CheckedPayload()
 		return &modelWireFact{
 			Kind: checkedModelWire, Package: checked.Package,
 			Name: checked.Name, Variants: nil,
 		}
-	case 2:
-		enum := __tgo_match_20.TgoEnum()
+	case modelTagEnum:
+		enum := enumValue20.EnumPayload()
 		return &modelWireFact{
 			Kind: enumModelWire, Package: enum.Package, Name: enum.Name,
 			Variants: append([]string(nil), enum.Variants...),
 		}
-	case 3:
+	case modelTagMixed:
 		return nil
-	case 4:
+	case modelTagParameter:
 		return nil
 	default:
-
-		// decodeModelFact validates a wire fact before it enters the checker.
-		panic("invalid model variant")
+		panic(enumValue20.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// decodeModelFact validates a wire fact before it enters the checker.
 func decodeModelFact(fact *modelWireFact, expectedPackage string) *model {
 	if fact == nil || fact.Package != expectedPackage || fact.Name == "" {
 		return nil
@@ -530,473 +535,4 @@ func decodeModelFact(fact *modelWireFact, expectedPackage string) *model {
 		}
 	}
 	return nil
-}
-
-// validationFact marks a generated operation that returns a validated model.
-
-type validationFact struct {
-}
-
-// AFact marks validationFact as a Go analysis fact.
-func (*validationFact) AFact() {}
-
-type objectKey struct {
-	pkg  *types.Package
-	name string
-}
-
-// findModels verifies generated files before it exports any model facts.
-func (c *checker) findModels() {
-	var verified []*verifiedSource = nil
-	for _, file := range c.pass.Files {
-		if !c.hasGeneratedHeader(file) {
-			continue
-		}
-		c.generated[file] = true
-		if source := c.verifySourceModels(file); source != nil {
-			verified = append(verified, source)
-		}
-	}
-	if c.invalid {
-		return
-	}
-	for _, source := range verified {
-		c.exportSourceModels(source)
-	}
-}
-
-func (c *checker) hasGeneratedHeader(file *ast.File) bool {
-	if len(file.Comments) == 0 || len(file.Comments[0].List) == 0 {
-		return false
-	}
-	comment := file.Comments[0].List[0]
-	position := c.pass.Fset.Position(comment.Pos())
-	return position.Line == 1 && position.Column == 1 && comment.Text == generatedHeader
-}
-
-func (c *checker) exportGeneratedValidator(object *types.TypeName) {
-	function, ok := object.Pkg().Scope().Lookup("Validate" + object.Name()).(*types.Func)
-	if !ok || !validValidatorAPI(function, object.Type()) {
-		return
-	}
-	fact := &validationFact{}
-	c.validated[function] = true
-	c.pass.ExportObjectFact(function, fact)
-}
-
-func validValidatorAPI(function *types.Func, typ types.Type) bool {
-	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Params().Len() != 1 || signature.Results().Len() != 2 {
-		return false
-	}
-	errorType := types.Universe.Lookup("error").Type()
-	return types.Identical(signature.Params().At(0).Type(), typ) &&
-		types.Identical(signature.Results().At(0).Type(), typ) &&
-		types.Identical(signature.Results().At(1).Type(), errorType)
-}
-
-// exportValidationFacts marks verified constructors as trusted value sources.
-func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
-	scope := object.Pkg().Scope()
-	var names []string = nil
-	_, name := modelDescription(value)
-	if modelIsChecked(value) {
-		names = append(names, "New"+name)
-	}
-	if modelIsEnum(value) {
-		for _, variant := range modelVariants(value) {
-			names = append(names, "New"+name+variant)
-		}
-	}
-	for _, name := range names {
-		function, ok := scope.Lookup(name).(*types.Func)
-		if !ok {
-			continue
-		}
-		fact := &validationFact{}
-		c.validated[function] = true
-		c.pass.ExportObjectFact(function, fact)
-	}
-}
-
-// findValidationWrappers exports a fact for a direct validator forwarding function.
-func (c *checker) findValidationWrappers() {
-	changed := true
-	for changed {
-		changed = false
-		for _, file := range c.pass.Files {
-			for _, declaration := range file.Decls {
-				changed = c.exportValidationWrapper(declaration) || changed
-			}
-		}
-	}
-}
-
-func (c *checker) exportValidationWrapper(declaration ast.Decl) bool {
-	function, ok := declaration.(*ast.FuncDecl)
-	if !ok || function.Body == nil || len(function.Body.List) != 1 {
-		return false
-	}
-	object, ok := c.pass.TypesInfo.Defs[function.Name].(*types.Func)
-	if !ok || c.validated[object] {
-		return false
-	}
-	statement, ok := function.Body.List[0].(*ast.ReturnStmt)
-	if !ok || len(statement.Results) != 1 {
-		return false
-	}
-	call, ok := statement.Results[0].(*ast.CallExpr)
-	if !ok || !c.callHasValidationFact(call) {
-		return false
-	}
-	fact := &validationFact{}
-	c.validated[object] = true
-	c.pass.ExportObjectFact(object, fact)
-	return true
-}
-
-func (c *checker) callHasValidationFact(call *ast.CallExpr) bool {
-	object := calledObject(c.pass.TypesInfo, call.Fun)
-	if object == nil {
-		return false
-	}
-	if target := c.callTarget[object]; target != nil {
-		object = target
-	}
-	if c.validated[object] {
-		return true
-	}
-	fact := new(validationFact)
-	if !c.pass.ImportObjectFact(object, fact) {
-		return false
-	}
-	c.validated[object] = true
-	return true
-}
-
-// findValidationFunctionValues resolves stable local aliases of validators.
-func (c *checker) findValidationFunctionValues() {
-	candidates := make(map[types.Object]types.Object)
-	writes := make(map[types.Object]int)
-	escaped := make(map[types.Object]bool)
-	for _, file := range c.pass.Files {
-		if c.generated[file] {
-			continue
-		}
-		ast.Inspect(file, func(node ast.Node) bool {
-			c.scanValidationFunctionValue(node, candidates, writes, escaped)
-			return true
-		})
-	}
-	for object, target := range candidates {
-		if object != nil && writes[object] == 1 && !escaped[object] {
-			c.callTarget[object] = target
-		}
-	}
-}
-
-func (c *checker) scanValidationFunctionValue(
-	node ast.Node,
-	candidates map[types.Object]types.Object,
-	writes map[types.Object]int,
-	escaped map[types.Object]bool,
-) {
-	switch node := node.(type) {
-	case *ast.AssignStmt:
-		c.recordFunctionWrites(node.Lhs, writes)
-		if len(node.Lhs) == 1 && len(node.Rhs) == 1 {
-			c.recordValidationFunctionValue(candidates, node.Lhs[0], node.Rhs[0])
-		}
-	case *ast.ValueSpec:
-		for _, name := range node.Names {
-			writes[c.pass.TypesInfo.ObjectOf(name)]++
-		}
-		if len(node.Names) == 1 && len(node.Values) == 1 {
-			c.recordValidationFunctionValue(candidates, node.Names[0], node.Values[0])
-		}
-	case *ast.RangeStmt:
-		c.recordFunctionWrites([]ast.Expr{node.Key, node.Value}, writes)
-	case *ast.UnaryExpr:
-		if node.Op == token.AND {
-			escaped[c.pass.TypesInfo.ObjectOf(identifier(node.X))] = true
-		}
-	}
-}
-
-func (c *checker) recordFunctionWrites(
-	expressions []ast.Expr,
-	writes map[types.Object]int,
-) {
-	for _, expression := range expressions {
-		if name, ok := expression.(*ast.Ident); ok {
-			writes[c.pass.TypesInfo.ObjectOf(name)]++
-		}
-	}
-}
-
-func (c *checker) recordValidationFunctionValue(
-	candidates map[types.Object]types.Object,
-	left ast.Expr,
-	right ast.Expr,
-) {
-	name, ok := left.(*ast.Ident)
-	if !ok {
-		return
-	}
-	target := calledObject(c.pass.TypesInfo, right)
-	if target != nil && c.objectHasValidationFact(target) {
-		candidates[c.pass.TypesInfo.ObjectOf(name)] = target
-	}
-}
-
-func (c *checker) objectHasValidationFact(object types.Object) bool {
-	if c.validated[object] {
-		return true
-	}
-	fact := new(validationFact)
-	if !c.pass.ImportObjectFact(object, fact) {
-		return false
-	}
-	c.validated[object] = true
-	return true
-}
-
-func emittedCheckedModel(name string, structure *ast.StructType, typ types.Type) *model {
-	fields := structure.Fields.List
-	underlying, ok := typ.Underlying().(*types.Struct)
-	if !ok || underlying.NumFields() != len(fields) {
-		return nil
-	}
-	if len(fields) == 1 && fieldName(fields[0]) == "value" &&
-		validCheckedAPI(typ, underlying.Field(0).Type(), "New"+name) {
-		named, _ := types.Unalias(typ).(*types.Named)
-		return checkedModel(named.Obj().Pkg().Path(), name)
-	}
-	return nil
-}
-
-func fieldName(field *ast.Field) string {
-	if len(field.Names) != 1 {
-		return ""
-	}
-	return field.Names[0].Name
-}
-
-func method(typ types.Type, name string) *types.Signature {
-	object, _, _ := types.LookupFieldOrMethod(typ, true, nil, name)
-	function, ok := object.(*types.Func)
-	if !ok {
-		return nil
-	}
-	signature, _ := function.Type().(*types.Signature)
-	return signature
-}
-
-func constructor(typ types.Type, name string) *types.Signature {
-	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil {
-		return nil
-	}
-	function, ok := named.Obj().Pkg().Scope().Lookup(name).(*types.Func)
-	if !ok {
-		return nil
-	}
-	signature, _ := function.Type().(*types.Signature)
-	return signature
-}
-
-func validCheckedAPI(typ, base types.Type, constructorName string) bool {
-	value := method(typ, "Value")
-	makeValue := constructor(typ, constructorName)
-	if value == nil || makeValue == nil {
-		return false
-	}
-	errorType := types.Universe.Lookup("error").Type()
-	return value.Params().Len() == 0 && value.Results().Len() == 1 &&
-		types.Identical(value.Results().At(0).Type(), base) &&
-		makeValue.Params().Len() == 1 && makeValue.Results().Len() == 2 &&
-		types.Identical(makeValue.Params().At(0).Type(), base) &&
-		types.Identical(makeValue.Results().At(0).Type(), typ) &&
-		types.Identical(makeValue.Results().At(1).Type(), errorType)
-}
-
-func validTagMethod(typ, tag types.Type) bool {
-	method := method(typ, "TgoTag")
-	return method != nil && method.Params().Len() == 0 && method.Results().Len() == 1 &&
-		types.Identical(method.Results().At(0).Type(), tag)
-}
-
-func validEnumAPI(typ, payload types.Type, accessor, constructorName string) bool {
-	read := method(typ, accessor)
-	makeValue := constructor(typ, constructorName)
-	return read != nil && makeValue != nil &&
-		read.Params().Len() == 0 && read.Results().Len() == 1 &&
-		types.Identical(read.Results().At(0).Type(), payload) &&
-		makeValue.Params().Len() == 1 && makeValue.Results().Len() == 1 &&
-		types.Identical(makeValue.Params().At(0).Type(), payload) &&
-		types.Identical(makeValue.Results().At(0).Type(), typ)
-}
-
-// modelFor loads and caches the verified model for one named type.
-func (c *checker) modelFor(typ types.Type) *model {
-	typ = types.Unalias(typ)
-	named, ok := typ.(*types.Named)
-	if !ok || named.Obj().Pkg() == nil {
-		return nil
-	}
-	key := objectKey{pkg: named.Obj().Pkg(), name: named.Obj().Name()}
-	if fact, ok := c.models[key]; ok {
-		return fact
-	}
-	fact := new(modelWireFact)
-	if !c.pass.ImportObjectFact(named.Obj(), fact) {
-		c.models[key] = nil
-		return nil
-	}
-	value := decodeModelFact(fact, named.Obj().Pkg().Path())
-	c.models[key] = value
-	return value
-}
-
-func (c *checker) modelForReceiver(typ types.Type) *model {
-	typ = types.Unalias(typ)
-	for {
-		if parameter, ok := typ.(*types.TypeParam); ok {
-			return c.modelForTypeParameter(parameter)
-		}
-		pointer, ok := typ.(*types.Pointer)
-		if !ok {
-			return c.modelFor(typ)
-		}
-		typ = types.Unalias(pointer.Elem())
-	}
-}
-
-// modelForTypeParameter finds one model shared by every constraint term.
-func (c *checker) modelForTypeParameter(parameter *types.TypeParam) *model {
-	terms, supported := simpleTerms(parameter.Constraint())
-	if !supported {
-		return nil
-	}
-	var found *model = nil
-	for _, term := range terms {
-		model := c.modelForReceiver(term.Type())
-		if model == nil {
-			continue
-		}
-		if found != nil && !sameModel(found, model) {
-			return mixedModel()
-		}
-		found = model
-	}
-	return found
-}
-
-func (c *checker) modelForSelector(selector *ast.SelectorExpr) *model {
-	if model := c.modelForReceiver(c.pass.TypesInfo.TypeOf(selector.X)); model != nil {
-		return model
-	}
-	selection := c.pass.TypesInfo.Selections[selector]
-	if selection == nil {
-		return nil
-	}
-	if function, ok := selection.Obj().(*types.Func); ok {
-		signature, _ := function.Type().(*types.Signature)
-		if signature != nil && signature.Recv() != nil {
-			return c.modelForReceiver(signature.Recv().Type())
-		}
-	}
-	current := selection.Recv()
-	for offset, index := range selection.Index() {
-		current = dereference(current)
-		structure, ok := current.Underlying().(*types.Struct)
-		if !ok || index >= structure.NumFields() {
-			return nil
-		}
-		if offset == len(selection.Index())-1 {
-			return c.modelForReceiver(current)
-		}
-		current = structure.Field(index).Type()
-	}
-	return nil
-}
-
-// structuralModel finds a generated enum behind an interface method set.
-// It returns nil when the receiver cannot admit that enum.
-func (c *checker) structuralModel(selector *ast.SelectorExpr) *model {
-	receiver := c.pass.TypesInfo.TypeOf(selector.X)
-	if !c.receiverCanHideModel(receiver) {
-		return nil
-	}
-	methods := types.NewMethodSet(receiver)
-	var found *model = nil
-	for index := 0; index < methods.Len(); index++ {
-		function, ok := methods.At(index).Obj().(*types.Func)
-		if !ok {
-			continue
-		}
-		model := c.modelForAccessor(function)
-		if model == nil {
-			continue
-		}
-		if found != nil && !sameModel(found, model) {
-			return mixedModel()
-		}
-		found = model
-	}
-	return found
-}
-
-func (c *checker) receiverCanHideModel(typ types.Type) bool {
-	typ = types.Unalias(typ)
-	if named, ok := typ.(*types.Named); ok {
-		_, isInterface := named.Underlying().(*types.Interface)
-		return isInterface
-	}
-	parameter, ok := typ.(*types.TypeParam)
-	if !ok {
-		_, isInterface := typ.(*types.Interface)
-		return isInterface
-	}
-	terms, supported := simpleTerms(parameter.Constraint())
-	return !supported || len(terms) == 0
-}
-
-// modelForAccessor resolves a generated payload accessor to its owning model.
-func (c *checker) modelForAccessor(function *types.Func) *model {
-	name := function.Name()
-	if !strings.HasPrefix(name, "Tgo") || name == "TgoTag" {
-		return nil
-	}
-	variant := strings.TrimPrefix(name, "Tgo")
-	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Params().Len() != 0 || signature.Results().Len() != 1 {
-		return nil
-	}
-	payload, ok := types.Unalias(signature.Results().At(0).Type()).(*types.Named)
-	if !ok || payload.Obj().Pkg() == nil ||
-		!strings.HasSuffix(payload.Obj().Name(), variant) {
-		return nil
-	}
-	modelName := strings.TrimSuffix(payload.Obj().Name(), variant)
-	object, ok := payload.Obj().Pkg().Scope().Lookup(modelName).(*types.TypeName)
-	if !ok {
-		return nil
-	}
-	model := c.modelFor(object.Type())
-	if !modelIsEnum(model) || variantTag(model, name) == 0 {
-		return nil
-	}
-	return model
-}
-
-func dereference(typ types.Type) types.Type {
-	typ = types.Unalias(typ)
-	for {
-		pointer, ok := typ.(*types.Pointer)
-		if !ok {
-			return typ
-		}
-		typ = types.Unalias(pointer.Elem())
-	}
 }

@@ -1,0 +1,37 @@
+package tgolint
+
+import "tgo/pkg/syntax"
+
+// checkRepresentationAccess blocks private fields and unchecked payload methods.
+func (c %checker) checkRepresentationAccess(expression %syntax.Expression) {
+	if c.syntaxSafe[expression] || c.syntaxHandled[expression] {
+		return
+	}
+	selector := syntax.SelectorExpressionOf(expression)
+	if selector == nil { return }
+	model := c.modelForSourceSelector(expression, selector)
+	if model == nil {
+		return
+	}
+	if privateRepresentation(model, selector.Selector.Name) {
+		c.pass.Reportf(selector.Start,
+			"%s.%s is private tgo representation",
+			modelName(model), selector.Selector.Name)
+		return
+	}
+}
+
+func privateRepresentation(model *model, name string) bool {
+	if modelIsChecked(model) {
+		return name == "value"
+	}
+	if name == "tgoTag" {
+		return true
+	}
+	for _, variant := range modelVariants(model) {
+		if name == "tgo"+variant {
+			return true
+		}
+	}
+	return false
+}

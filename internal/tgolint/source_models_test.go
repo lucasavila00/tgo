@@ -2,7 +2,6 @@ package tgolint
 
 import (
 	"bytes"
-	"go/ast"
 	"go/token"
 	"testing"
 
@@ -84,15 +83,20 @@ func TestMissingGeneratedDeclarationDiagnostic(t *testing.T) {
 		ExportPackageFact: func(analysis.Fact) {},
 	}
 	checker := &checker{pass: pass}
-	file := &ast.File{Package: token.Pos(1)}
 	data := []byte("package sample\ntype Missing struct {}\n")
 	files := token.NewFileSet()
+	generated, err := syntax.ParseGoFile(
+		files, "model_tgo.go", []byte("package sample\n"), syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatalf("ParseFile generated: %v", err)
+	}
 	source, err := syntax.ParseFile(files, "model.tgo", data, syntax.AllErrors)
 	if err != nil {
 		t.Fatalf("ParseFile: %v", err)
 	}
 	checker.checkSourceDeclaration(
-		file, "model.tgo", source, source.Declarations[0],
+		generated, "model.tgo", source, source.Declarations[0],
 		files.File(source.Package), data,
 	)
 	want := "generated tgo output for Missing does not match model.tgo"
@@ -108,18 +112,17 @@ func TestCheckedSourceDeclarationFactRoundTrip(t *testing.T) {
 		t.Fatalf("checked source model: %#v", models[0])
 	}
 	checked := *models[0]
-	switch checked.TgoTag() {
-	case 1:
-		shape := checked.TgoChecked()
+	switch checked.Tag() {
+	case sourceModelTagChecked:
+		shape := checked.CheckedPayload()
 		if shape.Base != "int" {
 			t.Fatalf("checked base: %q", shape.Base)
 		}
 		assertSourceModelFactRoundTrip(t, shape.Fact, checkedModelWire, "Count", nil)
-	case 2, 3:
+	case sourceModelTagEnum, sourceModelTagStruct:
 		t.Fatal("checked source has a different variant")
-		return
 	default:
-		panic("invalid sourceModel variant")
+		panic(checked.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -130,12 +133,11 @@ func TestEnumSourceDeclarationFactRoundTrip(t *testing.T) {
 		t.Fatalf("enum source model: %#v", models[1])
 	}
 	enum := *models[1]
-	switch enum.TgoTag() {
-	case 1, 3:
+	switch enum.Tag() {
+	case sourceModelTagChecked, sourceModelTagStruct:
 		t.Fatal("enum source has a different variant")
-		return
-	case 2:
-		shape := enum.TgoEnum()
+	case sourceModelTagEnum:
+		shape := enum.EnumPayload()
 		wantVariants := []string{"Started", "Stopped"}
 		if len(shape.Variants) != 2 ||
 			shape.Variants[0].name != wantVariants[0] ||
@@ -146,7 +148,7 @@ func TestEnumSourceDeclarationFactRoundTrip(t *testing.T) {
 			t, shape.Fact, enumModelWire, "Event", wantVariants,
 		)
 	default:
-		panic("invalid sourceModel variant")
+		panic(enum.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -157,18 +159,17 @@ func TestStructSourceDeclaration(t *testing.T) {
 		t.Fatalf("struct source model: %#v", models[2])
 	}
 	structure := *models[2]
-	switch structure.TgoTag() {
-	case 1, 2:
+	switch structure.Tag() {
+	case sourceModelTagChecked, sourceModelTagEnum:
 		t.Fatal("struct source has a different variant")
-		return
-	case 3:
-		shape := structure.TgoStruct()
+	case sourceModelTagStruct:
+		shape := structure.StructPayload()
 		if len(shape.Fields) != 1 || shape.Fields[0].name != "Limit" ||
 			shape.Fields[0].typeExpression != "int" {
 			t.Fatalf("struct fields: %#v", shape.Fields)
 		}
 	default:
-		panic("invalid sourceModel variant")
+		panic(structure.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 	if sourceModelFact(&structure) != nil {
 		t.Fatal("struct source model has a fact")

@@ -14,6 +14,14 @@ type EnumAlias enum
 
 type AccountAlias = Account
 
+type Accounts interface {
+    Account
+    Tag() AccountTag
+    UnknownTag() string
+    PersonalPayload() AccountPersonal
+    BusinessPayload() AccountBusiness
+}
+
 type CounterRecord (struct {
     value int
 })
@@ -90,16 +98,36 @@ func Business(company string, members []Account, tags map[string]string) Account
 }
 
 func Label(account Account) string {
-    match account {
-    case Personal(person): return person.Name
-    case Business(company): return company.Company
+    switch enumValue3 := account; enumValue3.Tag() {
+    case AccountTagPersonal:
+        person := enumValue3.PersonalPayload()
+        return person.Name
+    case AccountTagBusiness:
+        company := enumValue3.BusinessPayload()
+        return company.Company
+    exhaustive:
     }
 }
 
 func AliasLabel(account AccountAlias) string {
-    match account {
-    case Personal(person): return person.Name
-    case Business(company): return company.Company
+    switch enumValue4 := account; enumValue4.Tag() {
+    case AccountTagPersonal:
+        person := enumValue4.PersonalPayload()
+        return person.Name
+    case AccountTagBusiness:
+        company := enumValue4.BusinessPayload()
+        return company.Company
+    exhaustive:
+    }
+}
+
+func GenericLabel[T Accounts](account T) string {
+    switch account.Tag() {
+    case AccountTagPersonal:
+        return account.PersonalPayload().Name
+    case AccountTagBusiness:
+        return account.BusinessPayload().Company
+    exhaustive:
     }
 }
 
@@ -123,25 +151,6 @@ func Tag(value Tagged) uint8 {
     return value.tgoTag
 }
 
-func MatchName(account Account) string {
-    __tgo_match_1 := "source"
-    match account {
-    case Personal(_): return __tgo_match_1
-    case Business(_): return __tgo_match_1
-    }
-}
-
-func __tgo_match(value int) int {
-    return value
-}
-
-func MarkerSwitch(value int) string {
-    switch __tgo_match(value) {
-    case 1: return "one"
-    default: return "other"
-    }
-}
-
 func match[T any](value T) T {
     return value
 }
@@ -153,7 +162,7 @@ func (matcher) match(value string) string {
 }
 
 func OrdinaryMatchName() string {
-	return matcher{}.match(match[string]("ordinary"))
+    return matcher{}.match(match[string]("ordinary"))
 }
 
 func OrdinaryMatchStatement() {
@@ -172,25 +181,53 @@ match:
     return value
 }
 
-func FunctionMatchSubject(account Account) string {
-    match func() Account { return account }() {
-    case Personal(person): return person.Name
-    case Business(business): return business.Company
+func FunctionTagSubject(account Account) string {
+    switch enumValue6 := func() Account { return account }(); enumValue6.Tag() {
+    case AccountTagPersonal:
+        person := enumValue6.PersonalPayload()
+        return person.Name
+    case AccountTagBusiness:
+        business := enumValue6.BusinessPayload()
+        return business.Company
+    exhaustive:
     }
 }
 
-func LiteralMatchSubject(name string) string {
-    match Account.Personal{Name: name} {
-    case Personal(person): return person.Name
-    case Business(business): return business.Company
+func LiteralTagSubject(name string) string {
+    switch enumValue7 := (Account.Personal{Name: name}); enumValue7.Tag() {
+    case AccountTagPersonal:
+        person := enumValue7.PersonalPayload()
+        return person.Name
+    case AccountTagBusiness:
+        business := enumValue7.BusinessPayload()
+        return business.Company
+    exhaustive:
     }
 }
 
 func SignalName(signal Signal) string {
-    match
-        signal {
-    case On(_): return "on"
-    case Off(_): return "off"
+    switch enumValue8 := signal; enumValue8.Tag() {
+    case SignalTagOn:
+        return "on"
+    case SignalTagOff:
+        return "off"
+    exhaustive:
+    }
+}
+
+func SignalState(signal Signal) string {
+    switch signal.Tag() {
+    case SignalTagOn, SignalTagOff:
+        return "known"
+    exhaustive:
+    }
+}
+
+func SignalStateOrInvalid(signal Signal) string {
+    switch signal.Tag() {
+    case SignalTagOn, SignalTagOff:
+        return "known"
+    exhaustive:
     }
 }
 
@@ -210,18 +247,24 @@ func AliasAccount(name string) Account {
     return AccountAlias.Personal{Name: name}
 }
 
-func LabeledMatch(account Account) string {
+func LabeledTagSwitch(account Account) string {
 Done:
-    match account {
-    case Personal(_): break Done
-    case Business(_): break Done
+    switch enumValue9 := account; enumValue9.Tag() {
+    case AccountTagPersonal:
+        break Done
+    case AccountTagBusiness:
+        break Done
+    exhaustive:
     }
     return "done"
 }
 
 func NoticeLabels(notice Notice) map[string]string {
-    match notice {
-    case Text(text): return text.Labels
+    switch enumValue10 := notice; enumValue10.Tag() {
+    case NoticeTagText:
+        text := enumValue10.TextPayload()
+        return text.Labels
+    exhaustive:
     }
 }
 

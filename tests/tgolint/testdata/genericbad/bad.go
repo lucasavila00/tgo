@@ -20,9 +20,10 @@ type eventChoices interface {
 type events interface {
 	eventChoices
 	model.Event
-	TgoTag() uint8
-	TgoStarted() model.EventStarted
-	TgoStopped() model.EventStopped
+	Tag() model.EventTag
+	UnknownTag() string
+	StartedPayload() model.EventStarted
+	StoppedPayload() model.EventStopped
 }
 
 func FilledCounts[S countSlices]() S {
@@ -35,64 +36,69 @@ func ZeroEvent[E events]() {
 }
 
 func WrongPayload[E events](event E) string {
-	switch event.TgoTag() {
-	case 1:
-		return event.TgoStopped().Reason
-	case 2:
-		return event.TgoStopped().Reason
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StoppedPayload().Reason
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
 	default:
-		panic("invalid Event variant")
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 type Decoy struct{}
 
-func (Decoy) TgoTag() uint8 {
-	return 1
+func (Decoy) Tag() model.EventTag {
+	return model.EventTagStarted
 }
 
-func (Decoy) TgoStarted() model.EventStarted {
+func (Decoy) UnknownTag() string { return "decoy" }
+
+func (Decoy) StartedPayload() model.EventStarted {
 	return model.EventStarted{}
 }
 
-func (Decoy) TgoStopped() model.EventStopped {
+func (Decoy) StoppedPayload() model.EventStopped {
 	return model.EventStopped{}
 }
 
 type mixedEvents interface {
 	model.Event | Decoy
-	TgoTag() uint8
-	TgoStarted() model.EventStarted
-	TgoStopped() model.EventStopped
+	Tag() model.EventTag
+	UnknownTag() string
+	StartedPayload() model.EventStarted
+	StoppedPayload() model.EventStopped
 }
 
 func MixedDirect[E mixedEvents](event E) string {
-	return event.TgoStarted().ID
+	return event.StartedPayload().ID
 }
 
 type eventPointers interface {
 	*model.Event
-	TgoTag() uint8
-	TgoStarted() model.EventStarted
-	TgoStopped() model.EventStopped
+	Tag() model.EventTag
+	UnknownTag() string
+	StartedPayload() model.EventStarted
+	StoppedPayload() model.EventStopped
 }
 
 func PointerGeneric[E eventPointers](event E) string {
-	switch event.TgoTag() {
-	case 1:
-		return event.TgoStarted().ID
-	case 2:
-		return event.TgoStopped().Reason
+	switch event.Tag() {
+	case model.EventTagStarted:
+		return event.StartedPayload().ID
+	case model.EventTagStopped:
+		return event.StoppedPayload().Reason
 	default:
-		panic("invalid Event variant")
+		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 type differentModels interface {
 	model.Event | model.Signal
-	TgoTag() uint8
+	Tag() model.EventTag
+	UnknownTag() string
 }
 
-func MixedModels[M differentModels](value M) uint8 {
-	return value.TgoTag()
+func MixedModels[M differentModels](value M) model.EventTag {
+	return value.Tag()
 }

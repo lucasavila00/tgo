@@ -8,6 +8,6 @@ type Wrapped struct {
     Account
 }
 
-func tag(value Wrapped) uint8 {
+func tag(value Wrapped) AccountTag {
     return value.tgoTag
 }

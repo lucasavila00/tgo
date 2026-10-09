@@ -17,11 +17,12 @@ func nilOnlyType() nilType { return nilType.Nil{} }
 func optionalNilType() nilType { return nilType.Optional{} }
 
 func nilTypeMembers(value nilType) uint8 {
-	match value {
-	case Never(_): return 0
-	case NonNil(_): return 1
-	case Nil(_): return 2
-	case Optional(_): return 3
+	switch value.Tag() {
+	case nilTypeTagNever: return 0
+	case nilTypeTagNonNil: return 1
+	case nilTypeTagNil: return 2
+	case nilTypeTagOptional: return 3
+	exhaustive:
 	}
 }
 
@@ -76,4 +77,3 @@ func typeCanBeNil(typ types.Type) bool {
 	}
 	return false
 }
-

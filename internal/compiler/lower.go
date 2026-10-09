@@ -32,9 +32,9 @@ func generatedNames(models []*model) map[string]bool {
 	names := make(map[string]bool)
 	for _, model := range models {
 		if len(model.Variants) > 0 {
+			names[model.Name+"Tag"] = true
 			for _, variant := range model.Variants {
 				names[model.Name+variant.Name] = true
-				names["New"+model.Name+variant.Name] = true
 			}
 		}
 		if model.Predicate != "" {
@@ -124,14 +124,22 @@ func generatedCheckedMethod(receiver, method string, model *model) bool {
 
 // generatedEnumMethod recognizes tag and payload accessor methods.
 func generatedEnumMethod(receiver, method string, model *model) bool {
-	if receiver != model.Name || len(model.Variants) == 0 {
+	if len(model.Variants) == 0 {
 		return false
 	}
-	if method == "TgoTag" {
+	for _, variant := range model.Variants {
+		if method == model.Name && receiver == model.Name+variant.Name {
+			return true
+		}
+	}
+	if receiver != model.Name {
+		return false
+	}
+	if method == "Tag" || method == "UnknownTag" {
 		return true
 	}
 	for _, variant := range model.Variants {
-		if method == "Tgo"+variant.Name {
+		if method == variant.Name+"Payload" {
 			return true
 		}
 	}
@@ -165,8 +173,7 @@ func (p *packageUnit) lowerConstruction(file *ast.File, node ast.Node) ast.Node 
 		if selector.Sel.Name == variant.Name {
 			payload := model.Name + variant.Name
 			literal.Type = p.generatedObject(prefix, path, payload, at)
-			constructor := p.generatedObject(prefix, path, "New"+payload, at)
-			return call(constructor, literal)
+			return call(&ast.SelectorExpr{X: literal, Sel: ast.NewIdent(model.Name)})
 		}
 	}
 	p.fail(literal, "unknown variant %s.%s", model.Name, selector.Sel.Name)

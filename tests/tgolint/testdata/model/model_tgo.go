@@ -31,14 +31,26 @@ type Pair struct {
 
 // Event requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type EventTag uint8
+
+const (
+	EventTagStarted EventTag = iota + 1
+	EventTagStopped
+)
+
 type Event struct {
-	tgoTag     uint8
+	tgoTag     EventTag
 	tgoStarted EventStarted
 	tgoStopped EventStopped
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Event) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Event) Tag() EventTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Event) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Event: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // EventStarted is the Started payload.
 type EventStarted struct {
@@ -46,38 +58,38 @@ type EventStarted struct {
 	Alias string `json:"event"`
 }
 
-// NewEventStarted constructs Event. Model fields must be valid.
+// Event constructs Event. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewEventStarted(value EventStarted) Event {
-	return Event{tgoTag: 1, tgoStarted: value}
+func (value EventStarted) Event() Event {
+	return Event{tgoTag: EventTagStarted, tgoStarted: value}
 }
 
-// TgoStarted returns the Started payload. Check TgoTag first.
-func (v Event) TgoStarted() EventStarted { return v.tgoStarted }
+// StartedPayload requires Started. No tag check.
+func (v Event) StartedPayload() EventStarted { return v.tgoStarted }
 
 // EventStopped is the Stopped payload.
 type EventStopped struct {
 	Reason string
 }
 
-// NewEventStopped constructs Event. Model fields must be valid.
+// Event constructs Event. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewEventStopped(value EventStopped) Event {
-	return Event{tgoTag: 2, tgoStopped: value}
+func (value EventStopped) Event() Event {
+	return Event{tgoTag: EventTagStopped, tgoStopped: value}
 }
 
-// TgoStopped returns the Stopped payload. Check TgoTag first.
-func (v Event) TgoStopped() EventStopped { return v.tgoStopped }
+// StoppedPayload requires Stopped. No tag check.
+func (v Event) StoppedPayload() EventStopped { return v.tgoStopped }
 
 func (v Event) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoStarted()
+	case EventTagStarted:
+		payload := v.StartedPayload()
 		return __tgo_json.Marshal(struct {
 			Payload EventStarted `json:"Started"`
 		}{Payload: payload})
-	case 2:
-		payload := v.TgoStopped()
+	case EventTagStopped:
+		payload := v.StoppedPayload()
 		return __tgo_json.Marshal(struct {
 			Payload EventStopped `json:"Stopped"`
 		}{Payload: payload})
@@ -106,14 +118,14 @@ func (v *Event) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewEventStarted(payload)
+		*v = payload.Event()
 		return nil
 	case "Stopped":
 		var payload EventStopped
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewEventStopped(payload)
+		*v = payload.Event()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Event JSON variant %q", variant)
@@ -122,29 +134,40 @@ func (v *Event) UnmarshalJSON(data []byte) error {
 
 // Signal requires a variant constructor. Its zero value is invalid.
 // Shared data keeps Go aliases. Callers must keep model values valid.
+type SignalTag uint8
+
+const (
+	SignalTagOn SignalTag = iota + 1
+)
+
 type Signal struct {
-	tgoTag uint8
+	tgoTag SignalTag
 }
 
-// TgoTag returns the tag. Use only on a constructed value.
-func (v Signal) TgoTag() uint8 { return v.tgoTag }
+// Tag returns the active tag.
+func (v Signal) Tag() SignalTag { return v.tgoTag }
+
+// UnknownTag describes an invalid tag.
+func (v Signal) UnknownTag() string {
+	return __tgo_fmt.Sprintf("Signal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
+}
 
 // SignalOn is the On payload.
 type SignalOn struct{}
 
-// NewSignalOn constructs Signal. Model fields must be valid.
+// Signal constructs Signal. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
-func NewSignalOn(_ SignalOn) Signal {
-	return Signal{tgoTag: 1}
+func (value SignalOn) Signal() Signal {
+	return Signal{tgoTag: SignalTagOn}
 }
 
-// TgoOn returns the On payload. Check TgoTag first.
-func (Signal) TgoOn() SignalOn { return SignalOn{} }
+// OnPayload requires On. No tag check.
+func (Signal) OnPayload() SignalOn { return SignalOn{} }
 
 func (v Signal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
-	case 1:
-		payload := v.TgoOn()
+	case SignalTagOn:
+		payload := v.OnPayload()
 		return __tgo_json.Marshal(struct {
 			Payload SignalOn `json:"On"`
 		}{Payload: payload})
@@ -173,7 +196,7 @@ func (v *Signal) UnmarshalJSON(data []byte) error {
 		if err := __tgo_json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
-		*v = NewSignalOn(payload)
+		*v = payload.Signal()
 		return nil
 	default:
 		return __tgo_fmt.Errorf("unknown Signal JSON variant %q", variant)

@@ -53,16 +53,17 @@ type Account enum {
 }
 
 func Label(account Account) string {
-    match account {
-    case Personal(person): return person.Name
-    case Business(company): return company.Company
+    switch account.Tag() {
+    case AccountTagPersonal: return account.PersonalPayload().Name
+    case AccountTagBusiness: return account.BusinessPayload().Company
+    exhaustive:
     }
 }
 ```
 
-Construct with `Account.Personal{Name: "Lucas"}`. Cover every variant in `match`.
-Use `_` to discard a payload. Duplicate or missing cases fail compilation.
-Do not use `fallthrough` in a match or select `Tgo*` methods through an interface.
+Construct with `Account.Personal{Name: "Lucas"}`. `exhaustive:` requires one case for each declared
+variant. Use `default:` when the switch needs fallback behavior. Duplicate tags and missing
+exhaustive cases fail compilation. Do not use `fallthrough` or select generated enum methods through an interface.
 Type aliases can construct variants. Go name resolution selects the aliased type.
 Do not shadow generated payload, constructor, or default helper names at a construction.
 The value uses a tag and typed Go fields. Reads do not run validation.
@@ -105,7 +106,7 @@ Import Go packages and call them directly. Keep their types, callbacks, and erro
 Go code can call generated functions. Variant constructors use these names:
 
 ```go
-account := model.NewAccountPersonal(model.AccountPersonal{Name: "Lucas"})
+account := model.AccountPersonal{Name: "Lucas"}.Account()
 quantity, err := model.NewQuantity(3)
 ```
 

@@ -96,8 +96,14 @@ func emitEnumJSONMarshalTo(
 		name,
 		jsonTextPackage,
 	)
-	for index, variant := range declaration.Variants {
-		fmt.Fprintf(out, "case %d:\npayload := v.Tgo%s()\n", index+1, variant.Name)
+	for _, variant := range declaration.Variants {
+		fmt.Fprintf(
+			out,
+			"case %sTag%s:\npayload := v.%sPayload()\n",
+			name,
+			variant.Name,
+			variant.Name,
+		)
 		switch config.Form {
 		case "external":
 			fmt.Fprintf(
@@ -233,14 +239,13 @@ func emitExternalJSONUnmarshalFrom(
 				"var payload %s%s\n"+
 				"if err := %s.Unmarshal(payloadData, &payload, in.Options()); "+
 				"err != nil { return err }\n"+
-				"*v = New%s%s(payload)\n"+
+				"*v = payload.%s()\n"+
 				"return nil\n",
 			index+1,
 			name,
 			variant.Name,
 			jsonV2Package,
 			name,
-			variant.Name,
 		)
 	}
 	fmt.Fprintf(
@@ -366,14 +371,13 @@ func emitAdjacentJSONUnmarshalFrom(
 				"var payload %s%s\n"+
 				"if err := %s.Unmarshal(contentData, &payload, in.Options()); "+
 				"err != nil { return err }\n"+
-				"*v = New%s%s(payload)\n"+
+				"*v = payload.%s()\n"+
 				"return nil\n",
 			index+1,
 			name,
 			variant.Name,
 			jsonV2Package,
 			name,
-			variant.Name,
 		)
 	}
 	fmt.Fprintf(

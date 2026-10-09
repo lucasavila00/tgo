@@ -8,950 +8,714 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch __tgo_match_1 := *node; __tgo_match_1.TgoTag() {
-	case 11:
-		value := __tgo_match_1.TgoIdentifier()
+	switch enumValue1 := *node; enumValue1.Tag() {
+	case NodeTagIdentifier:
+		value := enumValue1.IdentifierPayload()
 		return value.Value, true
-	case 5:
-		value := __tgo_match_1.TgoExpression()
-		switch __tgo_match_2 := *value.Value; __tgo_match_2.TgoTag() {
-		case 2:
-			item := __tgo_match_2.TgoIdentifier()
+	case NodeTagExpression:
+		value := enumValue1.ExpressionPayload()
+		switch enumValue2 := *value.Value; enumValue2.Tag() {
+		case ExpressionTagIdentifier:
+			item := enumValue2.IdentifierPayload()
 			return item.Value, true
-		case 1:
+		case ExpressionTagBad:
 			return nil, false
-		case 3:
+		case ExpressionTagEllipsis:
 			return nil, false
-		case 4:
+		case ExpressionTagBasicLiteral:
 			return nil, false
-		case 5:
+		case ExpressionTagFunctionLiteral:
 			return nil, false
-		case 6:
+		case ExpressionTagCompositeLiteral:
 			return nil, false
-		case 7:
+		case ExpressionTagParenthesized:
 			return nil, false
-		case 8:
+		case ExpressionTagSelector:
 			return nil, false
-		case 9:
+		case ExpressionTagIndex:
 			return nil, false
-		case 10:
+		case ExpressionTagIndexList:
 			return nil, false
-		case 11:
+		case ExpressionTagSlice:
 			return nil, false
-		case 12:
+		case ExpressionTagTypeAssertion:
 			return nil, false
-		case 13:
+		case ExpressionTagCall:
 			return nil, false
-		case 14:
+		case ExpressionTagStar:
 			return nil, false
-		case 15:
+		case ExpressionTagNonNilPointer:
 			return nil, false
-		case 16:
+		case ExpressionTagUnary:
 			return nil, false
-		case 17:
+		case ExpressionTagBinary:
 			return nil, false
-		case 18:
+		case ExpressionTagKeyValue:
 			return nil, false
-		case 19:
+		case ExpressionTagArrayType:
 			return nil, false
-		case 20:
+		case ExpressionTagStructType:
 			return nil, false
-		case 21:
+		case ExpressionTagFunctionType:
 			return nil, false
-		case 22:
+		case ExpressionTagInterfaceType:
 			return nil, false
-		case 23:
+		case ExpressionTagMapType:
 			return nil, false
-		case 24:
+		case ExpressionTagChannelType:
 			return nil, false
-		case 25:
+		case ExpressionTagDefault:
 			return nil, false
-		case 26:
+		case ExpressionTagPropagation:
 			return nil, false
-		case 27:
+		case ExpressionTagComprehension:
 			return nil, false
 		default:
-			panic("invalid Expression variant")
+			panic(enumValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
-	case 1:
+	case NodeTagFile:
 		return nil, false
-	case 2:
+	case NodeTagDeclaration:
 		return nil, false
-	case 3:
+	case NodeTagSpecification:
 		return nil, false
-	case 4:
+	case NodeTagStatement:
 		return nil, false
-	case 6:
+	case NodeTagField:
 		return nil, false
-	case 7:
+	case NodeTagFieldList:
 		return nil, false
-	case 8:
+	case NodeTagTGoField:
 		return nil, false
-	case 9:
+	case NodeTagEnumVariant:
 		return nil, false
-	case 10:
+	case NodeTagComment:
 		return nil, false
-	case 12:
-		return nil, false
-	case 13:
+	case NodeTagCommentGroup:
 		return nil, false
 	default:
-
-		// EnumDeclarationOf returns an enum declaration payload.
-		panic("invalid Node variant")
+		panic(enumValue1.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// EnumDeclarationOf returns an enum declaration payload.
 func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 	if value == nil {
 		return nil, false
 	}
-	switch __tgo_match_3 := *value; __tgo_match_3.TgoTag() {
-	case 4:
-		item := __tgo_match_3.TgoEnum()
+	switch enumValue3 := *value; enumValue3.Tag() {
+	case DeclarationTagEnum:
+		item := enumValue3.EnumPayload()
 		return item.Value, true
-	case 1:
+	case DeclarationTagBad:
 		return nil, false
-	case 2:
+	case DeclarationTagGeneral:
 		return nil, false
-	case 3:
+	case DeclarationTagFunction:
 		return nil, false
-	case 5:
+	case DeclarationTagStruct:
 		return nil, false
-	case 6:
+	case DeclarationTagChecked:
 		return nil, false
 	default:
-
-		// StructDeclarationOf returns a TGo struct declaration payload.
-		panic("invalid Declaration variant")
+		panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// StructDeclarationOf returns a TGo struct declaration payload.
 func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 	if value == nil {
 		return nil, false
 	}
-	switch __tgo_match_4 := *value; __tgo_match_4.TgoTag() {
-	case 5:
-		item := __tgo_match_4.TgoStruct()
+	switch enumValue4 := *value; enumValue4.Tag() {
+	case DeclarationTagStruct:
+		item := enumValue4.StructPayload()
 		return item.Value, true
-	case 1:
+	case DeclarationTagBad:
 		return nil, false
-	case 2:
+	case DeclarationTagGeneral:
 		return nil, false
-	case 3:
+	case DeclarationTagFunction:
 		return nil, false
-	case 4:
+	case DeclarationTagEnum:
 		return nil, false
-	case 6:
+	case DeclarationTagChecked:
 		return nil, false
 	default:
-
-		// CheckedDeclarationOf returns a checked declaration payload.
-		panic("invalid Declaration variant")
+		panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// CheckedDeclarationOf returns a checked declaration payload.
 func CheckedDeclarationOf(value *Declaration) (*CheckedDeclaration, bool) {
 	if value == nil {
 		return nil, false
 	}
-	switch __tgo_match_5 := *value; __tgo_match_5.TgoTag() {
-	case 6:
-		item := __tgo_match_5.TgoChecked()
+	switch enumValue5 := *value; enumValue5.Tag() {
+	case DeclarationTagChecked:
+		item := enumValue5.CheckedPayload()
 		return item.Value, true
-	case 1:
+	case DeclarationTagBad:
 		return nil, false
-	case 2:
+	case DeclarationTagGeneral:
 		return nil, false
-	case 3:
+	case DeclarationTagFunction:
 		return nil, false
-	case 4:
+	case DeclarationTagEnum:
 		return nil, false
-	case 5:
+	case DeclarationTagStruct:
 		return nil, false
 	default:
-
-		// MatchStatementOf returns a match statement node payload.
-		panic("invalid Declaration variant")
+		panic(enumValue5.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
-func MatchStatementOf(node *Node) (*MatchStatement, bool) {
-	if node == nil {
-		return nil, false
-	}
-	switch __tgo_match_6 := *node; __tgo_match_6.TgoTag() {
-	case 4:
-		value := __tgo_match_6.TgoStatement()
-		switch __tgo_match_7 := *value.Value; __tgo_match_7.TgoTag() {
-		case 22:
-			item := __tgo_match_7.TgoMatch()
-			return item.Value, true
-		case 1:
-			return nil, false
-		case 2:
-			return nil, false
-		case 3:
-			return nil, false
-		case 4:
-			return nil, false
-		case 5:
-			return nil, false
-		case 6:
-			return nil, false
-		case 7:
-			return nil, false
-		case 8:
-			return nil, false
-		case 9:
-			return nil, false
-		case 10:
-			return nil, false
-		case 11:
-			return nil, false
-		case 12:
-			return nil, false
-		case 13:
-			return nil, false
-		case 14:
-			return nil, false
-		case 15:
-			return nil, false
-		case 16:
-			return nil, false
-		case 17:
-			return nil, false
-		case 18:
-			return nil, false
-		case 19:
-			return nil, false
-		case 20:
-			return nil, false
-		case 21:
-			return nil, false
-		default:
-			panic("invalid Statement variant")
-		}
-	case 1:
-		return nil, false
-	case 2:
-		return nil, false
-	case 3:
-		return nil, false
-	case 5:
-		return nil, false
-	case 6:
-		return nil, false
-	case 7:
-		return nil, false
-	case 8:
-		return nil, false
-	case 9:
-		return nil, false
-	case 10:
-		return nil, false
-	case 11:
-		return nil, false
-	case 12:
-		return nil, false
-	case 13:
-		return nil, false
-	default:
-
-		// DefaultExpressionOf returns a default marker node payload.
-		panic("invalid Node variant")
-	}
-}
-
+// DefaultExpressionOf returns a default marker node payload.
 func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok {
 		return nil, false
 	}
-	switch __tgo_match_8 := *expression; __tgo_match_8.TgoTag() {
-	case 25:
-		item := __tgo_match_8.TgoDefault()
+	switch enumValue8 := *expression; enumValue8.Tag() {
+	case ExpressionTagDefault:
+		item := enumValue8.DefaultPayload()
 		return item.Value, true
-	case 1:
+	case ExpressionTagBad:
 		return nil, false
-	case 2:
+	case ExpressionTagIdentifier:
 		return nil, false
-	case 3:
+	case ExpressionTagEllipsis:
 		return nil, false
-	case 4:
+	case ExpressionTagBasicLiteral:
 		return nil, false
-	case 5:
+	case ExpressionTagFunctionLiteral:
 		return nil, false
-	case 6:
+	case ExpressionTagCompositeLiteral:
 		return nil, false
-	case 7:
+	case ExpressionTagParenthesized:
 		return nil, false
-	case 8:
+	case ExpressionTagSelector:
 		return nil, false
-	case 9:
+	case ExpressionTagIndex:
 		return nil, false
-	case 10:
+	case ExpressionTagIndexList:
 		return nil, false
-	case 11:
+	case ExpressionTagSlice:
 		return nil, false
-	case 12:
+	case ExpressionTagTypeAssertion:
 		return nil, false
-	case 13:
+	case ExpressionTagCall:
 		return nil, false
-	case 14:
+	case ExpressionTagStar:
 		return nil, false
-	case 15:
+	case ExpressionTagNonNilPointer:
 		return nil, false
-	case 16:
+	case ExpressionTagUnary:
 		return nil, false
-	case 17:
+	case ExpressionTagBinary:
 		return nil, false
-	case 18:
+	case ExpressionTagKeyValue:
 		return nil, false
-	case 19:
+	case ExpressionTagArrayType:
 		return nil, false
-	case 20:
+	case ExpressionTagStructType:
 		return nil, false
-	case 21:
+	case ExpressionTagFunctionType:
 		return nil, false
-	case 22:
+	case ExpressionTagInterfaceType:
 		return nil, false
-	case 23:
+	case ExpressionTagMapType:
 		return nil, false
-	case 24:
+	case ExpressionTagChannelType:
 		return nil, false
-	case 26:
+	case ExpressionTagPropagation:
 		return nil, false
-	case 27:
+	case ExpressionTagComprehension:
 		return nil, false
 	default:
-
-		// PropagationExpressionOf returns an error propagation node payload.
-		panic("invalid Expression variant")
+		panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// PropagationExpressionOf returns an error propagation node payload.
 func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok {
 		return nil, false
 	}
-	switch __tgo_match_9 := *expression; __tgo_match_9.TgoTag() {
-	case 26:
-		item := __tgo_match_9.TgoPropagation()
+	switch enumValue9 := *expression; enumValue9.Tag() {
+	case ExpressionTagPropagation:
+		item := enumValue9.PropagationPayload()
 		return item.Value, true
-	case 27:
+	case ExpressionTagBad:
 		return nil, false
-	case 1:
+	case ExpressionTagIdentifier:
 		return nil, false
-	case 2:
+	case ExpressionTagEllipsis:
 		return nil, false
-	case 3:
+	case ExpressionTagBasicLiteral:
 		return nil, false
-	case 4:
+	case ExpressionTagFunctionLiteral:
 		return nil, false
-	case 5:
+	case ExpressionTagCompositeLiteral:
 		return nil, false
-	case 6:
+	case ExpressionTagParenthesized:
 		return nil, false
-	case 7:
+	case ExpressionTagSelector:
 		return nil, false
-	case 8:
+	case ExpressionTagIndex:
 		return nil, false
-	case 9:
+	case ExpressionTagIndexList:
 		return nil, false
-	case 10:
+	case ExpressionTagSlice:
 		return nil, false
-	case 11:
+	case ExpressionTagTypeAssertion:
 		return nil, false
-	case 12:
+	case ExpressionTagCall:
 		return nil, false
-	case 13:
+	case ExpressionTagStar:
 		return nil, false
-	case 14:
+	case ExpressionTagNonNilPointer:
 		return nil, false
-	case 15:
+	case ExpressionTagUnary:
 		return nil, false
-	case 16:
+	case ExpressionTagBinary:
 		return nil, false
-	case 17:
+	case ExpressionTagKeyValue:
 		return nil, false
-	case 18:
+	case ExpressionTagArrayType:
 		return nil, false
-	case 19:
+	case ExpressionTagStructType:
 		return nil, false
-	case 20:
+	case ExpressionTagFunctionType:
 		return nil, false
-	case 21:
+	case ExpressionTagInterfaceType:
 		return nil, false
-	case 22:
+	case ExpressionTagMapType:
 		return nil, false
-	case 23:
+	case ExpressionTagChannelType:
 		return nil, false
-	case 24:
+	case ExpressionTagDefault:
 		return nil, false
-	case 25:
+	case ExpressionTagComprehension:
 		return nil, false
 	default:
-
-		// ComprehensionExpressionOf returns a collection comprehension payload.
-		panic("invalid Expression variant")
+		panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// ComprehensionExpressionOf returns a collection comprehension payload.
 func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok {
 		return nil, false
 	}
-	switch __tgo_match_10 := *expression; __tgo_match_10.TgoTag() {
-	case 27:
-		item := __tgo_match_10.TgoComprehension()
-		return item.Value, true
-	case 1:
-		return nil, false
-	case 2:
-		return nil, false
-	case 3:
-		return nil, false
-	case 4:
-		return nil, false
-	case 5:
-		return nil, false
-	case 6:
-		return nil, false
-	case 7:
-		return nil, false
-	case 8:
-		return nil, false
-	case 9:
-		return nil, false
-	case 10:
-		return nil, false
-	case 11:
-		return nil, false
-	case 12:
-		return nil, false
-	case 13:
-		return nil, false
-	case 14:
-		return nil, false
-	case 15:
-		return nil, false
-	case 16:
-		return nil, false
-	case 17:
-		return nil, false
-	case 18:
-		return nil, false
-	case 19:
-		return nil, false
-	case 20:
-		return nil, false
-	case 21:
-		return nil, false
-	case 22:
-		return nil, false
-	case 23:
-		return nil, false
-	case 24:
-		return nil, false
-	case 25:
-		return nil, false
-	case 26:
+	switch item := *expression; item.Tag() {
+	case ExpressionTagComprehension:
+		return item.ComprehensionPayload().Value, true
+	case ExpressionTagBad, ExpressionTagIdentifier, ExpressionTagEllipsis,
+		ExpressionTagBasicLiteral, ExpressionTagFunctionLiteral,
+		ExpressionTagCompositeLiteral, ExpressionTagParenthesized,
+		ExpressionTagSelector, ExpressionTagIndex, ExpressionTagIndexList,
+		ExpressionTagSlice, ExpressionTagTypeAssertion, ExpressionTagCall,
+		ExpressionTagStar, ExpressionTagNonNilPointer, ExpressionTagUnary,
+		ExpressionTagBinary, ExpressionTagKeyValue, ExpressionTagArrayType,
+		ExpressionTagStructType, ExpressionTagFunctionType,
+		ExpressionTagInterfaceType, ExpressionTagMapType,
+		ExpressionTagChannelType, ExpressionTagDefault, ExpressionTagPropagation:
 		return nil, false
 	default:
-
-		// ComprehensionRangeClauseOf returns one range clause.
-		panic("invalid Expression variant")
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// ComprehensionRangeClauseOf returns one range clause.
 func ComprehensionRangeClauseOf(
 	value *ComprehensionClause,
 ) (*ComprehensionRangeClause, bool) {
 	if value == nil {
 		return nil, false
 	}
-	switch __tgo_match_11 := *value; __tgo_match_11.TgoTag() {
-	case 1:
-		item := __tgo_match_11.TgoRange()
-		return item.Value, true
-	case 2:
+	switch item := *value; item.Tag() {
+	case ComprehensionClauseTagRange:
+		return item.RangePayload().Value, true
+	case ComprehensionClauseTagFilter:
 		return nil, false
 	default:
-
-		// ComprehensionFilterClauseOf returns one filter clause.
-		panic("invalid ComprehensionClause variant")
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// ComprehensionFilterClauseOf returns one filter clause.
 func ComprehensionFilterClauseOf(
 	value *ComprehensionClause,
 ) (*ComprehensionFilterClause, bool) {
 	if value == nil {
 		return nil, false
 	}
-	switch __tgo_match_12 := *value; __tgo_match_12.TgoTag() {
-	case 2:
-		item := __tgo_match_12.TgoFilter()
-		return item.Value, true
-	case 1:
+	switch item := *value; item.Tag() {
+	case ComprehensionClauseTagRange:
 		return nil, false
+	case ComprehensionClauseTagFilter:
+		return item.FilterPayload().Value, true
 	default:
-
-		// NonNilPointerTypeOf returns a non-nil pointer type payload.
-		panic("invalid ComprehensionClause variant")
+		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// NonNilPointerTypeOf returns a non-nil pointer type payload.
 func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	expression, ok := ExpressionOf(node)
 	if !ok {
 		return nil, false
 	}
-	switch __tgo_match_13 := *expression; __tgo_match_13.TgoTag() {
-	case 15:
-		item := __tgo_match_13.TgoNonNilPointer()
+	switch enumValue10 := *expression; enumValue10.Tag() {
+	case ExpressionTagNonNilPointer:
+		item := enumValue10.NonNilPointerPayload()
 		return item.Value, true
-	case 1:
+	case ExpressionTagBad:
 		return nil, false
-	case 2:
+	case ExpressionTagIdentifier:
 		return nil, false
-	case 3:
+	case ExpressionTagEllipsis:
 		return nil, false
-	case 4:
+	case ExpressionTagBasicLiteral:
 		return nil, false
-	case 5:
+	case ExpressionTagFunctionLiteral:
 		return nil, false
-	case 6:
+	case ExpressionTagCompositeLiteral:
 		return nil, false
-	case 7:
+	case ExpressionTagParenthesized:
 		return nil, false
-	case 8:
+	case ExpressionTagSelector:
 		return nil, false
-	case 9:
+	case ExpressionTagIndex:
 		return nil, false
-	case 10:
+	case ExpressionTagIndexList:
 		return nil, false
-	case 11:
+	case ExpressionTagSlice:
 		return nil, false
-	case 12:
+	case ExpressionTagTypeAssertion:
 		return nil, false
-	case 13:
+	case ExpressionTagCall:
 		return nil, false
-	case 14:
+	case ExpressionTagStar:
 		return nil, false
-	case 16:
+	case ExpressionTagUnary:
 		return nil, false
-	case 17:
+	case ExpressionTagBinary:
 		return nil, false
-	case 18:
+	case ExpressionTagKeyValue:
 		return nil, false
-	case 19:
+	case ExpressionTagArrayType:
 		return nil, false
-	case 20:
+	case ExpressionTagStructType:
 		return nil, false
-	case 21:
+	case ExpressionTagFunctionType:
 		return nil, false
-	case 22:
+	case ExpressionTagInterfaceType:
 		return nil, false
-	case 23:
+	case ExpressionTagMapType:
 		return nil, false
-	case 24:
+	case ExpressionTagChannelType:
 		return nil, false
-	case 25:
+	case ExpressionTagDefault:
 		return nil, false
-	case 26:
+	case ExpressionTagPropagation:
 		return nil, false
-	case 27:
+	case ExpressionTagComprehension:
 		return nil, false
 	default:
-
-		// ExpressionOf returns an expression node payload.
-		panic("invalid Expression variant")
+		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// ExpressionOf returns an expression node payload.
 func ExpressionOf(node *Node) (*Expression, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch __tgo_match_14 := *node; __tgo_match_14.TgoTag() {
-	case 5:
-		value := __tgo_match_14.TgoExpression()
+	switch enumValue11 := *node; enumValue11.Tag() {
+	case NodeTagExpression:
+		value := enumValue11.ExpressionPayload()
 		return value.Value, true
-	case 1:
+	case NodeTagFile:
 		return nil, false
-	case 2:
+	case NodeTagDeclaration:
 		return nil, false
-	case 3:
+	case NodeTagSpecification:
 		return nil, false
-	case 4:
+	case NodeTagStatement:
 		return nil, false
-	case 6:
+	case NodeTagField:
 		return nil, false
-	case 7:
+	case NodeTagFieldList:
 		return nil, false
-	case 8:
+	case NodeTagTGoField:
 		return nil, false
-	case 9:
+	case NodeTagEnumVariant:
 		return nil, false
-	case 10:
+	case NodeTagIdentifier:
 		return nil, false
-	case 11:
+	case NodeTagComment:
 		return nil, false
-	case 12:
-		return nil, false
-	case 13:
+	case NodeTagCommentGroup:
 		return nil, false
 	default:
-
-		// StatementOf returns a statement node payload.
-		panic("invalid Node variant")
+		panic(enumValue11.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// StatementOf returns a statement node payload.
 func StatementOf(node *Node) (*Statement, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch __tgo_match_15 := *node; __tgo_match_15.TgoTag() {
-	case 4:
-		value := __tgo_match_15.TgoStatement()
+	switch enumValue12 := *node; enumValue12.Tag() {
+	case NodeTagStatement:
+		value := enumValue12.StatementPayload()
 		return value.Value, true
-	case 1:
+	case NodeTagFile:
 		return nil, false
-	case 2:
+	case NodeTagDeclaration:
 		return nil, false
-	case 3:
+	case NodeTagSpecification:
 		return nil, false
-	case 5:
+	case NodeTagExpression:
 		return nil, false
-	case 6:
+	case NodeTagField:
 		return nil, false
-	case 7:
+	case NodeTagFieldList:
 		return nil, false
-	case 8:
+	case NodeTagTGoField:
 		return nil, false
-	case 9:
+	case NodeTagEnumVariant:
 		return nil, false
-	case 10:
+	case NodeTagIdentifier:
 		return nil, false
-	case 11:
+	case NodeTagComment:
 		return nil, false
-	case 12:
-		return nil, false
-	case 13:
+	case NodeTagCommentGroup:
 		return nil, false
 	default:
-
-		// DeclarationOf returns a declaration node payload.
-		panic("invalid Node variant")
+		panic(enumValue12.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// DeclarationOf returns a declaration node payload.
 func DeclarationOf(node *Node) (*Declaration, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch __tgo_match_16 := *node; __tgo_match_16.TgoTag() {
-	case 2:
-		value := __tgo_match_16.TgoDeclaration()
+	switch enumValue13 := *node; enumValue13.Tag() {
+	case NodeTagDeclaration:
+		value := enumValue13.DeclarationPayload()
 		return value.Value, true
-	case 1:
+	case NodeTagFile:
 		return nil, false
-	case 3:
+	case NodeTagSpecification:
 		return nil, false
-	case 4:
+	case NodeTagStatement:
 		return nil, false
-	case 5:
+	case NodeTagExpression:
 		return nil, false
-	case 6:
+	case NodeTagField:
 		return nil, false
-	case 7:
+	case NodeTagFieldList:
 		return nil, false
-	case 8:
+	case NodeTagTGoField:
 		return nil, false
-	case 9:
+	case NodeTagEnumVariant:
 		return nil, false
-	case 10:
+	case NodeTagIdentifier:
 		return nil, false
-	case 11:
+	case NodeTagComment:
 		return nil, false
-	case 12:
-		return nil, false
-	case 13:
+	case NodeTagCommentGroup:
 		return nil, false
 	default:
-
-		// SpecificationOf returns a specification node payload.
-		panic("invalid Node variant")
+		panic(enumValue13.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// SpecificationOf returns a specification node payload.
 func SpecificationOf(node *Node) (*Specification, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch __tgo_match_17 := *node; __tgo_match_17.TgoTag() {
-	case 3:
-		value := __tgo_match_17.TgoSpecification()
+	switch enumValue14 := *node; enumValue14.Tag() {
+	case NodeTagSpecification:
+		value := enumValue14.SpecificationPayload()
 		return value.Value, true
-	case 1:
+	case NodeTagFile:
 		return nil, false
-	case 2:
+	case NodeTagDeclaration:
 		return nil, false
-	case 4:
+	case NodeTagStatement:
 		return nil, false
-	case 5:
+	case NodeTagExpression:
 		return nil, false
-	case 6:
+	case NodeTagField:
 		return nil, false
-	case 7:
+	case NodeTagFieldList:
 		return nil, false
-	case 8:
+	case NodeTagTGoField:
 		return nil, false
-	case 9:
+	case NodeTagEnumVariant:
 		return nil, false
-	case 10:
+	case NodeTagIdentifier:
 		return nil, false
-	case 11:
+	case NodeTagComment:
 		return nil, false
-	case 12:
-		return nil, false
-	case 13:
+	case NodeTagCommentGroup:
 		return nil, false
 	default:
-
-		// ExpressionKind returns the closed expression variant name.
-		panic("invalid Node variant")
+		panic(enumValue14.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// ExpressionKind returns the closed expression variant name.
 func ExpressionKind(value *Expression) string {
-	switch __tgo_match_18 := *value; __tgo_match_18.TgoTag() {
-	case 1:
+	switch enumValue15 := *value; enumValue15.Tag() {
+	case ExpressionTagBad:
 		return "Bad"
-	case 2:
+	case ExpressionTagIdentifier:
 		return "Identifier"
-	case 3:
+	case ExpressionTagEllipsis:
 		return "Ellipsis"
-	case 4:
+	case ExpressionTagBasicLiteral:
 		return "BasicLiteral"
-	case 5:
+	case ExpressionTagFunctionLiteral:
 		return "FunctionLiteral"
-	case 6:
+	case ExpressionTagCompositeLiteral:
 		return "CompositeLiteral"
-	case 7:
+	case ExpressionTagParenthesized:
 		return "Parenthesized"
-	case 8:
+	case ExpressionTagSelector:
 		return "Selector"
-	case 9:
+	case ExpressionTagIndex:
 		return "Index"
-	case 10:
+	case ExpressionTagIndexList:
 		return "IndexList"
-	case 11:
+	case ExpressionTagSlice:
 		return "Slice"
-	case 12:
+	case ExpressionTagTypeAssertion:
 		return "TypeAssertion"
-	case 13:
+	case ExpressionTagCall:
 		return "Call"
-	case 14:
+	case ExpressionTagStar:
 		return "Star"
-	case 15:
+	case ExpressionTagNonNilPointer:
 		return "NonNilPointer"
-	case 16:
+	case ExpressionTagUnary:
 		return "Unary"
-	case 17:
+	case ExpressionTagBinary:
 		return "Binary"
-	case 18:
+	case ExpressionTagKeyValue:
 		return "KeyValue"
-	case 19:
+	case ExpressionTagArrayType:
 		return "ArrayType"
-	case 20:
+	case ExpressionTagStructType:
 		return "StructType"
-	case 21:
+	case ExpressionTagFunctionType:
 		return "FunctionType"
-	case 22:
+	case ExpressionTagInterfaceType:
 		return "InterfaceType"
-	case 23:
+	case ExpressionTagMapType:
 		return "MapType"
-	case 24:
+	case ExpressionTagChannelType:
 		return "ChannelType"
-	case 25:
+	case ExpressionTagDefault:
 		return "Default"
-	case 26:
+	case ExpressionTagPropagation:
 		return "Propagation"
-	case 27:
+	case ExpressionTagComprehension:
 		return "Comprehension"
 	default:
-
-		// StatementKind returns the closed statement variant name.
-		panic("invalid Expression variant")
+		panic(enumValue15.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// StatementKind returns the closed statement variant name.
 func StatementKind(value *Statement) string {
-	switch __tgo_match_19 := *value; __tgo_match_19.TgoTag() {
-	case 1:
+	switch enumValue16 := *value; enumValue16.Tag() {
+	case StatementTagBad:
 		return "Bad"
-	case 2:
+	case StatementTagDeclaration:
 		return "Declaration"
-	case 3:
+	case StatementTagEmpty:
 		return "Empty"
-	case 4:
+	case StatementTagLabeled:
 		return "Labeled"
-	case 5:
+	case StatementTagExpression:
 		return "Expression"
-	case 6:
+	case StatementTagSend:
 		return "Send"
-	case 7:
+	case StatementTagIncrement:
 		return "Increment"
-	case 8:
+	case StatementTagAssignment:
 		return "Assignment"
-	case 9:
+	case StatementTagGo:
 		return "Go"
-	case 10:
+	case StatementTagDefer:
 		return "Defer"
-	case 11:
+	case StatementTagReturn:
 		return "Return"
-	case 12:
+	case StatementTagBranch:
 		return "Branch"
-	case 13:
+	case StatementTagBlock:
 		return "Block"
-	case 14:
+	case StatementTagIf:
 		return "If"
-	case 15:
+	case StatementTagCase:
 		return "Case"
-	case 16:
+	case StatementTagSwitch:
 		return "Switch"
-	case 17:
+	case StatementTagTypeSwitch:
 		return "TypeSwitch"
-	case 18:
+	case StatementTagCommunication:
 		return "Communication"
-	case 19:
+	case StatementTagSelect:
 		return "Select"
-	case 20:
+	case StatementTagFor:
 		return "For"
-	case 21:
+	case StatementTagRange:
 		return "Range"
-	case 22:
-		return "Match"
 	default:
-
-		// DeclarationKind returns the closed declaration variant name.
-		panic("invalid Statement variant")
+		panic(enumValue16.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// DeclarationKind returns the closed declaration variant name.
 func DeclarationKind(value *Declaration) string {
-	switch __tgo_match_20 := *value; __tgo_match_20.TgoTag() {
-	case 1:
+	switch enumValue17 := *value; enumValue17.Tag() {
+	case DeclarationTagBad:
 		return "Bad"
-	case 2:
+	case DeclarationTagGeneral:
 		return "General"
-	case 3:
+	case DeclarationTagFunction:
 		return "Function"
-	case 4:
+	case DeclarationTagEnum:
 		return "Enum"
-	case 5:
+	case DeclarationTagStruct:
 		return "Struct"
-	case 6:
+	case DeclarationTagChecked:
 		return "Checked"
 	default:
-
-		// SpecificationKind returns the closed specification variant name.
-		panic("invalid Declaration variant")
+		panic(enumValue17.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
+// SpecificationKind returns the closed specification variant name.
 func SpecificationKind(value *Specification) string {
-	switch __tgo_match_21 := *value; __tgo_match_21.TgoTag() {
-	case 1:
+	switch enumValue18 := *value; enumValue18.Tag() {
+	case SpecificationTagImport:
 		return "Import"
-	case 2:
+	case SpecificationTagValue:
 		return "Value"
-	case 3:
+	case SpecificationTagType:
 		return "Type"
 	default:
-
-		// StaticCallName returns the source name for a supported static call.
-		panic("invalid Specification variant")
-	}
-}
-
-func StaticCallName(value *Expression) (string, bool) {
-	if value == nil {
-		return "", false
-	}
-	switch __tgo_match_22 := *value; __tgo_match_22.TgoTag() {
-	case 2:
-		item := __tgo_match_22.TgoIdentifier()
-		return item.Value.Name, true
-	case 8:
-		item := __tgo_match_22.TgoSelector()
-		prefix, ok := StaticCallName(item.Value.Expression)
-		if !ok {
-			return "", false
-		}
-		return prefix + "." + item.Value.Selector.Name, true
-	case 9:
-		item := __tgo_match_22.TgoIndex()
-		return StaticCallName(item.Value.Expression)
-	case 10:
-		item := __tgo_match_22.TgoIndexList()
-		return StaticCallName(item.Value.Expression)
-	case 7:
-		item := __tgo_match_22.TgoParenthesized()
-		return StaticCallName(item.Value.Expression)
-	case 14:
-		item := __tgo_match_22.TgoStar()
-		return StaticCallName(item.Value.Expression)
-	case 15:
-		return "", false
-	case 1:
-		return "", false
-	case 3:
-		return "", false
-	case 4:
-		return "", false
-	case 5:
-		return "", false
-	case 6:
-		return "", false
-	case 11:
-		return "", false
-	case 12:
-		return "", false
-	case 13:
-		return "", false
-	case 16:
-		return "", false
-	case 17:
-		return "", false
-	case 18:
-		return "", false
-	case 19:
-		return "", false
-	case 20:
-		return "", false
-	case 21:
-		return "", false
-	case 22:
-		return "", false
-	case 23:
-		return "", false
-	case 24:
-		return "", false
-	case 25:
-		return "", false
-	case 26:
-		return "", false
-	case 27:
-		return "", false
-	default:
-		panic("invalid Expression variant")
+		panic(enumValue18.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }

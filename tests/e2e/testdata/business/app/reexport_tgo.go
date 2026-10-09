@@ -9,7 +9,7 @@ import (
 )
 
 func ReexportedAccount(name string) any {
-	return __tgo_import_2.NewAccountPersonal(__tgo_import_2.AccountPersonal{Name: name})
+	return __tgo_import_2.AccountPersonal{Name: name}.Account()
 }
 
 func ReexportedRequest(id string) any {

@@ -11,11 +11,12 @@ var packageEnabled = false
 
 type sameNamedEvents interface {
 	model.Event | othermodel.Event
-	TgoTag() uint8
+	Tag() model.EventTag
+	UnknownTag() string
 }
 
-func MixedModels[T sameNamedEvents](event T) uint8 {
-	return event.TgoTag()
+func MixedModels[T sameNamedEvents](event T) model.EventTag {
+	return event.Tag()
 }
 
 func Direct(

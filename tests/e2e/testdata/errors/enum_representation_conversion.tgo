@@ -5,7 +5,7 @@ type Account enum {
 }
 
 type Exposed struct {
-    tgoTag uint8
+    tgoTag AccountTag
     tgoPersonal AccountPersonal
 }
 

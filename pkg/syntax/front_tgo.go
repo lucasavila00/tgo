@@ -39,19 +39,22 @@ type frontExtension interface {
 
 type frontFile struct {
 	frontSpan
-	Doc        *ast.CommentGroup
-	Package    token.Pos
-	Name       *ast.Ident
-	Decls      []frontNode
-	Imports    []*ast.ImportSpec
-	Comments   []*ast.CommentGroup
-	GoVersion  string
-	goFile     *ast.File
-	children   map[frontNode][]frontNode
-	parents    map[frontNode]frontNode
-	extensions []frontExtension
-	attached   map[frontNode][]*ast.CommentGroup
-	nonNil     map[token.Pos]bool
+	Doc               *ast.CommentGroup
+	Package           token.Pos
+	Name              *ast.Ident
+	Decls             []frontNode
+	Imports           []*ast.ImportSpec
+	Comments          []*ast.CommentGroup
+	GoVersion         string
+	goFile            *ast.File
+	tokenFile         *token.File
+	source            []byte
+	children          map[frontNode][]frontNode
+	parents           map[frontNode]frontNode
+	extensions        []frontExtension
+	attached          map[frontNode][]*ast.CommentGroup
+	nonNil            map[token.Pos]bool
+	exhaustiveClauses map[token.Pos]bool
 }
 
 // frontEnumDecl declares a closed enum.
@@ -130,44 +133,6 @@ type frontFieldDecl struct {
 }
 
 func (*frontFieldDecl) extensionNode() {}
-
-// frontLabeledStmt is an ordinary label whose statement is a tgo node.
-
-type frontLabeledStmt struct {
-	frontSpan
-	Label *ast.Ident
-	Colon token.Pos
-	Stmt  frontNode
-}
-
-// frontMatchStmt selects one enum variant.
-
-type frontMatchStmt struct {
-	frontSpan
-	Match   token.Pos
-	Subject ast.Expr
-	Lbrace  token.Pos
-	Cases   []*frontMatchCase
-	Rbrace  token.Pos
-}
-
-func (*frontMatchStmt) extensionNode() {}
-
-// frontMatchCase binds one enum payload.
-
-type frontMatchCase struct {
-	frontSpan
-	Case     token.Pos
-	Variant  *ast.Ident
-	Lparen   token.Pos
-	Binding  *ast.Ident
-	Rparen   token.Pos
-	Colon    token.Pos
-	Body     []frontNode
-	Comments []*ast.CommentGroup
-}
-
-func (*frontMatchCase) extensionNode() {}
 
 // frontDefaultMarker selects all omitted fields that have defaults.
 

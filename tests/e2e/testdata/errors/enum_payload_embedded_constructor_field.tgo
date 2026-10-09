@@ -1,0 +1,9 @@
+package invalid
+
+import "net/http"
+
+type Request enum {
+	A struct {
+		*http.Request
+	}
+}

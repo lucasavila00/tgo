@@ -2,6 +2,20 @@ package syntax
 
 import "go/token"
 
+// SourceText returns the source text in one syntax span.
+func SourceText(file *File, span Span) string {
+	if file == nil || file.front == nil || file.front.tokenFile == nil ||
+		span.Start < file.front.tokenFile.Pos(0) || span.Stop < span.Start {
+		return ""
+	}
+	start := file.front.tokenFile.Offset(span.Start)
+	stop := file.front.tokenFile.Offset(span.Stop)
+	if start < 0 || stop < start || stop > len(file.front.source) {
+		return ""
+	}
+	return string(file.front.source[start:stop])
+}
+
 // Visitor visits each node in source order.
 type Visitor interface {
 	Visit(*Node) Visitor
@@ -113,20 +127,44 @@ func NodePosition(node *Node) token.Pos {
 	if node == nil {
 		return token.NoPos
 	}
-	match *node {
-	case File(value): return value.Value.Start
-	case Declaration(value): return DeclarationPosition(value.Value)
-	case Specification(value): return SpecificationPosition(value.Value)
-	case Statement(value): return StatementPosition(value.Value)
-	case Expression(value): return ExpressionPosition(value.Value)
-	case Field(value): return value.Value.Start
-	case FieldList(value): return value.Value.Start
-	case TGoField(value): return value.Value.Start
-	case EnumVariant(value): return value.Value.Start
-	case MatchCase(value): return value.Value.Start
-	case Identifier(value): return value.Value.Start
-	case Comment(value): return value.Value.Start
-	case CommentGroup(value): return value.Value.Start
+	switch enumValue20 := *node; enumValue20.Tag() {
+	case NodeTagFile:
+		value := enumValue20.FilePayload()
+		return value.Value.Start
+	case NodeTagDeclaration:
+		value := enumValue20.DeclarationPayload()
+		return DeclarationPosition(value.Value)
+	case NodeTagSpecification:
+		value := enumValue20.SpecificationPayload()
+		return SpecificationPosition(value.Value)
+	case NodeTagStatement:
+		value := enumValue20.StatementPayload()
+		return StatementPosition(value.Value)
+	case NodeTagExpression:
+		value := enumValue20.ExpressionPayload()
+		return ExpressionPosition(value.Value)
+	case NodeTagField:
+		value := enumValue20.FieldPayload()
+		return value.Value.Start
+	case NodeTagFieldList:
+		value := enumValue20.FieldListPayload()
+		return value.Value.Start
+	case NodeTagTGoField:
+		value := enumValue20.TGoFieldPayload()
+		return value.Value.Start
+	case NodeTagEnumVariant:
+		value := enumValue20.EnumVariantPayload()
+		return value.Value.Start
+case NodeTagIdentifier:
+		value := enumValue20.IdentifierPayload()
+		return value.Value.Start
+	case NodeTagComment:
+		value := enumValue20.CommentPayload()
+		return value.Value.Start
+	case NodeTagCommentGroup:
+		value := enumValue20.CommentGroupPayload()
+		return value.Value.Start
+	exhaustive:
 	}
 }
 
@@ -135,88 +173,222 @@ func NodeEnd(node *Node) token.Pos {
 	if node == nil {
 		return token.NoPos
 	}
-	match *node {
-	case File(value): return value.Value.Stop
-	case Declaration(value): return DeclarationEnd(value.Value)
-	case Specification(value): return SpecificationEnd(value.Value)
-	case Statement(value): return StatementEnd(value.Value)
-	case Expression(value): return ExpressionEnd(value.Value)
-	case Field(value): return value.Value.Stop
-	case FieldList(value): return value.Value.Stop
-	case TGoField(value): return value.Value.Stop
-	case EnumVariant(value): return value.Value.Stop
-	case MatchCase(value): return value.Value.Stop
-	case Identifier(value): return value.Value.Stop
-	case Comment(value): return value.Value.Stop
-	case CommentGroup(value): return value.Value.Stop
+	switch enumValue21 := *node; enumValue21.Tag() {
+	case NodeTagFile:
+		value := enumValue21.FilePayload()
+		return value.Value.Stop
+	case NodeTagDeclaration:
+		value := enumValue21.DeclarationPayload()
+		return DeclarationEnd(value.Value)
+	case NodeTagSpecification:
+		value := enumValue21.SpecificationPayload()
+		return SpecificationEnd(value.Value)
+	case NodeTagStatement:
+		value := enumValue21.StatementPayload()
+		return StatementEnd(value.Value)
+	case NodeTagExpression:
+		value := enumValue21.ExpressionPayload()
+		return ExpressionEnd(value.Value)
+	case NodeTagField:
+		value := enumValue21.FieldPayload()
+		return value.Value.Stop
+	case NodeTagFieldList:
+		value := enumValue21.FieldListPayload()
+		return value.Value.Stop
+	case NodeTagTGoField:
+		value := enumValue21.TGoFieldPayload()
+		return value.Value.Stop
+	case NodeTagEnumVariant:
+		value := enumValue21.EnumVariantPayload()
+		return value.Value.Stop
+case NodeTagIdentifier:
+		value := enumValue21.IdentifierPayload()
+		return value.Value.Stop
+	case NodeTagComment:
+		value := enumValue21.CommentPayload()
+		return value.Value.Stop
+	case NodeTagCommentGroup:
+		value := enumValue21.CommentGroupPayload()
+		return value.Value.Stop
+	exhaustive:
 	}
 }
 
 // ExpressionPosition returns the first expression position.
 func ExpressionPosition(value *Expression) token.Pos {
 	if value == nil { return token.NoPos }
-	match *value {
-	case Bad(item): return item.Value.Start
-	case Identifier(item): return item.Value.Start
-	case Ellipsis(item): return item.Value.Start
-	case BasicLiteral(item): return item.Value.Start
-	case FunctionLiteral(item): return item.Value.Start
-	case CompositeLiteral(item): return item.Value.Start
-	case Parenthesized(item): return item.Value.Start
-	case Selector(item): return item.Value.Start
-	case Index(item): return item.Value.Start
-	case IndexList(item): return item.Value.Start
-	case Slice(item): return item.Value.Start
-	case TypeAssertion(item): return item.Value.Start
-	case Call(item): return item.Value.Start
-	case Star(item): return item.Value.Start
-	case NonNilPointer(item): return item.Value.Start
-	case Unary(item): return item.Value.Start
-	case Binary(item): return item.Value.Start
-	case KeyValue(item): return item.Value.Start
-	case ArrayType(item): return item.Value.Start
-	case StructType(item): return item.Value.Start
-	case FunctionType(item): return item.Value.Start
-	case InterfaceType(item): return item.Value.Start
-	case MapType(item): return item.Value.Start
-	case ChannelType(item): return item.Value.Start
-	case Default(item): return item.Value.Start
-	case Propagation(item): return item.Value.Start
-	case Comprehension(item): return item.Value.Start
+	switch enumValue22 := *value; enumValue22.Tag() {
+	case ExpressionTagBad:
+		item := enumValue22.BadPayload()
+		return item.Value.Start
+	case ExpressionTagIdentifier:
+		item := enumValue22.IdentifierPayload()
+		return item.Value.Start
+	case ExpressionTagEllipsis:
+		item := enumValue22.EllipsisPayload()
+		return item.Value.Start
+	case ExpressionTagBasicLiteral:
+		item := enumValue22.BasicLiteralPayload()
+		return item.Value.Start
+	case ExpressionTagFunctionLiteral:
+		item := enumValue22.FunctionLiteralPayload()
+		return item.Value.Start
+	case ExpressionTagCompositeLiteral:
+		item := enumValue22.CompositeLiteralPayload()
+		return item.Value.Start
+	case ExpressionTagParenthesized:
+		item := enumValue22.ParenthesizedPayload()
+		return item.Value.Start
+	case ExpressionTagSelector:
+		item := enumValue22.SelectorPayload()
+		return item.Value.Start
+	case ExpressionTagIndex:
+		item := enumValue22.IndexPayload()
+		return item.Value.Start
+	case ExpressionTagIndexList:
+		item := enumValue22.IndexListPayload()
+		return item.Value.Start
+	case ExpressionTagSlice:
+		item := enumValue22.SlicePayload()
+		return item.Value.Start
+	case ExpressionTagTypeAssertion:
+		item := enumValue22.TypeAssertionPayload()
+		return item.Value.Start
+	case ExpressionTagCall:
+		item := enumValue22.CallPayload()
+		return item.Value.Start
+	case ExpressionTagStar:
+		item := enumValue22.StarPayload()
+		return item.Value.Start
+	case ExpressionTagNonNilPointer:
+		item := enumValue22.NonNilPointerPayload()
+		return item.Value.Start
+	case ExpressionTagUnary:
+		item := enumValue22.UnaryPayload()
+		return item.Value.Start
+	case ExpressionTagBinary:
+		item := enumValue22.BinaryPayload()
+		return item.Value.Start
+	case ExpressionTagKeyValue:
+		item := enumValue22.KeyValuePayload()
+		return item.Value.Start
+	case ExpressionTagArrayType:
+		item := enumValue22.ArrayTypePayload()
+		return item.Value.Start
+	case ExpressionTagStructType:
+		item := enumValue22.StructTypePayload()
+		return item.Value.Start
+	case ExpressionTagFunctionType:
+		item := enumValue22.FunctionTypePayload()
+		return item.Value.Start
+	case ExpressionTagInterfaceType:
+		item := enumValue22.InterfaceTypePayload()
+		return item.Value.Start
+	case ExpressionTagMapType:
+		item := enumValue22.MapTypePayload()
+		return item.Value.Start
+	case ExpressionTagChannelType:
+		item := enumValue22.ChannelTypePayload()
+		return item.Value.Start
+	case ExpressionTagDefault:
+		item := enumValue22.DefaultPayload()
+		return item.Value.Start
+	case ExpressionTagPropagation:
+		item := enumValue22.PropagationPayload()
+		return item.Value.Start
+	case ExpressionTagComprehension:
+		item := enumValue22.ComprehensionPayload()
+		return item.Value.Start
+	exhaustive:
 	}
 }
 
 // ExpressionEnd returns the first position after an expression.
 func ExpressionEnd(value *Expression) token.Pos {
 	if value == nil { return token.NoPos }
-	match *value {
-	case Bad(item): return item.Value.Stop
-	case Identifier(item): return item.Value.Stop
-	case Ellipsis(item): return item.Value.Stop
-	case BasicLiteral(item): return item.Value.Stop
-	case FunctionLiteral(item): return item.Value.Stop
-	case CompositeLiteral(item): return item.Value.Stop
-	case Parenthesized(item): return item.Value.Stop
-	case Selector(item): return item.Value.Stop
-	case Index(item): return item.Value.Stop
-	case IndexList(item): return item.Value.Stop
-	case Slice(item): return item.Value.Stop
-	case TypeAssertion(item): return item.Value.Stop
-	case Call(item): return item.Value.Stop
-	case Star(item): return item.Value.Stop
-	case NonNilPointer(item): return item.Value.Stop
-	case Unary(item): return item.Value.Stop
-	case Binary(item): return item.Value.Stop
-	case KeyValue(item): return item.Value.Stop
-	case ArrayType(item): return item.Value.Stop
-	case StructType(item): return item.Value.Stop
-	case FunctionType(item): return item.Value.Stop
-	case InterfaceType(item): return item.Value.Stop
-	case MapType(item): return item.Value.Stop
-	case ChannelType(item): return item.Value.Stop
-	case Default(item): return item.Value.Stop
-	case Propagation(item): return item.Value.Stop
-	case Comprehension(item): return item.Value.Stop
+	switch enumValue23 := *value; enumValue23.Tag() {
+	case ExpressionTagBad:
+		item := enumValue23.BadPayload()
+		return item.Value.Stop
+	case ExpressionTagIdentifier:
+		item := enumValue23.IdentifierPayload()
+		return item.Value.Stop
+	case ExpressionTagEllipsis:
+		item := enumValue23.EllipsisPayload()
+		return item.Value.Stop
+	case ExpressionTagBasicLiteral:
+		item := enumValue23.BasicLiteralPayload()
+		return item.Value.Stop
+	case ExpressionTagFunctionLiteral:
+		item := enumValue23.FunctionLiteralPayload()
+		return item.Value.Stop
+	case ExpressionTagCompositeLiteral:
+		item := enumValue23.CompositeLiteralPayload()
+		return item.Value.Stop
+	case ExpressionTagParenthesized:
+		item := enumValue23.ParenthesizedPayload()
+		return item.Value.Stop
+	case ExpressionTagSelector:
+		item := enumValue23.SelectorPayload()
+		return item.Value.Stop
+	case ExpressionTagIndex:
+		item := enumValue23.IndexPayload()
+		return item.Value.Stop
+	case ExpressionTagIndexList:
+		item := enumValue23.IndexListPayload()
+		return item.Value.Stop
+	case ExpressionTagSlice:
+		item := enumValue23.SlicePayload()
+		return item.Value.Stop
+	case ExpressionTagTypeAssertion:
+		item := enumValue23.TypeAssertionPayload()
+		return item.Value.Stop
+	case ExpressionTagCall:
+		item := enumValue23.CallPayload()
+		return item.Value.Stop
+	case ExpressionTagStar:
+		item := enumValue23.StarPayload()
+		return item.Value.Stop
+	case ExpressionTagNonNilPointer:
+		item := enumValue23.NonNilPointerPayload()
+		return item.Value.Stop
+	case ExpressionTagUnary:
+		item := enumValue23.UnaryPayload()
+		return item.Value.Stop
+	case ExpressionTagBinary:
+		item := enumValue23.BinaryPayload()
+		return item.Value.Stop
+	case ExpressionTagKeyValue:
+		item := enumValue23.KeyValuePayload()
+		return item.Value.Stop
+	case ExpressionTagArrayType:
+		item := enumValue23.ArrayTypePayload()
+		return item.Value.Stop
+	case ExpressionTagStructType:
+		item := enumValue23.StructTypePayload()
+		return item.Value.Stop
+	case ExpressionTagFunctionType:
+		item := enumValue23.FunctionTypePayload()
+		return item.Value.Stop
+	case ExpressionTagInterfaceType:
+		item := enumValue23.InterfaceTypePayload()
+		return item.Value.Stop
+	case ExpressionTagMapType:
+		item := enumValue23.MapTypePayload()
+		return item.Value.Stop
+	case ExpressionTagChannelType:
+		item := enumValue23.ChannelTypePayload()
+		return item.Value.Stop
+	case ExpressionTagDefault:
+		item := enumValue23.DefaultPayload()
+		return item.Value.Stop
+	case ExpressionTagPropagation:
+		item := enumValue23.PropagationPayload()
+		return item.Value.Stop
+	case ExpressionTagComprehension:
+		item := enumValue23.ComprehensionPayload()
+		return item.Value.Stop
+	exhaustive:
 	}
 }
 
@@ -232,29 +404,71 @@ func StatementEnd(value *Statement) token.Pos {
 
 func statementSpan(value *Statement) Span {
 	if value == nil { return Span{Start: token.NoPos, Stop: token.NoPos} }
-	match *value {
-	case Bad(item): return item.Value.Span
-	case Declaration(item): return item.Value.Span
-	case Empty(item): return item.Value.Span
-	case Labeled(item): return item.Value.Span
-	case Expression(item): return item.Value.Span
-	case Send(item): return item.Value.Span
-	case Increment(item): return item.Value.Span
-	case Assignment(item): return item.Value.Span
-	case Go(item): return item.Value.Span
-	case Defer(item): return item.Value.Span
-	case Return(item): return item.Value.Span
-	case Branch(item): return item.Value.Span
-	case Block(item): return item.Value.Span
-	case If(item): return item.Value.Span
-	case Case(item): return item.Value.Span
-	case Switch(item): return item.Value.Span
-	case TypeSwitch(item): return item.Value.Span
-	case Communication(item): return item.Value.Span
-	case Select(item): return item.Value.Span
-	case For(item): return item.Value.Span
-	case Range(item): return item.Value.Span
-	case Match(item): return item.Value.Span
+	switch enumValue24 := *value; enumValue24.Tag() {
+	case StatementTagBad:
+		item := enumValue24.BadPayload()
+		return item.Value.Span
+	case StatementTagDeclaration:
+		item := enumValue24.DeclarationPayload()
+		return item.Value.Span
+	case StatementTagEmpty:
+		item := enumValue24.EmptyPayload()
+		return item.Value.Span
+	case StatementTagLabeled:
+		item := enumValue24.LabeledPayload()
+		return item.Value.Span
+	case StatementTagExpression:
+		item := enumValue24.ExpressionPayload()
+		return item.Value.Span
+	case StatementTagSend:
+		item := enumValue24.SendPayload()
+		return item.Value.Span
+	case StatementTagIncrement:
+		item := enumValue24.IncrementPayload()
+		return item.Value.Span
+	case StatementTagAssignment:
+		item := enumValue24.AssignmentPayload()
+		return item.Value.Span
+	case StatementTagGo:
+		item := enumValue24.GoPayload()
+		return item.Value.Span
+	case StatementTagDefer:
+		item := enumValue24.DeferPayload()
+		return item.Value.Span
+	case StatementTagReturn:
+		item := enumValue24.ReturnPayload()
+		return item.Value.Span
+	case StatementTagBranch:
+		item := enumValue24.BranchPayload()
+		return item.Value.Span
+	case StatementTagBlock:
+		item := enumValue24.BlockPayload()
+		return item.Value.Span
+	case StatementTagIf:
+		item := enumValue24.IfPayload()
+		return item.Value.Span
+	case StatementTagCase:
+		item := enumValue24.CasePayload()
+		return item.Value.Span
+	case StatementTagSwitch:
+		item := enumValue24.SwitchPayload()
+		return item.Value.Span
+	case StatementTagTypeSwitch:
+		item := enumValue24.TypeSwitchPayload()
+		return item.Value.Span
+	case StatementTagCommunication:
+		item := enumValue24.CommunicationPayload()
+		return item.Value.Span
+	case StatementTagSelect:
+		item := enumValue24.SelectPayload()
+		return item.Value.Span
+	case StatementTagFor:
+		item := enumValue24.ForPayload()
+		return item.Value.Span
+	case StatementTagRange:
+		item := enumValue24.RangePayload()
+		return item.Value.Span
+exhaustive:
 	}
 }
 
@@ -270,13 +484,26 @@ func DeclarationEnd(value *Declaration) token.Pos {
 
 func declarationSpan(value *Declaration) Span {
 	if value == nil { return Span{Start: token.NoPos, Stop: token.NoPos} }
-	match *value {
-	case Bad(item): return item.Value.Span
-	case General(item): return item.Value.Span
-	case Function(item): return item.Value.Span
-	case Enum(item): return item.Value.Span
-	case Struct(item): return item.Value.Span
-	case Checked(item): return item.Value.Span
+	switch enumValue25 := *value; enumValue25.Tag() {
+	case DeclarationTagBad:
+		item := enumValue25.BadPayload()
+		return item.Value.Span
+	case DeclarationTagGeneral:
+		item := enumValue25.GeneralPayload()
+		return item.Value.Span
+	case DeclarationTagFunction:
+		item := enumValue25.FunctionPayload()
+		return item.Value.Span
+	case DeclarationTagEnum:
+		item := enumValue25.EnumPayload()
+		return item.Value.Span
+	case DeclarationTagStruct:
+		item := enumValue25.StructPayload()
+		return item.Value.Span
+	case DeclarationTagChecked:
+		item := enumValue25.CheckedPayload()
+		return item.Value.Span
+	exhaustive:
 	}
 }
 
@@ -292,10 +519,17 @@ func SpecificationEnd(value *Specification) token.Pos {
 
 func specificationSpan(value *Specification) Span {
 	if value == nil { return Span{Start: token.NoPos, Stop: token.NoPos} }
-	match *value {
-	case Import(item): return item.Value.Span
-	case Value(item): return item.Value.Span
-	case Type(item): return item.Value.Span
+	switch enumValue26 := *value; enumValue26.Tag() {
+	case SpecificationTagImport:
+		item := enumValue26.ImportPayload()
+		return item.Value.Span
+	case SpecificationTagValue:
+		item := enumValue26.ValuePayload()
+		return item.Value.Span
+	case SpecificationTagType:
+		item := enumValue26.TypePayload()
+		return item.Value.Span
+	exhaustive:
 	}
 }
 
@@ -320,7 +554,6 @@ func nodeTGoField(value %TGoField) Node { return Node.TGoField{Value: value} }
 func nodeEnumVariant(value %EnumVariant) Node {
 	return Node.EnumVariant{Value: value}
 }
-func nodeMatchCase(value %MatchCase) Node { return Node.MatchCase{Value: value} }
 func nodeIdentifier(value %Identifier) Node {
 	return Node.Identifier{Value: value}
 }

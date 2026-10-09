@@ -88,14 +88,15 @@ func boxEnumFields(structure *ast.StructType, declaration *model) {
 // boxEnumFunction changes the stored value or the returned payload.
 func boxEnumFunction(function *ast.FuncDecl, enum string, boxed map[string]bool) {
 	for variant := range boxed {
-		if function.Recv == nil && function.Name.Name == "New"+enum+variant {
+		receiver, ok := receiverName(function)
+		if ok && receiver == enum+variant && function.Name.Name == enum {
 			statement := function.Body.List[0].(*ast.ReturnStmt)
 			literal := statement.Results[0].(*ast.CompositeLit)
 			literal.Elts[1].(*ast.KeyValueExpr).Key.(*ast.Ident).Name = "tgoPayload"
 			return
 		}
-		receiver, ok := receiverName(function)
-		if !ok || receiver != enum || function.Name.Name != "Tgo"+variant {
+		receiver, ok = receiverName(function)
+		if !ok || receiver != enum || function.Name.Name != variant+"Payload" {
 			continue
 		}
 		statement := function.Body.List[0].(*ast.ReturnStmt)

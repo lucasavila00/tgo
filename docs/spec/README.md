@@ -45,8 +45,6 @@ TgoStructDecl  = "type" TypeName "struct" "{" { TgoFieldDecl ";" } "}" .
 TgoFieldDecl   = GoFieldDecl [ "=" GoExpression ] .
 VariantLiteral = TypeName "." VariantName GoLiteralValue .
 DefaultMarker  = "..default" .
-MatchStmt      = "match" GoExpression "{" { MatchCase } "}" .
-MatchCase      = "case" VariantName "(" identifier ")" ":" GoStatementList .
 PropagateExpr  = GoCallExpr ( "!" | "!!" ) .
 NonNilPointer = "%" GoType .
 ```
@@ -57,8 +55,6 @@ Go semicolon insertion applies. A qualified variant literal starts with a packag
 model.Account.Personal{Name: "Lucas"}
 ```
 
-`match` is a contextual keyword at the start of a match statement.
-An identifier named `match` keeps its Go meaning in other positions.
 `enum` is contextual before an enum body. `where` is contextual after a checked base type.
 These names keep their Go meaning in other positions.
 An immediate line break after a contextual keyword does not insert a semicolon.
@@ -205,8 +201,8 @@ type Account enum {
 }
 ```
 
-The zero value of an enum is invalid. No variant is implicit.
-A variant literal constructs one valid value:
+The zero value of an enum is invalid. No variant is implicit. Declared variants have nonzero tags
+in declaration order. A variant literal constructs one declared variant:
 
 ```text
 account := Account.Personal{Name: "Lucas"}
@@ -318,8 +314,9 @@ pointer values, and custom `MarshalJSON` methods. A custom method can also retai
 data.
 
 The generated typed wrappers and local payload variables do not contain an explicit heap
-allocation. Escape analysis can move them to the heap. An inline enum payload is copied during
-construction. A boxed enum payload can allocate its interface box. A zero or unknown tag, a
+allocation. Escape analysis can move them to the heap. `Tag`, inline construction, and inline
+payload access add no heap allocation. A boxed enum payload can allocate its interface box when it
+escapes. `UnknownTag` formats a new string on the default path. A zero or unknown tag, a
 missing field, an unknown variant, and a failed untagged match can allocate an error. JSON syntax,
 type, and custom-method errors can allocate before the generated method returns them.
 
@@ -371,22 +368,30 @@ different payload type or a custom JSON method adds.
 The example above emits these public types and operations:
 
 ```text
+type AccountTag uint8
+const (
+    AccountTagPersonal AccountTag = iota + 1
+    AccountTagBusiness
+)
 type AccountPersonal struct { Name string }
 type AccountBusiness struct {
     Company string
     Members []Account
 }
 
-func NewAccountPersonal(value AccountPersonal) Account
-func (value Account) TgoTag() uint8
-func (value Account) TgoPersonal() AccountPersonal
+func (AccountPersonal) Account() Account
+func (AccountBusiness) Account() Account
+func (value Account) Tag() AccountTag
+func (value Account) UnknownTag() string
+func (value Account) PersonalPayload() AccountPersonal
+func (value Account) BusinessPayload() AccountBusiness
 ```
 
-The compiler emits one constructor and one payload accessor per variant. Payload types,
-constructors, the tag accessor, and payload accessors are exported for Go calls.
+The compiler emits one constructor method and one payload accessor per declared variant.
+Payload types, constructors, the tag API, tag constants, and payload accessors are exported.
 Representation fields and their layout are private. Go callers must use the exported operations.
 
-Tag zero is invalid. Variant tags start at one in declaration order.
+Tag zero is invalid. Declared variant tags start at one in declaration order.
 The tag uses `uint8` below 256 variants, `uint16` below 65,536 variants,
 and `uint32` otherwise.
 
@@ -400,10 +405,18 @@ in declaration order. Boxed variants share one interface field. Construction can
 allocate when the payload escapes. A boxed payload accessor can panic on the wrong
 variant. Enums with no payload fields store only their tag.
 
-A tgo file may not build an enum with a struct literal, conversion, or `new`.
-It may not read representation fields or call generated `Tgo*` methods directly.
+Payload accessors do not check the tag and do not allocate. An inline accessor for the wrong
+variant returns the inactive inline slot. A value from another variant constructor normally has
+the zero value in that slot. A boxed accessor for the wrong variant panics during its type
+assertion. An empty-payload accessor returns an empty value for each tag. The contextual checks
+below prevent these calls in checked source.
+
+A tgo file may not build a declared variant with an enum struct literal or conversion.
+It may not read representation fields. Contextual payload checks apply only in the checked tag
+switch below. Calls outside that switch are unchecked Go calls.
 Embedding an enum does not expose its representation fields or generated accessors.
-A tgo file may not select a `Tgo`-prefixed method through an interface or type parameter.
+A canonical switch does not recognize these generated methods through an interface or an open or
+mixed type parameter. An exact enum constraint can use them in a checked tag switch.
 A new defined type may not derive from an enum, including through pointer layers.
 A type alias may name the enum or pointer and keeps all model rules.
 A tgo file may not convert an enum value or pointer to expose its representation.
@@ -411,40 +424,55 @@ Conversion to a concrete interface type remains valid.
 An unnamed struct identical to the enum representation is reserved and rejected.
 The conversion rules also apply to a type parameter whose type set admits the enum.
 
-## Match statements
+## Enum tag switches
 
-A match reads an enum and has one case for every variant:
+A TGo file reads an enum payload with a checked tag switch:
 
 ```text
-match account {
-case Personal(person): return person.Name
-case Business(business): return business.Company
+switch account.Tag() {
+case AccountTagPersonal:
+    return account.PersonalPayload().Name
+case AccountTagBusiness:
+    return account.BusinessPayload().Company
+exhaustive:
 }
 ```
 
-Cases may appear in any order. Each variant must appear once.
-Unknown, duplicate, and missing variants are compile errors.
-The binding is one name. `_` discards the payload.
-A match case may not use `fallthrough`.
+The switch tag must be a direct `Tag()` call on an enum value or pointer. Parentheses are valid.
+The receiver can be a local value, package value, field, alias, or captured value. An exact enum
+type constraint can use the switch. An interface or open or mixed type parameter cannot.
 
-The subject is evaluated once. A match lowers to this shape:
+An `exhaustive:` clause requires the switch to cover every declared tag with generated tag
+constants. Parentheses, a
+constant conversion, and a same-value constant alias are valid labels. An unrelated numeric
+constant is invalid, even when its value is equal to a tag. An unresolved label suppresses the
+missing-case diagnostic. A repeated tag is invalid. `exhaustive:` must have no body. It emits this
+Go default for the same receiver:
 
-```go
-switch value := account; value.TgoTag() {
-case 1:
-    person := value.TgoPersonal()
-    return person.Name
-case 2:
-    business := value.TgoBusiness()
-    return business.Company
+```text
 default:
-    panic("invalid Account variant")
-}
+    panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
 ```
 
-The payload binding is a Go value copy. Reference fields keep their Go aliases.
-Accessors do not check the tag. The final switch case catches an invalid foreign tag.
-A label on a match labels the emitted switch.
+A normal `default:` clause is a fallback and may cover omitted variants. Its flow type is the union
+of those omitted variants. Its body is ordinary Go control flow. A tag switch must have either
+`default:` or `exhaustive:`.
+
+The switch starts with the union of all declared variants. An explicit case intersects that type
+with the union of its labels. The default removes all explicit-case variants. `exhaustive:` requires
+that remaining type to be `never`.
+
+A case cannot use `fallthrough`.
+
+A case with one possible variant permits only that variant's payload accessor on the same receiver.
+A case with multiple tags has their union type. A default with one omitted variant permits that
+variant's accessor; a default with multiple omitted variants permits no accessor. If a clause assigns
+the receiver or a selector-prefix receiver, the clause gets no payload proof. A nested function literal does not
+inherit the proof. Direct calls in `go` and `defer` statements do inherit it. Method values do not.
+A nested switch on the same `Tag()` receiver supplies its own proof.
+
+The compiler does not analyze a `Tag` or payload call outside a recognized canonical switch.
+The accessor returns a Go value copy. Reference fields keep their Go aliases.
 
 ## Checked types
 
@@ -654,7 +682,7 @@ Pointers, aliases, methods, interfaces, callbacks, channels, variadic calls, gen
 errors, typed nils, and object identity keep their Go behavior.
 
 TGo trusts values that cross the Go boundary. The compiler does not scan, copy, reconstruct, or
-validate them. Go can create a zero enum, change private storage with `unsafe`, or return a value
+validate them. Go can create an unknown enum tag, change private storage with `unsafe`, or return a value
 that breaks a checked type rule. The Go caller owns these risks.
 
 `tgolint` checks unsafe Go patterns that it can prove from source. It does not make the Go
@@ -671,9 +699,12 @@ For a type `T`, variant `V`, and defaulted field `F`, tgo generates or reserves:
 ```text
 T
 TV
-NewTV
-TgoTag
-TgoV
+TTag
+TTagV
+Tag
+UnknownTag
+VPayload
+T
 tgoTag
 tgoV
 NewT
@@ -683,9 +714,11 @@ TgoDefaultTF
 ```
 
 A source declaration that collides with a generated name is a compile error.
-Internal match variables use names that do not occur in the package source.
 An inserted reference must resolve to its generated declaration. A local name cannot capture it.
 An enum reserves its emitted `uint8`, `uint16`, or `uint32` tag name.
+Generated payload types and tag constants must have different names. Thus, a variant named `Tag`
+is invalid, but a variant named `Zero` is valid. A payload field cannot have the enum name because
+that name belongs to the constructor method.
 A checked type reserves the predeclared `string`, `error`, and `nil` names.
 
 ## Build command and diagnostics
