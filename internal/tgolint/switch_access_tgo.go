@@ -2,7 +2,12 @@
 
 package tgolint
 
-import "tgo/pkg/syntax"
+import (
+	"go/token"
+	"go/types"
+
+	"tgo/pkg/syntax"
+)
 
 // checkRepresentationAccess blocks private fields and unchecked payload methods.
 func (c *checker) checkRepresentationAccess(expression *syntax.Expression) {
@@ -17,6 +22,14 @@ func (c *checker) checkRepresentationAccess(expression *syntax.Expression) {
 	if model == nil {
 		return
 	}
+	if modelIsChecked(model) && c.checkedFieldChange(expression) {
+		c.pass.Reportf(
+			selector.Start,
+			"checked field %s cannot be changed after construction",
+			selector.Selector.Name,
+		)
+		return
+	}
 	if privateRepresentation(model, selector.Selector.Name) {
 		c.pass.Reportf(
 			selector.Start,
@@ -26,6 +39,48 @@ func (c *checker) checkRepresentationAccess(expression *syntax.Expression) {
 		)
 		return
 	}
+}
+
+func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {
+	selection := c.facts.Selection(expression)
+	if selection == nil || selection.Kind() != types.FieldVal ||
+		len(selection.Index()) != 1 {
+		return false
+	}
+	target := syntax.ExpressionNode(expression)
+	parent := c.parents[target]
+	for parent != nil {
+		if wrapped, ok := syntax.ExpressionOf(parent); ok {
+			parentheses := syntax.ParenthesizedExpressionOf(wrapped)
+			if parentheses != nil {
+				parent = c.parents[*parent]
+				continue
+			}
+			unary := syntax.UnaryExpressionOf(wrapped)
+			return unary != nil && unary.Operator == token.AND
+		}
+		statement, ok := syntax.StatementOf(parent)
+		if !ok {
+			return false
+		}
+		if increment := syntax.IncrementStatementOf(statement); increment != nil {
+			return sameExpressionRange(increment.Expression, expression)
+		}
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			for _, left := range assignment.Left {
+				if sameExpressionRange(left, expression) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	return false
+}
+
+func sameExpressionRange(left *syntax.Expression, right *syntax.Expression) bool {
+	return syntax.ExpressionPosition(left) == syntax.ExpressionPosition(right) &&
+		syntax.ExpressionEnd(left) == syntax.ExpressionEnd(right)
 }
 
 func privateRepresentation(model *model, name string) bool {

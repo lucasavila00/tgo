@@ -5,6 +5,14 @@ package policygood
 type Quantity struct {
 	value int
 }
+type TgoQuantityInput struct {
+	FieldValue int
+}
+
+// NewQuantity constructs and checks Quantity.
+func NewQuantity(value int) (Quantity, error) {
+	return Quantity{value}.check()
+}
 
 func (value Quantity) check() (Quantity, error) { return value, nil }
 func (value Quantity) Value() int               { return value.value }

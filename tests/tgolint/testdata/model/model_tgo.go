@@ -10,6 +10,14 @@ import __tgo_fmt "fmt"
 type Count struct {
 	value int
 }
+type TgoCountInput struct {
+	FieldValue int
+}
+
+// NewCount constructs and checks Count.
+func NewCount(value int) (Count, error) {
+	return Count{value}.check()
+}
 
 type countError struct {
 }
@@ -22,8 +30,7 @@ func (value Count) check() (Count, error) {
 	}
 	return value, nil
 }
-func NewCount(value int) (Count, error) { return Count{value: value}.check() }
-func (value Count) Value() int          { return value.value }
+func (value Count) Value() int { return value.value }
 
 type Pair struct {
 	Left  string `json:"pair"`

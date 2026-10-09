@@ -23,6 +23,12 @@ func BypassPortCheck() Port {
 	return Port{number: 80}
 }
 
+func ChangeCount(count Count) {
+	count.value = 2
+	count.value++
+	_ = &count.value
+}
+
 func ReadPromoted(value embedded) EventTag {
 	return value.tgoTag
 }

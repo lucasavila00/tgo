@@ -241,6 +241,7 @@ func sourceModel(
 			if err := validateCheckedStructFields(files, node); err != nil {
 				return nil, "", enumJSONUse{}, err
 			}
+			return item, checkedStructGo(sourceName, item), enumJSONUse{}, nil
 		}
 		return item, "type " + item.Name + " struct {\n" +
 			fieldDecls(sourceName, item.Fields) + "}\n", enumJSONUse{}, nil

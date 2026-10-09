@@ -10,11 +10,27 @@ import __tgo_fmt "fmt"
 type Count struct {
 	value int
 }
+type TgoCountInput struct {
+	FieldValue int
+}
+
+// NewCount constructs and checks Count.
+func NewCount(value int) (Count, error) {
+	return Count{value}.check()
+}
 
 func (value Count) check() (Count, error) { return value, nil }
 
 type Port struct {
 	number int
+}
+type TgoPortInput struct {
+	FieldNumber int
+}
+
+// NewPort constructs and checks Port.
+func NewPort(number int) (Port, error) {
+	return Port{number}.check()
 }
 
 func (value Port) check() (Port, error) {

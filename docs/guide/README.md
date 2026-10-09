@@ -109,14 +109,15 @@ becomes `*T` in generated Go and adds no runtime check.
 ## Call Go
 
 Import Go packages and call them directly. Keep their types, callbacks, and error results.
-Go code can call generated enum functions and project-defined checked struct factories:
+Go code can call generated enum functions and generated checked struct constructors:
 
 ```go
 account := model.AccountPersonal{Name: "Lucas"}.Account()
 port, err := model.NewPort(3)
 ```
 
-Check `err` before using `port`. TGo trusts values from Go. Go callers must use the project factory.
+Check `err` before you use `port`. TGo trusts values from Go. TGo source uses checked literals,
+including for types from another package. It cannot call the generated `NewPort` Go ABI.
 
 Use postfix `!` when a call returns Go values followed by `error` and the current function also
 ends in `error`:

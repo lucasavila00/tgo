@@ -10,6 +10,14 @@ import __tgo_fmt "fmt"
 type Quantity struct {
 	value int
 }
+type TgoQuantityInput struct {
+	FieldValue int
+}
+
+// NewQuantity constructs and checks Quantity.
+func NewQuantity(value int) (Quantity, error) {
+	return Quantity{value}.check()
+}
 
 type quantityError struct {
 }
@@ -21,11 +29,18 @@ func (value Quantity) check() (Quantity, error) {
 	}
 	return value, nil
 }
-func NewQuantity(value int) (Quantity, error) { return Quantity{value: value}.check() }
-func (value Quantity) Value() int             { return value.value }
+func (value Quantity) Value() int { return value.value }
 
 type PositivePoint struct {
 	value struct{ X int }
+}
+type TgoPositivePointInput struct {
+	FieldValue struct{ X int }
+}
+
+// NewPositivePoint constructs and checks PositivePoint.
+func NewPositivePoint(value struct{ X int }) (PositivePoint, error) {
+	return PositivePoint{value}.check()
 }
 
 type positivePointError struct {
@@ -38,13 +53,18 @@ func (value PositivePoint) check() (PositivePoint, error) {
 	}
 	return value, nil
 }
-func NewPositivePoint(value struct{ X int }) (PositivePoint, error) {
-	return PositivePoint{value: value}.check()
-}
 func (value PositivePoint) Value() struct{ X int } { return value.value }
 
 type Multiline struct {
 	value int
+}
+type TgoMultilineInput struct {
+	FieldValue int
+}
+
+// NewMultiline constructs and checks Multiline.
+func NewMultiline(value int) (Multiline, error) {
+	return Multiline{value}.check()
 }
 
 type multilineError struct {
@@ -57,8 +77,7 @@ func (value Multiline) check() (Multiline, error) {
 	}
 	return value, nil
 }
-func NewMultiline(value int) (Multiline, error) { return Multiline{value: value}.check() }
-func (value Multiline) Value() int              { return value.value }
+func (value Multiline) Value() int { return value.value }
 
 type where int
 type enum int

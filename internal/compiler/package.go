@@ -25,6 +25,7 @@ type packageUnit struct {
 	generated       map[ast.Decl]bool
 	generatedValues map[*ast.ValueSpec]bool
 	checkedLiterals map[*ast.CompositeLit]bool
+	checkedCalls    map[*ast.CallExpr]bool
 	erasedImports   map[*ast.ImportSpec]bool
 	references      []generatedReference
 	usedIdentifiers map[string]bool
@@ -148,6 +149,7 @@ func (p *packageUnit) checkAndLower() error {
 	if len(p.errors) > 0 {
 		return p.errors[0]
 	}
+	p.fillCheckedDefaults()
 	p.lowerConstructions()
 	p.typecheck()
 	p.lowerPropagations()

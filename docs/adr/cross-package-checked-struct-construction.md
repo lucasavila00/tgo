@@ -43,6 +43,8 @@ func NewPort(number int) (Port, error) {
 ```
 
 The package-level name `New<Type>` is reserved for this generated ABI.
+A reserved `Tgo<Type>Input` type stages keyed fields for compiler lowering.
+TGo rejects its use, and navigation hides it.
 
 The compiler uses that ABI for checked literals. It builds the raw value and
 calls the private `check` method exactly once. In TGo source, only the owning

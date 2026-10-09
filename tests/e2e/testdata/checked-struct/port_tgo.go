@@ -12,6 +12,14 @@ var ErrInvalidPort = errors.New("invalid port")
 type Port struct {
 	number int
 }
+type TgoPortInput struct {
+	FieldNumber int
+}
+
+// NewPort constructs and checks Port.
+func NewPort(number int) (Port, error) {
+	return Port{number}.check()
+}
 
 func (value Port) check() (Port, error) {
 	if value.number < 1 || value.number > 65535 {
@@ -23,22 +31,30 @@ func (value Port) check() (Port, error) {
 type ServicePort struct {
 	port Port
 }
+type TgoServicePortInput struct {
+	FieldPort Port
+}
+
+// NewServicePort constructs and checks ServicePort.
+func NewServicePort(port Port) (ServicePort, error) {
+	return ServicePort{port}.check()
+}
 
 func (value ServicePort) check() (ServicePort, error) {
 	return value, nil
 }
 
-func NewPort(number int) (Port, error) {
-	return Port{number: number}.check()
-}
-
-func NewServicePort(number int) (ServicePort, error) {
-	port, err := Port{number: number}.check()
+func ServicePortFromNumber(number int) (ServicePort, error) {
+	port, err := func(tgoInput TgoPortInput) (Port, error) {
+		return NewPort(tgoInput.FieldNumber)
+	}(TgoPortInput{FieldNumber: number})
 	if err != nil {
 		return ServicePort{}, __tgo_fmt.Errorf("Port: %w", err)
 	}
 
-	return ServicePort{port: port}.check()
+	return func(tgoInput_1 TgoServicePortInput) (ServicePort, error) {
+		return NewServicePort(tgoInput_1.FieldPort)
+	}(TgoServicePortInput{FieldPort: port})
 }
 
 func Number(value Port) int {

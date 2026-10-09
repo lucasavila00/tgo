@@ -10,6 +10,7 @@ func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
 	p.generatedValues = make(map[*ast.ValueSpec]bool)
 	p.checkedLiterals = make(map[*ast.CompositeLit]bool)
+	p.checkedCalls = make(map[*ast.CallExpr]bool)
 	p.erasedImports = make(map[*ast.ImportSpec]bool)
 	p.references = nil
 	p.usedIdentifiers = nil
@@ -24,6 +25,9 @@ func (p *packageUnit) prepare() {
 func (p *packageUnit) lowerConstructions() {
 	for _, source := range p.Sources {
 		for _, declaration := range source.File.Decls {
+			if p.generatedDecl(declaration) {
+				continue
+			}
 			var exempt *model
 			if function, ok := declaration.(*ast.FuncDecl); ok && function.Name.Name == "check" {
 				if receiver, ok := receiverName(function); ok {
@@ -53,6 +57,10 @@ func generatedNames(models []*model) map[string]bool {
 			for _, variant := range model.Variants {
 				names[model.Name+variant.Name] = true
 			}
+		}
+		if model.CheckedStruct {
+			names["New"+model.Name] = true
+			names[checkedCarrierName(model.Name)] = true
 		}
 	}
 	return names
@@ -170,9 +178,7 @@ func (p *packageUnit) lowerConstruction(
 			return node
 		}
 		p.checkedLiterals[literal] = true
-		return call(&ast.SelectorExpr{
-			X: literal, Sel: &ast.Ident{NamePos: literal.End(), Name: "check"},
-		})
+		return p.checkedConstructorCall(file, literal, owner, declaration)
 	}
 	selector, ok := literal.Type.(*ast.SelectorExpr)
 	if !ok {
@@ -200,6 +206,142 @@ func (p *packageUnit) lowerConstruction(
 	}
 	p.fail(literal, "unknown variant %s.%s", model.Name, selector.Sel.Name)
 	return node
+}
+
+// checkedConstructorCall lowers one checked literal to its generated Go ABI.
+func (p *packageUnit) checkedConstructorCall(
+	file *ast.File,
+	literal *ast.CompositeLit,
+	owner *packageUnit,
+	declaration *model,
+) ast.Expr {
+	typ := p.info.TypeOf(literal)
+	if typ == nil && owner != nil && owner.typed != nil {
+		if object := owner.typed.Scope().Lookup(declaration.Name); object != nil {
+			typ = object.Type()
+		}
+	}
+	if typ == nil {
+		return literal
+	}
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok {
+		return literal
+	}
+	structure, ok := named.Underlying().(*types.Struct)
+	if !ok || structure.NumFields() != len(declaration.Fields) {
+		return literal
+	}
+
+	values := make([]ast.Expr, structure.NumFields())
+	evaluation := make([]ast.Expr, 0, len(literal.Elts))
+	indices := make([]int, 0, len(literal.Elts))
+	keyed := false
+	unkeyed := false
+	supplied := make(map[int]bool)
+	for index, element := range literal.Elts {
+		fieldIndex := index
+		value := element
+		if pair, pairOK := element.(*ast.KeyValueExpr); pairOK {
+			keyed = true
+			name, nameOK := pair.Key.(*ast.Ident)
+			if !nameOK {
+				return literal
+			}
+			fieldIndex = structFieldIndex(structure, name.Name)
+			value = pair.Value
+		} else {
+			unkeyed = true
+		}
+		if keyed && unkeyed {
+			p.fail(literal, "mixture of field:value and value elements in struct literal")
+			return literal
+		}
+		if fieldIndex < 0 || fieldIndex >= len(values) {
+			return literal
+		}
+		if supplied[fieldIndex] {
+			p.fail(element, "duplicate field %s in struct literal", structure.Field(fieldIndex).Name())
+			return literal
+		}
+		supplied[fieldIndex] = true
+		values[fieldIndex] = value
+		evaluation = append(evaluation, value)
+		indices = append(indices, fieldIndex)
+	}
+	for index, value := range values {
+		if value == nil {
+			p.fail(literal, "missing required field %s", structure.Field(index).Name())
+			return literal
+		}
+	}
+
+	prefix := p.ownerQualifier(file, named.Obj().Pkg())
+	constructor := p.generatedObject(
+		prefix, owner.Path, "New"+declaration.Name, literal.Lbrace,
+	)
+	if !keyed {
+		result := call(constructor, values...)
+		p.checkedCalls[result] = true
+		return result
+	}
+
+	carrierType := p.generatedObject(
+		prefix, owner.Path, checkedCarrierName(declaration.Name), literal.Lbrace,
+	)
+	carrierElements := make([]ast.Expr, 0, len(evaluation))
+	for index, value := range evaluation {
+		fieldIndex := indices[index]
+		carrierElements = append(carrierElements, &ast.KeyValueExpr{
+			Key: ast.NewIdent(checkedCarrierFieldName(
+				declaration.Fields[fieldIndex], fieldIndex,
+			)),
+			Value: value,
+		})
+	}
+	inputName := p.freshIdentifier("tgoInput")
+	arguments := make([]ast.Expr, len(values))
+	for index := range arguments {
+		arguments[index] = &ast.SelectorExpr{
+			X:   ast.NewIdent(inputName),
+			Sel: ast.NewIdent(checkedCarrierFieldName(declaration.Fields[index], index)),
+		}
+	}
+	constructorCall := call(constructor, arguments...)
+	p.checkedCalls[constructorCall] = true
+	resultType := p.generatedObject(
+		prefix, owner.Path, declaration.Name, literal.Lbrace,
+	)
+	function := &ast.FuncLit{
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{List: []*ast.Field{{
+				Names: []*ast.Ident{ast.NewIdent(inputName)},
+				Type:  carrierType,
+			}}},
+			Results: &ast.FieldList{List: []*ast.Field{
+				{Type: resultType},
+				{Type: p.generatedUniverse("error", literal.Lbrace)},
+			}},
+		},
+		Body: &ast.BlockStmt{List: []ast.Stmt{
+			&ast.ReturnStmt{Results: []ast.Expr{constructorCall}},
+		}},
+	}
+	carrierLiteralType := p.generatedObject(
+		prefix, owner.Path, checkedCarrierName(declaration.Name), literal.Lbrace,
+	)
+	return call(function, &ast.CompositeLit{
+		Type: carrierLiteralType, Elts: carrierElements,
+	})
+}
+
+func structFieldIndex(structure *types.Struct, name string) int {
+	for index := 0; index < structure.NumFields(); index++ {
+		if structure.Field(index).Name() == name {
+			return index
+		}
+	}
+	return -1
 }
 
 // namedLiteralModel resolves a named literal when an outer marker blocks type information.
