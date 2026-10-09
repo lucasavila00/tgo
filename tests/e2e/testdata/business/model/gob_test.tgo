@@ -11,7 +11,7 @@ var gobSignalSink Signal
 
 func TestPayloadFreeEnumGobRoundTrip(t *testing.T) {
 	t.Parallel()
-	want := SignalOn{}.Signal()
+	want := Signal.On{}
 	var data bytes.Buffer
 	if err := gob.NewEncoder(&data).Encode(struct{ Kind Signal }{Kind: want}); err != nil {
 		t.Fatal(err)
@@ -27,7 +27,7 @@ func TestPayloadFreeEnumGobRoundTrip(t *testing.T) {
 
 func TestPayloadFreeEnumGobWire(t *testing.T) {
 	t.Parallel()
-	value := SignalOff{}.Signal()
+	value := Signal.Off{}
 	data, err := value.GobEncode()
 	if err != nil {
 		t.Fatal(err)
@@ -54,7 +54,7 @@ func TestPayloadFreeEnumGobWire(t *testing.T) {
 }
 
 func TestPayloadFreeEnumGobAllocations(t *testing.T) {
-	value := SignalOn{}.Signal()
+	value := Signal.On{}
 	encodeAllocations := testing.AllocsPerRun(1000, func() {
 		data, err := value.GobEncode()
 		if err != nil {

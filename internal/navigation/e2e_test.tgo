@@ -47,6 +47,14 @@ type fixtureSymbolRequest struct {
 	Symbols []fixtureSymbol `json:"symbols"`
 }
 
+type protocolSymbol struct {
+	Name      string              `json:"name"`
+	Kind      string              `json:"kind"`
+	Container string              `json:"container"`
+	Range     navigation.Location `json:"range"`
+	Selection navigation.Location `json:"selection"`
+}
+
 type fixtureMutation struct {
 	File    string         `json:"file"`
 	Old     string         `json:"old"`
@@ -251,7 +259,7 @@ func (h *helperProcess) checkSymbols(
 	if fixture.File != "" {
 		params["uri"] = fileURI(t, filepath.Join(workspace, fixture.File))
 	}
-	result := []navigation.Symbol(nil)
+	result := []protocolSymbol(nil)
 	h.call(t, fixture.Method, mustJSON(t, params), &result)
 	names := make([]string, 0, len(result))
 	for _, symbol := range result {
@@ -260,7 +268,7 @@ func (h *helperProcess) checkSymbols(
 	if !equalStrings(names, fixture.Names) {
 		t.Fatalf("%s names = %#v, want %#v", fixture.Method, names, fixture.Names)
 	}
-	byName := make(map[string]navigation.Symbol)
+	byName := make(map[string]protocolSymbol)
 	for _, symbol := range result {
 		byName[symbol.Name] = symbol
 	}
@@ -273,7 +281,7 @@ func (h *helperProcess) checkSymbols(
 		rangeStart := pointOffset(t, rangePath, expected.Range)
 		selectionPath := filepath.Join(workspace, expected.Selection.File)
 		selectionStart := pointOffset(t, selectionPath, expected.Selection)
-		want := navigation.Symbol{
+		want := protocolSymbol{
 			Name: expected.Name, Kind: expected.Kind, Container: expected.Container,
 			Range: navigation.Location{
 				URI: fileURI(t, rangePath), Start: rangeStart,
