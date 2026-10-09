@@ -28,6 +28,11 @@ type Request enum { Value struct { *http.Request } }
 
 var ready = Event.Ready{value: nil, ..default}
 var empty = Event.Empty{}
+
+func shadowPayloadName() Event {
+	type EventReady struct{}
+	return Event.Ready{value: nil, ..default}
+}
 `)
 	compiled, problems := Compile(PackageInput{
 		Path: "sample", Sources: []File{{Name: "sample.tgo", Data: data}},

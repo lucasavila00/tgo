@@ -33,7 +33,7 @@ Use a checked `switch value.Tag()` to read the active payload. Use `exhaustive:`
 declared variant, or use `default:` for fallback behavior. Read a payload only in its single-tag
 case. Do not use `fallthrough` or select generated enum methods through interfaces.
 Type aliases can construct variants. Go name resolution selects the aliased type.
-Do not shadow generated payload, constructor, or default helper names at a construction.
+Do not shadow generated constructor, carrier, or default helper names at a construction.
 
 ```text
 func Label(account Account) string {
