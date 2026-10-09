@@ -8,13 +8,10 @@ import __tgo_fmt "fmt"
 
 import (
 	"bytes"
-	"go/ast"
 	"go/format"
-	"go/parser"
 	"go/token"
 	"go/types"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -33,14 +30,14 @@ type generatedMetadata struct {
 }
 
 type verifiedSource struct {
-	generated *ast.File
+	generated *syntax.File
 	file      *syntax.File
 	tokenFile *token.File
 	data      []byte
 }
 
 // verifySourceModels checks generated declarations against their canonical source.
-func (c *checker) verifySourceModels(generated *ast.File) *verifiedSource {
+func (c *checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 	generatedPath := c.pass.Fset.Position(generated.Package).Filename
 	generatedData, readErr := c.pass.ReadFile(generatedPath)
 	metadata := parseGeneratedMetadata(generatedData)
@@ -151,27 +148,27 @@ func (c *checker) hasModelAPIs(object *types.TypeName) bool {
 
 // reportExtraGeneratedModels rejects model APIs with no matching TGo declaration.
 func (c *checker) reportExtraGeneratedModels(
-	file *ast.File,
+	file *syntax.File,
 	sourceName string,
 	sourceNames map[string]bool,
 ) {
-	for _, declaration := range file.Decls {
-		general, ok := declaration.(*ast.GenDecl)
-		if !ok {
+	for _, declarationValue := range file.Declarations {
+		general := syntax.GeneralDeclarationOf(declarationValue)
+		if general == nil {
 			continue
 		}
 		for _, item := range general.Specs {
-			specification, ok := item.(*ast.TypeSpec)
-			if !ok || sourceNames[specification.Name.Name] {
+			specification := syntax.TypeSpecificationOf(item)
+			if specification == nil || sourceNames[specification.Name.Name] {
 				continue
 			}
-			object, objectOK := c.pass.TypesInfo.Defs[specification.Name].(*types.TypeName)
+			object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
 			if !objectOK {
 				continue
 			}
 			if c.hasModelAPIs(object) {
 				c.failVerification(
-					specification.Pos(),
+					specification.Start,
 					"generated tgo output for %s does not match %s",
 					specification.Name.Name,
 					sourceName,
@@ -183,7 +180,7 @@ func (c *checker) reportExtraGeneratedModels(
 
 // checkSourceDeclaration compares one TGo model with its generated Go API.
 func (c *checker) checkSourceDeclaration(
-	generated *ast.File,
+	generated *syntax.File,
 	sourceName string,
 	file *syntax.File,
 	declaration *syntax.Declaration,
@@ -207,12 +204,12 @@ func (c *checker) checkSourceDeclaration(
 		)
 		return
 	}
-	object, objectOK := c.pass.TypesInfo.Defs[specification.Name].(*types.TypeName)
+	object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
 	if !objectOK || !sourceShapeMatches(
 		generated, specification.Type, object.Type(), source,
 	) {
 		c.failVerification(
-			specification.Pos(),
+			specification.Start,
 			"generated tgo output for %s does not match %s",
 			name,
 			sourceName,
@@ -223,7 +220,7 @@ func (c *checker) checkSourceDeclaration(
 
 // exportSourceDeclaration records one verified model and its constructors.
 func (c *checker) exportSourceDeclaration(
-	generated *ast.File,
+	generated *syntax.File,
 	file *syntax.File,
 	declaration *syntax.Declaration,
 	sourceFile *token.File,
@@ -240,7 +237,7 @@ func (c *checker) exportSourceDeclaration(
 	if specification == nil {
 		return
 	}
-	object, ok := c.pass.TypesInfo.Defs[specification.Name].(*types.TypeName)
+	object, ok := c.facts.DefinitionName(specification.Name).(*types.TypeName)
 	if !ok {
 		return
 	}
@@ -402,7 +399,16 @@ func sourceDeclaration(
 	sourceFile *token.File,
 	data []byte,
 ) *sourceModel {
+	if file == nil {
+		return nil
+	}
+	if sourceFile == nil {
+		return nil
+	}
 	if node, ok := syntax.CheckedDeclarationOf(declaration); ok {
+		if node == nil {
+			return nil
+		}
 		result := sourceModelChecked{
 			Name: node.Name.Name,
 			Fact: checkedModel(packagePath, node.Name.Name),
@@ -411,13 +417,25 @@ func sourceDeclaration(
 		return &result
 	}
 	if node, ok := syntax.EnumDeclarationOf(declaration); ok {
+		if node == nil {
+			return nil
+		}
 		variants := make([]string, 0, len(node.Variants))
 		sourceVariants := make([]sourceVariant, 0, len(node.Variants))
 		for _, variant := range node.Variants {
+			if variant == nil {
+				continue
+			}
 			variants = append(variants, variant.Name.Name)
+			fields := []sourceField(nil)
+			for _, field := range variant.Fields {
+				if field != nil {
+					fields = append(fields, sourceFields(file, sourceFile, data, field)...)
+				}
+			}
 			sourceVariants = append(sourceVariants, sourceVariant{
 				name:   variant.Name.Name,
-				fields: sourceFields(file, sourceFile, data, variant.Fields),
+				fields: fields,
 			})
 		}
 		result := sourceModelEnum{
@@ -428,9 +446,18 @@ func sourceDeclaration(
 		return &result
 	}
 	if node, ok := syntax.StructDeclarationOf(declaration); ok {
+		if node == nil {
+			return nil
+		}
+		fields := []sourceField(nil)
+		for _, field := range node.Fields {
+			if field != nil {
+				fields = append(fields, sourceFields(file, sourceFile, data, field)...)
+			}
+		}
 		result := sourceModelStruct{
 			Name:   node.Name.Name,
-			Fields: sourceFields(file, sourceFile, data, node.Fields),
+			Fields: fields,
 		}.sourceModel()
 		return &result
 	}
@@ -487,15 +514,15 @@ func readTGoSource(pass *analysis.Pass, path string) ([]byte, error) {
 	return data, nil
 }
 
-func generatedTypeSpec(file *ast.File, name string) *ast.TypeSpec {
-	for _, declaration := range file.Decls {
-		general, ok := declaration.(*ast.GenDecl)
-		if !ok {
+func generatedTypeSpec(file *syntax.File, name string) *syntax.TypeSpecification {
+	for _, declarationValue := range file.Declarations {
+		general := syntax.GeneralDeclarationOf(declarationValue)
+		if general == nil {
 			continue
 		}
 		for _, item := range general.Specs {
-			specification, ok := item.(*ast.TypeSpec)
-			if ok && specification.Name.Name == name {
+			specification := syntax.TypeSpecificationOf(item)
+			if specification != nil && specification.Name.Name == name {
 				return specification
 			}
 		}
@@ -505,8 +532,8 @@ func generatedTypeSpec(file *ast.File, name string) *ast.TypeSpec {
 
 // sourceShapeMatches checks source fields and the public generated model API.
 func sourceShapeMatches(
-	generated *ast.File,
-	representation ast.Expr,
+	generated *syntax.File,
+	representation *syntax.Expression,
 	typ types.Type,
 	source *sourceModel,
 ) bool {
@@ -516,22 +543,26 @@ func sourceShapeMatches(
 	switch item := *source; item.Tag() {
 	case sourceModelTagStruct:
 		sourceStruct := item.StructPayload()
-		structure, ok := representation.(*ast.StructType)
-		if !ok {
+		structure := syntax.StructTypeExpressionOf(representation)
+		if structure == nil {
 			return false
 		}
-		return sameFields(sourceStruct.Fields, structure.Fields)
+		return sameFields(sourceStruct.Fields, structure.Fields.List, generated)
 	case sourceModelTagChecked:
 		checked := item.CheckedPayload()
-		structure, ok := representation.(*ast.StructType)
-		if !ok {
+		structure := syntax.StructTypeExpressionOf(representation)
+		if structure == nil {
 			return false
 		}
 		return sameModelFact(
 			checked.Fact, emittedCheckedModel(checked.Name, structure, typ),
 		) &&
-			len(structure.Fields.List) == 1 &&
-			sameExpressionText(checked.Base, structure.Fields.List[0].Type)
+			len(structure.Fields.List) == 1 && sameExpressionText(
+			checked.Base, syntax.SourceText(generated, syntax.Span{
+				Start: syntax.ExpressionPosition(structure.Fields.List[0].Type),
+				Stop:  syntax.ExpressionEnd(structure.Fields.List[0].Type),
+			}),
+		)
 	case sourceModelTagEnum:
 		enum := item.EnumPayload()
 		if !generatedEnumShape(typ, enum.Name, enum.Variants) {
@@ -542,8 +573,8 @@ func sourceShapeMatches(
 			if payloadSpec == nil {
 				return false
 			}
-			payload, ok := payloadSpec.Type.(*ast.StructType)
-			if !ok || !sameFields(variant.fields, payload.Fields) {
+			payload := syntax.StructTypeExpressionOf(payloadSpec.Type)
+			if payload == nil || !sameFields(variant.fields, payload.Fields.List, generated) {
 				return false
 			}
 		}
@@ -656,29 +687,24 @@ func sourceFields(
 	file *syntax.File,
 	sourceFile *token.File,
 	data []byte,
-	fields []*syntax.TGoField,
+	declaration *syntax.TGoField,
 ) []sourceField {
 	result := []sourceField(nil)
-	for _, declaration := range fields {
-		typeText := sourceExpression(file, sourceFile, data, declaration.Field.Type)
-		tagText := ""
-		if declaration.Field.Tag != nil {
-			tagText = sourceRange(
-				sourceFile, data, declaration.Field.Tag.Start,
-				declaration.Field.Tag.Stop,
-			)
-		}
-		if len(declaration.Field.Names) == 0 {
-			result = append(result, sourceField{
-				name: "", typeExpression: typeText, tag: tagText,
-			})
-			continue
-		}
-		for _, name := range declaration.Field.Names {
-			result = append(result, sourceField{
-				name: name.Name, typeExpression: typeText, tag: tagText,
-			})
-		}
+	typeText := sourceExpression(file, sourceFile, data, declaration.Field.Type)
+	tagText := ""
+	if declaration.Field.Tag != nil {
+		tagText = sourceRange(
+			sourceFile, data, declaration.Field.Tag.Start,
+			declaration.Field.Tag.Stop,
+		)
+	}
+	if len(declaration.Field.Names) == 0 {
+		return []sourceField{{name: "", typeExpression: typeText, tag: tagText}}
+	}
+	for _, name := range declaration.Field.Names {
+		result = append(result, sourceField{
+			name: name.Name, typeExpression: typeText, tag: tagText,
+		})
 	}
 	return result
 }
@@ -698,9 +724,6 @@ func sourceExpression(
 		sourceFile, data, syntax.ExpressionPosition(expression),
 		syntax.ExpressionEnd(expression),
 	))
-	if file == nil {
-		return string(result)
-	}
 	for _, extension := range syntax.Extensions(file) {
 		node, ok := syntax.NonNilPointerTypeOf(extension)
 		if !ok || node.Percent < start || node.Percent >= end {
@@ -720,15 +743,29 @@ func sourceRange(
 	return string(data[sourceFile.Offset(start):sourceFile.Offset(end)])
 }
 
-func sameFields(source []sourceField, generated *ast.FieldList) bool {
-	flat := source
-	if generated == nil || len(flat) != len(generated.List) {
+func sameFields(
+	source []sourceField,
+	generated []*syntax.Field,
+	file *syntax.File,
+) bool {
+	if len(source) != len(generated) {
 		return false
 	}
-	for index, field := range flat {
-		other := generated.List[index]
-		if !sameExpressionText(field.typeExpression, other.Type) ||
-			!sameExpressionText(field.tag, other.Tag) {
+	for index, field := range source {
+		other := generated[index]
+		if other == nil {
+			return false
+		}
+		typeText := syntax.SourceText(file, syntax.Span{
+			Start: syntax.ExpressionPosition(other.Type),
+			Stop:  syntax.ExpressionEnd(other.Type),
+		})
+		tagText := ""
+		if other.Tag != nil {
+			tagText = syntax.SourceText(file, other.Tag.Span)
+		}
+		if !sameExpressionText(field.typeExpression, typeText) ||
+			!sameExpressionText(field.tag, tagText) {
 			return false
 		}
 		if field.name == "" && len(other.Names) == 0 {
@@ -741,27 +778,17 @@ func sameFields(source []sourceField, generated *ast.FieldList) bool {
 	return true
 }
 
-func sameExpressionText(left string, right ast.Expr) bool {
-	if left == "" || expressionNil(right) {
-		return left == "" && expressionNil(right)
-	}
-	leftExpression, err := parser.ParseExpr(left)
-	if err != nil {
-		return false
-	}
-	leftText := new(bytes.Buffer)
-	rightText := new(bytes.Buffer)
-	if format.Node(leftText, token.NewFileSet(), leftExpression) != nil ||
-		format.Node(rightText, token.NewFileSet(), right) != nil {
-		return false
-	}
-	return leftText.String() == rightText.String()
-}
-
-func expressionNil(expression ast.Expr) bool {
-	if expression == nil {
+func sameExpressionText(left string, right string) bool {
+	if left == right {
 		return true
 	}
-	value := reflect.ValueOf(expression)
-	return value.Kind() == reflect.Pointer && value.IsNil()
+	if left == "" || right == "" {
+		return left == right
+	}
+	leftText, leftErr := format.Source([]byte(left))
+	rightText, rightErr := format.Source([]byte(right))
+	if leftErr != nil || rightErr != nil {
+		return false
+	}
+	return string(leftText) == string(rightText)
 }

@@ -11,6 +11,10 @@ tgolint ./...
 data from generated packages and uses it in packages that import them. It does
 not check generated files.
 
+Downstream analysis uses only `pkg/syntax` nodes. The compiler implementation and
+the private `pkg/syntax` parser and converter can use `go/ast`. Downstream packages
+must not import or expose `go/ast` types.
+
 ## Checked by tgolint
 
 A clean run means that the loaded Go packages do not contain these errors:

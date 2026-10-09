@@ -4,14 +4,13 @@
 package tgolint
 
 import (
-	"go/ast"
 	"go/token"
 	"go/types"
 	"path/filepath"
 
 	"tgo/internal/compiler"
-
-	"golang.org/x/tools/go/cfg"
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
 )
 
 type nilPlace struct {
@@ -42,7 +41,7 @@ type nilFlowState struct {
 }
 
 type nilFlow struct {
-	before map[ast.Node]*nilFlowState
+	before map[syntax.Node]*nilFlowState
 }
 
 // checkTGoSource runs checks that need the typed TGo source package.
@@ -80,49 +79,37 @@ func (c *checker) analyzeTGoPackage() *compiler.AnalysisPackage {
 
 // checkNilSafety checks `%T` contracts in TGo and Go source.
 func (c *checker) checkNilSafety(analysis *compiler.AnalysisPackage) {
-	goFiles := make([]*ast.File, 0, len(c.pass.Files))
-	for _, file := range c.pass.Files {
-		if !c.generated[file] {
+	goFiles := make([]*syntax.File, 0, len(c.files))
+	for _, file := range c.files {
+		if !syntaxFileGenerated(file) {
 			goFiles = append(goFiles, file)
 		}
 	}
 	goEnvironment := newNilEnvironment(
-		c.pass, goFiles, c.pass.TypesInfo, c.pass.Pkg, nil,
+		c.pass, goFiles, c.facts, c.pass.Pkg, nil,
 	)
 	goEnvironment.collectNilContracts()
 
 	if analysis != nil {
-		projected := make([]*ast.File, 0, len(analysis.Sources))
+		sourceFiles := make([]*syntax.File, 0, len(analysis.Sources))
 		for _, source := range analysis.Sources {
-			projected = append(projected, source.Projected)
+			if source.Syntax != nil {
+				sourceFiles = append(sourceFiles, source.Syntax)
+			}
+		}
+		if analysis.Facts == nil || analysis.Package == nil {
+			return
 		}
 		sourceEnvironment := newNilEnvironment(
-			c.pass, projected, analysis.Info, analysis.Package,
+			c.pass, sourceFiles, analysis.Facts, analysis.Package,
 			analysis.NonNil,
 		)
 		sourceEnvironment.collectNilContracts()
-		sourceEnvironment.files = userSourceFiles(analysis)
 		sourceEnvironment.copyPackageContracts(goEnvironment)
 		sourceEnvironment.exportContracts(c.pass)
 		sourceEnvironment.checkNilFiles()
 	}
 	goEnvironment.checkNilFiles()
-}
-
-// userSourceFiles removes generated declarations from source checks.
-func userSourceFiles(analysis *compiler.AnalysisPackage) []*ast.File {
-	result := make([]*ast.File, 0, len(analysis.Sources))
-	for _, source := range analysis.Sources {
-		file := *source.Projected
-		file.Decls = make([]ast.Decl, 0, len(source.Projected.Decls))
-		for _, declaration := range source.Projected.Decls {
-			if !source.Generated[declaration] {
-				file.Decls = append(file.Decls, declaration)
-			}
-		}
-		result = append(result, &file)
-	}
-	return result
 }
 
 // packageDirectory returns the directory that owns the loaded package.
@@ -155,15 +142,15 @@ func (e *nilEnvironment) copyPackageContracts(target *nilEnvironment) {
 func (e *nilEnvironment) checkNilFiles() {
 	e.checkNilGlobals()
 	for _, file := range e.files {
-		ast.Inspect(file, func(node ast.Node) bool {
-			switch node := node.(type) {
-			case *ast.FuncDecl:
-				if node.Body != nil {
-					e.checkNilFunction(node, node.Type, node.Body)
+		syntax.Inspect(file, func(node *syntax.Node) bool {
+			if declaration, ok := syntax.FunctionDeclarationOf(node); ok {
+				if declaration.Body != nil {
+					e.checkNilFunction(node, declaration.Type, declaration.Body)
 				}
 				return false
-			case *ast.FuncLit:
-				e.checkNilFunction(node, node.Type, node.Body)
+			}
+			if literal, ok := syntax.FunctionLiteralOf(node); ok {
+				e.checkNilFunction(node, literal.Type, literal.Body)
 				return false
 			}
 			return true
@@ -175,14 +162,14 @@ func (e *nilEnvironment) checkNilFiles() {
 func (e *nilEnvironment) checkNilGlobals() {
 	state := newNilState()
 	for _, file := range e.files {
-		for _, declaration := range file.Decls {
-			general, ok := declaration.(*ast.GenDecl)
-			if !ok || general.Tok != token.VAR {
+		for _, declaration := range file.Declarations {
+			general := syntax.GeneralDeclarationOf(declaration)
+			if general == nil || general.Kind != token.VAR {
 				continue
 			}
 			for _, item := range general.Specs {
-				values, ok := item.(*ast.ValueSpec)
-				if !ok {
+				values := syntax.ValueSpecificationOf(item)
+				if values == nil {
 					continue
 				}
 				e.checkNilValues(state, values)
@@ -197,20 +184,26 @@ func (e *nilEnvironment) checkNilGlobals() {
 
 // checkNilFunction solves and checks one function control-flow graph.
 func (e *nilEnvironment) checkNilFunction(
-	root ast.Node,
-	typ *ast.FuncType,
-	body *ast.BlockStmt,
+	root *syntax.Node,
+	typ *syntax.FunctionType,
+	body *syntax.BlockStatement,
 ) {
 	graph := cfg.New(body, e.nilCallMayReturn)
 	entries := e.solveNilEntries(graph, e.nilEntryState(root, typ))
-	flow := &nilFlow{before: make(map[ast.Node]*nilFlowState)}
+	flow := &nilFlow{before: make(map[syntax.Node]*nilFlowState)}
 	e.recordNilEntries(flow, graph, entries)
 	for _, block := range graph.Blocks {
+		if block == nil {
+			continue
+		}
 		entry := entries[block.Index]
 		if entry == nil {
 			continue
 		}
 		state := cloneNilState(entry)
+		if state == nil {
+			continue
+		}
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			e.transferNilNode(state, node, root, true)
@@ -218,24 +211,28 @@ func (e *nilEnvironment) checkNilFunction(
 	}
 }
 
-func (e *nilEnvironment) nilCallMayReturn(call *ast.CallExpr) bool {
-	name, ok := call.Fun.(*ast.Ident)
-	if !ok {
+func (e *nilEnvironment) nilCallMayReturn(expression *syntax.Expression) bool {
+	call := syntax.CallExpressionOf(expression)
+	if call == nil {
 		return true
 	}
-	builtin, ok := e.info.Uses[name].(*types.Builtin)
+	name := syntax.IdentifierExpressionOf(call.Callee)
+	if name == nil {
+		return true
+	}
+	builtin, ok := e.facts.Object(name).(*types.Builtin)
 	return !ok || builtin.Name() != "panic"
 }
 
 func (e *nilEnvironment) nilEntryState(
-	root ast.Node,
-	function *ast.FuncType,
+	root *syntax.Node,
+	function *syntax.FunctionType,
 ) *nilFlowState {
 	state := newNilState()
-	if declaration, ok := root.(*ast.FuncDecl); ok && declaration.Recv != nil {
-		for _, field := range declaration.Recv.List {
+	if declaration, ok := syntax.FunctionDeclarationOf(root); ok && declaration.Receiver != nil {
+		for _, field := range declaration.Receiver.List {
 			for _, name := range field.Names {
-				object := e.info.Defs[name]
+				object := e.facts.DefinitionName(name)
 				if e.contractForObject(object)[""] {
 					e.setNilType(state, nilPlace{object: object, path: ""}, nonNilType())
 				}
@@ -247,7 +244,7 @@ func (e *nilEnvironment) nilEntryState(
 	}
 	for _, field := range function.Params.List {
 		for _, name := range field.Names {
-			object := e.info.Defs[name]
+			object := e.facts.DefinitionName(name)
 			if len(e.contractForObject(object)) != 0 {
 				e.setNilType(state, nilPlace{object: object, path: ""}, nonNilType())
 			}
@@ -318,8 +315,14 @@ func (e *nilEnvironment) solveNilEntries(
 	for len(queue) != 0 {
 		block := queue[0]
 		queue = queue[1:]
+		if block == nil {
+			continue
+		}
 		queued[block.Index] = false
 		state := cloneNilState(entries[block.Index])
+		if state == nil {
+			continue
+		}
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			e.transferNilNode(state, node, nil, false)
@@ -357,10 +360,16 @@ func (e *nilEnvironment) recordNilEntries(
 	entries []*nilFlowState,
 ) {
 	for _, block := range graph.Blocks {
+		if block == nil {
+			continue
+		}
 		if entries[block.Index] == nil {
 			continue
 		}
 		state := cloneNilState(entries[block.Index])
+		if state == nil {
+			continue
+		}
 		e.prepareNilBlock(state, block)
 		for _, node := range block.Nodes {
 			flow.before[node] = cloneNilState(state)

@@ -7,11 +7,11 @@ import __tgo_json "encoding/json"
 import __tgo_fmt "fmt"
 
 import (
-	"go/ast"
-	"go/constant"
 	"go/token"
 	"go/types"
 	"strings"
+
+	"tgo/pkg/syntax"
 )
 
 // genericEffectWireFact carries generic effects between analysis packages.
@@ -429,16 +429,17 @@ func decodeGenericEffectFact(fact *genericEffectWireFact) *genericEffectSet {
 
 type genericEffectSummary struct {
 	function              *types.Func
-	declaration           *ast.FuncDecl
+	file                  *syntax.File
+	declaration           *syntax.FunctionDeclaration
 	parameters            map[*types.TypeParam]zeroParameter
 	zeroEffects           []genericEffect
 	accessEffects         []genericEffect
 	returnedZeroEffects   []genericEffect
 	returnedAccessEffects []genericEffect
-	calls                 []*ast.CallExpr
-	reachable             map[ast.Node]bool
-	root                  ast.Node
-	body                  *ast.BlockStmt
+	calls                 []*syntax.Expression
+	reachable             map[syntax.Node]bool
+	root                  *syntax.Node
+	body                  *syntax.BlockStatement
 }
 
 // checkGenericZeroSafety exports generic zero facts and checks each use.
@@ -455,23 +456,26 @@ func (c *checker) checkGenericZeroSafety() {
 	}
 
 	bindings, sources := c.collectGenericValueBindings(summaries)
-	for _, file := range c.pass.Files {
+	for _, file := range c.files {
 		if c.generated[file] {
 			continue
 		}
-		ast.Inspect(file, func(node ast.Node) bool {
-			switch node := node.(type) {
-			case *ast.CallExpr:
-				c.reportGenericZeroCall(node, summaries)
-				c.reportReturnedGenericCall(node, summaries, sources)
-			case *ast.Ident:
-				c.reportBoundGenericValueUse(node, bindings)
-			case *ast.IndexExpr:
-				c.reportDirectGenericValueEscape(node, summaries, sources)
-			case *ast.IndexListExpr:
-				c.reportDirectGenericValueEscape(node, summaries, sources)
-			case *ast.SelectorExpr:
-				c.reportDirectGenericValueEscape(node, summaries, sources)
+		inspectGenericFile(file, func(node *syntax.Node) bool {
+			expression, ok := syntax.ExpressionOf(node)
+			if !ok {
+				return true
+			}
+			if syntax.IdentifierExpressionOf(expression) != nil {
+				c.reportBoundGenericValueUse(expression, bindings)
+			}
+			if call := syntax.CallExpressionOf(expression); call != nil {
+				c.reportGenericZeroCall(expression, summaries)
+				c.reportReturnedGenericCall(expression, summaries, sources)
+			}
+			if syntax.IndexExpressionOf(expression) != nil ||
+				syntax.IndexListExpressionOf(expression) != nil ||
+				syntax.SelectorExpressionOf(expression) != nil {
+				c.reportDirectGenericValueEscape(expression, summaries, sources)
 			}
 			return true
 		})
@@ -481,38 +485,40 @@ func (c *checker) checkGenericZeroSafety() {
 // collectGenericZeroSummaries creates one local effect summary per generic function.
 func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSummary {
 	summaries := make(map[*types.Func]*genericEffectSummary)
-	for _, file := range c.pass.Files {
+	for _, file := range c.files {
 		if c.generated[file] {
 			continue
 		}
-		for _, declaration := range file.Decls {
-			function, ok := declaration.(*ast.FuncDecl)
+		inspectGenericFile(file, func(node *syntax.Node) bool {
+			function, ok := syntax.FunctionDeclarationOf(node)
 			if !ok || function.Body == nil {
-				continue
+				return true
 			}
-			object, ok := c.pass.TypesInfo.Defs[function.Name].(*types.Func)
+			object, ok := c.facts.DefinitionName(function.Name).(*types.Func)
 			if !ok {
-				continue
+				return false
 			}
 			signature, ok := object.Type().(*types.Signature)
 			if !ok {
-				continue
+				return false
 			}
 			parameters := genericParameters(signature)
 			if len(parameters) == 0 {
-				continue
+				return false
 			}
+			root := *node
 			summary := &genericEffectSummary{
-				function: object, declaration: function, parameters: parameters,
+				function: object, file: file, declaration: function, parameters: parameters,
 				zeroEffects: nil, accessEffects: nil, returnedZeroEffects: nil,
 				returnedAccessEffects: nil, calls: nil,
-				reachable: c.reachableNodes(function.Body), root: function,
+				reachable: c.reachableNodes(function.Body), root: &root,
 				body: function.Body,
 			}
 			c.collectDirectGenericZeros(summary)
 			c.collectReturnedGenericEffects(summary)
 			summaries[object] = summary
-		}
+			return false
+		})
 	}
 	return summaries
 }
@@ -552,30 +558,42 @@ func (c *checker) collectDirectGenericZeros(summary *genericEffectSummary) {
 }
 
 func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
-	ast.Inspect(summary.body, func(node ast.Node) bool {
-		switch node := node.(type) {
-		case *ast.FuncLit:
+	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
-		case *ast.ValueSpec:
-			c.collectValueSpecZeros(summary, node)
-		case *ast.CompositeLit:
-			c.collectLiteralZeros(summary, node)
-		case *ast.CallExpr:
-			c.collectCallZeros(summary, node)
-			summary.calls = append(summary.calls, node)
-		case *ast.IndexExpr:
-			c.collectMapReadZero(summary, node)
-		case *ast.UnaryExpr:
-			if node.Op == token.ARROW && !c.commaOK(node) {
+		}
+		if specification, ok := syntax.SpecificationOf(node); ok {
+			if value := syntax.ValueSpecificationOf(specification); value != nil {
+				c.collectValueSpecZeros(summary, node, value)
+			}
+		}
+		expression, ok := syntax.ExpressionOf(node)
+		if !ok {
+			return true
+		}
+		if literal := syntax.CompositeLiteralOf(expression); literal != nil {
+			c.collectLiteralZeros(summary, expression, literal)
+		}
+		if call := syntax.CallExpressionOf(expression); call != nil {
+			c.collectCallZeros(summary, expression, call)
+			summary.calls = append(summary.calls, expression)
+		}
+		if index := syntax.IndexExpressionOf(expression); index != nil {
+			c.collectMapReadZero(summary, expression, index)
+		}
+		if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+			if unary.Operator == token.ARROW && !c.commaOK(expression) {
 				c.markConditionalGenericZero(
-					summary, node, firstType(c.pass.TypesInfo.TypeOf(node)),
-					closedChannelEffectCondition(), node.X, nil,
+					summary, node, firstType(c.facts.Type(expression)),
+					closedChannelEffectCondition(), unary.Expression, nil,
 				)
 			}
-		case *ast.SliceExpr:
-			c.collectResliceZero(summary, node)
-		case *ast.SelectorExpr:
-			c.collectGenericAccess(summary, node)
+		}
+		if slice := syntax.SliceExpressionOf(expression); slice != nil {
+			c.collectResliceZero(summary, expression, slice)
+		}
+		if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+			c.collectGenericAccess(summary, node, expression, selector)
 		}
 		return true
 	})
@@ -583,25 +601,28 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 
 // collectReturnedGenericEffects records effects in a directly returned closure.
 func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
-	ast.Inspect(summary.body, func(node ast.Node) bool {
-		if _, nested := node.(*ast.FuncLit); nested {
+	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
-		statement, ok := node.(*ast.ReturnStmt)
-		if !ok {
+		statement, ok := syntax.StatementOf(node)
+		if !ok || syntax.ReturnStatementOf(statement) == nil {
 			return true
 		}
-		for _, expression := range statement.Results {
-			literal, ok := unparenthesized(expression).(*ast.FuncLit)
-			if !ok {
+		for _, expression := range syntax.ReturnStatementOf(statement).Results {
+			value := unparenthesized(expression)
+			literal := syntax.FunctionLiteralExpressionOf(value)
+			if literal == nil {
 				continue
 			}
+			root := syntax.ExpressionNode(value)
 			returned := &genericEffectSummary{
-				function: summary.function, declaration: summary.declaration,
-				parameters: summary.parameters, zeroEffects: nil,
+				function: summary.function, file: summary.file,
+				declaration: summary.declaration,
+				parameters:  summary.parameters, zeroEffects: nil,
 				accessEffects: nil, returnedZeroEffects: nil,
 				returnedAccessEffects: nil, calls: nil,
-				reachable: c.reachableNodes(literal.Body), root: literal,
+				reachable: c.reachableNodes(literal.Body), root: &root,
 				body: literal.Body,
 			}
 			c.collectGenericNodes(returned)
@@ -621,27 +642,37 @@ func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
 // collectGenericPresenceZeros records zero values from failed presence operations.
 func (c *checker) collectGenericPresenceZeros(summary *genericEffectSummary) {
 	previousZeroTypes := c.zeroTypes
-	previousCapture := c.capture
+	previousCaptureResult := c.captureResult
+	previousCaptureSource := c.captureSource
 	previousChecked := c.checked
 	previousPresence := c.presence
 	defer func() {
 		c.zeroTypes = previousZeroTypes
-		c.capture = previousCapture
+		c.captureResult = previousCaptureResult
+		c.captureSource = previousCaptureSource
 		c.checked = previousChecked
 		c.presence = previousPresence
 	}()
 
 	for parameter, reference := range summary.parameters {
 		currentModel := parameterModel()
-		var sources []ast.Expr = nil
+		var sources []*syntax.Expression = nil
 		c.zeroTypes = map[*types.TypeParam]*model{parameter: currentModel}
-		c.capture = func(candidate *model, source ast.Expr) {
+		record := func(candidate *model, source *syntax.Expression) {
+			if source == nil {
+				if candidate == currentModel {
+					sources = append(sources, nil)
+				}
+				return
+			}
 			if candidate == currentModel {
 				sources = append(sources, source)
 			}
 		}
-		c.checked = make(map[*ast.CallExpr]bool)
-		c.presence = make(map[ast.Expr]bool)
+		c.captureResult = func(candidate *model) { record(candidate, nil) }
+		c.captureSource = record
+		c.checked = make(map[*syntax.Expression]bool)
+		c.presence = make(map[*syntax.Expression]bool)
 		c.checkConstructors(summary.root, summary.body)
 		for _, source := range sources {
 			if source == nil {
@@ -657,24 +688,26 @@ func (c *checker) collectGenericPresenceZeros(summary *genericEffectSummary) {
 
 func (c *checker) markGenericPresenceEffect(
 	summary *genericEffectSummary,
-	source ast.Expr,
+	source *syntax.Expression,
 ) {
-	typ := firstType(c.pass.TypesInfo.TypeOf(source))
-	switch source := source.(type) {
-	case *ast.IndexExpr:
+	typ := firstType(c.facts.Type(source))
+	if index := syntax.IndexExpressionOf(source); index != nil {
 		c.markConditionalGenericZero(
-			summary, source, typ, mapMissEffectCondition(), source.X, source.Index,
+			summary, syntaxNode(source), typ, mapMissEffectCondition(),
+			index.Expression, index.Index,
 		)
-	case *ast.UnaryExpr:
+	} else if unary := syntax.UnaryExpressionOf(source); unary != nil {
 		c.markConditionalGenericZero(
-			summary, source, typ, closedChannelEffectCondition(), source.X, nil,
+			summary, syntaxNode(source), typ, closedChannelEffectCondition(),
+			unary.Expression, nil,
 		)
-	case *ast.TypeAssertExpr:
+	} else if assertion := syntax.TypeAssertionExpressionOf(source); assertion != nil {
 		c.markConditionalGenericZero(
-			summary, source, typ, failedAssertionEffectCondition(), source.X, nil,
+			summary, syntaxNode(source), typ, failedAssertionEffectCondition(),
+			assertion.Expression, nil,
 		)
-	default:
-		c.markGenericZeroWith(summary, source, typ, nil, true)
+	} else {
+		c.markGenericZeroWith(summary, syntaxNode(source), typ, nil, true)
 	}
 }
 
@@ -685,7 +718,7 @@ func (c *checker) collectNamedResultZeros(summary *genericEffectSummary) {
 	}
 	for _, field := range results.List {
 		for _, name := range field.Names {
-			if variable, ok := c.pass.TypesInfo.Defs[name].(*types.Var); ok {
+			if variable, ok := c.facts.DefinitionName(name).(*types.Var); ok {
 				c.markGenericZeroUnconditional(summary, variable.Type())
 			}
 		}
@@ -703,41 +736,47 @@ func (c *checker) markGenericZeroUnconditional(
 
 func (c *checker) collectValueSpecZeros(
 	summary *genericEffectSummary,
-	specification *ast.ValueSpec,
+	node *syntax.Node,
+	specification *syntax.ValueSpecification,
 ) {
 	if len(specification.Values) != 0 {
 		return
 	}
 	for _, name := range specification.Names {
-		if variable, ok := c.pass.TypesInfo.Defs[name].(*types.Var); ok {
-			c.markGenericZeroAt(summary, name, variable.Type())
+		if variable, ok := c.facts.DefinitionName(name).(*types.Var); ok {
+			c.markGenericZeroAt(summary, node, variable.Type())
 		}
 	}
 }
 
 // collectCallZeros records zero-producing built-ins and conversions.
-func (c *checker) collectCallZeros(summary *genericEffectSummary, call *ast.CallExpr) {
-	name, ok := call.Fun.(*ast.Ident)
-	if !ok {
+func (c *checker) collectCallZeros(
+	summary *genericEffectSummary,
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+) {
+	name := syntax.IdentifierExpressionOf(call.Callee)
+	if name == nil {
 		return
 	}
-	if _, ok := c.pass.TypesInfo.Uses[name].(*types.Builtin); !ok {
+	if _, ok := c.facts.Object(name).(*types.Builtin); !ok {
 		return
 	}
 	switch name.Name {
 	case "new":
 		if len(call.Args) == 1 {
-			c.markGenericZeroAt(summary, call, c.pass.TypesInfo.TypeOf(call.Args[0]))
+			c.markGenericZeroAt(summary, syntaxNode(expression), c.facts.Type(call.Args[0]))
 		}
 	case "make":
-		c.collectMakeZeros(summary, call)
+		c.collectMakeZeros(summary, expression, call)
 	case "clear":
 		if len(call.Args) != 1 {
 			return
 		}
-		if slice, ok := coreType(c.pass.TypesInfo.TypeOf(call.Args[0])).(*types.Slice); ok {
+		if slice, ok := coreType(c.facts.Type(call.Args[0])).(*types.Slice); ok {
 			c.markConditionalGenericZero(
-				summary, call, slice.Elem(), nonemptyEffectCondition(), call.Args[0], nil,
+				summary, syntaxNode(expression), slice.Elem(),
+				nonemptyEffectCondition(), call.Args[0], nil,
 			)
 		}
 	}
@@ -745,153 +784,99 @@ func (c *checker) collectCallZeros(summary *genericEffectSummary, call *ast.Call
 
 func (c *checker) collectMakeZeros(
 	summary *genericEffectSummary,
-	call *ast.CallExpr,
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
 ) {
 	if len(call.Args) < 2 {
 		return
 	}
-	slice, ok := coreType(c.pass.TypesInfo.TypeOf(call.Args[0])).(*types.Slice)
+	typeArgument := call.Args[0]
+	if typeArgument == nil {
+		return
+	}
+	slice, ok := coreType(c.facts.Type(typeArgument)).(*types.Slice)
 	if !ok {
 		return
 	}
-	condition, outcome := c.nonzeroEffectCondition(call.Args[1])
-	switch enumValue2 := outcome; enumValue2.Tag() {
-	case effectOutcomeTagNever:
+	lengthArgument := call.Args[1]
+	if lengthArgument == nil {
 		return
-	case effectOutcomeTagAlways:
-		c.markGenericZeroAt(summary, call, slice.Elem())
-	case effectOutcomeTagConditional:
-		c.markGenericZeroWith(summary, call, slice.Elem(), condition, false)
-	case effectOutcomeTagUnknown:
-		c.markGenericZeroWith(summary, call, slice.Elem(), nil, true)
-	default:
-		panic(enumValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
+	condition, outcome := c.nonzeroEffectCondition(lengthArgument)
+	if outcome == neverEffectOutcome() {
+		return
+	}
+	if outcome == alwaysEffectOutcome() {
+		c.markGenericZeroAt(summary, syntaxNode(expression), slice.Elem())
+		return
+	}
+	if outcome == conditionalEffectOutcome() {
+		if condition == nil {
+			return
+		}
+		c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), condition, false)
+		return
+	}
+	c.markGenericZeroWith(summary, syntaxNode(expression), slice.Elem(), nil, true)
 }
 
 func (c *checker) collectMapReadZero(
 	summary *genericEffectSummary,
-	index *ast.IndexExpr,
+	expression *syntax.Expression,
+	index *syntax.IndexExpression,
 ) {
-	if c.assignmentTarget(index) {
+	if c.assignmentTarget(expression) {
 		return
 	}
-	if c.commaOK(index) {
+	if c.commaOK(expression) {
 		return
 	}
-	mapping, ok := coreType(c.pass.TypesInfo.TypeOf(index.X)).(*types.Map)
+	mapping, ok := coreType(c.facts.Type(index.Expression)).(*types.Map)
 	if ok {
 		c.markConditionalGenericZero(
-			summary, index, mapping.Elem(), mapMissEffectCondition(), index.X, index.Index,
+			summary, syntaxNode(expression), mapping.Elem(), mapMissEffectCondition(),
+			index.Expression, index.Index,
 		)
 	}
 }
 
 func (c *checker) collectResliceZero(
 	summary *genericEffectSummary,
-	expression *ast.SliceExpr,
+	value *syntax.Expression,
+	expression *syntax.SliceExpression,
 ) {
-	if expression.High == nil || c.currentLength(expression.High, expression.X) ||
-		constantZero(c.pass.TypesInfo.Types[expression.High].Value) {
+	if expression.High == nil {
 		return
 	}
-	slice, ok := coreType(c.pass.TypesInfo.TypeOf(expression.X)).(*types.Slice)
+	if c.currentLength(expression.High, expression.Expression) ||
+		constantZero(c.facts.Constant(expression.High)) {
+		return
+	}
+	slice, ok := coreType(c.facts.Type(expression.Expression)).(*types.Slice)
 	if ok {
 		c.markConditionalGenericZero(
-			summary, expression, slice.Elem(), extendingResliceEffectCondition(),
-			expression.X, expression.High,
+			summary, syntaxNode(value), slice.Elem(), extendingResliceEffectCondition(),
+			expression.Expression, expression.High,
 		)
 	}
 }
 
 func (c *checker) collectGenericAccess(
 	summary *genericEffectSummary,
-	selector *ast.SelectorExpr,
+	node *syntax.Node,
+	expression *syntax.Expression,
+	selector *syntax.SelectorExpression,
 ) {
-	if !strings.HasPrefix(selector.Sel.Name, "Tgo") ||
-		!c.receiverCanHideModel(c.pass.TypesInfo.TypeOf(selector.X)) {
+	if !strings.HasPrefix(selector.Selector.Name, "Tgo") ||
+		!c.receiverCanHideModel(c.facts.Type(selector.Expression)) {
 		return
 	}
-	if selection := c.pass.TypesInfo.Selections[selector]; selection == nil {
+	if selection := c.facts.Selection(expression); selection == nil {
 		return
 	} else if _, ok := selection.Obj().(*types.Func); !ok {
 		return
 	}
-	c.markGenericAccessAt(summary, selector, c.pass.TypesInfo.TypeOf(selector.X))
-}
-
-func (c *checker) collectLiteralZeros(
-	summary *genericEffectSummary,
-	literal *ast.CompositeLit,
-) {
-	switch underlying := coreType(c.pass.TypesInfo.TypeOf(literal)).(type) {
-	case *types.Struct:
-		c.collectStructLiteralZeros(summary, literal, underlying)
-	case *types.Array:
-		if literalHasHoles(c.pass.TypesInfo, literal, underlying.Len()) {
-			c.markGenericZeroAt(summary, literal, underlying.Elem())
-		}
-	case *types.Slice:
-		if literalHasHoles(c.pass.TypesInfo, literal, -1) {
-			c.markGenericZeroAt(summary, literal, underlying.Elem())
-		}
-	}
-}
-
-func (c *checker) collectStructLiteralZeros(
-	summary *genericEffectSummary,
-	literal *ast.CompositeLit,
-	structure *types.Struct,
-) {
-	keyed := len(literal.Elts) == 0
-	supplied := make(map[string]bool)
-	for _, element := range literal.Elts {
-		pair, ok := element.(*ast.KeyValueExpr)
-		if !ok {
-			continue
-		}
-		keyed = true
-		if name, ok := pair.Key.(*ast.Ident); ok {
-			supplied[name.Name] = true
-		}
-	}
-	if !keyed {
-		return
-	}
-	for index := 0; index < structure.NumFields(); index++ {
-		field := structure.Field(index)
-		if !supplied[field.Name()] {
-			c.markGenericZeroAt(summary, literal, field.Type())
-		}
-	}
-}
-
-func literalHasHoles(info *types.Info, literal *ast.CompositeLit, length int64) bool {
-	supplied := make(map[int64]bool)
-	next := int64(0)
-	largest := int64(-1)
-	for _, element := range literal.Elts {
-		if pair, ok := element.(*ast.KeyValueExpr); ok {
-			value := info.Types[pair.Key].Value
-			if value == nil || value.Kind() != constant.Int {
-				return false
-			}
-			index, exact := constant.Int64Val(value)
-			if !exact {
-				return false
-			}
-			next = index
-		}
-		supplied[next] = true
-		if next > largest {
-			largest = next
-		}
-		next++
-	}
-	if length < 0 {
-		length = largest + 1
-	}
-	return int64(len(supplied)) != length
+	c.markGenericAccessAt(summary, node, c.facts.Type(selector.Expression))
 }
 
 func noGenericEffect() genericEffect {

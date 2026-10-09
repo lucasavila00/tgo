@@ -57,3 +57,5 @@ bad/bad.go:502:9: tgo enum Event presence value is used before ok is proved true
 bad/bad.go:508:2: tgo checked Count result variables must not have aliases
 bad/bad.go:520:10: tgo checked Count value is used before its error is proved nil
 bad/bad.go:528:2: tgo enum Event presence variables must not have aliases
+bad/bad.go:819:6: literal holes contain invalid tgo enum Event values
+bad/bad.go:820:6: literal holes contain invalid tgo enum Event values

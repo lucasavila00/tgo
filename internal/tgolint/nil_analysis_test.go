@@ -63,7 +63,7 @@ func checkNilBooleanProperty(t testing.TB, data []byte) {
 
 	for _, item := range cases {
 		diagnostics, err := runNilAnalysis(
-			"value, other, alias *Item, a, b bool", item.body,
+			t, "value, other, alias *Item, a, b bool", item.body,
 		)
 		if err != nil {
 			t.Fatalf("%s: %v\ncondition: %s", item.name, err, expression)
