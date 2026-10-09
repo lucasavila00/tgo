@@ -67,6 +67,7 @@ type source struct {
 	Exhaustive       map[token.Pos]bool
 	NonNil           map[token.Pos]bool
 	SuccessReturns   []*ast.ReturnStmt
+	FailureReturns   map[*ast.ReturnStmt]token.Pos
 	GeneratedHelpers map[string]bool
 	Lowered          bool
 }
@@ -85,7 +86,8 @@ type comprehensionSource struct {
 // initiallyNeedsLowering reports whether parsed TGo syntax changes Go output.
 func (s *source) initiallyNeedsLowering() bool {
 	if len(s.Propagations) > 0 || len(s.Comprehensions) > 0 ||
-		len(s.Exhaustive) > 0 || len(s.NonNil) > 0 || len(s.SuccessReturns) > 0 {
+		len(s.Exhaustive) > 0 || len(s.NonNil) > 0 || len(s.SuccessReturns) > 0 ||
+		len(s.FailureReturns) > 0 {
 		return true
 	}
 	for _, declaration := range s.Models {

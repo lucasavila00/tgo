@@ -57,6 +57,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		) + edits[firstEnumEdit].text
 	}
 	edits, successLocations := lowerSuccessReturnCommas(files, file, tree, edits)
+	edits, failureLocations := lowerFailureReturnCommas(files, file, tree, edits)
 	edits, propagations, comprehensions, exhaustiveLocations, err := lowerCheckedExtensions(
 		files, file, tree, name, data, defaultMarker, used, edits,
 	)
@@ -87,6 +88,10 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	if len(successReturns) != len(successLocations) {
 		return nil, fmt.Errorf("parse %s: cannot project successful return", name)
 	}
+	failureReturns := projectedFailureReturns(files, goFile, failureLocations)
+	if len(failureReturns) != len(failureLocations) {
+		return nil, fmt.Errorf("parse %s: cannot project failure return", name)
+	}
 	nonNil := make(map[token.Pos]bool)
 	ast.Inspect(goFile, func(node ast.Node) bool {
 		pointer, ok := node.(*ast.StarExpr)
@@ -110,6 +115,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		Exhaustive:     exhaustiveClausePositions(files, goFile, exhaustiveLocations),
 		NonNil:         nonNil,
 		SuccessReturns: successReturns,
+		FailureReturns: failureReturns,
 		GeneratedHelpers: map[string]bool{
 			externalJSONTo: jsonUse.external,
 			adjacentJSONTo: jsonUse.adjacent,

@@ -91,6 +91,11 @@ type rawSuccessReturn struct {
 	comma   int
 }
 
+type rawFailureReturn struct {
+	keyword int
+	comma   int
+}
+
 type rawComprehension struct {
 	start   int
 	end     int
@@ -135,6 +140,7 @@ type sourceParser struct {
 	exhaustiveOffsets []int
 	propagations      []*rawPropagation
 	successReturns    []*rawSuccessReturn
+	failureReturns    []*rawFailureReturn
 	comprehensions    []*rawComprehension
 	nonNil            map[token.Pos]bool
 	edits             []sourceEdit
@@ -166,6 +172,7 @@ func parseFrontFile(
 		exhaustiveOffsets: nil,
 		propagations:      nil,
 		successReturns:    nil,
+		failureReturns:    nil,
 		comprehensions:    nil,
 		nonNil:            make(map[token.Pos]bool),
 		edits:             nil,

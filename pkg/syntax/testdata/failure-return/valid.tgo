@@ -1,0 +1,11 @@
+package failurereturn
+
+func one(err error) (int, error) {
+	return , err
+}
+
+func nested(err error) func() (string, error) {
+	return func() (string, error) {
+		return /* keep */ , err
+	}
+}

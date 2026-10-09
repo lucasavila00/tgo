@@ -127,6 +127,16 @@ func (p *packageUnit) reportUnloweredExtensions(source *source) {
 		}
 		return true
 	})
+	ast.Inspect(source.File, func(node ast.Node) bool {
+		statement, ok := node.(*ast.ReturnStmt)
+		if !ok {
+			return true
+		}
+		if comma, found := source.FailureReturns[statement]; found {
+			p.failAt(comma, "failure return needs a valid function signature")
+		}
+		return true
+	})
 }
 
 func propagationMarker(
@@ -168,6 +178,10 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 	case *ast.ReturnStmt:
 		values, prefix := l.expressions(node.Results)
 		node.Results = values
+		if comma, ok := l.source.FailureReturns[node]; ok {
+			delete(l.source.FailureReturns, node)
+			return l.failureReturn(node, prefix, comma)
+		}
 		return append(prefix, node)
 	case *ast.SendStmt:
 		values, prefix := l.expressions([]ast.Expr{node.Chan, node.Value})
@@ -850,31 +864,7 @@ func (l *propagationLowerer) errorBranch(
 	metadata propagationSource,
 	errorName *ast.Ident,
 ) ast.Stmt {
-	zeroValues := make([]ast.Expr, 0, len(l.function.resultAST)-1)
-	body := make([]ast.Stmt, 0, len(l.function.resultAST))
-	for index, resultType := range l.function.resultAST[:len(l.function.resultAST)-1] {
-		valueType := l.function.resultType.At(index).Type()
-		if value, ok := l.zeroExpression(
-			valueType,
-			resultType,
-			metadata.Bang,
-		); ok {
-			zeroValues = append(zeroValues, value)
-			continue
-		}
-		name := l.freshName("zero", "tgoZero")
-		if parameter, ok := types.Unalias(valueType).(*types.TypeParam); ok {
-			resultType = ast.NewIdent(parameter.Obj().Name())
-		}
-		specification := &ast.ValueSpec{Names: []*ast.Ident{name}, Type: resultType}
-		l.unit.generatedValues[specification] = true
-		declaration := &ast.DeclStmt{Decl: &ast.GenDecl{
-			Tok:   token.VAR,
-			Specs: []ast.Spec{specification},
-		}}
-		body = append(body, declaration)
-		zeroValues = append(zeroValues, name)
-	}
+	zeroValues, body := l.zeroReturnValues(metadata.Bang)
 	returnedError := ast.Expr(errorName)
 	if !metadata.Transparent {
 		formatError := l.unit.generatedObject(
@@ -896,6 +886,57 @@ func (l *propagationLowerer) errorBranch(
 		},
 		Body: &ast.BlockStmt{List: body},
 	}
+}
+
+// failureReturn adds zero values before one explicit error result.
+func (l *propagationLowerer) failureReturn(
+	statement *ast.ReturnStmt,
+	prefix []ast.Stmt,
+	comma token.Pos,
+) []ast.Stmt {
+	if l.function.resultType.Len() < 2 {
+		l.unit.failAt(comma, "failure return needs at least two function results")
+		return append(prefix, statement)
+	}
+	last := l.function.resultType.Len() - 1
+	if !isPredeclaredError(l.function.resultType.At(last).Type()) {
+		l.unit.failAt(comma, "failure return function must end in the Go error type")
+		return append(prefix, statement)
+	}
+	zeroValues, declarations := l.zeroReturnValues(comma)
+	statement.Results = append(zeroValues, statement.Results[0])
+	prefix = append(prefix, declarations...)
+	return append(prefix, statement)
+}
+
+// zeroReturnValues makes exact zero values for all results before error.
+func (l *propagationLowerer) zeroReturnValues(position token.Pos) ([]ast.Expr, []ast.Stmt) {
+	zeroValues := make([]ast.Expr, 0, len(l.function.resultAST)-1)
+	declarations := make([]ast.Stmt, 0, len(l.function.resultAST)-1)
+	for index, resultType := range l.function.resultAST[:len(l.function.resultAST)-1] {
+		valueType := l.function.resultType.At(index).Type()
+		if value, ok := l.zeroExpression(
+			valueType,
+			resultType,
+			position,
+		); ok {
+			zeroValues = append(zeroValues, value)
+			continue
+		}
+		name := l.freshName("zero", "tgoZero")
+		if parameter, ok := types.Unalias(valueType).(*types.TypeParam); ok {
+			resultType = ast.NewIdent(parameter.Obj().Name())
+		}
+		specification := &ast.ValueSpec{Names: []*ast.Ident{name}, Type: resultType}
+		l.unit.generatedValues[specification] = true
+		declaration := &ast.DeclStmt{Decl: &ast.GenDecl{
+			Tok:   token.VAR,
+			Specs: []ast.Spec{specification},
+		}}
+		declarations = append(declarations, declaration)
+		zeroValues = append(zeroValues, name)
+	}
+	return zeroValues, declarations
 }
 
 func (l *propagationLowerer) formatQualifier() string {

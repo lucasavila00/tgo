@@ -51,7 +51,7 @@ func TestParseFileMarksSuccessfulReturns(t *testing.T) {
 	}
 }
 
-func TestParseFileRejectsEmptySuccessfulReturn(t *testing.T) {
+func TestParseFileRejectsEmptyReturnElision(t *testing.T) {
 	t.Parallel()
 	source, err := os.ReadFile("testdata/success-return/empty.tgo")
 	if err != nil {
@@ -63,9 +63,71 @@ func TestParseFileRejectsEmptySuccessfulReturn(t *testing.T) {
 	if err == nil {
 		t.Fatal("ParseFile accepted an empty successful return")
 	}
-	const want = "empty.tgo:4:9: successful return needs at least one expression"
+	const want = "empty.tgo:4:9: failure return needs one error expression"
 	if err.Error() != want {
 		t.Fatalf("error = %q, want %q", err, want)
+	}
+}
+
+func TestParseFileMarksFailureReturns(t *testing.T) {
+	t.Parallel()
+	source, err := os.ReadFile("testdata/failure-return/valid.tgo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := token.NewFileSet()
+	file, err := syntax.ParseFile(
+		files, "valid.tgo", source, syntax.ParseComments|syntax.AllErrors,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marked := 0
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		statement, ok := syntax.StatementOf(node)
+		if !ok {
+			return true
+		}
+		returned := syntax.ReturnStatementOf(statement)
+		if returned == nil || !returned.FailureComma.IsValid() {
+			return true
+		}
+		marked++
+		if len(returned.Results) != 1 {
+			t.Fatalf("failure return has %d expressions", len(returned.Results))
+		}
+		if source[files.File(returned.FailureComma).Offset(returned.FailureComma)] != ',' {
+			t.Fatal("failure marker is not a comma")
+		}
+		return true
+	})
+	if marked != 2 {
+		t.Fatalf("marked returns = %d", marked)
+	}
+}
+
+func TestParseFileRejectsInvalidFailureReturns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		want string
+	}{
+		{name: "empty", want: "empty.tgo:4:9: failure return needs one error expression"},
+		{name: "multiple", want: "multiple.tgo:4:14: failure return needs exactly one error expression"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			source, err := os.ReadFile("testdata/failure-return/" + test.name + ".tgo")
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = syntax.ParseFile(
+				token.NewFileSet(), test.name+".tgo", source, syntax.AllErrors,
+			)
+			if err == nil || err.Error() != test.want {
+				t.Fatalf("error = %q, want %q", err, test.want)
+			}
+		})
 	}
 }
 

@@ -33,6 +33,32 @@ func lowerSuccessReturnCommas(
 	return edits, locations
 }
 
+// lowerFailureReturnCommas removes each leading return comma before Go parsing.
+func lowerFailureReturnCommas(
+	files *token.FileSet,
+	file *token.File,
+	tree *syntax.File,
+	edits []edit,
+) ([]edit, map[[2]int]token.Pos) {
+	locations := make(map[[2]int]token.Pos)
+	syntax.Inspect(tree, func(node *syntax.Node) bool {
+		statement, ok := syntax.StatementOf(node)
+		if !ok {
+			return true
+		}
+		returned := syntax.ReturnStatementOf(statement)
+		if returned == nil || !returned.FailureComma.IsValid() {
+			return true
+		}
+		offset := file.Offset(returned.FailureComma)
+		edits = append(edits, edit{start: offset, end: offset + 1, text: ""})
+		position := files.Position(returned.Return)
+		locations[[2]int{position.Line, position.Column}] = returned.FailureComma
+		return true
+	})
+	return edits, locations
+}
+
 func projectedSuccessReturns(
 	files *token.FileSet,
 	file *ast.File,
@@ -47,6 +73,26 @@ func projectedSuccessReturns(
 		position := files.Position(statement.Return)
 		if locations[[2]int{position.Line, position.Column}] {
 			result = append(result, statement)
+		}
+		return true
+	})
+	return result
+}
+
+func projectedFailureReturns(
+	files *token.FileSet,
+	file *ast.File,
+	locations map[[2]int]token.Pos,
+) map[*ast.ReturnStmt]token.Pos {
+	result := make(map[*ast.ReturnStmt]token.Pos, len(locations))
+	ast.Inspect(file, func(node ast.Node) bool {
+		statement, ok := node.(*ast.ReturnStmt)
+		if !ok {
+			return true
+		}
+		position := files.Position(statement.Return)
+		if comma := locations[[2]int{position.Line, position.Column}]; comma.IsValid() {
+			result[statement] = comma
 		}
 		return true
 	})

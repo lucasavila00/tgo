@@ -1,0 +1,8 @@
+package failurereturn
+func simple(err error)(int,error){return ,err}
+func commented(err error)(string,error){return/* failure */,err}
+func generic[T any](err error)(T,error){
+return,
+err
+}
+func nested(err error)func()(int,error){return func()(int,error){return ,err}}

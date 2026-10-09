@@ -75,6 +75,7 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 		return &result
 	case *ast.ReturnStmt:
 		comma := c.front.successReturns[item.Return]
+		failureComma := c.front.failureReturns[item.Return]
 		itemSpan := span(item)
 		if comma.IsValid() {
 			itemSpan.Stop = comma + 1
@@ -83,6 +84,7 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 			Span: itemSpan, Return: item.Return,
 			Results:      c.expressions(item.Results),
 			SuccessComma: comma,
+			FailureComma: failureComma,
 		}}.Statement()
 		return &result
 	case *ast.BranchStmt:

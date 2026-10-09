@@ -6,10 +6,11 @@ import (
 	"go/types"
 
 	"tgo/internal/compiler"
+	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
 )
 
-// checkSuccessReturnModernization finds explicit final nil return values.
+// checkSuccessReturnModernization finds explicit return values that TGo can elide.
 func (c *checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPackage) {
 	if analysis == nil || analysis.Facts == nil {
 		return
@@ -28,20 +29,50 @@ func (c *checker) checkSuccessReturnModernization(analysis *compiler.AnalysisPac
 					return true
 				}
 				returned := syntax.ReturnStatementOf(statement)
-				if returned == nil || returned.SuccessComma.IsValid() || len(returned.Results) < 2 {
+				if returned == nil || returned.SuccessComma.IsValid() ||
+					returned.FailureComma.IsValid() || len(returned.Results) < 2 {
 					return true
 				}
 				last := sourceUnparenthesized(returned.Results[len(returned.Results)-1])
 				name, ok := sourceIdentifier(last)
-				if !ok || name.Name != "nil" || facts.IdentifierObject(last) != types.Universe.Lookup("nil") {
+				if ok && name.Name == "nil" && facts.IdentifierObject(last) == types.Universe.Lookup("nil") {
+					c.reportResult(
+						syntax.ExpressionPosition(last),
+						"return with final nil can use a trailing comma",
+					)
+					return true
+				}
+				signature := sourceFunctionSignature(file, node, facts)
+				if !failureReturnCanUseLeadingComma(returned, signature, facts) {
 					return true
 				}
 				c.reportResult(
-					syntax.ExpressionPosition(last),
-					"return with final nil can use a trailing comma",
+					syntax.ExpressionPosition(returned.Results[0]),
+					"return with zero values before final error can use a leading comma",
 				)
 				return true
 			},
 		)
 	}
+}
+
+func failureReturnCanUseLeadingComma(
+	returned *syntax.ReturnStatement,
+	signature *types.Signature,
+	facts *sourcefacts.Index,
+) bool {
+	if signature == nil || signature.Results().Len() != len(returned.Results) ||
+		signature.Results().Len() < 2 {
+		return false
+	}
+	results := signature.Results()
+	if !predeclaredError(results.At(results.Len() - 1).Type()) {
+		return false
+	}
+	for position, expression := range returned.Results[:len(returned.Results)-1] {
+		if !exactZeroValue(expression, results.At(position).Type(), facts) {
+			return false
+		}
+	}
+	return true
 }
