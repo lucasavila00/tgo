@@ -22,7 +22,7 @@ test("grammar includes Go after TGo rules", () => {
   ]);
 });
 
-test("grammar leaves contextual syntax to the Go grammar", () => {
+test("grammar adds no broad TGo token rules", () => {
   const scopes = [
     "keyword.operator.propagation.tgo",
     "storage.modifier.non-nil.tgo",
