@@ -54,3 +54,46 @@ func TestSourceFactsFindShiftedDefinition(t *testing.T) {
 		t.Fatalf("shifted field definition = %v, want field", object)
 	}
 }
+
+func TestAnalysisTypeInfoOmitsGeneratedFunctionFacts(t *testing.T) {
+	t.Parallel()
+	generatedExpression := &ast.BasicLit{Kind: token.INT, Value: "1"}
+	generatedFunction := &ast.FuncDecl{
+		Name: ast.NewIdent("generated"),
+		Type: &ast.FuncType{Params: new(ast.FieldList)},
+		Body: &ast.BlockStmt{List: []ast.Stmt{
+			&ast.ExprStmt{X: generatedExpression},
+		}},
+	}
+	sourceExpression := &ast.BasicLit{Kind: token.INT, Value: "2"}
+	generatedType := ast.NewIdent("int")
+	generatedDeclaration := &ast.GenDecl{
+		Tok: token.TYPE,
+		Specs: []ast.Spec{&ast.TypeSpec{
+			Name: ast.NewIdent("Payload"), Type: generatedType,
+		}},
+	}
+	info := newInfo()
+	info.Types[generatedExpression] = types.TypeAndValue{Type: types.Typ[types.Int]}
+	info.Types[sourceExpression] = types.TypeAndValue{Type: types.Typ[types.Int]}
+	info.Types[generatedType] = types.TypeAndValue{Type: types.Typ[types.Int]}
+	unit := &packageUnit{
+		info: info,
+		generated: map[ast.Decl]bool{
+			generatedFunction:    true,
+			generatedDeclaration: true,
+		},
+	}
+
+	filtered := analysisTypeInfo(unit)
+
+	if _, ok := filtered.Types[generatedExpression]; ok {
+		t.Fatal("generated function expression remains in analysis facts")
+	}
+	if _, ok := filtered.Types[sourceExpression]; !ok {
+		t.Fatal("source expression is missing from analysis facts")
+	}
+	if _, ok := filtered.Types[generatedType]; !ok {
+		t.Fatal("generated payload type is missing from analysis facts")
+	}
+}

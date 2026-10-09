@@ -2,8 +2,10 @@ package compiler
 
 import (
 	"fmt"
+	"go/ast"
 	"go/token"
 	"go/types"
+	"maps"
 	"path/filepath"
 
 	"tgo/internal/sourcefacts"
@@ -82,6 +84,7 @@ func analysisSources(
 	}
 	sources := make([]AnalysisSource, 0, len(unit.Sources))
 	nonNil := make(map[token.Pos]bool)
+	info := analysisTypeInfo(unit)
 	var facts *sourcefacts.Index
 	for _, source := range unit.Sources {
 		tree := source.Tree
@@ -93,7 +96,7 @@ func analysisSources(
 			Syntax: tree,
 		})
 		if facts == nil {
-			facts = sourcefacts.New(tree, unit.info, unit.fs)
+			facts = sourcefacts.New(tree, info, unit.fs)
 		} else {
 			facts.AddFile(tree)
 		}
@@ -102,6 +105,40 @@ func analysisSources(
 		}
 	}
 	return sources, facts, nonNil, nil
+}
+
+// analysisTypeInfo removes generated function facts that can share source positions.
+func analysisTypeInfo(unit *packageUnit) *types.Info {
+	result := *unit.info
+	result.Types = maps.Clone(unit.info.Types)
+	result.Defs = maps.Clone(unit.info.Defs)
+	result.Uses = maps.Clone(unit.info.Uses)
+	result.Implicits = maps.Clone(unit.info.Implicits)
+	result.Selections = maps.Clone(unit.info.Selections)
+	result.Scopes = maps.Clone(unit.info.Scopes)
+	result.Instances = maps.Clone(unit.info.Instances)
+	for declaration := range unit.generated {
+		if _, ok := declaration.(*ast.FuncDecl); !ok {
+			continue
+		}
+		ast.Inspect(declaration, func(node ast.Node) bool {
+			delete(result.Implicits, node)
+			delete(result.Scopes, node)
+			if expression, ok := node.(ast.Expr); ok {
+				delete(result.Types, expression)
+			}
+			if identifier, ok := node.(*ast.Ident); ok {
+				delete(result.Defs, identifier)
+				delete(result.Uses, identifier)
+				delete(result.Instances, identifier)
+			}
+			if selector, ok := node.(*ast.SelectorExpr); ok {
+				delete(result.Selections, selector)
+			}
+			return true
+		})
+	}
+	return &result
 }
 
 func loadAnalysisPackage(
