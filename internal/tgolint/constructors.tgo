@@ -26,7 +26,9 @@ func (c %checker) reportModelResult(
 	format string,
 	arguments ...any,
 ) {
-	if model == nil { return }
+	if model == nil {
+		return
+	}
 	capture := c.captureResult
 	if capture != nil {
 		capture(model)
@@ -43,9 +45,13 @@ func (c %checker) reportModelSource(
 	format string,
 	arguments ...any,
 ) {
-	if model == nil { return }
+	if model == nil {
+		return
+	}
 	if source == nil {
-		if capture := c.captureResult; capture != nil { capture(model) }
+		if capture := c.captureResult; capture != nil {
+			capture(model)
+		}
 		return
 	}
 	capture := c.captureSource
@@ -138,17 +144,23 @@ func escapedObjects(facts %sourcefacts.Index, body %syntax.BlockStatement) map[t
 			literalBlock := syntax.Statement.Block{Value: literal.Body}
 			syntax.InspectStatement(&literalBlock, func(captured *syntax.Node) bool {
 				name, ok := syntax.IdentifierOf(captured)
-				if ok { record(facts.Object(name), literal.Start) }
+				if ok {
+					record(facts.Object(name), literal.Start)
+				}
 				return true
 			})
 			return false
 		}
 		expression, ok := syntax.ExpressionOf(node)
-		if !ok { return true }
+		if !ok {
+			return true
+		}
 		unary := syntax.UnaryExpressionOf(expression)
 		if unary != nil && unary.Operator == token.AND {
 			name := identifier(unary.Expression)
-			if name != nil { record(facts.Object(name), unary.Start) }
+			if name != nil {
+				record(facts.Object(name), unary.Start)
+			}
 		}
 		return true
 	})
@@ -162,7 +174,9 @@ func (c %checker) checkedBlock(statements []%syntax.Statement, state checkedStat
 			return true
 		}
 		if c.file != nil {
-			if c.statementsTerminate(c.file, []%syntax.Statement{statement}) { return true }
+			if c.statementsTerminate(c.file, []%syntax.Statement{statement}) {
+				return true
+			}
 		}
 	}
 	return false
@@ -210,7 +224,9 @@ func (c %checker) checkedControlStatement(statement %syntax.Statement, state che
 		var exits []checkedState = nil
 		for _, item := range value.Body.List {
 			clause := syntax.CommunicationClauseOf(item)
-			if clause == nil { continue }
+			if clause == nil {
+				continue
+			}
 			branch := cloneCheckedState(state)
 			if clause.Communication != nil {
 				c.checkedStatement(clause.Communication, branch)
@@ -269,8 +285,12 @@ func (c %checker) checkedRange(statement %syntax.RangeStatement, state checkedSt
 	for {
 		iteration := cloneCheckedState(loop)
 		var targets []%syntax.Expression = nil
-		if statement.Key != nil { targets = append(targets, statement.Key) }
-		if statement.Value != nil { targets = append(targets, statement.Value) }
+		if statement.Key != nil {
+			targets = append(targets, statement.Key)
+		}
+		if statement.Value != nil {
+			targets = append(targets, statement.Value)
+		}
 		c.invalidateAssignments(targets, iteration)
 		c.checkedBlock(statement.Body.List, iteration)
 		next := joinCheckedStates(entry, iteration)
@@ -283,10 +303,18 @@ func (c %checker) checkedRange(statement %syntax.RangeStatement, state checkedSt
 }
 
 func statementExpression(statement %syntax.Statement) *syntax.Expression {
-	if value := syntax.ExpressionStatementOf(statement); value != nil { return value.Expression }
-	if value := syntax.GoStatementOf(statement); value != nil { return value.Call }
-	if value := syntax.DeferStatementOf(statement); value != nil { return value.Call }
-	if value := syntax.IncrementStatementOf(statement); value != nil { return value.Expression }
+	if value := syntax.ExpressionStatementOf(statement); value != nil {
+		return value.Expression
+	}
+	if value := syntax.GoStatementOf(statement); value != nil {
+		return value.Call
+	}
+	if value := syntax.DeferStatementOf(statement); value != nil {
+		return value.Call
+	}
+	if value := syntax.IncrementStatementOf(statement); value != nil {
+		return value.Expression
+	}
 	return nil
 }
 
@@ -365,12 +393,18 @@ func (c %checker) checkedCallAssignment(
 
 func (c %checker) checkedDeclaration(statement %syntax.Statement, state checkedState) {
 	wrapped := syntax.DeclarationStatementOf(statement)
-	if wrapped == nil { return }
+	if wrapped == nil {
+		return
+	}
 	declaration := syntax.GeneralDeclarationOf(wrapped.Declaration)
-	if declaration == nil { return }
+	if declaration == nil {
+		return
+	}
 	for _, item := range declaration.Specs {
 		specification := syntax.ValueSpecificationOf(item)
-		if specification == nil { continue }
+		if specification == nil {
+			continue
+		}
 		c.checkedValueSpec(specification, state)
 	}
 }
@@ -424,7 +458,9 @@ func (c %checker) markValidatedResult(
 		return
 	}
 	name := identifier(value)
-	if name == nil { return }
+	if name == nil {
+		return
+	}
 	object := c.facts.Object(name)
 	result, found := state[object]
 	if object == nil || !found {

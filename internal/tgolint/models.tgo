@@ -1,10 +1,17 @@
 package tgolint
 
 type model enum {
-	Checked struct { Package string; Name string }
-	Enum struct { Package string; Name string; Variants []string }
-	Mixed struct{}
-	Parameter struct{}
+	Checked struct {
+		Package string
+		Name    string
+	}
+	Enum struct {
+		Package  string
+		Name     string
+		Variants []string
+	}
+	Mixed struct {}
+	Parameter struct {}
 }
 
 // modelWireFact is the stable fact format used by go/analysis.

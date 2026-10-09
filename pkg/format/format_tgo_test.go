@@ -293,9 +293,8 @@ func checkRepositorySource(t *testing.T, path string, name string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if (strings.HasPrefix(name, "pkg/format/") || name == "cmd/tgofmt/main.tgo") &&
-		!bytes.Equal(formatted, source) {
-		t.Fatal("formatter source is not in canonical format")
+	if !bytes.Equal(formatted, source) {
+		t.Fatalf("%s: run 'go run ./cmd/tgofmt -w -- %s'", name, name)
 	}
 	again, err := format.Source(path, formatted)
 	if err != nil {
