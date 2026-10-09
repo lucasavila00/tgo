@@ -4,12 +4,17 @@
 package syntax
 
 import (
+	__tgo_fmt_1 "fmt"
 	"go/ast"
 	"go/token"
 	"slices"
 )
 
 func (p *sourceParser) discoverExtensions() error {
+	err := p.discoverSuccessReturns()
+	if err != nil {
+		return __tgo_fmt_1.Errorf("p.discoverSuccessReturns: %w", err)
+	}
 	exhaustiveTokens := p.exhaustiveTokens()
 	for cursor := 0; cursor < len(p.tokens); cursor++ {
 		if exhaustiveTokens[cursor] {
@@ -68,6 +73,79 @@ func (p *sourceParser) discoverExtensions() error {
 		}
 	}
 	return p.discoverComprehensions()
+}
+
+// discoverSuccessReturns projects a trailing return comma as one semicolon.
+func (p *sourceParser) discoverSuccessReturns() error {
+	for keyword, item := range p.tokens {
+		if item.kind != token.RETURN {
+			continue
+		}
+		comma, found := p.successReturnComma(keyword)
+		if !found {
+			continue
+		}
+		if comma == keyword+1 {
+			return p.tokenError(comma, "successful return needs at least one expression")
+		}
+		p.successReturns = append(p.successReturns, &rawSuccessReturn{
+			keyword: keyword,
+			comma:   comma,
+		})
+		p.edits = append(p.edits, sourceEdit{
+			start: p.tokens[comma].start,
+			end:   p.tokens[comma].end,
+			text:  ";",
+		})
+	}
+	return nil
+}
+
+func (p *sourceParser) successReturnComma(keyword int) (int, bool) {
+	stack := []token.Token(nil)
+	previous := -1
+	for cursor := keyword + 1; cursor < len(p.tokens); cursor++ {
+		kind := p.tokens[cursor].kind
+		if len(stack) == 0 && previous >= 0 &&
+			p.tokens[previous].kind == token.COMMA && !startsExpression(kind) {
+			return previous, true
+		}
+		switch kind {
+		case token.LPAREN:
+			stack = append(stack, token.RPAREN)
+		case token.LBRACK:
+			stack = append(stack, token.RBRACK)
+		case token.LBRACE:
+			stack = append(stack, token.RBRACE)
+		case token.RPAREN, token.RBRACK, token.RBRACE:
+			if len(stack) == 0 {
+				return 0, false
+			}
+			if stack[len(stack)-1] != kind {
+				return 0, false
+			}
+			stack = stack[:len(stack)-1]
+		}
+		if len(stack) != 0 {
+			continue
+		}
+		if kind == token.SEMICOLON {
+			return 0, false
+		}
+		previous = cursor
+	}
+	return previous, previous >= 0 && p.tokens[previous].kind == token.COMMA
+}
+
+func startsExpression(kind token.Token) bool {
+	switch kind {
+	case token.IDENT, token.INT, token.FLOAT, token.IMAG, token.CHAR, token.STRING,
+		token.FUNC, token.MAP, token.STRUCT, token.INTERFACE, token.CHAN,
+		token.LPAREN, token.LBRACK, token.ADD, token.SUB, token.NOT, token.XOR,
+		token.MUL, token.AND, token.ARROW:
+		return true
+	}
+	return false
 }
 
 func (p *sourceParser) exhaustiveTokens() map[int]bool {
@@ -165,6 +243,11 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 	for _, offset := range p.exhaustiveOffsets {
 		exhaustiveClauses[p.pos(offset)] = true
 	}
+	successReturns := make(map[token.Pos]token.Pos)
+	for _, item := range p.successReturns {
+		successReturns[p.pos(p.tokens[item.keyword].start)] =
+			p.pos(p.tokens[item.comma].start)
+	}
 	result := &frontFile{
 		frontSpan:         frontSpan{Start: p.file.Pos(0), Stop: p.file.Pos(len(p.source))},
 		Doc:               goFile.Doc,
@@ -183,6 +266,7 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		attached:          make(map[frontNode][]*ast.CommentGroup),
 		nonNil:            p.nonNil,
 		exhaustiveClauses: exhaustiveClauses,
+		successReturns:    successReturns,
 	}
 	defaultAt := make(map[token.Pos]*frontDefaultMarker)
 	for _, raw := range p.defaults {

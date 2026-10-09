@@ -87,6 +87,11 @@ type rawPropagation struct {
 	node       *frontPropagateExpr
 }
 
+type rawSuccessReturn struct {
+	keyword int
+	comma   int
+}
+
 type rawComprehension struct {
 	start   int
 	end     int
@@ -130,6 +135,7 @@ type sourceParser struct {
 	defaults          []*rawDefault
 	exhaustiveOffsets []int
 	propagations      []*rawPropagation
+	successReturns    []*rawSuccessReturn
 	comprehensions    []*rawComprehension
 	nonNil            map[token.Pos]bool
 	edits             []sourceEdit
@@ -160,6 +166,7 @@ func parseFrontFile(
 		defaults:          nil,
 		exhaustiveOffsets: nil,
 		propagations:      nil,
+		successReturns:    nil,
 		comprehensions:    nil,
 		nonNil:            make(map[token.Pos]bool),
 		edits:             nil,
