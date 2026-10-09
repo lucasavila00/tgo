@@ -385,8 +385,7 @@ func identifierWidth(values []%syntax.Identifier) int {
 }
 
 func (p *printer) formattedExpressionWidth(value *syntax.Expression) int {
-	probe := newPrinter(p.files, p.file, p.source)
-	probe.comments = nil
+	probe := p.newProbe(nil)
 	probe.expression(value, 0)
 	return probe.outputColumn()
 }

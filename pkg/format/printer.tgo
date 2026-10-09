@@ -3,6 +3,7 @@ package format
 import (
 	"bytes"
 	"go/token"
+	"sort"
 	"strings"
 
 	"tgo/pkg/syntax"
@@ -75,6 +76,15 @@ func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer
 			)
 		}
 	}
+	return newPrinterState(files, file, source, comments)
+}
+
+func newPrinterState(
+	files *token.FileSet,
+	file *syntax.File,
+	source []byte,
+	comments []sourceComment,
+) *printer {
 	return &printer{
 		files:              files,
 		file:               file,
@@ -91,6 +101,10 @@ func newPrinter(files *token.FileSet, file *syntax.File, source []byte) *printer
 		measureComments:    nil,
 		functionBodyColumn: 0,
 	}
+}
+
+func (p *printer) newProbe(comments []sourceComment) *printer {
+	return newPrinterState(p.files, p.file, p.source, comments)
 }
 
 func (p *printer) printFile() []byte {
@@ -203,7 +217,7 @@ func declarationKind(value *syntax.Declaration) token.Token {
 }
 
 func (p *printer) hasCommentBetween(stop token.Pos, start token.Pos) bool {
-	for _, comment := range p.comments {
+	for _, comment := range p.comments[p.commentStartingAfter(stop):] {
 		if comment.start >= start {
 			return false
 		}
@@ -222,7 +236,7 @@ func (p *printer) hasInlineCommentBetween(stop token.Pos, start token.Pos) bool 
 	if line == 0 || p.position(start).Line != line {
 		return false
 	}
-	for _, comment := range p.comments {
+	for _, comment := range p.comments[p.commentStartingAfter(stop):] {
 		if comment.start >= start {
 			return false
 		}
@@ -250,9 +264,33 @@ func (p *printer) before(position token.Pos) {
 }
 
 func (p *printer) skipCommentsBefore(position token.Pos) {
-	for p.comment < len(p.comments) && p.comments[p.comment].stop <= position {
-		p.comment++
+	p.comment = p.commentEndingAfter(position)
+}
+
+func (p *printer) commentStartingAtOrAfter(position token.Pos) int {
+	return sort.Search(len(p.comments), func(index int) bool {
+		return p.comments[index].start >= position
+	})
+}
+
+func (p *printer) commentStartingAfter(position token.Pos) int {
+	return sort.Search(len(p.comments), func(index int) bool {
+		return p.comments[index].start > position
+	})
+}
+
+func (p *printer) commentEndingAfter(position token.Pos) int {
+	return sort.Search(len(p.comments), func(index int) bool {
+		return p.comments[index].stop > position
+	})
+}
+
+func (p *printer) commentAt(position token.Pos) *sourceComment {
+	index := p.commentStartingAtOrAfter(position)
+	if index < len(p.comments) && p.comments[index].start == position {
+		return &p.comments[index]
 	}
+	return nil
 }
 
 func (p *printer) beforeComments(position token.Pos, tight bool) {
@@ -411,7 +449,7 @@ func (p *printer) sourceCommaEnd(position token.Pos, following token.Pos) token.
 	}
 	offset := file.Offset(position)
 	limit := file.Offset(following)
-	comment := 0
+	comment := p.commentEndingAfter(position)
 	for offset < limit && offset < len(p.source) {
 		for comment < len(p.comments) && file.Offset(p.comments[comment].stop) <= offset {
 			comment++
@@ -513,19 +551,16 @@ func (p *printer) sourceBlankBetween(stop token.Pos, start token.Pos) bool {
 	}
 	lines := strings.Split(string(p.source[left:right]), "\n")
 	firstLine := p.position(stop).Line
+	comment := p.commentEndingAfter(stop)
 	for index, line := range lines[1:max(1, len(lines)-1)] {
 		lineNumber := firstLine + index + 1
-		covered := false
-		for _, comment := range p.comments {
-			startLine := p.position(comment.start).Line
-			if startLine > lineNumber {
-				break
-			}
-			if startLine <= lineNumber && lineNumber <= p.position(comment.stop).Line {
-				covered = true
-				break
-			}
+		for comment < len(p.comments) &&
+			p.position(p.comments[comment].stop).Line < lineNumber {
+			comment++
 		}
+		covered := comment < len(p.comments) && p.comments[comment].start < start &&
+			p.position(p.comments[comment].start).Line <= lineNumber &&
+			lineNumber <= p.position(p.comments[comment].stop).Line
 		if covered {
 			continue
 		}

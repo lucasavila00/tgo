@@ -131,8 +131,7 @@ func fieldCommentCells(cells []int, value *syntax.Field) []int {
 }
 
 func (p *printer) formattedFieldContentWidth(value *syntax.Field) int {
-	probe := newPrinter(p.files, p.file, p.source)
-	probe.comments = nil
+	probe := p.newProbe(nil)
 	probe.fieldContent(value, 0, nil, false)
 	return probe.outputColumn()
 }
@@ -172,7 +171,8 @@ func (p *printer) outerCommentPositions(
 ) (token.Pos, token.Pos) {
 	startLine := p.position(start).Line
 	header := token.NoPos
-	for _, comment := range p.comments {
+	first := p.commentStartingAfter(start)
+	for _, comment := range p.comments[first:] {
 		line := p.position(comment.start).Line
 		if line > startLine {
 			break
@@ -193,8 +193,13 @@ func (p *printer) outerCommentPositions(
 func (p *printer) trailingCommentPosition(position token.Pos) token.Pos {
 	line := p.position(position).Line
 	start := p.position(position).Offset
-	for _, comment := range p.comments {
-		if p.position(comment.start).Line != line {
+	first := p.commentStartingAtOrAfter(position)
+	for _, comment := range p.comments[first:] {
+		commentLine := p.position(comment.start).Line
+		if commentLine > line {
+			break
+		}
+		if commentLine < line {
 			continue
 		}
 		stop := p.position(comment.start).Offset
@@ -264,7 +269,7 @@ func (p *printer) formattedStatementCommentWidths(
 	value *syntax.Statement,
 	positions ...token.Pos,
 ) map[token.Pos]int {
-	probe := newPrinter(p.files, p.file, p.source)
+	probe := p.newProbe(p.comments)
 	probe.skipCommentsBefore(syntax.StatementPosition(value))
 	probe.measureComments = commentMeasurements(positions)
 	probe.statement(value)
@@ -338,7 +343,7 @@ func (p *printer) formattedDeclarationCommentWidths(
 	bodyColumn int,
 	positions ...token.Pos,
 ) map[token.Pos]int {
-	probe := newPrinter(p.files, p.file, p.source)
+	probe := p.newProbe(p.comments)
 	probe.skipCommentsBefore(syntax.DeclarationPosition(value))
 	probe.measureComments = commentMeasurements(positions)
 	probe.functionBodyColumn = bodyColumn
@@ -394,12 +399,9 @@ func (p *printer) compositeAlignment(
 		if commaEnd != stop {
 			commaWidth = 1
 		}
-		for _, comment := range p.comments {
-			if comment.start == comments[index] &&
-				!strings.HasPrefix(comment.text, "//") {
-				comments[index] = token.NoPos
-				break
-			}
+		if comment := p.commentAt(comments[index]); comment != nil &&
+			!strings.HasPrefix(comment.text, "//") {
+			comments[index] = token.NoPos
 		}
 		keyValue := syntax.KeyValueExpressionOf(value)
 		if keyValue == nil {
@@ -411,11 +413,9 @@ func (p *printer) compositeAlignment(
 			}
 			continue
 		}
-		rows[index].cells = []int{
-			p.formattedExpressionWidth(keyValue.Key) + 1,
-			p.formattedExpressionWidth(keyValue.Value) + commaWidth,
-		}
+		rows[index].cells = []int{p.compositeKeyWidth(keyValue.Key) + 1, 0}
 		if comments[index].IsValid() {
+			rows[index].cells[1] = p.formattedExpressionWidth(keyValue.Value) + commaWidth
 			rows[index].cells = append(rows[index].cells, 0)
 		}
 	}
@@ -430,4 +430,16 @@ func (p *printer) compositeAlignment(
 		}
 	}
 	return columns, commentColumns
+}
+
+func (p *printer) compositeKeyWidth(value *syntax.Expression) int {
+	if name := syntax.IdentifierExpressionOf(value); name != nil {
+		return utf8.RuneCountInString(name.Name)
+	}
+	switch expressionValue := *value; expressionValue.Tag() {
+	case syntax.ExpressionTagBasicLiteral:
+		return utf8.RuneCountInString(expressionValue.BasicLiteralPayload().Value.Value)
+	default:
+		return p.formattedExpressionWidth(value)
+	}
 }

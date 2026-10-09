@@ -269,8 +269,7 @@ func (p *printer) alignmentSpace(columns []int, index int) {
 }
 
 func (p *printer) formattedExpressionListWidth(values []*syntax.Expression) int {
-	probe := newPrinter(p.files, p.file, p.source)
-	probe.comments = nil
+	probe := p.newProbe(nil)
 	probe.commaList(values)
 	return probe.outputColumn()
 }
@@ -278,8 +277,7 @@ func (p *printer) formattedExpressionListWidth(values []*syntax.Expression) int 
 func (p *printer) formattedImportSpecificationWidth(
 	value *syntax.ImportSpecification,
 ) int {
-	probe := newPrinter(p.files, p.file, p.source)
-	probe.comments = nil
+	probe := p.newProbe(nil)
 	probe.importSpecification(value)
 	return probe.outputColumn()
 }
@@ -287,8 +285,7 @@ func (p *printer) formattedImportSpecificationWidth(
 func (p *printer) formattedTypeSpecificationNameWidth(
 	value *syntax.TypeSpecification,
 ) int {
-	probe := newPrinter(p.files, p.file, p.source)
-	probe.comments = nil
+	probe := p.newProbe(nil)
 	probe.token(value.Name.Start, value.Name.Name)
 	if value.TypeParams != nil {
 		probe.fieldList(value.TypeParams, "[", "]")
@@ -299,8 +296,7 @@ func (p *printer) formattedTypeSpecificationNameWidth(
 func (p *printer) formattedTypeSpecificationValueWidth(
 	value *syntax.TypeSpecification,
 ) int {
-	probe := newPrinter(p.files, p.file, p.source)
-	probe.comments = nil
+	probe := p.newProbe(nil)
 	if value.Assign != token.NoPos {
 		probe.token(value.Assign, "=")
 		probe.space()
@@ -360,8 +356,7 @@ func (p *printer) functionHeader(value *syntax.FunctionDeclaration) {
 func (p *printer) formattedFunctionHeaderWidth(
 	value *syntax.FunctionDeclaration,
 ) int {
-	probe := newPrinter(p.files, p.file, p.source)
-	probe.comments = nil
+	probe := p.newProbe(nil)
 	probe.functionHeader(value)
 	return probe.outputColumn()
 }

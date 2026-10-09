@@ -213,8 +213,7 @@ func (p *printer) compactFunctionBody(value *syntax.BlockStatement, headerWidth 
 	}
 	bodyWidth := 0
 	for index, statement := range value.List {
-		probe := newPrinter(p.files, p.file, p.source)
-		probe.comments = nil
+		probe := p.newProbe(nil)
 		probe.statement(statement)
 		if bytes.IndexByte(probe.output.Bytes(), '\n') >= 0 {
 			return false
