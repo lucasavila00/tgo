@@ -12,11 +12,16 @@ func (Port) Valid(value int) bool {
 	return value > 0 && value < 65536
 }
 
+func (Port) Parse(text string) (int, error) {
+	return strconv.Atoi(text)
+}
+
 newtype UserID string
 ```
 
 A missing `Valid` method accepts every base value. A method must have the exact
-form `func (T) Valid(Base) bool`. TGo reserves it as the predicate.
+form `func (T) Valid(Base) bool`. An optional parser has the exact form
+`func (T) Parse(string) (Base, error)`. TGo reserves both methods.
 
 Use braces for literals and conversion syntax for dynamic values:
 
@@ -58,8 +63,9 @@ and generated names.
 
 `NewPort` returns `Port{}` and `invalid Port` when the predicate is false.
 `MustPort` calls `NewPort` and panics on failure. TGo literal checks make that
-panic unreachable in checked source. `ParsePort` parses the exact base width with
-`strconv`, then calls `NewPort`.
+panic unreachable in checked source. `ParsePort` calls the reserved parser, then
+calls `NewPort`. Without a parser, strings use identity and numbers use `strconv`
+with the exact base width. Other bases have no generated `ParseT`.
 
 The base is an exact Go type. Use `int8`, `uint16`, `float64`, or a named type
 when that width or method set matters. Newtypes do not inherit base operators.
