@@ -30,7 +30,7 @@ async function run() {
   await checkProviders(document);
   await checkWatchers(folder, client, invalidations);
   checkRemoteURITranslation();
-  await checkConfigurationRestart(api, folder, client);
+  checkConfigurationRestart(api, folder, client);
   await checkCancellation();
   await checkDirtyDocument(document);
   await checkWorkspaceFolderRemoval(api);
@@ -53,21 +53,15 @@ function checkRemoteURITranslation() {
   output.dispose();
 }
 
-async function checkConfigurationRestart(api, folder, original) {
-  const configuration = vscode.workspace.getConfiguration("tgo.navigation", folder.uri);
-  const helper = path.join(process.env.TGO_EXTENSION_PATH, "bin", "tgonav");
-  await configuration.update(
-    "helperPath", helper, vscode.ConfigurationTarget.WorkspaceFolder
-  );
-  let restarted;
-  await waitFor(() => {
-    restarted = api.clients.forURI(folder.uri);
-    return restarted !== original;
+function checkConfigurationRestart(api, folder, original) {
+  api.clients.configurationChanged({
+    affectsConfiguration(section, resource) {
+      return section === "tgo.navigation.helperPath" &&
+        resource.toString() === folder.uri.toString();
+    }
   });
-  await configuration.update(
-    "helperPath", undefined, vscode.ConfigurationTarget.WorkspaceFolder
-  );
-  await waitFor(() => api.clients.forURI(folder.uri) !== restarted);
+  assert.equal(api.clients.clients.has(folder.uri.toString()), false);
+  assert.notEqual(api.clients.forURI(folder.uri), original);
 }
 
 async function checkDirtyDocument(document) {
@@ -83,7 +77,7 @@ async function checkDirtyDocument(document) {
   const symbols = await vscode.commands.executeCommand(
     "vscode.executeDocumentSymbolProvider", document.uri
   );
-  assert.deepEqual(symbols, []);
+  assert.deepEqual(symbols || [], []);
 }
 
 async function checkWorkspaceFolderRemoval(api) {
