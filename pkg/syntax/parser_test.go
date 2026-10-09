@@ -578,14 +578,8 @@ if value > row { value }
 	if !ok {
 		t.Fatal("third clause is not a filter")
 	}
-	if len(outer.Bindings) != 2 || outer.Bindings[0].Name != "row" ||
-		outer.Bindings[1].Name != "values" {
-		t.Fatal("outer bindings are wrong")
-	}
-	if len(inner.Bindings) != 2 || inner.Bindings[0].Name != "_" ||
-		inner.Bindings[1].Name != "value" {
-		t.Fatal("inner bindings are wrong")
-	}
+	requireComprehensionBindings(t, outer, []string{"row", "values"})
+	requireComprehensionBindings(t, inner, []string{"_", "value"})
 
 	positions := []struct {
 		name string
@@ -619,6 +613,21 @@ if value > row { value }
 				item.name, position.Line, position.Column, item.line, item.col,
 			)
 		}
+	}
+}
+
+func requireComprehensionBindings(
+	t *testing.T,
+	clause *syntax.ComprehensionRangeClause,
+	want []string,
+) {
+	t.Helper()
+	names := make([]string, 0, len(clause.Bindings))
+	for _, binding := range clause.Bindings {
+		names = append(names, binding.Name)
+	}
+	if !reflect.DeepEqual(names, want) {
+		t.Fatalf("bindings = %v, want %v", names, want)
 	}
 }
 
