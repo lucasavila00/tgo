@@ -202,7 +202,9 @@ func (c *checker) enumGotoEntersClause(
 		return false
 	}
 	invalid := false
-	wrapped := syntax.StatementBlock{Value: body}.Statement()
+	wrapped := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
+	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
 		if invalid {
 			return false
@@ -244,7 +246,9 @@ func (c *checker) enumReceiverStableBetween(
 		return false
 	}
 	stable := true
-	wrapped := syntax.StatementBlock{Value: body}.Statement()
+	wrapped := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
+	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
 		if !stable || syntax.NodePosition(node) >= access {
 			return false
@@ -271,7 +275,9 @@ func (c *checker) enumGotoBypassesProof(
 	access token.Pos,
 ) bool {
 	labels := make(map[string]token.Pos)
-	wrapped := syntax.StatementBlock{Value: body}.Statement()
+	wrapped := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
+	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
@@ -323,7 +329,9 @@ func (c *checker) enumReceiverEscapedBefore(
 		return true
 	}
 	escaped := false
-	wrapped := syntax.StatementBlock{Value: body}.Statement()
+	wrapped := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
+	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
 		if escaped || syntax.NodePosition(node) >= access {
 			return false
@@ -523,7 +531,9 @@ func (c *checker) enumGotoCanInvalidate(
 ) bool {
 	changedAfter := false
 	invalid := false
-	wrapped := syntax.StatementBlock{Value: body}.Statement()
+	wrapped := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
+	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
 		if invalid {
 			return false
