@@ -178,11 +178,9 @@ func nonzeroMap() (map[string]int, error) {
 }
 
 func propagated() (*record, error) {
-	__tgo_value, __tgo_error := load()
-	if __tgo_error != nil {
-		var __tgo_zero *record
-		return __tgo_zero, fmt.Errorf("load: %w", __tgo_error)
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %w", err)
 	}
-	value := __tgo_value
 	return value, nil
 }

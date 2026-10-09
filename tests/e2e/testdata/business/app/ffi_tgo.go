@@ -10,25 +10,20 @@ import (
 )
 
 func StoredLabel(store legacy.AccountStore, id legacy.AccountID) (string, error) {
-	__tgo_value, __tgo_error := store.Load(id)
-	if __tgo_error != nil {
-		var __tgo_zero string
-		return __tgo_zero, __tgo_fmt.Errorf("store.Load: %w", __tgo_error)
+	account, err := store.Load(id)
+	if err != nil {
+		return "", __tgo_fmt.Errorf("store.Load: %w", err)
 	}
-	account := __tgo_value
 	return model.Label(account), nil
 }
 
 func Labels(accounts []model.Account) ([]string, error) {
-	__tgo_value_1, __tgo_error_1 := legacy.Map(accounts, func(account model.Account) (string, error) {
+	labels, err := legacy.Map(accounts, func(account model.Account) (string, error) {
 		return model.Label(account), nil
 	})
-	if __tgo_error_1 != nil {
-		var __tgo_zero_1 []string
-		return __tgo_zero_1, __tgo_fmt.Errorf("legacy.Map: %w", __tgo_error_1)
+	if err != nil {
+		return nil, __tgo_fmt.Errorf("legacy.Map: %w", err)
 	}
-	labels := __tgo_value_1
-
 	return labels, nil
 }
 

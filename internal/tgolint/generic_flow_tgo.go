@@ -25,9 +25,8 @@ type effectOutcome struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v effectOutcome) TgoTag() uint8 { return v.tgoTag }
 
-// effectOutcomeUnknown holds the variant fields. Supply every field.
-type effectOutcomeUnknown struct {
-}
+// effectOutcomeUnknown is the Unknown payload.
+type effectOutcomeUnknown struct{}
 
 // NeweffectOutcomeUnknown constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -35,14 +34,11 @@ func NeweffectOutcomeUnknown(_ effectOutcomeUnknown) effectOutcome {
 	return effectOutcome{tgoTag: 1}
 }
 
-// TgoUnknown requires Unknown. No tag check.
-func (v effectOutcome) TgoUnknown() effectOutcomeUnknown {
-	return effectOutcomeUnknown{}
-}
+// TgoUnknown returns the Unknown payload. Check TgoTag first.
+func (effectOutcome) TgoUnknown() effectOutcomeUnknown { return effectOutcomeUnknown{} }
 
-// effectOutcomeNever holds the variant fields. Supply every field.
-type effectOutcomeNever struct {
-}
+// effectOutcomeNever is the Never payload.
+type effectOutcomeNever struct{}
 
 // NeweffectOutcomeNever constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -50,14 +46,11 @@ func NeweffectOutcomeNever(_ effectOutcomeNever) effectOutcome {
 	return effectOutcome{tgoTag: 2}
 }
 
-// TgoNever requires Never. No tag check.
-func (v effectOutcome) TgoNever() effectOutcomeNever {
-	return effectOutcomeNever{}
-}
+// TgoNever returns the Never payload. Check TgoTag first.
+func (effectOutcome) TgoNever() effectOutcomeNever { return effectOutcomeNever{} }
 
-// effectOutcomeAlways holds the variant fields. Supply every field.
-type effectOutcomeAlways struct {
-}
+// effectOutcomeAlways is the Always payload.
+type effectOutcomeAlways struct{}
 
 // NeweffectOutcomeAlways constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -65,14 +58,11 @@ func NeweffectOutcomeAlways(_ effectOutcomeAlways) effectOutcome {
 	return effectOutcome{tgoTag: 3}
 }
 
-// TgoAlways requires Always. No tag check.
-func (v effectOutcome) TgoAlways() effectOutcomeAlways {
-	return effectOutcomeAlways{}
-}
+// TgoAlways returns the Always payload. Check TgoTag first.
+func (effectOutcome) TgoAlways() effectOutcomeAlways { return effectOutcomeAlways{} }
 
-// effectOutcomeConditional holds the variant fields. Supply every field.
-type effectOutcomeConditional struct {
-}
+// effectOutcomeConditional is the Conditional payload.
+type effectOutcomeConditional struct{}
 
 // NeweffectOutcomeConditional constructs effectOutcome. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -80,10 +70,9 @@ func NeweffectOutcomeConditional(_ effectOutcomeConditional) effectOutcome {
 	return effectOutcome{tgoTag: 4}
 }
 
-// TgoConditional requires Conditional. No tag check.
-func (v effectOutcome) TgoConditional() effectOutcomeConditional {
-	return effectOutcomeConditional{}
-}
+// TgoConditional returns the Conditional payload. Check TgoTag first.
+func (effectOutcome) TgoConditional() effectOutcomeConditional { return effectOutcomeConditional{} }
+
 func (v effectOutcome) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -110,6 +99,7 @@ func (v effectOutcome) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid effectOutcome JSON tag")
 	}
 }
+
 func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte

@@ -24,7 +24,7 @@ type model struct {
 // TgoTag returns the tag. Use only on a constructed value.
 func (v model) TgoTag() uint8 { return v.tgoTag }
 
-// modelChecked holds the variant fields. Supply every field.
+// modelChecked is the Checked payload.
 type modelChecked struct {
 	Package string
 	Name    string
@@ -36,12 +36,10 @@ func NewmodelChecked(value modelChecked) model {
 	return model{tgoTag: 1, tgoChecked: value}
 }
 
-// TgoChecked requires Checked. No tag check.
-func (v model) TgoChecked() modelChecked {
-	return v.tgoChecked
-}
+// TgoChecked returns the Checked payload. Check TgoTag first.
+func (v model) TgoChecked() modelChecked { return v.tgoChecked }
 
-// modelEnum holds the variant fields. Supply every field.
+// modelEnum is the Enum payload.
 type modelEnum struct {
 	Package  string
 	Name     string
@@ -54,14 +52,11 @@ func NewmodelEnum(value modelEnum) model {
 	return model{tgoTag: 2, tgoPayload: value}
 }
 
-// TgoEnum requires Enum. No tag check.
-func (v model) TgoEnum() modelEnum {
-	return v.tgoPayload.(modelEnum)
-}
+// TgoEnum returns the Enum payload. Check TgoTag first.
+func (v model) TgoEnum() modelEnum { return v.tgoPayload.(modelEnum) }
 
-// modelMixed holds the variant fields. Supply every field.
-type modelMixed struct {
-}
+// modelMixed is the Mixed payload.
+type modelMixed struct{}
 
 // NewmodelMixed constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -69,14 +64,11 @@ func NewmodelMixed(_ modelMixed) model {
 	return model{tgoTag: 3}
 }
 
-// TgoMixed requires Mixed. No tag check.
-func (v model) TgoMixed() modelMixed {
-	return modelMixed{}
-}
+// TgoMixed returns the Mixed payload. Check TgoTag first.
+func (model) TgoMixed() modelMixed { return modelMixed{} }
 
-// modelParameter holds the variant fields. Supply every field.
-type modelParameter struct {
-}
+// modelParameter is the Parameter payload.
+type modelParameter struct{}
 
 // NewmodelParameter constructs model. Model fields must be valid.
 // Shared fields keep their aliases and caller duties.
@@ -84,10 +76,9 @@ func NewmodelParameter(_ modelParameter) model {
 	return model{tgoTag: 4}
 }
 
-// TgoParameter requires Parameter. No tag check.
-func (v model) TgoParameter() modelParameter {
-	return modelParameter{}
-}
+// TgoParameter returns the Parameter payload. Check TgoTag first.
+func (model) TgoParameter() modelParameter { return modelParameter{} }
+
 func (v model) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case 1:
@@ -114,6 +105,7 @@ func (v model) MarshalJSON() ([]byte, error) {
 		return nil, __tgo_fmt.Errorf("invalid model JSON tag")
 	}
 }
+
 func (v *model) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
