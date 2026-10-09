@@ -593,7 +593,7 @@ func sourceRange(
 
 func sameFields(
 	source []sourceField,
-	generated []*syntax.Field,
+	generated []%syntax.Field,
 	file %syntax.File,
 ) bool {
 	if len(source) != len(generated) {

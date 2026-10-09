@@ -122,10 +122,15 @@ func (c *converter) statementRequired(value frontNode) *Statement {
 		}}.Statement()
 		return &result
 	case *ast.CommClause:
+		__tgo_source := item.Body
+		__tgo_result := make([]*Statement, len(__tgo_source))
+		for __tgo_index, statement := range __tgo_source {
+			__tgo_result[__tgo_index] = c.statementRequired(statement)
+		}
 		result := StatementCommunication{Value: &CommunicationClause{
 			Span: span(item), Case: item.Case,
 			Communication: c.statement(item.Comm), Colon: item.Colon,
-			Body: c.statementList(item),
+			Body: __tgo_result,
 		}}.Statement()
 		return &result
 	case *ast.SelectStmt:
