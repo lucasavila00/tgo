@@ -628,7 +628,7 @@ func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDeclar
 		Fields:          nil,
 	}
 	for _, item := range declaration.Variants {
-		fields := []field(nil)
+		fields := make([]field, 0, len(item.Fields))
 		for _, itemField := range item.Fields {
 			fields = append(fields, sourceModelField(files, data, itemField)...)
 		}
@@ -642,7 +642,7 @@ func enumModel(files *token.FileSet, data []byte, declaration *syntax.EnumDeclar
 
 func structModel(files *token.FileSet, data []byte, declaration *syntax.StructDeclaration) *model {
 	position := files.Position(declaration.Name.Start)
-	fields := []field(nil)
+	fields := make([]field, 0, len(declaration.Fields))
 	for _, itemField := range declaration.Fields {
 		fields = append(fields, sourceModelField(files, data, itemField)...)
 	}
