@@ -428,15 +428,15 @@ func sourceModelName(value *sourceModel) string {
 	if value == nil {
 		return ""
 	}
-	switch __tgo_match_25 := *value; __tgo_match_25.TgoTag() {
+	switch __tgo_match_22 := *value; __tgo_match_22.TgoTag() {
 	case 1:
-		checked := __tgo_match_25.TgoChecked()
+		checked := __tgo_match_22.TgoChecked()
 		return checked.Name
 	case 2:
-		enum := __tgo_match_25.TgoEnum()
+		enum := __tgo_match_22.TgoEnum()
 		return enum.Name
 	case 3:
-		structure := __tgo_match_25.TgoStruct()
+		structure := __tgo_match_22.TgoStruct()
 		return structure.Name
 	default:
 		panic("invalid sourceModel variant")
@@ -447,12 +447,12 @@ func sourceModelFact(value *sourceModel) *model {
 	if value == nil {
 		return nil
 	}
-	switch __tgo_match_26 := *value; __tgo_match_26.TgoTag() {
+	switch __tgo_match_23 := *value; __tgo_match_23.TgoTag() {
 	case 1:
-		checked := __tgo_match_26.TgoChecked()
+		checked := __tgo_match_23.TgoChecked()
 		return checked.Fact
 	case 2:
-		enum := __tgo_match_26.TgoEnum()
+		enum := __tgo_match_23.TgoEnum()
 		return enum.Fact
 	case 3:
 		return nil
@@ -505,16 +505,16 @@ func sourceShapeMatches(
 	if source == nil {
 		return false
 	}
-	switch __tgo_match_27 := *source; __tgo_match_27.TgoTag() {
+	switch __tgo_match_24 := *source; __tgo_match_24.TgoTag() {
 	case 3:
-		sourceStruct := __tgo_match_27.TgoStruct()
+		sourceStruct := __tgo_match_24.TgoStruct()
 		structure, ok := representation.(*ast.StructType)
 		if !ok {
 			return false
 		}
 		return sameFields(sourceStruct.Fields, structure.Fields)
 	case 1:
-		checked := __tgo_match_27.TgoChecked()
+		checked := __tgo_match_24.TgoChecked()
 		structure, ok := representation.(*ast.StructType)
 		if !ok {
 			return false
@@ -525,7 +525,7 @@ func sourceShapeMatches(
 			len(structure.Fields.List) == 1 &&
 			sameExpressionText(checked.Base, structure.Fields.List[0].Type)
 	case 2:
-		enum := __tgo_match_27.TgoEnum()
+		enum := __tgo_match_24.TgoEnum()
 		if !generatedEnumShape(typ, enum.Name, enum.Variants) {
 			return false
 		}
