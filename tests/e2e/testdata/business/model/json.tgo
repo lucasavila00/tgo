@@ -72,3 +72,54 @@ type JSONInternalPayloadMethod enum `json:"internal,tag=type"` {
 type JSONInternalPromotedMethod enum `json:"internal,tag=type"` {
     Value struct { JSONObject } `json:"value"`
 }
+
+type JSONNonNilTarget struct{ Name string `json:"name,omitempty"` }
+
+type JSONNonNilAlias = %JSONNonNilTarget
+
+type JSONNonNilCustom struct {
+    Value %JSONNonNilTarget
+}
+
+type JSONNonNilExternal enum {
+    Value struct {
+        Direct %JSONNonNilTarget
+        Alias JSONNonNilAlias
+        Nested struct {
+            Array [1]%JSONNonNilTarget
+            Slice []%JSONNonNilTarget
+            Map map[string]%JSONNonNilTarget
+            Optional *struct { Value %JSONNonNilTarget }
+        }
+        Custom JSONNonNilCustom
+    }
+}
+
+type JSONNonNilInternal enum `json:"internal,tag=type"` {
+    Value struct { Required %JSONNonNilTarget } `json:"value"`
+}
+
+type JSONNonNilAdjacent enum `json:"adjacent,tag=type,content=data"` {
+    Value struct { Required %JSONNonNilTarget } `json:"value"`
+}
+
+type JSONNonNilUntagged enum `json:"untagged"` {
+    First struct { Required %JSONNonNilTarget }
+    Second struct { Count int }
+}
+
+type JSONNonNilRecursive struct {
+    Next *JSONNonNilRecursive
+    Required %JSONNonNilTarget
+}
+
+type JSONNonNilRequired struct { Item %JSONNonNilTarget }
+
+type JSONNonNilBox[T any] struct { Value T }
+
+type JSONNonNilAdvanced enum {
+    Value struct {
+        Recursive JSONNonNilRecursive
+        Generic JSONNonNilBox[JSONNonNilRequired]
+    }
+}
