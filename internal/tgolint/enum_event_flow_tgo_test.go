@@ -130,6 +130,46 @@ func TestEnumRelationRequiresEveryJoinedPath(t *testing.T) {
 	if !enumCellSetEqual(unchanged.cells[3].relations, enumCellSet{1: true}) {
 		t.Fatalf("unchanged relation = %v", unchanged.cells[3].relations)
 	}
+	proofState := newEnumEventState()
+	tested := enumAbstractValue{
+		regions:       enumRegionSet{1: true, 2: true},
+		relations:     enumCellSet{1: true},
+		relationKnown: true,
+		readCells:     enumCellSet{1: true},
+	}
+	tested.observation = proofState.observe(tested)
+	proofState.prove(tested, 1)
+	partial := joined.cells[3]
+	if proofState.payloadValid(partial, 1) {
+		t.Fatal("a partially rebound copy inherited the tested proof")
+	}
+}
+
+func TestEnumCopiedValueIgnoresSourceRebind(t *testing.T) {
+	t.Parallel()
+	graph := newEnumEventGraph()
+	state := newEnumEventState()
+	copy := enumAbstractValue{
+		regions:       enumRegionSet{1: true},
+		relations:     enumCellSet{1: true},
+		relationKnown: true,
+		readCells:     enumCellSet{2: true},
+	}
+	copy.observation = state.observe(copy)
+	state.prove(copy, 1)
+	state.saved[1] = enumAbstractValue{
+		regions:       enumRegionSet{2: true},
+		relations:     enumCellSet{3: true},
+		relationKnown: true,
+	}
+	graph.transfer(state, enumEvent{
+		kind:  enumEventStore,
+		cells: enumCellSet{1: true},
+		value: 1,
+	})
+	if !state.payloadValid(copy, 1) {
+		t.Fatal("rebinding the source removed the copied value proof")
+	}
 }
 
 func TestEnumInvocationStartsWithNoPriorWrites(t *testing.T) {
