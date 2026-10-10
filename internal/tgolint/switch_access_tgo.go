@@ -28,10 +28,14 @@ func (c *checker) checkRepresentationAccess(expression *syntax.Expression) {
 	}
 	if modelIsChecked(model) && c.checkedFieldChange(expression) &&
 		!c.checkedReceiverMutation(expression, model) {
+		name := selector.Selector.Name
+		if field := c.promotedPointerMethodField(expression); field != nil {
+			name = field.Name()
+		}
 		c.pass.Reportf(
 			selector.Start,
 			"checked field %s cannot be changed after construction",
-			selector.Selector.Name,
+			name,
 		)
 		return
 	}
@@ -55,6 +59,19 @@ func (c *checker) checkedReceiverMutation(
 	if selector == nil {
 		return false
 	}
+	selection := c.facts.Selection(expression)
+	if selection == nil {
+		return false
+	}
+	directField := selection.Kind() == types.FieldVal &&
+		len(selection.Index()) == 1
+	promotedField := c.promotedPointerMethodField(expression)
+	directPrimitiveMethod := selection.Kind() == types.MethodVal &&
+		len(selection.Index()) == 2 && promotedField != nil &&
+		checkedPrimitiveType(promotedField.Type())
+	if !directField && !directPrimitiveMethod {
+		return false
+	}
 	receiver := sourceUnparenthesized(selector.Expression)
 	receiverName := syntax.IdentifierExpressionOf(receiver)
 	if receiverName == nil {
@@ -66,12 +83,78 @@ func (c *checker) checkedReceiverMutation(
 	for current != nil {
 		declaration, ok := syntax.FunctionDeclarationOf(current)
 		if ok {
-			return declaration != nil && declaration.Name.Name == "check" &&
-				c.matchesCheckedReceiver(
+			if declaration == nil || declaration.Name.Name != "check" ||
+				!c.matchesCheckedReceiver(
 					declaration, model, receiverName, receiverObject,
-				)
+				) {
+				return false
+			}
+			if directPrimitiveMethod || checkedPrimitiveField(selection) {
+				return true
+			}
+			return c.checkedFieldReplacement(expression)
 		}
 		current = syntax.Parent(c.file, current)
+	}
+	return false
+}
+
+func checkedPrimitiveField(selection *types.Selection) bool {
+	field, ok := selection.Obj().(*types.Var)
+	if !ok {
+		return false
+	}
+	return checkedPrimitiveType(field.Type())
+}
+
+func checkedPrimitiveType(typ types.Type) bool {
+	basic, ok := types.Unalias(typ).Underlying().(*types.Basic)
+	if !ok {
+		return false
+	}
+	const allowed = types.IsBoolean | types.IsInteger | types.IsFloat |
+		types.IsComplex | types.IsString
+	return basic.Info()&allowed != 0
+}
+
+func (c *checker) checkedFieldReplacement(expression *syntax.Expression) bool {
+	current := expression
+	parent := c.parents[syntax.ExpressionNode(current)]
+	for parent != nil {
+		if wrapped, ok := syntax.ExpressionOf(parent); ok {
+			if wrapped == nil {
+				return false
+			}
+			parentheses := syntax.ParenthesizedExpressionOf(wrapped)
+			if parentheses == nil ||
+				!sameExpressionRange(parentheses.Expression, current) {
+				return false
+			}
+			current = wrapped
+			parent = c.parents[*parent]
+			continue
+		}
+		statement, ok := syntax.StatementOf(parent)
+		if !ok {
+			return false
+		}
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			for _, left := range assignment.Left {
+				if sameExpressionRange(left, current) {
+					return true
+				}
+			}
+		}
+		if ranged := syntax.RangeStatementOf(statement); ranged != nil &&
+			ranged.Operator == token.ASSIGN {
+			if optionalSameExpressionRange(ranged.Key, current) {
+				return true
+			}
+			if optionalSameExpressionRange(ranged.Value, current) {
+				return true
+			}
+		}
+		return false
 	}
 	return false
 }
@@ -135,48 +218,97 @@ func sameModelForType(
 
 func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {
 	selection := c.facts.Selection(expression)
-	if selection == nil || selection.Kind() != types.FieldVal ||
-		len(selection.Index()) != 1 {
+	if selection == nil {
 		return false
 	}
-	target := syntax.ExpressionNode(expression)
+	if selection.Kind() != types.FieldVal {
+		return c.promotedPointerMethodField(expression) != nil
+	}
+	current := expression
+	target := syntax.ExpressionNode(current)
 	parent := c.parents[target]
 	for parent != nil {
 		if wrapped, ok := syntax.ExpressionOf(parent); ok {
+			if wrapped == nil {
+				return false
+			}
 			parentheses := syntax.ParenthesizedExpressionOf(wrapped)
-			if parentheses != nil {
+			if parentheses != nil &&
+				sameExpressionRange(parentheses.Expression, current) {
+				current = wrapped
 				parent = c.parents[*parent]
 				continue
 			}
+			selector := syntax.SelectorExpressionOf(wrapped)
+			if selector != nil && sameExpressionRange(selector.Expression, current) {
+				return c.pointerMethodSelection(wrapped)
+			}
 			unary := syntax.UnaryExpressionOf(wrapped)
-			return unary != nil && unary.Operator == token.AND
+			return unary != nil && unary.Operator == token.AND &&
+				sameExpressionRange(unary.Expression, current)
 		}
 		statement, ok := syntax.StatementOf(parent)
 		if !ok {
 			return false
 		}
 		if increment := syntax.IncrementStatementOf(statement); increment != nil {
-			return sameExpressionRange(increment.Expression, expression)
+			return sameExpressionRange(increment.Expression, current)
 		}
 		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
 			for _, left := range assignment.Left {
-				if sameExpressionRange(left, expression) {
+				if sameExpressionRange(left, current) {
 					return true
 				}
 			}
 		}
 		if ranged := syntax.RangeStatementOf(statement); ranged != nil &&
 			ranged.Operator == token.ASSIGN {
-			if ranged.Key != nil && sameExpressionRange(ranged.Key, expression) {
+			if optionalSameExpressionRange(ranged.Key, current) {
 				return true
 			}
-			if ranged.Value != nil && sameExpressionRange(ranged.Value, expression) {
+			if optionalSameExpressionRange(ranged.Value, current) {
 				return true
 			}
 		}
 		return false
 	}
 	return false
+}
+
+func (c *checker) promotedPointerMethodField(
+	expression *syntax.Expression,
+) *types.Var {
+	selection := c.facts.Selection(expression)
+	if selection == nil || len(selection.Index()) < 2 ||
+		(selection.Kind() != types.MethodVal &&
+			selection.Kind() != types.MethodExpr) ||
+		!c.pointerMethodSelection(expression) {
+		return nil
+	}
+	current := selection.Recv()
+	for _, index := range selection.Index()[:len(selection.Index())-1] {
+		current = dereference(current)
+		structure, ok := current.Underlying().(*types.Struct)
+		if !ok || index >= structure.NumFields() {
+			return nil
+		}
+		field := structure.Field(index)
+		if modelIsChecked(c.modelForReceiver(current)) {
+			return field
+		}
+		current = field.Type()
+	}
+	return nil
+}
+
+func optionalSameExpressionRange(
+	left *syntax.Expression,
+	right *syntax.Expression,
+) bool {
+	if left == nil {
+		return false
+	}
+	return sameExpressionRange(left, right)
 }
 
 func sameExpressionRange(left *syntax.Expression, right *syntax.Expression) bool {

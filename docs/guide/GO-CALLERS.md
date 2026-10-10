@@ -11,7 +11,7 @@ Fix every diagnostic. The command checks loaded Go packages for:
 
 - invalid checked-struct zero values;
 - constructor bypasses;
-- writes or address-taking through checked-struct fields;
+- writes, address-taking, or pointer-method access through checked-struct fields;
 - unchecked `(T, error)` results;
 - unchecked `(T, bool)` and comma-ok results;
 - incomplete enum switches and payload reads without a variant proof;
@@ -85,6 +85,12 @@ if err != nil {
 The constructor parameters follow field declaration order. `NewPort` and the generated staging
 carrier are Go ABI. TGo source uses `model.Port{number: 3}` and cannot refer to either generated
 name.
+
+A checked field is a boolean, numeric, or string value, or another checked
+struct by value. Named types and aliases follow this rule. Constructors for
+nested checked values run from the inner value to the outer value. Go callers
+can copy, assign, or take the address of a whole validated checked value. Do not
+bypass a constructor or change storage through one of its fields.
 
 `%T` has the Go `*T` representation. Unchecked Go can still pass nil. The linter adds no runtime
 check and cannot prove code that runs through reflection, `unsafe`, cgo, or a data race.

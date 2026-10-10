@@ -420,6 +420,98 @@ func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 }
 
 func Identity(value int) int { return value }
+
+type Level struct {
+	value int
+}
+type TgoLevelInput struct {
+	FieldValue int
+}
+
+// NewLevel constructs and checks Level.
+func NewLevel(value int) (Level, error) {
+	return Level{value}.check()
+}
+
+func (value Level) check() (Level, error) { return value, nil }
+func (value Level) Value() int            { return value.value }
+
+type Nested struct {
+	level Level
+}
+type TgoNestedInput struct {
+	FieldLevel Level
+}
+
+// NewNested constructs and checks Nested.
+func NewNested(level Level) (Nested, error) {
+	return Nested{level}.check()
+}
+
+func (value Nested) check() (Nested, error) { return value, nil }
+func (value Nested) Level() Level           { return value.level }
+
+type measurable int
+type measurableAlias = measurable
+
+func (value measurable) Value() int { return int(value) }
+func (value *measurable) Change()   { *value = 99 }
+
+type MethodCount struct {
+	measurableAlias
+}
+type TgoMethodCountInput struct {
+	Field0 measurableAlias
+}
+
+// NewMethodCount constructs and checks MethodCount.
+func NewMethodCount(tgoField0 measurableAlias) (MethodCount, error) {
+	return MethodCount{tgoField0}.check()
+}
+
+type methodCountError struct {
+}
+
+func (methodCountError) Error() string { return "invalid MethodCount" }
+func (value MethodCount) check() (MethodCount, error) {
+	if value.measurableAlias != 1 {
+		return MethodCount{},
+			methodCountError{}
+	}
+	return value, nil
+}
+func (value *MethodCount) WholeMethod() {}
+
+type methodCountAlias = MethodCount
+
+type MethodOuter struct {
+	methodCountAlias
+}
+type TgoMethodOuterInput struct {
+	Field0 methodCountAlias
+}
+
+// NewMethodOuter constructs and checks MethodOuter.
+func NewMethodOuter(tgoField0 methodCountAlias) (MethodOuter, error) {
+	return MethodOuter{tgoField0}.check()
+}
+
+func (value MethodOuter) check() (MethodOuter, error) { return value, nil }
+
+type MethodWrapper struct {
+	MethodCount
+}
+
+type MethodWrapperAlias = MethodWrapper
+
+type MethodNestedWrapper struct {
+	MethodWrapperAlias
+}
+
+type MethodPointerWrapper struct {
+	*MethodWrapper
+}
+
 func TgoDefaultPairLeft() string {
 	return ""
 }

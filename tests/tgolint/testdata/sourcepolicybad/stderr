@@ -18,14 +18,41 @@ sourcepolicybad/source.tgo:74:2: checked field number cannot be changed after co
 sourcepolicybad/source.tgo:75:2: checked field number cannot be changed after construction
 sourcepolicybad/source.tgo:76:7: checked field number cannot be changed after construction
 sourcepolicybad/source.tgo:77:6: checked field number cannot be changed after construction
-sourcepolicybad/source.tgo:81:24: NewPort is generated Go ABI; use a checked literal
-sourcepolicybad/source.tgo:82:20: TgoPortInput is generated staging ABI; use a checked literal
-sourcepolicybad/source.tgo:83:33: NewCount is generated Go ABI; use a checked literal
-sourcepolicybad/source.tgo:84:29: TgoCountInput is generated staging ABI; use a checked literal
-sourcepolicybad/source.tgo:85:28: NewLocalReady is generated Go ABI; use Local.Ready{...}
-sourcepolicybad/source.tgo:86:37: NewEventStarted is generated Go ABI; use Event.Started{...}
-sourcepolicybad/source.tgo:89:15: LocalReady is generated enum representation; use Local.Ready{...}
-sourcepolicybad/source.tgo:90:15: TgoLocalReadyInput is generated staging ABI; use Local.Ready{...}
-sourcepolicybad/source.tgo:91:24: EventStarted is generated enum representation; use Event.Started{...}
-sourcepolicybad/source.tgo:92:24: TgoEventStartedInput is generated staging ABI; use Event.Started{...}
-sourcepolicybad/source.tgo:96:9: use a constructor for Event
+sourcepolicybad/source.tgo:102:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:103:7: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:104:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:105:21: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:114:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:115:7: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:116:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:117:15: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:124:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:125:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:126:7: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:127:9: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:129:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:130:15: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:133:2: checked field inner cannot be changed after construction
+sourcepolicybad/source.tgo:134:7: checked field inner cannot be changed after construction
+sourcepolicybad/source.tgo:163:2: checked field measuredAlias cannot be changed after construction
+sourcepolicybad/source.tgo:164:12: checked field measuredAlias cannot be changed after construction
+sourcepolicybad/source.tgo:166:2: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:167:17: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:169:12: checked field measuredAlias cannot be changed after construction
+sourcepolicybad/source.tgo:171:17: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:173:2: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:174:11: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:190:2: checked field measuredAlias cannot be changed after construction
+sourcepolicybad/source.tgo:191:12: checked field measuredAlias cannot be changed after construction
+sourcepolicybad/source.tgo:193:12: checked field measuredAlias cannot be changed after construction
+sourcepolicybad/source.tgo:197:24: NewPort is generated Go ABI; use a checked literal
+sourcepolicybad/source.tgo:198:20: TgoPortInput is generated staging ABI; use a checked literal
+sourcepolicybad/source.tgo:199:33: NewCount is generated Go ABI; use a checked literal
+sourcepolicybad/source.tgo:200:29: TgoCountInput is generated staging ABI; use a checked literal
+sourcepolicybad/source.tgo:201:28: NewLocalReady is generated Go ABI; use Local.Ready{...}
+sourcepolicybad/source.tgo:202:37: NewEventStarted is generated Go ABI; use Event.Started{...}
+sourcepolicybad/source.tgo:205:15: LocalReady is generated enum representation; use Local.Ready{...}
+sourcepolicybad/source.tgo:206:15: TgoLocalReadyInput is generated staging ABI; use Local.Ready{...}
+sourcepolicybad/source.tgo:207:24: EventStarted is generated enum representation; use Event.Started{...}
+sourcepolicybad/source.tgo:208:24: TgoEventStartedInput is generated staging ABI; use Event.Started{...}
+sourcepolicybad/source.tgo:212:9: use a constructor for Event

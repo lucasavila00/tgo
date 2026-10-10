@@ -10,15 +10,15 @@ func (value Quantity) check() (Quantity, error) {
 }
 func (value Quantity) Value() int { return value.value }
 
-type PositivePoint struct { value struct { X int } } checked
+type PositivePoint struct { value int } checked
 
 type positivePointError struct{}
 func (positivePointError) Error() string { return "invalid PositivePoint" }
 func (value PositivePoint) check() (PositivePoint, error) {
-    if value.value.X <= 0 { return PositivePoint{}, positivePointError{} }
+    if value.value <= 0 { return PositivePoint{}, positivePointError{} }
     return value, nil
 }
-func (value PositivePoint) Value() struct { X int } { return value.value }
+func (value PositivePoint) Value() int { return value.value }
 
 type Multiline struct {
     value int

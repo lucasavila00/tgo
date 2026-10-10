@@ -2,7 +2,7 @@ package compiler
 
 import "go/types"
 
-// checkCheckedStructs checks the required local validation method.
+// checkCheckedStructs checks fields and the required local validation method.
 func (p *packageUnit) checkCheckedStructs() {
 	for _, source := range p.Sources {
 		for _, model := range source.Models {
@@ -17,6 +17,7 @@ func (p *packageUnit) checkCheckedStructs() {
 			if !ok {
 				continue
 			}
+			p.checkCheckedStructFields(named)
 			method := directMethod(named, "check")
 			if method == nil {
 				p.failAt(object.Pos(),
@@ -31,6 +32,35 @@ func (p *packageUnit) checkCheckedStructs() {
 			}
 		}
 	}
+}
+
+func (p *packageUnit) checkCheckedStructFields(named *types.Named) {
+	structure, ok := named.Underlying().(*types.Struct)
+	if !ok {
+		return
+	}
+	for index := 0; index < structure.NumFields(); index++ {
+		field := structure.Field(index)
+		if p.validCheckedStructField(field.Type()) {
+			continue
+		}
+		p.failAt(
+			field.Pos(),
+			"checked struct field %s must be boolean, numeric, string, or a checked struct",
+			field.Name(),
+		)
+	}
+}
+
+func (p *packageUnit) validCheckedStructField(typ types.Type) bool {
+	unaliased := types.Unalias(typ)
+	if basic, ok := unaliased.Underlying().(*types.Basic); ok {
+		const allowed = types.IsBoolean | types.IsInteger | types.IsFloat |
+			types.IsComplex | types.IsString
+		return basic.Info()&allowed != 0
+	}
+	_, model := p.modelOwner(typ)
+	return model != nil && model.CheckedStruct
 }
 
 func directMethod(named *types.Named, name string) *types.Func {

@@ -94,3 +94,16 @@ bad/bad.go:912:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:924:9: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:929:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:938:9: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:941:29: cannot construct tgo checked Count with a Go literal
+bad/bad.go:944:2: checked field measurableAlias cannot be changed after construction
+bad/bad.go:945:12: checked field measurableAlias cannot be changed after construction
+bad/bad.go:947:2: checked field methodCountAlias cannot be changed after construction
+bad/bad.go:948:17: checked field methodCountAlias cannot be changed after construction
+bad/bad.go:950:12: checked field measurableAlias cannot be changed after construction
+bad/bad.go:952:17: checked field methodCountAlias cannot be changed after construction
+bad/bad.go:954:2: checked field methodCountAlias cannot be changed after construction
+bad/bad.go:955:11: checked field methodCountAlias cannot be changed after construction
+bad/bad.go:970:2: checked field measurableAlias cannot be changed after construction
+bad/bad.go:971:12: checked field measurableAlias cannot be changed after construction
+bad/bad.go:973:19: checked field measurableAlias cannot be changed after construction
+bad/bad.go:975:17: checked field measurableAlias cannot be changed after construction

@@ -28,6 +28,7 @@ func TestCheckedStructConstruction(t *testing.T) {
 }
 
 func TestNestedCheckedStructConstruction(t *testing.T) {
+	checks = nil
 	port, err := ServicePortFromNumber(443)
 	if err != nil {
 		t.Fatal(err)
@@ -36,8 +37,15 @@ func TestNestedCheckedStructConstruction(t *testing.T) {
 	if ServiceNumber(port) != 443 {
 		t.Fatalf("NewServicePort = %d, %v", ServiceNumber(port), err)
 	}
+	if strings.Join(checks, ",") != "port,service" {
+		t.Fatalf("nested check order = %v", checks)
+	}
+	checks = nil
 	_, err = ServicePortFromNumber(0)
 	if !errors.Is(err, ErrInvalidPort) || !strings.Contains(err.Error(), "Port: ") {
 		t.Fatalf("NewServicePort error = %v", err)
+	}
+	if strings.Join(checks, ",") != "port" {
+		t.Fatalf("failed nested check order = %v", checks)
 	}
 }

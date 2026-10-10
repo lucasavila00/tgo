@@ -115,11 +115,12 @@ func Transparent(number int) (model.Port, error) {
 }
 
 func Contextual() (model.Context, error) {
+	port := model.Port{number: 1}!
 	return model.Context{
 		hidden: model.Hidden(1),
-		points: []struct{ X int }{{X: 2}},
+		alias: model.HiddenAlias(2),
 		number: 255,
-		pointer: nil,
+		port: port,
 	}
 }
 
@@ -138,17 +139,17 @@ func Unicode() (model.Unicode, error) {
 		t.Fatal(problems[0])
 	}
 	output := string(compiled.Outputs["app.tgo"])
-	if count := strings.Count(output, "model.NewPort("); count != 4 {
-		t.Fatalf("generated constructor calls = %d, want 4\n%s", count, output)
+	if count := strings.Count(output, "model.NewPort("); count != 5 {
+		t.Fatalf("generated constructor calls = %d, want 5\n%s", count, output)
 	}
 	if strings.Contains(output, ".check()") {
 		t.Fatalf("imported construction calls private check\n%s", output)
 	}
 	if !strings.Contains(output, "model.TgoContextInput{") ||
-		!strings.Contains(output, "FieldPoints: []struct{ X int }{{X: 2}}") ||
 		!strings.Contains(output, "FieldHidden: model.Hidden(1)") ||
+		!strings.Contains(output, "FieldAlias: model.HiddenAlias(2)") ||
 		!strings.Contains(output, "FieldNumber: 255") ||
-		!strings.Contains(output, "FieldPointer: nil") {
+		!strings.Contains(output, "FieldPort: port") {
 		t.Fatalf("imported contextual construction changed\n%s", output)
 	}
 	for _, text := range []string{
@@ -164,6 +165,26 @@ func Unicode() (model.Unicode, error) {
 		if !strings.Contains(output, text) {
 			t.Fatalf("imported Unicode construction does not contain %q\n%s", text, output)
 		}
+	}
+	_, problems = Compile(PackageInput{
+		Path: "nested",
+		Sources: []File{{Name: "nested.tgo", Data: []byte(`package nested
+import "model"
+type Context struct {
+	port model.Port
+	alias model.PortAlias
+} checked
+func (value Context) check() (Context, error) { return value, nil }
+`)}},
+		Imports: map[string]*CompiledPackage{"model": modelPackage},
+		FileSet: token.NewFileSet(),
+		Importer: checkedPackageImporter{
+			packages: map[string]*types.Package{"model": modelPackage.Package},
+			fallback: importer.Default(),
+		},
+	})
+	if len(problems) != 0 {
+		t.Fatalf("imported checked field failed: %v", problems)
 	}
 	_, problems = Compile(PackageInput{
 		Path: "invalid",
@@ -520,37 +541,6 @@ func Invalid(number int) (Port, error) { ` + body + ` }
 	}
 }
 
-func TestCompilerLeavesCheckedFieldPolicyToTgolint(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name string
-		body string
-	}{
-		{name: "assignment", body: "value.number = 2"},
-		{name: "increment", body: "value.number++"},
-		{name: "address", body: "_ = &value.number"},
-		{name: "range assignment", body: "for value.number = range []int{1} {}"},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			_, problems := Compile(PackageInput{
-				Path: "sample",
-				Sources: []File{{Name: "sample.tgo", Data: []byte(`package sample
-
-type Port struct { number int } checked
-func (value Port) check() (Port, error) { value.number = 1; return value, nil }
-func Invalid(value Port) { ` + test.body + ` }
-`)}},
-				FileSet: token.NewFileSet(), Importer: importer.Default(),
-			})
-			if len(problems) != 0 {
-				t.Fatalf("compiler applied checked field policy: %v", problems)
-			}
-		})
-	}
-}
-
 func TestCompilerLeavesCheckedReceiverPolicyToTgolint(t *testing.T) {
 	t.Parallel()
 	_, problems := Compile(PackageInput{
@@ -602,15 +592,16 @@ func compileCheckedStructPackage(t *testing.T) *CompiledPackage {
 
 type Port struct { number int } checked
 func (value Port) check() (Port, error) { return value, nil }
+type PortAlias = Port
 
-type hidden struct { X int }
-func Hidden(value int) hidden { return hidden{X: value} }
+type Hidden uint16
+type HiddenAlias = Hidden
 
 type Context struct {
-	pointer *int
+	hidden Hidden
+	alias HiddenAlias
 	number uint8
-	hidden hidden
-	points []struct { X int }
+	port Port
 } checked
 func (value Context) check() (Context, error) { return value, nil }
 

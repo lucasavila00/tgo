@@ -7,7 +7,9 @@
       "OrdinaryNamed",
       "OrdinaryPointer",
       "checkedNamed",
+      "check",
       "checkedPointer",
+      "check",
       "Box",
       "Pair",
       "Ordinary",
@@ -86,15 +88,15 @@
         "name": "checkedNamed",
         "kind": "field",
         "container": "Checked",
-        "range": {"file": "main.tgo", "text": "checkedNamed", "occurrence": 2},
-        "selection": {"file": "main.tgo", "text": "checkedNamed", "occurrence": 2}
+        "range": {"file": "main.tgo", "text": "checkedNamed", "occurrence": 4},
+        "selection": {"file": "main.tgo", "text": "checkedNamed", "occurrence": 4}
       },
       {
         "name": "checkedPointer",
         "kind": "field",
         "container": "Checked",
-        "range": {"file": "main.tgo", "text": "%checkedPointer", "occurrence": 1},
-        "selection": {"file": "main.tgo", "text": "checkedPointer", "occurrence": 2}
+        "range": {"file": "main.tgo", "text": "checkedPointer", "occurrence": 4},
+        "selection": {"file": "main.tgo", "text": "checkedPointer", "occurrence": 4}
       },
       {
         "name": "after",
@@ -126,8 +128,8 @@
         "name": "checkedPointer",
         "kind": "field",
         "container": "Checked",
-        "range": {"file": "main.tgo", "text": "%checkedPointer", "occurrence": 1},
-        "selection": {"file": "main.tgo", "text": "checkedPointer", "occurrence": 2}
+        "range": {"file": "main.tgo", "text": "checkedPointer", "occurrence": 4},
+        "selection": {"file": "main.tgo", "text": "checkedPointer", "occurrence": 4}
       }
     ]
   }

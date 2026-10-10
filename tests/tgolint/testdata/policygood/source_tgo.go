@@ -278,6 +278,151 @@ func choicePayload(value Choice) string {
 	payload := value.TextPayload
 	return payload().Value
 }
+
+type measured int
+
+func (value measured) Value() int  { return int(value) }
+func (value *measured) Increment() { *value++ }
+
+type inner struct {
+	number measured
+}
+type TgoinnerInput struct {
+	FieldNumber measured
+}
+
+// Newinner constructs and checks inner.
+func Newinner(number measured) (inner, error) {
+	return inner{number}.check()
+}
+
+func (value inner) check() (inner, error) { return value, nil }
+
+type NestedQuantity struct {
+	number measured
+	inner  inner
+}
+type TgoNestedQuantityInput struct {
+	FieldNumber measured
+	FieldInner  inner
+}
+
+// NewNestedQuantity constructs and checks NestedQuantity.
+func NewNestedQuantity(number measured, inner inner) (NestedQuantity, error) {
+	return NestedQuantity{number, inner}.check()
+}
+
+func (value NestedQuantity) check() (NestedQuantity, error) {
+	value.number++
+	value.number.Increment()
+	increment := value.number.Increment
+	increment()
+	replacement, err := func(tgoInput TgoinnerInput) (inner, error) {
+		return Newinner(tgoInput.FieldNumber)
+	}(TgoinnerInput{FieldNumber: 1})
+	if err != nil {
+		return NestedQuantity{}, fmt.Errorf("inner: %w", err)
+	}
+
+	value.inner = replacement
+	return value, nil
+}
+
+type EmbeddedQuantity struct {
+	inner
+}
+type TgoEmbeddedQuantityInput struct {
+	Field0 inner
+}
+
+// NewEmbeddedQuantity constructs and checks EmbeddedQuantity.
+func NewEmbeddedQuantity(tgoField0 inner) (EmbeddedQuantity, error) {
+	return EmbeddedQuantity{tgoField0}.check()
+}
+
+func (value EmbeddedQuantity) check() (EmbeddedQuantity, error) { return value, nil }
+
+func checkedCopies(value NestedQuantity) int {
+	copy := value
+	copy = value
+	_ = &copy
+	return value.number.Value() + value.inner.number.Value()
+}
+
+func checkedPromotedRead(value EmbeddedQuantity) int {
+	return value.number.Value()
+}
+
+type measuredAlias = measured
+
+type MethodQuantity struct {
+	measuredAlias
+}
+type TgoMethodQuantityInput struct {
+	Field0 measuredAlias
+}
+
+// NewMethodQuantity constructs and checks MethodQuantity.
+func NewMethodQuantity(tgoField0 measuredAlias) (MethodQuantity, error) {
+	return MethodQuantity{tgoField0}.check()
+}
+
+type methodQuantityError struct {
+}
+
+func (methodQuantityError) Error() string { return "invalid MethodQuantity" }
+func (value MethodQuantity) check() (MethodQuantity, error) {
+	value.Increment()
+	change := value.Increment
+	change()
+	if value.measuredAlias != 2 {
+		return MethodQuantity{},
+
+			methodQuantityError{}
+	}
+	return value, nil
+}
+
+func (value *MethodQuantity) WholeMethod() {}
+
+type methodQuantityAlias = MethodQuantity
+
+type MethodOuter struct {
+	methodQuantityAlias
+}
+type TgoMethodOuterInput struct {
+	Field0 methodQuantityAlias
+}
+
+// NewMethodOuter constructs and checks MethodOuter.
+func NewMethodOuter(tgoField0 methodQuantityAlias) (MethodOuter, error) {
+	return MethodOuter{tgoField0}.check()
+}
+
+func (value MethodOuter) check() (MethodOuter, error) { return value, nil }
+
+func safePromotedMethods(value *MethodQuantity, outer *MethodOuter) int {
+	value.WholeMethod()
+	whole := value.WholeMethod
+	whole()
+	wholeExpression := (*MethodQuantity).WholeMethod
+	wholeExpression(value)
+	valueExpression := MethodQuantity.Value
+	valueMethod := outer.Value
+	return value.Value() + valueMethod() + valueExpression(*value)
+}
+
+type MutableMethodWrapper struct {
+	measuredAlias
+}
+
+func changeMutableMethods(value *MutableMethodWrapper) {
+	value.Increment()
+	change := value.Increment
+	change()
+	method := (*MutableMethodWrapper).Increment
+	method(value)
+}
 func TgoDefaultRequestTags() map[string]string {
 	return map[string]string{}
 }

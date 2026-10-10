@@ -76,6 +76,16 @@ func Label(account Account) string {
 }
 ```
 
+A checked field must be boolean, numeric, string, or another checked struct by
+value. Named scalar types and aliases are valid. A private checked type can be
+embedded by value. Do not use pointers, `%T`, slices, maps, arrays, functions,
+channels, interfaces, enums, or ordinary structs as checked fields.
+
+The `check` method can normalize its directly declared scalar fields. It can
+replace a directly declared nested checked field with another validated value.
+It cannot change fields inside that nested value. This rule applies to explicit
+and promoted fields, field addresses, and pointer-receiver method access.
+
 Construct with `Account.Personal{Name: "Lucas"}`. `exhaustive:` requires one case for each declared
 variant. Use `default:` when the switch needs fallback behavior. Duplicate tags and missing
 exhaustive cases fail compilation. Do not use `fallthrough` or select generated enum methods through an interface.
@@ -131,6 +141,8 @@ port, err := model.NewPort(3)
 
 Check `err` before you use `port`. TGo trusts values from Go. TGo source uses checked literals,
 including for types from another package. It cannot call the generated `NewPort` Go ABI.
+For a nested checked literal, construct the inner value before the outer value.
+If the inner check fails, the outer check does not run.
 
 Use postfix `!` when a call returns Go values followed by `error` and the current function also
 ends in `error`:

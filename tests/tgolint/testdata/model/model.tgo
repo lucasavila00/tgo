@@ -24,3 +24,41 @@ type Signal enum {
 }
 
 func Identity(value int) int { return value }
+
+type Level struct { value int } checked
+
+func (value Level) check() (Level, error) { return value, }
+func (value Level) Value() int            { return value.value }
+
+type Nested struct { level Level } checked
+
+func (value Nested) check() (Nested, error) { return value, }
+func (value Nested) Level() Level           { return value.level }
+
+type measurable int
+type measurableAlias = measurable
+
+func (value measurable) Value() int { return int(value) }
+func (value *measurable) Change()    { *value = 99 }
+
+type MethodCount struct{ measurableAlias } checked
+
+type methodCountError struct{}
+
+func (methodCountError) Error() string { return "invalid MethodCount" }
+func (value MethodCount) check() (MethodCount, error) {
+	if value.measurableAlias != 1 { return , methodCountError{} }
+	return value,
+}
+func (value *MethodCount) WholeMethod()               {}
+
+type methodCountAlias = MethodCount
+
+type MethodOuter struct{ methodCountAlias } checked
+
+func (value MethodOuter) check() (MethodOuter, error) { return value, }
+
+type MethodWrapper struct{ MethodCount }
+type MethodWrapperAlias = MethodWrapper
+type MethodNestedWrapper struct{ MethodWrapperAlias }
+type MethodPointerWrapper struct{ *MethodWrapper }

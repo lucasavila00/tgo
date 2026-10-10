@@ -70,8 +70,14 @@ func (value Quantity) check() (Quantity, error) {
 Each literal returns `(Quantity, error)`. Use postfix `!` when the surrounding function returns an
 error. The same literal form works from another TGo package. The compiler generates a fallible
 `NewQuantity` ABI for Go callers, but TGo source cannot call it. It generates no field accessor.
-TGo permits package-local field reads, but it rejects field changes and address-taking after
-construction. On failure, the zero value is invalid.
+Use only boolean, numeric, string, or checked-struct values as fields. Named types and aliases are
+valid. Embed only a private checked struct by value. Do not use pointers, collections, arrays,
+functions, channels, interfaces, enums, or ordinary structs as checked fields.
+
+TGo permits package-local field reads, but it rejects field changes, address-taking, and writable
+pointer-method access after construction. A `check` method can normalize its directly declared
+scalar fields or replace one directly declared checked field with a validated whole value. It must
+not change a nested or promoted checked field. On failure, the zero value is invalid.
 
 ## Error propagation
 
@@ -170,6 +176,9 @@ account := model.NewAccountPersonal("Lucas")
 
 `NewQuantity` in this example is generated Go ABI. Test check success and failure, every tag
 branch, and shared collection changes.
+For nested checked values, construct the inner value first. Its failure must
+prevent the outer check. Whole checked-value copies, assignments, and addresses
+are valid. Field writes and writable pointer-method access are not valid.
 Test calls in both directions. Include Go error results and invalid foreign values. Run
 `tgolint` to check Go construction, result pairs, and enum access.
 
