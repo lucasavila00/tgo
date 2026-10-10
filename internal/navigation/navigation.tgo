@@ -57,6 +57,7 @@ type Hover struct {
 type occurrence struct {
 	location Location
 	key      string
+	hover    string
 }
 
 type sourcePosition struct {
@@ -68,7 +69,6 @@ type sourcePosition struct {
 type workspaceIndex struct {
 	occurrences []occurrence
 	definitions map[string]Location
-	hovers      map[string]string
 	references  map[string][]Location
 	symbols     []Symbol
 }
@@ -161,11 +161,7 @@ func (e *Engine) Hover(
 	for _, item := range index.occurrences {
 		if item.location.URI == uri && item.location.Start <= offset &&
 			offset < item.location.End {
-			contents, ok := index.hovers[item.key]
-			if !ok {
-				return nil,
-			}
-			return &Hover{Contents: contents, Range: item.location},
+			return &Hover{Contents: item.hover, Range: item.location},
 		}
 	}
 	return nil,
@@ -264,7 +260,6 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	index := &workspaceIndex{
 		occurrences: nil,
 		definitions: make(map[string]Location),
-		hovers:      make(map[string]string),
 		references:  make(map[string][]Location),
 		symbols:     nil,
 	}
@@ -317,9 +312,8 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 						)
 					}
 				}
-				index.hovers[key] = contents
 				index.occurrences = append(index.occurrences, occurrence{
-					location: location, key: key,
+					location: location, key: key, hover: contents,
 				})
 				index.references[key] = append(index.references[key], location)
 				if definition {
