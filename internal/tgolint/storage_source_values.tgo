@@ -501,18 +501,24 @@ func copyStorageSlices(
 ) storageValue {
 	count := storageValue{}
 	snapshot := cloneStorageState(state)
-	writes := make(map[storagePathKey]storageValue)
+	var post storageState
+	first := true
 	for _, target := range destination.slices {
 		for _, origin := range source.slices {
+			alternative := cloneStorageState(snapshot)
 			if target.knownLength && target.length == 0 ||
 				origin.knownLength && origin.length == 0 {
 				count = joinStorageValue(count, storageValue{integerKnown: true})
-				continue
+			} else {
+				writes := storageSliceCopyValues(snapshot, target, origin)
+				exact := len(destination.slices) == 1 &&
+					!target.backing.merged
+				for path, value := range writes {
+					writeStorageMemory(alternative, path, value, exact && !path.wildcard)
+				}
 			}
-			for path, value := range storageSliceCopyValues(snapshot, target, origin) {
-				writes[path] = joinStorageValue(writes[path], value)
-			}
-			if target.knownLength && origin.knownLength {
+			if target.knownLength && origin.knownLength &&
+				target.length != 0 && origin.length != 0 {
 				length := target.length
 				if origin.length < length {
 					length = origin.length
@@ -521,15 +527,20 @@ func copyStorageSlices(
 					integer: length, integerKnown: true,
 				})
 			} else {
-				count.unknown = true
+				if !target.knownLength || !origin.knownLength {
+					count.unknown = true
+				}
+			}
+			if first {
+				post = alternative
+				first = false
+			} else {
+				post = joinStorageState(post, alternative)
 			}
 		}
 	}
-	for path, value := range writes {
-		writeStorageMemory(
-			state, path, value,
-			len(destination.slices) == 1 && !path.wildcard,
-		)
+	if !first {
+		replaceStorageState(state, post)
 	}
 	return count
 }
