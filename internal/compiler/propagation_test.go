@@ -145,3 +145,52 @@ func value() (int, error) {
 		position = next
 	}
 }
+
+func TestPropagationVariableSpecificationCommentsStayAttached(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func mark(label string) int { return len(label) }
+func load() (int, error) { return 1, nil }
+
+func value() (int, error) {
+	// group doc
+	var (
+		// before doc
+		before = mark("before") // before tail
+		// loaded doc
+		// loaded detail
+		loaded = load()!! //nolint:errcheck // loaded tail
+		// after doc
+		after = mark("after") // after tail
+	)
+	return before + loaded + after, nil
+}
+`)
+	want := `	// group doc
+
+	// before doc
+	var before = mark("before") // before tail
+
+	// loaded doc
+	// loaded detail
+	var loaded, err = load() //nolint:errcheck // loaded tail
+	if err != nil {
+		return 0, err
+	}
+	// after doc
+	var after = mark("after") // after tail`
+	if !strings.Contains(output, want) {
+		t.Fatalf("generated comments moved\n%s", output)
+	}
+	files := token.NewFileSet()
+	file, err := parser.ParseFile(files, "sample.go", output, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (&types.Config{}).Check(
+		"sample", files, []*ast.File{file}, nil,
+	); err != nil {
+		t.Fatal(err)
+	}
+}

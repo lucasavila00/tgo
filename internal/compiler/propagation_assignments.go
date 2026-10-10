@@ -215,8 +215,13 @@ func (l *propagationLowerer) splitVariableDeclaration(
 	}
 	result := []ast.Stmt(nil)
 	for index, specification := range general.Specs {
+		if value, ok := specification.(*ast.ValueSpec); ok && value.Doc != nil {
+			for _, comment := range value.Doc.List {
+				comment.Slash = specification.Pos() - 1
+			}
+		}
 		declaration := &ast.GenDecl{
-			TokPos: general.TokPos,
+			TokPos: specification.Pos(),
 			Tok:    general.Tok,
 			Specs:  []ast.Spec{specification},
 		}
