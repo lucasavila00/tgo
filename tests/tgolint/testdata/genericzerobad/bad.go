@@ -118,6 +118,7 @@ func FunctionValues(event model.Event) {
 	genericzero.AliasedNested[model.Event]()()
 	genericzero.NamedAliasedNested[model.Event]()()
 	genericzero.CapturedNested[model.Event]()()
+	genericzero.NamedCapturedCellBeforeWrite[model.Event]()()
 	genericzero.AddressedNested[model.Event]()()
 	genericzero.AddressedAlternativeNested[int, model.Event]()()
 	genericzero.RangedAssignedNested[model.Event]()()

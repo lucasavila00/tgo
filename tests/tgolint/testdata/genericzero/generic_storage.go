@@ -247,6 +247,20 @@ func CapturedCellBeforeWrite[T any]() func() {
 	return result
 }
 
+func NamedCapturedCellAfterWrite[T any]() (result func()) {
+	value := storedEffect[T]
+	result = func() { value() }
+	value = func() {}
+	return
+}
+
+func NamedCapturedCellBeforeWrite[T any]() (result func()) {
+	value := func() {}
+	result = func() { value() }
+	value = storedEffect[T]
+	return
+}
+
 func SharedSlot(slot []func()) func() {
 	return func() { slot[0]() }
 }

@@ -119,6 +119,7 @@ func Safe() {
 	genericzero.CopyAlias[int](make([]func(), 1))
 	genericzero.OrderedSafe[model.Event]()
 	genericzero.CapturedCellAfterWrite[model.Event]()()
+	genericzero.NamedCapturedCellAfterWrite[model.Event]()()
 	genericzero.DiscardedAppendFresh[model.Event]()
 	genericzero.ZeroCopyThenCall[model.Event]()
 	genericzero.RecursiveSafe[model.Event]()
