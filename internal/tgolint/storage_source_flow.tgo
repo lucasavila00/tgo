@@ -173,7 +173,6 @@ func (c %checker) buildStorageFlow(root %syntax.Node) %storageFlow {
 		queued[block.Index] = false
 		state := cloneStorageState(entries[block.Index])
 		for _, node := range block.Nodes {
-			flow.before[node] = cloneStorageState(state)
 			c.transferStorageSourceNode(state, node, flow, storageLoopBlock(block))
 		}
 		for _, successor := range c.storageSuccessors(block) {
