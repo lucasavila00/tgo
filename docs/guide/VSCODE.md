@@ -1,8 +1,13 @@
 # Navigate TGo in VS Code
 
-The TGo extension provides syntax highlighting, symbol hover information, go to definition,
-find references, document symbols, and workspace symbols. It does not edit source or report
-diagnostics.
+The TGo extension provides syntax highlighting, symbol hover information, go
+to definition, find references, document symbols, and workspace symbols. It
+does not provide completion, rename, formatting, code actions, or diagnostics.
+Navigation covers workspace packages, not downloaded dependencies.
+
+Symbols include packages, types, functions, methods, fields, enum variants,
+constants, and variables. Definitions support identifiers and selectors.
+Generated members resolve to their owning TGo declarations.
 
 On macOS, Linux, or another Unix system, build and install the private extension for the
 current host:
@@ -35,12 +40,13 @@ Then start an Extension Development Host from the repository root:
 code --extensionDevelopmentPath="$PWD/editors/vscode" "$PWD"
 ```
 
-The extension updates its index after changes to `.tgo`, `.go`, `go.mod`, or `go.work` files. It
-uses active Go build constraints and target file suffixes.
+The extension updates its index after changes to `.tgo`, `.go`, `go.mod`, or
+`go.work` files. It uses active Go build constraints and target file suffixes.
 
-Navigation reads saved source. Save a changed document before you request hover information,
-a definition, references, or symbols.
+Navigation reads saved source. Save a changed document before you request
+hover information, a definition, references, or symbols.
 
-The extension runs in desktop VS Code and in desktop remote workspaces such as SSH and
-containers. In a remote workspace, run `vscode.sh` in the environment that runs the workspace
-extension host. The extension does not run in browser-only VS Code.
+The extension runs in desktop VS Code and in desktop remote workspaces such as
+SSH and containers. In a remote workspace, run `vscode.sh` in the environment
+that runs the workspace extension host. The extension does not run in
+browser-only VS Code.
