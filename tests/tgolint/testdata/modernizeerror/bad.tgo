@@ -115,3 +115,61 @@ func useLiteral() func() (int, error) {
 		return value,
 	}
 }
+
+func useNamedResult() (result *record, final error) {
+	value, err := load()
+	if err != nil {
+		return , fmt.Errorf("load: %w", err)
+	}
+	return value,
+}
+
+func useReusedNamedError() (result *record, err error) {
+	value, err := load()
+	if err != nil {
+		return , err
+	}
+	return value,
+}
+
+func useReusedLocalError() (*record, error) {
+	first, err := load()
+	if err != nil {
+		return , err
+	}
+	second, err := load()
+	if err != nil {
+		return , err
+	}
+	_ = first
+	return second,
+}
+
+func useFailureComma() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return , err
+	}
+	return value,
+}
+
+func useInitializer(repository store) error {
+	if err := repository.Flush(); err != nil {
+		return fmt.Errorf("repository.Flush: %w", err)
+	}
+	return nil
+}
+
+func useTransparentInitializer(repository store) error {
+	if err := repository.Flush(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func useIgnoredInitializer(text string) error {
+	if _, err := strconv.Atoi(text); err != nil {
+		return err
+	}
+	return nil
+}

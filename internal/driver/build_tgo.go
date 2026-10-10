@@ -115,7 +115,8 @@ func (b *packageBuilder) build(path string) error {
 	}
 	b.states[path] = buildActive
 	unit := b.packages[path]
-	if err := unit.load(); err != nil {
+	err := unit.load()
+	if err != nil {
 		return err
 	}
 	if len(unit.Sources) == 0 {
@@ -124,45 +125,51 @@ func (b *packageBuilder) build(path string) error {
 			return err_1
 		}
 		for _, dependency := range imports {
-			if err := b.buildImport(dependency); err != nil {
-				return err
+			err_2 := b.buildImport(dependency)
+			if err_2 != nil {
+				return err_2
 			}
 		}
 		if b.write {
-			if err := b.removeStaleOutputs(unit, expectedOutputs(unit, nil)); err != nil {
-				return err
+			err_3 := b.removeStaleOutputs(unit, expectedOutputs(unit, nil))
+			if err_3 != nil {
+				return err_3
 			}
 		}
 		b.states[path] = buildDone
 		return nil
 	}
 	for _, dependency := range importsOf(unit.Files) {
-		if err := b.buildImport(dependency); err != nil {
-			return err
+		err_4 := b.buildImport(dependency)
+		if err_4 != nil {
+			return err_4
 		}
 	}
-	outputs, err_2 := b.compile(unit)
-	if err_2 != nil {
-		return err_2
+	outputs, err_5 := b.compile(unit)
+	if err_5 != nil {
+		return err_5
 	}
 	if b.write {
 		for _, name := range sortedOutputPaths(outputs) {
 			data := outputs[name]
-			if err := b.writeFile(name, data); err != nil {
-				return err
+			err_6 := b.writeFile(name, data)
+			if err_6 != nil {
+				return err_6
 			}
 		}
-		if err := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs)); err != nil {
-			return err
+		err_7 := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs))
+		if err_7 != nil {
+			return err_7
 		}
-		testOutputs, err_3 := b.compileTests(unit)
-		if err_3 != nil {
-			return err_3
+		testOutputs, err_8 := b.compileTests(unit)
+		if err_8 != nil {
+			return err_8
 		}
 		for _, name := range sortedOutputPaths(testOutputs) {
 			data := testOutputs[name]
-			if err := b.writeFile(name, data); err != nil {
-				return err
+			err_9 := b.writeFile(name, data)
+			if err_9 != nil {
+				return err_9
 			}
 		}
 	}
@@ -204,14 +211,14 @@ func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, err
 		if len(item.tests.Sources) == 0 {
 			continue
 		}
-		compiled, err := b.compileTestPackage(
+		compiled, err_1 := b.compileTestPackage(
 			unit,
 			item.tests,
 			item.external,
 			token.NewFileSet(),
 		)
-		if err != nil {
-			return nil, err
+		if err_1 != nil {
+			return nil, err_1
 		}
 		for _, source := range item.tests.Sources {
 			if data, ok := compiled.Outputs[source.Name]; ok {
@@ -247,7 +254,8 @@ func (b *packageBuilder) compileTestPackage(
 		if dependency == unit.Path {
 			continue
 		}
-		if err := b.buildImport(dependency); err != nil {
+		err := b.buildImport(dependency)
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -365,9 +373,9 @@ func loadExportPaths(
 // buildImport follows local Go packages until it reaches each tgo package.
 func (b *packageBuilder) buildImport(path string) error {
 	if dependency := b.packages[path]; dependency != nil {
-		available, err_1 := dependency.available()
-		if err_1 != nil {
-			return err_1
+		available, err := dependency.available()
+		if err != nil {
+			return err
 		}
 		if available {
 			return b.build(path)
@@ -383,13 +391,14 @@ func (b *packageBuilder) buildImport(path string) error {
 		return fmt.Errorf("import cycle at %s", path)
 	}
 	b.states[path] = buildActive
-	imports, err_2 := b.localGoImports(path)
-	if err_2 != nil {
-		return err_2
+	imports, err_1 := b.localGoImports(path)
+	if err_1 != nil {
+		return err_1
 	}
 	for _, dependency := range imports {
-		if err := b.buildImport(dependency); err != nil {
-			return err
+		err_2 := b.buildImport(dependency)
+		if err_2 != nil {
+			return err_2
 		}
 	}
 	b.states[path] = buildDone
@@ -538,9 +547,9 @@ func fileImportsC(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
-	if err != nil {
-		return false, err
+	file, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+	if err_1 != nil {
+		return false, err_1
 	}
 	return importsC(file), nil
 }

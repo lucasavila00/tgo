@@ -14,12 +14,14 @@ type propagationFunction struct {
 }
 
 type propagationLowerer struct {
-	unit     *packageUnit
-	source   *source
-	function propagationFunction
-	fmtAlias string
-	gotos    map[string]bool
-	names    map[string]bool
+	unit                *packageUnit
+	source              *source
+	function            propagationFunction
+	fmtAlias            string
+	gotos               map[string]bool
+	names               map[string]bool
+	inferredResultTypes map[types.Object]types.Type
+	inferredResultNames map[string]types.Type
 }
 
 // lowerPropagations lowers postfix errors and comprehensions into direct control flow.
@@ -30,6 +32,8 @@ func (p *packageUnit) lowerPropagations() {
 			lowerer := &propagationLowerer{
 				unit: p, source: source, function: function, fmtAlias: "",
 				gotos: functionGotoLabels(function.body), names: function.names,
+				inferredResultTypes: make(map[types.Object]types.Type),
+				inferredResultNames: make(map[string]types.Type),
 			}
 			function.body.List = lowerer.statements(function.body.List)
 		}
@@ -160,13 +164,26 @@ func (l *propagationLowerer) statements(input []ast.Stmt) []ast.Stmt {
 	return result
 }
 
+// scopedStatements restores inferred names when one lexical block ends.
+func (l *propagationLowerer) scopedStatements(input []ast.Stmt) []ast.Stmt {
+	outer := l.inferredResultNames
+	l.inferredResultNames = make(map[string]types.Type, len(outer))
+	for name, typ := range outer {
+		l.inferredResultNames[name] = typ
+	}
+	result := l.statements(input)
+	l.inferredResultNames = outer
+	return result
+}
+
 //nolint:cyclop,gocognit // Each case preserves one Go statement evaluation rule.
 func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 	switch node := statement.(type) {
 	case *ast.BlockStmt:
-		node.List = l.statements(node.List)
+		node.List = l.scopedStatements(node.List)
 		return []ast.Stmt{node}
 	case *ast.AssignStmt:
+		l.rememberSimpleAssignmentTypes(node)
 		return l.assignment(node)
 	case *ast.IncDecStmt:
 		return l.increment(node)
@@ -187,7 +204,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 	case *ast.DeclStmt:
 		return l.declaration(node)
 	case *ast.IfStmt:
-		node.Body.List = l.statements(node.Body.List)
+		node.Body.List = l.scopedStatements(node.Body.List)
 		if node.Else != nil {
 			rewritten := l.statement(node.Else)
 			node.Else = oneStatement(rewritten)
@@ -201,7 +218,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		}
 		return l.prefixedStatement(prefix, node, scopedInitializer)
 	case *ast.RangeStmt:
-		node.Body.List = l.statements(node.Body.List)
+		node.Body.List = l.scopedStatements(node.Body.List)
 		value, prefix := l.expression(node.X)
 		node.X = value
 		return l.prefixedStatement(prefix, node, false)
@@ -221,7 +238,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		l.rejectStatement(node.Assign, "type switch assignment")
 		return []ast.Stmt{node}
 	case *ast.ForStmt:
-		node.Body.List = l.statements(node.Body.List)
+		node.Body.List = l.scopedStatements(node.Body.List)
 		l.rejectStatement(node.Init, "for initializer")
 		l.rejectStatement(node.Post, "for post statement")
 		if l.hasLowering(node.Cond) {
@@ -244,7 +261,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		for _, item := range node.Body.List {
 			clause := item.(*ast.CommClause)
 			l.rejectStatement(clause.Comm, "select communication")
-			clause.Body = l.statements(clause.Body)
+			clause.Body = l.scopedStatements(clause.Body)
 		}
 		return []ast.Stmt{node}
 	case *ast.GoStmt:
@@ -338,7 +355,7 @@ func (l *propagationLowerer) caseBodies(body *ast.BlockStmt) {
 		for _, expression := range clause.List {
 			l.rejectExpression(expression, "switch case")
 		}
-		clause.Body = l.statements(clause.Body)
+		clause.Body = l.scopedStatements(clause.Body)
 	}
 }
 
@@ -406,7 +423,8 @@ func (l *propagationLowerer) propagation(
 		l.unit.failAt(metadata.Bang, "error propagation needs a call")
 		return []ast.Expr{expression}, nil
 	}
-	signature, ok := types.Unalias(l.unit.info.TypeOf(call.Fun)).(*types.Signature)
+	signature := l.propagationCallSignature(call.Fun)
+	ok = signature != nil
 	if !ok || signature.Results().Len() == 0 ||
 		!isPredeclaredError(signature.Results().At(signature.Results().Len()-1).Type()) {
 		l.unit.failAt(metadata.Bang, "propagated call must end in the Go error type")
@@ -431,6 +449,47 @@ func (l *propagationLowerer) propagation(
 	assignment := &ast.AssignStmt{Lhs: left, Tok: token.DEFINE, Rhs: []ast.Expr{call}}
 	prefix = append(prefix, assignment, l.errorBranch(metadata, errorName))
 	return values, prefix
+}
+
+// propagationCallSignature gets a call type, including a receiver from an earlier propagation.
+func (l *propagationLowerer) propagationCallSignature(
+	function ast.Expr,
+) *types.Signature {
+	signature, _ := types.Unalias(l.unit.info.TypeOf(function)).(*types.Signature)
+	if signature != nil {
+		return signature
+	}
+	selector, ok := function.(*ast.SelectorExpr)
+	if !ok {
+		return nil
+	}
+	receiver := selector.X
+	for {
+		parentheses, wrapped := receiver.(*ast.ParenExpr)
+		if !wrapped {
+			break
+		}
+		receiver = parentheses.X
+	}
+	identifier, ok := receiver.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	receiverType := l.inferredResultTypes[l.unit.info.ObjectOf(identifier)]
+	if receiverType == nil {
+		receiverType = l.inferredResultNames[identifier.Name]
+	}
+	if receiverType == nil {
+		return nil
+	}
+	object, _, _ := types.LookupFieldOrMethod(
+		receiverType, true, l.unit.typed, selector.Sel.Name,
+	)
+	if object == nil {
+		return nil
+	}
+	signature, _ = types.Unalias(object.Type()).(*types.Signature)
+	return signature
 }
 
 func unwrappedCompilerCall(expression ast.Expr) (*ast.CallExpr, bool) {

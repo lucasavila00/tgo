@@ -106,16 +106,18 @@ one from one common offset. Every value must come from `iota` or its repeated ex
 check excludes bit shifts and bitwise expressions because they can define combinable flags. It
 does not check `.go` files and does not offer a fix because integer values can cross a boundary.
 
-The error-return modernization check reports two adjacent statements in handwritten `.tgo`
-source. The first statement must declare only new variables from one static call. The second must
-check its error and return the same zero values. Its final value must be the same error for `!!`,
-or the `fmt.Errorf` wrapper that `!` emits. The function must have unnamed results that end in the
-Go `error` type. The local error variable must have no use after the branch.
+The error-return modernization check reports a static call followed by its manual error branch in
+handwritten `.tgo` source. It also reports the same call in the `if` initializer. Successful result
+variables must be new or blank. The error can be new or the function's named final result. The
+branch must return exact zero values or leading failure commas. Its final value must be the same
+error for `!!`, or the `fmt.Errorf` wrapper that `!` emits. The function results must end in the Go
+`error` type. A new local error variable can be reused by another exact call-and-branch expansion
+in the same statement list. It must have no other use.
 
 The wrapper text must contain the full static call name and `: %w`. Thus, `repo.Find(id)!` matches
 `fmt.Errorf("repo.Find: %w", err)`. It does not match `fmt.Errorf("Find: %w", err)`. The check does
-not report function values, assignments to existing variables, extra branch work, named results,
-nonzero returns, or different error text. It does not check `.go` files or offer a fix.
+not report function values, normal assignments, existing successful result variables, extra branch
+work, nonzero returns, or different error text. It does not check `.go` files or offer a fix.
 
 The successful-return modernization check reports `return value, nil` in handwritten `.tgo`
 source. It also accepts parenthesized `nil` and returns with more than two values. It does not

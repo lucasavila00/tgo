@@ -36,9 +36,7 @@ func (p %sourceParser) discoverComprehensionsIn(start int, limit int) error {
 	for _, item := range candidates {
 		literalStart, isLiteral := starts[item.open]
 		if !isLiteral {
-			if err := p.discoverComprehensionsIn(item.open+2, item.close); err != nil {
-				return err
-			}
+			p.discoverComprehensionsIn(item.open+2, item.close)!!
 			continue
 		}
 		comprehension := p.rawComprehension(literalStart, item.open, item.close)!!
@@ -152,18 +150,9 @@ func (p %sourceParser) rawComprehensionBody(
 		failure := p.tokenError(start, "comprehension clause needs a block")
 		return ,, failure
 	}
-	bodyOpen, err := p.openToken(bodyClose)
-	if err != nil {
-		return ,, err
-	}
-	clause, err := p.rawComprehensionClause(start, bodyOpen, bodyClose)
-	if err != nil {
-		return ,, err
-	}
-	children, result, err := p.rawComprehensionBody(bodyOpen+1, bodyClose)
-	if err != nil {
-		return ,, err
-	}
+	bodyOpen := p.openToken(bodyClose)!!
+	clause := p.rawComprehensionClause(start, bodyOpen, bodyClose)!!
+	children, result := p.rawComprehensionBody(bodyOpen+1, bodyClose)!!
 	return append([]*rawComprehensionClause{clause}, children...), result,
 }
 

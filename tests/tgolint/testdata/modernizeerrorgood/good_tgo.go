@@ -96,14 +96,6 @@ func changedSuccessValue() (*record, error) {
 	return value, nil
 }
 
-func namedResult() (result *record, final error) {
-	value, err := load()
-	if err != nil {
-		return nil, fmt.Errorf("load: %w", err)
-	}
-	return value, nil
-}
-
 func normalAssignment() (*record, error) {
 	var value *record = nil
 	var err error = nil

@@ -12,6 +12,23 @@ import (
 	"tgo/pkg/syntax"
 )
 
+type errorReturnMatch struct {
+	start       token.Pos
+	returned    token.Pos
+	errorObject types.Object
+	newError    bool
+	name        string
+	operator    string
+}
+
+// emptyErrorReturnMatch provides the unused result for a failed match.
+func emptyErrorReturnMatch() errorReturnMatch {
+	return errorReturnMatch{
+		start: token.NoPos, returned: token.NoPos, errorObject: nil,
+		newError: false, name: "", operator: "",
+	}
+}
+
 // checkErrorReturnModernization finds manual branches that propagation replaces exactly.
 func (c *checker) checkErrorReturnModernization(analysis *sourceanalysis.Package) {
 	if analysis == nil {
@@ -28,99 +45,147 @@ func (c *checker) checkErrorReturnModernization(analysis *sourceanalysis.Package
 		index := analysis.Facts
 		syntax.Inspect(file, func(node *syntax.Node) bool {
 			statements, ok := sourceStatementList(node)
-			if !ok || len(statements) < 2 {
+			if !ok {
 				return true
 			}
 			signature := sourceFunctionSignature(file, node, index)
-			for position := 0; position+1 < len(statements); position++ {
-				c.checkErrorReturnPair(
-					statements[position], statements[position+1],
-					signature, index,
-				)
+			for _, match := range errorReturnModernizations(
+				statements, signature, index,
+			) {
+				reportErrorReturnModernization(c, match)
 			}
 			return true
 		})
 	}
 }
 
-// unnamedErrorResults requires unnamed results that end in the Go error type.
-func unnamedErrorResults(signature *types.Signature) bool {
+// errorResults requires results that end in the Go error type.
+func errorResults(signature *types.Signature) bool {
 	if signature == nil || signature.Results().Len() == 0 {
 		return false
 	}
 	results := signature.Results()
-	for index := range results.Len() {
-		if results.At(index).Name() != "" {
-			return false
-		}
-	}
 	return predeclaredError(results.At(results.Len() - 1).Type())
 }
 
-// checkErrorReturnPair reports one exact manual propagation expansion.
-func (c *checker) checkErrorReturnPair(
-	first *syntax.Statement,
-	second *syntax.Statement,
+// errorReturnModernizations finds safe manual propagation expansions in one statement list.
+func errorReturnModernizations(
+	statements []*syntax.Statement,
 	function *types.Signature,
 	index *sourcefacts.Index,
-) {
-	name, operator, ok := errorReturnModernization(first, second, function, index)
-	if !ok {
-		return
+) []errorReturnMatch {
+	matches := []errorReturnMatch(nil)
+	for _, statement := range statements {
+		branch, ok := sourceIf(statement)
+		if !ok || branch == nil || branch.Init == nil {
+			continue
+		}
+		if match, matched := errorReturnExpansion(
+			branch.Init, branch, function, index,
+		); matched {
+			matches = append(matches, match)
+		}
 	}
-	assignment, _ := sourceAssignment(first)
+	for position := 0; position+1 < len(statements); position++ {
+		branch, ok := sourceIf(statements[position+1])
+		if !ok || branch == nil || branch.Init != nil {
+			continue
+		}
+		if match, matched := errorReturnExpansion(
+			statements[position], branch, function, index,
+		); matched {
+			matches = append(matches, match)
+		}
+	}
+	expectedUses := make(map[types.Object]int)
+	for _, match := range matches {
+		expectedUses[match.errorObject] += 3
+		if match.newError {
+			expectedUses[match.errorObject]--
+		}
+	}
+	var namedError types.Object = nil
+	if errorResults(function) {
+		candidate := function.Results().At(function.Results().Len() - 1)
+		if candidate.Name() != "" {
+			namedError = candidate
+		}
+	}
+	result := []errorReturnMatch{}
+	for _, match := range matches {
+		if match.errorObject == namedError ||
+			index.UseCount(match.errorObject) == expectedUses[match.errorObject] {
+			result = append(result, match)
+		}
+	}
+	return result
+}
+
+// reportErrorReturnModernization reports one manual propagation expansion.
+func reportErrorReturnModernization(
+	c *checker,
+	match errorReturnMatch,
+) {
 	kind := "return"
-	if operator == "!" {
+	if match.operator == "!" {
 		kind = "wrapper"
 	}
 	c.reportResult(
-		assignment.Start,
+		match.start,
 		"manual %s error %s matches postfix %s; use postfix %s",
-		name, kind, operator, operator,
+		match.name, kind, match.operator, match.operator,
 	)
 }
 
-// errorReturnModernization recognizes one exact manual propagation expansion.
-func errorReturnModernization(
-	first *syntax.Statement,
-	second *syntax.Statement,
+// errorReturnExpansion recognizes one exact manual propagation expansion.
+func errorReturnExpansion(
+	assignmentStatement *syntax.Statement,
+	branch *syntax.IfStatement,
 	function *types.Signature,
 	index *sourcefacts.Index,
-) (string, string, bool) {
-	if !unnamedErrorResults(function) {
-		return "", "", false
+) (errorReturnMatch, bool) {
+	if !errorResults(function) {
+		return emptyErrorReturnMatch(), false
 	}
-	assignment, ok := sourceAssignment(first)
+	assignment, ok := sourceAssignment(assignmentStatement)
 	if !ok || assignment == nil || assignment.Operator != token.DEFINE ||
 		len(assignment.Right) != 1 {
-		return "", "", false
+		return emptyErrorReturnMatch(), false
 	}
 	call, ok := sourceCall(assignment.Right[0])
 	if !ok || call == nil {
-		return "", "", false
+		return emptyErrorReturnMatch(), false
 	}
-	errorObject, ok := errorReturnAssignment(assignment, call, index)
-	if !ok || index.UseCount(errorObject) != 2 {
-		return "", "", false
+	errorObject, newError, ok := errorReturnAssignment(
+		assignment, call, index,
+	)
+	if !ok {
+		return emptyErrorReturnMatch(), false
 	}
-	branch, ok := sourceIf(second)
-	if !ok || branch == nil {
-		return "", "", false
-	}
-	if !errorReturnBranch(branch, errorObject, function, index) {
-		return "", "", false
+	returned, ok := errorReturnBranch(branch, errorObject, function, index)
+	if !ok {
+		return emptyErrorReturnMatch(), false
 	}
 	name, ok := syntax.StaticCallName(call.Callee)
 	if !ok {
-		return "", "", false
+		return emptyErrorReturnMatch(), false
+	}
+	result := errorReturnMatch{
+		start:       assignment.Start,
+		returned:    returned,
+		errorObject: errorObject,
+		newError:    newError,
+		name:        name,
+		operator:    "!!",
 	}
 	if errorReturnIdentity(branch, errorObject, index) {
-		return name, "!!", true
+		return result, true
 	}
 	if !errorReturnFormat(branch, errorObject, name, index) {
-		return "", "", false
+		return emptyErrorReturnMatch(), false
 	}
-	return name, "!", true
+	result.operator = "!"
+	return result, true
 }
 
 // errorReturnIdentity proves that the final return is the original error.
@@ -143,31 +208,38 @@ func errorReturnAssignment(
 	assignment *syntax.AssignmentStatement,
 	call *syntax.CallExpression,
 	index *sourcefacts.Index,
-) (types.Object, bool) {
+) (types.Object, bool, bool) {
 	if index.CalledFunction(call.Callee) == nil {
-		return nil, false
+		return nil, false, false
 	}
 	signature, ok := types.Unalias(index.Type(call.Callee)).(*types.Signature)
 	if !ok || signature.Results().Len() != len(assignment.Left) ||
 		signature.Results().Len() == 0 {
-		return nil, false
+		return nil, false, false
 	}
 	last := signature.Results().Len() - 1
 	if !predeclaredError(signature.Results().At(last).Type()) {
-		return nil, false
+		return nil, false, false
 	}
-	for _, expression := range assignment.Left {
+	for _, expression := range assignment.Left[:last] {
 		sourceName, ok := sourceIdentifier(expression)
 		if !ok || sourceName.Name != "_" && index.Definition(expression) == nil {
-			return nil, false
+			return nil, false, false
 		}
 	}
 	sourceName, ok := sourceIdentifier(assignment.Left[last])
 	errorObject := index.Definition(assignment.Left[last])
-	if !ok || sourceName.Name == "_" || errorObject == nil {
-		return nil, false
+	if !ok || sourceName.Name == "_" {
+		return nil, false, false
 	}
-	return errorObject, true
+	if errorObject != nil {
+		return errorObject, true, true
+	}
+	errorObject = index.IdentifierObject(assignment.Left[last])
+	if errorObject == nil {
+		return nil, false, false
+	}
+	return errorObject, false, true
 }
 
 // errorReturnBranch proves the condition, body, and zero return values.
@@ -176,25 +248,28 @@ func errorReturnBranch(
 	errorObject types.Object,
 	function *types.Signature,
 	index *sourcefacts.Index,
-) bool {
-	if branch.Init != nil || branch.Else != nil || len(branch.Body.List) != 1 {
-		return false
+) (token.Pos, bool) {
+	if branch.Else != nil || len(branch.Body.List) != 1 {
+		return token.NoPos, false
 	}
 	if !sameErrorCondition(branch.Condition, errorObject, index) {
-		return false
+		return token.NoPos, false
 	}
 	result, ok := sourceReturn(branch.Body.List[0])
-	if !ok || result == nil || len(result.Results) != function.Results().Len() {
-		return false
+	if !ok || result == nil || len(result.Results) == 0 ||
+		len(result.FailureCommas)+len(result.Results) != function.Results().Len() {
+		return token.NoPos, false
 	}
 	for position, expression := range result.Results[:len(result.Results)-1] {
 		if !exactZeroValue(
-			expression, function.Results().At(position).Type(), index,
+			expression,
+			function.Results().At(len(result.FailureCommas)+position).Type(),
+			index,
 		) {
-			return false
+			return token.NoPos, false
 		}
 	}
-	return true
+	return result.Return, true
 }
 
 // sameErrorCondition requires the exact err != nil condition.

@@ -69,20 +69,14 @@ func manualPropagationReturns(
 	result := make(map[token.Pos]bool)
 	syntax.Inspect(file, func(node *syntax.Node) bool {
 		statements, ok := sourceStatementList(node)
-		if !ok || len(statements) < 2 {
+		if !ok {
 			return true
 		}
 		signature := sourceFunctionSignature(file, node, facts)
-		for position := 0; position+1 < len(statements); position++ {
-			_, _, matched := errorReturnModernization(
-				statements[position], statements[position+1], signature, facts,
-			)
-			if !matched {
-				continue
-			}
-			branch, _ := sourceIf(statements[position+1])
-			returned, _ := sourceReturn(branch.Body.List[0])
-			result[returned.Return] = true
+		for _, match := range errorReturnModernizations(
+			statements, signature, facts,
+		) {
+			result[match.returned] = true
 		}
 		return true
 	})

@@ -33,7 +33,7 @@ func lowerSuccessReturnCommas(
 	return edits, locations
 }
 
-// lowerFailureReturnCommas removes each leading return comma before Go parsing.
+// lowerFailureReturnCommas erases each leading return comma before Go parsing.
 func lowerFailureReturnCommas(
 	files *token.FileSet,
 	file *token.File,
@@ -52,7 +52,7 @@ func lowerFailureReturnCommas(
 		}
 		for _, comma := range returned.FailureCommas {
 			offset := file.Offset(comma)
-			edits = append(edits, edit{start: offset, end: offset + 1, text: ""})
+			edits = append(edits, edit{start: offset, end: offset + 1, text: " "})
 		}
 		position := files.Position(returned.Return)
 		locations[[2]int{position.Line, position.Column}] = returned.FailureCommas

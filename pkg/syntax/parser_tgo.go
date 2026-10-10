@@ -952,9 +952,9 @@ func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	fields, err := p.rawFields(start+2, closing)
-	if err != nil {
-		return nil, 0, err
+	fields, err_1 := p.rawFields(start+2, closing)
+	if err_1 != nil {
+		return nil, 0, err_1
 	}
 	variant := new(rawVariant)
 	variant.start = p.tokens[start].start
@@ -983,9 +983,9 @@ func (p *sourceParser) structDeclaration(
 	if err != nil {
 		return nil, 0, err
 	}
-	fields, err := p.rawFields(open, closing)
-	if err != nil {
-		return nil, 0, err
+	fields, err_1 := p.rawFields(open, closing)
+	if err_1 != nil {
+		return nil, 0, err_1
 	}
 	next := closing + 1
 	checked := -1

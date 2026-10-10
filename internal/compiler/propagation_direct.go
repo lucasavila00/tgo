@@ -3,6 +3,7 @@ package compiler
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 )
 
 // directShortAssignment keeps source names in the propagated Go call.
@@ -12,6 +13,7 @@ func (l *propagationLowerer) directShortAssignment(
 	if node.Tok != token.DEFINE || len(node.Rhs) != 1 || !identifierTargets(node.Lhs) {
 		return nil, false
 	}
+	signature := l.directPropagationSignature(node.Rhs[0])
 	call, statements, callIndex, direct := l.directCall(
 		node.Rhs[0], len(node.Lhs), "assignment",
 	)
@@ -21,10 +23,104 @@ func (l *propagationLowerer) directShortAssignment(
 	if call == nil {
 		return append(statements, node), true
 	}
+	l.rememberDirectResultTypes(node.Lhs, signature)
 	node.Lhs = append(node.Lhs, call.Lhs[len(call.Lhs)-1])
 	node.Rhs = call.Rhs
 	statements[callIndex] = node
 	return statements, true
+}
+
+// directPropagationSignature gets the source call signature for one direct marker.
+func (l *propagationLowerer) directPropagationSignature(
+	expression ast.Expr,
+) *types.Signature {
+	marker, ok := expression.(*ast.CallExpr)
+	if !ok || len(marker.Args) != 1 {
+		return nil
+	}
+	call, ok := unwrappedCompilerCall(marker.Args[0])
+	if !ok {
+		return nil
+	}
+	return l.propagationCallSignature(call.Fun)
+}
+
+// rememberDirectResultTypes records names inferred by an earlier propagated call.
+func (l *propagationLowerer) rememberDirectResultTypes(
+	targets []ast.Expr,
+	signature *types.Signature,
+) {
+	if signature == nil || signature.Results().Len() <= len(targets) {
+		return
+	}
+	for index, target := range targets {
+		identifier, ok := target.(*ast.Ident)
+		if !ok || identifier.Name == "_" {
+			continue
+		}
+		object := l.unit.info.Defs[identifier]
+		if object != nil {
+			l.inferredResultTypes[object] = signature.Results().At(index).Type()
+		}
+		l.inferredResultNames[identifier.Name] = signature.Results().At(index).Type()
+	}
+}
+
+// rememberSimpleAssignmentTypes carries inferred types through an ordinary declaration.
+func (l *propagationLowerer) rememberSimpleAssignmentTypes(node *ast.AssignStmt) {
+	if node.Tok != token.DEFINE || len(node.Lhs) != len(node.Rhs) {
+		return
+	}
+	for index, target := range node.Lhs {
+		identifier, ok := target.(*ast.Ident)
+		if !ok || identifier.Name == "_" {
+			continue
+		}
+		object := l.unit.info.Defs[identifier]
+		typ := l.inferredExpressionType(node.Rhs[index])
+		if object != nil && typ != nil {
+			l.inferredResultTypes[object] = typ
+		}
+		if typ != nil {
+			l.inferredResultNames[identifier.Name] = typ
+		}
+	}
+}
+
+// inferredExpressionType gets a type that depends on an earlier propagated result.
+func (l *propagationLowerer) inferredExpressionType(expression ast.Expr) types.Type {
+	if typ := l.unit.info.TypeOf(expression); typ != nil {
+		basic, invalid := types.Unalias(typ).(*types.Basic)
+		if !invalid || basic.Kind() != types.Invalid {
+			return typ
+		}
+	}
+	switch node := expression.(type) {
+	case *ast.ParenExpr:
+		return l.inferredExpressionType(node.X)
+	case *ast.Ident:
+		typ := l.inferredResultTypes[l.unit.info.ObjectOf(node)]
+		if typ == nil {
+			typ = l.inferredResultNames[node.Name]
+		}
+		return typ
+	case *ast.IndexExpr:
+		container := types.Unalias(l.inferredExpressionType(node.X))
+		switch value := container.(type) {
+		case *types.Array:
+			return value.Elem()
+		case *types.Slice:
+			return value.Elem()
+		case *types.Map:
+			return value.Elem()
+		case *types.Pointer:
+			array, _ := types.Unalias(value.Elem()).(*types.Array)
+			if array != nil {
+				return array.Elem()
+			}
+		}
+	}
+	return nil
 }
 
 // directVariableDeclaration keeps an inferred var declaration as one Go call.

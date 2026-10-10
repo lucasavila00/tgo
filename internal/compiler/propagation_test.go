@@ -79,3 +79,40 @@ func use() (int, error) {
 		})
 	}
 }
+
+func TestPropagationUsesEarlierPropagatedResultType(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+type writer struct{}
+func openWriter() (*writer, error) { return &writer{}, nil }
+func (w *writer) Write() (int, error) { return 1, nil }
+func use() error {
+	w := openWriter()!!
+	_ = w.Write()!!
+	return nil
+}
+`)
+	if !strings.Contains(output, "result, err_1 := w.Write()") ||
+		!strings.Contains(output, "_ = result") {
+		t.Fatalf("generated output does not lower the method call\n%s", output)
+	}
+}
+
+func TestPropagationUsesTypeDerivedFromEarlierResult(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+type writer struct{}
+func openWriters() (map[string]*writer, error) { return nil, nil }
+func (w *writer) Write() (int, error) { return 1, nil }
+func use() error {
+	writers := openWriters()!!
+	w := writers["one"]
+	_ = w.Write()!!
+	return nil
+}
+`)
+	if !strings.Contains(output, "result, err_1 := w.Write()") ||
+		!strings.Contains(output, "_ = result") {
+		t.Fatalf("generated output does not lower the method call\n%s", output)
+	}
+}
