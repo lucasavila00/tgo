@@ -140,9 +140,9 @@ func (c *checker) collectReturnedExpression(
 				allowHelper, uncertain, seen,
 			) || found
 		}
-		if binding.opaque && !found {
+		if binding.opaque {
 			c.addUnknownReturnedEffects(summary)
-			return true
+			found = true
 		}
 		return found
 	}
@@ -152,16 +152,28 @@ func (c *checker) collectReturnedExpression(
 		return true
 	}
 	function, _ := c.genericCallObject(call.Callee).(*types.Func)
-	if allowHelper && function != nil && !genericSignature(function) {
+	unresolvedGenericHelper := false
+	if allowHelper && function != nil {
 		declaration := declarations[function.Origin()]
 		if declaration != nil {
-			return c.collectReturnedHelperCall(
-				summary, call, function, declaration, bindings,
-				summaries, declarations, maySkip, seen,
-			)
+			resolution := c.returnedHelper(function.Origin(), declaration)
+			generic := genericSignature(function)
+			if !generic ||
+				resolution.resolved && resolution.parameter >= 0 {
+				return c.collectReturnedHelperCall(
+					summary, call, resolution, bindings, summaries,
+					declarations, maySkip, seen,
+				)
+			}
+			unresolvedGenericHelper = generic && !resolution.resolved
 		}
 	}
 	if function != nil && c.genericZeroFact(function.Origin(), summaries) != nil {
+		if unresolvedGenericHelper {
+			c.collectReturnedArguments(
+				summary, call.Args, bindings, summaries, declarations, seen,
+			)
+		}
 		summary.returnedCalls = append(summary.returnedCalls, returnedGenericCall{
 			expression: value,
 			maySkip:    maySkip,
@@ -194,15 +206,13 @@ func (c *checker) collectReturnedArguments(
 func (c *checker) collectReturnedHelperCall(
 	summary *genericEffectSummary,
 	call *syntax.CallExpression,
-	function *types.Func,
-	declaration *syntax.FunctionDeclaration,
+	resolution returnedHelperResolution,
 	bindings map[types.Object]*returnedClosureBinding,
 	summaries map[*types.Func]*genericEffectSummary,
 	declarations map[*types.Func]*syntax.FunctionDeclaration,
 	maySkip bool,
 	seen map[types.Object]bool,
 ) bool {
-	resolution := c.returnedHelper(function, declaration)
 	if !resolution.resolved {
 		return c.collectReturnedArguments(
 			summary, call.Args, bindings, summaries, declarations, seen,

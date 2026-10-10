@@ -719,6 +719,7 @@ func (c *checker) collectReturnedGenericEffects(
 		returnedResultObjects(signature),
 	)
 	namedResults := returnedNamedResultExpressions(summary.declaration)
+	maySkip := returnedFunctionReturnCount(summary.body, signature) > 1
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
@@ -741,7 +742,7 @@ func (c *checker) collectReturnedGenericEffects(
 				}
 				c.collectReturnedExpression(
 					summary, expression, bindings, summaries, declarations,
-					true, false, make(map[types.Object]bool),
+					true, maySkip, make(map[types.Object]bool),
 				)
 			}
 			return false
@@ -752,7 +753,7 @@ func (c *checker) collectReturnedGenericEffects(
 					if returnedFunctionType(signature.Results().At(index).Type()) {
 						c.collectReturnedExpression(
 							summary, results[0], bindings, summaries, declarations,
-							true, false, make(map[types.Object]bool),
+							true, maySkip, make(map[types.Object]bool),
 						)
 						break
 					}
@@ -767,11 +768,37 @@ func (c *checker) collectReturnedGenericEffects(
 			}
 			c.collectReturnedExpression(
 				summary, expression, bindings, summaries, declarations,
-				true, false, make(map[types.Object]bool),
+				true, maySkip, make(map[types.Object]bool),
 			)
 		}
 		return false
 	})
+}
+
+func returnedFunctionReturnCount(
+	body *syntax.BlockStatement,
+	signature *types.Signature,
+) int {
+	functionResult := false
+	for index := range signature.Results().Len() {
+		functionResult = functionResult ||
+			returnedFunctionType(signature.Results().At(index).Type())
+	}
+	if !functionResult {
+		return 0
+	}
+	count := 0
+	inspectGenericBlock(body, func(node *syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
+			return false
+		}
+		statement, ok := syntax.StatementOf(node)
+		if ok && syntax.ReturnStatementOf(statement) != nil {
+			count++
+		}
+		return true
+	})
+	return count
 }
 
 func returnedResultObjects(signature *types.Signature) map[types.Object]bool {

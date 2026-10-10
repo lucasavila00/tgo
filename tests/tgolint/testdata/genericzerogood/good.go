@@ -69,9 +69,12 @@ func Safe() {
 	_ = nested
 	genericzero.AliasedNested[int]()()
 	genericzero.ForwardedNested[int]()()
+	genericzero.GenericForwardedNested[int]()()
 	genericzero.SafeAliasedNested[model.Event]()()
 	genericzero.SafeForwardedNested[model.Event]()()
+	genericzero.SafeGenericForwardedNested[model.Event]()()
 	genericzero.DiscardedNested[model.Event]()()
+	genericzero.AlternativeNested[int, int](true)()
 }
 
 func BoundaryAssertion(input any) {

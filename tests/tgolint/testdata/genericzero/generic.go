@@ -171,6 +171,18 @@ func AddressedNested[T any]() func() {
 	return nested
 }
 
+func AddressedAlternativeNested[A any, B any]() func() {
+	nested := func() {
+		var value A
+		_ = value
+	}
+	setNested(&nested, func() {
+		var value B
+		_ = value
+	})
+	return nested
+}
+
 type nestedBox struct {
 	value func()
 }
@@ -199,6 +211,34 @@ func ForwardedNested[T any]() func() {
 		var value T
 		_ = value
 	})
+}
+
+func forwardGenericNested[T any](nested func()) func() {
+	return nested
+}
+
+func GenericForwardedNested[T any]() func() {
+	return forwardGenericNested[T](func() {
+		var value T
+		_ = value
+	})
+}
+
+func SafeGenericForwardedNested[T any]() func() {
+	return forwardGenericNested[T](func() {})
+}
+
+func AlternativeNested[A any, B any](first bool) func() {
+	if first {
+		return func() {
+			var value A
+			_ = value
+		}
+	}
+	return func() {
+		var value B
+		_ = value
+	}
 }
 
 func callAndForwardNested(nested func()) func() {

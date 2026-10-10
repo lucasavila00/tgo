@@ -119,10 +119,17 @@ func FunctionValues(event model.Event) {
 	genericzero.NamedAliasedNested[model.Event]()()
 	genericzero.CapturedNested[model.Event]()()
 	genericzero.AddressedNested[model.Event]()()
+	genericzero.AddressedAlternativeNested[int, model.Event]()()
 	genericzero.SelectedNested[model.Event]()()
 	genericzero.IndexedNested[model.Event]()()
 	genericzero.ForwardedNested[model.Event]()()
+	genericzero.GenericForwardedNested[model.Event]()()
 	genericzero.CalledForwardedNested[model.Event]()()
+}
+
+func ReturnedAlternatives(first bool) {
+	genericzero.AlternativeNested[model.Event, int](first)()
+	genericzero.AlternativeNested[int, model.Event](first)()
 }
 
 func UnresolvedEscape(forward func(func()) func()) {
