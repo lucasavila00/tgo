@@ -288,12 +288,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 	case *ast.ForStmt:
 		return l.forStatement(node)
 	case *ast.SelectStmt:
-		for _, item := range node.Body.List {
-			clause := item.(*ast.CommClause)
-			l.missingStatementLowering(clause.Comm, "select communication")
-			clause.Body = l.scopedStatements(clause.Body)
-		}
-		return []ast.Stmt{node}
+		return l.selectStatement(node)
 	case *ast.GoStmt:
 		if _, direct := propagationMarker(l.source, node.Call); direct {
 			l.rejectExpression(node.Call, "go statement")

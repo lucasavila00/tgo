@@ -1,0 +1,200 @@
+package app
+
+import "errors"
+
+var errSelectCommunication = errors.New("select communication failure")
+
+func selectPlainChannel(events %[]string, name string, channel chan int) chan int {
+	*events = append(*events, name)
+	return channel
+}
+
+func selectPlainValue(events %[]string, name string, value int) int {
+	*events = append(*events, name)
+	return value
+}
+
+func selectChannel(
+	events %[]string,
+	name string,
+	channel chan int,
+	fail bool,
+) (chan int, error) {
+	*events = append(*events, name)
+	if fail {
+		return nil, errSelectCommunication
+	}
+	return channel, nil
+}
+
+func selectValue(events %[]string, name string, value int, fail bool) (int, error) {
+	*events = append(*events, name)
+	if fail {
+		return 0, errSelectCommunication
+	}
+	return value, nil
+}
+
+func selectIndex(events %[]string, name string, failName string) (int, error) {
+	*events = append(*events, name)
+	if name == failName {
+		return 0, errSelectCommunication
+	}
+	return 0, nil
+}
+
+func PropagationSelectReceiveOrder(events %[]string) (int, error) {
+	receive := make(chan int, 1)
+	receive <- 7
+	var send chan int
+	select {
+	case selectPlainChannel(events, "send-channel", send) <-
+		selectValue(events, "send-value", 5, false)!!:
+		*events = append(*events, "send-body")
+	case value := <-selectChannel(events, "receive-channel", receive, false)!!:
+		*events = append(*events, "receive-body")
+		return value, nil
+	}
+	return 0, nil
+}
+
+func PropagationSelectSendOrder(events %[]string) (int, error) {
+	send := make(chan int, 1)
+	var receive chan int
+	select {
+	case selectChannel(events, "send-channel", send, false)!! <-
+		selectPlainValue(events, "send-value", 5):
+		*events = append(*events, "send-body")
+	case <-selectChannel(events, "receive-channel", receive, false)!!:
+		*events = append(*events, "receive-body")
+	}
+	return <-send, nil
+}
+
+func selectReplaceChannel(
+	events %[]string,
+	target %chan int,
+	replacement chan int,
+) (chan int, error) {
+	*events = append(*events, "replace")
+	*target = replacement
+	return replacement, nil
+}
+
+func PropagationSelectOperandSnapshot(events %[]string) (int, error) {
+	send := make(chan int, 1)
+	original := send
+	var replacement chan int
+	select {
+	case send <- selectValue(events, "send-value", 6, false)!!:
+		*events = append(*events, "send-body")
+	case <-selectReplaceChannel(events, &send, replacement)!!:
+		*events = append(*events, "receive-body")
+	}
+	return <-original, nil
+}
+
+func PropagationSelectUntypedSend(events %[]string) (int8, error) {
+	send := make(chan int8, 1)
+	var receive chan int
+	select {
+	case send <- 1:
+	case <-selectChannel(events, "receive-channel", receive, false)!!:
+	}
+	return <-send, nil
+}
+
+func PropagationSelectDefault(events %[]string) error {
+	var send chan int
+	var receive chan int
+	select {
+	case selectChannel(events, "send-channel", send, false)!! <-
+		selectValue(events, "send-value", 5, false)!!:
+	case <-selectChannel(events, "receive-channel", receive, false)!!:
+	default:
+		*events = append(*events, "default")
+	}
+	return nil
+}
+
+func PropagationSelectPreFailure(events %[]string, failure string) error {
+	var channel chan int
+	select {
+	case selectChannel(events, "send-channel", channel, failure == "channel")!! <-
+		selectValue(events, "send-value", 1, failure == "value")!!:
+	case <-selectChannel(events, "receive-channel", channel, failure == "receive")!!:
+	default:
+	}
+	return nil
+}
+
+func PropagationSelectWrapped(events %[]string) error {
+	var channel chan int
+	select {
+	case channel <- selectValue(events, "wrapped", 1, true)!:
+	default:
+	}
+	return nil
+}
+
+func PropagationSelectTargets(
+	events %[]string,
+	values %[1]int,
+	statuses %[1]bool,
+	ready bool,
+	failName string,
+) error {
+	var channel chan int
+	if ready {
+		channel = make(chan int, 1)
+		channel <- 9
+	}
+	select {
+	case values[selectIndex(events, "left", failName)!!],
+		statuses[selectIndex(events, "right", failName)!!] =
+		<-selectChannel(events, "receive-channel", channel, false)!!:
+		*events = append(*events, "body")
+	default:
+		*events = append(*events, "default")
+	}
+	return nil
+}
+
+func PropagationSelectGotoBreak(events %[]string) error {
+	channel := make(chan int, 1)
+	channel <- 1
+	goto choice
+choice:
+	select {
+	case <-selectChannel(events, "receive-channel", channel, false)!!:
+		*events = append(*events, "body")
+		break choice
+	}
+	*events = append(*events, "done")
+	return nil
+}
+
+func PropagationSelectContinue(events %[]string) error {
+	channel := make(chan int, 2)
+	channel <- 1
+	channel <- 2
+outer:
+	for index := 0; index < 2; index++ {
+		select {
+		case <-selectChannel(events, "receive-channel", channel, false)!!:
+			*events = append(*events, "body")
+			continue outer
+		}
+		*events = append(*events, "after")
+	}
+	return nil
+}
+
+func PropagationSelectDeclaration(events %[]string) (int, bool, error) {
+	channel := make(chan int, 1)
+	channel <- 4
+	select {
+	case value, ok := <-selectChannel(events, "receive-channel", channel, false)!!:
+		return value, ok, nil
+	}
+}

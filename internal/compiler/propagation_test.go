@@ -636,3 +636,40 @@ func use() error {
 		position = next
 	}
 }
+
+func TestPropagationLowersSelectCommunications(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func channel(name string) (chan int, error) { return nil, nil }
+func value(name string) (int, error) { return 1, nil }
+func index(name string) (int, error) { return 0, nil }
+
+func use(operand, result, err, received int) error {
+	values := [1]int{}
+	select {
+	case channel("send")!! <- value("value")!!:
+	case values[index("target")!!] = <-channel("receive")!!:
+	}
+	return nil
+}
+`)
+	ordered := []string{
+		`result_1, err_1 := channel("send")`,
+		`result_2, err_2 := value("value")`,
+		`result_3, err_3 := channel("receive")`,
+		"select {",
+		"case result_1 <- result_2:",
+		"case received_1 := <-result_3:",
+		`result_4, err_4 := index("target")`,
+		"values[result_4] = received_1",
+	}
+	position := -1
+	for _, required := range ordered {
+		next := strings.Index(output, required)
+		if next <= position {
+			t.Fatalf("generated output puts %q out of order\n%s", required, output)
+		}
+		position = next
+	}
+}
