@@ -91,6 +91,9 @@ func (c *checker) reportStorageGenericValueUse(
 			}
 			called = true
 			c.reportGenericValueCall(call, value)
+			if value.callDepth == 0 {
+				value.conditionCall = call
+			}
 			value.callDepth++
 			current = call
 		}
