@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOTS = ("cmd", "internal", "pkg")
 SKIPPED_DIRECTORIES = frozenset({"fixtures", "testdata", "vendor"})
 IDENTIFIER = re.compile(r"[^\W\d]\w*|_\w*")
-NUMBERED_ENUM_VALUE = re.compile(r"enumValue[0-9]+")
+NUMBERED_ENUM_VALUE = re.compile(r"enumValue\d+")
 NON_CODE = re.compile(
     r'''//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`[^`]*`''',
     re.DOTALL,

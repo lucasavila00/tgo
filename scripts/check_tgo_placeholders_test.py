@@ -41,6 +41,22 @@ class TGoPlaceholderTest(unittest.TestCase):
 
         self.assertEqual(check_tgo_placeholders.failures(self.repository), [])
 
+    def test_rejects_placeholder_with_unicode_digit(self) -> None:
+        self.write(
+            "pkg/model.tgo",
+            "package model\nvar enumValue١ = 1\n",
+        )
+
+        result = check_tgo_placeholders.failures(self.repository)
+
+        self.assertEqual(
+            result,
+            [
+                "pkg/model.tgo:2: replace numbered enum placeholder "
+                "with a role name"
+            ],
+        )
+
     def test_ignores_placeholders_in_comments_and_literals(self) -> None:
         self.write(
             "pkg/model.tgo",
