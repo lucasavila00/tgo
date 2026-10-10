@@ -79,18 +79,21 @@ func applyStorageOperation(
 					operation.TypeArguments, operation.CalledParameters,
 				)
 			}
-			if firstTransfer {
-				transferred = updated
-				firstTransfer = false
-			} else {
-				transferred = joinStorageState(transferred, updated)
-			}
 			state.effects.zero = appendGenericEffects(
 				state.effects.zero, effects.zero,
 			)
 			state.effects.access = appendGenericEffects(
 				state.effects.access, effects.access,
 			)
+			if !effects.completed {
+				continue
+			}
+			if firstTransfer {
+				transferred = updated
+				firstTransfer = false
+			} else {
+				transferred = joinStorageState(transferred, updated)
+			}
 			for index, value := range returned {
 				for len(results) <= index {
 					results = append(results, storageValue{})
@@ -100,6 +103,8 @@ func applyStorageOperation(
 		}
 		if !firstTransfer {
 			state.storage = transferred
+		} else if len(functions) != 0 {
+			state.live = false
 		}
 		setStorageResults(state.temps, operation.Results, results)
 	case storageEffectAllocate:

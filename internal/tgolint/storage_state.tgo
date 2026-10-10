@@ -9,8 +9,9 @@ import (
 
 func storageCallInputKey(call storageGraphCall) string {
 	var text strings.Builder
+	constants := storageFunctionIntegerConstants(call)
 	for _, argument := range call.arguments {
-		writeStorageValueKey(&text, argument)
+		writeStorageValueKey(&text, argument, constants)
 		text.WriteByte(';')
 	}
 	text.WriteByte('|')
@@ -21,7 +22,27 @@ func storageCallInputKey(call storageGraphCall) string {
 	return text.String()
 }
 
-func writeStorageValueKey(text *strings.Builder, value storageValue) {
+func storageFunctionIntegerConstants(call storageGraphCall) map[int64]bool {
+	result := make(map[int64]bool)
+	function := findStorageEffectFunction(call.fact.Storage, call.function)
+	if function == nil {
+		return result
+	}
+	for _, block := range function.Blocks {
+		for _, operation := range block.Operations {
+			if operation.Kind == storageEffectInteger && operation.KnownLength {
+				result[operation.Length] = true
+			}
+		}
+	}
+	return result
+}
+
+func writeStorageValueKey(
+	text *strings.Builder,
+	value storageValue,
+	constants map[int64]bool,
+) {
 	if value.unknown {
 		text.WriteByte('?')
 	}
@@ -32,7 +53,11 @@ func writeStorageValueKey(text *strings.Builder, value storageValue) {
 		text.WriteByte('f')
 	}
 	if value.integerKnown {
-		text.WriteString(strconv.FormatInt(value.integer, 10))
+		if constants[value.integer] {
+			text.WriteString(strconv.FormatInt(value.integer, 10))
+		} else {
+			text.WriteByte('#')
+		}
 	}
 	for _, function := range value.functions {
 		text.WriteString(fmt.Sprintf("f%p:%d", function.fact, function.graph))
