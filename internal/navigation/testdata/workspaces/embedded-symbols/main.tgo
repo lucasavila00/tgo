@@ -10,7 +10,7 @@ type checkedPointer struct{}
 
 type Ordinary struct {
 	OrdinaryNamed
-	*OrdinaryPointer
+	*OrdinaryPointer `json:"pointer"`
 }
 
 type Checked struct {

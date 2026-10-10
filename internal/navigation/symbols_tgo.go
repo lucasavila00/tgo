@@ -264,7 +264,10 @@ func appendEmbeddedFieldSymbol(
 		pkg,
 		uri,
 		name.Name, NewSymbolKindField(), container,
-		field.Span,
+		syntax.Span{
+			Start: syntax.ExpressionPosition(field.Type),
+			Stop:  syntax.ExpressionEnd(field.Type),
+		},
 		name.Span,
 	)
 }
