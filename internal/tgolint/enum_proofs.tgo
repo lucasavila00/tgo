@@ -586,22 +586,32 @@ func (c %checker) enumCallClosureInvalidates(
 	proved enumStorageSet,
 	receiver %syntax.Expression,
 ) bool {
-	effect := c.enumExpressionClosure(expression, state)
-	if effect == nil {
-		return false
-	}
 	receiverPlace, receiverOK := enumPointerPlaceOf(c.facts, receiver)
-	for place := range effect.bindings {
-		if receiverOK && place == receiverPlace {
+	for literal := range c.enumExpressionClosure(expression, state) {
+		output := c.invokeEnumClosure(literal, cloneEnumStorageState(state))
+		if enumStorageSetsOverlap(output.writes, proved) {
 			return true
 		}
-	}
-	for place := range effect.pointees {
-		if enumStorageSetsOverlap(c.enumPlaceStorage(place, state), proved) {
+		if receiverOK && !enumStorageSetEqual(
+			c.enumPlaceStorage(receiverPlace, state),
+			c.enumPlaceStorage(receiverPlace, output),
+		) {
 			return true
 		}
 	}
 	return false
+}
+
+func enumStorageSetEqual(left, right enumStorageSet) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for place := range left {
+		if !right[place] {
+			return false
+		}
+	}
+	return true
 }
 
 func (c %checker) enumReceiverInvalidatedAt(
