@@ -146,6 +146,23 @@ func FunctionValues(event model.Event) {
 	tripleSecond()()
 	var initializedTripleSecond = genericzero.TripleNested[model.Event]()()
 	initializedTripleSecond()()
+	transitiveFactory := genericzero.TripleNested[model.Event]
+	transitiveFactorySecond := transitiveFactory
+	transitiveFactorySecond()()()()
+	transitiveFactoryThird := transitiveFactorySecond
+	transitiveFactoryThird()()()()
+	transitiveFirst := genericzero.TripleNested[model.Event]()
+	var transitiveFirstSecond = transitiveFirst
+	transitiveFirstSecond()()()
+	var transitiveFirstThird = transitiveFirstSecond
+	transitiveFirstThird()()()
+	transitiveSecond := genericzero.TripleNested[model.Event]()()
+	var transitiveSecondNext func() func()
+	transitiveSecondNext = transitiveSecond
+	transitiveSecondNext()()
+	var transitiveSecondLast func() func()
+	transitiveSecondLast = transitiveSecondNext
+	transitiveSecondLast()()
 	genericzero.ParenthesizedAssignedNested[model.Event]()()
 	genericzero.ParenthesizedRangedAssignedNested[model.Event]()()
 	genericzero.CalledForwardedNested[model.Event]()()

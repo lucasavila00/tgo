@@ -17,9 +17,11 @@ type genericValue struct {
 }
 
 type genericValueBinding struct {
-	value     genericValue
-	source    *syntax.Expression
-	ambiguous bool
+	value         genericValue
+	source        *syntax.Expression
+	initialTarget token.Pos
+	dependency    *genericValueBinding
+	ambiguous     bool
 }
 
 // collectGenericValueBindings finds stable local generic function values.
@@ -28,14 +30,32 @@ func (c %checker) collectGenericValueBindings(
 ) (map[types.Object]%genericValueBinding, map[*syntax.Expression]bool) {
 	bindings := make(map[types.Object]%genericValueBinding)
 	sources := make(map[*syntax.Expression]bool)
-	for _, file := range c.files {
-		if c.generated[file] {
-			continue
+	for {
+		changed := false
+		for _, file := range c.files {
+			if c.generated[file] {
+				continue
+			}
+			changed = c.collectFileGenericValueBindings(
+				file, summaries, bindings, sources,
+			) || changed
 		}
-		c.collectFileGenericValueBindings(file, summaries, bindings, sources)
+		if !changed {
+			break
+		}
 	}
 	for _, file := range c.files {
 		c.markAmbiguousGenericValueBindings(file, bindings)
+	}
+	for changed := true; changed; {
+		changed = false
+		for _, binding := range bindings {
+			if !binding.ambiguous && binding.dependency != nil &&
+				binding.dependency.ambiguous {
+				binding.ambiguous = true
+				changed = true
+			}
+		}
 	}
 	return bindings, sources
 }
@@ -45,14 +65,15 @@ func (c %checker) collectFileGenericValueBindings(
 	summaries map[*types.Func]%genericEffectSummary,
 	bindings map[types.Object]%genericValueBinding,
 	sources map[*syntax.Expression]bool,
-) {
+) bool {
+	changed := false
 	inspectGenericFile(file, func(node %syntax.Node) bool {
 		if statement, ok := syntax.StatementOf(node); ok {
 			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil &&
-				assignment.Operator == token.DEFINE {
-				c.collectAssignedGenericValues(
+				(assignment.Operator == token.DEFINE || assignment.Operator == token.ASSIGN) {
+				changed = c.collectAssignedGenericValues(
 					assignment.Left, assignment.Right, summaries, bindings, sources,
-				)
+				) || changed
 			}
 		}
 		if specification, ok := syntax.SpecificationOf(node); ok {
@@ -62,13 +83,14 @@ func (c %checker) collectFileGenericValueBindings(
 					item := syntax.Expression.Identifier{Value: value.Names[index]}
 					left[index] = &item
 				}
-				c.collectAssignedGenericValues(
+				changed = c.collectAssignedGenericValues(
 					left, value.Values, summaries, bindings, sources,
-				)
+				) || changed
 			}
 		}
 		return true
 	})
+	return changed
 }
 
 // markAmbiguousGenericValueBindings rejects values changed after their first binding.
@@ -77,6 +99,20 @@ func (c %checker) markAmbiguousGenericValueBindings(
 	bindings map[types.Object]%genericValueBinding,
 ) {
 	inspectGenericFile(file, func(node %syntax.Node) bool {
+		if specification, ok := syntax.SpecificationOf(node); ok {
+			if value := syntax.ValueSpecificationOf(specification); value != nil &&
+				len(value.Values) != 0 {
+				for index := range value.Names {
+					object := c.facts.Object(value.Names[index])
+					binding, found := bindings[object]
+					if !found || len(value.Values) == len(value.Names) &&
+						binding.source == value.Values[index] {
+						continue
+					}
+					binding.ambiguous = true
+				}
+			}
+		}
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			return true
@@ -113,6 +149,9 @@ func (c %checker) markAmbiguousGenericTargets(
 			continue
 		}
 		if binding, found := bindings[c.facts.Object(name)]; found {
+			if binding.initialTarget == name.Start {
+				continue
+			}
 			binding.ambiguous = true
 		}
 	}
@@ -124,12 +163,23 @@ func (c %checker) collectAssignedGenericValues(
 	summaries map[*types.Func]%genericEffectSummary,
 	bindings map[types.Object]%genericValueBinding,
 	sources map[*syntax.Expression]bool,
-) {
+) bool {
 	if len(left) != len(right) {
-		return
+		return false
 	}
+	changed := false
 	for index, expression := range right {
 		value, ok := c.genericValue(expression, summaries)
+		var dependency *genericValueBinding = nil
+		if !ok {
+			source := syntax.IdentifierExpressionOf(unparenthesized(expression))
+			if source != nil {
+				dependency = bindings[c.facts.Object(source)]
+				if dependency != nil {
+					value, ok = dependency.value, true
+				}
+			}
+		}
 		name := syntax.IdentifierExpressionOf(unparenthesized(left[index]))
 		if !ok || name == nil || name.Name == "_" {
 			continue
@@ -139,14 +189,20 @@ func (c %checker) collectAssignedGenericValues(
 			continue
 		}
 		if current, found := bindings[object]; found {
+			if current.source == expression {
+				continue
+			}
 			current.ambiguous = true
 			continue
 		}
 		bindings[object] = &genericValueBinding{
-			value: value, source: expression, ambiguous: false,
+			value: value, source: expression, initialTarget: name.Start,
+			dependency: dependency, ambiguous: false,
 		}
 		sources[expression] = true
+		changed = true
 	}
+	return changed
 }
 
 // genericValue resolves the effects carried by a function value expression.
@@ -358,7 +414,11 @@ func (c %checker) expressionStatement(expression %syntax.Expression) bool {
 func (c %checker) reportBoundGenericValueUse(
 	expression %syntax.Expression,
 	bindings map[types.Object]%genericValueBinding,
+	sources map[*syntax.Expression]bool,
 ) {
+	if c.boundGenericValueSource(expression, sources) {
+		return
+	}
 	name := syntax.IdentifierExpressionOf(expression)
 	if name == nil {
 		return
@@ -367,7 +427,8 @@ func (c %checker) reportBoundGenericValueUse(
 		return
 	}
 	binding, found := bindings[c.facts.Object(name)]
-	if !found || c.discardedValue(expression) {
+	if !found || binding.initialTarget == syntax.ExpressionPosition(expression) ||
+		c.discardedValue(expression) {
 		return
 	}
 	if binding.ambiguous {
@@ -399,6 +460,31 @@ func (c %checker) reportBoundGenericValueUse(
 		return
 	}
 	c.reportGenericValueEscape(current, value)
+}
+
+func (c %checker) boundGenericValueSource(
+	expression %syntax.Expression,
+	sources map[*syntax.Expression]bool,
+) bool {
+	current := expression
+	for {
+		if sources[current] {
+			return true
+		}
+		parentNode := c.parents[syntax.ExpressionNode(current)]
+		if parentNode == nil {
+			return false
+		}
+		parent, ok := syntax.ExpressionOf(parentNode)
+		if !ok || parent == nil {
+			return false
+		}
+		parentheses := syntax.ParenthesizedExpressionOf(parent)
+		if parentheses == nil || parentheses.Expression != current {
+			return false
+		}
+		current = parent
+	}
 }
 
 // reportGenericValueCall checks saved effects with the current call arguments.

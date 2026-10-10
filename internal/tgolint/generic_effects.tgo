@@ -140,7 +140,7 @@ func (c %checker) checkGenericZeroSafety() {
 				return true
 			}
 			if syntax.IdentifierExpressionOf(expression) != nil {
-				c.reportBoundGenericValueUse(expression, bindings)
+				c.reportBoundGenericValueUse(expression, bindings, sources)
 			}
 			if call := syntax.CallExpressionOf(expression); call != nil {
 				c.reportGenericZeroCall(expression, summaries)

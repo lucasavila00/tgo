@@ -133,4 +133,21 @@ func FunctionValues() {
 	partialSecond()
 	var initializedPartial = genericzero.TripleNested[model.Event]()()
 	initializedPartial()
+	transitiveFactory := genericzero.TripleNested[model.Event]
+	transitiveFactorySecond := transitiveFactory
+	transitiveFactorySecond()()()
+	transitiveFactoryThird := transitiveFactorySecond
+	transitiveFactoryThird()()()
+	transitiveFirst := genericzero.TripleNested[model.Event]()
+	var transitiveFirstSecond = transitiveFirst
+	transitiveFirstSecond()()
+	var transitiveFirstThird = transitiveFirstSecond
+	transitiveFirstThird()()
+	transitiveSecond := genericzero.TripleNested[model.Event]()()
+	var transitiveSecondNext func() func()
+	transitiveSecondNext = transitiveSecond
+	transitiveSecondNext()
+	var transitiveSecondLast func() func()
+	transitiveSecondLast = transitiveSecondNext
+	transitiveSecondLast()
 }
