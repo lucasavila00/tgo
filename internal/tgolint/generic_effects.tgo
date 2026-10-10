@@ -3,7 +3,6 @@ package tgolint
 import (
 	"go/token"
 	"go/types"
-	"strings"
 
 	"tgo/pkg/syntax"
 )
@@ -684,29 +683,5 @@ func (c %checker) collectResliceZero(
 			summary, syntaxNode(value), slice.Elem(), extendingResliceEffectCondition(),
 			expression.Expression, expression.High,
 		)
-	}
-}
-
-func (c %checker) collectGenericAccess(
-	summary %genericEffectSummary,
-	node %syntax.Node,
-	expression %syntax.Expression,
-	selector %syntax.SelectorExpression,
-) {
-	if !strings.HasPrefix(selector.Selector.Name, "Tgo") ||
-		!c.receiverCanHideModel(c.facts.Type(selector.Expression)) {
-		return
-	}
-	if selection := c.facts.Selection(expression); selection == nil {
-		return
-	} else if _, ok := selection.Obj().(*types.Func); !ok {
-		return
-	}
-	c.markGenericAccessAt(summary, node, c.facts.Type(selector.Expression))
-}
-
-func noGenericEffect() GenericEffect {
-	return GenericEffect{
-		Receiver: false, TypeParameter: 0, Conditions: nil, MaySkip: false,
 	}
 }

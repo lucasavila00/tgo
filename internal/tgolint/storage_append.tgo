@@ -1,0 +1,147 @@
+package tgolint
+
+func applyStorageAppend(
+	state %storageExecutionState,
+	call %storageGraphCall,
+	operation StorageEffectOperation,
+) {
+	base := storageInput(state.temps, operation.Inputs, 0)
+	values := storageInputs(state.temps, operation.Inputs[1:])
+	location := storageBirthLocation(
+		&state.storage, call, storageRootAllocation, operation.Target.ID,
+	)
+	renameStorageExecutionFamily(state, call, location.family)
+	base = storageInput(state.temps, operation.Inputs, 0)
+	values = storageInputs(state.temps, operation.Inputs[1:])
+	base = appendStorageValue(state.storage, base, values, operation.Variadic, location)
+	setStorageResults(state.temps, operation.Results, []storageValue{base})
+}
+
+func renameStorageExecutionFamily(
+	state %storageExecutionState,
+	call %storageGraphCall,
+	family string,
+) {
+	for id, value := range state.temps {
+		state.temps[id] = renameStorageFamilyValue(value, family)
+	}
+	for index, value := range state.returns {
+		state.returns[index] = renameStorageFamilyValue(value, family)
+	}
+}
+
+func appendStorageValue(
+	state storageState,
+	base storageValue,
+	values []storageValue,
+	variadic bool,
+	freshLocation storageLocation,
+) storageValue {
+	var slices []storageSlice = nil
+	for _, slice := range base.slices {
+		if variadic && len(values) == 1 {
+			for _, source := range values[0].slices {
+				slices = append(slices, appendStorageSlice(
+					state, slice, nil, &source, freshLocation,
+				)...)
+			}
+			if len(values[0].slices) == 0 {
+				source := storageSlice{backing: freshLocation}
+				slices = append(slices, appendStorageSlice(
+					state, slice, nil, &source, freshLocation,
+				)...)
+			}
+			continue
+		}
+		slices = append(slices, appendStorageSlice(
+			state, slice, values, nil, freshLocation,
+		)...)
+	}
+	base.regions = nil
+	base.slices = slices
+	return base
+}
+
+func appendStorageSlice(
+	state storageState,
+	slice storageSlice,
+	values []storageValue,
+	variadic *storageSlice,
+	freshLocation storageLocation,
+) []storageSlice {
+	added := int64(len(values))
+	addedKnown := true
+	if variadic != nil {
+		added = variadic.length
+		addedKnown = variadic.knownLength
+	}
+	var slices []storageSlice = nil
+	forceFresh := slice.knownCapacity && addedKnown && slice.length+added > slice.capacity
+	reuse := !forceFresh
+	if reuse {
+		reused := slice
+		if variadic != nil {
+			target := reused
+			target.offset += reused.length
+			target.length = added
+			target.knownLength = addedKnown
+			copyStorageSliceElements(state, target, *variadic, false)
+		} else {
+			for index, value := range values {
+				writeStorageSliceIndex(state, reused, reused.length+int64(index), value, false)
+			}
+		}
+		reused.length += added
+		reused.knownLength = reused.knownLength && addedKnown
+		slices = append(slices, reused)
+	}
+	if !slice.knownCapacity || !addedKnown || forceFresh {
+		fresh := storageSlice{
+			backing: freshLocation, knownOffset: true,
+			length:      slice.length + added,
+			knownLength: slice.knownLength && addedKnown,
+		}
+		copyStorageSliceElements(state, fresh, slice, false)
+		if variadic != nil {
+			target := fresh
+			target.offset = slice.length
+			target.length = added
+			target.knownLength = addedKnown
+			copyStorageSliceElements(state, target, *variadic, false)
+		} else {
+			for index, value := range values {
+				writeStorageSliceIndex(state, fresh, slice.length+int64(index), value, false)
+			}
+		}
+		slices = append(slices, fresh)
+	}
+	return slices
+}
+
+func writeStorageSliceIndex(
+	state storageState,
+	slice storageSlice,
+	index int64,
+	value storageValue,
+	exact bool,
+) {
+	path := storagePath{location: slice.backing, steps: []StorageEffectPath{{
+		Kind: storagePathIndex, Index: slice.offset + index,
+	}}}
+	writeStorageMemory(state, storageMemoryKey(path), value, exact)
+}
+
+func applyStorageCopy(
+	state %storageExecutionState,
+	operation StorageEffectOperation,
+) {
+	if len(operation.Inputs) < 2 {
+		return
+	}
+	count := copyStorageSlices(
+		state.storage,
+		state.temps[operation.Inputs[0]],
+		state.temps[operation.Inputs[1]],
+	)
+	setStorageResults(state.temps, operation.Results, []storageValue{count})
+}
