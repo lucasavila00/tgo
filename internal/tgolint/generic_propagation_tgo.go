@@ -95,13 +95,15 @@ func (c *checker) propagateGenericZeroFacts(
 					continue
 				}
 				if c.propagateGenericEffects(
-					summary, returned.expression, fact.ReturnedZeroEffects,
+					summary, returned.expression, returned.expression,
+					fact.ReturnedZeroEffects,
 					receiverArguments, typeArguments, true, true, returned.maySkip,
 				) {
 					changed = true
 				}
 				if c.propagateGenericEffects(
-					summary, returned.expression, fact.ReturnedAccessEffects,
+					summary, returned.expression, returned.expression,
+					fact.ReturnedAccessEffects,
 					receiverArguments, typeArguments, false, true, returned.maySkip,
 				) {
 					changed = true
@@ -116,9 +118,21 @@ func (c *checker) propagateGenericSummaryCalls(
 	summaries map[*types.Func]*genericEffectSummary,
 ) bool {
 	changed := false
+	bindings := c.collectBlockGenericValueBindings(summary.body, summaries)
 	for _, call := range summary.calls {
 		function, receiverArguments, typeArguments := c.genericCall(call)
 		if function == nil {
+			value, found, ambiguous := c.genericSummaryCallValue(
+				call, summaries, bindings,
+			)
+			if found {
+				changed = c.propagateGenericValueEffects(
+					summary, call, value, ambiguous,
+				) || changed
+				if ambiguous {
+					changed = c.addUnknownGenericEffects(summary) || changed
+				}
+			}
 			continue
 		}
 		fact := c.genericZeroFact(function, summaries)
@@ -126,20 +140,77 @@ func (c *checker) propagateGenericSummaryCalls(
 			continue
 		}
 		changed = c.propagateGenericEffects(
-			summary, call, fact.ZeroEffects, receiverArguments, typeArguments,
+			summary, call, call, fact.ZeroEffects, receiverArguments, typeArguments,
 			true, false, false,
 		) || changed
 		changed = c.propagateGenericEffects(
-			summary, call, fact.AccessEffects, receiverArguments, typeArguments,
+			summary, call, call, fact.AccessEffects, receiverArguments, typeArguments,
 			false, false, false,
 		) || changed
 	}
 	return changed
 }
 
+func (c *checker) genericSummaryCallValue(
+	expression *syntax.Expression,
+	summaries map[*types.Func]*genericEffectSummary,
+	bindings map[types.Object]*genericValueBinding,
+) (genericValue, bool, bool) {
+	call := syntax.CallExpressionOf(expression)
+	if call == nil {
+		return noGenericValue(), false, false
+	}
+	callee := unparenthesized(call.Callee)
+	if name := syntax.IdentifierExpressionOf(callee); name != nil {
+		if binding, found := bindings[c.facts.Object(name)]; found {
+			return binding.value, true, binding.ambiguous
+		}
+	}
+	value, found := c.genericValue(callee, summaries)
+	return value, found, false
+}
+
+func (c *checker) propagateGenericValueEffects(
+	summary *genericEffectSummary,
+	expression *syntax.Expression,
+	value genericValue,
+	maySkip bool,
+) bool {
+	conditionCall := expression
+	zeroEffects := value.fact.ZeroEffects
+	accessEffects := value.fact.AccessEffects
+	if value.returned {
+		if value.conditionCall == nil {
+			return false
+		}
+		conditionCall = value.conditionCall
+		zeroEffects = value.fact.ReturnedZeroEffects
+		accessEffects = value.fact.ReturnedAccessEffects
+	}
+	changed := c.propagateGenericEffects(
+		summary, expression, conditionCall, zeroEffects,
+		value.receiverArguments, value.typeArguments, true, false, maySkip,
+	)
+	return c.propagateGenericEffects(
+		summary, expression, conditionCall, accessEffects,
+		value.receiverArguments, value.typeArguments, false, false, maySkip,
+	) || changed
+}
+
+func (c *checker) addUnknownGenericEffects(summary *genericEffectSummary) bool {
+	changed := false
+	for _, parameter := range summary.parameters {
+		effect := noGenericEffect()
+		effect.MaySkip = true
+		changed = c.addGenericEffect(summary, true, parameter, effect) || changed
+	}
+	return changed
+}
+
 func (c *checker) propagateGenericEffects(
 	summary *genericEffectSummary,
-	callExpression *syntax.Expression,
+	pathExpression *syntax.Expression,
+	conditionExpression *syntax.Expression,
 	effects []GenericEffect,
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
@@ -149,14 +220,14 @@ func (c *checker) propagateGenericEffects(
 ) bool {
 	changed := false
 	pathConditions, pathMaySkip, reachable := c.genericEffectPath(
-		summary, syntaxNode(callExpression),
+		summary, syntaxNode(pathExpression),
 	)
 	if !reachable {
 		return false
 	}
 	for _, effect := range effects {
 		mapped, parameters, possible := c.propagatedGenericEffect(
-			summary, callExpression, effect, receiverArguments, typeArguments,
+			summary, conditionExpression, effect, receiverArguments, typeArguments,
 			pathConditions, pathMaySkip, zero,
 		)
 		if !possible {

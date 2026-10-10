@@ -252,6 +252,46 @@ func NestedGenericCall[T any]() func() {
 	}
 }
 
+func NestedReturnedGenericCall[T any]() func() {
+	return func() {
+		Nested[T]()()
+	}
+}
+
+func AliasedNestedReturnedGenericCall[T any]() func() {
+	return func() {
+		nested := Nested[T]()
+		nested()
+	}
+}
+
+func AliasedGenericValueCall[T any]() func() {
+	return func() {
+		variable := Variable[T]
+		variable()
+	}
+}
+
+func ParenthesizedAssignedNested[T any]() func() {
+	nested := func() {}
+	(nested) = func() {
+		var value T
+		_ = value
+	}
+	return nested
+}
+
+func ParenthesizedRangedAssignedNested[T any]() func() {
+	values := []func(){func() {
+		var value T
+		_ = value
+	}}
+	nested := func() {}
+	for _, (nested) = range values {
+	}
+	return nested
+}
+
 func SafeGenericForwardedNested[T any]() func() {
 	return forwardGenericNested[T](func() {})
 }

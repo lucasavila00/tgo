@@ -106,7 +106,10 @@ func (c *checker) markAmbiguousGenericTargets(
 	bindings map[types.Object]*genericValueBinding,
 ) {
 	for _, target := range targets {
-		name := syntax.IdentifierExpressionOf(target)
+		if target == nil {
+			continue
+		}
+		name := syntax.IdentifierExpressionOf(unparenthesized(target))
 		if name == nil {
 			continue
 		}
@@ -131,7 +134,7 @@ func (c *checker) collectAssignedGenericValues(
 	}
 	for index, expression := range right {
 		value, ok := c.genericValue(expression, summaries)
-		name := syntax.IdentifierExpressionOf(left[index])
+		name := syntax.IdentifierExpressionOf(unparenthesized(left[index]))
 		if !ok || name == nil || name.Name == "_" {
 			continue
 		}
@@ -148,6 +151,65 @@ func (c *checker) collectAssignedGenericValues(
 		}
 		sources[expression] = true
 	}
+}
+
+// collectBlockGenericValueBindings finds stable generic values in one body.
+func (c *checker) collectBlockGenericValueBindings(
+	body *syntax.BlockStatement,
+	summaries map[*types.Func]*genericEffectSummary,
+) map[types.Object]*genericValueBinding {
+	bindings := make(map[types.Object]*genericValueBinding)
+	sources := make(map[*syntax.Expression]bool)
+	inspectGenericBlock(body, func(node *syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
+			return false
+		}
+		if statement, ok := syntax.StatementOf(node); ok {
+			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil &&
+				assignment.Operator == token.DEFINE {
+				c.collectAssignedGenericValues(
+					assignment.Left, assignment.Right, summaries, bindings, sources,
+				)
+			}
+		}
+		if specification, ok := syntax.SpecificationOf(node); ok {
+			if value := syntax.ValueSpecificationOf(specification); value != nil {
+				left := make([]*syntax.Expression, len(value.Names))
+				for index := range value.Names {
+					item := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+						return syntax.NewExpressionIdentifier(input.FieldValue)
+					}(syntax.TgoExpressionIdentifierInput{FieldValue: value.Names[index]})
+					left[index] = &item
+				}
+				c.collectAssignedGenericValues(
+					left, value.Values, summaries, bindings, sources,
+				)
+			}
+		}
+		return true
+	})
+	inspectGenericBlock(body, func(node *syntax.Node) bool {
+		if _, nested := syntax.FunctionLiteralOf(node); nested {
+			return false
+		}
+		statement, ok := syntax.StatementOf(node)
+		if !ok {
+			return true
+		}
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			c.markAmbiguousGenericTargets(
+				assignment.Left, assignment.Operator, bindings,
+			)
+		}
+		if ranged := syntax.RangeStatementOf(statement); ranged != nil {
+			c.markAmbiguousGenericTargets(
+				[]*syntax.Expression{ranged.Key, ranged.Value},
+				ranged.Operator, bindings,
+			)
+		}
+		return true
+	})
+	return bindings
 }
 
 // genericValue resolves the effects carried by a function value expression.

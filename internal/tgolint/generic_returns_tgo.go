@@ -58,7 +58,10 @@ func (c *checker) markRangedReturnedClosureBindings(
 	ranged *syntax.RangeStatement,
 ) {
 	for _, target := range []*syntax.Expression{ranged.Key, ranged.Value} {
-		name := syntax.IdentifierExpressionOf(target)
+		if target == nil {
+			continue
+		}
+		name := syntax.IdentifierExpressionOf(unparenthesized(target))
 		if name == nil || name.Name == "_" {
 			continue
 		}
@@ -87,7 +90,7 @@ func (c *checker) addReturnedClosureBindings(
 	predeclared map[types.Object]bool,
 ) {
 	for index, target := range left {
-		name := syntax.IdentifierExpressionOf(target)
+		name := syntax.IdentifierExpressionOf(unparenthesized(target))
 		if name == nil || name.Name == "_" {
 			continue
 		}

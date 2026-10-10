@@ -56,7 +56,12 @@ genericzerobad/bad.go:126:2: call to function returned by IndexedNested can crea
 genericzerobad/bad.go:127:2: call to function returned by ForwardedNested will create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:128:2: call to function returned by GenericForwardedNested will create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:129:2: call to function returned by NestedGenericCall will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:130:2: call to function returned by CalledForwardedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:134:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:135:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:140:7: function returned by UnresolvedNested escapes; its effects cannot be checked at a call site
+genericzerobad/bad.go:130:2: call to function returned by NestedReturnedGenericCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:131:2: call to function returned by AliasedNestedReturnedGenericCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:132:2: call to function returned by AliasedGenericValueCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:133:2: call to function returned by ParenthesizedAssignedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:134:2: call to function returned by ParenthesizedRangedAssignedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:135:2: call to function returned by CalledForwardedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:139:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:140:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:145:7: function returned by UnresolvedNested escapes; its effects cannot be checked at a call site
