@@ -1,0 +1,37 @@
+[
+  {
+    "method": "workspaceSymbols",
+    "query": "",
+    "names": ["a", "Make", "b", "Use"],
+    "symbols": [
+      {
+        "name": "a",
+        "kind": "package",
+        "container": "example.test/memory-imports/a",
+        "range": {"file": "a/a.tgo", "text": "a", "occurrence": 1},
+        "selection": {"file": "a/a.tgo", "text": "a", "occurrence": 1}
+      },
+      {
+        "name": "Make",
+        "kind": "function",
+        "container": "example.test/memory-imports/a",
+        "range": {"file": "a/a.tgo", "text": "func Make() (string, error) {\n\treturn \"x\",\n}", "occurrence": 1},
+        "selection": {"file": "a/a.tgo", "text": "Make", "occurrence": 1}
+      },
+      {
+        "name": "b",
+        "kind": "package",
+        "container": "example.test/memory-imports/b",
+        "range": {"file": "b/b.tgo", "text": "b", "occurrence": 1},
+        "selection": {"file": "b/b.tgo", "text": "b", "occurrence": 1}
+      },
+      {
+        "name": "Use",
+        "kind": "function",
+        "container": "example.test/memory-imports/b",
+        "range": {"file": "b/b.tgo", "text": "func Use() string {\n\tvalue, err := a.Make()\n\tif err != nil {\n\t\treturn \"\"\n\t}\n\treturn value\n}", "occurrence": 1},
+        "selection": {"file": "b/b.tgo", "text": "Use", "occurrence": 1}
+      }
+    ]
+  }
+]

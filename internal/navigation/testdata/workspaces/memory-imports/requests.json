@@ -1,0 +1,23 @@
+[
+  {
+    "method": "hover",
+    "position": {"file": "b/b.tgo", "text": "Make", "occurrence": 1},
+    "hover": "func Make() (string, error)"
+  },
+  {
+    "method": "definition",
+    "position": {"file": "b/b.tgo", "text": "Make", "occurrence": 1},
+    "locations": [
+      {"file": "a/a.tgo", "text": "Make", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "references",
+    "position": {"file": "b/b.tgo", "text": "Make", "occurrence": 1},
+    "includeDeclaration": true,
+    "locations": [
+      {"file": "a/a.tgo", "text": "Make", "occurrence": 1},
+      {"file": "b/b.tgo", "text": "Make", "occurrence": 1}
+    ]
+  }
+]

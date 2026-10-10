@@ -1,0 +1,11 @@
+package b
+
+import "example.test/memory-imports/a"
+
+func Use() string {
+	value, err := a.Make()
+	if err != nil {
+		return ""
+	}
+	return value
+}

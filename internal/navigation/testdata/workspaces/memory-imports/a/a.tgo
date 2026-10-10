@@ -1,0 +1,5 @@
+package a
+
+func Make() (string, error) {
+	return "x",
+}

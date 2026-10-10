@@ -96,7 +96,30 @@ func TestHelperWorkspaceFixtures(t *testing.T) {
 			for _, mutation := range readMutations(t, workspace) {
 				server.checkMutation(t, workspace, mutation)
 			}
+			if entry.Name() == "memory-imports" {
+				assertNoGoFiles(t, workspace)
+			}
 		})
+	}
+}
+
+func assertNoGoFiles(t *testing.T, workspace string) {
+	t.Helper()
+	err := filepath.WalkDir(workspace, func(
+		path string,
+		entry fs.DirEntry,
+		walkErr error,
+	) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if !entry.IsDir() && filepath.Ext(path) == ".go" {
+			t.Fatalf("navigation wrote Go file %s", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

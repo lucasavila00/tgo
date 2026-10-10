@@ -240,6 +240,8 @@ func (b *packageBuilder) compileFiles(
 		}
 		if dependency := unit.Imports[importPath]; dependency != nil && dependency.compiled != nil {
 			imports[importPath] = dependency.compiled
+			memoryImports[importPath] = dependency.compiled
+			continue
 		}
 		diskImports = append(diskImports, importPath)
 	}
