@@ -466,13 +466,13 @@ func activeGoFile(
 	if err != nil || !matches {
 		return nil, nil, false, err
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, nil, false, err
+	data, err_1 := os.ReadFile(path)
+	if err_1 != nil {
+		return nil, nil, false, err_1
 	}
-	file, err := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
-	if err != nil {
-		return nil, nil, false, err
+	file, err_2 := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
+	if err_2 != nil {
+		return nil, nil, false, err_2
 	}
 	cgo := importsC(file)
 	if cgo && !context.CgoEnabled {

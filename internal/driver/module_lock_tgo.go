@@ -85,9 +85,9 @@ func moduleRoot(directory string) (string, string, error) {
 	if path == "" || path == os.DevNull {
 		return "", "", errors.New("tgo needs a Go module; run go mod init first")
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", "", err
+	data, err_1 := os.ReadFile(path)
+	if err_1 != nil {
+		return "", "", err_1
 	}
 	for line := range strings.SplitSeq(string(data), "\n") {
 		fields := strings.Fields(line)

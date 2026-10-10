@@ -407,14 +407,8 @@ func activeGoFile(
 	if err != nil || !matches {
 		return ,,, err
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return ,,, err
-	}
-	file, err := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
-	if err != nil {
-		return ,,, err
-	}
+	data := os.ReadFile(path)!!
+	file := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)!!
 	cgo := importsC(file)
 	if cgo && !context.CgoEnabled {
 		return nil, nil, false,
