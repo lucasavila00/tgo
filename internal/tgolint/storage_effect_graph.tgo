@@ -33,27 +33,29 @@ type StorageEffectEdge struct {
 
 // StorageEffectOperation is one ordered wire operation.
 type StorageEffectOperation struct {
-	Kind          int
-	Position      int
-	Target        StorageEffectRegion
-	Source        StorageEffectRegion
-	Regions       []StorageEffectRegion
-	Inputs        []int
-	Results       []int
-	TypeArguments []int
-	Function      int
-	Field         string
-	Offset        int64
-	Length        int64
-	Capacity      int64
-	KnownOffset   bool
-	KnownLength   bool
-	KnownCapacity bool
-	Boolean       bool
-	Variadic      bool
-	Operator      int
-	ZeroEffects   []GenericEffect
-	AccessEffects []GenericEffect
+	Kind              int
+	Position          int
+	Target            StorageEffectRegion
+	Source            StorageEffectRegion
+	Regions           []StorageEffectRegion
+	Inputs            []int
+	Results           []int
+	TypeArguments     []int
+	ReceiverArguments []int
+	CalledParameters  []int
+	Function          int
+	Field             string
+	Offset            int64
+	Length            int64
+	Capacity          int64
+	KnownOffset       bool
+	KnownLength       bool
+	KnownCapacity     bool
+	Boolean           bool
+	Variadic          bool
+	Operator          int
+	ZeroEffects       []GenericEffect
+	AccessEffects     []GenericEffect
 }
 
 const (

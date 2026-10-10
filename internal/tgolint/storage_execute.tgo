@@ -26,17 +26,19 @@ type storageInvocationEffects struct {
 }
 
 type storageGraphCall struct {
-	fact           %GenericEffectFact
-	function       int
-	arguments      []storageValue
-	captures       []storagePath
-	parameterCells []storagePath
-	typeArguments  []types.Type
+	fact              %GenericEffectFact
+	function          int
+	arguments         []storageValue
+	captures          []storagePath
+	parameterCells    []storagePath
+	receiverArguments []types.Type
+	typeArguments     []types.Type
 }
 
 type storageCallKey struct {
 	fact     %GenericEffectFact
 	function int
+	inputs   string
 }
 
 type storageExecutionResult struct {
@@ -80,6 +82,7 @@ func executeStorageFunction(
 	state storageState,
 	context %storageExecutionContext,
 ) (storageState, []storageValue, storageInvocationEffects) {
+	state = cloneStorageState(state)
 	function := findStorageEffectFunction(call.fact.Storage, call.function)
 	if function == nil {
 		return state, nil, storageInvocationEffects{}
@@ -95,7 +98,10 @@ func executeStorageFunction(
 			writeStorageMemory(state, storageMemoryKey(path), argument, true)
 		}
 	}
-	key := storageCallKey{fact: call.fact, function: call.function}
+	key := storageCallKey{
+		fact: call.fact, function: call.function,
+		inputs: storageCallInputKey(call),
+	}
 	if context.active[key] {
 		if result, ok := context.approximations[key]; ok {
 			return cloneStorageState(result.storage), cloneStorageValues(result.returns), result.effects
@@ -104,26 +110,34 @@ func executeStorageFunction(
 	}
 	context.active[key] = true
 	defer delete(context.active, key)
-	previous := storageExecutionResult{storage: cloneStorageState(state)}
+	var previous storageExecutionResult
+	initialized := false
 	for {
-		context.approximations[key] = previous
+		if initialized {
+			context.approximations[key] = previous
+		} else {
+			delete(context.approximations, key)
+		}
 		storage, returns, effects := executeStorageFunctionOnce(call, state, context, function)
 		next := storageExecutionResult{
 			storage: storage,
-			returns: joinStorageValues(previous.returns, returns),
-			effects: storageInvocationEffects{
-				zero: appendGenericEffects(
-					append([]GenericEffect(nil), previous.effects.zero...), effects.zero,
-				),
-				access: appendGenericEffects(
-					append([]GenericEffect(nil), previous.effects.access...), effects.access,
-				),
-			},
+			returns: cloneStorageValues(returns), effects: effects,
 		}
-		if reflect.DeepEqual(previous, next) {
+		if initialized {
+			next.storage = joinStorageState(previous.storage, storage)
+			next.returns = joinStorageValues(previous.returns, returns)
+			next.effects.zero = appendGenericEffects(
+				append([]GenericEffect(nil), previous.effects.zero...), effects.zero,
+			)
+			next.effects.access = appendGenericEffects(
+				append([]GenericEffect(nil), previous.effects.access...), effects.access,
+			)
+		}
+		if initialized && reflect.DeepEqual(previous, next) {
 			return next.storage, next.returns, next.effects
 		}
 		previous = next
+		initialized = true
 	}
 }
 

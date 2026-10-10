@@ -123,9 +123,15 @@ func Safe() {
 	genericzero.ZeroCopyThenCall[model.Event]()
 	genericzero.RecursiveSafe[model.Event]()
 	genericzero.GuardedSafe[model.Event]()
+	genericzero.SharedActualSafe[model.Event]()
+	genericzero.NestedArgumentSafe[model.Event]()
+	genericzero.LoopOverwriteSafe[model.Event]()
 	genericzero.KnownIgnore[model.Event]()
+	genericzero.UnreachableKnownIgnore[model.Event]()
 	imported := []func(){genericzero.Nested[model.Event]()}
 	genericzerowrap.StoreThenCall(imported, func() {})
+	shared := []func(){genericzero.Nested[model.Event]()}
+	genericzerowrap.StoreFirstCallSecond(shared, shared)
 	genericzero.AlternativeNested[int, int](true)()
 	genericzero.RangedAssignedNested[int]()()
 	genericzero.RangedDefinedNested[int]()()

@@ -41,3 +41,7 @@ func CallThenStore(slot []func(), replacement func()) {
 func LoadThenStoreCall(slot []func(), replacement func()) {
 	genericzero.LoadThenStoreCall(slot, replacement)
 }
+
+func StoreFirstCallSecond(first []func(), second []func()) {
+	genericzero.StoreFirstCallSecond(first, second)
+}

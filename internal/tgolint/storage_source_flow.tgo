@@ -10,15 +10,19 @@ import (
 	"tgo/pkg/syntax/cfg"
 )
 
-func (c %checker) reportStorageFunctionCall(expression %syntax.Expression) {
+func (c %checker) reportStorageFunctionCall(expression %syntax.Expression) bool {
 	call := syntax.CallExpressionOf(expression)
-	if call == nil || c.genericCallObject(call.Callee) != nil {
-		return
+	if call == nil {
+		return false
+	}
+	if function, ok := c.genericCallObject(call.Callee).(*types.Func); ok {
+		fact := c.storageFunctionFact(function.Origin())
+		return fact != nil && fact.Version == 1 && fact.Storage.Known
 	}
 	node := syntax.ExpressionNode(expression)
 	root := c.enclosingFunction(&node)
 	if root == nil {
-		return
+		return false
 	}
 	flow := c.storageFlows[*root]
 	if flow == nil {
@@ -32,21 +36,24 @@ func (c %checker) reportStorageFunctionCall(expression %syntax.Expression) {
 		arguments = append(arguments,
 			c.storageExpressionValue(argument, state, flow, false))
 	}
+	handled := len(value.functions) != 0
 	for _, function := range value.functions {
 		effects := storageGraphEffects(storageGraphCall{
 			fact: function.fact, function: function.graph,
 			arguments: arguments, captures: function.captures,
-			typeArguments: function.typeArguments,
+			receiverArguments: function.receiverArguments,
+			typeArguments:     function.typeArguments,
 		}, state)
 		c.reportGenericEffects(
-			expression, expression, effects.zero, nil,
+			expression, expression, effects.zero, function.receiverArguments,
 			function.typeArguments, true, "call to function value",
 		)
 		c.reportGenericEffects(
-			expression, expression, effects.access, nil,
+			expression, expression, effects.access, function.receiverArguments,
 			function.typeArguments, false, "call to function value",
 		)
 	}
+	return handled
 }
 
 func (c %checker) reportStorageFactCall(
@@ -81,6 +88,7 @@ func (c %checker) reportStorageFactCall(
 	effects := storageGraphEffects(storageGraphCall{
 		fact: fact, function: fact.Storage.Entry,
 		arguments: arguments, captures: nil, typeArguments: typeArguments,
+		receiverArguments: receiverArguments,
 	}, state)
 	c.reportGenericEffects(
 		expression, expression, effects.zero,

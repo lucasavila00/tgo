@@ -1,10 +1,69 @@
 package tgolint
 
 import (
+	"fmt"
 	"go/types"
 	"strconv"
 	"strings"
 )
+
+func storageCallInputKey(call storageGraphCall) string {
+	var text strings.Builder
+	for _, argument := range call.arguments {
+		writeStorageValueKey(&text, argument)
+		text.WriteByte(';')
+	}
+	text.WriteByte('|')
+	for _, capture := range call.captures {
+		writeStoragePathKey(&text, capture)
+		text.WriteByte(';')
+	}
+	return text.String()
+}
+
+func writeStorageValueKey(text *strings.Builder, value storageValue) {
+	if value.unknown {
+		text.WriteByte('?')
+	}
+	if value.trueValue {
+		text.WriteByte('t')
+	}
+	if value.falseValue {
+		text.WriteByte('f')
+	}
+	if value.integerKnown {
+		text.WriteString(strconv.FormatInt(value.integer, 10))
+	}
+	for _, function := range value.functions {
+		text.WriteString(fmt.Sprintf("f%p:%d", function.fact, function.graph))
+		for _, capture := range function.captures {
+			writeStoragePathKey(text, capture)
+		}
+	}
+	for _, region := range value.regions {
+		writeStoragePathKey(text, region)
+	}
+	for _, slice := range value.slices {
+		writeStorageLocationKey(text, slice.backing)
+		text.WriteByte('/')
+	}
+}
+
+func writeStoragePathKey(text *strings.Builder, path storagePath) {
+	writeStorageLocationKey(text, path.location)
+	key := storageMemoryKey(path)
+	text.WriteString(key.path)
+	if key.wildcard {
+		text.WriteByte('*')
+	}
+}
+
+func writeStorageLocationKey(text *strings.Builder, location storageLocation) {
+	text.WriteString(fmt.Sprintf(
+		"%p:%d:%d:%d:%t", location.owner, location.graph,
+		location.site, location.kind, location.merged,
+	))
+}
 
 type storageLocation struct {
 	owner  *GenericEffectFact
@@ -20,10 +79,11 @@ type storagePath struct {
 }
 
 type storageFunction struct {
-	graph         int
-	fact          %GenericEffectFact
-	captures      []storagePath
-	typeArguments []types.Type
+	graph             int
+	fact              %GenericEffectFact
+	captures          []storagePath
+	receiverArguments []types.Type
+	typeArguments     []types.Type
 }
 
 type storageSlice struct {
@@ -160,6 +220,7 @@ func containsStorageFunction(
 	for _, function := range functions {
 		if function.graph != want.graph || function.fact != want.fact ||
 			len(function.captures) != len(want.captures) ||
+			len(function.receiverArguments) != len(want.receiverArguments) ||
 			len(function.typeArguments) != len(want.typeArguments) {
 			continue
 		}
@@ -171,6 +232,13 @@ func containsStorageFunction(
 		}
 		for index := range function.typeArguments {
 			if !types.Identical(function.typeArguments[index], want.typeArguments[index]) {
+				equal = false
+			}
+		}
+		for index := range function.receiverArguments {
+			if !types.Identical(
+				function.receiverArguments[index], want.receiverArguments[index],
+			) {
 				equal = false
 			}
 		}

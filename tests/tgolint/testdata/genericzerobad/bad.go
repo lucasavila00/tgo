@@ -213,10 +213,16 @@ func FunctionValues(event model.Event) {
 	genericzero.CopyThenCall[model.Event]()
 	genericzero.RecursiveUnsafe[model.Event]()
 	genericzero.GuardedUnsafe[model.Event]()
+	genericzero.DistinctActualsUnsafe[model.Event]()
+	genericzero.MultipleAssignmentUnsafe[model.Event]()
+	genericzero.NestedArgumentUnsafe[model.Event]()
 	imported := []func(){genericzero.Nested[model.Event]()}
 	genericzerowrap.CallThenStore(imported, func() {})
 	imported = []func(){genericzero.Nested[model.Event]()}
 	genericzerowrap.LoadThenStoreCall(imported, func() {})
+	first := []func(){genericzero.Nested[model.Event]()}
+	second := []func(){genericzero.Nested[model.Event]()}
+	genericzerowrap.StoreFirstCallSecond(first, second)
 }
 
 func ReturnedAlternatives(first bool) {

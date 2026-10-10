@@ -305,6 +305,12 @@ func KnownIgnore[T any]() {
 	IgnoreFunction(storedEffect[T])
 }
 
+func UnreachableKnownIgnore[T any]() {
+	if false {
+		IgnoreFunction(storedEffect[T])
+	}
+}
+
 func GuardedStore(slot []func(), replacement func(), store bool) {
 	if store {
 		slot[0] = replacement
@@ -320,4 +326,47 @@ func GuardedSafe[T any]() {
 func GuardedUnsafe[T any]() {
 	values := []func(){storedEffect[T]}
 	GuardedStore(values, func() {}, false)
+}
+
+func StoreFirstCallSecond(first []func(), second []func()) {
+	first[0] = func() {}
+	second[0]()
+}
+
+func DistinctActualsUnsafe[T any]() {
+	first := []func(){storedEffect[T]}
+	second := []func(){storedEffect[T]}
+	StoreFirstCallSecond(first, second)
+}
+
+func SharedActualSafe[T any]() {
+	values := []func(){storedEffect[T]}
+	StoreFirstCallSecond(values, values)
+}
+
+func MultipleAssignmentUnsafe[T any]() {
+	values := []func(){storedEffect[T]}
+	var loaded func()
+	loaded, values[0] = values[0], func() {}
+	loaded()
+}
+
+func InvokeFunction(value func()) {
+	value()
+}
+
+func NestedArgumentUnsafe[T any]() {
+	InvokeFunction(CapturedCellBeforeWrite[T]())
+}
+
+func NestedArgumentSafe[T any]() {
+	IgnoreFunction(CapturedCellBeforeWrite[T]())
+}
+
+func LoopOverwriteSafe[T any]() {
+	values := []func(){storedEffect[T]}
+	for index := 0; index < 2; index++ {
+		values[0] = func() {}
+		values[0]()
+	}
 }

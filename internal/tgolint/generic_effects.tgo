@@ -171,12 +171,15 @@ func (c %checker) checkGenericZeroSafety() {
 				return true
 			}
 			if syntax.IdentifierExpressionOf(expression) != nil {
-				c.reportBoundGenericValueUse(expression, bindings, sources)
+				if _, functionValue := coreType(c.facts.Type(expression)).(*types.Signature); !functionValue {
+					c.reportBoundGenericValueUse(expression, bindings, sources)
+				}
 			}
 			if call := syntax.CallExpressionOf(expression); call != nil {
 				c.reportGenericZeroCall(expression, summaries)
-				c.reportReturnedGenericCall(expression, summaries, sources)
-				c.reportStorageFunctionCall(expression)
+				if !c.reportStorageFunctionCall(expression) {
+					c.reportReturnedGenericCall(expression, summaries, sources)
+				}
 			}
 			if syntax.IndexExpressionOf(expression) != nil ||
 				syntax.IndexListExpressionOf(expression) != nil ||

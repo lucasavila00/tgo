@@ -31,7 +31,8 @@ func applyStorageOperation(
 		}
 		value := storageValue{functions: []storageFunction{{
 			graph: operation.Function, fact: call.fact, captures: captures,
-			typeArguments: append([]types.Type(nil), call.typeArguments...),
+			receiverArguments: append([]types.Type(nil), call.receiverArguments...),
+			typeArguments:     append([]types.Type(nil), call.typeArguments...),
 		}}}
 		setStorageResults(state.temps, operation.Results, []storageValue{value})
 	case storageEffectCall:
@@ -43,8 +44,13 @@ func applyStorageOperation(
 			}
 			functions = append(functions, storageFunction{
 				graph: operation.Function, fact: call.fact,
+				receiverArguments: projectStorageTypeArguments(
+					call.receiverArguments, call.typeArguments,
+					operation.ReceiverArguments,
+				),
 				typeArguments: projectStorageTypeArguments(
-					call.typeArguments, operation.TypeArguments,
+					call.receiverArguments, call.typeArguments,
+					operation.TypeArguments,
 				),
 			})
 		} else if len(arguments) != 0 {
@@ -59,12 +65,19 @@ func applyStorageOperation(
 			nested := storageGraphCall{
 				fact: function.fact, function: function.graph,
 				arguments: arguments, captures: function.captures,
-				typeArguments: function.typeArguments,
+				receiverArguments: function.receiverArguments,
+				typeArguments:     function.typeArguments,
 			}
 			updated, returned, effects := executeStorageFunction(nested, before, context)
 			if operation.Function >= 0 && len(operation.TypeArguments) != 0 {
-				effects.zero = projectStorageEffects(effects.zero, operation.TypeArguments)
-				effects.access = projectStorageEffects(effects.access, operation.TypeArguments)
+				effects.zero = projectStorageEffects(
+					effects.zero, operation.ReceiverArguments,
+					operation.TypeArguments, operation.CalledParameters,
+				)
+				effects.access = projectStorageEffects(
+					effects.access, operation.ReceiverArguments,
+					operation.TypeArguments, operation.CalledParameters,
+				)
 			}
 			if firstTransfer {
 				transferred = updated
@@ -153,13 +166,19 @@ func applyStorageOperation(
 }
 
 func projectStorageTypeArguments(
-	arguments []types.Type,
+	receiverArguments []types.Type,
+	typeArguments []types.Type,
 	projection []int,
 ) []types.Type {
 	result := make([]types.Type, len(projection))
 	for index, source := range projection {
-		if source >= 0 && source < len(arguments) {
-			result[index] = arguments[source]
+		if source >= 0 && source < len(typeArguments) {
+			result[index] = typeArguments[source]
+		} else if source <= -2 {
+			receiver := -source - 2
+			if receiver < len(receiverArguments) {
+				result[index] = receiverArguments[receiver]
+			}
 		}
 	}
 	return result
@@ -233,19 +252,49 @@ func storageScalarEqual(left storageValue, right storageValue) (bool, bool) {
 
 func projectStorageEffects(
 	effects []GenericEffect,
+	receiverProjection []int,
 	projection []int,
+	parameters []int,
 ) []GenericEffect {
 	var result []GenericEffect = nil
 	for _, effect := range effects {
-		if effect.Receiver || effect.TypeParameter < 0 ||
-			effect.TypeParameter >= len(projection) {
+		targetProjection := projection
+		if effect.Receiver {
+			targetProjection = receiverProjection
+		}
+		if effect.TypeParameter < 0 || effect.TypeParameter >= len(targetProjection) {
 			continue
 		}
-		target := projection[effect.TypeParameter]
-		if target < 0 {
+		target := targetProjection[effect.TypeParameter]
+		if target == -1 {
 			continue
 		}
-		effect.TypeParameter = target
+		effect.Receiver = target <= -2
+		if effect.Receiver {
+			effect.TypeParameter = -target - 2
+		} else {
+			effect.TypeParameter = target
+		}
+		for index := range effect.Conditions {
+			condition := &effect.Conditions[index]
+			if condition.ValueParameter < 0 ||
+				condition.ValueParameter >= len(parameters) ||
+				parameters[condition.ValueParameter] < 0 {
+				effect.MaySkip = true
+				effect.Conditions = nil
+				break
+			}
+			condition.ValueParameter = parameters[condition.ValueParameter]
+			if condition.OtherParameter >= 0 {
+				if condition.OtherParameter >= len(parameters) ||
+					parameters[condition.OtherParameter] < 0 {
+					effect.MaySkip = true
+					effect.Conditions = nil
+					break
+				}
+				condition.OtherParameter = parameters[condition.OtherParameter]
+			}
+		}
 		result = appendGenericEffects(result, []GenericEffect{effect})
 	}
 	return result
