@@ -405,6 +405,15 @@ func (c %checker) enumCells(
 	if star := syntax.StarExpressionOf(expression); star != nil {
 		return c.enumExpressionStorage(star.Expression, state)
 	}
+	if index := syntax.IndexExpressionOf(expression); index != nil {
+		owners := c.enumCells(index.Expression, state)
+		result := make(enumStorageSet, len(owners))
+		for owner := range owners {
+			owner.path += "/[]"
+			result[owner] = true
+		}
+		return result
+	}
 	selector := syntax.SelectorExpressionOf(expression)
 	if selector == nil {
 		return nil

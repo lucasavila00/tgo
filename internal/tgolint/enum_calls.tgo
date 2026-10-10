@@ -191,6 +191,16 @@ func (c %checker) invokeEnumClosure(
 				break
 			}
 			object := c.facts.Object(name)
+			if variadic := syntax.EllipsisExpressionOf(field.Type); variadic != nil {
+				values := make(enumStorageSet)
+				for ; argument < len(arguments); argument++ {
+					values, _ = joinEnumStorageSet(values, arguments[argument])
+				}
+				if object != nil && enumPointerType(c.facts, variadic.Element) {
+					input.pointers[enumPointerPlace{root: object, path: "/[]"}] = values
+				}
+				continue
+			}
 			if object != nil && enumPointerType(c.facts, field.Type) {
 				input.pointers[enumPointerPlace{root: object}] =
 					cloneEnumStorageSet(arguments[argument])
