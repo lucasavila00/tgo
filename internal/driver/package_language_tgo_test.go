@@ -204,15 +204,21 @@ func TestBuildFromGoOnlyPackage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("compile workspace: %v", err)
 	}
-	if len(compiled) != 1 || compiled[0].Path != "example.com/graph/model" {
-		t.Fatalf("compiled packages = %v, want model", compiled)
+	if len(compiled) != 1 {
+		t.Fatalf("compiled package count = %d, want 1", len(compiled))
+	}
+	if compiled[0].Path != "example.com/graph/model" {
+		t.Fatalf("compiled package path = %q, want model", compiled[0].Path)
 	}
 	views, err := CompileWorkspaceViewsContext(context.Background(), root)
 	if err != nil {
 		t.Fatalf("compile workspace views: %v", err)
 	}
-	if len(views) != 1 || views[0].Package.Path != "example.com/graph/model" {
-		t.Fatalf("compiled views = %v, want model", views)
+	if len(views) != 1 {
+		t.Fatalf("compiled view count = %d, want 1", len(views))
+	}
+	if views[0].Package.Path != "example.com/graph/model" {
+		t.Fatalf("compiled view path = %q, want model", views[0].Package.Path)
 	}
 	if err := Build(root, []string{"./app"}); err != nil {
 		t.Fatal(err)
