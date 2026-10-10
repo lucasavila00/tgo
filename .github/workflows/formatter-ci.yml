@@ -40,9 +40,7 @@ jobs:
           go-version-file: go.mod
       - id: corpus
         name: Run formatter corpus
-        run: |
-          make formatter-go-corpus
-          echo "passed=true" >> "$GITHUB_OUTPUT"
+        run: make formatter-go-corpus
 
   formatter-corpus-gate:
     name: formatter-corpus

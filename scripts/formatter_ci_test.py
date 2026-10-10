@@ -189,16 +189,47 @@ class WorkflowVerificationTest(unittest.TestCase):
 
         self.assertIn("formatter corpus step must not have a condition", failures)
 
+    def test_rejects_corpus_checkout_ref(self) -> None:
+        source = WORKFLOW.read_text().replace(
+            "      - uses: actions/checkout@v6\n      - uses: actions/setup-go@v6",
+            "      - uses: actions/checkout@v6\n"
+            "        with:\n"
+            "          ref: main\n"
+            "      - uses: actions/setup-go@v6",
+        )
+
+        failures = formatter_ci.formatter_workflow_failures(source)
+
+        self.assertIn(
+            "formatter corpus checkout must not have options",
+            failures,
+        )
+
+    def test_rejects_extra_corpus_step_command(self) -> None:
+        source = WORKFLOW.read_text().replace(
+            "        run: make formatter-go-corpus\n",
+            "        run: |\n"
+            "          make formatter-go-corpus\n"
+            '          echo "passed=true" >> "$GITHUB_OUTPUT"\n',
+        )
+
+        failures = formatter_ci.formatter_workflow_failures(source)
+
+        self.assertIn(
+            "formatter corpus step must run only the corpus target",
+            failures,
+        )
+
     def test_rejects_missing_corpus_proof(self) -> None:
         source = WORKFLOW.read_text().replace(
-            '          echo "passed=true" >> "$GITHUB_OUTPUT"\n',
+            "      passed: ${{ steps.corpus.outputs.passed }}\n",
             "",
         )
 
         failures = formatter_ci.formatter_workflow_failures(source)
 
         self.assertIn(
-            "formatter corpus step must run the exact proof commands",
+            "formatter corpus job must export the corpus proof",
             failures,
         )
 
@@ -247,7 +278,9 @@ class BackstopVerificationTest(unittest.TestCase):
     def test_rejects_noop_corpus_recipe(self) -> None:
         recipe = (
             "\tTGO_FULL_GO_FORMAT_CORPUS=1 go test ./pkg/format "
-            "-run TestSourceMatchesFullGoTree -count=1"
+            "-run TestSourceMatchesFullGoTree -count=1 && \\\n"
+            '\t\t{ test -z "$$GITHUB_OUTPUT" || echo "passed=true" '
+            '>> "$$GITHUB_OUTPUT"; }'
         )
         source = MAKEFILE.read_text().replace(
             recipe,
@@ -258,6 +291,33 @@ class BackstopVerificationTest(unittest.TestCase):
 
         self.assertIn(
             "formatter-go-corpus must run the exact full corpus recipe",
+            failures,
+        )
+
+    def test_rejects_noop_slow_ci_recipe(self) -> None:
+        recipe = (
+            '\tflock "$$(git rev-parse --git-path tgo-ci.lock)" '
+            "$(MAKE) -j2 slow-ci-unlocked"
+        )
+        source = MAKEFILE.read_text().replace(
+            recipe,
+            "\ttrue\n\t# " + recipe.lstrip(),
+        )
+
+        failures = formatter_ci.makefile_failures(source)
+
+        self.assertIn(
+            "slow-ci must run the exact locked slow CI recipe",
+            failures,
+        )
+
+    def test_rejects_ignored_corpus_failure(self) -> None:
+        source = MAKEFILE.read_text() + "\n.IGNORE: formatter-go-corpus\n"
+
+        failures = formatter_ci.makefile_failures(source)
+
+        self.assertIn(
+            "Makefile must not ignore formatter-go-corpus failures",
             failures,
         )
 

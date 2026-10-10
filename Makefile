@@ -31,7 +31,8 @@ formatter-ci:
 	python3 scripts/formatter_ci.py verify
 
 formatter-go-corpus:
-	TGO_FULL_GO_FORMAT_CORPUS=1 go test ./pkg/format -run TestSourceMatchesFullGoTree -count=1
+	TGO_FULL_GO_FORMAT_CORPUS=1 go test ./pkg/format -run TestSourceMatchesFullGoTree -count=1 && \
+		{ test -z "$$GITHUB_OUTPUT" || echo "passed=true" >> "$$GITHUB_OUTPUT"; }
 
 tgofmt-check:
 	python3 -m scripts.check_tgofmt

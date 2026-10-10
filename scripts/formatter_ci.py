@@ -203,6 +203,21 @@ def formatter_workflow_failures(source: str) -> list[str]:
             failures.append("formatter corpus job must export the corpus proof")
         if has_active_key(corpus_job, "continue-on-error"):
             failures.append("formatter corpus job must not continue on error")
+        checkout = workflow_section(
+            "\n".join(corpus_job),
+            "      - uses: actions/checkout@v6",
+        )
+        checkout_steps = [
+            line
+            for line in active_lines(corpus_job)
+            if line.lstrip().startswith("- uses: actions/checkout@")
+        ]
+        if (
+            checkout is None
+            or active_lines(checkout)
+            or checkout_steps != ["      - uses: actions/checkout@v6"]
+        ):
+            failures.append("formatter corpus checkout must not have options")
         corpus_step = workflow_section(
             "\n".join(corpus_job),
             "      - id: corpus",
@@ -212,13 +227,12 @@ def formatter_workflow_failures(source: str) -> list[str]:
                 failures.append("formatter corpus step must not have a condition")
             if has_active_key(corpus_step, "shell"):
                 failures.append("formatter corpus step must use the default shell")
-            run = workflow_section("\n".join(corpus_step), "        run: |")
-            expected = [
-                "          make formatter-go-corpus",
-                '          echo "passed=true" >> "$GITHUB_OUTPUT"',
+            expected_step = [
+                "        name: Run formatter corpus",
+                "        run: make formatter-go-corpus",
             ]
-            if run is None or active_lines(run) != expected:
-                failures.append("formatter corpus step must run the exact proof commands")
+            if active_lines(corpus_step) != expected_step:
+                failures.append("formatter corpus step must run only the corpus target")
 
     gate_job = job_sections.get("  formatter-corpus-gate:")
     if gate_job is not None:
@@ -281,15 +295,34 @@ def makefile_failures(source: str) -> list[str]:
     if slow is None or slow[0] != expected_slow:
         failures.append("slow-ci-unlocked must depend on formatter-go-corpus")
 
+    slow_entry = make_target(source, "slow-ci")
+    expected_slow_recipe = [
+        '\tflock "$$(git rev-parse --git-path tgo-ci.lock)" '
+        "$(MAKE) -j2 slow-ci-unlocked",
+    ]
+    if slow_entry is None or slow_entry[0] != "slow-ci:":
+        failures.append("Makefile needs an active slow-ci target")
+    elif slow_entry[1] != expected_slow_recipe:
+        failures.append("slow-ci must run the exact locked slow CI recipe")
+
     corpus = make_target(source, "formatter-go-corpus")
     expected_recipe = [
         "\tTGO_FULL_GO_FORMAT_CORPUS=1 go test ./pkg/format "
-        "-run TestSourceMatchesFullGoTree -count=1",
+        "-run TestSourceMatchesFullGoTree -count=1 && \\",
+        '\t\t{ test -z "$$GITHUB_OUTPUT" || echo "passed=true" '
+        '>> "$$GITHUB_OUTPUT"; }',
     ]
     if corpus is None or corpus[0] != "formatter-go-corpus:":
         failures.append("Makefile needs an active formatter-go-corpus target")
     elif corpus[1] != expected_recipe:
         failures.append("formatter-go-corpus must run the exact full corpus recipe")
+    for line in active_lines(source.splitlines()):
+        if not line.startswith(".IGNORE:"):
+            continue
+        ignored = line.removeprefix(".IGNORE:").split()
+        if not ignored or "formatter-go-corpus" in ignored:
+            failures.append("Makefile must not ignore formatter-go-corpus failures")
+            break
     return failures
 
 
