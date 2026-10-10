@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 )
 
@@ -174,6 +175,9 @@ func (l *propagationLowerer) declaration(node *ast.DeclStmt) []ast.Stmt {
 	if !ok {
 		return []ast.Stmt{node}
 	}
+	if statements, split := l.splitVariableDeclaration(general); split {
+		return statements
+	}
 	if statements, fused := l.directVariableDeclaration(node, general); fused {
 		return statements
 	}
@@ -199,6 +203,46 @@ func (l *propagationLowerer) declaration(node *ast.DeclStmt) []ast.Stmt {
 		prefix = append(prefix, before...)
 	}
 	return append(prefix, node)
+}
+
+// splitVariableDeclaration keeps lowering work between its source specifications.
+func (l *propagationLowerer) splitVariableDeclaration(
+	general *ast.GenDecl,
+) ([]ast.Stmt, bool) {
+	if general.Tok != token.VAR || len(general.Specs) < 2 ||
+		!l.variableDeclarationHasLowering(general) {
+		return nil, false
+	}
+	result := []ast.Stmt(nil)
+	for index, specification := range general.Specs {
+		declaration := &ast.GenDecl{
+			TokPos: general.TokPos,
+			Tok:    general.Tok,
+			Specs:  []ast.Spec{specification},
+		}
+		if index == 0 {
+			declaration.Doc = general.Doc
+		}
+		result = append(result, l.declaration(&ast.DeclStmt{Decl: declaration})...)
+	}
+	return result, true
+}
+
+func (l *propagationLowerer) variableDeclarationHasLowering(
+	general *ast.GenDecl,
+) bool {
+	for _, specification := range general.Specs {
+		value, ok := specification.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+		for _, expression := range value.Values {
+			if l.hasLowering(expression) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (l *propagationLowerer) reportResultCount(

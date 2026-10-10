@@ -79,3 +79,69 @@ func use() (int, error) {
 		})
 	}
 }
+
+func TestPropagationVariableSpecificationsSeeEarlierNames(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func first() (int, error) { return 1, nil }
+func second(value int) (int, error) { return value + 1, nil }
+
+func values() (int, error) {
+	var (
+		firstValue = first()!!
+		secondValue = second(firstValue)!!
+	)
+	return secondValue, nil
+}
+`)
+	for _, required := range []string{
+		"var firstValue, err = first()",
+		"var secondValue, err_1 = second(firstValue)",
+	} {
+		if !strings.Contains(output, required) {
+			t.Fatalf("generated output does not contain %q\n%s", required, output)
+		}
+	}
+}
+
+func TestPropagationVariableSpecificationsKeepOrder(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func mark(label string) int { return len(label) }
+func load() (int, error) { return 1, nil }
+
+func value() (int, error) {
+	var (
+		controlA = mark("control-a")
+		controlB = mark("control-b")
+	)
+	var (
+		before = mark("before")
+		loaded = load()!!
+		after = mark("after")
+	)
+	return controlA + controlB + before + loaded + after, nil
+}
+`)
+	control := "var (\n\t\tcontrolA = mark(\"control-a\")\n" +
+		"\t\tcontrolB = mark(\"control-b\")\n\t)"
+	if !strings.Contains(output, control) {
+		t.Fatalf("ordinary declaration changed\n%s", output)
+	}
+	ordered := []string{
+		`var before = mark("before")`,
+		"var loaded, err = load()",
+		"if err != nil {",
+		`var after = mark("after")`,
+	}
+	position := -1
+	for _, required := range ordered {
+		next := strings.Index(output, required)
+		if next <= position {
+			t.Fatalf("generated output puts %q out of order\n%s", required, output)
+		}
+		position = next
+	}
+}
