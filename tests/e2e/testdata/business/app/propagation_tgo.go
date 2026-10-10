@@ -323,8 +323,7 @@ func PropagationForInitializer(events *[]string, firstFound bool, secondFound bo
 		if err_1 != nil {
 			return 0, err_1
 		}
-		first, second := result, result_1
-		for ; propagationForCondition(events, count < first+second); propagationForPost(events, &count) {
+		for first, second := result, result_1; propagationForCondition(events, count < first+second); propagationForPost(events, &count) {
 			*events = append(*events, "body")
 			if count == 0 {
 				continue
@@ -339,11 +338,11 @@ func PropagationForInitializer(events *[]string, firstFound bool, secondFound bo
 
 func PropagationForInitializerWrapped(events *[]string, found bool) (int, error) {
 	{
-		value, err := propagationForValue(events, "wrapped", 1, found)
+		result, err := propagationForValue(events, "wrapped", 1, found)
 		if err != nil {
 			return 0, fmt.Errorf("propagationForValue: %w", err)
 		}
-		for ; value < 2; value++ {
+		for value := result; value < 2; value++ {
 			return value, nil
 		}
 	}
@@ -357,12 +356,12 @@ func PropagationForInitializerLabels(events *[]string, enterWithGoto bool) (int,
 	}
 outer:
 	{
-		limit, err := propagationForValue(events, "label", 2, true)
+		result, err := propagationForValue(events, "label", 2, true)
 		if err != nil {
 			return 0, err
 		}
 	control:
-		for ; count < limit; count++ {
+		for limit := result; count < limit; count++ {
 			if count == 0 {
 				continue control
 			}
@@ -370,6 +369,23 @@ outer:
 		}
 	}
 	return count, nil
+}
+
+func PropagationForInitializerIdentity() ([]func() int, []*int, error) {
+	events := []string{}
+	closures := []func() int{}
+	addresses := []*int{}
+	{
+		result, err := propagationForValue(&events, "identity", 0, true)
+		if err != nil {
+			return nil, nil, err
+		}
+		for value := result; value < 3; value++ {
+			closures = append(closures, func() int { return value })
+			addresses = append(addresses, &value)
+		}
+	}
+	return closures, addresses, nil
 }
 
 func PropagationDeferredArgument(events *[]string, found bool) (int, error) {

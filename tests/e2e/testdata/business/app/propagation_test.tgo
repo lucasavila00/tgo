@@ -239,6 +239,23 @@ func TestPropagationKeepsForInitializerLabels(t *testing.T) {
 	}
 }
 
+func TestPropagationKeepsForInitializerIterationIdentity(t *testing.T) {
+	closures, addresses, err := PropagationForInitializerIdentity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index := range 3 {
+		if closures[index]() != index || *addresses[index] != index {
+			t.Fatalf("index=%d closure=%d address=%d", index, closures[index](), *addresses[index])
+		}
+		for other := range index {
+			if addresses[index] == addresses[other] {
+				t.Fatalf("iterations %d and %d have the same address", index, other)
+			}
+		}
+	}
+}
+
 func TestPropagationInDeferredArgument(t *testing.T) {
 	events := []string{}
 	value, err := PropagationDeferredArgument(&events, true)

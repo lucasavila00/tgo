@@ -426,8 +426,7 @@ func use() error {
 		if err != nil {
 			return err
 		}
-		before, w := operand, result
-		for ; w.ready(); before++ {`
+		for before, w := operand, result; w.ready(); before++ {`
 	if !strings.Contains(output, want) {
 		t.Fatalf("generated output does not lower the for initializer\n%s", output)
 	}
@@ -457,10 +456,10 @@ entry:
 }
 `)
 	for _, required := range []string{
-		"value, err := load()",
-		"outer:\n\t\tfor ; value < 2; value++",
-		"entry:\n\t{\n\t\tother, err_1 := load()",
-		"control_1:\n\t\tfor ; other < 2; other++",
+		"result, err := load()",
+		"outer:\n\t\tfor value := result; value < 2; value++",
+		"entry:\n\t{\n\t\tresult_1, err_1 := load()",
+		"control_1:\n\t\tfor other := result_1; other < 2; other++",
 		"break control_1",
 	} {
 		if !strings.Contains(output, required) {
@@ -486,7 +485,7 @@ func use(result, err, operand, control int) (int, error) {
 	for _, required := range []string{
 		"operand_1 := mark(operand)",
 		"result_1, err_1 := load()",
-		"before, value := operand_1, result_1",
+		"for before, value := operand_1, result_1; value < 2; before++",
 	} {
 		if !strings.Contains(output, required) {
 			t.Fatalf("generated output does not contain %q\n%s", required, output)

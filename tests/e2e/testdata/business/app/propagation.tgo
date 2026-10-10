@@ -277,6 +277,17 @@ outer:
 	return count, nil
 }
 
+func PropagationForInitializerIdentity() ([]func() int, []*int, error) {
+	events := []string{}
+	closures := []func() int{}
+	addresses := []*int{}
+	for value := propagationForValue(&events, "identity", 0, true)!!; value < 3; value++ {
+		closures = append(closures, func() int { return value })
+		addresses = append(addresses, &value)
+	}
+	return closures, addresses, nil
+}
+
 func PropagationDeferredArgument(events %[]string, found bool) (int, error) {
 	defer propagationRecord(events, propagationLoad(events, found)!)
 	*events = append(*events, "body")

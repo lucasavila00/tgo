@@ -291,8 +291,19 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		scopedInitializer := node.Init != nil
 		prefix := []ast.Stmt(nil)
 		if l.statementHasLowering(node.Init) {
-			prefix = l.simpleStatement(node.Init)
-			node.Init = nil
+			if assignment, ok := node.Init.(*ast.AssignStmt); ok {
+				l.rememberSimpleAssignmentTypes(assignment)
+				l.rememberDirectResultTypes(
+					assignment.Lhs,
+					l.directPropagationSignature(assignment.Rhs[0]),
+				)
+				lowered := l.lowerAssignment(assignment, false)
+				node.Init = lowered[len(lowered)-1]
+				prefix = lowered[:len(lowered)-1]
+			} else {
+				prefix = l.simpleStatement(node.Init)
+				node.Init = nil
+			}
 		} else if assignment, ok := node.Init.(*ast.AssignStmt); ok {
 			l.rememberSimpleAssignmentTypes(assignment)
 		}
