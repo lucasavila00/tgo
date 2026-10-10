@@ -17,6 +17,11 @@ type location struct {
 	column int
 }
 
+type identifierLocation struct {
+	position location
+	name     string
+}
+
 type definitionLocation struct {
 	file string
 	line int
@@ -33,10 +38,10 @@ type span struct {
 type Index struct {
 	files                *token.FileSet
 	types                map[span]types.TypeAndValue
-	definitions          map[location]types.Object
+	definitions          map[identifierLocation]types.Object
 	lineDefinitions      map[definitionLocation]types.Object
 	ambiguousDefinitions map[definitionLocation]bool
-	uses                 map[location]types.Object
+	uses                 map[identifierLocation]types.Object
 	selections           map[span]*types.Selection
 	instances            map[location]types.Instance
 	implicits            map[span]types.Object
@@ -48,7 +53,7 @@ type Index struct {
 type Projection interface {
 	RangeTypes(func(token.Pos, token.Pos, types.TypeAndValue, bool))
 	RangeDefinitions(func(token.Pos, string, types.Object, bool))
-	RangeUses(func(token.Pos, types.Object, bool))
+	RangeUses(func(token.Pos, string, types.Object, bool))
 	RangeSelections(func(token.Pos, token.Pos, *types.Selection, bool))
 	RangeInstances(func(token.Pos, types.Instance, bool))
 	RangeImplicits(func(token.Pos, token.Pos, types.Object, bool))
@@ -89,9 +94,9 @@ func NewProjection(
 		},
 	)
 	facts.RangeUses(
-		func(position token.Pos, object types.Object, synthetic bool) {
+		func(position token.Pos, name string, object types.Object, synthetic bool) {
 			if object != nil && !synthetic {
-				index.uses[index.location(position)] = object
+				index.uses[index.identifierLocation(position, name)] = object
 				index.useCounts[object]++
 			}
 		},
@@ -151,7 +156,7 @@ func New(file *syntax.File, info *types.Info, files *token.FileSet) *Index {
 	}
 	for identifier, object := range info.Uses {
 		if object != nil {
-			index.uses[index.location(identifier.Pos())] = object
+			index.uses[index.identifierLocation(identifier.Pos(), identifier.Name)] = object
 			index.useCounts[object]++
 		}
 	}
@@ -175,10 +180,10 @@ func newIndex(files *token.FileSet) *Index {
 	return &Index{
 		files:                files,
 		types:                make(map[span]types.TypeAndValue),
-		definitions:          make(map[location]types.Object),
+		definitions:          make(map[identifierLocation]types.Object),
 		lineDefinitions:      make(map[definitionLocation]types.Object),
 		ambiguousDefinitions: make(map[definitionLocation]bool),
-		uses:                 make(map[location]types.Object),
+		uses:                 make(map[identifierLocation]types.Object),
 		selections:           make(map[span]*types.Selection),
 		instances:            make(map[location]types.Instance),
 		implicits:            make(map[span]types.Object),
@@ -193,7 +198,7 @@ func (i *Index) addDefinition(
 	object types.Object,
 ) {
 	location := i.location(position)
-	i.definitions[location] = object
+	i.definitions[identifierLocation{position: location, name: name}] = object
 	key := definitionLocation{file: location.file, line: location.line, name: name}
 	if current := i.lineDefinitions[key]; current != nil && current != object {
 		i.ambiguousDefinitions[key] = true
@@ -267,10 +272,10 @@ func (i *Index) IdentifierObject(expression *syntax.Expression) types.Object {
 // Object returns the object used or defined by an identifier.
 func (i *Index) Object(identifier *syntax.Identifier) types.Object {
 	position := i.location(identifier.Start)
-	if object := i.definitions[position]; object != nil {
+	if object := matchingObject(i.definitions, identifier, position); object != nil {
 		return object
 	}
-	if object := i.uses[position]; object != nil {
+	if object := matchingObject(i.uses, identifier, position); object != nil {
 		return object
 	}
 	return i.lineDefinition(identifier, position)
@@ -283,10 +288,10 @@ func (i *Index) IdentifierFact(file *syntax.File, node *syntax.Node) (types.Obje
 		return nil, false
 	}
 	position := i.location(identifier.Start)
-	if object := i.definitions[position]; object != nil {
+	if object := matchingObject(i.definitions, identifier, position); object != nil {
 		return object, true
 	}
-	if object := i.uses[position]; object != nil {
+	if object := matchingObject(i.uses, identifier, position); object != nil {
 		return object, false
 	}
 	object := i.lineDefinition(identifier, position)
@@ -416,10 +421,18 @@ func (i *Index) Definition(expression *syntax.Expression) types.Object {
 // DefinitionName returns the object defined by a source identifier node.
 func (i *Index) DefinitionName(identifier *syntax.Identifier) types.Object {
 	position := i.location(identifier.Start)
-	if object := i.definitions[position]; object != nil {
+	if object := matchingObject(i.definitions, identifier, position); object != nil {
 		return object
 	}
 	return i.lineDefinition(identifier, position)
+}
+
+func matchingObject(
+	objects map[identifierLocation]types.Object,
+	identifier *syntax.Identifier,
+	position location,
+) types.Object {
+	return objects[identifierLocation{position: position, name: identifier.Name}]
 }
 
 func (i *Index) lineDefinition(
@@ -540,6 +553,10 @@ func (i *Index) location(position token.Pos) location {
 		line:   value.Line,
 		column: value.Column,
 	}
+}
+
+func (i *Index) identifierLocation(position token.Pos, name string) identifierLocation {
+	return identifierLocation{position: i.location(position), name: name}
 }
 
 func (i *Index) nodeSpan(start token.Pos, stop token.Pos) span {

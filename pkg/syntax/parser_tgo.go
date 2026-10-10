@@ -101,11 +101,6 @@ type rawDecl struct {
 // Tag returns the active tag.
 func (v rawDecl) Tag() rawDeclTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v rawDecl) UnknownTag() string {
-	return fmt.Sprintf("rawDecl: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // rawDeclEnum is the Enum payload.
 type rawDeclEnum struct {
 	rawDeclBase
@@ -345,11 +340,6 @@ type rawComprehensionClause struct {
 
 // Tag returns the active tag.
 func (v rawComprehensionClause) Tag() rawComprehensionClauseTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v rawComprehensionClause) UnknownTag() string {
-	return fmt.Sprintf("rawComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // rawComprehensionClauseRange is the Range payload.
 type rawComprehensionClauseRange struct {
@@ -803,7 +793,7 @@ func (p *sourceParser) discoverDeclarations() error {
 					declarationStart = payload.start
 					declarationEnd = payload.end
 				default:
-					panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+					panic("invalid rawDecl tag") // unreachable: tgolint requires a case per tag
 				}
 				p.edits = append(
 					p.edits,

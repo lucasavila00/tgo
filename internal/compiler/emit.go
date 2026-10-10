@@ -12,6 +12,7 @@ import (
 func checkedStructGo(sourceName string, declaration *model) string {
 	var output strings.Builder
 	parameters := checkedParameterNames(declaration.Fields, declaration.Name)
+	carrierNames := carrierFieldNames(declaration.Fields)
 	fmt.Fprintf(
 		&output,
 		"type %s struct {\n%s}\n",
@@ -20,7 +21,7 @@ func checkedStructGo(sourceName string, declaration *model) string {
 	)
 	fmt.Fprintf(&output, "type %s struct {\n", checkedCarrierName(declaration.Name))
 	for index, field := range declaration.Fields {
-		fmt.Fprintf(&output, "%s %s\n", checkedCarrierFieldName(field, index), field.Type)
+		fmt.Fprintf(&output, "%s %s\n", carrierNames[index], field.Type)
 	}
 	output.WriteString("}\n")
 	fmt.Fprintf(
@@ -48,15 +49,6 @@ func checkedStructGo(sourceName string, declaration *model) string {
 }
 
 func checkedCarrierName(name string) string { return "Tgo" + name + "Input" }
-
-func checkedCarrierFieldName(value field, index int) string {
-	if value.Name == "" || value.Name == "_" {
-		return fmt.Sprintf("Field%d", index)
-	}
-	runes := []rune(value.Name)
-	runes[0] = unicode.ToUpper(runes[0])
-	return "Field" + string(runes)
-}
 
 func checkedParameterNames(fields []field, reserved string) []string {
 	names := make([]string, len(fields))
@@ -117,11 +109,6 @@ func enumGo(sourceName string, declaration *model, fmtPackage string) string {
 	output.WriteString("}\n")
 	output.WriteString("// Tag returns the active tag.\n")
 	fmt.Fprintf(&output, "func (v %s) Tag() %sTag { return v.tgoTag }\n", name, name)
-	output.WriteString("// UnknownTag describes an invalid tag.\n")
-	fmt.Fprintf(&output,
-		"func (v %s) UnknownTag() string { return %s.Sprintf(%q, v.tgoTag) }\n",
-		name, fmtPackage,
-		name+": unknown tag %d — tgolint proves every tag has a case, so this is unreachable")
 	if payloadFreeEnum(declaration) {
 		emitEnumGob(&output, declaration, fmtPackage)
 	}
@@ -228,7 +215,7 @@ func emitVariant(
 	}
 	if len(variant.Fields) > 0 {
 		fmt.Fprintf(output, "type %s struct {\n", enumCarrierName(enum, variant.Name))
-		for index, fieldName := range enumCarrierFieldNames(variant.Fields) {
+		for index, fieldName := range carrierFieldNames(variant.Fields) {
 			fmt.Fprintf(output, "%s %s\n", fieldName, variant.Fields[index].Type)
 		}
 		output.WriteString("}\n")
@@ -350,7 +337,7 @@ func enumPayloadLocalName(parameters []string) string {
 	return name
 }
 
-func enumCarrierFieldNames(fields []field) []string {
+func carrierFieldNames(fields []field) []string {
 	names := make([]string, len(fields))
 	used := make(map[string]bool)
 	for index, value := range fields {

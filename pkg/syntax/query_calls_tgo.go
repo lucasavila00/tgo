@@ -73,6 +73,6 @@ func StaticCallName(value *Expression) (string, bool) {
 	case ExpressionTagComprehension:
 		return "", false
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }

@@ -194,5 +194,6 @@ func (p *packageUnit) checkAndLower() error {
 	if len(p.typeErrors) > 0 {
 		return p.typeErrors[0]
 	}
+	p.setExhaustiveDefaultMessages()
 	return nil
 }

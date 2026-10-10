@@ -1,0 +1,84 @@
+package model
+
+import (
+	"reflect"
+	"testing"
+)
+
+func recordExhaustiveEvaluation(events *[]string, event string) bool {
+	*events = append(*events, event)
+	return true
+}
+
+func classifyExhaustive(load func() Account, events *[]string) bool {
+	switch initialized := recordExhaustiveEvaluation(events, "init"); (load()).Tag() {
+	case AccountTagPersonal, AccountTagBusiness:
+		return initialized
+	exhaustive:
+	}
+}
+
+func classifyLabeledExhaustive(load func() Account, events *[]string, again *bool) bool {
+	goto dispatch
+dispatch:
+	switch initialized := recordExhaustiveEvaluation(events, "init"); (load()).Tag() {
+	case AccountTagPersonal, AccountTagBusiness:
+		if !initialized {
+			return false
+		}
+		if *again {
+			*again = false
+			goto dispatch
+		}
+		break dispatch
+	exhaustive:
+	}
+	return true
+}
+
+func TestExhaustiveReceiverEvaluatesOnceOnValidPath(t *testing.T) {
+	events := []string{}
+	load := func() Account {
+		events = append(events, "receiver")
+		return Account.Personal{Name: "Ada"}
+	}
+	if !classifyExhaustive(load, &events) {
+		t.Fatal("valid receiver did not select its case")
+	}
+	if want := []string{"init", "receiver"}; !reflect.DeepEqual(events, want) {
+		t.Fatalf("evaluation order = %v, want %v", events, want)
+	}
+}
+
+func TestExhaustiveReceiverEvaluatesOnceOnInvalidPath(t *testing.T) {
+	events := []string{}
+	defer func() {
+		if message := recover(); message != "invalid Account tag" {
+			t.Fatalf("panic = %v, want invalid Account tag", message)
+		}
+		if want := []string{"init", "receiver"}; !reflect.DeepEqual(events, want) {
+			t.Fatalf("evaluation order = %v, want %v", events, want)
+		}
+	}()
+	classifyExhaustive(func() Account {
+		events = append(events, "receiver")
+		var invalid Account
+		return invalid
+	}, &events)
+}
+
+func TestLabeledExhaustiveReceiverReevaluatesAfterGoto(t *testing.T) {
+	events := []string{}
+	again := true
+	load := func() Account {
+		events = append(events, "receiver")
+		return Account.Personal{Name: "Ada"}
+	}
+	if !classifyLabeledExhaustive(load, &events, &again) {
+		t.Fatal("labeled switch did not select its case")
+	}
+	want := []string{"init", "receiver", "init", "receiver"}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("evaluation order = %v, want %v", events, want)
+	}
+}

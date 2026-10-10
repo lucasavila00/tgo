@@ -243,9 +243,9 @@ func label[T Events](value T) string {
 	output := string(compiled.Outputs["sample.tgo"])
 	for _, text := range []string{
 		"Tag() EventTag",
-		"UnknownTag() string",
 		"ReadyPayload() EventReady",
 		"EmptyPayload() EventEmpty",
+		`panic("invalid Event tag")`,
 	} {
 		if !strings.Contains(output, text) {
 			t.Fatalf("exact enum constraint does not contain %q\n%s", text, output)

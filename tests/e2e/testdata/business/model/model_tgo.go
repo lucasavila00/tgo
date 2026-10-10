@@ -89,7 +89,6 @@ type AccountAlias = Account
 type Accounts interface {
 	Account
 	Tag() AccountTag
-	UnknownTag() string
 	PersonalPayload() AccountPersonal
 	BusinessPayload() AccountBusiness
 }
@@ -141,11 +140,6 @@ type Account struct {
 
 // Tag returns the active tag.
 func (v Account) Tag() AccountTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v Account) UnknownTag() string {
-	return fmt.Sprintf("Account: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // AccountPersonal is the Personal payload.
 type AccountPersonal struct {
@@ -345,11 +339,6 @@ type Notice struct {
 // Tag returns the active tag.
 func (v Notice) Tag() NoticeTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Notice) UnknownTag() string {
-	return fmt.Sprintf("Notice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // NoticeText is the Text payload.
 type NoticeText struct {
 	Body   string
@@ -503,11 +492,6 @@ type Signal struct {
 
 // Tag returns the active tag.
 func (v Signal) Tag() SignalTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v Signal) UnknownTag() string {
-	return fmt.Sprintf("Signal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // GobEncode returns the stable four-byte enum tag.
 func (v Signal) GobEncode() ([]byte, error) {
@@ -720,11 +704,6 @@ type PrivateChoice struct {
 // Tag returns the active tag.
 func (v PrivateChoice) Tag() PrivateChoiceTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v PrivateChoice) UnknownTag() string {
-	return fmt.Sprintf("PrivateChoice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // PrivateChoiceValue is the Value payload.
 type PrivateChoiceValue struct {
 	text    string
@@ -908,7 +887,7 @@ func PrivateChoiceText(value PrivateChoice) string {
 	case PrivateChoiceTagEmpty:
 		return ""
 	default:
-		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid PrivateChoice tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -919,7 +898,7 @@ func PrivateChoiceValueCount(value PrivateChoice) int {
 	case PrivateChoiceTagEmpty:
 		return 0
 	default:
-		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid PrivateChoice tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -938,11 +917,6 @@ type OrderedChoice struct {
 
 // Tag returns the active tag.
 func (v OrderedChoice) Tag() OrderedChoiceTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v OrderedChoice) UnknownTag() string {
-	return fmt.Sprintf("OrderedChoice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // OrderedChoiceValue is the Value payload.
 type OrderedChoiceValue struct {
@@ -1143,7 +1117,7 @@ func Label(account Account) string {
 		company := enumValue3.BusinessPayload()
 		return company.Company
 	default:
-		panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -1156,7 +1130,7 @@ func AliasLabel(account AccountAlias) string {
 		company := enumValue4.BusinessPayload()
 		return company.Company
 	default:
-		panic(enumValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -1167,7 +1141,7 @@ func GenericLabel[T Accounts](account T) string {
 	case AccountTagBusiness:
 		return account.BusinessPayload().Company
 	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -1231,7 +1205,7 @@ func FunctionTagSubject(account Account) string {
 		business := enumValue6.BusinessPayload()
 		return business.Company
 	default:
-		panic(enumValue6.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -1246,7 +1220,7 @@ func LiteralTagSubject(name string) string {
 		business := enumValue7.BusinessPayload()
 		return business.Company
 	default:
-		panic(enumValue7.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -1257,7 +1231,7 @@ func SignalName(signal Signal) string {
 	case SignalTagOff:
 		return "off"
 	default:
-		panic(enumValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Signal tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -1266,7 +1240,7 @@ func SignalState(signal Signal) string {
 	case SignalTagOn, SignalTagOff:
 		return "known"
 	default:
-		panic(signal.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Signal tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -1275,7 +1249,7 @@ func SignalStateOrInvalid(signal Signal) string {
 	case SignalTagOn, SignalTagOff:
 		return "known"
 	default:
-		panic(signal.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Signal tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -1305,7 +1279,7 @@ Done:
 	case AccountTagBusiness:
 		break Done
 	default:
-		panic(enumValue9.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 	return "done"
 }
@@ -1316,7 +1290,7 @@ func NoticeLabels(notice Notice) map[string]string {
 		text := enumValue10.TextPayload()
 		return text.Labels
 	default:
-		panic(enumValue10.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Notice tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

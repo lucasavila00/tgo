@@ -136,7 +136,7 @@ func (p *printer) statement(value *syntax.Statement) {
 	case syntax.StatementTagRange:
 		p.rangeStatement(statementValue.RangePayload().Value)
 	default:
-		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

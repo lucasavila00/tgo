@@ -36,11 +36,6 @@ type Result struct {
 // Tag returns the active tag.
 func (v Result) Tag() ResultTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Result) UnknownTag() string {
-	return fmt.Sprintf("Result: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // GobEncode returns the stable four-byte enum tag.
 func (v Result) GobEncode() ([]byte, error) {
 	if v.tgoTag < ResultTagSuccess || v.tgoTag > ResultTagFailure {
@@ -242,6 +237,6 @@ func use(value Result) {
 	case ResultTagFailure:
 		return
 	default:
-		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Result tag") // unreachable: tgolint requires a case per tag
 	}
 }

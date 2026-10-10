@@ -265,7 +265,7 @@ func (c *checker) compositeEffectCondition(
 	case EffectKindTagNonzero:
 		return false, false
 	default:
-		panic(conditionKind.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid EffectKind tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

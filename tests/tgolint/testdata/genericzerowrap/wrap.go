@@ -23,7 +23,6 @@ func Make[T any](length int) {
 
 type eventLike interface {
 	Tag() model.EventTag
-	UnknownTag() string
 	StartedPayload() model.EventStarted
 }
 

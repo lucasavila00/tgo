@@ -93,7 +93,7 @@ directly. A closure returned through a local variable or another helper can hide
 an effect from the checker.
 
 An enum payload call or method value needs a variant proof on the same syntactic receiver. A TGo
-`exhaustive:` clause requires all declared tags and emits the generated `UnknownTag` panic and
+`exhaustive:` clause requires all declared tags and emits an enum-specific panic literal and the
 required comment. A normal default clause is fallback behavior and can cover omitted tags. Each
 clause has the union of its possible variants. A default has the union of omitted variants and
 proves a payload when only one variant remains. A simple `Tag() != TagConstant` guard also proves

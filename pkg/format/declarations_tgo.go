@@ -27,7 +27,7 @@ func (p *printer) declaration(value *syntax.Declaration) {
 	case syntax.DeclarationTagStruct:
 		p.structDeclaration(declarationValue.StructPayload().Value)
 	default:
-		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Declaration tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -106,7 +106,7 @@ func (p *printer) alignedSpecification(
 	case syntax.SpecificationTagType:
 		p.typeSpecification(specificationValue.TypePayload().Value, columns)
 	default:
-		panic(specificationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Specification tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -181,7 +181,7 @@ func (p *printer) specificationCells(
 			p.formattedTypeSpecificationValueWidth(item),
 		}
 	default:
-		panic(specificationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Specification tag") // unreachable: tgolint requires a case per tag
 	}
 	if p.hasTrailingComment(syntax.SpecificationEnd(value)) {
 		if valueSpecificationOf(value) != nil {

@@ -93,7 +93,7 @@ func AssignedSwitchPayload(event, replacement model.Event) string {
 	case model.EventTagStopped:
 		return ""
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -104,13 +104,12 @@ func ClosureSwitchPayload(event model.Event) func() string {
 	case model.EventTagStopped:
 		return nil
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
 type EventView interface {
 	Tag() model.EventTag
-	UnknownTag() string
 	StartedPayload() model.EventStarted
 	StoppedPayload() model.EventStopped
 }
@@ -130,7 +129,6 @@ func StructuralGeneric[T EventAccess](event T) string {
 
 type TagView interface {
 	Tag() model.EventTag
-	UnknownTag() string
 }
 
 func InterfaceTag(event model.Event) model.EventTag {
@@ -173,7 +171,7 @@ func EscapingDefault(event model.Event, escape bool) string {
 		if escape {
 			break
 		}
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 	return ""
 }
@@ -294,7 +292,7 @@ func ChangedReceiver(envelope Envelope) string {
 	case model.EventTagStopped:
 		return envelope.Event.StoppedPayload().Reason
 	default:
-		panic(envelope.Event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -305,7 +303,7 @@ func WrongPromoted(embedded Embedded) string {
 	case model.EventTagStopped:
 		return embedded.StoppedPayload().Reason
 	default:
-		panic(embedded.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -328,7 +326,6 @@ type CountChannels interface {
 type Events interface {
 	model.Event
 	Tag() model.EventTag
-	UnknownTag() string
 	StartedPayload() model.EventStarted
 	StoppedPayload() model.EventStopped
 }
@@ -373,7 +370,7 @@ func GenericWrongAccessor[E Events](event E) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -387,7 +384,7 @@ func GotoDefault(event model.Event, escape bool) string {
 		if escape {
 			goto done
 		}
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 done:
 	return ""
@@ -590,7 +587,7 @@ func PointerReceiver(event *model.Event) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -607,7 +604,7 @@ func AddressedReceiver(event model.Event) string {
 		mutateEvent(&event)
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -620,7 +617,7 @@ func AliasedReceiver(event model.Event) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -631,7 +628,7 @@ func DelayedClosure(event model.Event) func() string {
 	case model.EventTagStopped:
 		return func() string { return event.StoppedPayload().Reason }
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -646,7 +643,7 @@ func DelayedDefer(event model.Event) {
 		_ = event.StoppedPayload()
 		return
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -659,7 +656,7 @@ func DelayedGo(event model.Event) {
 		_ = event.StoppedPayload()
 		return
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -674,7 +671,7 @@ func CapturedReceiver(event model.Event) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -694,7 +691,7 @@ func PointerMethodMutation(event MutableEmbedded) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -708,7 +705,7 @@ func OuterCapture(
 		case model.EventTagStopped:
 			return event.StoppedPayload().Reason
 		default:
-			panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 	write := func() {
@@ -728,7 +725,7 @@ func ReceiverLoop(event model.Event) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -742,7 +739,7 @@ func ReceiverRange(event model.Event, events []model.Event) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -760,7 +757,7 @@ func ReceiverGoto(event model.Event, repeat bool) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -775,7 +772,7 @@ func PointerField(event PointerEmbedded) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -790,7 +787,7 @@ func NumericTag(event model.Event) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -801,7 +798,7 @@ func UnrelatedTag(event model.Event) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -810,7 +807,7 @@ func MultiTagPayload(event model.Event) string {
 	case model.EventTagStarted, model.EventTagStopped:
 		return event.StartedPayload().ID
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -821,7 +818,7 @@ func PayloadMethodValue(event model.Event) func() model.EventStarted {
 	case model.EventTagStopped:
 		return nil
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -830,7 +827,7 @@ func MissingTag(event model.Event) string {
 	case model.EventTagStarted:
 		return event.StartedPayload().ID
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -841,7 +838,7 @@ func WrongGoPayload(event model.Event) {
 	case model.EventTagStopped:
 		go useEventStarted(event.StartedPayload())
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -852,7 +849,7 @@ func WrongDeferPayload(event model.Event) {
 	case model.EventTagStopped:
 		defer useEventStarted(event.StartedPayload())
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -890,7 +887,7 @@ func EscapedReceiverLoop(event model.Event) string {
 	case model.EventTagStopped:
 		return ""
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -916,7 +913,7 @@ func EmbeddedAssignment(event MutableEmbedded) string {
 	case model.EventTagStopped:
 		return ""
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

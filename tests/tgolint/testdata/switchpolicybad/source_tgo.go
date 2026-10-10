@@ -38,11 +38,6 @@ type Account struct {
 // Tag returns the active tag.
 func (v Account) Tag() AccountTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Account) UnknownTag() string {
-	return fmt.Sprintf("Account: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // AccountPersonal is the Personal payload.
 type AccountPersonal struct {
 	Name string
@@ -271,7 +266,7 @@ func fallthroughCase(account Account) string {
 	case AccountTagBusiness:
 		return account.BusinessPayload().Company
 	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -280,7 +275,7 @@ func missingCase(account Account) string {
 	case AccountTagPersonal:
 		return account.PersonalPayload().Name
 	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -289,7 +284,7 @@ func multiTagPayload(account Account) string {
 	case AccountTagPersonal, AccountTagBusiness:
 		return account.PersonalPayload().Name
 	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -302,7 +297,7 @@ func numericLabel(account Account) {
 	case AccountTagBusiness:
 		return
 	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -313,7 +308,7 @@ func unrelatedLabel(account Account) {
 	case AccountTagBusiness:
 		return
 	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -324,7 +319,7 @@ func wrongPayload(account Account) string {
 	case AccountTagBusiness:
 		return account.PersonalPayload().Name
 	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -345,7 +340,7 @@ func shadowedPanic(account Account) {
 	case AccountTagBusiness:
 		return
 	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -356,7 +351,7 @@ func laterPanic(account Account) {
 	case AccountTagBusiness:
 		return
 	default:
-		panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 	panic := func(any) {}
 	_ = panic
@@ -370,7 +365,7 @@ func initializerPanic(account Account) {
 		case AccountTagBusiness:
 			return
 		default:
-			panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 	panic()

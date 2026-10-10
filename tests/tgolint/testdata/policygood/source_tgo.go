@@ -50,11 +50,6 @@ type Choice struct {
 // Tag returns the active tag.
 func (v Choice) Tag() ChoiceTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Choice) UnknownTag() string {
-	return fmt.Sprintf("Choice: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // ChoiceText is the Text payload.
 type ChoiceText struct {
 	Value string

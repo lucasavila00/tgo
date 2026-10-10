@@ -70,7 +70,7 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 		case ExpressionTagComprehension:
 			return nil, false
 		default:
-			panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 		}
 	case NodeTagFile:
 		return nil, false
@@ -93,7 +93,7 @@ func IdentifierOf(node *Node) (*Identifier, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -115,7 +115,7 @@ func EnumDeclarationOf(value *Declaration) (*EnumDeclaration, bool) {
 	case DeclarationTagStruct:
 		return nil, false
 	default:
-		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Declaration tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -137,7 +137,7 @@ func StructDeclarationOf(value *Declaration) (*StructDeclaration, bool) {
 	case DeclarationTagEnum:
 		return nil, false
 	default:
-		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Declaration tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -204,7 +204,7 @@ func DefaultExpressionOf(node *Node) (*DefaultExpression, bool) {
 	case ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -271,7 +271,7 @@ func PropagationExpressionOf(node *Node) (*PropagationExpression, bool) {
 	case ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -287,7 +287,7 @@ func ComprehensionExpressionOf(node *Node) (*ComprehensionExpression, bool) {
 	case ExpressionTagBad, ExpressionTagIdentifier, ExpressionTagEllipsis, ExpressionTagBasicLiteral, ExpressionTagFunctionLiteral, ExpressionTagCompositeLiteral, ExpressionTagParenthesized, ExpressionTagSelector, ExpressionTagIndex, ExpressionTagIndexList, ExpressionTagSlice, ExpressionTagTypeAssertion, ExpressionTagCall, ExpressionTagStar, ExpressionTagNonNilPointer, ExpressionTagUnary, ExpressionTagBinary, ExpressionTagKeyValue, ExpressionTagArrayType, ExpressionTagStructType, ExpressionTagFunctionType, ExpressionTagInterfaceType, ExpressionTagMapType, ExpressionTagChannelType, ExpressionTagDefault, ExpressionTagPropagation:
 		return nil, false
 	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -304,7 +304,7 @@ func ComprehensionRangeClauseOf(
 	case ComprehensionClauseTagFilter:
 		return nil, false
 	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid ComprehensionClause tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -321,7 +321,7 @@ func ComprehensionFilterClauseOf(
 	case ComprehensionClauseTagFilter:
 		return item.FilterPayload().Value, true
 	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid ComprehensionClause tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -388,7 +388,7 @@ func NonNilPointerTypeOf(node *Node) (*NonNilPointerType, bool) {
 	case ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(nodeValue0.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -424,7 +424,7 @@ func ExpressionOf(node *Node) (*Expression, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(nodeValue1.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -460,7 +460,7 @@ func StatementOf(node *Node) (*Statement, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(nodeValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -496,7 +496,7 @@ func DeclarationOf(node *Node) (*Declaration, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(nodeValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -532,7 +532,7 @@ func SpecificationOf(node *Node) (*Specification, bool) {
 	case NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(nodeValue4.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -594,7 +594,7 @@ func ExpressionKind(value *Expression) string {
 	case ExpressionTagComprehension:
 		return "Comprehension"
 	default:
-		panic(nodeValue5.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -644,7 +644,7 @@ func StatementKind(value *Statement) string {
 	case StatementTagRange:
 		return "Range"
 	default:
-		panic(nodeValue6.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -662,7 +662,7 @@ func DeclarationKind(value *Declaration) string {
 	case DeclarationTagStruct:
 		return "Struct"
 	default:
-		panic(nodeValue7.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Declaration tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -676,6 +676,6 @@ func SpecificationKind(value *Specification) string {
 	case SpecificationTagType:
 		return "Type"
 	default:
-		panic(nodeValue8.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Specification tag") // unreachable: tgolint requires a case per tag
 	}
 }

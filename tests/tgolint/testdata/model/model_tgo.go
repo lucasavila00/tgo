@@ -68,11 +68,6 @@ type Event struct {
 // Tag returns the active tag.
 func (v Event) Tag() EventTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Event) UnknownTag() string {
-	return fmt.Sprintf("Event: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // EventStarted is the Started payload.
 type EventStarted struct {
 	ID    string `json:"event"`
@@ -267,11 +262,6 @@ type Signal struct {
 
 // Tag returns the active tag.
 func (v Signal) Tag() SignalTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v Signal) UnknownTag() string {
-	return fmt.Sprintf("Signal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // GobEncode returns the stable four-byte enum tag.
 func (v Signal) GobEncode() ([]byte, error) {

@@ -91,7 +91,7 @@ func simpleTerms(typ types.Type) ([]*types.Term, bool) {
 		goTypeTagMap, goTypeTagChannel, goTypeTagOther:
 		return []*types.Term{types.NewTerm(false, typ)}, true
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

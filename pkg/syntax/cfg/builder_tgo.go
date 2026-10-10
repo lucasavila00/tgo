@@ -84,7 +84,7 @@ start:
 	case syntax.StatementTagCase, syntax.StatementTagCommunication:
 		panic(fmt.Sprintf("unexpected statement kind: %s", syntax.StatementKind(statement)))
 	default:
-		panic(statement.UnknownTag())
+		panic("invalid Statement tag")
 	}
 }
 
