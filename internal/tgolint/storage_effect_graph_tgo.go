@@ -50,6 +50,8 @@ type StorageEffectOperation struct {
 	KnownLength   bool
 	KnownCapacity bool
 	Boolean       bool
+	Variadic      bool
+	Operator      int
 	ZeroEffects   []GenericEffect
 	AccessEffects []GenericEffect
 }
@@ -70,6 +72,9 @@ const (
 	storageEffectFieldRead
 	storageEffectFieldWrite
 	storageEffectBoolean
+	storageEffectInteger
+	storageEffectUnary
+	storageEffectBinary
 )
 
 // StorageEffectRegion names parameter, capture, temporary, or allocation storage.

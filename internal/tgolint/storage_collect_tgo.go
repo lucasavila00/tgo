@@ -31,6 +31,16 @@ type storageGraphBuilder struct {
 	multi     map[token.Pos][]int
 }
 
+type storageAssignmentTarget struct {
+	region     StorageEffectRegion
+	regionOK   bool
+	base       int
+	index      int
+	field      string
+	indexValue int64
+	indexKnown bool
+}
+
 func (c *checker) collectStorageEffectGraphs() map[*types.Func]*storageGraphSummary {
 	result := make(map[*types.Func]*storageGraphSummary)
 	for _, file := range c.files {
@@ -110,7 +120,13 @@ func (b *storageGraphBuilder) addFunction(
 			}
 		}
 		for index, successor := range source.Succs {
-			edge := StorageEffectEdge{Block: int(successor.Index), Condition: condition, Expected: true}
+			edgeCondition := 0
+			if len(source.Succs) == 2 {
+				edgeCondition = condition
+			}
+			edge := StorageEffectEdge{
+				Block: int(successor.Index), Condition: edgeCondition, Expected: true,
+			}
 			if len(source.Succs) == 2 {
 				edge.Expected = index == 0
 			}
@@ -192,8 +208,9 @@ func (b *storageGraphBuilder) collectAssignment(
 	block *StorageEffectBlock,
 	assignment *syntax.AssignmentStatement,
 ) {
+	targets := make([]storageAssignmentTarget, 0, len(assignment.Left))
 	for _, target := range assignment.Left {
-		b.collectAddressInputs(block, target)
+		targets = append(targets, b.collectAssignmentTarget(block, target))
 	}
 	values := b.collectExpressions(block, assignment.Right)
 	if len(assignment.Right) == 1 && len(assignment.Left) > 1 {
@@ -201,32 +218,55 @@ func (b *storageGraphBuilder) collectAssignment(
 			values = multiple
 		}
 	}
-	for index, target := range assignment.Left {
+	for index := range assignment.Left {
 		if index >= len(values) {
 			break
 		}
-		region, ok := b.expressionRegion(target)
-		if !ok {
+		target := targets[index]
+		if target.base != 0 && target.index != 0 {
+			block.Operations = append(block.Operations, StorageEffectOperation{
+				Kind:   storageEffectIndexWrite,
+				Inputs: []int{target.base, target.index, values[index]},
+				Length: target.indexValue, KnownLength: target.indexKnown,
+			})
+			continue
+		}
+		if target.base != 0 && target.field != "" {
+			block.Operations = append(block.Operations, StorageEffectOperation{
+				Kind: storageEffectFieldWrite, Inputs: []int{target.base, values[index]},
+				Field: target.field,
+			})
+			continue
+		}
+		if !target.regionOK {
 			continue
 		}
 		block.Operations = append(block.Operations, StorageEffectOperation{
-			Kind: storageEffectWrite, Target: region, Inputs: []int{values[index]},
+			Kind: storageEffectWrite, Target: target.region, Inputs: []int{values[index]},
 		})
 	}
 }
 
-func (b *storageGraphBuilder) collectAddressInputs(
+func (b *storageGraphBuilder) collectAssignmentTarget(
 	block *StorageEffectBlock,
 	expression *syntax.Expression,
-) {
+) storageAssignmentTarget {
 	if index := syntax.IndexExpressionOf(expression); index != nil {
-		b.collectExpression(block, index.Expression)
-		b.collectExpression(block, index.Index)
-		return
+		base := b.collectExpression(block, index.Expression)
+		indexTemp := b.collectExpression(block, index.Index)
+		value, known := storageExpressionConstantInt(b.checker, index.Index)
+		return storageAssignmentTarget{
+			base: base, index: indexTemp, indexValue: value, indexKnown: known,
+		}
 	}
 	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		b.collectExpression(block, selector.Expression)
+		return storageAssignmentTarget{
+			base:  b.collectExpression(block, selector.Expression),
+			field: selector.Selector.Name,
+		}
 	}
+	region, ok := b.expressionRegion(expression)
+	return storageAssignmentTarget{region: region, regionOK: ok}
 }
 
 func (b *storageGraphBuilder) collectExpressions(
@@ -258,6 +298,17 @@ func (b *storageGraphBuilder) collectExpression(
 		})
 		return result
 	}
+	if value := b.checker.facts.Constant(expression); value != nil && value.Kind() == constant.Int {
+		integer, known := constant.Int64Val(value)
+		if known {
+			result := b.newTemp()
+			block.Operations = append(block.Operations, StorageEffectOperation{
+				Kind: storageEffectInteger, Results: []int{result},
+				Length: integer, KnownLength: true,
+			})
+			return result
+		}
+	}
 	if object, ok := b.checker.genericCallObject(expression).(*types.Func); ok &&
 		syntax.CallExpressionOf(expression) == nil {
 		result := b.newTemp()
@@ -268,6 +319,9 @@ func (b *storageGraphBuilder) collectExpression(
 		return result
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
+		if len(call.Args) == 1 && b.checker.facts.IsType(call.Callee) {
+			return b.collectExpression(block, call.Args[0])
+		}
 		callee := b.collectExpression(block, call.Callee)
 		arguments := b.collectExpressions(block, call.Args)
 		results := b.callResultTemps(expression)
@@ -315,6 +369,7 @@ func (b *storageGraphBuilder) collectExpression(
 					block.Operations = append(block.Operations, StorageEffectOperation{
 						Kind: kind, Regions: regions, Inputs: arguments,
 						Results: results, Target: target,
+						Variadic: call.Ellipsis != token.NoPos,
 					})
 					return result
 				}
@@ -353,6 +408,25 @@ func (b *storageGraphBuilder) collectExpression(
 		}
 		return result
 	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+		input := b.collectExpression(block, unary.Expression)
+		result := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectUnary, Inputs: []int{input}, Results: []int{result},
+			Operator: int(unary.Operator),
+		})
+		return result
+	}
+	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
+		left := b.collectExpression(block, binary.Left)
+		right := b.collectExpression(block, binary.Right)
+		result := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectBinary, Inputs: []int{left, right}, Results: []int{result},
+			Operator: int(binary.Operator),
+		})
+		return result
+	}
 	if sliced := syntax.SliceExpressionOf(expression); sliced != nil {
 		base := b.collectExpression(block, sliced.Expression)
 		low := int64(0)
@@ -383,9 +457,11 @@ func (b *storageGraphBuilder) collectExpression(
 	if indexed := syntax.IndexExpressionOf(expression); indexed != nil {
 		base := b.collectExpression(block, indexed.Expression)
 		index := b.collectExpression(block, indexed.Index)
+		value, known := storageExpressionConstantInt(b.checker, indexed.Index)
 		result := b.newTemp()
 		block.Operations = append(block.Operations, StorageEffectOperation{
 			Kind: storageEffectIndexRead, Inputs: []int{base, index}, Results: []int{result},
+			Length: value, KnownLength: known,
 		})
 		return result
 	}
@@ -507,6 +583,21 @@ func (b *storageGraphBuilder) collectFunctionLiteral(
 			Root: storageRootCapture, ID: index,
 		}
 	}
+	if signature, ok := b.checker.facts.Type(expression).(*types.Signature); ok {
+		for index := 0; index < signature.Params().Len(); index++ {
+			b.regions[signature.Params().At(index)] = StorageEffectRegion{
+				Root: storageRootParameter, ID: index,
+			}
+		}
+		for index := 0; index < signature.Results().Len(); index++ {
+			result := signature.Results().At(index)
+			if result.Name() != "" {
+				b.regions[result] = StorageEffectRegion{
+					Root: storageRootResult, ID: index,
+				}
+			}
+		}
+	}
 	function := b.addFunction(literal.Body, captures)
 	b.checker.storageLiterals[syntax.ExpressionPosition(expression)] = function
 	b.regions = saved
@@ -532,6 +623,9 @@ func (b *storageGraphBuilder) expressionRegion(
 ) (StorageEffectRegion, bool) {
 	if name := syntax.IdentifierExpressionOf(expression); name != nil {
 		object := b.checker.facts.Object(name)
+		if object == nil {
+			return StorageEffectRegion{}, false
+		}
 		if region, ok := b.regions[object]; ok {
 			return region, true
 		}

@@ -2,6 +2,7 @@ package tgolint
 
 import (
 	"go/constant"
+	"go/token"
 	"go/types"
 
 	"tgo/pkg/syntax"
@@ -20,6 +21,12 @@ func (c %checker) storageExpressionValue(
 	flow.before[node] = cloneStorageState(state)
 	if value := c.facts.Constant(expression); value != nil && value.Kind() == constant.Bool {
 		return storageValue{trueValue: constant.BoolVal(value), falseValue: !constant.BoolVal(value)}
+	}
+	if value := c.facts.Constant(expression); value != nil && value.Kind() == constant.Int {
+		integer, known := constant.Int64Val(value)
+		if known {
+			return storageValue{integer: integer, integerKnown: true}
+		}
 	}
 	if function, ok := c.genericCallObject(expression).(*types.Func); ok {
 		return c.storageNamedFunctionValue(expression, function.Origin())
@@ -45,7 +52,6 @@ func (c %checker) storageExpressionValue(
 		if stored, ok := state.memory[storageMemoryKey(storageObjectPath(object))]; ok {
 			value = cloneStorageValue(stored)
 		}
-		value.regions = append(value.regions, storageObjectPath(object))
 		return value
 	}
 	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
@@ -193,18 +199,23 @@ func (c %checker) storageNamedFunctionValue(
 }
 
 func (c %checker) storageFunctionFact(function *types.Func) %GenericEffectFact {
-	if summary := c.genericSummaries[function]; summary != nil {
-		fact := summary.effects()
-		return &fact
-	}
-	if summary := c.storageGraphs[function]; summary != nil {
-		return &GenericEffectFact{Version: 1, Storage: summary.graph}
-	}
-	fact := new(GenericEffectFact)
-	if c.pass.ImportObjectFact(function, fact) && fact.Version == 1 {
+	if fact, ok := c.storageFacts[function]; ok {
 		return fact
 	}
-	return nil
+	var fact %GenericEffectFact
+	if summary := c.genericSummaries[function]; summary != nil {
+		value := summary.effects()
+		fact = &value
+	} else if summary := c.storageGraphs[function]; summary != nil {
+		fact = &GenericEffectFact{Version: 1, Storage: summary.graph}
+	} else {
+		imported := new(GenericEffectFact)
+		if c.pass.ImportObjectFact(function, imported) && imported.Version == 1 {
+			fact = imported
+		}
+	}
+	c.storageFacts[function] = fact
+	return fact
 }
 
 func (c %checker) storageLiteralValue(
@@ -225,7 +236,10 @@ func (c %checker) storageLiteralValue(
 	if summary == nil {
 		return storageValue{unknown: true}
 	}
-	fact := &GenericEffectFact{Version: 1, Storage: summary.graph}
+	fact := c.storageFunctionFact(owner.Origin())
+	if fact == nil {
+		return storageValue{unknown: true}
+	}
 	var captures []storagePath = nil
 	inspectGenericBlock(literal.Body, func(node %syntax.Node) bool {
 		if nested, ok := syntax.FunctionLiteralOf(node); ok && nested != literal {
@@ -282,6 +296,12 @@ func (c %checker) storageCallValues(
 	flow %storageFlow,
 	apply bool,
 ) []storageValue {
+	position := syntax.ExpressionPosition(expression)
+	if !apply {
+		if values, ok := flow.values[position]; ok {
+			return cloneStorageValues(values)
+		}
+	}
 	callee := c.storageExpressionValue(call.Callee, state, flow, apply)
 	arguments := make([]storageValue, 0, len(call.Args))
 	for _, argument := range call.Args {
@@ -290,9 +310,13 @@ func (c %checker) storageCallValues(
 	}
 	if name := syntax.IdentifierExpressionOf(call.Callee); name != nil {
 		if builtin, ok := c.facts.Object(name).(*types.Builtin); ok {
-			return []storageValue{
+			results := []storageValue{
 				c.storageBuiltinValue(expression, call, builtin.Name(), arguments, state),
 			}
+			if apply {
+				flow.values[position] = joinStorageValues(flow.values[position], results)
+			}
+			return results
 		}
 	}
 	var results []storageValue = nil
@@ -305,8 +329,7 @@ func (c %checker) storageCallValues(
 			arguments: arguments, captures: function.captures,
 			typeArguments: function.typeArguments,
 		}, state)
-		state.cells = updated.cells
-		state.memory = updated.memory
+		replaceStorageState(state, updated)
 		for index, value := range values {
 			for len(results) <= index {
 				results = append(results, storageValue{})
@@ -317,7 +340,25 @@ func (c %checker) storageCallValues(
 	if len(callee.functions) == 0 {
 		results = append(results, storageValue{unknown: true})
 	}
+	if apply {
+		flow.values[position] = joinStorageValues(flow.values[position], results)
+	}
 	return results
+}
+
+func replaceStorageState(target storageState, source storageState) {
+	for object := range target.cells {
+		delete(target.cells, object)
+	}
+	for path := range target.memory {
+		delete(target.memory, path)
+	}
+	for object, value := range source.cells {
+		target.cells[object] = cloneStorageValue(value)
+	}
+	for path, value := range source.memory {
+		target.memory[path] = cloneStorageValue(value)
+	}
 }
 
 func (c %checker) storageBuiltinValue(
@@ -342,42 +383,16 @@ func (c %checker) storageBuiltinValue(
 		}
 	}
 	if name == "append" && len(arguments) != 0 {
-		value := cloneStorageValue(arguments[0])
-		var result []storageSlice = nil
-		for _, slice := range value.slices {
-			reuse := !slice.knownCapacity ||
-				slice.length+int64(len(arguments)-1) <= slice.capacity
-			fresh := !slice.knownCapacity || !reuse
-			if reuse {
-				for index, item := range arguments[1:] {
-					writeStorageSliceIndex(
-						state, slice, slice.length+int64(index), item, false,
-					)
-				}
-				slice.length += int64(len(arguments) - 1)
-				result = append(result, slice)
-			}
-			if fresh {
-				freshSlice := storageSlice{
-					backing: storageLocation{
-						graph: -3, site: int(syntax.ExpressionPosition(expression)),
-					},
-					knownOffset: true,
-					length:      slice.length + int64(len(arguments)-1), knownLength: slice.knownLength,
-				}
-				copyStorageSliceElements(state, freshSlice, slice)
-				for index, item := range arguments[1:] {
-					writeStorageSliceIndex(state, freshSlice, slice.length+int64(index), item, false)
-				}
-				result = append(result, freshSlice)
-			}
-		}
-		value.slices = result
-		return value
+		return appendStorageValue(
+			state, arguments[0], arguments[1:], call.Ellipsis != token.NoPos,
+			storageLocation{
+				graph: -3, site: int(syntax.ExpressionPosition(expression)),
+				kind: storageRootAllocation,
+			},
+		)
 	}
 	if name == "copy" && len(arguments) == 2 {
-		copyStorageSlices(state, arguments[0], arguments[1])
-		return storageValue{}
+		return copyStorageSlices(state, arguments[0], arguments[1])
 	}
 	return storageValue{unknown: true}
 }
@@ -414,22 +429,39 @@ func copyStorageSlices(
 	state storageState,
 	destination storageValue,
 	source storageValue,
-) {
+) storageValue {
+	count := storageValue{}
 	for _, target := range destination.slices {
 		for _, origin := range source.slices {
 			if target.knownLength && target.length == 0 ||
 				origin.knownLength && origin.length == 0 {
+				count = joinStorageValue(count, storageValue{integerKnown: true})
 				continue
 			}
-			copyStorageSliceElements(state, target, origin)
+			copyStorageSliceElements(
+				state, target, origin, len(destination.slices) == 1,
+			)
+			if target.knownLength && origin.knownLength {
+				length := target.length
+				if origin.length < length {
+					length = origin.length
+				}
+				count = joinStorageValue(count, storageValue{
+					integer: length, integerKnown: true,
+				})
+			} else {
+				count.unknown = true
+			}
 		}
 	}
+	return count
 }
 
 func copyStorageSliceElements(
 	state storageState,
 	destination storageSlice,
 	source storageSlice,
+	exact bool,
 ) {
 	if destination.knownLength && source.knownLength {
 		length := destination.length
@@ -444,7 +476,7 @@ func copyStorageSliceElements(
 			values[index] = readStorageMemory(state, storageMemoryKey(path))
 		}
 		for index, value := range values {
-			writeStorageSliceIndex(state, destination, int64(index), value, true)
+			writeStorageSliceIndex(state, destination, int64(index), value, exact)
 		}
 		return
 	}
@@ -459,6 +491,5 @@ func copyStorageSliceElements(
 }
 
 func reflectStorageValueEmpty(value storageValue) bool {
-	return !value.unknown && !value.trueValue && !value.falseValue && len(value.functions) == 0 &&
-		len(value.regions) == 0 && len(value.slices) == 0
+	return storageValueEmpty(value)
 }

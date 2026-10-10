@@ -3,6 +3,7 @@
 package tgolint
 
 import (
+	"go/token"
 	"go/types"
 	"reflect"
 
@@ -11,6 +12,7 @@ import (
 
 type storageFlow struct {
 	before map[syntax.Node]storageState
+	values map[token.Pos][]storageValue
 }
 
 type storageExecutionState struct {
@@ -26,11 +28,12 @@ type storageInvocationEffects struct {
 }
 
 type storageGraphCall struct {
-	fact          *GenericEffectFact
-	function      int
-	arguments     []storageValue
-	captures      []storagePath
-	typeArguments []types.Type
+	fact           *GenericEffectFact
+	function       int
+	arguments      []storageValue
+	captures       []storagePath
+	parameterCells []storagePath
+	typeArguments  []types.Type
 }
 
 type storageCallKey struct {
@@ -83,6 +86,17 @@ func executeStorageFunction(
 	if function == nil {
 		return state, nil, storageInvocationEffects{}
 	}
+	if len(call.parameterCells) == 0 && len(call.arguments) != 0 {
+		call.parameterCells = make([]storagePath, len(call.arguments))
+		for index, argument := range call.arguments {
+			path := storagePath{location: storageLocation{
+				owner: call.fact, graph: call.function, site: index,
+				kind: storageRootParameter,
+			}}
+			call.parameterCells[index] = path
+			writeStorageMemory(state, storageMemoryKey(path), argument, true)
+		}
+	}
 	key := storageCallKey{fact: call.fact, function: call.function}
 	if context.active[key] {
 		if result, ok := context.approximations[key]; ok {
@@ -97,7 +111,7 @@ func executeStorageFunction(
 		context.approximations[key] = previous
 		storage, returns, effects := executeStorageFunctionOnce(call, state, context, function)
 		next := storageExecutionResult{
-			storage: joinStorageState(previous.storage, storage),
+			storage: storage,
 			returns: joinStorageValues(previous.returns, returns),
 			effects: storageInvocationEffects{
 				zero: appendGenericEffects(
@@ -161,11 +175,17 @@ func executeStorageFunctionOnce(
 			}
 		}
 	}
-	result := cloneStorageState(state)
+	result := newStorageState()
+	firstExit := true
 	var returns []storageValue = nil
 	var effects storageInvocationEffects
 	for _, exit := range exits {
-		result = joinStorageState(result, exit.storage)
+		if firstExit {
+			result = cloneStorageState(exit.storage)
+			firstExit = false
+		} else {
+			result = joinStorageState(result, exit.storage)
+		}
 		for index, value := range exit.returns {
 			for len(returns) <= index {
 				returns = append(returns, storageValue{})
@@ -174,6 +194,9 @@ func executeStorageFunctionOnce(
 		}
 		effects.zero = appendGenericEffects(effects.zero, exit.effects.zero)
 		effects.access = appendGenericEffects(effects.access, exit.effects.access)
+	}
+	if firstExit {
+		result = cloneStorageState(state)
 	}
 	return result, returns, effects
 }

@@ -94,7 +94,10 @@ func (c %checker) reportStorageFactCall(
 }
 
 func (c %checker) buildStorageFlow(root %syntax.Node) %storageFlow {
-	flow := &storageFlow{before: make(map[syntax.Node]storageState)}
+	flow := &storageFlow{
+		before: make(map[syntax.Node]storageState),
+		values: make(map[token.Pos][]storageValue),
+	}
 	body := genericFunctionBody(root)
 	if body == nil {
 		return flow
@@ -189,7 +192,6 @@ func (c %checker) transferStorageSourceNode(
 				value := c.storageExpressionValue(source, state, flow, true)
 				if index < len(values.Names) && values.Names[index].Name != "_" {
 					object := c.facts.DefinitionName(values.Names[index])
-					value.regions = append(value.regions, storageObjectPath(object))
 					writeStorageObject(state, object, value, !weak)
 				}
 			}
@@ -234,9 +236,7 @@ func (c %checker) transferStorageSourceNode(
 		name := syntax.IdentifierExpressionOf(target)
 		if name != nil && name.Name != "_" {
 			object := c.facts.Object(name)
-			value := values[index]
-			value.regions = append(value.regions, storageObjectPath(object))
-			writeStorageObject(state, object, value, !weak &&
+			writeStorageObject(state, object, values[index], !weak &&
 				(assignment.Operator == token.ASSIGN || assignment.Operator == token.DEFINE))
 			continue
 		}
@@ -282,7 +282,11 @@ func (c %checker) storageTargetPaths(
 	flow %storageFlow,
 ) []storagePath {
 	if name := syntax.IdentifierExpressionOf(expression); name != nil {
-		return []storagePath{storageObjectPath(c.facts.Object(name))}
+		object := c.facts.Object(name)
+		if object == nil {
+			return nil
+		}
+		return []storagePath{storageObjectPath(object)}
 	}
 	if index := syntax.IndexExpressionOf(expression); index != nil {
 		base := c.storageExpressionValue(index.Expression, state, flow, true)

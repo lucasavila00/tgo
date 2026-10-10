@@ -9,8 +9,10 @@ import (
 )
 
 type storageLocation struct {
+	owner  *GenericEffectFact
 	graph  int
 	site   int
+	kind   int
 	merged bool
 }
 
@@ -37,12 +39,14 @@ type storageSlice struct {
 }
 
 type storageValue struct {
-	unknown    bool
-	trueValue  bool
-	falseValue bool
-	functions  []storageFunction
-	regions    []storagePath
-	slices     []storageSlice
+	unknown      bool
+	trueValue    bool
+	falseValue   bool
+	integer      int64
+	integerKnown bool
+	functions    []storageFunction
+	regions      []storagePath
+	slices       []storageSlice
 }
 
 type storageState struct {
@@ -93,10 +97,17 @@ func joinStorageState(left storageState, right storageState) storageState {
 }
 
 func joinStorageValue(left storageValue, right storageValue) storageValue {
+	leftEmpty := storageValueEmpty(left)
 	joined := cloneStorageValue(left)
 	joined.unknown = left.unknown || right.unknown
 	joined.trueValue = left.trueValue || right.trueValue
 	joined.falseValue = left.falseValue || right.falseValue
+	if leftEmpty && right.integerKnown {
+		joined.integer = right.integer
+		joined.integerKnown = true
+	} else if !right.integerKnown || !left.integerKnown || left.integer != right.integer {
+		joined.integerKnown = false
+	}
 	for _, function := range right.functions {
 		if !containsStorageFunction(joined.functions, function) {
 			joined.functions = append(joined.functions, function)
@@ -108,9 +119,38 @@ func joinStorageValue(left storageValue, right storageValue) storageValue {
 		}
 	}
 	for _, slice := range right.slices {
-		if !containsStorageSlice(joined.slices, slice) {
+		found := false
+		for index := range joined.slices {
+			if joined.slices[index].backing != slice.backing {
+				continue
+			}
+			joined.slices[index] = joinStorageSlice(joined.slices[index], slice)
+			found = true
+			break
+		}
+		if !found {
 			joined.slices = append(joined.slices, slice)
 		}
+	}
+	return joined
+}
+
+func storageValueEmpty(value storageValue) bool {
+	return !value.unknown && !value.trueValue && !value.falseValue &&
+		!value.integerKnown && len(value.functions) == 0 &&
+		len(value.regions) == 0 && len(value.slices) == 0
+}
+
+func joinStorageSlice(left storageSlice, right storageSlice) storageSlice {
+	joined := left
+	if !left.knownOffset || !right.knownOffset || left.offset != right.offset {
+		joined.knownOffset = false
+	}
+	if !left.knownLength || !right.knownLength || left.length != right.length {
+		joined.knownLength = false
+	}
+	if !left.knownCapacity || !right.knownCapacity || left.capacity != right.capacity {
+		joined.knownCapacity = false
 	}
 	return joined
 }

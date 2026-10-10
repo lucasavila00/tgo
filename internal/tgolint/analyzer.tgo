@@ -60,6 +60,7 @@ type checker struct {
 	storageGraphs    map[*types.Func]%storageGraphSummary
 	storageLiterals  map[token.Pos]int
 	storageFlows     map[syntax.Node]%storageFlow
+	storageFacts     map[*types.Func]*GenericEffectFact
 	genericSummaries map[*types.Func]%genericEffectSummary
 	invalid          bool
 }
@@ -129,6 +130,7 @@ func run(pass *analysis.Pass) (any, error) {
 		storageGraphs:    make(map[*types.Func]%storageGraphSummary),
 		storageLiterals:  make(map[token.Pos]int),
 		storageFlows:     make(map[syntax.Node]%storageFlow),
+		storageFacts:     make(map[*types.Func]*GenericEffectFact),
 		genericSummaries: make(map[*types.Func]%genericEffectSummary),
 		invalid:          false,
 	}
