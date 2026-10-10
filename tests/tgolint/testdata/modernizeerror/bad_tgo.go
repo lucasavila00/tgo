@@ -189,3 +189,19 @@ func useNamedResultAfterPriorUses() (result *record, err error) {
 	}
 	return value, nil
 }
+
+func useMixedExpansionOrder() (*record, error) {
+	first, err := load()
+	if err != nil {
+		return nil, err
+	}
+	if _, middleErr := load(); middleErr != nil {
+		return nil, middleErr
+	}
+	last, err := load()
+	if err != nil {
+		return nil, err
+	}
+	_ = first
+	return last, nil
+}

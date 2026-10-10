@@ -211,3 +211,13 @@ func namedErrorAddressedBeforeSuccess() (result *record, err error) {
 	_ = *pointer
 	return value, nil
 }
+
+func namedErrorUsedByNakedReturn() (result *record, err error) {
+	err = errors.New("old")
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	result = value
+	return
+}

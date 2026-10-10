@@ -74,19 +74,19 @@ func errorReturnModernizations(
 	index %sourcefacts.Index,
 ) []errorReturnMatch {
 	matches := []errorReturnMatch(nil)
-	for _, statement := range statements {
+	for position, statement := range statements {
 		branch, ok := sourceIf(statement)
-		if !ok || branch == nil || branch.Init == nil {
+		if ok && branch != nil && branch.Init != nil {
+			if match, matched := errorReturnExpansion(
+				branch.Init, branch, function, index,
+			); matched {
+				matches = append(matches, match)
+			}
+		}
+		if position+1 >= len(statements) {
 			continue
 		}
-		if match, matched := errorReturnExpansion(
-			branch.Init, branch, function, index,
-		); matched {
-			matches = append(matches, match)
-		}
-	}
-	for position := 0; position+1 < len(statements); position++ {
-		branch, ok := sourceIf(statements[position+1])
+		branch, ok = sourceIf(statements[position+1])
 		if !ok || branch == nil || branch.Init != nil {
 			continue
 		}
@@ -102,7 +102,9 @@ func errorReturnModernizations(
 	}
 	safeObjects := make(map[types.Object]bool)
 	for object, ranges := range objectMatches {
-		safeObjects[object] = errorUsesCovered(file, object, ranges, index)
+		safeObjects[object] = errorUsesCovered(
+			file, function, object, ranges, index,
+		)
 	}
 	result := []errorReturnMatch{}
 	for _, match := range matches {
@@ -116,6 +118,7 @@ func errorReturnModernizations(
 // errorUsesCovered requires each use after the first call to stay in a matched expansion.
 func errorUsesCovered(
 	file %syntax.File,
+	function *types.Signature,
 	target types.Object,
 	matches []errorReturnMatch,
 	index %sourcefacts.Index,
@@ -127,9 +130,22 @@ func errorUsesCovered(
 			first = match.start
 		}
 	}
+	namedResult := errorResults(function) &&
+		function.Results().At(function.Results().Len()-1) == target &&
+		target.Name() != ""
 	syntax.Inspect(file, func(node *syntax.Node) bool {
 		if !valid {
 			return false
+		}
+		if namedResult {
+			statement, statementOK := syntax.StatementOf(node)
+			returned := syntax.ReturnStatementOf(statement)
+			if statementOK && returned != nil && len(returned.Results) == 0 &&
+				returned.Return > first &&
+				sourceFunctionSignature(file, node, index) == function {
+				valid = false
+				return false
+			}
 		}
 		identifier, ok := syntax.IdentifierOf(node)
 		if !ok {
