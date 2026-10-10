@@ -330,6 +330,8 @@ func (c *checker) storageCallValues(
 			fact: function.fact, function: function.graph,
 			arguments: arguments, captures: function.captures,
 			typeArguments: function.typeArguments,
+			caller:        function.fact, callerGraph: function.graph,
+			callSite: int(position),
 		}
 		input := storageCallInputState(state, arguments, function.captures)
 		updated, values, _ := executeStorageFunction(graphCall, input, flow.context)

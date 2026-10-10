@@ -62,11 +62,23 @@ func applyStorageOperation(
 		var transferred storageState
 		firstTransfer := true
 		for _, function := range functions {
+			caller := call.fact
+			callerGraph := call.function
+			callSite := operation.Position
+			if call.caller != nil {
+				caller = call.caller
+				callerGraph = call.callerGraph
+				callSite = call.callSite
+			}
 			nested := storageGraphCall{
 				fact: function.fact, function: function.graph,
 				arguments: arguments, captures: function.captures,
 				receiverArguments: function.receiverArguments,
 				typeArguments:     function.typeArguments,
+				caller:            caller, callerGraph: callerGraph, callSite: callSite,
+				summary: call.summary || storageCallOperationRepeated(
+					call.fact.Storage, call.function, operation.Position,
+				),
 			}
 			input := storageCallInputState(before, arguments, function.captures)
 			updated, returned, effects := executeStorageFunction(nested, input, context)
@@ -112,7 +124,12 @@ func applyStorageOperation(
 	case storageEffectAllocate:
 		location := storageLocation{
 			owner: call.fact, graph: call.function, site: operation.Target.ID,
-			kind: storageRootAllocation,
+			kind:   storageRootAllocation,
+			caller: call.caller, callerGraph: call.callerGraph,
+			callSite: call.callSite,
+			merged: call.summary || storageAllocationRepeated(
+				call.fact.Storage, call.function, operation.Target.ID,
+			),
 		}
 		value := storageValue{regions: []storagePath{{
 			location: location,
@@ -475,19 +492,21 @@ func writeStorageIndex(
 	if operation.KnownLength {
 		step = StorageEffectPath{Kind: storagePathIndex, Index: operation.Length}
 	}
+	targetCount := len(base.slices) + len(base.regions)
+	exact := operation.KnownLength && targetCount == 1
 	for _, slice := range base.slices {
 		if operation.KnownLength {
 			step.Index += slice.offset
 		}
 		path := storagePath{location: slice.backing, steps: []StorageEffectPath{step}}
-		writeStorageMemory(state, storageMemoryKey(path), value, operation.KnownLength)
+		writeStorageMemory(state, storageMemoryKey(path), value, exact)
 		if operation.KnownLength {
 			step.Index -= slice.offset
 		}
 	}
 	for _, region := range base.regions {
 		region.steps = append(region.steps, step)
-		writeStorageMemory(state, storageMemoryKey(region), value, operation.KnownLength)
+		writeStorageMemory(state, storageMemoryKey(region), value, exact)
 	}
 }
 
@@ -601,6 +620,8 @@ func resolveStoragePaths(
 	if region.Root == storageRootAllocation || region.Root == storageRootResult {
 		paths = append(paths, storagePath{location: storageLocation{
 			owner: call.fact, graph: call.function, site: region.ID, kind: region.Root,
+			caller: call.caller, callerGraph: call.callerGraph,
+			callSite: call.callSite,
 		}})
 	}
 	for index := range paths {

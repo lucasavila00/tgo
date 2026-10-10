@@ -38,6 +38,10 @@ type storageGraphCall struct {
 	parameterCells    []storagePath
 	receiverArguments []types.Type
 	typeArguments     []types.Type
+	caller            *GenericEffectFact
+	callerGraph       int
+	callSite          int
+	summary           bool
 }
 
 type storageCallKey struct {
@@ -101,6 +105,7 @@ func executeStorageFunction(
 	context *storageExecutionContext,
 ) (storageState, []storageValue, storageInvocationEffects) {
 	if storageFunctionRecursive(call.fact.Storage, call.function) {
+		call.summary = true
 		constants := storageFunctionIntegerConstants(call)
 		state = abstractStorageState(state, constants)
 		for index := range call.arguments {
@@ -205,6 +210,73 @@ func storageFunctionRecursive(graph StorageEffectGraph, function int) bool {
 		return false
 	}
 	return reaches(function)
+}
+
+func storageCallOperationRepeated(
+	graph StorageEffectGraph,
+	function int,
+	position int,
+) bool {
+	return storageOperationRepeated(graph, function, func(operation StorageEffectOperation) bool {
+		return operation.Kind == storageEffectCall && operation.Position == position
+	})
+}
+
+func storageAllocationRepeated(
+	graph StorageEffectGraph,
+	function int,
+	site int,
+) bool {
+	return storageOperationRepeated(graph, function, func(operation StorageEffectOperation) bool {
+		return operation.Kind == storageEffectAllocate && operation.Target.ID == site
+	})
+}
+
+func storageOperationRepeated(
+	graph StorageEffectGraph,
+	function int,
+	matches func(StorageEffectOperation) bool,
+) bool {
+	item := findStorageEffectFunction(graph, function)
+	if item == nil {
+		return false
+	}
+	blocks := make(map[int]StorageEffectBlock, len(item.Blocks))
+	target := -1
+	for _, block := range item.Blocks {
+		blocks[block.ID] = block
+		for _, operation := range block.Operations {
+			if matches(operation) {
+				target = block.ID
+			}
+		}
+	}
+	if target < 0 {
+		return false
+	}
+	seen := make(map[int]bool)
+	var reachesTarget func(int) bool
+	reachesTarget = func(blockID int) bool {
+		if blockID == target {
+			return true
+		}
+		if seen[blockID] {
+			return false
+		}
+		seen[blockID] = true
+		for _, edge := range blocks[blockID].Successors {
+			if reachesTarget(edge.Block) {
+				return true
+			}
+		}
+		return false
+	}
+	for _, edge := range blocks[target].Successors {
+		if reachesTarget(edge.Block) {
+			return true
+		}
+	}
+	return false
 }
 
 func abstractStorageState(

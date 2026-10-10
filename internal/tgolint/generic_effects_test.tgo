@@ -177,3 +177,50 @@ func TestRecursiveStorageExecutionNormalizesSliceBounds(t *testing.T) {
 		t.Fatalf("completed recursive inputs = %#v", context.completed)
 	}
 }
+
+func TestStorageAllocationIdentityIncludesCallerSite(t *testing.T) {
+	t.Parallel()
+	fact := &GenericEffectFact{Version: 1, Storage: StorageEffectGraph{Known: true}}
+	operation := StorageEffectOperation{
+		Kind:    storageEffectAllocate,
+		Target:  StorageEffectRegion{Root: storageRootAllocation, ID: 4},
+		Results: []int{1},
+	}
+	left := &storageExecutionState{storage: newStorageState(), temps: make(map[int]storageValue)}
+	right := &storageExecutionState{storage: newStorageState(), temps: make(map[int]storageValue)}
+	applyStorageOperation(left, storageGraphCall{
+		fact: fact, function: 0, caller: fact, callerGraph: 1, callSite: 10,
+	}, operation, newStorageExecutionContext())
+	applyStorageOperation(right, storageGraphCall{
+		fact: fact, function: 0, caller: fact, callerGraph: 1, callSite: 20,
+	}, operation, newStorageExecutionContext())
+	leftLocation := left.temps[1].regions[0].location
+	rightLocation := right.temps[1].regions[0].location
+	if leftLocation == rightLocation {
+		t.Fatalf("factory allocations share location %#v", leftLocation)
+	}
+}
+
+func TestStorageIndexWriteIsWeakForAlternativeTargets(t *testing.T) {
+	t.Parallel()
+	state := newStorageState()
+	left := storageLocation{graph: 1, site: 1}
+	right := storageLocation{graph: 1, site: 2}
+	leftPath := storageMemoryKey(storagePath{location: left, steps: []StorageEffectPath{{
+		Kind: storagePathIndex, Index: 0,
+	}}})
+	rightPath := storageMemoryKey(storagePath{location: right, steps: []StorageEffectPath{{
+		Kind: storagePathIndex, Index: 0,
+	}}})
+	writeStorageMemory(state, leftPath, storageValue{integer: 1, integerKnown: true}, true)
+	writeStorageMemory(state, rightPath, storageValue{integer: 2, integerKnown: true}, true)
+	writeStorageIndex(state, storageValue{slices: []storageSlice{
+		{backing: left, knownOffset: true},
+		{backing: right, knownOffset: true},
+	}}, StorageEffectOperation{KnownLength: true}, storageValue{
+		integer: 3, integerKnown: true,
+	})
+	if state.memory[leftPath].integerKnown || state.memory[rightPath].integerKnown {
+		t.Fatalf("alternative target write was strong: %#v", state.memory)
+	}
+}

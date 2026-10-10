@@ -154,17 +154,21 @@ func writeStoragePathKey(text *strings.Builder, path storagePath) {
 
 func writeStorageLocationKey(text *strings.Builder, location storageLocation) {
 	text.WriteString(fmt.Sprintf(
-		"%p:%d:%d:%d:%t", location.owner, location.graph,
-		location.site, location.kind, location.merged,
+		"%p:%d:%d:%d:%t:%p:%d:%d", location.owner, location.graph,
+		location.site, location.kind, location.merged, location.caller,
+		location.callerGraph, location.callSite,
 	))
 }
 
 type storageLocation struct {
-	owner  *GenericEffectFact
-	graph  int
-	site   int
-	kind   int
-	merged bool
+	owner       *GenericEffectFact
+	graph       int
+	site        int
+	kind        int
+	merged      bool
+	caller      *GenericEffectFact
+	callerGraph int
+	callSite    int
 }
 
 type storagePath struct {
