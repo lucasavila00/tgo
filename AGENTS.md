@@ -109,6 +109,9 @@ request body when the user requests that issue or pull request.
 
 ## 11. Lower Valid TGo Before You Restrict It
 
+Read the [compiler lowering guide](docs/contrib/compiler-lowering.md) before
+you change compiler lowering or add a source restriction.
+
 Preserve valid TGo semantics, evaluation order, scope, control flow, and error
 identity first. Generate fresh locals and blocks when the lowering needs them.
 Improve generated-code appearance after correctness is complete.
