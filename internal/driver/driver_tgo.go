@@ -46,15 +46,16 @@ func Build(directory string, patterns []string) (err error) {
 		return err_5
 	}
 	builder := packageBuilder{
-		packages: packages,
-		root:     root,
-		module:   module,
-		context:  &context,
-		states:   make(map[string]buildState),
-		previous: make(map[string]previousFile),
-		current:  make(map[string]previousFile),
-		order:    nil,
-		write:    true,
+		packages:     packages,
+		root:         root,
+		module:       module,
+		context:      &context,
+		states:       make(map[string]buildState),
+		previous:     make(map[string]previousFile),
+		current:      make(map[string]previousFile),
+		order:        nil,
+		write:        true,
+		typeImporter: newWorkspaceTypeImporter(root),
 	}
 	defer func() {
 		if err != nil {
@@ -337,15 +338,16 @@ func newMemoryBuilder(
 	buildContext *build.Context,
 ) *packageBuilder {
 	return &packageBuilder{
-		packages: packages,
-		root:     root,
-		module:   module,
-		context:  buildContext,
-		states:   make(map[string]buildState),
-		previous: make(map[string]previousFile),
-		current:  make(map[string]previousFile),
-		order:    nil,
-		write:    false,
+		packages:     packages,
+		root:         root,
+		module:       module,
+		context:      buildContext,
+		states:       make(map[string]buildState),
+		previous:     make(map[string]previousFile),
+		current:      make(map[string]previousFile),
+		order:        nil,
+		write:        false,
+		typeImporter: newWorkspaceTypeImporter(root),
 	}
 }
 

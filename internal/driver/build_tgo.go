@@ -6,10 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"go/build"
-	"go/importer"
 	"go/token"
 	"go/types"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -17,6 +15,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"golang.org/x/tools/go/gcexportdata"
 
 	"tgo/internal/compiler"
 	"tgo/internal/outputname"
@@ -38,15 +38,76 @@ type previousFile struct {
 }
 
 type packageBuilder struct {
-	packages map[string]*packageUnit
+	packages     map[string]*packageUnit
+	root         string
+	module       string
+	context      *build.Context
+	states       map[string]buildState
+	previous     map[string]previousFile
+	current      map[string]previousFile
+	order        []string
+	write        bool
+	typeImporter *workspaceTypeImporter
+}
+
+type workspaceTypeImporter struct {
 	root     string
-	module   string
-	context  *build.Context
-	states   map[string]buildState
-	previous map[string]previousFile
-	current  map[string]previousFile
-	order    []string
-	write    bool
+	files    *token.FileSet
+	packages map[string]*types.Package
+	exports  map[string]string
+}
+
+func newWorkspaceTypeImporter(root string) *workspaceTypeImporter {
+	return &workspaceTypeImporter{
+		root:     root,
+		files:    token.NewFileSet(),
+		packages: make(map[string]*types.Package),
+		exports:  make(map[string]string),
+	}
+}
+
+func (i *workspaceTypeImporter) Import(path string) (*types.Package, error) {
+	return i.ImportFrom(path, i.root, 0)
+}
+
+func (i *workspaceTypeImporter) ImportFrom(
+	path string,
+	directory string,
+	mode types.ImportMode,
+) (*types.Package, error) {
+	if pkg := i.packages[path]; pkg != nil && pkg.Complete() {
+		return pkg, nil
+	}
+	if path == "unsafe" {
+		return types.Unsafe, nil
+	}
+	export := i.exports[path]
+	if export == "" {
+		result, err_1 := loadExportPath(directory, path)
+		if err_1 != nil {
+			return nil, err_1
+		}
+		export = result
+		i.exports[path] = export
+	}
+	file, err_2 := os.Open(export)
+	if err_2 != nil {
+		return nil, err_2
+	}
+	reader, err := gcexportdata.NewReader(file)
+	if err != nil {
+		closeErr := file.Close()
+		if closeErr != nil {
+			return nil, errors.Join(err, closeErr)
+		}
+		return nil, err
+	}
+	pkg, err := gcexportdata.Read(reader, i.files, i.packages, path)
+	closeErr := file.Close()
+	if closeErr != nil {
+		return nil, errors.Join(err, closeErr)
+	}
+	return pkg, err
 }
 
 type memoryImporter struct {
@@ -75,34 +136,17 @@ func (i memoryImporter) ImportFrom(
 	return i.fallback.Import(path)
 }
 
-func packageTypeImporter(
-	unit *packageUnit,
-	files *token.FileSet,
+func (b *packageBuilder) packageTypeImporter(
 	paths map[string]string,
-) types.Importer {
-	if unit.typeImporter == nil {
-		unit.typeExports = make(map[string]string)
-		unit.typeImporter = importer.ForCompiler(
-			files,
-			"gc",
-			func(path string) (io.ReadCloser, error) {
-				export := unit.typeExports[path]
-				if export == "" {
-					var err error = nil
-					export, err = loadExportPath(unit.Dir, path)
-					if err != nil {
-						return nil, err
-					}
-					unit.typeExports[path] = export
-				}
-				return os.Open(export)
-			},
-		)
-	}
+	local map[string]*compiler.CompiledPackage,
+) *workspaceTypeImporter {
 	for path, export := range paths {
-		unit.typeExports[path] = export
+		b.typeImporter.exports[path] = export
 	}
-	return unit.typeImporter
+	for path, compiled := range local {
+		b.typeImporter.packages[path] = compiled.Package
+	}
+	return b.typeImporter
 }
 
 // build compiles dependencies before one package and writes its outputs.
@@ -284,6 +328,8 @@ func (b *packageBuilder) compileFiles(
 		}
 		if dependency := unit.Imports[importPath]; dependency != nil && dependency.compiled != nil {
 			imports[importPath] = dependency.compiled
+			memoryImports[importPath] = dependency.compiled
+			continue
 		}
 		diskImports = append(diskImports, importPath)
 	}
@@ -291,7 +337,7 @@ func (b *packageBuilder) compileFiles(
 	if err != nil {
 		return nil, err
 	}
-	fallback := packageTypeImporter(unit, fileSet, paths)
+	fallback := b.packageTypeImporter(paths, memoryImports)
 	packageImporter := memoryImporter{packages: memoryImports, fallback: fallback}
 	compiled, diagnostics := compiler.Compile(
 		compiler.PackageInput{
@@ -306,6 +352,9 @@ func (b *packageBuilder) compileFiles(
 	)
 	if len(diagnostics) != 0 {
 		return nil, errors.Join(diagnostics...)
+	}
+	if path == unit.Path && fileSet == unit.fs {
+		b.typeImporter.packages[path] = compiled.Package
 	}
 	return compiled, nil
 }
