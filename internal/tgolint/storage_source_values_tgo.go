@@ -6,6 +6,7 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"reflect"
 
 	"tgo/pkg/syntax"
 )
@@ -308,8 +309,12 @@ func (c *checker) storageCallValues(
 			c.storageExpressionValue(argument, state, flow, apply))
 	}
 	if apply {
-		flow.postArguments[position] = cloneStorageState(state)
-		flow.arguments[position] = cloneStorageValues(arguments)
+		if previous, ok := flow.postArguments[position]; ok {
+			flow.postArguments[position] = joinStorageState(previous, state)
+		} else {
+			flow.postArguments[position] = cloneStorageState(state)
+		}
+		flow.arguments[position] = joinStorageValues(flow.arguments[position], arguments)
 	}
 	if name := syntax.IdentifierExpressionOf(call.Callee); name != nil {
 		if builtin, ok := c.facts.Object(name).(*types.Builtin); ok {
@@ -342,11 +347,12 @@ func (c *checker) storageCallValues(
 		}
 		input := storageCallInputState(state, arguments, function.captures)
 		updated, values, effects := executeStorageFunction(graphCall, input, flow.context)
-		flow.invocations[position] = append(flow.invocations[position], storageRecordedInvocation{
-			effects:           effects,
-			receiverArguments: append([]types.Type(nil), function.receiverArguments...),
-			typeArguments:     append([]types.Type(nil), function.typeArguments...),
-		})
+		flow.invocations[position] = appendStorageRecordedInvocation(
+			flow.invocations[position], storageRecordedInvocation{
+				effects:           effects,
+				receiverArguments: append([]types.Type(nil), function.receiverArguments...),
+				typeArguments:     append([]types.Type(nil), function.typeArguments...),
+			})
 		updated = projectStorageCallerState(state, updated, values)
 		replaceStorageState(state, updated)
 		for index, value := range values {
@@ -363,6 +369,27 @@ func (c *checker) storageCallValues(
 		flow.values[position] = joinStorageValues(flow.values[position], results)
 	}
 	return results
+}
+
+func appendStorageRecordedInvocation(
+	target []storageRecordedInvocation,
+	value storageRecordedInvocation,
+) []storageRecordedInvocation {
+	for index := range target {
+		if reflect.DeepEqual(target[index].receiverArguments, value.receiverArguments) &&
+			reflect.DeepEqual(target[index].typeArguments, value.typeArguments) {
+			target[index].effects.zero = appendGenericEffects(
+				target[index].effects.zero, value.effects.zero,
+			)
+			target[index].effects.access = appendGenericEffects(
+				target[index].effects.access, value.effects.access,
+			)
+			target[index].effects.completed = target[index].effects.completed ||
+				value.effects.completed
+			return target
+		}
+	}
+	return append(target, value)
 }
 
 func replaceStorageState(target storageState, source storageState) {
