@@ -44,3 +44,32 @@ agents. Move the requested work to review without unnecessary waiting.
 - Keep no more than six pull requests open at one time. Draft pull requests can
   outnumber active agents. Use open slots for the highest-priority unblocked
   issues.
+
+## Correct the Model Before Repeating Fixes
+
+The coordinator must detect repeated failures without waiting for Lucas to
+intervene. If review finds a second missed case from the same analysis model,
+or fixes require more special cases without a clear rule, pause implementation
+and keep the pull request in draft. Preserve the work and free the agent slot.
+
+Ask an independent architecture agent to inspect the code and failure evidence.
+Choose a model suited to this work, such as `gpt-6-astra` or `gpt-6.1-sol`.
+The agent must define the identities, state, transfer rules, control-flow joins,
+and package summaries needed for the feature. It must assess existing Go and
+Go tools code for reuse and explain any required TGo-specific logic.
+
+The target is complete support for the intended language feature. Do not change
+the language, reject valid programs, add a fallback, suppress diagnostics, or
+weaken tests to make the implementation pass. Require the model to catch unsafe
+programs and accept safe programs under the specification.
+
+Before implementation resumes, check the proposed model against all known
+failures and a table of relevant operations and boundaries. Include aliases,
+mutation, branches, loops, calls, and package boundaries where they apply.
+Require both safe and unsafe cases. Give a `gpt-5.6-sol` implementer the model,
+the full acceptance criteria, and the agreed tests. The independent reviewer
+must test the model across those cases, not only the last reported failure.
+
+Keep architecture work focused on the feature. Do not add speculative systems
+or redesign adjacent code. Resume implementation when the model explains the
+required behavior, then verify the complete feature before marking it ready.
