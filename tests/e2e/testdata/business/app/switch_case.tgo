@@ -1,0 +1,99 @@
+package app
+
+import "errors"
+
+var errSwitchCase = errors.New("switch case failure")
+
+func switchCaseMark(events %[]string, name string, value int) int {
+	*events = append(*events, name)
+	return value
+}
+
+func switchCaseValue(events %[]string, name string, value int, fail bool) (int, error) {
+	*events = append(*events, name)
+	if fail {
+		return 0, errSwitchCase
+	}
+	return value, nil
+}
+
+func switchCaseBool(events %[]string, name string, value bool, fail bool) (bool, error) {
+	*events = append(*events, name)
+	if fail {
+		return false, errSwitchCase
+	}
+	return value, nil
+}
+
+func PropagationSwitchCaseOrder(events %[]string, tag int, fail bool) (string, error) {
+	switch switchCaseMark(events, "tag", tag) {
+	case switchCaseMark(events, "first", 0), switchCaseValue(events, "second", 2, fail)!!:
+		return "second", nil
+	case switchCaseValue(events, "third", 3, false)!!:
+		return "third", nil
+	default:
+		return "default", nil
+	}
+}
+
+func PropagationSwitchCaseWrapped(events %[]string) error {
+	switch 1 {
+	case switchCaseValue(events, "wrapped", 1, true)!:
+	}
+	return nil
+}
+
+func PropagationSwitchCaseDefaultFallthrough(events %[]string) error {
+	switch switchCaseMark(events, "tag", 9) {
+	default:
+		*events = append(*events, "default")
+		fallthrough
+	case switchCaseValue(events, "case", 1, false)!!:
+		*events = append(*events, "fallthrough")
+	}
+	return nil
+}
+
+func PropagationSwitchCaseGotoBreak(events %[]string) error {
+	goto outer
+outer:
+	switch 1 {
+	case switchCaseValue(events, "case", 1, false)!!:
+		*events = append(*events, "body")
+		break outer
+	}
+	*events = append(*events, "done")
+	return nil
+}
+
+func PropagationSwitchCaseContinue(events %[]string) error {
+outer:
+	for value := 0; value < 2; value++ {
+		switch value {
+		case switchCaseValue(events, "case", value, false)!!:
+			*events = append(*events, "body")
+			continue outer
+		}
+		*events = append(*events, "after")
+	}
+	return nil
+}
+
+func PropagationSwitchCaseTagless(events %[]string) error {
+	switch {
+	case switchCaseBool(events, "first", false, false)!!,
+		switchCaseBool(events, "second", true, false)!!:
+		*events = append(*events, "body")
+	case switchCaseBool(events, "third", true, false)!!:
+		*events = append(*events, "late")
+	}
+	return nil
+}
+
+func PropagationSwitchCaseInitializer(events %[]string) error {
+	switch base := switchCaseMark(events, "init", 2); switchCaseMark(events, "tag", base) {
+	case switchCaseValue(events, "case", base, false)!!:
+		*events = append(*events, "body")
+	}
+	return nil
+}
