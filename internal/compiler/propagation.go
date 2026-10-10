@@ -262,10 +262,29 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		l.inferredResultNames = outer
 		return result
 	case *ast.TypeSwitchStmt:
+		outer := l.inferredResultNames
+		l.inferredResultNames = cloneInferredResultNames(outer)
+		scopedInitializer := node.Init != nil
+		prefix := []ast.Stmt(nil)
+		if l.statementHasLowering(node.Init) {
+			prefix = l.simpleStatement(node.Init)
+			node.Init = nil
+		} else if assignment, ok := node.Init.(*ast.AssignStmt); ok {
+			l.rememberSimpleAssignmentTypes(assignment)
+		}
 		l.caseBodies(node.Body)
-		l.missingStatementLowering(node.Init, "type switch initializer")
-		l.missingStatementLowering(node.Assign, "type switch assignment")
-		return []ast.Stmt{node}
+		if l.statementHasLowering(node.Assign) {
+			if node.Init != nil {
+				prefix = append(prefix, l.simpleStatement(node.Init)...)
+				node.Init = nil
+			}
+			guard := l.simpleStatement(node.Assign)
+			node.Assign = guard[len(guard)-1]
+			prefix = append(prefix, guard[:len(guard)-1]...)
+		}
+		result := l.prefixedStatement(prefix, node, scopedInitializer)
+		l.inferredResultNames = outer
+		return result
 	case *ast.ForStmt:
 		node.Body.List = l.scopedStatements(node.Body.List)
 		l.missingStatementLowering(node.Init, "for initializer")
@@ -319,7 +338,8 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 // labeledStatement keeps goto at the source label and moves loop or switch
 // branches to a generated label when propagation adds a block.
 func (l *propagationLowerer) labeledStatement(node *ast.LabeledStmt) []ast.Stmt {
-	rewritten := oneStatement(l.statement(node.Stmt))
+	statements := l.statement(node.Stmt)
+	rewritten := oneStatement(statements)
 	block, ok := rewritten.(*ast.BlockStmt)
 	if !ok || len(block.List) == 0 {
 		node.Stmt = rewritten
@@ -339,6 +359,9 @@ func (l *propagationLowerer) labeledStatement(node *ast.LabeledStmt) []ast.Stmt 
 			Label: node.Label,
 			Colon: node.Colon,
 			Stmt:  block.List[last],
+		}
+		if len(statements) == 1 {
+			return statements
 		}
 		return block.List
 	}
