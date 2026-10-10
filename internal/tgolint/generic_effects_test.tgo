@@ -102,3 +102,18 @@ func TestRecursiveStorageGraphCompletesWithEffects(t *testing.T) {
 		t.Fatalf("recursive effects = %#v", effects)
 	}
 }
+
+func TestAcyclicStorageTransferIsCached(t *testing.T) {
+	t.Parallel()
+	fact := &GenericEffectFact{Version: 1, Storage: StorageEffectGraph{
+		Known: true, Entry: 0,
+		Functions: []StorageEffectFunction{{ID: 0, Blocks: []StorageEffectBlock{{ID: 0}}}},
+	}}
+	context := newStorageExecutionContext()
+	call := storageGraphCall{fact: fact, function: 0}
+	_, _, first := executeStorageFunction(call, newStorageState(), context)
+	_, _, second := executeStorageFunction(call, newStorageState(), context)
+	if !first.completed || !second.completed || len(context.completed) != 1 {
+		t.Fatalf("completed transfers = %#v", context.completed)
+	}
+}

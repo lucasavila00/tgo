@@ -40,12 +40,12 @@ func (c *checker) reportStorageFunctionCall(expression *syntax.Expression) bool 
 	}
 	handled := len(value.functions) != 0
 	for _, function := range value.functions {
-		effects := storageGraphEffects(storageGraphCall{
+		effects := storageGraphEffectsInContext(storageGraphCall{
 			fact: function.fact, function: function.graph,
 			arguments: arguments, captures: function.captures,
 			receiverArguments: function.receiverArguments,
 			typeArguments:     function.typeArguments,
-		}, state)
+		}, state, flow.context)
 		c.reportGenericEffects(
 			expression, expression, effects.zero, function.receiverArguments,
 			function.typeArguments, true, "call to function value",
@@ -90,12 +90,12 @@ func (c *checker) reportStorageUnknownCallArguments(expression *syntax.Expressio
 	for _, argument := range call.Args {
 		value := c.storageExpressionValue(argument, state, flow, false)
 		for _, function := range value.functions {
-			effects := storageGraphEffects(storageGraphCall{
+			effects := storageGraphEffectsInContext(storageGraphCall{
 				fact: function.fact, function: function.graph,
 				captures:          function.captures,
 				receiverArguments: function.receiverArguments,
 				typeArguments:     function.typeArguments,
-			}, state)
+			}, state, flow.context)
 			c.reportGenericEffects(
 				argument, argument, effects.zero, function.receiverArguments,
 				function.typeArguments, true, "function value escape",
@@ -137,11 +137,11 @@ func (c *checker) reportStorageFactCall(
 				c.storageExpressionValue(argument, state, flow, false))
 		}
 	}
-	effects := storageGraphEffects(storageGraphCall{
+	effects := storageGraphEffectsInContext(storageGraphCall{
 		fact: fact, function: fact.Storage.Entry,
 		arguments: arguments, captures: nil, typeArguments: typeArguments,
 		receiverArguments: receiverArguments,
-	}, state)
+	}, state, flow.context)
 	c.reportGenericEffects(
 		expression, expression, effects.zero,
 		receiverArguments, typeArguments, true, description,

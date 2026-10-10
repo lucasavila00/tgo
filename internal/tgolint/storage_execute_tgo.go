@@ -72,7 +72,16 @@ func storageGraphEffects(
 	call storageGraphCall,
 	state storageState,
 ) storageInvocationEffects {
-	context := newStorageExecutionContext()
+	return storageGraphEffectsInContext(
+		call, state, newStorageExecutionContext(),
+	)
+}
+
+func storageGraphEffectsInContext(
+	call storageGraphCall,
+	state storageState,
+	context *storageExecutionContext,
+) storageInvocationEffects {
 	_, _, effects := executeStorageFunction(call, state, context)
 	return effects
 }
