@@ -10,8 +10,12 @@ type MultilineEvent enum
 }
 
 type Port struct { number int } checked
+type Τ struct{}
+type Υ struct{}
 type CheckedRecord struct {
 	value int
+	Field %[2]%T
+	UnicodeField [2]%Τ
 	owner %User
 	history []%User
 	lookup map[string]%User
@@ -38,6 +42,10 @@ type UserPointer = %User
 type UserPointerMap = map[string][]%*User
 type DirectUserPointerMap = map[string]%User
 type UserArray [2]%User
+type Alias [2]%Τ
+type Chain [1][2]%Τ
+type Composed %[2]%Τ
+type FunctionType func([2]%Τ) [2]%Υ
 type MultilineUserArray [
 	2
 ]%User
@@ -104,6 +112,9 @@ type MultilineReader interface
 	) %MultilineTransformResult
 }
 var currentUser %User
+var Group = [2]%T{}
+var Typed [2]%Τ
+var FunctionValue func([2]%Τ) [2]%Υ
 var multilineVariableFactory func(
 	value %VariableInput,
 ) %VariableResult
@@ -146,6 +157,8 @@ var (
 type WhereAlias where
 
 func read(ok bool, owner %User) error {
+	var local [2]%Τ
+	_ = local
 	_ = Request{..default}
 	value := load() /* keep */ !
 	value = load()!!
@@ -154,8 +167,34 @@ func read(ok bool, owner %User) error {
 	_ = left%right
 	_ = left % Thing
 	_ = values[2] % Thing
+	_ = values[0][1] % Thing
+	_ = [2]%Record{}
+	_ = ([2]%Record)(records)
+	_ = [len([2]int{})]%Record{}
+	_ = [len("a]b")]%Record{}
+	_ = [left % right]int{}
+	_ = "abc" [2] % Thing
+	_ = 'x' [0] % Thing
+	_ = []int{} [0] % Thing
+	_ = α [0] % Thing
+	_ = π[0] % Thing
+	_ = [2 // ]%LineFake
+]%LineRecord{}
+	_ = [len(`a]%RawFake
+b`)]%RawRecord{}
+	_ = [2 /* ]%BlockFake
+		keep
+*/]%BlockRecord{}
+	return [2]%ReturnRecord{}
+	_ = make(chan [2]%ChannelRecord)
+	for _, item := range [2]%RangeRecord{} { _ = item }
+	_ = [1][2]%MatrixRecord{}
+	_ = map[string][2]%MapRecord{}
+	_ = [len([2]int{})][3]%NestedMatrixRecord{}
+	_ = %[2]%T(nil)
 	_ = []int{for _, item := range values { if item > 0 { item } }}
 	switch event.Tag() {
+	case [2]%CaseRecord{}:
 	exhaustive:
 	}
 	where := 1
@@ -191,6 +230,13 @@ func (receiver %*ReceiverRecord) composedReceiver() {}
 func (receiver %%DeepRecord) doubleReceiver() {}
 
 func signatureModulo(value [(Left %Right)]Record) {}
+func unicodeArrayParameter(value [2]%Τ) {}
+func (
+	receiver [2]%Τ,
+) unicodeArrayReceiver() {}
+func unicodeArrayResult() [2]%Τ { return [2]%Τ{} }
+func unicodeSignatureModulo(value [(Α % Β)]Τ) {}
+func unicodeBodyModulo() { _ = α % 2 }
 func bodyModulo() { _ = left %Thing }
 func multilineBodyModulo() {
 	_ = bodyLeft %BodyThing

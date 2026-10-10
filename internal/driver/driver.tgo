@@ -19,29 +19,15 @@ import (
 // Build checks tgo packages and writes Go source beside each input file.
 // If a check fails, it restores all output files changed by this build.
 func Build(directory string, patterns []string) (err error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return err
-	}
-	context, err := effectiveBuildContext(directory)
-	if err != nil {
-		return err
-	}
-	lock, err := acquireModuleLock(root)
-	if err != nil {
-		return err
-	}
+	err = nil
+	root, module := moduleRoot(directory)!!
+	context := effectiveBuildContext(directory)!!
+	lock := acquireModuleLock(root)!!
 	defer func() {
 		err = errors.Join(err, lock.Unlock())
 	}()
-	packages, err := discover(root, module, &context)
-	if err != nil {
-		return err
-	}
-	selected, err := selectPackages(directory, patterns, packages)
-	if err != nil {
-		return err
-	}
+	packages := discover(root, module, &context)!!
+	selected := selectPackages(directory, patterns, packages)!!
 	builder := packageBuilder{
 		packages: packages,
 		root:     root,
@@ -115,18 +101,9 @@ func compileWorkspaceContext(
 	directory string,
 	continueAfterError bool,
 ) ([]%compiler.CompiledPackage, error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return , err
-	}
-	buildContext, err := effectiveBuildContext(directory)
-	if err != nil {
-		return , err
-	}
-	packages, err := discover(root, module, &buildContext)
-	if err != nil {
-		return , err
-	}
+	root, module := moduleRoot(directory)!!
+	buildContext := effectiveBuildContext(directory)!!
+	packages := discover(root, module, &buildContext)!!
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	paths := sortedPackagePaths(packages)
 	result := make([]%compiler.CompiledPackage, 0, len(paths))
@@ -156,18 +133,9 @@ func compileWorkspaceViewsContext(
 	directory string,
 	continueAfterError bool,
 ) ([]CompiledView, error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return , err
-	}
-	buildContext, err := effectiveBuildContext(directory)
-	if err != nil {
-		return , err
-	}
-	packages, err := discover(root, module, &buildContext)
-	if err != nil {
-		return , err
-	}
+	root, module := moduleRoot(directory)!!
+	buildContext := effectiveBuildContext(directory)!!
+	packages := discover(root, module, &buildContext)!!
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	result := make([]CompiledView, 0, len(packages))
 	for _, path := range sortedPackagePaths(packages) {
@@ -251,18 +219,9 @@ func CompilePackage(
 	importPath string,
 	files *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return , err
-	}
-	buildContext, err := effectiveBuildContext(directory)
-	if err != nil {
-		return , err
-	}
-	packages, err := discover(root, module, &buildContext)
-	if err != nil {
-		return , err
-	}
+	root, module := moduleRoot(directory)!!
+	buildContext := effectiveBuildContext(directory)!!
+	packages := discover(root, module, &buildContext)!!
 	unit := packages[importPath]
 	if unit == nil {
 		return nil,
@@ -271,9 +230,7 @@ func CompilePackage(
 		unit.fs = files
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
-	if err := builder.build(importPath); err != nil {
-		return , err
-	}
+	builder.build(importPath)!!
 	if unit.compiled == nil {
 		return nil,
 	}
@@ -287,30 +244,16 @@ func CompileTestPackage(
 	external bool,
 	files *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return , err
-	}
-	buildContext, err := effectiveBuildContext(directory)
-	if err != nil {
-		return , err
-	}
-	packages, err := discover(root, module, &buildContext)
-	if err != nil {
-		return , err
-	}
+	root, module := moduleRoot(directory)!!
+	buildContext := effectiveBuildContext(directory)!!
+	packages := discover(root, module, &buildContext)!!
 	unit := packages[importPath]
 	if unit == nil {
 		return nil,
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
-	if err := builder.build(importPath); err != nil {
-		return , err
-	}
-	internal, externalTests, err := unit.readTests()
-	if err != nil {
-		return , err
-	}
+	builder.build(importPath)!!
+	internal, externalTests := unit.readTests()!!
 	tests := internal
 	if external {
 		tests = externalTests

@@ -57,13 +57,16 @@ func run(paths []string, write bool, list bool, input io.Reader, output io.Write
 	for _, path := range paths {
 		directory := filepath.Clean(filepath.Dir(path))
 		if !checked[directory] {
-			if _, err := packagelanguage.Classify(context, directory); err != nil {
-				return err
+			result, err_4 := packagelanguage.Classify(context, directory)
+			if err_4 != nil {
+				return err_4
 			}
+			_ = result
 			checked[directory] = true
 		}
-		if err := formatPath(path, write, list, output); err != nil {
-			return err
+		err_5 := formatPath(path, write, list, output)
+		if err_5 != nil {
+			return err_5
 		}
 	}
 	return nil
@@ -80,14 +83,16 @@ func formatPath(path string, write bool, list bool, output io.Writer) error {
 	}
 	changed := !bytes.Equal(source, formatted)
 	if list && changed {
-		if _, err := fmt.Fprintln(output, path); err != nil {
-			return err
-		}
-	}
-	if write && changed {
-		info, err_3 := os.Stat(path)
+		result, err_3 := fmt.Fprintln(output, path)
 		if err_3 != nil {
 			return err_3
+		}
+		_ = result
+	}
+	if write && changed {
+		info, err_4 := os.Stat(path)
+		if err_4 != nil {
+			return err_4
 		}
 		return writeFormattedFile(path, source, formatted, info.Mode().Perm())
 	}

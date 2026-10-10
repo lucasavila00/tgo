@@ -218,14 +218,8 @@ func (d *packageDiscovery) importPath(directory string) (string, error) {
 
 // readSource loads one TGo source and its imports.
 func (p *packageUnit) readSource(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
-	if err != nil {
-		return err
-	}
+	data := os.ReadFile(path)!!
+	file := syntax.ParseFile(token.NewFileSet(), path, data, 0)!!
 	p.Sources = append(p.Sources, compiler.File{Name: path, Data: data})
 	p.Files = append(p.Files, file)
 	return nil
@@ -235,23 +229,14 @@ func (p *packageUnit) readSource(path string) error {
 func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 	internal := packageTests{Sources: nil, Files: nil, UsesC: false}
 	external := packageTests{Sources: nil, Files: nil, UsesC: false}
-	paths, err := p.matchingTestSources()
-	if err != nil {
-		return ,, err
-	}
+	paths := p.matchingTestSources()!!
 	if len(paths) == 0 {
 		return internal, external,
 	}
 	packageName := p.Files[0].Name.Name
 	for _, path := range paths {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return ,, err
-		}
-		file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
-		if err != nil {
-			return ,, err
-		}
+		data := os.ReadFile(path)!!
+		file := syntax.ParseFile(token.NewFileSet(), path, data, 0)!!
 		cgo := importsC(file)
 		if cgo && !p.context.CgoEnabled {
 			continue
@@ -305,10 +290,7 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 
 // available reports whether this package has active source or orphan output.
 func (p *packageUnit) available() (bool, error) {
-	_, err := p.packageLanguage()
-	if err != nil {
-		return , err
-	}
+	_ = p.packageLanguage()!!
 	paths := p.matchingSources()!!
 	if len(paths) > 0 {
 		return true,
