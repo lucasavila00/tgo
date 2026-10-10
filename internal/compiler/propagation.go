@@ -338,7 +338,8 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 // labeledStatement keeps goto at the source label and moves loop or switch
 // branches to a generated label when propagation adds a block.
 func (l *propagationLowerer) labeledStatement(node *ast.LabeledStmt) []ast.Stmt {
-	rewritten := oneStatement(l.statement(node.Stmt))
+	statements := l.statement(node.Stmt)
+	rewritten := oneStatement(statements)
 	block, ok := rewritten.(*ast.BlockStmt)
 	if !ok || len(block.List) == 0 {
 		node.Stmt = rewritten
@@ -358,6 +359,9 @@ func (l *propagationLowerer) labeledStatement(node *ast.LabeledStmt) []ast.Stmt 
 			Label: node.Label,
 			Colon: node.Colon,
 			Stmt:  block.List[last],
+		}
+		if len(statements) == 1 {
+			return statements
 		}
 		return block.List
 	}

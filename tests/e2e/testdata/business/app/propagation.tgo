@@ -96,7 +96,11 @@ func propagationCode(found bool) (int, error) {
 }
 
 func propagationAny(events %[]string, found bool) (any, error) {
-	*events = append(*events, "guard")
+	return propagationNamedAny(events, "guard", found)
+}
+
+func propagationNamedAny(events %[]string, name string, found bool) (any, error) {
+	*events = append(*events, name)
 	if !found {
 		return nil, errPropagationMissing
 	}
@@ -330,6 +334,15 @@ func PropagationTypeSwitchInitializer(events %[]string, found bool) (string, err
 	return "other", nil
 }
 
+func PropagationTypeSwitchBoth(events %[]string, initFound bool, guardFound bool) (string, error) {
+	switch prefix := propagationNamedAny(events, "init", initFound)!!;
+	value := (propagationNamedAny(events, "guard", guardFound)!!).(type) {
+	case string:
+		return prefix.(string) + ":" + value, nil
+	}
+	return "other", nil
+}
+
 func PropagationBareTypeSwitch(events %[]string, found bool) (string, error) {
 	switch (propagationAny(events, found)!!).(type) {
 	case string:
@@ -349,6 +362,18 @@ outer:
 		result = "other"
 	}
 	return result, nil
+}
+
+func PropagationLabeledTypeSwitchScope() (string, error) {
+	events := []string{}
+	prefix := "outer"
+outer:
+	switch prefix := propagationLoad(&events, true)!!; value := any("ready").(type) {
+	case string:
+		_, _ = prefix, value
+		break outer
+	}
+	return prefix, nil
 }
 
 func PropagationGotoLabeledTypeSwitch(events %[]string, found bool) (string, error) {

@@ -243,6 +243,40 @@ func TestPropagationInControlExpressions(t *testing.T) {
 	if err != nil || prefix != "init" || strings.Join(events, ",") != "init" {
 		t.Fatalf("switch init prefix=%q error=%v events=%v", prefix, err, events)
 	}
+	events = nil
+	label, err = PropagationTypeSwitch(&events, true)
+	if err != nil || label != "init:ready" || strings.Join(events, ",") != "init,guard" {
+		t.Fatalf("type switch label=%q error=%v events=%v", label, err, events)
+	}
+	events = nil
+	label, err = PropagationTypeSwitchInitializer(&events, true)
+	if err != nil || label != "7:ready" || strings.Join(events, ",") != "load" {
+		t.Fatalf("type switch initializer label=%q error=%v events=%v", label, err, events)
+	}
+	events = nil
+	label, err = PropagationTypeSwitchBoth(&events, true, true)
+	if err != nil || label != "ready:ready" || strings.Join(events, ",") != "init,guard" {
+		t.Fatalf("both type switch label=%q error=%v events=%v", label, err, events)
+	}
+	events = nil
+	label, err = PropagationBareTypeSwitch(&events, true)
+	if err != nil || label != "string" || strings.Join(events, ",") != "guard" {
+		t.Fatalf("bare type switch label=%q error=%v events=%v", label, err, events)
+	}
+	events = nil
+	label, err = PropagationLabeledTypeSwitch(&events, true)
+	if err != nil || label != "ready" || strings.Join(events, ",") != "guard" {
+		t.Fatalf("labeled type switch label=%q error=%v events=%v", label, err, events)
+	}
+	label, err = PropagationLabeledTypeSwitchScope()
+	if err != nil || label != "outer" {
+		t.Fatalf("labeled type switch scope label=%q error=%v", label, err)
+	}
+	events = nil
+	label, err = PropagationGotoLabeledTypeSwitch(&events, true)
+	if err != nil || label != "ready" || strings.Join(events, ",") != "guard" {
+		t.Fatalf("goto type switch label=%q error=%v events=%v", label, err, events)
+	}
 
 	total, err = PropagationRange(false)
 	if total != 0 || !errors.Is(err, errPropagationMissing) {
@@ -251,6 +285,30 @@ func TestPropagationInControlExpressions(t *testing.T) {
 	label, err = PropagationSwitch(false)
 	if label != "" || !errors.Is(err, errPropagationMissing) {
 		t.Fatalf("failed switch label=%q error=%v", label, err)
+	}
+	events = nil
+	label, err = PropagationTypeSwitch(&events, false)
+	if label != "" || err != errPropagationMissing ||
+		!errors.Is(err, errPropagationMissing) || strings.Join(events, ",") != "init,guard" {
+		t.Fatalf("failed type switch label=%q error=%v events=%v", label, err, events)
+	}
+	events = nil
+	label, err = PropagationTypeSwitchInitializer(&events, false)
+	if label != "" || err != errPropagationMissing ||
+		!errors.Is(err, errPropagationMissing) || strings.Join(events, ",") != "load" {
+		t.Fatalf("failed type switch initializer label=%q error=%v events=%v", label, err, events)
+	}
+	events = nil
+	label, err = PropagationTypeSwitchBoth(&events, false, true)
+	if label != "" || err != errPropagationMissing ||
+		!errors.Is(err, errPropagationMissing) || strings.Join(events, ",") != "init" {
+		t.Fatalf("failed type switch init label=%q error=%v events=%v", label, err, events)
+	}
+	events = nil
+	label, err = PropagationTypeSwitchBoth(&events, true, false)
+	if label != "" || err != errPropagationMissing ||
+		!errors.Is(err, errPropagationMissing) || strings.Join(events, ",") != "init,guard" {
+		t.Fatalf("failed type switch guard label=%q error=%v events=%v", label, err, events)
 	}
 }
 
