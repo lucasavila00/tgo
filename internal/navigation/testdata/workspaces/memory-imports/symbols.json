@@ -29,7 +29,7 @@
         "name": "Use",
         "kind": "function",
         "container": "example.test/memory-imports/b",
-        "range": {"file": "b/b.tgo", "text": "func Use() time.Time {\n\tvalue, err := a.Make()\n\tif err != nil {\n\t\treturn time.Time{}\n\t}\n\treturn c.Normalize(value)\n}", "occurrence": 1},
+        "range": {"file": "b/b.tgo", "text": "func Use() time.Time {\n\tvalue, err := a.Make()\n\tif err != nil {\n\t\treturn time.Time{}\n\t}\n\treturn bridge.Normalize(c.Normalize(value))\n}", "occurrence": 1},
         "selection": {"file": "b/b.tgo", "text": "Use", "occurrence": 1}
       },
       {

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"example.test/memory-imports/a"
+	"example.test/memory-imports/bridge"
 	"example.test/memory-imports/c"
 )
 
@@ -12,5 +13,5 @@ func Use() time.Time {
 	if err != nil {
 		return time.Time{}
 	}
-	return c.Normalize(value)
+	return bridge.Normalize(c.Normalize(value))
 }
