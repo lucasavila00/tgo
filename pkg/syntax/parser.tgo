@@ -507,14 +507,8 @@ func (p %sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 		failure := p.tokenError(start, "variant needs Name struct { fields }")
 		return ,, failure
 	}
-	closing, err := p.closeToken(start + 2)
-	if err != nil {
-		return ,, err
-	}
-	fields, err := p.rawFields(start+2, closing)
-	if err != nil {
-		return ,, err
-	}
+	closing := p.closeToken(start + 2)!!
+	fields := p.rawFields(start+2, closing)!!
 	variant := new(rawVariant)
 	variant.start = p.tokens[start].start
 	variant.end = p.tokens[closing].end
@@ -538,14 +532,8 @@ func (p %sourceParser) structDeclaration(
 	keyword int,
 	open int,
 ) (*rawDecl, int, error) {
-	closing, err := p.closeToken(open)
-	if err != nil {
-		return ,, err
-	}
-	fields, err := p.rawFields(open, closing)
-	if err != nil {
-		return ,, err
-	}
+	closing := p.closeToken(open)!!
+	fields := p.rawFields(open, closing)!!
 	next := closing + 1
 	checked := -1
 	if next < len(p.tokens) && p.tokens[next].kind == token.IDENT &&

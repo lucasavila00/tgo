@@ -58,11 +58,6 @@ type Account struct {
 // Tag returns the active tag.
 func (v Account) Tag() AccountTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Account) UnknownTag() string {
-	return fmt.Sprintf("Account: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // AccountPersonal is the Personal payload.
 type AccountPersonal struct {
 	Name string
@@ -248,7 +243,7 @@ func AccountName(value Account) string {
 	case AccountTagBusiness:
 		return value.BusinessPayload().Company
 	default:
-		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -259,7 +254,7 @@ func PersonalName(value Account) string {
 	case AccountTagBusiness:
 		return ""
 	default:
-		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

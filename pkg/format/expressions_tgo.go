@@ -169,7 +169,7 @@ func (p *printer) expressionAt(
 	case syntax.ExpressionTagComprehension:
 		p.comprehension(expressionValue.ComprehensionPayload().Value)
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -543,7 +543,7 @@ func (p *printer) channelType(value *syntax.ChannelType) {
 		p.token(value.Begin, "chan")
 		p.space()
 	default:
-		panic(direction.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid ChannelDirection tag") // unreachable: tgolint requires a case per tag
 	}
 	p.expression(value.Value, token.UnaryPrec)
 }
@@ -578,7 +578,7 @@ func (p *printer) comprehension(value *syntax.ComprehensionExpression) {
 			p.newline()
 			p.indent++
 		default:
-			panic(clauseValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid ComprehensionClause tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 	if value.Result.Key != nil {
@@ -587,6 +587,7 @@ func (p *printer) comprehension(value *syntax.ComprehensionExpression) {
 		p.space()
 	}
 	p.expression(value.Result.Value, 0)
+	p.trailingLine(syntax.ExpressionEnd(value.Result.Value))
 	p.newline()
 	for index := len(value.Clauses) - 1; index >= 0; index-- {
 		p.indent--

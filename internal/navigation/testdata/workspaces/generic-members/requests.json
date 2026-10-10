@@ -1,0 +1,252 @@
+[
+  {
+    "method": "definition",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 3
+    },
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 1
+      }
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 5
+    },
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 1
+      }
+    ]
+  },
+  {
+    "method": "references",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 6
+    },
+    "includeDeclaration": true,
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 1
+      },
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 2
+      },
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 3
+      },
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 4
+      },
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 5
+      },
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 6
+      }
+    ]
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 1
+    },
+    "hover": "field Value T"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 2
+    },
+    "hover": "field Value T"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 3
+    },
+    "hover": "field Value int"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 4
+    },
+    "hover": "field Value string"
+  },
+  {
+    "method": "definition",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 3
+    },
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 1
+      }
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 5
+    },
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 1
+      }
+    ]
+  },
+  {
+    "method": "references",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 6
+    },
+    "includeDeclaration": true,
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 1
+      },
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 2
+      },
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 3
+      },
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 4
+      },
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 5
+      },
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 6
+      }
+    ]
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 1
+    },
+    "hover": "func (Box[T]) Get() T"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 2
+    },
+    "hover": "func (Box[T]) Get() T"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 3
+    },
+    "hover": "func (Box[int]) Get() int"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 4
+    },
+    "hover": "func (Box[string]) Get() string"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 5
+    },
+    "hover": "field Value int"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 6
+    },
+    "hover": "field Value string"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 5
+    },
+    "hover": "func (Box[int]) Get() int"
+  },
+  {
+    "method": "hover",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 6
+    },
+    "hover": "func (Box[string]) Get() string"
+  }
+]

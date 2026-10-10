@@ -58,7 +58,7 @@ func (p *packageUnit) outputPath(sourcePath string) string {
 	return outputname.Path(sourcePath)
 }
 
-// discover indexes tgo packages without parsing their source.
+// discover indexes possible build packages without parsing their source.
 func discover(
 	root string,
 	module string,
@@ -87,7 +87,7 @@ type packageDiscovery struct {
 	packages map[string]*packageUnit
 }
 
-// visit adds tgo files and skips directories outside the active module.
+// visit adds source candidates and skips directories outside the active module.
 func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) error {
 	if walkErr != nil {
 		return walkErr
@@ -103,9 +103,17 @@ func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) 
 		return d.addSource(path)
 	case outputname.Reserved(entry.Name()):
 		return d.addGeneratedCandidate(path)
+	case strings.HasSuffix(entry.Name(), ".go"):
+		return d.addGoCandidate(path)
 	default:
 		return nil
 	}
+}
+
+// addGoCandidate records one package that can be a Go-only build root.
+func (d *packageDiscovery) addGoCandidate(path string) error {
+	_, err := d.packageFor(filepath.Dir(path))
+	return err
 }
 
 // addTestSource records one possible TGo test source file.
@@ -242,9 +250,9 @@ func (p *packageUnit) readSource(path string) error {
 	if err != nil {
 		return err
 	}
-	file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
-	if err != nil {
-		return err
+	file, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+	if err_1 != nil {
+		return err_1
 	}
 	p.Sources = append(p.Sources, compiler.File{Name: path, Data: data})
 	p.Files = append(p.Files, file)
@@ -257,27 +265,24 @@ func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 	external := packageTests{Sources: nil, Files: nil, UsesC: false}
 	paths, err := p.matchingTestSources()
 	if err != nil {
-		return packageTests{}, packageTests{},
-
-			err
+		return packageTests{}, packageTests{}, err
 	}
+
 	if len(paths) == 0 {
 		return internal, external, nil
 	}
 	packageName := p.Files[0].Name.Name
 	for _, path := range paths {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return packageTests{}, packageTests{},
-
-				err
+		data, err_1 := os.ReadFile(path)
+		if err_1 != nil {
+			return packageTests{}, packageTests{}, err_1
 		}
-		file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
-		if err != nil {
-			return packageTests{}, packageTests{},
 
-				err
+		file, err_2 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+		if err_2 != nil {
+			return packageTests{}, packageTests{}, err_2
 		}
+
 		cgo := importsC(file)
 		if cgo && !p.context.CgoEnabled {
 			continue
@@ -333,10 +338,11 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 
 // available reports whether this package has active source or orphan output.
 func (p *packageUnit) available() (bool, error) {
-	_, err := p.packageLanguage()
+	result, err := p.packageLanguage()
 	if err != nil {
 		return false, err
 	}
+	_ = result
 	paths, err_1 := p.matchingSources()
 	if err_1 != nil {
 		return false, err_1
@@ -454,7 +460,13 @@ func selectPackages(
 				return nil, err
 			}
 			if !available {
-				continue
+				language, err_1 := unit.packageLanguage()
+				if err_1 != nil {
+					return nil, err_1
+				}
+				if language != packagelanguage.Go {
+					continue
+				}
 			}
 			selected[path] = true
 			matched = true
@@ -479,6 +491,24 @@ func sortedPackagePaths(packages map[string]*packageUnit) []string {
 	}
 	sort.Strings(paths)
 	return paths
+}
+
+// sortedTGoPackagePaths returns stable paths found by TGo discovery.
+func sortedTGoPackagePaths(packages map[string]*packageUnit) []string {
+	paths := make([]string, 0, len(packages))
+	for path, unit := range packages {
+		if unit.tgoCandidate() {
+			paths = append(paths, path)
+		}
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+// tgoCandidate reports whether discovery found TGo source or reserved output.
+func (p *packageUnit) tgoCandidate() bool {
+	return len(p.sourcePaths) > 0 || len(p.testSourcePaths) > 0 ||
+		len(p.generatedPaths) > 0
 }
 
 // packagePattern returns the directory and recursion rule for a pattern.

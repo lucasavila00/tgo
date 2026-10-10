@@ -4,6 +4,7 @@ import (
 	"go/build"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -175,12 +176,37 @@ func TestFileImportsCStopsAfterImports(t *testing.T) {
 
 func TestBuildTagsFromGoFlags(t *testing.T) {
 	t.Parallel()
-	got, err := BuildTagsFromGoFlags(`-mod=readonly -tags 'alpha,beta'`)
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name  string
+		flags string
+		want  []string
+		err   bool
+	}{
+		{
+			name:  "separate value",
+			flags: `-mod=readonly -tags 'alpha,beta'`,
+			want:  []string{"alpha", "beta"},
+		},
+		{name: "comma list", flags: `-tags=alpha,beta`, want: []string{"alpha", "beta"}},
+		{name: "attached single quote", flags: `-tags='alpha'`, want: []string{"alpha"}},
+		{
+			name:  "single quoted comma",
+			flags: `-tags='alpha,beta'`,
+			want:  []string{"alpha,beta"},
+		},
+		{name: "attached double quote", flags: `-tags="alpha"`, want: []string{`"alpha"`}},
+		{name: "unterminated attached quote", flags: `-tags='alpha`, err: true},
 	}
-	want := []string{"alpha", "beta"}
-	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
-		t.Fatalf("tags = %v, want %v", got, want)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := BuildTagsFromGoFlags(test.flags)
+			if (err != nil) != test.err {
+				t.Fatalf("error = %v, want error %t", err, test.err)
+			}
+			if !slices.Equal(got, test.want) {
+				t.Fatalf("tags = %v, want %v", got, test.want)
+			}
+		})
 	}
 }

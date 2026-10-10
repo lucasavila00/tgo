@@ -127,34 +127,24 @@ func subject(%s) {
 }
 `, parameters, body)
 	directory := t.TempDir()
-	if err := os.WriteFile(
+	os.WriteFile(
 		filepath.Join(directory, "go.mod"), []byte("module sample\n"), 0o600,
-	); err != nil {
-		return , err
-	}
+	)!!
 	filename := filepath.Join(directory, "sample.go")
-	if err := os.WriteFile(filename, []byte(source), 0o600); err != nil {
-		return , err
-	}
+	os.WriteFile(filename, []byte(source), 0o600)!!
 	configuration := new(packages.Config)
 	configuration.Dir = directory
 	configuration.Mode = packages.NeedName | packages.NeedFiles |
 		packages.NeedCompiledGoFiles | packages.NeedSyntax |
 		packages.NeedTypes | packages.NeedTypesInfo
-	loaded, err := packages.Load(configuration, ".")
-	if err != nil {
-		return , err
-	}
+	loaded := packages.Load(configuration, ".")!!
 	if packages.PrintErrors(loaded) != 0 || len(loaded) != 1 {
 		return , fmt.Errorf("load sample package")
 	}
 	loadedPackage := loaded[0]
-	file, err := syntax.ParseGoFile(
+	file := syntax.ParseGoFile(
 		loadedPackage.Fset, filename, []byte(source), syntax.ParseComments|syntax.AllErrors,
-	)
-	if err != nil {
-		return , err
-	}
+	)!!
 	if file == nil {
 		return , fmt.Errorf("load sample package syntax")
 	}

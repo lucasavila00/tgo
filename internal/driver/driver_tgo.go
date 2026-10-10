@@ -21,28 +21,29 @@ import (
 // Build checks tgo packages and writes Go source beside each input file.
 // If a check fails, it restores all output files changed by this build.
 func Build(directory string, patterns []string) (err error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return err
+	err = nil
+	root, module, err_1 := moduleRoot(directory)
+	if err_1 != nil {
+		return err_1
 	}
-	context, err := effectiveBuildContext(directory)
-	if err != nil {
-		return err
+	context, err_2 := effectiveBuildContext(directory)
+	if err_2 != nil {
+		return err_2
 	}
-	lock, err := acquireModuleLock(root)
-	if err != nil {
-		return err
+	lock, err_3 := acquireModuleLock(root)
+	if err_3 != nil {
+		return err_3
 	}
 	defer func() {
 		err = errors.Join(err, lock.Unlock())
 	}()
-	packages, err := discover(root, module, &context)
-	if err != nil {
-		return err
+	packages, err_4 := discover(root, module, &context)
+	if err_4 != nil {
+		return err_4
 	}
-	selected, err := selectPackages(directory, patterns, packages)
-	if err != nil {
-		return err
+	selected, err_5 := selectPackages(directory, patterns, packages)
+	if err_5 != nil {
+		return err_5
 	}
 	builder := packageBuilder{
 		packages: packages,
@@ -118,20 +119,20 @@ func compileWorkspaceContext(
 	directory string,
 	continueAfterError bool,
 ) ([]*compiler.CompiledPackage, error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return nil, err
+	root, module, err_1 := moduleRoot(directory)
+	if err_1 != nil {
+		return nil, err_1
 	}
-	buildContext, err := effectiveBuildContext(directory)
-	if err != nil {
-		return nil, err
+	buildContext, err_2 := effectiveBuildContext(directory)
+	if err_2 != nil {
+		return nil, err_2
 	}
-	packages, err := discover(root, module, &buildContext)
-	if err != nil {
-		return nil, err
+	packages, err_3 := discover(root, module, &buildContext)
+	if err_3 != nil {
+		return nil, err_3
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
-	paths := sortedPackagePaths(packages)
+	paths := sortedTGoPackagePaths(packages)
 	result := make([]*compiler.CompiledPackage, 0, len(paths))
 	for _, path := range paths {
 		select {
@@ -159,21 +160,21 @@ func compileWorkspaceViewsContext(
 	directory string,
 	continueAfterError bool,
 ) ([]CompiledView, error) {
-	root, module, err := moduleRoot(directory)
-	if err != nil {
-		return nil, err
+	root, module, err_1 := moduleRoot(directory)
+	if err_1 != nil {
+		return nil, err_1
 	}
-	buildContext, err := effectiveBuildContext(directory)
-	if err != nil {
-		return nil, err
+	buildContext, err_2 := effectiveBuildContext(directory)
+	if err_2 != nil {
+		return nil, err_2
 	}
-	packages, err := discover(root, module, &buildContext)
-	if err != nil {
-		return nil, err
+	packages, err_3 := discover(root, module, &buildContext)
+	if err_3 != nil {
+		return nil, err_3
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	result := make([]CompiledView, 0, len(packages))
-	for _, path := range sortedPackagePaths(packages) {
+	for _, path := range sortedTGoPackagePaths(packages) {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
@@ -258,24 +259,25 @@ func CompilePackage(
 	if err != nil {
 		return nil, err
 	}
-	buildContext, err := effectiveBuildContext(directory)
-	if err != nil {
-		return nil, err
+	buildContext, err_1 := effectiveBuildContext(directory)
+	if err_1 != nil {
+		return nil, err_1
 	}
-	packages, err := discover(root, module, &buildContext)
-	if err != nil {
-		return nil, err
+	packages, err_2 := discover(root, module, &buildContext)
+	if err_2 != nil {
+		return nil, err_2
 	}
 	unit := packages[importPath]
-	if unit == nil {
+	if unit == nil || !unit.tgoCandidate() {
 		return nil, nil
 	}
 	if files != nil {
 		unit.fs = files
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
-	if err := builder.build(importPath); err != nil {
-		return nil, err
+	err_3 := builder.build(importPath)
+	if err_3 != nil {
+		return nil, err_3
 	}
 	if unit.compiled == nil {
 		return nil, nil
@@ -294,25 +296,26 @@ func CompileTestPackage(
 	if err != nil {
 		return nil, err
 	}
-	buildContext, err := effectiveBuildContext(directory)
-	if err != nil {
-		return nil, err
+	buildContext, err_1 := effectiveBuildContext(directory)
+	if err_1 != nil {
+		return nil, err_1
 	}
-	packages, err := discover(root, module, &buildContext)
-	if err != nil {
-		return nil, err
+	packages, err_2 := discover(root, module, &buildContext)
+	if err_2 != nil {
+		return nil, err_2
 	}
 	unit := packages[importPath]
-	if unit == nil {
+	if unit == nil || !unit.tgoCandidate() {
 		return nil, nil
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
-	if err := builder.build(importPath); err != nil {
-		return nil, err
+	err_3 := builder.build(importPath)
+	if err_3 != nil {
+		return nil, err_3
 	}
-	internal, externalTests, err := unit.readTests()
-	if err != nil {
-		return nil, err
+	internal, externalTests, err_4 := unit.readTests()
+	if err_4 != nil {
+		return nil, err_4
 	}
 	tests := internal
 	if external {

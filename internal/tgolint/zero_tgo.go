@@ -62,7 +62,7 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 		goTypeTagTuple, goTypeTagSignature, goTypeTagMap, goTypeTagChannel,
 		goTypeTagInterface, goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 	return nil, false
 }
@@ -133,7 +133,7 @@ func (c *checker) checkLiteral(
 		goTypeTagSignature, goTypeTagMap, goTypeTagChannel, goTypeTagInterface,
 		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(underlying.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

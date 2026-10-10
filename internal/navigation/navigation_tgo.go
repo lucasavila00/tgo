@@ -70,11 +70,6 @@ type SymbolKind struct {
 // Tag returns the active tag.
 func (v SymbolKind) Tag() SymbolKindTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v SymbolKind) UnknownTag() string {
-	return fmt.Sprintf("SymbolKind: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // GobEncode returns the stable four-byte enum tag.
 func (v SymbolKind) GobEncode() ([]byte, error) {
 	if v.tgoTag < SymbolKindTagPackage || v.tgoTag > SymbolKindTagVariable {
@@ -631,6 +626,7 @@ type Hover struct {
 type occurrence struct {
 	location Location
 	key      string
+	hover    string
 }
 
 type sourcePosition struct {
@@ -642,7 +638,6 @@ type sourcePosition struct {
 type workspaceIndex struct {
 	occurrences []occurrence
 	definitions map[string]Location
-	hovers      map[string]string
 	references  map[string][]Location
 	symbols     []Symbol
 }
@@ -752,11 +747,7 @@ func (e *Engine) Hover(
 	for _, item := range index.occurrences {
 		if item.location.URI == uri && item.location.Start <= offset &&
 			offset < item.location.End {
-			contents, ok := index.hovers[item.key]
-			if !ok {
-				return nil, nil
-			}
-			return &Hover{Contents: contents, Range: item.location}, nil
+			return &Hover{Contents: item.hover, Range: item.location}, nil
 		}
 	}
 	return nil, nil
@@ -861,7 +852,6 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	index := &workspaceIndex{
 		occurrences: nil,
 		definitions: make(map[string]Location),
-		hovers:      make(map[string]string),
 		references:  make(map[string][]Location),
 		symbols:     nil,
 	}
@@ -917,9 +907,8 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 						)
 					}
 				}
-				index.hovers[key] = contents
 				index.occurrences = append(index.occurrences, occurrence{
-					location: location, key: key,
+					location: location, key: key, hover: contents,
 				})
 				index.references[key] = append(index.references[key], location)
 				if definition {
@@ -1013,6 +1002,12 @@ func (k *objectKeys) addNamed(prefix string, named *types.Named) {
 }
 
 func (k *objectKeys) key(object types.Object) string {
+	switch value := object.(type) {
+	case *types.Func:
+		object = value.Origin()
+	case *types.Var:
+		object = value.Origin()
+	}
 	if key := k.known[object]; key != "" {
 		return key
 	}

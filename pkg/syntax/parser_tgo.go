@@ -101,11 +101,6 @@ type rawDecl struct {
 // Tag returns the active tag.
 func (v rawDecl) Tag() rawDeclTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v rawDecl) UnknownTag() string {
-	return fmt.Sprintf("rawDecl: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // rawDeclEnum is the Enum payload.
 type rawDeclEnum struct {
 	rawDeclBase
@@ -345,11 +340,6 @@ type rawComprehensionClause struct {
 
 // Tag returns the active tag.
 func (v rawComprehensionClause) Tag() rawComprehensionClauseTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v rawComprehensionClause) UnknownTag() string {
-	return fmt.Sprintf("rawComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // rawComprehensionClauseRange is the Range payload.
 type rawComprehensionClauseRange struct {
@@ -803,7 +793,7 @@ func (p *sourceParser) discoverDeclarations() error {
 					declarationStart = payload.start
 					declarationEnd = payload.end
 				default:
-					panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+					panic("invalid rawDecl tag") // unreachable: tgolint requires a case per tag
 				}
 				p.edits = append(
 					p.edits,
@@ -952,9 +942,9 @@ func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	fields, err := p.rawFields(start+2, closing)
-	if err != nil {
-		return nil, 0, err
+	fields, err_1 := p.rawFields(start+2, closing)
+	if err_1 != nil {
+		return nil, 0, err_1
 	}
 	variant := new(rawVariant)
 	variant.start = p.tokens[start].start
@@ -983,9 +973,9 @@ func (p *sourceParser) structDeclaration(
 	if err != nil {
 		return nil, 0, err
 	}
-	fields, err := p.rawFields(open, closing)
-	if err != nil {
-		return nil, 0, err
+	fields, err_1 := p.rawFields(open, closing)
+	if err_1 != nil {
+		return nil, 0, err_1
 	}
 	next := closing + 1
 	checked := -1

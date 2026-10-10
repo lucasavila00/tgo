@@ -56,7 +56,7 @@ func (p *packageUnit) outputPath(sourcePath string) string {
 	return outputname.Path(sourcePath)
 }
 
-// discover indexes tgo packages without parsing their source.
+// discover indexes possible build packages without parsing their source.
 func discover(
 	root string,
 	module string,
@@ -82,7 +82,7 @@ type packageDiscovery struct {
 	packages map[string]*packageUnit
 }
 
-// visit adds tgo files and skips directories outside the active module.
+// visit adds source candidates and skips directories outside the active module.
 func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) error {
 	if walkErr != nil {
 		return walkErr
@@ -98,9 +98,17 @@ func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) 
 		return d.addSource(path)
 	case outputname.Reserved(entry.Name()):
 		return d.addGeneratedCandidate(path)
+	case strings.HasSuffix(entry.Name(), ".go"):
+		return d.addGoCandidate(path)
 	default:
 		return nil
 	}
+}
+
+// addGoCandidate records one package that can be a Go-only build root.
+func (d *packageDiscovery) addGoCandidate(path string) error {
+	_, err := d.packageFor(filepath.Dir(path))
+	return err
 }
 
 // addTestSource records one possible TGo test source file.
@@ -218,14 +226,8 @@ func (d *packageDiscovery) importPath(directory string) (string, error) {
 
 // readSource loads one TGo source and its imports.
 func (p *packageUnit) readSource(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
-	if err != nil {
-		return err
-	}
+	data := os.ReadFile(path)!!
+	file := syntax.ParseFile(token.NewFileSet(), path, data, 0)!!
 	p.Sources = append(p.Sources, compiler.File{Name: path, Data: data})
 	p.Files = append(p.Files, file)
 	return nil
@@ -235,23 +237,14 @@ func (p *packageUnit) readSource(path string) error {
 func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 	internal := packageTests{Sources: nil, Files: nil, UsesC: false}
 	external := packageTests{Sources: nil, Files: nil, UsesC: false}
-	paths, err := p.matchingTestSources()
-	if err != nil {
-		return ,, err
-	}
+	paths := p.matchingTestSources()!!
 	if len(paths) == 0 {
 		return internal, external,
 	}
 	packageName := p.Files[0].Name.Name
 	for _, path := range paths {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return ,, err
-		}
-		file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
-		if err != nil {
-			return ,, err
-		}
+		data := os.ReadFile(path)!!
+		file := syntax.ParseFile(token.NewFileSet(), path, data, 0)!!
 		cgo := importsC(file)
 		if cgo && !p.context.CgoEnabled {
 			continue
@@ -305,10 +298,7 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 
 // available reports whether this package has active source or orphan output.
 func (p *packageUnit) available() (bool, error) {
-	_, err := p.packageLanguage()
-	if err != nil {
-		return , err
-	}
+	_ = p.packageLanguage()!!
 	paths := p.matchingSources()!!
 	if len(paths) > 0 {
 		return true,
@@ -414,7 +404,10 @@ func selectPackages(
 			}
 			available := unit.available()!!
 			if !available {
-				continue
+				language := unit.packageLanguage()!!
+				if language != packagelanguage.Go {
+					continue
+				}
 			}
 			selected[path] = true
 			matched = true
@@ -439,6 +432,24 @@ func sortedPackagePaths(packages map[string]*packageUnit) []string {
 	}
 	sort.Strings(paths)
 	return paths
+}
+
+// sortedTGoPackagePaths returns stable paths found by TGo discovery.
+func sortedTGoPackagePaths(packages map[string]*packageUnit) []string {
+	paths := make([]string, 0, len(packages))
+	for path, unit := range packages {
+		if unit.tgoCandidate() {
+			paths = append(paths, path)
+		}
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+// tgoCandidate reports whether discovery found TGo source or reserved output.
+func (p *packageUnit) tgoCandidate() bool {
+	return len(p.sourcePaths) > 0 || len(p.testSourcePaths) > 0 ||
+		len(p.generatedPaths) > 0
 }
 
 // packagePattern returns the directory and recursion rule for a pattern.

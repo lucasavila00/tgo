@@ -151,7 +151,7 @@ async function checkRepositoryHovers() {
   );
   await checkHover(
     vscode.Uri.joinPath(folder.uri, "internal", "navigation", "navigation.tgo"),
-    "contents, ok :=",
+    "contents := pkg.OwnerHovers",
     "var contents string"
   );
   await checkHover(

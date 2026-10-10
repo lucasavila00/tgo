@@ -562,7 +562,6 @@ func OmittedSlice[T any](value T) []T {
 
 type eventLike interface {
 	Tag() model.EventTag
-	UnknownTag() string
 	StartedPayload() model.EventStarted
 }
 

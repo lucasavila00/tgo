@@ -70,7 +70,7 @@ func isExtension(node Node) bool {
 		case DeclarationTagStruct:
 			return true
 		default:
-			panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Declaration tag") // unreachable: tgolint requires a case per tag
 		}
 	case NodeTagStatement:
 		value := nodeValue.StatementPayload()
@@ -118,7 +118,7 @@ func isExtension(node Node) bool {
 		case StatementTagRange:
 			return false
 		default:
-			panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 		}
 	case NodeTagExpression:
 		value := nodeValue.ExpressionPayload()
@@ -178,7 +178,7 @@ func isExtension(node Node) bool {
 		case ExpressionTagComprehension:
 			return true
 		default:
-			panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 		}
 	case NodeTagTGoField:
 		return true
@@ -199,7 +199,7 @@ func isExtension(node Node) bool {
 	case NodeTagCommentGroup:
 		return false
 	default:
-		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -244,7 +244,7 @@ func publicChildren(node Node) []Node {
 		}
 		return result
 	default:
-		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -395,7 +395,7 @@ func expressionChildren(value *Expression) []Node {
 			case ComprehensionClauseTagFilter:
 				addExpression(value.FilterPayload().Value.Condition)
 			default:
-				panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+				panic("invalid ComprehensionClause tag") // unreachable: tgolint requires a case per tag
 			}
 		}
 		if item.Value.Result.Key != nil {
@@ -403,7 +403,7 @@ func expressionChildren(value *Expression) []Node {
 		}
 		addExpression(item.Value.Result.Value)
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 	return result
 }
@@ -531,7 +531,7 @@ func statementChildren(value *Statement) []Node {
 		addExpression(item.Value.Source)
 		addStatement(blockStatementNode(item.Value.Body))
 	default:
-		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 	}
 	return result
 }
@@ -584,7 +584,7 @@ func declarationChildren(value *Declaration) []Node {
 		}
 		result = addComment(result, item.Value.Comment)
 	default:
-		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Declaration tag") // unreachable: tgolint requires a case per tag
 	}
 	return result
 }
@@ -623,7 +623,7 @@ func specificationChildren(value *Specification) []Node {
 		result = append(result, nodeExpression(item.Value.Type))
 		result = addComment(result, item.Value.Comment)
 	default:
-		panic(specificationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Specification tag") // unreachable: tgolint requires a case per tag
 	}
 	return result
 }

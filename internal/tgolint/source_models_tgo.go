@@ -273,11 +273,6 @@ type sourceModel struct {
 // Tag returns the active tag.
 func (v sourceModel) Tag() sourceModelTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v sourceModel) UnknownTag() string {
-	return fmt.Sprintf("sourceModel: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // sourceModelEnum is the Enum payload.
 type sourceModelEnum struct {
 	Name     string
@@ -550,7 +545,7 @@ func sourceModelName(value *sourceModel) string {
 	case sourceModelTagStruct:
 		return item.StructPayload().Name
 	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid sourceModel tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -564,7 +559,7 @@ func sourceModelFact(value *sourceModel) *model {
 	case sourceModelTagStruct:
 		return item.StructPayload().Fact
 	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid sourceModel tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -641,7 +636,7 @@ func sourceShapeMatches(
 		}
 		return true
 	default:
-		panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid sourceModel tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -717,11 +712,8 @@ func validGeneratedTagAPI(
 	variants []sourceVariant,
 ) bool {
 	tag := method(typ, "Tag")
-	unknown := method(typ, "UnknownTag")
 	if tag == nil || tag.Params().Len() != 0 || tag.Results().Len() != 1 ||
-		!types.Identical(tag.Results().At(0).Type(), tagType) ||
-		unknown == nil || unknown.Params().Len() != 0 || unknown.Results().Len() != 1 ||
-		!types.Identical(unknown.Results().At(0).Type(), types.Typ[types.String]) {
+		!types.Identical(tag.Results().At(0).Type(), tagType) {
 		return false
 	}
 	basic, ok := coreType(tagType).(*types.Basic)

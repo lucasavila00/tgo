@@ -205,7 +205,7 @@ func syntaxChildren(file *frontFile, node frontNode) []frontNode {
 				filter := item.FilterPayload()
 				children = append(children, filter.Condition)
 			default:
-				panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+				panic("invalid frontComprehensionClause tag") // unreachable: tgolint requires a case per tag
 			}
 		}
 		children = append(children, node.Result.Key, node.Result.Value)

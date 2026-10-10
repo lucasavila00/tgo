@@ -21,7 +21,6 @@ type events interface {
 	eventChoices
 	model.Event
 	Tag() model.EventTag
-	UnknownTag() string
 	StartedPayload() model.EventStarted
 	StoppedPayload() model.EventStopped
 }
@@ -37,6 +36,6 @@ func Describe[E events](event E) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }

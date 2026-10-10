@@ -48,11 +48,6 @@ type effectOutcome struct {
 // Tag returns the active tag.
 func (v effectOutcome) Tag() effectOutcomeTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v effectOutcome) UnknownTag() string {
-	return fmt.Sprintf("effectOutcome: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // GobEncode returns the stable four-byte enum tag.
 func (v effectOutcome) GobEncode() ([]byte, error) {
 	if v.tgoTag < effectOutcomeTagUnknown || v.tgoTag > effectOutcomeTagConditional {
@@ -991,7 +986,7 @@ func zeroTypeParameters(
 		goTypeTagTuple, goTypeTagSignature, goTypeTagMap, goTypeTagChannel,
 		goTypeTagInterface, goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 	return result
 }

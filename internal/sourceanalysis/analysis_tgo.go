@@ -211,7 +211,6 @@ func addEnumOwners(
 	named := namedObject(enumObject)
 	for _, method := range []string{
 		"Tag",
-		"UnknownTag",
 		"MarshalJSON",
 		"MarshalJSONTo",
 		"UnmarshalJSON",

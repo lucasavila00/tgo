@@ -416,10 +416,6 @@ func TestEnumJSONCustomFields(t *testing.T) {
 
 func TestEnumJSONInvalidTags(t *testing.T) {
 	zero := invalidJSONExternal(0)
-	want := "JSONExternal: unknown tag 0 — tgolint proves every tag has a case, so this is unreachable"
-	if zero.UnknownTag() != want {
-		t.Fatalf("UnknownTag = %q", zero.UnknownTag())
-	}
 	for _, value := range []JSONExternal{zero, invalidJSONExternal(255)} {
 		if _, err := json.Marshal(value); err == nil {
 			t.Fatal("invalid tag was accepted")

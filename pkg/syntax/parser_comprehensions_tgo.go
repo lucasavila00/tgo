@@ -27,9 +27,9 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 			continue
 		}
 		open := cursor - 1
-		close, err_1 := p.closeToken(open)
-		if err_1 != nil {
-			return err_1
+		close, err := p.closeToken(open)
+		if err != nil {
+			return err
 		}
 		candidates = append(candidates, comprehensionCandidate{open: open, close: close})
 		cursor = close
@@ -41,8 +41,9 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 	for _, item := range candidates {
 		literalStart, isLiteral := starts[item.open]
 		if !isLiteral {
-			if err := p.discoverComprehensionsIn(item.open+2, item.close); err != nil {
-				return err
+			err_1 := p.discoverComprehensionsIn(item.open+2, item.close)
+			if err_1 != nil {
+				return err_1
 			}
 			continue
 		}
@@ -132,7 +133,7 @@ func (p *sourceParser) rawComprehension(
 			}
 			seenFilter = true
 		default:
-			panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid rawComprehensionClause tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 	return &rawComprehension{
@@ -165,17 +166,17 @@ func (p *sourceParser) rawComprehensionBody(
 		failure := p.tokenError(start, "comprehension clause needs a block")
 		return nil, nil, failure
 	}
-	bodyOpen, err := p.openToken(bodyClose)
-	if err != nil {
-		return nil, nil, err
+	bodyOpen, err_1 := p.openToken(bodyClose)
+	if err_1 != nil {
+		return nil, nil, err_1
 	}
-	clause, err := p.rawComprehensionClause(start, bodyOpen, bodyClose)
-	if err != nil {
-		return nil, nil, err
+	clause, err_2 := p.rawComprehensionClause(start, bodyOpen, bodyClose)
+	if err_2 != nil {
+		return nil, nil, err_2
 	}
-	children, result, err := p.rawComprehensionBody(bodyOpen+1, bodyClose)
-	if err != nil {
-		return nil, nil, err
+	children, result, err_3 := p.rawComprehensionBody(bodyOpen+1, bodyClose)
+	if err_3 != nil {
+		return nil, nil, err_3
 	}
 	return append([]*rawComprehensionClause{clause}, children...), result, nil
 }

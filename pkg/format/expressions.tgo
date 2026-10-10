@@ -582,6 +582,7 @@ func (p *printer) comprehension(value *syntax.ComprehensionExpression) {
 		p.space()
 	}
 	p.expression(value.Result.Value, 0)
+	p.trailingLine(syntax.ExpressionEnd(value.Result.Value))
 	p.newline()
 	for index := len(value.Clauses) - 1; index >= 0; index-- {
 		p.indent--

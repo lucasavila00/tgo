@@ -13,7 +13,6 @@ var savedNested = genericzero.Nested[model.Event]()
 type sameNamedEvents interface {
 	model.Event | othermodel.Event
 	Tag() model.EventTag
-	UnknownTag() string
 }
 
 func MixedModels[T sameNamedEvents](event T) model.EventTag {

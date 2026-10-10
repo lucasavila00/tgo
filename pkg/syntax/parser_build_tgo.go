@@ -139,7 +139,7 @@ func (p *sourceParser) makeComprehension(
 
 			result.Clauses = append(result.Clauses, item)
 		default:
-			panic(rawClause.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid rawComprehensionClause tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 	rawResult := raw.result
@@ -268,7 +268,7 @@ func (p *sourceParser) makeDeclaration(
 			Comment:   nil,
 		}
 	default:
-		panic(declaration.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid rawDecl tag") // unreachable: tgolint requires a case per tag
 	}
 	return node, anchors, nil
 }

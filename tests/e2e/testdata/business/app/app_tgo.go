@@ -60,7 +60,7 @@ func Summary(name string) string {
 		company := enumValue1.BusinessPayload()
 		return company.Company
 	default:
-		panic(enumValue1.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

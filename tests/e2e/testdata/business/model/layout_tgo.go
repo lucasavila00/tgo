@@ -38,11 +38,6 @@ type Large struct {
 // Tag returns the active tag.
 func (v Large) Tag() LargeTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Large) UnknownTag() string {
-	return fmt.Sprintf("Large: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // LargeFirst is the First payload.
 type LargeFirst struct {
 	Data [64]byte
@@ -275,11 +270,6 @@ type Equal struct {
 // Tag returns the active tag.
 func (v Equal) Tag() EqualTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Equal) UnknownTag() string {
-	return fmt.Sprintf("Equal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // EqualFirst is the First payload.
 type EqualFirst struct {
 	Data [40]byte
@@ -473,11 +463,6 @@ type NamedZero struct {
 
 // Tag returns the active tag.
 func (v NamedZero) Tag() NamedZeroTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v NamedZero) UnknownTag() string {
-	return fmt.Sprintf("NamedZero: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // GobEncode returns the stable four-byte enum tag.
 func (v NamedZero) GobEncode() ([]byte, error) {

@@ -51,11 +51,6 @@ type scalarValue struct {
 // Tag returns the active tag.
 func (v scalarValue) Tag() scalarValueTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v scalarValue) UnknownTag() string {
-	return fmt.Sprintf("scalarValue: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // scalarValueBoolean is the Boolean payload.
 type scalarValueBoolean struct {
 	Value bool
@@ -889,7 +884,7 @@ func scalarBoolean(value scalarValue) (bool, bool) {
 	case scalarValueTagIntegerParameter:
 		return false, false
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid scalarValue tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -905,7 +900,7 @@ func scalarInteger(value scalarValue) (int64, bool) {
 	case scalarValueTagIntegerParameter:
 		return 0, false
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid scalarValue tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -922,7 +917,7 @@ func scalarParameter(value scalarValue) (int, bool, bool) {
 		parameter := classified.IntegerParameterPayload()
 		return parameter.Index, false, true
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid scalarValue tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -944,11 +939,12 @@ func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
 		}(TgoscalarValueBooleanParameterInput{FieldIndex: parameter.Index, FieldNegated: !parameter.Negated}), true
 	case scalarValueTagIntegerParameter:
 		return func(input TgoscalarValueBooleanInput) scalarValue {
-			return NewscalarValueBoolean(input.FieldValue)
-			// unreachable: tgolint requires a case per tag
+			return NewscalarValueBoolean(input.
+				// unreachable: tgolint requires a case per tag
+				FieldValue)
 		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	default:
-		panic(classified.UnknownTag())
+		panic("invalid scalarValue tag")
 	}
 }
 
@@ -982,7 +978,7 @@ func scalarBooleanParameter(value scalarValue) (int, bool, bool) {
 	case scalarValueTagIntegerParameter:
 		return 0, false, false
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid scalarValue tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -998,6 +994,6 @@ func scalarIntegerParameter(value scalarValue) (int, bool) {
 		parameter := classified.IntegerParameterPayload()
 		return parameter.Index, true
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid scalarValue tag") // unreachable: tgolint requires a case per tag
 	}
 }

@@ -275,7 +275,7 @@ func (e *nilEnvironment) collectRangeContracts(statement *syntax.RangeStatement)
 		goTypeTagTuple, goTypeTagSignature, goTypeTagInterface, goTypeTagNamed,
 		goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 	e.setRangeContract(statement.Key, keyContract)
 	e.setRangeContract(statement.Value, valueContract)
@@ -521,7 +521,7 @@ func (e *nilEnvironment) contractForType(typ types.Type) nilContract {
 	case goTypeTagNil, goTypeTagBasic, goTypeTagTuple, goTypeTagInterface,
 		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 	if len(result) == 0 {
 		return nil

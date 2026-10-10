@@ -189,7 +189,7 @@ func TestCheckedStructSourceDeclarationFactRoundTrip(t *testing.T) {
 		}
 		assertSourceModelFactRoundTrip(t, shape.Fact, checkedModelWire, "Count", nil)
 	default:
-		panic(structure.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid sourceModel tag")
 	}
 }
 
@@ -215,7 +215,7 @@ func TestEnumSourceDeclarationFactRoundTrip(t *testing.T) {
 			t, shape.Fact, enumModelWire, "Event", wantVariants,
 		)
 	default:
-		panic(enum.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid sourceModel tag")
 	}
 }
 
@@ -236,7 +236,7 @@ func TestStructSourceDeclaration(t *testing.T) {
 			t.Fatalf("struct fields: %#v", shape.Fields)
 		}
 	default:
-		panic(structure.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid sourceModel tag")
 	}
 	if sourceModelFact(&structure) != nil {
 		t.Fatal("struct source model has a fact")
