@@ -508,6 +508,24 @@
         "token": "%T",
         "has": "storage.modifier.non-nil.tgo",
         "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "func unicodeArrayParameter(value [2]%Τ) {}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "receiver [2]%Τ,",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "func unicodeArrayResult() [2]%Τ { return [2]%Τ{} }",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
       }
     ],
     "negative": [
@@ -594,6 +612,18 @@
         "line": "_ = [2 /* ]%BlockFake",
         "token": "%",
         "has": "comment.block.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "func unicodeSignatureModulo(value [(Α % Β)]Τ) {}",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "func unicodeBodyModulo() { _ = α % 2 }",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
         "not": "storage.modifier.non-nil.tgo"
       }
     ]

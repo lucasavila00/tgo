@@ -10,6 +10,7 @@ type MultilineEvent enum
 }
 
 type Port struct { number int } checked
+type Τ struct{}
 type CheckedRecord struct {
 	value int
 	Field %[2]%T
@@ -219,6 +220,13 @@ func (receiver %*ReceiverRecord) composedReceiver() {}
 func (receiver %%DeepRecord) doubleReceiver() {}
 
 func signatureModulo(value [(Left %Right)]Record) {}
+func unicodeArrayParameter(value [2]%Τ) {}
+func (
+	receiver [2]%Τ,
+) unicodeArrayReceiver() {}
+func unicodeArrayResult() [2]%Τ { return [2]%Τ{} }
+func unicodeSignatureModulo(value [(Α % Β)]Τ) {}
+func unicodeBodyModulo() { _ = α % 2 }
 func bodyModulo() { _ = left %Thing }
 func multilineBodyModulo() {
 	_ = bodyLeft %BodyThing

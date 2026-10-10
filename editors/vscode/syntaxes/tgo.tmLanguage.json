@@ -352,7 +352,7 @@
     "L:meta.function.signature.tgo -comment -string": {
       "patterns": [
         {
-          "match": "(?<!\\[[^\\]\\r\\n]*)(?:(?<=^)|(?<=[(,]))([ \\t]*)([A-Za-z_]\\w*(?:[ \\t]*,[ \\t]*[A-Za-z_]\\w*)*)([ \\t]+)(%+)(?=[*A-Za-z_(\\[])",
+          "match": "(?<!\\[[^\\]\\r\\n]*)(?:(?<=^)|(?<=[(,]))([ \\t]*)([A-Za-z_]\\w*(?:[ \\t]*,[ \\t]*[A-Za-z_]\\w*)*)([ \\t]+)(%+)(?=[*\\p{L}_(\\[])",
           "captures": {
             "2": {
               "patterns": [
@@ -372,7 +372,7 @@
           }
         },
         {
-          "match": "(?<!\\[[^\\]\\r\\n]*)(?:(?<=^)|(?<=[(,]))([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "match": "(?<!\\[[^\\]\\r\\n]*)(?:(?<=^)|(?<=[(,]))([ \\t]*)(%+)(?=[*\\p{L}_(\\[])",
           "captures": {
             "2": {
               "name": "storage.modifier.non-nil.tgo"
@@ -380,7 +380,7 @@
           }
         },
         {
-          "match": "(?<=\\))([ \\t]+)(%+)(?=[*A-Za-z_(\\[])",
+          "match": "(?<=\\))([ \\t]+)(%+)(?=[*\\p{L}_(\\[])",
           "captures": {
             "2": {
               "name": "storage.modifier.non-nil.tgo"
@@ -418,7 +418,7 @@
     },
     "non-nil-type-modifier": {
       "name": "storage.modifier.non-nil.tgo",
-      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
+      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*\\p{L}_(\\[])"
     },
     "multiline-function-type": {
       "begin": "\\bfunc[ \\t]*\\([ \\t]*$",
@@ -429,7 +429,7 @@
           "patterns": [
             {
               "name": "storage.modifier.non-nil.tgo",
-              "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
+              "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*\\p{L}_(\\[])"
             },
             {
               "include": "source.go"
