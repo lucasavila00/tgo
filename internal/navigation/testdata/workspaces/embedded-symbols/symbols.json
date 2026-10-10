@@ -1,0 +1,76 @@
+[
+  {
+    "method": "documentSymbols",
+    "file": "main.tgo",
+    "names": [
+      "embedded",
+      "OrdinaryNamed",
+      "OrdinaryPointer",
+      "checkedNamed",
+      "checkedPointer",
+      "Ordinary",
+      "OrdinaryNamed",
+      "OrdinaryPointer",
+      "Checked",
+      "checkedNamed",
+      "checkedPointer",
+      "check"
+    ],
+    "symbols": [
+      {
+        "name": "OrdinaryNamed",
+        "kind": "field",
+        "container": "Ordinary",
+        "range": {"file": "main.tgo", "text": "OrdinaryNamed", "occurrence": 2},
+        "selection": {"file": "main.tgo", "text": "OrdinaryNamed", "occurrence": 2}
+      },
+      {
+        "name": "OrdinaryPointer",
+        "kind": "field",
+        "container": "Ordinary",
+        "range": {"file": "main.tgo", "text": "*OrdinaryPointer", "occurrence": 1},
+        "selection": {"file": "main.tgo", "text": "OrdinaryPointer", "occurrence": 2}
+      },
+      {
+        "name": "checkedNamed",
+        "kind": "field",
+        "container": "Checked",
+        "range": {"file": "main.tgo", "text": "checkedNamed", "occurrence": 2},
+        "selection": {"file": "main.tgo", "text": "checkedNamed", "occurrence": 2}
+      },
+      {
+        "name": "checkedPointer",
+        "kind": "field",
+        "container": "Checked",
+        "range": {"file": "main.tgo", "text": "*checkedPointer", "occurrence": 1},
+        "selection": {"file": "main.tgo", "text": "checkedPointer", "occurrence": 2}
+      }
+    ]
+  },
+  {
+    "method": "workspaceSymbols",
+    "query": "Pointer",
+    "names": [
+      "OrdinaryPointer",
+      "checkedPointer",
+      "OrdinaryPointer",
+      "checkedPointer"
+    ],
+    "symbols": [
+      {
+        "name": "OrdinaryPointer",
+        "kind": "field",
+        "container": "Ordinary",
+        "range": {"file": "main.tgo", "text": "*OrdinaryPointer", "occurrence": 1},
+        "selection": {"file": "main.tgo", "text": "OrdinaryPointer", "occurrence": 2}
+      },
+      {
+        "name": "checkedPointer",
+        "kind": "field",
+        "container": "Checked",
+        "range": {"file": "main.tgo", "text": "*checkedPointer", "occurrence": 1},
+        "selection": {"file": "main.tgo", "text": "checkedPointer", "occurrence": 2}
+      }
+    ]
+  }
+]

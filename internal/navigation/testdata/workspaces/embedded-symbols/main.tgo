@@ -1,0 +1,23 @@
+package embedded
+
+type OrdinaryNamed struct{}
+
+type OrdinaryPointer struct{}
+
+type checkedNamed struct{}
+
+type checkedPointer struct{}
+
+type Ordinary struct {
+	OrdinaryNamed
+	*OrdinaryPointer
+}
+
+type Checked struct {
+	checkedNamed
+	*checkedPointer
+} checked
+
+func (value Checked) check() (Checked, error) {
+	return value,
+}
