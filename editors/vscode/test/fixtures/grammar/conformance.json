@@ -436,6 +436,48 @@
         "token": "%",
         "has": "storage.modifier.non-nil.tgo",
         "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "return [2]%ReturnRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "make(chan [2]%ChannelRecord)",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "range [2]%RangeRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "case [2]%CaseRecord{}:",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = [1][2]%MatrixRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = map[string][2]%MapRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = [len([2]int{})][3]%NestedMatrixRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
       }
     ],
     "negative": [
@@ -462,6 +504,12 @@
       {
         "line": "_ = values[2] % Thing",
         "token": "%",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = values[0][1] % Thing",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
         "not": "storage.modifier.non-nil.tgo"
       },
       {

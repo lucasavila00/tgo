@@ -56,18 +56,19 @@
           }
         },
         {
-          "begin": "(?<![\\p{L}\\p{Nd}_.)\\]}'\"\\x60][ \\t]*)(\\[)",
+          "begin": "(?:(?:^[ \\t]+|[^\\p{L}\\p{Nd}_.)\\]}'\"\\x60\\s][ \\t]*)|\\b(?:return|range|chan|map)\\b[ \\t]*|^[ \\t]*\\bcase\\b[ \\t]+|\\bmake\\b[ \\t]*\\([ \\t]*\\b(?:chan|map)\\b[ \\t]+)(?=\\[)",
           "beginCaptures": {
-            "1": {
-              "name": "punctuation.definition.begin.bracket.square.go"
+            "0": {
+              "patterns": [
+                {
+                  "include": "source.go"
+                }
+              ]
             }
           },
-          "end": "(\\])([ \\t]*)(?:(%+)(?=[*\\p{L}_(\\[]))?",
+          "end": "[ \\t]*(?:(%+)(?=[*\\p{L}_(\\[])|(?=%)|(?=[^\\[\\s%])|$)",
           "endCaptures": {
             "1": {
-              "name": "punctuation.definition.end.bracket.square.go"
-            },
-            "3": {
               "name": "storage.modifier.non-nil.tgo"
             }
           },
@@ -79,21 +80,6 @@
               "include": "source.go"
             }
           ]
-        },
-        {
-          "match": "(\\bmap[ \\t]*\\[[^\\]\\r\\n]+\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
-          "captures": {
-            "1": {
-              "patterns": [
-                {
-                  "include": "source.go"
-                }
-              ]
-            },
-            "3": {
-              "name": "storage.modifier.non-nil.tgo"
-            }
-          }
         },
         {
           "match": "(\\b(?:chan|case|return)\\b)([ \\t]+)(%+)(?=[*A-Za-z_(\\[])",

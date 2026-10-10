@@ -154,6 +154,7 @@ func read(ok bool, owner %User) error {
 	_ = left%right
 	_ = left % Thing
 	_ = values[2] % Thing
+	_ = values[0][1] % Thing
 	_ = [2]%Record{}
 	_ = ([2]%Record)(records)
 	_ = [len([2]int{})]%Record{}
@@ -171,8 +172,15 @@ b`)]%RawRecord{}
 	_ = [2 /* ]%BlockFake
 		keep
 */]%BlockRecord{}
+	return [2]%ReturnRecord{}
+	_ = make(chan [2]%ChannelRecord)
+	for _, item := range [2]%RangeRecord{} { _ = item }
+	_ = [1][2]%MatrixRecord{}
+	_ = map[string][2]%MapRecord{}
+	_ = [len([2]int{})][3]%NestedMatrixRecord{}
 	_ = []int{for _, item := range values { if item > 0 { item } }}
 	switch event.Tag() {
+	case [2]%CaseRecord{}:
 	exhaustive:
 	}
 	where := 1
