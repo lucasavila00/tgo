@@ -1,11 +1,13 @@
 package sourcefacts
 
 import (
+	"go/importer"
 	"go/token"
 	"go/types"
 	"strings"
 	"testing"
 
+	"tgo/internal/compiler"
 	"tgo/pkg/syntax"
 )
 
@@ -34,10 +36,10 @@ func (p *projectionStub) RangeDefinitions(
 }
 
 func (p *projectionStub) RangeUses(
-	yield func(token.Pos, types.Object, bool),
+	yield func(token.Pos, string, types.Object, bool),
 ) {
 	for _, fact := range p.uses {
-		yield(fact.position, fact.object, false)
+		yield(fact.position, fact.name, fact.object, false)
 	}
 }
 
@@ -158,7 +160,7 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 			}},
 		}, files)
 		for _, item := range []struct {
-				name   %syntax.Identifier
+			name   %syntax.Identifier
 			object types.Object
 		}{
 			{name: alpha, object: alphaObject},
@@ -197,6 +199,118 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 				order, got, definition, betaObject)
 		}
 	}
+}
+
+func TestProjectionKeepsLoweredReceiverUse(t *testing.T) {
+	t.Parallel()
+	files := token.NewFileSet()
+	data := []byte("package sample\n" +
+		"type Event enum { Ready struct{} }\n" +
+		"func load() Event { return Event.Ready{} }\n" +
+		"func use() { switch load().Tag() {\n" +
+		"case EventTagReady: return\n" +
+		"exhaustive:\n" +
+		"} }\n")
+	input := new(compiler.PackageInput)
+	input.Path = "sample"
+	input.Sources = []compiler.File{{Name: "sample.tgo", Data: data}}
+	input.FileSet = files
+	input.Importer = importer.Default()
+	compiled, errors := compiler.Compile(*input)
+	if len(errors) != 0 {
+		t.Fatal(errors)
+		return
+	}
+	if compiled == nil {
+		t.Fatal("compiled package is absent")
+		return
+	}
+	if len(compiled.Sources) != 1 {
+		t.Fatalf("compiled source count = %d, want 1", len(compiled.Sources))
+		return
+	}
+	parsed := compiled.Sources[0].Syntax
+	projection := compiled.Facts
+	if projection == nil {
+		t.Fatal("compiled projection facts are absent")
+		return
+	}
+	receiver := sourceIdentifier(t, files, parsed, "load", 4)
+	wantPosition := files.Position(receiver.Start)
+	wantPosition.Offset = 0
+	uses := make(map[string]objectFact)
+	projection.RangeUses(func(
+		position token.Pos,
+		name string,
+		object types.Object,
+		synthetic bool,
+	) {
+		adjusted := files.Position(position)
+		adjusted.Offset = 0
+		if !synthetic && adjusted == wantPosition {
+			uses[name] = objectFact{position: position, name: name, object: object}
+		}
+	})
+	sourceUse, sourceOK := uses["load"]
+	generatedUse, generatedOK := uses["enumValue"]
+	if !sourceOK || !generatedOK {
+		t.Fatalf("receiver uses = %v, want load and enumValue", uses)
+	}
+	node := requiredIdentifierNode(t, parsed, receiver)
+	orders := [][]objectFact{
+		{sourceUse, generatedUse},
+		{generatedUse, sourceUse},
+	}
+	for order, facts := range orders {
+		index := NewProjection(parsed, &projectionStub{definitions: nil, uses: facts}, files)
+		if got := index.Object(receiver); got != sourceUse.object {
+			t.Fatalf("order %d: receiver object = %v, want %v",
+				order, got, sourceUse.object)
+		}
+		got, definition := index.IdentifierFact(parsed, node)
+		if got != sourceUse.object || definition {
+			t.Fatalf("order %d: receiver fact = %v, %t, want %v, false",
+				order, got, definition, sourceUse.object)
+		}
+	}
+}
+
+func requiredIdentifierNode(
+	t *testing.T,
+	file %syntax.File,
+	identifier %syntax.Identifier,
+) %syntax.Node {
+	t.Helper()
+	result := identifierNode(file, identifier)
+	if result == nil {
+		t.Fatal("identifier node is absent")
+		panic("identifier node is absent")
+	}
+	return result
+}
+
+func sourceIdentifier(
+	t *testing.T,
+	files *token.FileSet,
+	file %syntax.File,
+	name string,
+	line int,
+) %syntax.Identifier {
+	t.Helper()
+	var result *syntax.Identifier = nil
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		identifier, ok := syntax.IdentifierOf(node)
+		if ok && identifier.Name == name &&
+			files.Position(identifier.Start).Line == line {
+			result = identifier
+		}
+		return result == nil
+	})
+	if result == nil {
+		t.Fatalf("source identifier %s on line %d is absent", name, line)
+		panic("source identifier is absent")
+	}
+	return result
 }
 
 func declarationName(file %syntax.File, index int) %syntax.Identifier {

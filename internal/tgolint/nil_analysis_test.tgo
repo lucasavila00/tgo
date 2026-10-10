@@ -44,7 +44,7 @@ func TestSyntaxContractsKeepSourceDefinitionOwners(t *testing.T) {
 	pass.Fset = result.Files
 	pass.Pkg = pkg
 	pass.ImportObjectFact = func(types.Object, analysis.Fact) bool {
-			return false
+		return false
 	}
 	environment := newNilEnvironment(
 		pass, files, facts, pkg, result.NonNil,
