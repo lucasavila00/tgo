@@ -284,72 +284,78 @@ func choicePayload(value Choice) string {
 	return payload().Value
 }
 
-type mutableDetails struct {
-	number int
+type measured int
+
+func (value measured) Value() int  { return int(value) }
+func (value *measured) Increment() { *value++ }
+
+type inner struct {
+	number measured
+}
+type TgoinnerInput struct {
+	FieldNumber measured
 }
 
-type nestedDetails struct {
-	pointer       *mutableDetails
-	slice         []int
-	mapping       map[string]int
-	pointerMiddle pointerMiddle
-	pointerArray  [1]pointerMiddle
+// Newinner constructs and checks inner.
+func Newinner(number measured) (inner, error) {
+	return inner{number}.check()
 }
 
-type promotedLeaf struct {
-	number int
-}
-
-type pointerMiddle struct {
-	*promotedLeaf
-}
+func (value inner) check() (inner, error) { return value, nil }
 
 type NestedQuantity struct {
-	nestedDetails
+	number measured
+	inner  inner
 }
 type TgoNestedQuantityInput struct {
-	Field0 nestedDetails
+	FieldNumber measured
+	FieldInner  inner
 }
 
 // NewNestedQuantity constructs and checks NestedQuantity.
-func NewNestedQuantity(tgoField0 nestedDetails) (NestedQuantity, error) {
-	return NestedQuantity{tgoField0}.check()
+func NewNestedQuantity(number measured, inner inner) (NestedQuantity, error) {
+	return NestedQuantity{number, inner}.check()
 }
 
-func (value NestedQuantity) check() (NestedQuantity, error) { return value, nil }
+func (value NestedQuantity) check() (NestedQuantity, error) {
+	value.number++
+	value.number.Increment()
+	increment := value.number.Increment
+	increment()
+	replacement, err := func(tgoInput TgoinnerInput) (inner, error) {
+		return Newinner(tgoInput.FieldNumber)
+	}(TgoinnerInput{FieldNumber: 1})
+	if err != nil {
+		return NestedQuantity{}, fmt.Errorf("inner: %w", err)
+	}
 
-func changeNestedReferences(value *NestedQuantity) {
-	value.pointer.number = 1
-	value.nestedDetails.pointer.number = 2
-	value.slice[0]++
-	value.nestedDetails.slice[0] = 3
-	value.mapping["one"] = 4
-	value.nestedDetails.mapping["two"] = 5
-	_ = &value.slice[0]
-	value.pointerMiddle.number = 6
-	value.pointerArray[0].number = 7
+	value.inner = replacement
+	return value, nil
 }
 
-type pointedDetails struct {
-	number int
+type EmbeddedQuantity struct {
+	inner
+}
+type TgoEmbeddedQuantityInput struct {
+	Field0 inner
 }
 
-type PointerQuantity struct {
-	*pointedDetails
-}
-type TgoPointerQuantityInput struct {
-	Field0 *pointedDetails
+// NewEmbeddedQuantity constructs and checks EmbeddedQuantity.
+func NewEmbeddedQuantity(tgoField0 inner) (EmbeddedQuantity, error) {
+	return EmbeddedQuantity{tgoField0}.check()
 }
 
-// NewPointerQuantity constructs and checks PointerQuantity.
-func NewPointerQuantity(tgoField0 *pointedDetails) (PointerQuantity, error) {
-	return PointerQuantity{tgoField0}.check()
+func (value EmbeddedQuantity) check() (EmbeddedQuantity, error) { return value, nil }
+
+func checkedCopies(value NestedQuantity) int {
+	copy := value
+	copy = value
+	_ = &copy
+	return value.number.Value() + value.inner.number.Value()
 }
 
-func (value PointerQuantity) check() (PointerQuantity, error) { return value, nil }
-
-func changePromotedPointer(value *PointerQuantity) {
-	value.number = 1
+func checkedPromotedRead(value EmbeddedQuantity) int {
+	return value.number.Value()
 }
 func TgoDefaultRequestTags() map[string]string {
 	return map[string]string{}

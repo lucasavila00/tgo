@@ -515,7 +515,14 @@ func (value Port) check() (Port, error) {
 }
 ```
 
-All fields must be private. The type must declare a value-receiver method with the exact signature
+All fields must be private. A field can be a boolean, numeric, or string type, or another checked
+struct by value. This rule accepts named scalar types, aliases, aliases of checked structs, and
+private checked structs that are embedded by value. A new defined type whose underlying type is a
+checked struct does not become checked.
+
+Pointers, including `%T`, slices, maps, arrays, functions, channels, interfaces, `unsafe.Pointer`,
+enums, and ordinary structs are not valid checked fields. The compiler reports each unsupported
+field at its declaration. The type must declare a value-receiver method with the exact signature
 `check() (Port, error)`. The compiler reports a missing method or a different signature.
 
 The compiler removes the `checked` marker and keeps the struct and method. Checked literals are the
@@ -544,14 +551,18 @@ contextual typing and source evaluation order across a package boundary. This ca
 output, not TGo API. TGo source cannot refer to it, and navigation hides it.
 
 A raw literal is permitted only inside its own `check` method and the generated constructor. The
-method can normalize its local raw value. This trusted exception also lets a failed check return
-the invalid zero value with a non-nil error.
+method can normalize its directly declared scalar fields. It can replace a directly declared
+checked field with another validated value. It cannot write through or take an address through a
+nested or embedded checked value. A pointer-receiver method call or saved method value is a writable
+access and follows the same rule. This trusted exception also lets a failed check return the invalid
+zero value with a non-nil error.
 
-The zero value is invalid. A checked struct can contain another checked struct. Code in the same
-package can read its private fields. TGo rejects assignment, increment, decrement, range assignment,
-and address-taking through a checked field after construction, including in the declaring package.
-It permits normal value copies. Reference fields keep normal Go aliases, so this rule does not
-provide deep immutability. No field accessor or setter is generated.
+The zero value is invalid. A checked struct can contain another checked struct by value. The inner
+constructor runs before the outer constructor, and an inner failure prevents the outer check. Code
+in the same package can read private fields. TGo rejects assignment, increment, decrement, range
+assignment, address-taking, and implicit writable pointer-method access through a checked field
+after construction, including in the declaring package. It permits copies, assignment, and
+address-taking of a whole validated checked value. No field accessor or setter is generated.
 
 Handwritten Go can call the generated constructor. `tgolint` reports direct Go literals, field
 writes, discarded constructor errors, and the same invalid-zero uses that it reports for enums and

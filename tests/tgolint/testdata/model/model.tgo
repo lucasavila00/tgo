@@ -25,30 +25,12 @@ type Signal enum {
 
 func Identity(value int) int { return value }
 
-type mutableDetails struct { Number int }
+type Level struct { value int } checked
 
-type checkedDetails struct {
-	Number        int
-	Values        [2]int
-	Pointer       *mutableDetails
-	Slice         []int
-	Map           map[string]int
-	PointerMiddle pointerMiddle
-	PointerArray  [1]pointerMiddle
-	ValueMiddle   valueMiddle
-	ValueArray    [1]valueMiddle
-}
+func (value Level) check() (Level, error) { return value, }
+func (value Level) Value() int            { return value.value }
 
-type promotedLeaf struct { Number int }
-type pointerMiddle struct { *promotedLeaf }
-type valueMiddle struct { promotedLeaf }
-
-type Nested struct { checkedDetails } checked
+type Nested struct { level Level } checked
 
 func (value Nested) check() (Nested, error) { return value, }
-
-type pointedDetails struct { Number int }
-
-type PointerNested struct { *pointedDetails } checked
-
-func (value PointerNested) check() (PointerNested, error) { return value, }
+func (value Nested) Level() Level           { return value.level }

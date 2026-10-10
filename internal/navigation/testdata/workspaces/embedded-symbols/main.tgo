@@ -6,9 +6,13 @@ type OrdinaryNamed struct{}
 
 type OrdinaryPointer struct{}
 
-type checkedNamed struct{}
+type checkedNamed struct{} checked
 
-type checkedPointer struct{}
+func (value checkedNamed) check() (checkedNamed, error) { return value, }
+
+type checkedPointer struct{} checked
+
+func (value checkedPointer) check() (checkedPointer, error) { return value, }
 
 type Box[T any] struct{}
 
@@ -27,7 +31,7 @@ type Ordinary struct {
 type Checked struct {
 	before int
 	checkedNamed
-	%checkedPointer
+	checkedPointer
 	after int
 } checked
 

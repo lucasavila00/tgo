@@ -31,8 +31,8 @@ func TestBusiness(t *testing.T) {
 	}
 	point, err := func(tgoInput_2 model.TgoPositivePointInput) (model.PositivePoint, error) {
 		return model.NewPositivePoint(tgoInput_2.FieldValue)
-	}(model.TgoPositivePointInput{FieldValue: struct{ X int }{X: 1}})
-	if err != nil || point.Value().X != 1 {
+	}(model.TgoPositivePointInput{FieldValue: 1})
+	if err != nil || point.Value() != 1 {
 		t.Fatalf("checked struct: %v, %v", point, err)
 	}
 	multiline, err := func(tgoInput_3 model.TgoMultilineInput) (model.Multiline, error) {

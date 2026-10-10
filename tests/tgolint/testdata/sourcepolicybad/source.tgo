@@ -78,38 +78,60 @@ func change(value Port) {
 	}
 }
 
-type mutableDetails struct{ number int }
+type measured int
 
-type nestedDetails struct {
-	number      int
-	values      [2]int
-	pointer     *mutableDetails
-	slice       []int
-	mapping     map[string]int
-	valueMiddle valueMiddle
-	valueArray  [1]valueMiddle
+func (value measured) Value() int { return int(value) }
+func (value *measured) Increment() { *value++ }
+
+type inner struct{ number measured } checked
+
+func (value inner) check() (inner, error) { return value, }
+
+type NestedPort struct {
+	number measured
+	inner  inner
+} checked
+
+func (value NestedPort) check() (NestedPort, error) {
+	value.number++
+	value.number.Increment()
+	increment := value.number.Increment
+	increment()
+	replacement := inner{number: 1}!
+	value.inner = replacement
+	value.inner.number = 2
+	_ = &value.inner.number
+	value.inner.number.Increment()
+	nestedIncrement := value.inner.number.Increment
+	_ = nestedIncrement
+	_ = value.inner.number.Value()
+	return value,
 }
 
-type promotedLeaf struct{ number int }
-type valueMiddle struct{ promotedLeaf }
+type EmbeddedPort struct{ inner } checked
 
-type NestedPort struct{ nestedDetails } checked
+func (value EmbeddedPort) check() (EmbeddedPort, error) {
+	value.number = 3
+	_ = &value.number
+	value.number.Increment()
+	increment := value.number.Increment
+	_ = increment
+	_ = value.number.Value()
+	return value,
+}
 
-func (value NestedPort) check() (NestedPort, error) { return value, }
-
-func changeNested(value *NestedPort) {
-	value.number = 1
-	value.nestedDetails.number = 2
-	value.values[0] = 3
-	value.nestedDetails.values[1]++
-	value.values[:][0] = 4
-	for value.values[0] = range []int{4} {
+func changeNested(value *NestedPort, replacement inner) {
+	value.number = 4
+	value.number++
+	_ = &value.number
+	for _, value.number = range []measured{5} {
 	}
-	_ = &value.nestedDetails.number
-	_ = &value.values[1]
-	value.pointer = nil
-	value.valueMiddle.number = 5
-	value.valueArray[0].number = 6
+	value.number.Increment()
+	increment := value.number.Increment
+	_ = increment
+	_ = value.number.Value()
+	value.inner = replacement
+	_ = &value.inner
 }
 
 var localConstructor = NewPort

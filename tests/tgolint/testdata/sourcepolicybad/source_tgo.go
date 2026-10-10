@@ -266,55 +266,95 @@ func change(value Port) {
 	}
 }
 
-type mutableDetails struct {
-	number int
+type measured int
+
+func (value measured) Value() int  { return int(value) }
+func (value *measured) Increment() { *value++ }
+
+type inner struct {
+	number measured
+}
+type TgoinnerInput struct {
+	FieldNumber measured
 }
 
-type nestedDetails struct {
-	number      int
-	values      [2]int
-	pointer     *mutableDetails
-	slice       []int
-	mapping     map[string]int
-	valueMiddle valueMiddle
-	valueArray  [1]valueMiddle
+// Newinner constructs and checks inner.
+func Newinner(number measured) (inner, error) {
+	return inner{number}.check()
 }
 
-type promotedLeaf struct {
-	number int
-}
-
-type valueMiddle struct {
-	promotedLeaf
-}
+func (value inner) check() (inner, error) { return value, nil }
 
 type NestedPort struct {
-	nestedDetails
+	number measured
+	inner  inner
 }
 type TgoNestedPortInput struct {
-	Field0 nestedDetails
+	FieldNumber measured
+	FieldInner  inner
 }
 
 // NewNestedPort constructs and checks NestedPort.
-func NewNestedPort(tgoField0 nestedDetails) (NestedPort, error) {
-	return NestedPort{tgoField0}.check()
+func NewNestedPort(number measured, inner inner) (NestedPort, error) {
+	return NestedPort{number, inner}.check()
 }
 
-func (value NestedPort) check() (NestedPort, error) { return value, nil }
-
-func changeNested(value *NestedPort) {
-	value.number = 1
-	value.nestedDetails.number = 2
-	value.values[0] = 3
-	value.nestedDetails.values[1]++
-	value.values[:][0] = 4
-	for value.values[0] = range []int{4} {
+func (value NestedPort) check() (NestedPort, error) {
+	value.number++
+	value.number.Increment()
+	increment := value.number.Increment
+	increment()
+	replacement, err := func(tgoInput TgoinnerInput) (inner, error) {
+		return Newinner(tgoInput.FieldNumber)
+	}(TgoinnerInput{FieldNumber: 1})
+	if err != nil {
+		return NestedPort{}, fmt.Errorf("inner: %w", err)
 	}
-	_ = &value.nestedDetails.number
-	_ = &value.values[1]
-	value.pointer = nil
-	value.valueMiddle.number = 5
-	value.valueArray[0].number = 6
+
+	value.inner = replacement
+	value.inner.number = 2
+	_ = &value.inner.number
+	value.inner.number.Increment()
+	nestedIncrement := value.inner.number.Increment
+	_ = nestedIncrement
+	_ = value.inner.number.Value()
+	return value, nil
+}
+
+type EmbeddedPort struct {
+	inner
+}
+type TgoEmbeddedPortInput struct {
+	Field0 inner
+}
+
+// NewEmbeddedPort constructs and checks EmbeddedPort.
+func NewEmbeddedPort(tgoField0 inner) (EmbeddedPort, error) {
+	return EmbeddedPort{tgoField0}.check()
+}
+
+func (value EmbeddedPort) check() (EmbeddedPort, error) {
+	value.number = 3
+	_ = &value.number
+	value.number.Increment()
+	increment := value.number.Increment
+	_ = increment
+	_ = value.number.Value()
+	return value, nil
+}
+
+func changeNested(value *NestedPort, replacement inner) {
+	value.number = 4
+	value.number++
+	_ = &value.number
+	for _, value.number = range []measured{5} {
+	}
+	value.number.Increment()
+	increment := value.number.Increment
+	_ = increment
+	_ = value.number.Value()
+	value.inner = replacement
+	_ = &value.inner
 }
 
 var localConstructor = NewPort
@@ -337,8 +377,8 @@ func importedLiteral() model.Event {
 }
 
 func validChecked(number int) (Port, error) {
-	return func(tgoInput TgoPortInput) (Port, error) {
-		return NewPort(tgoInput.FieldNumber)
+	return func(tgoInput_1 TgoPortInput) (Port, error) {
+		return NewPort(tgoInput_1.FieldNumber)
 	}(TgoPortInput{FieldNumber: number})
 }
 

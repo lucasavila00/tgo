@@ -58,41 +58,41 @@ func choicePayload(value Choice) string {
 	return payload().Value
 }
 
-type mutableDetails struct{ number int }
+type measured int
 
-type nestedDetails struct {
-	pointer       *mutableDetails
-	slice         []int
-	mapping       map[string]int
-	pointerMiddle pointerMiddle
-	pointerArray  [1]pointerMiddle
+func (value measured) Value() int { return int(value) }
+func (value *measured) Increment() { *value++ }
+
+type inner struct{ number measured } checked
+
+func (value inner) check() (inner, error) { return value, }
+
+type NestedQuantity struct {
+	number measured
+	inner  inner
+} checked
+
+func (value NestedQuantity) check() (NestedQuantity, error) {
+	value.number++
+	value.number.Increment()
+	increment := value.number.Increment
+	increment()
+	replacement := inner{number: 1}!
+	value.inner = replacement
+	return value,
 }
 
-type promotedLeaf struct{ number int }
-type pointerMiddle struct{ *promotedLeaf }
+type EmbeddedQuantity struct{ inner } checked
 
-type NestedQuantity struct{ nestedDetails } checked
+func (value EmbeddedQuantity) check() (EmbeddedQuantity, error) { return value, }
 
-func (value NestedQuantity) check() (NestedQuantity, error) { return value, }
-
-func changeNestedReferences(value *NestedQuantity) {
-	value.pointer.number = 1
-	value.nestedDetails.pointer.number = 2
-	value.slice[0]++
-	value.nestedDetails.slice[0] = 3
-	value.mapping["one"] = 4
-	value.nestedDetails.mapping["two"] = 5
-	_ = &value.slice[0]
-	value.pointerMiddle.number = 6
-	value.pointerArray[0].number = 7
+func checkedCopies(value NestedQuantity) int {
+	copy := value
+	copy = value
+	_ = &copy
+	return value.number.Value() + value.inner.number.Value()
 }
 
-type pointedDetails struct{ number int }
-
-type PointerQuantity struct{ *pointedDetails } checked
-
-func (value PointerQuantity) check() (PointerQuantity, error) { return value, }
-
-func changePromotedPointer(value *PointerQuantity) {
-	value.number = 1
+func checkedPromotedRead(value EmbeddedQuantity) int {
+	return value.number.Value()
 }

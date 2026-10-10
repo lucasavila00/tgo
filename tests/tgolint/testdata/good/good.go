@@ -543,15 +543,8 @@ func DefaultFallback(event model.Event) string {
 	}
 }
 
-func ChangeNestedReferences(value *model.Nested) {
-	value.Pointer.Number = 1
-	value.Slice[0] = 2
-	value.Map["one"] = 3
-	_ = &value.Slice[0]
-	value.PointerMiddle.Number = 4
-	value.PointerArray[0].Number = 5
-}
-
-func ChangePromotedPointer(value *model.PointerNested) {
-	value.Number = 1
+func CopyChecked(value model.Count) *model.Count {
+	copy := value
+	copy = value
+	return &copy
 }

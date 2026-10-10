@@ -431,65 +431,35 @@ func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 
 func Identity(value int) int { return value }
 
-type mutableDetails struct {
-	Number int
+type Level struct {
+	value int
+}
+type TgoLevelInput struct {
+	FieldValue int
 }
 
-type checkedDetails struct {
-	Number        int
-	Values        [2]int
-	Pointer       *mutableDetails
-	Slice         []int
-	Map           map[string]int
-	PointerMiddle pointerMiddle
-	PointerArray  [1]pointerMiddle
-	ValueMiddle   valueMiddle
-	ValueArray    [1]valueMiddle
+// NewLevel constructs and checks Level.
+func NewLevel(value int) (Level, error) {
+	return Level{value}.check()
 }
 
-type promotedLeaf struct {
-	Number int
-}
-
-type pointerMiddle struct {
-	*promotedLeaf
-}
-
-type valueMiddle struct {
-	promotedLeaf
-}
+func (value Level) check() (Level, error) { return value, nil }
+func (value Level) Value() int            { return value.value }
 
 type Nested struct {
-	checkedDetails
+	level Level
 }
 type TgoNestedInput struct {
-	Field0 checkedDetails
+	FieldLevel Level
 }
 
 // NewNested constructs and checks Nested.
-func NewNested(tgoField0 checkedDetails) (Nested, error) {
-	return Nested{tgoField0}.check()
+func NewNested(level Level) (Nested, error) {
+	return Nested{level}.check()
 }
 
 func (value Nested) check() (Nested, error) { return value, nil }
-
-type pointedDetails struct {
-	Number int
-}
-
-type PointerNested struct {
-	*pointedDetails
-}
-type TgoPointerNestedInput struct {
-	Field0 *pointedDetails
-}
-
-// NewPointerNested constructs and checks PointerNested.
-func NewPointerNested(tgoField0 *pointedDetails) (PointerNested, error) {
-	return PointerNested{tgoField0}.check()
-}
-
-func (value PointerNested) check() (PointerNested, error) { return value, nil }
+func (value Nested) Level() Level           { return value.level }
 func TgoDefaultPairLeft() string {
 	return ""
 }
