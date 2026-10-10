@@ -111,6 +111,18 @@ func newStorageExecutionContext() %storageExecutionContext {
 	}
 }
 
+func (context %storageExecutionContext) functionActive(
+	fact %GenericEffectFact,
+	function int,
+) bool {
+	for key := range context.active {
+		if key.fact == fact && key.function == function {
+			return true
+		}
+	}
+	return false
+}
+
 func executeStorageFunction(
 	call storageGraphCall,
 	state storageState,

@@ -58,6 +58,11 @@ func renameStorageExecutionFamily(
 	for index, value := range state.returns {
 		state.returns[index] = renameStorageFamilyValue(value, family)
 	}
+	for index, value := range call.arguments {
+		call.arguments[index] = renameStorageFamilyValue(value, family)
+	}
+	call.captures = renameStorageFamilyPaths(call.captures, family)
+	call.parameterCells = renameStorageFamilyPaths(call.parameterCells, family)
 }
 
 func appendStorageValue(

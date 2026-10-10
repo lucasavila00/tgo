@@ -79,7 +79,9 @@ func applyStorageOperationInCall(
 				callerGraph = call.callerGraph
 				callSite = call.callSite
 			}
-			repeated := call.summary || storageCallOperationRepeated(
+			repeated := call.summary || context.functionActive(
+				function.fact, function.graph,
+			) || storageCallOperationRepeated(
 				call.fact.Storage, call.function, operation.Position,
 			)
 			nested := storageGraphCall{
@@ -115,6 +117,9 @@ func applyStorageOperationInCall(
 			)
 			if !effects.completed {
 				continue
+			}
+			for family := range storageSummaryFamilies(updated, returned) {
+				renameStorageExecutionFamily(state, call, family)
 			}
 			updated = projectStorageCallerState(before, updated, returned)
 			if firstTransfer {
@@ -248,23 +253,61 @@ func projectStorageCallerState(
 	updated storageState,
 	returned []storageValue,
 ) storageState {
+	result := cloneStorageState(before)
+	for family := range storageSummaryFamilies(updated, returned) {
+		renameStorageFamilyState(&result, family)
+	}
 	locations := make(map[storageLocation]bool)
-	for path := range before.memory {
+	for path := range result.memory {
 		locations[path.location] = true
 	}
-	for _, value := range before.cells {
+	for _, value := range result.cells {
 		addStorageValueLocations(locations, value)
 	}
 	for _, value := range returned {
 		addStorageValueLocations(locations, value)
 	}
 	expandStorageLocations(updated, locations)
-	result := cloneStorageState(before)
 	for path, value := range updated.memory {
 		if locations[path.location] {
 			result.memory[path] = cloneStorageValue(value)
 		}
 	}
+	return result
+}
+
+func storageSummaryFamilies(
+	state storageState,
+	values []storageValue,
+) map[string]bool {
+	result := make(map[string]bool)
+	addLocation := func(location storageLocation) {
+		if location.family != "" && location.generation == storageGenerationSummary {
+			result[location.family] = true
+		}
+	}
+	for path, value := range state.memory {
+		addLocation(path.location)
+		for location := range storageValueLocations(value) {
+			addLocation(location)
+		}
+	}
+	for _, value := range state.cells {
+		for location := range storageValueLocations(value) {
+			addLocation(location)
+		}
+	}
+	for _, value := range values {
+		for location := range storageValueLocations(value) {
+			addLocation(location)
+		}
+	}
+	return result
+}
+
+func storageValueLocations(value storageValue) map[storageLocation]bool {
+	result := make(map[storageLocation]bool)
+	addStorageValueLocations(result, value)
 	return result
 }
 
