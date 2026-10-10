@@ -115,6 +115,18 @@ func propagationCode(found bool) (int, error) {
 	return 2, nil
 }
 
+func propagationAny(events *[]string, found bool) (any, error) {
+	return propagationNamedAny(events, "guard", found)
+}
+
+func propagationNamedAny(events *[]string, name string, found bool) (any, error) {
+	*events = append(*events, name)
+	if !found {
+		return nil, errPropagationMissing
+	}
+	return "ready", nil
+}
+
 type propagationTypedError struct {
 }
 
@@ -493,6 +505,125 @@ outer:
 		switch result_1 {
 		case 2:
 			result = "two"
+			break control
+		default:
+			result = "other"
+		}
+	}
+	return result, nil
+}
+
+func PropagationTypeSwitch(events *[]string, found bool) (string, error) {
+	result := "other"
+	{
+		prefix := propagationMark(events, "init")
+		result_1, err := propagationAny(events, found)
+		if err != nil {
+			return "", err
+		}
+		switch value := (result_1).(type) {
+		case string:
+			result = prefix + ":" + value
+		case int:
+			result = fmt.Sprint(prefix, ":", value+1)
+		}
+	}
+	return result, nil
+}
+
+func PropagationTypeSwitchInitializer(events *[]string, found bool) (string, error) {
+	{
+		prefix, err := propagationLoad(events, found)
+		if err != nil {
+			return "", err
+		}
+		switch value := any("ready").(type) {
+		case string:
+			return fmt.Sprint(prefix, ":", value), nil
+		}
+	}
+	return "other", nil
+}
+
+func PropagationTypeSwitchBoth(events *[]string, initFound bool, guardFound bool) (string, error) {
+	{
+		prefix, err := propagationNamedAny(events, "init", initFound)
+		if err != nil {
+			return "", err
+		}
+		result, err_1 := propagationNamedAny(events, "guard", guardFound)
+		if err_1 != nil {
+			return "", err_1
+		}
+		switch value := (result).(type) {
+		case string:
+			return prefix.(string) + ":" + value, nil
+		}
+	}
+	return "other", nil
+}
+
+func PropagationBareTypeSwitch(events *[]string, found bool) (string, error) {
+	result, err := propagationAny(events, found)
+	if err != nil {
+		return "", err
+	}
+	switch (result).(type) {
+	case string:
+		return "string", nil
+	}
+	return "other", nil
+}
+
+func PropagationLabeledTypeSwitch(events *[]string, found bool) (string, error) {
+	result := "before"
+	result_1, err := propagationAny(events, found)
+	if err != nil {
+		return "", err
+	}
+outer:
+	switch value := (result_1).(type) {
+	case string:
+		result = value
+		break outer
+	default:
+		result = "other"
+	}
+	return result, nil
+}
+
+func PropagationLabeledTypeSwitchScope() (string, error) {
+	events := []string{}
+	prefix := "outer"
+	{
+
+		prefix, err := propagationLoad(&events, true)
+		if err != nil {
+			return "", err
+		}
+	outer:
+		switch value := any("ready").(type) {
+		case string:
+			_, _ = prefix, value
+			break outer
+		}
+	}
+	return prefix, nil
+}
+
+func PropagationGotoLabeledTypeSwitch(events *[]string, found bool) (string, error) {
+	result := "before"
+	goto outer
+outer:
+	{
+		result_1, err := propagationAny(events, found)
+		if err != nil {
+			return "", err
+		}
+	control:
+		switch value := (result_1).(type) {
+		case string:
+			result = value
 			break control
 		default:
 			result = "other"

@@ -493,3 +493,86 @@ func use(result, err, operand, control int) (int, error) {
 		}
 	}
 }
+
+func TestPropagationLowersTypeSwitchStatements(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func mark() int { return 1 }
+func load() (any, error) { return "ready", nil }
+
+func use() (string, error) {
+	result, err := "", error(nil)
+	switch prefix := mark(); value := (load()!!).(type) {
+	case string:
+		result = value
+		_ = prefix
+	}
+	return result, err
+}
+`)
+	want := `{
+		prefix := mark()
+		result_1, err_1 := load()
+		if err_1 != nil {
+			return "", err_1
+		}
+		switch value := (result_1).(type) {`
+	if !strings.Contains(output, want) {
+		t.Fatalf("generated output does not lower the type switch\n%s", output)
+	}
+}
+
+func TestPropagationLowersEachTypeSwitchPart(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		body string
+		want []string
+	}{
+		{
+			name: "bare guard",
+			body: `switch (load()!!).(type) { case string: }`,
+			want: []string{"result, err := load()", "switch (result).(type)"},
+		},
+		{
+			name: "initializer",
+			body: `switch prefix := text()!!; value := any("ready").(type) {
+		case string: _, _ = prefix, value
+	}`,
+			want: []string{"prefix, err := text()", `switch value := any("ready").(type)`},
+		},
+		{
+			name: "initializer and guard",
+			body: `switch prefix := text()!!; value := (load()!!).(type) {
+		case string: _, _ = prefix, value
+	}`,
+			want: []string{
+				"prefix, err := text()",
+				"result, err_1 := load()",
+				"switch value := (result).(type)",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			output := compileSourceOutput(t, `package sample
+func load() (any, error) { return "ready", nil }
+func text() (string, error) { return "prefix", nil }
+func use() error {
+`+test.body+`
+	return nil
+}
+`)
+			position := -1
+			for _, required := range test.want {
+				next := strings.Index(output, required)
+				if next <= position {
+					t.Fatalf("generated output puts %q out of order\n%s", required, output)
+				}
+				position = next
+			}
+		})
+	}
+}
