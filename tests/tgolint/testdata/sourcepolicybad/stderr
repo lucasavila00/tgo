@@ -34,14 +34,22 @@ sourcepolicybad/source.tgo:129:2: checked field number cannot be changed after c
 sourcepolicybad/source.tgo:130:15: checked field number cannot be changed after construction
 sourcepolicybad/source.tgo:133:2: checked field inner cannot be changed after construction
 sourcepolicybad/source.tgo:134:7: checked field inner cannot be changed after construction
-sourcepolicybad/source.tgo:137:24: NewPort is generated Go ABI; use a checked literal
-sourcepolicybad/source.tgo:138:20: TgoPortInput is generated staging ABI; use a checked literal
-sourcepolicybad/source.tgo:139:33: NewCount is generated Go ABI; use a checked literal
-sourcepolicybad/source.tgo:140:29: TgoCountInput is generated staging ABI; use a checked literal
-sourcepolicybad/source.tgo:141:28: NewLocalReady is generated Go ABI; use Local.Ready{...}
-sourcepolicybad/source.tgo:142:37: NewEventStarted is generated Go ABI; use Event.Started{...}
-sourcepolicybad/source.tgo:145:15: LocalReady is generated enum representation; use Local.Ready{...}
-sourcepolicybad/source.tgo:146:15: TgoLocalReadyInput is generated staging ABI; use Local.Ready{...}
-sourcepolicybad/source.tgo:147:24: EventStarted is generated enum representation; use Event.Started{...}
-sourcepolicybad/source.tgo:148:24: TgoEventStartedInput is generated staging ABI; use Event.Started{...}
-sourcepolicybad/source.tgo:152:9: use a constructor for Event
+sourcepolicybad/source.tgo:163:2: checked field measuredAlias cannot be changed after construction
+sourcepolicybad/source.tgo:164:12: checked field measuredAlias cannot be changed after construction
+sourcepolicybad/source.tgo:166:2: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:167:17: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:169:12: checked field measuredAlias cannot be changed after construction
+sourcepolicybad/source.tgo:171:17: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:173:2: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:174:11: checked field methodPortAlias cannot be changed after construction
+sourcepolicybad/source.tgo:180:24: NewPort is generated Go ABI; use a checked literal
+sourcepolicybad/source.tgo:181:20: TgoPortInput is generated staging ABI; use a checked literal
+sourcepolicybad/source.tgo:182:33: NewCount is generated Go ABI; use a checked literal
+sourcepolicybad/source.tgo:183:29: TgoCountInput is generated staging ABI; use a checked literal
+sourcepolicybad/source.tgo:184:28: NewLocalReady is generated Go ABI; use Local.Ready{...}
+sourcepolicybad/source.tgo:185:37: NewEventStarted is generated Go ABI; use Event.Started{...}
+sourcepolicybad/source.tgo:188:15: LocalReady is generated enum representation; use Local.Ready{...}
+sourcepolicybad/source.tgo:189:15: TgoLocalReadyInput is generated staging ABI; use Local.Ready{...}
+sourcepolicybad/source.tgo:190:24: EventStarted is generated enum representation; use Event.Started{...}
+sourcepolicybad/source.tgo:191:24: TgoEventStartedInput is generated staging ABI; use Event.Started{...}
+sourcepolicybad/source.tgo:195:9: use a constructor for Event

@@ -134,6 +134,49 @@ func changeNested(value *NestedPort, replacement inner) {
 	_ = &value.inner
 }
 
+type measuredAlias = measured
+
+func (value *measured) Change() { *value = 99 }
+
+type MethodPort struct{ measuredAlias } checked
+
+type methodPortError struct{}
+
+func (methodPortError) Error() string { return "invalid MethodPort" }
+func (value MethodPort) check() (MethodPort, error) {
+	value.Increment()
+	change := value.Increment
+	change()
+	if value.measuredAlias != 2 { return , methodPortError{} }
+	return value,
+}
+
+func (value *MethodPort) WholeMethod() {}
+
+type methodPortAlias = MethodPort
+
+type MethodOuter struct{ methodPortAlias } checked
+
+func (value MethodOuter) check() (MethodOuter, error) { return value, }
+
+func changePromotedMethods(value *MethodPort, outer *MethodOuter) {
+	value.Change()
+	change := value.Change
+	change()
+	outer.Change()
+	outerChange := outer.Change
+	outerChange()
+	method := (*MethodPort).Change
+	method(value)
+	outerMethod := (*MethodOuter).Change
+	outerMethod(outer)
+	outer.WholeMethod()
+	whole := outer.WholeMethod
+	whole()
+	_ = value.Value()
+	_ = outer.Value()
+}
+
 var localConstructor = NewPort
 var localCarrier = TgoPortInput{FieldNumber: 0}
 var importedConstructor = model.NewCount

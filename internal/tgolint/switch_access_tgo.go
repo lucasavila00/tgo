@@ -28,10 +28,14 @@ func (c *checker) checkRepresentationAccess(expression *syntax.Expression) {
 	}
 	if modelIsChecked(model) && c.checkedFieldChange(expression) &&
 		!c.checkedReceiverMutation(expression, model) {
+		name := selector.Selector.Name
+		if field := c.promotedPointerMethodField(expression); field != nil {
+			name = field.Name()
+		}
 		c.pass.Reportf(
 			selector.Start,
 			"checked field %s cannot be changed after construction",
-			selector.Selector.Name,
+			name,
 		)
 		return
 	}
@@ -56,8 +60,16 @@ func (c *checker) checkedReceiverMutation(
 		return false
 	}
 	selection := c.facts.Selection(expression)
-	if selection == nil || selection.Kind() != types.FieldVal ||
-		len(selection.Index()) != 1 {
+	if selection == nil {
+		return false
+	}
+	directField := selection.Kind() == types.FieldVal &&
+		len(selection.Index()) == 1
+	promotedField := c.promotedPointerMethodField(expression)
+	directPrimitiveMethod := selection.Kind() == types.MethodVal &&
+		len(selection.Index()) == 2 && promotedField != nil &&
+		checkedPrimitiveType(promotedField.Type())
+	if !directField && !directPrimitiveMethod {
 		return false
 	}
 	receiver := sourceUnparenthesized(selector.Expression)
@@ -77,7 +89,7 @@ func (c *checker) checkedReceiverMutation(
 				) {
 				return false
 			}
-			if checkedPrimitiveField(selection) {
+			if directPrimitiveMethod || checkedPrimitiveField(selection) {
 				return true
 			}
 			return c.checkedFieldReplacement(expression)
@@ -92,7 +104,11 @@ func checkedPrimitiveField(selection *types.Selection) bool {
 	if !ok {
 		return false
 	}
-	basic, ok := types.Unalias(field.Type()).Underlying().(*types.Basic)
+	return checkedPrimitiveType(field.Type())
+}
+
+func checkedPrimitiveType(typ types.Type) bool {
+	basic, ok := types.Unalias(typ).Underlying().(*types.Basic)
 	if !ok {
 		return false
 	}
@@ -202,8 +218,11 @@ func sameModelForType(
 
 func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {
 	selection := c.facts.Selection(expression)
-	if selection == nil || selection.Kind() != types.FieldVal {
+	if selection == nil {
 		return false
+	}
+	if selection.Kind() != types.FieldVal {
+		return c.promotedPointerMethodField(expression) != nil
 	}
 	current := expression
 	target := syntax.ExpressionNode(current)
@@ -254,6 +273,28 @@ func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {
 		return false
 	}
 	return false
+}
+
+func (c *checker) promotedPointerMethodField(
+	expression *syntax.Expression,
+) *types.Var {
+	selection := c.facts.Selection(expression)
+	if selection == nil || len(selection.Index()) < 2 ||
+		(selection.Kind() != types.MethodVal &&
+			selection.Kind() != types.MethodExpr) ||
+		!c.pointerMethodSelection(expression) {
+		return nil
+	}
+	current := dereference(selection.Recv())
+	structure, ok := current.Underlying().(*types.Struct)
+	if !ok {
+		return nil
+	}
+	index := selection.Index()[0]
+	if index >= structure.NumFields() {
+		return nil
+	}
+	return structure.Field(index)
 }
 
 func optionalSameExpressionRange(

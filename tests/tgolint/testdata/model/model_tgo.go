@@ -460,6 +460,53 @@ func NewNested(level Level) (Nested, error) {
 
 func (value Nested) check() (Nested, error) { return value, nil }
 func (value Nested) Level() Level           { return value.level }
+
+type measurable int
+type measurableAlias = measurable
+
+func (value measurable) Value() int { return int(value) }
+func (value *measurable) Change()   { *value = 99 }
+
+type MethodCount struct {
+	measurableAlias
+}
+type TgoMethodCountInput struct {
+	Field0 measurableAlias
+}
+
+// NewMethodCount constructs and checks MethodCount.
+func NewMethodCount(tgoField0 measurableAlias) (MethodCount, error) {
+	return MethodCount{tgoField0}.check()
+}
+
+type methodCountError struct {
+}
+
+func (methodCountError) Error() string { return "invalid MethodCount" }
+func (value MethodCount) check() (MethodCount, error) {
+	if value.measurableAlias != 1 {
+		return MethodCount{},
+			methodCountError{}
+	}
+	return value, nil
+}
+func (value *MethodCount) WholeMethod() {}
+
+type methodCountAlias = MethodCount
+
+type MethodOuter struct {
+	methodCountAlias
+}
+type TgoMethodOuterInput struct {
+	Field0 methodCountAlias
+}
+
+// NewMethodOuter constructs and checks MethodOuter.
+func NewMethodOuter(tgoField0 methodCountAlias) (MethodOuter, error) {
+	return MethodOuter{tgoField0}.check()
+}
+
+func (value MethodOuter) check() (MethodOuter, error) { return value, nil }
 func TgoDefaultPairLeft() string {
 	return ""
 }

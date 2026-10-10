@@ -548,3 +548,14 @@ func CopyChecked(value model.Count) *model.Count {
 	copy = value
 	return &copy
 }
+
+func ReadPromotedMethods(value *model.MethodCount, outer *model.MethodOuter) int {
+	value.WholeMethod()
+	whole := value.WholeMethod
+	whole()
+	wholeExpression := (*model.MethodCount).WholeMethod
+	wholeExpression(value)
+	valueExpression := model.MethodCount.Value
+	valueMethod := outer.Value
+	return value.Value() + valueMethod() + valueExpression(*value)
+}

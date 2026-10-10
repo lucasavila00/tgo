@@ -942,3 +942,21 @@ func InsufficientEarlyExitProof(event model.Event, ready bool) string {
 }
 
 var invalidCheckedLiteral = model.Count{}
+
+func ChangePromotedMethods(value *model.MethodCount, outer *model.MethodOuter) {
+	value.Change()
+	change := value.Change
+	change()
+	outer.Change()
+	outerChange := outer.Change
+	outerChange()
+	method := (*model.MethodCount).Change
+	method(value)
+	outerMethod := (*model.MethodOuter).Change
+	outerMethod(outer)
+	outer.WholeMethod()
+	whole := outer.WholeMethod
+	whole()
+	_ = value.Value()
+	_ = outer.Value()
+}

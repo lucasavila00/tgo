@@ -357,6 +357,65 @@ func checkedCopies(value NestedQuantity) int {
 func checkedPromotedRead(value EmbeddedQuantity) int {
 	return value.number.Value()
 }
+
+type measuredAlias = measured
+
+type MethodQuantity struct {
+	measuredAlias
+}
+type TgoMethodQuantityInput struct {
+	Field0 measuredAlias
+}
+
+// NewMethodQuantity constructs and checks MethodQuantity.
+func NewMethodQuantity(tgoField0 measuredAlias) (MethodQuantity, error) {
+	return MethodQuantity{tgoField0}.check()
+}
+
+type methodQuantityError struct {
+}
+
+func (methodQuantityError) Error() string { return "invalid MethodQuantity" }
+func (value MethodQuantity) check() (MethodQuantity, error) {
+	value.Increment()
+	change := value.Increment
+	change()
+	if value.measuredAlias != 2 {
+		return MethodQuantity{},
+
+			methodQuantityError{}
+	}
+	return value, nil
+}
+
+func (value *MethodQuantity) WholeMethod() {}
+
+type methodQuantityAlias = MethodQuantity
+
+type MethodOuter struct {
+	methodQuantityAlias
+}
+type TgoMethodOuterInput struct {
+	Field0 methodQuantityAlias
+}
+
+// NewMethodOuter constructs and checks MethodOuter.
+func NewMethodOuter(tgoField0 methodQuantityAlias) (MethodOuter, error) {
+	return MethodOuter{tgoField0}.check()
+}
+
+func (value MethodOuter) check() (MethodOuter, error) { return value, nil }
+
+func safePromotedMethods(value *MethodQuantity, outer *MethodOuter) int {
+	value.WholeMethod()
+	whole := value.WholeMethod
+	whole()
+	wholeExpression := (*MethodQuantity).WholeMethod
+	wholeExpression(value)
+	valueExpression := MethodQuantity.Value
+	valueMethod := outer.Value
+	return value.Value() + valueMethod() + valueExpression(*value)
+}
 func TgoDefaultRequestTags() map[string]string {
 	return map[string]string{}
 }
