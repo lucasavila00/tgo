@@ -7,14 +7,44 @@ func applyStorageAppend(
 ) {
 	base := storageInput(state.temps, operation.Inputs, 0)
 	values := storageInputs(state.temps, operation.Inputs[1:])
-	location := storageBirthLocation(
-		&state.storage, call, storageRootAllocation, operation.Target.ID,
-	)
-	renameStorageExecutionFamily(state, call, location.family)
-	base = storageInput(state.temps, operation.Inputs, 0)
-	values = storageInputs(state.temps, operation.Inputs[1:])
+	location := storageLocationForCall(*call, storageRootAllocation, operation.Target.ID)
+	if storageAppendMayAllocate(base, values, operation.Variadic) {
+		location = storageBirthLocation(
+			&state.storage, call, storageRootAllocation, operation.Target.ID,
+		)
+		renameStorageExecutionFamily(state, call, location.family)
+		base = storageInput(state.temps, operation.Inputs, 0)
+		values = storageInputs(state.temps, operation.Inputs[1:])
+	}
 	base = appendStorageValue(state.storage, base, values, operation.Variadic, location)
 	setStorageResults(state.temps, operation.Results, []storageValue{base})
+}
+
+func storageAppendMayAllocate(
+	base storageValue,
+	values []storageValue,
+	variadic bool,
+) bool {
+	added := int64(len(values))
+	addedKnown := true
+	if variadic {
+		if len(values) != 1 || len(values[0].slices) == 0 {
+			return true
+		}
+		for _, source := range values[0].slices {
+			if !source.knownLength {
+				return true
+			}
+			added = source.length
+		}
+	}
+	for _, slice := range base.slices {
+		if !slice.knownLength || !slice.knownCapacity || !addedKnown ||
+			slice.length+added > slice.capacity {
+			return true
+		}
+	}
+	return len(base.slices) == 0
 }
 
 func renameStorageExecutionFamily(
