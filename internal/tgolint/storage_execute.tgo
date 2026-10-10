@@ -1,6 +1,7 @@
 package tgolint
 
 import (
+	"fmt"
 	"go/token"
 	"go/types"
 	"reflect"
@@ -9,9 +10,18 @@ import (
 )
 
 type storageFlow struct {
-	before  map[syntax.Node]storageState
-	values  map[token.Pos][]storageValue
-	context %storageExecutionContext
+	before        map[syntax.Node]storageState
+	values        map[token.Pos][]storageValue
+	invocations   map[token.Pos][]storageRecordedInvocation
+	postArguments map[token.Pos]storageState
+	arguments     map[token.Pos][]storageValue
+	context       %storageExecutionContext
+}
+
+type storageRecordedInvocation struct {
+	effects           storageInvocationEffects
+	receiverArguments []types.Type
+	typeArguments     []types.Type
 }
 
 type storageExecutionState struct {
@@ -43,6 +53,7 @@ type storageGraphCall struct {
 	immediateGraph    int
 	immediateSite     int
 	summary           bool
+	allocationRoute   string
 }
 
 type storageCallKey struct {
@@ -118,18 +129,21 @@ func executeStorageFunction(
 	if function == nil {
 		return state, nil, storageInvocationEffects{}
 	}
+	resultSites := storageFunctionResultSites(function)
+	for _, site := range resultSites {
+		storageBirthLocation(&state, &call, storageRootResult, site)
+	}
+	hasBirths := len(call.arguments) != 0 || len(resultSites) != 0 ||
+		storageFunctionAllocates(function)
 	if len(call.parameterCells) == 0 && len(call.arguments) != 0 {
 		call.parameterCells = make([]storagePath, len(call.arguments))
-		for index, argument := range call.arguments {
-			path := storagePath{location: storageLocation{
-				owner: call.fact, graph: call.function, site: index,
-				kind:   storageRootParameter,
-				caller: call.caller, callerGraph: call.callerGraph,
-				callSite: call.callSite, immediateCaller: call.immediateCaller,
-				immediateGraph: call.immediateGraph, immediateSite: call.immediateSite,
-			}}
+		for index := range call.arguments {
+			location := storageBirthLocation(
+				&state, &call, storageRootParameter, index,
+			)
+			path := storagePath{location: location}
 			call.parameterCells[index] = path
-			writeStorageMemory(state, storageMemoryKey(path), argument, true)
+			writeStorageMemory(state, storageMemoryKey(path), call.arguments[index], true)
 		}
 	}
 	recursiveKey := storageCallKey{
@@ -140,7 +154,7 @@ func executeStorageFunction(
 		fact: call.fact, function: call.function,
 		inputs: storageCallInputKey(call, state, false),
 	}
-	if result, ok := context.completed[completedKey]; ok {
+	if result, ok := context.completed[completedKey]; ok && !hasBirths {
 		return cloneStorageState(result.storage), cloneStorageValues(result.returns), result.effects
 	}
 	if context.active[recursiveKey] {
@@ -187,6 +201,17 @@ func executeStorageFunction(
 		previous = next
 		initialized = true
 	}
+}
+
+func storageFunctionAllocates(function %StorageEffectFunction) bool {
+	for _, block := range function.Blocks {
+		for _, operation := range block.Operations {
+			if operation.Kind == storageEffectAllocate || operation.Kind == storageEffectAppend {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func storageFunctionRecursive(graph StorageEffectGraph, function int) bool {
@@ -352,7 +377,7 @@ func executeStorageFunctionOnce(
 			if !current.live {
 				break
 			}
-			applyStorageOperation(&current, call, operation, context)
+			applyStorageOperationInCall(&current, &call, operation, context)
 		}
 		observed.zero = appendGenericEffects(observed.zero, current.effects.zero)
 		observed.access = appendGenericEffects(observed.access, current.effects.access)
@@ -478,6 +503,81 @@ func cloneStorageExecution(state storageExecutionState) storageExecutionState {
 	return cloned
 }
 
+func storageBirthLocation(
+	state *storageState,
+	call *storageGraphCall,
+	kind int,
+	site int,
+) storageLocation {
+	location := storageLocationForCall(*call, kind, site)
+	family := location.family
+	renameStorageFamilyState(state, family)
+	for index, value := range call.arguments {
+		call.arguments[index] = renameStorageFamilyValue(value, family)
+	}
+	call.captures = renameStorageFamilyPaths(call.captures, family)
+	call.parameterCells = renameStorageFamilyPaths(call.parameterCells, family)
+	return location
+}
+
+func storageLocationForCall(
+	call storageGraphCall,
+	kind int,
+	site int,
+) storageLocation {
+	route := storageAllocationRoute(call)
+	family := fmt.Sprintf(
+		"%s/%p:%d:%d:%d", route, call.fact,
+		call.function, kind, site,
+	)
+	return storageLocation{
+		family: family, generation: storageGenerationRecent,
+		owner: call.fact, graph: call.function, site: site, kind: kind,
+	}
+}
+
+func storageFunctionResultSites(function %StorageEffectFunction) []int {
+	seen := make(map[int]bool)
+	var result []int
+	add := func(region StorageEffectRegion) {
+		if region.Root == storageRootResult && !seen[region.ID] {
+			seen[region.ID] = true
+			result = append(result, region.ID)
+		}
+	}
+	for _, block := range function.Blocks {
+		for _, operation := range block.Operations {
+			add(operation.Target)
+			add(operation.Source)
+			for _, region := range operation.Regions {
+				add(region)
+			}
+		}
+	}
+	return result
+}
+
+func storageNestedAllocationRoute(
+	call storageGraphCall,
+	callee storageFunction,
+	position int,
+	repeated bool,
+) string {
+	route := storageAllocationRoute(call)
+	if repeated {
+		return route
+	}
+	return fmt.Sprintf("%s/call:%p:%d:%d", route, call.fact, call.function, position)
+}
+
+func storageRootAllocationRoute(
+	fact %GenericEffectFact,
+	graph int,
+	position token.Pos,
+) string {
+	return fmt.Sprintf("root:%p:%d:%d", fact, graph, position)
+}
+
 func joinStorageExecution(
 	left storageExecutionState,
 	right storageExecutionState,
@@ -525,10 +625,15 @@ func appendGenericEffects(
 			found = found || genericEffectsEqual(current, value)
 		}
 		if !found {
-			target = append(target, value)
+			target = append(target, cloneGenericEffect(value))
 		}
 	}
 	return target
+}
+
+func cloneGenericEffect(effect GenericEffect) GenericEffect {
+	effect.Conditions = append([]GenericEffectCondition(nil), effect.Conditions...)
+	return effect
 }
 
 func genericEffectsEqual(left GenericEffect, right GenericEffect) bool {

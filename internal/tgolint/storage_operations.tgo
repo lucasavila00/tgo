@@ -11,6 +11,15 @@ func applyStorageOperation(
 	operation StorageEffectOperation,
 	context %storageExecutionContext,
 ) {
+	applyStorageOperationInCall(state, &call, operation, context)
+}
+
+func applyStorageOperationInCall(
+	state %storageExecutionState,
+	call %storageGraphCall,
+	operation StorageEffectOperation,
+	context %storageExecutionContext,
+) {
 	state.effects.zero = appendGenericEffects(
 		state.effects.zero, operation.ZeroEffects,
 	)
@@ -19,15 +28,15 @@ func applyStorageOperation(
 	)
 	switch operation.Kind {
 	case storageEffectRead:
-		value := readStorageRegion(state.storage, call, operation.Source)
+		value := readStorageRegion(state.storage, *call, operation.Source)
 		setStorageResults(state.temps, operation.Results, []storageValue{value})
 	case storageEffectWrite:
 		value := storageInput(state.temps, operation.Inputs, 0)
-		writeStorageRegion(state.storage, call, operation.Target, value)
+		writeStorageRegion(state.storage, *call, operation.Target, value)
 	case storageEffectFunction:
 		var captures []storagePath = nil
 		for _, region := range operation.Regions {
-			captures = append(captures, resolveStoragePaths(call, region)...)
+			captures = append(captures, resolveStoragePaths(*call, region)...)
 		}
 		value := storageValue{functions: []storageFunction{{
 			graph: operation.Function, fact: call.fact, captures: captures,
@@ -70,14 +79,18 @@ func applyStorageOperation(
 				callerGraph = call.callerGraph
 				callSite = call.callSite
 			}
+			repeated := call.summary || storageCallOperationRepeated(
+				call.fact.Storage, call.function, operation.Position,
+			)
 			nested := storageGraphCall{
 				fact: function.fact, function: function.graph,
 				arguments: arguments, captures: function.captures,
 				receiverArguments: function.receiverArguments,
 				typeArguments:     function.typeArguments,
 				caller:            caller, callerGraph: callerGraph, callSite: callSite,
-				summary: call.summary || storageCallOperationRepeated(
-					call.fact.Storage, call.function, operation.Position,
+				summary: repeated,
+				allocationRoute: storageNestedAllocationRoute(
+					*call, function, operation.Position, repeated,
 				),
 				immediateCaller: call.fact, immediateGraph: call.function,
 				immediateSite: operation.Position,
@@ -124,17 +137,10 @@ func applyStorageOperation(
 		}
 		setStorageResults(state.temps, operation.Results, results)
 	case storageEffectAllocate:
-		location := storageLocation{
-			owner: call.fact, graph: call.function, site: operation.Target.ID,
-			kind:   storageRootAllocation,
-			caller: call.caller, callerGraph: call.callerGraph,
-			callSite:        call.callSite,
-			immediateCaller: call.immediateCaller,
-			immediateGraph:  call.immediateGraph, immediateSite: call.immediateSite,
-			merged: call.summary || storageAllocationRepeated(
-				call.fact.Storage, call.function, operation.Target.ID,
-			),
-		}
+		location := storageBirthLocation(
+			&state.storage, call, storageRootAllocation, operation.Target.ID,
+		)
+		renameStorageExecutionFamily(state, call, location.family)
 		value := storageValue{regions: []storagePath{{
 			location: location,
 		}}}
@@ -428,7 +434,8 @@ func projectStorageEffects(
 	parameters []int,
 ) []GenericEffect {
 	var result []GenericEffect = nil
-	for _, effect := range effects {
+	for _, source := range effects {
+		effect := cloneGenericEffect(source)
 		targetProjection := projection
 		if effect.Receiver {
 			targetProjection = receiverProjection
@@ -668,13 +675,9 @@ func resolveStoragePaths(
 		paths = append(paths, call.captures[region.ID])
 	}
 	if region.Root == storageRootAllocation || region.Root == storageRootResult {
-		paths = append(paths, storagePath{location: storageLocation{
-			owner: call.fact, graph: call.function, site: region.ID, kind: region.Root,
-			caller: call.caller, callerGraph: call.callerGraph,
-			callSite:        call.callSite,
-			immediateCaller: call.immediateCaller,
-			immediateGraph:  call.immediateGraph, immediateSite: call.immediateSite,
-		}})
+		paths = append(paths, storagePath{location: storageLocationForCall(
+			call, region.Root, region.ID,
+		)})
 	}
 	for index := range paths {
 		paths[index].steps = append(paths[index].steps, region.Path...)
@@ -693,19 +696,35 @@ func storageWirePathExact(path []StorageEffectPath) bool {
 
 func applyStorageAppend(
 	state %storageExecutionState,
-	call storageGraphCall,
+	call %storageGraphCall,
 	operation StorageEffectOperation,
 ) {
 	base := storageInput(state.temps, operation.Inputs, 0)
 	values := storageInputs(state.temps, operation.Inputs[1:])
+	location := storageBirthLocation(
+		&state.storage, call, storageRootAllocation, operation.Target.ID,
+	)
+	renameStorageExecutionFamily(state, call, location.family)
+	base = storageInput(state.temps, operation.Inputs, 0)
+	values = storageInputs(state.temps, operation.Inputs[1:])
 	base = appendStorageValue(
 		state.storage, base, values, operation.Variadic,
-		storageLocation{
-			owner: call.fact, graph: call.function, site: operation.Target.ID,
-			kind: storageRootAllocation,
-		},
+		location,
 	)
 	setStorageResults(state.temps, operation.Results, []storageValue{base})
+}
+
+func renameStorageExecutionFamily(
+	state %storageExecutionState,
+	call %storageGraphCall,
+	family string,
+) {
+	for id, value := range state.temps {
+		state.temps[id] = renameStorageFamilyValue(value, family)
+	}
+	for index, value := range state.returns {
+		state.returns[index] = renameStorageFamilyValue(value, family)
+	}
 }
 
 func appendStorageValue(

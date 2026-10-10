@@ -31,35 +31,21 @@ func (c *checker) reportStorageFunctionCall(expression *syntax.Expression) bool 
 		flow = c.buildStorageFlow(root)
 		c.storageFlows[*root] = flow
 	}
-	state := flow.before[syntax.ExpressionNode(call.Callee)]
-	value := c.storageExpressionValue(call.Callee, state, flow, false)
-	arguments := make([]storageValue, 0, len(call.Args))
-	for _, argument := range call.Args {
-		arguments = append(arguments,
-			c.storageExpressionValue(argument, state, flow, false))
-	}
-	handled := len(value.functions) != 0
-	for _, function := range value.functions {
-		effects := storageGraphEffectsInContext(storageGraphCall{
-			fact: function.fact, function: function.graph,
-			arguments: arguments, captures: function.captures,
-			receiverArguments: function.receiverArguments,
-			typeArguments:     function.typeArguments,
-			caller:            function.fact, callerGraph: function.graph,
-			callSite:        int(syntax.ExpressionPosition(expression)),
-			immediateCaller: function.fact, immediateGraph: function.graph,
-			immediateSite: int(syntax.ExpressionPosition(expression)),
-		}, state, flow.context)
+	position := syntax.ExpressionPosition(expression)
+	recorded := flow.invocations[position]
+	for _, invocation := range recorded {
 		c.reportGenericEffects(
-			expression, expression, effects.zero, function.receiverArguments,
-			function.typeArguments, true, "call to function value",
+			expression, expression, invocation.effects.zero,
+			invocation.receiverArguments, invocation.typeArguments,
+			true, "call to function value",
 		)
 		c.reportGenericEffects(
-			expression, expression, effects.access, function.receiverArguments,
-			function.typeArguments, false, "call to function value",
+			expression, expression, invocation.effects.access,
+			invocation.receiverArguments, invocation.typeArguments,
+			false, "call to function value",
 		)
 	}
-	return handled
+	return len(recorded) != 0
 }
 
 func (c *checker) reportStorageUnknownCallArguments(expression *syntax.Expression) {
@@ -86,13 +72,18 @@ func (c *checker) reportStorageUnknownCallArguments(expression *syntax.Expressio
 		flow = c.buildStorageFlow(root)
 		c.storageFlows[*root] = flow
 	}
-	state := flow.before[node]
-	callee := c.storageExpressionValue(call.Callee, state, flow, false)
+	position := syntax.ExpressionPosition(expression)
+	state := flow.postArguments[position]
+	calleeState := flow.before[syntax.ExpressionNode(call.Callee)]
+	callee := c.storageExpressionValue(call.Callee, calleeState, flow, false)
 	if len(callee.functions) != 0 {
 		return
 	}
-	for _, argument := range call.Args {
-		value := c.storageExpressionValue(argument, state, flow, false)
+	for index, argument := range call.Args {
+		if index >= len(flow.arguments[position]) {
+			break
+		}
+		value := flow.arguments[position][index]
 		for _, function := range value.functions {
 			effects := storageGraphEffectsInContext(storageGraphCall{
 				fact: function.fact, function: function.graph,
@@ -103,6 +94,9 @@ func (c *checker) reportStorageUnknownCallArguments(expression *syntax.Expressio
 				callSite:        int(syntax.ExpressionPosition(expression)),
 				immediateCaller: function.fact, immediateGraph: function.graph,
 				immediateSite: int(syntax.ExpressionPosition(expression)),
+				allocationRoute: storageRootAllocationRoute(
+					function.fact, function.graph, syntax.ExpressionPosition(expression),
+				),
 			}, state, flow.context)
 			c.reportGenericEffects(
 				argument, argument, effects.zero, function.receiverArguments,
@@ -136,40 +130,27 @@ func (c *checker) reportStorageFactCall(
 		flow = c.buildStorageFlow(root)
 		c.storageFlows[*root] = flow
 	}
-	state := flow.before[node]
-	call := syntax.CallExpressionOf(expression)
-	var arguments []storageValue = nil
-	if call != nil {
-		for _, argument := range call.Args {
-			arguments = append(arguments,
-				c.storageExpressionValue(argument, state, flow, false))
-		}
+	for _, invocation := range flow.invocations[syntax.ExpressionPosition(expression)] {
+		c.reportGenericEffects(
+			expression, expression, invocation.effects.zero,
+			invocation.receiverArguments, invocation.typeArguments, true, description,
+		)
+		c.reportGenericEffects(
+			expression, expression, invocation.effects.access,
+			invocation.receiverArguments, invocation.typeArguments, false, description,
+		)
 	}
-	effects := storageGraphEffectsInContext(storageGraphCall{
-		fact: fact, function: fact.Storage.Entry,
-		arguments: arguments, captures: nil, typeArguments: typeArguments,
-		receiverArguments: receiverArguments,
-		caller:            fact, callerGraph: fact.Storage.Entry,
-		callSite:        int(syntax.ExpressionPosition(expression)),
-		immediateCaller: fact, immediateGraph: fact.Storage.Entry,
-		immediateSite: int(syntax.ExpressionPosition(expression)),
-	}, state, flow.context)
-	c.reportGenericEffects(
-		expression, expression, effects.zero,
-		receiverArguments, typeArguments, true, description,
-	)
-	c.reportGenericEffects(
-		expression, expression, effects.access,
-		receiverArguments, typeArguments, false, description,
-	)
 	return true
 }
 
 func (c *checker) buildStorageFlow(root *syntax.Node) *storageFlow {
 	flow := &storageFlow{
-		before:  make(map[syntax.Node]storageState),
-		values:  make(map[token.Pos][]storageValue),
-		context: newStorageExecutionContext(),
+		before:        make(map[syntax.Node]storageState),
+		values:        make(map[token.Pos][]storageValue),
+		invocations:   make(map[token.Pos][]storageRecordedInvocation),
+		postArguments: make(map[token.Pos]storageState),
+		arguments:     make(map[token.Pos][]storageValue),
+		context:       newStorageExecutionContext(),
 	}
 	body := genericFunctionBody(root)
 	if body == nil {

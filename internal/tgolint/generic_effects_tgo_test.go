@@ -203,6 +203,103 @@ func TestStorageAllocationIdentityIncludesCallerSite(t *testing.T) {
 	}
 }
 
+func TestStorageBirthMovesRecentReferencesToSummary(t *testing.T) {
+	t.Parallel()
+	fact := &GenericEffectFact{Version: 1, Storage: StorageEffectGraph{Known: true}}
+	call := storageGraphCall{
+		fact: fact, function: 0, allocationRoute: "factory",
+	}
+	state := newStorageState()
+	first := storageBirthLocation(&state, &call, storageRootAllocation, 4)
+	value := storageValue{
+		regions: []storagePath{{location: first}},
+		slices:  []storageSlice{{backing: first}},
+		functions: []storageFunction{{
+			captures: []storagePath{{location: first}},
+		}},
+	}
+	state.memory[storageMemoryKey(storagePath{location: first})] = value
+	call.arguments = []storageValue{value}
+	call.captures = []storagePath{{location: first}}
+	second := storageBirthLocation(&state, &call, storageRootAllocation, 4)
+	if second.generation != storageGenerationRecent {
+		t.Fatalf("birth locations = %#v, %#v", first, second)
+	}
+	summary := first
+	summary.generation = storageGenerationSummary
+	summary.merged = true
+	if _, ok := state.memory[storageMemoryKey(storagePath{location: summary})]; !ok {
+		t.Fatalf("summary memory is absent: %#v", state.memory)
+	}
+	argument := call.arguments[0]
+	if argument.regions[0].location != summary ||
+		argument.slices[0].backing != summary ||
+		argument.functions[0].captures[0].location != summary ||
+		call.captures[0].location != summary {
+		t.Fatalf("old recent references were not renamed: %#v %#v", argument, call.captures)
+	}
+}
+
+func TestCachedStorageFactoryReplaysBirth(t *testing.T) {
+	t.Parallel()
+	fact := &GenericEffectFact{Version: 1}
+	fact.Storage = StorageEffectGraph{
+		Known: true, Entry: 0,
+		Functions: []StorageEffectFunction{{
+			ID: 0,
+			Blocks: []StorageEffectBlock{{ID: 0, Operations: []StorageEffectOperation{
+				{
+					Kind: storageEffectAllocate,
+					Target: StorageEffectRegion{
+						Root: storageRootAllocation, ID: 1,
+					},
+					Results: []int{1},
+				},
+				{Kind: storageEffectReturn, Inputs: []int{1}},
+			}}},
+		}},
+	}
+	context := newStorageExecutionContext()
+	call := storageGraphCall{
+		fact: fact, function: 0, allocationRoute: "cached-factory",
+	}
+	state, first, _ := executeStorageFunction(call, newStorageState(), context)
+	firstPath := storagePath{location: first[0].regions[0].location}
+	state.memory[storageMemoryKey(firstPath)] = first[0]
+	state, second, _ := executeStorageFunction(call, state, context)
+	firstLocation := first[0].regions[0].location
+	secondLocation := second[0].regions[0].location
+	if firstLocation.generation != storageGenerationRecent ||
+		secondLocation.generation != storageGenerationRecent {
+		t.Fatalf("factory returns = %#v, %#v", first, second)
+	}
+	summary := firstLocation
+	summary.generation = storageGenerationSummary
+	summary.merged = true
+	if _, ok := state.memory[storageMemoryKey(storagePath{location: summary})]; !ok {
+		t.Fatalf("factory summary is absent: %#v", state.memory)
+	}
+}
+
+func TestStorageEffectProjectionDoesNotMutateConditions(t *testing.T) {
+	t.Parallel()
+	effects := []GenericEffect{{
+		TypeParameter: 0,
+		Conditions: []GenericEffectCondition{{
+			ValueParameter: 0, OtherParameter: 1,
+		}},
+	}}
+	projected := projectStorageEffects(effects, nil, []int{1}, []int{2, 3})
+	if effects[0].Conditions[0].ValueParameter != 0 ||
+		effects[0].Conditions[0].OtherParameter != 1 {
+		t.Fatalf("source conditions changed: %#v", effects)
+	}
+	if projected[0].Conditions[0].ValueParameter != 2 ||
+		projected[0].Conditions[0].OtherParameter != 3 {
+		t.Fatalf("projected conditions = %#v", projected)
+	}
+}
+
 func TestStorageIndexWriteIsWeakForAlternativeTargets(t *testing.T) {
 	t.Parallel()
 	state := newStorageState()

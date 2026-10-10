@@ -17,12 +17,10 @@ func storageCallInputKey(
 ) string {
 	var text strings.Builder
 	constants := storageFunctionIntegerConstants(call)
-	writeStorageLocationKey(&text, storageLocation{
-		owner: call.caller, graph: call.callerGraph, site: call.callSite,
-		merged:          call.summary,
-		immediateCaller: call.immediateCaller,
-		immediateGraph:  call.immediateGraph, immediateSite: call.immediateSite,
-	})
+	text.WriteString(storageAllocationRoute(call))
+	if call.summary {
+		text.WriteByte('*')
+	}
 	text.WriteByte('|')
 	for _, argument := range call.arguments {
 		writeStorageValueKey(&text, argument, constants, abstract)
@@ -61,6 +59,17 @@ func storageCallInputKey(
 		text.WriteByte(';')
 	}
 	return text.String()
+}
+
+func storageAllocationRoute(call storageGraphCall) string {
+	if call.allocationRoute != "" {
+		return call.allocationRoute
+	}
+	caller := call.caller
+	if caller == nil {
+		caller = call.fact
+	}
+	return fmt.Sprintf("root:%p:%d:%d", caller, call.callerGraph, call.callSite)
 }
 
 func storageFunctionIntegerConstants(call storageGraphCall) map[int64]bool {
@@ -160,6 +169,12 @@ func writeStoragePathKey(text *strings.Builder, path storagePath) {
 }
 
 func writeStorageLocationKey(text *strings.Builder, location storageLocation) {
+	if location.family != "" {
+		text.WriteString(location.family)
+		text.WriteByte(':')
+		text.WriteString(strconv.Itoa(location.generation))
+		return
+	}
 	text.WriteString(fmt.Sprintf(
 		"%p:%d:%d:%d:%t:%p:%d:%d:%p:%d:%d", location.owner, location.graph,
 		location.site, location.kind, location.merged, location.caller,
@@ -169,6 +184,8 @@ func writeStorageLocationKey(text *strings.Builder, location storageLocation) {
 }
 
 type storageLocation struct {
+	family          string
+	generation      int
 	owner           *GenericEffectFact
 	graph           int
 	site            int
@@ -181,6 +198,11 @@ type storageLocation struct {
 	immediateGraph  int
 	immediateSite   int
 }
+
+const (
+	storageGenerationRecent = iota + 1
+	storageGenerationSummary
+)
 
 type storagePath struct {
 	location storageLocation
@@ -246,10 +268,84 @@ func cloneStorageState(state storageState) storageState {
 }
 
 func cloneStorageValue(value storageValue) storageValue {
-	value.functions = append([]storageFunction(nil), value.functions...)
-	value.regions = append([]storagePath(nil), value.regions...)
+	value.functions = cloneStorageFunctions(value.functions)
+	value.regions = cloneStoragePaths(value.regions)
 	value.slices = append([]storageSlice(nil), value.slices...)
 	return value
+}
+
+func cloneStorageFunctions(functions []storageFunction) []storageFunction {
+	result := make([]storageFunction, len(functions))
+	copy(result, functions)
+	for index := range result {
+		result[index].captures = cloneStoragePaths(result[index].captures)
+	}
+	return result
+}
+
+func cloneStoragePaths(paths []storagePath) []storagePath {
+	result := make([]storagePath, len(paths))
+	for index, path := range paths {
+		result[index] = storagePath{
+			location: path.location,
+			steps:    append([]StorageEffectPath(nil), path.steps...),
+		}
+	}
+	return result
+}
+
+func renameStorageFamilyState(state *storageState, family string) {
+	if family == "" {
+		return
+	}
+	for object, value := range state.cells {
+		state.cells[object] = renameStorageFamilyValue(value, family)
+	}
+	memory := make(map[storagePathKey]storageValue, len(state.memory))
+	for path, value := range state.memory {
+		path.location = renameStorageFamilyLocation(path.location, family)
+		value = renameStorageFamilyValue(value, family)
+		memory[path] = joinStorageValue(memory[path], value)
+	}
+	state.memory = memory
+}
+
+func renameStorageFamilyValue(value storageValue, family string) storageValue {
+	value = cloneStorageValue(value)
+	for index := range value.functions {
+		for capture := range value.functions[index].captures {
+			value.functions[index].captures[capture].location = renameStorageFamilyLocation(
+				value.functions[index].captures[capture].location, family,
+			)
+		}
+	}
+	for index := range value.regions {
+		value.regions[index].location = renameStorageFamilyLocation(
+			value.regions[index].location, family,
+		)
+	}
+	for index := range value.slices {
+		value.slices[index].backing = renameStorageFamilyLocation(
+			value.slices[index].backing, family,
+		)
+	}
+	return value
+}
+
+func renameStorageFamilyPaths(paths []storagePath, family string) []storagePath {
+	result := cloneStoragePaths(paths)
+	for index := range result {
+		result[index].location = renameStorageFamilyLocation(result[index].location, family)
+	}
+	return result
+}
+
+func renameStorageFamilyLocation(location storageLocation, family string) storageLocation {
+	if location.family == family && location.generation == storageGenerationRecent {
+		location.generation = storageGenerationSummary
+		location.merged = true
+	}
+	return location
 }
 
 func joinStorageState(left storageState, right storageState) storageState {
