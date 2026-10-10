@@ -172,7 +172,6 @@ func (worklist *enumEventCallWorklist) next() enumEventCallID {
 func (worklist *enumEventCallWorklist) applyAlternatives(
 	state *enumEventState,
 	closures enumEventClosureSet,
-	caller enumActivationID,
 	arguments []enumAbstractValue,
 	results []enumSavedValueID,
 ) {
@@ -180,7 +179,7 @@ func (worklist *enumEventCallWorklist) applyAlternatives(
 	joinedCells := make(map[enumCellID]enumAbstractValue)
 	joinedRegions := make(enumRegionSet)
 	for closure := range closures {
-		call := worklist.call(enumEventCallKey{closure: closure, caller: caller})
+		call := worklist.call(enumEventCallKey{closure: closure})
 		worklist.addInput(call, arguments, state)
 		worklist.depend(call, worklist.graph.call)
 		summary := worklist.summary(call)
@@ -252,18 +251,14 @@ func (worklist *enumEventCallWorklist) analyzeCall(
 		return
 	}
 	literal := worklist.graph.identities.closureKeys[closureIndex].literal
+	creation := worklist.graph.identities.closureKeys[closureIndex].activation
 	builder := worklist.graph.checker.newEnumClosureEventBuilder(
-		worklist.graph, literal, key.caller,
+		worklist.graph, literal, creation,
 	)
 	child := builder.build(literal.Body)
 	child.calls = worklist
 	child.call = call
-	initial := cloneEnumEventState(summary.inputState)
-	if initial == nil {
-		initial = newEnumEventState()
-	}
-	initial.cellWrites = make(map[enumCellID]enumWriteSet)
-	initial.regionWrites = make(map[enumRegionID]enumWriteSet)
+	initial := enumInvocationState(summary.inputState)
 	argument := 0
 	for _, field := range literal.Type.Params.List {
 		for _, name := range field.Names {
@@ -295,6 +290,16 @@ func (worklist *enumEventCallWorklist) analyzeCall(
 		}
 	}
 	worklist.addOutput(call, result.values, cells, regions)
+}
+
+func enumInvocationState(input *enumEventState) *enumEventState {
+	result := cloneEnumEventState(input)
+	if result == nil {
+		result = newEnumEventState()
+	}
+	result.cellWrites = make(map[enumCellID]enumWriteSet)
+	result.regionWrites = make(map[enumRegionID]enumWriteSet)
+	return result
 }
 
 func enumCellsOf(values map[enumCellID]enumAbstractValue) enumCellSet {

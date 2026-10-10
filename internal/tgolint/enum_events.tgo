@@ -76,6 +76,24 @@ func (table *enumIdentityTable) fieldRegion(
 	if region, found := table.fields[key]; found {
 		return region
 	}
+	for current := owner; current != 0; {
+		index := int(current) - 1
+		if index < 0 || index >= len(table.regionKeys) {
+			break
+		}
+		ancestor := table.regionKeys[index]
+		if ancestor.typ != nil && types.Identical(ancestor.typ, field.Type()) {
+			region := table.region(enumRegionKey{
+				activation: activation,
+				site:       field.Pos(),
+				typ:        field.Type(),
+				summary:    true,
+			})
+			table.fields[key] = region
+			return region
+		}
+		current = ancestor.owner
+	}
 	region := table.region(enumRegionKey{
 		activation: activation,
 		owner:      owner,
@@ -133,12 +151,15 @@ type enumRegionSet map[enumRegionID]bool
 type enumCellSet map[enumCellID]bool
 
 type enumAbstractValue struct {
-	regions      enumRegionSet
-	places       enumCellSet
-	closures     enumEventClosureSet
-	dependencies enumCellSet
-	observation  *enumTagObservation
-	unknown      bool
+	regions       enumRegionSet
+	places        enumCellSet
+	relations     enumCellSet
+	relationKnown bool
+	readCells     enumCellSet
+	closures      enumEventClosureSet
+	dependencies  enumCellSet
+	observation   *enumTagObservation
+	unknown       bool
 }
 
 type enumEventClosureSet map[enumEventClosureID]bool
@@ -158,9 +179,10 @@ type enumTagObservation struct {
 
 func cloneEnumAbstractValue(value enumAbstractValue) enumAbstractValue {
 	result := enumAbstractValue{
-		regions:  make(enumRegionSet, len(value.regions)),
-		closures: make(enumEventClosureSet, len(value.closures)),
-		unknown:  value.unknown,
+		regions:       make(enumRegionSet, len(value.regions)),
+		closures:      make(enumEventClosureSet, len(value.closures)),
+		relationKnown: value.relationKnown,
+		unknown:       value.unknown,
 	}
 	for closure := range value.closures {
 		result.closures[closure] = true
@@ -169,6 +191,8 @@ func cloneEnumAbstractValue(value enumAbstractValue) enumAbstractValue {
 		result.regions[region] = true
 	}
 	result.places = cloneEnumCellSet(value.places)
+	result.relations = cloneEnumCellSet(value.relations)
+	result.readCells = cloneEnumCellSet(value.readCells)
 	result.dependencies = make(enumCellSet, len(value.dependencies))
 	for cell := range value.dependencies {
 		result.dependencies[cell] = true

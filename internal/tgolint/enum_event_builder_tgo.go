@@ -75,7 +75,7 @@ func (c *checker) newEnumClosureEventBuilder(
 	}
 	builder.activation = graph.identities.activation(enumActivationKey{
 		function: literal.Start,
-		caller:   caller,
+		caller:   0,
 		summary:  true,
 	})
 	graph.activation = builder.activation
@@ -124,8 +124,10 @@ func (builder *enumEventBuilder) seedFunctionInputs(function *syntax.Node) {
 			typ:        variable.Type(),
 		})
 		builder.graph.initial.cells[cell] = enumAbstractValue{
-			regions:      enumRegionSet{region: true},
-			dependencies: enumCellSet{cell: true},
+			regions:       enumRegionSet{region: true},
+			dependencies:  enumCellSet{cell: true},
+			relations:     enumCellSet{cell: true},
+			relationKnown: true,
 		}
 	}
 }

@@ -10,9 +10,9 @@ import (
 )
 
 type enumRegionProof struct {
-	targets      string
-	dependencies string
-	tag          int
+	targets  string
+	relation string
+	tag      int
 }
 
 type enumEventState struct {
@@ -142,6 +142,26 @@ func joinEnumAbstractValues(
 			changed = true
 		}
 	}
+	if result.readCells == nil {
+		result.readCells = make(enumCellSet)
+	}
+	for cell := range right.readCells {
+		if !result.readCells[cell] {
+			result.readCells[cell] = true
+			changed = true
+		}
+	}
+	if !result.relationKnown && right.relationKnown {
+		result.relations = cloneEnumCellSet(right.relations)
+		result.relationKnown = true
+		changed = true
+	} else if result.relationKnown && right.relationKnown {
+		intersection := intersectEnumCellSets(result.relations, right.relations)
+		if !enumCellSetEqual(intersection, result.relations) {
+			result.relations = intersection
+			changed = true
+		}
+	}
 	if result.closures == nil {
 		result.closures = make(enumEventClosureSet)
 	}
@@ -211,7 +231,14 @@ func joinEnumEventStates(
 	result := cloneEnumEventState(current)
 	changed := false
 	for cell, value := range incoming.cells {
-		joined, added := joinEnumAbstractValues(result.cells[cell], value)
+		currentValue, present := result.cells[cell]
+		joined, added := joinEnumAbstractValues(currentValue, value)
+		if present && currentValue.relationKnown && value.relationKnown &&
+			!enumCellSetEqual(currentValue.relations, value.relations) {
+			joined.relations = enumCellSet{cell: true}
+			joined.relationKnown = true
+			added = true
+		}
 		result.cells[cell] = joined
 		changed = changed || added
 	}
@@ -264,6 +291,28 @@ func joinEnumWriteSets(left, right enumWriteSet) (enumWriteSet, bool) {
 	return result, changed
 }
 
+func intersectEnumCellSets(left, right enumCellSet) enumCellSet {
+	result := make(enumCellSet)
+	for cell := range left {
+		if right[cell] {
+			result[cell] = true
+		}
+	}
+	return result
+}
+
+func enumCellSetEqual(left, right enumCellSet) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for cell := range left {
+		if !right[cell] {
+			return false
+		}
+	}
+	return true
+}
+
 func (state *enumEventState) killRegionProofs(regions enumRegionSet) {
 	for proof := range state.proofs {
 		for region := range state.proofTargets[proof] {
@@ -281,14 +330,17 @@ func (state *enumEventState) prove(value enumAbstractValue, tag int) {
 	if value.unknown || !state.observationFresh(value.observation) {
 		return
 	}
+	if !value.relationKnown || len(value.relations) == 0 {
+		return
+	}
 	proof := enumRegionProof{
-		targets:      enumRegionSignature(value.regions),
-		dependencies: enumCellSignature(value.dependencies),
-		tag:          tag,
+		targets:  enumRegionSignature(value.regions),
+		relation: enumCellSignature(value.relations),
+		tag:      tag,
 	}
 	state.proofs[proof] = true
 	state.proofTargets[proof] = cloneEnumRegionSet(value.regions)
-	state.proofDependencies[proof] = cloneEnumCellSet(value.dependencies)
+	state.proofDependencies[proof] = cloneEnumCellSet(value.readCells)
 }
 
 func (state *enumEventState) observationFresh(
@@ -308,9 +360,10 @@ func (state *enumEventState) payloadValid(
 		return false
 	}
 	targets := enumRegionSignature(value.regions)
+	relation := enumCellSignature(value.relations)
 	for proof := range state.proofs {
-		if proof.targets == targets && proof.tag == tag &&
-			enumCellSubset(state.proofDependencies[proof], value.dependencies) {
+		if value.relationKnown && proof.targets == targets &&
+			proof.relation == relation && proof.tag == tag {
 			return true
 		}
 	}
@@ -371,8 +424,10 @@ func (graph *enumEventGraph) transfer(
 						region, event.field, graph.activation,
 					)
 					state.cells[cell] = enumAbstractValue{
-						regions:      enumRegionSet{target: true},
-						dependencies: enumCellSet{cell: true},
+						regions:       enumRegionSet{target: true},
+						dependencies:  enumCellSet{cell: true},
+						relations:     enumCellSet{cell: true},
+						relationKnown: true,
 					}
 				}
 			}
@@ -381,6 +436,7 @@ func (graph *enumEventGraph) transfer(
 		state.saved[event.value] = value
 	case enumEventLoad:
 		value := enumAbstractValue{}
+		readCells := cloneEnumCellSet(event.cells)
 		for cell := range event.cells {
 			value, _ = joinEnumAbstractValues(value, state.cells[cell])
 			if value.dependencies == nil {
@@ -389,12 +445,14 @@ func (graph *enumEventGraph) transfer(
 			value.dependencies[cell] = true
 		}
 		for cell := range state.saved[event.source].places {
+			readCells[cell] = true
 			value, _ = joinEnumAbstractValues(value, state.cells[cell])
 			if value.dependencies == nil {
 				value.dependencies = make(enumCellSet)
 			}
 			value.dependencies[cell] = true
 		}
+		value.readCells = readCells
 		state.saved[event.value] = value
 	case enumEventTagRead:
 		value := cloneEnumAbstractValue(state.saved[event.source])
@@ -410,7 +468,7 @@ func (graph *enumEventGraph) transfer(
 		callee := state.saved[event.value]
 		if len(callee.closures) != 0 {
 			graph.calls.applyAlternatives(
-				state, callee.closures, graph.activation, arguments, event.results,
+				state, callee.closures, arguments, event.results,
 			)
 			break
 		}
@@ -423,7 +481,7 @@ func (graph *enumEventGraph) transfer(
 		for _, argument := range arguments {
 			if len(argument.closures) != 0 {
 				graph.calls.applyAlternatives(
-					state, argument.closures, graph.activation, nil, nil,
+					state, argument.closures, nil, nil,
 				)
 			}
 			for region := range argument.regions {
@@ -520,12 +578,12 @@ func staleEnumObservation(
 func (state *enumEventState) observe(value enumAbstractValue) *enumTagObservation {
 	result := &enumTagObservation{
 		regions: make(map[enumRegionID]enumWriteSet, len(value.regions)),
-		cells:   make(map[enumCellID]enumWriteSet, len(value.dependencies)),
+		cells:   make(map[enumCellID]enumWriteSet, len(value.readCells)),
 	}
 	for region := range value.regions {
 		result.regions[region] = cloneEnumWriteSet(state.regionWrites[region])
 	}
-	for cell := range value.dependencies {
+	for cell := range value.readCells {
 		result.cells[cell] = cloneEnumWriteSet(state.cellWrites[cell])
 	}
 	return result

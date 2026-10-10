@@ -294,7 +294,7 @@ func (c %checker) enumCallStorages(
 	}
 	if len(result) == 0 {
 		result = append(result, enumStorageSet{
-			enumPointerPlace{origin: call.Start}: true,
+			enumPointerPlace{root: nil, path: "", origin: call.Start}: true,
 		})
 	}
 	return result
@@ -319,12 +319,16 @@ func (c %checker) invokeEnumClosure(
 					values, _ = joinEnumStorageSet(values, arguments[argument])
 				}
 				if object != nil && enumPointerType(c.facts, variadic.Element) {
-					input.pointers[enumPointerPlace{root: object, path: "/[]"}] = values
+					input.pointers[enumPointerPlace{
+						root: object, path: "/[]", origin: token.NoPos,
+					}] = values
 				}
 				continue
 			}
 			if object != nil && enumPointerType(c.facts, field.Type) {
-				input.pointers[enumPointerPlace{root: object}] =
+				input.pointers[enumPointerPlace{
+					root: object, path: "", origin: token.NoPos,
+				}] =
 					cloneEnumStorageSet(arguments[argument])
 			}
 			argument++
