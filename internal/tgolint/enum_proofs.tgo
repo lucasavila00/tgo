@@ -185,6 +185,8 @@ func (c %checker) enumReceiverStableBefore(
 	receiver %syntax.Expression,
 	proof token.Pos,
 ) bool {
+	return c.enumProofValidAt(expression, receiver, proof)
+	/*
 	_ = file
 	access := syntax.ExpressionPosition(expression)
 	_, body := c.enclosingEnumFunction(expression)
@@ -245,6 +247,7 @@ func (c %checker) enumReceiverStableBefore(
 		Rbrace: token.NoPos,
 	}
 	return !c.enumGotoCanInvalidate(clauseBody, receiver, proof, access, flow, proved)
+	*/
 }
 
 // enumGotoEntersClause reports a jump into a proved switch clause.
@@ -308,6 +311,8 @@ func (c %checker) enumReceiverStableBetween(
 	proof token.Pos,
 	access token.Pos,
 ) bool {
+	return c.enumProofValidAt(expression, receiver, proof)
+	/*
 	_, body := c.enclosingEnumFunction(expression)
 	if body == nil {
 		return false
@@ -345,6 +350,7 @@ func (c %checker) enumReceiverStableBetween(
 		return false
 	}
 	return !c.enumGotoCanInvalidate(body, receiver, proof, access, flow, proved)
+	*/
 }
 
 // enumGotoBypassesProof reports a jump into the proved source region.

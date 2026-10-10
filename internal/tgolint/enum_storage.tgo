@@ -32,6 +32,7 @@ type enumStorageState struct {
 	closures map[types.Object]enumClosureSet
 	calls    map[*syntax.FunctionLiteral]*enumClosureCall
 	writes   enumStorageSet
+	bindings enumStorageSet
 }
 
 type enumStorageFlow struct {
@@ -106,6 +107,7 @@ func newEnumStorageState() *enumStorageState {
 		closures: make(map[types.Object]enumClosureSet),
 		calls:    make(map[*syntax.FunctionLiteral]*enumClosureCall),
 		writes:   make(enumStorageSet),
+		bindings: make(enumStorageSet),
 	}
 }
 
@@ -132,6 +134,7 @@ func cloneEnumStorageState(source *enumStorageState) *enumStorageState {
 	result := newEnumStorageState()
 	result.calls = source.calls
 	result.writes = cloneEnumStorageSet(source.writes)
+	result.bindings = cloneEnumStorageSet(source.bindings)
 	for place, identities := range source.pointers {
 		result.pointers[place] = cloneEnumStorageSet(identities)
 	}
@@ -144,7 +147,6 @@ func cloneEnumStorageState(source *enumStorageState) *enumStorageState {
 func joinEnumStorageSet(current, incoming enumStorageSet) (enumStorageSet, bool) {
 	result := cloneEnumStorageSet(current)
 	changed := false
-	result.writes, changed = joinEnumStorageSet(result.writes, incoming.writes)
 	for identity := range incoming {
 		if !result[identity] {
 			result[identity] = true
@@ -163,6 +165,12 @@ func joinEnumStorageStates(
 	}
 	result := cloneEnumStorageState(current)
 	changed := false
+	result.writes, changed = joinEnumStorageSet(result.writes, incoming.writes)
+	var bindingsChanged bool
+	result.bindings, bindingsChanged = joinEnumStorageSet(
+		result.bindings, incoming.bindings,
+	)
+	changed = changed || bindingsChanged
 	for place, identities := range incoming.pointers {
 		var added bool
 		result.pointers[place], added = joinEnumStorageSet(
@@ -273,6 +281,7 @@ func (c %checker) transferEnumStorageLists(
 		if enumPointerType(c.facts, target) {
 			strong := len(destinations[index]) == 1
 			for place := range destinations[index] {
+				state.bindings[place] = true
 				if strong {
 					state.pointers[place] = storages[index]
 					continue

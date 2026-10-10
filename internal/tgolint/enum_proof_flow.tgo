@@ -1,0 +1,85 @@
+package tgolint
+
+import (
+	"go/token"
+
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
+)
+
+const (
+	enumProofAbsent = iota
+	enumProofValid
+	enumProofInvalid
+)
+
+type enumProofState struct {
+	storage      *enumStorageState
+	status       int
+	proved       enumStorageSet
+	dependencies enumStorageSet
+}
+
+// enumProofValidAt follows one proof and its dependent storage through the CFG.
+func (c %checker) enumProofValidAt(expression %syntax.Expression, receiver %syntax.Expression, proof token.Pos) bool {
+	_, body := c.enclosingEnumFunction(expression)
+	if body == nil || !c.enumReceiverLocalToFunction(expression, receiver) { return false }
+	graph := cfg.New(body, c.callMayReturn)
+	entries := make([]*enumProofState, len(graph.Blocks))
+	entries[0] = &enumProofState{storage: newEnumStorageState()}
+	queue := []*cfg.Block{graph.Blocks[0]}
+	queued := make([]bool, len(graph.Blocks)); queued[0] = true
+	access := syntax.ExpressionPosition(expression)
+	found, valid := false, true
+	for len(queue) != 0 {
+		block := queue[0]; queue = queue[1:]; queued[block.Index] = false
+		state := cloneEnumProofState(entries[block.Index])
+		for _, node := range block.Nodes {
+			start, end := syntax.NodePosition(&node), syntax.NodeEnd(&node)
+			if start <= access && access < end {
+				found = true
+				valid = valid && state.status == enumProofValid && enumStorageSetsOverlap(c.enumExpressionStorage(receiver, state.storage), state.proved)
+			}
+			state.storage.writes = make(enumStorageSet); state.storage.bindings = make(enumStorageSet)
+			c.transferEnumStorage(state.storage, node)
+			if state.status == enumProofValid && (enumStorageSetsOverlap(state.storage.writes, state.proved) || enumStorageSetsOverlap(state.storage.bindings, state.dependencies)) { state.status = enumProofInvalid }
+			if start <= proof && proof <= end {
+				state.status = enumProofValid
+				state.proved = c.enumExpressionStorage(receiver, state.storage)
+				state.dependencies = c.enumCells(receiver, state.storage)
+			}
+		}
+		state.storage.writes = make(enumStorageSet); state.storage.bindings = make(enumStorageSet)
+		for _, successor := range block.Succs {
+			if successor == nil { continue }
+			joined, changed := joinEnumProofStates(entries[successor.Index], state)
+			if changed { entries[successor.Index] = joined; if !queued[successor.Index] { queue = append(queue, successor); queued[successor.Index] = true } }
+		}
+	}
+	return found && valid
+}
+
+func cloneEnumProofState(source *enumProofState) *enumProofState {
+	if source == nil { return nil }
+	return &enumProofState{storage: cloneEnumStorageState(source.storage), status: source.status, proved: cloneEnumStorageSet(source.proved), dependencies: cloneEnumStorageSet(source.dependencies)}
+}
+
+func joinEnumProofStates(current *enumProofState, incoming *enumProofState) (*enumProofState, bool) {
+	if current == nil { return cloneEnumProofState(incoming), true }
+	result := cloneEnumProofState(current)
+	var storageChanged bool
+	result.storage, storageChanged = joinEnumStorageStates(result.storage, incoming.storage)
+	status := current.status
+	if status != incoming.status { status = enumProofInvalid }
+	proved := intersectEnumStorageSets(current.proved, incoming.proved)
+	dependencies := intersectEnumStorageSets(current.dependencies, incoming.dependencies)
+	changed := storageChanged || status != current.status || !enumStorageSetEqual(proved, current.proved) || !enumStorageSetEqual(dependencies, current.dependencies)
+	result.status, result.proved, result.dependencies = status, proved, dependencies
+	return result, changed
+}
+
+func intersectEnumStorageSets(left, right enumStorageSet) enumStorageSet {
+	result := make(enumStorageSet)
+	for place := range left { if right[place] { result[place] = true } }
+	return result
+}

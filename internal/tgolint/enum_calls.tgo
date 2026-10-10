@@ -145,6 +145,7 @@ func (c %checker) evalEnumCall(
 			state.closures[object] = cloneEnumClosureSet(values)
 		}
 		state.writes, _ = joinEnumStorageSet(state.writes, output.writes)
+		state.bindings, _ = joinEnumStorageSet(state.bindings, output.bindings)
 	}
 }
 
@@ -334,7 +335,8 @@ func enumStorageStateEqual(left, right *enumStorageState) bool {
 	}
 	if len(left.pointers) != len(right.pointers) ||
 		len(left.closures) != len(right.closures) ||
-		!enumStorageSetEqual(left.writes, right.writes) {
+		!enumStorageSetEqual(left.writes, right.writes) ||
+		!enumStorageSetEqual(left.bindings, right.bindings) {
 		return false
 	}
 	for place, values := range left.pointers {
