@@ -20,6 +20,16 @@ func storageCallInputKey(call storageGraphCall, state storageState) string {
 		writeStoragePathKey(&text, capture)
 		text.WriteByte(';')
 	}
+	for _, argument := range call.receiverArguments {
+		writeStorageTypeKey(&text, argument)
+		text.WriteByte(';')
+	}
+	text.WriteByte('|')
+	for _, argument := range call.typeArguments {
+		writeStorageTypeKey(&text, argument)
+		text.WriteByte(';')
+	}
+	text.WriteByte('|')
 	var memory []string = nil
 	for path, value := range state.memory {
 		var item strings.Builder
@@ -82,14 +92,47 @@ func writeStorageValueKey(
 		for _, capture := range function.captures {
 			writeStoragePathKey(text, capture)
 		}
+		for _, argument := range function.receiverArguments {
+			writeStorageTypeKey(text, argument)
+			text.WriteByte(';')
+		}
+		for _, argument := range function.typeArguments {
+			writeStorageTypeKey(text, argument)
+			text.WriteByte(';')
+		}
 	}
 	for _, region := range value.regions {
 		writeStoragePathKey(text, region)
 	}
 	for _, slice := range value.slices {
 		writeStorageLocationKey(text, slice.backing)
+		writeStorageIntegerKey(text, slice.offset, slice.knownOffset, constants)
+		writeStorageIntegerKey(text, slice.length, slice.knownLength, constants)
+		writeStorageIntegerKey(text, slice.capacity, slice.knownCapacity, constants)
 		text.WriteByte('/')
 	}
+}
+
+func writeStorageTypeKey(text *strings.Builder, typ types.Type) {
+	text.WriteString(types.TypeString(typ, func(value *types.Package) string {
+		return value.Path()
+	}))
+}
+
+func writeStorageIntegerKey(
+	text *strings.Builder,
+	value int64,
+	known bool,
+	constants map[int64]bool,
+) {
+	if !known {
+		text.WriteByte('?')
+	} else if constants[value] {
+		text.WriteString(strconv.FormatInt(value, 10))
+	} else {
+		text.WriteByte('#')
+	}
+	text.WriteByte(':')
 }
 
 func writeStoragePathKey(text *strings.Builder, path storagePath) {
