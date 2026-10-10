@@ -451,6 +451,29 @@ func enumExpressionOrdersCalls(expression *syntax.Expression) bool {
 	return ordered
 }
 
+func (builder *enumEventBuilder) capturedCells(
+	literal *syntax.FunctionLiteral,
+) enumCellSet {
+	result := make(enumCellSet)
+	statement := func(input syntax.TgoStatementBlockInput) syntax.Statement {
+		return syntax.NewStatementBlock(input.FieldValue)
+	}(syntax.TgoStatementBlockInput{FieldValue: literal.Body})
+	syntax.InspectStatement(&statement, func(node *syntax.Node) bool {
+		name, ok := syntax.IdentifierOf(node)
+		if !ok {
+			return true
+		}
+		object := builder.checker.facts.Object(name)
+		_, variable := object.(*types.Var)
+		if variable && (object.Pos() < literal.Start ||
+			literal.Stop < object.Pos()) {
+			result[builder.localCell(object)] = true
+		}
+		return true
+	})
+	return result
+}
+
 func (builder *enumEventBuilder) emitExpressionValues(
 	block enumEventBlockID,
 	expression *syntax.Expression,
@@ -505,7 +528,7 @@ func (builder *enumEventBuilder) emitExpression(
 		closure := builder.graph.closure(enumEventClosureKey{
 			literal:    literal,
 			activation: builder.activation,
-		})
+		}, builder.capturedCells(literal))
 		closureValue := newEnumAbstractValue()
 		closureValue.closures = enumEventClosureSet{closure: true}
 		value := builder.graph.save(closureValue)

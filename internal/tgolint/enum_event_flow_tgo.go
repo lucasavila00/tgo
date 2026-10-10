@@ -167,6 +167,21 @@ func joinEnumAbstractValues(
 			result.closures[closure] = true
 			changed = true
 		}
+		if result.closureInputs == nil {
+			result.closureInputs = make(
+				map[enumEventClosureID]map[enumCellID]enumAbstractValue,
+			)
+		}
+		if result.closureInputs[closure] == nil {
+			result.closureInputs[closure] = make(map[enumCellID]enumAbstractValue)
+		}
+		for cell, input := range right.closureInputs[closure] {
+			joined, added := joinEnumAbstractValues(
+				result.closureInputs[closure][cell], input,
+			)
+			result.closureInputs[closure][cell] = joined
+			changed = changed || added
+		}
 	}
 	if result.dependencies == nil {
 		result.dependencies = make(enumCellSet)
@@ -182,6 +197,14 @@ func joinEnumAbstractValues(
 		result.observation, right.observation,
 	)
 	changed = changed || observationChanged
+	if result.formal == 0 && right.formal != 0 {
+		result.formal = right.formal
+		changed = true
+	} else if result.formal != 0 && right.formal != 0 &&
+		result.formal != right.formal {
+		result.formal = -1
+		changed = true
+	}
 	if right.unknown && !result.unknown {
 		result.unknown = true
 		changed = true
@@ -416,7 +439,25 @@ func (graph *enumEventGraph) transfer(
 		value.observation = state.observe(value)
 		state.saved[event.value] = value
 	case enumEventSave:
-		state.saved[event.value] = graph.saved(event.value)
+		value := graph.saved(event.value)
+		for closure := range value.closures {
+			if value.closureInputs == nil {
+				value.closureInputs = make(
+					map[enumEventClosureID]map[enumCellID]enumAbstractValue,
+				)
+			}
+			inputs := make(map[enumCellID]enumAbstractValue)
+			index := int(closure) - 1
+			if index >= 0 && index < len(graph.identities.closureCaptures) {
+				for cell := range graph.identities.closureCaptures[index] {
+					if !graph.uniqueCell(cell) {
+						inputs[cell] = cloneEnumAbstractValue(state.cells[cell])
+					}
+				}
+			}
+			value.closureInputs[closure] = inputs
+		}
+		state.saved[event.value] = value
 	case enumEventCall:
 		arguments := make([]enumAbstractValue, len(event.arguments))
 		for index, saved := range event.arguments {
@@ -425,7 +466,7 @@ func (graph *enumEventGraph) transfer(
 		callee := state.saved[event.value]
 		if len(callee.closures) != 0 {
 			graph.calls.applyAlternatives(
-				state, graph.call, callee.closures, arguments, event.results,
+				state, graph.call, callee, arguments, event.results,
 			)
 			break
 		}
@@ -438,7 +479,7 @@ func (graph *enumEventGraph) transfer(
 		for _, argument := range arguments {
 			if len(argument.closures) != 0 {
 				graph.calls.applyAlternatives(
-					state, graph.call, argument.closures, nil, nil,
+					state, graph.call, argument, nil, nil,
 				)
 			}
 			for region := range argument.regions {
@@ -487,84 +528,6 @@ func (graph *enumEventGraph) transfer(
 		return state.payloadValid(state.saved[event.value], event.tag)
 	}
 	return true
-}
-
-func (state *enumEventState) invalidateObservations(
-	cells enumCellSet,
-	regions enumRegionSet,
-) {
-	for id, value := range state.saved {
-		state.saved[id] = staleEnumObservation(value, cells, regions)
-	}
-	for cell, value := range state.cells {
-		state.cells[cell] = staleEnumObservation(value, cells, regions)
-	}
-}
-
-func staleEnumObservation(
-	value enumAbstractValue,
-	cells enumCellSet,
-	regions enumRegionSet,
-) enumAbstractValue {
-	observation := value.observation
-	if observation == nil || observation.stale {
-		return value
-	}
-	invalid := false
-	for cell := range cells {
-		if _, depends := observation.cells[cell]; depends {
-			invalid = true
-			break
-		}
-	}
-	if !invalid {
-		for region := range regions {
-			if _, depends := observation.regions[region]; depends {
-				invalid = true
-				break
-			}
-		}
-	}
-	if invalid {
-		value.observation = cloneEnumTagObservation(observation)
-		value.observation.stale = true
-	}
-	return value
-}
-
-func (state *enumEventState) observe(value enumAbstractValue) *enumTagObservation {
-	result := &enumTagObservation{
-		regions: make(map[enumRegionID]enumWriteSet, len(value.regions)),
-		cells:   make(map[enumCellID]enumWriteSet, len(value.readCells)),
-	}
-	for region := range value.regions {
-		result.regions[region] = cloneEnumWriteSet(state.regionWrites[region])
-	}
-	for cell := range value.readCells {
-		result.cells[cell] = cloneEnumWriteSet(state.cellWrites[cell])
-	}
-	return result
-}
-
-func (state *enumEventState) recordCellWrite(cell enumCellID, serial int) {
-	if state.cellWrites[cell] == nil {
-		state.cellWrites[cell] = make(enumWriteSet)
-	}
-	state.cellWrites[cell][serial] = true
-	for proof, dependencies := range state.proofDependencies {
-		if dependencies[cell] {
-			delete(state.proofs, proof)
-			delete(state.proofTargets, proof)
-			delete(state.proofDependencies, proof)
-		}
-	}
-}
-
-func (state *enumEventState) recordRegionWrite(region enumRegionID, serial int) {
-	if state.regionWrites[region] == nil {
-		state.regionWrites[region] = make(enumWriteSet)
-	}
-	state.regionWrites[region][serial] = true
 }
 
 func (graph *enumEventGraph) uniqueCell(cell enumCellID) bool {

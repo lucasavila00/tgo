@@ -1296,3 +1296,16 @@ func MutualRecursiveChangedArgument(value, other *model.Event) string {
 	}
 	return ""
 }
+
+func FactoryChangedCapture(value, other *model.Event) string {
+	factory := func(pointer *model.Event) func() {
+		return func() { *pointer = model.NewEventStopped("changed") }
+	}
+	mutateValue := factory(value)
+	_ = factory(other)
+	if value.Tag() == model.EventTagStarted {
+		mutateValue()
+		return value.StartedPayload().ID
+	}
+	return ""
+}

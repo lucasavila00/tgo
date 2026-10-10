@@ -130,7 +130,12 @@ func (builder *enumEventBuilder) emitSelectorPlace(block enumEventBlockID, expre
 func (builder *enumEventBuilder) localCell(object types.Object) enumCellID {
 	if object != nil && builder.parent != 0 && (object.Pos() < builder.start || builder.stop < object.Pos()) {
 		for index, key := range builder.graph.identities.cellKeys {
-			if key.object == object {
+			if key.object == object && key.activation == builder.activation {
+				return enumCellID(index + 1)
+			}
+		}
+		for index, key := range builder.graph.identities.cellKeys {
+			if key.object == object && key.activation == builder.parent {
 				return enumCellID(index + 1)
 			}
 		}

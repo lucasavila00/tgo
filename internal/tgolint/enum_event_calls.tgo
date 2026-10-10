@@ -6,19 +6,21 @@ type enumEventCallID int
 
 type enumEventCallKey struct {
 	closure enumEventClosureID
-	context string
 }
 
 type enumEventCallSummary struct {
-	inputs       []enumAbstractValue
-	captures     map[enumCellID]enumAbstractValue
-	inputState   *enumEventState
-	results      []enumAbstractValue
-	cellWrites   map[enumCellID]enumAbstractValue
-	regionWrites enumRegionSet
-	dependents   map[enumEventCallID]bool
-	queued       bool
-	analyzing    bool
+	inputs         []enumAbstractValue
+	captures       map[enumCellID]enumAbstractValue
+	captureCells   enumCellSet
+	inputState     *enumEventState
+	results        []enumAbstractValue
+	cellWrites     map[enumCellID]enumAbstractValue
+	argumentWrites map[int]bool
+	captureWrites  map[enumCellID]bool
+	regionWrites   enumRegionSet
+	dependents     map[enumEventCallID]bool
+	queued         bool
+	analyzing      bool
 }
 
 type enumEventCallWorklist struct {
@@ -44,11 +46,21 @@ func (worklist *enumEventCallWorklist) call(
 	}
 	id := enumEventCallID(len(worklist.summaries) + 1)
 	worklist.calls[key] = id
+	captureCells := enumCellSet(nil)
+	index := int(key.closure) - 1
+	if index >= 0 && index < len(worklist.graph.identities.closureCaptures) {
+		captureCells = cloneEnumCellSet(
+			worklist.graph.identities.closureCaptures[index],
+		)
+	}
 	worklist.summaries = append(worklist.summaries, &enumEventCallSummary{
-		captures:     make(map[enumCellID]enumAbstractValue),
-		cellWrites:   make(map[enumCellID]enumAbstractValue),
-		regionWrites: make(enumRegionSet),
-		dependents:   make(map[enumEventCallID]bool),
+		captures:       make(map[enumCellID]enumAbstractValue),
+		captureCells:   captureCells,
+		cellWrites:     make(map[enumCellID]enumAbstractValue),
+		argumentWrites: make(map[int]bool),
+		captureWrites:  make(map[enumCellID]bool),
+		regionWrites:   make(enumRegionSet),
+		dependents:     make(map[enumEventCallID]bool),
 	})
 	return id
 }
@@ -82,7 +94,8 @@ func (worklist *enumEventCallWorklist) addInput(
 		summary.inputs[index] = joined
 		changed = changed || added
 	}
-	for cell, capture := range state.cells {
+	for cell := range summary.captureCells {
+		capture := state.cells[cell]
 		joined, added := joinEnumAbstractValues(summary.captures[cell], capture)
 		summary.captures[cell] = joined
 		changed = changed || added
@@ -101,6 +114,8 @@ func (worklist *enumEventCallWorklist) addOutput(
 	id enumEventCallID,
 	results []enumAbstractValue,
 	cells map[enumCellID]enumAbstractValue,
+	arguments map[int]bool,
+	captures map[enumCellID]bool,
 	regions enumRegionSet,
 ) bool {
 	summary := worklist.summary(id)
@@ -121,6 +136,18 @@ func (worklist *enumEventCallWorklist) addOutput(
 		joined, added := joinEnumAbstractValues(summary.cellWrites[cell], value)
 		summary.cellWrites[cell] = joined
 		changed = changed || added
+	}
+	for argument := range arguments {
+		if !summary.argumentWrites[argument] {
+			summary.argumentWrites[argument] = true
+			changed = true
+		}
+	}
+	for capture := range captures {
+		if !summary.captureWrites[capture] {
+			summary.captureWrites[capture] = true
+			changed = true
+		}
 	}
 	for region := range regions {
 		if !summary.regionWrites[region] {
@@ -172,19 +199,20 @@ func (worklist *enumEventCallWorklist) next() enumEventCallID {
 func (worklist *enumEventCallWorklist) applyAlternatives(
 	state *enumEventState,
 	caller enumEventCallID,
-	closures enumEventClosureSet,
+	callee enumAbstractValue,
 	arguments []enumAbstractValue,
 	results []enumSavedValueID,
 ) {
 	joinedResults := make([]enumAbstractValue, len(results))
 	joinedCells := make(map[enumCellID]enumAbstractValue)
 	joinedRegions := make(enumRegionSet)
-	for closure := range closures {
-		call := worklist.call(enumEventCallKey{
-			closure: closure,
-			context: enumCallContext(arguments, state),
-		})
-		worklist.addInput(call, arguments, state)
+	for closure := range callee.closures {
+		call := worklist.call(enumEventCallKey{closure: closure})
+		inputState := cloneEnumEventState(state)
+		for cell, input := range callee.closureInputs[closure] {
+			inputState.cells[cell] = cloneEnumAbstractValue(input)
+		}
+		worklist.addInput(call, arguments, inputState)
 		worklist.depend(call, caller)
 		summary := worklist.summary(call)
 		if summary == nil {
@@ -192,13 +220,32 @@ func (worklist *enumEventCallWorklist) applyAlternatives(
 		}
 		for index := range joinedResults {
 			if index < len(summary.results) {
+				current := enumInstantiateClosureInputs(
+					summary.results[index], arguments,
+				)
 				joinedResults[index], _ = joinEnumAbstractValues(
-					joinedResults[index], summary.results[index],
+					joinedResults[index], current,
 				)
 			}
 		}
 		for cell, value := range summary.cellWrites {
 			joinedCells[cell], _ = joinEnumAbstractValues(joinedCells[cell], value)
+		}
+		for argument := range summary.argumentWrites {
+			if argument < len(arguments) {
+				for region := range arguments[argument].regions {
+					joinedRegions[region] = true
+				}
+			}
+		}
+		for capture := range summary.captureWrites {
+			input := state.cells[capture]
+			if saved, found := callee.closureInputs[closure][capture]; found {
+				input = saved
+			}
+			for region := range input.regions {
+				joinedRegions[region] = true
+			}
 		}
 		for region := range summary.regionWrites {
 			joinedRegions[region] = true
@@ -259,9 +306,6 @@ func (worklist *enumEventCallWorklist) analyzeCall(
 	builder := worklist.graph.checker.newEnumClosureEventBuilder(
 		worklist.graph, literal, creation,
 	)
-	child := builder.build(literal.Body)
-	child.calls = worklist
-	child.call = call
 	initial := enumInvocationState(summary.inputState)
 	argument := 0
 	for _, field := range literal.Type.Params.List {
@@ -269,7 +313,10 @@ func (worklist *enumEventCallWorklist) analyzeCall(
 			if argument >= len(summary.inputs) {
 				break
 			}
-			cell := builder.localCell(worklist.graph.checker.facts.Object(name))
+			cell := builder.graph.identities.cell(enumCellKey{
+				activation: builder.activation,
+				object:     worklist.graph.checker.facts.Object(name),
+			})
 			if syntax.EllipsisExpressionOf(field.Type) != nil {
 				value := enumAbstractValue{}
 				for ; argument < len(summary.inputs); argument++ {
@@ -282,18 +329,94 @@ func (worklist *enumEventCallWorklist) analyzeCall(
 			}
 		}
 	}
+	child := builder.build(literal.Body)
+	child.calls = worklist
+	child.call = call
 	result := child.runPass(initial)
 	cells := make(map[enumCellID]enumAbstractValue)
+	argumentWrites := make(map[int]bool)
+	captureWrites := make(map[enumCellID]bool)
 	regions := make(enumRegionSet)
 	if result.output != nil {
 		for cell := range result.output.cellWrites {
 			cells[cell] = cloneEnumAbstractValue(result.output.cells[cell])
 		}
 		for region := range result.output.regionWrites {
-			regions[region] = true
+			captured := false
+			for cell, capture := range summary.captures {
+				if capture.regions[region] {
+					captureWrites[cell] = true
+					captured = true
+				}
+			}
+			if !captured {
+				mapped := false
+				for index, input := range summary.inputs {
+					if input.regions[region] {
+						argumentWrites[index] = true
+						mapped = true
+					}
+				}
+				if !mapped {
+					regions[region] = true
+				}
+			}
 		}
 	}
-	worklist.addOutput(call, result.values, cells, regions)
+	formalResults := make([]enumAbstractValue, len(result.values))
+	for index, value := range result.values {
+		formalResults[index] = enumFormalizeClosureInputs(value, summary.inputs)
+	}
+	worklist.addOutput(
+		call, formalResults, cells, argumentWrites, captureWrites, regions,
+	)
+}
+
+func enumFormalizeClosureInputs(
+	value enumAbstractValue,
+	inputs []enumAbstractValue,
+) enumAbstractValue {
+	value = cloneEnumAbstractValue(value)
+	for closure, captures := range value.closureInputs {
+		for cell, capture := range captures {
+			for index, input := range inputs {
+				if enumRegionsOverlap(capture.regions, input.regions) {
+					capture.formal = index + 1
+					capture.regions = nil
+					captures[cell] = capture
+					break
+				}
+			}
+		}
+		value.closureInputs[closure] = captures
+	}
+	return value
+}
+
+func enumInstantiateClosureInputs(
+	value enumAbstractValue,
+	arguments []enumAbstractValue,
+) enumAbstractValue {
+	value = cloneEnumAbstractValue(value)
+	for closure, captures := range value.closureInputs {
+		for cell, capture := range captures {
+			index := capture.formal - 1
+			if index >= 0 && index < len(arguments) {
+				captures[cell] = cloneEnumAbstractValue(arguments[index])
+			}
+		}
+		value.closureInputs[closure] = captures
+	}
+	return value
+}
+
+func enumRegionsOverlap(left, right enumRegionSet) bool {
+	for region := range left {
+		if right[region] {
+			return true
+		}
+	}
+	return false
 }
 
 func enumInvocationState(input *enumEventState) *enumEventState {

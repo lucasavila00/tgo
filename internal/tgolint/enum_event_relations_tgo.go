@@ -54,52 +54,6 @@ func enumCellSignature(cells enumCellSet) string {
 	return strings.Join(parts, ",")
 }
 
-func enumClosureSignature(closures enumEventClosureSet) string {
-	values := make([]int, 0, len(closures))
-	for closure := range closures {
-		values = append(values, int(closure))
-	}
-	sort.Ints(values)
-	parts := make([]string, len(values))
-	for index, value := range values {
-		parts[index] = strconv.Itoa(value)
-	}
-	return strings.Join(parts, ",")
-}
-
-func enumAbstractValueSignature(value enumAbstractValue) string {
-	return strings.Join([]string{
-		enumRegionSignature(value.regions),
-		enumCellSignature(value.places),
-		enumCellSignature(value.relations),
-		strconv.FormatBool(value.relationKnown),
-		enumCellSignature(value.readCells),
-		enumClosureSignature(value.closures),
-		strconv.FormatBool(value.unknown),
-	}, "/")
-}
-
-func enumCallContext(
-	arguments []enumAbstractValue,
-	state *enumEventState,
-) string {
-	parts := make([]string, 0, len(arguments)+len(state.cells))
-	for _, argument := range arguments {
-		parts = append(parts, "a:"+enumAbstractValueSignature(argument))
-	}
-	cells := make([]int, 0, len(state.cells))
-	for cell := range state.cells {
-		cells = append(cells, int(cell))
-	}
-	sort.Ints(cells)
-	for _, raw := range cells {
-		cell := enumCellID(raw)
-		parts = append(parts, "c:"+strconv.Itoa(raw)+":"+
-			enumAbstractValueSignature(state.cells[cell]))
-	}
-	return strings.Join(parts, "|")
-}
-
 func equalEnumAbstractValues(left, right enumAbstractValue) bool {
 	return enumRegionSetEqual(left.regions, right.regions) &&
 		enumCellSetEqual(left.places, right.places) &&
@@ -109,7 +63,31 @@ func equalEnumAbstractValues(left, right enumAbstractValue) bool {
 		enumCellSetEqual(left.dependencies, right.dependencies) &&
 		enumCellSetEqual(left.readCells, right.readCells) &&
 		equalEnumTagObservation(left.observation, right.observation) &&
+		equalEnumClosureInputs(left.closureInputs, right.closureInputs) &&
+		left.formal == right.formal &&
 		left.unknown == right.unknown
+}
+
+func equalEnumClosureInputs(
+	left map[enumEventClosureID]map[enumCellID]enumAbstractValue,
+	right map[enumEventClosureID]map[enumCellID]enumAbstractValue,
+) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for closure, leftInputs := range left {
+		rightInputs, found := right[closure]
+		if !found || len(leftInputs) != len(rightInputs) {
+			return false
+		}
+		for cell, leftInput := range leftInputs {
+			rightInput, found := rightInputs[cell]
+			if !found || !equalEnumAbstractValues(leftInput, rightInput) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func enumRegionSetEqual(left, right enumRegionSet) bool {

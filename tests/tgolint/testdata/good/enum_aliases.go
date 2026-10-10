@@ -226,3 +226,16 @@ func MutualRecursiveUnrelatedArgument(
 	}
 	return ""
 }
+
+func FactoryUnrelatedCapture(value, other *model.Event) string {
+	factory := func(pointer *model.Event) func() {
+		return func() { *pointer = model.NewEventStopped("changed") }
+	}
+	_ = factory(value)
+	mutateOther := factory(other)
+	if value.Tag() == model.EventTagStarted {
+		mutateOther()
+		return value.StartedPayload().ID
+	}
+	return ""
+}

@@ -42,15 +42,16 @@ type enumRegionKey struct {
 }
 
 type enumIdentityTable struct {
-	activations    map[enumActivationKey]enumActivationID
-	cells          map[enumCellKey]enumCellID
-	regions        map[enumRegionKey]enumRegionID
-	fields         map[enumRegionFieldKey]enumRegionID
-	closures       map[enumEventClosureKey]enumEventClosureID
-	activationKeys []enumActivationKey
-	cellKeys       []enumCellKey
-	regionKeys     []enumRegionKey
-	closureKeys    []enumEventClosureKey
+	activations     map[enumActivationKey]enumActivationID
+	cells           map[enumCellKey]enumCellID
+	regions         map[enumRegionKey]enumRegionID
+	fields          map[enumRegionFieldKey]enumRegionID
+	closures        map[enumEventClosureKey]enumEventClosureID
+	activationKeys  []enumActivationKey
+	cellKeys        []enumCellKey
+	regionKeys      []enumRegionKey
+	closureKeys     []enumEventClosureKey
+	closureCaptures []enumCellSet
 }
 
 type enumRegionFieldKey struct {
@@ -159,16 +160,18 @@ type enumAbstractValue struct {
 	relationKnown bool
 	readCells     enumCellSet
 	closures      enumEventClosureSet
+	closureInputs map[enumEventClosureID]map[enumCellID]enumAbstractValue
 	dependencies  enumCellSet
 	observation   *enumTagObservation
+	formal        int
 	unknown       bool
 }
 
 func newEnumAbstractValue() enumAbstractValue {
 	return enumAbstractValue{
 		regions: nil, places: nil, relations: nil, relationKnown: false,
-		readCells: nil, closures: nil, dependencies: nil, observation: nil,
-		unknown: false,
+		readCells: nil, closures: nil, closureInputs: nil, dependencies: nil,
+		observation: nil, formal: 0, unknown: false,
 	}
 }
 
@@ -191,11 +194,18 @@ func cloneEnumAbstractValue(value enumAbstractValue) enumAbstractValue {
 	result := enumAbstractValue{
 		regions:       make(enumRegionSet, len(value.regions)),
 		closures:      make(enumEventClosureSet, len(value.closures)),
+		closureInputs: make(map[enumEventClosureID]map[enumCellID]enumAbstractValue),
 		relationKnown: value.relationKnown,
+		formal:        value.formal,
 		unknown:       value.unknown,
 	}
 	for closure := range value.closures {
 		result.closures[closure] = true
+		inputs := make(map[enumCellID]enumAbstractValue)
+		for cell, input := range value.closureInputs[closure] {
+			inputs[cell] = cloneEnumAbstractValue(input)
+		}
+		result.closureInputs[closure] = inputs
 	}
 	for region := range value.regions {
 		result.regions[region] = true
@@ -321,13 +331,19 @@ func newEnumEventGraph() *enumEventGraph {
 	}
 }
 
-func (graph *enumEventGraph) closure(key enumEventClosureKey) enumEventClosureID {
+func (graph *enumEventGraph) closure(
+	key enumEventClosureKey,
+	captures enumCellSet,
+) enumEventClosureID {
 	if id, found := graph.identities.closures[key]; found {
 		return id
 	}
 	id := enumEventClosureID(len(graph.identities.closureKeys) + 1)
 	graph.identities.closures[key] = id
 	graph.identities.closureKeys = append(graph.identities.closureKeys, key)
+	graph.identities.closureCaptures = append(
+		graph.identities.closureCaptures, cloneEnumCellSet(captures),
+	)
 	return id
 }
 

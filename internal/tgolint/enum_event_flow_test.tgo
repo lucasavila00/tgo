@@ -95,7 +95,7 @@ func TestEnumClosureInputIncludesCapturedState(t *testing.T) {
 	t.Parallel()
 	graph := newEnumEventGraph()
 	worklist := newEnumEventCallWorklist(graph)
-	call := worklist.call(enumEventCallKey{closure: 1, context: "test"})
+	call := worklist.call(enumEventCallKey{closure: 1})
 	first := newEnumEventState()
 	first.cells[1] = enumAbstractValue{regions: enumRegionSet{1: true}}
 	worklist.addInput(call, nil, first)
