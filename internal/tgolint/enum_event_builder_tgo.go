@@ -373,15 +373,51 @@ func (builder *enumEventBuilder) emitAssignment(
 	left []*syntax.Expression,
 	right []*syntax.Expression,
 ) enumEventBlockID {
+	for _, expression := range left {
+		if enumExpressionOrdersCalls(expression) {
+			return builder.emitOrderedAssignment(block, left, right, true)
+		}
+	}
+	hasOrderedRight := false
+	for _, expression := range right {
+		hasOrderedRight = hasOrderedRight || enumExpressionOrdersCalls(expression)
+	}
+	if !hasOrderedRight {
+		return builder.emitOrderedAssignment(block, left, right, true)
+	}
+	early, late, done := builder.graph.addBlock(), builder.graph.addBlock(),
+		builder.graph.addBlock()
+	builder.addEdge(block, early)
+	builder.addEdge(block, late)
+	early = builder.emitOrderedAssignment(early, left, right, true)
+	late = builder.emitOrderedAssignment(late, left, right, false)
+	builder.addEdge(early, done)
+	builder.addEdge(late, done)
+	return done
+}
+
+func (builder *enumEventBuilder) emitOrderedAssignment(
+	block enumEventBlockID,
+	left []*syntax.Expression,
+	right []*syntax.Expression,
+	destinationsFirst bool,
+) enumEventBlockID {
 	destinations := make([]enumSavedValueID, len(left))
-	for index, expression := range left {
-		block, destinations[index] = builder.emitPlace(block, expression)
+	if destinationsFirst {
+		for index, expression := range left {
+			block, destinations[index] = builder.emitPlace(block, expression)
+		}
 	}
 	values := make([]enumSavedValueID, 0, len(right))
 	for _, expression := range right {
 		var evaluated []enumSavedValueID
 		block, evaluated = builder.emitExpressionValues(block, expression)
 		values = append(values, evaluated...)
+	}
+	if !destinationsFirst {
+		for index, expression := range left {
+			block, destinations[index] = builder.emitPlace(block, expression)
+		}
 	}
 	for index, destination := range destinations {
 		if index >= len(values) {
@@ -394,6 +430,30 @@ func (builder *enumEventBuilder) emitAssignment(
 		})
 	}
 	return block
+}
+
+func enumExpressionOrdersCalls(expression *syntax.Expression) bool {
+	ordered := false
+	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+		value, ok := syntax.ExpressionOf(node)
+		if !ok {
+			return true
+		}
+		if value != expression && syntax.FunctionLiteralExpressionOf(value) != nil {
+			return false
+		}
+		if syntax.CallExpressionOf(value) != nil {
+			ordered = true
+			return false
+		}
+		if unary := syntax.UnaryExpressionOf(value); unary != nil &&
+			unary.Operator == token.ARROW {
+			ordered = true
+			return false
+		}
+		return true
+	})
+	return ordered
 }
 
 func (builder *enumEventBuilder) emitExpressionValues(
@@ -457,6 +517,22 @@ func (builder *enumEventBuilder) emitExpression(
 			value:      value,
 		})
 		return block, value
+	}
+	if expression.Tag() == syntax.ExpressionTagCompositeLiteral {
+		literal := expression.CompositeLiteralPayload().Value
+		for _, element := range literal.Elements {
+			block, _ = builder.emitExpression(block, element)
+		}
+		return builder.emitUnknown(block, expression)
+	}
+	if expression.Tag() == syntax.ExpressionTagPropagation {
+		propagation := expression.PropagationPayload().Value
+		return builder.emitExpression(block, propagation.Expression)
+	}
+	if expression.Tag() == syntax.ExpressionTagComprehension {
+		return builder.emitComprehension(
+			block, expression, expression.ComprehensionPayload().Value,
+		)
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
 		if receiver, _, _, _, _ := builder.checker.tagCall(expression); receiver != nil {
@@ -559,124 +635,4 @@ func (builder *enumEventBuilder) emitExpression(
 		value:      value,
 	})
 	return block, value
-}
-
-func (builder *enumEventBuilder) methodCall(call *syntax.CallExpression) bool {
-	selector := syntax.SelectorExpressionOf(call.Callee)
-	if selector == nil {
-		return false
-	}
-	selection := builder.checker.facts.Selection(call.Callee)
-	return selection != nil && selection.Kind() == types.MethodVal
-}
-
-func (builder *enumEventBuilder) callResults(
-	call *syntax.CallExpression,
-) []enumSavedValueID {
-	count := 1
-	if typ := builder.checker.facts.Type(call.Callee); typ != nil {
-		if signature, ok := types.Unalias(typ).(*types.Signature); ok &&
-			signature.Results().Len() > count {
-			count = signature.Results().Len()
-		}
-	}
-	results := make([]enumSavedValueID, count)
-	for index := range results {
-		results[index] = builder.graph.newSavedValue()
-	}
-	return results
-}
-
-func (builder *enumEventBuilder) emitUnknown(
-	block enumEventBlockID,
-	expression *syntax.Expression,
-) (enumEventBlockID, enumSavedValueID) {
-	value := builder.graph.newSavedValue()
-	builder.graph.addEvent(block, enumEvent{
-		kind:       enumEventSave,
-		expression: expression,
-		value:      value,
-	})
-	return block, value
-}
-
-func (builder *enumEventBuilder) emitShortCircuit(
-	block enumEventBlockID,
-	binary *syntax.BinaryExpression,
-) (enumEventBlockID, enumSavedValueID) {
-	right := builder.graph.addBlock()
-	done := builder.graph.addBlock()
-	builder.addEdge(block, right)
-	builder.addEdge(block, done)
-	right, value := builder.emitExpression(right, binary.Right)
-	builder.addEdge(right, done)
-	return done, value
-}
-
-func (builder *enumEventBuilder) emitPlace(
-	block enumEventBlockID,
-	expression *syntax.Expression,
-) (enumEventBlockID, enumSavedValueID) {
-	if star := syntax.StarExpressionOf(expression); star != nil {
-		return builder.emitExpression(block, star.Expression)
-	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		return builder.emitSelectorPlace(block, expression, selector)
-	}
-	if name := syntax.IdentifierExpressionOf(expression); name != nil {
-		cell := builder.localCell(builder.checker.facts.Object(name))
-		value := builder.graph.save(enumAbstractValue{
-			places: enumCellSet{cell: true},
-		})
-		builder.graph.addEvent(block, enumEvent{
-			kind:  enumEventSave,
-			value: value,
-		})
-		return block, value
-	}
-	return builder.emitExpression(block, expression)
-}
-
-func (builder *enumEventBuilder) emitSelectorPlace(
-	block enumEventBlockID,
-	expression *syntax.Expression,
-	selector *syntax.SelectorExpression,
-) (enumEventBlockID, enumSavedValueID) {
-	block, owner := builder.emitExpression(block, selector.Expression)
-	selection := builder.checker.facts.Selection(expression)
-	if selection == nil || selection.Kind() != types.FieldVal {
-		return block, owner
-	}
-	field, ok := selection.Obj().(*types.Var)
-	if !ok {
-		return block, owner
-	}
-	value := builder.graph.newSavedValue()
-	builder.graph.addEvent(block, enumEvent{
-		kind:       enumEventResolvePlace,
-		expression: expression,
-		source:     owner,
-		value:      value,
-		field:      field,
-	})
-	return block, value
-}
-
-func (builder *enumEventBuilder) localCell(object types.Object) enumCellID {
-	if object != nil && builder.parent != 0 &&
-		(object.Pos() < builder.start || builder.stop < object.Pos()) {
-		for index, key := range builder.graph.identities.cellKeys {
-			if key.object == object {
-				return enumCellID(index + 1)
-			}
-		}
-		return builder.graph.identities.cell(enumCellKey{
-			activation: builder.parent,
-			object:     object,
-		})
-	}
-	return builder.graph.identities.cell(enumCellKey{
-		activation: builder.activation,
-		object:     object,
-	})
 }
