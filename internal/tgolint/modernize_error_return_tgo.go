@@ -6,10 +6,12 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"sort"
 
 	"tgo/internal/sourceanalysis"
 	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
 )
 
 type errorReturnMatch struct {
@@ -43,20 +45,36 @@ func (c *checker) checkErrorReturnModernization(analysis *sourceanalysis.Package
 			continue
 		}
 		index := analysis.Facts
+		matches := []errorReturnMatch(nil)
 		syntax.Inspect(file, func(node *syntax.Node) bool {
 			statements, ok := sourceStatementList(node)
 			if !ok {
 				return true
 			}
 			signature := sourceFunctionSignature(file, node, index)
-			for _, match := range errorReturnModernizations(
-				file, statements, signature, index,
-			) {
-				reportErrorReturnModernization(c, match)
-			}
+			matches = append(matches, errorReturnModernizations(
+				file, sourceFunctionBody(file, node), statements, signature, index,
+				c.callMayReturn,
+			)...)
 			return true
 		})
+		sort.Slice(matches, func(left, right int) bool {
+			return matches[left].start < matches[right].start
+		})
+		for _, match := range matches {
+			reportErrorReturnModernization(c, match)
+		}
 	}
+}
+
+// sourceFunctionBody gets the body that contains a source node.
+func sourceFunctionBody(file *syntax.File, node *syntax.Node) *syntax.BlockStatement {
+	for current := node; current != nil; current = syntax.Parent(file, current) {
+		if body := functionBody(current); body != nil {
+			return body
+		}
+	}
+	return nil
 }
 
 // errorResults requires results that end in the Go error type.
@@ -71,9 +89,11 @@ func errorResults(signature *types.Signature) bool {
 // errorReturnModernizations finds safe manual propagation expansions in one statement list.
 func errorReturnModernizations(
 	file *syntax.File,
+	body *syntax.BlockStatement,
 	statements []*syntax.Statement,
 	function *types.Signature,
 	index *sourcefacts.Index,
+	mayReturn func(*syntax.Expression) bool,
 ) []errorReturnMatch {
 	matches := []errorReturnMatch(nil)
 	for position, statement := range statements {
@@ -105,7 +125,7 @@ func errorReturnModernizations(
 	safeObjects := make(map[types.Object]bool)
 	for object, ranges := range objectMatches {
 		safeObjects[object] = errorUsesCovered(
-			file, function, object, ranges, index,
+			file, body, function, object, ranges, index, mayReturn,
 		)
 	}
 	result := []errorReturnMatch{}
@@ -120,10 +140,12 @@ func errorReturnModernizations(
 // errorUsesCovered requires each use after the first call to stay in a matched expansion.
 func errorUsesCovered(
 	file *syntax.File,
+	body *syntax.BlockStatement,
 	function *types.Signature,
 	target types.Object,
 	matches []errorReturnMatch,
 	index *sourcefacts.Index,
+	mayReturn func(*syntax.Expression) bool,
 ) bool {
 	valid := true
 	first := matches[0].start
@@ -135,19 +157,12 @@ func errorUsesCovered(
 	namedResult := errorResults(function) &&
 		function.Results().At(function.Results().Len()-1) == target &&
 		target.Name() != ""
+	if namedResult && nakedReturnReachable(body, matches, mayReturn) {
+		return false
+	}
 	syntax.Inspect(file, func(node *syntax.Node) bool {
 		if !valid {
 			return false
-		}
-		if namedResult {
-			statement, statementOK := syntax.StatementOf(node)
-			returned := syntax.ReturnStatementOf(statement)
-			if statementOK && returned != nil && len(returned.Results) == 0 &&
-				returned.Return > first &&
-				sourceFunctionSignature(file, node, index) == function {
-				valid = false
-				return false
-			}
 		}
 		identifier, ok := syntax.IdentifierOf(node)
 		if !ok {
@@ -169,6 +184,50 @@ func errorUsesCovered(
 		return false
 	})
 	return valid
+}
+
+// nakedReturnReachable reports whether a match can reach a naked return.
+func nakedReturnReachable(
+	body *syntax.BlockStatement,
+	matches []errorReturnMatch,
+	mayReturn func(*syntax.Expression) bool,
+) bool {
+	if body == nil {
+		return false
+	}
+	starts := make(map[token.Pos]bool)
+	for _, match := range matches {
+		starts[match.start] = true
+	}
+	graph := cfg.New(body, mayReturn)
+	queue := []*cfg.Block(nil)
+	for _, block := range graph.Blocks {
+		for _, node := range block.Nodes {
+			statement, ok := syntax.StatementOf(&node)
+			if ok && starts[syntax.StatementPosition(statement)] {
+				queue = append(queue, block)
+				break
+			}
+		}
+	}
+	visited := make(map[*cfg.Block]bool)
+	for len(queue) > 0 {
+		block := queue[len(queue)-1]
+		queue = queue[:len(queue)-1]
+		if visited[block] {
+			continue
+		}
+		visited[block] = true
+		for _, node := range block.Nodes {
+			statement, ok := syntax.StatementOf(&node)
+			returned := syntax.ReturnStatementOf(statement)
+			if ok && returned != nil && len(returned.Results) == 0 {
+				return true
+			}
+		}
+		queue = append(queue, block.Succs...)
+	}
+	return false
 }
 
 // priorErrorUseIsSafe rejects stored closures that can read the old error later.

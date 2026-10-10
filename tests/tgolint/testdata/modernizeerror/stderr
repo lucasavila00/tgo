@@ -19,3 +19,6 @@ modernizeerror/bad.tgo:182:2: manual load error return matches postfix !!; use p
 modernizeerror/bad.tgo:190:2: manual load error return matches postfix !!; use postfix !!
 modernizeerror/bad.tgo:194:5: manual load error return matches postfix !!; use postfix !!
 modernizeerror/bad.tgo:197:2: manual load error return matches postfix !!; use postfix !!
+modernizeerror/bad.tgo:207:3: manual load error return matches postfix !!; use postfix !!
+modernizeerror/bad.tgo:213:5: manual repository.Flush error return matches postfix !!; use postfix !!
+modernizeerror/bad.tgo:217:3: manual load error return matches postfix !!; use postfix !!

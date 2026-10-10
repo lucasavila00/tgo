@@ -201,3 +201,23 @@ func useMixedExpansionOrder() (*record, error) {
 	_ = first
 	return last,
 }
+
+func useNestedExpansionOrder(repository store) (*record, error) {
+	{
+		first, err := load()
+		if err != nil {
+			return , err
+		}
+		_ = first
+	}
+	if err := repository.Flush(); err != nil {
+		return , err
+	}
+	{
+		last, err := load()
+		if err != nil {
+			return , err
+		}
+		return last,
+	}
+}

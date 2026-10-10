@@ -22,7 +22,7 @@ func (c *checker) checkSuccessReturnModernization(analysis *sourceanalysis.Packa
 			continue
 		}
 		facts := analysis.Facts
-		propagationReturns := manualPropagationReturns(file, facts)
+		propagationReturns := manualPropagationReturns(file, facts, c.callMayReturn)
 		syntax.Inspect(
 			file,
 			func(node *syntax.Node) bool {
@@ -65,6 +65,7 @@ func (c *checker) checkSuccessReturnModernization(analysis *sourceanalysis.Packa
 func manualPropagationReturns(
 	file *syntax.File,
 	facts *sourcefacts.Index,
+	mayReturn func(*syntax.Expression) bool,
 ) map[token.Pos]bool {
 	result := make(map[token.Pos]bool)
 	syntax.Inspect(file, func(node *syntax.Node) bool {
@@ -74,7 +75,8 @@ func manualPropagationReturns(
 		}
 		signature := sourceFunctionSignature(file, node, facts)
 		for _, match := range errorReturnModernizations(
-			file, statements, signature, facts,
+			file, sourceFunctionBody(file, node), statements, signature, facts,
+			mayReturn,
 		) {
 			result[match.returned] = true
 		}

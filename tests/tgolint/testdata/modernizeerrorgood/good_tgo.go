@@ -221,3 +221,19 @@ func namedErrorUsedByNakedReturn() (result *record, err error) {
 	result = value
 	return
 }
+
+func namedErrorUsedByBackwardGoto() (result *record, err error) {
+	result = nil
+	err = errors.New("old")
+	goto work
+done:
+	return
+work:
+	_ = result
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	result = value
+	goto done
+}
