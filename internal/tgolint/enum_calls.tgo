@@ -2,6 +2,7 @@ package tgolint
 
 import (
 	"go/token"
+	"go/types"
 
 	"tgo/pkg/syntax"
 	"tgo/pkg/syntax/cfg"
@@ -136,7 +137,8 @@ func (c %checker) evalEnumCall(
 	for index, argument := range call.Args {
 		arguments[index] = c.enumExpressionStorage(argument, state)
 	}
-	for literal := range c.enumExpressionClosure(call.Callee, state) {
+	closures := c.enumExpressionClosure(call.Callee, state)
+	for literal := range closures {
 		output := c.invokeEnumClosure(literal, state, arguments)
 		for place, values := range output.pointers {
 			state.pointers[place] = cloneEnumStorageSet(values)
@@ -146,6 +148,27 @@ func (c %checker) evalEnumCall(
 		}
 		state.writes, _ = joinEnumStorageSet(state.writes, output.writes)
 		state.bindings, _ = joinEnumStorageSet(state.bindings, output.bindings)
+	}
+	if len(closures) != 0 {
+		return
+	}
+	typ := c.facts.Type(call.Callee)
+	if typ == nil {
+		return
+	}
+	if _, function := types.Unalias(typ).(*types.Signature); !function {
+		return
+	}
+	for index, argument := range call.Args {
+		if enumPointerType(c.facts, argument) {
+			state.writes, _ = joinEnumStorageSet(state.writes, arguments[index])
+		}
+	}
+	if selector := syntax.SelectorExpressionOf(call.Callee); selector != nil &&
+		c.pointerMethodSelection(call.Callee) {
+		state.writes, _ = joinEnumStorageSet(
+			state.writes, c.enumExpressionStorage(selector.Expression, state),
+		)
 	}
 }
 
