@@ -394,6 +394,204 @@
         "line": "groupedArray [2]%User",
         "token": "%",
         "has": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [2]%Record{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = ([2]%Record)(records)",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = [len([2]int{})]%Record{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = [len(\"a]b\")]%Record{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "]%LineRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "b`)]%RawRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "*/]%BlockRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "return [2]%ReturnRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "make(chan [2]%ChannelRecord)",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "range [2]%RangeRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "case [2]%CaseRecord{}:",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = [1][2]%MatrixRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = map[string][2]%MapRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = [len([2]int{})][3]%NestedMatrixRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var Group = [2]%T{}",
+        "token": "%T",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "Field %[2]%T",
+        "token": "%[2]",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "Field %[2]%T",
+        "token": "%T",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = %[2]%T(nil)",
+        "token": "%[2]",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = %[2]%T(nil)",
+        "token": "%T",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "func unicodeArrayParameter(value [2]%Τ) {}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "receiver [2]%Τ,",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "func unicodeArrayResult() [2]%Τ { return [2]%Τ{} }",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type Alias [2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type Chain [1][2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "UnicodeField [2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var Typed [2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var local [2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var FunctionValue func([2]%Τ) [2]%Υ",
+        "token": "%Τ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var FunctionValue func([2]%Τ) [2]%Υ",
+        "token": "%Υ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type FunctionType func([2]%Τ) [2]%Υ",
+        "token": "%Τ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type FunctionType func([2]%Τ) [2]%Υ",
+        "token": "%Υ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type Composed %[2]%Τ",
+        "token": "%[2]",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type Composed %[2]%Τ",
+        "token": "%Τ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
       }
     ],
     "negative": [
@@ -420,6 +618,78 @@
       {
         "line": "_ = values[2] % Thing",
         "token": "%",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = values[0][1] % Thing",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [left % right]int{}",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = \"abc\" [2] % Thing",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = 'x' [0] % Thing",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = []int{} [0] % Thing",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = α [0] % Thing",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = π[0] % Thing",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [2 // ]%LineFake",
+        "token": "%",
+        "has": "comment.line.double-slash.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [len(`a]%RawFake",
+        "token": "%",
+        "has": "string.quoted.raw.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [2 /* ]%BlockFake",
+        "token": "%",
+        "has": "comment.block.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "func unicodeSignatureModulo(value [(Α % Β)]Τ) {}",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "func unicodeBodyModulo() { _ = α % 2 }",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
         "not": "storage.modifier.non-nil.tgo"
       }
     ]
