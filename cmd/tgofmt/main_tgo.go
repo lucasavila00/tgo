@@ -76,7 +76,6 @@ func run(paths []string, write bool, list bool, input io.Reader, output io.Write
 }
 
 func formatPath(path string, write bool, list bool, output io.Writer) error {
-	type operandType = bool
 	source, err_1 := os.ReadFile(path)
 	if err_1 != nil {
 		return err_1
@@ -86,7 +85,7 @@ func formatPath(path string, write bool, list bool, output io.Writer) error {
 		return err_2
 	}
 	changed := !bytes.Equal(source, formatted)
-	var operand operandType = list
+	operand := list
 	if operand {
 		operand = changed
 	}
@@ -97,7 +96,7 @@ func formatPath(path string, write bool, list bool, output io.Writer) error {
 		}
 		_ = result
 	}
-	var operand_1 operandType = write
+	operand_1 := write
 	if operand_1 {
 		operand_1 = changed
 	}
@@ -108,7 +107,7 @@ func formatPath(path string, write bool, list bool, output io.Writer) error {
 		}
 		return writeFormattedFile(path, source, formatted, info.Mode().Perm())
 	}
-	var operand_2 operandType = !write
+	operand_2 := !write
 	if operand_2 {
 		operand_2 = !list
 	}
@@ -139,8 +138,7 @@ func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.Fi
 	restored, writeErr := replaceContents(target, source, formatted)
 	closeErr := target.Close()
 	if writeErr != nil {
-		type operandType = bool
-		var operand operandType = restored
+		operand := restored
 		if operand {
 			operand = closeErr == nil
 		}

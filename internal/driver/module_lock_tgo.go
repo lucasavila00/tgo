@@ -15,7 +15,6 @@ import (
 
 // acquireModuleLock serializes builds and rollback for one module.
 func acquireModuleLock(root string) (acquired *flock.Flock, err error) {
-	type operandType = bool
 	err = nil
 	canonicalRoot, err_1 := filepath.EvalSymlinks(root)
 	if err_1 != nil {
@@ -44,7 +43,7 @@ func acquireModuleLock(root string) (acquired *flock.Flock, err error) {
 	if err_3 != nil {
 		return nil, err_3
 	}
-	var operand_2 operandType = !pathInfo.Mode().IsRegular()
+	operand_2 := !pathInfo.Mode().IsRegular()
 	if !operand_2 {
 		operand_2 = !os.SameFile(pathInfo, lockedInfo)
 	}

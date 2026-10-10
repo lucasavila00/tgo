@@ -116,7 +116,6 @@ func (c *checker) genericEffectModel(
 	typeArguments []types.Type,
 	zero bool,
 ) *model {
-	type operandType = bool
 	target := c.genericEffectType(effect, receiverArguments, typeArguments)
 	if target == nil {
 		return nil
@@ -129,7 +128,7 @@ func (c *checker) genericEffectModel(
 		return nil
 	}
 	model := c.modelBehindAccessType(target)
-	var operand operandType = model == nil
+	var operand bool = model == nil
 	if !operand {
 		operand = modelIsMixed(model)
 	}
@@ -171,7 +170,6 @@ func (c *checker) effectCertainty(
 	}
 	call := syntax.CallExpressionOf(expression)
 	for _, condition := range effect.Conditions {
-		type operandType_1 = bool
 		type operandType = bool
 		var operand operandType = call == nil
 		if !operand {
@@ -186,7 +184,7 @@ func (c *checker) effectCertainty(
 			continue
 		}
 		matches, known := c.effectConditionValue(expression, condition, targetType)
-		var operand_2 operandType_1 = known
+		operand_2 := known
 		if operand_2 {
 			operand_2 = !matches
 		}
@@ -472,7 +470,6 @@ func (c *checker) mapMissCondition(
 }
 
 func (c *checker) freshChannel(expression *syntax.Expression) bool {
-	type operandType_1 = bool
 	type operandType = bool
 	value := unparenthesized(expression)
 	call := syntax.CallExpressionOf(value)
@@ -489,7 +486,7 @@ func (c *checker) freshChannel(expression *syntax.Expression) bool {
 	}
 	_, builtin := c.facts.Object(name).(*types.Builtin)
 	_, channel := coreType(c.facts.Type(value)).(*types.Chan)
-	var operand_1 operandType_1 = builtin
+	operand_1 := builtin
 	if operand_1 {
 		operand_1 = channel
 	}
@@ -535,7 +532,6 @@ func (c *checker) resliceExtends(
 	expression *syntax.Expression,
 	condition GenericEffectCondition,
 ) (bool, bool) {
-	type operandType_1 = bool
 	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
@@ -557,7 +553,7 @@ func (c *checker) resliceExtends(
 	if !known {
 		return false, false
 	}
-	var operand_1 operandType_1 = high > length
+	var operand_1 bool = high > length
 	if operand_1 {
 		operand_1 = high <= capacity
 	}
@@ -585,7 +581,6 @@ func (c *checker) modelBehindAccessType(typ types.Type) *model {
 	methods := types.NewMethodSet(typ)
 	var found *model = nil
 	for index := 0; index < methods.Len(); index++ {
-		type operandType = bool
 		function, ok := methods.At(index).Obj().(*types.Func)
 		if !ok {
 			continue
@@ -594,7 +589,7 @@ func (c *checker) modelBehindAccessType(typ types.Type) *model {
 		if model == nil {
 			continue
 		}
-		var operand operandType = found != nil
+		var operand bool = found != nil
 		if operand {
 			operand = !sameModel(found, model)
 		}

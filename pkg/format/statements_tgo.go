@@ -217,13 +217,12 @@ func (p *printer) indentReturnList(values []*syntax.Expression) bool {
 	multiline := 0
 	line := first
 	for _, value := range values {
-		type operandType_1 = bool
 		start := p.position(syntax.ExpressionPosition(value)).Line
 		stop := p.position(syntax.ExpressionEnd(value)).Line
 		if line < start {
 			return true
 		}
-		var operand_1 operandType_1 = start < stop
+		var operand_1 bool = start < stop
 		if operand_1 {
 			operand_1 = !compositeLiteralLike(value)
 		}
@@ -312,8 +311,7 @@ func (p *printer) functionBody(value *syntax.BlockStatement, headerWidth int) {
 }
 
 func (p *printer) compactFunctionBody(value *syntax.BlockStatement, headerWidth int) bool {
-	type operandType = bool
-	var operand operandType = p.multiline(value.Lbrace, value.Rbrace)
+	operand := p.multiline(value.Lbrace, value.Rbrace)
 	if !operand {
 		operand = len(value.List) > 5
 	}

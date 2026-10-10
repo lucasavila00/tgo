@@ -120,9 +120,8 @@ func (p *printer) newProbe(comments []sourceComment) *printer {
 func (p *printer) printFile() []byte {
 	p.before(p.file.Package)
 	if p.comment > 0 {
-		type operandType = bool
 		leading := p.comments[p.comment-1].text
-		var operand operandType = strings.HasPrefix(leading, "//go:build")
+		operand := strings.HasPrefix(leading, "//go:build")
 		if !operand {
 			operand = strings.HasPrefix(leading, "// +build")
 		}
@@ -145,19 +144,18 @@ func (p *printer) printFile() []byte {
 	)
 	for index, declaration := range p.file.Declarations {
 		if index > 0 {
-			type operandType_1 = bool
 			previous := p.file.Declarations[index-1]
 			start := syntax.DeclarationPosition(declaration)
 			stop := syntax.DeclarationEnd(previous)
-			var operand_1 operandType_1 = declarationKind(previous) != declarationKind(declaration)
+			var operand_1 bool = declarationKind(previous) != declarationKind(declaration)
 			if operand_1 {
 				operand_1 = !p.trailingCommentPosition(stop).IsValid()
 			}
-			var operand_2 operandType_1 = operand_1
+			var operand_2 bool = operand_1
 			if !operand_2 {
 				operand_2 = p.sourceGap(stop, start).blank
 			}
-			var operand_3 operandType_1 = operand_2
+			var operand_3 bool = operand_2
 			if !operand_3 {
 				operand_3 = p.sourceGap(stop, start).leadingComment
 			}
@@ -181,13 +179,12 @@ func (p *printer) printFile() []byte {
 func (p *printer) functionBodyColumns(values []*syntax.Declaration) []int {
 	columns := make([]int, len(values))
 	for first := 0; first < len(values); {
-		type operandType = bool
 		declaration := functionDeclarationOf(values[first])
-		var operand operandType = declaration == nil
+		var operand bool = declaration == nil
 		if !operand {
 			operand = declaration.Body == nil
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if !operand_1 {
 			operand_1 = !p.compactFunctionBody(
 				declaration.Body,
@@ -200,24 +197,23 @@ func (p *printer) functionBodyColumns(values []*syntax.Declaration) []int {
 		}
 		last := first + 1
 		for last < len(values) {
-			type operandType_1 = bool
 			next := functionDeclarationOf(values[last])
-			var operand_2 operandType_1 = next == nil
+			var operand_2 bool = next == nil
 			if !operand_2 {
 				operand_2 = next.Body == nil
 			}
-			var operand_3 operandType_1 = operand_2
+			var operand_3 bool = operand_2
 			if !operand_3 {
 				operand_3 = !p.compactFunctionBody(next.Body, p.formattedFunctionHeaderWidth(next))
 			}
-			var operand_4 operandType_1 = operand_3
+			var operand_4 bool = operand_3
 			if !operand_4 {
 				operand_4 = p.blankBetween(
 					syntax.DeclarationEnd(values[last-1]),
 					syntax.DeclarationPosition(values[last]),
 				)
 			}
-			var operand_5 operandType_1 = operand_4
+			var operand_5 bool = operand_4
 			if !operand_5 {
 				operand_5 = p.hasCommentBetween(
 					syntax.DeclarationEnd(values[last-1]),
@@ -391,21 +387,20 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		operand = file != nil
 	}
 	if operand {
-		type operandType_1 = bool
 		offset := file.Offset(position)
-		var operand_1 operandType_1 = data[len(data)-1] == ' '
+		var operand_1 bool = data[len(data)-1] == ' '
 		if !operand_1 {
 			operand_1 = data[len(data)-1] == '\t'
 		}
-		var operand_2 operandType_1 = (operand_1)
+		var operand_2 bool = (operand_1)
 		if operand_2 {
 			operand_2 = 0 <= offset
 		}
-		var operand_3 operandType_1 = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = offset < len(p.source)
 		}
-		var operand_4 operandType_1 = operand_3
+		var operand_4 bool = operand_3
 		if operand_4 {
 			operand_4 = p.source[offset] == '}'
 		}
@@ -413,9 +408,8 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 
 	}
 	for {
-		type operandType_3 = bool
-		type operandType_2 = bool
-		var operand_5 operandType_2 = p.comment < len(p.comments)
+		type operandType_1 = bool
+		var operand_5 operandType_1 = p.comment < len(p.comments)
 		if operand_5 {
 			operand_5 = p.comments[p.comment].start < position
 		}
@@ -427,11 +421,11 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		p.comment++
 		start := p.position(item.start)
 		last := p.position(p.lastSource)
-		var operand_6 operandType_3 = !p.lineStart
+		operand_6 := !p.lineStart
 		if operand_6 {
 			operand_6 = last.IsValid()
 		}
-		var operand_7 operandType_3 = operand_6
+		var operand_7 bool = operand_6
 		if operand_7 {
 			operand_7 = last.Line == start.Line
 		}
@@ -458,9 +452,8 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 			}
 
 		} else {
-			type operandType_4 = bool
 			p.newline()
-			var operand_8 operandType_4 = last.IsValid()
+			operand_8 := last.IsValid()
 			if operand_8 {
 				operand_8 = p.sourceBlankBetween(p.lastSource, item.start)
 			}
@@ -470,18 +463,18 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		}
 
 		previousIndent := p.indent
-		var operand_9 operandType_3 = p.lineStart
+		operand_9 := p.lineStart
 		if operand_9 {
 			operand_9 = p.sourceCommentIndent
 		}
 		if operand_9 {
 			p.indent = max(p.indent, p.sourceIndent(item.start))
 		}
-		var operand_10 operandType_3 = p.lineStart
+		operand_10 := p.lineStart
 		if operand_10 {
 			operand_10 = start.Column == 1
 		}
-		var operand_11 operandType_3 = operand_10
+		var operand_11 bool = operand_10
 		if operand_11 {
 			operand_11 = strings.HasPrefix(item.text, "//line ")
 		}
@@ -496,7 +489,7 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		p.indent = previousIndent
 		stop := p.position(item.stop)
 		nextPosition := position
-		var operand_12 operandType_2 = p.comment < len(p.comments)
+		var operand_12 operandType_1 = p.comment < len(p.comments)
 		if operand_12 {
 			operand_12 = p.comments[p.comment].start < position
 		}
@@ -504,11 +497,11 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 			nextPosition = p.comments[p.comment].start
 		}
 		next := p.position(nextPosition)
-		var operand_13 operandType_3 = strings.HasPrefix(item.text, "//")
+		operand_13 := strings.HasPrefix(item.text, "//")
 		if !operand_13 {
 			operand_13 = !next.IsValid()
 		}
-		var operand_14 operandType_3 = operand_13
+		var operand_14 bool = operand_13
 		if !operand_14 {
 			operand_14 = stop.Line != next.Line
 		}
@@ -520,8 +513,7 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		p.lastSource = item.stop
 	}
 	if wroteComment {
-		type operandType_5 = bool
-		var operand_15 operandType_5 = preserveSpace
+		operand_15 := preserveSpace
 		if operand_15 {
 			operand_15 = !p.lineStart
 		}
@@ -703,13 +695,12 @@ func (p *printer) trailingLine(position token.Pos) {
 		}
 		end := comment.stop
 		for index := p.comment + 1; index < len(p.comments); index++ {
-			type operandType_1 = bool
 			next := p.comments[index]
-			var operand_5 operandType_1 = strings.HasPrefix(p.comments[index-1].text, "//")
+			operand_5 := strings.HasPrefix(p.comments[index-1].text, "//")
 			if !operand_5 {
 				operand_5 = p.position(next.start).Line != line
 			}
-			var operand_6 operandType_1 = operand_5
+			var operand_6 bool = operand_5
 			if !operand_6 {
 				operand_6 = !p.sourceWhitespaceBetween(end, next.start)
 			}
@@ -812,17 +803,16 @@ func (p *printer) comma(position token.Pos, following token.Pos) token.Pos {
 	commentLimit := comma
 	line := p.position(position).Line
 	for index := p.comment; index < len(p.comments); index++ {
-		type operandType = bool
 		item := p.comments[index]
-		var operand operandType = item.start >= following
+		var operand bool = item.start >= following
 		if !operand {
 			operand = strings.HasPrefix(item.text, "//")
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if !operand_1 {
 			operand_1 = p.position(item.start).Line != line
 		}
-		var operand_2 operandType = operand_1
+		var operand_2 bool = operand_1
 		if !operand_2 {
 			operand_2 = p.position(item.stop).Line != line
 		}
@@ -860,14 +850,13 @@ func (p *printer) tokenEnd(position token.Pos, width int) token.Pos {
 }
 
 func (p *printer) multiline(start token.Pos, stop token.Pos) bool {
-	type operandType = bool
 	first := p.position(start)
 	last := p.position(stop)
-	var operand operandType = first.IsValid()
+	operand := first.IsValid()
 	if operand {
 		operand = last.IsValid()
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
 		operand_1 = first.Line != last.Line
 	}
@@ -905,7 +894,6 @@ func (p *printer) sourceBlankBetween(stop token.Pos, start token.Pos) bool {
 	firstLine := p.position(stop).Line
 	comment := p.commentEndingAfter(stop)
 	for index, line := range lines[1:max(1, len(lines)-1)] {
-		type operandType_2 = bool
 		lineNumber := firstLine + index + 1
 		for {
 			type operandType_1 = bool
@@ -918,15 +906,15 @@ func (p *printer) sourceBlankBetween(stop token.Pos, start token.Pos) bool {
 			}
 			comment++
 		}
-		var operand_4 operandType_2 = comment < len(p.comments)
+		var operand_4 bool = comment < len(p.comments)
 		if operand_4 {
 			operand_4 = p.comments[comment].start < start
 		}
-		var operand_5 operandType_2 = operand_4
+		var operand_5 bool = operand_4
 		if operand_5 {
 			operand_5 = p.position(p.comments[comment].start).Line <= lineNumber
 		}
-		var operand_6 operandType_2 = operand_5
+		var operand_6 bool = operand_5
 		if operand_6 {
 			operand_6 = lineNumber <= p.position(p.comments[comment].stop).Line
 		}
@@ -943,7 +931,6 @@ func (p *printer) sourceBlankBetween(stop token.Pos, start token.Pos) bool {
 }
 
 func (p *printer) sourceGap(stop token.Pos, start token.Pos) sourceGap {
-	type operandType_1 = bool
 	left := stop
 	comment := p.comment
 	for {
@@ -963,7 +950,7 @@ func (p *printer) sourceGap(stop token.Pos, start token.Pos) sourceGap {
 		comment++
 	}
 	right := start
-	var operand_2 operandType_1 = comment < len(p.comments)
+	var operand_2 bool = comment < len(p.comments)
 	if operand_2 {
 		operand_2 = p.comments[comment].start < start
 	}
@@ -971,7 +958,7 @@ func (p *printer) sourceGap(stop token.Pos, start token.Pos) sourceGap {
 	if leadingComment {
 		right = p.comments[comment].start
 	}
-	var operand_3 operandType_1 = leadingComment
+	operand_3 := leadingComment
 	if operand_3 {
 		operand_3 = p.position(right).Column > p.position(start).Column
 	}
@@ -994,12 +981,11 @@ func (p *printer) breakSourceGap(stop token.Pos, start token.Pos) {
 }
 
 func (p *printer) breakClosingGap(stop token.Pos, start token.Pos) {
-	type operandType = bool
 	gap := p.sourceGap(stop, start)
 	if gap.lineBreak {
 		p.newline()
 	}
-	var operand operandType = gap.blank
+	operand := gap.blank
 	if operand {
 		operand = p.hasTrailingComment(stop)
 	}

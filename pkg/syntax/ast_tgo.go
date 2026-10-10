@@ -275,7 +275,6 @@ func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 }
 
 func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -289,7 +288,6 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -304,12 +302,12 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "ReceiveOnly":
 			current = 3
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -325,11 +323,11 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -352,7 +350,7 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -1998,7 +1996,6 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -2012,7 +2009,6 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -2075,12 +2071,12 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Comprehension":
 			current = 27
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -2096,11 +2092,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -2123,7 +2119,7 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -4259,7 +4255,6 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -4273,7 +4268,6 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -4324,12 +4318,12 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Range":
 			current = 21
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -4345,11 +4339,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -4372,7 +4366,7 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -5324,7 +5318,6 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -5338,7 +5331,6 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -5353,12 +5345,12 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Type":
 			current = 3
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -5374,11 +5366,11 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -5401,7 +5393,7 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -6149,7 +6141,6 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -6163,7 +6154,6 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -6182,12 +6172,12 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Struct":
 			current = 5
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -6203,11 +6193,11 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -6230,7 +6220,7 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -7477,7 +7467,6 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -7491,7 +7480,6 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -7524,12 +7512,12 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "CommentGroup":
 			current = 12
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -7545,11 +7533,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -7572,7 +7560,7 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}

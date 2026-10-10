@@ -104,7 +104,6 @@ func (c *checker) analyzeTGoPackage() (*sourceanalysis.Package, error) {
 
 // tgoTestPackage reports whether the pass contains generated TGo tests.
 func (c *checker) tgoTestPackage() (bool, bool) {
-	type operandType = bool
 	test := false
 	production := false
 	for _, file := range c.files {
@@ -119,7 +118,7 @@ func (c *checker) tgoTestPackage() (bool, bool) {
 		}
 
 	}
-	var operand operandType = test
+	operand := test
 	if operand {
 		operand = !production
 	}
@@ -282,7 +281,6 @@ func (e *nilEnvironment) checkNilFunction(
 }
 
 func (e *nilEnvironment) nilCallMayReturn(expression *syntax.Expression) bool {
-	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
 		return true
@@ -292,7 +290,7 @@ func (e *nilEnvironment) nilCallMayReturn(expression *syntax.Expression) bool {
 		return true
 	}
 	builtin, ok := e.facts.Object(name).(*types.Builtin)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = builtin.Name() != "panic"
 	}
@@ -303,12 +301,11 @@ func (e *nilEnvironment) nilEntryState(
 	root *syntax.Node,
 	function *syntax.FunctionType,
 ) *nilFlowState {
-	type operandType_1 = bool
+	type operandType = bool
 	state := newNilState()
 	{
-		type operandType = bool
 		declaration, ok := syntax.FunctionDeclarationOf(root)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = declaration.Receiver != nil
 		}
@@ -323,7 +320,7 @@ func (e *nilEnvironment) nilEntryState(
 			}
 		}
 	}
-	var operand_1 operandType_1 = function == nil
+	var operand_1 operandType = function == nil
 	if !operand_1 {
 		operand_1 = function.Params == nil
 	}
@@ -472,8 +469,7 @@ func joinNilStates(
 	current *nilFlowState,
 	incoming *nilFlowState,
 ) (*nilFlowState, bool) {
-	type operandType = bool
-	var operand operandType = incoming == nil
+	var operand bool = incoming == nil
 	if !operand {
 		operand = !incoming.reachable
 	}
@@ -504,11 +500,10 @@ func joinNilStates(
 	}
 	for left := range places {
 		for right := range places {
-			type operandType_1 = bool
 			if nilPlaceID(left) >= nilPlaceID(right) {
 				continue
 			}
-			var operand_1 operandType_1 = nilAliased(current, left, right)
+			operand_1 := nilAliased(current, left, right)
 			if operand_1 {
 				operand_1 = nilAliased(incoming, left, right)
 			}
@@ -518,9 +513,8 @@ func joinNilStates(
 		}
 	}
 	for object, guard := range current.guards {
-		type operandType_2 = bool
 		other, ok := incoming.guards[object]
-		var operand_2 operandType_2 = ok
+		operand_2 := ok
 		if operand_2 {
 			operand_2 = equalNilGuard(guard, other)
 		}
@@ -592,8 +586,7 @@ func equalNilStates(left, right *nilFlowState) bool {
 }
 
 func equalNilGuard(left, right nilGuard) bool {
-	type operandType = bool
-	var operand operandType = equalNilBranches(left.trueBranches, right.trueBranches)
+	operand := equalNilBranches(left.trueBranches, right.trueBranches)
 	if operand {
 		operand = equalNilBranches(left.falseBranches, right.falseBranches)
 	}

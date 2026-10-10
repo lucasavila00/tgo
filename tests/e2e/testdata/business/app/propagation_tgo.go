@@ -281,7 +281,6 @@ func PropagationManyDeclaration(found bool) (string, int, error) {
 	if err != nil {
 		return "", 0, fmt.Errorf("propagationPair: %w", err)
 	}
-
 	return name, value, nil
 }
 
@@ -464,62 +463,68 @@ func PropagationIfInitializer(events *[]string, value bool) (string, error) {
 
 func PropagationRange(found bool) (int, error) {
 	total := 0
-	result, err := propagationValues(found)
-	if err != nil {
-		return 0, fmt.Errorf("propagationValues: %w", err)
-	}
+	{
+		result, err := propagationValues(found)
+		if err != nil {
+			return 0, fmt.Errorf("propagationValues: %w", err)
+		}
 
-	for _, value := range result {
-		total += value
+		for _, value := range result {
+			total += value
+		}
 	}
 	return total, nil
 }
 
 func PropagationLabeledRange(found bool) (int, error) {
 	total := 0
-	result, err := propagationValues(found)
-	if err != nil {
-		return 0, fmt.Errorf("propagationValues: %w", err)
-	}
-outer:
+	{
+		result, err := propagationValues(found)
+		if err != nil {
+			return 0, fmt.Errorf("propagationValues: %w", err)
+		}
+	outer:
 
-	for _, value := range result {
-		for {
-			total += value
-			continue outer
+		for _, value := range result {
+			for {
+				total += value
+				continue outer
+			}
 		}
 	}
 	return total, nil
 }
 
 func PropagationSwitch(found bool) (string, error) {
-	result, err := propagationCode(found)
-	if err != nil {
-		return "", fmt.Errorf("propagationCode: %w", err)
-	}
-	tag := result
-	selected := -1
-	if selected == -1 {
-		if tag ==
-
-			1 {
-			selected = 0
+	{
+		result, err := propagationCode(found)
+		if err != nil {
+			return "", fmt.Errorf("propagationCode: %w", err)
 		}
-	}
-	if selected == -1 {
-		if tag ==
+		tag := result
+		selected := -1
+		if selected == -1 {
+			if tag ==
 
-			2 {
-			selected = 1
+				1 {
+				selected = 0
+			}
 		}
-	}
-	switch selected {
-	case 0:
-		return "one", nil
-	case 1:
-		return "two", nil
-	default:
-		return "other", nil
+		if selected == -1 {
+			if tag ==
+
+				2 {
+				selected = 1
+			}
+		}
+		switch selected {
+		case 0:
+			return "one", nil
+		case 1:
+			return "two", nil
+		default:
+			return "other", nil
+		}
 	}
 }
 
@@ -550,26 +555,28 @@ func PropagationSwitchInitializer(events *[]string, found bool) (string, error) 
 
 func PropagationLabeledSwitch(found bool) (string, error) {
 	result := "before"
-	result_1, err := propagationCode(found)
-	if err != nil {
-		return "", fmt.Errorf("propagationCode: %w", err)
-	}
-	tag := result_1
-	selected := -1
-	if selected == -1 {
-		if tag ==
-
-			2 {
-			selected = 0
+	{
+		result_1, err := propagationCode(found)
+		if err != nil {
+			return "", fmt.Errorf("propagationCode: %w", err)
 		}
-	}
-outer:
-	switch selected {
-	case 0:
-		result = "two"
-		break outer
-	default:
-		result = "other"
+		tag := result_1
+		selected := -1
+		if selected == -1 {
+			if tag ==
+
+				2 {
+				selected = 0
+			}
+		}
+	outer:
+		switch selected {
+		case 0:
+			result = "two"
+			break outer
+		default:
+			result = "other"
+		}
 	}
 	return result, nil
 }
@@ -577,26 +584,29 @@ outer:
 func PropagationGotoLabeledSwitch(found bool) (string, error) {
 	result := "before"
 	goto outer
-	result_1, err := propagationCode(found)
-	if err != nil {
-		return "", fmt.Errorf("propagationCode: %w", err)
-	}
-	tag := result_1
-	selected := -1
-	if selected == -1 {
-		if tag ==
-
-			2 {
-			selected = 0
-		}
-	}
 outer:
-	switch selected {
-	case 0:
-		result = "two"
-		break outer
-	default:
-		result = "other"
+	{
+		result_1, err := propagationCode(found)
+		if err != nil {
+			return "", fmt.Errorf("propagationCode: %w", err)
+		}
+		tag := result_1
+		selected := -1
+		if selected == -1 {
+			if tag ==
+
+				2 {
+				selected = 0
+			}
+		}
+	control:
+		switch selected {
+		case 0:
+			result = "two"
+			break control
+		default:
+			result = "other"
+		}
 	}
 	return result, nil
 }
@@ -708,18 +718,21 @@ func PropagationLabeledTypeSwitchScope() (string, error) {
 func PropagationGotoLabeledTypeSwitch(events *[]string, found bool) (string, error) {
 	result := "before"
 	goto outer
-	result_1, err := propagationAny(events, found)
-	if err != nil {
-		return "", err
-	}
 outer:
+	{
+		result_1, err := propagationAny(events, found)
+		if err != nil {
+			return "", err
+		}
+	control:
 
-	switch value := (result_1).(type) {
-	case string:
-		result = value
-		break outer
-	default:
-		result = "other"
+		switch value := (result_1).(type) {
+		case string:
+			result = value
+			break control
+		default:
+			result = "other"
+		}
 	}
 	return result, nil
 }

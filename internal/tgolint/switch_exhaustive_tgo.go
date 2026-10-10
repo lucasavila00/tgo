@@ -17,12 +17,11 @@ func (c *checker) panicIsShadowed(file *syntax.File, position token.Pos) bool {
 	shadowed := false
 	for _, source := range c.sourceFiles {
 		syntax.Inspect(source, func(node *syntax.Node) bool {
-			type operandType = bool
 			if shadowed {
 				return false
 			}
 			identifier, ok := syntax.IdentifierOf(node)
-			var operand operandType = !ok
+			operand := !ok
 			if !operand {
 				operand = identifier.Name != "panic"
 			}
@@ -30,18 +29,18 @@ func (c *checker) panicIsShadowed(file *syntax.File, position token.Pos) bool {
 				return true
 			}
 			object, definition := c.facts.IdentifierFact(source, node)
-			var operand_1 operandType = !definition
+			operand_1 := !definition
 			if !operand_1 {
 				operand_1 = object == nil
 			}
-			var operand_2 operandType = operand_1
+			var operand_2 bool = operand_1
 			if !operand_2 {
 				operand_2 = object.Parent() == nil
 			}
 			if operand_2 {
 				return true
 			}
-			var operand_3 operandType = source == file
+			var operand_3 bool = source == file
 			if operand_3 {
 				operand_3 = c.sourceObjectVisibleAt(file, node, object, position)
 			}
@@ -64,14 +63,13 @@ func (c *checker) sourceObjectVisibleAt(
 	object types.Object,
 	position token.Pos,
 ) bool {
-	type operandType = bool
 	target := c.pass.Fset.Position(position)
 	declaration := c.pass.Fset.Position(c.sourceObjectScopeStart(file, node, object))
-	var operand operandType = target.Filename == ""
+	var operand bool = target.Filename == ""
 	if !operand {
 		operand = target.Filename != declaration.Filename
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = !sourcePositionAtOrAfter(target, declaration)
 	}
@@ -136,7 +134,6 @@ func (c *checker) sourceObjectScopeStart(
 }
 
 func (c *checker) sourceScopeContains(scope *types.Scope, position token.Pos) bool {
-	type operandType_1 = bool
 	type operandType = bool
 	target := c.pass.Fset.Position(position)
 	start := c.pass.Fset.Position(scope.Pos())
@@ -152,7 +149,7 @@ func (c *checker) sourceScopeContains(scope *types.Scope, position token.Pos) bo
 	if operand_1 {
 		return false
 	}
-	var operand_2 operandType_1 = sourcePositionAtOrAfter(target, start)
+	operand_2 := sourcePositionAtOrAfter(target, start)
 	if operand_2 {
 		operand_2 = sourcePositionAtOrAfter(stop, target)
 	}
@@ -160,11 +157,9 @@ func (c *checker) sourceScopeContains(scope *types.Scope, position token.Pos) bo
 }
 
 func sourcePositionAtOrAfter(left token.Position, right token.Position) bool {
-	type operandType = bool
-	var operand operandType = left.Line > right.Line
+	var operand bool = left.Line > right.Line
 	if !operand {
-		type operandType_1 = bool
-		var operand_1 operandType_1 = left.Line == right.Line
+		var operand_1 bool = left.Line == right.Line
 		if operand_1 {
 			operand_1 = left.Column >= right.Column
 		}

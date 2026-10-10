@@ -118,9 +118,8 @@ func (s diagnosticSuppressions) addLine(filename string, line int) {
 
 // contains reports whether a source position has an active directive.
 func (s diagnosticSuppressions) contains(pass *analysis.Pass, position token.Pos) bool {
-	type operandType = bool
 	source := pass.Fset.Position(position)
-	var operand operandType = s.files[source.Filename]
+	operand := s.files[source.Filename]
 	if !operand {
 		operand = s.lines[source.Filename][source.Line]
 	}

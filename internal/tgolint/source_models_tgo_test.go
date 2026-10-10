@@ -85,7 +85,6 @@ func TestTGoTestPackageUsesGeneratedTestName(t *testing.T) {
 }
 
 func TestReadTGoSourceUsesPassReader(t *testing.T) {
-	type operandType_1 = bool
 	type operandType = bool
 	called := false
 	pass := new(analysis.Pass)
@@ -98,14 +97,14 @@ func TestReadTGoSourceUsesPassReader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var operand operandType = !called
+	operand := !called
 	if !operand {
 		operand = string(data) != "/work/model.tgo"
 	}
 	if operand {
 		t.Fatalf("reader called=%v data=%q", called, data)
 	}
-	var operand_1 operandType_1 = len(pass.OtherFiles) != 1
+	var operand_1 operandType = len(pass.OtherFiles) != 1
 	if !operand_1 {
 		operand_1 = pass.OtherFiles[0] != "/work/model.tgo"
 	}

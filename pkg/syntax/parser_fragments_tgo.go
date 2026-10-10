@@ -30,11 +30,10 @@ func shiftTokenPositions(root any, delta int) {
 	seen := make(map[uintptr]bool)
 	var shift func(reflect.Value) = nil
 	shift = func(value reflect.Value) {
-		type operandType = bool
 		if !value.IsValid() {
 			return
 		}
-		var operand operandType = value.Type() == positionType
+		var operand bool = value.Type() == positionType
 		if operand {
 			operand = value.CanSet()
 		}
@@ -156,14 +155,13 @@ func (p *sourceParser) sanitize(
 				}
 				elements := node.Elts[:0]
 				for _, element := range node.Elts {
-					type operandType_1 = bool
 					marker, present := defaultAt[element.Pos()]
 					literal, artificial := element.(*ast.BasicLit)
-					var operand_1 operandType_1 = present
+					operand_1 := present
 					if operand_1 {
 						operand_1 = artificial
 					}
-					var operand_2 operandType_1 = operand_1
+					var operand_2 bool = operand_1
 					if operand_2 {
 						operand_2 = literal.Value == "0"
 					}
@@ -249,8 +247,7 @@ func (p *sourceParser) attachComments(file *frontFile) {
 	seen := make(map[frontNode]bool)
 	var collect func(frontNode) = nil
 	collect = func(node frontNode) {
-		type operandType = bool
-		var operand operandType = node == nil
+		var operand bool = node == nil
 		if !operand {
 			operand = seen[node]
 		}
@@ -285,7 +282,6 @@ func (p *sourceParser) attachComments(file *frontFile) {
 func standardCommentOwners(nodes []frontNode) map[*ast.CommentGroup]frontNode {
 	owners := make(map[*ast.CommentGroup]frontNode)
 	for _, node := range nodes {
-		type operandType = bool
 		{
 			_, ok := node.(ast.Node)
 			if !ok {
@@ -293,11 +289,11 @@ func standardCommentOwners(nodes []frontNode) map[*ast.CommentGroup]frontNode {
 			}
 		}
 		value := reflect.ValueOf(node)
-		var operand operandType = !value.IsValid()
+		operand := !value.IsValid()
 		if !operand {
 			operand = value.Kind() != reflect.Pointer
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if !operand_1 {
 			operand_1 = value.IsNil()
 		}
@@ -306,13 +302,12 @@ func standardCommentOwners(nodes []frontNode) map[*ast.CommentGroup]frontNode {
 		}
 		value = value.Elem()
 		for _, name := range []string{"Doc", "Comment"} {
-			type operandType_1 = bool
 			field := value.FieldByName(name)
-			var operand_2 operandType_1 = !field.IsValid()
+			operand_2 := !field.IsValid()
 			if !operand_2 {
 				operand_2 = field.IsNil()
 			}
-			var operand_3 operandType_1 = operand_2
+			var operand_3 bool = operand_2
 			if !operand_3 {
 				operand_3 = !field.CanInterface()
 			}
@@ -375,10 +370,9 @@ func (p *sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup
 			continue
 		}
 		if distance == bestDistance {
-			type operandType_1 = bool
 			_, nodeExtension := node.(frontExtension)
 			_, ownerExtension := owner.(frontExtension)
-			var operand_3 operandType_1 = !nodeExtension
+			operand_3 := !nodeExtension
 			if !operand_3 {
 				operand_3 = ownerExtension
 			}

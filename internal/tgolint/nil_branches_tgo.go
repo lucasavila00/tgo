@@ -88,16 +88,14 @@ func (e *nilEnvironment) comparisonNilBranches(
 	operator token.Token,
 	state *nilFlowState,
 ) (nilBranches, nilBranches) {
-	type operandType = bool
 	place, ok := e.nilPlace(left)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = !e.isNil(right)
 	}
 	if operand {
-		type operandType_1 = bool
 		place, ok = e.nilPlace(right)
-		var operand_1 operandType_1 = !ok
+		operand_1 := !ok
 		if !operand_1 {
 			operand_1 = !e.isNil(left)
 		}
@@ -168,9 +166,8 @@ func (e *nilEnvironment) normalizeNilBranches(
 ) nilBranches {
 	result := make(nilBranches, 0, len(branches))
 	for _, branch := range branches {
-		type operandType = bool
 		normalized, possible := normalizeNilBranch(state, branch)
-		var operand operandType = !possible
+		operand := !possible
 		if !operand {
 			operand = branchCoveredBy(result, normalized)
 		}

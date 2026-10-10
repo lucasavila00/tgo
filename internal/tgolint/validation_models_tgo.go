@@ -46,9 +46,8 @@ func (c *checker) findModels() {
 }
 
 func (c *checker) exportGeneratedValidator(object *types.TypeName) {
-	type operandType = bool
 	function, ok := object.Pkg().Scope().Lookup("Validate" + object.Name()).(*types.Func)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = !validValidatorAPI(function, object.Type())
 	}
@@ -61,13 +60,12 @@ func (c *checker) exportGeneratedValidator(object *types.TypeName) {
 }
 
 func validValidatorAPI(function *types.Func, typ types.Type) bool {
-	type operandType = bool
 	signature, ok := function.Type().(*types.Signature)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = signature.Params().Len() != 1
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = signature.Results().Len() != 2
 	}
@@ -75,11 +73,11 @@ func validValidatorAPI(function *types.Func, typ types.Type) bool {
 		return false
 	}
 	errorType := types.Universe.Lookup("error").Type()
-	var operand_2 operandType = types.Identical(signature.Params().At(0).Type(), typ)
+	operand_2 := types.Identical(signature.Params().At(0).Type(), typ)
 	if operand_2 {
 		operand_2 = types.Identical(signature.Results().At(0).Type(), typ)
 	}
-	var operand_3 operandType = operand_2
+	var operand_3 bool = operand_2
 	if operand_3 {
 		operand_3 = types.Identical(signature.Results().At(1).Type(), errorType)
 	}
@@ -92,9 +90,8 @@ func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
 	scope := object.Pkg().Scope()
 	_, name := modelDescription(value)
 	if modelIsChecked(value) {
-		type operandType = bool
 		constructor, ok := scope.Lookup("New" + object.Name()).(*types.Func)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = validCheckedStructAPI(object.Type())
 		}
@@ -106,14 +103,13 @@ func (c *checker) exportValidationFacts(object *types.TypeName, value *model) {
 	}
 	if modelIsEnum(value) {
 		for _, variant := range modelVariants(value) {
-			type operandType_1 = bool
 			function, ok := scope.Lookup("New" + name + variant).(*types.Func)
 			payload, payloadOK := scope.Lookup(name + variant).(*types.TypeName)
-			var operand_1 operandType_1 = !ok
+			operand_1 := !ok
 			if !operand_1 {
 				operand_1 = !payloadOK
 			}
-			var operand_2 operandType_1 = operand_1
+			var operand_2 bool = operand_1
 			if !operand_2 {
 				operand_2 = !validEnumConstructor(object.Type(), payload.Type(), function.Name())
 			}
@@ -134,8 +130,7 @@ func (c *checker) findValidationWrappers() {
 		changed = false
 		for _, file := range c.files {
 			for _, declaration := range file.Declarations {
-				type operandType = bool
-				var operand operandType = c.exportValidationWrapper(declaration)
+				operand := c.exportValidationWrapper(declaration)
 				if !operand {
 					operand = changed
 				}
@@ -146,7 +141,6 @@ func (c *checker) findValidationWrappers() {
 }
 
 func (c *checker) exportValidationWrapper(declaration *syntax.Declaration) bool {
-	type operandType_1 = bool
 	type operandType = bool
 	function := syntax.FunctionDeclarationValueOf(declaration)
 	var operand operandType = function == nil
@@ -161,7 +155,7 @@ func (c *checker) exportValidationWrapper(declaration *syntax.Declaration) bool 
 		return false
 	}
 	object, ok := c.facts.DefinitionName(function.Name).(*types.Func)
-	var operand_2 operandType_1 = !ok
+	operand_2 := !ok
 	if !operand_2 {
 		operand_2 = c.validated[object]
 	}
@@ -177,7 +171,7 @@ func (c *checker) exportValidationWrapper(declaration *syntax.Declaration) bool 
 		return false
 	}
 	call := syntax.CallExpressionOf(statement.Results[0])
-	var operand_4 operandType_1 = call == nil
+	var operand_4 bool = call == nil
 	if !operand_4 {
 		operand_4 = !c.sourceCallHasValidationFact(call)
 	}
@@ -230,12 +224,11 @@ func (c *checker) findValidationFunctionValues() {
 		)
 	}
 	for object, target := range candidates {
-		type operandType = bool
-		var operand operandType = object != nil
+		var operand bool = object != nil
 		if operand {
 			operand = writes[object] == 1
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = !escaped[object]
 		}
@@ -349,12 +342,11 @@ func (c *checker) recordValidationFunctionValue(
 	left *syntax.Expression,
 	right *syntax.Expression,
 ) {
-	type operandType = bool
 	if syntax.IdentifierExpressionOf(left) == nil {
 		return
 	}
 	target := c.facts.CalledFunction(right)
-	var operand operandType = target != nil
+	var operand bool = target != nil
 	if operand {
 		operand = c.objectHasValidationFact(target)
 	}
@@ -400,17 +392,16 @@ func method(typ types.Type, name string) *types.Signature {
 }
 
 func validTagMethod(typ, tag types.Type) bool {
-	type operandType = bool
 	method := method(typ, "Tag")
-	var operand operandType = method != nil
+	var operand bool = method != nil
 	if operand {
 		operand = method.Params().Len() == 0
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
 		operand_1 = method.Results().Len() == 1
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if operand_2 {
 		operand_2 = types.Identical(method.Results().At(0).Type(), tag)
 	}
@@ -419,29 +410,28 @@ func validTagMethod(typ, tag types.Type) bool {
 }
 
 func validEnumAPI(typ, payload types.Type, accessor, constructorName string) bool {
-	type operandType = bool
 	named, ok := types.Unalias(typ).(*types.Named)
 	if !ok {
 		return false
 	}
 	read := method(typ, accessor)
-	var operand operandType = read != nil
+	var operand bool = read != nil
 	if operand {
 		operand = validEnumConstructor(typ, payload, constructorName)
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
 		operand_1 = method(payload, named.Obj().Name()) == nil
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if operand_2 {
 		operand_2 = read.Params().Len() == 0
 	}
-	var operand_3 operandType = operand_2
+	var operand_3 bool = operand_2
 	if operand_3 {
 		operand_3 = read.Results().Len() == 1
 	}
-	var operand_4 operandType = operand_3
+	var operand_4 bool = operand_3
 	if operand_4 {
 		operand_4 = types.Identical(read.Results().At(0).Type(), payload)
 	}
@@ -450,9 +440,8 @@ func validEnumAPI(typ, payload types.Type, accessor, constructorName string) boo
 }
 
 func validEnumConstructor(typ, payload types.Type, constructorName string) bool {
-	type operandType = bool
 	named, ok := types.Unalias(typ).(*types.Named)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = named.Obj().Pkg() == nil
 	}
@@ -465,19 +454,19 @@ func validEnumConstructor(typ, payload types.Type, constructorName string) bool 
 	}
 	signature, ok := function.Type().(*types.Signature)
 	structure, structureOK := payload.Underlying().(*types.Struct)
-	var operand_1 operandType = !ok
+	operand_1 := !ok
 	if !operand_1 {
 		operand_1 = !structureOK
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = signature.Params().Len() != structure.NumFields()
 	}
-	var operand_3 operandType = operand_2
+	var operand_3 bool = operand_2
 	if !operand_3 {
 		operand_3 = signature.Results().Len() != 1
 	}
-	var operand_4 operandType = operand_3
+	var operand_4 bool = operand_3
 	if !operand_4 {
 		operand_4 = !types.Identical(signature.Results().At(0).Type(), typ)
 	}
@@ -493,14 +482,13 @@ func validEnumConstructor(typ, payload types.Type, constructorName string) bool 
 }
 
 func validEnumCarrier(payload types.Type, carrier types.Type) bool {
-	type operandType = bool
 	payloadStruct, payloadOK := payload.Underlying().(*types.Struct)
 	carrierStruct, carrierOK := carrier.Underlying().(*types.Struct)
-	var operand operandType = !payloadOK
+	operand := !payloadOK
 	if !operand {
 		operand = !carrierOK
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = payloadStruct.NumFields() != carrierStruct.NumFields()
 	}
@@ -508,8 +496,7 @@ func validEnumCarrier(payload types.Type, carrier types.Type) bool {
 		return false
 	}
 	for index := 0; index < payloadStruct.NumFields(); index++ {
-		type operandType_1 = bool
-		var operand_2 operandType_1 = !carrierStruct.Field(index).Exported()
+		operand_2 := !carrierStruct.Field(index).Exported()
 		if !operand_2 {
 			operand_2 = !types.Identical(payloadStruct.Field(index).Type(), carrierStruct.Field(index).Type())
 		}
@@ -522,10 +509,9 @@ func validEnumCarrier(payload types.Type, carrier types.Type) bool {
 
 // modelFor loads and caches the verified model for one named type.
 func (c *checker) modelFor(typ types.Type) *model {
-	type operandType = bool
 	typ = types.Unalias(typ)
 	named, ok := typ.(*types.Named)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = named.Obj().Pkg() == nil
 	}
@@ -540,12 +526,12 @@ func (c *checker) modelFor(typ types.Type) *model {
 		}
 	}
 	for candidate, fact := range c.models {
-		type operandType_1 = bool
-		var operand_1 operandType_1 = candidate.pkg != nil
+		type operandType = bool
+		var operand_1 operandType = candidate.pkg != nil
 		if operand_1 {
 			operand_1 = candidate.name == key.name
 		}
-		var operand_2 operandType_1 = operand_1
+		var operand_2 operandType = operand_1
 		if operand_2 {
 			operand_2 = candidate.pkg.Path() == key.pkg.Path()
 		}
@@ -556,7 +542,7 @@ func (c *checker) modelFor(typ types.Type) *model {
 	}
 	fact := new(modelWireFact)
 	factObject := c.analysisModelObject(named.Obj())
-	var operand_3 operandType = factObject == nil
+	var operand_3 bool = factObject == nil
 	if !operand_3 {
 		operand_3 = !c.pass.ImportObjectFact(factObject, fact)
 	}
@@ -596,8 +582,7 @@ func analysisPackage(
 	path string,
 	seen map[*types.Package]bool,
 ) *types.Package {
-	type operandType = bool
-	var operand operandType = pkg == nil
+	var operand bool = pkg == nil
 	if !operand {
 		operand = seen[pkg]
 	}
@@ -644,12 +629,11 @@ func (c *checker) modelForTypeParameter(parameter *types.TypeParam) *model {
 	}
 	var found *model = nil
 	for _, term := range terms {
-		type operandType = bool
 		model := c.modelForReceiver(term.Type())
 		if model == nil {
 			continue
 		}
-		var operand operandType = found != nil
+		var operand bool = found != nil
 		if operand {
 			operand = !sameModel(found, model)
 		}
@@ -670,7 +654,6 @@ func (c *checker) structuralModel(receiver types.Type) *model {
 	methods := types.NewMethodSet(receiver)
 	var found *model = nil
 	for index := 0; index < methods.Len(); index++ {
-		type operandType = bool
 		function, ok := methods.At(index).Obj().(*types.Func)
 		if !ok {
 			continue
@@ -679,7 +662,7 @@ func (c *checker) structuralModel(receiver types.Type) *model {
 		if model == nil {
 			continue
 		}
-		var operand operandType = found != nil
+		var operand bool = found != nil
 		if operand {
 			operand = !sameModel(found, model)
 		}
@@ -692,7 +675,6 @@ func (c *checker) structuralModel(receiver types.Type) *model {
 }
 
 func (c *checker) receiverCanHideModel(typ types.Type) bool {
-	type operandType = bool
 	typ = types.Unalias(typ)
 	{
 		named, ok := typ.(*types.Named)
@@ -707,7 +689,7 @@ func (c *checker) receiverCanHideModel(typ types.Type) bool {
 		return isInterface
 	}
 	terms, supported := simpleTerms(parameter.Constraint())
-	var operand operandType = !supported
+	operand := !supported
 	if !operand {
 		operand = len(terms) == 0
 	}
@@ -716,18 +698,17 @@ func (c *checker) receiverCanHideModel(typ types.Type) bool {
 
 // modelForAccessor resolves a generated payload accessor to its owning model.
 func (c *checker) modelForAccessor(function *types.Func) *model {
-	type operandType = bool
 	name := function.Name()
 	if !strings.HasSuffix(name, "Payload") {
 		return nil
 	}
 	variant := strings.TrimSuffix(name, "Payload")
 	signature, ok := function.Type().(*types.Signature)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = signature.Params().Len() != 0
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = signature.Results().Len() != 1
 	}
@@ -735,11 +716,11 @@ func (c *checker) modelForAccessor(function *types.Func) *model {
 		return nil
 	}
 	payload, ok := types.Unalias(signature.Results().At(0).Type()).(*types.Named)
-	var operand_2 operandType = !ok
+	operand_2 := !ok
 	if !operand_2 {
 		operand_2 = payload.Obj().Pkg() == nil
 	}
-	var operand_3 operandType = operand_2
+	var operand_3 bool = operand_2
 	if !operand_3 {
 		operand_3 = !strings.HasSuffix(payload.Obj().Name(), variant)
 	}
@@ -752,7 +733,7 @@ func (c *checker) modelForAccessor(function *types.Func) *model {
 		return nil
 	}
 	model := c.modelFor(object.Type())
-	var operand_4 operandType = !modelIsEnum(model)
+	operand_4 := !modelIsEnum(model)
 	if !operand_4 {
 		operand_4 = variantTag(model, name) == 0
 	}

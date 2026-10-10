@@ -142,18 +142,19 @@ func compileWorkspaceContext(
 	paths := sortedTGoPackagePaths(packages)
 	result := make([]*compiler.CompiledPackage, 0, len(paths))
 	for _, path := range paths {
-		operand := ctx.Done()
-		select {
-		case <-operand:
-			return nil, ctx.Err()
-		default:
+		{
+			operand := ctx.Done()
+			select {
+			case <-operand:
+				return nil, ctx.Err()
+			default:
+			}
 		}
 		{
 			err := builder.build(path)
 			if err != nil {
-				type operandType = bool
 				var boundary *packagelanguage.BoundaryError = nil
-				var operand_1 operandType = !continueAfterError
+				operand_1 := !continueAfterError
 				if !operand_1 {
 					operand_1 = errors.As(err, &boundary)
 				}
@@ -194,19 +195,20 @@ func compileWorkspaceViewsContext(
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	result := make([]CompiledView, 0, len(packages))
 	for _, path := range sortedTGoPackagePaths(packages) {
-		operand := ctx.Done()
-		select {
-		case <-operand:
-			return nil, ctx.Err()
-		default:
+		{
+			operand := ctx.Done()
+			select {
+			case <-operand:
+				return nil, ctx.Err()
+			default:
+			}
 		}
 		unit := packages[path]
 		{
 			err := builder.build(path)
 			if err != nil {
-				type operandType = bool
 				var boundary *packagelanguage.BoundaryError = nil
-				var operand_1 operandType = !continueAfterError
+				operand_1 := !continueAfterError
 				if !operand_1 {
 					operand_1 = errors.As(err, &boundary)
 				}
@@ -226,9 +228,8 @@ func compileWorkspaceViewsContext(
 		})
 		internal, external, err := unit.readTests()
 		if err != nil {
-			type operandType_1 = bool
 			var boundary *packagelanguage.BoundaryError = nil
-			var operand_2 operandType_1 = !continueAfterError
+			operand_2 := !continueAfterError
 			if !operand_2 {
 				operand_2 = errors.As(err, &boundary)
 			}
@@ -247,19 +248,20 @@ func compileWorkspaceViewsContext(
 			if len(test.files.Sources) == 0 {
 				continue
 			}
-			operand_3 := ctx.Done()
-			select {
-			case <-operand_3:
-				return nil, ctx.Err()
-			default:
+			{
+				operand_3 := ctx.Done()
+				select {
+				case <-operand_3:
+					return nil, ctx.Err()
+				default:
+				}
 			}
 			compiled, err := builder.compileTestPackage(
 				unit, test.files, test.external, token.NewFileSet(),
 			)
 			if err != nil {
-				type operandType_2 = bool
 				var boundary *packagelanguage.BoundaryError = nil
-				var operand_4 operandType_2 = !continueAfterError
+				operand_4 := !continueAfterError
 				if !operand_4 {
 					operand_4 = errors.As(err, &boundary)
 				}
@@ -294,7 +296,6 @@ func CompilePackage(
 	importPath string,
 	files *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
-	type operandType = bool
 	root, module, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
@@ -311,7 +312,7 @@ func CompilePackage(
 	}
 
 	unit := packages[importPath]
-	var operand operandType = unit == nil
+	var operand bool = unit == nil
 	if !operand {
 		operand = !unit.tgoCandidate()
 	}
@@ -340,7 +341,6 @@ func CompileTestPackage(
 	external bool,
 	files *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
-	type operandType = bool
 	root, module, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
@@ -357,7 +357,7 @@ func CompileTestPackage(
 	}
 
 	unit := packages[importPath]
-	var operand operandType = unit == nil
+	var operand bool = unit == nil
 	if !operand {
 		operand = !unit.tgoCandidate()
 	}

@@ -248,7 +248,6 @@ func (v *scalarValue) UnmarshalJSON(data []byte) error {
 }
 
 func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -262,7 +261,6 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -279,12 +277,12 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "IntegerParameter":
 			current = 4
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -300,11 +298,11 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -327,7 +325,7 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -520,7 +518,6 @@ func (c *checker) scalarSuccessors(
 	block *cfg.Block,
 	state scalarState,
 ) []*cfg.Block {
-	type operandType_1 = bool
 	type operandType = bool
 	var operand operandType = len(block.Succs) != 2
 	if !operand {
@@ -530,7 +527,7 @@ func (c *checker) scalarSuccessors(
 		return block.Succs
 	}
 	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
-	var operand_1 operandType_1 = !ok
+	operand_1 := !ok
 	if !operand_1 {
 		operand_1 = condition == nil
 	}
@@ -650,9 +647,8 @@ func (c *checker) functionSignature(root *syntax.Node) *types.Signature {
 }
 
 func isInteger(typ types.Type) bool {
-	type operandType = bool
 	basic, ok := coreType(typ).(*types.Basic)
-	var operand operandType = ok
+	operand := ok
 	if operand {
 		operand = basic.Info()&types.IsInteger != 0
 	}
@@ -782,7 +778,6 @@ func (c *checker) transferScalarAssignment(
 		known = append(known, valueKnown)
 	}
 	for index, target := range statement.Left {
-		type operandType_2 = bool
 		type operandType_1 = bool
 		name := syntax.IdentifierExpressionOf(target)
 		var operand_2 operandType_1 = name == nil
@@ -793,7 +788,7 @@ func (c *checker) transferScalarAssignment(
 			continue
 		}
 		object := c.facts.Object(name)
-		var operand_3 operandType_2 = !owned[object]
+		operand_3 := !owned[object]
 		if !operand_3 {
 			operand_3 = !known[index]
 		}
@@ -819,10 +814,9 @@ func (c *checker) transferScalarValues(
 		return
 	}
 	for index, name := range names {
-		type operandType = bool
 		object := c.facts.Object(name)
 		value, known := c.evaluateScalar(values[index], state)
-		var operand operandType = !owned[object]
+		operand := !owned[object]
 		if !operand {
 			operand = !known
 		}
@@ -858,9 +852,8 @@ func (c *checker) invalidateScalarEscapes(state scalarState, root *syntax.Node) 
 					}
 				}
 				{
-					type operandType_1 = bool
 					selector := syntax.SelectorExpressionOf(expression)
-					var operand_1 operandType_1 = selector != nil
+					var operand_1 bool = selector != nil
 					if operand_1 {
 						operand_1 = c.pointerMethodSelection(expression)
 					}
@@ -929,9 +922,8 @@ func (c *checker) evaluateScalar(
 	{
 		unary := syntax.UnaryExpressionOf(expression)
 		if unary != nil {
-			type operandType = bool
 			value, ok := c.evaluateScalar(unary.Expression, state)
-			var operand operandType = !ok
+			operand := !ok
 			if !operand {
 				operand = unary.Operator != token.NOT
 			}
@@ -989,12 +981,11 @@ func (c *checker) valuePreservingConversion(
 	expression *syntax.Expression,
 	call *syntax.CallExpression,
 ) bool {
-	type operandType = bool
-	var operand operandType = len(call.Args) == 1
+	var operand bool = len(call.Args) == 1
 	if operand {
 		operand = c.facts.IsType(call.Callee)
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
 		operand_1 = types.Identical(
 			c.facts.Type(expression),
@@ -1010,10 +1001,9 @@ func (c *checker) evaluateScalarBinary(
 	expression *syntax.BinaryExpression,
 	state scalarState,
 ) (scalarValue, bool) {
-	type operandType = bool
 	left, leftKnown := c.evaluateScalar(expression.Left, state)
 	right, rightKnown := c.evaluateScalar(expression.Right, state)
-	var operand operandType = !leftKnown
+	operand := !leftKnown
 	if !operand {
 		operand = !rightKnown
 	}
@@ -1056,15 +1046,13 @@ func scalarLogicalAnd(
 	rightBoolean bool,
 	rightKnown bool,
 ) (scalarValue, bool) {
-	type operandType = bool
-	var operand operandType = leftKnown
+	operand := leftKnown
 	if operand {
 		operand = !leftBoolean
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
-		type operandType_1 = bool
-		var operand_2 operandType_1 = rightKnown
+		operand_2 := rightKnown
 		if operand_2 {
 			operand_2 = !rightBoolean
 		}
@@ -1075,14 +1063,14 @@ func scalarLogicalAnd(
 			return NewscalarValueBoolean(input.FieldValue)
 		}(TgoscalarValueBooleanInput{FieldValue: false}), true
 	}
-	var operand_3 operandType = leftKnown
+	operand_3 := leftKnown
 	if operand_3 {
 		operand_3 = leftBoolean
 	}
 	if operand_3 {
 		return right, true
 	}
-	var operand_4 operandType = rightKnown
+	operand_4 := rightKnown
 	if operand_4 {
 		operand_4 = rightBoolean
 	}
@@ -1102,15 +1090,13 @@ func scalarLogicalOr(
 	rightBoolean bool,
 	rightKnown bool,
 ) (scalarValue, bool) {
-	type operandType = bool
-	var operand operandType = leftKnown
+	operand := leftKnown
 	if operand {
 		operand = leftBoolean
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
-		type operandType_1 = bool
-		var operand_2 operandType_1 = rightKnown
+		operand_2 := rightKnown
 		if operand_2 {
 			operand_2 = rightBoolean
 		}
@@ -1121,14 +1107,14 @@ func scalarLogicalOr(
 			return NewscalarValueBoolean(input.FieldValue)
 		}(TgoscalarValueBooleanInput{FieldValue: true}), true
 	}
-	var operand_3 operandType = leftKnown
+	operand_3 := leftKnown
 	if operand_3 {
 		operand_3 = !leftBoolean
 	}
 	if operand_3 {
 		return right, true
 	}
-	var operand_4 operandType = rightKnown
+	operand_4 := rightKnown
 	if operand_4 {
 		operand_4 = !rightBoolean
 	}
@@ -1217,13 +1203,11 @@ func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
 }
 
 func scalarValuesEqual(left scalarValue, right scalarValue) bool {
-	type operandType_3 = bool
 	{
 		leftBoolean, ok := scalarBoolean(left)
 		if ok {
-			type operandType = bool
 			rightBoolean, rightOK := scalarBoolean(right)
-			var operand operandType = rightOK
+			operand := rightOK
 			if operand {
 				operand = leftBoolean == rightBoolean
 			}
@@ -1233,9 +1217,8 @@ func scalarValuesEqual(left scalarValue, right scalarValue) bool {
 	{
 		leftInteger, ok := scalarInteger(left)
 		if ok {
-			type operandType_1 = bool
 			rightInteger, rightOK := scalarInteger(right)
-			var operand_1 operandType_1 = rightOK
+			operand_1 := rightOK
 			if operand_1 {
 				operand_1 = leftInteger == rightInteger
 			}
@@ -1245,13 +1228,12 @@ func scalarValuesEqual(left scalarValue, right scalarValue) bool {
 	{
 		leftIndex, leftNegated, ok := scalarBooleanParameter(left)
 		if ok {
-			type operandType_2 = bool
 			rightIndex, rightNegated, rightOK := scalarBooleanParameter(right)
-			var operand_2 operandType_2 = rightOK
+			operand_2 := rightOK
 			if operand_2 {
 				operand_2 = leftIndex == rightIndex
 			}
-			var operand_3 operandType_2 = operand_2
+			var operand_3 bool = operand_2
 			if operand_3 {
 				operand_3 = leftNegated == rightNegated
 			}
@@ -1260,11 +1242,11 @@ func scalarValuesEqual(left scalarValue, right scalarValue) bool {
 	}
 	leftIndex, leftOK := scalarIntegerParameter(left)
 	rightIndex, rightOK := scalarIntegerParameter(right)
-	var operand_4 operandType_3 = leftOK
+	operand_4 := leftOK
 	if operand_4 {
 		operand_4 = rightOK
 	}
-	var operand_5 operandType_3 = operand_4
+	var operand_5 bool = operand_4
 	if operand_5 {
 		operand_5 = leftIndex == rightIndex
 	}

@@ -112,15 +112,13 @@ func assertNoGeneratedGoFiles(t *testing.T, workspace string) {
 		entry fs.DirEntry,
 		walkErr error,
 	) error {
-		type operandType = bool
 		if walkErr != nil {
 			return walkErr
 		}
 		name := entry.Name()
-		var operand operandType = !entry.IsDir()
+		operand := !entry.IsDir()
 		if operand {
-			type operandType_1 = bool
-			var operand_1 operandType_1 = strings.HasSuffix(name, "_tgo.go")
+			operand_1 := strings.HasSuffix(name, "_tgo.go")
 			if !operand_1 {
 				operand_1 = strings.HasSuffix(name, "_tgo_test.go")
 			}

@@ -195,10 +195,9 @@ func (c *checker) checkStructLiteral(
 		return
 	}
 	for index := 0; index < structure.NumFields(); index++ {
-		type operandType_1 = bool
 		field := structure.Field(index)
 		model, invalid := c.zeroInvalid(field.Type())
-		var operand_1 operandType_1 = invalid
+		operand_1 := invalid
 		if operand_1 {
 			operand_1 = !supplied[field.Name()]
 		}
@@ -305,9 +304,8 @@ func (c *checker) checkCall(
 }
 
 func (c *checker) checkedSourceCall(expression *syntax.Expression) *model {
-	type operandType = bool
 	tuple, ok := c.facts.Type(expression).(*types.Tuple)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = tuple.Len() != 2
 	}
@@ -328,7 +326,6 @@ func (c *checker) identityConversion(
 	expression *syntax.Expression,
 	call *syntax.CallExpression,
 ) bool {
-	type operandType = bool
 	if len(call.Args) != 1 {
 		return false
 	}
@@ -342,7 +339,7 @@ func (c *checker) identityConversion(
 		return false
 	}
 	terms, supported := simpleTerms(parameter.Constraint())
-	var operand operandType = !supported
+	operand := !supported
 	if !operand {
 		operand = len(terms) == 0
 	}
@@ -350,8 +347,7 @@ func (c *checker) identityConversion(
 		return false
 	}
 	for _, term := range terms {
-		type operandType_1 = bool
-		var operand_1 operandType_1 = term.Tilde()
+		operand_1 := term.Tilde()
 		if !operand_1 {
 			operand_1 = !types.Identical(types.Unalias(term.Type()), types.Unalias(target))
 		}
@@ -396,7 +392,6 @@ func (c *checker) checkMake(
 	expression *syntax.Expression,
 	call *syntax.CallExpression,
 ) {
-	type operandType = bool
 	if len(call.Args) < 2 {
 		return
 	}
@@ -406,7 +401,7 @@ func (c *checker) checkMake(
 		return
 	}
 	model, invalid := c.zeroInvalid(slice.Elem())
-	var operand operandType = !invalid
+	operand := !invalid
 	if !operand {
 		operand = constantZero(c.facts.Constant(call.Args[1]))
 	}
@@ -456,21 +451,20 @@ func (c *checker) checkMapRead(
 	expression *syntax.Expression,
 	index *syntax.IndexExpression,
 ) {
-	type operandType = bool
 	typ := c.facts.Type(index.Expression)
 	mapping, ok := coreType(typ).(*types.Map)
 	if !ok {
 		return
 	}
 	model, invalid := c.zeroInvalid(mapping.Elem())
-	var operand operandType = !invalid
+	operand := !invalid
 	if !operand {
 		operand = c.assignmentTarget(expression)
 	}
 	if operand {
 		return
 	}
-	var operand_1 operandType = c.commaOK(expression)
+	operand_1 := c.commaOK(expression)
 	if operand_1 {
 		operand_1 = c.presence[expression]
 	}
@@ -506,13 +500,12 @@ func (c *checker) commaOK(expression *syntax.Expression) bool {
 	{
 		statement, ok := syntax.StatementOf(parent)
 		if ok {
-			type operandType = bool
 			assignment := syntax.AssignmentStatementOf(statement)
-			var operand operandType = assignment != nil
+			var operand bool = assignment != nil
 			if operand {
 				operand = len(assignment.Left) == 2
 			}
-			var operand_1 operandType = operand
+			var operand_1 bool = operand
 			if operand_1 {
 				operand_1 = len(assignment.Right) == 1
 			}
@@ -523,13 +516,12 @@ func (c *checker) commaOK(expression *syntax.Expression) bool {
 	{
 		specification, ok := syntax.SpecificationOf(parent)
 		if ok {
-			type operandType_1 = bool
 			values := syntax.ValueSpecificationOf(specification)
-			var operand_2 operandType_1 = values != nil
+			var operand_2 bool = values != nil
 			if operand_2 {
 				operand_2 = len(values.Names) == 2
 			}
-			var operand_3 operandType_1 = operand_2
+			var operand_3 bool = operand_2
 			if operand_3 {
 				operand_3 = len(values.Values) == 1
 			}
@@ -544,12 +536,11 @@ func (c *checker) checkPresenceRead(
 	expression *syntax.Expression,
 	_ *syntax.UnaryExpression,
 ) {
-	type operandType = bool
 	model, invalid := c.zeroInvalid(firstType(c.facts.Type(expression)))
 	if !invalid {
 		return
 	}
-	var operand operandType = c.commaOK(expression)
+	operand := c.commaOK(expression)
 	if operand {
 		operand = c.presence[expression]
 	}
@@ -578,18 +569,16 @@ func (c *checker) checkTypeAssertion(
 }
 
 func (c *checker) assertionValidator(expression *syntax.Expression) bool {
-	type operandType_2 = bool
-	type operandType_1 = bool
+	type operandType = bool
 	current := expression
 	for {
-		type operandType = bool
 		node := syntax.ExpressionNode(current)
 		parent, ok := syntax.ExpressionOf(c.parents[node])
-		var operand operandType = !ok
+		operand := !ok
 		if !operand {
 			operand = parent == nil
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if !operand_1 {
 			operand_1 = syntax.ParenthesizedExpressionOf(parent) == nil
 		}
@@ -600,7 +589,7 @@ func (c *checker) assertionValidator(expression *syntax.Expression) bool {
 	}
 	node := syntax.ExpressionNode(current)
 	parent, ok := syntax.ExpressionOf(c.parents[node])
-	var operand_2 operandType_1 = !ok
+	operand_2 := !ok
 	if !operand_2 {
 		operand_2 = parent == nil
 	}
@@ -608,11 +597,11 @@ func (c *checker) assertionValidator(expression *syntax.Expression) bool {
 		return false
 	}
 	call := syntax.CallExpressionOf(parent)
-	var operand_3 operandType_2 = call == nil
+	var operand_3 operandType = call == nil
 	if !operand_3 {
 		operand_3 = len(call.Args) != 1
 	}
-	var operand_4 operandType_2 = operand_3
+	var operand_4 operandType = operand_3
 	if !operand_4 {
 		operand_4 = call.Args[0] != current
 	}
@@ -624,9 +613,8 @@ func (c *checker) assertionValidator(expression *syntax.Expression) bool {
 
 func firstType(typ types.Type) types.Type {
 	{
-		type operandType = bool
 		tuple, ok := typ.(*types.Tuple)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = tuple.Len() > 0
 		}
@@ -642,7 +630,6 @@ func (c *checker) checkReslice(
 	expression *syntax.Expression,
 	slicing *syntax.SliceExpression,
 ) {
-	type operandType = bool
 	high := slicing.High
 	if high == nil {
 		return
@@ -653,11 +640,11 @@ func (c *checker) checkReslice(
 		return
 	}
 	model, invalid := c.zeroInvalid(slice.Elem())
-	var operand operandType = !invalid
+	operand := !invalid
 	if !operand {
 		operand = c.currentLength(high, slicing.Expression)
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = constantZero(c.facts.Constant(high))
 	}

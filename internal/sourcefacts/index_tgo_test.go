@@ -172,7 +172,6 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 		},
 	}
 	for order, definitions := range orders {
-		type operandType_2 = bool
 		index := NewProjection(parsed, &projectionStub{
 			definitions: definitions,
 			uses: []objectFact{{
@@ -186,7 +185,6 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 			{name: alpha, object: alphaObject},
 			{name: gamma, object: gammaObject},
 		} {
-			type operandType_1 = bool
 			{
 				got := index.DefinitionName(item.name)
 				if got != item.object {
@@ -207,7 +205,7 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 				return
 			}
 			got, definition := index.IdentifierFact(parsed, node)
-			var operand_1 operandType_1 = got != item.object
+			var operand_1 bool = got != item.object
 			if !operand_1 {
 				operand_1 = !definition
 			}
@@ -228,7 +226,7 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 			return
 		}
 		got, definition := index.IdentifierFact(parsed, useNode)
-		var operand_2 operandType_2 = got != betaObject
+		var operand_2 bool = got != betaObject
 		if !operand_2 {
 			operand_2 = definition
 		}
@@ -240,7 +238,6 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 }
 
 func TestProjectionKeepsLoweredReceiverUse(t *testing.T) {
-	type operandType = bool
 	t.Parallel()
 	files := token.NewFileSet()
 	data := []byte("package sample\n" +
@@ -284,10 +281,9 @@ func TestProjectionKeepsLoweredReceiverUse(t *testing.T) {
 		object types.Object,
 		synthetic bool,
 	) {
-		type operandType = bool
 		adjusted := files.Position(position)
 		adjusted.Offset = 0
-		var operand operandType = !synthetic
+		operand := !synthetic
 		if operand {
 			operand = adjusted == wantPosition
 		}
@@ -297,7 +293,7 @@ func TestProjectionKeepsLoweredReceiverUse(t *testing.T) {
 	})
 	sourceUse, sourceOK := uses["load"]
 	generatedUse, generatedOK := uses["enumValue"]
-	var operand operandType = !sourceOK
+	operand := !sourceOK
 	if !operand {
 		operand = !generatedOK
 	}
@@ -310,7 +306,6 @@ func TestProjectionKeepsLoweredReceiverUse(t *testing.T) {
 		{generatedUse, sourceUse},
 	}
 	for order, facts := range orders {
-		type operandType_1 = bool
 		index := NewProjection(parsed, &projectionStub{definitions: nil, uses: facts}, files)
 		{
 			got := index.Object(receiver)
@@ -320,7 +315,7 @@ func TestProjectionKeepsLoweredReceiverUse(t *testing.T) {
 			}
 		}
 		got, definition := index.IdentifierFact(parsed, node)
-		var operand_1 operandType_1 = got != sourceUse.object
+		var operand_1 bool = got != sourceUse.object
 		if !operand_1 {
 			operand_1 = definition
 		}
@@ -355,13 +350,12 @@ func sourceIdentifier(
 	t.Helper()
 	var result *syntax.Identifier = nil
 	syntax.Inspect(file, func(node *syntax.Node) bool {
-		type operandType = bool
 		identifier, ok := syntax.IdentifierOf(node)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = identifier.Name == name
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = files.Position(identifier.Start).Line == line
 		}
@@ -433,13 +427,12 @@ func sourceIdentifiers(
 func identifierNode(file *syntax.File, identifier *syntax.Identifier) *syntax.Node {
 	var result *syntax.Node = nil
 	syntax.Inspect(file, func(node *syntax.Node) bool {
-		type operandType = bool
 		value, ok := syntax.IdentifierOf(node)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = value.Start == identifier.Start
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = value.Stop == identifier.Stop
 		}

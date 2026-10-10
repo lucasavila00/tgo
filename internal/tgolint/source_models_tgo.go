@@ -121,14 +121,13 @@ func (c *checker) exportSourceModels(source *verifiedSource) {
 }
 
 func (c *checker) hasModelAPIs(object *types.TypeName) bool {
-	type operandType = bool
 	{
 		_, ok := object.Type().Underlying().(*types.Interface)
 		if ok {
 			return false
 		}
 	}
-	var operand operandType = method(object.Type(), "Tag") != nil
+	var operand bool = method(object.Type(), "Tag") != nil
 	if !operand {
 		operand = method(object.Type(), "check") != nil
 	}
@@ -148,9 +147,8 @@ func (c *checker) reportExtraGeneratedModels(
 			continue
 		}
 		for _, item := range general.Specs {
-			type operandType = bool
 			specification := syntax.TypeSpecificationOf(item)
-			var operand operandType = specification == nil
+			var operand bool = specification == nil
 			if !operand {
 				operand = sourceNames[specification.Name.Name]
 			}
@@ -158,7 +156,7 @@ func (c *checker) reportExtraGeneratedModels(
 				continue
 			}
 			object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
-			var operand_1 operandType = !objectOK
+			operand_1 := !objectOK
 			if !operand_1 {
 				operand_1 = object.IsAlias()
 			}
@@ -186,7 +184,6 @@ func (c *checker) checkSourceDeclaration(
 	sourceFile *token.File,
 	data []byte,
 ) {
-	type operandType = bool
 	source := sourceDeclaration(
 		declaration,
 		c.packagePath(),
@@ -209,7 +206,7 @@ func (c *checker) checkSourceDeclaration(
 		return
 	}
 	object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
-	var operand operandType = !objectOK
+	operand := !objectOK
 	if !operand {
 		operand = !sourceShapeMatches(
 			generated,
@@ -434,7 +431,6 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 }
 
 func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -448,7 +444,6 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -461,12 +456,12 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Struct":
 			current = 2
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -482,11 +477,11 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -509,7 +504,7 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -703,7 +698,6 @@ func sourceShapeMatches(
 	}
 	switch item := *source; item.Tag() {
 	case sourceModelTagStruct:
-		type operandType = bool
 		sourceStruct := item.StructPayload()
 		structure := syntax.StructTypeExpressionOf(representation)
 		if structure == nil {
@@ -712,10 +706,9 @@ func sourceShapeMatches(
 		if !sameFields(sourceStruct.Fields, structure.Fields.List, generated) {
 			return false
 		}
-		var operand operandType = sourceStruct.Fact == nil
+		var operand bool = sourceStruct.Fact == nil
 		if !operand {
-			type operandType_1 = bool
-			var operand_1 operandType_1 = validCheckedStructAPI(typ)
+			operand_1 := validCheckedStructAPI(typ)
 			if operand_1 {
 				operand_1 = validCheckedCarrier(typ, sourceStruct.Fields)
 			}
@@ -729,13 +722,12 @@ func sourceShapeMatches(
 			return false
 		}
 		for _, variant := range enum.Variants {
-			type operandType_2 = bool
 			payloadSpec := generatedTypeSpec(generated, enum.Name+variant.name)
 			if payloadSpec == nil {
 				return false
 			}
 			payload := syntax.StructTypeExpressionOf(payloadSpec.Type)
-			var operand_2 operandType_2 = payload == nil
+			var operand_2 bool = payload == nil
 			if !operand_2 {
 				operand_2 = !sameFields(variant.fields, payload.Fields.List, generated)
 			}
@@ -750,21 +742,20 @@ func sourceShapeMatches(
 }
 
 func validCheckedStructAPI(typ types.Type) bool {
-	type operandType = bool
 	signature := method(typ, "check")
-	var operand operandType = signature == nil
+	var operand bool = signature == nil
 	if !operand {
 		operand = signature.Recv() == nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = signature.Params().Len() != 0
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = signature.Results().Len() != 2
 	}
-	var operand_3 operandType = operand_2
+	var operand_3 bool = operand_2
 	if !operand_3 {
 		operand_3 = signature.Variadic()
 	}
@@ -772,15 +763,15 @@ func validCheckedStructAPI(typ types.Type) bool {
 		return false
 	}
 	errorObject := types.Universe.Lookup("error")
-	var operand_4 operandType = errorObject == nil
+	var operand_4 bool = errorObject == nil
 	if !operand_4 {
 		operand_4 = !types.Identical(signature.Recv().Type(), typ)
 	}
-	var operand_5 operandType = operand_4
+	var operand_5 bool = operand_4
 	if !operand_5 {
 		operand_5 = !types.Identical(signature.Results().At(0).Type(), typ)
 	}
-	var operand_6 operandType = operand_5
+	var operand_6 bool = operand_5
 	if !operand_6 {
 		operand_6 = !types.Identical(signature.Results().At(1).Type(), errorObject.Type())
 	}
@@ -788,7 +779,7 @@ func validCheckedStructAPI(typ types.Type) bool {
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
-	var operand_7 operandType = !ok
+	operand_7 := !ok
 	if !operand_7 {
 		operand_7 = named.Obj().Pkg() == nil
 	}
@@ -803,23 +794,23 @@ func validCheckedStructAPI(typ types.Type) bool {
 	}
 	created, ok := constructor.Type().(*types.Signature)
 	structure, structureOK := named.Underlying().(*types.Struct)
-	var operand_8 operandType = !ok
+	operand_8 := !ok
 	if !operand_8 {
 		operand_8 = !structureOK
 	}
-	var operand_9 operandType = operand_8
+	var operand_9 bool = operand_8
 	if !operand_9 {
 		operand_9 = created.Recv() != nil
 	}
-	var operand_10 operandType = operand_9
+	var operand_10 bool = operand_9
 	if !operand_10 {
 		operand_10 = created.Variadic()
 	}
-	var operand_11 operandType = operand_10
+	var operand_11 bool = operand_10
 	if !operand_11 {
 		operand_11 = created.Params().Len() != structure.NumFields()
 	}
-	var operand_12 operandType = operand_11
+	var operand_12 bool = operand_11
 	if !operand_12 {
 		operand_12 = created.Results().Len() != 2
 	}
@@ -831,7 +822,7 @@ func validCheckedStructAPI(typ types.Type) bool {
 			return false
 		}
 	}
-	var operand_13 operandType = types.Identical(created.Results().At(0).Type(), typ)
+	operand_13 := types.Identical(created.Results().At(0).Type(), typ)
 	if operand_13 {
 		operand_13 = types.Identical(created.Results().At(1).Type(), errorObject.Type())
 	}
@@ -845,9 +836,8 @@ func generatedEnumShape(
 	name string,
 	variants []sourceVariant,
 ) bool {
-	type operandType = bool
 	tag, ok := typeInPackage(typ, name+"Tag")
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = !validGeneratedTagAPI(typ, tag, name, variants)
 	}
@@ -855,10 +845,9 @@ func generatedEnumShape(
 		return false
 	}
 	for _, variant := range variants {
-		type operandType_1 = bool
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
-		var operand_1 operandType_1 = !ok
+		operand_1 := !ok
 		if !operand_1 {
 			operand_1 = !validEnumAPI(
 				typ, payload, variant.name+"Payload", "New"+payloadName,
@@ -868,9 +857,8 @@ func generatedEnumShape(
 			return false
 		}
 		if len(variant.fields) > 0 {
-			type operandType_2 = bool
 			carrier, ok := typeInPackage(typ, "Tgo"+payloadName+"Input")
-			var operand_2 operandType_2 = !ok
+			operand_2 := !ok
 			if !operand_2 {
 				operand_2 = !validEnumCarrier(payload, carrier)
 			}
@@ -888,17 +876,16 @@ func validGeneratedTagAPI(
 	name string,
 	variants []sourceVariant,
 ) bool {
-	type operandType = bool
 	tag := method(typ, "Tag")
-	var operand operandType = tag == nil
+	var operand bool = tag == nil
 	if !operand {
 		operand = tag.Params().Len() != 0
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = tag.Results().Len() != 1
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = !types.Identical(tag.Results().At(0).Type(), tagType)
 	}
@@ -906,7 +893,7 @@ func validGeneratedTagAPI(
 		return false
 	}
 	basic, ok := coreType(tagType).(*types.Basic)
-	var operand_3 operandType = !ok
+	operand_3 := !ok
 	if !operand_3 {
 		operand_3 = basic.Info()&types.IsUnsigned == 0
 	}
@@ -914,7 +901,7 @@ func validGeneratedTagAPI(
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
-	var operand_4 operandType = !ok
+	operand_4 := !ok
 	if !operand_4 {
 		operand_4 = named.Obj().Pkg() == nil
 	}
@@ -926,13 +913,12 @@ func validGeneratedTagAPI(
 		names = append(names, name+"Tag"+variant.name)
 	}
 	for index, constantName := range names {
-		type operandType_1 = bool
 		constant, ok := named.Obj().Pkg().Scope().Lookup(constantName).(*types.Const)
-		var operand_5 operandType_1 = !ok
+		operand_5 := !ok
 		if !operand_5 {
 			operand_5 = !types.Identical(constant.Type(), tagType)
 		}
-		var operand_6 operandType_1 = operand_5
+		var operand_6 bool = operand_5
 		if !operand_6 {
 			operand_6 = constant.Val().ExactString() != strconv.Itoa(index+1)
 		}
@@ -944,9 +930,8 @@ func validGeneratedTagAPI(
 }
 
 func typeInPackage(typ types.Type, name string) (types.Type, bool) {
-	type operandType = bool
 	named, ok := types.Unalias(typ).(*types.Named)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = named.Obj().Pkg() == nil
 	}
@@ -962,12 +947,11 @@ func typeInPackage(typ types.Type, name string) (types.Type, bool) {
 
 // sameModelFact compares model identity and the ordered enum variants.
 func sameModelFact(left *model, right *model) bool {
-	type operandType = bool
-	var operand operandType = left == nil
+	var operand bool = left == nil
 	if !operand {
 		operand = right == nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = !sameModel(left, right)
 	}
@@ -1051,13 +1035,12 @@ func sourceExpression(
 		),
 	)
 	for _, extension := range syntax.Extensions(file) {
-		type operandType = bool
 		node, ok := syntax.NonNilPointerTypeOf(extension)
-		var operand operandType = !ok
+		operand := !ok
 		if !operand {
 			operand = node.Percent < start
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if !operand_1 {
 			operand_1 = node.Percent >= end
 		}

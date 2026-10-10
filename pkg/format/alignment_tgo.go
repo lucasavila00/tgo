@@ -48,8 +48,7 @@ func applyListAlignmentSections(rows []alignmentRow, sizes []int) {
 			log2sum = 0
 			count = 0
 		} else {
-			type operandType = bool
-			var operand operandType = index > 0
+			var operand bool = index > 0
 			if operand {
 				operand = listStartsAlignmentSection(
 					previousSize,
@@ -79,7 +78,6 @@ func listStartsAlignmentSection(
 	log2sum float64,
 	count int,
 ) bool {
-	type operandType_2 = bool
 	type operandType = bool
 	var operand operandType = previousSize == 0
 	if !operand {
@@ -104,7 +102,7 @@ func listStartsAlignmentSection(
 	const ratioLimit = 2.5
 	mean := listExp2(log2sum / float64(count))
 	ratio := float64(size) / mean
-	var operand_3 operandType_2 = ratioLimit*ratio <= 1
+	var operand_3 bool = ratioLimit*ratio <= 1
 	if !operand_3 {
 		operand_3 = ratioLimit <= ratio
 	}
@@ -131,8 +129,7 @@ func alignmentColumns(rows []alignmentRow) [][]int {
 	for first := 0; first < len(rows); {
 		last := first + 1
 		for {
-			type operandType = bool
-			var operand operandType = last < len(rows)
+			var operand bool = last < len(rows)
 			if operand {
 				operand = !rows[last].breakBefore
 			}
@@ -154,8 +151,8 @@ func alignmentColumns(rows []alignmentRow) [][]int {
 			}
 			for run := first; run < last; {
 				for {
-					type operandType_1 = bool
-					var operand_1 operandType_1 = run < last
+					type operandType = bool
+					var operand_1 operandType = run < last
 					if operand_1 {
 						operand_1 = len(rows[run].cells) <= cell+1
 					}
@@ -167,8 +164,8 @@ func alignmentColumns(rows []alignmentRow) [][]int {
 				end := run
 				width := 0
 				for {
-					type operandType_2 = bool
-					var operand_2 operandType_2 = end < last
+					type operandType_1 = bool
+					var operand_2 operandType_1 = end < last
 					if operand_2 {
 						operand_2 = len(rows[end].cells) > cell+1
 					}
@@ -216,19 +213,18 @@ func (p *printer) fieldAlignment(values []*syntax.Field) [][]int {
 	rows := make([]alignmentRow, len(values))
 	for index, value := range values {
 		if index > 0 {
-			type operandType = bool
 			previous := values[index-1]
 			operand := rows
 			operand_1 := index
-			var operand_2 operandType = value.Doc != nil
+			var operand_2 bool = value.Doc != nil
 			if !operand_2 {
 				operand_2 = p.blankBetween(previous.Stop, value.Start)
 			}
-			var operand_3 operandType = operand_2
+			var operand_3 bool = operand_2
 			if !operand_3 {
 				operand_3 = p.hasCommentBetween(previous.Stop, value.Start)
 			}
-			var operand_4 operandType = operand_3
+			var operand_4 bool = operand_3
 			if !operand_4 {
 				operand_4 = p.multiline(previous.Start, previous.Stop)
 			}
@@ -252,16 +248,15 @@ func (p *printer) fieldCells(value *syntax.Field) []int {
 }
 
 func (p *printer) fieldSyntaxCells(value *syntax.Field) []int {
-	type operandType = bool
 	if p.identifiersAreMultiline(value.Names) {
 		return nil
 	}
 	functionType := syntax.FunctionTypeExpressionOf(value.Type)
-	var operand operandType = len(value.Names) > 0
+	var operand bool = len(value.Names) > 0
 	if operand {
 		operand = functionType != nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
 		operand_1 = !functionType.Function.IsValid()
 	}
@@ -335,8 +330,7 @@ func commentAlignmentColumns(
 	columns := alignmentColumns(alignmentRows)
 	result := make([]map[token.Pos]int, owners)
 	for index, row := range rows {
-		type operandType = bool
-		var operand operandType = !row.position.IsValid()
+		operand := !row.position.IsValid()
 		if !operand {
 			operand = len(columns[index]) == 0
 		}
@@ -359,16 +353,15 @@ func (p *printer) outerCommentPositions(
 	header := token.NoPos
 	first := p.commentStartingAfter(start)
 	for _, comment := range p.comments[first:] {
-		type operandType = bool
 		line := p.position(comment.start).Line
 		if line > startLine {
 			break
 		}
-		var operand operandType = line == startLine
+		var operand bool = line == startLine
 		if operand {
 			operand = comment.start > start
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = strings.HasPrefix(comment.text, "//")
 		}
@@ -422,12 +415,11 @@ func (p *printer) statementCommentAlignment(
 ) []map[token.Pos]int {
 	rows := make([]commentAlignmentRow, 0, len(values)*2)
 	for index, value := range values {
-		type operandType = bool
 		start := syntax.StatementPosition(value)
 		stop := syntax.StatementEnd(value)
 		header, end := p.outerCommentPositions(start, stop)
 		widths := map[token.Pos]int(nil)
-		var operand operandType = header.IsValid()
+		operand := header.IsValid()
 		if !operand {
 			operand = end.IsValid()
 		}
@@ -437,24 +429,23 @@ func (p *printer) statementCommentAlignment(
 		isMultiline := p.multiline(start, stop)
 		breakBefore := clauseStatement(value)
 		if index > 0 {
-			type operandType_1 = bool
 			previous := values[index-1]
 			previousStart := syntax.StatementPosition(previous)
 			previousStop := syntax.StatementEnd(previous)
-			var operand_1 operandType_1 = breakBefore
+			operand_1 := breakBefore
 			if !operand_1 {
 				operand_1 = p.multiline(previousStart, previousStop)
 			}
-			var operand_2 operandType_1 = operand_1
+			var operand_2 bool = operand_1
 			if !operand_2 {
 				operand_2 = p.blankBetween(previousStop, start)
 			}
-			var operand_3 operandType_1 = operand_2
+			var operand_3 bool = operand_2
 			if !operand_3 {
 				operand_3 = p.hasCommentBetween(previousStop, start)
 			}
 			breakBefore = operand_3
-			var operand_4 operandType_1 = clauseStatement(previous)
+			operand_4 := clauseStatement(previous)
 			if !operand_4 {
 				operand_4 = clauseStatement(value)
 			}
@@ -470,11 +461,11 @@ func (p *printer) statementCommentAlignment(
 				cells:       nil,
 			},
 		}
-		var operand_5 operandType = !header.IsValid()
+		operand_5 := !header.IsValid()
 		if operand_5 {
 			operand_5 = !isMultiline
 		}
-		var operand_6 operandType = operand_5
+		var operand_6 bool = operand_5
 		if operand_6 {
 			operand_6 = end.IsValid()
 		}
@@ -523,15 +514,13 @@ func (p *printer) declarationCommentAlignment(
 ) []map[token.Pos]int {
 	rows := make([]commentAlignmentRow, 0, len(values)*2)
 	for index, value := range values {
-		type operandType_1 = bool
 		start := syntax.DeclarationPosition(value)
 		stop := syntax.DeclarationEnd(value)
 		header, end := p.outerCommentPositions(start, stop)
 		isMultiline := p.multiline(start, stop)
 		{
-			type operandType = bool
 			general := generalDeclarationOf(value)
-			var operand operandType = general != nil
+			var operand bool = general != nil
 			if operand {
 				operand = general.Lparen.IsValid()
 			}
@@ -540,7 +529,7 @@ func (p *printer) declarationCommentAlignment(
 			}
 		}
 		widths := map[token.Pos]int(nil)
-		var operand_1 operandType_1 = header.IsValid()
+		operand_1 := header.IsValid()
 		if !operand_1 {
 			operand_1 = end.IsValid()
 		}
@@ -552,20 +541,19 @@ func (p *printer) declarationCommentAlignment(
 				end,
 			)
 		}
-		var operand_2 operandType_1 = functionDeclarationOf(value) != nil
+		var operand_2 bool = functionDeclarationOf(value) != nil
 		if operand_2 {
 			operand_2 = bodyColumns[index] == 0
 		}
 		breakBefore := operand_2
 		if index > 0 {
-			type operandType_2 = bool
 			previous := values[index-1]
 			previousStop := syntax.DeclarationEnd(previous)
-			var operand_3 operandType_2 = breakBefore
+			operand_3 := breakBefore
 			if !operand_3 {
 				operand_3 = p.blankBetween(previousStop, start)
 			}
-			var operand_4 operandType_2 = operand_3
+			var operand_4 bool = operand_3
 			if !operand_4 {
 				operand_4 = p.hasCommentBetween(previousStop, start)
 			}
@@ -603,10 +591,9 @@ func (p *printer) declarationCommentAlignment(
 	}
 	result := commentAlignmentColumns(rows, len(values), 0)
 	for index, value := range values {
-		type operandType_3 = bool
 		start := syntax.DeclarationPosition(value)
 		stop := syntax.DeclarationEnd(value)
-		var operand_5 operandType_3 = functionDeclarationOf(value) == nil
+		var operand_5 bool = functionDeclarationOf(value) == nil
 		if !operand_5 {
 			operand_5 = !p.multiline(start, stop)
 		}
@@ -614,7 +601,7 @@ func (p *printer) declarationCommentAlignment(
 			continue
 		}
 		_, end := p.outerCommentPositions(start, stop)
-		var operand_6 operandType_3 = !end.IsValid()
+		operand_6 := !end.IsValid()
 		if !operand_6 {
 			operand_6 = p.sourceCommentPadding(end) <= 1
 		}
@@ -670,18 +657,17 @@ func (p *printer) compositeAlignment(
 		}
 		lineBreak := p.position(previous).Line < p.position(start).Line
 		if index > 0 {
-			type operandType = bool
 			operand := rows
 			operand_1 := index
-			var operand_2 operandType = !lineBreak
+			operand_2 := !lineBreak
 			if !operand_2 {
 				operand_2 = p.blankBetween(previous, start)
 			}
-			var operand_3 operandType = operand_2
+			var operand_3 bool = operand_2
 			if !operand_3 {
 				operand_3 = p.hasCommentBetween(previous, start)
 			}
-			var operand_4 operandType = operand_3
+			var operand_4 bool = operand_3
 			if !operand_4 {
 				operand_4 = p.multiline(
 					syntax.ExpressionPosition(values[index-1]),
@@ -731,8 +717,7 @@ func (p *printer) compositeAlignment(
 	columns := alignmentColumns(rows)
 	commentColumns := make([]map[token.Pos]int, len(values))
 	for index, position := range comments {
-		type operandType_1 = bool
-		var operand_5 operandType_1 = !position.IsValid()
+		operand_5 := !position.IsValid()
 		if !operand_5 {
 			operand_5 = len(columns[index]) == 0
 		}
@@ -751,16 +736,15 @@ func (p *printer) compositeAlignment(
 		0,
 	)
 	for index, columns := range fallback {
-		type operandType_2 = bool
 		position := token.NoPos
 		for item := range columns {
 			position = item
 		}
-		var operand_6 operandType_2 = index+1 < len(values)
+		var operand_6 bool = index+1 < len(values)
 		if operand_6 {
 			operand_6 = position.IsValid()
 		}
-		var operand_7 operandType_2 = operand_6
+		var operand_7 bool = operand_6
 		if operand_7 {
 			operand_7 = p.sourceCommentPadding(position) > 1
 		}

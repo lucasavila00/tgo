@@ -174,9 +174,8 @@ func run(pass *analysis.Pass) (any, error) {
 			return true
 		})
 		syntax.Inspect(file, func(node *syntax.Node) bool {
-			type operandType = bool
 			expression, expressionOK := syntax.ExpressionOf(node)
-			var operand operandType = expressionOK
+			operand := expressionOK
 			if operand {
 				operand = syntax.SelectorExpressionOf(expression) != nil
 			}
@@ -195,9 +194,8 @@ func run(pass *analysis.Pass) (any, error) {
 func (c *checker) rejectInvalidDependencies() bool {
 	found := false
 	for _, imported := range c.pass.Pkg.Imports() {
-		type operandType = bool
 		fact := new(invalidPackageFact)
-		var operand operandType = !c.pass.ImportPackageFact(imported, fact)
+		operand := !c.pass.ImportPackageFact(imported, fact)
 		if !operand {
 			operand = fact.Version != invalidPackageVersion
 		}
@@ -260,7 +258,6 @@ func (c *checker) addParent(node *syntax.Node) {
 
 // checkNode sends one AST node to each check that applies to its form.
 func (c *checker) checkNode(node *syntax.Node) {
-	type operandType_1 = bool
 	{
 		function, ok := syntax.FunctionDeclarationOf(node)
 		if ok {
@@ -316,7 +313,7 @@ func (c *checker) checkNode(node *syntax.Node) {
 		}
 	}
 	expression, ok := syntax.ExpressionOf(node)
-	var operand_1 operandType_1 = !ok
+	operand_1 := !ok
 	if !operand_1 {
 		operand_1 = expression == nil
 	}
@@ -342,9 +339,9 @@ func (c *checker) checkNode(node *syntax.Node) {
 		}
 	}
 	{
-		type operandType_2 = bool
+		type operandType_1 = bool
 		value := syntax.UnaryExpressionOf(expression)
-		var operand_2 operandType_2 = value != nil
+		var operand_2 operandType_1 = value != nil
 		if operand_2 {
 			operand_2 = value.Operator == token.ARROW
 		}

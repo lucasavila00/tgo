@@ -16,7 +16,6 @@ func (e *nilEnvironment) blockNilFacts(
 	block *cfg.Block,
 	state *nilFlowState,
 ) (nilFacts, nilFacts) {
-	type operandType_1 = bool
 	type operandType = bool
 	var operand operandType = block == nil
 	if !operand {
@@ -30,7 +29,7 @@ func (e *nilEnvironment) blockNilFacts(
 		return nil, nil
 	}
 	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
-	var operand_2 operandType_1 = !ok
+	operand_2 := !ok
 	if !operand_2 {
 		operand_2 = condition == nil
 	}
@@ -41,7 +40,6 @@ func (e *nilEnvironment) blockNilFacts(
 	{
 		clauseNode := e.parents[conditionNode]
 		if clauseNode != nil {
-			type operandType_2 = bool
 			clauseStatement, clauseOK := syntax.StatementOf(clauseNode)
 			clause := syntax.CaseClauseOf(clauseStatement)
 			bodyNode := e.parents[*clauseNode]
@@ -53,27 +51,27 @@ func (e *nilEnvironment) blockNilFacts(
 			}
 			switchStatementNode, switchOK := syntax.StatementOf(switchNode)
 			switchStatement := syntax.SwitchStatementOf(switchStatementNode)
-			var operand_3 operandType_2 = clauseOK
+			operand_3 := clauseOK
 			if operand_3 {
 				operand_3 = clause != nil
 			}
-			var operand_4 operandType_2 = operand_3
+			var operand_4 bool = operand_3
 			if operand_4 {
 				operand_4 = bodyOK
 			}
-			var operand_5 operandType_2 = operand_4
+			var operand_5 bool = operand_4
 			if operand_5 {
 				operand_5 = body != nil
 			}
-			var operand_6 operandType_2 = operand_5
+			var operand_6 bool = operand_5
 			if operand_6 {
 				operand_6 = switchOK
 			}
-			var operand_7 operandType_2 = operand_6
+			var operand_7 bool = operand_6
 			if operand_7 {
 				operand_7 = switchStatement != nil
 			}
-			var operand_8 operandType_2 = operand_7
+			var operand_8 bool = operand_7
 			if operand_8 {
 				operand_8 = switchStatement.Tag != nil
 			}
@@ -122,8 +120,7 @@ func impossibleNilFacts() nilFacts {
 }
 
 func (e *nilEnvironment) applyNilFacts(state *nilFlowState, facts nilFacts) {
-	type operandType = bool
-	var operand operandType = state == nil
+	var operand bool = state == nil
 	if !operand {
 		operand = !state.reachable
 	}
@@ -362,9 +359,8 @@ func (e *nilEnvironment) prepareNilBlock(
 	if statement.Value != nil {
 		e.assignNilTarget(state, statement.Value, nil)
 		{
-			type operandType_1 = bool
 			place, ok := e.nilPlace(statement.Value)
-			var operand_2 operandType_1 = ok
+			operand_2 := ok
 			if operand_2 {
 				operand_2 = valueContract[""]
 			}

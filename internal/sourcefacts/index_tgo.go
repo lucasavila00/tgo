@@ -88,8 +88,7 @@ func NewProjection(
 			object types.Object,
 			synthetic bool,
 		) {
-			type operandType = bool
-			var operand operandType = object != nil
+			var operand bool = object != nil
 			if operand {
 				operand = !synthetic
 			}
@@ -100,8 +99,7 @@ func NewProjection(
 	)
 	facts.RangeUses(
 		func(position token.Pos, name string, object types.Object, synthetic bool) {
-			type operandType = bool
-			var operand operandType = object != nil
+			var operand bool = object != nil
 			if operand {
 				operand = !synthetic
 			}
@@ -308,9 +306,8 @@ func (i *Index) Object(identifier *syntax.Identifier) types.Object {
 
 // IdentifierFact returns the object and reports whether the source name defines it.
 func (i *Index) IdentifierFact(file *syntax.File, node *syntax.Node) (types.Object, bool) {
-	type operandType = bool
 	identifier, ok := syntax.IdentifierOf(node)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = identifier == nil
 	}
@@ -331,7 +328,7 @@ func (i *Index) IdentifierFact(file *syntax.File, node *syntax.Node) (types.Obje
 		}
 	}
 	object := i.lineDefinition(identifier, position)
-	var operand_1 operandType = object != nil
+	var operand_1 bool = object != nil
 	if operand_1 {
 		operand_1 = sourceDefinition(file, node, identifier)
 	}
@@ -428,8 +425,7 @@ func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identif
 					operand_2 = value.Operator == token.DEFINE
 				}
 				if operand_2 {
-					type operandType_3 = bool
-					var operand_3 operandType_3 = expressionHasIdentifier(value.Key, name)
+					operand_3 := expressionHasIdentifier(value.Key, name)
 					if !operand_3 {
 						operand_3 = expressionHasIdentifier(value.Value, name)
 					}
@@ -449,9 +445,8 @@ func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identif
 		comprehension, ok := syntax.ComprehensionExpressionOf(parent)
 		if ok {
 			for _, clause := range comprehension.Clauses {
-				type operandType_4 = bool
 				value, rangeOK := syntax.ComprehensionRangeClauseOf(&clause)
-				var operand_4 operandType_4 = rangeOK
+				operand_4 := rangeOK
 				if operand_4 {
 					operand_4 = identifierIn(value.Bindings, name)
 				}
@@ -524,8 +519,7 @@ func expressionHasIdentifier(
 }
 
 func sameIdentifier(left, right *syntax.Identifier) bool {
-	type operandType = bool
-	var operand operandType = left.Start == right.Start
+	var operand bool = left.Start == right.Start
 	if operand {
 		operand = left.Stop == right.Stop
 	}
@@ -604,9 +598,8 @@ func (i *Index) IotaPosition(expression *syntax.Expression) (token.Pos, bool) {
 	syntax.InspectExpression(
 		expression,
 		func(node *syntax.Node) bool {
-			type operandType = bool
 			identifier, ok := syntax.IdentifierOf(node)
-			var operand operandType = ok
+			operand := ok
 			if operand {
 				operand = i.Object(identifier) == types.Universe.Lookup("iota")
 			}

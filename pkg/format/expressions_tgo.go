@@ -175,31 +175,27 @@ func (p *printer) expressionAt(
 }
 
 func unaryNeedsSpace(operator token.Token, operand *syntax.Expression) bool {
-	type operandType = bool
 	inner := syntax.UnaryExpressionOf(operand)
 	if inner == nil {
 		return false
 	}
-	var operand_1 operandType = operator == token.ADD
+	var operand_1 bool = operator == token.ADD
 	if operand_1 {
 		operand_1 = inner.Operator == token.ADD
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
-		type operandType_1 = bool
-		var operand_3 operandType_1 = operator == token.SUB
+		var operand_3 bool = operator == token.SUB
 		if operand_3 {
 			operand_3 = inner.Operator == token.SUB
 		}
 		operand_2 = operand_3
 	}
-	var operand_4 operandType = operand_2
+	var operand_4 bool = operand_2
 	if !operand_4 {
-		type operandType_2 = bool
-		var operand_5 operandType_2 = operator == token.AND
+		var operand_5 bool = operator == token.AND
 		if operand_5 {
-			type operandType_3 = bool
-			var operand_6 operandType_3 = inner.Operator == token.AND
+			var operand_6 bool = inner.Operator == token.AND
 			if !operand_6 {
 				operand_6 = inner.Operator == token.XOR
 			}
@@ -212,7 +208,6 @@ func unaryNeedsSpace(operator token.Token, operand *syntax.Expression) bool {
 }
 
 func (p *printer) sliceExpression(value *syntax.SliceExpression, depth int) {
-	type operandType_1 = bool
 	p.expressionAt(value.Expression, token.HighestPrec, 1)
 	p.token(value.Lbrack, "[")
 	indices := []*syntax.Expression{value.Low, value.High}
@@ -223,20 +218,19 @@ func (p *printer) sliceExpression(value *syntax.SliceExpression, depth int) {
 	hasBinary := false
 	for _, index := range indices {
 		if index != nil {
-			type operandType = bool
 			count++
-			var operand operandType = hasBinary
+			operand := hasBinary
 			if !operand {
 				operand = syntax.BinaryExpressionOf(index) != nil
 			}
 			hasBinary = operand
 		}
 	}
-	var operand_1 operandType_1 = depth <= 1
+	var operand_1 bool = depth <= 1
 	if operand_1 {
 		operand_1 = count > 1
 	}
-	var operand_2 operandType_1 = operand_1
+	var operand_2 bool = operand_1
 	if operand_2 {
 		operand_2 = hasBinary
 	}
@@ -244,7 +238,7 @@ func (p *printer) sliceExpression(value *syntax.SliceExpression, depth int) {
 	if value.Low != nil {
 		p.expressionAt(value.Low, 0, depth+1)
 	}
-	var operand_3 operandType_1 = value.Low != nil
+	var operand_3 bool = value.Low != nil
 	if operand_3 {
 		operand_3 = spaces
 	}
@@ -259,8 +253,7 @@ func (p *printer) sliceExpression(value *syntax.SliceExpression, depth int) {
 		p.expressionAt(value.High, 0, depth+1)
 	}
 	if value.Slice3 {
-		type operandType_2 = bool
-		var operand_4 operandType_2 = value.High != nil
+		var operand_4 bool = value.High != nil
 		if operand_4 {
 			operand_4 = spaces
 		}
@@ -290,7 +283,6 @@ func (p *printer) callExpression(value *syntax.CallExpression, depth int) {
 }
 
 func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
-	type operandType_1 = bool
 	if value.Type != nil {
 		p.expression(value.Type, token.HighestPrec)
 	}
@@ -349,11 +341,11 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		p.commentColumns = previousCommentColumns
 	}
 	gap := p.sourceGap(previous, value.Rbrace)
-	var operand_1 operandType_1 = gap.leadingComment
+	operand_1 := gap.leadingComment
 	if operand_1 {
 		operand_1 = gap.lineBreak
 	}
-	var operand_2 operandType_1 = operand_1
+	var operand_2 bool = operand_1
 	if operand_2 {
 		operand_2 = !indented
 	}
@@ -408,10 +400,9 @@ func (p *printer) fieldContent(
 ) {
 	column := 0
 	if len(value.Names) > 0 {
-		type operandType = bool
 		p.identifiersAt(value.Names, alreadyIndented)
 		functionType := syntax.FunctionTypeExpressionOf(value.Type)
-		var operand operandType = functionType == nil
+		var operand bool = functionType == nil
 		if !operand {
 			operand = functionType.Function.IsValid()
 		}
@@ -512,16 +503,15 @@ func (p *printer) fieldBlock(value *syntax.FieldList) {
 	p.breakSourceGap(value.Opening, value.List[0].Start)
 	columns := p.fieldAlignment(value.List)
 	for index, item := range value.List {
-		type operandType = bool
 		if index > 0 {
 			p.breakSourceGap(value.List[index-1].Stop, item.Start)
 		}
 		previousCommentColumn := p.commentColumn
-		var operand operandType = !p.multilineFieldType(item)
+		operand := !p.multilineFieldType(item)
 		if operand {
 			operand = p.hasTrailingComment(fieldContentEnd(item))
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = len(columns[index]) > 0
 		}
@@ -551,7 +541,6 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 		return
 	}
 	if p.multiline(value.Opening, value.Closing) {
-		type operandType_1 = bool
 		previous := value.Opening
 		indented := false
 		for index, item := range value.List {
@@ -582,11 +571,11 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 			}
 		}
 		gap := p.sourceGap(previous, value.Closing)
-		var operand_1 operandType_1 = gap.leadingComment
+		operand_1 := gap.leadingComment
 		if operand_1 {
 			operand_1 = gap.lineBreak
 		}
-		var operand_2 operandType_1 = operand_1
+		var operand_2 bool = operand_1
 		if operand_2 {
 			operand_2 = !indented
 		}

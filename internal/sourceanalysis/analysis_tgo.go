@@ -144,8 +144,7 @@ func analyzePackage(compiled *compiler.CompiledPackage, testSourcesOnly bool) *P
 	nonNil := make(map[token.Pos]bool)
 	var facts *sourcefacts.Index = nil
 	for _, source := range compiled.Sources {
-		type operandType_1 = bool
-		var operand_2 operandType_1 = testSourcesOnly
+		operand_2 := testSourcesOnly
 		if operand_2 {
 			operand_2 = !strings.HasSuffix(source.Name, "_test.tgo")
 		}

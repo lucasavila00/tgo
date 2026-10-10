@@ -36,9 +36,18 @@ func TestLoweringKeepsImportedPrivateResultInferred(t *testing.T) {
 	))
 	external.MarkComplete()
 
-	_, problems := Compile(PackageInput{
-		Path: "sample",
-		Sources: []File{{Name: "sample.tgo", Data: []byte(`package sample
+	tests := []struct {
+		name       string
+		expression string
+	}{
+		{name: "call", expression: "external.Factory()"},
+		{name: "binary", expression: "external.Factory() + external.Factory()"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, problems := Compile(PackageInput{
+				Path: "sample",
+				Sources: []File{{Name: "sample.tgo", Data: []byte(`package sample
 
 import "example.com/external"
 
@@ -47,15 +56,17 @@ func load() (int, error) {
 }
 
 func use() (int, error) {
-	return external.Consume(external.Factory(), load()!!), nil
+	return external.Consume(` + test.expression + `, load()!!), nil
 }
 `)}},
-		FileSet: token.NewFileSet(),
-		Importer: packageImporter{
-			"example.com/external": external,
-		},
-	})
-	if len(problems) != 0 {
-		t.Fatalf("compile imported private result: %v", problems[0])
+				FileSet: token.NewFileSet(),
+				Importer: packageImporter{
+					"example.com/external": external,
+				},
+			})
+			if len(problems) != 0 {
+				t.Fatalf("compile imported private result: %v", problems[0])
+			}
+		})
 	}
 }

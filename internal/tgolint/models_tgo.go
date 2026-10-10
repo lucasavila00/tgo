@@ -225,7 +225,6 @@ func (v *model) UnmarshalJSON(data []byte) error {
 }
 
 func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -239,7 +238,6 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -256,12 +254,12 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Parameter":
 			current = 4
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -277,11 +275,11 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -304,7 +302,7 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -536,12 +534,11 @@ func sameModel(left *model, right *model) bool {
 		return left == right
 	}
 	if modelIsChecked(left) {
-		type operandType_1 = bool
-		var operand_1 operandType_1 = modelIsChecked(right)
+		operand_1 := modelIsChecked(right)
 		if operand_1 {
 			operand_1 = modelPackage(left) == modelPackage(right)
 		}
-		var operand_2 operandType_1 = operand_1
+		var operand_2 bool = operand_1
 		if operand_2 {
 			operand_2 = modelName(left) == modelName(right)
 		}
@@ -549,12 +546,11 @@ func sameModel(left *model, right *model) bool {
 
 	}
 	if modelIsEnum(left) {
-		type operandType_2 = bool
-		var operand_3 operandType_2 = modelIsEnum(right)
+		operand_3 := modelIsEnum(right)
 		if operand_3 {
 			operand_3 = modelPackage(left) == modelPackage(right)
 		}
-		var operand_4 operandType_2 = operand_3
+		var operand_4 bool = operand_3
 		if operand_4 {
 			operand_4 = modelName(left) == modelName(right)
 		}

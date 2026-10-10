@@ -190,21 +190,19 @@ func (p *sourceParser) discoverFailureReturn(keyword int) error {
 }
 
 func (p *sourceParser) successReturnComma(keyword int) (int, bool) {
-	type operandType_1 = bool
 	stack := []token.Token(nil)
 	previous := -1
 	for cursor := keyword + 1; cursor < len(p.tokens); cursor++ {
-		type operandType = bool
 		kind := p.tokens[cursor].kind
-		var operand operandType = len(stack) == 0
+		var operand bool = len(stack) == 0
 		if operand {
 			operand = previous >= 0
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = p.tokens[previous].kind == token.COMMA
 		}
-		var operand_2 operandType = operand_1
+		var operand_2 bool = operand_1
 		if operand_2 {
 			operand_2 = !startsExpression(kind)
 		}
@@ -235,7 +233,7 @@ func (p *sourceParser) successReturnComma(keyword int) (int, bool) {
 		}
 		previous = cursor
 	}
-	var operand_3 operandType_1 = previous >= 0
+	var operand_3 bool = previous >= 0
 	if operand_3 {
 		operand_3 = p.tokens[previous].kind == token.COMMA
 	}
@@ -263,16 +261,14 @@ func (p *sourceParser) exhaustiveTokens() map[int]bool {
 		case token.LBRACE:
 			openBraces = append(openBraces, cursor)
 		case token.RBRACE:
-			type operandType = bool
 			if len(openBraces) == 0 {
 				continue
 			}
 			open := openBraces[len(openBraces)-1]
 			openBraces = openBraces[:len(openBraces)-1]
-			var operand operandType = !hasClause[open]
+			operand := !hasClause[open]
 			if !operand {
-				type operandType_1 = bool
-				var operand_1 operandType_1 = open > 0
+				var operand_1 bool = open > 0
 				if operand_1 {
 					operand_1 = p.tokens[open-1].kind == token.SELECT
 				}
@@ -289,12 +285,12 @@ func (p *sourceParser) exhaustiveTokens() map[int]bool {
 				hasClause[openBraces[len(openBraces)-1]] = true
 			}
 		case token.DEFAULT:
-			type operandType_2 = bool
-			var operand_2 operandType_2 = len(openBraces) != 0
+			type operandType = bool
+			var operand_2 operandType = len(openBraces) != 0
 			if operand_2 {
 				operand_2 = cursor+1 < len(p.tokens)
 			}
-			var operand_3 operandType_2 = operand_2
+			var operand_3 operandType = operand_2
 			if operand_3 {
 				operand_3 = p.tokens[cursor+1].kind == token.COLON
 			}
@@ -302,16 +298,16 @@ func (p *sourceParser) exhaustiveTokens() map[int]bool {
 				hasClause[openBraces[len(openBraces)-1]] = true
 			}
 		case token.IDENT:
-			type operandType_3 = bool
-			var operand_4 operandType_3 = len(openBraces) != 0
+			type operandType_1 = bool
+			var operand_4 operandType_1 = len(openBraces) != 0
 			if operand_4 {
 				operand_4 = item.text == "exhaustive"
 			}
-			var operand_5 operandType_3 = operand_4
+			var operand_5 operandType_1 = operand_4
 			if operand_5 {
 				operand_5 = cursor+1 < len(p.tokens)
 			}
-			var operand_6 operandType_3 = operand_5
+			var operand_6 operandType_1 = operand_5
 			if operand_6 {
 				operand_6 = p.tokens[cursor+1].kind == token.COLON
 			}
@@ -325,15 +321,13 @@ func (p *sourceParser) exhaustiveTokens() map[int]bool {
 }
 
 func (p *sourceParser) atPropagation(cursor int) bool {
-	type operandType = bool
-	var operand operandType = cursor > 0
+	var operand bool = cursor > 0
 	if operand {
 		operand = p.tokens[cursor].kind == token.NOT
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
-		type operandType_1 = bool
-		var operand_2 operandType_1 = p.tokens[cursor-1].kind == token.RPAREN
+		var operand_2 bool = p.tokens[cursor-1].kind == token.RPAREN
 		if !operand_2 {
 			operand_2 = p.tokens[cursor-1].kind == token.RBRACE
 		}
@@ -344,16 +338,15 @@ func (p *sourceParser) atPropagation(cursor int) bool {
 }
 
 func (p *sourceParser) atDefault(cursor int) bool {
-	type operandType = bool
-	var operand operandType = cursor+2 < len(p.tokens)
+	var operand bool = cursor+2 < len(p.tokens)
 	if operand {
 		operand = p.tokens[cursor].kind == token.PERIOD
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
 		operand_1 = p.tokens[cursor+1].kind == token.PERIOD
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if operand_2 {
 		operand_2 = p.tokens[cursor+2].kind == token.DEFAULT
 	}

@@ -24,7 +24,6 @@ type graphBuilder struct {
 func (b *graphBuilder) statement(statement *syntax.Statement) {
 	var label *labelBlocks = nil
 start:
-
 	switch statement.Tag() {
 	case syntax.StatementTagBad,
 		syntax.StatementTagSend,
@@ -37,10 +36,9 @@ start:
 		b.addStatement(statement)
 		b.current.returns = true
 	case syntax.StatementTagExpression:
-		type operandType = bool
 		b.addStatement(statement)
 		item := syntax.ExpressionStatementOf(statement)
-		var operand operandType = syntax.CallExpressionOf(item.Expression) != nil
+		var operand bool = syntax.CallExpressionOf(item.Expression) != nil
 		if operand {
 			operand = !b.mayReturn(item.Expression)
 		}
@@ -48,10 +46,10 @@ start:
 			b.current = b.newBlock(KindUnreachable, statement)
 		}
 	case syntax.StatementTagDeclaration:
-		type operandType_1 = bool
+		type operandType = bool
 		item := syntax.DeclarationStatementOf(statement)
 		declaration := syntax.GeneralDeclarationOf(item.Declaration)
-		var operand_1 operandType_1 = declaration != nil
+		var operand_1 operandType = declaration != nil
 		if operand_1 {
 			operand_1 = declaration.Kind == token.VAR
 		}

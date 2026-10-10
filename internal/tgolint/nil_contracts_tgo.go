@@ -370,9 +370,8 @@ func (e *nilEnvironment) addParents(file *syntax.File) {
 		return true
 	})
 	for _, node := range syntax.Extensions(file) {
-		type operandType = bool
 		comprehension, ok := syntax.ComprehensionExpressionOf(node)
-		var operand operandType = !ok
+		operand := !ok
 		if !operand {
 			operand = comprehension == nil
 		}
@@ -380,9 +379,8 @@ func (e *nilEnvironment) addParents(file *syntax.File) {
 			continue
 		}
 		for parent := syntax.Parent(file, node); parent != nil; parent = syntax.Parent(file, parent) {
-			type operandType_1 = bool
 			expression, expressionOK := syntax.ExpressionOf(parent)
-			var operand_1 operandType_1 = expressionOK
+			operand_1 := expressionOK
 			if operand_1 {
 				operand_1 = syntax.CompositeLiteralOf(expression) != nil
 			}
@@ -539,7 +537,6 @@ func (e *nilEnvironment) declaredContract(expression *syntax.Expression) nilCont
 }
 
 func (e *nilEnvironment) contractForObject(object types.Object) nilContract {
-	type operandType = bool
 	if object == nil {
 		return nil
 	}
@@ -551,11 +548,11 @@ func (e *nilEnvironment) contractForObject(object types.Object) nilContract {
 	}
 	fact := new(nilContractWireFactV2)
 	factObject := e.analysisFactObject(object)
-	var operand operandType = factObject != nil
+	var operand bool = factObject != nil
 	if operand {
 		operand = factObject.Pkg() != e.pkg
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
 		operand_1 = e.pass.ImportObjectFact(factObject, fact)
 	}
@@ -694,14 +691,13 @@ func (e *nilEnvironment) exportContract(
 	object types.Object,
 	contract nilContract,
 ) {
-	type operandType = bool
 	mapped := mapNilObject(object, e.pkg, target.Pkg)
 	fact := nilContractFact(contract)
-	var operand operandType = mapped != nil
+	var operand bool = mapped != nil
 	if operand {
 		operand = fact != nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
 		operand_1 = mapped.Exported()
 	}
@@ -715,7 +711,6 @@ func mapNilObject(
 	from *types.Package,
 	to *types.Package,
 ) types.Object {
-	type operandType_1 = bool
 	type operandType = bool
 	var operand operandType = object == nil
 	if !operand {
@@ -740,7 +735,7 @@ func mapNilObject(
 		return nil
 	}
 	signature, ok := function.Type().(*types.Signature)
-	var operand_3 operandType_1 = !ok
+	operand_3 := !ok
 	if !operand_3 {
 		operand_3 = signature.Recv() == nil
 	}

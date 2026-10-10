@@ -141,12 +141,11 @@ func (c *checker) boundaryModel(typ types.Type) *model {
 func escapedObjects(facts *sourcefacts.Index, body *syntax.BlockStatement) map[types.Object]token.Pos {
 	escaped := make(map[types.Object]token.Pos)
 	record := func(object types.Object, position token.Pos) {
-		type operandType = bool
 		if object == nil {
 			return
 		}
 		first, found := escaped[object]
-		var operand operandType = !found
+		operand := !found
 		if !operand {
 			operand = position < first
 		}
@@ -323,7 +322,6 @@ func (c *checker) checkedLoop(statement *syntax.ForStatement, state checkedState
 	entry := cloneCheckedState(state)
 	loop := cloneCheckedState(entry)
 	for {
-		type operandType = bool
 		if statement.Condition != nil {
 			c.checkResultUses([]*syntax.Expression{statement.Condition}, loop, nil)
 		}
@@ -332,7 +330,7 @@ func (c *checker) checkedLoop(statement *syntax.ForStatement, state checkedState
 		for failure := range trueProofs {
 			proveResult(iteration, failure)
 		}
-		var operand operandType = !c.checkedBlock(statement.Body.List, iteration)
+		operand := !c.checkedBlock(statement.Body.List, iteration)
 		if operand {
 			operand = statement.Post != nil
 		}
@@ -583,7 +581,6 @@ func (c *checker) markValidatedResult(
 	value *syntax.Expression,
 	state checkedState,
 ) {
-	type operandType = bool
 	if !c.validatedCall(call) {
 		return
 	}
@@ -593,7 +590,7 @@ func (c *checker) markValidatedResult(
 	}
 	object := c.facts.Object(name)
 	result, found := state[object]
-	var operand operandType = object == nil
+	var operand bool = object == nil
 	if !operand {
 		operand = !found
 	}
@@ -611,7 +608,6 @@ func (c *checker) bindCheckedResults(
 	model *model,
 	state checkedState,
 ) {
-	type operandType_1 = bool
 	type operandType = bool
 	c.invalidateAssignments([]*syntax.Expression{valueExpression, errorExpression}, state)
 	errorName := syntax.IdentifierExpressionOf(errorExpression)
@@ -644,7 +640,7 @@ func (c *checker) bindCheckedResults(
 	if operand_1 {
 		return
 	}
-	var operand_2 operandType_1 = !c.localResultObject(valueObject)
+	operand_2 := !c.localResultObject(valueObject)
 	if !operand_2 {
 		operand_2 = !c.localResultObject(errorObject)
 	}
@@ -653,7 +649,7 @@ func (c *checker) bindCheckedResults(
 			"tgo %s %s result variables must be local to this function",
 			modelKind(model), modelName(model))
 	}
-	var operand_3 operandType_1 = escapedBefore(c.escaped, valueObject, syntax.ExpressionPosition(valueExpression))
+	operand_3 := escapedBefore(c.escaped, valueObject, syntax.ExpressionPosition(valueExpression))
 	if !operand_3 {
 		operand_3 = escapedBefore(c.escaped, errorObject, syntax.ExpressionPosition(errorExpression))
 	}
@@ -677,13 +673,12 @@ func (c *checker) bindCheckedResults(
 func (c *checker) presenceModel(expression *syntax.Expression) *model {
 	var valueType types.Type = nil
 	{
-		type operandType = bool
 		tuple, ok := c.facts.Type(expression).(*types.Tuple)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = tuple.Len() == 2
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = isBoolean(tuple.At(1).Type())
 		}
@@ -735,9 +730,8 @@ func (c *checker) presenceModel(expression *syntax.Expression) *model {
 }
 
 func isBoolean(typ types.Type) bool {
-	type operandType = bool
 	basic, ok := types.Unalias(typ).Underlying().(*types.Basic)
-	var operand operandType = ok
+	operand := ok
 	if operand {
 		operand = basic.Kind() == types.Bool
 	}
@@ -752,7 +746,6 @@ func (c *checker) bindPresenceResults(
 	model *model,
 	state checkedState,
 ) {
-	type operandType_1 = bool
 	type operandType = bool
 	c.invalidateAssignments([]*syntax.Expression{valueExpression, presenceExpression}, state)
 	presenceName := syntax.IdentifierExpressionOf(presenceExpression)
@@ -785,7 +778,7 @@ func (c *checker) bindPresenceResults(
 	if operand_1 {
 		return
 	}
-	var operand_2 operandType_1 = !c.localResultObject(valueObject)
+	operand_2 := !c.localResultObject(valueObject)
 	if !operand_2 {
 		operand_2 = !c.localResultObject(presenceObject)
 	}
@@ -794,7 +787,7 @@ func (c *checker) bindPresenceResults(
 			"tgo %s %s presence variables must be local to this function",
 			modelKind(model), modelName(model))
 	}
-	var operand_3 operandType_1 = escapedBefore(c.escaped, valueObject, syntax.ExpressionPosition(valueExpression))
+	operand_3 := escapedBefore(c.escaped, valueObject, syntax.ExpressionPosition(valueExpression))
 	if !operand_3 {
 		operand_3 = escapedBefore(c.escaped, presenceObject, syntax.ExpressionPosition(presenceExpression))
 	}
@@ -816,8 +809,7 @@ func (c *checker) bindPresenceResults(
 }
 
 func presenceBoundary(source *syntax.Expression) bool {
-	type operandType = bool
-	var operand operandType = syntax.TypeAssertionExpressionOf(source) != nil
+	var operand bool = syntax.TypeAssertionExpressionOf(source) != nil
 	if !operand {
 		operand = syntax.CallExpressionOf(source) != nil
 	}
@@ -830,9 +822,8 @@ func escapedBefore(
 	object types.Object,
 	position token.Pos,
 ) bool {
-	type operandType = bool
 	escape, found := escaped[object]
-	var operand operandType = found
+	operand := found
 	if operand {
 		operand = escape < position
 	}
@@ -840,18 +831,17 @@ func escapedBefore(
 }
 
 func (c *checker) localResultObject(object types.Object) bool {
-	type operandType_1 = bool
 	type operandType = bool
 	variable, ok := object.(*types.Var)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = variable.IsField()
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = variable.Parent() == c.pass.Pkg.Scope()
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = c.function == nil
 	}
@@ -861,14 +851,14 @@ func (c *checker) localResultObject(object types.Object) bool {
 	position := c.pass.Fset.Position(variable.Pos())
 	start := c.pass.Fset.Position(syntax.NodePosition(c.function))
 	stop := c.pass.Fset.Position(syntax.NodeEnd(c.function))
-	var operand_3 operandType_1 = position.Filename != start.Filename
+	var operand_3 operandType = position.Filename != start.Filename
 	if !operand_3 {
 		operand_3 = position.Filename != stop.Filename
 	}
 	if operand_3 {
 		return false
 	}
-	var operand_4 operandType = !sourcePositionBefore(position, start)
+	operand_4 := !sourcePositionBefore(position, start)
 	if operand_4 {
 		operand_4 = !sourcePositionBefore(stop, position)
 	}
@@ -876,11 +866,9 @@ func (c *checker) localResultObject(object types.Object) bool {
 }
 
 func sourcePositionBefore(left, right token.Position) bool {
-	type operandType = bool
-	var operand operandType = left.Line < right.Line
+	var operand bool = left.Line < right.Line
 	if !operand {
-		type operandType_1 = bool
-		var operand_1 operandType_1 = left.Line == right.Line
+		var operand_1 bool = left.Line == right.Line
 		if operand_1 {
 			operand_1 = left.Column < right.Column
 		}
@@ -898,7 +886,6 @@ func (c *checker) checkedReturn(statement *syntax.ReturnStatement, state checked
 	}
 	skip := make(map[*syntax.Identifier]bool)
 	for index := 0; index+1 < len(statement.Results); index++ {
-		type operandType_1 = bool
 		type operandType = bool
 		value := syntax.IdentifierExpressionOf(statement.Results[index])
 		failure := syntax.IdentifierExpressionOf(statement.Results[index+1])
@@ -910,11 +897,11 @@ func (c *checker) checkedReturn(statement *syntax.ReturnStatement, state checked
 			continue
 		}
 		result, ok := state[c.facts.Object(value)]
-		var operand_1 operandType_1 = ok
+		operand_1 := ok
 		if operand_1 {
 			operand_1 = result.failure == c.facts.Object(failure)
 		}
-		var operand_2 operandType_1 = operand_1
+		var operand_2 bool = operand_1
 		if operand_2 {
 			operand_2 = result.validProof
 		}

@@ -22,7 +22,6 @@ func (c *checker) checkTagSwitch(
 	statement *syntax.Statement,
 	tagSwitch *syntax.SwitchStatement,
 ) {
-	type operandType_1 = bool
 	receiver, selectorExpression, selector, model, tagType := c.tagCall(tagSwitch.Tag)
 	if model == nil {
 		return
@@ -36,7 +35,6 @@ func (c *checker) checkTagSwitch(
 	hasDefault := false
 	labelsResolved := true
 	for _, item := range tagSwitch.Body.List {
-		type operandType = bool
 		clause := syntax.CaseClauseOf(item)
 		if clause == nil {
 			continue
@@ -62,7 +60,7 @@ func (c *checker) checkTagSwitch(
 			continue
 		}
 		tags, resolved := c.caseTags(clause, model, tagType, seen)
-		var operand operandType = labelsResolved
+		operand := labelsResolved
 		if operand {
 			operand = resolved
 		}
@@ -89,7 +87,7 @@ func (c *checker) checkTagSwitch(
 			syntax.ExpressionEnd(tagSwitch.Tag),
 		)
 	}
-	var operand_1 operandType_1 = labelsResolved
+	operand_1 := labelsResolved
 	if operand_1 {
 		operand_1 = hasSentinelDefault
 	}
@@ -158,8 +156,7 @@ func (c *checker) statementsTerminateWith(
 	statements []*syntax.Statement,
 	tagDefault bool,
 ) bool {
-	type operandType = bool
-	var operand operandType = len(statements) == 0
+	var operand bool = len(statements) == 0
 	if !operand {
 		operand = c.hasEscapingBranch(file, statements, tagDefault)
 	}
@@ -195,9 +192,8 @@ func (c *checker) statementsTerminateWith(
 			continue
 		}
 		for _, node := range block.Nodes {
-			type operandType_1 = bool
 			value, ok := syntax.StatementOf(&node)
-			var operand_1 operandType_1 = ok
+			operand_1 := ok
 			if operand_1 {
 				operand_1 = value == &sentinel
 			}
@@ -274,9 +270,8 @@ func (c *checker) branchEscapes(
 	labels map[types.Object]bool,
 	tagDefault bool,
 ) bool {
-	type operandType_1 = bool
 	type operandType = bool
-	var operand operandType = tagDefault
+	operand := tagDefault
 	if operand {
 		operand = branch.Token == token.RETURN
 	}
@@ -286,14 +281,14 @@ func (c *checker) branchEscapes(
 	if branch.Label != nil {
 		return !labels[c.facts.Object(branch.Label)]
 	}
-	var operand_1 operandType_1 = branch.Token != token.BREAK
+	var operand_1 operandType = branch.Token != token.BREAK
 	if operand_1 {
 		operand_1 = branch.Token != token.CONTINUE
 	}
 	if operand_1 {
 		return true
 	}
-	var operand_2 operandType = tagDefault
+	operand_2 := tagDefault
 	if operand_2 {
 		operand_2 = roots[*branchNode]
 	}
@@ -401,13 +396,12 @@ func (c *checker) caseTags(
 	resolved := true
 	tags := make(map[int]bool)
 	for _, expression := range clause.List {
-		type operandType = bool
 		value := c.facts.Constant(expression)
-		var operand operandType = value == nil
+		var operand bool = value == nil
 		if !operand {
 			operand = value.Kind() != constant.Int
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if !operand_1 {
 			operand_1 = !c.tagExpression(expression, model, tagType)
 		}
@@ -418,11 +412,11 @@ func (c *checker) caseTags(
 			continue
 		}
 		tag64, exact := constant.Int64Val(value)
-		var operand_2 operandType = !exact
+		operand_2 := !exact
 		if !operand_2 {
 			operand_2 = tag64 < 1
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if !operand_3 {
 			operand_3 = tag64 > int64(len(modelVariants(model)))
 		}
@@ -433,7 +427,7 @@ func (c *checker) caseTags(
 			continue
 		}
 		tag := int(tag64)
-		var operand_4 operandType = tags[tag]
+		operand_4 := tags[tag]
 		if !operand_4 {
 			operand_4 = seen[tag]
 		}
@@ -471,9 +465,8 @@ func (c *checker) tagExpressionSeen(
 	{
 		identifier := syntax.IdentifierExpressionOf(expression)
 		if identifier != nil {
-			type operandType = bool
 			object, ok := c.facts.Object(identifier).(*types.Const)
-			var operand operandType = ok
+			operand := ok
 			if operand {
 				operand = c.tagConstantExpression(object, model, tagType, seen)
 			}
@@ -483,9 +476,8 @@ func (c *checker) tagExpressionSeen(
 	{
 		selector := syntax.SelectorExpressionOf(expression)
 		if selector != nil {
-			type operandType_1 = bool
 			object, ok := c.facts.Object(selector.Selector).(*types.Const)
-			var operand_1 operandType_1 = ok
+			operand_1 := ok
 			if operand_1 {
 				operand_1 = c.tagConstantExpression(object, model, tagType, seen)
 			}
@@ -495,12 +487,11 @@ func (c *checker) tagExpressionSeen(
 	{
 		call := syntax.CallExpressionOf(expression)
 		if call != nil {
-			type operandType_2 = bool
-			var operand_2 operandType_2 = len(call.Args) == 1
+			var operand_2 bool = len(call.Args) == 1
 			if operand_2 {
 				operand_2 = c.facts.IsType(call.Callee)
 			}
-			var operand_3 operandType_2 = operand_2
+			var operand_3 bool = operand_2
 			if operand_3 {
 				operand_3 = types.Identical(c.facts.Type(call.Callee), tagType)
 			}
@@ -517,8 +508,7 @@ func (c *checker) tagConstantExpression(
 	tagType types.Type,
 	seen map[*types.Const]bool,
 ) bool {
-	type operandType = bool
-	var operand operandType = !types.Identical(object.Type(), tagType)
+	operand := !types.Identical(object.Type(), tagType)
 	if !operand {
 		operand = seen[object]
 	}
@@ -526,7 +516,7 @@ func (c *checker) tagConstantExpression(
 		return false
 	}
 	named, ok := types.Unalias(tagType).(*types.Named)
-	var operand_1 operandType = ok
+	operand_1 := ok
 	if operand_1 {
 		operand_1 = named.Obj().Pkg() == object.Pkg()
 	}
@@ -541,9 +531,9 @@ func (c *checker) tagConstantExpression(
 	defer delete(seen, object)
 	for _, file := range c.files {
 		for _, declarationValue := range file.Declarations {
-			type operandType_1 = bool
+			type operandType = bool
 			declaration := syntax.GeneralDeclarationOf(declarationValue)
-			var operand_2 operandType_1 = declaration == nil
+			var operand_2 operandType = declaration == nil
 			if !operand_2 {
 				operand_2 = declaration.Kind != token.CONST
 			}
@@ -556,8 +546,8 @@ func (c *checker) tagConstantExpression(
 					continue
 				}
 				for index, name := range specification.Names {
-					type operandType_2 = bool
-					var operand_3 operandType_2 = c.facts.DefinitionName(name) != object
+					type operandType_1 = bool
+					var operand_3 operandType_1 = c.facts.DefinitionName(name) != object
 					if !operand_3 {
 						operand_3 = len(specification.Values) == 0
 					}
@@ -671,7 +661,6 @@ func (c *checker) modelForSourceSelector(
 	}
 	current := selection.Recv()
 	for offset, index := range selection.Index() {
-		type operandType = bool
 		current = dereference(current)
 		{
 			model := c.modelForReceiver(current)
@@ -683,7 +672,7 @@ func (c *checker) modelForSourceSelector(
 			break
 		}
 		structure, ok := current.Underlying().(*types.Struct)
-		var operand operandType = !ok
+		operand := !ok
 		if !operand {
 			operand = index >= structure.NumFields()
 		}
@@ -695,9 +684,9 @@ func (c *checker) modelForSourceSelector(
 	{
 		function, ok := selection.Obj().(*types.Func)
 		if ok {
-			type operandType_1 = bool
+			type operandType = bool
 			signature, _ := function.Type().(*types.Signature)
-			var operand_1 operandType_1 = signature != nil
+			var operand_1 operandType = signature != nil
 			if operand_1 {
 				operand_1 = signature.Recv() != nil
 			}

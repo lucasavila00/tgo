@@ -19,7 +19,6 @@ func (p *printer) expressionList(
 	ellipsis token.Pos,
 	depth int,
 ) {
-	type operandType_2 = bool
 	if len(values) == 0 {
 		gap := p.sourceGap(opening, closing)
 		if gap.leadingComment {
@@ -40,7 +39,6 @@ func (p *printer) expressionList(
 	indented := false
 	previousIndent := p.indent
 	for index, value := range values {
-		type operandType_1 = bool
 		type operandType = bool
 		start := syntax.ExpressionPosition(value)
 		gap := p.sourceGap(previous, start)
@@ -57,7 +55,7 @@ func (p *printer) expressionList(
 		p.commentColumns = commentColumns[index]
 		p.expressionAt(value, 0, depth)
 		previous = syntax.ExpressionEnd(value)
-		var operand operandType = index == len(values)-1
+		var operand bool = index == len(values)-1
 		if operand {
 			operand = ellipsis.IsValid()
 		}
@@ -69,7 +67,7 @@ func (p *printer) expressionList(
 		if index+1 < len(values) {
 			following = syntax.ExpressionPosition(values[index+1])
 		}
-		var operand_1 operandType_1 = index+1 < len(values)
+		var operand_1 operandType = index+1 < len(values)
 		if !operand_1 {
 			operand_1 = p.position(previous).Line < p.position(closing).Line
 		}
@@ -80,11 +78,11 @@ func (p *printer) expressionList(
 		p.commentColumns = previousCommentColumns
 	}
 	gap := p.sourceGap(previous, closing)
-	var operand_2 operandType_2 = gap.leadingComment
+	operand_2 := gap.leadingComment
 	if operand_2 {
 		operand_2 = gap.lineBreak
 	}
-	var operand_3 operandType_2 = operand_2
+	var operand_3 bool = operand_2
 	if operand_3 {
 		operand_3 = !indented
 	}
@@ -106,9 +104,8 @@ func (p *printer) delimitedExpressions(
 	ellipsis bool,
 	depth int,
 ) {
-	type operandType = bool
 	ellipsisPosition := token.NoPos
-	var operand operandType = ellipsis
+	operand := ellipsis
 	if operand {
 		operand = len(values) > 0
 	}
@@ -149,8 +146,7 @@ func (p *printer) commaListWithComments(
 			p.trailingLine(separator)
 			p.commentColumns = previousCommentColumns
 			if p.position(previous).Line < p.position(start).Line {
-				type operandType = bool
-				var operand operandType = !alreadyIndented
+				operand := !alreadyIndented
 				if operand {
 					operand = !indented
 				}
@@ -187,9 +183,8 @@ func (p *printer) identifiersAt(values []*syntax.Identifier, alreadyIndented boo
 			previous := values[index-1].Stop
 			p.trailingLine(p.comma(previous, value.Start))
 			if p.position(previous).Line < p.position(value.Start).Line {
-				type operandType = bool
 				p.newline()
-				var operand operandType = !alreadyIndented
+				operand := !alreadyIndented
 				if operand {
 					operand = !indented
 				}

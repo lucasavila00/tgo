@@ -129,8 +129,7 @@ func frontInspect(file *frontFile, visit func(frontNode) bool) {
 type inspector func(frontNode) bool
 
 func (inspect inspector) Visit(node frontNode) frontVisitor {
-	type operandType = bool
-	var operand operandType = node == nil
+	var operand bool = node == nil
 	if !operand {
 		operand = inspect(node)
 	}
@@ -146,8 +145,7 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 	file.extensions = nil
 	anchoredChildren := make(map[frontNode][]frontNode, len(anchors))
 	for child, parent := range anchors {
-		type operandType = bool
-		var operand operandType = nodePresent(child)
+		operand := nodePresent(child)
 		if operand {
 			operand = nodePresent(parent)
 		}
@@ -159,8 +157,7 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 	visited := make(map[frontNode]bool)
 	var add func(frontNode) = nil
 	add = func(node frontNode) {
-		type operandType = bool
-		var operand operandType = node == nil
+		var operand bool = node == nil
 		if !operand {
 			operand = visited[node]
 		}
@@ -173,8 +170,7 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 		filtered := children[:0]
 		seenChild := make(map[frontNode]bool)
 		for _, child := range children {
-			type operandType_1 = bool
-			var operand_1 operandType_1 = !nodePresent(child)
+			operand_1 := !nodePresent(child)
 			if !operand_1 {
 				operand_1 = seenChild[child]
 			}
@@ -182,9 +178,9 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 				continue
 			}
 			{
-				type operandType_2 = bool
+				type operandType = bool
 				parent := file.parents[child]
-				var operand_2 operandType_2 = parent == nil
+				var operand_2 operandType = parent == nil
 				if !operand_2 {
 					operand_2 = parent == node
 				}
@@ -298,9 +294,8 @@ func syntaxChildren(file *frontFile, node frontNode) []frontNode {
 }
 
 func directGoChildren(node ast.Node) []frontNode {
-	type operandType = bool
 	value := reflect.ValueOf(node)
-	var operand operandType = !value.IsValid()
+	operand := !value.IsValid()
 	if !operand {
 		operand = value.IsNil()
 	}
@@ -337,15 +332,13 @@ func nodeValues(value reflect.Value) []frontNode {
 }
 
 func reflectedNode(value reflect.Value) frontNode {
-	type operandType = bool
-	var operand operandType = !value.IsValid()
+	operand := !value.IsValid()
 	if !operand {
-		type operandType_1 = bool
-		var operand_1 operandType_1 = value.Kind() == reflect.Interface
+		var operand_1 bool = value.Kind() == reflect.Interface
 		if !operand_1 {
 			operand_1 = value.Kind() == reflect.Pointer
 		}
-		var operand_2 operandType_1 = (operand_1)
+		var operand_2 bool = (operand_1)
 		if operand_2 {
 			operand_2 = value.IsNil()
 		}
@@ -393,12 +386,11 @@ func compareNodes(left frontNode, right frontNode) int {
 }
 
 func nodePresent(node frontNode) bool {
-	type operandType = bool
 	if node == nil {
 		return false
 	}
 	value := reflect.ValueOf(node)
-	var operand operandType = value.Kind() != reflect.Pointer
+	var operand bool = value.Kind() != reflect.Pointer
 	if !operand {
 		operand = !value.IsNil()
 	}

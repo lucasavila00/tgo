@@ -185,12 +185,11 @@ func TestRequestJSONRejectsInvalidInput(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			type operandType = bool
 			request := func(input TgoRequestHoverInput) Request {
 				return NewRequestHover(input.FieldID, input.FieldParams)
 			}(TgoRequestHoverInput{FieldID: 0, FieldParams: new(positionParams)})
 			err := json.Unmarshal([]byte(test.wire), &request)
-			var operand operandType = err == nil
+			var operand bool = err == nil
 			if !operand {
 				operand = !strings.Contains(err.Error(), test.errorText)
 			}
@@ -240,7 +239,6 @@ func TestServeReportsProtocolErrors(t *testing.T) {
 		{9, "cannot unmarshal"},
 	}
 	for _, test := range tests {
-		type operandType = bool
 		response := *new(protocolWireResponse)
 		{
 			err := decoder.Decode(&response)
@@ -248,7 +246,7 @@ func TestServeReportsProtocolErrors(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		var operand operandType = response.ID != test.id
+		var operand bool = response.ID != test.id
 		if !operand {
 			operand = !strings.Contains(response.Error, test.errorText)
 		}
@@ -335,9 +333,8 @@ func serveProtocolLine(t *testing.T, request string) string {
 }
 
 func assertJSONLine(t *testing.T, got, want string) {
-	type operandType = bool
 	t.Helper()
-	var operand operandType = !strings.HasSuffix(got, "\n")
+	operand := !strings.HasSuffix(got, "\n")
 	if !operand {
 		operand = strings.Count(got, "\n") != 1
 	}

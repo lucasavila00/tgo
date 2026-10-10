@@ -35,13 +35,12 @@ func (c *checker) checkIotaModernization(analysis *sourceanalysis.Package) {
 		}
 		index := analysis.Facts
 		for _, declaration := range file.Declarations {
-			type operandType = bool
 			general, ok := sourceGeneralDeclaration(declaration)
-			var operand operandType = !ok
+			operand := !ok
 			if !operand {
 				operand = general == nil
 			}
-			var operand_1 operandType = operand
+			var operand_1 bool = operand
 			if !operand_1 {
 				operand_1 = general.Kind != token.CONST
 			}
@@ -62,9 +61,8 @@ func (c *checker) checkIotaGroup(
 	ordered := make([]*iotaCandidate, 0)
 	var valueSource *syntax.ValueSpecification = nil
 	for _, specification := range group.Specs {
-		type operandType = bool
 		item, ok := sourceValueSpecification(specification)
-		var operand operandType = !ok
+		operand := !ok
 		if !operand {
 			operand = item == nil
 		}
@@ -75,13 +73,12 @@ func (c *checker) checkIotaGroup(
 			valueSource = item
 		}
 		for position, identifier := range item.Names {
-			type operandType_2 = bool
-			type operandType_1 = bool
-			var operand_1 operandType_1 = identifier.Name == "_"
+			type operandType = bool
+			var operand_1 operandType = identifier.Name == "_"
 			if !operand_1 {
 				operand_1 = valueSource == nil
 			}
-			var operand_2 operandType_1 = operand_1
+			var operand_2 operandType = operand_1
 			if !operand_2 {
 				operand_2 = position >= len(valueSource.Values)
 			}
@@ -93,7 +90,7 @@ func (c *checker) checkIotaGroup(
 				continue
 			}
 			typ, ok := object.Type().(*types.Named)
-			var operand_3 operandType_2 = !ok
+			operand_3 := !ok
 			if !operand_3 {
 				operand_3 = !integerNamedType(typ)
 			}
@@ -107,23 +104,22 @@ func (c *checker) checkIotaGroup(
 			iotaPosition, usesIota := facts.IotaPosition(valueSource.Values[position])
 			candidate.values = append(candidate.values, object.Val())
 			operand_4 := candidate
-			var operand_5 operandType_2 = candidate.allIota
+			operand_5 := candidate.allIota
 			if operand_5 {
 				operand_5 = usesIota
 			}
 			(*operand_4).allIota = operand_5
 			operand_6 := candidate
-			var operand_7 operandType_2 = candidate.bitSet
+			operand_7 := candidate.bitSet
 			if !operand_7 {
-				type operandType_3 = bool
-				var operand_8 operandType_3 = usesIota
+				operand_8 := usesIota
 				if operand_8 {
 					operand_8 = facts.HasBitSetOperator(valueSource.Values[position])
 				}
 				operand_7 = (operand_8)
 			}
 			(*operand_6).bitSet = operand_7
-			var operand_9 operandType_2 = candidate.position == token.NoPos
+			var operand_9 bool = candidate.position == token.NoPos
 			if operand_9 {
 				operand_9 = usesIota
 			}
@@ -164,9 +160,8 @@ func iotaCandidateFor(
 
 // integerNamedType reports whether a type is a defined integer type.
 func integerNamedType(typ *types.Named) bool {
-	type operandType = bool
 	basic, ok := typ.Underlying().(*types.Basic)
-	var operand operandType = ok
+	operand := ok
 	if operand {
 		operand = basic.Info()&types.IsInteger != 0
 	}
@@ -175,16 +170,15 @@ func integerNamedType(typ *types.Named) bool {
 
 // iotaEnumCandidate checks the typed values and the expression source.
 func iotaEnumCandidate(candidate *iotaCandidate) bool {
-	type operandType = bool
-	var operand operandType = len(candidate.values) < 2
+	var operand bool = len(candidate.values) < 2
 	if !operand {
 		operand = candidate.position == token.NoPos
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = !candidate.allIota
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = candidate.bitSet
 	}

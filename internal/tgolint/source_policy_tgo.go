@@ -69,7 +69,6 @@ func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
 }
 
 func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
-	type operandType_2 = bool
 	c.checkSourceModelPolicy(node)
 	{
 		function, ok := syntax.FunctionDeclarationOf(node)
@@ -120,7 +119,7 @@ func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
 		}
 	}
 	expression, ok := syntax.ExpressionOf(node)
-	var operand_2 operandType_2 = !ok
+	operand_2 := !ok
 	if !operand_2 {
 		operand_2 = expression == nil
 	}
@@ -151,9 +150,9 @@ func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
 		}
 	}
 	{
-		type operandType_3 = bool
+		type operandType_2 = bool
 		unary := syntax.UnaryExpressionOf(expression)
-		var operand_3 operandType_3 = unary != nil
+		var operand_3 operandType_2 = unary != nil
 		if operand_3 {
 			operand_3 = unary.Operator == token.ARROW
 		}
@@ -235,9 +234,8 @@ func (c *checker) literalInOwnCheckMethod(
 		return false
 	}
 	{
-		type operandType = bool
 		model := c.modelFor(typ)
-		var operand operandType = model == nil
+		var operand bool = model == nil
 		if !operand {
 			operand = !modelIsChecked(model)
 		}
@@ -247,21 +245,20 @@ func (c *checker) literalInOwnCheckMethod(
 	}
 	node := syntax.ExpressionNode(expression)
 	for parent := c.parents[node]; parent != nil; parent = c.parents[*parent] {
-		type operandType_2 = bool
-		type operandType_1 = bool
+		type operandType = bool
 		function, ok := syntax.FunctionDeclarationOf(parent)
-		var operand_1 operandType_1 = !ok
+		operand_1 := !ok
 		if !operand_1 {
 			operand_1 = function == nil
 		}
 		if operand_1 {
 			continue
 		}
-		var operand_2 operandType_2 = function.Name.Name != "check"
+		var operand_2 operandType = function.Name.Name != "check"
 		if !operand_2 {
 			operand_2 = function.Receiver == nil
 		}
-		var operand_3 operandType_2 = operand_2
+		var operand_3 operandType = operand_2
 		if !operand_3 {
 			operand_3 = len(function.Receiver.List) != 1
 		}
@@ -279,7 +276,6 @@ func (c *checker) checkCompleteStructLiteral(
 	literal *syntax.CompositeLiteral,
 	structure *types.Struct,
 ) {
-	type operandType = bool
 	fields := make(map[string]bool)
 	keyed, defaults := false, false
 	for _, element := range literal.Elements {
@@ -302,7 +298,7 @@ func (c *checker) checkCompleteStructLiteral(
 			}
 		}
 	}
-	var operand operandType = !keyed
+	operand := !keyed
 	if operand {
 		operand = len(literal.Elements) == structure.NumFields()
 	}
@@ -310,12 +306,10 @@ func (c *checker) checkCompleteStructLiteral(
 		return
 	}
 	for index := 0; index < structure.NumFields(); index++ {
-		type operandType_1 = bool
 		field := structure.Field(index)
-		var operand_1 operandType_1 = fields[field.Name()]
+		operand_1 := fields[field.Name()]
 		if !operand_1 {
-			type operandType_2 = bool
-			var operand_2 operandType_2 = defaults
+			operand_2 := defaults
 			if operand_2 {
 				operand_2 = c.hasFieldDefault(typ, field.Name())
 			}
@@ -337,9 +331,8 @@ func syntaxExpressionNode(expression *syntax.Expression) *syntax.Node {
 }
 
 func (c *checker) hasFieldDefault(typ types.Type, field string) bool {
-	type operandType = bool
 	named, ok := types.Unalias(typ).(*types.Named)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = named.Obj().Pkg() == nil
 	}
@@ -483,7 +476,6 @@ func (c *checker) resultReadsExpression(expression *syntax.Expression, state res
 	syntax.InspectExpression(
 		expression,
 		func(node *syntax.Node) bool {
-			type operandType = bool
 			{
 				literal, ok := syntax.FunctionLiteralOf(node)
 				if ok {
@@ -492,7 +484,7 @@ func (c *checker) resultReadsExpression(expression *syntax.Expression, state res
 				}
 			}
 			name, ok := syntax.IdentifierOf(node)
-			var operand operandType = !ok
+			operand := !ok
 			if !operand {
 				operand = name == nil
 			}
@@ -500,9 +492,8 @@ func (c *checker) resultReadsExpression(expression *syntax.Expression, state res
 				return true
 			}
 			{
-				type operandType_1 = bool
 				assigned, found := state[c.facts.Object(name)]
-				var operand_1 operandType_1 = found
+				operand_1 := found
 				if operand_1 {
 					operand_1 = !assigned
 				}
@@ -522,7 +513,6 @@ func (c *checker) resultReadsStatement(statement *syntax.Statement, state result
 	syntax.InspectStatement(
 		statement,
 		func(node *syntax.Node) bool {
-			type operandType = bool
 			{
 				literal, ok := syntax.FunctionLiteralOf(node)
 				if ok {
@@ -531,11 +521,11 @@ func (c *checker) resultReadsStatement(statement *syntax.Statement, state result
 				}
 			}
 			name, ok := syntax.IdentifierOf(node)
-			var operand operandType = !ok
+			operand := !ok
 			if !operand {
 				operand = name == nil
 			}
-			var operand_1 operandType = operand
+			var operand_1 bool = operand
 			if !operand_1 {
 				operand_1 = c.resultWrite(name)
 			}
@@ -543,9 +533,8 @@ func (c *checker) resultReadsStatement(statement *syntax.Statement, state result
 				return true
 			}
 			{
-				type operandType_1 = bool
 				assigned, found := state[c.facts.Object(name)]
-				var operand_2 operandType_1 = found
+				operand_2 := found
 				if operand_2 {
 					operand_2 = !assigned
 				}
@@ -574,7 +563,6 @@ func (c *checker) resultCapturedReads(literal *syntax.FunctionLiteral, state res
 }
 
 func (c *checker) resultWrite(name *syntax.Identifier) bool {
-	type operandType_1 = bool
 	type operandType = bool
 	var operand operandType = name == nil
 	if !operand {
@@ -588,7 +576,7 @@ func (c *checker) resultWrite(name *syntax.Identifier) bool {
 	}(syntax.TgoNodeIdentifierInput{FieldValue: name})
 	parent := syntax.Parent(c.file, &node)
 	expression, ok := syntax.ExpressionOf(parent)
-	var operand_1 operandType_1 = ok
+	operand_1 := ok
 	if operand_1 {
 		operand_1 = expression != nil
 	}
@@ -597,7 +585,7 @@ func (c *checker) resultWrite(name *syntax.Identifier) bool {
 		parent = syntax.Parent(c.file, &node)
 	}
 	statement, ok := syntax.StatementOf(parent)
-	var operand_2 operandType_1 = !ok
+	operand_2 := !ok
 	if !operand_2 {
 		operand_2 = statement == nil
 	}
@@ -605,12 +593,12 @@ func (c *checker) resultWrite(name *syntax.Identifier) bool {
 		return false
 	}
 	{
-		type operandType_2 = bool
+		type operandType_1 = bool
 		assignment := syntax.AssignmentStatementOf(statement)
-		var operand_3 operandType_2 = assignment != nil
+		var operand_3 operandType_1 = assignment != nil
 		if operand_3 {
-			type operandType_3 = bool
-			var operand_4 operandType_3 = assignment.Operator == token.ASSIGN
+			type operandType_2 = bool
+			var operand_4 operandType_2 = assignment.Operator == token.ASSIGN
 			if !operand_4 {
 				operand_4 = assignment.Operator == token.DEFINE
 			}
@@ -628,20 +616,19 @@ func (c *checker) resultWrite(name *syntax.Identifier) bool {
 		}
 	}
 	{
-		type operandType_4 = bool
+		type operandType_3 = bool
 		ranged := syntax.RangeStatementOf(statement)
-		var operand_5 operandType_4 = ranged != nil
+		var operand_5 operandType_3 = ranged != nil
 		if operand_5 {
-			type operandType_5 = bool
-			var operand_6 operandType_5 = ranged.Operator == token.ASSIGN
+			type operandType_4 = bool
+			var operand_6 operandType_4 = ranged.Operator == token.ASSIGN
 			if !operand_6 {
 				operand_6 = ranged.Operator == token.DEFINE
 			}
 			operand_5 = (operand_6)
 		}
 		if operand_5 {
-			type operandType_6 = bool
-			var operand_7 operandType_6 = syntax.IdentifierExpressionOf(ranged.Key) == name
+			var operand_7 bool = syntax.IdentifierExpressionOf(ranged.Key) == name
 			if !operand_7 {
 				operand_7 = syntax.IdentifierExpressionOf(ranged.Value) == name
 			}
@@ -802,19 +789,17 @@ func (c *checker) resultAssignment(
 	assignment *syntax.AssignmentStatement,
 	state resultState,
 ) {
-	type operandType = bool
 	for _, expression := range assignment.Right {
 		c.resultReadsExpression(expression, state)
 	}
-	var operand operandType = assignment.Operator == token.ASSIGN
+	var operand bool = assignment.Operator == token.ASSIGN
 	if !operand {
 		operand = assignment.Operator == token.DEFINE
 	}
 	plain := operand
 	for _, expression := range assignment.Left {
-		type operandType_1 = bool
 		name := syntax.IdentifierExpressionOf(expression)
-		var operand_1 operandType_1 = name == nil
+		var operand_1 bool = name == nil
 		if !operand_1 {
 			operand_1 = !plain
 		}
@@ -913,7 +898,6 @@ func firstUnassignedResult(state resultState) types.Object {
 }
 
 func (c *checker) resultIf(statement *syntax.IfStatement, state resultState) bool {
-	type operandType_2 = bool
 	if statement.Init != nil {
 		c.resultStatement(statement.Init, state)
 	}
@@ -925,17 +909,15 @@ func (c *checker) resultIf(statement *syntax.IfStatement, state resultState) boo
 		falseReturns = c.resultStatement(statement.Else, falseState)
 	}
 	for object := range state {
-		type operandType = bool
 		operand := state
 		operand_1 := object
-		var operand_2 operandType = trueState[object]
+		operand_2 := trueState[object]
 		if !operand_2 {
 			operand_2 = trueReturns
 		}
-		var operand_3 operandType = (operand_2)
+		var operand_3 bool = (operand_2)
 		if operand_3 {
-			type operandType_1 = bool
-			var operand_4 operandType_1 = falseState[object]
+			operand_4 := falseState[object]
 			if !operand_4 {
 				operand_4 = falseReturns
 			}
@@ -943,7 +925,7 @@ func (c *checker) resultIf(statement *syntax.IfStatement, state resultState) boo
 		}
 		operand[operand_1] = operand_3
 	}
-	var operand_5 operandType_2 = trueReturns
+	operand_5 := trueReturns
 	if operand_5 {
 		operand_5 = falseReturns
 	}

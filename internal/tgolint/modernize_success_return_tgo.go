@@ -31,21 +31,20 @@ func (c *checker) checkSuccessReturnModernization(analysis *sourceanalysis.Packa
 		syntax.Inspect(
 			file,
 			func(node *syntax.Node) bool {
-				type operandType = bool
 				statement, ok := syntax.StatementOf(node)
 				if !ok {
 					return true
 				}
 				returned := syntax.ReturnStatementOf(statement)
-				var operand operandType = returned == nil
+				var operand bool = returned == nil
 				if !operand {
 					operand = returned.SuccessComma.IsValid()
 				}
-				var operand_1 operandType = operand
+				var operand_1 bool = operand
 				if !operand_1 {
 					operand_1 = len(returned.FailureCommas) > 0
 				}
-				var operand_2 operandType = operand_1
+				var operand_2 bool = operand_1
 				if !operand_2 {
 					operand_2 = len(returned.Results) < 2
 				}
@@ -57,11 +56,11 @@ func (c *checker) checkSuccessReturnModernization(analysis *sourceanalysis.Packa
 				}
 				last := sourceUnparenthesized(returned.Results[len(returned.Results)-1])
 				name, ok := sourceIdentifier(last)
-				var operand_3 operandType = ok
+				operand_3 := ok
 				if operand_3 {
 					operand_3 = name.Name == "nil"
 				}
-				var operand_4 operandType = operand_3
+				var operand_4 bool = operand_3
 				if operand_4 {
 					operand_4 = facts.IdentifierObject(last) == types.Universe.Lookup("nil")
 				}

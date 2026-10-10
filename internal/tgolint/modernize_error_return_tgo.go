@@ -105,13 +105,12 @@ func errorReturnModernizations(
 ) []errorReturnMatch {
 	matches := []errorReturnMatch(nil)
 	for position, statement := range statements {
-		type operandType = bool
 		branch, ok := sourceIf(statement)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = branch != nil
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = branch.Init != nil
 		}
@@ -129,11 +128,11 @@ func errorReturnModernizations(
 			continue
 		}
 		branch, ok = sourceIf(statements[position+1])
-		var operand_2 operandType = !ok
+		operand_2 := !ok
 		if !operand_2 {
 			operand_2 = branch == nil
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if !operand_3 {
 			operand_3 = branch.Init != nil
 		}
@@ -178,7 +177,6 @@ func errorUsesCovered(
 	index *sourcefacts.Index,
 	mayReturn func(*syntax.Expression) bool,
 ) bool {
-	type operandType = bool
 	valid := true
 	first := matches[0].start
 	for _, match := range matches[1:] {
@@ -186,23 +184,23 @@ func errorUsesCovered(
 			first = match.start
 		}
 	}
-	var operand operandType = errorResults(function)
+	operand := errorResults(function)
 	if operand {
 		operand = function.Results().At(function.Results().Len()-1) == target
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if operand_1 {
 		operand_1 = target.Name() != ""
 	}
 	namedResult := operand_1
-	var operand_2 operandType = namedResult
+	operand_2 := namedResult
 	if operand_2 {
 		operand_2 = nakedReturnReachable(body, matches, mayReturn)
 	}
 	if operand_2 {
 		return false
 	}
-	var operand_3 operandType = !namedResult
+	operand_3 := !namedResult
 	if !operand_3 {
 		operand_3 = namedErrorIsNilBefore(
 			file, target, first, index,
@@ -211,7 +209,6 @@ func errorUsesCovered(
 	deferredReadSafe := operand_3
 
 	syntax.Inspect(file, func(node *syntax.Node) bool {
-		type operandType = bool
 		if !valid {
 			return false
 		}
@@ -220,7 +217,7 @@ func errorUsesCovered(
 			return true
 		}
 		object, definition := index.IdentifierFact(file, node)
-		var operand operandType = definition
+		operand := definition
 		if !operand {
 			operand = object != target
 		}
@@ -228,8 +225,8 @@ func errorUsesCovered(
 			return true
 		}
 		for _, match := range matches {
-			type operandType_1 = bool
-			var operand_1 operandType_1 = match.start <= identifier.Start
+			type operandType = bool
+			var operand_1 operandType = match.start <= identifier.Start
 			if operand_1 {
 				operand_1 = identifier.Start < match.stop
 			}
@@ -237,7 +234,7 @@ func errorUsesCovered(
 				return true
 			}
 		}
-		var operand_2 operandType = identifier.Start < first
+		var operand_2 bool = identifier.Start < first
 		if operand_2 {
 			operand_2 = priorErrorUseIsSafe(file, node, deferredReadSafe)
 		}
@@ -259,13 +256,12 @@ func namedErrorIsNilBefore(
 ) bool {
 	valid := true
 	syntax.Inspect(file, func(node *syntax.Node) bool {
-		type operandType_2 = bool
-		type operandType = bool
+		type operandType_1 = bool
 		if !valid {
 			return false
 		}
 		statement, ok := syntax.StatementOf(node)
-		var operand operandType = !ok
+		operand := !ok
 		if !operand {
 			operand = syntax.StatementPosition(statement) >= before
 		}
@@ -276,11 +272,11 @@ func namedErrorIsNilBefore(
 			assignment := syntax.AssignmentStatementOf(statement)
 			if assignment != nil {
 				for position, left := range assignment.Left {
-					type operandType_1 = bool
+					type operandType = bool
 					if index.IdentifierObject(sourceUnparenthesized(left)) != target {
 						continue
 					}
-					var operand_1 operandType_1 = len(assignment.Left) != len(assignment.Right)
+					var operand_1 operandType = len(assignment.Left) != len(assignment.Right)
 					if !operand_1 {
 						operand_1 = index.IdentifierObject(sourceUnparenthesized(
 							assignment.Right[position],
@@ -294,17 +290,17 @@ func namedErrorIsNilBefore(
 			}
 		}
 		ranged := syntax.RangeStatementOf(statement)
-		var operand_2 operandType_2 = ranged != nil
+		var operand_2 operandType_1 = ranged != nil
 		if operand_2 {
-			type operandType_3 = bool
-			var operand_3 operandType_3 = ranged.Key != nil
+			type operandType_2 = bool
+			var operand_3 operandType_2 = ranged.Key != nil
 			if operand_3 {
 				operand_3 = index.IdentifierObject(sourceUnparenthesized(ranged.Key)) == target
 			}
-			var operand_4 operandType_3 = operand_3
+			var operand_4 operandType_2 = operand_3
 			if !operand_4 {
-				type operandType_4 = bool
-				var operand_5 operandType_4 = ranged.Value != nil
+				type operandType_3 = bool
+				var operand_5 operandType_3 = ranged.Value != nil
 				if operand_5 {
 					operand_5 = index.IdentifierObject(sourceUnparenthesized(ranged.Value)) == target
 				}
@@ -338,9 +334,8 @@ func nakedReturnReachable(
 	queue := []*cfg.Block(nil)
 	for _, block := range graph.Blocks {
 		for _, node := range block.Nodes {
-			type operandType = bool
 			statement, ok := syntax.StatementOf(&node)
-			var operand operandType = ok
+			operand := ok
 			if operand {
 				operand = starts[syntax.StatementPosition(statement)]
 			}
@@ -359,14 +354,13 @@ func nakedReturnReachable(
 		}
 		visited[block] = true
 		for _, node := range block.Nodes {
-			type operandType_1 = bool
 			statement, ok := syntax.StatementOf(&node)
 			returned := syntax.ReturnStatementOf(statement)
-			var operand_1 operandType_1 = ok
+			operand_1 := ok
 			if operand_1 {
 				operand_1 = returned != nil
 			}
-			var operand_2 operandType_1 = operand_1
+			var operand_2 bool = operand_1
 			if operand_2 {
 				operand_2 = len(returned.Results) == 0
 			}
@@ -385,7 +379,6 @@ func priorErrorUseIsSafe(
 	node *syntax.Node,
 	deferredReadSafe bool,
 ) bool {
-	type operandType_2 = bool
 	literals := 0
 	deferred := false
 	addressed := false
@@ -411,9 +404,8 @@ func priorErrorUseIsSafe(
 			}
 		}
 		{
-			type operandType_1 = bool
 			statement, ok := syntax.StatementOf(parent)
-			var operand_1 operandType_1 = ok
+			operand_1 := ok
 			if operand_1 {
 				operand_1 = syntax.DeferStatementOf(statement) != nil
 			}
@@ -422,20 +414,17 @@ func priorErrorUseIsSafe(
 			}
 		}
 	}
-	var operand_2 operandType_2 = !addressed
+	operand_2 := !addressed
 	if operand_2 {
-		type operandType_3 = bool
-		var operand_3 operandType_3 = literals == 0
+		var operand_3 bool = literals == 0
 		if !operand_3 {
-			type operandType_4 = bool
-			var operand_4 operandType_4 = literals == 1
+			var operand_4 bool = literals == 1
 			if operand_4 {
 				operand_4 = deferred
 			}
-			var operand_5 operandType_4 =
+			var operand_5 bool = operand_4
 
 			// reportErrorReturnModernization reports one manual propagation expansion.
-			operand_4
 			if operand_5 {
 				operand_5 = deferredReadSafe
 			}
@@ -469,20 +458,19 @@ func errorReturnExpansion(
 	function *types.Signature,
 	index *sourcefacts.Index,
 ) (errorReturnMatch, bool) {
-	type operandType = bool
 	if !errorResults(function) {
 		return emptyErrorReturnMatch(), false
 	}
 	assignment, ok := sourceAssignment(assignmentStatement)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = assignment == nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = assignment.Operator != token.DEFINE
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = len(assignment.Right) != 1
 	}
@@ -490,7 +478,7 @@ func errorReturnExpansion(
 		return emptyErrorReturnMatch(), false
 	}
 	call, ok := sourceCall(assignment.Right[0])
-	var operand_3 operandType = !ok
+	operand_3 := !ok
 	if !operand_3 {
 		operand_3 = call == nil
 	}
@@ -535,13 +523,12 @@ func errorReturnIdentity(
 	errorObject types.Object,
 	index *sourcefacts.Index,
 ) bool {
-	type operandType = bool
 	result, ok := sourceReturn(branch.Body.List[0])
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = result == nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = len(result.Results) == 0
 	}
@@ -550,7 +537,7 @@ func errorReturnIdentity(
 	}
 	last := sourceUnparenthesized(result.Results[len(result.Results)-1])
 	_, sourceName := sourceIdentifier(last)
-	var operand_2 operandType = sourceName
+	operand_2 := sourceName
 	if operand_2 {
 		operand_2 = index.IdentifierObject(last) == errorObject
 	}
@@ -563,16 +550,15 @@ func errorReturnAssignment(
 	call *syntax.CallExpression,
 	index *sourcefacts.Index,
 ) (types.Object, bool) {
-	type operandType = bool
 	if index.CalledFunction(call.Callee) == nil {
 		return nil, false
 	}
 	signature, ok := types.Unalias(index.Type(call.Callee)).(*types.Signature)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = signature.Results().Len() != len(assignment.Left)
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = signature.Results().Len() == 0
 	}
@@ -584,12 +570,10 @@ func errorReturnAssignment(
 		return nil, false
 	}
 	for _, expression := range assignment.Left[:last] {
-		type operandType_1 = bool
 		sourceName, ok := sourceIdentifier(expression)
-		var operand_2 operandType_1 = !ok
+		operand_2 := !ok
 		if !operand_2 {
-			type operandType_2 = bool
-			var operand_3 operandType_2 = sourceName.Name != "_"
+			var operand_3 bool = sourceName.Name != "_"
 			if operand_3 {
 				operand_3 = index.Definition(expression) == nil
 			}
@@ -601,7 +585,7 @@ func errorReturnAssignment(
 	}
 	sourceName, ok := sourceIdentifier(assignment.Left[last])
 	errorObject := index.Definition(assignment.Left[last])
-	var operand_4 operandType = !ok
+	operand_4 := !ok
 	if !operand_4 {
 		operand_4 = sourceName.Name == "_"
 	}
@@ -625,7 +609,6 @@ func errorReturnBranch(
 	function *types.Signature,
 	index *sourcefacts.Index,
 ) (token.Pos, bool) {
-	type operandType_1 = bool
 	type operandType = bool
 	var operand operandType = branch.Else != nil
 	if !operand {
@@ -638,15 +621,15 @@ func errorReturnBranch(
 		return token.NoPos, false
 	}
 	result, ok := sourceReturn(branch.Body.List[0])
-	var operand_1 operandType_1 = !ok
+	operand_1 := !ok
 	if !operand_1 {
 		operand_1 = result == nil
 	}
-	var operand_2 operandType_1 = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = len(result.Results) == 0
 	}
-	var operand_3 operandType_1 = operand_2
+	var operand_3 bool = operand_2
 	if !operand_3 {
 		operand_3 = len(result.FailureCommas)+len(result.Results) != function.Results().Len()
 	}
@@ -671,13 +654,12 @@ func sameErrorCondition(
 	errorObject types.Object,
 	index *sourcefacts.Index,
 ) bool {
-	type operandType = bool
 	comparison, ok := sourceBinary(expression)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = comparison == nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = comparison.Operator != token.NEQ
 	}
@@ -685,7 +667,7 @@ func sameErrorCondition(
 		return false
 	}
 	_, leftSource := sourceIdentifier(comparison.Left)
-	var operand_2 operandType = !leftSource
+	operand_2 := !leftSource
 	if !operand_2 {
 		operand_2 = index.IdentifierObject(comparison.Left) != errorObject
 	}
@@ -693,7 +675,7 @@ func sameErrorCondition(
 		return false
 	}
 	_, rightSource := sourceIdentifier(comparison.Right)
-	var operand_3 operandType = rightSource
+	operand_3 := rightSource
 	if operand_3 {
 		operand_3 = index.IdentifierObject(comparison.Right) == types.Universe.Lookup("nil")
 	}
@@ -708,14 +690,13 @@ func errorReturnFormat(
 	name string,
 	index *sourcefacts.Index,
 ) bool {
-	type operandType_1 = bool
 	type operandType = bool
 	result, ok := sourceReturn(branch.Body.List[0])
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = result == nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = len(result.Results) == 0
 	}
@@ -724,15 +705,15 @@ func errorReturnFormat(
 	}
 	last := result.Results[len(result.Results)-1]
 	wrapper, ok := sourceCall(last)
-	var operand_2 operandType = !ok
+	operand_2 := !ok
 	if !operand_2 {
 		operand_2 = wrapper == nil
 	}
-	var operand_3 operandType = operand_2
+	var operand_3 bool = operand_2
 	if !operand_3 {
 		operand_3 = wrapper.Ellipsis != token.NoPos
 	}
-	var operand_4 operandType = operand_3
+	var operand_4 bool = operand_3
 	if !operand_4 {
 		operand_4 = len(wrapper.Args) != 2
 	}
@@ -740,15 +721,15 @@ func errorReturnFormat(
 		return false
 	}
 	function := index.CalledFunction(wrapper.Callee)
-	var operand_5 operandType_1 = function == nil
+	var operand_5 operandType = function == nil
 	if !operand_5 {
 		operand_5 = function.Name() != "Errorf"
 	}
-	var operand_6 operandType_1 = operand_5
+	var operand_6 operandType = operand_5
 	if !operand_6 {
 		operand_6 = function.Pkg() == nil
 	}
-	var operand_7 operandType_1 = operand_6
+	var operand_7 operandType = operand_6
 	if !operand_7 {
 		operand_7 = function.Pkg().Path() != "fmt"
 	}
@@ -756,11 +737,11 @@ func errorReturnFormat(
 		return false
 	}
 	format := index.Constant(wrapper.Args[0])
-	var operand_8 operandType_1 = format == nil
+	var operand_8 operandType = format == nil
 	if !operand_8 {
 		operand_8 = format.Kind() != constant.String
 	}
-	var operand_9 operandType_1 = operand_8
+	var operand_9 operandType = operand_8
 	if !operand_9 {
 		operand_9 = constant.StringVal(format) != name+": %w"
 	}
@@ -769,7 +750,7 @@ func errorReturnFormat(
 	}
 	argument := sourceUnparenthesized(wrapper.Args[1])
 	_, sourceName := sourceIdentifier(argument)
-	var operand_10 operandType = sourceName
+	operand_10 := sourceName
 	if operand_10 {
 		operand_10 = index.IdentifierObject(argument) == errorObject
 	}
@@ -782,7 +763,6 @@ func exactZeroValue(
 	resultType types.Type,
 	index *sourcefacts.Index,
 ) bool {
-	type operandType = bool
 	expression = sourceUnparenthesized(expression)
 	{
 		_, ok := sourceIdentifier(expression)
@@ -799,11 +779,11 @@ func exactZeroValue(
 		}
 	}
 	literal, ok := sourceCompositeLiteral(expression)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = len(literal.Elements) != 0
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = !types.Identical(index.Type(expression), resultType)
 	}
@@ -839,9 +819,8 @@ func zeroConstant(value constant.Value) bool {
 
 // predeclaredError reports whether a type is the Go error interface.
 func predeclaredError(typ types.Type) bool {
-	type operandType = bool
 	object := types.Universe.Lookup("error")
-	var operand operandType = object != nil
+	var operand bool = object != nil
 	if operand {
 		operand = types.Identical(typ, object.Type())
 	}

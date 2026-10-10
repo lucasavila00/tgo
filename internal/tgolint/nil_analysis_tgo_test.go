@@ -246,34 +246,30 @@ func (c *nilCondition) possible(result, nonNil bool) bool {
 	case 2, 3, 4, 5:
 		return true
 	case 6:
-		type operandType_1 = bool
 		if result {
-			type operandType = bool
-			var operand operandType = c.left.possible(true, nonNil)
+			operand := c.left.possible(true, nonNil)
 			if operand {
 				operand = c.right.possible(true, nonNil)
 			}
 			return operand
 
 		}
-		var operand_1 operandType_1 = c.left.possible(false, nonNil)
+		operand_1 := c.left.possible(false, nonNil)
 		if !operand_1 {
 			operand_1 = c.right.possible(false, nonNil)
 		}
 		return operand_1
 
 	case 7:
-		type operandType_3 = bool
 		if result {
-			type operandType_2 = bool
-			var operand_2 operandType_2 = c.left.possible(true, nonNil)
+			operand_2 := c.left.possible(true, nonNil)
 			if !operand_2 {
 				operand_2 = c.right.possible(true, nonNil)
 			}
 			return operand_2
 
 		}
-		var operand_3 operandType_3 = c.left.possible(false, nonNil)
+		operand_3 := c.left.possible(false, nonNil)
 		if operand_3 {
 			operand_3 = c.right.possible(false, nonNil)
 		}

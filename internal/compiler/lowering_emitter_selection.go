@@ -29,6 +29,10 @@ func (e *loweringEmitter) switchStatement(
 		output.List = append(output.List, wrapper)
 		target = wrapper
 	}
+	if lowerCases && target == output {
+		target = &ast.BlockStmt{}
+		output.List = append(output.List, target)
+	}
 
 	if !lowerCases {
 		e.emitDirectSwitch(operation, node, target)
@@ -130,6 +134,8 @@ func (e *loweringEmitter) selectStatement(
 	output *ast.BlockStmt,
 ) {
 	node := operation.source.(*ast.SelectStmt)
+	target := &ast.BlockStmt{}
+	output.List = append(output.List, target)
 	for index, item := range node.Body.List {
 		clause := item.(*ast.CommClause)
 		communication := operation.communications[index]
@@ -138,12 +144,12 @@ func (e *loweringEmitter) selectStatement(
 		}
 
 		channel := e.emitTypedBind(
-			communication.channelValue, communication.channel, output,
+			communication.channelValue, communication.channel, target,
 		)
 		switch source := communication.source.(type) {
 		case *ast.SendStmt:
 			value := e.emitTypedBind(
-				communication.sendValue, communication.value, output,
+				communication.sendValue, communication.value, target,
 			)
 			clause.Comm = &ast.SendStmt{Chan: channel, Arrow: source.Arrow, Value: value}
 		case *ast.ExprStmt:
@@ -173,7 +179,7 @@ func (e *loweringEmitter) selectStatement(
 		e.operations(operation.cases[index], body)
 		clause.Body = body.List
 	}
-	e.appendControl(output, operation.target, node)
+	e.appendControl(target, operation.target, node)
 }
 
 func selectReceiveExpression(expression ast.Expr) *ast.UnaryExpr {

@@ -23,6 +23,19 @@ type plannedTypeBlocker struct {
 	definition  *ast.Ident
 	identifiers []*ast.Ident
 	typeName    bool
+	alias       *plannedTypeAliasAction
+}
+
+type plannedTypeAliasAction struct {
+	object       types.Object
+	before       *ast.Ident
+	packageScope bool
+	parameters   []plannedTypeAliasParameter
+}
+
+type plannedTypeAliasParameter struct {
+	name       string
+	constraint types.Type
 }
 
 type plannedTypeObjectReference struct {
@@ -177,6 +190,21 @@ func capturePlannedTypeReference(
 			if used == blocker {
 				planned.identifiers = append(planned.identifiers, identifier)
 			}
+		}
+		if planned.typeName {
+			action := &plannedTypeAliasAction{
+				object: object, before: planned.definition,
+				packageScope: object.Pkg() != current || object.Parent() == current.Scope(),
+			}
+			if named, ok := object.Type().(*types.Named); ok && named.TypeParams() != nil {
+				for index := range named.TypeParams().Len() {
+					parameter := named.TypeParams().At(index)
+					action.parameters = append(action.parameters, plannedTypeAliasParameter{
+						name: parameter.Obj().Name(), constraint: parameter.Constraint(),
+					})
+				}
+			}
+			planned.alias = action
 		}
 		reference.blockers = append(reference.blockers, planned)
 	}

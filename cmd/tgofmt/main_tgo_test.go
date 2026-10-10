@@ -123,7 +123,6 @@ func TestRunRejectsWriteForStandardInput(t *testing.T) {
 }
 
 func TestRunRejectsMixedPackage(t *testing.T) {
-	type operandType = bool
 	t.Parallel()
 	directory := t.TempDir()
 	path := filepath.Join(directory, "sample.tgo")
@@ -144,7 +143,7 @@ func TestRunRejectsMixedPackage(t *testing.T) {
 		}
 	}
 	err := run([]string{path}, false, false, strings.NewReader(""), new(bytes.Buffer))
-	var operand operandType = err == nil
+	var operand bool = err == nil
 	if !operand {
 		operand = !strings.Contains(err.Error(), "mixes handwritten TGo and Go files")
 	}

@@ -16,7 +16,6 @@ func sameFields(
 		return false
 	}
 	for index, field := range source {
-		type operandType_1 = bool
 		type operandType = bool
 		other := generated[index]
 		if other == nil {
@@ -33,21 +32,21 @@ func sameFields(
 		if other.Tag != nil {
 			tagText = syntax.SourceText(file, other.Tag.Span)
 		}
-		var operand operandType = !sameTypeText(field.typeExpression, typeText)
+		operand := !sameTypeText(field.typeExpression, typeText)
 		if !operand {
 			operand = !sameTagText(field.tag, tagText)
 		}
 		if operand {
 			return false
 		}
-		var operand_1 operandType_1 = field.name == ""
+		var operand_1 operandType = field.name == ""
 		if operand_1 {
 			operand_1 = len(other.Names) == 0
 		}
 		if operand_1 {
 			continue
 		}
-		var operand_2 operandType_1 = len(other.Names) != 1
+		var operand_2 operandType = len(other.Names) != 1
 		if !operand_2 {
 			operand_2 = other.Names[0].Name != field.name
 		}

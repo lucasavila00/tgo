@@ -20,9 +20,8 @@ func inspectGenericNode(node *syntax.Node, visit func(*syntax.Node) bool) {
 		return
 	}
 	{
-		type operandType = bool
 		expression, ok := syntax.ExpressionOf(node)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = expression != nil
 		}
@@ -32,9 +31,8 @@ func inspectGenericNode(node *syntax.Node, visit func(*syntax.Node) bool) {
 		}
 	}
 	{
-		type operandType_1 = bool
 		statement, ok := syntax.StatementOf(node)
-		var operand_1 operandType_1 = ok
+		operand_1 := ok
 		if operand_1 {
 			operand_1 = statement != nil
 		}

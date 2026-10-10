@@ -9,7 +9,6 @@ import (
 )
 
 func TestGenericEffectFactGobRoundTrip(t *testing.T) {
-	type operandType_1 = bool
 	type operandType = bool
 	t.Parallel()
 	want := &GenericEffectFact{
@@ -50,15 +49,15 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 		t.Fatalf("decoded fact = %#v", got)
 	}
 	condition := got.ZeroEffects[0].Conditions[0]
-	var operand_1 operandType_1 = condition.Kind.Tag() != EffectKindTagBoolean
+	var operand_1 bool = condition.Kind.Tag() != EffectKindTagBoolean
 	if !operand_1 {
 		operand_1 = !condition.Expected
 	}
-	var operand_2 operandType_1 = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = condition.ValueParameter != 2
 	}
-	var operand_3 operandType_1 = operand_2
+	var operand_3 bool = operand_2
 	if !operand_3 {
 		operand_3 = condition.OtherParameter != -1
 	}

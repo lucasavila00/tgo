@@ -390,10 +390,9 @@ func appendSymbol(
 	span syntax.Span,
 	selection syntax.Span,
 ) []Symbol {
-	type operandType = bool
 	full, fullOK := sourceLocation(pkg, uri, span)
 	selected, selectedOK := sourceLocation(pkg, uri, selection)
-	var operand operandType = !fullOK
+	operand := !fullOK
 	if !operand {
 		operand = !selectedOK
 	}

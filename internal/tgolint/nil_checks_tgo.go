@@ -19,8 +19,7 @@ func (e *nilEnvironment) transferNilNode(
 	function *syntax.Node,
 	report bool,
 ) {
-	type operandType = bool
-	var operand operandType = state == nil
+	var operand bool = state == nil
 	if !operand {
 		operand = !state.reachable
 	}
@@ -86,9 +85,9 @@ func (e *nilEnvironment) transferNilNode(
 				}
 			}
 			{
-				type operandType_1 = bool
+				type operandType = bool
 				item := syntax.ReturnStatementOf(statement)
-				var operand_1 operandType_1 = item != nil
+				var operand_1 operandType = item != nil
 				if operand_1 {
 					operand_1 = function != nil
 				}
@@ -221,11 +220,10 @@ func (e *nilEnvironment) checkNilAssignment(
 	}
 	if len(statement.Right) == len(statement.Left) {
 		for index, target := range statement.Left {
-			type operandType = bool
 			if isNilDiscard(target) {
 				continue
 			}
-			var operand operandType = statement.Operator == token.DEFINE
+			var operand bool = statement.Operator == token.DEFINE
 			if operand {
 				operand = e.newNilTarget(target)
 			}
@@ -242,11 +240,10 @@ func (e *nilEnvironment) checkNilAssignment(
 		return
 	}
 	for index, target := range statement.Left {
-		type operandType_1 = bool
 		if isNilDiscard(target) {
 			continue
 		}
-		var operand_1 operandType_1 = statement.Operator == token.DEFINE
+		var operand_1 bool = statement.Operator == token.DEFINE
 		if operand_1 {
 			operand_1 = e.newNilTarget(target)
 		}
@@ -441,9 +438,8 @@ func (e *nilEnvironment) checkNilFlowResult(
 	expected nilContract,
 	state *nilFlowState,
 ) {
-	type operandType = bool
 	actual := e.resultContract(expression, index)
-	var operand operandType = expected[""]
+	operand := expected[""]
 	if operand {
 		operand = !actual[""]
 	}
@@ -463,20 +459,19 @@ func (e *nilEnvironment) checkNilFlow(
 	expected nilContract,
 	state *nilFlowState,
 ) {
-	type operandType = bool
 	if expression == nil {
 		return
 	}
 	actual := e.contractForExpression(expression)
 	value := e.expressionNilType(expression, state)
-	var operand operandType = expected[""]
+	operand := expected[""]
 	if operand {
 		operand = !isNonNilType(value)
 	}
 	if operand {
 		e.reportNil(syntax.ExpressionPosition(expression), "value is not proven non-nil for %%T")
 	}
-	var operand_1 operandType = !expected[""]
+	operand_1 := !expected[""]
 	if operand_1 {
 		operand_1 = isNilOnlyType(value)
 	}
@@ -492,8 +487,7 @@ func (e *nilEnvironment) checkNestedNilContract(
 	actual nilContract,
 ) {
 	for path := range expected {
-		type operandType = bool
-		var operand operandType = path != ""
+		var operand bool = path != ""
 		if operand {
 			operand = !actual[path]
 		}
@@ -515,12 +509,11 @@ func (e *nilEnvironment) checkNilContractCompatibility(
 	actual nilContract,
 ) {
 	for path := range expected {
-		type operandType = bool
-		var operand operandType = path != ""
+		var operand bool = path != ""
 		if operand {
 			operand = !actual[path]
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = !isDirectNilParameter(path)
 		}
@@ -534,15 +527,13 @@ func (e *nilEnvironment) checkNilContractCompatibility(
 		}
 	}
 	for path := range actual {
-		type operandType_1 = bool
-		var operand_2 operandType_1 = path != ""
+		var operand_2 bool = path != ""
 		if operand_2 {
 			operand_2 = !expected[path]
 		}
-		var operand_3 operandType_1 = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
-			type operandType_2 = bool
-			var operand_4 operandType_2 = isDirectNilParameter(path)
+			operand_4 := isDirectNilParameter(path)
 			if !operand_4 {
 				operand_4 = isMutableNilPath(path)
 			}
@@ -560,8 +551,7 @@ func (e *nilEnvironment) checkNilContractCompatibility(
 }
 
 func isDirectNilParameter(path string) bool {
-	type operandType = bool
-	var operand operandType = !strings.HasPrefix(path, "p")
+	operand := !strings.HasPrefix(path, "p")
 	if !operand {
 		operand = strings.Contains(path, "/")
 	}
@@ -573,8 +563,7 @@ func isDirectNilParameter(path string) bool {
 }
 
 func isMutableNilPath(path string) bool {
-	type operandType = bool
-	var operand operandType = !isDirectNilParameter(path)
+	operand := !isDirectNilParameter(path)
 	if operand {
 		operand = !isDirectNilResult(path)
 	}
@@ -582,8 +571,7 @@ func isMutableNilPath(path string) bool {
 }
 
 func isDirectNilResult(path string) bool {
-	type operandType = bool
-	var operand operandType = !strings.HasPrefix(path, "r")
+	operand := !strings.HasPrefix(path, "r")
 	if !operand {
 		operand = strings.Contains(path, "/")
 	}

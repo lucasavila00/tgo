@@ -61,9 +61,8 @@ func inspectNode(value Node, visit func(*Node) bool) {
 
 // FunctionDeclarationOf returns a function declaration node payload.
 func FunctionDeclarationOf(node *Node) (*FunctionDeclaration, bool) {
-	type operandType = bool
 	value, ok := DeclarationOf(node)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = value.Tag() != DeclarationTagFunction
 	}
@@ -75,9 +74,8 @@ func FunctionDeclarationOf(node *Node) (*FunctionDeclaration, bool) {
 
 // FunctionLiteralOf returns a function literal node payload.
 func FunctionLiteralOf(node *Node) (*FunctionLiteral, bool) {
-	type operandType = bool
 	value, ok := ExpressionOf(node)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = value.Tag() != ExpressionTagFunctionLiteral
 	}

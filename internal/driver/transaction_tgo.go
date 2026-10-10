@@ -196,9 +196,8 @@ func atomicWriteFile(
 			err = errors.Join(err, temporary.Close())
 		}
 		if !published {
-			type operandType = bool
 			removeErr := os.Remove(temporaryPath)
-			var operand operandType = removeErr != nil
+			var operand bool = removeErr != nil
 			if operand {
 				operand = !errors.Is(removeErr, os.ErrNotExist)
 			}
@@ -273,7 +272,6 @@ func atomicRemoveFile(path string) (bool, error) {
 
 // fileUnchanged checks that no other process changed one output state.
 func fileUnchanged(path string, expected previousFile) error {
-	type operandType = bool
 	actual, err := readFileSnapshot(path)
 	if err != nil {
 		return err
@@ -284,7 +282,7 @@ func fileUnchanged(path string, expected previousFile) error {
 	if !actual.exists {
 		return nil
 	}
-	var operand operandType = actual.mode != expected.mode
+	var operand bool = actual.mode != expected.mode
 	if !operand {
 		operand = !bytes.Equal(actual.data, expected.data)
 	}

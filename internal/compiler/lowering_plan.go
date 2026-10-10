@@ -449,7 +449,15 @@ func (b *loweringPlanBuilder) declarationPlans(
 				value.Values[0], expected, len(value.Names),
 			)}
 		} else {
-			planned.expressions = b.expressionList(value.Values)
+			planned.expressions = make([]*plannedExpression, 0, len(value.Values))
+			for _, expression := range value.Values {
+				expected := types.Type(nil)
+				if value.Type != nil {
+					expected = b.expressionType(value.Type)
+				}
+				planned.expressions = append(planned.expressions,
+					b.expressionContext(expression, expected, 1))
+			}
 		}
 		planned.before = b.orderExpressions(planned.expressions)
 		temporarySource := &ast.DeclStmt{Decl: &ast.GenDecl{
@@ -754,8 +762,12 @@ func (b *loweringPlanBuilder) statementExpressions(statement ast.Stmt) []*planne
 	switch node := statement.(type) {
 	case *ast.AssignStmt:
 		if len(node.Rhs) == 1 {
+			expected := types.Type(nil)
+			if len(node.Lhs) == 1 {
+				expected = b.expressionType(node.Lhs[0])
+			}
 			return []*plannedExpression{b.expressionContext(
-				node.Rhs[0], nil, len(node.Lhs),
+				node.Rhs[0], expected, len(node.Lhs),
 			)}
 		}
 		if len(node.Lhs) == len(node.Rhs) {
@@ -856,7 +868,7 @@ func (b *loweringPlanBuilder) expressionContext(
 ) *plannedExpression {
 	result := &plannedExpression{
 		kind: planRetainedExpression, source: expression, typ: b.expressionType(expression),
-		expected: expected, contextual: expressionNeedsContext(expression, expected),
+		expected: expected, contextual: b.expressionNeedsContext(expression, expected),
 		resultCount: resultCount,
 	}
 	if metadata, function, ok := comprehensionMarker(b.source, expression); ok {
@@ -1083,23 +1095,41 @@ func (b *loweringPlanBuilder) expressionContext(
 	return result
 }
 
-func expressionNeedsContext(expression ast.Expr, expected types.Type) bool {
+func (b *loweringPlanBuilder) expressionNeedsContext(
+	expression ast.Expr,
+	expected types.Type,
+) bool {
 	if expected == nil {
 		return false
 	}
 	switch node := expression.(type) {
-	case *ast.BasicLit, *ast.BinaryExpr:
+	case *ast.BasicLit:
 		return true
+	case *ast.BinaryExpr:
+		switch node.Op {
+		case token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ,
+			token.LAND, token.LOR:
+			return true
+		case token.SHL, token.SHR:
+			return b.expressionNeedsContext(node.X, expected)
+		default:
+			return isUntypedType(b.expressionType(node))
+		}
 	case *ast.Ident:
 		return node.Name == "nil"
 	case *ast.UnaryExpr:
-		return expressionNeedsContext(node.X, expected)
+		return isUntypedType(b.expressionType(node))
 	case *ast.ParenExpr:
-		return expressionNeedsContext(node.X, expected)
+		return b.expressionNeedsContext(node.X, expected)
 	case *ast.CompositeLit:
 		return node.Type == nil
 	}
 	return false
+}
+
+func isUntypedType(typ types.Type) bool {
+	basic, ok := types.Unalias(typ).(*types.Basic)
+	return ok && basic.Info()&types.IsUntyped != 0
 }
 
 func (b *loweringPlanBuilder) orderOperands(
@@ -1272,17 +1302,22 @@ func (b *loweringPlanBuilder) promotedSelectionBase(
 		}
 		b.plan.places = append(b.plan.places, fieldPlace)
 		if _, pointer := types.Unalias(field.Type()).(*types.Pointer); pointer {
+			value := b.newValue(field.Type(), node.Pos())
 			base = &plannedPlace{
 				id: placeID(len(b.plan.places) + 1), typ: dereferencedType(field.Type()),
 				position: node.Pos(), kind: planDerefPlace, source: expression,
-				container: selectorPlan,
+				base: fieldPlace,
 			}
-			base.values = append(base.values, b.newValue(field.Type(), node.Pos()))
+			base.values = append(base.values, value)
 			b.plan.places = append(b.plan.places, base)
+			expressionPlan = &plannedExpression{
+				kind: planRetainedExpression, source: expression, typ: field.Type(),
+				materialized: value.id, resultCount: 1,
+			}
 		} else {
 			base = fieldPlace
+			expressionPlan = selectorPlan
 		}
-		expressionPlan = selectorPlan
 		typ = field.Type()
 	}
 	return base

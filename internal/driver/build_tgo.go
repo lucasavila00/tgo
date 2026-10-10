@@ -76,9 +76,8 @@ func (i *workspaceTypeImporter) ImportFrom(
 	mode types.ImportMode,
 ) (*types.Package, error) {
 	{
-		type operandType = bool
 		pkg := i.packages[path]
-		var operand operandType = pkg != nil
+		var operand bool = pkg != nil
 		if operand {
 			operand = pkg.Complete()
 		}
@@ -320,13 +319,12 @@ func (b *packageBuilder) compileTestPackage(
 	syntaxFiles := tests.Files
 	usesC := tests.UsesC
 	if !external {
-		type operandType = bool
 		sources = append(append([]compiler.File(nil), unit.Sources...), sources...)
 		syntaxFiles = append(
 			append([]*syntax.File(nil), unit.Files...),
 			syntaxFiles...,
 		)
-		var operand operandType = unit.usesC
+		operand := unit.usesC
 		if !operand {
 			operand = usesC
 		}
@@ -486,7 +484,6 @@ func loadExportPaths(
 
 // buildImport follows local Go packages until it reaches each tgo package.
 func (b *packageBuilder) buildImport(path string) error {
-	type operandType = bool
 	{
 		dependency := b.packages[path]
 		if dependency != nil {
@@ -500,7 +497,7 @@ func (b *packageBuilder) buildImport(path string) error {
 			}
 		}
 	}
-	var operand operandType = path != b.module
+	var operand bool = path != b.module
 	if operand {
 		operand = !strings.HasPrefix(path, b.module+"/")
 	}
@@ -532,7 +529,6 @@ func (b *packageBuilder) buildImport(path string) error {
 
 // localGoImports reads active Go imports from one package in the main module.
 func (b *packageBuilder) localGoImports(path string) ([]string, error) {
-	type operandType = bool
 	relative := strings.TrimPrefix(path, b.module)
 	relative = strings.TrimPrefix(relative, "/")
 	directory := filepath.Clean(filepath.Join(b.root, filepath.FromSlash(relative)))
@@ -540,7 +536,7 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var operand operandType = inside == ".."
+	var operand bool = inside == ".."
 	if !operand {
 		operand = strings.HasPrefix(inside, ".."+string(filepath.Separator))
 	}
@@ -581,13 +577,12 @@ func activeGoFile(
 	directory string,
 	entry os.DirEntry,
 ) (*syntax.File, []byte, bool, error) {
-	type operandType = bool
 	name := entry.Name()
-	var operand operandType = entry.IsDir()
+	operand := entry.IsDir()
 	if !operand {
 		operand = !strings.HasSuffix(name, ".go")
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = strings.HasSuffix(name, "_test.go")
 	}
@@ -596,9 +591,8 @@ func activeGoFile(
 	}
 	path := filepath.Join(directory, name)
 	if outputname.Reserved(name) {
-		type operandType_1 = bool
 		owned, err := generatedFile(path)
-		var operand_2 operandType_1 = err != nil
+		var operand_2 bool = err != nil
 		if !operand_2 {
 			operand_2 = owned
 		}
@@ -607,7 +601,7 @@ func activeGoFile(
 		}
 	}
 	matches, err := context.MatchFile(directory, name)
-	var operand_3 operandType = err != nil
+	var operand_3 bool = err != nil
 	if !operand_3 {
 		operand_3 = !matches
 	}
@@ -625,7 +619,7 @@ func activeGoFile(
 	}
 
 	cgo := importsC(file)
-	var operand_4 operandType = cgo
+	operand_4 := cgo
 	if operand_4 {
 		operand_4 = !context.CgoEnabled
 	}

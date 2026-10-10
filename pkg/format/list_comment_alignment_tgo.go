@@ -59,16 +59,14 @@ func (p *printer) expressionListCommentAlignment(
 	baseColumn int,
 	depth int,
 ) []map[token.Pos]int {
-	type operandType = bool
 	aligned := p.listCommentAlignment(values, opening, closing, baseColumn, depth)
-	var operand operandType = closing.IsValid()
+	operand := closing.IsValid()
 	if operand {
 		operand = p.sourceToken(closing) == ':'
 	}
 	if operand {
-		type operandType_1 = bool
 		position := p.trailingCommentPosition(p.tokenEnd(closing, 1))
-		var operand_1 operandType_1 = position.IsValid()
+		operand_1 := position.IsValid()
 		if operand_1 {
 			operand_1 = p.sourceCommentPadding(position) > 1
 		}
@@ -76,7 +74,6 @@ func (p *printer) expressionListCommentAlignment(
 			p.fixedCommentColumns[position] = p.sourceVisualColumn(position)
 		}
 	} else if closing.IsValid() {
-		type operandType_2 = bool
 		position := p.trailingCommentPosition(p.tokenEnd(closing, 1))
 		target := 0
 		for _, columns := range aligned {
@@ -86,7 +83,7 @@ func (p *printer) expressionListCommentAlignment(
 				}
 			}
 		}
-		var operand_2 operandType_2 = position.IsValid()
+		operand_2 := position.IsValid()
 		if operand_2 {
 			operand_2 = target > 0
 		}
@@ -134,7 +131,6 @@ func (p *printer) listCommentAlignment(
 	previousSection := 0
 	previousStop := opening
 	for index, value := range values {
-		type operandType_1 = bool
 		type operandType = bool
 		start := syntax.ExpressionPosition(value)
 		stop := syntax.ExpressionEnd(value)
@@ -168,15 +164,15 @@ func (p *printer) listCommentAlignment(
 		if separatorEnd != stop {
 			suffixWidth = 1
 		}
-		var operand_1 operandType_1 = !comment.IsValid()
+		operand_1 := !comment.IsValid()
 		if operand_1 {
 			operand_1 = index+1 == len(values)
 		}
-		var operand_2 operandType_1 = operand_1
+		var operand_2 bool = operand_1
 		if operand_2 {
 			operand_2 = closing.IsValid()
 		}
-		var operand_3 operandType_1 = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = p.position(closing).Line == stopLine
 		}
@@ -187,7 +183,7 @@ func (p *printer) listCommentAlignment(
 				suffixWidth = 1
 			}
 		}
-		var operand_4 operandType_1 = comment.IsValid()
+		operand_4 := comment.IsValid()
 		if operand_4 {
 			operand_4 = startLine > p.position(opening).Line
 		}
@@ -198,16 +194,15 @@ func (p *printer) listCommentAlignment(
 				cells:       []int{lineWidth + suffixWidth, 0},
 			}
 			if len(commentRows) > 0 {
-				type operandType_2 = bool
-				var operand_5 operandType_2 = sections[index] != previousSection
+				var operand_5 bool = sections[index] != previousSection
 				if !operand_5 {
 					operand_5 = lineComment != previousLineComment
 				}
-				var operand_6 operandType_2 = operand_5
+				var operand_6 bool = operand_5
 				if !operand_6 {
 					operand_6 = previousCommentLine+1 < startLine
 				}
-				var operand_7 operandType_2 = operand_6
+				var operand_7 bool = operand_6
 				if !operand_7 {
 					operand_7 = p.blankBetween(previousStop, start)
 				}
@@ -281,11 +276,10 @@ func (p *printer) expressionListSections(
 				operand_2 = (operand_3)
 			}
 			if operand_2 {
-				type operandType_4 = bool
 				const ratioLimit = 2.5
 				mean := listExp2(log2sum / float64(count))
 				ratio := float64(size) / mean
-				var operand_4 operandType_4 = ratioLimit*ratio <= 1
+				var operand_4 bool = ratioLimit*ratio <= 1
 				if !operand_4 {
 					operand_4 = ratioLimit <= ratio
 				}
@@ -301,14 +295,13 @@ func (p *printer) expressionListSections(
 			operand_6 = previousLine < line
 		}
 		if operand_6 {
-			type operandType_5 = bool
 			previous := syntax.ExpressionEnd(values[index-1])
 			gap := p.sourceGap(previous, start)
-			var operand_7 operandType_5 = newSection
+			operand_7 := newSection
 			if !operand_7 {
 				operand_7 = previousBreak+1 < index
 			}
-			var operand_8 operandType_5 = operand_7
+			var operand_8 bool = operand_7
 			if !operand_8 {
 				operand_8 = gap.blank
 			}

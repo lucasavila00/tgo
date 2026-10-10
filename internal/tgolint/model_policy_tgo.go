@@ -12,11 +12,9 @@ import (
 
 // checkSourceModelPolicy checks model use in one TGo source node.
 func (c *checker) checkSourceModelPolicy(node *syntax.Node) {
-	type operandType_1 = bool
 	{
-		type operandType = bool
 		identifier, ok := syntax.IdentifierOf(node)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = identifier != nil
 		}
@@ -36,7 +34,7 @@ func (c *checker) checkSourceModelPolicy(node *syntax.Node) {
 		}
 	}
 	expression, ok := syntax.ExpressionOf(node)
-	var operand_1 operandType_1 = !ok
+	operand_1 := !ok
 	if !operand_1 {
 		operand_1 = expression == nil
 	}
@@ -108,8 +106,7 @@ func (c *checker) checkSourceGeneratedName(
 			{
 				model, variant, carrier := c.enumGeneratedType(value)
 				if model != nil {
-					type operandType_1 = bool
-					var operand_1 operandType_1 = !carrier
+					operand_1 := !carrier
 					if operand_1 {
 						operand_1 = c.enumPayloadMethodReceiver(node, identifier)
 					}
@@ -150,7 +147,6 @@ func (c *checker) enumPayloadMethodReceiver(
 	identifier *syntax.Identifier,
 ) bool {
 	for current := syntax.Parent(c.file, node); current != nil; current = syntax.Parent(c.file, current) {
-		type operandType_1 = bool
 		type operandType = bool
 		declaration, ok := syntax.FunctionDeclarationOf(current)
 		if !ok {
@@ -164,7 +160,7 @@ func (c *checker) enumPayloadMethodReceiver(
 			return false
 		}
 		receiver := declaration.Receiver
-		var operand_1 operandType_1 = identifier.Start >= receiver.Start
+		var operand_1 bool = identifier.Start >= receiver.Start
 		if operand_1 {
 			operand_1 = identifier.Stop <= receiver.Stop
 		}
@@ -212,12 +208,11 @@ func (c *checker) enumConstructorModel(
 func (c *checker) enumGeneratedType(
 	object *types.TypeName,
 ) (*model, string, bool) {
-	type operandType = bool
 	if object == nil {
 		return nil, "", false
 	}
 	named, ok := types.Unalias(object.Type()).(*types.Named)
-	var operand operandType = !ok
+	operand := !ok
 	if !operand {
 		operand = named.Obj().Pkg() == nil
 	}
@@ -248,12 +243,11 @@ func (c *checker) enumGeneratedType(
 }
 
 func (c *checker) checkedConstructorModel(function *types.Func) *model {
-	type operandType = bool
-	var operand operandType = function == nil
+	var operand bool = function == nil
 	if !operand {
 		operand = function.Pkg() == nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = !strings.HasPrefix(function.Name(), "New")
 	}
@@ -277,16 +271,15 @@ func (c *checker) checkedConstructorModel(function *types.Func) *model {
 }
 
 func (c *checker) checkedCarrierModel(object *types.TypeName) *model {
-	type operandType = bool
-	var operand operandType = object == nil
+	var operand bool = object == nil
 	if !operand {
 		operand = object.Pkg() == nil
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = !strings.HasPrefix(object.Name(), "Tgo")
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = !strings.HasSuffix(object.Name(), "Input")
 	}
@@ -298,7 +291,7 @@ func (c *checker) checkedCarrierModel(object *types.TypeName) *model {
 		"Input",
 	)
 	modelObject, ok := object.Pkg().Scope().Lookup(name).(*types.TypeName)
-	var operand_3 operandType = !ok
+	operand_3 := !ok
 	if !operand_3 {
 		operand_3 = object.Pkg().Scope().Lookup(object.Name()) != object
 	}
@@ -334,7 +327,6 @@ func (c *checker) checkSourceModelLiteral(
 	expression *syntax.Expression,
 	literal *syntax.CompositeLiteral,
 ) {
-	type operandType_1 = bool
 	type operandType = bool
 	typ := c.facts.Type(expression)
 	var operand operandType = typ == nil
@@ -345,7 +337,7 @@ func (c *checker) checkSourceModelLiteral(
 		typ = c.facts.Type(literal.Type)
 	}
 	model := c.sourceDirectModel(typ)
-	var operand_1 operandType_1 = !modelIsEnum(model)
+	operand_1 := !modelIsEnum(model)
 	if !operand_1 {
 		operand_1 = c.sourceEnumVariantLiteral(literal, model)
 	}
@@ -363,12 +355,11 @@ func (c *checker) sourceEnumVariantLiteral(
 	literal *syntax.CompositeLiteral,
 	model *model,
 ) bool {
-	type operandType = bool
 	if literal.Type == nil {
 		return false
 	}
 	selector := syntax.SelectorExpressionOf(literal.Type)
-	var operand operandType = selector == nil
+	var operand bool = selector == nil
 	if !operand {
 		operand = !c.facts.IsType(selector.Expression)
 	}
@@ -392,7 +383,6 @@ func (c *checker) checkSourceModelConversion(
 	expression *syntax.Expression,
 	call *syntax.CallExpression,
 ) {
-	type operandType = bool
 	if !c.facts.IsType(call.Callee) {
 		return
 	}
@@ -407,7 +397,7 @@ func (c *checker) checkSourceModelConversion(
 			return
 		}
 	}
-	var operand operandType = len(call.Args) != 1
+	var operand bool = len(call.Args) != 1
 	if !operand {
 		operand = sourceInterfaceType(c.facts.Type(expression))
 	}
@@ -473,7 +463,6 @@ func (c *checker) sourceDefinedTypeExpression(
 ) bool {
 	current := c.parents[syntax.ExpressionNode(expression)]
 	for current != nil {
-		type operandType = bool
 		{
 			wrapped, ok := syntax.ExpressionOf(current)
 			if ok {
@@ -489,7 +478,7 @@ func (c *checker) sourceDefinedTypeExpression(
 			return false
 		}
 		typeSpec := syntax.TypeSpecificationOf(specification)
-		var operand operandType = typeSpec != nil
+		var operand bool = typeSpec != nil
 		if operand {
 			operand = typeSpec.Assign == token.NoPos
 		}
@@ -499,7 +488,6 @@ func (c *checker) sourceDefinedTypeExpression(
 }
 
 func (c *checker) sourceDirectModel(typ types.Type) *model {
-	type operandType = bool
 	if typ == nil {
 		return nil
 	}
@@ -511,7 +499,7 @@ func (c *checker) sourceDirectModel(typ types.Type) *model {
 		}
 	}
 	model := c.modelForReceiver(typ)
-	var operand operandType = modelIsChecked(model)
+	operand := modelIsChecked(model)
 	if !operand {
 		operand = modelIsEnum(model)
 	}
@@ -534,17 +522,16 @@ func (c *checker) sourceTypeParameterModel(
 		return nil
 	}
 	for _, term := range terms {
-		type operandType = bool
 		candidate := term.Type()
 		model := c.sourceDirectModel(candidate)
-		var operand operandType = model == nil
+		var operand bool = model == nil
 		if operand {
 			operand = term.Tilde()
 		}
 		if operand {
 			model, candidate = c.sourceLayoutModel(candidate)
 		}
-		var operand_1 operandType = model != nil
+		var operand_1 bool = model != nil
 		if operand_1 {
 			operand_1 = types.Satisfies(candidate, constraint)
 		}
@@ -566,13 +553,12 @@ func (c *checker) sourceLayoutModel(typ types.Type) (*model, types.Type) {
 		return nil, nil
 	}
 	for _, name := range c.sourcePackage.Scope().Names() {
-		type operandType_1 = bool
 		object, ok := c.sourcePackage.Scope().Lookup(name).(*types.TypeName)
 		if !ok {
 			continue
 		}
 		model := c.modelFor(object.Type())
-		var operand_1 operandType_1 = !modelIsChecked(model)
+		operand_1 := !modelIsChecked(model)
 		if operand_1 {
 			operand_1 = !modelIsEnum(model)
 		}

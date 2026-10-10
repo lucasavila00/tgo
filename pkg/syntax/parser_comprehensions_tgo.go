@@ -246,12 +246,10 @@ func (p *sourceParser) rawComprehensionClause(
 }
 
 func (p *sourceParser) comprehensionBindings(start int, end int) ([]int, error) {
-	type operandType_1 = bool
 	bindings := []int(nil)
 	expectName := true
 	for cursor := start; cursor < end; cursor++ {
-		type operandType = bool
-		var operand operandType = expectName
+		operand := expectName
 		if operand {
 			operand = p.tokens[cursor].kind == token.IDENT
 		}
@@ -260,7 +258,7 @@ func (p *sourceParser) comprehensionBindings(start int, end int) ([]int, error) 
 			expectName = false
 			continue
 		}
-		var operand_1 operandType = !expectName
+		operand_1 := !expectName
 		if operand_1 {
 			operand_1 = p.tokens[cursor].kind == token.COMMA
 		}
@@ -270,11 +268,11 @@ func (p *sourceParser) comprehensionBindings(start int, end int) ([]int, error) 
 		}
 		return nil, p.tokenError(cursor, "comprehension range needs one or two names")
 	}
-	var operand_2 operandType_1 = expectName
+	operand_2 := expectName
 	if !operand_2 {
 		operand_2 = len(bindings) == 0
 	}
-	var operand_3 operandType_1 = operand_2
+	var operand_3 bool = operand_2
 	if !operand_3 {
 		operand_3 = len(bindings) > 2
 	}

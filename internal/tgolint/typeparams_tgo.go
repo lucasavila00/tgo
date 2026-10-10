@@ -14,9 +14,8 @@ func coreType(typ types.Type) types.Type {
 	{
 		parameter, ok := typ.(*types.TypeParam)
 		if ok {
-			type operandType = bool
 			terms, supported := simpleTerms(parameter.Constraint())
-			var operand operandType = !supported
+			operand := !supported
 			if !operand {
 				operand = len(terms) == 0
 			}
@@ -41,15 +40,14 @@ func coreType(typ types.Type) types.Type {
 
 // commonChannel combines channel directions when their element types match.
 func commonChannel(left, right types.Type) types.Type {
-	type operandType_1 = bool
 	type operandType = bool
 	leftChannel, leftOK := left.(*types.Chan)
 	rightChannel, rightOK := right.(*types.Chan)
-	var operand operandType = !leftOK
+	operand := !leftOK
 	if !operand {
 		operand = !rightOK
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = !types.Identical(leftChannel.Elem(), rightChannel.Elem())
 	}
@@ -59,7 +57,7 @@ func commonChannel(left, right types.Type) types.Type {
 	if leftChannel.Dir() == types.SendRecv {
 		return rightChannel
 	}
-	var operand_2 operandType_1 = rightChannel.Dir() == types.SendRecv
+	var operand_2 operandType = rightChannel.Dir() == types.SendRecv
 	if !operand_2 {
 		operand_2 = leftChannel.Dir() == rightChannel.Dir()
 	}
@@ -123,9 +121,8 @@ func intersectTerms(left, right []*types.Term) []*types.Term {
 	intersection := make([]*types.Term, 0)
 	for _, leftTerm := range left {
 		for _, rightTerm := range right {
-			type operandType = bool
 			term := intersectTerm(leftTerm, rightTerm)
-			var operand operandType = term != nil
+			var operand bool = term != nil
 			if operand {
 				operand = !containsTerm(intersection, term)
 			}
@@ -140,10 +137,9 @@ func intersectTerms(left, right []*types.Term) []*types.Term {
 // intersectTerm returns the overlap of two exact or approximate terms.
 // intersectTerm returns the narrower compatible term.
 func intersectTerm(left, right *types.Term) *types.Term {
-	type operandType = bool
 	leftType := types.Unalias(left.Type())
 	rightType := types.Unalias(right.Type())
-	var operand operandType = !left.Tilde()
+	operand := !left.Tilde()
 	if operand {
 		operand = !right.Tilde()
 	}
@@ -168,8 +164,7 @@ func intersectTerm(left, right *types.Term) *types.Term {
 // containsTerm reports whether terms already contains the same term.
 func containsTerm(terms []*types.Term, target *types.Term) bool {
 	for _, term := range terms {
-		type operandType = bool
-		var operand operandType = term.Tilde() == target.Tilde()
+		var operand bool = term.Tilde() == target.Tilde()
 		if operand {
 			operand = types.Identical(term.Type(), target.Type())
 		}

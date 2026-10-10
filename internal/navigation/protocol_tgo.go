@@ -562,16 +562,15 @@ func (v Request) MarshalJSON() ([]byte, error) {
 func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case RequestTagHover:
-		type operandType = bool
 		payload := v.HoverPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		var operand operandType = marshalsJSON
+		operand := marshalsJSON
 		if !operand {
 			operand = marshalsText
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if !operand_1 {
 			operand_1 = marshalsJSONTo
 		}
@@ -587,16 +586,15 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestHover
 		}{Variant: "hover", RequestHover: payload})
 	case RequestTagDefinition:
-		type operandType_1 = bool
 		payload := v.DefinitionPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		var operand_2 operandType_1 = marshalsJSON
+		operand_2 := marshalsJSON
 		if !operand_2 {
 			operand_2 = marshalsText
 		}
-		var operand_3 operandType_1 = operand_2
+		var operand_3 bool = operand_2
 		if !operand_3 {
 			operand_3 = marshalsJSONTo
 		}
@@ -612,16 +610,15 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestDefinition
 		}{Variant: "definition", RequestDefinition: payload})
 	case RequestTagReferences:
-		type operandType_2 = bool
 		payload := v.ReferencesPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		var operand_4 operandType_2 = marshalsJSON
+		operand_4 := marshalsJSON
 		if !operand_4 {
 			operand_4 = marshalsText
 		}
-		var operand_5 operandType_2 = operand_4
+		var operand_5 bool = operand_4
 		if !operand_5 {
 			operand_5 = marshalsJSONTo
 		}
@@ -637,16 +634,15 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestReferences
 		}{Variant: "references", RequestReferences: payload})
 	case RequestTagDocumentSymbols:
-		type operandType_3 = bool
 		payload := v.DocumentSymbolsPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		var operand_6 operandType_3 = marshalsJSON
+		operand_6 := marshalsJSON
 		if !operand_6 {
 			operand_6 = marshalsText
 		}
-		var operand_7 operandType_3 = operand_6
+		var operand_7 bool = operand_6
 		if !operand_7 {
 			operand_7 = marshalsJSONTo
 		}
@@ -662,16 +658,15 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestDocumentSymbols
 		}{Variant: "documentSymbols", RequestDocumentSymbols: payload})
 	case RequestTagWorkspaceSymbols:
-		type operandType_4 = bool
 		payload := v.WorkspaceSymbolsPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		var operand_8 operandType_4 = marshalsJSON
+		operand_8 := marshalsJSON
 		if !operand_8 {
 			operand_8 = marshalsText
 		}
-		var operand_9 operandType_4 = operand_8
+		var operand_9 bool = operand_8
 		if !operand_9 {
 			operand_9 = marshalsJSONTo
 		}
@@ -687,16 +682,15 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestWorkspaceSymbols
 		}{Variant: "workspaceSymbols", RequestWorkspaceSymbols: payload})
 	case RequestTagCancel:
-		type operandType_5 = bool
 		payload := v.CancelPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		var operand_10 operandType_5 = marshalsJSON
+		operand_10 := marshalsJSON
 		if !operand_10 {
 			operand_10 = marshalsText
 		}
-		var operand_11 operandType_5 = operand_10
+		var operand_11 bool = operand_10
 		if !operand_11 {
 			operand_11 = marshalsJSONTo
 		}
@@ -712,16 +706,15 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestCancel
 		}{Variant: "cancel", RequestCancel: payload})
 	case RequestTagInvalidate:
-		type operandType_6 = bool
 		payload := v.InvalidatePayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		var operand_12 operandType_6 = marshalsJSON
+		operand_12 := marshalsJSON
 		if !operand_12 {
 			operand_12 = marshalsText
 		}
-		var operand_13 operandType_6 = operand_12
+		var operand_13 bool = operand_12
 		if !operand_13 {
 			operand_13 = marshalsJSONTo
 		}

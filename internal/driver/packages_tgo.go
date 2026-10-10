@@ -127,19 +127,18 @@ func (d *packageDiscovery) addTestSource(path string) error {
 
 // visitDirectory skips hidden, vendor, and nested module directories.
 func (d *packageDiscovery) visitDirectory(path, name string) error {
-	type operandType = bool
 	if path == d.root {
 		return nil
 	}
-	var operand operandType = strings.HasPrefix(name, ".")
+	operand := strings.HasPrefix(name, ".")
 	if !operand {
 		operand = strings.HasPrefix(name, "_")
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = name == "testdata"
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = name == "vendor"
 	}
@@ -224,7 +223,6 @@ func (p *packageUnit) matchingTestSources() ([]string, error) {
 	}
 	p.testsMatched = true
 	for _, path := range p.testSourcePaths {
-		type operandType = bool
 		match, err := packagelanguage.MatchFile(
 			p.context, path, packagelanguage.TGo,
 		)
@@ -240,7 +238,7 @@ func (p *packageUnit) matchingTestSources() ([]string, error) {
 			p.matchError = err
 			return nil, err
 		}
-		var operand operandType = cgo
+		operand := cgo
 		if operand {
 			operand = !p.context.CgoEnabled
 		}
@@ -296,7 +294,6 @@ func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 	}
 	packageName := p.Files[0].Name.Name
 	for _, path := range paths {
-		type operandType = bool
 		data, err_1 := os.ReadFile(path)
 		if err_1 != nil {
 			return packageTests{}, packageTests{}, err_1
@@ -308,7 +305,7 @@ func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 		}
 
 		cgo := importsC(file)
-		var operand operandType = cgo
+		operand := cgo
 		if operand {
 			operand = !p.context.CgoEnabled
 		}
@@ -329,7 +326,7 @@ func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 		tests.Sources = append(tests.Sources, compiler.File{Name: path, Data: data})
 		tests.Files = append(tests.Files, file)
 		operand_1 := tests
-		var operand_2 operandType = tests.UsesC
+		operand_2 := tests.UsesC
 		if !operand_2 {
 			operand_2 = cgo
 		}
@@ -345,7 +342,6 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 	}
 	p.sourcesMatched = true
 	for _, path := range p.sourcePaths {
-		type operandType = bool
 		match, err := packagelanguage.MatchFile(
 			p.context, path, packagelanguage.TGo,
 		)
@@ -361,7 +357,7 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 			p.matchError = err
 			return nil, err
 		}
-		var operand operandType = cgo
+		operand := cgo
 		if operand {
 			operand = !p.context.CgoEnabled
 		}
@@ -369,7 +365,7 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 			continue
 		}
 		operand_1 := p
-		var operand_2 operandType = p.usesC
+		operand_2 := p.usesC
 		if !operand_2 {
 			operand_2 = cgo
 		}
@@ -407,12 +403,11 @@ func (p *packageUnit) available() (bool, error) {
 		)
 	}
 	for _, path := range p.generatedPaths {
-		type operandType = bool
 		owned, err_3 := generatedFile(path)
 		if err_3 != nil {
 			return false, err_3
 		}
-		var operand operandType = owned
+		operand := owned
 		if operand {
 			operand = !p.sourceOwnsOutput(path)
 		}
@@ -566,12 +561,11 @@ func sortedTGoPackagePaths(packages map[string]*packageUnit) []string {
 
 // tgoCandidate reports whether discovery found TGo source or reserved output.
 func (p *packageUnit) tgoCandidate() bool {
-	type operandType = bool
-	var operand operandType = len(p.sourcePaths) > 0
+	var operand bool = len(p.sourcePaths) > 0
 	if !operand {
 		operand = len(p.testSourcePaths) > 0
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 
 		// packagePattern returns the directory and recursion rule for a pattern.
@@ -582,8 +576,7 @@ func (p *packageUnit) tgoCandidate() bool {
 }
 
 func packagePattern(directory, pattern string) (string, bool) {
-	type operandType = bool
-	var operand operandType = strings.HasSuffix(pattern, "/...")
+	operand := strings.HasSuffix(pattern, "/...")
 	if !operand {
 		operand = pattern == "..."
 	}
@@ -606,7 +599,6 @@ func packageMatches(
 	target string,
 	recursive bool,
 ) bool {
-	type operandType_1 = bool
 	type operandType = bool
 	var operand operandType = path == pattern
 	if !operand {
@@ -616,7 +608,7 @@ func packageMatches(
 		return true
 	}
 	childPrefix := target + string(filepath.Separator)
-	var operand_1 operandType_1 = recursive
+	operand_1 := recursive
 	if operand_1 {
 		operand_1 = strings.HasPrefix(unit.Dir, childPrefix)
 	}

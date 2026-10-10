@@ -312,9 +312,8 @@ func (e *nilEnvironment) resultNilType(
 		item := syntax.IndexExpressionOf(expression)
 		if item != nil {
 			{
-				type operandType = bool
 				_, mapping := coreType(e.facts.Type(item.Expression)).(*types.Map)
-				var operand operandType = mapping
+				operand := mapping
 				if operand {
 					operand = index == 0
 				}
@@ -327,8 +326,8 @@ func (e *nilEnvironment) resultNilType(
 	{
 		unary := syntax.UnaryExpressionOf(expression)
 		if unary != nil {
-			type operandType_1 = bool
-			var operand_1 operandType_1 = unary.Operator == token.ARROW
+			type operandType = bool
+			var operand_1 operandType = unary.Operator == token.ARROW
 			if operand_1 {
 				operand_1 = index == 0
 			}
@@ -448,17 +447,14 @@ func (e *nilEnvironment) expressionNilType(
 	{
 		call := syntax.CallExpressionOf(expression)
 		if call != nil {
-			type operandType_2 = bool
 			{
 				name := syntax.IdentifierExpressionOf(call.Callee)
 				if name != nil {
 					{
-						type operandType = bool
 						builtin, ok := e.facts.Object(name).(*types.Builtin)
-						var operand operandType = ok
+						operand := ok
 						if operand {
-							type operandType_1 = bool
-							var operand_1 operandType_1 = builtin.Name() == "new"
+							var operand_1 bool = builtin.Name() == "new"
 							if !operand_1 {
 								operand_1 = builtin.Name() == "make"
 							}
@@ -470,7 +466,7 @@ func (e *nilEnvironment) expressionNilType(
 					}
 				}
 			}
-			var operand_2 operandType_2 = e.facts.IsType(call.Callee)
+			operand_2 := e.facts.IsType(call.Callee)
 			if operand_2 {
 				operand_2 = len(call.Args) == 1
 			}
@@ -597,14 +593,13 @@ func (e *nilEnvironment) checkNilCall(
 		return
 	}
 	for index, argument := range call.Args {
-		type operandType = bool
 		parameter := index
 		expected := nilChild(contract, "p"+strconv.Itoa(parameter))
-		var operand operandType = signature.Variadic()
+		operand := signature.Variadic()
 		if operand {
 			operand = index >= signature.Params().Len()-1
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = call.Ellipsis == token.NoPos
 		}
@@ -662,9 +657,8 @@ func (e *nilEnvironment) checkNilBuiltin(
 	case "clear":
 		if len(call.Args) == 1 {
 			{
-				type operandType = bool
 				_, slice := coreType(e.facts.Type(call.Args[0])).(*types.Slice)
-				var operand operandType = slice
+				operand := slice
 				if operand {
 					operand = nilChild(e.contractForExpression(call.Args[0]), "e")[""]
 				}
@@ -697,9 +691,8 @@ func (e *nilEnvironment) nilZeroInvalid(
 			}
 		}
 	case goTypeTagArray:
-		type operandType = bool
 		array := classified.ArrayPayload().Value
-		var operand operandType = array.Len() != 0
+		var operand bool = array.Len() != 0
 		if operand {
 			operand = e.nilZeroInvalid(array.Elem(), nilChild(contract, "e"))
 		}
@@ -806,12 +799,11 @@ func (e *nilEnvironment) checkNilStructLiteral(
 		)
 	}
 	for index, initialized := range set {
-		type operandType_1 = bool
 		fieldContract := e.contractForObject(typ.Field(index))
 		if len(fieldContract) == 0 {
 			fieldContract = nilChild(contract, "f"+strconv.Itoa(index))
 		}
-		var operand_1 operandType_1 = initialized
+		operand_1 := initialized
 		if !operand_1 {
 			operand_1 = !e.nilZeroInvalid(typ.Field(index).Type(), fieldContract)
 		}

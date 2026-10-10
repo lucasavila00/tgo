@@ -376,7 +376,6 @@ func (v *EffectKind) UnmarshalJSON(data []byte) error {
 }
 
 func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -390,7 +389,6 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -413,12 +411,12 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "ResliceExtends":
 			current = 7
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -434,11 +432,11 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -461,7 +459,7 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -660,9 +658,8 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 			continue
 		}
 		inspectGenericFile(file, func(node *syntax.Node) bool {
-			type operandType = bool
 			function, ok := syntax.FunctionDeclarationOf(node)
-			var operand operandType = !ok
+			operand := !ok
 			if !operand {
 				operand = function.Body == nil
 			}
@@ -780,8 +777,7 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 		{
 			unary := syntax.UnaryExpressionOf(expression)
 			if unary != nil {
-				type operandType = bool
-				var operand operandType = unary.Operator == token.ARROW
+				var operand bool = unary.Operator == token.ARROW
 				if operand {
 					operand = !c.commaOK(expression)
 				}
@@ -812,7 +808,6 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 // collectReturnedGenericEffects records effects in a directly returned closure.
 func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
-		type operandType = bool
 		{
 			_, nested := syntax.FunctionLiteralOf(node)
 			if nested {
@@ -820,7 +815,7 @@ func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
 			}
 		}
 		statement, ok := syntax.StatementOf(node)
-		var operand operandType = !ok
+		operand := !ok
 		if !operand {
 			operand = syntax.ReturnStatementOf(statement) == nil
 		}
@@ -1085,11 +1080,10 @@ func (c *checker) collectResliceZero(
 	value *syntax.Expression,
 	expression *syntax.SliceExpression,
 ) {
-	type operandType = bool
 	if expression.High == nil {
 		return
 	}
-	var operand operandType = c.currentLength(expression.High, expression.Expression)
+	operand := c.currentLength(expression.High, expression.Expression)
 	if !operand {
 		operand = constantZero(c.facts.Constant(expression.High))
 	}
@@ -1111,8 +1105,7 @@ func (c *checker) collectGenericAccess(
 	expression *syntax.Expression,
 	selector *syntax.SelectorExpression,
 ) {
-	type operandType = bool
-	var operand operandType = !strings.HasPrefix(selector.Selector.Name, "Tgo")
+	operand := !strings.HasPrefix(selector.Selector.Name, "Tgo")
 	if !operand {
 		operand = !c.receiverCanHideModel(c.facts.Type(selector.Expression))
 	}

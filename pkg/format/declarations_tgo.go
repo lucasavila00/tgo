@@ -55,7 +55,6 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 	p.breakSourceGap(value.Lparen, syntax.SpecificationPosition(value.Specs[0]))
 	columns, keepTypes := p.specificationAlignment(value)
 	for index, item := range value.Specs {
-		type operandType = bool
 		if index > 0 {
 			p.breakSourceGap(
 				syntax.SpecificationEnd(value.Specs[index-1]),
@@ -63,14 +62,14 @@ func (p *printer) generalDeclaration(value *syntax.GeneralDeclaration) {
 			)
 		}
 		previousCommentColumn := p.commentColumn
-		var operand operandType = !p.multiline(
+		operand := !p.multiline(
 			syntax.SpecificationPosition(item),
 			syntax.SpecificationEnd(item),
 		)
 		if operand {
 			operand = p.hasTrailingComment(syntax.SpecificationEnd(item))
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = len(columns[index]) > 0
 		}
@@ -125,14 +124,13 @@ func (p *printer) specificationAlignment(
 	rows := make([]alignmentRow, len(declaration.Specs))
 	for index, value := range declaration.Specs {
 		if index > 0 {
-			type operandType = bool
 			previous := declaration.Specs[index-1]
 			comment := p.commentAt(
 				p.trailingCommentPosition(syntax.SpecificationEnd(previous)),
 			)
 			operand := rows
 			operand_1 := index
-			var operand_2 operandType = p.blankBetween(
+			operand_2 := p.blankBetween(
 				syntax.SpecificationEnd(previous),
 				syntax.SpecificationPosition(value),
 			)
@@ -142,17 +140,16 @@ func (p *printer) specificationAlignment(
 					syntax.SpecificationPosition(value),
 				)
 			}
-			var operand_3 operandType = operand_2
+			var operand_3 bool = operand_2
 			if !operand_3 {
 				operand_3 = p.multiline(
 					syntax.SpecificationPosition(previous),
 					syntax.SpecificationEnd(previous),
 				)
 			}
-			var operand_4 operandType = operand_3
+			var operand_4 bool = operand_3
 			if !operand_4 {
-				type operandType_1 = bool
-				var operand_5 operandType_1 = comment != nil
+				var operand_5 bool = comment != nil
 				if operand_5 {
 					operand_5 = strings.Contains(comment.text, "\n")
 				}
@@ -176,12 +173,11 @@ func (p *printer) specificationCells(
 		item := specificationValue.ImportPayload().Value
 		cells = []int{p.formattedImportSpecificationWidth(item)}
 	case syntax.SpecificationTagValue:
-		type operandType = bool
 		item := specificationValue.ValuePayload().Value
 		if p.identifiersAreMultiline(item.Names) {
 			return nil
 		}
-		var operand operandType = item.Type != nil
+		var operand bool = item.Type != nil
 		if operand {
 			operand = p.multiline(
 				syntax.ExpressionPosition(item.Type),
@@ -192,18 +188,17 @@ func (p *printer) specificationCells(
 			return []int{identifierWidth(item.Names), 0}
 		}
 		cells = append(cells, identifierWidth(item.Names))
-		var operand_1 operandType = item.Type != nil
+		var operand_1 bool = item.Type != nil
 		if !operand_1 {
 			operand_1 = keepType
 		}
 		if operand_1 {
-			type operandType_1 = bool
 			typeWidth := 0
 			if item.Type != nil {
 				typeWidth = p.formattedExpressionWidth(item.Type)
 			}
 			cells = append(cells, typeWidth)
-			var operand_2 operandType_1 = item.Type != nil
+			var operand_2 bool = item.Type != nil
 			if operand_2 {
 				operand_2 = p.multiline(
 					syntax.ExpressionPosition(item.Type),
@@ -302,10 +297,9 @@ func (p *printer) valueSpecification(
 	columns []int,
 	alreadyIndented bool,
 ) {
-	type operandType = bool
 	p.identifiersAt(value.Names, alreadyIndented)
 	column := 0
-	var operand operandType = value.Type != nil
+	var operand bool = value.Type != nil
 	if !operand {
 		operand = keepType
 	}
@@ -326,7 +320,6 @@ func (p *printer) valueSpecification(
 }
 
 func (p *printer) typeSpecification(value *syntax.TypeSpecification, columns []int) {
-	type operandType = bool
 	p.token(value.Name.Start, value.Name.Name)
 	if value.TypeParams != nil {
 		p.fieldList(value.TypeParams, "[", "]")
@@ -336,7 +329,7 @@ func (p *printer) typeSpecification(value *syntax.TypeSpecification, columns []i
 		p.token(value.Assign, "=")
 		p.space()
 	}
-	var operand operandType = value.Assign != token.NoPos
+	var operand bool = value.Assign != token.NoPos
 	if !operand {
 		operand = !p.namedTypeExpression(value.Type)
 	}
@@ -382,13 +375,12 @@ func (p *printer) formattedTypeSpecificationNameWidth(
 func (p *printer) formattedTypeSpecificationValueWidth(
 	value *syntax.TypeSpecification,
 ) int {
-	type operandType = bool
 	probe := p.newProbe(nil)
 	if value.Assign != token.NoPos {
 		probe.token(value.Assign, "=")
 		probe.space()
 	}
-	var operand operandType = value.Assign != token.NoPos
+	var operand bool = value.Assign != token.NoPos
 	if !operand {
 		operand = !probe.namedTypeExpression(value.Type)
 	}
@@ -495,14 +487,13 @@ func (p *printer) enumDeclaration(value *syntax.EnumDeclaration) {
 }
 
 func (p *printer) enumVariant(value *syntax.EnumVariant) {
-	type operandType = bool
 	p.token(value.Name.Start, value.Name.Name)
 	p.space()
 	p.token(value.Struct, "struct")
 	p.space()
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
-	var operand operandType = len(value.Fields) == 0
+	var operand bool = len(value.Fields) == 0
 	if operand {
 		operand = p.multiline(value.Lbrace, value.Rbrace)
 	}
@@ -512,7 +503,7 @@ func (p *printer) enumVariant(value *syntax.EnumVariant) {
 		p.before(value.Rbrace)
 		p.indent--
 	}
-	var operand_1 operandType = len(value.Fields) == 1
+	var operand_1 bool = len(value.Fields) == 1
 	if operand_1 {
 		operand_1 = !p.multiline(value.Lbrace, value.Rbrace)
 	}
@@ -538,13 +529,12 @@ func (p *printer) enumVariant(value *syntax.EnumVariant) {
 }
 
 func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
-	type operandType = bool
 	p.token(value.Type, "type")
 	p.space()
 	p.token(value.Name.Start, value.Name.Name)
 	p.space()
 	p.token(value.Struct, "struct")
-	var operand operandType = len(value.Fields) > 1
+	var operand bool = len(value.Fields) > 1
 	if !operand {
 		operand = p.multiline(value.Lbrace, value.Rbrace)
 	}
@@ -553,7 +543,7 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 	}
 	p.token(value.Lbrace, "{")
 	p.trailingToken(value.Lbrace, 1)
-	var operand_1 operandType = len(value.Fields) == 0
+	var operand_1 bool = len(value.Fields) == 0
 	if operand_1 {
 		operand_1 = p.multiline(value.Lbrace, value.Rbrace)
 	}
@@ -563,7 +553,7 @@ func (p *printer) structDeclaration(value *syntax.StructDeclaration) {
 		p.before(value.Rbrace)
 		p.indent--
 	}
-	var operand_2 operandType = len(value.Fields) == 1
+	var operand_2 bool = len(value.Fields) == 1
 	if operand_2 {
 		operand_2 = !p.multiline(value.Lbrace, value.Rbrace)
 	}
@@ -608,12 +598,11 @@ func (p *printer) tgoFields(
 	p.breakSourceGap(opening, values[0].Start)
 	columns := p.tgoFieldAlignment(values)
 	for index, value := range values {
-		type operandType = bool
 		if index > 0 {
 			p.breakSourceGap(values[index-1].Stop, value.Start)
 		}
 		previousCommentColumn := p.commentColumn
-		var operand operandType = p.hasTrailingComment(value.Stop)
+		operand := p.hasTrailingComment(value.Stop)
 		if operand {
 			operand = len(columns[index]) > 0
 		}
@@ -636,15 +625,14 @@ func (p *printer) tgoFieldAlignment(values []*syntax.TGoField) [][]int {
 	rows := make([]alignmentRow, len(values))
 	for index, value := range values {
 		if index > 0 {
-			type operandType = bool
 			previous := values[index-1]
 			operand := rows
 			operand_1 := index
-			var operand_2 operandType = p.blankBetween(previous.Stop, value.Start)
+			operand_2 := p.blankBetween(previous.Stop, value.Start)
 			if !operand_2 {
 				operand_2 = p.hasCommentBetween(previous.Stop, value.Start)
 			}
-			var operand_3 operandType = operand_2
+			var operand_3 bool = operand_2
 			if !operand_3 {
 				operand_3 = p.multiline(previous.Start, previous.Stop)
 			}

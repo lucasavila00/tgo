@@ -31,100 +31,109 @@ func switchCaseBool(events *[]string, name string, value bool, fail bool) (bool,
 }
 
 func PropagationSwitchCaseOrder(events *[]string, tag int, fail bool) (string, error) {
-	tag_1 := switchCaseMark(events, "tag", tag)
-	selected := -1
-	if selected == -1 {
-		if tag_1 ==
-			switchCaseMark(events, "first", 0) {
-			selected = 0
+	{
+		tag_1 := switchCaseMark(events, "tag", tag)
+		selected := -1
+		if selected == -1 {
+			if tag_1 ==
+				switchCaseMark(events, "first", 0) {
+				selected = 0
+			}
 		}
-	}
-	if selected == -1 {
-		result, err := switchCaseValue(events, "second", 2, fail)
-		if err != nil {
-			return "", err
+		if selected == -1 {
+			result, err := switchCaseValue(events, "second", 2, fail)
+			if err != nil {
+				return "", err
+			}
+			if tag_1 == result {
+				selected = 0
+			}
 		}
-		if tag_1 == result {
-			selected = 0
+		if selected == -1 {
+			result_1, err_1 := switchCaseValue(events, "third", 3, false)
+			if err_1 != nil {
+				return "", err_1
+			}
+			if tag_1 == result_1 {
+				selected = 1
+			}
 		}
-	}
-	if selected == -1 {
-		result_1, err_1 := switchCaseValue(events, "third", 3, false)
-		if err_1 != nil {
-			return "", err_1
+		switch selected {
+		case 0:
+			return "second", nil
+		case 1:
+			return "third", nil
+		default:
+			return "default", nil
 		}
-		if tag_1 == result_1 {
-			selected = 1
-		}
-	}
-	switch selected {
-	case 0:
-		return "second", nil
-	case 1:
-		return "third", nil
-	default:
-		return "default", nil
 	}
 }
 
 func PropagationSwitchCaseWrapped(events *[]string) error {
-	tag := 1
-	selected := -1
-	if selected == -1 {
-		result, err := switchCaseValue(events, "wrapped", 1, true)
-		if err != nil {
-			return fmt.Errorf("switchCaseValue: %w", err)
+	{
+		tag := 1
+		selected := -1
+		if selected == -1 {
+			result, err := switchCaseValue(events, "wrapped", 1, true)
+			if err != nil {
+				return fmt.Errorf("switchCaseValue: %w", err)
+			}
+			if tag == result {
+				selected = 0
+			}
 		}
-		if tag == result {
-			selected = 0
+		switch selected {
+		case 0:
 		}
-	}
-	switch selected {
-	case 0:
 	}
 	return nil
 }
 
 func PropagationSwitchCaseDefaultFallthrough(events *[]string) error {
-	tag := switchCaseMark(events, "tag", 9)
-	selected := -1
-	if selected == -1 {
-		result, err := switchCaseValue(events, "case", 1, false)
-		if err != nil {
-			return err
+	{
+		tag := switchCaseMark(events, "tag", 9)
+		selected := -1
+		if selected == -1 {
+			result, err := switchCaseValue(events, "case", 1, false)
+			if err != nil {
+				return err
+			}
+			if tag == result {
+				selected = 1
+			}
 		}
-		if tag == result {
-			selected = 1
+		switch selected {
+		default:
+			*events = append(*events, "default")
+			fallthrough
+		case 1:
+			*events = append(*events, "fallthrough")
 		}
-	}
-	switch selected {
-	default:
-		*events = append(*events, "default")
-		fallthrough
-	case 1:
-		*events = append(*events, "fallthrough")
 	}
 	return nil
 }
 
 func PropagationSwitchCaseGotoBreak(events *[]string) error {
 	goto outer
-	tag := 1
-	selected := -1
-	if selected == -1 {
-		result, err := switchCaseValue(events, "case", 1, false)
-		if err != nil {
-			return err
-		}
-		if tag == result {
-			selected = 0
-		}
-	}
 outer:
-	switch selected {
-	case 0:
-		*events = append(*events, "body")
-		break outer
+	{
+		tag := 1
+		selected := -1
+		if selected == -1 {
+			result, err := switchCaseValue(events, "case", 1, false)
+			if err != nil {
+				return err
+			}
+			if tag == result {
+				selected = 0
+			}
+		}
+	control:
+		switch selected {
+		case 0:
+			*events = append(*events, "body")
+			break control
+		}
 	}
 	*events = append(*events, "done")
 	return nil
@@ -134,21 +143,23 @@ func PropagationSwitchCaseContinue(events *[]string) error {
 outer:
 
 	for value := 0; value < 2; value++ {
-		tag := value
-		selected := -1
-		if selected == -1 {
-			result, err := switchCaseValue(events, "case", value, false)
-			if err != nil {
-				return err
+		{
+			tag := value
+			selected := -1
+			if selected == -1 {
+				result, err := switchCaseValue(events, "case", value, false)
+				if err != nil {
+					return err
+				}
+				if tag == result {
+					selected = 0
+				}
 			}
-			if tag == result {
-				selected = 0
+			switch selected {
+			case 0:
+				*events = append(*events, "body")
+				continue outer
 			}
-		}
-		switch selected {
-		case 0:
-			*events = append(*events, "body")
-			continue outer
 		}
 		*events = append(*events, "after")
 	}
@@ -156,39 +167,41 @@ outer:
 }
 
 func PropagationSwitchCaseTagless(events *[]string) error {
-	selected := -1
-	if selected == -1 {
-		result, err := switchCaseBool(events, "first", false, false)
-		if err != nil {
-			return err
+	{
+		selected := -1
+		if selected == -1 {
+			result, err := switchCaseBool(events, "first", false, false)
+			if err != nil {
+				return err
+			}
+			if result {
+				selected = 0
+			}
 		}
-		if result {
-			selected = 0
+		if selected == -1 {
+			result_1, err_1 := switchCaseBool(events, "second", true, false)
+			if err_1 != nil {
+				return err_1
+			}
+			if result_1 {
+				selected = 0
+			}
 		}
-	}
-	if selected == -1 {
-		result_1, err_1 := switchCaseBool(events, "second", true, false)
-		if err_1 != nil {
-			return err_1
+		if selected == -1 {
+			result_2, err_2 := switchCaseBool(events, "third", true, false)
+			if err_2 != nil {
+				return err_2
+			}
+			if result_2 {
+				selected = 1
+			}
 		}
-		if result_1 {
-			selected = 0
+		switch selected {
+		case 0:
+			*events = append(*events, "body")
+		case 1:
+			*events = append(*events, "late")
 		}
-	}
-	if selected == -1 {
-		result_2, err_2 := switchCaseBool(events, "third", true, false)
-		if err_2 != nil {
-			return err_2
-		}
-		if result_2 {
-			selected = 1
-		}
-	}
-	switch selected {
-	case 0:
-		*events = append(*events, "body")
-	case 1:
-		*events = append(*events, "late")
 	}
 	return nil
 }

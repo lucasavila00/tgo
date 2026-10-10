@@ -507,7 +507,6 @@ func (v *SymbolKind) UnmarshalJSON(data []byte) error {
 }
 
 func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -521,7 +520,6 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -552,12 +550,12 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Variable":
 			current = 11
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -573,11 +571,11 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -600,7 +598,7 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -794,8 +792,7 @@ func (e *Engine) WorkspaceSymbols(
 	query = strings.ToLower(query)
 	result := make([]Symbol, 0)
 	for _, symbol := range index.symbols {
-		type operandType = bool
-		var operand operandType = query == ""
+		var operand bool = query == ""
 		if !operand {
 			operand = strings.Contains(strings.ToLower(symbol.Name), query)
 		}
@@ -851,12 +848,11 @@ func (e *Engine) Definition(
 	}
 
 	for _, item := range index.occurrences {
-		type operandType = bool
-		var operand operandType = item.location.URI == uri
+		var operand bool = item.location.URI == uri
 		if operand {
 			operand = item.location.Start <= offset
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = offset < item.location.End
 		}
@@ -883,12 +879,11 @@ func (e *Engine) Hover(
 	}
 
 	for _, item := range index.occurrences {
-		type operandType = bool
-		var operand operandType = item.location.URI == uri
+		var operand bool = item.location.URI == uri
 		if operand {
 			operand = item.location.Start <= offset
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = offset < item.location.End
 		}
@@ -912,12 +907,11 @@ func (e *Engine) References(
 	}
 
 	for _, item := range index.occurrences {
-		type operandType = bool
-		var operand operandType = item.location.URI != uri
+		var operand bool = item.location.URI != uri
 		if !operand {
 			operand = offset < item.location.Start
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if !operand_1 {
 			operand_1 = item.location.End <= offset
 		}
@@ -928,8 +922,7 @@ func (e *Engine) References(
 		definition, hasDefinition := index.definitions[item.key]
 		seen := make(map[Location]bool)
 		for _, location := range index.references[item.key] {
-			type operandType_1 = bool
-			var operand_2 operandType_1 = hasDefinition
+			operand_2 := hasDefinition
 			if operand_2 {
 				operand_2 = location == definition
 			}
@@ -939,11 +932,11 @@ func (e *Engine) References(
 			result = append(result, location)
 			seen[location] = true
 		}
-		var operand_3 operandType = includeDeclaration
+		operand_3 := includeDeclaration
 		if operand_3 {
 			operand_3 = hasDefinition
 		}
-		var operand_4 operandType = operand_3
+		var operand_4 bool = operand_3
 		if operand_4 {
 			operand_4 = !seen[definition]
 		}
@@ -963,7 +956,6 @@ func (e *Engine) References(
 
 func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 	for {
-		type operandType = bool
 		e.mu.Lock()
 		if e.index != nil {
 			index := e.index
@@ -974,12 +966,14 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		if e.building {
 			ready := e.ready
 			e.mu.Unlock()
-			operand := ctx.Done()
-			operand_1 := ready
-			select {
-			case <-operand:
-				return nil, ctx.Err()
-			case <-operand_1:
+			{
+				operand := ctx.Done()
+				operand_1 := ready
+				select {
+				case <-operand:
+					return nil, ctx.Err()
+				case <-operand_1:
+				}
 			}
 			continue
 		}
@@ -988,7 +982,7 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		e.mu.Unlock()
 		index, err := e.buildIndex(ctx)
 		e.mu.Lock()
-		var operand_2 operandType = err == nil
+		var operand_2 bool = err == nil
 		if operand_2 {
 			operand_2 = generation == e.generation
 		}
@@ -1010,21 +1004,25 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 }
 
 func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
-	operand := ctx.Done()
-	select {
-	case <-operand:
-		return nil, ctx.Err()
-	default:
+	{
+		operand := ctx.Done()
+		select {
+		case <-operand:
+			return nil, ctx.Err()
+		default:
+		}
 	}
 	packages, err := sourceanalysis.AnalyzeAvailableWorkspaceContext(ctx, e.root)
 	if err != nil {
 		return nil, err
 	}
-	operand_1 := ctx.Done()
-	select {
-	case <-operand_1:
-		return nil, ctx.Err()
-	default:
+	{
+		operand_1 := ctx.Done()
+		select {
+		case <-operand_1:
+			return nil, ctx.Err()
+		default:
+		}
 	}
 	index := &workspaceIndex{
 		occurrences: nil,
@@ -1033,11 +1031,13 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		symbols:     nil,
 	}
 	for view, pkg := range packages {
-		operand_2 := ctx.Done()
-		select {
-		case <-operand_2:
-			return nil, ctx.Err()
-		default:
+		{
+			operand_2 := ctx.Done()
+			select {
+			case <-operand_2:
+				return nil, ctx.Err()
+			default:
+			}
 		}
 		keys := newObjectKeys(pkg.Package, view)
 		ownerLocations := make(map[token.Pos]Location)
@@ -1052,9 +1052,8 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 			}
 
 			syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
-				type operandType = bool
 				identifier, ok := syntax.IdentifierOf(node)
-				var operand operandType = !ok
+				operand := !ok
 				if !operand {
 					operand = identifier == nil
 				}
@@ -1063,7 +1062,7 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 				}
 				start := pkg.Files.Position(identifier.Start).Offset
 				end := pkg.Files.Position(identifier.Stop).Offset
-				var operand_1 operandType = start < 0
+				var operand_1 bool = start < 0
 				if !operand_1 {
 					operand_1 = end <= start
 				}
@@ -1086,9 +1085,8 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 					contents = types.ObjectString(object, qualifier)
 				}
 				{
-					type operandType_1 = bool
 					function, ok := object.(*types.Func)
-					var operand_2 operandType_1 = ok
+					operand_2 := ok
 					if operand_2 {
 						operand_2 = pkg.OwnerHovers[object] == ""
 					}
@@ -1155,8 +1153,7 @@ func newObjectKeys(root *types.Package, view int) *objectKeys {
 }
 
 func (k *objectKeys) addPackage(pkg *types.Package, seen map[*types.Package]bool) {
-	type operandType = bool
-	var operand operandType = pkg == nil
+	var operand bool = pkg == nil
 	if !operand {
 		operand = seen[pkg]
 	}
@@ -1238,7 +1235,6 @@ func pathURI(path string) (string, error) {
 }
 
 func pathURIValue(absolute string, volume string) string {
-	type operandType = bool
 	slashPath := filepath.ToSlash(absolute)
 	slashVolume := filepath.ToSlash(volume)
 	value := new(url.URL)
@@ -1253,7 +1249,7 @@ func pathURIValue(absolute string, volume string) string {
 			return value.String()
 		}
 	}
-	var operand operandType = slashVolume != ""
+	var operand bool = slashVolume != ""
 	if operand {
 		operand = !strings.HasPrefix(slashPath, "/")
 	}

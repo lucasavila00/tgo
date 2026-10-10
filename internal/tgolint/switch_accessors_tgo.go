@@ -32,7 +32,6 @@ func (c *checker) checkCaseAccessors(
 	}
 	for _, statement := range clause.Body {
 		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			type operandType_2 = bool
 			{
 				_, nested := syntax.FunctionLiteralOf(node)
 				if nested {
@@ -40,9 +39,8 @@ func (c *checker) checkCaseAccessors(
 				}
 			}
 			{
-				type operandType = bool
 				nestedStatement, ok := syntax.StatementOf(node)
-				var operand operandType = ok
+				operand := ok
 				if operand {
 					operand = nestedStatement != tagSwitch
 				}
@@ -50,9 +48,8 @@ func (c *checker) checkCaseAccessors(
 					{
 						nested := syntax.SwitchStatementOf(nestedStatement)
 						if nested != nil {
-							type operandType_1 = bool
 							nestedReceiver, _, _, nestedModel, _ := c.tagCall(nested.Tag)
-							var operand_1 operandType_1 = sameModel(nestedModel, model)
+							operand_1 := sameModel(nestedModel, model)
 							if operand_1 {
 								operand_1 = sameReceiver(c.facts, receiver, nestedReceiver)
 							}
@@ -68,7 +65,7 @@ func (c *checker) checkCaseAccessors(
 				return true
 			}
 			selector := syntax.SelectorExpressionOf(expression)
-			var operand_2 operandType_2 = selector == nil
+			var operand_2 bool = selector == nil
 			if !operand_2 {
 				operand_2 = !sameReceiver(c.facts, receiver, selector.Expression)
 			}
@@ -84,7 +81,7 @@ func (c *checker) checkCaseAccessors(
 			}
 			c.syntaxHandled[expression] = true
 			active, narrowed := variantflow.Singleton(flowType)
-			var operand_3 operandType_2 = narrowed
+			operand_3 := narrowed
 			if operand_3 {
 				operand_3 = active == tag
 			}
@@ -93,14 +90,14 @@ func (c *checker) checkCaseAccessors(
 				return true
 			}
 			caseName := "default"
-			var operand_4 operandType_2 = !defaultClause
+			operand_4 := !defaultClause
 			if operand_4 {
 				operand_4 = !narrowed
 			}
 			if operand_4 {
 				caseName = "a multi-tag case"
 			}
-			var operand_5 operandType_2 = !defaultClause
+			operand_5 := !defaultClause
 			if operand_5 {
 				operand_5 = narrowed
 			}
@@ -124,12 +121,11 @@ func capturesObject(
 		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&statement, func(node *syntax.Node) bool {
-		type operandType = bool
 		if captured {
 			return false
 		}
 		identifier, ok := syntax.IdentifierOf(node)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = facts.Object(identifier) == object
 		}
@@ -146,18 +142,17 @@ func receiverWrite(
 	target *syntax.Expression,
 	receiver *syntax.Expression,
 ) bool {
-	type operandType = bool
 	targetRoot, targetPath, targetOK := receiverPath(facts, target)
 	receiverRoot, receiverFields, receiverOK := receiverPath(facts, receiver)
-	var operand operandType = !targetOK
+	operand := !targetOK
 	if !operand {
 		operand = !receiverOK
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = targetRoot != receiverRoot
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = len(targetPath) > len(receiverFields)
 	}
@@ -186,18 +181,17 @@ func sameReceiver(
 	left *syntax.Expression,
 	right *syntax.Expression,
 ) bool {
-	type operandType = bool
 	leftRoot, leftPath, leftOK := receiverPath(facts, left)
 	rightRoot, rightPath, rightOK := receiverPath(facts, right)
-	var operand operandType = !leftOK
+	operand := !leftOK
 	if !operand {
 		operand = !rightOK
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = leftRoot != rightRoot
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = len(leftPath) != len(rightPath)
 	}

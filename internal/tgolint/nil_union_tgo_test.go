@@ -20,61 +20,60 @@ import (
 
 func TestNilTypeLatticeProperties(t *testing.T) {
 	property := func(leftByte, middleByte, rightByte uint8) bool {
-		type operandType = bool
 		left := nilTypeFromMembers(leftByte)
 		middle := nilTypeFromMembers(middleByte)
 		right := nilTypeFromMembers(rightByte)
-		var operand operandType = equalNilType(unionNilTypes(left, middle), unionNilTypes(middle, left))
+		operand := equalNilType(unionNilTypes(left, middle), unionNilTypes(middle, left))
 		if operand {
 			operand = equalNilType(
 				unionNilTypes(unionNilTypes(left, middle), right),
 				unionNilTypes(left, unionNilTypes(middle, right)),
 			)
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if operand_1 {
 			operand_1 = equalNilType(intersectNilTypes(left, middle), intersectNilTypes(middle, left))
 		}
-		var operand_2 operandType = operand_1
+		var operand_2 bool = operand_1
 		if operand_2 {
 			operand_2 = equalNilType(
 				intersectNilTypes(intersectNilTypes(left, middle), right),
 				intersectNilTypes(left, intersectNilTypes(middle, right)),
 			)
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = equalNilType(unionNilTypes(left, left), left)
 		}
-		var operand_4 operandType = operand_3
+		var operand_4 bool = operand_3
 		if operand_4 {
 			operand_4 = equalNilType(intersectNilTypes(left, left), left)
 		}
-		var operand_5 operandType = operand_4
+		var operand_5 bool = operand_4
 		if operand_5 {
 			operand_5 = equalNilType(
 				intersectNilTypes(left, unionNilTypes(left, middle)), left,
 			)
 		}
-		var operand_6 operandType = operand_5
+		var operand_6 bool = operand_5
 		if operand_6 {
 			operand_6 = equalNilType(
 				unionNilTypes(left, intersectNilTypes(left, middle)), left,
 			)
 		}
-		var operand_7 operandType = operand_6
+		var operand_7 bool = operand_6
 		if operand_7 {
 			operand_7 = equalNilType(unionNilTypes(left, neverNilType()), left)
 		}
-		var operand_8 operandType = operand_7
+		var operand_8 bool = operand_7
 		if operand_8 {
 			operand_8 = equalNilType(intersectNilTypes(left, optionalNilType()), left)
 		}
-		var operand_9 operandType = operand_8
+		var operand_9 bool = operand_8
 		if operand_9 {
 			operand_9 = isOptionalNilType(unionNilTypes(left, optionalNilType()))
 		}
-		var operand_10 operandType = operand_9
+		var operand_10 bool = operand_9
 		if operand_10 {
 			operand_10 = isNeverNilType(intersectNilTypes(left, neverNilType()))
 		}
@@ -161,7 +160,6 @@ func runNilAnalysis(
 	parameters string,
 	body string,
 ) ([]analysis.Diagnostic, error) {
-	type operandType = bool
 	t.Helper()
 	source := fmt.Sprintf(`package sample
 type Item struct{}
@@ -191,7 +189,7 @@ func subject(%s) {
 	if err != nil {
 		return nil, err
 	}
-	var operand_2 operandType = packages.PrintErrors(loaded) != 0
+	var operand_2 bool = packages.PrintErrors(loaded) != 0
 	if !operand_2 {
 		operand_2 = len(loaded) != 1
 	}

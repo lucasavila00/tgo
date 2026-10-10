@@ -261,7 +261,6 @@ func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 }
 
 func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -275,7 +274,6 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
-		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -292,12 +290,12 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Conditional":
 			current = 4
 		}
-		var operand operandType = haveName
+		operand := haveName
 		if operand {
 			operand = current == selected
 		}
 		same := operand
-		var operand_1 operandType = same
+		operand_1 := same
 		if operand_1 {
 			operand_1 = current == 0
 		}
@@ -313,11 +311,11 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		var operand_2 operandType = !multiple
+		operand_2 := !multiple
 		if operand_2 {
 			operand_2 = current > 0
 		}
-		var operand_3 operandType = operand_2
+		var operand_3 bool = operand_2
 		if operand_3 {
 			operand_3 = current == selected
 		}
@@ -340,7 +338,7 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand_4 operandType_1 = !haveName
+	operand_4 := !haveName
 	if !operand_4 {
 		operand_4 = multiple
 	}
@@ -432,7 +430,6 @@ func (c *checker) markGenericZeroWith(
 	extra *GenericEffectCondition,
 	unknown bool,
 ) {
-	type operandType = bool
 	conditions, maySkip, reachable := c.genericEffectPath(summary, node)
 	if !reachable {
 		return
@@ -440,7 +437,7 @@ func (c *checker) markGenericZeroWith(
 	if extra != nil {
 		conditions = append(conditions, *extra)
 	}
-	var operand operandType = maySkip
+	operand := maySkip
 	if !operand {
 		operand = unknown
 	}
@@ -461,24 +458,22 @@ func (c *checker) markConditionalGenericZero(
 	value *syntax.Expression,
 	other *syntax.Expression,
 ) {
-	type operandType = bool
 	valueIndex, valueOK := c.expressionParameter(summary, value)
 	otherIndex, otherOK := -1, true
 	if other != nil {
 		otherIndex, otherOK = c.expressionParameter(summary, other)
 	}
-	var operand operandType = !valueOK
+	operand := !valueOK
 	if !operand {
 		operand = !otherOK
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = !c.parameterStableBefore(summary, valueIndex, syntax.NodePosition(node))
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
-		type operandType_1 = bool
-		var operand_3 operandType_1 = otherIndex >= 0
+		var operand_3 bool = otherIndex >= 0
 		if operand_3 {
 			operand_3 = !c.parameterStableBefore(summary, otherIndex, syntax.NodePosition(node))
 		}
@@ -533,12 +528,11 @@ func (c *checker) parameterStableBefore(
 	object := signature.Params().At(index)
 	stable := true
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
-		type operandType = bool
-		var operand operandType = node == nil
+		var operand bool = node == nil
 		if !operand {
 			operand = syntax.NodePosition(node) >= before
 		}
-		var operand_1 operandType = operand
+		var operand_1 bool = operand
 		if !operand_1 {
 			operand_1 = !stable
 		}
@@ -547,7 +541,7 @@ func (c *checker) parameterStableBefore(
 		}
 		changed, descend := c.parameterChangedAt(node, object)
 		stable = !changed
-		var operand_2 operandType = stable
+		operand_2 := stable
 		if operand_2 {
 			operand_2 = descend
 		}
@@ -596,8 +590,7 @@ func (c *checker) parameterChangedAt(
 			{
 				rangeStatement := syntax.RangeStatementOf(statement)
 				if rangeStatement != nil {
-					type operandType_1 = bool
-					var operand_1 operandType_1 = c.expressionUsesObject(rangeStatement.Key, object)
+					operand_1 := c.expressionUsesObject(rangeStatement.Key, object)
 					if !operand_1 {
 						operand_1 = c.expressionUsesObject(rangeStatement.Value, object)
 					}
@@ -613,8 +606,7 @@ func (c *checker) parameterChangedAt(
 	{
 		unary := syntax.UnaryExpressionOf(expression)
 		if unary != nil {
-			type operandType_2 = bool
-			var operand_2 operandType_2 = unary.Operator == token.AND
+			var operand_2 bool = unary.Operator == token.AND
 			if operand_2 {
 				operand_2 = c.expressionUsesObject(unary.Expression, object)
 			}
@@ -636,9 +628,8 @@ func (c *checker) syntaxCapturesObject(
 ) bool {
 	captured := false
 	inspectGenericBlock(body, func(node *syntax.Node) bool {
-		type operandType = bool
 		name, ok := syntax.IdentifierOf(node)
-		var operand operandType = ok
+		operand := ok
 		if operand {
 			operand = c.facts.Object(name) == object
 		}
@@ -681,18 +672,16 @@ func (c *checker) callUsesObject(
 	for _, argument := range call.Args {
 		if c.expressionUsesObject(argument, object) {
 			{
-				type operandType_2 = bool
 				variable, ok := object.(*types.Var)
-				var operand_2 operandType_2 = ok
+				operand_2 := ok
 				if operand_2 {
-					type operandType_3 = bool
-					var operand_3 operandType_3 = isBoolean(variable.Type())
+					operand_3 := isBoolean(variable.Type())
 					if !operand_3 {
 						operand_3 = isInteger(variable.Type())
 					}
 					operand_2 = (operand_3)
 				}
-				var operand_4 operandType_2 = operand_2
+				var operand_4 bool = operand_2
 				if operand_4 {
 					operand_4 = !c.scalarEscapesInExpression(argument, object)
 				}
@@ -717,13 +706,12 @@ func (c *checker) scalarEscapesInExpression(
 			value, ok := syntax.ExpressionOf(node)
 			if ok {
 				{
-					type operandType = bool
 					unary := syntax.UnaryExpressionOf(value)
-					var operand operandType = unary != nil
+					var operand bool = unary != nil
 					if operand {
 						operand = unary.Operator == token.AND
 					}
-					var operand_1 operandType = operand
+					var operand_1 bool = operand
 					if operand_1 {
 						operand_1 = c.expressionUsesObject(unary.Expression, object)
 					}
@@ -733,13 +721,12 @@ func (c *checker) scalarEscapesInExpression(
 					}
 				}
 				{
-					type operandType_1 = bool
 					selector := syntax.SelectorExpressionOf(value)
-					var operand_2 operandType_1 = selector != nil
+					var operand_2 bool = selector != nil
 					if operand_2 {
 						operand_2 = c.pointerMethodSelection(value)
 					}
-					var operand_3 operandType_1 = operand_2
+					var operand_3 bool = operand_2
 					if operand_3 {
 						operand_3 = c.expressionUsesObject(selector.Expression, object)
 					}
@@ -765,7 +752,6 @@ func (c *checker) scalarEscapesInExpression(
 }
 
 func (c *checker) pointerMethodSelection(expression *syntax.Expression) bool {
-	type operandType_1 = bool
 	type operandType = bool
 	selection := c.facts.Selection(expression)
 	var operand operandType = selection == nil
@@ -780,7 +766,7 @@ func (c *checker) pointerMethodSelection(expression *syntax.Expression) bool {
 		return false
 	}
 	signature, ok := function.Type().(*types.Signature)
-	var operand_1 operandType_1 = !ok
+	operand_1 := !ok
 	if !operand_1 {
 		operand_1 = signature.Recv() == nil
 	}
@@ -842,7 +828,6 @@ func (c *checker) addGenericEffect(
 // normalizeGenericEffect sorts conditions and rejects contradictions.
 func normalizeGenericEffect(effect GenericEffect) (GenericEffect, bool) {
 	sort.Slice(effect.Conditions, func(left, right int) bool {
-		type operandType = bool
 		if effect.Conditions[left].ValueParameter !=
 			effect.Conditions[right].ValueParameter {
 			return effect.Conditions[left].ValueParameter <
@@ -858,7 +843,7 @@ func normalizeGenericEffect(effect GenericEffect) (GenericEffect, bool) {
 			return effect.Conditions[left].OtherParameter <
 				effect.Conditions[right].OtherParameter
 		}
-		var operand operandType = !effect.Conditions[left].Expected
+		operand := !effect.Conditions[left].Expected
 		if operand {
 			operand = effect.Conditions[right].Expected
 		}
@@ -927,7 +912,6 @@ func (c *checker) genericEffectPath(
 	maySkip := false
 	var current *syntax.Node = node
 	for {
-		type operandType_1 = bool
 		type operandType = bool
 		var operand operandType = current != nil
 		if operand {
@@ -957,7 +941,7 @@ func (c *checker) genericEffectPath(
 			return nil, false, false
 		}
 		conditions = append(conditions, path...)
-		var operand_2 operandType_1 = maySkip
+		operand_2 := maySkip
 		if !operand_2 {
 			operand_2 = unknown
 		}
@@ -1023,16 +1007,15 @@ func (c *checker) parentEffectConditions(
 	{
 		loop := syntax.ForStatementOf(statement)
 		if loop != nil {
-			type operandType_1 = bool
 			if loop.Condition == nil {
 				return nil, false, true
 			}
 			value := c.facts.Constant(loop.Condition)
-			var operand_3 operandType_1 = value == nil
+			var operand_3 bool = value == nil
 			if !operand_3 {
 				operand_3 = value.Kind() != constant.Bool
 			}
-			var operand_4 operandType_1 = operand_3
+			var operand_4 bool = operand_3
 			if !operand_4 {
 				operand_4 = !constant.BoolVal(value)
 			}
@@ -1128,22 +1111,21 @@ func (c *checker) ifEffectCondition(
 	statement *syntax.IfStatement,
 	node *syntax.Node,
 ) (*GenericEffectCondition, effectOutcome) {
-	type operandType = bool
-	var operand operandType = syntax.NodePosition(node) >= statement.Body.Start
+	var operand bool = syntax.NodePosition(node) >= statement.Body.Start
 	if operand {
 		operand = syntax.NodeEnd(node) <= statement.Body.Stop
 	}
 	inBody := operand
-	var operand_1 operandType = statement.Else != nil
+	var operand_1 bool = statement.Else != nil
 	if operand_1 {
 		operand_1 = syntax.NodePosition(node) >= syntax.StatementPosition(statement.Else)
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if operand_2 {
 		operand_2 = syntax.NodeEnd(node) <= syntax.StatementEnd(statement.Else)
 	}
 	inElse := operand_2
-	var operand_3 operandType = !inBody
+	operand_3 := !inBody
 	if operand_3 {
 		operand_3 = !inElse
 	}

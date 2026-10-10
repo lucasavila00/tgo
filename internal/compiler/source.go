@@ -4,6 +4,7 @@ package compiler
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 
 	"tgo/pkg/syntax"
 )
@@ -56,27 +57,28 @@ type model struct {
 }
 
 type source struct {
-	JSONPackage      string
-	JSONV2Package    string
-	JSONTextPackage  string
-	StringsPackage   string
-	FmtPackage       string
-	ExternalJSONTo   string
-	AdjacentJSONTo   string
-	Name             string
-	Data             []byte
-	Tree             *syntax.File
-	File             *ast.File
-	Models           []*model
-	DefaultMarker    string
-	Propagations     map[string]propagationSource
-	Comprehensions   map[string]comprehensionSource
-	NonNil           map[token.Pos]bool
-	SuccessReturns   []*ast.ReturnStmt
-	FailureReturns   map[*ast.ReturnStmt][]token.Pos
-	Exhaustive       []exhaustiveDefault
-	GeneratedHelpers map[string]bool
-	Lowered          bool
+	JSONPackage         string
+	JSONV2Package       string
+	JSONTextPackage     string
+	StringsPackage      string
+	FmtPackage          string
+	ExternalJSONTo      string
+	AdjacentJSONTo      string
+	Name                string
+	Data                []byte
+	Tree                *syntax.File
+	File                *ast.File
+	Models              []*model
+	DefaultMarker       string
+	Propagations        map[string]propagationSource
+	Comprehensions      map[string]comprehensionSource
+	NonNil              map[token.Pos]bool
+	SuccessReturns      []*ast.ReturnStmt
+	FailureReturns      map[*ast.ReturnStmt][]token.Pos
+	Exhaustive          []exhaustiveDefault
+	GeneratedHelpers    map[string]bool
+	Lowered             bool
+	LoweringTypeAliases map[types.Object]*ast.Ident
 }
 
 type propagationSource struct {

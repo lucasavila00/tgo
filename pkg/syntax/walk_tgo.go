@@ -183,8 +183,7 @@ func Inspect(file *File, visit func(*Node) bool) {
 type publicInspector func(*Node) bool
 
 func (visit publicInspector) Visit(node *Node) Visitor {
-	type operandType = bool
-	var operand operandType = node == nil
+	var operand bool = node == nil
 	if !operand {
 		operand = visit(node)
 	}

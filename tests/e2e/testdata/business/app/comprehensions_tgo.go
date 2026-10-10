@@ -129,8 +129,10 @@ func ComprehensionSourceError(events *[]string, fail bool) ([]string, error) {
 	}
 	source := []string{result_1}
 	result := make([]string, len(source))
-	for index, value := range source {
-		result[index] = value
+	{
+		for index, value := range source {
+			result[index] = value
+		}
 	}
 	return result, nil
 }

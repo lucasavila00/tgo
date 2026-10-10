@@ -128,8 +128,7 @@ func (c *checker) propagateGenericEffects(
 			continue
 		}
 		for parameter := range parameters {
-			type operandType = bool
-			var operand operandType = c.addGenericEffect(summary, zero, parameter, mapped)
+			operand := c.addGenericEffect(summary, zero, parameter, mapped)
 			if !operand {
 				operand = changed
 			}
@@ -150,7 +149,6 @@ func (c *checker) propagatedGenericEffect(
 	pathMaySkip bool,
 	zero bool,
 ) (GenericEffect, map[zeroParameter]bool, bool) {
-	type operandType_1 = bool
 	type operandType = bool
 	arguments := typeArguments
 	if effect.Receiver {
@@ -164,7 +162,7 @@ func (c *checker) propagatedGenericEffect(
 		return noGenericEffect(), nil, false
 	}
 	conditions := append([]GenericEffectCondition(nil), pathConditions...)
-	var operand_1 operandType_1 = pathMaySkip
+	operand_1 := pathMaySkip
 	if !operand_1 {
 		operand_1 = effect.MaySkip
 	}
@@ -247,7 +245,6 @@ func (c *checker) mapParameterEffectCondition(
 	expression *syntax.Expression,
 	condition GenericEffectCondition,
 ) (*GenericEffectCondition, effectOutcome) {
-	type operandType_1 = bool
 	call := syntax.CallExpressionOf(callExpression)
 	if call == nil {
 		return nil, unknownEffectOutcome()
@@ -276,7 +273,7 @@ func (c *checker) mapParameterEffectCondition(
 		}
 	}
 	index, ok := c.expressionParameter(summary, expression)
-	var operand_2 operandType_1 = !ok
+	operand_2 := !ok
 	if !operand_2 {
 		operand_2 = !c.parameterStableBefore(summary, index, call.Start)
 	}
@@ -285,7 +282,6 @@ func (c *checker) mapParameterEffectCondition(
 	}
 	otherIndex := -1
 	if condition.OtherParameter >= 0 {
-		type operandType_2 = bool
 		if condition.OtherParameter >= len(call.Args) {
 			return nil, unknownEffectOutcome()
 		}
@@ -293,7 +289,7 @@ func (c *checker) mapParameterEffectCondition(
 			summary,
 			call.Args[condition.OtherParameter],
 		)
-		var operand_3 operandType_2 = !ok
+		operand_3 := !ok
 		if !operand_3 {
 			operand_3 = !c.parameterStableBefore(summary, otherIndex, call.Start)
 		}
@@ -315,7 +311,6 @@ func (c *checker) mappedScalarEffectCondition(
 	expression *syntax.Expression,
 	condition GenericEffectCondition,
 ) *GenericEffectCondition {
-	type operandType = bool
 	if !isScalarEffectCondition(condition.Kind) {
 		return nil
 	}
@@ -328,7 +323,7 @@ func (c *checker) mappedScalarEffectCondition(
 		return nil
 	}
 	expected := condition.Expected
-	var operand operandType = condition.Kind == booleanEffectCondition()
+	var operand bool = condition.Kind == booleanEffectCondition()
 	if operand {
 		operand = negated
 	}
@@ -405,16 +400,15 @@ func (summary *genericEffectSummary) fact() *GenericEffectFact {
 }
 
 func (fact *GenericEffectFact) hasEffects() bool {
-	type operandType = bool
-	var operand operandType = len(fact.ZeroEffects) != 0
+	var operand bool = len(fact.ZeroEffects) != 0
 	if !operand {
 		operand = len(fact.AccessEffects) != 0
 	}
-	var operand_1 operandType = operand
+	var operand_1 bool = operand
 	if !operand_1 {
 		operand_1 = len(fact.ReturnedZeroEffects) != 0
 	}
-	var operand_2 operandType = operand_1
+	var operand_2 bool = operand_1
 	if !operand_2 {
 		operand_2 = len(fact.ReturnedAccessEffects) != 0
 	}

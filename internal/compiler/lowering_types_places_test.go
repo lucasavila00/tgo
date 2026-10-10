@@ -148,6 +148,16 @@ func storeDeepPromotedPlace(events *[]string, value *promotedOuter) error {
 	value.Value = loadValue(events)!!
 	return nil
 }
+
+func promotedFactory(events *[]string, value *promotedOuter) *promotedOuter {
+	record(events, "factory")
+	return value
+}
+
+func storeFactoryPromotedPlace(events *[]string, value *promotedOuter) error {
+	promotedFactory(events, value).Value = loadValue(events)!!
+	return nil
+}
 `
 
 const loweringTypesPlacesTestSource = `package typesplaces
@@ -207,6 +217,14 @@ func TestGeneratedTypesAndPlaces(t *testing.T) {
 	if err != nil || deepCell.Value != 9 || deep.cell != 0 ||
 		strings.Join(events, ",") != "rhs" {
 		t.Fatalf("deep promoted=%v direct=%d error=%v events=%v", deepCell, deep.cell, err, events)
+	}
+
+	events = nil
+	deepCell = &cell{}
+	deep = promotedOuter{promotedMiddle: promotedMiddle{cell: deepCell}}
+	err = storeFactoryPromotedPlace(&events, &deep)
+	if err != nil || deepCell.Value != 9 || strings.Join(events, ",") != "factory,rhs" {
+		t.Fatalf("factory promoted=%v error=%v events=%v", deepCell, err, events)
 	}
 }
 `

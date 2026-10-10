@@ -34,13 +34,19 @@ func newLoweringEmitter(
 	source *source,
 	plan *functionLoweringPlan,
 ) *loweringEmitter {
+	if source.LoweringTypeAliases == nil {
+		source.LoweringTypeAliases = make(map[types.Object]*ast.Ident)
+	}
 	emitter := &loweringEmitter{
 		unit: unit, source: source, plan: plan, names: plan.function.names,
 		values: make(map[valueID]*ast.Ident), targets: make(map[targetID]*ast.Ident),
 		typeAliases:         make(map[*ast.BlockStmt]map[types.Type]*ast.Ident),
 		renamedTypeBlockers: make(map[types.Object]string),
 		typeDefinitionSites: make(map[*ast.Ident]emittedTypeDefinition),
-		typeObjectAliases:   make(map[types.Object]*ast.Ident),
+		typeObjectAliases:   source.LoweringTypeAliases,
+	}
+	for _, alias := range source.LoweringTypeAliases {
+		emitter.names[alias.Name] = true
 	}
 	for id, target := range plan.targets {
 		if target.label != "" {
@@ -301,7 +307,11 @@ func (e *loweringEmitter) labeledStatement(
 	separateEntry := operation.labelHasGoto && e.controlNeedsWrapper(operation)
 	if operation.controlTarget != 0 {
 		if separateEntry {
-			e.targets[operation.controlTarget] = e.freshName("control")
+			if blockUsesTarget(operation.body, operation.controlTarget) {
+				e.targets[operation.controlTarget] = e.freshName("control")
+			} else {
+				delete(e.targets, operation.controlTarget)
+			}
 		} else {
 			e.targets[operation.controlTarget] = ast.NewIdent(node.Label.Name)
 		}
@@ -317,6 +327,31 @@ func (e *loweringEmitter) labeledStatement(
 		return
 	}
 	output.List = append(output.List, body.List...)
+}
+
+func blockUsesTarget(block *plannedBlock, target targetID) bool {
+	if block == nil {
+		return false
+	}
+	for _, operation := range block.operations {
+		if operation.kind == planJump && operation.target == target {
+			return true
+		}
+		for _, child := range []*plannedBlock{
+			operation.init, operation.test, operation.body, operation.post,
+			operation.otherwise, operation.before, operation.after,
+		} {
+			if blockUsesTarget(child, target) {
+				return true
+			}
+		}
+		for _, child := range operation.cases {
+			if blockUsesTarget(child, target) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func operationHasPlannedWork(operation *plannedOperation) bool {
@@ -345,11 +380,9 @@ func (e *loweringEmitter) controlNeedsWrapper(operation *plannedOperation) bool 
 	}
 	control := operation.body.operations[0]
 	switch control.kind {
-	case planForStatement:
-		return len(control.headerBindings) != 0 ||
-			control.init != nil && blockHasPlannedWork(control.init)
-	case planSwitchStatement, planTypeSwitchStatement:
-		return control.init != nil && blockHasPlannedWork(control.init)
+	case planForStatement, planRangeStatement, planSwitchStatement,
+		planTypeSwitchStatement, planSelectStatement:
+		return operationHasPlannedWork(control)
 	}
 	return false
 }
@@ -492,11 +525,16 @@ func (e *loweringEmitter) rangeStatement(
 	output *ast.BlockStmt,
 ) {
 	node := operation.source.(*ast.RangeStmt)
-	node.X = e.expression(operation.expressions[0], output)
+	target := output
+	if plannedExpressionHasWork(operation.expressions[0]) {
+		target = &ast.BlockStmt{}
+		output.List = append(output.List, target)
+	}
+	node.X = e.expression(operation.expressions[0], target)
 	body := &ast.BlockStmt{Lbrace: node.Body.Lbrace, Rbrace: node.Body.Rbrace}
 	e.operations(operation.body, body)
 	node.Body = body
-	e.appendControl(output, operation.target, node)
+	e.appendControl(target, operation.target, node)
 }
 
 func (e *loweringEmitter) forStatement(
@@ -533,6 +571,10 @@ func (e *loweringEmitter) forStatement(
 	body := &ast.BlockStmt{Lbrace: node.Body.Lbrace, Rbrace: node.Body.Rbrace}
 	postLowered := operation.post != nil && blockHasPlannedWork(operation.post)
 	if postLowered {
+		if target == output {
+			target = &ast.BlockStmt{}
+			output.List = append(output.List, target)
+		}
 		pending := e.freshName("post")
 		target.List = append(target.List, &ast.AssignStmt{
 			Lhs: []ast.Expr{pending}, Tok: token.DEFINE,
@@ -668,7 +710,7 @@ func (e *loweringEmitter) sourceStatement(
 		output.List = append(output.List, node)
 	case *ast.DeclStmt:
 		e.recordTypeDefinitions(node, output)
-		if len(operation.declarations) > 1 && declarationsHaveWork(operation.declarations) {
+		if declarationsHaveWork(operation.declarations) {
 			e.splitDeclaration(node, operation, output)
 			return
 		}
@@ -871,7 +913,14 @@ func (e *loweringEmitter) preparePlace(
 	case planObjectPlace:
 		return place.source
 	case planDerefPlace:
-		pointer := e.emitTypedBind(place.values[0], place.container, output)
+		var pointer ast.Expr
+		if place.base != nil {
+			pointer = e.emitTypedExpressionBind(
+				place.values[0], e.preparePlace(place.base, output), false, output,
+			)
+		} else {
+			pointer = e.emitTypedBind(place.values[0], place.container, output)
+		}
 		return &ast.StarExpr{X: pointer}
 	case planFieldPlace:
 		selector := place.source.(*ast.SelectorExpr)
@@ -1004,15 +1053,19 @@ func (e *loweringEmitter) emitTypeAliasesBeforeBlockers(value plannedValue) {
 		if !planned.typeName || e.typeObjectAliases[planned.intended] != nil {
 			continue
 		}
+		if planned.alias.packageScope {
+			e.emitPackageTypeAlias(planned)
+			continue
+		}
 		site, ok := e.typeDefinitionSites[planned.definition]
 		if !ok {
 			continue
 		}
 		alias := e.freshName(planned.intended.Name() + "Type")
-		position := planned.definition.Pos()
+		position := planned.alias.before.Pos()
 		declaration := &ast.DeclStmt{Decl: &ast.GenDecl{
 			Tok: token.TYPE, Specs: []ast.Spec{
-				e.typeAliasSpecification(alias, planned.intended, position),
+				e.typeAliasSpecification(alias, planned.alias, position),
 			},
 		}}
 		site.block.List = append(site.block.List, nil)
@@ -1028,25 +1081,42 @@ func (e *loweringEmitter) emitTypeAliasesBeforeBlockers(value plannedValue) {
 	}
 }
 
+func (e *loweringEmitter) emitPackageTypeAlias(planned plannedTypeBlocker) {
+	alias := e.freshName(planned.intended.Name() + "Type")
+	position := e.source.File.Package
+	specification := e.typeAliasSpecification(alias, planned.alias, position)
+	declaration := &ast.GenDecl{Tok: token.TYPE, Specs: []ast.Spec{specification}}
+	index := 0
+	for index < len(e.source.File.Decls) {
+		imports, ok := e.source.File.Decls[index].(*ast.GenDecl)
+		if !ok || imports.Tok != token.IMPORT {
+			break
+		}
+		index++
+	}
+	e.source.File.Decls = append(e.source.File.Decls, nil)
+	copy(e.source.File.Decls[index+1:], e.source.File.Decls[index:])
+	e.source.File.Decls[index] = declaration
+	e.typeObjectAliases[planned.intended] = alias
+}
+
 func (e *loweringEmitter) typeAliasSpecification(
 	alias *ast.Ident,
-	object types.Object,
+	action *plannedTypeAliasAction,
 	position token.Pos,
 ) *ast.TypeSpec {
 	specification := &ast.TypeSpec{
-		Name: alias, Assign: position, Type: e.typeObjectExpression(object, position),
+		Name: alias, Assign: position, Type: e.typeObjectExpression(action.object, position),
 	}
-	named, ok := object.Type().(*types.Named)
-	if !ok || named.TypeParams() == nil || named.TypeParams().Len() == 0 {
+	if len(action.parameters) == 0 {
 		return specification
 	}
-	parameters := make([]*ast.Field, 0, named.TypeParams().Len())
-	arguments := make([]ast.Expr, 0, named.TypeParams().Len())
-	for index := range named.TypeParams().Len() {
-		parameter := named.TypeParams().At(index)
-		name := ast.NewIdent(parameter.Obj().Name())
+	parameters := make([]*ast.Field, 0, len(action.parameters))
+	arguments := make([]ast.Expr, 0, len(action.parameters))
+	for _, parameter := range action.parameters {
+		name := ast.NewIdent(parameter.name)
 		parameters = append(parameters, &ast.Field{
-			Names: []*ast.Ident{name}, Type: e.typeExpression(parameter.Constraint(), position),
+			Names: []*ast.Ident{name}, Type: e.typeExpression(parameter.constraint, position),
 		})
 		arguments = append(arguments, ast.NewIdent(name.Name))
 	}
