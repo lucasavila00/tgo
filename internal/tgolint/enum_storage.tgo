@@ -3,6 +3,7 @@ package tgolint
 import (
 	"go/token"
 	"go/types"
+	"sort"
 	"strconv"
 
 	"tgo/internal/sourcefacts"
@@ -214,6 +215,9 @@ func (c %checker) transferEnumStorage(
 ) {
 	if statement, ok := syntax.StatementOf(&node); ok {
 		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			for _, expression := range assignment.Left {
+				c.evalEnumCalls(state, expression)
+			}
 			for _, expression := range assignment.Right {
 				c.evalEnumCalls(state, expression)
 			}
@@ -431,32 +435,46 @@ func (c %checker) evalEnumStatementCalls(
 	state *enumStorageState,
 	statement %syntax.Statement,
 ) {
+	calls := make([]%syntax.Expression, 0)
 	syntax.InspectStatement(statement, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
 		expression, ok := syntax.ExpressionOf(node)
-		if ok {
-			c.evalEnumCall(state, expression)
+		if ok && syntax.CallExpressionOf(expression) != nil {
+			calls = append(calls, expression)
 		}
 		return true
 	})
+	sort.SliceStable(calls, func(left, right int) bool {
+		return syntax.ExpressionEnd(calls[left]) < syntax.ExpressionEnd(calls[right])
+	})
+	for _, call := range calls {
+		c.evalEnumCall(state, call)
+	}
 }
 
 func (c %checker) evalEnumCalls(
 	state *enumStorageState,
 	expression %syntax.Expression,
 ) {
+	calls := make([]%syntax.Expression, 0)
 	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
 		}
 		value, ok := syntax.ExpressionOf(node)
-		if ok {
-			c.evalEnumCall(state, value)
+		if ok && syntax.CallExpressionOf(value) != nil {
+			calls = append(calls, value)
 		}
 		return true
 	})
+	sort.SliceStable(calls, func(left, right int) bool {
+		return syntax.ExpressionEnd(calls[left]) < syntax.ExpressionEnd(calls[right])
+	})
+	for _, call := range calls {
+		c.evalEnumCall(state, call)
+	}
 }
 
 func (c %checker) evalEnumCall(
