@@ -53,6 +53,40 @@ func MustPort(number int) (Port, error) {
 	}
 }
 
+func TestCheckedStructConstructorAvoidsTypeNameParameter(t *testing.T) {
+	t.Parallel()
+	compiled, problems := Compile(PackageInput{
+		Path: "sample",
+		Sources: []File{{Name: "sample.tgo", Data: []byte(`package sample
+
+type value struct { value int } checked
+
+func (item value) check() (value, error) { return item, nil }
+
+func Keyed(number int) (value, error) { return value{value: number} }
+func Positional(number int) (value, error) { return value{number} }
+`)}},
+		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	output := string(compiled.Outputs["sample.tgo"])
+	for _, text := range []string{
+		"func Newvalue(tgoField0 int) (value, error)",
+		"return value{tgoField0}.check()",
+		"return Newvalue(tgoInput.FieldValue)",
+		"return Newvalue(number)",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("generated Go does not contain %q\n%s", text, output)
+		}
+	}
+	if count := strings.Count(output, ".check()"); count != 1 {
+		t.Fatalf("generated check calls = %d, want 1\n%s", count, output)
+	}
+}
+
 func TestImportedCheckedStructLiteralsUseConstructorABI(t *testing.T) {
 	t.Parallel()
 	modelPackage := compileCheckedStructPackage(t)

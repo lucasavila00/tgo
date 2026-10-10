@@ -11,7 +11,7 @@ import (
 // checkedStructGo emits the checked value and its Go construction ABI.
 func checkedStructGo(sourceName string, declaration *model) string {
 	var output strings.Builder
-	parameters := checkedParameterNames(declaration.Fields)
+	parameters := checkedParameterNames(declaration.Fields, declaration.Name)
 	fmt.Fprintf(
 		&output,
 		"type %s struct {\n%s}\n",
@@ -58,11 +58,11 @@ func checkedCarrierFieldName(value field, index int) string {
 	return "Field" + string(runes)
 }
 
-func checkedParameterNames(fields []field) []string {
+func checkedParameterNames(fields []field, reserved string) []string {
 	names := make([]string, len(fields))
-	used := make(map[string]bool)
+	used := map[string]bool{reserved: true}
 	for index, field := range fields {
-		if field.Name != "" && field.Name != "_" {
+		if field.Name != "" && field.Name != "_" && !used[field.Name] {
 			names[index] = field.Name
 			used[field.Name] = true
 		}
