@@ -41,6 +41,32 @@ class TGoPlaceholderTest(unittest.TestCase):
 
         self.assertEqual(check_tgo_placeholders.failures(self.repository), [])
 
+    def test_ignores_placeholders_in_comments_and_literals(self) -> None:
+        self.write(
+            "pkg/model.tgo",
+            '''package model
+
+// enumValue1 is an old name.
+/* enumValue2 is also an old name.
+enumValue3 remains in this block comment. */
+const interpreted = "enumValue4 and \\"enumValue5\\""
+const raw = `enumValue6
+enumValue7`
+const rune = 'enumValue8'
+var enumValue9 = 1
+''',
+        )
+
+        result = check_tgo_placeholders.failures(self.repository)
+
+        self.assertEqual(
+            result,
+            [
+                "pkg/model.tgo:10: replace numbered enum placeholder "
+                "with a role name"
+            ],
+        )
+
     def test_ignores_test_sources_and_generated_go(self) -> None:
         source = "package model\nvar enumValue42 = 1\n"
         for relative in (

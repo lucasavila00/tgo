@@ -11,7 +11,20 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOTS = ("cmd", "internal", "pkg")
 SKIPPED_DIRECTORIES = frozenset({"fixtures", "testdata", "vendor"})
-NUMBERED_ENUM_VALUE = re.compile(r"\benumValue\d+\b")
+IDENTIFIER = re.compile(r"[^\W\d]\w*|_\w*")
+NUMBERED_ENUM_VALUE = re.compile(r"enumValue[0-9]+")
+NON_CODE = re.compile(
+    r'''//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`[^`]*`''',
+    re.DOTALL,
+)
+
+
+def code_text(source: str) -> str:
+    """Replace comments and literals with spaces, but keep line breaks."""
+    return NON_CODE.sub(
+        lambda match: re.sub(r"[^\n]", " ", match.group()),
+        source,
+    )
 
 
 def production_sources(repository: Path) -> list[Path]:
@@ -39,8 +52,12 @@ def failures(repository: Path = ROOT) -> list[str]:
     result: list[str] = []
     for relative in production_sources(repository):
         path = repository / relative
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if NUMBERED_ENUM_VALUE.search(line):
+        source = code_text(path.read_text(encoding="utf-8"))
+        for number, line in enumerate(source.splitlines(), 1):
+            if any(
+                NUMBERED_ENUM_VALUE.fullmatch(match.group())
+                for match in IDENTIFIER.finditer(line)
+            ):
                 result.append(
                     f"{relative}:{number}: replace numbered enum placeholder "
                     "with a role name"
