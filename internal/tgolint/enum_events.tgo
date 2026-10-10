@@ -1,0 +1,192 @@
+package tgolint
+
+import (
+	"go/token"
+	"go/types"
+
+	"tgo/pkg/syntax"
+)
+
+type enumActivationID int
+type enumCellID int
+type enumRegionID int
+type enumSavedValueID int
+type enumEventBlockID int
+
+type enumActivationKey struct {
+	function token.Pos
+	caller   enumActivationID
+	summary  bool
+}
+
+// enumCellKey identifies one variable or field cell in one activation.
+type enumCellKey struct {
+	activation enumActivationID
+	object     types.Object
+	owner      enumRegionID
+	parent     enumCellID
+	field      *types.Var
+}
+
+type enumRegionKey struct {
+	activation enumActivationID
+	input      types.Object
+	site       token.Pos
+	typ        types.Type
+	summary    bool
+}
+
+type enumIdentityTable struct {
+	activations map[enumActivationKey]enumActivationID
+	cells       map[enumCellKey]enumCellID
+	regions     map[enumRegionKey]enumRegionID
+
+	activationKeys []enumActivationKey
+	cellKeys       []enumCellKey
+	regionKeys     []enumRegionKey
+}
+
+func newEnumIdentityTable() *enumIdentityTable {
+	return &enumIdentityTable{
+		activations: make(map[enumActivationKey]enumActivationID),
+		cells:       make(map[enumCellKey]enumCellID),
+		regions:     make(map[enumRegionKey]enumRegionID),
+	}
+}
+
+func (table *enumIdentityTable) activation(
+	key enumActivationKey,
+) enumActivationID {
+	if id, found := table.activations[key]; found {
+		return id
+	}
+	id := enumActivationID(len(table.activationKeys) + 1)
+	table.activations[key] = id
+	table.activationKeys = append(table.activationKeys, key)
+	return id
+}
+
+func (table *enumIdentityTable) cell(key enumCellKey) enumCellID {
+	if id, found := table.cells[key]; found {
+		return id
+	}
+	id := enumCellID(len(table.cellKeys) + 1)
+	table.cells[key] = id
+	table.cellKeys = append(table.cellKeys, key)
+	return id
+}
+
+func (table *enumIdentityTable) region(key enumRegionKey) enumRegionID {
+	if id, found := table.regions[key]; found {
+		return id
+	}
+	id := enumRegionID(len(table.regionKeys) + 1)
+	table.regions[key] = id
+	table.regionKeys = append(table.regionKeys, key)
+	return id
+}
+
+type enumRegionSet map[enumRegionID]bool
+type enumCellSet map[enumCellID]bool
+
+type enumAbstractValue struct {
+	regions  enumRegionSet
+	closures enumClosureSet
+	unknown  bool
+}
+
+func cloneEnumAbstractValue(value enumAbstractValue) enumAbstractValue {
+	result := enumAbstractValue{
+		regions:  make(enumRegionSet, len(value.regions)),
+		closures: cloneEnumClosureSet(value.closures),
+		unknown:  value.unknown,
+	}
+	for region := range value.regions {
+		result.regions[region] = true
+	}
+	return result
+}
+
+type enumEventKind uint8
+
+const (
+	enumEventInvalid enumEventKind = iota
+	enumEventResolvePlace
+	enumEventLoad
+	enumEventSave
+	enumEventCall
+	enumEventStore
+	enumEventTagTest
+	enumEventPayloadCheck
+)
+
+// enumEvent is one ordered abstract operation. Values are immutable snapshots.
+type enumEvent struct {
+	kind       enumEventKind
+	expression *syntax.Expression
+	cells      enumCellSet
+	value      enumSavedValueID
+	values     []enumSavedValueID
+	result     int
+	tag        int
+}
+
+type enumEventBlock struct {
+	events       []enumEvent
+	successors   []enumEventBlockID
+	alternatives [][]enumEventBlockID
+}
+
+// enumEventGraph adds expression microblocks to one syntax CFG.
+type enumEventGraph struct {
+	identities *enumIdentityTable
+	blocks     []enumEventBlock
+	entry      enumEventBlockID
+	access     map[*syntax.Expression]enumEventLocation
+	values     []enumAbstractValue
+}
+
+type enumEventLocation struct {
+	block enumEventBlockID
+	index int
+}
+
+func newEnumEventGraph() *enumEventGraph {
+	return &enumEventGraph{
+		identities: newEnumIdentityTable(),
+		access:     make(map[*syntax.Expression]enumEventLocation),
+	}
+}
+
+func (graph *enumEventGraph) save(value enumAbstractValue) enumSavedValueID {
+	graph.values = append(graph.values, cloneEnumAbstractValue(value))
+	return enumSavedValueID(len(graph.values))
+}
+
+func (graph *enumEventGraph) saved(id enumSavedValueID) enumAbstractValue {
+	if id <= 0 || int(id) > len(graph.values) {
+		return enumAbstractValue{unknown: true}
+	}
+	return cloneEnumAbstractValue(graph.values[id-1])
+}
+
+func (graph *enumEventGraph) addBlock() enumEventBlockID {
+	graph.blocks = append(graph.blocks, enumEventBlock{})
+	return enumEventBlockID(len(graph.blocks))
+}
+
+func (graph *enumEventGraph) addEvent(
+	block enumEventBlockID,
+	event enumEvent,
+) enumEventLocation {
+	index := int(block) - 1
+	if index < 0 || index >= len(graph.blocks) {
+		return enumEventLocation{}
+	}
+	location := enumEventLocation{block: block, index: len(graph.blocks[index].events)}
+	graph.blocks[index].events = append(graph.blocks[index].events, event)
+	if event.kind == enumEventPayloadCheck && event.expression != nil {
+		graph.access[event.expression] = location
+	}
+	return location
+}
