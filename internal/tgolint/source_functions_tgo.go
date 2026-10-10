@@ -30,12 +30,12 @@ func sourceFunctionPosition(node *syntax.Node) (token.Pos, bool) {
 	if node == nil {
 		return token.NoPos, false
 	}
-	switch enumValue35 := *node; enumValue35.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case syntax.NodeTagDeclaration:
-		value := enumValue35.DeclarationPayload()
+		value := nodeValue.DeclarationPayload()
 		return declarationFunctionPosition(value.Value)
 	case syntax.NodeTagExpression:
-		value := enumValue35.ExpressionPayload()
+		value := nodeValue.ExpressionPayload()
 		return expressionFunctionPosition(value.Value)
 	case syntax.NodeTagFile:
 		return token.NoPos, false
@@ -58,15 +58,15 @@ func sourceFunctionPosition(node *syntax.Node) (token.Pos, bool) {
 	case syntax.NodeTagCommentGroup:
 		return token.NoPos, false
 	default:
-		panic(enumValue35.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // declarationFunctionPosition gets a named function position.
 func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
-	switch enumValue36 := *value; enumValue36.Tag() {
+	switch declarationValue := *value; declarationValue.Tag() {
 	case syntax.DeclarationTagFunction:
-		function := enumValue36.FunctionPayload()
+		function := declarationValue.FunctionPayload()
 		return function.Value.Start, true
 	case syntax.DeclarationTagBad:
 		return token.NoPos, false
@@ -77,15 +77,15 @@ func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
 	case syntax.DeclarationTagStruct:
 		return token.NoPos, false
 	default:
-		panic(enumValue36.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // expressionFunctionPosition gets a function literal position.
 func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
-	switch enumValue37 := *value; enumValue37.Tag() {
+	switch expressionValue := *value; expressionValue.Tag() {
 	case syntax.ExpressionTagFunctionLiteral:
-		function := enumValue37.FunctionLiteralPayload()
+		function := expressionValue.FunctionLiteralPayload()
 		return function.Value.Start, true
 	case syntax.ExpressionTagBad:
 		return token.NoPos, false
@@ -140,7 +140,7 @@ func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
 	case syntax.ExpressionTagComprehension:
 		return token.NoPos, false
 	default:
-		panic(enumValue37.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -148,9 +148,9 @@ func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
 func sourceGeneralDeclaration(
 	value *syntax.Declaration,
 ) (*syntax.GeneralDeclaration, bool) {
-	switch enumValue38 := *value; enumValue38.Tag() {
+	switch declarationValue := *value; declarationValue.Tag() {
 	case syntax.DeclarationTagGeneral:
-		declaration := enumValue38.GeneralPayload()
+		declaration := declarationValue.GeneralPayload()
 		return declaration.Value, true
 	case syntax.DeclarationTagBad:
 		return nil, false
@@ -161,7 +161,7 @@ func sourceGeneralDeclaration(
 	case syntax.DeclarationTagStruct:
 		return nil, false
 	default:
-		panic(enumValue38.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -169,15 +169,15 @@ func sourceGeneralDeclaration(
 func sourceValueSpecification(
 	value *syntax.Specification,
 ) (*syntax.ValueSpecification, bool) {
-	switch enumValue39 := *value; enumValue39.Tag() {
+	switch specificationValue := *value; specificationValue.Tag() {
 	case syntax.SpecificationTagValue:
-		specification := enumValue39.ValuePayload()
+		specification := specificationValue.ValuePayload()
 		return specification.Value, true
 	case syntax.SpecificationTagImport:
 		return nil, false
 	case syntax.SpecificationTagType:
 		return nil, false
 	default:
-		panic(enumValue39.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(specificationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
