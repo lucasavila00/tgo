@@ -155,25 +155,26 @@ const (
 )
 
 type plannedExpression struct {
-	kind          plannedExpressionKind
-	source        ast.Expr
-	typ           types.Type
-	expected      types.Type
-	contextual    bool
-	retainContext bool
-	resultCount   int
-	results       []plannedValue
-	operands      []*plannedExpression
-	propagation   *propagationSource
-	comprehension *comprehensionSource
-	function      *ast.FuncLit
-	work          *plannedBlock
-	before        *plannedBlock
-	materialized  valueID
-	place         *plannedPlace
-	resultNames   []*ast.Ident
-	builtins      []*plannedBuiltin
-	exact         *plannedExactComprehension
+	kind           plannedExpressionKind
+	source         ast.Expr
+	typ            types.Type
+	expected       types.Type
+	contextual     bool
+	retainContext  bool
+	resultCount    int
+	results        []plannedValue
+	operands       []*plannedExpression
+	propagation    *propagationSource
+	comprehension  *comprehensionSource
+	function       *ast.FuncLit
+	work           *plannedBlock
+	before         *plannedBlock
+	materialized   valueID
+	booleanAdapter bool
+	place          *plannedPlace
+	resultNames    []*ast.Ident
+	builtins       []*plannedBuiltin
+	exact          *plannedExactComprehension
 }
 
 type plannedExactComprehension struct {
@@ -283,130 +284,192 @@ func (b *loweringPlanBuilder) statement(statement ast.Stmt) *plannedOperation {
 	}
 	switch node := statement.(type) {
 	case *ast.BlockStmt:
-		operation.kind = planBlockStatement
-		operation.body = b.block(node.List)
+		b.planBlockStatement(operation, node)
 	case *ast.IfStmt:
-		operation.kind = planIfStatement
-		operation.init = b.simpleBlock(node.Init)
+		b.planIfStatement(operation, node)
+	case *ast.RangeStmt:
+		b.planRangeStatement(operation, node)
+	case *ast.ForStmt:
+		b.planForStatement(operation, node)
+	case *ast.SwitchStmt:
+		b.planSwitchStatement(operation, node)
+	case *ast.TypeSwitchStmt:
+		b.planTypeSwitchStatement(operation, node)
+	case *ast.SelectStmt:
+		b.planSelectStatement(operation, node)
+	case *ast.LabeledStmt:
+		b.planLabeledStatement(operation, node)
+	case *ast.BranchStmt:
+		b.planBranchStatement(operation, node)
+	default:
+		b.planDirectStatement(operation, statement)
+	}
+	if returned, ok := statement.(*ast.ReturnStmt); ok {
+		operation.failureCommas = append(
+			operation.failureCommas, b.source.FailureReturns[returned]...,
+		)
+	}
+	return operation
+}
+
+func (b *loweringPlanBuilder) planBlockStatement(operation *plannedOperation, node *ast.BlockStmt) {
+	operation.kind = planBlockStatement
+	operation.body = b.block(node.List)
+}
+
+func (b *loweringPlanBuilder) planIfStatement(operation *plannedOperation, node *ast.IfStmt) {
+	operation.kind = planIfStatement
+	operation.init = b.simpleBlock(node.Init)
+	condition := b.expression(node.Cond)
+	operation.test = b.plannedExpressionBlock(condition)
+	operation.expressions = []*plannedExpression{condition}
+	operation.body = b.block(node.Body.List)
+	if node.Else != nil {
+		operation.otherwise = b.block([]ast.Stmt{node.Else})
+	}
+}
+
+func (b *loweringPlanBuilder) planRangeStatement(operation *plannedOperation, node *ast.RangeStmt) {
+	operation.kind = planRangeStatement
+	operation.target = b.target()
+	operation.expressions = b.expressions(node.X)
+	b.breakTargets = append(b.breakTargets, operation.target)
+	b.loopTargets = append(b.loopTargets, operation.target)
+	operation.body = b.block(node.Body.List)
+	b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
+	b.loopTargets = b.loopTargets[:len(b.loopTargets)-1]
+	operation.places = b.assignmentPlaces(node.Key, node.Value)
+}
+
+func (b *loweringPlanBuilder) planForStatement(operation *plannedOperation, node *ast.ForStmt) {
+	operation.kind = planForStatement
+	operation.target = b.target()
+	operation.init, operation.headerBindings = b.loopInitializer(node.Init)
+	if node.Cond != nil {
 		condition := b.expression(node.Cond)
 		operation.test = b.plannedExpressionBlock(condition)
 		operation.expressions = []*plannedExpression{condition}
-		operation.body = b.block(node.Body.List)
-		if node.Else != nil {
-			operation.otherwise = b.block([]ast.Stmt{node.Else})
+	}
+	b.breakTargets = append(b.breakTargets, operation.target)
+	b.loopTargets = append(b.loopTargets, operation.target)
+	operation.body = b.block(node.Body.List)
+	b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
+	b.loopTargets = b.loopTargets[:len(b.loopTargets)-1]
+	operation.post = b.simpleBlock(node.Post)
+}
+
+func (b *loweringPlanBuilder) planSwitchStatement(
+	operation *plannedOperation,
+	node *ast.SwitchStmt,
+) {
+	operation.kind = planSwitchStatement
+	operation.target = b.target()
+	operation.init = b.simpleBlock(node.Init)
+	if node.Tag != nil {
+		tag := b.expression(node.Tag)
+		operation.test = b.plannedExpressionBlock(tag)
+		operation.expressions = []*plannedExpression{tag}
+	}
+	b.breakTargets = append(b.breakTargets, operation.target)
+	for _, item := range node.Body.List {
+		clause := item.(*ast.CaseClause)
+		operation.cases = append(operation.cases, b.block(clause.Body))
+		for _, expression := range clause.List {
+			caseExpression := b.expression(expression)
+			operation.entry = append(operation.entry, b.plannedExpressionBlock(caseExpression))
+			operation.expressions = append(operation.expressions, caseExpression)
 		}
-	case *ast.RangeStmt:
-		operation.kind = planRangeStatement
-		operation.target = b.target()
-		operation.expressions = b.expressions(node.X)
-		b.breakTargets = append(b.breakTargets, operation.target)
-		b.loopTargets = append(b.loopTargets, operation.target)
-		operation.body = b.block(node.Body.List)
-		b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
-		b.loopTargets = b.loopTargets[:len(b.loopTargets)-1]
-		operation.places = b.assignmentPlaces(node.Key, node.Value)
-	case *ast.ForStmt:
-		operation.kind = planForStatement
-		operation.target = b.target()
-		operation.init, operation.headerBindings = b.loopInitializer(node.Init)
-		if node.Cond != nil {
-			condition := b.expression(node.Cond)
-			operation.test = b.plannedExpressionBlock(condition)
-			operation.expressions = []*plannedExpression{condition}
-		}
-		b.breakTargets = append(b.breakTargets, operation.target)
-		b.loopTargets = append(b.loopTargets, operation.target)
-		operation.body = b.block(node.Body.List)
-		b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
-		b.loopTargets = b.loopTargets[:len(b.loopTargets)-1]
-		operation.post = b.simpleBlock(node.Post)
-	case *ast.SwitchStmt:
-		operation.kind = planSwitchStatement
-		operation.target = b.target()
-		operation.init = b.simpleBlock(node.Init)
-		if node.Tag != nil {
-			tag := b.expression(node.Tag)
-			operation.test = b.plannedExpressionBlock(tag)
-			operation.expressions = []*plannedExpression{tag}
-		}
-		b.breakTargets = append(b.breakTargets, operation.target)
-		for _, item := range node.Body.List {
-			clause := item.(*ast.CaseClause)
-			operation.cases = append(operation.cases, b.block(clause.Body))
-			for _, expression := range clause.List {
-				caseExpression := b.expression(expression)
-				operation.entry = append(operation.entry, b.plannedExpressionBlock(caseExpression))
-				operation.expressions = append(operation.expressions, caseExpression)
-			}
-		}
-		b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
-	case *ast.TypeSwitchStmt:
-		operation.kind = planTypeSwitchStatement
-		operation.target = b.target()
-		operation.init = b.simpleBlock(node.Init)
-		operation.test = b.simpleBlock(node.Assign)
-		b.breakTargets = append(b.breakTargets, operation.target)
-		for _, item := range node.Body.List {
-			operation.cases = append(operation.cases, b.block(item.(*ast.CaseClause).Body))
-		}
-		b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
-	case *ast.SelectStmt:
-		operation.kind = planSelectStatement
-		operation.target = b.target()
-		b.breakTargets = append(b.breakTargets, operation.target)
-		for _, item := range node.Body.List {
-			clause := item.(*ast.CommClause)
-			operation.communications = append(operation.communications, b.communication(clause.Comm))
-			operation.entry = append(operation.entry, b.selectEntry(clause.Comm))
-			operation.selected = append(operation.selected, b.selectSelected(clause.Comm))
-			operation.cases = append(operation.cases, b.block(clause.Body))
-		}
-		b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
-	case *ast.LabeledStmt:
-		operation.kind = planLabeledStatement
+	}
+	b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
+}
+
+func (b *loweringPlanBuilder) planTypeSwitchStatement(
+	operation *plannedOperation,
+	node *ast.TypeSwitchStmt,
+) {
+	operation.kind = planTypeSwitchStatement
+	operation.target = b.target()
+	operation.init = b.simpleBlock(node.Init)
+	operation.test = b.simpleBlock(node.Assign)
+	b.breakTargets = append(b.breakTargets, operation.target)
+	for _, item := range node.Body.List {
+		operation.cases = append(operation.cases, b.block(item.(*ast.CaseClause).Body))
+	}
+	b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
+}
+
+func (b *loweringPlanBuilder) planSelectStatement(
+	operation *plannedOperation,
+	node *ast.SelectStmt,
+) {
+	operation.kind = planSelectStatement
+	operation.target = b.target()
+	b.breakTargets = append(b.breakTargets, operation.target)
+	for _, item := range node.Body.List {
+		clause := item.(*ast.CommClause)
+		operation.communications = append(operation.communications, b.communication(clause.Comm))
+		operation.entry = append(operation.entry, b.selectEntry(clause.Comm))
+		operation.selected = append(operation.selected, b.selectSelected(clause.Comm))
+		operation.cases = append(operation.cases, b.block(clause.Body))
+	}
+	b.breakTargets = b.breakTargets[:len(b.breakTargets)-1]
+}
+
+func (b *loweringPlanBuilder) planLabeledStatement(
+	operation *plannedOperation,
+	node *ast.LabeledStmt,
+) {
+	operation.kind = planLabeledStatement
+	operation.target = b.labels[node.Label.Name]
+	operation.body = b.block([]ast.Stmt{node.Stmt})
+	operation.labelHasGoto = b.gotos[node.Label.Name]
+	if len(operation.body.operations) != 1 {
+		return
+	}
+	child := operation.body.operations[0]
+	switch child.kind {
+	case planForStatement, planRangeStatement, planSwitchStatement,
+		planTypeSwitchStatement, planSelectStatement:
+		operation.controlTarget = child.target
+		redirectLabeledControl(operation.body, operation.target, child.target)
+	}
+}
+
+func (b *loweringPlanBuilder) planBranchStatement(
+	operation *plannedOperation,
+	node *ast.BranchStmt,
+) {
+	operation.kind = planJump
+	switch {
+	case node.Label != nil:
 		operation.target = b.labels[node.Label.Name]
-		operation.body = b.block([]ast.Stmt{node.Stmt})
-		operation.labelHasGoto = b.gotos[node.Label.Name]
-		if len(operation.body.operations) == 1 {
-			child := operation.body.operations[0]
-			switch child.kind {
-			case planForStatement, planRangeStatement, planSwitchStatement,
-				planTypeSwitchStatement, planSelectStatement:
-				operation.controlTarget = child.target
-				redirectLabeledControl(operation.body, operation.target, child.target)
-			}
-		}
-	case *ast.BranchStmt:
-		operation.kind = planJump
-		if node.Label != nil {
-			operation.target = b.labels[node.Label.Name]
-		} else if node.Tok == token.CONTINUE {
-			operation.target = lastTarget(b.loopTargets)
-		} else if node.Tok == token.BREAK {
-			operation.target = lastTarget(b.breakTargets)
-		}
-	default:
-		if declaration, ok := statement.(*ast.DeclStmt); ok {
-			operation.declarations = b.declarationPlans(declaration)
-			for _, specification := range operation.declarations {
-				operation.expressions = append(operation.expressions, specification.expressions...)
-			}
-		} else {
-			operation.expressions = b.statementExpressions(statement)
-			operation.before = b.orderExpressions(operation.expressions)
-		}
-		if assignment, ok := statement.(*ast.AssignStmt); ok {
-			operation.places = b.assignmentPlaces(assignment.Lhs...)
-		}
-		if update, ok := statement.(*ast.IncDecStmt); ok {
-			operation.places = b.assignmentPlaces(update.X)
-		}
-		b.directStatementBinding(operation)
+	case node.Tok == token.CONTINUE:
+		operation.target = lastTarget(b.loopTargets)
+	case node.Tok == token.BREAK:
+		operation.target = lastTarget(b.breakTargets)
 	}
-	if returned, ok := statement.(*ast.ReturnStmt); ok {
-		operation.failureCommas = append(operation.failureCommas, b.source.FailureReturns[returned]...)
+}
+
+func (b *loweringPlanBuilder) planDirectStatement(
+	operation *plannedOperation,
+	statement ast.Stmt,
+) {
+	if declaration, ok := statement.(*ast.DeclStmt); ok {
+		operation.declarations = b.declarationPlans(declaration)
+		for _, specification := range operation.declarations {
+			operation.expressions = append(operation.expressions, specification.expressions...)
+		}
+	} else {
+		operation.expressions = b.statementExpressions(statement)
+		operation.before = b.orderExpressions(operation.expressions)
 	}
-	return operation
+	if assignment, ok := statement.(*ast.AssignStmt); ok {
+		operation.places = b.assignmentPlaces(assignment.Lhs...)
+	}
+	if update, ok := statement.(*ast.IncDecStmt); ok {
+		operation.places = b.assignmentPlaces(update.X)
+	}
+	b.directStatementBinding(operation)
 }
 
 func redirectLabeledControl(block *plannedBlock, source targetID, target targetID) {
@@ -496,24 +559,8 @@ func (b *loweringPlanBuilder) directStatementBinding(operation *plannedOperation
 	if binding.kind != planBind || len(binding.outputs) != len(expression.results)+1 {
 		return
 	}
-	targets := 0
-	switch node := operation.source.(type) {
-	case *ast.AssignStmt:
-		if node.Tok != token.DEFINE {
-			return
-		}
-		targets = len(node.Lhs)
-	case *ast.DeclStmt:
-		declaration, ok := node.Decl.(*ast.GenDecl)
-		if !ok || declaration.Tok != token.VAR || len(declaration.Specs) != 1 {
-			return
-		}
-		value, ok := declaration.Specs[0].(*ast.ValueSpec)
-		if !ok || value.Type != nil || len(value.Values) != 1 {
-			return
-		}
-		targets = len(value.Names)
-	default:
+	targets, valid := directBindingTargetCount(operation.source)
+	if !valid {
 		return
 	}
 	if targets != len(expression.results) {
@@ -526,27 +573,28 @@ func (b *loweringPlanBuilder) directStatementBinding(operation *plannedOperation
 	}
 }
 
+func directBindingTargetCount(statement ast.Stmt) (int, bool) {
+	switch node := statement.(type) {
+	case *ast.AssignStmt:
+		return len(node.Lhs), node.Tok == token.DEFINE
+	case *ast.DeclStmt:
+		declaration, ok := node.Decl.(*ast.GenDecl)
+		if !ok || declaration.Tok != token.VAR || len(declaration.Specs) != 1 {
+			return 0, false
+		}
+		value, ok := declaration.Specs[0].(*ast.ValueSpec)
+		if !ok || value.Type != nil || len(value.Values) != 1 {
+			return 0, false
+		}
+		return len(value.Names), true
+	default:
+		return 0, false
+	}
+}
+
 func (b *loweringPlanBuilder) communication(statement ast.Stmt) *plannedCommunication {
 	communication := &plannedCommunication{source: statement}
-	var channel ast.Expr
-	switch node := statement.(type) {
-	case *ast.SendStmt:
-		channel = node.Chan
-		communication.value = b.expression(node.Value)
-	case *ast.ExprStmt:
-		if receive, ok := node.X.(*ast.UnaryExpr); ok && receive.Op == token.ARROW {
-			channel = receive.X
-		}
-	case *ast.AssignStmt:
-		communication.left = node.Lhs
-		communication.token = node.Tok
-		communication.targets = b.assignmentPlaces(node.Lhs...)
-		if len(node.Rhs) == 1 {
-			if receive, ok := node.Rhs[0].(*ast.UnaryExpr); ok && receive.Op == token.ARROW {
-				channel = receive.X
-			}
-		}
-	}
+	channel := b.communicationSource(communication, statement)
 	if channel == nil {
 		return communication
 	}
@@ -562,7 +610,9 @@ func (b *loweringPlanBuilder) communication(statement ast.Stmt) *plannedCommunic
 	if channelType, ok := channelType.(*types.Chan); ok {
 		if send, ok := statement.(*ast.SendStmt); ok {
 			communication.value = b.expressionContext(send.Value, channelType.Elem(), 1)
-			communication.sendValue = b.newValue(channelType.Elem(), communication.value.source.Pos())
+			communication.sendValue = b.newValue(
+				channelType.Elem(), communication.value.source.Pos(),
+			)
 			communication.sendValue.explicit = communication.value.contextual
 		} else if len(communication.left) != 0 {
 			communication.receiveValues = append(communication.receiveValues,
@@ -574,6 +624,35 @@ func (b *loweringPlanBuilder) communication(statement ast.Stmt) *plannedCommunic
 		}
 	}
 	return communication
+}
+
+func (b *loweringPlanBuilder) communicationSource(
+	communication *plannedCommunication,
+	statement ast.Stmt,
+) ast.Expr {
+	switch node := statement.(type) {
+	case *ast.SendStmt:
+		communication.value = b.expression(node.Value)
+		return node.Chan
+	case *ast.ExprStmt:
+		return receiveChannel(node.X)
+	case *ast.AssignStmt:
+		communication.left = node.Lhs
+		communication.token = node.Tok
+		communication.targets = b.assignmentPlaces(node.Lhs...)
+		if len(node.Rhs) == 1 {
+			return receiveChannel(node.Rhs[0])
+		}
+	}
+	return nil
+}
+
+func receiveChannel(expression ast.Expr) ast.Expr {
+	receive, ok := expression.(*ast.UnaryExpr)
+	if ok && receive.Op == token.ARROW {
+		return receive.X
+	}
+	return nil
 }
 
 func (b *loweringPlanBuilder) newValue(typ types.Type, position token.Pos) plannedValue {
@@ -749,13 +828,6 @@ func (b *loweringPlanBuilder) loopInitializer(
 	return evaluation, bindings
 }
 
-func (b *loweringPlanBuilder) expressionBlock(expression ast.Expr) *plannedBlock {
-	if expression == nil {
-		return nil
-	}
-	return b.plannedExpressionBlock(b.expression(expression))
-}
-
 func (b *loweringPlanBuilder) plannedExpressionBlock(
 	expression *plannedExpression,
 ) *plannedBlock {
@@ -791,50 +863,66 @@ func (b *loweringPlanBuilder) statementExpressions(statement ast.Stmt) []*planne
 	case *ast.ExprStmt:
 		return b.expressions(node.X)
 	case *ast.ReturnStmt:
-		result := make([]*plannedExpression, 0, len(node.Results))
-		for index, expression := range node.Results {
-			expected := types.Type(nil)
-			if len(b.source.FailureReturns[node]) != 0 && b.function.resultType.Len() != 0 {
-				expected = b.function.resultType.At(b.function.resultType.Len() - 1).Type()
-			} else if index < b.function.resultType.Len() {
-				expected = b.function.resultType.At(index).Type()
-			}
-			result = append(result, b.expressionContext(
-				expression, expected, b.expressionResultCount(expression),
-			))
-		}
-		return result
+		return b.returnExpressions(node)
 	case *ast.SendStmt:
-		channel := b.expression(node.Chan)
-		expected := types.Type(nil)
-		channelType := types.Unalias(b.expressionType(node.Chan))
-		if named, ok := channelType.(*types.Named); ok {
-			channelType = named.Underlying()
-		}
-		if channelType, ok := channelType.(*types.Chan); ok {
-			expected = channelType.Elem()
-		}
-		return []*plannedExpression{
-			channel, b.expressionContext(node.Value, expected, 1),
-		}
+		return b.sendExpressions(node)
 	case *ast.GoStmt:
 		return b.expressions(node.Call)
 	case *ast.DeferStmt:
 		return b.expressions(node.Call)
 	case *ast.DeclStmt:
-		declaration, ok := node.Decl.(*ast.GenDecl)
-		if !ok {
-			return nil
-		}
-		result := []*plannedExpression(nil)
-		for _, specification := range declaration.Specs {
-			if value, ok := specification.(*ast.ValueSpec); ok {
-				result = append(result, b.expressionList(value.Values)...)
-			}
-		}
-		return result
+		return b.declarationExpressions(node)
 	}
 	return nil
+}
+
+func (b *loweringPlanBuilder) returnExpressions(node *ast.ReturnStmt) []*plannedExpression {
+	result := make([]*plannedExpression, 0, len(node.Results))
+	for index, expression := range node.Results {
+		expected := b.returnExpectedType(node, index)
+		result = append(result, b.expressionContext(
+			expression, expected, b.expressionResultCount(expression),
+		))
+	}
+	return result
+}
+
+func (b *loweringPlanBuilder) returnExpectedType(node *ast.ReturnStmt, index int) types.Type {
+	if len(b.source.FailureReturns[node]) != 0 && b.function.resultType.Len() != 0 {
+		return b.function.resultType.At(b.function.resultType.Len() - 1).Type()
+	}
+	if index < b.function.resultType.Len() {
+		return b.function.resultType.At(index).Type()
+	}
+	return nil
+}
+
+func (b *loweringPlanBuilder) sendExpressions(node *ast.SendStmt) []*plannedExpression {
+	expected := types.Type(nil)
+	channelType := types.Unalias(b.expressionType(node.Chan))
+	if named, ok := channelType.(*types.Named); ok {
+		channelType = named.Underlying()
+	}
+	if channel, ok := channelType.(*types.Chan); ok {
+		expected = channel.Elem()
+	}
+	return []*plannedExpression{
+		b.expression(node.Chan), b.expressionContext(node.Value, expected, 1),
+	}
+}
+
+func (b *loweringPlanBuilder) declarationExpressions(node *ast.DeclStmt) []*plannedExpression {
+	declaration, ok := node.Decl.(*ast.GenDecl)
+	if !ok {
+		return nil
+	}
+	result := []*plannedExpression(nil)
+	for _, specification := range declaration.Specs {
+		if value, ok := specification.(*ast.ValueSpec); ok {
+			result = append(result, b.expressionList(value.Values)...)
+		}
+	}
+	return result
 }
 
 func (b *loweringPlanBuilder) expressionList(input []ast.Expr) []*plannedExpression {
@@ -879,225 +967,20 @@ func (b *loweringPlanBuilder) expressionContext(
 		resultCount:   resultCount,
 	}
 	if metadata, function, ok := comprehensionMarker(b.source, expression); ok {
-		result.kind = planComprehensionExpression
-		result.comprehension = &metadata
-		result.function = function
-		if function != nil && function.Body != nil {
-			result.work = b.block(function.Body.List)
-			if count := len(result.work.operations); count != 0 {
-				if _, ok := result.work.operations[count-1].source.(*ast.ReturnStmt); ok {
-					result.work.operations = result.work.operations[:count-1]
-				}
-			}
-			var resultObject types.Object
-			ast.Inspect(function.Body, func(node ast.Node) bool {
-				identifier, ok := node.(*ast.Ident)
-				if !ok || identifier.Name != metadata.Result {
-					return true
-				}
-				object := b.unit.info.ObjectOf(identifier)
-				if resultObject == nil && b.unit.info.Defs[identifier] != nil {
-					resultObject = object
-				}
-				if resultObject == nil || object == resultObject {
-					result.resultNames = append(result.resultNames, identifier)
-				}
-				return true
-			})
-			if makeCall, outer, valid := b.comprehensionParts(function.Body); valid {
-				if !validPlannedType(result.typ) && len(makeCall.Args) != 0 {
-					result.typ = b.expressionType(makeCall.Args[0])
-				}
-				result.builtins = append(result.builtins, &plannedBuiltin{
-					call: makeCall, name: "make", position: metadata.Position,
-				})
-				terminal := comprehensionTerminal(outer.Body)
-				if terminal == outer.Body && len(terminal.List) == 1 {
-					if assignment, ok := terminal.List[0].(*ast.AssignStmt); ok &&
-						len(assignment.Rhs) == 1 {
-						if appendCall, ok := assignment.Rhs[0].(*ast.CallExpr); ok &&
-							!metadata.Map {
-							result.builtins = append(result.builtins, &plannedBuiltin{
-								call: appendCall, name: "append", position: metadata.Position,
-							})
-							if len(makeCall.Args) == 2 && len(function.Body.List) == 3 &&
-								len(outer.Body.List) == 1 &&
-								underlyingSlice(b.expressionType(outer.X)) != nil &&
-								underlyingSlice(b.expressionType(makeCall.Args[0])) != nil {
-								for _, operation := range result.work.operations {
-									if operation.source != outer || len(operation.expressions) != 1 {
-										continue
-									}
-									sourcePlan := operation.expressions[0]
-									sourceValue := b.newValue(sourcePlan.typ, outer.X.Pos())
-									sourcePlan.materialized = sourceValue.id
-									result.work.operations = append([]*plannedOperation{{
-										kind: planEvaluate, expressions: []*plannedExpression{sourcePlan},
-										outputs: []valueID{sourceValue.id}, preferred: "source",
-									}}, result.work.operations...)
-									result.exact = &plannedExactComprehension{
-										makeCall: makeCall, outer: outer, assignment: assignment,
-										appendCall: appendCall, source: sourceValue,
-										position: metadata.Position,
-										identity: sameExpressionObject(
-											b.unit.info, outer.Value, appendCall.Args[1],
-										),
-									}
-									if result.exact.identity {
-										operation.kind = planCopy
-										operation.inputs = []valueID{sourceValue.id}
-										operation.copyTarget = assignment.Lhs[0]
-									}
-									break
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-		result.addResult(b, result.typ, expression.Pos())
-		return result
+		return b.comprehensionExpression(result, expression, metadata, function)
 	}
 	if metadata, ok := propagationMarker(b.source, expression); ok {
-		result.kind = planPropagationExpression
-		result.propagation = &metadata
-		result.work = &plannedBlock{scope: b.currentScope}
-		marker := expression.(*ast.CallExpr)
-		if call, valid := unwrappedCompilerCall(marker.Args[0]); valid {
-			callPlan := b.expression(call)
-			result.operands = append(result.operands, callPlan)
-			if signature := b.callSignature(call.Fun); signature != nil {
-				for index := 0; index < signature.Results().Len(); index++ {
-					result.addResult(b, signature.Results().At(index).Type(), expression.Pos())
-				}
-				if len(result.results) != 0 {
-					errorResult := result.results[len(result.results)-1]
-					result.results = result.results[:len(result.results)-1]
-					outputs := make([]valueID, 0, len(result.results)+1)
-					for _, value := range result.results {
-						outputs = append(outputs, value.id)
-					}
-					outputs = append(outputs, errorResult.id)
-					result.work.operations = append(result.work.operations,
-						&plannedOperation{
-							kind: planBind, expressions: []*plannedExpression{callPlan}, outputs: outputs,
-							metadata: &metadata,
-						},
-						&plannedOperation{
-							kind: planBranch, errorValue: errorResult.id, metadata: &metadata,
-							body: &plannedBlock{scope: b.currentScope, operations: []*plannedOperation{{
-								kind: planReturn, errorValue: errorResult.id, metadata: &metadata,
-							}}},
-						},
-					)
-				}
-			}
-		}
+		return b.propagationExpression(result, expression, metadata)
+	}
+	if logical, ok := expression.(*ast.BinaryExpr); ok &&
+		(logical.Op == token.LAND || logical.Op == token.LOR) {
+		return b.logicalExpression(result, logical, expected)
+	}
+	operands, supported := classifyPlannedExpression(result, expression)
+	if !supported {
 		return result
 	}
-	var operands []ast.Expr
-	switch node := expression.(type) {
-	case *ast.CallExpr:
-		result.kind = planCallExpression
-		operands = append([]ast.Expr{node.Fun}, node.Args...)
-	case *ast.BinaryExpr:
-		result.kind = planBinaryExpression
-		if node.Op == token.LAND || node.Op == token.LOR {
-			left := b.expressionContext(node.X, result.typ, 1)
-			right := b.expressionContext(node.Y, result.typ, 1)
-			result.operands = []*plannedExpression{left, right}
-			valueType := result.typ
-			if expected != nil {
-				valueType = expected
-			}
-			result.addResult(b, valueType, expression.Pos())
-			if len(result.results) != 0 {
-				output := result.results[0].id
-				result.work = &plannedBlock{
-					scope: b.currentScope,
-					operations: []*plannedOperation{
-						{kind: planBind, expressions: []*plannedExpression{left}, outputs: []valueID{output}},
-						{
-							kind: planBranch, inputs: []valueID{output}, operator: node.Op,
-							body: &plannedBlock{scope: b.currentScope, operations: []*plannedOperation{{
-								kind: planStore, expressions: []*plannedExpression{right}, inputs: []valueID{output},
-							}}},
-						},
-					},
-				}
-			}
-			return result
-		}
-		operands = []ast.Expr{node.X, node.Y}
-	case *ast.IndexExpr:
-		result.kind = planIndexExpression
-		operands = []ast.Expr{node.X, node.Index}
-	case *ast.IndexListExpr:
-		result.kind = planIndexListExpression
-		operands = append([]ast.Expr{node.X}, node.Indices...)
-	case *ast.SelectorExpr:
-		result.kind = planSelectorExpression
-		operands = []ast.Expr{node.X}
-	case *ast.SliceExpr:
-		result.kind = planSliceExpression
-		operands = []ast.Expr{node.X, node.Low, node.High, node.Max}
-	case *ast.ParenExpr:
-		result.kind = planParenExpression
-		operands = []ast.Expr{node.X}
-	case *ast.StarExpr:
-		result.kind = planStarExpression
-		operands = []ast.Expr{node.X}
-	case *ast.UnaryExpr:
-		result.kind = planUnaryExpression
-		operands = []ast.Expr{node.X}
-	case *ast.TypeAssertExpr:
-		result.kind = planTypeAssertExpression
-		operands = []ast.Expr{node.X}
-	case *ast.CompositeLit:
-		result.kind = planCompositeExpression
-		operands = node.Elts
-	case *ast.KeyValueExpr:
-		result.kind = planKeyValueExpression
-		operands = []ast.Expr{node.Key, node.Value}
-	case *ast.FuncLit:
-		return result
-	}
-	for index, operand := range operands {
-		if operand != nil {
-			operandExpected := types.Type(nil)
-			if binary, ok := expression.(*ast.BinaryExpr); ok {
-				switch binary.Op {
-				case token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ,
-					token.LAND, token.LOR:
-				case token.SHL, token.SHR:
-					if index == 0 {
-						operandExpected = expected
-					}
-				default:
-					operandExpected = expected
-				}
-			}
-			if call, ok := expression.(*ast.CallExpr); ok && index > 0 {
-				if signature := b.callSignature(call.Fun); signature != nil {
-					parameter := index - 1
-					if signature.Variadic() && parameter >= signature.Params().Len()-1 {
-						parameter = signature.Params().Len() - 1
-						if slice, ok := signature.Params().At(parameter).Type().(*types.Slice); ok &&
-							!call.Ellipsis.IsValid() {
-							operandExpected = slice.Elem()
-						} else {
-							operandExpected = signature.Params().At(parameter).Type()
-						}
-					} else if parameter < signature.Params().Len() {
-						operandExpected = signature.Params().At(parameter).Type()
-					}
-				}
-			}
-			result.operands = append(result.operands,
-				b.expressionContext(operand, operandExpected, b.expressionResultCount(operand)))
-		}
-	}
+	result.operands = b.planOperands(expression, operands, expected)
 	result.before = b.orderOperands(result.operands, result.kind == planSliceExpression)
 	valueType := result.typ
 	if expected != nil {
@@ -1108,6 +991,336 @@ func (b *loweringPlanBuilder) expressionContext(
 		result.addResult(b, types.Typ[types.Bool], expression.Pos())
 	}
 	return result
+}
+
+func (b *loweringPlanBuilder) logicalExpression(
+	result *plannedExpression,
+	node *ast.BinaryExpr,
+	expected types.Type,
+) *plannedExpression {
+	result.kind = planBinaryExpression
+	left := b.expressionContext(node.X, result.typ, 1)
+	right := b.expressionContext(node.Y, result.typ, 1)
+	result.operands = []*plannedExpression{left, right}
+	valueType := result.typ
+	if expected != nil {
+		valueType = expected
+	}
+	result.addResult(b, valueType, node.Pos())
+	if len(result.results) == 0 {
+		return result
+	}
+	output := result.results[0].id
+	result.work = &plannedBlock{scope: b.currentScope, operations: []*plannedOperation{
+		{kind: planBind, expressions: []*plannedExpression{left}, outputs: []valueID{output}},
+		{
+			kind: planBranch, inputs: []valueID{output}, operator: node.Op,
+			body: &plannedBlock{scope: b.currentScope, operations: []*plannedOperation{{
+				kind: planStore, expressions: []*plannedExpression{right},
+				inputs: []valueID{output},
+			}}},
+		},
+	}}
+	return result
+}
+
+func classifyPlannedExpression(result *plannedExpression, expression ast.Expr) ([]ast.Expr, bool) {
+	switch node := expression.(type) {
+	case *ast.CallExpr:
+		result.kind = planCallExpression
+		return append([]ast.Expr{node.Fun}, node.Args...), true
+	case *ast.BinaryExpr:
+		result.kind = planBinaryExpression
+		return []ast.Expr{node.X, node.Y}, true
+	case *ast.IndexExpr:
+		result.kind = planIndexExpression
+		return []ast.Expr{node.X, node.Index}, true
+	case *ast.IndexListExpr:
+		result.kind = planIndexListExpression
+		return append([]ast.Expr{node.X}, node.Indices...), true
+	case *ast.SelectorExpr:
+		result.kind = planSelectorExpression
+		return []ast.Expr{node.X}, true
+	case *ast.SliceExpr:
+		result.kind = planSliceExpression
+		return []ast.Expr{node.X, node.Low, node.High, node.Max}, true
+	case *ast.ParenExpr:
+		result.kind = planParenExpression
+		return []ast.Expr{node.X}, true
+	case *ast.StarExpr:
+		result.kind = planStarExpression
+		return []ast.Expr{node.X}, true
+	case *ast.UnaryExpr:
+		result.kind = planUnaryExpression
+		return []ast.Expr{node.X}, true
+	case *ast.TypeAssertExpr:
+		result.kind = planTypeAssertExpression
+		return []ast.Expr{node.X}, true
+	case *ast.CompositeLit:
+		result.kind = planCompositeExpression
+		return node.Elts, true
+	case *ast.KeyValueExpr:
+		result.kind = planKeyValueExpression
+		return []ast.Expr{node.Key, node.Value}, true
+	case *ast.FuncLit:
+		return nil, false
+	default:
+		return nil, true
+	}
+}
+
+func (b *loweringPlanBuilder) planOperands(
+	expression ast.Expr,
+	operands []ast.Expr,
+	expected types.Type,
+) []*plannedExpression {
+	result := make([]*plannedExpression, 0, len(operands))
+	for index, operand := range operands {
+		if operand == nil {
+			continue
+		}
+		operandExpected := b.operandExpectedType(expression, index, expected)
+		result = append(result, b.expressionContext(
+			operand, operandExpected, b.expressionResultCount(operand),
+		))
+	}
+	return result
+}
+
+func (b *loweringPlanBuilder) operandExpectedType(
+	expression ast.Expr,
+	index int,
+	expected types.Type,
+) types.Type {
+	if binary, ok := expression.(*ast.BinaryExpr); ok {
+		switch binary.Op {
+		case token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ,
+			token.LAND, token.LOR:
+			return nil
+		case token.SHL, token.SHR:
+			if index == 0 {
+				return expected
+			}
+			return nil
+		default:
+			return expected
+		}
+	}
+	call, ok := expression.(*ast.CallExpr)
+	if !ok || index == 0 {
+		return nil
+	}
+	return b.callOperandExpectedType(call, index-1)
+}
+
+func (b *loweringPlanBuilder) callOperandExpectedType(
+	call *ast.CallExpr,
+	parameter int,
+) types.Type {
+	signature := b.callSignature(call.Fun)
+	if signature == nil || signature.Params().Len() == 0 {
+		return nil
+	}
+	if signature.Variadic() && parameter >= signature.Params().Len()-1 {
+		parameter = signature.Params().Len() - 1
+		parameterType := signature.Params().At(parameter).Type()
+		if slice, ok := parameterType.(*types.Slice); ok && !call.Ellipsis.IsValid() {
+			return slice.Elem()
+		}
+		return parameterType
+	}
+	if parameter < signature.Params().Len() {
+		return signature.Params().At(parameter).Type()
+	}
+	return nil
+}
+
+func (b *loweringPlanBuilder) comprehensionExpression(
+	result *plannedExpression,
+	expression ast.Expr,
+	metadata comprehensionSource,
+	function *ast.FuncLit,
+) *plannedExpression {
+	result.kind = planComprehensionExpression
+	result.comprehension = &metadata
+	result.function = function
+	if function == nil || function.Body == nil {
+		result.addResult(b, result.typ, expression.Pos())
+		return result
+	}
+	result.work = b.block(function.Body.List)
+	trimComprehensionReturn(result.work)
+	b.captureComprehensionResultNames(result, function, metadata.Result)
+	b.planComprehensionBuiltins(result, function, metadata)
+	result.addResult(b, result.typ, expression.Pos())
+	return result
+}
+
+func trimComprehensionReturn(work *plannedBlock) {
+	count := len(work.operations)
+	if count == 0 {
+		return
+	}
+	if _, ok := work.operations[count-1].source.(*ast.ReturnStmt); ok {
+		work.operations = work.operations[:count-1]
+	}
+}
+
+func (b *loweringPlanBuilder) captureComprehensionResultNames(
+	result *plannedExpression,
+	function *ast.FuncLit,
+	name string,
+) {
+	var resultObject types.Object
+	ast.Inspect(function.Body, func(node ast.Node) bool {
+		identifier, ok := node.(*ast.Ident)
+		if !ok || identifier.Name != name {
+			return true
+		}
+		object := b.unit.info.ObjectOf(identifier)
+		if resultObject == nil && b.unit.info.Defs[identifier] != nil {
+			resultObject = object
+		}
+		if resultObject == nil || object == resultObject {
+			result.resultNames = append(result.resultNames, identifier)
+		}
+		return true
+	})
+}
+
+func (b *loweringPlanBuilder) planComprehensionBuiltins(
+	result *plannedExpression,
+	function *ast.FuncLit,
+	metadata comprehensionSource,
+) {
+	makeCall, outer, valid := b.comprehensionParts(function.Body)
+	if !valid {
+		return
+	}
+	if !validPlannedType(result.typ) && len(makeCall.Args) != 0 {
+		result.typ = b.expressionType(makeCall.Args[0])
+	}
+	result.builtins = append(result.builtins, &plannedBuiltin{
+		call: makeCall, name: "make", position: metadata.Position,
+	})
+	assignment, appendCall := directComprehensionAppend(outer, metadata.Map)
+	if appendCall == nil {
+		return
+	}
+	result.builtins = append(result.builtins, &plannedBuiltin{
+		call: appendCall, name: "append", position: metadata.Position,
+	})
+	b.planExactComprehension(result, function, makeCall, outer, assignment, appendCall, metadata)
+}
+
+func directComprehensionAppend(
+	outer *ast.RangeStmt,
+	isMap bool,
+) (*ast.AssignStmt, *ast.CallExpr) {
+	terminal := comprehensionTerminal(outer.Body)
+	if isMap || terminal != outer.Body || len(terminal.List) != 1 {
+		return nil, nil
+	}
+	assignment, ok := terminal.List[0].(*ast.AssignStmt)
+	if !ok || len(assignment.Rhs) != 1 {
+		return nil, nil
+	}
+	appendCall, _ := assignment.Rhs[0].(*ast.CallExpr)
+	return assignment, appendCall
+}
+
+func (b *loweringPlanBuilder) planExactComprehension(
+	result *plannedExpression,
+	function *ast.FuncLit,
+	makeCall *ast.CallExpr,
+	outer *ast.RangeStmt,
+	assignment *ast.AssignStmt,
+	appendCall *ast.CallExpr,
+	metadata comprehensionSource,
+) {
+	if len(makeCall.Args) != 2 || len(function.Body.List) != 3 || len(outer.Body.List) != 1 ||
+		underlyingSlice(b.expressionType(outer.X)) == nil ||
+		underlyingSlice(b.expressionType(makeCall.Args[0])) == nil {
+		return
+	}
+	for _, operation := range result.work.operations {
+		if operation.source != outer || len(operation.expressions) != 1 {
+			continue
+		}
+		sourcePlan := operation.expressions[0]
+		sourceValue := b.newValue(sourcePlan.typ, outer.X.Pos())
+		sourcePlan.materialized = sourceValue.id
+		result.work.operations = append([]*plannedOperation{{
+			kind: planEvaluate, expressions: []*plannedExpression{sourcePlan},
+			outputs: []valueID{sourceValue.id}, preferred: "source",
+		}}, result.work.operations...)
+		result.exact = &plannedExactComprehension{
+			makeCall: makeCall, outer: outer, assignment: assignment,
+			appendCall: appendCall, source: sourceValue, position: metadata.Position,
+			identity: sameExpressionObject(b.unit.info, outer.Value, appendCall.Args[1]),
+		}
+		if result.exact.identity {
+			operation.kind = planCopy
+			operation.inputs = []valueID{sourceValue.id}
+			operation.copyTarget = assignment.Lhs[0]
+		}
+		return
+	}
+}
+
+func (b *loweringPlanBuilder) propagationExpression(
+	result *plannedExpression,
+	expression ast.Expr,
+	metadata propagationSource,
+) *plannedExpression {
+	result.kind = planPropagationExpression
+	result.propagation = &metadata
+	result.work = &plannedBlock{scope: b.currentScope}
+	marker := expression.(*ast.CallExpr)
+	call, valid := unwrappedCompilerCall(marker.Args[0])
+	if !valid {
+		return result
+	}
+	callPlan := b.expression(call)
+	result.operands = append(result.operands, callPlan)
+	signature := b.callSignature(call.Fun)
+	if signature == nil {
+		return result
+	}
+	for index := 0; index < signature.Results().Len(); index++ {
+		result.addResult(b, signature.Results().At(index).Type(), expression.Pos())
+	}
+	if len(result.results) == 0 {
+		return result
+	}
+	b.planPropagationWork(result, callPlan, metadata)
+	return result
+}
+
+func (b *loweringPlanBuilder) planPropagationWork(
+	result *plannedExpression,
+	callPlan *plannedExpression,
+	metadata propagationSource,
+) {
+	errorResult := result.results[len(result.results)-1]
+	result.results = result.results[:len(result.results)-1]
+	outputs := make([]valueID, 0, len(result.results)+1)
+	for _, value := range result.results {
+		outputs = append(outputs, value.id)
+	}
+	outputs = append(outputs, errorResult.id)
+	result.work.operations = append(result.work.operations,
+		&plannedOperation{
+			kind: planBind, expressions: []*plannedExpression{callPlan}, outputs: outputs,
+			metadata: &metadata,
+		},
+		&plannedOperation{
+			kind: planBranch, errorValue: errorResult.id, metadata: &metadata,
+			body: &plannedBlock{scope: b.currentScope, operations: []*plannedOperation{{
+				kind: planReturn, errorValue: errorResult.id, metadata: &metadata,
+			}}},
+		},
+	)
 }
 
 func sameExpressionObject(info *types.Info, left ast.Expr, right ast.Expr) bool {
@@ -1179,37 +1392,69 @@ func (b *loweringPlanBuilder) orderOperands(
 		if !operandWork && (!laterWork || !b.canMaterialize(operand)) {
 			continue
 		}
-		if laterWork {
-			if pointer := arrayPointerOperand(operand); pointer != nil && len(pointer.results) == 1 {
-				pointer.materialized = pointer.results[0].id
-				block.operations = append(block.operations, &plannedOperation{
-					kind: planEvaluate, expressions: []*plannedExpression{pointer},
-					outputs: []valueID{pointer.results[0].id},
-				})
-				continue
-			}
+		operation := b.operandOrderOperation(operand, index, laterWork, addressArray)
+		if operation != nil {
+			block.operations = append(block.operations, operation)
 		}
-		if addressArray && index == 0 && laterWork && underlyingArray(operand.typ) != nil {
-			place := b.assignmentPlace(operand.source)
-			operand.place = place
-			block.operations = append(block.operations, &plannedOperation{
-				kind: planPreparePlace, places: []*plannedPlace{place},
-			})
-			continue
-		}
-		if len(operand.results) != 1 {
-			continue
-		}
-		operand.materialized = operand.results[0].id
-		block.operations = append(block.operations, &plannedOperation{
-			kind: planEvaluate, expressions: []*plannedExpression{operand},
-			outputs: []valueID{operand.results[0].id},
-		})
 	}
 	if len(block.operations) == 0 {
 		return nil
 	}
 	return block
+}
+
+func (b *loweringPlanBuilder) operandOrderOperation(
+	operand *plannedExpression,
+	index int,
+	laterWork bool,
+	addressArray bool,
+) *plannedOperation {
+	if laterWork {
+		if pointer := arrayPointerOperand(operand); pointer != nil && len(pointer.results) == 1 {
+			pointer.materialized = pointer.results[0].id
+			return &plannedOperation{
+				kind: planEvaluate, expressions: []*plannedExpression{pointer},
+				outputs: []valueID{pointer.results[0].id},
+			}
+		}
+	}
+	if addressArray && index == 0 && laterWork && underlyingArray(operand.typ) != nil {
+		place := b.assignmentPlace(operand.source)
+		operand.place = place
+		return &plannedOperation{kind: planPreparePlace, places: []*plannedPlace{place}}
+	}
+	if len(operand.results) != 1 {
+		return nil
+	}
+	if laterWork {
+		b.planBooleanContextAdapter(operand)
+	}
+	operand.materialized = operand.results[0].id
+	return &plannedOperation{
+		kind: planEvaluate, expressions: []*plannedExpression{operand},
+		outputs: []valueID{operand.results[0].id},
+	}
+}
+
+func (b *loweringPlanBuilder) planBooleanContextAdapter(expression *plannedExpression) {
+	binary, ok := expression.source.(*ast.BinaryExpr)
+	if !ok || !expression.contextual || !isComparisonOperator(binary.Op) {
+		return
+	}
+	expression.booleanAdapter = true
+	value := &b.plan.values[expression.results[0].id-1]
+	value.typ = types.Typ[types.Bool]
+	value.typeReference = b.typeReference(value.typ, value.position)
+	expression.results[0] = *value
+}
+
+func isComparisonOperator(operator token.Token) bool {
+	switch operator {
+	case token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ:
+		return true
+	default:
+		return false
+	}
 }
 
 func arrayPointerOperand(expression *plannedExpression) *plannedExpression {
@@ -1500,28 +1745,17 @@ func (b *loweringPlanBuilder) expressionType(expression ast.Expr) types.Type {
 	if typ := b.unit.info.TypeOf(expression); validPlannedType(typ) {
 		return typ
 	}
+	return b.inferredExpressionType(expression)
+}
+
+func (b *loweringPlanBuilder) inferredExpressionType(expression ast.Expr) types.Type {
 	switch node := expression.(type) {
 	case *ast.ParenExpr:
 		return b.expressionType(node.X)
 	case *ast.Ident:
 		return b.bindings[b.unit.info.ObjectOf(node)]
 	case *ast.IndexExpr:
-		container := b.expressionType(node.X)
-		if container == nil {
-			return nil
-		}
-		switch value := types.Unalias(container).Underlying().(type) {
-		case *types.Array:
-			return value.Elem()
-		case *types.Slice:
-			return value.Elem()
-		case *types.Map:
-			return value.Elem()
-		case *types.Pointer:
-			if array, ok := types.Unalias(value.Elem()).Underlying().(*types.Array); ok {
-				return array.Elem()
-			}
-		}
+		return indexElementType(b.expressionType(node.X))
 	case *ast.SelectorExpr:
 		receiver := b.expressionType(node.X)
 		if receiver != nil {
@@ -1547,6 +1781,25 @@ func (b *loweringPlanBuilder) expressionType(expression ast.Expr) types.Type {
 	return nil
 }
 
+func indexElementType(container types.Type) types.Type {
+	if container == nil {
+		return nil
+	}
+	switch value := types.Unalias(container).Underlying().(type) {
+	case *types.Array:
+		return value.Elem()
+	case *types.Slice:
+		return value.Elem()
+	case *types.Map:
+		return value.Elem()
+	case *types.Pointer:
+		if array, ok := types.Unalias(value.Elem()).Underlying().(*types.Array); ok {
+			return array.Elem()
+		}
+	}
+	return nil
+}
+
 func validPlannedType(typ types.Type) bool {
 	if typ == nil {
 		return false
@@ -1560,21 +1813,6 @@ func validPlannedType(typ types.Type) bool {
 func (b *loweringPlanBuilder) callSignature(function ast.Expr) *types.Signature {
 	signature, _ := types.Unalias(b.expressionType(function)).(*types.Signature)
 	return signature
-}
-
-func (b *loweringPlanBuilder) placeOperands(expression ast.Expr) []*plannedExpression {
-	switch node := expression.(type) {
-	case *ast.ParenExpr:
-		return b.placeOperands(node.X)
-	case *ast.StarExpr:
-		return b.expressions(node.X)
-	case *ast.SelectorExpr:
-		return b.expressions(node.X)
-	case *ast.IndexExpr:
-		return b.expressionList([]ast.Expr{node.X, node.Index})
-	default:
-		return nil
-	}
 }
 
 // selectEntry records operands that Go evaluates when it enters a select.

@@ -2,6 +2,9 @@ package app
 
 import (
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"strings"
 	"testing"
@@ -101,17 +104,46 @@ func TestComprehensionGeneratedLoops(t *testing.T) {
 		!strings.Contains(text, "for _, sale := range account.Sales") {
 		t.Fatal("generated output does not contain the fused loop nest")
 	}
-	for _, required := range []string{"copy(result, values)", "] = comprehensionRecord("} {
-		if !strings.Contains(text, required) {
-			t.Fatalf("generated output lacks exact slice lowering: %s", required)
-		}
+	parsed, err := parser.ParseFile(token.NewFileSet(), "comprehensions_tgo.go", generated, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !generatedFunctionCalls(parsed, "ComprehensionCopy", "copy") {
+		t.Fatal("generated ComprehensionCopy does not call copy")
+	}
+	if !strings.Contains(text, "] = comprehensionRecord(") {
+		t.Fatal("generated transformed comprehension does not use indexed evaluation")
 	}
 	values := []int{1, 2, 3, 4}
 	var copied []int
 	allocations := testing.AllocsPerRun(1000, func() {
 		copied = ComprehensionCopy(values)
 	})
-	if allocations != 1 || len(copied) != len(values) {
+	if allocations != 1 || len(copied) != len(values) || copied[0] != values[0] ||
+		&copied[0] == &values[0] {
 		t.Fatalf("copy cost: %f allocations, %v", allocations, copied)
 	}
+}
+
+func generatedFunctionCalls(file *ast.File, function string, called string) bool {
+	for _, declaration := range file.Decls {
+		candidate, ok := declaration.(*ast.FuncDecl)
+		if !ok || candidate.Name.Name != function {
+			continue
+		}
+		found := false
+		ast.Inspect(candidate.Body, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			identifier, ok := call.Fun.(*ast.Ident)
+			if ok && identifier.Name == called {
+				found = true
+			}
+			return !found
+		})
+		return found
+	}
+	return false
 }

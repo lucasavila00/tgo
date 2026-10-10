@@ -67,7 +67,8 @@ func loadFlag(events *[]string, fail bool) (BasicFlag, error) {
 }
 
 func declaredFlags(events *[]string, x int, y int, fail bool) (BasicFlag, BasicFlag, error) {
-	var a, b BasicFlag = mark(events, "left", x) < mark(events, "right", y), loadFlag(events, fail)!!
+	var a, b BasicFlag = mark(events, "left", x) < mark(events, "right", y), loadFlag(events,
+		fail)!!
 	return a, b, nil
 }
 

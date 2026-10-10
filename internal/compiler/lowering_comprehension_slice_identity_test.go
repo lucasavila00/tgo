@@ -151,7 +151,8 @@ func arrayIndex(events *[]string) int {
 }
 
 func indexedArraySlice(events *[]string, values [][1]int) ([]int, error) {
-	result := arraySource(events, values)[arrayIndex(events)][arrayBound(events, &values[0], false)!!:]
+	result := arraySource(events, values)[arrayIndex(events)][arrayBound(events,
+		&values[0], false)!!:]
 	record(events, "after")
 	return result, nil
 }
@@ -234,7 +235,8 @@ func TestGeneratedComprehensionAndSliceIdentity(t *testing.T) {
 		t.Fatalf("filtered values=%v", filteredValues)
 	}
 	nestedValues := nested([][]int{{1, 2}, {3}})
-	if len(nestedValues) != 3 || nestedValues[0] != 1 || nestedValues[1] != 2 || nestedValues[2] != 3 {
+	if len(nestedValues) != 3 || nestedValues[0] != 1 ||
+		nestedValues[1] != 2 || nestedValues[2] != 3 {
 		t.Fatalf("nested values=%v", nestedValues)
 	}
 

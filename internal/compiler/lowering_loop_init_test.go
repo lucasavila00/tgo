@@ -73,7 +73,10 @@ func TestGeneratedForInitializer(t *testing.T) {
 	closures, addresses, err := loop(&events, false, true)
 	if err != errInitializer || closures != nil || addresses != nil ||
 		strings.Join(events, ",") != "left,load" {
-		t.Fatalf("failure closures=%v addresses=%v error=%v events=%v", closures, addresses, err, events)
+		t.Fatalf(
+			"failure closures=%v addresses=%v error=%v events=%v",
+			closures, addresses, err, events,
+		)
 	}
 
 	events = nil
@@ -87,7 +90,10 @@ func TestGeneratedForInitializer(t *testing.T) {
 	}
 	for index := range 3 {
 		if closures[index]() != index || *addresses[index] != index {
-			t.Fatalf("iteration=%d closure=%d address=%d", index, closures[index](), *addresses[index])
+			t.Fatalf(
+				"iteration=%d closure=%d address=%d",
+				index, closures[index](), *addresses[index],
+			)
 		}
 		for prior := range index {
 			if addresses[index] == addresses[prior] {

@@ -21,6 +21,7 @@ type loweringEmitter struct {
 	renamedTypeBlockers map[types.Object]string
 	typeDefinitionSites map[*ast.Ident]emittedTypeDefinition
 	typeObjectAliases   map[types.Object]*ast.Ident
+	forcedQualifiers    map[*types.Package]string
 	fmtAlias            string
 }
 
@@ -45,6 +46,7 @@ func newLoweringEmitter(
 		renamedTypeBlockers: make(map[types.Object]string),
 		typeDefinitionSites: make(map[*ast.Ident]emittedTypeDefinition),
 		typeObjectAliases:   source.LoweringTypeAliases,
+		forcedQualifiers:    make(map[*types.Package]string),
 	}
 	for _, alias := range source.LoweringTypeAliases {
 		emitter.names[alias.Name] = true
@@ -82,7 +84,14 @@ func (e *loweringEmitter) expression(
 		return e.places[plan.place.id]
 	}
 	if plan.materialized != 0 {
-		return e.valueName(plan.materialized, "operand")
+		value := ast.Expr(e.valueName(plan.materialized, "operand"))
+		if plan.booleanAdapter {
+			return &ast.BinaryExpr{
+				X: value, Op: token.EQL,
+				Y: e.unit.generatedUniverse("true", plan.source.Pos()),
+			}
+		}
+		return value
 	}
 	if plan.before != nil {
 		e.operations(plan.before, block)
@@ -94,16 +103,7 @@ func (e *loweringEmitter) expression(
 		}
 	}
 	if plan.work != nil {
-		e.operations(plan.work, block)
-		if plan.kind == planComprehensionExpression {
-			for _, builtin := range plan.builtins {
-				if plan.exact != nil && builtin.call == plan.exact.appendCall {
-					continue
-				}
-				builtin.call.Fun = e.unit.generatedUniverse(builtin.name, builtin.position)
-			}
-			e.applyExactComprehension(plan)
-		}
+		e.emitExpressionWork(plan, block)
 		if len(plan.results) == 1 {
 			return e.valueName(plan.results[0].id, "result")
 		}
@@ -112,7 +112,29 @@ func (e *loweringEmitter) expression(
 	for _, operand := range plan.operands {
 		operands = append(operands, e.expression(operand, block))
 	}
-	switch node := plan.source.(type) {
+	e.applyExpressionOperands(plan.source, operands)
+	return plan.source
+}
+
+func (e *loweringEmitter) emitExpressionWork(
+	plan *plannedExpression,
+	block *ast.BlockStmt,
+) {
+	e.operations(plan.work, block)
+	if plan.kind != planComprehensionExpression {
+		return
+	}
+	for _, builtin := range plan.builtins {
+		if plan.exact != nil && builtin.call == plan.exact.appendCall {
+			continue
+		}
+		builtin.call.Fun = e.unit.generatedUniverse(builtin.name, builtin.position)
+	}
+	e.applyExactComprehension(plan)
+}
+
+func (e *loweringEmitter) applyExpressionOperands(source ast.Expr, operands []ast.Expr) {
+	switch node := source.(type) {
 	case *ast.CallExpr:
 		if len(operands) != 0 {
 			node.Fun, node.Args = operands[0], operands[1:]
@@ -126,19 +148,7 @@ func (e *loweringEmitter) expression(
 	case *ast.SelectorExpr:
 		node.X = operands[0]
 	case *ast.SliceExpr:
-		node.X = operands[0]
-		index := 1
-		if node.Low != nil {
-			node.Low = operands[index]
-			index++
-		}
-		if node.High != nil {
-			node.High = operands[index]
-			index++
-		}
-		if node.Max != nil {
-			node.Max = operands[index]
-		}
+		applySliceOperands(node, operands)
 	case *ast.ParenExpr:
 		node.X = operands[0]
 	case *ast.StarExpr:
@@ -152,7 +162,22 @@ func (e *loweringEmitter) expression(
 	case *ast.KeyValueExpr:
 		node.Key, node.Value = operands[0], operands[1]
 	}
-	return plan.source
+}
+
+func applySliceOperands(node *ast.SliceExpr, operands []ast.Expr) {
+	node.X = operands[0]
+	index := 1
+	if node.Low != nil {
+		node.Low = operands[index]
+		index++
+	}
+	if node.High != nil {
+		node.High = operands[index]
+		index++
+	}
+	if node.Max != nil {
+		node.Max = operands[index]
+	}
 }
 
 func (e *loweringEmitter) applyExactComprehension(
@@ -216,54 +241,22 @@ func (e *loweringEmitter) operation(
 		e.labeledStatement(operation, output)
 	case planSourceStatement:
 		e.sourceStatement(operation, output)
+	default:
+		e.valueOperation(operation, output)
+	}
+}
+
+func (e *loweringEmitter) valueOperation(
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) {
+	switch operation.kind {
 	case planJump:
-		branch := operation.source.(*ast.BranchStmt)
-		label := (*ast.Ident)(nil)
-		if branch.Label != nil && operation.target != 0 {
-			label = e.targets[operation.target]
-		}
-		output.List = append(output.List, &ast.BranchStmt{
-			TokPos: branch.TokPos, Tok: branch.Tok, Label: label,
-		})
+		e.emitJump(operation, output)
 	case planEvaluate:
-		expression := operation.expressions[0]
-		materialized := expression.materialized
-		expression.materialized = 0
-		if expression.work != nil {
-			e.expressionResults(expression, output)
-			expression.materialized = materialized
-			break
-		}
-		value := e.expression(expression, output)
-		expression.materialized = materialized
-		if len(operation.outputs) != 0 {
-			planned := e.plannedValue(operation.outputs[0])
-			if operation.preferred != "" && e.values[planned.id] == nil {
-				e.values[planned.id] = e.freshName(operation.preferred)
-			}
-			planned.explicit = expression.contextual
-			e.emitTypedExpressionBind(planned, value, planned.explicit, output)
-		}
+		e.emitEvaluation(operation, output)
 	case planBind:
-		call := e.expression(operation.expressions[0], output)
-		if len(operation.outputs) == 1 {
-			planned := e.plannedValue(operation.outputs[0])
-			expression := operation.expressions[0]
-			planned.explicit = expression.contextual
-			e.emitTypedExpressionBind(planned, call, planned.explicit, output)
-			break
-		}
-		left := make([]ast.Expr, 0, len(operation.outputs))
-		for index, id := range operation.outputs {
-			preferred := "result"
-			if operation.metadata != nil && index == len(operation.outputs)-1 {
-				preferred = "err"
-			}
-			left = append(left, e.valueName(id, preferred))
-		}
-		output.List = append(output.List, &ast.AssignStmt{
-			Lhs: left, Tok: token.DEFINE, Rhs: []ast.Expr{call},
-		})
+		e.emitBinding(operation, output)
 	case planStore:
 		value := e.expression(operation.expressions[0], output)
 		output.List = append(output.List, &ast.AssignStmt{
@@ -271,7 +264,7 @@ func (e *loweringEmitter) operation(
 			Tok: token.ASSIGN, Rhs: []ast.Expr{value},
 		})
 	case planBranch:
-		condition := ast.Expr(nil)
+		var condition ast.Expr
 		if operation.errorValue != 0 {
 			condition = &ast.BinaryExpr{
 				X: e.valueName(operation.errorValue, "err"), OpPos: operation.metadata.Bang,
@@ -299,11 +292,65 @@ func (e *loweringEmitter) operation(
 	}
 }
 
-func (operation *plannedOperation) preferredName() string {
-	if operation.preferred != "" {
-		return operation.preferred
+func (e *loweringEmitter) emitJump(operation *plannedOperation, output *ast.BlockStmt) {
+	branch := operation.source.(*ast.BranchStmt)
+	var label *ast.Ident
+	if branch.Label != nil && operation.target != 0 {
+		label = e.targets[operation.target]
 	}
-	return "operand"
+	output.List = append(output.List, &ast.BranchStmt{
+		TokPos: branch.TokPos, Tok: branch.Tok, Label: label,
+	})
+}
+
+func (e *loweringEmitter) emitEvaluation(
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) {
+	expression := operation.expressions[0]
+	materialized := expression.materialized
+	expression.materialized = 0
+	if expression.work != nil {
+		e.expressionResults(expression, output)
+		expression.materialized = materialized
+		return
+	}
+	value := e.expression(expression, output)
+	expression.materialized = materialized
+	if len(operation.outputs) == 0 {
+		return
+	}
+	planned := e.plannedValue(operation.outputs[0])
+	if operation.preferred != "" && e.values[planned.id] == nil {
+		e.values[planned.id] = e.freshName(operation.preferred)
+	}
+	planned.explicit = expression.contextual
+	e.emitTypedExpressionBind(planned, value, planned.explicit, output)
+}
+
+func (e *loweringEmitter) emitBinding(
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) {
+	call := e.expression(operation.expressions[0], output)
+	if len(operation.outputs) == 1 {
+		planned := e.plannedValue(operation.outputs[0])
+		expression := operation.expressions[0]
+		planned.explicit = expression.contextual
+		e.emitTypedExpressionBind(planned, call, planned.explicit, output)
+		return
+	}
+	left := make([]ast.Expr, 0, len(operation.outputs))
+	for index, id := range operation.outputs {
+		preferred := "result"
+		if operation.metadata != nil && index == len(operation.outputs)-1 {
+			preferred = "err"
+		}
+		left = append(left, e.valueName(id, preferred))
+	}
+	output.List = append(output.List, &ast.AssignStmt{
+		Lhs: left, Tok: token.DEFINE, Rhs: []ast.Expr{call},
+	})
 }
 
 func (e *loweringEmitter) labeledStatement(
@@ -319,17 +366,7 @@ func (e *loweringEmitter) labeledStatement(
 		}
 	}
 	separateEntry := operation.labelHasGoto && e.controlNeedsWrapper(operation)
-	if operation.controlTarget != 0 {
-		if separateEntry {
-			if blockUsesTarget(operation.body, operation.controlTarget) {
-				e.targets[operation.controlTarget] = e.freshName("control")
-			} else {
-				delete(e.targets, operation.controlTarget)
-			}
-		} else {
-			e.targets[operation.controlTarget] = ast.NewIdent(node.Label.Name)
-		}
-	}
+	e.configureLabeledTarget(operation, node, separateEntry)
 	body := &ast.BlockStmt{}
 	e.operations(operation.body, body)
 	if len(body.List) == 0 {
@@ -347,6 +384,25 @@ func (e *loweringEmitter) labeledStatement(
 		return
 	}
 	output.List = append(output.List, body.List...)
+}
+
+func (e *loweringEmitter) configureLabeledTarget(
+	operation *plannedOperation,
+	node *ast.LabeledStmt,
+	separateEntry bool,
+) {
+	if operation.controlTarget == 0 {
+		return
+	}
+	if !separateEntry {
+		e.targets[operation.controlTarget] = ast.NewIdent(node.Label.Name)
+		return
+	}
+	if blockUsesTarget(operation.body, operation.controlTarget) {
+		e.targets[operation.controlTarget] = e.freshName("control")
+		return
+	}
+	delete(e.targets, operation.controlTarget)
 }
 
 func blockUsesTarget(block *plannedBlock, target targetID) bool {
@@ -507,7 +563,8 @@ func (e *loweringEmitter) forStatement(
 ) {
 	node := operation.source.(*ast.ForStmt)
 	target := output
-	if len(operation.headerBindings) != 0 {
+	switch {
+	case len(operation.headerBindings) != 0:
 		wrapper := &ast.BlockStmt{}
 		e.operations(operation.init, wrapper)
 		left := make([]ast.Expr, 0, len(operation.headerBindings))
@@ -522,10 +579,10 @@ func (e *loweringEmitter) forStatement(
 		}
 		output.List = append(output.List, wrapper)
 		target = wrapper
-	} else if operation.init != nil && !blockHasPlannedWork(operation.init) &&
-		len(operation.init.operations) == 1 {
+	case operation.init != nil && !blockHasPlannedWork(operation.init) &&
+		len(operation.init.operations) == 1:
 		node.Init = operation.init.operations[0].source
-	} else if operation.init != nil {
+	case operation.init != nil:
 		wrapper := &ast.BlockStmt{}
 		e.operations(operation.init, wrapper)
 		node.Init = nil
@@ -619,33 +676,13 @@ func (e *loweringEmitter) sourceStatement(
 	operation *plannedOperation,
 	output *ast.BlockStmt,
 ) {
-	if assignment, ok := operation.source.(*ast.AssignStmt); ok &&
-		len(operation.places) != 0 && operationHasExpressionWork(operation) {
-		left := make([]ast.Expr, 0, len(operation.places))
-		for _, place := range operation.places {
-			left = append(left, e.preparePlace(place, output))
-		}
-		assignment.Lhs = left
-	}
-	if update, ok := operation.source.(*ast.IncDecStmt); ok &&
-		len(operation.places) == 1 && operationHasExpressionWork(operation) {
-		update.X = e.preparePlace(operation.places[0], output)
-	}
+	e.prepareSourceStatementPlaces(operation, output)
 	if operation.before != nil {
 		e.operations(operation.before, output)
 	}
 	switch node := operation.source.(type) {
 	case *ast.ReturnStmt:
-		results := make([]ast.Expr, 0, len(operation.expressions))
-		for _, expression := range operation.expressions {
-			results = append(results, e.expressionResults(expression, output)...)
-		}
-		if len(operation.failureCommas) != 0 {
-			results = e.failureResults(results, operation.failureCommas, output)
-			delete(e.source.FailureReturns, node)
-		}
-		node.Results = results
-		output.List = append(output.List, node)
+		e.emitSourceReturn(node, operation, output)
 	case *ast.ExprStmt:
 		values := e.expressionResults(operation.expressions[0], output)
 		if len(values) != 0 {
@@ -655,58 +692,9 @@ func (e *loweringEmitter) sourceStatement(
 	case *ast.IncDecStmt:
 		output.List = append(output.List, node)
 	case *ast.AssignStmt:
-		if operation.binding != nil {
-			call := e.expression(operation.binding.expressions[0], output)
-			left := append([]ast.Expr(nil), node.Lhs...)
-			left = append(left, e.valueName(
-				operation.binding.outputs[len(operation.binding.outputs)-1], "err",
-			))
-			node.Lhs, node.Rhs = left, []ast.Expr{call}
-			output.List = append(output.List, node)
-			e.operations(operation.after, output)
-			return
-		}
-		results := make([]ast.Expr, 0, len(operation.expressions))
-		for _, expression := range operation.expressions {
-			results = append(results, e.expressionResults(expression, output)...)
-		}
-		node.Rhs = results
-		output.List = append(output.List, node)
+		e.emitSourceAssignment(node, operation, output)
 	case *ast.DeclStmt:
-		e.recordTypeDefinitions(node, output)
-		if declarationsHaveWork(operation.declarations) {
-			e.splitDeclaration(node, operation, output)
-			return
-		}
-		if operation.binding != nil {
-			declaration := node.Decl.(*ast.GenDecl)
-			value := declaration.Specs[0].(*ast.ValueSpec)
-			value.Names = append(value.Names, e.valueName(
-				operation.binding.outputs[len(operation.binding.outputs)-1], "err",
-			))
-			value.Values = []ast.Expr{e.expression(operation.binding.expressions[0], output)}
-			output.List = append(output.List, node)
-			e.operations(operation.after, output)
-			return
-		}
-		expressionIndex := 0
-		if declaration, ok := node.Decl.(*ast.GenDecl); ok {
-			for _, specification := range declaration.Specs {
-				value, ok := specification.(*ast.ValueSpec)
-				if !ok {
-					continue
-				}
-				results := []ast.Expr(nil)
-				for range value.Values {
-					results = append(results, e.expressionResults(
-						operation.expressions[expressionIndex], output,
-					)...)
-					expressionIndex++
-				}
-				value.Values = results
-			}
-		}
-		output.List = append(output.List, node)
+		e.emitSourceDeclaration(node, operation, output)
 	case *ast.SendStmt:
 		node.Chan = e.expression(operation.expressions[0], output)
 		node.Value = e.expression(operation.expressions[1], output)
@@ -722,6 +710,114 @@ func (e *loweringEmitter) sourceStatement(
 			output.List = append(output.List, operation.source)
 		}
 	}
+}
+
+func (e *loweringEmitter) prepareSourceStatementPlaces(
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) {
+	if assignment, ok := operation.source.(*ast.AssignStmt); ok &&
+		len(operation.places) != 0 && operationHasExpressionWork(operation) {
+		left := make([]ast.Expr, 0, len(operation.places))
+		for _, place := range operation.places {
+			left = append(left, e.preparePlace(place, output))
+		}
+		assignment.Lhs = left
+	}
+	if update, ok := operation.source.(*ast.IncDecStmt); ok &&
+		len(operation.places) == 1 && operationHasExpressionWork(operation) {
+		update.X = e.preparePlace(operation.places[0], output)
+	}
+}
+
+func (e *loweringEmitter) emitSourceReturn(
+	node *ast.ReturnStmt,
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) {
+	results := make([]ast.Expr, 0, len(operation.expressions))
+	for _, expression := range operation.expressions {
+		results = append(results, e.expressionResults(expression, output)...)
+	}
+	if len(operation.failureCommas) != 0 {
+		results = e.failureResults(results, operation.failureCommas, output)
+		delete(e.source.FailureReturns, node)
+	}
+	node.Results = results
+	output.List = append(output.List, node)
+}
+
+func (e *loweringEmitter) emitSourceAssignment(
+	node *ast.AssignStmt,
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) {
+	if operation.binding != nil {
+		call := e.expression(operation.binding.expressions[0], output)
+		left := append([]ast.Expr(nil), node.Lhs...)
+		left = append(left, e.valueName(
+			operation.binding.outputs[len(operation.binding.outputs)-1], "err",
+		))
+		node.Lhs, node.Rhs = left, []ast.Expr{call}
+		output.List = append(output.List, node)
+		e.operations(operation.after, output)
+		return
+	}
+	results := make([]ast.Expr, 0, len(operation.expressions))
+	for _, expression := range operation.expressions {
+		results = append(results, e.expressionResults(expression, output)...)
+	}
+	node.Rhs = results
+	output.List = append(output.List, node)
+}
+
+func (e *loweringEmitter) emitSourceDeclaration(
+	node *ast.DeclStmt,
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) {
+	e.recordTypeDefinitions(node, output)
+	if declarationsHaveWork(operation.declarations) {
+		e.splitDeclaration(node, operation, output)
+		return
+	}
+	if operation.binding != nil {
+		e.emitBoundDeclaration(node, operation, output)
+		return
+	}
+	expressionIndex := 0
+	if declaration, ok := node.Decl.(*ast.GenDecl); ok {
+		for _, specification := range declaration.Specs {
+			value, ok := specification.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			results := []ast.Expr(nil)
+			for range value.Values {
+				results = append(results, e.expressionResults(
+					operation.expressions[expressionIndex], output,
+				)...)
+				expressionIndex++
+			}
+			value.Values = results
+		}
+	}
+	output.List = append(output.List, node)
+}
+
+func (e *loweringEmitter) emitBoundDeclaration(
+	node *ast.DeclStmt,
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) {
+	declaration := node.Decl.(*ast.GenDecl)
+	value := declaration.Specs[0].(*ast.ValueSpec)
+	value.Names = append(value.Names, e.valueName(
+		operation.binding.outputs[len(operation.binding.outputs)-1], "err",
+	))
+	value.Values = []ast.Expr{e.expression(operation.binding.expressions[0], output)}
+	output.List = append(output.List, node)
+	e.operations(operation.after, output)
 }
 
 func (e *loweringEmitter) recordTypeDefinitions(
@@ -814,55 +910,88 @@ func (e *loweringEmitter) splitDeclaration(
 ) {
 	general := node.Decl.(*ast.GenDecl)
 	for index, planned := range operation.declarations {
-		value := planned.source
-		if value.Doc != nil {
-			for _, comment := range value.Doc.List {
-				comment.Slash = value.Pos() - 1
-			}
+		e.emitSplitDeclaration(general, planned, index == 0, output)
+	}
+}
+
+func (e *loweringEmitter) emitSplitDeclaration(
+	general *ast.GenDecl,
+	planned *plannedDeclaration,
+	first bool,
+	output *ast.BlockStmt,
+) {
+	value := planned.source
+	positionDeclarationComments(value)
+	declaration := &ast.GenDecl{
+		TokPos: value.Pos(), Tok: general.Tok, Specs: []ast.Spec{value},
+	}
+	if first {
+		declaration.Doc = general.Doc
+	}
+	before := len(output.List)
+	if planned.before != nil {
+		e.operations(planned.before, output)
+	}
+	e.emitSplitDeclarationValue(value, declaration, planned, output)
+	e.positionSplitDeclaration(value, declaration, before, output)
+}
+
+func positionDeclarationComments(value *ast.ValueSpec) {
+	if value.Doc == nil {
+		return
+	}
+	for _, comment := range value.Doc.List {
+		comment.Slash = value.Pos() - 1
+	}
+}
+
+func (e *loweringEmitter) emitSplitDeclarationValue(
+	value *ast.ValueSpec,
+	declaration *ast.GenDecl,
+	planned *plannedDeclaration,
+	output *ast.BlockStmt,
+) {
+	if planned.binding != nil {
+		value.Names = append(value.Names, e.valueName(
+			planned.binding.outputs[len(planned.binding.outputs)-1], "err",
+		))
+		value.Values = []ast.Expr{e.expression(planned.binding.expressions[0], output)}
+		output.List = append(output.List, &ast.DeclStmt{Decl: declaration})
+		e.operations(planned.after, output)
+		return
+	}
+	results := []ast.Expr(nil)
+	for _, expression := range planned.expressions {
+		results = append(results, e.expressionResults(expression, output)...)
+	}
+	value.Values = results
+	output.List = append(output.List, &ast.DeclStmt{Decl: declaration})
+}
+
+func (e *loweringEmitter) positionSplitDeclaration(
+	value *ast.ValueSpec,
+	declaration *ast.GenDecl,
+	before int,
+	output *ast.BlockStmt,
+) {
+	declarationIndex := len(output.List) - 1
+	for item := before; item < len(output.List); item++ {
+		statement, ok := output.List[item].(*ast.DeclStmt)
+		if ok && statement.Decl == declaration {
+			declarationIndex = item
+			break
 		}
-		declaration := &ast.GenDecl{
-			TokPos: value.Pos(), Tok: general.Tok, Specs: []ast.Spec{value},
-		}
-		if index == 0 {
-			declaration.Doc = general.Doc
-		}
-		before := len(output.List)
-		if planned.before != nil {
-			e.operations(planned.before, output)
-		}
-		if planned.binding != nil {
-			value.Names = append(value.Names, e.valueName(
-				planned.binding.outputs[len(planned.binding.outputs)-1], "err",
-			))
-			value.Values = []ast.Expr{e.expression(planned.binding.expressions[0], output)}
-			output.List = append(output.List, &ast.DeclStmt{Decl: declaration})
-			e.operations(planned.after, output)
-		} else {
-			results := []ast.Expr(nil)
-			for _, expression := range planned.expressions {
-				results = append(results, e.expressionResults(expression, output)...)
-			}
-			value.Values = results
-			output.List = append(output.List, &ast.DeclStmt{Decl: declaration})
-		}
-		declarationIndex := len(output.List) - 1
-		for item := before; item < len(output.List); item++ {
-			if statement, ok := output.List[item].(*ast.DeclStmt); ok && statement.Decl == declaration {
-				declarationIndex = item
-				break
-			}
-		}
-		for _, statement := range output.List[before:declarationIndex] {
-			positionGeneratedStatement(statement, value.Pos())
-		}
-		positionGeneratedStatement(output.List[declarationIndex], value.Pos())
-		position := value.End()
-		if value.Comment != nil {
-			position = value.Comment.End() + 1
-		}
-		for _, statement := range output.List[declarationIndex+1:] {
-			positionGeneratedStatement(statement, position)
-		}
+	}
+	for _, statement := range output.List[before:declarationIndex] {
+		positionGeneratedStatement(statement, value.Pos())
+	}
+	positionGeneratedStatement(output.List[declarationIndex], value.Pos())
+	position := value.End()
+	if value.Comment != nil {
+		position = value.Comment.End() + 1
+	}
+	for _, statement := range output.List[declarationIndex+1:] {
+		positionGeneratedStatement(statement, position)
 	}
 }
 
@@ -931,24 +1060,22 @@ func (e *loweringEmitter) emitTypedBind(
 	output *ast.BlockStmt,
 ) ast.Expr {
 	expression := e.expression(plan, output)
-	if plan != nil && plan.retainContext && !plannedExpressionHasWork(plan) {
+	if retainTypedBindExpression(value, plan) {
 		return expression
-	}
-	if plan != nil && plan.typ != nil {
-		if basic, ok := types.Unalias(plan.typ).(*types.Basic); ok &&
-			basic.Info()&types.IsUntyped != 0 && !plannedExpressionHasWork(plan) {
-			return expression
-		}
-	}
-	if value.typ != nil {
-		if basic, ok := types.Unalias(value.typ).(*types.Basic); ok &&
-			basic.Info()&types.IsUntyped != 0 {
-			return expression
-		}
 	}
 	explicit := value.explicit || plan != nil && plan.typ != nil && value.typ != nil &&
 		!types.Identical(plan.typ, value.typ)
 	return e.emitTypedExpressionBind(value, expression, explicit, output)
+}
+
+func retainTypedBindExpression(value plannedValue, plan *plannedExpression) bool {
+	if plan != nil && plan.retainContext && !plannedExpressionHasWork(plan) {
+		return true
+	}
+	if plan != nil && isUntypedType(plan.typ) && !plannedExpressionHasWork(plan) {
+		return true
+	}
+	return isUntypedType(value.typ)
 }
 
 func (e *loweringEmitter) emitTypedExpressionBind(
@@ -1020,6 +1147,10 @@ func (e *loweringEmitter) emitTypeAliasesBeforeBlockers(value plannedValue) {
 		if !planned.typeName || e.typeObjectAliases[planned.intended] != nil {
 			continue
 		}
+		if planned.alias.foreignQualified {
+			e.ensureQualifiedTypeOwner(planned.intended.Pkg())
+			continue
+		}
 		if planned.alias.packageScope {
 			e.emitPackageTypeAlias(planned)
 			continue
@@ -1046,6 +1177,16 @@ func (e *loweringEmitter) emitTypeAliasesBeforeBlockers(value plannedValue) {
 		}
 		e.typeObjectAliases[planned.intended] = alias
 	}
+}
+
+func (e *loweringEmitter) ensureQualifiedTypeOwner(owner *types.Package) {
+	if e.forcedQualifiers[owner] != "" {
+		return
+	}
+	alias := freshASTIdentifier(e.source.File, owner.Name())
+	astutil.AddNamedImport(e.unit.fs, e.source.File, alias, owner.Path())
+	e.forcedQualifiers[owner] = alias
+	e.names[alias] = true
 }
 
 func (e *loweringEmitter) emitPackageTypeAlias(planned plannedTypeBlocker) {
@@ -1099,10 +1240,17 @@ func (e *loweringEmitter) typeObjectExpression(object types.Object, position tok
 	if object.Pkg() == e.unit.typed && object.Parent() != e.unit.typed.Scope() {
 		return ast.NewIdent(object.Name())
 	}
-	qualifier := e.unit.ownerQualifier(e.source.File, object.Pkg())
+	qualifier := e.typeOwnerQualifier(object.Pkg())
 	return e.unit.generatedObject(
 		qualifier, packagePath(object.Pkg()), object.Name(), position,
 	)
+}
+
+func (e *loweringEmitter) typeOwnerQualifier(owner *types.Package) string {
+	if qualifier := e.forcedQualifiers[owner]; qualifier != "" {
+		return qualifier
+	}
+	return e.unit.ownerQualifier(e.source.File, owner)
 }
 
 func (e *loweringEmitter) renameTypeReferenceBlockers(value plannedValue) {
@@ -1131,47 +1279,46 @@ func (e *loweringEmitter) typeExpression(typ types.Type, position token.Pos) ast
 	}
 	switch item := typ.(type) {
 	case *types.Basic:
-		if item.Info()&types.IsUntyped != 0 {
-			return e.typeExpression(types.Default(item), position)
-		}
-		if alias := e.typeObjectAliases[types.Universe.Lookup(item.Name())]; alias != nil {
-			return ast.NewIdent(alias.Name)
-		}
-		if item.Kind() == types.UnsafePointer {
-			qualifier := e.unit.ownerQualifier(e.source.File, types.Unsafe)
-			return e.unit.generatedObject(
-				qualifier, types.Unsafe.Path(), "Pointer", position,
-			)
-		}
-		return e.unit.generatedUniverse(item.Name(), position)
+		return e.basicTypeExpression(item, position)
 	case *types.Named:
-		object := item.Obj()
-		if alias := e.typeObjectAliases[object]; alias != nil {
-			expression := ast.Expr(ast.NewIdent(alias.Name))
-			if arguments := item.TypeArgs(); arguments != nil && arguments.Len() != 0 {
-				indices := make([]ast.Expr, 0, arguments.Len())
-				for index := range arguments.Len() {
-					indices = append(indices, e.typeExpression(arguments.At(index), position))
-				}
-				return &ast.IndexListExpr{X: expression, Indices: indices}
-			}
-			return expression
+		return e.namedTypeExpression(item, position)
+	case *types.Pointer:
+		return e.containerTypeExpression(item, position)
+	case *types.Slice:
+		return e.containerTypeExpression(item, position)
+	case *types.Array:
+		return e.containerTypeExpression(item, position)
+	case *types.Map:
+		return e.containerTypeExpression(item, position)
+	case *types.Chan:
+		return e.containerTypeExpression(item, position)
+	case *types.TypeParam:
+		return e.typeParameterExpression(item)
+	case *types.Struct:
+		return e.structTypeExpression(item, position)
+	case *types.Interface:
+		return e.interfaceTypeExpression(item, position)
+	case *types.Union:
+		return e.unionTypeExpression(item, position)
+	case *types.Signature:
+		return &ast.FuncType{
+			Params:  e.tupleFields(item.Params(), item.Variadic(), position),
+			Results: e.tupleFields(item.Results(), false, position),
 		}
-		if object.Pkg() == e.unit.typed && object.Parent() != e.unit.typed.Scope() {
-			return ast.NewIdent(object.Name())
-		}
-		qualifier := e.unit.ownerQualifier(e.source.File, object.Pkg())
-		expression := e.unit.generatedObject(
-			qualifier, packagePath(object.Pkg()), object.Name(), position,
-		)
-		if arguments := item.TypeArgs(); arguments != nil && arguments.Len() != 0 {
-			indices := make([]ast.Expr, 0, arguments.Len())
-			for index := range arguments.Len() {
-				indices = append(indices, e.typeExpression(arguments.At(index), position))
-			}
-			return &ast.IndexListExpr{X: expression, Indices: indices}
-		}
-		return expression
+	}
+	return nil
+}
+
+func (e *loweringEmitter) typeParameterExpression(item *types.TypeParam) ast.Expr {
+	object := item.Obj()
+	if alias := e.typeObjectAliases[object]; alias != nil {
+		return ast.NewIdent(alias.Name)
+	}
+	return ast.NewIdent(object.Name())
+}
+
+func (e *loweringEmitter) containerTypeExpression(typ types.Type, position token.Pos) ast.Expr {
+	switch item := typ.(type) {
 	case *types.Pointer:
 		return &ast.StarExpr{X: e.typeExpression(item.Elem(), position)}
 	case *types.Slice:
@@ -1194,51 +1341,105 @@ func (e *loweringEmitter) typeExpression(typ types.Type, position token.Pos) ast
 			direction = ast.RECV
 		}
 		return &ast.ChanType{Dir: direction, Value: e.typeExpression(item.Elem(), position)}
-	case *types.TypeParam:
-		object := item.Obj()
-		if alias := e.typeObjectAliases[object]; alias != nil {
-			return ast.NewIdent(alias.Name)
-		}
-		return ast.NewIdent(object.Name())
-	case *types.Struct:
-		fields := make([]*ast.Field, 0, item.NumFields())
-		for index := range item.NumFields() {
-			field := item.Field(index)
-			names := []*ast.Ident(nil)
-			if !field.Embedded() {
-				names = []*ast.Ident{ast.NewIdent(field.Name())}
-			}
-			var tag *ast.BasicLit
-			if text := item.Tag(index); text != "" {
-				tag = &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(text)}
-			}
-			fields = append(fields, &ast.Field{
-				Names: names, Type: e.typeExpression(field.Type(), position), Tag: tag,
-			})
-		}
-		return &ast.StructType{Fields: &ast.FieldList{List: fields}}
-	case *types.Interface:
-		fields := make([]*ast.Field, 0, item.NumExplicitMethods()+item.NumEmbeddeds())
-		for index := range item.NumExplicitMethods() {
-			method := item.ExplicitMethod(index)
-			fields = append(fields, &ast.Field{
-				Names: []*ast.Ident{ast.NewIdent(method.Name())},
-				Type:  e.typeExpression(method.Type(), position),
-			})
-		}
-		for index := range item.NumEmbeddeds() {
-			fields = append(fields, &ast.Field{
-				Type: e.typeExpression(item.EmbeddedType(index), position),
-			})
-		}
-		return &ast.InterfaceType{Methods: &ast.FieldList{List: fields}}
-	case *types.Signature:
-		return &ast.FuncType{
-			Params:  e.tupleFields(item.Params(), item.Variadic(), position),
-			Results: e.tupleFields(item.Results(), false, position),
-		}
 	}
 	return nil
+}
+
+func (e *loweringEmitter) basicTypeExpression(item *types.Basic, position token.Pos) ast.Expr {
+	if item.Info()&types.IsUntyped != 0 {
+		return e.typeExpression(types.Default(item), position)
+	}
+	if alias := e.typeObjectAliases[types.Universe.Lookup(item.Name())]; alias != nil {
+		return ast.NewIdent(alias.Name)
+	}
+	if item.Kind() == types.UnsafePointer {
+		qualifier := e.unit.ownerQualifier(e.source.File, types.Unsafe)
+		return e.unit.generatedObject(qualifier, types.Unsafe.Path(), "Pointer", position)
+	}
+	return e.unit.generatedUniverse(item.Name(), position)
+}
+
+func (e *loweringEmitter) namedTypeExpression(item *types.Named, position token.Pos) ast.Expr {
+	object := item.Obj()
+	var expression ast.Expr
+	if alias := e.typeObjectAliases[object]; alias != nil {
+		expression = ast.NewIdent(alias.Name)
+	} else if object.Pkg() == e.unit.typed && object.Parent() != e.unit.typed.Scope() {
+		expression = ast.NewIdent(object.Name())
+	} else {
+		qualifier := e.typeOwnerQualifier(object.Pkg())
+		expression = e.unit.generatedObject(
+			qualifier, packagePath(object.Pkg()), object.Name(), position,
+		)
+	}
+	arguments := item.TypeArgs()
+	if arguments == nil || arguments.Len() == 0 {
+		return expression
+	}
+	indices := make([]ast.Expr, 0, arguments.Len())
+	for index := range arguments.Len() {
+		indices = append(indices, e.typeExpression(arguments.At(index), position))
+	}
+	return &ast.IndexListExpr{X: expression, Indices: indices}
+}
+
+func (e *loweringEmitter) structTypeExpression(
+	item *types.Struct,
+	position token.Pos,
+) ast.Expr {
+	fields := make([]*ast.Field, 0, item.NumFields())
+	for index := range item.NumFields() {
+		field := item.Field(index)
+		var names []*ast.Ident
+		if !field.Embedded() {
+			names = []*ast.Ident{ast.NewIdent(field.Name())}
+		}
+		var tag *ast.BasicLit
+		if text := item.Tag(index); text != "" {
+			tag = &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(text)}
+		}
+		fields = append(fields, &ast.Field{
+			Names: names, Type: e.typeExpression(field.Type(), position), Tag: tag,
+		})
+	}
+	return &ast.StructType{Fields: &ast.FieldList{List: fields}}
+}
+
+func (e *loweringEmitter) interfaceTypeExpression(
+	item *types.Interface,
+	position token.Pos,
+) ast.Expr {
+	fields := make([]*ast.Field, 0, item.NumExplicitMethods()+item.NumEmbeddeds())
+	for index := range item.NumExplicitMethods() {
+		method := item.ExplicitMethod(index)
+		fields = append(fields, &ast.Field{
+			Names: []*ast.Ident{ast.NewIdent(method.Name())},
+			Type:  e.typeExpression(method.Type(), position),
+		})
+	}
+	for index := range item.NumEmbeddeds() {
+		fields = append(fields, &ast.Field{
+			Type: e.typeExpression(item.EmbeddedType(index), position),
+		})
+	}
+	return &ast.InterfaceType{Methods: &ast.FieldList{List: fields}}
+}
+
+func (e *loweringEmitter) unionTypeExpression(item *types.Union, position token.Pos) ast.Expr {
+	var expression ast.Expr
+	for index := range item.Len() {
+		term := item.Term(index)
+		termExpression := e.typeExpression(term.Type(), position)
+		if term.Tilde() {
+			termExpression = &ast.UnaryExpr{Op: token.TILDE, X: termExpression}
+		}
+		if expression == nil {
+			expression = termExpression
+			continue
+		}
+		expression = &ast.BinaryExpr{X: expression, Op: token.OR, Y: termExpression}
+	}
+	return expression
 }
 
 func (e *loweringEmitter) tupleFields(
@@ -1312,7 +1513,9 @@ func (e *loweringEmitter) errorReturn(
 	if !operation.metadata.Transparent {
 		returnedError = call(
 			e.unit.generatedObject(e.formatQualifier(), "fmt", "Errorf", operation.metadata.Bang),
-			&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(operation.metadata.Name + ": %w")},
+			&ast.BasicLit{
+				Kind: token.STRING, Value: strconv.Quote(operation.metadata.Name + ": %w"),
+			},
 			returnedError,
 		)
 	}

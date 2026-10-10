@@ -111,6 +111,15 @@ func assertGuardedPropagationPlan(t *testing.T, plan *functionLoweringPlan) {
 		t.Fatalf("guard child does not contain the RHS store: %#v", store)
 	}
 	propagation := store.expressions[0]
+	assertPropagationWork(t, plan, propagation)
+}
+
+func assertPropagationWork(
+	t *testing.T,
+	plan *functionLoweringPlan,
+	propagation *plannedExpression,
+) {
+	t.Helper()
 	if propagation.kind != planPropagationExpression || propagation.work == nil ||
 		len(propagation.work.operations) != 2 {
 		t.Fatalf("guarded RHS does not contain propagation work: %#v", propagation)
@@ -124,9 +133,10 @@ func assertGuardedPropagationPlan(t *testing.T, plan *functionLoweringPlan) {
 		t.Fatalf("propagation does not bind and return inside the guard: "+
 			"bind=%#v branch=%#v", bind, errorBranch)
 	}
+	errorType := types.Universe.Lookup("error").Type()
 	if len(propagation.results) != 1 ||
 		!types.Identical(propagation.results[0].typ, types.Typ[types.Bool]) ||
-		!types.Identical(plan.values[bind.outputs[1]-1].typ, types.Universe.Lookup("error").Type()) {
+		!types.Identical(plan.values[bind.outputs[1]-1].typ, errorType) {
 		t.Fatalf("call result types are not bool and error: results=%v values=%v",
 			propagation.results, plan.values)
 	}
@@ -157,7 +167,8 @@ func countGuardedCheckCalls(use *ast.FuncDecl) (int, int) {
 			ast.Inspect(conditional.Body, func(node ast.Node) bool {
 				call, ok := node.(*ast.CallExpr)
 				if ok {
-					if identifier, named := call.Fun.(*ast.Ident); named && identifier.Name == "check" {
+					if identifier, named := call.Fun.(*ast.Ident); named &&
+						identifier.Name == "check" {
 						callCount++
 						guardedCallCount++
 					}

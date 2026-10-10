@@ -27,10 +27,11 @@ type plannedTypeBlocker struct {
 }
 
 type plannedTypeAliasAction struct {
-	object       types.Object
-	before       *ast.Ident
-	packageScope bool
-	parameters   []plannedTypeAliasParameter
+	object           types.Object
+	before           *ast.Ident
+	packageScope     bool
+	foreignQualified bool
+	parameters       []plannedTypeAliasParameter
 }
 
 type plannedTypeAliasParameter struct {
@@ -126,11 +127,23 @@ func (capture *plannedTypeObjectCapture) addObject(object types.Object, paramete
 	capture.reference.objects = append(capture.reference.objects, plannedTypeObjectReference{
 		object: object, definition: definition, direct: direct,
 	})
+	capture.addForeignPackageObject(object)
+	capture.updateDeclarationAnchor(object, parameter, definition)
+}
+
+func (capture *plannedTypeObjectCapture) addForeignPackageObject(object types.Object) {
 	if object.Pkg() != nil && object.Pkg() != capture.current {
 		packageObject := filePackageObject(capture.file, capture.info, object.Pkg())
 		capture.addObject(packageObject, false, packageObject != nil &&
 			packageObject.Name() != "." && packageObject.Name() != "_")
 	}
+}
+
+func (capture *plannedTypeObjectCapture) updateDeclarationAnchor(
+	object types.Object,
+	parameter bool,
+	definition *ast.Ident,
+) {
 	if object.Pkg() != capture.current || object.Parent() == capture.current.Scope() {
 		return
 	}
@@ -156,6 +169,13 @@ func (capture *plannedTypeObjectCapture) visit(item types.Type) {
 		return
 	}
 	capture.seenTypes[item] = true
+	if capture.visitObjectType(item) {
+		return
+	}
+	capture.visitCompositeType(item)
+}
+
+func (capture *plannedTypeObjectCapture) visitObjectType(item types.Type) bool {
 	switch item := item.(type) {
 	case *types.Alias:
 		capture.addObject(item.Obj(), false, capture.typeObjectIsDirect(item.Obj()))
@@ -173,17 +193,24 @@ func (capture *plannedTypeObjectCapture) visit(item types.Type) {
 		} else {
 			capture.addObject(types.Universe.Lookup(item.Name()), false, true)
 		}
+	default:
+		return false
+	}
+	return true
+}
+
+func (capture *plannedTypeObjectCapture) visitCompositeType(item types.Type) {
+	switch item := item.(type) {
 	case *types.Pointer:
-		capture.visit(item.Elem())
+		capture.visitContainer(item)
 	case *types.Slice:
-		capture.visit(item.Elem())
+		capture.visitContainer(item)
 	case *types.Array:
-		capture.visit(item.Elem())
+		capture.visitContainer(item)
 	case *types.Map:
-		capture.visit(item.Key())
-		capture.visit(item.Elem())
+		capture.visitContainer(item)
 	case *types.Chan:
-		capture.visit(item.Elem())
+		capture.visitContainer(item)
 	case *types.Struct:
 		for index := range item.NumFields() {
 			capture.visit(item.Field(index).Type())
@@ -205,6 +232,22 @@ func (capture *plannedTypeObjectCapture) visit(item types.Type) {
 		visitTupleTypes(item.Results(), capture.visit)
 	case *types.Tuple:
 		visitTupleTypes(item, capture.visit)
+	}
+}
+
+func (capture *plannedTypeObjectCapture) visitContainer(item types.Type) {
+	switch item := item.(type) {
+	case *types.Pointer:
+		capture.visit(item.Elem())
+	case *types.Slice:
+		capture.visit(item.Elem())
+	case *types.Array:
+		capture.visit(item.Elem())
+	case *types.Map:
+		capture.visit(item.Key())
+		capture.visit(item.Elem())
+	case *types.Chan:
+		capture.visit(item.Elem())
 	}
 }
 
@@ -256,7 +299,8 @@ func plannedTypeAlias(
 ) *plannedTypeAliasAction {
 	action := &plannedTypeAliasAction{
 		object: object, before: before,
-		packageScope: object.Pkg() != current || object.Parent() == current.Scope(),
+		packageScope:     object.Pkg() != current || object.Parent() == current.Scope(),
+		foreignQualified: object.Pkg() != nil && object.Pkg() != current,
 	}
 	parameters := typeAliasParameters(object.Type())
 	if parameters == nil {

@@ -118,7 +118,8 @@ outer:
 		item(events, value)
 	}}:
 		record(events, "send-body")
-		result := numbers{for _, value := range (values(events, "body-source", false)!!).kept(events) {
+		result := numbers{for _, value := range (values(events,
+			"body-source", false)!!).kept(events) {
 			item(events, value)
 		}}
 		send <- result
@@ -172,7 +173,10 @@ func TestGeneratedLoweringContexts(t *testing.T) {
 	}
 	for index := range 3 {
 		if closures[index]() != index || *addresses[index] != index {
-			t.Fatalf("capture index=%d closure=%d address=%d", index, closures[index](), *addresses[index])
+			t.Fatalf(
+				"capture index=%d closure=%d address=%d",
+				index, closures[index](), *addresses[index],
+			)
 		}
 		for prior := range index {
 			if addresses[index] == addresses[prior] {

@@ -7,14 +7,40 @@ import (
 )
 
 func TestLoweringKeepsGenericAliasTypeBeforePropagation(t *testing.T) {
-	_, problems := Compile(PackageInput{
-		Path: "genericaliascontract",
-		Sources: []File{{Name: "generic_alias_contract.tgo", Data: []byte(`package genericaliascontract
+	tests := []struct {
+		name         string
+		declarations string
+		constraint   string
+	}{
+		{
+			name: "any alias",
+			declarations: `type Base[T any] bool
+type Flag[T any] = Base[T]`,
+			constraint: "any",
+		},
+		{
+			name: "union alias",
+			declarations: `type Base[T ~int | ~int64] bool
+type Flag[T ~int | ~int64] = Base[T]`,
+			constraint: "~int | ~int64",
+		},
+		{
+			name:         "union named",
+			declarations: "type Flag[T ~int | ~int64] bool",
+			constraint:   "~int | ~int64",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, problems := Compile(PackageInput{
+				Path: "genericaliascontract",
+				Sources: []File{{
+					Name: "generic_alias_contract.tgo",
+					Data: []byte(`package genericaliascontract
 
-type Base[T any] bool
-type Flag[T any] = Base[T]
+` + test.declarations + `
 
-func consume[V any](value Flag[V], number int) int {
+func consume[V ` + test.constraint + `](value Flag[V], number int) int {
 	if value {
 		return number
 	}
@@ -25,16 +51,19 @@ func load() (int, error) {
 	return 7, nil
 }
 
-func use[V any](left int, right int) (int, error) {
+func use[V ` + test.constraint + `](left int, right int) (int, error) {
 	type Flag bool
 	_ = Flag(false)
 	return consume[V](left < right, load()!!), nil
 }
-`)}},
-		FileSet: token.NewFileSet(),
-	})
-	if len(problems) != 0 {
-		t.Fatalf("compile generic alias contract: %v", problems[0])
+	`),
+				}},
+				FileSet: token.NewFileSet(),
+			})
+			if len(problems) != 0 {
+				t.Fatalf("compile generic alias contract: %v", problems[0])
+			}
+		})
 	}
 }
 
@@ -82,5 +111,135 @@ func use() error {
 	})
 	if len(problems) != 0 {
 		t.Fatalf("compile imported private channel result: %v", problems[0])
+	}
+}
+
+func TestLoweringKeepsForeignPrivateConstraintIdentity(t *testing.T) {
+	library := types.NewPackage("example.com/lib", "lib")
+	concreteName := types.NewTypeName(token.NoPos, library, "Concrete", nil)
+	concrete := types.NewNamed(concreteName, types.NewStruct(nil, nil), nil)
+	library.Scope().Insert(concreteName)
+	receiver := types.NewVar(token.NoPos, library, "", concrete)
+	concrete.AddMethod(types.NewFunc(
+		token.NoPos,
+		library,
+		"private",
+		types.NewSignatureType(receiver, nil, nil, types.NewTuple(), types.NewTuple(), false),
+	))
+
+	privateMethod := types.NewFunc(
+		token.NoPos,
+		library,
+		"private",
+		types.NewSignatureType(nil, nil, nil, types.NewTuple(), types.NewTuple(), false),
+	)
+	constraint := types.NewInterfaceType([]*types.Func{privateMethod}, nil)
+	constraint.Complete()
+	parameterName := types.NewTypeName(token.NoPos, library, "T", nil)
+	parameter := types.NewTypeParam(parameterName, constraint)
+	boxName := types.NewTypeName(token.NoPos, library, "Box", nil)
+	box := types.NewNamed(boxName, types.Typ[types.Bool], nil)
+	box.SetTypeParams([]*types.TypeParam{parameter})
+	library.Scope().Insert(boxName)
+	instantiatedBox, err := types.Instantiate(
+		nil,
+		box,
+		[]types.Type{concrete},
+		true,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	library.Scope().Insert(types.NewFunc(
+		token.NoPos,
+		library,
+		"Consume",
+		types.NewSignatureType(
+			nil,
+			nil,
+			nil,
+			types.NewTuple(
+				types.NewVar(token.NoPos, library, "", instantiatedBox),
+				types.NewVar(token.NoPos, library, "", types.Typ[types.Int]),
+			),
+			types.NewTuple(types.NewVar(token.NoPos, library, "", types.Typ[types.Int])),
+			false,
+		),
+	))
+	library.MarkComplete()
+
+	_, problems := Compile(PackageInput{
+		Path: "privateconstraintcontract",
+		Sources: []File{{
+			Name: "private_constraint_contract.tgo",
+			Data: []byte(`package privateconstraintcontract
+
+import . "example.com/lib"
+
+func load() (int, error) {
+	return 7, nil
+}
+
+func use(left int, right int) (int, error) {
+	type Box bool
+	_ = Box(false)
+	return Consume(left < right, load()!!), nil
+}
+
+`),
+		}},
+		FileSet: token.NewFileSet(),
+		Importer: packageImporter{
+			"example.com/lib": library,
+		},
+	})
+	if len(problems) != 0 {
+		t.Fatalf("compile foreign private constraint: %v", problems[0])
+	}
+}
+
+func TestLoweringKeepsForeignHiddenBooleanContext(t *testing.T) {
+	library := types.NewPackage("example.com/hidden", "hidden")
+	hiddenName := types.NewTypeName(token.NoPos, library, "hiddenBool", nil)
+	hidden := types.NewNamed(hiddenName, types.Typ[types.Bool], nil)
+	library.Scope().Insert(hiddenName)
+	library.Scope().Insert(types.NewFunc(
+		token.NoPos, library, "Consume",
+		types.NewSignatureType(
+			nil, nil, nil,
+			types.NewTuple(
+				types.NewVar(token.NoPos, library, "", hidden),
+				types.NewVar(token.NoPos, library, "", types.Typ[types.Int]),
+			),
+			types.NewTuple(), false,
+		),
+	))
+	library.MarkComplete()
+
+	_, problems := Compile(PackageInput{
+		Path: "hiddenbooleancontract",
+		Sources: []File{{
+			Name: "hidden_boolean_contract.tgo",
+			Data: []byte(`package hiddenbooleancontract
+
+import "example.com/hidden"
+
+func left() int { return 1 }
+func right() int { return 2 }
+func load() (int, error) { return 7, nil }
+
+func use() error {
+	hidden.Consume(left() < right(), load()!!)
+	return nil
+}
+`),
+		}},
+		FileSet: token.NewFileSet(),
+		Importer: packageImporter{
+			"example.com/hidden": library,
+		},
+	})
+	if len(problems) != 0 {
+		t.Fatalf("compile foreign hidden boolean context: %v", problems[0])
 	}
 }
