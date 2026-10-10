@@ -1,4 +1,4 @@
-"""Check Markdown line width. Exclude AGENTS.md."""
+"""Check Markdown line width. Exclude AGENTS.md and the root coordinator goal."""
 
 import os
 from pathlib import Path
@@ -36,7 +36,8 @@ for raw_path in sorted(set(paths) - {b""}):
         if not linked.exists():
             print(f"{path}: local link target does not exist: {target}")
             failed = True
-    if path.name == "AGENTS.md":
+    # The root coordinator goal must stay on one line.
+    if path.name == "AGENTS.md" or path == Path("coordinator.md"):
         continue
     limit = 120
     for number, line in enumerate(content.splitlines(), 1):
