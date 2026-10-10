@@ -16,9 +16,11 @@ class LocalValidationLockTest(unittest.TestCase):
         for name in (
             "GITHUB_ACTIONS",
             "TGO_LOCAL_VALIDATION_LOCK_HELD",
+            "TGO_LOCAL_VALIDATION_VERIFY_CGROUP",
+            "TGO_LOCAL_VALIDATION_CGROUP_ROOT",
+            "TGO_LOCAL_VALIDATION_CGROUP_FILE",
             "TGO_LOCAL_VALIDATION_MEMINFO",
             "TGO_LOCAL_VALIDATION_MIN_AVAILABLE_KB",
-            "TGO_LOCAL_VALIDATION_MEMORY_MAX",
             "TGO_LOCAL_VALIDATION_SYSTEMD_RUN",
         ):
             environment.pop(name, None)
@@ -29,6 +31,14 @@ class LocalValidationLockTest(unittest.TestCase):
     ) -> dict[str, str]:
         meminfo = directory / "meminfo"
         meminfo.write_text(f"MemAvailable: {available_kb} kB\n")
+        cgroup_root = directory / "cgroup"
+        control_dir = cgroup_root / "test.scope"
+        control_dir.mkdir(parents=True, exist_ok=True)
+        (control_dir / "memory.max").write_text("4294967296\n")
+        (control_dir / "memory.swap.max").write_text("0\n")
+        (control_dir / "memory.oom.group").write_text("1\n")
+        cgroup_file = directory / "self-cgroup"
+        cgroup_file.write_text("0::/test.scope\n")
         systemd_run = directory / "systemd-run"
         systemd_run.write_text(
             "#!/bin/sh\n"
@@ -36,12 +46,15 @@ class LocalValidationLockTest(unittest.TestCase):
             'test -z "${SYSTEMD_RUN_FAILURE:-}" || exit "$SYSTEMD_RUN_FAILURE"\n'
             'while test "$1" != --; do shift; done\n'
             "shift\n"
-            'exec env TGO_LOCAL_VALIDATION_LOCK_HELD=1 "$@"\n'
+            "exec env TGO_LOCAL_VALIDATION_LOCK_HELD=1 "
+            'TGO_LOCAL_VALIDATION_VERIFY_CGROUP=1 "$@"\n'
         )
         systemd_run.chmod(0o755)
         environment = self.clean_environment()
         environment["TGO_LOCAL_VALIDATION_MEMINFO"] = str(meminfo)
         environment["TGO_LOCAL_VALIDATION_SYSTEMD_RUN"] = str(systemd_run)
+        environment["TGO_LOCAL_VALIDATION_CGROUP_ROOT"] = str(cgroup_root)
+        environment["TGO_LOCAL_VALIDATION_CGROUP_FILE"] = str(cgroup_file)
         return environment
 
     def make_repository(self, directory: Path) -> Path:
@@ -201,8 +214,56 @@ class LocalValidationLockTest(unittest.TestCase):
                 capture_output=True,
             )
             self.assertEqual(result.returncode, 137)
-            self.assertIn("was killed inside the 4G process-tree memory limit", result.stderr)
-            self.assertIn("check the systemd log for an out-of-memory kill", result.stderr)
+            self.assertIn("status 137 inside the 4G process-tree memory limit", result.stderr)
+            self.assertIn("an out-of-memory kill is possible", result.stderr)
+
+    def test_rejects_missing_effective_cgroup_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            repository = self.make_repository(directory)
+            started = directory / "started"
+            environment = self.resource_environment(directory)
+            (directory / "cgroup/test.scope/memory.max").unlink()
+            result = subprocess.run(
+                [LOCK_SCRIPT, "sh", "-c", f"touch {started}"],
+                cwd=repository,
+                env=environment,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertFalse(started.exists())
+            self.assertIn("does not enforce the requested memory limits", result.stderr)
+
+    def test_rejects_wrong_effective_cgroup_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            repository = self.make_repository(directory)
+            started = directory / "started"
+            environment = self.resource_environment(directory)
+            control_dir = directory / "cgroup/test.scope"
+            limits = {
+                "memory.max": ("4294967296\n", "max\n"),
+                "memory.swap.max": ("0\n", "max\n"),
+                "memory.oom.group": ("1\n", "0\n"),
+            }
+            for name, (valid, invalid) in limits.items():
+                with self.subTest(name=name):
+                    path = control_dir / name
+                    path.write_text(invalid)
+                    result = subprocess.run(
+                        [LOCK_SCRIPT, "sh", "-c", f"touch {started}"],
+                        cwd=repository,
+                        env=environment,
+                        text=True,
+                        capture_output=True,
+                    )
+                    self.assertEqual(result.returncode, 1)
+                    self.assertFalse(started.exists())
+                    self.assertIn(
+                        "does not enforce the requested memory limits", result.stderr
+                    )
+                    path.write_text(valid)
 
     def test_preserves_command_failure_status(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

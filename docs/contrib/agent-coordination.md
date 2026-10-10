@@ -33,9 +33,9 @@ agents. Move the requested work to review without unnecessary waiting.
   needs 6 GiB of available memory before it starts. It limits its process tree
   to 4 GiB and disables swap use for that tree. This leaves at least 2 GiB
   available at admission time. Processes outside the runner can still use the
-  reserve. Use `TGO_LOCAL_VALIDATION_MIN_AVAILABLE_KB` and
-  `TGO_LOCAL_VALIDATION_MEMORY_MAX` only when the local host needs different
-  limits. The runner stops if the host cannot enforce the process-tree limit.
+  reserve. Use `TGO_LOCAL_VALIDATION_MIN_AVAILABLE_KB` only when the local host
+  needs a different admission threshold. The runner stops if the host cannot
+  enforce the process-tree limit.
 - Do not merge `main` into a clean pull request only to refresh its ancestry.
   This repository squash-merges pull requests. Merge `main` only when GitHub
   reports a conflict or Lucas asks. Preserve both sides of a conflict. Do not
