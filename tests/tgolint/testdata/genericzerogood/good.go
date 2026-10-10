@@ -115,6 +115,8 @@ func Safe() {
 	_ = genericzero.SafeContainerLength[model.Event]()
 	genericzero.OverwrittenContainer[model.Event]()
 	genericzero.UnusedCapturedClosure[model.Event]()
+	_ = genericzero.ReturnedAppendedAlias[int]()
+	genericzero.CopyAlias[int](make([]func(), 1))
 	genericzero.AlternativeNested[int, int](true)()
 	genericzero.RangedAssignedNested[int]()()
 	genericzero.RangedDefinedNested[int]()()

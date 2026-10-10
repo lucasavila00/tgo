@@ -4,6 +4,21 @@ type FunctionBox struct {
 	Values []func()
 }
 
+func storedEffect[T any]() {
+	var value T
+	_ = value
+}
+
+func ReturnedAppendedAlias[T any]() []func() {
+	values := []func(){storedEffect[T]}
+	return append(values)
+}
+
+func CopyAlias[T any](target []func()) {
+	values := []func(){storedEffect[T]}
+	copy(target, values)
+}
+
 func LocalLiteralContainer[T any]() {
 	values := []func(){func() {
 		var value T

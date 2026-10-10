@@ -111,7 +111,9 @@ genericzerobad/bad.go:203:2: call to ConditionalForwardCall will create invalid 
 genericzerobad/bad.go:204:2: call to DirectInvokedForwardCall will create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:205:2: call to function returned by ConditionalAlias can create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:206:6: call to ReturnAssignedBox can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:210:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:211:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:215:12: call to UnresolvedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:216:7: function returned by UnresolvedNested escapes; its effects cannot be checked at a call site
+genericzerobad/bad.go:207:6: call to ReturnedAppendedAlias can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:208:2: call to CopyAlias can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:212:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:213:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:217:12: call to UnresolvedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:218:7: function returned by UnresolvedNested escapes; its effects cannot be checked at a call site

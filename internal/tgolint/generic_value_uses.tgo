@@ -79,12 +79,16 @@ func (c %checker) collectContainerCallGenericValueUses(
 	summaries map[*types.Func]%genericEffectSummary,
 	bindings map[types.Object]%returnedClosureBinding,
 ) {
+	arguments := call.Args
 	if name := syntax.IdentifierExpressionOf(unparenthesized(call.Callee)); name != nil {
-		if _, builtin := c.facts.Object(name).(*types.Builtin); builtin {
-			return
+		if builtin, ok := c.facts.Object(name).(*types.Builtin); ok {
+			if builtin.Name() != "copy" || len(call.Args) < 2 {
+				return
+			}
+			arguments = call.Args[1:2]
 		}
 	}
-	for _, argument := range call.Args {
+	for _, argument := range arguments {
 		if returnedFunctionType(c.facts.Type(argument)) {
 			continue
 		}
@@ -359,8 +363,22 @@ func (c %checker) genericSummaryValues(
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
 		if name := syntax.IdentifierExpressionOf(unparenthesized(call.Callee)); name != nil {
-			if _, builtin := c.facts.Object(name).(*types.Builtin); builtin {
-				return nil, false, false
+			if builtin, ok := c.facts.Object(name).(*types.Builtin); ok {
+				if builtin.Name() != "append" {
+					return nil, false, false
+				}
+				var values []genericValue = nil
+				maySkip := false
+				opaque := false
+				for _, argument := range call.Args {
+					nested, nestedMaySkip, nestedOpaque := c.genericSummaryValues(
+						summary, argument, summaries, bindings, seen,
+					)
+					values = append(values, nested...)
+					maySkip = maySkip || nestedMaySkip
+					opaque = opaque || nestedOpaque
+				}
+				return values, maySkip || len(values) > 1, opaque
 			}
 		}
 		function, _ := c.genericCallObject(call.Callee).(*types.Func)
