@@ -307,6 +307,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		} else if assignment, ok := node.Init.(*ast.AssignStmt); ok {
 			l.rememberSimpleAssignmentTypes(assignment)
 		}
+		l.missingStatementLowering(node.Init, "for initializer")
 		node.Body.List = l.scopedStatements(node.Body.List)
 		l.missingStatementLowering(node.Post, "for post statement")
 		if l.hasLowering(node.Cond) {
