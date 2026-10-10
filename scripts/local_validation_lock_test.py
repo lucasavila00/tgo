@@ -166,7 +166,10 @@ class LocalValidationLockTest(unittest.TestCase):
             )
             self.assertIn("--property=MemoryMax=4G", arguments.read_text().splitlines())
             self.assertIn("--property=MemorySwapMax=0", arguments.read_text().splitlines())
-            self.assertIn("--property=MemoryOOMGroup=yes", arguments.read_text().splitlines())
+            self.assertIn("--property=OOMPolicy=kill", arguments.read_text().splitlines())
+            self.assertNotIn(
+                "--property=MemoryOOMGroup=yes", arguments.read_text().splitlines()
+            )
 
     def test_reports_cgroup_start_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
