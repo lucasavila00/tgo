@@ -25,6 +25,30 @@ func classifyExhaustive(load func() Account, events *[]string) bool {
 	}
 }
 
+func classifyLabeledExhaustive(load func() Account, events *[]string, again *bool) bool {
+	goto dispatch
+dispatch:
+	switch {
+	default:
+		initialized := recordExhaustiveEvaluation(events, "init")
+		enumValue_1 := (load())
+		switch enumValue_1.Tag() {
+		case AccountTagPersonal, AccountTagBusiness:
+			if !initialized {
+				return false
+			}
+			if *again {
+				*again = false
+				goto dispatch
+			}
+			break dispatch
+		default:
+			panic(enumValue_1.UnknownTag()) // unreachable: tgolint requires a case per tag
+		}
+	}
+	return true
+}
+
 func TestExhaustiveReceiverEvaluatesOnceOnValidPath(t *testing.T) {
 	events := []string{}
 	load := func() Account {
@@ -56,4 +80,22 @@ func TestExhaustiveReceiverEvaluatesOnceOnInvalidPath(t *testing.T) {
 		var invalid Account
 		return invalid
 	}, &events)
+}
+
+func TestLabeledExhaustiveReceiverReevaluatesAfterGoto(t *testing.T) {
+	events := []string{}
+	again := true
+	load := func() Account {
+		events = append(events, "receiver")
+		return func(input TgoAccountPersonalInput) Account {
+			return NewAccountPersonal(input.FieldName)
+		}(TgoAccountPersonalInput{FieldName: "Ada"})
+	}
+	if !classifyLabeledExhaustive(load, &events, &again) {
+		t.Fatal("labeled switch did not select its case")
+	}
+	want := []string{"init", "receiver", "init", "receiver"}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("evaluation order = %v, want %v", events, want)
+	}
 }

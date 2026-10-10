@@ -147,6 +147,60 @@ func pointerReceiver(value *Event) {
 	}
 }
 
+func TestExhaustiveClauseStoresIndexReceiverOnce(t *testing.T) {
+	output := compileEnumSwitch(t, `package sample
+type Event enum { Ready struct{} }
+func use(values []Event, index func() int) {
+	switch values[index()].Tag() {
+	case EventTagReady:
+		return
+	exhaustive:
+	}
+}
+`)
+	if strings.Count(output, "values[index()]") != 1 {
+		t.Fatalf("index receiver evaluation count is not one\n%s", output)
+	}
+	for _, text := range []string{
+		"switch enumValue := values[index()]; enumValue.Tag()",
+		"panic(enumValue.UnknownTag())",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("generated switch does not contain %q\n%s", text, output)
+		}
+	}
+}
+
+func TestExhaustiveClausePreservesLabeledGoto(t *testing.T) {
+	output := compileEnumSwitch(t, `package sample
+type Event enum { Ready struct{} }
+func use(load func() Event, again bool) string {
+	goto dispatch
+dispatch:
+	switch initialized := true; load().Tag() {
+	case EventTagReady:
+		_ = initialized
+		if again {
+			again = false
+			goto dispatch
+		}
+		break dispatch
+	exhaustive:
+	}
+	return "done"
+}
+`)
+	for _, text := range []string{
+		"dispatch:\n\tswitch {\n\tdefault:\n\t\tinitialized := true",
+		"enumValue := load()\n\t\tswitch enumValue.Tag()",
+		"goto dispatch", "break dispatch",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("generated switch does not contain %q\n%s", text, output)
+		}
+	}
+}
+
 func compileEnumSwitch(t *testing.T, source string) string {
 	t.Helper()
 	compiled, problems := Compile(PackageInput{

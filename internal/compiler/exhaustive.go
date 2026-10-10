@@ -42,50 +42,66 @@ func lowerExhaustiveClauses(
 			if !clause.Exhaustive.IsValid() {
 				continue
 			}
-			start := file.Offset(clause.Exhaustive)
-			if len(clause.Body) != 0 {
-				failure = fmt.Errorf(
-					"%s: exhaustive clause must not have a body",
-					files.Position(clause.Case),
-				)
-				return false
-			}
-			receiver, ok := exhaustiveReceiver(switchStatement.Tag)
-			if !ok {
-				failure = fmt.Errorf(
-					"%s: exhaustive clause requires switch value.Tag()",
-					files.Position(clause.Case),
-				)
-				return false
-			}
-			receiverStart := file.Offset(syntax.ExpressionPosition(receiver))
-			receiverEnd := file.Offset(syntax.ExpressionEnd(receiver))
-			if receiverStart < 0 || receiverEnd < receiverStart || receiverEnd > len(data) {
-				failure = fmt.Errorf(
-					"%s: exhaustive clause has an invalid switch receiver",
-					files.Position(clause.Case),
-				)
-				return false
-			}
-			receiverText := string(data[receiverStart:receiverEnd])
-			unknownTag := receiverText + ".UnknownTag()"
-			if exhaustiveReceiverNeedsStorage(receiver) {
-				marker := freshIdentifier("tgoExhaustive", used)
-				storedReceivers[marker] = freshIdentifier("enumValue", used)
-				unknownTag = marker + "()"
-			}
-			edits = append(edits,
-				edit{start: start, end: start + len(exhaustiveWord), text: "default"},
-				edit{
-					start: file.Offset(clause.Colon) + 1,
-					end:   file.Offset(clause.Colon) + 1,
-					text:  " panic(" + unknownTag + ") " + enumDefaultComment,
-				},
+			var changes []edit
+			changes, failure = lowerExhaustiveClause(
+				files, file, switchStatement, clause, data, used, storedReceivers,
 			)
+			if failure != nil {
+				return false
+			}
+			edits = append(edits, changes...)
 		}
 		return true
 	})
 	return edits, storedReceivers, failure
+}
+
+func lowerExhaustiveClause(
+	files *token.FileSet,
+	file *token.File,
+	switched *syntax.SwitchStatement,
+	clause *syntax.CaseClause,
+	data []byte,
+	used map[string]bool,
+	storedReceivers map[string]string,
+) ([]edit, error) {
+	if len(clause.Body) != 0 {
+		return nil, fmt.Errorf(
+			"%s: exhaustive clause must not have a body",
+			files.Position(clause.Case),
+		)
+	}
+	receiver, ok := exhaustiveReceiver(switched.Tag)
+	if !ok {
+		return nil, fmt.Errorf(
+			"%s: exhaustive clause requires switch value.Tag()",
+			files.Position(clause.Case),
+		)
+	}
+	receiverStart := file.Offset(syntax.ExpressionPosition(receiver))
+	receiverEnd := file.Offset(syntax.ExpressionEnd(receiver))
+	if receiverStart < 0 || receiverEnd < receiverStart || receiverEnd > len(data) {
+		return nil, fmt.Errorf(
+			"%s: exhaustive clause has an invalid switch receiver",
+			files.Position(clause.Case),
+		)
+	}
+	receiverText := string(data[receiverStart:receiverEnd])
+	unknownTag := receiverText + ".UnknownTag()"
+	if exhaustiveReceiverNeedsStorage(receiver) {
+		marker := freshIdentifier("tgoExhaustive", used)
+		storedReceivers[marker] = freshIdentifier("enumValue", used)
+		unknownTag = marker + "()"
+	}
+	start := file.Offset(clause.Exhaustive)
+	colon := file.Offset(clause.Colon) + 1
+	return []edit{
+		{start: start, end: start + len(exhaustiveWord), text: "default"},
+		{
+			start: colon, end: colon,
+			text: " panic(" + unknownTag + ") " + enumDefaultComment,
+		},
+	}, nil
 }
 
 func exhaustiveReceiverNeedsStorage(expression *syntax.Expression) bool {
@@ -150,10 +166,11 @@ func lowerExhaustiveReceiverEvaluations(file *ast.File, names map[string]string)
 			initializer := switched.Init
 			switched.Init = nil
 			applyExhaustivePlan(plan)
-			node.Stmt = switched
-			cursor.Replace(&ast.BlockStmt{List: []ast.Stmt{
-				initializer, exhaustiveReceiverAssignment(plan), node,
-			}})
+			node.Stmt = &ast.SwitchStmt{Body: &ast.BlockStmt{List: []ast.Stmt{
+				&ast.CaseClause{Body: []ast.Stmt{
+					initializer, exhaustiveReceiverAssignment(plan), switched,
+				}},
+			}}}
 		}
 		return true
 	})

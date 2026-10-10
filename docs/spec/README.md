@@ -449,19 +449,24 @@ exhaustive:
 ```
 
 The switch tag must be a direct `Tag()` call on an enum value or pointer. Parentheses are valid.
-The receiver can be a local value, pointer, field, or direct alias. An exact enum type constraint
-can use the switch. An interface or open or mixed type parameter cannot.
+The receiver can be a local value, pointer, field, direct alias, call expression, or index
+expression. An exact enum type constraint can use the switch. An interface or open or mixed type
+parameter cannot.
+
+The compiler evaluates a non-local receiver one time in a fresh local variable. If the switch has
+an initializer, the initializer runs first. The generated `Tag` and `UnknownTag` calls use the same
+local variable.
 
 An `exhaustive:` clause requires the switch to cover every declared tag with generated tag
 constants. Parentheses, a
 constant conversion, and a same-value constant alias are valid labels. An unrelated numeric
 constant is invalid, even when its value is equal to a tag. An unresolved label suppresses the
-missing-case diagnostic. A repeated tag is invalid. `exhaustive:` must have no body. It emits this
-Go default for the same receiver:
+missing-case diagnostic. A repeated tag is invalid. `exhaustive:` must have no body. It emits a Go
+default that uses the stored receiver:
 
 ```text
 default:
-    panic(account.UnknownTag()) // unreachable: tgolint requires a case per tag
+    panic(enumValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 ```
 
 A normal `default:` clause is a fallback and may cover omitted variants. Its flow type is the union
