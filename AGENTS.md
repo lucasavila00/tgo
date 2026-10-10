@@ -141,8 +141,7 @@ Move the requested work to review without unnecessary waiting.
   unblocked issue. Do not wait for the prior pull request to merge.
 - Use a separate `gpt-5.6-sol` subagent for the final independent review. The
   review subagent reports its result and then stops.
-- Do not use an agent slot to wait for hosted CI. Do not run the full CI suite
-  locally.
+- Do not use an agent slot to wait for hosted CI.
 - Do not merge `main` into a clean pull request only to refresh its ancestry.
   This repository squash-merges pull requests. Merge `main` only when GitHub
   reports a conflict, and preserve both sides of the conflict.
