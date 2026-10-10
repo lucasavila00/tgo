@@ -548,15 +548,16 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Variable":
 			current = 11
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -568,15 +569,15 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -595,11 +596,11 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one SymbolKind JSON variant")
 	}
 	if selected == 0 {
@@ -762,11 +763,12 @@ func (e *Engine) DocumentSymbols(
 	ctx context.Context,
 	uri string,
 ) ([]Symbol, error) {
-	index, err := e.load(ctx)
+	result_1, err := e.load(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	index := result_1
 	result := make([]Symbol, 0)
 	for _, symbol := range index.symbols {
 		if symbol.Range.URI == uri {
@@ -781,11 +783,12 @@ func (e *Engine) WorkspaceSymbols(
 	ctx context.Context,
 	query string,
 ) ([]Symbol, error) {
-	index, err := e.load(ctx)
+	result_1, err := e.load(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	index := result_1
 	query = strings.ToLower(query)
 	result := make([]Symbol, 0)
 	for _, symbol := range index.symbols {
@@ -813,11 +816,12 @@ type Engine struct {
 
 // New makes an engine for one workspace directory.
 func New(root string) (*Engine, error) {
-	absolute, err := filepath.Abs(root)
+	result, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
 	}
 
+	absolute := result
 	return &Engine{
 		root: absolute, mu: new(sync.Mutex), index: nil, generation: 0,
 		building: false, ready: nil,
@@ -839,11 +843,12 @@ func (e *Engine) Definition(
 	uri string,
 	offset int,
 ) ([]Location, error) {
-	index, err := e.load(ctx)
+	result, err := e.load(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	index := result
 	for _, item := range index.occurrences {
 		var operand bool = item.location.URI == uri
 		if operand {
@@ -870,11 +875,12 @@ func (e *Engine) Hover(
 	uri string,
 	offset int,
 ) (*Hover, error) {
-	index, err := e.load(ctx)
+	result, err := e.load(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	index := result
 	for _, item := range index.occurrences {
 		var operand bool = item.location.URI == uri
 		if operand {
@@ -898,11 +904,12 @@ func (e *Engine) References(
 	offset int,
 	includeDeclaration bool,
 ) ([]Location, error) {
-	index, err := e.load(ctx)
+	result_1, err := e.load(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	index := result_1
 	for _, item := range index.occurrences {
 		var operand bool = item.location.URI != uri
 		if !operand {
@@ -979,10 +986,11 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		e.mu.Unlock()
 		index, err := e.buildIndex(ctx)
 		e.mu.Lock()
-		var current bool = err == nil
-		if current {
-			current = generation == e.generation
+		var operand_2 bool = err == nil
+		if operand_2 {
+			operand_2 = generation == e.generation
 		}
+		current := operand_2
 		if current {
 			e.index = index
 		}
@@ -1008,10 +1016,12 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		default:
 		}
 	}
-	packages, err := sourceanalysis.AnalyzeAvailableWorkspaceContext(ctx, e.root)
+	result, err := sourceanalysis.AnalyzeAvailableWorkspaceContext(ctx, e.root)
 	if err != nil {
 		return nil, err
 	}
+
+	packages := result
 	{
 		operand_1 := ctx.Done()
 		select {
@@ -1042,11 +1052,12 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 			generatedUses[positionKey(pkg.Files.Position(position))] = object
 		}
 		for _, source := range pkg.Sources {
-			fileURI, err_1 := pathURI(source.Path)
+			result_1, err_1 := pathURI(source.Path)
 			if err_1 != nil {
 				return nil, err_1
 			}
 
+			fileURI := result_1
 			syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
 				identifier, ok := syntax.IdentifierOf(node)
 				operand := !ok
@@ -1222,11 +1233,12 @@ func (k *objectKeys) key(object types.Object) string {
 }
 
 func pathURI(path string) (string, error) {
-	absolute, err := filepath.Abs(path)
+	result, err := filepath.Abs(path)
 	if err != nil {
 		return "", err
 	}
 
+	absolute := result
 	return pathURIValue(absolute, filepath.VolumeName(absolute)), nil
 }
 

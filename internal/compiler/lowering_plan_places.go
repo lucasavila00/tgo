@@ -102,6 +102,13 @@ func (b *loweringPlanBuilder) promotedSelectionBase(
 	expression := node.X
 	expressionPlan := b.expression(node.X)
 	typ := selection.Recv()
+	if underlyingPointer(b.expressionType(node.X)) != nil {
+		base = b.derefPlace(node.X)
+		expressionPlan = &plannedExpression{
+			kind: planRetainedExpression, source: node.X,
+			typ: b.expressionType(node.X), materialized: base.values[0].id, resultCount: 1,
+		}
+	}
 	for _, fieldIndex := range selection.Index()[:len(selection.Index())-1] {
 		if pointer := underlyingPointer(typ); pointer != nil {
 			typ = pointer.Elem()

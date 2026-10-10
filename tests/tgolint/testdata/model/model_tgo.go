@@ -38,14 +38,23 @@ type Pair struct {
 }
 
 func tgoEventExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -140,8 +149,11 @@ func (v *Event) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Event JSON variant")
@@ -153,15 +165,21 @@ func (v *Event) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Started":
 		var payload EventStarted
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEventStarted(payload.ID, payload.Alias)
 		return nil
 	case "Stopped":
 		var payload EventStopped
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEventStopped(payload.Reason)
 		return nil
@@ -196,8 +214,16 @@ func (v *Event) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Stopped":
 			current = 2
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -209,20 +235,38 @@ func (v *Event) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Event JSON variant")
 	}
 	if selected == 0 {
@@ -231,15 +275,21 @@ func (v *Event) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload EventStarted
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEventStarted(payload.ID, payload.Alias)
 		return nil
 	case 2:
 		var payload EventStopped
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEventStopped(payload.Reason)
 		return nil
@@ -265,7 +315,11 @@ func (v Signal) Tag() SignalTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v Signal) GobEncode() ([]byte, error) {
-	if v.tgoTag < SignalTagOn || v.tgoTag > SignalTagOn {
+	operand := v.tgoTag < SignalTagOn
+	if !operand {
+		operand = v.tgoTag > SignalTagOn
+	}
+	if operand {
 		return nil, fmt.Errorf("Signal: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
@@ -279,7 +333,15 @@ func (v *Signal) GobDecode(data []byte) error {
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := SignalTag(number)
-	if uint32(tag) != number || tag < SignalTagOn || tag > SignalTagOn {
+	operand := uint32(tag) != number
+	if !operand {
+		operand = tag < SignalTagOn
+	}
+	operand_1 := operand
+	if !operand_1 {
+		operand_1 = tag > SignalTagOn
+	}
+	if operand_1 {
 		return fmt.Errorf("Signal: cannot gob decode unknown tag %d", number)
 	}
 	switch tag {
@@ -327,8 +389,11 @@ func (v *Signal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Signal JSON variant")
@@ -340,8 +405,11 @@ func (v *Signal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "On":
 		var payload SignalOn
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSignalOn()
 		return nil
@@ -374,8 +442,16 @@ func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "On":
 			current = 1
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -387,20 +463,38 @@ func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Signal JSON variant")
 	}
 	if selected == 0 {
@@ -409,8 +503,11 @@ func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload SignalOn
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSignalOn()
 		return nil

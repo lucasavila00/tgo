@@ -87,7 +87,7 @@ func (p *sourceParser) makeComprehension(
 		switch rawClause := *clause; rawClause.Tag() {
 		case rawComprehensionClauseTagRange:
 			rawRange := rawClause.RangePayload()
-			source, found, err_1 := p.parseExpression(
+			result_1, result_2, err_1 := p.parseExpression(
 				p.tokens[rawRange.sourceStart].start,
 				p.tokens[rawRange.sourceEnd].start,
 				defaultAt,
@@ -95,6 +95,8 @@ func (p *sourceParser) makeComprehension(
 			if err_1 != nil {
 				return nil, nil, err_1
 			}
+			source, found := result_1, result_2
+
 			for child, parent := range found {
 				anchors[child] = parent
 			}
@@ -119,7 +121,7 @@ func (p *sourceParser) makeComprehension(
 			result.Clauses = append(result.Clauses, item)
 		case rawComprehensionClauseTagFilter:
 			rawFilter := rawClause.FilterPayload()
-			condition, found, err_2 := p.parseExpression(
+			result_3, result_4, err_2 := p.parseExpression(
 				p.tokens[rawFilter.conditionStart].start,
 				p.tokens[rawFilter.conditionEnd].start,
 				defaultAt,
@@ -127,6 +129,8 @@ func (p *sourceParser) makeComprehension(
 			if err_2 != nil {
 				return nil, nil, err_2
 			}
+			condition, found := result_3, result_4
+
 			for child, parent := range found {
 				anchors[child] = parent
 			}
@@ -209,10 +213,11 @@ func (p *sourceParser) makeDeclaration(
 			Comment:   nil,
 		}
 		for _, rawVariant := range rawEnum.variants {
-			fields, fieldAnchors, err := p.makeFields(rawVariant.fields, defaultAt)
+			result, result_1, err := p.makeFields(rawVariant.fields, defaultAt)
 			if err != nil {
 				return nil, nil, err
 			}
+			fields, fieldAnchors := result, result_1
 			variant := &frontVariantDecl{
 				frontSpan: frontSpan{
 					Start: p.pos(rawVariant.start),
@@ -244,10 +249,11 @@ func (p *sourceParser) makeDeclaration(
 			Name:    p.tokens[rawStruct.name].text,
 			Obj:     nil,
 		}
-		fields, fieldAnchors, err_1 := p.makeFields(rawStruct.fields, defaultAt)
+		result_2, result_3, err_1 := p.makeFields(rawStruct.fields, defaultAt)
 		if err_1 != nil {
 			return nil, nil, err_1
 		}
+		fields, fieldAnchors := result_2, result_3
 		checked := token.NoPos
 		if rawStruct.checked >= 0 {
 			checked = p.pos(p.tokens[rawStruct.checked].start)
@@ -284,10 +290,11 @@ func (p *sourceParser) makeFields(
 		if raw.assign >= 0 {
 			declarationEnd = raw.assign
 		}
-		field, err := p.parseField(raw.start, declarationEnd)
+		result, err := p.parseField(raw.start, declarationEnd)
 		if err != nil {
 			return nil, nil, err
 		}
+		field := result
 		var defaultValue ast.Expr = nil
 		assign := token.NoPos
 		if raw.assign >= 0 {
@@ -296,7 +303,7 @@ func (p *sourceParser) makeFields(
 				return nil, nil, failure
 			}
 			assign = p.pos(p.tokens[raw.assign].start)
-			parsedDefault, expressionAnchors, err_1 := p.parseExpression(
+			result_1, result_2, err_1 := p.parseExpression(
 				p.tokens[raw.assign+1].start,
 				p.tokens[raw.end-1].end,
 				defaultAt,
@@ -304,6 +311,8 @@ func (p *sourceParser) makeFields(
 			if err_1 != nil {
 				return nil, nil, err_1
 			}
+			parsedDefault, expressionAnchors := result_1, result_2
+
 			defaultValue = parsedDefault
 			for extension, parent := range expressionAnchors {
 				anchors[extension] = parent

@@ -34,14 +34,16 @@ func run(paths []string, write bool, list bool, input io.Reader, output io.Write
 		if write {
 			return fmt.Errorf("cannot use -w with standard input")
 		}
-		source, err_1 := io.ReadAll(input)
+		result, err_1 := io.ReadAll(input)
 		if err_1 != nil {
 			return err_1
 		}
-		formatted, err_2 := format.Source("<standard input>", source)
+		source := result
+		result_1, err_2 := format.Source("<standard input>", source)
 		if err_2 != nil {
 			return err_2
 		}
+		formatted := result_1
 		if list {
 			if !bytes.Equal(source, formatted) {
 				_, err := fmt.Fprintln(output, "<standard input>")
@@ -52,19 +54,20 @@ func run(paths []string, write bool, list bool, input io.Reader, output io.Write
 		_, err := output.Write(formatted)
 		return err
 	}
-	context, err_3 := packagelanguage.DefaultContext()
+	result_2, err_3 := packagelanguage.DefaultContext()
 	if err_3 != nil {
 		return fmt.Errorf("packagelanguage.DefaultContext: %w", err_3)
 	}
+	context := result_2
 	checked := make(map[string]bool)
 	for _, path := range paths {
 		directory := filepath.Clean(filepath.Dir(path))
 		if !checked[directory] {
-			result, err_4 := packagelanguage.Classify(context, directory)
+			result_3, err_4 := packagelanguage.Classify(context, directory)
 			if err_4 != nil {
 				return err_4
 			}
-			_ = result
+			_ = result_3
 			checked[directory] = true
 		}
 		operand := formatPath(path, write, list, output)
@@ -76,35 +79,38 @@ func run(paths []string, write bool, list bool, input io.Reader, output io.Write
 }
 
 func formatPath(path string, write bool, list bool, output io.Writer) error {
-	source, err_1 := os.ReadFile(path)
+	result, err_1 := os.ReadFile(path)
 	if err_1 != nil {
 		return err_1
 	}
-	formatted, err_2 := format.Source(path, source)
+	source := result
+	result_1, err_2 := format.Source(path, source)
 	if err_2 != nil {
 		return err_2
 	}
+	formatted := result_1
 	changed := !bytes.Equal(source, formatted)
 	operand := list
 	if operand {
 		operand = changed
 	}
 	if operand {
-		result, err_3 := fmt.Fprintln(output, path)
+		result_2, err_3 := fmt.Fprintln(output, path)
 		if err_3 != nil {
 			return err_3
 		}
-		_ = result
+		_ = result_2
 	}
 	operand_1 := write
 	if operand_1 {
 		operand_1 = changed
 	}
 	if operand_1 {
-		info, err_4 := os.Stat(path)
+		result_3, err_4 := os.Stat(path)
 		if err_4 != nil {
 			return err_4
 		}
+		info := result_3
 		return writeFormattedFile(path, source, formatted, info.Mode().Perm())
 	}
 	operand_2 := !write
@@ -125,12 +131,13 @@ type rewriteTarget interface {
 }
 
 func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.FileMode) error {
-	backup,
+	result,
 		// Rewrite the existing inode so hard links and symbolic links keep their identity.
 		err_1 := createBackup(path, source, mode)
 	if err_1 != nil {
 		return err_1
 	}
+	backup := result
 	target, err := os.OpenFile(path, os.O_WRONLY, mode)
 	if err != nil {
 		_ = os.Remove(backup)
@@ -156,13 +163,15 @@ func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.Fi
 }
 
 func createBackup(path string, source []byte, mode fs.FileMode) (string, error) {
-	backup, err_1 := os.CreateTemp(
+	result, err_1 := os.CreateTemp(
 		filepath.Dir(path),
 		"."+filepath.Base(path)+".tgofmt-",
 	)
 	if err_1 != nil {
 		return "", err_1
 	}
+	backup := result
+
 	name := backup.Name()
 	{
 		err := backup.Chmod(mode)

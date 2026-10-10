@@ -288,15 +288,16 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Conditional":
 			current = 4
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -308,15 +309,15 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -335,11 +336,11 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one effectOutcome JSON variant")
 	}
 	if selected == 0 {
@@ -438,10 +439,12 @@ func (c *checker) markGenericZeroWith(
 	if !operand {
 		operand = unknown
 	}
-	effect := GenericEffect{
+	operand_1 := GenericEffect{
 		Receiver: false, TypeParameter: 0,
 		Conditions: conditions, MaySkip: operand,
 	}
+	effect := operand_1
+
 	for parameter := range zeroTypeParameters(typ, summary.parameters, make(map[types.Type]bool)) {
 		c.addGenericEffect(summary, true, parameter, effect)
 	}
@@ -1003,10 +1006,11 @@ func (c *checker) parentEffectConditions(
 			if !operand_3 {
 				operand_3 = value.Kind() != constant.Bool
 			}
-			var unknown bool = operand_3
-			if !unknown {
-				unknown = !constant.BoolVal(value)
+			var operand_4 bool = operand_3
+			if !operand_4 {
+				operand_4 = !constant.BoolVal(value)
 			}
+			unknown := operand_4
 			return nil, unknown, true
 		}
 	}
@@ -1097,23 +1101,25 @@ func (c *checker) ifEffectCondition(
 	statement *syntax.IfStatement,
 	node *syntax.Node,
 ) (*GenericEffectCondition, effectOutcome) {
-	var inBody bool = syntax.NodePosition(node) >= statement.Body.Start
-	if inBody {
-		inBody = syntax.NodeEnd(node) <= statement.Body.Stop
-	}
-	var operand bool = statement.Else != nil
+	var operand bool = syntax.NodePosition(node) >= statement.Body.Start
 	if operand {
-		operand = syntax.NodePosition(node) >= syntax.StatementPosition(statement.Else)
+		operand = syntax.NodeEnd(node) <= statement.Body.Stop
 	}
-	var inElse bool = operand
-	if inElse {
-		inElse = syntax.NodeEnd(node) <= syntax.StatementEnd(statement.Else)
-	}
-	operand_1 := !inBody
+	inBody := operand
+	var operand_1 bool = statement.Else != nil
 	if operand_1 {
-		operand_1 = !inElse
+		operand_1 = syntax.NodePosition(node) >= syntax.StatementPosition(statement.Else)
 	}
-	if operand_1 {
+	var operand_2 bool = operand_1
+	if operand_2 {
+		operand_2 = syntax.NodeEnd(node) <= syntax.StatementEnd(statement.Else)
+	}
+	inElse := operand_2
+	operand_3 := !inBody
+	if operand_3 {
+		operand_3 = !inElse
+	}
+	if operand_3 {
 		return nil, alwaysEffectOutcome()
 	}
 	return c.booleanEffectCondition(statement.Condition, inBody)

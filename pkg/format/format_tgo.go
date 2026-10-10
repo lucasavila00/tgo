@@ -12,7 +12,7 @@ import (
 // Source formats one complete TGo source file.
 func Source(filename string, source []byte) ([]byte, error) {
 	files := token.NewFileSet()
-	file, err := syntax.ParseFile(
+	result, err := syntax.ParseFile(
 		files,
 		filename,
 		source,
@@ -21,5 +21,7 @@ func Source(filename string, source []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	file := result
+
 	return newPrinter(files, file, source).printFile(), nil
 }

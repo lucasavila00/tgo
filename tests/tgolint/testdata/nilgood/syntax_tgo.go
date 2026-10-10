@@ -17,10 +17,11 @@ func syntaxFacts(values nilmodel.SyntaxList) {
 }
 
 func propagationContract() error {
-	item, err := nilmodel.Load()
+	result, err := nilmodel.Load()
 	if err != nil {
 		return err
 	}
+	item := result
 	nilmodel.Need(item)
 	return nil
 }

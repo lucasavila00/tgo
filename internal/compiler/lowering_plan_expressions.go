@@ -345,6 +345,8 @@ func (b *loweringPlanBuilder) planExactComprehension(
 			operation.kind = planCopy
 			operation.inputs = []valueID{sourceValue.id}
 			operation.copyTarget = assignment.Lhs[0]
+		} else {
+			b.planExactComprehensionIndex(result, assignment)
 		}
 		return
 	}

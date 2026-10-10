@@ -13,11 +13,15 @@ func copyItems(groups [][]*item) {
 	source := groups[0]
 	result_1 := make([]*item, len(source))
 	for index, value := range source {
-		result_1[index] = copyItem(value)
+		operand := result_1
+		operand_1 := copyItem(value)
+		operand[index] = operand_1
 	}
-	result := holder{
+	operand_2 := holder{
 		Body: result_1,
 	}
+	result := operand_2
+
 	_ = result
 	for _, value := range groups[0] {
 		requireItem(value)

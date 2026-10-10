@@ -10,9 +10,9 @@ type holder struct {
 }
 
 func copyItems(values []*item) holder {
-
-	result := make([]*item, len(values))
-	copy(result, values)
+	source := values
+	result := make([]*item, len(source))
+	copy(result, source)
 	return holder{
 		Body: result,
 	}

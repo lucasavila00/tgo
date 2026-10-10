@@ -187,23 +187,26 @@ func errorUsesCovered(
 	if operand {
 		operand = function.Results().At(function.Results().Len()-1) == target
 	}
-	var namedResult bool = operand
-	if namedResult {
-		namedResult = target.Name() != ""
-	}
-	operand_1 := namedResult
+	var operand_1 bool = operand
 	if operand_1 {
-		operand_1 = nakedReturnReachable(body, matches, mayReturn)
+		operand_1 = target.Name() != ""
 	}
-	if operand_1 {
+	namedResult := operand_1
+	operand_2 := namedResult
+	if operand_2 {
+		operand_2 = nakedReturnReachable(body, matches, mayReturn)
+	}
+	if operand_2 {
 		return false
 	}
-	deferredReadSafe := !namedResult
-	if !deferredReadSafe {
-		deferredReadSafe = namedErrorIsNilBefore(
+	operand_3 := !namedResult
+	if !operand_3 {
+		operand_3 = namedErrorIsNilBefore(
 			file, target, first, index,
 		)
 	}
+	deferredReadSafe := operand_3
+
 	syntax.Inspect(file, func(node *syntax.Node) bool {
 		if !valid {
 			return false

@@ -23,6 +23,7 @@ type Cell struct {
 
 type P *Cell
 type A *[1]int
+type Outer struct { *Cell }
 
 func record(events *[]string, event string) {
 	*events = append(*events, event)
@@ -46,6 +47,22 @@ func mutation[T any](
 func pointerField(events *[]string, value P, next P, fail bool) error {
 	value.Value = mutation(events, &value, next, 9, fail)!!
 	record(events, "after")
+	return nil
+}
+
+func promotedField(events *[]string, value *Outer, next *Outer, fail bool) error {
+	value.Value = mutation(events, &value, next, 9, fail)!!
+	record(events, "after")
+	return nil
+}
+
+func outerRoot(events *[]string, value *Outer) *Outer {
+	record(events, "root")
+	return value
+}
+
+func promotedCall(events *[]string, value *Outer, fail bool) error {
+	outerRoot(events, value).Value = mutation(events, &value, value, 9, fail)!!
 	return nil
 }
 
@@ -124,6 +141,23 @@ func TestGeneratedNamedPlaceRuntime(t *testing.T) {
 		t.Fatalf("failed pointer field first=%v second=%v error=%v", firstCell, secondCell, err)
 	}
 	checkEvents(t, events, "mutation")
+
+	firstOuter := &Outer{Cell: &Cell{Value: 1}}
+	secondOuter := &Outer{Cell: &Cell{Value: 2}}
+	events = nil
+	err = promotedField(&events, firstOuter, secondOuter, false)
+	if err != nil || firstOuter.Value != 9 || secondOuter.Value != 2 {
+		t.Fatalf("promoted field first=%v second=%v error=%v", firstOuter, secondOuter, err)
+	}
+	checkEvents(t, events, "mutation,after")
+
+	firstOuter.Value = 1
+	events = nil
+	err = promotedCall(&events, firstOuter, false)
+	if err != nil || firstOuter.Value != 9 {
+		t.Fatalf("promoted call first=%v error=%v", firstOuter, err)
+	}
+	checkEvents(t, events, "root,mutation")
 
 	firstArray := [1]int{1}
 	secondArray := [1]int{2}

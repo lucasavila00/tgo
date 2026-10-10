@@ -15,10 +15,11 @@ func parseAnalysisFiles(pass *analysis.Pass) ([]*syntax.File, error) {
 	result := make([]*syntax.File, 0, len(pass.Files))
 	for _, file := range pass.Files {
 		filename := pass.Fset.Position(file.Pos()).Filename
-		data, err_1 := pass.ReadFile(filename)
+		result_1, err_1 := pass.ReadFile(filename)
 		if err_1 != nil {
 			return nil, err_1
 		}
+		data := result_1
 		parsed, err := syntax.ParseGoFile(
 			pass.Fset, filename, data, syntax.ParseComments|syntax.AllErrors,
 		)

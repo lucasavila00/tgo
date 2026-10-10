@@ -30,11 +30,12 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 			continue
 		}
 		open := cursor - 1
-		close, err := p.closeToken(open)
+		result, err := p.closeToken(open)
 		if err != nil {
 			return err
 		}
 
+		close := result
 		candidates = append(candidates, comprehensionCandidate{open: open, close: close})
 		cursor = close
 	}
@@ -52,11 +53,12 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 
 			continue
 		}
-		comprehension, err_1 := p.rawComprehension(literalStart, item.open, item.close)
+		result_1, err_1 := p.rawComprehension(literalStart, item.open, item.close)
 		if err_1 != nil {
 			return err_1
 		}
 
+		comprehension := result_1
 		p.comprehensions = append(p.comprehensions, comprehension)
 		p.edits = append(p.edits, sourceEdit{
 			start: p.tokens[item.open].end,
@@ -114,11 +116,12 @@ func (p *sourceParser) rawComprehension(
 	open int,
 	close int,
 ) (*rawComprehension, error) {
-	clauses, result, err := p.rawComprehensionBody(open+1, close)
+	result_1, result_2, err := p.rawComprehensionBody(open+1, close)
 	if err != nil {
 		return nil, err
 	}
 
+	clauses, result := result_1, result_2
 	seenFilter := false
 	for _, clause := range clauses {
 		switch item := *clause; item.Tag() {
@@ -177,19 +180,24 @@ func (p *sourceParser) rawComprehensionBody(
 		failure := p.tokenError(start, "comprehension clause needs a block")
 		return nil, nil, failure
 	}
-	bodyOpen, err_1 := p.openToken(bodyClose)
+	result_1, err_1 := p.openToken(bodyClose)
 	if err_1 != nil {
 		return nil, nil, err_1
 	}
-	clause, err_2 := p.rawComprehensionClause(start, bodyOpen, bodyClose)
+
+	bodyOpen := result_1
+	result_2, err_2 := p.rawComprehensionClause(start, bodyOpen, bodyClose)
 	if err_2 != nil {
 		return nil, nil, err_2
 	}
-	children, result, err_3 := p.rawComprehensionBody(bodyOpen+1, bodyClose)
+
+	clause := result_2
+	result_3, result_4, err_3 := p.rawComprehensionBody(bodyOpen+1, bodyClose)
 	if err_3 != nil {
 		return nil, nil, err_3
 	}
 
+	children, result := result_3, result_4
 	return append([]*rawComprehensionClause{clause}, children...), result, nil
 }
 
@@ -225,11 +233,12 @@ func (p *sourceParser) rawComprehensionClause(
 	if operand {
 		return nil, p.tokenError(start, "comprehension range must use :=")
 	}
-	bindings, err := p.comprehensionBindings(start+1, define)
+	result, err := p.comprehensionBindings(start+1, define)
 	if err != nil {
 		return nil, err
 	}
 
+	bindings := result
 	if rangeToken+1 >= open {
 		return nil, p.tokenError(rangeToken, "comprehension range needs a source")
 	}

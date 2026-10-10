@@ -31,7 +31,8 @@ func PropagationForPostOrder(events *[]string, failLeft int, failRight int) erro
 				if err_1 != nil {
 					return err_1
 				}
-				left, right = result, result_1
+				left = result
+				right = result_1
 			}
 			if !(left < 2) {
 				break

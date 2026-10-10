@@ -161,10 +161,11 @@ func (c *checker) propagatedGenericEffect(
 		return noGenericEffect(), nil, false
 	}
 	conditions := append([]GenericEffectCondition(nil), pathConditions...)
-	maySkip := pathMaySkip
-	if !maySkip {
-		maySkip = effect.MaySkip
+	operand_1 := pathMaySkip
+	if !operand_1 {
+		operand_1 = effect.MaySkip
 	}
+	maySkip := operand_1
 	targetType := arguments[effect.TypeParameter]
 	for _, condition := range effect.Conditions {
 		mapped, outcome := c.mapEffectCondition(

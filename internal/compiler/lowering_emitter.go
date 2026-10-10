@@ -214,15 +214,6 @@ func (e *loweringEmitter) applyExactComprehension(
 	if plan.exact.identity {
 		return
 	}
-	index, ok := plan.exact.outer.Key.(*ast.Ident)
-	if !ok || index.Name == "_" {
-		index = e.freshName("index")
-		plan.exact.outer.Key = index
-	}
-	plan.exact.assignment.Lhs[0] = &ast.IndexExpr{
-		X: plan.exact.assignment.Lhs[0], Index: index,
-	}
-	plan.exact.assignment.Rhs[0] = plan.exact.appendCall.Args[1]
 }
 
 func (e *loweringEmitter) operations(plan *plannedBlock, output *ast.BlockStmt) {

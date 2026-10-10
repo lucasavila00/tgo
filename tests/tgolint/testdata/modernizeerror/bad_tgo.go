@@ -158,22 +158,31 @@ func useFailureComma() (*record, error) {
 }
 
 func useInitializer(repository store) error {
-	if err := repository.Flush(); err != nil {
-		return fmt.Errorf("repository.Flush: %w", err)
+	{
+		err := repository.Flush()
+		if err != nil {
+			return fmt.Errorf("repository.Flush: %w", err)
+		}
 	}
 	return nil
 }
 
 func useTransparentInitializer(repository store) error {
-	if err := repository.Flush(); err != nil {
-		return err
+	{
+		err := repository.Flush()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func useIgnoredInitializer(text string) error {
-	if _, err := strconv.Atoi(text); err != nil {
-		return err
+	{
+		_, err := strconv.Atoi(text)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -195,8 +204,11 @@ func useMixedExpansionOrder() (*record, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, middleErr := load(); middleErr != nil {
-		return nil, middleErr
+	{
+		_, middleErr := load()
+		if middleErr != nil {
+			return nil, middleErr
+		}
 	}
 	last, err := load()
 	if err != nil {
@@ -208,20 +220,27 @@ func useMixedExpansionOrder() (*record, error) {
 
 func useNestedExpansionOrder(repository store) (*record, error) {
 	{
+
 		first, err := load()
 		if err != nil {
 			return nil, err
 		}
 		_ = first
 	}
-	if err := repository.Flush(); err != nil {
-		return nil, err
+	{
+
+		err := repository.Flush()
+		if err != nil {
+			return nil, err
+		}
 	}
 	{
+
 		last, err := load()
 		if err != nil {
 			return nil, err
 		}
 		return last, nil
 	}
+
 }

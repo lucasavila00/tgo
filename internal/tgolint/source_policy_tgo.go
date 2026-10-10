@@ -778,17 +778,18 @@ func (c *checker) resultAssignment(
 	for _, expression := range assignment.Right {
 		c.resultReadsExpression(expression, state)
 	}
-	var plain bool = assignment.Operator == token.ASSIGN
-	if !plain {
-		plain = assignment.Operator == token.DEFINE
+	var operand bool = assignment.Operator == token.ASSIGN
+	if !operand {
+		operand = assignment.Operator == token.DEFINE
 	}
+	plain := operand
 	for _, expression := range assignment.Left {
 		name := syntax.IdentifierExpressionOf(expression)
-		var operand bool = name == nil
-		if !operand {
-			operand = !plain
+		var operand_1 bool = name == nil
+		if !operand_1 {
+			operand_1 = !plain
 		}
-		if operand {
+		if operand_1 {
 			c.resultReadsExpression(expression, state)
 			continue
 		}

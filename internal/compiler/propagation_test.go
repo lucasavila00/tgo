@@ -288,8 +288,7 @@ func use() error {
 	return nil
 }
 `)
-	if !strings.Contains(output, "result, err_1 := w.Write()") ||
-		!strings.Contains(output, "_ = result") {
+	if !strings.Contains(output, ":= w.Write()") || !strings.Contains(output, "_ = result") {
 		t.Fatalf("generated output does not lower the method call\n%s", output)
 	}
 }
@@ -307,8 +306,7 @@ func use() error {
 	return nil
 }
 `)
-	if !strings.Contains(output, "result, err_1 := w.Write()") ||
-		!strings.Contains(output, "_ = result") {
+	if !strings.Contains(output, ":= w.Write()") || !strings.Contains(output, "_ = result") {
 		t.Fatalf("generated output does not lower the method call\n%s", output)
 	}
 }
@@ -330,7 +328,7 @@ func use() error {
 	return nil
 }
 `,
-			want: "result, err_1 := w.Write()",
+			want: ":= w.Write()",
 		},
 		{
 			name: "switch initializer",
@@ -343,7 +341,7 @@ func use() error {
 	return nil
 }
 `,
-			want: "result, err_1 := w.Write()",
+			want: ":= w.Write()",
 		},
 		{
 			name: "shadowed if initializer",
@@ -360,7 +358,7 @@ func use() error {
 	return nil
 }
 `,
-			want: "result, result_1, err_2 := w.Write()",
+			want: ":= w.Write()",
 		},
 		{
 			name: "var declaration",
@@ -371,7 +369,7 @@ func use() error {
 	return nil
 }
 `,
-			want: "result, err_1 := w.Write()",
+			want: ":= w.Write()",
 		},
 		{
 			name: "named map",
@@ -385,7 +383,7 @@ func use() error {
 	return nil
 }
 `,
-			want: "result, err_1 := w.Write()",
+			want: ":= w.Write()",
 		},
 	}
 	for _, test := range tests {
@@ -539,7 +537,7 @@ func TestPropagationLowersEachTypeSwitchPart(t *testing.T) {
 			body: `switch prefix := text()!!; value := any("ready").(type) {
 		case string: _, _ = prefix, value
 	}`,
-			want: []string{"prefix, err := text()", `switch value := any("ready").(type)`},
+			want: []string{":= text()", "prefix :=", `switch value := any("ready").(type)`},
 		},
 		{
 			name: "initializer and guard",
@@ -547,9 +545,10 @@ func TestPropagationLowersEachTypeSwitchPart(t *testing.T) {
 		case string: _, _ = prefix, value
 	}`,
 			want: []string{
-				"prefix, err := text()",
-				"result, err_1 := load()",
-				"switch value := (result).(type)",
+				":= text()",
+				"prefix :=",
+				":= load()",
+				"switch value := (result_1).(type)",
 			},
 		},
 	}

@@ -478,20 +478,22 @@ func copyWorkspace(t *testing.T, source, destination string) {
 		if walkErr != nil {
 			return walkErr
 		}
-		relative, err := filepath.Rel(source, path)
+		result, err := filepath.Rel(source, path)
 		if err != nil {
 			return err
 		}
 
+		relative := result
 		target := filepath.Join(destination, relative)
 		if entry.IsDir() {
 			return os.MkdirAll(target, 0o755)
 		}
-		data, err_1 := os.ReadFile(path)
+		result_1, err_1 := os.ReadFile(path)
 		if err_1 != nil {
 			return err_1
 		}
 
+		data := result_1
 		return os.WriteFile(target, data, 0o644)
 	})
 	if err != nil {

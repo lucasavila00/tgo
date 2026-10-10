@@ -418,10 +418,11 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		if operand_6 {
 			operand_6 = last.IsValid()
 		}
-		var inline bool = operand_6
-		if inline {
-			inline = last.Line == start.Line
+		var operand_7 bool = operand_6
+		if operand_7 {
+			operand_7 = last.Line == start.Line
 		}
+		inline := operand_7
 		if inline {
 			{
 				_, ok := p.measureComments[item.start]
@@ -445,32 +446,32 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 
 		} else {
 			p.newline()
-			operand_7 := last.IsValid()
-			if operand_7 {
-				operand_7 = p.sourceBlankBetween(p.lastSource, item.start)
+			operand_8 := last.IsValid()
+			if operand_8 {
+				operand_8 = p.sourceBlankBetween(p.lastSource, item.start)
 			}
-			if operand_7 {
+			if operand_8 {
 				p.blankline()
 			}
 		}
 
 		previousIndent := p.indent
-		operand_8 := p.lineStart
-		if operand_8 {
-			operand_8 = p.sourceCommentIndent
-		}
-		if operand_8 {
-			p.indent = max(p.indent, p.sourceIndent(item.start))
-		}
 		operand_9 := p.lineStart
 		if operand_9 {
-			operand_9 = start.Column == 1
+			operand_9 = p.sourceCommentIndent
 		}
-		var operand_10 bool = operand_9
-		if operand_10 {
-			operand_10 = strings.HasPrefix(item.text, "//line ")
+		if operand_9 {
+			p.indent = max(p.indent, p.sourceIndent(item.start))
 		}
+		operand_10 := p.lineStart
 		if operand_10 {
+			operand_10 = start.Column == 1
+		}
+		var operand_11 bool = operand_10
+		if operand_11 {
+			operand_11 = strings.HasPrefix(item.text, "//line ")
+		}
+		if operand_11 {
 			p.output.WriteString(item.text)
 			p.lineStart = false
 			p.lineBreaks = 0
@@ -481,23 +482,23 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		p.indent = previousIndent
 		stop := p.position(item.stop)
 		nextPosition := position
-		operand_11 := p.comment < len(p.comments)
-		if operand_11 {
-			operand_11 = p.comments[p.comment].start < position
+		operand_12 := p.comment < len(p.comments)
+		if operand_12 {
+			operand_12 = p.comments[p.comment].start < position
 		}
-		if operand_11 {
+		if operand_12 {
 			nextPosition = p.comments[p.comment].start
 		}
 		next := p.position(nextPosition)
-		operand_12 := strings.HasPrefix(item.text, "//")
-		if !operand_12 {
-			operand_12 = !next.IsValid()
-		}
-		var operand_13 bool = operand_12
+		operand_13 := strings.HasPrefix(item.text, "//")
 		if !operand_13 {
-			operand_13 = stop.Line != next.Line
+			operand_13 = !next.IsValid()
 		}
-		if operand_13 {
+		var operand_14 bool = operand_13
+		if !operand_14 {
+			operand_14 = stop.Line != next.Line
+		}
+		if operand_14 {
 			p.newline()
 		} else if !tight {
 			p.space()
@@ -505,11 +506,11 @@ func (p *printer) beforeComments(position token.Pos, tight bool) {
 		p.lastSource = item.stop
 	}
 	if wroteComment {
-		operand_14 := preserveSpace
-		if operand_14 {
-			operand_14 = !p.lineStart
+		operand_15 := preserveSpace
+		if operand_15 {
+			operand_15 = !p.lineStart
 		}
-		if operand_14 {
+		if operand_15 {
 			p.space()
 		}
 		if p.sourceBlankBetween(p.lastSource, position) {
@@ -894,10 +895,12 @@ func (p *printer) sourceBlankBetween(stop token.Pos, start token.Pos) bool {
 		if operand_5 {
 			operand_5 = p.position(p.comments[comment].start).Line <= lineNumber
 		}
-		var covered bool = operand_5
-		if covered {
-			covered = lineNumber <= p.position(p.comments[comment].stop).Line
+		var operand_6 bool = operand_5
+		if operand_6 {
+			operand_6 = lineNumber <= p.position(p.comments[comment].stop).Line
 		}
+		covered := operand_6
+
 		if covered {
 			continue
 		}
@@ -927,22 +930,23 @@ func (p *printer) sourceGap(stop token.Pos, start token.Pos) sourceGap {
 		comment++
 	}
 	right := start
-	var leadingComment bool = comment < len(p.comments)
-	if leadingComment {
-		leadingComment = p.comments[comment].start < start
+	var operand_2 bool = comment < len(p.comments)
+	if operand_2 {
+		operand_2 = p.comments[comment].start < start
 	}
+	leadingComment := operand_2
 	if leadingComment {
 		right = p.comments[comment].start
 	}
-	operand_2 := leadingComment
-	if operand_2 {
-		operand_2 = p.position(right).Column > p.position(start).Column
+	operand_3 := leadingComment
+	if operand_3 {
+		operand_3 = p.position(right).Column > p.position(start).Column
 	}
 	return sourceGap{
 		lineBreak:              p.position(left).Line < p.position(start).Line,
 		blank:                  p.sourceBlankBetween(left, right),
 		leadingComment:         leadingComment,
-		leadingCommentIndented: operand_2,
+		leadingCommentIndented: operand_3,
 	}
 }
 

@@ -20,18 +20,19 @@ type plannedValue struct {
 }
 
 type plannedPlace struct {
-	id          placeID
-	typ         types.Type
-	position    token.Pos
-	kind        plannedPlaceKind
-	source      ast.Expr
-	object      types.Object
-	base        *plannedPlace
-	container   *plannedExpression
-	index       *plannedExpression
-	values      []plannedValue
-	retainIndex bool
-	alternative *plannedPlaceAlternative
+	id            placeID
+	typ           types.Type
+	position      token.Pos
+	kind          plannedPlaceKind
+	source        ast.Expr
+	object        types.Object
+	base          *plannedPlace
+	container     *plannedExpression
+	index         *plannedExpression
+	values        []plannedValue
+	retainIndex   bool
+	preparedIndex bool
+	alternative   *plannedPlaceAlternative
 }
 
 type plannedPlaceKind uint8
@@ -135,6 +136,7 @@ type plannedOperation struct {
 	typeKind       plannedTypeKind
 	packageRef     plannedPackageReference
 	declaresOutput bool
+	rangeKey       valueID
 }
 
 type plannedDeclaration struct {
@@ -214,6 +216,7 @@ type plannedExactComprehension struct {
 	source     plannedValue
 	position   token.Pos
 	identity   bool
+	index      plannedValue
 }
 
 type plannedBuiltin struct {

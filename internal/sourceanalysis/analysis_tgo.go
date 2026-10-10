@@ -48,11 +48,12 @@ func AnalyzeWorkspace(directory string) ([]*Package, error) {
 
 // AnalyzeWorkspaceContext stops before the next package after cancellation.
 func AnalyzeWorkspaceContext(ctx context.Context, directory string) ([]*Package, error) {
-	compiled, err := driver.CompileWorkspaceViewsContext(ctx, directory)
+	result_1, err := driver.CompileWorkspaceViewsContext(ctx, directory)
 	if err != nil {
 		return nil, err
 	}
 
+	compiled := result_1
 	result := make([]*Package, 0, len(compiled))
 	for _, view := range compiled {
 		result = append(result, analyzeWorkspaceView(view))
@@ -65,11 +66,12 @@ func AnalyzeAvailableWorkspaceContext(
 	ctx context.Context,
 	directory string,
 ) ([]*Package, error) {
-	compiled, err := driver.CompileAvailableWorkspaceViewsContext(ctx, directory)
+	result_1, err := driver.CompileAvailableWorkspaceViewsContext(ctx, directory)
 	if err != nil {
 		return nil, err
 	}
 
+	compiled := result_1
 	result := make([]*Package, 0, len(compiled))
 	for _, view := range compiled {
 		result = append(result, analyzeWorkspaceView(view))
@@ -83,11 +85,12 @@ func AnalyzePackage(
 	importPath string,
 	files *token.FileSet,
 ) (*Package, error) {
-	compiled, err := driver.CompilePackage(directory, importPath, files)
+	result, err := driver.CompilePackage(directory, importPath, files)
 	if err != nil {
 		return nil, err
 	}
 
+	compiled := result
 	if compiled == nil {
 		return nil, nil
 	}
@@ -101,12 +104,14 @@ func AnalyzeTestPackage(
 	external bool,
 	files *token.FileSet,
 ) (*Package, error) {
-	compiled, err := driver.CompileTestPackage(
+	result_1, err := driver.CompileTestPackage(
 		directory, importPath, external, files,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	compiled := result_1
 
 	if compiled == nil {
 		return nil, nil

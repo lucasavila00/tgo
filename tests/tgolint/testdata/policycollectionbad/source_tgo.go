@@ -50,9 +50,13 @@ func clearAll(items []Quantity) {
 }
 
 func failedBranch(items map[int]Quantity) int {
-	if value, ok := items[0]; ok {
-		return value.Value()
-	} else {
-		return value.Value()
+	{
+		value, ok := items[0]
+		if ok {
+			return value.Value()
+		} else {
+			return value.Value()
+		}
 	}
+
 }

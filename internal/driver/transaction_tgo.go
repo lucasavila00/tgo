@@ -41,10 +41,11 @@ func (b *packageBuilder) removeStaleOutputs(
 	unit *packageUnit,
 	outputs map[string]bool,
 ) error {
-	entries, err := os.ReadDir(unit.Dir)
+	result, err := os.ReadDir(unit.Dir)
 	if err != nil {
 		return err
 	}
+	entries := result
 	for _, entry := range entries {
 		path := filepath.Join(unit.Dir, entry.Name())
 		if !staleOutput(entry, path, outputs) {
@@ -181,7 +182,7 @@ func atomicWriteFile(
 		filepath.Dir(path),
 		"."+filepath.Base(path)+".tmp-"+cryptorand.Text(),
 	)
-	temporary, err_1 := os.OpenFile(
+	result, err_1 := os.OpenFile(
 		temporaryPath,
 		os.O_CREATE|os.O_EXCL|os.O_WRONLY,
 		mode,
@@ -189,6 +190,8 @@ func atomicWriteFile(
 	if err_1 != nil {
 		return false, 0, err_1
 	}
+	temporary := result
+
 	closed := false
 	published := false
 	defer func() {
@@ -206,11 +209,11 @@ func atomicWriteFile(
 			}
 		}
 	}()
-	result, err_2 := temporary.Write(data)
+	result_1, err_2 := temporary.Write(data)
 	if err_2 != nil {
 		return false, 0, err_2
 	}
-	_ = result
+	_ = result_1
 	if preserveMode {
 		operand := temporary.Chmod(mode)
 		if operand != nil {
@@ -221,10 +224,11 @@ func atomicWriteFile(
 	if operand_1 != nil {
 		return false, 0, operand_1
 	}
-	temporaryInfo, err_3 := temporary.Stat()
+	result_2, err_3 := temporary.Stat()
 	if err_3 != nil {
 		return false, 0, err_3
 	}
+	temporaryInfo := result_2
 	writtenMode = chmodMode(temporaryInfo.Mode())
 	closeErr := temporary.Close()
 	closed = true
@@ -272,10 +276,11 @@ func atomicRemoveFile(path string) (bool, error) {
 
 // fileUnchanged checks that no other process changed one output state.
 func fileUnchanged(path string, expected previousFile) error {
-	actual, err := readFileSnapshot(path)
+	result, err := readFileSnapshot(path)
 	if err != nil {
 		return err
 	}
+	actual := result
 	if actual.exists != expected.exists {
 		return fmt.Errorf("output changed during build: %s", path)
 	}

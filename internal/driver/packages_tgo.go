@@ -116,11 +116,12 @@ func (d *packageDiscovery) addGoCandidate(path string) error {
 
 // addTestSource records one possible TGo test source file.
 func (d *packageDiscovery) addTestSource(path string) error {
-	unit, err := d.packageFor(filepath.Dir(path))
+	result, err := d.packageFor(filepath.Dir(path))
 	if err != nil {
 		return err
 	}
 
+	unit := result
 	unit.testSourcePaths = append(unit.testSourcePaths, path)
 	return nil
 }
@@ -158,33 +159,36 @@ func (d *packageDiscovery) visitDirectory(path, name string) error {
 
 // addSource records one possible tgo source file.
 func (d *packageDiscovery) addSource(path string) error {
-	unit, err := d.packageFor(filepath.Dir(path))
+	result, err := d.packageFor(filepath.Dir(path))
 	if err != nil {
 		return err
 	}
 
+	unit := result
 	unit.sourcePaths = append(unit.sourcePaths, path)
 	return nil
 }
 
 // addGeneratedCandidate records an output that can keep an orphan package visible.
 func (d *packageDiscovery) addGeneratedCandidate(path string) error {
-	unit, err := d.packageFor(filepath.Dir(path))
+	result, err := d.packageFor(filepath.Dir(path))
 	if err != nil {
 		return err
 	}
 
+	unit := result
 	unit.generatedPaths = append(unit.generatedPaths, path)
 	return nil
 }
 
 // packageFor returns the indexed package for one directory.
 func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
-	importPath, err := d.importPath(directory)
+	result, err := d.importPath(directory)
 	if err != nil {
 		return nil, err
 	}
 
+	importPath := result
 	unit := d.packages[importPath]
 	if unit == nil {
 		unit = &packageUnit{
@@ -252,11 +256,12 @@ func (p *packageUnit) matchingTestSources() ([]string, error) {
 
 // importPath maps a package directory to its module import path.
 func (d *packageDiscovery) importPath(directory string) (string, error) {
-	relative, err := filepath.Rel(d.root, directory)
+	result, err := filepath.Rel(d.root, directory)
 	if err != nil {
 		return "", err
 	}
 
+	relative := result
 	if relative == "." {
 		return d.module, nil
 	}
@@ -265,15 +270,18 @@ func (d *packageDiscovery) importPath(directory string) (string, error) {
 
 // readSource loads one TGo source and its imports.
 func (p *packageUnit) readSource(path string) error {
-	data, err := os.ReadFile(path)
+	result, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	file, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+
+	data := result
+	result_1, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
 	if err_1 != nil {
 		return err_1
 	}
 
+	file := result_1
 	p.Sources = append(p.Sources, compiler.File{Name: path, Data: data})
 	p.Files = append(p.Files, file)
 	return nil
@@ -283,25 +291,29 @@ func (p *packageUnit) readSource(path string) error {
 func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 	internal := packageTests{Sources: nil, Files: nil, UsesC: false}
 	external := packageTests{Sources: nil, Files: nil, UsesC: false}
-	paths, err := p.matchingTestSources()
+	result, err := p.matchingTestSources()
 	if err != nil {
 		return packageTests{}, packageTests{}, err
 	}
 
+	paths := result
 	if len(paths) == 0 {
 		return internal, external, nil
 	}
 	packageName := p.Files[0].Name.Name
 	for _, path := range paths {
-		data, err_1 := os.ReadFile(path)
+		result_1, err_1 := os.ReadFile(path)
 		if err_1 != nil {
 			return packageTests{}, packageTests{}, err_1
 		}
-		file, err_2 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+
+		data := result_1
+		result_2, err_2 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
 		if err_2 != nil {
 			return packageTests{}, packageTests{}, err_2
 		}
 
+		file := result_2
 		cgo := importsC(file)
 		operand := cgo
 		if operand {
@@ -381,19 +393,21 @@ func (p *packageUnit) available() (bool, error) {
 	}
 
 	_ = result
-	paths, err_1 := p.matchingSources()
+	result_1, err_1 := p.matchingSources()
 	if err_1 != nil {
 		return false, err_1
 	}
 
+	paths := result_1
 	if len(paths) > 0 {
 		return true, nil
 	}
-	tests, err_2 := p.matchingTestSources()
+	result_2, err_2 := p.matchingTestSources()
 	if err_2 != nil {
 		return false, err_2
 	}
 
+	tests := result_2
 	if len(tests) > 0 {
 		return false, fmt.Errorf(
 			"%s: active TGo test needs active TGo production source",
@@ -401,10 +415,12 @@ func (p *packageUnit) available() (bool, error) {
 		)
 	}
 	for _, path := range p.generatedPaths {
-		owned, err_3 := generatedFile(path)
+		result_3, err_3 := generatedFile(path)
 		if err_3 != nil {
 			return false, err_3
 		}
+
+		owned := result_3
 		operand := owned
 		if operand {
 			operand = !p.sourceOwnsOutput(path)
@@ -505,17 +521,19 @@ func selectPackages(
 			if !packageMatches(unit, path, pattern, target, recursive) {
 				continue
 			}
-			available, err := unit.available()
+			result, err := unit.available()
 			if err != nil {
 				return nil, err
 			}
 
+			available := result
 			if !available {
-				language, err_1 := unit.packageLanguage()
+				result_1, err_1 := unit.packageLanguage()
 				if err_1 != nil {
 					return nil, err_1
 				}
 
+				language := result_1
 				if language != packagelanguage.Go {
 					continue
 				}
@@ -574,10 +592,11 @@ func (p *packageUnit) tgoCandidate() bool {
 }
 
 func packagePattern(directory, pattern string) (string, bool) {
-	recursive := strings.HasSuffix(pattern, "/...")
-	if !recursive {
-		recursive = pattern == "..."
+	operand := strings.HasSuffix(pattern, "/...")
+	if !operand {
+		operand = pattern == "..."
 	}
+	recursive := operand
 	target := strings.TrimSuffix(pattern, "/...")
 	if target == "..." {
 		target = "."

@@ -300,15 +300,16 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "ReceiveOnly":
 			current = 3
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -320,15 +321,15 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -347,11 +348,11 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one ChannelDirection JSON variant")
 	}
 	if selected == 0 {
@@ -2068,15 +2069,16 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Comprehension":
 			current = 27
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -2088,15 +2090,15 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -2115,11 +2117,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one Expression JSON variant")
 	}
 	if selected == 0 {
@@ -4314,15 +4316,16 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Range":
 			current = 21
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -4334,15 +4337,15 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -4361,11 +4364,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one Statement JSON variant")
 	}
 	if selected == 0 {
@@ -5340,15 +5343,16 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Type":
 			current = 3
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -5360,15 +5364,15 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -5387,11 +5391,11 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one Specification JSON variant")
 	}
 	if selected == 0 {
@@ -6166,15 +6170,16 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Struct":
 			current = 5
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -6186,15 +6191,15 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -6213,11 +6218,11 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one Declaration JSON variant")
 	}
 	if selected == 0 {
@@ -7505,15 +7510,16 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "CommentGroup":
 			current = 12
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -7525,15 +7531,15 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -7552,11 +7558,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one Node JSON variant")
 	}
 	if selected == 0 {

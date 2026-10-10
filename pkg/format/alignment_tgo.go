@@ -535,22 +535,23 @@ func (p *printer) declarationCommentAlignment(
 				end,
 			)
 		}
-		var breakBefore bool = functionDeclarationOf(value) != nil
-		if breakBefore {
-			breakBefore = bodyColumns[index] == 0
+		var operand_2 bool = functionDeclarationOf(value) != nil
+		if operand_2 {
+			operand_2 = bodyColumns[index] == 0
 		}
+		breakBefore := operand_2
 		if index > 0 {
 			previous := values[index-1]
 			previousStop := syntax.DeclarationEnd(previous)
-			operand_2 := breakBefore
-			if !operand_2 {
-				operand_2 = p.blankBetween(previousStop, start)
-			}
-			var operand_3 bool = operand_2
+			operand_3 := breakBefore
 			if !operand_3 {
-				operand_3 = p.hasCommentBetween(previousStop, start)
+				operand_3 = p.blankBetween(previousStop, start)
 			}
-			breakBefore = operand_3
+			var operand_4 bool = operand_3
+			if !operand_4 {
+				operand_4 = p.hasCommentBetween(previousStop, start)
+			}
+			breakBefore = operand_4
 
 		}
 		headerRow := commentAlignmentRow{
@@ -586,19 +587,19 @@ func (p *printer) declarationCommentAlignment(
 	for index, value := range values {
 		start := syntax.DeclarationPosition(value)
 		stop := syntax.DeclarationEnd(value)
-		var operand_4 bool = functionDeclarationOf(value) == nil
-		if !operand_4 {
-			operand_4 = !p.multiline(start, stop)
+		var operand_5 bool = functionDeclarationOf(value) == nil
+		if !operand_5 {
+			operand_5 = !p.multiline(start, stop)
 		}
-		if operand_4 {
+		if operand_5 {
 			continue
 		}
 		_, end := p.outerCommentPositions(start, stop)
-		operand_5 := !end.IsValid()
-		if !operand_5 {
-			operand_5 = p.sourceCommentPadding(end) <= 1
+		operand_6 := !end.IsValid()
+		if !operand_6 {
+			operand_6 = p.sourceCommentPadding(end) <= 1
 		}
-		if operand_5 {
+		if operand_6 {
 			continue
 		}
 		if result[index] == nil {

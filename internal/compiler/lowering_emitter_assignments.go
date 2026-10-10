@@ -15,20 +15,12 @@ func (e *loweringEmitter) emitPlannedAssignment(
 	if assignment == nil {
 		return false
 	}
-	if assignment.bindTargets {
-		for _, target := range assignment.targets {
-			identifier := target.source.(*ast.Ident)
-			e.values[target.value.id] = ast.NewIdent(identifier.Name)
-		}
-	}
 	e.operations(assignment.prepare, output)
 	if assignment.rhs != nil {
 		e.operations(assignment.rhs, output)
 	}
 	if assignment.define {
-		if !assignment.bindTargets {
-			e.emitAssignmentDefinition(assignment, output)
-		}
+		e.emitAssignmentDefinition(assignment, output)
 		return true
 	}
 	for _, store := range assignment.stores {
@@ -210,9 +202,12 @@ func (e *loweringEmitter) preparedPlaceExpression(place *plannedPlace) ast.Expr 
 		}
 	case planSliceIndexPlace, planMapIndexPlace:
 		var index ast.Expr
-		if place.retainIndex {
+		switch {
+		case place.preparedIndex:
+			index = e.valueName(place.values[1].id, "index")
+		case place.retainIndex:
 			index = place.index.source
-		} else {
+		default:
 			index = e.valueName(place.values[1].id, "index")
 		}
 		return &ast.IndexExpr{

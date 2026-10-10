@@ -10,14 +10,13 @@ import (
 )
 
 type plannedAssignment struct {
-	prepare     *plannedBlock
-	rhs         *plannedBlock
-	places      []*plannedPlace
-	right       []plannedAssignmentRight
-	stores      []plannedAssignmentStore
-	targets     []plannedAssignmentTarget
-	define      bool
-	bindTargets bool
+	prepare *plannedBlock
+	rhs     *plannedBlock
+	places  []*plannedPlace
+	right   []plannedAssignmentRight
+	stores  []plannedAssignmentStore
+	targets []plannedAssignmentTarget
+	define  bool
 }
 
 type plannedAssignmentRight struct {
@@ -50,7 +49,6 @@ type plannedAssignmentTarget struct {
 	object types.Object
 	typ    types.Type
 	define bool
-	value  plannedValue
 }
 
 type plannedPlaceAlternative struct {
@@ -135,7 +133,6 @@ func (b *loweringPlanBuilder) planAssignmentStatement(
 			b.unit.failAt(source.Pos(), "assignment result count does not match targets")
 			return
 		}
-		assignment.bindTargets = assignmentCanBindTargets(assignment, values)
 	} else {
 		if len(values) != len(operation.places) {
 			b.unit.failAt(source.Pos(), "assignment result count does not match targets")
@@ -169,24 +166,6 @@ func (b *loweringPlanBuilder) planUpdateStatement(
 	}
 	b.planPlacePreparation(operation.places[0], operation.assignment.prepare)
 	operation.before = nil
-}
-
-func assignmentCanBindTargets(
-	assignment *plannedAssignment,
-	values []plannedAssignmentOperand,
-) bool {
-	if len(assignment.targets) != len(values) {
-		return false
-	}
-	for index := range assignment.targets {
-		target := &assignment.targets[index]
-		identifier, ok := target.source.(*ast.Ident)
-		if !ok || identifier.Name == "_" || !target.define || values[index].retained {
-			return false
-		}
-		target.value = values[index].value
-	}
-	return true
 }
 
 func assignmentNeedsPlan(operation *plannedOperation) bool {
@@ -413,7 +392,7 @@ func (b *loweringPlanBuilder) planPlacePreparation(
 		b.planAssignmentEvaluation(block, place.index, place.values[0])
 	case planSliceIndexPlace, planMapIndexPlace:
 		b.planAssignmentEvaluation(block, place.container, place.values[0])
-		if !place.retainIndex {
+		if !place.retainIndex && !place.preparedIndex {
 			b.planAssignmentEvaluation(block, place.index, place.values[1])
 		}
 	case planAlternativeIndexPlace:

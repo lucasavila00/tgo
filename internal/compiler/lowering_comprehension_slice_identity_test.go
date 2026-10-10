@@ -31,7 +31,8 @@ func validateComprehensionSliceIdentityOutput(t *testing.T, compiled *CompiledPa
 		t.Fatalf("identity comprehension does not use copy\n%s", identityOutput)
 	}
 	if strings.Contains(transformedOutput, "copy(") ||
-		!strings.Contains(transformedOutput, "] = transform(") {
+		!strings.Contains(transformedOutput, "transform(") ||
+		!strings.Contains(transformedOutput, "] = ") {
 		t.Fatalf("transformed comprehension lost indexed evaluation\n%s", transformedOutput)
 	}
 }

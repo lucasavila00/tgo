@@ -185,10 +185,11 @@ func subject(%s) {
 	configuration.Mode = packages.NeedName | packages.NeedFiles |
 		packages.NeedCompiledGoFiles | packages.NeedSyntax |
 		packages.NeedTypes | packages.NeedTypesInfo
-	loaded, err := packages.Load(configuration, ".")
+	result, err := packages.Load(configuration, ".")
 	if err != nil {
 		return nil, err
 	}
+	loaded := result
 	var operand_2 bool = packages.PrintErrors(loaded) != 0
 	if !operand_2 {
 		operand_2 = len(loaded) != 1
@@ -197,12 +198,14 @@ func subject(%s) {
 		return nil, fmt.Errorf("load sample package")
 	}
 	loadedPackage := loaded[0]
-	file, err_1 := syntax.ParseGoFile(
+	result_1, err_1 := syntax.ParseGoFile(
 		loadedPackage.Fset, filename, []byte(source), syntax.ParseComments|syntax.AllErrors,
 	)
 	if err_1 != nil {
 		return nil, err_1
 	}
+	file := result_1
+
 	if file == nil {
 		return nil, fmt.Errorf("load sample package syntax")
 	}

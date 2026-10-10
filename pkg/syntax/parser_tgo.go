@@ -253,15 +253,16 @@ func (v *rawDecl) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Struct":
 			current = 2
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -273,15 +274,15 @@ func (v *rawDecl) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -300,11 +301,11 @@ func (v *rawDecl) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one rawDecl JSON variant")
 	}
 	if selected == 0 {
@@ -557,15 +558,16 @@ func (v *rawComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Filter":
 			current = 2
 		}
-		same := haveName
-		if same {
-			same = current == selected
-		}
-		operand := same
+		operand := haveName
 		if operand {
-			operand = current == 0
+			operand = current == selected
 		}
-		if operand {
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -577,15 +579,15 @@ func (v *rawComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_1 := !multiple
-		if operand_1 {
-			operand_1 = current > 0
-		}
-		var operand_2 bool = operand_1
+		operand_2 := !multiple
 		if operand_2 {
-			operand_2 = current == selected
+			operand_2 = current > 0
 		}
-		if operand_2 {
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -604,11 +606,11 @@ func (v *rawComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_3 := !haveName
-	if !operand_3 {
-		operand_3 = multiple
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if operand_3 {
+	if operand_4 {
 		return fmt.Errorf("expected one rawComprehensionClause JSON variant")
 	}
 	if selected == 0 {
@@ -920,11 +922,12 @@ func (p *sourceParser) discoverDeclarations() error {
 			operand_1 = p.tokens[cursor+1].kind == token.IDENT
 		}
 		if operand_1 {
-			declaration, next, err := p.declaration(cursor)
+			result, result_1, err := p.declaration(cursor)
 			if err != nil {
 				return err
 			}
 
+			declaration, next := result, result_1
 			if declaration != nil {
 				p.decls = append(p.decls, declaration)
 				declarationStart := 0
@@ -954,11 +957,12 @@ func (p *sourceParser) discoverDeclarations() error {
 			}
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err_1 := p.closeToken(cursor)
+			result_2, err_1 := p.closeToken(cursor)
 			if err_1 != nil {
 				return err_1
 			}
 
+			end := result_2
 			cursor = end + 1
 			continue
 		}
@@ -992,11 +996,12 @@ func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
 			return p.enumDeclaration(start, cursor, open)
 		}
 	}
-	declarationEnd, err := p.declarationEnd(cursor)
+	result, err := p.declarationEnd(cursor)
 	if err != nil {
 		return nil, 0, err
 	}
 
+	declarationEnd := result
 	ordinary := p.goDeclarationSyntax(start, declarationEnd)
 	baseStart := cursor
 	operand_2 := ordinary
@@ -1031,11 +1036,12 @@ func (p *sourceParser) declarationEnd(start int) (int, error) {
 			break
 		}
 		if opening(p.tokens[cursor].kind) {
-			end, err := p.closeToken(cursor)
+			result, err := p.closeToken(cursor)
 			if err != nil {
 				return 0, err
 			}
 
+			end := result
 			cursor = end + 1
 			continue
 		}
@@ -1058,11 +1064,12 @@ func (p *sourceParser) enumDeclaration(
 	keyword int,
 	open int,
 ) (*rawDecl, int, error) {
-	closing, err := p.closeToken(open)
+	result, err := p.closeToken(open)
 	if err != nil {
 		return nil, 0, fmt.Errorf("p.closeToken: %w", err)
 	}
 
+	closing := result
 	tag := -1
 	operand := keyword+1 < open
 	if operand {
@@ -1079,11 +1086,12 @@ func (p *sourceParser) enumDeclaration(
 			cursor++
 			continue
 		}
-		variant, next, err_1 := p.variant(cursor, closing)
+		result_1, result_2, err_1 := p.variant(cursor, closing)
 		if err_1 != nil {
 			return nil, 0, fmt.Errorf("p.variant: %w", err_1)
 		}
 
+		variant, next := result_1, result_2
 		name := p.tokens[variant.name].text
 		operand_1 := names[name]
 		if operand_1 {
@@ -1137,15 +1145,18 @@ func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 		failure := p.tokenError(start, "variant needs Name struct { fields }")
 		return nil, 0, failure
 	}
-	closing, err := p.closeToken(start + 2)
+	result, err := p.closeToken(start + 2)
 	if err != nil {
 		return nil, 0, err
 	}
-	fields, err_1 := p.rawFields(start+2, closing)
+
+	closing := result
+	result_1, err_1 := p.rawFields(start+2, closing)
 	if err_1 != nil {
 		return nil, 0, err_1
 	}
 
+	fields := result_1
 	variant := new(rawVariant)
 	variant.start = p.tokens[start].start
 	variant.end = p.tokens[closing].end
@@ -1173,15 +1184,18 @@ func (p *sourceParser) structDeclaration(
 	keyword int,
 	open int,
 ) (*rawDecl, int, error) {
-	closing, err := p.closeToken(open)
+	result, err := p.closeToken(open)
 	if err != nil {
 		return nil, 0, err
 	}
-	fields, err_1 := p.rawFields(open, closing)
+
+	closing := result
+	result_1, err_1 := p.rawFields(open, closing)
 	if err_1 != nil {
 		return nil, 0, err_1
 	}
 
+	fields := result_1
 	next := closing + 1
 	checked := -1
 	var operand bool = next < len(p.tokens)
@@ -1241,11 +1255,12 @@ func (p *sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 				field.assign = cursor
 			}
 			if opening(p.tokens[cursor].kind) {
-				end, err := p.closeToken(cursor)
+				result, err := p.closeToken(cursor)
 				if err != nil {
 					return nil, err
 				}
 
+				end := result
 				cursor = end + 1
 				continue
 			}

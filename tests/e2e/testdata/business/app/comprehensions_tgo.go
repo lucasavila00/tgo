@@ -112,7 +112,9 @@ func ComprehensionOrder(events *[]string) []string {
 	source := comprehensionSource(events, []int{1, 2})
 	result := make([]string, len(source))
 	for index, value := range source {
-		result[index] = comprehensionRecord(events, "value") + string(rune('0'+value))
+		operand := result
+		operand_1 := comprehensionRecord(events, "value") + string(rune('0'+value))
+		operand[index] = operand_1
 	}
 	return result
 
@@ -149,12 +151,13 @@ func ComprehensionResultError(events *[]string, fail bool) ([]string, error) {
 	source := []string{"value"}
 	result := make([]string, len(source))
 	for index, value := range source {
+		operand := result
 		result_1, err := comprehensionLoad(events, "result", fail)
 		if err != nil {
 			return nil, fmt.Errorf("comprehensionLoad: %w", err)
 		}
-
-		result[index] = value + result_1
+		operand_1 := value + result_1
+		operand[index] = operand_1
 	}
 	return result, nil
 }
@@ -172,12 +175,13 @@ func ComprehensionMapError(
 		if err != nil {
 			return nil, fmt.Errorf("comprehensionLoad: %w", err)
 		}
-		operand_1 := result_1
-		result_2, err_1 := comprehensionLoad(events, "value", failValue)
+		result_2 := result_1
+		result_3, err_1 := comprehensionLoad(events, "value", failValue)
 		if err_1 != nil {
 			return nil, fmt.Errorf("comprehensionLoad: %w", err_1)
 		}
-		operand[operand_1] = value + result_2
+		operand_1 := value + result_3
+		operand[result_2] = operand_1
 	}
 	return result, nil
 }

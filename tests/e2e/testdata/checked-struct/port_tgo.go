@@ -52,13 +52,13 @@ func (value ServicePort) check() (ServicePort, error) {
 }
 
 func ServicePortFromNumber(number int) (ServicePort, error) {
-	port, err := func(tgoInput TgoPortInput) (Port, error) {
+	result, err := func(tgoInput TgoPortInput) (Port, error) {
 		return NewPort(tgoInput.FieldNumber)
 	}(TgoPortInput{FieldNumber: number})
 	if err != nil {
 		return ServicePort{}, fmt.Errorf("Port: %w", err)
 	}
-
+	port := result
 	return func(tgoInput_1 TgoServicePortInput) (ServicePort, error) {
 		return NewServicePort(tgoInput_1.FieldPort)
 	}(TgoServicePortInput{FieldPort: port})

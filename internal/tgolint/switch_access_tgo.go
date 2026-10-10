@@ -80,28 +80,31 @@ func (c *checker) checkedReceiverMutation(
 	if selection == nil {
 		return false
 	}
-	var directField bool = selection.Kind() == types.FieldVal
-	if directField {
-		directField = len(selection.Index()) == 1
-	}
-	promotedField := c.promotedPointerMethodField(expression)
-	var operand bool = selection.Kind() == types.MethodVal
+	var operand bool = selection.Kind() == types.FieldVal
 	if operand {
-		operand = len(selection.Index()) == 2
+		operand = len(selection.Index()) == 1
 	}
-	var operand_1 bool = operand
+	directField := operand
+
+	promotedField := c.promotedPointerMethodField(expression)
+	var operand_1 bool = selection.Kind() == types.MethodVal
 	if operand_1 {
-		operand_1 = promotedField != nil
+		operand_1 = len(selection.Index()) == 2
 	}
-	var directPrimitiveMethod bool = operand_1
-	if directPrimitiveMethod {
-		directPrimitiveMethod = checkedPrimitiveType(promotedField.Type())
-	}
-	operand_2 := !directField
+	var operand_2 bool = operand_1
 	if operand_2 {
-		operand_2 = !directPrimitiveMethod
+		operand_2 = promotedField != nil
 	}
-	if operand_2 {
+	var operand_3 bool = operand_2
+	if operand_3 {
+		operand_3 = checkedPrimitiveType(promotedField.Type())
+	}
+	directPrimitiveMethod := operand_3
+	operand_4 := !directField
+	if operand_4 {
+		operand_4 = !directPrimitiveMethod
+	}
+	if operand_4 {
 		return false
 	}
 	receiver := sourceUnparenthesized(selector.Expression)
@@ -115,24 +118,24 @@ func (c *checker) checkedReceiverMutation(
 	for current != nil {
 		declaration, ok := syntax.FunctionDeclarationOf(current)
 		if ok {
-			var operand_3 bool = declaration == nil
-			if !operand_3 {
-				operand_3 = declaration.Name.Name != "check"
+			var operand_5 bool = declaration == nil
+			if !operand_5 {
+				operand_5 = declaration.Name.Name != "check"
 			}
-			var operand_4 bool = operand_3
-			if !operand_4 {
-				operand_4 = !c.matchesCheckedReceiver(
+			var operand_6 bool = operand_5
+			if !operand_6 {
+				operand_6 = !c.matchesCheckedReceiver(
 					declaration, model, receiverName, receiverObject,
 				)
 			}
-			if operand_4 {
+			if operand_6 {
 				return false
 			}
-			operand_5 := directPrimitiveMethod
-			if !operand_5 {
-				operand_5 = checkedPrimitiveField(selection)
+			operand_7 := directPrimitiveMethod
+			if !operand_7 {
+				operand_7 = checkedPrimitiveField(selection)
 			}
-			if operand_5 {
+			if operand_7 {
 				return true
 			}
 			return c.checkedFieldReplacement(expression)

@@ -16,10 +16,11 @@ import (
 // acquireModuleLock serializes builds and rollback for one module.
 func acquireModuleLock(root string) (acquired *flock.Flock, err error) {
 	err = nil
-	canonicalRoot, err_1 := filepath.EvalSymlinks(root)
+	result, err_1 := filepath.EvalSymlinks(root)
 	if err_1 != nil {
 		return nil, err_1
 	}
+	canonicalRoot := result
 	path := filepath.Join(canonicalRoot, ".tgo.lock")
 	operand := ensureLockFile(path)
 	if operand != nil {
@@ -35,14 +36,16 @@ func acquireModuleLock(root string) (acquired *flock.Flock, err error) {
 			err = errors.Join(err, lock.Unlock())
 		}
 	}()
-	pathInfo, err_2 := os.Lstat(path)
+	result_1, err_2 := os.Lstat(path)
 	if err_2 != nil {
 		return nil, err_2
 	}
-	lockedInfo, err_3 := lock.Stat()
+	pathInfo := result_1
+	result_2, err_3 := lock.Stat()
 	if err_3 != nil {
 		return nil, err_3
 	}
+	lockedInfo := result_2
 	operand_2 := !pathInfo.Mode().IsRegular()
 	if !operand_2 {
 		operand_2 = !os.SameFile(pathInfo, lockedInfo)
@@ -93,10 +96,11 @@ func moduleRoot(directory string) (string, string, error) {
 	if operand {
 		return "", "", errors.New("tgo needs a Go module; run go mod init first")
 	}
-	data, err_1 := os.ReadFile(path)
+	result, err_1 := os.ReadFile(path)
 	if err_1 != nil {
 		return "", "", err_1
 	}
+	data := result
 	for line := range strings.SplitSeq(string(data), "\n") {
 		fields := strings.Fields(line)
 		operand_1 := len(fields) >= 2

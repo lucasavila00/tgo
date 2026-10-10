@@ -98,11 +98,12 @@ func (i *workspaceTypeImporter) ImportFrom(
 		export = result
 		i.exports[path] = export
 	}
-	file, err_2 := os.Open(export)
+	result_1, err_2 := os.Open(export)
 	if err_2 != nil {
 		return nil, err_2
 	}
 
+	file := result_1
 	reader, err := gcexportdata.NewReader(file)
 	if err != nil {
 		closeErr := file.Close()
@@ -183,11 +184,12 @@ func (b *packageBuilder) build(path string) error {
 	}
 
 	if len(unit.Sources) == 0 {
-		imports, err := b.localGoImports(path)
+		result, err := b.localGoImports(path)
 		if err != nil {
 			return err
 		}
 
+		imports := result
 		for _, dependency := range imports {
 			operand_1 := b.buildImport(dependency)
 			if operand_1 != nil {
@@ -212,11 +214,12 @@ func (b *packageBuilder) build(path string) error {
 		}
 
 	}
-	outputs, err_1 := b.compile(unit)
+	result_1, err_1 := b.compile(unit)
 	if err_1 != nil {
 		return err_1
 	}
 
+	outputs := result_1
 	if b.write {
 		for _, name := range sortedOutputPaths(outputs) {
 			data := outputs[name]
@@ -230,11 +233,12 @@ func (b *packageBuilder) build(path string) error {
 		if operand_5 != nil {
 			return operand_5
 		}
-		testOutputs, err_2 := b.compileTests(unit)
+		result_2, err_2 := b.compileTests(unit)
 		if err_2 != nil {
 			return err_2
 		}
 
+		testOutputs := result_2
 		for _, name := range sortedOutputPaths(testOutputs) {
 			data := testOutputs[name]
 			operand_6 := b.writeFile(name, data)
@@ -250,7 +254,7 @@ func (b *packageBuilder) build(path string) error {
 
 // compile sends one prepared package to the in-memory compiler.
 func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
-	compiled, err := b.compileFiles(
+	result, err := b.compileFiles(
 		unit,
 		unit.Path,
 		unit.Sources,
@@ -262,17 +266,20 @@ func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 		return nil, err
 	}
 
+	compiled := result
+
 	unit.compiled = compiled
 	return outputPaths(unit, compiled.Outputs), nil
 }
 
 // compileTests emits internal and external TGo test packages.
 func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, error) {
-	internal, external, err := unit.readTests()
+	result, result_1, err := unit.readTests()
 	if err != nil {
 		return nil, err
 	}
 
+	internal, external := result, result_1
 	outputs := make(map[string][]byte)
 	for _, item := range []struct {
 		tests    packageTests
@@ -284,7 +291,7 @@ func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, err
 		if len(item.tests.Sources) == 0 {
 			continue
 		}
-		compiled, err_1 := b.compileTestPackage(
+		result_2, err_1 := b.compileTestPackage(
 			unit,
 			item.tests,
 			item.external,
@@ -293,6 +300,8 @@ func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, err
 		if err_1 != nil {
 			return nil, err_1
 		}
+
+		compiled := result_2
 
 		for _, source := range item.tests.Sources {
 			{
@@ -387,11 +396,12 @@ func (b *packageBuilder) compileFiles(
 		}
 		diskImports = append(diskImports, importPath)
 	}
-	paths, err := loadExportPaths(unit.Dir, diskImports)
+	result, err := loadExportPaths(unit.Dir, diskImports)
 	if err != nil {
 		return nil, err
 	}
 
+	paths := result
 	fallback := b.packageTypeImporter(paths, memoryImports)
 	packageImporter := memoryImporter{packages: memoryImports, fallback: fallback}
 	compiled, diagnostics := compiler.Compile(
@@ -483,11 +493,12 @@ func (b *packageBuilder) buildImport(path string) error {
 	{
 		dependency := b.packages[path]
 		if dependency != nil {
-			available, err := dependency.available()
+			result, err := dependency.available()
 			if err != nil {
 				return err
 			}
 
+			available := result
 			if available {
 				return b.build(path)
 			}
@@ -507,11 +518,12 @@ func (b *packageBuilder) buildImport(path string) error {
 		return fmt.Errorf("import cycle at %s", path)
 	}
 	b.states[path] = buildActive
-	imports, err_1 := b.localGoImports(path)
+	result_1, err_1 := b.localGoImports(path)
 	if err_1 != nil {
 		return err_1
 	}
 
+	imports := result_1
 	for _, dependency := range imports {
 		operand_1 := b.buildImport(dependency)
 		if operand_1 != nil {
@@ -605,15 +617,18 @@ func activeGoFile(
 	if operand_3 {
 		return nil, nil, false, err
 	}
-	data, err_1 := os.ReadFile(path)
+	result, err_1 := os.ReadFile(path)
 	if err_1 != nil {
 		return nil, nil, false, err_1
 	}
-	file, err_2 := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
+
+	data := result
+	result_1, err_2 := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
 	if err_2 != nil {
 		return nil, nil, false, err_2
 	}
 
+	file := result_1
 	cgo := importsC(file)
 	operand_4 := cgo
 	if operand_4 {
@@ -694,15 +709,18 @@ func importsOf(files []*syntax.File) []string {
 
 // fileImportsC reports whether one source file imports C.
 func fileImportsC(path string) (bool, error) {
-	data, err := os.ReadFile(path)
+	result, err := os.ReadFile(path)
 	if err != nil {
 		return false, err
 	}
-	file, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
+
+	data := result
+	result_1, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
 	if err_1 != nil {
 		return false, err_1
 	}
 
+	file := result_1
 	return importsC(file), nil
 }
 

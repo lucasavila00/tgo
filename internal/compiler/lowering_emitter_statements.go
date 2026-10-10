@@ -84,6 +84,9 @@ func (e *loweringEmitter) rangeStatement(
 		output.List = append(output.List, target)
 	}
 	node.X = e.expression(operation.expressions[0], target)
+	if operation.rangeKey != 0 {
+		node.Key = e.valueName(operation.rangeKey, "index")
+	}
 	body := &ast.BlockStmt{Lbrace: node.Body.Lbrace, Rbrace: node.Body.Rbrace}
 	e.operations(operation.body, body)
 	node.Body = body

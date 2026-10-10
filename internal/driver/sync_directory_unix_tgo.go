@@ -8,10 +8,11 @@ import "os"
 
 // syncDirectory makes a renamed or removed output durable.
 func syncDirectory(path string) error {
-	directory, err := os.Open(path)
+	result, err := os.Open(path)
 	if err != nil {
 		return err
 	}
+	directory := result
 	syncErr := directory.Sync()
 	closeErr := directory.Close()
 	if syncErr != nil {

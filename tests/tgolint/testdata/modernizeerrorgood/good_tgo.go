@@ -78,12 +78,16 @@ func branchElse() (*record, error) {
 	} else {
 		return value, nil
 	}
+
 }
 
 func branchInitializer() (*record, error) {
 	value, err := load()
-	if checked := err; checked != nil {
-		return nil, fmt.Errorf("load: %w", checked)
+	{
+		checked := err
+		if checked != nil {
+			return nil, fmt.Errorf("load: %w", checked)
+		}
 	}
 	return value, nil
 }
@@ -169,10 +173,12 @@ func nonzeroMap() (map[string]int, error) {
 }
 
 func propagated() (*record, error) {
-	value, err := load()
+	result, err := load()
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}
+
+	value := result
 	return value, nil
 }
 

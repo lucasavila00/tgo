@@ -22,29 +22,34 @@ import (
 // If a check fails, it restores all output files changed by this build.
 func Build(directory string, patterns []string) (err error) {
 	err = nil
-	root, module, err_1 := moduleRoot(directory)
+	result, result_1, err_1 := moduleRoot(directory)
 	if err_1 != nil {
 		return err_1
 	}
-	context, err_2 := effectiveBuildContext(directory)
+	root, module := result, result_1
+	result_2, err_2 := effectiveBuildContext(directory)
 	if err_2 != nil {
 		return err_2
 	}
-	lock, err_3 := acquireModuleLock(root)
+	context := result_2
+	result_3, err_3 := acquireModuleLock(root)
 	if err_3 != nil {
 		return err_3
 	}
+	lock := result_3
 	defer func() {
 		err = errors.Join(err, lock.Unlock())
 	}()
-	packages, err_4 := discover(root, module, &context)
+	result_4, err_4 := discover(root, module, &context)
 	if err_4 != nil {
 		return err_4
 	}
-	selected, err_5 := selectPackages(directory, patterns, packages)
+	packages := result_4
+	result_5, err_5 := selectPackages(directory, patterns, packages)
 	if err_5 != nil {
 		return err_5
 	}
+	selected := result_5
 	builder := packageBuilder{
 		packages:     packages,
 		root:         root,
@@ -123,19 +128,24 @@ func compileWorkspaceContext(
 	directory string,
 	continueAfterError bool,
 ) ([]*compiler.CompiledPackage, error) {
-	root, module, err_1 := moduleRoot(directory)
+	result_1, result_2, err_1 := moduleRoot(directory)
 	if err_1 != nil {
 		return nil, err_1
 	}
-	buildContext, err_2 := effectiveBuildContext(directory)
+
+	root, module := result_1, result_2
+	result_3, err_2 := effectiveBuildContext(directory)
 	if err_2 != nil {
 		return nil, err_2
 	}
-	packages, err_3 := discover(root, module, &buildContext)
+
+	buildContext := result_3
+	result_4, err_3 := discover(root, module, &buildContext)
 	if err_3 != nil {
 		return nil, err_3
 	}
 
+	packages := result_4
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	paths := sortedTGoPackagePaths(packages)
 	result := make([]*compiler.CompiledPackage, 0, len(paths))
@@ -175,19 +185,24 @@ func compileWorkspaceViewsContext(
 	directory string,
 	continueAfterError bool,
 ) ([]CompiledView, error) {
-	root, module, err_1 := moduleRoot(directory)
+	result_1, result_2, err_1 := moduleRoot(directory)
 	if err_1 != nil {
 		return nil, err_1
 	}
-	buildContext, err_2 := effectiveBuildContext(directory)
+
+	root, module := result_1, result_2
+	result_3, err_2 := effectiveBuildContext(directory)
 	if err_2 != nil {
 		return nil, err_2
 	}
-	packages, err_3 := discover(root, module, &buildContext)
+
+	buildContext := result_3
+	result_4, err_3 := discover(root, module, &buildContext)
 	if err_3 != nil {
 		return nil, err_3
 	}
 
+	packages := result_4
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	result := make([]CompiledView, 0, len(packages))
 	for _, path := range sortedTGoPackagePaths(packages) {
@@ -292,19 +307,24 @@ func CompilePackage(
 	importPath string,
 	files *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
-	root, module, err := moduleRoot(directory)
+	result, result_1, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
 	}
-	buildContext, err_1 := effectiveBuildContext(directory)
+
+	root, module := result, result_1
+	result_2, err_1 := effectiveBuildContext(directory)
 	if err_1 != nil {
 		return nil, err_1
 	}
-	packages, err_2 := discover(root, module, &buildContext)
+
+	buildContext := result_2
+	result_3, err_2 := discover(root, module, &buildContext)
 	if err_2 != nil {
 		return nil, err_2
 	}
 
+	packages := result_3
 	unit := packages[importPath]
 	var operand bool = unit == nil
 	if !operand {
@@ -335,19 +355,24 @@ func CompileTestPackage(
 	external bool,
 	files *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
-	root, module, err := moduleRoot(directory)
+	result, result_1, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
 	}
-	buildContext, err_1 := effectiveBuildContext(directory)
+
+	root, module := result, result_1
+	result_2, err_1 := effectiveBuildContext(directory)
 	if err_1 != nil {
 		return nil, err_1
 	}
-	packages, err_2 := discover(root, module, &buildContext)
+
+	buildContext := result_2
+	result_3, err_2 := discover(root, module, &buildContext)
 	if err_2 != nil {
 		return nil, err_2
 	}
 
+	packages := result_3
 	unit := packages[importPath]
 	var operand bool = unit == nil
 	if !operand {
@@ -361,11 +386,12 @@ func CompileTestPackage(
 	if operand_1 != nil {
 		return nil, operand_1
 	}
-	internal, externalTests, err_3 := unit.readTests()
+	result_4, result_5, err_3 := unit.readTests()
 	if err_3 != nil {
 		return nil, err_3
 	}
 
+	internal, externalTests := result_4, result_5
 	tests := internal
 	if external {
 		tests = externalTests
@@ -472,11 +498,12 @@ func effectiveToolTags(current []string, environment goEnvironment) ([]string, e
 			tags = append(tags, tag)
 		}
 	}
-	architecture, err := architectureFeatureTags(environment)
+	result, err := architectureFeatureTags(environment)
 	if err != nil {
 		return nil, err
 	}
 
+	architecture := result
 	return append(tags, architecture...), nil
 }
 

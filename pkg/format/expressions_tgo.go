@@ -230,18 +230,19 @@ func (p *printer) sliceExpression(value *syntax.SliceExpression, depth int) {
 	if operand_1 {
 		operand_1 = count > 1
 	}
-	var spaces bool = operand_1
-	if spaces {
-		spaces = hasBinary
+	var operand_2 bool = operand_1
+	if operand_2 {
+		operand_2 = hasBinary
 	}
+	spaces := operand_2
 	if value.Low != nil {
 		p.expressionAt(value.Low, 0, depth+1)
 	}
-	var operand_2 bool = value.Low != nil
-	if operand_2 {
-		operand_2 = spaces
+	var operand_3 bool = value.Low != nil
+	if operand_3 {
+		operand_3 = spaces
 	}
-	if operand_2 {
+	if operand_3 {
 		p.space()
 	}
 	p.text(":")
@@ -252,11 +253,11 @@ func (p *printer) sliceExpression(value *syntax.SliceExpression, depth int) {
 		p.expressionAt(value.High, 0, depth+1)
 	}
 	if value.Slice3 {
-		var operand_3 bool = value.High != nil
-		if operand_3 {
-			operand_3 = spaces
+		var operand_4 bool = value.High != nil
+		if operand_4 {
+			operand_4 = spaces
 		}
-		if operand_3 {
+		if operand_4 {
 			p.space()
 		}
 		p.text(":")

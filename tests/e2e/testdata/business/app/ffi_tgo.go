@@ -9,20 +9,23 @@ import (
 )
 
 func StoredLabel(store legacy.AccountStore, id legacy.AccountID) (string, error) {
-	account, err := store.Load(id)
+	result, err := store.Load(id)
 	if err != nil {
 		return "", fmt.Errorf("store.Load: %w", err)
 	}
+	account := result
 	return model.Label(account), nil
 }
 
 func Labels(accounts []model.Account) ([]string, error) {
-	labels, err := legacy.Map(accounts, func(account model.Account) (string, error) {
+	result, err := legacy.Map(accounts, func(account model.Account) (string, error) {
 		return model.Label(account), nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("legacy.Map: %w", err)
 	}
+	labels := result
+
 	return labels, nil
 }
 
