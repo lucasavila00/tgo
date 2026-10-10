@@ -11,6 +11,24 @@ import (
 func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 	t.Parallel()
 	want := &GenericEffectFact{
+		Version: 1,
+		Storage: StorageEffectGraph{Known: true, Entry: 0,
+			Functions: []StorageEffectFunction{{
+				ID: 0, Captures: nil, ZeroEffects: nil, AccessEffects: nil,
+				Blocks: []StorageEffectBlock{{
+					ID: 0,
+					Operations: []StorageEffectOperation{{
+						Kind: storageEffectCall, Position: 7,
+						Target: StorageEffectRegion{}, Source: StorageEffectRegion{},
+						Regions: nil, Inputs: nil, Results: nil, Function: -1,
+						Field: "", Length: 0, Capacity: 0,
+						KnownLength: false, KnownCapacity: false,
+						ZeroEffects: nil, AccessEffects: nil,
+					}},
+					Successors: nil,
+				}},
+			}},
+		},
 		ZeroEffects: []GenericEffect{{
 			Receiver:      false,
 			TypeParameter: 1,
@@ -44,6 +62,11 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 	}
 	if len(got.ZeroEffects) != 1 || len(got.ZeroEffects[0].Conditions) != 1 {
 		t.Fatalf("decoded fact = %#v", got)
+	}
+	if got.Version != 1 || !got.Storage.Known ||
+		len(got.Storage.Functions) != 1 ||
+		got.Storage.Functions[0].Blocks[0].Operations[0].Position != 7 {
+		t.Fatalf("decoded storage fact = %#v", got.Storage)
 	}
 	if len(got.ReturnedZeroEffectsAtDepth) != 1 ||
 		got.ReturnedZeroEffectsAtDepth[0].CallDepth != 2 ||

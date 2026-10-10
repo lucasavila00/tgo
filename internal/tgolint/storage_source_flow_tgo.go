@@ -29,20 +29,70 @@ func (c *checker) reportStorageFunctionCall(expression *syntax.Expression) {
 	}
 	state := flow.before[syntax.ExpressionNode(call.Callee)]
 	value := c.storageExpressionValue(call.Callee, state, flow, false)
+	arguments := make([]storageValue, 0, len(call.Args))
+	for _, argument := range call.Args {
+		arguments = append(arguments,
+			c.storageExpressionValue(argument, state, flow, false))
+	}
 	for _, function := range value.functions {
-		item := findStorageEffectFunction(function.fact.Storage, function.graph)
-		if item == nil {
-			continue
-		}
+		effects := storageGraphEffects(storageGraphCall{
+			fact: function.fact, function: function.graph,
+			arguments: arguments, captures: function.captures,
+			typeArguments: function.typeArguments,
+		}, state)
 		c.reportGenericEffects(
-			expression, expression, item.ZeroEffects, nil,
+			expression, expression, effects.zero, nil,
 			function.typeArguments, true, "call to function value",
 		)
 		c.reportGenericEffects(
-			expression, expression, item.AccessEffects, nil,
+			expression, expression, effects.access, nil,
 			function.typeArguments, false, "call to function value",
 		)
 	}
+}
+
+func (c *checker) reportStorageFactCall(
+	expression *syntax.Expression,
+	fact *GenericEffectFact,
+	receiverArguments []types.Type,
+	typeArguments []types.Type,
+	description string,
+) bool {
+	if fact.Version != 1 || !fact.Storage.Known {
+		return false
+	}
+	node := syntax.ExpressionNode(expression)
+	root := c.enclosingFunction(&node)
+	if root == nil {
+		return false
+	}
+	flow := c.storageFlows[*root]
+	if flow == nil {
+		flow = c.buildStorageFlow(root)
+		c.storageFlows[*root] = flow
+	}
+	state := flow.before[node]
+	call := syntax.CallExpressionOf(expression)
+	var arguments []storageValue = nil
+	if call != nil {
+		for _, argument := range call.Args {
+			arguments = append(arguments,
+				c.storageExpressionValue(argument, state, flow, false))
+		}
+	}
+	effects := storageGraphEffects(storageGraphCall{
+		fact: fact, function: fact.Storage.Entry,
+		arguments: arguments, captures: nil, typeArguments: typeArguments,
+	}, state)
+	c.reportGenericEffects(
+		expression, expression, effects.zero,
+		receiverArguments, typeArguments, true, description,
+	)
+	c.reportGenericEffects(
+		expression, expression, effects.access,
+		receiverArguments, typeArguments, false, description,
+	)
+	return true
 }
 
 func (c *checker) buildStorageFlow(root *syntax.Node) *storageFlow {

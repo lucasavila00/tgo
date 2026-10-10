@@ -32,6 +32,9 @@ func (c *checker) storageExpressionValue(
 	if call := syntax.CallExpressionOf(expression); call != nil {
 		return c.storageCallValue(expression, call, state, flow, apply)
 	}
+	if literal := syntax.CompositeLiteralOf(expression); literal != nil {
+		return c.storageCompositeValue(expression, literal, state, flow, apply)
+	}
 	if name := syntax.IdentifierExpressionOf(expression); name != nil {
 		object := c.facts.Object(name)
 		if function, ok := object.(*types.Func); ok {
@@ -51,7 +54,7 @@ func (c *checker) storageExpressionValue(
 			region.steps = append(region.steps, StorageEffectPath{
 				Kind: storagePathField, Field: selector.Selector.Name,
 			})
-			value = joinStorageValue(value, state.memory[storageMemoryKey(region)])
+			value = joinStorageValue(value, readStorageMemory(state, storageMemoryKey(region)))
 			value.regions = append(value.regions, region)
 		}
 		return value
@@ -69,12 +72,12 @@ func (c *checker) storageExpressionValue(
 		var result storageValue
 		for _, slice := range base.slices {
 			path := storagePath{location: slice.backing, steps: []StorageEffectPath{step}}
-			result = joinStorageValue(result, state.memory[storageMemoryKey(path)])
+			result = joinStorageValue(result, readStorageMemory(state, storageMemoryKey(path)))
 			result.regions = append(result.regions, path)
 		}
 		for _, region := range base.regions {
 			region.steps = append(region.steps, step)
-			result = joinStorageValue(result, state.memory[storageMemoryKey(region)])
+			result = joinStorageValue(result, readStorageMemory(state, storageMemoryKey(region)))
 			result.regions = append(result.regions, region)
 		}
 		return result
@@ -101,6 +104,47 @@ func (c *checker) storageExpressionValue(
 	}
 	if reflectStorageValueEmpty(value) {
 		value.unknown = true
+	}
+	return value
+}
+
+func (c *checker) storageCompositeValue(
+	expression *syntax.Expression,
+	literal *syntax.CompositeLiteral,
+	state storageState,
+	flow *storageFlow,
+	apply bool,
+) storageValue {
+	location := storageLocation{
+		graph: -4, site: int(syntax.ExpressionPosition(expression)),
+	}
+	value := storageValue{regions: []storagePath{{location: location}}}
+	if _, ok := coreType(c.facts.Type(expression)).(*types.Slice); ok {
+		value.slices = []storageSlice{{
+			backing: location, length: int64(len(literal.Elements)),
+			capacity: int64(len(literal.Elements)), knownLength: true, knownCapacity: true,
+		}}
+	}
+	next := int64(0)
+	for _, element := range literal.Elements {
+		item := element
+		step := StorageEffectPath{Kind: storagePathIndex, Index: next}
+		if pair := syntax.KeyValueExpressionOf(element); pair != nil {
+			item = pair.Value
+			if name := syntax.IdentifierExpressionOf(pair.Key); name != nil {
+				step = StorageEffectPath{Kind: storagePathField, Field: name.Name}
+			} else if constantValue := c.facts.Constant(pair.Key); constantValue != nil &&
+				constantValue.Kind() == constant.Int {
+				if index, exact := constant.Int64Val(constantValue); exact {
+					step.Index = index
+					next = index
+				}
+			}
+		}
+		stored := c.storageExpressionValue(item, state, flow, apply)
+		path := storagePath{location: location, steps: []StorageEffectPath{step}}
+		writeStorageMemory(state, storageMemoryKey(path), stored, true)
+		next++
 	}
 	return value
 }
@@ -351,7 +395,7 @@ func copyStorageSlices(
 			from := storagePath{location: origin.backing, steps: []StorageEffectPath{{
 				Kind: storagePathAnyIndex,
 			}}}
-			snapshot := cloneStorageValue(state.memory[storageMemoryKey(from)])
+			snapshot := readStorageMemory(state, storageMemoryKey(from))
 			to := storagePath{location: target.backing, steps: []StorageEffectPath{{
 				Kind: storagePathAnyIndex,
 			}}}

@@ -51,6 +51,7 @@ type storageState struct {
 type storagePathKey struct {
 	location storageLocation
 	path     string
+	wildcard bool
 }
 
 func newStorageState() storageState {
@@ -187,6 +188,13 @@ func writeStorageMemory(
 	value storageValue,
 	exact bool,
 ) {
+	if path.wildcard {
+		for current, stored := range state.memory {
+			if current.location == path.location {
+				state.memory[current] = joinStorageValue(stored, value)
+			}
+		}
+	}
 	if exact && !path.location.merged {
 		state.memory[path] = cloneStorageValue(value)
 		return
@@ -194,9 +202,23 @@ func writeStorageMemory(
 	state.memory[path] = joinStorageValue(state.memory[path], value)
 }
 
+func readStorageMemory(state storageState, path storagePathKey) storageValue {
+	value := cloneStorageValue(state.memory[path])
+	if path.wildcard {
+		for current, stored := range state.memory {
+			if current.location == path.location {
+				value = joinStorageValue(value, stored)
+			}
+		}
+	}
+	return value
+}
+
 func storageMemoryKey(path storagePath) storagePathKey {
 	var text strings.Builder
+	wildcard := false
 	for _, step := range path.steps {
+		wildcard = wildcard || step.Kind == storagePathAnyIndex
 		text.WriteString(strconv.Itoa(step.Kind))
 		text.WriteByte(':')
 		text.WriteString(step.Field)
@@ -204,7 +226,7 @@ func storageMemoryKey(path storagePath) storagePathKey {
 		text.WriteString(strconv.FormatInt(step.Index, 10))
 		text.WriteByte('/')
 	}
-	return storagePathKey{location: path.location, path: text.String()}
+	return storagePathKey{location: path.location, path: text.String(), wildcard: wildcard}
 }
 
 func storagePathFromWire(

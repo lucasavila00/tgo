@@ -118,6 +118,7 @@ func (b *storageGraphBuilder) addFunction(
 }
 
 func (b *storageGraphBuilder) collectNode(block *StorageEffectBlock, node syntax.Node) {
+	defer b.collectEffectPoint(block, syntax.NodePosition(&node))
 	if statement, ok := syntax.StatementOf(&node); ok {
 		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
 			b.collectAssignment(block, assignment)
@@ -240,16 +241,46 @@ func (b *storageGraphBuilder) collectExpression(
 	if expression == nil {
 		return 0
 	}
+	defer b.collectEffectPoint(block, syntax.ExpressionPosition(expression))
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
 		return b.collectExpression(block, parenthesized.Expression)
+	}
+	if object, ok := b.checker.genericCallObject(expression).(*types.Func); ok &&
+		syntax.CallExpressionOf(expression) == nil {
+		result := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectFunction, Results: []int{result},
+			Function: b.functionID(object.Origin()),
+		})
+		return result
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
 		callee := b.collectExpression(block, call.Callee)
 		arguments := b.collectExpressions(block, call.Args)
 		results := b.callResultTemps(expression)
-		result := results[0]
+		result := b.newTemp()
+		if len(results) != 0 {
+			result = results[0]
+		}
 		if name := syntax.IdentifierExpressionOf(call.Callee); name != nil {
 			if builtin, ok := b.checker.facts.Object(name).(*types.Builtin); ok {
+				if builtin.Name() == "make" {
+					length, lengthKnown := storageConstantInt(b.checker, call.Args, 1)
+					capacity, capacityKnown := storageConstantInt(b.checker, call.Args, 2)
+					if len(call.Args) == 2 {
+						capacity, capacityKnown = length, lengthKnown
+					}
+					block.Operations = append(block.Operations, StorageEffectOperation{
+						Kind: storageEffectAllocate, Results: results,
+						Target: StorageEffectRegion{
+							Root: storageRootAllocation, ID: b.nextSite,
+						},
+						Length: length, Capacity: capacity,
+						KnownLength: lengthKnown, KnownCapacity: capacityKnown,
+					})
+					b.nextSite++
+					return result
+				}
 				regions := make([]StorageEffectRegion, 0, len(call.Args))
 				for _, argument := range call.Args {
 					region, _ := b.expressionRegion(argument)
@@ -285,6 +316,42 @@ func (b *storageGraphBuilder) collectExpression(
 	if literal, ok := syntax.FunctionLiteralOf(&node); ok {
 		return b.collectFunctionLiteral(block, expression, literal)
 	}
+	if literal := syntax.CompositeLiteralOf(expression); literal != nil {
+		result := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectAllocate, Results: []int{result},
+			Target: StorageEffectRegion{Root: storageRootAllocation, ID: b.nextSite},
+			Length: int64(len(literal.Elements)), Capacity: int64(len(literal.Elements)),
+			KnownLength: true, KnownCapacity: true,
+		})
+		b.nextSite++
+		for index, element := range literal.Elements {
+			value := b.collectExpression(block, element)
+			block.Operations = append(block.Operations, StorageEffectOperation{
+				Kind:   storageEffectIndexWrite,
+				Inputs: []int{result, 0, value}, Length: int64(index), KnownLength: true,
+			})
+		}
+		return result
+	}
+	if indexed := syntax.IndexExpressionOf(expression); indexed != nil {
+		base := b.collectExpression(block, indexed.Expression)
+		index := b.collectExpression(block, indexed.Index)
+		result := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectIndexRead, Inputs: []int{base, index}, Results: []int{result},
+		})
+		return result
+	}
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		base := b.collectExpression(block, selector.Expression)
+		result := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectFieldRead, Inputs: []int{base}, Results: []int{result},
+			Field: selector.Selector.Name,
+		})
+		return result
+	}
 	if region, ok := b.expressionRegion(expression); ok {
 		result := b.newTemp()
 		block.Operations = append(block.Operations, StorageEffectOperation{
@@ -304,6 +371,15 @@ func (b *storageGraphBuilder) collectExpression(
 	}
 	result = b.newTemp()
 	return result
+}
+
+func (b *storageGraphBuilder) collectEffectPoint(
+	block *StorageEffectBlock,
+	position token.Pos,
+) {
+	block.Operations = append(block.Operations, StorageEffectOperation{
+		Kind: storageEffectObserve, Position: int(position),
+	})
 }
 
 func (b *storageGraphBuilder) callResultTemps(
@@ -444,13 +520,36 @@ type storageGraphComposer struct {
 }
 
 func (summary *genericEffectSummary) attachStorageEffects() {
-	for index := range summary.storage.Functions {
-		function := &summary.storage.Functions[index]
-		if function.ID != summary.storage.Entry {
+	attachOrderedStorageEffects(
+		&summary.storage, summary.storage.Entry,
+		summary.storageZeroAt, summary.storageAccessAt,
+	)
+}
+
+func attachOrderedStorageEffects(
+	graph *StorageEffectGraph,
+	functionID int,
+	zero map[token.Pos][]GenericEffect,
+	access map[token.Pos][]GenericEffect,
+) {
+	for functionIndex := range graph.Functions {
+		function := &graph.Functions[functionIndex]
+		if function.ID != functionID {
 			continue
 		}
-		function.ZeroEffects = append([]GenericEffect(nil), summary.zeroEffects...)
-		function.AccessEffects = append([]GenericEffect(nil), summary.accessEffects...)
+		for blockIndex := range function.Blocks {
+			block := &function.Blocks[blockIndex]
+			for operationIndex := range block.Operations {
+				operation := &block.Operations[operationIndex]
+				position := token.Pos(operation.Position)
+				operation.ZeroEffects = append(
+					[]GenericEffect(nil), zero[position]...,
+				)
+				operation.AccessEffects = append(
+					[]GenericEffect(nil), access[position]...,
+				)
+			}
+		}
 		return
 	}
 }
@@ -470,21 +569,16 @@ func (c *checker) attachLiteralStorageEffects(summary *genericEffectSummary) {
 			calls: nil, returnedValues: nil, returnedBodies: nil, valueUses: nil,
 			declarations: summary.declarations,
 			reachable:    c.reachableNodes(literal.Body), root: node, body: literal.Body,
+			storage:         StorageEffectGraph{},
+			storageZeroAt:   make(map[token.Pos][]GenericEffect),
+			storageAccessAt: make(map[token.Pos][]GenericEffect),
 		}
 		c.collectGenericPresenceZeros(nested)
 		c.collectGenericNodes(nested)
 		id := c.storageLiterals[syntax.NodePosition(node)]
-		for index := range summary.storage.Functions {
-			function := &summary.storage.Functions[index]
-			if function.ID == id {
-				function.ZeroEffects = append(
-					[]GenericEffect(nil), nested.zeroEffects...,
-				)
-				function.AccessEffects = append(
-					[]GenericEffect(nil), nested.accessEffects...,
-				)
-			}
-		}
+		attachOrderedStorageEffects(
+			&summary.storage, id, nested.storageZeroAt, nested.storageAccessAt,
+		)
 		return false
 	})
 }

@@ -17,6 +17,12 @@ type storageExecutionState struct {
 	storage storageState
 	temps   map[int]storageValue
 	returns []storageValue
+	effects storageInvocationEffects
+}
+
+type storageInvocationEffects struct {
+	zero   []GenericEffect
+	access []GenericEffect
 }
 
 type storageGraphCall struct {
@@ -32,17 +38,30 @@ func executeStorageGraph(
 	state storageState,
 ) (storageState, []storageValue) {
 	active := make(map[int]bool)
-	return executeStorageFunction(call, state, active)
+	storage, values, _ := executeStorageFunction(call, state, active)
+	return storage, values
+}
+
+func storageGraphEffects(
+	call storageGraphCall,
+	state storageState,
+) storageInvocationEffects {
+	active := make(map[int]bool)
+	_, _, effects := executeStorageFunction(call, state, active)
+	return effects
 }
 
 func executeStorageFunction(
 	call storageGraphCall,
 	state storageState,
 	active map[int]bool,
-) (storageState, []storageValue) {
+) (storageState, []storageValue, storageInvocationEffects) {
 	function := findStorageEffectFunction(call.fact.Storage, call.function)
-	if function == nil || active[call.function] {
-		return state, nil
+	if function == nil {
+		return state, nil, storageInvocationEffects{}
+	}
+	if active[call.function] {
+		return state, nil, recursiveStorageEffects(function)
 	}
 	active[call.function] = true
 	defer delete(active, call.function)
@@ -81,6 +100,7 @@ func executeStorageFunction(
 	}
 	result := cloneStorageState(state)
 	var returns []storageValue = nil
+	var effects storageInvocationEffects
 	for _, exit := range exits {
 		result = joinStorageState(result, exit.storage)
 		for index, value := range exit.returns {
@@ -89,8 +109,21 @@ func executeStorageFunction(
 			}
 			returns[index] = joinStorageValue(returns[index], value)
 		}
+		effects.zero = appendGenericEffects(effects.zero, exit.effects.zero)
+		effects.access = appendGenericEffects(effects.access, exit.effects.access)
 	}
-	return result, returns
+	return result, returns, effects
+}
+
+func recursiveStorageEffects(function *StorageEffectFunction) storageInvocationEffects {
+	var effects storageInvocationEffects
+	for _, block := range function.Blocks {
+		for _, operation := range block.Operations {
+			effects.zero = appendGenericEffects(effects.zero, operation.ZeroEffects)
+			effects.access = appendGenericEffects(effects.access, operation.AccessEffects)
+		}
+	}
+	return effects
 }
 
 func findStorageEffectFunction(
@@ -122,6 +155,10 @@ func cloneStorageExecution(state storageExecutionState) storageExecutionState {
 		storage: cloneStorageState(state.storage),
 		temps:   make(map[int]storageValue),
 		returns: append([]storageValue(nil), state.returns...),
+		effects: storageInvocationEffects{
+			zero:   append([]GenericEffect(nil), state.effects.zero...),
+			access: append([]GenericEffect(nil), state.effects.access...),
+		},
 	}
 	for id, value := range state.temps {
 		cloned.temps[id] = cloneStorageValue(value)
@@ -147,5 +184,27 @@ func joinStorageExecution(
 		}
 		joined.returns[index] = joinStorageValue(joined.returns[index], value)
 	}
+	joined.effects.zero = appendGenericEffects(joined.effects.zero, right.effects.zero)
+	joined.effects.access = appendGenericEffects(joined.effects.access, right.effects.access)
 	return joined, !reflect.DeepEqual(left, joined)
+}
+
+func appendGenericEffects(
+	target []GenericEffect,
+	values []GenericEffect,
+) []GenericEffect {
+	for _, value := range values {
+		found := false
+		for _, current := range target {
+			found = found || genericEffectsEqual(current, value)
+		}
+		if !found {
+			target = append(target, value)
+		}
+	}
+	return target
+}
+
+func genericEffectsEqual(left GenericEffect, right GenericEffect) bool {
+	return reflect.DeepEqual(left, right)
 }

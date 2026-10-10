@@ -205,6 +205,17 @@ func FunctionValues(event model.Event) {
 	_ = genericzero.ReturnAssignedBox[model.Event]()
 	_ = genericzero.ReturnedAppendedAlias[model.Event]()
 	genericzero.CopyAlias[model.Event](make([]func(), 1))
+	genericzero.OrderedUnsafe[model.Event]()
+	genericzero.LoadedBeforeWrite[model.Event]()
+	genericzero.CapturedCellBeforeWrite[model.Event]()()
+	genericzero.SharedSlotAfterWrite[model.Event]()
+	genericzero.DiscardedAppendReuse[model.Event]()
+	genericzero.CopyThenCall[model.Event]()
+	genericzero.RecursiveUnsafe[model.Event]()
+	imported := []func(){genericzero.Nested[model.Event]()}
+	genericzerowrap.CallThenStore(imported, func() {})
+	imported = []func(){genericzero.Nested[model.Event]()}
+	genericzerowrap.LoadThenStoreCall(imported, func() {})
 }
 
 func ReturnedAlternatives(first bool) {

@@ -24,6 +24,12 @@ func (c *checker) reportGenericZeroCall(
 	if fact == nil {
 		return
 	}
+	if c.reportStorageFactCall(
+		expression, fact, receiverArguments, typeArguments,
+		"call to "+function.Name(),
+	) {
+		return
+	}
 	c.reportGenericEffects(expression, expression, fact.ZeroEffects,
 		receiverArguments, typeArguments, true, "call to "+function.Name())
 	c.reportGenericEffects(expression, expression, fact.AccessEffects,

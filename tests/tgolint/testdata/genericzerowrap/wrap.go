@@ -29,3 +29,15 @@ type eventLike interface {
 func Started[T eventLike](event T) string {
 	return genericzero.Started(event)
 }
+
+func StoreThenCall(slot []func(), replacement func()) {
+	genericzero.StoreThenCall(slot, replacement)
+}
+
+func CallThenStore(slot []func(), replacement func()) {
+	genericzero.CallThenStore(slot, replacement)
+}
+
+func LoadThenStoreCall(slot []func(), replacement func()) {
+	genericzero.LoadThenStoreCall(slot, replacement)
+}

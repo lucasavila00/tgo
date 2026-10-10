@@ -103,6 +103,8 @@ type genericEffectSummary struct {
 	root                         %syntax.Node
 	body                         %syntax.BlockStatement
 	storage                      StorageEffectGraph
+	storageZeroAt                map[token.Pos][]GenericEffect
+	storageAccessAt              map[token.Pos][]GenericEffect
 }
 
 type returnedGenericBody struct {
@@ -221,7 +223,10 @@ func (c %checker) collectGenericZeroSummaries() map[*types.Func]%genericEffectSu
 				calls:                        nil, returnedValues: nil, returnedBodies: nil, valueUses: nil,
 				declarations: declarations,
 				reachable:    c.reachableNodes(function.Body), root: &root,
-				body: function.Body,
+				body:            function.Body,
+				storage:         StorageEffectGraph{},
+				storageZeroAt:   make(map[token.Pos][]GenericEffect),
+				storageAccessAt: make(map[token.Pos][]GenericEffect),
 			}
 			c.collectDirectGenericZeros(summary)
 			summaries[object] = summary

@@ -201,3 +201,106 @@ func ReturnAssignedBox[T any]() FunctionBox {
 	}}
 	return box
 }
+
+func CallThenStore(slot []func(), replacement func()) {
+	slot[0]()
+	slot[0] = replacement
+}
+
+func StoreThenCall(slot []func(), replacement func()) {
+	slot[0] = replacement
+	slot[0]()
+}
+
+func LoadThenStoreCall(slot []func(), replacement func()) {
+	loaded := slot[0]
+	slot[0] = replacement
+	loaded()
+}
+
+func OrderedUnsafe[T any]() {
+	values := []func(){storedEffect[T]}
+	CallThenStore(values, func() {})
+}
+
+func OrderedSafe[T any]() {
+	values := []func(){storedEffect[T]}
+	StoreThenCall(values, func() {})
+}
+
+func LoadedBeforeWrite[T any]() {
+	values := []func(){storedEffect[T]}
+	LoadThenStoreCall(values, func() {})
+}
+
+func CapturedCellAfterWrite[T any]() func() {
+	value := storedEffect[T]
+	result := func() { value() }
+	value = func() {}
+	return result
+}
+
+func CapturedCellBeforeWrite[T any]() func() {
+	value := func() {}
+	result := func() { value() }
+	value = storedEffect[T]
+	return result
+}
+
+func SharedSlot(slot []func()) func() {
+	return func() { slot[0]() }
+}
+
+func SharedSlotAfterWrite[T any]() {
+	values := []func(){func() {}}
+	result := SharedSlot(values)
+	values[0] = storedEffect[T]
+	result()
+}
+
+func DiscardedAppendReuse[T any]() {
+	values := make([]func(), 0, 1)
+	append(values, storedEffect[T])
+	values[:1][0]()
+}
+
+func DiscardedAppendFresh[T any]() {
+	values := make([]func(), 0, 0)
+	append(values, storedEffect[T])
+}
+
+func CopyThenCall[T any]() {
+	target := []func(){func() {}}
+	source := []func(){storedEffect[T]}
+	copy(target, source)
+	target[0]()
+}
+
+func ZeroCopyThenCall[T any]() {
+	target := []func(){func() {}}
+	source := []func(){storedEffect[T]}
+	copy(target[:0], source)
+	target[0]()
+}
+
+func RecursiveCall(value func(), count int) {
+	if count == 0 {
+		return
+	}
+	value()
+	RecursiveCall(value, count-1)
+}
+
+func RecursiveUnsafe[T any]() {
+	RecursiveCall(storedEffect[T], 1)
+}
+
+func RecursiveSafe[T any]() {
+	RecursiveCall(func() {}, 1)
+}
+
+func IgnoreFunction(value func()) {}
+
+func KnownIgnore[T any]() {
+	IgnoreFunction(storedEffect[T])
+}

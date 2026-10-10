@@ -367,6 +367,7 @@ func (c *checker) markGenericZeroWith(
 	}
 	for parameter := range zeroTypeParameters(typ, summary.parameters, make(map[types.Type]bool)) {
 		c.addGenericEffect(summary, true, parameter, effect)
+		c.recordStorageGenericEffect(summary, node, true, parameter, effect)
 	}
 }
 
@@ -585,7 +586,30 @@ func (c *checker) markGenericAccessAt(
 		make(map[types.Type]bool),
 	) {
 		c.addGenericEffect(summary, false, parameter, effect)
+		c.recordStorageGenericEffect(summary, node, false, parameter, effect)
 	}
+}
+
+func (c *checker) recordStorageGenericEffect(
+	summary *genericEffectSummary,
+	node *syntax.Node,
+	zero bool,
+	parameter zeroParameter,
+	effect GenericEffect,
+) {
+	effect.Receiver = parameter.receiver
+	effect.TypeParameter = parameter.index
+	target := summary.storageAccessAt
+	if zero {
+		target = summary.storageZeroAt
+	}
+	position := syntax.NodePosition(node)
+	for _, current := range target[position] {
+		if genericEffectsEqual(current, effect) {
+			return
+		}
+	}
+	target[position] = append(target[position], effect)
 }
 
 // addGenericEffect normalizes and deduplicates one summary effect.
