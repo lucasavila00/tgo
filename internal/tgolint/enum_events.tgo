@@ -40,10 +40,16 @@ type enumIdentityTable struct {
 	activations map[enumActivationKey]enumActivationID
 	cells       map[enumCellKey]enumCellID
 	regions     map[enumRegionKey]enumRegionID
+	fields      map[enumRegionFieldKey]enumRegionID
 
 	activationKeys []enumActivationKey
 	cellKeys       []enumCellKey
 	regionKeys     []enumRegionKey
+}
+
+type enumRegionFieldKey struct {
+	owner enumRegionID
+	field *types.Var
 }
 
 func newEnumIdentityTable() *enumIdentityTable {
@@ -51,7 +57,38 @@ func newEnumIdentityTable() *enumIdentityTable {
 		activations: make(map[enumActivationKey]enumActivationID),
 		cells:       make(map[enumCellKey]enumCellID),
 		regions:     make(map[enumRegionKey]enumRegionID),
+		fields:      make(map[enumRegionFieldKey]enumRegionID),
 	}
+}
+
+// fieldRegion reuses one owner-field region and terminates pointer cycles.
+func (table *enumIdentityTable) fieldRegion(
+	owner enumRegionID,
+	field *types.Var,
+	activation enumActivationID,
+) enumRegionID {
+	key := enumRegionFieldKey{owner: owner, field: field}
+	if region, found := table.fields[key]; found {
+		return region
+	}
+	region := table.region(enumRegionKey{
+		activation: activation,
+		site:       field.Pos(),
+		typ:        field.Type(),
+		summary:    table.regionSummary(owner),
+	})
+	table.fields[key] = region
+	return region
+}
+
+func (table *enumIdentityTable) regionSummary(region enumRegionID) bool {
+	index := int(region) - 1
+	return index < 0 || index >= len(table.regionKeys) ||
+		table.regionKeys[index].summary
+}
+
+func (table *enumIdentityTable) uniqueRegion(region enumRegionID) bool {
+	return region != 0 && !table.regionSummary(region)
 }
 
 func (table *enumIdentityTable) activation(

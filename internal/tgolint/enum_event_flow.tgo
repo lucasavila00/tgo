@@ -1,0 +1,169 @@
+package tgolint
+
+type enumRegionProof struct {
+	region enumRegionID
+	tag    int
+}
+
+type enumEventState struct {
+	cells  map[enumCellID]enumAbstractValue
+	saved  map[enumSavedValueID]enumAbstractValue
+	proofs map[enumRegionProof]bool
+}
+
+func newEnumEventState() *enumEventState {
+	return &enumEventState{
+		cells:  make(map[enumCellID]enumAbstractValue),
+		saved:  make(map[enumSavedValueID]enumAbstractValue),
+		proofs: make(map[enumRegionProof]bool),
+	}
+}
+
+func cloneEnumEventState(source *enumEventState) *enumEventState {
+	if source == nil {
+		return nil
+	}
+	result := newEnumEventState()
+	for cell, value := range source.cells {
+		result.cells[cell] = cloneEnumAbstractValue(value)
+	}
+	for saved, value := range source.saved {
+		result.saved[saved] = cloneEnumAbstractValue(value)
+	}
+	for proof := range source.proofs {
+		result.proofs[proof] = true
+	}
+	return result
+}
+
+func joinEnumAbstractValues(
+	left enumAbstractValue,
+	right enumAbstractValue,
+) (enumAbstractValue, bool) {
+	result := cloneEnumAbstractValue(left)
+	changed := false
+	if result.regions == nil {
+		result.regions = make(enumRegionSet)
+	}
+	for region := range right.regions {
+		if !result.regions[region] {
+			result.regions[region] = true
+			changed = true
+		}
+	}
+	if result.closures == nil {
+		result.closures = make(enumClosureSet)
+	}
+	for closure := range right.closures {
+		if !result.closures[closure] {
+			result.closures[closure] = true
+			changed = true
+		}
+	}
+	if right.unknown && !result.unknown {
+		result.unknown = true
+		changed = true
+	}
+	return result, changed
+}
+
+// joinEnumEventStates keeps only proofs that hold on every incoming path.
+func joinEnumEventStates(
+	current *enumEventState,
+	incoming *enumEventState,
+) (*enumEventState, bool) {
+	if current == nil {
+		return cloneEnumEventState(incoming), true
+	}
+	result := cloneEnumEventState(current)
+	changed := false
+	for cell, value := range incoming.cells {
+		joined, added := joinEnumAbstractValues(result.cells[cell], value)
+		result.cells[cell] = joined
+		changed = changed || added
+	}
+	for saved, value := range incoming.saved {
+		joined, added := joinEnumAbstractValues(result.saved[saved], value)
+		result.saved[saved] = joined
+		changed = changed || added
+	}
+	for proof := range result.proofs {
+		if !incoming.proofs[proof] {
+			delete(result.proofs, proof)
+			changed = true
+		}
+	}
+	return result, changed
+}
+
+func (state *enumEventState) killRegionProofs(regions enumRegionSet) {
+	for proof := range state.proofs {
+		if regions[proof.region] {
+			delete(state.proofs, proof)
+		}
+	}
+}
+
+func (state *enumEventState) prove(value enumAbstractValue, tag int) {
+	if value.unknown {
+		return
+	}
+	for region := range value.regions {
+		state.proofs[enumRegionProof{region: region, tag: tag}] = true
+	}
+}
+
+func (state *enumEventState) payloadValid(
+	value enumAbstractValue,
+	tag int,
+) bool {
+	if value.unknown || len(value.regions) == 0 {
+		return false
+	}
+	for region := range value.regions {
+		if !state.proofs[enumRegionProof{region: region, tag: tag}] {
+			return false
+		}
+	}
+	return true
+}
+
+func (graph *enumEventGraph) transfer(
+	state *enumEventState,
+	event enumEvent,
+) bool {
+	switch event.kind {
+	case enumEventLoad:
+		value := enumAbstractValue{}
+		for cell := range event.cells {
+			value, _ = joinEnumAbstractValues(value, state.cells[cell])
+		}
+		state.saved[event.value] = value
+	case enumEventSave:
+		state.saved[event.value] = graph.saved(event.value)
+	case enumEventStore:
+		value := state.saved[event.value]
+		strong := len(event.cells) == 1
+		for cell := range event.cells {
+			old := state.cells[cell]
+			state.killRegionProofs(old.regions)
+			if strong && graph.uniqueCell(cell) {
+				state.cells[cell] = cloneEnumAbstractValue(value)
+			} else {
+				state.cells[cell], _ = joinEnumAbstractValues(old, value)
+			}
+		}
+	case enumEventPayloadCheck:
+		return state.payloadValid(state.saved[event.value], event.tag)
+	}
+	return true
+}
+
+func (graph *enumEventGraph) uniqueCell(cell enumCellID) bool {
+	index := int(cell) - 1
+	if index < 0 || index >= len(graph.identities.cellKeys) {
+		return false
+	}
+	key := graph.identities.cellKeys[index]
+	return key.owner == 0 || graph.identities.uniqueRegion(key.owner)
+}
