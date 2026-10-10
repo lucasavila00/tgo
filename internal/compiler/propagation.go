@@ -167,12 +167,17 @@ func (l *propagationLowerer) statements(input []ast.Stmt) []ast.Stmt {
 // scopedStatements restores inferred names when one lexical block ends.
 func (l *propagationLowerer) scopedStatements(input []ast.Stmt) []ast.Stmt {
 	outer := l.inferredResultNames
-	l.inferredResultNames = make(map[string]types.Type, len(outer))
-	for name, typ := range outer {
-		l.inferredResultNames[name] = typ
-	}
+	l.inferredResultNames = cloneInferredResultNames(outer)
 	result := l.statements(input)
 	l.inferredResultNames = outer
+	return result
+}
+
+func cloneInferredResultNames(input map[string]types.Type) map[string]types.Type {
+	result := make(map[string]types.Type, len(input))
+	for name, typ := range input {
+		result[name] = typ
+	}
 	return result
 }
 
@@ -204,34 +209,58 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 	case *ast.DeclStmt:
 		return l.declaration(node)
 	case *ast.IfStmt:
+		outer := l.inferredResultNames
+		l.inferredResultNames = cloneInferredResultNames(outer)
+		scopedInitializer := node.Init != nil
+		prefix := []ast.Stmt(nil)
+		if l.statementHasLowering(node.Init) {
+			prefix = l.simpleStatement(node.Init)
+			node.Init = nil
+		} else if assignment, ok := node.Init.(*ast.AssignStmt); ok {
+			l.rememberSimpleAssignmentTypes(assignment)
+		}
 		node.Body.List = l.scopedStatements(node.Body.List)
 		if node.Else != nil {
 			rewritten := l.statement(node.Else)
 			node.Else = oneStatement(rewritten)
 		}
-		condition, prefix := l.expression(node.Cond)
+		condition, conditionPrefix := l.expression(node.Cond)
 		node.Cond = condition
-		scopedInitializer := node.Init != nil
-		if len(prefix) > 0 || l.statementHasLowering(node.Init) {
-			prefix = append(l.simpleStatement(node.Init), prefix...)
+		if len(conditionPrefix) > 0 && node.Init != nil {
+			prefix = append(prefix, l.simpleStatement(node.Init)...)
 			node.Init = nil
 		}
-		return l.prefixedStatement(prefix, node, scopedInitializer)
+		prefix = append(prefix, conditionPrefix...)
+		result := l.prefixedStatement(prefix, node, scopedInitializer)
+		l.inferredResultNames = outer
+		return result
 	case *ast.RangeStmt:
 		node.Body.List = l.scopedStatements(node.Body.List)
 		value, prefix := l.expression(node.X)
 		node.X = value
 		return l.prefixedStatement(prefix, node, false)
 	case *ast.SwitchStmt:
-		l.caseBodies(node.Body)
-		value, prefix := l.optionalExpression(node.Tag)
-		node.Tag = value
+		outer := l.inferredResultNames
+		l.inferredResultNames = cloneInferredResultNames(outer)
 		scopedInitializer := node.Init != nil
-		if len(prefix) > 0 || l.statementHasLowering(node.Init) {
-			prefix = append(l.simpleStatement(node.Init), prefix...)
+		prefix := []ast.Stmt(nil)
+		if l.statementHasLowering(node.Init) {
+			prefix = l.simpleStatement(node.Init)
+			node.Init = nil
+		} else if assignment, ok := node.Init.(*ast.AssignStmt); ok {
+			l.rememberSimpleAssignmentTypes(assignment)
+		}
+		l.caseBodies(node.Body)
+		value, tagPrefix := l.optionalExpression(node.Tag)
+		node.Tag = value
+		if len(tagPrefix) > 0 && node.Init != nil {
+			prefix = append(prefix, l.simpleStatement(node.Init)...)
 			node.Init = nil
 		}
-		return l.prefixedStatement(prefix, node, scopedInitializer)
+		prefix = append(prefix, tagPrefix...)
+		result := l.prefixedStatement(prefix, node, scopedInitializer)
+		l.inferredResultNames = outer
+		return result
 	case *ast.TypeSwitchStmt:
 		l.caseBodies(node.Body)
 		l.rejectStatement(node.Init, "type switch initializer")

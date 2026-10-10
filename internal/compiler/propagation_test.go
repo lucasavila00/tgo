@@ -116,3 +116,93 @@ func use() error {
 		t.Fatalf("generated output does not lower the method call\n%s", output)
 	}
 }
+
+func TestPropagationTracksInferredResultScopes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "if initializer",
+			body: `
+func use() error {
+	if w := openWriter()!!; w != nil {
+		_ = w.Write()!!
+	}
+	return nil
+}
+`,
+			want: "result, err_1 := w.Write()",
+		},
+		{
+			name: "switch initializer",
+			body: `
+func use() error {
+	switch w := openWriter()!!; {
+	case w != nil:
+		_ = w.Write()!!
+	}
+	return nil
+}
+`,
+			want: "result, err_1 := w.Write()",
+		},
+		{
+			name: "shadowed if initializer",
+			body: `
+type wideWriter struct{}
+func openWideWriter() (*wideWriter, error) { return &wideWriter{}, nil }
+func (w *wideWriter) Write() (int, int, error) { return 1, 2, nil }
+func use() error {
+	w := openWriter()!!
+	if w := openWideWriter()!!; w != nil {
+		_, _ = w.Write()!!
+	}
+	_ = w
+	return nil
+}
+`,
+			want: "result, result_1, err_2 := w.Write()",
+		},
+		{
+			name: "var declaration",
+			body: `
+func use() error {
+	var w = openWriter()!!
+	_ = w.Write()!!
+	return nil
+}
+`,
+			want: "result, err_1 := w.Write()",
+		},
+		{
+			name: "named map",
+			body: `
+type writers map[string]*writer
+func openWriters() (writers, error) { return nil, nil }
+func use() error {
+	values := openWriters()!!
+	w := values["one"]
+	_ = w.Write()!!
+	return nil
+}
+`,
+			want: "result, err_1 := w.Write()",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			output := compileSourceOutput(t, `package sample
+type writer struct{}
+func openWriter() (*writer, error) { return &writer{}, nil }
+func (w *writer) Write() (int, error) { return 1, nil }
+`+test.body)
+			if !strings.Contains(output, test.want) {
+				t.Fatalf("generated output does not contain %q\n%s", test.want, output)
+			}
+		})
+	}
+}

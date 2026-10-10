@@ -175,3 +175,15 @@ func propagated() (*record, error) {
 	}
 	return value, nil
 }
+
+func reusedNamedErrorAfterSuccess() (result *record, err error) {
+	err = errors.New("old")
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}

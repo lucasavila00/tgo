@@ -102,17 +102,9 @@ func errorReturnModernizations(
 			expectedUses[match.errorObject]--
 		}
 	}
-	var namedError types.Object = nil
-	if errorResults(function) {
-		candidate := function.Results().At(function.Results().Len() - 1)
-		if candidate.Name() != "" {
-			namedError = candidate
-		}
-	}
 	result := []errorReturnMatch{}
 	for _, match := range matches {
-		if match.errorObject == namedError ||
-			index.UseCount(match.errorObject) == expectedUses[match.errorObject] {
+		if index.UseCount(match.errorObject) == expectedUses[match.errorObject] {
 			result = append(result, match)
 		}
 	}

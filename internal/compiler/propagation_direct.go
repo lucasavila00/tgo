@@ -58,12 +58,35 @@ func (l *propagationLowerer) rememberDirectResultTypes(
 		if !ok || identifier.Name == "_" {
 			continue
 		}
-		object := l.unit.info.Defs[identifier]
-		if object != nil {
-			l.inferredResultTypes[object] = signature.Results().At(index).Type()
-		}
-		l.inferredResultNames[identifier.Name] = signature.Results().At(index).Type()
+		l.rememberDirectResultType(identifier, index, signature)
 	}
+}
+
+func (l *propagationLowerer) rememberDirectResultNames(
+	targets []*ast.Ident,
+	signature *types.Signature,
+) {
+	if signature == nil || signature.Results().Len() <= len(targets) {
+		return
+	}
+	for index, identifier := range targets {
+		if identifier.Name != "_" {
+			l.rememberDirectResultType(identifier, index, signature)
+		}
+	}
+}
+
+func (l *propagationLowerer) rememberDirectResultType(
+	identifier *ast.Ident,
+	index int,
+	signature *types.Signature,
+) {
+	typ := signature.Results().At(index).Type()
+	object := l.unit.info.Defs[identifier]
+	if object != nil {
+		l.inferredResultTypes[object] = typ
+	}
+	l.inferredResultNames[identifier.Name] = typ
 }
 
 // rememberSimpleAssignmentTypes carries inferred types through an ordinary declaration.
@@ -105,7 +128,11 @@ func (l *propagationLowerer) inferredExpressionType(expression ast.Expr) types.T
 		}
 		return typ
 	case *ast.IndexExpr:
-		container := types.Unalias(l.inferredExpressionType(node.X))
+		container := l.inferredExpressionType(node.X)
+		if container == nil {
+			return nil
+		}
+		container = types.Unalias(container).Underlying()
 		switch value := container.(type) {
 		case *types.Array:
 			return value.Elem()
@@ -114,7 +141,7 @@ func (l *propagationLowerer) inferredExpressionType(expression ast.Expr) types.T
 		case *types.Map:
 			return value.Elem()
 		case *types.Pointer:
-			array, _ := types.Unalias(value.Elem()).(*types.Array)
+			array, _ := types.Unalias(value.Elem()).Underlying().(*types.Array)
 			if array != nil {
 				return array.Elem()
 			}
@@ -135,6 +162,7 @@ func (l *propagationLowerer) directVariableDeclaration(
 	if !ok || value.Type != nil || len(value.Values) != 1 {
 		return nil, false
 	}
+	signature := l.directPropagationSignature(value.Values[0])
 	call, statements, callIndex, direct := l.directCall(
 		value.Values[0], len(value.Names), "declaration",
 	)
@@ -148,6 +176,7 @@ func (l *propagationLowerer) directVariableDeclaration(
 	if !ok {
 		return append(statements, node), true
 	}
+	l.rememberDirectResultNames(value.Names, signature)
 	value.Names = append(value.Names, errorName)
 	value.Values = call.Rhs
 	statements[callIndex] = node
