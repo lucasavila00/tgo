@@ -79,3 +79,326 @@ func use() (int, error) {
 		})
 	}
 }
+
+func TestPropagationVariableSpecificationsSeeEarlierNames(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func first() (int, error) { return 1, nil }
+func second(value int) (int, error) { return value + 1, nil }
+
+func values() (int, error) {
+	var (
+		firstValue = first()!!
+		secondValue = second(firstValue)!!
+	)
+	return secondValue, nil
+}
+`)
+	for _, required := range []string{
+		"var firstValue, err = first()",
+		"var secondValue, err_1 = second(firstValue)",
+	} {
+		if !strings.Contains(output, required) {
+			t.Fatalf("generated output does not contain %q\n%s", required, output)
+		}
+	}
+}
+
+func TestPropagationGroupedVariableTracksEarlierResultType(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+type writer struct{}
+
+func openWriter() (*writer, error) { return &writer{}, nil }
+func (w *writer) Write() (int, error) { return 1, nil }
+
+func use() (int, error) {
+	var (
+		w = openWriter()!!
+		written = w.Write()!!
+	)
+	return written, nil
+}
+`)
+	for _, required := range []string{
+		"var w, err = openWriter()",
+		"var written, err_1 = w.Write()",
+	} {
+		if !strings.Contains(output, required) {
+			t.Fatalf("generated output does not contain %q\n%s", required, output)
+		}
+	}
+}
+
+func TestPropagationVariableSpecificationsKeepOrder(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func mark(label string) int { return len(label) }
+func load() (int, error) { return 1, nil }
+
+func value() (int, error) {
+	var (
+		controlA = mark("control-a")
+		controlB = mark("control-b")
+	)
+	var (
+		before = mark("before")
+		loaded = load()!!
+		after = mark("after")
+	)
+	return controlA + controlB + before + loaded + after, nil
+}
+`)
+	control := "var (\n\t\tcontrolA = mark(\"control-a\")\n" +
+		"\t\tcontrolB = mark(\"control-b\")\n\t)"
+	if !strings.Contains(output, control) {
+		t.Fatalf("ordinary declaration changed\n%s", output)
+	}
+	ordered := []string{
+		`var before = mark("before")`,
+		"var loaded, err = load()",
+		"if err != nil {",
+		`var after = mark("after")`,
+	}
+	position := -1
+	for _, required := range ordered {
+		next := strings.Index(output, required)
+		if next <= position {
+			t.Fatalf("generated output puts %q out of order\n%s", required, output)
+		}
+		position = next
+	}
+}
+
+func TestPropagationVariableSpecificationCommentsStayAttached(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func mark(label string) int { return len(label) }
+func load() (int, error) { return 1, nil }
+
+func value() (int, error) {
+	// group doc
+	var (
+		// before doc
+		before = mark("before") // before tail
+		// loaded doc
+		// loaded detail
+		loaded = load()!! //nolint:errcheck // loaded tail
+		// after doc
+		after = mark("after") // after tail
+	)
+	return before + loaded + after, nil
+}
+`)
+	want := `	// group doc
+
+	// before doc
+	var before = mark("before") // before tail
+
+	// loaded doc
+	// loaded detail
+	var loaded, err = load() //nolint:errcheck // loaded tail
+	if err != nil {
+		return 0, err
+	}
+	// after doc
+	var after = mark("after") // after tail`
+	if !strings.Contains(output, want) {
+		t.Fatalf("generated comments moved\n%s", output)
+	}
+	files := token.NewFileSet()
+	file, err := parser.ParseFile(files, "sample.go", output, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (&types.Config{}).Check(
+		"sample", files, []*ast.File{file}, nil,
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPropagationNonDirectVariableCommentsStayAttached(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func mark(label string) int { return len(label) }
+func load() (int, error) { return 1, nil }
+
+func value() (int, error) {
+	// group doc
+	var (
+		// typed doc
+		typed int = load()!! //nolint:errcheck // typed inline
+		// multiple doc
+		first, second = mark("first"), load()!! // multiple inline
+		// after doc
+		after = mark("after") // after inline
+	)
+	return typed + first + second + after, nil
+}
+`)
+	want := `	// group doc
+
+	// typed doc
+	result, err := load()
+	if err != nil {
+		return 0, err
+	}
+	var typed int = result //nolint:errcheck // typed inline
+
+	// multiple doc
+	operand := mark("first")
+	result_1, err_1 := load()
+	if err_1 != nil {
+		return 0, err_1
+	}
+	var first, second = operand, result_1 // multiple inline
+
+	// after doc
+	var after = mark("after") // after inline`
+	if !strings.Contains(output, want) {
+		t.Fatalf("generated comments moved\n%s", output)
+	}
+	files := token.NewFileSet()
+	file, err := parser.ParseFile(files, "sample.go", output, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (&types.Config{}).Check(
+		"sample", files, []*ast.File{file}, nil,
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPropagationUsesEarlierPropagatedResultType(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+type writer struct{}
+func openWriter() (*writer, error) { return &writer{}, nil }
+func (w *writer) Write() (int, error) { return 1, nil }
+func use() error {
+	w := openWriter()!!
+	_ = w.Write()!!
+	return nil
+}
+`)
+	if !strings.Contains(output, "result, err_1 := w.Write()") ||
+		!strings.Contains(output, "_ = result") {
+		t.Fatalf("generated output does not lower the method call\n%s", output)
+	}
+}
+
+func TestPropagationUsesTypeDerivedFromEarlierResult(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+type writer struct{}
+func openWriters() (map[string]*writer, error) { return nil, nil }
+func (w *writer) Write() (int, error) { return 1, nil }
+func use() error {
+	writers := openWriters()!!
+	w := writers["one"]
+	_ = w.Write()!!
+	return nil
+}
+`)
+	if !strings.Contains(output, "result, err_1 := w.Write()") ||
+		!strings.Contains(output, "_ = result") {
+		t.Fatalf("generated output does not lower the method call\n%s", output)
+	}
+}
+
+func TestPropagationTracksInferredResultScopes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "if initializer",
+			body: `
+func use() error {
+	if w := openWriter()!!; w != nil {
+		_ = w.Write()!!
+	}
+	return nil
+}
+`,
+			want: "result, err_1 := w.Write()",
+		},
+		{
+			name: "switch initializer",
+			body: `
+func use() error {
+	switch w := openWriter()!!; {
+	case w != nil:
+		_ = w.Write()!!
+	}
+	return nil
+}
+`,
+			want: "result, err_1 := w.Write()",
+		},
+		{
+			name: "shadowed if initializer",
+			body: `
+type wideWriter struct{}
+func openWideWriter() (*wideWriter, error) { return &wideWriter{}, nil }
+func (w *wideWriter) Write() (int, int, error) { return 1, 2, nil }
+func use() error {
+	w := openWriter()!!
+	if w := openWideWriter()!!; w != nil {
+		_, _ = w.Write()!!
+	}
+	_ = w
+	return nil
+}
+`,
+			want: "result, result_1, err_2 := w.Write()",
+		},
+		{
+			name: "var declaration",
+			body: `
+func use() error {
+	var w = openWriter()!!
+	_ = w.Write()!!
+	return nil
+}
+`,
+			want: "result, err_1 := w.Write()",
+		},
+		{
+			name: "named map",
+			body: `
+type writers map[string]*writer
+func openWriters() (writers, error) { return nil, nil }
+func use() error {
+	values := openWriters()!!
+	w := values["one"]
+	_ = w.Write()!!
+	return nil
+}
+`,
+			want: "result, err_1 := w.Write()",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			output := compileSourceOutput(t, `package sample
+type writer struct{}
+func openWriter() (*writer, error) { return &writer{}, nil }
+func (w *writer) Write() (int, error) { return 1, nil }
+`+test.body)
+			if !strings.Contains(output, test.want) {
+				t.Fatalf("generated output does not contain %q\n%s", test.want, output)
+			}
+		})
+	}
+}

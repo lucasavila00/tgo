@@ -119,3 +119,109 @@ func useLiteral() func() (int, error) {
 		return value, nil
 	}
 }
+
+func useNamedResult() (result *record, final error) {
+	value, err := load()
+	if err != nil {
+		return nil, fmt.Errorf("load: %w", err)
+	}
+	return value, nil
+}
+
+func useReusedNamedError() (result *record, err error) {
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
+func useReusedLocalError() (*record, error) {
+	first, err := load()
+	if err != nil {
+		return nil, err
+	}
+	second, err := load()
+	if err != nil {
+		return nil, err
+	}
+	_ = first
+	return second, nil
+}
+
+func useFailureComma() (*record, error) {
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
+func useInitializer(repository store) error {
+	if err := repository.Flush(); err != nil {
+		return fmt.Errorf("repository.Flush: %w", err)
+	}
+	return nil
+}
+
+func useTransparentInitializer(repository store) error {
+	if err := repository.Flush(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func useIgnoredInitializer(text string) error {
+	if _, err := strconv.Atoi(text); err != nil {
+		return err
+	}
+	return nil
+}
+
+func useNamedResultAfterPriorUses() (result *record, err error) {
+	err = nil
+	defer func() {
+		_ = err
+	}()
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
+func useMixedExpansionOrder() (*record, error) {
+	first, err := load()
+	if err != nil {
+		return nil, err
+	}
+	if _, middleErr := load(); middleErr != nil {
+		return nil, middleErr
+	}
+	last, err := load()
+	if err != nil {
+		return nil, err
+	}
+	_ = first
+	return last, nil
+}
+
+func useNestedExpansionOrder(repository store) (*record, error) {
+	{
+		first, err := load()
+		if err != nil {
+			return nil, err
+		}
+		_ = first
+	}
+	if err := repository.Flush(); err != nil {
+		return nil, err
+	}
+	{
+		last, err := load()
+		if err != nil {
+			return nil, err
+		}
+		return last, nil
+	}
+}

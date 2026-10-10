@@ -53,9 +53,16 @@ func BuildTagsFromGoFlags(flags string) ([]string, error) {
 			found = true
 		}
 		if found {
-			tags = strings.FieldsFunc(value, func(character rune) bool {
-				return character == ',' || character == ' '
-			})
+			if strings.Contains(value, " ") || strings.Contains(value, "'") {
+				tags, err = splitGoFlags(value)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				tags = strings.FieldsFunc(value, func(character rune) bool {
+					return character == ','
+				})
+			}
 		}
 	}
 	return tags, nil

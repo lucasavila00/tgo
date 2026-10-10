@@ -129,33 +129,35 @@ func subject(%s) {
 }
 `, parameters, body)
 	directory := t.TempDir()
-	if err := os.WriteFile(
+	err := os.WriteFile(
 		filepath.Join(directory, "go.mod"), []byte("module sample\n"), 0o600,
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
 	}
 	filename := filepath.Join(directory, "sample.go")
-	if err := os.WriteFile(filename, []byte(source), 0o600); err != nil {
-		return nil, err
+	err_1 := os.WriteFile(filename, []byte(source), 0o600)
+	if err_1 != nil {
+		return nil, err_1
 	}
 	configuration := new(packages.Config)
 	configuration.Dir = directory
 	configuration.Mode = packages.NeedName | packages.NeedFiles |
 		packages.NeedCompiledGoFiles | packages.NeedSyntax |
 		packages.NeedTypes | packages.NeedTypesInfo
-	loaded, err := packages.Load(configuration, ".")
-	if err != nil {
-		return nil, err
+	loaded, err_2 := packages.Load(configuration, ".")
+	if err_2 != nil {
+		return nil, err_2
 	}
 	if packages.PrintErrors(loaded) != 0 || len(loaded) != 1 {
 		return nil, fmt.Errorf("load sample package")
 	}
 	loadedPackage := loaded[0]
-	file, err := syntax.ParseGoFile(
+	file, err_3 := syntax.ParseGoFile(
 		loadedPackage.Fset, filename, []byte(source), syntax.ParseComments|syntax.AllErrors,
 	)
-	if err != nil {
-		return nil, err
+	if err_3 != nil {
+		return nil, err_3
 	}
 	if file == nil {
 		return nil, fmt.Errorf("load sample package syntax")
