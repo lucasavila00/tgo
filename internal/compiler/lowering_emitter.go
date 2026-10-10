@@ -226,7 +226,7 @@ func (e *loweringEmitter) operation(
 			if operation.preferred != "" && e.values[planned.id] == nil {
 				e.values[planned.id] = e.freshName(operation.preferred)
 			}
-			planned.explicit = expression.expected != nil
+			planned.explicit = expression.contextual
 			e.emitTypedExpressionBind(planned, value, planned.explicit, output)
 		}
 	case planBind:
@@ -234,7 +234,7 @@ func (e *loweringEmitter) operation(
 		if len(operation.outputs) == 1 {
 			planned := e.plannedValue(operation.outputs[0])
 			expression := operation.expressions[0]
-			planned.explicit = expression.expected != nil
+			planned.explicit = expression.contextual
 			e.emitTypedExpressionBind(planned, call, planned.explicit, output)
 			break
 		}

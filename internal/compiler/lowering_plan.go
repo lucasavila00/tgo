@@ -156,6 +156,7 @@ type plannedExpression struct {
 	source        ast.Expr
 	typ           types.Type
 	expected      types.Type
+	contextual    bool
 	resultCount   int
 	results       []plannedValue
 	operands      []*plannedExpression
@@ -548,7 +549,7 @@ func (b *loweringPlanBuilder) communication(statement ast.Stmt) *plannedCommunic
 		if send, ok := statement.(*ast.SendStmt); ok {
 			communication.value = b.expressionContext(send.Value, channelType.Elem(), 1)
 			communication.sendValue = b.newValue(channelType.Elem(), communication.value.source.Pos())
-			communication.sendValue.explicit = true
+			communication.sendValue.explicit = communication.value.contextual
 		} else if len(communication.left) != 0 {
 			communication.receiveValues = append(communication.receiveValues,
 				b.newValue(channelType.Elem(), channel.Pos()))
@@ -855,7 +856,8 @@ func (b *loweringPlanBuilder) expressionContext(
 ) *plannedExpression {
 	result := &plannedExpression{
 		kind: planRetainedExpression, source: expression, typ: b.expressionType(expression),
-		expected: expected, resultCount: resultCount,
+		expected: expected, contextual: expressionNeedsContext(expression, expected),
+		resultCount: resultCount,
 	}
 	if metadata, function, ok := comprehensionMarker(b.source, expression); ok {
 		result.kind = planComprehensionExpression
@@ -1079,6 +1081,25 @@ func (b *loweringPlanBuilder) expressionContext(
 		result.addResult(b, types.Typ[types.Bool], expression.Pos())
 	}
 	return result
+}
+
+func expressionNeedsContext(expression ast.Expr, expected types.Type) bool {
+	if expected == nil {
+		return false
+	}
+	switch node := expression.(type) {
+	case *ast.BasicLit, *ast.BinaryExpr:
+		return true
+	case *ast.Ident:
+		return node.Name == "nil"
+	case *ast.UnaryExpr:
+		return expressionNeedsContext(node.X, expected)
+	case *ast.ParenExpr:
+		return expressionNeedsContext(node.X, expected)
+	case *ast.CompositeLit:
+		return node.Type == nil
+	}
+	return false
 }
 
 func (b *loweringPlanBuilder) orderOperands(
