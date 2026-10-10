@@ -15,3 +15,4 @@ modernizeerror/bad.tgo:149:2: manual load error return matches postfix !!; use p
 modernizeerror/bad.tgo:157:5: manual repository.Flush error wrapper matches postfix !; use postfix !
 modernizeerror/bad.tgo:164:5: manual repository.Flush error return matches postfix !!; use postfix !!
 modernizeerror/bad.tgo:171:5: manual strconv.Atoi error return matches postfix !!; use postfix !!
+modernizeerror/bad.tgo:182:2: manual load error return matches postfix !!; use postfix !!

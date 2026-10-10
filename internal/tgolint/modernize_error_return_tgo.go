@@ -14,9 +14,9 @@ import (
 
 type errorReturnMatch struct {
 	start       token.Pos
+	stop        token.Pos
 	returned    token.Pos
 	errorObject types.Object
-	newError    bool
 	name        string
 	operator    string
 }
@@ -24,8 +24,8 @@ type errorReturnMatch struct {
 // emptyErrorReturnMatch provides the unused result for a failed match.
 func emptyErrorReturnMatch() errorReturnMatch {
 	return errorReturnMatch{
-		start: token.NoPos, returned: token.NoPos, errorObject: nil,
-		newError: false, name: "", operator: "",
+		start: token.NoPos, stop: token.NoPos, returned: token.NoPos, errorObject: nil,
+		name: "", operator: "",
 	}
 }
 
@@ -50,7 +50,7 @@ func (c *checker) checkErrorReturnModernization(analysis *sourceanalysis.Package
 			}
 			signature := sourceFunctionSignature(file, node, index)
 			for _, match := range errorReturnModernizations(
-				statements, signature, index,
+				file, statements, signature, index,
 			) {
 				reportErrorReturnModernization(c, match)
 			}
@@ -70,6 +70,7 @@ func errorResults(signature *types.Signature) bool {
 
 // errorReturnModernizations finds safe manual propagation expansions in one statement list.
 func errorReturnModernizations(
+	file *syntax.File,
 	statements []*syntax.Statement,
 	function *types.Signature,
 	index *sourcefacts.Index,
@@ -97,20 +98,84 @@ func errorReturnModernizations(
 			matches = append(matches, match)
 		}
 	}
-	expectedUses := make(map[types.Object]int)
+	objectMatches := make(map[types.Object][]errorReturnMatch)
 	for _, match := range matches {
-		expectedUses[match.errorObject] += 3
-		if match.newError {
-			expectedUses[match.errorObject]--
-		}
+		objectMatches[match.errorObject] = append(objectMatches[match.errorObject], match)
+	}
+	safeObjects := make(map[types.Object]bool)
+	for object, ranges := range objectMatches {
+		safeObjects[object] = errorUsesCovered(file, object, ranges, index)
 	}
 	result := []errorReturnMatch{}
 	for _, match := range matches {
-		if index.UseCount(match.errorObject) == expectedUses[match.errorObject] {
+		if safeObjects[match.errorObject] {
 			result = append(result, match)
 		}
 	}
 	return result
+}
+
+// errorUsesCovered requires each use after the first call to stay in a matched expansion.
+func errorUsesCovered(
+	file *syntax.File,
+	target types.Object,
+	matches []errorReturnMatch,
+	index *sourcefacts.Index,
+) bool {
+	valid := true
+	first := matches[0].start
+	for _, match := range matches[1:] {
+		if match.start < first {
+			first = match.start
+		}
+	}
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		if !valid {
+			return false
+		}
+		identifier, ok := syntax.IdentifierOf(node)
+		if !ok {
+			return true
+		}
+		object, definition := index.IdentifierFact(file, node)
+		if definition || object != target {
+			return true
+		}
+		for _, match := range matches {
+			if match.start <= identifier.Start && identifier.Start < match.stop {
+				return true
+			}
+		}
+		if identifier.Start < first && priorErrorUseIsSafe(file, node) {
+			return true
+		}
+		valid = false
+		return false
+	})
+	return valid
+}
+
+// priorErrorUseIsSafe rejects stored closures that can read the old error later.
+func priorErrorUseIsSafe(file *syntax.File, node *syntax.Node) bool {
+	literals := 0
+	deferred := false
+	addressed := false
+	for parent := syntax.Parent(file, node); parent != nil; parent = syntax.Parent(file, parent) {
+		if expression, ok := syntax.ExpressionOf(parent); ok {
+			unary := syntax.UnaryExpressionOf(expression)
+			if unary != nil && unary.Operator == token.AND {
+				addressed = true
+			}
+		}
+		if _, ok := syntax.FunctionLiteralOf(parent); ok {
+			literals++
+		}
+		if statement, ok := syntax.StatementOf(parent); ok &&
+			syntax.DeferStatementOf(statement) != nil {
+			deferred = true
+		}
+	}
+	return !addressed && (literals == 0 || literals == 1 && deferred)
 }
 
 // reportErrorReturnModernization reports one manual propagation expansion.
@@ -148,7 +213,7 @@ func errorReturnExpansion(
 	if !ok || call == nil {
 		return emptyErrorReturnMatch(), false
 	}
-	errorObject, newError, ok := errorReturnAssignment(
+	errorObject, ok := errorReturnAssignment(
 		assignment, call, index,
 	)
 	if !ok {
@@ -164,9 +229,9 @@ func errorReturnExpansion(
 	}
 	result := errorReturnMatch{
 		start:       assignment.Start,
+		stop:        syntax.StatementEnd(branch.Body.List[0]),
 		returned:    returned,
 		errorObject: errorObject,
-		newError:    newError,
 		name:        name,
 		operator:    "!!",
 	}
@@ -200,38 +265,38 @@ func errorReturnAssignment(
 	assignment *syntax.AssignmentStatement,
 	call *syntax.CallExpression,
 	index *sourcefacts.Index,
-) (types.Object, bool, bool) {
+) (types.Object, bool) {
 	if index.CalledFunction(call.Callee) == nil {
-		return nil, false, false
+		return nil, false
 	}
 	signature, ok := types.Unalias(index.Type(call.Callee)).(*types.Signature)
 	if !ok || signature.Results().Len() != len(assignment.Left) ||
 		signature.Results().Len() == 0 {
-		return nil, false, false
+		return nil, false
 	}
 	last := signature.Results().Len() - 1
 	if !predeclaredError(signature.Results().At(last).Type()) {
-		return nil, false, false
+		return nil, false
 	}
 	for _, expression := range assignment.Left[:last] {
 		sourceName, ok := sourceIdentifier(expression)
 		if !ok || sourceName.Name != "_" && index.Definition(expression) == nil {
-			return nil, false, false
+			return nil, false
 		}
 	}
 	sourceName, ok := sourceIdentifier(assignment.Left[last])
 	errorObject := index.Definition(assignment.Left[last])
 	if !ok || sourceName.Name == "_" {
-		return nil, false, false
+		return nil, false
 	}
 	if errorObject != nil {
-		return errorObject, true, true
+		return errorObject, true
 	}
 	errorObject = index.IdentifierObject(assignment.Left[last])
 	if errorObject == nil {
-		return nil, false, false
+		return nil, false
 	}
-	return errorObject, false, true
+	return errorObject, true
 }
 
 // errorReturnBranch proves the condition, body, and zero return values.

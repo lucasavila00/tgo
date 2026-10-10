@@ -181,3 +181,27 @@ func reusedNamedErrorAfterSuccess() (result *record, err error) {
 	}
 	return value,
 }
+
+func namedErrorCapturedBeforeSuccess() (result *record, err error) {
+	err = errors.New("old")
+	observe := func() {
+		_ = err
+	}
+	value, err := load()
+	if err != nil {
+		return , err
+	}
+	observe()
+	return value,
+}
+
+func namedErrorAddressedBeforeSuccess() (result *record, err error) {
+	err = errors.New("old")
+	pointer := &err
+	value, err := load()
+	if err != nil {
+		return , err
+	}
+	_ = *pointer
+	return value,
+}

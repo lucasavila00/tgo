@@ -177,3 +177,15 @@ func useIgnoredInitializer(text string) error {
 	}
 	return nil
 }
+
+func useNamedResultAfterPriorUses() (result *record, err error) {
+	err = nil
+	defer func() {
+		_ = err
+	}()
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}

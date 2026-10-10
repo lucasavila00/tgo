@@ -74,7 +74,7 @@ func manualPropagationReturns(
 		}
 		signature := sourceFunctionSignature(file, node, facts)
 		for _, match := range errorReturnModernizations(
-			statements, signature, facts,
+			file, statements, signature, facts,
 		) {
 			result[match.returned] = true
 		}
