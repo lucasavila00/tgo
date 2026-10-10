@@ -109,6 +109,24 @@ func (c *checker) evalEnumExpr(
 		c.evalEnumExpr(state, index.Index)
 		return
 	}
+	if index := syntax.IndexListExpressionOf(expression); index != nil {
+		c.evalEnumExpr(state, index.Expression)
+		for _, item := range index.Indices {
+			c.evalEnumExpr(state, item)
+		}
+		return
+	}
+	if slice := syntax.SliceExpressionOf(expression); slice != nil {
+		c.evalEnumExpr(state, slice.Expression)
+		c.evalEnumExpr(state, slice.Low)
+		c.evalEnumExpr(state, slice.High)
+		c.evalEnumExpr(state, slice.Max)
+		return
+	}
+	if assertion := syntax.TypeAssertionExpressionOf(expression); assertion != nil {
+		c.evalEnumExpr(state, assertion.Expression)
+		return
+	}
 	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
 		c.evalEnumExpr(state, unary.Expression)
 		return
@@ -155,6 +173,22 @@ func (c *checker) evalEnumExprBefore(
 		children = append(children, value.Expression)
 	} else if value := syntax.IndexExpressionOf(expression); value != nil {
 		children = append(children, value.Expression, value.Index)
+	} else if value := syntax.IndexListExpressionOf(expression); value != nil {
+		children = append(children, value.Expression)
+		children = append(children, value.Indices...)
+	} else if value := syntax.SliceExpressionOf(expression); value != nil {
+		children = append(children, value.Expression)
+		if value.Low != nil {
+			children = append(children, value.Low)
+		}
+		if value.High != nil {
+			children = append(children, value.High)
+		}
+		if value.Max != nil {
+			children = append(children, value.Max)
+		}
+	} else if value := syntax.TypeAssertionExpressionOf(expression); value != nil {
+		children = append(children, value.Expression)
 	} else if value := syntax.UnaryExpressionOf(expression); value != nil {
 		children = append(children, value.Expression)
 	} else if value := syntax.StarExpressionOf(expression); value != nil {
