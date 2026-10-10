@@ -67,6 +67,9 @@ func writeStorageValueKey(
 			writeStoragePathKey(text, capture)
 		}
 	}
+	for _, generic := range value.genericValues {
+		text.WriteString(fmt.Sprintf("g%p:%d", generic.fact, generic.callDepth))
+	}
 	for _, region := range value.regions {
 		writeStoragePathKey(text, region)
 	}
@@ -124,14 +127,15 @@ type storageSlice struct {
 }
 
 type storageValue struct {
-	unknown      bool
-	trueValue    bool
-	falseValue   bool
-	integer      int64
-	integerKnown bool
-	functions    []storageFunction
-	regions      []storagePath
-	slices       []storageSlice
+	unknown       bool
+	trueValue     bool
+	falseValue    bool
+	integer       int64
+	integerKnown  bool
+	functions     []storageFunction
+	genericValues []genericValue
+	regions       []storagePath
+	slices        []storageSlice
 }
 
 type storageState struct {
@@ -165,6 +169,7 @@ func cloneStorageState(state storageState) storageState {
 
 func cloneStorageValue(value storageValue) storageValue {
 	value.functions = append([]storageFunction(nil), value.functions...)
+	value.genericValues = append([]genericValue(nil), value.genericValues...)
 	value.regions = append([]storagePath(nil), value.regions...)
 	value.slices = append([]storageSlice(nil), value.slices...)
 	return value
@@ -198,6 +203,11 @@ func joinStorageValue(left storageValue, right storageValue) storageValue {
 			joined.functions = append(joined.functions, function)
 		}
 	}
+	for _, value := range right.genericValues {
+		if !containsStorageGenericValue(joined.genericValues, value) {
+			joined.genericValues = append(joined.genericValues, value)
+		}
+	}
 	for _, region := range right.regions {
 		if !containsStoragePath(joined.regions, region) {
 			joined.regions = append(joined.regions, region)
@@ -220,10 +230,36 @@ func joinStorageValue(left storageValue, right storageValue) storageValue {
 	return joined
 }
 
+func containsStorageGenericValue(values []genericValue, want genericValue) bool {
+	for _, value := range values {
+		if value.fact != want.fact || value.callDepth != want.callDepth ||
+			len(value.receiverArguments) != len(want.receiverArguments) ||
+			len(value.typeArguments) != len(want.typeArguments) {
+			continue
+		}
+		equal := true
+		for index := range value.receiverArguments {
+			equal = equal && types.Identical(
+				value.receiverArguments[index], want.receiverArguments[index],
+			)
+		}
+		for index := range value.typeArguments {
+			equal = equal && types.Identical(
+				value.typeArguments[index], want.typeArguments[index],
+			)
+		}
+		if equal {
+			return true
+		}
+	}
+	return false
+}
+
 func storageValueEmpty(value storageValue) bool {
 	return !value.unknown && !value.trueValue && !value.falseValue &&
 		!value.integerKnown && len(value.functions) == 0 &&
-		len(value.regions) == 0 && len(value.slices) == 0
+		len(value.genericValues) == 0 && len(value.regions) == 0 &&
+		len(value.slices) == 0
 }
 
 func joinStorageSlice(left storageSlice, right storageSlice) storageSlice {

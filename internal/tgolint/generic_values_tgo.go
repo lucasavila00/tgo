@@ -564,13 +564,19 @@ func (c *checker) reportGenericValueCall(
 	conditionCall := expression
 	effectsZero := genericFactEffectsAtDepth(value.fact, value.callDepth, true)
 	effectsAccess := genericFactEffectsAtDepth(value.fact, value.callDepth, false)
-	description := "call to " + value.function.Name()
+	description := "call to generic function value"
+	if value.function != nil {
+		description = "call to " + value.function.Name()
+	}
 	if value.callDepth > 0 {
 		if value.conditionCall == nil {
 			return
 		}
 		conditionCall = value.conditionCall
-		description = "call to function returned by " + value.function.Name()
+		description = "call to returned generic function value"
+		if value.function != nil {
+			description = "call to function returned by " + value.function.Name()
+		}
 	}
 	c.reportGenericEffects(expression, conditionCall, effectsZero,
 		value.receiverArguments, value.typeArguments, true, description)
@@ -583,9 +589,15 @@ func (c *checker) reportGenericValueEscape(position *syntax.Expression, value ge
 	if !c.genericValueAffectsModel(value) {
 		return
 	}
-	description := "generic tgo function value " + value.function.Name()
+	description := "generic tgo function value"
+	if value.function != nil {
+		description += " " + value.function.Name()
+	}
 	if value.callDepth > 0 {
-		description = "function returned by " + value.function.Name()
+		description = "returned generic function value"
+		if value.function != nil {
+			description = "function returned by " + value.function.Name()
+		}
 	}
 	c.reportResult(
 		syntax.ExpressionPosition(position),
