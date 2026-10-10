@@ -127,9 +127,18 @@ type enumRegionSet map[enumRegionID]bool
 type enumCellSet map[enumCellID]bool
 
 type enumAbstractValue struct {
-	regions  enumRegionSet
-	closures enumClosureSet
-	unknown  bool
+	regions      enumRegionSet
+	closures     enumClosureSet
+	dependencies enumCellSet
+	observation  *enumTagObservation
+	unknown      bool
+}
+
+type enumWriteSet map[int]bool
+
+type enumTagObservation struct {
+	regions map[enumRegionID]enumWriteSet
+	cells   map[enumCellID]enumWriteSet
 }
 
 func cloneEnumAbstractValue(value enumAbstractValue) enumAbstractValue {
@@ -140,6 +149,36 @@ func cloneEnumAbstractValue(value enumAbstractValue) enumAbstractValue {
 	}
 	for region := range value.regions {
 		result.regions[region] = true
+	}
+	result.dependencies = make(enumCellSet, len(value.dependencies))
+	for cell := range value.dependencies {
+		result.dependencies[cell] = true
+	}
+	result.observation = cloneEnumTagObservation(value.observation)
+	return result
+}
+
+func cloneEnumWriteSet(source enumWriteSet) enumWriteSet {
+	result := make(enumWriteSet, len(source))
+	for write := range source {
+		result[write] = true
+	}
+	return result
+}
+
+func cloneEnumTagObservation(source *enumTagObservation) *enumTagObservation {
+	if source == nil {
+		return nil
+	}
+	result := &enumTagObservation{
+		regions: make(map[enumRegionID]enumWriteSet, len(source.regions)),
+		cells:   make(map[enumCellID]enumWriteSet, len(source.cells)),
+	}
+	for region, writes := range source.regions {
+		result.regions[region] = cloneEnumWriteSet(writes)
+	}
+	for cell, writes := range source.cells {
+		result.cells[cell] = cloneEnumWriteSet(writes)
 	}
 	return result
 }
@@ -162,16 +201,24 @@ type enumEvent struct {
 	kind       enumEventKind
 	expression *syntax.Expression
 	cells      enumCellSet
+	regions    enumRegionSet
 	value      enumSavedValueID
 	values     []enumSavedValueID
 	result     int
 	tag        int
+	serial     int
+	tagRead    bool
 }
 
 type enumEventBlock struct {
 	events       []enumEvent
-	successors   []enumEventBlockID
+	successors   []enumEventEdge
 	alternatives [][]enumEventBlockID
+}
+
+type enumEventEdge struct {
+	target enumEventBlockID
+	tests  []enumEvent
 }
 
 // enumEventGraph adds expression microblocks to one syntax CFG.
@@ -221,6 +268,10 @@ func (graph *enumEventGraph) addEvent(
 		return enumEventLocation{}
 	}
 	location := enumEventLocation{block: block, index: len(graph.blocks[index].events)}
+	event.serial = 1
+	for _, current := range graph.blocks {
+		event.serial += len(current.events)
+	}
 	graph.blocks[index].events = append(graph.blocks[index].events, event)
 	if event.kind == enumEventPayloadCheck && event.expression != nil {
 		graph.access[event.expression] = location

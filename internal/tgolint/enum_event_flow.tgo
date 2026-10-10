@@ -1,14 +1,62 @@
 package tgolint
 
+import "tgo/pkg/syntax"
+
 type enumRegionProof struct {
 	region enumRegionID
 	tag    int
 }
 
 type enumEventState struct {
-	cells  map[enumCellID]enumAbstractValue
-	saved  map[enumSavedValueID]enumAbstractValue
-	proofs map[enumRegionProof]bool
+	cells             map[enumCellID]enumAbstractValue
+	saved             map[enumSavedValueID]enumAbstractValue
+	proofs            map[enumRegionProof]bool
+	proofDependencies map[enumRegionProof]enumCellSet
+	regionWrites      map[enumRegionID]enumWriteSet
+	cellWrites        map[enumCellID]enumWriteSet
+}
+
+func cloneEnumCellSet(source enumCellSet) enumCellSet {
+	result := make(enumCellSet, len(source))
+	for cell := range source {
+		result[cell] = true
+	}
+	return result
+}
+
+func equalEnumWriteSet(left, right enumWriteSet) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for write := range left {
+		if !right[write] {
+			return false
+		}
+	}
+	return true
+}
+
+func equalEnumTagObservation(
+	left *enumTagObservation,
+	right *enumTagObservation,
+) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	if len(left.regions) != len(right.regions) || len(left.cells) != len(right.cells) {
+		return false
+	}
+	for region, writes := range left.regions {
+		if !equalEnumWriteSet(writes, right.regions[region]) {
+			return false
+		}
+	}
+	for cell, writes := range left.cells {
+		if !equalEnumWriteSet(writes, right.cells[cell]) {
+			return false
+		}
+	}
+	return true
 }
 
 func newEnumEventState() *enumEventState {
@@ -16,6 +64,9 @@ func newEnumEventState() *enumEventState {
 		cells:  make(map[enumCellID]enumAbstractValue),
 		saved:  make(map[enumSavedValueID]enumAbstractValue),
 		proofs: make(map[enumRegionProof]bool),
+		proofDependencies: make(map[enumRegionProof]enumCellSet),
+		regionWrites:      make(map[enumRegionID]enumWriteSet),
+		cellWrites:        make(map[enumCellID]enumWriteSet),
 	}
 }
 
@@ -32,6 +83,15 @@ func cloneEnumEventState(source *enumEventState) *enumEventState {
 	}
 	for proof := range source.proofs {
 		result.proofs[proof] = true
+		result.proofDependencies[proof] = cloneEnumCellSet(
+			source.proofDependencies[proof],
+		)
+	}
+	for region, writes := range source.regionWrites {
+		result.regionWrites[region] = cloneEnumWriteSet(writes)
+	}
+	for cell, writes := range source.cellWrites {
+		result.cellWrites[cell] = cloneEnumWriteSet(writes)
 	}
 	return result
 }
@@ -59,6 +119,21 @@ func joinEnumAbstractValues(
 			result.closures[closure] = true
 			changed = true
 		}
+	}
+	if result.dependencies == nil {
+		result.dependencies = make(enumCellSet)
+	}
+	for cell := range right.dependencies {
+		if !result.dependencies[cell] {
+			result.dependencies[cell] = true
+			changed = true
+		}
+	}
+	if !equalEnumTagObservation(result.observation, right.observation) {
+		if result.observation != nil {
+			changed = true
+		}
+		result.observation = nil
 	}
 	if right.unknown && !result.unknown {
 		result.unknown = true
@@ -93,6 +168,39 @@ func joinEnumEventStates(
 			changed = true
 		}
 	}
+	for proof := range result.proofs {
+		for cell := range incoming.proofDependencies[proof] {
+			if result.proofDependencies[proof] == nil {
+				result.proofDependencies[proof] = make(enumCellSet)
+			}
+			if !result.proofDependencies[proof][cell] {
+				result.proofDependencies[proof][cell] = true
+				changed = true
+			}
+		}
+	}
+	for region, writes := range incoming.regionWrites {
+		joined, added := joinEnumWriteSets(result.regionWrites[region], writes)
+		result.regionWrites[region] = joined
+		changed = changed || added
+	}
+	for cell, writes := range incoming.cellWrites {
+		joined, added := joinEnumWriteSets(result.cellWrites[cell], writes)
+		result.cellWrites[cell] = joined
+		changed = changed || added
+	}
+	return result, changed
+}
+
+func joinEnumWriteSets(left, right enumWriteSet) (enumWriteSet, bool) {
+	result := cloneEnumWriteSet(left)
+	changed := false
+	for write := range right {
+		if !result[write] {
+			result[write] = true
+			changed = true
+		}
+	}
 	return result, changed
 }
 
@@ -100,17 +208,39 @@ func (state *enumEventState) killRegionProofs(regions enumRegionSet) {
 	for proof := range state.proofs {
 		if regions[proof.region] {
 			delete(state.proofs, proof)
+			delete(state.proofDependencies, proof)
 		}
 	}
 }
 
 func (state *enumEventState) prove(value enumAbstractValue, tag int) {
-	if value.unknown {
+	if value.unknown || !state.observationFresh(value.observation) {
 		return
 	}
 	for region := range value.regions {
-		state.proofs[enumRegionProof{region: region, tag: tag}] = true
+		proof := enumRegionProof{region: region, tag: tag}
+		state.proofs[proof] = true
+		state.proofDependencies[proof] = cloneEnumCellSet(value.dependencies)
 	}
+}
+
+func (state *enumEventState) observationFresh(
+	observation *enumTagObservation,
+) bool {
+	if observation == nil {
+		return false
+	}
+	for region, writes := range observation.regions {
+		if !equalEnumWriteSet(writes, state.regionWrites[region]) {
+			return false
+		}
+	}
+	for cell, writes := range observation.cells {
+		if !equalEnumWriteSet(writes, state.cellWrites[cell]) {
+			return false
+		}
+	}
+	return true
 }
 
 func (state *enumEventState) payloadValid(
@@ -138,6 +268,9 @@ func (graph *enumEventGraph) transfer(
 		for cell := range event.cells {
 			value, _ = joinEnumAbstractValues(value, state.cells[cell])
 		}
+		if event.tagRead {
+			value.observation = state.observe(value)
+		}
 		state.saved[event.value] = value
 	case enumEventSave:
 		state.saved[event.value] = graph.saved(event.value)
@@ -147,16 +280,57 @@ func (graph *enumEventGraph) transfer(
 		for cell := range event.cells {
 			old := state.cells[cell]
 			state.killRegionProofs(old.regions)
+			state.recordCellWrite(cell, event.serial)
 			if strong && graph.uniqueCell(cell) {
 				state.cells[cell] = cloneEnumAbstractValue(value)
 			} else {
 				state.cells[cell], _ = joinEnumAbstractValues(old, value)
 			}
 		}
+		for region := range event.regions {
+			state.killRegionProofs(enumRegionSet{region: true})
+			state.recordRegionWrite(region, event.serial)
+		}
+	case enumEventTagTest:
+		state.prove(state.saved[event.value], event.tag)
 	case enumEventPayloadCheck:
 		return state.payloadValid(state.saved[event.value], event.tag)
 	}
 	return true
+}
+
+func (state *enumEventState) observe(value enumAbstractValue) *enumTagObservation {
+	result := &enumTagObservation{
+		regions: make(map[enumRegionID]enumWriteSet, len(value.regions)),
+		cells:   make(map[enumCellID]enumWriteSet, len(value.dependencies)),
+	}
+	for region := range value.regions {
+		result.regions[region] = cloneEnumWriteSet(state.regionWrites[region])
+	}
+	for cell := range value.dependencies {
+		result.cells[cell] = cloneEnumWriteSet(state.cellWrites[cell])
+	}
+	return result
+}
+
+func (state *enumEventState) recordCellWrite(cell enumCellID, serial int) {
+	if state.cellWrites[cell] == nil {
+		state.cellWrites[cell] = make(enumWriteSet)
+	}
+	state.cellWrites[cell][serial] = true
+	for proof, dependencies := range state.proofDependencies {
+		if dependencies[cell] {
+			delete(state.proofs, proof)
+			delete(state.proofDependencies, proof)
+		}
+	}
+}
+
+func (state *enumEventState) recordRegionWrite(region enumRegionID, serial int) {
+	if state.regionWrites[region] == nil {
+		state.regionWrites[region] = make(enumWriteSet)
+	}
+	state.regionWrites[region][serial] = true
 }
 
 func (graph *enumEventGraph) uniqueCell(cell enumCellID) bool {
@@ -166,4 +340,63 @@ func (graph *enumEventGraph) uniqueCell(cell enumCellID) bool {
 	}
 	key := graph.identities.cellKeys[index]
 	return key.owner == 0 || graph.identities.uniqueRegion(key.owner)
+}
+
+type enumEventResult struct {
+	access map[*syntax.Expression]bool
+	before map[enumEventLocation]*enumEventState
+}
+
+// run evaluates all event paths to a finite fixed point.
+func (graph *enumEventGraph) run(initial *enumEventState) *enumEventResult {
+	result := &enumEventResult{
+		access: make(map[*syntax.Expression]bool),
+		before: make(map[enumEventLocation]*enumEventState),
+	}
+	entries := make([]*enumEventState, len(graph.blocks))
+	entry := int(graph.entry) - 1
+	if entry < 0 || entry >= len(entries) {
+		return result
+	}
+	entries[entry] = cloneEnumEventState(initial)
+	queue := []enumEventBlockID{graph.entry}
+	queued := make([]bool, len(graph.blocks))
+	queued[entry] = true
+	for len(queue) != 0 {
+		blockID := queue[0]
+		queue = queue[1:]
+		index := int(blockID) - 1
+		queued[index] = false
+		state := cloneEnumEventState(entries[index])
+		block := graph.blocks[index]
+		for eventIndex, event := range block.events {
+			location := enumEventLocation{block: blockID, index: eventIndex}
+			result.before[location] = cloneEnumEventState(state)
+			valid := graph.transfer(state, event)
+			if event.kind == enumEventPayloadCheck && event.expression != nil {
+				current, found := result.access[event.expression]
+				result.access[event.expression] = valid && (!found || current)
+			}
+		}
+		for _, edge := range block.successors {
+			outgoing := cloneEnumEventState(state)
+			for _, test := range edge.tests {
+				graph.transfer(outgoing, test)
+			}
+			target := int(edge.target) - 1
+			if target < 0 || target >= len(entries) {
+				continue
+			}
+			joined, changed := joinEnumEventStates(entries[target], outgoing)
+			if !changed {
+				continue
+			}
+			entries[target] = joined
+			if !queued[target] {
+				queue = append(queue, edge.target)
+				queued[target] = true
+			}
+		}
+	}
+	return result
 }
