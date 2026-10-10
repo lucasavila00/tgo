@@ -13,7 +13,7 @@ var request = Request{ID: "one"}
 var array = [3]int{0: 1, 2: 3}
 var slice = []int{2: 3}
 
-func Named() (result int) { return  }
+func Named() (result int) { return }
 
 type Quantity struct {
 	value int

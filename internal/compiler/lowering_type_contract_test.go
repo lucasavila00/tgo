@@ -214,6 +214,19 @@ func TestLoweringKeepsForeignHiddenBooleanContext(t *testing.T) {
 			types.NewTuple(), false,
 		),
 	))
+	library.Scope().Insert(types.NewFunc(
+		token.NoPos, library, "Check",
+		types.NewSignatureType(
+			nil, nil, nil, types.NewTuple(),
+			types.NewTuple(
+				types.NewVar(token.NoPos, library, "", hidden),
+				types.NewVar(
+					token.NoPos, library, "", types.Universe.Lookup("error").Type(),
+				),
+			),
+			false,
+		),
+	))
 	library.MarkComplete()
 
 	_, problems := Compile(PackageInput{
@@ -255,6 +268,21 @@ func logicalAnd() error {
 
 func logicalOr() error {
 	hidden.Consume(left() > right() || right() > left(), load()!!)
+	return nil
+}
+
+func parenthesizedLogical() error {
+	hidden.Consume((left() < right() && right() > left()), load()!!)
+	return nil
+}
+
+func logicalChain() error {
+	hidden.Consume(left() < right() && right() > left() && left() < right(), load()!!)
+	return nil
+}
+
+func propagatedLogicalRHS() error {
+	hidden.Consume(left() < right() && hidden.Check()!!, load()!!)
 	return nil
 }
 `),

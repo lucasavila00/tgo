@@ -1437,25 +1437,43 @@ func (b *loweringPlanBuilder) operandOrderOperation(
 }
 
 func (b *loweringPlanBuilder) planBooleanContextAdapter(expression *plannedExpression) {
-	contextType := expression.expected
-	if contextType == nil {
-		contextType = expression.typ
-	}
-	if !b.needsBooleanContextAdapter(contextType) {
+	if !b.expressionNeedsBooleanAdapter(expression) {
 		return
 	}
+	b.normalizeBooleanStorage(expression)
+}
+
+func (b *loweringPlanBuilder) normalizeBooleanStorage(expression *plannedExpression) {
 	expression.booleanAdapter = true
-	if expression.kind == planBinaryExpression {
+	if expression.kind != planPropagationExpression {
 		for _, operand := range expression.operands {
-			if b.needsBooleanContextAdapter(operand.typ) {
-				operand.booleanAdapter = true
+			if b.expressionNeedsBooleanAdapter(operand) {
+				b.normalizeBooleanStorage(operand)
 			}
 		}
+	}
+	if len(expression.results) != 1 {
+		return
 	}
 	value := &b.plan.values[expression.results[0].id-1]
 	value.typ = types.Typ[types.Bool]
 	value.typeReference = b.typeReference(value.typ, value.position)
 	expression.results[0] = *value
+}
+
+func (b *loweringPlanBuilder) expressionNeedsBooleanAdapter(
+	expression *plannedExpression,
+) bool {
+	if b.needsBooleanContextAdapter(expression.expected) ||
+		b.needsBooleanContextAdapter(expression.typ) {
+		return true
+	}
+	for _, result := range expression.results {
+		if b.needsBooleanContextAdapter(result.typ) {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *loweringPlanBuilder) needsBooleanContextAdapter(typ types.Type) bool {

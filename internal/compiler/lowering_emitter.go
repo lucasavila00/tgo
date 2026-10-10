@@ -746,7 +746,7 @@ func (e *loweringEmitter) emitSourceReturn(
 	operation *plannedOperation,
 	output *ast.BlockStmt,
 ) {
-	results := make([]ast.Expr, 0, len(operation.expressions))
+	results := []ast.Expr(nil)
 	for _, expression := range operation.expressions {
 		results = append(results, e.expressionResults(expression, output)...)
 	}
