@@ -197,3 +197,42 @@ func slotString(value constant.Value) string {
 	}
 	return value.ExactString()
 }
+
+// discardedLocalFunctionValue reports a stable local value with no live use.
+func (c %checker) discardedLocalFunctionValue(
+	summary %genericEffectSummary,
+	expression %syntax.Expression,
+) bool {
+	bindings := c.returnedClosureBindings(summary, nil)
+	var object types.Object = nil
+	for candidate, binding := range bindings {
+		if binding.unstable || binding.opaque || len(binding.sources) != 1 {
+			continue
+		}
+		if unparenthesized(binding.sources[0].expression) ==
+			unparenthesized(expression) {
+			object = candidate
+			break
+		}
+	}
+	if object == nil {
+		return false
+	}
+	discarded := true
+	inspectGenericBlock(summary.body, func(node %syntax.Node) bool {
+		reference, ok := syntax.ExpressionOf(node)
+		if !ok || reference == nil {
+			return true
+		}
+		name := syntax.IdentifierExpressionOf(reference)
+		if name == nil || c.facts.Object(name) != object ||
+			c.facts.DefinitionName(name) != nil {
+			return true
+		}
+		if !c.discardedValue(reference) {
+			discarded = false
+		}
+		return true
+	})
+	return discarded
+}

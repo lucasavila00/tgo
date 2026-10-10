@@ -484,7 +484,8 @@ func (c *checker) helperParameterUse(
 			pathNode = syntaxNode(literalExpression)
 			continue
 		}
-		if c.discardedValue(literalExpression) {
+		if c.discardedValue(literalExpression) ||
+			c.discardedLocalFunctionValue(summary, literalExpression) {
 			return noReturnedHelperUse(), false
 		}
 		returned = c.returnedExpression(literalExpression)

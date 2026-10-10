@@ -108,6 +108,7 @@ func Safe() {
 	genericzero.NeverForwardCall[model.Event]()
 	genericzero.DirectInvokedForwardCall[int]()
 	genericzero.DiscardedForwardCapture[model.Event]()
+	genericzero.NestedUnusedForwardCapture[model.Event]()
 	genericzero.DeadAlias[model.Event]()()
 	genericzero.ConditionalAlias[model.Event](false)()
 	genericzero.ConditionalAlias[int](true)()

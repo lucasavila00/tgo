@@ -116,6 +116,21 @@ func DiscardedForwardCapture[T any]() {
 	})
 }
 
+func captureButDoNotUse(value func()) func() {
+	unused := func() {
+		value()
+	}
+	_ = unused
+	return func() {}
+}
+
+func NestedUnusedForwardCapture[T any]() {
+	_ = captureButDoNotUse(func() {
+		var value T
+		_ = value
+	})
+}
+
 func DeadAlias[T any]() func() {
 	value := func() {}
 	if false {
