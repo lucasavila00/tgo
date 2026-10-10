@@ -19,6 +19,24 @@ func TestPointerAliasExamplesReachWrongPayload(t *testing.T) {
 		{name: "reverse alias", read: ReverseAliasIf},
 		{name: "closure parameter", read: ClosureParameterAlias},
 		{name: "closure result", read: ClosureResultAlias},
+		{name: "operand mutation", read: OperandMutationAfterProof},
+		{name: "condition mutation", read: ConditionMutationAfterProof},
+		{name: "initializer mutation", read: InitializerMutationAfterProof},
+		{name: "range source mutation", read: RangeSourceMutation},
+		{
+			name: "assignment operand snapshot",
+			read: func(value *model.Event) string {
+				other := model.NewEventStarted("other", "")
+				return AssignmentOperandSnapshot(value, &other)
+			},
+		},
+		{
+			name: "recursive changed argument",
+			read: func(value *model.Event) string {
+				first := model.NewEventStarted("first", "")
+				return RecursiveChangedArgument(&first, value)
+			},
+		},
 		{
 			name: "same field aliases",
 			read: func(value *model.Event) string {

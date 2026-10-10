@@ -59,8 +59,11 @@ func (c *checker) enumProofValidAt(expression *syntax.Expression, receiver *synt
 		for _, node := range block.Nodes {
 			start, end := syntax.NodePosition(&node), syntax.NodeEnd(&node)
 			if start <= access && access < end {
+				accessState := c.enumStorageBeforePosition(
+					state.storage, node, access,
+				)
 				found = true
-				valid = valid && state.status == enumProofValid && enumStorageSetsOverlap(c.enumExpressionStorage(receiver, state.storage), state.proved)
+				valid = valid && state.status == enumProofValid && enumStorageSetsOverlap(c.enumExpressionStorage(receiver, accessState), state.proved) && !enumStorageSetsOverlap(accessState.writes, state.proved) && !enumStorageSetsOverlap(accessState.bindings, state.dependencies)
 			}
 			state.storage.writes = make(enumStorageSet)
 			state.storage.bindings = make(enumStorageSet)

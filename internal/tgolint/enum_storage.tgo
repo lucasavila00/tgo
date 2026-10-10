@@ -224,13 +224,7 @@ func (c %checker) transferEnumStorage(
 ) {
 	if statement, ok := syntax.StatementOf(&node); ok {
 		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-			for _, expression := range assignment.Left {
-				c.evalEnumCalls(state, expression)
-			}
-			for _, expression := range assignment.Right {
-				c.evalEnumCalls(state, expression)
-			}
-			c.transferEnumStorageLists(state, assignment.Left, assignment.Right)
+			c.evalEnumAssignment(state, assignment.Left, assignment.Right)
 			return
 		}
 		if ranged := syntax.RangeStatementOf(statement); ranged != nil {
@@ -239,6 +233,10 @@ func (c %checker) transferEnumStorage(
 			})
 		}
 		c.evalEnumStatementCalls(state, statement)
+		return
+	}
+	if expression, ok := syntax.ExpressionOf(&node); ok {
+		c.evalEnumExpr(state, expression)
 		return
 	}
 	specification, ok := syntax.SpecificationOf(&node)
@@ -254,7 +252,7 @@ func (c %checker) transferEnumStorage(
 		item := syntax.Expression.Identifier{Value: name}
 		left[index] = &item
 	}
-	c.transferEnumStorageLists(state, left, values.Values)
+	c.evalEnumAssignment(state, left, values.Values)
 }
 
 func (c %checker) recordEnumDestinations(
@@ -275,6 +273,47 @@ func (c %checker) recordEnumDestinations(
 	}
 }
 
+func (c %checker) enumStorageBeforePosition(
+	state *enumStorageState,
+	node syntax.Node,
+	position token.Pos,
+) *enumStorageState {
+	result := cloneEnumStorageState(state)
+	result.writes = make(enumStorageSet)
+	result.bindings = make(enumStorageSet)
+	if expression, ok := syntax.ExpressionOf(&node); ok {
+		c.evalEnumExprBefore(result, expression, position)
+		return result
+	}
+	statement, ok := syntax.StatementOf(&node)
+	if !ok {
+		return result
+	}
+	if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+		for _, expression := range assignment.Left {
+			if c.evalEnumExprBefore(result, expression, position) {
+				return result
+			}
+		}
+		for _, expression := range assignment.Right {
+			if c.evalEnumExprBefore(result, expression, position) {
+				return result
+			}
+		}
+		return result
+	}
+	if returned := syntax.ReturnStatementOf(statement); returned != nil {
+		for _, expression := range returned.Results {
+			if c.evalEnumExprBefore(result, expression, position) {
+				return result
+			}
+		}
+		return result
+	}
+	c.evalEnumStatementCalls(result, statement)
+	return result
+}
+
 func (c %checker) transferEnumStorageLists(
 	state *enumStorageState,
 	left []%syntax.Expression,
@@ -284,14 +323,17 @@ func (c %checker) transferEnumStorageLists(
 	closures := make([]enumClosureSet, len(left))
 	destinations := make([]enumStorageSet, len(left))
 	for index, target := range left {
+		c.evalEnumCalls(state, target)
 		destinations[index] = c.enumCells(target, state)
 	}
 	if len(left) == len(right) {
 		for index := range left {
+			c.evalEnumCalls(state, right[index])
 			storages[index] = c.enumExpressionStorage(right[index], state)
 			closures[index] = c.enumExpressionClosure(right[index], state)
 		}
 	} else if len(right) == 1 {
+		c.evalEnumCalls(state, right[0])
 		if call := syntax.CallExpressionOf(right[0]); call != nil {
 			values := c.enumCallStorages(call, state)
 			for index := range left {
@@ -301,6 +343,24 @@ func (c %checker) transferEnumStorageLists(
 			}
 		}
 	}
+	c.transferEnumStorageValues(state, left, destinations, storages, closures)
+}
+
+func (c %checker) evalEnumAssignment(
+	state *enumStorageState,
+	left []%syntax.Expression,
+	right []%syntax.Expression,
+) {
+	c.transferEnumStorageLists(state, left, right)
+}
+
+func (c %checker) transferEnumStorageValues(
+	state *enumStorageState,
+	left []%syntax.Expression,
+	destinations []enumStorageSet,
+	storages []enumStorageSet,
+	closures []enumClosureSet,
+) {
 	for index, target := range left {
 		if enumPointerType(c.facts, target) {
 			strong := len(destinations[index]) == 1

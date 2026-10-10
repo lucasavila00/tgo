@@ -720,3 +720,52 @@ func UntouchedBranchAlias(value, other *model.Event, change bool) string {
 	}
 	return ""
 }
+
+func PayloadBeforeOperandMutation(value *model.Event) string {
+	if value.Tag() == model.EventTagStarted {
+		return value.StartedPayload().ID + mutateSafeAliasString(value)
+	}
+	return ""
+}
+
+func mutateSafeAliasString(value *model.Event) string {
+	*value = model.NewEventStopped("changed")
+	return ""
+}
+
+func ConditionMutationBeforeRetest(value *model.Event) string {
+	if mutateSafeAliasString(value) == "" &&
+		value.Tag() == model.EventTagStopped {
+		return value.StoppedPayload().Reason
+	}
+	return ""
+}
+
+func SafeAssignmentOperandSnapshot(value, other *model.Event) string {
+	alias := other
+	rebind := func() *model.Event {
+		alias = value
+		return value
+	}
+	if value.Tag() == model.EventTagStarted {
+		*alias, _ = model.NewEventStopped("changed"), rebind()
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func RecursiveUnrelatedArgument(value, other, proved *model.Event) string {
+	var mutate func(*model.Event, int)
+	mutate = func(pointer *model.Event, depth int) {
+		if depth == 0 {
+			*pointer = model.NewEventStopped("changed")
+			return
+		}
+		mutate(other, 0)
+	}
+	if proved.Tag() == model.EventTagStarted {
+		mutate(value, 1)
+		return proved.StartedPayload().ID
+	}
+	return ""
+}

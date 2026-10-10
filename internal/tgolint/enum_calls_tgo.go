@@ -92,10 +92,12 @@ func (c *checker) evalEnumExpr(
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
 		c.evalEnumExpr(state, call.Callee)
-		for _, argument := range call.Args {
+		arguments := make([]enumStorageSet, len(call.Args))
+		for index, argument := range call.Args {
 			c.evalEnumExpr(state, argument)
+			arguments[index] = c.enumExpressionStorage(argument, state)
 		}
-		c.evalEnumCall(state, expression)
+		c.evalEnumCallWithArguments(state, expression, arguments)
 		return
 	}
 	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
@@ -127,6 +129,49 @@ func (c *checker) evalEnumExpr(
 	}
 }
 
+// evalEnumExprBefore applies effects before one nested expression.
+func (c *checker) evalEnumExprBefore(
+	state *enumStorageState,
+	expression *syntax.Expression,
+	position token.Pos,
+) bool {
+	if expression == nil || position < syntax.ExpressionPosition(expression) ||
+		syntax.ExpressionEnd(expression) <= position {
+		c.evalEnumExpr(state, expression)
+		return false
+	}
+	if syntax.ExpressionPosition(expression) == position {
+		return true
+	}
+	children := make([]*syntax.Expression, 0)
+	if value := syntax.ParenthesizedExpressionOf(expression); value != nil {
+		children = append(children, value.Expression)
+	} else if value := syntax.BinaryExpressionOf(expression); value != nil {
+		children = append(children, value.Left, value.Right)
+	} else if value := syntax.CallExpressionOf(expression); value != nil {
+		children = append(children, value.Callee)
+		children = append(children, value.Args...)
+	} else if value := syntax.SelectorExpressionOf(expression); value != nil {
+		children = append(children, value.Expression)
+	} else if value := syntax.IndexExpressionOf(expression); value != nil {
+		children = append(children, value.Expression, value.Index)
+	} else if value := syntax.UnaryExpressionOf(expression); value != nil {
+		children = append(children, value.Expression)
+	} else if value := syntax.StarExpressionOf(expression); value != nil {
+		children = append(children, value.Expression)
+	} else if value := syntax.KeyValueExpressionOf(expression); value != nil {
+		children = append(children, value.Key, value.Value)
+	} else if value := syntax.CompositeLiteralOf(expression); value != nil {
+		children = append(children, value.Elements...)
+	}
+	for _, child := range children {
+		if c.evalEnumExprBefore(state, child, position) {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *checker) evalEnumCall(
 	state *enumStorageState,
 	expression *syntax.Expression,
@@ -138,6 +183,18 @@ func (c *checker) evalEnumCall(
 	arguments := make([]enumStorageSet, len(call.Args))
 	for index, argument := range call.Args {
 		arguments[index] = c.enumExpressionStorage(argument, state)
+	}
+	c.evalEnumCallWithArguments(state, expression, arguments)
+}
+
+func (c *checker) evalEnumCallWithArguments(
+	state *enumStorageState,
+	expression *syntax.Expression,
+	arguments []enumStorageSet,
+) {
+	call := syntax.CallExpressionOf(expression)
+	if call == nil {
+		return
 	}
 	closures := c.enumExpressionClosure(call.Callee, state)
 	for literal := range closures {
@@ -242,17 +299,17 @@ func (c *checker) invokeEnumClosure(
 		}
 	}
 	call := input.calls[literal]
-	if call != nil && call.analyzing {
-		if call.output != nil {
-			return cloneEnumStorageState(call.output)
-		}
-		return cloneEnumStorageState(input)
-	}
 	if call == nil {
 		call = &enumClosureCall{}
 		input.calls[literal] = call
 	}
 	call.input, _ = joinEnumStorageStates(call.input, input)
+	if call.analyzing {
+		if call.output != nil {
+			return cloneEnumStorageState(call.output)
+		}
+		return cloneEnumStorageState(input)
+	}
 	call.analyzing = true
 	for {
 		before := cloneEnumStorageState(call.output)

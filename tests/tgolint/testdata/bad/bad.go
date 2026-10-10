@@ -1146,3 +1146,78 @@ func BranchClosureAlias(value, other *model.Event, change bool) string {
 	}
 	return ""
 }
+
+func mutateAliasString(value *model.Event) string {
+	*value = model.NewEventStopped("changed")
+	return ""
+}
+
+func mutateAliasBool(value *model.Event) bool {
+	*value = model.NewEventStopped("changed")
+	return true
+}
+
+func OperandMutationAfterProof(value *model.Event) string {
+	if value.Tag() == model.EventTagStarted {
+		return mutateAliasString(value) + value.StartedPayload().ID
+	}
+	return ""
+}
+
+func ConditionMutationAfterProof(value *model.Event) string {
+	if value.Tag() == model.EventTagStarted && mutateAliasBool(value) {
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func InitializerMutationAfterProof(value *model.Event) string {
+	if value.Tag() == model.EventTagStarted {
+		changed := mutateAliasString(value)
+		return changed + value.StartedPayload().ID
+	}
+	return ""
+}
+
+func mutateAliasRange(value *model.Event) []int {
+	*value = model.NewEventStopped("changed")
+	return []int{1}
+}
+
+func RangeSourceMutation(value *model.Event) string {
+	if value.Tag() == model.EventTagStarted {
+		for range mutateAliasRange(value) {
+			return value.StartedPayload().ID
+		}
+	}
+	return ""
+}
+
+func AssignmentOperandSnapshot(value, other *model.Event) string {
+	alias := value
+	rebind := func() *model.Event {
+		alias = other
+		return other
+	}
+	if value.Tag() == model.EventTagStarted {
+		*alias, _ = model.NewEventStopped("changed"), rebind()
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func RecursiveChangedArgument(value, other *model.Event) string {
+	var mutate func(*model.Event, int)
+	mutate = func(pointer *model.Event, depth int) {
+		if depth == 0 {
+			*pointer = model.NewEventStopped("changed")
+			return
+		}
+		mutate(other, 0)
+	}
+	if other.Tag() == model.EventTagStarted {
+		mutate(value, 1)
+		return other.StartedPayload().ID
+	}
+	return ""
+}
