@@ -142,6 +142,7 @@ func PropagationValue(events *[]string, found bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("propagationLoad: %w", err)
 	}
+
 	return value, nil
 }
 
@@ -150,6 +151,7 @@ func PropagationOuter(events *[]string, found bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("PropagationValue: %w", err)
 	}
+
 	return value, nil
 }
 
@@ -158,6 +160,7 @@ func PropagationTransparent(events *[]string, found bool) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return value, nil
 }
 
@@ -167,6 +170,7 @@ func PropagationTransparentFunction(events *[]string, found bool) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return value, nil
 }
 
@@ -176,6 +180,7 @@ func PropagationTransparentNested(events *[]string, found bool) (string, error) 
 	if err != nil {
 		return "", err
 	}
+
 	return propagationFormat(operand, result, propagationMark(events, "after")), nil
 }
 
@@ -185,6 +190,7 @@ func PropagationNested(events *[]string, found bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("propagationLoad: %w", err)
 	}
+
 	return propagationFormat(operand, result, propagationMark(events, "after")), nil
 }
 
@@ -207,8 +213,9 @@ func PropagationIncrement(events *[]string, found bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("propagationTargetLoad: %w", err)
 	}
-	operand := propagationIndex(events)
-	result[operand]++
+	operand := result
+	operand_1 := propagationIndex(events)
+	operand[operand_1]++
 	return values[0], nil
 }
 
@@ -218,6 +225,7 @@ func PropagationArrayIndex(found bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("propagationArrayBound: %w", err)
 	}
+
 	return values[result], nil
 }
 
@@ -227,17 +235,28 @@ func PropagationArraySlice(found bool) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("propagationArrayBound: %w", err)
 	}
+
 	slice := values[result:]
-	return &slice[0] == &values[0] && slice[0] == 2, nil
+	var operand bool = &slice[0] == &values[0]
+	if operand {
+		operand = slice[0] == 2
+	}
+	return operand, nil
 }
 
 func PropagationGenericArraySlice[T ~[1]int](values *T, found bool) (bool, error) {
+	operand := (*values)
 	result, err := propagationGenericArrayBound(values, found)
 	if err != nil {
 		return false, fmt.Errorf("propagationGenericArrayBound: %w", err)
 	}
-	slice := (*values)[result:]
-	return &slice[0] == &(*values)[0] && slice[0] == 2, nil
+
+	slice := operand[result:]
+	var operand_1 bool = &slice[0] == &(*values)[0]
+	if operand_1 {
+		operand_1 = slice[0] == 2
+	}
+	return operand_1, nil
 }
 
 func propagationGenericArrayBound[T ~[1]int](values *T, found bool) (int, error) {
@@ -253,6 +272,7 @@ func PropagationMany(found bool) (string, int, error) {
 	if err != nil {
 		return "", 0, fmt.Errorf("propagationPair: %w", err)
 	}
+
 	return name, value, nil
 }
 
@@ -261,39 +281,43 @@ func PropagationManyDeclaration(found bool) (string, int, error) {
 	if err != nil {
 		return "", 0, fmt.Errorf("propagationPair: %w", err)
 	}
+
 	return name, value, nil
 }
 
 func PropagationErrorOnly(found bool) error {
-	err := propagationFlush(found)
-	if err != nil {
-		return fmt.Errorf("propagationFlush: %w", err)
+	operand := propagationFlush(found)
+	if operand != nil {
+		return fmt.Errorf("propagationFlush: %w", operand)
 	}
+
 	return nil
 }
 
 func PropagationAnd(events *[]string, left bool, right bool) (bool, error) {
-	condition := false
-	if left {
+	operand := left
+	if operand {
 		result, err := propagationBool(events, "right", right)
 		if err != nil {
 			return false, fmt.Errorf("propagationBool: %w", err)
 		}
-		condition = result
+		operand = result
 	}
-	return condition, nil
+
+	return operand, nil
 }
 
 func PropagationOr(events *[]string, left bool, right bool) (bool, error) {
-	condition := true
-	if !left {
+	operand := left
+	if !operand {
 		result, err := propagationBool(events, "right", right)
 		if err != nil {
 			return false, fmt.Errorf("propagationBool: %w", err)
 		}
-		condition = result
+		operand = result
 	}
-	return condition, nil
+
+	return operand, nil
 }
 
 func PropagationLoop(failAt int) (int, error) {
@@ -307,6 +331,7 @@ func PropagationLoop(failAt int) (int, error) {
 		if !result {
 			break
 		}
+
 		count++
 	}
 	return count, nil
@@ -319,7 +344,8 @@ func PropagationForInitializer(events *[]string, firstFound bool, secondFound bo
 		if err != nil {
 			return 0, err
 		}
-		result_1, err_1 := propagationForValue(events, "second", 2, secondFound)
+		result_1, err_1 :=
+			propagationForValue(events, "second", 2, secondFound)
 		if err_1 != nil {
 			return 0, err_1
 		}
@@ -393,6 +419,7 @@ func PropagationDeferredArgument(events *[]string, found bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("propagationLoad: %w", err)
 	}
+
 	defer propagationRecord(events, result)
 	*events = append(*events, "body")
 	return 7, nil
@@ -404,6 +431,7 @@ func PropagationExistingDefer(events *[]string, found bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("propagationLoad: %w", err)
 	}
+
 	return value, nil
 }
 
@@ -412,6 +440,7 @@ func PropagationIf(events *[]string, value bool) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("propagationBool: %w", err)
 	}
+
 	if result {
 		return true, nil
 	}
@@ -425,6 +454,7 @@ func PropagationIfInitializer(events *[]string, value bool) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("propagationBool: %w", err)
 		}
+
 		if result {
 			return prefix, nil
 		}
@@ -438,6 +468,7 @@ func PropagationRange(found bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("propagationValues: %w", err)
 	}
+
 	for _, value := range result {
 		total += value
 	}
@@ -451,6 +482,7 @@ func PropagationLabeledRange(found bool) (int, error) {
 		return 0, fmt.Errorf("propagationValues: %w", err)
 	}
 outer:
+
 	for _, value := range result {
 		for {
 			total += value
@@ -465,10 +497,26 @@ func PropagationSwitch(found bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("propagationCode: %w", err)
 	}
-	switch result {
-	case 1:
+	tag := result
+	selected := -1
+	if selected == -1 {
+		if tag ==
+
+			1 {
+			selected = 0
+		}
+	}
+	if selected == -1 {
+		if tag ==
+
+			2 {
+			selected = 1
+		}
+	}
+	switch selected {
+	case 0:
 		return "one", nil
-	case 2:
+	case 1:
 		return "two", nil
 	default:
 		return "other", nil
@@ -482,8 +530,17 @@ func PropagationSwitchInitializer(events *[]string, found bool) (string, error) 
 		if err != nil {
 			return "", fmt.Errorf("propagationCode: %w", err)
 		}
-		switch result {
-		case 2:
+		tag := result
+		selected := -1
+		if selected == -1 {
+			if tag ==
+
+				2 {
+				selected = 0
+			}
+		}
+		switch selected {
+		case 0:
 			return prefix, nil
 		default:
 			return "", nil
@@ -497,9 +554,18 @@ func PropagationLabeledSwitch(found bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("propagationCode: %w", err)
 	}
+	tag := result_1
+	selected := -1
+	if selected == -1 {
+		if tag ==
+
+			2 {
+			selected = 0
+		}
+	}
 outer:
-	switch result_1 {
-	case 2:
+	switch selected {
+	case 0:
 		result = "two"
 		break outer
 	default:
@@ -511,20 +577,26 @@ outer:
 func PropagationGotoLabeledSwitch(found bool) (string, error) {
 	result := "before"
 	goto outer
+	result_1, err := propagationCode(found)
+	if err != nil {
+		return "", fmt.Errorf("propagationCode: %w", err)
+	}
+	tag := result_1
+	selected := -1
+	if selected == -1 {
+		if tag ==
+
+			2 {
+			selected = 0
+		}
+	}
 outer:
-	{
-		result_1, err := propagationCode(found)
-		if err != nil {
-			return "", fmt.Errorf("propagationCode: %w", err)
-		}
-	control:
-		switch result_1 {
-		case 2:
-			result = "two"
-			break control
-		default:
-			result = "other"
-		}
+	switch selected {
+	case 0:
+		result = "two"
+		break outer
+	default:
+		result = "other"
 	}
 	return result, nil
 }
@@ -537,6 +609,7 @@ func PropagationTypeSwitch(events *[]string, found bool) (string, error) {
 		if err != nil {
 			return "", err
 		}
+
 		switch value := (result_1).(type) {
 		case string:
 			result = prefix + ":" + value
@@ -553,6 +626,7 @@ func PropagationTypeSwitchInitializer(events *[]string, found bool) (string, err
 		if err != nil {
 			return "", err
 		}
+
 		switch value := any("ready").(type) {
 		case string:
 			return fmt.Sprint(prefix, ":", value), nil
@@ -571,6 +645,7 @@ func PropagationTypeSwitchBoth(events *[]string, initFound bool, guardFound bool
 		if err_1 != nil {
 			return "", err_1
 		}
+
 		switch value := (result).(type) {
 		case string:
 			return prefix.(string) + ":" + value, nil
@@ -584,6 +659,7 @@ func PropagationBareTypeSwitch(events *[]string, found bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	switch (result).(type) {
 	case string:
 		return "string", nil
@@ -598,6 +674,7 @@ func PropagationLabeledTypeSwitch(events *[]string, found bool) (string, error) 
 		return "", err
 	}
 outer:
+
 	switch value := (result_1).(type) {
 	case string:
 		result = value
@@ -618,6 +695,7 @@ func PropagationLabeledTypeSwitchScope() (string, error) {
 			return "", err
 		}
 	outer:
+
 		switch value := any("ready").(type) {
 		case string:
 			_, _ = prefix, value
@@ -630,20 +708,18 @@ func PropagationLabeledTypeSwitchScope() (string, error) {
 func PropagationGotoLabeledTypeSwitch(events *[]string, found bool) (string, error) {
 	result := "before"
 	goto outer
+	result_1, err := propagationAny(events, found)
+	if err != nil {
+		return "", err
+	}
 outer:
-	{
-		result_1, err := propagationAny(events, found)
-		if err != nil {
-			return "", err
-		}
-	control:
-		switch value := (result_1).(type) {
-		case string:
-			result = value
-			break control
-		default:
-			result = "other"
-		}
+
+	switch value := (result_1).(type) {
+	case string:
+		result = value
+		break outer
+	default:
+		result = "other"
 	}
 	return result, nil
 }
@@ -653,6 +729,7 @@ func PropagationTypedNil() (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("propagationTypedNil: %w", err)
 	}
+
 	return value, nil
 }
 
@@ -662,6 +739,7 @@ func PropagationFunctionValue(events *[]string, found bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("load: %w", err)
 	}
+
 	return value, nil
 }
 
@@ -671,6 +749,7 @@ func PropagationNamed(events *[]string, found bool) (value int, err error) {
 	if err_1 != nil {
 		return 0, fmt.Errorf("propagationLoad: %w", err_1)
 	}
+
 	return loaded, nil
 }
 
@@ -680,6 +759,7 @@ func PropagationGeneric[T any](value T, found bool) (T, error) {
 		var zero T
 		return zero, fmt.Errorf("propagationGenericLoad: %w", err)
 	}
+
 	return loaded, nil
 }
 

@@ -11,18 +11,31 @@ import (
 )
 
 func TestBoxedEnumLayout(t *testing.T) {
-	if size := unsafe.Sizeof(*new(model.Large)); size != 24 {
-		t.Fatalf("boxed enum size: %d", size)
+	type operandType = bool
+	{
+		size := unsafe.Sizeof(*new(model.Large))
+		if size != 24 {
+			t.Fatalf("boxed enum size: %d", size)
+		}
 	}
-	if size := unsafe.Sizeof(*new(model.Equal)); size != 64 {
-		t.Fatalf("mixed enum size: %d", size)
+	{
+		size := unsafe.Sizeof(*new(model.Equal))
+		if size != 64 {
+			t.Fatalf("mixed enum size: %d", size)
+		}
 	}
 	layout := reflect.TypeOf(*new(model.Equal))
-	if _, ok := layout.FieldByName("tgoFirst"); ok {
-		t.Fatal("first equal-size payload must be boxed")
+	{
+		_, ok := layout.FieldByName("tgoFirst")
+		if ok {
+			t.Fatal("first equal-size payload must be boxed")
+		}
 	}
-	if _, ok := layout.FieldByName("tgoSecond"); !ok {
-		t.Fatal("second equal-size payload must stay inline")
+	{
+		_, ok := layout.FieldByName("tgoSecond")
+		if !ok {
+			t.Fatal("second equal-size payload must stay inline")
+		}
 	}
 	first := [64]byte{1, 2}
 	second := [64]byte{3, 4}
@@ -33,10 +46,18 @@ func TestBoxedEnumLayout(t *testing.T) {
 		return model.NewLargeSecond(input.FieldData)
 	}(model.TgoLargeSecondInput{FieldData: second})
 	empty := model.NewLargeEmpty()
-	if a.Tag() != model.LargeTagFirst || a.FirstPayload().Data != first {
+	var operand operandType = a.Tag() != model.LargeTagFirst
+	if !operand {
+		operand = a.FirstPayload().Data != first
+	}
+	if operand {
 		t.Fatal("first boxed payload")
 	}
-	if b.Tag() != model.LargeTagSecond || b.SecondPayload().Data != second {
+	var operand_1 operandType = b.Tag() != model.LargeTagSecond
+	if !operand_1 {
+		operand_1 = b.SecondPayload().Data != second
+	}
+	if operand_1 {
 		t.Fatal("second boxed payload")
 	}
 	if empty.Tag() != model.LargeTagEmpty {
@@ -52,14 +73,23 @@ func TestBoxedEnumLayout(t *testing.T) {
 	allocations := testing.AllocsPerRun(1000, func() {
 		read = a.FirstPayload().Data
 	})
-	if allocations != 0 || read != first {
+	var operand_2 operandType = allocations != 0
+	if !operand_2 {
+		operand_2 = read != first
+	}
+	if operand_2 {
 		t.Fatalf("boxed accessor cost: %f allocations", allocations)
 	}
 }
 
 func TestEnumPublicAPI(t *testing.T) {
+	type operandType = bool
 	namedZero := model.NewNamedZeroZero()
-	if namedZero.Tag() != model.NamedZeroTagZero || namedZero.Tag() == 0 {
+	var operand operandType = namedZero.Tag() != model.NamedZeroTagZero
+	if !operand {
+		operand = namedZero.Tag() == 0
+	}
+	if operand {
 		t.Fatal("declared Zero variant tag")
 	}
 	inline := (func(input model.TgoEqualFirstInput) model.Equal {

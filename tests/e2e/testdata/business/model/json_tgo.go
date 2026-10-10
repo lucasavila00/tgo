@@ -12,34 +12,58 @@ import (
 )
 
 func tgoJSONExternalExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
 func tgoJSONExternalAdjacentJSONTo[T interface{}](
 	out *jsontext.Encoder, tag string, name string, content string, payload T,
 ) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(tag)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(tag))
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(content)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(content))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -157,8 +181,11 @@ func (v *JSONExternal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one JSONExternal JSON variant")
@@ -170,22 +197,31 @@ func (v *JSONExternal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "created":
 		var payload JSONExternalCreated
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONExternalCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case "Empty":
 		var payload JSONExternalEmpty
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONExternalEmpty()
 		return nil
 	case "Large":
 		var payload JSONExternalLarge
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONExternalLarge(payload.Data)
 		return nil
@@ -222,8 +258,16 @@ func (v *JSONExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Large":
 			current = 3
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -235,20 +279,38 @@ func (v *JSONExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one JSONExternal JSON variant")
 	}
 	if selected == 0 {
@@ -257,22 +319,31 @@ func (v *JSONExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONExternalCreated
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONExternalCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case 2:
 		var payload JSONExternalEmpty
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONExternalEmpty()
 		return nil
 	case 3:
 		var payload JSONExternalLarge
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONExternalLarge(payload.Data)
 		return nil
@@ -335,12 +406,21 @@ func (JSONInternal) EmptyPayload() JSONInternalEmpty { return JSONInternalEmpty{
 func (v JSONInternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalTagCreated:
+		type operandType = bool
 		payload := v.CreatedPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand operandType = len(payloadData) < 2
+		if !operand {
+			operand = payloadData[0] != '{'
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_1 {
 			return nil, fmt.Errorf("expected JSONInternal JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -352,12 +432,21 @@ func (v JSONInternal) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case JSONInternalTagEmpty:
+		type operandType_1 = bool
 		payload := v.EmptyPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand_2 operandType_1 = len(payloadData) < 2
+		if !operand_2 {
+			operand_2 = payloadData[0] != '{'
+		}
+		var operand_3 operandType_1 = operand_2
+		if !operand_3 {
+			operand_3 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_3 {
 			return nil, fmt.Errorf("expected JSONInternal JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -380,7 +469,15 @@ func (v JSONInternal) MarshalJSONTo(out *jsontext.Encoder) error {
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		operand := marshalsJSON
+		if !operand {
+			operand = marshalsText
+		}
+		var operand_1 bool = operand
+		if !operand_1 {
+			operand_1 = marshalsJSONTo
+		}
+		if operand_1 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -396,7 +493,15 @@ func (v JSONInternal) MarshalJSONTo(out *jsontext.Encoder) error {
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		operand_2 := marshalsJSON
+		if !operand_2 {
+			operand_2 = marshalsText
+		}
+		var operand_3 bool = operand_2
+		if !operand_3 {
+			operand_3 = marshalsJSONTo
+		}
+		if operand_3 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -417,8 +522,11 @@ func (v *JSONInternal) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Tag string `json:"type"`
 	}
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if object.Tag == "" {
 		return fmt.Errorf("missing JSONInternal JSON tag")
@@ -427,15 +535,21 @@ func (v *JSONInternal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "created":
 		var payload JSONInternalCreated
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONInternalCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case "Empty":
 		var payload JSONInternalEmpty
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONInternalEmpty()
 		return nil
@@ -542,8 +656,11 @@ func (v *JSONAdjacent) UnmarshalJSON(data []byte) error {
 		Tag     string          `json:"type"`
 		Content json.RawMessage `json:"data"`
 	}
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if object.Tag == "" {
 		return fmt.Errorf("missing JSONAdjacent JSON tag")
@@ -556,15 +673,21 @@ func (v *JSONAdjacent) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "created":
 		var payload JSONAdjacentCreated
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONAdjacentCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case "Empty":
 		var payload JSONAdjacentEmpty
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONAdjacentEmpty()
 		return nil
@@ -574,6 +697,7 @@ func (v *JSONAdjacent) UnmarshalJSON(data []byte) error {
 }
 
 func (v *JSONAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -605,8 +729,11 @@ func (v *JSONAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		switch field {
 		case 1:
 			if in.PeekKind() == 'n' {
-				if _, err := in.ReadToken(); err != nil {
-					return err
+				{
+					_, err := in.ReadToken()
+					if err != nil {
+						return err
+					}
 				}
 				break
 			}
@@ -637,15 +764,25 @@ func (v *JSONAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			contentData = append(contentData[:0], raw...)
 			contentPresent = true
 		default:
-			if err := in.SkipValue(); err != nil {
-				return err
+			{
+				err := in.SkipValue()
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	{
+		_, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
 	}
-	if selected == 0 && unknown == "" {
+	var operand operandType = selected == 0
+	if operand {
+		operand = unknown == ""
+	}
+	if operand {
 		return fmt.Errorf("missing JSONAdjacent JSON tag")
 	}
 	if !contentPresent {
@@ -657,15 +794,21 @@ func (v *JSONAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONAdjacentCreated
-		if err := jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(contentData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONAdjacentCreated(payload.ID, payload.Reason, payload.Custom)
 		return nil
 	case 2:
 		var payload JSONAdjacentEmpty
-		if err := jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(contentData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONAdjacentEmpty()
 		return nil
@@ -783,23 +926,32 @@ func (v JSONUntagged) MarshalJSONTo(out *jsontext.Encoder) error {
 func (v *JSONUntagged) UnmarshalJSON(data []byte) error {
 	{
 		var payload JSONUntaggedNumber
-		if err := json.Unmarshal(data, &payload); err == nil {
-			*v = NewJSONUntaggedNumber(payload.Value)
-			return nil
+		{
+			err := json.Unmarshal(data, &payload)
+			if err == nil {
+				*v = NewJSONUntaggedNumber(payload.Value)
+				return nil
+			}
 		}
 	}
 	{
 		var payload JSONUntaggedText
-		if err := json.Unmarshal(data, &payload); err == nil {
-			*v = NewJSONUntaggedText(payload.Value)
-			return nil
+		{
+			err := json.Unmarshal(data, &payload)
+			if err == nil {
+				*v = NewJSONUntaggedText(payload.Value)
+				return nil
+			}
 		}
 	}
 	{
 		var payload JSONUntaggedOther
-		if err := json.Unmarshal(data, &payload); err == nil {
-			*v = NewJSONUntaggedOther(payload.Value)
-			return nil
+		{
+			err := json.Unmarshal(data, &payload)
+			if err == nil {
+				*v = NewJSONUntaggedOther(payload.Value)
+				return nil
+			}
 		}
 	}
 	return fmt.Errorf("no matching JSONUntagged JSON variant")
@@ -873,8 +1025,11 @@ func (v *JSONNested) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one JSONNested JSON variant")
@@ -886,8 +1041,11 @@ func (v *JSONNested) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Nested":
 		var payload JSONNestedNested
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONNestedNested(payload.Value)
 		return nil
@@ -920,8 +1078,16 @@ func (v *JSONNested) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Nested":
 			current = 1
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -933,20 +1099,38 @@ func (v *JSONNested) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one JSONNested JSON variant")
 	}
 	if selected == 0 {
@@ -955,8 +1139,11 @@ func (v *JSONNested) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONNestedNested
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONNestedNested(payload.Value)
 		return nil
@@ -1025,8 +1212,11 @@ func (v *JSONCustom) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one JSONCustom JSON variant")
@@ -1038,8 +1228,11 @@ func (v *JSONCustom) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Value":
 		var payload JSONCustomValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONCustomValue(payload.Value)
 		return nil
@@ -1072,8 +1265,16 @@ func (v *JSONCustom) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Value":
 			current = 1
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -1085,20 +1286,38 @@ func (v *JSONCustom) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one JSONCustom JSON variant")
 	}
 	if selected == 0 {
@@ -1107,8 +1326,11 @@ func (v *JSONCustom) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONCustomValue
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONCustomValue(payload.Value)
 		return nil
@@ -1160,12 +1382,21 @@ func (v JSONEscaped) ValuePayload() JSONEscapedValue { return v.tgoValue }
 func (v JSONEscaped) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONEscapedTagValue:
+		type operandType = bool
 		payload := v.ValuePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand operandType = len(payloadData) < 2
+		if !operand {
+			operand = payloadData[0] != '{'
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_1 {
 			return nil, fmt.Errorf("expected JSONEscaped JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -1188,7 +1419,15 @@ func (v JSONEscaped) MarshalJSONTo(out *jsontext.Encoder) error {
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		operand := marshalsJSON
+		if !operand {
+			operand = marshalsText
+		}
+		var operand_1 bool = operand
+		if !operand_1 {
+			operand_1 = marshalsJSONTo
+		}
+		if operand_1 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -1207,21 +1446,30 @@ func (v JSONEscaped) MarshalJSONTo(out *jsontext.Encoder) error {
 func (v *JSONEscaped) UnmarshalJSON(data []byte) error {
 	var variant string
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	tag, ok := object["kind\x01"]
 	if !ok {
 		return fmt.Errorf("missing JSONEscaped JSON tag")
 	}
-	if err := json.Unmarshal(tag, &variant); err != nil {
-		return err
+	{
+		err := json.Unmarshal(tag, &variant)
+		if err != nil {
+			return err
+		}
 	}
 	switch variant {
 	case "name\x01\"end":
 		var payload JSONEscapedValue
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONEscapedValue(payload.ID)
 		return nil
@@ -1304,8 +1552,11 @@ func (v *JSONEscapedExternal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one JSONEscapedExternal JSON variant")
@@ -1317,8 +1568,11 @@ func (v *JSONEscapedExternal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "name\x01\"end":
 		var payload JSONEscapedExternalValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONEscapedExternalValue(payload.ID)
 		return nil
@@ -1351,8 +1605,16 @@ func (v *JSONEscapedExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "name\x01\"end":
 			current = 1
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -1364,20 +1626,38 @@ func (v *JSONEscapedExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one JSONEscapedExternal JSON variant")
 	}
 	if selected == 0 {
@@ -1386,8 +1666,11 @@ func (v *JSONEscapedExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONEscapedExternalValue
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONEscapedExternalValue(payload.ID)
 		return nil
@@ -1462,15 +1745,21 @@ func (v *JSONEscapedAdjacent) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	tag, ok := object["kind\x01"]
 	if !ok {
 		return fmt.Errorf("missing JSONEscapedAdjacent JSON tag")
 	}
-	if err := json.Unmarshal(tag, &variant); err != nil {
-		return err
+	{
+		err := json.Unmarshal(tag, &variant)
+		if err != nil {
+			return err
+		}
 	}
 	var present bool
 	payloadData, present = object["data\x02"]
@@ -1480,8 +1769,11 @@ func (v *JSONEscapedAdjacent) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "name\x01\"end":
 		var payload JSONEscapedAdjacentValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONEscapedAdjacentValue(payload.ID)
 		return nil
@@ -1491,6 +1783,7 @@ func (v *JSONEscapedAdjacent) UnmarshalJSON(data []byte) error {
 }
 
 func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -1518,8 +1811,11 @@ func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		switch field {
 		case 1:
 			if in.PeekKind() == 'n' {
-				if _, err := in.ReadToken(); err != nil {
-					return err
+				{
+					_, err := in.ReadToken()
+					if err != nil {
+						return err
+					}
 				}
 				break
 			}
@@ -1548,15 +1844,25 @@ func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			contentData = append(contentData[:0], raw...)
 			contentPresent = true
 		default:
-			if err := in.SkipValue(); err != nil {
-				return err
+			{
+				err := in.SkipValue()
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	{
+		_, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
 	}
-	if selected == 0 && unknown == "" {
+	var operand operandType = selected == 0
+	if operand {
+		operand = unknown == ""
+	}
+	if operand {
 		return fmt.Errorf("missing JSONEscapedAdjacent JSON tag")
 	}
 	if !contentPresent {
@@ -1568,8 +1874,11 @@ func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONEscapedAdjacentValue
-		if err := jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(contentData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONEscapedAdjacentValue(payload.ID)
 		return nil
@@ -1638,8 +1947,11 @@ func (v *JSONStringField) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one JSONStringField JSON variant")
@@ -1651,8 +1963,11 @@ func (v *JSONStringField) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Value":
 		var payload JSONStringFieldValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONStringFieldValue(payload.Count)
 		return nil
@@ -1685,8 +2000,16 @@ func (v *JSONStringField) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Value":
 			current = 1
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -1698,20 +2021,38 @@ func (v *JSONStringField) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one JSONStringField JSON variant")
 	}
 	if selected == 0 {
@@ -1720,8 +2061,11 @@ func (v *JSONStringField) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONStringFieldValue
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONStringFieldValue(payload.Count)
 		return nil
@@ -1767,12 +2111,21 @@ func (v JSONInternalPayloadMethod) ValuePayload() JSONInternalPayloadMethodValue
 func (v JSONInternalPayloadMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalPayloadMethodTagValue:
+		type operandType = bool
 		payload := v.ValuePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand operandType = len(payloadData) < 2
+		if !operand {
+			operand = payloadData[0] != '{'
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_1 {
 			return nil, fmt.Errorf("expected JSONInternalPayloadMethod JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -1795,7 +2148,15 @@ func (v JSONInternalPayloadMethod) MarshalJSONTo(out *jsontext.Encoder) error {
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		operand := marshalsJSON
+		if !operand {
+			operand = marshalsText
+		}
+		var operand_1 bool = operand
+		if !operand_1 {
+			operand_1 = marshalsJSONTo
+		}
+		if operand_1 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -1816,8 +2177,11 @@ func (v *JSONInternalPayloadMethod) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Tag string `json:"type"`
 	}
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if object.Tag == "" {
 		return fmt.Errorf("missing JSONInternalPayloadMethod JSON tag")
@@ -1826,8 +2190,11 @@ func (v *JSONInternalPayloadMethod) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "value":
 		var payload JSONInternalPayloadMethodValue
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONInternalPayloadMethodValue(payload.Seen)
 		return nil
@@ -1881,12 +2248,21 @@ func (v JSONInternalPromotedMethod) ValuePayload() JSONInternalPromotedMethodVal
 func (v JSONInternalPromotedMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalPromotedMethodTagValue:
+		type operandType = bool
 		payload := v.ValuePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand operandType = len(payloadData) < 2
+		if !operand {
+			operand = payloadData[0] != '{'
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_1 {
 			return nil, fmt.Errorf("expected JSONInternalPromotedMethod JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -1909,7 +2285,15 @@ func (v JSONInternalPromotedMethod) MarshalJSONTo(out *jsontext.Encoder) error {
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		operand := marshalsJSON
+		if !operand {
+			operand = marshalsText
+		}
+		var operand_1 bool = operand
+		if !operand_1 {
+			operand_1 = marshalsJSONTo
+		}
+		if operand_1 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -1930,8 +2314,11 @@ func (v *JSONInternalPromotedMethod) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Tag string `json:"type"`
 	}
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if object.Tag == "" {
 		return fmt.Errorf("missing JSONInternalPromotedMethod JSON tag")
@@ -1940,8 +2327,11 @@ func (v *JSONInternalPromotedMethod) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "value":
 		var payload JSONInternalPromotedMethodValue
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewJSONInternalPromotedMethodValue(payload.JSONObject)
 		return nil
@@ -2049,8 +2439,11 @@ func (v *JSONNonNilExternal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one JSONNonNilExternal JSON variant")
@@ -2062,8 +2455,11 @@ func (v *JSONNonNilExternal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Value":
 		var payload JSONNonNilExternalValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Direct == nil {
 			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Direct must not be nil")
@@ -2126,8 +2522,16 @@ func (v *JSONNonNilExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Value":
 			current = 1
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -2139,20 +2543,38 @@ func (v *JSONNonNilExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one JSONNonNilExternal JSON variant")
 	}
 	if selected == 0 {
@@ -2161,8 +2583,11 @@ func (v *JSONNonNilExternal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONNonNilExternalValue
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Direct == nil {
 			return fmt.Errorf("invalid JSONNonNilExternal.Value JSON payload: Direct must not be nil")
@@ -2238,12 +2663,21 @@ func (v JSONNonNilInternal) ValuePayload() JSONNonNilInternalValue { return v.tg
 func (v JSONNonNilInternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONNonNilInternalTagValue:
+		type operandType = bool
 		payload := v.ValuePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand operandType = len(payloadData) < 2
+		if !operand {
+			operand = payloadData[0] != '{'
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_1 {
 			return nil, fmt.Errorf("expected JSONNonNilInternal JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -2266,7 +2700,15 @@ func (v JSONNonNilInternal) MarshalJSONTo(out *jsontext.Encoder) error {
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		operand := marshalsJSON
+		if !operand {
+			operand = marshalsText
+		}
+		var operand_1 bool = operand
+		if !operand_1 {
+			operand_1 = marshalsJSONTo
+		}
+		if operand_1 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -2287,8 +2729,11 @@ func (v *JSONNonNilInternal) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Tag string `json:"type"`
 	}
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if object.Tag == "" {
 		return fmt.Errorf("missing JSONNonNilInternal JSON tag")
@@ -2297,8 +2742,11 @@ func (v *JSONNonNilInternal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "value":
 		var payload JSONNonNilInternalValue
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Required == nil {
 			return fmt.Errorf("invalid JSONNonNilInternal.Value JSON payload: Required must not be nil")
@@ -2383,8 +2831,11 @@ func (v *JSONNonNilAdjacent) UnmarshalJSON(data []byte) error {
 		Tag     string          `json:"type"`
 		Content json.RawMessage `json:"data"`
 	}
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if object.Tag == "" {
 		return fmt.Errorf("missing JSONNonNilAdjacent JSON tag")
@@ -2397,8 +2848,11 @@ func (v *JSONNonNilAdjacent) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "value":
 		var payload JSONNonNilAdjacentValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Required == nil {
 			return fmt.Errorf("invalid JSONNonNilAdjacent.Value JSON payload: Required must not be nil")
@@ -2412,6 +2866,7 @@ func (v *JSONNonNilAdjacent) UnmarshalJSON(data []byte) error {
 }
 
 func (v *JSONNonNilAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -2443,8 +2898,11 @@ func (v *JSONNonNilAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		switch field {
 		case 1:
 			if in.PeekKind() == 'n' {
-				if _, err := in.ReadToken(); err != nil {
-					return err
+				{
+					_, err := in.ReadToken()
+					if err != nil {
+						return err
+					}
 				}
 				break
 			}
@@ -2473,15 +2931,25 @@ func (v *JSONNonNilAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			contentData = append(contentData[:0], raw...)
 			contentPresent = true
 		default:
-			if err := in.SkipValue(); err != nil {
-				return err
+			{
+				err := in.SkipValue()
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	{
+		_, err := in.ReadToken()
+		if err != nil {
+			return err
+		}
 	}
-	if selected == 0 && unknown == "" {
+	var operand operandType = selected == 0
+	if operand {
+		operand = unknown == ""
+	}
+	if operand {
 		return fmt.Errorf("missing JSONNonNilAdjacent JSON tag")
 	}
 	if !contentPresent {
@@ -2493,8 +2961,11 @@ func (v *JSONNonNilAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONNonNilAdjacentValue
-		if err := jsonv2.Unmarshal(contentData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(contentData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Required == nil {
 			return fmt.Errorf("invalid JSONNonNilAdjacent.Value JSON payload: Required must not be nil")
@@ -2591,26 +3062,35 @@ func (v *JSONNonNilUntagged) UnmarshalJSON(data []byte) error {
 	var tgoJSONNonNilError error
 	{
 		var payload JSONNonNilUntaggedFirst
-		if err := json.Unmarshal(data, &payload); err == nil {
-			if tgoJSONError := func() error {
-				if payload.Required == nil {
-					return fmt.Errorf("invalid JSONNonNilUntagged.First JSON payload: Required must not be nil")
-				}
-				return nil
-			}(); tgoJSONError == nil {
+		{
+			err := json.Unmarshal(data, &payload)
+			if err == nil {
+				{
+					tgoJSONError := func() error {
+						if payload.Required == nil {
+							return fmt.Errorf("invalid JSONNonNilUntagged.First JSON payload: Required must not be nil")
+						}
+						return nil
+					}()
+					if tgoJSONError == nil {
 
-				*v = NewJSONNonNilUntaggedFirst(payload.Required)
-				return nil
-			} else if tgoJSONNonNilError == nil {
-				tgoJSONNonNilError = tgoJSONError
+						*v = NewJSONNonNilUntaggedFirst(payload.Required)
+						return nil
+					} else if tgoJSONNonNilError == nil {
+						tgoJSONNonNilError = tgoJSONError
+					}
+				}
 			}
 		}
 	}
 	{
 		var payload JSONNonNilUntaggedSecond
-		if err := json.Unmarshal(data, &payload); err == nil {
-			*v = NewJSONNonNilUntaggedSecond(payload.Count)
-			return nil
+		{
+			err := json.Unmarshal(data, &payload)
+			if err == nil {
+				*v = NewJSONNonNilUntaggedSecond(payload.Count)
+				return nil
+			}
 		}
 	}
 	if tgoJSONNonNilError != nil {
@@ -2700,8 +3180,11 @@ func (v *JSONNonNilAdvanced) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one JSONNonNilAdvanced JSON variant")
@@ -2713,8 +3196,11 @@ func (v *JSONNonNilAdvanced) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Value":
 		var payload JSONNonNilAdvancedValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		tgoJSONVisited := make(map[uintptr]bool)
 		var (
@@ -2729,8 +3215,11 @@ func (v *JSONNonNilAdvanced) UnmarshalJSON(data []byte) error {
 				tgoJSONVisited[tgoJSONPointer] = true
 			}
 			if !tgoJSONValue.Field(0).IsNil() {
-				if err := tgoJSONValidate0(tgoJSONValue.Field(0).Elem(), tgoJSONPath+".Next"); err != nil {
-					return err
+				{
+					err := tgoJSONValidate0(tgoJSONValue.Field(0).Elem(), tgoJSONPath+".Next")
+					if err != nil {
+						return err
+					}
 				}
 			}
 			if tgoJSONValue.Field(1).IsNil() {
@@ -2739,8 +3228,11 @@ func (v *JSONNonNilAdvanced) UnmarshalJSON(data []byte) error {
 			return nil
 		}
 		if payload.Recursive.Next != nil {
-			if err := tgoJSONValidate0(reflect.ValueOf(&(*payload.Recursive.Next)).Elem(), "Recursive.Next"); err != nil {
-				return err
+			{
+				err := tgoJSONValidate0(reflect.ValueOf(&(*payload.Recursive.Next)).Elem(), "Recursive.Next")
+				if err != nil {
+					return err
+				}
 			}
 		}
 		if payload.Recursive.Required == nil {
@@ -2781,8 +3273,16 @@ func (v *JSONNonNilAdvanced) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Value":
 			current = 1
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -2794,20 +3294,38 @@ func (v *JSONNonNilAdvanced) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one JSONNonNilAdvanced JSON variant")
 	}
 	if selected == 0 {
@@ -2816,8 +3334,11 @@ func (v *JSONNonNilAdvanced) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload JSONNonNilAdvancedValue
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		tgoJSONVisited := make(map[uintptr]bool)
 		var (
@@ -2832,8 +3353,11 @@ func (v *JSONNonNilAdvanced) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 				tgoJSONVisited[tgoJSONPointer] = true
 			}
 			if !tgoJSONValue.Field(0).IsNil() {
-				if err := tgoJSONValidate0(tgoJSONValue.Field(0).Elem(), tgoJSONPath+".Next"); err != nil {
-					return err
+				{
+					err := tgoJSONValidate0(tgoJSONValue.Field(0).Elem(), tgoJSONPath+".Next")
+					if err != nil {
+						return err
+					}
 				}
 			}
 			if tgoJSONValue.Field(1).IsNil() {
@@ -2842,8 +3366,11 @@ func (v *JSONNonNilAdvanced) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return nil
 		}
 		if payload.Recursive.Next != nil {
-			if err := tgoJSONValidate0(reflect.ValueOf(&(*payload.Recursive.Next)).Elem(), "Recursive.Next"); err != nil {
-				return err
+			{
+				err := tgoJSONValidate0(reflect.ValueOf(&(*payload.Recursive.Next)).Elem(), "Recursive.Next")
+				if err != nil {
+					return err
+				}
 			}
 		}
 		if payload.Recursive.Required == nil {

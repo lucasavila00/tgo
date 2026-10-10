@@ -5,22 +5,31 @@ package app
 import "example.com/business/model"
 
 func Lookup(accounts map[string]model.Account, key string) string {
-	if account, ok := accounts[key]; ok {
-		return model.Label(account)
+	{
+		account, ok := accounts[key]
+		if ok {
+			return model.Label(account)
+		}
 	}
 	return "missing"
 }
 
 func Receive(accounts <-chan model.Account) string {
-	if account, ok := <-accounts; ok {
-		return model.Label(account)
+	{
+		account, ok := <-accounts
+		if ok {
+			return model.Label(account)
+		}
 	}
 	return "closed"
 }
 
 func Assert(value any) string {
-	if account, ok := value.(model.Account); ok {
-		return model.Label(account)
+	{
+		account, ok := value.(model.Account)
+		if ok {
+			return model.Label(account)
+		}
 	}
 	return "other"
 }
@@ -56,7 +65,12 @@ func Nested(account model.Account) string {
 }
 
 func Shorten(accounts []model.Account, length int) []model.Account {
-	if length >= 0 && length <= len(accounts) {
+	type operandType = bool
+	var operand operandType = length >= 0
+	if operand {
+		operand = length <= len(accounts)
+	}
+	if operand {
 		return accounts[:length]
 	}
 	return accounts[:0]

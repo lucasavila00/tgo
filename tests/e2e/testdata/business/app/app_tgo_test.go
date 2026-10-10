@@ -15,49 +15,79 @@ import (
 )
 
 func TestBusiness(t *testing.T) {
-	if got := app.Summary("Lucas"); got != "person Lucas" {
-		t.Fatal(got)
+	type operandType = bool
+	{
+		got := app.Summary("Lucas")
+		if got != "person Lucas" {
+			t.Fatal(got)
+		}
 	}
 	quantity, err := func(tgoInput model.TgoQuantityInput) (model.Quantity, error) {
 		return model.NewQuantity(tgoInput.FieldValue)
 	}(model.TgoQuantityInput{FieldValue: 3})
-	if err != nil || quantity.Value() != 3 {
+	var operand operandType = err != nil
+	if !operand {
+		operand = quantity.Value() != 3
+	}
+	if operand {
 		t.Fatalf("quantity: %v, %v", quantity, err)
 	}
-	if _, err := (func(tgoInput_1 model.TgoQuantityInput) (model.Quantity, error) {
-		return model.NewQuantity(tgoInput_1.FieldValue)
-	}(model.TgoQuantityInput{FieldValue: 0})); err == nil {
-		t.Fatal("zero passed the constructor")
+	{
+		_, err := (func(tgoInput_1 model.TgoQuantityInput) (model.Quantity, error) {
+			return model.NewQuantity(tgoInput_1.FieldValue)
+		}(model.TgoQuantityInput{FieldValue: 0}))
+		if err == nil {
+			t.Fatal("zero passed the constructor")
+		}
 	}
 	point, err := func(tgoInput_2 model.TgoPositivePointInput) (model.PositivePoint, error) {
 		return model.NewPositivePoint(tgoInput_2.FieldValue)
 	}(model.TgoPositivePointInput{FieldValue: 1})
-	if err != nil || point.Value() != 1 {
+	var operand_1 operandType = err != nil
+	if !operand_1 {
+		operand_1 = point.Value() != 1
+	}
+	if operand_1 {
 		t.Fatalf("checked struct: %v, %v", point, err)
 	}
 	multiline, err := func(tgoInput_3 model.TgoMultilineInput) (model.Multiline, error) {
 		return model.NewMultiline(tgoInput_3.FieldValue)
 	}(model.TgoMultilineInput{FieldValue: 1})
-	if err != nil || multiline.Value() != 1 {
+	var operand_2 operandType = err != nil
+	if !operand_2 {
+		operand_2 = multiline.Value() != 1
+	}
+	if operand_2 {
 		t.Fatalf("multiline checked struct: %v, %v", multiline, err)
 	}
 	whereValue, enumValue := model.ContextualTypeNames()
-	if whereValue != 1 || enumValue != 2 {
+	var operand_3 operandType = whereValue != 1
+	if !operand_3 {
+		operand_3 = enumValue != 2
+	}
+	if operand_3 {
 		t.Fatal("contextual type names became tgo keywords")
 	}
 	first := app.Request("a")
 	second := model.NewRequest("b")
 	copy := first
 	copy.Tags["shared"] = "yes"
-	if first.Tags["shared"] != "yes" || len(second.Tags) != 0 {
+	var operand_4 operandType = first.Tags["shared"] != "yes"
+	if !operand_4 {
+		operand_4 = len(second.Tags) != 0
+	}
+	if operand_4 {
 		t.Fatal("defaults lost freshness or aliases")
 	}
 	firstNotice := app.Notice("one")
 	secondNotice := app.Notice("two")
 	firstLabels := model.NoticeLabels(firstNotice)
 	firstLabels["shared"] = "yes"
-	if model.NoticeLabels(firstNotice)["shared"] != "yes" ||
-		len(model.NoticeLabels(secondNotice)) != 0 {
+	var operand_5 operandType = model.NoticeLabels(firstNotice)["shared"] != "yes"
+	if !operand_5 {
+		operand_5 = len(model.NoticeLabels(secondNotice)) != 0
+	}
+	if operand_5 {
 		t.Fatal("variant defaults lost freshness or aliases")
 	}
 	account := model.Business("Acme", []model.Account{model.Personal("Lucas")}, first.Tags)
@@ -71,7 +101,11 @@ func TestBusiness(t *testing.T) {
 		t.Fatal("exact enum constraint lost the tag proof")
 	}
 	boxed, ok := model.AsAny(account).(model.Account)
-	if !ok || model.Label(boxed) != "Acme" {
+	operand_6 := !ok
+	if !operand_6 {
+		operand_6 = model.Label(boxed) != "Acme"
+	}
+	if operand_6 {
 		t.Fatal("interface conversion changed the model value")
 	}
 	if model.CounterValue(model.Counter(2)) != 2 {
@@ -108,54 +142,125 @@ func TestBusiness(t *testing.T) {
 	}
 	explicitFlag, explicitName := model.MarkerValues(model.ExplicitMarker())
 	defaultFlag, defaultName := model.MarkerValues(model.SelectedMarker())
-	if !explicitFlag || explicitName != "set" || defaultFlag || defaultName != "default" {
+	operand_7 := !explicitFlag
+	if !operand_7 {
+		operand_7 = explicitName != "set"
+	}
+	var operand_8 bool = operand_7
+	if !operand_8 {
+		operand_8 = defaultFlag
+	}
+	var operand_9 bool = operand_8
+	if !operand_9 {
+		operand_9 = defaultName != "default"
+	}
+	if operand_9 {
 		t.Fatal("default marker captured a source field")
 	}
-	if model.Label(model.AliasAccount("Alias")) != "Alias" ||
-		model.Label(app.ImportedAlias("Imported")) != "Imported" ||
-		model.Label(app.LocalImportedAlias("Local")) != "Local" {
+	var operand_10 operandType = model.Label(model.AliasAccount("Alias")) != "Alias"
+	if !operand_10 {
+		operand_10 = model.Label(app.ImportedAlias("Imported")) != "Imported"
+	}
+	var operand_11 operandType = operand_10
+	if !operand_11 {
+		operand_11 = model.Label(app.LocalImportedAlias("Local")) != "Local"
+	}
+	if operand_11 {
 		t.Fatal("alias variant construction failed")
 	}
 	privateChoice := app.ImportedPrivateChoice("private")
-	if model.PrivateChoiceText(privateChoice) != "private" ||
-		model.PrivateChoiceValueCount(privateChoice) != 1 {
+	var operand_12 operandType = model.PrivateChoiceText(privateChoice) != "private"
+	if !operand_12 {
+		operand_12 = model.PrivateChoiceValueCount(privateChoice) != 1
+	}
+	if operand_12 {
 		t.Fatal("imported private variant construction failed")
 	}
 	order := []string{}
 	ordered := model.MakeOrderedChoice(&order)
-	if !reflect.DeepEqual(order, []string{"second", "first"}) ||
-		ordered.ValuePayload().First != "first" ||
-		ordered.ValuePayload().Second != "second" {
+	operand_13 := !reflect.DeepEqual(order, []string{"second", "first"})
+	if !operand_13 {
+		operand_13 = ordered.ValuePayload().First != "first"
+	}
+	var operand_14 bool = operand_13
+	if !operand_14 {
+		operand_14 = ordered.ValuePayload().Second != "second"
+	}
+	if operand_14 {
 		t.Fatal("enum construction changed source evaluation order")
 	}
-	if request := app.LocalImportedRequest("local"); request.ID != "local" || len(request.Tags) != 0 {
-		t.Fatal("alias default construction failed")
+	{
+		type operandType_1 = bool
+		request := app.LocalImportedRequest("local")
+		var operand_15 operandType_1 = request.ID != "local"
+		if !operand_15 {
+			operand_15 = len(request.Tags) != 0
+		}
+		if operand_15 {
+			t.Fatal("alias default construction failed")
+		}
 	}
 	if model.LabeledTagSwitch(person) != "done" {
 		t.Fatal("label did not label the tag switch")
 	}
 	reexported, ok := app.ReexportedAccount("Bridge").(model.Account)
-	if !ok || model.Label(reexported) != "Bridge" {
+	operand_16 := !ok
+	if !operand_16 {
+		operand_16 = model.Label(reexported) != "Bridge"
+	}
+	if operand_16 {
 		t.Fatal("re-exported enum alias used the wrong owner")
 	}
 	onlyReexported, ok := app.OnlyReexportedAccount("Only").(model.Account)
-	if !ok || model.Label(onlyReexported) != "Only" {
+	operand_17 := !ok
+	if !operand_17 {
+		operand_17 = model.Label(onlyReexported) != "Only"
+	}
+	if operand_17 {
 		t.Fatal("lowered enum alias lost its bridge import")
 	}
 	goReexported, ok := app.GoReexportedAccount("Go bridge").(model.Account)
-	if !ok || model.Label(goReexported) != "Go bridge" {
+	operand_18 := !ok
+	if !operand_18 {
+		operand_18 = model.Label(goReexported) != "Go bridge"
+	}
+	if operand_18 {
 		t.Fatal("Go enum alias used the wrong owner")
 	}
 	goRequest, ok := app.GoReexportedRequest("Go request").(model.Request)
-	if !ok || goRequest.ID != "Go request" || len(goRequest.Tags) != 0 {
+	operand_19 := !ok
+	if !operand_19 {
+		operand_19 = goRequest.ID != "Go request"
+	}
+	var operand_20 bool = operand_19
+	if !operand_20 {
+		operand_20 = len(goRequest.Tags) != 0
+	}
+	if operand_20 {
 		t.Fatal("Go default alias used the wrong owner")
 	}
 	reexportedRequest, ok := app.ReexportedRequest("bridge").(model.Request)
-	if !ok || reexportedRequest.ID != "bridge" || len(reexportedRequest.Tags) != 0 {
+	operand_21 := !ok
+	if !operand_21 {
+		operand_21 = reexportedRequest.ID != "bridge"
+	}
+	var operand_22 bool = operand_21
+	if !operand_22 {
+		operand_22 = len(reexportedRequest.Tags) != 0
+	}
+	if operand_22 {
 		t.Fatal("re-exported default alias used the wrong owner")
 	}
 	completeRequest, ok := app.CompleteReexportedRequest("complete").(model.Request)
-	if !ok || completeRequest.ID != "complete" || len(completeRequest.Tags) != 0 {
+	operand_23 := !ok
+	if !operand_23 {
+		operand_23 = completeRequest.ID != "complete"
+	}
+	var operand_24 bool = operand_23
+	if !operand_24 {
+		operand_24 = len(completeRequest.Tags) != 0
+	}
+	if operand_24 {
 		t.Fatal("complete default selection added an unused owner")
 	}
 	exposed := model.ExposedQuantity{}
@@ -168,23 +273,36 @@ func TestBusiness(t *testing.T) {
 		t.Fatal("foreign zero did not pass through")
 	}
 	sorted := app.Sorted([]int{3, 1, 2})
-	if sorted[0] != 1 || sorted[2] != 3 {
+	var operand_25 operandType = sorted[0] != 1
+	if !operand_25 {
+		operand_25 = sorted[2] != 3
+	}
+	if operand_25 {
 		t.Fatal(sorted)
 	}
 	message := model.NewMessage("one")
 	encoded, err := json.Marshal(message)
-	if err != nil || string(encoded) != `{"id":"one","tags":{}}` {
+	var operand_26 operandType = err != nil
+	if !operand_26 {
+		operand_26 = string(encoded) != `{"id":"one","tags":{}}`
+	}
+	if operand_26 {
 		t.Fatalf("message: %s, %v", encoded, err)
 	}
 }
 
 func TestGoInterop(t *testing.T) {
+	type operandType = bool
 	person := model.Personal("Lucas")
 	store := &legacy.MemoryStore{
 		Accounts: map[legacy.AccountID]model.Account{"one": person},
 	}
 	label, err := app.StoredLabel(store, "one")
-	if err != nil || label != "Lucas" {
+	var operand operandType = err != nil
+	if !operand {
+		operand = label != "Lucas"
+	}
+	if operand {
 		t.Fatalf("stored label: %q, %v", label, err)
 	}
 	_, err = app.StoredLabel(store, "missing")
@@ -192,7 +310,15 @@ func TestGoInterop(t *testing.T) {
 		t.Fatalf("error identity: %v", err)
 	}
 	labels, err := app.Labels([]model.Account{person, model.Personal("Other")})
-	if err != nil || labels[0] != "Lucas" || labels[1] != "Other" {
+	var operand_1 operandType = err != nil
+	if !operand_1 {
+		operand_1 = labels[0] != "Lucas"
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = labels[1] != "Other"
+	}
+	if operand_2 {
 		t.Fatalf("generic callback: %v, %v", labels, err)
 	}
 	if app.FirstStreamLabel(person) != "Lucas" {
@@ -211,6 +337,7 @@ func TestGoInterop(t *testing.T) {
 }
 
 func TestGeneratedCost(t *testing.T) {
+	type operandType = bool
 	if unsafe.Sizeof(*new(model.Signal)) != unsafe.Sizeof(uint8(0)) {
 		t.Fatal("payload-free enum is larger than its tag")
 	}
@@ -231,7 +358,11 @@ func TestGeneratedCost(t *testing.T) {
 	allocations := testing.AllocsPerRun(1000, func() {
 		label = model.Label(person)
 	})
-	if allocations != 0 || label != "Lucas" {
+	var operand operandType = allocations != 0
+	if !operand {
+		operand = label != "Lucas"
+	}
+	if operand {
 		t.Fatalf("tag switch cost: %f allocations, %q", allocations, label)
 	}
 }

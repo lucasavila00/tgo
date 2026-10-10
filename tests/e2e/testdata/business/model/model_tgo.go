@@ -111,14 +111,23 @@ type MarkerRecord struct {
 }
 
 func tgoAccountExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -215,8 +224,11 @@ func (v *Account) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Account JSON variant")
@@ -228,15 +240,21 @@ func (v *Account) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Personal":
 		var payload AccountPersonal
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewAccountPersonal(payload.Name)
 		return nil
 	case "Business":
 		var payload AccountBusiness
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewAccountBusiness(payload.Company, payload.Members, payload.Tags)
 		return nil
@@ -271,8 +289,16 @@ func (v *Account) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Business":
 			current = 2
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -284,20 +310,38 @@ func (v *Account) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Account JSON variant")
 	}
 	if selected == 0 {
@@ -306,15 +350,21 @@ func (v *Account) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload AccountPersonal
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewAccountPersonal(payload.Name)
 		return nil
 	case 2:
 		var payload AccountBusiness
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewAccountBusiness(payload.Company, payload.Members, payload.Tags)
 		return nil
@@ -385,8 +435,11 @@ func (v *Notice) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Notice JSON variant")
@@ -398,8 +451,11 @@ func (v *Notice) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Text":
 		var payload NoticeText
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewNoticeText(payload.Body, payload.Labels)
 		return nil
@@ -432,8 +488,16 @@ func (v *Notice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Text":
 			current = 1
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -445,20 +509,38 @@ func (v *Notice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Notice JSON variant")
 	}
 	if selected == 0 {
@@ -467,8 +549,11 @@ func (v *Notice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload NoticeText
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewNoticeText(payload.Body, payload.Labels)
 		return nil
@@ -495,7 +580,12 @@ func (v Signal) Tag() SignalTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v Signal) GobEncode() ([]byte, error) {
-	if v.tgoTag < SignalTagOn || v.tgoTag > SignalTagOff {
+	type operandType = bool
+	var operand operandType = v.tgoTag < SignalTagOn
+	if !operand {
+		operand = v.tgoTag > SignalTagOff
+	}
+	if operand {
 		return nil, fmt.Errorf("Signal: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
@@ -504,12 +594,21 @@ func (v Signal) GobEncode() ([]byte, error) {
 
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *Signal) GobDecode(data []byte) error {
+	type operandType = bool
 	if len(data) != 4 {
 		return fmt.Errorf("Signal: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := SignalTag(number)
-	if uint32(tag) != number || tag < SignalTagOn || tag > SignalTagOff {
+	var operand operandType = uint32(tag) != number
+	if !operand {
+		operand = tag < SignalTagOn
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = tag > SignalTagOff
+	}
+	if operand_1 {
 		return fmt.Errorf("Signal: cannot gob decode unknown tag %d", number)
 	}
 	switch tag {
@@ -579,8 +678,11 @@ func (v *Signal) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Signal JSON variant")
@@ -592,15 +694,21 @@ func (v *Signal) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "On":
 		var payload SignalOn
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSignalOn()
 		return nil
 	case "Off":
 		var payload SignalOff
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSignalOff()
 		return nil
@@ -635,8 +743,16 @@ func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Off":
 			current = 2
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -648,20 +764,38 @@ func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Signal JSON variant")
 	}
 	if selected == 0 {
@@ -670,15 +804,21 @@ func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload SignalOn
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSignalOn()
 		return nil
 	case 2:
 		var payload SignalOff
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSignalOff()
 		return nil
@@ -772,8 +912,11 @@ func (v *PrivateChoice) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one PrivateChoice JSON variant")
@@ -785,15 +928,21 @@ func (v *PrivateChoice) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Value":
 		var payload PrivateChoiceValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewPrivateChoiceValue(payload.text, payload.pointer, payload.values)
 		return nil
 	case "Empty":
 		var payload PrivateChoiceEmpty
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewPrivateChoiceEmpty()
 		return nil
@@ -828,8 +977,16 @@ func (v *PrivateChoice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Empty":
 			current = 2
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -841,20 +998,38 @@ func (v *PrivateChoice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one PrivateChoice JSON variant")
 	}
 	if selected == 0 {
@@ -863,15 +1038,21 @@ func (v *PrivateChoice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload PrivateChoiceValue
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewPrivateChoiceValue(payload.text, payload.pointer, payload.values)
 		return nil
 	case 2:
 		var payload PrivateChoiceEmpty
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewPrivateChoiceEmpty()
 		return nil
@@ -964,8 +1145,11 @@ func (v *OrderedChoice) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one OrderedChoice JSON variant")
@@ -977,8 +1161,11 @@ func (v *OrderedChoice) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Value":
 		var payload OrderedChoiceValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewOrderedChoiceValue(payload.First, payload.Second)
 		return nil
@@ -1011,8 +1198,16 @@ func (v *OrderedChoice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Value":
 			current = 1
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		operand := haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		operand_1 := same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -1024,20 +1219,38 @@ func (v *OrderedChoice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		operand_2 := !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 bool = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	operand_4 := !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one OrderedChoice JSON variant")
 	}
 	if selected == 0 {
@@ -1046,8 +1259,11 @@ func (v *OrderedChoice) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload OrderedChoiceValue
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewOrderedChoiceValue(payload.First, payload.Second)
 		return nil

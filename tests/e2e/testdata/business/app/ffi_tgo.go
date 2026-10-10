@@ -28,8 +28,11 @@ func Labels(accounts []model.Account) ([]string, error) {
 
 func FirstStreamLabel(accounts ...model.Account) string {
 	stream := legacy.Stream(accounts...)
-	if account, ok := <-stream; ok {
-		return model.Label(account)
+	{
+		account, ok := <-stream
+		if ok {
+			return model.Label(account)
+		}
 	}
 	return "closed"
 }

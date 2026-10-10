@@ -9,12 +9,21 @@ import (
 )
 
 func TestUnicodeCheckedCarrierFields(t *testing.T) {
+	type operandType = bool
 	local, err := model.MakeUnicodePair()
 	if err != nil {
 		t.Fatal(err)
 	}
 	first, second, third := model.UnicodePairValues(local)
-	if first != 1 || second != 2 || third != 3 {
+	var operand operandType = first != 1
+	if !operand {
+		operand = second != 2
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = third != 3
+	}
+	if operand_1 {
 		t.Fatalf("local values = %d, %d, %d", first, second, third)
 	}
 
@@ -25,7 +34,15 @@ func TestUnicodeCheckedCarrierFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	first, second, third = model.UnicodePairValues(imported)
-	if first != 4 || second != 5 || third != 6 {
+	var operand_2 operandType = first != 4
+	if !operand_2 {
+		operand_2 = second != 5
+	}
+	var operand_3 operandType = operand_2
+	if !operand_3 {
+		operand_3 = third != 6
+	}
+	if operand_3 {
 		t.Fatalf("imported values = %d, %d, %d", first, second, third)
 	}
 }

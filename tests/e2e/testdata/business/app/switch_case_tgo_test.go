@@ -8,29 +8,70 @@ import (
 )
 
 func TestPropagationSwitchCaseOrderAndErrors(t *testing.T) {
+	type operandType = bool
 	events := []string{}
 	result, err := PropagationSwitchCaseOrder(&events, 0, false)
-	if result != "second" || err != nil || strings.Join(events, ",") != "tag,first" {
+	var operand operandType = result != "second"
+	if !operand {
+		operand = err != nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = strings.Join(events, ",") != "tag,first"
+	}
+	if operand_1 {
 		t.Fatalf("early result=%q error=%v events=%v", result, err, events)
 	}
 	events = nil
 	result, err = PropagationSwitchCaseOrder(&events, 2, false)
-	if result != "second" || err != nil || strings.Join(events, ",") != "tag,first,second" {
+	var operand_2 operandType = result != "second"
+	if !operand_2 {
+		operand_2 = err != nil
+	}
+	var operand_3 operandType = operand_2
+	if !operand_3 {
+		operand_3 = strings.Join(events, ",") != "tag,first,second"
+	}
+	if operand_3 {
 		t.Fatalf("match result=%q error=%v events=%v", result, err, events)
 	}
 	events = nil
 	result, err = PropagationSwitchCaseOrder(&events, 3, false)
-	if result != "third" || err != nil || strings.Join(events, ",") != "tag,first,second,third" {
+	var operand_4 operandType = result != "third"
+	if !operand_4 {
+		operand_4 = err != nil
+	}
+	var operand_5 operandType = operand_4
+	if !operand_5 {
+		operand_5 = strings.Join(events, ",") != "tag,first,second,third"
+	}
+	if operand_5 {
 		t.Fatalf("late result=%q error=%v events=%v", result, err, events)
 	}
 	events = nil
 	result, err = PropagationSwitchCaseOrder(&events, 2, true)
-	if result != "" || err != errSwitchCase || strings.Join(events, ",") != "tag,first,second" {
+	var operand_6 operandType = result != ""
+	if !operand_6 {
+		operand_6 = err != errSwitchCase
+	}
+	var operand_7 operandType = operand_6
+	if !operand_7 {
+		operand_7 = strings.Join(events, ",") != "tag,first,second"
+	}
+	if operand_7 {
 		t.Fatalf("failure result=%q error=%v events=%v", result, err, events)
 	}
 	events = nil
 	err = PropagationSwitchCaseWrapped(&events)
-	if err == nil || err == errSwitchCase || err.Error() != "switchCaseValue: switch case failure" {
+	var operand_8 operandType = err == nil
+	if !operand_8 {
+		operand_8 = err == errSwitchCase
+	}
+	var operand_9 operandType = operand_8
+	if !operand_9 {
+		operand_9 = err.Error() != "switchCaseValue: switch case failure"
+	}
+	if operand_9 {
 		t.Fatalf("wrapped error=%v", err)
 	}
 }
@@ -49,9 +90,14 @@ func TestPropagationSwitchCaseControlFlow(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			type operandType = bool
 			events := []string{}
 			err := test.run(&events)
-			if err != nil || strings.Join(events, ",") != test.want {
+			var operand operandType = err != nil
+			if !operand {
+				operand = strings.Join(events, ",") != test.want
+			}
+			if operand {
 				t.Fatalf("error=%v events=%v", err, events)
 			}
 		})

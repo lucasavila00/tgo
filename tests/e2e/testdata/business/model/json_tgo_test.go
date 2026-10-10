@@ -12,6 +12,7 @@ import (
 )
 
 func TestEnumJSONRejectsNilNonNilPayloads(t *testing.T) {
+	type operandType_1 = bool
 	validExternal := `{"Value":{"Direct":{},"Alias":{},"Nested":{"Array":[{}],"Slice":[{}],"Map":{"item":{}},"Optional":{"Value":{}}},"Custom":"valid"}}`
 	tests := []struct {
 		name        string
@@ -36,12 +37,26 @@ func TestEnumJSONRejectsNilNonNilPayloads(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			direct := test.newValue()
-			if err := direct.UnmarshalJSON([]byte(test.input)); err == nil || !strings.Contains(err.Error(), test.want) {
-				t.Fatalf("direct error = %v, want %q", err, test.want)
+			{
+				err := direct.UnmarshalJSON([]byte(test.input))
+				var operand bool = err == nil
+				if !operand {
+					operand = !strings.Contains(err.Error(), test.want)
+				}
+				if operand {
+					t.Fatalf("direct error = %v, want %q", err, test.want)
+				}
 			}
 			streamed := test.streamValue()
-			if err := jsonv2.Unmarshal([]byte(test.input), streamed); err == nil || !strings.Contains(err.Error(), test.want) {
-				t.Fatalf("stream error = %v, want %q", err, test.want)
+			{
+				err := jsonv2.Unmarshal([]byte(test.input), streamed)
+				var operand_1 bool = err == nil
+				if !operand_1 {
+					operand_1 = !strings.Contains(err.Error(), test.want)
+				}
+				if operand_1 {
+					t.Fatalf("stream error = %v, want %q", err, test.want)
+				}
 			}
 		})
 	}
@@ -51,21 +66,35 @@ func TestEnumJSONRejectsNilNonNilPayloads(t *testing.T) {
 		func(data []byte, value any) error { return json.Unmarshal(data, value) },
 		func(data []byte, value any) error { return jsonv2.Unmarshal(data, value) },
 	} {
+		type operandType = bool
 		var value JSONNonNilExternal
-		if err := decode([]byte(validExternal), &value); err != nil {
-			t.Fatal(err)
+		{
+			err := decode([]byte(validExternal), &value)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 		before := value
-		if err := decode([]byte(`{"Value":{}}`), &value); err == nil {
-			t.Fatal("invalid payload succeeded")
+		{
+			err := decode([]byte(`{"Value":{}}`), &value)
+			if err == nil {
+				t.Fatal("invalid payload succeeded")
+			}
 		}
 		if !reflect.DeepEqual(value, before) {
 			t.Fatal("failed decode changed the receiver")
 		}
-		if err := decode([]byte(validExternal), &value); err != nil {
-			t.Fatal(err)
+		{
+			err := decode([]byte(validExternal), &value)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
-		if value.ValuePayload().Direct == nil || value.ValuePayload().Custom.Value == nil {
+		var operand operandType = value.ValuePayload().Direct == nil
+		if !operand {
+			operand = value.ValuePayload().Custom.Value == nil
+		}
+		if operand {
 			t.Fatal("valid payload lost a non-null field")
 		}
 	}
@@ -82,17 +111,27 @@ func TestEnumJSONRejectsNilNonNilPayloads(t *testing.T) {
 			{`{"type":"value","data":{"Required":{}}}`, new(JSONNonNilAdjacent)},
 			{`{"Required":{}}`, new(JSONNonNilUntagged)},
 		} {
-			if err := decode([]byte(valid.input), valid.value); err != nil {
-				t.Fatalf("valid payload failed: %v", err)
+			{
+				err := decode([]byte(valid.input), valid.value)
+				if err != nil {
+					t.Fatalf("valid payload failed: %v", err)
+				}
 			}
 		}
 	}
 
 	var untagged JSONNonNilUntagged
-	if err := json.Unmarshal([]byte(`{"Count":2}`), &untagged); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(`{"Count":2}`), &untagged)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if untagged.Tag() != JSONNonNilUntaggedTagSecond || untagged.SecondPayload().Count != 2 {
+	var operand_1 operandType_1 = untagged.Tag() != JSONNonNilUntaggedTagSecond
+	if !operand_1 {
+		operand_1 = untagged.SecondPayload().Count != 2
+	}
+	if operand_1 {
 		t.Fatal("untagged decode did not continue after an invalid non-null payload")
 	}
 }
@@ -125,7 +164,11 @@ func TestEnumJSONRejectsRecursiveAndInstantiatedNilPayloads(t *testing.T) {
 			} {
 				var value JSONNonNilAdvanced
 				err := decode([]byte(test.input), &value)
-				if err == nil || !strings.Contains(err.Error(), test.want) {
+				var operand bool = err == nil
+				if !operand {
+					operand = !strings.Contains(err.Error(), test.want)
+				}
+				if operand {
 					t.Fatalf("error = %v, want %q", err, test.want)
 				}
 			}
@@ -139,13 +182,21 @@ func TestEnumJSONRejectsRecursiveAndInstantiatedNilPayloads(t *testing.T) {
 		func(data []byte, value any) error { return json.Unmarshal(data, value) },
 		func(data []byte, value any) error { return jsonv2.Unmarshal(data, value) },
 	} {
+		type operandType = bool
 		var value JSONNonNilAdvanced
 		data := []byte(`{"Value":{"Recursive":"cycle","Generic":{"Value":{"Item":{}}}}}`)
-		if err := decode(data, &value); err != nil {
-			t.Fatalf("valid recursive cycle failed: %v", err)
+		{
+			err := decode(data, &value)
+			if err != nil {
+				t.Fatalf("valid recursive cycle failed: %v", err)
+			}
 		}
 		got := value.ValuePayload().Recursive
-		if got.Next == nil || got.Next.Next != got.Next {
+		var operand operandType = got.Next == nil
+		if !operand {
+			operand = got.Next.Next != got.Next
+		}
+		if operand {
 			t.Fatal("recursive cycle was not preserved")
 		}
 	}
@@ -181,12 +232,18 @@ func TestEnumJSONNonNilFailureKeepsTaggedAndUntaggedReceivers(t *testing.T) {
 				func(data []byte, value any) error { return jsonv2.Unmarshal(data, value) },
 			} {
 				value := test.value()
-				if err := decode([]byte(test.valid), value); err != nil {
-					t.Fatal(err)
+				{
+					err := decode([]byte(test.valid), value)
+					if err != nil {
+						t.Fatal(err)
+					}
 				}
 				before := reflect.ValueOf(value).Elem().Interface()
-				if err := decode([]byte(test.invalid), value); err == nil {
-					t.Fatal("invalid payload succeeded")
+				{
+					err := decode([]byte(test.invalid), value)
+					if err == nil {
+						t.Fatal("invalid payload succeeded")
+					}
 				}
 				if !reflect.DeepEqual(reflect.ValueOf(value).Elem().Interface(), before) {
 					t.Fatal("failed decode changed the receiver")
@@ -249,17 +306,26 @@ func TestEnumJSONForms(t *testing.T) {
 				t.Fatal(err)
 			}
 			var got, want any
-			if err := json.Unmarshal(data, &got); err != nil {
-				t.Fatal(err)
+			{
+				err := json.Unmarshal(data, &got)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
-			if err := json.Unmarshal([]byte(test.wire), &want); err != nil {
-				t.Fatal(err)
+			{
+				err := json.Unmarshal([]byte(test.wire), &want)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("wire = %s, want %s", data, test.wire)
 			}
-			if err := json.Unmarshal([]byte(test.wire), test.receiver); err != nil {
-				t.Fatal(err)
+			{
+				err := json.Unmarshal([]byte(test.wire), test.receiver)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			if !reflect.DeepEqual(reflect.ValueOf(test.receiver).Elem().Interface(), test.value) {
 				t.Fatalf("decoded = %#v, want %#v", test.receiver, test.value)
@@ -295,8 +361,11 @@ func TestEnumJSONDecodeFailureKeepsReceiver(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			before := reflect.ValueOf(test.receiver).Elem().Interface()
 			for _, input := range test.inputs {
-				if err := json.Unmarshal([]byte(input), test.receiver); err == nil {
-					t.Errorf("accepted %s", input)
+				{
+					err := json.Unmarshal([]byte(input), test.receiver)
+					if err == nil {
+						t.Errorf("accepted %s", input)
+					}
 				}
 				if !reflect.DeepEqual(reflect.ValueOf(test.receiver).Elem().Interface(), before) {
 					t.Fatalf("receiver changed after %s", input)
@@ -307,14 +376,22 @@ func TestEnumJSONDecodeFailureKeepsReceiver(t *testing.T) {
 }
 
 func TestEnumJSONExternalDuplicateNames(t *testing.T) {
+	type operandType = bool
 	var value JSONExternal
-	if err := json.Unmarshal(
-		[]byte(`{"created":{"account_id":7},"created":{"account_id":"last"}}`),
-		&value,
-	); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal(
+			[]byte(`{"created":{"account_id":7},"created":{"account_id":"last"}}`),
+			&value,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if value.Tag() != JSONExternalTagCreated || value.CreatedPayload().ID != "last" {
+	var operand operandType = value.Tag() != JSONExternalTagCreated
+	if !operand {
+		operand = value.CreatedPayload().ID != "last"
+	}
+	if operand {
 		t.Fatalf("last duplicate value was not selected: %#v", value)
 	}
 
@@ -328,7 +405,11 @@ func TestEnumJSONExternalDuplicateNames(t *testing.T) {
 	if err == nil {
 		t.Fatal("invalid last duplicate value succeeded")
 	}
-	if value.Tag() != JSONExternalTagCreated || value.CreatedPayload().ID != "old" {
+	var operand_1 operandType = value.Tag() != JSONExternalTagCreated
+	if !operand_1 {
+		operand_1 = value.CreatedPayload().ID != "old"
+	}
+	if operand_1 {
 		t.Fatalf("failed duplicate decode changed the receiver: %#v", value)
 	}
 
@@ -339,14 +420,21 @@ func TestEnumJSONExternalDuplicateNames(t *testing.T) {
 		{`{"other":{},"other":{}}`, "unknown JSONExternal JSON variant"},
 		{`{"created":{},"Empty":{}}`, "expected one JSONExternal JSON variant"},
 	} {
-		if err := json.Unmarshal([]byte(test.input), &value); err == nil ||
-			!strings.Contains(err.Error(), test.want) {
-			t.Fatalf("Unmarshal(%s) error = %v, want %q", test.input, err, test.want)
+		{
+			err := json.Unmarshal([]byte(test.input), &value)
+			var operand_2 bool = err == nil
+			if !operand_2 {
+				operand_2 = !strings.Contains(err.Error(), test.want)
+			}
+			if operand_2 {
+				t.Fatalf("Unmarshal(%s) error = %v, want %q", test.input, err, test.want)
+			}
 		}
 	}
 }
 
 func TestEnumJSONDirectMethods(t *testing.T) {
+	type operandType = bool
 	value := func(input TgoJSONAdjacentCreatedInput) JSONAdjacent {
 		return NewJSONAdjacentCreated(input.FieldID, input.FieldReason, input.FieldCustom)
 	}(TgoJSONAdjacentCreatedInput{FieldID: "a1", FieldReason: "", FieldCustom: ""})
@@ -359,10 +447,17 @@ func TestEnumJSONDirectMethods(t *testing.T) {
 		t.Fatalf("MarshalJSON() = %s, want %s", data, wire)
 	}
 	var decoded JSONAdjacent
-	if err := decoded.UnmarshalJSON([]byte(wire)); err != nil {
-		t.Fatal(err)
+	{
+		err := decoded.UnmarshalJSON([]byte(wire))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if decoded.Tag() != JSONAdjacentTagCreated || decoded.CreatedPayload().ID != "a1" {
+	var operand operandType = decoded.Tag() != JSONAdjacentTagCreated
+	if !operand {
+		operand = decoded.CreatedPayload().ID != "a1"
+	}
+	if operand {
 		t.Fatalf("UnmarshalJSON() = %#v", decoded)
 	}
 }
@@ -376,6 +471,7 @@ func TestEnumJSONAdjacentStreamMatchesDirectMethod(t *testing.T) {
 		`{"type":"other","data":{}}`,
 		`{"type":"created"}`,
 	} {
+		type operandType = bool
 		var streamed JSONAdjacent
 		streamErr := json.Unmarshal([]byte(input), &streamed)
 		var direct JSONAdjacent
@@ -383,29 +479,43 @@ func TestEnumJSONAdjacentStreamMatchesDirectMethod(t *testing.T) {
 		if (streamErr == nil) != (directErr == nil) {
 			t.Fatalf("Unmarshal(%s) stream error = %v, direct error = %v", input, streamErr, directErr)
 		}
-		if streamErr == nil && streamed != direct {
+		var operand operandType = streamErr == nil
+		if operand {
+			operand = streamed != direct
+		}
+		if operand {
 			t.Fatalf("Unmarshal(%s) stream = %#v, direct = %#v", input, streamed, direct)
 		}
 	}
 }
 
 func TestEnumJSONOrderAndPayloadRules(t *testing.T) {
+	type operandType = bool
 	var value JSONUntagged
-	if err := json.Unmarshal([]byte(`{"value":"text"}`), &value); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(`{"value":"text"}`), &value)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if value.Tag() != JSONUntaggedTagText {
 		t.Fatal("decode did not select the first matching variant")
 	}
-	if err := json.Unmarshal([]byte(`{}`), &value); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(`{}`), &value)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if value.Tag() != JSONUntaggedTagNumber {
 		t.Fatal("decode did not use declaration order")
 	}
 	var external JSONExternal
-	if err := json.Unmarshal([]byte(`{"created":{"account_id":"a1","unknown":true}}`), &external); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(`{"created":{"account_id":"a1","unknown":true}}`), &external)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if external.CreatedPayload().ID != "a1" {
 		t.Fatal("wrong payload")
@@ -417,52 +527,80 @@ func TestEnumJSONOrderAndPayloadRules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal(data, &external); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal(data, &external)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if external.Tag() != large.Tag() || external.LargePayload() != large.LargePayload() {
+	var operand operandType = external.Tag() != large.Tag()
+	if !operand {
+		operand = external.LargePayload() != large.LargePayload()
+	}
+	if operand {
 		t.Fatal("boxed payload changed")
 	}
 	plain := JSONPlain{ID: "a1", Reason: ""}
 	data, err = json.Marshal(plain)
-	if err != nil || string(data) != `{"account_id":"a1"}` {
+	var operand_1 operandType = err != nil
+	if !operand_1 {
+		operand_1 = string(data) != `{"account_id":"a1"}`
+	}
+	if operand_1 {
 		t.Fatalf("plain struct: %s, %v", data, err)
 	}
 }
 
 func TestEnumJSONCustomFields(t *testing.T) {
+	type operandType = bool
 	value := func(input TgoJSONCustomValueInput) JSONCustom {
 		return NewJSONCustomValue(input.FieldValue)
 	}(TgoJSONCustomValueInput{FieldValue: "ok"})
 	data, err := json.Marshal(value)
-	if err != nil || string(data) != `{"Value":{"value":"custom:ok"}}` {
+	var operand operandType = err != nil
+	if !operand {
+		operand = string(data) != `{"Value":{"value":"custom:ok"}}`
+	}
+	if operand {
 		t.Fatalf("custom field: %s, %v", data, err)
 	}
-	if err := json.Unmarshal([]byte(`{"Value":{"value":"decoded"}}`), &value); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(`{"Value":{"value":"decoded"}}`), &value)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if value.ValuePayload().Value != "decoded" {
 		t.Fatal("custom decoder was not used")
 	}
 	before := value
-	if err := json.Unmarshal([]byte(`{"Value":{"value":"bad"}}`), &value); err == nil {
-		t.Fatal("field error was lost")
+	{
+		err := json.Unmarshal([]byte(`{"Value":{"value":"bad"}}`), &value)
+		if err == nil {
+			t.Fatal("field error was lost")
+		}
 	}
 	if value != before {
 		t.Fatal("receiver changed after field error")
 	}
-	if _, err := json.Marshal(func(input TgoJSONCustomValueInput) JSONCustom {
-		return NewJSONCustomValue(input.FieldValue)
-	}(TgoJSONCustomValueInput{FieldValue: "bad"})); err == nil {
-		t.Fatal("field encode error was lost")
+	{
+		_, err := json.Marshal(func(input TgoJSONCustomValueInput) JSONCustom {
+			return NewJSONCustomValue(input.FieldValue)
+		}(TgoJSONCustomValueInput{FieldValue: "bad"}))
+		if err == nil {
+			t.Fatal("field encode error was lost")
+		}
 	}
 }
 
 func TestEnumJSONInvalidTags(t *testing.T) {
 	zero := invalidJSONExternal(0)
 	for _, value := range []JSONExternal{zero, invalidJSONExternal(255)} {
-		if _, err := json.Marshal(value); err == nil {
-			t.Fatal("invalid tag was accepted")
+		{
+			_, err := json.Marshal(value)
+			if err == nil {
+				t.Fatal("invalid tag was accepted")
+			}
 		}
 	}
 }
@@ -501,15 +639,21 @@ func TestEnumJSONCustomFieldsInTaggedForms(t *testing.T) {
 			if !strings.Contains(string(data), `"custom":"custom:ok"`) {
 				t.Fatalf("custom encoder: %s", data)
 			}
-			if err := json.Unmarshal([]byte(test.wire), test.receiver); err != nil {
-				t.Fatal(err)
+			{
+				err := json.Unmarshal([]byte(test.wire), test.receiver)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			before := reflect.ValueOf(test.receiver).Elem().Interface()
 			if !reflect.DeepEqual(before, test.value) {
 				t.Fatal("custom decoder was not used")
 			}
-			if err := json.Unmarshal([]byte(test.bad), test.receiver); err == nil {
-				t.Fatal("custom field error was lost")
+			{
+				err := json.Unmarshal([]byte(test.bad), test.receiver)
+				if err == nil {
+					t.Fatal("custom field error was lost")
+				}
 			}
 			if !reflect.DeepEqual(reflect.ValueOf(test.receiver).Elem().Interface(), before) {
 				t.Fatal("receiver changed after field error")
@@ -519,27 +663,59 @@ func TestEnumJSONCustomFieldsInTaggedForms(t *testing.T) {
 }
 
 func TestEnumJSONNullPayloads(t *testing.T) {
+	type operandType = bool
 	var external JSONExternal
-	if err := json.Unmarshal([]byte(`{"created":null}`), &external); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(`{"created":null}`), &external)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	externalPayload := external.CreatedPayload()
-	if external.Tag() != JSONExternalTagCreated || externalPayload.ID != "" ||
-		externalPayload.Reason != "" || externalPayload.Custom != "" {
+	var operand operandType = external.Tag() != JSONExternalTagCreated
+	if !operand {
+		operand = externalPayload.ID != ""
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = externalPayload.Reason != ""
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = externalPayload.Custom != ""
+	}
+	if operand_2 {
 		t.Fatal("wrong null payload")
 	}
 	var adjacent JSONAdjacent
-	if err := json.Unmarshal([]byte(`{"type":"created","data":null}`), &adjacent); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(`{"type":"created","data":null}`), &adjacent)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	adjacentPayload := adjacent.CreatedPayload()
-	if adjacent.Tag() != JSONAdjacentTagCreated || adjacentPayload.ID != "" ||
-		adjacentPayload.Reason != "" || adjacentPayload.Custom != "" {
+	var operand_3 operandType = adjacent.Tag() != JSONAdjacentTagCreated
+	if !operand_3 {
+		operand_3 = adjacentPayload.ID != ""
+	}
+	var operand_4 operandType = operand_3
+	if !operand_4 {
+		operand_4 = adjacentPayload.Reason != ""
+	}
+	var operand_5 operandType = operand_4
+	if !operand_5 {
+		operand_5 = adjacentPayload.Custom != ""
+	}
+	if operand_5 {
 		t.Fatal("wrong null payload")
 	}
 	var untagged JSONUntagged
-	if err := json.Unmarshal([]byte(`null`), &untagged); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(`null`), &untagged)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if untagged.Tag() != JSONUntaggedTagNumber {
 		t.Fatal("null did not select the first payload decode")
@@ -547,17 +723,25 @@ func TestEnumJSONNullPayloads(t *testing.T) {
 }
 
 func TestEnumJSONInternalPayloadMethods(t *testing.T) {
+	type operandType = bool
 	direct := func(input TgoJSONInternalPayloadMethodValueInput) JSONInternalPayloadMethod {
 		return NewJSONInternalPayloadMethodValue(input.FieldSeen)
 	}(TgoJSONInternalPayloadMethodValueInput{FieldSeen: ""})
 	data, err := json.Marshal(direct)
-	if err != nil || string(data) != `{"type":"value","custom":"payload"}` {
+	var operand operandType = err != nil
+	if !operand {
+		operand = string(data) != `{"type":"value","custom":"payload"}`
+	}
+	if operand {
 		t.Fatalf("direct method: %s, %v", data, err)
 	}
 	var decodedDirect JSONInternalPayloadMethod
 	input := `{"type":"value","second":2,"first":1}`
-	if err := json.Unmarshal([]byte(input), &decodedDirect); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(input), &decodedDirect)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if decodedDirect.ValuePayload().Seen != input {
 		t.Fatalf("direct method input = %q", decodedDirect.ValuePayload().Seen)
@@ -568,13 +752,20 @@ func TestEnumJSONInternalPayloadMethods(t *testing.T) {
 	}(TgoJSONInternalPromotedMethodValueInput{Field0: JSONObject{}})
 
 	data, err = json.Marshal(promoted)
-	if err != nil || string(data) != `{"type":"value","custom":"promoted"}` {
+	var operand_1 operandType = err != nil
+	if !operand_1 {
+		operand_1 = string(data) != `{"type":"value","custom":"promoted"}`
+	}
+	if operand_1 {
 		t.Fatalf("promoted method: %s, %v", data, err)
 	}
 	var decodedPromoted JSONInternalPromotedMethod
 	input = `{"type":"value","last":2,"first":1}`
-	if err := json.Unmarshal([]byte(input), &decodedPromoted); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal([]byte(input), &decodedPromoted)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if decodedPromoted.ValuePayload().Seen != input {
 		t.Fatalf("promoted method input = %q", decodedPromoted.ValuePayload().Seen)
@@ -583,8 +774,14 @@ func TestEnumJSONInternalPayloadMethods(t *testing.T) {
 	invalid := func(input TgoJSONInternalPayloadMethodValueInput) JSONInternalPayloadMethod {
 		return NewJSONInternalPayloadMethodValue(input.FieldSeen)
 	}(TgoJSONInternalPayloadMethodValueInput{FieldSeen: "scalar"})
-	if _, err := json.Marshal(invalid); err == nil ||
-		!strings.Contains(err.Error(), "expected JSONInternalPayloadMethod JSON payload object") {
-		t.Fatalf("scalar payload error = %v", err)
+	{
+		_, err := json.Marshal(invalid)
+		var operand_2 bool = err == nil
+		if !operand_2 {
+			operand_2 = !strings.Contains(err.Error(), "expected JSONInternalPayloadMethod JSON payload object")
+		}
+		if operand_2 {
+			t.Fatalf("scalar payload error = %v", err)
+		}
 	}
 }

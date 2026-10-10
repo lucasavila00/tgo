@@ -18,46 +18,42 @@ func forPostStep(events *[]string, name string, value int, failAt int) (int, err
 }
 
 func PropagationForPostOrder(events *[]string, failLeft int, failRight int) error {
-	{
-		post := false
-		for left, right := 0, 0; ; post = true {
-			if post {
-				post = false
-				result, err := forPostStep(events, "left", left, failLeft)
-				if err != nil {
-					return err
-				}
-				result_1, err_1 := forPostStep(events, "right", right, failRight)
-				if err_1 != nil {
-					return err_1
-				}
-				left, right = result, result_1
+	post := false
+	for left, right := 0, 0; ; post = true {
+		if post {
+			post = false
+			result, err := forPostStep(events, "left", left, failLeft)
+			if err != nil {
+				return err
 			}
-			if !(left < 2) {
-				break
+			result_1, err_1 := forPostStep(events, "right", right, failRight)
+			if err_1 != nil {
+				return err_1
 			}
-
+			left, right = result, result_1
 		}
+		if !(left < 2) {
+			break
+		}
+
 	}
 	return nil
 }
 
 func PropagationForPostWrapped() error {
 	events := []string{}
-	{
-		post := false
-		for value := 0; ; post = true {
-			if post {
-				post = false
-				result, err := forPostStep(&events, "wrapped", value, 0)
-				if err != nil {
-					return fmt.Errorf("forPostStep: %w", err)
-				}
-				value = result
+	post := false
+	for value := 0; ; post = true {
+		if post {
+			post = false
+			result, err := forPostStep(&events, "wrapped", value, 0)
+			if err != nil {
+				return fmt.Errorf("forPostStep: %w", err)
 			}
-			if !(value < 1) {
-				break
-			}
+			value = result
+		}
+		if !(value < 1) {
+			break
 		}
 	}
 	return nil
@@ -69,65 +65,60 @@ func forPostCondition(events *[]string, value int) bool {
 }
 
 func PropagationForPostFailureSkipsCondition(events *[]string) error {
-	{
-		post := false
-		for value := 0; ; post = true {
-			if post {
-				post = false
-				result, err := forPostStep(events, "post", value, 0)
-				if err != nil {
-					return err
-				}
-				value = result
+	post := false
+	for value := 0; ; post = true {
+		if post {
+			post = false
+			result, err := forPostStep(events, "post", value, 0)
+			if err != nil {
+				return err
 			}
-			if !forPostCondition(events, value) {
-				break
-			}
-
+			value = result
 		}
+		if !forPostCondition(events, value) {
+			break
+		}
+
 	}
 	return nil
 }
 
 func PropagationForPostContinues() ([]string, error) {
 	events := []string{}
-	{
+	post := false
+outer:
+
+	for outerValue := 0; ; post = true {
+		if post {
+			post = false
+			result, err := forPostStep(&events, "outer", outerValue, -1)
+			if err != nil {
+				return nil, err
+			}
+			outerValue = result
+		}
+		if !(outerValue < 2) {
+			break
+		}
 		post_1 := false
-	outer:
-		for outerValue := 0; ; post_1 = true {
+
+		for innerValue := 0; ; post_1 = true {
 			if post_1 {
 				post_1 = false
-				result_1, err_1 := forPostStep(&events, "outer", outerValue, -1)
+				result_1, err_1 := forPostStep(&events, "inner", innerValue, -1)
 				if err_1 != nil {
 					return nil, err_1
 				}
-				outerValue = result_1
+				innerValue = result_1
 			}
-			if !(outerValue < 2) {
+			if !(innerValue < 2) {
 				break
 			}
-			{
-				post := false
 
-				for innerValue := 0; ; post = true {
-					if post {
-						post = false
-						result, err := forPostStep(&events, "inner", innerValue, -1)
-						if err != nil {
-							return nil, err
-						}
-						innerValue = result
-					}
-					if !(innerValue < 2) {
-						break
-					}
-
-					if innerValue == 0 {
-						continue
-					}
-					continue outer
-				}
+			if innerValue == 0 {
+				continue
 			}
+			continue outer
 		}
 	}
 	return events, nil
@@ -136,60 +127,55 @@ func PropagationForPostContinues() ([]string, error) {
 func PropagationForPostSkipsAbrupt(mode string) ([]string, error) {
 	events := []string{}
 	if mode == "return" {
-		{
-			post := false
-			for value := 0; ; post = true {
-				if post {
-					post = false
-					result, err := forPostStep(&events, "return", value, -1)
-					if err != nil {
-						return nil, err
-					}
-					value = result
+		post := false
+		for value := 0; ; post = true {
+			if post {
+				post = false
+				result, err := forPostStep(&events, "return", value, -1)
+				if err != nil {
+					return nil, err
 				}
-				if !(value < 1) {
-					break
-				}
-				return events, nil
-			}
-		}
-	}
-	if mode == "goto" {
-		{
-			post_1 := false
-			for value := 0; ; post_1 = true {
-				if post_1 {
-					post_1 = false
-					result_1, err_1 := forPostStep(&events, "goto", value, -1)
-					if err_1 != nil {
-						return nil, err_1
-					}
-					value = result_1
-				}
-				if !(value < 1) {
-					break
-				}
-				goto done
-			}
-		}
-	}
-	{
-		post_2 := false
-	loop:
-		for value := 0; ; post_2 = true {
-			if post_2 {
-				post_2 = false
-				result_2, err_2 := forPostStep(&events, "break", value, -1)
-				if err_2 != nil {
-					return nil, err_2
-				}
-				value = result_2
+				value = result
 			}
 			if !(value < 1) {
 				break
 			}
-			break loop
+			return events, nil
 		}
+	}
+	if mode == "goto" {
+		post_1 := false
+		for value := 0; ; post_1 = true {
+			if post_1 {
+				post_1 = false
+				result_1, err_1 := forPostStep(&events, "goto", value, -1)
+				if err_1 != nil {
+					return nil, err_1
+				}
+				value = result_1
+			}
+			if !(value < 1) {
+				break
+			}
+			goto done
+		}
+	}
+	post_2 := false
+loop:
+
+	for value := 0; ; post_2 = true {
+		if post_2 {
+			post_2 = false
+			result_2, err_2 := forPostStep(&events, "break", value, -1)
+			if err_2 != nil {
+				return nil, err_2
+			}
+			value = result_2
+		}
+		if !(value < 1) {
+			break
+		}
+		break loop
 	}
 done:
 	return events, nil
@@ -198,24 +184,22 @@ done:
 func PropagationForPostGotoContinue() ([]string, error) {
 	events := []string{}
 	goto outer
+	post := false
 outer:
-	{
-		post := false
-	control:
-		for value := 0; ; post = true {
-			if post {
-				post = false
-				result, err := forPostStep(&events, "outer", value, -1)
-				if err != nil {
-					return nil, err
-				}
-				value = result
+
+	for value := 0; ; post = true {
+		if post {
+			post = false
+			result, err := forPostStep(&events, "outer", value, -1)
+			if err != nil {
+				return nil, err
 			}
-			if !(value < 2) {
-				break
-			}
-			continue control
+			value = result
 		}
+		if !(value < 2) {
+			break
+		}
+		continue outer
 	}
 	return events, nil
 }
@@ -231,29 +215,60 @@ func PropagationForPostIterationIdentity() (bool, error) {
 	postFunctions := []func() int{}
 	bodyPointers := []*int{}
 	postPointers := []*int{}
-	{
-		post := false
-		for value := 0; ; post = true {
-			if post {
-				post = false
-				result, err := forPostCapture(&postFunctions, &postPointers, &value)
-				if err != nil {
-					return false, err
-				}
-				value = result
+	post := false
+	for value := 0; ; post = true {
+		if post {
+			post = false
+			result, err := forPostCapture(&postFunctions, &postPointers, &value)
+			if err != nil {
+				return false, err
 			}
-			if !(value < 3) {
-				break
-			}
-
-			bodyFunctions = append(bodyFunctions, func() int { return value })
-			bodyPointers = append(bodyPointers, &value)
+			value = result
 		}
+		if !(value < 3) {
+			break
+		}
+
+		bodyFunctions = append(bodyFunctions, func() int { return value })
+		bodyPointers = append(bodyPointers, &value)
 	}
-	return bodyFunctions[0]() == 0 && bodyFunctions[1]() == 1 && bodyFunctions[2]() == 2 &&
-		postFunctions[0]() == 1 && postFunctions[1]() == 2 && postFunctions[2]() == 3 &&
-		bodyPointers[0] != postPointers[0] && postPointers[0] == bodyPointers[1] &&
-		postPointers[1] == bodyPointers[2] && postPointers[2] != bodyPointers[2], nil
+	var operand bool = bodyFunctions[0]() == 0
+	if operand {
+		operand = bodyFunctions[1]() == 1
+	}
+	var operand_1 bool = operand
+	if operand_1 {
+		operand_1 = bodyFunctions[2]() == 2
+	}
+	var operand_2 bool = operand_1
+	if operand_2 {
+		operand_2 = postFunctions[0]() == 1
+	}
+	var operand_3 bool = operand_2
+	if operand_3 {
+		operand_3 = postFunctions[1]() == 2
+	}
+	var operand_4 bool = operand_3
+	if operand_4 {
+		operand_4 = postFunctions[2]() == 3
+	}
+	var operand_5 bool = operand_4
+	if operand_5 {
+		operand_5 = bodyPointers[0] != postPointers[0]
+	}
+	var operand_6 bool = operand_5
+	if operand_6 {
+		operand_6 = postPointers[0] == bodyPointers[1]
+	}
+	var operand_7 bool = operand_6
+	if operand_7 {
+		operand_7 = postPointers[1] == bodyPointers[2]
+	}
+	var operand_8 bool = operand_7
+	if operand_8 {
+		operand_8 = postPointers[2] != bodyPointers[2]
+	}
+	return operand_8, nil
 }
 
 func PropagationForPostNamedDefer(events *[]string) (value int, err error) {
@@ -261,20 +276,18 @@ func PropagationForPostNamedDefer(events *[]string) (value int, err error) {
 		*events = append(*events, "defer")
 		value++
 	}()
-	{
-		post := false
-		for index := 0; ; post = true {
-			if post {
-				post = false
-				result, err_1 := forPostStep(events, "post", index, 0)
-				if err_1 != nil {
-					return 0, err_1
-				}
-				index = result
+	post := false
+	for index := 0; ; post = true {
+		if post {
+			post = false
+			result, err_1 := forPostStep(events, "post", index, 0)
+			if err_1 != nil {
+				return 0, err_1
 			}
-			if !(index < 1) {
-				break
-			}
+			index = result
+		}
+		if !(index < 1) {
+			break
 		}
 	}
 	return 9, nil

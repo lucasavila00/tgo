@@ -60,19 +60,28 @@ func TestExhaustiveReceiverEvaluatesOnceOnValidPath(t *testing.T) {
 	if !classifyExhaustive(load, &events) {
 		t.Fatal("valid receiver did not select its case")
 	}
-	if want := []string{"init", "receiver"}; !reflect.DeepEqual(events, want) {
-		t.Fatalf("evaluation order = %v, want %v", events, want)
+	{
+		want := []string{"init", "receiver"}
+		if !reflect.DeepEqual(events, want) {
+			t.Fatalf("evaluation order = %v, want %v", events, want)
+		}
 	}
 }
 
 func TestExhaustiveReceiverEvaluatesOnceOnInvalidPath(t *testing.T) {
 	events := []string{}
 	defer func() {
-		if message := recover(); message != "invalid Account tag" {
-			t.Fatalf("panic = %v, want invalid Account tag", message)
+		{
+			message := recover()
+			if message != "invalid Account tag" {
+				t.Fatalf("panic = %v, want invalid Account tag", message)
+			}
 		}
-		if want := []string{"init", "receiver"}; !reflect.DeepEqual(events, want) {
-			t.Fatalf("evaluation order = %v, want %v", events, want)
+		{
+			want := []string{"init", "receiver"}
+			if !reflect.DeepEqual(events, want) {
+				t.Fatalf("evaluation order = %v, want %v", events, want)
+			}
 		}
 	}()
 	classifyExhaustive(func() Account {
