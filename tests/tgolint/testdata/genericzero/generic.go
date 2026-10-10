@@ -272,6 +272,72 @@ func AliasedGenericValueCall[T any]() func() {
 	}
 }
 
+func TransitiveAliasedGenericValueCall[T any]() func() {
+	return func() {
+		first := Variable[T]
+		second := first
+		second()
+	}
+}
+
+func TransitiveAliasedReturnedCall[T any]() func() {
+	return func() {
+		first := Nested[T]()
+		second := first
+		second()
+	}
+}
+
+func AssignedGenericValueCall[T any]() func() {
+	return func() {
+		var variable func()
+		variable = Variable[T]
+		variable()
+	}
+}
+
+func AssignedReturnedCall[T any]() func() {
+	return func() {
+		var nested func()
+		nested = Nested[T]()
+		nested()
+	}
+}
+
+func CycledAliasedGenericValueCall[T any]() func() {
+	return func() {
+		first := Variable[T]
+		second := first
+		first = second
+		second()
+	}
+}
+
+func OpaqueAliasedGenericValueCall[T any](replacement func()) func() {
+	return func() {
+		variable := Variable[T]
+		variable = replacement
+		variable()
+	}
+}
+
+func AmbiguousSafeGenericValueCall[T any]() func() {
+	return func() {
+		variable := Variable[int]
+		variable = Variable[int]
+		variable()
+	}
+}
+
+func DoubleNested[T any]() func() func() {
+	return func() func() {
+		return func() {
+			var value T
+			_ = value
+		}
+	}
+}
+
 func ParenthesizedAssignedNested[T any]() func() {
 	nested := func() {}
 	(nested) = func() {

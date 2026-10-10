@@ -609,7 +609,10 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 		})
 	}
 	for _, summary := range summaries {
-		c.collectReturnedGenericEffects(summary, summaries, declarations)
+		signature, _ := summary.function.Type().(*types.Signature)
+		c.collectReturnedGenericEffects(
+			summary, signature, summary.declaration.Type, summaries, declarations,
+		)
 	}
 	return summaries
 }
@@ -714,18 +717,19 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 // collectReturnedGenericEffects records effects in returned closure values.
 func (c *checker) collectReturnedGenericEffects(
 	summary *genericEffectSummary,
+	signature *types.Signature,
+	functionType *syntax.FunctionType,
 	summaries map[*types.Func]*genericEffectSummary,
 	declarations map[*types.Func]*syntax.FunctionDeclaration,
 ) {
-	signature, ok := summary.function.Type().(*types.Signature)
-	if !ok {
+	if signature == nil {
 		return
 	}
 	bindings := c.returnedClosureBindings(
 		summary.body,
 		returnedResultObjects(signature),
 	)
-	namedResults := returnedNamedResultExpressions(summary.declaration)
+	namedResults := returnedNamedResultExpressions(functionType)
 	maySkip := returnedFunctionReturnCount(summary.body, signature) > 1
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
@@ -820,14 +824,14 @@ func returnedResultObjects(signature *types.Signature) map[types.Object]bool {
 }
 
 func returnedNamedResultExpressions(
-	declaration *syntax.FunctionDeclaration,
+	functionType *syntax.FunctionType,
 ) map[int]*syntax.Expression {
 	results := make(map[int]*syntax.Expression)
-	if declaration.Type.Results == nil {
+	if functionType.Results == nil {
 		return results
 	}
 	index := 0
-	for _, field := range declaration.Type.Results.List {
+	for _, field := range functionType.Results.List {
 		if len(field.Names) == 0 {
 			index++
 			continue

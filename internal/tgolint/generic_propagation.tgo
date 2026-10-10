@@ -64,50 +64,58 @@ func (c %checker) propagateGenericZeroFacts(
 	for changed {
 		changed = false
 		for _, summary := range summaries {
-			if c.propagateGenericSummaryCalls(summary, summaries) {
-				changed = true
-			}
-			for _, body := range summary.returnedBodies {
-				if c.propagateGenericSummaryCalls(body.summary, summaries) {
-					changed = true
-				}
-				for _, effect := range body.summary.zeroEffects {
-					effect.MaySkip = effect.MaySkip || body.maySkip
-					changed = c.addReturnedGenericEffect(summary, true, effect) || changed
-				}
-				for _, effect := range body.summary.accessEffects {
-					effect.MaySkip = effect.MaySkip || body.maySkip
-					changed = c.addReturnedGenericEffect(summary, false, effect) || changed
-				}
-			}
-			for _, returned := range summary.returnedCalls {
-				function, receiverArguments, typeArguments := c.genericCall(
-					returned.expression,
-				)
-				if function == nil {
-					continue
-				}
-				fact := c.genericZeroFact(function, summaries)
-				if fact == nil {
-					continue
-				}
-				if c.propagateGenericEffects(
-					summary, returned.expression, returned.expression,
-					fact.ReturnedZeroEffects,
-					receiverArguments, typeArguments, true, true, returned.maySkip,
-				) {
-					changed = true
-				}
-				if c.propagateGenericEffects(
-					summary, returned.expression, returned.expression,
-					fact.ReturnedAccessEffects,
-					receiverArguments, typeArguments, false, true, returned.maySkip,
-				) {
-					changed = true
-				}
+			changed = c.propagateGenericSummary(summary, summaries) || changed
+		}
+	}
+}
+
+func (c %checker) propagateGenericSummary(
+	summary %genericEffectSummary,
+	summaries map[*types.Func]%genericEffectSummary,
+) bool {
+	changed := c.propagateGenericSummaryCalls(summary, summaries)
+	for _, body := range summary.returnedBodies {
+		changed = c.propagateGenericSummary(body.summary, summaries) || changed
+		for _, effects := range []struct {
+			items []GenericEffect
+			zero  bool
+		}{
+			{items: body.summary.zeroEffects, zero: true},
+			{items: body.summary.accessEffects, zero: false},
+			{items: body.summary.returnedZeroEffects, zero: true},
+			{items: body.summary.returnedAccessEffects, zero: false},
+		} {
+			for _, effect := range effects.items {
+				effect.MaySkip = effect.MaySkip || body.maySkip
+				changed = c.addReturnedGenericEffect(
+					summary, effects.zero, effect,
+				) || changed
 			}
 		}
 	}
+	for _, returned := range summary.returnedCalls {
+		function, receiverArguments, typeArguments := c.genericCall(
+			returned.expression,
+		)
+		if function == nil {
+			continue
+		}
+		fact := c.genericZeroFact(function, summaries)
+		if fact == nil {
+			continue
+		}
+		changed = c.propagateGenericEffects(
+			summary, returned.expression, returned.expression,
+			fact.ReturnedZeroEffects,
+			receiverArguments, typeArguments, true, true, returned.maySkip,
+		) || changed
+		changed = c.propagateGenericEffects(
+			summary, returned.expression, returned.expression,
+			fact.ReturnedAccessEffects,
+			receiverArguments, typeArguments, false, true, returned.maySkip,
+		) || changed
+	}
+	return changed
 }
 
 func (c %checker) propagateGenericSummaryCalls(
@@ -115,20 +123,20 @@ func (c %checker) propagateGenericSummaryCalls(
 	summaries map[*types.Func]%genericEffectSummary,
 ) bool {
 	changed := false
-	bindings := c.collectBlockGenericValueBindings(summary.body, summaries)
+	bindings := c.returnedClosureBindings(summary.body, nil)
 	for _, call := range summary.calls {
 		function, receiverArguments, typeArguments := c.genericCall(call)
 		if function == nil {
-			value, found, ambiguous := c.genericSummaryCallValue(
-				call, summaries, bindings,
+			values, maySkip, opaque := c.genericSummaryCallValues(
+				call, summaries, bindings, make(map[types.Object]bool),
 			)
-			if found {
+			for _, value := range values {
 				changed = c.propagateGenericValueEffects(
-					summary, call, value, ambiguous,
+					summary, call, value, maySkip,
 				) || changed
-				if ambiguous {
-					changed = c.addUnknownGenericEffects(summary) || changed
-				}
+			}
+			if opaque && len(values) > 0 {
+				changed = c.addUnknownGenericEffects(summary) || changed
 			}
 			continue
 		}
@@ -148,23 +156,66 @@ func (c %checker) propagateGenericSummaryCalls(
 	return changed
 }
 
-func (c %checker) genericSummaryCallValue(
+func (c %checker) genericSummaryCallValues(
 	expression %syntax.Expression,
 	summaries map[*types.Func]%genericEffectSummary,
-	bindings map[types.Object]%genericValueBinding,
-) (genericValue, bool, bool) {
+	bindings map[types.Object]%returnedClosureBinding,
+	seen map[types.Object]bool,
+) ([]genericValue, bool, bool) {
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
-		return noGenericValue(), false, false
+		return nil, false, false
 	}
 	callee := unparenthesized(call.Callee)
 	if name := syntax.IdentifierExpressionOf(callee); name != nil {
-		if binding, found := bindings[c.facts.Object(name)]; found {
-			return binding.value, true, binding.ambiguous
-		}
+		return c.genericSummaryBindingValues(
+			c.facts.Object(name), summaries, bindings, seen,
+		)
 	}
 	value, found := c.genericValue(callee, summaries)
-	return value, found, false
+	if !found {
+		return nil, false, false
+	}
+	return []genericValue{value}, false, false
+}
+
+func (c %checker) genericSummaryBindingValues(
+	object types.Object,
+	summaries map[*types.Func]%genericEffectSummary,
+	bindings map[types.Object]%returnedClosureBinding,
+	seen map[types.Object]bool,
+) ([]genericValue, bool, bool) {
+	binding := bindings[object]
+	if binding == nil {
+		return nil, false, true
+	}
+	if seen[object] {
+		return nil, true, true
+	}
+	seen[object] = true
+	defer delete(seen, object)
+	values := []genericValue(nil)
+	maySkip := binding.unstable || len(binding.sources) != 1
+	opaque := binding.opaque
+	for _, source := range binding.sources {
+		value, found := c.genericValue(source, summaries)
+		if found {
+			values = append(values, value)
+			continue
+		}
+		name := syntax.IdentifierExpressionOf(unparenthesized(source))
+		if name == nil {
+			opaque = true
+			continue
+		}
+		nested, nestedMaySkip, nestedOpaque := c.genericSummaryBindingValues(
+			c.facts.Object(name), summaries, bindings, seen,
+		)
+		values = append(values, nested...)
+		maySkip = maySkip || nestedMaySkip
+		opaque = opaque || nestedOpaque
+	}
+	return values, maySkip, opaque
 }
 
 func (c %checker) propagateGenericValueEffects(

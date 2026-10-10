@@ -150,7 +150,9 @@ func (c %checker) collectReturnedExpression(
 ) bool {
 	value := unparenthesized(expression)
 	if literal := syntax.FunctionLiteralExpressionOf(value); literal != nil {
-		return c.collectReturnedLiteral(summary, value, literal, maySkip)
+		return c.collectReturnedLiteral(
+			summary, value, literal, summaries, declarations, maySkip,
+		)
 	}
 	if name := syntax.IdentifierExpressionOf(value); name != nil {
 		object := c.facts.Object(name)
@@ -269,6 +271,8 @@ func (c %checker) collectReturnedLiteral(
 	summary %genericEffectSummary,
 	expression %syntax.Expression,
 	literal %syntax.FunctionLiteral,
+	summaries map[*types.Func]%genericEffectSummary,
+	declarations map[*types.Func]%syntax.FunctionDeclaration,
 	maySkip bool,
 ) bool {
 	root := syntax.ExpressionNode(expression)
@@ -283,12 +287,17 @@ func (c %checker) collectReturnedLiteral(
 		body: literal.Body,
 	}
 	c.collectGenericNodes(returned)
+	signature, _ := types.Unalias(c.facts.Type(expression)).Underlying().(*types.Signature)
+	c.collectReturnedGenericEffects(
+		returned, signature, literal.Type, summaries, declarations,
+	)
 	summary.returnedBodies = append(summary.returnedBodies, returnedGenericBody{
 		summary: returned,
 		maySkip: maySkip,
 	})
 	found := len(returned.zeroEffects) > 0 || len(returned.accessEffects) > 0 ||
-		len(returned.calls) > 0
+		len(returned.calls) > 0 || len(returned.returnedCalls) > 0 ||
+		len(returned.returnedBodies) > 0
 	return found
 }
 
