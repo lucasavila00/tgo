@@ -10,15 +10,16 @@ import (
 )
 
 type loweringEmitter struct {
-	unit        *packageUnit
-	source      *source
-	plan        *functionLoweringPlan
-	names       map[string]bool
-	values      map[valueID]*ast.Ident
-	targets     map[targetID]*ast.Ident
-	typeAliases map[*ast.BlockStmt]map[types.Type]*ast.Ident
-	fmtAlias    string
-	hoisted     []ast.Stmt
+	unit                *packageUnit
+	source              *source
+	plan                *functionLoweringPlan
+	names               map[string]bool
+	values              map[valueID]*ast.Ident
+	targets             map[targetID]*ast.Ident
+	typeAliases         map[*ast.BlockStmt]map[types.Type]*ast.Ident
+	renamedTypeBlockers map[types.Object]string
+	fmtAlias            string
+	hoisted             []ast.Stmt
 }
 
 func newLoweringEmitter(
@@ -29,7 +30,8 @@ func newLoweringEmitter(
 	emitter := &loweringEmitter{
 		unit: unit, source: source, plan: plan, names: plan.function.names,
 		values: make(map[valueID]*ast.Ident), targets: make(map[targetID]*ast.Ident),
-		typeAliases: make(map[*ast.BlockStmt]map[types.Type]*ast.Ident),
+		typeAliases:         make(map[*ast.BlockStmt]map[types.Type]*ast.Ident),
+		renamedTypeBlockers: make(map[types.Object]string),
 	}
 	for id, target := range plan.targets {
 		if target.label != "" {
@@ -913,7 +915,7 @@ func (e *loweringEmitter) emitTypedExpressionBind(
 	name := e.valueName(value.id, "operand")
 	var typeExpression ast.Expr
 	if explicit {
-		typeExpression = e.contextTypeExpression(value.typ, value.position, output)
+		typeExpression = e.contextTypeExpression(value, output)
 	}
 	if typeExpression != nil {
 		output.List = append(output.List, &ast.DeclStmt{Decl: &ast.GenDecl{
@@ -931,13 +933,15 @@ func (e *loweringEmitter) emitTypedExpressionBind(
 }
 
 func (e *loweringEmitter) contextTypeExpression(
-	typ types.Type,
-	position token.Pos,
+	value plannedValue,
 	output *ast.BlockStmt,
 ) ast.Expr {
-	if e.typeHasLexicalObject(typ) {
-		return e.typeExpression(typ, position)
+	reference := value.typeReference
+	if reference.anchor.after != nil || reference.anchor.entry != nil {
+		e.renameTypeReferenceBlockers(value)
+		return e.typeExpression(value.typ, value.position)
 	}
+	typ := value.typ
 	aliases := e.typeAliases[output]
 	if aliases == nil {
 		aliases = make(map[types.Type]*ast.Ident)
@@ -962,32 +966,36 @@ func (e *loweringEmitter) contextTypeExpression(
 	return ast.NewIdent(alias.Name)
 }
 
-func (e *loweringEmitter) typeHasLexicalObject(typ types.Type) bool {
-	switch item := typ.(type) {
-	case *types.Named:
-		object := item.Obj()
-		if object.Pkg() == e.unit.typed && object.Parent() != e.unit.typed.Scope() {
-			return true
+func (e *loweringEmitter) renameTypeReferenceBlockers(value plannedValue) {
+	blocker := value.typeReference.blockingObject()
+	if blocker == nil {
+		return
+	}
+	if _, typeName := blocker.(*types.TypeName); typeName {
+		return
+	}
+	for _, required := range value.typeReference.objects {
+		intended := required.object
+		if intended == nil || intended.Name() != blocker.Name() {
+			continue
 		}
-		for index := range item.TypeArgs().Len() {
-			if e.typeHasLexicalObject(item.TypeArgs().At(index)) {
-				return true
+		name := e.renamedTypeBlockers[blocker]
+		if name == "" {
+			name = e.freshName(intended.Name() + "Value").Name
+			e.renamedTypeBlockers[blocker] = name
+		}
+		for identifier, object := range e.unit.info.Defs {
+			if object == blocker {
+				identifier.Name = name
 			}
 		}
-	case *types.TypeParam:
-		return true
-	case *types.Pointer:
-		return e.typeHasLexicalObject(item.Elem())
-	case *types.Slice:
-		return e.typeHasLexicalObject(item.Elem())
-	case *types.Array:
-		return e.typeHasLexicalObject(item.Elem())
-	case *types.Map:
-		return e.typeHasLexicalObject(item.Key()) || e.typeHasLexicalObject(item.Elem())
-	case *types.Chan:
-		return e.typeHasLexicalObject(item.Elem())
+		for identifier, object := range e.unit.info.Uses {
+			if object == blocker {
+				identifier.Name = name
+			}
+		}
+		return
 	}
-	return false
 }
 
 func (e *loweringEmitter) typeExpression(typ types.Type, position token.Pos) ast.Expr {
@@ -999,6 +1007,9 @@ func (e *loweringEmitter) typeExpression(typ types.Type, position token.Pos) ast
 	}
 	switch item := typ.(type) {
 	case *types.Basic:
+		if item.Info()&types.IsUntyped != 0 {
+			return e.typeExpression(types.Default(item), position)
+		}
 		return e.unit.generatedUniverse(item.Name(), position)
 	case *types.Named:
 		object := item.Obj()

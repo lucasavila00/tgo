@@ -11,8 +11,15 @@ func (e *loweringEmitter) switchStatement(
 	output *ast.BlockStmt,
 ) {
 	node := operation.source.(*ast.SwitchStmt)
+	lowerCases := false
+	for _, expression := range operation.expressions {
+		if plannedExpressionHasWork(expression) {
+			lowerCases = true
+			break
+		}
+	}
 	target := output
-	if operation.init != nil && !blockHasPlannedWork(operation.init) &&
+	if operation.init != nil && !lowerCases && !blockHasPlannedWork(operation.init) &&
 		len(operation.init.operations) == 1 {
 		node.Init = operation.init.operations[0].source
 	} else if operation.init != nil {
@@ -23,13 +30,6 @@ func (e *loweringEmitter) switchStatement(
 		target = wrapper
 	}
 
-	lowerCases := false
-	for _, expression := range operation.expressions {
-		if plannedExpressionHasWork(expression) {
-			lowerCases = true
-			break
-		}
-	}
 	if !lowerCases {
 		e.emitDirectSwitch(operation, node, target)
 		return

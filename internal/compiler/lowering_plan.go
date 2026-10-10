@@ -12,10 +12,11 @@ type scopeID int
 type targetID int
 
 type plannedValue struct {
-	id       valueID
-	typ      types.Type
-	position token.Pos
-	explicit bool
+	id            valueID
+	typ           types.Type
+	position      token.Pos
+	explicit      bool
+	typeReference plannedTypeReference
 }
 
 type plannedPlace struct {
@@ -561,7 +562,10 @@ func (b *loweringPlanBuilder) communication(statement ast.Stmt) *plannedCommunic
 }
 
 func (b *loweringPlanBuilder) newValue(typ types.Type, position token.Pos) plannedValue {
-	value := plannedValue{id: valueID(len(b.plan.values) + 1), typ: typ, position: position}
+	value := plannedValue{
+		id: valueID(len(b.plan.values) + 1), typ: typ, position: position,
+		typeReference: b.typeReference(typ, position),
+	}
 	b.plan.values = append(b.plan.values, value)
 	return value
 }
@@ -583,7 +587,8 @@ func (b *loweringPlanBuilder) orderExpressions(
 		}
 		value := plannedValue{
 			id: valueID(len(b.plan.values) + 1), typ: expression.typ,
-			position: expression.source.Pos(),
+			position:      expression.source.Pos(),
+			typeReference: b.typeReference(expression.typ, expression.source.Pos()),
 		}
 		b.plan.values = append(b.plan.values, value)
 		expression.materialized = value.id
@@ -661,6 +666,16 @@ func (b *loweringPlanBuilder) sourceScope(position token.Pos) *types.Scope {
 		}
 	}
 	return selected
+}
+
+func (b *loweringPlanBuilder) typeReference(
+	typ types.Type,
+	position token.Pos,
+) plannedTypeReference {
+	return capturePlannedTypeReference(
+		typ, b.sourceScope(position), position, b.unit.typed, b.unit.info,
+		b.source.File, b.function.body,
+	)
 }
 
 func (b *loweringPlanBuilder) simpleBlock(statement ast.Stmt) *plannedBlock {
@@ -960,8 +975,8 @@ func (b *loweringPlanBuilder) expressionContext(
 	case *ast.BinaryExpr:
 		result.kind = planBinaryExpression
 		if node.Op == token.LAND || node.Op == token.LOR {
-			left := b.expression(node.X)
-			right := b.expression(node.Y)
+			left := b.expressionContext(node.X, result.typ, 1)
+			right := b.expressionContext(node.Y, result.typ, 1)
 			result.operands = []*plannedExpression{left, right}
 			valueType := result.typ
 			if expected != nil {
@@ -1129,7 +1144,10 @@ func (e *plannedExpression) addResult(
 		}
 		return
 	}
-	value := plannedValue{id: valueID(len(b.plan.values) + 1), typ: typ, position: position}
+	value := plannedValue{
+		id: valueID(len(b.plan.values) + 1), typ: typ, position: position,
+		typeReference: b.typeReference(typ, position),
+	}
 	b.plan.values = append(b.plan.values, value)
 	e.results = append(e.results, value)
 }
