@@ -133,7 +133,11 @@ func executeStorageFunction(
 	for _, site := range resultSites {
 		storageBirthLocation(&state, &call, storageRootResult, site)
 	}
-	hasBirths := len(call.arguments) != 0 || len(resultSites) != 0 ||
+	localSites := storageFunctionLocalSites(function)
+	for _, site := range localSites {
+		storageBirthLocation(&state, &call, storageRootAllocation, site)
+	}
+	hasBirths := len(call.arguments) != 0 || len(resultSites) != 0 || len(localSites) != 0 ||
 		storageFunctionAllocates(function)
 	if len(call.parameterCells) == 0 && len(call.arguments) != 0 {
 		call.parameterCells = make([]storagePath, len(call.arguments))
@@ -201,6 +205,39 @@ func executeStorageFunction(
 		previous = next
 		initialized = true
 	}
+}
+
+func storageFunctionLocalSites(function %StorageEffectFunction) []int {
+	dynamic := make(map[int]bool)
+	for _, block := range function.Blocks {
+		for _, operation := range block.Operations {
+			if operation.Kind == storageEffectAllocate || operation.Kind == storageEffectAppend {
+				dynamic[operation.Target.ID] = true
+			}
+		}
+	}
+	seen := make(map[int]bool)
+	var result []int
+	add := func(region StorageEffectRegion) {
+		if region.Root != storageRootAllocation || dynamic[region.ID] || seen[region.ID] {
+			return
+		}
+		seen[region.ID] = true
+		result = append(result, region.ID)
+	}
+	for _, capture := range function.Captures {
+		add(capture)
+	}
+	for _, block := range function.Blocks {
+		for _, operation := range block.Operations {
+			add(operation.Target)
+			add(operation.Source)
+			for _, region := range operation.Regions {
+				add(region)
+			}
+		}
+	}
+	return result
 }
 
 func storageFunctionAllocates(function %StorageEffectFunction) bool {
