@@ -2,10 +2,192 @@ package app
 
 import (
 	"errors"
-	"os"
+	"go/ast"
+	"go/token"
 	"strings"
 	"testing"
 )
+
+func propagationLoadBinding(
+	t *testing.T,
+	function *ast.FuncDecl,
+) (*ast.Ident, *ast.Ident, int) {
+	t.Helper()
+	for index, statement := range function.Body.List {
+		assignment, ok := statement.(*ast.AssignStmt)
+		if !ok || assignment.Tok != token.DEFINE || len(assignment.Lhs) < 2 ||
+			len(assignment.Rhs) != 1 {
+			continue
+		}
+		call, ok := assignment.Rhs[0].(*ast.CallExpr)
+		if !ok {
+			continue
+		}
+		name, named := call.Fun.(*ast.Ident)
+		if !named || name.Name != "propagationLoad" {
+			continue
+		}
+		result, resultOK := assignment.Lhs[0].(*ast.Ident)
+		failure, failureOK := assignment.Lhs[len(assignment.Lhs)-1].(*ast.Ident)
+		if resultOK && failureOK {
+			return result, failure, index
+		}
+	}
+	t.Fatalf("generated function %s lacks propagationLoad binding", function.Name.Name)
+	return nil, nil, 0
+}
+
+func assertPropagationGeneratedStructure(t *testing.T, name string, wrapped bool) {
+	t.Helper()
+	function := generatedFunction(t, "propagation_tgo.go", name)
+	rejectGeneratedWrappers(t, function)
+	result, failure, bindingIndex := propagationLoadBinding(t, function)
+	if bindingIndex+1 >= len(function.Body.List) {
+		t.Fatalf("generated function %s lacks failure check", name)
+	}
+	conditional, ok := function.Body.List[bindingIndex+1].(*ast.IfStmt)
+	if !ok || !isNonNilCheck(conditional.Cond, failure.Name) {
+		t.Fatalf("generated function %s does not check captured error", name)
+	}
+	if wrapped {
+		if !wrappedFailureReturn(conditional.Body, failure.Name) {
+			t.Fatalf("generated function %s wrapper loses captured error", name)
+		}
+	} else if !transparentFailureReturn(conditional.Body, failure.Name) {
+		t.Fatalf("generated function %s does not return the captured error", name)
+	}
+	if !sourceDeclarationAndReturn(function.Body.List[bindingIndex+2:], "value", result.Name) {
+		t.Fatalf("generated function %s declares value before its failure check", name)
+	}
+}
+
+func isNonNilCheck(expression ast.Expr, name string) bool {
+	binary, ok := expression.(*ast.BinaryExpr)
+	if !ok || binary.Op != token.NEQ {
+		return false
+	}
+	left, leftOK := binary.X.(*ast.Ident)
+	right, rightOK := binary.Y.(*ast.Ident)
+	return leftOK && rightOK && left.Name == name && right.Name == "nil"
+}
+
+func wrappedFailureReturn(body *ast.BlockStmt, failure string) bool {
+	returned := failureReturn(body)
+	if returned == nil {
+		return false
+	}
+	call, ok := returned.Results[1].(*ast.CallExpr)
+	if !ok || !expressionCallsSelector(call, "fmt", "Errorf") || len(call.Args) != 2 {
+		return false
+	}
+	format, literal := call.Args[0].(*ast.BasicLit)
+	last, identifier := call.Args[1].(*ast.Ident)
+	return literal && format.Value == `"propagationLoad: %w"` &&
+		identifier && last.Name == failure
+}
+
+func transparentFailureReturn(body *ast.BlockStmt, failure string) bool {
+	returned := failureReturn(body)
+	if returned == nil || expressionCallsSelector(body, "fmt", "Errorf") {
+		return false
+	}
+	identifier, ok := returned.Results[1].(*ast.Ident)
+	return ok && identifier.Name == failure
+}
+
+func failureReturn(body *ast.BlockStmt) *ast.ReturnStmt {
+	for _, statement := range body.List {
+		returned, ok := statement.(*ast.ReturnStmt)
+		if ok && len(returned.Results) == 2 {
+			return returned
+		}
+	}
+	return nil
+}
+
+func assertManyDeclarationBoundary(t *testing.T) {
+	t.Helper()
+	function := generatedFunction(t, "propagation_tgo.go", "PropagationManyDeclaration")
+	rejectGeneratedWrappers(t, function)
+	for _, statement := range function.Body.List {
+		declaration, ok := statement.(*ast.DeclStmt)
+		if !ok {
+			continue
+		}
+		general, generalOK := declaration.Decl.(*ast.GenDecl)
+		if !generalOK || general.Tok != token.VAR || len(general.Specs) != 1 {
+			continue
+		}
+		value, valueOK := general.Specs[0].(*ast.ValueSpec)
+		if !valueOK || len(value.Names) != 3 || len(value.Values) != 1 {
+			continue
+		}
+		call, callOK := value.Values[0].(*ast.CallExpr)
+		if !callOK {
+			continue
+		}
+		callee, named := call.Fun.(*ast.Ident)
+		if named && callee.Name == "propagationPair" &&
+			value.Names[0].Name == "name" && value.Names[1].Name == "value" &&
+			value.Names[2].Name == "err" {
+			return
+		}
+	}
+	t.Fatal("PropagationManyDeclaration loses its source declaration")
+}
+
+func expressionUsesIdentifier(node ast.Node, name string) bool {
+	found := false
+	ast.Inspect(node, func(child ast.Node) bool {
+		identifier, ok := child.(*ast.Ident)
+		found = found || ok && identifier.Name == name
+		return !found
+	})
+	return found
+}
+
+func expressionCallsSelector(node ast.Node, owner, name string) bool {
+	found := false
+	ast.Inspect(node, func(child ast.Node) bool {
+		call, ok := child.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		selector, selected := call.Fun.(*ast.SelectorExpr)
+		if !selected {
+			return true
+		}
+		identifier, named := selector.X.(*ast.Ident)
+		found = named && identifier.Name == owner &&
+			selector.Sel.Name == name
+		return !found
+	})
+	return found
+}
+
+func sourceDeclarationAndReturn(statements []ast.Stmt, name, result string) bool {
+	for index, statement := range statements {
+		assignment, ok := statement.(*ast.AssignStmt)
+		if !ok || assignment.Tok != token.DEFINE || len(assignment.Lhs) != 1 ||
+			len(assignment.Rhs) != 1 {
+			continue
+		}
+		left, leftOK := assignment.Lhs[0].(*ast.Ident)
+		right, rightOK := assignment.Rhs[0].(*ast.Ident)
+		if leftOK && rightOK && left.Name == name && right.Name == result {
+			for _, later := range statements[index+1:] {
+				returned, returnOK := later.(*ast.ReturnStmt)
+				if !returnOK || len(returned.Results) != 2 {
+					continue
+				}
+				value, valueOK := returned.Results[0].(*ast.Ident)
+				nilValue, nilOK := returned.Results[1].(*ast.Ident)
+				return valueOK && nilOK && value.Name == name && nilValue.Name == "nil"
+			}
+		}
+	}
+	return false
+}
 
 func TestPropagationSuccess(t *testing.T) {
 	events := []string{}
@@ -401,20 +583,50 @@ func TestPropagationUsesGoTypedNilRule(t *testing.T) {
 }
 
 func TestPropagationGeneratedGoPreservesWrappers(t *testing.T) {
-	data, err := os.ReadFile("propagation_tgo.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(data)
-	for _, required := range []string{
-		`return 0, fmt.Errorf("propagationLoad: %w", err)`,
-		"var zero T",
-	} {
-		if !strings.Contains(text, required) {
-			t.Fatalf("generated Go lacks %q", required)
+	rejectGeneratedPrefix(t, generatedFile(t, "propagation_tgo.go"))
+	assertPropagationGeneratedStructure(t, "PropagationValue", true)
+	assertPropagationGeneratedStructure(t, "PropagationTransparent", false)
+	assertManyDeclarationBoundary(t)
+	generic := generatedFunction(t, "propagation_tgo.go", "PropagationGeneric")
+	rejectGeneratedWrappers(t, generic)
+	zeroName := ""
+	ast.Inspect(generic.Body, func(node ast.Node) bool {
+		specification, ok := node.(*ast.ValueSpec)
+		if !ok {
+			return true
 		}
+		typeName, typed := specification.Type.(*ast.Ident)
+		if typed && typeName.Name == "T" && len(specification.Values) == 0 &&
+			len(specification.Names) == 1 {
+			zeroName = specification.Names[0].Name
+		}
+		return zeroName == ""
+	})
+	if zeroName == "" || !genericFailureReturnsZero(generic, zeroName) {
+		t.Fatal("generated generic propagation lacks a typed zero result")
 	}
-	if strings.Contains(text, "__tgo_") {
-		t.Fatal("generated Go contains an old synthetic name")
-	}
+}
+
+func genericFailureReturnsZero(function *ast.FuncDecl, zeroName string) bool {
+	found := false
+	ast.Inspect(function.Body, func(node ast.Node) bool {
+		returned, ok := node.(*ast.ReturnStmt)
+		if !ok || len(returned.Results) != 2 {
+			return true
+		}
+		zero, zeroOK := returned.Results[0].(*ast.Ident)
+		call, callOK := returned.Results[1].(*ast.CallExpr)
+		if !zeroOK || !callOK {
+			return true
+		}
+		selector, selectorOK := call.Fun.(*ast.SelectorExpr)
+		if !selectorOK {
+			return true
+		}
+		owner, ownerOK := selector.X.(*ast.Ident)
+		found = found || ownerOK && zero.Name == zeroName &&
+			owner.Name == "fmt" && selector.Sel.Name == "Errorf"
+		return !found
+	})
+	return found
 }

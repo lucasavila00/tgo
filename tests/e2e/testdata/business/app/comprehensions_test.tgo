@@ -2,10 +2,145 @@ package app
 
 import (
 	"errors"
-	"os"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"strings"
 	"testing"
 )
+
+func generatedFunction(t *testing.T, path, name string) *ast.FuncDecl {
+	t.Helper()
+	file := generatedFile(t, path)
+	for _, declaration := range file.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if ok && function.Name.Name == name {
+			return function
+		}
+	}
+	t.Fatalf("generated function %s is absent", name)
+	return nil
+}
+
+func generatedFile(t *testing.T, path string) *ast.File {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return file
+}
+
+func rejectGeneratedPrefix(t *testing.T, file *ast.File) {
+	t.Helper()
+	ast.Inspect(file, func(node ast.Node) bool {
+		identifier, ok := node.(*ast.Ident)
+		if ok && strings.HasPrefix(identifier.Name, "__tgo_") {
+			t.Fatalf("generated file contains %s", identifier.Name)
+		}
+		return true
+	})
+}
+
+func rejectGeneratedWrappers(t *testing.T, function *ast.FuncDecl) {
+	t.Helper()
+	ast.Inspect(function.Body, func(node ast.Node) bool {
+		switch value := node.(type) {
+		case *ast.FuncLit:
+			t.Fatalf("generated function %s contains a wrapper", function.Name.Name)
+		case *ast.Ident:
+			if strings.HasPrefix(value.Name, "__tgo_") {
+				t.Fatalf("generated function %s contains %s", function.Name.Name, value.Name)
+			}
+		}
+		return true
+	})
+}
+
+func assertIndexedComprehension(t *testing.T, function *ast.FuncDecl) {
+	t.Helper()
+	found := false
+	ast.Inspect(function.Body, func(node ast.Node) bool {
+		rangeStatement, ok := node.(*ast.RangeStmt)
+		key, named := rangeStatementKey(rangeStatement, ok)
+		if !named {
+			return true
+		}
+		var captured string
+		for _, statement := range rangeStatement.Body.List {
+			assignment, ok := statement.(*ast.AssignStmt)
+			if !ok || len(assignment.Lhs) != 1 || len(assignment.Rhs) != 1 {
+				continue
+			}
+			if expressionCallsIdentifier(assignment.Rhs[0], "comprehensionRecord") {
+				identifier, named := assignment.Lhs[0].(*ast.Ident)
+				if named {
+					captured = identifier.Name
+				}
+				continue
+			}
+			indexed, indexedOK := assignment.Lhs[0].(*ast.IndexExpr)
+			if !indexedOK {
+				continue
+			}
+			index, indexOK := indexed.Index.(*ast.Ident)
+			found = captured != "" && indexOK && index.Name == key.Name &&
+				expressionUsesIdentifier(assignment.Rhs[0], captured)
+			if found {
+				break
+			}
+		}
+		return !found
+	})
+	if !found {
+		t.Fatalf("generated function %s lacks ordered indexed evaluation", function.Name.Name)
+	}
+}
+
+func expressionCallsIdentifier(node ast.Node, name string) bool {
+	found := false
+	ast.Inspect(node, func(child ast.Node) bool {
+		call, ok := child.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		identifier, named := call.Fun.(*ast.Ident)
+		found = found || named && identifier.Name == name
+		return !found
+	})
+	return found
+}
+
+func assertNestedRanges(t *testing.T, function *ast.FuncDecl) {
+	t.Helper()
+	found := false
+	ast.Inspect(function.Body, func(node ast.Node) bool {
+		outer, ok := node.(*ast.RangeStmt)
+		if !ok {
+			return true
+		}
+		ast.Inspect(outer.Body, func(child ast.Node) bool {
+			if child != outer.Body {
+				if _, nested := child.(*ast.RangeStmt); nested {
+					found = true
+				}
+			}
+			return !found
+		})
+		return !found
+	})
+	if !found {
+		t.Fatalf("generated function %s lacks a fused range nest", function.Name.Name)
+	}
+}
+
+func rangeStatementKey(statement *ast.RangeStmt, ok bool) (*ast.Ident, bool) {
+	if !ok || statement == nil {
+		return nil, false
+	}
+	key, named := statement.Key.(*ast.Ident)
+	return key, named && key.Name != "_"
+}
 
 func comprehensionFixture() []comprehensionAccount {
 	return []comprehensionAccount{
@@ -90,23 +225,13 @@ func TestComprehensionGeneratedLoops(t *testing.T) {
 	if value := ComprehensionForInitializer([]int{7, 8}); value != 7 {
 		t.Fatalf("for initializer value=%d", value)
 	}
-	generated, err := os.ReadFile("comprehensions_tgo.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(generated)
-	for _, forbidden := range []string{"__tgo_", "func() comprehension"} {
-		if strings.Contains(text, forbidden) {
-			t.Fatalf("generated projection remains: %s", forbidden)
-		}
-	}
-	if !strings.Contains(text, "for _, account := range accounts") ||
-		!strings.Contains(text, "for _, sale := range account.Sales") {
-		t.Fatal("generated output does not contain the fused loop nest")
-	}
-	if !strings.Contains(text, "comprehensionRecord(") || !strings.Contains(text, "] = ") {
-		t.Fatal("generated transformed comprehension does not use indexed evaluation")
-	}
+	pairsFunction := generatedFunction(t, "comprehensions_tgo.go", "ComprehensionPairs")
+	orderFunction := generatedFunction(t, "comprehensions_tgo.go", "ComprehensionOrder")
+	rejectGeneratedPrefix(t, generatedFile(t, "comprehensions_tgo.go"))
+	rejectGeneratedWrappers(t, pairsFunction)
+	rejectGeneratedWrappers(t, orderFunction)
+	assertNestedRanges(t, pairsFunction)
+	assertIndexedComprehension(t, orderFunction)
 	values := []int{1, 2, 3, 4}
 	var copied []int
 	allocations := testing.AllocsPerRun(1000, func() {
