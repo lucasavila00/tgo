@@ -42,8 +42,9 @@ const (
 )
 
 type plannedBlock struct {
-	scope      scopeID
-	operations []*plannedOperation
+	scope       scopeID
+	sourceScope *types.Scope
+	operations  []*plannedOperation
 }
 
 type plannedTarget struct {
@@ -76,6 +77,8 @@ type plannedOperation struct {
 	kind           plannedOperationKind
 	source         ast.Stmt
 	target         targetID
+	controlTarget  targetID
+	sourceScope    *types.Scope
 	expressions    []*plannedExpression
 	places         []*plannedPlace
 	init           *plannedBlock
@@ -230,6 +233,9 @@ func (b *loweringPlanBuilder) block(statements []ast.Stmt) *plannedBlock {
 	b.nextScope++
 	b.currentScope = b.nextScope
 	block := &plannedBlock{scope: b.currentScope}
+	if len(statements) != 0 {
+		block.sourceScope = b.sourceScope(statements[0].Pos())
+	}
 	for _, statement := range statements {
 		beforeStatement := cloneTypeBindings(b.bindings)
 		block.operations = append(block.operations, b.statement(statement))
@@ -263,7 +269,10 @@ func cloneTypeBindings(input map[types.Object]types.Type) map[types.Object]types
 
 // statement defines the execution regions for one source statement.
 func (b *loweringPlanBuilder) statement(statement ast.Stmt) *plannedOperation {
-	operation := &plannedOperation{source: statement, kind: planSourceStatement}
+	operation := &plannedOperation{
+		source: statement, kind: planSourceStatement,
+		sourceScope: b.sourceScope(statement.Pos()),
+	}
 	switch node := statement.(type) {
 	case *ast.BlockStmt:
 		operation.kind = planBlockStatement
@@ -350,6 +359,15 @@ func (b *loweringPlanBuilder) statement(statement ast.Stmt) *plannedOperation {
 		operation.target = b.labels[node.Label.Name]
 		operation.body = b.block([]ast.Stmt{node.Stmt})
 		operation.labelHasGoto = b.gotos[node.Label.Name]
+		if len(operation.body.operations) == 1 {
+			child := operation.body.operations[0]
+			switch child.kind {
+			case planForStatement, planRangeStatement, planSwitchStatement,
+				planTypeSwitchStatement, planSelectStatement:
+				operation.controlTarget = child.target
+				redirectLabeledControl(operation.body, operation.target, child.target)
+			}
+		}
 	case *ast.BranchStmt:
 		operation.kind = planJump
 		if node.Label != nil {
@@ -381,6 +399,29 @@ func (b *loweringPlanBuilder) statement(statement ast.Stmt) *plannedOperation {
 		operation.failureCommas = append(operation.failureCommas, b.source.FailureReturns[returned]...)
 	}
 	return operation
+}
+
+func redirectLabeledControl(block *plannedBlock, source targetID, target targetID) {
+	if block == nil {
+		return
+	}
+	for _, operation := range block.operations {
+		if operation.kind == planJump && operation.target == source {
+			branch, _ := operation.source.(*ast.BranchStmt)
+			if branch != nil && (branch.Tok == token.BREAK || branch.Tok == token.CONTINUE) {
+				operation.target = target
+			}
+		}
+		for _, child := range []*plannedBlock{
+			operation.init, operation.test, operation.body, operation.post,
+			operation.otherwise, operation.before, operation.after,
+		} {
+			redirectLabeledControl(child, source, target)
+		}
+		for _, child := range operation.cases {
+			redirectLabeledControl(child, source, target)
+		}
+	}
 }
 
 func (b *loweringPlanBuilder) declarationPlans(
@@ -587,7 +628,7 @@ func (b *loweringPlanBuilder) indexLabels(body *ast.BlockStmt) {
 		id := b.target()
 		b.labels[label.Label.Name] = id
 		b.plan.targets[id] = plannedTarget{
-			id: id, label: label.Label.Name, position: label.Label.Pos(),
+			id: id, label: label.Label.Name, position: label.Colon,
 		}
 		return true
 	})
@@ -598,6 +639,19 @@ func lastTarget(targets []targetID) targetID {
 		return 0
 	}
 	return targets[len(targets)-1]
+}
+
+func (b *loweringPlanBuilder) sourceScope(position token.Pos) *types.Scope {
+	var selected *types.Scope
+	for _, scope := range b.unit.info.Scopes {
+		if !scope.Contains(position) {
+			continue
+		}
+		if selected == nil || selected.Contains(scope.Pos()) {
+			selected = scope
+		}
+	}
+	return selected
 }
 
 func (b *loweringPlanBuilder) simpleBlock(statement ast.Stmt) *plannedBlock {

@@ -16,6 +16,7 @@ type loweringEmitter struct {
 	plan     *functionLoweringPlan
 	names    map[string]bool
 	values   map[valueID]*ast.Ident
+	targets  map[targetID]*ast.Ident
 	fmtAlias string
 	hoisted  []ast.Stmt
 }
@@ -25,10 +26,16 @@ func newLoweringEmitter(
 	source *source,
 	plan *functionLoweringPlan,
 ) *loweringEmitter {
-	return &loweringEmitter{
+	emitter := &loweringEmitter{
 		unit: unit, source: source, plan: plan, names: plan.function.names,
-		values: make(map[valueID]*ast.Ident),
+		values: make(map[valueID]*ast.Ident), targets: make(map[targetID]*ast.Ident),
 	}
+	for id, target := range plan.targets {
+		if target.label != "" {
+			emitter.targets[id] = ast.NewIdent(target.label)
+		}
+	}
+	return emitter
 }
 
 func (e *loweringEmitter) freshName(preferred string) *ast.Ident {
@@ -183,7 +190,14 @@ func (e *loweringEmitter) operation(
 	case planSourceStatement:
 		e.sourceStatement(operation, output)
 	case planJump:
-		output.List = append(output.List, operation.source)
+		branch := operation.source.(*ast.BranchStmt)
+		label := (*ast.Ident)(nil)
+		if branch.Label != nil && operation.target != 0 {
+			label = e.targets[operation.target]
+		}
+		output.List = append(output.List, &ast.BranchStmt{
+			TokPos: branch.TokPos, Tok: branch.Tok, Label: label,
+		})
 	case planEvaluate:
 		expression := operation.expressions[0]
 		materialized := expression.materialized
@@ -256,44 +270,67 @@ func (e *loweringEmitter) labeledStatement(
 	if e.labeledDeclaration(operation, node, output) {
 		return
 	}
+	if operation.body != nil && len(operation.body.operations) == 1 {
+		child := operation.body.operations[0]
+		if child.source == node.Stmt && !operationHasPlannedWork(child) {
+			output.List = append(output.List, node)
+			return
+		}
+	}
+	separateEntry := operation.labelHasGoto && e.controlNeedsWrapper(operation)
+	if operation.controlTarget != 0 {
+		if separateEntry {
+			e.targets[operation.controlTarget] = e.freshName("control")
+		} else {
+			e.targets[operation.controlTarget] = ast.NewIdent(node.Label.Name)
+		}
+	}
 	body := &ast.BlockStmt{}
 	e.operations(operation.body, body)
 	if len(body.List) == 0 {
 		return
 	}
-	if len(body.List) == 1 && body.List[0] == node.Stmt {
+	if operation.controlTarget == 0 || separateEntry {
+		node.Stmt = oneStatement(body.List)
 		output.List = append(output.List, node)
 		return
 	}
-	container := body
-	if len(body.List) == 1 {
-		if block, ok := body.List[0].(*ast.BlockStmt); ok {
-			container = block
+	output.List = append(output.List, body.List...)
+}
+
+func operationHasPlannedWork(operation *plannedOperation) bool {
+	if operation == nil || operationHasExpressionWork(operation) {
+		return operation != nil
+	}
+	for _, block := range []*plannedBlock{
+		operation.init, operation.test, operation.body, operation.post,
+		operation.otherwise, operation.before, operation.after,
+	} {
+		if blockHasPlannedWork(block) {
+			return true
 		}
 	}
-	last := len(container.List) - 1
-	switch container.List[last].(type) {
-	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt,
-		*ast.TypeSwitchStmt, *ast.SelectStmt:
-		label := node.Label
-		if operation.labelHasGoto {
-			control := e.freshName("control")
-			rewriteControlBranches(container.List[last], node.Label.Name, control.Name)
-			label = control
+	for _, block := range operation.cases {
+		if blockHasPlannedWork(block) {
+			return true
 		}
-		container.List[last] = &ast.LabeledStmt{
-			Label: label, Colon: node.Colon, Stmt: container.List[last],
-		}
-		if operation.labelHasGoto {
-			node.Stmt = oneStatement(body.List)
-			output.List = append(output.List, node)
-		} else {
-			output.List = append(output.List, body.List...)
-		}
-	default:
-		node.Stmt = oneStatement(body.List)
-		output.List = append(output.List, node)
 	}
+	return false
+}
+
+func (e *loweringEmitter) controlNeedsWrapper(operation *plannedOperation) bool {
+	if operation.body == nil || len(operation.body.operations) != 1 {
+		return false
+	}
+	control := operation.body.operations[0]
+	switch control.kind {
+	case planForStatement:
+		return len(control.headerBindings) != 0 ||
+			control.init != nil && blockHasPlannedWork(control.init)
+	case planSwitchStatement, planTypeSwitchStatement:
+		return control.init != nil && blockHasPlannedWork(control.init)
+	}
+	return false
 }
 
 func (e *loweringEmitter) labeledDeclaration(
@@ -397,7 +434,7 @@ func (e *loweringEmitter) typeSwitchStatement(
 		e.operations(operation.cases[index], body)
 		clause.Body = body.List
 	}
-	target.List = append(target.List, node)
+	e.appendControl(target, operation.target, node)
 }
 
 func (e *loweringEmitter) ifStatement(
@@ -438,7 +475,7 @@ func (e *loweringEmitter) rangeStatement(
 	body := &ast.BlockStmt{Lbrace: node.Body.Lbrace, Rbrace: node.Body.Rbrace}
 	e.operations(operation.body, body)
 	node.Body = body
-	output.List = append(output.List, node)
+	e.appendControl(output, operation.target, node)
 }
 
 func (e *loweringEmitter) forStatement(
@@ -504,7 +541,21 @@ func (e *loweringEmitter) forStatement(
 	}
 	e.operations(operation.body, body)
 	node.Body = body
-	target.List = append(target.List, node)
+	e.appendControl(target, operation.target, node)
+}
+
+func (e *loweringEmitter) appendControl(
+	output *ast.BlockStmt,
+	target targetID,
+	statement ast.Stmt,
+) {
+	if label := e.targets[target]; label != nil {
+		output.List = append(output.List, &ast.LabeledStmt{
+			Label: label, Colon: e.plan.targets[target].position, Stmt: statement,
+		})
+		return
+	}
+	output.List = append(output.List, statement)
 }
 
 func blockHasPlannedWork(block *plannedBlock) bool {
@@ -1034,25 +1085,6 @@ func (e *loweringEmitter) formatQualifier() string {
 		astutil.AddNamedImport(e.unit.fs, e.source.File, e.fmtAlias, "fmt")
 	}
 	return e.fmtAlias
-}
-
-func rewriteControlBranches(node ast.Node, oldLabel string, newLabel string) bool {
-	rewritten := false
-	ast.Inspect(node, func(current ast.Node) bool {
-		if _, ok := current.(*ast.FuncLit); ok {
-			return false
-		}
-		branch, ok := current.(*ast.BranchStmt)
-		if !ok || branch.Label == nil || branch.Label.Name != oldLabel {
-			return true
-		}
-		if branch.Tok == token.BREAK || branch.Tok == token.CONTINUE {
-			branch.Label = ast.NewIdent(newLabel)
-			rewritten = true
-		}
-		return true
-	})
-	return rewritten
 }
 
 func oneStatement(statements []ast.Stmt) ast.Stmt {

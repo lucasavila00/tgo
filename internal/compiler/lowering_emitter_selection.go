@@ -81,7 +81,7 @@ func (e *loweringEmitter) switchStatement(
 	}
 	node.Tag = ast.NewIdent(selected.Name)
 	e.emitSwitchBodies(operation, node)
-	target.List = append(target.List, node)
+	e.appendControl(target, operation.target, node)
 }
 
 func switchNegativeOne() ast.Expr {
@@ -110,7 +110,7 @@ func (e *loweringEmitter) emitDirectSwitch(
 		}
 	}
 	e.emitSwitchBodies(operation, node)
-	output.List = append(output.List, node)
+	e.appendControl(output, operation.target, node)
 }
 
 func (e *loweringEmitter) emitSwitchBodies(
@@ -173,7 +173,7 @@ func (e *loweringEmitter) selectStatement(
 		e.operations(operation.cases[index], body)
 		clause.Body = body.List
 	}
-	output.List = append(output.List, node)
+	e.appendControl(output, operation.target, node)
 }
 
 func selectReceiveExpression(expression ast.Expr) *ast.UnaryExpr {

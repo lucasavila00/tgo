@@ -83,29 +83,14 @@ Diagnostics must distinguish invalid TGo from an unimplemented lowering. Use
 `compiler does not yet lower` for a confirmed compiler gap. Link the gap to a
 focused issue with a regression example.
 
-## Current lowering audit
+## Valid lowering contexts
 
-The audit at main commit
-`aaed15ba0de180700b8ba2155ecedb2a68ada237` inspected compiler and linter
-diagnostics. It reproduced each restriction below with valid TGo source.
+Error propagation and comprehensions use the same recursive expression plan
+at each expression evaluation point in a function. This includes loop
+initializers, conditions, and post statements; switch tags and cases; type
+switch statements; select communications; assignments; and nested calls.
 
-| Context | Error propagation | Comprehension |
-| --- | --- | --- |
-| Type-switch initializer or assignment | [#195] | [#218] |
-| `for` initializer | [#213] | [#218] |
-| `for` post statement | [#214] | [#218] |
-| Expression-switch case | [#215] | [#218] |
-| Select communication | [#216] | [#218] |
-
-The linter has no rule that rejects these contexts. The compiler owns the
-listed diagnostics. Direct propagation on a `go` or `defer` call remains
-invalid because that call executes outside the current function return point.
-Package-scope propagation and comprehensions remain invalid because no
-function body exists for their generated control flow.
-
-[#195]: https://github.com/lucasavila00/tgo/issues/195
-[#213]: https://github.com/lucasavila00/tgo/issues/213
-[#214]: https://github.com/lucasavila00/tgo/issues/214
-[#215]: https://github.com/lucasavila00/tgo/issues/215
-[#216]: https://github.com/lucasavila00/tgo/issues/216
-[#218]: https://github.com/lucasavila00/tgo/issues/218
+Direct propagation on a `go` or `defer` call remains invalid because that call
+executes outside the current function return point. Package-scope propagation
+and comprehensions remain invalid because no function body exists for their
+generated control flow.
