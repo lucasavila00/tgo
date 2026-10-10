@@ -49,7 +49,10 @@ func (c %checker) enumReceiverStorage(
 		return nil
 	}
 	graph := cfg.New(body, c.callMayReturn)
-	entries := make([]*enumStorageState, len(graph.Blocks))
+	entries := make([]*enumStorageState, 0, len(graph.Blocks))
+	for range graph.Blocks {
+		entries = append(entries, nil)
+	}
 	entries[0] = newEnumStorageState()
 	queued := make([]bool, len(graph.Blocks))
 	queue := []*cfg.Block{graph.Blocks[0]}
