@@ -124,6 +124,7 @@ func Safe() {
 	genericzero.NamedCapturedCellAfterWrite[model.Event]()()
 	genericzero.DiscardedAppendFresh[model.Event]()
 	genericzero.ZeroCopyThenCall[model.Event]()
+	genericzero.RecursiveZeroCopyThenCall[model.Event]()
 	genericzero.RecursiveSafe[model.Event]()
 	genericzero.GuardedSafe[model.Event]()
 	genericzero.SharedActualSafe[model.Event]()

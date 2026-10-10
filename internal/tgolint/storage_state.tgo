@@ -55,7 +55,7 @@ func storageCallInputKey(
 }
 
 func storageFunctionIntegerConstants(call storageGraphCall) map[int64]bool {
-	result := make(map[int64]bool)
+	result := map[int64]bool{0: true}
 	function := findStorageEffectFunction(call.fact.Storage, call.function)
 	if function == nil {
 		return result

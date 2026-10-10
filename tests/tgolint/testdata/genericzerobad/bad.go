@@ -213,6 +213,7 @@ func FunctionValues(event model.Event) {
 	genericzero.SharedSlotAfterWrite[model.Event]()
 	genericzero.DiscardedAppendReuse[model.Event]()
 	genericzero.CopyThenCall[model.Event]()
+	genericzero.RecursiveCopyThenCall[model.Event]()
 	genericzero.RecursiveUnsafe[model.Event]()
 	genericzero.GuardedUnsafe[model.Event]()
 	genericzero.DistinctActualsUnsafe[model.Event]()

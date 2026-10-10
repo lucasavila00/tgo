@@ -164,7 +164,7 @@ func TestRecursiveStorageExecutionNormalizesSliceBounds(t *testing.T) {
 	}
 	context := newStorageExecutionContext()
 	call := storageGraphCall{fact: fact, function: 0}
-	for _, length := range []int64{2, 3} {
+	for _, length := range []int64{0, 2, 3} {
 		call.arguments = []storageValue{{slices: []storageSlice{{
 			length: length, knownLength: true,
 		}}}}
@@ -173,7 +173,7 @@ func TestRecursiveStorageExecutionNormalizesSliceBounds(t *testing.T) {
 			t.Fatalf("recursive length %d did not complete", length)
 		}
 	}
-	if len(context.completed) != 1 {
+	if len(context.completed) != 2 {
 		t.Fatalf("completed recursive inputs = %#v", context.completed)
 	}
 }

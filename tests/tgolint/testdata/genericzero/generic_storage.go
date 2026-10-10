@@ -310,6 +310,31 @@ func ZeroCopyThenCall[T any]() {
 	target[0]()
 }
 
+func RecursiveCopy(destination []func(), source []func(), zero bool) {
+	if zero {
+		copy(destination[:0], source)
+	} else {
+		copy(destination, source)
+	}
+	if len(source) > 1 {
+		RecursiveCopy(destination, source[:1], true)
+	}
+}
+
+func RecursiveZeroCopyThenCall[T any]() {
+	target := []func(){func() {}}
+	source := []func(){storedEffect[T]}
+	RecursiveCopy(target, source, true)
+	target[0]()
+}
+
+func RecursiveCopyThenCall[T any]() {
+	target := []func(){func() {}}
+	source := []func(){storedEffect[T]}
+	RecursiveCopy(target, source, false)
+	target[0]()
+}
+
 func RecursiveCall(value func(), count int) {
 	if count == 0 {
 		return
