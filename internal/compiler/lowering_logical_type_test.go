@@ -51,6 +51,18 @@ func use(events *[]string, a int, b int, checkFail bool, loadFail bool) (int, er
 		load(events, loadFail)!!,
 	), nil
 }
+
+func preserveDynamicType(events *[]string, loadFail bool) (bool, error) {
+	return consumeAny(
+		check(events, true, false)!!,
+		load(events, loadFail)!!,
+	), nil
+}
+
+func consumeAny(value any, number int) bool {
+	_, ok := value.(Flag)
+	return ok && number == 7
+}
 `
 
 const loweringLogicalTypeTestSource = `package logicaltype
@@ -83,6 +95,18 @@ func TestGeneratedNamedLogicalType(t *testing.T) {
 	value, err = use(&events, 1, 2, false, true)
 	if value != 0 || err != errLoad || strings.Join(events, ",") != "check,load" {
 		t.Fatalf("load failure value=%d error=%v events=%v", value, err, events)
+	}
+
+	events = nil
+	preserved, err := preserveDynamicType(&events, false)
+	if !preserved || err != nil || strings.Join(events, ",") != "check,load" {
+		t.Fatalf("dynamic type preserved=%t error=%v events=%v", preserved, err, events)
+	}
+
+	events = nil
+	preserved, err = preserveDynamicType(&events, true)
+	if preserved || err != errLoad || strings.Join(events, ",") != "check,load" {
+		t.Fatalf("dynamic type failure preserved=%t error=%v events=%v", preserved, err, events)
 	}
 }
 `

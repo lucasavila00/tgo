@@ -192,6 +192,197 @@ func countGuardedCheckCalls(use *ast.FuncDecl) (int, int) {
 	return callCount, guardedCallCount
 }
 
+func TestLoweringPlanSeparatesForeignBooleanNormalization(t *testing.T) {
+	library := types.NewPackage("example.com/hidden", "hidden")
+	hiddenName := types.NewTypeName(token.NoPos, library, "hiddenBool", nil)
+	hidden := types.NewNamed(hiddenName, types.Typ[types.Bool], nil)
+	library.Scope().Insert(hiddenName)
+	library.Scope().Insert(types.NewFunc(
+		token.NoPos,
+		library,
+		"Check",
+		types.NewSignatureType(
+			nil, nil, nil, types.NewTuple(),
+			types.NewTuple(
+				types.NewVar(token.NoPos, library, "", hidden),
+				types.NewVar(token.NoPos, library, "", types.Universe.Lookup("error").Type()),
+			),
+			false,
+		),
+	))
+	library.Scope().Insert(types.NewFunc(
+		token.NoPos,
+		library,
+		"Consume",
+		types.NewSignatureType(
+			nil, nil, nil,
+			types.NewTuple(
+				types.NewVar(token.NoPos, library, "", hidden),
+				types.NewVar(token.NoPos, library, "", types.Typ[types.Int]),
+			),
+			types.NewTuple(types.NewVar(token.NoPos, library, "", types.Typ[types.Int])),
+			false,
+		),
+	))
+	library.MarkComplete()
+
+	plan := buildForeignContractPlan(t, library, "use", `package sample
+
+import "example.com/hidden"
+
+func load() (int, error) { return 7, nil }
+
+func use(ready bool) (int, error) {
+	return hidden.Consume(ready && hidden.Check()!!, load()!!), nil
+}
+`)
+	assertForeignBooleanNormalizationPlan(t, plan, hidden)
+}
+
+func assertForeignBooleanNormalizationPlan(
+	t *testing.T,
+	plan *functionLoweringPlan,
+	hidden types.Type,
+) {
+	t.Helper()
+	propagation := foreignBooleanPropagation(t, plan)
+	bind := propagation.work.operations[0]
+	errorBranch := propagation.work.operations[1]
+	conversion := propagation.work.operations[2]
+	sourceID := bind.outputs[0]
+	convertedID := conversion.outputs[0]
+	if bind.kind != planBind || !types.Identical(plan.values[sourceID-1].typ, hidden) {
+		t.Fatalf("Check result lost its foreign type: bind=%#v value=%#v",
+			bind, plan.values[sourceID-1])
+	}
+	if errorBranch.kind != planBranch || conversion.kind != planBooleanConvert ||
+		conversion.inputs[0] != sourceID || convertedID == sourceID ||
+		!types.Identical(plan.values[convertedID-1].typ, types.Typ[types.Bool]) {
+		t.Fatalf("foreign result does not convert after its error branch: "+
+			"branch=%#v conversion=%#v", errorBranch, conversion)
+	}
+	if len(propagation.results) != 1 || propagation.results[0].id != convertedID {
+		t.Fatalf("logical RHS does not use the converted bool: results=%#v conversion=%#v",
+			propagation.results, conversion)
+	}
+}
+
+func foreignBooleanPropagation(t *testing.T, plan *functionLoweringPlan) *plannedExpression {
+	t.Helper()
+	call := plan.root.operations[0].expressions[0]
+	if len(call.operands) < 3 {
+		t.Fatalf("Consume call does not retain its operands: %#v", call)
+	}
+	logical := call.operands[1]
+	if logical.work == nil || len(logical.work.operations) != 2 ||
+		logical.work.operations[1].body == nil ||
+		len(logical.work.operations[1].body.operations) != 1 {
+		t.Fatalf("logical expression does not retain its guarded RHS: %#v", logical)
+	}
+	store := logical.work.operations[1].body.operations[0]
+	propagation := store.expressions[0]
+	if propagation.kind != planPropagationExpression || propagation.work == nil ||
+		len(propagation.work.operations) != 3 {
+		t.Fatalf("logical RHS does not have bind, error, and conversion work: %#v",
+			propagation)
+	}
+	return propagation
+}
+
+func TestLoweringPlanKeepsOrdinaryForeignResultType(t *testing.T) {
+	library := types.NewPackage("example.com/hidden", "hidden")
+	hiddenName := types.NewTypeName(token.NoPos, library, "hiddenValue", nil)
+	hidden := types.NewNamed(hiddenName, types.Typ[types.Int], nil)
+	library.Scope().Insert(hiddenName)
+	library.Scope().Insert(types.NewFunc(
+		token.NoPos, library, "Factory",
+		types.NewSignatureType(
+			nil, nil, nil, types.NewTuple(),
+			types.NewTuple(types.NewVar(token.NoPos, library, "", hidden)), false,
+		),
+	))
+	anyType := types.Universe.Lookup("any").Type()
+	library.Scope().Insert(types.NewFunc(
+		token.NoPos, library, "ConsumeAny",
+		types.NewSignatureType(
+			nil, nil, nil,
+			types.NewTuple(
+				types.NewVar(token.NoPos, library, "", anyType),
+				types.NewVar(token.NoPos, library, "", types.Typ[types.Int]),
+			),
+			types.NewTuple(types.NewVar(token.NoPos, library, "", types.Typ[types.Int])),
+			false,
+		),
+	))
+	library.MarkComplete()
+
+	plan := buildForeignContractPlan(t, library, "use", `package sample
+
+import "example.com/hidden"
+
+func load() (int, error) { return 7, nil }
+
+func use() (int, error) {
+	return hidden.ConsumeAny(hidden.Factory(), load()!!), nil
+}
+`)
+	call := plan.root.operations[0].expressions[0]
+	if len(call.operands) < 3 {
+		t.Fatalf("ConsumeAny call does not retain its operands: %#v", call)
+	}
+	factory := call.operands[1]
+	if factory.materialized == 0 {
+		t.Fatalf("ordinary call is not materialized before later work: %#v", factory)
+	}
+	if !types.Identical(factory.expected, anyType) || !types.Identical(factory.typ, hidden) ||
+		!types.Identical(plan.values[factory.materialized-1].typ, hidden) {
+		t.Fatalf("ordinary call lost its natural foreign type: expression=%#v value=%#v",
+			factory, plan.values[factory.materialized-1])
+	}
+}
+
+func buildForeignContractPlan(
+	t *testing.T,
+	library *types.Package,
+	functionName string,
+	sourceText string,
+) *functionLoweringPlan {
+	t.Helper()
+	files := token.NewFileSet()
+	input, err := parseSource(files, "sample.tgo", []byte(sourceText))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unit := &packageUnit{
+		Path: "sample", Sources: []*source{input}, Files: []*ast.File{input.File},
+		Models: make(map[string]*model), Imports: make(map[string]*packageUnit),
+		fs: files,
+		importer: packageImporter{
+			"example.com/hidden": library,
+		},
+	}
+	unit.prepare()
+	unit.typecheck()
+	var target *ast.FuncDecl
+	for _, declaration := range input.File.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if ok && function.Name.Name == functionName {
+			target = function
+			break
+		}
+	}
+	if target == nil {
+		t.Fatalf("%s function is not in the source", functionName)
+	}
+	for _, function := range unit.loweringFunctions(input) {
+		if function.body.Pos() == target.Body.Pos() {
+			return buildFunctionLoweringPlan(unit, input, function)
+		}
+	}
+	t.Fatalf("%s function is not in the lowering input", functionName)
+	return nil
+}
+
 func formatLoweringContractAST(t *testing.T, files *token.FileSet, file *ast.File) string {
 	t.Helper()
 	var output bytes.Buffer

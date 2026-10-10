@@ -1,0 +1,38 @@
+package app
+
+import (
+	"errors"
+
+	"example.com/business/opaquebool"
+)
+
+var errOpaqueBooleanLater = errors.New("opaque bool later failure")
+
+func opaqueBooleanLater(events %[]string, fail bool) (int, error) {
+	*events = append(*events, "later")
+	if fail {
+		return 0, errOpaqueBooleanLater
+	}
+	return 7, nil
+}
+
+func opaqueBooleanConsume(events %[]string, value any, later int) bool {
+	*events = append(*events, "consume")
+	return opaquebool.ConsumeAny(value, later)
+}
+
+func OpaqueBooleanFactory(events %[]string, failLater bool) (bool, error) {
+	return opaqueBooleanConsume(
+		events,
+		opaquebool.Factory(),
+		opaqueBooleanLater(events, failLater)!!,
+	), nil
+}
+
+func OpaqueBooleanChecked(events %[]string, failCheck bool, failLater bool) (bool, error) {
+	return opaqueBooleanConsume(
+		events,
+		opaquebool.Check(failCheck)!!,
+		opaqueBooleanLater(events, failLater)!!,
+	), nil
+}

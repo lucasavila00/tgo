@@ -181,3 +181,17 @@ func ComprehensionMapError(
 	}
 	return result, nil
 }
+
+func ComprehensionForInitializer(input []int) int {
+	{
+		source :=
+
+			input
+		result := make([]int, len(source))
+		copy(result, source)
+		for items := result; len(items) > 0; items = nil {
+			return items[0]
+		}
+	}
+	return 0
+}

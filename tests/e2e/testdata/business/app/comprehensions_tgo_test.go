@@ -87,6 +87,9 @@ func TestComprehensionPropagation(t *testing.T) {
 }
 
 func TestComprehensionGeneratedLoops(t *testing.T) {
+	if value := ComprehensionForInitializer([]int{7, 8}); value != 7 {
+		t.Fatalf("for initializer value=%d", value)
+	}
 	generated, err := os.ReadFile("comprehensions_tgo.go")
 	if err != nil {
 		t.Fatal(err)

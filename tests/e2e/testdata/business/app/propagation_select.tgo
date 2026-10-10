@@ -1,0 +1,26 @@
+package app
+
+import "errors"
+
+var errPropagationSelect = errors.New("select channel failure")
+
+func loadSelectChannel(value int, ready bool, fail bool) (chan int, error) {
+	if fail {
+		return nil, errPropagationSelect
+	}
+	if !ready {
+		return nil, nil
+	}
+	values := make(chan int, 1)
+	values <- value
+	return values, nil
+}
+
+func PropagationSelect(value int, ready bool, fail bool) (int, error) {
+	select {
+	case selected := <-loadSelectChannel(value, ready, fail)!:
+		return selected, nil
+	default:
+		return 0, nil
+	}
+}
