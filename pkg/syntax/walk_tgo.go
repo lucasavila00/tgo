@@ -129,45 +129,45 @@ func NodePosition(node *Node) token.Pos {
 	if node == nil {
 		return token.NoPos
 	}
-	switch enumValue20 := *node; enumValue20.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case NodeTagFile:
-		value := enumValue20.FilePayload()
+		value := nodeValue.FilePayload()
 		return value.Value.Start
 	case NodeTagDeclaration:
-		value := enumValue20.DeclarationPayload()
+		value := nodeValue.DeclarationPayload()
 		return DeclarationPosition(value.Value)
 	case NodeTagSpecification:
-		value := enumValue20.SpecificationPayload()
+		value := nodeValue.SpecificationPayload()
 		return SpecificationPosition(value.Value)
 	case NodeTagStatement:
-		value := enumValue20.StatementPayload()
+		value := nodeValue.StatementPayload()
 		return StatementPosition(value.Value)
 	case NodeTagExpression:
-		value := enumValue20.ExpressionPayload()
+		value := nodeValue.ExpressionPayload()
 		return ExpressionPosition(value.Value)
 	case NodeTagField:
-		value := enumValue20.FieldPayload()
+		value := nodeValue.FieldPayload()
 		return value.Value.Start
 	case NodeTagFieldList:
-		value := enumValue20.FieldListPayload()
+		value := nodeValue.FieldListPayload()
 		return value.Value.Start
 	case NodeTagTGoField:
-		value := enumValue20.TGoFieldPayload()
+		value := nodeValue.TGoFieldPayload()
 		return value.Value.Start
 	case NodeTagEnumVariant:
-		value := enumValue20.EnumVariantPayload()
+		value := nodeValue.EnumVariantPayload()
 		return value.Value.Start
 	case NodeTagIdentifier:
-		value := enumValue20.IdentifierPayload()
+		value := nodeValue.IdentifierPayload()
 		return value.Value.Start
 	case NodeTagComment:
-		value := enumValue20.CommentPayload()
+		value := nodeValue.CommentPayload()
 		return value.Value.Start
 	case NodeTagCommentGroup:
-		value := enumValue20.CommentGroupPayload()
+		value := nodeValue.CommentGroupPayload()
 		return value.Value.Start
 	default:
-		panic(enumValue20.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -176,45 +176,45 @@ func NodeEnd(node *Node) token.Pos {
 	if node == nil {
 		return token.NoPos
 	}
-	switch enumValue21 := *node; enumValue21.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case NodeTagFile:
-		value := enumValue21.FilePayload()
+		value := nodeValue.FilePayload()
 		return value.Value.Stop
 	case NodeTagDeclaration:
-		value := enumValue21.DeclarationPayload()
+		value := nodeValue.DeclarationPayload()
 		return DeclarationEnd(value.Value)
 	case NodeTagSpecification:
-		value := enumValue21.SpecificationPayload()
+		value := nodeValue.SpecificationPayload()
 		return SpecificationEnd(value.Value)
 	case NodeTagStatement:
-		value := enumValue21.StatementPayload()
+		value := nodeValue.StatementPayload()
 		return StatementEnd(value.Value)
 	case NodeTagExpression:
-		value := enumValue21.ExpressionPayload()
+		value := nodeValue.ExpressionPayload()
 		return ExpressionEnd(value.Value)
 	case NodeTagField:
-		value := enumValue21.FieldPayload()
+		value := nodeValue.FieldPayload()
 		return value.Value.Stop
 	case NodeTagFieldList:
-		value := enumValue21.FieldListPayload()
+		value := nodeValue.FieldListPayload()
 		return value.Value.Stop
 	case NodeTagTGoField:
-		value := enumValue21.TGoFieldPayload()
+		value := nodeValue.TGoFieldPayload()
 		return value.Value.Stop
 	case NodeTagEnumVariant:
-		value := enumValue21.EnumVariantPayload()
+		value := nodeValue.EnumVariantPayload()
 		return value.Value.Stop
 	case NodeTagIdentifier:
-		value := enumValue21.IdentifierPayload()
+		value := nodeValue.IdentifierPayload()
 		return value.Value.Stop
 	case NodeTagComment:
-		value := enumValue21.CommentPayload()
+		value := nodeValue.CommentPayload()
 		return value.Value.Stop
 	case NodeTagCommentGroup:
-		value := enumValue21.CommentGroupPayload()
+		value := nodeValue.CommentGroupPayload()
 		return value.Value.Stop
 	default:
-		panic(enumValue21.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -223,90 +223,90 @@ func ExpressionPosition(value *Expression) token.Pos {
 	if value == nil {
 		return token.NoPos
 	}
-	switch enumValue22 := *value; enumValue22.Tag() {
+	switch expressionValue := *value; expressionValue.Tag() {
 	case ExpressionTagBad:
-		item := enumValue22.BadPayload()
+		item := expressionValue.BadPayload()
 		return item.Value.Start
 	case ExpressionTagIdentifier:
-		item := enumValue22.IdentifierPayload()
+		item := expressionValue.IdentifierPayload()
 		return item.Value.Start
 	case ExpressionTagEllipsis:
-		item := enumValue22.EllipsisPayload()
+		item := expressionValue.EllipsisPayload()
 		return item.Value.Start
 	case ExpressionTagBasicLiteral:
-		item := enumValue22.BasicLiteralPayload()
+		item := expressionValue.BasicLiteralPayload()
 		return item.Value.Start
 	case ExpressionTagFunctionLiteral:
-		item := enumValue22.FunctionLiteralPayload()
+		item := expressionValue.FunctionLiteralPayload()
 		return item.Value.Start
 	case ExpressionTagCompositeLiteral:
-		item := enumValue22.CompositeLiteralPayload()
+		item := expressionValue.CompositeLiteralPayload()
 		return item.Value.Start
 	case ExpressionTagParenthesized:
-		item := enumValue22.ParenthesizedPayload()
+		item := expressionValue.ParenthesizedPayload()
 		return item.Value.Start
 	case ExpressionTagSelector:
-		item := enumValue22.SelectorPayload()
+		item := expressionValue.SelectorPayload()
 		return item.Value.Start
 	case ExpressionTagIndex:
-		item := enumValue22.IndexPayload()
+		item := expressionValue.IndexPayload()
 		return item.Value.Start
 	case ExpressionTagIndexList:
-		item := enumValue22.IndexListPayload()
+		item := expressionValue.IndexListPayload()
 		return item.Value.Start
 	case ExpressionTagSlice:
-		item := enumValue22.SlicePayload()
+		item := expressionValue.SlicePayload()
 		return item.Value.Start
 	case ExpressionTagTypeAssertion:
-		item := enumValue22.TypeAssertionPayload()
+		item := expressionValue.TypeAssertionPayload()
 		return item.Value.Start
 	case ExpressionTagCall:
-		item := enumValue22.CallPayload()
+		item := expressionValue.CallPayload()
 		return item.Value.Start
 	case ExpressionTagStar:
-		item := enumValue22.StarPayload()
+		item := expressionValue.StarPayload()
 		return item.Value.Start
 	case ExpressionTagNonNilPointer:
-		item := enumValue22.NonNilPointerPayload()
+		item := expressionValue.NonNilPointerPayload()
 		return item.Value.Start
 	case ExpressionTagUnary:
-		item := enumValue22.UnaryPayload()
+		item := expressionValue.UnaryPayload()
 		return item.Value.Start
 	case ExpressionTagBinary:
-		item := enumValue22.BinaryPayload()
+		item := expressionValue.BinaryPayload()
 		return item.Value.Start
 	case ExpressionTagKeyValue:
-		item := enumValue22.KeyValuePayload()
+		item := expressionValue.KeyValuePayload()
 		return item.Value.Start
 	case ExpressionTagArrayType:
-		item := enumValue22.ArrayTypePayload()
+		item := expressionValue.ArrayTypePayload()
 		return item.Value.Start
 	case ExpressionTagStructType:
-		item := enumValue22.StructTypePayload()
+		item := expressionValue.StructTypePayload()
 		return item.Value.Start
 	case ExpressionTagFunctionType:
-		item := enumValue22.FunctionTypePayload()
+		item := expressionValue.FunctionTypePayload()
 		return item.Value.Start
 	case ExpressionTagInterfaceType:
-		item := enumValue22.InterfaceTypePayload()
+		item := expressionValue.InterfaceTypePayload()
 		return item.Value.Start
 	case ExpressionTagMapType:
-		item := enumValue22.MapTypePayload()
+		item := expressionValue.MapTypePayload()
 		return item.Value.Start
 	case ExpressionTagChannelType:
-		item := enumValue22.ChannelTypePayload()
+		item := expressionValue.ChannelTypePayload()
 		return item.Value.Start
 	case ExpressionTagDefault:
-		item := enumValue22.DefaultPayload()
+		item := expressionValue.DefaultPayload()
 		return item.Value.Start
 	case ExpressionTagPropagation:
-		item := enumValue22.PropagationPayload()
+		item := expressionValue.PropagationPayload()
 		return item.Value.Start
 	case ExpressionTagComprehension:
-		item := enumValue22.ComprehensionPayload()
+		item := expressionValue.ComprehensionPayload()
 		return item.Value.Start
 	default:
-		panic(enumValue22.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -315,90 +315,90 @@ func ExpressionEnd(value *Expression) token.Pos {
 	if value == nil {
 		return token.NoPos
 	}
-	switch enumValue23 := *value; enumValue23.Tag() {
+	switch expressionValue := *value; expressionValue.Tag() {
 	case ExpressionTagBad:
-		item := enumValue23.BadPayload()
+		item := expressionValue.BadPayload()
 		return item.Value.Stop
 	case ExpressionTagIdentifier:
-		item := enumValue23.IdentifierPayload()
+		item := expressionValue.IdentifierPayload()
 		return item.Value.Stop
 	case ExpressionTagEllipsis:
-		item := enumValue23.EllipsisPayload()
+		item := expressionValue.EllipsisPayload()
 		return item.Value.Stop
 	case ExpressionTagBasicLiteral:
-		item := enumValue23.BasicLiteralPayload()
+		item := expressionValue.BasicLiteralPayload()
 		return item.Value.Stop
 	case ExpressionTagFunctionLiteral:
-		item := enumValue23.FunctionLiteralPayload()
+		item := expressionValue.FunctionLiteralPayload()
 		return item.Value.Stop
 	case ExpressionTagCompositeLiteral:
-		item := enumValue23.CompositeLiteralPayload()
+		item := expressionValue.CompositeLiteralPayload()
 		return item.Value.Stop
 	case ExpressionTagParenthesized:
-		item := enumValue23.ParenthesizedPayload()
+		item := expressionValue.ParenthesizedPayload()
 		return item.Value.Stop
 	case ExpressionTagSelector:
-		item := enumValue23.SelectorPayload()
+		item := expressionValue.SelectorPayload()
 		return item.Value.Stop
 	case ExpressionTagIndex:
-		item := enumValue23.IndexPayload()
+		item := expressionValue.IndexPayload()
 		return item.Value.Stop
 	case ExpressionTagIndexList:
-		item := enumValue23.IndexListPayload()
+		item := expressionValue.IndexListPayload()
 		return item.Value.Stop
 	case ExpressionTagSlice:
-		item := enumValue23.SlicePayload()
+		item := expressionValue.SlicePayload()
 		return item.Value.Stop
 	case ExpressionTagTypeAssertion:
-		item := enumValue23.TypeAssertionPayload()
+		item := expressionValue.TypeAssertionPayload()
 		return item.Value.Stop
 	case ExpressionTagCall:
-		item := enumValue23.CallPayload()
+		item := expressionValue.CallPayload()
 		return item.Value.Stop
 	case ExpressionTagStar:
-		item := enumValue23.StarPayload()
+		item := expressionValue.StarPayload()
 		return item.Value.Stop
 	case ExpressionTagNonNilPointer:
-		item := enumValue23.NonNilPointerPayload()
+		item := expressionValue.NonNilPointerPayload()
 		return item.Value.Stop
 	case ExpressionTagUnary:
-		item := enumValue23.UnaryPayload()
+		item := expressionValue.UnaryPayload()
 		return item.Value.Stop
 	case ExpressionTagBinary:
-		item := enumValue23.BinaryPayload()
+		item := expressionValue.BinaryPayload()
 		return item.Value.Stop
 	case ExpressionTagKeyValue:
-		item := enumValue23.KeyValuePayload()
+		item := expressionValue.KeyValuePayload()
 		return item.Value.Stop
 	case ExpressionTagArrayType:
-		item := enumValue23.ArrayTypePayload()
+		item := expressionValue.ArrayTypePayload()
 		return item.Value.Stop
 	case ExpressionTagStructType:
-		item := enumValue23.StructTypePayload()
+		item := expressionValue.StructTypePayload()
 		return item.Value.Stop
 	case ExpressionTagFunctionType:
-		item := enumValue23.FunctionTypePayload()
+		item := expressionValue.FunctionTypePayload()
 		return item.Value.Stop
 	case ExpressionTagInterfaceType:
-		item := enumValue23.InterfaceTypePayload()
+		item := expressionValue.InterfaceTypePayload()
 		return item.Value.Stop
 	case ExpressionTagMapType:
-		item := enumValue23.MapTypePayload()
+		item := expressionValue.MapTypePayload()
 		return item.Value.Stop
 	case ExpressionTagChannelType:
-		item := enumValue23.ChannelTypePayload()
+		item := expressionValue.ChannelTypePayload()
 		return item.Value.Stop
 	case ExpressionTagDefault:
-		item := enumValue23.DefaultPayload()
+		item := expressionValue.DefaultPayload()
 		return item.Value.Stop
 	case ExpressionTagPropagation:
-		item := enumValue23.PropagationPayload()
+		item := expressionValue.PropagationPayload()
 		return item.Value.Stop
 	case ExpressionTagComprehension:
-		item := enumValue23.ComprehensionPayload()
+		item := expressionValue.ComprehensionPayload()
 		return item.Value.Stop
 	default:
-		panic(enumValue23.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -416,72 +416,72 @@ func statementSpan(value *Statement) Span {
 	if value == nil {
 		return Span{Start: token.NoPos, Stop: token.NoPos}
 	}
-	switch enumValue24 := *value; enumValue24.Tag() {
+	switch statementValue := *value; statementValue.Tag() {
 	case StatementTagBad:
-		item := enumValue24.BadPayload()
+		item := statementValue.BadPayload()
 		return item.Value.Span
 	case StatementTagDeclaration:
-		item := enumValue24.DeclarationPayload()
+		item := statementValue.DeclarationPayload()
 		return item.Value.Span
 	case StatementTagEmpty:
-		item := enumValue24.EmptyPayload()
+		item := statementValue.EmptyPayload()
 		return item.Value.Span
 	case StatementTagLabeled:
-		item := enumValue24.LabeledPayload()
+		item := statementValue.LabeledPayload()
 		return item.Value.Span
 	case StatementTagExpression:
-		item := enumValue24.ExpressionPayload()
+		item := statementValue.ExpressionPayload()
 		return item.Value.Span
 	case StatementTagSend:
-		item := enumValue24.SendPayload()
+		item := statementValue.SendPayload()
 		return item.Value.Span
 	case StatementTagIncrement:
-		item := enumValue24.IncrementPayload()
+		item := statementValue.IncrementPayload()
 		return item.Value.Span
 	case StatementTagAssignment:
-		item := enumValue24.AssignmentPayload()
+		item := statementValue.AssignmentPayload()
 		return item.Value.Span
 	case StatementTagGo:
-		item := enumValue24.GoPayload()
+		item := statementValue.GoPayload()
 		return item.Value.Span
 	case StatementTagDefer:
-		item := enumValue24.DeferPayload()
+		item := statementValue.DeferPayload()
 		return item.Value.Span
 	case StatementTagReturn:
-		item := enumValue24.ReturnPayload()
+		item := statementValue.ReturnPayload()
 		return item.Value.Span
 	case StatementTagBranch:
-		item := enumValue24.BranchPayload()
+		item := statementValue.BranchPayload()
 		return item.Value.Span
 	case StatementTagBlock:
-		item := enumValue24.BlockPayload()
+		item := statementValue.BlockPayload()
 		return item.Value.Span
 	case StatementTagIf:
-		item := enumValue24.IfPayload()
+		item := statementValue.IfPayload()
 		return item.Value.Span
 	case StatementTagCase:
-		item := enumValue24.CasePayload()
+		item := statementValue.CasePayload()
 		return item.Value.Span
 	case StatementTagSwitch:
-		item := enumValue24.SwitchPayload()
+		item := statementValue.SwitchPayload()
 		return item.Value.Span
 	case StatementTagTypeSwitch:
-		item := enumValue24.TypeSwitchPayload()
+		item := statementValue.TypeSwitchPayload()
 		return item.Value.Span
 	case StatementTagCommunication:
-		item := enumValue24.CommunicationPayload()
+		item := statementValue.CommunicationPayload()
 		return item.Value.Span
 	case StatementTagSelect:
-		item := enumValue24.SelectPayload()
+		item := statementValue.SelectPayload()
 		return item.Value.Span
 	case StatementTagFor:
-		item := enumValue24.ForPayload()
+		item := statementValue.ForPayload()
 		return item.Value.Span
 	case StatementTagRange:
-		item := enumValue24.RangePayload()
+		item := statementValue.RangePayload()
 		return item.Value.Span
 	default:
-		panic(enumValue24.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -499,24 +499,24 @@ func declarationSpan(value *Declaration) Span {
 	if value == nil {
 		return Span{Start: token.NoPos, Stop: token.NoPos}
 	}
-	switch enumValue25 := *value; enumValue25.Tag() {
+	switch declarationValue := *value; declarationValue.Tag() {
 	case DeclarationTagBad:
-		item := enumValue25.BadPayload()
+		item := declarationValue.BadPayload()
 		return item.Value.Span
 	case DeclarationTagGeneral:
-		item := enumValue25.GeneralPayload()
+		item := declarationValue.GeneralPayload()
 		return item.Value.Span
 	case DeclarationTagFunction:
-		item := enumValue25.FunctionPayload()
+		item := declarationValue.FunctionPayload()
 		return item.Value.Span
 	case DeclarationTagEnum:
-		item := enumValue25.EnumPayload()
+		item := declarationValue.EnumPayload()
 		return item.Value.Span
 	case DeclarationTagStruct:
-		item := enumValue25.StructPayload()
+		item := declarationValue.StructPayload()
 		return item.Value.Span
 	default:
-		panic(enumValue25.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -534,18 +534,18 @@ func specificationSpan(value *Specification) Span {
 	if value == nil {
 		return Span{Start: token.NoPos, Stop: token.NoPos}
 	}
-	switch enumValue26 := *value; enumValue26.Tag() {
+	switch specificationValue := *value; specificationValue.Tag() {
 	case SpecificationTagImport:
-		item := enumValue26.ImportPayload()
+		item := specificationValue.ImportPayload()
 		return item.Value.Span
 	case SpecificationTagValue:
-		item := enumValue26.ValuePayload()
+		item := specificationValue.ValuePayload()
 		return item.Value.Span
 	case SpecificationTagType:
-		item := enumValue26.TypePayload()
+		item := specificationValue.TypePayload()
 		return item.Value.Span
 	default:
-		panic(enumValue26.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(specificationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

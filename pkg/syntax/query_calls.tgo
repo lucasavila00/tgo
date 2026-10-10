@@ -5,28 +5,28 @@ func StaticCallName(value *Expression) (string, bool) {
 	if value == nil {
 		return "", false
 	}
-	switch enumValue19 := *value; enumValue19.Tag() {
+	switch expressionValue := *value; expressionValue.Tag() {
 	case ExpressionTagIdentifier:
-		item := enumValue19.IdentifierPayload()
+		item := expressionValue.IdentifierPayload()
 		return item.Value.Name, true
 	case ExpressionTagSelector:
-		item := enumValue19.SelectorPayload()
+		item := expressionValue.SelectorPayload()
 		prefix, ok := StaticCallName(item.Value.Expression)
 		if !ok {
 			return "", false
 		}
 		return prefix + "." + item.Value.Selector.Name, true
 	case ExpressionTagIndex:
-		item := enumValue19.IndexPayload()
+		item := expressionValue.IndexPayload()
 		return StaticCallName(item.Value.Expression)
 	case ExpressionTagIndexList:
-		item := enumValue19.IndexListPayload()
+		item := expressionValue.IndexListPayload()
 		return StaticCallName(item.Value.Expression)
 	case ExpressionTagParenthesized:
-		item := enumValue19.ParenthesizedPayload()
+		item := expressionValue.ParenthesizedPayload()
 		return StaticCallName(item.Value.Expression)
 	case ExpressionTagStar:
-		item := enumValue19.StarPayload()
+		item := expressionValue.StarPayload()
 		return StaticCallName(item.Value.Expression)
 	case ExpressionTagNonNilPointer:
 		return "", false

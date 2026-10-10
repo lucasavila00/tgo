@@ -321,7 +321,7 @@ func (c *checker) mappedScalarEffectCondition(
 }
 
 func isScalarEffectCondition(kind EffectKind) bool {
-	switch enumValue6 := kind; enumValue6.Tag() {
+	switch effectKind := kind; effectKind.Tag() {
 	case EffectKindTagBoolean:
 		return true
 	case EffectKindTagNonzero:
@@ -337,7 +337,7 @@ func isScalarEffectCondition(kind EffectKind) bool {
 	case EffectKindTagResliceExtends:
 		return false
 	default:
-		panic(enumValue6.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(effectKind.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

@@ -9,9 +9,9 @@ func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
 	if node == nil {
 		return nil, false
 	}
-	switch enumValue25 := *node; enumValue25.Tag() {
+	switch nodeValue := *node; nodeValue.Tag() {
 	case syntax.NodeTagStatement:
-		value := enumValue25.StatementPayload()
+		value := nodeValue.StatementPayload()
 		if value.Value == nil {
 			return nil, false
 		}
@@ -39,21 +39,21 @@ func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
 	case syntax.NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(enumValue25.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // statementList gets the child list from one source statement container.
 func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
-	switch enumValue26 := *statement; enumValue26.Tag() {
+	switch statementValue := *statement; statementValue.Tag() {
 	case syntax.StatementTagBlock:
-		value := enumValue26.BlockPayload()
+		value := statementValue.BlockPayload()
 		return value.Value.List, true
 	case syntax.StatementTagCase:
-		value := enumValue26.CasePayload()
+		value := statementValue.CasePayload()
 		return value.Value.Body, true
 	case syntax.StatementTagCommunication:
-		value := enumValue26.CommunicationPayload()
+		value := statementValue.CommunicationPayload()
 		return value.Value.Body, true
 	case syntax.StatementTagBad:
 		return nil, false
@@ -92,15 +92,15 @@ func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
 	case syntax.StatementTagRange:
 		return nil, false
 	default:
-		panic(enumValue26.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // sourceAssignment gets an assignment that the user wrote.
 func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement, bool) {
-	switch enumValue27 := *statement; enumValue27.Tag() {
+	switch statementValue := *statement; statementValue.Tag() {
 	case syntax.StatementTagAssignment:
-		value := enumValue27.AssignmentPayload()
+		value := statementValue.AssignmentPayload()
 		return value.Value, true
 	case syntax.StatementTagBad:
 		return nil, false
@@ -143,15 +143,15 @@ func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement,
 	case syntax.StatementTagRange:
 		return nil, false
 	default:
-		panic(enumValue27.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // sourceIf gets an if statement that the user wrote.
 func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
-	switch enumValue28 := *statement; enumValue28.Tag() {
+	switch statementValue := *statement; statementValue.Tag() {
 	case syntax.StatementTagIf:
-		value := enumValue28.IfPayload()
+		value := statementValue.IfPayload()
 		return value.Value, true
 	case syntax.StatementTagBad:
 		return nil, false
@@ -194,15 +194,15 @@ func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
 	case syntax.StatementTagRange:
 		return nil, false
 	default:
-		panic(enumValue28.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // sourceReturn gets a return statement that the user wrote.
 func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
-	switch enumValue29 := *statement; enumValue29.Tag() {
+	switch statementValue := *statement; statementValue.Tag() {
 	case syntax.StatementTagReturn:
-		value := enumValue29.ReturnPayload()
+		value := statementValue.ReturnPayload()
 		return value.Value, true
 	case syntax.StatementTagBad:
 		return nil, false
@@ -245,18 +245,18 @@ func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
 	case syntax.StatementTagRange:
 		return nil, false
 	default:
-		panic(enumValue29.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // sourceCall gets a direct or parenthesized call from TGo source.
 func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
-	switch enumValue30 := *expression; enumValue30.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case syntax.ExpressionTagCall:
-		value := enumValue30.CallPayload()
+		value := expressionValue.CallPayload()
 		return value.Value, true
 	case syntax.ExpressionTagParenthesized:
-		value := enumValue30.ParenthesizedPayload()
+		value := expressionValue.ParenthesizedPayload()
 		return sourceCall(value.Value.Expression)
 	case syntax.ExpressionTagBad:
 		return nil, false
@@ -309,15 +309,15 @@ func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
 	case syntax.ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(enumValue30.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // sourceIdentifier gets a direct identifier expression.
 func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) {
-	switch enumValue31 := *expression; enumValue31.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case syntax.ExpressionTagIdentifier:
-		value := enumValue31.IdentifierPayload()
+		value := expressionValue.IdentifierPayload()
 		return value.Value, true
 	case syntax.ExpressionTagBad:
 		return nil, false
@@ -372,15 +372,15 @@ func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) 
 	case syntax.ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(enumValue31.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // sourceBinary gets a direct binary expression.
 func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool) {
-	switch enumValue32 := *expression; enumValue32.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case syntax.ExpressionTagBinary:
-		value := enumValue32.BinaryPayload()
+		value := expressionValue.BinaryPayload()
 		return value.Value, true
 	case syntax.ExpressionTagBad:
 		return nil, false
@@ -435,7 +435,7 @@ func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool
 	case syntax.ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(enumValue32.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -443,9 +443,9 @@ func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool
 func sourceCompositeLiteral(
 	expression *syntax.Expression,
 ) (*syntax.CompositeLiteral, bool) {
-	switch enumValue33 := *expression; enumValue33.Tag() {
+	switch expressionValue := *expression; expressionValue.Tag() {
 	case syntax.ExpressionTagCompositeLiteral:
-		value := enumValue33.CompositeLiteralPayload()
+		value := expressionValue.CompositeLiteralPayload()
 		return value.Value, true
 	case syntax.ExpressionTagBad:
 		return nil, false
@@ -500,16 +500,16 @@ func sourceCompositeLiteral(
 	case syntax.ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(enumValue33.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
 // sourceUnparenthesized removes all outer source parentheses.
 func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
 	for {
-		switch enumValue34 := *expression; enumValue34.Tag() {
+		switch expressionValue := *expression; expressionValue.Tag() {
 		case syntax.ExpressionTagParenthesized:
-			value := enumValue34.ParenthesizedPayload()
+			value := expressionValue.ParenthesizedPayload()
 			expression = value.Value.Expression
 		case syntax.ExpressionTagBad:
 			return expression
@@ -564,7 +564,7 @@ func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
 		case syntax.ExpressionTagComprehension:
 			return expression
 		default:
-			panic(enumValue34.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 		}
 	}
 }
