@@ -19,7 +19,7 @@ type loweringEmitter struct {
 	typeAliases         map[*ast.BlockStmt]map[types.Type]*ast.Ident
 	renamedTypeBlockers map[types.Object]string
 	typeDefinitionSites map[*ast.Ident]emittedTypeDefinition
-	typeBlockerAliases  map[types.Object]map[types.Type]*ast.Ident
+	typeObjectAliases   map[types.Object]*ast.Ident
 	fmtAlias            string
 	hoisted             []ast.Stmt
 }
@@ -40,7 +40,7 @@ func newLoweringEmitter(
 		typeAliases:         make(map[*ast.BlockStmt]map[types.Type]*ast.Ident),
 		renamedTypeBlockers: make(map[types.Object]string),
 		typeDefinitionSites: make(map[*ast.Ident]emittedTypeDefinition),
-		typeBlockerAliases:  make(map[types.Object]map[types.Type]*ast.Ident),
+		typeObjectAliases:   make(map[types.Object]*ast.Ident),
 	}
 	for id, target := range plan.targets {
 		if target.label != "" {
@@ -968,9 +968,7 @@ func (e *loweringEmitter) contextTypeExpression(
 	reference := value.typeReference
 	if len(reference.blockers) != 0 {
 		e.renameTypeReferenceBlockers(value)
-		if alias := e.typeAliasBeforeBlocker(value); alias != nil {
-			return alias
-		}
+		e.emitTypeAliasesBeforeBlockers(value)
 		return e.typeExpression(value.typ, value.position)
 	}
 	if reference.direct {
@@ -1001,50 +999,73 @@ func (e *loweringEmitter) contextTypeExpression(
 	return ast.NewIdent(alias.Name)
 }
 
-func (e *loweringEmitter) typeAliasBeforeBlocker(value plannedValue) ast.Expr {
-	var blocker types.Object
-	var site emittedTypeDefinition
+func (e *loweringEmitter) emitTypeAliasesBeforeBlockers(value plannedValue) {
 	for _, planned := range value.typeReference.blockers {
-		candidate, ok := e.typeDefinitionSites[planned.definition]
-		if !planned.typeName || !ok {
+		if !planned.typeName || e.typeObjectAliases[planned.intended] != nil {
 			continue
 		}
-		if blocker == nil || candidate.block == site.block && candidate.index < site.index {
-			blocker, site = planned.object, candidate
+		site, ok := e.typeDefinitionSites[planned.definition]
+		if !ok {
+			continue
 		}
-	}
-	if blocker == nil {
-		return nil
-	}
-	aliases := e.typeBlockerAliases[blocker]
-	if aliases == nil {
-		aliases = make(map[types.Type]*ast.Ident)
-		e.typeBlockerAliases[blocker] = aliases
-	}
-	if alias := aliases[value.typ]; alias != nil {
-		return ast.NewIdent(alias.Name)
-	}
-	alias := e.freshName("operandType")
-	aliases[value.typ] = alias
-	position := value.position
-	if value.typeReference.anchor.after != nil {
-		position = value.typeReference.anchor.after.End()
-	}
-	declaration := &ast.DeclStmt{Decl: &ast.GenDecl{
-		Tok: token.TYPE, Specs: []ast.Spec{&ast.TypeSpec{
-			Name: alias, Assign: position, Type: e.typeExpression(value.typ, position),
-		}},
-	}}
-	site.block.List = append(site.block.List, nil)
-	copy(site.block.List[site.index+1:], site.block.List[site.index:])
-	site.block.List[site.index] = declaration
-	for definition, other := range e.typeDefinitionSites {
-		if other.block == site.block && other.index >= site.index {
-			other.index++
-			e.typeDefinitionSites[definition] = other
+		alias := e.freshName(planned.intended.Name() + "Type")
+		position := planned.definition.Pos()
+		declaration := &ast.DeclStmt{Decl: &ast.GenDecl{
+			Tok: token.TYPE, Specs: []ast.Spec{
+				e.typeAliasSpecification(alias, planned.intended, position),
+			},
+		}}
+		site.block.List = append(site.block.List, nil)
+		copy(site.block.List[site.index+1:], site.block.List[site.index:])
+		site.block.List[site.index] = declaration
+		for definition, other := range e.typeDefinitionSites {
+			if other.block == site.block && other.index >= site.index {
+				other.index++
+				e.typeDefinitionSites[definition] = other
+			}
 		}
+		e.typeObjectAliases[planned.intended] = alias
 	}
-	return ast.NewIdent(alias.Name)
+}
+
+func (e *loweringEmitter) typeAliasSpecification(
+	alias *ast.Ident,
+	object types.Object,
+	position token.Pos,
+) *ast.TypeSpec {
+	specification := &ast.TypeSpec{
+		Name: alias, Assign: position, Type: e.typeObjectExpression(object, position),
+	}
+	named, ok := object.Type().(*types.Named)
+	if !ok || named.TypeParams() == nil || named.TypeParams().Len() == 0 {
+		return specification
+	}
+	parameters := make([]*ast.Field, 0, named.TypeParams().Len())
+	arguments := make([]ast.Expr, 0, named.TypeParams().Len())
+	for index := range named.TypeParams().Len() {
+		parameter := named.TypeParams().At(index)
+		name := ast.NewIdent(parameter.Obj().Name())
+		parameters = append(parameters, &ast.Field{
+			Names: []*ast.Ident{name}, Type: e.typeExpression(parameter.Constraint(), position),
+		})
+		arguments = append(arguments, ast.NewIdent(name.Name))
+	}
+	specification.TypeParams = &ast.FieldList{List: parameters}
+	specification.Type = &ast.IndexListExpr{X: specification.Type, Indices: arguments}
+	return specification
+}
+
+func (e *loweringEmitter) typeObjectExpression(object types.Object, position token.Pos) ast.Expr {
+	if object.Pkg() == nil {
+		return e.unit.generatedUniverse(object.Name(), position)
+	}
+	if object.Pkg() == e.unit.typed && object.Parent() != e.unit.typed.Scope() {
+		return ast.NewIdent(object.Name())
+	}
+	qualifier := e.unit.ownerQualifier(e.source.File, object.Pkg())
+	return e.unit.generatedObject(
+		qualifier, packagePath(object.Pkg()), object.Name(), position,
+	)
 }
 
 func (e *loweringEmitter) renameTypeReferenceBlockers(value plannedValue) {
@@ -1076,6 +1097,9 @@ func (e *loweringEmitter) typeExpression(typ types.Type, position token.Pos) ast
 		if item.Info()&types.IsUntyped != 0 {
 			return e.typeExpression(types.Default(item), position)
 		}
+		if alias := e.typeObjectAliases[types.Universe.Lookup(item.Name())]; alias != nil {
+			return ast.NewIdent(alias.Name)
+		}
 		if item.Kind() == types.UnsafePointer {
 			qualifier := e.unit.ownerQualifier(e.source.File, types.Unsafe)
 			return e.unit.generatedObject(
@@ -1085,6 +1109,17 @@ func (e *loweringEmitter) typeExpression(typ types.Type, position token.Pos) ast
 		return e.unit.generatedUniverse(item.Name(), position)
 	case *types.Named:
 		object := item.Obj()
+		if alias := e.typeObjectAliases[object]; alias != nil {
+			expression := ast.Expr(ast.NewIdent(alias.Name))
+			if arguments := item.TypeArgs(); arguments != nil && arguments.Len() != 0 {
+				indices := make([]ast.Expr, 0, arguments.Len())
+				for index := range arguments.Len() {
+					indices = append(indices, e.typeExpression(arguments.At(index), position))
+				}
+				return &ast.IndexListExpr{X: expression, Indices: indices}
+			}
+			return expression
+		}
 		if object.Pkg() == e.unit.typed && object.Parent() != e.unit.typed.Scope() {
 			return ast.NewIdent(object.Name())
 		}
@@ -1124,6 +1159,9 @@ func (e *loweringEmitter) typeExpression(typ types.Type, position token.Pos) ast
 		return &ast.ChanType{Dir: direction, Value: e.typeExpression(item.Elem(), position)}
 	case *types.TypeParam:
 		object := item.Obj()
+		if alias := e.typeObjectAliases[object]; alias != nil {
+			return ast.NewIdent(alias.Name)
+		}
 		return ast.NewIdent(object.Name())
 	case *types.Struct:
 		fields := make([]*ast.Field, 0, item.NumFields())

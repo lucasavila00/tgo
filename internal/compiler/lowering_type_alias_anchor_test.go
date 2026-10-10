@@ -53,6 +53,13 @@ import (
 
 var errLoad = errors.New("load failure")
 
+type GenericFlag[T any] bool
+
+func consumeGeneric[V any](value GenericFlag[V], number int) int {
+	if value { return number }
+	return 0
+}
+
 func mark(events *[]string, event string, value int) int {
 	*events = append(*events, event)
 	return value
@@ -112,6 +119,13 @@ func unsafePointer(events *[]string) error {
 	}
 	return nil
 }
+
+func genericAnchor(events *[]string) (int, error) {
+	type GenericFlag bool
+	type V int
+	_ = GenericFlag(false)
+	return consumeGeneric[V](mark(events, "left", 1) < mark(events, "right", 2), load(events, false)!!), nil
+}
 `
 
 const loweringTypeAliasAnchorTestSource = `package typealiasanchor
@@ -143,6 +157,12 @@ func TestGeneratedTypeAliasAnchor(t *testing.T) {
 	events = nil
 	if err := unsafePointer(&events); err != nil || strings.Join(events, ",") != "channel" {
 		t.Fatalf("unsafe pointer error=%v events=%v", err, events)
+	}
+
+	events = nil
+	value, err = genericAnchor(&events)
+	if value != 7 || err != nil || strings.Join(events, ",") != "left,right,load" {
+		t.Fatalf("generic anchor value=%d error=%v events=%v", value, err, events)
 	}
 }
 `

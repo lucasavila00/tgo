@@ -18,6 +18,7 @@ type plannedTypeReference struct {
 }
 
 type plannedTypeBlocker struct {
+	intended    types.Object
 	object      types.Object
 	definition  *ast.Ident
 	identifiers []*ast.Ident
@@ -164,7 +165,7 @@ func capturePlannedTypeReference(
 			continue
 		}
 		seenBlockers[blocker] = true
-		planned := plannedTypeBlocker{object: blocker}
+		planned := plannedTypeBlocker{intended: object, object: blocker}
 		_, planned.typeName = blocker.(*types.TypeName)
 		for identifier, defined := range info.Defs {
 			if defined == blocker {
