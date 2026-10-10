@@ -286,48 +286,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		l.inferredResultNames = outer
 		return result
 	case *ast.ForStmt:
-		outer := l.inferredResultNames
-		l.inferredResultNames = cloneInferredResultNames(outer)
-		scopedInitializer := node.Init != nil
-		prefix := []ast.Stmt(nil)
-		if l.statementHasLowering(node.Init) {
-			if assignment, ok := node.Init.(*ast.AssignStmt); ok {
-				l.rememberSimpleAssignmentTypes(assignment)
-				l.rememberDirectResultTypes(
-					assignment.Lhs,
-					l.directPropagationSignature(assignment.Rhs[0]),
-				)
-				lowered := l.lowerAssignment(assignment, false)
-				node.Init = lowered[len(lowered)-1]
-				prefix = lowered[:len(lowered)-1]
-			} else {
-				prefix = l.simpleStatement(node.Init)
-				node.Init = nil
-			}
-		} else if assignment, ok := node.Init.(*ast.AssignStmt); ok {
-			l.rememberSimpleAssignmentTypes(assignment)
-		}
-		l.missingStatementLowering(node.Init, "for initializer")
-		node.Body.List = l.scopedStatements(node.Body.List)
-		l.missingStatementLowering(node.Post, "for post statement")
-		if l.hasLowering(node.Cond) {
-			condition, prefix := l.expression(node.Cond)
-			exit := &ast.IfStmt{
-				Cond: &ast.UnaryExpr{Op: token.NOT, X: condition},
-				Body: &ast.BlockStmt{List: []ast.Stmt{&ast.BranchStmt{
-					Tok: token.BREAK,
-				}}},
-			}
-			node.Cond = nil
-			body := make([]ast.Stmt, 0, len(prefix)+1+len(node.Body.List))
-			body = append(body, prefix...)
-			body = append(body, exit)
-			body = append(body, node.Body.List...)
-			node.Body.List = body
-		}
-		result := l.prefixedStatement(prefix, node, scopedInitializer)
-		l.inferredResultNames = outer
-		return result
+		return l.forStatement(node)
 	case *ast.SelectStmt:
 		for _, item := range node.Body.List {
 			clause := item.(*ast.CommClause)
