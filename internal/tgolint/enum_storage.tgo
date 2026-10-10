@@ -23,6 +23,7 @@ type enumClosureSet map[*syntax.FunctionLiteral]bool
 type enumClosureCall struct {
 	input     *enumStorageState
 	output    *enumStorageState
+	results   []enumStorageSet
 	analyzing bool
 }
 
@@ -358,6 +359,9 @@ func (c %checker) enumExpressionStorage(
 	if name := syntax.IdentifierExpressionOf(expression); name != nil &&
 		c.facts.Object(name) == types.Universe.Lookup("nil") {
 		return enumStorageSet{}
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		return c.enumCallStorage(call, state)
 	}
 	if !enumPointerType(c.facts, expression) {
 		return enumStorageSet{{origin: syntax.ExpressionPosition(expression)}: true}

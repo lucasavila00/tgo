@@ -147,6 +147,28 @@ func (c %checker) evalEnumCall(
 	}
 }
 
+func (c %checker) enumCallStorage(
+	call *syntax.CallExpression,
+	state *enumStorageState,
+) enumStorageSet {
+	arguments := make([]enumStorageSet, len(call.Args))
+	for index, argument := range call.Args {
+		arguments[index] = c.enumExpressionStorage(argument, state)
+	}
+	result := make(enumStorageSet)
+	for literal := range c.enumExpressionClosure(call.Callee, state) {
+		c.invokeEnumClosure(literal, state, arguments)
+		summary := state.calls[literal]
+		if summary != nil && len(summary.results) != 0 {
+			result, _ = joinEnumStorageSet(result, summary.results[0])
+		}
+	}
+	if len(result) == 0 {
+		result[enumPointerPlace{origin: call.Start}] = true
+	}
+	return result
+}
+
 func (c %checker) invokeEnumClosure(
 	literal *syntax.FunctionLiteral,
 	input *enumStorageState,
@@ -182,6 +204,7 @@ func (c %checker) invokeEnumClosure(
 	call.analyzing = true
 	for {
 		before := cloneEnumStorageState(call.output)
+		beforeResults := cloneEnumStorageSets(call.results)
 		graph := cfg.New(literal.Body, c.callMayReturn)
 		entries := make([]*enumStorageState, len(graph.Blocks))
 		entries[0] = cloneEnumStorageState(call.input)
@@ -195,6 +218,7 @@ func (c %checker) invokeEnumClosure(
 			state := cloneEnumStorageState(entries[block.Index])
 			for _, node := range block.Nodes {
 				c.transferEnumStorage(state, node)
+				c.recordEnumClosureResults(call, node, state)
 			}
 			if len(block.Succs) == 0 {
 				call.output, _ = joinEnumStorageStates(call.output, state)
@@ -213,7 +237,8 @@ func (c %checker) invokeEnumClosure(
 				}
 			}
 		}
-		if enumStorageStateEqual(before, call.output) {
+		if enumStorageStateEqual(before, call.output) &&
+			enumStorageSetsEqual(beforeResults, call.results) {
 			break
 		}
 	}
@@ -222,6 +247,49 @@ func (c %checker) invokeEnumClosure(
 		return cloneEnumStorageState(input)
 	}
 	return cloneEnumStorageState(call.output)
+}
+
+func (c %checker) recordEnumClosureResults(
+	call *enumClosureCall,
+	node syntax.Node,
+	state *enumStorageState,
+) {
+	statement, ok := syntax.StatementOf(&node)
+	if !ok {
+		return
+	}
+	returned := syntax.ReturnStatementOf(statement)
+	if returned == nil {
+		return
+	}
+	for index, expression := range returned.Results {
+		for len(call.results) <= index {
+			call.results = append(call.results, make(enumStorageSet))
+		}
+		call.results[index], _ = joinEnumStorageSet(
+			call.results[index], c.enumExpressionStorage(expression, state),
+		)
+	}
+}
+
+func cloneEnumStorageSets(source []enumStorageSet) []enumStorageSet {
+	result := make([]enumStorageSet, len(source))
+	for index, values := range source {
+		result[index] = cloneEnumStorageSet(values)
+	}
+	return result
+}
+
+func enumStorageSetsEqual(left, right []enumStorageSet) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if !enumStorageSetEqual(left[index], right[index]) {
+			return false
+		}
+	}
+	return true
 }
 
 func enumStorageStateEqual(left, right *enumStorageState) bool {
