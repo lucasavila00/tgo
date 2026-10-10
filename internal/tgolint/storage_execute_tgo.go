@@ -338,8 +338,20 @@ func joinStorageExecution(
 	if left.temps == nil {
 		return cloneStorageExecution(right), true
 	}
-	joined := cloneStorageExecution(left)
-	joined.storage = joinStorageState(left.storage, right.storage)
+	joined := storageExecutionState{
+		storage: joinStorageState(left.storage, right.storage),
+		temps:   make(map[int]storageValue, len(left.temps)),
+		returns: cloneStorageValues(left.returns),
+		live:    left.live,
+		effects: storageInvocationEffects{
+			zero:      append([]GenericEffect(nil), left.effects.zero...),
+			access:    append([]GenericEffect(nil), left.effects.access...),
+			completed: left.effects.completed,
+		},
+	}
+	for id, value := range left.temps {
+		joined.temps[id] = cloneStorageValue(value)
+	}
 	for id, value := range right.temps {
 		joined.temps[id] = joinStorageValue(joined.temps[id], value)
 	}
