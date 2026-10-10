@@ -22,7 +22,10 @@ func TestEnumFieldRegionsKeepOwnersSeparate(t *testing.T) {
 func TestEnumProofKeepsTestedTargetRelation(t *testing.T) {
 	t.Parallel()
 	state := newEnumEventState()
-	selected := enumAbstractValue{regions: enumRegionSet{1: true, 2: true}}
+	selected := enumAbstractValue{
+		regions:      enumRegionSet{1: true, 2: true},
+		dependencies: enumCellSet{3: true},
+	}
 	selected.observation = state.observe(selected)
 	state.prove(selected, 1)
 	if !state.payloadValid(selected, 1) {
@@ -30,6 +33,18 @@ func TestEnumProofKeepsTestedTargetRelation(t *testing.T) {
 	}
 	if state.payloadValid(enumAbstractValue{regions: enumRegionSet{1: true}}, 1) {
 		t.Fatal("a possible target inherited the receiver proof")
+	}
+	independent := enumAbstractValue{
+		regions:      enumRegionSet{1: true, 2: true},
+		dependencies: enumCellSet{4: true},
+	}
+	if state.payloadValid(independent, 1) {
+		t.Fatal("an independent selection inherited the receiver proof")
+	}
+	alias := cloneEnumAbstractValue(selected)
+	alias.dependencies[5] = true
+	if !state.payloadValid(alias, 1) {
+		t.Fatal("a copied alias lost the receiver proof")
 	}
 }
 

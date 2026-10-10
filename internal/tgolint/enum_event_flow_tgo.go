@@ -9,8 +9,9 @@ import (
 )
 
 type enumRegionProof struct {
-	targets string
-	tag     int
+	targets      string
+	dependencies string
+	tag          int
 }
 
 type enumEventState struct {
@@ -279,7 +280,11 @@ func (state *enumEventState) prove(value enumAbstractValue, tag int) {
 	if value.unknown || !state.observationFresh(value.observation) {
 		return
 	}
-	proof := enumRegionProof{targets: enumRegionSignature(value.regions), tag: tag}
+	proof := enumRegionProof{
+		targets:      enumRegionSignature(value.regions),
+		dependencies: enumCellSignature(value.dependencies),
+		tag:          tag,
+	}
 	state.proofs[proof] = true
 	state.proofTargets[proof] = cloneEnumRegionSet(value.regions)
 	state.proofDependencies[proof] = cloneEnumCellSet(value.dependencies)
@@ -301,8 +306,14 @@ func (state *enumEventState) payloadValid(
 	if value.unknown || len(value.regions) == 0 {
 		return false
 	}
-	proof := enumRegionProof{targets: enumRegionSignature(value.regions), tag: tag}
-	return state.proofs[proof]
+	targets := enumRegionSignature(value.regions)
+	for proof := range state.proofs {
+		if proof.targets == targets && proof.tag == tag &&
+			enumCellSubset(state.proofDependencies[proof], value.dependencies) {
+			return true
+		}
+	}
+	return false
 }
 
 func enumRegionSignature(regions enumRegionSet) string {
@@ -316,6 +327,28 @@ func enumRegionSignature(regions enumRegionSet) string {
 		parts[index] = strconv.Itoa(value)
 	}
 	return strings.Join(parts, ",")
+}
+
+func enumCellSignature(cells enumCellSet) string {
+	values := make([]int, 0, len(cells))
+	for cell := range cells {
+		values = append(values, int(cell))
+	}
+	sort.Ints(values)
+	parts := make([]string, len(values))
+	for index, value := range values {
+		parts[index] = strconv.Itoa(value)
+	}
+	return strings.Join(parts, ",")
+}
+
+func enumCellSubset(left, right enumCellSet) bool {
+	for cell := range left {
+		if !right[cell] {
+			return false
+		}
+	}
+	return true
 }
 
 func (graph *enumEventGraph) transfer(
