@@ -120,10 +120,13 @@ func FunctionValues(event model.Event) {
 	genericzero.CapturedNested[model.Event]()()
 	genericzero.AddressedNested[model.Event]()()
 	genericzero.AddressedAlternativeNested[int, model.Event]()()
+	genericzero.RangedAssignedNested[model.Event]()()
+	genericzero.RangedDefinedNested[model.Event]()()
 	genericzero.SelectedNested[model.Event]()()
 	genericzero.IndexedNested[model.Event]()()
 	genericzero.ForwardedNested[model.Event]()()
 	genericzero.GenericForwardedNested[model.Event]()()
+	genericzero.NestedGenericCall[model.Event]()()
 	genericzero.CalledForwardedNested[model.Event]()()
 }
 

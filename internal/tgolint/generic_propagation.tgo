@@ -64,38 +64,20 @@ func (c %checker) propagateGenericZeroFacts(
 	for changed {
 		changed = false
 		for _, summary := range summaries {
-			for _, call := range summary.calls {
-				function, receiverArguments, typeArguments := c.genericCall(call)
-				if function == nil {
-					continue
-				}
-				fact := c.genericZeroFact(function, summaries)
-				if fact == nil {
-					continue
-				}
-				if c.propagateGenericEffects(
-					summary,
-					call,
-					fact.ZeroEffects,
-					receiverArguments,
-					typeArguments,
-					true,
-					false,
-					false,
-				) {
+			if c.propagateGenericSummaryCalls(summary, summaries) {
+				changed = true
+			}
+			for _, body := range summary.returnedBodies {
+				if c.propagateGenericSummaryCalls(body.summary, summaries) {
 					changed = true
 				}
-				if c.propagateGenericEffects(
-					summary,
-					call,
-					fact.AccessEffects,
-					receiverArguments,
-					typeArguments,
-					false,
-					false,
-					false,
-				) {
-					changed = true
+				for _, effect := range body.summary.zeroEffects {
+					effect.MaySkip = effect.MaySkip || body.maySkip
+					changed = c.addReturnedGenericEffect(summary, true, effect) || changed
+				}
+				for _, effect := range body.summary.accessEffects {
+					effect.MaySkip = effect.MaySkip || body.maySkip
+					changed = c.addReturnedGenericEffect(summary, false, effect) || changed
 				}
 			}
 			for _, returned := range summary.returnedCalls {
@@ -124,6 +106,32 @@ func (c %checker) propagateGenericZeroFacts(
 			}
 		}
 	}
+}
+
+func (c %checker) propagateGenericSummaryCalls(
+	summary %genericEffectSummary,
+	summaries map[*types.Func]%genericEffectSummary,
+) bool {
+	changed := false
+	for _, call := range summary.calls {
+		function, receiverArguments, typeArguments := c.genericCall(call)
+		if function == nil {
+			continue
+		}
+		fact := c.genericZeroFact(function, summaries)
+		if fact == nil {
+			continue
+		}
+		changed = c.propagateGenericEffects(
+			summary, call, fact.ZeroEffects, receiverArguments, typeArguments,
+			true, false, false,
+		) || changed
+		changed = c.propagateGenericEffects(
+			summary, call, fact.AccessEffects, receiverArguments, typeArguments,
+			false, false, false,
+		) || changed
+	}
+	return changed
 }
 
 func (c %checker) propagateGenericEffects(

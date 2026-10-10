@@ -183,6 +183,28 @@ func AddressedAlternativeNested[A any, B any]() func() {
 	return nested
 }
 
+func RangedAssignedNested[T any]() func() {
+	values := []func(){func() {
+		var value T
+		_ = value
+	}}
+	nested := func() {}
+	for _, nested = range values {
+	}
+	return nested
+}
+
+func RangedDefinedNested[T any]() func() {
+	values := []func(){func() {
+		var value T
+		_ = value
+	}}
+	for _, nested := range values {
+		return nested
+	}
+	return func() {}
+}
+
 type nestedBox struct {
 	value func()
 }
@@ -222,6 +244,12 @@ func GenericForwardedNested[T any]() func() {
 		var value T
 		_ = value
 	})
+}
+
+func NestedGenericCall[T any]() func() {
+	return func() {
+		Variable[T]()
+	}
 }
 
 func SafeGenericForwardedNested[T any]() func() {

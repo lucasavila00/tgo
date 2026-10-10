@@ -507,6 +507,7 @@ type genericEffectSummary struct {
 	returnedAccessEffects []GenericEffect
 	calls                 []*syntax.Expression
 	returnedCalls         []returnedGenericCall
+	returnedBodies        []returnedGenericBody
 	reachable             map[syntax.Node]bool
 	root                  *syntax.Node
 	body                  *syntax.BlockStatement
@@ -515,6 +516,11 @@ type genericEffectSummary struct {
 type returnedGenericCall struct {
 	expression *syntax.Expression
 	maySkip    bool
+}
+
+type returnedGenericBody struct {
+	summary *genericEffectSummary
+	maySkip bool
 }
 
 type returnedClosureBinding struct {
@@ -593,7 +599,8 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 				function: object, file: file, declaration: function, parameters: parameters,
 				zeroEffects: nil, accessEffects: nil, returnedZeroEffects: nil,
 				returnedAccessEffects: nil, calls: nil, returnedCalls: nil,
-				reachable: c.reachableNodes(function.Body), root: &root,
+				returnedBodies: nil,
+				reachable:      c.reachableNodes(function.Body), root: &root,
 				body: function.Body,
 			}
 			c.collectDirectGenericZeros(summary)

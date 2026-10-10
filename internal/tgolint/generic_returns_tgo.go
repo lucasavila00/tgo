@@ -29,6 +29,9 @@ func (c *checker) returnedClosureBindings(
 					assignment.Operator == token.DEFINE, predeclared,
 				)
 			}
+			if ranged := syntax.RangeStatementOf(statement); ranged != nil {
+				c.markRangedReturnedClosureBindings(bindings, ranged)
+			}
 		}
 		if specification, ok := syntax.SpecificationOf(node); ok {
 			if value := syntax.ValueSpecificationOf(specification); value != nil {
@@ -48,6 +51,32 @@ func (c *checker) returnedClosureBindings(
 	})
 	c.markAddressedReturnedClosureBindings(body, bindings)
 	return bindings
+}
+
+func (c *checker) markRangedReturnedClosureBindings(
+	bindings map[types.Object]*returnedClosureBinding,
+	ranged *syntax.RangeStatement,
+) {
+	for _, target := range []*syntax.Expression{ranged.Key, ranged.Value} {
+		name := syntax.IdentifierExpressionOf(target)
+		if name == nil || name.Name == "_" {
+			continue
+		}
+		object := c.facts.Object(name)
+		if object == nil {
+			continue
+		}
+		binding := bindings[object]
+		if binding == nil {
+			binding = &returnedClosureBinding{
+				sources: nil, unstable: true, opaque: true,
+			}
+			bindings[object] = binding
+			continue
+		}
+		binding.unstable = true
+		binding.opaque = true
+	}
 }
 
 func (c *checker) addReturnedClosureBindings(
@@ -250,19 +279,17 @@ func (c *checker) collectReturnedLiteral(
 		parameters:  summary.parameters, zeroEffects: nil,
 		accessEffects: nil, returnedZeroEffects: nil,
 		returnedAccessEffects: nil, calls: nil, returnedCalls: nil,
-		reachable: c.reachableNodes(literal.Body), root: &root,
+		returnedBodies: nil,
+		reachable:      c.reachableNodes(literal.Body), root: &root,
 		body: literal.Body,
 	}
 	c.collectGenericNodes(returned)
-	found := len(returned.zeroEffects) > 0 || len(returned.accessEffects) > 0
-	for _, effect := range returned.zeroEffects {
-		effect.MaySkip = effect.MaySkip || maySkip
-		c.addReturnedGenericEffect(summary, true, effect)
-	}
-	for _, effect := range returned.accessEffects {
-		effect.MaySkip = effect.MaySkip || maySkip
-		c.addReturnedGenericEffect(summary, false, effect)
-	}
+	summary.returnedBodies = append(summary.returnedBodies, returnedGenericBody{
+		summary: returned,
+		maySkip: maySkip,
+	})
+	found := len(returned.zeroEffects) > 0 || len(returned.accessEffects) > 0 ||
+		len(returned.calls) > 0
 	return found
 }
 
