@@ -10,9 +10,11 @@ type StorageEffectGraph struct {
 
 // StorageEffectFunction is one finite function or closure graph.
 type StorageEffectFunction struct {
-	ID       int
-	Captures []StorageEffectRegion
-	Blocks   []StorageEffectBlock
+	ID            int
+	Captures      []StorageEffectRegion
+	ZeroEffects   []GenericEffect
+	AccessEffects []GenericEffect
+	Blocks        []StorageEffectBlock
 }
 
 // StorageEffectBlock keeps operations in source evaluation order.

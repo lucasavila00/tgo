@@ -10,6 +10,7 @@ import (
 type storageGraphSummary struct {
 	function *types.Func
 	graph    StorageEffectGraph
+	calls    map[int]*types.Func
 }
 
 type storageGraphBuilder struct {
@@ -21,6 +22,8 @@ type storageGraphBuilder struct {
 	nextTemp  int
 	nextSite  int
 	nextGraph int
+	root      *types.Func
+	calls     map[int]*types.Func
 }
 
 func (c %checker) collectStorageEffectGraphs() map[*types.Func]%storageGraphSummary {
@@ -41,7 +44,7 @@ func (c %checker) collectStorageEffectGraphs() map[*types.Func]%storageGraphSumm
 			builder := newStorageGraphBuilder(c, file, function)
 			builder.addFunction(declaration.Body, nil)
 			result[function.Origin()] = &storageGraphSummary{
-				function: function.Origin(), graph: *builder.graph,
+				function: function.Origin(), graph: *builder.graph, calls: builder.calls,
 			}
 			return false
 		})
@@ -59,6 +62,7 @@ func newStorageGraphBuilder(
 		checker: c, file: file, graph: graph, function: nil,
 		regions: make(map[types.Object]StorageEffectRegion),
 		nextTemp: 1, nextSite: 1, nextGraph: 0,
+		root: function.Origin(), calls: make(map[int]*types.Func),
 	}
 	signature, _ := function.Type().(*types.Signature)
 	if signature != nil {
@@ -382,13 +386,113 @@ func (b %storageGraphBuilder) functionID(function *types.Func) int {
 	if function == nil {
 		return -1
 	}
-	return int(function.Pos())
+	if function == b.root {
+		return 0
+	}
+	id := -int(function.Pos()) - 2
+	b.calls[id] = function
+	return id
 }
 
 func (c %checker) resolveStorageEffectGraphs(
 	summaries map[*types.Func]%storageGraphSummary,
 ) {
-	_ = summaries
+	for function, summary := range summaries {
+		composer := &storageGraphComposer{
+			checker: c, summaries: summaries,
+			graph: StorageEffectGraph{Known: true, Entry: 0, Functions: nil},
+			assigned: make(map[*types.Func]int),
+		}
+		composer.addLocal(function)
+		summary.graph = composer.graph
+	}
+}
+
+type storageGraphComposer struct {
+	checker   %checker
+	summaries map[*types.Func]%storageGraphSummary
+	graph     StorageEffectGraph
+	assigned  map[*types.Func]int
+}
+
+func (summary %genericEffectSummary) attachStorageEffects() {
+	for index := range summary.storage.Functions {
+		function := &summary.storage.Functions[index]
+		if function.ID != summary.storage.Entry {
+			continue
+		}
+		function.ZeroEffects = append([]GenericEffect(nil), summary.zeroEffects...)
+		function.AccessEffects = append([]GenericEffect(nil), summary.accessEffects...)
+		return
+	}
+}
+
+func (c %storageGraphComposer) addLocal(function *types.Func) int {
+	if id, ok := c.assigned[function]; ok {
+		return id
+	}
+	summary := c.summaries[function]
+	if summary == nil {
+		return c.addImported(function)
+	}
+	return c.addGraph(function, summary.graph, summary.calls)
+}
+
+func (c %storageGraphComposer) addImported(function *types.Func) int {
+	fact := new(GenericEffectFact)
+	if !c.checker.pass.ImportObjectFact(function, fact) ||
+		fact.Version != 1 || !fact.Storage.Known {
+		return -1
+	}
+	return c.addGraph(function, fact.Storage, nil)
+}
+
+func (c %storageGraphComposer) addGraph(
+	function *types.Func,
+	source StorageEffectGraph,
+	calls map[int]*types.Func,
+) int {
+	base := len(c.graph.Functions)
+	c.assigned[function] = base + source.Entry
+	for _, item := range source.Functions {
+		copied := item
+		copied.ID = base + item.ID
+		copied.Captures = append([]StorageEffectRegion(nil), item.Captures...)
+		copied.ZeroEffects = append([]GenericEffect(nil), item.ZeroEffects...)
+		copied.AccessEffects = append([]GenericEffect(nil), item.AccessEffects...)
+		copied.Blocks = append([]StorageEffectBlock(nil), item.Blocks...)
+		for blockIndex := range copied.Blocks {
+			block := &copied.Blocks[blockIndex]
+			block.Successors = append([]StorageEffectEdge(nil), block.Successors...)
+			block.Operations = append([]StorageEffectOperation(nil), block.Operations...)
+			for operationIndex := range block.Operations {
+				operation := &block.Operations[operationIndex]
+				if operation.Function >= 0 {
+					operation.Function += base
+				}
+			}
+		}
+		c.graph.Functions = append(c.graph.Functions, copied)
+	}
+	limit := len(c.graph.Functions)
+	for index := base; index < limit; index++ {
+		for blockIndex := range c.graph.Functions[index].Blocks {
+			block := &c.graph.Functions[index].Blocks[blockIndex]
+			for operationIndex := range block.Operations {
+				operation := &block.Operations[operationIndex]
+				if operation.Function >= -1 {
+					continue
+				}
+				callee := calls[operation.Function]
+				if callee == nil {
+					operation.Function = -1
+					continue
+				}
+				operation.Function = c.addLocal(callee.Origin())
+			}
+		}
+	}
+	return base + source.Entry
 }
 
 func (c %checker) exportOrdinaryStorageFacts(

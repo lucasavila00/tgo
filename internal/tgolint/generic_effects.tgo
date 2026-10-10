@@ -135,6 +135,9 @@ func (c %checker) checkGenericZeroSafety() {
 		}
 	}
 	c.propagateGenericZeroFacts(summaries)
+	for _, summary := range summaries {
+		summary.attachStorageEffects()
+	}
 
 	for _, summary := range summaries {
 		fact := summary.fact()
