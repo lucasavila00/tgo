@@ -169,6 +169,9 @@ func (c %checker) invokeEnumClosure(
 	}
 	call := input.calls[literal]
 	if call != nil && call.analyzing {
+		if call.output != nil {
+			return cloneEnumStorageState(call.output)
+		}
 		return cloneEnumStorageState(input)
 	}
 	if call == nil {
@@ -177,35 +180,41 @@ func (c %checker) invokeEnumClosure(
 	}
 	call.input, _ = joinEnumStorageStates(call.input, input)
 	call.analyzing = true
-	graph := cfg.New(literal.Body, c.callMayReturn)
-	entries := make([]*enumStorageState, len(graph.Blocks))
-	entries[0] = cloneEnumStorageState(call.input)
-	queue := []*cfg.Block{graph.Blocks[0]}
-	queued := make([]bool, len(graph.Blocks))
-	queued[0] = true
-	for len(queue) != 0 {
-		block := queue[0]
-		queue = queue[1:]
-		queued[block.Index] = false
-		state := cloneEnumStorageState(entries[block.Index])
-		for _, node := range block.Nodes {
-			c.transferEnumStorage(state, node)
-		}
-		if len(block.Succs) == 0 {
-			call.output, _ = joinEnumStorageStates(call.output, state)
-		}
-		for _, successor := range block.Succs {
-			if successor == nil {
-				continue
+	for {
+		before := cloneEnumStorageState(call.output)
+		graph := cfg.New(literal.Body, c.callMayReturn)
+		entries := make([]*enumStorageState, len(graph.Blocks))
+		entries[0] = cloneEnumStorageState(call.input)
+		queue := []*cfg.Block{graph.Blocks[0]}
+		queued := make([]bool, len(graph.Blocks))
+		queued[0] = true
+		for len(queue) != 0 {
+			block := queue[0]
+			queue = queue[1:]
+			queued[block.Index] = false
+			state := cloneEnumStorageState(entries[block.Index])
+			for _, node := range block.Nodes {
+				c.transferEnumStorage(state, node)
 			}
-			joined, changed := joinEnumStorageStates(entries[successor.Index], state)
-			if changed {
-				entries[successor.Index] = joined
-				if !queued[successor.Index] {
-					queue = append(queue, successor)
-					queued[successor.Index] = true
+			if len(block.Succs) == 0 {
+				call.output, _ = joinEnumStorageStates(call.output, state)
+			}
+			for _, successor := range block.Succs {
+				if successor == nil {
+					continue
+				}
+				joined, changed := joinEnumStorageStates(entries[successor.Index], state)
+				if changed {
+					entries[successor.Index] = joined
+					if !queued[successor.Index] {
+						queue = append(queue, successor)
+						queued[successor.Index] = true
+					}
 				}
 			}
+		}
+		if enumStorageStateEqual(before, call.output) {
+			break
 		}
 	}
 	call.analyzing = false
@@ -213,5 +222,33 @@ func (c %checker) invokeEnumClosure(
 		return cloneEnumStorageState(input)
 	}
 	return cloneEnumStorageState(call.output)
+}
+
+func enumStorageStateEqual(left, right *enumStorageState) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	if len(left.pointers) != len(right.pointers) ||
+		len(left.closures) != len(right.closures) ||
+		!enumStorageSetEqual(left.writes, right.writes) {
+		return false
+	}
+	for place, values := range left.pointers {
+		if !enumStorageSetEqual(values, right.pointers[place]) {
+			return false
+		}
+	}
+	for object, values := range left.closures {
+		other := right.closures[object]
+		if len(values) != len(other) {
+			return false
+		}
+		for literal := range values {
+			if !other[literal] {
+				return false
+			}
+		}
+	}
+	return true
 }
 
