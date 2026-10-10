@@ -59,6 +59,7 @@ type checker struct {
 	captureResult   func(*model)
 	captureSource   func(*model, *syntax.Expression)
 	scalarFlows     map[syntax.Node]*scalarFlow
+	enumEventFlows  map[syntax.Node]*enumEventResult
 	invalid         bool
 }
 
@@ -128,6 +129,7 @@ func run(pass *analysis.Pass) (any, error) {
 		captureResult:   nil,
 		captureSource:   nil,
 		scalarFlows:     make(map[syntax.Node]*scalarFlow),
+		enumEventFlows:  make(map[syntax.Node]*enumEventResult),
 		invalid:         false,
 	}
 	if c.rejectInvalidDependencies() {

@@ -87,12 +87,12 @@ func TestEnumClosureInputIncludesCapturedState(t *testing.T) {
 	graph := newEnumEventGraph()
 	worklist := newEnumEventCallWorklist(graph)
 	call := worklist.call(enumEventCallKey{closure: 1, caller: 1})
-	worklist.addInput(call, nil, map[enumCellID]enumAbstractValue{
-		1: {regions: enumRegionSet{1: true}},
-	})
-	worklist.addInput(call, nil, map[enumCellID]enumAbstractValue{
-		1: {regions: enumRegionSet{2: true}},
-	})
+	first := newEnumEventState()
+	first.cells[1] = enumAbstractValue{regions: enumRegionSet{1: true}}
+	worklist.addInput(call, nil, first)
+	second := newEnumEventState()
+	second.cells[1] = enumAbstractValue{regions: enumRegionSet{2: true}}
+	worklist.addInput(call, nil, second)
 	captured := worklist.summary(call).captures[1].regions
 	if !captured[1] || !captured[2] {
 		t.Fatalf("captured regions = %v", captured)

@@ -391,6 +391,32 @@ func (graph *enumEventGraph) transfer(
 		state.saved[event.value] = value
 	case enumEventSave:
 		state.saved[event.value] = graph.saved(event.value)
+	case enumEventCall:
+		arguments := make([]enumAbstractValue, len(event.arguments))
+		for index, saved := range event.arguments {
+			arguments[index] = cloneEnumAbstractValue(state.saved[saved])
+		}
+		callee := state.saved[event.value]
+		if len(callee.closures) != 0 {
+			graph.calls.applyAlternatives(
+				state, callee.closures, graph.activation, arguments, event.results,
+			)
+			break
+		}
+		regions := make(enumRegionSet)
+		for _, argument := range arguments {
+			for region := range argument.regions {
+				regions[region] = true
+			}
+		}
+		state.killRegionProofs(regions)
+		state.invalidateObservations(nil, regions)
+		for region := range regions {
+			state.recordRegionWrite(region, event.serial)
+		}
+		for _, result := range event.results {
+			state.saved[result] = enumAbstractValue{unknown: true}
+		}
 	case enumEventStore:
 		value := state.saved[event.value]
 		cells := cloneEnumCellSet(event.cells)
@@ -517,6 +543,8 @@ func (graph *enumEventGraph) uniqueCell(cell enumCellID) bool {
 type enumEventResult struct {
 	access map[*syntax.Expression]bool
 	before map[enumEventLocation]*enumEventState
+	output *enumEventState
+	values []enumAbstractValue
 }
 
 // run evaluates all event paths to a finite fixed point.
@@ -524,6 +552,12 @@ func (graph *enumEventGraph) run(initial *enumEventState) *enumEventResult {
 	result := &enumEventResult{
 		access: make(map[*syntax.Expression]bool),
 		before: make(map[enumEventLocation]*enumEventState),
+	}
+	if initial == nil {
+		initial = graph.initial
+	}
+	if graph.calls == nil {
+		graph.calls = newEnumEventCallWorklist(graph)
 	}
 	entries := make([]*enumEventState, len(graph.blocks))
 	entry := int(graph.entry) - 1
@@ -549,6 +583,19 @@ func (graph *enumEventGraph) run(initial *enumEventState) *enumEventResult {
 				current, found := result.access[event.expression]
 				result.access[event.expression] = valid && (!found || current)
 			}
+			if event.kind == enumEventReturn {
+				for len(result.values) < len(event.values) {
+					result.values = append(result.values, enumAbstractValue{})
+				}
+				for valueIndex, saved := range event.values {
+					result.values[valueIndex], _ = joinEnumAbstractValues(
+						result.values[valueIndex], state.saved[saved],
+					)
+				}
+			}
+		}
+		if len(block.successors) == 0 {
+			result.output, _ = joinEnumEventStates(result.output, state)
 		}
 		for _, edge := range block.successors {
 			outgoing := cloneEnumEventState(state)
@@ -569,6 +616,9 @@ func (graph *enumEventGraph) run(initial *enumEventState) *enumEventResult {
 				queued[target] = true
 			}
 		}
+	}
+	if graph.calls.analyze() {
+		return graph.run(initial)
 	}
 	return result
 }

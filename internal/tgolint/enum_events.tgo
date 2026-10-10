@@ -43,10 +43,12 @@ type enumIdentityTable struct {
 	cells       map[enumCellKey]enumCellID
 	regions     map[enumRegionKey]enumRegionID
 	fields      map[enumRegionFieldKey]enumRegionID
+	closures    map[enumEventClosureKey]enumEventClosureID
 
 	activationKeys []enumActivationKey
 	cellKeys       []enumCellKey
 	regionKeys     []enumRegionKey
+	closureKeys    []enumEventClosureKey
 }
 
 type enumRegionFieldKey struct {
@@ -60,6 +62,7 @@ func newEnumIdentityTable() *enumIdentityTable {
 		cells:       make(map[enumCellKey]enumCellID),
 		regions:     make(map[enumRegionKey]enumRegionID),
 		fields:      make(map[enumRegionFieldKey]enumRegionID),
+		closures:    make(map[enumEventClosureKey]enumEventClosureID),
 	}
 }
 
@@ -210,6 +213,7 @@ const (
 	enumEventSave
 	enumEventCall
 	enumEventStore
+	enumEventReturn
 	enumEventTagTest
 	enumEventPayloadCheck
 )
@@ -223,6 +227,8 @@ type enumEvent struct {
 	value      enumSavedValueID
 	source     enumSavedValueID
 	values     []enumSavedValueID
+	arguments  []enumSavedValueID
+	results    []enumSavedValueID
 	result     int
 	tag        int
 	serial     int
@@ -242,14 +248,17 @@ type enumEventEdge struct {
 
 // enumEventGraph adds expression microblocks to one syntax CFG.
 type enumEventGraph struct {
+	checker     %checker
 	identities  *enumIdentityTable
+	activation  enumActivationID
+	call        enumEventCallID
 	blocks      []enumEventBlock
 	entry       enumEventBlockID
+	initial     *enumEventState
 	access      map[*syntax.Expression]enumEventLocation
 	expressions map[*syntax.Expression]enumSavedValueID
 	values      []enumAbstractValue
-	closures    map[enumEventClosureKey]enumEventClosureID
-	closureKeys []enumEventClosureKey
+	calls       *enumEventCallWorklist
 }
 
 type enumEventLocation struct {
@@ -262,17 +271,16 @@ func newEnumEventGraph() *enumEventGraph {
 		identities:  newEnumIdentityTable(),
 		access:      make(map[*syntax.Expression]enumEventLocation),
 		expressions: make(map[*syntax.Expression]enumSavedValueID),
-		closures:    make(map[enumEventClosureKey]enumEventClosureID),
 	}
 }
 
 func (graph *enumEventGraph) closure(key enumEventClosureKey) enumEventClosureID {
-	if id, found := graph.closures[key]; found {
+	if id, found := graph.identities.closures[key]; found {
 		return id
 	}
-	id := enumEventClosureID(len(graph.closureKeys) + 1)
-	graph.closures[key] = id
-	graph.closureKeys = append(graph.closureKeys, key)
+	id := enumEventClosureID(len(graph.identities.closureKeys) + 1)
+	graph.identities.closures[key] = id
+	graph.identities.closureKeys = append(graph.identities.closureKeys, key)
 	return id
 }
 

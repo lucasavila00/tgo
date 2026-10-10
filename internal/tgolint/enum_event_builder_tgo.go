@@ -15,22 +15,103 @@ type enumEventBuilder struct {
 	checker    *checker
 	graph      *enumEventGraph
 	activation enumActivationID
+	parent     enumActivationID
+	start      token.Pos
+	stop       token.Pos
 	blocks     map[*cfg.Block]enumEventBlockID
 }
 
+func (c *checker) enumEventFlow(expression *syntax.Expression) *enumEventResult {
+	function, body := c.enclosingEnumFunction(expression)
+	if function == nil || body == nil {
+		return nil
+	}
+	if result := c.enumEventFlows[*function]; result != nil {
+		return result
+	}
+	graph := c.newEnumEventBuilder(function, body).build(body)
+	result := graph.run(nil)
+	c.enumEventFlows[*function] = result
+	return result
+}
+
 func (c *checker) newEnumEventBuilder(
+	function *syntax.Node,
 	body *syntax.BlockStatement,
 ) *enumEventBuilder {
 	graph := newEnumEventGraph()
+	graph.checker = c
 	builder := &enumEventBuilder{
 		checker: c,
 		graph:   graph,
 		blocks:  make(map[*cfg.Block]enumEventBlockID),
+		start:   body.Start,
+		stop:    body.Stop,
 	}
 	builder.activation = graph.identities.activation(enumActivationKey{
 		function: body.Start,
 	})
+	graph.activation = builder.activation
+	builder.seedFunctionInputs(function)
 	return builder
+}
+
+func (c *checker) newEnumClosureEventBuilder(
+	parent *enumEventGraph,
+	literal *syntax.FunctionLiteral,
+	caller enumActivationID,
+) *enumEventBuilder {
+	graph := newEnumEventGraph()
+	graph.checker = c
+	graph.identities = parent.identities
+	builder := &enumEventBuilder{
+		checker: c,
+		graph:   graph,
+		parent:  caller,
+		start:   literal.Body.Start,
+		stop:    literal.Body.Stop,
+		blocks:  make(map[*cfg.Block]enumEventBlockID),
+	}
+	builder.activation = graph.identities.activation(enumActivationKey{
+		function: literal.Start,
+		caller:   caller,
+		summary:  true,
+	})
+	graph.activation = builder.activation
+	return builder
+}
+
+func (builder *enumEventBuilder) seedFunctionInputs(function *syntax.Node) {
+	builder.graph.initial = newEnumEventState()
+	if function == nil {
+		return
+	}
+	signature := builder.checker.functionSignature(function)
+	if signature == nil {
+		return
+	}
+	variables := make([]*types.Var, 0, signature.Params().Len()+1)
+	if signature.Recv() != nil {
+		variables = append(variables, signature.Recv())
+	}
+	for index := 0; index < signature.Params().Len(); index++ {
+		variables = append(variables, signature.Params().At(index))
+	}
+	for _, variable := range variables {
+		if _, pointer := types.Unalias(variable.Type()).(*types.Pointer); !pointer {
+			continue
+		}
+		cell := builder.localCell(variable)
+		region := builder.graph.identities.region(enumRegionKey{
+			activation: builder.activation,
+			input:      variable,
+			typ:        variable.Type(),
+		})
+		builder.graph.initial.cells[cell] = enumAbstractValue{
+			regions:      enumRegionSet{region: true},
+			dependencies: enumCellSet{cell: true},
+		}
+	}
 }
 
 func (builder *enumEventBuilder) build(
@@ -225,9 +306,11 @@ func (builder *enumEventBuilder) emitNode(
 		return block
 	}
 	if returned := syntax.ReturnStatementOf(statement); returned != nil {
-		for _, expression := range returned.Results {
-			block, _ = builder.emitExpression(block, expression)
+		values := make([]enumSavedValueID, len(returned.Results))
+		for index, expression := range returned.Results {
+			block, values[index] = builder.emitExpression(block, expression)
 		}
+		builder.graph.addEvent(block, enumEvent{kind: enumEventReturn, values: values})
 	}
 	return block
 }
@@ -356,7 +439,7 @@ func (builder *enumEventBuilder) emitExpression(
 					kind:       enumEventCall,
 					expression: expression,
 					value:      receiver,
-					values:     []enumSavedValueID{result},
+					results:    []enumSavedValueID{result},
 				})
 				return block, result
 			}
@@ -372,7 +455,8 @@ func (builder *enumEventBuilder) emitExpression(
 			kind:       enumEventCall,
 			expression: expression,
 			value:      callee,
-			values:     append(arguments, result),
+			arguments:  arguments,
+			results:    []enumSavedValueID{result},
 		})
 		return block, result
 	}
@@ -502,6 +586,18 @@ func (builder *enumEventBuilder) emitSelectorPlace(
 }
 
 func (builder *enumEventBuilder) localCell(object types.Object) enumCellID {
+	if object != nil && builder.parent != 0 &&
+		(object.Pos() < builder.start || builder.stop < object.Pos()) {
+		for index, key := range builder.graph.identities.cellKeys {
+			if key.object == object {
+				return enumCellID(index + 1)
+			}
+		}
+		return builder.graph.identities.cell(enumCellKey{
+			activation: builder.parent,
+			object:     object,
+		})
+	}
 	return builder.graph.identities.cell(enumCellKey{
 		activation: builder.activation,
 		object:     object,
