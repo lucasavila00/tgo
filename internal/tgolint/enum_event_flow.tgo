@@ -115,7 +115,7 @@ func joinEnumAbstractValues(
 		}
 	}
 	if result.closures == nil {
-		result.closures = make(enumClosureSet)
+		result.closures = make(enumEventClosureSet)
 	}
 	for closure := range right.closures {
 		if !result.closures[closure] {

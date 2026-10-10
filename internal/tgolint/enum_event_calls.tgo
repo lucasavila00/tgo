@@ -1,0 +1,206 @@
+package tgolint
+
+type enumEventCallID int
+
+type enumEventCallKey struct {
+	closure enumEventClosureID
+	caller  enumActivationID
+}
+
+type enumEventCallSummary struct {
+	inputs      []enumAbstractValue
+	results     []enumAbstractValue
+	cellWrites  map[enumCellID]enumAbstractValue
+	regionWrites enumRegionSet
+	dependents  map[enumEventCallID]bool
+	queued      bool
+	analyzing   bool
+}
+
+type enumEventCallWorklist struct {
+	graph     *enumEventGraph
+	calls     map[enumEventCallKey]enumEventCallID
+	summaries []*enumEventCallSummary
+	queue     []enumEventCallID
+}
+
+func newEnumEventCallWorklist(graph *enumEventGraph) *enumEventCallWorklist {
+	return &enumEventCallWorklist{
+		graph: graph,
+		calls: make(map[enumEventCallKey]enumEventCallID),
+	}
+}
+
+func (worklist *enumEventCallWorklist) call(
+	key enumEventCallKey,
+) enumEventCallID {
+	if id, found := worklist.calls[key]; found {
+		return id
+	}
+	id := enumEventCallID(len(worklist.summaries) + 1)
+	worklist.calls[key] = id
+	worklist.summaries = append(worklist.summaries, &enumEventCallSummary{
+		cellWrites:   make(map[enumCellID]enumAbstractValue),
+		regionWrites: make(enumRegionSet),
+		dependents:   make(map[enumEventCallID]bool),
+	})
+	return id
+}
+
+func (worklist *enumEventCallWorklist) summary(
+	id enumEventCallID,
+) *enumEventCallSummary {
+	index := int(id) - 1
+	if index < 0 || index >= len(worklist.summaries) {
+		return nil
+	}
+	return worklist.summaries[index]
+}
+
+func (worklist *enumEventCallWorklist) addInput(
+	id enumEventCallID,
+	arguments []enumAbstractValue,
+) bool {
+	summary := worklist.summary(id)
+	if summary == nil {
+		return false
+	}
+	changed := false
+	for len(summary.inputs) < len(arguments) {
+		summary.inputs = append(summary.inputs, enumAbstractValue{})
+		changed = true
+	}
+	for index, argument := range arguments {
+		joined, added := joinEnumAbstractValues(summary.inputs[index], argument)
+		summary.inputs[index] = joined
+		changed = changed || added
+	}
+	if changed {
+		worklist.enqueue(id)
+	}
+	return changed
+}
+
+func (worklist *enumEventCallWorklist) addOutput(
+	id enumEventCallID,
+	results []enumAbstractValue,
+	cells map[enumCellID]enumAbstractValue,
+	regions enumRegionSet,
+) bool {
+	summary := worklist.summary(id)
+	if summary == nil {
+		return false
+	}
+	changed := false
+	for len(summary.results) < len(results) {
+		summary.results = append(summary.results, enumAbstractValue{})
+		changed = true
+	}
+	for index, result := range results {
+		joined, added := joinEnumAbstractValues(summary.results[index], result)
+		summary.results[index] = joined
+		changed = changed || added
+	}
+	for cell, value := range cells {
+		joined, added := joinEnumAbstractValues(summary.cellWrites[cell], value)
+		summary.cellWrites[cell] = joined
+		changed = changed || added
+	}
+	for region := range regions {
+		if !summary.regionWrites[region] {
+			summary.regionWrites[region] = true
+			changed = true
+		}
+	}
+	if changed {
+		for dependent := range summary.dependents {
+			worklist.enqueue(dependent)
+		}
+	}
+	return changed
+}
+
+func (worklist *enumEventCallWorklist) depend(
+	callee enumEventCallID,
+	caller enumEventCallID,
+) {
+	summary := worklist.summary(callee)
+	if summary != nil && caller != 0 {
+		summary.dependents[caller] = true
+	}
+}
+
+func (worklist *enumEventCallWorklist) enqueue(id enumEventCallID) {
+	summary := worklist.summary(id)
+	if summary == nil || summary.queued {
+		return
+	}
+	summary.queued = true
+	worklist.queue = append(worklist.queue, id)
+}
+
+func (worklist *enumEventCallWorklist) next() enumEventCallID {
+	if len(worklist.queue) == 0 {
+		return 0
+	}
+	id := worklist.queue[0]
+	worklist.queue = worklist.queue[1:]
+	if summary := worklist.summary(id); summary != nil {
+		summary.queued = false
+	}
+	return id
+}
+
+// applyAlternatives joins closure outputs before it changes the caller state.
+func (worklist *enumEventCallWorklist) applyAlternatives(
+	state *enumEventState,
+	closures enumEventClosureSet,
+	caller enumActivationID,
+	arguments []enumAbstractValue,
+	results []enumSavedValueID,
+) {
+	joinedResults := make([]enumAbstractValue, len(results))
+	joinedCells := make(map[enumCellID]enumAbstractValue)
+	joinedRegions := make(enumRegionSet)
+	for closure := range closures {
+		call := worklist.call(enumEventCallKey{closure: closure, caller: caller})
+		worklist.addInput(call, arguments)
+		summary := worklist.summary(call)
+		if summary == nil {
+			continue
+		}
+		for index := range joinedResults {
+			if index < len(summary.results) {
+				joinedResults[index], _ = joinEnumAbstractValues(
+					joinedResults[index], summary.results[index],
+				)
+			}
+		}
+		for cell, value := range summary.cellWrites {
+			joinedCells[cell], _ = joinEnumAbstractValues(joinedCells[cell], value)
+		}
+		for region := range summary.regionWrites {
+			joinedRegions[region] = true
+		}
+	}
+	for index, saved := range results {
+		state.saved[saved] = joinedResults[index]
+	}
+	for cell, value := range joinedCells {
+		state.recordCellWrite(cell, 0)
+		state.cells[cell], _ = joinEnumAbstractValues(state.cells[cell], value)
+	}
+	for region := range joinedRegions {
+		state.killRegionProofs(enumRegionSet{region: true})
+		state.recordRegionWrite(region, 0)
+	}
+	state.invalidateObservations(enumCellsOf(joinedCells), joinedRegions)
+}
+
+func enumCellsOf(values map[enumCellID]enumAbstractValue) enumCellSet {
+	result := make(enumCellSet, len(values))
+	for cell := range values {
+		result[cell] = true
+	}
+	return result
+}

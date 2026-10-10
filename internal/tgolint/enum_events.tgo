@@ -12,6 +12,7 @@ type enumCellID int
 type enumRegionID int
 type enumSavedValueID int
 type enumEventBlockID int
+type enumEventClosureID int
 
 type enumActivationKey struct {
 	function token.Pos
@@ -128,10 +129,17 @@ type enumCellSet map[enumCellID]bool
 
 type enumAbstractValue struct {
 	regions      enumRegionSet
-	closures     enumClosureSet
+	closures     enumEventClosureSet
 	dependencies enumCellSet
 	observation  *enumTagObservation
 	unknown      bool
+}
+
+type enumEventClosureSet map[enumEventClosureID]bool
+
+type enumEventClosureKey struct {
+	literal    *syntax.FunctionLiteral
+	activation enumActivationID
 }
 
 type enumWriteSet map[int]bool
@@ -145,8 +153,11 @@ type enumTagObservation struct {
 func cloneEnumAbstractValue(value enumAbstractValue) enumAbstractValue {
 	result := enumAbstractValue{
 		regions:  make(enumRegionSet, len(value.regions)),
-		closures: cloneEnumClosureSet(value.closures),
+		closures: make(enumEventClosureSet, len(value.closures)),
 		unknown:  value.unknown,
+	}
+	for closure := range value.closures {
+		result.closures[closure] = true
 	}
 	for region := range value.regions {
 		result.regions[region] = true
@@ -230,6 +241,8 @@ type enumEventGraph struct {
 	entry      enumEventBlockID
 	access     map[*syntax.Expression]enumEventLocation
 	values     []enumAbstractValue
+	closures   map[enumEventClosureKey]enumEventClosureID
+	closureKeys []enumEventClosureKey
 }
 
 type enumEventLocation struct {
@@ -241,7 +254,18 @@ func newEnumEventGraph() *enumEventGraph {
 	return &enumEventGraph{
 		identities: newEnumIdentityTable(),
 		access:     make(map[*syntax.Expression]enumEventLocation),
+		closures:   make(map[enumEventClosureKey]enumEventClosureID),
 	}
+}
+
+func (graph *enumEventGraph) closure(key enumEventClosureKey) enumEventClosureID {
+	if id, found := graph.closures[key]; found {
+		return id
+	}
+	id := enumEventClosureID(len(graph.closureKeys) + 1)
+	graph.closures[key] = id
+	graph.closureKeys = append(graph.closureKeys, key)
+	return id
 }
 
 func (graph *enumEventGraph) save(value enumAbstractValue) enumSavedValueID {
