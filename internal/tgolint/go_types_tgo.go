@@ -12,14 +12,23 @@ import "go/types"
 // goType closes the go/types.Type implementations used by tgolint.
 // goTypeOf is the only open Go type switch in this package.
 func tgogoTypeExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -457,8 +466,11 @@ func (v *goType) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one goType JSON variant")
@@ -470,106 +482,151 @@ func (v *goType) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Nil":
 		var payload goTypeNil
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeNil()
 		return nil
 	case "Basic":
 		var payload goTypeBasic
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeBasic(payload.Value)
 		return nil
 	case "Array":
 		var payload goTypeArray
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeArray(payload.Value)
 		return nil
 	case "Slice":
 		var payload goTypeSlice
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeSlice(payload.Value)
 		return nil
 	case "Struct":
 		var payload goTypeStruct
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeStruct(payload.Value)
 		return nil
 	case "Pointer":
 		var payload goTypePointer
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypePointer(payload.Value)
 		return nil
 	case "Tuple":
 		var payload goTypeTuple
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeTuple(payload.Value)
 		return nil
 	case "Signature":
 		var payload goTypeSignature
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeSignature(payload.Value)
 		return nil
 	case "Map":
 		var payload goTypeMap
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeMap(payload.Value)
 		return nil
 	case "Channel":
 		var payload goTypeChannel
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeChannel(payload.Value)
 		return nil
 	case "Interface":
 		var payload goTypeInterface
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeInterface(payload.Value)
 		return nil
 	case "Named":
 		var payload goTypeNamed
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeNamed(payload.Value)
 		return nil
 	case "TypeParameter":
 		var payload goTypeTypeParameter
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeTypeParameter(payload.Value)
 		return nil
 	case "Union":
 		var payload goTypeUnion
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeUnion(payload.Value)
 		return nil
 	case "Other":
 		var payload goTypeOther
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeOther()
 		return nil
@@ -579,6 +636,7 @@ func (v *goType) UnmarshalJSON(data []byte) error {
 }
 
 func (v *goType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -592,6 +650,7 @@ func (v *goType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -630,8 +689,16 @@ func (v *goType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Other":
 			current = 15
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -643,20 +710,38 @@ func (v *goType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one goType JSON variant")
 	}
 	if selected == 0 {
@@ -665,106 +750,151 @@ func (v *goType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload goTypeNil
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeNil()
 		return nil
 	case 2:
 		var payload goTypeBasic
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeBasic(payload.Value)
 		return nil
 	case 3:
 		var payload goTypeArray
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeArray(payload.Value)
 		return nil
 	case 4:
 		var payload goTypeSlice
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeSlice(payload.Value)
 		return nil
 	case 5:
 		var payload goTypeStruct
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeStruct(payload.Value)
 		return nil
 	case 6:
 		var payload goTypePointer
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypePointer(payload.Value)
 		return nil
 	case 7:
 		var payload goTypeTuple
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeTuple(payload.Value)
 		return nil
 	case 8:
 		var payload goTypeSignature
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeSignature(payload.Value)
 		return nil
 	case 9:
 		var payload goTypeMap
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeMap(payload.Value)
 		return nil
 	case 10:
 		var payload goTypeChannel
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeChannel(payload.Value)
 		return nil
 	case 11:
 		var payload goTypeInterface
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeInterface(payload.Value)
 		return nil
 	case 12:
 		var payload goTypeNamed
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeNamed(payload.Value)
 		return nil
 	case 13:
 		var payload goTypeTypeParameter
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeTypeParameter(payload.Value)
 		return nil
 	case 14:
 		var payload goTypeUnion
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeUnion(payload.Value)
 		return nil
 	case 15:
 		var payload goTypeOther
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewgoTypeOther()
 		return nil

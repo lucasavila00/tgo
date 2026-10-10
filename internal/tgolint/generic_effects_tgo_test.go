@@ -9,6 +9,8 @@ import (
 )
 
 func TestGenericEffectFactGobRoundTrip(t *testing.T) {
+	type operandType_1 = bool
+	type operandType = bool
 	t.Parallel()
 	want := &GenericEffectFact{
 		ZeroEffects: []GenericEffect{{
@@ -27,19 +29,40 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 		ReturnedAccessEffects: nil,
 	}
 	data := *new(bytes.Buffer)
-	if err := gob.NewEncoder(&data).Encode(want); err != nil {
-		t.Fatal(err)
+	{
+		err := gob.NewEncoder(&data).Encode(want)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	got := new(GenericEffectFact)
-	if err := gob.NewDecoder(&data).Decode(got); err != nil {
-		t.Fatal(err)
+	{
+		err := gob.NewDecoder(&data).Decode(got)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if len(got.ZeroEffects) != 1 || len(got.ZeroEffects[0].Conditions) != 1 {
+	var operand operandType = len(got.ZeroEffects) != 1
+	if !operand {
+		operand = len(got.ZeroEffects[0].Conditions) != 1
+	}
+	if operand {
 		t.Fatalf("decoded fact = %#v", got)
 	}
 	condition := got.ZeroEffects[0].Conditions[0]
-	if condition.Kind.Tag() != EffectKindTagBoolean || !condition.Expected ||
-		condition.ValueParameter != 2 || condition.OtherParameter != -1 {
+	var operand_1 operandType_1 = condition.Kind.Tag() != EffectKindTagBoolean
+	if !operand_1 {
+		operand_1 = !condition.Expected
+	}
+	var operand_2 operandType_1 = operand_1
+	if !operand_2 {
+		operand_2 = condition.ValueParameter != 2
+	}
+	var operand_3 operandType_1 = operand_2
+	if !operand_3 {
+		operand_3 = condition.OtherParameter != -1
+	}
+	if operand_3 {
 		t.Fatalf("decoded condition = %#v", condition)
 	}
 }

@@ -110,52 +110,64 @@ func appendGeneralSymbols(
 	container string,
 ) []Symbol {
 	for _, specification := range declaration.Specs {
-		if value := syntax.ValueSpecificationOf(specification); value != nil {
-			kind := NewSymbolKindVariable()
-			if declaration.Kind == token.CONST {
-				kind = NewSymbolKindConstant()
+		{
+			value := syntax.ValueSpecificationOf(specification)
+			if value != nil {
+				kind := NewSymbolKindVariable()
+				if declaration.Kind == token.CONST {
+					kind = NewSymbolKindConstant()
+				}
+				for _, name := range value.Names {
+					result = appendSymbol(
+						result,
+						pkg,
+						uri,
+						name.Name,
+						kind,
+						container,
+						value.Span,
+						name.Span,
+					)
+				}
 			}
-			for _, name := range value.Names {
+		}
+		{
+			value := syntax.TypeSpecificationOf(specification)
+			if value != nil {
 				result = appendSymbol(
 					result,
 					pkg,
 					uri,
-					name.Name,
-					kind,
+					value.Name.Name,
+					typeKind(value.Type),
 					container,
 					value.Span,
-					name.Span,
+					value.Name.Span,
 				)
-			}
-		}
-		if value := syntax.TypeSpecificationOf(specification); value != nil {
-			result = appendSymbol(
-				result,
-				pkg,
-				uri,
-				value.Name.Name,
-				typeKind(value.Type),
-				container,
-				value.Span,
-				value.Name.Span,
-			)
-			if structure := syntax.StructTypeExpressionOf(value.Type); structure != nil {
-				result = appendFieldSymbols(
-					result,
-					pkg,
-					uri,
-					structure.Fields.List,
-					value.Name.Name,
-				)
-			}
-			if methods := interfaceMethods(value.Type); methods != nil {
-				result = appendNamedFields(
-					result,
-					pkg,
-					uri,
-					methods.List,
-					value.Name.Name, NewSymbolKindMethod(),
-				)
+				{
+					structure := syntax.StructTypeExpressionOf(value.Type)
+					if structure != nil {
+						result = appendFieldSymbols(
+							result,
+							pkg,
+							uri,
+							structure.Fields.List,
+							value.Name.Name,
+						)
+					}
+				}
+				{
+					methods := interfaceMethods(value.Type)
+					if methods != nil {
+						result = appendNamedFields(
+							result,
+							pkg,
+							uri,
+							methods.List,
+							value.Name.Name, NewSymbolKindMethod(),
+						)
+					}
+				}
 			}
 		}
 	}
@@ -180,12 +192,17 @@ func receiverName(
 	pkg *sourceanalysis.Package,
 	declaration *syntax.FunctionDeclaration,
 ) string {
+	type operandType = bool
 	object, _ := pkg.Facts.DefinitionName(declaration.Name).(*types.Func)
 	if object == nil {
 		return pkg.Path
 	}
 	signature, _ := object.Type().(*types.Signature)
-	if signature == nil || signature.Recv() == nil {
+	var operand operandType = signature == nil
+	if !operand {
+		operand = signature.Recv() == nil
+	}
+	if operand {
 		return pkg.Path
 	}
 	value := signature.Recv().Type()
@@ -282,27 +299,45 @@ func appendEmbeddedFieldSymbol(
 // embeddedFieldName gets the declared name from one embedded field type.
 func embeddedFieldName(expression *syntax.Expression) *syntax.Identifier {
 	for {
-		if name := syntax.IdentifierExpressionOf(expression); name != nil {
-			return name
+		{
+			name := syntax.IdentifierExpressionOf(expression)
+			if name != nil {
+				return name
+			}
 		}
-		if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-			return selector.Selector
+		{
+			selector := syntax.SelectorExpressionOf(expression)
+			if selector != nil {
+				return selector.Selector
+			}
 		}
-		if pointer := syntax.StarExpressionOf(expression); pointer != nil {
-			expression = pointer.Expression
-			continue
+		{
+			pointer := syntax.StarExpressionOf(expression)
+			if pointer != nil {
+				expression = pointer.Expression
+				continue
+			}
 		}
-		if pointer := syntax.NonNilPointerTypeExpressionOf(expression); pointer != nil {
-			expression = pointer.Type
-			continue
+		{
+			pointer := syntax.NonNilPointerTypeExpressionOf(expression)
+			if pointer != nil {
+				expression = pointer.Type
+				continue
+			}
 		}
-		if index := syntax.IndexExpressionOf(expression); index != nil {
-			expression = index.Expression
-			continue
+		{
+			index := syntax.IndexExpressionOf(expression)
+			if index != nil {
+				expression = index.Expression
+				continue
+			}
 		}
-		if index := syntax.IndexListExpressionOf(expression); index != nil {
-			expression = index.Expression
-			continue
+		{
+			index := syntax.IndexListExpressionOf(expression)
+			if index != nil {
+				expression = index.Expression
+				continue
+			}
 		}
 		return nil
 	}
@@ -334,7 +369,12 @@ func appendNamedFields(
 }
 
 func interfaceMethods(value *syntax.Expression) *syntax.FieldList {
-	if value == nil || value.Tag() != syntax.ExpressionTagInterfaceType {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != syntax.ExpressionTagInterfaceType
+	}
+	if operand {
 		return nil
 	}
 	return value.InterfaceTypePayload().Value.Methods
@@ -350,9 +390,14 @@ func appendSymbol(
 	span syntax.Span,
 	selection syntax.Span,
 ) []Symbol {
+	type operandType = bool
 	full, fullOK := sourceLocation(pkg, uri, span)
 	selected, selectedOK := sourceLocation(pkg, uri, selection)
-	if !fullOK || !selectedOK {
+	var operand operandType = !fullOK
+	if !operand {
+		operand = !selectedOK
+	}
+	if operand {
 		return result
 	}
 	return append(
@@ -372,9 +417,14 @@ func sourceLocation(
 	uri string,
 	span syntax.Span,
 ) (Location, bool) {
+	type operandType = bool
 	start := pkg.Files.Position(span.Start).Offset
 	end := pkg.Files.Position(span.Stop).Offset
-	if start < 0 || end <= start {
+	var operand operandType = start < 0
+	if !operand {
+		operand = end <= start
+	}
+	if operand {
 		return Location{URI: "", Start: 0, End: 0}, false
 	}
 	return Location{URI: uri, Start: start, End: end}, true

@@ -75,8 +75,16 @@ func (i *workspaceTypeImporter) ImportFrom(
 	directory string,
 	mode types.ImportMode,
 ) (*types.Package, error) {
-	if pkg := i.packages[path]; pkg != nil && pkg.Complete() {
-		return pkg, nil
+	{
+		type operandType = bool
+		pkg := i.packages[path]
+		var operand operandType = pkg != nil
+		if operand {
+			operand = pkg.Complete()
+		}
+		if operand {
+			return pkg, nil
+		}
 	}
 	if path == "unsafe" {
 		return types.Unsafe, nil
@@ -87,6 +95,7 @@ func (i *workspaceTypeImporter) ImportFrom(
 		if err_1 != nil {
 			return nil, err_1
 		}
+
 		export = result
 		i.exports[path] = export
 	}
@@ -94,6 +103,7 @@ func (i *workspaceTypeImporter) ImportFrom(
 	if err_2 != nil {
 		return nil, err_2
 	}
+
 	reader, err := gcexportdata.NewReader(file)
 	if err != nil {
 		closeErr := file.Close()
@@ -116,8 +126,11 @@ type memoryImporter struct {
 }
 
 func (i memoryImporter) Import(path string) (*types.Package, error) {
-	if compiled := i.packages[path]; compiled != nil {
-		return compiled.Package, nil
+	{
+		compiled := i.packages[path]
+		if compiled != nil {
+			return compiled.Package, nil
+		}
 	}
 	return i.fallback.Import(path)
 }
@@ -127,11 +140,17 @@ func (i memoryImporter) ImportFrom(
 	directory string,
 	mode types.ImportMode,
 ) (*types.Package, error) {
-	if compiled := i.packages[path]; compiled != nil {
-		return compiled.Package, nil
+	{
+		compiled := i.packages[path]
+		if compiled != nil {
+			return compiled.Package, nil
+		}
 	}
-	if fallback, ok := i.fallback.(types.ImporterFrom); ok {
-		return fallback.ImportFrom(path, directory, mode)
+	{
+		fallback, ok := i.fallback.(types.ImporterFrom)
+		if ok {
+			return fallback.ImportFrom(path, directory, mode)
+		}
 	}
 	return i.fallback.Import(path)
 }
@@ -159,62 +178,72 @@ func (b *packageBuilder) build(path string) error {
 	}
 	b.states[path] = buildActive
 	unit := b.packages[path]
-	err := unit.load()
-	if err != nil {
-		return err
+	operand := unit.load()
+	if operand != nil {
+		return operand
 	}
+
 	if len(unit.Sources) == 0 {
-		imports, err_1 := b.localGoImports(path)
-		if err_1 != nil {
-			return err_1
+		imports, err := b.localGoImports(path)
+		if err != nil {
+			return err
 		}
+
 		for _, dependency := range imports {
-			err_2 := b.buildImport(dependency)
-			if err_2 != nil {
-				return err_2
+			operand_1 := b.buildImport(dependency)
+			if operand_1 != nil {
+				return operand_1
 			}
+
 		}
 		if b.write {
-			err_3 := b.removeStaleOutputs(unit, expectedOutputs(unit, nil))
-			if err_3 != nil {
-				return err_3
+			operand_2 := b.removeStaleOutputs(unit, expectedOutputs(unit, nil))
+			if operand_2 != nil {
+				return operand_2
 			}
+
 		}
 		b.states[path] = buildDone
 		return nil
 	}
 	for _, dependency := range importsOf(unit.Files) {
-		err_4 := b.buildImport(dependency)
-		if err_4 != nil {
-			return err_4
+		operand_3 := b.buildImport(dependency)
+		if operand_3 != nil {
+			return operand_3
 		}
+
 	}
-	outputs, err_5 := b.compile(unit)
-	if err_5 != nil {
-		return err_5
+	outputs, err_1 := b.compile(unit)
+	if err_1 != nil {
+		return err_1
 	}
+
 	if b.write {
 		for _, name := range sortedOutputPaths(outputs) {
 			data := outputs[name]
-			err_6 := b.writeFile(name, data)
-			if err_6 != nil {
-				return err_6
+			operand_4 := b.writeFile(name, data)
+			if operand_4 != nil {
+				return operand_4
 			}
+
 		}
-		err_7 := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs))
-		if err_7 != nil {
-			return err_7
+		operand_5 := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs))
+		if operand_5 != nil {
+			return operand_5
 		}
-		testOutputs, err_8 := b.compileTests(unit)
-		if err_8 != nil {
-			return err_8
+
+		testOutputs, err_2 := b.compileTests(unit)
+		if err_2 != nil {
+			return err_2
 		}
+
 		for _, name := range sortedOutputPaths(testOutputs) {
 			data := testOutputs[name]
-			err_9 := b.writeFile(name, data)
-			if err_9 != nil {
-				return err_9
+			operand_6 := b.writeFile(name, data)
+			if operand_6 != nil {
+				return operand_6
 			}
+
 		}
 	}
 	b.states[path] = buildDone
@@ -234,6 +263,7 @@ func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	unit.compiled = compiled
 	return outputPaths(unit, compiled.Outputs), nil
 }
@@ -244,6 +274,7 @@ func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, err
 	if err != nil {
 		return nil, err
 	}
+
 	outputs := make(map[string][]byte)
 	for _, item := range []struct {
 		tests    packageTests
@@ -264,9 +295,13 @@ func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, err
 		if err_1 != nil {
 			return nil, err_1
 		}
+
 		for _, source := range item.tests.Sources {
-			if data, ok := compiled.Outputs[source.Name]; ok {
-				outputs[unit.outputPath(source.Name)] = data
+			{
+				data, ok := compiled.Outputs[source.Name]
+				if ok {
+					outputs[unit.outputPath(source.Name)] = data
+				}
 			}
 		}
 	}
@@ -285,23 +320,30 @@ func (b *packageBuilder) compileTestPackage(
 	syntaxFiles := tests.Files
 	usesC := tests.UsesC
 	if !external {
+		type operandType = bool
 		sources = append(append([]compiler.File(nil), unit.Sources...), sources...)
 		syntaxFiles = append(
 			append([]*syntax.File(nil), unit.Files...),
 			syntaxFiles...,
 		)
-		usesC = unit.usesC || usesC
+		var operand operandType = unit.usesC
+		if !operand {
+			operand = usesC
+		}
+		usesC = operand
 	} else {
 		path += "_test"
 	}
+
 	for _, dependency := range importsOf(syntaxFiles) {
 		if dependency == unit.Path {
 			continue
 		}
-		err := b.buildImport(dependency)
-		if err != nil {
-			return nil, err
+		operand_1 := b.buildImport(dependency)
+		if operand_1 != nil {
+			return nil, operand_1
 		}
+
 	}
 	return b.compileFiles(
 		unit, path, sources, syntaxFiles, usesC, files,
@@ -317,19 +359,37 @@ func (b *packageBuilder) compileFiles(
 	usesC bool,
 	fileSet *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
+	type operandType_2 = bool
 	imports := make(map[string]*compiler.CompiledPackage)
 	memoryImports := make(map[string]*compiler.CompiledPackage)
 	diskImports := make([]string, 0)
 	for _, importPath := range importsOf(files) {
-		if importPath == unit.Path && path != unit.Path && unit.compiled != nil {
+		type operandType = bool
+		var operand operandType = importPath == unit.Path
+		if operand {
+			operand = path != unit.Path
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = unit.compiled != nil
+		}
+		if operand_1 {
 			imports[importPath] = unit.compiled
 			memoryImports[importPath] = unit.compiled
 			continue
 		}
-		if dependency := unit.Imports[importPath]; dependency != nil && dependency.compiled != nil {
-			imports[importPath] = dependency.compiled
-			memoryImports[importPath] = dependency.compiled
-			continue
+		{
+			type operandType_1 = bool
+			dependency := unit.Imports[importPath]
+			var operand_2 operandType_1 = dependency != nil
+			if operand_2 {
+				operand_2 = dependency.compiled != nil
+			}
+			if operand_2 {
+				imports[importPath] = dependency.compiled
+				memoryImports[importPath] = dependency.compiled
+				continue
+			}
 		}
 		diskImports = append(diskImports, importPath)
 	}
@@ -337,6 +397,7 @@ func (b *packageBuilder) compileFiles(
 	if err != nil {
 		return nil, err
 	}
+
 	fallback := b.packageTypeImporter(paths, memoryImports)
 	packageImporter := memoryImporter{packages: memoryImports, fallback: fallback}
 	compiled, diagnostics := compiler.Compile(
@@ -353,7 +414,11 @@ func (b *packageBuilder) compileFiles(
 	if len(diagnostics) != 0 {
 		return nil, errors.Join(diagnostics...)
 	}
-	if path == unit.Path && fileSet == unit.fs {
+	var operand_3 operandType_2 = path == unit.Path
+	if operand_3 {
+		operand_3 = fileSet == unit.fs
+	}
+	if operand_3 {
 		b.typeImporter.packages[path] = compiled.Package
 	}
 	return compiled, nil
@@ -421,16 +486,25 @@ func loadExportPaths(
 
 // buildImport follows local Go packages until it reaches each tgo package.
 func (b *packageBuilder) buildImport(path string) error {
-	if dependency := b.packages[path]; dependency != nil {
-		available, err := dependency.available()
-		if err != nil {
-			return err
-		}
-		if available {
-			return b.build(path)
+	type operandType = bool
+	{
+		dependency := b.packages[path]
+		if dependency != nil {
+			available, err := dependency.available()
+			if err != nil {
+				return err
+			}
+
+			if available {
+				return b.build(path)
+			}
 		}
 	}
-	if path != b.module && !strings.HasPrefix(path, b.module+"/") {
+	var operand operandType = path != b.module
+	if operand {
+		operand = !strings.HasPrefix(path, b.module+"/")
+	}
+	if operand {
 		return nil
 	}
 	switch b.states[path] {
@@ -444,11 +518,13 @@ func (b *packageBuilder) buildImport(path string) error {
 	if err_1 != nil {
 		return err_1
 	}
+
 	for _, dependency := range imports {
-		err_2 := b.buildImport(dependency)
-		if err_2 != nil {
-			return err_2
+		operand_1 := b.buildImport(dependency)
+		if operand_1 != nil {
+			return operand_1
 		}
+
 	}
 	b.states[path] = buildDone
 	return nil
@@ -456,6 +532,7 @@ func (b *packageBuilder) buildImport(path string) error {
 
 // localGoImports reads active Go imports from one package in the main module.
 func (b *packageBuilder) localGoImports(path string) ([]string, error) {
+	type operandType = bool
 	relative := strings.TrimPrefix(path, b.module)
 	relative = strings.TrimPrefix(relative, "/")
 	directory := filepath.Clean(filepath.Join(b.root, filepath.FromSlash(relative)))
@@ -463,7 +540,11 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if inside == ".." || strings.HasPrefix(inside, ".."+string(filepath.Separator)) {
+	var operand operandType = inside == ".."
+	if !operand {
+		operand = strings.HasPrefix(inside, ".."+string(filepath.Separator))
+	}
+	if operand {
 		return nil, nil
 	}
 	nested, err := nestedModule(directory, b.root)
@@ -486,6 +567,7 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 		if err_1 != nil {
 			return nil, err_1
 		}
+
 		if file != nil {
 			files = append(files, file)
 		}
@@ -499,32 +581,55 @@ func activeGoFile(
 	directory string,
 	entry os.DirEntry,
 ) (*syntax.File, []byte, bool, error) {
+	type operandType = bool
 	name := entry.Name()
-	if entry.IsDir() || !strings.HasSuffix(name, ".go") ||
-		strings.HasSuffix(name, "_test.go") {
+	var operand operandType = entry.IsDir()
+	if !operand {
+		operand = !strings.HasSuffix(name, ".go")
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = strings.HasSuffix(name, "_test.go")
+	}
+	if operand_1 {
 		return nil, nil, false, nil
 	}
 	path := filepath.Join(directory, name)
 	if outputname.Reserved(name) {
+		type operandType_1 = bool
 		owned, err := generatedFile(path)
-		if err != nil || owned {
+		var operand_2 operandType_1 = err != nil
+		if !operand_2 {
+			operand_2 = owned
+		}
+		if operand_2 {
 			return nil, nil, false, err
 		}
 	}
 	matches, err := context.MatchFile(directory, name)
-	if err != nil || !matches {
+	var operand_3 operandType = err != nil
+	if !operand_3 {
+		operand_3 = !matches
+	}
+	if operand_3 {
 		return nil, nil, false, err
 	}
 	data, err_1 := os.ReadFile(path)
 	if err_1 != nil {
 		return nil, nil, false, err_1
 	}
+
 	file, err_2 := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
 	if err_2 != nil {
 		return nil, nil, false, err_2
 	}
+
 	cgo := importsC(file)
-	if cgo && !context.CgoEnabled {
+	var operand_4 operandType = cgo
+	if operand_4 {
+		operand_4 = !context.CgoEnabled
+	}
+	if operand_4 {
 		return nil, nil, false, nil
 	}
 	return file, data, cgo, nil
@@ -533,10 +638,13 @@ func activeGoFile(
 // nestedModule reports whether a directory belongs to another module.
 func nestedModule(directory string, root string) (bool, error) {
 	for current := directory; current != root; current = filepath.Dir(current) {
-		if _, err := os.Stat(filepath.Join(current, "go.mod")); err == nil {
-			return true, nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return false, err
+		{
+			_, err := os.Stat(filepath.Join(current, "go.mod"))
+			if err == nil {
+				return true, nil
+			} else if !errors.Is(err, os.ErrNotExist) {
+				return false, err
+			}
 		}
 		parent := filepath.Dir(current)
 		if parent == current {
@@ -576,8 +684,13 @@ func importsOf(files []*syntax.File) []string {
 	imports := make(map[string]bool)
 	for _, file := range files {
 		for _, spec := range file.Imports {
+			type operandType = bool
 			path, err := strconv.Unquote(spec.Path.Value)
-			if err == nil && path != "C" {
+			var operand operandType = err == nil
+			if operand {
+				operand = path != "C"
+			}
+			if operand {
 				imports[path] = true
 			}
 		}
@@ -596,18 +709,25 @@ func fileImportsC(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	file, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
 	if err_1 != nil {
 		return false, err_1
 	}
+
 	return importsC(file), nil
 }
 
 // importsC reports whether one parsed file imports C.
 func importsC(file *syntax.File) bool {
 	for _, spec := range file.Imports {
+		type operandType = bool
 		path, err := strconv.Unquote(spec.Path.Value)
-		if err == nil && path == "C" {
+		var operand operandType = err == nil
+		if operand {
+			operand = path == "C"
+		}
+		if operand {
 			return true
 		}
 	}

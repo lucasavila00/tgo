@@ -17,18 +17,35 @@ func (c *checker) panicIsShadowed(file *syntax.File, position token.Pos) bool {
 	shadowed := false
 	for _, source := range c.sourceFiles {
 		syntax.Inspect(source, func(node *syntax.Node) bool {
+			type operandType = bool
 			if shadowed {
 				return false
 			}
 			identifier, ok := syntax.IdentifierOf(node)
-			if !ok || identifier.Name != "panic" {
+			var operand operandType = !ok
+			if !operand {
+				operand = identifier.Name != "panic"
+			}
+			if operand {
 				return true
 			}
 			object, definition := c.facts.IdentifierFact(source, node)
-			if !definition || object == nil || object.Parent() == nil {
+			var operand_1 operandType = !definition
+			if !operand_1 {
+				operand_1 = object == nil
+			}
+			var operand_2 operandType = operand_1
+			if !operand_2 {
+				operand_2 = object.Parent() == nil
+			}
+			if operand_2 {
 				return true
 			}
-			if source == file && c.sourceObjectVisibleAt(file, node, object, position) {
+			var operand_3 operandType = source == file
+			if operand_3 {
+				operand_3 = c.sourceObjectVisibleAt(file, node, object, position)
+			}
+			if operand_3 {
 				shadowed = true
 				return false
 			}
@@ -47,10 +64,18 @@ func (c *checker) sourceObjectVisibleAt(
 	object types.Object,
 	position token.Pos,
 ) bool {
+	type operandType = bool
 	target := c.pass.Fset.Position(position)
 	declaration := c.pass.Fset.Position(c.sourceObjectScopeStart(file, node, object))
-	if target.Filename == "" || target.Filename != declaration.Filename ||
-		!sourcePositionAtOrAfter(target, declaration) {
+	var operand operandType = target.Filename == ""
+	if !operand {
+		operand = target.Filename != declaration.Filename
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = !sourcePositionAtOrAfter(target, declaration)
+	}
+	if operand_1 {
 		return false
 	}
 	return c.sourceScopeContains(object.Parent(), position)
@@ -62,22 +87,48 @@ func (c *checker) sourceObjectScopeStart(
 	object types.Object,
 ) token.Pos {
 	for parent := syntax.Parent(file, node); parent != nil; parent = syntax.Parent(file, parent) {
-		if specification, ok := syntax.SpecificationOf(parent); ok {
-			if value := syntax.ValueSpecificationOf(specification); value != nil {
-				return value.Stop
+		{
+			specification, ok := syntax.SpecificationOf(parent)
+			if ok {
+				{
+					value := syntax.ValueSpecificationOf(specification)
+					if value != nil {
+						return value.Stop
+					}
+				}
 			}
 		}
-		if field, ok := syntax.FieldOf(parent); ok {
-			return field.Stop
-		}
-		if statement, ok := syntax.StatementOf(parent); ok {
-			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil &&
-				assignment.Operator == token.DEFINE {
-				return assignment.Stop
+		{
+			field, ok := syntax.FieldOf(parent)
+			if ok {
+				return field.Stop
 			}
-			if item := syntax.RangeStatementOf(statement); item != nil &&
-				item.Operator == token.DEFINE {
-				return item.Body.Lbrace
+		}
+		{
+			statement, ok := syntax.StatementOf(parent)
+			if ok {
+				{
+					type operandType = bool
+					assignment := syntax.AssignmentStatementOf(statement)
+					var operand operandType = assignment != nil
+					if operand {
+						operand = assignment.Operator == token.DEFINE
+					}
+					if operand {
+						return assignment.Stop
+					}
+				}
+				{
+					type operandType_1 = bool
+					item := syntax.RangeStatementOf(statement)
+					var operand_1 operandType_1 = item != nil
+					if operand_1 {
+						operand_1 = item.Operator == token.DEFINE
+					}
+					if operand_1 {
+						return item.Body.Lbrace
+					}
+				}
 			}
 		}
 	}
@@ -85,16 +136,39 @@ func (c *checker) sourceObjectScopeStart(
 }
 
 func (c *checker) sourceScopeContains(scope *types.Scope, position token.Pos) bool {
+	type operandType_1 = bool
+	type operandType = bool
 	target := c.pass.Fset.Position(position)
 	start := c.pass.Fset.Position(scope.Pos())
 	stop := c.pass.Fset.Position(scope.End())
-	if target.Filename == "" || target.Filename != start.Filename ||
-		target.Filename != stop.Filename {
+	var operand operandType = target.Filename == ""
+	if !operand {
+		operand = target.Filename != start.Filename
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = target.Filename != stop.Filename
+	}
+	if operand_1 {
 		return false
 	}
-	return sourcePositionAtOrAfter(target, start) && sourcePositionAtOrAfter(stop, target)
+	var operand_2 operandType_1 = sourcePositionAtOrAfter(target, start)
+	if operand_2 {
+		operand_2 = sourcePositionAtOrAfter(stop, target)
+	}
+	return operand_2
 }
 
 func sourcePositionAtOrAfter(left token.Position, right token.Position) bool {
-	return left.Line > right.Line || left.Line == right.Line && left.Column >= right.Column
+	type operandType = bool
+	var operand operandType = left.Line > right.Line
+	if !operand {
+		type operandType_1 = bool
+		var operand_1 operandType_1 = left.Line == right.Line
+		if operand_1 {
+			operand_1 = left.Column >= right.Column
+		}
+		operand = operand_1
+	}
+	return operand
 }

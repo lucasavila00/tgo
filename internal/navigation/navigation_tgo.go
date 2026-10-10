@@ -33,14 +33,23 @@ type Location struct {
 
 // SymbolKind identifies one closed class of source declaration.
 func tgoSymbolKindExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -72,7 +81,12 @@ func (v SymbolKind) Tag() SymbolKindTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v SymbolKind) GobEncode() ([]byte, error) {
-	if v.tgoTag < SymbolKindTagPackage || v.tgoTag > SymbolKindTagVariable {
+	type operandType = bool
+	var operand operandType = v.tgoTag < SymbolKindTagPackage
+	if !operand {
+		operand = v.tgoTag > SymbolKindTagVariable
+	}
+	if operand {
 		return nil, fmt.Errorf("SymbolKind: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
@@ -81,12 +95,21 @@ func (v SymbolKind) GobEncode() ([]byte, error) {
 
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *SymbolKind) GobDecode(data []byte) error {
+	type operandType = bool
 	if len(data) != 4 {
 		return fmt.Errorf("SymbolKind: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := SymbolKindTag(number)
-	if uint32(tag) != number || tag < SymbolKindTagPackage || tag > SymbolKindTagVariable {
+	var operand operandType = uint32(tag) != number
+	if !operand {
+		operand = tag < SymbolKindTagPackage
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = tag > SymbolKindTagVariable
+	}
+	if operand_1 {
 		return fmt.Errorf("SymbolKind: cannot gob decode unknown tag %d", number)
 	}
 	switch tag {
@@ -354,8 +377,11 @@ func (v *SymbolKind) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one SymbolKind JSON variant")
@@ -367,78 +393,111 @@ func (v *SymbolKind) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Package":
 		var payload SymbolKindPackage
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindPackage()
 		return nil
 	case "Type":
 		var payload SymbolKindType
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindType()
 		return nil
 	case "Struct":
 		var payload SymbolKindStruct
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindStruct()
 		return nil
 	case "Interface":
 		var payload SymbolKindInterface
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindInterface()
 		return nil
 	case "Function":
 		var payload SymbolKindFunction
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindFunction()
 		return nil
 	case "Method":
 		var payload SymbolKindMethod
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindMethod()
 		return nil
 	case "Field":
 		var payload SymbolKindField
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindField()
 		return nil
 	case "Enum":
 		var payload SymbolKindEnum
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindEnum()
 		return nil
 	case "EnumMember":
 		var payload SymbolKindEnumMember
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindEnumMember()
 		return nil
 	case "Constant":
 		var payload SymbolKindConstant
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindConstant()
 		return nil
 	case "Variable":
 		var payload SymbolKindVariable
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindVariable()
 		return nil
@@ -448,6 +507,7 @@ func (v *SymbolKind) UnmarshalJSON(data []byte) error {
 }
 
 func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -461,6 +521,7 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -491,8 +552,16 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Variable":
 			current = 11
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -504,20 +573,38 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one SymbolKind JSON variant")
 	}
 	if selected == 0 {
@@ -526,78 +613,111 @@ func (v *SymbolKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload SymbolKindPackage
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindPackage()
 		return nil
 	case 2:
 		var payload SymbolKindType
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindType()
 		return nil
 	case 3:
 		var payload SymbolKindStruct
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindStruct()
 		return nil
 	case 4:
 		var payload SymbolKindInterface
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindInterface()
 		return nil
 	case 5:
 		var payload SymbolKindFunction
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindFunction()
 		return nil
 	case 6:
 		var payload SymbolKindMethod
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindMethod()
 		return nil
 	case 7:
 		var payload SymbolKindField
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindField()
 		return nil
 	case 8:
 		var payload SymbolKindEnum
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindEnum()
 		return nil
 	case 9:
 		var payload SymbolKindEnumMember
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindEnumMember()
 		return nil
 	case 10:
 		var payload SymbolKindConstant
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindConstant()
 		return nil
 	case 11:
 		var payload SymbolKindVariable
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewSymbolKindVariable()
 		return nil
@@ -651,6 +771,7 @@ func (e *Engine) DocumentSymbols(
 	if err != nil {
 		return nil, err
 	}
+
 	result := make([]Symbol, 0)
 	for _, symbol := range index.symbols {
 		if symbol.Range.URI == uri {
@@ -669,10 +790,16 @@ func (e *Engine) WorkspaceSymbols(
 	if err != nil {
 		return nil, err
 	}
+
 	query = strings.ToLower(query)
 	result := make([]Symbol, 0)
 	for _, symbol := range index.symbols {
-		if query == "" || strings.Contains(strings.ToLower(symbol.Name), query) {
+		type operandType = bool
+		var operand operandType = query == ""
+		if !operand {
+			operand = strings.Contains(strings.ToLower(symbol.Name), query)
+		}
+		if operand {
 			result = append(result, symbol)
 		}
 	}
@@ -696,6 +823,7 @@ func New(root string) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Engine{
 		root: absolute, mu: new(sync.Mutex), index: nil, generation: 0,
 		building: false, ready: nil,
@@ -721,9 +849,18 @@ func (e *Engine) Definition(
 	if err != nil {
 		return nil, err
 	}
+
 	for _, item := range index.occurrences {
-		if item.location.URI == uri && item.location.Start <= offset &&
-			offset < item.location.End {
+		type operandType = bool
+		var operand operandType = item.location.URI == uri
+		if operand {
+			operand = item.location.Start <= offset
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = offset < item.location.End
+		}
+		if operand_1 {
 			definition, ok := index.definitions[item.key]
 			if !ok {
 				return nil, nil
@@ -744,9 +881,18 @@ func (e *Engine) Hover(
 	if err != nil {
 		return nil, err
 	}
+
 	for _, item := range index.occurrences {
-		if item.location.URI == uri && item.location.Start <= offset &&
-			offset < item.location.End {
+		type operandType = bool
+		var operand operandType = item.location.URI == uri
+		if operand {
+			operand = item.location.Start <= offset
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = offset < item.location.End
+		}
+		if operand_1 {
 			return &Hover{Contents: item.hover, Range: item.location}, nil
 		}
 	}
@@ -764,22 +910,44 @@ func (e *Engine) References(
 	if err != nil {
 		return nil, err
 	}
+
 	for _, item := range index.occurrences {
-		if item.location.URI != uri || offset < item.location.Start ||
-			item.location.End <= offset {
+		type operandType = bool
+		var operand operandType = item.location.URI != uri
+		if !operand {
+			operand = offset < item.location.Start
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = item.location.End <= offset
+		}
+		if operand_1 {
 			continue
 		}
 		result := make([]Location, 0, len(index.references[item.key]))
 		definition, hasDefinition := index.definitions[item.key]
 		seen := make(map[Location]bool)
 		for _, location := range index.references[item.key] {
-			if hasDefinition && location == definition {
+			type operandType_1 = bool
+			var operand_2 operandType_1 = hasDefinition
+			if operand_2 {
+				operand_2 = location == definition
+			}
+			if operand_2 {
 				continue
 			}
 			result = append(result, location)
 			seen[location] = true
 		}
-		if includeDeclaration && hasDefinition && !seen[definition] {
+		var operand_3 operandType = includeDeclaration
+		if operand_3 {
+			operand_3 = hasDefinition
+		}
+		var operand_4 operandType = operand_3
+		if operand_4 {
+			operand_4 = !seen[definition]
+		}
+		if operand_4 {
 			result = append(result, definition)
 		}
 		sort.Slice(result, func(left, right int) bool {
@@ -795,6 +963,7 @@ func (e *Engine) References(
 
 func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 	for {
+		type operandType = bool
 		e.mu.Lock()
 		if e.index != nil {
 			index := e.index
@@ -805,10 +974,12 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		if e.building {
 			ready := e.ready
 			e.mu.Unlock()
+			operand := ctx.Done()
+			operand_1 := ready
 			select {
-			case <-ctx.Done():
+			case <-operand:
 				return nil, ctx.Err()
-			case <-ready:
+			case <-operand_1:
 			}
 			continue
 		}
@@ -817,7 +988,11 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 		e.mu.Unlock()
 		index, err := e.buildIndex(ctx)
 		e.mu.Lock()
-		current := err == nil && generation == e.generation
+		var operand_2 operandType = err == nil
+		if operand_2 {
+			operand_2 = generation == e.generation
+		}
+		current := operand_2
 		if current {
 			e.index = index
 		}
@@ -835,8 +1010,9 @@ func (e *Engine) load(ctx context.Context) (*workspaceIndex, error) {
 }
 
 func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
+	operand := ctx.Done()
 	select {
-	case <-ctx.Done():
+	case <-operand:
 		return nil, ctx.Err()
 	default:
 	}
@@ -844,8 +1020,9 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 	if err != nil {
 		return nil, err
 	}
+	operand_1 := ctx.Done()
 	select {
-	case <-ctx.Done():
+	case <-operand_1:
 		return nil, ctx.Err()
 	default:
 	}
@@ -856,8 +1033,9 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 		symbols:     nil,
 	}
 	for view, pkg := range packages {
+		operand_2 := ctx.Done()
 		select {
-		case <-ctx.Done():
+		case <-operand_2:
 			return nil, ctx.Err()
 		default:
 		}
@@ -872,14 +1050,24 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 			if err_1 != nil {
 				return nil, err_1
 			}
+
 			syntax.Inspect(source.Syntax, func(node *syntax.Node) bool {
+				type operandType = bool
 				identifier, ok := syntax.IdentifierOf(node)
-				if !ok || identifier == nil {
+				var operand operandType = !ok
+				if !operand {
+					operand = identifier == nil
+				}
+				if operand {
 					return true
 				}
 				start := pkg.Files.Position(identifier.Start).Offset
 				end := pkg.Files.Position(identifier.Stop).Offset
-				if start < 0 || end <= start {
+				var operand_1 operandType = start < 0
+				if !operand_1 {
+					operand_1 = end <= start
+				}
+				if operand_1 {
 					return true
 				}
 				location := Location{URI: fileURI, Start: start, End: end}
@@ -897,14 +1085,25 @@ func (e *Engine) buildIndex(ctx context.Context) (*workspaceIndex, error) {
 				if contents == "" {
 					contents = types.ObjectString(object, qualifier)
 				}
-				if function, ok := object.(*types.Func); ok && pkg.OwnerHovers[object] == "" {
-					signature := function.Type().(*types.Signature)
-					if receiver := signature.Recv(); receiver != nil {
-						contents = "func (" + types.TypeString(
-							receiver.Type(), qualifier,
-						) + ") " + function.Name() + strings.TrimPrefix(
-							types.TypeString(signature, qualifier), "func",
-						)
+				{
+					type operandType_1 = bool
+					function, ok := object.(*types.Func)
+					var operand_2 operandType_1 = ok
+					if operand_2 {
+						operand_2 = pkg.OwnerHovers[object] == ""
+					}
+					if operand_2 {
+						signature := function.Type().(*types.Signature)
+						{
+							receiver := signature.Recv()
+							if receiver != nil {
+								contents = "func (" + types.TypeString(
+									receiver.Type(), qualifier,
+								) + ") " + function.Name() + strings.TrimPrefix(
+									types.TypeString(signature, qualifier), "func",
+								)
+							}
+						}
 					}
 				}
 				index.occurrences = append(index.occurrences, occurrence{
@@ -956,7 +1155,12 @@ func newObjectKeys(root *types.Package, view int) *objectKeys {
 }
 
 func (k *objectKeys) addPackage(pkg *types.Package, seen map[*types.Package]bool) {
-	if pkg == nil || seen[pkg] {
+	type operandType = bool
+	var operand operandType = pkg == nil
+	if !operand {
+		operand = seen[pkg]
+	}
+	if operand {
 		return
 	}
 	seen[pkg] = true
@@ -1008,8 +1212,11 @@ func (k *objectKeys) key(object types.Object) string {
 	case *types.Var:
 		object = value.Origin()
 	}
-	if key := k.known[object]; key != "" {
-		return key
+	{
+		key := k.known[object]
+		if key != "" {
+			return key
+		}
 	}
 	packagePath := "universe"
 	if object.Pkg() != nil {
@@ -1026,10 +1233,12 @@ func pathURI(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return pathURIValue(absolute, filepath.VolumeName(absolute)), nil
 }
 
 func pathURIValue(absolute string, volume string) string {
+	type operandType = bool
 	slashPath := filepath.ToSlash(absolute)
 	slashVolume := filepath.ToSlash(volume)
 	value := new(url.URL)
@@ -1044,7 +1253,11 @@ func pathURIValue(absolute string, volume string) string {
 			return value.String()
 		}
 	}
-	if slashVolume != "" && !strings.HasPrefix(slashPath, "/") {
+	var operand operandType = slashVolume != ""
+	if operand {
+		operand = !strings.HasPrefix(slashPath, "/")
+	}
+	if operand {
 		slashPath = "/" + slashPath
 	}
 	value.Path = slashPath

@@ -20,9 +20,12 @@ func main() {
 	write := flag.Bool("w", false, "write result to file")
 	list := flag.Bool("l", false, "list files whose format differs")
 	flag.Parse()
-	if err := run(flag.Args(), *write, *list, os.Stdin, os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, "tgofmt:", err)
-		os.Exit(1)
+	{
+		err := run(flag.Args(), *write, *list, os.Stdin, os.Stdout)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "tgofmt:", err)
+			os.Exit(1)
+		}
 	}
 }
 
@@ -64,15 +67,16 @@ func run(paths []string, write bool, list bool, input io.Reader, output io.Write
 			_ = result
 			checked[directory] = true
 		}
-		err_5 := formatPath(path, write, list, output)
-		if err_5 != nil {
-			return err_5
+		operand := formatPath(path, write, list, output)
+		if operand != nil {
+			return operand
 		}
 	}
 	return nil
 }
 
 func formatPath(path string, write bool, list bool, output io.Writer) error {
+	type operandType = bool
 	source, err_1 := os.ReadFile(path)
 	if err_1 != nil {
 		return err_1
@@ -82,21 +86,33 @@ func formatPath(path string, write bool, list bool, output io.Writer) error {
 		return err_2
 	}
 	changed := !bytes.Equal(source, formatted)
-	if list && changed {
+	var operand operandType = list
+	if operand {
+		operand = changed
+	}
+	if operand {
 		result, err_3 := fmt.Fprintln(output, path)
 		if err_3 != nil {
 			return err_3
 		}
 		_ = result
 	}
-	if write && changed {
+	var operand_1 operandType = write
+	if operand_1 {
+		operand_1 = changed
+	}
+	if operand_1 {
 		info, err_4 := os.Stat(path)
 		if err_4 != nil {
 			return err_4
 		}
 		return writeFormattedFile(path, source, formatted, info.Mode().Perm())
 	}
-	if !write && !list {
+	var operand_2 operandType = !write
+	if operand_2 {
+		operand_2 = !list
+	}
+	if operand_2 {
 		_, err := output.Write(formatted)
 		return err
 	}
@@ -123,7 +139,12 @@ func writeFormattedFile(path string, source []byte, formatted []byte, mode fs.Fi
 	restored, writeErr := replaceContents(target, source, formatted)
 	closeErr := target.Close()
 	if writeErr != nil {
-		if restored && closeErr == nil {
+		type operandType = bool
+		var operand operandType = restored
+		if operand {
+			operand = closeErr == nil
+		}
+		if operand {
 			_ = os.Remove(backup)
 			return writeErr
 		}
@@ -144,42 +165,68 @@ func createBackup(path string, source []byte, mode fs.FileMode) (string, error) 
 		return "", err_1
 	}
 	name := backup.Name()
-	if err := backup.Chmod(mode); err != nil {
-		_ = backup.Close()
-		_ = os.Remove(name)
-		return "", err
+	{
+		err := backup.Chmod(mode)
+		if err != nil {
+			_ = backup.Close()
+			_ = os.Remove(name)
+			return "", err
+		}
 	}
-	if err := writeAll(backup, source); err != nil {
-		_ = backup.Close()
-		_ = os.Remove(name)
-		return "", err
+	{
+		err := writeAll(backup, source)
+		if err != nil {
+			_ = backup.Close()
+			_ = os.Remove(name)
+			return "", err
+		}
 	}
-	if err := backup.Sync(); err != nil {
-		_ = backup.Close()
-		_ = os.Remove(name)
-		return "", err
+	{
+		err := backup.Sync()
+		if err != nil {
+			_ = backup.Close()
+			_ = os.Remove(name)
+			return "", err
+		}
 	}
-	if err := backup.Close(); err != nil {
-		_ = os.Remove(name)
-		return "", err
+	{
+		err := backup.Close()
+		if err != nil {
+			_ = os.Remove(name)
+			return "", err
+		}
 	}
 	return name, nil
 }
 
 func replaceContents(target rewriteTarget, source []byte, formatted []byte) (bool, error) {
-	if err := writeAll(target, formatted); err == nil {
-		if err := target.Truncate(int64(len(formatted))); err == nil {
-			return false, nil
-		} else if restoreErr := restoreContents(target, source); restoreErr != nil {
-			return false, fmt.Errorf("%w; restore failed: %v", err, restoreErr)
+	{
+		err := writeAll(target, formatted)
+		if err == nil {
+			{
+				err := target.Truncate(int64(len(formatted)))
+				if err == nil {
+					return false, nil
+				} else {
+					restoreErr := restoreContents(target, source)
+					if restoreErr != nil {
+						return false, fmt.Errorf("%w; restore failed: %v", err, restoreErr)
+					} else {
+						return true, err
+					}
+				}
+			}
+
 		} else {
-			return true, err
+			restoreErr := restoreContents(target, source)
+			if restoreErr != nil {
+				return false, fmt.Errorf("%w; restore failed: %v", err, restoreErr)
+			} else {
+				return true, err
+			}
 		}
-	} else if restoreErr := restoreContents(target, source); restoreErr != nil {
-		return false, fmt.Errorf("%w; restore failed: %v", err, restoreErr)
-	} else {
-		return true, err
 	}
+
 }
 
 func restoreContents(target rewriteTarget, source []byte) error {

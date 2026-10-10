@@ -67,10 +67,11 @@ func discover(
 		context:  context,
 		packages: make(map[string]*packageUnit),
 	}
-	err := filepath.WalkDir(root, discovery.visit)
-	if err != nil {
-		return nil, err
+	operand := filepath.WalkDir(root, discovery.visit)
+	if operand != nil {
+		return nil, operand
 	}
+
 	for _, unit := range discovery.packages {
 		unit.Imports = discovery.packages
 	}
@@ -119,23 +120,39 @@ func (d *packageDiscovery) addTestSource(path string) error {
 	if err != nil {
 		return err
 	}
+
 	unit.testSourcePaths = append(unit.testSourcePaths, path)
 	return nil
 }
 
 // visitDirectory skips hidden, vendor, and nested module directories.
 func (d *packageDiscovery) visitDirectory(path, name string) error {
+	type operandType = bool
 	if path == d.root {
 		return nil
 	}
-	if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") ||
-		name == "testdata" || name == "vendor" {
+	var operand operandType = strings.HasPrefix(name, ".")
+	if !operand {
+		operand = strings.HasPrefix(name, "_")
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = name == "testdata"
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = name == "vendor"
+	}
+	if operand_2 {
 		return filepath.SkipDir
 	}
-	if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
-		return filepath.SkipDir
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
+	{
+		_, err := os.Stat(filepath.Join(path, "go.mod"))
+		if err == nil {
+			return filepath.SkipDir
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
 	}
 	return nil
 }
@@ -146,6 +163,7 @@ func (d *packageDiscovery) addSource(path string) error {
 	if err != nil {
 		return err
 	}
+
 	unit.sourcePaths = append(unit.sourcePaths, path)
 	return nil
 }
@@ -156,6 +174,7 @@ func (d *packageDiscovery) addGeneratedCandidate(path string) error {
 	if err != nil {
 		return err
 	}
+
 	unit.generatedPaths = append(unit.generatedPaths, path)
 	return nil
 }
@@ -166,6 +185,7 @@ func (d *packageDiscovery) packageFor(directory string) (*packageUnit, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	unit := d.packages[importPath]
 	if unit == nil {
 		unit = &packageUnit{
@@ -204,6 +224,7 @@ func (p *packageUnit) matchingTestSources() ([]string, error) {
 	}
 	p.testsMatched = true
 	for _, path := range p.testSourcePaths {
+		type operandType = bool
 		match, err := packagelanguage.MatchFile(
 			p.context, path, packagelanguage.TGo,
 		)
@@ -219,7 +240,11 @@ func (p *packageUnit) matchingTestSources() ([]string, error) {
 			p.matchError = err
 			return nil, err
 		}
-		if cgo && !p.context.CgoEnabled {
+		var operand operandType = cgo
+		if operand {
+			operand = !p.context.CgoEnabled
+		}
+		if operand {
 			continue
 		}
 		p.matchingTestPaths = append(p.matchingTestPaths, path)
@@ -233,6 +258,7 @@ func (d *packageDiscovery) importPath(directory string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if relative == "." {
 		return d.module, nil
 	}
@@ -245,10 +271,12 @@ func (p *packageUnit) readSource(path string) error {
 	if err != nil {
 		return err
 	}
+
 	file, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
 	if err_1 != nil {
 		return err_1
 	}
+
 	p.Sources = append(p.Sources, compiler.File{Name: path, Data: data})
 	p.Files = append(p.Files, file)
 	return nil
@@ -268,6 +296,7 @@ func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 	}
 	packageName := p.Files[0].Name.Name
 	for _, path := range paths {
+		type operandType = bool
 		data, err_1 := os.ReadFile(path)
 		if err_1 != nil {
 			return packageTests{}, packageTests{}, err_1
@@ -279,7 +308,11 @@ func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 		}
 
 		cgo := importsC(file)
-		if cgo && !p.context.CgoEnabled {
+		var operand operandType = cgo
+		if operand {
+			operand = !p.context.CgoEnabled
+		}
+		if operand {
 			continue
 		}
 		tests := &internal
@@ -295,7 +328,12 @@ func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 		}
 		tests.Sources = append(tests.Sources, compiler.File{Name: path, Data: data})
 		tests.Files = append(tests.Files, file)
-		tests.UsesC = tests.UsesC || cgo
+		operand_1 := tests
+		var operand_2 operandType = tests.UsesC
+		if !operand_2 {
+			operand_2 = cgo
+		}
+		(*operand_1).UsesC = operand_2
 	}
 	return internal, external, nil
 }
@@ -307,6 +345,7 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 	}
 	p.sourcesMatched = true
 	for _, path := range p.sourcePaths {
+		type operandType = bool
 		match, err := packagelanguage.MatchFile(
 			p.context, path, packagelanguage.TGo,
 		)
@@ -322,10 +361,19 @@ func (p *packageUnit) matchingSources() ([]string, error) {
 			p.matchError = err
 			return nil, err
 		}
-		if cgo && !p.context.CgoEnabled {
+		var operand operandType = cgo
+		if operand {
+			operand = !p.context.CgoEnabled
+		}
+		if operand {
 			continue
 		}
-		p.usesC = p.usesC || cgo
+		operand_1 := p
+		var operand_2 operandType = p.usesC
+		if !operand_2 {
+			operand_2 = cgo
+		}
+		(*operand_1).usesC = operand_2
 		p.matchingPaths = append(p.matchingPaths, path)
 	}
 	return p.matchingPaths, nil
@@ -337,11 +385,13 @@ func (p *packageUnit) available() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	_ = result
 	paths, err_1 := p.matchingSources()
 	if err_1 != nil {
 		return false, err_1
 	}
+
 	if len(paths) > 0 {
 		return true, nil
 	}
@@ -349,6 +399,7 @@ func (p *packageUnit) available() (bool, error) {
 	if err_2 != nil {
 		return false, err_2
 	}
+
 	if len(tests) > 0 {
 		return false, fmt.Errorf(
 			"%s: active TGo test needs active TGo production source",
@@ -356,11 +407,16 @@ func (p *packageUnit) available() (bool, error) {
 		)
 	}
 	for _, path := range p.generatedPaths {
+		type operandType = bool
 		owned, err_3 := generatedFile(path)
 		if err_3 != nil {
 			return false, err_3
 		}
-		if owned && !p.sourceOwnsOutput(path) {
+		var operand operandType = owned
+		if operand {
+			operand = !p.sourceOwnsOutput(path)
+		}
+		if operand {
 			return true, nil
 		}
 	}
@@ -399,9 +455,12 @@ func (p *packageUnit) load() error {
 		return p.loadError
 	}
 	p.loaded = true
-	if _, err := p.packageLanguage(); err != nil {
-		p.loadError = err
-		return err
+	{
+		_, err := p.packageLanguage()
+		if err != nil {
+			p.loadError = err
+			return err
+		}
 	}
 	paths, err := p.matchingSources()
 	if err != nil {
@@ -409,9 +468,12 @@ func (p *packageUnit) load() error {
 		return err
 	}
 	for _, path := range paths {
-		if err := p.readSource(path); err != nil {
-			p.loadError = err
-			return err
+		{
+			err := p.readSource(path)
+			if err != nil {
+				p.loadError = err
+				return err
+			}
 		}
 	}
 	return p.loadError
@@ -454,11 +516,13 @@ func selectPackages(
 			if err != nil {
 				return nil, err
 			}
+
 			if !available {
 				language, err_1 := unit.packageLanguage()
 				if err_1 != nil {
 					return nil, err_1
 				}
+
 				if language != packagelanguage.Go {
 					continue
 				}
@@ -502,13 +566,28 @@ func sortedTGoPackagePaths(packages map[string]*packageUnit) []string {
 
 // tgoCandidate reports whether discovery found TGo source or reserved output.
 func (p *packageUnit) tgoCandidate() bool {
-	return len(p.sourcePaths) > 0 || len(p.testSourcePaths) > 0 ||
-		len(p.generatedPaths) > 0
+	type operandType = bool
+	var operand operandType = len(p.sourcePaths) > 0
+	if !operand {
+		operand = len(p.testSourcePaths) > 0
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+
+		// packagePattern returns the directory and recursion rule for a pattern.
+		operand_1 = len(p.generatedPaths) > 0
+	}
+	return operand_1
+
 }
 
-// packagePattern returns the directory and recursion rule for a pattern.
 func packagePattern(directory, pattern string) (string, bool) {
-	recursive := strings.HasSuffix(pattern, "/...") || pattern == "..."
+	type operandType = bool
+	var operand operandType = strings.HasSuffix(pattern, "/...")
+	if !operand {
+		operand = pattern == "..."
+	}
+	recursive := operand
 	target := strings.TrimSuffix(pattern, "/...")
 	if target == "..." {
 		target = "."
@@ -527,9 +606,19 @@ func packageMatches(
 	target string,
 	recursive bool,
 ) bool {
-	if path == pattern || unit.Dir == target {
+	type operandType_1 = bool
+	type operandType = bool
+	var operand operandType = path == pattern
+	if !operand {
+		operand = unit.Dir == target
+	}
+	if operand {
 		return true
 	}
 	childPrefix := target + string(filepath.Separator)
-	return recursive && strings.HasPrefix(unit.Dir, childPrefix)
+	var operand_1 operandType_1 = recursive
+	if operand_1 {
+		operand_1 = strings.HasPrefix(unit.Dir, childPrefix)
+	}
+	return operand_1
 }

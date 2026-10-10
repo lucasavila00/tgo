@@ -13,7 +13,12 @@ import (
 
 // checkSuccessReturnModernization finds explicit return values that TGo can elide.
 func (c *checker) checkSuccessReturnModernization(analysis *sourceanalysis.Package) {
-	if analysis == nil || analysis.Facts == nil {
+	type operandType = bool
+	var operand operandType = analysis == nil
+	if !operand {
+		operand = analysis.Facts == nil
+	}
+	if operand {
 		return
 	}
 	for _, source := range analysis.Sources {
@@ -26,13 +31,25 @@ func (c *checker) checkSuccessReturnModernization(analysis *sourceanalysis.Packa
 		syntax.Inspect(
 			file,
 			func(node *syntax.Node) bool {
+				type operandType = bool
 				statement, ok := syntax.StatementOf(node)
 				if !ok {
 					return true
 				}
 				returned := syntax.ReturnStatementOf(statement)
-				if returned == nil || returned.SuccessComma.IsValid() ||
-					len(returned.FailureCommas) > 0 || len(returned.Results) < 2 {
+				var operand operandType = returned == nil
+				if !operand {
+					operand = returned.SuccessComma.IsValid()
+				}
+				var operand_1 operandType = operand
+				if !operand_1 {
+					operand_1 = len(returned.FailureCommas) > 0
+				}
+				var operand_2 operandType = operand_1
+				if !operand_2 {
+					operand_2 = len(returned.Results) < 2
+				}
+				if operand_2 {
 					return true
 				}
 				if propagationReturns[returned.Return] {
@@ -40,7 +57,15 @@ func (c *checker) checkSuccessReturnModernization(analysis *sourceanalysis.Packa
 				}
 				last := sourceUnparenthesized(returned.Results[len(returned.Results)-1])
 				name, ok := sourceIdentifier(last)
-				if ok && name.Name == "nil" && facts.IdentifierObject(last) == types.Universe.Lookup("nil") {
+				var operand_3 operandType = ok
+				if operand_3 {
+					operand_3 = name.Name == "nil"
+				}
+				var operand_4 operandType = operand_3
+				if operand_4 {
+					operand_4 = facts.IdentifierObject(last) == types.Universe.Lookup("nil")
+				}
+				if operand_4 {
 					c.reportResult(
 						syntax.ExpressionPosition(last),
 						"return with final nil can use a trailing comma",
@@ -90,8 +115,16 @@ func failureReturnCanUseLeadingComma(
 	signature *types.Signature,
 	facts *sourcefacts.Index,
 ) bool {
-	if signature == nil || signature.Results().Len() != len(returned.Results) ||
-		signature.Results().Len() < 2 {
+	type operandType = bool
+	var operand operandType = signature == nil
+	if !operand {
+		operand = signature.Results().Len() != len(returned.Results)
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = signature.Results().Len() < 2
+	}
+	if operand_1 {
 		return false
 	}
 	results := signature.Results()

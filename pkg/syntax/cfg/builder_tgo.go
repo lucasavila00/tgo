@@ -24,6 +24,7 @@ type graphBuilder struct {
 func (b *graphBuilder) statement(statement *syntax.Statement) {
 	var label *labelBlocks = nil
 start:
+
 	switch statement.Tag() {
 	case syntax.StatementTagBad,
 		syntax.StatementTagSend,
@@ -36,15 +37,25 @@ start:
 		b.addStatement(statement)
 		b.current.returns = true
 	case syntax.StatementTagExpression:
+		type operandType = bool
 		b.addStatement(statement)
 		item := syntax.ExpressionStatementOf(statement)
-		if syntax.CallExpressionOf(item.Expression) != nil && !b.mayReturn(item.Expression) {
+		var operand operandType = syntax.CallExpressionOf(item.Expression) != nil
+		if operand {
+			operand = !b.mayReturn(item.Expression)
+		}
+		if operand {
 			b.current = b.newBlock(KindUnreachable, statement)
 		}
 	case syntax.StatementTagDeclaration:
+		type operandType_1 = bool
 		item := syntax.DeclarationStatementOf(statement)
 		declaration := syntax.GeneralDeclarationOf(item.Declaration)
-		if declaration != nil && declaration.Kind == token.VAR {
+		var operand_1 operandType_1 = declaration != nil
+		if operand_1 {
+			operand_1 = declaration.Kind == token.VAR
+		}
+		if operand_1 {
 			for _, specification := range declaration.Specs {
 				if specification == nil {
 					continue
@@ -101,20 +112,46 @@ func (b *graphBuilder) branch(item *syntax.BranchStatement, statement *syntax.St
 		if item.Label != nil {
 			block = b.label(item.Label, nil).breakTo
 		} else {
-			for target := b.targets; target != nil && block == nil; target = target.tail {
+			for target := b.targets; ; target = target.tail {
+				type operandType = bool
+				var operand operandType = target != nil
+				if operand {
+					operand = block == nil
+				}
+				if !operand {
+					break
+				}
 				block = target.breakTo
 			}
 		}
+
 	case token.CONTINUE:
 		if item.Label != nil {
 			block = b.label(item.Label, nil).continueTo
 		} else {
-			for target := b.targets; target != nil && block == nil; target = target.tail {
+			for target := b.targets; ; target = target.tail {
+				type operandType_1 = bool
+				var operand_1 operandType_1 = target != nil
+				if operand_1 {
+					operand_1 = block == nil
+				}
+				if !operand_1 {
+					break
+				}
 				block = target.continueTo
 			}
 		}
+
 	case token.FALLTHROUGH:
-		for target := b.targets; target != nil && block == nil; target = target.tail {
+		for target := b.targets; ; target = target.tail {
+			type operandType_2 = bool
+			var operand_2 operandType_2 = target != nil
+			if operand_2 {
+				operand_2 = block == nil
+			}
+			if !operand_2 {
+				break
+			}
 			block = target.fallthroughTo
 		}
 	case token.GOTO:
@@ -262,6 +299,7 @@ func (b *graphBuilder) typeSwitchStatement(
 	} else {
 		b.jump(done)
 	}
+
 	b.current = done
 }
 
@@ -280,8 +318,13 @@ func (b *graphBuilder) selectStatement(
 	label *labelBlocks,
 ) {
 	for _, clauseStatement := range item.Body.List {
+		type operandType = bool
 		clause := syntax.CommunicationClauseOf(clauseStatement)
-		if clause != nil && clause.Communication != nil {
+		var operand operandType = clause != nil
+		if operand {
+			operand = clause.Communication != nil
+		}
+		if operand {
 			b.statement(clause.Communication)
 		}
 	}
@@ -306,9 +349,16 @@ func (b *graphBuilder) selectStatement(
 		b.targets = &branchTargets{
 			tail: b.targets, breakTo: done, continueTo: nil, fallthroughTo: nil,
 		}
-		if assignment := syntax.AssignmentStatementOf(clause.Communication); assignment != nil &&
-			len(assignment.Left) > 0 {
-			b.addExpression(assignment.Left[0])
+		{
+			type operandType_1 = bool
+			assignment := syntax.AssignmentStatementOf(clause.Communication)
+			var operand_1 operandType_1 = assignment != nil
+			if operand_1 {
+				operand_1 = len(assignment.Left) > 0
+			}
+			if operand_1 {
+				b.addExpression(assignment.Left[0])
+			}
 		}
 		b.statementList(clause.Body)
 		b.targets = b.targets.tail
@@ -416,6 +466,7 @@ type labelBlocks struct {
 }
 
 func (b *graphBuilder) label(identifier *syntax.Identifier, statement *syntax.Statement) *labelBlocks {
+	type operandType = bool
 	value := b.labels[identifier.Name]
 	if value == nil {
 		value = &labelBlocks{
@@ -426,7 +477,11 @@ func (b *graphBuilder) label(identifier *syntax.Identifier, statement *syntax.St
 		}
 		b.labels[identifier.Name] = value
 	}
-	if statement != nil && value.goTo.Stmt == nil {
+	var operand operandType = statement != nil
+	if operand {
+		operand = value.goTo.Stmt == nil
+	}
+	if operand {
 		value.goTo.Stmt = statement
 	}
 	return value

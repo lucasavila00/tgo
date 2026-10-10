@@ -31,8 +31,11 @@ func containedTypeParameters(
 	switch classified.Tag() {
 	case goTypeTagTypeParameter:
 		parameterType := classified.TypeParameterPayload().Value
-		if parameter, ok := parameters[parameterType]; ok {
-			result[parameter] = true
+		{
+			parameter, ok := parameters[parameterType]
+			if ok {
+				result[parameter] = true
+			}
 		}
 	case goTypeTagNamed:
 		named := classified.NamedPayload().Value
@@ -125,7 +128,12 @@ func (c *checker) propagateGenericEffects(
 			continue
 		}
 		for parameter := range parameters {
-			changed = c.addGenericEffect(summary, zero, parameter, mapped) || changed
+			type operandType = bool
+			var operand operandType = c.addGenericEffect(summary, zero, parameter, mapped)
+			if !operand {
+				operand = changed
+			}
+			changed = operand
 		}
 	}
 	return changed
@@ -142,15 +150,25 @@ func (c *checker) propagatedGenericEffect(
 	pathMaySkip bool,
 	zero bool,
 ) (GenericEffect, map[zeroParameter]bool, bool) {
+	type operandType_1 = bool
+	type operandType = bool
 	arguments := typeArguments
 	if effect.Receiver {
 		arguments = receiverArguments
 	}
-	if effect.TypeParameter < 0 || effect.TypeParameter >= len(arguments) {
+	var operand operandType = effect.TypeParameter < 0
+	if !operand {
+		operand = effect.TypeParameter >= len(arguments)
+	}
+	if operand {
 		return noGenericEffect(), nil, false
 	}
 	conditions := append([]GenericEffectCondition(nil), pathConditions...)
-	maySkip := pathMaySkip || effect.MaySkip
+	var operand_1 operandType_1 = pathMaySkip
+	if !operand_1 {
+		operand_1 = effect.MaySkip
+	}
+	maySkip := operand_1
 	targetType := arguments[effect.TypeParameter]
 	for _, condition := range effect.Conditions {
 		mapped, outcome := c.mapEffectCondition(
@@ -186,26 +204,37 @@ func (c *checker) mapEffectCondition(
 	condition GenericEffectCondition,
 	targetType types.Type,
 ) (*GenericEffectCondition, effectOutcome) {
+	type operandType = bool
 	call := syntax.CallExpressionOf(callExpression)
 	if call == nil {
 		return nil, unknownEffectOutcome()
 	}
-	if condition.ValueParameter < 0 || condition.ValueParameter >= len(call.Args) {
+	var operand operandType = condition.ValueParameter < 0
+	if !operand {
+		operand = condition.ValueParameter >= len(call.Args)
+	}
+	if operand {
 		return nil, unknownEffectOutcome()
 	}
-	if matches, known := c.effectConditionValue(
-		callExpression, condition, targetType,
-	); known {
-		if matches {
-			return nil, alwaysEffectOutcome()
+	{
+		matches, known := c.effectConditionValue(
+			callExpression, condition, targetType,
+		)
+		if known {
+			if matches {
+				return nil, alwaysEffectOutcome()
+			}
+			return nil, neverEffectOutcome()
 		}
-		return nil, neverEffectOutcome()
 	}
 	expression := call.Args[condition.ValueParameter]
-	if mapped := c.mappedScalarEffectCondition(
-		callExpression, expression, condition,
-	); mapped != nil {
-		return mapped, conditionalEffectOutcome()
+	{
+		mapped := c.mappedScalarEffectCondition(
+			callExpression, expression, condition,
+		)
+		if mapped != nil {
+			return mapped, conditionalEffectOutcome()
+		}
 	}
 	return c.mapParameterEffectCondition(
 		summary, callExpression, expression, condition,
@@ -218,25 +247,45 @@ func (c *checker) mapParameterEffectCondition(
 	expression *syntax.Expression,
 	condition GenericEffectCondition,
 ) (*GenericEffectCondition, effectOutcome) {
+	type operandType_1 = bool
 	call := syntax.CallExpressionOf(callExpression)
 	if call == nil {
 		return nil, unknownEffectOutcome()
 	}
-	if parentheses := syntax.ParenthesizedExpressionOf(expression); parentheses != nil {
-		expression = parentheses.Expression
+	{
+		parentheses := syntax.ParenthesizedExpressionOf(expression)
+		if parentheses != nil {
+			expression = parentheses.Expression
+		}
 	}
 	expected := condition.Expected
-	if negation := syntax.UnaryExpressionOf(expression); negation != nil &&
-		negation.Operator == token.NOT && condition.Kind == booleanEffectCondition() {
-		expression = negation.Expression
-		expected = !expected
+	{
+		type operandType = bool
+		negation := syntax.UnaryExpressionOf(expression)
+		var operand operandType = negation != nil
+		if operand {
+			operand = negation.Operator == token.NOT
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = condition.Kind == booleanEffectCondition()
+		}
+		if operand_1 {
+			expression = negation.Expression
+			expected = !expected
+		}
 	}
 	index, ok := c.expressionParameter(summary, expression)
-	if !ok || !c.parameterStableBefore(summary, index, call.Start) {
+	var operand_2 operandType_1 = !ok
+	if !operand_2 {
+		operand_2 = !c.parameterStableBefore(summary, index, call.Start)
+	}
+	if operand_2 {
 		return nil, unknownEffectOutcome()
 	}
 	otherIndex := -1
 	if condition.OtherParameter >= 0 {
+		type operandType_2 = bool
 		if condition.OtherParameter >= len(call.Args) {
 			return nil, unknownEffectOutcome()
 		}
@@ -244,7 +293,11 @@ func (c *checker) mapParameterEffectCondition(
 			summary,
 			call.Args[condition.OtherParameter],
 		)
-		if !ok || !c.parameterStableBefore(summary, otherIndex, call.Start) {
+		var operand_3 operandType_2 = !ok
+		if !operand_3 {
+			operand_3 = !c.parameterStableBefore(summary, otherIndex, call.Start)
+		}
+		if operand_3 {
 			return nil, unknownEffectOutcome()
 		}
 	}
@@ -262,6 +315,7 @@ func (c *checker) mappedScalarEffectCondition(
 	expression *syntax.Expression,
 	condition GenericEffectCondition,
 ) *GenericEffectCondition {
+	type operandType = bool
 	if !isScalarEffectCondition(condition.Kind) {
 		return nil
 	}
@@ -274,7 +328,11 @@ func (c *checker) mappedScalarEffectCondition(
 		return nil
 	}
 	expected := condition.Expected
-	if condition.Kind == booleanEffectCondition() && negated {
+	var operand operandType = condition.Kind == booleanEffectCondition()
+	if operand {
+		operand = negated
+	}
+	if operand {
 		expected = !expected
 	}
 	return &GenericEffectCondition{
@@ -308,8 +366,11 @@ func (c *checker) genericZeroFact(
 	function *types.Func,
 	summaries map[*types.Func]*genericEffectSummary,
 ) *GenericEffectFact {
-	if summary := summaries[function]; summary != nil {
-		return summary.effects()
+	{
+		summary := summaries[function]
+		if summary != nil {
+			return summary.effects()
+		}
 	}
 	fact := new(GenericEffectFact)
 	if c.pass.ImportObjectFact(function, fact) {
@@ -344,8 +405,21 @@ func (summary *genericEffectSummary) fact() *GenericEffectFact {
 }
 
 func (fact *GenericEffectFact) hasEffects() bool {
-	return len(fact.ZeroEffects) != 0 || len(fact.AccessEffects) != 0 ||
-		len(fact.ReturnedZeroEffects) != 0 || len(fact.ReturnedAccessEffects) != 0
+	type operandType = bool
+	var operand operandType = len(fact.ZeroEffects) != 0
+	if !operand {
+		operand = len(fact.AccessEffects) != 0
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = len(fact.ReturnedZeroEffects) != 0
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = len(fact.ReturnedAccessEffects) != 0
+	}
+	return operand_2
+
 }
 
 func sortGenericEffects(effects []GenericEffect) {

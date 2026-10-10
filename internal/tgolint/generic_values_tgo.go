@@ -49,26 +49,42 @@ func (c *checker) collectFileGenericValueBindings(
 	sources map[*syntax.Expression]bool,
 ) {
 	inspectGenericFile(file, func(node *syntax.Node) bool {
-		if statement, ok := syntax.StatementOf(node); ok {
-			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil &&
-				assignment.Operator == token.DEFINE {
-				c.collectAssignedGenericValues(
-					assignment.Left, assignment.Right, summaries, bindings, sources,
-				)
+		{
+			statement, ok := syntax.StatementOf(node)
+			if ok {
+				{
+					type operandType = bool
+					assignment := syntax.AssignmentStatementOf(statement)
+					var operand operandType = assignment != nil
+					if operand {
+						operand = assignment.Operator == token.DEFINE
+					}
+					if operand {
+						c.collectAssignedGenericValues(
+							assignment.Left, assignment.Right, summaries, bindings, sources,
+						)
+					}
+				}
 			}
 		}
-		if specification, ok := syntax.SpecificationOf(node); ok {
-			if value := syntax.ValueSpecificationOf(specification); value != nil {
-				left := make([]*syntax.Expression, len(value.Names))
-				for index := range value.Names {
-					item := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
-						return syntax.NewExpressionIdentifier(input.FieldValue)
-					}(syntax.TgoExpressionIdentifierInput{FieldValue: value.Names[index]})
-					left[index] = &item
+		{
+			specification, ok := syntax.SpecificationOf(node)
+			if ok {
+				{
+					value := syntax.ValueSpecificationOf(specification)
+					if value != nil {
+						left := make([]*syntax.Expression, len(value.Names))
+						for index := range value.Names {
+							item := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+								return syntax.NewExpressionIdentifier(input.FieldValue)
+							}(syntax.TgoExpressionIdentifierInput{FieldValue: value.Names[index]})
+							left[index] = &item
+						}
+						c.collectAssignedGenericValues(
+							left, value.Values, summaries, bindings, sources,
+						)
+					}
 				}
-				c.collectAssignedGenericValues(
-					left, value.Values, summaries, bindings, sources,
-				)
 			}
 		}
 		return true
@@ -85,16 +101,22 @@ func (c *checker) markAmbiguousGenericValueBindings(
 		if !ok {
 			return true
 		}
-		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-			c.markAmbiguousGenericTargets(
-				assignment.Left, assignment.Operator, bindings,
-			)
+		{
+			assignment := syntax.AssignmentStatementOf(statement)
+			if assignment != nil {
+				c.markAmbiguousGenericTargets(
+					assignment.Left, assignment.Operator, bindings,
+				)
+			}
 		}
-		if rangeStatement := syntax.RangeStatementOf(statement); rangeStatement != nil {
-			c.markAmbiguousGenericTargets(
-				[]*syntax.Expression{rangeStatement.Key, rangeStatement.Value},
-				rangeStatement.Operator, bindings,
-			)
+		{
+			rangeStatement := syntax.RangeStatementOf(statement)
+			if rangeStatement != nil {
+				c.markAmbiguousGenericTargets(
+					[]*syntax.Expression{rangeStatement.Key, rangeStatement.Value},
+					rangeStatement.Operator, bindings,
+				)
+			}
 		}
 		return true
 	})
@@ -106,15 +128,23 @@ func (c *checker) markAmbiguousGenericTargets(
 	bindings map[types.Object]*genericValueBinding,
 ) {
 	for _, target := range targets {
+		type operandType = bool
 		name := syntax.IdentifierExpressionOf(target)
 		if name == nil {
 			continue
 		}
-		if operator == token.DEFINE && c.facts.DefinitionName(name) != nil {
+		var operand operandType = operator == token.DEFINE
+		if operand {
+			operand = c.facts.DefinitionName(name) != nil
+		}
+		if operand {
 			continue
 		}
-		if binding, found := bindings[c.facts.Object(name)]; found {
-			binding.ambiguous = true
+		{
+			binding, found := bindings[c.facts.Object(name)]
+			if found {
+				binding.ambiguous = true
+			}
 		}
 	}
 }
@@ -130,18 +160,30 @@ func (c *checker) collectAssignedGenericValues(
 		return
 	}
 	for index, expression := range right {
+		type operandType = bool
 		value, ok := c.genericValue(expression, summaries)
 		name := syntax.IdentifierExpressionOf(left[index])
-		if !ok || name == nil || name.Name == "_" {
+		var operand operandType = !ok
+		if !operand {
+			operand = name == nil
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = name.Name == "_"
+		}
+		if operand_1 {
 			continue
 		}
 		object := c.facts.Object(name)
 		if object == nil {
 			continue
 		}
-		if current, found := bindings[object]; found {
-			current.ambiguous = true
-			continue
+		{
+			current, found := bindings[object]
+			if found {
+				current.ambiguous = true
+				continue
+			}
 		}
 		bindings[object] = &genericValueBinding{
 			value: value, source: expression, ambiguous: false,
@@ -155,22 +197,34 @@ func (c *checker) genericValue(
 	expression *syntax.Expression,
 	summaries map[*types.Func]*genericEffectSummary,
 ) (genericValue, bool) {
-	if callExpression := unparenthesized(expression); syntax.CallExpressionOf(callExpression) != nil {
-		function, receiverArguments, typeArguments := c.genericCall(callExpression)
-		if function == nil {
+	{
+		callExpression := unparenthesized(expression)
+		if syntax.CallExpressionOf(callExpression) != nil {
+			type operandType = bool
+			function, receiverArguments, typeArguments := c.genericCall(callExpression)
+			if function == nil {
+				return noGenericValue(), false
+			}
+			fact := c.genericZeroFact(function, summaries)
+			var operand operandType = fact != nil
+			if operand {
+				type operandType_1 = bool
+				var operand_1 operandType_1 = len(fact.ReturnedZeroEffects) != 0
+				if !operand_1 {
+					operand_1 = len(fact.ReturnedAccessEffects) != 0
+				}
+				operand = (operand_1)
+			}
+			if operand {
+				return genericValue{
+					function: function, fact: fact,
+					receiverArguments: receiverArguments,
+					typeArguments:     typeArguments, conditionCall: callExpression,
+					returned: true,
+				}, true
+			}
 			return noGenericValue(), false
 		}
-		fact := c.genericZeroFact(function, summaries)
-		if fact != nil &&
-			(len(fact.ReturnedZeroEffects) != 0 || len(fact.ReturnedAccessEffects) != 0) {
-			return genericValue{
-				function: function, fact: fact,
-				receiverArguments: receiverArguments,
-				typeArguments:     typeArguments, conditionCall: callExpression,
-				returned: true,
-			}, true
-		}
-		return noGenericValue(), false
 	}
 	identifier := genericCallIdentifier(expression)
 	if identifier == nil {
@@ -185,8 +239,11 @@ func (c *checker) genericValue(
 		return noGenericValue(), false
 	}
 	var typeArguments []types.Type = nil
-	if instance, ok := c.facts.Instance(identifier); ok {
-		typeArguments = typeList(instance.TypeArgs)
+	{
+		instance, ok := c.facts.Instance(identifier)
+		if ok {
+			typeArguments = typeList(instance.TypeArgs)
+		}
 	}
 	return genericValue{
 		function: function.Origin(), fact: fact,
@@ -203,30 +260,58 @@ func (c *checker) reportDirectGenericValueEscape(
 	summaries map[*types.Func]*genericEffectSummary,
 	sources map[*syntax.Expression]bool,
 ) {
-	if sources[expression] || c.calledDirectly(expression) || c.discardedValue(expression) ||
-		c.genericInstantiationPart(expression) {
+	type operandType = bool
+	var operand operandType = sources[expression]
+	if !operand {
+		operand = c.calledDirectly(expression)
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = c.discardedValue(expression)
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = c.genericInstantiationPart(expression)
+	}
+	if operand_2 {
 		return
 	}
 	value, ok := c.genericValue(expression, summaries)
-	if ok && !value.returned {
+	var operand_3 operandType = ok
+	if operand_3 {
+		operand_3 = !value.returned
+	}
+	if operand_3 {
 		c.reportGenericValueEscape(expression, value)
 	}
 }
 
 func (c *checker) genericInstantiationPart(expression *syntax.Expression) bool {
+	type operandType = bool
 	parentNode := c.parents[syntax.ExpressionNode(expression)]
 	if parentNode == nil {
 		return false
 	}
 	parent, ok := syntax.ExpressionOf(parentNode)
-	if !ok || parent == nil {
+	var operand operandType = !ok
+	if !operand {
+		operand = parent == nil
+	}
+	if operand {
 		return false
 	}
-	if index := syntax.IndexExpressionOf(parent); index != nil {
-		return index.Expression == expression
+	{
+		index := syntax.IndexExpressionOf(parent)
+		if index != nil {
+			return index.Expression == expression
+		}
 	}
 	index := syntax.IndexListExpressionOf(parent)
-	return index != nil && index.Expression == expression
+	var operand_1 operandType = index != nil
+	if operand_1 {
+		operand_1 = index.Expression == expression
+	}
+	return operand_1
 }
 
 func (c *checker) reportReturnedGenericCall(
@@ -234,33 +319,61 @@ func (c *checker) reportReturnedGenericCall(
 	summaries map[*types.Func]*genericEffectSummary,
 	sources map[*syntax.Expression]bool,
 ) {
+	type operandType = bool
 	value, ok := c.genericValue(expression, summaries)
-	if !ok || !value.returned || sources[expression] {
+	var operand operandType = !ok
+	if !operand {
+		operand = !value.returned
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = sources[expression]
+	}
+	if operand_1 {
 		return
 	}
-	if invocation := c.directCallOf(expression); invocation != nil {
-		c.reportGenericValueCall(invocation, value)
-		return
+	{
+		invocation := c.directCallOf(expression)
+		if invocation != nil {
+			c.reportGenericValueCall(invocation, value)
+			return
+		}
 	}
-	if c.discardedValue(expression) || c.expressionStatement(expression) {
+	var operand_2 operandType = c.discardedValue(expression)
+	if !operand_2 {
+		operand_2 = c.expressionStatement(expression)
+	}
+	if operand_2 {
 		return
 	}
 	c.reportGenericValueEscape(expression, value)
 }
 
 func (c *checker) directCallOf(expression *syntax.Expression) *syntax.Expression {
+	type operandType_3 = bool
+	type operandType_2 = bool
 	var current *syntax.Expression = expression
 	for {
+		type operandType_1 = bool
+		type operandType = bool
 		parentNode := c.parents[syntax.ExpressionNode(current)]
 		if parentNode == nil {
 			return nil
 		}
 		parent, ok := syntax.ExpressionOf(parentNode)
-		if !ok || parent == nil {
+		var operand operandType = !ok
+		if !operand {
+			operand = parent == nil
+		}
+		if operand {
 			return nil
 		}
 		parentheses := syntax.ParenthesizedExpressionOf(parent)
-		if parentheses == nil || parentheses.Expression != current {
+		var operand_1 operandType_1 = parentheses == nil
+		if !operand_1 {
+			operand_1 = parentheses.Expression != current
+		}
+		if operand_1 {
 			break
 		}
 		current = parent
@@ -270,29 +383,49 @@ func (c *checker) directCallOf(expression *syntax.Expression) *syntax.Expression
 		return nil
 	}
 	parent, ok := syntax.ExpressionOf(parentNode)
-	if !ok || parent == nil {
+	var operand_2 operandType_2 = !ok
+	if !operand_2 {
+		operand_2 = parent == nil
+	}
+	if operand_2 {
 		return nil
 	}
 	call := syntax.CallExpressionOf(parent)
-	if call != nil && call.Callee == current {
+	var operand_3 operandType_3 = call != nil
+	if operand_3 {
+		operand_3 = call.Callee == current
+	}
+	if operand_3 {
 		return parent
 	}
 	return nil
 }
 
 func (c *checker) discardedValue(expression *syntax.Expression) bool {
+	type operandType_3 = bool
+	type operandType_2 = bool
 	var current *syntax.Expression = expression
 	for {
+		type operandType_1 = bool
+		type operandType = bool
 		parentNode := c.parents[syntax.ExpressionNode(current)]
 		if parentNode == nil {
 			break
 		}
 		parent, ok := syntax.ExpressionOf(parentNode)
-		if !ok || parent == nil {
+		var operand operandType = !ok
+		if !operand {
+			operand = parent == nil
+		}
+		if operand {
 			break
 		}
 		parentheses := syntax.ParenthesizedExpressionOf(parent)
-		if parentheses == nil || parentheses.Expression != current {
+		var operand_1 operandType_1 = parentheses == nil
+		if !operand_1 {
+			operand_1 = parentheses.Expression != current
+		}
+		if operand_1 {
 			break
 		}
 		current = parent
@@ -302,36 +435,60 @@ func (c *checker) discardedValue(expression *syntax.Expression) bool {
 		return false
 	}
 	statement, ok := syntax.StatementOf(parentNode)
-	if !ok || statement == nil {
+	var operand_2 operandType_2 = !ok
+	if !operand_2 {
+		operand_2 = statement == nil
+	}
+	if operand_2 {
 		return false
 	}
 	assignment := syntax.AssignmentStatementOf(statement)
-	if assignment == nil || len(assignment.Left) != len(assignment.Right) {
+	var operand_3 operandType_3 = assignment == nil
+	if !operand_3 {
+		operand_3 = len(assignment.Left) != len(assignment.Right)
+	}
+	if operand_3 {
 		return false
 	}
 	for index, right := range assignment.Right {
+		type operandType_4 = bool
 		if right != current {
 			continue
 		}
 		name := syntax.IdentifierExpressionOf(assignment.Left[index])
-		return name != nil && name.Name == "_"
+		var operand_4 operandType_4 = name != nil
+		if operand_4 {
+			operand_4 = name.Name == "_"
+		}
+		return operand_4
 	}
 	return false
 }
 
 func (c *checker) expressionStatement(expression *syntax.Expression) bool {
+	type operandType_2 = bool
 	var current *syntax.Expression = expression
 	for {
+		type operandType_1 = bool
+		type operandType = bool
 		parentNode := c.parents[syntax.ExpressionNode(current)]
 		if parentNode == nil {
 			break
 		}
 		parent, ok := syntax.ExpressionOf(parentNode)
-		if !ok || parent == nil {
+		var operand operandType = !ok
+		if !operand {
+			operand = parent == nil
+		}
+		if operand {
 			break
 		}
 		parentheses := syntax.ParenthesizedExpressionOf(parent)
-		if parentheses == nil || parentheses.Expression != current {
+		var operand_1 operandType_1 = parentheses == nil
+		if !operand_1 {
+			operand_1 = parentheses.Expression != current
+		}
+		if operand_1 {
 			break
 		}
 		current = parent
@@ -341,17 +498,26 @@ func (c *checker) expressionStatement(expression *syntax.Expression) bool {
 		return false
 	}
 	statement, ok := syntax.StatementOf(parentNode)
-	if !ok || statement == nil {
+	var operand_2 operandType_2 = !ok
+	if !operand_2 {
+		operand_2 = statement == nil
+	}
+	if operand_2 {
 		return false
 	}
 	expressionStatement := syntax.ExpressionStatementOf(statement)
-	return expressionStatement != nil && expressionStatement.Expression == current
+	var operand_3 operandType_2 = expressionStatement != nil
+	if operand_3 {
+		operand_3 = expressionStatement.Expression == current
+	}
+	return operand_3
 }
 
 func (c *checker) reportBoundGenericValueUse(
 	expression *syntax.Expression,
 	bindings map[types.Object]*genericValueBinding,
 ) {
+	type operandType = bool
 	name := syntax.IdentifierExpressionOf(expression)
 	if name == nil {
 		return
@@ -360,12 +526,24 @@ func (c *checker) reportBoundGenericValueUse(
 		return
 	}
 	binding, found := bindings[c.facts.Object(name)]
-	if !found || c.discardedValue(expression) {
+	var operand operandType = !found
+	if !operand {
+		operand = c.discardedValue(expression)
+	}
+	if operand {
 		return
 	}
-	if call := c.directCallOf(expression); call != nil && !binding.ambiguous {
-		c.reportGenericValueCall(call, binding.value)
-		return
+	{
+		type operandType_1 = bool
+		call := c.directCallOf(expression)
+		var operand_1 operandType_1 = call != nil
+		if operand_1 {
+			operand_1 = !binding.ambiguous
+		}
+		if operand_1 {
+			c.reportGenericValueCall(call, binding.value)
+			return
+		}
 	}
 	c.reportGenericValueEscape(expression, binding.value)
 }
@@ -437,18 +615,33 @@ func (c *checker) genericValueAffectsModel(value genericValue) bool {
 func (c *checker) calledDirectly(expression *syntax.Expression) bool {
 	var current *syntax.Expression = expression
 	for {
+		type operandType_1 = bool
+		type operandType = bool
 		parentNode := c.parents[syntax.ExpressionNode(current)]
 		if parentNode == nil {
 			return false
 		}
 		parent, ok := syntax.ExpressionOf(parentNode)
-		if !ok || parent == nil {
+		var operand operandType = !ok
+		if !operand {
+			operand = parent == nil
+		}
+		if operand {
 			return false
 		}
 		parentheses := syntax.ParenthesizedExpressionOf(parent)
-		if parentheses == nil || parentheses.Expression != current {
+		var operand_1 operandType_1 = parentheses == nil
+		if !operand_1 {
+			operand_1 = parentheses.Expression != current
+		}
+		if operand_1 {
+			type operandType_2 = bool
 			call := syntax.CallExpressionOf(parent)
-			return call != nil && call.Callee == current
+			var operand_2 operandType_2 = call != nil
+			if operand_2 {
+				operand_2 = call.Callee == current
+			}
+			return operand_2
 		}
 		current = parent
 	}

@@ -46,6 +46,7 @@ func TestTGoTestPackageUsesGeneratedTestName(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			type operandType = bool
 			files := token.NewFileSet()
 			parsed := []*syntax.File(nil)
 			for _, path := range test.paths {
@@ -69,7 +70,11 @@ func TestTGoTestPackageUsesGeneratedTestName(t *testing.T) {
 			check.pass = pass
 			check.files = parsed
 			gotTest, gotExternal := check.tgoTestPackage()
-			if gotTest != test.wantTest || gotExternal != test.wantExternal {
+			var operand operandType = gotTest != test.wantTest
+			if !operand {
+				operand = gotExternal != test.wantExternal
+			}
+			if operand {
 				t.Fatalf(
 					"test package = (%v, %v), want (%v, %v)",
 					gotTest, gotExternal, test.wantTest, test.wantExternal,
@@ -80,6 +85,8 @@ func TestTGoTestPackageUsesGeneratedTestName(t *testing.T) {
 }
 
 func TestReadTGoSourceUsesPassReader(t *testing.T) {
+	type operandType_1 = bool
+	type operandType = bool
 	called := false
 	pass := new(analysis.Pass)
 	pass.OtherFiles = nil
@@ -91,10 +98,18 @@ func TestReadTGoSourceUsesPassReader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !called || string(data) != "/work/model.tgo" {
+	var operand operandType = !called
+	if !operand {
+		operand = string(data) != "/work/model.tgo"
+	}
+	if operand {
 		t.Fatalf("reader called=%v data=%q", called, data)
 	}
-	if len(pass.OtherFiles) != 1 || pass.OtherFiles[0] != "/work/model.tgo" {
+	var operand_1 operandType_1 = len(pass.OtherFiles) != 1
+	if !operand_1 {
+		operand_1 = pass.OtherFiles[0] != "/work/model.tgo"
+	}
+	if operand_1 {
 		t.Fatalf("other files: %v", pass.OtherFiles)
 	}
 }
@@ -183,8 +198,13 @@ func TestCheckedStructSourceDeclarationFactRoundTrip(t *testing.T) {
 	case sourceModelTagEnum:
 		t.Fatal("checked source has a different variant")
 	case sourceModelTagStruct:
+		type operandType = bool
 		shape := structure.StructPayload()
-		if len(shape.Fields) != 1 || shape.Fields[0].name != "value" {
+		var operand operandType = len(shape.Fields) != 1
+		if !operand {
+			operand = shape.Fields[0].name != "value"
+		}
+		if operand {
 			t.Fatalf("checked fields: %#v", shape.Fields)
 		}
 		assertSourceModelFactRoundTrip(t, shape.Fact, checkedModelWire, "Count", nil)
@@ -204,11 +224,18 @@ func TestEnumSourceDeclarationFactRoundTrip(t *testing.T) {
 	case sourceModelTagStruct:
 		t.Fatal("enum source has a different variant")
 	case sourceModelTagEnum:
+		type operandType = bool
 		shape := enum.EnumPayload()
 		wantVariants := []string{"Started", "Stopped"}
-		if len(shape.Variants) != 2 ||
-			shape.Variants[0].name != wantVariants[0] ||
-			shape.Variants[1].name != wantVariants[1] {
+		var operand operandType = len(shape.Variants) != 2
+		if !operand {
+			operand = shape.Variants[0].name != wantVariants[0]
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = shape.Variants[1].name != wantVariants[1]
+		}
+		if operand_1 {
 			t.Fatalf("enum variants: %#v", shape.Variants)
 		}
 		assertSourceModelFactRoundTrip(
@@ -230,9 +257,17 @@ func TestStructSourceDeclaration(t *testing.T) {
 	case sourceModelTagEnum:
 		t.Fatal("struct source has a different variant")
 	case sourceModelTagStruct:
+		type operandType = bool
 		shape := structure.StructPayload()
-		if len(shape.Fields) != 1 || shape.Fields[0].name != "Limit" ||
-			shape.Fields[0].typeExpression != "int" {
+		var operand operandType = len(shape.Fields) != 1
+		if !operand {
+			operand = shape.Fields[0].name != "Limit"
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = shape.Fields[0].typeExpression != "int"
+		}
+		if operand_1 {
 			t.Fatalf("struct fields: %#v", shape.Fields)
 		}
 	default:
@@ -286,10 +321,26 @@ func assertSourceModelFactRoundTrip(
 	wantName string,
 	wantVariants []string,
 ) {
+	type operandType = bool
 	t.Helper()
 	wire := encodeModelFact(fact)
-	if wire == nil || wire.Kind != wantKind || wire.Package != "example.com/sample" ||
-		wire.Name != wantName || len(wire.Variants) != len(wantVariants) {
+	var operand operandType = wire == nil
+	if !operand {
+		operand = wire.Kind != wantKind
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = wire.Package != "example.com/sample"
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = wire.Name != wantName
+	}
+	var operand_3 operandType = operand_2
+	if !operand_3 {
+		operand_3 = len(wire.Variants) != len(wantVariants)
+	}
+	if operand_3 {
 		t.Fatalf("wire fact: %#v", wire)
 	}
 	for index := range wantVariants {

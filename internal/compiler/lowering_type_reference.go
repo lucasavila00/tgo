@@ -13,6 +13,15 @@ type plannedTypeReference struct {
 	use         token.Pos
 	objects     []plannedTypeObjectReference
 	anchor      plannedTypeDeclarationAnchor
+	blockers    []plannedTypeBlocker
+	direct      bool
+}
+
+type plannedTypeBlocker struct {
+	object      types.Object
+	definition  *ast.Ident
+	identifiers []*ast.Ident
+	typeName    bool
 }
 
 type plannedTypeObjectReference struct {
@@ -64,7 +73,8 @@ func capturePlannedTypeReference(
 		})
 		if object.Pkg() != nil && object.Pkg() != current {
 			packageObject := filePackageObject(file, info, object.Pkg())
-			addObject(packageObject, false, packageObject != nil)
+			addObject(packageObject, false, packageObject != nil &&
+				packageObject.Name() != "." && packageObject.Name() != "_")
 		}
 		if object.Pkg() != current || object.Parent() == current.Scope() {
 			return
@@ -101,7 +111,12 @@ func capturePlannedTypeReference(
 		case *types.TypeParam:
 			addObject(item.Obj(), true, true)
 		case *types.Basic:
-			addObject(types.Universe.Lookup(item.Name()), false, true)
+			if item.Kind() == types.UnsafePointer {
+				object := types.Unsafe.Scope().Lookup("Pointer")
+				addObject(object, false, typeObjectIsDirect(object, current, file, info))
+			} else {
+				addObject(types.Universe.Lookup(item.Name()), false, true)
+			}
 		case *types.Pointer:
 			visit(item.Elem())
 		case *types.Slice:
@@ -137,25 +152,40 @@ func capturePlannedTypeReference(
 		}
 	}
 	visit(typ)
+	seenBlockers := make(map[types.Object]bool)
+	for _, required := range reference.objects {
+		object := required.object
+		if object == nil || !required.direct || sourceScope == nil {
+			continue
+		}
+		reference.direct = true
+		_, blocker := sourceScope.LookupParent(object.Name(), use)
+		if blocker == nil || blocker == object || seenBlockers[blocker] {
+			continue
+		}
+		seenBlockers[blocker] = true
+		planned := plannedTypeBlocker{object: blocker}
+		_, planned.typeName = blocker.(*types.TypeName)
+		for identifier, defined := range info.Defs {
+			if defined == blocker {
+				planned.definition = identifier
+				planned.identifiers = append(planned.identifiers, identifier)
+			}
+		}
+		for identifier, used := range info.Uses {
+			if used == blocker {
+				planned.identifiers = append(planned.identifiers, identifier)
+			}
+		}
+		reference.blockers = append(reference.blockers, planned)
+	}
+	if reference.anchor.after != nil || reference.anchor.entry != nil {
+		reference.direct = true
+	}
 	if reference.anchor.owner == nil {
 		reference.anchor.owner = sourceScope
 	}
 	return reference
-}
-
-// blockingObject gets the source object that captures a required type name.
-func (r plannedTypeReference) blockingObject() types.Object {
-	for _, required := range r.objects {
-		object := required.object
-		if object == nil || !required.direct || r.sourceScope == nil {
-			continue
-		}
-		_, actual := r.sourceScope.LookupParent(object.Name(), r.use)
-		if actual != nil && actual != object {
-			return actual
-		}
-	}
-	return nil
 }
 
 func filePackageObject(file *ast.File, info *types.Info, pkg *types.Package) types.Object {
@@ -174,8 +204,9 @@ func typeObjectIsDirect(
 	file *ast.File,
 	info *types.Info,
 ) bool {
-	return object.Pkg() == nil || object.Pkg() == current ||
-		filePackageObject(file, info, object.Pkg()) == nil
+	packageObject := filePackageObject(file, info, object.Pkg())
+	return object.Pkg() == nil || object.Pkg() == current || packageObject == nil ||
+		packageObject.Name() == "."
 }
 
 func deeperTypeScope(candidate, current *types.Scope) bool {

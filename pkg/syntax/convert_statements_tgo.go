@@ -352,8 +352,11 @@ func (c *converter) importSpecification(value *ast.ImportSpec) *ImportSpecificat
 func (c *converter) importSpecificationRequired(
 	value *ast.ImportSpec,
 ) *ImportSpecification {
-	if found, ok := c.imports[value]; ok {
-		return found
+	{
+		found, ok := c.imports[value]
+		if ok {
+			return found
+		}
 	}
 	result := &ImportSpecification{
 		Span:    span(value),

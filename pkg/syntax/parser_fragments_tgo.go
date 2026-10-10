@@ -13,7 +13,12 @@ import (
 func (p *sourceParser) editsInRange(start int, end int) []sourceEdit {
 	result := []sourceEdit(nil)
 	for _, edit := range p.edits {
-		if edit.start >= start && edit.end <= end {
+		type operandType = bool
+		var operand operandType = edit.start >= start
+		if operand {
+			operand = edit.end <= end
+		}
+		if operand {
 			result = append(result, edit)
 		}
 	}
@@ -25,10 +30,15 @@ func shiftTokenPositions(root any, delta int) {
 	seen := make(map[uintptr]bool)
 	var shift func(reflect.Value) = nil
 	shift = func(value reflect.Value) {
+		type operandType = bool
 		if !value.IsValid() {
 			return
 		}
-		if value.Type() == positionType && value.CanSet() {
+		var operand operandType = value.Type() == positionType
+		if operand {
+			operand = value.CanSet()
+		}
+		if operand {
 			position := token.Pos(value.Int())
 			if position.IsValid() {
 				value.SetInt(int64(int(position) + delta))
@@ -113,7 +123,12 @@ func (p *sourceParser) sanitize(
 			case *ast.CallExpr:
 				p.buildPropagation(node, node)
 			case *ast.BinaryExpr:
-				if node.Op == token.MUL && p.sourceToken(node.OpPos) == '%' {
+				type operandType = bool
+				var operand operandType = node.Op == token.MUL
+				if operand {
+					operand = p.sourceToken(node.OpPos) == '%'
+				}
+				if operand {
 					node.Op = token.REM
 				}
 			case *ast.StarExpr:
@@ -141,9 +156,18 @@ func (p *sourceParser) sanitize(
 				}
 				elements := node.Elts[:0]
 				for _, element := range node.Elts {
+					type operandType_1 = bool
 					marker, present := defaultAt[element.Pos()]
 					literal, artificial := element.(*ast.BasicLit)
-					if present && artificial && literal.Value == "0" {
+					var operand_1 operandType_1 = present
+					if operand_1 {
+						operand_1 = artificial
+					}
+					var operand_2 operandType_1 = operand_1
+					if operand_2 {
+						operand_2 = literal.Value == "0"
+					}
+					if operand_2 {
 						anchors[marker] = node
 						continue
 					}
@@ -157,11 +181,20 @@ func (p *sourceParser) sanitize(
 }
 
 func (p *sourceParser) sourceToken(position token.Pos) byte {
-	if p.file == nil || position == token.NoPos {
+	type operandType = bool
+	var operand operandType = p.file == nil
+	if !operand {
+		operand = position == token.NoPos
+	}
+	if operand {
 		return 0
 	}
 	offset := p.file.Offset(position)
-	if offset < 0 || offset >= len(p.source) {
+	var operand_1 operandType = offset < 0
+	if !operand_1 {
+		operand_1 = offset >= len(p.source)
+	}
+	if operand_1 {
 		return 0
 	}
 	return p.source[offset]
@@ -171,7 +204,12 @@ func (p *sourceParser) sourceToken(position token.Pos) byte {
 func (p *sourceParser) buildPropagation(expression ast.Expr, call *ast.CallExpr) {
 	end := p.file.Offset(expression.End())
 	for _, item := range p.propagations {
-		if item.node != nil || item.callEnd != end {
+		type operandType = bool
+		var operand operandType = item.node != nil
+		if !operand {
+			operand = item.callEnd != end
+		}
+		if operand {
 			continue
 		}
 		bang := p.tokens[item.bang]
@@ -211,7 +249,12 @@ func (p *sourceParser) attachComments(file *frontFile) {
 	seen := make(map[frontNode]bool)
 	var collect func(frontNode) = nil
 	collect = func(node frontNode) {
-		if node == nil || seen[node] {
+		type operandType = bool
+		var operand operandType = node == nil
+		if !operand {
+			operand = seen[node]
+		}
+		if operand {
 			return
 		}
 		seen[node] = true
@@ -242,17 +285,38 @@ func (p *sourceParser) attachComments(file *frontFile) {
 func standardCommentOwners(nodes []frontNode) map[*ast.CommentGroup]frontNode {
 	owners := make(map[*ast.CommentGroup]frontNode)
 	for _, node := range nodes {
-		if _, ok := node.(ast.Node); !ok {
-			continue
+		type operandType = bool
+		{
+			_, ok := node.(ast.Node)
+			if !ok {
+				continue
+			}
 		}
 		value := reflect.ValueOf(node)
-		if !value.IsValid() || value.Kind() != reflect.Pointer || value.IsNil() {
+		var operand operandType = !value.IsValid()
+		if !operand {
+			operand = value.Kind() != reflect.Pointer
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = value.IsNil()
+		}
+		if operand_1 {
 			continue
 		}
 		value = value.Elem()
 		for _, name := range []string{"Doc", "Comment"} {
+			type operandType_1 = bool
 			field := value.FieldByName(name)
-			if !field.IsValid() || field.IsNil() || !field.CanInterface() {
+			var operand_2 operandType_1 = !field.IsValid()
+			if !operand_2 {
+				operand_2 = field.IsNil()
+			}
+			var operand_3 operandType_1 = operand_2
+			if !operand_3 {
+				operand_3 = !field.CanInterface()
+			}
+			if operand_3 {
 				continue
 			}
 			comment, ok := field.Interface().(*ast.CommentGroup)
@@ -270,31 +334,55 @@ func (p *sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup
 	commentStart := p.file.Position(comment.Pos())
 	commentEnd := p.file.Position(comment.End())
 	for _, node := range nodes {
+		type operandType = bool
 		if node == nil {
 			continue
 		}
-		if _, isComment := node.(*ast.CommentGroup); isComment {
-			continue
+		{
+			_, isComment := node.(*ast.CommentGroup)
+			if isComment {
+				continue
+			}
 		}
-		if _, custom := node.(frontExtension); !custom {
-			continue
+		{
+			_, custom := node.(frontExtension)
+			if !custom {
+				continue
+			}
 		}
 		nodeStart := p.file.Position(node.Pos())
 		nodeEnd := p.file.Position(node.End())
 		distance := -1
-		if comment.End() <= node.Pos() && commentEnd.Line+1 == nodeStart.Line {
+		var operand operandType = comment.End() <= node.Pos()
+		if operand {
+			operand = commentEnd.Line+1 == nodeStart.Line
+		}
+		if operand {
 			distance = int(node.Pos() - comment.End())
 		}
-		if node.End() <= comment.Pos() && nodeEnd.Line == commentStart.Line {
+		var operand_1 operandType = node.End() <= comment.Pos()
+		if operand_1 {
+			operand_1 = nodeEnd.Line == commentStart.Line
+		}
+		if operand_1 {
 			distance = int(comment.Pos() - node.End())
 		}
-		if distance < 0 || distance > bestDistance {
+		var operand_2 operandType = distance < 0
+		if !operand_2 {
+			operand_2 = distance > bestDistance
+		}
+		if operand_2 {
 			continue
 		}
 		if distance == bestDistance {
+			type operandType_1 = bool
 			_, nodeExtension := node.(frontExtension)
 			_, ownerExtension := owner.(frontExtension)
-			if !nodeExtension || ownerExtension {
+			var operand_3 operandType_1 = !nodeExtension
+			if !operand_3 {
+				operand_3 = ownerExtension
+			}
+			if operand_3 {
 				continue
 			}
 		}
@@ -305,12 +393,21 @@ func (p *sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup
 }
 
 func (p *sourceParser) setNodeComments(node frontNode, comments []*ast.CommentGroup) {
+	type operandType = bool
 	var leading *ast.CommentGroup = nil
 	var trailing *ast.CommentGroup = nil
-	if len(comments) > 0 && comments[0].End() <= node.Pos() {
+	var operand operandType = len(comments) > 0
+	if operand {
+		operand = comments[0].End() <= node.Pos()
+	}
+	if operand {
 		leading = comments[0]
 	}
-	if len(comments) > 0 && comments[len(comments)-1].Pos() >= node.End() {
+	var operand_1 operandType = len(comments) > 0
+	if operand_1 {
+		operand_1 = comments[len(comments)-1].Pos() >= node.End()
+	}
+	if operand_1 {
 		trailing = comments[len(comments)-1]
 	}
 	switch node := node.(type) {

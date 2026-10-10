@@ -12,14 +12,23 @@ import "go/types"
 // Go types stores T. nilType stores the current union of T and nil.
 // Optional is T | nil. Never is an impossible value.
 func tgonilTypeExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -44,7 +53,12 @@ func (v nilType) Tag() nilTypeTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v nilType) GobEncode() ([]byte, error) {
-	if v.tgoTag < nilTypeTagNever || v.tgoTag > nilTypeTagOptional {
+	type operandType = bool
+	var operand operandType = v.tgoTag < nilTypeTagNever
+	if !operand {
+		operand = v.tgoTag > nilTypeTagOptional
+	}
+	if operand {
 		return nil, fmt.Errorf("nilType: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
@@ -53,12 +67,21 @@ func (v nilType) GobEncode() ([]byte, error) {
 
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *nilType) GobDecode(data []byte) error {
+	type operandType = bool
 	if len(data) != 4 {
 		return fmt.Errorf("nilType: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := nilTypeTag(number)
-	if uint32(tag) != number || tag < nilTypeTagNever || tag > nilTypeTagOptional {
+	var operand operandType = uint32(tag) != number
+	if !operand {
+		operand = tag < nilTypeTagNever
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = tag > nilTypeTagOptional
+	}
+	if operand_1 {
 		return fmt.Errorf("nilType: cannot gob decode unknown tag %d", number)
 	}
 	switch tag {
@@ -172,8 +195,11 @@ func (v *nilType) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one nilType JSON variant")
@@ -185,29 +211,41 @@ func (v *nilType) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Never":
 		var payload nilTypeNever
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewnilTypeNever()
 		return nil
 	case "NonNil":
 		var payload nilTypeNonNil
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewnilTypeNonNil()
 		return nil
 	case "Nil":
 		var payload nilTypeNil
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewnilTypeNil()
 		return nil
 	case "Optional":
 		var payload nilTypeOptional
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewnilTypeOptional()
 		return nil
@@ -217,6 +255,7 @@ func (v *nilType) UnmarshalJSON(data []byte) error {
 }
 
 func (v *nilType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -230,6 +269,7 @@ func (v *nilType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -246,8 +286,16 @@ func (v *nilType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Optional":
 			current = 4
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -259,20 +307,38 @@ func (v *nilType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one nilType JSON variant")
 	}
 	if selected == 0 {
@@ -281,29 +347,41 @@ func (v *nilType) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload nilTypeNever
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewnilTypeNever()
 		return nil
 	case 2:
 		var payload nilTypeNonNil
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewnilTypeNonNil()
 		return nil
 	case 3:
 		var payload nilTypeNil
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewnilTypeNil()
 		return nil
 	case 4:
 		var payload nilTypeOptional
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewnilTypeOptional()
 		return nil
@@ -374,8 +452,11 @@ func typeCanBeNil(typ types.Type) bool {
 	if typ == nil {
 		return true
 	}
-	if _, parameter := types.Unalias(typ).(*types.TypeParam); parameter {
-		return true
+	{
+		_, parameter := types.Unalias(typ).(*types.TypeParam)
+		if parameter {
+			return true
+		}
 	}
 	classified := goTypeOf(coreType(typ))
 	switch classified.Tag() {

@@ -22,20 +22,44 @@ func (c *checker) checkCaseAccessors(
 	defaultClause bool,
 	proof token.Pos,
 ) {
-	if clause == nil || receiver == nil {
+	type operandType = bool
+	var operand operandType = clause == nil
+	if !operand {
+		operand = receiver == nil
+	}
+	if operand {
 		return
 	}
 	for _, statement := range clause.Body {
 		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			if _, nested := syntax.FunctionLiteralOf(node); nested {
-				return false
+			type operandType_2 = bool
+			{
+				_, nested := syntax.FunctionLiteralOf(node)
+				if nested {
+					return false
+				}
 			}
-			if nestedStatement, ok := syntax.StatementOf(node); ok && nestedStatement != tagSwitch {
-				if nested := syntax.SwitchStatementOf(nestedStatement); nested != nil {
-					nestedReceiver, _, _, nestedModel, _ := c.tagCall(nested.Tag)
-					if sameModel(nestedModel, model) &&
-						sameReceiver(c.facts, receiver, nestedReceiver) {
-						return false
+			{
+				type operandType = bool
+				nestedStatement, ok := syntax.StatementOf(node)
+				var operand operandType = ok
+				if operand {
+					operand = nestedStatement != tagSwitch
+				}
+				if operand {
+					{
+						nested := syntax.SwitchStatementOf(nestedStatement)
+						if nested != nil {
+							type operandType_1 = bool
+							nestedReceiver, _, _, nestedModel, _ := c.tagCall(nested.Tag)
+							var operand_1 operandType_1 = sameModel(nestedModel, model)
+							if operand_1 {
+								operand_1 = sameReceiver(c.facts, receiver, nestedReceiver)
+							}
+							if operand_1 {
+								return false
+							}
+						}
 					}
 				}
 			}
@@ -44,7 +68,11 @@ func (c *checker) checkCaseAccessors(
 				return true
 			}
 			selector := syntax.SelectorExpressionOf(expression)
-			if selector == nil || !sameReceiver(c.facts, receiver, selector.Expression) {
+			var operand_2 operandType_2 = selector == nil
+			if !operand_2 {
+				operand_2 = !sameReceiver(c.facts, receiver, selector.Expression)
+			}
+			if operand_2 {
 				return true
 			}
 			tag := variantTag(model, selector.Selector.Name)
@@ -56,15 +84,27 @@ func (c *checker) checkCaseAccessors(
 			}
 			c.syntaxHandled[expression] = true
 			active, narrowed := variantflow.Singleton(flowType)
-			if narrowed && active == tag {
+			var operand_3 operandType_2 = narrowed
+			if operand_3 {
+				operand_3 = active == tag
+			}
+			if operand_3 {
 				c.syntaxSafe[expression] = true
 				return true
 			}
 			caseName := "default"
-			if !defaultClause && !narrowed {
+			var operand_4 operandType_2 = !defaultClause
+			if operand_4 {
+				operand_4 = !narrowed
+			}
+			if operand_4 {
 				caseName = "a multi-tag case"
 			}
-			if !defaultClause && narrowed {
+			var operand_5 operandType_2 = !defaultClause
+			if operand_5 {
+				operand_5 = narrowed
+			}
+			if operand_5 {
 				caseName = "case " + tagConstant(model, active)
 			}
 			c.pass.Reportf(selector.Start, "%s: %s called under %s",
@@ -84,11 +124,16 @@ func capturesObject(
 		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&statement, func(node *syntax.Node) bool {
+		type operandType = bool
 		if captured {
 			return false
 		}
 		identifier, ok := syntax.IdentifierOf(node)
-		if ok && facts.Object(identifier) == object {
+		var operand operandType = ok
+		if operand {
+			operand = facts.Object(identifier) == object
+		}
+		if operand {
 			captured = true
 		}
 		return !captured
@@ -101,10 +146,22 @@ func receiverWrite(
 	target *syntax.Expression,
 	receiver *syntax.Expression,
 ) bool {
+	type operandType = bool
 	targetRoot, targetPath, targetOK := receiverPath(facts, target)
 	receiverRoot, receiverFields, receiverOK := receiverPath(facts, receiver)
-	if !targetOK || !receiverOK || targetRoot != receiverRoot ||
-		len(targetPath) > len(receiverFields) {
+	var operand operandType = !targetOK
+	if !operand {
+		operand = !receiverOK
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = targetRoot != receiverRoot
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = len(targetPath) > len(receiverFields)
+	}
+	if operand_2 {
 		return false
 	}
 	for index := range targetPath {
@@ -129,9 +186,22 @@ func sameReceiver(
 	left *syntax.Expression,
 	right *syntax.Expression,
 ) bool {
+	type operandType = bool
 	leftRoot, leftPath, leftOK := receiverPath(facts, left)
 	rightRoot, rightPath, rightOK := receiverPath(facts, right)
-	if !leftOK || !rightOK || leftRoot != rightRoot || len(leftPath) != len(rightPath) {
+	var operand operandType = !leftOK
+	if !operand {
+		operand = !rightOK
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = leftRoot != rightRoot
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = len(leftPath) != len(rightPath)
+	}
+	if operand_2 {
 		return false
 	}
 	for index := range leftPath {
@@ -150,29 +220,54 @@ func receiverPath(
 	if expression == nil {
 		return nil, nil, false
 	}
-	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
-		object := facts.Object(identifier)
-		return object, nil, object != nil
-	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		root, path, ok := receiverPath(facts, selector.Expression)
-		if !ok {
-			return nil, nil, false
+	{
+		identifier := syntax.IdentifierExpressionOf(expression)
+		if identifier != nil {
+			object := facts.Object(identifier)
+			return object, nil, object != nil
 		}
-		selection := facts.Selection(expression)
-		if selection == nil || selection.Kind() != types.FieldVal {
-			return nil, nil, false
+	}
+	{
+		selector := syntax.SelectorExpressionOf(expression)
+		if selector != nil {
+			type operandType = bool
+			root, path, ok := receiverPath(facts, selector.Expression)
+			if !ok {
+				return nil, nil, false
+			}
+			selection := facts.Selection(expression)
+			var operand operandType = selection == nil
+			if !operand {
+				operand = selection.Kind() != types.FieldVal
+			}
+			if operand {
+				return nil, nil, false
+			}
+			return root, append(path, selection.Obj()), true
 		}
-		return root, append(path, selection.Obj()), true
 	}
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return receiverPath(facts, parenthesized.Expression)
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return receiverPath(facts, parenthesized.Expression)
+		}
 	}
-	if star := syntax.StarExpressionOf(expression); star != nil {
-		return receiverPath(facts, star.Expression)
+	{
+		star := syntax.StarExpressionOf(expression)
+		if star != nil {
+			return receiverPath(facts, star.Expression)
+		}
 	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil && unary.Operator == token.AND {
-		return receiverPath(facts, unary.Expression)
+	{
+		type operandType_1 = bool
+		unary := syntax.UnaryExpressionOf(expression)
+		var operand_1 operandType_1 = unary != nil
+		if operand_1 {
+			operand_1 = unary.Operator == token.AND
+		}
+		if operand_1 {
+			return receiverPath(facts, unary.Expression)
+		}
 	}
 	return nil, nil, false
 }

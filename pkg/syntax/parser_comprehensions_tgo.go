@@ -22,8 +22,12 @@ func (p *sourceParser) discoverComprehensions() error {
 func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 	candidates := []comprehensionCandidate(nil)
 	for cursor := start; cursor < limit; cursor++ {
-		if p.tokens[cursor].kind != token.FOR ||
-			p.tokens[cursor-1].kind != token.LBRACE {
+		type operandType = bool
+		var operand operandType = p.tokens[cursor].kind != token.FOR
+		if !operand {
+			operand = p.tokens[cursor-1].kind != token.LBRACE
+		}
+		if operand {
 			continue
 		}
 		open := cursor - 1
@@ -31,6 +35,7 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 		if err != nil {
 			return err
 		}
+
 		candidates = append(candidates, comprehensionCandidate{open: open, close: close})
 		cursor = close
 	}
@@ -41,16 +46,18 @@ func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 	for _, item := range candidates {
 		literalStart, isLiteral := starts[item.open]
 		if !isLiteral {
-			err_1 := p.discoverComprehensionsIn(item.open+2, item.close)
-			if err_1 != nil {
-				return err_1
+			operand_1 := p.discoverComprehensionsIn(item.open+2, item.close)
+			if operand_1 != nil {
+				return operand_1
 			}
+
 			continue
 		}
-		comprehension, err_2 := p.rawComprehension(literalStart, item.open, item.close)
-		if err_2 != nil {
-			return err_2
+		comprehension, err_1 := p.rawComprehension(literalStart, item.open, item.close)
+		if err_1 != nil {
+			return err_1
 		}
+
 		p.comprehensions = append(p.comprehensions, comprehension)
 		p.edits = append(p.edits, sourceEdit{
 			start: p.tokens[item.open].end,
@@ -112,6 +119,7 @@ func (p *sourceParser) rawComprehension(
 	if err != nil {
 		return nil, err
 	}
+
 	seenFilter := false
 	for _, clause := range clauses {
 		switch item := *clause; item.Tag() {
@@ -152,12 +160,17 @@ func (p *sourceParser) rawComprehensionBody(
 	start int,
 	limit int,
 ) ([]*rawComprehensionClause, *rawComprehensionResult, error) {
+	type operandType = bool
 	start, limit = p.trimComprehensionSemicolons(start, limit)
 	if start >= limit {
 		failure := p.tokenError(limit, "comprehension block needs one item")
 		return nil, nil, failure
 	}
-	if p.tokens[start].kind != token.FOR && p.tokens[start].kind != token.IF {
+	var operand operandType = p.tokens[start].kind != token.FOR
+	if operand {
+		operand = p.tokens[start].kind != token.IF
+	}
+	if operand {
 		result, err := p.rawComprehensionResult(start, limit)
 		return nil, result, err
 	}
@@ -170,14 +183,17 @@ func (p *sourceParser) rawComprehensionBody(
 	if err_1 != nil {
 		return nil, nil, err_1
 	}
+
 	clause, err_2 := p.rawComprehensionClause(start, bodyOpen, bodyClose)
 	if err_2 != nil {
 		return nil, nil, err_2
 	}
+
 	children, result, err_3 := p.rawComprehensionBody(bodyOpen+1, bodyClose)
 	if err_3 != nil {
 		return nil, nil, err_3
 	}
+
 	return append([]*rawComprehensionClause{clause}, children...), result, nil
 }
 
@@ -186,6 +202,7 @@ func (p *sourceParser) rawComprehensionClause(
 	open int,
 	close int,
 ) (*rawComprehensionClause, error) {
+	type operandType = bool
 	if p.tokens[start].kind == token.IF {
 		if start+1 >= open {
 			return nil, p.tokenError(start, "comprehension if needs a condition")
@@ -206,13 +223,18 @@ func (p *sourceParser) rawComprehensionClause(
 			break
 		}
 	}
-	if define < 0 || rangeToken != define+1 {
+	var operand operandType = define < 0
+	if !operand {
+		operand = rangeToken != define+1
+	}
+	if operand {
 		return nil, p.tokenError(start, "comprehension range must use :=")
 	}
 	bindings, err := p.comprehensionBindings(start+1, define)
 	if err != nil {
 		return nil, err
 	}
+
 	if rangeToken+1 >= open {
 		return nil, p.tokenError(rangeToken, "comprehension range needs a source")
 	}
@@ -224,21 +246,39 @@ func (p *sourceParser) rawComprehensionClause(
 }
 
 func (p *sourceParser) comprehensionBindings(start int, end int) ([]int, error) {
+	type operandType_1 = bool
 	bindings := []int(nil)
 	expectName := true
 	for cursor := start; cursor < end; cursor++ {
-		if expectName && p.tokens[cursor].kind == token.IDENT {
+		type operandType = bool
+		var operand operandType = expectName
+		if operand {
+			operand = p.tokens[cursor].kind == token.IDENT
+		}
+		if operand {
 			bindings = append(bindings, cursor)
 			expectName = false
 			continue
 		}
-		if !expectName && p.tokens[cursor].kind == token.COMMA {
+		var operand_1 operandType = !expectName
+		if operand_1 {
+			operand_1 = p.tokens[cursor].kind == token.COMMA
+		}
+		if operand_1 {
 			expectName = true
 			continue
 		}
 		return nil, p.tokenError(cursor, "comprehension range needs one or two names")
 	}
-	if expectName || len(bindings) == 0 || len(bindings) > 2 {
+	var operand_2 operandType_1 = expectName
+	if !operand_2 {
+		operand_2 = len(bindings) == 0
+	}
+	var operand_3 operandType_1 = operand_2
+	if !operand_3 {
+		operand_3 = len(bindings) > 2
+	}
+	if operand_3 {
 		return nil, p.tokenError(start, "comprehension range needs one or two names")
 	}
 	return bindings, nil
@@ -270,7 +310,12 @@ func (p *sourceParser) rawComprehensionResult(
 		colon: colon, valueStart: start, valueEnd: end,
 	}
 	if colon >= 0 {
-		if colon == start || colon+1 == end {
+		type operandType = bool
+		var operand operandType = colon == start
+		if !operand {
+			operand = colon+1 == end
+		}
+		if operand {
 			return nil, p.tokenError(colon, "map comprehension needs a key and value")
 		}
 		result.keyStart, result.keyEnd = start, colon
@@ -280,10 +325,26 @@ func (p *sourceParser) rawComprehensionResult(
 }
 
 func (p *sourceParser) trimComprehensionSemicolons(start int, end int) (int, int) {
-	for start < end && p.tokens[start].kind == token.SEMICOLON {
+	for {
+		type operandType = bool
+		var operand operandType = start < end
+		if operand {
+			operand = p.tokens[start].kind == token.SEMICOLON
+		}
+		if !operand {
+			break
+		}
 		start++
 	}
-	for start < end && p.tokens[end-1].kind == token.SEMICOLON {
+	for {
+		type operandType_1 = bool
+		var operand_1 operandType_1 = start < end
+		if operand_1 {
+			operand_1 = p.tokens[end-1].kind == token.SEMICOLON
+		}
+		if !operand_1 {
+			break
+		}
 		end--
 	}
 	return start, end

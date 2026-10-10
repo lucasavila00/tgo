@@ -16,6 +16,8 @@ func sameFields(
 		return false
 	}
 	for index, field := range source {
+		type operandType_1 = bool
+		type operandType = bool
 		other := generated[index]
 		if other == nil {
 			return false
@@ -31,14 +33,25 @@ func sameFields(
 		if other.Tag != nil {
 			tagText = syntax.SourceText(file, other.Tag.Span)
 		}
-		if !sameTypeText(field.typeExpression, typeText) ||
-			!sameTagText(field.tag, tagText) {
+		var operand operandType = !sameTypeText(field.typeExpression, typeText)
+		if !operand {
+			operand = !sameTagText(field.tag, tagText)
+		}
+		if operand {
 			return false
 		}
-		if field.name == "" && len(other.Names) == 0 {
+		var operand_1 operandType_1 = field.name == ""
+		if operand_1 {
+			operand_1 = len(other.Names) == 0
+		}
+		if operand_1 {
 			continue
 		}
-		if len(other.Names) != 1 || other.Names[0].Name != field.name {
+		var operand_2 operandType_1 = len(other.Names) != 1
+		if !operand_2 {
+			operand_2 = other.Names[0].Name != field.name
+		}
+		if operand_2 {
 			return false
 		}
 	}
@@ -70,15 +83,24 @@ func sameFormattedText(
 	right string,
 	wrap func(string) string,
 ) bool {
+	type operandType = bool
 	if left == right {
 		return true
 	}
-	if left == "" || right == "" {
+	var operand operandType = left == ""
+	if !operand {
+		operand = right == ""
+	}
+	if operand {
 		return left == right
 	}
 	leftText, leftErr := format.Source("left.tgo", []byte(wrap(left)))
 	rightText, rightErr := format.Source("right.tgo", []byte(wrap(right)))
-	if leftErr != nil || rightErr != nil {
+	var operand_1 operandType = leftErr != nil
+	if !operand_1 {
+		operand_1 = rightErr != nil
+	}
+	if operand_1 {
 		return false
 	}
 	return string(leftText) == string(rightText)

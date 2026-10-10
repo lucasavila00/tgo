@@ -47,6 +47,7 @@ func (p *printer) sourceVisualColumn(position token.Pos) int {
 		} else {
 			column++
 		}
+
 	}
 	return column
 }
@@ -58,13 +59,24 @@ func (p *printer) expressionListCommentAlignment(
 	baseColumn int,
 	depth int,
 ) []map[token.Pos]int {
+	type operandType = bool
 	aligned := p.listCommentAlignment(values, opening, closing, baseColumn, depth)
-	if closing.IsValid() && p.sourceToken(closing) == ':' {
+	var operand operandType = closing.IsValid()
+	if operand {
+		operand = p.sourceToken(closing) == ':'
+	}
+	if operand {
+		type operandType_1 = bool
 		position := p.trailingCommentPosition(p.tokenEnd(closing, 1))
-		if position.IsValid() && p.sourceCommentPadding(position) > 1 {
+		var operand_1 operandType_1 = position.IsValid()
+		if operand_1 {
+			operand_1 = p.sourceCommentPadding(position) > 1
+		}
+		if operand_1 {
 			p.fixedCommentColumns[position] = p.sourceVisualColumn(position)
 		}
 	} else if closing.IsValid() {
+		type operandType_2 = bool
 		position := p.trailingCommentPosition(p.tokenEnd(closing, 1))
 		target := 0
 		for _, columns := range aligned {
@@ -74,7 +86,11 @@ func (p *printer) expressionListCommentAlignment(
 				}
 			}
 		}
-		if position.IsValid() && target > 0 {
+		var operand_2 operandType_2 = position.IsValid()
+		if operand_2 {
+			operand_2 = target > 0
+		}
+		if operand_2 {
 			p.fixedCommentColumns[position] = target
 		}
 	}
@@ -82,12 +98,17 @@ func (p *printer) expressionListCommentAlignment(
 }
 
 func (p *printer) sourceToken(position token.Pos) byte {
+	type operandType = bool
 	file := p.files.File(position)
 	if file == nil {
 		return 0
 	}
 	offset := file.Offset(position)
-	if offset < 0 || offset >= len(p.source) {
+	var operand operandType = offset < 0
+	if !operand {
+		operand = offset >= len(p.source)
+	}
+	if operand {
 		return 0
 	}
 	return p.source[offset]
@@ -113,11 +134,17 @@ func (p *printer) listCommentAlignment(
 	previousSection := 0
 	previousStop := opening
 	for index, value := range values {
+		type operandType_1 = bool
+		type operandType = bool
 		start := syntax.ExpressionPosition(value)
 		stop := syntax.ExpressionEnd(value)
 		startLine := p.position(start).Line
 		stopLine := p.position(stop).Line
-		if startLine == 0 || startLine != stopLine {
+		var operand operandType = startLine == 0
+		if !operand {
+			operand = startLine != stopLine
+		}
+		if operand {
 			line = 0
 			lineWidth = 0
 			previousStop = stop
@@ -130,6 +157,7 @@ func (p *printer) listCommentAlignment(
 			line = startLine
 			lineWidth = width
 		}
+
 		following := closing
 		if index+1 < len(values) {
 			following = syntax.ExpressionPosition(values[index+1])
@@ -140,25 +168,51 @@ func (p *printer) listCommentAlignment(
 		if separatorEnd != stop {
 			suffixWidth = 1
 		}
-		if !comment.IsValid() && index+1 == len(values) && closing.IsValid() &&
-			p.position(closing).Line == stopLine {
+		var operand_1 operandType_1 = !comment.IsValid()
+		if operand_1 {
+			operand_1 = index+1 == len(values)
+		}
+		var operand_2 operandType_1 = operand_1
+		if operand_2 {
+			operand_2 = closing.IsValid()
+		}
+		var operand_3 operandType_1 = operand_2
+		if operand_3 {
+			operand_3 = p.position(closing).Line == stopLine
+		}
+		if operand_3 {
 			separatorEnd = p.tokenEnd(closing, 1)
 			comment = p.trailingCommentPosition(separatorEnd)
 			if comment.IsValid() {
 				suffixWidth = 1
 			}
 		}
-		if comment.IsValid() && startLine > p.position(opening).Line {
+		var operand_4 operandType_1 = comment.IsValid()
+		if operand_4 {
+			operand_4 = startLine > p.position(opening).Line
+		}
+		if operand_4 {
 			lineComment := strings.HasPrefix(p.commentAt(comment).text, "//")
 			row := alignmentRow{
 				breakBefore: false,
 				cells:       []int{lineWidth + suffixWidth, 0},
 			}
 			if len(commentRows) > 0 {
-				row.breakBefore = sections[index] != previousSection ||
-					lineComment != previousLineComment ||
-					previousCommentLine+1 < startLine ||
-					p.blankBetween(previousStop, start)
+				type operandType_2 = bool
+				var operand_5 operandType_2 = sections[index] != previousSection
+				if !operand_5 {
+					operand_5 = lineComment != previousLineComment
+				}
+				var operand_6 operandType_2 = operand_5
+				if !operand_6 {
+					operand_6 = previousCommentLine+1 < startLine
+				}
+				var operand_7 operandType_2 = operand_6
+				if !operand_7 {
+					operand_7 = p.blankBetween(previousStop, start)
+				}
+				row.breakBefore = operand_7
+
 			}
 			commentRows = append(
 				commentRows,
@@ -185,6 +239,7 @@ func (p *printer) expressionListSections(
 	opening token.Pos,
 	depth int,
 ) []int {
+	type operandType = bool
 	sections := make([]int, len(values))
 	if len(values) == 0 {
 		return sections
@@ -192,7 +247,11 @@ func (p *printer) expressionListSections(
 	previousLine := p.position(opening).Line
 	previousBreak := -1
 	firstLine := p.position(syntax.ExpressionPosition(values[0])).Line
-	if previousLine > 0 && previousLine < firstLine {
+	var operand operandType = previousLine > 0
+	if operand {
+		operand = previousLine < firstLine
+	}
+	if operand {
 		previousBreak = 0
 	}
 	previousSize := 0
@@ -200,23 +259,60 @@ func (p *printer) expressionListSections(
 	count := 0
 	section := 0
 	for index, value := range values {
+		type operandType_1 = bool
 		start := syntax.ExpressionPosition(value)
 		line := p.position(start).Line
 		size := p.expressionListElementSize(value, depth)
 		newSection := false
-		if previousSize > 0 && size > 0 {
+		var operand_1 operandType_1 = previousSize > 0
+		if operand_1 {
+			operand_1 = size > 0
+		}
+		if operand_1 {
+			type operandType_2 = bool
 			const smallSize = 40
-			if count > 0 && (previousSize > smallSize || size > smallSize) {
+			var operand_2 operandType_2 = count > 0
+			if operand_2 {
+				type operandType_3 = bool
+				var operand_3 operandType_3 = previousSize > smallSize
+				if !operand_3 {
+					operand_3 = size > smallSize
+				}
+				operand_2 = (operand_3)
+			}
+			if operand_2 {
+				type operandType_4 = bool
 				const ratioLimit = 2.5
 				mean := listExp2(log2sum / float64(count))
 				ratio := float64(size) / mean
-				newSection = ratioLimit*ratio <= 1 || ratioLimit <= ratio
+				var operand_4 operandType_4 = ratioLimit*ratio <= 1
+				if !operand_4 {
+					operand_4 = ratioLimit <= ratio
+				}
+				newSection = operand_4
 			}
 		}
-		if index > 0 && previousLine > 0 && previousLine < line {
+		var operand_5 operandType_1 = index > 0
+		if operand_5 {
+			operand_5 = previousLine > 0
+		}
+		var operand_6 operandType_1 = operand_5
+		if operand_6 {
+			operand_6 = previousLine < line
+		}
+		if operand_6 {
+			type operandType_5 = bool
 			previous := syntax.ExpressionEnd(values[index-1])
 			gap := p.sourceGap(previous, start)
-			newSection = newSection || previousBreak+1 < index || gap.blank
+			var operand_7 operandType_5 = newSection
+			if !operand_7 {
+				operand_7 = previousBreak+1 < index
+			}
+			var operand_8 operandType_5 = operand_7
+			if !operand_8 {
+				operand_8 = gap.blank
+			}
+			newSection = operand_8
 			previousBreak = index
 			if newSection {
 				section++
@@ -242,8 +338,11 @@ func (p *printer) expressionListElementSize(
 	if p.multiline(syntax.ExpressionPosition(value), syntax.ExpressionEnd(value)) {
 		return 0
 	}
-	if pair := syntax.KeyValueExpressionOf(value); pair != nil {
-		return p.formattedExpressionWidthAt(pair.Key, depth)
+	{
+		pair := syntax.KeyValueExpressionOf(value)
+		if pair != nil {
+			return p.formattedExpressionWidthAt(pair.Key, depth)
+		}
 	}
 	return p.formattedExpressionWidthAt(value, depth)
 }

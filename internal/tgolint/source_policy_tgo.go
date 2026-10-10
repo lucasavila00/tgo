@@ -13,7 +13,12 @@ import (
 
 // checkSourcePolicies checks usage policy in TGo source after compilation.
 func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
-	if analysis == nil || analysis.Facts == nil {
+	type operandType = bool
+	var operand operandType = analysis == nil
+	if !operand {
+		operand = analysis.Facts == nil
+	}
+	if operand {
 		return
 	}
 	savedFacts, savedFile := c.facts, c.file
@@ -43,9 +48,15 @@ func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
 		syntax.Inspect(
 			c.file,
 			func(node *syntax.Node) bool {
-				if statement, ok := syntax.StatementOf(node); ok {
-					if tagSwitch := syntax.SwitchStatementOf(statement); tagSwitch != nil {
-						c.checkTagSwitch(c.file, statement, tagSwitch)
+				{
+					statement, ok := syntax.StatementOf(node)
+					if ok {
+						{
+							tagSwitch := syntax.SwitchStatementOf(statement)
+							if tagSwitch != nil {
+								c.checkTagSwitch(c.file, statement, tagSwitch)
+							}
+						}
 					}
 				}
 				c.checkSourcePolicyNode(node)
@@ -58,59 +69,109 @@ func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
 }
 
 func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
+	type operandType_2 = bool
 	c.checkSourceModelPolicy(node)
-	if function, ok := syntax.FunctionDeclarationOf(node); ok {
-		if function != nil {
-			functionType, body := function.Type, function.Body
-			if functionType != nil && body != nil {
-				c.checkConstructors(node, body)
-				c.checkNamedResultAssignments(functionType, body)
+	{
+		function, ok := syntax.FunctionDeclarationOf(node)
+		if ok {
+			if function != nil {
+				type operandType = bool
+				functionType, body := function.Type, function.Body
+				var operand operandType = functionType != nil
+				if operand {
+					operand = body != nil
+				}
+				if operand {
+					c.checkConstructors(node, body)
+					c.checkNamedResultAssignments(functionType, body)
+				}
 			}
+			return
 		}
-		return
 	}
-	if literal, ok := syntax.FunctionLiteralOf(node); ok {
-		if literal != nil {
-			functionType, body := literal.Type, literal.Body
-			if functionType != nil && body != nil {
-				c.checkConstructors(node, body)
-				c.checkNamedResultAssignments(functionType, body)
+	{
+		literal, ok := syntax.FunctionLiteralOf(node)
+		if ok {
+			if literal != nil {
+				type operandType_1 = bool
+				functionType, body := literal.Type, literal.Body
+				var operand_1 operandType_1 = functionType != nil
+				if operand_1 {
+					operand_1 = body != nil
+				}
+				if operand_1 {
+					c.checkConstructors(node, body)
+					c.checkNamedResultAssignments(functionType, body)
+				}
 			}
+			return
 		}
-		return
 	}
-	if specification, ok := syntax.SpecificationOf(node); ok {
-		if values := syntax.ValueSpecificationOf(specification); values != nil {
-			c.checkSourceInitializer(values)
+	{
+		specification, ok := syntax.SpecificationOf(node)
+		if ok {
+			{
+				values := syntax.ValueSpecificationOf(specification)
+				if values != nil {
+					c.checkSourceInitializer(values)
+				}
+			}
+			return
 		}
-		return
 	}
 	expression, ok := syntax.ExpressionOf(node)
-	if !ok || expression == nil {
+	var operand_2 operandType_2 = !ok
+	if !operand_2 {
+		operand_2 = expression == nil
+	}
+	if operand_2 {
 		return
 	}
 	if syntax.SelectorExpressionOf(expression) != nil {
 		c.checkRepresentationAccess(expression)
 	}
-	if literal := syntax.CompositeLiteralOf(expression); literal != nil {
-		if !modelIsEnum(c.sourceDirectModel(c.facts.Type(expression))) {
-			c.checkCompleteLiteral(expression, literal)
+	{
+		literal := syntax.CompositeLiteralOf(expression)
+		if literal != nil {
+			if !modelIsEnum(c.sourceDirectModel(c.facts.Type(expression))) {
+				c.checkCompleteLiteral(expression, literal)
+			}
 		}
 	}
-	if call := syntax.CallExpressionOf(expression); call != nil {
-		c.checkSourceZeroCall(expression, call)
+	{
+		call := syntax.CallExpressionOf(expression)
+		if call != nil {
+			c.checkSourceZeroCall(expression, call)
+		}
 	}
-	if index := syntax.IndexExpressionOf(expression); index != nil {
-		c.checkMapRead(expression, index)
+	{
+		index := syntax.IndexExpressionOf(expression)
+		if index != nil {
+			c.checkMapRead(expression, index)
+		}
 	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil && unary.Operator == token.ARROW {
-		c.checkPresenceRead(expression, unary)
+	{
+		type operandType_3 = bool
+		unary := syntax.UnaryExpressionOf(expression)
+		var operand_3 operandType_3 = unary != nil
+		if operand_3 {
+			operand_3 = unary.Operator == token.ARROW
+		}
+		if operand_3 {
+			c.checkPresenceRead(expression, unary)
+		}
 	}
-	if assertion := syntax.TypeAssertionExpressionOf(expression); assertion != nil {
-		c.checkSourceTypeAssertion(expression, assertion)
+	{
+		assertion := syntax.TypeAssertionExpressionOf(expression)
+		if assertion != nil {
+			c.checkSourceTypeAssertion(expression, assertion)
+		}
 	}
-	if slicing := syntax.SliceExpressionOf(expression); slicing != nil {
-		c.checkReslice(expression, slicing)
+	{
+		slicing := syntax.SliceExpressionOf(expression)
+		if slicing != nil {
+			c.checkReslice(expression, slicing)
+		}
 	}
 }
 
@@ -119,9 +180,12 @@ func (c *checker) checkSourceInitializer(specification *syntax.ValueSpecificatio
 		return
 	}
 	for _, name := range specification.Names {
-		if _, ok := c.facts.DefinitionName(name).(*types.Var); ok {
-			c.pass.Reportf(specification.Start, "variables need an initializer")
-			return
+		{
+			_, ok := c.facts.DefinitionName(name).(*types.Var)
+			if ok {
+				c.pass.Reportf(specification.Start, "variables need an initializer")
+				return
+			}
 		}
 	}
 }
@@ -130,8 +194,13 @@ func (c *checker) checkCompleteLiteral(
 	expression *syntax.Expression,
 	literal *syntax.CompositeLiteral,
 ) {
+	type operandType = bool
 	typ := c.facts.Type(expression)
-	if typ == nil && literal.Type != nil {
+	var operand operandType = typ == nil
+	if operand {
+		operand = literal.Type != nil
+	}
+	if operand {
 		typ = c.facts.Type(literal.Type)
 	}
 	if typ == nil {
@@ -165,17 +234,38 @@ func (c *checker) literalInOwnCheckMethod(
 	if expression == nil {
 		return false
 	}
-	if model := c.modelFor(typ); model == nil || !modelIsChecked(model) {
-		return false
+	{
+		type operandType = bool
+		model := c.modelFor(typ)
+		var operand operandType = model == nil
+		if !operand {
+			operand = !modelIsChecked(model)
+		}
+		if operand {
+			return false
+		}
 	}
 	node := syntax.ExpressionNode(expression)
 	for parent := c.parents[node]; parent != nil; parent = c.parents[*parent] {
+		type operandType_2 = bool
+		type operandType_1 = bool
 		function, ok := syntax.FunctionDeclarationOf(parent)
-		if !ok || function == nil {
+		var operand_1 operandType_1 = !ok
+		if !operand_1 {
+			operand_1 = function == nil
+		}
+		if operand_1 {
 			continue
 		}
-		if function.Name.Name != "check" || function.Receiver == nil ||
-			len(function.Receiver.List) != 1 {
+		var operand_2 operandType_2 = function.Name.Name != "check"
+		if !operand_2 {
+			operand_2 = function.Receiver == nil
+		}
+		var operand_3 operandType_2 = operand_2
+		if !operand_3 {
+			operand_3 = len(function.Receiver.List) != 1
+		}
+		if operand_3 {
 			return false
 		}
 		receiver := c.facts.Type(function.Receiver.List[0].Type)
@@ -189,28 +279,49 @@ func (c *checker) checkCompleteStructLiteral(
 	literal *syntax.CompositeLiteral,
 	structure *types.Struct,
 ) {
+	type operandType = bool
 	fields := make(map[string]bool)
 	keyed, defaults := false, false
 	for _, element := range literal.Elements {
-		if _, ok := syntax.DefaultExpressionOf(syntaxExpressionNode(element)); ok {
-			defaults, keyed = true, true
-			continue
+		{
+			_, ok := syntax.DefaultExpressionOf(syntaxExpressionNode(element))
+			if ok {
+				defaults, keyed = true, true
+				continue
+			}
 		}
 		pair := syntax.KeyValueExpressionOf(element)
 		if pair == nil {
 			continue
 		}
 		keyed = true
-		if name := syntax.IdentifierExpressionOf(pair.Key); name != nil {
-			fields[name.Name] = true
+		{
+			name := syntax.IdentifierExpressionOf(pair.Key)
+			if name != nil {
+				fields[name.Name] = true
+			}
 		}
 	}
-	if !keyed && len(literal.Elements) == structure.NumFields() {
+	var operand operandType = !keyed
+	if operand {
+		operand = len(literal.Elements) == structure.NumFields()
+	}
+	if operand {
 		return
 	}
 	for index := 0; index < structure.NumFields(); index++ {
+		type operandType_1 = bool
 		field := structure.Field(index)
-		if fields[field.Name()] || defaults && c.hasFieldDefault(typ, field.Name()) {
+		var operand_1 operandType_1 = fields[field.Name()]
+		if !operand_1 {
+			type operandType_2 = bool
+			var operand_2 operandType_2 = defaults
+			if operand_2 {
+				operand_2 = c.hasFieldDefault(typ, field.Name())
+			}
+			operand_1 = operand_2
+		}
+		if operand_1 {
 			continue
 		}
 		c.pass.Reportf(literal.Start, "missing required field %s", field.Name())
@@ -226,8 +337,13 @@ func syntaxExpressionNode(expression *syntax.Expression) *syntax.Node {
 }
 
 func (c *checker) hasFieldDefault(typ types.Type, field string) bool {
+	type operandType = bool
 	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil {
+	var operand operandType = !ok
+	if !operand {
+		operand = named.Obj().Pkg() == nil
+	}
+	if operand {
 		return false
 	}
 	helper := "TgoDefault" + named.Obj().Name() + field
@@ -239,16 +355,24 @@ func (c *checker) checkCompleteElements(literal *syntax.CompositeLiteral, length
 	supplied := make(map[int64]bool)
 	next, largest := int64(0), int64(-1)
 	for _, element := range literal.Elements {
-		if pair := syntax.KeyValueExpressionOf(element); pair != nil {
-			value := c.facts.Constant(pair.Key)
-			if value == nil || value.Kind() != constant.Int {
-				return
+		{
+			pair := syntax.KeyValueExpressionOf(element)
+			if pair != nil {
+				type operandType = bool
+				value := c.facts.Constant(pair.Key)
+				var operand operandType = value == nil
+				if !operand {
+					operand = value.Kind() != constant.Int
+				}
+				if operand {
+					return
+				}
+				index, exact := constant.Int64Val(value)
+				if !exact {
+					return
+				}
+				next = index
 			}
-			index, exact := constant.Int64Val(value)
-			if !exact {
-				return
-			}
-			next = index
 		}
 		supplied[next] = true
 		if next > largest {
@@ -272,8 +396,11 @@ func (c *checker) checkSourceZeroCall(
 	if name == nil {
 		return
 	}
-	if _, ok := c.facts.Object(name).(*types.Builtin); !ok {
-		return
+	{
+		_, ok := c.facts.Object(name).(*types.Builtin)
+		if !ok {
+			return
+		}
 	}
 	switch name.Name {
 	case "new":
@@ -296,11 +423,14 @@ func (c *checker) checkSourceTypeAssertion(
 		c.checkTypeAssertion(expression, assertion)
 		return
 	}
-	if _, invalid := c.zeroInvalid(firstType(c.facts.Type(expression))); invalid {
-		c.pass.Reportf(
-			syntax.ExpressionPosition(expression),
-			"this read needs if value, ok := read; ok { ... }",
-		)
+	{
+		_, invalid := c.zeroInvalid(firstType(c.facts.Type(expression)))
+		if invalid {
+			c.pass.Reportf(
+				syntax.ExpressionPosition(expression),
+				"this read needs if value, ok := read; ok { ... }",
+			)
+		}
 	}
 }
 
@@ -310,14 +440,26 @@ func (c *checker) checkNamedResultAssignments(
 	function *syntax.FunctionType,
 	body *syntax.BlockStatement,
 ) {
-	if function == nil || function.Results == nil || body == nil {
+	type operandType = bool
+	var operand operandType = function == nil
+	if !operand {
+		operand = function.Results == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = body == nil
+	}
+	if operand_1 {
 		return
 	}
 	state := make(resultState)
 	for _, field := range function.Results.List {
 		for _, name := range field.Names {
-			if object := c.facts.DefinitionName(name); object != nil {
-				state[object] = false
+			{
+				object := c.facts.DefinitionName(name)
+				if object != nil {
+					state[object] = false
+				}
 			}
 		}
 	}
@@ -341,16 +483,32 @@ func (c *checker) resultReadsExpression(expression *syntax.Expression, state res
 	syntax.InspectExpression(
 		expression,
 		func(node *syntax.Node) bool {
-			if literal, ok := syntax.FunctionLiteralOf(node); ok {
-				c.resultCapturedReads(literal, state)
-				return false
+			type operandType = bool
+			{
+				literal, ok := syntax.FunctionLiteralOf(node)
+				if ok {
+					c.resultCapturedReads(literal, state)
+					return false
+				}
 			}
 			name, ok := syntax.IdentifierOf(node)
-			if !ok || name == nil {
+			var operand operandType = !ok
+			if !operand {
+				operand = name == nil
+			}
+			if operand {
 				return true
 			}
-			if assigned, found := state[c.facts.Object(name)]; found && !assigned {
-				c.pass.Reportf(name.Start, "named result %s needs an assignment before use", name.Name)
+			{
+				type operandType_1 = bool
+				assigned, found := state[c.facts.Object(name)]
+				var operand_1 operandType_1 = found
+				if operand_1 {
+					operand_1 = !assigned
+				}
+				if operand_1 {
+					c.pass.Reportf(name.Start, "named result %s needs an assignment before use", name.Name)
+				}
 			}
 			return true
 		},
@@ -364,16 +522,36 @@ func (c *checker) resultReadsStatement(statement *syntax.Statement, state result
 	syntax.InspectStatement(
 		statement,
 		func(node *syntax.Node) bool {
-			if literal, ok := syntax.FunctionLiteralOf(node); ok {
-				c.resultCapturedReads(literal, state)
-				return false
+			type operandType = bool
+			{
+				literal, ok := syntax.FunctionLiteralOf(node)
+				if ok {
+					c.resultCapturedReads(literal, state)
+					return false
+				}
 			}
 			name, ok := syntax.IdentifierOf(node)
-			if !ok || name == nil || c.resultWrite(name) {
+			var operand operandType = !ok
+			if !operand {
+				operand = name == nil
+			}
+			var operand_1 operandType = operand
+			if !operand_1 {
+				operand_1 = c.resultWrite(name)
+			}
+			if operand_1 {
 				return true
 			}
-			if assigned, found := state[c.facts.Object(name)]; found && !assigned {
-				c.pass.Reportf(name.Start, "named result %s needs an assignment before use", name.Name)
+			{
+				type operandType_1 = bool
+				assigned, found := state[c.facts.Object(name)]
+				var operand_2 operandType_1 = found
+				if operand_2 {
+					operand_2 = !assigned
+				}
+				if operand_2 {
+					c.pass.Reportf(name.Start, "named result %s needs an assignment before use", name.Name)
+				}
 			}
 			return true
 		},
@@ -381,7 +559,12 @@ func (c *checker) resultReadsStatement(statement *syntax.Statement, state result
 }
 
 func (c *checker) resultCapturedReads(literal *syntax.FunctionLiteral, state resultState) {
-	if literal == nil || literal.Body == nil {
+	type operandType = bool
+	var operand operandType = literal == nil
+	if !operand {
+		operand = literal.Body == nil
+	}
+	if operand {
 		return
 	}
 	body := func(input syntax.TgoStatementBlockInput) syntax.Statement {
@@ -391,7 +574,13 @@ func (c *checker) resultCapturedReads(literal *syntax.FunctionLiteral, state res
 }
 
 func (c *checker) resultWrite(name *syntax.Identifier) bool {
-	if name == nil || c.file == nil {
+	type operandType_1 = bool
+	type operandType = bool
+	var operand operandType = name == nil
+	if !operand {
+		operand = c.file == nil
+	}
+	if operand {
 		return false
 	}
 	node := func(input syntax.TgoNodeIdentifierInput) syntax.Node {
@@ -399,23 +588,65 @@ func (c *checker) resultWrite(name *syntax.Identifier) bool {
 	}(syntax.TgoNodeIdentifierInput{FieldValue: name})
 	parent := syntax.Parent(c.file, &node)
 	expression, ok := syntax.ExpressionOf(parent)
-	if ok && expression != nil {
+	var operand_1 operandType_1 = ok
+	if operand_1 {
+		operand_1 = expression != nil
+	}
+	if operand_1 {
 		node = syntax.ExpressionNode(expression)
 		parent = syntax.Parent(c.file, &node)
 	}
 	statement, ok := syntax.StatementOf(parent)
-	if !ok || statement == nil {
+	var operand_2 operandType_1 = !ok
+	if !operand_2 {
+		operand_2 = statement == nil
+	}
+	if operand_2 {
 		return false
 	}
-	if assignment := syntax.AssignmentStatementOf(statement); assignment != nil && (assignment.Operator == token.ASSIGN || assignment.Operator == token.DEFINE) {
-		for _, left := range assignment.Left {
-			if candidate := syntax.IdentifierExpressionOf(left); candidate == name {
-				return true
+	{
+		type operandType_2 = bool
+		assignment := syntax.AssignmentStatementOf(statement)
+		var operand_3 operandType_2 = assignment != nil
+		if operand_3 {
+			type operandType_3 = bool
+			var operand_4 operandType_3 = assignment.Operator == token.ASSIGN
+			if !operand_4 {
+				operand_4 = assignment.Operator == token.DEFINE
+			}
+			operand_3 = (operand_4)
+		}
+		if operand_3 {
+			for _, left := range assignment.Left {
+				{
+					candidate := syntax.IdentifierExpressionOf(left)
+					if candidate == name {
+						return true
+					}
+				}
 			}
 		}
 	}
-	if ranged := syntax.RangeStatementOf(statement); ranged != nil && (ranged.Operator == token.ASSIGN || ranged.Operator == token.DEFINE) {
-		return syntax.IdentifierExpressionOf(ranged.Key) == name || syntax.IdentifierExpressionOf(ranged.Value) == name
+	{
+		type operandType_4 = bool
+		ranged := syntax.RangeStatementOf(statement)
+		var operand_5 operandType_4 = ranged != nil
+		if operand_5 {
+			type operandType_5 = bool
+			var operand_6 operandType_5 = ranged.Operator == token.ASSIGN
+			if !operand_6 {
+				operand_6 = ranged.Operator == token.DEFINE
+			}
+			operand_5 = (operand_6)
+		}
+		if operand_5 {
+			type operandType_6 = bool
+			var operand_7 operandType_6 = syntax.IdentifierExpressionOf(ranged.Key) == name
+			if !operand_7 {
+				operand_7 = syntax.IdentifierExpressionOf(ranged.Value) == name
+			}
+			return operand_7
+		}
 	}
 	return false
 }
@@ -433,99 +664,135 @@ func (c *checker) resultStatement(statement *syntax.Statement, state resultState
 	if statement == nil {
 		return false
 	}
-	if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-		c.resultAssignment(assignment, state)
-		return false
-	}
-	if returned := syntax.ReturnStatementOf(statement); returned != nil {
-		c.resultReturn(returned, state)
-		return true
-	}
-	if block := syntax.BlockStatementOf(statement); block != nil {
-		return c.resultBlock(block.List, state)
-	}
-	if branch := syntax.IfStatementOf(statement); branch != nil {
-		return c.resultIf(branch, state)
-	}
-	if loop := syntax.ForStatementOf(statement); loop != nil {
-		if loop.Init != nil {
-			c.resultStatement(loop.Init, state)
+	{
+		assignment := syntax.AssignmentStatementOf(statement)
+		if assignment != nil {
+			c.resultAssignment(assignment, state)
+			return false
 		}
-		c.resultReadsExpression(loop.Condition, state)
-		c.resultBlock(loop.Body.List, cloneResultState(state))
-		if loop.Post != nil {
-			c.resultStatement(loop.Post, cloneResultState(state))
-		}
-		return false
 	}
-	if ranged := syntax.RangeStatementOf(statement); ranged != nil {
-		c.resultReadsExpression(ranged.Source, state)
-		branch := cloneResultState(state)
-		c.resultRangeTarget(ranged.Key, ranged.Operator, branch)
-		c.resultRangeTarget(ranged.Value, ranged.Operator, branch)
-		c.resultBlock(ranged.Body.List, branch)
-		return false
-	}
-	if switched := syntax.SwitchStatementOf(statement); switched != nil {
-		if switched.Init != nil {
-			c.resultStatement(switched.Init, state)
+	{
+		returned := syntax.ReturnStatementOf(statement)
+		if returned != nil {
+			c.resultReturn(returned, state)
+			return true
 		}
-		c.resultReadsExpression(switched.Tag, state)
-		for _, item := range switched.Body.List {
-			clause := syntax.CaseClauseOf(item)
-			if clause == nil {
-				continue
+	}
+	{
+		block := syntax.BlockStatementOf(statement)
+		if block != nil {
+			return c.resultBlock(block.List, state)
+		}
+	}
+	{
+		branch := syntax.IfStatementOf(statement)
+		if branch != nil {
+			return c.resultIf(branch, state)
+		}
+	}
+	{
+		loop := syntax.ForStatementOf(statement)
+		if loop != nil {
+			if loop.Init != nil {
+				c.resultStatement(loop.Init, state)
+			}
+			c.resultReadsExpression(loop.Condition, state)
+			c.resultBlock(loop.Body.List, cloneResultState(state))
+			if loop.Post != nil {
+				c.resultStatement(loop.Post, cloneResultState(state))
+			}
+			return false
+		}
+	}
+	{
+		ranged := syntax.RangeStatementOf(statement)
+		if ranged != nil {
+			c.resultReadsExpression(ranged.Source, state)
+			branch := cloneResultState(state)
+			c.resultRangeTarget(ranged.Key, ranged.Operator, branch)
+			c.resultRangeTarget(ranged.Value, ranged.Operator, branch)
+			c.resultBlock(ranged.Body.List, branch)
+			return false
+		}
+	}
+	{
+		switched := syntax.SwitchStatementOf(statement)
+		if switched != nil {
+			if switched.Init != nil {
+				c.resultStatement(switched.Init, state)
+			}
+			c.resultReadsExpression(switched.Tag, state)
+			for _, item := range switched.Body.List {
+				clause := syntax.CaseClauseOf(item)
+				if clause == nil {
+					continue
+				}
+				branch := cloneResultState(state)
+				for _, expression := range clause.List {
+					c.resultReadsExpression(expression, branch)
+				}
+				c.resultBlock(clause.Body, branch)
+			}
+			return false
+		}
+	}
+	{
+		switched := syntax.TypeSwitchStatementOf(statement)
+		if switched != nil {
+			if switched.Init != nil {
+				c.resultStatement(switched.Init, state)
 			}
 			branch := cloneResultState(state)
-			for _, expression := range clause.List {
-				c.resultReadsExpression(expression, branch)
+			c.resultStatement(switched.Assignment, branch)
+			for _, item := range switched.Body.List {
+				clause := syntax.CaseClauseOf(item)
+				if clause != nil {
+					c.resultBlock(clause.Body, cloneResultState(branch))
+				}
 			}
-			c.resultBlock(clause.Body, branch)
+			return false
 		}
-		return false
 	}
-	if switched := syntax.TypeSwitchStatementOf(statement); switched != nil {
-		if switched.Init != nil {
-			c.resultStatement(switched.Init, state)
-		}
-		branch := cloneResultState(state)
-		c.resultStatement(switched.Assignment, branch)
-		for _, item := range switched.Body.List {
-			clause := syntax.CaseClauseOf(item)
-			if clause != nil {
-				c.resultBlock(clause.Body, cloneResultState(branch))
+	{
+		selected := syntax.SelectStatementOf(statement)
+		if selected != nil {
+			for _, item := range selected.Body.List {
+				clause := syntax.CommunicationClauseOf(item)
+				if clause == nil {
+					continue
+				}
+				branch := cloneResultState(state)
+				if clause.Communication != nil {
+					c.resultStatement(clause.Communication, branch)
+				}
+				c.resultBlock(clause.Body, branch)
 			}
+			return false
 		}
-		return false
 	}
-	if selected := syntax.SelectStatementOf(statement); selected != nil {
-		for _, item := range selected.Body.List {
-			clause := syntax.CommunicationClauseOf(item)
-			if clause == nil {
-				continue
-			}
-			branch := cloneResultState(state)
-			if clause.Communication != nil {
-				c.resultStatement(clause.Communication, branch)
-			}
-			c.resultBlock(clause.Body, branch)
+	{
+		labeled := syntax.LabeledStatementOf(statement)
+		if labeled != nil {
+			return c.resultStatement(labeled.Statement, state)
 		}
-		return false
 	}
-	if labeled := syntax.LabeledStatementOf(statement); labeled != nil {
-		return c.resultStatement(labeled.Statement, state)
-	}
-	if branch := syntax.BranchStatementOf(statement); branch != nil {
-		if branch.Token == token.GOTO {
-			if object := firstUnassignedResult(state); object != nil {
-				c.pass.Reportf(
-					branch.Start,
-					"named result %s needs an assignment before goto",
-					object.Name(),
-				)
+	{
+		branch := syntax.BranchStatementOf(statement)
+		if branch != nil {
+			if branch.Token == token.GOTO {
+				{
+					object := firstUnassignedResult(state)
+					if object != nil {
+						c.pass.Reportf(
+							branch.Start,
+							"named result %s needs an assignment before goto",
+							object.Name(),
+						)
+					}
+				}
 			}
+			return true
 		}
-		return true
 	}
 	c.resultReadsStatement(statement, state)
 	return false
@@ -535,19 +802,35 @@ func (c *checker) resultAssignment(
 	assignment *syntax.AssignmentStatement,
 	state resultState,
 ) {
+	type operandType = bool
 	for _, expression := range assignment.Right {
 		c.resultReadsExpression(expression, state)
 	}
-	plain := assignment.Operator == token.ASSIGN || assignment.Operator == token.DEFINE
+	var operand operandType = assignment.Operator == token.ASSIGN
+	if !operand {
+		operand = assignment.Operator == token.DEFINE
+	}
+	plain := operand
 	for _, expression := range assignment.Left {
+		type operandType_1 = bool
 		name := syntax.IdentifierExpressionOf(expression)
-		if name == nil || !plain {
+		var operand_1 operandType_1 = name == nil
+		if !operand_1 {
+			operand_1 = !plain
+		}
+		if operand_1 {
 			c.resultReadsExpression(expression, state)
 			continue
 		}
-		if object := c.facts.Object(name); object != nil {
-			if _, found := state[object]; found {
-				state[object] = true
+		{
+			object := c.facts.Object(name)
+			if object != nil {
+				{
+					_, found := state[object]
+					if found {
+						state[object] = true
+					}
+				}
 			}
 		}
 	}
@@ -558,29 +841,43 @@ func (c *checker) resultRangeTarget(
 	operator token.Token,
 	state resultState,
 ) {
+	type operandType = bool
 	if expression == nil {
 		return
 	}
 	name := syntax.IdentifierExpressionOf(expression)
-	if name == nil || operator != token.ASSIGN {
+	var operand operandType = name == nil
+	if !operand {
+		operand = operator != token.ASSIGN
+	}
+	if operand {
 		c.resultReadsExpression(expression, state)
 		return
 	}
-	if object := c.facts.Object(name); object != nil {
-		if _, found := state[object]; found {
-			state[object] = true
+	{
+		object := c.facts.Object(name)
+		if object != nil {
+			{
+				_, found := state[object]
+				if found {
+					state[object] = true
+				}
+			}
 		}
 	}
 }
 
 func (c *checker) resultReturn(statement *syntax.ReturnStatement, state resultState) {
 	if len(statement.Results) == 0 {
-		if object := firstUnassignedResult(state); object != nil {
-			c.pass.Reportf(
-				statement.Start,
-				"named result %s needs an assignment before return",
-				object.Name(),
-			)
+		{
+			object := firstUnassignedResult(state)
+			if object != nil {
+				c.pass.Reportf(
+					statement.Start,
+					"named result %s needs an assignment before return",
+					object.Name(),
+				)
+			}
 		}
 	}
 	for _, expression := range statement.Results {
@@ -591,10 +888,24 @@ func (c *checker) resultReturn(statement *syntax.ReturnStatement, state resultSt
 func firstUnassignedResult(state resultState) types.Object {
 	var first types.Object = nil
 	for object, assigned := range state {
+		type operandType = bool
 		if assigned {
 			continue
 		}
-		if first == nil || object.Pos() < first.Pos() || object.Pos() == first.Pos() && object.Name() < first.Name() {
+		var operand operandType = first == nil
+		if !operand {
+			operand = object.Pos() < first.Pos()
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			type operandType_1 = bool
+			var operand_2 operandType_1 = object.Pos() == first.Pos()
+			if operand_2 {
+				operand_2 = object.Name() < first.Name()
+			}
+			operand_1 = operand_2
+		}
+		if operand_1 {
 			first = object
 		}
 	}
@@ -602,6 +913,7 @@ func firstUnassignedResult(state resultState) types.Object {
 }
 
 func (c *checker) resultIf(statement *syntax.IfStatement, state resultState) bool {
+	type operandType_2 = bool
 	if statement.Init != nil {
 		c.resultStatement(statement.Init, state)
 	}
@@ -613,7 +925,27 @@ func (c *checker) resultIf(statement *syntax.IfStatement, state resultState) boo
 		falseReturns = c.resultStatement(statement.Else, falseState)
 	}
 	for object := range state {
-		state[object] = (trueState[object] || trueReturns) && (falseState[object] || falseReturns)
+		type operandType = bool
+		operand := state
+		operand_1 := object
+		var operand_2 operandType = trueState[object]
+		if !operand_2 {
+			operand_2 = trueReturns
+		}
+		var operand_3 operandType = (operand_2)
+		if operand_3 {
+			type operandType_1 = bool
+			var operand_4 operandType_1 = falseState[object]
+			if !operand_4 {
+				operand_4 = falseReturns
+			}
+			operand_3 = (operand_4)
+		}
+		operand[operand_1] = operand_3
 	}
-	return trueReturns && falseReturns
+	var operand_5 operandType_2 = trueReturns
+	if operand_5 {
+		operand_5 = falseReturns
+	}
+	return operand_5
 }

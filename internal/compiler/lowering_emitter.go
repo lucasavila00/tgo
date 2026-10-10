@@ -18,8 +18,15 @@ type loweringEmitter struct {
 	targets             map[targetID]*ast.Ident
 	typeAliases         map[*ast.BlockStmt]map[types.Type]*ast.Ident
 	renamedTypeBlockers map[types.Object]string
+	typeDefinitionSites map[*ast.Ident]emittedTypeDefinition
+	typeBlockerAliases  map[types.Object]map[types.Type]*ast.Ident
 	fmtAlias            string
 	hoisted             []ast.Stmt
+}
+
+type emittedTypeDefinition struct {
+	block *ast.BlockStmt
+	index int
 }
 
 func newLoweringEmitter(
@@ -32,6 +39,8 @@ func newLoweringEmitter(
 		values: make(map[valueID]*ast.Ident), targets: make(map[targetID]*ast.Ident),
 		typeAliases:         make(map[*ast.BlockStmt]map[types.Type]*ast.Ident),
 		renamedTypeBlockers: make(map[types.Object]string),
+		typeDefinitionSites: make(map[*ast.Ident]emittedTypeDefinition),
+		typeBlockerAliases:  make(map[types.Object]map[types.Type]*ast.Ident),
 	}
 	for id, target := range plan.targets {
 		if target.label != "" {
@@ -658,6 +667,7 @@ func (e *loweringEmitter) sourceStatement(
 		node.Rhs = results
 		output.List = append(output.List, node)
 	case *ast.DeclStmt:
+		e.recordTypeDefinitions(node, output)
 		if len(operation.declarations) > 1 && declarationsHaveWork(operation.declarations) {
 			e.splitDeclaration(node, operation, output)
 			return
@@ -704,6 +714,25 @@ func (e *loweringEmitter) sourceStatement(
 	default:
 		if operation.source != nil {
 			output.List = append(output.List, operation.source)
+		}
+	}
+}
+
+func (e *loweringEmitter) recordTypeDefinitions(
+	statement *ast.DeclStmt,
+	output *ast.BlockStmt,
+) {
+	declaration, ok := statement.Decl.(*ast.GenDecl)
+	if !ok || declaration.Tok != token.TYPE {
+		return
+	}
+	for _, specification := range declaration.Specs {
+		typeSpecification, ok := specification.(*ast.TypeSpec)
+		if !ok {
+			continue
+		}
+		e.typeDefinitionSites[typeSpecification.Name] = emittedTypeDefinition{
+			block: output, index: len(output.List),
 		}
 	}
 }
@@ -937,8 +966,14 @@ func (e *loweringEmitter) contextTypeExpression(
 	output *ast.BlockStmt,
 ) ast.Expr {
 	reference := value.typeReference
-	if reference.anchor.after != nil || reference.anchor.entry != nil {
+	if len(reference.blockers) != 0 {
 		e.renameTypeReferenceBlockers(value)
+		if alias := e.typeAliasBeforeBlocker(value); alias != nil {
+			return alias
+		}
+		return e.typeExpression(value.typ, value.position)
+	}
+	if reference.direct {
 		return e.typeExpression(value.typ, value.position)
 	}
 	typ := value.typ
@@ -966,35 +1001,66 @@ func (e *loweringEmitter) contextTypeExpression(
 	return ast.NewIdent(alias.Name)
 }
 
-func (e *loweringEmitter) renameTypeReferenceBlockers(value plannedValue) {
-	blocker := value.typeReference.blockingObject()
-	if blocker == nil {
-		return
-	}
-	if _, typeName := blocker.(*types.TypeName); typeName {
-		return
-	}
-	for _, required := range value.typeReference.objects {
-		intended := required.object
-		if intended == nil || intended.Name() != blocker.Name() {
+func (e *loweringEmitter) typeAliasBeforeBlocker(value plannedValue) ast.Expr {
+	var blocker types.Object
+	var site emittedTypeDefinition
+	for _, planned := range value.typeReference.blockers {
+		candidate, ok := e.typeDefinitionSites[planned.definition]
+		if !planned.typeName || !ok {
 			continue
 		}
+		if blocker == nil || candidate.block == site.block && candidate.index < site.index {
+			blocker, site = planned.object, candidate
+		}
+	}
+	if blocker == nil {
+		return nil
+	}
+	aliases := e.typeBlockerAliases[blocker]
+	if aliases == nil {
+		aliases = make(map[types.Type]*ast.Ident)
+		e.typeBlockerAliases[blocker] = aliases
+	}
+	if alias := aliases[value.typ]; alias != nil {
+		return ast.NewIdent(alias.Name)
+	}
+	alias := e.freshName("operandType")
+	aliases[value.typ] = alias
+	position := value.position
+	if value.typeReference.anchor.after != nil {
+		position = value.typeReference.anchor.after.End()
+	}
+	declaration := &ast.DeclStmt{Decl: &ast.GenDecl{
+		Tok: token.TYPE, Specs: []ast.Spec{&ast.TypeSpec{
+			Name: alias, Assign: position, Type: e.typeExpression(value.typ, position),
+		}},
+	}}
+	site.block.List = append(site.block.List, nil)
+	copy(site.block.List[site.index+1:], site.block.List[site.index:])
+	site.block.List[site.index] = declaration
+	for definition, other := range e.typeDefinitionSites {
+		if other.block == site.block && other.index >= site.index {
+			other.index++
+			e.typeDefinitionSites[definition] = other
+		}
+	}
+	return ast.NewIdent(alias.Name)
+}
+
+func (e *loweringEmitter) renameTypeReferenceBlockers(value plannedValue) {
+	for _, planned := range value.typeReference.blockers {
+		if planned.typeName {
+			continue
+		}
+		blocker := planned.object
 		name := e.renamedTypeBlockers[blocker]
 		if name == "" {
-			name = e.freshName(intended.Name() + "Value").Name
+			name = e.freshName(blocker.Name() + "Value").Name
 			e.renamedTypeBlockers[blocker] = name
 		}
-		for identifier, object := range e.unit.info.Defs {
-			if object == blocker {
-				identifier.Name = name
-			}
+		for _, identifier := range planned.identifiers {
+			identifier.Name = name
 		}
-		for identifier, object := range e.unit.info.Uses {
-			if object == blocker {
-				identifier.Name = name
-			}
-		}
-		return
 	}
 }
 
@@ -1009,6 +1075,12 @@ func (e *loweringEmitter) typeExpression(typ types.Type, position token.Pos) ast
 	case *types.Basic:
 		if item.Info()&types.IsUntyped != 0 {
 			return e.typeExpression(types.Default(item), position)
+		}
+		if item.Kind() == types.UnsafePointer {
+			qualifier := e.unit.ownerQualifier(e.source.File, types.Unsafe)
+			return e.unit.generatedObject(
+				qualifier, types.Unsafe.Path(), "Pointer", position,
+			)
 		}
 		return e.unit.generatedUniverse(item.Name(), position)
 	case *types.Named:

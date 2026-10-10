@@ -6,13 +6,37 @@ import "go/token"
 
 // SourceText returns the source text in one syntax span.
 func SourceText(file *File, span Span) string {
-	if file == nil || file.front == nil || file.front.tokenFile == nil ||
-		span.Start < file.front.tokenFile.Pos(0) || span.Stop < span.Start {
+	type operandType = bool
+	var operand operandType = file == nil
+	if !operand {
+		operand = file.front == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = file.front.tokenFile == nil
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = span.Start < file.front.tokenFile.Pos(0)
+	}
+	var operand_3 operandType = operand_2
+	if !operand_3 {
+		operand_3 = span.Stop < span.Start
+	}
+	if operand_3 {
 		return ""
 	}
 	start := file.front.tokenFile.Offset(span.Start)
 	stop := file.front.tokenFile.Offset(span.Stop)
-	if start < 0 || stop < start || stop > len(file.front.source) {
+	var operand_4 operandType = start < 0
+	if !operand_4 {
+		operand_4 = stop < start
+	}
+	var operand_5 operandType = operand_4
+	if !operand_5 {
+		operand_5 = stop > len(file.front.source)
+	}
+	if operand_5 {
 		return ""
 	}
 	return string(file.front.source[start:stop])
@@ -25,7 +49,12 @@ type Visitor interface {
 
 // Children returns direct children in source order.
 func Children(file *File, node *Node) []*Node {
-	if file == nil || node == nil {
+	type operandType = bool
+	var operand operandType = file == nil
+	if !operand {
+		operand = node == nil
+	}
+	if operand {
 		return nil
 	}
 	values := file.children[*node]
@@ -39,11 +68,19 @@ func Children(file *File, node *Node) []*Node {
 
 // Parent returns the direct parent.
 func Parent(file *File, node *Node) *Node {
-	if file == nil || node == nil {
+	type operandType = bool
+	var operand operandType = file == nil
+	if !operand {
+		operand = node == nil
+	}
+	if operand {
 		return nil
 	}
-	if value, ok := file.parents[*node]; ok {
-		return &value
+	{
+		value, ok := file.parents[*node]
+		if ok {
+			return &value
+		}
 	}
 	return nil
 }
@@ -65,10 +102,23 @@ func Extensions(file *File) []*Node {
 func ExtensionAt(file *File, position token.Pos) *Node {
 	var result *Node = nil
 	for _, node := range Extensions(file) {
+		type operandType = bool
 		start := NodePosition(node)
 		end := NodeEnd(node)
-		if start <= position && position < end &&
-			(result == nil || end-start < NodeEnd(result)-NodePosition(result)) {
+		var operand operandType = start <= position
+		if operand {
+			operand = position < end
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			type operandType_1 = bool
+			var operand_2 operandType_1 = result == nil
+			if !operand_2 {
+				operand_2 = end-start < NodeEnd(result)-NodePosition(result)
+			}
+			operand_1 = (operand_2)
+		}
+		if operand_1 {
 			result = node
 		}
 	}
@@ -77,7 +127,12 @@ func ExtensionAt(file *File, position token.Pos) *Node {
 
 // AttachedComments returns comments attached to a node.
 func AttachedComments(file *File, node *Node) []*CommentGroup {
-	if file == nil || node == nil {
+	type operandType = bool
+	var operand operandType = file == nil
+	if !operand {
+		operand = node == nil
+	}
+	if operand {
 		return nil
 	}
 	var result []*CommentGroup = nil
@@ -89,7 +144,12 @@ func AttachedComments(file *File, node *Node) []*CommentGroup {
 
 // Walk visits a complete file tree.
 func Walk(visitor Visitor, file *File) {
-	if visitor == nil || file == nil {
+	type operandType = bool
+	var operand operandType = visitor == nil
+	if !operand {
+		operand = file == nil
+	}
+	if operand {
 		return
 	}
 	root := nodeFile(file)
@@ -109,7 +169,12 @@ func walkPublic(visitor Visitor, file *File, node *Node) {
 
 // Inspect calls visit for each node. False skips its children.
 func Inspect(file *File, visit func(*Node) bool) {
-	if file == nil || visit == nil {
+	type operandType = bool
+	var operand operandType = file == nil
+	if !operand {
+		operand = visit == nil
+	}
+	if operand {
 		return
 	}
 	Walk(publicInspector(visit), file)
@@ -118,7 +183,12 @@ func Inspect(file *File, visit func(*Node) bool) {
 type publicInspector func(*Node) bool
 
 func (visit publicInspector) Visit(node *Node) Visitor {
-	if node == nil || visit(node) {
+	type operandType = bool
+	var operand operandType = node == nil
+	if !operand {
+		operand = visit(node)
+	}
+	if operand {
 		return visit
 	}
 	return nil

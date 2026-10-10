@@ -33,14 +33,24 @@ func (e *nilEnvironment) transferNilAssignmentLists(
 	sources := make([]*nilPlace, len(left))
 	if len(right) == len(left) {
 		for index, expression := range right {
+			type operandType = bool
 			values[index] = e.expressionNilType(expression, state)
-			if isOptionalNilType(values[index]) &&
-				len(e.contractForExpression(expression)) != 0 &&
-				!e.nilExpressionCanBeAbsent(expression) {
+			var operand operandType = isOptionalNilType(values[index])
+			if operand {
+				operand = len(e.contractForExpression(expression)) != 0
+			}
+			var operand_1 operandType = operand
+			if operand_1 {
+				operand_1 = !e.nilExpressionCanBeAbsent(expression)
+			}
+			if operand_1 {
 				values[index] = nonNilType()
 			}
-			if place, ok := e.nilPlace(expression); ok {
-				sources[index] = &place
+			{
+				place, ok := e.nilPlace(expression)
+				if ok {
+					sources[index] = &place
+				}
 			}
 		}
 	} else if len(right) == 1 {
@@ -68,21 +78,38 @@ func (e *nilEnvironment) transferNilAssignmentLists(
 		e.assignNilTarget(state, target, nil)
 	}
 	for index, target := range left {
-		if place, ok := e.nilPlace(target); ok {
-			e.setNilType(state, place, values[index])
+		{
+			place, ok := e.nilPlace(target)
+			if ok {
+				e.setNilType(state, place, values[index])
+			}
 		}
 	}
 	e.bindNilAssignmentAliases(state, beforeAssignment, left, sources)
 	state.guards = remappedGuards
 	state.presence = remappedPresence
 	for index, target := range left {
+		type operandType_1 = bool
 		name := syntax.IdentifierExpressionOf(target)
-		if name != nil && name.Name != "_" {
+		var operand_2 operandType_1 = name != nil
+		if operand_2 {
+			operand_2 = name.Name != "_"
+		}
+		if operand_2 {
+			type operandType_2 = bool
 			object := e.facts.Object(name)
 			delete(state.guards, object)
 			delete(state.presence, object)
-			if index == 0 && (nilBranchesInformative(trueBranches) ||
-				nilBranchesInformative(falseBranches)) {
+			var operand_3 operandType_2 = index == 0
+			if operand_3 {
+				type operandType_3 = bool
+				var operand_4 operandType_3 = nilBranchesInformative(trueBranches)
+				if !operand_4 {
+					operand_4 = nilBranchesInformative(falseBranches)
+				}
+				operand_3 = (operand_4)
+			}
+			if operand_3 {
 				state.guards[object] = nilGuard{
 					trueBranches: trueBranches, falseBranches: falseBranches,
 				}
@@ -110,12 +137,21 @@ func (e *nilEnvironment) bindNilAssignmentAliases(
 ) {
 	targetPlaces, validTargets := e.assignmentNilPlaces(targets)
 	for index, source := range sources {
-		if source == nil || !validTargets[index] {
+		type operandType = bool
+		var operand operandType = source == nil
+		if !operand {
+			operand = !validTargets[index]
+		}
+		if operand {
 			continue
 		}
 		for candidate := range before.aliases {
-			if nilPlaceOverwritten(candidate, targetPlaces, validTargets) ||
-				!nilAliased(before, *source, candidate) {
+			type operandType_1 = bool
+			var operand_1 operandType_1 = nilPlaceOverwritten(candidate, targetPlaces, validTargets)
+			if !operand_1 {
+				operand_1 = !nilAliased(before, *source, candidate)
+			}
+			if operand_1 {
 				continue
 			}
 			addNilAlias(state, targetPlaces[index], candidate)
@@ -124,8 +160,16 @@ func (e *nilEnvironment) bindNilAssignmentAliases(
 			addNilAlias(state, targetPlaces[index], *source)
 		}
 		for previous := range index {
-			if sources[previous] != nil && validTargets[previous] &&
-				nilAliased(before, *source, *sources[previous]) {
+			type operandType_2 = bool
+			var operand_2 operandType_2 = sources[previous] != nil
+			if operand_2 {
+				operand_2 = validTargets[previous]
+			}
+			var operand_3 operandType_2 = operand_2
+			if operand_3 {
+				operand_3 = nilAliased(before, *source, *sources[previous])
+			}
+			if operand_3 {
 				addNilAlias(state, targetPlaces[index], targetPlaces[previous])
 			}
 		}
@@ -134,7 +178,12 @@ func (e *nilEnvironment) bindNilAssignmentAliases(
 
 func nilPlaceOverwritten(place nilPlace, targets []nilPlace, valid []bool) bool {
 	for index, target := range targets {
-		if valid[index] && nilPlacesOverlap(place, target) {
+		type operandType = bool
+		var operand operandType = valid[index]
+		if operand {
+			operand = nilPlacesOverlap(place, target)
+		}
+		if operand {
 			return true
 		}
 	}
@@ -157,13 +206,19 @@ func (e *nilEnvironment) copiedNilDependencies(
 			continue
 		}
 		sourceObject := e.facts.Object(source)
-		if guard, found := state.guards[sourceObject]; found {
-			copy := cloneNilGuard(guard)
-			guards[index] = &copy
+		{
+			guard, found := state.guards[sourceObject]
+			if found {
+				copy := cloneNilGuard(guard)
+				guards[index] = &copy
+			}
 		}
-		if fact, found := state.presence[sourceObject]; found {
-			copy := fact
-			presence[index] = &copy
+		{
+			fact, found := state.presence[sourceObject]
+			if found {
+				copy := fact
+				presence[index] = &copy
+			}
 		}
 	}
 	return guards, presence
@@ -192,9 +247,12 @@ func (e *nilEnvironment) remapNilDependencies(
 		mapped := e.remapNilFacts(
 			state, nilFacts{fact.value: nonNilType()}, targets, sources,
 		)
-		if place, found := firstNilFactPlace(mapped); found {
-			fact.value = place
-			presence[object] = fact
+		{
+			place, found := firstNilFactPlace(mapped)
+			if found {
+				fact.value = place
+				presence[object] = fact
+			}
 		}
 	}
 	return guards, presence
@@ -214,7 +272,12 @@ func (e *nilEnvironment) remapNilFacts(
 	for factPlace, value := range facts {
 		retained := true
 		for index, target := range targetPlaces {
-			if validTargets[index] && nilPlacesOverlap(factPlace, target) {
+			type operandType = bool
+			var operand operandType = validTargets[index]
+			if operand {
+				operand = nilPlacesOverlap(factPlace, target)
+			}
+			if operand {
 				retained = false
 			}
 		}
@@ -222,20 +285,33 @@ func (e *nilEnvironment) remapNilFacts(
 			addRemappedNilFact(result, factPlace, value)
 		} else {
 			for candidate := range state.aliases {
-				if nilAliased(state, factPlace, candidate) &&
-					!nilPlaceOverwritten(candidate, targetPlaces, validTargets) {
+				type operandType_1 = bool
+				var operand_1 operandType_1 = nilAliased(state, factPlace, candidate)
+				if operand_1 {
+					operand_1 = !nilPlaceOverwritten(candidate, targetPlaces, validTargets)
+				}
+				if operand_1 {
 					addRemappedNilFact(result, candidate, value)
 				}
 			}
 		}
+
 		for index, source := range sources {
-			if source == nil || !validTargets[index] {
+			type operandType_2 = bool
+			var operand_2 operandType_2 = source == nil
+			if !operand_2 {
+				operand_2 = !validTargets[index]
+			}
+			if operand_2 {
 				continue
 			}
-			if mapped, ok := copiedNilFactPlace(
-				state, factPlace, *source, targetPlaces[index],
-			); ok {
-				addRemappedNilFact(result, mapped, value)
+			{
+				mapped, ok := copiedNilFactPlace(
+					state, factPlace, *source, targetPlaces[index],
+				)
+				if ok {
+					addRemappedNilFact(result, mapped, value)
+				}
 			}
 		}
 	}
@@ -262,7 +338,13 @@ func copiedNilFactPlace(
 	source nilPlace,
 	target nilPlace,
 ) (nilPlace, bool) {
-	if fact == source || nilAliased(state, fact, source) {
+	type operandType_1 = bool
+	type operandType = bool
+	var operand operandType = fact == source
+	if !operand {
+		operand = nilAliased(state, fact, source)
+	}
+	if operand {
 		return target, true
 	}
 	if fact.object != source.object {
@@ -277,25 +359,38 @@ func copiedNilFactPlace(
 		return nilPlace{object: nil, path: ""}, false
 	}
 	path := target.path
-	if path != "" && suffix != "" {
+	var operand_1 operandType_1 = path != ""
+	if operand_1 {
+		operand_1 = suffix != ""
+	}
+	if operand_1 {
 		path += "/"
 	}
 	return nilPlace{object: target.object, path: path + suffix}, true
 }
 
 func addRemappedNilFact(facts nilFacts, place nilPlace, value nilType) {
-	if current, found := facts[place]; found {
-		facts[place] = intersectNilTypes(current, value)
-	} else {
-		facts[place] = value
+	{
+		current, found := facts[place]
+		if found {
+			facts[place] = intersectNilTypes(current, value)
+		} else {
+			facts[place] = value
+		}
 	}
+
 }
 
 func firstNilFactPlace(facts nilFacts) (nilPlace, bool) {
 	result := nilPlace{object: nil, path: ""}
 	found := false
 	for place := range facts {
-		if !found || nilPlaceID(place) < nilPlaceID(result) {
+		type operandType = bool
+		var operand operandType = !found
+		if !operand {
+			operand = nilPlaceID(place) < nilPlaceID(result)
+		}
+		if operand {
 			result = place
 			found = true
 		}
@@ -320,8 +415,13 @@ func (e *nilEnvironment) newNilTarget(target *syntax.Expression) bool {
 }
 
 func isNilDiscard(target *syntax.Expression) bool {
+	type operandType = bool
 	name := syntax.IdentifierExpressionOf(target)
-	return name != nil && name.Name == "_"
+	var operand operandType = name != nil
+	if operand {
+		operand = name.Name == "_"
+	}
+	return operand
 }
 
 func (e *nilEnvironment) inferNilContracts(
@@ -362,8 +462,13 @@ func (e *nilEnvironment) setInferredNilContract(
 	target *syntax.Expression,
 	contract nilContract,
 ) {
+	type operandType = bool
 	name := syntax.IdentifierExpressionOf(target)
-	if name == nil || len(contract) == 0 {
+	var operand operandType = name == nil
+	if !operand {
+		operand = len(contract) == 0
+	}
+	if operand {
 		return
 	}
 	object := e.facts.DefinitionName(name)
@@ -373,15 +478,24 @@ func (e *nilEnvironment) setInferredNilContract(
 }
 
 func (e *nilEnvironment) nilExpressionCanBeAbsent(expression *syntax.Expression) bool {
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.nilExpressionCanBeAbsent(parenthesized.Expression)
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return e.nilExpressionCanBeAbsent(parenthesized.Expression)
+		}
 	}
-	if index := syntax.IndexExpressionOf(expression); index != nil {
-		_, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map)
-		return mapping
+	{
+		index := syntax.IndexExpressionOf(expression)
+		if index != nil {
+			_, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map)
+			return mapping
+		}
 	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-		return unary.Operator == token.ARROW
+	{
+		unary := syntax.UnaryExpressionOf(expression)
+		if unary != nil {
+			return unary.Operator == token.ARROW
+		}
 	}
 	if syntax.TypeAssertionExpressionOf(expression) != nil {
 		return true
@@ -424,12 +538,22 @@ func (e *nilEnvironment) bindNilPresence(
 	left []*syntax.Expression,
 	right []*syntax.Expression,
 ) {
-	if len(left) != 2 || len(right) != 1 {
+	type operandType_1 = bool
+	type operandType = bool
+	var operand operandType = len(left) != 2
+	if !operand {
+		operand = len(right) != 1
+	}
+	if operand {
 		return
 	}
 	okName := syntax.IdentifierExpressionOf(left[1])
 	valuePlace, valueOK := e.nilPlace(left[0])
-	if okName == nil || !valueOK {
+	var operand_1 operandType_1 = okName == nil
+	if !operand_1 {
+		operand_1 = !valueOK
+	}
+	if operand_1 {
 		return
 	}
 	okObject := e.facts.Object(okName)
@@ -437,16 +561,25 @@ func (e *nilEnvironment) bindNilPresence(
 		return
 	}
 	nonNil := false
-	if index := syntax.IndexExpressionOf(right[0]); index != nil {
-		if _, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map); mapping {
-			nonNil = nilChild(e.contractForExpression(index.Expression), "v")[""]
+	{
+		index := syntax.IndexExpressionOf(right[0])
+		if index != nil {
+			{
+				_, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map)
+				if mapping {
+					nonNil = nilChild(e.contractForExpression(index.Expression), "v")[""]
+				}
+			}
+		} else {
+			unary := syntax.UnaryExpressionOf(right[0])
+			if unary != nil {
+				if unary.Operator == token.ARROW {
+					nonNil = nilChild(e.contractForExpression(unary.Expression), "e")[""]
+				}
+			} else if syntax.TypeAssertionExpressionOf(right[0]) != nil {
+				nonNil = false
+			}
 		}
-	} else if unary := syntax.UnaryExpressionOf(right[0]); unary != nil {
-		if unary.Operator == token.ARROW {
-			nonNil = nilChild(e.contractForExpression(unary.Expression), "e")[""]
-		}
-	} else if syntax.TypeAssertionExpressionOf(right[0]) != nil {
-		nonNil = false
 	}
 	state.presence[okObject] = nilPresence{value: valuePlace, nonNil: nonNil}
 }
@@ -463,28 +596,54 @@ func (e *nilEnvironment) invalidateNilPlace(
 		indexReference = "/io" + nilPlaceID(place)
 	}
 	for current := range state.values {
-		if current == place || current.object == place.object &&
-			strings.HasPrefix(current.path, place.path+"/") ||
-			indexReference != "" && strings.Contains(current.path, indexReference) {
+		type operandType = bool
+		var operand operandType = current == place
+		if !operand {
+			type operandType_1 = bool
+			var operand_1 operandType_1 = current.object == place.object
+			if operand_1 {
+				operand_1 = strings.HasPrefix(current.path, place.path+"/")
+			}
+			operand = operand_1
+		}
+		var operand_2 operandType = operand
+		if !operand_2 {
+			type operandType_2 = bool
+			var operand_3 operandType_2 = indexReference != ""
+			if operand_3 {
+				operand_3 = strings.Contains(current.path, indexReference)
+			}
+			operand_2 = operand_3
+		}
+		if operand_2 {
 			delete(state.values, current)
 		}
 	}
 	delete(state.values, place)
 	for object, guard := range state.guards {
-		if nilBranchesAffected(guard.trueBranches, place) ||
-			nilBranchesAffected(guard.falseBranches, place) {
+		type operandType_3 = bool
+		var operand_4 operandType_3 = nilBranchesAffected(guard.trueBranches, place)
+		if !operand_4 {
+			operand_4 = nilBranchesAffected(guard.falseBranches, place)
+		}
+		if operand_4 {
+			type operandType_4 = bool
 			guard.trueBranches = e.withoutAffectedNilBranches(
 				state, guard.trueBranches, place,
 			)
 			guard.falseBranches = e.withoutAffectedNilBranches(
 				state, guard.falseBranches, place,
 			)
-			if nilBranchesInformative(guard.trueBranches) ||
-				nilBranchesInformative(guard.falseBranches) {
+			var operand_5 operandType_4 = nilBranchesInformative(guard.trueBranches)
+			if !operand_5 {
+				operand_5 = nilBranchesInformative(guard.falseBranches)
+			}
+			if operand_5 {
 				state.guards[object] = guard
 			} else {
 				delete(state.guards, object)
 			}
+
 		}
 	}
 	for object, presence := range state.presence {
@@ -535,10 +694,19 @@ func survivingNilAlias(state *nilFlowState, changed nilPlace) (nilPlace, bool) {
 	replacement := nilPlace{object: nil, path: ""}
 	found := false
 	for candidate := range state.aliases {
-		if candidate == changed || !nilAliased(state, changed, candidate) {
+		type operandType = bool
+		var operand operandType = candidate == changed
+		if !operand {
+			operand = !nilAliased(state, changed, candidate)
+		}
+		if operand {
 			continue
 		}
-		if !found || nilPlaceID(candidate) < nilPlaceID(replacement) {
+		var operand_1 operandType = !found
+		if !operand_1 {
+			operand_1 = nilPlaceID(candidate) < nilPlaceID(replacement)
+		}
+		if operand_1 {
 			replacement = candidate
 			found = true
 		}
@@ -551,15 +719,22 @@ func replaceNilFactPlace(
 	old nilPlace,
 	replacement nilPlace,
 ) nilFacts {
-	if value, found := facts[old]; found {
-		result := cloneNilFacts(facts)
-		delete(result, old)
-		if current, exists := result[replacement]; exists {
-			result[replacement] = intersectNilTypes(current, value)
-		} else {
-			result[replacement] = value
+	{
+		value, found := facts[old]
+		if found {
+			result := cloneNilFacts(facts)
+			delete(result, old)
+			{
+				current, exists := result[replacement]
+				if exists {
+					result[replacement] = intersectNilTypes(current, value)
+				} else {
+					result[replacement] = value
+				}
+			}
+
+			return result
 		}
-		return result
 	}
 	return facts
 }
@@ -574,12 +749,20 @@ func nilFactsAffected(facts nilFacts, changed nilPlace) bool {
 }
 
 func nilPlacesOverlap(left, right nilPlace) bool {
+	type operandType = bool
 	if left.object != right.object {
 		return false
 	}
-	return left.path == right.path ||
-		strings.HasPrefix(left.path, right.path+"/") ||
-		strings.HasPrefix(right.path, left.path+"/")
+	var operand operandType = left.path == right.path
+	if !operand {
+		operand = strings.HasPrefix(left.path, right.path+"/")
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = strings.HasPrefix(right.path, left.path+"/")
+	}
+	return operand_1
+
 }
 
 func (e *nilEnvironment) invalidateNilExpressions(
@@ -601,25 +784,37 @@ func (e *nilEnvironment) invalidateNilExpression(
 	}
 	hasCall := false
 	syntax.InspectExpression(root, func(node *syntax.Node) bool {
-		if expression, ok := syntax.ExpressionOf(node); ok {
-			if syntax.CallExpressionOf(expression) != nil {
-				hasCall = true
-			}
-			if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-				if unary.Operator == token.AND {
-					if place, ok := e.nilPlace(unary.Expression); ok {
-						e.invalidateNilPlace(state, place)
+		{
+			expression, ok := syntax.ExpressionOf(node)
+			if ok {
+				if syntax.CallExpressionOf(expression) != nil {
+					hasCall = true
+				}
+				{
+					unary := syntax.UnaryExpressionOf(expression)
+					if unary != nil {
+						if unary.Operator == token.AND {
+							{
+								place, ok := e.nilPlace(unary.Expression)
+								if ok {
+									e.invalidateNilPlace(state, place)
+								}
+							}
+						}
 					}
 				}
 			}
 		}
-		if literal, ok := syntax.FunctionLiteralOf(node); ok {
-			for place := range state.values {
-				if e.closureMayWriteNilPlace(literal.Body, place) {
-					e.invalidateNilPlace(state, place)
+		{
+			literal, ok := syntax.FunctionLiteralOf(node)
+			if ok {
+				for place := range state.values {
+					if e.closureMayWriteNilPlace(literal.Body, place) {
+						e.invalidateNilPlace(state, place)
+					}
 				}
+				return false
 			}
-			return false
 		}
 		return true
 	})
@@ -645,29 +840,56 @@ func (e *nilEnvironment) closureMayWriteNilPlace(
 		if writes {
 			return false
 		}
-		if value, ok := syntax.StatementOf(node); ok {
-			if assignment := syntax.AssignmentStatementOf(value); assignment != nil {
-				for _, target := range assignment.Left {
-					if e.nilWriteAffects(target, tracked) {
-						writes = true
-						return false
+		{
+			value, ok := syntax.StatementOf(node)
+			if ok {
+				{
+					assignment := syntax.AssignmentStatementOf(value)
+					if assignment != nil {
+						for _, target := range assignment.Left {
+							if e.nilWriteAffects(target, tracked) {
+								writes = true
+								return false
+							}
+						}
+					}
+				}
+				{
+					increment := syntax.IncrementStatementOf(value)
+					if increment != nil {
+						writes = e.nilWriteAffects(increment.Expression, tracked)
+					}
+				}
+				{
+					item := syntax.RangeStatementOf(value)
+					if item != nil {
+						if item.Operator == token.ASSIGN {
+							type operandType = bool
+							var operand operandType = e.nilWriteAffects(item.Key, tracked)
+							if !operand {
+								operand = e.nilWriteAffects(item.Value, tracked)
+							}
+							writes = operand
+
+						}
 					}
 				}
 			}
-			if increment := syntax.IncrementStatementOf(value); increment != nil {
-				writes = e.nilWriteAffects(increment.Expression, tracked)
-			}
-			if item := syntax.RangeStatementOf(value); item != nil {
-				if item.Operator == token.ASSIGN {
-					writes = e.nilWriteAffects(item.Key, tracked) ||
-						e.nilWriteAffects(item.Value, tracked)
-				}
-			}
 		}
-		if expression, ok := syntax.ExpressionOf(node); ok {
-			if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
-				unary.Operator == token.AND {
-				writes = e.nilWriteAffects(unary.Expression, tracked)
+		{
+			expression, ok := syntax.ExpressionOf(node)
+			if ok {
+				{
+					type operandType_1 = bool
+					unary := syntax.UnaryExpressionOf(expression)
+					var operand_1 operandType_1 = unary != nil
+					if operand_1 {
+						operand_1 = unary.Operator == token.AND
+					}
+					if operand_1 {
+						writes = e.nilWriteAffects(unary.Expression, tracked)
+					}
+				}
 			}
 		}
 		return !writes
@@ -679,14 +901,26 @@ func (e *nilEnvironment) nilWriteAffects(
 	expression *syntax.Expression,
 	tracked nilPlace,
 ) bool {
+	type operandType = bool
 	if expression == nil {
 		return false
 	}
 	written, ok := e.nilPlace(expression)
-	if !ok || written.object != tracked.object {
+	var operand operandType = !ok
+	if !operand {
+		operand = written.object != tracked.object
+	}
+	if operand {
 		return false
 	}
-	return written.path == tracked.path ||
-		strings.HasPrefix(tracked.path, written.path+"/") ||
-		strings.HasPrefix(written.path, tracked.path+"/")
+	var operand_1 operandType = written.path == tracked.path
+	if !operand_1 {
+		operand_1 = strings.HasPrefix(tracked.path, written.path+"/")
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = strings.HasPrefix(written.path, tracked.path+"/")
+	}
+	return operand_2
+
 }

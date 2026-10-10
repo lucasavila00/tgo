@@ -58,8 +58,11 @@ func TestSyntaxContractsKeepSourceDefinitionOwners(t *testing.T) {
 	assertContractPaths(t, environment.contracts[scope.Lookup("GeneralDeclaration")],
 		"f5/e")
 	for _, name := range []string{"SpecificationImport", "DeclarationFunction"} {
-		if contract := environment.contracts[scope.Lookup(name)]; len(contract) != 0 {
-			t.Fatalf("generated payload %s owns source contract %v", name, contract)
+		{
+			contract := environment.contracts[scope.Lookup(name)]
+			if len(contract) != 0 {
+				t.Fatalf("generated payload %s owns source contract %v", name, contract)
+			}
 		}
 	}
 }
@@ -80,8 +83,11 @@ func TestNilBooleanNarrowingProperties(t *testing.T) {
 	random := rand.New(rand.NewSource(2)) //nolint:gosec // Tests need stable data.
 	for range 300 {
 		data := make([]byte, 12)
-		if _, err := random.Read(data); err != nil {
-			t.Fatal(err)
+		{
+			_, err := random.Read(data)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 		checkNilBooleanProperty(t, data)
 	}
@@ -179,13 +185,18 @@ func decodeNilCondition(data []byte) *nilCondition {
 	index := 0
 	decode := (func(depth int) *nilCondition)(nil)
 	decode = func(depth int) *nilCondition {
+		type operandType = bool
 		value := byte(0)
 		if index < len(data) {
 			value = data[index]
 			index++
 		}
 		kind := value % 9
-		if depth == 0 && kind >= 6 {
+		var operand operandType = depth == 0
+		if operand {
+			operand = kind >= 6
+		}
+		if operand {
 			kind %= 6
 		}
 		result := &nilCondition{kind: kind, left: nil, right: nil}
@@ -235,19 +246,39 @@ func (c *nilCondition) possible(result, nonNil bool) bool {
 	case 2, 3, 4, 5:
 		return true
 	case 6:
+		type operandType_1 = bool
 		if result {
-			return c.left.possible(true, nonNil) &&
-				c.right.possible(true, nonNil)
+			type operandType = bool
+			var operand operandType = c.left.possible(true, nonNil)
+			if operand {
+				operand = c.right.possible(true, nonNil)
+			}
+			return operand
+
 		}
-		return c.left.possible(false, nonNil) ||
-			c.right.possible(false, nonNil)
+		var operand_1 operandType_1 = c.left.possible(false, nonNil)
+		if !operand_1 {
+			operand_1 = c.right.possible(false, nonNil)
+		}
+		return operand_1
+
 	case 7:
+		type operandType_3 = bool
 		if result {
-			return c.left.possible(true, nonNil) ||
-				c.right.possible(true, nonNil)
+			type operandType_2 = bool
+			var operand_2 operandType_2 = c.left.possible(true, nonNil)
+			if !operand_2 {
+				operand_2 = c.right.possible(true, nonNil)
+			}
+			return operand_2
+
 		}
-		return c.left.possible(false, nonNil) &&
-			c.right.possible(false, nonNil)
+		var operand_3 operandType_3 = c.left.possible(false, nonNil)
+		if operand_3 {
+			operand_3 = c.right.possible(false, nonNil)
+		}
+		return operand_3
+
 	default:
 		return c.left.possible(!result, nonNil)
 	}

@@ -56,8 +56,11 @@ func TestGoTypeOf(t *testing.T) {
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			if got := goTypeOf(test.typ).Tag(); got != test.want {
-				t.Fatalf("goTypeOf().Tag() = %v, want %v", got, test.want)
+			{
+				got := goTypeOf(test.typ).Tag()
+				if got != test.want {
+					t.Fatalf("goTypeOf().Tag() = %v, want %v", got, test.want)
+				}
 			}
 			allocations := testing.AllocsPerRun(100, func() {
 				testedGoType = goTypeOf(test.typ)

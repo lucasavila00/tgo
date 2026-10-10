@@ -16,31 +16,72 @@ func (e *nilEnvironment) blockNilFacts(
 	block *cfg.Block,
 	state *nilFlowState,
 ) (nilFacts, nilFacts) {
-	if block == nil || state == nil || len(block.Nodes) == 0 {
+	type operandType_1 = bool
+	type operandType = bool
+	var operand operandType = block == nil
+	if !operand {
+		operand = state == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = len(block.Nodes) == 0
+	}
+	if operand_1 {
 		return nil, nil
 	}
 	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
-	if !ok || condition == nil {
+	var operand_2 operandType_1 = !ok
+	if !operand_2 {
+		operand_2 = condition == nil
+	}
+	if operand_2 {
 		return nil, nil
 	}
 	conditionNode := syntax.ExpressionNode(condition)
-	if clauseNode := e.parents[conditionNode]; clauseNode != nil {
-		clauseStatement, clauseOK := syntax.StatementOf(clauseNode)
-		clause := syntax.CaseClauseOf(clauseStatement)
-		bodyNode := e.parents[*clauseNode]
-		bodyStatement, bodyOK := syntax.StatementOf(bodyNode)
-		body := syntax.BlockStatementOf(bodyStatement)
-		var switchNode *syntax.Node = nil
-		if bodyNode != nil {
-			switchNode = e.parents[*bodyNode]
-		}
-		switchStatementNode, switchOK := syntax.StatementOf(switchNode)
-		switchStatement := syntax.SwitchStatementOf(switchStatementNode)
-		if clauseOK && clause != nil && bodyOK && body != nil && switchOK &&
-			switchStatement != nil && switchStatement.Tag != nil {
-			return e.comparisonNilFacts(
-				switchStatement.Tag, condition, token.EQL, state,
-			)
+	{
+		clauseNode := e.parents[conditionNode]
+		if clauseNode != nil {
+			type operandType_2 = bool
+			clauseStatement, clauseOK := syntax.StatementOf(clauseNode)
+			clause := syntax.CaseClauseOf(clauseStatement)
+			bodyNode := e.parents[*clauseNode]
+			bodyStatement, bodyOK := syntax.StatementOf(bodyNode)
+			body := syntax.BlockStatementOf(bodyStatement)
+			var switchNode *syntax.Node = nil
+			if bodyNode != nil {
+				switchNode = e.parents[*bodyNode]
+			}
+			switchStatementNode, switchOK := syntax.StatementOf(switchNode)
+			switchStatement := syntax.SwitchStatementOf(switchStatementNode)
+			var operand_3 operandType_2 = clauseOK
+			if operand_3 {
+				operand_3 = clause != nil
+			}
+			var operand_4 operandType_2 = operand_3
+			if operand_4 {
+				operand_4 = bodyOK
+			}
+			var operand_5 operandType_2 = operand_4
+			if operand_5 {
+				operand_5 = body != nil
+			}
+			var operand_6 operandType_2 = operand_5
+			if operand_6 {
+				operand_6 = switchOK
+			}
+			var operand_7 operandType_2 = operand_6
+			if operand_7 {
+				operand_7 = switchStatement != nil
+			}
+			var operand_8 operandType_2 = operand_7
+			if operand_8 {
+				operand_8 = switchStatement.Tag != nil
+			}
+			if operand_8 {
+				return e.comparisonNilFacts(
+					switchStatement.Tag, condition, token.EQL, state,
+				)
+			}
 		}
 	}
 	return e.conditionNilFacts(condition, state)
@@ -81,13 +122,21 @@ func impossibleNilFacts() nilFacts {
 }
 
 func (e *nilEnvironment) applyNilFacts(state *nilFlowState, facts nilFacts) {
-	if state == nil || !state.reachable {
+	type operandType = bool
+	var operand operandType = state == nil
+	if !operand {
+		operand = !state.reachable
+	}
+	if operand {
 		return
 	}
 	for place, value := range facts {
 		current := optionalNilType()
-		if known, found := state.values[place]; found {
-			current = known
+		{
+			known, found := state.values[place]
+			if found {
+				current = known
+			}
 		}
 		narrowed := intersectNilTypes(current, value)
 		if isNeverNilType(narrowed) {
@@ -124,8 +173,11 @@ func nilPlaceID(place nilPlace) string {
 }
 
 func nilRepresentative(state *nilFlowState, place nilPlace) nilPlace {
-	if representative, ok := state.aliases[place]; ok {
-		return representative
+	{
+		representative, ok := state.aliases[place]
+		if ok {
+			return representative
+		}
 	}
 	return place
 }
@@ -179,60 +231,88 @@ func breakNilAlias(state *nilFlowState, target nilPlace) {
 
 // nilPlace identifies a stable local, field, index, or dereference.
 func (e *nilEnvironment) nilPlace(expression *syntax.Expression) (nilPlace, bool) {
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.nilPlace(parenthesized.Expression)
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return e.nilPlace(parenthesized.Expression)
+		}
 	}
-	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
-		object := e.facts.Object(identifier)
-		if object == nil || object == types.Universe.Lookup("nil") {
-			return nilPlace{object: nil, path: ""}, false
+	{
+		identifier := syntax.IdentifierExpressionOf(expression)
+		if identifier != nil {
+			type operandType = bool
+			object := e.facts.Object(identifier)
+			var operand operandType = object == nil
+			if !operand {
+				operand = object == types.Universe.Lookup("nil")
+			}
+			if operand {
+				return nilPlace{object: nil, path: ""}, false
+			}
+			return nilPlace{object: object, path: ""}, true
 		}
-		return nilPlace{object: object, path: ""}, true
 	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		base, ok := e.nilPlace(selector.Expression)
-		if !ok {
-			return nilPlace{object: nil, path: ""}, false
+	{
+		selector := syntax.SelectorExpressionOf(expression)
+		if selector != nil {
+			type operandType_1 = bool
+			base, ok := e.nilPlace(selector.Expression)
+			if !ok {
+				return nilPlace{object: nil, path: ""}, false
+			}
+			selection := e.facts.Selection(expression)
+			var operand_1 operandType_1 = selection == nil
+			if !operand_1 {
+				operand_1 = selection.Kind() != types.FieldVal
+			}
+			if operand_1 {
+				return nilPlace{object: nil, path: ""}, false
+			}
+			parts := make([]string, 0, len(selection.Index()))
+			for _, index := range selection.Index() {
+				parts = append(parts, strconv.Itoa(index))
+			}
+			base.path += "/f" + strings.Join(parts, ".")
+			return base, true
 		}
-		selection := e.facts.Selection(expression)
-		if selection == nil || selection.Kind() != types.FieldVal {
-			return nilPlace{object: nil, path: ""}, false
-		}
-		parts := make([]string, 0, len(selection.Index()))
-		for _, index := range selection.Index() {
-			parts = append(parts, strconv.Itoa(index))
-		}
-		base.path += "/f" + strings.Join(parts, ".")
-		return base, true
 	}
-	if index := syntax.IndexExpressionOf(expression); index != nil {
-		base, ok := e.nilPlace(index.Expression)
-		if !ok {
-			return nilPlace{object: nil, path: ""}, false
+	{
+		index := syntax.IndexExpressionOf(expression)
+		if index != nil {
+			base, ok := e.nilPlace(index.Expression)
+			if !ok {
+				return nilPlace{object: nil, path: ""}, false
+			}
+			key, ok := e.stableIndex(index.Index)
+			if !ok {
+				return nilPlace{object: nil, path: ""}, false
+			}
+			base.path += "/i" + key
+			return base, true
 		}
-		key, ok := e.stableIndex(index.Index)
-		if !ok {
-			return nilPlace{object: nil, path: ""}, false
-		}
-		base.path += "/i" + key
-		return base, true
 	}
-	if star := syntax.StarExpressionOf(expression); star != nil {
-		base, ok := e.nilPlace(star.Expression)
-		if !ok {
-			return nilPlace{object: nil, path: ""}, false
+	{
+		star := syntax.StarExpressionOf(expression)
+		if star != nil {
+			base, ok := e.nilPlace(star.Expression)
+			if !ok {
+				return nilPlace{object: nil, path: ""}, false
+			}
+			base.path += "/d"
+			return base, true
 		}
-		base.path += "/d"
-		return base, true
 	}
 	return nilPlace{object: nil, path: ""}, false
 }
 
 func (e *nilEnvironment) stableIndex(expression *syntax.Expression) (string, bool) {
-	if name := syntax.IdentifierExpressionOf(expression); name != nil {
-		object := e.facts.Object(name)
-		if object != nil {
-			return "o" + nilPlaceID(nilPlace{object: object, path: ""}), true
+	{
+		name := syntax.IdentifierExpressionOf(expression)
+		if name != nil {
+			object := e.facts.Object(name)
+			if object != nil {
+				return "o" + nilPlaceID(nilPlace{object: object, path: ""}), true
+			}
 		}
 	}
 	value := e.facts.Constant(expression)
@@ -255,7 +335,16 @@ func (e *nilEnvironment) prepareNilBlock(
 	state *nilFlowState,
 	block *cfg.Block,
 ) {
-	if state == nil || block == nil || block.Kind != cfg.KindRangeBody {
+	type operandType = bool
+	var operand operandType = state == nil
+	if !operand {
+		operand = block == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = block.Kind != cfg.KindRangeBody
+	}
+	if operand_1 {
 		return
 	}
 	statement := syntax.RangeStatementOf(block.Stmt)
@@ -264,13 +353,24 @@ func (e *nilEnvironment) prepareNilBlock(
 	}
 	source := e.contractForExpression(statement.Source)
 	valueContract := nilChild(source, "e")
-	if _, mapping := coreType(e.facts.Type(statement.Source)).(*types.Map); mapping {
-		valueContract = nilChild(source, "v")
+	{
+		_, mapping := coreType(e.facts.Type(statement.Source)).(*types.Map)
+		if mapping {
+			valueContract = nilChild(source, "v")
+		}
 	}
 	if statement.Value != nil {
 		e.assignNilTarget(state, statement.Value, nil)
-		if place, ok := e.nilPlace(statement.Value); ok && valueContract[""] {
-			e.setNilType(state, place, nonNilType())
+		{
+			type operandType_1 = bool
+			place, ok := e.nilPlace(statement.Value)
+			var operand_2 operandType_1 = ok
+			if operand_2 {
+				operand_2 = valueContract[""]
+			}
+			if operand_2 {
+				e.setNilType(state, place, nonNilType())
+			}
 		}
 	}
 }

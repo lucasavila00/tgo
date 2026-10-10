@@ -28,10 +28,15 @@ type verifiedSource struct {
 
 // verifySourceModels checks generated declarations against their canonical source.
 func (c *checker) verifySourceModels(generated *syntax.File) *verifiedSource {
+	type operandType = bool
 	generatedPath := c.pass.Fset.Position(generated.Package).Filename
 	generatedData, readErr := c.pass.ReadFile(generatedPath)
 	sourceName := c.generatedSource[generated]
-	if readErr != nil || sourceName == "" {
+	var operand operandType = readErr != nil
+	if !operand {
+		operand = sourceName == ""
+	}
+	if operand {
 		c.failVerification(generated.Package, "generated tgo source mapping is invalid")
 		return nil
 	}
@@ -69,14 +74,17 @@ func (c *checker) verifySourceModels(generated *syntax.File) *verifiedSource {
 	sourceNames := make(map[string]bool)
 	sourceToken := sourceFiles.File(file.Package)
 	for _, declaration := range file.Declarations {
-		if source := sourceDeclaration(
-			declaration,
-			c.packagePath(),
-			file,
-			sourceToken,
-			data,
-		); source != nil {
-			sourceNames[sourceModelName(source)] = true
+		{
+			source := sourceDeclaration(
+				declaration,
+				c.packagePath(),
+				file,
+				sourceToken,
+				data,
+			)
+			if source != nil {
+				sourceNames[sourceModelName(source)] = true
+			}
 		}
 		c.checkSourceDeclaration(
 			generated,
@@ -113,11 +121,19 @@ func (c *checker) exportSourceModels(source *verifiedSource) {
 }
 
 func (c *checker) hasModelAPIs(object *types.TypeName) bool {
-	if _, ok := object.Type().Underlying().(*types.Interface); ok {
-		return false
+	type operandType = bool
+	{
+		_, ok := object.Type().Underlying().(*types.Interface)
+		if ok {
+			return false
+		}
 	}
-	return method(object.Type(), "Tag") != nil ||
-		method(object.Type(), "check") != nil
+	var operand operandType = method(object.Type(), "Tag") != nil
+	if !operand {
+		operand = method(object.Type(), "check") != nil
+	}
+	return operand
+
 }
 
 // reportExtraGeneratedModels rejects model APIs with no matching TGo declaration.
@@ -132,12 +148,21 @@ func (c *checker) reportExtraGeneratedModels(
 			continue
 		}
 		for _, item := range general.Specs {
+			type operandType = bool
 			specification := syntax.TypeSpecificationOf(item)
-			if specification == nil || sourceNames[specification.Name.Name] {
+			var operand operandType = specification == nil
+			if !operand {
+				operand = sourceNames[specification.Name.Name]
+			}
+			if operand {
 				continue
 			}
 			object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
-			if !objectOK || object.IsAlias() {
+			var operand_1 operandType = !objectOK
+			if !operand_1 {
+				operand_1 = object.IsAlias()
+			}
+			if operand_1 {
 				continue
 			}
 			if c.hasModelAPIs(object) {
@@ -161,6 +186,7 @@ func (c *checker) checkSourceDeclaration(
 	sourceFile *token.File,
 	data []byte,
 ) {
+	type operandType = bool
 	source := sourceDeclaration(
 		declaration,
 		c.packagePath(),
@@ -183,12 +209,16 @@ func (c *checker) checkSourceDeclaration(
 		return
 	}
 	object, objectOK := c.facts.DefinitionName(specification.Name).(*types.TypeName)
-	if !objectOK || !sourceShapeMatches(
-		generated,
-		specification.Type,
-		object.Type(),
-		source,
-	) {
+	var operand operandType = !objectOK
+	if !operand {
+		operand = !sourceShapeMatches(
+			generated,
+			specification.Type,
+			object.Type(),
+			source,
+		)
+	}
+	if operand {
 		c.failVerification(
 			specification.Start,
 			"generated tgo output for %s does not match %s",
@@ -243,14 +273,23 @@ func (c *checker) packagePath() string {
 }
 
 func tgosourceModelExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -351,8 +390,11 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one sourceModel JSON variant")
@@ -364,8 +406,11 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Enum":
 		var payload sourceModelEnum
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Fact == nil {
 			return fmt.Errorf("invalid sourceModel.Enum JSON payload: Fact must not be nil")
@@ -375,8 +420,11 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Struct":
 		var payload sourceModelStruct
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewsourceModelStruct(payload.Name, payload.Fact, payload.Fields)
 		return nil
@@ -386,6 +434,7 @@ func (v *sourceModel) UnmarshalJSON(data []byte) error {
 }
 
 func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -399,6 +448,7 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -411,8 +461,16 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Struct":
 			current = 2
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -424,20 +482,38 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one sourceModel JSON variant")
 	}
 	if selected == 0 {
@@ -446,8 +522,11 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload sourceModelEnum
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Fact == nil {
 			return fmt.Errorf("invalid sourceModel.Enum JSON payload: Fact must not be nil")
@@ -457,8 +536,11 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 2:
 		var payload sourceModelStruct
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewsourceModelStruct(payload.Name, payload.Fact, payload.Fields)
 		return nil
@@ -481,56 +563,62 @@ func sourceDeclaration(
 	if sourceFile == nil {
 		return nil
 	}
-	if node, ok := syntax.EnumDeclarationOf(declaration); ok {
-		if node == nil {
-			return nil
-		}
-		variants := make([]string, 0, len(node.Variants))
-		sourceVariants := make([]sourceVariant, 0, len(node.Variants))
-		for _, variant := range node.Variants {
-			if variant == nil {
-				continue
+	{
+		node, ok := syntax.EnumDeclarationOf(declaration)
+		if ok {
+			if node == nil {
+				return nil
 			}
-			variants = append(variants, variant.Name.Name)
+			variants := make([]string, 0, len(node.Variants))
+			sourceVariants := make([]sourceVariant, 0, len(node.Variants))
+			for _, variant := range node.Variants {
+				if variant == nil {
+					continue
+				}
+				variants = append(variants, variant.Name.Name)
+				fields := []sourceField(nil)
+				for _, field := range variant.Fields {
+					if field != nil {
+						fields = append(fields, sourceFields(file, sourceFile, data, field)...)
+					}
+				}
+				sourceVariants = append(
+					sourceVariants,
+					sourceVariant{
+						name:   variant.Name.Name,
+						fields: fields,
+					},
+				)
+			}
+			result := func(input TgosourceModelEnumInput) sourceModel {
+				return NewsourceModelEnum(input.FieldName, input.FieldFact, input.FieldVariants)
+			}(TgosourceModelEnumInput{FieldName: node.Name.Name, FieldFact: enumModel(packagePath, node.Name.Name, variants), FieldVariants: sourceVariants})
+
+			return &result
+		}
+	}
+	{
+		node, ok := syntax.StructDeclarationOf(declaration)
+		if ok {
+			if node == nil {
+				return nil
+			}
 			fields := []sourceField(nil)
-			for _, field := range variant.Fields {
+			for _, field := range node.Fields {
 				if field != nil {
 					fields = append(fields, sourceFields(file, sourceFile, data, field)...)
 				}
 			}
-			sourceVariants = append(
-				sourceVariants,
-				sourceVariant{
-					name:   variant.Name.Name,
-					fields: fields,
-				},
-			)
-		}
-		result := func(input TgosourceModelEnumInput) sourceModel {
-			return NewsourceModelEnum(input.FieldName, input.FieldFact, input.FieldVariants)
-		}(TgosourceModelEnumInput{FieldName: node.Name.Name, FieldFact: enumModel(packagePath, node.Name.Name, variants), FieldVariants: sourceVariants})
-
-		return &result
-	}
-	if node, ok := syntax.StructDeclarationOf(declaration); ok {
-		if node == nil {
-			return nil
-		}
-		fields := []sourceField(nil)
-		for _, field := range node.Fields {
-			if field != nil {
-				fields = append(fields, sourceFields(file, sourceFile, data, field)...)
+			var fact *model = nil
+			if node.Checked != token.NoPos {
+				fact = checkedModel(packagePath, node.Name.Name)
 			}
-		}
-		var fact *model = nil
-		if node.Checked != token.NoPos {
-			fact = checkedModel(packagePath, node.Name.Name)
-		}
-		result := func(input TgosourceModelStructInput) sourceModel {
-			return NewsourceModelStruct(input.FieldName, input.FieldFact, input.FieldFields)
-		}(TgosourceModelStructInput{FieldName: node.Name.Name, FieldFact: fact, FieldFields: fields})
+			result := func(input TgosourceModelStructInput) sourceModel {
+				return NewsourceModelStruct(input.FieldName, input.FieldFact, input.FieldFields)
+			}(TgosourceModelStructInput{FieldName: node.Name.Name, FieldFact: fact, FieldFields: fields})
 
-		return &result
+			return &result
+		}
 	}
 	return nil
 }
@@ -578,6 +666,7 @@ func readTGoSource(pass *analysis.Pass, path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("pass.ReadFile: %w", err)
 	}
+
 	return data, nil
 }
 
@@ -588,8 +677,13 @@ func generatedTypeSpec(file *syntax.File, name string) *syntax.TypeSpecification
 			continue
 		}
 		for _, item := range general.Specs {
+			type operandType = bool
 			specification := syntax.TypeSpecificationOf(item)
-			if specification != nil && specification.Name.Name == name {
+			var operand operandType = specification != nil
+			if operand {
+				operand = specification.Name.Name == name
+			}
+			if operand {
 				return specification
 			}
 		}
@@ -609,6 +703,7 @@ func sourceShapeMatches(
 	}
 	switch item := *source; item.Tag() {
 	case sourceModelTagStruct:
+		type operandType = bool
 		sourceStruct := item.StructPayload()
 		structure := syntax.StructTypeExpressionOf(representation)
 		if structure == nil {
@@ -617,20 +712,34 @@ func sourceShapeMatches(
 		if !sameFields(sourceStruct.Fields, structure.Fields.List, generated) {
 			return false
 		}
-		return sourceStruct.Fact == nil ||
-			validCheckedStructAPI(typ) && validCheckedCarrier(typ, sourceStruct.Fields)
+		var operand operandType = sourceStruct.Fact == nil
+		if !operand {
+			type operandType_1 = bool
+			var operand_1 operandType_1 = validCheckedStructAPI(typ)
+			if operand_1 {
+				operand_1 = validCheckedCarrier(typ, sourceStruct.Fields)
+			}
+			operand = operand_1
+		}
+		return operand
+
 	case sourceModelTagEnum:
 		enum := item.EnumPayload()
 		if !generatedEnumShape(typ, enum.Name, enum.Variants) {
 			return false
 		}
 		for _, variant := range enum.Variants {
+			type operandType_2 = bool
 			payloadSpec := generatedTypeSpec(generated, enum.Name+variant.name)
 			if payloadSpec == nil {
 				return false
 			}
 			payload := syntax.StructTypeExpressionOf(payloadSpec.Type)
-			if payload == nil || !sameFields(variant.fields, payload.Fields.List, generated) {
+			var operand_2 operandType_2 = payload == nil
+			if !operand_2 {
+				operand_2 = !sameFields(variant.fields, payload.Fields.List, generated)
+			}
+			if operand_2 {
 				return false
 			}
 		}
@@ -641,19 +750,49 @@ func sourceShapeMatches(
 }
 
 func validCheckedStructAPI(typ types.Type) bool {
+	type operandType = bool
 	signature := method(typ, "check")
-	if signature == nil || signature.Recv() == nil || signature.Params().Len() != 0 ||
-		signature.Results().Len() != 2 || signature.Variadic() {
+	var operand operandType = signature == nil
+	if !operand {
+		operand = signature.Recv() == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = signature.Params().Len() != 0
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = signature.Results().Len() != 2
+	}
+	var operand_3 operandType = operand_2
+	if !operand_3 {
+		operand_3 = signature.Variadic()
+	}
+	if operand_3 {
 		return false
 	}
 	errorObject := types.Universe.Lookup("error")
-	if errorObject == nil || !types.Identical(signature.Recv().Type(), typ) ||
-		!types.Identical(signature.Results().At(0).Type(), typ) ||
-		!types.Identical(signature.Results().At(1).Type(), errorObject.Type()) {
+	var operand_4 operandType = errorObject == nil
+	if !operand_4 {
+		operand_4 = !types.Identical(signature.Recv().Type(), typ)
+	}
+	var operand_5 operandType = operand_4
+	if !operand_5 {
+		operand_5 = !types.Identical(signature.Results().At(0).Type(), typ)
+	}
+	var operand_6 operandType = operand_5
+	if !operand_6 {
+		operand_6 = !types.Identical(signature.Results().At(1).Type(), errorObject.Type())
+	}
+	if operand_6 {
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil {
+	var operand_7 operandType = !ok
+	if !operand_7 {
+		operand_7 = named.Obj().Pkg() == nil
+	}
+	if operand_7 {
 		return false
 	}
 	constructor, ok := named.Obj().Pkg().Scope().Lookup(
@@ -664,8 +803,27 @@ func validCheckedStructAPI(typ types.Type) bool {
 	}
 	created, ok := constructor.Type().(*types.Signature)
 	structure, structureOK := named.Underlying().(*types.Struct)
-	if !ok || !structureOK || created.Recv() != nil || created.Variadic() ||
-		created.Params().Len() != structure.NumFields() || created.Results().Len() != 2 {
+	var operand_8 operandType = !ok
+	if !operand_8 {
+		operand_8 = !structureOK
+	}
+	var operand_9 operandType = operand_8
+	if !operand_9 {
+		operand_9 = created.Recv() != nil
+	}
+	var operand_10 operandType = operand_9
+	if !operand_10 {
+		operand_10 = created.Variadic()
+	}
+	var operand_11 operandType = operand_10
+	if !operand_11 {
+		operand_11 = created.Params().Len() != structure.NumFields()
+	}
+	var operand_12 operandType = operand_11
+	if !operand_12 {
+		operand_12 = created.Results().Len() != 2
+	}
+	if operand_12 {
 		return false
 	}
 	for index := 0; index < structure.NumFields(); index++ {
@@ -673,8 +831,12 @@ func validCheckedStructAPI(typ types.Type) bool {
 			return false
 		}
 	}
-	return types.Identical(created.Results().At(0).Type(), typ) &&
-		types.Identical(created.Results().At(1).Type(), errorObject.Type())
+	var operand_13 operandType = types.Identical(created.Results().At(0).Type(), typ)
+	if operand_13 {
+		operand_13 = types.Identical(created.Results().At(1).Type(), errorObject.Type())
+	}
+	return operand_13
+
 }
 
 // generatedEnumShape checks enum operations without reading private storage.
@@ -683,21 +845,36 @@ func generatedEnumShape(
 	name string,
 	variants []sourceVariant,
 ) bool {
+	type operandType = bool
 	tag, ok := typeInPackage(typ, name+"Tag")
-	if !ok || !validGeneratedTagAPI(typ, tag, name, variants) {
+	var operand operandType = !ok
+	if !operand {
+		operand = !validGeneratedTagAPI(typ, tag, name, variants)
+	}
+	if operand {
 		return false
 	}
 	for _, variant := range variants {
+		type operandType_1 = bool
 		payloadName := name + variant.name
 		payload, ok := typeInPackage(typ, payloadName)
-		if !ok || !validEnumAPI(
-			typ, payload, variant.name+"Payload", "New"+payloadName,
-		) {
+		var operand_1 operandType_1 = !ok
+		if !operand_1 {
+			operand_1 = !validEnumAPI(
+				typ, payload, variant.name+"Payload", "New"+payloadName,
+			)
+		}
+		if operand_1 {
 			return false
 		}
 		if len(variant.fields) > 0 {
+			type operandType_2 = bool
 			carrier, ok := typeInPackage(typ, "Tgo"+payloadName+"Input")
-			if !ok || !validEnumCarrier(payload, carrier) {
+			var operand_2 operandType_2 = !ok
+			if !operand_2 {
+				operand_2 = !validEnumCarrier(payload, carrier)
+			}
+			if operand_2 {
 				return false
 			}
 		}
@@ -711,17 +888,37 @@ func validGeneratedTagAPI(
 	name string,
 	variants []sourceVariant,
 ) bool {
+	type operandType = bool
 	tag := method(typ, "Tag")
-	if tag == nil || tag.Params().Len() != 0 || tag.Results().Len() != 1 ||
-		!types.Identical(tag.Results().At(0).Type(), tagType) {
+	var operand operandType = tag == nil
+	if !operand {
+		operand = tag.Params().Len() != 0
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = tag.Results().Len() != 1
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = !types.Identical(tag.Results().At(0).Type(), tagType)
+	}
+	if operand_2 {
 		return false
 	}
 	basic, ok := coreType(tagType).(*types.Basic)
-	if !ok || basic.Info()&types.IsUnsigned == 0 {
+	var operand_3 operandType = !ok
+	if !operand_3 {
+		operand_3 = basic.Info()&types.IsUnsigned == 0
+	}
+	if operand_3 {
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil {
+	var operand_4 operandType = !ok
+	if !operand_4 {
+		operand_4 = named.Obj().Pkg() == nil
+	}
+	if operand_4 {
 		return false
 	}
 	names := []string(nil)
@@ -729,9 +926,17 @@ func validGeneratedTagAPI(
 		names = append(names, name+"Tag"+variant.name)
 	}
 	for index, constantName := range names {
+		type operandType_1 = bool
 		constant, ok := named.Obj().Pkg().Scope().Lookup(constantName).(*types.Const)
-		if !ok || !types.Identical(constant.Type(), tagType) ||
-			constant.Val().ExactString() != strconv.Itoa(index+1) {
+		var operand_5 operandType_1 = !ok
+		if !operand_5 {
+			operand_5 = !types.Identical(constant.Type(), tagType)
+		}
+		var operand_6 operandType_1 = operand_5
+		if !operand_6 {
+			operand_6 = constant.Val().ExactString() != strconv.Itoa(index+1)
+		}
+		if operand_6 {
 			return false
 		}
 	}
@@ -739,8 +944,13 @@ func validGeneratedTagAPI(
 }
 
 func typeInPackage(typ types.Type, name string) (types.Type, bool) {
+	type operandType = bool
 	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil {
+	var operand operandType = !ok
+	if !operand {
+		operand = named.Obj().Pkg() == nil
+	}
+	if operand {
 		return nil, false
 	}
 	object, ok := named.Obj().Pkg().Scope().Lookup(name).(*types.TypeName)
@@ -752,7 +962,16 @@ func typeInPackage(typ types.Type, name string) (types.Type, bool) {
 
 // sameModelFact compares model identity and the ordered enum variants.
 func sameModelFact(left *model, right *model) bool {
-	if left == nil || right == nil || !sameModel(left, right) {
+	type operandType = bool
+	var operand operandType = left == nil
+	if !operand {
+		operand = right == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = !sameModel(left, right)
+	}
+	if operand_1 {
 		return false
 	}
 	leftVariants := modelVariants(left)
@@ -832,8 +1051,17 @@ func sourceExpression(
 		),
 	)
 	for _, extension := range syntax.Extensions(file) {
+		type operandType = bool
 		node, ok := syntax.NonNilPointerTypeOf(extension)
-		if !ok || node.Percent < start || node.Percent >= end {
+		var operand operandType = !ok
+		if !operand {
+			operand = node.Percent < start
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = node.Percent >= end
+		}
+		if operand_1 {
 			continue
 		}
 		result[sourceFile.Offset(node.Percent)-sourceFile.Offset(start)] = '*'

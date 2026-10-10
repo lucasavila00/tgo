@@ -51,8 +51,11 @@ func (c *checker) collectStructLiteralZeros(
 			continue
 		}
 		keyed = true
-		if name := syntax.IdentifierExpressionOf(pair.Key); name != nil {
-			supplied[name.Name] = true
+		{
+			name := syntax.IdentifierExpressionOf(pair.Key)
+			if name != nil {
+				supplied[name.Name] = true
+			}
 		}
 	}
 	if !keyed {
@@ -71,16 +74,24 @@ func (c *checker) literalHasHoles(literal *syntax.CompositeLiteral, length int64
 	next := int64(0)
 	largest := int64(-1)
 	for _, element := range literal.Elements {
-		if pair := syntax.KeyValueExpressionOf(element); pair != nil {
-			value := c.facts.Constant(pair.Key)
-			if value == nil || value.Kind() != constant.Int {
-				return false
+		{
+			pair := syntax.KeyValueExpressionOf(element)
+			if pair != nil {
+				type operandType = bool
+				value := c.facts.Constant(pair.Key)
+				var operand operandType = value == nil
+				if !operand {
+					operand = value.Kind() != constant.Int
+				}
+				if operand {
+					return false
+				}
+				index, exact := constant.Int64Val(value)
+				if !exact {
+					return false
+				}
+				next = index
 			}
-			index, exact := constant.Int64Val(value)
-			if !exact {
-				return false
-			}
-			next = index
 		}
 		supplied[next] = true
 		if next > largest {

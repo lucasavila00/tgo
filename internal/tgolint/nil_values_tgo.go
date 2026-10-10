@@ -13,24 +13,42 @@ import (
 
 // contractForTarget returns the contract required by an assignment target.
 func (e *nilEnvironment) contractForTarget(expression *syntax.Expression) nilContract {
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.contractForTarget(parenthesized.Expression)
-	}
-	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
-		return e.contractForObject(e.facts.Object(identifier))
-	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		return e.selectorContract(expression, selector)
-	}
-	if index := syntax.IndexExpressionOf(expression); index != nil {
-		container := e.contractForExpression(index.Expression)
-		if _, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map); mapping {
-			return nilChild(container, "v")
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return e.contractForTarget(parenthesized.Expression)
 		}
-		return nilChild(container, "e")
 	}
-	if star := syntax.StarExpressionOf(expression); star != nil {
-		return nilChild(e.contractForExpression(star.Expression), "e")
+	{
+		identifier := syntax.IdentifierExpressionOf(expression)
+		if identifier != nil {
+			return e.contractForObject(e.facts.Object(identifier))
+		}
+	}
+	{
+		selector := syntax.SelectorExpressionOf(expression)
+		if selector != nil {
+			return e.selectorContract(expression, selector)
+		}
+	}
+	{
+		index := syntax.IndexExpressionOf(expression)
+		if index != nil {
+			container := e.contractForExpression(index.Expression)
+			{
+				_, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map)
+				if mapping {
+					return nilChild(container, "v")
+				}
+			}
+			return nilChild(container, "e")
+		}
+	}
+	{
+		star := syntax.StarExpressionOf(expression)
+		if star != nil {
+			return nilChild(e.contractForExpression(star.Expression), "e")
+		}
 	}
 	return nil
 }
@@ -53,63 +71,102 @@ func (e *nilEnvironment) contractForExpression(expression *syntax.Expression) ni
 		}
 		return result
 	}
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.contractForExpression(parenthesized.Expression)
-	}
-	if propagation := nilPropagationExpressionOf(expression); propagation != nil {
-		return e.resultContract(propagation.Expression, 0)
-	}
-	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
-		return e.contractForObject(e.facts.Object(identifier))
-	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		return e.selectorContract(expression, selector)
-	}
-	if index := syntax.IndexExpressionOf(expression); index != nil {
-		container := e.contractForExpression(index.Expression)
-		if _, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map); mapping {
-			return nilChild(container, "v")
-		}
-		return nilChild(container, "e")
-	}
-	if slice := syntax.SliceExpressionOf(expression); slice != nil {
-		return e.contractForExpression(slice.Expression)
-	}
-	if star := syntax.StarExpressionOf(expression); star != nil {
-		return nilChild(e.contractForExpression(star.Expression), "e")
-	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-		if unary.Operator == token.AND {
-			result := make(nilContract)
-			result[""] = true
-			addNilPath(result, "e", e.contractForExpression(unary.Expression))
-			return result
-		}
-		if unary.Operator == token.ARROW {
-			return nilChild(e.contractForExpression(unary.Expression), "e")
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return e.contractForExpression(parenthesized.Expression)
 		}
 	}
-	if call := syntax.CallExpressionOf(expression); call != nil {
-		if e.facts.IsType(call.Callee) {
-			return e.contractForType(e.facts.Type(expression))
+	{
+		propagation := nilPropagationExpressionOf(expression)
+		if propagation != nil {
+			return e.resultContract(propagation.Expression, 0)
 		}
-		return e.resultContract(expression, 0)
+	}
+	{
+		identifier := syntax.IdentifierExpressionOf(expression)
+		if identifier != nil {
+			return e.contractForObject(e.facts.Object(identifier))
+		}
+	}
+	{
+		selector := syntax.SelectorExpressionOf(expression)
+		if selector != nil {
+			return e.selectorContract(expression, selector)
+		}
+	}
+	{
+		index := syntax.IndexExpressionOf(expression)
+		if index != nil {
+			container := e.contractForExpression(index.Expression)
+			{
+				_, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map)
+				if mapping {
+					return nilChild(container, "v")
+				}
+			}
+			return nilChild(container, "e")
+		}
+	}
+	{
+		slice := syntax.SliceExpressionOf(expression)
+		if slice != nil {
+			return e.contractForExpression(slice.Expression)
+		}
+	}
+	{
+		star := syntax.StarExpressionOf(expression)
+		if star != nil {
+			return nilChild(e.contractForExpression(star.Expression), "e")
+		}
+	}
+	{
+		unary := syntax.UnaryExpressionOf(expression)
+		if unary != nil {
+			if unary.Operator == token.AND {
+				result := make(nilContract)
+				result[""] = true
+				addNilPath(result, "e", e.contractForExpression(unary.Expression))
+				return result
+			}
+			if unary.Operator == token.ARROW {
+				return nilChild(e.contractForExpression(unary.Expression), "e")
+			}
+		}
+	}
+	{
+		call := syntax.CallExpressionOf(expression)
+		if call != nil {
+			if e.facts.IsType(call.Callee) {
+				return e.contractForType(e.facts.Type(expression))
+			}
+			return e.resultContract(expression, 0)
+		}
 	}
 	if syntax.TypeAssertionExpressionOf(expression) != nil {
 		return e.contractForType(e.facts.Type(expression))
 	}
-	if literal := syntax.CompositeLiteralOf(expression); literal != nil {
-		contract := e.declaredContract(literal.Type)
-		if len(contract) != 0 {
-			return contract
+	{
+		literal := syntax.CompositeLiteralOf(expression)
+		if literal != nil {
+			contract := e.declaredContract(literal.Type)
+			if len(contract) != 0 {
+				return contract
+			}
+			return e.contractForType(e.facts.Type(expression))
 		}
-		return e.contractForType(e.facts.Type(expression))
 	}
-	if literal := syntax.FunctionLiteralExpressionOf(expression); literal != nil {
-		return e.functionContract(literal.Type)
+	{
+		literal := syntax.FunctionLiteralExpressionOf(expression)
+		if literal != nil {
+			return e.functionContract(literal.Type)
+		}
 	}
-	if comprehension := nilComprehensionExpressionOf(expression); comprehension != nil {
-		return e.valueContract(comprehension.Type)
+	{
+		comprehension := nilComprehensionExpressionOf(expression)
+		if comprehension != nil {
+			return e.valueContract(comprehension.Type)
+		}
 	}
 	return e.contractForType(e.facts.Type(expression))
 }
@@ -130,8 +187,11 @@ func (e *nilEnvironment) selectorContract(
 		return selected
 	}
 	contract := e.contractForExpression(selector.Expression)
-	if _, pointer := coreType(e.facts.Type(selector.Expression)).(*types.Pointer); pointer {
-		contract = nilChild(contract, "e")
+	{
+		_, pointer := coreType(e.facts.Type(selector.Expression)).(*types.Pointer)
+		if pointer {
+			contract = nilChild(contract, "e")
+		}
 	}
 	for _, index := range selection.Index() {
 		contract = nilChild(contract, "f"+strconv.Itoa(index))
@@ -153,24 +213,41 @@ func (e *nilEnvironment) resultContract(
 	expression *syntax.Expression,
 	index int,
 ) nilContract {
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.resultContract(parenthesized.Expression, index)
-	}
-	if call := syntax.CallExpressionOf(expression); call != nil {
-		if contract := e.builtinResultContract(call, index); len(contract) != 0 {
-			return contract
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return e.resultContract(parenthesized.Expression, index)
 		}
-		contract := e.callContract(call)
-		return nilChild(contract, "r"+strconv.Itoa(index))
+	}
+	{
+		call := syntax.CallExpressionOf(expression)
+		if call != nil {
+			{
+				contract := e.builtinResultContract(call, index)
+				if len(contract) != 0 {
+					return contract
+				}
+			}
+			contract := e.callContract(call)
+			return nilChild(contract, "r"+strconv.Itoa(index))
+		}
 	}
 	if syntax.IndexExpressionOf(expression) != nil {
 		if index == 0 {
 			return e.contractForExpression(expression)
 		}
 	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-		if unary.Operator == token.ARROW && index == 0 {
-			return e.contractForExpression(expression)
+	{
+		unary := syntax.UnaryExpressionOf(expression)
+		if unary != nil {
+			type operandType = bool
+			var operand operandType = unary.Operator == token.ARROW
+			if operand {
+				operand = index == 0
+			}
+			if operand {
+				return e.contractForExpression(expression)
+			}
 		}
 	}
 	if syntax.TypeAssertionExpressionOf(expression) != nil {
@@ -185,7 +262,12 @@ func (e *nilEnvironment) builtinResultContract(
 	call *syntax.CallExpression,
 	index int,
 ) nilContract {
-	if index != 0 || call == nil {
+	type operandType = bool
+	var operand operandType = index != 0
+	if !operand {
+		operand = call == nil
+	}
+	if operand {
 		return nil
 	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
@@ -220,18 +302,39 @@ func (e *nilEnvironment) resultNilType(
 	index int,
 	state *nilFlowState,
 ) nilType {
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.resultNilType(parenthesized.Expression, index, state)
-	}
-	if item := syntax.IndexExpressionOf(expression); item != nil {
-		if _, mapping := coreType(e.facts.Type(item.Expression)).(*types.Map); mapping &&
-			index == 0 {
-			return optionalNilType()
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return e.resultNilType(parenthesized.Expression, index, state)
 		}
 	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-		if unary.Operator == token.ARROW && index == 0 {
-			return optionalNilType()
+	{
+		item := syntax.IndexExpressionOf(expression)
+		if item != nil {
+			{
+				type operandType = bool
+				_, mapping := coreType(e.facts.Type(item.Expression)).(*types.Map)
+				var operand operandType = mapping
+				if operand {
+					operand = index == 0
+				}
+				if operand {
+					return optionalNilType()
+				}
+			}
+		}
+	}
+	{
+		unary := syntax.UnaryExpressionOf(expression)
+		if unary != nil {
+			type operandType_1 = bool
+			var operand_1 operandType_1 = unary.Operator == token.ARROW
+			if operand_1 {
+				operand_1 = index == 0
+			}
+			if operand_1 {
+				return optionalNilType()
+			}
 		}
 	}
 	if syntax.TypeAssertionExpressionOf(expression) != nil {
@@ -250,11 +353,19 @@ func (e *nilEnvironment) resultGoType(
 	index int,
 ) types.Type {
 	typ := e.facts.Type(expression)
-	if tuple, ok := typ.(*types.Tuple); ok {
-		if index >= 0 && index < tuple.Len() {
-			return tuple.At(index).Type()
+	{
+		tuple, ok := typ.(*types.Tuple)
+		if ok {
+			type operandType = bool
+			var operand operandType = index >= 0
+			if operand {
+				operand = index < tuple.Len()
+			}
+			if operand {
+				return tuple.At(index).Type()
+			}
+			return nil
 		}
-		return nil
 	}
 	if index == 0 {
 		return typ
@@ -266,8 +377,11 @@ func (e *nilEnvironment) callContract(call *syntax.CallExpression) nilContract {
 	if call == nil {
 		return nil
 	}
-	if object := e.facts.CalledFunction(call.Callee); object != nil {
-		return e.contractForObject(object)
+	{
+		object := e.facts.CalledFunction(call.Callee)
+		if object != nil {
+			return e.contractForObject(object)
+		}
 	}
 	return e.contractForExpression(call.Callee)
 }
@@ -283,45 +397,89 @@ func (e *nilEnvironment) expressionNilType(
 	if e.isNil(expression) {
 		return nilOnlyType()
 	}
-	if place, ok := e.nilPlace(expression); ok {
-		if value, exists := state.values[place]; exists {
-			return value
+	{
+		place, ok := e.nilPlace(expression)
+		if ok {
+			{
+				value, exists := state.values[place]
+				if exists {
+					return value
+				}
+			}
 		}
 	}
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.expressionNilType(parenthesized.Expression, state)
-	}
-	if propagation := nilPropagationExpressionOf(expression); propagation != nil {
-		return e.resultNilType(propagation.Expression, 0, state)
-	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-		if unary.Operator == token.AND {
-			return nonNilType()
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return e.expressionNilType(parenthesized.Expression, state)
 		}
-		if unary.Operator == token.ARROW {
-			return optionalNilType()
+	}
+	{
+		propagation := nilPropagationExpressionOf(expression)
+		if propagation != nil {
+			return e.resultNilType(propagation.Expression, 0, state)
+		}
+	}
+	{
+		unary := syntax.UnaryExpressionOf(expression)
+		if unary != nil {
+			if unary.Operator == token.AND {
+				return nonNilType()
+			}
+			if unary.Operator == token.ARROW {
+				return optionalNilType()
+			}
 		}
 	}
 	if syntax.TypeAssertionExpressionOf(expression) != nil {
 		return optionalNilType()
 	}
-	if index := syntax.IndexExpressionOf(expression); index != nil {
-		if _, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map); mapping {
-			return optionalNilType()
+	{
+		index := syntax.IndexExpressionOf(expression)
+		if index != nil {
+			{
+				_, mapping := coreType(e.facts.Type(index.Expression)).(*types.Map)
+				if mapping {
+					return optionalNilType()
+				}
+			}
 		}
 	}
-	if call := syntax.CallExpressionOf(expression); call != nil {
-		if name := syntax.IdentifierExpressionOf(call.Callee); name != nil {
-			if builtin, ok := e.facts.Object(name).(*types.Builtin); ok &&
-				(builtin.Name() == "new" || builtin.Name() == "make") {
-				return nonNilType()
+	{
+		call := syntax.CallExpressionOf(expression)
+		if call != nil {
+			type operandType_2 = bool
+			{
+				name := syntax.IdentifierExpressionOf(call.Callee)
+				if name != nil {
+					{
+						type operandType = bool
+						builtin, ok := e.facts.Object(name).(*types.Builtin)
+						var operand operandType = ok
+						if operand {
+							type operandType_1 = bool
+							var operand_1 operandType_1 = builtin.Name() == "new"
+							if !operand_1 {
+								operand_1 = builtin.Name() == "make"
+							}
+							operand = (operand_1)
+						}
+						if operand {
+							return nonNilType()
+						}
+					}
+				}
 			}
-		}
-		if e.facts.IsType(call.Callee) && len(call.Args) == 1 {
-			if e.contractForType(e.facts.Type(expression))[""] {
-				return nonNilType()
+			var operand_2 operandType_2 = e.facts.IsType(call.Callee)
+			if operand_2 {
+				operand_2 = len(call.Args) == 1
 			}
-			return e.expressionNilType(call.Args[0], state)
+			if operand_2 {
+				if e.contractForType(e.facts.Type(expression))[""] {
+					return nonNilType()
+				}
+				return e.expressionNilType(call.Args[0], state)
+			}
 		}
 	}
 	if e.contractForExpression(expression)[""] {
@@ -333,7 +491,12 @@ func (e *nilEnvironment) expressionNilType(
 func nilComprehensionExpressionOf(
 	expression *syntax.Expression,
 ) *syntax.ComprehensionExpression {
-	if expression == nil || expression.Tag() != syntax.ExpressionTagComprehension {
+	type operandType = bool
+	var operand operandType = expression == nil
+	if !operand {
+		operand = expression.Tag() != syntax.ExpressionTagComprehension
+	}
+	if operand {
 		return nil
 	}
 	return expression.ComprehensionPayload().Value
@@ -342,7 +505,12 @@ func nilComprehensionExpressionOf(
 func nilPropagationExpressionOf(
 	expression *syntax.Expression,
 ) *syntax.PropagationExpression {
-	if expression == nil || expression.Tag() != syntax.ExpressionTagPropagation {
+	type operandType = bool
+	var operand operandType = expression == nil
+	if !operand {
+		operand = expression.Tag() != syntax.ExpressionTagPropagation
+	}
+	if operand {
 		return nil
 	}
 	return expression.PropagationPayload().Value
@@ -361,14 +529,23 @@ func (e *nilEnvironment) checkNilExpression(
 		if !ok {
 			return true
 		}
-		if literal := syntax.FunctionLiteralExpressionOf(value); literal != nil {
-			return value == expression
+		{
+			literal := syntax.FunctionLiteralExpressionOf(value)
+			if literal != nil {
+				return value == expression
+			}
 		}
-		if call := syntax.CallExpressionOf(value); call != nil {
-			e.checkNilCall(value, call, state)
+		{
+			call := syntax.CallExpressionOf(value)
+			if call != nil {
+				e.checkNilCall(value, call, state)
+			}
 		}
-		if literal := syntax.CompositeLiteralOf(value); literal != nil {
-			e.checkNilLiteral(value, literal, state)
+		{
+			literal := syntax.CompositeLiteralOf(value)
+			if literal != nil {
+				e.checkNilLiteral(value, literal, state)
+			}
 		}
 		return true
 	})
@@ -409,18 +586,29 @@ func (e *nilEnvironment) checkNilCall(
 		return
 	}
 	contract := e.callContract(call)
-	if selector := syntax.SelectorExpressionOf(call.Callee); selector != nil {
-		e.checkNilFlow(selector.Expression, nilChild(contract, "v"), state)
+	{
+		selector := syntax.SelectorExpressionOf(call.Callee)
+		if selector != nil {
+			e.checkNilFlow(selector.Expression, nilChild(contract, "v"), state)
+		}
 	}
 	signature, _ := coreType(e.facts.Type(call.Callee)).(*types.Signature)
 	if signature == nil {
 		return
 	}
 	for index, argument := range call.Args {
+		type operandType = bool
 		parameter := index
 		expected := nilChild(contract, "p"+strconv.Itoa(parameter))
-		if signature.Variadic() && index >= signature.Params().Len()-1 &&
-			call.Ellipsis == token.NoPos {
+		var operand operandType = signature.Variadic()
+		if operand {
+			operand = index >= signature.Params().Len()-1
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = call.Ellipsis == token.NoPos
+		}
+		if operand_1 {
 			parameter = signature.Params().Len() - 1
 			expected = nilChild(
 				nilChild(contract, "p"+strconv.Itoa(parameter)), "e",
@@ -463,6 +651,7 @@ func (e *nilEnvironment) checkNilBuiltin(
 					e.checkNilFlow(argument, element, state)
 				}
 			}
+
 		}
 	case "copy":
 		if len(call.Args) == 2 {
@@ -472,9 +661,16 @@ func (e *nilEnvironment) checkNilBuiltin(
 		}
 	case "clear":
 		if len(call.Args) == 1 {
-			if _, slice := coreType(e.facts.Type(call.Args[0])).(*types.Slice); slice &&
-				nilChild(e.contractForExpression(call.Args[0]), "e")[""] {
-				e.reportNil(call.Start, "clear creates nil elements in a non-nil slice")
+			{
+				type operandType = bool
+				_, slice := coreType(e.facts.Type(call.Args[0])).(*types.Slice)
+				var operand operandType = slice
+				if operand {
+					operand = nilChild(e.contractForExpression(call.Args[0]), "e")[""]
+				}
+				if operand {
+					e.reportNil(call.Start, "clear creates nil elements in a non-nil slice")
+				}
 			}
 		}
 	}
@@ -501,9 +697,14 @@ func (e *nilEnvironment) nilZeroInvalid(
 			}
 		}
 	case goTypeTagArray:
+		type operandType = bool
 		array := classified.ArrayPayload().Value
-		return array.Len() != 0 &&
-			e.nilZeroInvalid(array.Elem(), nilChild(contract, "e"))
+		var operand operandType = array.Len() != 0
+		if operand {
+			operand = e.nilZeroInvalid(array.Elem(), nilChild(contract, "e"))
+		}
+		return operand
+
 	case goTypeTagNil, goTypeTagBasic, goTypeTagSlice, goTypeTagPointer,
 		goTypeTagTuple, goTypeTagSignature, goTypeTagMap, goTypeTagChannel,
 		goTypeTagInterface, goTypeTagNamed, goTypeTagTypeParameter,
@@ -515,6 +716,7 @@ func (e *nilEnvironment) nilZeroInvalid(
 }
 
 func (e *nilEnvironment) checkNilMake(call *syntax.CallExpression) {
+	type operandType = bool
 	if len(call.Args) < 2 {
 		return
 	}
@@ -523,7 +725,11 @@ func (e *nilEnvironment) checkNilMake(call *syntax.CallExpression) {
 		return
 	}
 	length := e.facts.Constant(call.Args[1])
-	if length == nil || constant.Sign(length) != 0 {
+	var operand operandType = length == nil
+	if !operand {
+		operand = constant.Sign(length) != 0
+	}
+	if operand {
 		e.reportNil(call.Start, "make creates nil elements in a non-nil slice")
 	}
 }
@@ -571,13 +777,21 @@ func (e *nilEnvironment) checkNilStructLiteral(
 ) {
 	set := make([]bool, typ.NumFields())
 	for index, element := range literal.Elements {
+		type operandType = bool
 		fieldIndex := index
 		value := element
-		if keyed := syntax.KeyValueExpressionOf(element); keyed != nil {
-			value = keyed.Value
-			fieldIndex = nilStructFieldIndex(typ, keyed.Key)
+		{
+			keyed := syntax.KeyValueExpressionOf(element)
+			if keyed != nil {
+				value = keyed.Value
+				fieldIndex = nilStructFieldIndex(typ, keyed.Key)
+			}
 		}
-		if fieldIndex < 0 || fieldIndex >= typ.NumFields() {
+		var operand operandType = fieldIndex < 0
+		if !operand {
+			operand = fieldIndex >= typ.NumFields()
+		}
+		if operand {
 			continue
 		}
 		set[fieldIndex] = true
@@ -592,11 +806,16 @@ func (e *nilEnvironment) checkNilStructLiteral(
 		)
 	}
 	for index, initialized := range set {
+		type operandType_1 = bool
 		fieldContract := e.contractForObject(typ.Field(index))
 		if len(fieldContract) == 0 {
 			fieldContract = nilChild(contract, "f"+strconv.Itoa(index))
 		}
-		if initialized || !e.nilZeroInvalid(typ.Field(index).Type(), fieldContract) {
+		var operand_1 operandType_1 = initialized
+		if !operand_1 {
+			operand_1 = !e.nilZeroInvalid(typ.Field(index).Type(), fieldContract)
+		}
+		if operand_1 {
 			continue
 		}
 		e.reportNil(
@@ -635,17 +854,20 @@ func (e *nilEnvironment) checkNilArrayLiteral(
 	for _, element := range literal.Elements {
 		value := element
 		index := next
-		if keyed := syntax.KeyValueExpressionOf(element); keyed != nil {
-			value = keyed.Value
-			constantValue := e.facts.Constant(keyed.Key)
-			if constantValue == nil {
-				continue
+		{
+			keyed := syntax.KeyValueExpressionOf(element)
+			if keyed != nil {
+				value = keyed.Value
+				constantValue := e.facts.Constant(keyed.Key)
+				if constantValue == nil {
+					continue
+				}
+				parsed, exact := constant.Int64Val(constantValue)
+				if !exact {
+					continue
+				}
+				index = parsed
 			}
-			parsed, exact := constant.Int64Val(constantValue)
-			if !exact {
-				continue
-			}
-			index = parsed
 		}
 		set[index] = true
 		next = index + 1
@@ -662,8 +884,11 @@ func (e *nilEnvironment) checkNilSequenceLiteral(
 	state *nilFlowState,
 ) {
 	for _, element := range literal.Elements {
-		if keyed := syntax.KeyValueExpressionOf(element); keyed != nil {
-			element = keyed.Value
+		{
+			keyed := syntax.KeyValueExpressionOf(element)
+			if keyed != nil {
+				element = keyed.Value
+			}
 		}
 		e.checkNilFlow(element, elementContract, state)
 	}

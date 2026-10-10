@@ -25,8 +25,11 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 		return nil, false
 	}
 	seen[typ] = true
-	if model := c.modelFor(typ); model != nil {
-		return model, true
+	{
+		model := c.modelFor(typ)
+		if model != nil {
+			return model, true
+		}
 	}
 	classified := goTypeOf(typ)
 	switch classified.Tag() {
@@ -35,8 +38,11 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 	case goTypeTagStruct:
 		structure := classified.StructPayload().Value
 		for index := 0; index < structure.NumFields(); index++ {
-			if model, invalid := c.zero(structure.Field(index).Type(), seen); invalid {
-				return model, true
+			{
+				model, invalid := c.zero(structure.Field(index).Type(), seen)
+				if invalid {
+					return model, true
+				}
 			}
 		}
 	case goTypeTagArray:
@@ -46,16 +52,22 @@ func (c *checker) zero(typ types.Type, seen map[types.Type]bool) (*model, bool) 
 		}
 	case goTypeTagTypeParameter:
 		parameter := classified.TypeParameterPayload().Value
-		if model := c.zeroTypes[parameter]; model != nil {
-			return model, true
+		{
+			model := c.zeroTypes[parameter]
+			if model != nil {
+				return model, true
+			}
 		}
 		terms, supported := simpleTerms(parameter.Constraint())
 		if !supported {
 			return nil, false
 		}
 		for _, term := range terms {
-			if model, invalid := c.zero(term.Type(), make(map[types.Type]bool)); invalid {
-				return model, true
+			{
+				model, invalid := c.zero(term.Type(), make(map[types.Type]bool))
+				if invalid {
+					return model, true
+				}
 			}
 		}
 	case goTypeTagNil, goTypeTagBasic, goTypeTagSlice, goTypeTagPointer,
@@ -77,10 +89,13 @@ func (c *checker) checkValueSpec(specification *syntax.ValueSpecification) {
 		if !ok {
 			continue
 		}
-		if model, invalid := c.zeroInvalid(object.Type()); invalid {
-			c.pass.Reportf(name.Start,
-				"zero declaration contains invalid tgo %s %s; construct it first",
-				modelKind(model), modelName(model))
+		{
+			model, invalid := c.zeroInvalid(object.Type())
+			if invalid {
+				c.pass.Reportf(name.Start,
+					"zero declaration contains invalid tgo %s %s; construct it first",
+					modelKind(model), modelName(model))
+			}
 		}
 	}
 }
@@ -96,10 +111,13 @@ func (c *checker) checkNamedResults(function *syntax.FunctionType) {
 			if !ok {
 				continue
 			}
-			if model, invalid := c.zeroInvalid(object.Type()); invalid {
-				c.pass.Reportf(name.Start,
-					"named result contains invalid tgo %s %s zero; use an unnamed result",
-					modelKind(model), modelName(model))
+			{
+				model, invalid := c.zeroInvalid(object.Type())
+				if invalid {
+					c.pass.Reportf(name.Start,
+						"named result contains invalid tgo %s %s zero; use an unnamed result",
+						modelKind(model), modelName(model))
+				}
 			}
 		}
 	}
@@ -111,10 +129,13 @@ func (c *checker) checkLiteral(
 	literal *syntax.CompositeLiteral,
 ) {
 	typ := c.facts.Type(expression)
-	if model := c.modelFor(typ); model != nil {
-		c.pass.Reportf(literal.Start, "cannot construct tgo %s %s with a Go literal",
-			modelKind(model), modelName(model))
-		return
+	{
+		model := c.modelFor(typ)
+		if model != nil {
+			c.pass.Reportf(literal.Start, "cannot construct tgo %s %s with a Go literal",
+				modelKind(model), modelName(model))
+			return
+		}
 	}
 	underlying := goTypeOf(coreType(typ))
 	switch underlying.Tag() {
@@ -122,12 +143,18 @@ func (c *checker) checkLiteral(
 		c.checkStructLiteral(literal, underlying.StructPayload().Value)
 	case goTypeTagArray:
 		array := underlying.ArrayPayload().Value
-		if model, invalid := c.zeroInvalid(array.Elem()); invalid {
-			c.checkLiteralElements(literal, array.Len(), model)
+		{
+			model, invalid := c.zeroInvalid(array.Elem())
+			if invalid {
+				c.checkLiteralElements(literal, array.Len(), model)
+			}
 		}
 	case goTypeTagSlice:
-		if model, invalid := c.zeroInvalid(underlying.SlicePayload().Value.Elem()); invalid {
-			c.checkLiteralElements(literal, -1, model)
+		{
+			model, invalid := c.zeroInvalid(underlying.SlicePayload().Value.Elem())
+			if invalid {
+				c.checkLiteralElements(literal, -1, model)
+			}
 		}
 	case goTypeTagNil, goTypeTagBasic, goTypeTagPointer, goTypeTagTuple,
 		goTypeTagSignature, goTypeTagMap, goTypeTagChannel, goTypeTagInterface,
@@ -141,7 +168,12 @@ func (c *checker) checkStructLiteral(
 	literal *syntax.CompositeLiteral,
 	structure *types.Struct,
 ) {
-	if len(literal.Elements) == 0 && structure.NumFields() == 0 {
+	type operandType = bool
+	var operand operandType = len(literal.Elements) == 0
+	if operand {
+		operand = structure.NumFields() == 0
+	}
+	if operand {
 		return
 	}
 	supplied := make(map[string]bool)
@@ -152,17 +184,25 @@ func (c *checker) checkStructLiteral(
 			continue
 		}
 		keyed = true
-		if name := syntax.IdentifierExpressionOf(pair.Key); name != nil {
-			supplied[name.Name] = true
+		{
+			name := syntax.IdentifierExpressionOf(pair.Key)
+			if name != nil {
+				supplied[name.Name] = true
+			}
 		}
 	}
 	if !keyed {
 		return
 	}
 	for index := 0; index < structure.NumFields(); index++ {
+		type operandType_1 = bool
 		field := structure.Field(index)
 		model, invalid := c.zeroInvalid(field.Type())
-		if invalid && !supplied[field.Name()] {
+		var operand_1 operandType_1 = invalid
+		if operand_1 {
+			operand_1 = !supplied[field.Name()]
+		}
+		if operand_1 {
 			c.pass.Reportf(literal.Start,
 				"field %s defaults to invalid tgo %s %s; supply it",
 				field.Name(), modelKind(model), modelName(model))
@@ -179,16 +219,24 @@ func (c *checker) checkLiteralElements(
 	next := int64(0)
 	largest := int64(-1)
 	for _, element := range literal.Elements {
-		if pair := syntax.KeyValueExpressionOf(element); pair != nil {
-			value := c.facts.Constant(pair.Key)
-			if value == nil || value.Kind() != constant.Int {
-				return
+		{
+			pair := syntax.KeyValueExpressionOf(element)
+			if pair != nil {
+				type operandType = bool
+				value := c.facts.Constant(pair.Key)
+				var operand operandType = value == nil
+				if !operand {
+					operand = value.Kind() != constant.Int
+				}
+				if operand {
+					return
+				}
+				index, exact := constant.Int64Val(value)
+				if !exact {
+					return
+				}
+				next = index
 			}
-			index, exact := constant.Int64Val(value)
-			if !exact {
-				return
-			}
-			next = index
 		}
 		supplied[next] = true
 		if next > largest {
@@ -211,22 +259,28 @@ func (c *checker) checkCall(
 	expression *syntax.Expression,
 	call *syntax.CallExpression,
 ) {
-	if model := c.checkedSourceCall(expression); model != nil {
-		if !c.checked[expression] {
-			c.reportModelResult(syntax.ExpressionPosition(expression), model,
-				"tgo %s %s result error must be checked or returned",
-				modelKind(model), modelName(model))
+	{
+		model := c.checkedSourceCall(expression)
+		if model != nil {
+			if !c.checked[expression] {
+				c.reportModelResult(syntax.ExpressionPosition(expression), model,
+					"tgo %s %s result error must be checked or returned",
+					modelKind(model), modelName(model))
+			}
+			return
 		}
-		return
 	}
 	if c.facts.IsType(call.Callee) {
-		if model := c.modelFor(c.facts.Type(expression)); model != nil {
-			if c.identityConversion(expression, call) {
-				return
+		{
+			model := c.modelFor(c.facts.Type(expression))
+			if model != nil {
+				if c.identityConversion(expression, call) {
+					return
+				}
+				c.pass.Reportf(syntax.ExpressionPosition(expression),
+					"conversion bypasses the tgo %s %s constructor",
+					modelKind(model), modelName(model))
 			}
-			c.pass.Reportf(syntax.ExpressionPosition(expression),
-				"conversion bypasses the tgo %s %s constructor",
-				modelKind(model), modelName(model))
 		}
 		return
 	}
@@ -234,8 +288,11 @@ func (c *checker) checkCall(
 	if name == nil {
 		return
 	}
-	if _, ok := c.facts.Object(name).(*types.Builtin); !ok {
-		return
+	{
+		_, ok := c.facts.Object(name).(*types.Builtin)
+		if !ok {
+			return
+		}
 	}
 	switch name.Name {
 	case "new":
@@ -248,8 +305,13 @@ func (c *checker) checkCall(
 }
 
 func (c *checker) checkedSourceCall(expression *syntax.Expression) *model {
+	type operandType = bool
 	tuple, ok := c.facts.Type(expression).(*types.Tuple)
-	if !ok || tuple.Len() != 2 {
+	var operand operandType = !ok
+	if !operand {
+		operand = tuple.Len() != 2
+	}
+	if operand {
 		return nil
 	}
 	model, invalid := c.zeroInvalid(tuple.At(0).Type())
@@ -266,6 +328,7 @@ func (c *checker) identityConversion(
 	expression *syntax.Expression,
 	call *syntax.CallExpression,
 ) bool {
+	type operandType = bool
 	if len(call.Args) != 1 {
 		return false
 	}
@@ -279,11 +342,20 @@ func (c *checker) identityConversion(
 		return false
 	}
 	terms, supported := simpleTerms(parameter.Constraint())
-	if !supported || len(terms) == 0 {
+	var operand operandType = !supported
+	if !operand {
+		operand = len(terms) == 0
+	}
+	if operand {
 		return false
 	}
 	for _, term := range terms {
-		if term.Tilde() || !types.Identical(types.Unalias(term.Type()), types.Unalias(target)) {
+		type operandType_1 = bool
+		var operand_1 operandType_1 = term.Tilde()
+		if !operand_1 {
+			operand_1 = !types.Identical(types.Unalias(term.Type()), types.Unalias(target))
+		}
+		if operand_1 {
 			return false
 		}
 	}
@@ -294,10 +366,13 @@ func (c *checker) checkTypeSpec(specification *syntax.TypeSpecification) {
 	if specification.Assign != token.NoPos {
 		return
 	}
-	if model := c.modelFor(c.facts.Type(specification.Type)); model != nil {
-		c.pass.Reportf(syntax.ExpressionPosition(specification.Type),
-			"cannot define a new Go type from tgo %s %s; use an alias",
-			modelKind(model), modelName(model))
+	{
+		model := c.modelFor(c.facts.Type(specification.Type))
+		if model != nil {
+			c.pass.Reportf(syntax.ExpressionPosition(specification.Type),
+				"cannot define a new Go type from tgo %s %s; use an alias",
+				modelKind(model), modelName(model))
+		}
 	}
 }
 
@@ -308,9 +383,12 @@ func (c *checker) checkNew(
 	if len(call.Args) != 1 {
 		return
 	}
-	if model, invalid := c.zeroInvalid(c.facts.Type(call.Args[0])); invalid {
-		c.pass.Reportf(syntax.ExpressionPosition(expression), "new creates invalid tgo %s %s",
-			modelKind(model), modelName(model))
+	{
+		model, invalid := c.zeroInvalid(c.facts.Type(call.Args[0]))
+		if invalid {
+			c.pass.Reportf(syntax.ExpressionPosition(expression), "new creates invalid tgo %s %s",
+				modelKind(model), modelName(model))
+		}
 	}
 }
 
@@ -318,6 +396,7 @@ func (c *checker) checkMake(
 	expression *syntax.Expression,
 	call *syntax.CallExpression,
 ) {
+	type operandType = bool
 	if len(call.Args) < 2 {
 		return
 	}
@@ -327,7 +406,11 @@ func (c *checker) checkMake(
 		return
 	}
 	model, invalid := c.zeroInvalid(slice.Elem())
-	if !invalid || constantZero(c.facts.Constant(call.Args[1])) {
+	var operand operandType = !invalid
+	if !operand {
+		operand = constantZero(c.facts.Constant(call.Args[1]))
+	}
+	if operand {
 		return
 	}
 	c.pass.Reportf(syntax.ExpressionPosition(expression),
@@ -336,7 +419,12 @@ func (c *checker) checkMake(
 }
 
 func constantZero(value constant.Value) bool {
-	if value == nil || value.Kind() != constant.Int {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Kind() != constant.Int
+	}
+	if operand {
 		return false
 	}
 	return constant.Sign(value) == 0
@@ -354,9 +442,12 @@ func (c *checker) checkClear(
 	if !ok {
 		return
 	}
-	if model, invalid := c.zeroInvalid(slice.Elem()); invalid {
-		c.pass.Reportf(syntax.ExpressionPosition(expression), "clear creates invalid tgo %s %s values",
-			modelKind(model), modelName(model))
+	{
+		model, invalid := c.zeroInvalid(slice.Elem())
+		if invalid {
+			c.pass.Reportf(syntax.ExpressionPosition(expression), "clear creates invalid tgo %s %s values",
+				modelKind(model), modelName(model))
+		}
 	}
 }
 
@@ -365,16 +456,25 @@ func (c *checker) checkMapRead(
 	expression *syntax.Expression,
 	index *syntax.IndexExpression,
 ) {
+	type operandType = bool
 	typ := c.facts.Type(index.Expression)
 	mapping, ok := coreType(typ).(*types.Map)
 	if !ok {
 		return
 	}
 	model, invalid := c.zeroInvalid(mapping.Elem())
-	if !invalid || c.assignmentTarget(expression) {
+	var operand operandType = !invalid
+	if !operand {
+		operand = c.assignmentTarget(expression)
+	}
+	if operand {
 		return
 	}
-	if c.commaOK(expression) && c.presence[expression] {
+	var operand_1 operandType = c.commaOK(expression)
+	if operand_1 {
+		operand_1 = c.presence[expression]
+	}
+	if operand_1 {
 		return
 	}
 	c.pass.Reportf(syntax.ExpressionPosition(expression),
@@ -403,14 +503,38 @@ func (c *checker) assignmentTarget(expression *syntax.Expression) bool {
 func (c *checker) commaOK(expression *syntax.Expression) bool {
 	node := syntax.ExpressionNode(expression)
 	parent := c.parents[node]
-	if statement, ok := syntax.StatementOf(parent); ok {
-		assignment := syntax.AssignmentStatementOf(statement)
-		return assignment != nil && len(assignment.Left) == 2 &&
-			len(assignment.Right) == 1
+	{
+		statement, ok := syntax.StatementOf(parent)
+		if ok {
+			type operandType = bool
+			assignment := syntax.AssignmentStatementOf(statement)
+			var operand operandType = assignment != nil
+			if operand {
+				operand = len(assignment.Left) == 2
+			}
+			var operand_1 operandType = operand
+			if operand_1 {
+				operand_1 = len(assignment.Right) == 1
+			}
+			return operand_1
+
+		}
 	}
-	if specification, ok := syntax.SpecificationOf(parent); ok {
-		values := syntax.ValueSpecificationOf(specification)
-		return values != nil && len(values.Names) == 2 && len(values.Values) == 1
+	{
+		specification, ok := syntax.SpecificationOf(parent)
+		if ok {
+			type operandType_1 = bool
+			values := syntax.ValueSpecificationOf(specification)
+			var operand_2 operandType_1 = values != nil
+			if operand_2 {
+				operand_2 = len(values.Names) == 2
+			}
+			var operand_3 operandType_1 = operand_2
+			if operand_3 {
+				operand_3 = len(values.Values) == 1
+			}
+			return operand_3
+		}
 	}
 	return false
 }
@@ -420,11 +544,16 @@ func (c *checker) checkPresenceRead(
 	expression *syntax.Expression,
 	_ *syntax.UnaryExpression,
 ) {
+	type operandType = bool
 	model, invalid := c.zeroInvalid(firstType(c.facts.Type(expression)))
 	if !invalid {
 		return
 	}
-	if c.commaOK(expression) && c.presence[expression] {
+	var operand operandType = c.commaOK(expression)
+	if operand {
+		operand = c.presence[expression]
+	}
+	if operand {
 		return
 	}
 	c.pass.Reportf(syntax.ExpressionPosition(expression),
@@ -449,30 +578,61 @@ func (c *checker) checkTypeAssertion(
 }
 
 func (c *checker) assertionValidator(expression *syntax.Expression) bool {
+	type operandType_2 = bool
+	type operandType_1 = bool
 	current := expression
 	for {
+		type operandType = bool
 		node := syntax.ExpressionNode(current)
 		parent, ok := syntax.ExpressionOf(c.parents[node])
-		if !ok || parent == nil || syntax.ParenthesizedExpressionOf(parent) == nil {
+		var operand operandType = !ok
+		if !operand {
+			operand = parent == nil
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = syntax.ParenthesizedExpressionOf(parent) == nil
+		}
+		if operand_1 {
 			break
 		}
 		current = parent
 	}
 	node := syntax.ExpressionNode(current)
 	parent, ok := syntax.ExpressionOf(c.parents[node])
-	if !ok || parent == nil {
+	var operand_2 operandType_1 = !ok
+	if !operand_2 {
+		operand_2 = parent == nil
+	}
+	if operand_2 {
 		return false
 	}
 	call := syntax.CallExpressionOf(parent)
-	if call == nil || len(call.Args) != 1 || call.Args[0] != current {
+	var operand_3 operandType_2 = call == nil
+	if !operand_3 {
+		operand_3 = len(call.Args) != 1
+	}
+	var operand_4 operandType_2 = operand_3
+	if !operand_4 {
+		operand_4 = call.Args[0] != current
+	}
+	if operand_4 {
 		return false
 	}
 	return c.sourceCallHasValidationFact(call)
 }
 
 func firstType(typ types.Type) types.Type {
-	if tuple, ok := typ.(*types.Tuple); ok && tuple.Len() > 0 {
-		return tuple.At(0).Type()
+	{
+		type operandType = bool
+		tuple, ok := typ.(*types.Tuple)
+		var operand operandType = ok
+		if operand {
+			operand = tuple.Len() > 0
+		}
+		if operand {
+			return tuple.At(0).Type()
+		}
 	}
 	return typ
 }
@@ -482,6 +642,7 @@ func (c *checker) checkReslice(
 	expression *syntax.Expression,
 	slicing *syntax.SliceExpression,
 ) {
+	type operandType = bool
 	high := slicing.High
 	if high == nil {
 		return
@@ -492,8 +653,15 @@ func (c *checker) checkReslice(
 		return
 	}
 	model, invalid := c.zeroInvalid(slice.Elem())
-	if !invalid || c.currentLength(high, slicing.Expression) ||
-		constantZero(c.facts.Constant(high)) {
+	var operand operandType = !invalid
+	if !operand {
+		operand = c.currentLength(high, slicing.Expression)
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = constantZero(c.facts.Constant(high))
+	}
+	if operand_1 {
 		return
 	}
 	c.pass.Reportf(syntax.ExpressionPosition(expression),
@@ -502,20 +670,36 @@ func (c *checker) checkReslice(
 }
 
 func (c *checker) currentLength(expression, slice *syntax.Expression) bool {
+	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
-	if call == nil || len(call.Args) != 1 {
+	var operand operandType = call == nil
+	if !operand {
+		operand = len(call.Args) != 1
+	}
+	if operand {
 		return false
 	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
-	if name == nil || name.Name != "len" {
+	var operand_1 operandType = name == nil
+	if !operand_1 {
+		operand_1 = name.Name != "len"
+	}
+	if operand_1 {
 		return false
 	}
-	if _, ok := c.facts.Object(name).(*types.Builtin); !ok {
-		return false
+	{
+		_, ok := c.facts.Object(name).(*types.Builtin)
+		if !ok {
+			return false
+		}
 	}
 	left := syntax.IdentifierExpressionOf(call.Args[0])
 	right := syntax.IdentifierExpressionOf(slice)
-	if left == nil || right == nil {
+	var operand_2 operandType = left == nil
+	if !operand_2 {
+		operand_2 = right == nil
+	}
+	if operand_2 {
 		return false
 	}
 	return c.facts.Object(left) == c.facts.Object(right)

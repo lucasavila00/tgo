@@ -8,14 +8,23 @@ import "encoding/json/jsontext"
 import "fmt"
 
 func tgomodelExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -156,8 +165,11 @@ func (v *model) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one model JSON variant")
@@ -169,29 +181,41 @@ func (v *model) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Checked":
 		var payload modelChecked
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewmodelChecked(payload.Package, payload.Name)
 		return nil
 	case "Enum":
 		var payload modelEnum
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewmodelEnum(payload.Package, payload.Name, payload.Variants)
 		return nil
 	case "Mixed":
 		var payload modelMixed
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewmodelMixed()
 		return nil
 	case "Parameter":
 		var payload modelParameter
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewmodelParameter()
 		return nil
@@ -201,6 +225,7 @@ func (v *model) UnmarshalJSON(data []byte) error {
 }
 
 func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -214,6 +239,7 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -230,8 +256,16 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Parameter":
 			current = 4
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -243,20 +277,38 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one model JSON variant")
 	}
 	if selected == 0 {
@@ -265,29 +317,41 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload modelChecked
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewmodelChecked(payload.Package, payload.Name)
 		return nil
 	case 2:
 		var payload modelEnum
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewmodelEnum(payload.Package, payload.Name, payload.Variants)
 		return nil
 	case 3:
 		var payload modelMixed
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewmodelMixed()
 		return nil
 	case 4:
 		var payload modelParameter
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewmodelParameter()
 		return nil
@@ -463,16 +527,39 @@ func modelIsMixed(value *model) bool {
 }
 
 func sameModel(left *model, right *model) bool {
-	if left == nil || right == nil {
+	type operandType = bool
+	var operand operandType = left == nil
+	if !operand {
+		operand = right == nil
+	}
+	if operand {
 		return left == right
 	}
 	if modelIsChecked(left) {
-		return modelIsChecked(right) && modelPackage(left) == modelPackage(right) &&
-			modelName(left) == modelName(right)
+		type operandType_1 = bool
+		var operand_1 operandType_1 = modelIsChecked(right)
+		if operand_1 {
+			operand_1 = modelPackage(left) == modelPackage(right)
+		}
+		var operand_2 operandType_1 = operand_1
+		if operand_2 {
+			operand_2 = modelName(left) == modelName(right)
+		}
+		return operand_2
+
 	}
 	if modelIsEnum(left) {
-		return modelIsEnum(right) && modelPackage(left) == modelPackage(right) &&
-			modelName(left) == modelName(right)
+		type operandType_2 = bool
+		var operand_3 operandType_2 = modelIsEnum(right)
+		if operand_3 {
+			operand_3 = modelPackage(left) == modelPackage(right)
+		}
+		var operand_4 operandType_2 = operand_3
+		if operand_4 {
+			operand_4 = modelName(left) == modelName(right)
+		}
+		return operand_4
+
 	}
 	if modelIsMixed(left) {
 		return modelIsMixed(right)
@@ -527,7 +614,16 @@ func encodeModelFact(value *model) *modelWireFact {
 
 // decodeModelFact validates a wire fact before it enters the checker.
 func decodeModelFact(fact *modelWireFact, expectedPackage string) *model {
-	if fact == nil || fact.Package != expectedPackage || fact.Name == "" {
+	type operandType = bool
+	var operand operandType = fact == nil
+	if !operand {
+		operand = fact.Package != expectedPackage
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = fact.Name == ""
+	}
+	if operand_1 {
 		return nil
 	}
 	switch fact.Kind {

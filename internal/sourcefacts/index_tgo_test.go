@@ -77,12 +77,16 @@ func TestProjectionFindsShiftedDefinition(t *testing.T) {
 	specification := syntax.TypeSpecificationOf(declaration.Specs[0])
 	structure := syntax.StructTypeExpressionOf(specification.Type)
 	name := structure.Fields.List[0].Names[0]
-	if got := index.DefinitionName(name); got != object {
-		t.Fatalf("shifted field definition = %v, want %v", got, object)
+	{
+		got := index.DefinitionName(name)
+		if got != object {
+			t.Fatalf("shifted field definition = %v, want %v", got, object)
+		}
 	}
 }
 
 func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
+	type operandType = bool
 	t.Parallel()
 	projected := []byte("package sample\nvar      value = 1; var copy = value\n")
 	source := []byte("package sample\nvar value = 1; var copy = value\n")
@@ -100,13 +104,21 @@ func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
 		uses: []objectFact{{position: usePosition, name: "", object: object}},
 	}, files)
 	definition, use := sourceIdentifiers(t, parsed)
-	if definition == nil || use == nil {
+	var operand operandType = definition == nil
+	if !operand {
+		operand = use == nil
+	}
+	if operand {
 		t.Fatal("identifier node is absent")
 		return
 	}
 	definitionObject, definitionFact := index.IdentifierFact(parsed, definition)
 	useObject, useFact := index.IdentifierFact(parsed, use)
-	if definitionObject != object || useObject != object {
+	var operand_1 operandType = definitionObject != object
+	if !operand_1 {
+		operand_1 = useObject != object
+	}
+	if operand_1 {
 		t.Fatalf("objects = %v, %v, want %v", definitionObject, useObject, object)
 	}
 	if !definitionFact {
@@ -118,6 +130,7 @@ func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
 }
 
 func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
+	type operandType = bool
 	t.Parallel()
 	source := []byte("package sample\n" +
 		"//line sample.tgo:10:5\nvar alpha int\n" +
@@ -136,7 +149,11 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 	gammaPosition.Offset = 0
 	usePosition := files.Position(use.Start)
 	usePosition.Offset = 0
-	if gammaPosition != position || usePosition != position {
+	var operand operandType = gammaPosition != position
+	if !operand {
+		operand = usePosition != position
+	}
+	if operand {
 		t.Fatal("test identifiers do not share an adjusted position")
 	}
 	alphaObject := types.NewVar(alpha.Start, nil, alpha.Name, types.Typ[types.Int])
@@ -155,6 +172,7 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 		},
 	}
 	for order, definitions := range orders {
+		type operandType_2 = bool
 		index := NewProjection(parsed, &projectionStub{
 			definitions: definitions,
 			uses: []objectFact{{
@@ -168,13 +186,20 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 			{name: alpha, object: alphaObject},
 			{name: gamma, object: gammaObject},
 		} {
-			if got := index.DefinitionName(item.name); got != item.object {
-				t.Fatalf("order %d: definition %s = %v, want %v",
-					order, item.name.Name, got, item.object)
+			type operandType_1 = bool
+			{
+				got := index.DefinitionName(item.name)
+				if got != item.object {
+					t.Fatalf("order %d: definition %s = %v, want %v",
+						order, item.name.Name, got, item.object)
+				}
 			}
-			if got := index.Object(item.name); got != item.object {
-				t.Fatalf("order %d: object %s = %v, want %v",
-					order, item.name.Name, got, item.object)
+			{
+				got := index.Object(item.name)
+				if got != item.object {
+					t.Fatalf("order %d: object %s = %v, want %v",
+						order, item.name.Name, got, item.object)
+				}
 			}
 			node := identifierNode(parsed, item.name)
 			if node == nil {
@@ -182,13 +207,20 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 				return
 			}
 			got, definition := index.IdentifierFact(parsed, node)
-			if got != item.object || !definition {
+			var operand_1 operandType_1 = got != item.object
+			if !operand_1 {
+				operand_1 = !definition
+			}
+			if operand_1 {
 				t.Fatalf("order %d: identifier %s = %v, %t, want %v, true",
 					order, item.name.Name, got, definition, item.object)
 			}
 		}
-		if got := index.Object(use); got != betaObject {
-			t.Fatalf("order %d: use object = %v, want %v", order, got, betaObject)
+		{
+			got := index.Object(use)
+			if got != betaObject {
+				t.Fatalf("order %d: use object = %v, want %v", order, got, betaObject)
+			}
 		}
 		useNode := identifierNode(parsed, use)
 		if useNode == nil {
@@ -196,7 +228,11 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 			return
 		}
 		got, definition := index.IdentifierFact(parsed, useNode)
-		if got != betaObject || definition {
+		var operand_2 operandType_2 = got != betaObject
+		if !operand_2 {
+			operand_2 = definition
+		}
+		if operand_2 {
 			t.Fatalf("order %d: use = %v, %t, want %v, false",
 				order, got, definition, betaObject)
 		}
@@ -204,6 +240,7 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 }
 
 func TestProjectionKeepsLoweredReceiverUse(t *testing.T) {
+	type operandType = bool
 	t.Parallel()
 	files := token.NewFileSet()
 	data := []byte("package sample\n" +
@@ -247,15 +284,24 @@ func TestProjectionKeepsLoweredReceiverUse(t *testing.T) {
 		object types.Object,
 		synthetic bool,
 	) {
+		type operandType = bool
 		adjusted := files.Position(position)
 		adjusted.Offset = 0
-		if !synthetic && adjusted == wantPosition {
+		var operand operandType = !synthetic
+		if operand {
+			operand = adjusted == wantPosition
+		}
+		if operand {
 			uses[name] = objectFact{position: position, name: name, object: object}
 		}
 	})
 	sourceUse, sourceOK := uses["load"]
 	generatedUse, generatedOK := uses["enumValue"]
-	if !sourceOK || !generatedOK {
+	var operand operandType = !sourceOK
+	if !operand {
+		operand = !generatedOK
+	}
+	if operand {
 		t.Fatalf("receiver uses = %v, want load and enumValue", uses)
 	}
 	node := requiredIdentifierNode(t, parsed, receiver)
@@ -264,13 +310,21 @@ func TestProjectionKeepsLoweredReceiverUse(t *testing.T) {
 		{generatedUse, sourceUse},
 	}
 	for order, facts := range orders {
+		type operandType_1 = bool
 		index := NewProjection(parsed, &projectionStub{definitions: nil, uses: facts}, files)
-		if got := index.Object(receiver); got != sourceUse.object {
-			t.Fatalf("order %d: receiver object = %v, want %v",
-				order, got, sourceUse.object)
+		{
+			got := index.Object(receiver)
+			if got != sourceUse.object {
+				t.Fatalf("order %d: receiver object = %v, want %v",
+					order, got, sourceUse.object)
+			}
 		}
 		got, definition := index.IdentifierFact(parsed, node)
-		if got != sourceUse.object || definition {
+		var operand_1 operandType_1 = got != sourceUse.object
+		if !operand_1 {
+			operand_1 = definition
+		}
+		if operand_1 {
 			t.Fatalf("order %d: receiver fact = %v, %t, want %v, false",
 				order, got, definition, sourceUse.object)
 		}
@@ -301,9 +355,17 @@ func sourceIdentifier(
 	t.Helper()
 	var result *syntax.Identifier = nil
 	syntax.Inspect(file, func(node *syntax.Node) bool {
+		type operandType = bool
 		identifier, ok := syntax.IdentifierOf(node)
-		if ok && identifier.Name == name &&
-			files.Position(identifier.Start).Line == line {
+		var operand operandType = ok
+		if operand {
+			operand = identifier.Name == name
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = files.Position(identifier.Start).Line == line
+		}
+		if operand_1 {
 			result = identifier
 		}
 		return result == nil
@@ -349,6 +411,7 @@ func sourceIdentifiers(
 	t *testing.T,
 	file *syntax.File,
 ) (*syntax.Node, *syntax.Node) {
+	type operandType = bool
 	t.Helper()
 	first := syntax.GeneralDeclarationOf(file.Declarations[0])
 	firstValue := syntax.ValueSpecificationOf(first.Specs[0])
@@ -357,7 +420,11 @@ func sourceIdentifiers(
 	secondValue := syntax.ValueSpecificationOf(second.Specs[0])
 	useName := syntax.IdentifierExpressionOf(secondValue.Values[0])
 	use := identifierNode(file, useName)
-	if definition == nil || use == nil {
+	var operand operandType = definition == nil
+	if !operand {
+		operand = use == nil
+	}
+	if operand {
 		t.Fatal("identifier node is absent")
 	}
 	return definition, use
@@ -366,8 +433,17 @@ func sourceIdentifiers(
 func identifierNode(file *syntax.File, identifier *syntax.Identifier) *syntax.Node {
 	var result *syntax.Node = nil
 	syntax.Inspect(file, func(node *syntax.Node) bool {
+		type operandType = bool
 		value, ok := syntax.IdentifierOf(node)
-		if ok && value.Start == identifier.Start && value.Stop == identifier.Stop {
+		var operand operandType = ok
+		if operand {
+			operand = value.Start == identifier.Start
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = value.Stop == identifier.Stop
+		}
+		if operand_1 {
 			result = node
 			return false
 		}

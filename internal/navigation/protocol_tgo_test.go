@@ -31,8 +31,11 @@ func TestSymbolKindProtocolContract(t *testing.T) {
 		Variant string `json:"variant"`
 		Wire    string `json:"wire"`
 	}{}
-	if err := json.Unmarshal(contractData, &contract); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal(contractData, &contract)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	values := []SymbolKind{NewSymbolKindPackage(), NewSymbolKindType(), NewSymbolKindStruct(), NewSymbolKindInterface(), NewSymbolKindFunction(), NewSymbolKindMethod(), NewSymbolKindField(), NewSymbolKindEnum(), NewSymbolKindEnumMember(), NewSymbolKindConstant(), NewSymbolKindVariable()}
 	got := make([]string, 0, len(values))
@@ -58,8 +61,13 @@ func TestSymbolKindProtocolContract(t *testing.T) {
 	}
 	variants := make([]string, 0)
 	for _, declaration := range file.Declarations {
+		type operandType = bool
 		value, _ := syntax.EnumDeclarationOf(declaration)
-		if value == nil || value.Name.Name != "SymbolKind" {
+		var operand operandType = value == nil
+		if !operand {
+			operand = value.Name.Name != "SymbolKind"
+		}
+		if operand {
 			continue
 		}
 		for _, variant := range value.Variants {
@@ -123,8 +131,11 @@ func TestRequestJSONVariants(t *testing.T) {
 			request := func(input TgoRequestHoverInput) Request {
 				return NewRequestHover(input.FieldID, input.FieldParams)
 			}(TgoRequestHoverInput{FieldID: 0, FieldParams: new(positionParams)})
-			if err := json.Unmarshal([]byte(test.wire), &request); err != nil {
-				t.Fatal(err)
+			{
+				err := json.Unmarshal([]byte(test.wire), &request)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			if request.Tag() != test.tag {
 				t.Fatalf("request tag = %v, want %v", request.Tag(), test.tag)
@@ -174,11 +185,16 @@ func TestRequestJSONRejectsInvalidInput(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			type operandType = bool
 			request := func(input TgoRequestHoverInput) Request {
 				return NewRequestHover(input.FieldID, input.FieldParams)
 			}(TgoRequestHoverInput{FieldID: 0, FieldParams: new(positionParams)})
 			err := json.Unmarshal([]byte(test.wire), &request)
-			if err == nil || !strings.Contains(err.Error(), test.errorText) {
+			var operand operandType = err == nil
+			if !operand {
+				operand = !strings.Contains(err.Error(), test.errorText)
+			}
+			if operand {
 				t.Fatalf("error = %v, want text %q", err, test.errorText)
 			}
 		})
@@ -202,8 +218,11 @@ func TestServeReportsProtocolErrors(t *testing.T) {
 			`{"id":9,"method":"cancel","params":{"id":"one"}}` + "\n",
 	)
 	output := *new(bytes.Buffer)
-	if err := Serve(context.Background(), engine, input, &output); err != nil {
-		t.Fatal(err)
+	{
+		err := Serve(context.Background(), engine, input, &output)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	decoder := json.NewDecoder(&output)
 	tests := []struct {
@@ -221,11 +240,19 @@ func TestServeReportsProtocolErrors(t *testing.T) {
 		{9, "cannot unmarshal"},
 	}
 	for _, test := range tests {
+		type operandType = bool
 		response := *new(protocolWireResponse)
-		if err := decoder.Decode(&response); err != nil {
-			t.Fatal(err)
+		{
+			err := decoder.Decode(&response)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
-		if response.ID != test.id || !strings.Contains(response.Error, test.errorText) {
+		var operand operandType = response.ID != test.id
+		if !operand {
+			operand = !strings.Contains(response.Error, test.errorText)
+		}
+		if operand {
 			t.Fatalf("response = %#v, want ID %d and error %q", response, test.id, test.errorText)
 		}
 	}
@@ -246,8 +273,11 @@ func TestResponseJSONLines(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			output := *new(bytes.Buffer)
-			if err := json.NewEncoder(&output).Encode(test.response); err != nil {
-				t.Fatal(err)
+			{
+				err := json.NewEncoder(&output).Encode(test.response)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			assertJSONLine(t, output.String(), test.want)
 		})
@@ -276,8 +306,11 @@ func TestServeDoesNotReplyToInvalidCancelNotification(t *testing.T) {
 			`{"method":"cancel"}` + "\n",
 	)
 	output := *new(bytes.Buffer)
-	if err := Serve(context.Background(), engine, input, &output); err != nil {
-		t.Fatal(err)
+	{
+		err := Serve(context.Background(), engine, input, &output)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if output.Len() != 0 {
 		t.Fatalf("cancel notification output = %s, want empty output", &output)
@@ -291,16 +324,24 @@ func serveProtocolLine(t *testing.T, request string) string {
 		t.Fatal(err)
 	}
 	output := *new(bytes.Buffer)
-	if err := Serve(context.Background(), engine,
-		strings.NewReader(request+"\n"), &output); err != nil {
-		t.Fatal(err)
+	{
+		err := Serve(context.Background(), engine,
+			strings.NewReader(request+"\n"), &output)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	return output.String()
 }
 
 func assertJSONLine(t *testing.T, got, want string) {
+	type operandType = bool
 	t.Helper()
-	if !strings.HasSuffix(got, "\n") || strings.Count(got, "\n") != 1 {
+	var operand operandType = !strings.HasSuffix(got, "\n")
+	if !operand {
+		operand = strings.Count(got, "\n") != 1
+	}
+	if operand {
 		t.Fatalf("response output = %q, want one JSON line", got)
 	}
 	if !sameJSON(t, []byte(strings.TrimSuffix(got, "\n")), []byte(want)) {
@@ -311,12 +352,18 @@ func assertJSONLine(t *testing.T, got, want string) {
 func sameJSON(t *testing.T, left, right []byte) bool {
 	t.Helper()
 	leftValue := any(nil)
-	if err := json.Unmarshal(left, &leftValue); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal(left, &leftValue)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	rightValue := any(nil)
-	if err := json.Unmarshal(right, &rightValue); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal(right, &rightValue)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	return reflect.DeepEqual(leftValue, rightValue)
 }

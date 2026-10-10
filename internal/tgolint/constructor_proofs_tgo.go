@@ -13,6 +13,7 @@ import (
 
 // checkedIf applies branch proofs and joins all paths that continue.
 func (c *checker) checkedIf(statement *syntax.IfStatement, state checkedState) bool {
+	type operandType = bool
 	if statement.Init != nil {
 		c.checkedStatement(statement.Init, state)
 	}
@@ -27,7 +28,11 @@ func (c *checker) checkedIf(statement *syntax.IfStatement, state checkedState) b
 		proveResult(falseState, failure)
 	}
 	trueStops := c.checkedBlock(statement.Body.List, trueState)
-	if !trueStops && c.file != nil {
+	var operand operandType = !trueStops
+	if operand {
+		operand = c.file != nil
+	}
+	if operand {
 		trueStops = c.statementsTerminate(c.file, statement.Body.List)
 	}
 	falseStops := false
@@ -42,12 +47,33 @@ func (c *checker) checkedIf(statement *syntax.IfStatement, state checkedState) b
 			}
 		}
 	}
-	switch {
-	case trueStops && falseStops:
+	selected := -1
+	if selected == -1 {
+		type operandType_1 = bool
+		var operand_1 operandType_1 = trueStops
+		if operand_1 {
+			operand_1 = falseStops
+		}
+		if operand_1 {
+			selected = 0
+		}
+	}
+	if selected == -1 {
+		if trueStops {
+			selected = 1
+		}
+	}
+	if selected == -1 {
+		if falseStops {
+			selected = 2
+		}
+	}
+	switch selected {
+	case 0:
 		return true
-	case trueStops:
+	case 1:
 		replaceCheckedState(state, falseState)
-	case falseStops:
+	case 2:
 		replaceCheckedState(state, trueState)
 	default:
 		mergeCheckedStates(state, trueState, falseState)
@@ -64,29 +90,43 @@ func (c *checker) resultProofs(
 	expression *syntax.Expression,
 	state checkedState,
 ) (proofSet, proofSet) {
-	if parentheses := syntax.ParenthesizedExpressionOf(expression); parentheses != nil {
-		return c.resultProofs(parentheses.Expression, state)
+	{
+		parentheses := syntax.ParenthesizedExpressionOf(expression)
+		if parentheses != nil {
+			return c.resultProofs(parentheses.Expression, state)
+		}
 	}
-	if negation := syntax.UnaryExpressionOf(expression); negation != nil && negation.Operator == token.NOT {
-		trueProofs, falseProofs := c.resultProofs(negation.Expression, state)
-		return falseProofs, trueProofs
+	{
+		type operandType = bool
+		negation := syntax.UnaryExpressionOf(expression)
+		var operand operandType = negation != nil
+		if operand {
+			operand = negation.Operator == token.NOT
+		}
+		if operand {
+			trueProofs, falseProofs := c.resultProofs(negation.Expression, state)
+			return falseProofs, trueProofs
+		}
 	}
-	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
-		switch binary.Operator {
-		case token.LAND:
-			leftTrue, leftFalse := c.resultProofs(binary.Left, state)
-			rightTrue, rightFalse := c.resultProofs(binary.Right, state)
-			return unionProofs(leftTrue, rightTrue), intersectProofs(
-				leftFalse,
-				unionProofs(leftTrue, rightFalse),
-			)
-		case token.LOR:
-			leftTrue, leftFalse := c.resultProofs(binary.Left, state)
-			rightTrue, rightFalse := c.resultProofs(binary.Right, state)
-			return intersectProofs(
-				leftTrue,
-				unionProofs(leftFalse, rightTrue),
-			), unionProofs(leftFalse, rightFalse)
+	{
+		binary := syntax.BinaryExpressionOf(expression)
+		if binary != nil {
+			switch binary.Operator {
+			case token.LAND:
+				leftTrue, leftFalse := c.resultProofs(binary.Left, state)
+				rightTrue, rightFalse := c.resultProofs(binary.Right, state)
+				return unionProofs(leftTrue, rightTrue), intersectProofs(
+					leftFalse,
+					unionProofs(leftTrue, rightFalse),
+				)
+			case token.LOR:
+				leftTrue, leftFalse := c.resultProofs(binary.Left, state)
+				rightTrue, rightFalse := c.resultProofs(binary.Right, state)
+				return intersectProofs(
+					leftTrue,
+					unionProofs(leftFalse, rightTrue),
+				), unionProofs(leftFalse, rightFalse)
+			}
 		}
 	}
 	failure, successOnTrue := c.atomicResultProof(expression, state)
@@ -103,19 +143,35 @@ func (c *checker) atomicResultProof(
 	expression *syntax.Expression,
 	state checkedState,
 ) (types.Object, bool) {
-	if name := syntax.IdentifierExpressionOf(expression); name != nil {
-		object := c.facts.Object(name)
-		if c.hasValidPresenceProof(state, object) {
-			return object, true
+	type operandType = bool
+	{
+		name := syntax.IdentifierExpressionOf(expression)
+		if name != nil {
+			object := c.facts.Object(name)
+			if c.hasValidPresenceProof(state, object) {
+				return object, true
+			}
+			return nil, false
 		}
-		return nil, false
 	}
 	binary := syntax.BinaryExpressionOf(expression)
-	if binary == nil || binary.Operator != token.EQL && binary.Operator != token.NEQ {
+	var operand operandType = binary == nil
+	if !operand {
+		type operandType_1 = bool
+		var operand_1 operandType_1 = binary.Operator != token.EQL
+		if operand_1 {
+			operand_1 = binary.Operator != token.NEQ
+		}
+		operand = operand_1
+	}
+	if operand {
 		return nil, false
 	}
-	if failure, success := c.binaryErrorProof(binary, state); failure != nil {
-		return failure, success
+	{
+		failure, success := c.binaryErrorProof(binary, state)
+		if failure != nil {
+			return failure, success
+		}
 	}
 	return c.binaryPresenceProof(binary, state)
 }
@@ -124,11 +180,16 @@ func (c *checker) binaryErrorProof(
 	binary *syntax.BinaryExpression,
 	state checkedState,
 ) (types.Object, bool) {
+	type operandType = bool
 	name, nilName := errorAndNil(binary.Left, binary.Right)
 	if name == nil {
 		name, nilName = errorAndNil(binary.Right, binary.Left)
 	}
-	if name == nil || nilName == nil {
+	var operand operandType = name == nil
+	if !operand {
+		operand = nilName == nil
+	}
+	if operand {
 		return nil, false
 	}
 	if c.facts.Object(nilName) != types.Universe.Lookup("nil") {
@@ -136,7 +197,16 @@ func (c *checker) binaryErrorProof(
 	}
 	object := c.facts.Object(name)
 	for _, result := range state {
-		if !result.presence && result.failure == object && result.validProof {
+		type operandType_1 = bool
+		var operand_1 operandType_1 = !result.presence
+		if operand_1 {
+			operand_1 = result.failure == object
+		}
+		var operand_2 operandType_1 = operand_1
+		if operand_2 {
+			operand_2 = result.validProof
+		}
+		if operand_2 {
 			return object, binary.Operator == token.EQL
 		}
 	}
@@ -147,11 +217,20 @@ func (c *checker) binaryPresenceProof(
 	binary *syntax.BinaryExpression,
 	state checkedState,
 ) (types.Object, bool) {
+	type operandType = bool
 	name, value, ok := booleanComparison(c.facts, binary.Left, binary.Right)
-	if !ok || name == nil {
+	var operand operandType = !ok
+	if !operand {
+		operand = name == nil
+	}
+	if operand {
 		name, value, ok = booleanComparison(c.facts, binary.Right, binary.Left)
 	}
-	if !ok || name == nil {
+	var operand_1 operandType = !ok
+	if !operand_1 {
+		operand_1 = name == nil
+	}
+	if operand_1 {
 		return nil, false
 	}
 	object := c.facts.Object(name)
@@ -170,19 +249,29 @@ func booleanComparison(
 	nameExpression *syntax.Expression,
 	valueExpression *syntax.Expression,
 ) (*syntax.Identifier, bool, bool) {
+	type operandType = bool
 	name := syntax.IdentifierExpressionOf(nameExpression)
 	if name == nil {
 		return nil, false, false
 	}
 	value := facts.Constant(valueExpression)
-	if value == nil || value.Kind() != constant.Bool {
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Kind() != constant.Bool
+	}
+	if operand {
 		return nil, false, false
 	}
 	return name, constant.BoolVal(value), true
 }
 
 func unionProofs(left, right proofSet) proofSet {
-	if len(left) == 0 && len(right) == 0 {
+	type operandType = bool
+	var operand operandType = len(left) == 0
+	if operand {
+		operand = len(right) == 0
+	}
+	if operand {
 		return nil
 	}
 	result := make(proofSet, len(left)+len(right))
@@ -210,7 +299,16 @@ func intersectProofs(left, right proofSet) proofSet {
 
 func (c *checker) hasValidPresenceProof(state checkedState, object types.Object) bool {
 	for _, result := range state {
-		if result.presence && result.failure == object && result.validProof {
+		type operandType = bool
+		var operand operandType = result.presence
+		if operand {
+			operand = result.failure == object
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = result.validProof
+		}
+		if operand_1 {
 			return true
 		}
 	}
@@ -218,12 +316,17 @@ func (c *checker) hasValidPresenceProof(state checkedState, object types.Object)
 }
 
 func errorAndNil(errorExpression, nilExpression *syntax.Expression) (*syntax.Identifier, *syntax.Identifier) {
+	type operandType = bool
 	name := syntax.IdentifierExpressionOf(errorExpression)
 	if name == nil {
 		return nil, nil
 	}
 	nilName := syntax.IdentifierExpressionOf(nilExpression)
-	if nilName == nil || nilName.Name != "nil" {
+	var operand operandType = nilName == nil
+	if !operand {
+		operand = nilName.Name != "nil"
+	}
+	if operand {
 		return nil, nil
 	}
 	return name, nilName
@@ -231,7 +334,12 @@ func errorAndNil(errorExpression, nilExpression *syntax.Expression) (*syntax.Ide
 
 func proveResult(state checkedState, failure types.Object) {
 	for object, result := range state {
-		if result.failure == failure && result.validProof {
+		type operandType = bool
+		var operand operandType = result.failure == failure
+		if operand {
+			operand = result.validProof
+		}
+		if operand {
 			result.safe = true
 			state[object] = result
 		}
@@ -251,15 +359,24 @@ func (c *checker) checkResultUses(
 		c.invalidateEscapedProofs(expression, state)
 		validatorInput := c.validatorInput(expression, state)
 		syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+			type operandType = bool
 			name, ok := syntax.IdentifierOf(node)
-			if !ok || skip[name] {
+			var operand operandType = !ok
+			if !operand {
+				operand = skip[name]
+			}
+			if operand {
 				return true
 			}
 			result, found := state[c.facts.Object(name)]
 			if validatorInput[name] {
 				return true
 			}
-			if found && !result.safe {
+			var operand_1 operandType = found
+			if operand_1 {
+				operand_1 = !result.safe
+			}
+			if operand_1 {
 				if result.presence {
 					c.reportModelSource(name.Start, result.model, result.source,
 						"tgo %s %s presence value is used before ok is proved true",
@@ -269,6 +386,7 @@ func (c *checker) checkResultUses(
 						"tgo %s %s value is used before its error is proved nil",
 						modelKind(result.model), modelName(result.model))
 				}
+
 			}
 			return true
 		})
@@ -276,12 +394,22 @@ func (c *checker) checkResultUses(
 }
 
 func (c *checker) validatorInput(expression *syntax.Expression, state checkedState) map[*syntax.Identifier]bool {
+	type operandType_1 = bool
+	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
-	if call == nil || len(call.Args) != 1 {
+	var operand operandType = call == nil
+	if !operand {
+		operand = len(call.Args) != 1
+	}
+	if operand {
 		return nil
 	}
 	model := c.checkedCall(expression)
-	if model == nil || !c.validatedCall(expression) {
+	var operand_1 operandType_1 = model == nil
+	if !operand_1 {
+		operand_1 = !c.validatedCall(expression)
+	}
+	if operand_1 {
 		return nil
 	}
 	name := c.boundaryArgumentName(call.Args[0])
@@ -289,18 +417,34 @@ func (c *checker) validatorInput(expression *syntax.Expression, state checkedSta
 		return nil
 	}
 	result, found := state[c.facts.Object(name)]
-	if !found || !result.safe {
+	var operand_2 operandType_1 = !found
+	if !operand_2 {
+		operand_2 = !result.safe
+	}
+	if operand_2 {
 		return nil
 	}
 	return map[*syntax.Identifier]bool{name: true}
 }
 
 func (c *checker) boundaryArgumentName(expression *syntax.Expression) *syntax.Identifier {
-	if name := identifier(expression); name != nil {
-		return name
+	type operandType = bool
+	{
+		name := identifier(expression)
+		if name != nil {
+			return name
+		}
 	}
 	call := syntax.CallExpressionOf(expression)
-	if call == nil || len(call.Args) != 1 || !c.facts.IsType(call.Callee) {
+	var operand operandType = call == nil
+	if !operand {
+		operand = len(call.Args) != 1
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = !c.facts.IsType(call.Callee)
+	}
+	if operand_1 {
 		return nil
 	}
 	if !c.identityConversion(expression, call) {
@@ -313,8 +457,17 @@ func (c *checker) validatorArgumentSkip(
 	call *syntax.Expression,
 	state checkedState,
 ) map[*syntax.Identifier]bool {
+	type operandType = bool
 	value := syntax.CallExpressionOf(call)
-	if value == nil || len(value.Args) != 1 || !c.validatedCall(call) {
+	var operand operandType = value == nil
+	if !operand {
+		operand = len(value.Args) != 1
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = !c.validatedCall(call)
+	}
+	if operand_1 {
 		return nil
 	}
 	name := identifier(value.Args[0])
@@ -322,7 +475,11 @@ func (c *checker) validatorArgumentSkip(
 		return nil
 	}
 	result, found := state[c.facts.Object(name)]
-	if !found || !result.safe {
+	var operand_2 operandType = !found
+	if !operand_2 {
+		operand_2 = !result.safe
+	}
+	if operand_2 {
 		return nil
 	}
 	return map[*syntax.Identifier]bool{name: true}
@@ -333,18 +490,26 @@ func (c *checker) validatorArgumentSkip(
 // invalidateEscapedProofs drops facts after an address or closure escape.
 func (c *checker) invalidateEscapedProofs(expression *syntax.Expression, state checkedState) {
 	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
-		if nested, ok := syntax.FunctionLiteralOf(node); ok {
-			for _, result := range state {
-				if capturesObject(c.facts, nested.Body, result.failure) {
-					c.invalidateProof(result.failure, state)
+		{
+			nested, ok := syntax.FunctionLiteralOf(node)
+			if ok {
+				for _, result := range state {
+					if capturesObject(c.facts, nested.Body, result.failure) {
+						c.invalidateProof(result.failure, state)
+					}
 				}
+				return false
 			}
-			return false
 		}
 		value, ok := syntax.ExpressionOf(node)
 		if ok {
+			type operandType = bool
 			unary := syntax.UnaryExpressionOf(value)
-			if unary != nil && unary.Operator == token.AND {
+			var operand operandType = unary != nil
+			if operand {
+				operand = unary.Operator == token.AND
+			}
+			if operand {
 				name := identifier(unary.Expression)
 				if name != nil {
 					c.invalidateProof(c.facts.Object(name), state)
@@ -356,11 +521,17 @@ func (c *checker) invalidateEscapedProofs(expression *syntax.Expression, state c
 }
 
 func identifier(expression *syntax.Expression) *syntax.Identifier {
-	if name := syntax.IdentifierExpressionOf(expression); name != nil {
-		return name
+	{
+		name := syntax.IdentifierExpressionOf(expression)
+		if name != nil {
+			return name
+		}
 	}
-	if value := syntax.ParenthesizedExpressionOf(expression); value != nil {
-		return identifier(value.Expression)
+	{
+		value := syntax.ParenthesizedExpressionOf(expression)
+		if value != nil {
+			return identifier(value.Expression)
+		}
 	}
 	return nil
 }
@@ -370,7 +541,12 @@ func (c *checker) invalidateProof(object types.Object, state checkedState) {
 		return
 	}
 	for value, result := range state {
-		if result.failure == object && !result.safe {
+		type operandType = bool
+		var operand operandType = result.failure == object
+		if operand {
+			operand = !result.safe
+		}
+		if operand {
 			result.validProof = false
 			state[value] = result
 		}
@@ -379,8 +555,13 @@ func (c *checker) invalidateProof(object types.Object, state checkedState) {
 
 func (c *checker) invalidateAssignments(expressions []*syntax.Expression, state checkedState) {
 	for _, expression := range expressions {
+		type operandType = bool
 		name := syntax.IdentifierExpressionOf(expression)
-		if name == nil || name.Name == "_" {
+		var operand operandType = name == nil
+		if !operand {
+			operand = name.Name == "_"
+		}
+		if operand {
 			continue
 		}
 		object := c.facts.Object(name)
@@ -477,6 +658,7 @@ func replaceCheckedState(target, source checkedState) {
 func mergeCheckedStates(target, left, right checkedState) {
 	clear(target)
 	for object, leftResult := range left {
+		type operandType_1 = bool
 		rightResult, ok := right[object]
 		if !ok {
 			if !leftResult.safe {
@@ -486,21 +668,42 @@ func mergeCheckedStates(target, left, right checkedState) {
 			continue
 		}
 		if leftResult.failure != rightResult.failure {
-			if !leftResult.safe || !rightResult.safe {
+			type operandType = bool
+			var operand operandType = !leftResult.safe
+			if !operand {
+				operand = !rightResult.safe
+			}
+			if operand {
 				leftResult.safe = false
 				leftResult.validProof = false
 				target[object] = leftResult
 			}
 			continue
 		}
-		leftResult.safe = leftResult.safe && rightResult.safe
-		leftResult.validProof = leftResult.validProof && rightResult.validProof
+		var operand_1 operandType_1 = leftResult.safe
+		if operand_1 {
+			operand_1 = rightResult.safe
+		}
+		leftResult.safe = operand_1
+		var operand_2 operandType_1 = leftResult.validProof
+		if operand_2 {
+			operand_2 = rightResult.validProof
+		}
+		leftResult.validProof = operand_2
 		target[object] = leftResult
 	}
 	for object, rightResult := range right {
-		if _, ok := left[object]; !ok && !rightResult.safe {
-			rightResult.validProof = false
-			target[object] = rightResult
+		{
+			type operandType_2 = bool
+			_, ok := left[object]
+			var operand_3 operandType_2 = !ok
+			if operand_3 {
+				operand_3 = !rightResult.safe
+			}
+			if operand_3 {
+				rightResult.validProof = false
+				target[object] = rightResult
+			}
 		}
 	}
 }
@@ -539,8 +742,13 @@ func equalCheckedStates(left, right checkedState) bool {
 // checkedCall finds a call that returns a zero-invalid tgo value and an error.
 // It includes constructors, decoders, wrappers, and function values.
 func (c *checker) checkedCall(call *syntax.Expression) *model {
+	type operandType = bool
 	tuple, ok := c.facts.Type(call).(*types.Tuple)
-	if !ok || tuple.Len() != 2 {
+	var operand operandType = !ok
+	if !operand {
+		operand = tuple.Len() != 2
+	}
+	if operand {
 		return nil
 	}
 	model, invalid := c.zeroInvalid(tuple.At(0).Type())
@@ -554,17 +762,30 @@ func (c *checker) checkedCall(call *syntax.Expression) *model {
 }
 
 func (c *checker) boundarySingleCall(call *syntax.Expression) *model {
+	type operandType = bool
 	typ := c.facts.Type(call)
 	if typ == nil {
 		return nil
 	}
 	_, tuple := typ.(*types.Tuple)
 	value := syntax.CallExpressionOf(call)
-	if value == nil || tuple || c.facts.IsType(value.Callee) {
+	var operand operandType = value == nil
+	if !operand {
+		operand = tuple
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = c.facts.IsType(value.Callee)
+	}
+	if operand_1 {
 		return nil
 	}
 	model, invalid := c.zeroInvalid(typ)
-	if !invalid || c.callHasValidationFact(call) {
+	var operand_2 operandType = !invalid
+	if !operand_2 {
+		operand_2 = c.callHasValidationFact(call)
+	}
+	if operand_2 {
 		return nil
 	}
 	return model
@@ -584,8 +805,11 @@ func (c *checker) validatedCall(call *syntax.Expression) bool {
 	if object == nil {
 		return false
 	}
-	if target := c.callTarget[object]; target != nil {
-		object = target
+	{
+		target := c.callTarget[object]
+		if target != nil {
+			object = target
+		}
 	}
 	if c.validated[object] {
 		return true
@@ -599,20 +823,35 @@ func (c *checker) validatedCall(call *syntax.Expression) bool {
 }
 
 func calledObject(facts *sourcefacts.Index, expression *syntax.Expression) types.Object {
-	if name := syntax.IdentifierExpressionOf(expression); name != nil {
-		return facts.Object(name)
+	{
+		name := syntax.IdentifierExpressionOf(expression)
+		if name != nil {
+			return facts.Object(name)
+		}
 	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		return facts.Object(selector.Selector)
+	{
+		selector := syntax.SelectorExpressionOf(expression)
+		if selector != nil {
+			return facts.Object(selector.Selector)
+		}
 	}
-	if index := syntax.IndexExpressionOf(expression); index != nil {
-		return calledObject(facts, index.Expression)
+	{
+		index := syntax.IndexExpressionOf(expression)
+		if index != nil {
+			return calledObject(facts, index.Expression)
+		}
 	}
-	if index := syntax.IndexListExpressionOf(expression); index != nil {
-		return calledObject(facts, index.Expression)
+	{
+		index := syntax.IndexListExpressionOf(expression)
+		if index != nil {
+			return calledObject(facts, index.Expression)
+		}
 	}
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return calledObject(facts, parenthesized.Expression)
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return calledObject(facts, parenthesized.Expression)
+		}
 	}
 	return nil
 }

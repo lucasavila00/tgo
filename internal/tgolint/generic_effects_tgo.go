@@ -34,14 +34,23 @@ type zeroParameter struct {
 
 // EffectKind identifies the condition that controls a generic effect.
 func tgoEffectKindExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -69,7 +78,12 @@ func (v EffectKind) Tag() EffectKindTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v EffectKind) GobEncode() ([]byte, error) {
-	if v.tgoTag < EffectKindTagBoolean || v.tgoTag > EffectKindTagResliceExtends {
+	type operandType = bool
+	var operand operandType = v.tgoTag < EffectKindTagBoolean
+	if !operand {
+		operand = v.tgoTag > EffectKindTagResliceExtends
+	}
+	if operand {
 		return nil, fmt.Errorf("EffectKind: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
@@ -78,12 +92,21 @@ func (v EffectKind) GobEncode() ([]byte, error) {
 
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *EffectKind) GobDecode(data []byte) error {
+	type operandType = bool
 	if len(data) != 4 {
 		return fmt.Errorf("EffectKind: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := EffectKindTag(number)
-	if uint32(tag) != number || tag < EffectKindTagBoolean || tag > EffectKindTagResliceExtends {
+	var operand operandType = uint32(tag) != number
+	if !operand {
+		operand = tag < EffectKindTagBoolean
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = tag > EffectKindTagResliceExtends
+	}
+	if operand_1 {
 		return fmt.Errorf("EffectKind: cannot gob decode unknown tag %d", number)
 	}
 	switch tag {
@@ -263,8 +286,11 @@ func (v *EffectKind) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one EffectKind JSON variant")
@@ -276,50 +302,71 @@ func (v *EffectKind) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Boolean":
 		var payload EffectKindBoolean
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindBoolean()
 		return nil
 	case "Nonzero":
 		var payload EffectKindNonzero
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindNonzero()
 		return nil
 	case "Nonempty":
 		var payload EffectKindNonempty
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindNonempty()
 		return nil
 	case "MapMiss":
 		var payload EffectKindMapMiss
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindMapMiss()
 		return nil
 	case "ChannelClosed":
 		var payload EffectKindChannelClosed
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindChannelClosed()
 		return nil
 	case "AssertionFails":
 		var payload EffectKindAssertionFails
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindAssertionFails()
 		return nil
 	case "ResliceExtends":
 		var payload EffectKindResliceExtends
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindResliceExtends()
 		return nil
@@ -329,6 +376,7 @@ func (v *EffectKind) UnmarshalJSON(data []byte) error {
 }
 
 func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -342,6 +390,7 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -364,8 +413,16 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "ResliceExtends":
 			current = 7
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -377,20 +434,38 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one EffectKind JSON variant")
 	}
 	if selected == 0 {
@@ -399,50 +474,71 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload EffectKindBoolean
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindBoolean()
 		return nil
 	case 2:
 		var payload EffectKindNonzero
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindNonzero()
 		return nil
 	case 3:
 		var payload EffectKindNonempty
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindNonempty()
 		return nil
 	case 4:
 		var payload EffectKindMapMiss
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindMapMiss()
 		return nil
 	case 5:
 		var payload EffectKindChannelClosed
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindChannelClosed()
 		return nil
 	case 6:
 		var payload EffectKindAssertionFails
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindAssertionFails()
 		return nil
 	case 7:
 		var payload EffectKindResliceExtends
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewEffectKindResliceExtends()
 		return nil
@@ -525,6 +621,7 @@ func (c *checker) checkGenericZeroSafety() {
 			continue
 		}
 		inspectGenericFile(file, func(node *syntax.Node) bool {
+			type operandType = bool
 			expression, ok := syntax.ExpressionOf(node)
 			if !ok {
 				return true
@@ -532,13 +629,22 @@ func (c *checker) checkGenericZeroSafety() {
 			if syntax.IdentifierExpressionOf(expression) != nil {
 				c.reportBoundGenericValueUse(expression, bindings)
 			}
-			if call := syntax.CallExpressionOf(expression); call != nil {
-				c.reportGenericZeroCall(expression, summaries)
-				c.reportReturnedGenericCall(expression, summaries, sources)
+			{
+				call := syntax.CallExpressionOf(expression)
+				if call != nil {
+					c.reportGenericZeroCall(expression, summaries)
+					c.reportReturnedGenericCall(expression, summaries, sources)
+				}
 			}
-			if syntax.IndexExpressionOf(expression) != nil ||
-				syntax.IndexListExpressionOf(expression) != nil ||
-				syntax.SelectorExpressionOf(expression) != nil {
+			var operand operandType = syntax.IndexExpressionOf(expression) != nil
+			if !operand {
+				operand = syntax.IndexListExpressionOf(expression) != nil
+			}
+			var operand_1 operandType = operand
+			if !operand_1 {
+				operand_1 = syntax.SelectorExpressionOf(expression) != nil
+			}
+			if operand_1 {
 				c.reportDirectGenericValueEscape(expression, summaries, sources)
 			}
 			return true
@@ -554,8 +660,13 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 			continue
 		}
 		inspectGenericFile(file, func(node *syntax.Node) bool {
+			type operandType = bool
 			function, ok := syntax.FunctionDeclarationOf(node)
-			if !ok || function.Body == nil {
+			var operand operandType = !ok
+			if !operand {
+				operand = function.Body == nil
+			}
+			if operand {
 				return true
 			}
 			object, ok := c.facts.DefinitionName(function.Name).(*types.Func)
@@ -596,11 +707,14 @@ func genericParameters(signature *types.Signature) map[*types.TypeParam]zeroPara
 		}
 	}
 	if signature.Recv() != nil {
-		if named, ok := dereference(signature.Recv().Type()).(*types.Named); ok {
-			for index := 0; index < named.TypeArgs().Len(); index++ {
-				parameter, ok := named.TypeArgs().At(index).(*types.TypeParam)
-				if ok {
-					parameters[parameter] = zeroParameter{receiver: true, index: index}
+		{
+			named, ok := dereference(signature.Recv().Type()).(*types.Named)
+			if ok {
+				for index := 0; index < named.TypeArgs().Len(); index++ {
+					parameter, ok := named.TypeArgs().At(index).(*types.TypeParam)
+					if ok {
+						parameters[parameter] = zeroParameter{receiver: true, index: index}
+					}
 				}
 			}
 		}
@@ -623,41 +737,73 @@ func (c *checker) collectDirectGenericZeros(summary *genericEffectSummary) {
 
 func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
+		{
+			_, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				return false
+			}
 		}
-		if specification, ok := syntax.SpecificationOf(node); ok {
-			if value := syntax.ValueSpecificationOf(specification); value != nil {
-				c.collectValueSpecZeros(summary, node, value)
+		{
+			specification, ok := syntax.SpecificationOf(node)
+			if ok {
+				{
+					value := syntax.ValueSpecificationOf(specification)
+					if value != nil {
+						c.collectValueSpecZeros(summary, node, value)
+					}
+				}
 			}
 		}
 		expression, ok := syntax.ExpressionOf(node)
 		if !ok {
 			return true
 		}
-		if literal := syntax.CompositeLiteralOf(expression); literal != nil {
-			c.collectLiteralZeros(summary, expression, literal)
-		}
-		if call := syntax.CallExpressionOf(expression); call != nil {
-			c.collectCallZeros(summary, expression, call)
-			summary.calls = append(summary.calls, expression)
-		}
-		if index := syntax.IndexExpressionOf(expression); index != nil {
-			c.collectMapReadZero(summary, expression, index)
-		}
-		if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-			if unary.Operator == token.ARROW && !c.commaOK(expression) {
-				c.markConditionalGenericZero(
-					summary, node, firstType(c.facts.Type(expression)),
-					closedChannelEffectCondition(), unary.Expression, nil,
-				)
+		{
+			literal := syntax.CompositeLiteralOf(expression)
+			if literal != nil {
+				c.collectLiteralZeros(summary, expression, literal)
 			}
 		}
-		if slice := syntax.SliceExpressionOf(expression); slice != nil {
-			c.collectResliceZero(summary, expression, slice)
+		{
+			call := syntax.CallExpressionOf(expression)
+			if call != nil {
+				c.collectCallZeros(summary, expression, call)
+				summary.calls = append(summary.calls, expression)
+			}
 		}
-		if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-			c.collectGenericAccess(summary, node, expression, selector)
+		{
+			index := syntax.IndexExpressionOf(expression)
+			if index != nil {
+				c.collectMapReadZero(summary, expression, index)
+			}
+		}
+		{
+			unary := syntax.UnaryExpressionOf(expression)
+			if unary != nil {
+				type operandType = bool
+				var operand operandType = unary.Operator == token.ARROW
+				if operand {
+					operand = !c.commaOK(expression)
+				}
+				if operand {
+					c.markConditionalGenericZero(
+						summary, node, firstType(c.facts.Type(expression)),
+						closedChannelEffectCondition(), unary.Expression, nil,
+					)
+				}
+			}
+		}
+		{
+			slice := syntax.SliceExpressionOf(expression)
+			if slice != nil {
+				c.collectResliceZero(summary, expression, slice)
+			}
+		}
+		{
+			selector := syntax.SelectorExpressionOf(expression)
+			if selector != nil {
+				c.collectGenericAccess(summary, node, expression, selector)
+			}
 		}
 		return true
 	})
@@ -666,11 +812,19 @@ func (c *checker) collectGenericNodes(summary *genericEffectSummary) {
 // collectReturnedGenericEffects records effects in a directly returned closure.
 func (c *checker) collectReturnedGenericEffects(summary *genericEffectSummary) {
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
+		type operandType = bool
+		{
+			_, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				return false
+			}
 		}
 		statement, ok := syntax.StatementOf(node)
-		if !ok || syntax.ReturnStatementOf(statement) == nil {
+		var operand operandType = !ok
+		if !operand {
+			operand = syntax.ReturnStatementOf(statement) == nil
+		}
+		if operand {
 			return true
 		}
 		for _, expression := range syntax.ReturnStatementOf(statement).Results {
@@ -755,24 +909,34 @@ func (c *checker) markGenericPresenceEffect(
 	source *syntax.Expression,
 ) {
 	typ := firstType(c.facts.Type(source))
-	if index := syntax.IndexExpressionOf(source); index != nil {
-		c.markConditionalGenericZero(
-			summary, syntaxNode(source), typ, mapMissEffectCondition(),
-			index.Expression, index.Index,
-		)
-	} else if unary := syntax.UnaryExpressionOf(source); unary != nil {
-		c.markConditionalGenericZero(
-			summary, syntaxNode(source), typ, closedChannelEffectCondition(),
-			unary.Expression, nil,
-		)
-	} else if assertion := syntax.TypeAssertionExpressionOf(source); assertion != nil {
-		c.markConditionalGenericZero(
-			summary, syntaxNode(source), typ, failedAssertionEffectCondition(),
-			assertion.Expression, nil,
-		)
-	} else {
-		c.markGenericZeroWith(summary, syntaxNode(source), typ, nil, true)
+	{
+		index := syntax.IndexExpressionOf(source)
+		if index != nil {
+			c.markConditionalGenericZero(
+				summary, syntaxNode(source), typ, mapMissEffectCondition(),
+				index.Expression, index.Index,
+			)
+		} else {
+			unary := syntax.UnaryExpressionOf(source)
+			if unary != nil {
+				c.markConditionalGenericZero(
+					summary, syntaxNode(source), typ, closedChannelEffectCondition(),
+					unary.Expression, nil,
+				)
+			} else {
+				assertion := syntax.TypeAssertionExpressionOf(source)
+				if assertion != nil {
+					c.markConditionalGenericZero(
+						summary, syntaxNode(source), typ, failedAssertionEffectCondition(),
+						assertion.Expression, nil,
+					)
+				} else {
+					c.markGenericZeroWith(summary, syntaxNode(source), typ, nil, true)
+				}
+			}
+		}
 	}
+
 }
 
 func (c *checker) collectNamedResultZeros(summary *genericEffectSummary) {
@@ -782,8 +946,11 @@ func (c *checker) collectNamedResultZeros(summary *genericEffectSummary) {
 	}
 	for _, field := range results.List {
 		for _, name := range field.Names {
-			if variable, ok := c.facts.DefinitionName(name).(*types.Var); ok {
-				c.markGenericZeroUnconditional(summary, variable.Type())
+			{
+				variable, ok := c.facts.DefinitionName(name).(*types.Var)
+				if ok {
+					c.markGenericZeroUnconditional(summary, variable.Type())
+				}
 			}
 		}
 	}
@@ -807,8 +974,11 @@ func (c *checker) collectValueSpecZeros(
 		return
 	}
 	for _, name := range specification.Names {
-		if variable, ok := c.facts.DefinitionName(name).(*types.Var); ok {
-			c.markGenericZeroAt(summary, node, variable.Type())
+		{
+			variable, ok := c.facts.DefinitionName(name).(*types.Var)
+			if ok {
+				c.markGenericZeroAt(summary, node, variable.Type())
+			}
 		}
 	}
 }
@@ -823,8 +993,11 @@ func (c *checker) collectCallZeros(
 	if name == nil {
 		return
 	}
-	if _, ok := c.facts.Object(name).(*types.Builtin); !ok {
-		return
+	{
+		_, ok := c.facts.Object(name).(*types.Builtin)
+		if !ok {
+			return
+		}
 	}
 	switch name.Name {
 	case "new":
@@ -837,11 +1010,14 @@ func (c *checker) collectCallZeros(
 		if len(call.Args) != 1 {
 			return
 		}
-		if slice, ok := coreType(c.facts.Type(call.Args[0])).(*types.Slice); ok {
-			c.markConditionalGenericZero(
-				summary, syntaxNode(expression), slice.Elem(),
-				nonemptyEffectCondition(), call.Args[0], nil,
-			)
+		{
+			slice, ok := coreType(c.facts.Type(call.Args[0])).(*types.Slice)
+			if ok {
+				c.markConditionalGenericZero(
+					summary, syntaxNode(expression), slice.Elem(),
+					nonemptyEffectCondition(), call.Args[0], nil,
+				)
+			}
 		}
 	}
 }
@@ -909,11 +1085,15 @@ func (c *checker) collectResliceZero(
 	value *syntax.Expression,
 	expression *syntax.SliceExpression,
 ) {
+	type operandType = bool
 	if expression.High == nil {
 		return
 	}
-	if c.currentLength(expression.High, expression.Expression) ||
-		constantZero(c.facts.Constant(expression.High)) {
+	var operand operandType = c.currentLength(expression.High, expression.Expression)
+	if !operand {
+		operand = constantZero(c.facts.Constant(expression.High))
+	}
+	if operand {
 		return
 	}
 	slice, ok := coreType(c.facts.Type(expression.Expression)).(*types.Slice)
@@ -931,14 +1111,24 @@ func (c *checker) collectGenericAccess(
 	expression *syntax.Expression,
 	selector *syntax.SelectorExpression,
 ) {
-	if !strings.HasPrefix(selector.Selector.Name, "Tgo") ||
-		!c.receiverCanHideModel(c.facts.Type(selector.Expression)) {
+	type operandType = bool
+	var operand operandType = !strings.HasPrefix(selector.Selector.Name, "Tgo")
+	if !operand {
+		operand = !c.receiverCanHideModel(c.facts.Type(selector.Expression))
+	}
+	if operand {
 		return
 	}
-	if selection := c.facts.Selection(expression); selection == nil {
-		return
-	} else if _, ok := selection.Obj().(*types.Func); !ok {
-		return
+	{
+		selection := c.facts.Selection(expression)
+		if selection == nil {
+			return
+		} else {
+			_, ok := selection.Obj().(*types.Func)
+			if !ok {
+				return
+			}
+		}
 	}
 	c.markGenericAccessAt(summary, node, c.facts.Type(selector.Expression))
 }

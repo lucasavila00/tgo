@@ -19,59 +19,105 @@ func (e *nilEnvironment) transferNilNode(
 	function *syntax.Node,
 	report bool,
 ) {
-	if state == nil || !state.reachable {
+	type operandType = bool
+	var operand operandType = state == nil
+	if !operand {
+		operand = !state.reachable
+	}
+	if operand {
 		return
 	}
 	if report {
 		e.checkNilNode(state, node, function)
 	}
-	if statement, ok := syntax.StatementOf(&node); ok {
-		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-			e.transferNilAssignment(state, assignment)
-			return
-		}
-		if declarationStatement := syntax.DeclarationStatementOf(statement); declarationStatement != nil {
-			declaration := syntax.GeneralDeclarationOf(declarationStatement.Declaration)
-			if declaration != nil {
-				for _, item := range declaration.Specs {
-					if values := syntax.ValueSpecificationOf(item); values != nil {
-						e.transferNilValues(state, values.Names, values.Values)
-						if values.Type == nil {
-							e.inferNilContracts(values.Names, values.Values)
+	{
+		statement, ok := syntax.StatementOf(&node)
+		if ok {
+			{
+				assignment := syntax.AssignmentStatementOf(statement)
+				if assignment != nil {
+					e.transferNilAssignment(state, assignment)
+					return
+				}
+			}
+			{
+				declarationStatement := syntax.DeclarationStatementOf(statement)
+				if declarationStatement != nil {
+					declaration := syntax.GeneralDeclarationOf(declarationStatement.Declaration)
+					if declaration != nil {
+						for _, item := range declaration.Specs {
+							{
+								values := syntax.ValueSpecificationOf(item)
+								if values != nil {
+									e.transferNilValues(state, values.Names, values.Values)
+									if values.Type == nil {
+										e.inferNilContracts(values.Names, values.Values)
+									}
+								}
+							}
 						}
+					}
+					return
+				}
+			}
+			{
+				item := syntax.ExpressionStatementOf(statement)
+				if item != nil {
+					e.invalidateNilExpression(state, item.Expression)
+				}
+			}
+			{
+				item := syntax.SendStatementOf(statement)
+				if item != nil {
+					e.invalidateNilExpression(state, item.Channel)
+					e.invalidateNilExpression(state, item.Value)
+				}
+			}
+			{
+				item := syntax.GoStatementOf(statement)
+				if item != nil {
+					e.invalidateNilExpression(state, item.Call)
+				}
+			}
+			{
+				item := syntax.DeferStatementOf(statement)
+				if item != nil {
+					e.invalidateNilExpression(state, item.Call)
+				}
+			}
+			{
+				type operandType_1 = bool
+				item := syntax.ReturnStatementOf(statement)
+				var operand_1 operandType_1 = item != nil
+				if operand_1 {
+					operand_1 = function != nil
+				}
+				if operand_1 {
+					e.invalidateNilExpressions(state, item.Results)
+				}
+			}
+		}
+	}
+	{
+		specification, ok := syntax.SpecificationOf(&node)
+		if ok {
+			{
+				values := syntax.ValueSpecificationOf(specification)
+				if values != nil {
+					e.transferNilValues(state, values.Names, values.Values)
+					if values.Type == nil {
+						e.inferNilContracts(values.Names, values.Values)
 					}
 				}
 			}
 			return
 		}
-		if item := syntax.ExpressionStatementOf(statement); item != nil {
-			e.invalidateNilExpression(state, item.Expression)
-		}
-		if item := syntax.SendStatementOf(statement); item != nil {
-			e.invalidateNilExpression(state, item.Channel)
-			e.invalidateNilExpression(state, item.Value)
-		}
-		if item := syntax.GoStatementOf(statement); item != nil {
-			e.invalidateNilExpression(state, item.Call)
-		}
-		if item := syntax.DeferStatementOf(statement); item != nil {
-			e.invalidateNilExpression(state, item.Call)
-		}
-		if item := syntax.ReturnStatementOf(statement); item != nil && function != nil {
-			e.invalidateNilExpressions(state, item.Results)
-		}
 	}
-	if specification, ok := syntax.SpecificationOf(&node); ok {
-		if values := syntax.ValueSpecificationOf(specification); values != nil {
-			e.transferNilValues(state, values.Names, values.Values)
-			if values.Type == nil {
-				e.inferNilContracts(values.Names, values.Values)
-			}
+	{
+		expression, ok := syntax.ExpressionOf(&node)
+		if ok {
+			e.invalidateNilExpression(state, expression)
 		}
-		return
-	}
-	if expression, ok := syntax.ExpressionOf(&node); ok {
-		e.invalidateNilExpression(state, expression)
 	}
 }
 
@@ -81,48 +127,84 @@ func (e *nilEnvironment) checkNilNode(
 	node syntax.Node,
 	function *syntax.Node,
 ) {
-	if statement, ok := syntax.StatementOf(&node); ok {
-		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-			e.checkNilAssignment(state, assignment)
-		}
-		if declarationStatement := syntax.DeclarationStatementOf(statement); declarationStatement != nil {
-			declaration := syntax.GeneralDeclarationOf(declarationStatement.Declaration)
-			if declaration != nil {
-				for _, item := range declaration.Specs {
-					if values := syntax.ValueSpecificationOf(item); values != nil {
-						e.checkNilValues(state, values)
+	{
+		statement, ok := syntax.StatementOf(&node)
+		if ok {
+			{
+				assignment := syntax.AssignmentStatementOf(statement)
+				if assignment != nil {
+					e.checkNilAssignment(state, assignment)
+				}
+			}
+			{
+				declarationStatement := syntax.DeclarationStatementOf(statement)
+				if declarationStatement != nil {
+					declaration := syntax.GeneralDeclarationOf(declarationStatement.Declaration)
+					if declaration != nil {
+						for _, item := range declaration.Specs {
+							{
+								values := syntax.ValueSpecificationOf(item)
+								if values != nil {
+									e.checkNilValues(state, values)
+								}
+							}
+						}
 					}
 				}
 			}
-		}
-		if item := syntax.ReturnStatementOf(statement); item != nil {
-			if function != nil {
-				e.checkNilReturn(state, item, function)
+			{
+				item := syntax.ReturnStatementOf(statement)
+				if item != nil {
+					if function != nil {
+						e.checkNilReturn(state, item, function)
+					}
+				}
+			}
+			{
+				item := syntax.SendStatementOf(statement)
+				if item != nil {
+					channel := e.contractForExpression(item.Channel)
+					e.checkNilFlow(item.Value, nilChild(channel, "e"), state)
+					e.checkNilExpression(item.Channel, state)
+					e.checkNilExpression(item.Value, state)
+				}
+			}
+			{
+				item := syntax.ExpressionStatementOf(statement)
+				if item != nil {
+					e.checkNilExpression(item.Expression, state)
+				}
+			}
+			{
+				item := syntax.GoStatementOf(statement)
+				if item != nil {
+					e.checkNilExpression(item.Call, state)
+				}
+			}
+			{
+				item := syntax.DeferStatementOf(statement)
+				if item != nil {
+					e.checkNilExpression(item.Call, state)
+				}
 			}
 		}
-		if item := syntax.SendStatementOf(statement); item != nil {
-			channel := e.contractForExpression(item.Channel)
-			e.checkNilFlow(item.Value, nilChild(channel, "e"), state)
-			e.checkNilExpression(item.Channel, state)
-			e.checkNilExpression(item.Value, state)
-		}
-		if item := syntax.ExpressionStatementOf(statement); item != nil {
-			e.checkNilExpression(item.Expression, state)
-		}
-		if item := syntax.GoStatementOf(statement); item != nil {
-			e.checkNilExpression(item.Call, state)
-		}
-		if item := syntax.DeferStatementOf(statement); item != nil {
-			e.checkNilExpression(item.Call, state)
+	}
+	{
+		specification, ok := syntax.SpecificationOf(&node)
+		if ok {
+			{
+				values := syntax.ValueSpecificationOf(specification)
+				if values != nil {
+					e.checkNilValues(state, values)
+				}
+			}
 		}
 	}
-	if specification, ok := syntax.SpecificationOf(&node); ok {
-		if values := syntax.ValueSpecificationOf(specification); values != nil {
-			e.checkNilValues(state, values)
+	{
+		expression, ok := syntax.ExpressionOf(&node)
+		if ok {
+			e.checkNilExpression(expression, state)
 		}
-	}
-	if expression, ok := syntax.ExpressionOf(&node); ok {
-		e.checkNilExpression(expression, state)
 	}
 }
 
@@ -139,10 +221,15 @@ func (e *nilEnvironment) checkNilAssignment(
 	}
 	if len(statement.Right) == len(statement.Left) {
 		for index, target := range statement.Left {
+			type operandType = bool
 			if isNilDiscard(target) {
 				continue
 			}
-			if statement.Operator == token.DEFINE && e.newNilTarget(target) {
+			var operand operandType = statement.Operator == token.DEFINE
+			if operand {
+				operand = e.newNilTarget(target)
+			}
+			if operand {
 				continue
 			}
 			e.checkNilFlow(
@@ -155,10 +242,15 @@ func (e *nilEnvironment) checkNilAssignment(
 		return
 	}
 	for index, target := range statement.Left {
+		type operandType_1 = bool
 		if isNilDiscard(target) {
 			continue
 		}
-		if statement.Operator == token.DEFINE && e.newNilTarget(target) {
+		var operand_1 operandType_1 = statement.Operator == token.DEFINE
+		if operand_1 {
+			operand_1 = e.newNilTarget(target)
+		}
+		if operand_1 {
 			continue
 		}
 		e.checkNilFlowResult(
@@ -225,8 +317,13 @@ func (e *nilEnvironment) checkNilReturn(
 		e.checkNilExpression(expression, state)
 	}
 	if len(statement.FailureCommas) > 0 {
+		type operandType = bool
 		signature := e.functionSignature(function)
-		if signature != nil && len(statement.Results) == 1 {
+		var operand operandType = signature != nil
+		if operand {
+			operand = len(statement.Results) == 1
+		}
+		if operand {
 			last := signature.Results().Len() - 1
 			e.checkNilFlow(
 				statement.Results[0],
@@ -246,18 +343,21 @@ func (e *nilEnvironment) checkNilReturn(
 		}
 	}
 	if len(statement.Results) == 1 {
-		if _, tuple := e.facts.Type(statement.Results[0]).(*types.Tuple); tuple {
-			signature := e.functionSignature(function)
-			if signature == nil {
+		{
+			_, tuple := e.facts.Type(statement.Results[0]).(*types.Tuple)
+			if tuple {
+				signature := e.functionSignature(function)
+				if signature == nil {
+					return
+				}
+				for index := range signature.Results().Len() {
+					e.checkNilFlowResult(
+						statement.Results[0], index,
+						nilChild(contract, "r"+strconv.Itoa(index)), state,
+					)
+				}
 				return
 			}
-			for index := range signature.Results().Len() {
-				e.checkNilFlowResult(
-					statement.Results[0], index,
-					nilChild(contract, "r"+strconv.Itoa(index)), state,
-				)
-			}
-			return
 		}
 	}
 	for index, expression := range statement.Results {
@@ -274,10 +374,16 @@ func (e *nilEnvironment) checkNilNamedResults(
 	contract nilContract,
 ) {
 	var resultList *syntax.FieldList = nil
-	if declaration, ok := syntax.FunctionDeclarationOf(function); ok {
-		resultList = declaration.Type.Results
-	} else if literal, ok := syntax.FunctionLiteralOf(function); ok {
-		resultList = literal.Type.Results
+	{
+		declaration, ok := syntax.FunctionDeclarationOf(function)
+		if ok {
+			resultList = declaration.Type.Results
+		} else {
+			literal, ok := syntax.FunctionLiteralOf(function)
+			if ok {
+				resultList = literal.Type.Results
+			}
+		}
 	}
 	if resultList == nil {
 		return
@@ -302,6 +408,7 @@ func (e *nilEnvironment) checkNilNamedResults(
 						e.reportNil(name.Start, "named result is not proven non-nil")
 					}
 				}
+
 			}
 			index++
 		}
@@ -309,11 +416,17 @@ func (e *nilEnvironment) checkNilNamedResults(
 }
 
 func (e *nilEnvironment) functionNodeContract(function *syntax.Node) nilContract {
-	if declaration, ok := syntax.FunctionDeclarationOf(function); ok {
-		return e.contractForObject(e.facts.DefinitionName(declaration.Name))
+	{
+		declaration, ok := syntax.FunctionDeclarationOf(function)
+		if ok {
+			return e.contractForObject(e.facts.DefinitionName(declaration.Name))
+		}
 	}
-	if literal, ok := syntax.FunctionLiteralOf(function); ok {
-		return e.functionContract(literal.Type)
+	{
+		literal, ok := syntax.FunctionLiteralOf(function)
+		if ok {
+			return e.functionContract(literal.Type)
+		}
 	}
 	return nil
 }
@@ -328,8 +441,13 @@ func (e *nilEnvironment) checkNilFlowResult(
 	expected nilContract,
 	state *nilFlowState,
 ) {
+	type operandType = bool
 	actual := e.resultContract(expression, index)
-	if expected[""] && !actual[""] {
+	var operand operandType = expected[""]
+	if operand {
+		operand = !actual[""]
+	}
+	if operand {
 		e.reportNil(
 			syntax.ExpressionPosition(expression),
 			"result %d is not proven non-nil for %%T",
@@ -345,15 +463,24 @@ func (e *nilEnvironment) checkNilFlow(
 	expected nilContract,
 	state *nilFlowState,
 ) {
+	type operandType = bool
 	if expression == nil {
 		return
 	}
 	actual := e.contractForExpression(expression)
 	value := e.expressionNilType(expression, state)
-	if expected[""] && !isNonNilType(value) {
+	var operand operandType = expected[""]
+	if operand {
+		operand = !isNonNilType(value)
+	}
+	if operand {
 		e.reportNil(syntax.ExpressionPosition(expression), "value is not proven non-nil for %%T")
 	}
-	if !expected[""] && isNilOnlyType(value) {
+	var operand_1 operandType = !expected[""]
+	if operand_1 {
+		operand_1 = isNilOnlyType(value)
+	}
+	if operand_1 {
 		return
 	}
 	e.checkNilContractCompatibility(syntax.ExpressionPosition(expression), expected, actual)
@@ -365,7 +492,12 @@ func (e *nilEnvironment) checkNestedNilContract(
 	actual nilContract,
 ) {
 	for path := range expected {
-		if path != "" && !actual[path] {
+		type operandType = bool
+		var operand operandType = path != ""
+		if operand {
+			operand = !actual[path]
+		}
+		if operand {
 			e.reportNil(
 				position,
 				"value does not preserve nested non-nil contract at %s",
@@ -383,7 +515,16 @@ func (e *nilEnvironment) checkNilContractCompatibility(
 	actual nilContract,
 ) {
 	for path := range expected {
-		if path != "" && !actual[path] && !isDirectNilParameter(path) {
+		type operandType = bool
+		var operand operandType = path != ""
+		if operand {
+			operand = !actual[path]
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = !isDirectNilParameter(path)
+		}
+		if operand_1 {
 			e.reportNil(
 				position,
 				"value does not preserve nested non-nil contract at %s",
@@ -393,8 +534,21 @@ func (e *nilEnvironment) checkNilContractCompatibility(
 		}
 	}
 	for path := range actual {
-		if path != "" && !expected[path] &&
-			(isDirectNilParameter(path) || isMutableNilPath(path)) {
+		type operandType_1 = bool
+		var operand_2 operandType_1 = path != ""
+		if operand_2 {
+			operand_2 = !expected[path]
+		}
+		var operand_3 operandType_1 = operand_2
+		if operand_3 {
+			type operandType_2 = bool
+			var operand_4 operandType_2 = isDirectNilParameter(path)
+			if !operand_4 {
+				operand_4 = isMutableNilPath(path)
+			}
+			operand_3 = (operand_4)
+		}
+		if operand_3 {
 			e.reportNil(
 				position,
 				"value requires an incompatible non-nil contract at %s",
@@ -406,7 +560,12 @@ func (e *nilEnvironment) checkNilContractCompatibility(
 }
 
 func isDirectNilParameter(path string) bool {
-	if !strings.HasPrefix(path, "p") || strings.Contains(path, "/") {
+	type operandType = bool
+	var operand operandType = !strings.HasPrefix(path, "p")
+	if !operand {
+		operand = strings.Contains(path, "/")
+	}
+	if operand {
 		return false
 	}
 	_, err := strconv.Atoi(strings.TrimPrefix(path, "p"))
@@ -414,11 +573,21 @@ func isDirectNilParameter(path string) bool {
 }
 
 func isMutableNilPath(path string) bool {
-	return !isDirectNilParameter(path) && !isDirectNilResult(path)
+	type operandType = bool
+	var operand operandType = !isDirectNilParameter(path)
+	if operand {
+		operand = !isDirectNilResult(path)
+	}
+	return operand
 }
 
 func isDirectNilResult(path string) bool {
-	if !strings.HasPrefix(path, "r") || strings.Contains(path, "/") {
+	type operandType = bool
+	var operand operandType = !strings.HasPrefix(path, "r")
+	if !operand {
+		operand = strings.Contains(path, "/")
+	}
+	if operand {
 		return false
 	}
 	_, err := strconv.Atoi(strings.TrimPrefix(path, "r"))

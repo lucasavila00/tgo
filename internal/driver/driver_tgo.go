@@ -63,8 +63,11 @@ func Build(directory string, patterns []string) (err error) {
 		}
 	}()
 	for _, path := range selected {
-		if err = builder.build(path); err != nil {
-			return err
+		{
+			err = builder.build(path)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -124,30 +127,42 @@ func compileWorkspaceContext(
 	if err_1 != nil {
 		return nil, err_1
 	}
+
 	buildContext, err_2 := effectiveBuildContext(directory)
 	if err_2 != nil {
 		return nil, err_2
 	}
+
 	packages, err_3 := discover(root, module, &buildContext)
 	if err_3 != nil {
 		return nil, err_3
 	}
+
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	paths := sortedTGoPackagePaths(packages)
 	result := make([]*compiler.CompiledPackage, 0, len(paths))
 	for _, path := range paths {
+		operand := ctx.Done()
 		select {
-		case <-ctx.Done():
+		case <-operand:
 			return nil, ctx.Err()
 		default:
 		}
-		if err := builder.build(path); err != nil {
-			var boundary *packagelanguage.BoundaryError = nil
-			if !continueAfterError || errors.As(err, &boundary) {
-				return nil, err
+		{
+			err := builder.build(path)
+			if err != nil {
+				type operandType = bool
+				var boundary *packagelanguage.BoundaryError = nil
+				var operand_1 operandType = !continueAfterError
+				if !operand_1 {
+					operand_1 = errors.As(err, &boundary)
+				}
+				if operand_1 {
+					return nil, err
+				}
+				resetActiveBuilds(builder)
+				continue
 			}
-			resetActiveBuilds(builder)
-			continue
 		}
 		if packages[path].compiled != nil {
 			result = append(result, packages[path].compiled)
@@ -165,30 +180,42 @@ func compileWorkspaceViewsContext(
 	if err_1 != nil {
 		return nil, err_1
 	}
+
 	buildContext, err_2 := effectiveBuildContext(directory)
 	if err_2 != nil {
 		return nil, err_2
 	}
+
 	packages, err_3 := discover(root, module, &buildContext)
 	if err_3 != nil {
 		return nil, err_3
 	}
+
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	result := make([]CompiledView, 0, len(packages))
 	for _, path := range sortedTGoPackagePaths(packages) {
+		operand := ctx.Done()
 		select {
-		case <-ctx.Done():
+		case <-operand:
 			return nil, ctx.Err()
 		default:
 		}
 		unit := packages[path]
-		if err := builder.build(path); err != nil {
-			var boundary *packagelanguage.BoundaryError = nil
-			if !continueAfterError || errors.As(err, &boundary) {
-				return nil, err
+		{
+			err := builder.build(path)
+			if err != nil {
+				type operandType = bool
+				var boundary *packagelanguage.BoundaryError = nil
+				var operand_1 operandType = !continueAfterError
+				if !operand_1 {
+					operand_1 = errors.As(err, &boundary)
+				}
+				if operand_1 {
+					return nil, err
+				}
+				resetActiveBuilds(builder)
+				continue
 			}
-			resetActiveBuilds(builder)
-			continue
 		}
 		compiled := unit.compiled
 		if compiled == nil {
@@ -199,8 +226,13 @@ func compileWorkspaceViewsContext(
 		})
 		internal, external, err := unit.readTests()
 		if err != nil {
+			type operandType_1 = bool
 			var boundary *packagelanguage.BoundaryError = nil
-			if !continueAfterError || errors.As(err, &boundary) {
+			var operand_2 operandType_1 = !continueAfterError
+			if !operand_2 {
+				operand_2 = errors.As(err, &boundary)
+			}
+			if operand_2 {
 				return nil, err
 			}
 			continue
@@ -215,8 +247,9 @@ func compileWorkspaceViewsContext(
 			if len(test.files.Sources) == 0 {
 				continue
 			}
+			operand_3 := ctx.Done()
 			select {
-			case <-ctx.Done():
+			case <-operand_3:
 				return nil, ctx.Err()
 			default:
 			}
@@ -224,8 +257,13 @@ func compileWorkspaceViewsContext(
 				unit, test.files, test.external, token.NewFileSet(),
 			)
 			if err != nil {
+				type operandType_2 = bool
 				var boundary *packagelanguage.BoundaryError = nil
-				if !continueAfterError || errors.As(err, &boundary) {
+				var operand_4 operandType_2 = !continueAfterError
+				if !operand_4 {
+					operand_4 = errors.As(err, &boundary)
+				}
+				if operand_4 {
 					return nil, err
 				}
 				resetActiveBuilds(builder)
@@ -256,30 +294,39 @@ func CompilePackage(
 	importPath string,
 	files *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
+	type operandType = bool
 	root, module, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
 	}
+
 	buildContext, err_1 := effectiveBuildContext(directory)
 	if err_1 != nil {
 		return nil, err_1
 	}
+
 	packages, err_2 := discover(root, module, &buildContext)
 	if err_2 != nil {
 		return nil, err_2
 	}
+
 	unit := packages[importPath]
-	if unit == nil || !unit.tgoCandidate() {
+	var operand operandType = unit == nil
+	if !operand {
+		operand = !unit.tgoCandidate()
+	}
+	if operand {
 		return nil, nil
 	}
 	if files != nil {
 		unit.fs = files
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
-	err_3 := builder.build(importPath)
-	if err_3 != nil {
-		return nil, err_3
+	operand_1 := builder.build(importPath)
+	if operand_1 != nil {
+		return nil, operand_1
 	}
+
 	if unit.compiled == nil {
 		return nil, nil
 	}
@@ -293,31 +340,41 @@ func CompileTestPackage(
 	external bool,
 	files *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
+	type operandType = bool
 	root, module, err := moduleRoot(directory)
 	if err != nil {
 		return nil, err
 	}
+
 	buildContext, err_1 := effectiveBuildContext(directory)
 	if err_1 != nil {
 		return nil, err_1
 	}
+
 	packages, err_2 := discover(root, module, &buildContext)
 	if err_2 != nil {
 		return nil, err_2
 	}
+
 	unit := packages[importPath]
-	if unit == nil || !unit.tgoCandidate() {
+	var operand operandType = unit == nil
+	if !operand {
+		operand = !unit.tgoCandidate()
+	}
+	if operand {
 		return nil, nil
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
-	err_3 := builder.build(importPath)
+	operand_1 := builder.build(importPath)
+	if operand_1 != nil {
+		return nil, operand_1
+	}
+
+	internal, externalTests, err_3 := unit.readTests()
 	if err_3 != nil {
 		return nil, err_3
 	}
-	internal, externalTests, err_4 := unit.readTests()
-	if err_4 != nil {
-		return nil, err_4
-	}
+
 	tests := internal
 	if external {
 		tests = externalTests
@@ -393,8 +450,11 @@ func effectiveBuildContext(directory string) (build.Context, error) {
 		return build.Default, fmt.Errorf("find Go build context: %s", output)
 	}
 	environment := new(goEnvironment)
-	if err := json.Unmarshal(output, environment); err != nil {
-		return build.Default, fmt.Errorf("read Go build context: %w", err)
+	{
+		err := json.Unmarshal(output, environment)
+		if err != nil {
+			return build.Default, fmt.Errorf("read Go build context: %w", err)
+		}
 	}
 	context := build.Default
 	context.GOOS = environment.GOOS
@@ -425,6 +485,7 @@ func effectiveToolTags(current []string, environment goEnvironment) ([]string, e
 	if err != nil {
 		return nil, err
 	}
+
 	return append(tags, architecture...), nil
 }
 
@@ -503,13 +564,43 @@ func numberedFeatureTags(
 
 // arm64FeatureTags gets cumulative tags for one ARM64 version.
 func arm64FeatureTags(value string) ([]string, error) {
+	type operandType = bool
 	version, _, _ := strings.Cut(value, ",")
-	if len(version) != 4 || version[0] != 'v' || version[2] != '.' {
+	var operand operandType = len(version) != 4
+	if !operand {
+		operand = version[0] != 'v'
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = version[2] != '.'
+	}
+	if operand_1 {
 		return nil, fmt.Errorf("invalid GOARM64 %q", value)
 	}
 	major := int(version[1] - '0')
 	minor := int(version[3] - '0')
-	if major != 8 && major != 9 || minor < 0 || minor > 9 || major == 9 && minor > 5 {
+	var operand_2 operandType = major != 8
+	if operand_2 {
+		operand_2 = major != 9
+	}
+	var operand_3 operandType = operand_2
+	if !operand_3 {
+		operand_3 = minor < 0
+	}
+	var operand_4 operandType = operand_3
+	if !operand_4 {
+		operand_4 = minor > 9
+	}
+	var operand_5 operandType = operand_4
+	if !operand_5 {
+		type operandType_1 = bool
+		var operand_6 operandType_1 = major == 9
+		if operand_6 {
+			operand_6 = minor > 5
+		}
+		operand_5 = operand_6
+	}
+	if operand_5 {
 		return nil, fmt.Errorf("invalid GOARM64 %q", value)
 	}
 	tags := cumulativeFeatureTags(fmt.Sprintf("arm64.v%d.", major), 0, minor)
@@ -551,12 +642,21 @@ func wasmFeatureTags(value string) ([]string, error) {
 
 // featureLevel parses one numbered feature setting.
 func featureLevel(value string, prefix string, first int, last int) (int, error) {
+	type operandType = bool
 	number, found := strings.CutPrefix(value, prefix)
 	if !found {
 		return 0, errors.New("missing feature prefix")
 	}
 	level, err := strconv.Atoi(number)
-	if err != nil || level < first || level > last {
+	var operand operandType = err != nil
+	if !operand {
+		operand = level < first
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = level > last
+	}
+	if operand_1 {
 		return 0, errors.New("invalid feature level")
 	}
 	return level, nil

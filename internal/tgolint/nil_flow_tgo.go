@@ -98,11 +98,13 @@ func (c *checker) analyzeTGoPackage() (*sourceanalysis.Package, error) {
 			directory, path, c.pass.Fset,
 		)
 	}
+
 	return analysis, err
 }
 
 // tgoTestPackage reports whether the pass contains generated TGo tests.
 func (c *checker) tgoTestPackage() (bool, bool) {
+	type operandType = bool
 	test := false
 	production := false
 	for _, file := range c.files {
@@ -115,8 +117,13 @@ func (c *checker) tgoTestPackage() (bool, bool) {
 		} else {
 			production = true
 		}
+
 	}
-	return test, test && !production
+	var operand operandType = test
+	if operand {
+		operand = !production
+	}
+	return test, operand
 }
 
 // checkNilSafety checks `%T` contracts in TGo and Go source.
@@ -133,13 +140,18 @@ func (c *checker) checkNilSafety(analysis *sourceanalysis.Package) {
 	goEnvironment.collectNilContracts()
 
 	if analysis != nil {
+		type operandType = bool
 		sourceFiles := make([]*syntax.File, 0, len(analysis.Sources))
 		for _, source := range analysis.Sources {
 			if source.Syntax != nil {
 				sourceFiles = append(sourceFiles, source.Syntax)
 			}
 		}
-		if analysis.Facts == nil || analysis.Package == nil {
+		var operand operandType = analysis.Facts == nil
+		if !operand {
+			operand = analysis.Package == nil
+		}
+		if operand {
 			return
 		}
 		sourceEnvironment := newNilEnvironment(
@@ -157,13 +169,18 @@ func (c *checker) checkNilSafety(analysis *sourceanalysis.Package) {
 // packageDirectory returns the directory that owns the loaded package.
 func (c *checker) packageDirectory() string {
 	for _, file := range c.pass.Files {
+		type operandType = bool
 		name := c.pass.Fset.Position(file.Package).Filename
 		if name == "" {
 			continue
 		}
 		directory := filepath.Dir(name)
 		sources, err := filepath.Glob(filepath.Join(directory, "*.tgo"))
-		if err == nil && len(sources) != 0 {
+		var operand operandType = err == nil
+		if operand {
+			operand = len(sources) != 0
+		}
+		if operand {
 			return directory
 		}
 	}
@@ -185,15 +202,21 @@ func (e *nilEnvironment) checkNilFiles() {
 	e.checkNilGlobals()
 	for _, file := range e.files {
 		syntax.Inspect(file, func(node *syntax.Node) bool {
-			if declaration, ok := syntax.FunctionDeclarationOf(node); ok {
-				if declaration.Body != nil {
-					e.checkNilFunction(node, declaration.Type, declaration.Body)
+			{
+				declaration, ok := syntax.FunctionDeclarationOf(node)
+				if ok {
+					if declaration.Body != nil {
+						e.checkNilFunction(node, declaration.Type, declaration.Body)
+					}
+					return false
 				}
-				return false
 			}
-			if literal, ok := syntax.FunctionLiteralOf(node); ok {
-				e.checkNilFunction(node, literal.Type, literal.Body)
-				return false
+			{
+				literal, ok := syntax.FunctionLiteralOf(node)
+				if ok {
+					e.checkNilFunction(node, literal.Type, literal.Body)
+					return false
+				}
 			}
 			return true
 		})
@@ -205,8 +228,13 @@ func (e *nilEnvironment) checkNilGlobals() {
 	state := newNilState()
 	for _, file := range e.files {
 		for _, declaration := range file.Declarations {
+			type operandType = bool
 			general := syntax.GeneralDeclarationOf(declaration)
-			if general == nil || general.Kind != token.VAR {
+			var operand operandType = general == nil
+			if !operand {
+				operand = general.Kind != token.VAR
+			}
+			if operand {
 				continue
 			}
 			for _, item := range general.Specs {
@@ -254,6 +282,7 @@ func (e *nilEnvironment) checkNilFunction(
 }
 
 func (e *nilEnvironment) nilCallMayReturn(expression *syntax.Expression) bool {
+	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
 		return true
@@ -263,25 +292,42 @@ func (e *nilEnvironment) nilCallMayReturn(expression *syntax.Expression) bool {
 		return true
 	}
 	builtin, ok := e.facts.Object(name).(*types.Builtin)
-	return !ok || builtin.Name() != "panic"
+	var operand operandType = !ok
+	if !operand {
+		operand = builtin.Name() != "panic"
+	}
+	return operand
 }
 
 func (e *nilEnvironment) nilEntryState(
 	root *syntax.Node,
 	function *syntax.FunctionType,
 ) *nilFlowState {
+	type operandType_1 = bool
 	state := newNilState()
-	if declaration, ok := syntax.FunctionDeclarationOf(root); ok && declaration.Receiver != nil {
-		for _, field := range declaration.Receiver.List {
-			for _, name := range field.Names {
-				object := e.facts.DefinitionName(name)
-				if e.contractForObject(object)[""] {
-					e.setNilType(state, nilPlace{object: object, path: ""}, nonNilType())
+	{
+		type operandType = bool
+		declaration, ok := syntax.FunctionDeclarationOf(root)
+		var operand operandType = ok
+		if operand {
+			operand = declaration.Receiver != nil
+		}
+		if operand {
+			for _, field := range declaration.Receiver.List {
+				for _, name := range field.Names {
+					object := e.facts.DefinitionName(name)
+					if e.contractForObject(object)[""] {
+						e.setNilType(state, nilPlace{object: object, path: ""}, nonNilType())
+					}
 				}
 			}
 		}
 	}
-	if function == nil || function.Params == nil {
+	var operand_1 operandType_1 = function == nil
+	if !operand_1 {
+		operand_1 = function.Params == nil
+	}
+	if operand_1 {
 		return state
 	}
 	for _, field := range function.Params.List {
@@ -378,6 +424,7 @@ func (e *nilEnvironment) solveNilEntries(
 				} else {
 					e.applyNilFacts(next, falseFacts)
 				}
+
 			}
 			if !next.reachable {
 				continue
@@ -425,7 +472,12 @@ func joinNilStates(
 	current *nilFlowState,
 	incoming *nilFlowState,
 ) (*nilFlowState, bool) {
-	if incoming == nil || !incoming.reachable {
+	type operandType = bool
+	var operand operandType = incoming == nil
+	if !operand {
+		operand = !incoming.reachable
+	}
+	if operand {
 		return current, false
 	}
 	if current == nil {
@@ -433,10 +485,13 @@ func joinNilStates(
 	}
 	joined := newNilState()
 	for place, value := range current.values {
-		if incomingValue, exists := incoming.values[place]; exists {
-			combined := unionNilTypes(value, incomingValue)
-			if !isOptionalNilType(combined) {
-				joined.values[place] = combined
+		{
+			incomingValue, exists := incoming.values[place]
+			if exists {
+				combined := unionNilTypes(value, incomingValue)
+				if !isOptionalNilType(combined) {
+					joined.values[place] = combined
+				}
 			}
 		}
 	}
@@ -449,17 +504,27 @@ func joinNilStates(
 	}
 	for left := range places {
 		for right := range places {
+			type operandType_1 = bool
 			if nilPlaceID(left) >= nilPlaceID(right) {
 				continue
 			}
-			if nilAliased(current, left, right) && nilAliased(incoming, left, right) {
+			var operand_1 operandType_1 = nilAliased(current, left, right)
+			if operand_1 {
+				operand_1 = nilAliased(incoming, left, right)
+			}
+			if operand_1 {
 				addNilAlias(joined, left, right)
 			}
 		}
 	}
 	for object, guard := range current.guards {
+		type operandType_2 = bool
 		other, ok := incoming.guards[object]
-		if ok && equalNilGuard(guard, other) {
+		var operand_2 operandType_2 = ok
+		if operand_2 {
+			operand_2 = equalNilGuard(guard, other)
+		}
+		if operand_2 {
 			joined.guards[object] = cloneNilGuard(guard)
 		}
 	}
@@ -475,19 +540,38 @@ func joinNilStates(
 }
 
 func equalNilStates(left, right *nilFlowState) bool {
-	if left.reachable != right.reachable ||
-		len(left.values) != len(right.values) || len(left.aliases) != len(right.aliases) ||
-		len(left.guards) != len(right.guards) || len(left.presence) != len(right.presence) {
+	type operandType = bool
+	var operand operandType = left.reachable != right.reachable
+	if !operand {
+		operand = len(left.values) != len(right.values)
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = len(left.aliases) != len(right.aliases)
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = len(left.guards) != len(right.guards)
+	}
+	var operand_3 operandType = operand_2
+	if !operand_3 {
+		operand_3 = len(left.presence) != len(right.presence)
+	}
+	if operand_3 {
 		return false
 	}
 	for place, value := range left.values {
-		if other, found := right.values[place]; found {
-			if !equalNilType(other, value) {
+		{
+			other, found := right.values[place]
+			if found {
+				if !equalNilType(other, value) {
+					return false
+				}
+			} else {
 				return false
 			}
-		} else {
-			return false
 		}
+
 	}
 	for place, representative := range left.aliases {
 		if right.aliases[place] != representative {
@@ -508,8 +592,13 @@ func equalNilStates(left, right *nilFlowState) bool {
 }
 
 func equalNilGuard(left, right nilGuard) bool {
-	return equalNilBranches(left.trueBranches, right.trueBranches) &&
-		equalNilBranches(left.falseBranches, right.falseBranches)
+	type operandType = bool
+	var operand operandType = equalNilBranches(left.trueBranches, right.trueBranches)
+	if operand {
+		operand = equalNilBranches(left.falseBranches, right.falseBranches)
+	}
+	return operand
+
 }
 
 func cloneNilBranches(source nilBranches) nilBranches {
@@ -540,13 +629,17 @@ func equalNilFacts(left, right nilFacts) bool {
 		return false
 	}
 	for place, value := range left {
-		if other, found := right[place]; found {
-			if !equalNilType(other, value) {
+		{
+			other, found := right[place]
+			if found {
+				if !equalNilType(other, value) {
+					return false
+				}
+			} else {
 				return false
 			}
-		} else {
-			return false
 		}
+
 	}
 	return true
 }

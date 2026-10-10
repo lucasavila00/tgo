@@ -88,14 +88,24 @@ func NewProjection(
 			object types.Object,
 			synthetic bool,
 		) {
-			if object != nil && !synthetic {
+			type operandType = bool
+			var operand operandType = object != nil
+			if operand {
+				operand = !synthetic
+			}
+			if operand {
 				index.addDefinition(position, name, object)
 			}
 		},
 	)
 	facts.RangeUses(
 		func(position token.Pos, name string, object types.Object, synthetic bool) {
-			if object != nil && !synthetic {
+			type operandType = bool
+			var operand operandType = object != nil
+			if operand {
+				operand = !synthetic
+			}
+			if operand {
 				index.uses[index.identifierLocation(position, name)] = object
 				index.useCounts[object]++
 			}
@@ -200,11 +210,20 @@ func (i *Index) addDefinition(
 	location := i.location(position)
 	i.definitions[identifierLocation{position: location, name: name}] = object
 	key := definitionLocation{file: location.file, line: location.line, name: name}
-	if current := i.lineDefinitions[key]; current != nil && current != object {
-		i.ambiguousDefinitions[key] = true
-	} else {
-		i.lineDefinitions[key] = object
+	{
+		type operandType = bool
+		current := i.lineDefinitions[key]
+		var operand operandType = current != nil
+		if operand {
+			operand = current != object
+		}
+		if operand {
+			i.ambiguousDefinitions[key] = true
+		} else {
+			i.lineDefinitions[key] = object
+		}
 	}
+
 }
 
 // ImplicitField returns the object for one anonymous field.
@@ -272,30 +291,51 @@ func (i *Index) IdentifierObject(expression *syntax.Expression) types.Object {
 // Object returns the object used or defined by an identifier.
 func (i *Index) Object(identifier *syntax.Identifier) types.Object {
 	position := i.location(identifier.Start)
-	if object := matchingObject(i.definitions, identifier, position); object != nil {
-		return object
+	{
+		object := matchingObject(i.definitions, identifier, position)
+		if object != nil {
+			return object
+		}
 	}
-	if object := matchingObject(i.uses, identifier, position); object != nil {
-		return object
+	{
+		object := matchingObject(i.uses, identifier, position)
+		if object != nil {
+			return object
+		}
 	}
 	return i.lineDefinition(identifier, position)
 }
 
 // IdentifierFact returns the object and reports whether the source name defines it.
 func (i *Index) IdentifierFact(file *syntax.File, node *syntax.Node) (types.Object, bool) {
+	type operandType = bool
 	identifier, ok := syntax.IdentifierOf(node)
-	if !ok || identifier == nil {
+	var operand operandType = !ok
+	if !operand {
+		operand = identifier == nil
+	}
+	if operand {
 		return nil, false
 	}
 	position := i.location(identifier.Start)
-	if object := matchingObject(i.definitions, identifier, position); object != nil {
-		return object, true
+	{
+		object := matchingObject(i.definitions, identifier, position)
+		if object != nil {
+			return object, true
+		}
 	}
-	if object := matchingObject(i.uses, identifier, position); object != nil {
-		return object, false
+	{
+		object := matchingObject(i.uses, identifier, position)
+		if object != nil {
+			return object, false
+		}
 	}
 	object := i.lineDefinition(identifier, position)
-	return object, object != nil && sourceDefinition(file, node, identifier)
+	var operand_1 operandType = object != nil
+	if operand_1 {
+		operand_1 = sourceDefinition(file, node, identifier)
+	}
+	return object, operand_1
 }
 
 func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identifier) bool {
@@ -303,53 +343,121 @@ func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identif
 	if parent == nil {
 		return false
 	}
-	if declaration, ok := syntax.DeclarationOf(parent); ok {
-		if function := syntax.FunctionDeclarationValueOf(declaration); function != nil {
-			return sameIdentifier(function.Name, name)
-		}
-		if value, ok := syntax.EnumDeclarationOf(declaration); ok {
-			return sameIdentifier(value.Name, name)
-		}
-		if value, ok := syntax.StructDeclarationOf(declaration); ok {
-			return sameIdentifier(value.Name, name)
-		}
-	}
-	if specification, ok := syntax.SpecificationOf(parent); ok {
-		if value := syntax.ValueSpecificationOf(specification); value != nil {
-			return identifierIn(value.Names, name)
-		}
-		if value := syntax.TypeSpecificationOf(specification); value != nil {
-			return sameIdentifier(value.Name, name)
-		}
-		if value := importSpecification(specification); value != nil && value.Name != nil {
-			return sameIdentifier(value.Name, name)
-		}
-	}
-	if field, ok := syntax.FieldOf(parent); ok {
-		return identifierIn(field.Names, name)
-	}
-	if variant, ok := enumVariant(parent); ok {
-		return sameIdentifier(variant.Name, name)
-	}
-	if statement, ok := syntax.StatementOf(parent); ok {
-		if value := syntax.AssignmentStatementOf(statement); value != nil &&
-			value.Operator == token.DEFINE {
-			return expressionListHasIdentifier(value.Left, name)
-		}
-		if value := syntax.RangeStatementOf(statement); value != nil &&
-			value.Operator == token.DEFINE {
-			return expressionHasIdentifier(value.Key, name) ||
-				expressionHasIdentifier(value.Value, name)
-		}
-		if value := syntax.LabeledStatementOf(statement); value != nil {
-			return sameIdentifier(value.Label, name)
+	{
+		declaration, ok := syntax.DeclarationOf(parent)
+		if ok {
+			{
+				function := syntax.FunctionDeclarationValueOf(declaration)
+				if function != nil {
+					return sameIdentifier(function.Name, name)
+				}
+			}
+			{
+				value, ok := syntax.EnumDeclarationOf(declaration)
+				if ok {
+					return sameIdentifier(value.Name, name)
+				}
+			}
+			{
+				value, ok := syntax.StructDeclarationOf(declaration)
+				if ok {
+					return sameIdentifier(value.Name, name)
+				}
+			}
 		}
 	}
-	if comprehension, ok := syntax.ComprehensionExpressionOf(parent); ok {
-		for _, clause := range comprehension.Clauses {
-			value, rangeOK := syntax.ComprehensionRangeClauseOf(&clause)
-			if rangeOK && identifierIn(value.Bindings, name) {
-				return true
+	{
+		specification, ok := syntax.SpecificationOf(parent)
+		if ok {
+			{
+				value := syntax.ValueSpecificationOf(specification)
+				if value != nil {
+					return identifierIn(value.Names, name)
+				}
+			}
+			{
+				value := syntax.TypeSpecificationOf(specification)
+				if value != nil {
+					return sameIdentifier(value.Name, name)
+				}
+			}
+			{
+				type operandType = bool
+				value := importSpecification(specification)
+				var operand operandType = value != nil
+				if operand {
+					operand = value.Name != nil
+				}
+				if operand {
+					return sameIdentifier(value.Name, name)
+				}
+			}
+		}
+	}
+	{
+		field, ok := syntax.FieldOf(parent)
+		if ok {
+			return identifierIn(field.Names, name)
+		}
+	}
+	{
+		variant, ok := enumVariant(parent)
+		if ok {
+			return sameIdentifier(variant.Name, name)
+		}
+	}
+	{
+		statement, ok := syntax.StatementOf(parent)
+		if ok {
+			{
+				type operandType_1 = bool
+				value := syntax.AssignmentStatementOf(statement)
+				var operand_1 operandType_1 = value != nil
+				if operand_1 {
+					operand_1 = value.Operator == token.DEFINE
+				}
+				if operand_1 {
+					return expressionListHasIdentifier(value.Left, name)
+				}
+			}
+			{
+				type operandType_2 = bool
+				value := syntax.RangeStatementOf(statement)
+				var operand_2 operandType_2 = value != nil
+				if operand_2 {
+					operand_2 = value.Operator == token.DEFINE
+				}
+				if operand_2 {
+					type operandType_3 = bool
+					var operand_3 operandType_3 = expressionHasIdentifier(value.Key, name)
+					if !operand_3 {
+						operand_3 = expressionHasIdentifier(value.Value, name)
+					}
+					return operand_3
+
+				}
+			}
+			{
+				value := syntax.LabeledStatementOf(statement)
+				if value != nil {
+					return sameIdentifier(value.Label, name)
+				}
+			}
+		}
+	}
+	{
+		comprehension, ok := syntax.ComprehensionExpressionOf(parent)
+		if ok {
+			for _, clause := range comprehension.Clauses {
+				type operandType_4 = bool
+				value, rangeOK := syntax.ComprehensionRangeClauseOf(&clause)
+				var operand_4 operandType_4 = rangeOK
+				if operand_4 {
+					operand_4 = identifierIn(value.Bindings, name)
+				}
+				if operand_4 {
+					return true
+				}
 			}
 		}
 	}
@@ -357,14 +465,24 @@ func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identif
 }
 
 func importSpecification(value *syntax.Specification) *syntax.ImportSpecification {
-	if value == nil || value.Tag() != syntax.SpecificationTagImport {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != syntax.SpecificationTagImport
+	}
+	if operand {
 		return nil
 	}
 	return value.ImportPayload().Value
 }
 
 func enumVariant(node *syntax.Node) (*syntax.EnumVariant, bool) {
-	if node == nil || node.Tag() != syntax.NodeTagEnumVariant {
+	type operandType = bool
+	var operand operandType = node == nil
+	if !operand {
+		operand = node.Tag() != syntax.NodeTagEnumVariant
+	}
+	if operand {
 		return nil, false
 	}
 	return node.EnumVariantPayload().Value, true
@@ -406,7 +524,12 @@ func expressionHasIdentifier(
 }
 
 func sameIdentifier(left, right *syntax.Identifier) bool {
-	return left.Start == right.Start && left.Stop == right.Stop
+	type operandType = bool
+	var operand operandType = left.Start == right.Start
+	if operand {
+		operand = left.Stop == right.Stop
+	}
+	return operand
 }
 
 // Definition returns the object defined by a source identifier expression.
@@ -421,8 +544,11 @@ func (i *Index) Definition(expression *syntax.Expression) types.Object {
 // DefinitionName returns the object defined by a source identifier node.
 func (i *Index) DefinitionName(identifier *syntax.Identifier) types.Object {
 	position := i.location(identifier.Start)
-	if object := matchingObject(i.definitions, identifier, position); object != nil {
-		return object
+	{
+		object := matchingObject(i.definitions, identifier, position)
+		if object != nil {
+			return object
+		}
 	}
 	return i.lineDefinition(identifier, position)
 }
@@ -478,8 +604,13 @@ func (i *Index) IotaPosition(expression *syntax.Expression) (token.Pos, bool) {
 	syntax.InspectExpression(
 		expression,
 		func(node *syntax.Node) bool {
+			type operandType = bool
 			identifier, ok := syntax.IdentifierOf(node)
-			if ok && i.Object(identifier) == types.Universe.Lookup("iota") {
+			var operand operandType = ok
+			if operand {
+				operand = i.Object(identifier) == types.Universe.Lookup("iota")
+			}
+			if operand {
 				position = identifier.Start
 				return false
 			}
@@ -495,6 +626,7 @@ func (i *Index) HasBitSetOperator(expression *syntax.Expression) bool {
 	syntax.InspectExpression(
 		expression,
 		func(node *syntax.Node) bool {
+			type operandType = bool
 			value, ok := syntax.ExpressionOf(node)
 			if !ok {
 				return true
@@ -507,7 +639,11 @@ func (i *Index) HasBitSetOperator(expression *syntax.Expression) bool {
 				}
 			}
 			unary := syntax.UnaryExpressionOf(value)
-			if unary != nil && unary.Operator == token.XOR {
+			var operand operandType = unary != nil
+			if operand {
+				operand = unary.Operator == token.XOR
+			}
+			if operand {
 				found = true
 			}
 			return !found
@@ -517,20 +653,35 @@ func (i *Index) HasBitSetOperator(expression *syntax.Expression) bool {
 }
 
 func (i *Index) calledObject(expression *syntax.Expression) types.Object {
-	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
-		return i.Object(identifier)
+	{
+		identifier := syntax.IdentifierExpressionOf(expression)
+		if identifier != nil {
+			return i.Object(identifier)
+		}
 	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		return i.Object(selector.Selector)
+	{
+		selector := syntax.SelectorExpressionOf(expression)
+		if selector != nil {
+			return i.Object(selector.Selector)
+		}
 	}
-	if index := syntax.IndexExpressionOf(expression); index != nil {
-		return i.calledObject(index.Expression)
+	{
+		index := syntax.IndexExpressionOf(expression)
+		if index != nil {
+			return i.calledObject(index.Expression)
+		}
 	}
-	if index := syntax.IndexListExpressionOf(expression); index != nil {
-		return i.calledObject(index.Expression)
+	{
+		index := syntax.IndexListExpressionOf(expression)
+		if index != nil {
+			return i.calledObject(index.Expression)
+		}
 	}
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return i.calledObject(parenthesized.Expression)
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return i.calledObject(parenthesized.Expression)
+		}
 	}
 	return nil
 }

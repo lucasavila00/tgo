@@ -15,35 +15,40 @@ import (
 
 // acquireModuleLock serializes builds and rollback for one module.
 func acquireModuleLock(root string) (acquired *flock.Flock, err error) {
+	type operandType = bool
 	err = nil
 	canonicalRoot, err_1 := filepath.EvalSymlinks(root)
 	if err_1 != nil {
 		return nil, err_1
 	}
 	path := filepath.Join(canonicalRoot, ".tgo.lock")
-	err_2 := ensureLockFile(path)
-	if err_2 != nil {
-		return nil, err_2
+	operand := ensureLockFile(path)
+	if operand != nil {
+		return nil, operand
 	}
 	lock := flock.New(path)
-	err_3 := lock.Lock()
-	if err_3 != nil {
-		return nil, err_3
+	operand_1 := lock.Lock()
+	if operand_1 != nil {
+		return nil, operand_1
 	}
 	defer func() {
 		if err != nil {
 			err = errors.Join(err, lock.Unlock())
 		}
 	}()
-	pathInfo, err_4 := os.Lstat(path)
-	if err_4 != nil {
-		return nil, err_4
+	pathInfo, err_2 := os.Lstat(path)
+	if err_2 != nil {
+		return nil, err_2
 	}
-	lockedInfo, err_5 := lock.Stat()
-	if err_5 != nil {
-		return nil, err_5
+	lockedInfo, err_3 := lock.Stat()
+	if err_3 != nil {
+		return nil, err_3
 	}
-	if !pathInfo.Mode().IsRegular() || !os.SameFile(pathInfo, lockedInfo) {
+	var operand_2 operandType = !pathInfo.Mode().IsRegular()
+	if !operand_2 {
+		operand_2 = !os.SameFile(pathInfo, lockedInfo)
+	}
+	if operand_2 {
 		return nil, fmt.Errorf("refusing non-regular lock file %s", path)
 	}
 	return lock, nil
@@ -75,6 +80,7 @@ func ensureLockFile(path string) error {
 
 // moduleRoot finds the active module root and module path.
 func moduleRoot(directory string) (string, string, error) {
+	type operandType = bool
 	command := exec.Command("go", "env", "GOMOD")
 	command.Dir = directory
 	output, err := command.Output()
@@ -82,7 +88,11 @@ func moduleRoot(directory string) (string, string, error) {
 		return "", "", fmt.Errorf("find go.mod: %w", err)
 	}
 	path := strings.TrimSpace(string(output))
-	if path == "" || path == os.DevNull {
+	var operand operandType = path == ""
+	if !operand {
+		operand = path == os.DevNull
+	}
+	if operand {
 		return "", "", errors.New("tgo needs a Go module; run go mod init first")
 	}
 	data, err_1 := os.ReadFile(path)
@@ -90,8 +100,13 @@ func moduleRoot(directory string) (string, string, error) {
 		return "", "", err_1
 	}
 	for line := range strings.SplitSeq(string(data), "\n") {
+		type operandType_1 = bool
 		fields := strings.Fields(line)
-		if len(fields) >= 2 && fields[0] == "module" {
+		var operand_1 operandType_1 = len(fields) >= 2
+		if operand_1 {
+			operand_1 = fields[0] == "module"
+		}
+		if operand_1 {
 			return filepath.Dir(path), strings.Trim(fields[1], "\""), nil
 		}
 	}

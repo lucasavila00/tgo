@@ -88,6 +88,7 @@ func run(pass *analysis.Pass) (any, error) {
 	if err_1 != nil {
 		return nil, err_1
 	}
+
 	if len(files) == 0 {
 		return nil, nil
 	}
@@ -161,17 +162,25 @@ func run(pass *analysis.Pass) (any, error) {
 			return true
 		})
 		syntax.Inspect(file, func(node *syntax.Node) bool {
-			if statement, ok := syntax.StatementOf(node); ok {
-				tagSwitch := syntax.SwitchStatementOf(statement)
-				if tagSwitch != nil {
-					c.checkTagSwitch(file, statement, tagSwitch)
+			{
+				statement, ok := syntax.StatementOf(node)
+				if ok {
+					tagSwitch := syntax.SwitchStatementOf(statement)
+					if tagSwitch != nil {
+						c.checkTagSwitch(file, statement, tagSwitch)
+					}
 				}
 			}
 			return true
 		})
 		syntax.Inspect(file, func(node *syntax.Node) bool {
+			type operandType = bool
 			expression, expressionOK := syntax.ExpressionOf(node)
-			if expressionOK && syntax.SelectorExpressionOf(expression) != nil {
+			var operand operandType = expressionOK
+			if operand {
+				operand = syntax.SelectorExpressionOf(expression) != nil
+			}
+			if operand {
 				c.checkRepresentationAccess(expression)
 			}
 			c.checkNode(node)
@@ -186,8 +195,13 @@ func run(pass *analysis.Pass) (any, error) {
 func (c *checker) rejectInvalidDependencies() bool {
 	found := false
 	for _, imported := range c.pass.Pkg.Imports() {
+		type operandType = bool
 		fact := new(invalidPackageFact)
-		if !c.pass.ImportPackageFact(imported, fact) || fact.Version != invalidPackageVersion {
+		var operand operandType = !c.pass.ImportPackageFact(imported, fact)
+		if !operand {
+			operand = fact.Version != invalidPackageVersion
+		}
+		if operand {
 			continue
 		}
 		found = true
@@ -202,8 +216,13 @@ func (c *checker) rejectInvalidDependencies() bool {
 func (c *checker) reportInvalidImport(path string) {
 	for _, file := range c.pass.Files {
 		for _, specification := range file.Imports {
+			type operandType = bool
 			imported, err := strconv.Unquote(specification.Path.Value)
-			if err == nil && imported == path {
+			var operand operandType = err == nil
+			if operand {
+				operand = imported == path
+			}
+			if operand {
 				c.pass.Reportf(
 					specification.Path.Pos(),
 					"dependency %s failed tgo verification",
@@ -241,61 +260,108 @@ func (c *checker) addParent(node *syntax.Node) {
 
 // checkNode sends one AST node to each check that applies to its form.
 func (c *checker) checkNode(node *syntax.Node) {
-	if function, ok := syntax.FunctionDeclarationOf(node); ok {
-		if function != nil {
-			functionType := function.Type
-			body := function.Body
-			if functionType != nil && body != nil {
-				c.checkNamedResults(functionType)
-				c.checkConstructors(node, body)
+	type operandType_1 = bool
+	{
+		function, ok := syntax.FunctionDeclarationOf(node)
+		if ok {
+			if function != nil {
+				type operandType = bool
+				functionType := function.Type
+				body := function.Body
+				var operand operandType = functionType != nil
+				if operand {
+					operand = body != nil
+				}
+				if operand {
+					c.checkNamedResults(functionType)
+					c.checkConstructors(node, body)
+				}
 			}
-		}
-		return
-	}
-	if literal, ok := syntax.FunctionLiteralOf(node); ok {
-		if literal == nil {
 			return
 		}
-		functionType := literal.Type
-		if functionType != nil {
-			c.checkNamedResults(functionType)
-		}
-		body := literal.Body
-		if body != nil {
-			c.checkConstructors(node, body)
-		}
-		return
 	}
-	if specification, ok := syntax.SpecificationOf(node); ok {
-		if value := syntax.TypeSpecificationOf(specification); value != nil {
-			c.checkTypeSpec(value)
+	{
+		literal, ok := syntax.FunctionLiteralOf(node)
+		if ok {
+			if literal == nil {
+				return
+			}
+			functionType := literal.Type
+			if functionType != nil {
+				c.checkNamedResults(functionType)
+			}
+			body := literal.Body
+			if body != nil {
+				c.checkConstructors(node, body)
+			}
+			return
 		}
-		if value := syntax.ValueSpecificationOf(specification); value != nil {
-			c.checkValueSpec(value)
+	}
+	{
+		specification, ok := syntax.SpecificationOf(node)
+		if ok {
+			{
+				value := syntax.TypeSpecificationOf(specification)
+				if value != nil {
+					c.checkTypeSpec(value)
+				}
+			}
+			{
+				value := syntax.ValueSpecificationOf(specification)
+				if value != nil {
+					c.checkValueSpec(value)
+				}
+			}
+			return
 		}
-		return
 	}
 	expression, ok := syntax.ExpressionOf(node)
-	if !ok || expression == nil {
+	var operand_1 operandType_1 = !ok
+	if !operand_1 {
+		operand_1 = expression == nil
+	}
+	if operand_1 {
 		return
 	}
-	if value := syntax.CompositeLiteralOf(expression); value != nil {
-		c.checkLiteral(expression, value)
+	{
+		value := syntax.CompositeLiteralOf(expression)
+		if value != nil {
+			c.checkLiteral(expression, value)
+		}
 	}
-	if value := syntax.CallExpressionOf(expression); value != nil {
-		c.checkCall(expression, value)
+	{
+		value := syntax.CallExpressionOf(expression)
+		if value != nil {
+			c.checkCall(expression, value)
+		}
 	}
-	if value := syntax.IndexExpressionOf(expression); value != nil {
-		c.checkMapRead(expression, value)
+	{
+		value := syntax.IndexExpressionOf(expression)
+		if value != nil {
+			c.checkMapRead(expression, value)
+		}
 	}
-	if value := syntax.UnaryExpressionOf(expression); value != nil &&
-		value.Operator == token.ARROW {
-		c.checkPresenceRead(expression, value)
+	{
+		type operandType_2 = bool
+		value := syntax.UnaryExpressionOf(expression)
+		var operand_2 operandType_2 = value != nil
+		if operand_2 {
+			operand_2 = value.Operator == token.ARROW
+		}
+		if operand_2 {
+			c.checkPresenceRead(expression, value)
+		}
 	}
-	if value := syntax.TypeAssertionExpressionOf(expression); value != nil {
-		c.checkTypeAssertion(expression, value)
+	{
+		value := syntax.TypeAssertionExpressionOf(expression)
+		if value != nil {
+			c.checkTypeAssertion(expression, value)
+		}
 	}
-	if value := syntax.SliceExpressionOf(expression); value != nil {
-		c.checkReslice(expression, value)
+	{
+		value := syntax.SliceExpressionOf(expression)
+		if value != nil {
+			c.checkReslice(expression, value)
+		}
 	}
 }

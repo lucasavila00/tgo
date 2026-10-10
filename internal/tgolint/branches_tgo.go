@@ -12,6 +12,7 @@ import (
 )
 
 func (c *checker) callMayReturn(expression *syntax.Expression) bool {
+	type operandType = bool
 	if expression == nil {
 		return true
 	}
@@ -20,7 +21,11 @@ func (c *checker) callMayReturn(expression *syntax.Expression) bool {
 		return true
 	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
-	if name == nil || name.Name != "panic" {
+	var operand operandType = name == nil
+	if !operand {
+		operand = name.Name != "panic"
+	}
+	if operand {
 		return true
 	}
 	_, builtin := c.facts.Object(name).(*types.Builtin)
@@ -33,8 +38,20 @@ func (c *checker) checkBranch(
 	branch *syntax.BranchStatement,
 	state checkedState,
 ) {
-	if branch.Token != token.GOTO && branch.Token != token.BREAK &&
-		branch.Token != token.CONTINUE && branch.Token != token.FALLTHROUGH {
+	type operandType = bool
+	var operand operandType = branch.Token != token.GOTO
+	if operand {
+		operand = branch.Token != token.BREAK
+	}
+	var operand_1 operandType = operand
+	if operand_1 {
+		operand_1 = branch.Token != token.CONTINUE
+	}
+	var operand_2 operandType = operand_1
+	if operand_2 {
+		operand_2 = branch.Token != token.FALLTHROUGH
+	}
+	if operand_2 {
 		return
 	}
 	objects := make([]types.Object, 0, len(state))
@@ -45,8 +62,13 @@ func (c *checker) checkBranch(
 		return objects[left].Pos() < objects[right].Pos()
 	})
 	for _, object := range objects {
+		type operandType_1 = bool
 		result := state[object]
-		if result.safe || !c.branchHasUnsafeUse(statement, branch, object, result) {
+		var operand_3 operandType_1 = result.safe
+		if !operand_3 {
+			operand_3 = !c.branchHasUnsafeUse(statement, branch, object, result)
+		}
+		if operand_3 {
 			continue
 		}
 		if result.presence {
@@ -58,6 +80,7 @@ func (c *checker) checkBranch(
 				"%s moves tgo %s %s before its error is proved nil",
 				branch.Token, modelKind(result.model), modelName(result.model))
 		}
+
 	}
 }
 
@@ -86,11 +109,17 @@ func (c *checker) branchHasUnsafeUse(
 }
 
 func functionBody(function *syntax.Node) *syntax.BlockStatement {
-	if declaration, ok := syntax.FunctionDeclarationOf(function); ok {
-		return declaration.Body
+	{
+		declaration, ok := syntax.FunctionDeclarationOf(function)
+		if ok {
+			return declaration.Body
+		}
 	}
-	if literal, ok := syntax.FunctionLiteralOf(function); ok {
-		return literal.Body
+	{
+		literal, ok := syntax.FunctionLiteralOf(function)
+		if ok {
+			return literal.Body
+		}
 	}
 	return nil
 }
@@ -125,12 +154,17 @@ func (c *checker) branchConstruct(
 			return syntax.NewStatementBlock(input.FieldValue)
 		}(syntax.TgoStatementBlockInput{FieldValue: body})
 		syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
+			type operandType = bool
 			value, ok := syntax.StatementOf(node)
 			if !ok {
 				return true
 			}
 			labeled := syntax.LabeledStatementOf(value)
-			if labeled != nil && c.facts.DefinitionName(labeled.Label) == label {
+			var operand operandType = labeled != nil
+			if operand {
+				operand = c.facts.DefinitionName(labeled.Label) == label
+			}
+			if operand {
 				target = labeled.Statement
 				return false
 			}
@@ -166,7 +200,12 @@ func controlTargetBlock(
 ) *cfg.Block {
 	kind := controlTargetKind(statement, branch)
 	for _, block := range graph.Blocks {
-		if block.Stmt == statement && block.Kind == kind {
+		type operandType = bool
+		var operand operandType = block.Stmt == statement
+		if operand {
+			operand = block.Kind == kind
+		}
+		if operand {
 			return block
 		}
 	}
@@ -179,8 +218,13 @@ func controlTargetKind(statement *syntax.Statement, branch token.Token) cfg.Bloc
 	}
 	switch statement.Tag() {
 	case syntax.StatementTagFor:
+		type operandType = bool
 		value := syntax.ForStatementOf(statement)
-		if branch == token.CONTINUE && value.Post != nil {
+		var operand operandType = branch == token.CONTINUE
+		if operand {
+			operand = value.Post != nil
+		}
+		if operand {
 			return cfg.KindForPost
 		}
 		if branch == token.CONTINUE {
@@ -207,11 +251,20 @@ func (c *checker) gotoTargetBlock(graph *cfg.CFG, branch *syntax.BranchStatement
 	}
 	label := c.facts.Object(branch.Label)
 	for _, block := range graph.Blocks {
-		if block.Stmt == nil || block.Kind != cfg.KindLabel {
+		type operandType = bool
+		var operand operandType = block.Stmt == nil
+		if !operand {
+			operand = block.Kind != cfg.KindLabel
+		}
+		if operand {
 			continue
 		}
 		statement := syntax.LabeledStatementOf(block.Stmt)
-		if statement != nil && c.facts.DefinitionName(statement.Label) == label {
+		var operand_1 operandType = statement != nil
+		if operand_1 {
+			operand_1 = c.facts.DefinitionName(statement.Label) == label
+		}
+		if operand_1 {
 			return block
 		}
 	}
@@ -222,13 +275,18 @@ func (c *checker) fallthroughTargetBlock(
 	graph *cfg.CFG,
 	branch *syntax.Statement,
 ) *cfg.Block {
+	type operandType = bool
 	node := syntax.StatementNode(branch)
 	parent := c.parents[node]
 	if parent == nil {
 		return nil
 	}
 	clauseStatement, ok := syntax.StatementOf(parent)
-	if !ok || syntax.CaseClauseOf(clauseStatement) == nil {
+	var operand operandType = !ok
+	if !operand {
+		operand = syntax.CaseClauseOf(clauseStatement) == nil
+	}
+	if operand {
 		return nil
 	}
 	container := c.parents[*parent]
@@ -245,13 +303,23 @@ func (c *checker) fallthroughTargetBlock(
 	}
 	var next *syntax.Statement = nil
 	for index, item := range body.List {
-		if item == clauseStatement && index+1 < len(body.List) {
+		type operandType_1 = bool
+		var operand_1 operandType_1 = item == clauseStatement
+		if operand_1 {
+			operand_1 = index+1 < len(body.List)
+		}
+		if operand_1 {
 			next = body.List[index+1]
 			break
 		}
 	}
 	for _, block := range graph.Blocks {
-		if block.Kind == cfg.KindSwitchCaseBody && block.Stmt == next {
+		type operandType_2 = bool
+		var operand_2 operandType_2 = block.Kind == cfg.KindSwitchCaseBody
+		if operand_2 {
+			operand_2 = block.Stmt == next
+		}
+		if operand_2 {
 			return block
 		}
 	}
@@ -276,6 +344,7 @@ func (c *checker) unsafeUseFromBlock(
 	}
 	visited[flow] = true
 	for _, node := range block.Nodes {
+		type operandType = bool
 		unsafe, valueKilled, proofKilled := c.branchNodeEffect(node, object, result.failure)
 		if unsafe {
 			return true
@@ -283,11 +352,29 @@ func (c *checker) unsafeUseFromBlock(
 		if valueKilled {
 			return false
 		}
-		proofAlive = proofAlive && !proofKilled
+		var operand operandType = proofAlive
+		if operand {
+			operand = !proofKilled
+		}
+		proofAlive = operand
 	}
 	trueSafe, falseSafe := c.blockProofSuccessors(block, object, result, proofAlive)
 	for index, successor := range block.Succs {
-		if index == 0 && trueSafe || index == 1 && falseSafe {
+		type operandType_1 = bool
+		var operand_1 operandType_1 = index == 0
+		if operand_1 {
+			operand_1 = trueSafe
+		}
+		var operand_2 operandType_1 = operand_1
+		if !operand_2 {
+			type operandType_2 = bool
+			var operand_3 operandType_2 = index == 1
+			if operand_3 {
+				operand_3 = falseSafe
+			}
+			operand_2 = operand_3
+		}
+		if operand_2 {
 			continue
 		}
 		if successor == nil {
@@ -306,7 +393,16 @@ func (c *checker) blockProofSuccessors(
 	result checkedResult,
 	proofAlive bool,
 ) (bool, bool) {
-	if !proofAlive || len(block.Succs) != 2 || len(block.Nodes) == 0 {
+	type operandType = bool
+	var operand operandType = !proofAlive
+	if !operand {
+		operand = len(block.Succs) != 2
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = len(block.Nodes) == 0
+	}
+	if operand_1 {
 		return false, false
 	}
 	expression, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
@@ -326,25 +422,55 @@ func (c *checker) branchNodeEffect(
 	unsafe := c.branchNodeUnsafe(&node, value, failure)
 	valueKilled := false
 	proofKilled := false
-	if statement, ok := syntax.StatementOf(&node); ok {
-		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-			for _, target := range assignment.Left {
-				name := syntax.IdentifierExpressionOf(target)
-				if name == nil {
-					continue
+	{
+		statement, ok := syntax.StatementOf(&node)
+		if ok {
+			{
+				assignment := syntax.AssignmentStatementOf(statement)
+				if assignment != nil {
+					for _, target := range assignment.Left {
+						type operandType = bool
+						name := syntax.IdentifierExpressionOf(target)
+						if name == nil {
+							continue
+						}
+						assigned := c.facts.Object(name)
+						var operand operandType = valueKilled
+						if !operand {
+							operand = assigned == value
+						}
+						valueKilled = operand
+						var operand_1 operandType = proofKilled
+						if !operand_1 {
+							operand_1 = assigned == failure
+						}
+						proofKilled = operand_1
+					}
 				}
-				assigned := c.facts.Object(name)
-				valueKilled = valueKilled || assigned == value
-				proofKilled = proofKilled || assigned == failure
 			}
 		}
 	}
-	if specification, ok := syntax.SpecificationOf(&node); ok {
-		if values := syntax.ValueSpecificationOf(specification); values != nil {
-			for _, name := range values.Names {
-				defined := c.facts.DefinitionName(name)
-				valueKilled = valueKilled || defined == value
-				proofKilled = proofKilled || defined == failure
+	{
+		specification, ok := syntax.SpecificationOf(&node)
+		if ok {
+			{
+				values := syntax.ValueSpecificationOf(specification)
+				if values != nil {
+					for _, name := range values.Names {
+						type operandType_1 = bool
+						defined := c.facts.DefinitionName(name)
+						var operand_2 operandType_1 = valueKilled
+						if !operand_2 {
+							operand_2 = defined == value
+						}
+						valueKilled = operand_2
+						var operand_3 operandType_1 = proofKilled
+						if !operand_3 {
+							operand_3 = defined == failure
+						}
+						proofKilled = operand_3
+					}
+				}
 			}
 		}
 	}
@@ -356,23 +482,43 @@ func (c *checker) branchNodeUnsafe(
 	value types.Object,
 	failure types.Object,
 ) bool {
-	if statement, ok := syntax.StatementOf(node); ok {
-		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-			unsafe := c.expressionsUseObject(assignment.Right, value)
-			for _, target := range assignment.Left {
-				if syntax.IdentifierExpressionOf(target) == nil {
-					unsafe = unsafe || c.expressionUsesObject(target, value)
+	{
+		statement, ok := syntax.StatementOf(node)
+		if ok {
+			{
+				assignment := syntax.AssignmentStatementOf(statement)
+				if assignment != nil {
+					unsafe := c.expressionsUseObject(assignment.Right, value)
+					for _, target := range assignment.Left {
+						if syntax.IdentifierExpressionOf(target) == nil {
+							type operandType = bool
+							var operand operandType = unsafe
+							if !operand {
+								operand = c.expressionUsesObject(target, value)
+							}
+							unsafe = operand
+						}
+					}
+					return unsafe
 				}
 			}
-			return unsafe
-		}
-		if returned := syntax.ReturnStatementOf(statement); returned != nil {
-			return c.returnUsesPendingValue(returned, value, failure)
+			{
+				returned := syntax.ReturnStatementOf(statement)
+				if returned != nil {
+					return c.returnUsesPendingValue(returned, value, failure)
+				}
+			}
 		}
 	}
-	if specification, ok := syntax.SpecificationOf(node); ok {
-		if values := syntax.ValueSpecificationOf(specification); values != nil {
-			return c.expressionsUseObject(values.Values, value)
+	{
+		specification, ok := syntax.SpecificationOf(node)
+		if ok {
+			{
+				values := syntax.ValueSpecificationOf(specification)
+				if values != nil {
+					return c.expressionsUseObject(values.Values, value)
+				}
+			}
 		}
 	}
 	return c.nodeUsesObject(node, value)
@@ -390,8 +536,13 @@ func (c *checker) expressionsUseObject(expressions []*syntax.Expression, object 
 func (c *checker) expressionUsesObject(expression *syntax.Expression, object types.Object) bool {
 	used := false
 	syntax.InspectExpression(expression, func(node *syntax.Node) bool {
+		type operandType = bool
 		name, ok := syntax.IdentifierOf(node)
-		if ok && c.facts.Object(name) == object {
+		var operand operandType = ok
+		if operand {
+			operand = c.facts.Object(name) == object
+		}
+		if operand {
 			used = true
 		}
 		return !used
@@ -400,8 +551,13 @@ func (c *checker) expressionUsesObject(expression *syntax.Expression, object typ
 }
 
 func (c *checker) nodeUsesObject(node *syntax.Node, object types.Object) bool {
+	type operandType = bool
 	name, ok := syntax.IdentifierOf(node)
-	if ok && name != nil {
+	var operand operandType = ok
+	if operand {
+		operand = name != nil
+	}
+	if operand {
 		if c.facts.Object(name) == object {
 			return true
 		}

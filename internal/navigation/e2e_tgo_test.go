@@ -112,12 +112,21 @@ func assertNoGeneratedGoFiles(t *testing.T, workspace string) {
 		entry fs.DirEntry,
 		walkErr error,
 	) error {
+		type operandType = bool
 		if walkErr != nil {
 			return walkErr
 		}
 		name := entry.Name()
-		if !entry.IsDir() && (strings.HasSuffix(name, "_tgo.go") ||
-			strings.HasSuffix(name, "_tgo_test.go")) {
+		var operand operandType = !entry.IsDir()
+		if operand {
+			type operandType_1 = bool
+			var operand_1 operandType_1 = strings.HasSuffix(name, "_tgo.go")
+			if !operand_1 {
+				operand_1 = strings.HasSuffix(name, "_tgo_test.go")
+			}
+			operand = (operand_1)
+		}
+		if operand {
 			t.Fatalf("navigation wrote generated Go file %s", path)
 		}
 		return nil
@@ -128,6 +137,7 @@ func assertNoGeneratedGoFiles(t *testing.T, workspace string) {
 }
 
 func TestHelperCancellationStopsBeforeInvalidPackage(t *testing.T) {
+	type operandType = bool
 	repository := repositoryRoot(t)
 	helper := buildHelper(t, repository)
 	source := filepath.Join(
@@ -136,25 +146,38 @@ func TestHelperCancellationStopsBeforeInvalidPackage(t *testing.T) {
 	workspace := filepath.Join(t.TempDir(), "cancellation")
 	copyWorkspace(t, source, workspace)
 	server := startHelper(t, helper, workspace)
-	if err := server.input.Encode(map[string]any{
-		"id": 1, "method": "workspaceSymbols",
-		"params": map[string]any{"query": ""},
-	}); err != nil {
-		t.Fatal(err)
+	{
+		err := server.input.Encode(map[string]any{
+			"id": 1, "method": "workspaceSymbols",
+			"params": map[string]any{"query": ""},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := server.input.Encode(map[string]any{
-		"method": "cancel", "params": map[string]any{"id": 1},
-	}); err != nil {
-		t.Fatal(err)
+	{
+		err := server.input.Encode(map[string]any{
+			"method": "cancel", "params": map[string]any{"id": 1},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	response := struct {
 		ID    int64  `json:"id"`
 		Error string `json:"error"`
 	}{ID: 0, Error: ""}
-	if err := server.output.Decode(&response); err != nil {
-		t.Fatal(err)
+	{
+		err := server.output.Decode(&response)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if response.ID != 1 || response.Error != context.Canceled.Error() {
+	var operand operandType = response.ID != 1
+	if !operand {
+		operand = response.Error != context.Canceled.Error()
+	}
+	if operand {
 		t.Fatalf("canceled response = %#v", response)
 	}
 }
@@ -174,8 +197,11 @@ func (h *helperProcess) checkMutation(
 		t.Fatalf("mutation text %q is absent from %s", fixture.Old, fixture.File)
 	}
 	changed := strings.ReplaceAll(string(data), fixture.Old, fixture.New)
-	if err := os.WriteFile(path, []byte(changed), 0o644); err != nil {
-		t.Fatal(err)
+	{
+		err := os.WriteFile(path, []byte(changed), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	invalidated := false
 	h.call(t, "invalidate", mustJSON(t, map[string]any{
@@ -192,8 +218,11 @@ func buildHelper(t *testing.T, repository string) string {
 	helper := filepath.Join(t.TempDir(), "tgonav")
 	command := exec.Command("go", "build", "-o", helper, "./cmd/tgonav")
 	command.Dir = repository
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("build helper: %v\n%s", err, output)
+	{
+		output, err := command.CombinedOutput()
+		if err != nil {
+			t.Fatalf("build helper: %v\n%s", err, output)
+		}
 	}
 	return helper
 }
@@ -210,13 +239,19 @@ func startHelper(t *testing.T, helper, workspace string) *helperProcess {
 		t.Fatal(err)
 	}
 	command.Stderr = os.Stderr
-	if err := command.Start(); err != nil {
-		t.Fatal(err)
+	{
+		err := command.Start()
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	t.Cleanup(func() {
 		_ = input.Close()
-		if err := command.Wait(); err != nil {
-			t.Errorf("stop helper: %v", err)
+		{
+			err := command.Wait()
+			if err != nil {
+				t.Errorf("stop helper: %v", err)
+			}
 		}
 	})
 	return &helperProcess{
@@ -241,6 +276,7 @@ func (h *helperProcess) check(
 		"includeDeclaration": fixture.IncludeDeclaration,
 	})
 	if fixture.Method == "hover" {
+		type operandType = bool
 		result := (*navigation.Hover)(nil)
 		h.call(t, fixture.Method, params, &result)
 		want := &navigation.Hover{
@@ -250,7 +286,11 @@ func (h *helperProcess) check(
 				End: offset + len(fixture.Position.Text),
 			},
 		}
-		if result == nil || *result != *want {
+		var operand operandType = result == nil
+		if !operand {
+			operand = *result != *want
+		}
+		if operand {
 			t.Fatalf(
 				"hover at %#v result = %#v, want %#v",
 				fixture.Position, result, want,
@@ -335,8 +375,11 @@ func (h *helperProcess) call(
 	request := map[string]any{
 		"id": h.nextID, "method": method, "params": params,
 	}
-	if err := h.input.Encode(request); err != nil {
-		t.Fatal(err)
+	{
+		err := h.input.Encode(request)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	var response struct {
 		ID     int64           `json:"id"`
@@ -347,8 +390,11 @@ func (h *helperProcess) call(
 		Result json.RawMessage `json:"result"`
 		Error  string          `json:"error"`
 	}{ID: 0, Result: nil, Error: ""}
-	if err := h.output.Decode(&response); err != nil {
-		t.Fatal(err)
+	{
+		err := h.output.Decode(&response)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if response.Error != "" {
 		t.Fatalf("helper error: %s", response.Error)
@@ -357,8 +403,11 @@ func (h *helperProcess) call(
 		t.Fatalf("response ID = %d, want %d", response.ID, h.nextID)
 	}
 	h.nextID++
-	if err := json.Unmarshal(response.Result, result); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal(response.Result, result)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -378,8 +427,11 @@ func readRequests(t *testing.T, workspace string) []fixtureRequest {
 		t.Fatal(err)
 	}
 	result := []fixtureRequest(nil)
-	if err := json.Unmarshal(data, &result); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal(data, &result)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	return result
 }
@@ -395,8 +447,11 @@ func readSymbolRequests(t *testing.T, workspace string) []fixtureSymbolRequest {
 		t.Fatal(err)
 	}
 	result := []fixtureSymbolRequest(nil)
-	if err := json.Unmarshal(data, &result); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal(data, &result)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	return result
 }
@@ -412,8 +467,11 @@ func readMutations(t *testing.T, workspace string) []fixtureMutation {
 		t.Fatal(err)
 	}
 	result := []fixtureMutation(nil)
-	if err := json.Unmarshal(data, &result); err != nil {
-		t.Fatal(err)
+	{
+		err := json.Unmarshal(data, &result)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	return result
 }
@@ -428,6 +486,7 @@ func copyWorkspace(t *testing.T, source, destination string) {
 		if err != nil {
 			return err
 		}
+
 		target := filepath.Join(destination, relative)
 		if entry.IsDir() {
 			return os.MkdirAll(target, 0o755)
@@ -436,6 +495,7 @@ func copyWorkspace(t *testing.T, source, destination string) {
 		if err_1 != nil {
 			return err_1
 		}
+
 		return os.WriteFile(target, data, 0o644)
 	})
 	if err != nil {

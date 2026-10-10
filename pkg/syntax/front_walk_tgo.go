@@ -16,7 +16,12 @@ type frontVisitor interface {
 
 // frontChildren returns the direct source children of a node in a read-only tree.
 func frontChildren(file *frontFile, node frontNode) []frontNode {
-	if file == nil || node == nil {
+	type operandType = bool
+	var operand operandType = file == nil
+	if !operand {
+		operand = node == nil
+	}
+	if operand {
 		return nil
 	}
 	return append([]frontNode(nil), file.children[node]...)
@@ -24,7 +29,12 @@ func frontChildren(file *frontFile, node frontNode) []frontNode {
 
 // frontParent returns the direct source parent of a node.
 func frontParent(file *frontFile, node frontNode) frontNode {
-	if file == nil || node == nil {
+	type operandType = bool
+	var operand operandType = file == nil
+	if !operand {
+		operand = node == nil
+	}
+	if operand {
 		return nil
 	}
 	return file.parents[node]
@@ -45,8 +55,21 @@ func frontExtensionAt(file *frontFile, position token.Pos) frontExtension {
 	}
 	var found frontExtension = nil
 	for _, extension := range file.extensions {
-		if extension.Pos() <= position && position < extension.End() &&
-			(found == nil || extension.End()-extension.Pos() < found.End()-found.Pos()) {
+		type operandType = bool
+		var operand operandType = extension.Pos() <= position
+		if operand {
+			operand = position < extension.End()
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			type operandType_1 = bool
+			var operand_2 operandType_1 = found == nil
+			if !operand_2 {
+				operand_2 = extension.End()-extension.Pos() < found.End()-found.Pos()
+			}
+			operand_1 = (operand_2)
+		}
+		if operand_1 {
 			found = extension
 		}
 	}
@@ -55,7 +78,12 @@ func frontExtensionAt(file *frontFile, position token.Pos) frontExtension {
 
 // frontAttachedComments returns leading and trailing comments for a node.
 func frontAttachedComments(file *frontFile, node frontNode) []*ast.CommentGroup {
-	if file == nil || node == nil {
+	type operandType = bool
+	var operand operandType = file == nil
+	if !operand {
+		operand = node == nil
+	}
+	if operand {
 		return nil
 	}
 	return append([]*ast.CommentGroup(nil), file.attached[node]...)
@@ -63,7 +91,12 @@ func frontAttachedComments(file *frontFile, node frontNode) []*ast.CommentGroup 
 
 // frontWalk visits the complete source tree.
 func frontWalk(visitor frontVisitor, file *frontFile) {
-	if visitor == nil || file == nil {
+	type operandType = bool
+	var operand operandType = visitor == nil
+	if !operand {
+		operand = file == nil
+	}
+	if operand {
 		return
 	}
 	walkNode(visitor, file, file)
@@ -82,7 +115,12 @@ func walkNode(visitor frontVisitor, file *frontFile, node frontNode) {
 
 // frontInspect calls visit for each node. A false result skips that node's children.
 func frontInspect(file *frontFile, visit func(frontNode) bool) {
-	if file == nil || visit == nil {
+	type operandType = bool
+	var operand operandType = file == nil
+	if !operand {
+		operand = visit == nil
+	}
+	if operand {
 		return
 	}
 	walkNode(inspector(visit), file, file)
@@ -91,7 +129,12 @@ func frontInspect(file *frontFile, visit func(frontNode) bool) {
 type inspector func(frontNode) bool
 
 func (inspect inspector) Visit(node frontNode) frontVisitor {
-	if node == nil || inspect(node) {
+	type operandType = bool
+	var operand operandType = node == nil
+	if !operand {
+		operand = inspect(node)
+	}
+	if operand {
 		return inspect
 	}
 	return nil
@@ -103,7 +146,12 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 	file.extensions = nil
 	anchoredChildren := make(map[frontNode][]frontNode, len(anchors))
 	for child, parent := range anchors {
-		if nodePresent(child) && nodePresent(parent) {
+		type operandType = bool
+		var operand operandType = nodePresent(child)
+		if operand {
+			operand = nodePresent(parent)
+		}
+		if operand {
 			file.parents[child] = parent
 			anchoredChildren[parent] = append(anchoredChildren[parent], child)
 		}
@@ -111,7 +159,12 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 	visited := make(map[frontNode]bool)
 	var add func(frontNode) = nil
 	add = func(node frontNode) {
-		if node == nil || visited[node] {
+		type operandType = bool
+		var operand operandType = node == nil
+		if !operand {
+			operand = visited[node]
+		}
+		if operand {
 			return
 		}
 		visited[node] = true
@@ -120,19 +173,35 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 		filtered := children[:0]
 		seenChild := make(map[frontNode]bool)
 		for _, child := range children {
-			if !nodePresent(child) || seenChild[child] {
+			type operandType_1 = bool
+			var operand_1 operandType_1 = !nodePresent(child)
+			if !operand_1 {
+				operand_1 = seenChild[child]
+			}
+			if operand_1 {
 				continue
 			}
-			if parent := file.parents[child]; parent == nil || parent == node {
-				filtered = append(filtered, child)
-				seenChild[child] = true
+			{
+				type operandType_2 = bool
+				parent := file.parents[child]
+				var operand_2 operandType_2 = parent == nil
+				if !operand_2 {
+					operand_2 = parent == node
+				}
+				if operand_2 {
+					filtered = append(filtered, child)
+					seenChild[child] = true
+				}
 			}
 		}
 		children = filtered
 		slices.SortStableFunc(children, compareNodes)
 		file.children[node] = children
-		if extension, ok := node.(frontExtension); ok {
-			file.extensions = append(file.extensions, extension)
+		{
+			extension, ok := node.(frontExtension)
+			if ok {
+				file.extensions = append(file.extensions, extension)
+			}
 		}
 		for _, child := range children {
 			if file.parents[child] == nil {
@@ -210,21 +279,32 @@ func syntaxChildren(file *frontFile, node frontNode) []frontNode {
 		}
 		children = append(children, node.Result.Key, node.Result.Value)
 	default:
-		if goNode, ok := node.(ast.Node); ok {
-			children = directGoChildren(goNode)
+		{
+			goNode, ok := node.(ast.Node)
+			if ok {
+				children = directGoChildren(goNode)
+			}
 		}
 	}
-	if _, isFile := node.(*frontFile); !isFile {
-		for _, comment := range file.attached[node] {
-			children = append(children, comment)
+	{
+		_, isFile := node.(*frontFile)
+		if !isFile {
+			for _, comment := range file.attached[node] {
+				children = append(children, comment)
+			}
 		}
 	}
 	return children
 }
 
 func directGoChildren(node ast.Node) []frontNode {
+	type operandType = bool
 	value := reflect.ValueOf(node)
-	if !value.IsValid() || value.IsNil() {
+	var operand operandType = !value.IsValid()
+	if !operand {
+		operand = value.IsNil()
+	}
+	if operand {
 		return nil
 	}
 	return nodeValues(value.Elem())
@@ -236,13 +316,19 @@ func nodeValues(value reflect.Value) []frontNode {
 		field := value.Field(index)
 		switch field.Kind() {
 		case reflect.Interface, reflect.Pointer:
-			if node := reflectedNode(field); node != nil {
-				result = append(result, node)
+			{
+				node := reflectedNode(field)
+				if node != nil {
+					result = append(result, node)
+				}
 			}
 		case reflect.Slice:
 			for item := 0; item < field.Len(); item++ {
-				if node := reflectedNode(field.Index(item)); node != nil {
-					result = append(result, node)
+				{
+					node := reflectedNode(field.Index(item))
+					if node != nil {
+						result = append(result, node)
+					}
 				}
 			}
 		}
@@ -251,9 +337,21 @@ func nodeValues(value reflect.Value) []frontNode {
 }
 
 func reflectedNode(value reflect.Value) frontNode {
-	if !value.IsValid() ||
-		((value.Kind() == reflect.Interface || value.Kind() == reflect.Pointer) &&
-			value.IsNil()) {
+	type operandType = bool
+	var operand operandType = !value.IsValid()
+	if !operand {
+		type operandType_1 = bool
+		var operand_1 operandType_1 = value.Kind() == reflect.Interface
+		if !operand_1 {
+			operand_1 = value.Kind() == reflect.Pointer
+		}
+		var operand_2 operandType_1 = (operand_1)
+		if operand_2 {
+			operand_2 = value.IsNil()
+		}
+		operand = (operand_2)
+	}
+	if operand {
 		return nil
 	}
 	if value.Kind() == reflect.Interface {
@@ -266,11 +364,17 @@ func reflectedNode(value reflect.Value) frontNode {
 	if !ok {
 		return nil
 	}
-	if _, comment := node.(*ast.CommentGroup); comment {
-		return nil
+	{
+		_, comment := node.(*ast.CommentGroup)
+		if comment {
+			return nil
+		}
 	}
-	if _, comment := node.(*ast.Comment); comment {
-		return nil
+	{
+		_, comment := node.(*ast.Comment)
+		if comment {
+			return nil
+		}
 	}
 	return node
 }
@@ -289,11 +393,16 @@ func compareNodes(left frontNode, right frontNode) int {
 }
 
 func nodePresent(node frontNode) bool {
+	type operandType = bool
 	if node == nil {
 		return false
 	}
 	value := reflect.ValueOf(node)
-	return value.Kind() != reflect.Pointer || !value.IsNil()
+	var operand operandType = value.Kind() != reflect.Pointer
+	if !operand {
+		operand = !value.IsNil()
+	}
+	return operand
 }
 
 func compareExtensions(left frontExtension, right frontExtension) int {

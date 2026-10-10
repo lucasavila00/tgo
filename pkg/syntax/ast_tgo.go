@@ -61,14 +61,23 @@ type FieldList struct {
 
 // ChannelDirection is a channel type direction.
 func tgoChannelDirectionExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -92,7 +101,12 @@ func (v ChannelDirection) Tag() ChannelDirectionTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v ChannelDirection) GobEncode() ([]byte, error) {
-	if v.tgoTag < ChannelDirectionTagSendReceive || v.tgoTag > ChannelDirectionTagReceiveOnly {
+	type operandType = bool
+	var operand operandType = v.tgoTag < ChannelDirectionTagSendReceive
+	if !operand {
+		operand = v.tgoTag > ChannelDirectionTagReceiveOnly
+	}
+	if operand {
 		return nil, fmt.Errorf("ChannelDirection: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
@@ -101,12 +115,21 @@ func (v ChannelDirection) GobEncode() ([]byte, error) {
 
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *ChannelDirection) GobDecode(data []byte) error {
+	type operandType = bool
 	if len(data) != 4 {
 		return fmt.Errorf("ChannelDirection: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := ChannelDirectionTag(number)
-	if uint32(tag) != number || tag < ChannelDirectionTagSendReceive || tag > ChannelDirectionTagReceiveOnly {
+	var operand operandType = uint32(tag) != number
+	if !operand {
+		operand = tag < ChannelDirectionTagSendReceive
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = tag > ChannelDirectionTagReceiveOnly
+	}
+	if operand_1 {
 		return fmt.Errorf("ChannelDirection: cannot gob decode unknown tag %d", number)
 	}
 	switch tag {
@@ -202,8 +225,11 @@ func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one ChannelDirection JSON variant")
@@ -215,22 +241,31 @@ func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "SendReceive":
 		var payload ChannelDirectionSendReceive
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewChannelDirectionSendReceive()
 		return nil
 	case "SendOnly":
 		var payload ChannelDirectionSendOnly
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewChannelDirectionSendOnly()
 		return nil
 	case "ReceiveOnly":
 		var payload ChannelDirectionReceiveOnly
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewChannelDirectionReceiveOnly()
 		return nil
@@ -240,6 +275,7 @@ func (v *ChannelDirection) UnmarshalJSON(data []byte) error {
 }
 
 func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -253,6 +289,7 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -267,8 +304,16 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "ReceiveOnly":
 			current = 3
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -280,20 +325,38 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one ChannelDirection JSON variant")
 	}
 	if selected == 0 {
@@ -302,22 +365,31 @@ func (v *ChannelDirection) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload ChannelDirectionSendReceive
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewChannelDirectionSendReceive()
 		return nil
 	case 2:
 		var payload ChannelDirectionSendOnly
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewChannelDirectionSendOnly()
 		return nil
 	case 3:
 		var payload ChannelDirectionReceiveOnly
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewChannelDirectionReceiveOnly()
 		return nil
@@ -1112,8 +1184,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Expression JSON variant")
@@ -1125,8 +1200,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Bad":
 		var payload ExpressionBad
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Bad JSON payload: Value must not be nil")
@@ -1136,8 +1214,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Identifier":
 		var payload ExpressionIdentifier
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Identifier JSON payload: Value must not be nil")
@@ -1147,8 +1228,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Ellipsis":
 		var payload ExpressionEllipsis
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Ellipsis JSON payload: Value must not be nil")
@@ -1158,8 +1242,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "BasicLiteral":
 		var payload ExpressionBasicLiteral
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.BasicLiteral JSON payload: Value must not be nil")
@@ -1169,8 +1256,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "FunctionLiteral":
 		var payload ExpressionFunctionLiteral
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value must not be nil")
@@ -1293,8 +1383,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "CompositeLiteral":
 		var payload ExpressionCompositeLiteral
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.CompositeLiteral JSON payload: Value must not be nil")
@@ -1311,8 +1404,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Parenthesized":
 		var payload ExpressionParenthesized
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Parenthesized JSON payload: Value must not be nil")
@@ -1327,8 +1423,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Selector":
 		var payload ExpressionSelector
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Selector JSON payload: Value must not be nil")
@@ -1346,8 +1445,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Index":
 		var payload ExpressionIndex
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Index JSON payload: Value must not be nil")
@@ -1365,8 +1467,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "IndexList":
 		var payload ExpressionIndexList
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.IndexList JSON payload: Value must not be nil")
@@ -1386,8 +1491,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Slice":
 		var payload ExpressionSlice
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Slice JSON payload: Value must not be nil")
@@ -1402,8 +1510,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "TypeAssertion":
 		var payload ExpressionTypeAssertion
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.TypeAssertion JSON payload: Value must not be nil")
@@ -1418,8 +1529,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Call":
 		var payload ExpressionCall
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Call JSON payload: Value must not be nil")
@@ -1439,8 +1553,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Star":
 		var payload ExpressionStar
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Star JSON payload: Value must not be nil")
@@ -1455,8 +1572,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "NonNilPointer":
 		var payload ExpressionNonNilPointer
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.NonNilPointer JSON payload: Value must not be nil")
@@ -1471,8 +1591,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Unary":
 		var payload ExpressionUnary
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Unary JSON payload: Value must not be nil")
@@ -1487,8 +1610,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Binary":
 		var payload ExpressionBinary
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Binary JSON payload: Value must not be nil")
@@ -1506,8 +1632,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "KeyValue":
 		var payload ExpressionKeyValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.KeyValue JSON payload: Value must not be nil")
@@ -1525,8 +1654,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "ArrayType":
 		var payload ExpressionArrayType
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.ArrayType JSON payload: Value must not be nil")
@@ -1541,8 +1673,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "StructType":
 		var payload ExpressionStructType
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.StructType JSON payload: Value must not be nil")
@@ -1588,8 +1723,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "FunctionType":
 		var payload ExpressionFunctionType
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value must not be nil")
@@ -1697,8 +1835,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "InterfaceType":
 		var payload ExpressionInterfaceType
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value must not be nil")
@@ -1744,8 +1885,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "MapType":
 		var payload ExpressionMapType
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.MapType JSON payload: Value must not be nil")
@@ -1763,8 +1907,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "ChannelType":
 		var payload ExpressionChannelType
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.ChannelType JSON payload: Value must not be nil")
@@ -1779,8 +1926,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Default":
 		var payload ExpressionDefault
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Default JSON payload: Value must not be nil")
@@ -1790,8 +1940,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Propagation":
 		var payload ExpressionPropagation
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Propagation JSON payload: Value must not be nil")
@@ -1819,8 +1972,11 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Comprehension":
 		var payload ExpressionComprehension
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Comprehension JSON payload: Value must not be nil")
@@ -1842,6 +1998,7 @@ func (v *Expression) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -1855,6 +2012,7 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -1917,8 +2075,16 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Comprehension":
 			current = 27
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -1930,20 +2096,38 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Expression JSON variant")
 	}
 	if selected == 0 {
@@ -1952,8 +2136,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload ExpressionBad
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Bad JSON payload: Value must not be nil")
@@ -1963,8 +2150,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 2:
 		var payload ExpressionIdentifier
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Identifier JSON payload: Value must not be nil")
@@ -1974,8 +2164,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 3:
 		var payload ExpressionEllipsis
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Ellipsis JSON payload: Value must not be nil")
@@ -1985,8 +2178,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 4:
 		var payload ExpressionBasicLiteral
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.BasicLiteral JSON payload: Value must not be nil")
@@ -1996,8 +2192,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 5:
 		var payload ExpressionFunctionLiteral
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.FunctionLiteral JSON payload: Value must not be nil")
@@ -2120,8 +2319,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 6:
 		var payload ExpressionCompositeLiteral
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.CompositeLiteral JSON payload: Value must not be nil")
@@ -2138,8 +2340,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 7:
 		var payload ExpressionParenthesized
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Parenthesized JSON payload: Value must not be nil")
@@ -2154,8 +2359,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 8:
 		var payload ExpressionSelector
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Selector JSON payload: Value must not be nil")
@@ -2173,8 +2381,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 9:
 		var payload ExpressionIndex
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Index JSON payload: Value must not be nil")
@@ -2192,8 +2403,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 10:
 		var payload ExpressionIndexList
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.IndexList JSON payload: Value must not be nil")
@@ -2213,8 +2427,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 11:
 		var payload ExpressionSlice
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Slice JSON payload: Value must not be nil")
@@ -2229,8 +2446,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 12:
 		var payload ExpressionTypeAssertion
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.TypeAssertion JSON payload: Value must not be nil")
@@ -2245,8 +2465,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 13:
 		var payload ExpressionCall
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Call JSON payload: Value must not be nil")
@@ -2266,8 +2489,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 14:
 		var payload ExpressionStar
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Star JSON payload: Value must not be nil")
@@ -2282,8 +2508,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 15:
 		var payload ExpressionNonNilPointer
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.NonNilPointer JSON payload: Value must not be nil")
@@ -2298,8 +2527,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 16:
 		var payload ExpressionUnary
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Unary JSON payload: Value must not be nil")
@@ -2314,8 +2546,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 17:
 		var payload ExpressionBinary
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Binary JSON payload: Value must not be nil")
@@ -2333,8 +2568,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 18:
 		var payload ExpressionKeyValue
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.KeyValue JSON payload: Value must not be nil")
@@ -2352,8 +2590,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 19:
 		var payload ExpressionArrayType
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.ArrayType JSON payload: Value must not be nil")
@@ -2368,8 +2609,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 20:
 		var payload ExpressionStructType
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.StructType JSON payload: Value must not be nil")
@@ -2415,8 +2659,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 21:
 		var payload ExpressionFunctionType
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.FunctionType JSON payload: Value must not be nil")
@@ -2524,8 +2771,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 22:
 		var payload ExpressionInterfaceType
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.InterfaceType JSON payload: Value must not be nil")
@@ -2571,8 +2821,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 23:
 		var payload ExpressionMapType
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.MapType JSON payload: Value must not be nil")
@@ -2590,8 +2843,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 24:
 		var payload ExpressionChannelType
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.ChannelType JSON payload: Value must not be nil")
@@ -2606,8 +2862,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 25:
 		var payload ExpressionDefault
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Default JSON payload: Value must not be nil")
@@ -2617,8 +2876,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 26:
 		var payload ExpressionPropagation
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Propagation JSON payload: Value must not be nil")
@@ -2646,8 +2908,11 @@ func (v *Expression) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 27:
 		var payload ExpressionComprehension
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Expression.Comprehension JSON payload: Value must not be nil")
@@ -3513,8 +3778,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Statement JSON variant")
@@ -3526,8 +3794,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Bad":
 		var payload StatementBad
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Bad JSON payload: Value must not be nil")
@@ -3537,8 +3808,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Declaration":
 		var payload StatementDeclaration
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Declaration JSON payload: Value must not be nil")
@@ -3553,8 +3827,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Empty":
 		var payload StatementEmpty
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Empty JSON payload: Value must not be nil")
@@ -3564,8 +3841,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Labeled":
 		var payload StatementLabeled
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Labeled JSON payload: Value must not be nil")
@@ -3583,8 +3863,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Expression":
 		var payload StatementExpression
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Expression JSON payload: Value must not be nil")
@@ -3599,8 +3882,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Send":
 		var payload StatementSend
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Send JSON payload: Value must not be nil")
@@ -3618,8 +3904,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Increment":
 		var payload StatementIncrement
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Increment JSON payload: Value must not be nil")
@@ -3634,8 +3923,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Assignment":
 		var payload StatementAssignment
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Assignment JSON payload: Value must not be nil")
@@ -3657,8 +3949,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Go":
 		var payload StatementGo
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Go JSON payload: Value must not be nil")
@@ -3673,8 +3968,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Defer":
 		var payload StatementDefer
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Defer JSON payload: Value must not be nil")
@@ -3689,8 +3987,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Return":
 		var payload StatementReturn
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Return JSON payload: Value must not be nil")
@@ -3707,8 +4008,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Branch":
 		var payload StatementBranch
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Branch JSON payload: Value must not be nil")
@@ -3718,8 +4022,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Block":
 		var payload StatementBlock
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Block JSON payload: Value must not be nil")
@@ -3736,8 +4043,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "If":
 		var payload StatementIf
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.If JSON payload: Value must not be nil")
@@ -3762,8 +4072,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Case":
 		var payload StatementCase
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Case JSON payload: Value must not be nil")
@@ -3785,8 +4098,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Switch":
 		var payload StatementSwitch
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Switch JSON payload: Value must not be nil")
@@ -3808,8 +4124,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "TypeSwitch":
 		var payload StatementTypeSwitch
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value must not be nil")
@@ -3834,8 +4153,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Communication":
 		var payload StatementCommunication
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Communication JSON payload: Value must not be nil")
@@ -3852,8 +4174,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Select":
 		var payload StatementSelect
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Select JSON payload: Value must not be nil")
@@ -3875,8 +4200,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "For":
 		var payload StatementFor
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.For JSON payload: Value must not be nil")
@@ -3898,8 +4226,11 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Range":
 		var payload StatementRange
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Range JSON payload: Value must not be nil")
@@ -3928,6 +4259,7 @@ func (v *Statement) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -3941,6 +4273,7 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -3991,8 +4324,16 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Range":
 			current = 21
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -4004,20 +4345,38 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Statement JSON variant")
 	}
 	if selected == 0 {
@@ -4026,8 +4385,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload StatementBad
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Bad JSON payload: Value must not be nil")
@@ -4037,8 +4399,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 2:
 		var payload StatementDeclaration
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Declaration JSON payload: Value must not be nil")
@@ -4053,8 +4418,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 3:
 		var payload StatementEmpty
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Empty JSON payload: Value must not be nil")
@@ -4064,8 +4432,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 4:
 		var payload StatementLabeled
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Labeled JSON payload: Value must not be nil")
@@ -4083,8 +4454,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 5:
 		var payload StatementExpression
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Expression JSON payload: Value must not be nil")
@@ -4099,8 +4473,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 6:
 		var payload StatementSend
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Send JSON payload: Value must not be nil")
@@ -4118,8 +4495,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 7:
 		var payload StatementIncrement
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Increment JSON payload: Value must not be nil")
@@ -4134,8 +4514,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 8:
 		var payload StatementAssignment
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Assignment JSON payload: Value must not be nil")
@@ -4157,8 +4540,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 9:
 		var payload StatementGo
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Go JSON payload: Value must not be nil")
@@ -4173,8 +4559,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 10:
 		var payload StatementDefer
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Defer JSON payload: Value must not be nil")
@@ -4189,8 +4578,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 11:
 		var payload StatementReturn
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Return JSON payload: Value must not be nil")
@@ -4207,8 +4599,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 12:
 		var payload StatementBranch
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Branch JSON payload: Value must not be nil")
@@ -4218,8 +4613,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 13:
 		var payload StatementBlock
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Block JSON payload: Value must not be nil")
@@ -4236,8 +4634,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 14:
 		var payload StatementIf
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.If JSON payload: Value must not be nil")
@@ -4262,8 +4663,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 15:
 		var payload StatementCase
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Case JSON payload: Value must not be nil")
@@ -4285,8 +4689,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 16:
 		var payload StatementSwitch
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Switch JSON payload: Value must not be nil")
@@ -4308,8 +4715,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 17:
 		var payload StatementTypeSwitch
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.TypeSwitch JSON payload: Value must not be nil")
@@ -4334,8 +4744,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 18:
 		var payload StatementCommunication
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Communication JSON payload: Value must not be nil")
@@ -4352,8 +4765,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 19:
 		var payload StatementSelect
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Select JSON payload: Value must not be nil")
@@ -4375,8 +4791,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 20:
 		var payload StatementFor
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.For JSON payload: Value must not be nil")
@@ -4398,8 +4817,11 @@ func (v *Statement) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 21:
 		var payload StatementRange
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Statement.Range JSON payload: Value must not be nil")
@@ -4742,8 +5164,11 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Specification JSON variant")
@@ -4755,8 +5180,11 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Import":
 		var payload SpecificationImport
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Specification.Import JSON payload: Value must not be nil")
@@ -4785,8 +5213,11 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Value":
 		var payload SpecificationValue
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Specification.Value JSON payload: Value must not be nil")
@@ -4822,8 +5253,11 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Type":
 		var payload SpecificationType
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Specification.Type JSON payload: Value must not be nil")
@@ -4890,6 +5324,7 @@ func (v *Specification) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -4903,6 +5338,7 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -4917,8 +5353,16 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Type":
 			current = 3
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -4930,20 +5374,38 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Specification JSON variant")
 	}
 	if selected == 0 {
@@ -4952,8 +5414,11 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload SpecificationImport
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Specification.Import JSON payload: Value must not be nil")
@@ -4982,8 +5447,11 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 2:
 		var payload SpecificationValue
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Specification.Value JSON payload: Value must not be nil")
@@ -5019,8 +5487,11 @@ func (v *Specification) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 3:
 		var payload SpecificationType
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Specification.Type JSON payload: Value must not be nil")
@@ -5293,8 +5764,11 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Declaration JSON variant")
@@ -5306,8 +5780,11 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Bad":
 		var payload DeclarationBad
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.Bad JSON payload: Value must not be nil")
@@ -5317,8 +5794,11 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		return nil
 	case "General":
 		var payload DeclarationGeneral
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.General JSON payload: Value must not be nil")
@@ -5342,8 +5822,11 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Function":
 		var payload DeclarationFunction
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.Function JSON payload: Value must not be nil")
@@ -5504,8 +5987,11 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Enum":
 		var payload DeclarationEnum
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.Enum JSON payload: Value must not be nil")
@@ -5592,8 +6078,11 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Struct":
 		var payload DeclarationStruct
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.Struct JSON payload: Value must not be nil")
@@ -5660,6 +6149,7 @@ func (v *Declaration) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -5673,6 +6163,7 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -5691,8 +6182,16 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Struct":
 			current = 5
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -5704,20 +6203,38 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Declaration JSON variant")
 	}
 	if selected == 0 {
@@ -5726,8 +6243,11 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload DeclarationBad
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.Bad JSON payload: Value must not be nil")
@@ -5737,8 +6257,11 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 2:
 		var payload DeclarationGeneral
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.General JSON payload: Value must not be nil")
@@ -5762,8 +6285,11 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 3:
 		var payload DeclarationFunction
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.Function JSON payload: Value must not be nil")
@@ -5924,8 +6450,11 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 4:
 		var payload DeclarationEnum
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.Enum JSON payload: Value must not be nil")
@@ -6012,8 +6541,11 @@ func (v *Declaration) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 5:
 		var payload DeclarationStruct
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Declaration.Struct JSON payload: Value must not be nil")
@@ -6546,8 +7078,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one Node JSON variant")
@@ -6559,8 +7094,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "File":
 		var payload NodeFile
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.File JSON payload: Value must not be nil")
@@ -6637,8 +7175,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Declaration":
 		var payload NodeDeclaration
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Declaration JSON payload: Value must not be nil")
@@ -6648,8 +7189,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Specification":
 		var payload NodeSpecification
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Specification JSON payload: Value must not be nil")
@@ -6659,8 +7203,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Statement":
 		var payload NodeStatement
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Statement JSON payload: Value must not be nil")
@@ -6670,8 +7217,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Expression":
 		var payload NodeExpression
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Expression JSON payload: Value must not be nil")
@@ -6681,8 +7231,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Field":
 		var payload NodeField
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Field JSON payload: Value must not be nil")
@@ -6716,8 +7269,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "FieldList":
 		var payload NodeFieldList
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.FieldList JSON payload: Value must not be nil")
@@ -6758,8 +7314,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "TGoField":
 		var payload NodeTGoField
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.TGoField JSON payload: Value must not be nil")
@@ -6798,8 +7357,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "EnumVariant":
 		var payload NodeEnumVariant
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value must not be nil")
@@ -6862,8 +7424,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Identifier":
 		var payload NodeIdentifier
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Identifier JSON payload: Value must not be nil")
@@ -6873,8 +7438,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "Comment":
 		var payload NodeComment
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Comment JSON payload: Value must not be nil")
@@ -6884,8 +7452,11 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 		return nil
 	case "CommentGroup":
 		var payload NodeCommentGroup
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.CommentGroup JSON payload: Value must not be nil")
@@ -6906,6 +7477,7 @@ func (v *Node) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -6919,6 +7491,7 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -6951,8 +7524,16 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "CommentGroup":
 			current = 12
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -6964,20 +7545,38 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one Node JSON variant")
 	}
 	if selected == 0 {
@@ -6986,8 +7585,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload NodeFile
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.File JSON payload: Value must not be nil")
@@ -7064,8 +7666,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 2:
 		var payload NodeDeclaration
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Declaration JSON payload: Value must not be nil")
@@ -7075,8 +7680,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 3:
 		var payload NodeSpecification
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Specification JSON payload: Value must not be nil")
@@ -7086,8 +7694,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 4:
 		var payload NodeStatement
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Statement JSON payload: Value must not be nil")
@@ -7097,8 +7708,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 5:
 		var payload NodeExpression
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Expression JSON payload: Value must not be nil")
@@ -7108,8 +7722,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 6:
 		var payload NodeField
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Field JSON payload: Value must not be nil")
@@ -7143,8 +7760,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 7:
 		var payload NodeFieldList
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.FieldList JSON payload: Value must not be nil")
@@ -7185,8 +7805,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 8:
 		var payload NodeTGoField
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.TGoField JSON payload: Value must not be nil")
@@ -7225,8 +7848,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 9:
 		var payload NodeEnumVariant
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.EnumVariant JSON payload: Value must not be nil")
@@ -7289,8 +7915,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 10:
 		var payload NodeIdentifier
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Identifier JSON payload: Value must not be nil")
@@ -7300,8 +7929,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 11:
 		var payload NodeComment
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.Comment JSON payload: Value must not be nil")
@@ -7311,8 +7943,11 @@ func (v *Node) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		return nil
 	case 12:
 		var payload NodeCommentGroup
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Value == nil {
 			return fmt.Errorf("invalid Node.CommentGroup JSON payload: Value must not be nil")

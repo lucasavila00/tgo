@@ -18,8 +18,12 @@ func (c *checker) checkPayloadAccessor(
 	model *model,
 	tag int,
 ) {
-	if c.branchPayloadProof(expression, selector.Expression, model, tag) ||
-		c.earlyExitPayloadProof(expression, selector.Expression, model, tag) {
+	type operandType = bool
+	var operand operandType = c.branchPayloadProof(expression, selector.Expression, model, tag)
+	if !operand {
+		operand = c.earlyExitPayloadProof(expression, selector.Expression, model, tag)
+	}
+	if operand {
 		c.syntaxSafe[expression] = true
 		return
 	}
@@ -40,23 +44,52 @@ func (c *checker) branchPayloadProof(
 ) bool {
 	access := syntax.ExpressionPosition(expression)
 	for node := c.parents[syntax.ExpressionNode(expression)]; node != nil; node = c.parents[*node] {
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
+		type operandType_1 = bool
+		{
+			_, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				return false
+			}
 		}
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			continue
 		}
-		if guard := syntax.IfStatementOf(statement); guard != nil &&
-			guard.Body.Start <= access && access < guard.Body.Stop &&
-			c.tagConditionProof(guard.Condition, true, receiver, model, tag) {
-			return c.enumReceiverStableBetween(
-				expression, receiver, syntax.ExpressionEnd(guard.Condition), access,
-			)
+		{
+			type operandType = bool
+			guard := syntax.IfStatementOf(statement)
+			var operand operandType = guard != nil
+			if operand {
+				operand = guard.Body.Start <= access
+			}
+			var operand_1 operandType = operand
+			if operand_1 {
+				operand_1 = access < guard.Body.Stop
+			}
+			var operand_2 operandType = operand_1
+			if operand_2 {
+				operand_2 = c.tagConditionProof(guard.Condition, true, receiver, model, tag)
+			}
+			if operand_2 {
+				return c.enumReceiverStableBetween(
+					expression, receiver, syntax.ExpressionEnd(guard.Condition), access,
+				)
+			}
 		}
 		loop := syntax.ForStatementOf(statement)
-		if loop == nil || loop.Condition == nil ||
-			access < loop.Body.Start || loop.Body.Stop <= access {
+		var operand_3 operandType_1 = loop == nil
+		if !operand_3 {
+			operand_3 = loop.Condition == nil
+		}
+		var operand_4 operandType_1 = operand_3
+		if !operand_4 {
+			operand_4 = access < loop.Body.Start
+		}
+		var operand_5 operandType_1 = operand_4
+		if !operand_5 {
+			operand_5 = loop.Body.Stop <= access
+		}
+		if operand_5 {
 			continue
 		}
 		if c.tagConditionProof(loop.Condition, true, receiver, model, tag) {
@@ -77,8 +110,11 @@ func (c *checker) earlyExitPayloadProof(
 ) bool {
 	access := syntax.ExpressionPosition(expression)
 	for node := c.parents[syntax.ExpressionNode(expression)]; node != nil; node = c.parents[*node] {
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
+		{
+			_, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				return false
+			}
 		}
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
@@ -104,8 +140,12 @@ func (c *checker) earlyExitPayloadProof(
 
 func containingStatement(statements []*syntax.Statement, position token.Pos) int {
 	for index, statement := range statements {
-		if syntax.StatementPosition(statement) <= position &&
-			position < syntax.StatementEnd(statement) {
+		type operandType = bool
+		var operand operandType = syntax.StatementPosition(statement) <= position
+		if operand {
+			operand = position < syntax.StatementEnd(statement)
+		}
+		if operand {
 			return index
 		}
 	}
@@ -118,8 +158,21 @@ func (c *checker) earlyExitTagGuard(
 	model *model,
 	tag int,
 ) bool {
+	type operandType = bool
 	guard := syntax.IfStatementOf(statement)
-	if guard == nil || guard.Init != nil || guard.Else != nil || c.file == nil {
+	var operand operandType = guard == nil
+	if !operand {
+		operand = guard.Init != nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = guard.Else != nil
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = c.file == nil
+	}
+	if operand_2 {
 		return false
 	}
 	if !c.statementsTerminate(c.file, guard.Body.List) {
@@ -136,37 +189,97 @@ func (c *checker) tagConditionProof(
 	model *model,
 	tag int,
 ) bool {
-	if parenthesized := syntax.ParenthesizedExpressionOf(condition); parenthesized != nil {
-		return c.tagConditionProof(parenthesized.Expression, truth, receiver, model, tag)
+	type operandType_1 = bool
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(condition)
+		if parenthesized != nil {
+			return c.tagConditionProof(parenthesized.Expression, truth, receiver, model, tag)
+		}
 	}
-	if unary := syntax.UnaryExpressionOf(condition); unary != nil && unary.Operator == token.NOT {
-		return c.tagConditionProof(unary.Expression, !truth, receiver, model, tag)
+	{
+		type operandType = bool
+		unary := syntax.UnaryExpressionOf(condition)
+		var operand operandType = unary != nil
+		if operand {
+			operand = unary.Operator == token.NOT
+		}
+		if operand {
+			return c.tagConditionProof(unary.Expression, !truth, receiver, model, tag)
+		}
 	}
 	binary := syntax.BinaryExpressionOf(condition)
 	if binary == nil {
 		return false
 	}
-	if truth && binary.Operator == token.LAND || !truth && binary.Operator == token.LOR {
-		return c.tagConditionProof(binary.Left, truth, receiver, model, tag) ||
-			c.tagConditionProof(binary.Right, truth, receiver, model, tag)
+	var operand_1 operandType_1 = truth
+	if operand_1 {
+		operand_1 = binary.Operator == token.LAND
 	}
-	if truth && binary.Operator != token.EQL || !truth && binary.Operator != token.NEQ {
+	var operand_2 operandType_1 = operand_1
+	if !operand_2 {
+		type operandType_2 = bool
+		var operand_3 operandType_2 = !truth
+		if operand_3 {
+			operand_3 = binary.Operator == token.LOR
+		}
+		operand_2 = operand_3
+	}
+	if operand_2 {
+		type operandType_3 = bool
+		var operand_4 operandType_3 = c.tagConditionProof(binary.Left, truth, receiver, model, tag)
+		if !operand_4 {
+			operand_4 = c.tagConditionProof(binary.Right, truth, receiver, model, tag)
+		}
+		return operand_4
+
+	}
+	var operand_5 operandType_1 = truth
+	if operand_5 {
+		operand_5 = binary.Operator != token.EQL
+	}
+	var operand_6 operandType_1 = operand_5
+	if !operand_6 {
+		type operandType_4 = bool
+		var operand_7 operandType_4 = !truth
+		if operand_7 {
+			operand_7 = binary.Operator != token.NEQ
+		}
+		operand_6 = operand_7
+	}
+	if operand_6 {
 		return false
 	}
 	proofReceiver, proofModel, proofTag, ok := c.tagGuardSides(binary.Left, binary.Right)
 	if !ok {
 		proofReceiver, proofModel, proofTag, ok = c.tagGuardSides(binary.Right, binary.Left)
 	}
-	return ok && sameModel(proofModel, model) && proofTag == tag &&
-		sameReceiver(c.facts, receiver, proofReceiver)
+	var operand_8 operandType_1 = ok
+	if operand_8 {
+		operand_8 = sameModel(proofModel, model)
+	}
+	var operand_9 operandType_1 = operand_8
+	if operand_9 {
+		operand_9 = proofTag == tag
+	}
+	var operand_10 operandType_1 = operand_9
+	if operand_10 {
+		operand_10 = sameReceiver(c.facts, receiver, proofReceiver)
+	}
+	return operand_10
+
 }
 
 func (c *checker) tagGuardSides(
 	tagCall *syntax.Expression,
 	constantExpression *syntax.Expression,
 ) (*syntax.Expression, *model, int, bool) {
+	type operandType = bool
 	receiver, _, _, model, tagType := c.tagCall(tagCall)
-	if model == nil || !c.tagExpression(constantExpression, model, tagType) {
+	var operand operandType = model == nil
+	if !operand {
+		operand = !c.tagExpression(constantExpression, model, tagType)
+	}
+	if operand {
 		return nil, nil, 0, false
 	}
 	value := c.facts.Constant(constantExpression)
@@ -174,7 +287,15 @@ func (c *checker) tagGuardSides(
 		return nil, nil, 0, false
 	}
 	tag64, exact := constant.Int64Val(value)
-	if !exact || tag64 < 1 || tag64 > int64(len(modelVariants(model))) {
+	var operand_1 operandType = !exact
+	if !operand_1 {
+		operand_1 = tag64 < 1
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = tag64 > int64(len(modelVariants(model)))
+	}
+	if operand_2 {
 		return nil, nil, 0, false
 	}
 	return receiver, model, int(tag64), true
@@ -188,14 +309,18 @@ func (c *checker) enumReceiverStableBefore(
 	receiver *syntax.Expression,
 	proof token.Pos,
 ) bool {
+	type operandType = bool
 	_ = file
 	access := syntax.ExpressionPosition(expression)
 	_, body := c.enclosingEnumFunction(expression)
 	if body == nil {
 		return false
 	}
-	if !c.enumReceiverLocalToFunction(expression, receiver) ||
-		c.enumGotoEntersClause(body, clause, access) {
+	var operand operandType = !c.enumReceiverLocalToFunction(expression, receiver)
+	if !operand {
+		operand = c.enumGotoEntersClause(body, clause, access)
+	}
+	if operand {
 		return false
 	}
 	if c.enumReceiverEscapedBefore(expression, receiver, proof) {
@@ -211,21 +336,36 @@ func (c *checker) enumReceiverStableBefore(
 			break
 		}
 		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			if !stable || syntax.NodePosition(node) >= access {
+			type operandType = bool
+			var operand operandType = !stable
+			if !operand {
+				operand = syntax.NodePosition(node) >= access
+			}
+			if operand {
 				return false
 			}
-			if literal, nested := syntax.FunctionLiteralOf(node); nested {
-				if capturesObject(c.facts, literal.Body, root) {
-					stable = false
+			{
+				literal, nested := syntax.FunctionLiteralOf(node)
+				if nested {
+					if capturesObject(c.facts, literal.Body, root) {
+						stable = false
+					}
+					return false
 				}
-				return false
 			}
 			if c.enumReceiverEscapesAt(node, receiver) {
 				stable = false
 				return false
 			}
-			if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
-				c.enumReceiverChangesAt(node, receiver) {
+			var operand_1 operandType = syntax.NodePosition(node) > proof
+			if operand_1 {
+				operand_1 = syntax.NodeEnd(node) <= access
+			}
+			var operand_2 operandType = operand_1
+			if operand_2 {
+				operand_2 = c.enumReceiverChangesAt(node, receiver)
+			}
+			if operand_2 {
 				stable = false
 			}
 			return stable
@@ -258,15 +398,23 @@ func (c *checker) enumGotoEntersClause(
 			break
 		}
 		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			if _, nested := syntax.FunctionLiteralOf(node); nested {
-				return false
+			type operandType = bool
+			{
+				_, nested := syntax.FunctionLiteralOf(node)
+				if nested {
+					return false
+				}
 			}
 			value, ok := syntax.StatementOf(node)
 			if !ok {
 				return true
 			}
 			labeled := syntax.LabeledStatementOf(value)
-			if labeled != nil && labeled.Label != nil {
+			var operand operandType = labeled != nil
+			if operand {
+				operand = labeled.Label != nil
+			}
+			if operand {
 				labels[labeled.Label.Name] = true
 			}
 			return true
@@ -280,23 +428,42 @@ func (c *checker) enumGotoEntersClause(
 		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
+		type operandType = bool
 		if invalid {
 			return false
 		}
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
+		{
+			_, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				return false
+			}
 		}
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			return true
 		}
 		branch := syntax.BranchStatementOf(statement)
-		if branch == nil || branch.Token != token.GOTO || branch.Label == nil ||
-			!labels[branch.Label.Name] {
+		var operand operandType = branch == nil
+		if !operand {
+			operand = branch.Token != token.GOTO
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = branch.Label == nil
+		}
+		var operand_2 operandType = operand_1
+		if !operand_2 {
+			operand_2 = !labels[branch.Label.Name]
+		}
+		if operand_2 {
 			return true
 		}
 		position := syntax.StatementPosition(statement)
-		invalid = position < clause.Start || clause.Stop <= position
+		var operand_3 operandType = position < clause.Start
+		if !operand_3 {
+			operand_3 = clause.Stop <= position
+		}
+		invalid = operand_3
 		return !invalid
 	})
 	return invalid
@@ -327,11 +494,23 @@ func (c *checker) enumReceiverStableBetween(
 		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
-		if !stable || syntax.NodePosition(node) >= access {
+		type operandType = bool
+		var operand operandType = !stable
+		if !operand {
+			operand = syntax.NodePosition(node) >= access
+		}
+		if operand {
 			return false
 		}
-		if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
-			c.enumReceiverChangesAt(node, receiver) {
+		var operand_1 operandType = syntax.NodePosition(node) > proof
+		if operand_1 {
+			operand_1 = syntax.NodeEnd(node) <= access
+		}
+		var operand_2 operandType = operand_1
+		if operand_2 {
+			operand_2 = c.enumReceiverChangesAt(node, receiver)
+		}
+		if operand_2 {
 			stable = false
 			return false
 		}
@@ -357,37 +536,66 @@ func (c *checker) enumGotoBypassesProof(
 		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
+		type operandType = bool
+		{
+			_, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				return false
+			}
 		}
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			return true
 		}
 		labeled := syntax.LabeledStatementOf(statement)
-		if labeled != nil && labeled.Label != nil {
+		var operand operandType = labeled != nil
+		if operand {
+			operand = labeled.Label != nil
+		}
+		if operand {
 			labels[labeled.Label.Name] = labeled.Label.Start
 		}
 		return true
 	})
 	invalid := false
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
+		type operandType_1 = bool
+		type operandType = bool
 		if invalid {
 			return false
 		}
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
+		{
+			_, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				return false
+			}
 		}
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			return true
 		}
 		branch := syntax.BranchStatementOf(statement)
-		if branch == nil || branch.Token != token.GOTO || branch.Label == nil {
+		var operand operandType = branch == nil
+		if !operand {
+			operand = branch.Token != token.GOTO
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = branch.Label == nil
+		}
+		if operand_1 {
 			return true
 		}
 		label := labels[branch.Label.Name]
-		invalid = label != token.NoPos && proof < label && label < access
+		var operand_2 operandType_1 = label != token.NoPos
+		if operand_2 {
+			operand_2 = proof < label
+		}
+		var operand_3 operandType_1 = operand_2
+		if operand_3 {
+			operand_3 = label < access
+		}
+		invalid = operand_3
 		return !invalid
 	})
 	return invalid
@@ -411,12 +619,20 @@ func (c *checker) enumReceiverEscapedBefore(
 		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
-		if escaped || syntax.NodePosition(node) >= access {
+		type operandType = bool
+		var operand operandType = escaped
+		if !operand {
+			operand = syntax.NodePosition(node) >= access
+		}
+		if operand {
 			return false
 		}
-		if literal, nested := syntax.FunctionLiteralOf(node); nested {
-			escaped = capturesObject(c.facts, literal.Body, root)
-			return false
+		{
+			literal, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				escaped = capturesObject(c.facts, literal.Body, root)
+				return false
+			}
 		}
 		if c.enumReceiverEscapesAt(node, receiver) {
 			escaped = true
@@ -431,11 +647,17 @@ func (c *checker) enclosingEnumFunction(
 ) (*syntax.Node, *syntax.BlockStatement) {
 	node := syntax.ExpressionNode(expression)
 	for parent := c.parents[node]; parent != nil; parent = c.parents[*parent] {
-		if declaration, ok := syntax.FunctionDeclarationOf(parent); ok {
-			return parent, declaration.Body
+		{
+			declaration, ok := syntax.FunctionDeclarationOf(parent)
+			if ok {
+				return parent, declaration.Body
+			}
 		}
-		if literal, ok := syntax.FunctionLiteralOf(parent); ok {
-			return parent, literal.Body
+		{
+			literal, ok := syntax.FunctionLiteralOf(parent)
+			if ok {
+				return parent, literal.Body
+			}
 		}
 	}
 	return nil, nil
@@ -445,33 +667,49 @@ func (c *checker) enumReceiverLocalToFunction(
 	expression *syntax.Expression,
 	receiver *syntax.Expression,
 ) bool {
+	type operandType = bool
 	root, _, ok := receiverPath(c.facts, receiver)
 	if !ok {
 		return false
 	}
 	function, _ := c.enclosingEnumFunction(expression)
-	if function == nil || c.file == nil {
+	var operand operandType = function == nil
+	if !operand {
+		operand = c.file == nil
+	}
+	if operand {
 		return false
 	}
 	local := false
 	found := false
 	syntax.Inspect(c.file, func(node *syntax.Node) bool {
+		type operandType = bool
 		if found {
 			return false
 		}
 		identifier, ok := syntax.IdentifierOf(node)
-		if !ok || c.facts.DefinitionName(identifier) != root {
+		var operand operandType = !ok
+		if !operand {
+			operand = c.facts.DefinitionName(identifier) != root
+		}
+		if operand {
 			return true
 		}
 		found = true
 		for parent := c.parents[*node]; parent != nil; parent = c.parents[*parent] {
-			if _, ok := syntax.FunctionDeclarationOf(parent); ok {
-				local = *parent == *function
-				break
+			{
+				_, ok := syntax.FunctionDeclarationOf(parent)
+				if ok {
+					local = *parent == *function
+					break
+				}
 			}
-			if _, ok := syntax.FunctionLiteralOf(parent); ok {
-				local = *parent == *function
-				break
+			{
+				_, ok := syntax.FunctionLiteralOf(parent)
+				if ok {
+					local = *parent == *function
+					break
+				}
 			}
 		}
 		return false
@@ -487,19 +725,33 @@ func (c *checker) enumReceiverChangesAt(
 	if !ok {
 		return false
 	}
-	if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-		for _, target := range assignment.Left {
-			if receiverOverlaps(c.facts, target, receiver) {
-				return true
+	{
+		assignment := syntax.AssignmentStatementOf(statement)
+		if assignment != nil {
+			for _, target := range assignment.Left {
+				if receiverOverlaps(c.facts, target, receiver) {
+					return true
+				}
 			}
 		}
 	}
-	if increment := syntax.IncrementStatementOf(statement); increment != nil {
-		return receiverOverlaps(c.facts, increment.Expression, receiver)
+	{
+		increment := syntax.IncrementStatementOf(statement)
+		if increment != nil {
+			return receiverOverlaps(c.facts, increment.Expression, receiver)
+		}
 	}
-	if ranged := syntax.RangeStatementOf(statement); ranged != nil {
-		return receiverOverlaps(c.facts, ranged.Key, receiver) ||
-			receiverOverlaps(c.facts, ranged.Value, receiver)
+	{
+		ranged := syntax.RangeStatementOf(statement)
+		if ranged != nil {
+			type operandType = bool
+			var operand operandType = receiverOverlaps(c.facts, ranged.Key, receiver)
+			if !operand {
+				operand = receiverOverlaps(c.facts, ranged.Value, receiver)
+			}
+			return operand
+
+		}
 	}
 	return false
 }
@@ -508,18 +760,41 @@ func (c *checker) enumReceiverEscapesAt(
 	node *syntax.Node,
 	receiver *syntax.Expression,
 ) bool {
+	type operandType = bool
 	expression, ok := syntax.ExpressionOf(node)
-	if !ok || expression == nil {
+	var operand operandType = !ok
+	if !operand {
+		operand = expression == nil
+	}
+	if operand {
 		return false
 	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
-		unary.Operator == token.AND && receiverOverlaps(c.facts, unary.Expression, receiver) {
-		return true
-	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		if c.pointerMethodSelection(expression) &&
-			receiverOverlaps(c.facts, selector.Expression, receiver) {
+	{
+		type operandType_1 = bool
+		unary := syntax.UnaryExpressionOf(expression)
+		var operand_1 operandType_1 = unary != nil
+		if operand_1 {
+			operand_1 = unary.Operator == token.AND
+		}
+		var operand_2 operandType_1 = operand_1
+		if operand_2 {
+			operand_2 = receiverOverlaps(c.facts, unary.Expression, receiver)
+		}
+		if operand_2 {
 			return true
+		}
+	}
+	{
+		selector := syntax.SelectorExpressionOf(expression)
+		if selector != nil {
+			type operandType_2 = bool
+			var operand_3 operandType_2 = c.pointerMethodSelection(expression)
+			if operand_3 {
+				operand_3 = receiverOverlaps(c.facts, selector.Expression, receiver)
+			}
+			if operand_3 {
+				return true
+			}
 		}
 	}
 	call := syntax.CallExpressionOf(expression)
@@ -531,9 +806,16 @@ func (c *checker) enumReceiverEscapesAt(
 		if typ == nil {
 			continue
 		}
-		if _, pointer := types.Unalias(typ).(*types.Pointer); pointer &&
-			receiverOverlaps(c.facts, argument, receiver) {
-			return true
+		{
+			type operandType_3 = bool
+			_, pointer := types.Unalias(typ).(*types.Pointer)
+			var operand_4 operandType_3 = pointer
+			if operand_4 {
+				operand_4 = receiverOverlaps(c.facts, argument, receiver)
+			}
+			if operand_4 {
+				return true
+			}
 		}
 	}
 	return false
@@ -543,7 +825,12 @@ func (c *checker) enumReceiverInvalidatedAt(
 	node *syntax.Node,
 	receiver *syntax.Expression,
 ) bool {
-	if c.enumReceiverChangesAt(node, receiver) || c.enumReceiverEscapesAt(node, receiver) {
+	type operandType = bool
+	var operand operandType = c.enumReceiverChangesAt(node, receiver)
+	if !operand {
+		operand = c.enumReceiverEscapesAt(node, receiver)
+	}
+	if operand {
 		return true
 	}
 	literal, nested := syntax.FunctionLiteralOf(node)
@@ -551,7 +838,11 @@ func (c *checker) enumReceiverInvalidatedAt(
 		return false
 	}
 	root, _, ok := receiverPath(c.facts, receiver)
-	return ok && capturesObject(c.facts, literal.Body, root)
+	var operand_1 operandType = ok
+	if operand_1 {
+		operand_1 = capturesObject(c.facts, literal.Body, root)
+	}
+	return operand_1
 }
 
 func receiverOverlaps(
@@ -559,7 +850,12 @@ func receiverOverlaps(
 	left *syntax.Expression,
 	right *syntax.Expression,
 ) bool {
-	return receiverWrite(facts, left, right) || receiverWrite(facts, right, left)
+	type operandType = bool
+	var operand operandType = receiverWrite(facts, left, right)
+	if !operand {
+		operand = receiverWrite(facts, right, left)
+	}
+	return operand
 }
 
 func (c *checker) enumLoopCanInvalidate(
@@ -569,6 +865,7 @@ func (c *checker) enumLoopCanInvalidate(
 	access token.Pos,
 ) bool {
 	for node := c.parents[syntax.ExpressionNode(expression)]; node != nil; node = c.parents[*node] {
+		type operandType = bool
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			continue
@@ -579,7 +876,11 @@ func (c *checker) enumLoopCanInvalidate(
 		if syntax.StatementPosition(statement) >= access {
 			continue
 		}
-		if syntax.ForStatementOf(statement) == nil && syntax.RangeStatementOf(statement) == nil {
+		var operand operandType = syntax.ForStatementOf(statement) == nil
+		if operand {
+			operand = syntax.RangeStatementOf(statement) == nil
+		}
+		if operand {
 			continue
 		}
 		changed := false
@@ -608,11 +909,16 @@ func (c *checker) enumGotoCanInvalidate(
 		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
+		type operandType = bool
 		if invalid {
 			return false
 		}
 		position := syntax.NodePosition(node)
-		if position > access && c.enumReceiverInvalidatedAt(node, receiver) {
+		var operand operandType = position > access
+		if operand {
+			operand = c.enumReceiverInvalidatedAt(node, receiver)
+		}
+		if operand {
 			changedAfter = true
 		}
 		statement, ok := syntax.StatementOf(node)
@@ -620,11 +926,31 @@ func (c *checker) enumGotoCanInvalidate(
 			return true
 		}
 		branch := syntax.BranchStatementOf(statement)
-		if !changedAfter || branch == nil || branch.Token != token.GOTO || branch.Label == nil {
+		var operand_1 operandType = !changedAfter
+		if !operand_1 {
+			operand_1 = branch == nil
+		}
+		var operand_2 operandType = operand_1
+		if !operand_2 {
+			operand_2 = branch.Token != token.GOTO
+		}
+		var operand_3 operandType = operand_2
+		if !operand_3 {
+			operand_3 = branch.Label == nil
+		}
+		if operand_3 {
 			return true
 		}
 		label := c.facts.Object(branch.Label)
-		invalid = label != nil && label.Pos() > proof && label.Pos() < access
+		var operand_4 operandType = label != nil
+		if operand_4 {
+			operand_4 = label.Pos() > proof
+		}
+		var operand_5 operandType = operand_4
+		if operand_5 {
+			operand_5 = label.Pos() < access
+		}
+		invalid = operand_5
 		return !invalid
 	})
 	return invalid

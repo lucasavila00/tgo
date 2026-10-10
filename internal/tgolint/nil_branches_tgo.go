@@ -15,50 +15,68 @@ func (e *nilEnvironment) conditionNilBranches(
 	expression *syntax.Expression,
 	state *nilFlowState,
 ) (nilBranches, nilBranches) {
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.conditionNilBranches(parenthesized.Expression, state)
-	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-		if unary.Operator == token.NOT {
-			trueBranches, falseBranches := e.conditionNilBranches(
-				unary.Expression, state,
-			)
-			return falseBranches, trueBranches
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return e.conditionNilBranches(parenthesized.Expression, state)
 		}
 	}
-	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
-		if guard, ok := state.guards[e.facts.Object(identifier)]; ok {
-			return cloneNilBranches(guard.trueBranches),
-				cloneNilBranches(guard.falseBranches)
-		}
-		if presence, ok := state.presence[e.facts.Object(identifier)]; ok {
-			if presence.nonNil {
-				return nilBranches{{presence.value: nonNilType()}},
-					unconstrainedNilBranches()
+	{
+		unary := syntax.UnaryExpressionOf(expression)
+		if unary != nil {
+			if unary.Operator == token.NOT {
+				trueBranches, falseBranches := e.conditionNilBranches(
+					unary.Expression, state,
+				)
+				return falseBranches, trueBranches
 			}
 		}
 	}
-	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
-		switch binary.Operator {
-		case token.EQL, token.NEQ:
-			return e.comparisonNilBranches(
-				binary.Left, binary.Right, binary.Operator, state,
-			)
-		case token.LAND:
-			leftTrue, leftFalse := e.conditionNilBranches(binary.Left, state)
-			rightTrue, rightFalse := e.conditionNilBranches(binary.Right, state)
-			return e.andNilBranches(state, leftTrue, rightTrue),
-				e.orNilBranches(
-					state, leftFalse,
-					e.andNilBranches(state, leftTrue, rightFalse),
+	{
+		identifier := syntax.IdentifierExpressionOf(expression)
+		if identifier != nil {
+			{
+				guard, ok := state.guards[e.facts.Object(identifier)]
+				if ok {
+					return cloneNilBranches(guard.trueBranches),
+						cloneNilBranches(guard.falseBranches)
+				}
+			}
+			{
+				presence, ok := state.presence[e.facts.Object(identifier)]
+				if ok {
+					if presence.nonNil {
+						return nilBranches{{presence.value: nonNilType()}},
+							unconstrainedNilBranches()
+					}
+				}
+			}
+		}
+	}
+	{
+		binary := syntax.BinaryExpressionOf(expression)
+		if binary != nil {
+			switch binary.Operator {
+			case token.EQL, token.NEQ:
+				return e.comparisonNilBranches(
+					binary.Left, binary.Right, binary.Operator, state,
 				)
-		case token.LOR:
-			leftTrue, leftFalse := e.conditionNilBranches(binary.Left, state)
-			rightTrue, rightFalse := e.conditionNilBranches(binary.Right, state)
-			return e.orNilBranches(
-				state, leftTrue,
-				e.andNilBranches(state, leftFalse, rightTrue),
-			), e.andNilBranches(state, leftFalse, rightFalse)
+			case token.LAND:
+				leftTrue, leftFalse := e.conditionNilBranches(binary.Left, state)
+				rightTrue, rightFalse := e.conditionNilBranches(binary.Right, state)
+				return e.andNilBranches(state, leftTrue, rightTrue),
+					e.orNilBranches(
+						state, leftFalse,
+						e.andNilBranches(state, leftTrue, rightFalse),
+					)
+			case token.LOR:
+				leftTrue, leftFalse := e.conditionNilBranches(binary.Left, state)
+				rightTrue, rightFalse := e.conditionNilBranches(binary.Right, state)
+				return e.orNilBranches(
+					state, leftTrue,
+					e.andNilBranches(state, leftFalse, rightTrue),
+				), e.andNilBranches(state, leftFalse, rightFalse)
+			}
 		}
 	}
 	return unconstrainedNilBranches(), unconstrainedNilBranches()
@@ -70,10 +88,20 @@ func (e *nilEnvironment) comparisonNilBranches(
 	operator token.Token,
 	state *nilFlowState,
 ) (nilBranches, nilBranches) {
+	type operandType = bool
 	place, ok := e.nilPlace(left)
-	if !ok || !e.isNil(right) {
+	var operand operandType = !ok
+	if !operand {
+		operand = !e.isNil(right)
+	}
+	if operand {
+		type operandType_1 = bool
 		place, ok = e.nilPlace(right)
-		if !ok || !e.isNil(left) {
+		var operand_1 operandType_1 = !ok
+		if !operand_1 {
+			operand_1 = !e.isNil(left)
+		}
+		if operand_1 {
 			return unconstrainedNilBranches(), unconstrainedNilBranches()
 		}
 	}
@@ -105,11 +133,14 @@ func (e *nilEnvironment) andNilBranches(
 			}
 			possible := true
 			for place, value := range rightFacts {
-				if current, found := facts[place]; found {
-					value = intersectNilTypes(current, value)
-					if isNeverNilType(value) {
-						possible = false
-						break
+				{
+					current, found := facts[place]
+					if found {
+						value = intersectNilTypes(current, value)
+						if isNeverNilType(value) {
+							possible = false
+							break
+						}
 					}
 				}
 				facts[place] = value
@@ -137,8 +168,13 @@ func (e *nilEnvironment) normalizeNilBranches(
 ) nilBranches {
 	result := make(nilBranches, 0, len(branches))
 	for _, branch := range branches {
+		type operandType = bool
 		normalized, possible := normalizeNilBranch(state, branch)
-		if !possible || branchCoveredBy(result, normalized) {
+		var operand operandType = !possible
+		if !operand {
+			operand = branchCoveredBy(result, normalized)
+		}
+		if operand {
 			continue
 		}
 		kept := result[:0]
@@ -162,20 +198,26 @@ func normalizeNilBranch(
 	result := make(nilFacts)
 	for place, value := range branch {
 		representative := nilRepresentative(state, place)
-		if known, found := state.values[representative]; found {
-			narrowed := intersectNilTypes(known, value)
-			if isNeverNilType(narrowed) {
-				return nil, false
+		{
+			known, found := state.values[representative]
+			if found {
+				narrowed := intersectNilTypes(known, value)
+				if isNeverNilType(narrowed) {
+					return nil, false
+				}
+				if equalNilType(narrowed, known) {
+					continue
+				}
+				value = narrowed
 			}
-			if equalNilType(narrowed, known) {
-				continue
-			}
-			value = narrowed
 		}
-		if current, found := result[representative]; found {
-			value = intersectNilTypes(current, value)
-			if isNeverNilType(value) {
-				return nil, false
+		{
+			current, found := result[representative]
+			if found {
+				value = intersectNilTypes(current, value)
+				if isNeverNilType(value) {
+					return nil, false
+				}
 			}
 		}
 		result[representative] = value
@@ -197,9 +239,12 @@ func branchCoveredBy(branches nilBranches, target nilFacts) bool {
 
 func nilBranchCovers(left nilFacts, right nilFacts) bool {
 	for place, value := range left {
-		if other, found := right[place]; found {
-			if equalNilType(unionNilTypes(value, other), value) {
-				continue
+		{
+			other, found := right[place]
+			if found {
+				if equalNilType(unionNilTypes(value, other), value) {
+					continue
+				}
 			}
 		}
 		return false
@@ -236,11 +281,14 @@ func commonNilBranchFacts(branches nilBranches) nilFacts {
 	result := cloneNilFacts(branches[0])
 	for place, value := range result {
 		for _, branch := range branches[1:] {
-			if other, found := branch[place]; found {
-				value = unionNilTypes(value, other)
-				if !isOptionalNilType(value) {
-					result[place] = value
-					continue
+			{
+				other, found := branch[place]
+				if found {
+					value = unionNilTypes(value, other)
+					if !isOptionalNilType(value) {
+						result[place] = value
+						continue
+					}
 				}
 			}
 			delete(result, place)

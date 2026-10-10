@@ -13,7 +13,12 @@ func SpecificationNode(value *Specification) Node { return nodeSpecification(val
 
 // FieldOf returns a field node payload.
 func FieldOf(node *Node) (*Field, bool) {
-	if node == nil || node.Tag() != NodeTagField {
+	type operandType = bool
+	var operand operandType = node == nil
+	if !operand {
+		operand = node.Tag() != NodeTagField
+	}
+	if operand {
 		return nil, false
 	}
 	return node.FieldPayload().Value, true
@@ -21,7 +26,12 @@ func FieldOf(node *Node) (*Field, bool) {
 
 // InspectExpression visits one expression tree in source order.
 func InspectExpression(value *Expression, visit func(*Node) bool) {
-	if value == nil || visit == nil {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = visit == nil
+	}
+	if operand {
 		return
 	}
 	inspectNode(nodeExpression(value), visit)
@@ -29,7 +39,12 @@ func InspectExpression(value *Expression, visit func(*Node) bool) {
 
 // InspectStatement visits one statement tree in source order.
 func InspectStatement(value *Statement, visit func(*Node) bool) {
-	if value == nil || visit == nil {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = visit == nil
+	}
+	if operand {
 		return
 	}
 	inspectNode(nodeStatement(value), visit)
@@ -46,8 +61,13 @@ func inspectNode(value Node, visit func(*Node) bool) {
 
 // FunctionDeclarationOf returns a function declaration node payload.
 func FunctionDeclarationOf(node *Node) (*FunctionDeclaration, bool) {
+	type operandType = bool
 	value, ok := DeclarationOf(node)
-	if !ok || value.Tag() != DeclarationTagFunction {
+	var operand operandType = !ok
+	if !operand {
+		operand = value.Tag() != DeclarationTagFunction
+	}
+	if operand {
 		return nil, false
 	}
 	return value.FunctionPayload().Value, true
@@ -55,8 +75,13 @@ func FunctionDeclarationOf(node *Node) (*FunctionDeclaration, bool) {
 
 // FunctionLiteralOf returns a function literal node payload.
 func FunctionLiteralOf(node *Node) (*FunctionLiteral, bool) {
+	type operandType = bool
 	value, ok := ExpressionOf(node)
-	if !ok || value.Tag() != ExpressionTagFunctionLiteral {
+	var operand operandType = !ok
+	if !operand {
+		operand = value.Tag() != ExpressionTagFunctionLiteral
+	}
+	if operand {
 		return nil, false
 	}
 	return value.FunctionLiteralPayload().Value, true
@@ -64,7 +89,12 @@ func FunctionLiteralOf(node *Node) (*FunctionLiteral, bool) {
 
 // IdentifierExpressionOf returns an identifier expression payload.
 func IdentifierExpressionOf(value *Expression) *Identifier {
-	if value == nil || value.Tag() != ExpressionTagIdentifier {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagIdentifier
+	}
+	if operand {
 		return nil
 	}
 	return value.IdentifierPayload().Value
@@ -72,7 +102,12 @@ func IdentifierExpressionOf(value *Expression) *Identifier {
 
 // ParenthesizedExpressionOf returns a parenthesized expression payload.
 func ParenthesizedExpressionOf(value *Expression) *ParenthesizedExpression {
-	if value == nil || value.Tag() != ExpressionTagParenthesized {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagParenthesized
+	}
+	if operand {
 		return nil
 	}
 	return value.ParenthesizedPayload().Value
@@ -80,7 +115,12 @@ func ParenthesizedExpressionOf(value *Expression) *ParenthesizedExpression {
 
 // SelectorExpressionOf returns a selector expression payload.
 func SelectorExpressionOf(value *Expression) *SelectorExpression {
-	if value == nil || value.Tag() != ExpressionTagSelector {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagSelector
+	}
+	if operand {
 		return nil
 	}
 	return value.SelectorPayload().Value
@@ -88,7 +128,12 @@ func SelectorExpressionOf(value *Expression) *SelectorExpression {
 
 // IndexExpressionOf returns an index expression payload.
 func IndexExpressionOf(value *Expression) *IndexExpression {
-	if value == nil || value.Tag() != ExpressionTagIndex {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagIndex
+	}
+	if operand {
 		return nil
 	}
 	return value.IndexPayload().Value
@@ -96,7 +141,12 @@ func IndexExpressionOf(value *Expression) *IndexExpression {
 
 // IndexListExpressionOf returns an index-list expression payload.
 func IndexListExpressionOf(value *Expression) *IndexListExpression {
-	if value == nil || value.Tag() != ExpressionTagIndexList {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagIndexList
+	}
+	if operand {
 		return nil
 	}
 	return value.IndexListPayload().Value
@@ -104,7 +154,12 @@ func IndexListExpressionOf(value *Expression) *IndexListExpression {
 
 // BinaryExpressionOf returns a binary expression payload.
 func BinaryExpressionOf(value *Expression) *BinaryExpression {
-	if value == nil || value.Tag() != ExpressionTagBinary {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagBinary
+	}
+	if operand {
 		return nil
 	}
 	return value.BinaryPayload().Value
@@ -112,7 +167,12 @@ func BinaryExpressionOf(value *Expression) *BinaryExpression {
 
 // UnaryExpressionOf returns a unary expression payload.
 func UnaryExpressionOf(value *Expression) *UnaryExpression {
-	if value == nil || value.Tag() != ExpressionTagUnary {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagUnary
+	}
+	if operand {
 		return nil
 	}
 	return value.UnaryPayload().Value
@@ -120,7 +180,12 @@ func UnaryExpressionOf(value *Expression) *UnaryExpression {
 
 // CallExpressionOf returns a call expression payload.
 func CallExpressionOf(value *Expression) *CallExpression {
-	if value == nil || value.Tag() != ExpressionTagCall {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagCall
+	}
+	if operand {
 		return nil
 	}
 	return value.CallPayload().Value
@@ -128,7 +193,12 @@ func CallExpressionOf(value *Expression) *CallExpression {
 
 // FunctionTypeExpressionOf returns a function-type expression payload.
 func FunctionTypeExpressionOf(value *Expression) *FunctionType {
-	if value == nil || value.Tag() != ExpressionTagFunctionType {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagFunctionType
+	}
+	if operand {
 		return nil
 	}
 	return value.FunctionTypePayload().Value
@@ -136,7 +206,12 @@ func FunctionTypeExpressionOf(value *Expression) *FunctionType {
 
 // CompositeLiteralOf returns a composite literal payload.
 func CompositeLiteralOf(value *Expression) *CompositeLiteral {
-	if value == nil || value.Tag() != ExpressionTagCompositeLiteral {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagCompositeLiteral
+	}
+	if operand {
 		return nil
 	}
 	return value.CompositeLiteralPayload().Value
@@ -144,7 +219,12 @@ func CompositeLiteralOf(value *Expression) *CompositeLiteral {
 
 // SliceExpressionOf returns a slice expression payload.
 func SliceExpressionOf(value *Expression) *SliceExpression {
-	if value == nil || value.Tag() != ExpressionTagSlice {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagSlice
+	}
+	if operand {
 		return nil
 	}
 	return value.SlicePayload().Value
@@ -152,7 +232,12 @@ func SliceExpressionOf(value *Expression) *SliceExpression {
 
 // TypeAssertionExpressionOf returns a type assertion payload.
 func TypeAssertionExpressionOf(value *Expression) *TypeAssertionExpression {
-	if value == nil || value.Tag() != ExpressionTagTypeAssertion {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagTypeAssertion
+	}
+	if operand {
 		return nil
 	}
 	return value.TypeAssertionPayload().Value
@@ -160,7 +245,12 @@ func TypeAssertionExpressionOf(value *Expression) *TypeAssertionExpression {
 
 // StarExpressionOf returns a star expression payload.
 func StarExpressionOf(value *Expression) *StarExpression {
-	if value == nil || value.Tag() != ExpressionTagStar {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagStar
+	}
+	if operand {
 		return nil
 	}
 	return value.StarPayload().Value
@@ -168,7 +258,12 @@ func StarExpressionOf(value *Expression) *StarExpression {
 
 // NonNilPointerTypeExpressionOf returns a non-nil pointer type payload.
 func NonNilPointerTypeExpressionOf(value *Expression) *NonNilPointerType {
-	if value == nil || value.Tag() != ExpressionTagNonNilPointer {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagNonNilPointer
+	}
+	if operand {
 		return nil
 	}
 	return value.NonNilPointerPayload().Value
@@ -176,7 +271,12 @@ func NonNilPointerTypeExpressionOf(value *Expression) *NonNilPointerType {
 
 // KeyValueExpressionOf returns a key-value expression payload.
 func KeyValueExpressionOf(value *Expression) *KeyValueExpression {
-	if value == nil || value.Tag() != ExpressionTagKeyValue {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagKeyValue
+	}
+	if operand {
 		return nil
 	}
 	return value.KeyValuePayload().Value
@@ -184,7 +284,12 @@ func KeyValueExpressionOf(value *Expression) *KeyValueExpression {
 
 // FunctionLiteralExpressionOf returns a function literal payload.
 func FunctionLiteralExpressionOf(value *Expression) *FunctionLiteral {
-	if value == nil || value.Tag() != ExpressionTagFunctionLiteral {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagFunctionLiteral
+	}
+	if operand {
 		return nil
 	}
 	return value.FunctionLiteralPayload().Value
@@ -192,7 +297,12 @@ func FunctionLiteralExpressionOf(value *Expression) *FunctionLiteral {
 
 // EllipsisExpressionOf returns an ellipsis payload.
 func EllipsisExpressionOf(value *Expression) *EllipsisExpression {
-	if value == nil || value.Tag() != ExpressionTagEllipsis {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagEllipsis
+	}
+	if operand {
 		return nil
 	}
 	return value.EllipsisPayload().Value
@@ -200,7 +310,12 @@ func EllipsisExpressionOf(value *Expression) *EllipsisExpression {
 
 // ArrayTypeExpressionOf returns an array-type payload.
 func ArrayTypeExpressionOf(value *Expression) *ArrayType {
-	if value == nil || value.Tag() != ExpressionTagArrayType {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagArrayType
+	}
+	if operand {
 		return nil
 	}
 	return value.ArrayTypePayload().Value
@@ -208,7 +323,12 @@ func ArrayTypeExpressionOf(value *Expression) *ArrayType {
 
 // StructTypeExpressionOf returns a struct-type payload.
 func StructTypeExpressionOf(value *Expression) *StructType {
-	if value == nil || value.Tag() != ExpressionTagStructType {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagStructType
+	}
+	if operand {
 		return nil
 	}
 	return value.StructTypePayload().Value
@@ -216,7 +336,12 @@ func StructTypeExpressionOf(value *Expression) *StructType {
 
 // MapTypeExpressionOf returns a map-type payload.
 func MapTypeExpressionOf(value *Expression) *MapType {
-	if value == nil || value.Tag() != ExpressionTagMapType {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagMapType
+	}
+	if operand {
 		return nil
 	}
 	return value.MapTypePayload().Value
@@ -224,7 +349,12 @@ func MapTypeExpressionOf(value *Expression) *MapType {
 
 // ChannelTypeExpressionOf returns a channel-type payload.
 func ChannelTypeExpressionOf(value *Expression) *ChannelType {
-	if value == nil || value.Tag() != ExpressionTagChannelType {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != ExpressionTagChannelType
+	}
+	if operand {
 		return nil
 	}
 	return value.ChannelTypePayload().Value
@@ -232,7 +362,12 @@ func ChannelTypeExpressionOf(value *Expression) *ChannelType {
 
 // ExpressionStatementOf returns an expression statement payload.
 func ExpressionStatementOf(value *Statement) *ExpressionStatement {
-	if value == nil || value.Tag() != StatementTagExpression {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagExpression
+	}
+	if operand {
 		return nil
 	}
 	return value.ExpressionPayload().Value
@@ -240,7 +375,12 @@ func ExpressionStatementOf(value *Statement) *ExpressionStatement {
 
 // DeclarationStatementOf returns a declaration statement payload.
 func DeclarationStatementOf(value *Statement) *DeclarationStatement {
-	if value == nil || value.Tag() != StatementTagDeclaration {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagDeclaration
+	}
+	if operand {
 		return nil
 	}
 	return value.DeclarationPayload().Value
@@ -248,7 +388,12 @@ func DeclarationStatementOf(value *Statement) *DeclarationStatement {
 
 // SendStatementOf returns a send statement payload.
 func SendStatementOf(value *Statement) *SendStatement {
-	if value == nil || value.Tag() != StatementTagSend {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagSend
+	}
+	if operand {
 		return nil
 	}
 	return value.SendPayload().Value
@@ -256,7 +401,12 @@ func SendStatementOf(value *Statement) *SendStatement {
 
 // GoStatementOf returns a go statement payload.
 func GoStatementOf(value *Statement) *GoStatement {
-	if value == nil || value.Tag() != StatementTagGo {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagGo
+	}
+	if operand {
 		return nil
 	}
 	return value.GoPayload().Value
@@ -264,7 +414,12 @@ func GoStatementOf(value *Statement) *GoStatement {
 
 // DeferStatementOf returns a defer statement payload.
 func DeferStatementOf(value *Statement) *DeferStatement {
-	if value == nil || value.Tag() != StatementTagDefer {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagDefer
+	}
+	if operand {
 		return nil
 	}
 	return value.DeferPayload().Value
@@ -272,7 +427,12 @@ func DeferStatementOf(value *Statement) *DeferStatement {
 
 // AssignmentStatementOf returns an assignment statement payload.
 func AssignmentStatementOf(value *Statement) *AssignmentStatement {
-	if value == nil || value.Tag() != StatementTagAssignment {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagAssignment
+	}
+	if operand {
 		return nil
 	}
 	return value.AssignmentPayload().Value
@@ -280,7 +440,12 @@ func AssignmentStatementOf(value *Statement) *AssignmentStatement {
 
 // IncrementStatementOf returns an increment statement payload.
 func IncrementStatementOf(value *Statement) *IncrementStatement {
-	if value == nil || value.Tag() != StatementTagIncrement {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagIncrement
+	}
+	if operand {
 		return nil
 	}
 	return value.IncrementPayload().Value
@@ -288,7 +453,12 @@ func IncrementStatementOf(value *Statement) *IncrementStatement {
 
 // ReturnStatementOf returns a return statement payload.
 func ReturnStatementOf(value *Statement) *ReturnStatement {
-	if value == nil || value.Tag() != StatementTagReturn {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagReturn
+	}
+	if operand {
 		return nil
 	}
 	return value.ReturnPayload().Value
@@ -296,7 +466,12 @@ func ReturnStatementOf(value *Statement) *ReturnStatement {
 
 // BranchStatementOf returns a branch statement payload.
 func BranchStatementOf(value *Statement) *BranchStatement {
-	if value == nil || value.Tag() != StatementTagBranch {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagBranch
+	}
+	if operand {
 		return nil
 	}
 	return value.BranchPayload().Value
@@ -304,7 +479,12 @@ func BranchStatementOf(value *Statement) *BranchStatement {
 
 // BlockStatementOf returns a block statement payload.
 func BlockStatementOf(value *Statement) *BlockStatement {
-	if value == nil || value.Tag() != StatementTagBlock {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagBlock
+	}
+	if operand {
 		return nil
 	}
 	return value.BlockPayload().Value
@@ -312,7 +492,12 @@ func BlockStatementOf(value *Statement) *BlockStatement {
 
 // IfStatementOf returns an if statement payload.
 func IfStatementOf(value *Statement) *IfStatement {
-	if value == nil || value.Tag() != StatementTagIf {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagIf
+	}
+	if operand {
 		return nil
 	}
 	return value.IfPayload().Value
@@ -320,7 +505,12 @@ func IfStatementOf(value *Statement) *IfStatement {
 
 // CaseClauseOf returns a case clause payload.
 func CaseClauseOf(value *Statement) *CaseClause {
-	if value == nil || value.Tag() != StatementTagCase {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagCase
+	}
+	if operand {
 		return nil
 	}
 	return value.CasePayload().Value
@@ -328,7 +518,12 @@ func CaseClauseOf(value *Statement) *CaseClause {
 
 // SwitchStatementOf returns an expression switch payload.
 func SwitchStatementOf(value *Statement) *SwitchStatement {
-	if value == nil || value.Tag() != StatementTagSwitch {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagSwitch
+	}
+	if operand {
 		return nil
 	}
 	return value.SwitchPayload().Value
@@ -336,7 +531,12 @@ func SwitchStatementOf(value *Statement) *SwitchStatement {
 
 // TypeSwitchStatementOf returns a type switch payload.
 func TypeSwitchStatementOf(value *Statement) *TypeSwitchStatement {
-	if value == nil || value.Tag() != StatementTagTypeSwitch {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagTypeSwitch
+	}
+	if operand {
 		return nil
 	}
 	return value.TypeSwitchPayload().Value
@@ -344,7 +544,12 @@ func TypeSwitchStatementOf(value *Statement) *TypeSwitchStatement {
 
 // RangeStatementOf returns a range statement payload.
 func RangeStatementOf(value *Statement) *RangeStatement {
-	if value == nil || value.Tag() != StatementTagRange {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagRange
+	}
+	if operand {
 		return nil
 	}
 	return value.RangePayload().Value
@@ -352,7 +557,12 @@ func RangeStatementOf(value *Statement) *RangeStatement {
 
 // ForStatementOf returns a for statement payload.
 func ForStatementOf(value *Statement) *ForStatement {
-	if value == nil || value.Tag() != StatementTagFor {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagFor
+	}
+	if operand {
 		return nil
 	}
 	return value.ForPayload().Value
@@ -360,7 +570,12 @@ func ForStatementOf(value *Statement) *ForStatement {
 
 // SelectStatementOf returns a select statement payload.
 func SelectStatementOf(value *Statement) *SelectStatement {
-	if value == nil || value.Tag() != StatementTagSelect {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagSelect
+	}
+	if operand {
 		return nil
 	}
 	return value.SelectPayload().Value
@@ -368,7 +583,12 @@ func SelectStatementOf(value *Statement) *SelectStatement {
 
 // CommunicationClauseOf returns a communication clause payload.
 func CommunicationClauseOf(value *Statement) *CommunicationClause {
-	if value == nil || value.Tag() != StatementTagCommunication {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagCommunication
+	}
+	if operand {
 		return nil
 	}
 	return value.CommunicationPayload().Value
@@ -376,7 +596,12 @@ func CommunicationClauseOf(value *Statement) *CommunicationClause {
 
 // LabeledStatementOf returns a labeled statement payload.
 func LabeledStatementOf(value *Statement) *LabeledStatement {
-	if value == nil || value.Tag() != StatementTagLabeled {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != StatementTagLabeled
+	}
+	if operand {
 		return nil
 	}
 	return value.LabeledPayload().Value
@@ -384,7 +609,12 @@ func LabeledStatementOf(value *Statement) *LabeledStatement {
 
 // GeneralDeclarationOf returns a general declaration payload.
 func GeneralDeclarationOf(value *Declaration) *GeneralDeclaration {
-	if value == nil || value.Tag() != DeclarationTagGeneral {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != DeclarationTagGeneral
+	}
+	if operand {
 		return nil
 	}
 	return value.GeneralPayload().Value
@@ -392,7 +622,12 @@ func GeneralDeclarationOf(value *Declaration) *GeneralDeclaration {
 
 // FunctionDeclarationValueOf returns a function declaration payload.
 func FunctionDeclarationValueOf(value *Declaration) *FunctionDeclaration {
-	if value == nil || value.Tag() != DeclarationTagFunction {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != DeclarationTagFunction
+	}
+	if operand {
 		return nil
 	}
 	return value.FunctionPayload().Value
@@ -400,7 +635,12 @@ func FunctionDeclarationValueOf(value *Declaration) *FunctionDeclaration {
 
 // ValueSpecificationOf returns a value specification payload.
 func ValueSpecificationOf(value *Specification) *ValueSpecification {
-	if value == nil || value.Tag() != SpecificationTagValue {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != SpecificationTagValue
+	}
+	if operand {
 		return nil
 	}
 	return value.ValuePayload().Value
@@ -408,7 +648,12 @@ func ValueSpecificationOf(value *Specification) *ValueSpecification {
 
 // TypeSpecificationOf returns a type specification payload.
 func TypeSpecificationOf(value *Specification) *TypeSpecification {
-	if value == nil || value.Tag() != SpecificationTagType {
+	type operandType = bool
+	var operand operandType = value == nil
+	if !operand {
+		operand = value.Tag() != SpecificationTagType
+	}
+	if operand {
 		return nil
 	}
 	return value.TypePayload().Value

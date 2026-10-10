@@ -44,8 +44,11 @@ func buildPublicIndex(file *File) {
 			file.extensions = append(file.extensions, node)
 		}
 		for _, child := range children {
-			if _, exists := file.parents[child]; exists {
-				continue
+			{
+				_, exists := file.parents[child]
+				if exists {
+					continue
+				}
 			}
 			file.parents[child] = node
 			add(child)

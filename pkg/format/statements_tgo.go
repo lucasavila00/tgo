@@ -56,16 +56,25 @@ func (p *printer) statement(value *syntax.Statement) {
 		p.expression(item.Expression, 0)
 		p.token(item.Token, item.Operator.String())
 	case syntax.StatementTagAssignment:
+		type operandType = bool
 		item := statementValue.AssignmentPayload().Value
 		depth := 1
-		if len(item.Left) > 1 && len(item.Right) > 1 {
+		var operand operandType = len(item.Left) > 1
+		if operand {
+			operand = len(item.Right) > 1
+		}
+		if operand {
 			depth++
 		}
 		p.commaListAt(item.Left, depth, false)
 		p.space()
 		p.token(item.Token, item.Operator.String())
-		if len(item.Right) > 0 && p.position(item.Token).Line <
-			p.position(syntax.ExpressionPosition(item.Right[0])).Line {
+		var operand_1 operandType = len(item.Right) > 0
+		if operand_1 {
+			operand_1 = p.position(item.Token).Line <
+				p.position(syntax.ExpressionPosition(item.Right[0])).Line
+		}
+		if operand_1 {
 			p.newline()
 			p.indent++
 			p.commaListAt(item.Right, depth, true)
@@ -74,6 +83,7 @@ func (p *printer) statement(value *syntax.Statement) {
 			p.space()
 			p.commaListAt(item.Right, depth, false)
 		}
+
 	case syntax.StatementTagGo:
 		item := statementValue.GoPayload().Value
 		p.token(item.Go, "go")
@@ -191,23 +201,33 @@ func clauseStatement(value *syntax.Statement) bool {
 }
 
 func (p *printer) indentReturnList(values []*syntax.Expression) bool {
+	type operandType = bool
 	if len(values) < 2 {
 		return false
 	}
 	first := p.position(syntax.ExpressionPosition(values[0])).Line
 	last := p.position(syntax.ExpressionEnd(values[len(values)-1])).Line
-	if first <= 0 || first >= last {
+	var operand operandType = first <= 0
+	if !operand {
+		operand = first >= last
+	}
+	if operand {
 		return false
 	}
 	multiline := 0
 	line := first
 	for _, value := range values {
+		type operandType_1 = bool
 		start := p.position(syntax.ExpressionPosition(value)).Line
 		stop := p.position(syntax.ExpressionEnd(value)).Line
 		if line < start {
 			return true
 		}
-		if start < stop && !compositeLiteralLike(value) {
+		var operand_1 operandType_1 = start < stop
+		if operand_1 {
+			operand_1 = !compositeLiteralLike(value)
+		}
+		if operand_1 {
 			multiline++
 		}
 		line = stop
@@ -217,18 +237,29 @@ func (p *printer) indentReturnList(values []*syntax.Expression) bool {
 
 func compositeLiteralLike(value *syntax.Expression) bool {
 	for {
+		type operandType = bool
 		if syntax.CompositeLiteralOf(value) != nil {
 			return true
 		}
-		if parenthesized := syntax.ParenthesizedExpressionOf(value); parenthesized != nil {
-			value = parenthesized.Expression
-			continue
+		{
+			parenthesized := syntax.ParenthesizedExpressionOf(value)
+			if parenthesized != nil {
+				value = parenthesized.Expression
+				continue
+			}
 		}
 		unary := syntax.UnaryExpressionOf(value)
-		if unary != nil && unary.Operator.String() == "&" {
+		var operand operandType = unary != nil
+		if operand {
+			operand = unary.Operator.String() == "&"
+		}
+		if operand {
 			value = unary.Expression
-			if parenthesized := syntax.ParenthesizedExpressionOf(value); parenthesized != nil {
-				value = parenthesized.Expression
+			{
+				parenthesized := syntax.ParenthesizedExpressionOf(value)
+				if parenthesized != nil {
+					value = parenthesized.Expression
+				}
 			}
 			return syntax.CompositeLiteralOf(value) != nil
 		}
@@ -281,7 +312,12 @@ func (p *printer) functionBody(value *syntax.BlockStatement, headerWidth int) {
 }
 
 func (p *printer) compactFunctionBody(value *syntax.BlockStatement, headerWidth int) bool {
-	if p.multiline(value.Lbrace, value.Rbrace) || len(value.List) > 5 {
+	type operandType = bool
+	var operand operandType = p.multiline(value.Lbrace, value.Rbrace)
+	if !operand {
+		operand = len(value.List) > 5
+	}
+	if operand {
 		return false
 	}
 	bodyWidth := 0
@@ -373,6 +409,7 @@ func (p *printer) caseClause(value *syntax.CaseClause) {
 			p.commaListWithComments(value.List, 1, false, comments)
 		}
 	}
+
 	p.token(value.Colon, ":")
 	p.trailingToken(value.Colon, 1)
 	if len(value.Body) == 0 {
@@ -386,8 +423,13 @@ func (p *printer) caseClause(value *syntax.CaseClause) {
 }
 
 func (p *printer) switchStatement(value *syntax.SwitchStatement) {
+	type operandType = bool
 	p.token(value.Switch, "switch")
-	if value.Init != nil || value.Tag != nil {
+	var operand operandType = value.Init != nil
+	if !operand {
+		operand = value.Tag != nil
+	}
+	if operand {
 		p.space()
 	}
 	if value.Init != nil {
@@ -425,6 +467,7 @@ func (p *printer) communicationClause(value *syntax.CommunicationClause) {
 		p.space()
 		p.statement(value.Communication)
 	}
+
 	p.token(value.Colon, ":")
 	p.trailingToken(value.Colon, 1)
 	if len(value.Body) == 0 {
@@ -438,11 +481,24 @@ func (p *printer) communicationClause(value *syntax.CommunicationClause) {
 }
 
 func (p *printer) forStatement(value *syntax.ForStatement) {
+	type operandType = bool
 	p.token(value.For, "for")
-	if value.Init != nil || value.Condition != nil || value.Post != nil {
+	var operand operandType = value.Init != nil
+	if !operand {
+		operand = value.Condition != nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = value.Post != nil
+	}
+	if operand_1 {
 		p.space()
 	}
-	if value.Init != nil || value.Post != nil {
+	var operand_2 operandType = value.Init != nil
+	if !operand_2 {
+		operand_2 = value.Post != nil
+	}
+	if operand_2 {
 		if value.Init != nil {
 			p.statement(value.Init)
 		}

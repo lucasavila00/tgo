@@ -50,9 +50,9 @@ func (b *packageBuilder) removeStaleOutputs(
 		if !staleOutput(entry, path, outputs) {
 			continue
 		}
-		err_1 := b.removeGenerated(path)
-		if err_1 != nil {
-			return err_1
+		operand := b.removeGenerated(path)
+		if operand != nil {
+			return operand
 		}
 	}
 	return nil
@@ -100,9 +100,12 @@ func (b *packageBuilder) restore() error {
 	for index := len(b.order) - 1; index >= 0; index-- {
 		path := b.order[index]
 		previous := b.previous[path]
-		if err := fileUnchanged(path, b.current[path]); err != nil {
-			failures = append(failures, err)
-			continue
+		{
+			err := fileUnchanged(path, b.current[path])
+			if err != nil {
+				failures = append(failures, err)
+				continue
+			}
 		}
 		var err error = nil
 		if previous.exists {
@@ -110,6 +113,7 @@ func (b *packageBuilder) restore() error {
 		} else {
 			_, err = atomicRemoveFile(path)
 		}
+
 		if err != nil {
 			failures = append(failures, err)
 		}
@@ -151,8 +155,11 @@ func readFileSnapshot(path string) (previousFile, error) {
 	if err != nil {
 		return emptyPreviousFile(), errors.Join(err, file.Close())
 	}
-	if err := file.Close(); err != nil {
-		return emptyPreviousFile(), err
+	{
+		err := file.Close()
+		if err != nil {
+			return emptyPreviousFile(), err
+		}
 	}
 	mode := chmodMode(info.Mode())
 	return previousFile{data: data, mode: mode, exists: true}, nil
@@ -189,8 +196,13 @@ func atomicWriteFile(
 			err = errors.Join(err, temporary.Close())
 		}
 		if !published {
+			type operandType = bool
 			removeErr := os.Remove(temporaryPath)
-			if removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			var operand operandType = removeErr != nil
+			if operand {
+				operand = !errors.Is(removeErr, os.ErrNotExist)
+			}
+			if operand {
 				err = errors.Join(err, removeErr)
 			}
 		}
@@ -201,18 +213,18 @@ func atomicWriteFile(
 	}
 	_ = result
 	if preserveMode {
-		err_3 := temporary.Chmod(mode)
-		if err_3 != nil {
-			return false, 0, err_3
+		operand := temporary.Chmod(mode)
+		if operand != nil {
+			return false, 0, operand
 		}
 	}
-	err_4 := temporary.Sync()
-	if err_4 != nil {
-		return false, 0, err_4
+	operand_1 := temporary.Sync()
+	if operand_1 != nil {
+		return false, 0, operand_1
 	}
-	temporaryInfo, err_5 := temporary.Stat()
-	if err_5 != nil {
-		return false, 0, err_5
+	temporaryInfo, err_3 := temporary.Stat()
+	if err_3 != nil {
+		return false, 0, err_3
 	}
 	writtenMode = chmodMode(temporaryInfo.Mode())
 	closeErr := temporary.Close()
@@ -220,13 +232,16 @@ func atomicWriteFile(
 	if closeErr != nil {
 		return false, 0, closeErr
 	}
-	err_6 := replaceFile(temporaryPath, path)
-	if err_6 != nil {
-		return false, 0, err_6
+	operand_2 := replaceFile(temporaryPath, path)
+	if operand_2 != nil {
+		return false, 0, operand_2
 	}
 	published = true
-	if err := syncDirectory(filepath.Dir(path)); err != nil {
-		return true, writtenMode, err
+	{
+		err := syncDirectory(filepath.Dir(path))
+		if err != nil {
+			return true, writtenMode, err
+		}
 	}
 	return true, writtenMode, nil
 }
@@ -238,20 +253,27 @@ func chmodMode(mode fs.FileMode) fs.FileMode {
 
 // atomicRemoveFile removes one file and syncs its directory.
 func atomicRemoveFile(path string) (bool, error) {
-	if err := os.Remove(path); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return false, nil
+	{
+		err := os.Remove(path)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return false, nil
+			}
+			return false, err
 		}
-		return false, err
 	}
-	if err := syncDirectory(filepath.Dir(path)); err != nil {
-		return true, err
+	{
+		err := syncDirectory(filepath.Dir(path))
+		if err != nil {
+			return true, err
+		}
 	}
 	return true, nil
 }
 
 // fileUnchanged checks that no other process changed one output state.
 func fileUnchanged(path string, expected previousFile) error {
+	type operandType = bool
 	actual, err := readFileSnapshot(path)
 	if err != nil {
 		return err
@@ -262,7 +284,11 @@ func fileUnchanged(path string, expected previousFile) error {
 	if !actual.exists {
 		return nil
 	}
-	if actual.mode != expected.mode || !bytes.Equal(actual.data, expected.data) {
+	var operand operandType = actual.mode != expected.mode
+	if !operand {
+		operand = !bytes.Equal(actual.data, expected.data)
+	}
+	if operand {
 		return fmt.Errorf("output changed during build: %s", path)
 	}
 	return nil

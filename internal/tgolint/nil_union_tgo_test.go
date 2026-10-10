@@ -20,31 +20,66 @@ import (
 
 func TestNilTypeLatticeProperties(t *testing.T) {
 	property := func(leftByte, middleByte, rightByte uint8) bool {
+		type operandType = bool
 		left := nilTypeFromMembers(leftByte)
 		middle := nilTypeFromMembers(middleByte)
 		right := nilTypeFromMembers(rightByte)
-		return equalNilType(unionNilTypes(left, middle), unionNilTypes(middle, left)) &&
-			equalNilType(
+		var operand operandType = equalNilType(unionNilTypes(left, middle), unionNilTypes(middle, left))
+		if operand {
+			operand = equalNilType(
 				unionNilTypes(unionNilTypes(left, middle), right),
 				unionNilTypes(left, unionNilTypes(middle, right)),
-			) &&
-			equalNilType(intersectNilTypes(left, middle), intersectNilTypes(middle, left)) &&
-			equalNilType(
+			)
+		}
+		var operand_1 operandType = operand
+		if operand_1 {
+			operand_1 = equalNilType(intersectNilTypes(left, middle), intersectNilTypes(middle, left))
+		}
+		var operand_2 operandType = operand_1
+		if operand_2 {
+			operand_2 = equalNilType(
 				intersectNilTypes(intersectNilTypes(left, middle), right),
 				intersectNilTypes(left, intersectNilTypes(middle, right)),
-			) &&
-			equalNilType(unionNilTypes(left, left), left) &&
-			equalNilType(intersectNilTypes(left, left), left) &&
-			equalNilType(
+			)
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = equalNilType(unionNilTypes(left, left), left)
+		}
+		var operand_4 operandType = operand_3
+		if operand_4 {
+			operand_4 = equalNilType(intersectNilTypes(left, left), left)
+		}
+		var operand_5 operandType = operand_4
+		if operand_5 {
+			operand_5 = equalNilType(
 				intersectNilTypes(left, unionNilTypes(left, middle)), left,
-			) &&
-			equalNilType(
+			)
+		}
+		var operand_6 operandType = operand_5
+		if operand_6 {
+			operand_6 = equalNilType(
 				unionNilTypes(left, intersectNilTypes(left, middle)), left,
-			) &&
-			equalNilType(unionNilTypes(left, neverNilType()), left) &&
-			equalNilType(intersectNilTypes(left, optionalNilType()), left) &&
-			isOptionalNilType(unionNilTypes(left, optionalNilType())) &&
-			isNeverNilType(intersectNilTypes(left, neverNilType()))
+			)
+		}
+		var operand_7 operandType = operand_6
+		if operand_7 {
+			operand_7 = equalNilType(unionNilTypes(left, neverNilType()), left)
+		}
+		var operand_8 operandType = operand_7
+		if operand_8 {
+			operand_8 = equalNilType(intersectNilTypes(left, optionalNilType()), left)
+		}
+		var operand_9 operandType = operand_8
+		if operand_9 {
+			operand_9 = isOptionalNilType(unionNilTypes(left, optionalNilType()))
+		}
+		var operand_10 operandType = operand_9
+		if operand_10 {
+			operand_10 = isNeverNilType(intersectNilTypes(left, neverNilType()))
+		}
+		return operand_10
+
 	}
 	configuration := &quick.Config{
 		MaxCount:      1_000,
@@ -52,8 +87,11 @@ func TestNilTypeLatticeProperties(t *testing.T) {
 		Rand:          rand.New(rand.NewSource(1)), //nolint:gosec // Tests need stable data.
 		Values:        nil,
 	}
-	if err := quick.Check(property, configuration); err != nil {
-		t.Fatal(err)
+	{
+		err := quick.Check(property, configuration)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -106,11 +144,14 @@ func TestNilBooleanReachability(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", test.name, err)
 		}
-		if got := len(diagnostics) != 0; got != test.unsafe {
-			t.Fatalf(
-				"%s: got %d diagnostics; want unsafe=%t",
-				test.name, len(diagnostics), test.unsafe,
-			)
+		{
+			got := len(diagnostics) != 0
+			if got != test.unsafe {
+				t.Fatalf(
+					"%s: got %d diagnostics; want unsafe=%t",
+					test.name, len(diagnostics), test.unsafe,
+				)
+			}
 		}
 	}
 }
@@ -120,6 +161,7 @@ func runNilAnalysis(
 	parameters string,
 	body string,
 ) ([]analysis.Diagnostic, error) {
+	type operandType = bool
 	t.Helper()
 	source := fmt.Sprintf(`package sample
 type Item struct{}
@@ -129,35 +171,39 @@ func subject(%s) {
 }
 `, parameters, body)
 	directory := t.TempDir()
-	err := os.WriteFile(
+	operand := os.WriteFile(
 		filepath.Join(directory, "go.mod"), []byte("module sample\n"), 0o600,
 	)
-	if err != nil {
-		return nil, err
+	if operand != nil {
+		return nil, operand
 	}
 	filename := filepath.Join(directory, "sample.go")
-	err_1 := os.WriteFile(filename, []byte(source), 0o600)
-	if err_1 != nil {
-		return nil, err_1
+	operand_1 := os.WriteFile(filename, []byte(source), 0o600)
+	if operand_1 != nil {
+		return nil, operand_1
 	}
 	configuration := new(packages.Config)
 	configuration.Dir = directory
 	configuration.Mode = packages.NeedName | packages.NeedFiles |
 		packages.NeedCompiledGoFiles | packages.NeedSyntax |
 		packages.NeedTypes | packages.NeedTypesInfo
-	loaded, err_2 := packages.Load(configuration, ".")
-	if err_2 != nil {
-		return nil, err_2
+	loaded, err := packages.Load(configuration, ".")
+	if err != nil {
+		return nil, err
 	}
-	if packages.PrintErrors(loaded) != 0 || len(loaded) != 1 {
+	var operand_2 operandType = packages.PrintErrors(loaded) != 0
+	if !operand_2 {
+		operand_2 = len(loaded) != 1
+	}
+	if operand_2 {
 		return nil, fmt.Errorf("load sample package")
 	}
 	loadedPackage := loaded[0]
-	file, err_3 := syntax.ParseGoFile(
+	file, err_1 := syntax.ParseGoFile(
 		loadedPackage.Fset, filename, []byte(source), syntax.ParseComments|syntax.AllErrors,
 	)
-	if err_3 != nil {
-		return nil, err_3
+	if err_1 != nil {
+		return nil, err_1
 	}
 	if file == nil {
 		return nil, fmt.Errorf("load sample package syntax")

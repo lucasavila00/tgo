@@ -33,9 +33,9 @@ func finishGoPrinterOutput(raw []byte) ([]byte, error) {
 		return nil, err
 	}
 	_ = result
-	err_1 := aligned.Flush()
-	if err_1 != nil {
-		return nil, err_1
+	operand := aligned.Flush()
+	if operand != nil {
+		return nil, operand
 	}
 	return output.Bytes(), nil
 }

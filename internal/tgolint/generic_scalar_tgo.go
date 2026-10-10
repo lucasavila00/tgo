@@ -17,14 +17,23 @@ import (
 )
 
 func tgoscalarValueExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -179,8 +188,11 @@ func (v *scalarValue) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one scalarValue JSON variant")
@@ -192,29 +204,41 @@ func (v *scalarValue) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Boolean":
 		var payload scalarValueBoolean
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewscalarValueBoolean(payload.Value)
 		return nil
 	case "Integer":
 		var payload scalarValueInteger
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewscalarValueInteger(payload.Value)
 		return nil
 	case "BooleanParameter":
 		var payload scalarValueBooleanParameter
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewscalarValueBooleanParameter(payload.Index, payload.Negated)
 		return nil
 	case "IntegerParameter":
 		var payload scalarValueIntegerParameter
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewscalarValueIntegerParameter(payload.Index)
 		return nil
@@ -224,6 +248,7 @@ func (v *scalarValue) UnmarshalJSON(data []byte) error {
 }
 
 func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -237,6 +262,7 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -253,8 +279,16 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "IntegerParameter":
 			current = 4
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -266,20 +300,38 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one scalarValue JSON variant")
 	}
 	if selected == 0 {
@@ -288,29 +340,41 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload scalarValueBoolean
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewscalarValueBoolean(payload.Value)
 		return nil
 	case 2:
 		var payload scalarValueInteger
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewscalarValueInteger(payload.Value)
 		return nil
 	case 3:
 		var payload scalarValueBooleanParameter
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewscalarValueBooleanParameter(payload.Index, payload.Negated)
 		return nil
 	case 4:
 		var payload scalarValueIntegerParameter
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewscalarValueIntegerParameter(payload.Index)
 		return nil
@@ -330,7 +394,16 @@ func (c *checker) scalarValueAt(
 	node *syntax.Node,
 	expression *syntax.Expression,
 ) (scalarValue, bool) {
-	if c == nil || node == nil || expression == nil {
+	type operandType = bool
+	var operand operandType = c == nil
+	if !operand {
+		operand = node == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = expression == nil
+	}
+	if operand_1 {
 		return func(input TgoscalarValueBooleanInput) scalarValue {
 			return NewscalarValueBoolean(input.FieldValue)
 		}(TgoscalarValueBooleanInput{FieldValue: false}), false
@@ -362,11 +435,17 @@ func (c *checker) scalarValueAt(
 func (c *checker) enclosingFunction(node *syntax.Node) *syntax.Node {
 	var current *syntax.Node = node
 	for current != nil {
-		if _, declaration := syntax.FunctionDeclarationOf(current); declaration {
-			return current
+		{
+			_, declaration := syntax.FunctionDeclarationOf(current)
+			if declaration {
+				return current
+			}
 		}
-		if _, literal := syntax.FunctionLiteralOf(current); literal {
-			return current
+		{
+			_, literal := syntax.FunctionLiteralOf(current)
+			if literal {
+				return current
+			}
 		}
 		parent := c.parents[*current]
 		if parent == nil {
@@ -441,11 +520,21 @@ func (c *checker) scalarSuccessors(
 	block *cfg.Block,
 	state scalarState,
 ) []*cfg.Block {
-	if len(block.Succs) != 2 || len(block.Nodes) == 0 {
+	type operandType_1 = bool
+	type operandType = bool
+	var operand operandType = len(block.Succs) != 2
+	if !operand {
+		operand = len(block.Nodes) == 0
+	}
+	if operand {
 		return block.Succs
 	}
 	condition, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
-	if !ok || condition == nil {
+	var operand_1 operandType_1 = !ok
+	if !operand_1 {
+		operand_1 = condition == nil
+	}
+	if operand_1 {
 		return block.Succs
 	}
 	value, known := c.evaluateScalar(condition, state)
@@ -488,21 +577,30 @@ func (c *checker) ownedScalars(
 	body *syntax.BlockStatement,
 ) map[types.Object]bool {
 	owned := make(map[types.Object]bool)
-	if signature := c.functionSignature(root); signature != nil {
-		for index := 0; index < signature.Params().Len(); index++ {
-			owned[signature.Params().At(index)] = true
+	{
+		signature := c.functionSignature(root)
+		if signature != nil {
+			for index := 0; index < signature.Params().Len(); index++ {
+				owned[signature.Params().At(index)] = true
+			}
 		}
 	}
 	inspectGenericBlock(body, func(node *syntax.Node) bool {
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
+		{
+			_, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				return false
+			}
 		}
 		name, ok := syntax.IdentifierOf(node)
 		if !ok {
 			return true
 		}
-		if variable, ok := c.facts.DefinitionName(name).(*types.Var); ok {
-			owned[variable] = true
+		{
+			variable, ok := c.facts.DefinitionName(name).(*types.Var)
+			if ok {
+				owned[variable] = true
+			}
 		}
 		return true
 	})
@@ -538,19 +636,27 @@ func (c *checker) scalarEntryState(
 }
 
 func (c *checker) functionSignature(root *syntax.Node) *types.Signature {
-	if function, ok := syntax.FunctionDeclarationOf(root); ok {
-		object, _ := c.facts.DefinitionName(function.Name).(*types.Func)
-		if object != nil {
-			signature, _ := object.Type().(*types.Signature)
-			return signature
+	{
+		function, ok := syntax.FunctionDeclarationOf(root)
+		if ok {
+			object, _ := c.facts.DefinitionName(function.Name).(*types.Func)
+			if object != nil {
+				signature, _ := object.Type().(*types.Signature)
+				return signature
+			}
 		}
 	}
 	return c.facts.FunctionSignature(syntax.NodePosition(root))
 }
 
 func isInteger(typ types.Type) bool {
+	type operandType = bool
 	basic, ok := coreType(typ).(*types.Basic)
-	return ok && basic.Info()&types.IsInteger != 0
+	var operand operandType = ok
+	if operand {
+		operand = basic.Info()&types.IsInteger != 0
+	}
+	return operand
 }
 
 func (c *checker) clearRangeScalars(
@@ -565,8 +671,13 @@ func (c *checker) clearRangeScalars(
 		return
 	}
 	for _, expression := range []*syntax.Expression{statement.Key, statement.Value} {
+		type operandType = bool
 		name := syntax.IdentifierExpressionOf(expression)
-		if name != nil && name.Name != "_" {
+		var operand operandType = name != nil
+		if operand {
+			operand = name.Name != "_"
+		}
+		if operand {
 			delete(state, c.facts.Object(name))
 		}
 	}
@@ -577,33 +688,54 @@ func (c *checker) transferScalarNode(
 	node syntax.Node,
 	owned map[types.Object]bool,
 ) {
-	if statement, ok := syntax.StatementOf(&node); ok {
-		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-			c.transferScalarAssignment(state, assignment, owned)
-		}
-		if declaration := syntax.DeclarationStatementOf(statement); declaration != nil {
-			general := syntax.GeneralDeclarationOf(declaration.Declaration)
-			if general != nil {
-				for _, specification := range general.Specs {
-					values := syntax.ValueSpecificationOf(specification)
-					if values == nil {
-						continue
+	{
+		statement, ok := syntax.StatementOf(&node)
+		if ok {
+			{
+				assignment := syntax.AssignmentStatementOf(statement)
+				if assignment != nil {
+					c.transferScalarAssignment(state, assignment, owned)
+				}
+			}
+			{
+				declaration := syntax.DeclarationStatementOf(statement)
+				if declaration != nil {
+					general := syntax.GeneralDeclarationOf(declaration.Declaration)
+					if general != nil {
+						for _, specification := range general.Specs {
+							values := syntax.ValueSpecificationOf(specification)
+							if values == nil {
+								continue
+							}
+							c.transferScalarValues(state, values.Names, values.Values, owned)
+						}
 					}
-					c.transferScalarValues(state, values.Names, values.Values, owned)
+				}
+			}
+			{
+				increment := syntax.IncrementStatementOf(statement)
+				if increment != nil {
+					{
+						name := syntax.IdentifierExpressionOf(increment.Expression)
+						if name != nil {
+							delete(state, c.facts.Object(name))
+						}
+					}
 				}
 			}
 		}
-		if increment := syntax.IncrementStatementOf(statement); increment != nil {
-			if name := syntax.IdentifierExpressionOf(increment.Expression); name != nil {
-				delete(state, c.facts.Object(name))
-			}
-		}
 	}
-	if specification, ok := syntax.SpecificationOf(&node); ok {
-		if values := syntax.ValueSpecificationOf(specification); values != nil {
-			c.transferScalarValues(
-				state, values.Names, values.Values, owned,
-			)
+	{
+		specification, ok := syntax.SpecificationOf(&node)
+		if ok {
+			{
+				values := syntax.ValueSpecificationOf(specification)
+				if values != nil {
+					c.transferScalarValues(
+						state, values.Names, values.Values, owned,
+					)
+				}
+			}
 		}
 	}
 	c.invalidateScalarEscapes(state, &node)
@@ -615,11 +747,22 @@ func (c *checker) transferScalarAssignment(
 	statement *syntax.AssignmentStatement,
 	owned map[types.Object]bool,
 ) {
-	if statement.Operator != token.ASSIGN && statement.Operator != token.DEFINE ||
-		len(statement.Left) != len(statement.Right) {
+	type operandType = bool
+	var operand operandType = statement.Operator != token.ASSIGN
+	if operand {
+		operand = statement.Operator != token.DEFINE
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = len(statement.Left) != len(statement.Right)
+	}
+	if operand_1 {
 		for _, target := range statement.Left {
-			if name := syntax.IdentifierExpressionOf(target); name != nil {
-				delete(state, c.facts.Object(name))
+			{
+				name := syntax.IdentifierExpressionOf(target)
+				if name != nil {
+					delete(state, c.facts.Object(name))
+				}
 			}
 		}
 		return
@@ -635,19 +778,31 @@ func (c *checker) transferScalarAssignment(
 				return NewscalarValueBoolean(input.FieldValue)
 			}(TgoscalarValueBooleanInput{FieldValue: false}))
 		}
+
 		known = append(known, valueKnown)
 	}
 	for index, target := range statement.Left {
+		type operandType_2 = bool
+		type operandType_1 = bool
 		name := syntax.IdentifierExpressionOf(target)
-		if name == nil || name.Name == "_" {
+		var operand_2 operandType_1 = name == nil
+		if !operand_2 {
+			operand_2 = name.Name == "_"
+		}
+		if operand_2 {
 			continue
 		}
 		object := c.facts.Object(name)
-		if !owned[object] || !known[index] {
+		var operand_3 operandType_2 = !owned[object]
+		if !operand_3 {
+			operand_3 = !known[index]
+		}
+		if operand_3 {
 			delete(state, object)
 		} else {
 			state[object] = values[index]
 		}
+
 	}
 }
 
@@ -664,30 +819,59 @@ func (c *checker) transferScalarValues(
 		return
 	}
 	for index, name := range names {
+		type operandType = bool
 		object := c.facts.Object(name)
 		value, known := c.evaluateScalar(values[index], state)
-		if !owned[object] || !known {
+		var operand operandType = !owned[object]
+		if !operand {
+			operand = !known
+		}
+		if operand {
 			delete(state, object)
 		} else {
 			state[object] = value
 		}
+
 	}
 }
 
 // invalidateScalarEscapes drops facts after an address or closure captures a value.
 func (c *checker) invalidateScalarEscapes(state scalarState, root *syntax.Node) {
 	inspectGenericNode(root, func(node *syntax.Node) bool {
-		if expression, ok := syntax.ExpressionOf(node); ok {
-			if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
-				unary.Operator == token.AND {
-				if name := syntax.IdentifierExpressionOf(unary.Expression); name != nil {
-					delete(state, c.facts.Object(name))
+		{
+			expression, ok := syntax.ExpressionOf(node)
+			if ok {
+				{
+					type operandType = bool
+					unary := syntax.UnaryExpressionOf(expression)
+					var operand operandType = unary != nil
+					if operand {
+						operand = unary.Operator == token.AND
+					}
+					if operand {
+						{
+							name := syntax.IdentifierExpressionOf(unary.Expression)
+							if name != nil {
+								delete(state, c.facts.Object(name))
+							}
+						}
+					}
 				}
-			}
-			if selector := syntax.SelectorExpressionOf(expression); selector != nil &&
-				c.pointerMethodSelection(expression) {
-				if name := syntax.IdentifierExpressionOf(selector.Expression); name != nil {
-					delete(state, c.facts.Object(name))
+				{
+					type operandType_1 = bool
+					selector := syntax.SelectorExpressionOf(expression)
+					var operand_1 operandType_1 = selector != nil
+					if operand_1 {
+						operand_1 = c.pointerMethodSelection(expression)
+					}
+					if operand_1 {
+						{
+							name := syntax.IdentifierExpressionOf(selector.Expression)
+							if name != nil {
+								delete(state, c.facts.Object(name))
+							}
+						}
+					}
 				}
 			}
 		}
@@ -716,35 +900,61 @@ func (c *checker) evaluateScalar(
 			return NewscalarValueBoolean(input.FieldValue)
 		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
-	if exact, known := exactScalar(c.facts.Constant(expression)); known {
-		return exact, true
-	}
-	if parentheses := syntax.ParenthesizedExpressionOf(expression); parentheses != nil {
-		return c.evaluateScalar(parentheses.Expression, state)
-	}
-	if identifier := syntax.IdentifierExpressionOf(expression); identifier != nil {
-		if value, ok := state[c.facts.Object(identifier)]; ok {
-			return value, true
+	{
+		exact, known := exactScalar(c.facts.Constant(expression))
+		if known {
+			return exact, true
 		}
-		return func(input TgoscalarValueBooleanInput) scalarValue {
-			return NewscalarValueBoolean(input.FieldValue)
-		}(TgoscalarValueBooleanInput{FieldValue: false}), false
 	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-		value, ok := c.evaluateScalar(unary.Expression, state)
-		if !ok || unary.Operator != token.NOT {
+	{
+		parentheses := syntax.ParenthesizedExpressionOf(expression)
+		if parentheses != nil {
+			return c.evaluateScalar(parentheses.Expression, state)
+		}
+	}
+	{
+		identifier := syntax.IdentifierExpressionOf(expression)
+		if identifier != nil {
+			{
+				value, ok := state[c.facts.Object(identifier)]
+				if ok {
+					return value, true
+				}
+			}
 			return func(input TgoscalarValueBooleanInput) scalarValue {
 				return NewscalarValueBoolean(input.FieldValue)
 			}(TgoscalarValueBooleanInput{FieldValue: false}), false
 		}
-		return negateScalarBoolean(value)
 	}
-	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
-		return c.evaluateScalarBinary(binary, state)
+	{
+		unary := syntax.UnaryExpressionOf(expression)
+		if unary != nil {
+			type operandType = bool
+			value, ok := c.evaluateScalar(unary.Expression, state)
+			var operand operandType = !ok
+			if !operand {
+				operand = unary.Operator != token.NOT
+			}
+			if operand {
+				return func(input TgoscalarValueBooleanInput) scalarValue {
+					return NewscalarValueBoolean(input.FieldValue)
+				}(TgoscalarValueBooleanInput{FieldValue: false}), false
+			}
+			return negateScalarBoolean(value)
+		}
 	}
-	if call := syntax.CallExpressionOf(expression); call != nil {
-		if c.valuePreservingConversion(expression, call) {
-			return c.evaluateScalar(call.Args[0], state)
+	{
+		binary := syntax.BinaryExpressionOf(expression)
+		if binary != nil {
+			return c.evaluateScalarBinary(binary, state)
+		}
+	}
+	{
+		call := syntax.CallExpressionOf(expression)
+		if call != nil {
+			if c.valuePreservingConversion(expression, call) {
+				return c.evaluateScalar(call.Args[0], state)
+			}
 		}
 	}
 	return func(input TgoscalarValueBooleanInput) scalarValue {
@@ -779,11 +989,20 @@ func (c *checker) valuePreservingConversion(
 	expression *syntax.Expression,
 	call *syntax.CallExpression,
 ) bool {
-	return len(call.Args) == 1 && c.facts.IsType(call.Callee) &&
-		types.Identical(
+	type operandType = bool
+	var operand operandType = len(call.Args) == 1
+	if operand {
+		operand = c.facts.IsType(call.Callee)
+	}
+	var operand_1 operandType = operand
+	if operand_1 {
+		operand_1 = types.Identical(
 			c.facts.Type(expression),
 			c.facts.Type(call.Args[0]),
 		)
+	}
+	return operand_1
+
 }
 
 // evaluateScalarBinary evaluates safe Boolean operations and equality.
@@ -791,9 +1010,14 @@ func (c *checker) evaluateScalarBinary(
 	expression *syntax.BinaryExpression,
 	state scalarState,
 ) (scalarValue, bool) {
+	type operandType = bool
 	left, leftKnown := c.evaluateScalar(expression.Left, state)
 	right, rightKnown := c.evaluateScalar(expression.Right, state)
-	if !leftKnown || !rightKnown {
+	var operand operandType = !leftKnown
+	if !operand {
+		operand = !rightKnown
+	}
+	if operand {
 		return func(input TgoscalarValueBooleanInput) scalarValue {
 			return NewscalarValueBoolean(input.FieldValue)
 		}(TgoscalarValueBooleanInput{FieldValue: false}), false
@@ -832,15 +1056,37 @@ func scalarLogicalAnd(
 	rightBoolean bool,
 	rightKnown bool,
 ) (scalarValue, bool) {
-	if leftKnown && !leftBoolean || rightKnown && !rightBoolean {
+	type operandType = bool
+	var operand operandType = leftKnown
+	if operand {
+		operand = !leftBoolean
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		type operandType_1 = bool
+		var operand_2 operandType_1 = rightKnown
+		if operand_2 {
+			operand_2 = !rightBoolean
+		}
+		operand_1 = operand_2
+	}
+	if operand_1 {
 		return func(input TgoscalarValueBooleanInput) scalarValue {
 			return NewscalarValueBoolean(input.FieldValue)
 		}(TgoscalarValueBooleanInput{FieldValue: false}), true
 	}
-	if leftKnown && leftBoolean {
+	var operand_3 operandType = leftKnown
+	if operand_3 {
+		operand_3 = leftBoolean
+	}
+	if operand_3 {
 		return right, true
 	}
-	if rightKnown && rightBoolean {
+	var operand_4 operandType = rightKnown
+	if operand_4 {
+		operand_4 = rightBoolean
+	}
+	if operand_4 {
 		return left, true
 	}
 	return func(input TgoscalarValueBooleanInput) scalarValue {
@@ -856,15 +1102,37 @@ func scalarLogicalOr(
 	rightBoolean bool,
 	rightKnown bool,
 ) (scalarValue, bool) {
-	if leftKnown && leftBoolean || rightKnown && rightBoolean {
+	type operandType = bool
+	var operand operandType = leftKnown
+	if operand {
+		operand = leftBoolean
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		type operandType_1 = bool
+		var operand_2 operandType_1 = rightKnown
+		if operand_2 {
+			operand_2 = rightBoolean
+		}
+		operand_1 = operand_2
+	}
+	if operand_1 {
 		return func(input TgoscalarValueBooleanInput) scalarValue {
 			return NewscalarValueBoolean(input.FieldValue)
 		}(TgoscalarValueBooleanInput{FieldValue: true}), true
 	}
-	if leftKnown && !leftBoolean {
+	var operand_3 operandType = leftKnown
+	if operand_3 {
+		operand_3 = !leftBoolean
+	}
+	if operand_3 {
 		return right, true
 	}
-	if rightKnown && !rightBoolean {
+	var operand_4 operandType = rightKnown
+	if operand_4 {
+		operand_4 = !rightBoolean
+	}
+	if operand_4 {
 		return left, true
 	}
 	return func(input TgoscalarValueBooleanInput) scalarValue {
@@ -949,21 +1217,58 @@ func negateScalarBoolean(value scalarValue) (scalarValue, bool) {
 }
 
 func scalarValuesEqual(left scalarValue, right scalarValue) bool {
-	if leftBoolean, ok := scalarBoolean(left); ok {
-		rightBoolean, rightOK := scalarBoolean(right)
-		return rightOK && leftBoolean == rightBoolean
+	type operandType_3 = bool
+	{
+		leftBoolean, ok := scalarBoolean(left)
+		if ok {
+			type operandType = bool
+			rightBoolean, rightOK := scalarBoolean(right)
+			var operand operandType = rightOK
+			if operand {
+				operand = leftBoolean == rightBoolean
+			}
+			return operand
+		}
 	}
-	if leftInteger, ok := scalarInteger(left); ok {
-		rightInteger, rightOK := scalarInteger(right)
-		return rightOK && leftInteger == rightInteger
+	{
+		leftInteger, ok := scalarInteger(left)
+		if ok {
+			type operandType_1 = bool
+			rightInteger, rightOK := scalarInteger(right)
+			var operand_1 operandType_1 = rightOK
+			if operand_1 {
+				operand_1 = leftInteger == rightInteger
+			}
+			return operand_1
+		}
 	}
-	if leftIndex, leftNegated, ok := scalarBooleanParameter(left); ok {
-		rightIndex, rightNegated, rightOK := scalarBooleanParameter(right)
-		return rightOK && leftIndex == rightIndex && leftNegated == rightNegated
+	{
+		leftIndex, leftNegated, ok := scalarBooleanParameter(left)
+		if ok {
+			type operandType_2 = bool
+			rightIndex, rightNegated, rightOK := scalarBooleanParameter(right)
+			var operand_2 operandType_2 = rightOK
+			if operand_2 {
+				operand_2 = leftIndex == rightIndex
+			}
+			var operand_3 operandType_2 = operand_2
+			if operand_3 {
+				operand_3 = leftNegated == rightNegated
+			}
+			return operand_3
+		}
 	}
 	leftIndex, leftOK := scalarIntegerParameter(left)
 	rightIndex, rightOK := scalarIntegerParameter(right)
-	return leftOK && rightOK && leftIndex == rightIndex
+	var operand_4 operandType_3 = leftOK
+	if operand_4 {
+		operand_4 = rightOK
+	}
+	var operand_5 operandType_3 = operand_4
+	if operand_5 {
+		operand_5 = leftIndex == rightIndex
+	}
+	return operand_5
 }
 
 func scalarBooleanParameter(value scalarValue) (int, bool, bool) {

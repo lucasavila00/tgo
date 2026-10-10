@@ -52,6 +52,7 @@ func AnalyzeWorkspaceContext(ctx context.Context, directory string) ([]*Package,
 	if err != nil {
 		return nil, err
 	}
+
 	result := make([]*Package, 0, len(compiled))
 	for _, view := range compiled {
 		result = append(result, analyzeWorkspaceView(view))
@@ -68,6 +69,7 @@ func AnalyzeAvailableWorkspaceContext(
 	if err != nil {
 		return nil, err
 	}
+
 	result := make([]*Package, 0, len(compiled))
 	for _, view := range compiled {
 		result = append(result, analyzeWorkspaceView(view))
@@ -85,6 +87,7 @@ func AnalyzePackage(
 	if err != nil {
 		return nil, err
 	}
+
 	if compiled == nil {
 		return nil, nil
 	}
@@ -104,6 +107,7 @@ func AnalyzeTestPackage(
 	if err != nil {
 		return nil, err
 	}
+
 	if compiled == nil {
 		return nil, nil
 	}
@@ -121,17 +125,31 @@ func analyzeWorkspaceView(view driver.CompiledView) *Package {
 }
 
 func analyzePackage(compiled *compiler.CompiledPackage, testSourcesOnly bool) *Package {
+	type operandType = bool
 	projection := compiled.Facts
 	files := compiled.Files
 	pkg := compiled.Package
-	if projection == nil || files == nil || pkg == nil {
+	var operand operandType = projection == nil
+	if !operand {
+		operand = files == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = pkg == nil
+	}
+	if operand_1 {
 		panic("compiled package has incomplete projection facts")
 	}
 	sources := make([]Source, 0, len(compiled.Sources))
 	nonNil := make(map[token.Pos]bool)
 	var facts *sourcefacts.Index = nil
 	for _, source := range compiled.Sources {
-		if testSourcesOnly && !strings.HasSuffix(source.Name, "_test.tgo") {
+		type operandType_1 = bool
+		var operand_2 operandType_1 = testSourcesOnly
+		if operand_2 {
+			operand_2 = !strings.HasSuffix(source.Name, "_test.tgo")
+		}
+		if operand_2 {
 			continue
 		}
 		tree := source.Syntax
@@ -156,6 +174,7 @@ func analyzePackage(compiled *compiler.CompiledPackage, testSourcesOnly bool) *P
 		} else {
 			facts.AddFile(tree)
 		}
+
 		for position := range source.NonNil {
 			nonNil[position] = true
 		}

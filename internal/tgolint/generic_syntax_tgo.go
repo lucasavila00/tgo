@@ -19,24 +19,46 @@ func inspectGenericNode(node *syntax.Node, visit func(*syntax.Node) bool) {
 	if visit == nil {
 		return
 	}
-	if expression, ok := syntax.ExpressionOf(node); ok && expression != nil {
-		inspectGenericExpression(expression, visit)
-		return
+	{
+		type operandType = bool
+		expression, ok := syntax.ExpressionOf(node)
+		var operand operandType = ok
+		if operand {
+			operand = expression != nil
+		}
+		if operand {
+			inspectGenericExpression(expression, visit)
+			return
+		}
 	}
-	if statement, ok := syntax.StatementOf(node); ok && statement != nil {
-		inspectGenericStatement(statement, visit)
-		return
+	{
+		type operandType_1 = bool
+		statement, ok := syntax.StatementOf(node)
+		var operand_1 operandType_1 = ok
+		if operand_1 {
+			operand_1 = statement != nil
+		}
+		if operand_1 {
+			inspectGenericStatement(statement, visit)
+			return
+		}
 	}
 	if !visit(node) {
 		return
 	}
-	if specification, ok := syntax.SpecificationOf(node); ok {
-		if value := syntax.ValueSpecificationOf(specification); value != nil {
-			if value.Type != nil {
-				inspectGenericExpression(value.Type, visit)
-			}
-			for _, expression := range value.Values {
-				inspectGenericExpression(expression, visit)
+	{
+		specification, ok := syntax.SpecificationOf(node)
+		if ok {
+			{
+				value := syntax.ValueSpecificationOf(specification)
+				if value != nil {
+					if value.Type != nil {
+						inspectGenericExpression(value.Type, visit)
+					}
+					for _, expression := range value.Values {
+						inspectGenericExpression(expression, visit)
+					}
+				}
 			}
 		}
 	}
@@ -79,11 +101,17 @@ func inspectGenericStatement(statement *syntax.Statement, visit func(*syntax.Nod
 }
 
 func genericFunctionBody(node *syntax.Node) *syntax.BlockStatement {
-	if declaration, ok := syntax.FunctionDeclarationOf(node); ok {
-		return declaration.Body
+	{
+		declaration, ok := syntax.FunctionDeclarationOf(node)
+		if ok {
+			return declaration.Body
+		}
 	}
-	if literal, ok := syntax.FunctionLiteralOf(node); ok {
-		return literal.Body
+	{
+		literal, ok := syntax.FunctionLiteralOf(node)
+		if ok {
+			return literal.Body
+		}
 	}
 	return nil
 }

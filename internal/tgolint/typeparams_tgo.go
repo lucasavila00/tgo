@@ -11,37 +11,59 @@ func coreType(typ types.Type) types.Type {
 		return nil
 	}
 	typ = types.Unalias(typ)
-	if parameter, ok := typ.(*types.TypeParam); ok {
-		terms, supported := simpleTerms(parameter.Constraint())
-		if !supported || len(terms) == 0 {
-			return nil
-		}
-		core := terms[0].Type().Underlying()
-		for _, term := range terms[1:] {
-			candidate := term.Type().Underlying()
-			if !types.Identical(core, candidate) {
-				core = commonChannel(core, candidate)
-				if core == nil {
-					return nil
+	{
+		parameter, ok := typ.(*types.TypeParam)
+		if ok {
+			type operandType = bool
+			terms, supported := simpleTerms(parameter.Constraint())
+			var operand operandType = !supported
+			if !operand {
+				operand = len(terms) == 0
+			}
+			if operand {
+				return nil
+			}
+			core := terms[0].Type().Underlying()
+			for _, term := range terms[1:] {
+				candidate := term.Type().Underlying()
+				if !types.Identical(core, candidate) {
+					core = commonChannel(core, candidate)
+					if core == nil {
+						return nil
+					}
 				}
 			}
+			return core
 		}
-		return core
 	}
 	return typ.Underlying()
 }
 
 // commonChannel combines channel directions when their element types match.
 func commonChannel(left, right types.Type) types.Type {
+	type operandType_1 = bool
+	type operandType = bool
 	leftChannel, leftOK := left.(*types.Chan)
 	rightChannel, rightOK := right.(*types.Chan)
-	if !leftOK || !rightOK || !types.Identical(leftChannel.Elem(), rightChannel.Elem()) {
+	var operand operandType = !leftOK
+	if !operand {
+		operand = !rightOK
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = !types.Identical(leftChannel.Elem(), rightChannel.Elem())
+	}
+	if operand_1 {
 		return nil
 	}
 	if leftChannel.Dir() == types.SendRecv {
 		return rightChannel
 	}
-	if rightChannel.Dir() == types.SendRecv || leftChannel.Dir() == rightChannel.Dir() {
+	var operand_2 operandType_1 = rightChannel.Dir() == types.SendRecv
+	if !operand_2 {
+		operand_2 = leftChannel.Dir() == rightChannel.Dir()
+	}
+	if operand_2 {
 		return leftChannel
 	}
 	return nil
@@ -101,8 +123,13 @@ func intersectTerms(left, right []*types.Term) []*types.Term {
 	intersection := make([]*types.Term, 0)
 	for _, leftTerm := range left {
 		for _, rightTerm := range right {
+			type operandType = bool
 			term := intersectTerm(leftTerm, rightTerm)
-			if term != nil && !containsTerm(intersection, term) {
+			var operand operandType = term != nil
+			if operand {
+				operand = !containsTerm(intersection, term)
+			}
+			if operand {
 				intersection = append(intersection, term)
 			}
 		}
@@ -113,9 +140,14 @@ func intersectTerms(left, right []*types.Term) []*types.Term {
 // intersectTerm returns the overlap of two exact or approximate terms.
 // intersectTerm returns the narrower compatible term.
 func intersectTerm(left, right *types.Term) *types.Term {
+	type operandType = bool
 	leftType := types.Unalias(left.Type())
 	rightType := types.Unalias(right.Type())
-	if !left.Tilde() && !right.Tilde() {
+	var operand operandType = !left.Tilde()
+	if operand {
+		operand = !right.Tilde()
+	}
+	if operand {
 		if types.Identical(leftType, rightType) {
 			return types.NewTerm(false, leftType)
 		}
@@ -136,7 +168,12 @@ func intersectTerm(left, right *types.Term) *types.Term {
 // containsTerm reports whether terms already contains the same term.
 func containsTerm(terms []*types.Term, target *types.Term) bool {
 	for _, term := range terms {
-		if term.Tilde() == target.Tilde() && types.Identical(term.Type(), target.Type()) {
+		type operandType = bool
+		var operand operandType = term.Tilde() == target.Tilde()
+		if operand {
+			operand = types.Identical(term.Type(), target.Type())
+		}
+		if operand {
 			return true
 		}
 	}

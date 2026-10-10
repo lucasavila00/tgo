@@ -18,14 +18,23 @@ import (
 )
 
 func tgoeffectOutcomeExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -50,7 +59,12 @@ func (v effectOutcome) Tag() effectOutcomeTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v effectOutcome) GobEncode() ([]byte, error) {
-	if v.tgoTag < effectOutcomeTagUnknown || v.tgoTag > effectOutcomeTagConditional {
+	type operandType = bool
+	var operand operandType = v.tgoTag < effectOutcomeTagUnknown
+	if !operand {
+		operand = v.tgoTag > effectOutcomeTagConditional
+	}
+	if operand {
 		return nil, fmt.Errorf("effectOutcome: cannot gob encode invalid tag %d", v.tgoTag)
 	}
 	tag := uint32(v.tgoTag)
@@ -59,12 +73,21 @@ func (v effectOutcome) GobEncode() ([]byte, error) {
 
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *effectOutcome) GobDecode(data []byte) error {
+	type operandType = bool
 	if len(data) != 4 {
 		return fmt.Errorf("effectOutcome: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := effectOutcomeTag(number)
-	if uint32(tag) != number || tag < effectOutcomeTagUnknown || tag > effectOutcomeTagConditional {
+	var operand operandType = uint32(tag) != number
+	if !operand {
+		operand = tag < effectOutcomeTagUnknown
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = tag > effectOutcomeTagConditional
+	}
+	if operand_1 {
 		return fmt.Errorf("effectOutcome: cannot gob decode unknown tag %d", number)
 	}
 	switch tag {
@@ -178,8 +201,11 @@ func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one effectOutcome JSON variant")
@@ -191,29 +217,41 @@ func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Unknown":
 		var payload effectOutcomeUnknown
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NeweffectOutcomeUnknown()
 		return nil
 	case "Never":
 		var payload effectOutcomeNever
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NeweffectOutcomeNever()
 		return nil
 	case "Always":
 		var payload effectOutcomeAlways
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NeweffectOutcomeAlways()
 		return nil
 	case "Conditional":
 		var payload effectOutcomeConditional
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NeweffectOutcomeConditional()
 		return nil
@@ -223,6 +261,7 @@ func (v *effectOutcome) UnmarshalJSON(data []byte) error {
 }
 
 func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -236,6 +275,7 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -252,8 +292,16 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Conditional":
 			current = 4
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -265,20 +313,38 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one effectOutcome JSON variant")
 	}
 	if selected == 0 {
@@ -287,29 +353,41 @@ func (v *effectOutcome) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	switch selected {
 	case 1:
 		var payload effectOutcomeUnknown
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NeweffectOutcomeUnknown()
 		return nil
 	case 2:
 		var payload effectOutcomeNever
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NeweffectOutcomeNever()
 		return nil
 	case 3:
 		var payload effectOutcomeAlways
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NeweffectOutcomeAlways()
 		return nil
 	case 4:
 		var payload effectOutcomeConditional
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NeweffectOutcomeConditional()
 		return nil
@@ -354,6 +432,7 @@ func (c *checker) markGenericZeroWith(
 	extra *GenericEffectCondition,
 	unknown bool,
 ) {
+	type operandType = bool
 	conditions, maySkip, reachable := c.genericEffectPath(summary, node)
 	if !reachable {
 		return
@@ -361,9 +440,13 @@ func (c *checker) markGenericZeroWith(
 	if extra != nil {
 		conditions = append(conditions, *extra)
 	}
+	var operand operandType = maySkip
+	if !operand {
+		operand = unknown
+	}
 	effect := GenericEffect{
 		Receiver: false, TypeParameter: 0,
-		Conditions: conditions, MaySkip: maySkip || unknown,
+		Conditions: conditions, MaySkip: operand,
 	}
 	for parameter := range zeroTypeParameters(typ, summary.parameters, make(map[types.Type]bool)) {
 		c.addGenericEffect(summary, true, parameter, effect)
@@ -378,15 +461,30 @@ func (c *checker) markConditionalGenericZero(
 	value *syntax.Expression,
 	other *syntax.Expression,
 ) {
+	type operandType = bool
 	valueIndex, valueOK := c.expressionParameter(summary, value)
 	otherIndex, otherOK := -1, true
 	if other != nil {
 		otherIndex, otherOK = c.expressionParameter(summary, other)
 	}
-	if !valueOK || !otherOK ||
-		!c.parameterStableBefore(summary, valueIndex, syntax.NodePosition(node)) ||
-		(otherIndex >= 0 &&
-			!c.parameterStableBefore(summary, otherIndex, syntax.NodePosition(node))) {
+	var operand operandType = !valueOK
+	if !operand {
+		operand = !otherOK
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = !c.parameterStableBefore(summary, valueIndex, syntax.NodePosition(node))
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		type operandType_1 = bool
+		var operand_3 operandType_1 = otherIndex >= 0
+		if operand_3 {
+			operand_3 = !c.parameterStableBefore(summary, otherIndex, syntax.NodePosition(node))
+		}
+		operand_2 = (operand_3)
+	}
+	if operand_2 {
 		c.markGenericZeroWith(summary, node, typ, nil, true)
 		return
 	}
@@ -417,22 +515,43 @@ func (c *checker) parameterStableBefore(
 	index int,
 	before token.Pos,
 ) bool {
-	if _, returned := syntax.FunctionLiteralOf(summary.root); returned {
-		return false
+	type operandType = bool
+	{
+		_, returned := syntax.FunctionLiteralOf(summary.root)
+		if returned {
+			return false
+		}
 	}
 	signature := summary.function.Type().(*types.Signature)
-	if index < 0 || index >= signature.Params().Len() {
+	var operand operandType = index < 0
+	if !operand {
+		operand = index >= signature.Params().Len()
+	}
+	if operand {
 		return false
 	}
 	object := signature.Params().At(index)
 	stable := true
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
-		if node == nil || syntax.NodePosition(node) >= before || !stable {
+		type operandType = bool
+		var operand operandType = node == nil
+		if !operand {
+			operand = syntax.NodePosition(node) >= before
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = !stable
+		}
+		if operand_1 {
 			return false
 		}
 		changed, descend := c.parameterChangedAt(node, object)
 		stable = !changed
-		return stable && descend
+		var operand_2 operandType = stable
+		if operand_2 {
+			operand_2 = descend
+		}
+		return operand_2
 	})
 	return stable
 }
@@ -441,38 +560,72 @@ func (c *checker) parameterChangedAt(
 	node *syntax.Node,
 	object types.Object,
 ) (bool, bool) {
-	if literal, ok := syntax.FunctionLiteralOf(node); ok {
-		if literal == nil || literal.Body == nil {
-			return false, false
+	{
+		literal, ok := syntax.FunctionLiteralOf(node)
+		if ok {
+			type operandType = bool
+			var operand operandType = literal == nil
+			if !operand {
+				operand = literal.Body == nil
+			}
+			if operand {
+				return false, false
+			}
+			return c.syntaxCapturesObject(literal.Body, object), false
 		}
-		return c.syntaxCapturesObject(literal.Body, object), false
 	}
-	if statement, ok := syntax.StatementOf(node); ok {
-		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-			for _, target := range assignment.Left {
-				if c.expressionUsesObject(target, object) {
-					return true, false
+	{
+		statement, ok := syntax.StatementOf(node)
+		if ok {
+			{
+				assignment := syntax.AssignmentStatementOf(statement)
+				if assignment != nil {
+					for _, target := range assignment.Left {
+						if c.expressionUsesObject(target, object) {
+							return true, false
+						}
+					}
 				}
 			}
-		}
-		if increment := syntax.IncrementStatementOf(statement); increment != nil {
-			return c.expressionUsesObject(increment.Expression, object), true
-		}
-		if rangeStatement := syntax.RangeStatementOf(statement); rangeStatement != nil {
-			return c.expressionUsesObject(rangeStatement.Key, object) ||
-				c.expressionUsesObject(rangeStatement.Value, object), true
+			{
+				increment := syntax.IncrementStatementOf(statement)
+				if increment != nil {
+					return c.expressionUsesObject(increment.Expression, object), true
+				}
+			}
+			{
+				rangeStatement := syntax.RangeStatementOf(statement)
+				if rangeStatement != nil {
+					type operandType_1 = bool
+					var operand_1 operandType_1 = c.expressionUsesObject(rangeStatement.Key, object)
+					if !operand_1 {
+						operand_1 = c.expressionUsesObject(rangeStatement.Value, object)
+					}
+					return operand_1, true
+				}
+			}
 		}
 	}
 	expression, ok := syntax.ExpressionOf(node)
 	if !ok {
 		return false, true
 	}
-	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
-		return unary.Operator == token.AND &&
-			c.expressionUsesObject(unary.Expression, object), true
+	{
+		unary := syntax.UnaryExpressionOf(expression)
+		if unary != nil {
+			type operandType_2 = bool
+			var operand_2 operandType_2 = unary.Operator == token.AND
+			if operand_2 {
+				operand_2 = c.expressionUsesObject(unary.Expression, object)
+			}
+			return operand_2, true
+		}
 	}
-	if call := syntax.CallExpressionOf(expression); call != nil {
-		return c.callUsesObject(call, object), true
+	{
+		call := syntax.CallExpressionOf(expression)
+		if call != nil {
+			return c.callUsesObject(call, object), true
+		}
 	}
 	return false, true
 }
@@ -483,8 +636,13 @@ func (c *checker) syntaxCapturesObject(
 ) bool {
 	captured := false
 	inspectGenericBlock(body, func(node *syntax.Node) bool {
+		type operandType = bool
 		name, ok := syntax.IdentifierOf(node)
-		if ok && c.facts.Object(name) == object {
+		var operand operandType = ok
+		if operand {
+			operand = c.facts.Object(name) == object
+		}
+		if operand {
 			captured = true
 		}
 		return !captured
@@ -496,10 +654,25 @@ func (c *checker) callUsesObject(
 	call *syntax.CallExpression,
 	object types.Object,
 ) bool {
-	if name := syntax.IdentifierExpressionOf(call.Callee); name != nil &&
-		(name.Name == "len" || name.Name == "cap") {
-		if _, builtin := c.facts.Object(name).(*types.Builtin); builtin {
-			return false
+	{
+		type operandType = bool
+		name := syntax.IdentifierExpressionOf(call.Callee)
+		var operand operandType = name != nil
+		if operand {
+			type operandType_1 = bool
+			var operand_1 operandType_1 = name.Name == "len"
+			if !operand_1 {
+				operand_1 = name.Name == "cap"
+			}
+			operand = (operand_1)
+		}
+		if operand {
+			{
+				_, builtin := c.facts.Object(name).(*types.Builtin)
+				if builtin {
+					return false
+				}
+			}
 		}
 	}
 	if c.scalarEscapesInExpression(call.Callee, object) {
@@ -507,10 +680,25 @@ func (c *checker) callUsesObject(
 	}
 	for _, argument := range call.Args {
 		if c.expressionUsesObject(argument, object) {
-			if variable, ok := object.(*types.Var); ok &&
-				(isBoolean(variable.Type()) || isInteger(variable.Type())) &&
-				!c.scalarEscapesInExpression(argument, object) {
-				continue
+			{
+				type operandType_2 = bool
+				variable, ok := object.(*types.Var)
+				var operand_2 operandType_2 = ok
+				if operand_2 {
+					type operandType_3 = bool
+					var operand_3 operandType_3 = isBoolean(variable.Type())
+					if !operand_3 {
+						operand_3 = isInteger(variable.Type())
+					}
+					operand_2 = (operand_3)
+				}
+				var operand_4 operandType_2 = operand_2
+				if operand_4 {
+					operand_4 = !c.scalarEscapesInExpression(argument, object)
+				}
+				if operand_4 {
+					continue
+				}
 			}
 			return true
 		}
@@ -525,24 +713,50 @@ func (c *checker) scalarEscapesInExpression(
 ) bool {
 	escapes := false
 	inspectGenericExpression(expression, func(node *syntax.Node) bool {
-		if value, ok := syntax.ExpressionOf(node); ok {
-			if unary := syntax.UnaryExpressionOf(value); unary != nil &&
-				unary.Operator == token.AND &&
-				c.expressionUsesObject(unary.Expression, object) {
-				escapes = true
-				return false
-			}
-			if selector := syntax.SelectorExpressionOf(value); selector != nil &&
-				c.pointerMethodSelection(value) &&
-				c.expressionUsesObject(selector.Expression, object) {
-				escapes = true
-				return false
+		{
+			value, ok := syntax.ExpressionOf(node)
+			if ok {
+				{
+					type operandType = bool
+					unary := syntax.UnaryExpressionOf(value)
+					var operand operandType = unary != nil
+					if operand {
+						operand = unary.Operator == token.AND
+					}
+					var operand_1 operandType = operand
+					if operand_1 {
+						operand_1 = c.expressionUsesObject(unary.Expression, object)
+					}
+					if operand_1 {
+						escapes = true
+						return false
+					}
+				}
+				{
+					type operandType_1 = bool
+					selector := syntax.SelectorExpressionOf(value)
+					var operand_2 operandType_1 = selector != nil
+					if operand_2 {
+						operand_2 = c.pointerMethodSelection(value)
+					}
+					var operand_3 operandType_1 = operand_2
+					if operand_3 {
+						operand_3 = c.expressionUsesObject(selector.Expression, object)
+					}
+					if operand_3 {
+						escapes = true
+						return false
+					}
+				}
 			}
 		}
-		if literal, ok := syntax.FunctionLiteralOf(node); ok {
-			if c.syntaxCapturesObject(literal.Body, object) {
-				escapes = true
-				return false
+		{
+			literal, ok := syntax.FunctionLiteralOf(node)
+			if ok {
+				if c.syntaxCapturesObject(literal.Body, object) {
+					escapes = true
+					return false
+				}
 			}
 		}
 		return !escapes
@@ -551,8 +765,14 @@ func (c *checker) scalarEscapesInExpression(
 }
 
 func (c *checker) pointerMethodSelection(expression *syntax.Expression) bool {
+	type operandType_1 = bool
+	type operandType = bool
 	selection := c.facts.Selection(expression)
-	if selection == nil || selection.Kind() == types.FieldVal {
+	var operand operandType = selection == nil
+	if !operand {
+		operand = selection.Kind() == types.FieldVal
+	}
+	if operand {
 		return false
 	}
 	function, ok := selection.Obj().(*types.Func)
@@ -560,7 +780,11 @@ func (c *checker) pointerMethodSelection(expression *syntax.Expression) bool {
 		return false
 	}
 	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Recv() == nil {
+	var operand_1 operandType_1 = !ok
+	if !operand_1 {
+		operand_1 = signature.Recv() == nil
+	}
+	if operand_1 {
 		return false
 	}
 	_, pointer := types.Unalias(signature.Recv().Type()).(*types.Pointer)
@@ -618,6 +842,7 @@ func (c *checker) addGenericEffect(
 // normalizeGenericEffect sorts conditions and rejects contradictions.
 func normalizeGenericEffect(effect GenericEffect) (GenericEffect, bool) {
 	sort.Slice(effect.Conditions, func(left, right int) bool {
+		type operandType = bool
 		if effect.Conditions[left].ValueParameter !=
 			effect.Conditions[right].ValueParameter {
 			return effect.Conditions[left].ValueParameter <
@@ -633,18 +858,29 @@ func normalizeGenericEffect(effect GenericEffect) (GenericEffect, bool) {
 			return effect.Conditions[left].OtherParameter <
 				effect.Conditions[right].OtherParameter
 		}
-		return !effect.Conditions[left].Expected && effect.Conditions[right].Expected
+		var operand operandType = !effect.Conditions[left].Expected
+		if operand {
+			operand = effect.Conditions[right].Expected
+		}
+		return operand
 	})
 	output := effect.Conditions[:0]
 	for _, condition := range effect.Conditions {
+		type operandType = bool
 		if len(output) == 0 {
 			output = append(output, condition)
 			continue
 		}
 		previous := output[len(output)-1]
-		if previous.ValueParameter != condition.ValueParameter ||
-			previous.OtherParameter != condition.OtherParameter ||
-			previous.Kind.Tag() != condition.Kind.Tag() {
+		var operand operandType = previous.ValueParameter != condition.ValueParameter
+		if !operand {
+			operand = previous.OtherParameter != condition.OtherParameter
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = previous.Kind.Tag() != condition.Kind.Tag()
+		}
+		if operand_1 {
 			output = append(output, condition)
 			continue
 		}
@@ -657,8 +893,20 @@ func normalizeGenericEffect(effect GenericEffect) (GenericEffect, bool) {
 }
 
 func equalGenericEffect(left, right GenericEffect) bool {
-	if left.Receiver != right.Receiver || left.TypeParameter != right.TypeParameter ||
-		left.MaySkip != right.MaySkip || len(left.Conditions) != len(right.Conditions) {
+	type operandType = bool
+	var operand operandType = left.Receiver != right.Receiver
+	if !operand {
+		operand = left.TypeParameter != right.TypeParameter
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = left.MaySkip != right.MaySkip
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = len(left.Conditions) != len(right.Conditions)
+	}
+	if operand_2 {
 		return false
 	}
 	for index := range left.Conditions {
@@ -678,12 +926,25 @@ func (c *checker) genericEffectPath(
 	var conditions []GenericEffectCondition = nil
 	maySkip := false
 	var current *syntax.Node = node
-	for current != nil && *current != *summary.root {
+	for {
+		type operandType_1 = bool
+		type operandType = bool
+		var operand operandType = current != nil
+		if operand {
+			operand = *current != *summary.root
+		}
+		if !operand {
+			break
+		}
 		if summary.reachable[*current] {
 			reachable = true
 		}
 		parent := c.parents[*current]
-		if parent != nil && *parent == *summary.root {
+		var operand_1 operandType = parent != nil
+		if operand_1 {
+			operand_1 = *parent == *summary.root
+		}
+		if operand_1 {
 			current = summary.root
 			continue
 		}
@@ -696,7 +957,11 @@ func (c *checker) genericEffectPath(
 			return nil, false, false
 		}
 		conditions = append(conditions, path...)
-		maySkip = maySkip || unknown
+		var operand_2 operandType_1 = maySkip
+		if !operand_2 {
+			operand_2 = unknown
+		}
+		maySkip = operand_2
 		if parent == nil {
 			break
 		}
@@ -710,39 +975,70 @@ func (c *checker) parentEffectConditions(
 	parent *syntax.Node,
 	node *syntax.Node,
 ) ([]GenericEffectCondition, bool, bool) {
-	if _, literal := syntax.FunctionLiteralOf(parent); literal {
-		return nil, false, false
+	type operandType = bool
+	{
+		_, literal := syntax.FunctionLiteralOf(parent)
+		if literal {
+			return nil, false, false
+		}
 	}
 	statement, ok := syntax.StatementOf(parent)
 	if !ok {
 		return nil, false, true
 	}
-	if block := syntax.BlockStatementOf(statement); block != nil {
-		return c.blockEffectConditions(summary, block, node)
-	}
-	if conditional := syntax.IfStatementOf(statement); conditional != nil {
-		condition, outcome := c.ifEffectCondition(conditional, node)
-		if outcome == neverEffectOutcome() {
-			return nil, false, false
+	{
+		block := syntax.BlockStatementOf(statement)
+		if block != nil {
+			return c.blockEffectConditions(summary, block, node)
 		}
-		if outcome == conditionalEffectOutcome() {
-			return []GenericEffectCondition{*condition}, false, true
-		}
-		return nil, outcome == unknownEffectOutcome(), true
 	}
-	if syntax.RangeStatementOf(statement) != nil ||
-		syntax.SwitchStatementOf(statement) != nil ||
-		syntax.TypeSwitchStatementOf(statement) != nil ||
-		syntax.SelectStatementOf(statement) != nil {
+	{
+		conditional := syntax.IfStatementOf(statement)
+		if conditional != nil {
+			condition, outcome := c.ifEffectCondition(conditional, node)
+			if outcome == neverEffectOutcome() {
+				return nil, false, false
+			}
+			if outcome == conditionalEffectOutcome() {
+				return []GenericEffectCondition{*condition}, false, true
+			}
+			return nil, outcome == unknownEffectOutcome(), true
+		}
+	}
+	var operand operandType = syntax.RangeStatementOf(statement) != nil
+	if !operand {
+		operand = syntax.SwitchStatementOf(statement) != nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = syntax.TypeSwitchStatementOf(statement) != nil
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = syntax.SelectStatementOf(statement) != nil
+	}
+	if operand_2 {
 		return nil, true, true
 	}
-	if loop := syntax.ForStatementOf(statement); loop != nil {
-		if loop.Condition == nil {
-			return nil, false, true
+	{
+		loop := syntax.ForStatementOf(statement)
+		if loop != nil {
+			type operandType_1 = bool
+			if loop.Condition == nil {
+				return nil, false, true
+			}
+			value := c.facts.Constant(loop.Condition)
+			var operand_3 operandType_1 = value == nil
+			if !operand_3 {
+				operand_3 = value.Kind() != constant.Bool
+			}
+			var operand_4 operandType_1 = operand_3
+			if !operand_4 {
+				operand_4 = !constant.BoolVal(value)
+			}
+			unknown := operand_4
+			return nil, unknown, true
 		}
-		value := c.facts.Constant(loop.Condition)
-		unknown := value == nil || value.Kind() != constant.Bool || !constant.BoolVal(value)
-		return nil, unknown, true
 	}
 	return nil, false, true
 }
@@ -760,14 +1056,36 @@ func (c *checker) blockEffectConditions(
 		}
 		conditional := syntax.IfStatementOf(statement)
 		if conditional == nil {
-			if syntax.ForStatementOf(statement) != nil ||
-				syntax.RangeStatementOf(statement) != nil ||
-				syntax.SwitchStatementOf(statement) != nil ||
-				syntax.TypeSwitchStatementOf(statement) != nil ||
-				syntax.SelectStatementOf(statement) != nil ||
-				syntax.BranchStatementOf(statement) != nil ||
-				syntax.LabeledStatementOf(statement) != nil ||
-				syntax.BlockStatementOf(statement) != nil {
+			type operandType = bool
+			var operand operandType = syntax.ForStatementOf(statement) != nil
+			if !operand {
+				operand = syntax.RangeStatementOf(statement) != nil
+			}
+			var operand_1 operandType = operand
+			if !operand_1 {
+				operand_1 = syntax.SwitchStatementOf(statement) != nil
+			}
+			var operand_2 operandType = operand_1
+			if !operand_2 {
+				operand_2 = syntax.TypeSwitchStatementOf(statement) != nil
+			}
+			var operand_3 operandType = operand_2
+			if !operand_3 {
+				operand_3 = syntax.SelectStatementOf(statement) != nil
+			}
+			var operand_4 operandType = operand_3
+			if !operand_4 {
+				operand_4 = syntax.BranchStatementOf(statement) != nil
+			}
+			var operand_5 operandType = operand_4
+			if !operand_5 {
+				operand_5 = syntax.LabeledStatementOf(statement) != nil
+			}
+			var operand_6 operandType = operand_5
+			if !operand_6 {
+				operand_6 = syntax.BlockStatementOf(statement) != nil
+			}
+			if operand_6 {
 				unknown = true
 			}
 			continue
@@ -810,12 +1128,26 @@ func (c *checker) ifEffectCondition(
 	statement *syntax.IfStatement,
 	node *syntax.Node,
 ) (*GenericEffectCondition, effectOutcome) {
-	inBody := syntax.NodePosition(node) >= statement.Body.Start &&
-		syntax.NodeEnd(node) <= statement.Body.Stop
-	inElse := statement.Else != nil &&
-		syntax.NodePosition(node) >= syntax.StatementPosition(statement.Else) &&
-		syntax.NodeEnd(node) <= syntax.StatementEnd(statement.Else)
-	if !inBody && !inElse {
+	type operandType = bool
+	var operand operandType = syntax.NodePosition(node) >= statement.Body.Start
+	if operand {
+		operand = syntax.NodeEnd(node) <= statement.Body.Stop
+	}
+	inBody := operand
+	var operand_1 operandType = statement.Else != nil
+	if operand_1 {
+		operand_1 = syntax.NodePosition(node) >= syntax.StatementPosition(statement.Else)
+	}
+	var operand_2 operandType = operand_1
+	if operand_2 {
+		operand_2 = syntax.NodeEnd(node) <= syntax.StatementEnd(statement.Else)
+	}
+	inElse := operand_2
+	var operand_3 operandType = !inBody
+	if operand_3 {
+		operand_3 = !inElse
+	}
+	if operand_3 {
 		return nil, alwaysEffectOutcome()
 	}
 	return c.booleanEffectCondition(statement.Condition, inBody)
@@ -825,27 +1157,40 @@ func (c *checker) booleanEffectCondition(
 	expression *syntax.Expression,
 	wantTrue bool,
 ) (*GenericEffectCondition, effectOutcome) {
-	if value, known := c.scalarValueAt(syntaxNode(expression), expression); known {
-		if boolean, constantValue := scalarBoolean(value); constantValue {
-			if boolean == wantTrue {
+	{
+		value, known := c.scalarValueAt(syntaxNode(expression), expression)
+		if known {
+			{
+				boolean, constantValue := scalarBoolean(value)
+				if constantValue {
+					if boolean == wantTrue {
+						return nil, alwaysEffectOutcome()
+					}
+					return nil, neverEffectOutcome()
+				}
+			}
+			index, negated, parameter := scalarParameter(value)
+			if parameter {
+				return &GenericEffectCondition{
+					ValueParameter: index, OtherParameter: -1,
+					Kind: booleanEffectCondition(), Expected: wantTrue != negated,
+				}, conditionalEffectOutcome()
+			}
+		}
+	}
+	{
+		type operandType = bool
+		value := c.facts.Constant(expression)
+		var operand operandType = value != nil
+		if operand {
+			operand = value.Kind() == constant.Bool
+		}
+		if operand {
+			if constant.BoolVal(value) == wantTrue {
 				return nil, alwaysEffectOutcome()
 			}
 			return nil, neverEffectOutcome()
 		}
-		index, negated, parameter := scalarParameter(value)
-		if parameter {
-			return &GenericEffectCondition{
-				ValueParameter: index, OtherParameter: -1,
-				Kind: booleanEffectCondition(), Expected: wantTrue != negated,
-			}, conditionalEffectOutcome()
-		}
-	}
-	if value := c.facts.Constant(expression); value != nil &&
-		value.Kind() == constant.Bool {
-		if constant.BoolVal(value) == wantTrue {
-			return nil, alwaysEffectOutcome()
-		}
-		return nil, neverEffectOutcome()
 	}
 	return nil, unknownEffectOutcome()
 }
@@ -853,27 +1198,40 @@ func (c *checker) booleanEffectCondition(
 func (c *checker) nonzeroEffectCondition(
 	expression *syntax.Expression,
 ) (*GenericEffectCondition, effectOutcome) {
-	if value, known := c.scalarValueAt(syntaxNode(expression), expression); known {
-		if integer, constantValue := scalarInteger(value); constantValue {
-			if integer == 0 {
+	{
+		value, known := c.scalarValueAt(syntaxNode(expression), expression)
+		if known {
+			{
+				integer, constantValue := scalarInteger(value)
+				if constantValue {
+					if integer == 0 {
+						return nil, neverEffectOutcome()
+					}
+					return nil, alwaysEffectOutcome()
+				}
+			}
+			index, _, parameter := scalarParameter(value)
+			if parameter {
+				return &GenericEffectCondition{
+					ValueParameter: index, OtherParameter: -1,
+					Kind: nonzeroEffectConditionKind(), Expected: true,
+				}, conditionalEffectOutcome()
+			}
+		}
+	}
+	{
+		type operandType = bool
+		value := c.facts.Constant(expression)
+		var operand operandType = value != nil
+		if operand {
+			operand = value.Kind() == constant.Int
+		}
+		if operand {
+			if constant.Sign(value) == 0 {
 				return nil, neverEffectOutcome()
 			}
 			return nil, alwaysEffectOutcome()
 		}
-		index, _, parameter := scalarParameter(value)
-		if parameter {
-			return &GenericEffectCondition{
-				ValueParameter: index, OtherParameter: -1,
-				Kind: nonzeroEffectConditionKind(), Expected: true,
-			}, conditionalEffectOutcome()
-		}
-	}
-	if value := c.facts.Constant(expression); value != nil &&
-		value.Kind() == constant.Int {
-		if constant.Sign(value) == 0 {
-			return nil, neverEffectOutcome()
-		}
-		return nil, alwaysEffectOutcome()
 	}
 	return nil, unknownEffectOutcome()
 }
@@ -909,8 +1267,11 @@ func zeroTypeParameters(
 	switch classified.Tag() {
 	case goTypeTagTypeParameter:
 		parameterType := classified.TypeParameterPayload().Value
-		if parameter, ok := parameters[parameterType]; ok {
-			result[parameter] = true
+		{
+			parameter, ok := parameters[parameterType]
+			if ok {
+				result[parameter] = true
+			}
 		}
 	case goTypeTagNamed:
 		named := classified.NamedPayload().Value

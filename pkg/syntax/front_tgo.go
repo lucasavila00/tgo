@@ -168,14 +168,23 @@ type frontComprehensionExpr struct {
 func (*frontComprehensionExpr) extensionNode() {}
 
 func tgofrontComprehensionClauseExternalJSONTo[T interface{}](out *jsontext.Encoder, name string, payload T) error {
-	if err := out.WriteToken(jsontext.BeginObject); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.BeginObject)
+		if err != nil {
+			return err
+		}
 	}
-	if err := out.WriteToken(jsontext.String(name)); err != nil {
-		return err
+	{
+		err := out.WriteToken(jsontext.String(name))
+		if err != nil {
+			return err
+		}
 	}
-	if err := jsonv2.MarshalEncode(out, payload); err != nil {
-		return err
+	{
+		err := jsonv2.MarshalEncode(out, payload)
+		if err != nil {
+			return err
+		}
 	}
 	return out.WriteToken(jsontext.EndObject)
 }
@@ -292,8 +301,11 @@ func (v *frontComprehensionClause) UnmarshalJSON(data []byte) error {
 	var variant string
 	var payloadData []byte
 	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if len(object) != 1 {
 		return fmt.Errorf("expected one frontComprehensionClause JSON variant")
@@ -305,15 +317,21 @@ func (v *frontComprehensionClause) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "Range":
 		var payload frontComprehensionClauseRange
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewfrontComprehensionClauseRange(payload.frontSpan, payload.For, payload.Bindings, payload.Define, payload.Range, payload.Source, payload.Lbrace, payload.Rbrace)
 		return nil
 	case "Filter":
 		var payload frontComprehensionClauseFilter
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(payloadData, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewfrontComprehensionClauseFilter(payload.frontSpan, payload.If, payload.Condition, payload.Lbrace, payload.Rbrace)
 		return nil
@@ -323,6 +341,7 @@ func (v *frontComprehensionClause) UnmarshalJSON(data []byte) error {
 }
 
 func (v *frontComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
+	type operandType_1 = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -336,6 +355,7 @@ func (v *frontComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error
 	haveName := false
 	multiple := false
 	for in.PeekKind() != '}' {
+		type operandType = bool
 		nameToken, err := in.ReadToken()
 		if err != nil {
 			return err
@@ -348,8 +368,16 @@ func (v *frontComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error
 		case "Filter":
 			current = 2
 		}
-		same := haveName && current == selected
-		if same && current == 0 {
+		var operand operandType = haveName
+		if operand {
+			operand = current == selected
+		}
+		same := operand
+		var operand_1 operandType = same
+		if operand_1 {
+			operand_1 = current == 0
+		}
+		if operand_1 {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -361,20 +389,38 @@ func (v *frontComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error
 		} else if !same {
 			multiple = true
 		}
-		if !multiple && current > 0 && current == selected {
+		var operand_2 operandType = !multiple
+		if operand_2 {
+			operand_2 = current > 0
+		}
+		var operand_3 operandType = operand_2
+		if operand_3 {
+			operand_3 = current == selected
+		}
+		if operand_3 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
 			}
 			payloadData = append(payloadData[:0], raw...)
-		} else if err := in.SkipValue(); err != nil {
+		} else {
+			err := in.SkipValue()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	{
+		_, err := in.ReadToken()
+		if err != nil {
 			return err
 		}
 	}
-	if _, err := in.ReadToken(); err != nil {
-		return err
+	var operand_4 operandType_1 = !haveName
+	if !operand_4 {
+		operand_4 = multiple
 	}
-	if !haveName || multiple {
+	if operand_4 {
 		return fmt.Errorf("expected one frontComprehensionClause JSON variant")
 	}
 	if selected == 0 {
@@ -383,15 +429,21 @@ func (v *frontComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error
 	switch selected {
 	case 1:
 		var payload frontComprehensionClauseRange
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewfrontComprehensionClauseRange(payload.frontSpan, payload.For, payload.Bindings, payload.Define, payload.Range, payload.Source, payload.Lbrace, payload.Rbrace)
 		return nil
 	case 2:
 		var payload frontComprehensionClauseFilter
-		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
-			return err
+		{
+			err := jsonv2.Unmarshal(payloadData, &payload, in.Options())
+			if err != nil {
+				return err
+			}
 		}
 		*v = NewfrontComprehensionClauseFilter(payload.frontSpan, payload.If, payload.Condition, payload.Lbrace, payload.Rbrace)
 		return nil

@@ -15,8 +15,11 @@ func TestRunWritesAndListsFiles(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "sample.tgo")
 	input := []byte("package sample\nfunc value()int{return 1}\n")
-	if err := os.WriteFile(path, input, 0o640); err != nil {
-		t.Fatal(err)
+	{
+		err := os.WriteFile(path, input, 0o640)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	output := new(bytes.Buffer)
 	err := run([]string{path}, false, true, strings.NewReader(""), output)
@@ -26,8 +29,11 @@ func TestRunWritesAndListsFiles(t *testing.T) {
 	if output.String() != path+"\n" {
 		t.Fatalf("listed files = %q, want %q", output.String(), path+"\n")
 	}
-	if err := run([]string{path}, true, false, strings.NewReader(""), output); err != nil {
-		t.Fatal(err)
+	{
+		err := run([]string{path}, true, false, strings.NewReader(""), output)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	got, err := os.ReadFile(path)
 	if err != nil {
@@ -57,8 +63,11 @@ func TestRunFormatsStandardInput(t *testing.T) {
 	t.Parallel()
 	input := "package sample\nfunc value()int{return 1}\n"
 	output := new(bytes.Buffer)
-	if err := run(nil, false, false, strings.NewReader(input), output); err != nil {
-		t.Fatal(err)
+	{
+		err := run(nil, false, false, strings.NewReader(input), output)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	want := "package sample\n\nfunc value() int { return 1 }\n"
 	if output.String() != want {
@@ -70,8 +79,11 @@ func TestRunListsChangedStandardInput(t *testing.T) {
 	t.Parallel()
 	output := new(bytes.Buffer)
 	input := strings.NewReader("package   sample\n")
-	if err := run(nil, false, true, input, output); err != nil {
-		t.Fatal(err)
+	{
+		err := run(nil, false, true, input, output)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if output.String() != "<standard input>\n" {
 		t.Fatalf("listed input = %q", output.String())
@@ -83,8 +95,11 @@ func TestRunDoesNotWriteMalformedFile(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "bad.tgo")
 	input := []byte("package sample\nfunc {")
-	if err := os.WriteFile(path, input, 0o600); err != nil {
-		t.Fatal(err)
+	{
+		err := os.WriteFile(path, input, 0o600)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	err := run([]string{path}, true, false, strings.NewReader(""), new(bytes.Buffer))
 	if err == nil {
@@ -108,21 +123,32 @@ func TestRunRejectsWriteForStandardInput(t *testing.T) {
 }
 
 func TestRunRejectsMixedPackage(t *testing.T) {
+	type operandType = bool
 	t.Parallel()
 	directory := t.TempDir()
 	path := filepath.Join(directory, "sample.tgo")
-	if err := os.WriteFile(path, []byte("package sample\n"), 0o600); err != nil {
-		t.Fatal(err)
+	{
+		err := os.WriteFile(path, []byte("package sample\n"), 0o600)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := os.WriteFile(
-		filepath.Join(directory, "helper.go"),
-		[]byte("package sample\n"),
-		0o600,
-	); err != nil {
-		t.Fatal(err)
+	{
+		err := os.WriteFile(
+			filepath.Join(directory, "helper.go"),
+			[]byte("package sample\n"),
+			0o600,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	err := run([]string{path}, false, false, strings.NewReader(""), new(bytes.Buffer))
-	if err == nil || !strings.Contains(err.Error(), "mixes handwritten TGo and Go files") {
+	var operand operandType = err == nil
+	if !operand {
+		operand = !strings.Contains(err.Error(), "mixes handwritten TGo and Go files")
+	}
+	if operand {
 		t.Fatalf("error = %v, want package language diagnostic", err)
 	}
 }
@@ -132,12 +158,18 @@ func TestRunFormatsInvalidModel(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "sample.tgo")
 	input := []byte("package sample\ntype Empty enum{}\n")
-	if err := os.WriteFile(path, input, 0o600); err != nil {
-		t.Fatal(err)
+	{
+		err := os.WriteFile(path, input, 0o600)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	output := new(bytes.Buffer)
-	if err := run([]string{path}, false, false, strings.NewReader(""), output); err != nil {
-		t.Fatal(err)
+	{
+		err := run([]string{path}, false, false, strings.NewReader(""), output)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	want := "package sample\n\ntype Empty enum {}\n"
 	if output.String() != want {
@@ -151,15 +183,24 @@ func TestRunWritePreservesHardLink(t *testing.T) {
 	original := filepath.Join(directory, "source.tgo")
 	linked := filepath.Join(directory, "linked.tgo")
 	source := []byte("package sample\nfunc value()int{return 1}\n")
-	if err := os.WriteFile(original, source, 0o600); err != nil {
-		t.Fatal(err)
+	{
+		err := os.WriteFile(original, source, 0o600)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := os.Link(original, linked); err != nil {
-		t.Skipf("hard links are unavailable: %v", err)
+	{
+		err := os.Link(original, linked)
+		if err != nil {
+			t.Skipf("hard links are unavailable: %v", err)
+		}
 	}
 	input := strings.NewReader("")
-	if err := run([]string{linked}, true, false, input, new(bytes.Buffer)); err != nil {
-		t.Fatal(err)
+	{
+		err := run([]string{linked}, true, false, input, new(bytes.Buffer))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	originalInfo, err := os.Stat(original)
 	if err != nil {

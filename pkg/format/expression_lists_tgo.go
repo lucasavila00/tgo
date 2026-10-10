@@ -19,6 +19,7 @@ func (p *printer) expressionList(
 	ellipsis token.Pos,
 	depth int,
 ) {
+	type operandType_2 = bool
 	if len(values) == 0 {
 		gap := p.sourceGap(opening, closing)
 		if gap.leadingComment {
@@ -39,6 +40,8 @@ func (p *printer) expressionList(
 	indented := false
 	previousIndent := p.indent
 	for index, value := range values {
+		type operandType_1 = bool
+		type operandType = bool
 		start := syntax.ExpressionPosition(value)
 		gap := p.sourceGap(previous, start)
 		if gap.lineBreak {
@@ -54,7 +57,11 @@ func (p *printer) expressionList(
 		p.commentColumns = commentColumns[index]
 		p.expressionAt(value, 0, depth)
 		previous = syntax.ExpressionEnd(value)
-		if index == len(values)-1 && ellipsis.IsValid() {
+		var operand operandType = index == len(values)-1
+		if operand {
+			operand = ellipsis.IsValid()
+		}
+		if operand {
 			p.token(ellipsis, "...")
 			previous = p.tokenEnd(ellipsis, 3)
 		}
@@ -62,14 +69,26 @@ func (p *printer) expressionList(
 		if index+1 < len(values) {
 			following = syntax.ExpressionPosition(values[index+1])
 		}
-		if index+1 < len(values) || p.position(previous).Line < p.position(closing).Line {
+		var operand_1 operandType_1 = index+1 < len(values)
+		if !operand_1 {
+			operand_1 = p.position(previous).Line < p.position(closing).Line
+		}
+		if operand_1 {
 			previous = p.comma(previous, following)
 			p.trailingLine(previous)
 		}
 		p.commentColumns = previousCommentColumns
 	}
 	gap := p.sourceGap(previous, closing)
-	if gap.leadingComment && gap.lineBreak && !indented {
+	var operand_2 operandType_2 = gap.leadingComment
+	if operand_2 {
+		operand_2 = gap.lineBreak
+	}
+	var operand_3 operandType_2 = operand_2
+	if operand_3 {
+		operand_3 = !indented
+	}
+	if operand_3 {
 		p.indent = listIndent
 		indented = true
 	}
@@ -87,8 +106,13 @@ func (p *printer) delimitedExpressions(
 	ellipsis bool,
 	depth int,
 ) {
+	type operandType = bool
 	ellipsisPosition := token.NoPos
-	if ellipsis && len(values) > 0 {
+	var operand operandType = ellipsis
+	if operand {
+		operand = len(values) > 0
+	}
+	if operand {
 		ellipsisPosition = syntax.ExpressionEnd(values[len(values)-1])
 	}
 	p.expressionList(values, opening, closing, ellipsisPosition, depth)
@@ -125,7 +149,12 @@ func (p *printer) commaListWithComments(
 			p.trailingLine(separator)
 			p.commentColumns = previousCommentColumns
 			if p.position(previous).Line < p.position(start).Line {
-				if !alreadyIndented && !indented {
+				type operandType = bool
+				var operand operandType = !alreadyIndented
+				if operand {
+					operand = !indented
+				}
+				if operand {
 					p.indent++
 					indented = true
 				}
@@ -133,6 +162,7 @@ func (p *printer) commaListWithComments(
 			} else {
 				p.space()
 			}
+
 		}
 		previousCommentColumns := p.commentColumns
 		if commentColumns != nil {
@@ -157,14 +187,20 @@ func (p *printer) identifiersAt(values []*syntax.Identifier, alreadyIndented boo
 			previous := values[index-1].Stop
 			p.trailingLine(p.comma(previous, value.Start))
 			if p.position(previous).Line < p.position(value.Start).Line {
+				type operandType = bool
 				p.newline()
-				if !alreadyIndented && !indented {
+				var operand operandType = !alreadyIndented
+				if operand {
+					operand = !indented
+				}
+				if operand {
 					p.indent++
 					indented = true
 				}
 			} else {
 				p.space()
 			}
+
 		}
 		p.token(value.Start, value.Name)
 	}

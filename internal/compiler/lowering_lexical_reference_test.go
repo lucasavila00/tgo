@@ -94,6 +94,7 @@ func localAnonymousStruct(events *[]string, fail bool) (int, error) {
 		return consume(makeValue(), load(events, fail)!!) + T, nil
 	}
 }
+
 `
 
 const loweringLexicalReferenceTestSource = `package lexicalreference

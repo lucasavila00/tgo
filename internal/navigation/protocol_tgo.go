@@ -102,16 +102,22 @@ func (v Response) MarshalJSONTo(out *jsontext.Encoder) error {
 func (v *Response) UnmarshalJSON(data []byte) error {
 	{
 		var payload ResponseSuccess
-		if err := json.Unmarshal(data, &payload); err == nil {
-			*v = NewResponseSuccess(payload.ID, payload.Result)
-			return nil
+		{
+			err := json.Unmarshal(data, &payload)
+			if err == nil {
+				*v = NewResponseSuccess(payload.ID, payload.Result)
+				return nil
+			}
 		}
 	}
 	{
 		var payload ResponseFailure
-		if err := json.Unmarshal(data, &payload); err == nil {
-			*v = NewResponseFailure(payload.ID, payload.Error)
-			return nil
+		{
+			err := json.Unmarshal(data, &payload)
+			if err == nil {
+				*v = NewResponseFailure(payload.ID, payload.Error)
+				return nil
+			}
 		}
 	}
 	return fmt.Errorf("no matching Response JSON variant")
@@ -367,12 +373,21 @@ func (v Request) InvalidatePayload() RequestInvalidate { return v.tgoInvalidate 
 func (v Request) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case RequestTagHover:
+		type operandType = bool
 		payload := v.HoverPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand operandType = len(payloadData) < 2
+		if !operand {
+			operand = payloadData[0] != '{'
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_1 {
 			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -384,12 +399,21 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagDefinition:
+		type operandType_1 = bool
 		payload := v.DefinitionPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand_2 operandType_1 = len(payloadData) < 2
+		if !operand_2 {
+			operand_2 = payloadData[0] != '{'
+		}
+		var operand_3 operandType_1 = operand_2
+		if !operand_3 {
+			operand_3 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_3 {
 			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -401,12 +425,21 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagReferences:
+		type operandType_2 = bool
 		payload := v.ReferencesPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand_4 operandType_2 = len(payloadData) < 2
+		if !operand_4 {
+			operand_4 = payloadData[0] != '{'
+		}
+		var operand_5 operandType_2 = operand_4
+		if !operand_5 {
+			operand_5 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_5 {
 			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -418,12 +451,21 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagDocumentSymbols:
+		type operandType_3 = bool
 		payload := v.DocumentSymbolsPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand_6 operandType_3 = len(payloadData) < 2
+		if !operand_6 {
+			operand_6 = payloadData[0] != '{'
+		}
+		var operand_7 operandType_3 = operand_6
+		if !operand_7 {
+			operand_7 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_7 {
 			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -435,12 +477,21 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagWorkspaceSymbols:
+		type operandType_4 = bool
 		payload := v.WorkspaceSymbolsPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand_8 operandType_4 = len(payloadData) < 2
+		if !operand_8 {
+			operand_8 = payloadData[0] != '{'
+		}
+		var operand_9 operandType_4 = operand_8
+		if !operand_9 {
+			operand_9 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_9 {
 			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -452,12 +503,21 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagCancel:
+		type operandType_5 = bool
 		payload := v.CancelPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand_10 operandType_5 = len(payloadData) < 2
+		if !operand_10 {
+			operand_10 = payloadData[0] != '{'
+		}
+		var operand_11 operandType_5 = operand_10
+		if !operand_11 {
+			operand_11 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_11 {
 			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -469,12 +529,21 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagInvalidate:
+		type operandType_6 = bool
 		payload := v.InvalidatePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		if len(payloadData) < 2 || payloadData[0] != '{' || payloadData[len(payloadData)-1] != '}' {
+		var operand_12 operandType_6 = len(payloadData) < 2
+		if !operand_12 {
+			operand_12 = payloadData[0] != '{'
+		}
+		var operand_13 operandType_6 = operand_12
+		if !operand_13 {
+			operand_13 = payloadData[len(payloadData)-1] != '}'
+		}
+		if operand_13 {
 			return nil, fmt.Errorf("expected Request JSON payload object")
 		}
 		if len(payloadData) == 2 {
@@ -493,11 +562,20 @@ func (v Request) MarshalJSON() ([]byte, error) {
 func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 	switch v.tgoTag {
 	case RequestTagHover:
+		type operandType = bool
 		payload := v.HoverPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		var operand operandType = marshalsJSON
+		if !operand {
+			operand = marshalsText
+		}
+		var operand_1 operandType = operand
+		if !operand_1 {
+			operand_1 = marshalsJSONTo
+		}
+		if operand_1 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -509,11 +587,20 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestHover
 		}{Variant: "hover", RequestHover: payload})
 	case RequestTagDefinition:
+		type operandType_1 = bool
 		payload := v.DefinitionPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		var operand_2 operandType_1 = marshalsJSON
+		if !operand_2 {
+			operand_2 = marshalsText
+		}
+		var operand_3 operandType_1 = operand_2
+		if !operand_3 {
+			operand_3 = marshalsJSONTo
+		}
+		if operand_3 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -525,11 +612,20 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestDefinition
 		}{Variant: "definition", RequestDefinition: payload})
 	case RequestTagReferences:
+		type operandType_2 = bool
 		payload := v.ReferencesPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		var operand_4 operandType_2 = marshalsJSON
+		if !operand_4 {
+			operand_4 = marshalsText
+		}
+		var operand_5 operandType_2 = operand_4
+		if !operand_5 {
+			operand_5 = marshalsJSONTo
+		}
+		if operand_5 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -541,11 +637,20 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestReferences
 		}{Variant: "references", RequestReferences: payload})
 	case RequestTagDocumentSymbols:
+		type operandType_3 = bool
 		payload := v.DocumentSymbolsPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		var operand_6 operandType_3 = marshalsJSON
+		if !operand_6 {
+			operand_6 = marshalsText
+		}
+		var operand_7 operandType_3 = operand_6
+		if !operand_7 {
+			operand_7 = marshalsJSONTo
+		}
+		if operand_7 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -557,11 +662,20 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestDocumentSymbols
 		}{Variant: "documentSymbols", RequestDocumentSymbols: payload})
 	case RequestTagWorkspaceSymbols:
+		type operandType_4 = bool
 		payload := v.WorkspaceSymbolsPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		var operand_8 operandType_4 = marshalsJSON
+		if !operand_8 {
+			operand_8 = marshalsText
+		}
+		var operand_9 operandType_4 = operand_8
+		if !operand_9 {
+			operand_9 = marshalsJSONTo
+		}
+		if operand_9 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -573,11 +687,20 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestWorkspaceSymbols
 		}{Variant: "workspaceSymbols", RequestWorkspaceSymbols: payload})
 	case RequestTagCancel:
+		type operandType_5 = bool
 		payload := v.CancelPayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		var operand_10 operandType_5 = marshalsJSON
+		if !operand_10 {
+			operand_10 = marshalsText
+		}
+		var operand_11 operandType_5 = operand_10
+		if !operand_11 {
+			operand_11 = marshalsJSONTo
+		}
+		if operand_11 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -589,11 +712,20 @@ func (v Request) MarshalJSONTo(out *jsontext.Encoder) error {
 			RequestCancel
 		}{Variant: "cancel", RequestCancel: payload})
 	case RequestTagInvalidate:
+		type operandType_6 = bool
 		payload := v.InvalidatePayload()
 		_, marshalsJSON := interface{}(payload).(interface{ MarshalJSON() ([]byte, error) })
 		_, marshalsText := interface{}(payload).(interface{ MarshalText() ([]byte, error) })
 		_, marshalsJSONTo := interface{}(payload).(interface{ MarshalJSONTo(*jsontext.Encoder) error })
-		if marshalsJSON || marshalsText || marshalsJSONTo {
+		var operand_12 operandType_6 = marshalsJSON
+		if !operand_12 {
+			operand_12 = marshalsText
+		}
+		var operand_13 operandType_6 = operand_12
+		if !operand_13 {
+			operand_13 = marshalsJSONTo
+		}
+		if operand_13 {
 			data, err := v.MarshalJSON()
 			if err != nil {
 				return err
@@ -614,8 +746,11 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Tag string `json:"method"`
 	}
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+	{
+		err := json.Unmarshal(data, &object)
+		if err != nil {
+			return err
+		}
 	}
 	if object.Tag == "" {
 		return fmt.Errorf("missing Request JSON tag")
@@ -624,8 +759,11 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 	switch variant {
 	case "hover":
 		var payload RequestHover
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Params == nil {
 			return fmt.Errorf("invalid Request.Hover JSON payload: Params must not be nil")
@@ -635,8 +773,11 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		return nil
 	case "definition":
 		var payload RequestDefinition
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Params == nil {
 			return fmt.Errorf("invalid Request.Definition JSON payload: Params must not be nil")
@@ -646,8 +787,11 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		return nil
 	case "references":
 		var payload RequestReferences
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Params == nil {
 			return fmt.Errorf("invalid Request.References JSON payload: Params must not be nil")
@@ -657,8 +801,11 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		return nil
 	case "documentSymbols":
 		var payload RequestDocumentSymbols
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Params == nil {
 			return fmt.Errorf("invalid Request.DocumentSymbols JSON payload: Params must not be nil")
@@ -668,8 +815,11 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		return nil
 	case "workspaceSymbols":
 		var payload RequestWorkspaceSymbols
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Params == nil {
 			return fmt.Errorf("invalid Request.WorkspaceSymbols JSON payload: Params must not be nil")
@@ -679,8 +829,11 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		return nil
 	case "cancel":
 		var payload RequestCancel
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Params == nil {
 			return fmt.Errorf("invalid Request.Cancel JSON payload: Params must not be nil")
@@ -690,8 +843,11 @@ func (v *Request) UnmarshalJSON(data []byte) error {
 		return nil
 	case "invalidate":
 		var payload RequestInvalidate
-		if err := json.Unmarshal(data, &payload); err != nil {
-			return err
+		{
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				return err
+			}
 		}
 		if payload.Params == nil {
 			return fmt.Errorf("invalid Request.Invalidate JSON payload: Params must not be nil")
@@ -733,33 +889,47 @@ func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Write
 	}
 	for {
 		data := json.RawMessage(nil)
-		if err := decoder.Decode(&data); err != nil {
-			if err == io.EOF {
+		{
+			err := decoder.Decode(&data)
+			if err != nil {
+				if err == io.EOF {
+					server.stop()
+					return server.writeErr
+				}
 				server.stop()
-				return server.writeErr
+				return err
 			}
-			server.stop()
-			return err
 		}
 		header := struct {
 			ID     int64  `json:"id"`
 			Method string `json:"method"`
 		}{ID: 0, Method: ""}
-		if err := json.Unmarshal(data, &header); err != nil {
-			server.stop()
-			return err
+		{
+			err := json.Unmarshal(data, &header)
+			if err != nil {
+				server.stop()
+				return err
+			}
 		}
 		request := func(input TgoRequestHoverInput) Request {
 			return NewRequestHover(input.FieldID, input.FieldParams)
 		}(TgoRequestHoverInput{FieldID: 0, FieldParams: &positionParams{
 			URI: "", Offset: 0, IncludeDeclaration: false,
 		}})
+		{
 
-		if err := json.Unmarshal(data, &request); err != nil {
-			if header.Method != "cancel" || header.ID != 0 {
-				server.send(protocolError(header.ID, err.Error()))
+			err := json.Unmarshal(data, &request)
+			if err != nil {
+				type operandType = bool
+				var operand operandType = header.Method != "cancel"
+				if !operand {
+					operand = header.ID != 0
+				}
+				if operand {
+					server.send(protocolError(header.ID, err.Error()))
+				}
+				continue
 			}
-			continue
 		}
 		server.dispatch(request)
 	}

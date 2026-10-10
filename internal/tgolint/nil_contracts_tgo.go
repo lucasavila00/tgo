@@ -47,6 +47,7 @@ func addNilPath(target nilContract, prefix string, source nilContract) {
 		} else {
 			target[prefix+"/"+path] = true
 		}
+
 	}
 }
 
@@ -57,8 +58,11 @@ func nilChild(source nilContract, prefix string) nilContract {
 			result[""] = true
 			continue
 		}
-		if rest, ok := strings.CutPrefix(path, prefix+"/"); ok {
-			result[rest] = true
+		{
+			rest, ok := strings.CutPrefix(path, prefix+"/")
+			if ok {
+				result[rest] = true
+			}
 		}
 	}
 	if len(result) == 0 {
@@ -94,13 +98,27 @@ func nilContractFact(value nilContract) *nilContractWireFactV2 {
 }
 
 func decodeNilContract(fact *nilContractWireFactV2) nilContract {
-	if fact == nil || fact.Version != nilContractVersion || len(fact.Paths) == 0 {
+	type operandType = bool
+	var operand operandType = fact == nil
+	if !operand {
+		operand = fact.Version != nilContractVersion
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = len(fact.Paths) == 0
+	}
+	if operand_1 {
 		return nil
 	}
 	result := make(nilContract, len(fact.Paths))
 	previous := ""
 	for index, path := range fact.Paths {
-		if index > 0 && path <= previous {
+		type operandType_1 = bool
+		var operand_2 operandType_1 = index > 0
+		if operand_2 {
+			operand_2 = path <= previous
+		}
+		if operand_2 {
 			return nil
 		}
 		result[path] = true
@@ -200,36 +218,59 @@ func (e *nilEnvironment) collectNilContracts() {
 	}
 	for _, file := range e.files {
 		syntax.Inspect(file, func(node *syntax.Node) bool {
-			if field, ok := syntax.FieldOf(node); ok {
-				e.collectFieldContract(field)
-			}
-			if specification, ok := syntax.SpecificationOf(node); ok {
-				if values := syntax.ValueSpecificationOf(specification); values != nil {
-					e.collectValueContract(values)
+			{
+				field, ok := syntax.FieldOf(node)
+				if ok {
+					e.collectFieldContract(field)
 				}
 			}
-			if statement, ok := syntax.StatementOf(node); ok {
-				if item := syntax.RangeStatementOf(statement); item != nil {
-					e.collectRangeContracts(item)
-				}
-			}
-			if declaration, ok := syntax.FunctionDeclarationOf(node); ok {
-				contract := e.functionContract(declaration.Type)
-				if declaration.Receiver != nil && len(declaration.Receiver.List) == 1 {
-					if contract == nil {
-						contract = make(nilContract)
+			{
+				specification, ok := syntax.SpecificationOf(node)
+				if ok {
+					{
+						values := syntax.ValueSpecificationOf(specification)
+						if values != nil {
+							e.collectValueContract(values)
+						}
 					}
-					addNilPath(
-						contract, "v",
-						e.valueContract(declaration.Receiver.List[0].Type),
-					)
 				}
-				object := e.facts.DefinitionName(declaration.Name)
-				e.setContract(object, contract)
-				if declaration.Receiver == nil {
-					published := e.pkg.Scope().Lookup(declaration.Name.Name)
-					if published != object {
-						e.setExportContract(published, contract)
+			}
+			{
+				statement, ok := syntax.StatementOf(node)
+				if ok {
+					{
+						item := syntax.RangeStatementOf(statement)
+						if item != nil {
+							e.collectRangeContracts(item)
+						}
+					}
+				}
+			}
+			{
+				declaration, ok := syntax.FunctionDeclarationOf(node)
+				if ok {
+					type operandType = bool
+					contract := e.functionContract(declaration.Type)
+					var operand operandType = declaration.Receiver != nil
+					if operand {
+						operand = len(declaration.Receiver.List) == 1
+					}
+					if operand {
+						if contract == nil {
+							contract = make(nilContract)
+						}
+						addNilPath(
+							contract, "v",
+							e.valueContract(declaration.Receiver.List[0].Type),
+						)
+					}
+					object := e.facts.DefinitionName(declaration.Name)
+					e.setContract(object, contract)
+					if declaration.Receiver == nil {
+						published := e.pkg.Scope().Lookup(declaration.Name.Name)
+						if published != object {
+							e.setExportContract(published, contract)
+						}
 					}
 				}
 			}
@@ -256,7 +297,12 @@ func (e *nilEnvironment) structDeclarationContract(
 
 // collectRangeContracts gives range variables the source element contracts.
 func (e *nilEnvironment) collectRangeContracts(statement *syntax.RangeStatement) {
-	if statement == nil || statement.Operator != token.DEFINE {
+	type operandType = bool
+	var operand operandType = statement == nil
+	if !operand {
+		operand = statement.Operator != token.DEFINE
+	}
+	if operand {
 		return
 	}
 	contract := e.contractForExpression(statement.Source)
@@ -283,8 +329,13 @@ func (e *nilEnvironment) collectRangeContracts(statement *syntax.RangeStatement)
 
 // setRangeContract records one range variable contract.
 func (e *nilEnvironment) setRangeContract(expression *syntax.Expression, contract nilContract) {
+	type operandType = bool
 	name := syntax.IdentifierExpressionOf(expression)
-	if name == nil || name.Name == "_" {
+	var operand operandType = name == nil
+	if !operand {
+		operand = name.Name == "_"
+	}
+	if operand {
 		return
 	}
 	e.setContract(e.facts.DefinitionName(name), contract)
@@ -310,19 +361,32 @@ func (e *nilEnvironment) valueContract(expression *syntax.Expression) nilContrac
 
 func (e *nilEnvironment) addParents(file *syntax.File) {
 	syntax.Inspect(file, func(node *syntax.Node) bool {
-		if parent := syntax.Parent(file, node); parent != nil {
-			e.parents[*node] = parent
+		{
+			parent := syntax.Parent(file, node)
+			if parent != nil {
+				e.parents[*node] = parent
+			}
 		}
 		return true
 	})
 	for _, node := range syntax.Extensions(file) {
+		type operandType = bool
 		comprehension, ok := syntax.ComprehensionExpressionOf(node)
-		if !ok || comprehension == nil {
+		var operand operandType = !ok
+		if !operand {
+			operand = comprehension == nil
+		}
+		if operand {
 			continue
 		}
 		for parent := syntax.Parent(file, node); parent != nil; parent = syntax.Parent(file, parent) {
+			type operandType_1 = bool
 			expression, expressionOK := syntax.ExpressionOf(parent)
-			if expressionOK && syntax.CompositeLiteralOf(expression) != nil {
+			var operand_1 operandType_1 = expressionOK
+			if operand_1 {
+				operand_1 = syntax.CompositeLiteralOf(expression) != nil
+			}
+			if operand_1 {
 				position := syntax.ExpressionPosition(expression)
 				e.comprehensions[position] = append(
 					e.comprehensions[position], comprehension,
@@ -334,13 +398,23 @@ func (e *nilEnvironment) addParents(file *syntax.File) {
 }
 
 func (e *nilEnvironment) setContract(object types.Object, contract nilContract) {
-	if object != nil && len(contract) != 0 {
+	type operandType = bool
+	var operand operandType = object != nil
+	if operand {
+		operand = len(contract) != 0
+	}
+	if operand {
 		e.contracts[object] = contract
 	}
 }
 
 func (e *nilEnvironment) setExportContract(object types.Object, contract nilContract) {
-	if object != nil && len(contract) != 0 {
+	type operandType = bool
+	var operand operandType = object != nil
+	if operand {
+		operand = len(contract) != 0
+	}
+	if operand {
 		e.exports[object] = contract
 	}
 }
@@ -402,34 +476,61 @@ func (e *nilEnvironment) declaredContract(expression *syntax.Expression) nilCont
 		return nil
 	}
 	result := make(nilContract)
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return e.declaredContract(parenthesized.Expression)
+	{
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized != nil {
+			return e.declaredContract(parenthesized.Expression)
+		}
 	}
-	if pointer := syntax.NonNilPointerTypeExpressionOf(expression); pointer != nil {
-		result[""] = true
-		addNilPath(result, "e", e.declaredContract(pointer.Type))
-	} else if star := syntax.StarExpressionOf(expression); star != nil {
-		if e.markers[star.Star] {
+	{
+		pointer := syntax.NonNilPointerTypeExpressionOf(expression)
+		if pointer != nil {
 			result[""] = true
+			addNilPath(result, "e", e.declaredContract(pointer.Type))
+		} else {
+			star := syntax.StarExpressionOf(expression)
+			if star != nil {
+				if e.markers[star.Star] {
+					result[""] = true
+				}
+				addNilPath(result, "e", e.declaredContract(star.Expression))
+			} else {
+				array := syntax.ArrayTypeExpressionOf(expression)
+				if array != nil {
+					addNilPath(result, "e", e.declaredContract(array.Element))
+				} else {
+					mapping := syntax.MapTypeExpressionOf(expression)
+					if mapping != nil {
+						addNilPath(result, "k", e.declaredContract(mapping.Key))
+						addNilPath(result, "v", e.declaredContract(mapping.Value))
+					} else {
+						channel := syntax.ChannelTypeExpressionOf(expression)
+						if channel != nil {
+							addNilPath(result, "e", e.declaredContract(channel.Value))
+						} else {
+							structure := syntax.StructTypeExpressionOf(expression)
+							if structure != nil {
+								for index, field := range structure.Fields.List {
+									addNilPath(
+										result, "f"+strconv.Itoa(index), e.declaredContract(field.Type),
+									)
+								}
+							} else {
+								function := syntax.FunctionTypeExpressionOf(expression)
+								if function != nil {
+									return e.functionContract(function)
+								} else {
+									ellipsis := syntax.EllipsisExpressionOf(expression)
+									if ellipsis != nil {
+										addNilPath(result, "e", e.declaredContract(ellipsis.Element))
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 		}
-		addNilPath(result, "e", e.declaredContract(star.Expression))
-	} else if array := syntax.ArrayTypeExpressionOf(expression); array != nil {
-		addNilPath(result, "e", e.declaredContract(array.Element))
-	} else if mapping := syntax.MapTypeExpressionOf(expression); mapping != nil {
-		addNilPath(result, "k", e.declaredContract(mapping.Key))
-		addNilPath(result, "v", e.declaredContract(mapping.Value))
-	} else if channel := syntax.ChannelTypeExpressionOf(expression); channel != nil {
-		addNilPath(result, "e", e.declaredContract(channel.Value))
-	} else if structure := syntax.StructTypeExpressionOf(expression); structure != nil {
-		for index, field := range structure.Fields.List {
-			addNilPath(
-				result, "f"+strconv.Itoa(index), e.declaredContract(field.Type),
-			)
-		}
-	} else if function := syntax.FunctionTypeExpressionOf(expression); function != nil {
-		return e.functionContract(function)
-	} else if ellipsis := syntax.EllipsisExpressionOf(expression); ellipsis != nil {
-		addNilPath(result, "e", e.declaredContract(ellipsis.Element))
 	}
 	if len(result) == 0 {
 		return nil
@@ -438,31 +539,54 @@ func (e *nilEnvironment) declaredContract(expression *syntax.Expression) nilCont
 }
 
 func (e *nilEnvironment) contractForObject(object types.Object) nilContract {
+	type operandType = bool
 	if object == nil {
 		return nil
 	}
-	if contract := e.contracts[object]; len(contract) != 0 {
-		return contract
+	{
+		contract := e.contracts[object]
+		if len(contract) != 0 {
+			return contract
+		}
 	}
 	fact := new(nilContractWireFactV2)
 	factObject := e.analysisFactObject(object)
-	if factObject != nil && factObject.Pkg() != e.pkg &&
-		e.pass.ImportObjectFact(factObject, fact) {
+	var operand operandType = factObject != nil
+	if operand {
+		operand = factObject.Pkg() != e.pkg
+	}
+	var operand_1 operandType = operand
+	if operand_1 {
+		operand_1 = e.pass.ImportObjectFact(factObject, fact)
+	}
+	if operand_1 {
 		contract := decodeNilContract(fact)
 		if len(contract) != 0 {
 			e.contracts[object] = contract
 			return contract
 		}
 	}
-	if _, typeName := object.(*types.TypeName); typeName {
-		return nil
+	{
+		_, typeName := object.(*types.TypeName)
+		if typeName {
+			return nil
+		}
 	}
 	return e.contractForType(object.Type())
 }
 
 // analysisFactObject maps compiler type objects to the analysis type universe.
 func (e *nilEnvironment) analysisFactObject(object types.Object) types.Object {
-	if object == nil || object.Pkg() == nil || object.Pkg() == e.pkg {
+	type operandType = bool
+	var operand operandType = object == nil
+	if !operand {
+		operand = object.Pkg() == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = object.Pkg() == e.pkg
+	}
+	if operand_1 {
 		return object
 	}
 	for _, imported := range e.pass.Pkg.Imports() {
@@ -477,14 +601,23 @@ func (e *nilEnvironment) contractForType(typ types.Type) nilContract {
 	if typ == nil {
 		return nil
 	}
-	if alias, ok := typ.(*types.Alias); ok {
-		if contract := e.contractForObject(alias.Obj()); len(contract) != 0 {
-			return contract
+	{
+		alias, ok := typ.(*types.Alias)
+		if ok {
+			{
+				contract := e.contractForObject(alias.Obj())
+				if len(contract) != 0 {
+					return contract
+				}
+			}
+			typ = alias.Rhs()
 		}
-		typ = alias.Rhs()
 	}
-	if named, ok := typ.(*types.Named); ok {
-		return e.contractForObject(named.Obj())
+	{
+		named, ok := typ.(*types.Named)
+		if ok {
+			return e.contractForObject(named.Obj())
+		}
 	}
 	result := make(nilContract)
 	classified := goTypeOf(typ)
@@ -561,9 +694,18 @@ func (e *nilEnvironment) exportContract(
 	object types.Object,
 	contract nilContract,
 ) {
+	type operandType = bool
 	mapped := mapNilObject(object, e.pkg, target.Pkg)
 	fact := nilContractFact(contract)
-	if mapped != nil && fact != nil && mapped.Exported() {
+	var operand operandType = mapped != nil
+	if operand {
+		operand = fact != nil
+	}
+	var operand_1 operandType = operand
+	if operand_1 {
+		operand_1 = mapped.Exported()
+	}
+	if operand_1 {
 		target.ExportObjectFact(mapped, fact)
 	}
 }
@@ -573,7 +715,21 @@ func mapNilObject(
 	from *types.Package,
 	to *types.Package,
 ) types.Object {
-	if object == nil || from == nil || to == nil || object.Pkg() != from {
+	type operandType_1 = bool
+	type operandType = bool
+	var operand operandType = object == nil
+	if !operand {
+		operand = from == nil
+	}
+	var operand_1 operandType = operand
+	if !operand_1 {
+		operand_1 = to == nil
+	}
+	var operand_2 operandType = operand_1
+	if !operand_2 {
+		operand_2 = object.Pkg() != from
+	}
+	if operand_2 {
 		return nil
 	}
 	if object.Parent() == from.Scope() {
@@ -584,12 +740,19 @@ func mapNilObject(
 		return nil
 	}
 	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Recv() == nil {
+	var operand_3 operandType_1 = !ok
+	if !operand_3 {
+		operand_3 = signature.Recv() == nil
+	}
+	if operand_3 {
 		return nil
 	}
 	receiver := signature.Recv().Type()
-	if pointer, ok := receiver.(*types.Pointer); ok {
-		receiver = pointer.Elem()
+	{
+		pointer, ok := receiver.(*types.Pointer)
+		if ok {
+			receiver = pointer.Elem()
+		}
 	}
 	named, ok := receiver.(*types.Named)
 	if !ok {
@@ -600,8 +763,11 @@ func mapNilObject(
 		return nil
 	}
 	targetType := targetName.Type()
-	if _, pointer := signature.Recv().Type().(*types.Pointer); pointer {
-		targetType = types.NewPointer(targetType)
+	{
+		_, pointer := signature.Recv().Type().(*types.Pointer)
+		if pointer {
+			targetType = types.NewPointer(targetType)
+		}
 	}
 	mapped, _, _ := types.LookupFieldOrMethod(targetType, true, to, object.Name())
 	return mapped

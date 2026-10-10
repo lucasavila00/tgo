@@ -122,8 +122,11 @@ func (c *converter) comment(value *ast.Comment) *Comment {
 	if value == nil {
 		return nil
 	}
-	if found, ok := c.comments[value]; ok {
-		return found
+	{
+		found, ok := c.comments[value]
+		if ok {
+			return found
+		}
 	}
 	result := &Comment{Span: span(value), Text: value.Text}
 	c.comments[value] = result
@@ -131,8 +134,11 @@ func (c *converter) comment(value *ast.Comment) *Comment {
 }
 
 func (c *converter) commentRequired(value *ast.Comment) *Comment {
-	if found, ok := c.comments[value]; ok {
-		return found
+	{
+		found, ok := c.comments[value]
+		if ok {
+			return found
+		}
 	}
 	result := &Comment{Span: span(value), Text: value.Text}
 	c.comments[value] = result
@@ -147,8 +153,11 @@ func (c *converter) commentGroup(value *ast.CommentGroup) *CommentGroup {
 }
 
 func (c *converter) commentGroupRequired(value *ast.CommentGroup) *CommentGroup {
-	if found, ok := c.groups[value]; ok {
-		return found
+	{
+		found, ok := c.groups[value]
+		if ok {
+			return found
+		}
 	}
 	result := &CommentGroup{Span: span(value), List: nil}
 	c.groups[value] = result
@@ -207,13 +216,22 @@ func (c *converter) expression(value ast.Expr) *Expression {
 }
 
 func (c *converter) expressionRequired(value ast.Expr) *Expression {
-	if literal, ok := value.(*ast.CompositeLit); ok {
-		if item := c.comprehension[literal]; item != nil {
-			return c.comprehensionExpression(item)
+	{
+		literal, ok := value.(*ast.CompositeLit)
+		if ok {
+			{
+				item := c.comprehension[literal]
+				if item != nil {
+					return c.comprehensionExpression(item)
+				}
+			}
 		}
 	}
-	if item := c.propagation[value]; item != nil {
-		return c.propagationExpression(item)
+	{
+		item := c.propagation[value]
+		if item != nil {
+			return c.propagationExpression(item)
+		}
 	}
 	return c.expressionRaw(value)
 }
@@ -571,8 +589,11 @@ func insertExpression(values []*Expression, value *Expression) []*Expression {
 }
 
 func (c *converter) propagationExpression(value *frontPropagateExpr) *Expression {
-	if result, ok := c.convertedPropagation[value]; ok {
-		return result
+	{
+		result, ok := c.convertedPropagation[value]
+		if ok {
+			return result
+		}
 	}
 	payload := &PropagationExpression{
 		Span:       Span{Start: value.Pos(), Stop: value.End()},

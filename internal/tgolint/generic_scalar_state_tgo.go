@@ -19,9 +19,12 @@ func joinScalarState(current scalarState, incoming scalarState) (scalarState, bo
 	}
 	joined := make(scalarState)
 	for object, value := range current {
-		if other, ok := incoming[object]; ok {
-			if scalarValuesEqual(value, other) {
-				joined[object] = value
+		{
+			other, ok := incoming[object]
+			if ok {
+				if scalarValuesEqual(value, other) {
+					joined[object] = value
+				}
 			}
 		}
 	}
@@ -36,13 +39,17 @@ func scalarStatesEqual(left scalarState, right scalarState) bool {
 		return false
 	}
 	for object, value := range left {
-		if other, ok := right[object]; ok {
-			if !scalarValuesEqual(value, other) {
+		{
+			other, ok := right[object]
+			if ok {
+				if !scalarValuesEqual(value, other) {
+					return false
+				}
+			} else {
 				return false
 			}
-		} else {
-			return false
 		}
+
 	}
 	return true
 }
@@ -53,8 +60,11 @@ func recordScalarState(
 	state scalarState,
 ) {
 	inspectGenericNode(&root, func(node *syntax.Node) bool {
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
+		{
+			_, nested := syntax.FunctionLiteralOf(node)
+			if nested {
+				return false
+			}
 		}
 		target[*node] = cloneScalarState(state)
 		return true
