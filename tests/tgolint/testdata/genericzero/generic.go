@@ -349,6 +349,65 @@ func TripleNested[T any]() func() func() func() {
 	}
 }
 
+func DirectLocalLiteralCall[T any]() {
+	(func() {
+		var value T
+		_ = value
+	})()
+}
+
+func ReturnedLocalLiteralCall[T any]() func() {
+	return func() {
+		effect := func() {
+			var value T
+			_ = value
+		}
+		effect()
+	}
+}
+
+func ReturnPartialTriple[T any]() func() func() {
+	return TripleNested[T]()()
+}
+
+func CallAndReturnSafe[T any]() func() {
+	return callAndForwardNested(func() {
+		var value T
+		_ = value
+	})
+}
+
+func keepValue(any) {}
+
+func EscapeLiteral[T any]() {
+	keepValue(func() {
+		var value T
+		_ = value
+	})
+}
+
+func EscapeNested[T any]() {
+	keepValue(Nested[T]())
+}
+
+func EscapeVariable[T any]() {
+	keepValue(Variable[T])
+}
+
+func EscapeAny[T any]() any {
+	return func() {
+		var value T
+		_ = value
+	}
+}
+
+func EscapeContainer[T any]() []any {
+	return []any{func() {
+		var value T
+		_ = value
+	}}
+}
+
 func ParenthesizedAssignedNested[T any]() func() {
 	nested := func() {}
 	(nested) = func() {

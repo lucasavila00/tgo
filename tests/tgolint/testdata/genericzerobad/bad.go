@@ -8,6 +8,7 @@ import (
 )
 
 var packageEnabled = false
+var savedNested = genericzero.Nested[model.Event]()
 
 type sameNamedEvents interface {
 	model.Event | othermodel.Event
@@ -180,6 +181,15 @@ func FunctionValues(event model.Event) {
 	(parenthesizedFactoryAlias)()()()()
 	parenthesizedFirst := (parenthesizedFactory)()
 	(parenthesizedFirst)()()()
+	genericzero.DirectLocalLiteralCall[model.Event]()
+	genericzero.ReturnedLocalLiteralCall[model.Event]()()
+	genericzero.ReturnPartialTriple[model.Event]()()()
+	_ = genericzero.CallAndReturnSafe[model.Event]()
+	genericzero.EscapeLiteral[model.Event]()
+	genericzero.EscapeNested[model.Event]()
+	genericzero.EscapeVariable[model.Event]()
+	_ = genericzero.EscapeAny[model.Event]()
+	_ = genericzero.EscapeContainer[model.Event]()
 	genericzero.ParenthesizedAssignedNested[model.Event]()()
 	genericzero.ParenthesizedRangedAssignedNested[model.Event]()()
 	genericzero.CalledForwardedNested[model.Event]()()

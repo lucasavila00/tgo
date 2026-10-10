@@ -1,92 +1,106 @@
-genericzerobad/bad.go:31:2: call to Variable will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:32:6: call to Named will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:33:6: call to New will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:34:6: call to Make will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:35:2: call to Clear will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:36:2: call to Clear can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:37:6: call to MapRead will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:38:6: call to MapRead can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:39:6: call to ChannelRead can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:41:6: call to MapDiscarded will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:42:6: call to MapDiscarded can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:43:6: call to ChannelDiscarded can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:44:6: call to AssertDiscarded can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:45:6: call to AssertDiscarded will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:46:6: call to Reslice can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:47:6: call to Reslice will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:48:6: call to OmittedField will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:49:6: call to OmittedArray will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:50:6: call to OmittedSlice will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:51:2: call to Maybe will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:54:2: call to AssignedTrue will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:55:2: call to Copied will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:56:2: call to ReadByCall will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:57:2: call to Unless will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:58:2: call to Recursive will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:64:2: call to Maybe can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:65:2: call to Unless can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:66:2: call to Recursive can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:67:6: call to Make can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:70:2: call to Maybe can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:71:2: call to Make can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:76:2: call to Maybe will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:78:6: call to Make will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:79:6: call to Narrowed can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:80:2: call to ReceiverMutation can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:81:2: call to Maybe can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:84:3: call to Maybe can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:89:2: call to Twice will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:92:2: call to Variable will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:98:2: call to Variable will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:100:6: call to Make will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:106:2: call to Variable will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:108:6: call to Make will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:114:7: generic tgo function value Make escapes; its effects cannot be checked at a call site
-genericzerobad/bad.go:115:2: call to function returned by Nested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:117:2: call to function returned by Nested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:118:2: call to function returned by AliasedNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:119:2: call to function returned by NamedAliasedNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:120:2: call to function returned by CapturedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:121:2: call to function returned by AddressedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:122:2: call to function returned by AddressedAlternativeNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:123:2: call to function returned by RangedAssignedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:124:2: call to function returned by RangedDefinedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:125:2: call to function returned by SelectedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:126:2: call to function returned by IndexedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:127:2: call to function returned by ForwardedNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:128:2: call to function returned by GenericForwardedNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:129:2: call to function returned by NestedGenericCall will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:130:2: call to function returned by NestedReturnedGenericCall will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:131:2: call to function returned by AliasedNestedReturnedGenericCall will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:132:2: call to function returned by AliasedGenericValueCall will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:133:2: call to function returned by TransitiveAliasedGenericValueCall will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:134:2: call to function returned by TransitiveAliasedReturnedCall will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:135:2: call to function returned by AssignedGenericValueCall can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:136:2: call to function returned by AssignedReturnedCall can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:137:2: call to function returned by CycledAliasedGenericValueCall can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:138:2: call to function returned by OpaqueAliasedGenericValueCall can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:139:2: call to function returned by DoubleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:140:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:142:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:144:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:146:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:148:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:151:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:153:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:156:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:158:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:162:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:165:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:168:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:170:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:173:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:176:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:178:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:180:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:182:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:183:2: call to function returned by ParenthesizedAssignedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:184:2: call to function returned by ParenthesizedRangedAssignedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:185:2: call to function returned by CalledForwardedNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:189:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:190:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:195:7: function returned by UnresolvedNested escapes; its effects cannot be checked at a call site
+genericzerobad/bad.go:11:19: function returned by Nested escapes; its effects cannot be checked at a call site
+genericzerobad/bad.go:32:2: call to Variable will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:33:6: call to Named will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:34:6: call to New will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:35:6: call to Make will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:36:2: call to Clear will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:37:2: call to Clear can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:38:6: call to MapRead will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:39:6: call to MapRead can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:40:6: call to ChannelRead can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:42:6: call to MapDiscarded will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:43:6: call to MapDiscarded can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:44:6: call to ChannelDiscarded can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:45:6: call to AssertDiscarded can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:46:6: call to AssertDiscarded will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:47:6: call to Reslice can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:48:6: call to Reslice will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:49:6: call to OmittedField will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:50:6: call to OmittedArray will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:51:6: call to OmittedSlice will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:52:2: call to Maybe will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:55:2: call to AssignedTrue will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:56:2: call to Copied will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:57:2: call to ReadByCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:58:2: call to Unless will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:59:2: call to Recursive will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:65:2: call to Maybe can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:66:2: call to Unless can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:67:2: call to Recursive can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:68:6: call to Make can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:71:2: call to Maybe can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:72:2: call to Make can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:77:2: call to Maybe will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:79:6: call to Make will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:80:6: call to Narrowed can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:81:2: call to ReceiverMutation can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:82:2: call to Maybe can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:85:3: call to Maybe can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:90:2: call to Twice will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:93:2: call to Variable will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:99:2: call to Variable will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:101:6: call to Make will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:107:2: call to Variable will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:109:6: call to Make will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:115:7: generic tgo function value Make escapes; its effects cannot be checked at a call site
+genericzerobad/bad.go:116:2: call to function returned by Nested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:118:2: call to function returned by Nested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:119:2: call to function returned by AliasedNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:120:2: call to function returned by NamedAliasedNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:121:2: call to function returned by CapturedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:122:2: call to AddressedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:122:2: call to function returned by AddressedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:123:2: call to AddressedAlternativeNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:123:2: call to function returned by AddressedAlternativeNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:124:2: call to function returned by RangedAssignedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:125:2: call to function returned by RangedDefinedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:126:2: call to function returned by SelectedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:127:2: call to function returned by IndexedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:128:2: call to function returned by ForwardedNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:129:2: call to function returned by GenericForwardedNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:130:2: call to function returned by NestedGenericCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:131:2: call to function returned by NestedReturnedGenericCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:132:2: call to function returned by AliasedNestedReturnedGenericCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:133:2: call to function returned by AliasedGenericValueCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:134:2: call to function returned by TransitiveAliasedGenericValueCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:135:2: call to function returned by TransitiveAliasedReturnedCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:136:2: call to function returned by AssignedGenericValueCall can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:137:2: call to function returned by AssignedReturnedCall can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:138:2: call to function returned by CycledAliasedGenericValueCall can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:139:2: call to function returned by OpaqueAliasedGenericValueCall can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:140:2: call to function returned by DoubleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:141:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:143:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:145:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:147:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:149:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:152:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:154:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:157:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:159:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:163:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:166:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:169:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:171:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:174:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:177:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:179:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:181:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:183:2: call to function returned by TripleNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:184:2: call to DirectLocalLiteralCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:185:2: call to function returned by ReturnedLocalLiteralCall will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:186:2: call to function returned by ReturnPartialTriple will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:187:6: call to CallAndReturnSafe will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:188:2: call to EscapeLiteral can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:189:2: call to EscapeNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:190:2: call to EscapeVariable can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:191:6: call to EscapeAny can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:192:6: call to EscapeContainer can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:193:2: call to function returned by ParenthesizedAssignedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:194:2: call to function returned by ParenthesizedRangedAssignedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:195:2: call to CalledForwardedNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:195:2: call to function returned by CalledForwardedNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:199:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:200:2: call to function returned by AlternativeNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:204:12: call to UnresolvedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:205:7: function returned by UnresolvedNested escapes; its effects cannot be checked at a call site

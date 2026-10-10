@@ -70,6 +70,9 @@ func (c *checker) collectFileGenericValueBindings(
 ) bool {
 	changed := false
 	inspectGenericFile(file, func(node *syntax.Node) bool {
+		if !c.localGenericValueNode(node) {
+			return true
+		}
 		if statement, ok := syntax.StatementOf(node); ok {
 			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil &&
 				(assignment.Operator == token.DEFINE || assignment.Operator == token.ASSIGN) {
@@ -95,6 +98,24 @@ func (c *checker) collectFileGenericValueBindings(
 		return true
 	})
 	return changed
+}
+
+func (c *checker) localGenericValueNode(node *syntax.Node) bool {
+	if _, ok := syntax.FunctionDeclarationOf(node); ok {
+		return true
+	}
+	if _, ok := syntax.FunctionLiteralOf(node); ok {
+		return true
+	}
+	for current := c.parents[*node]; current != nil; current = c.parents[*current] {
+		if _, ok := syntax.FunctionDeclarationOf(current); ok {
+			return true
+		}
+		if _, ok := syntax.FunctionLiteralOf(current); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // markAmbiguousGenericValueBindings rejects values changed after their first binding.

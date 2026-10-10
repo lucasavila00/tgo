@@ -517,16 +517,13 @@ type genericEffectSummary struct {
 	returnedZeroEffectsAtDepth   []GenericEffectAtDepth
 	returnedAccessEffectsAtDepth []GenericEffectAtDepth
 	calls                        []*syntax.Expression
-	returnedCalls                []returnedGenericCall
+	returnedValues               []returnedGenericValue
 	returnedBodies               []returnedGenericBody
+	valueUses                    []genericValueUse
+	declarations                 map[*types.Func]*syntax.FunctionDeclaration
 	reachable                    map[syntax.Node]bool
 	root                         *syntax.Node
 	body                         *syntax.BlockStatement
-}
-
-type returnedGenericCall struct {
-	expression *syntax.Expression
-	maySkip    bool
 }
 
 type returnedGenericBody struct {
@@ -612,9 +609,9 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 				returnedAccessEffects:        nil,
 				returnedZeroEffectsAtDepth:   nil,
 				returnedAccessEffectsAtDepth: nil,
-				calls:                        nil, returnedCalls: nil,
-				returnedBodies: nil,
-				reachable:      c.reachableNodes(function.Body), root: &root,
+				calls:                        nil, returnedValues: nil, returnedBodies: nil, valueUses: nil,
+				declarations: declarations,
+				reachable:    c.reachableNodes(function.Body), root: &root,
 				body: function.Body,
 			}
 			c.collectDirectGenericZeros(summary)
@@ -627,6 +624,7 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 		c.collectReturnedGenericEffects(
 			summary, signature, summary.declaration.Type, summaries, declarations,
 		)
+		c.collectGenericValueUses(summary)
 	}
 	return summaries
 }

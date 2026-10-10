@@ -6,6 +6,8 @@ import (
 	"example.com/tgolint/model"
 )
 
+var savedNested = genericzero.Nested[int]()
+
 func Safe() {
 	genericzero.Variable[int]()
 	_ = genericzero.Named[int]()
@@ -167,4 +169,13 @@ func FunctionValues() {
 	(parenthesizedFactoryAlias)()()()
 	parenthesizedFirst := (parenthesizedFactory)()
 	(parenthesizedFirst)()()
+	genericzero.DirectLocalLiteralCall[int]()
+	genericzero.ReturnedLocalLiteralCall[int]()()
+	genericzero.ReturnPartialTriple[int]()()()
+	_ = genericzero.CallAndReturnSafe[int]()
+	genericzero.EscapeLiteral[int]()
+	genericzero.EscapeNested[int]()
+	genericzero.EscapeVariable[int]()
+	_ = genericzero.EscapeAny[int]()
+	_ = genericzero.EscapeContainer[int]()
 }
