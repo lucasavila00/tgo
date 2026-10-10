@@ -1,5 +1,7 @@
 # Add value-producing control flow
 
+Issue: [#210](https://github.com/lucasavila00/tgo/issues/210)
+
 ## Context
 
 Go `if` and `switch` constructs are statements. Code that selects a value must
@@ -61,7 +63,6 @@ nested in a call, operator, literal, or other expression.
   support the two expression forms.
 - Generated Go will contain a temporary and a statement form of the control
   flow.
-- Pattern matching can later use the same branch-value rules.
 - General scoped block expressions remain unavailable.
 
 ## Alternatives
