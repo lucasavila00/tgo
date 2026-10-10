@@ -144,6 +144,7 @@ func (c %checker) evalEnumCall(
 		for object, values := range output.closures {
 			state.closures[object] = cloneEnumClosureSet(values)
 		}
+		state.writes, _ = joinEnumStorageSet(state.writes, output.writes)
 	}
 }
 
