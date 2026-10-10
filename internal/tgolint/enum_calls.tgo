@@ -1,0 +1,217 @@
+package tgolint
+
+import (
+	"go/token"
+
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
+)
+
+func (c %checker) enumExpressionClosure(
+	expression %syntax.Expression,
+	state *enumStorageState,
+) enumClosureSet {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return c.enumExpressionClosure(parenthesized.Expression, state)
+	}
+	if literal := syntax.FunctionLiteralExpressionOf(expression); literal != nil {
+		return enumClosureSet{literal: true}
+	}
+	name := syntax.IdentifierExpressionOf(expression)
+	if name == nil {
+		return nil
+	}
+	return cloneEnumClosureSet(state.closures[c.facts.Object(name)])
+}
+
+func (c %checker) evalEnumStatementCalls(
+	state *enumStorageState,
+	statement %syntax.Statement,
+) {
+	if value := syntax.ExpressionStatementOf(statement); value != nil {
+		c.evalEnumExpr(state, value.Expression)
+	} else if value := syntax.SendStatementOf(statement); value != nil {
+		c.evalEnumExpr(state, value.Channel)
+		c.evalEnumExpr(state, value.Value)
+	} else if value := syntax.GoStatementOf(statement); value != nil {
+		c.evalEnumCallOperands(state, value.Call)
+	} else if value := syntax.DeferStatementOf(statement); value != nil {
+		c.evalEnumCallOperands(state, value.Call)
+	} else if value := syntax.ReturnStatementOf(statement); value != nil {
+		for _, expression := range value.Results {
+			c.evalEnumExpr(state, expression)
+		}
+	}
+}
+
+func (c %checker) evalEnumCallOperands(
+	state *enumStorageState,
+	expression %syntax.Expression,
+) {
+	call := syntax.CallExpressionOf(expression)
+	if call == nil {
+		c.evalEnumExpr(state, expression)
+		return
+	}
+	c.evalEnumExpr(state, call.Callee)
+	for _, argument := range call.Args {
+		c.evalEnumExpr(state, argument)
+	}
+}
+
+func (c %checker) evalEnumCalls(
+	state *enumStorageState,
+	expression %syntax.Expression,
+) {
+	c.evalEnumExpr(state, expression)
+}
+
+// evalEnumExpr applies call effects in Go expression evaluation order.
+func (c %checker) evalEnumExpr(
+	state *enumStorageState,
+	expression %syntax.Expression,
+) {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		c.evalEnumExpr(state, parenthesized.Expression)
+		return
+	}
+	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
+		c.evalEnumExpr(state, binary.Left)
+		if binary.Operator == token.LAND || binary.Operator == token.LOR {
+			right := cloneEnumStorageState(state)
+			c.evalEnumExpr(right, binary.Right)
+			joined, _ := joinEnumStorageStates(state, right)
+			*state = *joined
+		} else {
+			c.evalEnumExpr(state, binary.Right)
+		}
+		return
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		c.evalEnumExpr(state, call.Callee)
+		for _, argument := range call.Args {
+			c.evalEnumExpr(state, argument)
+		}
+		c.evalEnumCall(state, expression)
+		return
+	}
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		c.evalEnumExpr(state, selector.Expression)
+		return
+	}
+	if index := syntax.IndexExpressionOf(expression); index != nil {
+		c.evalEnumExpr(state, index.Expression)
+		c.evalEnumExpr(state, index.Index)
+		return
+	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+		c.evalEnumExpr(state, unary.Expression)
+		return
+	}
+	if star := syntax.StarExpressionOf(expression); star != nil {
+		c.evalEnumExpr(state, star.Expression)
+		return
+	}
+	if keyValue := syntax.KeyValueExpressionOf(expression); keyValue != nil {
+		c.evalEnumExpr(state, keyValue.Key)
+		c.evalEnumExpr(state, keyValue.Value)
+		return
+	}
+	if literal := syntax.CompositeLiteralOf(expression); literal != nil {
+		for _, element := range literal.Elements {
+			c.evalEnumExpr(state, element)
+		}
+	}
+}
+
+func (c %checker) evalEnumCall(
+	state *enumStorageState,
+	expression %syntax.Expression,
+) {
+	call := syntax.CallExpressionOf(expression)
+	if call == nil {
+		return
+	}
+	arguments := make([]enumStorageSet, len(call.Args))
+	for index, argument := range call.Args {
+		arguments[index] = c.enumExpressionStorage(argument, state)
+	}
+	for literal := range c.enumExpressionClosure(call.Callee, state) {
+		output := c.invokeEnumClosure(literal, state, arguments)
+		for place, values := range output.pointers {
+			state.pointers[place] = cloneEnumStorageSet(values)
+		}
+		for object, values := range output.closures {
+			state.closures[object] = cloneEnumClosureSet(values)
+		}
+	}
+}
+
+func (c %checker) invokeEnumClosure(
+	literal *syntax.FunctionLiteral,
+	input *enumStorageState,
+	arguments []enumStorageSet,
+) *enumStorageState {
+	input = cloneEnumStorageState(input)
+	argument := 0
+	for _, field := range literal.Type.Params.List {
+		for _, name := range field.Names {
+			if argument >= len(arguments) {
+				break
+			}
+			object := c.facts.Object(name)
+			if object != nil && enumPointerType(c.facts, field.Type) {
+				input.pointers[enumPointerPlace{root: object}] =
+					cloneEnumStorageSet(arguments[argument])
+			}
+			argument++
+		}
+	}
+	call := input.calls[literal]
+	if call != nil && call.analyzing {
+		return cloneEnumStorageState(input)
+	}
+	if call == nil {
+		call = &enumClosureCall{}
+		input.calls[literal] = call
+	}
+	call.input, _ = joinEnumStorageStates(call.input, input)
+	call.analyzing = true
+	graph := cfg.New(literal.Body, c.callMayReturn)
+	entries := make([]*enumStorageState, len(graph.Blocks))
+	entries[0] = cloneEnumStorageState(call.input)
+	queue := []*cfg.Block{graph.Blocks[0]}
+	queued := make([]bool, len(graph.Blocks))
+	queued[0] = true
+	for len(queue) != 0 {
+		block := queue[0]
+		queue = queue[1:]
+		queued[block.Index] = false
+		state := cloneEnumStorageState(entries[block.Index])
+		for _, node := range block.Nodes {
+			c.transferEnumStorage(state, node)
+		}
+		if len(block.Succs) == 0 {
+			call.output, _ = joinEnumStorageStates(call.output, state)
+		}
+		for _, successor := range block.Succs {
+			if successor == nil {
+				continue
+			}
+			joined, changed := joinEnumStorageStates(entries[successor.Index], state)
+			if changed {
+				entries[successor.Index] = joined
+				if !queued[successor.Index] {
+					queue = append(queue, successor)
+					queued[successor.Index] = true
+				}
+			}
+		}
+	}
+	call.analyzing = false
+	if call.output == nil {
+		return cloneEnumStorageState(input)
+	}
+	return cloneEnumStorageState(call.output)
+}
+

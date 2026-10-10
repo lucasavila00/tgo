@@ -602,18 +602,6 @@ func (c %checker) enumCallClosureInvalidates(
 	return false
 }
 
-func enumStorageSetEqual(left, right enumStorageSet) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for place := range left {
-		if !right[place] {
-			return false
-		}
-	}
-	return true
-}
-
 func (c %checker) enumReceiverInvalidatedAt(
 	node %syntax.Node,
 	receiver %syntax.Expression,
