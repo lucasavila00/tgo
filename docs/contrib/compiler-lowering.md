@@ -14,6 +14,35 @@ difficult. Do not replace a feasible compiler lowering with a linter rule. Do
 not require a user to write a temporary variable or other compiler
 bookkeeping.
 
+## Lower through a typed function plan
+
+Compiler lowering must use this phase order:
+
+1. Check the source and collect its semantic facts.
+2. Build one typed, structured lowering plan for each function.
+3. Emit Go AST from that plan.
+
+The plan builder must return typed value IDs or place IDs for each expression.
+It must keep the source facts that later phases need, including captured source
+types, contextual expected types, and required result counts. It must not
+change the source AST or create generated Go statements.
+
+The plan must give guarded, repeated, and selected work explicit regions. For
+example, branches own guarded regions, loops own test and body regions, and
+select cases own selected-case regions. The plan must also keep source scope,
+object identity, and jump-target identity. These facts must not be recovered
+from generated names or Go AST shapes.
+
+All expression forms must use one recursive plan-building path. New expression
+forms must extend that path. Statement lowering must define the execution
+region for each expression, but it must not implement a separate expression
+lowering path.
+
+Only the emitter can turn plan values into Go identifiers and plan operations
+into Go statements. The emitter must consume the plan directly. It must not
+call the replaced expression lowerer, use stale generated-AST maps, or recover
+types or identities from generated names.
+
 ## Preserve semantics
 
 Evaluate each source operand at the same point and the same number of times as

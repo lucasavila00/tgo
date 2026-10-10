@@ -29,13 +29,8 @@ func (p *packageUnit) lowerPropagations() {
 	for _, source := range p.Sources {
 		functions := p.loweringFunctions(source)
 		for _, function := range functions {
-			lowerer := &propagationLowerer{
-				unit: p, source: source, function: function, fmtAlias: "",
-				gotos: functionGotoLabels(function.body), names: function.names,
-				inferredResultTypes: make(map[types.Object]types.Type),
-				inferredResultNames: make(map[string]types.Type),
-			}
-			function.body.List = lowerer.statements(function.body.List)
+			plan := buildFunctionLoweringPlan(p, source, function)
+			newLoweringEmitter(p, source, plan).emit()
 		}
 		p.reportUnloweredExtensions(source)
 	}
