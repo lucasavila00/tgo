@@ -600,7 +600,8 @@ func (value Invalid) check() (Invalid, error) { return value, nil }
 `)}},
 				FileSet: token.NewFileSet(), Importer: importer.Default(),
 			})
-			want := "checked struct field value must be boolean, numeric, string, or a checked struct"
+			want := "checked struct field value must be boolean, numeric, string, " +
+				"or a checked struct"
 			if len(problems) == 0 || !strings.Contains(problems[0].Error(), want) {
 				t.Fatalf("error = %v, want %q", problems, want)
 			}
