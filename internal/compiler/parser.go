@@ -56,7 +56,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	}
 	edits, successLocations := lowerSuccessReturnCommas(files, file, tree, edits)
 	edits, failureLocations := lowerFailureReturnCommas(files, file, tree, edits)
-	edits, propagations, comprehensions, err := lowerCheckedExtensions(
+	edits, propagations, comprehensions, exhaustive, err := lowerCheckedExtensions(
 		files, file, tree, name, data, defaultMarker, used, edits,
 	)
 	if err != nil {
@@ -69,6 +69,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	if err != nil {
 		return nil, err
 	}
+	lowerExhaustiveReceiverEvaluations(goFile, exhaustive)
 	successReturns := projectedSuccessReturns(files, goFile, successLocations)
 	if len(successReturns) != len(successLocations) {
 		return nil, fmt.Errorf("parse %s: cannot project successful return", name)
@@ -123,16 +124,19 @@ func lowerCheckedExtensions(
 	[]edit,
 	map[string]propagationSource,
 	map[string]comprehensionSource,
+	map[string]string,
 	error,
 ) {
-	edits, err := lowerExhaustiveClauses(files, file, tree, data, edits)
+	edits, exhaustive, err := lowerExhaustiveClauses(
+		files, file, tree, data, used, edits,
+	)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	edits, propagations, comprehensions, err := lowerSourceExtensions(
 		files, file, tree, name, data, defaultMarker, used, edits,
 	)
-	return edits, propagations, comprehensions, err
+	return edits, propagations, comprehensions, exhaustive, err
 }
 
 // eraseNonNilTypes makes the Go spelling used inside generated model declarations.
