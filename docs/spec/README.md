@@ -157,14 +157,15 @@ loader(id)!!     -> err
 ```
 
 Lowering evaluates the call once. It keeps Go operand order and does not evaluate a later operand
-after failure. This includes nested calls, short-circuit Boolean expressions, deferred call
-arguments, range expressions, switch tags, and loop conditions. A loop condition checks the error
-on each iteration.
+after failure. This rule applies at each expression evaluation point in a function. It includes
+nested calls, short-circuit Boolean expressions, deferred call arguments, range expressions,
+statement initializers, switch tags and cases, select communications, and loop conditions and post
+statements. A loop condition checks the error on each iteration.
 
 The propagated call cannot be the direct call of `go` or `defer`, because its result would run
-outside the current return point. Propagation is also excluded from select communications, switch
-case expressions, and `for` initializers or post statements. Use a normal error check in these
-positions.
+outside the current return point. A missing compiler lowering for any other expression context is
+an implementation defect, not a language restriction. The
+[compiler lowering guide](../contrib/compiler-lowering.md) tracks known gaps.
 
 Generated Go keeps the source function signature. Its success path has the call, nil check, and
 branch of a manual Go error check. `!` calls `fmt.Errorf` only on failure and can allocate its
@@ -606,6 +607,12 @@ An empty slice literal has no elements and is valid.
 An array literal must supply every index, including indexes whose Go zero is valid.
 
 ## Collection comprehensions
+
+A comprehension is valid at each function expression point where its slice or
+map result is valid. The compiler runs its generated loops at that expression
+point. It must preserve surrounding evaluation order, scope, and control flow.
+A missing statement-context lowering is an implementation defect. The
+[compiler lowering guide](../contrib/compiler-lowering.md) tracks known gaps.
 
 A slice or map literal can contain one `for range` block. Each range uses `:=` with one or two
 names. A nested range adds one loop. An `if` block filters results. Use `&&` for two conditions.

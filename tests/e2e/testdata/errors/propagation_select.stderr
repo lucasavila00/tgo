@@ -1,1 +1,1 @@
-<WORK>/input.tgo:7:31: error propagation is not valid in select communication
+<WORK>/input.tgo:7:31: compiler does not yet lower error propagation in select communication

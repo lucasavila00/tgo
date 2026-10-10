@@ -2,6 +2,8 @@
 
 - [Feature documentation](feature-documentation.md): feature inventory and the
   required documentation updates for each change.
+- [Compiler lowering](compiler-lowering.md): semantic priorities, review rules,
+  and the current missing-lowering audit.
 - [Upstream adaptations](upstream-adaptations.md): attribution and source maps
   for code that TGo adapts from other projects.
 

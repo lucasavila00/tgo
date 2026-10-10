@@ -47,6 +47,10 @@ diagnostics that are required to produce that source. It may:
 - validate generated names, wire layouts, and representations; and
 - emit formatted Go source.
 
+Follow the [compiler lowering guide](../contrib/compiler-lowering.md). Preserve
+valid TGo semantics before you improve the generated Go. A feasible lowering
+belongs in the compiler, not in a source restriction or a linter rule.
+
 Source policy, modernization advice, navigation, generated-output integrity, package selection,
 locking, file transactions, and stale-output cleanup stay outside the compiler. Production code
 for these tasks must be `.tgo` and must use `pkg/syntax` instead of `go/ast`.

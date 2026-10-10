@@ -157,6 +157,13 @@ See the [user guide](docs/guide/README.md) and the
 - The [VS Code extension](docs/guide/VSCODE.md) provides syntax highlighting,
   hover information, navigation, and symbols.
 
+## Contribute
+
+Compiler changes preserve valid TGo behavior before they improve generated Go.
+The compiler generates locals and blocks when it needs them. It does not make
+users write compiler bookkeeping. See the
+[compiler lowering guide](docs/contrib/compiler-lowering.md).
+
 ## Learn more
 
 - [User guide](docs/guide/README.md)

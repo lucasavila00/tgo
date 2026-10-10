@@ -263,13 +263,13 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		return result
 	case *ast.TypeSwitchStmt:
 		l.caseBodies(node.Body)
-		l.rejectStatement(node.Init, "type switch initializer")
-		l.rejectStatement(node.Assign, "type switch assignment")
+		l.missingStatementLowering(node.Init, "type switch initializer")
+		l.missingStatementLowering(node.Assign, "type switch assignment")
 		return []ast.Stmt{node}
 	case *ast.ForStmt:
 		node.Body.List = l.scopedStatements(node.Body.List)
-		l.rejectStatement(node.Init, "for initializer")
-		l.rejectStatement(node.Post, "for post statement")
+		l.missingStatementLowering(node.Init, "for initializer")
+		l.missingStatementLowering(node.Post, "for post statement")
 		if l.hasLowering(node.Cond) {
 			condition, prefix := l.expression(node.Cond)
 			exit := &ast.IfStmt{
@@ -289,7 +289,7 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 	case *ast.SelectStmt:
 		for _, item := range node.Body.List {
 			clause := item.(*ast.CommClause)
-			l.rejectStatement(clause.Comm, "select communication")
+			l.missingStatementLowering(clause.Comm, "select communication")
 			clause.Body = l.scopedStatements(clause.Body)
 		}
 		return []ast.Stmt{node}
@@ -382,7 +382,7 @@ func (l *propagationLowerer) caseBodies(body *ast.BlockStmt) {
 	for _, item := range body.List {
 		clause := item.(*ast.CaseClause)
 		for _, expression := range clause.List {
-			l.rejectExpression(expression, "switch case")
+			l.missingExpressionLowering(expression, "switch case")
 		}
 		clause.Body = l.scopedStatements(clause.Body)
 	}
@@ -576,6 +576,21 @@ func (l *propagationLowerer) canMaterialize(expression ast.Expr) bool {
 }
 
 func (l *propagationLowerer) rejectExpression(expression ast.Expr, context string) {
+	l.diagnoseExpression(expression, context, false)
+}
+
+func (l *propagationLowerer) missingExpressionLowering(
+	expression ast.Expr,
+	context string,
+) {
+	l.diagnoseExpression(expression, context, true)
+}
+
+func (l *propagationLowerer) diagnoseExpression(
+	expression ast.Expr,
+	context string,
+	missingLowering bool,
+) {
 	if expression == nil {
 		return
 	}
@@ -585,25 +600,44 @@ func (l *propagationLowerer) rejectExpression(expression ast.Expr, context strin
 			return true
 		}
 		if metadata, found := propagationMarker(l.source, call); found {
-			l.unit.failAt(metadata.Bang, "error propagation is not valid in %s", context)
+			message := "error propagation is not valid in %s"
+			if missingLowering {
+				message = "compiler does not yet lower error propagation in %s"
+			}
+			l.unit.failAt(metadata.Bang, message, context)
 			return false
 		}
 		if metadata, _, found := comprehensionMarker(l.source, call); found {
-			l.unit.failAt(metadata.Position, "comprehension is not valid in %s", context)
+			message := "comprehension is not valid in %s"
+			if missingLowering {
+				message = "compiler does not yet lower a comprehension in %s"
+			}
+			l.unit.failAt(metadata.Position, message, context)
 			return false
 		}
 		return true
 	})
 }
 
-func (l *propagationLowerer) rejectStatement(statement ast.Stmt, context string) {
+func (l *propagationLowerer) missingStatementLowering(
+	statement ast.Stmt,
+	context string,
+) {
+	l.diagnoseStatement(statement, context, true)
+}
+
+func (l *propagationLowerer) diagnoseStatement(
+	statement ast.Stmt,
+	context string,
+	missingLowering bool,
+) {
 	if statement == nil {
 		return
 	}
 	ast.Inspect(statement, func(node ast.Node) bool {
 		expression, ok := node.(ast.Expr)
 		if ok {
-			l.rejectExpression(expression, context)
+			l.diagnoseExpression(expression, context, missingLowering)
 			return false
 		}
 		return true
