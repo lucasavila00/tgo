@@ -139,6 +139,7 @@ type enumWriteSet map[int]bool
 type enumTagObservation struct {
 	regions map[enumRegionID]enumWriteSet
 	cells   map[enumCellID]enumWriteSet
+	stale   bool
 }
 
 func cloneEnumAbstractValue(value enumAbstractValue) enumAbstractValue {
@@ -173,6 +174,7 @@ func cloneEnumTagObservation(source *enumTagObservation) *enumTagObservation {
 	result := &enumTagObservation{
 		regions: make(map[enumRegionID]enumWriteSet, len(source.regions)),
 		cells:   make(map[enumCellID]enumWriteSet, len(source.cells)),
+		stale:   source.stale,
 	}
 	for region, writes := range source.regions {
 		result.regions[region] = cloneEnumWriteSet(writes)

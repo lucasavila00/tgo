@@ -43,6 +43,9 @@ func equalEnumTagObservation(
 	if left == nil || right == nil {
 		return left == nil && right == nil
 	}
+	if left.stale != right.stale {
+		return false
+	}
 	if len(left.regions) != len(right.regions) || len(left.cells) != len(right.cells) {
 		return false
 	}
@@ -129,15 +132,42 @@ func joinEnumAbstractValues(
 			changed = true
 		}
 	}
-	if !equalEnumTagObservation(result.observation, right.observation) {
-		if result.observation != nil {
-			changed = true
-		}
-		result.observation = nil
-	}
+	var observationChanged bool
+	result.observation, observationChanged = joinEnumTagObservations(
+		result.observation, right.observation,
+	)
+	changed = changed || observationChanged
 	if right.unknown && !result.unknown {
 		result.unknown = true
 		changed = true
+	}
+	return result, changed
+}
+
+func joinEnumTagObservations(
+	left *enumTagObservation,
+	right *enumTagObservation,
+) (*enumTagObservation, bool) {
+	if left == nil || right == nil {
+		return nil, left != nil
+	}
+	result := cloneEnumTagObservation(left)
+	changed := false
+	if right.stale && !result.stale {
+		result.stale = true
+		changed = true
+	}
+	for region, writes := range right.regions {
+		if _, found := result.regions[region]; !found {
+			result.regions[region] = cloneEnumWriteSet(writes)
+			changed = true
+		}
+	}
+	for cell, writes := range right.cells {
+		if _, found := result.cells[cell]; !found {
+			result.cells[cell] = cloneEnumWriteSet(writes)
+			changed = true
+		}
 	}
 	return result, changed
 }
@@ -227,18 +257,8 @@ func (state *enumEventState) prove(value enumAbstractValue, tag int) {
 func (state *enumEventState) observationFresh(
 	observation *enumTagObservation,
 ) bool {
-	if observation == nil {
+	if observation == nil || observation.stale {
 		return false
-	}
-	for region, writes := range observation.regions {
-		if !equalEnumWriteSet(writes, state.regionWrites[region]) {
-			return false
-		}
-	}
-	for cell, writes := range observation.cells {
-		if !equalEnumWriteSet(writes, state.cellWrites[cell]) {
-			return false
-		}
 	}
 	return true
 }
@@ -287,6 +307,7 @@ func (graph *enumEventGraph) transfer(
 				state.cells[cell], _ = joinEnumAbstractValues(old, value)
 			}
 		}
+		state.invalidateObservations(event.cells, event.regions)
 		for region := range event.regions {
 			state.killRegionProofs(enumRegionSet{region: true})
 			state.recordRegionWrite(region, event.serial)
@@ -297,6 +318,38 @@ func (graph *enumEventGraph) transfer(
 		return state.payloadValid(state.saved[event.value], event.tag)
 	}
 	return true
+}
+
+func (state *enumEventState) invalidateObservations(
+	cells enumCellSet,
+	regions enumRegionSet,
+) {
+	for id, value := range state.saved {
+		observation := value.observation
+		if observation == nil || observation.stale {
+			continue
+		}
+		invalid := false
+		for cell := range cells {
+			if _, depends := observation.cells[cell]; depends {
+				invalid = true
+				break
+			}
+		}
+		if !invalid {
+			for region := range regions {
+				if _, depends := observation.regions[region]; depends {
+					invalid = true
+					break
+				}
+			}
+		}
+		if invalid {
+			value.observation = cloneEnumTagObservation(observation)
+			value.observation.stale = true
+			state.saved[id] = value
+		}
+	}
 }
 
 func (state *enumEventState) observe(value enumAbstractValue) *enumTagObservation {
