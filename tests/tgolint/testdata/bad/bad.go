@@ -1103,3 +1103,46 @@ func ChangeWrappedMethods(
 	aliasMethod := (*importedAliasWrapper).Change
 	aliasMethod(alias)
 }
+
+func ClosureParameterAlias(value *model.Event) string {
+	mutate := func(alias *model.Event) {
+		*alias = model.NewEventStopped("changed")
+	}
+	if value.Tag() == model.EventTagStarted {
+		mutate(value)
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func ClosureResultAlias(value *model.Event) string {
+	pointer := func() *model.Event { return value }()
+	if value.Tag() == model.EventTagStarted {
+		*pointer = model.NewEventStopped("changed")
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func SameFieldAliases(envelope EventPointerEnvelope) string {
+	first := envelope.Event
+	second := envelope.Event
+	if first.Tag() == model.EventTagStarted {
+		*second = model.NewEventStopped("changed")
+		return first.StartedPayload().ID
+	}
+	return ""
+}
+
+func BranchClosureAlias(value, other *model.Event, change bool) string {
+	alias := other
+	if change {
+		alias = value
+	}
+	mutate := func() { *alias = model.NewEventStopped("changed") }
+	if value.Tag() == model.EventTagStarted {
+		mutate()
+		return value.StartedPayload().ID
+	}
+	return ""
+}

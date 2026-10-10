@@ -689,3 +689,34 @@ func ChangeMutableMethods(value *mutableMethodWrapper) {
 	method := (*mutableMethodWrapper).Change
 	method(value)
 }
+
+func RetestedPointerAlias(value *model.Event) string {
+	alias := value
+	*alias = model.NewEventStarted("changed", "")
+	if value.Tag() == model.EventTagStarted {
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func InvokedReboundClosure(value, other *model.Event) string {
+	alias := value
+	mutate := func() { *alias = model.NewEventStopped("changed") }
+	alias = other
+	if value.Tag() == model.EventTagStarted {
+		mutate()
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func UntouchedBranchAlias(value, other *model.Event, change bool) string {
+	alias := other
+	if change {
+		*alias = model.NewEventStopped("changed")
+	}
+	if value.Tag() == model.EventTagStarted {
+		return value.StartedPayload().ID
+	}
+	return ""
+}

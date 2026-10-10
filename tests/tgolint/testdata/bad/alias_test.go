@@ -17,6 +17,21 @@ func TestPointerAliasExamplesReachWrongPayload(t *testing.T) {
 		{name: "invoked closure", read: InvokedAliasClosure},
 		{name: "escaped closure", read: EscapedAliasClosure},
 		{name: "reverse alias", read: ReverseAliasIf},
+		{name: "closure parameter", read: ClosureParameterAlias},
+		{name: "closure result", read: ClosureResultAlias},
+		{
+			name: "same field aliases",
+			read: func(value *model.Event) string {
+				return SameFieldAliases(EventPointerEnvelope{Event: value})
+			},
+		},
+		{
+			name: "branch closure alias",
+			read: func(value *model.Event) string {
+				other := model.NewEventStarted("other", "")
+				return BranchClosureAlias(value, &other, true)
+			},
+		},
 		{
 			name: "reverse pointer field",
 			read: func(value *model.Event) string {

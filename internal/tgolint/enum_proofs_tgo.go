@@ -187,66 +187,69 @@ func (c *checker) enumReceiverStableBefore(
 	receiver *syntax.Expression,
 	proof token.Pos,
 ) bool {
-	_ = file
-	access := syntax.ExpressionPosition(expression)
-	_, body := c.enclosingEnumFunction(expression)
-	if body == nil {
-		return false
-	}
-	if !c.enumReceiverLocalToFunction(expression, receiver) ||
-		c.enumGotoEntersClause(body, clause, access) {
-		return false
-	}
-	flow := c.enumReceiverStorage(expression)
-	proved := c.enumExpressionStorage(
-		receiver, c.enumStorageStateAtPosition(expression, flow, proof),
-	)
-	if c.enumReceiverEscapedBefore(expression, receiver, proof, flow, proved) {
-		return false
-	}
-	root, _, ok := receiverPath(c.facts, receiver)
-	if !ok {
-		return false
-	}
-	stable := true
-	for _, statement := range clause.Body {
-		if syntax.StatementPosition(statement) >= access {
-			break
-		}
-		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			if !stable || syntax.NodePosition(node) >= access {
-				return false
-			}
-			if literal, nested := syntax.FunctionLiteralOf(node); nested {
-				if capturesObject(c.facts, literal.Body, root) {
-					stable = false
-				}
-				return false
-			}
-			if c.enumReceiverEscapesAt(node, receiver, flow, proved) {
-				stable = false
-				return false
-			}
-			if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
-				c.enumReceiverChangesAt(node, receiver, flow, proved) {
-				stable = false
-			}
-			return stable
-		})
-		if !stable {
+	return c.enumProofValidAt(expression, receiver, proof)
+	/*
+		_ = file
+		access := syntax.ExpressionPosition(expression)
+		_, body := c.enclosingEnumFunction(expression)
+		if body == nil {
 			return false
 		}
-	}
-	if c.enumLoopCanInvalidate(expression, receiver, proof, access, flow, proved) {
-		return false
-	}
-	clauseBody := &syntax.BlockStatement{
-		Span:   syntax.Span{Start: token.NoPos, Stop: token.NoPos},
-		Lbrace: token.NoPos,
-		List:   clause.Body,
-		Rbrace: token.NoPos,
-	}
-	return !c.enumGotoCanInvalidate(clauseBody, receiver, proof, access, flow, proved)
+		if !c.enumReceiverLocalToFunction(expression, receiver) ||
+			c.enumGotoEntersClause(body, clause, access) {
+			return false
+		}
+		flow := c.enumReceiverStorage(expression)
+		proved := c.enumExpressionStorage(
+			receiver, c.enumStorageStateAtPosition(expression, flow, proof),
+		)
+		if c.enumReceiverEscapedBefore(expression, receiver, proof, flow, proved) {
+			return false
+		}
+		root, _, ok := receiverPath(c.facts, receiver)
+		if !ok {
+			return false
+		}
+		stable := true
+		for _, statement := range clause.Body {
+			if syntax.StatementPosition(statement) >= access {
+				break
+			}
+			syntax.InspectStatement(statement, func(node *syntax.Node) bool {
+				if !stable || syntax.NodePosition(node) >= access {
+					return false
+				}
+				if literal, nested := syntax.FunctionLiteralOf(node); nested {
+					if capturesObject(c.facts, literal.Body, root) {
+						stable = false
+					}
+					return false
+				}
+				if c.enumReceiverEscapesAt(node, receiver, flow, proved) {
+					stable = false
+					return false
+				}
+				if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
+					c.enumReceiverChangesAt(node, receiver, flow, proved) {
+					stable = false
+				}
+				return stable
+			})
+			if !stable {
+				return false
+			}
+		}
+		if c.enumLoopCanInvalidate(expression, receiver, proof, access, flow, proved) {
+			return false
+		}
+		clauseBody := &syntax.BlockStatement{
+			Span:   syntax.Span{Start: token.NoPos, Stop: token.NoPos},
+			Lbrace: token.NoPos,
+			List:   clause.Body,
+			Rbrace: token.NoPos,
+		}
+		return !c.enumGotoCanInvalidate(clauseBody, receiver, proof, access, flow, proved)
+	*/
 }
 
 // enumGotoEntersClause reports a jump into a proved switch clause.
@@ -312,45 +315,46 @@ func (c *checker) enumReceiverStableBetween(
 	proof token.Pos,
 	access token.Pos,
 ) bool {
-	_, body := c.enclosingEnumFunction(expression)
-	if body == nil {
-		return false
-	}
-	if !c.enumReceiverLocalToFunction(expression, receiver) {
-		return false
-	}
-	flow := c.enumReceiverStorage(expression)
-	proved := c.enumExpressionStorage(
-		receiver, c.enumStorageStateAtPosition(expression, flow, proof),
-	)
-	if c.enumReceiverEscapedBefore(expression, receiver, access, flow, proved) {
-		return false
-	}
-	if c.enumGotoBypassesProof(body, proof, access) {
-		return false
-	}
-	stable := true
-	wrapped := func(input syntax.TgoStatementBlockInput) syntax.Statement {
-		return syntax.NewStatementBlock(input.FieldValue)
-	}(syntax.TgoStatementBlockInput{FieldValue: body})
-	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
-		if !stable || syntax.NodePosition(node) >= access {
+	return c.enumProofValidAt(expression, receiver, proof)
+	/*
+		_, body := c.enclosingEnumFunction(expression)
+		if body == nil {
 			return false
 		}
-		if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
-			c.enumReceiverChangesAt(node, receiver, flow, proved) {
-			stable = false
+		if !c.enumReceiverLocalToFunction(expression, receiver) {
 			return false
 		}
-		return true
-	})
-	if !stable {
-		return false
-	}
-	if c.enumLoopCanInvalidate(expression, receiver, proof, access, flow, proved) {
-		return false
-	}
-	return !c.enumGotoCanInvalidate(body, receiver, proof, access, flow, proved)
+		flow := c.enumReceiverStorage(expression)
+		proved := c.enumExpressionStorage(
+			receiver, c.enumStorageStateAtPosition(expression, flow, proof),
+		)
+		if c.enumReceiverEscapedBefore(expression, receiver, access, flow, proved) {
+			return false
+		}
+		if c.enumGotoBypassesProof(body, proof, access) {
+			return false
+		}
+		stable := true
+		wrapped := syntax.Statement.Block{Value: body}
+		syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
+			if !stable || syntax.NodePosition(node) >= access {
+				return false
+			}
+			if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
+				c.enumReceiverChangesAt(node, receiver, flow, proved) {
+				stable = false
+				return false
+			}
+			return true
+		})
+		if !stable {
+			return false
+		}
+		if c.enumLoopCanInvalidate(expression, receiver, proof, access, flow, proved) {
+			return false
+		}
+		return !c.enumGotoCanInvalidate(body, receiver, proof, access, flow, proved)
+	*/
 }
 
 // enumGotoBypassesProof reports a jump into the proved source region.
@@ -596,18 +600,16 @@ func (c *checker) enumCallClosureInvalidates(
 	proved enumStorageSet,
 	receiver *syntax.Expression,
 ) bool {
-	effect := c.enumExpressionClosure(expression, state)
-	if effect == nil {
-		return false
-	}
 	receiverPlace, receiverOK := enumPointerPlaceOf(c.facts, receiver)
-	for place := range effect.bindings {
-		if receiverOK && place == receiverPlace {
+	for literal := range c.enumExpressionClosure(expression, state) {
+		output := c.invokeEnumClosure(literal, cloneEnumStorageState(state), nil)
+		if enumStorageSetsOverlap(output.writes, proved) {
 			return true
 		}
-	}
-	for place := range effect.pointees {
-		if enumStorageSetsOverlap(c.enumPlaceStorage(place, state), proved) {
+		if receiverOK && !enumStorageSetEqual(
+			c.enumPlaceStorage(receiverPlace, state),
+			c.enumPlaceStorage(receiverPlace, output),
+		) {
 			return true
 		}
 	}

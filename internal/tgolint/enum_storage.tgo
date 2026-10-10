@@ -4,6 +4,7 @@ import (
 	"go/token"
 	"go/types"
 	"strconv"
+	"strings"
 
 	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
@@ -232,6 +233,11 @@ func (c %checker) transferEnumStorage(
 			c.transferEnumStorageLists(state, assignment.Left, assignment.Right)
 			return
 		}
+		if ranged := syntax.RangeStatementOf(statement); ranged != nil {
+			c.recordEnumDestinations(state, []%syntax.Expression{
+				ranged.Key, ranged.Value,
+			})
+		}
 		c.evalEnumStatementCalls(state, statement)
 		return
 	}
@@ -249,6 +255,24 @@ func (c %checker) transferEnumStorage(
 		left[index] = &item
 	}
 	c.transferEnumStorageLists(state, left, values.Values)
+}
+
+func (c %checker) recordEnumDestinations(
+	state *enumStorageState,
+	expressions []%syntax.Expression,
+) {
+	for _, expression := range expressions {
+		if expression == nil {
+			continue
+		}
+		for place := range c.enumCells(expression, state) {
+			if enumPointerType(c.facts, expression) {
+				state.bindings[place] = true
+			} else {
+				state.writes[place] = true
+			}
+		}
+	}
 }
 
 func (c %checker) transferEnumStorageLists(
@@ -385,6 +409,9 @@ func (c %checker) enumExpressionStorage(
 		}
 	}
 	if !enumPointerType(c.facts, expression) {
+		if cells := c.enumCells(expression, state); len(cells) != 0 {
+			return cells
+		}
 		return enumStorageSet{{origin: syntax.ExpressionPosition(expression)}: true}
 	}
 	result := make(enumStorageSet)
@@ -446,7 +473,6 @@ func (c %checker) enumCells(
 	}
 	return result
 }
-
 
 func enumDereferencedPointerPlace(
 	facts %sourcefacts.Index,
@@ -510,12 +536,25 @@ func (c %checker) enumStorageStateAtPosition(
 }
 
 func enumStorageSetsOverlap(left, right enumStorageSet) bool {
-	for identity := range left {
-		if right[identity] {
-			return true
+	for leftPlace := range left {
+		for rightPlace := range right {
+			if enumPlacesOverlap(leftPlace, rightPlace) {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+func enumPlacesOverlap(left, right enumPointerPlace) bool {
+	if left.origin != token.NoPos || right.origin != token.NoPos {
+		return left == right
+	}
+	if left.root != right.root {
+		return false
+	}
+	return left.path == right.path || strings.HasPrefix(left.path, right.path+"/") ||
+		strings.HasPrefix(right.path, left.path+"/") || left.path == "" || right.path == ""
 }
 
 func enumStorageSetEqual(left, right enumStorageSet) bool {

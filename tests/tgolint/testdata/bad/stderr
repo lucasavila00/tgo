@@ -75,16 +75,15 @@ bad/bad.go:575:2: tgo enum Event presence variables must not have aliases
 bad/bad.go:602:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:605:10: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:616:10: Event: StartedPayload requires proof of EventTagStarted
-bad/bad.go:618:10: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:627:33: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:629:33: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:670:10: Event: StartedPayload requires proof of EventTagStarted
-bad/bad.go:672:10: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:690:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:704:11: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:706:11: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:721:8: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:736:8: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:750:13: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:866:6: literal holes contain invalid tgo enum Event values
 bad/bad.go:867:6: literal holes contain invalid tgo enum Event values
 bad/bad.go:876:9: Event: StartedPayload requires proof of EventTagStarted
@@ -118,3 +117,7 @@ bad/bad.go:1098:2: checked field measurableAlias cannot be changed after constru
 bad/bad.go:1099:12: checked field measurableAlias cannot be changed after construction
 bad/bad.go:1101:19: checked field measurableAlias cannot be changed after construction
 bad/bad.go:1103:17: checked field measurableAlias cannot be changed after construction
+bad/bad.go:1113:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1122:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1132:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1145:10: Event: StartedPayload requires proof of EventTagStarted
