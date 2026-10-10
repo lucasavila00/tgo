@@ -105,7 +105,7 @@ func compileWorkspaceContext(
 	buildContext := effectiveBuildContext(directory)!!
 	packages := discover(root, module, &buildContext)!!
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
-	paths := sortedPackagePaths(packages)
+	paths := sortedTGoPackagePaths(packages)
 	result := make([]%compiler.CompiledPackage, 0, len(paths))
 	for _, path := range paths {
 		select {
@@ -138,7 +138,7 @@ func compileWorkspaceViewsContext(
 	packages := discover(root, module, &buildContext)!!
 	builder := newMemoryBuilder(packages, root, module, &buildContext)
 	result := make([]CompiledView, 0, len(packages))
-	for _, path := range sortedPackagePaths(packages) {
+	for _, path := range sortedTGoPackagePaths(packages) {
 		select {
 		case <-ctx.Done():
 			return , ctx.Err()
@@ -223,7 +223,7 @@ func CompilePackage(
 	buildContext := effectiveBuildContext(directory)!!
 	packages := discover(root, module, &buildContext)!!
 	unit := packages[importPath]
-	if unit == nil {
+	if unit == nil || !unit.tgoCandidate() {
 		return nil,
 	}
 	if files != nil {
@@ -248,7 +248,7 @@ func CompileTestPackage(
 	buildContext := effectiveBuildContext(directory)!!
 	packages := discover(root, module, &buildContext)!!
 	unit := packages[importPath]
-	if unit == nil {
+	if unit == nil || !unit.tgoCandidate() {
 		return nil,
 	}
 	builder := newMemoryBuilder(packages, root, module, &buildContext)

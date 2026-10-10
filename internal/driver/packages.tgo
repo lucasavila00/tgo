@@ -434,6 +434,24 @@ func sortedPackagePaths(packages map[string]*packageUnit) []string {
 	return paths
 }
 
+// sortedTGoPackagePaths returns stable paths found by TGo discovery.
+func sortedTGoPackagePaths(packages map[string]*packageUnit) []string {
+	paths := make([]string, 0, len(packages))
+	for path, unit := range packages {
+		if unit.tgoCandidate() {
+			paths = append(paths, path)
+		}
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+// tgoCandidate reports whether discovery found TGo source or reserved output.
+func (p *packageUnit) tgoCandidate() bool {
+	return len(p.sourcePaths) > 0 || len(p.testSourcePaths) > 0 ||
+		len(p.generatedPaths) > 0
+}
+
 // packagePattern returns the directory and recursion rule for a pattern.
 func packagePattern(directory, pattern string) (string, bool) {
 	recursive := strings.HasSuffix(pattern, "/...") || pattern == "..."

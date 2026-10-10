@@ -174,7 +174,7 @@ func TestBuildFromGoOnlyPackage(t *testing.T) {
 	writePackageLanguageFile(
 		t, root, "go.mod", "module example.com/graph\n\ngo 1.27\n",
 	)
-	for _, name := range []string{"app", "bridge", "model"} {
+	for _, name := range []string{"app", "bridge", "broken", "model"} {
 		if err := os.Mkdir(filepath.Join(root, name), 0o700); err != nil {
 			t.Fatal(err)
 		}
@@ -193,9 +193,26 @@ func TestBuildFromGoOnlyPackage(t *testing.T) {
 		t, filepath.Join(root, "model"), "model.tgo",
 		"package model\n\nfunc Label() string { return \"ready\" }\n",
 	)
+	writePackageLanguageFile(
+		t, filepath.Join(root, "broken"), "broken.go", "package broken\n\nimport (\n",
+	)
 	output := filepath.Join(root, "model", "model_tgo.go")
 	if _, err := os.Stat(output); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("initial generated output exists: %v", err)
+	}
+	compiled, err := CompileWorkspace(root)
+	if err != nil {
+		t.Fatalf("compile workspace: %v", err)
+	}
+	if len(compiled) != 1 || compiled[0].Path != "example.com/graph/model" {
+		t.Fatalf("compiled packages = %v, want model", compiled)
+	}
+	views, err := CompileWorkspaceViewsContext(context.Background(), root)
+	if err != nil {
+		t.Fatalf("compile workspace views: %v", err)
+	}
+	if len(views) != 1 || views[0].Package.Path != "example.com/graph/model" {
+		t.Fatalf("compiled views = %v, want model", views)
 	}
 	if err := Build(root, []string{"./app"}); err != nil {
 		t.Fatal(err)
