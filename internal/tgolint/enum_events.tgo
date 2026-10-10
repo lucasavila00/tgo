@@ -249,6 +249,11 @@ func (graph *enumEventGraph) save(value enumAbstractValue) enumSavedValueID {
 	return enumSavedValueID(len(graph.values))
 }
 
+func (graph *enumEventGraph) newSavedValue() enumSavedValueID {
+	graph.values = append(graph.values, enumAbstractValue{unknown: true})
+	return enumSavedValueID(len(graph.values))
+}
+
 func (graph *enumEventGraph) saved(id enumSavedValueID) enumAbstractValue {
 	if id <= 0 || int(id) > len(graph.values) {
 		return enumAbstractValue{unknown: true}

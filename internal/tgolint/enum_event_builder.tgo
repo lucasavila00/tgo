@@ -1,0 +1,198 @@
+package tgolint
+
+import (
+	"go/token"
+	"go/types"
+
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
+)
+
+type enumEventBuilder struct {
+	checker    %checker
+	graph      *enumEventGraph
+	activation enumActivationID
+	blocks     map[*cfg.Block]enumEventBlockID
+}
+
+func (c %checker) newEnumEventBuilder(
+	body %syntax.BlockStatement,
+) *enumEventBuilder {
+	graph := newEnumEventGraph()
+	builder := &enumEventBuilder{
+		checker: c,
+		graph:   graph,
+		blocks:  make(map[*cfg.Block]enumEventBlockID),
+	}
+	builder.activation = graph.identities.activation(enumActivationKey{
+		function: body.Start,
+	})
+	return builder
+}
+
+func (builder *enumEventBuilder) build(
+	body %syntax.BlockStatement,
+) *enumEventGraph {
+	syntaxGraph := cfg.New(body, builder.checker.callMayReturn)
+	for _, block := range syntaxGraph.Blocks {
+		builder.blocks[block] = builder.graph.addBlock()
+	}
+	if len(syntaxGraph.Blocks) != 0 {
+		builder.graph.entry = builder.blocks[syntaxGraph.Blocks[0]]
+	}
+	for _, block := range syntaxGraph.Blocks {
+		current := builder.blocks[block]
+		for _, node := range block.Nodes {
+			current = builder.emitNode(current, node)
+		}
+		for _, successor := range block.Succs {
+			if successor != nil {
+				builder.addEdge(current, builder.blocks[successor])
+			}
+		}
+	}
+	return builder.graph
+}
+
+func (builder *enumEventBuilder) addEdge(
+	from enumEventBlockID,
+	to enumEventBlockID,
+) {
+	index := int(from) - 1
+	if index < 0 || index >= len(builder.graph.blocks) {
+		return
+	}
+	builder.graph.blocks[index].successors = append(
+		builder.graph.blocks[index].successors,
+		enumEventEdge{target: to},
+	)
+}
+
+func (builder *enumEventBuilder) emitNode(
+	block enumEventBlockID,
+	node syntax.Node,
+) enumEventBlockID {
+	if expression, ok := syntax.ExpressionOf(&node); ok {
+		block, _ = builder.emitExpression(block, expression)
+		return block
+	}
+	statement, ok := syntax.StatementOf(&node)
+	if !ok {
+		return block
+	}
+	if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+		return builder.emitAssignment(block, assignment.Left, assignment.Right)
+	}
+	if returned := syntax.ReturnStatementOf(statement); returned != nil {
+		for _, expression := range returned.Results {
+			block, _ = builder.emitExpression(block, expression)
+		}
+	}
+	return block
+}
+
+func (builder *enumEventBuilder) emitAssignment(
+	block enumEventBlockID,
+	left []%syntax.Expression,
+	right []%syntax.Expression,
+) enumEventBlockID {
+	destinations := make([]enumSavedValueID, len(left))
+	for index, expression := range left {
+		block, destinations[index] = builder.emitPlace(block, expression)
+	}
+	values := make([]enumSavedValueID, len(right))
+	for index, expression := range right {
+		block, values[index] = builder.emitExpression(block, expression)
+	}
+	for index, destination := range destinations {
+		if index >= len(values) {
+			break
+		}
+		builder.graph.addEvent(block, enumEvent{
+			kind:   enumEventStore,
+			value:  values[index],
+			values: []enumSavedValueID{destination},
+		})
+	}
+	return block
+}
+
+func (builder *enumEventBuilder) emitExpression(
+	block enumEventBlockID,
+	expression %syntax.Expression,
+) (enumEventBlockID, enumSavedValueID) {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return builder.emitExpression(block, parenthesized.Expression)
+	}
+	if name := syntax.IdentifierExpressionOf(expression); name != nil {
+		cell := builder.localCell(builder.checker.facts.Object(name))
+		value := builder.graph.newSavedValue()
+		builder.graph.addEvent(block, enumEvent{
+			kind:       enumEventLoad,
+			expression: expression,
+			cells:      enumCellSet{cell: true},
+			value:      value,
+		})
+		return block, value
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		var callee enumSavedValueID
+		block, callee = builder.emitExpression(block, call.Callee)
+		arguments := make([]enumSavedValueID, len(call.Args))
+		for index, argument := range call.Args {
+			block, arguments[index] = builder.emitExpression(block, argument)
+		}
+		result := builder.graph.newSavedValue()
+		builder.graph.addEvent(block, enumEvent{
+			kind:       enumEventCall,
+			expression: expression,
+			value:      callee,
+			values:     append(arguments, result),
+		})
+		return block, result
+	}
+	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
+		block, _ = builder.emitExpression(block, binary.Left)
+		if binary.Operator == token.LAND || binary.Operator == token.LOR {
+			return builder.emitShortCircuit(block, binary)
+		}
+		return builder.emitExpression(block, binary.Right)
+	}
+	value := builder.graph.newSavedValue()
+	builder.graph.addEvent(block, enumEvent{
+		kind:       enumEventSave,
+		expression: expression,
+		value:      value,
+	})
+	return block, value
+}
+
+func (builder *enumEventBuilder) emitShortCircuit(
+	block enumEventBlockID,
+	binary *syntax.BinaryExpression,
+) (enumEventBlockID, enumSavedValueID) {
+	right := builder.graph.addBlock()
+	done := builder.graph.addBlock()
+	builder.addEdge(block, right)
+	builder.addEdge(block, done)
+	right, value := builder.emitExpression(right, binary.Right)
+	builder.addEdge(right, done)
+	return done, value
+}
+
+func (builder *enumEventBuilder) emitPlace(
+	block enumEventBlockID,
+	expression %syntax.Expression,
+) (enumEventBlockID, enumSavedValueID) {
+	if star := syntax.StarExpressionOf(expression); star != nil {
+		return builder.emitExpression(block, star.Expression)
+	}
+	return builder.emitExpression(block, expression)
+}
+
+func (builder *enumEventBuilder) localCell(object types.Object) enumCellID {
+	return builder.graph.identities.cell(enumCellKey{
+		activation: builder.activation,
+		object:     object,
+	})
+}
