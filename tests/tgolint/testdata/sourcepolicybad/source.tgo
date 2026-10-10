@@ -177,6 +177,23 @@ func changePromotedMethods(value *MethodPort, outer *MethodOuter) {
 	_ = outer.Value()
 }
 
+type MethodWrapper struct{ MethodPort }
+type methodWrapperAlias = MethodWrapper
+type MethodNestedWrapper struct{ methodWrapperAlias }
+type MethodPointerWrapper struct{ *MethodWrapper }
+
+func changeWrappedMethods(
+	value *MethodWrapper,
+	nested *MethodNestedWrapper,
+	pointer *MethodPointerWrapper,
+) {
+	value.Change()
+	change := nested.Change
+	change()
+	method := (*MethodPointerWrapper).Change
+	method(pointer)
+}
+
 var localConstructor = NewPort
 var localCarrier = TgoPortInput{FieldNumber: 0}
 var importedConstructor = model.NewCount

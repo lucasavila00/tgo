@@ -57,3 +57,8 @@ type methodCountAlias = MethodCount
 type MethodOuter struct{ methodCountAlias } checked
 
 func (value MethodOuter) check() (MethodOuter, error) { return value, }
+
+type MethodWrapper struct{ MethodCount }
+type MethodWrapperAlias = MethodWrapper
+type MethodNestedWrapper struct{ MethodWrapperAlias }
+type MethodPointerWrapper struct{ *MethodWrapper }

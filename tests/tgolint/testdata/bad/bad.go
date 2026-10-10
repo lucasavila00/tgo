@@ -957,3 +957,21 @@ func ChangePromotedMethods(value *model.MethodCount, outer *model.MethodOuter) {
 	_ = value.Value()
 	_ = outer.Value()
 }
+
+type importedMethodWrapperAlias = model.MethodWrapper
+type importedAliasWrapper struct{ importedMethodWrapperAlias }
+
+func ChangeWrappedMethods(
+	value *model.MethodWrapper,
+	nested *model.MethodNestedWrapper,
+	pointer *model.MethodPointerWrapper,
+	alias *importedAliasWrapper,
+) {
+	value.Change()
+	change := nested.Change
+	change()
+	pointerMethod := (*model.MethodPointerWrapper).Change
+	pointerMethod(pointer)
+	aliasMethod := (*importedAliasWrapper).Change
+	aliasMethod(alias)
+}

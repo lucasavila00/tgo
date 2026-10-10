@@ -103,3 +103,7 @@ bad/bad.go:950:12: checked field measurableAlias cannot be changed after constru
 bad/bad.go:952:17: checked field methodCountAlias cannot be changed after construction
 bad/bad.go:954:2: checked field methodCountAlias cannot be changed after construction
 bad/bad.go:955:11: checked field methodCountAlias cannot be changed after construction
+bad/bad.go:970:2: checked field measurableAlias cannot be changed after construction
+bad/bad.go:971:12: checked field measurableAlias cannot be changed after construction
+bad/bad.go:973:19: checked field measurableAlias cannot be changed after construction
+bad/bad.go:975:17: checked field measurableAlias cannot be changed after construction

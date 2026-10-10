@@ -497,6 +497,21 @@ func NewMethodOuter(tgoField0 methodCountAlias) (MethodOuter, error) {
 }
 
 func (value MethodOuter) check() (MethodOuter, error) { return value, nil }
+
+type MethodWrapper struct {
+	MethodCount
+}
+
+type MethodWrapperAlias = MethodWrapper
+
+type MethodNestedWrapper struct {
+	MethodWrapperAlias
+}
+
+type MethodPointerWrapper struct {
+	*MethodWrapper
+}
+
 func TgoDefaultPairLeft() string {
 	return ""
 }

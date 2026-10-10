@@ -283,16 +283,20 @@ func (c %checker) promotedPointerMethodField(
 		!c.pointerMethodSelection(expression) {
 		return nil
 	}
-	current := dereference(selection.Recv())
-	structure, ok := current.Underlying().(*types.Struct)
-	if !ok {
-		return nil
+	current := selection.Recv()
+	for _, index := range selection.Index()[:len(selection.Index())-1] {
+		current = dereference(current)
+		structure, ok := current.Underlying().(*types.Struct)
+		if !ok || index >= structure.NumFields() {
+			return nil
+		}
+		field := structure.Field(index)
+		if modelIsChecked(c.modelForReceiver(current)) {
+			return field
+		}
+		current = field.Type()
 	}
-	index := selection.Index()[0]
-	if index >= structure.NumFields() {
-		return nil
-	}
-	return structure.Field(index)
+	return nil
 }
 
 func optionalSameExpressionRange(

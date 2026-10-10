@@ -411,6 +411,18 @@ func safePromotedMethods(value *MethodQuantity, outer *MethodOuter) int {
 	valueMethod := outer.Value
 	return value.Value() + valueMethod() + valueExpression(*value)
 }
+
+type MutableMethodWrapper struct {
+	measuredAlias
+}
+
+func changeMutableMethods(value *MutableMethodWrapper) {
+	value.Increment()
+	change := value.Increment
+	change()
+	method := (*MutableMethodWrapper).Increment
+	method(value)
+}
 func TgoDefaultRequestTags() map[string]string {
 	return map[string]string{}
 }
