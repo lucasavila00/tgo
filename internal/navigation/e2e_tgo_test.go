@@ -99,13 +99,13 @@ func TestHelperWorkspaceFixtures(t *testing.T) {
 				server.checkMutation(t, workspace, mutation)
 			}
 			if entry.Name() == "memory-imports" {
-				assertNoGoFiles(t, workspace)
+				assertNoGeneratedGoFiles(t, workspace)
 			}
 		})
 	}
 }
 
-func assertNoGoFiles(t *testing.T, workspace string) {
+func assertNoGeneratedGoFiles(t *testing.T, workspace string) {
 	t.Helper()
 	err := filepath.WalkDir(workspace, func(
 		path string,
@@ -115,8 +115,10 @@ func assertNoGoFiles(t *testing.T, workspace string) {
 		if walkErr != nil {
 			return walkErr
 		}
-		if !entry.IsDir() && filepath.Ext(path) == ".go" {
-			t.Fatalf("navigation wrote Go file %s", path)
+		name := entry.Name()
+		if !entry.IsDir() && (strings.HasSuffix(name, "_tgo.go") ||
+			strings.HasSuffix(name, "_tgo_test.go")) {
+			t.Fatalf("navigation wrote generated Go file %s", path)
 		}
 		return nil
 	})

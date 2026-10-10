@@ -22,7 +22,7 @@
   },
   {
     "method": "definition",
-    "position": {"file": "b/b.tgo", "text": "Normalize", "occurrence": 1},
+    "position": {"file": "b/b.tgo", "text": "Normalize", "occurrence": 2},
     "locations": [
       {"file": "c/c.tgo", "text": "Normalize", "occurrence": 1}
     ]
