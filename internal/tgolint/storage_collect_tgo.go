@@ -382,7 +382,9 @@ func (b *storageGraphBuilder) collectExpression(
 		block.Operations = append(block.Operations, StorageEffectOperation{
 			Kind: storageEffectCall, Inputs: append([]int{callee}, arguments...),
 			Results: results, Function: function,
-			TypeArguments: b.callTypeArgumentProjection(call.Callee),
+			TypeArguments:     b.callTypeArgumentProjection(call.Callee),
+			ReceiverArguments: b.callReceiverArgumentProjection(call.Callee),
+			CalledParameters:  b.callParameterProjection(call.Args),
 		})
 		return result
 	}
@@ -506,20 +508,71 @@ func (b *storageGraphBuilder) callTypeArgumentProjection(
 	if !ok {
 		return nil
 	}
+	return b.storageTypeProjection(typeList(instance.TypeArgs))
+}
+
+func (b *storageGraphBuilder) callReceiverArgumentProjection(
+	callee *syntax.Expression,
+) []int {
+	return b.storageTypeProjection(b.checker.receiverTypeArguments(callee))
+}
+
+func (b *storageGraphBuilder) storageTypeProjection(
+	arguments []types.Type,
+) []int {
 	signature, _ := b.root.Type().(*types.Signature)
 	if signature == nil {
 		return nil
 	}
-	parameters := signature.TypeParams()
-	result := make([]int, instance.TypeArgs.Len())
+	parameterMap := make(map[*types.TypeParam]zeroParameter)
+	for index := 0; index < signature.TypeParams().Len(); index++ {
+		parameterMap[signature.TypeParams().At(index)] = zeroParameter{index: index}
+	}
+	if signature.Recv() != nil {
+		if named, ok := dereference(signature.Recv().Type()).(*types.Named); ok {
+			for index := 0; index < named.TypeArgs().Len(); index++ {
+				if parameter, ok := named.TypeArgs().At(index).(*types.TypeParam); ok {
+					parameterMap[parameter] = zeroParameter{receiver: true, index: index}
+				}
+			}
+		}
+	}
+	result := make([]int, len(arguments))
 	for index := range result {
 		result[index] = -1
-		argument, ok := instance.TypeArgs.At(index).(*types.TypeParam)
-		if !ok {
+		contained := containedTypeParameters(
+			arguments[index], parameterMap, make(map[types.Type]bool),
+		)
+		if len(contained) != 1 {
 			continue
 		}
-		for parameter := 0; parameter < parameters.Len(); parameter++ {
-			if parameters.At(parameter) == argument {
+		for parameter := range contained {
+			result[index] = parameter.index
+			if parameter.receiver {
+				result[index] = -parameter.index - 2
+			}
+		}
+	}
+	return result
+}
+
+func (b *storageGraphBuilder) callParameterProjection(
+	arguments []*syntax.Expression,
+) []int {
+	signature, _ := b.root.Type().(*types.Signature)
+	if signature == nil {
+		return nil
+	}
+	result := make([]int, len(arguments))
+	for index := range result {
+		result[index] = -1
+		name := syntax.IdentifierExpressionOf(arguments[index])
+		if name == nil {
+			continue
+		}
+		object := b.checker.facts.Object(name)
+		for parameter := 0; parameter < signature.Params().Len(); parameter++ {
+			if signature.Params().At(parameter) == object {
 				result[index] = parameter
 				break
 			}

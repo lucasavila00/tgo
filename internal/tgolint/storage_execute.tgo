@@ -22,8 +22,8 @@ type storageExecutionState struct {
 }
 
 type storageInvocationEffects struct {
-	zero   []GenericEffect
-	access []GenericEffect
+	zero      []GenericEffect
+	access    []GenericEffect
 	completed bool
 }
 

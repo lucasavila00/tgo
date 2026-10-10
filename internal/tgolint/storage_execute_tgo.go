@@ -20,25 +20,29 @@ type storageExecutionState struct {
 	temps   map[int]storageValue
 	returns []storageValue
 	effects storageInvocationEffects
+	live    bool
 }
 
 type storageInvocationEffects struct {
-	zero   []GenericEffect
-	access []GenericEffect
+	zero      []GenericEffect
+	access    []GenericEffect
+	completed bool
 }
 
 type storageGraphCall struct {
-	fact           *GenericEffectFact
-	function       int
-	arguments      []storageValue
-	captures       []storagePath
-	parameterCells []storagePath
-	typeArguments  []types.Type
+	fact              *GenericEffectFact
+	function          int
+	arguments         []storageValue
+	captures          []storagePath
+	parameterCells    []storagePath
+	receiverArguments []types.Type
+	typeArguments     []types.Type
 }
 
 type storageCallKey struct {
 	fact     *GenericEffectFact
 	function int
+	inputs   string
 }
 
 type storageExecutionResult struct {
@@ -82,6 +86,7 @@ func executeStorageFunction(
 	state storageState,
 	context *storageExecutionContext,
 ) (storageState, []storageValue, storageInvocationEffects) {
+	state = cloneStorageState(state)
 	function := findStorageEffectFunction(call.fact.Storage, call.function)
 	if function == nil {
 		return state, nil, storageInvocationEffects{}
@@ -97,7 +102,10 @@ func executeStorageFunction(
 			writeStorageMemory(state, storageMemoryKey(path), argument, true)
 		}
 	}
-	key := storageCallKey{fact: call.fact, function: call.function}
+	key := storageCallKey{
+		fact: call.fact, function: call.function,
+		inputs: storageCallInputKey(call),
+	}
 	if context.active[key] {
 		if result, ok := context.approximations[key]; ok {
 			return cloneStorageState(result.storage), cloneStorageValues(result.returns), result.effects
@@ -106,26 +114,35 @@ func executeStorageFunction(
 	}
 	context.active[key] = true
 	defer delete(context.active, key)
-	previous := storageExecutionResult{storage: cloneStorageState(state)}
+	var previous storageExecutionResult
+	initialized := false
 	for {
-		context.approximations[key] = previous
+		if initialized {
+			context.approximations[key] = previous
+		} else {
+			delete(context.approximations, key)
+		}
 		storage, returns, effects := executeStorageFunctionOnce(call, state, context, function)
 		next := storageExecutionResult{
 			storage: storage,
-			returns: joinStorageValues(previous.returns, returns),
-			effects: storageInvocationEffects{
-				zero: appendGenericEffects(
-					append([]GenericEffect(nil), previous.effects.zero...), effects.zero,
-				),
-				access: appendGenericEffects(
-					append([]GenericEffect(nil), previous.effects.access...), effects.access,
-				),
-			},
+			returns: cloneStorageValues(returns), effects: effects,
 		}
-		if reflect.DeepEqual(previous, next) {
+		if initialized {
+			next.storage = joinStorageState(previous.storage, storage)
+			next.returns = joinStorageValues(previous.returns, returns)
+			next.effects.zero = appendGenericEffects(
+				append([]GenericEffect(nil), previous.effects.zero...), effects.zero,
+			)
+			next.effects.access = appendGenericEffects(
+				append([]GenericEffect(nil), previous.effects.access...), effects.access,
+			)
+			next.effects.completed = previous.effects.completed || effects.completed
+		}
+		if initialized && reflect.DeepEqual(previous, next) {
 			return next.storage, next.returns, next.effects
 		}
 		previous = next
+		initialized = true
 	}
 }
 
@@ -138,6 +155,7 @@ func executeStorageFunctionOnce(
 	entries := make(map[int]storageExecutionState)
 	entries[0] = storageExecutionState{
 		storage: cloneStorageState(state), temps: make(map[int]storageValue), returns: nil,
+		live: true,
 		effects: storageInvocationEffects{
 			zero:   append([]GenericEffect(nil), function.ZeroEffects...),
 			access: append([]GenericEffect(nil), function.AccessEffects...),
@@ -146,6 +164,7 @@ func executeStorageFunctionOnce(
 	queue := []int{0}
 	queued := map[int]bool{0: true}
 	var exits []storageExecutionState = nil
+	var observed storageInvocationEffects
 	for len(queue) != 0 {
 		blockID := queue[0]
 		queue = queue[1:]
@@ -156,12 +175,20 @@ func executeStorageFunctionOnce(
 		}
 		current := cloneStorageExecution(entries[blockID])
 		for _, operation := range block.Operations {
+			if !current.live {
+				break
+			}
 			applyStorageOperation(&current, call, operation, context)
 		}
-		if len(block.Successors) == 0 {
+		observed.zero = appendGenericEffects(observed.zero, current.effects.zero)
+		observed.access = appendGenericEffects(observed.access, current.effects.access)
+		if current.live && len(block.Successors) == 0 {
 			exits = append(exits, current)
 		}
 		for _, edge := range block.Successors {
+			if !current.live {
+				continue
+			}
 			if !storageEdgePossible(current.temps, edge) {
 				continue
 			}
@@ -178,8 +205,9 @@ func executeStorageFunctionOnce(
 	result := newStorageState()
 	firstExit := true
 	var returns []storageValue = nil
-	var effects storageInvocationEffects
+	effects := observed
 	for _, exit := range exits {
+		effects.completed = true
 		if firstExit {
 			result = cloneStorageState(exit.storage)
 			firstExit = false
@@ -294,6 +322,8 @@ func joinStorageExecution(
 	}
 	joined.effects.zero = appendGenericEffects(joined.effects.zero, right.effects.zero)
 	joined.effects.access = appendGenericEffects(joined.effects.access, right.effects.access)
+	joined.effects.completed = left.effects.completed || right.effects.completed
+	joined.live = left.live || right.live
 	return joined, !reflect.DeepEqual(left, joined)
 }
 

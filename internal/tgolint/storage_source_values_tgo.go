@@ -196,7 +196,9 @@ func (c *checker) storageNamedFunctionValue(
 		}
 	}
 	return storageValue{functions: []storageFunction{{
-		graph: fact.Storage.Entry, fact: fact, typeArguments: arguments,
+		graph: fact.Storage.Entry, fact: fact,
+		receiverArguments: c.receiverTypeArguments(expression),
+		typeArguments:     arguments,
 	}}}
 }
 
