@@ -293,13 +293,56 @@ func (p *packageUnit) markErasedOwnerImport(
 	if surface == nil || owner == nil || surface.Path() == owner.Path() {
 		return
 	}
+	if imported := surfaceImport(expression, p.info); imported != nil {
+		for _, specification := range file.Imports {
+			if importPackageName(specification, p.info) == imported {
+				p.erasedImports[specification] = true
+				return
+			}
+		}
+		return
+	}
 	for _, specification := range file.Imports {
 		path, err := strconv.Unquote(specification.Path.Value)
-		if err == nil && path == surface.Path() {
+		if err == nil && path == surface.Path() &&
+			specification.Name != nil && specification.Name.Name == "." {
 			p.erasedImports[specification] = true
 			return
 		}
 	}
+}
+
+// surfaceImport gets the qualified import named by one source type expression.
+func surfaceImport(expression ast.Expr, info *types.Info) *types.PkgName {
+	switch expression := expression.(type) {
+	case *ast.SelectorExpr:
+		identifier, ok := expression.X.(*ast.Ident)
+		if !ok {
+			return nil
+		}
+		imported, _ := info.Uses[identifier].(*types.PkgName)
+		return imported
+	case *ast.IndexExpr:
+		return surfaceImport(expression.X, info)
+	case *ast.IndexListExpr:
+		return surfaceImport(expression.X, info)
+	case *ast.ParenExpr:
+		return surfaceImport(expression.X, info)
+	}
+	return nil
+}
+
+// importPackageName gets the object declared by one import specification.
+func importPackageName(
+	specification *ast.ImportSpec,
+	info *types.Info,
+) *types.PkgName {
+	if specification.Name == nil {
+		imported, _ := info.Implicits[specification].(*types.PkgName)
+		return imported
+	}
+	imported, _ := info.Defs[specification.Name].(*types.PkgName)
+	return imported
 }
 
 // surfaceTypePackage gets the package named by the source type expression.
@@ -353,12 +396,7 @@ func (p *packageUnit) importUsed(specification *ast.ImportSpec) bool {
 		}
 		return false
 	}
-	var imported types.Object
-	if specification.Name == nil {
-		imported = p.info.Implicits[specification]
-	} else {
-		imported = p.info.Defs[specification.Name]
-	}
+	imported := importPackageName(specification, p.info)
 	for _, object := range p.info.Uses {
 		if object == imported {
 			return true

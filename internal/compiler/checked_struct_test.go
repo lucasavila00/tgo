@@ -219,7 +219,9 @@ func Marker() int { return 1 }
 	"bridge"
 	_ "unsafe"
 )`,
-			body:        `func Make(number int) (any, error) { return bridge.Alias{number: number} }`,
+			body: `func Make(number int) (any, error) {
+	return bridge.Alias{number: number}
+}`,
 			want:        `_ "bridge"`,
 			forbidden:   "\n\t\"bridge\"\n",
 			constructor: "model.NewPort(",
@@ -230,7 +232,9 @@ func Marker() int { return 1 }
 	records "model"
 	facade "bridge"
 )`,
-			body:        `func Make(number int) (records.Port, error) { return facade.Alias{number: number} }`,
+			body: `func Make(number int) (records.Port, error) {
+	return facade.Alias{number: number}
+}`,
 			want:        `_ "bridge"`,
 			forbidden:   `facade "bridge"`,
 			constructor: "records.NewPort(",
@@ -247,6 +251,20 @@ func Marker() int { return facade.Marker() }`,
 			forbidden:   `_ "bridge"`,
 			constructor: "model.NewPort(",
 		},
+		{
+			name: "duplicate import path",
+			imports: `import (
+	"model"
+	used "bridge"
+	erased "bridge"
+)`,
+			body: `func Make(number int) (model.Port, error) {
+	return erased.Alias{number: number + used.Marker()}
+}`,
+			want:        `used "bridge"`,
+			forbidden:   `erased "bridge"`,
+			constructor: "model.NewPort(",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -255,7 +273,9 @@ func Marker() int { return facade.Marker() }`,
 				Path: "app",
 				Sources: []File{{
 					Name: "app.tgo",
-					Data: []byte("package app\n" + test.imports + "\n" + test.body + "\n"),
+					Data: []byte(
+						"package app\n" + test.imports + "\n" + test.body + "\n",
+					),
 				}},
 				Imports: map[string]*CompiledPackage{
 					"bridge": bridgePackage,
@@ -274,8 +294,14 @@ func Marker() int { return facade.Marker() }`,
 				t.Fatal(problems[0])
 			}
 			output := string(compiled.Outputs["app.tgo"])
-			if !strings.Contains(output, test.want) || strings.Contains(output, test.forbidden) {
-				t.Fatalf("generated imports do not contain %q without %q\n%s", test.want, test.forbidden, output)
+			if !strings.Contains(output, test.want) ||
+				strings.Contains(output, test.forbidden) {
+				t.Fatalf(
+					"generated imports do not contain %q without %q\n%s",
+					test.want,
+					test.forbidden,
+					output,
+				)
 			}
 			if !strings.Contains(output, test.constructor) {
 				t.Fatalf("generated output does not use the defining constructor\n%s", output)
