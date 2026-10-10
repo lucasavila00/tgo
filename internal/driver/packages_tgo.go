@@ -58,7 +58,7 @@ func (p *packageUnit) outputPath(sourcePath string) string {
 	return outputname.Path(sourcePath)
 }
 
-// discover indexes tgo packages without parsing their source.
+// discover indexes possible build packages without parsing their source.
 func discover(
 	root string,
 	module string,
@@ -87,7 +87,7 @@ type packageDiscovery struct {
 	packages map[string]*packageUnit
 }
 
-// visit adds tgo files and skips directories outside the active module.
+// visit adds source candidates and skips directories outside the active module.
 func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) error {
 	if walkErr != nil {
 		return walkErr
@@ -103,9 +103,17 @@ func (d *packageDiscovery) visit(path string, entry fs.DirEntry, walkErr error) 
 		return d.addSource(path)
 	case outputname.Reserved(entry.Name()):
 		return d.addGeneratedCandidate(path)
+	case strings.HasSuffix(entry.Name(), ".go"):
+		return d.addGoCandidate(path)
 	default:
 		return nil
 	}
+}
+
+// addGoCandidate records one package that can be a Go-only build root.
+func (d *packageDiscovery) addGoCandidate(path string) error {
+	_, err := d.packageFor(filepath.Dir(path))
+	return err
 }
 
 // addTestSource records one possible TGo test source file.
@@ -452,7 +460,13 @@ func selectPackages(
 				return nil, err
 			}
 			if !available {
-				continue
+				language, err_1 := unit.packageLanguage()
+				if err_1 != nil {
+					return nil, err_1
+				}
+				if language != packagelanguage.Go {
+					continue
+				}
 			}
 			selected[path] = true
 			matched = true
