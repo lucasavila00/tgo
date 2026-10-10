@@ -1,77 +1,83 @@
-# Shared typed expression lowering
+# Replace prefix-list rewriting with a typed lowering plan
 
 Issue: [#245](https://github.com/lucasavila00/tgo/issues/245)
 
-## Context
+## What is wrong today
 
-The emitter already has a shared expression lowerer. It returns an expression
-and preceding statements, but each statement handler must decide where those
-statements run. This contract does not carry enough type, scope, or execution
-information. Recent loop, switch, and select fixes expose this gap.
+The compiler lowers expressions while it changes the Go AST in place.
+`expression()` returns a replacement expression and a flat list of statements.
+The caller must find a safe place for that list. The list does not say whether
+its work runs once, on each loop test, or only after a branch is selected.
 
-## Decision
+Generated call results also lose their types at this boundary. Later helpers
+query old type maps or recover some types from variable names and AST shapes.
+Adding more statement handlers can fix individual cases, but does not fix
+these contracts. The current model is too weak for general expression lowering.
+This is a design limit, not evidence that valid TGo cannot be compiled.
 
-Keep the Go AST, Go type checker, and Go formatter. Add one typed, structured
-lowering layer between type checking and Go AST emission. Do not build a new
-whole-program control-flow graph or repeat Go name and type analysis.
+## Proposed change
 
-Use these shared operations for all runtime expressions:
+Replace direct AST rewriting with two separate passes: build a typed lowering
+plan for each function, then emit Go AST from that plan. Expression lowering
+produces operations and typed value IDs, not loose Go statement prefixes.
+
+The plan is a structured tree with these records:
 
 ```text
-lowerValue(expression, expected type, result count, region) -> typed values
-lowerPlace(expression, region) -> typed assignment target
+Value: ID, type, source position
+Place: ID, target type, evaluated target operands
+Block: ordered operations, source scope
+Operation: evaluate, bind, store, branch, loop, switch, select, return, jump
+Target: source label or loop/switch/select target identity
 ```
 
-A region owns ordered generated statements at one source execution point.
-It retains source scope, fresh local names, and function and branch targets.
-Values and places retain types, source positions, and source object identity.
-Generated nodes carry their own type facts; they must not depend on stale
-type-checker maps or guesses from variable names.
+Branch, loop, switch, and select operations own child blocks. A loop has
+initializer, test, body, and post blocks. A select has entry operand evaluation
+and selected-case blocks. These boundaries state when work executes.
 
-The shared expression visitor lowers propagation and comprehensions once.
-Statement handlers define execution regions and emit their results. They do
-not implement separate expression lowering for each statement kind.
+One recursive expression lowerer writes into a specified block and returns
+typed values or places. It receives contextual types and required result counts.
+Propagation produces a call with typed result IDs and an error branch.
+Comprehensions produce loops. Both use this path in every expression context.
 
-Work stays inside its region: short-circuit right operands and unmatched
-switch candidates are conditional; loop tests and posts run at their required
-iteration points. Keep Go iteration-variable identity. Select channel and send
-operands run before selection; receive targets run only in the selected case.
-Initializers and declarations keep their source visibility and lifetime.
+For `ready && check()!!`, the call and error return belong inside the true
+branch of `ready`. In a loop condition they belong in the test block.
+No caller receives a prefix that it must position by hand.
 
-Distinguish values from types, builtins, constants, and assignment places.
-Keep contextual types, tuple results, addressable arrays, map targets, and
-receiver capture. Evaluate assignment operands before stores as Go requires.
-Use typed temporary variables only where evaluation order requires them.
+Statement lowering defines execution regions once for each Go statement kind.
+It does not inspect expressions to implement propagation or comprehensions.
+New expression forms use the shared path; new statement forms must define their
+execution rules. Scope and jump target identities remain attached to the plan.
 
-Keep labels and jumps bound to source targets. Generated blocks must not
-change scope, post execution, or valid jumps. Propagation returns from the
-source function. `!!` returns the same error interface value; `!` wraps it once
-with the specified call name. Do not hide work in function wrappers or reject
-valid source to avoid lowering it.
+Only the emitter turns plan values into Go identifiers and operations into Go
+statements. It can retain unchanged Go subtrees with captured semantic facts.
+Generated values do not use the old AST type maps or name-based type recovery.
+The Go type checker and formatter remain dependencies, not the decision.
 
-## Evidence and alternatives
+## Required behavior and limits
 
-The [Go ordering pass][go-order] uses typed temporary variables and expression
-initialization lists, with explicit rules for loops, select, and short circuit.
-[Rust expression lowering][rust-lowering] uses destinations and continuation
-blocks. Adopt its explicit destination concept, not its complete MIR machinery.
-A full graph would require reconstruction of structured Go source without a
-demonstrated need. A flat statement prefix does not express execution regions.
+The emitter must preserve Go iteration bindings, post timing, switch case
+order, and select entry versus selected-case evaluation. It must also preserve
+assignment operand evaluation before stores, array addressability, map targets,
+receiver capture, contextual types, scopes, and jumps. The plan makes these
+rules explicit; it does not implement them by itself.
 
-## Migration and verification
+This is a compiler refactor, not a language change. Do not use function wrappers
+or reject valid code to simplify it. `!!` returns the same error interface;
+`!` wraps it once with the specified call name.
 
-After approval, add the shared region, value, and place contracts. Move existing
-expression helpers into them, then convert statement handlers. Remove each old
-path when its replacement passes the same tests; do not keep a fallback.
+## Research and implementation plan
 
-Test nested extensions across assignments, calls, returns, conditions, loops,
-switch, select, range, go, and defer. Check event order, skipped work, panic and
-error behavior, contextual types, captures, scopes, and branch targets. Keep
-existing regressions and compare runtime behavior where output tests cannot
-prove it. Run full validation in hosted CI.
+The [Go ordering pass][go-order] uses typed locals and expression-owned work,
+but still implements statement-specific execution rules. [Rust MIR][rust-mir]
+makes destinations and control flow explicit. Use these principles in a
+structured plan, not Rust's full graph and destruction machinery.
 
-Move the approved contract to the compiler guide and specification during
-implementation, and delete this ADR. This proposal does not change the language.
+After approval, build the plan and emitter, then replace the current lowering
+path. Keep runtime regressions and add nested-expression tests across all
+statement contexts. Verify order, skipped work, types, scopes, captures, and
+jumps in hosted CI. Remove replaced helpers and name-based type recovery; keep
+no fallback. Move the contract to the compiler guide and delete this ADR.
 
 [go-order]: https://go.dev/src/cmd/compile/internal/walk/order.go
-[rust-lowering]: https://rustc-dev-guide.rust-lang.org/mir/construction.html
+[rust-mir]: https://rustc-dev-guide.rust-lang.org/mir/construction.html
