@@ -53,6 +53,7 @@ type storageExecutionResult struct {
 
 type storageExecutionContext struct {
 	active         map[storageCallKey]bool
+	reentered      map[storageCallKey]bool
 	approximations map[storageCallKey]storageExecutionResult
 }
 
@@ -77,6 +78,7 @@ func storageGraphEffects(
 func newStorageExecutionContext() *storageExecutionContext {
 	return &storageExecutionContext{
 		active:         make(map[storageCallKey]bool),
+		reentered:      make(map[storageCallKey]bool),
 		approximations: make(map[storageCallKey]storageExecutionResult),
 	}
 }
@@ -107,6 +109,7 @@ func executeStorageFunction(
 		inputs: storageCallInputKey(call),
 	}
 	if context.active[key] {
+		context.reentered[key] = true
 		if result, ok := context.approximations[key]; ok {
 			return cloneStorageState(result.storage), cloneStorageValues(result.returns), result.effects
 		}
@@ -126,6 +129,9 @@ func executeStorageFunction(
 		next := storageExecutionResult{
 			storage: storage,
 			returns: cloneStorageValues(returns), effects: effects,
+		}
+		if !context.reentered[key] {
+			return next.storage, next.returns, next.effects
 		}
 		if initialized {
 			next.storage = joinStorageState(previous.storage, storage)
