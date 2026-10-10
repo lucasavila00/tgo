@@ -727,9 +727,14 @@ func (b *storageGraphBuilder) functionID(function *types.Func) int {
 func (c *checker) resolveStorageEffectGraphs(
 	summaries map[*types.Func]*storageGraphSummary,
 ) {
+	sources := make(map[*types.Func]*storageGraphSummary, len(summaries))
+	for function, summary := range summaries {
+		copy := *summary
+		sources[function] = &copy
+	}
 	for function, summary := range summaries {
 		composer := &storageGraphComposer{
-			checker: c, summaries: summaries,
+			checker: c, summaries: sources,
 			graph:    StorageEffectGraph{Known: true, Entry: 0, Functions: nil},
 			assigned: make(map[*types.Func]int),
 		}

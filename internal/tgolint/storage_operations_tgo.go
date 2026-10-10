@@ -355,7 +355,6 @@ func readStorageIndex(
 		}
 		path := storagePath{location: slice.backing, steps: []StorageEffectPath{step}}
 		value = joinStorageValue(value, readStorageMemory(state, storageMemoryKey(path)))
-		value.regions = append(value.regions, path)
 		if operation.KnownLength {
 			step.Index -= slice.offset
 		}
@@ -363,7 +362,6 @@ func readStorageIndex(
 	for _, region := range base.regions {
 		region.steps = append(region.steps, step)
 		value = joinStorageValue(value, readStorageMemory(state, storageMemoryKey(region)))
-		value.regions = append(value.regions, region)
 	}
 	return value
 }
@@ -405,7 +403,6 @@ func readStorageField(
 			Kind: storagePathField, Field: field,
 		})
 		value = joinStorageValue(value, readStorageMemory(state, storageMemoryKey(region)))
-		value.regions = append(value.regions, region)
 	}
 	return value
 }

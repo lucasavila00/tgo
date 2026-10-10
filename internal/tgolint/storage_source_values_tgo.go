@@ -64,7 +64,6 @@ func (c *checker) storageExpressionValue(
 				Kind: storagePathField, Field: selector.Selector.Name,
 			})
 			value = joinStorageValue(value, readStorageMemory(state, storageMemoryKey(region)))
-			value.regions = append(value.regions, region)
 		}
 		return value
 	}
@@ -85,7 +84,6 @@ func (c *checker) storageExpressionValue(
 			}
 			path := storagePath{location: slice.backing, steps: []StorageEffectPath{step}}
 			result = joinStorageValue(result, readStorageMemory(state, storageMemoryKey(path)))
-			result.regions = append(result.regions, path)
 			if step.Kind == storagePathIndex {
 				step.Index -= slice.offset
 			}
@@ -93,7 +91,6 @@ func (c *checker) storageExpressionValue(
 		for _, region := range base.regions {
 			region.steps = append(region.steps, step)
 			result = joinStorageValue(result, readStorageMemory(state, storageMemoryKey(region)))
-			result.regions = append(result.regions, region)
 		}
 		return result
 	}

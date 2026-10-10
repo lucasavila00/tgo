@@ -291,9 +291,11 @@ func cloneStorageExecution(state storageExecutionState) storageExecutionState {
 		storage: cloneStorageState(state.storage),
 		temps:   make(map[int]storageValue),
 		returns: append([]storageValue(nil), state.returns...),
+		live:    state.live,
 		effects: storageInvocationEffects{
-			zero:   append([]GenericEffect(nil), state.effects.zero...),
-			access: append([]GenericEffect(nil), state.effects.access...),
+			zero:      append([]GenericEffect(nil), state.effects.zero...),
+			access:    append([]GenericEffect(nil), state.effects.access...),
+			completed: state.effects.completed,
 		},
 	}
 	for id, value := range state.temps {
