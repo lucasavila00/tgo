@@ -127,12 +127,21 @@ Move the requested work to review without unnecessary waiting.
 - Define the complete acceptance criteria before implementation. Keep the
   active pull request within that scope. Create a separate issue for an
   unrelated finding.
-- Give one agent ownership of the implementation. Use another agent for the
-  final independent review.
-- Run focused local tests while you implement or debug. Do not run the full CI
-  suite locally.
-- Push the branch and use hosted CI for full validation. Work on another
-  independent task while hosted CI runs.
+- The root agent coordinates the work, defines the scope, tracks hosted CI,
+  and reviews repository state. It must not create or edit repository files.
+- Only a `gpt-5.6-sol` subagent can create or edit repository files. Start each
+  subagent with the `gpt-5.6-sol` model, and give it the full task context.
+- The runtime has four total agent slots. The root agent uses one slot, so
+  three subagent slots are available.
+- Use slots in short cycles. One subagent implements one issue, runs focused
+  checks, pushes a complete draft pull request, reports its exact head commit,
+  and then stops.
+- The root agent tracks hosted CI and review without keeping the implementation
+  subagent active. Immediately use the free slot for the highest-priority
+  unblocked issue. Do not wait for the prior pull request to merge.
+- Use a separate `gpt-5.6-sol` subagent for the final independent review. The
+  review subagent reports its result and then stops.
+- Do not use an agent slot to wait for hosted CI.
 - Do not merge `main` into a clean pull request only to refresh its ancestry.
   This repository squash-merges pull requests. Merge `main` only when GitHub
   reports a conflict, and preserve both sides of the conflict.
@@ -147,5 +156,6 @@ Move the requested work to review without unnecessary waiting.
   hosted checks pass.
 - Rebuild the work inventory after a merge or a new issue changes priorities.
   Do not repeat the inventory while the external state is unchanged.
-- Keep no more than six pull requests open at one time. Use open slots for the
-  highest-priority unblocked issues.
+- Keep no more than six pull requests open at one time. Draft pull requests can
+  outnumber active agents. Use open slots for the highest-priority unblocked
+  issues.
