@@ -538,8 +538,12 @@ func (c %checker) evalEnumCall(
 	if call == nil {
 		return
 	}
+	arguments := make([]enumStorageSet, len(call.Args))
+	for index, argument := range call.Args {
+		arguments[index] = c.enumExpressionStorage(argument, state)
+	}
 	for literal := range c.enumExpressionClosure(call.Callee, state) {
-		output := c.invokeEnumClosure(literal, state)
+		output := c.invokeEnumClosure(literal, state, arguments)
 		for place, values := range output.pointers {
 			state.pointers[place] = cloneEnumStorageSet(values)
 		}
@@ -552,7 +556,23 @@ func (c %checker) evalEnumCall(
 func (c %checker) invokeEnumClosure(
 	literal *syntax.FunctionLiteral,
 	input *enumStorageState,
+	arguments []enumStorageSet,
 ) *enumStorageState {
+	input = cloneEnumStorageState(input)
+	argument := 0
+	for _, field := range literal.Type.Params.List {
+		for _, name := range field.Names {
+			if argument >= len(arguments) {
+				break
+			}
+			object := c.facts.Object(name)
+			if object != nil && enumPointerType(c.facts, field.Type) {
+				input.pointers[enumPointerPlace{root: object}] =
+					cloneEnumStorageSet(arguments[argument])
+			}
+			argument++
+		}
+	}
 	call := input.calls[literal]
 	if call != nil && call.analyzing {
 		return cloneEnumStorageState(input)

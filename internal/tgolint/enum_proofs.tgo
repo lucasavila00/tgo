@@ -588,7 +588,7 @@ func (c %checker) enumCallClosureInvalidates(
 ) bool {
 	receiverPlace, receiverOK := enumPointerPlaceOf(c.facts, receiver)
 	for literal := range c.enumExpressionClosure(expression, state) {
-		output := c.invokeEnumClosure(literal, cloneEnumStorageState(state))
+		output := c.invokeEnumClosure(literal, cloneEnumStorageState(state), nil)
 		if enumStorageSetsOverlap(output.writes, proved) {
 			return true
 		}
