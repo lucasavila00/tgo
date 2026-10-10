@@ -122,4 +122,15 @@ func FunctionValues() {
 	factory := genericzero.Factory[int]{}
 	method := factory.Variable
 	method()
+	partialFactory := genericzero.TripleNested[model.Event]
+	partialFactory()
+	partialFactory()()
+	partialFactory()()()
+	partialFirst := genericzero.TripleNested[model.Event]()
+	partialFirst()
+	partialFirst()()
+	partialSecond := genericzero.TripleNested[model.Event]()()
+	partialSecond()
+	var initializedPartial = genericzero.TripleNested[model.Event]()()
+	initializedPartial()
 }
