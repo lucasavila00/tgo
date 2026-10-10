@@ -370,12 +370,14 @@ func (graph *enumEventGraph) transfer(
 					target := graph.identities.fieldRegion(
 						region, event.field, graph.activation,
 					)
-					state.cells[cell] = enumAbstractValue{
-						regions:       enumRegionSet{target: true},
-						dependencies:  enumCellSet{cell: true},
-						relations:     enumCellSet{cell: true},
-						relationKnown: true,
+					pointerValue := newEnumAbstractValue()
+					pointerValue.regions = enumRegionSet{target: true}
+					pointerValue.dependencies = enumCellSet{cell: true}
+					if graph.uniqueCell(cell) {
+						pointerValue.relations = enumCellSet{cell: true}
+						pointerValue.relationKnown = true
 					}
+					state.cells[cell] = pointerValue
 				}
 			}
 			value.places[cell] = true
@@ -400,6 +402,14 @@ func (graph *enumEventGraph) transfer(
 			value.dependencies[cell] = true
 		}
 		value.readCells = readCells
+		if !value.relationKnown {
+			relation := graph.identities.cell(enumCellKey{
+				activation: graph.activation,
+				parent:     enumCellID(event.value),
+			})
+			value.relations = enumCellSet{relation: true}
+			value.relationKnown = true
+		}
 		state.saved[event.value] = value
 	case enumEventTagRead:
 		value := cloneEnumAbstractValue(state.saved[event.source])
@@ -415,7 +425,7 @@ func (graph *enumEventGraph) transfer(
 		callee := state.saved[event.value]
 		if len(callee.closures) != 0 {
 			graph.calls.applyAlternatives(
-				state, callee.closures, arguments, event.results,
+				state, graph.call, callee.closures, arguments, event.results,
 			)
 			break
 		}
@@ -428,7 +438,7 @@ func (graph *enumEventGraph) transfer(
 		for _, argument := range arguments {
 			if len(argument.closures) != 0 {
 				graph.calls.applyAlternatives(
-					state, argument.closures, nil, nil,
+					state, graph.call, argument.closures, nil, nil,
 				)
 			}
 			for region := range argument.regions {
@@ -563,7 +573,13 @@ func (graph *enumEventGraph) uniqueCell(cell enumCellID) bool {
 		return false
 	}
 	key := graph.identities.cellKeys[index]
-	return key.owner == 0 || graph.identities.uniqueRegion(key.owner)
+	if key.owner != 0 {
+		return graph.identities.uniqueRegion(key.owner)
+	}
+	activation := int(key.activation) - 1
+	return activation >= 0 &&
+		activation < len(graph.identities.activationKeys) &&
+		!graph.identities.activationKeys[activation].summary
 }
 
 type enumEventResult struct {

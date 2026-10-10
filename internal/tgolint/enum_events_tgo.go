@@ -164,6 +164,14 @@ type enumAbstractValue struct {
 	unknown       bool
 }
 
+func newEnumAbstractValue() enumAbstractValue {
+	return enumAbstractValue{
+		regions: nil, places: nil, relations: nil, relationKnown: false,
+		readCells: nil, closures: nil, dependencies: nil, observation: nil,
+		unknown: false,
+	}
+}
+
 type enumEventClosureSet map[enumEventClosureID]bool
 
 type enumEventClosureKey struct {
@@ -263,6 +271,14 @@ type enumEvent struct {
 	method     bool
 }
 
+func newEnumEvent(kind enumEventKind) enumEvent {
+	return enumEvent{
+		kind: kind, expression: nil, cells: nil, regions: nil, value: 0,
+		source: 0, values: nil, arguments: nil, results: nil, result: 0,
+		tag: 0, serial: 0, field: nil, method: false,
+	}
+}
+
 type enumEventBlock struct {
 	events       []enumEvent
 	successors   []enumEventEdge
@@ -321,13 +337,17 @@ func (graph *enumEventGraph) save(value enumAbstractValue) enumSavedValueID {
 }
 
 func (graph *enumEventGraph) newSavedValue() enumSavedValueID {
-	graph.values = append(graph.values, enumAbstractValue{unknown: true})
+	value := newEnumAbstractValue()
+	value.unknown = true
+	graph.values = append(graph.values, value)
 	return enumSavedValueID(len(graph.values))
 }
 
 func (graph *enumEventGraph) saved(id enumSavedValueID) enumAbstractValue {
 	if id <= 0 || int(id) > len(graph.values) {
-		return enumAbstractValue{unknown: true}
+		value := newEnumAbstractValue()
+		value.unknown = true
+		return value
 	}
 	return cloneEnumAbstractValue(graph.values[id-1])
 }

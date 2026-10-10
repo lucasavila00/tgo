@@ -79,7 +79,9 @@ func (builder *enumEventBuilder) callResults(call *syntax.CallExpression) []enum
 
 func (builder *enumEventBuilder) emitUnknown(block enumEventBlockID, expression *syntax.Expression) (enumEventBlockID, enumSavedValueID) {
 	value := builder.graph.newSavedValue()
-	builder.graph.addEvent(block, enumEvent{kind: enumEventSave, expression: expression, value: value})
+	event := newEnumEvent(enumEventSave)
+	event.expression, event.value = expression, value
+	builder.graph.addEvent(block, event)
 	return block, value
 }
 
@@ -102,7 +104,9 @@ func (builder *enumEventBuilder) emitPlace(block enumEventBlockID, expression *s
 	if name := syntax.IdentifierExpressionOf(expression); name != nil {
 		cell := builder.localCell(builder.checker.facts.Object(name))
 		value := builder.graph.save(enumAbstractValue{places: enumCellSet{cell: true}})
-		builder.graph.addEvent(block, enumEvent{kind: enumEventSave, value: value})
+		event := newEnumEvent(enumEventSave)
+		event.value = value
+		builder.graph.addEvent(block, event)
 		return block, value
 	}
 	return builder.emitExpression(block, expression)
@@ -119,7 +123,10 @@ func (builder *enumEventBuilder) emitSelectorPlace(block enumEventBlockID, expre
 		return block, owner
 	}
 	value := builder.graph.newSavedValue()
-	builder.graph.addEvent(block, enumEvent{kind: enumEventResolvePlace, expression: expression, source: owner, value: value, field: field})
+	event := newEnumEvent(enumEventResolvePlace)
+	event.expression, event.source, event.value = expression, owner, value
+	event.field = field
+	builder.graph.addEvent(block, event)
 	return block, value
 }
 

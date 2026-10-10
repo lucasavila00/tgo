@@ -172,3 +172,57 @@ func RecursiveUnrelatedArgument(value, other, proved *model.Event) string {
 	}
 	return ""
 }
+
+func NestedClosureUnrelatedAlias(value, other *model.Event) string {
+	mutate := func() { *other = model.NewEventStopped("changed") }
+	wrapper := func() { mutate() }
+	if value.Tag() == model.EventTagStarted {
+		wrapper()
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+type recursiveEventNode struct {
+	Next  *recursiveEventNode
+	Event *model.Event
+}
+
+func RecursiveFieldCopiedAlias(value *recursiveEventNode) string {
+	event := value.Next.Event
+	if event.Tag() == model.EventTagStarted {
+		return event.StartedPayload().ID
+	}
+	return ""
+}
+
+func SummaryChangedOtherArgument(value, other *model.Event) string {
+	mutate := func(pointer *model.Event) {
+		*pointer = model.NewEventStopped("changed")
+	}
+	mutate(value)
+	if value.Tag() != model.EventTagStarted {
+		return ""
+	}
+	mutate(other)
+	return value.StartedPayload().ID
+}
+
+func MutualRecursiveUnrelatedArgument(
+	value, other, proved *model.Event,
+) string {
+	var first, second func(*model.Event, int)
+	first = func(pointer *model.Event, depth int) {
+		if depth == 0 {
+			*pointer = model.NewEventStopped("changed")
+			return
+		}
+		second(other, 0)
+	}
+	second = func(pointer *model.Event, depth int) { first(pointer, depth) }
+	if proved.Tag() == model.EventTagStarted {
+		first(value, 1)
+		return proved.StartedPayload().ID
+	}
+	return ""
+}

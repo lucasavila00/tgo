@@ -212,7 +212,9 @@ func (builder *enumEventBuilder) switchProofEvents(
 		if !exact || !found || tag64 < 1 || tag64 > int64(len(modelVariants(model))) {
 			return nil
 		}
-		return []enumEvent{{kind: enumEventTagTest, value: value, tag: int(tag64)}}
+		event := newEnumEvent(enumEventTagTest)
+		event.value, event.tag = value, int(tag64)
+		return []enumEvent{event}
 	}
 	return nil
 }
@@ -250,7 +252,9 @@ func (builder *enumEventBuilder) proofEvents(
 	if !ok || !found {
 		return nil
 	}
-	return []enumEvent{{kind: enumEventTagTest, value: value, tag: tag}}
+	event := newEnumEvent(enumEventTagTest)
+	event.value, event.tag = value, tag
+	return []enumEvent{event}
 }
 
 func (builder *enumEventBuilder) addEdge(
@@ -300,16 +304,12 @@ func (builder *enumEventBuilder) emitNode(
 	if increment := syntax.IncrementStatementOf(statement); increment != nil {
 		block, destination := builder.emitPlace(block, increment.Expression)
 		value := builder.graph.newSavedValue()
-		builder.graph.addEvent(block, enumEvent{
-			kind:   enumEventLoad,
-			source: destination,
-			value:  value,
-		})
-		builder.graph.addEvent(block, enumEvent{
-			kind:   enumEventStore,
-			value:  value,
-			values: []enumSavedValueID{destination},
-		})
+		load := newEnumEvent(enumEventLoad)
+		load.source, load.value = destination, value
+		builder.graph.addEvent(block, load)
+		store := newEnumEvent(enumEventStore)
+		store.value, store.values = value, []enumSavedValueID{destination}
+		builder.graph.addEvent(block, store)
 		return block
 	}
 	if started := syntax.GoStatementOf(statement); started != nil {
@@ -330,15 +330,16 @@ func (builder *enumEventBuilder) emitNode(
 		if len(returned.Results) == 0 {
 			for _, object := range builder.results {
 				value := builder.graph.newSavedValue()
-				builder.graph.addEvent(block, enumEvent{
-					kind:  enumEventLoad,
-					cells: enumCellSet{builder.localCell(object): true},
-					value: value,
-				})
+				load := newEnumEvent(enumEventLoad)
+				load.cells = enumCellSet{builder.localCell(object): true}
+				load.value = value
+				builder.graph.addEvent(block, load)
 				values = append(values, value)
 			}
 		}
-		builder.graph.addEvent(block, enumEvent{kind: enumEventReturn, values: values})
+		returnEvent := newEnumEvent(enumEventReturn)
+		returnEvent.values = values
+		builder.graph.addEvent(block, returnEvent)
 	}
 	return block
 }
@@ -356,11 +357,9 @@ func (builder *enumEventBuilder) emitValueSpecification(
 			break
 		}
 		cell := builder.localCell(builder.checker.facts.DefinitionName(name))
-		builder.graph.addEvent(block, enumEvent{
-			kind:  enumEventStore,
-			cells: enumCellSet{cell: true},
-			value: values[index],
-		})
+		store := newEnumEvent(enumEventStore)
+		store.cells, store.value = enumCellSet{cell: true}, values[index]
+		builder.graph.addEvent(block, store)
 	}
 	return block
 }
@@ -420,11 +419,10 @@ func (builder *enumEventBuilder) emitOrderedAssignment(
 		if index >= len(values) {
 			break
 		}
-		builder.graph.addEvent(block, enumEvent{
-			kind:   enumEventStore,
-			value:  values[index],
-			values: []enumSavedValueID{destination},
-		})
+		store := newEnumEvent(enumEventStore)
+		store.value = values[index]
+		store.values = []enumSavedValueID{destination}
+		builder.graph.addEvent(block, store)
 	}
 	return block
 }
@@ -474,24 +472,19 @@ func (builder *enumEventBuilder) emitExpression(
 	if name := syntax.IdentifierExpressionOf(expression); name != nil {
 		cell := builder.localCell(builder.checker.facts.Object(name))
 		value := builder.graph.newSavedValue()
-		builder.graph.addEvent(block, enumEvent{
-			kind:       enumEventLoad,
-			expression: expression,
-			cells:      enumCellSet{cell: true},
-			value:      value,
-		})
+		load := newEnumEvent(enumEventLoad)
+		load.expression, load.cells, load.value =
+			expression, enumCellSet{cell: true}, value
+		builder.graph.addEvent(block, load)
 		return block, value
 	}
 	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
 		model := builder.checker.modelForSourceSelector(expression, selector)
 		if tag := variantTag(model, selector.Selector.Name); tag != 0 {
 			block, receiver := builder.emitExpression(block, selector.Expression)
-			builder.graph.addEvent(block, enumEvent{
-				kind:       enumEventPayloadCheck,
-				expression: expression,
-				value:      receiver,
-				tag:        tag,
-			})
+			check := newEnumEvent(enumEventPayloadCheck)
+			check.expression, check.value, check.tag = expression, receiver, tag
+			builder.graph.addEvent(block, check)
 			return builder.emitUnknown(block, expression)
 		}
 		block, place := builder.emitSelectorPlace(block, expression, selector)
@@ -500,12 +493,9 @@ func (builder *enumEventBuilder) emitExpression(
 			return block, place
 		}
 		value := builder.graph.newSavedValue()
-		builder.graph.addEvent(block, enumEvent{
-			kind:       enumEventLoad,
-			expression: expression,
-			source:     place,
-			value:      value,
-		})
+		load := newEnumEvent(enumEventLoad)
+		load.expression, load.source, load.value = expression, place, value
+		builder.graph.addEvent(block, load)
 		return block, value
 	}
 	if star := syntax.StarExpressionOf(expression); star != nil {
@@ -516,14 +506,12 @@ func (builder *enumEventBuilder) emitExpression(
 			literal:    literal,
 			activation: builder.activation,
 		})
-		value := builder.graph.save(enumAbstractValue{
-			closures: enumEventClosureSet{closure: true},
-		})
-		builder.graph.addEvent(block, enumEvent{
-			kind:       enumEventSave,
-			expression: expression,
-			value:      value,
-		})
+		closureValue := newEnumAbstractValue()
+		closureValue.closures = enumEventClosureSet{closure: true}
+		value := builder.graph.save(closureValue)
+		save := newEnumEvent(enumEventSave)
+		save.expression, save.value = expression, value
+		builder.graph.addEvent(block, save)
 		return block, value
 	}
 	if expression.Tag() == syntax.ExpressionTagCompositeLiteral {
@@ -546,12 +534,9 @@ func (builder *enumEventBuilder) emitExpression(
 		if receiver, _, _, _, _ := builder.checker.tagCall(expression); receiver != nil {
 			block, source := builder.emitExpression(block, receiver)
 			value := builder.graph.newSavedValue()
-			builder.graph.addEvent(block, enumEvent{
-				kind:       enumEventTagRead,
-				expression: expression,
-				source:     source,
-				value:      value,
-			})
+			read := newEnumEvent(enumEventTagRead)
+			read.expression, read.source, read.value = expression, source, value
+			builder.graph.addEvent(block, read)
 			builder.graph.expressions[expression] = value
 			return block, value
 		}
@@ -560,19 +545,14 @@ func (builder *enumEventBuilder) emitExpression(
 			tag := variantTag(model, selector.Selector.Name)
 			if tag != 0 {
 				block, receiver := builder.emitExpression(block, selector.Expression)
-				builder.graph.addEvent(block, enumEvent{
-					kind:       enumEventPayloadCheck,
-					expression: call.Callee,
-					value:      receiver,
-					tag:        tag,
-				})
+				check := newEnumEvent(enumEventPayloadCheck)
+				check.expression, check.value, check.tag = call.Callee, receiver, tag
+				builder.graph.addEvent(block, check)
 				results := builder.callResults(call)
-				builder.graph.addEvent(block, enumEvent{
-					kind:       enumEventCall,
-					expression: expression,
-					value:      receiver,
-					results:    results,
-				})
+				callEvent := newEnumEvent(enumEventCall)
+				callEvent.expression, callEvent.value = expression, receiver
+				callEvent.results = results
+				builder.graph.addEvent(block, callEvent)
 				builder.graph.expressionResults[expression] = results
 				return block, results[0]
 			}
@@ -584,14 +564,11 @@ func (builder *enumEventBuilder) emitExpression(
 			block, arguments[index] = builder.emitExpression(block, argument)
 		}
 		results := builder.callResults(call)
-		builder.graph.addEvent(block, enumEvent{
-			kind:       enumEventCall,
-			expression: expression,
-			value:      callee,
-			arguments:  arguments,
-			results:    results,
-			method:     builder.methodCall(call),
-		})
+		callEvent := newEnumEvent(enumEventCall)
+		callEvent.expression, callEvent.value = expression, callee
+		callEvent.arguments, callEvent.results = arguments, results
+		callEvent.method = builder.methodCall(call)
+		builder.graph.addEvent(block, callEvent)
 		builder.graph.expressionResults[expression] = results
 		return block, results[0]
 	}
@@ -637,10 +614,8 @@ func (builder *enumEventBuilder) emitExpression(
 		return builder.emitExpression(block, ellipsis.Element)
 	}
 	value := builder.graph.newSavedValue()
-	builder.graph.addEvent(block, enumEvent{
-		kind:       enumEventSave,
-		expression: expression,
-		value:      value,
-	})
+	save := newEnumEvent(enumEventSave)
+	save.expression, save.value = expression, value
+	builder.graph.addEvent(block, save)
 	return block, value
 }

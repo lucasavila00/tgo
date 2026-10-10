@@ -1236,3 +1236,63 @@ func RecursiveChangedArgument(value, other *model.Event) string {
 	}
 	return ""
 }
+
+func NestedClosureChangedAlias(value *model.Event) string {
+	mutate := func() { *value = model.NewEventStopped("changed") }
+	wrapper := func() { mutate() }
+	if value.Tag() == model.EventTagStarted {
+		wrapper()
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+type recursiveEventNode struct {
+	Next  *recursiveEventNode
+	Event *model.Event
+}
+
+func RecursiveFieldDifferentNode(value *recursiveEventNode) string {
+	if value.Next.Event.Tag() == model.EventTagStarted {
+		return value.Next.Next.Event.StartedPayload().ID
+	}
+	return ""
+}
+
+func RecursiveFieldDifferentOwner(
+	left, right *recursiveEventNode,
+) string {
+	if left.Next.Event.Tag() == model.EventTagStarted {
+		return right.Next.Event.StartedPayload().ID
+	}
+	return ""
+}
+
+func SummaryChangedCurrentArgument(value, other *model.Event) string {
+	mutate := func(pointer *model.Event) {
+		*pointer = model.NewEventStopped("changed")
+	}
+	mutate(other)
+	if value.Tag() == model.EventTagStarted {
+		mutate(value)
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func MutualRecursiveChangedArgument(value, other *model.Event) string {
+	var first, second func(*model.Event, int)
+	first = func(pointer *model.Event, depth int) {
+		if depth == 0 {
+			*pointer = model.NewEventStopped("changed")
+			return
+		}
+		second(other, 0)
+	}
+	second = func(pointer *model.Event, depth int) { first(pointer, depth) }
+	if other.Tag() == model.EventTagStarted {
+		first(value, 1)
+		return other.StartedPayload().ID
+	}
+	return ""
+}

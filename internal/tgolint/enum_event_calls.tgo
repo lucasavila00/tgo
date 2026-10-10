@@ -6,7 +6,7 @@ type enumEventCallID int
 
 type enumEventCallKey struct {
 	closure enumEventClosureID
-	caller  enumActivationID
+	context string
 }
 
 type enumEventCallSummary struct {
@@ -171,6 +171,7 @@ func (worklist *enumEventCallWorklist) next() enumEventCallID {
 // applyAlternatives joins closure outputs before it changes the caller state.
 func (worklist *enumEventCallWorklist) applyAlternatives(
 	state *enumEventState,
+	caller enumEventCallID,
 	closures enumEventClosureSet,
 	arguments []enumAbstractValue,
 	results []enumSavedValueID,
@@ -179,9 +180,12 @@ func (worklist *enumEventCallWorklist) applyAlternatives(
 	joinedCells := make(map[enumCellID]enumAbstractValue)
 	joinedRegions := make(enumRegionSet)
 	for closure := range closures {
-		call := worklist.call(enumEventCallKey{closure: closure})
+		call := worklist.call(enumEventCallKey{
+			closure: closure,
+			context: enumCallContext(arguments, state),
+		})
 		worklist.addInput(call, arguments, state)
-		worklist.depend(call, worklist.graph.call)
+		worklist.depend(call, caller)
 		summary := worklist.summary(call)
 		if summary == nil {
 			continue

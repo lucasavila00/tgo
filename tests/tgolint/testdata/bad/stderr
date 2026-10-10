@@ -128,3 +128,8 @@ bad/bad.go:1190:11: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:1204:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:1219:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:1235:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1245:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1257:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1266:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1278:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1295:10: Event: StartedPayload requires proof of EventTagStarted
