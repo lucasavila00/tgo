@@ -189,17 +189,7 @@ func projectStorageCallerState(
 	for _, value := range returned {
 		addStorageValueLocations(locations, value)
 	}
-	for changed := true; changed; {
-		changed = false
-		for path, value := range updated.memory {
-			if !locations[path.location] {
-				continue
-			}
-			beforeCount := len(locations)
-			addStorageValueLocations(locations, value)
-			changed = changed || len(locations) != beforeCount
-		}
-	}
+	expandStorageLocations(updated, locations)
 	result := cloneStorageState(before)
 	for path, value := range updated.memory {
 		if locations[path.location] {
@@ -221,17 +211,7 @@ func storageCallInputState(
 	for _, capture := range captures {
 		locations[capture.location] = true
 	}
-	for changed := true; changed; {
-		changed = false
-		for path, value := range state.memory {
-			if !locations[path.location] {
-				continue
-			}
-			beforeCount := len(locations)
-			addStorageValueLocations(locations, value)
-			changed = changed || len(locations) != beforeCount
-		}
-	}
+	expandStorageLocations(state, locations)
 	result := newStorageState()
 	for path, value := range state.memory {
 		if locations[path.location] {
@@ -239,6 +219,41 @@ func storageCallInputState(
 		}
 	}
 	return result
+}
+
+func expandStorageLocations(
+	state storageState,
+	locations map[storageLocation]bool,
+) {
+	values := make(map[storageLocation][]storageValue)
+	for path, value := range state.memory {
+		values[path.location] = append(values[path.location], value)
+	}
+	queue := make([]storageLocation, 0, len(locations))
+	for location := range locations {
+		queue = append(queue, location)
+	}
+	processed := make(map[storageLocation]bool)
+	for len(queue) != 0 {
+		location := queue[0]
+		queue = queue[1:]
+		if processed[location] {
+			continue
+		}
+		processed[location] = true
+		beforeCount := len(locations)
+		for _, value := range values[location] {
+			addStorageValueLocations(locations, value)
+		}
+		if len(locations) == beforeCount {
+			continue
+		}
+		for found := range locations {
+			if !processed[found] {
+				queue = append(queue, found)
+			}
+		}
+	}
 }
 
 func addStorageValueLocations(
