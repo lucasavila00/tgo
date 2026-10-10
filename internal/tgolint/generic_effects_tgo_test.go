@@ -79,3 +79,28 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 		t.Fatalf("decoded condition = %#v", condition)
 	}
 }
+
+func TestRecursiveStorageGraphCompletesWithEffects(t *testing.T) {
+	t.Parallel()
+	fact := &GenericEffectFact{Version: 1}
+	fact.Storage = StorageEffectGraph{
+		Known: true, Entry: 0,
+		Functions: []StorageEffectFunction{{
+			ID:          0,
+			ZeroEffects: []GenericEffect{{TypeParameter: 0}},
+			Blocks: []StorageEffectBlock{
+				{ID: 0, Successors: []StorageEffectEdge{{Block: 1}, {Block: 2}}},
+				{ID: 1},
+				{ID: 2, Operations: []StorageEffectOperation{{
+					Kind: storageEffectCall, Function: 0,
+				}}},
+			},
+		}},
+	}
+	effects := storageGraphEffects(storageGraphCall{
+		fact: fact, function: 0,
+	}, newStorageState())
+	if !effects.completed || len(effects.zero) != 1 {
+		t.Fatalf("recursive effects = %#v", effects)
+	}
+}
