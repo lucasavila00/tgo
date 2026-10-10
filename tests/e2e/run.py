@@ -432,6 +432,11 @@ def check_build_context_and_cgo(compiler, temporary):
     run([str(compiler), "build", "./tagged"], work, env=tag_env)
     assert feature_output.exists(), "GOFLAGS tag output is missing"
 
+    feature_output.unlink()
+    quoted_tag_env = {**os.environ, "GOFLAGS": "-tags='audit_tag'"}
+    run([str(compiler), "build", "./tagged"], work, env=quoted_tag_env)
+    assert feature_output.exists(), "quoted GOFLAGS tag output is missing"
+
     app = work / "app"
     bridge = work / "bridge"
     bad = work / "bad"
