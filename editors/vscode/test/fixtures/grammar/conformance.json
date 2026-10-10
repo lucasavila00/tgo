@@ -394,6 +394,18 @@
         "line": "groupedArray [2]%User",
         "token": "%",
         "has": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [2]%Record{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = ([2]%Record)(records)",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
       }
     ],
     "negative": [
@@ -420,6 +432,12 @@
       {
         "line": "_ = values[2] % Thing",
         "token": "%",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [left % right]int{}",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
         "not": "storage.modifier.non-nil.tgo"
       }
     ]

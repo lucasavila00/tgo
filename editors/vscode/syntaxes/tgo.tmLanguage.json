@@ -56,6 +56,21 @@
           }
         },
         {
+          "match": "((?<![A-Za-z0-9_.)\\]][ \\t]*)\\[[^\\]\\r\\n]+\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "source.go"
+                }
+              ]
+            },
+            "3": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        },
+        {
           "match": "(\\bmap[ \\t]*\\[[^\\]\\r\\n]+\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
           "captures": {
             "1": {
