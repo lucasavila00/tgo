@@ -58,7 +58,7 @@ func sourceFunctionPosition(node *syntax.Node) (token.Pos, bool) {
 	case syntax.NodeTagCommentGroup:
 		return token.NoPos, false
 	default:
-		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -77,7 +77,7 @@ func declarationFunctionPosition(value *syntax.Declaration) (token.Pos, bool) {
 	case syntax.DeclarationTagStruct:
 		return token.NoPos, false
 	default:
-		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Declaration tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -140,7 +140,7 @@ func expressionFunctionPosition(value *syntax.Expression) (token.Pos, bool) {
 	case syntax.ExpressionTagComprehension:
 		return token.NoPos, false
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -161,7 +161,7 @@ func sourceGeneralDeclaration(
 	case syntax.DeclarationTagStruct:
 		return nil, false
 	default:
-		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Declaration tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -178,6 +178,6 @@ func sourceValueSpecification(
 	case syntax.SpecificationTagType:
 		return nil, false
 	default:
-		panic(specificationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Specification tag") // unreachable: tgolint requires a case per tag
 	}
 }

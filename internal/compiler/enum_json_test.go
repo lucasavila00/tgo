@@ -194,7 +194,7 @@ type E enum { A struct{} }
 	if strings.Count(output, `"encoding/json"`) != 1 ||
 		strings.Count(output, `"fmt"`) != 1 ||
 		!strings.Contains(output, "standardjson.Marshal") ||
-		!strings.Contains(output, "fmt.Sprintf") {
+		!strings.Contains(output, "fmt.Errorf") {
 		t.Fatalf("generated output did not reuse compatible imports\n%s", output)
 	}
 }

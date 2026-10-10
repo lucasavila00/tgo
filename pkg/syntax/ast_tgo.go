@@ -90,11 +90,6 @@ type ChannelDirection struct {
 // Tag returns the active tag.
 func (v ChannelDirection) Tag() ChannelDirectionTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v ChannelDirection) UnknownTag() string {
-	return fmt.Sprintf("ChannelDirection: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // GobEncode returns the stable four-byte enum tag.
 func (v ChannelDirection) GobEncode() ([]byte, error) {
 	if v.tgoTag < ChannelDirectionTagSendReceive || v.tgoTag > ChannelDirectionTagReceiveOnly {
@@ -380,11 +375,6 @@ type Expression struct {
 
 // Tag returns the active tag.
 func (v Expression) Tag() ExpressionTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v Expression) UnknownTag() string {
-	return fmt.Sprintf("Expression: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // ExpressionBad is the Bad payload.
 type ExpressionBad struct {
@@ -2957,11 +2947,6 @@ type Statement struct {
 // Tag returns the active tag.
 func (v Statement) Tag() StatementTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Statement) UnknownTag() string {
-	return fmt.Sprintf("Statement: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // StatementBad is the Bad payload.
 type StatementBad struct {
 	Value *BadStatement
@@ -4661,11 +4646,6 @@ type Specification struct {
 // Tag returns the active tag.
 func (v Specification) Tag() SpecificationTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Specification) UnknownTag() string {
-	return fmt.Sprintf("Specification: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // SpecificationImport is the Import payload.
 type SpecificationImport struct {
 	Value *ImportSpecification
@@ -5164,11 +5144,6 @@ type Declaration struct {
 
 // Tag returns the active tag.
 func (v Declaration) Tag() DeclarationTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v Declaration) UnknownTag() string {
-	return fmt.Sprintf("Declaration: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // DeclarationBad is the Bad payload.
 type DeclarationBad struct {
@@ -6240,11 +6215,6 @@ type Node struct {
 
 // Tag returns the active tag.
 func (v Node) Tag() NodeTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v Node) UnknownTag() string {
-	return fmt.Sprintf("Node: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // NodeFile is the File payload.
 type NodeFile struct {

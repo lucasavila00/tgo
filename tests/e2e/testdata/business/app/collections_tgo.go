@@ -48,10 +48,10 @@ func Nested(account model.Account) string {
 			child := enumValue3.BusinessPayload()
 			return child.Company
 		default:
-			panic(enumValue3.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 		}
 	default:
-		panic(enumValue2.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

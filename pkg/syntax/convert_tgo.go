@@ -269,7 +269,7 @@ func (c *converter) comprehensionExpression(
 				}}),
 			)
 		default:
-			panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid frontComprehensionClause tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 	result := func(input TgoExpressionComprehensionInput) Expression {

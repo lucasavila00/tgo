@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"go/types"
+	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 
@@ -19,7 +21,6 @@ func lowerExhaustiveClauses(
 	files *token.FileSet,
 	file *token.File,
 	tree *syntax.File,
-	data []byte,
 	used map[string]bool,
 	edits []edit,
 ) ([]edit, map[string]string, error) {
@@ -44,7 +45,7 @@ func lowerExhaustiveClauses(
 			}
 			var changes []edit
 			changes, failure = lowerExhaustiveClause(
-				files, file, switchStatement, clause, data, used, storedReceivers,
+				files, file, switchStatement, clause, used, storedReceivers,
 			)
 			if failure != nil {
 				return false
@@ -61,7 +62,6 @@ func lowerExhaustiveClause(
 	file *token.File,
 	switched *syntax.SwitchStatement,
 	clause *syntax.CaseClause,
-	data []byte,
 	used map[string]bool,
 	storedReceivers map[string]string,
 ) ([]edit, error) {
@@ -78,20 +78,10 @@ func lowerExhaustiveClause(
 			files.Position(clause.Case),
 		)
 	}
-	receiverStart := file.Offset(syntax.ExpressionPosition(receiver))
-	receiverEnd := file.Offset(syntax.ExpressionEnd(receiver))
-	if receiverStart < 0 || receiverEnd < receiverStart || receiverEnd > len(data) {
-		return nil, fmt.Errorf(
-			"%s: exhaustive clause has an invalid switch receiver",
-			files.Position(clause.Case),
-		)
-	}
-	receiverText := string(data[receiverStart:receiverEnd])
-	unknownTag := receiverText + ".UnknownTag()"
+	marker := freshIdentifier("tgoExhaustive", used)
+	storedReceivers[marker] = ""
 	if exhaustiveReceiverNeedsStorage(receiver) {
-		marker := freshIdentifier("tgoExhaustive", used)
 		storedReceivers[marker] = freshIdentifier("enumValue", used)
-		unknownTag = marker + "()"
 	}
 	start := file.Offset(clause.Exhaustive)
 	colon := file.Offset(clause.Colon) + 1
@@ -99,7 +89,7 @@ func lowerExhaustiveClause(
 		{start: start, end: start + len(exhaustiveWord), text: "default"},
 		{
 			start: colon, end: colon,
-			text: " panic(" + unknownTag + ") " + enumDefaultComment,
+			text: " panic(" + marker + "()) " + enumDefaultComment,
 		},
 	}, nil
 }
@@ -130,17 +120,21 @@ func exhaustiveReceiver(expression *syntax.Expression) (*syntax.Expression, bool
 }
 
 type exhaustiveReceiverPlan struct {
-	defaultCall *ast.CallExpr
-	receiver    ast.Expr
-	selector    *ast.SelectorExpr
-	name        string
+	panicCall *ast.CallExpr
+	receiver  ast.Expr
+	selector  *ast.SelectorExpr
+	name      string
 }
 
 // lowerExhaustiveReceiverEvaluations stores non-local switch receivers once.
-func lowerExhaustiveReceiverEvaluations(file *ast.File, names map[string]string) {
+func lowerExhaustiveReceiverEvaluations(
+	file *ast.File,
+	names map[string]string,
+) []exhaustiveDefault {
 	if len(names) == 0 {
-		return
+		return nil
 	}
+	var defaults []exhaustiveDefault
 	astutil.Apply(file, nil, func(cursor *astutil.Cursor) bool {
 		switch node := cursor.Node().(type) {
 		case *ast.SwitchStmt:
@@ -153,6 +147,9 @@ func lowerExhaustiveReceiverEvaluations(file *ast.File, names map[string]string)
 					return true
 				}
 			}
+			defaults = append(defaults, exhaustiveDefault{
+				panicCall: plan.panicCall, tag: node.Tag,
+			})
 			cursor.Replace(lowerExhaustiveSwitch(node, plan))
 		case *ast.LabeledStmt:
 			switched, ok := node.Stmt.(*ast.SwitchStmt)
@@ -161,6 +158,13 @@ func lowerExhaustiveReceiverEvaluations(file *ast.File, names map[string]string)
 			}
 			plan, ok := exhaustivePlan(switched, names)
 			if !ok {
+				return true
+			}
+			defaults = append(defaults, exhaustiveDefault{
+				panicCall: plan.panicCall, tag: switched.Tag,
+			})
+			if plan.name == "" {
+				applyExhaustivePlan(plan)
 				return true
 			}
 			initializer := switched.Init
@@ -174,6 +178,12 @@ func lowerExhaustiveReceiverEvaluations(file *ast.File, names map[string]string)
 		}
 		return true
 	})
+	return defaults
+}
+
+type exhaustiveDefault struct {
+	panicCall *ast.CallExpr
+	tag       ast.Expr
 }
 
 func exhaustivePlan(
@@ -214,10 +224,10 @@ func exhaustivePlan(
 			continue
 		}
 		return exhaustiveReceiverPlan{
-			defaultCall: defaultCall,
-			receiver:    selector.X,
-			selector:    selector,
-			name:        name,
+			panicCall: panicCall,
+			receiver:  selector.X,
+			selector:  selector,
+			name:      name,
 		}, true
 	}
 	return exhaustiveReceiverPlan{}, false
@@ -245,6 +255,9 @@ func lowerExhaustiveSwitch(
 ) ast.Stmt {
 	initializer := switched.Init
 	applyExhaustivePlan(plan)
+	if plan.name == "" {
+		return switched
+	}
 	assignment := exhaustiveReceiverAssignment(plan)
 	if initializer == nil {
 		switched.Init = assignment
@@ -255,11 +268,13 @@ func lowerExhaustiveSwitch(
 }
 
 func applyExhaustivePlan(plan exhaustiveReceiverPlan) {
-	tagReceiver := ast.NewIdent(plan.name)
-	tagReceiver.NamePos = plan.receiver.Pos()
-	plan.selector.X = tagReceiver
-	plan.defaultCall.Fun = &ast.SelectorExpr{
-		X: ast.NewIdent(plan.name), Sel: ast.NewIdent("UnknownTag"),
+	if plan.name != "" {
+		tagReceiver := ast.NewIdent(plan.name)
+		tagReceiver.NamePos = plan.receiver.Pos()
+		plan.selector.X = tagReceiver
+	}
+	plan.panicCall.Args[0] = &ast.BasicLit{
+		Kind: token.STRING, Value: `"invalid enum tag"`,
 	}
 }
 
@@ -271,5 +286,25 @@ func exhaustiveReceiverAssignment(plan exhaustiveReceiverPlan) *ast.AssignStmt {
 		TokPos: plan.receiver.Pos(),
 		Tok:    token.DEFINE,
 		Rhs:    []ast.Expr{plan.receiver},
+	}
+}
+
+// setExhaustiveDefaultMessages gives each generated panic its enum name.
+func (p *packageUnit) setExhaustiveDefaultMessages() {
+	for _, source := range p.Sources {
+		for _, generated := range source.Exhaustive {
+			tag, ok := types.Unalias(p.info.TypeOf(generated.tag)).(*types.Named)
+			if !ok {
+				continue
+			}
+			name, ok := strings.CutSuffix(tag.Obj().Name(), "Tag")
+			if !ok || name == "" {
+				continue
+			}
+			generated.panicCall.Args[0] = &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", "invalid "+name+" tag"),
+			}
+		}
 	}
 }

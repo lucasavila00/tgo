@@ -198,11 +198,6 @@ type frontComprehensionClause struct {
 // Tag returns the active tag.
 func (v frontComprehensionClause) Tag() frontComprehensionClauseTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v frontComprehensionClause) UnknownTag() string {
-	return fmt.Sprintf("frontComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // frontComprehensionClauseRange is the Range payload.
 type frontComprehensionClauseRange struct {
 	frontSpan

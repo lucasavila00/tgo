@@ -69,7 +69,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 	if err != nil {
 		return nil, err
 	}
-	lowerExhaustiveReceiverEvaluations(goFile, exhaustive)
+	exhaustiveDefaults := lowerExhaustiveReceiverEvaluations(goFile, exhaustive)
 	successReturns := projectedSuccessReturns(files, goFile, successLocations)
 	if len(successReturns) != len(successLocations) {
 		return nil, fmt.Errorf("parse %s: cannot project successful return", name)
@@ -102,6 +102,7 @@ func parseSource(files *token.FileSet, name string, data []byte) (*source, error
 		NonNil:         nonNil,
 		SuccessReturns: successReturns,
 		FailureReturns: failureReturns,
+		Exhaustive:     exhaustiveDefaults,
 		GeneratedHelpers: map[string]bool{
 			externalJSONTo: jsonUse.external,
 			adjacentJSONTo: jsonUse.adjacent,
@@ -128,7 +129,7 @@ func lowerCheckedExtensions(
 	error,
 ) {
 	edits, exhaustive, err := lowerExhaustiveClauses(
-		files, file, tree, data, used, edits,
+		files, file, tree, used, edits,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, err

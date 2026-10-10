@@ -133,7 +133,7 @@ func (p *sourceParser) rawComprehension(
 			}
 			seenFilter = true
 		default:
-			panic(item.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid rawComprehensionClause tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 	return &rawComprehension{

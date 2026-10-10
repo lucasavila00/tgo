@@ -33,7 +33,7 @@ func (c *checker) collectLiteralZeros(
 		goTypeTagSignature, goTypeTagMap, goTypeTagChannel, goTypeTagInterface,
 		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(underlying.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

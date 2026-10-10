@@ -84,7 +84,7 @@ func use(load func() Event) string {
 	}
 	for _, text := range []string{
 		"switch enumValue := load(); enumValue.Tag()",
-		"panic(enumValue.UnknownTag())",
+		`panic("invalid Event tag")`,
 	} {
 		if !strings.Contains(output, text) {
 			t.Fatalf("generated switch does not contain %q\n%s", text, output)
@@ -109,7 +109,7 @@ func use(load func() Event, enumValue Event) string {
 		"initialized := true // evaluate the initializer first\n" +
 			"\t\tenumValue_1 := (load())\n\t\tswitch enumValue_1.Tag()",
 		"// evaluate the initializer first",
-		"panic(enumValue_1.UnknownTag())",
+		`panic("invalid Event tag")`,
 	} {
 		if !strings.Contains(output, text) {
 			t.Fatalf("generated switch does not contain %q\n%s", text, output)
@@ -139,7 +139,7 @@ func pointerReceiver(value *Event) {
 		t.Fatalf("local receivers gained redundant storage\n%s", output)
 	}
 	for _, text := range []string{
-		"switch value.Tag()", "panic(value.UnknownTag())",
+		"switch value.Tag()", `panic("invalid Event tag")`,
 	} {
 		if !strings.Contains(output, text) {
 			t.Fatalf("generated switch does not contain %q\n%s", text, output)
@@ -163,11 +163,27 @@ func use(values []Event, index func() int) {
 	}
 	for _, text := range []string{
 		"switch enumValue := values[index()]; enumValue.Tag()",
-		"panic(enumValue.UnknownTag())",
+		`panic("invalid Event tag")`,
 	} {
 		if !strings.Contains(output, text) {
 			t.Fatalf("generated switch does not contain %q\n%s", text, output)
 		}
+	}
+}
+
+func TestExhaustiveClauseNamesLiteralReceiverEnum(t *testing.T) {
+	output := compileEnumSwitch(t, `package sample
+type Event enum { Ready struct{} }
+func use() {
+	switch (Event.Ready{}).Tag() {
+	case EventTagReady:
+		return
+	exhaustive:
+	}
+}
+`)
+	if !strings.Contains(output, `panic("invalid Event tag")`) {
+		t.Fatalf("generated switch does not name Event\n%s", output)
 	}
 }
 

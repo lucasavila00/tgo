@@ -52,11 +52,6 @@ type ComprehensionClause struct {
 // Tag returns the active tag.
 func (v ComprehensionClause) Tag() ComprehensionClauseTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v ComprehensionClause) UnknownTag() string {
-	return fmt.Sprintf("ComprehensionClause: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // ComprehensionClauseRange is the Range payload.
 type ComprehensionClauseRange struct {
 	Value *ComprehensionRangeClause

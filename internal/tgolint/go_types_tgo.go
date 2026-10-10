@@ -61,11 +61,6 @@ type goType struct {
 // Tag returns the active tag.
 func (v goType) Tag() goTypeTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v goType) UnknownTag() string {
-	return fmt.Sprintf("goType: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // goTypeNil is the Nil payload.
 type goTypeNil struct{}
 

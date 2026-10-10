@@ -20,7 +20,7 @@ func classifyExhaustive(load func() Account, events *[]string) bool {
 		case AccountTagPersonal, AccountTagBusiness:
 			return initialized
 		default:
-			panic(enumValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 }
@@ -43,7 +43,7 @@ dispatch:
 			}
 			break dispatch
 		default:
-			panic(enumValue_1.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 	return true
@@ -68,8 +68,8 @@ func TestExhaustiveReceiverEvaluatesOnceOnValidPath(t *testing.T) {
 func TestExhaustiveReceiverEvaluatesOnceOnInvalidPath(t *testing.T) {
 	events := []string{}
 	defer func() {
-		if recover() == nil {
-			t.Fatal("invalid receiver did not panic")
+		if message := recover(); message != "invalid Account tag" {
+			t.Fatalf("panic = %v, want invalid Account tag", message)
 		}
 		if want := []string{"init", "receiver"}; !reflect.DeepEqual(events, want) {
 			t.Fatalf("evaluation order = %v, want %v", events, want)

@@ -167,7 +167,7 @@ func NodePosition(node *Node) token.Pos {
 		value := nodeValue.CommentGroupPayload()
 		return value.Value.Start
 	default:
-		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -214,7 +214,7 @@ func NodeEnd(node *Node) token.Pos {
 		value := nodeValue.CommentGroupPayload()
 		return value.Value.Stop
 	default:
-		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -306,7 +306,7 @@ func ExpressionPosition(value *Expression) token.Pos {
 		item := expressionValue.ComprehensionPayload()
 		return item.Value.Start
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -398,7 +398,7 @@ func ExpressionEnd(value *Expression) token.Pos {
 		item := expressionValue.ComprehensionPayload()
 		return item.Value.Stop
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -481,7 +481,7 @@ func statementSpan(value *Statement) Span {
 		item := statementValue.RangePayload()
 		return item.Value.Span
 	default:
-		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -516,7 +516,7 @@ func declarationSpan(value *Declaration) Span {
 		item := declarationValue.StructPayload()
 		return item.Value.Span
 	default:
-		panic(declarationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Declaration tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -545,7 +545,7 @@ func specificationSpan(value *Specification) Span {
 		item := specificationValue.TypePayload()
 		return item.Value.Span
 	default:
-		panic(specificationValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Specification tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

@@ -70,11 +70,6 @@ type SymbolKind struct {
 // Tag returns the active tag.
 func (v SymbolKind) Tag() SymbolKindTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v SymbolKind) UnknownTag() string {
-	return fmt.Sprintf("SymbolKind: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // GobEncode returns the stable four-byte enum tag.
 func (v SymbolKind) GobEncode() ([]byte, error) {
 	if v.tgoTag < SymbolKindTagPackage || v.tgoTag > SymbolKindTagVariable {

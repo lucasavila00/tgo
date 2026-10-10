@@ -390,7 +390,6 @@ type AccountBusiness struct {
 func NewAccountPersonal(name string) Account
 func NewAccountBusiness(company string, members []Account) Account
 func (value Account) Tag() AccountTag
-func (value Account) UnknownTag() string
 func (value Account) PersonalPayload() AccountPersonal
 func (value Account) BusinessPayload() AccountBusiness
 ```
@@ -454,19 +453,18 @@ expression. An exact enum type constraint can use the switch. An interface or op
 parameter cannot.
 
 The compiler evaluates a non-local receiver one time in a fresh local variable. If the switch has
-an initializer, the initializer runs first. The generated `Tag` and `UnknownTag` calls use the same
-local variable.
+an initializer, the initializer runs first. The generated `Tag` call uses the local variable.
 
 An `exhaustive:` clause requires the switch to cover every declared tag with generated tag
 constants. Parentheses, a
 constant conversion, and a same-value constant alias are valid labels. An unrelated numeric
 constant is invalid, even when its value is equal to a tag. An unresolved label suppresses the
 missing-case diagnostic. A repeated tag is invalid. `exhaustive:` must have no body. It emits a Go
-default that uses the stored receiver:
+default with a compiler-owned message:
 
 ```text
 default:
-    panic(enumValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+    panic("invalid Account tag") // unreachable: tgolint requires a case per tag
 ```
 
 A normal `default:` clause is a fallback and may cover omitted variants. Its flow type is the union
@@ -752,7 +750,6 @@ TTagV
 NewTV
 TgoTVInput
 Tag
-UnknownTag
 VPayload
 T
 tgoTag

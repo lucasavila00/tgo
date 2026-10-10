@@ -21,7 +21,6 @@ type events interface {
 	eventChoices
 	model.Event
 	Tag() model.EventTag
-	UnknownTag() string
 	StartedPayload() model.EventStarted
 	StoppedPayload() model.EventStopped
 }
@@ -42,7 +41,7 @@ func WrongPayload[E events](event E) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -51,8 +50,6 @@ type Decoy struct{}
 func (Decoy) Tag() model.EventTag {
 	return model.EventTagStarted
 }
-
-func (Decoy) UnknownTag() string { return "decoy" }
 
 func (Decoy) StartedPayload() model.EventStarted {
 	return model.EventStarted{}
@@ -65,7 +62,6 @@ func (Decoy) StoppedPayload() model.EventStopped {
 type mixedEvents interface {
 	model.Event | Decoy
 	Tag() model.EventTag
-	UnknownTag() string
 	StartedPayload() model.EventStarted
 	StoppedPayload() model.EventStopped
 }
@@ -77,7 +73,6 @@ func MixedDirect[E mixedEvents](event E) string {
 type eventPointers interface {
 	*model.Event
 	Tag() model.EventTag
-	UnknownTag() string
 	StartedPayload() model.EventStarted
 	StoppedPayload() model.EventStopped
 }
@@ -89,14 +84,13 @@ func PointerGeneric[E eventPointers](event E) string {
 	case model.EventTagStopped:
 		return event.StoppedPayload().Reason
 	default:
-		panic(event.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
 type differentModels interface {
 	model.Event | model.Signal
 	Tag() model.EventTag
-	UnknownTag() string
 }
 
 func MixedModels[M differentModels](value M) model.EventTag {

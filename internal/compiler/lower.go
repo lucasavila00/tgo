@@ -142,7 +142,7 @@ func generatedEnumMethod(receiver, method string, model *model) bool {
 	if receiver != model.Name {
 		return false
 	}
-	if method == "Tag" || method == "UnknownTag" {
+	if method == "Tag" {
 		return true
 	}
 	if payloadFreeEnum(model) && (method == "GobEncode" || method == "GobDecode") {

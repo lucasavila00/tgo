@@ -509,7 +509,7 @@ func (e *nilEnvironment) nilZeroInvalid(
 		goTypeTagInterface, goTypeTagNamed, goTypeTagTypeParameter,
 		goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 	return false
 }
@@ -559,7 +559,7 @@ func (e *nilEnvironment) checkNilLiteral(
 		goTypeTagSignature, goTypeTagChannel, goTypeTagInterface, goTypeTagNamed,
 		goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

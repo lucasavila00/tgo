@@ -53,8 +53,8 @@ func TestExhaustiveReceiverEvaluatesOnceOnValidPath(t *testing.T) {
 func TestExhaustiveReceiverEvaluatesOnceOnInvalidPath(t *testing.T) {
 	events := []string{}
 	defer func() {
-		if recover() == nil {
-			t.Fatal("invalid receiver did not panic")
+		if message := recover(); message != "invalid Account tag" {
+			t.Fatalf("panic = %v, want invalid Account tag", message)
 		}
 		if want := []string{"init", "receiver"}; !reflect.DeepEqual(events, want) {
 			t.Fatalf("evaluation order = %v, want %v", events, want)
