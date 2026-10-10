@@ -291,13 +291,16 @@ def makefile_failures(source: str) -> list[str]:
     """Return failures in the active formatter corpus Make targets."""
     failures: list[str] = []
     slow = make_target(source, "slow-ci-unlocked")
-    expected_slow = "slow-ci-unlocked: tgolint-unit-test formatter-go-corpus"
+    expected_slow = (
+        "slow-ci-unlocked: tgolint-unit-test-unlocked "
+        "formatter-go-corpus-unlocked"
+    )
     if slow is None or slow[0] != expected_slow:
         failures.append("slow-ci-unlocked must depend on formatter-go-corpus")
 
     slow_entry = make_target(source, "slow-ci")
     expected_slow_recipe = [
-        '\tflock "$$(git rev-parse --git-path tgo-ci.lock)" '
+        "\t+@scripts/with-local-validation-lock.sh "
         "$(MAKE) -j2 slow-ci-unlocked",
     ]
     if slow_entry is None or slow_entry[0] != "slow-ci:":
@@ -305,14 +308,14 @@ def makefile_failures(source: str) -> list[str]:
     elif slow_entry[1] != expected_slow_recipe:
         failures.append("slow-ci must run the exact locked slow CI recipe")
 
-    corpus = make_target(source, "formatter-go-corpus")
+    corpus = make_target(source, "formatter-go-corpus-unlocked")
     expected_recipe = [
         "\tTGO_FULL_GO_FORMAT_CORPUS=1 go test ./pkg/format "
         "-run TestSourceMatchesFullGoTree -count=1 && \\",
         '\t\t{ test -z "$$GITHUB_OUTPUT" || echo "passed=true" '
         '>> "$$GITHUB_OUTPUT"; }',
     ]
-    if corpus is None or corpus[0] != "formatter-go-corpus:":
+    if corpus is None or corpus[0] != "formatter-go-corpus-unlocked:":
         failures.append("Makefile needs an active formatter-go-corpus target")
     elif corpus[1] != expected_recipe:
         failures.append("formatter-go-corpus must run the exact full corpus recipe")
