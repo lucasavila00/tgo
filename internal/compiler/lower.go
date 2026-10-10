@@ -11,7 +11,7 @@ func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
 	p.generatedValues = make(map[*ast.ValueSpec]bool)
 	p.sourceReferences = make(map[token.Pos]types.Object)
-	p.erasedImports = make(map[*ast.ImportSpec]bool)
+	p.erasedImports = make(map[*ast.ImportSpec]*ast.File)
 	p.references = nil
 	for _, source := range p.Sources {
 		p.markGenerated(source)
@@ -389,6 +389,7 @@ func (p *packageUnit) checkedConstructorCall(
 	}
 	p.recordCheckedLiteralReferences(literal, named, structure, indices)
 
+	p.markErasedOwnerImport(file, literal.Type, named.Obj().Pkg())
 	prefix := p.ownerQualifier(file, named.Obj().Pkg())
 	constructor := p.generatedObject(
 		prefix, owner.Path, "New"+declaration.Name, literal.Lbrace,

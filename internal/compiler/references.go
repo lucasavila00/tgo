@@ -293,13 +293,56 @@ func (p *packageUnit) markErasedOwnerImport(
 	if surface == nil || owner == nil || surface.Path() == owner.Path() {
 		return
 	}
+	if imported := surfaceImport(expression, p.info); imported != nil {
+		for _, specification := range file.Imports {
+			if importPackageName(specification, p.info) == imported {
+				p.erasedImports[specification] = file
+				return
+			}
+		}
+		return
+	}
 	for _, specification := range file.Imports {
 		path, err := strconv.Unquote(specification.Path.Value)
-		if err == nil && path == surface.Path() {
-			p.erasedImports[specification] = true
+		if err == nil && path == surface.Path() &&
+			specification.Name != nil && specification.Name.Name == "." {
+			p.erasedImports[specification] = file
 			return
 		}
 	}
+}
+
+// surfaceImport gets the qualified import named by one source type expression.
+func surfaceImport(expression ast.Expr, info *types.Info) *types.PkgName {
+	switch expression := expression.(type) {
+	case *ast.SelectorExpr:
+		identifier, ok := expression.X.(*ast.Ident)
+		if !ok {
+			return nil
+		}
+		imported, _ := info.Uses[identifier].(*types.PkgName)
+		return imported
+	case *ast.IndexExpr:
+		return surfaceImport(expression.X, info)
+	case *ast.IndexListExpr:
+		return surfaceImport(expression.X, info)
+	case *ast.ParenExpr:
+		return surfaceImport(expression.X, info)
+	}
+	return nil
+}
+
+// importPackageName gets the object declared by one import specification.
+func importPackageName(
+	specification *ast.ImportSpec,
+	info *types.Info,
+) *types.PkgName {
+	if specification.Name == nil {
+		imported, _ := info.Implicits[specification].(*types.PkgName)
+		return imported
+	}
+	imported, _ := info.Defs[specification.Name].(*types.PkgName)
+	return imported
 }
 
 // surfaceTypePackage gets the package named by the source type expression.
@@ -326,11 +369,11 @@ func surfaceTypePackage(expression ast.Expr, info *types.Info) *types.Package {
 // blankUnusedErasedImports preserves imports whose only type use was lowered.
 func (p *packageUnit) blankUnusedErasedImports() bool {
 	changed := false
-	for specification := range p.erasedImports {
+	for specification, file := range p.erasedImports {
 		if specification.Name != nil && specification.Name.Name == "_" {
 			continue
 		}
-		if p.importUsed(specification) {
+		if p.importUsed(file, specification) {
 			continue
 		}
 		specification.Name = ast.NewIdent("_")
@@ -340,31 +383,47 @@ func (p *packageUnit) blankUnusedErasedImports() bool {
 }
 
 // importUsed reports whether lowered syntax still refers to one import.
-func (p *packageUnit) importUsed(specification *ast.ImportSpec) bool {
+func (p *packageUnit) importUsed(
+	file *ast.File,
+	specification *ast.ImportSpec,
+) bool {
 	path, err := strconv.Unquote(specification.Path.Value)
 	if err != nil {
 		return true
 	}
 	if specification.Name != nil && specification.Name.Name == "." {
-		for _, object := range p.info.Uses {
-			if object != nil && object.Pkg() != nil && object.Pkg().Path() == path {
-				return true
-			}
-		}
-		return false
+		return p.dotImportUsed(file, path)
 	}
-	var imported types.Object
-	if specification.Name == nil {
-		imported = p.info.Implicits[specification]
-	} else {
-		imported = p.info.Defs[specification.Name]
-	}
+	imported := importPackageName(specification, p.info)
 	for _, object := range p.info.Uses {
 		if object == imported {
 			return true
 		}
 	}
 	return false
+}
+
+// dotImportUsed reports whether one file still has an unqualified package use.
+func (p *packageUnit) dotImportUsed(file *ast.File, path string) bool {
+	used := false
+	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
+		identifier, ok := cursor.Node().(*ast.Ident)
+		if !ok {
+			return true
+		}
+		if selector, ok := cursor.Parent().(*ast.SelectorExpr); ok &&
+			selector.Sel == identifier {
+			return true
+		}
+		object := p.info.Uses[identifier]
+		if object == nil || object.Pkg() == nil || object.Pkg().Path() != path ||
+			object.Parent() != object.Pkg().Scope() {
+			return true
+		}
+		used = true
+		return false
+	}, nil)
+	return used
 }
 
 // validateGeneratedReferences rejects a source name that captures inserted code.

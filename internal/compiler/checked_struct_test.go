@@ -202,6 +202,186 @@ func Invalid(number int) (model.Port, error) {
 	}
 }
 
+func TestCheckedStructAliasLiteralsRewriteErasedImports(t *testing.T) {
+	t.Parallel()
+	modelPackage := compileCheckedStructPackage(t)
+	bridgePackage, problems := Compile(PackageInput{
+		Path: "bridge",
+		Sources: []File{{Name: "bridge.tgo", Data: []byte(`package bridge
+import "model"
+type Alias = model.Port
+func Marker() int { return 1 }
+`)}},
+		Imports: map[string]*CompiledPackage{"model": modelPackage},
+		FileSet: token.NewFileSet(),
+		Importer: checkedPackageImporter{
+			packages: map[string]*types.Package{"model": modelPackage.Package},
+			fallback: importer.Default(),
+		},
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+
+	tests := []struct {
+		name        string
+		imports     string
+		body        string
+		wants       []string
+		forbidden   string
+		constructor string
+	}{
+		{
+			name: "literal only",
+			imports: `import (
+	"bridge"
+	_ "unsafe"
+)`,
+			body: `func Make(number int) (any, error) {
+	return bridge.Alias{number: number}
+}`,
+			wants:       []string{`_ "bridge"`},
+			forbidden:   "\n\t\"bridge\"\n",
+			constructor: "model.NewPort(",
+		},
+		{
+			name: "named literal only",
+			imports: `import (
+	records "model"
+	facade "bridge"
+)`,
+			body: `func Make(number int) (records.Port, error) {
+	return facade.Alias{number: number}
+}`,
+			wants:       []string{`_ "bridge"`},
+			forbidden:   `facade "bridge"`,
+			constructor: "records.NewPort(",
+		},
+		{
+			name: "other source use",
+			imports: `import (
+	"model"
+	facade "bridge"
+)`,
+			body: `func Make(number int) (model.Port, error) { return facade.Alias{number: number} }
+func Marker() int { return facade.Marker() }`,
+			wants:       []string{`facade "bridge"`},
+			forbidden:   `_ "bridge"`,
+			constructor: "model.NewPort(",
+		},
+		{
+			name: "duplicate import path",
+			imports: `import (
+	"model"
+	used "bridge"
+	erased "bridge"
+)`,
+			body: `func Make(number int) (model.Port, error) {
+	return erased.Alias{number: number + used.Marker()}
+}`,
+			wants:       []string{`used "bridge"`, `_ "bridge"`},
+			forbidden:   `erased "bridge"`,
+			constructor: "model.NewPort(",
+		},
+		{
+			name: "dot literal only",
+			imports: `import (
+	"model"
+	. "bridge"
+	used "bridge"
+)`,
+			body: `func Make(number int) (model.Port, error) {
+	return Alias{number: number + used.Marker()}
+}`,
+			wants:       []string{`used "bridge"`, `_ "bridge"`},
+			forbidden:   `. "bridge"`,
+			constructor: "model.NewPort(",
+		},
+		{
+			name: "dot other source use",
+			imports: `import (
+	"model"
+	. "bridge"
+	used "bridge"
+)`,
+			body: `func Make(number int) (model.Port, error) {
+	return Alias{number: number + used.Marker()}
+}
+func ReadMarker() int { return Marker() }`,
+			wants:       []string{`used "bridge"`, `. "bridge"`},
+			forbidden:   `_ "bridge"`,
+			constructor: "model.NewPort(",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compiled, problems := Compile(PackageInput{
+				Path: "app",
+				Sources: []File{{
+					Name: "app.tgo",
+					Data: []byte(
+						"package app\n" + test.imports + "\n" + test.body + "\n",
+					),
+				}},
+				Imports: map[string]*CompiledPackage{
+					"bridge": bridgePackage,
+					"model":  modelPackage,
+				},
+				FileSet: token.NewFileSet(),
+				Importer: checkedPackageImporter{
+					packages: map[string]*types.Package{
+						"bridge": bridgePackage.Package,
+						"model":  modelPackage.Package,
+					},
+					fallback: importer.Default(),
+				},
+			})
+			if len(problems) != 0 {
+				t.Fatal(problems[0])
+			}
+			output := string(compiled.Outputs["app.tgo"])
+			for _, want := range test.wants {
+				if !strings.Contains(output, want) {
+					t.Fatalf("generated imports do not contain %q\n%s", want, output)
+				}
+			}
+			if strings.Contains(output, test.forbidden) {
+				t.Fatalf("generated imports contain %q\n%s", test.forbidden, output)
+			}
+			if !strings.Contains(output, test.constructor) {
+				t.Fatalf("generated output does not use the defining constructor\n%s", output)
+			}
+			if strings.Contains(test.imports, `_ "unsafe"`) &&
+				!strings.Contains(output, `_ "unsafe"`) {
+				t.Fatalf("generated output removed a source blank import\n%s", output)
+			}
+		})
+	}
+}
+
+func TestLocalCheckedStructAliasLiteralUsesConstructor(t *testing.T) {
+	t.Parallel()
+	compiled, problems := Compile(PackageInput{
+		Path: "sample",
+		Sources: []File{{Name: "sample.tgo", Data: []byte(`package sample
+
+type Port struct { number int } checked
+func (value Port) check() (Port, error) { return value, nil }
+type Alias = Port
+func Make(number int) (Port, error) { return Alias{number: number} }
+`)}},
+		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	output := string(compiled.Outputs["sample.tgo"])
+	if !strings.Contains(output, "NewPort(tgoInput.FieldNumber)") {
+		t.Fatalf("local alias did not use the checked constructor\n%s", output)
+	}
+}
+
 func TestCheckedStructLiteralPreservesEvaluationOrder(t *testing.T) {
 	t.Parallel()
 	compiled, problems := Compile(PackageInput{

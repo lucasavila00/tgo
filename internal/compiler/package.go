@@ -25,7 +25,7 @@ type packageUnit struct {
 	generated        map[ast.Decl]bool
 	generatedValues  map[*ast.ValueSpec]bool
 	sourceReferences map[token.Pos]types.Object
-	erasedImports    map[*ast.ImportSpec]bool
+	erasedImports    map[*ast.ImportSpec]*ast.File
 	references       []generatedReference
 	typeErrors       []error
 	errors           []error
