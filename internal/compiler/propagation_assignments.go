@@ -228,7 +228,25 @@ func (l *propagationLowerer) splitVariableDeclaration(
 		if index == 0 {
 			declaration.Doc = general.Doc
 		}
-		result = append(result, l.declaration(&ast.DeclStmt{Decl: declaration})...)
+		statements := l.declaration(&ast.DeclStmt{Decl: declaration})
+		declarationIndex := 0
+		for index, statement := range statements {
+			item, ok := statement.(*ast.DeclStmt)
+			if ok && item.Decl == declaration {
+				declarationIndex = index
+				break
+			}
+			positionGeneratedStatement(statement, specification.Pos())
+		}
+		positionGeneratedStatement(statements[declarationIndex], specification.Pos())
+		position := specification.End()
+		if value, ok := specification.(*ast.ValueSpec); ok && value.Comment != nil {
+			position = value.Comment.End() + 1
+		}
+		for _, statement := range statements[declarationIndex+1:] {
+			positionGeneratedStatement(statement, position)
+		}
+		result = append(result, statements...)
 	}
 	return result, true
 }

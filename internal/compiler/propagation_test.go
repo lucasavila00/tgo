@@ -194,3 +194,57 @@ func value() (int, error) {
 		t.Fatal(err)
 	}
 }
+
+func TestPropagationNonDirectVariableCommentsStayAttached(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func mark(label string) int { return len(label) }
+func load() (int, error) { return 1, nil }
+
+func value() (int, error) {
+	// group doc
+	var (
+		// typed doc
+		typed int = load()!! //nolint:errcheck // typed inline
+		// multiple doc
+		first, second = mark("first"), load()!! // multiple inline
+		// after doc
+		after = mark("after") // after inline
+	)
+	return typed + first + second + after, nil
+}
+`)
+	want := `	// group doc
+
+	// typed doc
+	result, err := load()
+	if err != nil {
+		return 0, err
+	}
+	var typed int = result //nolint:errcheck // typed inline
+
+	// multiple doc
+	operand := mark("first")
+	result_1, err_1 := load()
+	if err_1 != nil {
+		return 0, err_1
+	}
+	var first, second = operand, result_1 // multiple inline
+
+	// after doc
+	var after = mark("after") // after inline`
+	if !strings.Contains(output, want) {
+		t.Fatalf("generated comments moved\n%s", output)
+	}
+	files := token.NewFileSet()
+	file, err := parser.ParseFile(files, "sample.go", output, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (&types.Config{}).Check(
+		"sample", files, []*ast.File{file}, nil,
+	); err != nil {
+		t.Fatal(err)
+	}
+}
