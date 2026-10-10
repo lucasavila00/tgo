@@ -156,7 +156,12 @@ func read(ok bool, owner %User) error {
 	_ = values[2] % Thing
 	_ = [2]%Record{}
 	_ = ([2]%Record)(records)
+	_ = [len([2]int{})]%Record{}
+	_ = [len("a]b")]%Record{}
 	_ = [left % right]int{}
+	_ = "abc" [2] % Thing
+	_ = 'x' [0] % Thing
+	_ = []int{} [0] % Thing
 	_ = []int{for _, item := range values { if item > 0 { item } }}
 	switch event.Tag() {
 	exhaustive:
