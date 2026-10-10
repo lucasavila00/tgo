@@ -434,6 +434,8 @@ func copyStorageSlices(
 	source storageValue,
 ) storageValue {
 	count := storageValue{}
+	snapshot := cloneStorageState(state)
+	writes := make(map[storagePathKey]storageValue)
 	for _, target := range destination.slices {
 		for _, origin := range source.slices {
 			if target.knownLength && target.length == 0 ||
@@ -441,9 +443,9 @@ func copyStorageSlices(
 				count = joinStorageValue(count, storageValue{integerKnown: true})
 				continue
 			}
-			copyStorageSliceElements(
-				state, target, origin, len(destination.slices) == 1,
-			)
+			for path, value := range storageSliceCopyValues(snapshot, target, origin) {
+				writes[path] = joinStorageValue(writes[path], value)
+			}
 			if target.knownLength && origin.knownLength {
 				length := target.length
 				if origin.length < length {
@@ -457,7 +459,54 @@ func copyStorageSlices(
 			}
 		}
 	}
+	for path, value := range writes {
+		writeStorageMemory(
+			state, path, value,
+			len(destination.slices) == 1 && !path.wildcard,
+		)
+	}
 	return count
+}
+
+func storageSliceCopyValues(
+	state storageState,
+	destination storageSlice,
+	source storageSlice,
+) map[storagePathKey]storageValue {
+	result := make(map[storagePathKey]storageValue)
+	if destination.knownLength && source.knownLength &&
+		destination.knownOffset && source.knownOffset {
+		length := destination.length
+		if source.length < length {
+			length = source.length
+		}
+		for index := int64(0); index < length; index++ {
+			from := storageMemoryKey(storagePath{
+				location: source.backing,
+				steps: []StorageEffectPath{{
+					Kind: storagePathIndex, Index: source.offset + index,
+				}},
+			})
+			to := storageMemoryKey(storagePath{
+				location: destination.backing,
+				steps: []StorageEffectPath{{
+					Kind: storagePathIndex, Index: destination.offset + index,
+				}},
+			})
+			result[to] = readStorageMemory(state, from)
+		}
+		return result
+	}
+	from := storageMemoryKey(storagePath{
+		location: source.backing,
+		steps:    []StorageEffectPath{{Kind: storagePathAnyIndex}},
+	})
+	to := storageMemoryKey(storagePath{
+		location: destination.backing,
+		steps:    []StorageEffectPath{{Kind: storagePathAnyIndex}},
+	})
+	result[to] = readStorageMemory(state, from)
+	return result
 }
 
 func copyStorageSliceElements(

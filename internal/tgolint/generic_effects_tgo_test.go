@@ -253,3 +253,57 @@ func TestStorageUnknownSliceOffsetReadsWildcard(t *testing.T) {
 		t.Fatalf("wildcard read = %#v", got)
 	}
 }
+
+func TestStorageIndexDeduplicatesOneDestination(t *testing.T) {
+	t.Parallel()
+	state := newStorageState()
+	location := storageLocation{graph: 1, site: 1}
+	path := storagePath{location: location}
+	indexed := storageMemoryKey(storagePath{
+		location: location,
+		steps:    []StorageEffectPath{{Kind: storagePathIndex, Index: 0}},
+	})
+	writeStorageMemory(state, indexed, storageValue{integer: 1, integerKnown: true}, true)
+	writeStorageIndex(state, storageValue{
+		regions: []storagePath{path},
+		slices:  []storageSlice{{backing: location, knownOffset: true}},
+	}, StorageEffectOperation{KnownLength: true}, storageValue{
+		integer: 3, integerKnown: true,
+	})
+	if got := state.memory[indexed]; !got.integerKnown || got.integer != 3 {
+		t.Fatalf("deduplicated write = %#v", got)
+	}
+}
+
+func TestStorageCopyJoinsAlternativeSourcesBeforeWrite(t *testing.T) {
+	t.Parallel()
+	state := newStorageState()
+	destination := storageLocation{graph: 1, site: 1}
+	left := storageLocation{graph: 1, site: 2}
+	right := storageLocation{graph: 1, site: 3}
+	indexPath := func(location storageLocation) storagePathKey {
+		return storageMemoryKey(storagePath{
+			location: location,
+			steps:    []StorageEffectPath{{Kind: storagePathIndex, Index: 0}},
+		})
+	}
+	writeStorageMemory(state, indexPath(left), storageValue{
+		integer: 1, integerKnown: true,
+	}, true)
+	writeStorageMemory(state, indexPath(right), storageValue{
+		integer: 2, integerKnown: true,
+	}, true)
+	copyStorageSlices(state,
+		storageValue{slices: []storageSlice{{
+			backing: destination, length: 1,
+			knownOffset: true, knownLength: true,
+		}}},
+		storageValue{slices: []storageSlice{
+			{backing: left, length: 1, knownOffset: true, knownLength: true},
+			{backing: right, length: 1, knownOffset: true, knownLength: true},
+		}},
+	)
+	if got := state.memory[indexPath(destination)]; got.integerKnown {
+		t.Fatalf("alternative source copy = %#v", got)
+	}
+}

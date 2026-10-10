@@ -535,22 +535,24 @@ func writeStorageIndex(
 	if operation.KnownLength {
 		step = StorageEffectPath{Kind: storagePathIndex, Index: operation.Length}
 	}
-	targetCount := len(base.slices) + len(base.regions)
-	exact := operation.KnownLength && targetCount == 1
+	targets := make(map[storagePathKey]bool)
 	for _, slice := range base.slices {
 		current := step
 		if operation.KnownLength && slice.knownOffset {
 			current.Index += slice.offset
 		} else {
 			current = StorageEffectPath{Kind: storagePathAnyIndex}
-			exact = false
 		}
 		path := storagePath{location: slice.backing, steps: []StorageEffectPath{current}}
-		writeStorageMemory(state, storageMemoryKey(path), value, exact)
+		targets[storageMemoryKey(path)] = true
 	}
 	for _, region := range base.regions {
 		region.steps = append(region.steps, step)
-		writeStorageMemory(state, storageMemoryKey(region), value, exact)
+		targets[storageMemoryKey(region)] = true
+	}
+	exact := len(targets) == 1
+	for target := range targets {
+		writeStorageMemory(state, target, value, exact && !target.wildcard)
 	}
 }
 
