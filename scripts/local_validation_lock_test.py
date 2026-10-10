@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -10,6 +11,12 @@ LOCK_SCRIPT = ROOT / "scripts" / "with-local-validation-lock.sh"
 
 
 class LocalValidationLockTest(unittest.TestCase):
+    def clean_environment(self) -> dict[str, str]:
+        environment = os.environ.copy()
+        environment.pop("GITHUB_ACTIONS", None)
+        environment.pop("TGO_LOCAL_VALIDATION_LOCK_HELD", None)
+        return environment
+
     def make_repository(self, directory: Path) -> Path:
         repository = directory / "repository"
         subprocess.run(["git", "init", "-q", repository], check=True)
@@ -49,6 +56,7 @@ class LocalValidationLockTest(unittest.TestCase):
             first = subprocess.Popen(
                 [LOCK_SCRIPT, "sh", "-c", command, "sh", "first", events],
                 cwd=repository,
+                env=self.clean_environment(),
             )
             deadline = time.monotonic() + 1
             while not events.exists() and time.monotonic() < deadline:
@@ -57,6 +65,7 @@ class LocalValidationLockTest(unittest.TestCase):
             second = subprocess.Popen(
                 [LOCK_SCRIPT, "sh", "-c", command, "sh", "second", events],
                 cwd=worktree,
+                env=self.clean_environment(),
             )
             self.assertEqual(first.wait(timeout=2), 0)
             self.assertEqual(second.wait(timeout=2), 0)
@@ -74,13 +83,16 @@ class LocalValidationLockTest(unittest.TestCase):
                 "outer:\n"
                 f"\t+@{LOCK_SCRIPT} $(MAKE) inner\n"
                 "inner:\n"
-                f"\t@{LOCK_SCRIPT} sh -c 'echo complete > {result}'\n"
+                f"\t@{LOCK_SCRIPT} sh -c '"
+                'test "$$TGO_LOCAL_VALIDATION_LOCK_HELD" = 1 && '
+                f"echo complete > {result}'\n"
             )
 
             subprocess.run(
                 ["make", "outer"],
                 cwd=repository,
                 check=True,
+                env=self.clean_environment(),
                 timeout=2,
             )
             self.assertEqual(result.read_text(), "complete\n")
