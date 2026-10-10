@@ -555,7 +555,6 @@ func (c *checker) checkGenericZeroSafety() {
 			summary.storage = graph.graph
 		}
 	}
-	c.propagateGenericZeroFacts(summaries)
 	for function, summary := range summaries {
 		summary.attachStorageEffects()
 		c.attachLiteralStorageEffects(summary)
@@ -642,13 +641,6 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 			summaries[object] = summary
 			return false
 		})
-	}
-	for _, summary := range summaries {
-		signature, _ := summary.function.Type().(*types.Signature)
-		c.collectReturnedGenericEffects(
-			summary, signature, summary.declaration.Type, summaries, declarations,
-		)
-		c.collectGenericValueUses(summary, summaries)
 	}
 	return summaries
 }
