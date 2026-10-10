@@ -9,6 +9,7 @@ import (
 var savedNested = genericzero.Nested[int]()
 
 func Safe() {
+	genericzero.TraverseRecursiveFunctionNodes(nil)
 	genericzero.Variable[int]()
 	_ = genericzero.Named[int]()
 	_ = genericzero.New[int]()

@@ -4,6 +4,19 @@ type FunctionBox struct {
 	Values []func()
 }
 
+type RecursiveFunctionNode struct {
+	Children []RecursiveFunctionNode
+	Value    func()
+}
+
+func TraverseRecursiveFunctionNodes(nodes []RecursiveFunctionNode) {
+	for len(nodes) != 0 {
+		node := nodes[0]
+		nodes[0] = node
+		nodes = node.Children
+	}
+}
+
 func storedEffect[T any]() {
 	var value T
 	_ = value
