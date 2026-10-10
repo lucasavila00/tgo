@@ -133,6 +133,9 @@ Move the requested work to review without unnecessary waiting.
 - Do not merge `main` into a clean pull request only to refresh its ancestry.
   This repository squash-merges pull requests. Merge `main` only when GitHub
   reports a conflict, and preserve both sides of the conflict.
+- Do not build a merge train or combine open pull-request branches. Review and
+  merge each clean pull request independently. Run the full tests again on the
+  combined `main` branch before publishing.
 - Keep a pull request in draft while implementation, conflict resolution,
   review, or required CI is incomplete.
 - Mark a pull request ready as soon as its requested scope is complete, its
