@@ -122,6 +122,10 @@ func Contextual() (model.Context, error) {
 		pointer: nil,
 	}
 }
+
+func Unicode() (model.Unicode, error) {
+	return model.Unicode{ς: 5, σ_1: 6, σ: 4}
+}
 `)}},
 		Imports: map[string]*CompiledPackage{"model": modelPackage},
 		FileSet: token.NewFileSet(),
@@ -146,6 +150,20 @@ func Contextual() (model.Context, error) {
 		!strings.Contains(output, "FieldNumber: 255") ||
 		!strings.Contains(output, "FieldPointer: nil") {
 		t.Fatalf("imported contextual construction changed\n%s", output)
+	}
+	for _, text := range []string{
+		"model.TgoUnicodeInput{",
+		"FieldΣ_1: 5",
+		"FieldΣ_1_1: 6",
+		"FieldΣ: 4",
+		"model.NewUnicode(",
+		".FieldΣ, ",
+		".FieldΣ_1, ",
+		".FieldΣ_1_1)",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("imported Unicode construction does not contain %q\n%s", text, output)
+		}
 	}
 	_, problems = Compile(PackageInput{
 		Path: "invalid",
@@ -220,6 +238,42 @@ func Make() (Record, error) {
 		strings.Count(output, "observe(1)") != 1 ||
 		strings.Count(output, "FieldSecond: TgoDefaultRecordsecond()") != 1 {
 		t.Fatalf("checked literal expression is not evaluated once\n%s", output)
+	}
+}
+
+func TestCheckedStructCarrierFieldNamesAreUnique(t *testing.T) {
+	t.Parallel()
+	compiled, problems := Compile(PackageInput{
+		Path: "sample",
+		Sources: []File{{Name: "sample.tgo", Data: []byte(`package sample
+
+type Pair struct {
+	σ int
+	ς int
+	σ_1 int
+} checked
+
+func (value Pair) check() (Pair, error) { return value, nil }
+
+func Make() (Pair, error) {
+	return Pair{ς: 2, σ_1: 3, σ: 1}
+}
+`)}},
+		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	})
+	if len(problems) != 0 {
+		t.Fatal(problems[0])
+	}
+	output := string(compiled.Outputs["sample.tgo"])
+	for _, text := range []string{
+		"FieldΣ_1: 2",
+		"FieldΣ_1_1: 3",
+		"FieldΣ: 1",
+		"return NewPair(tgoInput.FieldΣ, tgoInput.FieldΣ_1, tgoInput.FieldΣ_1_1)",
+	} {
+		if !strings.Contains(output, text) {
+			t.Fatalf("generated Go does not contain %q\n%s", text, output)
+		}
 	}
 }
 
@@ -379,6 +433,13 @@ type Context struct {
 	points []struct { X int }
 } checked
 func (value Context) check() (Context, error) { return value, nil }
+
+type Unicode struct {
+	σ int
+	ς int
+	σ_1 int
+} checked
+func (value Unicode) check() (Unicode, error) { return value, nil }
 `)}},
 		FileSet: token.NewFileSet(), Importer: importer.Default(),
 	})

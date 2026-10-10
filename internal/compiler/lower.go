@@ -241,7 +241,7 @@ func (p *packageUnit) enumConstructorCall(
 	if !keyed {
 		return call(constructor, values...)
 	}
-	carrierNames := enumCarrierFieldNames(variant.Fields)
+	carrierNames := carrierFieldNames(variant.Fields)
 	carrier := enumCarrierName(declaration.Name, variant.Name)
 	carrierElements := make([]ast.Expr, 0, len(evaluation))
 	for index, value := range evaluation {
@@ -379,6 +379,7 @@ func (p *packageUnit) checkedConstructorCall(
 	if !ok || structure.NumFields() != len(declaration.Fields) {
 		return literal
 	}
+	carrierNames := carrierFieldNames(declaration.Fields)
 
 	values, evaluation, indices, keyed, valid := p.checkedLiteralValues(
 		literal, structure,
@@ -403,9 +404,7 @@ func (p *packageUnit) checkedConstructorCall(
 	for index, value := range evaluation {
 		fieldIndex := indices[index]
 		carrierElements = append(carrierElements, &ast.KeyValueExpr{
-			Key: ast.NewIdent(checkedCarrierFieldName(
-				declaration.Fields[fieldIndex], fieldIndex,
-			)),
+			Key:   ast.NewIdent(carrierNames[fieldIndex]),
 			Value: value,
 		})
 	}
@@ -414,7 +413,7 @@ func (p *packageUnit) checkedConstructorCall(
 	for index := range arguments {
 		arguments[index] = &ast.SelectorExpr{
 			X:   ast.NewIdent(inputName),
-			Sel: ast.NewIdent(checkedCarrierFieldName(declaration.Fields[index], index)),
+			Sel: ast.NewIdent(carrierNames[index]),
 		}
 	}
 	constructorCall := call(constructor, arguments...)
