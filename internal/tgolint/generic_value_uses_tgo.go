@@ -10,6 +10,8 @@ import (
 
 type returnedGenericValue struct {
 	expression *syntax.Expression
+	path       *syntax.Expression
+	conditions []GenericEffectCondition
 	maySkip    bool
 }
 
@@ -28,7 +30,7 @@ func (c *checker) collectGenericValueUses(
 	summaries map[*types.Func]*genericEffectSummary,
 ) {
 	signature, _ := summary.function.Type().(*types.Signature)
-	bindings := c.returnedClosureBindings(summary.body, nil)
+	bindings := c.returnedClosureBindings(summary, nil)
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
@@ -81,6 +83,11 @@ func (c *checker) collectContainerCallGenericValueUses(
 	summaries map[*types.Func]*genericEffectSummary,
 	bindings map[types.Object]*returnedClosureBinding,
 ) {
+	if name := syntax.IdentifierExpressionOf(unparenthesized(call.Callee)); name != nil {
+		if _, builtin := c.facts.Object(name).(*types.Builtin); builtin {
+			return
+		}
+	}
 	for _, argument := range call.Args {
 		if returnedFunctionType(c.facts.Type(argument)) {
 			continue
@@ -409,8 +416,14 @@ func (c *checker) genericSummaryValues(
 	opaque := binding.opaque
 	for _, source := range binding.sources {
 		nested, nestedMaySkip, nestedOpaque := c.genericSummaryValues(
-			summary, source, summaries, bindings, seen,
+			summary, source.expression, summaries, bindings, seen,
 		)
+		for index := range nested {
+			nested[index].conditions = append(
+				nested[index].conditions, source.conditions...,
+			)
+			nested[index].maySkip = nested[index].maySkip || source.maySkip
+		}
 		values = append(values, nested...)
 		maySkip = maySkip || nestedMaySkip
 		opaque = opaque || nestedOpaque

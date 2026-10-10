@@ -21,128 +21,13 @@ type returnedHelperUse struct {
 	maySkip    bool
 }
 
-// returnedClosureBindings gets local function-value sources in one body.
-func (c %checker) returnedClosureBindings(
-	body %syntax.BlockStatement,
-	predeclared map[types.Object]bool,
-) map[types.Object]%returnedClosureBinding {
-	bindings := make(map[types.Object]%returnedClosureBinding)
-	inspectGenericBlock(body, func(node %syntax.Node) bool {
-		if statement, ok := syntax.StatementOf(node); ok {
-			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-				c.addReturnedClosureBindings(
-					bindings, assignment.Left, assignment.Right,
-					assignment.Operator == token.DEFINE, predeclared,
-				)
-			}
-			if ranged := syntax.RangeStatementOf(statement); ranged != nil {
-				c.markRangedReturnedClosureBindings(bindings, ranged)
-			}
-		}
-		if specification, ok := syntax.SpecificationOf(node); ok {
-			if value := syntax.ValueSpecificationOf(specification); value != nil {
-				left := make([]%syntax.Expression, len(value.Names))
-				for index := range value.Names {
-					item := syntax.Expression.Identifier{Value: value.Names[index]}
-					left[index] = &item
-				}
-				c.addReturnedClosureBindings(
-					bindings, left, value.Values, true, predeclared,
-				)
-			}
-		}
-		return true
-	})
-	c.markAddressedReturnedClosureBindings(body, bindings)
-	return bindings
-}
-
-func (c %checker) markRangedReturnedClosureBindings(
-	bindings map[types.Object]%returnedClosureBinding,
-	ranged %syntax.RangeStatement,
-) {
-	for _, target := range []*syntax.Expression{ranged.Key, ranged.Value} {
-		if target == nil {
-			continue
-		}
-		name := syntax.IdentifierExpressionOf(unparenthesized(target))
-		if name == nil || name.Name == "_" {
-			continue
-		}
-		object := c.facts.Object(name)
-		if object == nil {
-			continue
-		}
-		binding := bindings[object]
-		if binding == nil {
-			binding = &returnedClosureBinding{
-				sources: nil, unstable: true, opaque: true,
-			}
-			bindings[object] = binding
-			continue
-		}
-		binding.unstable = true
-		binding.opaque = true
-	}
-}
-
-func (c %checker) addReturnedClosureBindings(
-	bindings map[types.Object]%returnedClosureBinding,
-	left []%syntax.Expression,
-	right []%syntax.Expression,
-	declaration bool,
-	predeclared map[types.Object]bool,
-) {
-	for index, target := range left {
-		name := syntax.IdentifierExpressionOf(unparenthesized(target))
-		if name == nil {
-			if len(left) == len(right) && index < len(right) {
-				c.addReturnedContainerSource(bindings, target, right[index])
-			}
-			continue
-		}
-		if name.Name == "_" {
-			continue
-		}
-		object := c.facts.Object(name)
-		if object == nil {
-			continue
-		}
-		binding := bindings[object]
-		if binding == nil {
-			defined := declaration && c.facts.DefinitionName(name) != nil
-			defined = defined || predeclared[object]
-			binding = &returnedClosureBinding{
-				sources: nil, unstable: !defined, opaque: false,
-			}
-			bindings[object] = binding
-		} else {
-			binding.unstable = true
-		}
-		if len(left) != len(right) || index >= len(right) {
-			binding.unstable = true
-			binding.opaque = binding.opaque || len(right) > 0 || !declaration
-			continue
-		}
-		binding.sources = append(binding.sources, right[index])
-	}
-}
-
 func (c %checker) addReturnedContainerSource(
 	bindings map[types.Object]%returnedClosureBinding,
 	target %syntax.Expression,
-	source %syntax.Expression,
+	source returnedClosureSource,
 ) {
-	index := syntax.IndexExpressionOf(unparenthesized(target))
-	if index == nil {
-		return
-	}
-	name := syntax.IdentifierExpressionOf(unparenthesized(index.Expression))
-	if name == nil {
-		return
-	}
-	object := c.facts.Object(name)
-	if object == nil {
+	object, slot, ok := c.returnedContainerTarget(target)
+	if !ok || object == nil {
 		return
 	}
 	binding := bindings[object]
@@ -154,7 +39,58 @@ func (c %checker) addReturnedContainerSource(
 	} else {
 		binding.unstable = true
 	}
+	if source.slot != "" && slot != "" {
+		source.slot = slot + "/" + source.slot
+	} else if slot != "" {
+		source.slot = slot
+	}
+	if source.slot != "" && len(source.conditions) == 0 && !source.maySkip {
+		kept := binding.sources[:0]
+		for _, current := range binding.sources {
+			if current.slot != source.slot {
+				kept = append(kept, current)
+			}
+		}
+		binding.sources = kept
+	}
 	binding.sources = append(binding.sources, source)
+}
+
+func (c %checker) returnedContainerTarget(
+	expression %syntax.Expression,
+) (types.Object, string, bool) {
+	expression = unparenthesized(expression)
+	if name := syntax.IdentifierExpressionOf(expression); name != nil {
+		object := c.facts.Object(name)
+		return object, "", object != nil
+	}
+	if index := syntax.IndexExpressionOf(expression); index != nil {
+		object, parent, ok := c.returnedContainerTarget(index.Expression)
+		if !ok {
+			return nil, "", false
+		}
+		slot := c.containerSlot(index.Index)
+		if slot == "" {
+			return object, "", true
+		}
+		if parent != "" {
+			slot = parent + "/" + slot
+		}
+		return object, slot, true
+	}
+	selector := syntax.SelectorExpressionOf(expression)
+	if selector == nil {
+		return nil, "", false
+	}
+	object, parent, ok := c.returnedContainerTarget(selector.Expression)
+	if !ok {
+		return nil, "", false
+	}
+	slot := "." + selector.Selector.Name
+	if parent != "" {
+		slot = parent + "/" + slot
+	}
+	return object, slot, true
 }
 
 func (c %checker) markAddressedReturnedClosureBindings(
@@ -203,21 +139,22 @@ func (c %checker) collectReturnedExpression(
 		if binding == nil || seen[object] {
 			return false
 		}
-		seen[object] = true
-		defer delete(seen, object)
 		uncertain := maySkip || binding.unstable || len(binding.sources) != 1
-		found := false
 		for _, source := range binding.sources {
-			found = c.collectReturnedExpression(
-				summary, source, bindings, summaries, declarations,
-				allowHelper, uncertain, seen,
-			) || found
+			path := source.expression
+			if c.expressionInsideFunctionLiteral(source.expression) {
+				path = value
+			}
+			summary.returnedValues = append(summary.returnedValues, returnedGenericValue{
+				expression: source.expression, path: path,
+				conditions: source.conditions,
+				maySkip:    uncertain || source.maySkip,
+			})
 		}
 		if binding.opaque {
 			c.addUnknownReturnedEffects(summary)
-			found = true
 		}
-		return found
+		return true
 	}
 	call := syntax.CallExpressionOf(value)
 	if call == nil {
@@ -248,16 +185,14 @@ func (c %checker) collectReturnedExpression(
 			)
 		}
 		summary.returnedValues = append(summary.returnedValues, returnedGenericValue{
-			expression: value,
-			maySkip:    maySkip,
+			expression: value, path: value, conditions: nil, maySkip: maySkip,
 		})
 		return true
 	}
 	recorded := function == nil
 	if recorded {
 		summary.returnedValues = append(summary.returnedValues, returnedGenericValue{
-			expression: value,
-			maySkip:    maySkip,
+			expression: value, path: value, conditions: nil, maySkip: maySkip,
 		})
 	}
 	return c.collectReturnedArguments(

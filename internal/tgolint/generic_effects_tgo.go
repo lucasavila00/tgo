@@ -532,9 +532,16 @@ type returnedGenericBody struct {
 }
 
 type returnedClosureBinding struct {
-	sources  []*syntax.Expression
+	sources  []returnedClosureSource
 	unstable bool
 	opaque   bool
+}
+
+type returnedClosureSource struct {
+	expression *syntax.Expression
+	conditions []GenericEffectCondition
+	maySkip    bool
+	slot       string
 }
 
 // checkGenericZeroSafety exports generic zero facts and checks each use.
@@ -738,8 +745,7 @@ func (c *checker) collectReturnedGenericEffects(
 		return
 	}
 	bindings := c.returnedClosureBindings(
-		summary.body,
-		returnedResultObjects(signature),
+		summary, returnedResultObjects(signature),
 	)
 	namedResults := returnedNamedResultExpressions(functionType)
 	maySkip := returnedFunctionReturnCount(summary.body, signature) > 1

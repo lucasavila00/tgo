@@ -123,15 +123,16 @@ func (c *checker) propagateGenericSummary(
 			}
 		}
 	}
-	bindings := c.returnedClosureBindings(summary.body, nil)
+	bindings := c.returnedClosureBindings(summary, nil)
 	for _, returned := range summary.returnedValues {
 		values, maySkip, opaque := c.genericSummaryValues(
 			summary, returned.expression, summaries, bindings,
 			make(map[types.Object]bool),
 		)
 		for _, value := range values {
+			value.conditions = append(value.conditions, returned.conditions...)
 			changed = c.propagateReturnedGenericValue(
-				summary, returned.expression, value,
+				summary, returned.path, value,
 				returned.maySkip || maySkip,
 			) || changed
 		}
@@ -222,7 +223,7 @@ func (c *checker) propagateGenericSummaryCalls(
 	summaries map[*types.Func]*genericEffectSummary,
 ) bool {
 	changed := false
-	bindings := c.returnedClosureBindings(summary.body, nil)
+	bindings := c.returnedClosureBindings(summary, nil)
 	for _, call := range summary.calls {
 		function, receiverArguments, typeArguments := c.genericCall(call)
 		if function == nil {

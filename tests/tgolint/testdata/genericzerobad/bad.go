@@ -202,6 +202,8 @@ func FunctionValues(event model.Event) {
 	genericzero.ForwardedUnknownEscape[model.Event]()
 	genericzero.ConditionalForwardCall[model.Event](true)
 	genericzero.DirectInvokedForwardCall[model.Event]()
+	genericzero.ConditionalAlias[model.Event](true)()
+	_ = genericzero.ReturnAssignedBox[model.Event]()
 }
 
 func ReturnedAlternatives(first bool) {
