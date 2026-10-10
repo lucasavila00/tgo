@@ -9,17 +9,20 @@ func zero[T any]() {
 	_ = value
 }
 
-func Compound[A, B any]() func() {
+func Safe[A, B any]() func() {
 	return func() {
 		zero[[]A]()
-		zero[[2]B]()
+		zero[[0]B]()
 		zero[map[string]*B]()
 		zero[chan A]()
-		zero[struct {
-			First  A
-			Second B
-		}]()
 		zero[func(A) B]()
+	}
+}
+
+func Invalid[A, B any]() func() {
+	return func() {
+		zero[[2]A]()
+		zero[struct{ Value B }]()
 		zero[Slot[A]]()
 	}
 }
@@ -30,4 +33,18 @@ func Primitive[T any]() func() {
 
 func (Factory[T]) Receiver() func() {
 	return func() { zero[[]T]() }
+}
+
+func (Factory[T]) ReceiverPrimitive() func() {
+	return func() { zero[T]() }
+}
+
+func Pick[A, B any]() func() {
+	factory := Primitive[B]
+	return factory()
+}
+
+func PickReceiver[A, B any]() func() {
+	factory := Factory[B]{}.ReceiverPrimitive
+	return factory()
 }

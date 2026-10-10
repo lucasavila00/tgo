@@ -140,6 +140,72 @@ func writeStorageTypeKey(text *strings.Builder, typ types.Type) {
 	text.WriteString(types.TypeString(typ, func(value *types.Package) string {
 		return value.Path()
 	}))
+	writeStorageTypeIdentity(text, typ, make(map[types.Type]bool))
+}
+
+func writeStorageTypeIdentity(
+	text *strings.Builder,
+	typ types.Type,
+	seen map[types.Type]bool,
+) {
+	if typ == nil || seen[typ] {
+		return
+	}
+	typ = types.Unalias(typ)
+	seen[typ] = true
+	classified := goTypeOf(typ)
+	switch classified.Tag() {
+	case goTypeTagNamed:
+		named := classified.NamedPayload().Value
+		text.WriteByte('@')
+		text.WriteString(strconv.Itoa(int(named.Obj().Pos())))
+		for index := 0; index < named.TypeArgs().Len(); index++ {
+			writeStorageTypeIdentity(text, named.TypeArgs().At(index), seen)
+		}
+	case goTypeTagArray:
+		writeStorageTypeIdentity(text, classified.ArrayPayload().Value.Elem(), seen)
+	case goTypeTagSlice:
+		writeStorageTypeIdentity(text, classified.SlicePayload().Value.Elem(), seen)
+	case goTypeTagPointer:
+		writeStorageTypeIdentity(text, classified.PointerPayload().Value.Elem(), seen)
+	case goTypeTagMap:
+		mapping := classified.MapPayload().Value
+		writeStorageTypeIdentity(text, mapping.Key(), seen)
+		writeStorageTypeIdentity(text, mapping.Elem(), seen)
+	case goTypeTagChannel:
+		writeStorageTypeIdentity(text, classified.ChannelPayload().Value.Elem(), seen)
+	case goTypeTagStruct:
+		structure := classified.StructPayload().Value
+		for index := 0; index < structure.NumFields(); index++ {
+			writeStorageTypeIdentity(text, structure.Field(index).Type(), seen)
+		}
+	case goTypeTagSignature:
+		signature := classified.SignaturePayload().Value
+		writeStorageTupleIdentity(text, signature.Params(), seen)
+		writeStorageTupleIdentity(text, signature.Results(), seen)
+	case goTypeTagInterface:
+		contract := classified.InterfacePayload().Value.Complete()
+		for index := 0; index < contract.NumMethods(); index++ {
+			writeStorageTypeIdentity(text, contract.Method(index).Type(), seen)
+		}
+		for index := 0; index < contract.NumEmbeddeds(); index++ {
+			writeStorageTypeIdentity(text, contract.EmbeddedType(index), seen)
+		}
+	case goTypeTagNil, goTypeTagBasic, goTypeTagTuple, goTypeTagTypeParameter,
+		goTypeTagUnion, goTypeTagOther:
+	default:
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
+	}
+}
+
+func writeStorageTupleIdentity(
+	text *strings.Builder,
+	tuple *types.Tuple,
+	seen map[types.Type]bool,
+) {
+	for index := 0; index < tuple.Len(); index++ {
+		writeStorageTypeIdentity(text, tuple.At(index).Type(), seen)
+	}
 }
 
 func writeStorageIntegerKey(
@@ -463,11 +529,7 @@ func storageTypesEqual(left, right types.Type) bool {
 	if left == nil || right == nil {
 		return left == right
 	}
-	if types.Identical(left, right) {
-		return true
-	}
-	qualifier := func(pkg *types.Package) string { return pkg.Path() }
-	return types.TypeString(left, qualifier) == types.TypeString(right, qualifier)
+	return types.Identical(left, right)
 }
 
 func containsStoragePath(paths []storagePath, want storagePath) bool {

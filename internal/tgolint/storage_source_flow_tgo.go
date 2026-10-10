@@ -191,6 +191,7 @@ func (c *checker) buildStorageFlow(root *syntax.Node) *storageFlow {
 		arguments:     make(map[token.Pos][]storageValue),
 		context:       newStorageExecutionContext(),
 	}
+	collectStorageNamedTypes(c.pass.Pkg, flow.context.namedTypes, make(map[*types.Package]bool))
 	body := genericFunctionBody(root)
 	if body == nil {
 		return flow

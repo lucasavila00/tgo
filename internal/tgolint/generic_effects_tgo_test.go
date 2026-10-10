@@ -296,7 +296,7 @@ func TestStorageEffectProjectionDoesNotMutateConditions(t *testing.T) {
 	}}
 	projected := projectStorageEffects(effects, nil, []StorageEffectType{{
 		Kind: storageTypeParameter, Parameter: 1,
-	}}, []int{2, 3})
+	}}, []int{2, 3}, true)
 	if effects[0].Conditions[0].ValueParameter != 0 ||
 		effects[0].Conditions[0].OtherParameter != 1 {
 		t.Fatalf("source conditions changed: %#v", effects)

@@ -314,7 +314,10 @@ func (b *storageGraphBuilder) collectExpression(
 		result := b.newTemp()
 		block.Operations = append(block.Operations, StorageEffectOperation{
 			Kind: storageEffectFunction, Results: []int{result},
-			Function: b.functionID(object.Origin()),
+			Function:          b.functionID(object.Origin()),
+			TypeArguments:     b.callTypeArgumentProjection(expression),
+			ReceiverArguments: b.callReceiverArgumentProjection(expression),
+			ProjectArguments:  true,
 		})
 		return result
 	}

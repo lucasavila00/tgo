@@ -1,0 +1,5 @@
+structuralprojectionbad/bad.go:9:2: call to function returned by Primitive will create invalid tgo enum Event zero from a type argument
+structuralprojectionbad/bad.go:10:2: call to function returned by Invalid will create invalid tgo enum Event zero from a type argument
+structuralprojectionbad/bad.go:11:2: call to function returned by ReceiverPrimitive will create invalid tgo enum Event zero from a type argument
+structuralprojectionbad/bad.go:12:2: call to function returned by Pick will create invalid tgo enum Event zero from a type argument
+structuralprojectionbad/bad.go:13:2: call to function returned by PickReceiver will create invalid tgo enum Event zero from a type argument

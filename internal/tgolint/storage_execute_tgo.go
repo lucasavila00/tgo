@@ -75,6 +75,7 @@ type storageExecutionContext struct {
 	reentered      map[storageCallKey]bool
 	approximations map[storageCallKey]storageExecutionResult
 	completed      map[storageCallKey]storageExecutionResult
+	namedTypes     map[string]*types.Named
 }
 
 func executeStorageGraph(
@@ -110,6 +111,7 @@ func newStorageExecutionContext() *storageExecutionContext {
 		reentered:      make(map[storageCallKey]bool),
 		approximations: make(map[storageCallKey]storageExecutionResult),
 		completed:      make(map[storageCallKey]storageExecutionResult),
+		namedTypes:     make(map[string]*types.Named),
 	}
 }
 

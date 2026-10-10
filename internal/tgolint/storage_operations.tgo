@@ -38,10 +38,22 @@ func applyStorageOperationInCall(
 		for _, region := range operation.Regions {
 			captures = append(captures, resolveStoragePaths(*call, region)...)
 		}
+		receiverArguments := append([]types.Type(nil), call.receiverArguments...)
+		typeArguments := append([]types.Type(nil), call.typeArguments...)
+		if operation.ProjectArguments {
+			receiverArguments = projectStorageTypeArguments(
+				call.receiverArguments, call.typeArguments, operation.ReceiverArguments,
+				context.namedTypes,
+			)
+			typeArguments = projectStorageTypeArguments(
+				call.receiverArguments, call.typeArguments, operation.TypeArguments,
+				context.namedTypes,
+			)
+		}
 		value := storageValue{functions: []storageFunction{{
 			graph: operation.Function, fact: call.fact, captures: captures,
-			receiverArguments: append([]types.Type(nil), call.receiverArguments...),
-			typeArguments:     append([]types.Type(nil), call.typeArguments...),
+			receiverArguments: receiverArguments,
+			typeArguments:     typeArguments,
 		}}}
 		setStorageResults(state.temps, operation.Results, []storageValue{value})
 	case storageEffectCall:
@@ -55,11 +67,11 @@ func applyStorageOperationInCall(
 				graph: operation.Function, fact: call.fact,
 				receiverArguments: projectStorageTypeArguments(
 					call.receiverArguments, call.typeArguments,
-					operation.ReceiverArguments,
+					operation.ReceiverArguments, context.namedTypes,
 				),
 				typeArguments: projectStorageTypeArguments(
 					call.receiverArguments, call.typeArguments,
-					operation.TypeArguments,
+					operation.TypeArguments, context.namedTypes,
 				),
 			})
 		} else if len(arguments) != 0 {
@@ -99,14 +111,15 @@ func applyStorageOperationInCall(
 			}
 			input := storageCallInputState(before, arguments, function.captures)
 			updated, returned, effects := executeStorageFunction(nested, input, context)
-			if operation.Function >= 0 && len(operation.TypeArguments) != 0 {
+			if operation.Function >= 0 &&
+				(len(operation.TypeArguments) != 0 || len(operation.ReceiverArguments) != 0) {
 				effects.zero = projectStorageEffects(
 					effects.zero, operation.ReceiverArguments,
-					operation.TypeArguments, operation.CalledParameters,
+					operation.TypeArguments, operation.CalledParameters, true,
 				)
 				effects.access = projectStorageEffects(
 					effects.access, operation.ReceiverArguments,
-					operation.TypeArguments, operation.CalledParameters,
+					operation.TypeArguments, operation.CalledParameters, false,
 				)
 			}
 			state.effects.zero = appendGenericEffects(
@@ -389,11 +402,12 @@ func projectStorageTypeArguments(
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 	projection []StorageEffectType,
+	namedTypes map[string]*types.Named,
 ) []types.Type {
 	result := make([]types.Type, len(projection))
 	for index, source := range projection {
-		result[index] = decodeStorageEffectType(
-			source, receiverArguments, typeArguments,
+		result[index] = decodeStorageEffectTypeWithNames(
+			source, receiverArguments, typeArguments, namedTypes,
 		)
 	}
 	return result
@@ -470,6 +484,7 @@ func projectStorageEffects(
 	receiverProjection []StorageEffectType,
 	projection []StorageEffectType,
 	parameters []int,
+	zero bool,
 ) []GenericEffect {
 	var result []GenericEffect = nil
 	for _, source := range effects {
@@ -481,12 +496,10 @@ func projectStorageEffects(
 		if effect.TypeParameter < 0 || effect.TypeParameter >= len(targetProjection) {
 			continue
 		}
-		target := targetProjection[effect.TypeParameter]
-		if target.Kind != storageTypeParameter && target.Kind != storageTypeReceiver {
+		targets := storageEffectTypeParameters(targetProjection[effect.TypeParameter], zero)
+		if len(targets) == 0 {
 			continue
 		}
-		effect.Receiver = target.Kind == storageTypeReceiver
-		effect.TypeParameter = target.Parameter
 		for index := range effect.Conditions {
 			condition := &effect.Conditions[index]
 			if condition.ValueParameter < 0 ||
@@ -507,7 +520,12 @@ func projectStorageEffects(
 				condition.OtherParameter = parameters[condition.OtherParameter]
 			}
 		}
-		result = appendGenericEffects(result, []GenericEffect{effect})
+		for _, target := range targets {
+			projected := cloneGenericEffect(effect)
+			projected.Receiver = target.Kind == storageTypeReceiver
+			projected.TypeParameter = target.Parameter
+			result = appendGenericEffects(result, []GenericEffect{projected})
+		}
 	}
 	return result
 }

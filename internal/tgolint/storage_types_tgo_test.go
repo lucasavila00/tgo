@@ -55,7 +55,7 @@ func TestStorageEffectProjectionDropsCompoundEffect(t *testing.T) {
 	effects := []GenericEffect{{TypeParameter: 0}}
 	projection := []StorageEffectType{{Kind: storageTypeSlice,
 		Element: []StorageEffectType{{Kind: storageTypeParameter, Parameter: 0}}}}
-	if got := projectStorageEffects(effects, nil, projection, nil); len(got) != 0 {
+	if got := projectStorageEffects(effects, nil, projection, nil, true); len(got) != 0 {
 		t.Fatalf("compound projected effects = %#v", got)
 	}
 }
@@ -64,22 +64,88 @@ func TestStorageEffectProjectionKeepsPrimitiveEffect(t *testing.T) {
 	t.Parallel()
 	effects := []GenericEffect{{TypeParameter: 0}}
 	projection := []StorageEffectType{{Kind: storageTypeParameter, Parameter: 1}}
-	got := projectStorageEffects(effects, nil, projection, nil)
+	got := projectStorageEffects(effects, nil, projection, nil, true)
 	if len(got) != 1 || got[0].Receiver || got[0].TypeParameter != 1 {
 		t.Fatalf("primitive projected effects = %#v", got)
+	}
+}
+
+func TestStorageEffectProjectionKeepsPositiveArrayAndStructEffects(t *testing.T) {
+	t.Parallel()
+	effects := []GenericEffect{{TypeParameter: 0}}
+	parameter := StorageEffectType{Kind: storageTypeParameter, Parameter: 1}
+	projections := []StorageEffectType{
+		{Kind: storageTypeArray, Length: 2, Element: []StorageEffectType{parameter}},
+		{Kind: storageTypeStruct, Fields: []StorageEffectType{parameter}},
+		{Kind: storageTypeNamed, Underlying: []StorageEffectType{{
+			Kind: storageTypeStruct, Fields: []StorageEffectType{parameter},
+		}}},
+	}
+	for _, projection := range projections {
+		got := projectStorageEffects(effects, nil, []StorageEffectType{projection}, nil, true)
+		if len(got) != 1 || got[0].TypeParameter != 1 {
+			t.Fatalf("invalid-zero projected effects = %#v", got)
+		}
+	}
+}
+
+func TestStorageEffectProjectionDropsZeroArrayEffect(t *testing.T) {
+	t.Parallel()
+	effects := []GenericEffect{{TypeParameter: 0}}
+	projection := []StorageEffectType{{
+		Kind: storageTypeArray, Length: 0,
+		Element: []StorageEffectType{{Kind: storageTypeParameter, Parameter: 0}},
+	}}
+	if got := projectStorageEffects(effects, nil, projection, nil, true); len(got) != 0 {
+		t.Fatalf("zero-array projected effects = %#v", got)
+	}
+}
+
+func TestStorageEffectProjectionKeepsReceiverEffect(t *testing.T) {
+	t.Parallel()
+	effects := []GenericEffect{{Receiver: true, TypeParameter: 0}}
+	receiver := []StorageEffectType{{Kind: storageTypeReceiver, Parameter: 1}}
+	got := projectStorageEffects(effects, receiver, nil, nil, true)
+	if len(got) != 1 || !got[0].Receiver || got[0].TypeParameter != 1 {
+		t.Fatalf("receiver projected effects = %#v", got)
 	}
 }
 
 func TestStorageProjectedNamedTypesHaveStableEquality(t *testing.T) {
 	t.Parallel()
 	projection := StorageEffectType{
-		Kind: storageTypeNamed, Package: "example.test/model", Name: "Box",
+		Kind: storageTypeNamed, Package: "example.test/model", Name: "Box", PackageLevel: true,
 		Arguments: []StorageEffectType{{Kind: storageTypeParameter, Parameter: 0}},
 	}
-	first := decodeStorageEffectType(projection, nil, []types.Type{types.Typ[types.Int]})
-	second := decodeStorageEffectType(projection, nil, []types.Type{types.Typ[types.Int]})
-	if !storageTypesEqual(first, second) {
+	pkg := types.NewPackage("example.test/model", "model")
+	named := types.NewNamed(types.NewTypeName(0, pkg, "Box", nil), types.NewStruct(nil, nil), nil)
+	named.SetTypeParams(storageTestParameters(1))
+	names := map[string]*types.Named{storageNamedTypeKey(pkg.Path(), "Box"): named}
+	first := decodeStorageEffectTypeWithNames(projection, nil, []types.Type{types.Typ[types.Int]}, names)
+	second := decodeStorageEffectTypeWithNames(projection, nil, []types.Type{types.Typ[types.Int]}, names)
+	want, err := types.Instantiate(nil, named, []types.Type{types.Typ[types.Int]}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !storageTypesEqual(first, second) || !types.Identical(first, want) {
 		t.Fatalf("projected named types differ: %s and %s", first, second)
+	}
+}
+
+func TestStorageProjectedLocalNamedTypeDoesNotUsePackageDeclaration(t *testing.T) {
+	t.Parallel()
+	pkg := types.NewPackage("example.test/model", "model")
+	packageNamed := types.NewNamed(
+		types.NewTypeName(1, pkg, "Box", nil), types.NewStruct(nil, nil), nil,
+	)
+	projection := StorageEffectType{
+		Kind: storageTypeNamed, Package: pkg.Path(), Name: "Box", Position: 2,
+		Underlying: []StorageEffectType{{Kind: storageTypeBasic, Basic: int(types.Int)}},
+	}
+	names := map[string]*types.Named{storageNamedTypeKey(pkg.Path(), "Box"): packageNamed}
+	got := decodeStorageEffectTypeWithNames(projection, nil, nil, names)
+	if types.Identical(got, packageNamed) || got.Underlying().String() != "int" {
+		t.Fatalf("local projected type = %s (%s)", got, got.Underlying())
 	}
 }
 

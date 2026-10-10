@@ -12,14 +12,10 @@ func localZero[T any]() {
 	_ = value
 }
 
-func localCompound[A, B any]() func() {
+func localSafe[A, B any]() func() {
 	return func() {
 		localZero[[]A]()
-		localZero[[2]B]()
-		localZero[struct {
-			First  A
-			Second B
-		}]()
+		localZero[[0]B]()
 		localZero[func(A) B]()
 	}
 }
@@ -29,10 +25,12 @@ func (localFactory[T]) receiver() func() {
 }
 
 func Use() {
-	localCompound[model.Event, model.Event]()()
-	structuralprojection.Compound[model.Event, model.Event]()()
+	localSafe[model.Event, model.Event]()()
+	structuralprojection.Safe[model.Event, model.Event]()()
 	localFactory[model.Event]{}.receiver()()
 	structuralprojection.Factory[model.Event]{}.Receiver()()
-	structuralprojection.Compound[model.Event, int]()()
-	localCompound[model.Event, int]()()
+	structuralprojection.Safe[model.Event, int]()()
+	localSafe[model.Event, int]()()
+	structuralprojection.Pick[model.Event, int]()()
+	structuralprojection.PickReceiver[model.Event, int]()()
 }

@@ -53,6 +53,7 @@ type StorageEffectOperation struct {
 	KnownCapacity     bool
 	Boolean           bool
 	Variadic          bool
+	ProjectArguments  bool
 	Operator          int
 	ZeroEffects       []GenericEffect
 	AccessEffects     []GenericEffect
@@ -60,26 +61,29 @@ type StorageEffectOperation struct {
 
 // StorageEffectType is a serializable type expression in a call graph.
 type StorageEffectType struct {
-	Kind       int
-	Parameter  int
-	Name       string
-	Package    string
-	Basic      int
-	Length     int64
-	Direction  int
-	Variadic   bool
-	Embedded   bool
-	Tag        string
-	Element    []StorageEffectType
-	Key        []StorageEffectType
-	Fields     []StorageEffectType
-	Parameters []StorageEffectType
-	Results    []StorageEffectType
-	Arguments  []StorageEffectType
-	FieldNames []string
-	FieldPkgs  []string
-	FieldTags  []string
-	FieldEmbed []bool
+	Kind         int
+	Parameter    int
+	Position     int
+	Name         string
+	Package      string
+	Basic        int
+	Length       int64
+	Direction    int
+	Variadic     bool
+	Embedded     bool
+	PackageLevel bool
+	Tag          string
+	Element      []StorageEffectType
+	Key          []StorageEffectType
+	Fields       []StorageEffectType
+	Parameters   []StorageEffectType
+	Results      []StorageEffectType
+	Arguments    []StorageEffectType
+	Underlying   []StorageEffectType
+	FieldNames   []string
+	FieldPkgs    []string
+	FieldTags    []string
+	FieldEmbed   []bool
 }
 
 const (
