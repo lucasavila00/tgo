@@ -1,5 +1,7 @@
 package a
 
-func Make() (string, error) {
-	return "x",
+import "time"
+
+func Make() (time.Time, error) {
+	return time.Unix(0, 0),
 }

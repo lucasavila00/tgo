@@ -1,11 +1,16 @@
 package b
 
-import "example.test/memory-imports/a"
+import (
+	"time"
 
-func Use() string {
+	"example.test/memory-imports/a"
+	"example.test/memory-imports/c"
+)
+
+func Use() time.Time {
 	value, err := a.Make()
 	if err != nil {
-		return ""
+		return time.Time{}
 	}
-	return value
+	return c.Normalize(value)
 }

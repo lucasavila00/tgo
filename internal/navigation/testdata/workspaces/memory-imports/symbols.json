@@ -2,20 +2,20 @@
   {
     "method": "workspaceSymbols",
     "query": "",
-    "names": ["a", "Make", "b", "Use"],
+    "names": ["a", "Make", "b", "Use", "c", "Normalize"],
     "symbols": [
       {
         "name": "a",
         "kind": "package",
         "container": "example.test/memory-imports/a",
-        "range": {"file": "a/a.tgo", "text": "a", "occurrence": 1},
-        "selection": {"file": "a/a.tgo", "text": "a", "occurrence": 1}
+        "range": {"file": "a/a.tgo", "text": "a", "occurrence": 3},
+        "selection": {"file": "a/a.tgo", "text": "a", "occurrence": 3}
       },
       {
         "name": "Make",
         "kind": "function",
         "container": "example.test/memory-imports/a",
-        "range": {"file": "a/a.tgo", "text": "func Make() (string, error) {\n\treturn \"x\",\n}", "occurrence": 1},
+        "range": {"file": "a/a.tgo", "text": "func Make() (time.Time, error) {\n\treturn time.Unix(0, 0),\n}", "occurrence": 1},
         "selection": {"file": "a/a.tgo", "text": "Make", "occurrence": 1}
       },
       {
@@ -29,8 +29,22 @@
         "name": "Use",
         "kind": "function",
         "container": "example.test/memory-imports/b",
-        "range": {"file": "b/b.tgo", "text": "func Use() string {\n\tvalue, err := a.Make()\n\tif err != nil {\n\t\treturn \"\"\n\t}\n\treturn value\n}", "occurrence": 1},
+        "range": {"file": "b/b.tgo", "text": "func Use() time.Time {\n\tvalue, err := a.Make()\n\tif err != nil {\n\t\treturn time.Time{}\n\t}\n\treturn c.Normalize(value)\n}", "occurrence": 1},
         "selection": {"file": "b/b.tgo", "text": "Use", "occurrence": 1}
+      },
+      {
+        "name": "c",
+        "kind": "package",
+        "container": "example.test/memory-imports/c",
+        "range": {"file": "c/c.tgo", "text": "c", "occurrence": 2},
+        "selection": {"file": "c/c.tgo", "text": "c", "occurrence": 2}
+      },
+      {
+        "name": "Normalize",
+        "kind": "function",
+        "container": "example.test/memory-imports/c",
+        "range": {"file": "c/c.tgo", "text": "func Normalize(value time.Time) time.Time {\n\treturn value.UTC()\n}", "occurrence": 1},
+        "selection": {"file": "c/c.tgo", "text": "Normalize", "occurrence": 1}
       }
     ]
   }

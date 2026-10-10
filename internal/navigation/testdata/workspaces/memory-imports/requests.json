@@ -2,7 +2,7 @@
   {
     "method": "hover",
     "position": {"file": "b/b.tgo", "text": "Make", "occurrence": 1},
-    "hover": "func Make() (string, error)"
+    "hover": "func Make() (time.Time, error)"
   },
   {
     "method": "definition",
@@ -18,6 +18,13 @@
     "locations": [
       {"file": "a/a.tgo", "text": "Make", "occurrence": 1},
       {"file": "b/b.tgo", "text": "Make", "occurrence": 1}
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {"file": "b/b.tgo", "text": "Normalize", "occurrence": 1},
+    "locations": [
+      {"file": "c/c.tgo", "text": "Normalize", "occurrence": 1}
     ]
   }
 ]
