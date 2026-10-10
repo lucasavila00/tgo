@@ -325,11 +325,13 @@ func (c *checker) storageCallValues(
 		if !apply {
 			continue
 		}
-		updated, values := executeStorageGraph(storageGraphCall{
+		graphCall := storageGraphCall{
 			fact: function.fact, function: function.graph,
 			arguments: arguments, captures: function.captures,
 			typeArguments: function.typeArguments,
-		}, state)
+		}
+		input := storageCallInputState(state, arguments, function.captures)
+		updated, values := executeStorageGraph(graphCall, input)
 		updated = projectStorageCallerState(state, updated, values)
 		replaceStorageState(state, updated)
 		for index, value := range values {

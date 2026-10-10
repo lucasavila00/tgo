@@ -70,7 +70,8 @@ func applyStorageOperation(
 				receiverArguments: function.receiverArguments,
 				typeArguments:     function.typeArguments,
 			}
-			updated, returned, effects := executeStorageFunction(nested, before, context)
+			input := storageCallInputState(before, arguments, function.captures)
+			updated, returned, effects := executeStorageFunction(nested, input, context)
 			if operation.Function >= 0 && len(operation.TypeArguments) != 0 {
 				effects.zero = projectStorageEffects(
 					effects.zero, operation.ReceiverArguments,
@@ -199,11 +200,40 @@ func projectStorageCallerState(
 			changed = changed || len(locations) != beforeCount
 		}
 	}
-	result := newStorageState()
-	for object, value := range before.cells {
-		result.cells[object] = cloneStorageValue(value)
-	}
+	result := cloneStorageState(before)
 	for path, value := range updated.memory {
+		if locations[path.location] {
+			result.memory[path] = cloneStorageValue(value)
+		}
+	}
+	return result
+}
+
+func storageCallInputState(
+	state storageState,
+	arguments []storageValue,
+	captures []storagePath,
+) storageState {
+	locations := make(map[storageLocation]bool)
+	for _, argument := range arguments {
+		addStorageValueLocations(locations, argument)
+	}
+	for _, capture := range captures {
+		locations[capture.location] = true
+	}
+	for changed := true; changed; {
+		changed = false
+		for path, value := range state.memory {
+			if !locations[path.location] {
+				continue
+			}
+			beforeCount := len(locations)
+			addStorageValueLocations(locations, value)
+			changed = changed || len(locations) != beforeCount
+		}
+	}
+	result := newStorageState()
+	for path, value := range state.memory {
 		if locations[path.location] {
 			result.memory[path] = cloneStorageValue(value)
 		}
