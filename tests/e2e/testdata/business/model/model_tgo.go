@@ -580,8 +580,7 @@ func (v Signal) Tag() SignalTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v Signal) GobEncode() ([]byte, error) {
-	type operandType = bool
-	var operand operandType = v.tgoTag < SignalTagOn
+	operand := v.tgoTag < SignalTagOn
 	if !operand {
 		operand = v.tgoTag > SignalTagOff
 	}
@@ -594,17 +593,16 @@ func (v Signal) GobEncode() ([]byte, error) {
 
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *Signal) GobDecode(data []byte) error {
-	type operandType = bool
 	if len(data) != 4 {
 		return fmt.Errorf("Signal: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := SignalTag(number)
-	var operand operandType = uint32(tag) != number
+	operand := uint32(tag) != number
 	if !operand {
 		operand = tag < SignalTagOn
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = tag > SignalTagOff
 	}

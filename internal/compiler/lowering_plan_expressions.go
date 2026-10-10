@@ -29,7 +29,7 @@ func (b *loweringPlanBuilder) expressionContext(
 	}
 	if logical, ok := expression.(*ast.BinaryExpr); ok &&
 		(logical.Op == token.LAND || logical.Op == token.LOR) {
-		return b.logicalExpression(result, logical, expected)
+		return b.logicalExpression(result, logical)
 	}
 	operands, supported := classifyPlannedExpression(result, expression)
 	if !supported {
@@ -51,14 +51,13 @@ func (b *loweringPlanBuilder) expressionContext(
 func (b *loweringPlanBuilder) logicalExpression(
 	result *plannedExpression,
 	node *ast.BinaryExpr,
-	expected types.Type,
 ) *plannedExpression {
 	result.kind = planBinaryExpression
 	left := b.expressionContext(node.X, result.typ, 1)
 	right := b.expressionContext(node.Y, result.typ, 1)
 	result.operands = []*plannedExpression{left, right}
 	valueType := result.typ
-	if expected != nil {
+	if expected := result.expected; expected != nil && result.contextual {
 		valueType = expected
 	}
 	result.addResult(b, valueType, node.Pos())
@@ -207,6 +206,10 @@ func (b *loweringPlanBuilder) comprehensionExpression(
 	trimComprehensionReturn(result.work)
 	b.captureComprehensionResultNames(result, function, metadata.Result)
 	b.planComprehensionBuiltins(result, function, metadata)
+	if !metadata.Map && validPlannedType(result.typ) && underlyingSlice(result.typ) == nil {
+		b.unit.failAt(metadata.Position, "slice comprehension needs a slice output type")
+		return result
+	}
 	result.addResult(b, result.typ, expression.Pos())
 	return result
 }
@@ -303,7 +306,7 @@ func (b *loweringPlanBuilder) planExactComprehension(
 			continue
 		}
 		sourcePlan := operation.expressions[0]
-		sourceValue := b.newValue(sourcePlan.typ, outer.X.Pos())
+		sourceValue := b.newValue(plannedExpressionProducedType(sourcePlan), outer.X.Pos())
 		sourcePlan.materialized = sourceValue.id
 		result.work.operations = append([]*plannedOperation{{
 			kind: planEvaluate, expressions: []*plannedExpression{sourcePlan},
@@ -407,7 +410,7 @@ func (b *loweringPlanBuilder) expressionNeedsContext(
 		switch node.Op {
 		case token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ,
 			token.LAND, token.LOR:
-			return true
+			return isBooleanType(expected)
 		case token.SHL, token.SHR:
 			return b.expressionNeedsContext(node.X, expected)
 		default:
@@ -423,6 +426,17 @@ func (b *loweringPlanBuilder) expressionNeedsContext(
 		return node.Type == nil
 	}
 	return false
+}
+
+func isBooleanType(typ types.Type) bool {
+	if typ == nil {
+		return false
+	}
+	if named, ok := types.Unalias(typ).(*types.Named); ok {
+		typ = named.Underlying()
+	}
+	basic, ok := types.Unalias(typ).(*types.Basic)
+	return ok && basic.Kind() == types.Bool
 }
 
 func isUntypedType(typ types.Type) bool {

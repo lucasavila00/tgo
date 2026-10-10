@@ -8,14 +8,13 @@ import (
 )
 
 func TestPropagationSwitchCaseOrderAndErrors(t *testing.T) {
-	type operandType = bool
 	events := []string{}
 	result, err := PropagationSwitchCaseOrder(&events, 0, false)
-	var operand operandType = result != "second"
+	operand := result != "second"
 	if !operand {
 		operand = err != nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = strings.Join(events, ",") != "tag,first"
 	}
@@ -24,11 +23,11 @@ func TestPropagationSwitchCaseOrderAndErrors(t *testing.T) {
 	}
 	events = nil
 	result, err = PropagationSwitchCaseOrder(&events, 2, false)
-	var operand_2 operandType = result != "second"
+	operand_2 := result != "second"
 	if !operand_2 {
 		operand_2 = err != nil
 	}
-	var operand_3 operandType = operand_2
+	operand_3 := operand_2
 	if !operand_3 {
 		operand_3 = strings.Join(events, ",") != "tag,first,second"
 	}
@@ -37,11 +36,11 @@ func TestPropagationSwitchCaseOrderAndErrors(t *testing.T) {
 	}
 	events = nil
 	result, err = PropagationSwitchCaseOrder(&events, 3, false)
-	var operand_4 operandType = result != "third"
+	operand_4 := result != "third"
 	if !operand_4 {
 		operand_4 = err != nil
 	}
-	var operand_5 operandType = operand_4
+	operand_5 := operand_4
 	if !operand_5 {
 		operand_5 = strings.Join(events, ",") != "tag,first,second,third"
 	}
@@ -50,11 +49,11 @@ func TestPropagationSwitchCaseOrderAndErrors(t *testing.T) {
 	}
 	events = nil
 	result, err = PropagationSwitchCaseOrder(&events, 2, true)
-	var operand_6 operandType = result != ""
+	operand_6 := result != ""
 	if !operand_6 {
 		operand_6 = err != errSwitchCase
 	}
-	var operand_7 operandType = operand_6
+	operand_7 := operand_6
 	if !operand_7 {
 		operand_7 = strings.Join(events, ",") != "tag,first,second"
 	}
@@ -63,11 +62,11 @@ func TestPropagationSwitchCaseOrderAndErrors(t *testing.T) {
 	}
 	events = nil
 	err = PropagationSwitchCaseWrapped(&events)
-	var operand_8 operandType = err == nil
+	operand_8 := err == nil
 	if !operand_8 {
 		operand_8 = err == errSwitchCase
 	}
-	var operand_9 operandType = operand_8
+	operand_9 := operand_8
 	if !operand_9 {
 		operand_9 = err.Error() != "switchCaseValue: switch case failure"
 	}
@@ -90,10 +89,9 @@ func TestPropagationSwitchCaseControlFlow(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			type operandType = bool
 			events := []string{}
 			err := test.run(&events)
-			var operand operandType = err != nil
+			operand := err != nil
 			if !operand {
 				operand = strings.Join(events, ",") != test.want
 			}

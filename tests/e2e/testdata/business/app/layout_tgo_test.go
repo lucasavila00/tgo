@@ -11,7 +11,6 @@ import (
 )
 
 func TestBoxedEnumLayout(t *testing.T) {
-	type operandType = bool
 	{
 		size := unsafe.Sizeof(*new(model.Large))
 		if size != 24 {
@@ -46,14 +45,14 @@ func TestBoxedEnumLayout(t *testing.T) {
 		return model.NewLargeSecond(input.FieldData)
 	}(model.TgoLargeSecondInput{FieldData: second})
 	empty := model.NewLargeEmpty()
-	var operand operandType = a.Tag() != model.LargeTagFirst
+	operand := a.Tag() != model.LargeTagFirst
 	if !operand {
 		operand = a.FirstPayload().Data != first
 	}
 	if operand {
 		t.Fatal("first boxed payload")
 	}
-	var operand_1 operandType = b.Tag() != model.LargeTagSecond
+	operand_1 := b.Tag() != model.LargeTagSecond
 	if !operand_1 {
 		operand_1 = b.SecondPayload().Data != second
 	}
@@ -73,7 +72,7 @@ func TestBoxedEnumLayout(t *testing.T) {
 	allocations := testing.AllocsPerRun(1000, func() {
 		read = a.FirstPayload().Data
 	})
-	var operand_2 operandType = allocations != 0
+	operand_2 := allocations != 0
 	if !operand_2 {
 		operand_2 = read != first
 	}
@@ -83,9 +82,8 @@ func TestBoxedEnumLayout(t *testing.T) {
 }
 
 func TestEnumPublicAPI(t *testing.T) {
-	type operandType = bool
 	namedZero := model.NewNamedZeroZero()
-	var operand operandType = namedZero.Tag() != model.NamedZeroTagZero
+	operand := namedZero.Tag() != model.NamedZeroTagZero
 	if !operand {
 		operand = namedZero.Tag() == 0
 	}

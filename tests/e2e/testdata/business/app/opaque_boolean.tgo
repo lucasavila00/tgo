@@ -29,6 +29,14 @@ func OpaqueBooleanFactory(events %[]string, failLater bool) (bool, error) {
 	), nil
 }
 
+func OpaqueBooleanLogical(events %[]string, failLater bool) (bool, error) {
+	return opaqueBooleanConsume(
+		events,
+		opaquebool.Factory() && opaquebool.Factory(),
+		opaqueBooleanLater(events, failLater)!!,
+	), nil
+}
+
 func OpaqueBooleanChecked(events %[]string, failCheck bool, failLater bool) (bool, error) {
 	return opaqueBooleanConsume(
 		events,

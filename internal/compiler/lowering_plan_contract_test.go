@@ -226,7 +226,7 @@ func TestLoweringPlanSeparatesForeignBooleanNormalization(t *testing.T) {
 	))
 	library.MarkComplete()
 
-	plan := buildForeignContractPlan(t, library, "use", `package sample
+	plan := buildForeignContractPlan(t, library, `package sample
 
 import "example.com/hidden"
 
@@ -316,7 +316,7 @@ func TestLoweringPlanKeepsOrdinaryForeignResultType(t *testing.T) {
 	))
 	library.MarkComplete()
 
-	plan := buildForeignContractPlan(t, library, "use", `package sample
+	plan := buildForeignContractPlan(t, library, `package sample
 
 import "example.com/hidden"
 
@@ -341,10 +341,79 @@ func use() (int, error) {
 	}
 }
 
+func TestLoweringPlanKeepsLogicalResultTypeBeforeInterfaceUse(t *testing.T) {
+	library := types.NewPackage("example.com/hidden", "hidden")
+	hiddenName := types.NewTypeName(token.NoPos, library, "hiddenBool", nil)
+	hidden := types.NewNamed(hiddenName, types.Typ[types.Bool], nil)
+	library.Scope().Insert(hiddenName)
+	library.Scope().Insert(types.NewFunc(
+		token.NoPos, library, "Factory",
+		types.NewSignatureType(
+			nil, nil, nil, types.NewTuple(),
+			types.NewTuple(types.NewVar(token.NoPos, library, "", hidden)), false,
+		),
+	))
+	anyType := types.Universe.Lookup("any").Type()
+	library.Scope().Insert(types.NewFunc(
+		token.NoPos, library, "ConsumeAny",
+		types.NewSignatureType(
+			nil, nil, nil,
+			types.NewTuple(
+				types.NewVar(token.NoPos, library, "", anyType),
+				types.NewVar(token.NoPos, library, "", types.Typ[types.Int]),
+			),
+			types.NewTuple(types.NewVar(token.NoPos, library, "", types.Typ[types.Int])),
+			false,
+		),
+	))
+	library.MarkComplete()
+
+	plan := buildForeignContractPlan(t, library, `package sample
+
+import "example.com/hidden"
+
+func load() (int, error) { return 7, nil }
+
+func use() (int, error) {
+	return hidden.ConsumeAny(hidden.Factory() && hidden.Factory(), load()!!), nil
+}
+`)
+	call := plan.root.operations[0].expressions[0]
+	logical := call.operands[1]
+	if !types.Identical(logical.expected, anyType) || len(logical.results) != 1 ||
+		!types.Identical(logical.results[0].typ, hidden) {
+		t.Fatalf("logical result lost its natural type: %#v", logical)
+	}
+	resultID := logical.results[0].id
+	if logical.work == nil || len(logical.work.operations) != 2 ||
+		logical.work.operations[0].outputs[0] != resultID ||
+		logical.work.operations[1].inputs[0] != resultID ||
+		!types.Identical(plan.values[resultID-1].typ, hidden) {
+		t.Fatalf("logical branch does not use its typed result: %#v", logical.work)
+	}
+}
+
+func TestLoweringReportsInvalidSliceComprehensionAtSource(t *testing.T) {
+	_, problems := Compile(PackageInput{
+		Path: "sample",
+		Sources: []File{{Name: "input.tgo", Data: []byte(`package sample
+
+func values(input []int) map[int]int {
+	return map[int]int{for _, value := range input { value }}
+}
+`)}},
+		FileSet:  token.NewFileSet(),
+		Importer: importer.Default(),
+	})
+	if len(problems) != 1 ||
+		problems[0].Error() != "input.tgo:4:9: slice comprehension needs a slice output type" {
+		t.Fatalf("invalid slice comprehension problems: %v", problems)
+	}
+}
+
 func buildForeignContractPlan(
 	t *testing.T,
 	library *types.Package,
-	functionName string,
 	sourceText string,
 ) *functionLoweringPlan {
 	t.Helper()
@@ -366,20 +435,20 @@ func buildForeignContractPlan(
 	var target *ast.FuncDecl
 	for _, declaration := range input.File.Decls {
 		function, ok := declaration.(*ast.FuncDecl)
-		if ok && function.Name.Name == functionName {
+		if ok && function.Name.Name == "use" {
 			target = function
 			break
 		}
 	}
 	if target == nil {
-		t.Fatalf("%s function is not in the source", functionName)
+		t.Fatal("use function is not in the source")
 	}
 	for _, function := range unit.loweringFunctions(input) {
 		if function.body.Pos() == target.Body.Pos() {
 			return buildFunctionLoweringPlan(unit, input, function)
 		}
 	}
-	t.Fatalf("%s function is not in the lowering input", functionName)
+	t.Fatal("use function is not in the lowering input")
 	return nil
 }
 

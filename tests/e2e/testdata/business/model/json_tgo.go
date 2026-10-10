@@ -406,17 +406,16 @@ func (JSONInternal) EmptyPayload() JSONInternalEmpty { return JSONInternalEmpty{
 func (v JSONInternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalTagCreated:
-		type operandType = bool
 		payload := v.CreatedPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand operandType = len(payloadData) < 2
+		operand := len(payloadData) < 2
 		if !operand {
 			operand = payloadData[0] != '{'
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -432,17 +431,16 @@ func (v JSONInternal) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case JSONInternalTagEmpty:
-		type operandType_1 = bool
 		payload := v.EmptyPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand_2 operandType_1 = len(payloadData) < 2
+		operand_2 := len(payloadData) < 2
 		if !operand_2 {
 			operand_2 = payloadData[0] != '{'
 		}
-		var operand_3 operandType_1 = operand_2
+		operand_3 := operand_2
 		if !operand_3 {
 			operand_3 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -697,7 +695,6 @@ func (v *JSONAdjacent) UnmarshalJSON(data []byte) error {
 }
 
 func (v *JSONAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -778,7 +775,7 @@ func (v *JSONAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand operandType = selected == 0
+	operand := selected == 0
 	if operand {
 		operand = unknown == ""
 	}
@@ -1382,17 +1379,16 @@ func (v JSONEscaped) ValuePayload() JSONEscapedValue { return v.tgoValue }
 func (v JSONEscaped) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONEscapedTagValue:
-		type operandType = bool
 		payload := v.ValuePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand operandType = len(payloadData) < 2
+		operand := len(payloadData) < 2
 		if !operand {
 			operand = payloadData[0] != '{'
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -1783,7 +1779,6 @@ func (v *JSONEscapedAdjacent) UnmarshalJSON(data []byte) error {
 }
 
 func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -1858,7 +1853,7 @@ func (v *JSONEscapedAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand operandType = selected == 0
+	operand := selected == 0
 	if operand {
 		operand = unknown == ""
 	}
@@ -2111,17 +2106,16 @@ func (v JSONInternalPayloadMethod) ValuePayload() JSONInternalPayloadMethodValue
 func (v JSONInternalPayloadMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalPayloadMethodTagValue:
-		type operandType = bool
 		payload := v.ValuePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand operandType = len(payloadData) < 2
+		operand := len(payloadData) < 2
 		if !operand {
 			operand = payloadData[0] != '{'
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -2248,17 +2242,16 @@ func (v JSONInternalPromotedMethod) ValuePayload() JSONInternalPromotedMethodVal
 func (v JSONInternalPromotedMethod) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONInternalPromotedMethodTagValue:
-		type operandType = bool
 		payload := v.ValuePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand operandType = len(payloadData) < 2
+		operand := len(payloadData) < 2
 		if !operand {
 			operand = payloadData[0] != '{'
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -2663,17 +2656,16 @@ func (v JSONNonNilInternal) ValuePayload() JSONNonNilInternalValue { return v.tg
 func (v JSONNonNilInternal) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case JSONNonNilInternalTagValue:
-		type operandType = bool
 		payload := v.ValuePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand operandType = len(payloadData) < 2
+		operand := len(payloadData) < 2
 		if !operand {
 			operand = payloadData[0] != '{'
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -2866,7 +2858,6 @@ func (v *JSONNonNilAdjacent) UnmarshalJSON(data []byte) error {
 }
 
 func (v *JSONNonNilAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
-	type operandType = bool
 	token, err := in.ReadToken()
 	if err != nil {
 		return err
@@ -2945,7 +2936,7 @@ func (v *JSONNonNilAdjacent) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	var operand operandType = selected == 0
+	operand := selected == 0
 	if operand {
 		operand = unknown == ""
 	}

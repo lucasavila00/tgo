@@ -65,8 +65,7 @@ func Nested(account model.Account) string {
 }
 
 func Shorten(accounts []model.Account, length int) []model.Account {
-	type operandType = bool
-	var operand operandType = length >= 0
+	operand := length >= 0
 	if operand {
 		operand = length <= len(accounts)
 	}

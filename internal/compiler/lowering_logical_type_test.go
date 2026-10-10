@@ -63,6 +63,16 @@ func consumeAny(value any, number int) bool {
 	_, ok := value.(Flag)
 	return ok && number == 7
 }
+
+func multipleResults(
+	events *[]string,
+	ready Flag,
+	checkFail bool,
+	loadFail bool,
+) (Flag, int, error) {
+	flag, number := ready && check(events, true, checkFail)!!, load(events, loadFail)!!
+	return flag, number, nil
+}
 `
 
 const loweringLogicalTypeTestSource = `package logicaltype
@@ -107,6 +117,25 @@ func TestGeneratedNamedLogicalType(t *testing.T) {
 	preserved, err = preserveDynamicType(&events, true)
 	if preserved || err != errLoad || strings.Join(events, ",") != "check,load" {
 		t.Fatalf("dynamic type failure preserved=%t error=%v events=%v", preserved, err, events)
+	}
+
+	events = nil
+	flag, number, err := multipleResults(&events, true, false, false)
+	if !flag || number != 7 || err != nil || strings.Join(events, ",") != "check,load" {
+		t.Fatalf("multiple success flag=%t number=%d error=%v events=%v", flag, number, err, events)
+	}
+
+	events = nil
+	flag, number, err = multipleResults(&events, false, false, false)
+	if flag || number != 7 || err != nil || strings.Join(events, ",") != "load" {
+		t.Fatalf("multiple short circuit flag=%t number=%d error=%v events=%v",
+			flag, number, err, events)
+	}
+
+	events = nil
+	flag, number, err = multipleResults(&events, true, true, false)
+	if flag || number != 0 || err != errCheck || strings.Join(events, ",") != "check" {
+		t.Fatalf("multiple failure flag=%t number=%d error=%v events=%v", flag, number, err, events)
 	}
 }
 `

@@ -15,6 +15,12 @@ func TestOpaqueBooleanKeepsForeignDynamicType(t *testing.T) {
 	}
 
 	events = nil
+	ok, err = OpaqueBooleanLogical(&events, false)
+	if !ok || err != nil || strings.Join(events, ",") != "later,consume" {
+		t.Fatalf("logical ok=%v error=%v events=%v", ok, err, events)
+	}
+
+	events = nil
 	ok, err = OpaqueBooleanChecked(&events, false, false)
 	if !ok || err != nil || strings.Join(events, ",") != "later,consume" {
 		t.Fatalf("checked ok=%v error=%v events=%v", ok, err, events)

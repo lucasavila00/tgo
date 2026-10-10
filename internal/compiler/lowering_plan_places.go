@@ -30,7 +30,9 @@ func (b *loweringPlanBuilder) assignmentPlace(expression ast.Expr) *plannedPlace
 	case *ast.StarExpr:
 		place.kind = planDerefPlace
 		place.container = b.expression(node.X)
-		place.values = append(place.values, b.newValue(place.container.typ, node.X.Pos()))
+		place.values = append(place.values, b.newValue(
+			plannedExpressionProducedType(place.container), node.X.Pos(),
+		))
 	case *ast.SelectorExpr:
 		place.kind = planFieldPlace
 		if selection := b.unit.info.Selections[node]; selection != nil &&
@@ -61,14 +63,16 @@ func (b *loweringPlanBuilder) assignmentPlace(expression ast.Expr) *plannedPlace
 		case *types.Slice:
 			place.kind = planSliceIndexPlace
 			place.container = containerPlan
-			place.values = append(place.values, b.newValue(place.container.typ, node.X.Pos()))
+			place.values = append(place.values, b.newValue(containerType, node.X.Pos()))
 		case *types.Map:
 			place.kind = planMapIndexPlace
 			place.container = containerPlan
-			place.values = append(place.values, b.newValue(place.container.typ, node.X.Pos()))
+			place.values = append(place.values, b.newValue(containerType, node.X.Pos()))
 		}
 		place.index = b.expression(node.Index)
-		place.values = append(place.values, b.newValue(place.index.typ, node.Index.Pos()))
+		place.values = append(place.values, b.newValue(
+			plannedExpressionProducedType(place.index), node.Index.Pos(),
+		))
 	}
 	return place
 }
@@ -135,14 +139,15 @@ func dereferencedType(typ types.Type) types.Type {
 }
 
 func (b *loweringPlanBuilder) derefPlace(expression ast.Expr) *plannedPlace {
-	pointerType := b.expressionType(expression)
+	container := b.expression(expression)
+	pointerType := plannedExpressionProducedType(container)
 	typ := types.Type(nil)
 	if pointer, ok := types.Unalias(pointerType).(*types.Pointer); ok {
 		typ = pointer.Elem()
 	}
 	place := &plannedPlace{
 		id: placeID(len(b.plan.places) + 1), typ: typ, position: expression.Pos(),
-		kind: planDerefPlace, source: expression, container: b.expression(expression),
+		kind: planDerefPlace, source: expression, container: container,
 	}
 	place.values = append(place.values, b.newValue(pointerType, expression.Pos()))
 	b.plan.places = append(b.plan.places, place)

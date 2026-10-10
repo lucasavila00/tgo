@@ -396,6 +396,19 @@ func (b *loweringPlanBuilder) newValue(typ types.Type, position token.Pos) plann
 	return value
 }
 
+func plannedExpressionProducedType(expression *plannedExpression) types.Type {
+	if expression == nil {
+		return nil
+	}
+	if len(expression.results) == 1 {
+		return expression.results[0].typ
+	}
+	if validPlannedType(expression.typ) {
+		return expression.typ
+	}
+	return nil
+}
+
 func (b *loweringPlanBuilder) orderExpressions(
 	expressions []*plannedExpression,
 ) *plannedBlock {
@@ -411,12 +424,12 @@ func (b *loweringPlanBuilder) orderExpressions(
 		if !laterWork || !b.canMaterialize(expression) {
 			continue
 		}
-		value := plannedValue{
-			id: valueID(len(b.plan.values) + 1), typ: expression.typ,
-			position:      expression.source.Pos(),
-			typeReference: b.typeReference(expression.typ, expression.source.Pos()),
+		var value plannedValue
+		if expression.work != nil && len(expression.results) == 1 {
+			value = expression.results[0]
+		} else {
+			value = b.newValue(plannedExpressionProducedType(expression), expression.source.Pos())
 		}
-		b.plan.values = append(b.plan.values, value)
 		expression.materialized = value.id
 		block.operations = append(block.operations, &plannedOperation{
 			kind: planEvaluate, expressions: []*plannedExpression{expression},
@@ -430,10 +443,11 @@ func (b *loweringPlanBuilder) orderExpressions(
 }
 
 func (b *loweringPlanBuilder) canMaterialize(expression *plannedExpression) bool {
-	if expression == nil || !validPlannedType(expression.typ) {
+	typ := plannedExpressionProducedType(expression)
+	if !validPlannedType(typ) {
 		return false
 	}
-	if _, tuple := expression.typ.(*types.Tuple); tuple {
+	if _, tuple := typ.(*types.Tuple); tuple {
 		return false
 	}
 	value, ok := b.unit.info.Types[expression.source]

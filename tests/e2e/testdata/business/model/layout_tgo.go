@@ -563,8 +563,7 @@ func (v NamedZero) Tag() NamedZeroTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v NamedZero) GobEncode() ([]byte, error) {
-	type operandType = bool
-	var operand operandType = v.tgoTag < NamedZeroTagZero
+	operand := v.tgoTag < NamedZeroTagZero
 	if !operand {
 		operand = v.tgoTag > NamedZeroTagOther
 	}
@@ -577,17 +576,16 @@ func (v NamedZero) GobEncode() ([]byte, error) {
 
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *NamedZero) GobDecode(data []byte) error {
-	type operandType = bool
 	if len(data) != 4 {
 		return fmt.Errorf("NamedZero: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := NamedZeroTag(number)
-	var operand operandType = uint32(tag) != number
+	operand := uint32(tag) != number
 	if !operand {
 		operand = tag < NamedZeroTagZero
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = tag > NamedZeroTagOther
 	}
