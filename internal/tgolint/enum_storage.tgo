@@ -243,6 +243,10 @@ func (c %checker) transferEnumStorageLists(
 ) {
 	storages := make([]enumStorageSet, len(left))
 	closures := make([]*enumClosureEffect, len(left))
+	destinations := make([]enumStorageSet, len(left))
+	for index, target := range left {
+		destinations[index] = c.enumCells(target, state)
+	}
 	if len(left) == len(right) {
 		for index := range left {
 			storages[index] = c.enumExpressionStorage(right[index], state)
@@ -250,8 +254,18 @@ func (c %checker) transferEnumStorageLists(
 		}
 	}
 	for index, target := range left {
-		if place, ok := enumPointerPlaceOf(c.facts, target); ok {
-			state.pointers[place] = storages[index]
+		if enumPointerType(c.facts, target) {
+			strong := len(destinations[index]) == 1
+			for place := range destinations[index] {
+				if strong {
+					state.pointers[place] = storages[index]
+					continue
+				}
+				joined, _ := joinEnumStorageSet(
+					c.enumPlaceStorage(place, state), storages[index],
+				)
+				state.pointers[place] = joined
+			}
 		}
 		name := syntax.IdentifierExpressionOf(target)
 		if name != nil && name.Name != "_" {
@@ -268,11 +282,21 @@ func enumPointerPlaceOf(
 	facts %sourcefacts.Index,
 	expression %syntax.Expression,
 ) (enumPointerPlace, bool) {
+	if !enumPointerType(facts, expression) {
+		return enumPointerPlace{}, false
+	}
+	return enumStablePlaceOf(facts, expression)
+}
+
+func enumPointerType(
+	facts %sourcefacts.Index,
+	expression %syntax.Expression,
+) bool {
 	typ := facts.Type(expression)
 	if typ == nil {
 		root, fields, ok := receiverPath(facts, expression)
 		if !ok {
-			return enumPointerPlace{}, false
+			return false
 		}
 		if len(fields) == 0 {
 			typ = root.Type()
@@ -281,12 +305,12 @@ func enumPointerPlaceOf(
 		}
 	}
 	if typ == nil {
-		return enumPointerPlace{}, false
+		return false
 	}
 	if _, pointer := types.Unalias(typ).(*types.Pointer); !pointer {
-		return enumPointerPlace{}, false
+		return false
 	}
-	return enumStablePlaceOf(facts, expression)
+	return true
 }
 
 func enumStablePlaceOf(
@@ -319,22 +343,64 @@ func (c %checker) enumExpressionStorage(
 		return c.enumExpressionStorage(parenthesized.Expression, state)
 	}
 	if unary := syntax.UnaryExpressionOf(expression); unary != nil && unary.Operator == token.AND {
-		if place, ok := enumStablePlaceOf(c.facts, unary.Expression); ok {
-			return enumStorageSet{place: true}
-		}
+		return c.enumCells(unary.Expression, state)
 	}
 	if name := syntax.IdentifierExpressionOf(expression); name != nil &&
 		c.facts.Object(name) == types.Universe.Lookup("nil") {
 		return enumStorageSet{}
 	}
-	place, ok := enumPointerPlaceOf(c.facts, expression)
-	if !ok {
+	if !enumPointerType(c.facts, expression) {
 		return enumStorageSet{{origin: syntax.ExpressionPosition(expression)}: true}
 	}
-	if identities, found := state.pointers[place]; found {
-		return cloneEnumStorageSet(identities)
+	result := make(enumStorageSet)
+	for place := range c.enumCells(expression, state) {
+		for identity := range c.enumPlaceStorage(place, state) {
+			result[identity] = true
+		}
 	}
-	return enumStorageSet{place: true}
+	return result
+}
+
+// enumCells resolves an expression to the cells that store its value.
+func (c %checker) enumCells(
+	expression %syntax.Expression,
+	state *enumStorageState,
+) enumStorageSet {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return c.enumCells(parenthesized.Expression, state)
+	}
+	if name := syntax.IdentifierExpressionOf(expression); name != nil {
+		object := c.facts.Object(name)
+		if object == nil {
+			return nil
+		}
+		return enumStorageSet{{root: object}: true}
+	}
+	if star := syntax.StarExpressionOf(expression); star != nil {
+		return c.enumExpressionStorage(star.Expression, state)
+	}
+	selector := syntax.SelectorExpressionOf(expression)
+	if selector == nil {
+		return nil
+	}
+	selection := c.facts.Selection(expression)
+	if selection == nil || selection.Kind() != types.FieldVal {
+		return nil
+	}
+	owners := c.enumCells(selector.Expression, state)
+	typ := c.facts.Type(selector.Expression)
+	if typ != nil {
+		if _, pointer := types.Unalias(typ).(*types.Pointer); pointer {
+			owners = c.enumExpressionStorage(selector.Expression, state)
+		}
+	}
+	result := make(enumStorageSet, len(owners))
+	part := "/" + strconv.Itoa(int(selection.Obj().Pos()))
+	for owner := range owners {
+		owner.path += part
+		result[owner] = true
+	}
+	return result
 }
 
 func (c %checker) enumExpressionClosure(
