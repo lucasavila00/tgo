@@ -261,7 +261,7 @@ func (e *loweringEmitter) operation(
 		e.operations(operation.body, body)
 		output.List = append(output.List, &ast.IfStmt{Cond: condition, Body: body})
 	case planReturn:
-		output.List = append(output.List, e.errorReturn(operation))
+		output.List = append(output.List, e.errorReturn(operation, output))
 	}
 }
 
@@ -1129,7 +1129,10 @@ func (e *loweringEmitter) expressionResults(
 	return []ast.Expr{e.expression(plan, block)}
 }
 
-func (e *loweringEmitter) errorReturn(operation *plannedOperation) ast.Stmt {
+func (e *loweringEmitter) errorReturn(
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) ast.Stmt {
 	count := e.plan.function.resultType.Len() - 1
 	results := make([]ast.Expr, 0, count+1)
 	for index := 0; index < count; index++ {
@@ -1142,6 +1145,9 @@ func (e *loweringEmitter) errorReturn(operation *plannedOperation) ast.Stmt {
 		name := e.freshName("zero")
 		specification := &ast.ValueSpec{Names: []*ast.Ident{name}, Type: resultType}
 		e.unit.generatedValues[specification] = true
+		output.List = append(output.List, &ast.DeclStmt{Decl: &ast.GenDecl{
+			Tok: token.VAR, Specs: []ast.Spec{specification},
+		}})
 		results = append(results, name)
 	}
 	returnedError := ast.Expr(e.valueName(operation.errorValue, "err"))
