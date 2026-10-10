@@ -129,6 +129,7 @@ type enumCellSet map[enumCellID]bool
 
 type enumAbstractValue struct {
 	regions      enumRegionSet
+	places       enumCellSet
 	closures     enumEventClosureSet
 	dependencies enumCellSet
 	observation  *enumTagObservation
@@ -162,6 +163,7 @@ func cloneEnumAbstractValue(value enumAbstractValue) enumAbstractValue {
 	for region := range value.regions {
 		result.regions[region] = true
 	}
+	result.places = cloneEnumCellSet(value.places)
 	result.dependencies = make(enumCellSet, len(value.dependencies))
 	for cell := range value.dependencies {
 		result.dependencies[cell] = true
@@ -202,6 +204,7 @@ const (
 	enumEventInvalid enumEventKind = iota
 	enumEventResolvePlace
 	enumEventLoad
+	enumEventTagRead
 	enumEventSave
 	enumEventCall
 	enumEventStore
@@ -216,11 +219,12 @@ type enumEvent struct {
 	cells      enumCellSet
 	regions    enumRegionSet
 	value      enumSavedValueID
+	source     enumSavedValueID
 	values     []enumSavedValueID
 	result     int
 	tag        int
 	serial     int
-	tagRead    bool
+	field      *types.Var
 }
 
 type enumEventBlock struct {
@@ -240,6 +244,7 @@ type enumEventGraph struct {
 	blocks      []enumEventBlock
 	entry       enumEventBlockID
 	access      map[*syntax.Expression]enumEventLocation
+	expressions map[*syntax.Expression]enumSavedValueID
 	values      []enumAbstractValue
 	closures    map[enumEventClosureKey]enumEventClosureID
 	closureKeys []enumEventClosureKey
@@ -252,9 +257,10 @@ type enumEventLocation struct {
 
 func newEnumEventGraph() *enumEventGraph {
 	return &enumEventGraph{
-		identities: newEnumIdentityTable(),
-		access:     make(map[*syntax.Expression]enumEventLocation),
-		closures:   make(map[enumEventClosureKey]enumEventClosureID),
+		identities:  newEnumIdentityTable(),
+		access:      make(map[*syntax.Expression]enumEventLocation),
+		expressions: make(map[*syntax.Expression]enumSavedValueID),
+		closures:    make(map[enumEventClosureKey]enumEventClosureID),
 	}
 }
 

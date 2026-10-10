@@ -47,13 +47,63 @@ func (builder *enumEventBuilder) build(
 		for _, node := range block.Nodes {
 			current = builder.emitNode(current, node)
 		}
-		for _, successor := range block.Succs {
+		for index, successor := range block.Succs {
 			if successor != nil {
-				builder.addEdge(current, builder.blocks[successor])
+				builder.addSyntaxEdge(current, builder.blocks[successor], block, index)
 			}
 		}
 	}
 	return builder.graph
+}
+
+func (builder *enumEventBuilder) addSyntaxEdge(
+	from enumEventBlockID,
+	to enumEventBlockID,
+	block *cfg.Block,
+	successor int,
+) {
+	index := int(from) - 1
+	if index < 0 || index >= len(builder.graph.blocks) {
+		return
+	}
+	edge := enumEventEdge{target: to}
+	if len(block.Succs) == 2 && len(block.Nodes) != 0 {
+		expression, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
+		if ok {
+			edge.tests = builder.proofEvents(expression, successor == 0)
+		}
+	}
+	builder.graph.blocks[index].successors = append(
+		builder.graph.blocks[index].successors, edge,
+	)
+}
+
+func (builder *enumEventBuilder) proofEvents(
+	expression *syntax.Expression,
+	truth bool,
+) []enumEvent {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return builder.proofEvents(parenthesized.Expression, truth)
+	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil && unary.Operator == token.NOT {
+		return builder.proofEvents(unary.Expression, !truth)
+	}
+	binary := syntax.BinaryExpressionOf(expression)
+	if binary == nil || truth && binary.Operator != token.EQL ||
+		!truth && binary.Operator != token.NEQ {
+		return nil
+	}
+	_, _, tag, ok := builder.checker.tagGuardSides(binary.Left, binary.Right)
+	call := binary.Left
+	if !ok {
+		_, _, tag, ok = builder.checker.tagGuardSides(binary.Right, binary.Left)
+		call = binary.Right
+	}
+	value, found := builder.graph.expressions[call]
+	if !ok || !found {
+		return nil
+	}
+	return []enumEvent{{kind: enumEventTagTest, value: value, tag: tag}}
 }
 
 func (builder *enumEventBuilder) addEdge(
@@ -137,7 +187,54 @@ func (builder *enumEventBuilder) emitExpression(
 		})
 		return block, value
 	}
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		block, place := builder.emitSelectorPlace(block, expression, selector)
+		value := builder.graph.newSavedValue()
+		builder.graph.addEvent(block, enumEvent{
+			kind:       enumEventLoad,
+			expression: expression,
+			source:     place,
+			value:      value,
+		})
+		return block, value
+	}
+	if star := syntax.StarExpressionOf(expression); star != nil {
+		return builder.emitExpression(block, star.Expression)
+	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
+		if receiver, _, _, _, _ := builder.checker.tagCall(expression); receiver != nil {
+			block, source := builder.emitExpression(block, receiver)
+			value := builder.graph.newSavedValue()
+			builder.graph.addEvent(block, enumEvent{
+				kind:       enumEventTagRead,
+				expression: expression,
+				source:     source,
+				value:      value,
+			})
+			builder.graph.expressions[expression] = value
+			return block, value
+		}
+		if selector := syntax.SelectorExpressionOf(call.Callee); selector != nil {
+			model := builder.checker.modelForSourceSelector(call.Callee, selector)
+			tag := variantTag(model, selector.Selector.Name)
+			if tag != 0 {
+				block, receiver := builder.emitExpression(block, selector.Expression)
+				builder.graph.addEvent(block, enumEvent{
+					kind:       enumEventPayloadCheck,
+					expression: call.Callee,
+					value:      receiver,
+					tag:        tag,
+				})
+				result := builder.graph.newSavedValue()
+				builder.graph.addEvent(block, enumEvent{
+					kind:       enumEventCall,
+					expression: expression,
+					value:      receiver,
+					values:     []enumSavedValueID{result},
+				})
+				return block, result
+			}
+		}
 		var callee enumSavedValueID
 		block, callee = builder.emitExpression(block, call.Callee)
 		arguments := make([]enumSavedValueID, len(call.Args))
@@ -189,7 +286,46 @@ func (builder *enumEventBuilder) emitPlace(
 	if star := syntax.StarExpressionOf(expression); star != nil {
 		return builder.emitExpression(block, star.Expression)
 	}
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		return builder.emitSelectorPlace(block, expression, selector)
+	}
+	if name := syntax.IdentifierExpressionOf(expression); name != nil {
+		cell := builder.localCell(builder.checker.facts.Object(name))
+		value := builder.graph.save(enumAbstractValue{
+			places: enumCellSet{cell: true},
+		})
+		builder.graph.addEvent(block, enumEvent{
+			kind:  enumEventSave,
+			value: value,
+		})
+		return block, value
+	}
 	return builder.emitExpression(block, expression)
+}
+
+func (builder *enumEventBuilder) emitSelectorPlace(
+	block enumEventBlockID,
+	expression *syntax.Expression,
+	selector *syntax.SelectorExpression,
+) (enumEventBlockID, enumSavedValueID) {
+	block, owner := builder.emitExpression(block, selector.Expression)
+	selection := builder.checker.facts.Selection(expression)
+	if selection == nil || selection.Kind() != types.FieldVal {
+		return block, owner
+	}
+	field, ok := selection.Obj().(*types.Var)
+	if !ok {
+		return block, owner
+	}
+	value := builder.graph.newSavedValue()
+	builder.graph.addEvent(block, enumEvent{
+		kind:       enumEventResolvePlace,
+		expression: expression,
+		source:     owner,
+		value:      value,
+		field:      field,
+	})
+	return block, value
 }
 
 func (builder *enumEventBuilder) localCell(object types.Object) enumCellID {

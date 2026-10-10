@@ -24,6 +24,14 @@ func cloneEnumCellSet(source enumCellSet) enumCellSet {
 	return result
 }
 
+func cloneEnumRegionSet(source enumRegionSet) enumRegionSet {
+	result := make(enumRegionSet, len(source))
+	for region := range source {
+		result[region] = true
+	}
+	return result
+}
+
 func equalEnumWriteSet(left, right enumWriteSet) bool {
 	if len(left) != len(right) {
 		return false
@@ -111,6 +119,15 @@ func joinEnumAbstractValues(
 	for region := range right.regions {
 		if !result.regions[region] {
 			result.regions[region] = true
+			changed = true
+		}
+	}
+	if result.places == nil {
+		result.places = make(enumCellSet)
+	}
+	for cell := range right.places {
+		if !result.places[cell] {
+			result.places[cell] = true
 			changed = true
 		}
 	}
@@ -283,21 +300,56 @@ func (graph *enumEventGraph) transfer(
 	event enumEvent,
 ) bool {
 	switch event.kind {
+	case enumEventResolvePlace:
+		base := state.saved[event.source]
+		value := enumAbstractValue{places: make(enumCellSet)}
+		for region := range base.regions {
+			owner := graph.identities.fieldRegion(region, event.field, 0)
+			cell := graph.identities.cell(enumCellKey{
+				owner: owner,
+				field: event.field,
+			})
+			value.places[cell] = true
+		}
+		state.saved[event.value] = value
 	case enumEventLoad:
 		value := enumAbstractValue{}
 		for cell := range event.cells {
 			value, _ = joinEnumAbstractValues(value, state.cells[cell])
+			if value.dependencies == nil {
+				value.dependencies = make(enumCellSet)
+			}
+			value.dependencies[cell] = true
 		}
-		if event.tagRead {
-			value.observation = state.observe(value)
+		for cell := range state.saved[event.source].places {
+			value, _ = joinEnumAbstractValues(value, state.cells[cell])
+			if value.dependencies == nil {
+				value.dependencies = make(enumCellSet)
+			}
+			value.dependencies[cell] = true
 		}
+		state.saved[event.value] = value
+	case enumEventTagRead:
+		value := cloneEnumAbstractValue(state.saved[event.source])
+		value.observation = state.observe(value)
 		state.saved[event.value] = value
 	case enumEventSave:
 		state.saved[event.value] = graph.saved(event.value)
 	case enumEventStore:
 		value := state.saved[event.value]
-		strong := len(event.cells) == 1
-		for cell := range event.cells {
+		cells := cloneEnumCellSet(event.cells)
+		regions := cloneEnumRegionSet(event.regions)
+		if len(event.values) != 0 {
+			destination := state.saved[event.values[0]]
+			for cell := range destination.places {
+				cells[cell] = true
+			}
+			for region := range destination.regions {
+				regions[region] = true
+			}
+		}
+		strong := len(cells) == 1
+		for cell := range cells {
 			old := state.cells[cell]
 			state.killRegionProofs(old.regions)
 			state.recordCellWrite(cell, event.serial)
@@ -307,8 +359,8 @@ func (graph *enumEventGraph) transfer(
 				state.cells[cell], _ = joinEnumAbstractValues(old, value)
 			}
 		}
-		state.invalidateObservations(event.cells, event.regions)
-		for region := range event.regions {
+		state.invalidateObservations(cells, regions)
+		for region := range regions {
 			state.killRegionProofs(enumRegionSet{region: true})
 			state.recordRegionWrite(region, event.serial)
 		}

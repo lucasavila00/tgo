@@ -1200,6 +1200,21 @@ func AssignmentOperandSnapshot(value, other *model.Event) string {
 		return other
 	}
 	if value.Tag() == model.EventTagStarted {
+		*saveAliasPointer(alias), _ = model.NewEventStopped("changed"), rebind()
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func saveAliasPointer(value *model.Event) *model.Event { return value }
+
+func UnspecifiedAssignmentOperand(value, other *model.Event) string {
+	alias := value
+	rebind := func() *model.Event {
+		alias = other
+		return other
+	}
+	if value.Tag() == model.EventTagStarted {
 		*alias, _ = model.NewEventStopped("changed"), rebind()
 		return value.StartedPayload().ID
 	}
