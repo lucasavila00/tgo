@@ -82,7 +82,7 @@ func (c %checker) reportStorageUnknownCallArguments(expression %syntax.Expressio
 			break
 		}
 		value := flow.arguments[position][index]
-		for _, function := range value.functions {
+		for _, function := range storageReachableFunctions(state, value) {
 			effects := storageGraphEffectsInContext(storageGraphCall{
 				fact: function.fact, function: function.graph,
 				captures:          function.captures,
@@ -104,6 +104,45 @@ func (c %checker) reportStorageUnknownCallArguments(expression %syntax.Expressio
 				argument, argument, effects.access, function.receiverArguments,
 				function.typeArguments, false, "function value escape",
 			)
+		}
+	}
+}
+
+func storageReachableFunctions(
+	state storageState,
+	root storageValue,
+) []storageFunction {
+	var result []storageFunction
+	locations := make(map[storageLocation]bool)
+	addStorageValueLocations(locations, root)
+	for _, function := range root.functions {
+		if !containsStorageFunction(result, function) {
+			result = append(result, function)
+		}
+	}
+	processed := make(map[storageLocation]bool)
+	for {
+		changed := false
+		for location := range locations {
+			if processed[location] {
+				continue
+			}
+			processed[location] = true
+			changed = true
+			for path, value := range state.memory {
+				if path.location != location {
+					continue
+				}
+				addStorageValueLocations(locations, value)
+				for _, function := range value.functions {
+					if !containsStorageFunction(result, function) {
+						result = append(result, function)
+					}
+				}
+			}
+		}
+		if !changed {
+			return result
 		}
 	}
 }
