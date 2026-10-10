@@ -388,6 +388,7 @@ func (p *packageUnit) checkedConstructorCall(
 	}
 	p.recordCheckedLiteralReferences(literal, named, structure, indices)
 
+	p.markErasedOwnerImport(file, literal.Type, named.Obj().Pkg())
 	prefix := p.ownerQualifier(file, named.Obj().Pkg())
 	constructor := p.generatedObject(
 		prefix, owner.Path, "New"+declaration.Name, literal.Lbrace,
