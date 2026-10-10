@@ -89,14 +89,14 @@ func (i *workspaceTypeImporter) ImportFrom(
 	if err != nil {
 		closeErr := file.Close()
 		if closeErr != nil {
-			return nil, errors.Join(err, closeErr)
+			return , errors.Join(err, closeErr)
 		}
-		return nil, err
+		return , err
 	}
 	pkg, err := gcexportdata.Read(reader, i.files, i.packages, path)
 	closeErr := file.Close()
 	if closeErr != nil {
-		return nil, errors.Join(err, closeErr)
+		return , errors.Join(err, closeErr)
 	}
 	return pkg, err
 }
