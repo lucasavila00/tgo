@@ -16,8 +16,8 @@ func (c *checker) checkPayloadAccessor(
 	model *model,
 	tag int,
 ) {
-	if c.branchPayloadProof(expression, selector.Expression, model, tag) ||
-		c.earlyExitPayloadProof(expression, selector.Expression, model, tag) {
+	flow := c.enumEventFlow(expression)
+	if flow != nil && flow.access[expression] {
 		c.syntaxSafe[expression] = true
 		return
 	}

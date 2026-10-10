@@ -149,11 +149,13 @@ func SafeAssignmentOperandSnapshot(value, other *model.Event) string {
 		return value
 	}
 	if value.Tag() == model.EventTagStarted {
-		*alias, _ = model.NewEventStopped("changed"), rebind()
+		*saveGoodAliasPointer(alias), _ = model.NewEventStopped("changed"), rebind()
 		return value.StartedPayload().ID
 	}
 	return ""
 }
+
+func saveGoodAliasPointer(value *model.Event) *model.Event { return value }
 
 func RecursiveUnrelatedArgument(value, other, proved *model.Event) string {
 	var mutate func(*model.Event, int)

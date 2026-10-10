@@ -229,18 +229,25 @@ func joinEnumEventStates(
 	changed := false
 	for cell, value := range incoming.cells {
 		currentValue, present := result.cells[cell]
-		joined, added := joinEnumAbstractValues(currentValue, value)
+		joined, _ := joinEnumAbstractValues(currentValue, value)
 		if present && currentValue.relationKnown && value.relationKnown &&
 			!enumCellSetEqual(currentValue.relations, value.relations) {
-			joined.relations = enumCellSet{cell: true}
+			phi := enumCellSet{cell: true}
+			joined.relations = phi
 			joined.relationKnown = true
-			added = true
 		}
+		added := !equalEnumAbstractValues(currentValue, joined)
 		result.cells[cell] = joined
 		changed = changed || added
 	}
 	for saved, value := range incoming.saved {
-		joined, added := joinEnumAbstractValues(result.saved[saved], value)
+		currentValue, present := result.saved[saved]
+		if !present {
+			result.saved[saved] = cloneEnumAbstractValue(value)
+			changed = true
+			continue
+		}
+		joined, added := joinEnumAbstractValues(currentValue, value)
 		result.saved[saved] = joined
 		changed = changed || added
 	}
@@ -566,8 +573,8 @@ type enumEventResult struct {
 	values []enumAbstractValue
 }
 
-// run evaluates all event paths to a finite fixed point.
-func (graph *enumEventGraph) run(initial *enumEventState) *enumEventResult {
+// runPass evaluates the event graph with the current call summaries.
+func (graph *enumEventGraph) runPass(initial *enumEventState) *enumEventResult {
 	result := &enumEventResult{
 		access: make(map[*syntax.Expression]bool),
 		before: make(map[enumEventLocation]*enumEventState),
@@ -636,8 +643,14 @@ func (graph *enumEventGraph) run(initial *enumEventState) *enumEventResult {
 			}
 		}
 	}
-	if graph.calls.analyze() {
-		return graph.run(initial)
+	return result
+}
+
+// run evaluates event and call paths to one finite fixed point.
+func (graph *enumEventGraph) run(initial *enumEventState) *enumEventResult {
+	result := graph.runPass(initial)
+	for graph.calls.analyze() {
+		result = graph.runPass(initial)
 	}
 	return result
 }

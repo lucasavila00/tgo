@@ -126,6 +126,9 @@ func TestEnumRelationRequiresEveryJoinedPath(t *testing.T) {
 	if !enumCellSetEqual(joined.cells[3].relations, enumCellSet{3: true}) {
 		t.Fatalf("joined relation = %v", joined.cells[3].relations)
 	}
+	if _, changed := joinEnumEventStates(joined, right); changed {
+		t.Fatal("the finite phi relation did not converge")
+	}
 	unchanged, _ := joinEnumEventStates(left, left)
 	if !enumCellSetEqual(unchanged.cells[3].relations, enumCellSet{1: true}) {
 		t.Fatalf("unchanged relation = %v", unchanged.cells[3].relations)

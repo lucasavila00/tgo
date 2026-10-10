@@ -114,9 +114,6 @@ func (builder *enumEventBuilder) seedFunctionInputs(function *syntax.Node) {
 		}
 	}
 	for _, variable := range variables {
-		if _, pointer := types.Unalias(variable.Type()).(*types.Pointer); !pointer {
-			continue
-		}
 		cell := builder.localCell(variable)
 		region := builder.graph.identities.region(enumRegionKey{
 			activation: builder.activation,
@@ -486,6 +483,17 @@ func (builder *enumEventBuilder) emitExpression(
 		return block, value
 	}
 	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		model := builder.checker.modelForSourceSelector(expression, selector)
+		if tag := variantTag(model, selector.Selector.Name); tag != 0 {
+			block, receiver := builder.emitExpression(block, selector.Expression)
+			builder.graph.addEvent(block, enumEvent{
+				kind:       enumEventPayloadCheck,
+				expression: expression,
+				value:      receiver,
+				tag:        tag,
+			})
+			return builder.emitUnknown(block, expression)
+		}
 		block, place := builder.emitSelectorPlace(block, expression, selector)
 		selection := builder.checker.facts.Selection(expression)
 		if selection != nil && selection.Kind() != types.FieldVal {

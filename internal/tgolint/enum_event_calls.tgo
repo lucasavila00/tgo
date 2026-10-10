@@ -278,7 +278,7 @@ func (worklist *enumEventCallWorklist) analyzeCall(
 			}
 		}
 	}
-	result := child.run(initial)
+	result := child.runPass(initial)
 	cells := make(map[enumCellID]enumAbstractValue)
 	regions := make(enumRegionSet)
 	if result.output != nil {

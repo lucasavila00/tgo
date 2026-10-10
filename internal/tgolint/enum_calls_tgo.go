@@ -338,7 +338,9 @@ func (c *checker) invokeEnumClosure(
 	}
 	call := input.calls[literal]
 	if call == nil {
-		call = &enumClosureCall{}
+		call = &enumClosureCall{
+			input: nil, output: nil, results: nil, analyzing: false,
+		}
 		input.calls[literal] = call
 	}
 	call.input, _ = joinEnumStorageStates(call.input, input)
@@ -417,7 +419,9 @@ func (c *checker) recordEnumClosureResults(
 				for len(call.results) <= index {
 					call.results = append(call.results, make(enumStorageSet))
 				}
-				place := enumPointerPlace{root: c.facts.Object(name)}
+				place := enumPointerPlace{
+					root: c.facts.Object(name), path: "", origin: token.NoPos,
+				}
 				call.results[index], _ = joinEnumStorageSet(
 					call.results[index], c.enumPlaceStorage(place, state),
 				)

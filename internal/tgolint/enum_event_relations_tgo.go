@@ -53,3 +53,39 @@ func enumCellSignature(cells enumCellSet) string {
 	}
 	return strings.Join(parts, ",")
 }
+
+func equalEnumAbstractValues(left, right enumAbstractValue) bool {
+	return enumRegionSetEqual(left.regions, right.regions) &&
+		enumCellSetEqual(left.places, right.places) &&
+		enumCellSetEqual(left.relations, right.relations) &&
+		left.relationKnown == right.relationKnown &&
+		enumClosureSetEqual(left.closures, right.closures) &&
+		enumCellSetEqual(left.dependencies, right.dependencies) &&
+		enumCellSetEqual(left.readCells, right.readCells) &&
+		equalEnumTagObservation(left.observation, right.observation) &&
+		left.unknown == right.unknown
+}
+
+func enumRegionSetEqual(left, right enumRegionSet) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for region := range left {
+		if !right[region] {
+			return false
+		}
+	}
+	return true
+}
+
+func enumClosureSetEqual(left, right enumEventClosureSet) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for closure := range left {
+		if !right[closure] {
+			return false
+		}
+	}
+	return true
+}
