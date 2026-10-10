@@ -87,9 +87,10 @@ An imported model fact includes its package path and type name. The package path
 must match the object that owns the fact. Equal type names from different packages
 remain different models.
 
-Returned-function effects follow a direct function literal, a stable local alias,
-and one statically resolved forwarding helper. The checker treats an effectful
-closure passed to an unresolved return call as conditional.
+Returned-function effects follow direct function literals, local bindings,
+named results, and statically resolved local helpers. The checker records a
+conditional effect when a returned function source can change or is opaque. A
+helper can suppress an argument effect only when it discards that argument.
 
 An enum payload call or method value needs a variant proof on the same syntactic receiver. A TGo
 `exhaustive:` clause requires all declared tags and emits the generated `UnknownTag` panic and

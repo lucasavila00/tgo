@@ -45,5 +45,11 @@ genericzerobad/bad.go:114:7: generic tgo function value Make escapes; its effect
 genericzerobad/bad.go:115:2: call to function returned by Nested will create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:117:2: call to function returned by Nested will create invalid tgo enum Event zero from a type argument
 genericzerobad/bad.go:118:2: call to function returned by AliasedNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:119:2: call to function returned by ForwardedNested will create invalid tgo enum Event zero from a type argument
-genericzerobad/bad.go:124:7: function returned by UnresolvedNested escapes; its effects cannot be checked at a call site
+genericzerobad/bad.go:119:2: call to function returned by NamedAliasedNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:120:2: call to function returned by CapturedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:121:2: call to function returned by AddressedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:122:2: call to function returned by SelectedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:123:2: call to function returned by IndexedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:124:2: call to function returned by ForwardedNested will create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:125:2: call to function returned by CalledForwardedNested can create invalid tgo enum Event zero from a type argument
+genericzerobad/bad.go:130:7: function returned by UnresolvedNested escapes; its effects cannot be checked at a call site

@@ -520,6 +520,7 @@ type returnedGenericCall struct {
 type returnedClosureBinding struct {
 	sources  []*syntax.Expression
 	unstable bool
+	opaque   bool
 }
 
 // checkGenericZeroSafety exports generic zero facts and checks each use.
@@ -531,7 +532,7 @@ func (c *checker) checkGenericZeroSafety() {
 	for _, summary := range summaries {
 		fact := summary.fact()
 		if fact.hasEffects() {
-			c.pass.ExportObjectFact(summary.function, fact)
+			c.pass.ExportObjectFact(summary.function, &fact)
 		}
 	}
 
@@ -709,7 +710,15 @@ func (c *checker) collectReturnedGenericEffects(
 	summaries map[*types.Func]*genericEffectSummary,
 	declarations map[*types.Func]*syntax.FunctionDeclaration,
 ) {
-	bindings := c.returnedClosureBindings(summary.body)
+	signature, ok := summary.function.Type().(*types.Signature)
+	if !ok {
+		return
+	}
+	bindings := c.returnedClosureBindings(
+		summary.body,
+		returnedResultObjects(signature),
+	)
+	namedResults := returnedNamedResultExpressions(summary.declaration)
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
@@ -722,7 +731,40 @@ func (c *checker) collectReturnedGenericEffects(
 		if returned == nil {
 			return true
 		}
-		for _, expression := range returned.Results {
+		results := returned.Results
+		if len(results) == 0 {
+			for index := range signature.Results().Len() {
+				expression := namedResults[index]
+				if expression == nil ||
+					!returnedFunctionType(signature.Results().At(index).Type()) {
+					continue
+				}
+				c.collectReturnedExpression(
+					summary, expression, bindings, summaries, declarations,
+					true, false, make(map[types.Object]bool),
+				)
+			}
+			return false
+		}
+		if len(results) == 1 {
+			if _, tuple := c.facts.Type(results[0]).(*types.Tuple); tuple {
+				for index := range signature.Results().Len() {
+					if returnedFunctionType(signature.Results().At(index).Type()) {
+						c.collectReturnedExpression(
+							summary, results[0], bindings, summaries, declarations,
+							true, false, make(map[types.Object]bool),
+						)
+						break
+					}
+				}
+				return false
+			}
+		}
+		for index, expression := range results {
+			if expression == nil || index >= signature.Results().Len() ||
+				!returnedFunctionType(signature.Results().At(index).Type()) {
+				continue
+			}
 			c.collectReturnedExpression(
 				summary, expression, bindings, summaries, declarations,
 				true, false, make(map[types.Object]bool),
@@ -730,6 +772,49 @@ func (c *checker) collectReturnedGenericEffects(
 		}
 		return false
 	})
+}
+
+func returnedResultObjects(signature *types.Signature) map[types.Object]bool {
+	results := make(map[types.Object]bool)
+	for index := range signature.Results().Len() {
+		result := signature.Results().At(index)
+		if result.Name() != "" {
+			results[result] = true
+		}
+	}
+	return results
+}
+
+func returnedNamedResultExpressions(
+	declaration *syntax.FunctionDeclaration,
+) map[int]*syntax.Expression {
+	results := make(map[int]*syntax.Expression)
+	if declaration.Type.Results == nil {
+		return results
+	}
+	index := 0
+	for _, field := range declaration.Type.Results.List {
+		if len(field.Names) == 0 {
+			index++
+			continue
+		}
+		for _, name := range field.Names {
+			expression := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
+				return syntax.NewExpressionIdentifier(input.FieldValue)
+			}(syntax.TgoExpressionIdentifierInput{FieldValue: name})
+			results[index] = &expression
+			index++
+		}
+	}
+	return results
+}
+
+func returnedFunctionType(typ types.Type) bool {
+	if typ == nil {
+		return false
+	}
+	_, ok := types.Unalias(typ).Underlying().(*types.Signature)
+	return ok
 }
 
 // collectGenericPresenceZeros runs the normal pair proof for each type parameter.

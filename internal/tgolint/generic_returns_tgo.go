@@ -9,20 +9,24 @@ import (
 	"tgo/pkg/syntax"
 )
 
+type returnedHelperResolution struct {
+	parameter int
+	unsafe    []bool
+	resolved  bool
+}
+
 // returnedClosureBindings gets local function-value sources in one body.
 func (c *checker) returnedClosureBindings(
 	body *syntax.BlockStatement,
+	predeclared map[types.Object]bool,
 ) map[types.Object]*returnedClosureBinding {
 	bindings := make(map[types.Object]*returnedClosureBinding)
 	inspectGenericBlock(body, func(node *syntax.Node) bool {
-		if _, nested := syntax.FunctionLiteralOf(node); nested {
-			return false
-		}
 		if statement, ok := syntax.StatementOf(node); ok {
 			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
 				c.addReturnedClosureBindings(
 					bindings, assignment.Left, assignment.Right,
-					assignment.Operator == token.DEFINE,
+					assignment.Operator == token.DEFINE, predeclared,
 				)
 			}
 		}
@@ -35,12 +39,14 @@ func (c *checker) returnedClosureBindings(
 					}(syntax.TgoExpressionIdentifierInput{FieldValue: value.Names[index]})
 					left[index] = &item
 				}
-				c.addReturnedClosureBindings(bindings, left, value.Values, true)
+				c.addReturnedClosureBindings(
+					bindings, left, value.Values, true, predeclared,
+				)
 			}
 		}
 		return true
 	})
-	c.markUnstableReturnedClosureBindings(body, bindings)
+	c.markAddressedReturnedClosureBindings(body, bindings)
 	return bindings
 }
 
@@ -49,6 +55,7 @@ func (c *checker) addReturnedClosureBindings(
 	left []*syntax.Expression,
 	right []*syntax.Expression,
 	declaration bool,
+	predeclared map[types.Object]bool,
 ) {
 	for index, target := range left {
 		name := syntax.IdentifierExpressionOf(target)
@@ -62,32 +69,28 @@ func (c *checker) addReturnedClosureBindings(
 		binding := bindings[object]
 		if binding == nil {
 			defined := declaration && c.facts.DefinitionName(name) != nil
-			binding = &returnedClosureBinding{sources: nil, unstable: !defined}
+			defined = defined || predeclared[object]
+			binding = &returnedClosureBinding{
+				sources: nil, unstable: !defined, opaque: false,
+			}
 			bindings[object] = binding
 		} else {
 			binding.unstable = true
 		}
 		if len(left) != len(right) || index >= len(right) {
 			binding.unstable = true
+			binding.opaque = binding.opaque || len(right) > 0 || !declaration
 			continue
 		}
 		binding.sources = append(binding.sources, right[index])
 	}
 }
 
-func (c *checker) markUnstableReturnedClosureBindings(
+func (c *checker) markAddressedReturnedClosureBindings(
 	body *syntax.BlockStatement,
 	bindings map[types.Object]*returnedClosureBinding,
 ) {
 	inspectGenericBlock(body, func(node *syntax.Node) bool {
-		if literal, nested := syntax.FunctionLiteralOf(node); nested {
-			for object, binding := range bindings {
-				if c.syntaxCapturesObject(literal.Body, object) {
-					binding.unstable = true
-				}
-			}
-			return false
-		}
 		expression, ok := syntax.ExpressionOf(node)
 		if !ok {
 			return true
@@ -100,6 +103,7 @@ func (c *checker) markUnstableReturnedClosureBindings(
 		if name != nil {
 			if binding := bindings[c.facts.Object(name)]; binding != nil {
 				binding.unstable = true
+				binding.opaque = true
 			}
 		}
 		return true
@@ -115,45 +119,46 @@ func (c *checker) collectReturnedExpression(
 	allowHelper bool,
 	maySkip bool,
 	seen map[types.Object]bool,
-) {
+) bool {
 	value := unparenthesized(expression)
 	if literal := syntax.FunctionLiteralExpressionOf(value); literal != nil {
-		c.collectReturnedLiteral(summary, value, literal, maySkip)
-		return
+		return c.collectReturnedLiteral(summary, value, literal, maySkip)
 	}
 	if name := syntax.IdentifierExpressionOf(value); name != nil {
 		object := c.facts.Object(name)
 		binding := bindings[object]
 		if binding == nil || seen[object] {
-			return
+			return false
 		}
 		seen[object] = true
 		defer delete(seen, object)
 		uncertain := maySkip || binding.unstable || len(binding.sources) != 1
+		found := false
 		for _, source := range binding.sources {
-			c.collectReturnedExpression(
+			found = c.collectReturnedExpression(
 				summary, source, bindings, summaries, declarations,
 				allowHelper, uncertain, seen,
-			)
+			) || found
 		}
-		return
+		if binding.opaque && !found {
+			c.addUnknownReturnedEffects(summary)
+			return true
+		}
+		return found
 	}
 	call := syntax.CallExpressionOf(value)
 	if call == nil {
-		return
+		c.addUnknownReturnedEffects(summary)
+		return true
 	}
 	function, _ := c.genericCallObject(call.Callee).(*types.Func)
-	if allowHelper && function != nil {
+	if allowHelper && function != nil && !genericSignature(function) {
 		declaration := declarations[function.Origin()]
 		if declaration != nil {
-			if index, ok := c.returnedHelperParameter(function, declaration); ok &&
-				index < len(call.Args) {
-				c.collectReturnedExpression(
-					summary, call.Args[index], bindings, summaries, declarations,
-					false, maySkip, seen,
-				)
-				return
-			}
+			return c.collectReturnedHelperCall(
+				summary, call, function, declaration, bindings,
+				summaries, declarations, maySkip, seen,
+			)
 		}
 	}
 	if function != nil && c.genericZeroFact(function.Origin(), summaries) != nil {
@@ -161,14 +166,65 @@ func (c *checker) collectReturnedExpression(
 			expression: value,
 			maySkip:    maySkip,
 		})
-		return
+		return true
 	}
-	for _, argument := range call.Args {
-		c.collectReturnedExpression(
+	return c.collectReturnedArguments(
+		summary, call.Args, bindings, summaries, declarations, seen,
+	)
+}
+
+func (c *checker) collectReturnedArguments(
+	summary *genericEffectSummary,
+	arguments []*syntax.Expression,
+	bindings map[types.Object]*returnedClosureBinding,
+	summaries map[*types.Func]*genericEffectSummary,
+	declarations map[*types.Func]*syntax.FunctionDeclaration,
+	seen map[types.Object]bool,
+) bool {
+	found := false
+	for _, argument := range arguments {
+		found = c.collectReturnedExpression(
 			summary, argument, bindings, summaries, declarations,
 			false, true, seen,
+		) || found
+	}
+	return found
+}
+
+func (c *checker) collectReturnedHelperCall(
+	summary *genericEffectSummary,
+	call *syntax.CallExpression,
+	function *types.Func,
+	declaration *syntax.FunctionDeclaration,
+	bindings map[types.Object]*returnedClosureBinding,
+	summaries map[*types.Func]*genericEffectSummary,
+	declarations map[*types.Func]*syntax.FunctionDeclaration,
+	maySkip bool,
+	seen map[types.Object]bool,
+) bool {
+	resolution := c.returnedHelper(function, declaration)
+	if !resolution.resolved {
+		return c.collectReturnedArguments(
+			summary, call.Args, bindings, summaries, declarations, seen,
 		)
 	}
+	found := false
+	if resolution.parameter >= 0 && resolution.parameter < len(call.Args) {
+		found = c.collectReturnedExpression(
+			summary, call.Args[resolution.parameter], bindings, summaries,
+			declarations, false, maySkip, seen,
+		)
+	}
+	for index, unsafe := range resolution.unsafe {
+		if !unsafe || index == resolution.parameter || index >= len(call.Args) {
+			continue
+		}
+		found = c.collectReturnedExpression(
+			summary, call.Args[index], bindings, summaries, declarations,
+			false, true, seen,
+		) || found
+	}
+	return found
 }
 
 func (c *checker) collectReturnedLiteral(
@@ -176,7 +232,7 @@ func (c *checker) collectReturnedLiteral(
 	expression *syntax.Expression,
 	literal *syntax.FunctionLiteral,
 	maySkip bool,
-) {
+) bool {
 	root := syntax.ExpressionNode(expression)
 	returned := &genericEffectSummary{
 		function: summary.function, file: summary.file,
@@ -188,6 +244,7 @@ func (c *checker) collectReturnedLiteral(
 		body: literal.Body,
 	}
 	c.collectGenericNodes(returned)
+	found := len(returned.zeroEffects) > 0 || len(returned.accessEffects) > 0
 	for _, effect := range returned.zeroEffects {
 		effect.MaySkip = effect.MaySkip || maySkip
 		c.addReturnedGenericEffect(summary, true, effect)
@@ -196,22 +253,31 @@ func (c *checker) collectReturnedLiteral(
 		effect.MaySkip = effect.MaySkip || maySkip
 		c.addReturnedGenericEffect(summary, false, effect)
 	}
+	return found
 }
 
-// returnedHelperParameter resolves a helper that returns one unchanged parameter.
-func (c *checker) returnedHelperParameter(
+func (c *checker) addUnknownReturnedEffects(summary *genericEffectSummary) {
+	for _, parameter := range summary.parameters {
+		effect := noGenericEffect()
+		effect.Receiver = parameter.receiver
+		effect.TypeParameter = parameter.index
+		effect.MaySkip = true
+		c.addReturnedGenericEffect(summary, true, effect)
+	}
+}
+
+// returnedHelper resolves a local helper's returned function and parameter uses.
+func (c *checker) returnedHelper(
 	function *types.Func,
 	declaration *syntax.FunctionDeclaration,
-) (int, bool) {
-	body := declaration.Body
-	if body == nil {
-		return 0, false
-	}
+) returnedHelperResolution {
 	signature, ok := function.Type().(*types.Signature)
-	if !ok || signature.Results().Len() != 1 {
-		return 0, false
+	body := declaration.Body
+	if !ok || body == nil || signature.Results().Len() != 1 {
+		return returnedHelperResolution{parameter: -1, unsafe: nil, resolved: false}
 	}
-	parameter := -1
+	parameter := -2
+	var allowed map[token.Pos]bool = make(map[token.Pos]bool)
 	found := false
 	valid := true
 	inspectGenericBlock(body, func(node *syntax.Node) bool {
@@ -230,63 +296,101 @@ func (c *checker) returnedHelperParameter(
 			valid = false
 			return false
 		}
-		name := syntax.IdentifierExpressionOf(unparenthesized(returned.Results[0]))
-		object := types.Object(nil)
-		if name != nil {
-			object = c.facts.Object(name)
-		}
-		index := -1
-		for candidate := 0; candidate < signature.Params().Len(); candidate++ {
-			if signature.Params().At(candidate) == object {
-				index = candidate
-				break
+		value := unparenthesized(returned.Results[0])
+		candidate := -1
+		if name := syntax.IdentifierExpressionOf(value); name != nil {
+			candidate = helperParameterIndex(signature, c.facts.Object(name))
+			if candidate < 0 {
+				valid = false
+				return false
 			}
-		}
-		if index < 0 || found && index != parameter ||
-			!c.returnedParameterStable(body, object) {
+			allowed[name.Start] = true
+		} else if syntax.FunctionLiteralExpressionOf(value) == nil {
 			valid = false
 			return false
 		}
-		parameter = index
+		if found && candidate != parameter {
+			valid = false
+			return false
+		}
+		parameter = candidate
 		found = true
 		return false
 	})
-	return parameter, valid && found
+	if !valid || !found {
+		return returnedHelperResolution{parameter: -1, unsafe: nil, resolved: false}
+	}
+	c.allowDiscardedHelperParameters(body, signature, allowed)
+	unsafe := c.unsafeHelperParameters(body, signature, allowed)
+	if parameter >= 0 && unsafe[parameter] {
+		return returnedHelperResolution{parameter: -1, unsafe: nil, resolved: false}
+	}
+	return returnedHelperResolution{
+		parameter: parameter,
+		unsafe:    unsafe,
+		resolved:  true,
+	}
 }
 
-func (c *checker) returnedParameterStable(
+func helperParameterIndex(signature *types.Signature, object types.Object) int {
+	for index := 0; index < signature.Params().Len(); index++ {
+		if signature.Params().At(index) == object {
+			return index
+		}
+	}
+	return -1
+}
+
+func (c *checker) allowDiscardedHelperParameters(
 	body *syntax.BlockStatement,
-	object types.Object,
-) bool {
-	stable := true
+	signature *types.Signature,
+	allowed map[token.Pos]bool,
+) {
 	inspectGenericBlock(body, func(node *syntax.Node) bool {
-		if !stable {
-			return false
-		}
-		if literal, nested := syntax.FunctionLiteralOf(node); nested {
-			stable = !c.syntaxCapturesObject(literal.Body, object)
-			return false
-		}
-		if statement, ok := syntax.StatementOf(node); ok {
-			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-				for _, target := range assignment.Left {
-					if c.expressionUsesObject(target, object) {
-						stable = false
-						return false
-					}
-				}
-			}
-		}
-		expression, ok := syntax.ExpressionOf(node)
+		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			return true
 		}
-		unary := syntax.UnaryExpressionOf(expression)
-		if unary != nil && unary.Operator == token.AND &&
-			c.expressionUsesObject(unary.Expression, object) {
-			stable = false
+		assignment := syntax.AssignmentStatementOf(statement)
+		if assignment == nil || len(assignment.Left) != len(assignment.Right) {
+			return true
 		}
-		return stable
+		for index, target := range assignment.Left {
+			blank := syntax.IdentifierExpressionOf(target)
+			name := syntax.IdentifierExpressionOf(
+				unparenthesized(assignment.Right[index]),
+			)
+			if blank != nil && blank.Name == "_" && name != nil &&
+				helperParameterIndex(signature, c.facts.Object(name)) >= 0 {
+				allowed[name.Start] = true
+			}
+		}
+		return true
 	})
-	return stable
+}
+
+func (c *checker) unsafeHelperParameters(
+	body *syntax.BlockStatement,
+	signature *types.Signature,
+	allowed map[token.Pos]bool,
+) []bool {
+	unsafe := make([]bool, signature.Params().Len())
+	inspectGenericBlock(body, func(node *syntax.Node) bool {
+		name, ok := syntax.IdentifierOf(node)
+		if !ok || name == nil || allowed[name.Start] {
+			return true
+		}
+		index := helperParameterIndex(signature, c.facts.Object(name))
+		if index >= 0 {
+			unsafe[index] = true
+		}
+		return true
+	})
+	return unsafe
+}
+
+func genericSignature(function *types.Func) bool {
+	signature, ok := function.Origin().Type().(*types.Signature)
+	return ok && (signature.TypeParams().Len() > 0 ||
+		signature.RecvTypeParams().Len() > 0)
 }

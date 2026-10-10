@@ -71,6 +71,7 @@ func Safe() {
 	genericzero.ForwardedNested[int]()()
 	genericzero.SafeAliasedNested[model.Event]()()
 	genericzero.SafeForwardedNested[model.Event]()()
+	genericzero.DiscardedNested[model.Event]()()
 }
 
 func BoundaryAssertion(input any) {

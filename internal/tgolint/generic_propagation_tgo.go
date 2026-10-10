@@ -346,7 +346,8 @@ func (c *checker) genericZeroFact(
 	summaries map[*types.Func]*genericEffectSummary,
 ) *GenericEffectFact {
 	if summary := summaries[function]; summary != nil {
-		return summary.effects()
+		fact := summary.effects()
+		return &fact
 	}
 	fact := new(GenericEffectFact)
 	if c.pass.ImportObjectFact(function, fact) {
@@ -355,8 +356,8 @@ func (c *checker) genericZeroFact(
 	return nil
 }
 
-func (summary *genericEffectSummary) effects() *GenericEffectFact {
-	return &GenericEffectFact{
+func (summary *genericEffectSummary) effects() GenericEffectFact {
+	return GenericEffectFact{
 		ZeroEffects: append([]GenericEffect(nil), summary.zeroEffects...),
 		AccessEffects: append(
 			[]GenericEffect(nil), summary.accessEffects...,
@@ -371,7 +372,7 @@ func (summary *genericEffectSummary) effects() *GenericEffectFact {
 }
 
 // fact sorts a local summary for package export.
-func (summary *genericEffectSummary) fact() *GenericEffectFact {
+func (summary *genericEffectSummary) fact() GenericEffectFact {
 	effects := summary.effects()
 	sortGenericEffects(effects.ZeroEffects)
 	sortGenericEffects(effects.AccessEffects)
@@ -380,7 +381,7 @@ func (summary *genericEffectSummary) fact() *GenericEffectFact {
 	return effects
 }
 
-func (fact *GenericEffectFact) hasEffects() bool {
+func (fact GenericEffectFact) hasEffects() bool {
 	return len(fact.ZeroEffects) != 0 || len(fact.AccessEffects) != 0 ||
 		len(fact.ReturnedZeroEffects) != 0 || len(fact.ReturnedAccessEffects) != 0
 }

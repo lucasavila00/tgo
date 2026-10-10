@@ -138,12 +138,88 @@ func AliasedNested[T any]() func() {
 	return nested
 }
 
+func NamedAliasedNested[T any]() (nested func()) {
+	nested = func() {
+		var value T
+		_ = value
+	}
+	return
+}
+
+func CapturedNested[T any]() func() {
+	nested := func() {}
+	replace := func() {
+		nested = func() {
+			var value T
+			_ = value
+		}
+	}
+	replace()
+	return nested
+}
+
+func setNested(target *func(), value func()) {
+	*target = value
+}
+
+func AddressedNested[T any]() func() {
+	nested := func() {}
+	setNested(&nested, func() {
+		var value T
+		_ = value
+	})
+	return nested
+}
+
+type nestedBox struct {
+	value func()
+}
+
+func SelectedNested[T any]() func() {
+	return (nestedBox{value: func() {
+		var value T
+		_ = value
+	}}).value
+}
+
+func IndexedNested[T any]() func() {
+	values := []func(){func() {
+		var value T
+		_ = value
+	}}
+	return values[0]
+}
+
 func forwardNested(nested func()) func() {
 	return nested
 }
 
 func ForwardedNested[T any]() func() {
 	return forwardNested(func() {
+		var value T
+		_ = value
+	})
+}
+
+func callAndForwardNested(nested func()) func() {
+	nested()
+	return nested
+}
+
+func CalledForwardedNested[T any]() func() {
+	return callAndForwardNested(func() {
+		var value T
+		_ = value
+	})
+}
+
+func discardNested(nested func()) func() {
+	_ = nested
+	return func() {}
+}
+
+func DiscardedNested[T any]() func() {
+	return discardNested(func() {
 		var value T
 		_ = value
 	})
