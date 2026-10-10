@@ -61,9 +61,8 @@ func TestSymbolKindProtocolContract(t *testing.T) {
 	}
 	variants := make([]string, 0)
 	for _, declaration := range file.Declarations {
-		type operandType = bool
 		value, _ := syntax.EnumDeclarationOf(declaration)
-		var operand operandType = value == nil
+		operand := value == nil
 		if !operand {
 			operand = value.Name.Name != "SymbolKind"
 		}

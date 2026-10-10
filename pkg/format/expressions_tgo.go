@@ -230,19 +230,18 @@ func (p *printer) sliceExpression(value *syntax.SliceExpression, depth int) {
 	if operand_1 {
 		operand_1 = count > 1
 	}
-	var operand_2 bool = operand_1
-	if operand_2 {
-		operand_2 = hasBinary
+	var spaces bool = operand_1
+	if spaces {
+		spaces = hasBinary
 	}
-	spaces := operand_2
 	if value.Low != nil {
 		p.expressionAt(value.Low, 0, depth+1)
 	}
-	var operand_3 bool = value.Low != nil
-	if operand_3 {
-		operand_3 = spaces
+	var operand_2 bool = value.Low != nil
+	if operand_2 {
+		operand_2 = spaces
 	}
-	if operand_3 {
+	if operand_2 {
 		p.space()
 	}
 	p.text(":")
@@ -253,11 +252,11 @@ func (p *printer) sliceExpression(value *syntax.SliceExpression, depth int) {
 		p.expressionAt(value.High, 0, depth+1)
 	}
 	if value.Slice3 {
-		var operand_4 bool = value.High != nil
-		if operand_4 {
-			operand_4 = spaces
+		var operand_3 bool = value.High != nil
+		if operand_3 {
+			operand_3 = spaces
 		}
-		if operand_4 {
+		if operand_3 {
 			p.space()
 		}
 		p.text(":")
@@ -310,7 +309,6 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 	previous := value.Lbrace
 	indented := false
 	for index, element := range value.Elements {
-		type operandType = bool
 		start := syntax.ExpressionPosition(element)
 		gap := p.sourceGap(previous, start)
 		if gap.lineBreak {
@@ -330,7 +328,7 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 		if index+1 < len(value.Elements) {
 			following = syntax.ExpressionPosition(value.Elements[index+1])
 		}
-		var operand operandType = index+1 < len(value.Elements)
+		operand := index+1 < len(value.Elements)
 		if !operand {
 			operand = p.position(previous).Line < p.position(value.Rbrace).Line
 		}
@@ -362,9 +360,8 @@ func (p *printer) compositeLiteral(value *syntax.CompositeLiteral) {
 }
 
 func (p *printer) compositeElement(value *syntax.Expression, columns []int) {
-	type operandType = bool
 	keyValue := syntax.KeyValueExpressionOf(value)
-	var operand operandType = keyValue == nil
+	operand := keyValue == nil
 	if !operand {
 		operand = len(columns) == 0
 	}
@@ -544,7 +541,6 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 		previous := value.Opening
 		indented := false
 		for index, item := range value.List {
-			type operandType = bool
 			gap := p.sourceGap(previous, item.Start)
 			if gap.lineBreak {
 				if !indented {
@@ -561,7 +557,7 @@ func (p *printer) fieldList(value *syntax.FieldList, opening string, closing str
 				following = value.List[index+1].Start
 			}
 			previous = item.Stop
-			var operand operandType = index+1 < len(value.List)
+			operand := index+1 < len(value.List)
 			if !operand {
 				operand = p.position(item.Stop).Line < p.position(value.Closing).Line
 			}

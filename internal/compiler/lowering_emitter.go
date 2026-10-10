@@ -12,13 +12,13 @@ type loweringEmitter struct {
 	plan                *functionLoweringPlan
 	names               map[string]bool
 	values              map[valueID]*ast.Ident
-	places              map[placeID]ast.Expr
 	targets             map[targetID]*ast.Ident
 	typeAliases         map[*ast.BlockStmt]map[types.Type]*ast.Ident
 	renamedTypeBlockers map[types.Object]string
 	typeDefinitionSites map[*ast.Ident]emittedTypeDefinition
 	typeObjectAliases   map[types.Object]*ast.Ident
 	forcedQualifiers    map[*types.Package]string
+	packageQualifiers   map[string]string
 	fmtAlias            string
 }
 
@@ -35,18 +35,24 @@ func newLoweringEmitter(
 	if source.LoweringTypeAliases == nil {
 		source.LoweringTypeAliases = make(map[types.Object]*ast.Ident)
 	}
+	if source.LoweringPackageQualifiers == nil {
+		source.LoweringPackageQualifiers = make(map[string]string)
+	}
 	emitter := &loweringEmitter{
 		unit: unit, source: source, plan: plan, names: plan.function.names,
 		values: make(map[valueID]*ast.Ident), targets: make(map[targetID]*ast.Ident),
-		places:              make(map[placeID]ast.Expr),
 		typeAliases:         make(map[*ast.BlockStmt]map[types.Type]*ast.Ident),
 		renamedTypeBlockers: make(map[types.Object]string),
 		typeDefinitionSites: make(map[*ast.Ident]emittedTypeDefinition),
 		typeObjectAliases:   source.LoweringTypeAliases,
 		forcedQualifiers:    make(map[*types.Package]string),
+		packageQualifiers:   source.LoweringPackageQualifiers,
 	}
 	for _, alias := range source.LoweringTypeAliases {
 		emitter.names[alias.Name] = true
+	}
+	for _, qualifier := range source.LoweringPackageQualifiers {
+		emitter.names[qualifier] = true
 	}
 	for id, target := range plan.targets {
 		if target.label != "" {
@@ -78,7 +84,7 @@ func (e *loweringEmitter) expression(
 		return nil
 	}
 	if plan.place != nil {
-		return e.places[plan.place.id]
+		return e.preparedPlaceExpression(plan.place)
 	}
 	if plan.materialized != 0 {
 		value := ast.Expr(e.valueName(plan.materialized, "operand"))
@@ -265,6 +271,9 @@ func (e *loweringEmitter) valueOperation(
 	operation *plannedOperation,
 	output *ast.BlockStmt,
 ) {
+	if e.emitAssignmentValueOperation(operation, output) {
+		return
+	}
 	switch operation.kind {
 	case planJump:
 		e.emitJump(operation, output)
@@ -303,9 +312,6 @@ func (e *loweringEmitter) valueOperation(
 			e.unit.generatedUniverse("copy", operation.source.Pos()),
 			operation.copyTarget, e.valueName(operation.inputs[0], "source"),
 		)})
-	case planPreparePlace:
-		place := operation.places[0]
-		e.places[place.id] = e.preparePlace(place, output)
 	}
 }
 
@@ -337,13 +343,21 @@ func (e *loweringEmitter) emitEvaluation(
 	materialized := expression.materialized
 	expression.materialized = 0
 	if expression.work != nil {
-		e.expressionResults(expression, output)
+		results := e.expressionResults(expression, output)
 		expression.materialized = materialized
+		if evaluationOutputsMatchResults(operation.outputs, expression.results) {
+			return
+		}
+		e.emitEvaluationOutputs(operation.outputs, results, output)
 		return
 	}
 	value := e.expression(expression, output)
 	expression.materialized = materialized
 	if len(operation.outputs) == 0 {
+		return
+	}
+	if len(operation.outputs) > 1 {
+		e.emitEvaluationOutputs(operation.outputs, []ast.Expr{value}, output)
 		return
 	}
 	planned := e.plannedValue(operation.outputs[0])
@@ -352,6 +366,32 @@ func (e *loweringEmitter) emitEvaluation(
 	}
 	planned.explicit = expression.contextual
 	e.emitTypedExpressionBind(planned, value, planned.explicit, output)
+}
+
+func evaluationOutputsMatchResults(outputs []valueID, results []plannedValue) bool {
+	if len(outputs) != len(results) {
+		return false
+	}
+	for index, output := range outputs {
+		if output != results[index].id {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *loweringEmitter) emitEvaluationOutputs(
+	outputs []valueID,
+	results []ast.Expr,
+	block *ast.BlockStmt,
+) {
+	left := make([]ast.Expr, 0, len(outputs))
+	for _, output := range outputs {
+		left = append(left, e.valueName(output, "result"))
+	}
+	block.List = append(block.List, &ast.AssignStmt{
+		Lhs: left, Tok: token.DEFINE, Rhs: results,
+	})
 }
 
 func (e *loweringEmitter) emitBinding(

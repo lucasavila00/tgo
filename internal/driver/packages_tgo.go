@@ -269,7 +269,6 @@ func (p *packageUnit) readSource(path string) error {
 	if err != nil {
 		return err
 	}
-
 	file, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
 	if err_1 != nil {
 		return err_1
@@ -298,7 +297,6 @@ func (p *packageUnit) readTests() (packageTests, packageTests, error) {
 		if err_1 != nil {
 			return packageTests{}, packageTests{}, err_1
 		}
-
 		file, err_2 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
 		if err_2 != nil {
 			return packageTests{}, packageTests{}, err_2
@@ -576,11 +574,10 @@ func (p *packageUnit) tgoCandidate() bool {
 }
 
 func packagePattern(directory, pattern string) (string, bool) {
-	operand := strings.HasSuffix(pattern, "/...")
-	if !operand {
-		operand = pattern == "..."
+	recursive := strings.HasSuffix(pattern, "/...")
+	if !recursive {
+		recursive = pattern == "..."
 	}
-	recursive := operand
 	target := strings.TrimSuffix(pattern, "/...")
 	if target == "..." {
 		target = "."
@@ -599,8 +596,7 @@ func packageMatches(
 	target string,
 	recursive bool,
 ) bool {
-	type operandType = bool
-	var operand operandType = path == pattern
+	operand := path == pattern
 	if !operand {
 		operand = unit.Dir == target
 	}

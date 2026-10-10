@@ -13,8 +13,7 @@ import (
 
 // checkSuccessReturnModernization finds explicit return values that TGo can elide.
 func (c *checker) checkSuccessReturnModernization(analysis *sourceanalysis.Package) {
-	type operandType = bool
-	var operand operandType = analysis == nil
+	operand := analysis == nil
 	if !operand {
 		operand = analysis.Facts == nil
 	}
@@ -114,12 +113,11 @@ func failureReturnCanUseLeadingComma(
 	signature *types.Signature,
 	facts *sourcefacts.Index,
 ) bool {
-	type operandType = bool
-	var operand operandType = signature == nil
+	operand := signature == nil
 	if !operand {
 		operand = signature.Results().Len() != len(returned.Results)
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = signature.Results().Len() < 2
 	}

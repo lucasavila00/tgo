@@ -38,6 +38,16 @@ forms must extend that path. Statement lowering must define the execution
 region for each expression, but it must not implement a separate expression
 lowering path.
 
+An assignment that needs lowering must have one assignment plan. Its builder
+must plan recursive place preparation, all right-hand evaluation, and ordered
+stores as separate regions. Place captures keep their natural source types;
+underlying or normalized type-set shapes only select the storage policy.
+Contextual constants can remain at their consumer. Other values must keep
+their actual types and required result counts. A generic array-or-reference
+place must use explicit planned alternatives. The emitter can distribute the
+same prepared load or store recipe through those alternatives, but it must not
+choose captures, evaluation order, or store timing.
+
 Only the emitter can turn plan values into Go identifiers and plan operations
 into Go statements. The emitter must consume the plan directly. It must not
 call the replaced expression lowerer, use stale generated-AST maps, or recover

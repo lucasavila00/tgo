@@ -28,11 +28,10 @@ type verifiedSource struct {
 
 // verifySourceModels checks generated declarations against their canonical source.
 func (c *checker) verifySourceModels(generated *syntax.File) *verifiedSource {
-	type operandType = bool
 	generatedPath := c.pass.Fset.Position(generated.Package).Filename
 	generatedData, readErr := c.pass.ReadFile(generatedPath)
 	sourceName := c.generatedSource[generated]
-	var operand operandType = readErr != nil
+	operand := readErr != nil
 	if !operand {
 		operand = sourceName == ""
 	}
@@ -456,16 +455,15 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Struct":
 			current = 2
 		}
-		operand := haveName
+		same := haveName
+		if same {
+			same = current == selected
+		}
+		operand := same
 		if operand {
-			operand = current == selected
+			operand = current == 0
 		}
-		same := operand
-		operand_1 := same
-		if operand_1 {
-			operand_1 = current == 0
-		}
-		if operand_1 {
+		if operand {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -477,15 +475,15 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_2 := !multiple
+		operand_1 := !multiple
+		if operand_1 {
+			operand_1 = current > 0
+		}
+		var operand_2 bool = operand_1
 		if operand_2 {
-			operand_2 = current > 0
+			operand_2 = current == selected
 		}
-		var operand_3 bool = operand_2
-		if operand_3 {
-			operand_3 = current == selected
-		}
-		if operand_3 {
+		if operand_2 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -504,11 +502,11 @@ func (v *sourceModel) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_4 := !haveName
-	if !operand_4 {
-		operand_4 = multiple
+	operand_3 := !haveName
+	if !operand_3 {
+		operand_3 = multiple
 	}
-	if operand_4 {
+	if operand_3 {
 		return fmt.Errorf("expected one sourceModel JSON variant")
 	}
 	if selected == 0 {
@@ -672,9 +670,8 @@ func generatedTypeSpec(file *syntax.File, name string) *syntax.TypeSpecification
 			continue
 		}
 		for _, item := range general.Specs {
-			type operandType = bool
 			specification := syntax.TypeSpecificationOf(item)
-			var operand operandType = specification != nil
+			operand := specification != nil
 			if operand {
 				operand = specification.Name.Name == name
 			}

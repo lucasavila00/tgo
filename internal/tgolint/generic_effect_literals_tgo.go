@@ -77,9 +77,8 @@ func (c *checker) literalHasHoles(literal *syntax.CompositeLiteral, length int64
 		{
 			pair := syntax.KeyValueExpressionOf(element)
 			if pair != nil {
-				type operandType = bool
 				value := c.facts.Constant(pair.Key)
-				var operand operandType = value == nil
+				operand := value == nil
 				if !operand {
 					operand = value.Kind() != constant.Int
 				}

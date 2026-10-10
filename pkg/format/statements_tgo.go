@@ -56,10 +56,9 @@ func (p *printer) statement(value *syntax.Statement) {
 		p.expression(item.Expression, 0)
 		p.token(item.Token, item.Operator.String())
 	case syntax.StatementTagAssignment:
-		type operandType = bool
 		item := statementValue.AssignmentPayload().Value
 		depth := 1
-		var operand operandType = len(item.Left) > 1
+		operand := len(item.Left) > 1
 		if operand {
 			operand = len(item.Right) > 1
 		}
@@ -69,7 +68,7 @@ func (p *printer) statement(value *syntax.Statement) {
 		p.commaListAt(item.Left, depth, false)
 		p.space()
 		p.token(item.Token, item.Operator.String())
-		var operand_1 operandType = len(item.Right) > 0
+		operand_1 := len(item.Right) > 0
 		if operand_1 {
 			operand_1 = p.position(item.Token).Line <
 				p.position(syntax.ExpressionPosition(item.Right[0])).Line
@@ -201,13 +200,12 @@ func clauseStatement(value *syntax.Statement) bool {
 }
 
 func (p *printer) indentReturnList(values []*syntax.Expression) bool {
-	type operandType = bool
 	if len(values) < 2 {
 		return false
 	}
 	first := p.position(syntax.ExpressionPosition(values[0])).Line
 	last := p.position(syntax.ExpressionEnd(values[len(values)-1])).Line
-	var operand operandType = first <= 0
+	operand := first <= 0
 	if !operand {
 		operand = first >= last
 	}
@@ -236,7 +234,6 @@ func (p *printer) indentReturnList(values []*syntax.Expression) bool {
 
 func compositeLiteralLike(value *syntax.Expression) bool {
 	for {
-		type operandType = bool
 		if syntax.CompositeLiteralOf(value) != nil {
 			return true
 		}
@@ -248,7 +245,7 @@ func compositeLiteralLike(value *syntax.Expression) bool {
 			}
 		}
 		unary := syntax.UnaryExpressionOf(value)
-		var operand operandType = unary != nil
+		operand := unary != nil
 		if operand {
 			operand = unary.Operator.String() == "&"
 		}
@@ -421,9 +418,8 @@ func (p *printer) caseClause(value *syntax.CaseClause) {
 }
 
 func (p *printer) switchStatement(value *syntax.SwitchStatement) {
-	type operandType = bool
 	p.token(value.Switch, "switch")
-	var operand operandType = value.Init != nil
+	operand := value.Init != nil
 	if !operand {
 		operand = value.Tag != nil
 	}
@@ -479,20 +475,19 @@ func (p *printer) communicationClause(value *syntax.CommunicationClause) {
 }
 
 func (p *printer) forStatement(value *syntax.ForStatement) {
-	type operandType = bool
 	p.token(value.For, "for")
-	var operand operandType = value.Init != nil
+	operand := value.Init != nil
 	if !operand {
 		operand = value.Condition != nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = value.Post != nil
 	}
 	if operand_1 {
 		p.space()
 	}
-	var operand_2 operandType = value.Init != nil
+	operand_2 := value.Init != nil
 	if !operand_2 {
 		operand_2 = value.Post != nil
 	}

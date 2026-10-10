@@ -179,28 +179,6 @@ func (b *loweringPlanBuilder) planBranchStatement(
 	}
 }
 
-func (b *loweringPlanBuilder) planDirectStatement(
-	operation *plannedOperation,
-	statement ast.Stmt,
-) {
-	if declaration, ok := statement.(*ast.DeclStmt); ok {
-		operation.declarations = b.declarationPlans(declaration)
-		for _, specification := range operation.declarations {
-			operation.expressions = append(operation.expressions, specification.expressions...)
-		}
-	} else {
-		operation.expressions = b.statementExpressions(statement)
-		operation.before = b.orderExpressions(operation.expressions)
-	}
-	if assignment, ok := statement.(*ast.AssignStmt); ok {
-		operation.places = b.assignmentPlaces(assignment.Lhs...)
-	}
-	if update, ok := statement.(*ast.IncDecStmt); ok {
-		operation.places = b.assignmentPlaces(update.X)
-	}
-	b.directStatementBinding(operation)
-}
-
 func redirectLabeledControl(block *plannedBlock, source targetID, target targetID) {
 	if block == nil {
 		return
@@ -354,6 +332,9 @@ func (b *loweringPlanBuilder) communication(statement ast.Stmt) *plannedCommunic
 					b.newValue(types.Typ[types.Bool], channel.Pos()))
 			}
 		}
+	}
+	if len(communication.receiveValues) != 0 {
+		communication.assignment = b.planReceiveAssignment(communication)
 	}
 	return communication
 }

@@ -149,12 +149,11 @@ func (c *checker) propagatedGenericEffect(
 	pathMaySkip bool,
 	zero bool,
 ) (GenericEffect, map[zeroParameter]bool, bool) {
-	type operandType = bool
 	arguments := typeArguments
 	if effect.Receiver {
 		arguments = receiverArguments
 	}
-	var operand operandType = effect.TypeParameter < 0
+	operand := effect.TypeParameter < 0
 	if !operand {
 		operand = effect.TypeParameter >= len(arguments)
 	}
@@ -162,11 +161,10 @@ func (c *checker) propagatedGenericEffect(
 		return noGenericEffect(), nil, false
 	}
 	conditions := append([]GenericEffectCondition(nil), pathConditions...)
-	operand_1 := pathMaySkip
-	if !operand_1 {
-		operand_1 = effect.MaySkip
+	maySkip := pathMaySkip
+	if !maySkip {
+		maySkip = effect.MaySkip
 	}
-	maySkip := operand_1
 	targetType := arguments[effect.TypeParameter]
 	for _, condition := range effect.Conditions {
 		mapped, outcome := c.mapEffectCondition(
@@ -202,12 +200,11 @@ func (c *checker) mapEffectCondition(
 	condition GenericEffectCondition,
 	targetType types.Type,
 ) (*GenericEffectCondition, effectOutcome) {
-	type operandType = bool
 	call := syntax.CallExpressionOf(callExpression)
 	if call == nil {
 		return nil, unknownEffectOutcome()
 	}
-	var operand operandType = condition.ValueParameter < 0
+	operand := condition.ValueParameter < 0
 	if !operand {
 		operand = condition.ValueParameter >= len(call.Args)
 	}
@@ -257,13 +254,12 @@ func (c *checker) mapParameterEffectCondition(
 	}
 	expected := condition.Expected
 	{
-		type operandType = bool
 		negation := syntax.UnaryExpressionOf(expression)
-		var operand operandType = negation != nil
+		operand := negation != nil
 		if operand {
 			operand = negation.Operator == token.NOT
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if operand_1 {
 			operand_1 = condition.Kind == booleanEffectCondition()
 		}

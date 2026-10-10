@@ -22,8 +22,7 @@ func (c *checker) checkCaseAccessors(
 	defaultClause bool,
 	proof token.Pos,
 ) {
-	type operandType = bool
-	var operand operandType = clause == nil
+	operand := clause == nil
 	if !operand {
 		operand = receiver == nil
 	}
@@ -224,13 +223,12 @@ func receiverPath(
 	{
 		selector := syntax.SelectorExpressionOf(expression)
 		if selector != nil {
-			type operandType = bool
 			root, path, ok := receiverPath(facts, selector.Expression)
 			if !ok {
 				return nil, nil, false
 			}
 			selection := facts.Selection(expression)
-			var operand operandType = selection == nil
+			operand := selection == nil
 			if !operand {
 				operand = selection.Kind() != types.FieldVal
 			}
@@ -253,9 +251,8 @@ func receiverPath(
 		}
 	}
 	{
-		type operandType_1 = bool
 		unary := syntax.UnaryExpressionOf(expression)
-		var operand_1 operandType_1 = unary != nil
+		operand_1 := unary != nil
 		if operand_1 {
 			operand_1 = unary.Operator == token.AND
 		}

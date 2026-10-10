@@ -82,8 +82,7 @@ func sourceFunctionBody(file *syntax.File, node *syntax.Node) *syntax.BlockState
 
 // errorResults requires results that end in the Go error type.
 func errorResults(signature *types.Signature) bool {
-	type operandType = bool
-	var operand operandType = signature == nil
+	operand := signature == nil
 	if !operand {
 		operand = signature.Results().Len() == 0
 	}
@@ -188,26 +187,23 @@ func errorUsesCovered(
 	if operand {
 		operand = function.Results().At(function.Results().Len()-1) == target
 	}
-	var operand_1 bool = operand
+	var namedResult bool = operand
+	if namedResult {
+		namedResult = target.Name() != ""
+	}
+	operand_1 := namedResult
 	if operand_1 {
-		operand_1 = target.Name() != ""
+		operand_1 = nakedReturnReachable(body, matches, mayReturn)
 	}
-	namedResult := operand_1
-	operand_2 := namedResult
-	if operand_2 {
-		operand_2 = nakedReturnReachable(body, matches, mayReturn)
-	}
-	if operand_2 {
+	if operand_1 {
 		return false
 	}
-	operand_3 := !namedResult
-	if !operand_3 {
-		operand_3 = namedErrorIsNilBefore(
+	deferredReadSafe := !namedResult
+	if !deferredReadSafe {
+		deferredReadSafe = namedErrorIsNilBefore(
 			file, target, first, index,
 		)
 	}
-	deferredReadSafe := operand_3
-
 	syntax.Inspect(file, func(node *syntax.Node) bool {
 		if !valid {
 			return false
@@ -225,8 +221,7 @@ func errorUsesCovered(
 			return true
 		}
 		for _, match := range matches {
-			type operandType = bool
-			var operand_1 operandType = match.start <= identifier.Start
+			operand_1 := match.start <= identifier.Start
 			if operand_1 {
 				operand_1 = identifier.Start < match.stop
 			}
@@ -256,7 +251,6 @@ func namedErrorIsNilBefore(
 ) bool {
 	valid := true
 	syntax.Inspect(file, func(node *syntax.Node) bool {
-		type operandType_1 = bool
 		if !valid {
 			return false
 		}
@@ -272,11 +266,10 @@ func namedErrorIsNilBefore(
 			assignment := syntax.AssignmentStatementOf(statement)
 			if assignment != nil {
 				for position, left := range assignment.Left {
-					type operandType = bool
 					if index.IdentifierObject(sourceUnparenthesized(left)) != target {
 						continue
 					}
-					var operand_1 operandType = len(assignment.Left) != len(assignment.Right)
+					operand_1 := len(assignment.Left) != len(assignment.Right)
 					if !operand_1 {
 						operand_1 = index.IdentifierObject(sourceUnparenthesized(
 							assignment.Right[position],
@@ -290,17 +283,15 @@ func namedErrorIsNilBefore(
 			}
 		}
 		ranged := syntax.RangeStatementOf(statement)
-		var operand_2 operandType_1 = ranged != nil
+		operand_2 := ranged != nil
 		if operand_2 {
-			type operandType_2 = bool
-			var operand_3 operandType_2 = ranged.Key != nil
+			operand_3 := ranged.Key != nil
 			if operand_3 {
 				operand_3 = index.IdentifierObject(sourceUnparenthesized(ranged.Key)) == target
 			}
-			var operand_4 operandType_2 = operand_3
+			operand_4 := operand_3
 			if !operand_4 {
-				type operandType_3 = bool
-				var operand_5 operandType_3 = ranged.Value != nil
+				operand_5 := ranged.Value != nil
 				if operand_5 {
 					operand_5 = index.IdentifierObject(sourceUnparenthesized(ranged.Value)) == target
 				}
@@ -386,9 +377,8 @@ func priorErrorUseIsSafe(
 		{
 			expression, ok := syntax.ExpressionOf(parent)
 			if ok {
-				type operandType = bool
 				unary := syntax.UnaryExpressionOf(expression)
-				var operand operandType = unary != nil
+				operand := unary != nil
 				if operand {
 					operand = unary.Operator == token.AND
 				}
@@ -609,8 +599,7 @@ func errorReturnBranch(
 	function *types.Signature,
 	index *sourcefacts.Index,
 ) (token.Pos, bool) {
-	type operandType = bool
-	var operand operandType = branch.Else != nil
+	operand := branch.Else != nil
 	if !operand {
 		operand = len(branch.Body.List) != 1
 	}
@@ -690,7 +679,6 @@ func errorReturnFormat(
 	name string,
 	index *sourcefacts.Index,
 ) bool {
-	type operandType = bool
 	result, ok := sourceReturn(branch.Body.List[0])
 	operand := !ok
 	if !operand {
@@ -721,15 +709,15 @@ func errorReturnFormat(
 		return false
 	}
 	function := index.CalledFunction(wrapper.Callee)
-	var operand_5 operandType = function == nil
+	operand_5 := function == nil
 	if !operand_5 {
 		operand_5 = function.Name() != "Errorf"
 	}
-	var operand_6 operandType = operand_5
+	operand_6 := operand_5
 	if !operand_6 {
 		operand_6 = function.Pkg() == nil
 	}
-	var operand_7 operandType = operand_6
+	operand_7 := operand_6
 	if !operand_7 {
 		operand_7 = function.Pkg().Path() != "fmt"
 	}
@@ -737,11 +725,11 @@ func errorReturnFormat(
 		return false
 	}
 	format := index.Constant(wrapper.Args[0])
-	var operand_8 operandType = format == nil
+	operand_8 := format == nil
 	if !operand_8 {
 		operand_8 = format.Kind() != constant.String
 	}
-	var operand_9 operandType = operand_8
+	operand_9 := operand_8
 	if !operand_9 {
 		operand_9 = constant.StringVal(format) != name+": %w"
 	}

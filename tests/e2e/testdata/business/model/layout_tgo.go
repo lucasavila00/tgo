@@ -214,16 +214,15 @@ func (v *Large) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Empty":
 			current = 3
 		}
-		operand := haveName
+		same := haveName
+		if same {
+			same = current == selected
+		}
+		operand := same
 		if operand {
-			operand = current == selected
+			operand = current == 0
 		}
-		same := operand
-		operand_1 := same
-		if operand_1 {
-			operand_1 = current == 0
-		}
-		if operand_1 {
+		if operand {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -235,15 +234,15 @@ func (v *Large) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_2 := !multiple
+		operand_1 := !multiple
+		if operand_1 {
+			operand_1 = current > 0
+		}
+		var operand_2 bool = operand_1
 		if operand_2 {
-			operand_2 = current > 0
+			operand_2 = current == selected
 		}
-		var operand_3 bool = operand_2
-		if operand_3 {
-			operand_3 = current == selected
-		}
-		if operand_3 {
+		if operand_2 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -262,11 +261,11 @@ func (v *Large) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_4 := !haveName
-	if !operand_4 {
-		operand_4 = multiple
+	operand_3 := !haveName
+	if !operand_3 {
+		operand_3 = multiple
 	}
-	if operand_4 {
+	if operand_3 {
 		return fmt.Errorf("expected one Large JSON variant")
 	}
 	if selected == 0 {
@@ -461,16 +460,15 @@ func (v *Equal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Second":
 			current = 2
 		}
-		operand := haveName
+		same := haveName
+		if same {
+			same = current == selected
+		}
+		operand := same
 		if operand {
-			operand = current == selected
+			operand = current == 0
 		}
-		same := operand
-		operand_1 := same
-		if operand_1 {
-			operand_1 = current == 0
-		}
-		if operand_1 {
+		if operand {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -482,15 +480,15 @@ func (v *Equal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_2 := !multiple
+		operand_1 := !multiple
+		if operand_1 {
+			operand_1 = current > 0
+		}
+		var operand_2 bool = operand_1
 		if operand_2 {
-			operand_2 = current > 0
+			operand_2 = current == selected
 		}
-		var operand_3 bool = operand_2
-		if operand_3 {
-			operand_3 = current == selected
-		}
-		if operand_3 {
+		if operand_2 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -509,11 +507,11 @@ func (v *Equal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_4 := !haveName
-	if !operand_4 {
-		operand_4 = multiple
+	operand_3 := !haveName
+	if !operand_3 {
+		operand_3 = multiple
 	}
-	if operand_4 {
+	if operand_3 {
 		return fmt.Errorf("expected one Equal JSON variant")
 	}
 	if selected == 0 {
@@ -724,16 +722,15 @@ func (v *NamedZero) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Other":
 			current = 2
 		}
-		operand := haveName
+		same := haveName
+		if same {
+			same = current == selected
+		}
+		operand := same
 		if operand {
-			operand = current == selected
+			operand = current == 0
 		}
-		same := operand
-		operand_1 := same
-		if operand_1 {
-			operand_1 = current == 0
-		}
-		if operand_1 {
+		if operand {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -745,15 +742,15 @@ func (v *NamedZero) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_2 := !multiple
+		operand_1 := !multiple
+		if operand_1 {
+			operand_1 = current > 0
+		}
+		var operand_2 bool = operand_1
 		if operand_2 {
-			operand_2 = current > 0
+			operand_2 = current == selected
 		}
-		var operand_3 bool = operand_2
-		if operand_3 {
-			operand_3 = current == selected
-		}
-		if operand_3 {
+		if operand_2 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -772,11 +769,11 @@ func (v *NamedZero) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_4 := !haveName
-	if !operand_4 {
-		operand_4 = multiple
+	operand_3 := !haveName
+	if !operand_3 {
+		operand_3 = multiple
 	}
-	if operand_4 {
+	if operand_3 {
 		return fmt.Errorf("expected one NamedZero JSON variant")
 	}
 	if selected == 0 {

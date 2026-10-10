@@ -21,10 +21,7 @@ func (b *loweringPlanBuilder) assignmentPlace(expression ast.Expr) *plannedPlace
 	if parenthesized, ok := expression.(*ast.ParenExpr); ok {
 		return b.assignmentPlace(parenthesized.X)
 	}
-	place := &plannedPlace{
-		id: placeID(len(b.plan.places) + 1), typ: b.expressionType(expression),
-		position: expression.Pos(), source: expression, kind: planObjectPlace,
-	}
+	place := b.newAssignmentPlace(expression)
 	b.plan.places = append(b.plan.places, place)
 	switch node := expression.(type) {
 	case *ast.StarExpr:
@@ -38,22 +35,21 @@ func (b *loweringPlanBuilder) assignmentPlace(expression ast.Expr) *plannedPlace
 		if selection := b.unit.info.Selections[node]; selection != nil &&
 			len(selection.Index()) > 1 {
 			place.base = b.promotedSelectionBase(node, selection)
-		} else if _, pointer := types.Unalias(b.expressionType(node.X)).(*types.Pointer); pointer {
+		} else if underlyingPointer(b.expressionType(node.X)) != nil {
 			place.base = b.derefPlace(node.X)
 		} else {
 			place.base = b.assignmentPlace(node.X)
 		}
 	case *ast.IndexExpr:
 		containerPlan := b.expression(node.X)
-		containerType := containerPlan.typ
-		if !validPlannedType(containerType) && len(containerPlan.results) == 1 {
-			containerType = containerPlan.results[0].typ
+		producedType := plannedExpressionProducedType(containerPlan)
+		place.container = containerPlan
+		place.index = b.expression(node.Index)
+		if b.planTypeParameterIndexPlace(place, producedType) {
+			return place
 		}
-		containerType = types.Unalias(containerType)
-		if named, ok := containerType.(*types.Named); ok {
-			containerType = named.Underlying()
-		}
-		switch containerType.(type) {
+		underlyingType := coreContainerType(producedType)
+		switch containerType := underlyingType.(type) {
 		case *types.Array:
 			place.kind = planArrayIndexPlace
 			place.base = b.assignmentPlace(node.X)
@@ -63,16 +59,37 @@ func (b *loweringPlanBuilder) assignmentPlace(expression ast.Expr) *plannedPlace
 		case *types.Slice:
 			place.kind = planSliceIndexPlace
 			place.container = containerPlan
-			place.values = append(place.values, b.newValue(containerType, node.X.Pos()))
+			place.values = append(place.values, b.newValue(producedType, node.X.Pos()))
 		case *types.Map:
 			place.kind = planMapIndexPlace
 			place.container = containerPlan
-			place.values = append(place.values, b.newValue(containerType, node.X.Pos()))
+			place.index = b.expressionContext(node.Index, containerType.Key(), 1)
+			place.retainIndex = assignmentExpressionRetainsContext(
+				b.unit.info, place.index, []types.Type{containerType.Key()},
+			)
+			place.values = append(place.values, b.newValue(producedType, node.X.Pos()))
 		}
-		place.index = b.expression(node.Index)
-		place.values = append(place.values, b.newValue(
-			plannedExpressionProducedType(place.index), node.Index.Pos(),
-		))
+		if !place.retainIndex {
+			place.values = append(place.values, b.newValue(
+				plannedExpressionProducedType(place.index), node.Index.Pos(),
+			))
+		}
+	}
+	return place
+}
+
+func (b *loweringPlanBuilder) newAssignmentPlace(expression ast.Expr) *plannedPlace {
+	place := &plannedPlace{
+		id: placeID(len(b.plan.places) + 1), typ: b.expressionType(expression),
+		position: expression.Pos(), source: expression, kind: planObjectPlace,
+	}
+	identifier, ok := expression.(*ast.Ident)
+	if !ok {
+		return place
+	}
+	place.object = b.unit.info.ObjectOf(identifier)
+	if place.object != nil {
+		place.typ = place.object.Type()
 	}
 	return place
 }
@@ -86,7 +103,7 @@ func (b *loweringPlanBuilder) promotedSelectionBase(
 	expressionPlan := b.expression(node.X)
 	typ := selection.Recv()
 	for _, fieldIndex := range selection.Index()[:len(selection.Index())-1] {
-		if pointer, ok := types.Unalias(typ).(*types.Pointer); ok {
+		if pointer := underlyingPointer(typ); pointer != nil {
 			typ = pointer.Elem()
 		}
 		named := types.Unalias(typ)
@@ -108,7 +125,7 @@ func (b *loweringPlanBuilder) promotedSelectionBase(
 			position: node.Pos(), kind: planFieldPlace, source: expression, base: base,
 		}
 		b.plan.places = append(b.plan.places, fieldPlace)
-		if _, pointer := types.Unalias(field.Type()).(*types.Pointer); pointer {
+		if underlyingPointer(field.Type()) != nil {
 			value := b.newValue(field.Type(), node.Pos())
 			base = &plannedPlace{
 				id: placeID(len(b.plan.places) + 1), typ: dereferencedType(field.Type()),
@@ -131,18 +148,60 @@ func (b *loweringPlanBuilder) promotedSelectionBase(
 }
 
 func dereferencedType(typ types.Type) types.Type {
-	pointer, _ := types.Unalias(typ).(*types.Pointer)
+	pointer := underlyingPointer(typ)
 	if pointer == nil {
 		return nil
 	}
 	return pointer.Elem()
 }
 
+func underlyingPointer(typ types.Type) *types.Pointer {
+	pointer, _ := coreContainerType(typ).(*types.Pointer)
+	return pointer
+}
+
+func coreContainerType(typ types.Type) types.Type {
+	typ = types.Unalias(typ)
+	if named, ok := typ.(*types.Named); ok {
+		typ = named.Underlying()
+	}
+	switch item := typ.(type) {
+	case *types.Array, *types.Slice, *types.Map, *types.Pointer:
+		return item
+	case *types.TypeParam:
+		return coreContainerType(item.Constraint())
+	case *types.Interface:
+		var core types.Type
+		for index := range item.NumEmbeddeds() {
+			next := coreContainerType(item.EmbeddedType(index))
+			if next == nil {
+				continue
+			}
+			if core != nil && !types.Identical(core, next) {
+				return nil
+			}
+			core = next
+		}
+		return core
+	case *types.Union:
+		var core types.Type
+		for index := range item.Len() {
+			next := coreContainerType(item.Term(index).Type())
+			if next == nil || core != nil && !types.Identical(core, next) {
+				return nil
+			}
+			core = next
+		}
+		return core
+	}
+	return nil
+}
+
 func (b *loweringPlanBuilder) derefPlace(expression ast.Expr) *plannedPlace {
 	container := b.expression(expression)
 	pointerType := plannedExpressionProducedType(container)
 	typ := types.Type(nil)
-	if pointer, ok := types.Unalias(pointerType).(*types.Pointer); ok {
+	if pointer := underlyingPointer(pointerType); pointer != nil {
 		typ = pointer.Elem()
 	}
 	place := &plannedPlace{

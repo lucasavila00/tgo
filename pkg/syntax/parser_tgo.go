@@ -253,16 +253,15 @@ func (v *rawDecl) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Struct":
 			current = 2
 		}
-		operand := haveName
+		same := haveName
+		if same {
+			same = current == selected
+		}
+		operand := same
 		if operand {
-			operand = current == selected
+			operand = current == 0
 		}
-		same := operand
-		operand_1 := same
-		if operand_1 {
-			operand_1 = current == 0
-		}
-		if operand_1 {
+		if operand {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -274,15 +273,15 @@ func (v *rawDecl) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_2 := !multiple
+		operand_1 := !multiple
+		if operand_1 {
+			operand_1 = current > 0
+		}
+		var operand_2 bool = operand_1
 		if operand_2 {
-			operand_2 = current > 0
+			operand_2 = current == selected
 		}
-		var operand_3 bool = operand_2
-		if operand_3 {
-			operand_3 = current == selected
-		}
-		if operand_3 {
+		if operand_2 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -301,11 +300,11 @@ func (v *rawDecl) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_4 := !haveName
-	if !operand_4 {
-		operand_4 = multiple
+	operand_3 := !haveName
+	if !operand_3 {
+		operand_3 = multiple
 	}
-	if operand_4 {
+	if operand_3 {
 		return fmt.Errorf("expected one rawDecl JSON variant")
 	}
 	if selected == 0 {
@@ -558,16 +557,15 @@ func (v *rawComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Filter":
 			current = 2
 		}
-		operand := haveName
+		same := haveName
+		if same {
+			same = current == selected
+		}
+		operand := same
 		if operand {
-			operand = current == selected
+			operand = current == 0
 		}
-		same := operand
-		operand_1 := same
-		if operand_1 {
-			operand_1 = current == 0
-		}
-		if operand_1 {
+		if operand {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -579,15 +577,15 @@ func (v *rawComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_2 := !multiple
+		operand_1 := !multiple
+		if operand_1 {
+			operand_1 = current > 0
+		}
+		var operand_2 bool = operand_1
 		if operand_2 {
-			operand_2 = current > 0
+			operand_2 = current == selected
 		}
-		var operand_3 bool = operand_2
-		if operand_3 {
-			operand_3 = current == selected
-		}
-		if operand_3 {
+		if operand_2 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -606,11 +604,11 @@ func (v *rawComprehensionClause) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_4 := !haveName
-	if !operand_4 {
-		operand_4 = multiple
+	operand_3 := !haveName
+	if !operand_3 {
+		operand_3 = multiple
 	}
-	if operand_4 {
+	if operand_3 {
 		return fmt.Errorf("expected one rawComprehensionClause JSON variant")
 	}
 	if selected == 0 {
@@ -767,7 +765,6 @@ func scanSource(
 	tokens := []lexeme(nil)
 	comments := []sourceEdit(nil)
 	for {
-		type operandType = bool
 		position, kind, literal := scan.Scan()
 		if kind == token.EOF {
 			break
@@ -778,7 +775,7 @@ func scanSource(
 			text = kind.String()
 		}
 		end := start + len(text)
-		var operand operandType = kind == token.SEMICOLON
+		operand := kind == token.SEMICOLON
 		if operand {
 			operand = literal == "\n"
 		}
@@ -856,8 +853,7 @@ func (p *sourceParser) closeToken(start int) (int, error) {
 		case token.LBRACE:
 			stack = append(stack, token.RBRACE)
 		case token.RPAREN, token.RBRACK, token.RBRACE:
-			type operandType = bool
-			var operand operandType = len(stack) == 0
+			operand := len(stack) == 0
 			if !operand {
 				operand = stack[len(stack)-1] != p.tokens[index].kind
 			}
@@ -874,9 +870,8 @@ func (p *sourceParser) closeToken(start int) (int, error) {
 }
 
 func (p *sourceParser) tokenError(index int, pattern string, values ...any) error {
-	type operandType = bool
 	message := fmt.Sprintf(pattern, values...)
-	var operand operandType = index < 0
+	operand := index < 0
 	if !operand {
 		operand = index >= len(p.tokens)
 	}
@@ -896,8 +891,7 @@ func lineColumn(source []byte, offset int) (int, int) {
 	line := 1
 	column := 1
 	for index := 0; ; index++ {
-		type operandType = bool
-		var operand operandType = index < offset
+		operand := index < offset
 		if operand {
 			operand = index < len(source)
 		}
@@ -917,12 +911,11 @@ func lineColumn(source []byte, offset int) (int, int) {
 
 func (p *sourceParser) discoverDeclarations() error {
 	for cursor := 0; cursor < len(p.tokens); {
-		type operandType = bool
-		var operand operandType = p.tokens[cursor].kind == token.TYPE
+		operand := p.tokens[cursor].kind == token.TYPE
 		if operand {
 			operand = cursor+1 < len(p.tokens)
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if operand_1 {
 			operand_1 = p.tokens[cursor+1].kind == token.IDENT
 		}
@@ -975,15 +968,13 @@ func (p *sourceParser) discoverDeclarations() error {
 }
 
 func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
-	type operandType_1 = bool
 	cursor := start + 2
 	if cursor >= len(p.tokens) {
 		return nil, start + 1, nil
 	}
 	if p.tokens[cursor].text == "enum" {
-		type operandType = bool
 		open := cursor + 1
-		var operand operandType = open < len(p.tokens)
+		operand := open < len(p.tokens)
 		if operand {
 			operand = p.tokens[open].kind == token.STRING
 		}
@@ -993,7 +984,7 @@ func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
 		if p.implicitSemicolon(open) {
 			open++
 		}
-		var operand_1 operandType = open < len(p.tokens)
+		operand_1 := open < len(p.tokens)
 		if operand_1 {
 			operand_1 = p.tokens[open].kind == token.LBRACE
 		}
@@ -1015,11 +1006,11 @@ func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
 	if operand_2 {
 		return nil, start + 1, nil
 	}
-	var operand_3 operandType_1 = p.tokens[baseStart].kind == token.STRUCT
+	operand_3 := p.tokens[baseStart].kind == token.STRUCT
 	if operand_3 {
 		operand_3 = baseStart+1 < len(p.tokens)
 	}
-	var operand_4 operandType_1 = operand_3
+	operand_4 := operand_3
 	if operand_4 {
 		operand_4 = p.tokens[baseStart+1].kind == token.LBRACE
 	}
@@ -1032,8 +1023,7 @@ func (p *sourceParser) declaration(start int) (*rawDecl, int, error) {
 func (p *sourceParser) declarationEnd(start int) (int, error) {
 	cursor := start
 	for {
-		type operandType = bool
-		var operand operandType = cursor < len(p.tokens)
+		operand := cursor < len(p.tokens)
 		if operand {
 			operand = p.tokens[cursor].kind != token.SEMICOLON
 		}
@@ -1068,14 +1058,13 @@ func (p *sourceParser) enumDeclaration(
 	keyword int,
 	open int,
 ) (*rawDecl, int, error) {
-	type operandType = bool
 	closing, err := p.closeToken(open)
 	if err != nil {
 		return nil, 0, fmt.Errorf("p.closeToken: %w", err)
 	}
 
 	tag := -1
-	var operand operandType = keyword+1 < open
+	operand := keyword+1 < open
 	if operand {
 		operand = p.tokens[keyword+1].kind == token.STRING
 	}
@@ -1108,7 +1097,7 @@ func (p *sourceParser) enumDeclaration(
 		variants = append(variants, variant)
 		cursor = next
 	}
-	var operand_2 operandType = len(variants) == 0
+	operand_2 := len(variants) == 0
 	if operand_2 {
 		operand_2 = p.mode&AllowInvalidModels == 0
 	}
@@ -1132,16 +1121,15 @@ func (p *sourceParser) enumDeclaration(
 }
 
 func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
-	type operandType = bool
-	var operand operandType = start+2 >= limit
+	operand := start+2 >= limit
 	if !operand {
 		operand = p.tokens[start].kind != token.IDENT
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = p.tokens[start+1].kind != token.STRUCT
 	}
-	var operand_2 operandType = operand_1
+	operand_2 := operand_1
 	if !operand_2 {
 		operand_2 = p.tokens[start+2].kind != token.LBRACE
 	}
@@ -1153,7 +1141,6 @@ func (p *sourceParser) variant(start int, limit int) (*rawVariant, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-
 	fields, err_1 := p.rawFields(start+2, closing)
 	if err_1 != nil {
 		return nil, 0, err_1
@@ -1190,7 +1177,6 @@ func (p *sourceParser) structDeclaration(
 	if err != nil {
 		return nil, 0, err
 	}
-
 	fields, err_1 := p.rawFields(open, closing)
 	if err_1 != nil {
 		return nil, 0, err_1
@@ -1241,8 +1227,7 @@ func (p *sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 		field.start = cursor
 		field.assign = -1
 		for {
-			type operandType = bool
-			var operand operandType = cursor < closing
+			operand := cursor < closing
 			if operand {
 				operand = p.tokens[cursor].kind != token.SEMICOLON
 			}
@@ -1276,8 +1261,7 @@ func (p *sourceParser) rawFields(open int, closing int) ([]*rawField, error) {
 }
 
 func skipSemicolon(tokens []lexeme, cursor int) int {
-	type operandType = bool
-	var operand operandType = cursor < len(tokens)
+	operand := cursor < len(tokens)
 	if operand {
 		operand = tokens[cursor].kind == token.SEMICOLON
 	}

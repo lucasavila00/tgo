@@ -185,14 +185,13 @@ func decodeNilCondition(data []byte) *nilCondition {
 	index := 0
 	decode := (func(depth int) *nilCondition)(nil)
 	decode = func(depth int) *nilCondition {
-		type operandType = bool
 		value := byte(0)
 		if index < len(data) {
 			value = data[index]
 			index++
 		}
 		kind := value % 9
-		var operand operandType = depth == 0
+		operand := depth == 0
 		if operand {
 			operand = kind >= 6
 		}

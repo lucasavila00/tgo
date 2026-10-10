@@ -46,7 +46,6 @@ func TestTGoTestPackageUsesGeneratedTestName(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			type operandType = bool
 			files := token.NewFileSet()
 			parsed := []*syntax.File(nil)
 			for _, path := range test.paths {
@@ -70,7 +69,7 @@ func TestTGoTestPackageUsesGeneratedTestName(t *testing.T) {
 			check.pass = pass
 			check.files = parsed
 			gotTest, gotExternal := check.tgoTestPackage()
-			var operand operandType = gotTest != test.wantTest
+			operand := gotTest != test.wantTest
 			if !operand {
 				operand = gotExternal != test.wantExternal
 			}
@@ -85,7 +84,6 @@ func TestTGoTestPackageUsesGeneratedTestName(t *testing.T) {
 }
 
 func TestReadTGoSourceUsesPassReader(t *testing.T) {
-	type operandType = bool
 	called := false
 	pass := new(analysis.Pass)
 	pass.OtherFiles = nil
@@ -104,7 +102,7 @@ func TestReadTGoSourceUsesPassReader(t *testing.T) {
 	if operand {
 		t.Fatalf("reader called=%v data=%q", called, data)
 	}
-	var operand_1 operandType = len(pass.OtherFiles) != 1
+	operand_1 := len(pass.OtherFiles) != 1
 	if !operand_1 {
 		operand_1 = pass.OtherFiles[0] != "/work/model.tgo"
 	}
@@ -197,9 +195,8 @@ func TestCheckedStructSourceDeclarationFactRoundTrip(t *testing.T) {
 	case sourceModelTagEnum:
 		t.Fatal("checked source has a different variant")
 	case sourceModelTagStruct:
-		type operandType = bool
 		shape := structure.StructPayload()
-		var operand operandType = len(shape.Fields) != 1
+		operand := len(shape.Fields) != 1
 		if !operand {
 			operand = shape.Fields[0].name != "value"
 		}
@@ -223,14 +220,13 @@ func TestEnumSourceDeclarationFactRoundTrip(t *testing.T) {
 	case sourceModelTagStruct:
 		t.Fatal("enum source has a different variant")
 	case sourceModelTagEnum:
-		type operandType = bool
 		shape := enum.EnumPayload()
 		wantVariants := []string{"Started", "Stopped"}
-		var operand operandType = len(shape.Variants) != 2
+		operand := len(shape.Variants) != 2
 		if !operand {
 			operand = shape.Variants[0].name != wantVariants[0]
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = shape.Variants[1].name != wantVariants[1]
 		}
@@ -256,13 +252,12 @@ func TestStructSourceDeclaration(t *testing.T) {
 	case sourceModelTagEnum:
 		t.Fatal("struct source has a different variant")
 	case sourceModelTagStruct:
-		type operandType = bool
 		shape := structure.StructPayload()
-		var operand operandType = len(shape.Fields) != 1
+		operand := len(shape.Fields) != 1
 		if !operand {
 			operand = shape.Fields[0].name != "Limit"
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = shape.Fields[0].typeExpression != "int"
 		}
@@ -320,22 +315,21 @@ func assertSourceModelFactRoundTrip(
 	wantName string,
 	wantVariants []string,
 ) {
-	type operandType = bool
 	t.Helper()
 	wire := encodeModelFact(fact)
-	var operand operandType = wire == nil
+	operand := wire == nil
 	if !operand {
 		operand = wire.Kind != wantKind
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = wire.Package != "example.com/sample"
 	}
-	var operand_2 operandType = operand_1
+	operand_2 := operand_1
 	if !operand_2 {
 		operand_2 = wire.Name != wantName
 	}
-	var operand_3 operandType = operand_2
+	operand_3 := operand_2
 	if !operand_3 {
 		operand_3 = len(wire.Variants) != len(wantVariants)
 	}

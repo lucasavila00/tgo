@@ -125,15 +125,14 @@ func analyzeWorkspaceView(view driver.CompiledView) *Package {
 }
 
 func analyzePackage(compiled *compiler.CompiledPackage, testSourcesOnly bool) *Package {
-	type operandType = bool
 	projection := compiled.Facts
 	files := compiled.Files
 	pkg := compiled.Package
-	var operand operandType = projection == nil
+	operand := projection == nil
 	if !operand {
 		operand = files == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = pkg == nil
 	}

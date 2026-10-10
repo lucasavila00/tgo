@@ -230,7 +230,6 @@ func (b *packageBuilder) build(path string) error {
 		if operand_5 != nil {
 			return operand_5
 		}
-
 		testOutputs, err_2 := b.compileTests(unit)
 		if err_2 != nil {
 			return err_2
@@ -357,17 +356,15 @@ func (b *packageBuilder) compileFiles(
 	usesC bool,
 	fileSet *token.FileSet,
 ) (*compiler.CompiledPackage, error) {
-	type operandType_2 = bool
 	imports := make(map[string]*compiler.CompiledPackage)
 	memoryImports := make(map[string]*compiler.CompiledPackage)
 	diskImports := make([]string, 0)
 	for _, importPath := range importsOf(files) {
-		type operandType = bool
-		var operand operandType = importPath == unit.Path
+		operand := importPath == unit.Path
 		if operand {
 			operand = path != unit.Path
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if operand_1 {
 			operand_1 = unit.compiled != nil
 		}
@@ -377,9 +374,8 @@ func (b *packageBuilder) compileFiles(
 			continue
 		}
 		{
-			type operandType_1 = bool
 			dependency := unit.Imports[importPath]
-			var operand_2 operandType_1 = dependency != nil
+			operand_2 := dependency != nil
 			if operand_2 {
 				operand_2 = dependency.compiled != nil
 			}
@@ -412,7 +408,7 @@ func (b *packageBuilder) compileFiles(
 	if len(diagnostics) != 0 {
 		return nil, errors.Join(diagnostics...)
 	}
-	var operand_3 operandType_2 = path == unit.Path
+	operand_3 := path == unit.Path
 	if operand_3 {
 		operand_3 = fileSet == unit.fs
 	}
@@ -559,11 +555,12 @@ func (b *packageBuilder) localGoImports(path string) ([]string, error) {
 	}
 	files := make([]*syntax.File, 0)
 	for _, entry := range entries {
-		file, _, _, err_1 := activeGoFile(b.context, directory, entry)
+		result, result_1, result_2, err_1 := activeGoFile(b.context, directory, entry)
 		if err_1 != nil {
 			return nil, err_1
 		}
 
+		file, _, _ := result, result_1, result_2
 		if file != nil {
 			files = append(files, file)
 		}
@@ -612,7 +609,6 @@ func activeGoFile(
 	if err_1 != nil {
 		return nil, nil, false, err_1
 	}
-
 	file, err_2 := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
 	if err_2 != nil {
 		return nil, nil, false, err_2
@@ -678,9 +674,8 @@ func importsOf(files []*syntax.File) []string {
 	imports := make(map[string]bool)
 	for _, file := range files {
 		for _, spec := range file.Imports {
-			type operandType = bool
 			path, err := strconv.Unquote(spec.Path.Value)
-			var operand operandType = err == nil
+			operand := err == nil
 			if operand {
 				operand = path != "C"
 			}
@@ -703,7 +698,6 @@ func fileImportsC(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
 	file, err_1 := syntax.ParseFile(token.NewFileSet(), path, data, 0)
 	if err_1 != nil {
 		return false, err_1
@@ -715,9 +709,8 @@ func fileImportsC(path string) (bool, error) {
 // importsC reports whether one parsed file imports C.
 func importsC(file *syntax.File) bool {
 	for _, spec := range file.Imports {
-		type operandType = bool
 		path, err := strconv.Unquote(spec.Path.Value)
-		var operand operandType = err == nil
+		operand := err == nil
 		if operand {
 			operand = path == "C"
 		}

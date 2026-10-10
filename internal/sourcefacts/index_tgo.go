@@ -209,9 +209,8 @@ func (i *Index) addDefinition(
 	i.definitions[identifierLocation{position: location, name: name}] = object
 	key := definitionLocation{file: location.file, line: location.line, name: name}
 	{
-		type operandType = bool
 		current := i.lineDefinitions[key]
-		var operand operandType = current != nil
+		operand := current != nil
 		if operand {
 			operand = current != object
 		}
@@ -379,9 +378,8 @@ func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identif
 				}
 			}
 			{
-				type operandType = bool
 				value := importSpecification(specification)
-				var operand operandType = value != nil
+				operand := value != nil
 				if operand {
 					operand = value.Name != nil
 				}
@@ -407,9 +405,8 @@ func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identif
 		statement, ok := syntax.StatementOf(parent)
 		if ok {
 			{
-				type operandType_1 = bool
 				value := syntax.AssignmentStatementOf(statement)
-				var operand_1 operandType_1 = value != nil
+				operand_1 := value != nil
 				if operand_1 {
 					operand_1 = value.Operator == token.DEFINE
 				}
@@ -418,9 +415,8 @@ func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identif
 				}
 			}
 			{
-				type operandType_2 = bool
 				value := syntax.RangeStatementOf(statement)
-				var operand_2 operandType_2 = value != nil
+				operand_2 := value != nil
 				if operand_2 {
 					operand_2 = value.Operator == token.DEFINE
 				}
@@ -460,8 +456,7 @@ func sourceDefinition(file *syntax.File, node *syntax.Node, name *syntax.Identif
 }
 
 func importSpecification(value *syntax.Specification) *syntax.ImportSpecification {
-	type operandType = bool
-	var operand operandType = value == nil
+	operand := value == nil
 	if !operand {
 		operand = value.Tag() != syntax.SpecificationTagImport
 	}
@@ -472,8 +467,7 @@ func importSpecification(value *syntax.Specification) *syntax.ImportSpecificatio
 }
 
 func enumVariant(node *syntax.Node) (*syntax.EnumVariant, bool) {
-	type operandType = bool
-	var operand operandType = node == nil
+	operand := node == nil
 	if !operand {
 		operand = node.Tag() != syntax.NodeTagEnumVariant
 	}
@@ -619,7 +613,6 @@ func (i *Index) HasBitSetOperator(expression *syntax.Expression) bool {
 	syntax.InspectExpression(
 		expression,
 		func(node *syntax.Node) bool {
-			type operandType = bool
 			value, ok := syntax.ExpressionOf(node)
 			if !ok {
 				return true
@@ -632,7 +625,7 @@ func (i *Index) HasBitSetOperator(expression *syntax.Expression) bool {
 				}
 			}
 			unary := syntax.UnaryExpressionOf(value)
-			var operand operandType = unary != nil
+			operand := unary != nil
 			if operand {
 				operand = unary.Operator == token.XOR
 			}

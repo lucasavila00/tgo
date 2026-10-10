@@ -80,31 +80,28 @@ func (c *checker) checkedReceiverMutation(
 	if selection == nil {
 		return false
 	}
-	var operand bool = selection.Kind() == types.FieldVal
-	if operand {
-		operand = len(selection.Index()) == 1
+	var directField bool = selection.Kind() == types.FieldVal
+	if directField {
+		directField = len(selection.Index()) == 1
 	}
-	directField := operand
-
 	promotedField := c.promotedPointerMethodField(expression)
-	var operand_1 bool = selection.Kind() == types.MethodVal
+	var operand bool = selection.Kind() == types.MethodVal
+	if operand {
+		operand = len(selection.Index()) == 2
+	}
+	var operand_1 bool = operand
 	if operand_1 {
-		operand_1 = len(selection.Index()) == 2
+		operand_1 = promotedField != nil
 	}
-	var operand_2 bool = operand_1
+	var directPrimitiveMethod bool = operand_1
+	if directPrimitiveMethod {
+		directPrimitiveMethod = checkedPrimitiveType(promotedField.Type())
+	}
+	operand_2 := !directField
 	if operand_2 {
-		operand_2 = promotedField != nil
+		operand_2 = !directPrimitiveMethod
 	}
-	var operand_3 bool = operand_2
-	if operand_3 {
-		operand_3 = checkedPrimitiveType(promotedField.Type())
-	}
-	directPrimitiveMethod := operand_3
-	operand_4 := !directField
-	if operand_4 {
-		operand_4 = !directPrimitiveMethod
-	}
-	if operand_4 {
+	if operand_2 {
 		return false
 	}
 	receiver := sourceUnparenthesized(selector.Expression)
@@ -118,24 +115,24 @@ func (c *checker) checkedReceiverMutation(
 	for current != nil {
 		declaration, ok := syntax.FunctionDeclarationOf(current)
 		if ok {
-			var operand_5 bool = declaration == nil
-			if !operand_5 {
-				operand_5 = declaration.Name.Name != "check"
+			var operand_3 bool = declaration == nil
+			if !operand_3 {
+				operand_3 = declaration.Name.Name != "check"
 			}
-			var operand_6 bool = operand_5
-			if !operand_6 {
-				operand_6 = !c.matchesCheckedReceiver(
+			var operand_4 bool = operand_3
+			if !operand_4 {
+				operand_4 = !c.matchesCheckedReceiver(
 					declaration, model, receiverName, receiverObject,
 				)
 			}
-			if operand_6 {
+			if operand_4 {
 				return false
 			}
-			operand_7 := directPrimitiveMethod
-			if !operand_7 {
-				operand_7 = checkedPrimitiveField(selection)
+			operand_5 := directPrimitiveMethod
+			if !operand_5 {
+				operand_5 = checkedPrimitiveField(selection)
 			}
-			if operand_7 {
+			if operand_5 {
 				return true
 			}
 			return c.checkedFieldReplacement(expression)
@@ -201,9 +198,8 @@ func (c *checker) checkedFieldReplacement(expression *syntax.Expression) bool {
 			}
 		}
 		{
-			type operandType = bool
 			ranged := syntax.RangeStatementOf(statement)
-			var operand_1 operandType = ranged != nil
+			operand_1 := ranged != nil
 			if operand_1 {
 				operand_1 = ranged.Operator == token.ASSIGN
 			}
@@ -227,7 +223,6 @@ func (c *checker) matchesCheckedReceiver(
 	name *syntax.Identifier,
 	object types.Object,
 ) bool {
-	type operandType = bool
 	declared := c.checkedReceiverObject(declaration, model)
 	if sameSourceObject(declared, object) {
 		return true
@@ -242,11 +237,11 @@ func (c *checker) matchesCheckedReceiver(
 			return false
 		}
 	}
-	var operand_1 operandType = declared == nil
+	operand_1 := declared == nil
 	if !operand_1 {
 		operand_1 = declaration.Receiver == nil
 	}
-	var operand_2 operandType = operand_1
+	operand_2 := operand_1
 	if !operand_2 {
 		operand_2 = len(declaration.Receiver.List) != 1
 	}
@@ -286,8 +281,7 @@ func (c *checker) checkedReceiverObject(
 	declaration *syntax.FunctionDeclaration,
 	model *model,
 ) types.Object {
-	type operandType = bool
-	var operand operandType = declaration.Receiver == nil
+	operand := declaration.Receiver == nil
 	if !operand {
 		operand = len(declaration.Receiver.List) != 1
 	}
@@ -313,8 +307,7 @@ func sameModelForType(
 	typ types.Type,
 	model *model,
 ) bool {
-	type operandType = bool
-	var operand operandType = model == nil
+	operand := model == nil
 	if !operand {
 		operand = typ == nil
 	}
@@ -408,9 +401,8 @@ func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {
 			}
 		}
 		{
-			type operandType = bool
 			ranged := syntax.RangeStatementOf(statement)
-			var operand_4 operandType = ranged != nil
+			operand_4 := ranged != nil
 			if operand_4 {
 				operand_4 = ranged.Operator == token.ASSIGN
 			}

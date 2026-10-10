@@ -16,12 +16,11 @@ func (e *nilEnvironment) blockNilFacts(
 	block *cfg.Block,
 	state *nilFlowState,
 ) (nilFacts, nilFacts) {
-	type operandType = bool
-	var operand operandType = block == nil
+	operand := block == nil
 	if !operand {
 		operand = state == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = len(block.Nodes) == 0
 	}
@@ -237,9 +236,8 @@ func (e *nilEnvironment) nilPlace(expression *syntax.Expression) (nilPlace, bool
 	{
 		identifier := syntax.IdentifierExpressionOf(expression)
 		if identifier != nil {
-			type operandType = bool
 			object := e.facts.Object(identifier)
-			var operand operandType = object == nil
+			operand := object == nil
 			if !operand {
 				operand = object == types.Universe.Lookup("nil")
 			}
@@ -252,13 +250,12 @@ func (e *nilEnvironment) nilPlace(expression *syntax.Expression) (nilPlace, bool
 	{
 		selector := syntax.SelectorExpressionOf(expression)
 		if selector != nil {
-			type operandType_1 = bool
 			base, ok := e.nilPlace(selector.Expression)
 			if !ok {
 				return nilPlace{object: nil, path: ""}, false
 			}
 			selection := e.facts.Selection(expression)
-			var operand_1 operandType_1 = selection == nil
+			operand_1 := selection == nil
 			if !operand_1 {
 				operand_1 = selection.Kind() != types.FieldVal
 			}
@@ -332,12 +329,11 @@ func (e *nilEnvironment) prepareNilBlock(
 	state *nilFlowState,
 	block *cfg.Block,
 ) {
-	type operandType = bool
-	var operand operandType = state == nil
+	operand := state == nil
 	if !operand {
 		operand = block == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = block.Kind != cfg.KindRangeBody
 	}

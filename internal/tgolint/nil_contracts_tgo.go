@@ -98,12 +98,11 @@ func nilContractFact(value nilContract) *nilContractWireFactV2 {
 }
 
 func decodeNilContract(fact *nilContractWireFactV2) nilContract {
-	type operandType = bool
-	var operand operandType = fact == nil
+	operand := fact == nil
 	if !operand {
 		operand = fact.Version != nilContractVersion
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = len(fact.Paths) == 0
 	}
@@ -113,8 +112,7 @@ func decodeNilContract(fact *nilContractWireFactV2) nilContract {
 	result := make(nilContract, len(fact.Paths))
 	previous := ""
 	for index, path := range fact.Paths {
-		type operandType_1 = bool
-		var operand_2 operandType_1 = index > 0
+		operand_2 := index > 0
 		if operand_2 {
 			operand_2 = path <= previous
 		}
@@ -249,9 +247,8 @@ func (e *nilEnvironment) collectNilContracts() {
 			{
 				declaration, ok := syntax.FunctionDeclarationOf(node)
 				if ok {
-					type operandType = bool
 					contract := e.functionContract(declaration.Type)
-					var operand operandType = declaration.Receiver != nil
+					operand := declaration.Receiver != nil
 					if operand {
 						operand = len(declaration.Receiver.List) == 1
 					}
@@ -297,8 +294,7 @@ func (e *nilEnvironment) structDeclarationContract(
 
 // collectRangeContracts gives range variables the source element contracts.
 func (e *nilEnvironment) collectRangeContracts(statement *syntax.RangeStatement) {
-	type operandType = bool
-	var operand operandType = statement == nil
+	operand := statement == nil
 	if !operand {
 		operand = statement.Operator != token.DEFINE
 	}
@@ -329,9 +325,8 @@ func (e *nilEnvironment) collectRangeContracts(statement *syntax.RangeStatement)
 
 // setRangeContract records one range variable contract.
 func (e *nilEnvironment) setRangeContract(expression *syntax.Expression, contract nilContract) {
-	type operandType = bool
 	name := syntax.IdentifierExpressionOf(expression)
-	var operand operandType = name == nil
+	operand := name == nil
 	if !operand {
 		operand = name.Name == "_"
 	}
@@ -396,8 +391,7 @@ func (e *nilEnvironment) addParents(file *syntax.File) {
 }
 
 func (e *nilEnvironment) setContract(object types.Object, contract nilContract) {
-	type operandType = bool
-	var operand operandType = object != nil
+	operand := object != nil
 	if operand {
 		operand = len(contract) != 0
 	}
@@ -407,8 +401,7 @@ func (e *nilEnvironment) setContract(object types.Object, contract nilContract) 
 }
 
 func (e *nilEnvironment) setExportContract(object types.Object, contract nilContract) {
-	type operandType = bool
-	var operand operandType = object != nil
+	operand := object != nil
 	if operand {
 		operand = len(contract) != 0
 	}
@@ -574,12 +567,11 @@ func (e *nilEnvironment) contractForObject(object types.Object) nilContract {
 
 // analysisFactObject maps compiler type objects to the analysis type universe.
 func (e *nilEnvironment) analysisFactObject(object types.Object) types.Object {
-	type operandType = bool
-	var operand operandType = object == nil
+	operand := object == nil
 	if !operand {
 		operand = object.Pkg() == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = object.Pkg() == e.pkg
 	}
@@ -711,16 +703,15 @@ func mapNilObject(
 	from *types.Package,
 	to *types.Package,
 ) types.Object {
-	type operandType = bool
-	var operand operandType = object == nil
+	operand := object == nil
 	if !operand {
 		operand = from == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = to == nil
 	}
-	var operand_2 operandType = operand_1
+	operand_2 := operand_1
 	if !operand_2 {
 		operand_2 = object.Pkg() != from
 	}

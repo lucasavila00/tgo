@@ -86,7 +86,6 @@ func TestProjectionFindsShiftedDefinition(t *testing.T) {
 }
 
 func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
-	type operandType = bool
 	t.Parallel()
 	projected := []byte("package sample\nvar      value = 1; var copy = value\n")
 	source := []byte("package sample\nvar value = 1; var copy = value\n")
@@ -104,7 +103,7 @@ func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
 		uses: []objectFact{{position: usePosition, name: "", object: object}},
 	}, files)
 	definition, use := sourceIdentifiers(t, parsed)
-	var operand operandType = definition == nil
+	operand := definition == nil
 	if !operand {
 		operand = use == nil
 	}
@@ -114,7 +113,7 @@ func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
 	}
 	definitionObject, definitionFact := index.IdentifierFact(parsed, definition)
 	useObject, useFact := index.IdentifierFact(parsed, use)
-	var operand_1 operandType = definitionObject != object
+	operand_1 := definitionObject != object
 	if !operand_1 {
 		operand_1 = useObject != object
 	}
@@ -130,7 +129,6 @@ func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
 }
 
 func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
-	type operandType = bool
 	t.Parallel()
 	source := []byte("package sample\n" +
 		"//line sample.tgo:10:5\nvar alpha int\n" +
@@ -149,7 +147,7 @@ func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
 	gammaPosition.Offset = 0
 	usePosition := files.Position(use.Start)
 	usePosition.Offset = 0
-	var operand operandType = gammaPosition != position
+	operand := gammaPosition != position
 	if !operand {
 		operand = usePosition != position
 	}
@@ -405,7 +403,6 @@ func sourceIdentifiers(
 	t *testing.T,
 	file *syntax.File,
 ) (*syntax.Node, *syntax.Node) {
-	type operandType = bool
 	t.Helper()
 	first := syntax.GeneralDeclarationOf(file.Declarations[0])
 	firstValue := syntax.ValueSpecificationOf(first.Specs[0])
@@ -414,7 +411,7 @@ func sourceIdentifiers(
 	secondValue := syntax.ValueSpecificationOf(second.Specs[0])
 	useName := syntax.IdentifierExpressionOf(secondValue.Values[0])
 	use := identifierNode(file, useName)
-	var operand operandType = definition == nil
+	operand := definition == nil
 	if !operand {
 		operand = use == nil
 	}

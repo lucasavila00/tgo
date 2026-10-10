@@ -95,13 +95,12 @@ func (p *printer) expressionListCommentAlignment(
 }
 
 func (p *printer) sourceToken(position token.Pos) byte {
-	type operandType = bool
 	file := p.files.File(position)
 	if file == nil {
 		return 0
 	}
 	offset := file.Offset(position)
-	var operand operandType = offset < 0
+	operand := offset < 0
 	if !operand {
 		operand = offset >= len(p.source)
 	}
@@ -131,12 +130,11 @@ func (p *printer) listCommentAlignment(
 	previousSection := 0
 	previousStop := opening
 	for index, value := range values {
-		type operandType = bool
 		start := syntax.ExpressionPosition(value)
 		stop := syntax.ExpressionEnd(value)
 		startLine := p.position(start).Line
 		stopLine := p.position(stop).Line
-		var operand operandType = startLine == 0
+		operand := startLine == 0
 		if !operand {
 			operand = startLine != stopLine
 		}
@@ -234,7 +232,6 @@ func (p *printer) expressionListSections(
 	opening token.Pos,
 	depth int,
 ) []int {
-	type operandType = bool
 	sections := make([]int, len(values))
 	if len(values) == 0 {
 		return sections
@@ -242,7 +239,7 @@ func (p *printer) expressionListSections(
 	previousLine := p.position(opening).Line
 	previousBreak := -1
 	firstLine := p.position(syntax.ExpressionPosition(values[0])).Line
-	var operand operandType = previousLine > 0
+	operand := previousLine > 0
 	if operand {
 		operand = previousLine < firstLine
 	}
@@ -254,22 +251,19 @@ func (p *printer) expressionListSections(
 	count := 0
 	section := 0
 	for index, value := range values {
-		type operandType_1 = bool
 		start := syntax.ExpressionPosition(value)
 		line := p.position(start).Line
 		size := p.expressionListElementSize(value, depth)
 		newSection := false
-		var operand_1 operandType_1 = previousSize > 0
+		operand_1 := previousSize > 0
 		if operand_1 {
 			operand_1 = size > 0
 		}
 		if operand_1 {
-			type operandType_2 = bool
 			const smallSize = 40
-			var operand_2 operandType_2 = count > 0
+			operand_2 := count > 0
 			if operand_2 {
-				type operandType_3 = bool
-				var operand_3 operandType_3 = previousSize > smallSize
+				operand_3 := previousSize > smallSize
 				if !operand_3 {
 					operand_3 = size > smallSize
 				}
@@ -286,11 +280,11 @@ func (p *printer) expressionListSections(
 				newSection = operand_4
 			}
 		}
-		var operand_5 operandType_1 = index > 0
+		operand_5 := index > 0
 		if operand_5 {
 			operand_5 = previousLine > 0
 		}
-		var operand_6 operandType_1 = operand_5
+		operand_6 := operand_5
 		if operand_6 {
 			operand_6 = previousLine < line
 		}

@@ -254,16 +254,15 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "Parameter":
 			current = 4
 		}
-		operand := haveName
+		same := haveName
+		if same {
+			same = current == selected
+		}
+		operand := same
 		if operand {
-			operand = current == selected
+			operand = current == 0
 		}
-		same := operand
-		operand_1 := same
-		if operand_1 {
-			operand_1 = current == 0
-		}
-		if operand_1 {
+		if operand {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -275,15 +274,15 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_2 := !multiple
+		operand_1 := !multiple
+		if operand_1 {
+			operand_1 = current > 0
+		}
+		var operand_2 bool = operand_1
 		if operand_2 {
-			operand_2 = current > 0
+			operand_2 = current == selected
 		}
-		var operand_3 bool = operand_2
-		if operand_3 {
-			operand_3 = current == selected
-		}
-		if operand_3 {
+		if operand_2 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -302,11 +301,11 @@ func (v *model) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_4 := !haveName
-	if !operand_4 {
-		operand_4 = multiple
+	operand_3 := !haveName
+	if !operand_3 {
+		operand_3 = multiple
 	}
-	if operand_4 {
+	if operand_3 {
 		return fmt.Errorf("expected one model JSON variant")
 	}
 	if selected == 0 {
@@ -525,8 +524,7 @@ func modelIsMixed(value *model) bool {
 }
 
 func sameModel(left *model, right *model) bool {
-	type operandType = bool
-	var operand operandType = left == nil
+	operand := left == nil
 	if !operand {
 		operand = right == nil
 	}
@@ -610,12 +608,11 @@ func encodeModelFact(value *model) *modelWireFact {
 
 // decodeModelFact validates a wire fact before it enters the checker.
 func decodeModelFact(fact *modelWireFact, expectedPackage string) *model {
-	type operandType = bool
-	var operand operandType = fact == nil
+	operand := fact == nil
 	if !operand {
 		operand = fact.Package != expectedPackage
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = fact.Name == ""
 	}

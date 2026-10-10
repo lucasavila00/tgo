@@ -139,14 +139,13 @@ func (c *checker) checkNilSafety(analysis *sourceanalysis.Package) {
 	goEnvironment.collectNilContracts()
 
 	if analysis != nil {
-		type operandType = bool
 		sourceFiles := make([]*syntax.File, 0, len(analysis.Sources))
 		for _, source := range analysis.Sources {
 			if source.Syntax != nil {
 				sourceFiles = append(sourceFiles, source.Syntax)
 			}
 		}
-		var operand operandType = analysis.Facts == nil
+		operand := analysis.Facts == nil
 		if !operand {
 			operand = analysis.Package == nil
 		}
@@ -168,14 +167,13 @@ func (c *checker) checkNilSafety(analysis *sourceanalysis.Package) {
 // packageDirectory returns the directory that owns the loaded package.
 func (c *checker) packageDirectory() string {
 	for _, file := range c.pass.Files {
-		type operandType = bool
 		name := c.pass.Fset.Position(file.Package).Filename
 		if name == "" {
 			continue
 		}
 		directory := filepath.Dir(name)
 		sources, err := filepath.Glob(filepath.Join(directory, "*.tgo"))
-		var operand operandType = err == nil
+		operand := err == nil
 		if operand {
 			operand = len(sources) != 0
 		}
@@ -227,9 +225,8 @@ func (e *nilEnvironment) checkNilGlobals() {
 	state := newNilState()
 	for _, file := range e.files {
 		for _, declaration := range file.Declarations {
-			type operandType = bool
 			general := syntax.GeneralDeclarationOf(declaration)
-			var operand operandType = general == nil
+			operand := general == nil
 			if !operand {
 				operand = general.Kind != token.VAR
 			}
@@ -301,7 +298,6 @@ func (e *nilEnvironment) nilEntryState(
 	root *syntax.Node,
 	function *syntax.FunctionType,
 ) *nilFlowState {
-	type operandType = bool
 	state := newNilState()
 	{
 		declaration, ok := syntax.FunctionDeclarationOf(root)
@@ -320,7 +316,7 @@ func (e *nilEnvironment) nilEntryState(
 			}
 		}
 	}
-	var operand_1 operandType = function == nil
+	operand_1 := function == nil
 	if !operand_1 {
 		operand_1 = function.Params == nil
 	}
@@ -534,20 +530,19 @@ func joinNilStates(
 }
 
 func equalNilStates(left, right *nilFlowState) bool {
-	type operandType = bool
-	var operand operandType = left.reachable != right.reachable
+	operand := left.reachable != right.reachable
 	if !operand {
 		operand = len(left.values) != len(right.values)
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = len(left.aliases) != len(right.aliases)
 	}
-	var operand_2 operandType = operand_1
+	operand_2 := operand_1
 	if !operand_2 {
 		operand_2 = len(left.guards) != len(right.guards)
 	}
-	var operand_3 operandType = operand_2
+	operand_3 := operand_2
 	if !operand_3 {
 		operand_3 = len(left.presence) != len(right.presence)
 	}

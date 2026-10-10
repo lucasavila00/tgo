@@ -39,7 +39,6 @@ func (p *printer) expressionList(
 	indented := false
 	previousIndent := p.indent
 	for index, value := range values {
-		type operandType = bool
 		start := syntax.ExpressionPosition(value)
 		gap := p.sourceGap(previous, start)
 		if gap.lineBreak {
@@ -67,7 +66,7 @@ func (p *printer) expressionList(
 		if index+1 < len(values) {
 			following = syntax.ExpressionPosition(values[index+1])
 		}
-		var operand_1 operandType = index+1 < len(values)
+		operand_1 := index+1 < len(values)
 		if !operand_1 {
 			operand_1 = p.position(previous).Line < p.position(closing).Line
 		}

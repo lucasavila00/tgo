@@ -13,8 +13,7 @@ import (
 func (p *sourceParser) editsInRange(start int, end int) []sourceEdit {
 	result := []sourceEdit(nil)
 	for _, edit := range p.edits {
-		type operandType = bool
-		var operand operandType = edit.start >= start
+		operand := edit.start >= start
 		if operand {
 			operand = edit.end <= end
 		}
@@ -122,8 +121,7 @@ func (p *sourceParser) sanitize(
 			case *ast.CallExpr:
 				p.buildPropagation(node, node)
 			case *ast.BinaryExpr:
-				type operandType = bool
-				var operand operandType = node.Op == token.MUL
+				operand := node.Op == token.MUL
 				if operand {
 					operand = p.sourceToken(node.OpPos) == '%'
 				}
@@ -179,8 +177,7 @@ func (p *sourceParser) sanitize(
 }
 
 func (p *sourceParser) sourceToken(position token.Pos) byte {
-	type operandType = bool
-	var operand operandType = p.file == nil
+	operand := p.file == nil
 	if !operand {
 		operand = position == token.NoPos
 	}
@@ -188,7 +185,7 @@ func (p *sourceParser) sourceToken(position token.Pos) byte {
 		return 0
 	}
 	offset := p.file.Offset(position)
-	var operand_1 operandType = offset < 0
+	operand_1 := offset < 0
 	if !operand_1 {
 		operand_1 = offset >= len(p.source)
 	}
@@ -202,8 +199,7 @@ func (p *sourceParser) sourceToken(position token.Pos) byte {
 func (p *sourceParser) buildPropagation(expression ast.Expr, call *ast.CallExpr) {
 	end := p.file.Offset(expression.End())
 	for _, item := range p.propagations {
-		type operandType = bool
-		var operand operandType = item.node != nil
+		operand := item.node != nil
 		if !operand {
 			operand = item.callEnd != end
 		}
@@ -329,7 +325,6 @@ func (p *sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup
 	commentStart := p.file.Position(comment.Pos())
 	commentEnd := p.file.Position(comment.End())
 	for _, node := range nodes {
-		type operandType = bool
 		if node == nil {
 			continue
 		}
@@ -348,21 +343,21 @@ func (p *sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup
 		nodeStart := p.file.Position(node.Pos())
 		nodeEnd := p.file.Position(node.End())
 		distance := -1
-		var operand operandType = comment.End() <= node.Pos()
+		operand := comment.End() <= node.Pos()
 		if operand {
 			operand = commentEnd.Line+1 == nodeStart.Line
 		}
 		if operand {
 			distance = int(node.Pos() - comment.End())
 		}
-		var operand_1 operandType = node.End() <= comment.Pos()
+		operand_1 := node.End() <= comment.Pos()
 		if operand_1 {
 			operand_1 = nodeEnd.Line == commentStart.Line
 		}
 		if operand_1 {
 			distance = int(comment.Pos() - node.End())
 		}
-		var operand_2 operandType = distance < 0
+		operand_2 := distance < 0
 		if !operand_2 {
 			operand_2 = distance > bestDistance
 		}
@@ -387,17 +382,16 @@ func (p *sourceParser) commentOwner(nodes []frontNode, comment *ast.CommentGroup
 }
 
 func (p *sourceParser) setNodeComments(node frontNode, comments []*ast.CommentGroup) {
-	type operandType = bool
 	var leading *ast.CommentGroup = nil
 	var trailing *ast.CommentGroup = nil
-	var operand operandType = len(comments) > 0
+	operand := len(comments) > 0
 	if operand {
 		operand = comments[0].End() <= node.Pos()
 	}
 	if operand {
 		leading = comments[0]
 	}
-	var operand_1 operandType = len(comments) > 0
+	operand_1 := len(comments) > 0
 	if operand_1 {
 		operand_1 = comments[len(comments)-1].Pos() >= node.End()
 	}

@@ -29,15 +29,23 @@ type loweringPlanContractFixture struct {
 
 func newLoweringPlanContractFixture(t *testing.T) loweringPlanContractFixture {
 	t.Helper()
-	files := token.NewFileSet()
-	inputSource, err := parseSource(files, "sample.tgo", []byte(`package sample
+	return newLoweringPlanContractFixtureSource(t, `package sample
 
 func check() (bool, error) { return true, nil }
 
 func use(ready bool) (bool, error) {
 	return ready && check()!!, nil
 }
-`))
+`)
+}
+
+func newLoweringPlanContractFixtureSource(
+	t *testing.T,
+	text string,
+) loweringPlanContractFixture {
+	t.Helper()
+	files := token.NewFileSet()
+	inputSource, err := parseSource(files, "sample.tgo", []byte(text))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,9 +57,20 @@ func use(ready bool) (bool, error) {
 	unit.prepare()
 	unit.typecheck()
 
+	var target *ast.FuncDecl
+	for _, declaration := range inputSource.File.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if ok && function.Name.Name == "use" {
+			target = function
+			break
+		}
+	}
+	if target == nil {
+		t.Fatal("use function is not in the source")
+	}
 	var function propagationFunction
 	for _, candidate := range unit.loweringFunctions(inputSource) {
-		if candidate.body.Pos() == inputSource.File.Decls[1].(*ast.FuncDecl).Body.Pos() {
+		if candidate.body.Pos() == target.Body.Pos() {
 			function = candidate
 			break
 		}
@@ -408,6 +427,24 @@ func values(input []int) map[int]int {
 	if len(problems) != 1 ||
 		problems[0].Error() != "input.tgo:4:9: slice comprehension needs a slice output type" {
 		t.Fatalf("invalid slice comprehension problems: %v", problems)
+	}
+}
+
+func TestLoweringReportsInvalidMapComprehensionAtSource(t *testing.T) {
+	_, problems := Compile(PackageInput{
+		Path: "sample",
+		Sources: []File{{Name: "input.tgo", Data: []byte(`package sample
+
+func values(input []int) []int {
+	return []int{for _, value := range input { value: value }}
+}
+`)}},
+		FileSet:  token.NewFileSet(),
+		Importer: importer.Default(),
+	})
+	if len(problems) != 1 ||
+		problems[0].Error() != "input.tgo:4:9: map comprehension needs a map output type" {
+		t.Fatalf("invalid map comprehension problems: %v", problems)
 	}
 }
 

@@ -6,20 +6,19 @@ import "go/token"
 
 // SourceText returns the source text in one syntax span.
 func SourceText(file *File, span Span) string {
-	type operandType = bool
-	var operand operandType = file == nil
+	operand := file == nil
 	if !operand {
 		operand = file.front == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = file.front.tokenFile == nil
 	}
-	var operand_2 operandType = operand_1
+	operand_2 := operand_1
 	if !operand_2 {
 		operand_2 = span.Start < file.front.tokenFile.Pos(0)
 	}
-	var operand_3 operandType = operand_2
+	operand_3 := operand_2
 	if !operand_3 {
 		operand_3 = span.Stop < span.Start
 	}
@@ -28,11 +27,11 @@ func SourceText(file *File, span Span) string {
 	}
 	start := file.front.tokenFile.Offset(span.Start)
 	stop := file.front.tokenFile.Offset(span.Stop)
-	var operand_4 operandType = start < 0
+	operand_4 := start < 0
 	if !operand_4 {
 		operand_4 = stop < start
 	}
-	var operand_5 operandType = operand_4
+	operand_5 := operand_4
 	if !operand_5 {
 		operand_5 = stop > len(file.front.source)
 	}
@@ -49,8 +48,7 @@ type Visitor interface {
 
 // Children returns direct children in source order.
 func Children(file *File, node *Node) []*Node {
-	type operandType = bool
-	var operand operandType = file == nil
+	operand := file == nil
 	if !operand {
 		operand = node == nil
 	}
@@ -68,8 +66,7 @@ func Children(file *File, node *Node) []*Node {
 
 // Parent returns the direct parent.
 func Parent(file *File, node *Node) *Node {
-	type operandType = bool
-	var operand operandType = file == nil
+	operand := file == nil
 	if !operand {
 		operand = node == nil
 	}
@@ -102,17 +99,15 @@ func Extensions(file *File) []*Node {
 func ExtensionAt(file *File, position token.Pos) *Node {
 	var result *Node = nil
 	for _, node := range Extensions(file) {
-		type operandType = bool
 		start := NodePosition(node)
 		end := NodeEnd(node)
-		var operand operandType = start <= position
+		operand := start <= position
 		if operand {
 			operand = position < end
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if operand_1 {
-			type operandType_1 = bool
-			var operand_2 operandType_1 = result == nil
+			operand_2 := result == nil
 			if !operand_2 {
 				operand_2 = end-start < NodeEnd(result)-NodePosition(result)
 			}
@@ -127,8 +122,7 @@ func ExtensionAt(file *File, position token.Pos) *Node {
 
 // AttachedComments returns comments attached to a node.
 func AttachedComments(file *File, node *Node) []*CommentGroup {
-	type operandType = bool
-	var operand operandType = file == nil
+	operand := file == nil
 	if !operand {
 		operand = node == nil
 	}
@@ -144,8 +138,7 @@ func AttachedComments(file *File, node *Node) []*CommentGroup {
 
 // Walk visits a complete file tree.
 func Walk(visitor Visitor, file *File) {
-	type operandType = bool
-	var operand operandType = visitor == nil
+	operand := visitor == nil
 	if !operand {
 		operand = file == nil
 	}
@@ -169,8 +162,7 @@ func walkPublic(visitor Visitor, file *File, node *Node) {
 
 // Inspect calls visit for each node. False skips its children.
 func Inspect(file *File, visit func(*Node) bool) {
-	type operandType = bool
-	var operand operandType = file == nil
+	operand := file == nil
 	if !operand {
 		operand = visit == nil
 	}

@@ -106,9 +106,8 @@ func (c *checker) sourceObjectScopeStart(
 			statement, ok := syntax.StatementOf(parent)
 			if ok {
 				{
-					type operandType = bool
 					assignment := syntax.AssignmentStatementOf(statement)
-					var operand operandType = assignment != nil
+					operand := assignment != nil
 					if operand {
 						operand = assignment.Operator == token.DEFINE
 					}
@@ -117,9 +116,8 @@ func (c *checker) sourceObjectScopeStart(
 					}
 				}
 				{
-					type operandType_1 = bool
 					item := syntax.RangeStatementOf(statement)
-					var operand_1 operandType_1 = item != nil
+					operand_1 := item != nil
 					if operand_1 {
 						operand_1 = item.Operator == token.DEFINE
 					}
@@ -134,15 +132,14 @@ func (c *checker) sourceObjectScopeStart(
 }
 
 func (c *checker) sourceScopeContains(scope *types.Scope, position token.Pos) bool {
-	type operandType = bool
 	target := c.pass.Fset.Position(position)
 	start := c.pass.Fset.Position(scope.Pos())
 	stop := c.pass.Fset.Position(scope.End())
-	var operand operandType = target.Filename == ""
+	operand := target.Filename == ""
 	if !operand {
 		operand = target.Filename != start.Filename
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = target.Filename != stop.Filename
 	}

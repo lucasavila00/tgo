@@ -143,12 +143,11 @@ func (c *checker) genericEffectType(
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 ) types.Type {
-	type operandType = bool
 	arguments := typeArguments
 	if effect.Receiver {
 		arguments = receiverArguments
 	}
-	var operand operandType = effect.TypeParameter < 0
+	operand := effect.TypeParameter < 0
 	if !operand {
 		operand = effect.TypeParameter >= len(arguments)
 	}
@@ -170,12 +169,11 @@ func (c *checker) effectCertainty(
 	}
 	call := syntax.CallExpressionOf(expression)
 	for _, condition := range effect.Conditions {
-		type operandType = bool
-		var operand operandType = call == nil
+		operand := call == nil
 		if !operand {
 			operand = condition.ValueParameter < 0
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = condition.ValueParameter >= len(call.Args)
 		}
@@ -204,12 +202,11 @@ func (c *checker) effectConditionValue(
 	condition GenericEffectCondition,
 	targetType types.Type,
 ) (bool, bool) {
-	type operandType = bool
 	call := syntax.CallExpressionOf(callExpression)
 	if call == nil {
 		return false, false
 	}
-	var operand operandType = condition.ValueParameter < 0
+	operand := condition.ValueParameter < 0
 	if !operand {
 		operand = condition.ValueParameter >= len(call.Args)
 	}
@@ -242,7 +239,6 @@ func (c *checker) booleanConditionValue(
 	expression *syntax.Expression,
 	expected bool,
 ) (bool, bool) {
-	type operandType = bool
 	{
 		value, known := c.scalarValueAt(syntaxNode(call), expression)
 		if known {
@@ -255,7 +251,7 @@ func (c *checker) booleanConditionValue(
 		}
 	}
 	value := c.facts.Constant(expression)
-	var operand operandType = value == nil
+	operand := value == nil
 	if !operand {
 		operand = value.Kind() != constant.Bool
 	}
@@ -270,7 +266,6 @@ func (c *checker) integerConditionValue(
 	expression *syntax.Expression,
 	expected bool,
 ) (bool, bool) {
-	type operandType = bool
 	{
 		value, known := c.scalarValueAt(syntaxNode(call), expression)
 		if known {
@@ -283,7 +278,7 @@ func (c *checker) integerConditionValue(
 		}
 	}
 	value := c.facts.Constant(expression)
-	var operand operandType = value == nil
+	operand := value == nil
 	if !operand {
 		operand = value.Kind() != constant.Int
 	}
@@ -326,7 +321,6 @@ func (c *checker) compositeEffectCondition(
 
 // knownSliceBounds reads exact length and capacity from literals and make calls.
 func (c *checker) knownSliceBounds(expression *syntax.Expression) (int64, int64, bool) {
-	type operandType = bool
 	{
 		parentheses := syntax.ParenthesizedExpressionOf(expression)
 		if parentheses != nil {
@@ -341,7 +335,7 @@ func (c *checker) knownSliceBounds(expression *syntax.Expression) (int64, int64,
 		}
 	}
 	call := syntax.CallExpressionOf(expression)
-	var operand operandType = call == nil
+	operand := call == nil
 	if !operand {
 		operand = len(call.Args) < 2
 	}
@@ -349,7 +343,7 @@ func (c *checker) knownSliceBounds(expression *syntax.Expression) (int64, int64,
 		return 0, 0, false
 	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
-	var operand_1 operandType = name == nil
+	operand_1 := name == nil
 	if !operand_1 {
 		operand_1 = name.Name != "make"
 	}
@@ -417,8 +411,7 @@ func (c *checker) literalLength(literal *syntax.CompositeLiteral) (int64, bool) 
 }
 
 func constantInteger(value constant.Value) (int64, bool) {
-	type operandType = bool
-	var operand operandType = value == nil
+	operand := value == nil
 	if !operand {
 		operand = value.Kind() != constant.Int
 	}
@@ -433,12 +426,11 @@ func (c *checker) mapMissCondition(
 	expression *syntax.Expression,
 	condition GenericEffectCondition,
 ) (bool, bool) {
-	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
 		return false, false
 	}
-	var operand operandType = condition.OtherParameter < 0
+	operand := condition.OtherParameter < 0
 	if !operand {
 		operand = condition.OtherParameter >= len(call.Args)
 	}
@@ -470,14 +462,13 @@ func (c *checker) mapMissCondition(
 }
 
 func (c *checker) freshChannel(expression *syntax.Expression) bool {
-	type operandType = bool
 	value := unparenthesized(expression)
 	call := syntax.CallExpressionOf(value)
 	if call == nil {
 		return false
 	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
-	var operand operandType = name == nil
+	operand := name == nil
 	if !operand {
 		operand = name.Name != "make"
 	}
@@ -532,12 +523,11 @@ func (c *checker) resliceExtends(
 	expression *syntax.Expression,
 	condition GenericEffectCondition,
 ) (bool, bool) {
-	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
 		return false, false
 	}
-	var operand operandType = condition.OtherParameter < 0
+	operand := condition.OtherParameter < 0
 	if !operand {
 		operand = condition.OtherParameter >= len(call.Args)
 	}

@@ -118,7 +118,6 @@ func tagVariantType(tags map[int]bool) variantflow.Type {
 
 func clauseFallthrough(clause *syntax.CaseClause) *syntax.BranchStatement {
 	for index := len(clause.Body) - 1; index >= 0; index-- {
-		type operandType = bool
 		statement := clause.Body[index]
 		if statement.Tag() == syntax.StatementTagEmpty {
 			continue
@@ -127,7 +126,7 @@ func clauseFallthrough(clause *syntax.CaseClause) *syntax.BranchStatement {
 			statement = syntax.LabeledStatementOf(statement).Statement
 		}
 		branch := syntax.BranchStatementOf(statement)
-		var operand operandType = branch != nil
+		operand := branch != nil
 		if operand {
 			operand = branch.Token == token.FALLTHROUGH
 		}
@@ -270,7 +269,6 @@ func (c *checker) branchEscapes(
 	labels map[types.Object]bool,
 	tagDefault bool,
 ) bool {
-	type operandType = bool
 	operand := tagDefault
 	if operand {
 		operand = branch.Token == token.RETURN
@@ -281,7 +279,7 @@ func (c *checker) branchEscapes(
 	if branch.Label != nil {
 		return !labels[c.facts.Object(branch.Label)]
 	}
-	var operand_1 operandType = branch.Token != token.BREAK
+	operand_1 := branch.Token != token.BREAK
 	if operand_1 {
 		operand_1 = branch.Token != token.CONTINUE
 	}
@@ -332,13 +330,12 @@ func branchTarget(node *syntax.Node, branch token.Token) bool {
 }
 
 func (c *checker) syntaxCallMayReturn(expression *syntax.Expression) bool {
-	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
 		return true
 	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
-	var operand operandType = name == nil
+	operand := name == nil
 	if !operand {
 		operand = name.Name != "panic"
 	}
@@ -353,7 +350,6 @@ func (c *checker) syntaxCallMayReturn(expression *syntax.Expression) bool {
 func (c *checker) tagCall(
 	expression *syntax.Expression,
 ) (*syntax.Expression, *syntax.Expression, *syntax.SelectorExpression, *model, types.Type) {
-	type operandType = bool
 	if expression == nil {
 		return nil, nil, nil, nil, nil
 	}
@@ -365,7 +361,7 @@ func (c *checker) tagCall(
 		expression = parenthesized.Expression
 	}
 	call := syntax.CallExpressionOf(expression)
-	var operand operandType = call == nil
+	operand := call == nil
 	if !operand {
 		operand = len(call.Args) != 0
 	}
@@ -373,7 +369,7 @@ func (c *checker) tagCall(
 		return nil, nil, nil, nil, nil
 	}
 	selector := syntax.SelectorExpressionOf(call.Callee)
-	var operand_1 operandType = selector == nil
+	operand_1 := selector == nil
 	if !operand_1 {
 		operand_1 = selector.Selector.Name != "Tag"
 	}
@@ -531,9 +527,8 @@ func (c *checker) tagConstantExpression(
 	defer delete(seen, object)
 	for _, file := range c.files {
 		for _, declarationValue := range file.Declarations {
-			type operandType = bool
 			declaration := syntax.GeneralDeclarationOf(declarationValue)
-			var operand_2 operandType = declaration == nil
+			operand_2 := declaration == nil
 			if !operand_2 {
 				operand_2 = declaration.Kind != token.CONST
 			}
@@ -546,8 +541,7 @@ func (c *checker) tagConstantExpression(
 					continue
 				}
 				for index, name := range specification.Names {
-					type operandType_1 = bool
-					var operand_3 operandType_1 = c.facts.DefinitionName(name) != object
+					operand_3 := c.facts.DefinitionName(name) != object
 					if !operand_3 {
 						operand_3 = len(specification.Values) == 0
 					}
@@ -575,7 +569,6 @@ func (c *checker) tagDefaultSentinel(
 	clause *syntax.CaseClause,
 	model *model,
 ) bool {
-	type operandType = bool
 	if clause == nil {
 		return false
 	}
@@ -587,7 +580,7 @@ func (c *checker) tagDefaultSentinel(
 		return false
 	}
 	panicCall := syntax.CallExpressionOf(expressionStatement.Expression)
-	var operand operandType = panicCall == nil
+	operand := panicCall == nil
 	if !operand {
 		operand = len(panicCall.Args) != 1
 	}
@@ -595,7 +588,7 @@ func (c *checker) tagDefaultSentinel(
 		return false
 	}
 	panicName := syntax.IdentifierExpressionOf(panicCall.Callee)
-	var operand_1 operandType = panicName == nil
+	operand_1 := panicName == nil
 	if !operand_1 {
 		operand_1 = panicName.Name != "panic"
 	}
@@ -613,7 +606,7 @@ func (c *checker) tagDefaultSentinel(
 		return false
 	}
 	literal := argument.BasicLiteralPayload().Value
-	var operand_2 operandType = literal.Kind != token.STRING
+	operand_2 := literal.Kind != token.STRING
 	if !operand_2 {
 		operand_2 = literal.Value != strconv.Quote("invalid "+modelName(model)+" tag")
 	}
@@ -623,17 +616,16 @@ func (c *checker) tagDefaultSentinel(
 	expressionPosition := c.pass.Fset.Position(expressionStatement.Stop)
 	for _, group := range file.Comments {
 		for _, comment := range group.List {
-			type operandType_1 = bool
 			commentPosition := c.pass.Fset.Position(comment.Start)
-			var operand_3 operandType_1 = comment.Text == enumDefaultComment
+			operand_3 := comment.Text == enumDefaultComment
 			if operand_3 {
 				operand_3 = commentPosition.Filename == expressionPosition.Filename
 			}
-			var operand_4 operandType_1 = operand_3
+			operand_4 := operand_3
 			if operand_4 {
 				operand_4 = commentPosition.Line == expressionPosition.Line
 			}
-			var operand_5 operandType_1 = operand_4
+			operand_5 := operand_4
 			if operand_5 {
 				operand_5 = comment.Start > expressionStatement.Stop
 			}
@@ -684,9 +676,8 @@ func (c *checker) modelForSourceSelector(
 	{
 		function, ok := selection.Obj().(*types.Func)
 		if ok {
-			type operandType = bool
 			signature, _ := function.Type().(*types.Signature)
-			var operand_1 operandType = signature != nil
+			operand_1 := signature != nil
 			if operand_1 {
 				operand_1 = signature.Recv() != nil
 			}

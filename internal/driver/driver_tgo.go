@@ -127,12 +127,10 @@ func compileWorkspaceContext(
 	if err_1 != nil {
 		return nil, err_1
 	}
-
 	buildContext, err_2 := effectiveBuildContext(directory)
 	if err_2 != nil {
 		return nil, err_2
 	}
-
 	packages, err_3 := discover(root, module, &buildContext)
 	if err_3 != nil {
 		return nil, err_3
@@ -181,12 +179,10 @@ func compileWorkspaceViewsContext(
 	if err_1 != nil {
 		return nil, err_1
 	}
-
 	buildContext, err_2 := effectiveBuildContext(directory)
 	if err_2 != nil {
 		return nil, err_2
 	}
-
 	packages, err_3 := discover(root, module, &buildContext)
 	if err_3 != nil {
 		return nil, err_3
@@ -300,12 +296,10 @@ func CompilePackage(
 	if err != nil {
 		return nil, err
 	}
-
 	buildContext, err_1 := effectiveBuildContext(directory)
 	if err_1 != nil {
 		return nil, err_1
 	}
-
 	packages, err_2 := discover(root, module, &buildContext)
 	if err_2 != nil {
 		return nil, err_2
@@ -345,12 +339,10 @@ func CompileTestPackage(
 	if err != nil {
 		return nil, err
 	}
-
 	buildContext, err_1 := effectiveBuildContext(directory)
 	if err_1 != nil {
 		return nil, err_1
 	}
-
 	packages, err_2 := discover(root, module, &buildContext)
 	if err_2 != nil {
 		return nil, err_2
@@ -369,7 +361,6 @@ func CompileTestPackage(
 	if operand_1 != nil {
 		return nil, operand_1
 	}
-
 	internal, externalTests, err_3 := unit.readTests()
 	if err_3 != nil {
 		return nil, err_3
@@ -564,13 +555,12 @@ func numberedFeatureTags(
 
 // arm64FeatureTags gets cumulative tags for one ARM64 version.
 func arm64FeatureTags(value string) ([]string, error) {
-	type operandType = bool
 	version, _, _ := strings.Cut(value, ",")
-	var operand operandType = len(version) != 4
+	operand := len(version) != 4
 	if !operand {
 		operand = version[0] != 'v'
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = version[2] != '.'
 	}
@@ -579,22 +569,21 @@ func arm64FeatureTags(value string) ([]string, error) {
 	}
 	major := int(version[1] - '0')
 	minor := int(version[3] - '0')
-	var operand_2 operandType = major != 8
+	operand_2 := major != 8
 	if operand_2 {
 		operand_2 = major != 9
 	}
-	var operand_3 operandType = operand_2
+	operand_3 := operand_2
 	if !operand_3 {
 		operand_3 = minor < 0
 	}
-	var operand_4 operandType = operand_3
+	operand_4 := operand_3
 	if !operand_4 {
 		operand_4 = minor > 9
 	}
-	var operand_5 operandType = operand_4
+	operand_5 := operand_4
 	if !operand_5 {
-		type operandType_1 = bool
-		var operand_6 operandType_1 = major == 9
+		operand_6 := major == 9
 		if operand_6 {
 			operand_6 = minor > 5
 		}
@@ -642,17 +631,16 @@ func wasmFeatureTags(value string) ([]string, error) {
 
 // featureLevel parses one numbered feature setting.
 func featureLevel(value string, prefix string, first int, last int) (int, error) {
-	type operandType = bool
 	number, found := strings.CutPrefix(value, prefix)
 	if !found {
 		return 0, errors.New("missing feature prefix")
 	}
 	level, err := strconv.Atoi(number)
-	var operand operandType = err != nil
+	operand := err != nil
 	if !operand {
 		operand = level < first
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = level > last
 	}

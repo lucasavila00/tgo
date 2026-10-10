@@ -9,7 +9,6 @@ import (
 )
 
 func TestGenericEffectFactGobRoundTrip(t *testing.T) {
-	type operandType = bool
 	t.Parallel()
 	want := &GenericEffectFact{
 		ZeroEffects: []GenericEffect{{
@@ -41,7 +40,7 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	var operand operandType = len(got.ZeroEffects) != 1
+	operand := len(got.ZeroEffects) != 1
 	if !operand {
 		operand = len(got.ZeroEffects[0].Conditions) != 1
 	}

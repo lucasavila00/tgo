@@ -209,7 +209,9 @@ func (e *loweringEmitter) sourceStatement(
 	operation *plannedOperation,
 	output *ast.BlockStmt,
 ) {
-	e.prepareSourceStatementPlaces(operation, output)
+	if e.emitPlannedAssignment(operation, output) {
+		return
+	}
 	if operation.before != nil {
 		e.operations(operation.before, output)
 	}
@@ -242,24 +244,6 @@ func (e *loweringEmitter) sourceStatement(
 		if operation.source != nil {
 			output.List = append(output.List, operation.source)
 		}
-	}
-}
-
-func (e *loweringEmitter) prepareSourceStatementPlaces(
-	operation *plannedOperation,
-	output *ast.BlockStmt,
-) {
-	if assignment, ok := operation.source.(*ast.AssignStmt); ok &&
-		len(operation.places) != 0 && operationHasExpressionWork(operation) {
-		left := make([]ast.Expr, 0, len(operation.places))
-		for _, place := range operation.places {
-			left = append(left, e.preparePlace(place, output))
-		}
-		assignment.Lhs = left
-	}
-	if update, ok := operation.source.(*ast.IncDecStmt); ok &&
-		len(operation.places) == 1 && operationHasExpressionWork(operation) {
-		update.X = e.preparePlace(operation.places[0], output)
 	}
 }
 

@@ -373,17 +373,16 @@ func (v Request) InvalidatePayload() RequestInvalidate { return v.tgoInvalidate 
 func (v Request) MarshalJSON() ([]byte, error) {
 	switch v.tgoTag {
 	case RequestTagHover:
-		type operandType = bool
 		payload := v.HoverPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand operandType = len(payloadData) < 2
+		operand := len(payloadData) < 2
 		if !operand {
 			operand = payloadData[0] != '{'
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -399,17 +398,16 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagDefinition:
-		type operandType_1 = bool
 		payload := v.DefinitionPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand_2 operandType_1 = len(payloadData) < 2
+		operand_2 := len(payloadData) < 2
 		if !operand_2 {
 			operand_2 = payloadData[0] != '{'
 		}
-		var operand_3 operandType_1 = operand_2
+		operand_3 := operand_2
 		if !operand_3 {
 			operand_3 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -425,17 +423,16 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagReferences:
-		type operandType_2 = bool
 		payload := v.ReferencesPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand_4 operandType_2 = len(payloadData) < 2
+		operand_4 := len(payloadData) < 2
 		if !operand_4 {
 			operand_4 = payloadData[0] != '{'
 		}
-		var operand_5 operandType_2 = operand_4
+		operand_5 := operand_4
 		if !operand_5 {
 			operand_5 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -451,17 +448,16 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagDocumentSymbols:
-		type operandType_3 = bool
 		payload := v.DocumentSymbolsPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand_6 operandType_3 = len(payloadData) < 2
+		operand_6 := len(payloadData) < 2
 		if !operand_6 {
 			operand_6 = payloadData[0] != '{'
 		}
-		var operand_7 operandType_3 = operand_6
+		operand_7 := operand_6
 		if !operand_7 {
 			operand_7 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -477,17 +473,16 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagWorkspaceSymbols:
-		type operandType_4 = bool
 		payload := v.WorkspaceSymbolsPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand_8 operandType_4 = len(payloadData) < 2
+		operand_8 := len(payloadData) < 2
 		if !operand_8 {
 			operand_8 = payloadData[0] != '{'
 		}
-		var operand_9 operandType_4 = operand_8
+		operand_9 := operand_8
 		if !operand_9 {
 			operand_9 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -503,17 +498,16 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagCancel:
-		type operandType_5 = bool
 		payload := v.CancelPayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand_10 operandType_5 = len(payloadData) < 2
+		operand_10 := len(payloadData) < 2
 		if !operand_10 {
 			operand_10 = payloadData[0] != '{'
 		}
-		var operand_11 operandType_5 = operand_10
+		operand_11 := operand_10
 		if !operand_11 {
 			operand_11 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -529,17 +523,16 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		result = append(result, payloadData[1:]...)
 		return result, nil
 	case RequestTagInvalidate:
-		type operandType_6 = bool
 		payload := v.InvalidatePayload()
 		payloadData, err := json.Marshal(payload)
 		if err != nil {
 			return nil, err
 		}
-		var operand_12 operandType_6 = len(payloadData) < 2
+		operand_12 := len(payloadData) < 2
 		if !operand_12 {
 			operand_12 = payloadData[0] != '{'
 		}
-		var operand_13 operandType_6 = operand_12
+		operand_13 := operand_12
 		if !operand_13 {
 			operand_13 = payloadData[len(payloadData)-1] != '}'
 		}
@@ -913,8 +906,7 @@ func Serve(ctx context.Context, engine *Engine, input io.Reader, output io.Write
 
 			err := json.Unmarshal(data, &request)
 			if err != nil {
-				type operandType = bool
-				var operand operandType = header.Method != "cancel"
+				operand := header.Method != "cancel"
 				if !operand {
 					operand = header.ID != 0
 				}

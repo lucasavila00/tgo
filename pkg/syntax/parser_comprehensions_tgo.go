@@ -22,8 +22,7 @@ func (p *sourceParser) discoverComprehensions() error {
 func (p *sourceParser) discoverComprehensionsIn(start int, limit int) error {
 	candidates := []comprehensionCandidate(nil)
 	for cursor := start; cursor < limit; cursor++ {
-		type operandType = bool
-		var operand operandType = p.tokens[cursor].kind != token.FOR
+		operand := p.tokens[cursor].kind != token.FOR
 		if !operand {
 			operand = p.tokens[cursor-1].kind != token.LBRACE
 		}
@@ -160,13 +159,12 @@ func (p *sourceParser) rawComprehensionBody(
 	start int,
 	limit int,
 ) ([]*rawComprehensionClause, *rawComprehensionResult, error) {
-	type operandType = bool
 	start, limit = p.trimComprehensionSemicolons(start, limit)
 	if start >= limit {
 		failure := p.tokenError(limit, "comprehension block needs one item")
 		return nil, nil, failure
 	}
-	var operand operandType = p.tokens[start].kind != token.FOR
+	operand := p.tokens[start].kind != token.FOR
 	if operand {
 		operand = p.tokens[start].kind != token.IF
 	}
@@ -183,12 +181,10 @@ func (p *sourceParser) rawComprehensionBody(
 	if err_1 != nil {
 		return nil, nil, err_1
 	}
-
 	clause, err_2 := p.rawComprehensionClause(start, bodyOpen, bodyClose)
 	if err_2 != nil {
 		return nil, nil, err_2
 	}
-
 	children, result, err_3 := p.rawComprehensionBody(bodyOpen+1, bodyClose)
 	if err_3 != nil {
 		return nil, nil, err_3
@@ -202,7 +198,6 @@ func (p *sourceParser) rawComprehensionClause(
 	open int,
 	close int,
 ) (*rawComprehensionClause, error) {
-	type operandType = bool
 	if p.tokens[start].kind == token.IF {
 		if start+1 >= open {
 			return nil, p.tokenError(start, "comprehension if needs a condition")
@@ -223,7 +218,7 @@ func (p *sourceParser) rawComprehensionClause(
 			break
 		}
 	}
-	var operand operandType = define < 0
+	operand := define < 0
 	if !operand {
 		operand = rangeToken != define+1
 	}
@@ -308,8 +303,7 @@ func (p *sourceParser) rawComprehensionResult(
 		colon: colon, valueStart: start, valueEnd: end,
 	}
 	if colon >= 0 {
-		type operandType = bool
-		var operand operandType = colon == start
+		operand := colon == start
 		if !operand {
 			operand = colon+1 == end
 		}
@@ -324,8 +318,7 @@ func (p *sourceParser) rawComprehensionResult(
 
 func (p *sourceParser) trimComprehensionSemicolons(start int, end int) (int, int) {
 	for {
-		type operandType = bool
-		var operand operandType = start < end
+		operand := start < end
 		if operand {
 			operand = p.tokens[start].kind == token.SEMICOLON
 		}
@@ -335,8 +328,7 @@ func (p *sourceParser) trimComprehensionSemicolons(start int, end int) (int, int
 		start++
 	}
 	for {
-		type operandType_1 = bool
-		var operand_1 operandType_1 = start < end
+		operand_1 := start < end
 		if operand_1 {
 			operand_1 = p.tokens[end-1].kind == token.SEMICOLON
 		}

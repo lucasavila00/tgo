@@ -16,7 +16,6 @@ func sameFields(
 		return false
 	}
 	for index, field := range source {
-		type operandType = bool
 		other := generated[index]
 		if other == nil {
 			return false
@@ -39,14 +38,14 @@ func sameFields(
 		if operand {
 			return false
 		}
-		var operand_1 operandType = field.name == ""
+		operand_1 := field.name == ""
 		if operand_1 {
 			operand_1 = len(other.Names) == 0
 		}
 		if operand_1 {
 			continue
 		}
-		var operand_2 operandType = len(other.Names) != 1
+		operand_2 := len(other.Names) != 1
 		if !operand_2 {
 			operand_2 = other.Names[0].Name != field.name
 		}
@@ -82,11 +81,10 @@ func sameFormattedText(
 	right string,
 	wrap func(string) string,
 ) bool {
-	type operandType = bool
 	if left == right {
 		return true
 	}
-	var operand operandType = left == ""
+	operand := left == ""
 	if !operand {
 		operand = right == ""
 	}
@@ -95,7 +93,7 @@ func sameFormattedText(
 	}
 	leftText, leftErr := format.Source("left.tgo", []byte(wrap(left)))
 	rightText, rightErr := format.Source("right.tgo", []byte(wrap(right)))
-	var operand_1 operandType = leftErr != nil
+	operand_1 := leftErr != nil
 	if !operand_1 {
 		operand_1 = rightErr != nil
 	}

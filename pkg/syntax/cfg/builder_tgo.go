@@ -46,10 +46,9 @@ start:
 			b.current = b.newBlock(KindUnreachable, statement)
 		}
 	case syntax.StatementTagDeclaration:
-		type operandType = bool
 		item := syntax.DeclarationStatementOf(statement)
 		declaration := syntax.GeneralDeclarationOf(item.Declaration)
-		var operand_1 operandType = declaration != nil
+		operand_1 := declaration != nil
 		if operand_1 {
 			operand_1 = declaration.Kind == token.VAR
 		}
@@ -111,8 +110,7 @@ func (b *graphBuilder) branch(item *syntax.BranchStatement, statement *syntax.St
 			block = b.label(item.Label, nil).breakTo
 		} else {
 			for target := b.targets; ; target = target.tail {
-				type operandType = bool
-				var operand operandType = target != nil
+				operand := target != nil
 				if operand {
 					operand = block == nil
 				}
@@ -128,8 +126,7 @@ func (b *graphBuilder) branch(item *syntax.BranchStatement, statement *syntax.St
 			block = b.label(item.Label, nil).continueTo
 		} else {
 			for target := b.targets; ; target = target.tail {
-				type operandType_1 = bool
-				var operand_1 operandType_1 = target != nil
+				operand_1 := target != nil
 				if operand_1 {
 					operand_1 = block == nil
 				}
@@ -142,8 +139,7 @@ func (b *graphBuilder) branch(item *syntax.BranchStatement, statement *syntax.St
 
 	case token.FALLTHROUGH:
 		for target := b.targets; ; target = target.tail {
-			type operandType_2 = bool
-			var operand_2 operandType_2 = target != nil
+			operand_2 := target != nil
 			if operand_2 {
 				operand_2 = block == nil
 			}
@@ -316,9 +312,8 @@ func (b *graphBuilder) selectStatement(
 	label *labelBlocks,
 ) {
 	for _, clauseStatement := range item.Body.List {
-		type operandType = bool
 		clause := syntax.CommunicationClauseOf(clauseStatement)
-		var operand operandType = clause != nil
+		operand := clause != nil
 		if operand {
 			operand = clause.Communication != nil
 		}
@@ -348,9 +343,8 @@ func (b *graphBuilder) selectStatement(
 			tail: b.targets, breakTo: done, continueTo: nil, fallthroughTo: nil,
 		}
 		{
-			type operandType_1 = bool
 			assignment := syntax.AssignmentStatementOf(clause.Communication)
-			var operand_1 operandType_1 = assignment != nil
+			operand_1 := assignment != nil
 			if operand_1 {
 				operand_1 = len(assignment.Left) > 0
 			}
@@ -464,7 +458,6 @@ type labelBlocks struct {
 }
 
 func (b *graphBuilder) label(identifier *syntax.Identifier, statement *syntax.Statement) *labelBlocks {
-	type operandType = bool
 	value := b.labels[identifier.Name]
 	if value == nil {
 		value = &labelBlocks{
@@ -475,7 +468,7 @@ func (b *graphBuilder) label(identifier *syntax.Identifier, statement *syntax.St
 		}
 		b.labels[identifier.Name] = value
 	}
-	var operand operandType = statement != nil
+	operand := statement != nil
 	if operand {
 		operand = value.goTo.Stmt == nil
 	}

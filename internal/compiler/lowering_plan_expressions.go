@@ -43,9 +43,28 @@ func (b *loweringPlanBuilder) expressionContext(
 	}
 	result.addResult(b, valueType, expression.Pos())
 	for len(result.results) < resultCount {
-		result.addResult(b, types.Typ[types.Bool], expression.Pos())
+		additional := commaOKResultType(expression, len(result.results))
+		if additional == nil {
+			break
+		}
+		result.addResult(b, additional, expression.Pos())
 	}
 	return result
+}
+
+func commaOKResultType(expression ast.Expr, resultIndex int) types.Type {
+	if resultIndex != 1 {
+		return nil
+	}
+	switch node := expression.(type) {
+	case *ast.IndexExpr, *ast.TypeAssertExpr:
+		return types.Typ[types.Bool]
+	case *ast.UnaryExpr:
+		if node.Op == token.ARROW {
+			return types.Typ[types.Bool]
+		}
+	}
+	return nil
 }
 
 func (b *loweringPlanBuilder) logicalExpression(
@@ -206,6 +225,11 @@ func (b *loweringPlanBuilder) comprehensionExpression(
 	trimComprehensionReturn(result.work)
 	b.captureComprehensionResultNames(result, function, metadata.Result)
 	b.planComprehensionBuiltins(result, function, metadata)
+	_, mapOutput := coreContainerType(result.typ).(*types.Map)
+	if metadata.Map && validPlannedType(result.typ) && !mapOutput {
+		b.unit.failAt(metadata.Position, "map comprehension needs a map output type")
+		return result
+	}
 	if !metadata.Map && validPlannedType(result.typ) && underlyingSlice(result.typ) == nil {
 		b.unit.failAt(metadata.Position, "slice comprehension needs a slice output type")
 		return result
@@ -490,7 +514,11 @@ func (b *loweringPlanBuilder) operandOrderOperation(
 	if addressArray && index == 0 && laterWork && underlyingArray(operand.typ) != nil {
 		place := b.assignmentPlace(operand.source)
 		operand.place = place
-		return &plannedOperation{kind: planPreparePlace, places: []*plannedPlace{place}}
+		prepare := &plannedBlock{scope: b.currentScope}
+		b.planPlacePreparation(place, prepare)
+		return &plannedOperation{
+			kind: planPlaceReady, places: []*plannedPlace{place}, before: prepare,
+		}
 	}
 	if len(operand.results) != 1 {
 		return nil
@@ -570,8 +598,7 @@ func (b *loweringPlanBuilder) needsBooleanContextAdapter(typ types.Type) bool {
 		return false
 	}
 	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok || named.Obj().Pkg() == nil || named.Obj().Pkg() == b.unit.typed ||
-		named.Obj().Exported() {
+	if !ok {
 		return false
 	}
 	basic, ok := named.Underlying().(*types.Basic)
@@ -596,29 +623,8 @@ func arrayPointerOperand(expression *plannedExpression) *plannedExpression {
 }
 
 func underlyingArray(typ types.Type) *types.Array {
-	typ = types.Unalias(typ)
-	if named, ok := typ.(*types.Named); ok {
-		typ = named.Underlying()
-	}
-	switch item := types.Unalias(typ).(type) {
-	case *types.Array:
-		return item
-	case *types.TypeParam:
-		return underlyingArray(item.Constraint())
-	case *types.Interface:
-		for index := range item.NumEmbeddeds() {
-			if array := underlyingArray(item.EmbeddedType(index)); array != nil {
-				return array
-			}
-		}
-	case *types.Union:
-		for index := range item.Len() {
-			if array := underlyingArray(item.Term(index).Type()); array != nil {
-				return array
-			}
-		}
-	}
-	return nil
+	array, _ := coreContainerType(typ).(*types.Array)
+	return array
 }
 
 func (b *loweringPlanBuilder) comprehensionParts(

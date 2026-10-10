@@ -135,7 +135,6 @@ func assertNoGeneratedGoFiles(t *testing.T, workspace string) {
 }
 
 func TestHelperCancellationStopsBeforeInvalidPackage(t *testing.T) {
-	type operandType = bool
 	repository := repositoryRoot(t)
 	helper := buildHelper(t, repository)
 	source := filepath.Join(
@@ -171,7 +170,7 @@ func TestHelperCancellationStopsBeforeInvalidPackage(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	var operand operandType = response.ID != 1
+	operand := response.ID != 1
 	if !operand {
 		operand = response.Error != context.Canceled.Error()
 	}
@@ -274,7 +273,6 @@ func (h *helperProcess) check(
 		"includeDeclaration": fixture.IncludeDeclaration,
 	})
 	if fixture.Method == "hover" {
-		type operandType = bool
 		result := (*navigation.Hover)(nil)
 		h.call(t, fixture.Method, params, &result)
 		want := &navigation.Hover{
@@ -284,7 +282,7 @@ func (h *helperProcess) check(
 				End: offset + len(fixture.Position.Text),
 			},
 		}
-		var operand operandType = result == nil
+		operand := result == nil
 		if !operand {
 			operand = *result != *want
 		}

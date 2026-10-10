@@ -85,9 +85,8 @@ func (e *nilEnvironment) transferNilNode(
 				}
 			}
 			{
-				type operandType = bool
 				item := syntax.ReturnStatementOf(statement)
-				var operand_1 operandType = item != nil
+				operand_1 := item != nil
 				if operand_1 {
 					operand_1 = function != nil
 				}
@@ -314,9 +313,8 @@ func (e *nilEnvironment) checkNilReturn(
 		e.checkNilExpression(expression, state)
 	}
 	if len(statement.FailureCommas) > 0 {
-		type operandType = bool
 		signature := e.functionSignature(function)
-		var operand operandType = signature != nil
+		operand := signature != nil
 		if operand {
 			operand = len(statement.Results) == 1
 		}

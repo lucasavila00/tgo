@@ -78,8 +78,7 @@ func listStartsAlignmentSection(
 	log2sum float64,
 	count int,
 ) bool {
-	type operandType = bool
-	var operand operandType = previousSize == 0
+	operand := previousSize == 0
 	if !operand {
 		operand = size == 0
 	}
@@ -87,10 +86,9 @@ func listStartsAlignmentSection(
 		return true
 	}
 	const smallSize = 40
-	var operand_1 operandType = count == 0
+	operand_1 := count == 0
 	if !operand_1 {
-		type operandType_1 = bool
-		var operand_2 operandType_1 = previousSize <= smallSize
+		operand_2 := previousSize <= smallSize
 		if operand_2 {
 			operand_2 = size <= smallSize
 		}
@@ -151,8 +149,7 @@ func alignmentColumns(rows []alignmentRow) [][]int {
 			}
 			for run := first; run < last; {
 				for {
-					type operandType = bool
-					var operand_1 operandType = run < last
+					operand_1 := run < last
 					if operand_1 {
 						operand_1 = len(rows[run].cells) <= cell+1
 					}
@@ -164,8 +161,7 @@ func alignmentColumns(rows []alignmentRow) [][]int {
 				end := run
 				width := 0
 				for {
-					type operandType_1 = bool
-					var operand_2 operandType_1 = end < last
+					operand_2 := end < last
 					if operand_2 {
 						operand_2 = len(rows[end].cells) > cell+1
 					}
@@ -295,8 +291,7 @@ func (p *printer) identifiersAreMultiline(values []*syntax.Identifier) bool {
 }
 
 func fieldCommentCells(cells []int, value *syntax.Field) []int {
-	type operandType = bool
-	var operand operandType = value.Tag == nil
+	operand := value.Tag == nil
 	if operand {
 		operand = len(value.Names) == 0
 	}
@@ -382,7 +377,6 @@ func (p *printer) trailingCommentPosition(position token.Pos) token.Pos {
 	start := p.position(position).Offset
 	first := p.commentStartingAtOrAfter(position)
 	for _, comment := range p.comments[first:] {
-		type operandType = bool
 		commentLine := p.position(comment.start).Line
 		if commentLine > line {
 			break
@@ -391,15 +385,15 @@ func (p *printer) trailingCommentPosition(position token.Pos) token.Pos {
 			continue
 		}
 		stop := p.position(comment.start).Offset
-		var operand operandType = start >= 0
+		operand := start >= 0
 		if operand {
 			operand = stop >= start
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if operand_1 {
 			operand_1 = stop <= len(p.source)
 		}
-		var operand_2 operandType = operand_1
+		operand_2 := operand_1
 		if operand_2 {
 			operand_2 = strings.TrimSpace(string(p.source[start:stop])) == ""
 		}
@@ -541,23 +535,22 @@ func (p *printer) declarationCommentAlignment(
 				end,
 			)
 		}
-		var operand_2 bool = functionDeclarationOf(value) != nil
-		if operand_2 {
-			operand_2 = bodyColumns[index] == 0
+		var breakBefore bool = functionDeclarationOf(value) != nil
+		if breakBefore {
+			breakBefore = bodyColumns[index] == 0
 		}
-		breakBefore := operand_2
 		if index > 0 {
 			previous := values[index-1]
 			previousStop := syntax.DeclarationEnd(previous)
-			operand_3 := breakBefore
+			operand_2 := breakBefore
+			if !operand_2 {
+				operand_2 = p.blankBetween(previousStop, start)
+			}
+			var operand_3 bool = operand_2
 			if !operand_3 {
-				operand_3 = p.blankBetween(previousStop, start)
+				operand_3 = p.hasCommentBetween(previousStop, start)
 			}
-			var operand_4 bool = operand_3
-			if !operand_4 {
-				operand_4 = p.hasCommentBetween(previousStop, start)
-			}
-			breakBefore = operand_4
+			breakBefore = operand_3
 
 		}
 		headerRow := commentAlignmentRow{
@@ -593,19 +586,19 @@ func (p *printer) declarationCommentAlignment(
 	for index, value := range values {
 		start := syntax.DeclarationPosition(value)
 		stop := syntax.DeclarationEnd(value)
-		var operand_5 bool = functionDeclarationOf(value) == nil
-		if !operand_5 {
-			operand_5 = !p.multiline(start, stop)
+		var operand_4 bool = functionDeclarationOf(value) == nil
+		if !operand_4 {
+			operand_4 = !p.multiline(start, stop)
 		}
-		if operand_5 {
+		if operand_4 {
 			continue
 		}
 		_, end := p.outerCommentPositions(start, stop)
-		operand_6 := !end.IsValid()
-		if !operand_6 {
-			operand_6 = p.sourceCommentPadding(end) <= 1
+		operand_5 := !end.IsValid()
+		if !operand_5 {
+			operand_5 = p.sourceCommentPadding(end) <= 1
 		}
-		if operand_6 {
+		if operand_5 {
 			continue
 		}
 		if result[index] == nil {

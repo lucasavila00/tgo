@@ -12,7 +12,6 @@ import (
 )
 
 func (c *checker) callMayReturn(expression *syntax.Expression) bool {
-	type operandType = bool
 	if expression == nil {
 		return true
 	}
@@ -21,7 +20,7 @@ func (c *checker) callMayReturn(expression *syntax.Expression) bool {
 		return true
 	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
-	var operand operandType = name == nil
+	operand := name == nil
 	if !operand {
 		operand = name.Name != "panic"
 	}
@@ -38,16 +37,15 @@ func (c *checker) checkBranch(
 	branch *syntax.BranchStatement,
 	state checkedState,
 ) {
-	type operandType = bool
-	var operand operandType = branch.Token != token.GOTO
+	operand := branch.Token != token.GOTO
 	if operand {
 		operand = branch.Token != token.BREAK
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if operand_1 {
 		operand_1 = branch.Token != token.CONTINUE
 	}
-	var operand_2 operandType = operand_1
+	operand_2 := operand_1
 	if operand_2 {
 		operand_2 = branch.Token != token.FALLTHROUGH
 	}
@@ -153,13 +151,12 @@ func (c *checker) branchConstruct(
 			return syntax.NewStatementBlock(input.FieldValue)
 		}(syntax.TgoStatementBlockInput{FieldValue: body})
 		syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
-			type operandType = bool
 			value, ok := syntax.StatementOf(node)
 			if !ok {
 				return true
 			}
 			labeled := syntax.LabeledStatementOf(value)
-			var operand operandType = labeled != nil
+			operand := labeled != nil
 			if operand {
 				operand = c.facts.DefinitionName(labeled.Label) == label
 			}
@@ -199,8 +196,7 @@ func controlTargetBlock(
 ) *cfg.Block {
 	kind := controlTargetKind(statement, branch)
 	for _, block := range graph.Blocks {
-		type operandType = bool
-		var operand operandType = block.Stmt == statement
+		operand := block.Stmt == statement
 		if operand {
 			operand = block.Kind == kind
 		}
@@ -217,9 +213,8 @@ func controlTargetKind(statement *syntax.Statement, branch token.Token) cfg.Bloc
 	}
 	switch statement.Tag() {
 	case syntax.StatementTagFor:
-		type operandType = bool
 		value := syntax.ForStatementOf(statement)
-		var operand operandType = branch == token.CONTINUE
+		operand := branch == token.CONTINUE
 		if operand {
 			operand = value.Post != nil
 		}
@@ -250,8 +245,7 @@ func (c *checker) gotoTargetBlock(graph *cfg.CFG, branch *syntax.BranchStatement
 	}
 	label := c.facts.Object(branch.Label)
 	for _, block := range graph.Blocks {
-		type operandType = bool
-		var operand operandType = block.Stmt == nil
+		operand := block.Stmt == nil
 		if !operand {
 			operand = block.Kind != cfg.KindLabel
 		}
@@ -259,7 +253,7 @@ func (c *checker) gotoTargetBlock(graph *cfg.CFG, branch *syntax.BranchStatement
 			continue
 		}
 		statement := syntax.LabeledStatementOf(block.Stmt)
-		var operand_1 operandType = statement != nil
+		operand_1 := statement != nil
 		if operand_1 {
 			operand_1 = c.facts.DefinitionName(statement.Label) == label
 		}
@@ -301,8 +295,7 @@ func (c *checker) fallthroughTargetBlock(
 	}
 	var next *syntax.Statement = nil
 	for index, item := range body.List {
-		type operandType = bool
-		var operand_1 operandType = item == clauseStatement
+		operand_1 := item == clauseStatement
 		if operand_1 {
 			operand_1 = index+1 < len(body.List)
 		}
@@ -312,8 +305,7 @@ func (c *checker) fallthroughTargetBlock(
 		}
 	}
 	for _, block := range graph.Blocks {
-		type operandType_1 = bool
-		var operand_2 operandType_1 = block.Kind == cfg.KindSwitchCaseBody
+		operand_2 := block.Kind == cfg.KindSwitchCaseBody
 		if operand_2 {
 			operand_2 = block.Stmt == next
 		}

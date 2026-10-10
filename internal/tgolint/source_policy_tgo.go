@@ -13,8 +13,7 @@ import (
 
 // checkSourcePolicies checks usage policy in TGo source after compilation.
 func (c *checker) checkSourcePolicies(analysis *sourceanalysis.Package) {
-	type operandType = bool
-	var operand operandType = analysis == nil
+	operand := analysis == nil
 	if !operand {
 		operand = analysis.Facts == nil
 	}
@@ -74,9 +73,8 @@ func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
 		function, ok := syntax.FunctionDeclarationOf(node)
 		if ok {
 			if function != nil {
-				type operandType = bool
 				functionType, body := function.Type, function.Body
-				var operand operandType = functionType != nil
+				operand := functionType != nil
 				if operand {
 					operand = body != nil
 				}
@@ -92,9 +90,8 @@ func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
 		literal, ok := syntax.FunctionLiteralOf(node)
 		if ok {
 			if literal != nil {
-				type operandType_1 = bool
 				functionType, body := literal.Type, literal.Body
-				var operand_1 operandType_1 = functionType != nil
+				operand_1 := functionType != nil
 				if operand_1 {
 					operand_1 = body != nil
 				}
@@ -150,9 +147,8 @@ func (c *checker) checkSourcePolicyNode(node *syntax.Node) {
 		}
 	}
 	{
-		type operandType_2 = bool
 		unary := syntax.UnaryExpressionOf(expression)
-		var operand_3 operandType_2 = unary != nil
+		operand_3 := unary != nil
 		if operand_3 {
 			operand_3 = unary.Operator == token.ARROW
 		}
@@ -193,9 +189,8 @@ func (c *checker) checkCompleteLiteral(
 	expression *syntax.Expression,
 	literal *syntax.CompositeLiteral,
 ) {
-	type operandType = bool
 	typ := c.facts.Type(expression)
-	var operand operandType = typ == nil
+	operand := typ == nil
 	if operand {
 		operand = literal.Type != nil
 	}
@@ -245,7 +240,6 @@ func (c *checker) literalInOwnCheckMethod(
 	}
 	node := syntax.ExpressionNode(expression)
 	for parent := c.parents[node]; parent != nil; parent = c.parents[*parent] {
-		type operandType = bool
 		function, ok := syntax.FunctionDeclarationOf(parent)
 		operand_1 := !ok
 		if !operand_1 {
@@ -254,11 +248,11 @@ func (c *checker) literalInOwnCheckMethod(
 		if operand_1 {
 			continue
 		}
-		var operand_2 operandType = function.Name.Name != "check"
+		operand_2 := function.Name.Name != "check"
 		if !operand_2 {
 			operand_2 = function.Receiver == nil
 		}
-		var operand_3 operandType = operand_2
+		operand_3 := operand_2
 		if !operand_3 {
 			operand_3 = len(function.Receiver.List) != 1
 		}
@@ -351,9 +345,8 @@ func (c *checker) checkCompleteElements(literal *syntax.CompositeLiteral, length
 		{
 			pair := syntax.KeyValueExpressionOf(element)
 			if pair != nil {
-				type operandType = bool
 				value := c.facts.Constant(pair.Key)
-				var operand operandType = value == nil
+				operand := value == nil
 				if !operand {
 					operand = value.Kind() != constant.Int
 				}
@@ -433,12 +426,11 @@ func (c *checker) checkNamedResultAssignments(
 	function *syntax.FunctionType,
 	body *syntax.BlockStatement,
 ) {
-	type operandType = bool
-	var operand operandType = function == nil
+	operand := function == nil
 	if !operand {
 		operand = function.Results == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = body == nil
 	}
@@ -548,8 +540,7 @@ func (c *checker) resultReadsStatement(statement *syntax.Statement, state result
 }
 
 func (c *checker) resultCapturedReads(literal *syntax.FunctionLiteral, state resultState) {
-	type operandType = bool
-	var operand operandType = literal == nil
+	operand := literal == nil
 	if !operand {
 		operand = literal.Body == nil
 	}
@@ -563,8 +554,7 @@ func (c *checker) resultCapturedReads(literal *syntax.FunctionLiteral, state res
 }
 
 func (c *checker) resultWrite(name *syntax.Identifier) bool {
-	type operandType = bool
-	var operand operandType = name == nil
+	operand := name == nil
 	if !operand {
 		operand = c.file == nil
 	}
@@ -593,12 +583,10 @@ func (c *checker) resultWrite(name *syntax.Identifier) bool {
 		return false
 	}
 	{
-		type operandType_1 = bool
 		assignment := syntax.AssignmentStatementOf(statement)
-		var operand_3 operandType_1 = assignment != nil
+		operand_3 := assignment != nil
 		if operand_3 {
-			type operandType_2 = bool
-			var operand_4 operandType_2 = assignment.Operator == token.ASSIGN
+			operand_4 := assignment.Operator == token.ASSIGN
 			if !operand_4 {
 				operand_4 = assignment.Operator == token.DEFINE
 			}
@@ -616,12 +604,10 @@ func (c *checker) resultWrite(name *syntax.Identifier) bool {
 		}
 	}
 	{
-		type operandType_3 = bool
 		ranged := syntax.RangeStatementOf(statement)
-		var operand_5 operandType_3 = ranged != nil
+		operand_5 := ranged != nil
 		if operand_5 {
-			type operandType_4 = bool
-			var operand_6 operandType_4 = ranged.Operator == token.ASSIGN
+			operand_6 := ranged.Operator == token.ASSIGN
 			if !operand_6 {
 				operand_6 = ranged.Operator == token.DEFINE
 			}
@@ -792,18 +778,17 @@ func (c *checker) resultAssignment(
 	for _, expression := range assignment.Right {
 		c.resultReadsExpression(expression, state)
 	}
-	var operand bool = assignment.Operator == token.ASSIGN
-	if !operand {
-		operand = assignment.Operator == token.DEFINE
+	var plain bool = assignment.Operator == token.ASSIGN
+	if !plain {
+		plain = assignment.Operator == token.DEFINE
 	}
-	plain := operand
 	for _, expression := range assignment.Left {
 		name := syntax.IdentifierExpressionOf(expression)
-		var operand_1 bool = name == nil
-		if !operand_1 {
-			operand_1 = !plain
+		var operand bool = name == nil
+		if !operand {
+			operand = !plain
 		}
-		if operand_1 {
+		if operand {
 			c.resultReadsExpression(expression, state)
 			continue
 		}
@@ -826,12 +811,11 @@ func (c *checker) resultRangeTarget(
 	operator token.Token,
 	state resultState,
 ) {
-	type operandType = bool
 	if expression == nil {
 		return
 	}
 	name := syntax.IdentifierExpressionOf(expression)
-	var operand operandType = name == nil
+	operand := name == nil
 	if !operand {
 		operand = operator != token.ASSIGN
 	}
@@ -873,18 +857,16 @@ func (c *checker) resultReturn(statement *syntax.ReturnStatement, state resultSt
 func firstUnassignedResult(state resultState) types.Object {
 	var first types.Object = nil
 	for object, assigned := range state {
-		type operandType = bool
 		if assigned {
 			continue
 		}
-		var operand operandType = first == nil
+		operand := first == nil
 		if !operand {
 			operand = object.Pos() < first.Pos()
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
-			type operandType_1 = bool
-			var operand_2 operandType_1 = object.Pos() == first.Pos()
+			operand_2 := object.Pos() == first.Pos()
 			if operand_2 {
 				operand_2 = object.Name() < first.Name()
 			}

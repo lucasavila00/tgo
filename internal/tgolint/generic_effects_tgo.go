@@ -78,8 +78,7 @@ func (v EffectKind) Tag() EffectKindTag { return v.tgoTag }
 
 // GobEncode returns the stable four-byte enum tag.
 func (v EffectKind) GobEncode() ([]byte, error) {
-	type operandType = bool
-	var operand operandType = v.tgoTag < EffectKindTagBoolean
+	operand := v.tgoTag < EffectKindTagBoolean
 	if !operand {
 		operand = v.tgoTag > EffectKindTagResliceExtends
 	}
@@ -92,17 +91,16 @@ func (v EffectKind) GobEncode() ([]byte, error) {
 
 // GobDecode replaces the value with a valid four-byte enum tag.
 func (v *EffectKind) GobDecode(data []byte) error {
-	type operandType = bool
 	if len(data) != 4 {
 		return fmt.Errorf("EffectKind: invalid gob data length %d", len(data))
 	}
 	number := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 	tag := EffectKindTag(number)
-	var operand operandType = uint32(tag) != number
+	operand := uint32(tag) != number
 	if !operand {
 		operand = tag < EffectKindTagBoolean
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = tag > EffectKindTagResliceExtends
 	}
@@ -411,16 +409,15 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "ResliceExtends":
 			current = 7
 		}
-		operand := haveName
+		same := haveName
+		if same {
+			same = current == selected
+		}
+		operand := same
 		if operand {
-			operand = current == selected
+			operand = current == 0
 		}
-		same := operand
-		operand_1 := same
-		if operand_1 {
-			operand_1 = current == 0
-		}
-		if operand_1 {
+		if operand {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -432,15 +429,15 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_2 := !multiple
+		operand_1 := !multiple
+		if operand_1 {
+			operand_1 = current > 0
+		}
+		var operand_2 bool = operand_1
 		if operand_2 {
-			operand_2 = current > 0
+			operand_2 = current == selected
 		}
-		var operand_3 bool = operand_2
-		if operand_3 {
-			operand_3 = current == selected
-		}
-		if operand_3 {
+		if operand_2 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -459,11 +456,11 @@ func (v *EffectKind) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_4 := !haveName
-	if !operand_4 {
-		operand_4 = multiple
+	operand_3 := !haveName
+	if !operand_3 {
+		operand_3 = multiple
 	}
-	if operand_4 {
+	if operand_3 {
 		return fmt.Errorf("expected one EffectKind JSON variant")
 	}
 	if selected == 0 {
@@ -619,7 +616,6 @@ func (c *checker) checkGenericZeroSafety() {
 			continue
 		}
 		inspectGenericFile(file, func(node *syntax.Node) bool {
-			type operandType = bool
 			expression, ok := syntax.ExpressionOf(node)
 			if !ok {
 				return true
@@ -634,11 +630,11 @@ func (c *checker) checkGenericZeroSafety() {
 					c.reportReturnedGenericCall(expression, summaries, sources)
 				}
 			}
-			var operand operandType = syntax.IndexExpressionOf(expression) != nil
+			operand := syntax.IndexExpressionOf(expression) != nil
 			if !operand {
 				operand = syntax.IndexListExpressionOf(expression) != nil
 			}
-			var operand_1 operandType = operand
+			operand_1 := operand
 			if !operand_1 {
 				operand_1 = syntax.SelectorExpressionOf(expression) != nil
 			}

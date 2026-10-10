@@ -168,8 +168,7 @@ func (c *checker) checkStructLiteral(
 	literal *syntax.CompositeLiteral,
 	structure *types.Struct,
 ) {
-	type operandType = bool
-	var operand operandType = len(literal.Elements) == 0
+	operand := len(literal.Elements) == 0
 	if operand {
 		operand = structure.NumFields() == 0
 	}
@@ -221,9 +220,8 @@ func (c *checker) checkLiteralElements(
 		{
 			pair := syntax.KeyValueExpressionOf(element)
 			if pair != nil {
-				type operandType = bool
 				value := c.facts.Constant(pair.Key)
-				var operand operandType = value == nil
+				operand := value == nil
 				if !operand {
 					operand = value.Kind() != constant.Int
 				}
@@ -414,8 +412,7 @@ func (c *checker) checkMake(
 }
 
 func constantZero(value constant.Value) bool {
-	type operandType = bool
-	var operand operandType = value == nil
+	operand := value == nil
 	if !operand {
 		operand = value.Kind() != constant.Int
 	}
@@ -569,7 +566,6 @@ func (c *checker) checkTypeAssertion(
 }
 
 func (c *checker) assertionValidator(expression *syntax.Expression) bool {
-	type operandType = bool
 	current := expression
 	for {
 		node := syntax.ExpressionNode(current)
@@ -597,11 +593,11 @@ func (c *checker) assertionValidator(expression *syntax.Expression) bool {
 		return false
 	}
 	call := syntax.CallExpressionOf(parent)
-	var operand_3 operandType = call == nil
+	operand_3 := call == nil
 	if !operand_3 {
 		operand_3 = len(call.Args) != 1
 	}
-	var operand_4 operandType = operand_3
+	operand_4 := operand_3
 	if !operand_4 {
 		operand_4 = call.Args[0] != current
 	}
@@ -657,9 +653,8 @@ func (c *checker) checkReslice(
 }
 
 func (c *checker) currentLength(expression, slice *syntax.Expression) bool {
-	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
-	var operand operandType = call == nil
+	operand := call == nil
 	if !operand {
 		operand = len(call.Args) != 1
 	}
@@ -667,7 +662,7 @@ func (c *checker) currentLength(expression, slice *syntax.Expression) bool {
 		return false
 	}
 	name := syntax.IdentifierExpressionOf(call.Callee)
-	var operand_1 operandType = name == nil
+	operand_1 := name == nil
 	if !operand_1 {
 		operand_1 = name.Name != "len"
 	}
@@ -682,7 +677,7 @@ func (c *checker) currentLength(expression, slice *syntax.Expression) bool {
 	}
 	left := syntax.IdentifierExpressionOf(call.Args[0])
 	right := syntax.IdentifierExpressionOf(slice)
-	var operand_2 operandType = left == nil
+	operand_2 := left == nil
 	if !operand_2 {
 		operand_2 = right == nil
 	}

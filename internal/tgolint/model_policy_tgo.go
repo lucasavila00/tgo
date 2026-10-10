@@ -64,9 +64,8 @@ func (c *checker) checkSourceGeneratedName(
 	node *syntax.Node,
 	identifier *syntax.Identifier,
 ) {
-	type operandType = bool
 	object := c.facts.Object(identifier)
-	var operand operandType = object == nil
+	operand := object == nil
 	if !operand {
 		operand = object.Name() != identifier.Name
 	}
@@ -147,12 +146,11 @@ func (c *checker) enumPayloadMethodReceiver(
 	identifier *syntax.Identifier,
 ) bool {
 	for current := syntax.Parent(c.file, node); current != nil; current = syntax.Parent(c.file, current) {
-		type operandType = bool
 		declaration, ok := syntax.FunctionDeclarationOf(current)
 		if !ok {
 			continue
 		}
-		var operand operandType = declaration == nil
+		operand := declaration == nil
 		if !operand {
 			operand = declaration.Receiver == nil
 		}
@@ -172,8 +170,7 @@ func (c *checker) enumPayloadMethodReceiver(
 func (c *checker) enumConstructorModel(
 	function *types.Func,
 ) (*model, string) {
-	type operandType = bool
-	var operand operandType = function == nil
+	operand := function == nil
 	if !operand {
 		operand = function.Pkg() == nil
 	}
@@ -191,9 +188,8 @@ func (c *checker) enumConstructorModel(
 			continue
 		}
 		for _, variant := range modelVariants(model) {
-			type operandType_1 = bool
 			constructor := "New" + modelName(model) + variant
-			var operand_1 operandType_1 = function.Name() == constructor
+			operand_1 := function.Name() == constructor
 			if operand_1 {
 				operand_1 = scope.Lookup(constructor) == function
 			}
@@ -327,9 +323,8 @@ func (c *checker) checkSourceModelLiteral(
 	expression *syntax.Expression,
 	literal *syntax.CompositeLiteral,
 ) {
-	type operandType = bool
 	typ := c.facts.Type(expression)
-	var operand operandType = typ == nil
+	operand := typ == nil
 	if operand {
 		operand = literal.Type != nil
 	}
@@ -544,8 +539,7 @@ func (c *checker) sourceTypeParameterModel(
 
 // sourceLayoutModel matches a local protected model layout.
 func (c *checker) sourceLayoutModel(typ types.Type) (*model, types.Type) {
-	type operandType = bool
-	var operand operandType = typ == nil
+	operand := typ == nil
 	if !operand {
 		operand = c.sourcePackage == nil
 	}

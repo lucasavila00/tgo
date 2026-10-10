@@ -277,16 +277,15 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		case "IntegerParameter":
 			current = 4
 		}
-		operand := haveName
+		same := haveName
+		if same {
+			same = current == selected
+		}
+		operand := same
 		if operand {
-			operand = current == selected
+			operand = current == 0
 		}
-		same := operand
-		operand_1 := same
-		if operand_1 {
-			operand_1 = current == 0
-		}
-		if operand_1 {
+		if operand {
 			same = wireName == unknown
 		}
 		if !haveName {
@@ -298,15 +297,15 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		} else if !same {
 			multiple = true
 		}
-		operand_2 := !multiple
+		operand_1 := !multiple
+		if operand_1 {
+			operand_1 = current > 0
+		}
+		var operand_2 bool = operand_1
 		if operand_2 {
-			operand_2 = current > 0
+			operand_2 = current == selected
 		}
-		var operand_3 bool = operand_2
-		if operand_3 {
-			operand_3 = current == selected
-		}
-		if operand_3 {
+		if operand_2 {
 			raw, err := in.ReadValue()
 			if err != nil {
 				return err
@@ -325,11 +324,11 @@ func (v *scalarValue) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 			return err
 		}
 	}
-	operand_4 := !haveName
-	if !operand_4 {
-		operand_4 = multiple
+	operand_3 := !haveName
+	if !operand_3 {
+		operand_3 = multiple
 	}
-	if operand_4 {
+	if operand_3 {
 		return fmt.Errorf("expected one scalarValue JSON variant")
 	}
 	if selected == 0 {
@@ -392,12 +391,11 @@ func (c *checker) scalarValueAt(
 	node *syntax.Node,
 	expression *syntax.Expression,
 ) (scalarValue, bool) {
-	type operandType = bool
-	var operand operandType = c == nil
+	operand := c == nil
 	if !operand {
 		operand = node == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = expression == nil
 	}
@@ -518,8 +516,7 @@ func (c *checker) scalarSuccessors(
 	block *cfg.Block,
 	state scalarState,
 ) []*cfg.Block {
-	type operandType = bool
-	var operand operandType = len(block.Succs) != 2
+	operand := len(block.Succs) != 2
 	if !operand {
 		operand = len(block.Nodes) == 0
 	}
@@ -667,9 +664,8 @@ func (c *checker) clearRangeScalars(
 		return
 	}
 	for _, expression := range []*syntax.Expression{statement.Key, statement.Value} {
-		type operandType = bool
 		name := syntax.IdentifierExpressionOf(expression)
-		var operand operandType = name != nil
+		operand := name != nil
 		if operand {
 			operand = name.Name != "_"
 		}
@@ -743,12 +739,11 @@ func (c *checker) transferScalarAssignment(
 	statement *syntax.AssignmentStatement,
 	owned map[types.Object]bool,
 ) {
-	type operandType = bool
-	var operand operandType = statement.Operator != token.ASSIGN
+	operand := statement.Operator != token.ASSIGN
 	if operand {
 		operand = statement.Operator != token.DEFINE
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = len(statement.Left) != len(statement.Right)
 	}
@@ -778,9 +773,8 @@ func (c *checker) transferScalarAssignment(
 		known = append(known, valueKnown)
 	}
 	for index, target := range statement.Left {
-		type operandType_1 = bool
 		name := syntax.IdentifierExpressionOf(target)
-		var operand_2 operandType_1 = name == nil
+		operand_2 := name == nil
 		if !operand_2 {
 			operand_2 = name.Name == "_"
 		}
@@ -836,9 +830,8 @@ func (c *checker) invalidateScalarEscapes(state scalarState, root *syntax.Node) 
 			expression, ok := syntax.ExpressionOf(node)
 			if ok {
 				{
-					type operandType = bool
 					unary := syntax.UnaryExpressionOf(expression)
-					var operand operandType = unary != nil
+					operand := unary != nil
 					if operand {
 						operand = unary.Operator == token.AND
 					}

@@ -97,9 +97,8 @@ func (c *checker) resultProofs(
 		}
 	}
 	{
-		type operandType = bool
 		negation := syntax.UnaryExpressionOf(expression)
-		var operand operandType = negation != nil
+		operand := negation != nil
 		if operand {
 			operand = negation.Operator == token.NOT
 		}
@@ -143,7 +142,6 @@ func (c *checker) atomicResultProof(
 	expression *syntax.Expression,
 	state checkedState,
 ) (types.Object, bool) {
-	type operandType = bool
 	{
 		name := syntax.IdentifierExpressionOf(expression)
 		if name != nil {
@@ -155,10 +153,9 @@ func (c *checker) atomicResultProof(
 		}
 	}
 	binary := syntax.BinaryExpressionOf(expression)
-	var operand operandType = binary == nil
+	operand := binary == nil
 	if !operand {
-		type operandType_1 = bool
-		var operand_1 operandType_1 = binary.Operator != token.EQL
+		operand_1 := binary.Operator != token.EQL
 		if operand_1 {
 			operand_1 = binary.Operator != token.NEQ
 		}
@@ -180,12 +177,11 @@ func (c *checker) binaryErrorProof(
 	binary *syntax.BinaryExpression,
 	state checkedState,
 ) (types.Object, bool) {
-	type operandType = bool
 	name, nilName := errorAndNil(binary.Left, binary.Right)
 	if name == nil {
 		name, nilName = errorAndNil(binary.Right, binary.Left)
 	}
-	var operand operandType = name == nil
+	operand := name == nil
 	if !operand {
 		operand = nilName == nil
 	}
@@ -247,13 +243,12 @@ func booleanComparison(
 	nameExpression *syntax.Expression,
 	valueExpression *syntax.Expression,
 ) (*syntax.Identifier, bool, bool) {
-	type operandType = bool
 	name := syntax.IdentifierExpressionOf(nameExpression)
 	if name == nil {
 		return nil, false, false
 	}
 	value := facts.Constant(valueExpression)
-	var operand operandType = value == nil
+	operand := value == nil
 	if !operand {
 		operand = value.Kind() != constant.Bool
 	}
@@ -264,8 +259,7 @@ func booleanComparison(
 }
 
 func unionProofs(left, right proofSet) proofSet {
-	type operandType = bool
-	var operand operandType = len(left) == 0
+	operand := len(left) == 0
 	if operand {
 		operand = len(right) == 0
 	}
@@ -313,13 +307,12 @@ func (c *checker) hasValidPresenceProof(state checkedState, object types.Object)
 }
 
 func errorAndNil(errorExpression, nilExpression *syntax.Expression) (*syntax.Identifier, *syntax.Identifier) {
-	type operandType = bool
 	name := syntax.IdentifierExpressionOf(errorExpression)
 	if name == nil {
 		return nil, nil
 	}
 	nilName := syntax.IdentifierExpressionOf(nilExpression)
-	var operand operandType = nilName == nil
+	operand := nilName == nil
 	if !operand {
 		operand = nilName.Name != "nil"
 	}
@@ -389,9 +382,8 @@ func (c *checker) checkResultUses(
 }
 
 func (c *checker) validatorInput(expression *syntax.Expression, state checkedState) map[*syntax.Identifier]bool {
-	type operandType = bool
 	call := syntax.CallExpressionOf(expression)
-	var operand operandType = call == nil
+	operand := call == nil
 	if !operand {
 		operand = len(call.Args) != 1
 	}
@@ -495,9 +487,8 @@ func (c *checker) invalidateEscapedProofs(expression *syntax.Expression, state c
 		}
 		value, ok := syntax.ExpressionOf(node)
 		if ok {
-			type operandType = bool
 			unary := syntax.UnaryExpressionOf(value)
-			var operand operandType = unary != nil
+			operand := unary != nil
 			if operand {
 				operand = unary.Operator == token.AND
 			}
@@ -546,9 +537,8 @@ func (c *checker) invalidateProof(object types.Object, state checkedState) {
 
 func (c *checker) invalidateAssignments(expressions []*syntax.Expression, state checkedState) {
 	for _, expression := range expressions {
-		type operandType = bool
 		name := syntax.IdentifierExpressionOf(expression)
-		var operand operandType = name == nil
+		operand := name == nil
 		if !operand {
 			operand = name.Name == "_"
 		}

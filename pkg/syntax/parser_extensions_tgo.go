@@ -32,14 +32,13 @@ func (p *sourceParser) discoverExtensions() error {
 			})
 		}
 		if p.atPropagation(cursor) {
-			type operandType = bool
 			secondBang := -1
 			end := p.tokens[cursor].end
-			var operand_1 operandType = cursor+1 < len(p.tokens)
+			operand_1 := cursor+1 < len(p.tokens)
 			if operand_1 {
 				operand_1 = p.tokens[cursor+1].kind == token.NOT
 			}
-			var operand_2 operandType = operand_1
+			operand_2 := operand_1
 			if operand_2 {
 				operand_2 = p.tokens[cursor].end == p.tokens[cursor+1].start
 			}
@@ -83,11 +82,10 @@ func (p *sourceParser) discoverExtensions() error {
 // discoverSuccessReturns projects a trailing return comma as one semicolon.
 func (p *sourceParser) discoverSuccessReturns() error {
 	for keyword, item := range p.tokens {
-		type operandType = bool
 		if item.kind != token.RETURN {
 			continue
 		}
-		var operand operandType = keyword+1 < len(p.tokens)
+		operand := keyword+1 < len(p.tokens)
 		if operand {
 			operand = p.tokens[keyword+1].kind == token.COMMA
 		}
@@ -124,8 +122,7 @@ func (p *sourceParser) discoverFailureReturn(keyword int) error {
 	commas := []int(nil)
 	cursor := firstComma
 	for {
-		type operandType = bool
-		var operand operandType = cursor < len(p.tokens)
+		operand := cursor < len(p.tokens)
 		if operand {
 			operand = p.tokens[cursor].kind == token.COMMA
 		}
@@ -140,8 +137,7 @@ func (p *sourceParser) discoverFailureReturn(keyword int) error {
 	for ; cursor < len(p.tokens); cursor++ {
 		kind := p.tokens[cursor].kind
 		if len(stack) == 0 {
-			type operandType_1 = bool
-			var operand_1 operandType_1 = kind == token.SEMICOLON
+			operand_1 := kind == token.SEMICOLON
 			if !operand_1 {
 				operand_1 = kind == token.RBRACE
 			}
@@ -160,8 +156,7 @@ func (p *sourceParser) discoverFailureReturn(keyword int) error {
 		case token.LBRACE:
 			stack = append(stack, token.RBRACE)
 		case token.RPAREN, token.RBRACK, token.RBRACE:
-			type operandType_2 = bool
-			var operand_2 operandType_2 = len(stack) == 0
+			operand_2 := len(stack) == 0
 			if !operand_2 {
 				operand_2 = stack[len(stack)-1] != kind
 			}
@@ -285,12 +280,11 @@ func (p *sourceParser) exhaustiveTokens() map[int]bool {
 				hasClause[openBraces[len(openBraces)-1]] = true
 			}
 		case token.DEFAULT:
-			type operandType = bool
-			var operand_2 operandType = len(openBraces) != 0
+			operand_2 := len(openBraces) != 0
 			if operand_2 {
 				operand_2 = cursor+1 < len(p.tokens)
 			}
-			var operand_3 operandType = operand_2
+			operand_3 := operand_2
 			if operand_3 {
 				operand_3 = p.tokens[cursor+1].kind == token.COLON
 			}
@@ -298,16 +292,15 @@ func (p *sourceParser) exhaustiveTokens() map[int]bool {
 				hasClause[openBraces[len(openBraces)-1]] = true
 			}
 		case token.IDENT:
-			type operandType_1 = bool
-			var operand_4 operandType_1 = len(openBraces) != 0
+			operand_4 := len(openBraces) != 0
 			if operand_4 {
 				operand_4 = item.text == "exhaustive"
 			}
-			var operand_5 operandType_1 = operand_4
+			operand_5 := operand_4
 			if operand_5 {
 				operand_5 = cursor+1 < len(p.tokens)
 			}
-			var operand_6 operandType_1 = operand_5
+			operand_6 := operand_5
 			if operand_6 {
 				operand_6 = p.tokens[cursor+1].kind == token.COLON
 			}
@@ -358,8 +351,7 @@ func (p *sourceParser) project(start int, end int, edits []sourceEdit) []byte {
 	result := append([]byte(nil), p.source[start:end]...)
 	applicable := []sourceEdit(nil)
 	for _, edit := range edits {
-		type operandType = bool
-		var operand operandType = edit.start < start
+		operand := edit.start < start
 		if !operand {
 			operand = edit.end > end
 		}
@@ -382,8 +374,7 @@ func (p *sourceParser) project(start int, end int, edits []sourceEdit) []byte {
 		from := edit.start - start
 		to := edit.end - start
 		for index := from; index < to; index++ {
-			type operandType_1 = bool
-			var operand_1 operandType_1 = result[index] != '\n'
+			operand_1 := result[index] != '\n'
 			if operand_1 {
 				operand_1 = result[index] != '\r'
 			}
@@ -395,8 +386,7 @@ func (p *sourceParser) project(start int, end int, edits []sourceEdit) []byte {
 		coveredUntil = edit.end
 	}
 	for _, comment := range p.comments {
-		type operandType_2 = bool
-		var operand_2 operandType_2 = comment.start >= start
+		operand_2 := comment.start >= start
 		if operand_2 {
 			operand_2 = comment.end <= end
 		}

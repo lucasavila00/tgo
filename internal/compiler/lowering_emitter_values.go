@@ -9,64 +9,6 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 )
 
-func (e *loweringEmitter) preparePlace(
-	place *plannedPlace,
-	output *ast.BlockStmt,
-) ast.Expr {
-	if place == nil {
-		return nil
-	}
-	switch place.kind {
-	case planObjectPlace:
-		return place.source
-	case planDerefPlace:
-		var pointer ast.Expr
-		if place.base != nil {
-			pointer = e.emitTypedExpressionBind(
-				place.values[0], e.preparePlace(place.base, output), false, output,
-			)
-		} else {
-			pointer = e.emitTypedBind(place.values[0], place.container, output)
-		}
-		return &ast.StarExpr{X: pointer}
-	case planFieldPlace:
-		selector := place.source.(*ast.SelectorExpr)
-		return &ast.SelectorExpr{X: e.preparePlace(place.base, output), Sel: selector.Sel}
-	case planArrayIndexPlace:
-		base := e.preparePlace(place.base, output)
-		index := e.emitTypedBind(place.values[0], place.index, output)
-		return &ast.IndexExpr{X: base, Index: index}
-	case planSliceIndexPlace, planMapIndexPlace:
-		container := e.emitTypedBind(place.values[0], place.container, output)
-		index := e.emitTypedBind(place.values[1], place.index, output)
-		return &ast.IndexExpr{X: container, Index: index}
-	default:
-		return place.source
-	}
-}
-func (e *loweringEmitter) emitReceiveStore(
-	communication *plannedCommunication,
-	output *ast.BlockStmt,
-) {
-	if communication == nil || len(communication.left) == 0 {
-		return
-	}
-	right := make([]ast.Expr, 0, len(communication.receiveValues))
-	for _, value := range communication.receiveValues {
-		right = append(right, e.valueName(value.id, "received"))
-	}
-	left := communication.left
-	if communication.token != token.DEFINE && len(communication.targets) != 0 {
-		left = make([]ast.Expr, 0, len(communication.targets))
-		for _, place := range communication.targets {
-			left = append(left, e.preparePlace(place, output))
-		}
-	}
-	output.List = append(output.List, &ast.AssignStmt{
-		Lhs: left, Tok: communication.token, Rhs: right,
-	})
-}
-
 func (e *loweringEmitter) emitTypedBind(
 	value plannedValue,
 	plan *plannedExpression,
@@ -319,6 +261,9 @@ func positionGeneratedIf(branch *ast.IfStmt, position token.Pos) {
 }
 
 func positionGeneratedExpression(expression ast.Expr, position token.Pos) {
+	if positionGeneratedSpecialExpression(expression, position) {
+		return
+	}
 	switch node := expression.(type) {
 	case *ast.Ident:
 		if node.NamePos == token.NoPos {
@@ -348,6 +293,15 @@ func positionGeneratedExpression(expression ast.Expr, position token.Pos) {
 	case *ast.SelectorExpr:
 		positionGeneratedExpression(node.X, position)
 		positionGeneratedExpression(node.Sel, position)
+	}
+}
+
+func positionGeneratedSpecialExpression(expression ast.Expr, position token.Pos) bool {
+	switch node := expression.(type) {
+	case *ast.IndexExpr:
+		positionGeneratedIndex(node.X, []ast.Expr{node.Index}, &node.Lbrack, &node.Rbrack, position)
+	case *ast.IndexListExpr:
+		positionGeneratedIndex(node.X, node.Indices, &node.Lbrack, &node.Rbrack, position)
 	case *ast.CompositeLit:
 		if node.Lbrace == token.NoPos {
 			node.Lbrace = position
@@ -355,5 +309,27 @@ func positionGeneratedExpression(expression ast.Expr, position token.Pos) {
 		if node.Rbrace == token.NoPos {
 			node.Rbrace = position
 		}
+	default:
+		return false
+	}
+	return true
+}
+
+func positionGeneratedIndex(
+	base ast.Expr,
+	indices []ast.Expr,
+	left *token.Pos,
+	right *token.Pos,
+	position token.Pos,
+) {
+	if *left == token.NoPos {
+		*left = position
+	}
+	if *right == token.NoPos {
+		*right = position
+	}
+	positionGeneratedExpression(base, position)
+	for _, index := range indices {
+		positionGeneratedExpression(index, position)
 	}
 }

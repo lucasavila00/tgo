@@ -178,7 +178,7 @@ func (e *loweringEmitter) selectStatement(
 	for index, item := range node.Body.List {
 		clause := item.(*ast.CommClause)
 		body := &ast.BlockStmt{}
-		e.emitReceiveStore(operation.communications[index], body)
+		e.emitReceiveAssignment(operation.communications[index], body)
 		e.operations(operation.cases[index], body)
 		clause.Body = body.List
 	}

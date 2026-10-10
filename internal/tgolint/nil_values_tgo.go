@@ -240,8 +240,7 @@ func (e *nilEnvironment) resultContract(
 	{
 		unary := syntax.UnaryExpressionOf(expression)
 		if unary != nil {
-			type operandType = bool
-			var operand operandType = unary.Operator == token.ARROW
+			operand := unary.Operator == token.ARROW
 			if operand {
 				operand = index == 0
 			}
@@ -262,8 +261,7 @@ func (e *nilEnvironment) builtinResultContract(
 	call *syntax.CallExpression,
 	index int,
 ) nilContract {
-	type operandType = bool
-	var operand operandType = index != 0
+	operand := index != 0
 	if !operand {
 		operand = call == nil
 	}
@@ -326,8 +324,7 @@ func (e *nilEnvironment) resultNilType(
 	{
 		unary := syntax.UnaryExpressionOf(expression)
 		if unary != nil {
-			type operandType = bool
-			var operand_1 operandType = unary.Operator == token.ARROW
+			operand_1 := unary.Operator == token.ARROW
 			if operand_1 {
 				operand_1 = index == 0
 			}
@@ -355,8 +352,7 @@ func (e *nilEnvironment) resultGoType(
 	{
 		tuple, ok := typ.(*types.Tuple)
 		if ok {
-			type operandType = bool
-			var operand operandType = index >= 0
+			operand := index >= 0
 			if operand {
 				operand = index < tuple.Len()
 			}
@@ -487,8 +483,7 @@ func (e *nilEnvironment) expressionNilType(
 func nilComprehensionExpressionOf(
 	expression *syntax.Expression,
 ) *syntax.ComprehensionExpression {
-	type operandType = bool
-	var operand operandType = expression == nil
+	operand := expression == nil
 	if !operand {
 		operand = expression.Tag() != syntax.ExpressionTagComprehension
 	}
@@ -501,8 +496,7 @@ func nilComprehensionExpressionOf(
 func nilPropagationExpressionOf(
 	expression *syntax.Expression,
 ) *syntax.PropagationExpression {
-	type operandType = bool
-	var operand operandType = expression == nil
+	operand := expression == nil
 	if !operand {
 		operand = expression.Tag() != syntax.ExpressionTagPropagation
 	}
@@ -709,7 +703,6 @@ func (e *nilEnvironment) nilZeroInvalid(
 }
 
 func (e *nilEnvironment) checkNilMake(call *syntax.CallExpression) {
-	type operandType = bool
 	if len(call.Args) < 2 {
 		return
 	}
@@ -718,7 +711,7 @@ func (e *nilEnvironment) checkNilMake(call *syntax.CallExpression) {
 		return
 	}
 	length := e.facts.Constant(call.Args[1])
-	var operand operandType = length == nil
+	operand := length == nil
 	if !operand {
 		operand = constant.Sign(length) != 0
 	}
@@ -770,7 +763,6 @@ func (e *nilEnvironment) checkNilStructLiteral(
 ) {
 	set := make([]bool, typ.NumFields())
 	for index, element := range literal.Elements {
-		type operandType = bool
 		fieldIndex := index
 		value := element
 		{
@@ -780,7 +772,7 @@ func (e *nilEnvironment) checkNilStructLiteral(
 				fieldIndex = nilStructFieldIndex(typ, keyed.Key)
 			}
 		}
-		var operand operandType = fieldIndex < 0
+		operand := fieldIndex < 0
 		if !operand {
 			operand = fieldIndex >= typ.NumFields()
 		}

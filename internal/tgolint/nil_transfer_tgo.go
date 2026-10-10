@@ -88,9 +88,8 @@ func (e *nilEnvironment) transferNilAssignmentLists(
 	state.guards = remappedGuards
 	state.presence = remappedPresence
 	for index, target := range left {
-		type operandType = bool
 		name := syntax.IdentifierExpressionOf(target)
-		var operand_2 operandType = name != nil
+		operand_2 := name != nil
 		if operand_2 {
 			operand_2 = name.Name != "_"
 		}
@@ -328,7 +327,6 @@ func copiedNilFactPlace(
 	source nilPlace,
 	target nilPlace,
 ) (nilPlace, bool) {
-	type operandType = bool
 	var operand bool = fact == source
 	if !operand {
 		operand = nilAliased(state, fact, source)
@@ -348,7 +346,7 @@ func copiedNilFactPlace(
 		return nilPlace{object: nil, path: ""}, false
 	}
 	path := target.path
-	var operand_1 operandType = path != ""
+	operand_1 := path != ""
 	if operand_1 {
 		operand_1 = suffix != ""
 	}
@@ -449,9 +447,8 @@ func (e *nilEnvironment) setInferredNilContract(
 	target *syntax.Expression,
 	contract nilContract,
 ) {
-	type operandType = bool
 	name := syntax.IdentifierExpressionOf(target)
-	var operand operandType = name == nil
+	operand := name == nil
 	if !operand {
 		operand = len(contract) == 0
 	}
@@ -525,8 +522,7 @@ func (e *nilEnvironment) bindNilPresence(
 	left []*syntax.Expression,
 	right []*syntax.Expression,
 ) {
-	type operandType = bool
-	var operand operandType = len(left) != 2
+	operand := len(left) != 2
 	if !operand {
 		operand = len(right) != 1
 	}
@@ -858,9 +854,8 @@ func (e *nilEnvironment) closureMayWriteNilPlace(
 			expression, ok := syntax.ExpressionOf(node)
 			if ok {
 				{
-					type operandType = bool
 					unary := syntax.UnaryExpressionOf(expression)
-					var operand_1 operandType = unary != nil
+					operand_1 := unary != nil
 					if operand_1 {
 						operand_1 = unary.Operator == token.AND
 					}

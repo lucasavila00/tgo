@@ -73,12 +73,11 @@ func (c *checker) checkIotaGroup(
 			valueSource = item
 		}
 		for position, identifier := range item.Names {
-			type operandType = bool
-			var operand_1 operandType = identifier.Name == "_"
+			operand_1 := identifier.Name == "_"
 			if !operand_1 {
 				operand_1 = valueSource == nil
 			}
-			var operand_2 operandType = operand_1
+			operand_2 := operand_1
 			if !operand_2 {
 				operand_2 = position >= len(valueSource.Values)
 			}

@@ -214,9 +214,8 @@ func (c *checker) rejectInvalidDependencies() bool {
 func (c *checker) reportInvalidImport(path string) {
 	for _, file := range c.pass.Files {
 		for _, specification := range file.Imports {
-			type operandType = bool
 			imported, err := strconv.Unquote(specification.Path.Value)
-			var operand operandType = err == nil
+			operand := err == nil
 			if operand {
 				operand = imported == path
 			}
@@ -262,10 +261,9 @@ func (c *checker) checkNode(node *syntax.Node) {
 		function, ok := syntax.FunctionDeclarationOf(node)
 		if ok {
 			if function != nil {
-				type operandType = bool
 				functionType := function.Type
 				body := function.Body
-				var operand operandType = functionType != nil
+				operand := functionType != nil
 				if operand {
 					operand = body != nil
 				}
@@ -339,9 +337,8 @@ func (c *checker) checkNode(node *syntax.Node) {
 		}
 	}
 	{
-		type operandType_1 = bool
 		value := syntax.UnaryExpressionOf(expression)
-		var operand_2 operandType_1 = value != nil
+		operand_2 := value != nil
 		if operand_2 {
 			operand_2 = value.Operator == token.ARROW
 		}

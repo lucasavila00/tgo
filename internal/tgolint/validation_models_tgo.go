@@ -141,13 +141,12 @@ func (c *checker) findValidationWrappers() {
 }
 
 func (c *checker) exportValidationWrapper(declaration *syntax.Declaration) bool {
-	type operandType = bool
 	function := syntax.FunctionDeclarationValueOf(declaration)
-	var operand operandType = function == nil
+	operand := function == nil
 	if !operand {
 		operand = function.Body == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = len(function.Body.List) != 1
 	}
@@ -163,7 +162,7 @@ func (c *checker) exportValidationWrapper(declaration *syntax.Declaration) bool 
 		return false
 	}
 	statement := syntax.ReturnStatementOf(function.Body.List[0])
-	var operand_3 operandType = statement == nil
+	operand_3 := statement == nil
 	if !operand_3 {
 		operand_3 = len(statement.Results) != 1
 	}
@@ -250,9 +249,8 @@ func (c *checker) scanValidationFunctionValue(
 			{
 				assignment := syntax.AssignmentStatementOf(statement)
 				if assignment != nil {
-					type operandType = bool
 					c.recordFunctionWrites(assignment.Left, writes)
-					var operand operandType = len(assignment.Left) == 1
+					operand := len(assignment.Left) == 1
 					if operand {
 						operand = len(assignment.Right) == 1
 					}
@@ -279,11 +277,10 @@ func (c *checker) scanValidationFunctionValue(
 		if ok {
 			value := syntax.ValueSpecificationOf(specification)
 			if value != nil {
-				type operandType_1 = bool
 				for _, name := range value.Names {
 					writes[c.facts.DefinitionName(name)]++
 				}
-				var operand_1 operandType_1 = len(value.Names) == 1
+				operand_1 := len(value.Names) == 1
 				if operand_1 {
 					operand_1 = len(value.Values) == 1
 				}
@@ -299,9 +296,8 @@ func (c *checker) scanValidationFunctionValue(
 	{
 		expression, ok := syntax.ExpressionOf(node)
 		if ok {
-			type operandType_2 = bool
 			unary := syntax.UnaryExpressionOf(expression)
-			var operand_2 operandType_2 = unary != nil
+			operand_2 := unary != nil
 			if operand_2 {
 				operand_2 = unary.Operator == token.AND
 			}
@@ -316,8 +312,7 @@ func (c *checker) recordFunctionWrite(
 	expression *syntax.Expression,
 	writes map[types.Object]int,
 ) {
-	type operandType = bool
-	var operand operandType = expression != nil
+	operand := expression != nil
 	if operand {
 		operand = syntax.IdentifierExpressionOf(expression) != nil
 	}
@@ -526,12 +521,11 @@ func (c *checker) modelFor(typ types.Type) *model {
 		}
 	}
 	for candidate, fact := range c.models {
-		type operandType = bool
-		var operand_1 operandType = candidate.pkg != nil
+		operand_1 := candidate.pkg != nil
 		if operand_1 {
 			operand_1 = candidate.name == key.name
 		}
-		var operand_2 operandType = operand_1
+		operand_2 := operand_1
 		if operand_2 {
 			operand_2 = candidate.pkg.Path() == key.pkg.Path()
 		}
@@ -557,12 +551,11 @@ func (c *checker) modelFor(typ types.Type) *model {
 
 // analysisModelObject maps a projected source object to the analysis graph.
 func (c *checker) analysisModelObject(object *types.TypeName) *types.TypeName {
-	type operandType = bool
-	var operand operandType = object == nil
+	operand := object == nil
 	if !operand {
 		operand = object.Pkg() == nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = c.pass == nil
 	}

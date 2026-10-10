@@ -40,7 +40,6 @@ func coreType(typ types.Type) types.Type {
 
 // commonChannel combines channel directions when their element types match.
 func commonChannel(left, right types.Type) types.Type {
-	type operandType = bool
 	leftChannel, leftOK := left.(*types.Chan)
 	rightChannel, rightOK := right.(*types.Chan)
 	operand := !leftOK
@@ -57,7 +56,7 @@ func commonChannel(left, right types.Type) types.Type {
 	if leftChannel.Dir() == types.SendRecv {
 		return rightChannel
 	}
-	var operand_2 operandType = rightChannel.Dir() == types.SendRecv
+	operand_2 := rightChannel.Dir() == types.SendRecv
 	if !operand_2 {
 		operand_2 = leftChannel.Dir() == rightChannel.Dir()
 	}

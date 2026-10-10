@@ -192,13 +192,12 @@ func receiverName(
 	pkg *sourceanalysis.Package,
 	declaration *syntax.FunctionDeclaration,
 ) string {
-	type operandType = bool
 	object, _ := pkg.Facts.DefinitionName(declaration.Name).(*types.Func)
 	if object == nil {
 		return pkg.Path
 	}
 	signature, _ := object.Type().(*types.Signature)
-	var operand operandType = signature == nil
+	operand := signature == nil
 	if !operand {
 		operand = signature.Recv() == nil
 	}
@@ -369,8 +368,7 @@ func appendNamedFields(
 }
 
 func interfaceMethods(value *syntax.Expression) *syntax.FieldList {
-	type operandType = bool
-	var operand operandType = value == nil
+	operand := value == nil
 	if !operand {
 		operand = value.Tag() != syntax.ExpressionTagInterfaceType
 	}
@@ -416,10 +414,9 @@ func sourceLocation(
 	uri string,
 	span syntax.Span,
 ) (Location, bool) {
-	type operandType = bool
 	start := pkg.Files.Position(span.Start).Offset
 	end := pkg.Files.Position(span.Stop).Offset
-	var operand operandType = start < 0
+	operand := start < 0
 	if !operand {
 		operand = end <= start
 	}

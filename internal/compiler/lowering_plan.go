@@ -20,15 +20,18 @@ type plannedValue struct {
 }
 
 type plannedPlace struct {
-	id        placeID
-	typ       types.Type
-	position  token.Pos
-	kind      plannedPlaceKind
-	source    ast.Expr
-	base      *plannedPlace
-	container *plannedExpression
-	index     *plannedExpression
-	values    []plannedValue
+	id          placeID
+	typ         types.Type
+	position    token.Pos
+	kind        plannedPlaceKind
+	source      ast.Expr
+	object      types.Object
+	base        *plannedPlace
+	container   *plannedExpression
+	index       *plannedExpression
+	values      []plannedValue
+	retainIndex bool
+	alternative *plannedPlaceAlternative
 }
 
 type plannedPlaceKind uint8
@@ -40,7 +43,21 @@ const (
 	planArrayIndexPlace
 	planSliceIndexPlace
 	planMapIndexPlace
+	planAlternativeIndexPlace
 )
+
+type plannedTypeKind uint8
+
+const (
+	planArrayType plannedTypeKind = iota + 1
+)
+
+type plannedPackageReference struct {
+	path        string
+	preferred   string
+	importSpec  *ast.ImportSpec
+	identifiers []*ast.Ident
+}
 
 type plannedBlock struct {
 	scope       scopeID
@@ -64,8 +81,11 @@ const (
 	planBranch
 	planReturn
 	planCopy
-	planPreparePlace
+	planPlaceReady
 	planBooleanConvert
+	planDeclareValue
+	planLoadPlace
+	planTypeKind
 	planJump
 	planBlockStatement
 	planIfStatement
@@ -96,6 +116,8 @@ type plannedOperation struct {
 	before         *plannedBlock
 	inputs         []valueID
 	outputs        []valueID
+	resultCount    int
+	contexts       []plannedTypeReference
 	errorValue     valueID
 	metadata       *propagationSource
 	operator       token.Token
@@ -108,6 +130,11 @@ type plannedOperation struct {
 	failureCommas  []token.Pos
 	labelHasGoto   bool
 	copyTarget     ast.Expr
+	assignment     *plannedAssignment
+	typeReference  plannedTypeReference
+	typeKind       plannedTypeKind
+	packageRef     plannedPackageReference
+	declaresOutput bool
 }
 
 type plannedDeclaration struct {
@@ -128,6 +155,7 @@ type plannedCommunication struct {
 	targets       []*plannedPlace
 	left          []ast.Expr
 	token         token.Token
+	assignment    *plannedAssignment
 }
 
 type plannedHeaderBinding struct {

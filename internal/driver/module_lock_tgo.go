@@ -79,7 +79,6 @@ func ensureLockFile(path string) error {
 
 // moduleRoot finds the active module root and module path.
 func moduleRoot(directory string) (string, string, error) {
-	type operandType = bool
 	command := exec.Command("go", "env", "GOMOD")
 	command.Dir = directory
 	output, err := command.Output()
@@ -87,7 +86,7 @@ func moduleRoot(directory string) (string, string, error) {
 		return "", "", fmt.Errorf("find go.mod: %w", err)
 	}
 	path := strings.TrimSpace(string(output))
-	var operand operandType = path == ""
+	operand := path == ""
 	if !operand {
 		operand = path == os.DevNull
 	}
@@ -99,9 +98,8 @@ func moduleRoot(directory string) (string, string, error) {
 		return "", "", err_1
 	}
 	for line := range strings.SplitSeq(string(data), "\n") {
-		type operandType_1 = bool
 		fields := strings.Fields(line)
-		var operand_1 operandType_1 = len(fields) >= 2
+		operand_1 := len(fields) >= 2
 		if operand_1 {
 			operand_1 = fields[0] == "module"
 		}

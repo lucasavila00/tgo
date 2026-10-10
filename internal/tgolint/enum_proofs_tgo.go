@@ -43,7 +43,6 @@ func (c *checker) branchPayloadProof(
 ) bool {
 	access := syntax.ExpressionPosition(expression)
 	for node := c.parents[syntax.ExpressionNode(expression)]; node != nil; node = c.parents[*node] {
-		type operandType = bool
 		{
 			_, nested := syntax.FunctionLiteralOf(node)
 			if nested {
@@ -75,15 +74,15 @@ func (c *checker) branchPayloadProof(
 			}
 		}
 		loop := syntax.ForStatementOf(statement)
-		var operand_3 operandType = loop == nil
+		operand_3 := loop == nil
 		if !operand_3 {
 			operand_3 = loop.Condition == nil
 		}
-		var operand_4 operandType = operand_3
+		operand_4 := operand_3
 		if !operand_4 {
 			operand_4 = access < loop.Body.Start
 		}
-		var operand_5 operandType = operand_4
+		operand_5 := operand_4
 		if !operand_5 {
 			operand_5 = loop.Body.Stop <= access
 		}
@@ -138,8 +137,7 @@ func (c *checker) earlyExitPayloadProof(
 
 func containingStatement(statements []*syntax.Statement, position token.Pos) int {
 	for index, statement := range statements {
-		type operandType = bool
-		var operand operandType = syntax.StatementPosition(statement) <= position
+		operand := syntax.StatementPosition(statement) <= position
 		if operand {
 			operand = position < syntax.StatementEnd(statement)
 		}
@@ -156,17 +154,16 @@ func (c *checker) earlyExitTagGuard(
 	model *model,
 	tag int,
 ) bool {
-	type operandType = bool
 	guard := syntax.IfStatementOf(statement)
-	var operand operandType = guard == nil
+	operand := guard == nil
 	if !operand {
 		operand = guard.Init != nil
 	}
-	var operand_1 operandType = operand
+	operand_1 := operand
 	if !operand_1 {
 		operand_1 = guard.Else != nil
 	}
-	var operand_2 operandType = operand_1
+	operand_2 := operand_1
 	if !operand_2 {
 		operand_2 = c.file == nil
 	}
@@ -194,9 +191,8 @@ func (c *checker) tagConditionProof(
 		}
 	}
 	{
-		type operandType = bool
 		unary := syntax.UnaryExpressionOf(condition)
-		var operand operandType = unary != nil
+		operand := unary != nil
 		if operand {
 			operand = unary.Operator == token.NOT
 		}
@@ -389,7 +385,6 @@ func (c *checker) enumGotoEntersClause(
 			break
 		}
 		syntax.InspectStatement(statement, func(node *syntax.Node) bool {
-			type operandType = bool
 			{
 				_, nested := syntax.FunctionLiteralOf(node)
 				if nested {
@@ -401,7 +396,7 @@ func (c *checker) enumGotoEntersClause(
 				return true
 			}
 			labeled := syntax.LabeledStatementOf(value)
-			var operand operandType = labeled != nil
+			operand := labeled != nil
 			if operand {
 				operand = labeled.Label != nil
 			}
@@ -525,7 +520,6 @@ func (c *checker) enumGotoBypassesProof(
 		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
-		type operandType = bool
 		{
 			_, nested := syntax.FunctionLiteralOf(node)
 			if nested {
@@ -537,7 +531,7 @@ func (c *checker) enumGotoBypassesProof(
 			return true
 		}
 		labeled := syntax.LabeledStatementOf(statement)
-		var operand operandType = labeled != nil
+		operand := labeled != nil
 		if operand {
 			operand = labeled.Label != nil
 		}
@@ -548,7 +542,6 @@ func (c *checker) enumGotoBypassesProof(
 	})
 	invalid := false
 	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
-		type operandType = bool
 		if invalid {
 			return false
 		}
@@ -563,11 +556,11 @@ func (c *checker) enumGotoBypassesProof(
 			return true
 		}
 		branch := syntax.BranchStatementOf(statement)
-		var operand operandType = branch == nil
+		operand := branch == nil
 		if !operand {
 			operand = branch.Token != token.GOTO
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if !operand_1 {
 			operand_1 = branch.Label == nil
 		}
@@ -654,13 +647,12 @@ func (c *checker) enumReceiverLocalToFunction(
 	expression *syntax.Expression,
 	receiver *syntax.Expression,
 ) bool {
-	type operandType = bool
 	root, _, ok := receiverPath(c.facts, receiver)
 	if !ok {
 		return false
 	}
 	function, _ := c.enclosingEnumFunction(expression)
-	var operand operandType = function == nil
+	operand := function == nil
 	if !operand {
 		operand = c.file == nil
 	}
@@ -844,7 +836,6 @@ func (c *checker) enumLoopCanInvalidate(
 	access token.Pos,
 ) bool {
 	for node := c.parents[syntax.ExpressionNode(expression)]; node != nil; node = c.parents[*node] {
-		type operandType = bool
 		statement, ok := syntax.StatementOf(node)
 		if !ok {
 			continue
@@ -855,7 +846,7 @@ func (c *checker) enumLoopCanInvalidate(
 		if syntax.StatementPosition(statement) >= access {
 			continue
 		}
-		var operand operandType = syntax.ForStatementOf(statement) == nil
+		operand := syntax.ForStatementOf(statement) == nil
 		if operand {
 			operand = syntax.RangeStatementOf(statement) == nil
 		}

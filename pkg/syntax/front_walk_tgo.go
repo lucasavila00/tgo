@@ -16,8 +16,7 @@ type frontVisitor interface {
 
 // frontChildren returns the direct source children of a node in a read-only tree.
 func frontChildren(file *frontFile, node frontNode) []frontNode {
-	type operandType = bool
-	var operand operandType = file == nil
+	operand := file == nil
 	if !operand {
 		operand = node == nil
 	}
@@ -29,8 +28,7 @@ func frontChildren(file *frontFile, node frontNode) []frontNode {
 
 // frontParent returns the direct source parent of a node.
 func frontParent(file *frontFile, node frontNode) frontNode {
-	type operandType = bool
-	var operand operandType = file == nil
+	operand := file == nil
 	if !operand {
 		operand = node == nil
 	}
@@ -55,15 +53,13 @@ func frontExtensionAt(file *frontFile, position token.Pos) frontExtension {
 	}
 	var found frontExtension = nil
 	for _, extension := range file.extensions {
-		type operandType = bool
-		var operand operandType = extension.Pos() <= position
+		operand := extension.Pos() <= position
 		if operand {
 			operand = position < extension.End()
 		}
-		var operand_1 operandType = operand
+		operand_1 := operand
 		if operand_1 {
-			type operandType_1 = bool
-			var operand_2 operandType_1 = found == nil
+			operand_2 := found == nil
 			if !operand_2 {
 				operand_2 = extension.End()-extension.Pos() < found.End()-found.Pos()
 			}
@@ -78,8 +74,7 @@ func frontExtensionAt(file *frontFile, position token.Pos) frontExtension {
 
 // frontAttachedComments returns leading and trailing comments for a node.
 func frontAttachedComments(file *frontFile, node frontNode) []*ast.CommentGroup {
-	type operandType = bool
-	var operand operandType = file == nil
+	operand := file == nil
 	if !operand {
 		operand = node == nil
 	}
@@ -91,8 +86,7 @@ func frontAttachedComments(file *frontFile, node frontNode) []*ast.CommentGroup 
 
 // frontWalk visits the complete source tree.
 func frontWalk(visitor frontVisitor, file *frontFile) {
-	type operandType = bool
-	var operand operandType = visitor == nil
+	operand := visitor == nil
 	if !operand {
 		operand = file == nil
 	}
@@ -115,8 +109,7 @@ func walkNode(visitor frontVisitor, file *frontFile, node frontNode) {
 
 // frontInspect calls visit for each node. A false result skips that node's children.
 func frontInspect(file *frontFile, visit func(frontNode) bool) {
-	type operandType = bool
-	var operand operandType = file == nil
+	operand := file == nil
 	if !operand {
 		operand = visit == nil
 	}
@@ -178,9 +171,8 @@ func buildIndex(file *frontFile, anchors map[frontNode]frontNode) {
 				continue
 			}
 			{
-				type operandType = bool
 				parent := file.parents[child]
-				var operand_2 operandType = parent == nil
+				operand_2 := parent == nil
 				if !operand_2 {
 					operand_2 = parent == node
 				}

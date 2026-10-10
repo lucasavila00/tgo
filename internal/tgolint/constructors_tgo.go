@@ -157,7 +157,6 @@ func escapedObjects(facts *sourcefacts.Index, body *syntax.BlockStatement) map[t
 		return syntax.NewStatementBlock(input.FieldValue)
 	}(syntax.TgoStatementBlockInput{FieldValue: body})
 	syntax.InspectStatement(&block, func(node *syntax.Node) bool {
-		type operandType = bool
 		{
 			literal, ok := syntax.FunctionLiteralOf(node)
 			if ok {
@@ -179,7 +178,7 @@ func escapedObjects(facts *sourcefacts.Index, body *syntax.BlockStatement) map[t
 			return true
 		}
 		unary := syntax.UnaryExpressionOf(expression)
-		var operand operandType = unary != nil
+		operand := unary != nil
 		if operand {
 			operand = unary.Operator == token.AND
 		}
@@ -403,9 +402,8 @@ func statementExpression(statement *syntax.Statement) *syntax.Expression {
 
 // checkedAssignment binds result pairs and invalidates values that are replaced.
 func (c *checker) checkedAssignment(statement *syntax.Statement, state checkedState) bool {
-	type operandType = bool
 	assignment := syntax.AssignmentStatementOf(statement)
-	var operand operandType = assignment == nil
+	operand := assignment == nil
 	if !operand {
 		operand = len(assignment.Right) != 1
 	}
@@ -449,14 +447,13 @@ func (c *checker) bindBoundaryValue(
 	model *model,
 	state checkedState,
 ) {
-	type operandType = bool
 	c.checked[call] = true
 	if len(left) != 1 {
 		return
 	}
 	c.invalidateAssignments(left, state)
 	name := syntax.IdentifierExpressionOf(left[0])
-	var operand operandType = name == nil
+	operand := name == nil
 	if !operand {
 		operand = name.Name == "_"
 	}
@@ -509,8 +506,7 @@ func (c *checker) checkedDeclaration(statement *syntax.Statement, state checkedS
 }
 
 func (c *checker) checkedValueSpec(specification *syntax.ValueSpecification, state checkedState) {
-	type operandType = bool
-	var operand operandType = len(specification.Values) == 1
+	operand := len(specification.Values) == 1
 	if operand {
 		operand = len(specification.Names) == 1
 	}
@@ -528,7 +524,7 @@ func (c *checker) checkedValueSpec(specification *syntax.ValueSpecification, sta
 			}
 		}
 	}
-	var operand_1 operandType = len(specification.Values) != 1
+	operand_1 := len(specification.Values) != 1
 	if !operand_1 {
 		operand_1 = len(specification.Names) != 2
 	}
@@ -608,10 +604,9 @@ func (c *checker) bindCheckedResults(
 	model *model,
 	state checkedState,
 ) {
-	type operandType = bool
 	c.invalidateAssignments([]*syntax.Expression{valueExpression, errorExpression}, state)
 	errorName := syntax.IdentifierExpressionOf(errorExpression)
-	var operand operandType = errorName == nil
+	operand := errorName == nil
 	if !operand {
 		operand = errorName.Name == "_"
 	}
@@ -633,7 +628,7 @@ func (c *checker) bindCheckedResults(
 		return
 	}
 	valueObject := c.facts.Object(valueName)
-	var operand_1 operandType = valueObject == nil
+	operand_1 := valueObject == nil
 	if !operand_1 {
 		operand_1 = errorObject == nil
 	}
@@ -746,10 +741,9 @@ func (c *checker) bindPresenceResults(
 	model *model,
 	state checkedState,
 ) {
-	type operandType = bool
 	c.invalidateAssignments([]*syntax.Expression{valueExpression, presenceExpression}, state)
 	presenceName := syntax.IdentifierExpressionOf(presenceExpression)
-	var operand operandType = presenceName == nil
+	operand := presenceName == nil
 	if !operand {
 		operand = presenceName.Name == "_"
 	}
@@ -771,7 +765,7 @@ func (c *checker) bindPresenceResults(
 	}
 	valueObject := c.facts.Object(valueName)
 	presenceObject := c.facts.Object(presenceName)
-	var operand_1 operandType = valueObject == nil
+	operand_1 := valueObject == nil
 	if !operand_1 {
 		operand_1 = presenceObject == nil
 	}
@@ -831,7 +825,6 @@ func escapedBefore(
 }
 
 func (c *checker) localResultObject(object types.Object) bool {
-	type operandType = bool
 	variable, ok := object.(*types.Var)
 	operand := !ok
 	if !operand {
@@ -851,7 +844,7 @@ func (c *checker) localResultObject(object types.Object) bool {
 	position := c.pass.Fset.Position(variable.Pos())
 	start := c.pass.Fset.Position(syntax.NodePosition(c.function))
 	stop := c.pass.Fset.Position(syntax.NodeEnd(c.function))
-	var operand_3 operandType = position.Filename != start.Filename
+	operand_3 := position.Filename != start.Filename
 	if !operand_3 {
 		operand_3 = position.Filename != stop.Filename
 	}
@@ -886,10 +879,9 @@ func (c *checker) checkedReturn(statement *syntax.ReturnStatement, state checked
 	}
 	skip := make(map[*syntax.Identifier]bool)
 	for index := 0; index+1 < len(statement.Results); index++ {
-		type operandType = bool
 		value := syntax.IdentifierExpressionOf(statement.Results[index])
 		failure := syntax.IdentifierExpressionOf(statement.Results[index+1])
-		var operand operandType = value == nil
+		operand := value == nil
 		if !operand {
 			operand = failure == nil
 		}
