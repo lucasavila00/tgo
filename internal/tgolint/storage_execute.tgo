@@ -98,6 +98,13 @@ func executeStorageFunction(
 	state storageState,
 	context %storageExecutionContext,
 ) (storageState, []storageValue, storageInvocationEffects) {
+	if storageFunctionRecursive(call.fact.Storage, call.function) {
+		constants := storageFunctionIntegerConstants(call)
+		state = abstractStorageState(state, constants)
+		for index := range call.arguments {
+			call.arguments[index] = abstractStorageValue(call.arguments[index], constants)
+		}
+	}
 	state = cloneStorageState(state)
 	function := findStorageEffectFunction(call.fact.Storage, call.function)
 	if function == nil {
@@ -169,6 +176,70 @@ func executeStorageFunction(
 		previous = next
 		initialized = true
 	}
+}
+
+func storageFunctionRecursive(graph StorageEffectGraph, function int) bool {
+	seen := make(map[int]bool)
+	var reaches func(int) bool
+	reaches = func(current int) bool {
+		item := findStorageEffectFunction(graph, current)
+		if item == nil {
+			return false
+		}
+		seen[current] = true
+		for _, block := range item.Blocks {
+			for _, operation := range block.Operations {
+				if operation.Kind != storageEffectCall || operation.Function < 0 {
+					continue
+				}
+				if operation.Function == function {
+					return true
+				}
+				if !seen[operation.Function] && reaches(operation.Function) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	return reaches(function)
+}
+
+func abstractStorageState(
+	state storageState,
+	constants map[int64]bool,
+) storageState {
+	result := newStorageState()
+	for object, value := range state.cells {
+		result.cells[object] = abstractStorageValue(value, constants)
+	}
+	for path, value := range state.memory {
+		result.memory[path] = abstractStorageValue(value, constants)
+	}
+	return result
+}
+
+func abstractStorageValue(
+	value storageValue,
+	constants map[int64]bool,
+) storageValue {
+	value = cloneStorageValue(value)
+	if value.integerKnown && !constants[value.integer] {
+		value.integerKnown = false
+	}
+	for index := range value.slices {
+		slice := &value.slices[index]
+		if slice.knownOffset && !constants[slice.offset] {
+			slice.knownOffset = false
+		}
+		if slice.knownLength && !constants[slice.length] {
+			slice.knownLength = false
+		}
+		if slice.knownCapacity && !constants[slice.capacity] {
+			slice.knownCapacity = false
+		}
+	}
+	return value
 }
 
 func executeStorageFunctionOnce(

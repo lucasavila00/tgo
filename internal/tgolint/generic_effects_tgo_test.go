@@ -144,3 +144,38 @@ func TestCompletedStorageKeyKeepsExactSliceBounds(t *testing.T) {
 			leftExact, rightExact, leftAbstract, rightAbstract)
 	}
 }
+
+func TestRecursiveStorageExecutionNormalizesSliceBounds(t *testing.T) {
+	t.Parallel()
+	fact := &GenericEffectFact{Version: 1}
+	fact.Storage = StorageEffectGraph{
+		Known: true, Entry: 0,
+		Functions: []StorageEffectFunction{{
+			ID: 0,
+			Blocks: []StorageEffectBlock{
+				{ID: 0, Successors: []StorageEffectEdge{{Block: 1}, {Block: 2}}},
+				{ID: 1},
+				{ID: 2, Operations: []StorageEffectOperation{
+					{Kind: storageEffectRead, Source: StorageEffectRegion{
+						Root: storageRootParameter, ID: 0,
+					}, Results: []int{1}},
+					{Kind: storageEffectCall, Function: 0, Inputs: []int{1, 1}},
+				}},
+			},
+		}},
+	}
+	context := newStorageExecutionContext()
+	call := storageGraphCall{fact: fact, function: 0}
+	for _, length := range []int64{2, 3} {
+		call.arguments = []storageValue{{slices: []storageSlice{{
+			length: length, knownLength: true,
+		}}}}
+		_, _, effects := executeStorageFunction(call, newStorageState(), context)
+		if !effects.completed {
+			t.Fatalf("recursive length %d did not complete", length)
+		}
+	}
+	if len(context.completed) != 1 {
+		t.Fatalf("completed recursive inputs = %#v", context.completed)
+	}
+}
