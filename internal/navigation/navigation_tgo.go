@@ -1013,6 +1013,12 @@ func (k *objectKeys) addNamed(prefix string, named *types.Named) {
 }
 
 func (k *objectKeys) key(object types.Object) string {
+	switch value := object.(type) {
+	case *types.Func:
+		object = value.Origin()
+	case *types.Var:
+		object = value.Origin()
+	}
 	if key := k.known[object]; key != "" {
 		return key
 	}

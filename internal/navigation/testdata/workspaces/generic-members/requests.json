@@ -1,0 +1,89 @@
+[
+  {
+    "method": "definition",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 3
+    },
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 1
+      }
+    ]
+  },
+  {
+    "method": "references",
+    "position": {
+      "file": "main.tgo",
+      "text": "Value",
+      "occurrence": 4
+    },
+    "includeDeclaration": true,
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 1
+      },
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 2
+      },
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 3
+      },
+      {
+        "file": "main.tgo",
+        "text": "Value",
+        "occurrence": 4
+      }
+    ]
+  },
+  {
+    "method": "definition",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 2
+    },
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 1
+      }
+    ]
+  },
+  {
+    "method": "references",
+    "position": {
+      "file": "main.tgo",
+      "text": "Get",
+      "occurrence": 3
+    },
+    "includeDeclaration": true,
+    "locations": [
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 1
+      },
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 2
+      },
+      {
+        "file": "main.tgo",
+        "text": "Get",
+        "occurrence": 3
+      }
+    ]
+  }
+]

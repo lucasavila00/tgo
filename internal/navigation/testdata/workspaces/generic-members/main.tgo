@@ -1,0 +1,17 @@
+package genericmembers
+
+type Box[T any] struct {
+	Value T
+}
+
+func (box Box[T]) Get() T {
+	return box.Value
+}
+
+func readInt(box Box[int]) int {
+	return box.Value + box.Get()
+}
+
+func readString(box Box[string]) string {
+	return box.Value + box.Get()
+}
