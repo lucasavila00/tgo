@@ -1019,3 +1019,49 @@ func EscapedAliasClosure(value *model.Event) string {
 	}
 	return ""
 }
+
+func ReverseAliasIf(value *model.Event) string {
+	alias := value
+	if alias.Tag() == model.EventTagStarted {
+		*value = model.NewEventStopped("changed")
+		return alias.StartedPayload().ID
+	}
+	return ""
+}
+
+func ReversePointerFieldSwitch(envelope EventPointerEnvelope) string {
+	alias := envelope.Event
+	switch alias.Tag() {
+	case model.EventTagStarted:
+		*envelope.Event = model.NewEventStopped("changed")
+		return alias.StartedPayload().ID
+	case model.EventTagStopped:
+		return ""
+	default:
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
+	}
+}
+
+func ReboundCapturedAlias(value, other *model.Event) string {
+	alias := other
+	mutate := func() { *alias = model.NewEventStopped("changed") }
+	alias = value
+	if value.Tag() == model.EventTagStarted {
+		mutate()
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func LoopAliasWrite(value, other *model.Event, bind bool) string {
+	alias := other
+	for bind {
+		alias = value
+		bind = false
+	}
+	if value.Tag() == model.EventTagStarted {
+		*alias = model.NewEventStopped("changed")
+		return value.StartedPayload().ID
+	}
+	return ""
+}

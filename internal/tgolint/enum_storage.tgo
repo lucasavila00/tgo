@@ -1,0 +1,477 @@
+package tgolint
+
+import (
+	"go/token"
+	"go/types"
+	"strconv"
+
+	"tgo/internal/sourcefacts"
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
+)
+
+type enumPointerPlace struct {
+	root   types.Object
+	path   string
+	origin token.Pos
+}
+
+type enumStorageSet map[enumPointerPlace]bool
+
+type enumClosureEffect struct {
+	pointees map[enumPointerPlace]bool
+	bindings map[enumPointerPlace]bool
+}
+
+type enumStorageState struct {
+	pointers map[enumPointerPlace]enumStorageSet
+	closures map[types.Object]enumClosureEffect
+}
+
+type enumStorageFlow struct {
+	before map[syntax.Node]*enumStorageState
+}
+
+func receiverOverlaps(
+	facts %sourcefacts.Index,
+	left %syntax.Expression,
+	right %syntax.Expression,
+) bool {
+	return receiverWrite(facts, left, right) || receiverWrite(facts, right, left)
+}
+
+// enumReceiverStorage records the storage that each local pointer can identify.
+func (c %checker) enumReceiverStorage(
+	expression %syntax.Expression,
+) *enumStorageFlow {
+	_, body := c.enclosingEnumFunction(expression)
+	if body == nil {
+		return nil
+	}
+	graph := cfg.New(body, c.callMayReturn)
+	entries := make([]*enumStorageState, len(graph.Blocks))
+	entries[0] = newEnumStorageState()
+	queued := make([]bool, len(graph.Blocks))
+	queue := []*cfg.Block{graph.Blocks[0]}
+	queued[0] = true
+	for len(queue) != 0 {
+		block := queue[0]
+		queue = queue[1:]
+		queued[block.Index] = false
+		state := cloneEnumStorageState(entries[block.Index])
+		for _, node := range block.Nodes {
+			c.transferEnumStorage(state, node)
+		}
+		for _, successor := range block.Succs {
+			if successor == nil {
+				continue
+			}
+			joined, changed := joinEnumStorageStates(entries[successor.Index], state)
+			if !changed {
+				continue
+			}
+			entries[successor.Index] = joined
+			if !queued[successor.Index] {
+				queue = append(queue, successor)
+				queued[successor.Index] = true
+			}
+		}
+	}
+	flow := &enumStorageFlow{before: make(map[syntax.Node]*enumStorageState)}
+	for _, block := range graph.Blocks {
+		if block == nil || entries[block.Index] == nil {
+			continue
+		}
+		state := cloneEnumStorageState(entries[block.Index])
+		for _, node := range block.Nodes {
+			flow.before[node] = cloneEnumStorageState(state)
+			c.transferEnumStorage(state, node)
+		}
+	}
+	return flow
+}
+
+func newEnumStorageState() *enumStorageState {
+	return &enumStorageState{
+		pointers: make(map[enumPointerPlace]enumStorageSet),
+		closures: make(map[types.Object]enumClosureEffect),
+	}
+}
+
+func cloneEnumStorageSet(source enumStorageSet) enumStorageSet {
+	result := make(enumStorageSet, len(source))
+	for identity := range source {
+		result[identity] = true
+	}
+	return result
+}
+
+func cloneEnumClosureEffect(source enumClosureEffect) enumClosureEffect {
+	result := enumClosureEffect{
+		pointees: make(map[enumPointerPlace]bool),
+		bindings: make(map[enumPointerPlace]bool),
+	}
+	for place := range source.pointees {
+		result.pointees[place] = true
+	}
+	for place := range source.bindings {
+		result.bindings[place] = true
+	}
+	return result
+}
+
+func cloneEnumStorageState(source *enumStorageState) *enumStorageState {
+	if source == nil {
+		return nil
+	}
+	result := newEnumStorageState()
+	for place, identities := range source.pointers {
+		result.pointers[place] = cloneEnumStorageSet(identities)
+	}
+	for object, effect := range source.closures {
+		result.closures[object] = cloneEnumClosureEffect(effect)
+	}
+	return result
+}
+
+func joinEnumStorageSet(current, incoming enumStorageSet) (enumStorageSet, bool) {
+	result := cloneEnumStorageSet(current)
+	changed := false
+	for identity := range incoming {
+		if !result[identity] {
+			result[identity] = true
+			changed = true
+		}
+	}
+	return result, changed
+}
+
+func joinEnumStorageStates(
+	current *enumStorageState,
+	incoming *enumStorageState,
+) (*enumStorageState, bool) {
+	if current == nil {
+		return cloneEnumStorageState(incoming), true
+	}
+	result := cloneEnumStorageState(current)
+	changed := false
+	for place, identities := range incoming.pointers {
+		var added bool
+		result.pointers[place], added = joinEnumStorageSet(
+			result.pointers[place], identities,
+		)
+		changed = changed || added
+	}
+	for place, identities := range current.pointers {
+		if _, ok := incoming.pointers[place]; ok {
+			continue
+		}
+		joined, added := joinEnumStorageSet(identities, enumStorageSet{place: true})
+		result.pointers[place] = joined
+		changed = changed || added
+	}
+	for place, identities := range incoming.pointers {
+		if _, ok := current.pointers[place]; ok {
+			continue
+		}
+		joined, added := joinEnumStorageSet(enumStorageSet{place: true}, identities)
+		result.pointers[place] = joined
+		changed = changed || added
+	}
+	for object, effect := range incoming.closures {
+		joined, added := joinEnumClosureEffects(result.closures[object], effect)
+		result.closures[object] = joined
+		changed = changed || added
+	}
+	return result, changed
+}
+
+func joinEnumClosureEffects(
+	current enumClosureEffect,
+	incoming enumClosureEffect,
+) (enumClosureEffect, bool) {
+	result := cloneEnumClosureEffect(current)
+	changed := false
+	for place := range incoming.pointees {
+		if !result.pointees[place] {
+			result.pointees[place] = true
+			changed = true
+		}
+	}
+	for place := range incoming.bindings {
+		if !result.bindings[place] {
+			result.bindings[place] = true
+			changed = true
+		}
+	}
+	return result, changed
+}
+
+func (c %checker) transferEnumStorage(
+	state *enumStorageState,
+	node syntax.Node,
+) {
+	if statement, ok := syntax.StatementOf(&node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			c.transferEnumStorageLists(state, assignment.Left, assignment.Right)
+		}
+		return
+	}
+	specification, ok := syntax.SpecificationOf(&node)
+	if !ok {
+		return
+	}
+	values := syntax.ValueSpecificationOf(specification)
+	if values == nil {
+		return
+	}
+	left := make([]%syntax.Expression, len(values.Names))
+	for index, name := range values.Names {
+		item := syntax.Expression.Identifier{Value: name}
+		left[index] = &item
+	}
+	c.transferEnumStorageLists(state, left, values.Values)
+}
+
+func (c %checker) transferEnumStorageLists(
+	state *enumStorageState,
+	left []%syntax.Expression,
+	right []%syntax.Expression,
+) {
+	storages := make([]enumStorageSet, len(left))
+	closures := make([]*enumClosureEffect, len(left))
+	if len(left) == len(right) {
+		for index := range left {
+			storages[index] = c.enumExpressionStorage(right[index], state)
+			closures[index] = c.enumExpressionClosure(right[index], state)
+		}
+	}
+	for index, target := range left {
+		if place, ok := enumPointerPlaceOf(c.facts, target); ok {
+			state.pointers[place] = storages[index]
+		}
+		name := syntax.IdentifierExpressionOf(target)
+		if name != nil && name.Name != "_" {
+			object := c.facts.Object(name)
+			delete(state.closures, object)
+			if closures[index] != nil {
+				state.closures[object] = *closures[index]
+			}
+		}
+	}
+}
+
+func enumPointerPlaceOf(
+	facts %sourcefacts.Index,
+	expression %syntax.Expression,
+) (enumPointerPlace, bool) {
+	typ := facts.Type(expression)
+	if typ == nil {
+		root, fields, ok := receiverPath(facts, expression)
+		if !ok {
+			return enumPointerPlace{}, false
+		}
+		if len(fields) == 0 {
+			typ = root.Type()
+		} else {
+			typ = fields[len(fields)-1].Type()
+		}
+	}
+	if typ == nil {
+		return enumPointerPlace{}, false
+	}
+	if _, pointer := types.Unalias(typ).(*types.Pointer); !pointer {
+		return enumPointerPlace{}, false
+	}
+	return enumStablePlaceOf(facts, expression)
+}
+
+func enumStablePlaceOf(
+	facts %sourcefacts.Index,
+	expression %syntax.Expression,
+) (enumPointerPlace, bool) {
+	for {
+		parenthesized := syntax.ParenthesizedExpressionOf(expression)
+		if parenthesized == nil {
+			break
+		}
+		expression = parenthesized.Expression
+	}
+	root, fields, ok := receiverPath(facts, expression)
+	if !ok {
+		return enumPointerPlace{}, false
+	}
+	place := enumPointerPlace{root: root}
+	for _, field := range fields {
+		place.path += "/" + strconv.Itoa(int(field.Pos()))
+	}
+	return place, true
+}
+
+func (c %checker) enumExpressionStorage(
+	expression %syntax.Expression,
+	state *enumStorageState,
+) enumStorageSet {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return c.enumExpressionStorage(parenthesized.Expression, state)
+	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil && unary.Operator == token.AND {
+		if place, ok := enumStablePlaceOf(c.facts, unary.Expression); ok {
+			return enumStorageSet{place: true}
+		}
+	}
+	if name := syntax.IdentifierExpressionOf(expression); name != nil &&
+		c.facts.Object(name) == types.Universe.Lookup("nil") {
+		return enumStorageSet{}
+	}
+	place, ok := enumPointerPlaceOf(c.facts, expression)
+	if !ok {
+		return enumStorageSet{{origin: syntax.ExpressionPosition(expression)}: true}
+	}
+	if identities, found := state.pointers[place]; found {
+		return cloneEnumStorageSet(identities)
+	}
+	return enumStorageSet{place: true}
+}
+
+func (c %checker) enumExpressionClosure(
+	expression %syntax.Expression,
+	state *enumStorageState,
+) *enumClosureEffect {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return c.enumExpressionClosure(parenthesized.Expression, state)
+	}
+	if literal := syntax.FunctionLiteralExpressionOf(expression); literal != nil {
+		effect := c.enumClosureEffects(literal.Body)
+		return &effect
+	}
+	name := syntax.IdentifierExpressionOf(expression)
+	if name == nil {
+		return nil
+	}
+	effect, ok := state.closures[c.facts.Object(name)]
+	if !ok {
+		return nil
+	}
+	result := cloneEnumClosureEffect(effect)
+	return &result
+}
+
+func (c %checker) enumClosureEffects(body %syntax.BlockStatement) enumClosureEffect {
+	effect := enumClosureEffect{
+		pointees: make(map[enumPointerPlace]bool),
+		bindings: make(map[enumPointerPlace]bool),
+	}
+	wrapped := syntax.Statement.Block{Value: body}
+	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
+		if literal, nested := syntax.FunctionLiteralOf(node); nested && literal.Body != body {
+			return false
+		}
+		if statement, ok := syntax.StatementOf(node); ok {
+			if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+				for _, target := range assignment.Left {
+					if place, ok := enumDereferencedPointerPlace(c.facts, target); ok {
+						effect.pointees[place] = true
+					} else if place, ok := enumPointerPlaceOf(c.facts, target); ok {
+						effect.bindings[place] = true
+					}
+				}
+			}
+		}
+		expression, ok := syntax.ExpressionOf(node)
+		if !ok || expression == nil {
+			return true
+		}
+		call := syntax.CallExpressionOf(expression)
+		if call == nil {
+			return true
+		}
+		for _, argument := range call.Args {
+			if place, ok := enumPointerPlaceOf(c.facts, argument); ok {
+				effect.pointees[place] = true
+			}
+		}
+		return true
+	})
+	return effect
+}
+
+func enumDereferencedPointerPlace(
+	facts %sourcefacts.Index,
+	expression %syntax.Expression,
+) (enumPointerPlace, bool) {
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return enumDereferencedPointerPlace(facts, parenthesized.Expression)
+	}
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		return enumDereferencedPointerPlace(facts, selector.Expression)
+	}
+	star := syntax.StarExpressionOf(expression)
+	if star == nil {
+		return enumPointerPlace{}, false
+	}
+	return enumPointerPlaceOf(facts, star.Expression)
+}
+
+func (c %checker) enumStorageStateAt(
+	node %syntax.Node,
+	flow *enumStorageFlow,
+) *enumStorageState {
+	if flow == nil {
+		return newEnumStorageState()
+	}
+	state := flow.before[*node]
+	for parent := c.parents[*node]; state == nil && parent != nil; parent = c.parents[*parent] {
+		state = flow.before[*parent]
+	}
+	if state == nil {
+		return newEnumStorageState()
+	}
+	return state
+}
+
+func (c %checker) enumStorageStateAtPosition(
+	expression %syntax.Expression,
+	flow *enumStorageFlow,
+	position token.Pos,
+) *enumStorageState {
+	_, body := c.enclosingEnumFunction(expression)
+	if body == nil || flow == nil {
+		return newEnumStorageState()
+	}
+	var selected *syntax.Node = nil
+	wrapped := syntax.Statement.Block{Value: body}
+	syntax.InspectStatement(&wrapped, func(node *syntax.Node) bool {
+		if syntax.NodePosition(node) <= position && position <= syntax.NodeEnd(node) {
+			if flow.before[*node] != nil {
+				copy := *node
+				selected = &copy
+			}
+			return true
+		}
+		return syntax.NodePosition(node) <= position
+	})
+	if selected == nil {
+		return newEnumStorageState()
+	}
+	return flow.before[*selected]
+}
+
+func enumStorageSetsOverlap(left, right enumStorageSet) bool {
+	for identity := range left {
+		if right[identity] {
+			return true
+		}
+	}
+	return false
+}
+
+func (c %checker) enumPlaceStorage(
+	place enumPointerPlace,
+	state *enumStorageState,
+) enumStorageSet {
+	if identities, ok := state.pointers[place]; ok {
+		return identities
+	}
+	return enumStorageSet{place: true}
+}

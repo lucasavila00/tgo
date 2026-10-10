@@ -101,3 +101,7 @@ bad/bad.go:981:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:996:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:1005:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:1018:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1027:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1037:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1051:10: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:1064:10: Event: StartedPayload requires proof of EventTagStarted

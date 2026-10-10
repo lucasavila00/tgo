@@ -620,3 +620,41 @@ func UnusedCapturedPointerAlias(value *model.Event) string {
 	}
 	return ""
 }
+
+func ReboundBeforePointerProof(value, other *model.Event) string {
+	alias := value
+	value = other
+	if value.Tag() == model.EventTagStarted {
+		*alias = model.NewEventStopped("changed")
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+type EventPointerEnvelope struct {
+	Event *model.Event
+}
+
+func ReboundPointerFieldBeforeProof(
+	envelope EventPointerEnvelope,
+	other *model.Event,
+) string {
+	alias := envelope.Event
+	envelope.Event = other
+	if envelope.Event.Tag() == model.EventTagStarted {
+		*alias = model.NewEventStopped("changed")
+		return envelope.Event.StartedPayload().ID
+	}
+	return ""
+}
+
+func ReboundCapturedAlias(value, other *model.Event) string {
+	alias := value
+	mutate := func() { *alias = model.NewEventStopped("changed") }
+	alias = other
+	if value.Tag() == model.EventTagStarted {
+		mutate()
+		return value.StartedPayload().ID
+	}
+	return ""
+}

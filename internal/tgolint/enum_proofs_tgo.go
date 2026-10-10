@@ -7,9 +7,7 @@ import (
 	"go/token"
 	"go/types"
 
-	"tgo/internal/sourcefacts"
 	"tgo/pkg/syntax"
-	"tgo/pkg/syntax/cfg"
 )
 
 // checkPayloadAccessor requires a proof for each generated payload accessor.
@@ -199,8 +197,11 @@ func (c *checker) enumReceiverStableBefore(
 		c.enumGotoEntersClause(body, clause, access) {
 		return false
 	}
-	aliases := c.enumReceiverAliases(expression, receiver)
-	if c.enumReceiverEscapedBefore(expression, receiver, proof, aliases) {
+	flow := c.enumReceiverStorage(expression)
+	proved := c.enumExpressionStorage(
+		receiver, c.enumStorageStateAtPosition(expression, flow, proof),
+	)
+	if c.enumReceiverEscapedBefore(expression, receiver, proof, flow, proved) {
 		return false
 	}
 	root, _, ok := receiverPath(c.facts, receiver)
@@ -222,12 +223,12 @@ func (c *checker) enumReceiverStableBefore(
 				}
 				return false
 			}
-			if c.enumReceiverEscapesAt(node, receiver, aliases) {
+			if c.enumReceiverEscapesAt(node, receiver, flow, proved) {
 				stable = false
 				return false
 			}
 			if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
-				c.enumReceiverChangesAt(node, receiver, aliases) {
+				c.enumReceiverChangesAt(node, receiver, flow, proved) {
 				stable = false
 			}
 			return stable
@@ -236,7 +237,7 @@ func (c *checker) enumReceiverStableBefore(
 			return false
 		}
 	}
-	if c.enumLoopCanInvalidate(expression, receiver, proof, access, aliases) {
+	if c.enumLoopCanInvalidate(expression, receiver, proof, access, flow, proved) {
 		return false
 	}
 	clauseBody := &syntax.BlockStatement{
@@ -245,7 +246,7 @@ func (c *checker) enumReceiverStableBefore(
 		List:   clause.Body,
 		Rbrace: token.NoPos,
 	}
-	return !c.enumGotoCanInvalidate(clauseBody, receiver, proof, access, aliases)
+	return !c.enumGotoCanInvalidate(clauseBody, receiver, proof, access, flow, proved)
 }
 
 // enumGotoEntersClause reports a jump into a proved switch clause.
@@ -318,8 +319,11 @@ func (c *checker) enumReceiverStableBetween(
 	if !c.enumReceiverLocalToFunction(expression, receiver) {
 		return false
 	}
-	aliases := c.enumReceiverAliases(expression, receiver)
-	if c.enumReceiverEscapedBefore(expression, receiver, access, aliases) {
+	flow := c.enumReceiverStorage(expression)
+	proved := c.enumExpressionStorage(
+		receiver, c.enumStorageStateAtPosition(expression, flow, proof),
+	)
+	if c.enumReceiverEscapedBefore(expression, receiver, access, flow, proved) {
 		return false
 	}
 	if c.enumGotoBypassesProof(body, proof, access) {
@@ -334,7 +338,7 @@ func (c *checker) enumReceiverStableBetween(
 			return false
 		}
 		if syntax.NodePosition(node) > proof && syntax.NodeEnd(node) <= access &&
-			c.enumReceiverChangesAt(node, receiver, aliases) {
+			c.enumReceiverChangesAt(node, receiver, flow, proved) {
 			stable = false
 			return false
 		}
@@ -343,10 +347,10 @@ func (c *checker) enumReceiverStableBetween(
 	if !stable {
 		return false
 	}
-	if c.enumLoopCanInvalidate(expression, receiver, proof, access, aliases) {
+	if c.enumLoopCanInvalidate(expression, receiver, proof, access, flow, proved) {
 		return false
 	}
-	return !c.enumGotoCanInvalidate(body, receiver, proof, access, aliases)
+	return !c.enumGotoCanInvalidate(body, receiver, proof, access, flow, proved)
 }
 
 // enumGotoBypassesProof reports a jump into the proved source region.
@@ -400,7 +404,8 @@ func (c *checker) enumReceiverEscapedBefore(
 	expression *syntax.Expression,
 	receiver *syntax.Expression,
 	access token.Pos,
-	aliases map[syntax.Node]map[types.Object]bool,
+	flow *enumStorageFlow,
+	proved enumStorageSet,
 ) bool {
 	root, _, ok := receiverPath(c.facts, receiver)
 	if !ok {
@@ -422,7 +427,7 @@ func (c *checker) enumReceiverEscapedBefore(
 			escaped = capturesObject(c.facts, literal.Body, root)
 			return false
 		}
-		if c.enumReceiverEscapesAt(node, receiver, aliases) {
+		if c.enumReceiverEscapesAt(node, receiver, flow, proved) {
 			escaped = true
 		}
 		return !escaped
@@ -483,175 +488,11 @@ func (c *checker) enumReceiverLocalToFunction(
 	return local
 }
 
-// enumReceiverAliases records local pointers that can identify the receiver.
-func (c *checker) enumReceiverAliases(
-	expression *syntax.Expression,
-	receiver *syntax.Expression,
-) map[syntax.Node]map[types.Object]bool {
-	_, body := c.enclosingEnumFunction(expression)
-	if body == nil {
-		return nil
-	}
-	graph := cfg.New(body, c.callMayReturn)
-	entries := make([]map[types.Object]bool, len(graph.Blocks))
-	entries[0] = make(map[types.Object]bool)
-	queued := make([]bool, len(graph.Blocks))
-	queue := []*cfg.Block{graph.Blocks[0]}
-	queued[0] = true
-	for len(queue) != 0 {
-		block := queue[0]
-		queue = queue[1:]
-		queued[block.Index] = false
-		state := cloneEnumAliases(entries[block.Index])
-		for _, node := range block.Nodes {
-			c.transferEnumAliases(state, node, receiver)
-		}
-		for _, successor := range block.Succs {
-			if successor == nil {
-				continue
-			}
-			joined, changed := joinEnumAliases(entries[successor.Index], state)
-			if !changed {
-				continue
-			}
-			entries[successor.Index] = joined
-			if !queued[successor.Index] {
-				queue = append(queue, successor)
-				queued[successor.Index] = true
-			}
-		}
-	}
-	before := make(map[syntax.Node]map[types.Object]bool)
-	for _, block := range graph.Blocks {
-		if block == nil || entries[block.Index] == nil {
-			continue
-		}
-		state := cloneEnumAliases(entries[block.Index])
-		for _, node := range block.Nodes {
-			before[node] = cloneEnumAliases(state)
-			c.transferEnumAliases(state, node, receiver)
-		}
-	}
-	return before
-}
-
-func cloneEnumAliases(source map[types.Object]bool) map[types.Object]bool {
-	result := make(map[types.Object]bool, len(source))
-	for object := range source {
-		result[object] = true
-	}
-	return result
-}
-
-func joinEnumAliases(
-	current map[types.Object]bool,
-	incoming map[types.Object]bool,
-) (map[types.Object]bool, bool) {
-	if current == nil {
-		return cloneEnumAliases(incoming), true
-	}
-	result := cloneEnumAliases(current)
-	changed := false
-	for object := range incoming {
-		if !result[object] {
-			result[object] = true
-			changed = true
-		}
-	}
-	return result, changed
-}
-
-func (c *checker) transferEnumAliases(
-	state map[types.Object]bool,
-	node syntax.Node,
-	receiver *syntax.Expression,
-) {
-	if statement, ok := syntax.StatementOf(&node); ok {
-		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
-			c.transferEnumAliasLists(state, assignment.Left, assignment.Right, receiver)
-		}
-		return
-	}
-	specification, ok := syntax.SpecificationOf(&node)
-	if !ok {
-		return
-	}
-	values := syntax.ValueSpecificationOf(specification)
-	if values == nil {
-		return
-	}
-	left := make([]*syntax.Expression, len(values.Names))
-	for index, name := range values.Names {
-		item := func(input syntax.TgoExpressionIdentifierInput) syntax.Expression {
-			return syntax.NewExpressionIdentifier(input.FieldValue)
-		}(syntax.TgoExpressionIdentifierInput{FieldValue: name})
-		left[index] = &item
-	}
-	c.transferEnumAliasLists(state, left, values.Values, receiver)
-}
-
-func (c *checker) transferEnumAliasLists(
-	state map[types.Object]bool,
-	left []*syntax.Expression,
-	right []*syntax.Expression,
-	receiver *syntax.Expression,
-) {
-	aliases := make([]bool, len(left))
-	if len(left) == len(right) {
-		for index := range left {
-			aliases[index] = c.enumAliasExpression(right[index], receiver, state)
-		}
-	}
-	for index, target := range left {
-		name := syntax.IdentifierExpressionOf(target)
-		if name == nil || name.Name == "_" {
-			continue
-		}
-		object := c.facts.Object(name)
-		delete(state, object)
-		if aliases[index] {
-			state[object] = true
-		}
-	}
-}
-
-func (c *checker) enumAliasExpression(
-	expression *syntax.Expression,
-	receiver *syntax.Expression,
-	state map[types.Object]bool,
-) bool {
-	for {
-		parenthesized := syntax.ParenthesizedExpressionOf(expression)
-		if parenthesized == nil {
-			break
-		}
-		expression = parenthesized.Expression
-	}
-	if sameReceiver(c.facts, expression, receiver) {
-		return true
-	}
-	name := syntax.IdentifierExpressionOf(expression)
-	return name != nil && state[c.facts.Object(name)]
-}
-
-func (c *checker) enumReceiverOverlapsAt(
-	node *syntax.Node,
-	expression *syntax.Expression,
-	receiver *syntax.Expression,
-	aliases map[syntax.Node]map[types.Object]bool,
-) bool {
-	if receiverOverlaps(c.facts, expression, receiver) {
-		return true
-	}
-	state := c.enumAliasesAt(node, aliases)
-	root, _, ok := receiverPath(c.facts, expression)
-	return ok && state[root]
-}
-
 func (c *checker) enumReceiverChangesAt(
 	node *syntax.Node,
 	receiver *syntax.Expression,
-	aliases map[syntax.Node]map[types.Object]bool,
+	flow *enumStorageFlow,
+	proved enumStorageSet,
 ) bool {
 	statement, ok := syntax.StatementOf(node)
 	if !ok {
@@ -659,84 +500,59 @@ func (c *checker) enumReceiverChangesAt(
 	}
 	if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
 		for _, target := range assignment.Left {
-			if c.enumReceiverWriteOverlapsAt(node, target, receiver, aliases) {
+			if receiverOverlaps(c.facts, target, receiver) ||
+				c.enumPointeeWriteOverlapsAt(node, target, flow, proved) {
 				return true
 			}
 		}
 	}
 	if increment := syntax.IncrementStatementOf(statement); increment != nil {
-		return c.enumReceiverWriteOverlapsAt(
-			node, increment.Expression, receiver, aliases,
-		)
+		return receiverOverlaps(c.facts, increment.Expression, receiver) ||
+			c.enumPointeeWriteOverlapsAt(node, increment.Expression, flow, proved)
 	}
 	if ranged := syntax.RangeStatementOf(statement); ranged != nil {
-		return c.enumReceiverWriteOverlapsAt(node, ranged.Key, receiver, aliases) ||
-			c.enumReceiverWriteOverlapsAt(node, ranged.Value, receiver, aliases)
+		return receiverOverlaps(c.facts, ranged.Key, receiver) ||
+			receiverOverlaps(c.facts, ranged.Value, receiver) ||
+			c.enumPointeeWriteOverlapsAt(node, ranged.Key, flow, proved) ||
+			c.enumPointeeWriteOverlapsAt(node, ranged.Value, flow, proved)
 	}
 	return false
 }
 
-func (c *checker) enumReceiverWriteOverlapsAt(
+func (c *checker) enumPointeeWriteOverlapsAt(
 	node *syntax.Node,
 	expression *syntax.Expression,
-	receiver *syntax.Expression,
-	aliases map[syntax.Node]map[types.Object]bool,
+	flow *enumStorageFlow,
+	proved enumStorageSet,
 ) bool {
-	if receiverOverlaps(c.facts, expression, receiver) {
-		return true
-	}
-	state := c.enumAliasesAt(node, aliases)
-	return enumWritesThroughAlias(c.facts, expression, state)
-}
-
-func (c *checker) enumAliasesAt(
-	node *syntax.Node,
-	aliases map[syntax.Node]map[types.Object]bool,
-) map[types.Object]bool {
-	state := aliases[*node]
-	for parent := c.parents[*node]; state == nil && parent != nil; parent = c.parents[*parent] {
-		state = aliases[*parent]
-	}
-	return state
-}
-
-func enumWritesThroughAlias(
-	facts *sourcefacts.Index,
-	expression *syntax.Expression,
-	aliases map[types.Object]bool,
-) bool {
-	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
-		return enumWritesThroughAlias(facts, parenthesized.Expression, aliases)
-	}
-	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		return enumWritesThroughAlias(facts, selector.Expression, aliases)
-	}
-	star := syntax.StarExpressionOf(expression)
-	if star == nil {
+	place, ok := enumDereferencedPointerPlace(c.facts, expression)
+	if !ok {
 		return false
 	}
-	root, _, ok := receiverPath(facts, star.Expression)
-	return ok && aliases[root]
+	state := c.enumStorageStateAt(node, flow)
+	return enumStorageSetsOverlap(c.enumPlaceStorage(place, state), proved)
 }
 
 func (c *checker) enumReceiverEscapesAt(
 	node *syntax.Node,
 	receiver *syntax.Expression,
-	aliases map[syntax.Node]map[types.Object]bool,
+	flow *enumStorageFlow,
+	proved enumStorageSet,
 ) bool {
 	expression, ok := syntax.ExpressionOf(node)
 	if !ok || expression == nil {
 		return false
 	}
 	if unary := syntax.UnaryExpressionOf(expression); unary != nil &&
-		unary.Operator == token.AND && c.enumReceiverOverlapsAt(
-		node, unary.Expression, receiver, aliases,
+		unary.Operator == token.AND && receiverOverlaps(
+		c.facts, unary.Expression, receiver,
 	) {
 		return true
 	}
 	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
-		if c.pointerMethodSelection(expression) &&
-			c.enumReceiverOverlapsAt(node, selector.Expression, receiver, aliases) {
+		if c.pointerMethodSelection(expression) && c.enumPointerExpressionOverlaps(
+			node, selector.Expression, flow, proved,
+		) {
 			return true
 		}
 	}
@@ -744,12 +560,12 @@ func (c *checker) enumReceiverEscapesAt(
 	if call == nil {
 		return false
 	}
-	state := c.enumAliasesAt(node, aliases)
-	if enumLiteralCapturesAlias(c.facts, call.Callee, state) {
+	state := c.enumStorageStateAt(node, flow)
+	if c.enumCallClosureInvalidates(call.Callee, state, proved, receiver) {
 		return true
 	}
 	for _, argument := range call.Args {
-		if enumLiteralCapturesAlias(c.facts, argument, state) {
+		if c.enumCallClosureInvalidates(argument, state, proved, receiver) {
 			return true
 		}
 		typ := c.facts.Type(argument)
@@ -757,24 +573,41 @@ func (c *checker) enumReceiverEscapesAt(
 			continue
 		}
 		if _, pointer := types.Unalias(typ).(*types.Pointer); pointer &&
-			c.enumReceiverOverlapsAt(node, argument, receiver, aliases) {
+			c.enumPointerExpressionOverlaps(node, argument, flow, proved) {
 			return true
 		}
 	}
 	return false
 }
 
-func enumLiteralCapturesAlias(
-	facts *sourcefacts.Index,
+func (c *checker) enumPointerExpressionOverlaps(
+	node *syntax.Node,
 	expression *syntax.Expression,
-	aliases map[types.Object]bool,
+	flow *enumStorageFlow,
+	proved enumStorageSet,
 ) bool {
-	literal := syntax.FunctionLiteralExpressionOf(expression)
-	if literal == nil {
+	state := c.enumStorageStateAt(node, flow)
+	return enumStorageSetsOverlap(c.enumExpressionStorage(expression, state), proved)
+}
+
+func (c *checker) enumCallClosureInvalidates(
+	expression *syntax.Expression,
+	state *enumStorageState,
+	proved enumStorageSet,
+	receiver *syntax.Expression,
+) bool {
+	effect := c.enumExpressionClosure(expression, state)
+	if effect == nil {
 		return false
 	}
-	for object := range aliases {
-		if capturesObject(facts, literal.Body, object) {
+	receiverPlace, receiverOK := enumPointerPlaceOf(c.facts, receiver)
+	for place := range effect.bindings {
+		if receiverOK && place == receiverPlace {
+			return true
+		}
+	}
+	for place := range effect.pointees {
+		if enumStorageSetsOverlap(c.enumPlaceStorage(place, state), proved) {
 			return true
 		}
 	}
@@ -784,10 +617,11 @@ func enumLiteralCapturesAlias(
 func (c *checker) enumReceiverInvalidatedAt(
 	node *syntax.Node,
 	receiver *syntax.Expression,
-	aliases map[syntax.Node]map[types.Object]bool,
+	flow *enumStorageFlow,
+	proved enumStorageSet,
 ) bool {
-	if c.enumReceiverChangesAt(node, receiver, aliases) ||
-		c.enumReceiverEscapesAt(node, receiver, aliases) {
+	if c.enumReceiverChangesAt(node, receiver, flow, proved) ||
+		c.enumReceiverEscapesAt(node, receiver, flow, proved) {
 		return true
 	}
 	literal, nested := syntax.FunctionLiteralOf(node)
@@ -798,20 +632,13 @@ func (c *checker) enumReceiverInvalidatedAt(
 	return ok && capturesObject(c.facts, literal.Body, root)
 }
 
-func receiverOverlaps(
-	facts *sourcefacts.Index,
-	left *syntax.Expression,
-	right *syntax.Expression,
-) bool {
-	return receiverWrite(facts, left, right) || receiverWrite(facts, right, left)
-}
-
 func (c *checker) enumLoopCanInvalidate(
 	expression *syntax.Expression,
 	receiver *syntax.Expression,
 	proof token.Pos,
 	access token.Pos,
-	aliases map[syntax.Node]map[types.Object]bool,
+	flow *enumStorageFlow,
+	proved enumStorageSet,
 ) bool {
 	for node := c.parents[syntax.ExpressionNode(expression)]; node != nil; node = c.parents[*node] {
 		statement, ok := syntax.StatementOf(node)
@@ -829,7 +656,7 @@ func (c *checker) enumLoopCanInvalidate(
 		}
 		changed := false
 		syntax.InspectStatement(statement, func(child *syntax.Node) bool {
-			if c.enumReceiverInvalidatedAt(child, receiver, aliases) {
+			if c.enumReceiverInvalidatedAt(child, receiver, flow, proved) {
 				changed = true
 			}
 			return !changed
@@ -846,7 +673,8 @@ func (c *checker) enumGotoCanInvalidate(
 	receiver *syntax.Expression,
 	proof token.Pos,
 	access token.Pos,
-	aliases map[syntax.Node]map[types.Object]bool,
+	flow *enumStorageFlow,
+	proved enumStorageSet,
 ) bool {
 	changedAfter := false
 	invalid := false
@@ -858,7 +686,7 @@ func (c *checker) enumGotoCanInvalidate(
 			return false
 		}
 		position := syntax.NodePosition(node)
-		if position > access && c.enumReceiverInvalidatedAt(node, receiver, aliases) {
+		if position > access && c.enumReceiverInvalidatedAt(node, receiver, flow, proved) {
 			changedAfter = true
 		}
 		statement, ok := syntax.StatementOf(node)
