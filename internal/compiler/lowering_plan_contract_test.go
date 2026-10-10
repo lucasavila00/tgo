@@ -11,6 +11,24 @@ import (
 )
 
 func TestLoweringPlanKeepsGuardedTypedWorkSeparateFromSource(t *testing.T) {
+	fixture := newLoweringPlanContractFixture(t)
+	assertLoweringPlanPreservesSource(t, fixture)
+	assertGuardedPropagationPlan(t, fixture.plan)
+	assertGuardedPropagationEmission(t, fixture)
+}
+
+type loweringPlanContractFixture struct {
+	files  *token.FileSet
+	unit   *packageUnit
+	source *source
+	plan   *functionLoweringPlan
+	before string
+	defs   map[*ast.Ident]types.Object
+	uses   map[*ast.Ident]types.Object
+}
+
+func newLoweringPlanContractFixture(t *testing.T) loweringPlanContractFixture {
+	t.Helper()
 	files := token.NewFileSet()
 	inputSource, err := parseSource(files, "sample.tgo", []byte(`package sample
 
@@ -50,22 +68,34 @@ func use(ready bool) (bool, error) {
 	for identifier, object := range unit.info.Uses {
 		uses[identifier] = object
 	}
-
 	plan := buildFunctionLoweringPlan(unit, inputSource, function)
-	if after := formatLoweringContractAST(t, files, inputSource.File); after != before {
-		t.Fatalf("plan construction changed the source AST\nbefore:\n%s\nafter:\n%s", before, after)
+	return loweringPlanContractFixture{
+		files: files, unit: unit, source: inputSource, plan: plan,
+		before: before, defs: defs, uses: uses,
 	}
-	for identifier, object := range defs {
-		if unit.info.Defs[identifier] != object {
+}
+
+func assertLoweringPlanPreservesSource(t *testing.T, fixture loweringPlanContractFixture) {
+	t.Helper()
+	after := formatLoweringContractAST(t, fixture.files, fixture.source.File)
+	if after != fixture.before {
+		t.Fatalf("plan construction changed the source AST\nbefore:\n%s\nafter:\n%s",
+			fixture.before, after)
+	}
+	for identifier, object := range fixture.defs {
+		if fixture.unit.info.Defs[identifier] != object {
 			t.Fatalf("plan construction changed the definition for %q", identifier.Name)
 		}
 	}
-	for identifier, object := range uses {
-		if unit.info.Uses[identifier] != object {
+	for identifier, object := range fixture.uses {
+		if fixture.unit.info.Uses[identifier] != object {
 			t.Fatalf("plan construction changed the use for %q", identifier.Name)
 		}
 	}
+}
 
+func assertGuardedPropagationPlan(t *testing.T, plan *functionLoweringPlan) {
+	t.Helper()
 	root := plan.root.operations[0]
 	binary := root.expressions[0]
 	if binary.kind != planBinaryExpression || len(binary.work.operations) != 2 {
@@ -91,19 +121,33 @@ func use(ready bool) (bool, error) {
 		errorBranch.kind != planBranch || errorBranch.body == nil ||
 		len(errorBranch.body.operations) != 1 ||
 		errorBranch.body.operations[0].kind != planReturn {
-		t.Fatalf("propagation does not bind and return inside the guard: bind=%#v branch=%#v", bind, errorBranch)
+		t.Fatalf("propagation does not bind and return inside the guard: "+
+			"bind=%#v branch=%#v", bind, errorBranch)
 	}
 	if len(propagation.results) != 1 ||
 		!types.Identical(propagation.results[0].typ, types.Typ[types.Bool]) ||
 		!types.Identical(plan.values[bind.outputs[1]-1].typ, types.Universe.Lookup("error").Type()) {
-		t.Fatalf("call result types are not bool and error: results=%v values=%v", propagation.results, plan.values)
+		t.Fatalf("call result types are not bool and error: results=%v values=%v",
+			propagation.results, plan.values)
 	}
+}
 
-	checkedInfo := unit.info
-	unit.info = newInfo()
-	newLoweringEmitter(unit, inputSource, plan).emit()
-	unit.info = checkedInfo
-	use := inputSource.File.Decls[1].(*ast.FuncDecl)
+func assertGuardedPropagationEmission(t *testing.T, fixture loweringPlanContractFixture) {
+	t.Helper()
+	checkedInfo := fixture.unit.info
+	fixture.unit.info = newInfo()
+	newLoweringEmitter(fixture.unit, fixture.source, fixture.plan).emit()
+	fixture.unit.info = checkedInfo
+	use := fixture.source.File.Decls[1].(*ast.FuncDecl)
+	callCount, guardedCallCount := countGuardedCheckCalls(use)
+	if callCount != 1 || guardedCallCount != 1 {
+		t.Fatalf("emitter placed check calls outside the guard: calls=%d guarded=%d\n%s",
+			callCount, guardedCallCount,
+			formatLoweringContractAST(t, fixture.files, fixture.source.File))
+	}
+}
+
+func countGuardedCheckCalls(use *ast.FuncDecl) (int, int) {
 	callCount := 0
 	guardedCallCount := 0
 	for _, statement := range use.Body.List {
@@ -134,10 +178,7 @@ func use(ready bool) (bool, error) {
 			return true
 		})
 	}
-	if callCount != 1 || guardedCallCount != 1 {
-		t.Fatalf("emitter placed check calls outside the guard: calls=%d guarded=%d\n%s",
-			callCount, guardedCallCount, formatLoweringContractAST(t, files, inputSource.File))
-	}
+	return callCount, guardedCallCount
 }
 
 func formatLoweringContractAST(t *testing.T, files *token.FileSet, file *ast.File) string {

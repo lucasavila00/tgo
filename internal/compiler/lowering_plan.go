@@ -63,6 +63,8 @@ const (
 	planStore
 	planBranch
 	planReturn
+	planCopy
+	planPreparePlace
 	planJump
 	planBlockStatement
 	planIfStatement
@@ -104,6 +106,7 @@ type plannedOperation struct {
 	declarations   []*plannedDeclaration
 	failureCommas  []token.Pos
 	labelHasGoto   bool
+	copyTarget     ast.Expr
 }
 
 type plannedDeclaration struct {
@@ -157,6 +160,7 @@ type plannedExpression struct {
 	typ           types.Type
 	expected      types.Type
 	contextual    bool
+	retainContext bool
 	resultCount   int
 	results       []plannedValue
 	operands      []*plannedExpression
@@ -166,6 +170,7 @@ type plannedExpression struct {
 	work          *plannedBlock
 	before        *plannedBlock
 	materialized  valueID
+	place         *plannedPlace
 	resultNames   []*ast.Ident
 	builtins      []*plannedBuiltin
 	exact         *plannedExactComprehension
@@ -178,6 +183,7 @@ type plannedExactComprehension struct {
 	appendCall *ast.CallExpr
 	source     plannedValue
 	position   token.Pos
+	identity   bool
 }
 
 type plannedBuiltin struct {
@@ -869,7 +875,8 @@ func (b *loweringPlanBuilder) expressionContext(
 	result := &plannedExpression{
 		kind: planRetainedExpression, source: expression, typ: b.expressionType(expression),
 		expected: expected, contextual: b.expressionNeedsContext(expression, expected),
-		resultCount: resultCount,
+		retainContext: b.expressionRetainsContext(expression),
+		resultCount:   resultCount,
 	}
 	if metadata, function, ok := comprehensionMarker(b.source, expression); ok {
 		result.kind = planComprehensionExpression
@@ -905,7 +912,7 @@ func (b *loweringPlanBuilder) expressionContext(
 					call: makeCall, name: "make", position: metadata.Position,
 				})
 				terminal := comprehensionTerminal(outer.Body)
-				if len(terminal.List) == 1 {
+				if terminal == outer.Body && len(terminal.List) == 1 {
 					if assignment, ok := terminal.List[0].(*ast.AssignStmt); ok &&
 						len(assignment.Rhs) == 1 {
 						if appendCall, ok := assignment.Rhs[0].(*ast.CallExpr); ok &&
@@ -932,6 +939,14 @@ func (b *loweringPlanBuilder) expressionContext(
 										makeCall: makeCall, outer: outer, assignment: assignment,
 										appendCall: appendCall, source: sourceValue,
 										position: metadata.Position,
+										identity: sameExpressionObject(
+											b.unit.info, outer.Value, appendCall.Args[1],
+										),
+									}
+									if result.exact.identity {
+										operation.kind = planCopy
+										operation.inputs = []valueID{sourceValue.id}
+										operation.copyTarget = assignment.Lhs[0]
 									}
 									break
 								}
@@ -1083,7 +1098,7 @@ func (b *loweringPlanBuilder) expressionContext(
 				b.expressionContext(operand, operandExpected, b.expressionResultCount(operand)))
 		}
 	}
-	result.before = b.orderOperands(result.operands)
+	result.before = b.orderOperands(result.operands, result.kind == planSliceExpression)
 	valueType := result.typ
 	if expected != nil {
 		valueType = expected
@@ -1093,6 +1108,21 @@ func (b *loweringPlanBuilder) expressionContext(
 		result.addResult(b, types.Typ[types.Bool], expression.Pos())
 	}
 	return result
+}
+
+func sameExpressionObject(info *types.Info, left ast.Expr, right ast.Expr) bool {
+	leftIdentifier, leftOK := left.(*ast.Ident)
+	rightIdentifier, rightOK := right.(*ast.Ident)
+	return leftOK && rightOK && info.ObjectOf(leftIdentifier) != nil &&
+		info.ObjectOf(leftIdentifier) == info.ObjectOf(rightIdentifier)
+}
+
+func (b *loweringPlanBuilder) expressionRetainsContext(expression ast.Expr) bool {
+	if identifier, ok := expression.(*ast.Ident); ok && identifier.Name == "nil" {
+		return true
+	}
+	value, ok := b.unit.info.Types[expression]
+	return ok && value.Value != nil
 }
 
 func (b *loweringPlanBuilder) expressionNeedsContext(
@@ -1134,6 +1164,7 @@ func isUntypedType(typ types.Type) bool {
 
 func (b *loweringPlanBuilder) orderOperands(
 	operands []*plannedExpression,
+	addressArray bool,
 ) *plannedBlock {
 	block := &plannedBlock{scope: b.currentScope}
 	for index, operand := range operands {
@@ -1146,6 +1177,24 @@ func (b *loweringPlanBuilder) orderOperands(
 		}
 		operandWork := plannedExpressionHasWork(operand)
 		if !operandWork && (!laterWork || !b.canMaterialize(operand)) {
+			continue
+		}
+		if laterWork {
+			if pointer := arrayPointerOperand(operand); pointer != nil && len(pointer.results) == 1 {
+				pointer.materialized = pointer.results[0].id
+				block.operations = append(block.operations, &plannedOperation{
+					kind: planEvaluate, expressions: []*plannedExpression{pointer},
+					outputs: []valueID{pointer.results[0].id},
+				})
+				continue
+			}
+		}
+		if addressArray && index == 0 && laterWork && underlyingArray(operand.typ) != nil {
+			place := b.assignmentPlace(operand.source)
+			operand.place = place
+			block.operations = append(block.operations, &plannedOperation{
+				kind: planPreparePlace, places: []*plannedPlace{place},
+			})
 			continue
 		}
 		if len(operand.results) != 1 {
@@ -1161,6 +1210,49 @@ func (b *loweringPlanBuilder) orderOperands(
 		return nil
 	}
 	return block
+}
+
+func arrayPointerOperand(expression *plannedExpression) *plannedExpression {
+	if expression == nil || underlyingArray(expression.typ) == nil {
+		return nil
+	}
+	switch expression.source.(type) {
+	case *ast.StarExpr:
+		if len(expression.operands) == 1 {
+			return expression.operands[0]
+		}
+	case *ast.ParenExpr:
+		if len(expression.operands) == 1 {
+			return arrayPointerOperand(expression.operands[0])
+		}
+	}
+	return nil
+}
+
+func underlyingArray(typ types.Type) *types.Array {
+	typ = types.Unalias(typ)
+	if named, ok := typ.(*types.Named); ok {
+		typ = named.Underlying()
+	}
+	switch item := types.Unalias(typ).(type) {
+	case *types.Array:
+		return item
+	case *types.TypeParam:
+		return underlyingArray(item.Constraint())
+	case *types.Interface:
+		for index := range item.NumEmbeddeds() {
+			if array := underlyingArray(item.EmbeddedType(index)); array != nil {
+				return array
+			}
+		}
+	case *types.Union:
+		for index := range item.Len() {
+			if array := underlyingArray(item.Term(index).Type()); array != nil {
+				return array
+			}
+		}
+	}
+	return nil
 }
 
 func (b *loweringPlanBuilder) comprehensionParts(

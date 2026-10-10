@@ -245,13 +245,13 @@ func PropagationArraySlice(found bool) (bool, error) {
 }
 
 func PropagationGenericArraySlice[T ~[1]int](values *T, found bool) (bool, error) {
-	operand := (*values)
+	operand := values
 	result, err := propagationGenericArrayBound(values, found)
 	if err != nil {
 		return false, fmt.Errorf("propagationGenericArrayBound: %w", err)
 	}
 
-	slice := operand[result:]
+	slice := (*operand)[result:]
 	var operand_1 bool = &slice[0] == &(*values)[0]
 	if operand_1 {
 		operand_1 = slice[0] == 2

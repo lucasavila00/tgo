@@ -1,45 +1,14 @@
 package compiler
 
-import (
-	"context"
-	"go/importer"
-	"go/token"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestLoweringPreservesContextualTypeIdentity(t *testing.T) {
-	compiled, problems := Compile(PackageInput{
-		Path: "typeidentity",
-		Sources: []File{
-			{Name: "type_identity.tgo", Data: []byte(loweringTypeIdentitySource)},
-			{Name: "type_identity_test.tgo", Data: []byte(loweringTypeIdentityTestSource)},
-		},
-		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	runLoweringRuntimeTest(t, loweringRuntimeFixture{
+		path: "typeidentity", sourceName: "type_identity.tgo",
+		source: loweringTypeIdentitySource, testName: "type_identity_test.tgo",
+		testSource:  loweringTypeIdentityTestSource,
+		testPattern: "TestGeneratedTypeIdentity",
 	})
-	if len(problems) != 0 {
-		t.Fatalf("compile TGo fixture: %v", problems[0])
-	}
-	directory := t.TempDir()
-	for name, data := range map[string][]byte{
-		"go.mod":                []byte("module typeidentity\n\ngo 1.27.0\n"),
-		"type_identity.go":      compiled.Outputs["type_identity.tgo"],
-		"type_identity_test.go": compiled.Outputs["type_identity_test.tgo"],
-	} {
-		if err := os.WriteFile(filepath.Join(directory, name), data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-run", "TestGeneratedTypeIdentity", "-count=1", ".")
-	command.Dir = directory
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("run generated Go: %v\n%s", err, output)
-	}
 }
 
 const loweringTypeIdentitySource = `package typeidentity
@@ -150,7 +119,8 @@ func TestGeneratedTypeIdentity(t *testing.T) {
 
 	events = nil
 	value, err = useLocalType(&events, 1, 2, false)
-	if value != 7 || err != nil || strings.Join(events, ",") != "local-left,local-right,load,local-consume" {
+	if value != 7 || err != nil ||
+		strings.Join(events, ",") != "local-left,local-right,load,local-consume" {
 		t.Fatalf("local type value=%d error=%v events=%v", value, err, events)
 	}
 

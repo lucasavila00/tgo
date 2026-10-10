@@ -1,45 +1,14 @@
 package compiler
 
-import (
-	"context"
-	"go/importer"
-	"go/token"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestLoweringPreservesEvaluationContracts(t *testing.T) {
-	compiled, problems := Compile(PackageInput{
-		Path: "evaluationcontract",
-		Sources: []File{
-			{Name: "evaluation_contract.tgo", Data: []byte(loweringEvaluationContractSource)},
-			{Name: "evaluation_contract_test.tgo", Data: []byte(loweringEvaluationContractTestSource)},
-		},
-		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	runLoweringRuntimeTest(t, loweringRuntimeFixture{
+		path: "evaluationcontract", sourceName: "evaluation_contract.tgo",
+		source: loweringEvaluationContractSource, testName: "evaluation_contract_test.tgo",
+		testSource:  loweringEvaluationContractTestSource,
+		testPattern: "TestGeneratedEvaluationContracts",
 	})
-	if len(problems) != 0 {
-		t.Fatalf("compile TGo fixture: %v", problems[0])
-	}
-	directory := t.TempDir()
-	for name, data := range map[string][]byte{
-		"go.mod":                      []byte("module evaluationcontract\n\ngo 1.27.0\n"),
-		"evaluation_contract.go":      compiled.Outputs["evaluation_contract.tgo"],
-		"evaluation_contract_test.go": compiled.Outputs["evaluation_contract_test.tgo"],
-	} {
-		if err := os.WriteFile(filepath.Join(directory, name), data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-run", "TestGeneratedEvaluationContracts", "-count=1", ".")
-	command.Dir = directory
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("run generated Go: %v\n%s", err, output)
-	}
 }
 
 const loweringEvaluationContractSource = `package evaluationcontract

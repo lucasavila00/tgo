@@ -1,45 +1,14 @@
 package compiler
 
-import (
-	"context"
-	"go/importer"
-	"go/token"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestLoweringReturnsGenericZeroResults(t *testing.T) {
-	compiled, problems := Compile(PackageInput{
-		Path: "zeroresult",
-		Sources: []File{
-			{Name: "zero_result.tgo", Data: []byte(loweringZeroResultSource)},
-			{Name: "zero_result_test.tgo", Data: []byte(loweringZeroResultTestSource)},
-		},
-		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	runLoweringRuntimeTest(t, loweringRuntimeFixture{
+		path: "zeroresult", sourceName: "zero_result.tgo",
+		source: loweringZeroResultSource, testName: "zero_result_test.tgo",
+		testSource:  loweringZeroResultTestSource,
+		testPattern: "TestGeneratedGenericZeroResults",
 	})
-	if len(problems) != 0 {
-		t.Fatalf("compile TGo fixture: %v", problems[0])
-	}
-	directory := t.TempDir()
-	for name, data := range map[string][]byte{
-		"go.mod":              []byte("module zeroresult\n\ngo 1.27.0\n"),
-		"zero_result.go":      compiled.Outputs["zero_result.tgo"],
-		"zero_result_test.go": compiled.Outputs["zero_result_test.tgo"],
-	} {
-		if err := os.WriteFile(filepath.Join(directory, name), data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-run", "TestGeneratedGenericZeroResults", "-count=1", ".")
-	command.Dir = directory
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("run generated Go: %v\n%s", err, output)
-	}
 }
 
 const loweringZeroResultSource = `package zeroresult

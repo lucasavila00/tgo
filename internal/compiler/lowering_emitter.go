@@ -15,13 +15,13 @@ type loweringEmitter struct {
 	plan                *functionLoweringPlan
 	names               map[string]bool
 	values              map[valueID]*ast.Ident
+	places              map[placeID]ast.Expr
 	targets             map[targetID]*ast.Ident
 	typeAliases         map[*ast.BlockStmt]map[types.Type]*ast.Ident
 	renamedTypeBlockers map[types.Object]string
 	typeDefinitionSites map[*ast.Ident]emittedTypeDefinition
 	typeObjectAliases   map[types.Object]*ast.Ident
 	fmtAlias            string
-	hoisted             []ast.Stmt
 }
 
 type emittedTypeDefinition struct {
@@ -40,6 +40,7 @@ func newLoweringEmitter(
 	emitter := &loweringEmitter{
 		unit: unit, source: source, plan: plan, names: plan.function.names,
 		values: make(map[valueID]*ast.Ident), targets: make(map[targetID]*ast.Ident),
+		places:              make(map[placeID]ast.Expr),
 		typeAliases:         make(map[*ast.BlockStmt]map[types.Type]*ast.Ident),
 		renamedTypeBlockers: make(map[types.Object]string),
 		typeDefinitionSites: make(map[*ast.Ident]emittedTypeDefinition),
@@ -76,6 +77,9 @@ func (e *loweringEmitter) expression(
 ) ast.Expr {
 	if plan == nil {
 		return nil
+	}
+	if plan.place != nil {
+		return e.places[plan.place.id]
 	}
 	if plan.materialized != 0 {
 		return e.valueName(plan.materialized, "operand")
@@ -151,7 +155,9 @@ func (e *loweringEmitter) expression(
 	return plan.source
 }
 
-func (e *loweringEmitter) applyExactComprehension(plan *plannedExpression) {
+func (e *loweringEmitter) applyExactComprehension(
+	plan *plannedExpression,
+) {
 	if plan.exact == nil {
 		return
 	}
@@ -159,6 +165,9 @@ func (e *loweringEmitter) applyExactComprehension(plan *plannedExpression) {
 	plan.exact.makeCall.Args[1] = call(
 		e.unit.generatedUniverse("len", plan.exact.position), source,
 	)
+	if plan.exact.identity {
+		return
+	}
 	index, ok := plan.exact.outer.Key.(*ast.Ident)
 	if !ok || index.Name == "_" {
 		index = e.freshName("index")
@@ -179,7 +188,7 @@ func (e *loweringEmitter) operations(plan *plannedBlock, output *ast.BlockStmt) 
 func (e *loweringEmitter) emit() {
 	body := &ast.BlockStmt{Lbrace: e.plan.function.body.Lbrace, Rbrace: e.plan.function.body.Rbrace}
 	e.operations(e.plan.root, body)
-	e.plan.function.body.List = append(e.hoisted, body.List...)
+	e.plan.function.body.List = body.List
 }
 
 func (e *loweringEmitter) operation(
@@ -279,6 +288,14 @@ func (e *loweringEmitter) operation(
 		output.List = append(output.List, &ast.IfStmt{Cond: condition, Body: body})
 	case planReturn:
 		output.List = append(output.List, e.errorReturn(operation, output))
+	case planCopy:
+		output.List = append(output.List, &ast.ExprStmt{X: call(
+			e.unit.generatedUniverse("copy", operation.source.Pos()),
+			operation.copyTarget, e.valueName(operation.inputs[0], "source"),
+		)})
+	case planPreparePlace:
+		place := operation.places[0]
+		e.places[place.id] = e.preparePlace(place, output)
 	}
 }
 
@@ -294,9 +311,6 @@ func (e *loweringEmitter) labeledStatement(
 	output *ast.BlockStmt,
 ) {
 	node := operation.source.(*ast.LabeledStmt)
-	if e.labeledDeclaration(operation, node, output) {
-		return
-	}
 	if operation.body != nil && len(operation.body.operations) == 1 {
 		child := operation.body.operations[0]
 		if child.source == node.Stmt && !operationHasPlannedWork(child) {
@@ -319,6 +333,12 @@ func (e *loweringEmitter) labeledStatement(
 	body := &ast.BlockStmt{}
 	e.operations(operation.body, body)
 	if len(body.List) == 0 {
+		return
+	}
+	if operation.controlTarget == 0 && operation.labelHasGoto {
+		node.Stmt = &ast.EmptyStmt{Implicit: true}
+		output.List = append(output.List, node)
+		output.List = append(output.List, body.List...)
 		return
 	}
 	if operation.controlTarget == 0 || separateEntry {
@@ -385,62 +405,6 @@ func (e *loweringEmitter) controlNeedsWrapper(operation *plannedOperation) bool 
 		return operationHasPlannedWork(control)
 	}
 	return false
-}
-
-func (e *loweringEmitter) labeledDeclaration(
-	operation *plannedOperation,
-	node *ast.LabeledStmt,
-	output *ast.BlockStmt,
-) bool {
-	if operation.body == nil || len(operation.body.operations) != 1 {
-		return false
-	}
-	planned := operation.body.operations[0]
-	assignment, ok := planned.source.(*ast.AssignStmt)
-	if !ok || assignment.Tok != token.DEFINE || planned.binding == nil ||
-		len(assignment.Lhs)+1 != len(planned.binding.outputs) {
-		return false
-	}
-	block := &ast.BlockStmt{}
-	left := make([]ast.Expr, 0, len(planned.binding.outputs))
-	slots := make([]ast.Expr, 0, len(assignment.Lhs))
-	for index, target := range assignment.Lhs {
-		identifier, ok := target.(*ast.Ident)
-		if !ok {
-			return false
-		}
-		value := e.plannedValue(planned.binding.outputs[index])
-		zero, ok := e.zeroExpression(value.typ, nil, target.Pos())
-		if !ok {
-			return false
-		}
-		slot := e.freshName(identifier.Name)
-		e.hoisted = append(e.hoisted, &ast.AssignStmt{
-			Lhs: []ast.Expr{slot}, Tok: token.DEFINE, Rhs: []ast.Expr{zero},
-		})
-		e.values[value.id] = slot
-		left = append(left, ast.NewIdent(slot.Name))
-		slots = append(slots, ast.NewIdent(slot.Name))
-	}
-	errorID := planned.binding.outputs[len(planned.binding.outputs)-1]
-	errorName := e.valueName(errorID, "err")
-	errorType := e.unit.generatedUniverse("error", node.Colon)
-	e.hoisted = append(e.hoisted, &ast.DeclStmt{Decl: &ast.GenDecl{
-		Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{
-			Names: []*ast.Ident{errorName}, Type: errorType,
-		}},
-	}})
-	left = append(left, ast.NewIdent(errorName.Name))
-	call := e.expression(planned.binding.expressions[0], block)
-	block.List = append(block.List, &ast.AssignStmt{
-		Lhs: left, Tok: token.ASSIGN, Rhs: []ast.Expr{call},
-	})
-	e.operations(planned.after, block)
-	node.Stmt = block
-	output.List = append(output.List, node, &ast.AssignStmt{
-		Lhs: assignment.Lhs, Tok: token.DEFINE, Rhs: slots,
-	})
-	return true
 }
 
 func (e *loweringEmitter) plannedValue(id valueID) plannedValue {
@@ -967,6 +931,9 @@ func (e *loweringEmitter) emitTypedBind(
 	output *ast.BlockStmt,
 ) ast.Expr {
 	expression := e.expression(plan, output)
+	if plan != nil && plan.retainContext && !plannedExpressionHasWork(plan) {
+		return expression
+	}
 	if plan != nil && plan.typ != nil {
 		if basic, ok := types.Unalias(plan.typ).(*types.Basic); ok &&
 			basic.Info()&types.IsUntyped != 0 && !plannedExpressionHasWork(plan) {

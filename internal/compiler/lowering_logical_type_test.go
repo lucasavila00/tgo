@@ -1,45 +1,14 @@
 package compiler
 
-import (
-	"context"
-	"go/importer"
-	"go/token"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestLoweringPreservesNamedLogicalType(t *testing.T) {
-	compiled, problems := Compile(PackageInput{
-		Path: "logicaltype",
-		Sources: []File{
-			{Name: "logical_type.tgo", Data: []byte(loweringLogicalTypeSource)},
-			{Name: "logical_type_test.tgo", Data: []byte(loweringLogicalTypeTestSource)},
-		},
-		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	runLoweringRuntimeTest(t, loweringRuntimeFixture{
+		path: "logicaltype", sourceName: "logical_type.tgo",
+		source: loweringLogicalTypeSource, testName: "logical_type_test.tgo",
+		testSource:  loweringLogicalTypeTestSource,
+		testPattern: "TestGeneratedNamedLogicalType",
 	})
-	if len(problems) != 0 {
-		t.Fatalf("compile TGo fixture: %v", problems[0])
-	}
-	directory := t.TempDir()
-	for name, data := range map[string][]byte{
-		"go.mod":               []byte("module logicaltype\n\ngo 1.27.0\n"),
-		"logical_type.go":      compiled.Outputs["logical_type.tgo"],
-		"logical_type_test.go": compiled.Outputs["logical_type_test.tgo"],
-	} {
-		if err := os.WriteFile(filepath.Join(directory, name), data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-run", "TestGeneratedNamedLogicalType", "-count=1", ".")
-	command.Dir = directory
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("run generated Go: %v\n%s", err, output)
-	}
 }
 
 const loweringLogicalTypeSource = `package logicaltype

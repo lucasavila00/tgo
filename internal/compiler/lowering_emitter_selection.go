@@ -11,13 +11,7 @@ func (e *loweringEmitter) switchStatement(
 	output *ast.BlockStmt,
 ) {
 	node := operation.source.(*ast.SwitchStmt)
-	lowerCases := false
-	for _, expression := range operation.expressions {
-		if plannedExpressionHasWork(expression) {
-			lowerCases = true
-			break
-		}
-	}
+	lowerCases := plannedSwitchCasesHaveWork(operation)
 	target := output
 	if operation.init != nil && !lowerCases && !blockHasPlannedWork(operation.init) &&
 		len(operation.init.operations) == 1 {
@@ -86,6 +80,15 @@ func (e *loweringEmitter) switchStatement(
 	node.Tag = ast.NewIdent(selected.Name)
 	e.emitSwitchBodies(operation, node)
 	e.appendControl(target, operation.target, node)
+}
+
+func plannedSwitchCasesHaveWork(operation *plannedOperation) bool {
+	for _, expression := range operation.expressions {
+		if plannedExpressionHasWork(expression) {
+			return true
+		}
+	}
+	return false
 }
 
 func switchNegativeOne() ast.Expr {

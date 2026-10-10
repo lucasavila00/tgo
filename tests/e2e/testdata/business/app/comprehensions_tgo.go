@@ -19,11 +19,11 @@ type comprehensionByID map[string]comprehensionAccount
 var errComprehension = errors.New("comprehension failure")
 
 func ComprehensionNames(accounts []comprehensionAccount) comprehensionNames {
-	source := accounts
-	result := make(comprehensionNames, len(source))
-	for index, account := range source {
+
+	result := make(comprehensionNames, 0)
+	for _, account := range accounts {
 		if account.Active {
-			result[index] = account.ID
+			result = append(result, account.ID)
 		}
 	}
 	return result
@@ -31,11 +31,11 @@ func ComprehensionNames(accounts []comprehensionAccount) comprehensionNames {
 }
 
 func ComprehensionPairs(accounts []comprehensionAccount) [][2]int {
-	source := accounts
-	result := make([][2]int, len(source))
-	for index, account := range source {
+
+	result := make([][2]int, 0)
+	for _, account := range accounts {
 		for _, sale := range account.Sales {
-			result[index] = [2]int{len(account.ID), sale}
+			result = append(result, [2]int{len(account.ID), sale})
 		}
 	}
 	return result
@@ -55,9 +55,7 @@ func ComprehensionByID(accounts []comprehensionAccount) comprehensionByID {
 func ComprehensionEmpty() []string {
 	source := []string{}
 	result := make([]string, len(source))
-	for index, value := range source {
-		result[index] = value
-	}
+	copy(result, source)
 	return result
 
 }
@@ -65,9 +63,7 @@ func ComprehensionEmpty() []string {
 func ComprehensionCopy(values []int) []int {
 	source := values
 	result := make([]int, len(source))
-	for index, value := range source {
-		result[index] = value
-	}
+	copy(result, source)
 	return result
 
 }
@@ -129,25 +125,21 @@ func ComprehensionSourceError(events *[]string, fail bool) ([]string, error) {
 	}
 	source := []string{result_1}
 	result := make([]string, len(source))
-	{
-		for index, value := range source {
-			result[index] = value
-		}
-	}
+	copy(result, source)
 	return result, nil
 }
 
 func ComprehensionFilterError(events *[]string, fail bool) ([]string, error) {
-	source := []string{"value"}
-	result := make([]string, len(source))
-	for index, value := range source {
+
+	result := make([]string, 0)
+	for _, value := range []string{"value"} {
 		result_1, err := comprehensionLoad(events, "filter", fail)
 		if err != nil {
 			return nil, fmt.Errorf("comprehensionLoad: %w", err)
 		}
 
 		if result_1 != "" {
-			result[index] = value
+			result = append(result, value)
 		}
 	}
 	return result, nil

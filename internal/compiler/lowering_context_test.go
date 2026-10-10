@@ -1,49 +1,14 @@
 package compiler
 
-import (
-	"context"
-	"go/importer"
-	"go/token"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestLoweringPreservesCrossContextRuntimeSemantics(t *testing.T) {
 	t.Parallel()
-	compiled, problems := Compile(PackageInput{
-		Path: "contexttest",
-		Sources: []File{
-			{Name: "context.tgo", Data: []byte(loweringContextSource)},
-			{Name: "context_test.tgo", Data: []byte(loweringContextTestSource)},
-		},
-		FileSet:  token.NewFileSet(),
-		Importer: importer.Default(),
+	runLoweringRuntimeTest(t, loweringRuntimeFixture{
+		path: "contexttest", sourceName: "context.tgo", source: loweringContextSource,
+		testName: "context_test.tgo", testSource: loweringContextTestSource,
+		testPattern: "TestGeneratedLoweringContexts",
 	})
-	if len(problems) != 0 {
-		t.Fatalf("compile TGo fixture: %v", problems[0])
-	}
-
-	directory := t.TempDir()
-	files := map[string][]byte{
-		"go.mod":          []byte("module contexttest\n\ngo 1.27.0\n"),
-		"context.go":      compiled.Outputs["context.tgo"],
-		"context_test.go": compiled.Outputs["context_test.tgo"],
-	}
-	for name, data := range files {
-		if err := os.WriteFile(filepath.Join(directory, name), data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-run", "TestGeneratedLoweringContexts", "-count=1", ".")
-	command.Dir = directory
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("run generated Go: %v\n%s", err, output)
-	}
 }
 
 const loweringContextSource = `package contexttest
@@ -110,7 +75,8 @@ func placeIndex(events *[]string) int {
 }
 
 func storeComprehension(events *[]string, target *[1]int) error {
-	place(events, target)[placeIndex(events)] += len(numbers{for _, value := range (values(events, "source", false)!!).kept(events) {
+	place(events, target)[placeIndex(events)] += len(numbers{for _, value := range (
+		values(events, "source", false)!!).kept(events) {
 		item(events, value)
 	}})
 	return nil
@@ -147,7 +113,8 @@ func selectComprehension(events *[]string) (numbers, error) {
 	var receive chan numbers
 outer:
 	select {
-	case channel(events, "send-channel", send)!! <- numbers{for _, value := range (values(events, "send-source", false)!!).kept(events) {
+	case channel(events, "send-channel", send)!! <- numbers{for _, value := range (
+		values(events, "send-source", false)!!).kept(events) {
 		item(events, value)
 	}}:
 		record(events, "send-body")
@@ -180,7 +147,8 @@ func TestGeneratedLoweringContexts(t *testing.T) {
 	}
 	events = nil
 	result, err = switchComprehension(&events, false, false)
-	if result != "comprehension" || err != nil || strings.Join(events, ",") != "source,method,item,item" {
+	if result != "comprehension" || err != nil ||
+		strings.Join(events, ",") != "source,method,item,item" {
 		t.Fatalf("switch result=%q error=%v events=%v", result, err, events)
 	}
 	events = nil
@@ -221,7 +189,8 @@ func TestGeneratedLoweringContexts(t *testing.T) {
 	events = nil
 	selected, err := selectComprehension(&events)
 	if err != nil || len(selected) != 2 || selected[0] != 1 || selected[1] != 2 ||
-		strings.Join(events, ",") != "send-channel,send-source,method,item,item,receive-channel,send-body,body-source,method,item,item,done" {
+		strings.Join(events, ",") != "send-channel,send-source,method,item,item,"+
+			"receive-channel,send-body,body-source,method,item,item,done" {
 		t.Fatalf("select result=%v error=%v events=%v", selected, err, events)
 	}
 }

@@ -1,45 +1,13 @@
 package compiler
 
-import (
-	"context"
-	"go/importer"
-	"go/token"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestForInitializerRuntimeOrderAndIdentity(t *testing.T) {
-	compiled, problems := Compile(PackageInput{
-		Path: "loopinit",
-		Sources: []File{
-			{Name: "loop.tgo", Data: []byte(loopInitializerSource)},
-			{Name: "loop_test.tgo", Data: []byte(loopInitializerTestSource)},
-		},
-		FileSet: token.NewFileSet(), Importer: importer.Default(),
+	runLoweringRuntimeTest(t, loweringRuntimeFixture{
+		path: "loopinit", sourceName: "loop.tgo", source: loopInitializerSource,
+		testName: "loop_test.tgo", testSource: loopInitializerTestSource,
+		testPattern: "TestGeneratedForInitializer",
 	})
-	if len(problems) != 0 {
-		t.Fatalf("compile TGo fixture: %v", problems[0])
-	}
-	directory := t.TempDir()
-	for name, data := range map[string][]byte{
-		"go.mod":       []byte("module loopinit\n\ngo 1.27.0\n"),
-		"loop.go":      compiled.Outputs["loop.tgo"],
-		"loop_test.go": compiled.Outputs["loop_test.tgo"],
-	} {
-		if err := os.WriteFile(filepath.Join(directory, name), data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-run", "TestGeneratedForInitializer", "-count=1", ".")
-	command.Dir = directory
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("run generated Go: %v\n%s", err, output)
-	}
 }
 
 const loopInitializerSource = `package loopinit
@@ -110,9 +78,12 @@ func TestGeneratedForInitializer(t *testing.T) {
 
 	events = nil
 	closures, addresses, err = loop(&events, true, false)
-	wantEvents := "left,load,right,combine,condition,body,post,condition,body,post,condition,body,post,condition"
-	if err != nil || len(closures) != 3 || len(addresses) != 3 || strings.Join(events, ",") != wantEvents {
-		t.Fatalf("success closures=%d addresses=%d error=%v events=%v", len(closures), len(addresses), err, events)
+	wantEvents := "left,load,right,combine,condition,body,post,condition," +
+		"body,post,condition,body,post,condition"
+	if err != nil || len(closures) != 3 || len(addresses) != 3 ||
+		strings.Join(events, ",") != wantEvents {
+		t.Fatalf("success closures=%d addresses=%d error=%v events=%v",
+			len(closures), len(addresses), err, events)
 	}
 	for index := range 3 {
 		if closures[index]() != index || *addresses[index] != index {
