@@ -52,7 +52,7 @@ fi
 
 if "$systemd_run" --scope --quiet --collect --same-dir \
 	--property="MemoryMax=$memory_max" --property=MemorySwapMax=0 \
-	--property=MemoryOOMGroup=yes \
+	--property=OOMPolicy=kill \
 	--setenv=TGO_LOCAL_VALIDATION_LOCK_HELD=1 \
 	--setenv=TGO_LOCAL_VALIDATION_VERIFY_CGROUP=1 -- "$0" "$@"; then
 	exit 0
