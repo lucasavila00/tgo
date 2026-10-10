@@ -624,7 +624,7 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 		c.collectReturnedGenericEffects(
 			summary, signature, summary.declaration.Type, summaries, declarations,
 		)
-		c.collectGenericValueUses(summary)
+		c.collectGenericValueUses(summary, summaries)
 	}
 	return summaries
 }

@@ -16,6 +16,8 @@ type genericValue struct {
 	typeArguments     []types.Type
 	conditionCall     *syntax.Expression
 	callDepth         int
+	conditions        []GenericEffectCondition
+	maySkip           bool
 }
 
 type genericValueBinding struct {
@@ -631,7 +633,7 @@ func (c *checker) calledDirectly(expression *syntax.Expression) bool {
 func noGenericValue() genericValue {
 	return genericValue{
 		function: nil, fact: nil, receiverArguments: nil, typeArguments: nil,
-		conditionCall: nil, callDepth: 0,
+		conditionCall: nil, callDepth: 0, conditions: nil, maySkip: false,
 	}
 }
 

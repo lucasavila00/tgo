@@ -14,14 +14,21 @@ type returnedGenericValue struct {
 }
 
 type genericValueUse struct {
-	expression *syntax.Expression
-	call       bool
-	maySkip    bool
+	expression    *syntax.Expression
+	conditionCall *syntax.Expression
+	conditions    []GenericEffectCondition
+	call          bool
+	returned      bool
+	maySkip       bool
 }
 
 // collectGenericValueUses records calls and escapes of local function values.
-func (c *checker) collectGenericValueUses(summary *genericEffectSummary) {
+func (c *checker) collectGenericValueUses(
+	summary *genericEffectSummary,
+	summaries map[*types.Func]*genericEffectSummary,
+) {
 	signature, _ := summary.function.Type().(*types.Signature)
+	bindings := c.returnedClosureBindings(summary.body, nil)
 	inspectGenericBlock(summary.body, func(node *syntax.Node) bool {
 		if _, nested := syntax.FunctionLiteralOf(node); nested {
 			return false
@@ -33,7 +40,9 @@ func (c *checker) collectGenericValueUses(summary *genericEffectSummary) {
 				)
 			}
 			if returned := syntax.ReturnStatementOf(statement); returned != nil {
-				c.collectReturnedGenericValueUses(summary, returned, signature)
+				c.collectReturnedGenericValueUses(
+					summary, returned, signature, summaries, bindings,
+				)
 			}
 		}
 		if specification, ok := syntax.SpecificationOf(node); ok {
@@ -53,7 +62,10 @@ func (c *checker) collectGenericValueUses(summary *genericEffectSummary) {
 			return true
 		}
 		if call := syntax.CallExpressionOf(expression); call != nil {
-			c.collectCallGenericValueUses(summary, call)
+			c.collectCallGenericValueUses(summary, expression, call)
+			c.collectContainerCallGenericValueUses(
+				summary, call, summaries, bindings,
+			)
 		}
 		if literal := syntax.CompositeLiteralOf(expression); literal != nil &&
 			c.genericContainerEscapes(expression) {
@@ -63,15 +75,37 @@ func (c *checker) collectGenericValueUses(summary *genericEffectSummary) {
 	})
 }
 
+func (c *checker) collectContainerCallGenericValueUses(
+	summary *genericEffectSummary,
+	call *syntax.CallExpression,
+	summaries map[*types.Func]*genericEffectSummary,
+	bindings map[types.Object]*returnedClosureBinding,
+) {
+	for _, argument := range call.Args {
+		if returnedFunctionType(c.facts.Type(argument)) {
+			continue
+		}
+		values, _, _ := c.genericSummaryValues(
+			summary, argument, summaries, bindings, make(map[types.Object]bool),
+		)
+		if len(values) > 0 {
+			summary.addGenericValueUse(argument, false, true)
+		}
+	}
+}
+
 func (c *checker) collectCallGenericValueUses(
 	summary *genericEffectSummary,
+	expression *syntax.Expression,
 	call *syntax.CallExpression,
 ) {
 	function, _ := c.genericCallObject(call.Callee).(*types.Func)
 	resolution := noReturnedHelperResolution()
 	if function != nil {
 		if declaration := summary.declarations[function.Origin()]; declaration != nil {
-			resolution = c.returnedHelper(function.Origin(), declaration)
+			resolution = c.returnedHelper(
+				function.Origin(), declaration, summary.file,
+			)
 		}
 	}
 	for index, argument := range call.Args {
@@ -82,11 +116,14 @@ func (c *checker) collectCallGenericValueUses(
 			summary.addGenericValueUse(argument, false, true)
 			continue
 		}
-		if index < len(resolution.called) && resolution.called[index] {
-			summary.addGenericValueUse(argument, true, false)
-		}
-		if index < len(resolution.escaped) && resolution.escaped[index] {
-			summary.addGenericValueUse(argument, false, true)
+		for _, use := range resolution.uses {
+			if use.parameter != index || use.returned {
+				continue
+			}
+			summary.addConditionalGenericValueUse(
+				argument, use.call, use.returned, use.maySkip,
+				expression, use.conditions,
+			)
 		}
 	}
 }
@@ -100,6 +137,9 @@ func (c *checker) collectAssignedGenericValueUses(
 		return
 	}
 	for index, source := range right {
+		if name := syntax.IdentifierExpressionOf(unparenthesized(left[index])); name != nil && name.Name == "_" {
+			continue
+		}
 		if returnedFunctionType(c.facts.Type(source)) &&
 			!returnedFunctionType(c.genericTargetType(left[index])) {
 			summary.addGenericValueUse(source, false, true)
@@ -165,6 +205,8 @@ func (c *checker) collectReturnedGenericValueUses(
 	summary *genericEffectSummary,
 	returned *syntax.ReturnStatement,
 	signature *types.Signature,
+	summaries map[*types.Func]*genericEffectSummary,
+	bindings map[types.Object]*returnedClosureBinding,
 ) {
 	if signature == nil || len(returned.Results) == 0 {
 		return
@@ -173,8 +215,18 @@ func (c *checker) collectReturnedGenericValueUses(
 		if index >= signature.Results().Len() {
 			break
 		}
-		if returnedFunctionType(c.facts.Type(result)) &&
-			!returnedFunctionType(signature.Results().At(index).Type()) {
+		resultFunction := returnedFunctionType(c.facts.Type(result))
+		if resultFunction && !returnedFunctionType(signature.Results().At(index).Type()) {
+			summary.addGenericValueUse(result, false, true)
+			continue
+		}
+		if resultFunction {
+			continue
+		}
+		values, _, _ := c.genericSummaryValues(
+			summary, result, summaries, bindings, make(map[types.Object]bool),
+		)
+		if len(values) > 0 {
 			summary.addGenericValueUse(result, false, true)
 		}
 	}
@@ -200,16 +252,48 @@ func (summary *genericEffectSummary) addGenericValueUse(
 	call bool,
 	maySkip bool,
 ) {
+	summary.addConditionalGenericValueUse(
+		expression, call, false, maySkip, nil, nil,
+	)
+}
+
+func (summary *genericEffectSummary) addConditionalGenericValueUse(
+	expression *syntax.Expression,
+	call bool,
+	returned bool,
+	maySkip bool,
+	conditionCall *syntax.Expression,
+	conditions []GenericEffectCondition,
+) {
 	for index := range summary.valueUses {
 		use := &summary.valueUses[index]
-		if use.expression == expression && use.call == call {
+		if use.expression == expression && use.call == call &&
+			use.returned == returned && use.conditionCall == conditionCall &&
+			equalGenericEffectConditions(use.conditions, conditions) {
 			use.maySkip = use.maySkip || maySkip
 			return
 		}
 	}
 	summary.valueUses = append(summary.valueUses, genericValueUse{
-		expression: expression, call: call, maySkip: maySkip,
+		expression: expression, conditionCall: conditionCall,
+		conditions: append([]GenericEffectCondition(nil), conditions...),
+		call:       call, returned: returned, maySkip: maySkip,
 	})
+}
+
+func equalGenericEffectConditions(
+	left []GenericEffectCondition,
+	right []GenericEffectCondition,
+) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *checker) genericSummaryCallValues(
@@ -236,6 +320,30 @@ func (c *checker) genericSummaryValues(
 	seen map[types.Object]bool,
 ) ([]genericValue, bool, bool) {
 	expression = unparenthesized(expression)
+	if literal := syntax.CompositeLiteralOf(expression); literal != nil {
+		var values []genericValue = nil
+		maySkip := false
+		opaque := false
+		for _, element := range literal.Elements {
+			value := element
+			if pair := syntax.KeyValueExpressionOf(element); pair != nil {
+				value = pair.Value
+			}
+			nested, nestedMaySkip, nestedOpaque := c.genericSummaryValues(
+				summary, value, summaries, bindings, seen,
+			)
+			values = append(values, nested...)
+			maySkip = maySkip || nestedMaySkip
+			opaque = opaque || nestedOpaque
+		}
+		return values, maySkip || len(values) > 1, opaque
+	}
+	if index := syntax.IndexExpressionOf(expression); index != nil {
+		values, maySkip, opaque := c.genericSummaryValues(
+			summary, index.Expression, summaries, bindings, seen,
+		)
+		return values, maySkip || len(values) > 1, opaque
+	}
 	if literal := syntax.FunctionLiteralExpressionOf(expression); literal != nil {
 		value, found := c.genericLiteralValue(summary, expression, literal, summaries)
 		if !found {
@@ -247,6 +355,25 @@ func (c *checker) genericSummaryValues(
 		return []genericValue{value}, false, false
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
+		if name := syntax.IdentifierExpressionOf(unparenthesized(call.Callee)); name != nil {
+			if _, builtin := c.facts.Object(name).(*types.Builtin); builtin {
+				return nil, false, false
+			}
+		}
+		function, _ := c.genericCallObject(call.Callee).(*types.Func)
+		if function != nil {
+			declaration := summary.declarations[function.Origin()]
+			if declaration != nil {
+				resolution := c.returnedHelper(
+					function.Origin(), declaration, summary.file,
+				)
+				if resolution.resolved {
+					return c.genericHelperResultValues(
+						summary, expression, call, resolution, summaries, bindings, seen,
+					)
+				}
+			}
+		}
 		values, maySkip, opaque := c.genericSummaryValues(
 			summary, call.Callee, summaries, bindings, seen,
 		)
@@ -264,12 +391,13 @@ func (c *checker) genericSummaryValues(
 	}
 	name := syntax.IdentifierExpressionOf(expression)
 	if name == nil {
-		return nil, false, true
+		return nil, false, false
 	}
 	object := c.facts.Object(name)
 	binding := bindings[object]
 	if binding == nil {
-		return nil, false, true
+		_, variable := object.(*types.Var)
+		return nil, false, variable
 	}
 	if seen[object] {
 		return nil, true, true
@@ -288,6 +416,72 @@ func (c *checker) genericSummaryValues(
 		opaque = opaque || nestedOpaque
 	}
 	return values, maySkip, opaque
+}
+
+func (c *checker) genericHelperResultValues(
+	summary *genericEffectSummary,
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+	resolution returnedHelperResolution,
+	summaries map[*types.Func]*genericEffectSummary,
+	bindings map[types.Object]*returnedClosureBinding,
+	seen map[types.Object]bool,
+) ([]genericValue, bool, bool) {
+	var values []genericValue = nil
+	maySkip := false
+	opaque := false
+	if resolution.parameter >= 0 && resolution.parameter < len(call.Args) {
+		forwarded, forwardedMaySkip, forwardedOpaque := c.genericSummaryValues(
+			summary, call.Args[resolution.parameter], summaries, bindings, seen,
+		)
+		values = append(values, forwarded...)
+		maySkip = maySkip || forwardedMaySkip
+		opaque = opaque || forwardedOpaque
+	}
+	returned, returnedMaySkip, returnedOpaque := c.genericReturnedHelperValues(
+		summary, expression, call, resolution, summaries, bindings, seen,
+	)
+	values = append(values, returned...)
+	return values, maySkip || returnedMaySkip, opaque || returnedOpaque
+}
+
+func (c *checker) genericReturnedHelperValues(
+	summary *genericEffectSummary,
+	expression *syntax.Expression,
+	call *syntax.CallExpression,
+	resolution returnedHelperResolution,
+	summaries map[*types.Func]*genericEffectSummary,
+	bindings map[types.Object]*returnedClosureBinding,
+	seen map[types.Object]bool,
+) ([]genericValue, bool, bool) {
+	var result []genericValue = nil
+	maySkip := false
+	opaque := false
+	for _, use := range resolution.uses {
+		if !use.returned || use.parameter < 0 || use.parameter >= len(call.Args) {
+			continue
+		}
+		useConditions, useConditionMaySkip, possible := c.genericValueUseConditions(
+			summary, genericValueUse{
+				conditionCall: expression, conditions: use.conditions,
+			},
+		)
+		if !possible {
+			continue
+		}
+		nested, nestedMaySkip, nestedOpaque := c.genericSummaryValues(
+			summary, call.Args[use.parameter], summaries, bindings, seen,
+		)
+		for _, value := range nested {
+			value.conditions = append(value.conditions, useConditions...)
+			value.maySkip = value.maySkip || use.maySkip ||
+				useConditionMaySkip || nestedMaySkip || !use.call
+			result = append(result, value)
+		}
+		maySkip = maySkip || use.maySkip || useConditionMaySkip || nestedMaySkip
+		opaque = opaque || nestedOpaque
+	}
+	return result, maySkip, opaque
 }
 
 func (c *checker) genericLiteralValue(
@@ -312,7 +506,7 @@ func (c *checker) genericLiteralValue(
 	c.collectReturnedGenericEffects(
 		nested, signature, literal.Type, summaries, summary.declarations,
 	)
-	c.collectGenericValueUses(nested)
+	c.collectGenericValueUses(nested, summaries)
 	for c.propagateGenericSummary(nested, summaries) {
 	}
 	fact := nested.effects()
@@ -381,6 +575,23 @@ func (c *checker) propagateStoredGenericValue(
 	depthOffset int,
 	maySkip bool,
 ) bool {
+	return c.propagateConditionedStoredGenericValue(
+		summary, expression, value, depthOffset, maySkip, nil,
+	)
+}
+
+func (c *checker) propagateConditionedStoredGenericValue(
+	summary *genericEffectSummary,
+	expression *syntax.Expression,
+	value genericValue,
+	depthOffset int,
+	maySkip bool,
+	conditions []GenericEffectCondition,
+) bool {
+	conditions = append(append([]GenericEffectCondition(nil), conditions...),
+		value.conditions...,
+	)
+	maySkip = maySkip || value.maySkip
 	condition := expression
 	if value.callDepth > 0 && value.conditionCall != nil {
 		condition = value.conditionCall
@@ -394,10 +605,11 @@ func (c *checker) propagateStoredGenericValue(
 		if depthOffset > 0 {
 			depth = effects.depth - value.callDepth + depthOffset
 		}
-		changed = c.propagateGenericEffects(
+		changed = c.propagateGenericEffectsWithConditions(
 			summary, expression, condition, effects.items,
 			value.receiverArguments, value.typeArguments, effects.zero,
 			depth, maySkip,
+			conditions,
 		) || changed
 	}
 	return changed

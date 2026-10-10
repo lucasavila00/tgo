@@ -140,18 +140,30 @@ func (c *checker) propagateGenericSummary(
 		}
 	}
 	for _, use := range summary.valueUses {
+		useConditions, useMaySkip, possible := c.genericValueUseConditions(
+			summary, use,
+		)
+		if !possible {
+			continue
+		}
 		values, maySkip, opaque := c.genericSummaryValues(
 			summary, use.expression, summaries, bindings,
 			make(map[types.Object]bool),
 		)
 		for _, value := range values {
-			if use.call {
-				changed = c.propagateGenericValueEffects(
-					summary, use.expression, value, use.maySkip || maySkip,
+			if use.returned {
+				changed = c.propagateConditionedStoredGenericValue(
+					summary, use.expression, value, 1,
+					use.maySkip || useMaySkip || maySkip, useConditions,
+				) || changed
+			} else if use.call {
+				changed = c.propagateConditionedGenericValueEffects(
+					summary, use.expression, value,
+					use.maySkip || useMaySkip || maySkip, useConditions,
 				) || changed
 			} else {
-				changed = c.propagateEscapedGenericValue(
-					summary, use.expression, value, true,
+				changed = c.propagateConditionedStoredGenericValue(
+					summary, use.expression, value, 0, true, useConditions,
 				) || changed
 			}
 		}
@@ -164,6 +176,35 @@ func (c *checker) propagateGenericSummary(
 		}
 	}
 	return changed
+}
+
+func (c *checker) genericValueUseConditions(
+	summary *genericEffectSummary,
+	use genericValueUse,
+) ([]GenericEffectCondition, bool, bool) {
+	if len(use.conditions) == 0 {
+		return nil, false, true
+	}
+	if use.conditionCall == nil {
+		return nil, true, true
+	}
+	var conditions []GenericEffectCondition = nil
+	maySkip := false
+	for _, condition := range use.conditions {
+		mapped, outcome := c.mapEffectCondition(
+			summary, use.conditionCall, condition, nil,
+		)
+		if outcome == neverEffectOutcome() {
+			return nil, false, false
+		}
+		if outcome == conditionalEffectOutcome() && mapped != nil {
+			conditions = append(conditions, *mapped)
+		}
+		if outcome == unknownEffectOutcome() {
+			maySkip = true
+		}
+	}
+	return conditions, maySkip, true
 }
 
 func (c *checker) propagateGenericSummaryCalls(
@@ -210,6 +251,22 @@ func (c *checker) propagateGenericValueEffects(
 	value genericValue,
 	maySkip bool,
 ) bool {
+	return c.propagateConditionedGenericValueEffects(
+		summary, expression, value, maySkip, nil,
+	)
+}
+
+func (c *checker) propagateConditionedGenericValueEffects(
+	summary *genericEffectSummary,
+	expression *syntax.Expression,
+	value genericValue,
+	maySkip bool,
+	conditions []GenericEffectCondition,
+) bool {
+	conditions = append(append([]GenericEffectCondition(nil), conditions...),
+		value.conditions...,
+	)
+	maySkip = maySkip || value.maySkip
 	conditionCall := expression
 	zeroEffects := genericFactEffectsAtDepth(value.fact, value.callDepth, true)
 	accessEffects := genericFactEffectsAtDepth(value.fact, value.callDepth, false)
@@ -219,13 +276,15 @@ func (c *checker) propagateGenericValueEffects(
 		}
 		conditionCall = value.conditionCall
 	}
-	changed := c.propagateGenericEffects(
+	changed := c.propagateGenericEffectsWithConditions(
 		summary, expression, conditionCall, zeroEffects,
 		value.receiverArguments, value.typeArguments, true, 0, maySkip,
+		conditions,
 	)
-	return c.propagateGenericEffects(
+	return c.propagateGenericEffectsWithConditions(
 		summary, expression, conditionCall, accessEffects,
 		value.receiverArguments, value.typeArguments, false, 0, maySkip,
+		conditions,
 	) || changed
 }
 
@@ -250,6 +309,25 @@ func (c *checker) propagateGenericEffects(
 	returnedDepth int,
 	additionalMaySkip bool,
 ) bool {
+	return c.propagateGenericEffectsWithConditions(
+		summary, pathExpression, conditionExpression, effects,
+		receiverArguments, typeArguments, zero, returnedDepth,
+		additionalMaySkip, nil,
+	)
+}
+
+func (c *checker) propagateGenericEffectsWithConditions(
+	summary *genericEffectSummary,
+	pathExpression *syntax.Expression,
+	conditionExpression *syntax.Expression,
+	effects []GenericEffect,
+	receiverArguments []types.Type,
+	typeArguments []types.Type,
+	zero bool,
+	returnedDepth int,
+	additionalMaySkip bool,
+	additionalConditions []GenericEffectCondition,
+) bool {
 	changed := false
 	pathConditions, pathMaySkip, reachable := c.genericEffectPath(
 		summary, syntaxNode(pathExpression),
@@ -265,6 +343,7 @@ func (c *checker) propagateGenericEffects(
 		if !possible {
 			continue
 		}
+		mapped.Conditions = append(mapped.Conditions, additionalConditions...)
 		mapped.MaySkip = mapped.MaySkip || additionalMaySkip
 		for parameter := range parameters {
 			if returnedDepth > 0 {

@@ -193,6 +193,15 @@ func FunctionValues(event model.Event) {
 	genericzero.ParenthesizedAssignedNested[model.Event]()()
 	genericzero.ParenthesizedRangedAssignedNested[model.Event]()()
 	genericzero.CalledForwardedNested[model.Event]()()
+	genericzero.LocalLiteralContainer[model.Event]()
+	genericzero.LocalAssignedContainer[model.Event]()
+	_ = genericzero.ReturnedContainer[model.Event]()
+	_ = genericzero.ReturnedAnyContainer[model.Event]()
+	genericzero.EscapedAnyContainer[model.Event]()
+	genericzero.ForwardedLocalCall[model.Event]()
+	genericzero.ForwardedUnknownEscape[model.Event]()
+	genericzero.ConditionalForwardCall[model.Event](true)
+	genericzero.DirectInvokedForwardCall[model.Event]()
 }
 
 func ReturnedAlternatives(first bool) {

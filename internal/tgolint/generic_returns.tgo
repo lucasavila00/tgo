@@ -9,10 +9,16 @@ import (
 
 type returnedHelperResolution struct {
 	parameter int
-	called    []bool
-	escaped   []bool
-	deferred  []bool
+	uses      []returnedHelperUse
 	resolved  bool
+}
+
+type returnedHelperUse struct {
+	parameter  int
+	call       bool
+	returned   bool
+	conditions []GenericEffectCondition
+	maySkip    bool
 }
 
 // returnedClosureBindings gets local function-value sources in one body.
@@ -89,7 +95,13 @@ func (c %checker) addReturnedClosureBindings(
 ) {
 	for index, target := range left {
 		name := syntax.IdentifierExpressionOf(unparenthesized(target))
-		if name == nil || name.Name == "_" {
+		if name == nil {
+			if len(left) == len(right) && index < len(right) {
+				c.addReturnedContainerSource(bindings, target, right[index])
+			}
+			continue
+		}
+		if name.Name == "_" {
 			continue
 		}
 		object := c.facts.Object(name)
@@ -114,6 +126,35 @@ func (c %checker) addReturnedClosureBindings(
 		}
 		binding.sources = append(binding.sources, right[index])
 	}
+}
+
+func (c %checker) addReturnedContainerSource(
+	bindings map[types.Object]%returnedClosureBinding,
+	target %syntax.Expression,
+	source %syntax.Expression,
+) {
+	index := syntax.IndexExpressionOf(unparenthesized(target))
+	if index == nil {
+		return
+	}
+	name := syntax.IdentifierExpressionOf(unparenthesized(index.Expression))
+	if name == nil {
+		return
+	}
+	object := c.facts.Object(name)
+	if object == nil {
+		return
+	}
+	binding := bindings[object]
+	if binding == nil {
+		binding = &returnedClosureBinding{
+			sources: nil, unstable: true, opaque: false,
+		}
+		bindings[object] = binding
+	} else {
+		binding.unstable = true
+	}
+	binding.sources = append(binding.sources, source)
 }
 
 func (c %checker) markAddressedReturnedClosureBindings(
@@ -188,12 +229,12 @@ func (c %checker) collectReturnedExpression(
 	if allowHelper && function != nil {
 		declaration := declarations[function.Origin()]
 		if declaration != nil {
-			resolution := c.returnedHelper(function.Origin(), declaration)
+			resolution := c.returnedHelper(function.Origin(), declaration, summary.file)
 			generic := genericSignature(function)
 			if !generic ||
 				resolution.resolved && resolution.parameter >= 0 {
 				return c.collectReturnedHelperCall(
-					summary, call, resolution, bindings, summaries,
+					summary, value, call, resolution, bindings, summaries,
 					declarations, maySkip, seen,
 				)
 			}
@@ -244,6 +285,7 @@ func (c %checker) collectReturnedArguments(
 
 func (c %checker) collectReturnedHelperCall(
 	summary %genericEffectSummary,
+	expression %syntax.Expression,
 	call %syntax.CallExpression,
 	resolution returnedHelperResolution,
 	bindings map[types.Object]%returnedClosureBinding,
@@ -264,24 +306,15 @@ func (c %checker) collectReturnedHelperCall(
 			declarations, false, maySkip, seen,
 		)
 	}
-	for index, called := range resolution.called {
-		if called && index < len(call.Args) {
-			summary.addGenericValueUse(call.Args[index], true, false)
-		}
-	}
-	for index, escaped := range resolution.escaped {
-		if escaped && index < len(call.Args) {
-			summary.addGenericValueUse(call.Args[index], false, true)
-		}
-	}
-	for index, deferred := range resolution.deferred {
-		if !deferred || index >= len(call.Args) {
+	for _, use := range resolution.uses {
+		if use.parameter < 0 || use.parameter >= len(call.Args) {
 			continue
 		}
-		found = c.collectReturnedExpression(
-			summary, call.Args[index], bindings, summaries, declarations,
-			false, maySkip, seen,
-		) || found
+		summary.addConditionalGenericValueUse(
+			call.Args[use.parameter], use.call, use.returned,
+			maySkip || use.maySkip, expression, use.conditions,
+		)
+		found = true
 	}
 	return found
 }
@@ -339,6 +372,7 @@ func (c %checker) addUnknownReturnedEffects(summary %genericEffectSummary) bool 
 func (c %checker) returnedHelper(
 	function *types.Func,
 	declaration %syntax.FunctionDeclaration,
+	file %syntax.File,
 ) returnedHelperResolution {
 	signature, ok := function.Type().(*types.Signature)
 	body := declaration.Body
@@ -390,19 +424,28 @@ func (c %checker) returnedHelper(
 		return noReturnedHelperResolution()
 	}
 	c.allowDiscardedHelperParameters(body, signature, allowed)
-	called, escaped, deferred := c.usedHelperParameters(body, signature, allowed)
+	rootStatement := syntax.Statement.Block{Value: body}
+	root := syntax.StatementNode(&rootStatement)
+	helperSummary := &genericEffectSummary{
+		function: function, file: file, declaration: declaration,
+		parameters: nil, zeroEffects: nil, accessEffects: nil,
+		returnedZeroEffects: nil, returnedAccessEffects: nil,
+		returnedZeroEffectsAtDepth: nil, returnedAccessEffectsAtDepth: nil,
+		calls: nil, returnedValues: nil, returnedBodies: nil, valueUses: nil,
+		declarations: nil, reachable: c.reachableNodes(body), root: &root,
+		body: body,
+	}
+	uses := c.usedHelperParameters(helperSummary, signature, allowed)
 	return returnedHelperResolution{
 		parameter: parameter,
-		called:    called,
-		escaped:   escaped,
-		deferred:  deferred,
+		uses:      uses,
 		resolved:  true,
 	}
 }
 
 func noReturnedHelperResolution() returnedHelperResolution {
 	return returnedHelperResolution{
-		parameter: -1, called: nil, escaped: nil, deferred: nil, resolved: false,
+		parameter: -1, uses: nil, resolved: false,
 	}
 }
 
@@ -444,14 +487,12 @@ func (c %checker) allowDiscardedHelperParameters(
 }
 
 func (c %checker) usedHelperParameters(
-	body %syntax.BlockStatement,
+	summary %genericEffectSummary,
 	signature *types.Signature,
 	allowed map[token.Pos]bool,
-) ([]bool, []bool, []bool) {
-	called := make([]bool, signature.Params().Len())
-	escaped := make([]bool, signature.Params().Len())
-	deferred := make([]bool, signature.Params().Len())
-	inspectGenericBlock(body, func(node %syntax.Node) bool {
+) []returnedHelperUse {
+	var uses []returnedHelperUse = nil
+	inspectGenericBlock(summary.body, func(node %syntax.Node) bool {
 		expression, ok := syntax.ExpressionOf(node)
 		if !ok {
 			return true
@@ -461,30 +502,128 @@ func (c %checker) usedHelperParameters(
 			return true
 		}
 		index := helperParameterIndex(signature, c.facts.Object(name))
-		if index >= 0 {
-			if c.insideFunctionLiteral(expression) {
-				deferred[index] = true
-			} else if c.directCallOf(expression) != nil {
-				called[index] = true
-			} else {
-				escaped[index] = true
-			}
+		if index < 0 {
+			return true
+		}
+		use, found := c.helperParameterUse(summary, expression, index)
+		if found {
+			uses = append(uses, use)
 		}
 		return true
 	})
-	return called, escaped, deferred
+	return uses
 }
 
-func (c %checker) insideFunctionLiteral(expression %syntax.Expression) bool {
+func (c %checker) helperParameterUse(
+	summary %genericEffectSummary,
+	expression %syntax.Expression,
+	parameter int,
+) (returnedHelperUse, bool) {
+	call := c.directCallOf(expression) != nil
+	returned := false
+	maySkip := false
+	var conditions []GenericEffectCondition = nil
+	pathNode := syntaxNode(expression)
 	for current := c.parents[syntax.ExpressionNode(expression)]; current != nil; current = c.parents[*current] {
-		if _, ok := syntax.FunctionLiteralOf(current); ok {
-			return true
+		literal, ok := syntax.FunctionLiteralOf(current)
+		if !ok {
+			continue
 		}
-		if _, ok := syntax.FunctionDeclarationOf(current); ok {
+		literalExpression, expressionOK := syntax.ExpressionOf(current)
+		if !expressionOK || literalExpression == nil {
+			return returnedHelperUse{}, false
+		}
+		innerConditions, innerMaySkip, reachable := c.helperLiteralUsePath(
+			summary, pathNode, literalExpression, literal,
+		)
+		if !reachable {
+			return returnedHelperUse{}, false
+		}
+		conditions = append(conditions, innerConditions...)
+		maySkip = maySkip || innerMaySkip
+		if c.directCallOf(literalExpression) != nil {
+			pathNode = syntaxNode(literalExpression)
+			continue
+		}
+		if c.discardedValue(literalExpression) {
+			return returnedHelperUse{}, false
+		}
+		returned = c.returnedExpression(literalExpression)
+		outerConditions, outerMaySkip, outerReachable := c.genericEffectPath(
+			summary, syntaxNode(literalExpression),
+		)
+		if outerReachable {
+			conditions = append(conditions, outerConditions...)
+			maySkip = maySkip || outerMaySkip
+		} else {
+			maySkip = true
+		}
+		return returnedHelperUse{
+			parameter: parameter, call: call, returned: returned,
+			conditions: conditions, maySkip: maySkip || !returned,
+		}, true
+	}
+	outerConditions, pathMaySkip, reachable := c.genericEffectPath(summary, pathNode)
+	if !reachable {
+		return returnedHelperUse{}, false
+	}
+	return returnedHelperUse{
+		parameter: parameter, call: call, returned: returned,
+		conditions: append(conditions, outerConditions...),
+		maySkip:    maySkip || pathMaySkip,
+	}, true
+}
+
+func (c %checker) helperLiteralUsePath(
+	summary %genericEffectSummary,
+	node %syntax.Node,
+	expression %syntax.Expression,
+	literal %syntax.FunctionLiteral,
+) ([]GenericEffectCondition, bool, bool) {
+	root := syntax.ExpressionNode(expression)
+	nested := &genericEffectSummary{
+		function: summary.function, file: summary.file,
+		declaration: summary.declaration, parameters: nil,
+		zeroEffects: nil, accessEffects: nil,
+		returnedZeroEffects: nil, returnedAccessEffects: nil,
+		returnedZeroEffectsAtDepth: nil, returnedAccessEffectsAtDepth: nil,
+		calls: nil, returnedValues: nil, returnedBodies: nil, valueUses: nil,
+		declarations: nil, reachable: c.reachableNodes(literal.Body), root: &root,
+		body: literal.Body,
+	}
+	return c.genericEffectPath(nested, node)
+}
+
+func (c %checker) returnedExpression(expression %syntax.Expression) bool {
+	current := expression
+	for {
+		parent := c.parents[syntax.ExpressionNode(current)]
+		if parent == nil {
 			return false
 		}
+		outer, ok := syntax.ExpressionOf(parent)
+		if !ok || outer == nil {
+			statement, statementOK := syntax.StatementOf(parent)
+			if !statementOK || statement == nil {
+				return false
+			}
+			returned := syntax.ReturnStatementOf(statement)
+			if returned == nil {
+				return false
+			}
+			for _, result := range returned.Results {
+				if result == current {
+					return true
+				}
+			}
+			return false
+		}
+		parentheses := syntax.ParenthesizedExpressionOf(outer)
+		if parentheses == nil || parentheses.Expression != current {
+			return false
+		}
+		current = outer
 	}
-	return false
 }
 
 func genericSignature(function *types.Func) bool {
