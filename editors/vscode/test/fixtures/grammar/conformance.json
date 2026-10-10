@@ -418,6 +418,24 @@
         "token": "%",
         "has": "storage.modifier.non-nil.tgo",
         "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "]%LineRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "b`)]%RawRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "*/]%BlockRecord{}",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
       }
     ],
     "negative": [
@@ -468,6 +486,36 @@
         "line": "_ = []int{} [0] % Thing",
         "token": "%",
         "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = α [0] % Thing",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = π[0] % Thing",
+        "token": "%",
+        "has": "keyword.operator.arithmetic.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [2 // ]%LineFake",
+        "token": "%",
+        "has": "comment.line.double-slash.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [len(`a]%RawFake",
+        "token": "%",
+        "has": "string.quoted.raw.go",
+        "not": "storage.modifier.non-nil.tgo"
+      },
+      {
+        "line": "_ = [2 /* ]%BlockFake",
+        "token": "%",
+        "has": "comment.block.go",
         "not": "storage.modifier.non-nil.tgo"
       }
     ]

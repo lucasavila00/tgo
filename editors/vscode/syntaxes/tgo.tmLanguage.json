@@ -56,19 +56,29 @@
           }
         },
         {
-          "match": "(?<![A-Za-z0-9_.)\\]}'\"\\x60][ \\t]*)(?<array>\\[(?:[^\\[\\]\\r\\n\"'/\\x60]|/(?!\\*)|/\\*(?:[^*\\r\\n]|\\*(?!/))*\\*/|\"(?:\\\\.|[^\"\\\\\\r\\n])*\"|'(?:\\\\.|[^'\\\\\\r\\n])*'|\\x60[^\\x60\\r\\n]*\\x60|\\g<array>)*\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
-          "captures": {
+          "begin": "(?<![\\p{L}\\p{Nd}_.)\\]}'\"\\x60][ \\t]*)(\\[)",
+          "beginCaptures": {
             "1": {
-              "patterns": [
-                {
-                  "include": "source.go"
-                }
-              ]
+              "name": "punctuation.definition.begin.bracket.square.go"
+            }
+          },
+          "end": "(\\])([ \\t]*)(?:(%+)(?=[*\\p{L}_(\\[]))?",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.end.bracket.square.go"
             },
             "3": {
               "name": "storage.modifier.non-nil.tgo"
             }
-          }
+          },
+          "patterns": [
+            {
+              "include": "#balanced-square-brackets"
+            },
+            {
+              "include": "source.go"
+            }
+          ]
         },
         {
           "match": "(\\bmap[ \\t]*\\[[^\\]\\r\\n]+\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
@@ -395,6 +405,28 @@
     }
   },
   "repository": {
+    "balanced-square-brackets": {
+      "begin": "\\[",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.begin.bracket.square.go"
+        }
+      },
+      "end": "\\]",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.end.bracket.square.go"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#balanced-square-brackets"
+        },
+        {
+          "include": "source.go"
+        }
+      ]
+    },
     "non-nil-type-modifier": {
       "name": "storage.modifier.non-nil.tgo",
       "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"

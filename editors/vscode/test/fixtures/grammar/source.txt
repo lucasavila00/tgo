@@ -162,6 +162,15 @@ func read(ok bool, owner %User) error {
 	_ = "abc" [2] % Thing
 	_ = 'x' [0] % Thing
 	_ = []int{} [0] % Thing
+	_ = α [0] % Thing
+	_ = π[0] % Thing
+	_ = [2 // ]%LineFake
+]%LineRecord{}
+	_ = [len(`a]%RawFake
+b`)]%RawRecord{}
+	_ = [2 /* ]%BlockFake
+		keep
+*/]%BlockRecord{}
 	_ = []int{for _, item := range values { if item > 0 { item } }}
 	switch event.Tag() {
 	exhaustive:
