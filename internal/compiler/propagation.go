@@ -250,14 +250,22 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		} else if assignment, ok := node.Init.(*ast.AssignStmt); ok {
 			l.rememberSimpleAssignmentTypes(assignment)
 		}
+		lowerCases := l.switchCasesHavePropagation(node.Body)
 		l.caseBodies(node.Body)
 		value, tagPrefix := l.optionalExpression(node.Tag)
-		node.Tag = value
-		if len(tagPrefix) > 0 && node.Init != nil {
+		if (len(tagPrefix) > 0 || lowerCases) && node.Init != nil {
 			prefix = append(prefix, l.simpleStatement(node.Init)...)
 			node.Init = nil
 		}
 		prefix = append(prefix, tagPrefix...)
+		if lowerCases {
+			selected, casePrefix := l.lowerSwitchCases(node.Body, value)
+			node.Tag = selected
+			prefix = append(prefix, casePrefix...)
+		} else {
+			node.Tag = value
+			l.diagnoseSwitchCases(node.Body)
+		}
 		result := l.prefixedStatement(prefix, node, scopedInitializer)
 		l.inferredResultNames = outer
 		return result
@@ -422,16 +430,6 @@ func rewriteControlBranches(node ast.Node, oldLabel string, newLabel string) boo
 		return true
 	})
 	return rewritten
-}
-
-func (l *propagationLowerer) caseBodies(body *ast.BlockStmt) {
-	for _, item := range body.List {
-		clause := item.(*ast.CaseClause)
-		for _, expression := range clause.List {
-			l.missingExpressionLowering(expression, "switch case")
-		}
-		clause.Body = l.scopedStatements(clause.Body)
-	}
 }
 
 func (l *propagationLowerer) simpleStatement(statement ast.Stmt) []ast.Stmt {

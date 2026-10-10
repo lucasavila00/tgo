@@ -575,3 +575,47 @@ func use() error {
 		})
 	}
 }
+
+func TestPropagationLowersSwitchCasesInOrder(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func mark(name string, value int) int { return value }
+func load(name string, value int) (int, error) { return value, nil }
+
+func use(tag, selected, result int, err error) error {
+outer:
+	switch mark("tag", tag) {
+	case mark("first", 1), load("second", 2)!!:
+		fallthrough
+	default:
+		break outer
+	case load("third", 3)!!:
+	}
+	return err
+}
+`)
+	ordered := []string{
+		`tag_1 := mark("tag", tag)`,
+		"selected_1 := -1",
+		`mark("first", 1)`,
+		`result_1, err_1 := load("second", 2)`,
+		"tag_1 == result_1",
+		`result_2, err_2 := load("third", 3)`,
+		"tag_1 == result_2",
+		"outer:\n\tswitch selected_1",
+		"case 0:",
+		"fallthrough",
+		"default:",
+		"break outer",
+		"case 2:",
+	}
+	position := -1
+	for _, required := range ordered {
+		next := strings.Index(output, required)
+		if next <= position {
+			t.Fatalf("generated output puts %q out of order\n%s", required, output)
+		}
+		position = next
+	}
+}
