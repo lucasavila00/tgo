@@ -1437,24 +1437,38 @@ func (b *loweringPlanBuilder) operandOrderOperation(
 }
 
 func (b *loweringPlanBuilder) planBooleanContextAdapter(expression *plannedExpression) {
-	binary, ok := expression.source.(*ast.BinaryExpr)
-	if !ok || !expression.contextual || !isComparisonOperator(binary.Op) {
+	contextType := expression.expected
+	if contextType == nil {
+		contextType = expression.typ
+	}
+	if !b.needsBooleanContextAdapter(contextType) {
 		return
 	}
 	expression.booleanAdapter = true
+	if expression.kind == planBinaryExpression {
+		for _, operand := range expression.operands {
+			if b.needsBooleanContextAdapter(operand.typ) {
+				operand.booleanAdapter = true
+			}
+		}
+	}
 	value := &b.plan.values[expression.results[0].id-1]
 	value.typ = types.Typ[types.Bool]
 	value.typeReference = b.typeReference(value.typ, value.position)
 	expression.results[0] = *value
 }
 
-func isComparisonOperator(operator token.Token) bool {
-	switch operator {
-	case token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ:
-		return true
-	default:
+func (b *loweringPlanBuilder) needsBooleanContextAdapter(typ types.Type) bool {
+	if typ == nil {
 		return false
 	}
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok || named.Obj().Pkg() == nil || named.Obj().Pkg() == b.unit.typed ||
+		named.Obj().Exported() {
+		return false
+	}
+	basic, ok := named.Underlying().(*types.Basic)
+	return ok && basic.Kind() == types.Bool
 }
 
 func arrayPointerOperand(expression *plannedExpression) *plannedExpression {

@@ -55,6 +55,7 @@ func FromLiteral(value int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return result, nil
 }
 
@@ -63,6 +64,7 @@ func Wrapped(ok bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("load: %w", err)
 	}
+
 	return result, nil
 }
 
@@ -71,5 +73,6 @@ func Transparent(ok bool) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return result, nil
 }

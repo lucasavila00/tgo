@@ -85,13 +85,7 @@ func (e *loweringEmitter) expression(
 	}
 	if plan.materialized != 0 {
 		value := ast.Expr(e.valueName(plan.materialized, "operand"))
-		if plan.booleanAdapter {
-			return &ast.BinaryExpr{
-				X: value, Op: token.EQL,
-				Y: e.unit.generatedUniverse("true", plan.source.Pos()),
-			}
-		}
-		return value
+		return e.booleanContextAdapter(plan, value)
 	}
 	if plan.before != nil {
 		e.operations(plan.before, block)
@@ -105,7 +99,8 @@ func (e *loweringEmitter) expression(
 	if plan.work != nil {
 		e.emitExpressionWork(plan, block)
 		if len(plan.results) == 1 {
-			return e.valueName(plan.results[0].id, "result")
+			value := ast.Expr(e.valueName(plan.results[0].id, "result"))
+			return e.booleanContextAdapter(plan, value)
 		}
 	}
 	operands := make([]ast.Expr, 0, len(plan.operands))
@@ -113,7 +108,23 @@ func (e *loweringEmitter) expression(
 		operands = append(operands, e.expression(operand, block))
 	}
 	e.applyExpressionOperands(plan.source, operands)
-	return plan.source
+	return e.booleanContextAdapter(plan, plan.source)
+}
+
+func (e *loweringEmitter) booleanContextAdapter(
+	plan *plannedExpression,
+	value ast.Expr,
+) ast.Expr {
+	if !plan.booleanAdapter {
+		return value
+	}
+	return &ast.BinaryExpr{
+		X: value, Op: token.EQL,
+		Y: &ast.BinaryExpr{
+			X: &ast.BasicLit{Kind: token.INT, Value: "0"}, Op: token.EQL,
+			Y: &ast.BasicLit{Kind: token.INT, Value: "0"},
+		},
+	}
 }
 
 func (e *loweringEmitter) emitExpressionWork(

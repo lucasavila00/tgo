@@ -42,7 +42,11 @@ func TestNestedCheckedStructConstruction(t *testing.T) {
 	}
 	checks = nil
 	_, err = ServicePortFromNumber(0)
-	if !errors.Is(err, ErrInvalidPort) || !strings.Contains(err.Error(), "Port: ") {
+	operand := !errors.Is(err, ErrInvalidPort)
+	if !operand {
+		operand = !strings.Contains(err.Error(), "Port: ")
+	}
+	if operand {
 		t.Fatalf("NewServicePort error = %v", err)
 	}
 	if strings.Join(checks, ",") != "port" {

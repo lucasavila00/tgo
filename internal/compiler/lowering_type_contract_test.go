@@ -228,8 +228,33 @@ func left() int { return 1 }
 func right() int { return 2 }
 func load() (int, error) { return 7, nil }
 
-func use() error {
+func direct() error {
 	hidden.Consume(left() < right(), load()!!)
+	return nil
+}
+
+func parenthesized() error {
+	hidden.Consume((left() < right()), load()!!)
+	return nil
+}
+
+func nestedParentheses() error {
+	hidden.Consume((((left() < right()))), load()!!)
+	return nil
+}
+
+func negated() error {
+	hidden.Consume(!(left() < right()), load()!!)
+	return nil
+}
+
+func logicalAnd() error {
+	hidden.Consume(left() < right() && right() > left(), load()!!)
+	return nil
+}
+
+func logicalOr() error {
+	hidden.Consume(left() > right() || right() > left(), load()!!)
 	return nil
 }
 `),

@@ -23,8 +23,13 @@ func NewPort(number int) (Port, error) {
 }
 
 func (value Port) check() (Port, error) {
+	type operandType = bool
 	checks = append(checks, "port")
-	if value.number < 1 || value.number > 65535 {
+	var operand operandType = value.number < 1
+	if !operand {
+		operand = value.number > 65535
+	}
+	if operand {
 		return Port{}, ErrInvalidPort
 	}
 	return value, nil
