@@ -235,10 +235,17 @@ func appendFieldSymbols(
 	fields []*syntax.Field,
 	container string,
 ) []Symbol {
-	result = appendNamedFields(
-		result, pkg, uri, fields, container, NewSymbolKindField(),
-	)
 	for _, field := range fields {
+		for _, name := range field.Names {
+			result = appendSymbol(
+				result,
+				pkg,
+				uri,
+				name.Name, NewSymbolKindField(), container,
+				field.Span,
+				name.Span,
+			)
+		}
 		result = appendEmbeddedFieldSymbol(result, pkg, uri, field, container)
 	}
 	return result
