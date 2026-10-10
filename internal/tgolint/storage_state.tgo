@@ -19,12 +19,12 @@ type storageFunction struct {
 }
 
 type storageSlice struct {
-	backing storageLocation
-	offset  int64
-	length  int64
-	capacity int64
-	knownOffset bool
-	knownLength bool
+	backing      storageLocation
+	offset       int64
+	length       int64
+	capacity     int64
+	knownOffset  bool
+	knownLength  bool
 	knownCapacity bool
 }
 
@@ -68,4 +68,120 @@ func cloneStorageValue(value storageValue) storageValue {
 	value.regions = append([]storagePath(nil), value.regions...)
 	value.slices = append([]storageSlice(nil), value.slices...)
 	return value
+}
+
+func joinStorageState(left storageState, right storageState) storageState {
+	joined := cloneStorageState(left)
+	for object, value := range right.cells {
+		joined.cells[object] = joinStorageValue(joined.cells[object], value)
+	}
+	for path, value := range right.memory {
+		joined.memory[path] = joinStorageValue(joined.memory[path], value)
+	}
+	return joined
+}
+
+func joinStorageValue(left storageValue, right storageValue) storageValue {
+	joined := cloneStorageValue(left)
+	joined.unknown = left.unknown || right.unknown
+	for _, function := range right.functions {
+		if !containsStorageFunction(joined.functions, function) {
+			joined.functions = append(joined.functions, function)
+		}
+	}
+	for _, region := range right.regions {
+		if !containsStoragePath(joined.regions, region) {
+			joined.regions = append(joined.regions, region)
+		}
+	}
+	for _, slice := range right.slices {
+		if !containsStorageSlice(joined.slices, slice) {
+			joined.slices = append(joined.slices, slice)
+		}
+	}
+	return joined
+}
+
+func containsStorageFunction(
+	functions []storageFunction,
+	want storageFunction,
+) bool {
+	for _, function := range functions {
+		if function.graph != want.graph ||
+			len(function.captures) != len(want.captures) ||
+			len(function.typeArguments) != len(want.typeArguments) {
+			continue
+		}
+		equal := true
+		for index := range function.captures {
+			if !storagePathsEqual(function.captures[index], want.captures[index]) {
+				equal = false
+			}
+		}
+		for index := range function.typeArguments {
+			if !types.Identical(function.typeArguments[index], want.typeArguments[index]) {
+				equal = false
+			}
+		}
+		if equal {
+			return true
+		}
+	}
+	return false
+}
+
+func containsStoragePath(paths []storagePath, want storagePath) bool {
+	for _, path := range paths {
+		if storagePathsEqual(path, want) {
+			return true
+		}
+	}
+	return false
+}
+
+func storagePathsEqual(left storagePath, right storagePath) bool {
+	if left.location != right.location || len(left.steps) != len(right.steps) {
+		return false
+	}
+	for index := range left.steps {
+		if left.steps[index] != right.steps[index] {
+			return false
+		}
+	}
+	return true
+}
+
+func containsStorageSlice(slices []storageSlice, want storageSlice) bool {
+	for _, slice := range slices {
+		if slice == want {
+			return true
+		}
+	}
+	return false
+}
+
+func writeStorageCell(
+	state storageState,
+	object types.Object,
+	value storageValue,
+	exact bool,
+) {
+	if exact {
+		state.cells[object] = cloneStorageValue(value)
+		return
+	}
+	state.cells[object] = joinStorageValue(state.cells[object], value)
+}
+
+func writeStorageMemory(
+	state storageState,
+	path storagePathKey,
+	value storageValue,
+	exact bool,
+) {
+	if exact && !path.location.merged {
+		state.memory[path] = cloneStorageValue(value)
+		return
+	}
+	state.memory[path] = joinStorageValue(state.memory[path], value)
 }
