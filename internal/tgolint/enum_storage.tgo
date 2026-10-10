@@ -259,6 +259,15 @@ func (c %checker) transferEnumStorageLists(
 			storages[index] = c.enumExpressionStorage(right[index], state)
 			closures[index] = c.enumExpressionClosure(right[index], state)
 		}
+	} else if len(right) == 1 {
+		if call := syntax.CallExpressionOf(right[0]); call != nil {
+			values := c.enumCallStorages(call, state)
+			for index := range left {
+				if index < len(values) {
+					storages[index] = values[index]
+				}
+			}
+		}
 	}
 	for index, target := range left {
 		if enumPointerType(c.facts, target) {
@@ -361,7 +370,10 @@ func (c %checker) enumExpressionStorage(
 		return enumStorageSet{}
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
-		return c.enumCallStorage(call, state)
+		values := c.enumCallStorages(call, state)
+		if len(values) != 0 {
+			return values[0]
+		}
 	}
 	if !enumPointerType(c.facts, expression) {
 		return enumStorageSet{{origin: syntax.ExpressionPosition(expression)}: true}

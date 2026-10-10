@@ -147,24 +147,32 @@ func (c %checker) evalEnumCall(
 	}
 }
 
-func (c %checker) enumCallStorage(
+func (c %checker) enumCallStorages(
 	call *syntax.CallExpression,
 	state *enumStorageState,
-) enumStorageSet {
+) []enumStorageSet {
 	arguments := make([]enumStorageSet, len(call.Args))
 	for index, argument := range call.Args {
 		arguments[index] = c.enumExpressionStorage(argument, state)
 	}
-	result := make(enumStorageSet)
+	result := make([]enumStorageSet, 0)
 	for literal := range c.enumExpressionClosure(call.Callee, state) {
 		c.invokeEnumClosure(literal, state, arguments)
 		summary := state.calls[literal]
-		if summary != nil && len(summary.results) != 0 {
-			result, _ = joinEnumStorageSet(result, summary.results[0])
+		if summary == nil {
+			continue
+		}
+		for len(result) < len(summary.results) {
+			result = append(result, make(enumStorageSet))
+		}
+		for index, values := range summary.results {
+			result[index], _ = joinEnumStorageSet(result[index], values)
 		}
 	}
 	if len(result) == 0 {
-		result[enumPointerPlace{origin: call.Start}] = true
+		result = append(result, enumStorageSet{
+			enumPointerPlace{origin: call.Start}: true,
+		})
 	}
 	return result
 }
@@ -218,7 +226,7 @@ func (c %checker) invokeEnumClosure(
 			state := cloneEnumStorageState(entries[block.Index])
 			for _, node := range block.Nodes {
 				c.transferEnumStorage(state, node)
-				c.recordEnumClosureResults(call, node, state)
+				c.recordEnumClosureResults(call, literal, node, state)
 			}
 			if len(block.Succs) == 0 {
 				call.output, _ = joinEnumStorageStates(call.output, state)
@@ -251,6 +259,7 @@ func (c %checker) invokeEnumClosure(
 
 func (c %checker) recordEnumClosureResults(
 	call *enumClosureCall,
+	literal *syntax.FunctionLiteral,
 	node syntax.Node,
 	state *enumStorageState,
 ) {
@@ -260,6 +269,22 @@ func (c %checker) recordEnumClosureResults(
 	}
 	returned := syntax.ReturnStatementOf(statement)
 	if returned == nil {
+		return
+	}
+	if len(returned.Results) == 0 && literal.Type.Results != nil {
+		index := 0
+		for _, field := range literal.Type.Results.List {
+			for _, name := range field.Names {
+				for len(call.results) <= index {
+					call.results = append(call.results, make(enumStorageSet))
+				}
+				place := enumPointerPlace{root: c.facts.Object(name)}
+				call.results[index], _ = joinEnumStorageSet(
+					call.results[index], c.enumPlaceStorage(place, state),
+				)
+				index++
+			}
+		}
 		return
 	}
 	for index, expression := range returned.Results {
