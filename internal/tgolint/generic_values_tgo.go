@@ -173,17 +173,9 @@ func (c *checker) collectAssignedGenericValues(
 	}
 	changed := false
 	for index, expression := range right {
-		value, ok := c.genericValue(expression, summaries)
-		var dependency *genericValueBinding = nil
-		if !ok {
-			source := syntax.IdentifierExpressionOf(unparenthesized(expression))
-			if source != nil {
-				dependency = bindings[c.facts.Object(source)]
-				if dependency != nil {
-					value, ok = dependency.value, true
-				}
-			}
-		}
+		value, dependency, ok := c.assignedGenericValue(
+			expression, summaries, bindings,
+		)
 		name := syntax.IdentifierExpressionOf(unparenthesized(left[index]))
 		if !ok || name == nil || name.Name == "_" {
 			continue
@@ -207,6 +199,43 @@ func (c *checker) collectAssignedGenericValues(
 		changed = true
 	}
 	return changed
+}
+
+// assignedGenericValue resolves a direct value or a partial call through a binding.
+func (c *checker) assignedGenericValue(
+	expression *syntax.Expression,
+	summaries map[*types.Func]*genericEffectSummary,
+	bindings map[types.Object]*genericValueBinding,
+) (genericValue, *genericValueBinding, bool) {
+	expression = unparenthesized(expression)
+	if value, ok := c.genericValue(expression, summaries); ok {
+		return value, nil, true
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		value, dependency, ok := c.assignedGenericValue(
+			call.Callee, summaries, bindings,
+		)
+		if !ok {
+			return noGenericValue(), nil, false
+		}
+		if value.callDepth == 0 {
+			value.conditionCall = expression
+		}
+		value.callDepth++
+		if !genericFactHasEffectsAtOrAfter(value.fact, value.callDepth) {
+			return noGenericValue(), nil, false
+		}
+		return value, dependency, true
+	}
+	source := syntax.IdentifierExpressionOf(expression)
+	if source == nil {
+		return noGenericValue(), nil, false
+	}
+	dependency := bindings[c.facts.Object(source)]
+	if dependency == nil {
+		return noGenericValue(), nil, false
+	}
+	return dependency.value, dependency, true
 }
 
 // genericValue resolves the effects carried by a function value expression.
@@ -270,7 +299,8 @@ func (c *checker) reportDirectGenericValueEscape(
 	summaries map[*types.Func]*genericEffectSummary,
 	sources map[*syntax.Expression]bool,
 ) {
-	if sources[expression] || c.calledDirectly(expression) || c.discardedValue(expression) ||
+	if c.boundGenericValueSource(expression, sources) ||
+		c.calledDirectly(expression) || c.discardedValue(expression) ||
 		c.genericInstantiationPart(expression) {
 		return
 	}
@@ -302,7 +332,8 @@ func (c *checker) reportReturnedGenericCall(
 	sources map[*syntax.Expression]bool,
 ) {
 	value, ok := c.genericValue(expression, summaries)
-	if !ok || value.callDepth == 0 || sources[expression] {
+	if !ok || value.callDepth == 0 ||
+		c.boundGenericValueSource(expression, sources) {
 		return
 	}
 	if invocation := c.directCallOf(expression); invocation != nil {
@@ -420,9 +451,7 @@ func (c *checker) reportBoundGenericValueUse(
 	bindings map[types.Object]*genericValueBinding,
 	sources map[*syntax.Expression]bool,
 ) {
-	if c.boundGenericValueSource(expression, sources) {
-		return
-	}
+	source := c.boundGenericValueSource(expression, sources)
 	name := syntax.IdentifierExpressionOf(expression)
 	if name == nil {
 		return
@@ -456,11 +485,14 @@ func (c *checker) reportBoundGenericValueUse(
 		current = call
 	}
 	if !called {
+		if source {
+			return
+		}
 		c.reportGenericValueEscape(expression, value)
 		return
 	}
 	if !genericFactHasEffectsAtOrAfter(value.fact, value.callDepth) ||
-		c.discardedValue(current) || c.expressionStatement(current) {
+		source || c.discardedValue(current) || c.expressionStatement(current) {
 		return
 	}
 	c.reportGenericValueEscape(current, value)
@@ -484,7 +516,12 @@ func (c *checker) boundGenericValueSource(
 			return false
 		}
 		parentheses := syntax.ParenthesizedExpressionOf(parent)
-		if parentheses == nil || parentheses.Expression != current {
+		if parentheses != nil && parentheses.Expression == current {
+			current = parent
+			continue
+		}
+		call := syntax.CallExpressionOf(parent)
+		if call == nil || call.Callee != current {
 			return false
 		}
 		current = parent
