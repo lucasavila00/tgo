@@ -29,7 +29,13 @@ agents. Move the requested work to review without unnecessary waiting.
   lint command. Do not run another compile at the same time. Limit Go command
   parallelism to the capacity that the coordinator assigns. The locked
   Makefile build, test, lint, and code-generation targets obtain this lease
-  automatically across all worktrees.
+  automatically across all worktrees. On a local host, the common runner also
+  needs 6 GiB of available memory before it starts. It limits its process tree
+  to 4 GiB and disables swap use for that tree. This leaves at least 2 GiB
+  available at admission time. Processes outside the runner can still use the
+  reserve. Use `TGO_LOCAL_VALIDATION_MIN_AVAILABLE_KB` and
+  `TGO_LOCAL_VALIDATION_MEMORY_MAX` only when the local host needs different
+  limits. The runner stops if the host cannot enforce the process-tree limit.
 - Do not merge `main` into a clean pull request only to refresh its ancestry.
   This repository squash-merges pull requests. Merge `main` only when GitHub
   reports a conflict or Lucas asks. Preserve both sides of a conflict. Do not

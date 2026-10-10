@@ -13,8 +13,35 @@ LOCK_SCRIPT = ROOT / "scripts" / "with-local-validation-lock.sh"
 class LocalValidationLockTest(unittest.TestCase):
     def clean_environment(self) -> dict[str, str]:
         environment = os.environ.copy()
-        environment.pop("GITHUB_ACTIONS", None)
-        environment.pop("TGO_LOCAL_VALIDATION_LOCK_HELD", None)
+        for name in (
+            "GITHUB_ACTIONS",
+            "TGO_LOCAL_VALIDATION_LOCK_HELD",
+            "TGO_LOCAL_VALIDATION_MEMINFO",
+            "TGO_LOCAL_VALIDATION_MIN_AVAILABLE_KB",
+            "TGO_LOCAL_VALIDATION_MEMORY_MAX",
+            "TGO_LOCAL_VALIDATION_SYSTEMD_RUN",
+        ):
+            environment.pop(name, None)
+        return environment
+
+    def resource_environment(
+        self, directory: Path, available_kb: int = 6291456
+    ) -> dict[str, str]:
+        meminfo = directory / "meminfo"
+        meminfo.write_text(f"MemAvailable: {available_kb} kB\n")
+        systemd_run = directory / "systemd-run"
+        systemd_run.write_text(
+            "#!/bin/sh\n"
+            'test -z "${SYSTEMD_RUN_ARGS:-}" || printf "%s\\n" "$@" > "$SYSTEMD_RUN_ARGS"\n'
+            'test -z "${SYSTEMD_RUN_FAILURE:-}" || exit "$SYSTEMD_RUN_FAILURE"\n'
+            'while test "$1" != --; do shift; done\n'
+            "shift\n"
+            'exec env TGO_LOCAL_VALIDATION_LOCK_HELD=1 "$@"\n'
+        )
+        systemd_run.chmod(0o755)
+        environment = self.clean_environment()
+        environment["TGO_LOCAL_VALIDATION_MEMINFO"] = str(meminfo)
+        environment["TGO_LOCAL_VALIDATION_SYSTEMD_RUN"] = str(systemd_run)
         return environment
 
     def make_repository(self, directory: Path) -> Path:
@@ -56,7 +83,7 @@ class LocalValidationLockTest(unittest.TestCase):
             first = subprocess.Popen(
                 [LOCK_SCRIPT, "sh", "-c", command, "sh", "first", events],
                 cwd=repository,
-                env=self.clean_environment(),
+                env=self.resource_environment(directory),
             )
             deadline = time.monotonic() + 1
             while not events.exists() and time.monotonic() < deadline:
@@ -65,7 +92,7 @@ class LocalValidationLockTest(unittest.TestCase):
             second = subprocess.Popen(
                 [LOCK_SCRIPT, "sh", "-c", command, "sh", "second", events],
                 cwd=worktree,
-                env=self.clean_environment(),
+                env=self.resource_environment(directory),
             )
             self.assertEqual(first.wait(timeout=2), 0)
             self.assertEqual(second.wait(timeout=2), 0)
@@ -92,10 +119,116 @@ class LocalValidationLockTest(unittest.TestCase):
                 ["make", "outer"],
                 cwd=repository,
                 check=True,
-                env=self.clean_environment(),
+                env=self.resource_environment(Path(temporary)),
                 timeout=2,
             )
             self.assertEqual(result.read_text(), "complete\n")
+
+    def test_rejects_insufficient_available_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            repository = self.make_repository(directory)
+            result = subprocess.run(
+                [LOCK_SCRIPT, "sh", "-c", "exit 0"],
+                cwd=repository,
+                env=self.resource_environment(directory, 6291455),
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("needs 6291456 kB available", result.stderr)
+
+    def test_applies_memory_limit_at_admission_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            repository = self.make_repository(directory)
+            arguments = directory / "arguments"
+            environment = self.resource_environment(directory)
+            environment["SYSTEMD_RUN_ARGS"] = str(arguments)
+            subprocess.run(
+                [LOCK_SCRIPT, "sh", "-c", 'test "$TGO_LOCAL_VALIDATION_LOCK_HELD" = 1'],
+                cwd=repository,
+                env=environment,
+                check=True,
+            )
+            self.assertIn("--property=MemoryMax=4G", arguments.read_text().splitlines())
+            self.assertIn("--property=MemorySwapMax=0", arguments.read_text().splitlines())
+            self.assertIn("--property=MemoryOOMGroup=yes", arguments.read_text().splitlines())
+
+    def test_reports_cgroup_start_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            repository = self.make_repository(directory)
+            environment = self.resource_environment(directory)
+            environment["SYSTEMD_RUN_FAILURE"] = "125"
+            result = subprocess.run(
+                [LOCK_SCRIPT, "sh", "-c", "exit 0"],
+                cwd=repository,
+                env=environment,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 125)
+            self.assertIn("status 125 inside the 4G process-tree memory limit", result.stderr)
+
+    def test_rejects_missing_cgroup_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            repository = self.make_repository(directory)
+            environment = self.resource_environment(directory)
+            environment["TGO_LOCAL_VALIDATION_SYSTEMD_RUN"] = str(directory / "missing")
+            result = subprocess.run(
+                [LOCK_SCRIPT, "sh", "-c", "exit 0"],
+                cwd=repository,
+                env=environment,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("needs systemd-run", result.stderr)
+
+    def test_preserves_memory_kill_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            repository = self.make_repository(directory)
+            environment = self.resource_environment(directory)
+            environment["SYSTEMD_RUN_FAILURE"] = "137"
+            result = subprocess.run(
+                [LOCK_SCRIPT, "sh", "-c", "exit 0"],
+                cwd=repository,
+                env=environment,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 137)
+            self.assertIn("was killed inside the 4G process-tree memory limit", result.stderr)
+            self.assertIn("check the systemd log for an out-of-memory kill", result.stderr)
+
+    def test_preserves_command_failure_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            repository = self.make_repository(directory)
+            result = subprocess.run(
+                [LOCK_SCRIPT, "sh", "-c", "exit 23"],
+                cwd=repository,
+                env=self.resource_environment(directory),
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 23)
+            self.assertIn("status 23 inside the 4G process-tree memory limit", result.stderr)
+
+    def test_hosted_ci_bypasses_local_resource_controls(self) -> None:
+        environment = self.clean_environment()
+        environment["GITHUB_ACTIONS"] = "true"
+        environment["TGO_LOCAL_VALIDATION_MEMINFO"] = "/missing"
+        environment["TGO_LOCAL_VALIDATION_SYSTEMD_RUN"] = "/missing"
+        subprocess.run(
+            [LOCK_SCRIPT, "sh", "-c", 'test "$TGO_LOCAL_VALIDATION_LOCK_HELD" = 1'],
+            cwd=ROOT,
+            env=environment,
+            check=True,
+        )
 
 
 if __name__ == "__main__":
