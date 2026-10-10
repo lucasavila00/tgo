@@ -101,3 +101,5 @@ bad/bad.go:948:2: checked field Values cannot be changed after construction
 bad/bad.go:949:6: checked field Values cannot be changed after construction
 bad/bad.go:951:7: checked field Values cannot be changed after construction
 bad/bad.go:952:2: checked field Pointer cannot be changed after construction
+bad/bad.go:953:2: checked field ValueMiddle cannot be changed after construction
+bad/bad.go:954:2: checked field ValueArray cannot be changed after construction

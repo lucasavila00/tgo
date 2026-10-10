@@ -271,11 +271,21 @@ type mutableDetails struct {
 }
 
 type nestedDetails struct {
-	number  int
-	values  [2]int
-	pointer *mutableDetails
-	slice   []int
-	mapping map[string]int
+	number      int
+	values      [2]int
+	pointer     *mutableDetails
+	slice       []int
+	mapping     map[string]int
+	valueMiddle valueMiddle
+	valueArray  [1]valueMiddle
+}
+
+type promotedLeaf struct {
+	number int
+}
+
+type valueMiddle struct {
+	promotedLeaf
 }
 
 type NestedPort struct {
@@ -303,6 +313,8 @@ func changeNested(value *NestedPort) {
 	_ = &value.nestedDetails.number
 	_ = &value.values[1]
 	value.pointer = nil
+	value.valueMiddle.number = 5
+	value.valueArray[0].number = 6
 }
 
 var localConstructor = NewPort

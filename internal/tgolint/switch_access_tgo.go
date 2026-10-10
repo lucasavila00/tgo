@@ -144,6 +144,9 @@ func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {
 	parent := c.parents[target]
 	for parent != nil {
 		if wrapped, ok := syntax.ExpressionOf(parent); ok {
+			if wrapped == nil {
+				return false
+			}
 			parentheses := syntax.ParenthesizedExpressionOf(wrapped)
 			if parentheses != nil &&
 				sameExpressionRange(parentheses.Expression, current) {
@@ -154,7 +157,8 @@ func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {
 			selector := syntax.SelectorExpressionOf(wrapped)
 			if selector != nil && sameExpressionRange(selector.Expression, current) {
 				if modelIsChecked(c.modelForReceiver(c.facts.Type(current))) ||
-					!structOwnsSelectedStorage(c.facts.Type(current)) {
+					!structOwnsSelectedStorage(c.facts.Type(current)) ||
+					!selectionUsesOwnedStorage(c.facts.Selection(wrapped)) {
 					return false
 				}
 				current = wrapped

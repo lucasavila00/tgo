@@ -950,4 +950,6 @@ func ChangeNested(value *model.Nested) {
 	}
 	_ = &value.Values[0]
 	value.Pointer = nil
+	value.ValueMiddle.Number = 4
+	value.ValueArray[0].Number = 5
 }

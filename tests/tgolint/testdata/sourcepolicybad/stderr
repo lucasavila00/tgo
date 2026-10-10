@@ -18,23 +18,25 @@ sourcepolicybad/source.tgo:74:2: checked field number cannot be changed after co
 sourcepolicybad/source.tgo:75:2: checked field number cannot be changed after construction
 sourcepolicybad/source.tgo:76:7: checked field number cannot be changed after construction
 sourcepolicybad/source.tgo:77:6: checked field number cannot be changed after construction
-sourcepolicybad/source.tgo:96:2: checked field number cannot be changed after construction
-sourcepolicybad/source.tgo:97:2: checked field nestedDetails cannot be changed after construction
-sourcepolicybad/source.tgo:98:2: checked field values cannot be changed after construction
-sourcepolicybad/source.tgo:99:2: checked field nestedDetails cannot be changed after construction
-sourcepolicybad/source.tgo:100:2: checked field values cannot be changed after construction
-sourcepolicybad/source.tgo:101:6: checked field values cannot be changed after construction
-sourcepolicybad/source.tgo:103:7: checked field nestedDetails cannot be changed after construction
-sourcepolicybad/source.tgo:104:7: checked field values cannot be changed after construction
-sourcepolicybad/source.tgo:105:2: checked field pointer cannot be changed after construction
-sourcepolicybad/source.tgo:108:24: NewPort is generated Go ABI; use a checked literal
-sourcepolicybad/source.tgo:109:20: TgoPortInput is generated staging ABI; use a checked literal
-sourcepolicybad/source.tgo:110:33: NewCount is generated Go ABI; use a checked literal
-sourcepolicybad/source.tgo:111:29: TgoCountInput is generated staging ABI; use a checked literal
-sourcepolicybad/source.tgo:112:28: NewLocalReady is generated Go ABI; use Local.Ready{...}
-sourcepolicybad/source.tgo:113:37: NewEventStarted is generated Go ABI; use Event.Started{...}
-sourcepolicybad/source.tgo:116:15: LocalReady is generated enum representation; use Local.Ready{...}
-sourcepolicybad/source.tgo:117:15: TgoLocalReadyInput is generated staging ABI; use Local.Ready{...}
-sourcepolicybad/source.tgo:118:24: EventStarted is generated enum representation; use Event.Started{...}
-sourcepolicybad/source.tgo:119:24: TgoEventStartedInput is generated staging ABI; use Event.Started{...}
-sourcepolicybad/source.tgo:123:9: use a constructor for Event
+sourcepolicybad/source.tgo:101:2: checked field number cannot be changed after construction
+sourcepolicybad/source.tgo:102:2: checked field nestedDetails cannot be changed after construction
+sourcepolicybad/source.tgo:103:2: checked field values cannot be changed after construction
+sourcepolicybad/source.tgo:104:2: checked field nestedDetails cannot be changed after construction
+sourcepolicybad/source.tgo:105:2: checked field values cannot be changed after construction
+sourcepolicybad/source.tgo:106:6: checked field values cannot be changed after construction
+sourcepolicybad/source.tgo:108:7: checked field nestedDetails cannot be changed after construction
+sourcepolicybad/source.tgo:109:7: checked field values cannot be changed after construction
+sourcepolicybad/source.tgo:110:2: checked field pointer cannot be changed after construction
+sourcepolicybad/source.tgo:111:2: checked field valueMiddle cannot be changed after construction
+sourcepolicybad/source.tgo:112:2: checked field valueArray cannot be changed after construction
+sourcepolicybad/source.tgo:115:24: NewPort is generated Go ABI; use a checked literal
+sourcepolicybad/source.tgo:116:20: TgoPortInput is generated staging ABI; use a checked literal
+sourcepolicybad/source.tgo:117:33: NewCount is generated Go ABI; use a checked literal
+sourcepolicybad/source.tgo:118:29: TgoCountInput is generated staging ABI; use a checked literal
+sourcepolicybad/source.tgo:119:28: NewLocalReady is generated Go ABI; use Local.Ready{...}
+sourcepolicybad/source.tgo:120:37: NewEventStarted is generated Go ABI; use Event.Started{...}
+sourcepolicybad/source.tgo:123:15: LocalReady is generated enum representation; use Local.Ready{...}
+sourcepolicybad/source.tgo:124:15: TgoLocalReadyInput is generated staging ABI; use Local.Ready{...}
+sourcepolicybad/source.tgo:125:24: EventStarted is generated enum representation; use Event.Started{...}
+sourcepolicybad/source.tgo:126:24: TgoEventStartedInput is generated staging ABI; use Event.Started{...}
+sourcepolicybad/source.tgo:130:9: use a constructor for Event

@@ -436,11 +436,27 @@ type mutableDetails struct {
 }
 
 type checkedDetails struct {
-	Number  int
-	Values  [2]int
-	Pointer *mutableDetails
-	Slice   []int
-	Map     map[string]int
+	Number        int
+	Values        [2]int
+	Pointer       *mutableDetails
+	Slice         []int
+	Map           map[string]int
+	PointerMiddle pointerMiddle
+	PointerArray  [1]pointerMiddle
+	ValueMiddle   valueMiddle
+	ValueArray    [1]valueMiddle
+}
+
+type promotedLeaf struct {
+	Number int
+}
+
+type pointerMiddle struct {
+	*promotedLeaf
+}
+
+type valueMiddle struct {
+	promotedLeaf
 }
 
 type Nested struct {

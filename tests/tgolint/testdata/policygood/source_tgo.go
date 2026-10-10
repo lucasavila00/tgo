@@ -289,9 +289,19 @@ type mutableDetails struct {
 }
 
 type nestedDetails struct {
-	pointer *mutableDetails
-	slice   []int
-	mapping map[string]int
+	pointer       *mutableDetails
+	slice         []int
+	mapping       map[string]int
+	pointerMiddle pointerMiddle
+	pointerArray  [1]pointerMiddle
+}
+
+type promotedLeaf struct {
+	number int
+}
+
+type pointerMiddle struct {
+	*promotedLeaf
 }
 
 type NestedQuantity struct {
@@ -316,6 +326,8 @@ func changeNestedReferences(value *NestedQuantity) {
 	value.mapping["one"] = 4
 	value.nestedDetails.mapping["two"] = 5
 	_ = &value.slice[0]
+	value.pointerMiddle.number = 6
+	value.pointerArray[0].number = 7
 }
 
 type pointedDetails struct {
