@@ -19,6 +19,7 @@ type enumEventBuilder struct {
 	start      token.Pos
 	stop       token.Pos
 	blocks     map[*cfg.Block]enumEventBlockID
+	results    []types.Object
 }
 
 func (c *checker) enumEventFlow(expression *syntax.Expression) *enumEventResult {
@@ -78,6 +79,15 @@ func (c *checker) newEnumClosureEventBuilder(
 		summary:  true,
 	})
 	graph.activation = builder.activation
+	if literal.Type.Results != nil {
+		for _, field := range literal.Type.Results.List {
+			for _, name := range field.Names {
+				builder.results = append(
+					builder.results, builder.checker.facts.Object(name),
+				)
+			}
+		}
+	}
 	return builder
 }
 
@@ -96,6 +106,12 @@ func (builder *enumEventBuilder) seedFunctionInputs(function *syntax.Node) {
 	}
 	for index := 0; index < signature.Params().Len(); index++ {
 		variables = append(variables, signature.Params().At(index))
+	}
+	for index := 0; index < signature.Results().Len(); index++ {
+		result := signature.Results().At(index)
+		if result.Name() != "" {
+			builder.results = append(builder.results, result)
+		}
 	}
 	for _, variable := range variables {
 		if _, pointer := types.Unalias(variable.Type()).(*types.Pointer); !pointer {
@@ -306,9 +322,22 @@ func (builder *enumEventBuilder) emitNode(
 		return block
 	}
 	if returned := syntax.ReturnStatementOf(statement); returned != nil {
-		values := make([]enumSavedValueID, len(returned.Results))
-		for index, expression := range returned.Results {
-			block, values[index] = builder.emitExpression(block, expression)
+		values := make([]enumSavedValueID, 0, len(returned.Results))
+		for _, expression := range returned.Results {
+			var evaluated []enumSavedValueID
+			block, evaluated = builder.emitExpressionValues(block, expression)
+			values = append(values, evaluated...)
+		}
+		if len(returned.Results) == 0 {
+			for _, object := range builder.results {
+				value := builder.graph.newSavedValue()
+				builder.graph.addEvent(block, enumEvent{
+					kind:  enumEventLoad,
+					cells: enumCellSet{builder.localCell(object): true},
+					value: value,
+				})
+				values = append(values, value)
+			}
 		}
 		builder.graph.addEvent(block, enumEvent{kind: enumEventReturn, values: values})
 	}
@@ -346,9 +375,11 @@ func (builder *enumEventBuilder) emitAssignment(
 	for index, expression := range left {
 		block, destinations[index] = builder.emitPlace(block, expression)
 	}
-	values := make([]enumSavedValueID, len(right))
-	for index, expression := range right {
-		block, values[index] = builder.emitExpression(block, expression)
+	values := make([]enumSavedValueID, 0, len(right))
+	for _, expression := range right {
+		var evaluated []enumSavedValueID
+		block, evaluated = builder.emitExpressionValues(block, expression)
+		values = append(values, evaluated...)
 	}
 	for index, destination := range destinations {
 		if index >= len(values) {
@@ -361,6 +392,17 @@ func (builder *enumEventBuilder) emitAssignment(
 		})
 	}
 	return block
+}
+
+func (builder *enumEventBuilder) emitExpressionValues(
+	block enumEventBlockID,
+	expression *syntax.Expression,
+) (enumEventBlockID, []enumSavedValueID) {
+	block, value := builder.emitExpression(block, expression)
+	if results := builder.graph.expressionResults[expression]; len(results) != 0 {
+		return block, results
+	}
+	return block, []enumSavedValueID{value}
 }
 
 func (builder *enumEventBuilder) emitExpression(
@@ -383,6 +425,10 @@ func (builder *enumEventBuilder) emitExpression(
 	}
 	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
 		block, place := builder.emitSelectorPlace(block, expression, selector)
+		selection := builder.checker.facts.Selection(expression)
+		if selection != nil && selection.Kind() != types.FieldVal {
+			return block, place
+		}
 		value := builder.graph.newSavedValue()
 		builder.graph.addEvent(block, enumEvent{
 			kind:       enumEventLoad,
@@ -434,14 +480,15 @@ func (builder *enumEventBuilder) emitExpression(
 					value:      receiver,
 					tag:        tag,
 				})
-				result := builder.graph.newSavedValue()
+				results := builder.callResults(call)
 				builder.graph.addEvent(block, enumEvent{
 					kind:       enumEventCall,
 					expression: expression,
 					value:      receiver,
-					results:    []enumSavedValueID{result},
+					results:    results,
 				})
-				return block, result
+				builder.graph.expressionResults[expression] = results
+				return block, results[0]
 			}
 		}
 		var callee enumSavedValueID
@@ -450,15 +497,17 @@ func (builder *enumEventBuilder) emitExpression(
 		for index, argument := range call.Args {
 			block, arguments[index] = builder.emitExpression(block, argument)
 		}
-		result := builder.graph.newSavedValue()
+		results := builder.callResults(call)
 		builder.graph.addEvent(block, enumEvent{
 			kind:       enumEventCall,
 			expression: expression,
 			value:      callee,
 			arguments:  arguments,
-			results:    []enumSavedValueID{result},
+			results:    results,
+			method:     builder.methodCall(call),
 		})
-		return block, result
+		builder.graph.expressionResults[expression] = results
+		return block, results[0]
 	}
 	if binary := syntax.BinaryExpressionOf(expression); binary != nil {
 		block, _ = builder.emitExpression(block, binary.Left)
@@ -508,6 +557,32 @@ func (builder *enumEventBuilder) emitExpression(
 		value:      value,
 	})
 	return block, value
+}
+
+func (builder *enumEventBuilder) methodCall(call *syntax.CallExpression) bool {
+	selector := syntax.SelectorExpressionOf(call.Callee)
+	if selector == nil {
+		return false
+	}
+	selection := builder.checker.facts.Selection(call.Callee)
+	return selection != nil && selection.Kind() == types.MethodVal
+}
+
+func (builder *enumEventBuilder) callResults(
+	call *syntax.CallExpression,
+) []enumSavedValueID {
+	count := 1
+	if typ := builder.checker.facts.Type(call.Callee); typ != nil {
+		if signature, ok := types.Unalias(typ).(*types.Signature); ok &&
+			signature.Results().Len() > count {
+			count = signature.Results().Len()
+		}
+	}
+	results := make([]enumSavedValueID, count)
+	for index := range results {
+		results[index] = builder.graph.newSavedValue()
+	}
+	return results
 }
 
 func (builder *enumEventBuilder) emitUnknown(

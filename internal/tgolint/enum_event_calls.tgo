@@ -1,5 +1,7 @@
 package tgolint
 
+import "tgo/pkg/syntax"
+
 type enumEventCallID int
 
 type enumEventCallKey struct {
@@ -260,6 +262,8 @@ func (worklist *enumEventCallWorklist) analyzeCall(
 	if initial == nil {
 		initial = newEnumEventState()
 	}
+	initial.cellWrites = make(map[enumCellID]enumWriteSet)
+	initial.regionWrites = make(map[enumRegionID]enumWriteSet)
 	argument := 0
 	for _, field := range literal.Type.Params.List {
 		for _, name := range field.Names {
@@ -267,8 +271,16 @@ func (worklist *enumEventCallWorklist) analyzeCall(
 				break
 			}
 			cell := builder.localCell(worklist.graph.checker.facts.Object(name))
-			initial.cells[cell] = cloneEnumAbstractValue(summary.inputs[argument])
-			argument++
+			if syntax.EllipsisExpressionOf(field.Type) != nil {
+				value := enumAbstractValue{}
+				for ; argument < len(summary.inputs); argument++ {
+					value, _ = joinEnumAbstractValues(value, summary.inputs[argument])
+				}
+				initial.cells[cell] = value
+			} else {
+				initial.cells[cell] = cloneEnumAbstractValue(summary.inputs[argument])
+				argument++
+			}
 		}
 	}
 	result := child.run(initial)

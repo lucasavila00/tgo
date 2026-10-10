@@ -236,6 +236,7 @@ type enumEvent struct {
 	tag        int
 	serial     int
 	field      *types.Var
+	method     bool
 }
 
 type enumEventBlock struct {
@@ -252,17 +253,18 @@ type enumEventEdge struct {
 // enumEventGraph adds expression microblocks to one syntax CFG.
 
 type enumEventGraph struct {
-	checker     *checker
-	identities  *enumIdentityTable
-	activation  enumActivationID
-	call        enumEventCallID
-	blocks      []enumEventBlock
-	entry       enumEventBlockID
-	initial     *enumEventState
-	access      map[*syntax.Expression]enumEventLocation
-	expressions map[*syntax.Expression]enumSavedValueID
-	values      []enumAbstractValue
-	calls       *enumEventCallWorklist
+	checker           *checker
+	identities        *enumIdentityTable
+	activation        enumActivationID
+	call              enumEventCallID
+	blocks            []enumEventBlock
+	entry             enumEventBlockID
+	initial           *enumEventState
+	access            map[*syntax.Expression]enumEventLocation
+	expressions       map[*syntax.Expression]enumSavedValueID
+	expressionResults map[*syntax.Expression][]enumSavedValueID
+	values            []enumAbstractValue
+	calls             *enumEventCallWorklist
 }
 
 type enumEventLocation struct {
@@ -272,9 +274,10 @@ type enumEventLocation struct {
 
 func newEnumEventGraph() *enumEventGraph {
 	return &enumEventGraph{
-		identities:  newEnumIdentityTable(),
-		access:      make(map[*syntax.Expression]enumEventLocation),
-		expressions: make(map[*syntax.Expression]enumSavedValueID),
+		identities:        newEnumIdentityTable(),
+		access:            make(map[*syntax.Expression]enumEventLocation),
+		expressions:       make(map[*syntax.Expression]enumSavedValueID),
+		expressionResults: make(map[*syntax.Expression][]enumSavedValueID),
 	}
 }
 

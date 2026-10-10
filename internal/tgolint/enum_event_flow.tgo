@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"go/types"
 
 	"tgo/pkg/syntax"
 )
@@ -360,11 +361,21 @@ func (graph *enumEventGraph) transfer(
 		base := state.saved[event.source]
 		value := enumAbstractValue{places: make(enumCellSet)}
 		for region := range base.regions {
-			owner := graph.identities.fieldRegion(region, event.field, 0)
 			cell := graph.identities.cell(enumCellKey{
-				owner: owner,
+				owner: region,
 				field: event.field,
 			})
+			if _, found := state.cells[cell]; !found {
+				if _, pointer := types.Unalias(event.field.Type()).(*types.Pointer); pointer {
+					target := graph.identities.fieldRegion(
+						region, event.field, graph.activation,
+					)
+					state.cells[cell] = enumAbstractValue{
+						regions:      enumRegionSet{target: true},
+						dependencies: enumCellSet{cell: true},
+					}
+				}
+			}
 			value.places[cell] = true
 		}
 		state.saved[event.value] = value
@@ -404,7 +415,17 @@ func (graph *enumEventGraph) transfer(
 			break
 		}
 		regions := make(enumRegionSet)
+		if event.method {
+			for region := range callee.regions {
+				regions[region] = true
+			}
+		}
 		for _, argument := range arguments {
+			if len(argument.closures) != 0 {
+				graph.calls.applyAlternatives(
+					state, argument.closures, graph.activation, nil, nil,
+				)
+			}
 			for region := range argument.regions {
 				regions[region] = true
 			}
