@@ -5,6 +5,25 @@ import (
 	"testing"
 )
 
+func TestLoweringKeepsMapComprehensionValueCalls(t *testing.T) {
+	output := compileSourceOutput(t, `package sample
+
+func mapped(value string) string { return "value:" + value }
+
+func build(values []string) map[string]string {
+	return map[string]string{for _, value := range values {
+		value: mapped(value)
+	}}
+}
+`)
+	if !strings.Contains(output, "result[value] = mapped(value)") {
+		t.Fatalf("generated map comprehension changed its value call\n%s", output)
+	}
+	if strings.Contains(output, "append(value)") {
+		t.Fatalf("generated map comprehension rewrote a value call as append\n%s", output)
+	}
+}
+
 func TestTypedPlanEmitsGuardedPropagation(t *testing.T) {
 	output := compileSourceOutput(t, `package sample
 

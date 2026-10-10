@@ -437,8 +437,17 @@ func (b *loweringPlanBuilder) declarationPlans(
 		if !ok {
 			continue
 		}
-		planned := &plannedDeclaration{
-			source: value, expressions: b.expressionList(value.Values),
+		planned := &plannedDeclaration{source: value}
+		if len(value.Values) == 1 {
+			expected := types.Type(nil)
+			if value.Type != nil && len(value.Names) == 1 {
+				expected = b.expressionType(value.Type)
+			}
+			planned.expressions = []*plannedExpression{b.expressionContext(
+				value.Values[0], expected, len(value.Names),
+			)}
+		} else {
+			planned.expressions = b.expressionList(value.Values)
 		}
 		planned.before = b.orderExpressions(planned.expressions)
 		temporarySource := &ast.DeclStmt{Decl: &ast.GenDecl{
@@ -728,6 +737,11 @@ func (b *loweringPlanBuilder) plannedExpressionBlock(
 func (b *loweringPlanBuilder) statementExpressions(statement ast.Stmt) []*plannedExpression {
 	switch node := statement.(type) {
 	case *ast.AssignStmt:
+		if len(node.Rhs) == 1 {
+			return []*plannedExpression{b.expressionContext(
+				node.Rhs[0], nil, len(node.Lhs),
+			)}
+		}
 		if len(node.Lhs) == len(node.Rhs) {
 			result := make([]*plannedExpression, 0, len(node.Rhs))
 			for index, expression := range node.Rhs {
@@ -839,9 +853,17 @@ func (b *loweringPlanBuilder) expressionContext(
 					result.work.operations = result.work.operations[:count-1]
 				}
 			}
+			var resultObject types.Object
 			ast.Inspect(function.Body, func(node ast.Node) bool {
 				identifier, ok := node.(*ast.Ident)
-				if ok && identifier.Name == metadata.Result {
+				if !ok || identifier.Name != metadata.Result {
+					return true
+				}
+				object := b.unit.info.ObjectOf(identifier)
+				if resultObject == nil && b.unit.info.Defs[identifier] != nil {
+					resultObject = object
+				}
+				if resultObject == nil || object == resultObject {
 					result.resultNames = append(result.resultNames, identifier)
 				}
 				return true
@@ -857,7 +879,8 @@ func (b *loweringPlanBuilder) expressionContext(
 				if len(terminal.List) == 1 {
 					if assignment, ok := terminal.List[0].(*ast.AssignStmt); ok &&
 						len(assignment.Rhs) == 1 {
-						if appendCall, ok := assignment.Rhs[0].(*ast.CallExpr); ok {
+						if appendCall, ok := assignment.Rhs[0].(*ast.CallExpr); ok &&
+							!metadata.Map {
 							result.builtins = append(result.builtins, &plannedBuiltin{
 								call: appendCall, name: "append", position: metadata.Position,
 							})
@@ -940,7 +963,11 @@ func (b *loweringPlanBuilder) expressionContext(
 			left := b.expression(node.X)
 			right := b.expression(node.Y)
 			result.operands = []*plannedExpression{left, right}
-			result.addResult(b, result.typ, expression.Pos())
+			valueType := result.typ
+			if expected != nil {
+				valueType = expected
+			}
+			result.addResult(b, valueType, expression.Pos())
 			if len(result.results) != 0 {
 				output := result.results[0].id
 				result.work = &plannedBlock{
@@ -995,8 +1022,17 @@ func (b *loweringPlanBuilder) expressionContext(
 	for index, operand := range operands {
 		if operand != nil {
 			operandExpected := types.Type(nil)
-			if _, ok := expression.(*ast.BinaryExpr); ok {
-				operandExpected = expected
+			if binary, ok := expression.(*ast.BinaryExpr); ok {
+				switch binary.Op {
+				case token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ,
+					token.LAND, token.LOR:
+				case token.SHL, token.SHR:
+					if index == 0 {
+						operandExpected = expected
+					}
+				default:
+					operandExpected = expected
+				}
 			}
 			if call, ok := expression.(*ast.CallExpr); ok && index > 0 {
 				if signature := b.callSignature(call.Fun); signature != nil {
@@ -1019,7 +1055,14 @@ func (b *loweringPlanBuilder) expressionContext(
 		}
 	}
 	result.before = b.orderOperands(result.operands)
-	result.addResult(b, result.typ, expression.Pos())
+	valueType := result.typ
+	if expected != nil {
+		valueType = expected
+	}
+	result.addResult(b, valueType, expression.Pos())
+	for len(result.results) < resultCount {
+		result.addResult(b, types.Typ[types.Bool], expression.Pos())
+	}
 	return result
 }
 
@@ -1118,7 +1161,10 @@ func (b *loweringPlanBuilder) assignmentPlace(expression ast.Expr) *plannedPlace
 		place.values = append(place.values, b.newValue(place.container.typ, node.X.Pos()))
 	case *ast.SelectorExpr:
 		place.kind = planFieldPlace
-		if _, pointer := types.Unalias(b.expressionType(node.X)).(*types.Pointer); pointer {
+		if selection := b.unit.info.Selections[node]; selection != nil &&
+			len(selection.Index()) > 1 {
+			place.base = b.promotedSelectionBase(node, selection)
+		} else if _, pointer := types.Unalias(b.expressionType(node.X)).(*types.Pointer); pointer {
 			place.base = b.derefPlace(node.X)
 		} else {
 			place.base = b.assignmentPlace(node.X)
@@ -1153,6 +1199,62 @@ func (b *loweringPlanBuilder) assignmentPlace(expression ast.Expr) *plannedPlace
 		place.values = append(place.values, b.newValue(place.index.typ, node.Index.Pos()))
 	}
 	return place
+}
+
+func (b *loweringPlanBuilder) promotedSelectionBase(
+	node *ast.SelectorExpr,
+	selection *types.Selection,
+) *plannedPlace {
+	base := b.assignmentPlace(node.X)
+	expression := node.X
+	expressionPlan := b.expression(node.X)
+	typ := selection.Recv()
+	for _, fieldIndex := range selection.Index()[:len(selection.Index())-1] {
+		if pointer, ok := types.Unalias(typ).(*types.Pointer); ok {
+			typ = pointer.Elem()
+		}
+		named := types.Unalias(typ)
+		if item, ok := named.(*types.Named); ok {
+			named = item.Underlying()
+		}
+		structure, ok := named.(*types.Struct)
+		if !ok || fieldIndex >= structure.NumFields() {
+			return base
+		}
+		field := structure.Field(fieldIndex)
+		expression = &ast.SelectorExpr{X: expression, Sel: ast.NewIdent(field.Name())}
+		selectorPlan := &plannedExpression{
+			kind: planSelectorExpression, source: expression, typ: field.Type(),
+			operands: []*plannedExpression{expressionPlan}, resultCount: 1,
+		}
+		fieldPlace := &plannedPlace{
+			id: placeID(len(b.plan.places) + 1), typ: field.Type(),
+			position: node.Pos(), kind: planFieldPlace, source: expression, base: base,
+		}
+		b.plan.places = append(b.plan.places, fieldPlace)
+		if _, pointer := types.Unalias(field.Type()).(*types.Pointer); pointer {
+			base = &plannedPlace{
+				id: placeID(len(b.plan.places) + 1), typ: dereferencedType(field.Type()),
+				position: node.Pos(), kind: planDerefPlace, source: expression,
+				container: selectorPlan,
+			}
+			base.values = append(base.values, b.newValue(field.Type(), node.Pos()))
+			b.plan.places = append(b.plan.places, base)
+		} else {
+			base = fieldPlace
+		}
+		expressionPlan = selectorPlan
+		typ = field.Type()
+	}
+	return base
+}
+
+func dereferencedType(typ types.Type) types.Type {
+	pointer, _ := types.Unalias(typ).(*types.Pointer)
+	if pointer == nil {
+		return nil
+	}
+	return pointer.Elem()
 }
 
 func (b *loweringPlanBuilder) derefPlace(expression ast.Expr) *plannedPlace {

@@ -61,6 +61,16 @@ func contextualSend(events *[]string) (uint64, error) {
 	return <-values, nil
 }
 
+func offset(events *[]string) (int, error) {
+	record(events, "offset")
+	return 2, nil
+}
+
+func contextualShiftArgument(events *[]string, n int) (uint64, error) {
+	consume := func(value uint64, number int) uint64 { return value + uint64(number) }
+	return consume(1 << (n + offset(events)!!), loadValue(events)!!), nil
+}
+
 func mutate(events *[]string, value *uint) (chan int, error) {
 	record(events, "mutate")
 	*value = 63
@@ -83,6 +93,19 @@ type cell struct {
 
 type holder struct {
 	Cells [1]cell
+}
+
+type promotedHolder struct {
+	*cell
+}
+
+type promotedMiddle struct {
+	*cell
+}
+
+type promotedOuter struct {
+	promotedMiddle
+	cell int
 }
 
 func selectHolder(events *[]string, value *holder) *holder {
@@ -109,6 +132,22 @@ func storeNestedPlace(events *[]string, value *holder) error {
 	selectHolder(events, value).Cells[selectIndex(events)].Value = loadValue(events)!!
 	return nil
 }
+
+func replacePromoted(events *[]string, value *promotedHolder, next *cell) (int, error) {
+	record(events, "rhs")
+	value.cell = next
+	return 11, nil
+}
+
+func storePromotedPlace(events *[]string, value *promotedHolder, next *cell) error {
+	value.Value = replacePromoted(events, value, next)!!
+	return nil
+}
+
+func storeDeepPromotedPlace(events *[]string, value *promotedOuter) error {
+	value.Value = loadValue(events)!!
+	return nil
+}
 `
 
 const loweringTypesPlacesTestSource = `package typesplaces
@@ -123,6 +162,12 @@ func TestGeneratedTypesAndPlaces(t *testing.T) {
 	value, err := contextualSend(&events)
 	if value != uint64(1)<<63 || err != nil || strings.Join(events, ",") != "shift" {
 		t.Fatalf("contextual value=%d error=%v events=%v", value, err, events)
+	}
+
+	events = nil
+	shifted, err := contextualShiftArgument(&events, 1)
+	if shifted != 17 || err != nil || strings.Join(events, ",") != "offset,rhs" {
+		t.Fatalf("shift argument=%d error=%v events=%v", shifted, err, events)
 	}
 
 	events = nil
@@ -143,6 +188,25 @@ func TestGeneratedTypesAndPlaces(t *testing.T) {
 	err = storeNestedPlace(&events, &target)
 	if target.Cells[0].Value != 9 || err != nil || strings.Join(events, ",") != "target,index,rhs" {
 		t.Fatalf("place target=%v error=%v events=%v", target, err, events)
+	}
+
+	events = nil
+	oldCell := &cell{}
+	newCell := &cell{}
+	promoted := promotedHolder{cell: oldCell}
+	err = storePromotedPlace(&events, &promoted, newCell)
+	if err != nil || oldCell.Value != 11 || newCell.Value != 0 ||
+		strings.Join(events, ",") != "rhs" {
+		t.Fatalf("promoted old=%v new=%v error=%v events=%v", oldCell, newCell, err, events)
+	}
+
+	events = nil
+	deepCell := &cell{}
+	deep := promotedOuter{promotedMiddle: promotedMiddle{cell: deepCell}}
+	err = storeDeepPromotedPlace(&events, &deep)
+	if err != nil || deepCell.Value != 9 || deep.cell != 0 ||
+		strings.Join(events, ",") != "rhs" {
+		t.Fatalf("deep promoted=%v direct=%d error=%v events=%v", deepCell, deep.cell, err, events)
 	}
 }
 `
