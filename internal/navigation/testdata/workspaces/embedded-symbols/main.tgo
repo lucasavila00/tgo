@@ -1,0 +1,36 @@
+package embedded
+
+import "sync"
+
+type OrdinaryNamed struct{}
+
+type OrdinaryPointer struct{}
+
+type checkedNamed struct{}
+
+type checkedPointer struct{}
+
+type Box[T any] struct{}
+
+type Pair[A, B any] struct{}
+
+type Ordinary struct {
+	Before int
+	OrdinaryNamed
+	sync.Mutex
+	Box[int]
+	Pair[int, string]
+	*OrdinaryPointer `json:"pointer"`
+	After            int
+}
+
+type Checked struct {
+	before int
+	checkedNamed
+	%checkedPointer
+	after int
+} checked
+
+func (value Checked) check() (Checked, error) {
+	return value,
+}
