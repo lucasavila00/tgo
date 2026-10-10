@@ -940,3 +940,14 @@ func InsufficientEarlyExitProof(event model.Event, ready bool) string {
 	}
 	return event.StartedPayload().ID
 }
+
+func ChangeNested(value *model.Nested) {
+	value.Number = 1
+	value.Values[0] = 2
+	value.Number++
+	value.Values[:][0] = 3
+	for value.Values[1] = range []int{3} {
+	}
+	_ = &value.Values[0]
+	value.Pointer = nil
+}

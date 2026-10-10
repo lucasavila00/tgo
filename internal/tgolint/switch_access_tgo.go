@@ -135,48 +135,118 @@ func sameModelForType(
 
 func (c *checker) checkedFieldChange(expression *syntax.Expression) bool {
 	selection := c.facts.Selection(expression)
-	if selection == nil || selection.Kind() != types.FieldVal ||
-		len(selection.Index()) != 1 {
+	if !selectionUsesOwnedStorage(selection) {
 		return false
 	}
-	target := syntax.ExpressionNode(expression)
+	current := expression
+	ownedSlice := false
+	target := syntax.ExpressionNode(current)
 	parent := c.parents[target]
 	for parent != nil {
 		if wrapped, ok := syntax.ExpressionOf(parent); ok {
 			parentheses := syntax.ParenthesizedExpressionOf(wrapped)
-			if parentheses != nil {
+			if parentheses != nil &&
+				sameExpressionRange(parentheses.Expression, current) {
+				current = wrapped
+				parent = c.parents[*parent]
+				continue
+			}
+			selector := syntax.SelectorExpressionOf(wrapped)
+			if selector != nil && sameExpressionRange(selector.Expression, current) {
+				if modelIsChecked(c.modelForReceiver(c.facts.Type(current))) ||
+					!structOwnsSelectedStorage(c.facts.Type(current)) {
+					return false
+				}
+				current = wrapped
+				parent = c.parents[*parent]
+				continue
+			}
+			index := syntax.IndexExpressionOf(wrapped)
+			if index != nil && sameExpressionRange(index.Expression, current) {
+				if !ownedSlice && !arrayOwnsIndexedStorage(c.facts.Type(current)) {
+					return false
+				}
+				current = wrapped
+				ownedSlice = false
+				parent = c.parents[*parent]
+				continue
+			}
+			slice := syntax.SliceExpressionOf(wrapped)
+			if slice != nil && sameExpressionRange(slice.Expression, current) {
+				if !ownedSlice && !arrayOwnsIndexedStorage(c.facts.Type(current)) {
+					return false
+				}
+				current = wrapped
+				ownedSlice = true
 				parent = c.parents[*parent]
 				continue
 			}
 			unary := syntax.UnaryExpressionOf(wrapped)
-			return unary != nil && unary.Operator == token.AND
+			return unary != nil && unary.Operator == token.AND &&
+				sameExpressionRange(unary.Expression, current)
 		}
 		statement, ok := syntax.StatementOf(parent)
 		if !ok {
 			return false
 		}
 		if increment := syntax.IncrementStatementOf(statement); increment != nil {
-			return sameExpressionRange(increment.Expression, expression)
+			return sameExpressionRange(increment.Expression, current)
 		}
 		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
 			for _, left := range assignment.Left {
-				if sameExpressionRange(left, expression) {
+				if sameExpressionRange(left, current) {
 					return true
 				}
 			}
 		}
 		if ranged := syntax.RangeStatementOf(statement); ranged != nil &&
 			ranged.Operator == token.ASSIGN {
-			if ranged.Key != nil && sameExpressionRange(ranged.Key, expression) {
+			if ranged.Key != nil && sameExpressionRange(ranged.Key, current) {
 				return true
 			}
-			if ranged.Value != nil && sameExpressionRange(ranged.Value, expression) {
+			if ranged.Value != nil && sameExpressionRange(ranged.Value, current) {
 				return true
 			}
 		}
 		return false
 	}
 	return false
+}
+
+func selectionUsesOwnedStorage(selection *types.Selection) bool {
+	if selection == nil || selection.Kind() != types.FieldVal {
+		return false
+	}
+	current := selection.Recv()
+	for offset, index := range selection.Index() {
+		current = dereference(current)
+		structure, ok := current.Underlying().(*types.Struct)
+		if !ok || index >= structure.NumFields() {
+			return false
+		}
+		current = structure.Field(index).Type()
+		if offset < len(selection.Index())-1 &&
+			!structOwnsSelectedStorage(current) {
+			return false
+		}
+	}
+	return true
+}
+
+func structOwnsSelectedStorage(typ types.Type) bool {
+	if typ == nil {
+		return false
+	}
+	_, ok := types.Unalias(typ).Underlying().(*types.Struct)
+	return ok
+}
+
+func arrayOwnsIndexedStorage(typ types.Type) bool {
+	if typ == nil {
+		return false
+	}
+	_, ok := types.Unalias(typ).Underlying().(*types.Array)
+	return ok
 }
 
 func sameExpressionRange(left *syntax.Expression, right *syntax.Expression) bool {

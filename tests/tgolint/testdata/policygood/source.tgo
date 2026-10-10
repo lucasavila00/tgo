@@ -57,3 +57,35 @@ func choicePayload(value Choice) string {
 	payload := value.TextPayload
 	return payload().Value
 }
+
+type mutableDetails struct{ number int }
+
+type nestedDetails struct {
+	pointer *mutableDetails
+	slice   []int
+	mapping map[string]int
+}
+
+type NestedQuantity struct{ nestedDetails } checked
+
+func (value NestedQuantity) check() (NestedQuantity, error) { return value, }
+
+func changeNestedReferences(value *NestedQuantity) {
+	value.pointer.number = 1
+	value.nestedDetails.pointer.number = 2
+	value.slice[0]++
+	value.nestedDetails.slice[0] = 3
+	value.mapping["one"] = 4
+	value.nestedDetails.mapping["two"] = 5
+	_ = &value.slice[0]
+}
+
+type pointedDetails struct{ number int }
+
+type PointerQuantity struct{ *pointedDetails } checked
+
+func (value PointerQuantity) check() (PointerQuantity, error) { return value, }
+
+func changePromotedPointer(value *PointerQuantity) {
+	value.number = 1
+}

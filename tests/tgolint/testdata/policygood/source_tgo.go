@@ -283,6 +283,62 @@ func choicePayload(value Choice) string {
 	payload := value.TextPayload
 	return payload().Value
 }
+
+type mutableDetails struct {
+	number int
+}
+
+type nestedDetails struct {
+	pointer *mutableDetails
+	slice   []int
+	mapping map[string]int
+}
+
+type NestedQuantity struct {
+	nestedDetails
+}
+type TgoNestedQuantityInput struct {
+	Field0 nestedDetails
+}
+
+// NewNestedQuantity constructs and checks NestedQuantity.
+func NewNestedQuantity(tgoField0 nestedDetails) (NestedQuantity, error) {
+	return NestedQuantity{tgoField0}.check()
+}
+
+func (value NestedQuantity) check() (NestedQuantity, error) { return value, nil }
+
+func changeNestedReferences(value *NestedQuantity) {
+	value.pointer.number = 1
+	value.nestedDetails.pointer.number = 2
+	value.slice[0]++
+	value.nestedDetails.slice[0] = 3
+	value.mapping["one"] = 4
+	value.nestedDetails.mapping["two"] = 5
+	_ = &value.slice[0]
+}
+
+type pointedDetails struct {
+	number int
+}
+
+type PointerQuantity struct {
+	*pointedDetails
+}
+type TgoPointerQuantityInput struct {
+	Field0 *pointedDetails
+}
+
+// NewPointerQuantity constructs and checks PointerQuantity.
+func NewPointerQuantity(tgoField0 *pointedDetails) (PointerQuantity, error) {
+	return PointerQuantity{tgoField0}.check()
+}
+
+func (value PointerQuantity) check() (PointerQuantity, error) { return value, nil }
+
+func changePromotedPointer(value *PointerQuantity) {
+	value.number = 1
+}
 func TgoDefaultRequestTags() map[string]string {
 	return map[string]string{}
 }

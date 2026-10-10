@@ -542,3 +542,14 @@ func DefaultFallback(event model.Event) string {
 		return event.StoppedPayload().Reason
 	}
 }
+
+func ChangeNestedReferences(value *model.Nested) {
+	value.Pointer.Number = 1
+	value.Slice[0] = 2
+	value.Map["one"] = 3
+	_ = &value.Slice[0]
+}
+
+func ChangePromotedPointer(value *model.PointerNested) {
+	value.Number = 1
+}

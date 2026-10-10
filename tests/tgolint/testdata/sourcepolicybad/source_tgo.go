@@ -266,6 +266,45 @@ func change(value Port) {
 	}
 }
 
+type mutableDetails struct {
+	number int
+}
+
+type nestedDetails struct {
+	number  int
+	values  [2]int
+	pointer *mutableDetails
+	slice   []int
+	mapping map[string]int
+}
+
+type NestedPort struct {
+	nestedDetails
+}
+type TgoNestedPortInput struct {
+	Field0 nestedDetails
+}
+
+// NewNestedPort constructs and checks NestedPort.
+func NewNestedPort(tgoField0 nestedDetails) (NestedPort, error) {
+	return NestedPort{tgoField0}.check()
+}
+
+func (value NestedPort) check() (NestedPort, error) { return value, nil }
+
+func changeNested(value *NestedPort) {
+	value.number = 1
+	value.nestedDetails.number = 2
+	value.values[0] = 3
+	value.nestedDetails.values[1]++
+	value.values[:][0] = 4
+	for value.values[0] = range []int{4} {
+	}
+	_ = &value.nestedDetails.number
+	_ = &value.values[1]
+	value.pointer = nil
+}
+
 var localConstructor = NewPort
 var localCarrier = TgoPortInput{FieldNumber: 0}
 var importedConstructor = model.NewCount

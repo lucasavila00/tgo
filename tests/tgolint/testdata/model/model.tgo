@@ -24,3 +24,23 @@ type Signal enum {
 }
 
 func Identity(value int) int { return value }
+
+type mutableDetails struct { Number int }
+
+type checkedDetails struct {
+	Number  int
+	Values  [2]int
+	Pointer *mutableDetails
+	Slice   []int
+	Map     map[string]int
+}
+
+type Nested struct { checkedDetails } checked
+
+func (value Nested) check() (Nested, error) { return value, }
+
+type pointedDetails struct { Number int }
+
+type PointerNested struct { *pointedDetails } checked
+
+func (value PointerNested) check() (PointerNested, error) { return value, }

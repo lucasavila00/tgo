@@ -430,6 +430,50 @@ func (v *Signal) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 }
 
 func Identity(value int) int { return value }
+
+type mutableDetails struct {
+	Number int
+}
+
+type checkedDetails struct {
+	Number  int
+	Values  [2]int
+	Pointer *mutableDetails
+	Slice   []int
+	Map     map[string]int
+}
+
+type Nested struct {
+	checkedDetails
+}
+type TgoNestedInput struct {
+	Field0 checkedDetails
+}
+
+// NewNested constructs and checks Nested.
+func NewNested(tgoField0 checkedDetails) (Nested, error) {
+	return Nested{tgoField0}.check()
+}
+
+func (value Nested) check() (Nested, error) { return value, nil }
+
+type pointedDetails struct {
+	Number int
+}
+
+type PointerNested struct {
+	*pointedDetails
+}
+type TgoPointerNestedInput struct {
+	Field0 *pointedDetails
+}
+
+// NewPointerNested constructs and checks PointerNested.
+func NewPointerNested(tgoField0 *pointedDetails) (PointerNested, error) {
+	return PointerNested{tgoField0}.check()
+}
+
+func (value PointerNested) check() (PointerNested, error) { return value, nil }
 func TgoDefaultPairLeft() string {
 	return ""
 }

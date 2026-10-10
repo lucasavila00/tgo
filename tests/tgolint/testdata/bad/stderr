@@ -94,3 +94,10 @@ bad/bad.go:915:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:927:9: Event: StoppedPayload requires proof of EventTagStopped
 bad/bad.go:932:10: Event: StartedPayload requires proof of EventTagStarted
 bad/bad.go:941:9: Event: StartedPayload requires proof of EventTagStarted
+bad/bad.go:945:2: checked field Number cannot be changed after construction
+bad/bad.go:946:2: checked field Values cannot be changed after construction
+bad/bad.go:947:2: checked field Number cannot be changed after construction
+bad/bad.go:948:2: checked field Values cannot be changed after construction
+bad/bad.go:949:6: checked field Values cannot be changed after construction
+bad/bad.go:951:7: checked field Values cannot be changed after construction
+bad/bad.go:952:2: checked field Pointer cannot be changed after construction
