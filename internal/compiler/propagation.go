@@ -288,23 +288,45 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 	case *ast.ForStmt:
 		node.Body.List = l.scopedStatements(node.Body.List)
 		l.missingStatementLowering(node.Init, "for initializer")
-		l.missingStatementLowering(node.Post, "for post statement")
-		if l.hasLowering(node.Cond) {
+		prefix := []ast.Stmt(nil)
+		postPrefix := []ast.Stmt(nil)
+		if l.statementHasLowering(node.Post) {
+			// Keep source post work after Go creates the next iteration variables.
+			pending := l.freshName("post")
+			prefix = append(prefix, &ast.AssignStmt{
+				Lhs: []ast.Expr{pending}, Tok: token.DEFINE,
+				Rhs: []ast.Expr{l.unit.generatedUniverse("false", node.Post.Pos())},
+			})
+			postPrefix = append(postPrefix, &ast.IfStmt{
+				Cond: ast.NewIdent(pending.Name),
+				Body: &ast.BlockStmt{List: append([]ast.Stmt{&ast.AssignStmt{
+					Lhs: []ast.Expr{ast.NewIdent(pending.Name)}, Tok: token.ASSIGN,
+					Rhs: []ast.Expr{l.unit.generatedUniverse("false", node.Post.Pos())},
+				}}, l.simpleStatement(node.Post)...)},
+			})
+			node.Post = &ast.AssignStmt{
+				Lhs: []ast.Expr{ast.NewIdent(pending.Name)}, Tok: token.ASSIGN,
+				Rhs: []ast.Expr{l.unit.generatedUniverse("true", node.Post.Pos())},
+			}
+		}
+		if len(postPrefix) > 0 || l.hasLowering(node.Cond) {
 			condition, prefix := l.expression(node.Cond)
-			exit := &ast.IfStmt{
-				Cond: &ast.UnaryExpr{Op: token.NOT, X: condition},
-				Body: &ast.BlockStmt{List: []ast.Stmt{&ast.BranchStmt{
-					Tok: token.BREAK,
-				}}},
+			body := make([]ast.Stmt, 0, len(postPrefix)+len(prefix)+1+len(node.Body.List))
+			body = append(body, postPrefix...)
+			body = append(body, prefix...)
+			if condition != nil {
+				body = append(body, &ast.IfStmt{
+					Cond: &ast.UnaryExpr{Op: token.NOT, X: condition},
+					Body: &ast.BlockStmt{List: []ast.Stmt{&ast.BranchStmt{
+						Tok: token.BREAK,
+					}}},
+				})
 			}
 			node.Cond = nil
-			body := make([]ast.Stmt, 0, len(prefix)+1+len(node.Body.List))
-			body = append(body, prefix...)
-			body = append(body, exit)
 			body = append(body, node.Body.List...)
 			node.Body.List = body
 		}
-		return []ast.Stmt{node}
+		return l.prefixedStatement(prefix, node, false)
 	case *ast.SelectStmt:
 		for _, item := range node.Body.List {
 			clause := item.(*ast.CommClause)

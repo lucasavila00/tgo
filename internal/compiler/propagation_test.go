@@ -485,3 +485,34 @@ func use() error {
 		})
 	}
 }
+
+func TestPropagationLowersForPost(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func next(value int) (int, error) { return value + 1, nil }
+
+func use(post, result int, err error) (int, error) {
+	for value := 0; value < 2; value = next(value)!! {
+		continue
+	}
+	return post + result, err
+}
+`)
+	for _, required := range []string{
+		"post_1 := false",
+		"for value := 0; ; post_1 = true",
+		"if post_1 {",
+		"post_1 = false",
+		"result_1, err_1 := next(value)",
+		"value = result_1",
+		"if !(value < 2)",
+	} {
+		if !strings.Contains(output, required) {
+			t.Fatalf("generated output does not contain %q\n%s", required, output)
+		}
+	}
+	if strings.Contains(output, "func()") {
+		t.Fatalf("generated for post uses a function frame\n%s", output)
+	}
+}
