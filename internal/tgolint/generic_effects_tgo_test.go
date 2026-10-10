@@ -237,6 +237,26 @@ func TestStorageIndexUsesRuntimeInteger(t *testing.T) {
 	}
 }
 
+func TestStorageIndexKeepsEncodedIntegerWithoutTemp(t *testing.T) {
+	t.Parallel()
+	operation := storageIndexOperation(map[int]storageValue{}, StorageEffectOperation{
+		Inputs: []int{1, 0}, Length: 4, KnownLength: true,
+	})
+	if !operation.KnownLength || operation.Length != 4 {
+		t.Fatalf("index operation = %#v", operation)
+	}
+}
+
+func TestStorageZeroResliceKeepsUnknownOffset(t *testing.T) {
+	t.Parallel()
+	value := resliceStorageValue(storageValue{slices: []storageSlice{{
+		offset: 3, knownOffset: false,
+	}}}, StorageEffectOperation{KnownOffset: true})
+	if value.slices[0].knownOffset {
+		t.Fatalf("reslice restored unknown offset: %#v", value)
+	}
+}
+
 func TestStorageUnknownSliceOffsetReadsWildcard(t *testing.T) {
 	t.Parallel()
 	state := newStorageState()

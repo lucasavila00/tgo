@@ -203,7 +203,10 @@ func storageIndexOperation(
 	if len(operation.Inputs) < 2 {
 		return operation
 	}
-	index := storageInput(temps, operation.Inputs, 1)
+	index, ok := temps[operation.Inputs[1]]
+	if !ok {
+		return operation
+	}
 	operation.Length = index.integer
 	operation.KnownLength = index.integerKnown
 	return operation
@@ -482,7 +485,6 @@ func resliceStorageValue(
 			continue
 		}
 		slice.offset += low
-		slice.knownOffset = slice.knownOffset || low == 0
 		if operation.KnownLength {
 			slice.length = operation.Length - low
 			slice.knownLength = true
