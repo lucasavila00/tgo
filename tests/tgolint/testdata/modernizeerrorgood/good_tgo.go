@@ -237,3 +237,16 @@ work:
 	result = value
 	goto done
 }
+
+func namedErrorDeferredAfterNonNil() (result *record, err error) {
+	err = errors.New("old")
+	defer func() {
+		_ = err
+	}()
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	result = value
+	panic("stop")
+}

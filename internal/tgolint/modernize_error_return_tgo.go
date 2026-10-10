@@ -160,6 +160,9 @@ func errorUsesCovered(
 	if namedResult && nakedReturnReachable(body, matches, mayReturn) {
 		return false
 	}
+	deferredReadSafe := !namedResult || namedErrorIsNilBefore(
+		file, target, first, index,
+	)
 	syntax.Inspect(file, func(node *syntax.Node) bool {
 		if !valid {
 			return false
@@ -177,11 +180,56 @@ func errorUsesCovered(
 				return true
 			}
 		}
-		if identifier.Start < first && priorErrorUseIsSafe(file, node) {
+		if identifier.Start < first &&
+			priorErrorUseIsSafe(file, node, deferredReadSafe) {
 			return true
 		}
 		valid = false
 		return false
+	})
+	return valid
+}
+
+// namedErrorIsNilBefore proves that each earlier write stores nil.
+func namedErrorIsNilBefore(
+	file *syntax.File,
+	target types.Object,
+	before token.Pos,
+	index *sourcefacts.Index,
+) bool {
+	valid := true
+	syntax.Inspect(file, func(node *syntax.Node) bool {
+		if !valid {
+			return false
+		}
+		statement, ok := syntax.StatementOf(node)
+		if !ok || syntax.StatementPosition(statement) >= before {
+			return true
+		}
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			for position, left := range assignment.Left {
+				if index.IdentifierObject(sourceUnparenthesized(left)) != target {
+					continue
+				}
+				if len(assignment.Left) != len(assignment.Right) ||
+					index.IdentifierObject(sourceUnparenthesized(
+						assignment.Right[position],
+					)) != types.Universe.Lookup("nil") {
+					valid = false
+					return false
+				}
+			}
+		}
+		ranged := syntax.RangeStatementOf(statement)
+		if ranged != nil &&
+			(ranged.Key != nil &&
+				index.IdentifierObject(sourceUnparenthesized(ranged.Key)) == target ||
+				ranged.Value != nil &&
+					index.IdentifierObject(sourceUnparenthesized(ranged.Value)) == target) {
+			valid = false
+			return false
+		}
+		return true
 	})
 	return valid
 }
@@ -231,7 +279,11 @@ func nakedReturnReachable(
 }
 
 // priorErrorUseIsSafe rejects stored closures that can read the old error later.
-func priorErrorUseIsSafe(file *syntax.File, node *syntax.Node) bool {
+func priorErrorUseIsSafe(
+	file *syntax.File,
+	node *syntax.Node,
+	deferredReadSafe bool,
+) bool {
 	literals := 0
 	deferred := false
 	addressed := false
@@ -250,7 +302,8 @@ func priorErrorUseIsSafe(file *syntax.File, node *syntax.Node) bool {
 			deferred = true
 		}
 	}
-	return !addressed && (literals == 0 || literals == 1 && deferred)
+	return !addressed &&
+		(literals == 0 || literals == 1 && deferred && deferredReadSafe)
 }
 
 // reportErrorReturnModernization reports one manual propagation expansion.
