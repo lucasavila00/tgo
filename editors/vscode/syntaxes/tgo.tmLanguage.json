@@ -33,32 +33,12 @@
           }
         },
         {
-          "match": "(?<![A-Za-z0-9_.)\\]][ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
-          "captures": {
-            "1": {
-              "name": "storage.modifier.non-nil.tgo"
-            }
-          }
-        },
-        {
-          "match": "(\\[\\s*\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
-          "captures": {
-            "1": {
-              "patterns": [
-                {
-                  "include": "source.go"
-                }
-              ]
-            },
-            "3": {
-              "name": "storage.modifier.non-nil.tgo"
-            }
-          }
-        },
-        {
-          "begin": "(?:(?:^[ \\t]+|[^\\p{L}\\p{Nd}_.)\\]}'\"\\x60\\s][ \\t]*)|\\b(?:return|range|chan|map)\\b[ \\t]*|^[ \\t]*\\bcase\\b[ \\t]+|\\bmake\\b[ \\t]*\\([ \\t]*\\b(?:chan|map)\\b[ \\t]+)(?=\\[)",
+          "begin": "(?:(?<![\\p{L}\\p{Nd}_.)\\]}'\"\\x60][ \\t]*)(%+)|((?:^[ \\t]+|^[ \\t]*\\bvar\\b[ \\t]+(?:[\\p{L}_][\\p{L}\\p{Nd}_]*[ \\t]*,[ \\t]*)*[\\p{L}_][\\p{L}\\p{Nd}_]*[ \\t]*=[ \\t]*|[^\\p{L}\\p{Nd}_.)\\]}'\"\\x60\\s][ \\t]*|\\b(?:return|range|chan|map)\\b[ \\t]*|^[ \\t]*\\bcase\\b[ \\t]+|\\bmake\\b[ \\t]*\\([ \\t]*\\b(?:chan|map)\\b[ \\t]+)))(?=\\[)",
           "beginCaptures": {
-            "0": {
+            "1": {
+              "name": "storage.modifier.non-nil.tgo"
+            },
+            "2": {
               "patterns": [
                 {
                   "include": "source.go"
@@ -80,6 +60,29 @@
               "include": "source.go"
             }
           ]
+        },
+        {
+          "match": "(?<![A-Za-z0-9_.)\\]][ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
+        },
+        {
+          "match": "(\\[\\s*\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "source.go"
+                }
+              ]
+            },
+            "3": {
+              "name": "storage.modifier.non-nil.tgo"
+            }
+          }
         },
         {
           "match": "(\\b(?:chan|case|return)\\b)([ \\t]+)(%+)(?=[*A-Za-z_(\\[])",
@@ -519,7 +522,7 @@
               ]
             },
             {
-              "match": "(^[ \\t]*(?:(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)?)([^=\\r\\n]+)",
+              "match": "(^[ \\t]*(?:(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)?)(%+)?([^=\\r\\n]+)",
               "captures": {
                 "1": {
                   "patterns": [
@@ -534,6 +537,9 @@
                   ]
                 },
                 "2": {
+                  "name": "storage.modifier.non-nil.tgo"
+                },
+                "3": {
                   "patterns": [
                     {
                       "name": "storage.modifier.non-nil.tgo",
@@ -547,7 +553,7 @@
               }
             },
             {
-              "match": "((?:(?<=\\{)|(?<=;))[ \\t]*(?:(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)?)([^=;\\r\\n}]+)",
+              "match": "((?:(?<=\\{)|(?<=;))[ \\t]*(?:(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)?)(%+)?([^=;\\r\\n}]+)",
               "captures": {
                 "1": {
                   "patterns": [
@@ -562,6 +568,9 @@
                   ]
                 },
                 "2": {
+                  "name": "storage.modifier.non-nil.tgo"
+                },
+                "3": {
                   "patterns": [
                     {
                       "name": "storage.modifier.non-nil.tgo",

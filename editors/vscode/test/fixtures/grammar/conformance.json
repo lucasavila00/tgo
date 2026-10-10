@@ -478,6 +478,36 @@
         "token": "%",
         "has": "storage.modifier.non-nil.tgo",
         "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var Group = [2]%T{}",
+        "token": "%T",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "Field %[2]%T",
+        "token": "%[2]",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "Field %[2]%T",
+        "token": "%T",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = %[2]%T(nil)",
+        "token": "%[2]",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "_ = %[2]%T(nil)",
+        "token": "%T",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
       }
     ],
     "negative": [

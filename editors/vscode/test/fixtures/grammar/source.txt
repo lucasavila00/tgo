@@ -12,6 +12,7 @@ type MultilineEvent enum
 type Port struct { number int } checked
 type CheckedRecord struct {
 	value int
+	Field %[2]%T
 	owner %User
 	history []%User
 	lookup map[string]%User
@@ -104,6 +105,7 @@ type MultilineReader interface
 	) %MultilineTransformResult
 }
 var currentUser %User
+var Group = [2]%T{}
 var multilineVariableFactory func(
 	value %VariableInput,
 ) %VariableResult
@@ -178,6 +180,7 @@ b`)]%RawRecord{}
 	_ = [1][2]%MatrixRecord{}
 	_ = map[string][2]%MapRecord{}
 	_ = [len([2]int{})][3]%NestedMatrixRecord{}
+	_ = %[2]%T(nil)
 	_ = []int{for _, item := range values { if item > 0 { item } }}
 	switch event.Tag() {
 	case [2]%CaseRecord{}:
