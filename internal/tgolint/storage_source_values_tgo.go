@@ -20,7 +20,6 @@ func (c *checker) storageExpressionValue(
 		return storageValue{unknown: true}
 	}
 	node := syntax.ExpressionNode(expression)
-	flow.before[node] = cloneStorageState(state)
 	if value := c.facts.Constant(expression); value != nil && value.Kind() == constant.Bool {
 		return storageValue{trueValue: constant.BoolVal(value), falseValue: !constant.BoolVal(value)}
 	}
@@ -298,6 +297,8 @@ func (c *checker) storageCallValues(
 	apply bool,
 ) []storageValue {
 	position := syntax.ExpressionPosition(expression)
+	flow.before[syntax.ExpressionNode(expression)] = cloneStorageState(state)
+	flow.before[syntax.ExpressionNode(call.Callee)] = cloneStorageState(state)
 	if !apply {
 		if values, ok := flow.values[position]; ok {
 			return cloneStorageValues(values)
