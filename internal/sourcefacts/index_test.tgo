@@ -113,6 +113,108 @@ func TestProjectionDoesNotClassifySameLineUseAsDefinition(t *testing.T) {
 	}
 }
 
+func TestProjectionMatchesNamesAtSharedAdjustedPosition(t *testing.T) {
+	t.Parallel()
+	source := []byte("package sample\n" +
+		"//line sample.tgo:10:5\nvar alpha int\n" +
+		"//line sample.tgo:10:5\nvar gamma int\n" +
+		"//line sample.tgo:11:1\nvar beta int\n" +
+		"//line sample.tgo:10:1\nvar _ = beta\n")
+	files := token.NewFileSet()
+	parsed := parseSource(t, files, source)
+	alpha := declarationName(parsed, 0)
+	gamma := declarationName(parsed, 1)
+	beta := declarationName(parsed, 2)
+	use := declarationUse(parsed, 3)
+	position := files.Position(alpha.Start)
+	position.Offset = 0
+	gammaPosition := files.Position(gamma.Start)
+	gammaPosition.Offset = 0
+	usePosition := files.Position(use.Start)
+	usePosition.Offset = 0
+	if gammaPosition != position || usePosition != position {
+		t.Fatal("test identifiers do not share an adjusted position")
+	}
+	alphaObject := types.NewVar(alpha.Start, nil, alpha.Name, types.Typ[types.Int])
+	gammaObject := types.NewVar(gamma.Start, nil, gamma.Name, types.Typ[types.Int])
+	betaObject := types.NewVar(beta.Start, nil, beta.Name, types.Typ[types.Int])
+	orders := [][]objectFact{
+		{
+			{position: alpha.Start, name: alpha.Name, object: alphaObject},
+			{position: gamma.Start, name: gamma.Name, object: gammaObject},
+			{position: beta.Start, name: beta.Name, object: betaObject},
+		},
+		{
+			{position: gamma.Start, name: gamma.Name, object: gammaObject},
+			{position: alpha.Start, name: alpha.Name, object: alphaObject},
+			{position: beta.Start, name: beta.Name, object: betaObject},
+		},
+	}
+	for order, definitions := range orders {
+		index := NewProjection(parsed, &projectionStub{
+			definitions: definitions,
+			uses: []objectFact{{
+				position: use.Start, name: use.Name, object: betaObject,
+			}},
+		}, files)
+		for _, item := range []struct {
+				name   %syntax.Identifier
+			object types.Object
+		}{
+			{name: alpha, object: alphaObject},
+			{name: gamma, object: gammaObject},
+		} {
+			if got := index.DefinitionName(item.name); got != item.object {
+				t.Fatalf("order %d: definition %s = %v, want %v",
+					order, item.name.Name, got, item.object)
+			}
+			if got := index.Object(item.name); got != item.object {
+				t.Fatalf("order %d: object %s = %v, want %v",
+					order, item.name.Name, got, item.object)
+			}
+			node := identifierNode(parsed, item.name)
+			if node == nil {
+				t.Fatalf("order %d: identifier node %s is absent", order, item.name.Name)
+				return
+			}
+			got, definition := index.IdentifierFact(parsed, node)
+			if got != item.object || !definition {
+				t.Fatalf("order %d: identifier %s = %v, %t, want %v, true",
+					order, item.name.Name, got, definition, item.object)
+			}
+		}
+		if got := index.Object(use); got != betaObject {
+			t.Fatalf("order %d: use object = %v, want %v", order, got, betaObject)
+		}
+		useNode := identifierNode(parsed, use)
+		if useNode == nil {
+			t.Fatalf("order %d: use node is absent", order)
+			return
+		}
+		got, definition := index.IdentifierFact(parsed, useNode)
+		if got != betaObject || definition {
+			t.Fatalf("order %d: use = %v, %t, want %v, false",
+				order, got, definition, betaObject)
+		}
+	}
+}
+
+func declarationName(file %syntax.File, index int) %syntax.Identifier {
+	declaration := syntax.GeneralDeclarationOf(file.Declarations[index])
+	value := syntax.ValueSpecificationOf(declaration.Specs[0])
+	return value.Names[0]
+}
+
+func declarationUse(file %syntax.File, index int) %syntax.Identifier {
+	declaration := syntax.GeneralDeclarationOf(file.Declarations[index])
+	value := syntax.ValueSpecificationOf(declaration.Specs[0])
+	result := syntax.IdentifierExpressionOf(value.Values[0])
+	if result == nil {
+		panic("test use identifier is absent")
+	}
+	return result
+}
+
 func parseSource(t *testing.T, files *token.FileSet, source []byte) *syntax.File {
 	t.Helper()
 	parsed, err := syntax.ParseGoFile(

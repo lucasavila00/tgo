@@ -264,10 +264,10 @@ func (i %Index) IdentifierObject(expression %syntax.Expression) types.Object {
 // Object returns the object used or defined by an identifier.
 func (i %Index) Object(identifier %syntax.Identifier) types.Object {
 	position := i.location(identifier.Start)
-	if object := i.definitions[position]; object != nil {
+	if object := matchingObject(i.definitions, identifier, position); object != nil {
 		return object
 	}
-	if object := i.uses[position]; object != nil {
+	if object := matchingObject(i.uses, identifier, position); object != nil {
 		return object
 	}
 	return i.lineDefinition(identifier, position)
@@ -280,10 +280,10 @@ func (i %Index) IdentifierFact(file %syntax.File, node %syntax.Node) (types.Obje
 		return nil, false
 	}
 	position := i.location(identifier.Start)
-	if object := i.definitions[position]; object != nil {
+	if object := matchingObject(i.definitions, identifier, position); object != nil {
 		return object, true
 	}
-	if object := i.uses[position]; object != nil {
+	if object := matchingObject(i.uses, identifier, position); object != nil {
 		return object, false
 	}
 	object := i.lineDefinition(identifier, position)
@@ -413,10 +413,22 @@ func (i %Index) Definition(expression %syntax.Expression) types.Object {
 // DefinitionName returns the object defined by a source identifier node.
 func (i %Index) DefinitionName(identifier %syntax.Identifier) types.Object {
 	position := i.location(identifier.Start)
-	if object := i.definitions[position]; object != nil {
+	if object := matchingObject(i.definitions, identifier, position); object != nil {
 		return object
 	}
 	return i.lineDefinition(identifier, position)
+}
+
+func matchingObject(
+	objects map[location]types.Object,
+	identifier *syntax.Identifier,
+	position location,
+) types.Object {
+	object := objects[position]
+	if object != nil && object.Name() == identifier.Name {
+		return object
+	}
+	return nil
 }
 
 func (i %Index) lineDefinition(
