@@ -31,12 +31,18 @@ jobs:
     needs: changes
     if: needs.changes.outputs.formatter == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.corpus.outputs.passed }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - run: make formatter-go-corpus
+      - id: corpus
+        name: Run formatter corpus
+        run: |
+          make formatter-go-corpus
+          echo "passed=true" >> "$GITHUB_OUTPUT"
 
   formatter-corpus-gate:
     name: formatter-corpus
@@ -50,4 +56,5 @@ jobs:
           CLASSIFIER_RESULT: ${{ needs.changes.result }}
           FORMATTER_REQUIRED: ${{ needs.changes.outputs.formatter }}
           CORPUS_RESULT: ${{ needs.formatter-go-corpus.result }}
+          CORPUS_PASSED: ${{ needs.formatter-go-corpus.outputs.passed }}
         run: python3 scripts/formatter_ci.py gate

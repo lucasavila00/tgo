@@ -14,6 +14,8 @@ from scripts import formatter_ci
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "formatter-ci.yml"
+SLOW_WORKFLOW = ROOT / ".github" / "workflows" / "slow-ci.yml"
+MAKEFILE = ROOT / "Makefile"
 
 
 class ClassificationTest(unittest.TestCase):
@@ -167,35 +169,141 @@ class WorkflowVerificationTest(unittest.TestCase):
             failures,
         )
 
+    def test_rejects_corpus_continue_on_error(self) -> None:
+        source = WORKFLOW.read_text().replace(
+            "      - id: corpus\n",
+            "      - id: corpus\n        continue-on-error: true\n",
+        )
+
+        failures = formatter_ci.formatter_workflow_failures(source)
+
+        self.assertIn("formatter corpus job must not continue on error", failures)
+
+    def test_rejects_corpus_step_condition(self) -> None:
+        source = WORKFLOW.read_text().replace(
+            "      - id: corpus\n",
+            "      - id: corpus\n        if: false\n",
+        )
+
+        failures = formatter_ci.formatter_workflow_failures(source)
+
+        self.assertIn("formatter corpus step must not have a condition", failures)
+
+    def test_rejects_missing_corpus_proof(self) -> None:
+        source = WORKFLOW.read_text().replace(
+            '          echo "passed=true" >> "$GITHUB_OUTPUT"\n',
+            "",
+        )
+
+        failures = formatter_ci.formatter_workflow_failures(source)
+
+        self.assertIn(
+            "formatter corpus step must run the exact proof commands",
+            failures,
+        )
+
+
+class BackstopVerificationTest(unittest.TestCase):
+    def test_accepts_active_backstop(self) -> None:
+        self.assertEqual(
+            formatter_ci.slow_workflow_failures(SLOW_WORKFLOW.read_text()),
+            [],
+        )
+        self.assertEqual(
+            formatter_ci.makefile_failures(MAKEFILE.read_text()),
+            [],
+        )
+
+    def test_rejects_commented_schedule(self) -> None:
+        source = SLOW_WORKFLOW.read_text().replace(
+            "  schedule:\n",
+            "  # schedule:\n",
+        )
+
+        failures = formatter_ci.slow_workflow_failures(source)
+
+        self.assertIn("Slow CI needs its active weekly schedule", failures)
+
+    def test_rejects_commented_slow_command(self) -> None:
+        source = SLOW_WORKFLOW.read_text().replace(
+            "      - run: make slow-ci\n",
+            "      # - run: make slow-ci\n",
+        )
+
+        failures = formatter_ci.slow_workflow_failures(source)
+
+        self.assertIn("Slow CI tests job must run make slow-ci", failures)
+
+    def test_rejects_inactive_slow_job(self) -> None:
+        source = SLOW_WORKFLOW.read_text().replace(
+            "  tests:\n",
+            "  tests:\n    if: false\n",
+        )
+
+        failures = formatter_ci.slow_workflow_failures(source)
+
+        self.assertIn("Slow CI tests job must not have a condition", failures)
+
+    def test_rejects_noop_corpus_recipe(self) -> None:
+        recipe = (
+            "\tTGO_FULL_GO_FORMAT_CORPUS=1 go test ./pkg/format "
+            "-run TestSourceMatchesFullGoTree -count=1"
+        )
+        source = MAKEFILE.read_text().replace(
+            recipe,
+            "\ttrue\n\t# " + recipe.lstrip(),
+        )
+
+        failures = formatter_ci.makefile_failures(source)
+
+        self.assertIn(
+            "formatter-go-corpus must run the exact full corpus recipe",
+            failures,
+        )
+
+    def test_rejects_commented_slow_dependency(self) -> None:
+        dependency = "slow-ci-unlocked: tgolint-unit-test formatter-go-corpus"
+        source = MAKEFILE.read_text().replace(
+            dependency,
+            "slow-ci-unlocked:\n# " + dependency,
+        )
+
+        failures = formatter_ci.makefile_failures(source)
+
+        self.assertIn(
+            "slow-ci-unlocked must depend on formatter-go-corpus",
+            failures,
+        )
+
 
 class GateTest(unittest.TestCase):
     def test_accepts_successful_required_corpus(self) -> None:
-        failure = formatter_ci.gate_failure("success", "true", "success")
+        failure = formatter_ci.gate_failure("success", "true", "success", "true")
 
         self.assertIsNone(failure)
 
     def test_accepts_skipped_unneeded_corpus(self) -> None:
-        failure = formatter_ci.gate_failure("success", "false", "skipped")
+        failure = formatter_ci.gate_failure("success", "false", "skipped", "")
 
         self.assertIsNone(failure)
 
     def test_rejects_skipped_required_corpus(self) -> None:
-        failure = formatter_ci.gate_failure("success", "true", "skipped")
+        failure = formatter_ci.gate_failure("success", "true", "skipped", "true")
 
         self.assertEqual(failure, "required formatter corpus ended with skipped")
 
     def test_rejects_failed_required_corpus(self) -> None:
-        failure = formatter_ci.gate_failure("success", "true", "failure")
+        failure = formatter_ci.gate_failure("success", "true", "failure", "true")
 
         self.assertEqual(failure, "required formatter corpus ended with failure")
 
     def test_rejects_unneeded_corpus_that_ran(self) -> None:
-        failure = formatter_ci.gate_failure("success", "false", "success")
+        failure = formatter_ci.gate_failure("success", "false", "success", "true")
 
         self.assertEqual(failure, "unneeded formatter corpus ended with success")
 
     def test_rejects_failed_classification(self) -> None:
-        failure = formatter_ci.gate_failure("failure", "", "skipped")
+        failure = formatter_ci.gate_failure("failure", "", "skipped", "")
 
         self.assertEqual(
             failure,
@@ -203,11 +311,27 @@ class GateTest(unittest.TestCase):
         )
 
     def test_rejects_missing_classification_output(self) -> None:
-        failure = formatter_ci.gate_failure("success", "", "skipped")
+        failure = formatter_ci.gate_failure("success", "", "skipped", "")
 
         self.assertEqual(
             failure,
             "formatter change classification returned ''",
+        )
+
+    def test_rejects_missing_corpus_proof(self) -> None:
+        failure = formatter_ci.gate_failure("success", "true", "success", "")
+
+        self.assertEqual(
+            failure,
+            "required formatter corpus did not prove success",
+        )
+
+    def test_rejects_false_corpus_proof(self) -> None:
+        failure = formatter_ci.gate_failure("success", "true", "success", "false")
+
+        self.assertEqual(
+            failure,
+            "required formatter corpus did not prove success",
         )
 
 

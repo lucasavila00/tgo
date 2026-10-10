@@ -63,6 +63,7 @@ def gate_failure(
     classifier_result: str,
     formatter_required: str,
     corpus_result: str,
+    corpus_passed: str,
 ) -> str | None:
     """Return an error when job results do not prove the required work."""
     if classifier_result != "success":
@@ -70,6 +71,8 @@ def gate_failure(
     if formatter_required == "true":
         if corpus_result != "success":
             return f"required formatter corpus ended with {corpus_result}"
+        if corpus_passed != "true":
+            return "required formatter corpus did not prove success"
         return None
     if formatter_required == "false":
         if corpus_result != "skipped":
@@ -119,6 +122,21 @@ def workflow_section(source: str, header: str) -> list[str] | None:
     return section
 
 
+def active_lines(lines: Iterable[str]) -> list[str]:
+    """Return nonblank, uncommented configuration lines."""
+    return [
+        line
+        for line in lines
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+
+def has_active_key(lines: Iterable[str], key: str) -> bool:
+    """Report whether active configuration contains one mapping key."""
+    prefix = key + ":"
+    return any(line.lstrip().startswith(prefix) for line in active_lines(lines))
+
+
 def formatter_workflow_failures(source: str) -> list[str]:
     """Return failures in active formatter workflow sections."""
     failures: list[str] = []
@@ -130,10 +148,7 @@ def formatter_workflow_failures(source: str) -> list[str]:
     )
     if pull_request is None:
         failures.append("formatter workflow needs an active pull_request event")
-    elif any(
-        line.strip() and not line.lstrip().startswith("#")
-        for line in pull_request
-    ):
+    elif active_lines(pull_request):
         failures.append("formatter pull_request event must not have options")
 
     jobs = workflow_section(source, "jobs:")
@@ -148,7 +163,8 @@ def formatter_workflow_failures(source: str) -> list[str]:
         "  formatter-go-corpus:": (
             "    needs: changes",
             "    if: needs.changes.outputs.formatter == 'true'",
-            "      - run: make formatter-go-corpus",
+            "      passed: ${{ steps.corpus.outputs.passed }}",
+            "      - id: corpus",
         ),
         "  formatter-corpus-gate:": (
             "    name: formatter-corpus",
@@ -157,6 +173,7 @@ def formatter_workflow_failures(source: str) -> list[str]:
             "          CLASSIFIER_RESULT: ${{ needs.changes.result }}",
             "          FORMATTER_REQUIRED: ${{ needs.changes.outputs.formatter }}",
             "          CORPUS_RESULT: ${{ needs.formatter-go-corpus.result }}",
+            "          CORPUS_PASSED: ${{ needs.formatter-go-corpus.outputs.passed }}",
             "        run: python3 scripts/formatter_ci.py gate",
         ),
     }
@@ -164,15 +181,142 @@ def formatter_workflow_failures(source: str) -> list[str]:
         failures.append("formatter workflow needs an active jobs section")
         return failures
     jobs_source = "\n".join(jobs)
+    job_sections: dict[str, list[str]] = {}
     for header, required_lines in required_jobs.items():
         job = workflow_section(jobs_source, header)
         name = header.strip().removesuffix(":")
         if job is None:
             failures.append(f"formatter workflow needs an active {name} job")
             continue
+        job_sections[header] = job
         for line in required_lines:
             if line not in job:
                 failures.append(f"formatter {name} job needs {line.strip()!r}")
+
+    corpus_job = job_sections.get("  formatter-go-corpus:")
+    if corpus_job is not None:
+        outputs = workflow_section("\n".join(corpus_job), "    outputs:")
+        expected_output = [
+            "      passed: ${{ steps.corpus.outputs.passed }}",
+        ]
+        if outputs is None or active_lines(outputs) != expected_output:
+            failures.append("formatter corpus job must export the corpus proof")
+        if has_active_key(corpus_job, "continue-on-error"):
+            failures.append("formatter corpus job must not continue on error")
+        corpus_step = workflow_section(
+            "\n".join(corpus_job),
+            "      - id: corpus",
+        )
+        if corpus_step is not None:
+            if has_active_key(corpus_step, "if"):
+                failures.append("formatter corpus step must not have a condition")
+            if has_active_key(corpus_step, "shell"):
+                failures.append("formatter corpus step must use the default shell")
+            run = workflow_section("\n".join(corpus_step), "        run: |")
+            expected = [
+                "          make formatter-go-corpus",
+                '          echo "passed=true" >> "$GITHUB_OUTPUT"',
+            ]
+            if run is None or active_lines(run) != expected:
+                failures.append("formatter corpus step must run the exact proof commands")
+
+    gate_job = job_sections.get("  formatter-corpus-gate:")
+    if gate_job is not None:
+        gate_step = workflow_section(
+            "\n".join(gate_job),
+            "      - name: Check formatter corpus result",
+        )
+        expected_environment = [
+            "          CLASSIFIER_RESULT: ${{ needs.changes.result }}",
+            "          FORMATTER_REQUIRED: ${{ needs.changes.outputs.formatter }}",
+            "          CORPUS_RESULT: ${{ needs.formatter-go-corpus.result }}",
+            "          CORPUS_PASSED: ${{ needs.formatter-go-corpus.outputs.passed }}",
+        ]
+        if gate_step is None:
+            failures.append("formatter gate needs its result-check step")
+        else:
+            if has_active_key(gate_step, "if"):
+                failures.append("formatter gate step must not have a condition")
+            if has_active_key(gate_step, "continue-on-error"):
+                failures.append("formatter gate step must not continue on error")
+            if has_active_key(gate_step, "shell"):
+                failures.append("formatter gate step must use the default shell")
+            environment = workflow_section("\n".join(gate_step), "        env:")
+            if (
+                environment is None
+                or active_lines(environment) != expected_environment
+            ):
+                failures.append("formatter gate must read the exact job results")
+            if "        run: python3 scripts/formatter_ci.py gate" not in gate_step:
+                failures.append("formatter gate must run its result check")
+    return failures
+
+
+def make_target(source: str, name: str) -> tuple[str, list[str]] | None:
+    """Return one active Make target declaration and its recipes."""
+    lines = source.splitlines()
+    prefix = name + ":"
+    matches = [index for index, line in enumerate(lines) if line.startswith(prefix)]
+    if len(matches) != 1:
+        return None
+    index = matches[0]
+    recipes: list[str] = []
+    for candidate in lines[index + 1 :]:
+        if candidate and not candidate[0].isspace():
+            break
+        if (
+            candidate.startswith("\t")
+            and candidate.strip()
+            and not candidate.lstrip().startswith("#")
+        ):
+            recipes.append(candidate)
+    return lines[index], recipes
+
+
+def makefile_failures(source: str) -> list[str]:
+    """Return failures in the active formatter corpus Make targets."""
+    failures: list[str] = []
+    slow = make_target(source, "slow-ci-unlocked")
+    expected_slow = "slow-ci-unlocked: tgolint-unit-test formatter-go-corpus"
+    if slow is None or slow[0] != expected_slow:
+        failures.append("slow-ci-unlocked must depend on formatter-go-corpus")
+
+    corpus = make_target(source, "formatter-go-corpus")
+    expected_recipe = [
+        "\tTGO_FULL_GO_FORMAT_CORPUS=1 go test ./pkg/format "
+        "-run TestSourceMatchesFullGoTree -count=1",
+    ]
+    if corpus is None or corpus[0] != "formatter-go-corpus:":
+        failures.append("Makefile needs an active formatter-go-corpus target")
+    elif corpus[1] != expected_recipe:
+        failures.append("formatter-go-corpus must run the exact full corpus recipe")
+    return failures
+
+
+def slow_workflow_failures(source: str) -> list[str]:
+    """Return failures in the active weekly Slow CI workflow."""
+    failures: list[str] = []
+    event = workflow_section(source, "on:")
+    schedule = (
+        None if event is None else workflow_section("\n".join(event), "  schedule:")
+    )
+    if (
+        schedule is None
+        or '    - cron: "0 4 * * 1"' not in active_lines(schedule)
+    ):
+        failures.append("Slow CI needs its active weekly schedule")
+
+    jobs = workflow_section(source, "jobs:")
+    tests = None if jobs is None else workflow_section("\n".join(jobs), "  tests:")
+    if tests is None:
+        failures.append("Slow CI needs its active tests job")
+    else:
+        if "      - run: make slow-ci" not in active_lines(tests):
+            failures.append("Slow CI tests job must run make slow-ci")
+        if has_active_key(tests, "if"):
+            failures.append("Slow CI tests job must not have a condition")
+        if has_active_key(tests, "continue-on-error"):
+            failures.append("Slow CI tests job must not continue on error")
     return failures
 
 
@@ -182,14 +326,10 @@ def repository_failures(repository: Path) -> list[str]:
     failures = formatter_workflow_failures(workflow)
 
     makefile = (repository / "Makefile").read_text()
-    if "formatter-go-corpus:" not in makefile:
-        failures.append("Makefile has no formatter-go-corpus target")
-    if "slow-ci-unlocked: tgolint-unit-test formatter-go-corpus" not in makefile:
-        failures.append("slow CI does not include the formatter corpus")
+    failures.extend(makefile_failures(makefile))
 
     slow_workflow = (repository / ".github/workflows/slow-ci.yml").read_text()
-    if "schedule:" not in slow_workflow or "run: make slow-ci" not in slow_workflow:
-        failures.append("weekly slow CI does not include the formatter corpus")
+    failures.extend(slow_workflow_failures(slow_workflow))
 
     for package in local_formatter_packages(repository):
         sample = (package / "dependency.go").as_posix()
@@ -217,6 +357,7 @@ def check_gate() -> None:
         os.environ.get("CLASSIFIER_RESULT", ""),
         os.environ.get("FORMATTER_REQUIRED", ""),
         os.environ.get("CORPUS_RESULT", ""),
+        os.environ.get("CORPUS_PASSED", ""),
     )
     if failure is not None:
         raise SystemExit(failure)
