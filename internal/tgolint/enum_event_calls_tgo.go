@@ -9,6 +9,7 @@ type enumEventCallKey struct {
 
 type enumEventCallSummary struct {
 	inputs       []enumAbstractValue
+	captures     map[enumCellID]enumAbstractValue
 	results      []enumAbstractValue
 	cellWrites   map[enumCellID]enumAbstractValue
 	regionWrites enumRegionSet
@@ -40,6 +41,7 @@ func (worklist *enumEventCallWorklist) call(
 	id := enumEventCallID(len(worklist.summaries) + 1)
 	worklist.calls[key] = id
 	worklist.summaries = append(worklist.summaries, &enumEventCallSummary{
+		captures:     make(map[enumCellID]enumAbstractValue),
 		cellWrites:   make(map[enumCellID]enumAbstractValue),
 		regionWrites: make(enumRegionSet),
 		dependents:   make(map[enumEventCallID]bool),
@@ -60,6 +62,7 @@ func (worklist *enumEventCallWorklist) summary(
 func (worklist *enumEventCallWorklist) addInput(
 	id enumEventCallID,
 	arguments []enumAbstractValue,
+	captures map[enumCellID]enumAbstractValue,
 ) bool {
 	summary := worklist.summary(id)
 	if summary == nil {
@@ -73,6 +76,11 @@ func (worklist *enumEventCallWorklist) addInput(
 	for index, argument := range arguments {
 		joined, added := joinEnumAbstractValues(summary.inputs[index], argument)
 		summary.inputs[index] = joined
+		changed = changed || added
+	}
+	for cell, capture := range captures {
+		joined, added := joinEnumAbstractValues(summary.captures[cell], capture)
+		summary.captures[cell] = joined
 		changed = changed || added
 	}
 	if changed {
@@ -164,7 +172,7 @@ func (worklist *enumEventCallWorklist) applyAlternatives(
 	joinedRegions := make(enumRegionSet)
 	for closure := range closures {
 		call := worklist.call(enumEventCallKey{closure: closure, caller: caller})
-		worklist.addInput(call, arguments)
+		worklist.addInput(call, arguments, state.cells)
 		summary := worklist.summary(call)
 		if summary == nil {
 			continue

@@ -31,6 +31,7 @@ type enumCellKey struct {
 
 type enumRegionKey struct {
 	activation enumActivationID
+	owner      enumRegionID
 	input      types.Object
 	site       token.Pos
 	typ        types.Type
@@ -74,6 +75,7 @@ func (table *enumIdentityTable) fieldRegion(
 	}
 	region := table.region(enumRegionKey{
 		activation: activation,
+		owner:      owner,
 		site:       field.Pos(),
 		typ:        field.Type(),
 		summary:    table.regionSummary(owner),

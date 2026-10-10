@@ -3,6 +3,7 @@
 package tgolint
 
 import (
+	"go/constant"
 	"go/token"
 	"go/types"
 
@@ -71,11 +72,53 @@ func (builder *enumEventBuilder) addSyntaxEdge(
 		expression, ok := syntax.ExpressionOf(&block.Nodes[len(block.Nodes)-1])
 		if ok {
 			edge.tests = builder.proofEvents(expression, successor == 0)
+			if len(edge.tests) == 0 && successor == 0 {
+				edge.tests = builder.switchProofEvents(block, expression)
+			}
 		}
 	}
 	builder.graph.blocks[index].successors = append(
 		builder.graph.blocks[index].successors, edge,
 	)
+}
+
+func (builder *enumEventBuilder) switchProofEvents(
+	block *cfg.Block,
+	caseExpression *syntax.Expression,
+) []enumEvent {
+	if block.Stmt == nil {
+		return nil
+	}
+	clause := syntax.CaseClauseOf(block.Stmt)
+	if clause == nil {
+		return nil
+	}
+	clauseNode := syntax.StatementNode(block.Stmt)
+	for parent := builder.checker.parents[clauseNode]; parent != nil; parent = builder.checker.parents[*parent] {
+		statement, ok := syntax.StatementOf(parent)
+		if !ok {
+			continue
+		}
+		switchStatement := syntax.SwitchStatementOf(statement)
+		if switchStatement == nil || switchStatement.Tag == nil {
+			continue
+		}
+		_, _, _, model, tagType := builder.checker.tagCall(switchStatement.Tag)
+		if model == nil || !builder.checker.tagExpression(caseExpression, model, tagType) {
+			return nil
+		}
+		constantValue := builder.checker.facts.Constant(caseExpression)
+		if constantValue == nil {
+			return nil
+		}
+		tag64, exact := constant.Int64Val(constantValue)
+		value, found := builder.graph.expressions[switchStatement.Tag]
+		if !exact || !found || tag64 < 1 || tag64 > int64(len(modelVariants(model))) {
+			return nil
+		}
+		return []enumEvent{{kind: enumEventTagTest, value: value, tag: int(tag64)}}
+	}
+	return nil
 }
 
 func (builder *enumEventBuilder) proofEvents(
@@ -89,7 +132,15 @@ func (builder *enumEventBuilder) proofEvents(
 		return builder.proofEvents(unary.Expression, !truth)
 	}
 	binary := syntax.BinaryExpressionOf(expression)
-	if binary == nil || truth && binary.Operator != token.EQL ||
+	if binary == nil {
+		return nil
+	}
+	if truth && binary.Operator == token.LAND ||
+		!truth && binary.Operator == token.LOR {
+		left := builder.proofEvents(binary.Left, truth)
+		return append(left, builder.proofEvents(binary.Right, truth)...)
+	}
+	if truth && binary.Operator != token.EQL ||
 		!truth && binary.Operator != token.NEQ {
 		return nil
 	}
@@ -128,6 +179,12 @@ func (builder *enumEventBuilder) emitNode(
 		block, _ = builder.emitExpression(block, expression)
 		return block
 	}
+	if specification, ok := syntax.SpecificationOf(&node); ok {
+		if values := syntax.ValueSpecificationOf(specification); values != nil {
+			return builder.emitValueSpecification(block, values)
+		}
+		return block
+	}
 	statement, ok := syntax.StatementOf(&node)
 	if !ok {
 		return block
@@ -135,10 +192,64 @@ func (builder *enumEventBuilder) emitNode(
 	if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
 		return builder.emitAssignment(block, assignment.Left, assignment.Right)
 	}
+	if expression := syntax.ExpressionStatementOf(statement); expression != nil {
+		block, _ = builder.emitExpression(block, expression.Expression)
+		return block
+	}
+	if send := syntax.SendStatementOf(statement); send != nil {
+		block, _ = builder.emitExpression(block, send.Channel)
+		block, _ = builder.emitExpression(block, send.Value)
+		return block
+	}
+	if increment := syntax.IncrementStatementOf(statement); increment != nil {
+		block, destination := builder.emitPlace(block, increment.Expression)
+		value := builder.graph.newSavedValue()
+		builder.graph.addEvent(block, enumEvent{
+			kind:   enumEventLoad,
+			source: destination,
+			value:  value,
+		})
+		builder.graph.addEvent(block, enumEvent{
+			kind:   enumEventStore,
+			value:  value,
+			values: []enumSavedValueID{destination},
+		})
+		return block
+	}
+	if started := syntax.GoStatementOf(statement); started != nil {
+		block, _ = builder.emitExpression(block, started.Call)
+		return block
+	}
+	if deferred := syntax.DeferStatementOf(statement); deferred != nil {
+		block, _ = builder.emitExpression(block, deferred.Call)
+		return block
+	}
 	if returned := syntax.ReturnStatementOf(statement); returned != nil {
 		for _, expression := range returned.Results {
 			block, _ = builder.emitExpression(block, expression)
 		}
+	}
+	return block
+}
+
+func (builder *enumEventBuilder) emitValueSpecification(
+	block enumEventBlockID,
+	specification *syntax.ValueSpecification,
+) enumEventBlockID {
+	values := make([]enumSavedValueID, len(specification.Values))
+	for index, expression := range specification.Values {
+		block, values[index] = builder.emitExpression(block, expression)
+	}
+	for index, name := range specification.Names {
+		if index >= len(values) {
+			break
+		}
+		cell := builder.localCell(builder.checker.facts.DefinitionName(name))
+		builder.graph.addEvent(block, enumEvent{
+			kind:  enumEventStore,
+			cells: enumCellSet{cell: true},
+			value: values[index],
+		})
 	}
 	return block
 }
@@ -201,6 +312,21 @@ func (builder *enumEventBuilder) emitExpression(
 	if star := syntax.StarExpressionOf(expression); star != nil {
 		return builder.emitExpression(block, star.Expression)
 	}
+	if literal := syntax.FunctionLiteralExpressionOf(expression); literal != nil {
+		closure := builder.graph.closure(enumEventClosureKey{
+			literal:    literal,
+			activation: builder.activation,
+		})
+		value := builder.graph.save(enumAbstractValue{
+			closures: enumEventClosureSet{closure: true},
+		})
+		builder.graph.addEvent(block, enumEvent{
+			kind:       enumEventSave,
+			expression: expression,
+			value:      value,
+		})
+		return block, value
+	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
 		if receiver, _, _, _, _ := builder.checker.tagCall(expression); receiver != nil {
 			block, source := builder.emitExpression(block, receiver)
@@ -257,6 +383,53 @@ func (builder *enumEventBuilder) emitExpression(
 		}
 		return builder.emitExpression(block, binary.Right)
 	}
+	if unary := syntax.UnaryExpressionOf(expression); unary != nil {
+		return builder.emitExpression(block, unary.Expression)
+	}
+	if indexed := syntax.IndexExpressionOf(expression); indexed != nil {
+		block, _ = builder.emitExpression(block, indexed.Expression)
+		block, _ = builder.emitExpression(block, indexed.Index)
+		return builder.emitUnknown(block, expression)
+	}
+	if indexed := syntax.IndexListExpressionOf(expression); indexed != nil {
+		block, _ = builder.emitExpression(block, indexed.Expression)
+		for _, index := range indexed.Indices {
+			block, _ = builder.emitExpression(block, index)
+		}
+		return builder.emitUnknown(block, expression)
+	}
+	if sliced := syntax.SliceExpressionOf(expression); sliced != nil {
+		block, _ = builder.emitExpression(block, sliced.Expression)
+		for _, bound := range []*syntax.Expression{sliced.Low, sliced.High, sliced.Max} {
+			if bound != nil {
+				block, _ = builder.emitExpression(block, bound)
+			}
+		}
+		return builder.emitUnknown(block, expression)
+	}
+	if asserted := syntax.TypeAssertionExpressionOf(expression); asserted != nil {
+		return builder.emitExpression(block, asserted.Expression)
+	}
+	if keyed := syntax.KeyValueExpressionOf(expression); keyed != nil {
+		block, _ = builder.emitExpression(block, keyed.Key)
+		return builder.emitExpression(block, keyed.Value)
+	}
+	if ellipsis := syntax.EllipsisExpressionOf(expression); ellipsis != nil && ellipsis.Element != nil {
+		return builder.emitExpression(block, ellipsis.Element)
+	}
+	value := builder.graph.newSavedValue()
+	builder.graph.addEvent(block, enumEvent{
+		kind:       enumEventSave,
+		expression: expression,
+		value:      value,
+	})
+	return block, value
+}
+
+func (builder *enumEventBuilder) emitUnknown(
+	block enumEventBlockID,
+	expression *syntax.Expression,
+) (enumEventBlockID, enumSavedValueID) {
 	value := builder.graph.newSavedValue()
 	builder.graph.addEvent(block, enumEvent{
 		kind:       enumEventSave,
