@@ -117,3 +117,28 @@ func TestAcyclicStorageTransferIsCached(t *testing.T) {
 		t.Fatalf("completed transfers = %#v", context.completed)
 	}
 }
+
+func TestCompletedStorageKeyKeepsExactSliceBounds(t *testing.T) {
+	t.Parallel()
+	fact := &GenericEffectFact{Version: 1, Storage: StorageEffectGraph{
+		Known: true, Entry: 0,
+		Functions: []StorageEffectFunction{{ID: 0}},
+	}}
+	call := storageGraphCall{fact: fact, function: 0}
+	left := storageValue{slices: []storageSlice{{
+		length: 2, knownLength: true,
+	}}}
+	right := storageValue{slices: []storageSlice{{
+		length: 3, knownLength: true,
+	}}}
+	call.arguments = []storageValue{left}
+	leftExact := storageCallInputKey(call, newStorageState(), false)
+	leftAbstract := storageCallInputKey(call, newStorageState(), true)
+	call.arguments = []storageValue{right}
+	rightExact := storageCallInputKey(call, newStorageState(), false)
+	rightAbstract := storageCallInputKey(call, newStorageState(), true)
+	if leftExact == rightExact || leftAbstract != rightAbstract {
+		t.Fatalf("slice keys: exact %q %q; abstract %q %q",
+			leftExact, rightExact, leftAbstract, rightAbstract)
+	}
+}

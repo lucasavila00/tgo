@@ -114,37 +114,41 @@ func executeStorageFunction(
 			writeStorageMemory(state, storageMemoryKey(path), argument, true)
 		}
 	}
-	key := storageCallKey{
+	recursiveKey := storageCallKey{
 		fact: call.fact, function: call.function,
-		inputs: storageCallInputKey(call, state),
+		inputs: storageCallInputKey(call, state, true),
 	}
-	if result, ok := context.completed[key]; ok {
+	completedKey := storageCallKey{
+		fact: call.fact, function: call.function,
+		inputs: storageCallInputKey(call, state, false),
+	}
+	if result, ok := context.completed[completedKey]; ok {
 		return cloneStorageState(result.storage), cloneStorageValues(result.returns), result.effects
 	}
-	if context.active[key] {
-		context.reentered[key] = true
-		if result, ok := context.approximations[key]; ok {
+	if context.active[recursiveKey] {
+		context.reentered[recursiveKey] = true
+		if result, ok := context.approximations[recursiveKey]; ok {
 			return cloneStorageState(result.storage), cloneStorageValues(result.returns), result.effects
 		}
 		return cloneStorageState(state), nil, storageInvocationEffects{}
 	}
-	context.active[key] = true
-	defer delete(context.active, key)
+	context.active[recursiveKey] = true
+	defer delete(context.active, recursiveKey)
 	var previous storageExecutionResult
 	initialized := false
 	for {
 		if initialized {
-			context.approximations[key] = previous
+			context.approximations[recursiveKey] = previous
 		} else {
-			delete(context.approximations, key)
+			delete(context.approximations, recursiveKey)
 		}
 		storage, returns, effects := executeStorageFunctionOnce(call, state, context, function)
 		next := storageExecutionResult{
 			storage: storage,
 			returns: cloneStorageValues(returns), effects: effects,
 		}
-		if !context.reentered[key] {
-			context.completed[key] = next
+		if !context.reentered[recursiveKey] {
+			context.completed[completedKey] = next
 			return next.storage, next.returns, next.effects
 		}
 		if initialized {
@@ -159,7 +163,7 @@ func executeStorageFunction(
 			next.effects.completed = previous.effects.completed || effects.completed
 		}
 		if initialized && reflect.DeepEqual(previous, next) {
-			context.completed[key] = next
+			context.completed[completedKey] = next
 			return next.storage, next.returns, next.effects
 		}
 		previous = next

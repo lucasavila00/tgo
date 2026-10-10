@@ -8,11 +8,15 @@ import (
 	"strings"
 )
 
-func storageCallInputKey(call storageGraphCall, state storageState) string {
+func storageCallInputKey(
+	call storageGraphCall,
+	state storageState,
+	abstract bool,
+) string {
 	var text strings.Builder
 	constants := storageFunctionIntegerConstants(call)
 	for _, argument := range call.arguments {
-		writeStorageValueKey(&text, argument, constants)
+		writeStorageValueKey(&text, argument, constants, abstract)
 		text.WriteByte(';')
 	}
 	text.WriteByte('|')
@@ -39,7 +43,7 @@ func storageCallInputKey(call storageGraphCall, state storageState) string {
 			item.WriteByte('*')
 		}
 		item.WriteByte('=')
-		writeStorageValueKey(&item, value, constants)
+		writeStorageValueKey(&item, value, constants, abstract)
 		memory = append(memory, item.String())
 	}
 	sort.Strings(memory)
@@ -70,6 +74,7 @@ func writeStorageValueKey(
 	text *strings.Builder,
 	value storageValue,
 	constants map[int64]bool,
+	abstract bool,
 ) {
 	if value.unknown {
 		text.WriteByte('?')
@@ -81,7 +86,7 @@ func writeStorageValueKey(
 		text.WriteByte('f')
 	}
 	if value.integerKnown {
-		if constants[value.integer] {
+		if !abstract || constants[value.integer] {
 			text.WriteString(strconv.FormatInt(value.integer, 10))
 		} else {
 			text.WriteByte('#')
@@ -106,9 +111,9 @@ func writeStorageValueKey(
 	}
 	for _, slice := range value.slices {
 		writeStorageLocationKey(text, slice.backing)
-		writeStorageIntegerKey(text, slice.offset, slice.knownOffset, constants)
-		writeStorageIntegerKey(text, slice.length, slice.knownLength, constants)
-		writeStorageIntegerKey(text, slice.capacity, slice.knownCapacity, constants)
+		writeStorageIntegerKey(text, slice.offset, slice.knownOffset, constants, abstract)
+		writeStorageIntegerKey(text, slice.length, slice.knownLength, constants, abstract)
+		writeStorageIntegerKey(text, slice.capacity, slice.knownCapacity, constants, abstract)
 		text.WriteByte('/')
 	}
 }
@@ -124,10 +129,11 @@ func writeStorageIntegerKey(
 	value int64,
 	known bool,
 	constants map[int64]bool,
+	abstract bool,
 ) {
 	if !known {
 		text.WriteByte('?')
-	} else if constants[value] {
+	} else if !abstract || constants[value] {
 		text.WriteString(strconv.FormatInt(value, 10))
 	} else {
 		text.WriteByte('#')
