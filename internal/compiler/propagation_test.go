@@ -402,3 +402,94 @@ func (w *writer) Write() (int, error) { return 1, nil }
 		})
 	}
 }
+
+func TestPropagationLowersForInitializer(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+type writer struct{}
+
+func mark(value int) int { return value }
+func openWriter(value int) (*writer, error) { return &writer{}, nil }
+func (w *writer) ready() bool { return true }
+
+func use() error {
+	for before, w := mark(1), openWriter(2)!!; w.ready(); before++ {
+		if before > 2 { break }
+	}
+	return nil
+}
+`)
+	want := `{
+		operand := mark(1)
+		result, err := openWriter(2)
+		if err != nil {
+			return err
+		}
+		before, w := operand, result
+		for ; w.ready(); before++ {`
+	if !strings.Contains(output, want) {
+		t.Fatalf("generated output does not lower the for initializer\n%s", output)
+	}
+}
+
+func TestPropagationKeepsLabeledForInitializerScope(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func load() (int, error) { return 1, nil }
+
+func use() error {
+	value := 0
+	control := 0
+	_ = control
+outer:
+	for value := load()!!; value < 2; value++ {
+		continue outer
+	}
+	_ = value
+	goto entry
+entry:
+	for other := load()!!; other < 2; other++ {
+		break entry
+	}
+	return nil
+}
+`)
+	for _, required := range []string{
+		"value, err := load()",
+		"outer:\n\t\tfor ; value < 2; value++",
+		"entry:\n\t{\n\t\tother, err_1 := load()",
+		"control_1:\n\t\tfor ; other < 2; other++",
+		"break control_1",
+	} {
+		if !strings.Contains(output, required) {
+			t.Fatalf("generated output does not contain %q\n%s", required, output)
+		}
+	}
+}
+
+func TestPropagationForInitializerUsesFreshNames(t *testing.T) {
+	t.Parallel()
+	output := compileSourceOutput(t, `package sample
+
+func load() (int, error) { return 1, nil }
+func mark(value int) int { return value }
+
+func use(result, err, operand, control int) (int, error) {
+	for before, value := mark(operand), load()!!; value < 2; before++ {
+		return result + err + before + control + value, nil
+	}
+	return 0, nil
+}
+`)
+	for _, required := range []string{
+		"operand_1 := mark(operand)",
+		"result_1, err_1 := load()",
+		"before, value := operand_1, result_1",
+	} {
+		if !strings.Contains(output, required) {
+			t.Fatalf("generated output does not contain %q\n%s", required, output)
+		}
+	}
+}

@@ -79,6 +79,24 @@ func propagationLoopCondition(attempt *int, failAt int) (bool, error) {
 	return *attempt <= 2, nil
 }
 
+func propagationForValue(events *[]string, name string, value int, found bool) (int, error) {
+	*events = append(*events, name)
+	if !found {
+		return 0, errPropagationMissing
+	}
+	return value, nil
+}
+
+func propagationForCondition(events *[]string, value bool) bool {
+	*events = append(*events, "condition")
+	return value
+}
+
+func propagationForPost(events *[]string, value *int) {
+	*events = append(*events, "post")
+	*value++
+}
+
 func propagationRecord(events *[]string, value int) {
 	*events = append(*events, "defer")
 }
@@ -278,6 +296,66 @@ func PropagationLoop(failAt int) (int, error) {
 			break
 		}
 		count++
+	}
+	return count, nil
+}
+
+func PropagationForInitializer(events *[]string, firstFound bool, secondFound bool) (int, error) {
+	count := 0
+	{
+		result, err := propagationForValue(events, "first", 1, firstFound)
+		if err != nil {
+			return 0, err
+		}
+		result_1, err_1 := propagationForValue(events, "second", 2, secondFound)
+		if err_1 != nil {
+			return 0, err_1
+		}
+		first, second := result, result_1
+		for ; propagationForCondition(events, count < first+second); propagationForPost(events, &count) {
+			*events = append(*events, "body")
+			if count == 0 {
+				continue
+			}
+			if count == 2 {
+				break
+			}
+		}
+	}
+	return count, nil
+}
+
+func PropagationForInitializerWrapped(events *[]string, found bool) (int, error) {
+	{
+		value, err := propagationForValue(events, "wrapped", 1, found)
+		if err != nil {
+			return 0, fmt.Errorf("propagationForValue: %w", err)
+		}
+		for ; value < 2; value++ {
+			return value, nil
+		}
+	}
+	return 0, nil
+}
+
+func PropagationForInitializerLabels(events *[]string, enterWithGoto bool) (int, error) {
+	count := 0
+	if enterWithGoto {
+		goto outer
+	}
+outer:
+	{
+		limit, err := propagationForValue(events, "label", 2, true)
+		if err != nil {
+			return 0, err
+		}
+	control:
+		for ; count < limit; count++ {
+			if count == 0 {
+				continue control
+			}
+			break control
+		}
 	}
 	return count, nil
 }
