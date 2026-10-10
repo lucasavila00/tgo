@@ -461,10 +461,8 @@ func (c *checker) genericReturnedHelperValues(
 		if !use.returned || use.parameter < 0 || use.parameter >= len(call.Args) {
 			continue
 		}
-		useConditions, useConditionMaySkip, possible := c.genericValueUseConditions(
-			summary, genericValueUse{
-				conditionCall: expression, conditions: use.conditions,
-			},
+		useConditions, useConditionMaySkip, possible := c.mapGenericValueUseConditions(
+			summary, expression, use.conditions,
 		)
 		if !possible {
 			continue
@@ -517,7 +515,7 @@ func (c *checker) genericLiteralValue(
 	return genericValue{
 		function: summary.function, fact: &fact,
 		receiverArguments: receiverArguments, typeArguments: typeArguments,
-		conditionCall: nil, callDepth: 0,
+		conditionCall: nil, callDepth: 0, conditions: nil, maySkip: false,
 	}, true
 }
 

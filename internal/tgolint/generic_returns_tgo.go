@@ -532,18 +532,18 @@ func (c *checker) helperParameterUse(
 	pathNode := syntaxNode(expression)
 	for current := c.parents[syntax.ExpressionNode(expression)]; current != nil; current = c.parents[*current] {
 		literal, ok := syntax.FunctionLiteralOf(current)
-		if !ok {
+		if !ok || literal == nil {
 			continue
 		}
 		literalExpression, expressionOK := syntax.ExpressionOf(current)
 		if !expressionOK || literalExpression == nil {
-			return returnedHelperUse{}, false
+			return noReturnedHelperUse(), false
 		}
 		innerConditions, innerMaySkip, reachable := c.helperLiteralUsePath(
 			summary, pathNode, literalExpression, literal,
 		)
 		if !reachable {
-			return returnedHelperUse{}, false
+			return noReturnedHelperUse(), false
 		}
 		conditions = append(conditions, innerConditions...)
 		maySkip = maySkip || innerMaySkip
@@ -552,7 +552,7 @@ func (c *checker) helperParameterUse(
 			continue
 		}
 		if c.discardedValue(literalExpression) {
-			return returnedHelperUse{}, false
+			return noReturnedHelperUse(), false
 		}
 		returned = c.returnedExpression(literalExpression)
 		outerConditions, outerMaySkip, outerReachable := c.genericEffectPath(
@@ -571,13 +571,20 @@ func (c *checker) helperParameterUse(
 	}
 	outerConditions, pathMaySkip, reachable := c.genericEffectPath(summary, pathNode)
 	if !reachable {
-		return returnedHelperUse{}, false
+		return noReturnedHelperUse(), false
 	}
 	return returnedHelperUse{
 		parameter: parameter, call: call, returned: returned,
 		conditions: append(conditions, outerConditions...),
 		maySkip:    maySkip || pathMaySkip,
 	}, true
+}
+
+func noReturnedHelperUse() returnedHelperUse {
+	return returnedHelperUse{
+		parameter: -1, call: false, returned: false,
+		conditions: nil, maySkip: false,
+	}
 }
 
 func (c *checker) helperLiteralUsePath(

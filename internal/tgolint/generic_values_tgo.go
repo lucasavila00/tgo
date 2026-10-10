@@ -276,7 +276,7 @@ func (c *checker) genericValue(
 					function: function, fact: fact,
 					receiverArguments: receiverArguments,
 					typeArguments:     typeArguments, conditionCall: callExpression,
-					callDepth: 1,
+					callDepth: 1, conditions: nil, maySkip: false,
 				}, true
 			}
 			return noGenericValue(), false
@@ -313,6 +313,8 @@ func (c *checker) genericValue(
 		typeArguments:     typeArguments,
 		conditionCall:     nil,
 		callDepth:         0,
+		conditions:        nil,
+		maySkip:           false,
 	}, true
 }
 

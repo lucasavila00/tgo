@@ -179,17 +179,27 @@ func (c %checker) genericValueUseConditions(
 	summary %genericEffectSummary,
 	use genericValueUse,
 ) ([]GenericEffectCondition, bool, bool) {
-	if len(use.conditions) == 0 {
+	return c.mapGenericValueUseConditions(
+		summary, use.conditionCall, use.conditions,
+	)
+}
+
+func (c %checker) mapGenericValueUseConditions(
+	summary %genericEffectSummary,
+	conditionCall *syntax.Expression,
+	useConditions []GenericEffectCondition,
+) ([]GenericEffectCondition, bool, bool) {
+	if len(useConditions) == 0 {
 		return nil, false, true
 	}
-	if use.conditionCall == nil {
+	if conditionCall == nil {
 		return nil, true, true
 	}
 	var conditions []GenericEffectCondition = nil
 	maySkip := false
-	for _, condition := range use.conditions {
+	for _, condition := range useConditions {
 		mapped, outcome := c.mapEffectCondition(
-			summary, use.conditionCall, condition, nil,
+			summary, conditionCall, condition, types.Typ[types.Invalid],
 		)
 		if outcome == neverEffectOutcome() {
 			return nil, false, false
