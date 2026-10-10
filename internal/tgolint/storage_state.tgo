@@ -15,6 +15,11 @@ func storageCallInputKey(
 ) string {
 	var text strings.Builder
 	constants := storageFunctionIntegerConstants(call)
+	writeStorageLocationKey(&text, storageLocation{
+		owner: call.caller, graph: call.callerGraph, site: call.callSite,
+		merged: call.summary,
+	})
+	text.WriteByte('|')
 	for _, argument := range call.arguments {
 		writeStorageValueKey(&text, argument, constants, abstract)
 		text.WriteByte(';')

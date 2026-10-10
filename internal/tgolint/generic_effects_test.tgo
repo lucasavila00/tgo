@@ -224,3 +224,30 @@ func TestStorageIndexWriteIsWeakForAlternativeTargets(t *testing.T) {
 		t.Fatalf("alternative target write was strong: %#v", state.memory)
 	}
 }
+
+func TestStorageIndexUsesRuntimeInteger(t *testing.T) {
+	t.Parallel()
+	operation := storageIndexOperation(map[int]storageValue{
+		2: {integer: 4, integerKnown: true},
+	}, StorageEffectOperation{Inputs: []int{1, 2}})
+	if !operation.KnownLength || operation.Length != 4 {
+		t.Fatalf("index operation = %#v", operation)
+	}
+}
+
+func TestStorageUnknownSliceOffsetReadsWildcard(t *testing.T) {
+	t.Parallel()
+	state := newStorageState()
+	backing := storageLocation{graph: 1, site: 1}
+	path := storageMemoryKey(storagePath{location: backing, steps: []StorageEffectPath{{
+		Kind: storagePathIndex, Index: 3,
+	}}})
+	want := storageValue{integer: 7, integerKnown: true}
+	writeStorageMemory(state, path, want, true)
+	got := readStorageIndex(state, storageValue{slices: []storageSlice{{
+		backing: backing, knownOffset: false,
+	}}}, StorageEffectOperation{Length: 0, KnownLength: true})
+	if !got.integerKnown || got.integer != want.integer {
+		t.Fatalf("wildcard read = %#v", got)
+	}
+}

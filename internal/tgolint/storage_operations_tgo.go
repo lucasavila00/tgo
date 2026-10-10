@@ -150,16 +150,19 @@ func applyStorageOperation(
 		applyStorageCopy(state, operation)
 	case storageEffectSlice:
 		value := storageInput(state.temps, operation.Inputs, 0)
+		operation = storageSliceOperation(state.temps, operation)
 		value = resliceStorageValue(value, operation)
 		setStorageResults(state.temps, operation.Results, []storageValue{value})
 	case storageEffectReturn:
 		state.returns = storageInputs(state.temps, operation.Inputs)
 	case storageEffectIndexRead:
 		base := storageInput(state.temps, operation.Inputs, 0)
+		operation = storageIndexOperation(state.temps, operation)
 		value := readStorageIndex(state.storage, base, operation)
 		setStorageResults(state.temps, operation.Results, []storageValue{value})
 	case storageEffectIndexWrite:
 		base := storageInput(state.temps, operation.Inputs, 0)
+		operation = storageIndexOperation(state.temps, operation)
 		value := storageInput(state.temps, operation.Inputs, 2)
 		writeStorageIndex(state.storage, base, operation, value)
 	case storageEffectFieldRead:
@@ -189,6 +192,44 @@ func applyStorageOperation(
 		)
 		setStorageResults(state.temps, operation.Results, []storageValue{value})
 	}
+}
+
+func storageIndexOperation(
+	temps map[int]storageValue,
+	operation StorageEffectOperation,
+) StorageEffectOperation {
+	if len(operation.Inputs) < 2 {
+		return operation
+	}
+	index := storageInput(temps, operation.Inputs, 1)
+	operation.Length = index.integer
+	operation.KnownLength = index.integerKnown
+	return operation
+}
+
+func storageSliceOperation(
+	temps map[int]storageValue,
+	operation StorageEffectOperation,
+) StorageEffectOperation {
+	if len(operation.Inputs) < 4 {
+		return operation
+	}
+	if operation.Inputs[1] >= 0 {
+		low := storageInput(temps, operation.Inputs, 1)
+		operation.Offset = low.integer
+		operation.KnownOffset = low.integerKnown
+	}
+	if operation.Inputs[2] >= 0 {
+		high := storageInput(temps, operation.Inputs, 2)
+		operation.Length = high.integer
+		operation.KnownLength = high.integerKnown
+	}
+	if operation.Inputs[3] >= 0 {
+		maximum := storageInput(temps, operation.Inputs, 3)
+		operation.Capacity = maximum.integer
+		operation.KnownCapacity = maximum.integerKnown
+	}
+	return operation
 }
 
 func projectStorageCallerState(
@@ -468,14 +509,14 @@ func readStorageIndex(
 	}
 	var value storageValue
 	for _, slice := range base.slices {
-		if operation.KnownLength {
-			step.Index += slice.offset
+		current := step
+		if operation.KnownLength && slice.knownOffset {
+			current.Index += slice.offset
+		} else {
+			current = StorageEffectPath{Kind: storagePathAnyIndex}
 		}
-		path := storagePath{location: slice.backing, steps: []StorageEffectPath{step}}
+		path := storagePath{location: slice.backing, steps: []StorageEffectPath{current}}
 		value = joinStorageValue(value, readStorageMemory(state, storageMemoryKey(path)))
-		if operation.KnownLength {
-			step.Index -= slice.offset
-		}
 	}
 	for _, region := range base.regions {
 		region.steps = append(region.steps, step)
@@ -497,14 +538,15 @@ func writeStorageIndex(
 	targetCount := len(base.slices) + len(base.regions)
 	exact := operation.KnownLength && targetCount == 1
 	for _, slice := range base.slices {
-		if operation.KnownLength {
-			step.Index += slice.offset
+		current := step
+		if operation.KnownLength && slice.knownOffset {
+			current.Index += slice.offset
+		} else {
+			current = StorageEffectPath{Kind: storagePathAnyIndex}
+			exact = false
 		}
-		path := storagePath{location: slice.backing, steps: []StorageEffectPath{step}}
+		path := storagePath{location: slice.backing, steps: []StorageEffectPath{current}}
 		writeStorageMemory(state, storageMemoryKey(path), value, exact)
-		if operation.KnownLength {
-			step.Index -= slice.offset
-		}
 	}
 	for _, region := range base.regions {
 		region.steps = append(region.steps, step)

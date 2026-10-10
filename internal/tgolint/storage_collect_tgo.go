@@ -319,6 +319,7 @@ func (b *storageGraphBuilder) collectExpression(
 		return result
 	}
 	if call := syntax.CallExpressionOf(expression); call != nil {
+		position := int(syntax.ExpressionPosition(expression))
 		if len(call.Args) == 1 && b.checker.facts.IsType(call.Callee) {
 			return b.collectExpression(block, call.Args[0])
 		}
@@ -338,7 +339,7 @@ func (b *storageGraphBuilder) collectExpression(
 						capacity, capacityKnown = length, lengthKnown
 					}
 					block.Operations = append(block.Operations, StorageEffectOperation{
-						Kind: storageEffectAllocate, Results: results,
+						Kind: storageEffectAllocate, Position: position, Results: results,
 						Target: StorageEffectRegion{
 							Root: storageRootAllocation, ID: b.nextSite,
 						},
@@ -367,7 +368,7 @@ func (b *storageGraphBuilder) collectExpression(
 						b.nextSite++
 					}
 					block.Operations = append(block.Operations, StorageEffectOperation{
-						Kind: kind, Regions: regions, Inputs: arguments,
+						Kind: kind, Position: position, Regions: regions, Inputs: arguments,
 						Results: results, Target: target,
 						Variadic: call.Ellipsis != token.NoPos,
 					})
@@ -380,7 +381,8 @@ func (b *storageGraphBuilder) collectExpression(
 			function = b.functionID(object.Origin())
 		}
 		block.Operations = append(block.Operations, StorageEffectOperation{
-			Kind: storageEffectCall, Inputs: append([]int{callee}, arguments...),
+			Kind: storageEffectCall, Position: position,
+			Inputs:  append([]int{callee}, arguments...),
 			Results: results, Function: function,
 			TypeArguments:     b.callTypeArgumentProjection(call.Callee),
 			ReceiverArguments: b.callReceiverArgumentProjection(call.Callee),
@@ -431,25 +433,29 @@ func (b *storageGraphBuilder) collectExpression(
 	}
 	if sliced := syntax.SliceExpressionOf(expression); sliced != nil {
 		base := b.collectExpression(block, sliced.Expression)
+		lowInput := -1
 		low := int64(0)
 		lowKnown := true
 		if sliced.Low != nil {
-			b.collectExpression(block, sliced.Low)
+			lowInput = b.collectExpression(block, sliced.Low)
 			low, lowKnown = storageExpressionConstantInt(b.checker, sliced.Low)
 		}
+		highInput := -1
 		high, highKnown := int64(0), false
 		if sliced.High != nil {
-			b.collectExpression(block, sliced.High)
+			highInput = b.collectExpression(block, sliced.High)
 			high, highKnown = storageExpressionConstantInt(b.checker, sliced.High)
 		}
+		maximumInput := -1
 		maximum, maximumKnown := int64(0), false
 		if sliced.Max != nil {
-			b.collectExpression(block, sliced.Max)
+			maximumInput = b.collectExpression(block, sliced.Max)
 			maximum, maximumKnown = storageExpressionConstantInt(b.checker, sliced.Max)
 		}
 		result := b.newTemp()
 		block.Operations = append(block.Operations, StorageEffectOperation{
-			Kind: storageEffectSlice, Inputs: []int{base}, Results: []int{result},
+			Kind:   storageEffectSlice,
+			Inputs: []int{base, lowInput, highInput, maximumInput}, Results: []int{result},
 			Offset: low, KnownOffset: lowKnown,
 			Length: high, KnownLength: highKnown,
 			Capacity: maximum, KnownCapacity: maximumKnown,

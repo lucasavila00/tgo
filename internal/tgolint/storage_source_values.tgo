@@ -66,24 +66,21 @@ func (c %checker) storageExpressionValue(
 	}
 	if indexed := syntax.IndexExpressionOf(expression); indexed != nil {
 		base := c.storageExpressionValue(indexed.Expression, state, flow, apply)
-		c.storageExpressionValue(indexed.Index, state, flow, apply)
+		index := c.storageExpressionValue(indexed.Index, state, flow, apply)
 		step := StorageEffectPath{Kind: storagePathAnyIndex}
-		if value := c.facts.Constant(indexed.Index); value != nil &&
-			value.Kind() == constant.Int {
-			if index, exact := constant.Int64Val(value); exact {
-				step = StorageEffectPath{Kind: storagePathIndex, Index: index}
-			}
+		if index.integerKnown {
+			step = StorageEffectPath{Kind: storagePathIndex, Index: index.integer}
 		}
 		var result storageValue
 		for _, slice := range base.slices {
-			if step.Kind == storagePathIndex {
-				step.Index += slice.offset
+			current := step
+			if step.Kind == storagePathIndex && slice.knownOffset {
+				current.Index += slice.offset
+			} else {
+				current = StorageEffectPath{Kind: storagePathAnyIndex}
 			}
-			path := storagePath{location: slice.backing, steps: []StorageEffectPath{step}}
+			path := storagePath{location: slice.backing, steps: []StorageEffectPath{current}}
 			result = joinStorageValue(result, readStorageMemory(state, storageMemoryKey(path)))
-			if step.Kind == storagePathIndex {
-				step.Index -= slice.offset
-			}
 		}
 		for _, region := range base.regions {
 			region.steps = append(region.steps, step)
@@ -95,16 +92,16 @@ func (c %checker) storageExpressionValue(
 		value := c.storageExpressionValue(slice.Expression, state, flow, apply)
 		operation := StorageEffectOperation{KnownOffset: true}
 		if slice.Low != nil {
-			c.storageExpressionValue(slice.Low, state, flow, apply)
-			operation.Offset, operation.KnownOffset = storageExpressionConstantInt(c, slice.Low)
+			low := c.storageExpressionValue(slice.Low, state, flow, apply)
+			operation.Offset, operation.KnownOffset = low.integer, low.integerKnown
 		}
 		if slice.High != nil {
-			c.storageExpressionValue(slice.High, state, flow, apply)
-			operation.Length, operation.KnownLength = storageExpressionConstantInt(c, slice.High)
+			high := c.storageExpressionValue(slice.High, state, flow, apply)
+			operation.Length, operation.KnownLength = high.integer, high.integerKnown
 		}
 		if slice.Max != nil {
-			c.storageExpressionValue(slice.Max, state, flow, apply)
-			operation.Capacity, operation.KnownCapacity = storageExpressionConstantInt(c, slice.Max)
+			maximum := c.storageExpressionValue(slice.Max, state, flow, apply)
+			operation.Capacity, operation.KnownCapacity = maximum.integer, maximum.integerKnown
 		}
 		return resliceStorageValue(value, operation)
 	}
@@ -327,8 +324,9 @@ func (c %checker) storageCallValues(
 		graphCall := storageGraphCall{
 			fact: function.fact, function: function.graph,
 			arguments: arguments, captures: function.captures,
-			typeArguments: function.typeArguments,
-			caller:        function.fact, callerGraph: function.graph,
+			typeArguments:     function.typeArguments,
+			receiverArguments: function.receiverArguments,
+			caller:            function.fact, callerGraph: function.graph,
 			callSite: int(position),
 		}
 		input := storageCallInputState(state, arguments, function.captures)
