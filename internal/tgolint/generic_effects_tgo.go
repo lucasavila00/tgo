@@ -18,6 +18,8 @@ import (
 // GenericEffectFact carries generic effects between analysis packages.
 
 type GenericEffectFact struct {
+	Version                      int
+	Storage                      StorageEffectGraph
 	ZeroEffects                  []GenericEffect
 	AccessEffects                []GenericEffect
 	ReturnedZeroEffects          []GenericEffect
@@ -519,6 +521,7 @@ type genericEffectSummary struct {
 	reachable                    map[syntax.Node]bool
 	root                         *syntax.Node
 	body                         *syntax.BlockStatement
+	storage                      StorageEffectGraph
 }
 
 type returnedGenericBody struct {
@@ -543,14 +546,36 @@ type returnedClosureSource struct {
 // checkGenericZeroSafety builds effect facts and checks each concrete call.
 func (c *checker) checkGenericZeroSafety() {
 	summaries := c.collectGenericZeroSummaries()
+	c.genericSummaries = summaries
+	storage := c.collectStorageEffectGraphs()
+	for function, summary := range summaries {
+		if graph := storage[function]; graph != nil {
+			summary.storage = graph.graph
+		}
+	}
 	c.propagateGenericZeroFacts(summaries)
+	for function, summary := range summaries {
+		summary.attachStorageEffects()
+		c.attachLiteralStorageEffects(summary)
+		if graph := storage[function]; graph != nil {
+			graph.graph = summary.storage
+		}
+	}
+	c.resolveStorageEffectGraphs(storage)
+	c.storageGraphs = storage
+	for function, summary := range summaries {
+		if graph := storage[function]; graph != nil {
+			summary.storage = graph.graph
+		}
+	}
 
 	for _, summary := range summaries {
 		fact := summary.fact()
-		if fact.hasEffects() {
+		if fact.hasEffects() || fact.Storage.Known {
 			c.pass.ExportObjectFact(summary.function, &fact)
 		}
 	}
+	c.exportOrdinaryStorageFacts(storage, summaries)
 
 	bindings, sources := c.collectGenericValueBindings(summaries)
 	for _, file := range c.files {
@@ -568,6 +593,7 @@ func (c *checker) checkGenericZeroSafety() {
 			if call := syntax.CallExpressionOf(expression); call != nil {
 				c.reportGenericZeroCall(expression, summaries)
 				c.reportReturnedGenericCall(expression, summaries, sources)
+				c.reportStorageFunctionCall(expression)
 			}
 			if syntax.IndexExpressionOf(expression) != nil ||
 				syntax.IndexListExpressionOf(expression) != nil ||

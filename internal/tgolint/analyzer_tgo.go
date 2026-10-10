@@ -35,31 +35,35 @@ func newAnalyzer() *analysis.Analyzer {
 }
 
 type checker struct {
-	pass            *analysis.Pass
-	files           []*syntax.File
-	facts           *sourcefacts.Index
-	models          map[objectKey]*model
-	validated       map[types.Object]bool
-	callTarget      map[types.Object]types.Object
-	generated       map[*syntax.File]bool
-	generatedSource map[*syntax.File]string
-	sourceFiles     []*syntax.File
-	outputs         map[string][]byte
-	parents         map[syntax.Node]*syntax.Node
-	syntaxSafe      map[*syntax.Expression]bool
-	syntaxHandled   map[*syntax.Expression]bool
-	checked         map[*syntax.Expression]bool
-	presence        map[*syntax.Expression]bool
-	escaped         map[types.Object]token.Pos
-	reported        map[diagnosticKey]bool
-	function        *syntax.Node
-	file            *syntax.File
-	sourcePackage   *types.Package
-	zeroTypes       map[*types.TypeParam]*model
-	captureResult   func(*model)
-	captureSource   func(*model, *syntax.Expression)
-	scalarFlows     map[syntax.Node]*scalarFlow
-	invalid         bool
+	pass             *analysis.Pass
+	files            []*syntax.File
+	facts            *sourcefacts.Index
+	models           map[objectKey]*model
+	validated        map[types.Object]bool
+	callTarget       map[types.Object]types.Object
+	generated        map[*syntax.File]bool
+	generatedSource  map[*syntax.File]string
+	sourceFiles      []*syntax.File
+	outputs          map[string][]byte
+	parents          map[syntax.Node]*syntax.Node
+	syntaxSafe       map[*syntax.Expression]bool
+	syntaxHandled    map[*syntax.Expression]bool
+	checked          map[*syntax.Expression]bool
+	presence         map[*syntax.Expression]bool
+	escaped          map[types.Object]token.Pos
+	reported         map[diagnosticKey]bool
+	function         *syntax.Node
+	file             *syntax.File
+	sourcePackage    *types.Package
+	zeroTypes        map[*types.TypeParam]*model
+	captureResult    func(*model)
+	captureSource    func(*model, *syntax.Expression)
+	scalarFlows      map[syntax.Node]*scalarFlow
+	storageGraphs    map[*types.Func]*storageGraphSummary
+	storageLiterals  map[token.Pos]int
+	storageFlows     map[syntax.Node]*storageFlow
+	genericSummaries map[*types.Func]*genericEffectSummary
+	invalid          bool
 }
 
 const invalidPackageVersion = 1
@@ -104,31 +108,35 @@ func run(pass *analysis.Pass) (any, error) {
 		facts.AddFile(file)
 	}
 	c := &checker{
-		pass:            pass,
-		files:           files,
-		facts:           facts,
-		models:          make(map[objectKey]*model),
-		validated:       make(map[types.Object]bool),
-		callTarget:      make(map[types.Object]types.Object),
-		generated:       make(map[*syntax.File]bool),
-		generatedSource: make(map[*syntax.File]string),
-		sourceFiles:     nil,
-		outputs:         make(map[string][]byte),
-		parents:         make(map[syntax.Node]*syntax.Node),
-		syntaxSafe:      make(map[*syntax.Expression]bool),
-		syntaxHandled:   make(map[*syntax.Expression]bool),
-		checked:         make(map[*syntax.Expression]bool),
-		presence:        make(map[*syntax.Expression]bool),
-		escaped:         make(map[types.Object]token.Pos),
-		reported:        make(map[diagnosticKey]bool),
-		function:        nil,
-		file:            nil,
-		sourcePackage:   nil,
-		zeroTypes:       nil,
-		captureResult:   nil,
-		captureSource:   nil,
-		scalarFlows:     make(map[syntax.Node]*scalarFlow),
-		invalid:         false,
+		pass:             pass,
+		files:            files,
+		facts:            facts,
+		models:           make(map[objectKey]*model),
+		validated:        make(map[types.Object]bool),
+		callTarget:       make(map[types.Object]types.Object),
+		generated:        make(map[*syntax.File]bool),
+		generatedSource:  make(map[*syntax.File]string),
+		sourceFiles:      nil,
+		outputs:          make(map[string][]byte),
+		parents:          make(map[syntax.Node]*syntax.Node),
+		syntaxSafe:       make(map[*syntax.Expression]bool),
+		syntaxHandled:    make(map[*syntax.Expression]bool),
+		checked:          make(map[*syntax.Expression]bool),
+		presence:         make(map[*syntax.Expression]bool),
+		escaped:          make(map[types.Object]token.Pos),
+		reported:         make(map[diagnosticKey]bool),
+		function:         nil,
+		file:             nil,
+		sourcePackage:    nil,
+		zeroTypes:        nil,
+		captureResult:    nil,
+		captureSource:    nil,
+		scalarFlows:      make(map[syntax.Node]*scalarFlow),
+		storageGraphs:    make(map[*types.Func]*storageGraphSummary),
+		storageLiterals:  make(map[token.Pos]int),
+		storageFlows:     make(map[syntax.Node]*storageFlow),
+		genericSummaries: make(map[*types.Func]*genericEffectSummary),
+		invalid:          false,
 	}
 	if c.rejectInvalidDependencies() {
 		return nil, nil
