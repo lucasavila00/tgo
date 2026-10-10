@@ -10,6 +10,8 @@ import (
 
 // GenericEffectFact carries generic effects between analysis packages.
 type GenericEffectFact struct {
+	Version                      int
+	Storage                      StorageEffectGraph
 	ZeroEffects                  []GenericEffect
 	AccessEffects                []GenericEffect
 	ReturnedZeroEffects          []GenericEffect

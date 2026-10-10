@@ -1,0 +1,71 @@
+package tgolint
+
+import "go/types"
+
+type storageLocation struct {
+	site   int
+	merged bool
+}
+
+type storagePath struct {
+	location storageLocation
+	steps    []StorageEffectPath
+}
+
+type storageFunction struct {
+	graph         int
+	captures      []storagePath
+	typeArguments []types.Type
+}
+
+type storageSlice struct {
+	backing storageLocation
+	offset  int64
+	length  int64
+	capacity int64
+	knownOffset bool
+	knownLength bool
+	knownCapacity bool
+}
+
+type storageValue struct {
+	unknown   bool
+	functions []storageFunction
+	regions   []storagePath
+	slices    []storageSlice
+}
+
+type storageState struct {
+	cells  map[types.Object]storageValue
+	memory map[storagePathKey]storageValue
+}
+
+type storagePathKey struct {
+	location storageLocation
+	path     string
+}
+
+func newStorageState() storageState {
+	return storageState{
+		cells:  make(map[types.Object]storageValue),
+		memory: make(map[storagePathKey]storageValue),
+	}
+}
+
+func cloneStorageState(state storageState) storageState {
+	cloned := newStorageState()
+	for object, value := range state.cells {
+		cloned.cells[object] = cloneStorageValue(value)
+	}
+	for path, value := range state.memory {
+		cloned.memory[path] = cloneStorageValue(value)
+	}
+	return cloned
+}
+
+func cloneStorageValue(value storageValue) storageValue {
+	value.functions = append([]storageFunction(nil), value.functions...)
+	value.regions = append([]storagePath(nil), value.regions...)
+	value.slices = append([]storageSlice(nil), value.slices...)
+	return value
+}
