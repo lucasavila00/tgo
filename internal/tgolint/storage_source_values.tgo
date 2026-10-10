@@ -431,12 +431,20 @@ func (c %checker) storageBuiltinValue(
 		}
 	}
 	if name == "append" && len(arguments) != 0 {
+		location := storageLocation{
+			graph: -3, site: int(syntax.ExpressionPosition(expression)),
+			kind: storageRootAllocation,
+		}
+		if storageAppendMayAllocate(
+			arguments[0], arguments[1:], call.Ellipsis != token.NoPos,
+		) {
+			location = storageSourceBirthLocation(
+				state, syntax.ExpressionPosition(expression), -3,
+			)
+		}
 		return appendStorageValue(
 			state, arguments[0], arguments[1:], call.Ellipsis != token.NoPos,
-			storageLocation{
-				graph: -3, site: int(syntax.ExpressionPosition(expression)),
-				kind: storageRootAllocation,
-			},
+			location,
 		)
 	}
 	if name == "copy" && len(arguments) == 2 {
