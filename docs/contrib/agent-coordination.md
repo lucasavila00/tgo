@@ -25,6 +25,11 @@ agents. Move the requested work to review without unnecessary waiting.
   reviewer reports the result and then stops.
 - Use hosted CI for full validation. Do not use an agent slot to wait for
   hosted CI.
+- Obtain the exclusive local validation lease before you run a direct Go or
+  lint command. Do not run another compile at the same time. Limit Go command
+  parallelism to the capacity that the coordinator assigns. The locked
+  Makefile build, test, lint, and code-generation targets obtain this lease
+  automatically across all worktrees.
 - Do not merge `main` into a clean pull request only to refresh its ancestry.
   This repository squash-merges pull requests. Merge `main` only when GitHub
   reports a conflict or Lucas asks. Preserve both sides of a conflict. Do not
