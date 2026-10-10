@@ -248,7 +248,7 @@ func (c *checker) compositeEffectCondition(
 		return false, false
 	}
 	value := call.Args[condition.ValueParameter]
-	switch enumValue5 := condition.Kind; enumValue5.Tag() {
+	switch conditionKind := condition.Kind; conditionKind.Tag() {
 	case EffectKindTagNonempty:
 		length, _, known := c.knownSliceBounds(value)
 		return (length != 0) == condition.Expected, known
@@ -265,7 +265,7 @@ func (c *checker) compositeEffectCondition(
 	case EffectKindTagNonzero:
 		return false, false
 	default:
-		panic(enumValue5.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(conditionKind.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 

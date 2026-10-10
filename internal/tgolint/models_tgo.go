@@ -348,19 +348,19 @@ func modelDescription(value *model) (string, string) {
 	if value == nil {
 		return "", ""
 	}
-	switch enumValue13 := *value; enumValue13.Tag() {
+	switch modelValue := *value; modelValue.Tag() {
 	case modelTagChecked:
-		checked := enumValue13.CheckedPayload()
+		checked := modelValue.CheckedPayload()
 		return "checked", checked.Name
 	case modelTagEnum:
-		enum := enumValue13.EnumPayload()
+		enum := modelValue.EnumPayload()
 		return "enum", enum.Name
 	case modelTagMixed:
 		return "", ""
 	case modelTagParameter:
 		return "generic", "type argument"
 	default:
-		panic(enumValue13.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -378,19 +378,19 @@ func modelPackage(value *model) string {
 	if value == nil {
 		return ""
 	}
-	switch enumValue14 := *value; enumValue14.Tag() {
+	switch modelValue := *value; modelValue.Tag() {
 	case modelTagChecked:
-		checked := enumValue14.CheckedPayload()
+		checked := modelValue.CheckedPayload()
 		return checked.Package
 	case modelTagEnum:
-		enum := enumValue14.EnumPayload()
+		enum := modelValue.EnumPayload()
 		return enum.Package
 	case modelTagMixed:
 		return ""
 	case modelTagParameter:
 		return ""
 	default:
-		panic(enumValue14.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -398,18 +398,18 @@ func modelVariants(value *model) []string {
 	if value == nil {
 		return nil
 	}
-	switch enumValue15 := *value; enumValue15.Tag() {
+	switch modelValue := *value; modelValue.Tag() {
 	case modelTagChecked:
 		return nil
 	case modelTagEnum:
-		enum := enumValue15.EnumPayload()
+		enum := modelValue.EnumPayload()
 		return enum.Variants
 	case modelTagMixed:
 		return nil
 	case modelTagParameter:
 		return nil
 	default:
-		panic(enumValue15.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -417,7 +417,7 @@ func modelIsChecked(value *model) bool {
 	if value == nil {
 		return false
 	}
-	switch enumValue16 := *value; enumValue16.Tag() {
+	switch modelValue := *value; modelValue.Tag() {
 	case modelTagChecked:
 		return true
 	case modelTagEnum:
@@ -427,7 +427,7 @@ func modelIsChecked(value *model) bool {
 	case modelTagParameter:
 		return false
 	default:
-		panic(enumValue16.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -435,7 +435,7 @@ func modelIsEnum(value *model) bool {
 	if value == nil {
 		return false
 	}
-	switch enumValue17 := *value; enumValue17.Tag() {
+	switch modelValue := *value; modelValue.Tag() {
 	case modelTagChecked:
 		return false
 	case modelTagEnum:
@@ -445,7 +445,7 @@ func modelIsEnum(value *model) bool {
 	case modelTagParameter:
 		return false
 	default:
-		panic(enumValue17.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -453,7 +453,7 @@ func modelIsMixed(value *model) bool {
 	if value == nil {
 		return false
 	}
-	switch enumValue18 := *value; enumValue18.Tag() {
+	switch modelValue := *value; modelValue.Tag() {
 	case modelTagChecked:
 		return false
 	case modelTagEnum:
@@ -463,7 +463,7 @@ func modelIsMixed(value *model) bool {
 	case modelTagParameter:
 		return false
 	default:
-		panic(enumValue18.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -489,7 +489,7 @@ func modelIsParameter(value *model) bool {
 	if value == nil {
 		return false
 	}
-	switch enumValue19 := *value; enumValue19.Tag() {
+	switch modelValue := *value; modelValue.Tag() {
 	case modelTagChecked:
 		return false
 	case modelTagEnum:
@@ -499,7 +499,7 @@ func modelIsParameter(value *model) bool {
 	case modelTagParameter:
 		return true
 	default:
-		panic(enumValue19.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -508,15 +508,15 @@ func encodeModelFact(value *model) *modelWireFact {
 	if value == nil {
 		return nil
 	}
-	switch enumValue20 := *value; enumValue20.Tag() {
+	switch modelValue := *value; modelValue.Tag() {
 	case modelTagChecked:
-		checked := enumValue20.CheckedPayload()
+		checked := modelValue.CheckedPayload()
 		return &modelWireFact{
 			Kind: checkedModelWire, Package: checked.Package,
 			Name: checked.Name, Variants: nil,
 		}
 	case modelTagEnum:
-		enum := enumValue20.EnumPayload()
+		enum := modelValue.EnumPayload()
 		return &modelWireFact{
 			Kind: enumModelWire, Package: enum.Package, Name: enum.Name,
 			Variants: append([]string(nil), enum.Variants...),
@@ -526,7 +526,7 @@ func encodeModelFact(value *model) *modelWireFact {
 	case modelTagParameter:
 		return nil
 	default:
-		panic(enumValue20.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
 	}
 }
 
