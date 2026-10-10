@@ -106,3 +106,46 @@ comments under the user's identity on your own initiative.
 
 This rule does not prevent the creation or update of an issue body or pull
 request body when the user requests that issue or pull request.
+
+## 11. Lower Valid TGo Before You Restrict It
+
+Read the [compiler lowering guide](docs/contrib/compiler-lowering.md) before
+you change compiler lowering or add a source restriction.
+
+Preserve valid TGo semantics, evaluation order, scope, control flow, and error
+identity first. Generate fresh locals and blocks when the lowering needs them.
+Improve generated-code appearance after correctness is complete.
+
+Reject only invalid or unrepresentable programs. Do not replace a feasible
+compiler lowering with a linter restriction. Do not require users to write
+compiler bookkeeping by hand.
+
+## 12. Autonomous Work
+
+Move the requested work to review without unnecessary waiting.
+
+- Define the complete acceptance criteria before implementation. Keep the
+  active pull request within that scope. Create a separate issue for an
+  unrelated finding.
+- Give one agent ownership of the implementation. Use another agent for the
+  final independent review.
+- Run focused local tests while you implement or debug. Do not run the full CI
+  suite locally.
+- Push the branch and use hosted CI for full validation. Work on another
+  independent task while hosted CI runs.
+- Do not merge `main` into a clean pull request only to refresh its ancestry.
+  This repository squash-merges pull requests. Merge `main` only when GitHub
+  reports a conflict, and preserve both sides of the conflict.
+- Do not use a GitLab-style merge train that repeatedly merges the latest
+  `main` into every open pull request. Review and test each clean pull request
+  at its own head. Run the full tests again on the combined `main` branch
+  before publishing.
+- Keep a pull request in draft while implementation, conflict resolution,
+  review, or required CI is incomplete.
+- Mark a pull request ready as soon as its requested scope is complete, its
+  independent review has no blocker, GitHub reports no conflict, and required
+  hosted checks pass.
+- Rebuild the work inventory after a merge or a new issue changes priorities.
+  Do not repeat the inventory while the external state is unchanged.
+- Keep no more than six pull requests open at one time. Use open slots for the
+  highest-priority unblocked issues.

@@ -9,6 +9,7 @@
 - [Project problem](problem/README.md): the problems that guide language design.
 - [Implementation notes](implementation/README.md): repository architecture and bootstrap rules.
 - [Contributor documentation](contrib/README.md): change procedures and feature documentation.
+- [Compiler lowering](contrib/compiler-lowering.md): semantic priorities and the current lowering audit.
 
 The root [README](../README.md) is the short project overview. Test-specific notes stay beside
 their test tools.
