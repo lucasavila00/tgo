@@ -96,14 +96,6 @@ func changedSuccessValue() (*record, error) {
 	return value, nil
 }
 
-func namedResult() (result *record, final error) {
-	value, err := load()
-	if err != nil {
-		return nil, fmt.Errorf("load: %w", err)
-	}
-	return value, nil
-}
-
 func normalAssignment() (*record, error) {
 	var value *record = nil
 	var err error = nil
@@ -182,4 +174,79 @@ func propagated() (*record, error) {
 		return nil, fmt.Errorf("load: %w", err)
 	}
 	return value, nil
+}
+
+func reusedNamedErrorAfterSuccess() (result *record, err error) {
+	err = errors.New("old")
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
+func namedErrorCapturedBeforeSuccess() (result *record, err error) {
+	err = errors.New("old")
+	observe := func() {
+		_ = err
+	}
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	observe()
+	return value, nil
+}
+
+func namedErrorAddressedBeforeSuccess() (result *record, err error) {
+	err = errors.New("old")
+	pointer := &err
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	_ = *pointer
+	return value, nil
+}
+
+func namedErrorUsedByNakedReturn() (result *record, err error) {
+	err = errors.New("old")
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	result = value
+	return
+}
+
+func namedErrorUsedByBackwardGoto() (result *record, err error) {
+	result = nil
+	err = errors.New("old")
+	goto work
+done:
+	return
+work:
+	_ = result
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	result = value
+	goto done
+}
+
+func namedErrorDeferredAfterNonNil() (result *record, err error) {
+	err = errors.New("old")
+	defer func() {
+		_ = err
+	}()
+	value, err := load()
+	if err != nil {
+		return nil, err
+	}
+	result = value
+	panic("stop")
 }

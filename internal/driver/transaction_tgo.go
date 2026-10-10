@@ -41,17 +41,18 @@ func (b *packageBuilder) removeStaleOutputs(
 	unit *packageUnit,
 	outputs map[string]bool,
 ) error {
-	entries, err_1 := os.ReadDir(unit.Dir)
-	if err_1 != nil {
-		return err_1
+	entries, err := os.ReadDir(unit.Dir)
+	if err != nil {
+		return err
 	}
 	for _, entry := range entries {
 		path := filepath.Join(unit.Dir, entry.Name())
 		if !staleOutput(entry, path, outputs) {
 			continue
 		}
-		if err := b.removeGenerated(path); err != nil {
-			return err
+		err_1 := b.removeGenerated(path)
+		if err_1 != nil {
+			return err_1
 		}
 	}
 	return nil
@@ -168,17 +169,18 @@ func atomicWriteFile(
 	mode fs.FileMode,
 	preserveMode bool,
 ) (changed bool, writtenMode fs.FileMode, err error) {
+	err = nil
 	temporaryPath := filepath.Join(
 		filepath.Dir(path),
 		"."+filepath.Base(path)+".tmp-"+cryptorand.Text(),
 	)
-	temporary, err := os.OpenFile(
+	temporary, err_1 := os.OpenFile(
 		temporaryPath,
 		os.O_CREATE|os.O_EXCL|os.O_WRONLY,
 		mode,
 	)
-	if err != nil {
-		return false, 0, err
+	if err_1 != nil {
+		return false, 0, err_1
 	}
 	closed := false
 	published := false
@@ -193,20 +195,24 @@ func atomicWriteFile(
 			}
 		}
 	}()
-	if _, err := temporary.Write(data); err != nil {
-		return false, 0, err
+	result, err_2 := temporary.Write(data)
+	if err_2 != nil {
+		return false, 0, err_2
 	}
+	_ = result
 	if preserveMode {
-		if err := temporary.Chmod(mode); err != nil {
-			return false, 0, err
+		err_3 := temporary.Chmod(mode)
+		if err_3 != nil {
+			return false, 0, err_3
 		}
 	}
-	if err := temporary.Sync(); err != nil {
-		return false, 0, err
+	err_4 := temporary.Sync()
+	if err_4 != nil {
+		return false, 0, err_4
 	}
-	temporaryInfo, err := temporary.Stat()
-	if err != nil {
-		return false, 0, err
+	temporaryInfo, err_5 := temporary.Stat()
+	if err_5 != nil {
+		return false, 0, err_5
 	}
 	writtenMode = chmodMode(temporaryInfo.Mode())
 	closeErr := temporary.Close()
@@ -214,8 +220,9 @@ func atomicWriteFile(
 	if closeErr != nil {
 		return false, 0, closeErr
 	}
-	if err := replaceFile(temporaryPath, path); err != nil {
-		return false, 0, err
+	err_6 := replaceFile(temporaryPath, path)
+	if err_6 != nil {
+		return false, 0, err_6
 	}
 	published = true
 	if err := syncDirectory(filepath.Dir(path)); err != nil {

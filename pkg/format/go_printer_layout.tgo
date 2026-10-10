@@ -26,12 +26,8 @@ func finishGoPrinterOutput(raw []byte) ([]byte, error) {
 		' ',
 		tabwriter.DiscardEmptyColumns|tabwriter.TabIndent,
 	)
-	if _, err := aligned.Write(raw); err != nil {
-		return , err
-	}
-	if err := aligned.Flush(); err != nil {
-		return , err
-	}
+	_ = aligned.Write(raw)!!
+	aligned.Flush()!!
 	return output.Bytes(),
 }
 

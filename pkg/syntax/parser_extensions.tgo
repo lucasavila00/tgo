@@ -145,7 +145,7 @@ func (p %sourceParser) discoverFailureReturn(keyword int) error {
 		p.edits = append(p.edits, sourceEdit{
 			start: p.tokens[comma].start,
 			end:   p.tokens[comma].end,
-			text:  "",
+			text:  " ",
 		})
 	}
 	return nil

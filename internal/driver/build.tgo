@@ -113,46 +113,32 @@ func (b *packageBuilder) build(path string) error {
 	}
 	b.states[path] = buildActive
 	unit := b.packages[path]
-	if err := unit.load(); err != nil {
-		return err
-	}
+	unit.load()!!
 	if len(unit.Sources) == 0 {
 		imports := b.localGoImports(path)!!
 		for _, dependency := range imports {
-			if err := b.buildImport(dependency); err != nil {
-				return err
-			}
+			b.buildImport(dependency)!!
 		}
 		if b.write {
-			if err := b.removeStaleOutputs(unit, expectedOutputs(unit, nil)); err != nil {
-				return err
-			}
+			b.removeStaleOutputs(unit, expectedOutputs(unit, nil))!!
 		}
 		b.states[path] = buildDone
 		return nil
 	}
 	for _, dependency := range importsOf(unit.Files) {
-		if err := b.buildImport(dependency); err != nil {
-			return err
-		}
+		b.buildImport(dependency)!!
 	}
 	outputs := b.compile(unit)!!
 	if b.write {
 		for _, name := range sortedOutputPaths(outputs) {
 			data := outputs[name]
-			if err := b.writeFile(name, data); err != nil {
-				return err
-			}
+			b.writeFile(name, data)!!
 		}
-		if err := b.removeStaleOutputs(unit, expectedOutputs(unit, outputs)); err != nil {
-			return err
-		}
+		b.removeStaleOutputs(unit, expectedOutputs(unit, outputs))!!
 		testOutputs := b.compileTests(unit)!!
 		for _, name := range sortedOutputPaths(testOutputs) {
 			data := testOutputs[name]
-			if err := b.writeFile(name, data); err != nil {
-				return err
-			}
+			b.writeFile(name, data)!!
 		}
 	}
 	b.states[path] = buildDone
@@ -161,27 +147,21 @@ func (b *packageBuilder) build(path string) error {
 
 // compile sends one prepared package to the in-memory compiler.
 func (b *packageBuilder) compile(unit *packageUnit) (map[string][]byte, error) {
-	compiled, err := b.compileFiles(
+	compiled := b.compileFiles(
 		unit,
 		unit.Path,
 		unit.Sources,
 		unit.Files,
 		unit.usesC,
 		unit.fs,
-	)
-	if err != nil {
-		return , err
-	}
+	)!!
 	unit.compiled = compiled
 	return outputPaths(unit, compiled.Outputs),
 }
 
 // compileTests emits internal and external TGo test packages.
 func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, error) {
-	internal, external, err := unit.readTests()
-	if err != nil {
-		return , err
-	}
+	internal, external := unit.readTests()!!
 	outputs := make(map[string][]byte)
 	for _, item := range []struct {
 		tests    packageTests
@@ -193,15 +173,12 @@ func (b *packageBuilder) compileTests(unit *packageUnit) (map[string][]byte, err
 		if len(item.tests.Sources) == 0 {
 			continue
 		}
-		compiled, err := b.compileTestPackage(
+		compiled := b.compileTestPackage(
 			unit,
 			item.tests,
 			item.external,
 			token.NewFileSet(),
-		)
-		if err != nil {
-			return , err
-		}
+		)!!
 		for _, source := range item.tests.Sources {
 			if data, ok := compiled.Outputs[source.Name]; ok {
 				outputs[unit.outputPath(source.Name)] = data
@@ -236,9 +213,7 @@ func (b *packageBuilder) compileTestPackage(
 		if dependency == unit.Path {
 			continue
 		}
-		if err := b.buildImport(dependency); err != nil {
-			return , err
-		}
+		b.buildImport(dependency)!!
 	}
 	return b.compileFiles(
 		unit, path, sources, syntaxFiles, usesC, files,
@@ -268,10 +243,7 @@ func (b *packageBuilder) compileFiles(
 		}
 		diskImports = append(diskImports, importPath)
 	}
-	paths, err := loadExportPaths(unit.Dir, diskImports)
-	if err != nil {
-		return , err
-	}
+	paths := loadExportPaths(unit.Dir, diskImports)!!
 	fallback := packageTypeImporter(unit, fileSet, paths)
 	packageImporter := memoryImporter{packages: memoryImports, fallback: fallback}
 	compiled, diagnostics := compiler.Compile(
@@ -371,9 +343,7 @@ func (b *packageBuilder) buildImport(path string) error {
 	b.states[path] = buildActive
 	imports := b.localGoImports(path)!!
 	for _, dependency := range imports {
-		if err := b.buildImport(dependency); err != nil {
-			return err
-		}
+		b.buildImport(dependency)!!
 	}
 	b.states[path] = buildDone
 	return nil
@@ -437,14 +407,8 @@ func activeGoFile(
 	if err != nil || !matches {
 		return ,,, err
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return ,,, err
-	}
-	file, err := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)
-	if err != nil {
-		return ,,, err
-	}
+	data := os.ReadFile(path)!!
+	file := syntax.ParseGoFile(token.NewFileSet(), path, data, 0)!!
 	cgo := importsC(file)
 	if cgo && !context.CgoEnabled {
 		return nil, nil, false,
@@ -514,14 +478,8 @@ func importsOf(files []*syntax.File) []string {
 
 // fileImportsC reports whether one source file imports C.
 func fileImportsC(path string) (bool, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return , err
-	}
-	file, err := syntax.ParseFile(token.NewFileSet(), path, data, 0)
-	if err != nil {
-		return , err
-	}
+	data := os.ReadFile(path)!!
+	file := syntax.ParseFile(token.NewFileSet(), path, data, 0)!!
 	return importsC(file),
 }
 
