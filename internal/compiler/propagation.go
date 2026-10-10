@@ -262,10 +262,29 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		l.inferredResultNames = outer
 		return result
 	case *ast.TypeSwitchStmt:
+		outer := l.inferredResultNames
+		l.inferredResultNames = cloneInferredResultNames(outer)
+		scopedInitializer := node.Init != nil
+		prefix := []ast.Stmt(nil)
+		if l.statementHasLowering(node.Init) {
+			prefix = l.simpleStatement(node.Init)
+			node.Init = nil
+		} else if assignment, ok := node.Init.(*ast.AssignStmt); ok {
+			l.rememberSimpleAssignmentTypes(assignment)
+		}
 		l.caseBodies(node.Body)
-		l.missingStatementLowering(node.Init, "type switch initializer")
-		l.missingStatementLowering(node.Assign, "type switch assignment")
-		return []ast.Stmt{node}
+		if l.statementHasLowering(node.Assign) {
+			if node.Init != nil {
+				prefix = append(prefix, l.simpleStatement(node.Init)...)
+				node.Init = nil
+			}
+			guard := l.simpleStatement(node.Assign)
+			node.Assign = guard[len(guard)-1]
+			prefix = append(prefix, guard[:len(guard)-1]...)
+		}
+		result := l.prefixedStatement(prefix, node, scopedInitializer)
+		l.inferredResultNames = outer
+		return result
 	case *ast.ForStmt:
 		node.Body.List = l.scopedStatements(node.Body.List)
 		l.missingStatementLowering(node.Init, "for initializer")
