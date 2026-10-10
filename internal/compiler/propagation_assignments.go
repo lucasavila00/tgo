@@ -7,11 +7,20 @@ import (
 )
 
 func (l *propagationLowerer) assignment(node *ast.AssignStmt) []ast.Stmt {
+	return l.lowerAssignment(node, true)
+}
+
+func (l *propagationLowerer) lowerAssignment(
+	node *ast.AssignStmt,
+	fuseDirect bool,
+) []ast.Stmt {
 	if !l.assignmentHasLowering(node) {
 		return []ast.Stmt{node}
 	}
-	if statements, fused := l.directShortAssignment(node); fused {
-		return statements
+	if fuseDirect {
+		if statements, fused := l.directShortAssignment(node); fused {
+			return statements
+		}
 	}
 	left, prefix := l.assignmentTargets(node.Lhs)
 	node.Lhs = left

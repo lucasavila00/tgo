@@ -190,6 +190,72 @@ func TestPropagationRunsInLoopCondition(t *testing.T) {
 	}
 }
 
+func TestPropagationRunsForInitializer(t *testing.T) {
+	events := []string{}
+	count, err := PropagationForInitializer(&events, true, true)
+	if err != nil || count != 2 {
+		t.Fatalf("count=%d error=%v", count, err)
+	}
+	want := "first,second,condition,body,post,condition,body,post,condition,body"
+	if strings.Join(events, ",") != want {
+		t.Fatalf("events=%v want=%q", events, want)
+	}
+
+	events = nil
+	count, err = PropagationForInitializer(&events, false, true)
+	if count != 0 || err != errPropagationMissing || strings.Join(events, ",") != "first" {
+		t.Fatalf("first failure count=%d error=%v events=%v", count, err, events)
+	}
+
+	events = nil
+	count, err = PropagationForInitializer(&events, true, false)
+	if count != 0 || err != errPropagationMissing || strings.Join(events, ",") != "first,second" {
+		t.Fatalf("second failure count=%d error=%v events=%v", count, err, events)
+	}
+
+	events = nil
+	count, err = PropagationForInitializerWrapped(&events, true)
+	if count != 1 || err != nil || strings.Join(events, ",") != "wrapped" {
+		t.Fatalf("wrapped success count=%d error=%v events=%v", count, err, events)
+	}
+
+	events = nil
+	count, err = PropagationForInitializerWrapped(&events, false)
+	if count != 0 || !errors.Is(err, errPropagationMissing) || err == errPropagationMissing {
+		t.Fatalf("wrapped failure count=%d error=%v", count, err)
+	}
+	if err.Error() != "propagationForValue: missing account" {
+		t.Fatalf("wrapped error=%q", err)
+	}
+}
+
+func TestPropagationKeepsForInitializerLabels(t *testing.T) {
+	for _, enterWithGoto := range []bool{false, true} {
+		events := []string{}
+		count, err := PropagationForInitializerLabels(&events, enterWithGoto)
+		if err != nil || count != 1 || strings.Join(events, ",") != "label" {
+			t.Fatalf("goto=%v count=%d error=%v events=%v", enterWithGoto, count, err, events)
+		}
+	}
+}
+
+func TestPropagationKeepsForInitializerIterationIdentity(t *testing.T) {
+	closures, addresses, err := PropagationForInitializerIdentity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index := range 3 {
+		if closures[index]() != index || *addresses[index] != index {
+			t.Fatalf("index=%d closure=%d address=%d", index, closures[index](), *addresses[index])
+		}
+		for other := range index {
+			if addresses[index] == addresses[other] {
+				t.Fatalf("iterations %d and %d have the same address", index, other)
+			}
+		}
+	}
+}
+
 func TestPropagationInDeferredArgument(t *testing.T) {
 	events := []string{}
 	value, err := PropagationDeferredArgument(&events, true)

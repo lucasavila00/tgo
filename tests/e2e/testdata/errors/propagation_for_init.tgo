@@ -1,9 +1,0 @@
-package errors
-
-func loadStart() (int, error) { return 0, nil }
-
-func useStart() error {
-	for value := loadStart()!; value < 1; value++ {
-	}
-	return nil
-}

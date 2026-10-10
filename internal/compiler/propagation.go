@@ -286,8 +286,29 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 		l.inferredResultNames = outer
 		return result
 	case *ast.ForStmt:
-		node.Body.List = l.scopedStatements(node.Body.List)
+		outer := l.inferredResultNames
+		l.inferredResultNames = cloneInferredResultNames(outer)
+		scopedInitializer := node.Init != nil
+		prefix := []ast.Stmt(nil)
+		if l.statementHasLowering(node.Init) {
+			if assignment, ok := node.Init.(*ast.AssignStmt); ok {
+				l.rememberSimpleAssignmentTypes(assignment)
+				l.rememberDirectResultTypes(
+					assignment.Lhs,
+					l.directPropagationSignature(assignment.Rhs[0]),
+				)
+				lowered := l.lowerAssignment(assignment, false)
+				node.Init = lowered[len(lowered)-1]
+				prefix = lowered[:len(lowered)-1]
+			} else {
+				prefix = l.simpleStatement(node.Init)
+				node.Init = nil
+			}
+		} else if assignment, ok := node.Init.(*ast.AssignStmt); ok {
+			l.rememberSimpleAssignmentTypes(assignment)
+		}
 		l.missingStatementLowering(node.Init, "for initializer")
+		node.Body.List = l.scopedStatements(node.Body.List)
 		l.missingStatementLowering(node.Post, "for post statement")
 		if l.hasLowering(node.Cond) {
 			condition, prefix := l.expression(node.Cond)
@@ -304,7 +325,9 @@ func (l *propagationLowerer) statement(statement ast.Stmt) []ast.Stmt {
 			body = append(body, node.Body.List...)
 			node.Body.List = body
 		}
-		return []ast.Stmt{node}
+		result := l.prefixedStatement(prefix, node, scopedInitializer)
+		l.inferredResultNames = outer
+		return result
 	case *ast.SelectStmt:
 		for _, item := range node.Body.List {
 			clause := item.(*ast.CommClause)
