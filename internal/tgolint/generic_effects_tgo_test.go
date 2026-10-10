@@ -21,6 +21,11 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 						Kind: storageEffectCall, Position: 7,
 						Target: StorageEffectRegion{}, Source: StorageEffectRegion{},
 						Regions: nil, Inputs: nil, Results: nil, Function: -1,
+						TypeArguments: []StorageEffectType{{
+							Kind: storageTypeSlice, Element: []StorageEffectType{{
+								Kind: storageTypeParameter, Parameter: 1,
+							}},
+						}},
 						Field: "", Length: 0, Capacity: 0,
 						KnownLength: false, KnownCapacity: false,
 						ZeroEffects: nil, AccessEffects: nil,
@@ -289,7 +294,9 @@ func TestStorageEffectProjectionDoesNotMutateConditions(t *testing.T) {
 			ValueParameter: 0, OtherParameter: 1,
 		}},
 	}}
-	projected := projectStorageEffects(effects, nil, []int{1}, []int{2, 3})
+	projected := projectStorageEffects(effects, nil, []StorageEffectType{{
+		Kind: storageTypeParameter, Parameter: 1,
+	}}, []int{2, 3})
 	if effects[0].Conditions[0].ValueParameter != 0 ||
 		effects[0].Conditions[0].OtherParameter != 1 {
 		t.Fatalf("source conditions changed: %#v", effects)

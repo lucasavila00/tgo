@@ -390,18 +390,13 @@ func addStorageValueLocations(
 func projectStorageTypeArguments(
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
-	projection []int,
+	projection []StorageEffectType,
 ) []types.Type {
 	result := make([]types.Type, len(projection))
 	for index, source := range projection {
-		if source >= 0 && source < len(typeArguments) {
-			result[index] = typeArguments[source]
-		} else if source <= -2 {
-			receiver := -source - 2
-			if receiver < len(receiverArguments) {
-				result[index] = receiverArguments[receiver]
-			}
-		}
+		result[index] = decodeStorageEffectType(
+			source, receiverArguments, typeArguments,
+		)
 	}
 	return result
 }
@@ -474,8 +469,8 @@ func storageScalarEqual(left storageValue, right storageValue) (bool, bool) {
 
 func projectStorageEffects(
 	effects []GenericEffect,
-	receiverProjection []int,
-	projection []int,
+	receiverProjection []StorageEffectType,
+	projection []StorageEffectType,
 	parameters []int,
 ) []GenericEffect {
 	var result []GenericEffect = nil
@@ -489,15 +484,11 @@ func projectStorageEffects(
 			continue
 		}
 		target := targetProjection[effect.TypeParameter]
-		if target == -1 {
+		if target.Kind != storageTypeParameter && target.Kind != storageTypeReceiver {
 			continue
 		}
-		effect.Receiver = target <= -2
-		if effect.Receiver {
-			effect.TypeParameter = -target - 2
-		} else {
-			effect.TypeParameter = target
-		}
+		effect.Receiver = target.Kind == storageTypeReceiver
+		effect.TypeParameter = target.Parameter
 		for index := range effect.Conditions {
 			condition := &effect.Conditions[index]
 			if condition.ValueParameter < 0 ||

@@ -441,12 +441,12 @@ func containsStorageFunction(
 			}
 		}
 		for index := range function.typeArguments {
-			if !types.Identical(function.typeArguments[index], want.typeArguments[index]) {
+			if !storageTypesEqual(function.typeArguments[index], want.typeArguments[index]) {
 				equal = false
 			}
 		}
 		for index := range function.receiverArguments {
-			if !types.Identical(
+			if !storageTypesEqual(
 				function.receiverArguments[index], want.receiverArguments[index],
 			) {
 				equal = false
@@ -457,6 +457,17 @@ func containsStorageFunction(
 		}
 	}
 	return false
+}
+
+func storageTypesEqual(left, right types.Type) bool {
+	if left == nil || right == nil {
+		return left == right
+	}
+	if types.Identical(left, right) {
+		return true
+	}
+	qualifier := func(pkg *types.Package) string { return pkg.Path() }
+	return types.TypeString(left, qualifier) == types.TypeString(right, qualifier)
 }
 
 func containsStoragePath(paths []storagePath, want storagePath) bool {

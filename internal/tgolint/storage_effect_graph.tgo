@@ -40,8 +40,8 @@ type StorageEffectOperation struct {
 	Regions           []StorageEffectRegion
 	Inputs            []int
 	Results           []int
-	TypeArguments     []int
-	ReceiverArguments []int
+	TypeArguments     []StorageEffectType
+	ReceiverArguments []StorageEffectType
 	CalledParameters  []int
 	Function          int
 	Field             string
@@ -57,6 +57,45 @@ type StorageEffectOperation struct {
 	ZeroEffects       []GenericEffect
 	AccessEffects     []GenericEffect
 }
+
+// StorageEffectType is a serializable type expression in a call graph.
+type StorageEffectType struct {
+	Kind       int
+	Parameter  int
+	Name       string
+	Package    string
+	Basic      int
+	Length     int64
+	Direction  int
+	Variadic   bool
+	Embedded   bool
+	Tag        string
+	Element    []StorageEffectType
+	Key        []StorageEffectType
+	Fields     []StorageEffectType
+	Parameters []StorageEffectType
+	Results    []StorageEffectType
+	Arguments  []StorageEffectType
+	FieldNames []string
+	FieldPkgs  []string
+	FieldTags  []string
+	FieldEmbed []bool
+}
+
+const (
+	storageTypeParameter = iota + 1
+	storageTypeReceiver
+	storageTypeBasic
+	storageTypeSlice
+	storageTypeArray
+	storageTypeMap
+	storageTypePointer
+	storageTypeChannel
+	storageTypeStruct
+	storageTypeSignature
+	storageTypeNamed
+	storageTypeInterface
+)
 
 const (
 	storageEffectRead = iota + 1

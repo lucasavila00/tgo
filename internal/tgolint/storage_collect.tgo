@@ -503,7 +503,7 @@ func (b %storageGraphBuilder) collectExpression(
 
 func (b %storageGraphBuilder) callTypeArgumentProjection(
 	callee %syntax.Expression,
-) []int {
+) []StorageEffectType {
 	identifier := genericCallIdentifier(callee)
 	if identifier == nil {
 		return nil
@@ -517,13 +517,13 @@ func (b %storageGraphBuilder) callTypeArgumentProjection(
 
 func (b %storageGraphBuilder) callReceiverArgumentProjection(
 	callee %syntax.Expression,
-) []int {
+) []StorageEffectType {
 	return b.storageTypeProjection(b.checker.receiverTypeArguments(callee))
 }
 
 func (b %storageGraphBuilder) storageTypeProjection(
 	arguments []types.Type,
-) []int {
+) []StorageEffectType {
 	signature, _ := b.root.Type().(*types.Signature)
 	if signature == nil {
 		return nil
@@ -541,21 +541,9 @@ func (b %storageGraphBuilder) storageTypeProjection(
 			}
 		}
 	}
-	result := make([]int, len(arguments))
+	result := make([]StorageEffectType, len(arguments))
 	for index := range result {
-		result[index] = -1
-		contained := containedTypeParameters(
-			arguments[index], parameterMap, make(map[types.Type]bool),
-		)
-		if len(contained) != 1 {
-			continue
-		}
-		for parameter := range contained {
-			result[index] = parameter.index
-			if parameter.receiver {
-				result[index] = -parameter.index - 2
-			}
-		}
+		result[index] = encodeStorageEffectType(arguments[index], parameterMap)
 	}
 	return result
 }
