@@ -74,7 +74,7 @@ func (i *workspaceTypeImporter) ImportFrom(
 	path string,
 	directory string,
 	mode types.ImportMode,
-) (pkg *types.Package, err error) {
+) (*types.Package, error) {
 	if pkg := i.packages[path]; pkg != nil && pkg.Complete() {
 		return pkg, nil
 	}
@@ -94,14 +94,20 @@ func (i *workspaceTypeImporter) ImportFrom(
 	if err_2 != nil {
 		return nil, err_2
 	}
-	defer func() {
-		err = errors.Join(err, file.Close())
-	}()
-	reader, err_3 := gcexportdata.NewReader(file)
-	if err_3 != nil {
-		return nil, err_3
+	reader, err := gcexportdata.NewReader(file)
+	if err != nil {
+		closeErr := file.Close()
+		if closeErr != nil {
+			return nil, errors.Join(err, closeErr)
+		}
+		return nil, err
 	}
-	return gcexportdata.Read(reader, i.files, i.packages, path)
+	pkg, err := gcexportdata.Read(reader, i.files, i.packages, path)
+	closeErr := file.Close()
+	if closeErr != nil {
+		return nil, errors.Join(err, closeErr)
+	}
+	return pkg, err
 }
 
 type memoryImporter struct {
