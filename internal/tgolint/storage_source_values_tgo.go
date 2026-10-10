@@ -3,6 +3,7 @@
 package tgolint
 
 import (
+	"fmt"
 	"go/constant"
 	"go/token"
 	"go/types"
@@ -128,9 +129,9 @@ func (c *checker) storageCompositeValue(
 	flow *storageFlow,
 	apply bool,
 ) storageValue {
-	location := storageLocation{
-		graph: -4, site: int(syntax.ExpressionPosition(expression)),
-	}
+	location := storageSourceBirthLocation(
+		state, syntax.ExpressionPosition(expression), -4,
+	)
 	value := storageValue{regions: []storagePath{{location: location}}}
 	if _, ok := coreType(c.facts.Type(expression)).(*types.Slice); ok {
 		value.slices = []storageSlice{{
@@ -421,8 +422,11 @@ func (c *checker) storageBuiltinValue(
 			if len(call.Args) == 2 {
 				capacity, capacityKnown = length, lengthKnown
 			}
+			location := storageSourceBirthLocation(
+				state, syntax.ExpressionPosition(expression), -3,
+			)
 			return storageValue{slices: []storageSlice{{
-				backing: storageLocation{graph: -3, site: int(syntax.ExpressionPosition(expression))},
+				backing: location,
 				length:  length, capacity: capacity,
 				knownOffset: true, knownLength: lengthKnown, knownCapacity: capacityKnown,
 			}}}
@@ -441,6 +445,19 @@ func (c *checker) storageBuiltinValue(
 		return copyStorageSlices(state, arguments[0], arguments[1])
 	}
 	return storageValue{unknown: true}
+}
+
+func storageSourceBirthLocation(
+	state storageState,
+	position token.Pos,
+	kind int,
+) storageLocation {
+	family := fmt.Sprintf("source:%d:%d", position, kind)
+	renameStorageFamilyState(&state, family)
+	return storageLocation{
+		family: family, generation: storageGenerationRecent,
+		graph: kind, site: int(position), kind: storageRootAllocation,
+	}
 }
 
 func storageConstantInt(

@@ -305,7 +305,12 @@ func renameStorageFamilyState(state %storageState, family string) {
 		value = renameStorageFamilyValue(value, family)
 		memory[path] = joinStorageValue(memory[path], value)
 	}
-	state.memory = memory
+	for path := range state.memory {
+		delete(state.memory, path)
+	}
+	for path, value := range memory {
+		state.memory[path] = value
+	}
 }
 
 func renameStorageFamilyValue(value storageValue, family string) storageValue {
