@@ -1,0 +1,149 @@
+package tgolint
+
+import (
+	"go/types"
+	"reflect"
+
+	"tgo/pkg/syntax"
+)
+
+type storageFlow struct {
+	before map[syntax.Node]storageState
+}
+
+type storageExecutionState struct {
+	storage storageState
+	temps   map[int]storageValue
+	returns []storageValue
+}
+
+type storageGraphCall struct {
+	fact       %GenericEffectFact
+	function   int
+	arguments  []storageValue
+	captures   []storagePath
+	typeArguments []types.Type
+}
+
+func executeStorageGraph(
+	call storageGraphCall,
+	state storageState,
+) (storageState, []storageValue) {
+	active := make(map[int]bool)
+	return executeStorageFunction(call, state, active)
+}
+
+func executeStorageFunction(
+	call storageGraphCall,
+	state storageState,
+	active map[int]bool,
+) (storageState, []storageValue) {
+	function := storageEffectFunction(call.fact.Storage, call.function)
+	if function == nil || active[call.function] {
+		return state, nil
+	}
+	active[call.function] = true
+	defer delete(active, call.function)
+	entries := make(map[int]storageExecutionState)
+	entries[0] = storageExecutionState{
+		storage: cloneStorageState(state), temps: make(map[int]storageValue), returns: nil,
+	}
+	queue := []int{0}
+	queued := map[int]bool{0: true}
+	var exits []storageExecutionState = nil
+	for len(queue) != 0 {
+		blockID := queue[0]
+		queue = queue[1:]
+		delete(queued, blockID)
+		block := storageEffectBlock(function, blockID)
+		if block == nil {
+			continue
+		}
+		current := cloneStorageExecution(entries[blockID])
+		for _, operation := range block.Operations {
+			applyStorageOperation(&current, call, operation, active)
+		}
+		if len(block.Successors) == 0 {
+			exits = append(exits, current)
+		}
+		for _, edge := range block.Successors {
+			joined, changed := joinStorageExecution(entries[edge.Block], current)
+			if changed {
+				entries[edge.Block] = joined
+				if !queued[edge.Block] {
+					queue = append(queue, edge.Block)
+					queued[edge.Block] = true
+				}
+			}
+		}
+	}
+	result := cloneStorageState(state)
+	var returns []storageValue = nil
+	for _, exit := range exits {
+		result = joinStorageState(result, exit.storage)
+		for index, value := range exit.returns {
+			for len(returns) <= index {
+				returns = append(returns, storageValue{})
+			}
+			returns[index] = joinStorageValue(returns[index], value)
+		}
+	}
+	return result, returns
+}
+
+func storageEffectFunction(
+	graph StorageEffectGraph,
+	id int,
+) %StorageEffectFunction {
+	for index := range graph.Functions {
+		if graph.Functions[index].ID == id {
+			return &graph.Functions[index]
+		}
+	}
+	return nil
+}
+
+func storageEffectBlock(
+	function %StorageEffectFunction,
+	id int,
+) %StorageEffectBlock {
+	for index := range function.Blocks {
+		if function.Blocks[index].ID == id {
+			return &function.Blocks[index]
+		}
+	}
+	return nil
+}
+
+func cloneStorageExecution(state storageExecutionState) storageExecutionState {
+	cloned := storageExecutionState{
+		storage: cloneStorageState(state.storage),
+		temps: make(map[int]storageValue),
+		returns: append([]storageValue(nil), state.returns...),
+	}
+	for id, value := range state.temps {
+		cloned.temps[id] = cloneStorageValue(value)
+	}
+	return cloned
+}
+
+func joinStorageExecution(
+	left storageExecutionState,
+	right storageExecutionState,
+) (storageExecutionState, bool) {
+	if left.temps == nil {
+		return cloneStorageExecution(right), true
+	}
+	joined := cloneStorageExecution(left)
+	joined.storage = joinStorageState(left.storage, right.storage)
+	for id, value := range right.temps {
+		joined.temps[id] = joinStorageValue(joined.temps[id], value)
+	}
+	for index, value := range right.returns {
+		for len(joined.returns) <= index {
+			joined.returns = append(joined.returns, storageValue{})
+		}
+		joined.returns[index] = joinStorageValue(joined.returns[index], value)
+	}
+	return joined, !reflect.DeepEqual(left, joined)
+}

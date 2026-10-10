@@ -1,0 +1,364 @@
+package tgolint
+
+import (
+	"go/constant"
+	"go/types"
+
+	"tgo/pkg/syntax"
+)
+
+func (c %checker) storageExpressionValue(
+	expression %syntax.Expression,
+	state storageState,
+	flow %storageFlow,
+	apply bool,
+) storageValue {
+	if expression == nil {
+		return storageValue{unknown: true}
+	}
+	node := syntax.ExpressionNode(expression)
+	flow.before[node] = cloneStorageState(state)
+	if function, ok := c.genericCallObject(expression).(*types.Func); ok {
+		return c.storageNamedFunctionValue(expression, function.Origin())
+	}
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return c.storageExpressionValue(parenthesized.Expression, state, flow, apply)
+	}
+	if literal := syntax.FunctionLiteralExpressionOf(expression); literal != nil {
+		return c.storageLiteralValue(expression, literal, state)
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		return c.storageCallValue(expression, call, state, flow, apply)
+	}
+	if name := syntax.IdentifierExpressionOf(expression); name != nil {
+		object := c.facts.Object(name)
+		if function, ok := object.(*types.Func); ok {
+			return c.storageNamedFunctionValue(expression, function.Origin())
+		}
+		value := cloneStorageValue(state.cells[object])
+		if stored, ok := state.memory[storageMemoryKey(storageObjectPath(object))]; ok {
+			value = cloneStorageValue(stored)
+		}
+		value.regions = append(value.regions, storageObjectPath(object))
+		return value
+	}
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		base := c.storageExpressionValue(selector.Expression, state, flow, apply)
+		var value storageValue
+		for _, region := range base.regions {
+			region.steps = append(region.steps, StorageEffectPath{
+				Kind: storagePathField, Field: selector.Selector.Name,
+			})
+			value = joinStorageValue(value, state.memory[storageMemoryKey(region)])
+			value.regions = append(value.regions, region)
+		}
+		return value
+	}
+	if indexed := syntax.IndexExpressionOf(expression); indexed != nil {
+		base := c.storageExpressionValue(indexed.Expression, state, flow, apply)
+		c.storageExpressionValue(indexed.Index, state, flow, apply)
+		step := StorageEffectPath{Kind: storagePathAnyIndex}
+		if value := c.facts.Constant(indexed.Index); value != nil &&
+			value.Kind() == constant.Int {
+			if index, exact := constant.Int64Val(value); exact {
+				step = StorageEffectPath{Kind: storagePathIndex, Index: index}
+			}
+		}
+		var result storageValue
+		for _, slice := range base.slices {
+			path := storagePath{location: slice.backing, steps: []StorageEffectPath{step}}
+			result = joinStorageValue(result, state.memory[storageMemoryKey(path)])
+			result.regions = append(result.regions, path)
+		}
+		for _, region := range base.regions {
+			region.steps = append(region.steps, step)
+			result = joinStorageValue(result, state.memory[storageMemoryKey(region)])
+			result.regions = append(result.regions, region)
+		}
+		return result
+	}
+	if slice := syntax.SliceExpressionOf(expression); slice != nil {
+		value := c.storageExpressionValue(slice.Expression, state, flow, apply)
+		if slice.Low != nil {
+			c.storageExpressionValue(slice.Low, state, flow, apply)
+		}
+		if slice.High != nil {
+			c.storageExpressionValue(slice.High, state, flow, apply)
+		}
+		if slice.Max != nil {
+			c.storageExpressionValue(slice.Max, state, flow, apply)
+		}
+		return value
+	}
+	var value storageValue
+	for _, child := range syntax.Children(c.file, &node) {
+		childExpression, ok := syntax.ExpressionOf(child)
+		if ok {
+			value = c.storageExpressionValue(childExpression, state, flow, apply)
+		}
+	}
+	if reflectStorageValueEmpty(value) {
+		value.unknown = true
+	}
+	return value
+}
+
+func (c %checker) storageExpressionValues(
+	expression %syntax.Expression,
+	state storageState,
+	flow %storageFlow,
+	apply bool,
+) []storageValue {
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		return c.storageCallValues(expression, call, state, flow, apply)
+	}
+	return []storageValue{c.storageExpressionValue(expression, state, flow, apply)}
+}
+
+func (c %checker) storageNamedFunctionValue(
+	expression %syntax.Expression,
+	function *types.Func,
+) storageValue {
+	fact := c.storageFunctionFact(function)
+	if fact == nil || !fact.Storage.Known {
+		return storageValue{unknown: true}
+	}
+	var arguments []types.Type = nil
+	if identifier := genericCallIdentifier(expression); identifier != nil {
+		if instance, ok := c.facts.Instance(identifier); ok {
+			arguments = typeList(instance.TypeArgs)
+		}
+	}
+	return storageValue{functions: []storageFunction{{
+		graph: fact.Storage.Entry, fact: fact, typeArguments: arguments,
+	}}}
+}
+
+func (c %checker) storageFunctionFact(function *types.Func) %GenericEffectFact {
+	if summary := c.genericSummaries[function]; summary != nil {
+		fact := summary.effects()
+		return &fact
+	}
+	if summary := c.storageGraphs[function]; summary != nil {
+		return &GenericEffectFact{Version: 1, Storage: summary.graph}
+	}
+	fact := new(GenericEffectFact)
+	if c.pass.ImportObjectFact(function, fact) && fact.Version == 1 {
+		return fact
+	}
+	return nil
+}
+
+func (c %checker) storageLiteralValue(
+	expression %syntax.Expression,
+	literal %syntax.FunctionLiteral,
+	state storageState,
+) storageValue {
+	node := syntax.ExpressionNode(expression)
+	root := c.enclosingFunction(&node)
+	if root == nil {
+		return storageValue{unknown: true}
+	}
+	owner := c.storageOwnerFunction(root)
+	if owner == nil {
+		return storageValue{unknown: true}
+	}
+	summary := c.storageGraphs[owner.Origin()]
+	if summary == nil {
+		return storageValue{unknown: true}
+	}
+	fact := &GenericEffectFact{Version: 1, Storage: summary.graph}
+	var captures []storagePath = nil
+	inspectGenericBlock(literal.Body, func(node %syntax.Node) bool {
+		if nested, ok := syntax.FunctionLiteralOf(node); ok && nested != literal {
+			return false
+		}
+		name, ok := syntax.IdentifierOf(node)
+		if ok {
+			object := c.facts.Object(name)
+			if _, found := state.cells[object]; found {
+				path := storageObjectPath(object)
+				if !containsStoragePath(captures, path) {
+					captures = append(captures, path)
+				}
+			}
+		}
+		return true
+	})
+	return storageValue{functions: []storageFunction{{
+		graph: c.storageLiterals[syntax.ExpressionPosition(expression)],
+		fact: fact, captures: captures,
+	}}}
+}
+
+func (c %checker) storageOwnerFunction(node %syntax.Node) *types.Func {
+	current := node
+	for current != nil {
+		if declaration, ok := syntax.FunctionDeclarationOf(current); ok {
+			owner, _ := c.facts.DefinitionName(declaration.Name).(*types.Func)
+			return owner
+		}
+		current = c.parents[*current]
+	}
+	return nil
+}
+
+func (c %checker) storageCallValue(
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
+	state storageState,
+	flow %storageFlow,
+	apply bool,
+) storageValue {
+	values := c.storageCallValues(expression, call, state, flow, apply)
+	if len(values) == 0 {
+		return storageValue{unknown: true}
+	}
+	return values[0]
+}
+
+func (c %checker) storageCallValues(
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
+	state storageState,
+	flow %storageFlow,
+	apply bool,
+) []storageValue {
+	callee := c.storageExpressionValue(call.Callee, state, flow, apply)
+	arguments := make([]storageValue, 0, len(call.Args))
+	for _, argument := range call.Args {
+		arguments = append(arguments,
+			c.storageExpressionValue(argument, state, flow, apply))
+	}
+	if name := syntax.IdentifierExpressionOf(call.Callee); name != nil {
+		if builtin, ok := c.facts.Object(name).(*types.Builtin); ok {
+			return []storageValue{
+				c.storageBuiltinValue(expression, call, builtin.Name(), arguments, state),
+			}
+		}
+	}
+	var results []storageValue = nil
+	for _, function := range callee.functions {
+		if !apply {
+			continue
+		}
+		updated, values := executeStorageGraph(storageGraphCall{
+			fact: function.fact, function: function.graph,
+			arguments: arguments, captures: function.captures,
+			typeArguments: function.typeArguments,
+		}, state)
+		state.cells = updated.cells
+		state.memory = updated.memory
+		for index, value := range values {
+			for len(results) <= index {
+				results = append(results, storageValue{})
+			}
+			results[index] = joinStorageValue(results[index], value)
+		}
+	}
+	if len(callee.functions) == 0 {
+		results = append(results, storageValue{unknown: true})
+	}
+	return results
+}
+
+func (c %checker) storageBuiltinValue(
+	expression %syntax.Expression,
+	call %syntax.CallExpression,
+	name string,
+	arguments []storageValue,
+	state storageState,
+) storageValue {
+	if name == "make" {
+		if _, ok := coreType(c.facts.Type(expression)).(*types.Slice); ok {
+			length, lengthKnown := storageConstantInt(c, call.Args, 1)
+			capacity, capacityKnown := storageConstantInt(c, call.Args, 2)
+			if len(call.Args) == 2 {
+				capacity, capacityKnown = length, lengthKnown
+			}
+			return storageValue{slices: []storageSlice{{
+				backing: storageLocation{graph: -3, site: int(syntax.ExpressionPosition(expression))},
+				length: length, capacity: capacity,
+				knownLength: lengthKnown, knownCapacity: capacityKnown,
+			}}}
+		}
+	}
+	if name == "append" && len(arguments) != 0 {
+		value := cloneStorageValue(arguments[0])
+		var result []storageSlice = nil
+		for _, slice := range value.slices {
+			reuse := !slice.knownCapacity ||
+				slice.length+int64(len(arguments)-1) <= slice.capacity
+			fresh := !slice.knownCapacity || !reuse
+			if reuse {
+				for _, item := range arguments[1:] {
+					path := storagePath{location: slice.backing, steps: []StorageEffectPath{{
+						Kind: storagePathAnyIndex,
+					}}}
+					writeStorageMemory(state, storageMemoryKey(path), item, false)
+				}
+				slice.length += int64(len(arguments) - 1)
+				result = append(result, slice)
+			}
+			if fresh {
+				result = append(result, storageSlice{
+					backing: storageLocation{
+						graph: -3, site: int(syntax.ExpressionPosition(expression)), merged: true,
+					},
+					length: slice.length + int64(len(arguments)-1), knownLength: slice.knownLength,
+				})
+			}
+		}
+		value.slices = result
+		return value
+	}
+	if name == "copy" && len(arguments) == 2 {
+		copyStorageSlices(state, arguments[0], arguments[1])
+		return storageValue{}
+	}
+	return storageValue{unknown: true}
+}
+
+func storageConstantInt(
+	c %checker,
+	arguments []%syntax.Expression,
+	index int,
+) (int64, bool) {
+	if index < 0 || index >= len(arguments) {
+		return 0, false
+	}
+	value := c.facts.Constant(arguments[index])
+	if value == nil || value.Kind() != constant.Int {
+		return 0, false
+	}
+	result, exact := constant.Int64Val(value)
+	return result, exact
+}
+
+func copyStorageSlices(
+	state storageState,
+	destination storageValue,
+	source storageValue,
+) {
+	for _, target := range destination.slices {
+		for _, origin := range source.slices {
+			if target.knownLength && target.length == 0 ||
+				origin.knownLength && origin.length == 0 {
+				continue
+			}
+			from := storagePath{location: origin.backing, steps: []StorageEffectPath{{
+				Kind: storagePathAnyIndex,
+			}}}
+			snapshot := cloneStorageValue(state.memory[storageMemoryKey(from)])
+			to := storagePath{location: target.backing, steps: []StorageEffectPath{{
+				Kind: storagePathAnyIndex,
+			}}}
+			writeStorageMemory(state, storageMemoryKey(to), snapshot, false)
+		}
+	}
+}
+
+func reflectStorageValueEmpty(value storageValue) bool {
+	return !value.unknown && len(value.functions) == 0 &&
+		len(value.regions) == 0 && len(value.slices) == 0
+}

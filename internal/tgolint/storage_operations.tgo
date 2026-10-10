@@ -1,0 +1,217 @@
+package tgolint
+
+import "go/types"
+
+func applyStorageOperation(
+	state %storageExecutionState,
+	call storageGraphCall,
+	operation StorageEffectOperation,
+	active map[int]bool,
+) {
+	switch operation.Kind {
+	case storageEffectRead:
+		value := readStorageRegion(state.storage, call, operation.Source)
+		setStorageResults(state.temps, operation.Results, []storageValue{value})
+	case storageEffectWrite:
+		value := storageInput(state.temps, operation.Inputs, 0)
+		writeStorageRegion(state.storage, call, operation.Target, value)
+	case storageEffectFunction:
+		var captures []storagePath = nil
+		for _, region := range operation.Regions {
+			captures = append(captures, resolveStoragePaths(call, region)...)
+		}
+		value := storageValue{functions: []storageFunction{{
+			graph: operation.Function, fact: call.fact, captures: captures,
+			typeArguments: append([]types.Type(nil), call.typeArguments...),
+		}}}
+		setStorageResults(state.temps, operation.Results, []storageValue{value})
+	case storageEffectCall:
+		arguments := storageInputs(state.temps, operation.Inputs)
+		var functions []storageFunction = nil
+		if operation.Function >= 0 {
+			functions = append(functions, storageFunction{
+				graph: operation.Function, fact: call.fact,
+			})
+		} else if len(arguments) != 0 {
+			functions = append(functions, arguments[0].functions...)
+			arguments = arguments[1:]
+		}
+		var results []storageValue = nil
+		for _, function := range functions {
+			nested := storageGraphCall{
+				fact: function.fact, function: function.graph,
+				arguments: arguments, captures: function.captures,
+				typeArguments: function.typeArguments,
+			}
+			updated, returned := executeStorageFunction(nested, state.storage, active)
+			state.storage = joinStorageState(state.storage, updated)
+			for index, value := range returned {
+				for len(results) <= index {
+					results = append(results, storageValue{})
+				}
+				results[index] = joinStorageValue(results[index], value)
+			}
+		}
+		setStorageResults(state.temps, operation.Results, results)
+	case storageEffectAllocate:
+		value := storageValue{regions: []storagePath{{
+			location: storageLocation{graph: call.function, site: operation.Target.ID},
+		}}}
+		setStorageResults(state.temps, operation.Results, []storageValue{value})
+	case storageEffectAppend:
+		applyStorageAppend(state, operation)
+	case storageEffectCopy:
+		applyStorageCopy(state, operation)
+	case storageEffectSlice:
+		value := storageInput(state.temps, operation.Inputs, 0)
+		setStorageResults(state.temps, operation.Results, []storageValue{value})
+	case storageEffectReturn:
+		state.returns = storageInputs(state.temps, operation.Inputs)
+	}
+}
+
+func storageInputs(values map[int]storageValue, inputs []int) []storageValue {
+	result := make([]storageValue, 0, len(inputs))
+	for _, input := range inputs {
+		result = append(result, cloneStorageValue(values[input]))
+	}
+	return result
+}
+
+func storageInput(values map[int]storageValue, inputs []int, index int) storageValue {
+	if index < 0 || index >= len(inputs) {
+		return storageValue{unknown: true}
+	}
+	return cloneStorageValue(values[inputs[index]])
+}
+
+func setStorageResults(
+	target map[int]storageValue,
+	results []int,
+	values []storageValue,
+) {
+	for index, result := range results {
+		if index < len(values) {
+			target[result] = cloneStorageValue(values[index])
+		} else {
+			target[result] = storageValue{unknown: true}
+		}
+	}
+}
+
+func readStorageRegion(
+	state storageState,
+	call storageGraphCall,
+	region StorageEffectRegion,
+) storageValue {
+	paths := resolveStoragePaths(call, region)
+	var value storageValue
+	for _, path := range paths {
+		value = joinStorageValue(value, state.memory[storageMemoryKey(path)])
+	}
+	if len(paths) == 0 {
+		value.unknown = true
+	}
+	return value
+}
+
+func writeStorageRegion(
+	state storageState,
+	call storageGraphCall,
+	region StorageEffectRegion,
+	value storageValue,
+) {
+	paths := resolveStoragePaths(call, region)
+	exact := len(paths) == 1 && !paths[0].location.merged &&
+		storageWirePathExact(region.Path)
+	for _, path := range paths {
+		writeStorageMemory(state, storageMemoryKey(path), value, exact)
+	}
+}
+
+func resolveStoragePaths(
+	call storageGraphCall,
+	region StorageEffectRegion,
+) []storagePath {
+	var paths []storagePath = nil
+	if region.Root == storageRootParameter &&
+		region.ID >= 0 && region.ID < len(call.arguments) {
+		paths = append(paths, call.arguments[region.ID].regions...)
+	}
+	if region.Root == storageRootCapture &&
+		region.ID >= 0 && region.ID < len(call.captures) {
+		paths = append(paths, call.captures[region.ID])
+	}
+	if region.Root == storageRootAllocation || region.Root == storageRootResult {
+		paths = append(paths, storagePath{location: storageLocation{
+			graph: call.function, site: region.ID,
+		}})
+	}
+	for index := range paths {
+		paths[index].steps = append(paths[index].steps, region.Path...)
+	}
+	return paths
+}
+
+func storageWirePathExact(path []StorageEffectPath) bool {
+	for _, step := range path {
+		if step.Kind == storagePathAnyIndex {
+			return false
+		}
+	}
+	return true
+}
+
+func applyStorageAppend(
+	state %storageExecutionState,
+	operation StorageEffectOperation,
+) {
+	base := storageInput(state.temps, operation.Inputs, 0)
+	values := storageInputs(state.temps, operation.Inputs[1:])
+	var slices []storageSlice = nil
+	for _, slice := range base.slices {
+		reuse := !slice.knownCapacity ||
+			slice.length+int64(len(values)) <= slice.capacity
+		if reuse {
+			for index, value := range values {
+				path := storagePath{location: slice.backing, steps: []StorageEffectPath{{
+					Kind: storagePathIndex, Index: slice.length + int64(index),
+				}}}
+				writeStorageMemory(state.storage, storageMemoryKey(path), value, false)
+			}
+			slice.length += int64(len(values))
+			slices = append(slices, slice)
+		}
+		if !slice.knownCapacity || !reuse {
+			slices = append(slices, storageSlice{
+				backing: storageLocation{
+					graph: callGraph(operation), site: operation.Results[0], merged: true,
+				},
+				length: slice.length + int64(len(values)), knownLength: slice.knownLength,
+			})
+		}
+	}
+	base.slices = slices
+	setStorageResults(state.temps, operation.Results, []storageValue{base})
+}
+
+func callGraph(operation StorageEffectOperation) int {
+	if operation.Function >= 0 {
+		return operation.Function
+	}
+	return -1
+}
+
+func applyStorageCopy(
+	state %storageExecutionState,
+	operation StorageEffectOperation,
+) {
+	if len(operation.Inputs) < 2 {
+		return
+	}
+	copyStorageSlices(
+		state.storage,
+		state.temps[operation.Inputs[0]],
+		state.temps[operation.Inputs[1]],
+	)
+}

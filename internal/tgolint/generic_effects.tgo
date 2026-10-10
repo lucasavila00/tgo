@@ -127,16 +127,27 @@ type returnedClosureSource struct {
 // checkGenericZeroSafety builds effect facts and checks each concrete call.
 func (c %checker) checkGenericZeroSafety() {
 	summaries := c.collectGenericZeroSummaries()
+	c.genericSummaries = summaries
 	storage := c.collectStorageEffectGraphs()
-	c.resolveStorageEffectGraphs(storage)
 	for function, summary := range summaries {
 		if graph := storage[function]; graph != nil {
 			summary.storage = graph.graph
 		}
 	}
 	c.propagateGenericZeroFacts(summaries)
-	for _, summary := range summaries {
+	for function, summary := range summaries {
 		summary.attachStorageEffects()
+		c.attachLiteralStorageEffects(summary)
+		if graph := storage[function]; graph != nil {
+			graph.graph = summary.storage
+		}
+	}
+	c.resolveStorageEffectGraphs(storage)
+	c.storageGraphs = storage
+	for function, summary := range summaries {
+		if graph := storage[function]; graph != nil {
+			summary.storage = graph.graph
+		}
 	}
 
 	for _, summary := range summaries {
@@ -163,6 +174,7 @@ func (c %checker) checkGenericZeroSafety() {
 			if call := syntax.CallExpressionOf(expression); call != nil {
 				c.reportGenericZeroCall(expression, summaries)
 				c.reportReturnedGenericCall(expression, summaries, sources)
+				c.reportStorageFunctionCall(expression)
 			}
 			if syntax.IndexExpressionOf(expression) != nil ||
 				syntax.IndexListExpressionOf(expression) != nil ||

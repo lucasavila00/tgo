@@ -57,6 +57,10 @@ type checker struct {
 	captureResult   func(%model)
 	captureSource   func(%model, *syntax.Expression)
 	scalarFlows     map[syntax.Node]*scalarFlow
+	storageGraphs   map[*types.Func]%storageGraphSummary
+	storageLiterals map[token.Pos]int
+	storageFlows    map[syntax.Node]%storageFlow
+	genericSummaries map[*types.Func]%genericEffectSummary
 	invalid         bool
 }
 
@@ -122,6 +126,10 @@ func run(pass *analysis.Pass) (any, error) {
 		captureResult:   nil,
 		captureSource:   nil,
 		scalarFlows:     make(map[syntax.Node]*scalarFlow),
+		storageGraphs:   make(map[*types.Func]%storageGraphSummary),
+		storageLiterals: make(map[token.Pos]int),
+		storageFlows:    make(map[syntax.Node]%storageFlow),
+		genericSummaries: make(map[*types.Func]%genericEffectSummary),
 		invalid:         false,
 	}
 	if c.rejectInvalidDependencies() {

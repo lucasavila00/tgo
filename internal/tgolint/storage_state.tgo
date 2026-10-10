@@ -1,8 +1,13 @@
 package tgolint
 
-import "go/types"
+import (
+	"go/types"
+	"strconv"
+	"strings"
+)
 
 type storageLocation struct {
+	graph  int
 	site   int
 	merged bool
 }
@@ -14,6 +19,7 @@ type storagePath struct {
 
 type storageFunction struct {
 	graph         int
+	fact          %GenericEffectFact
 	captures      []storagePath
 	typeArguments []types.Type
 }
@@ -107,7 +113,7 @@ func containsStorageFunction(
 	want storageFunction,
 ) bool {
 	for _, function := range functions {
-		if function.graph != want.graph ||
+		if function.graph != want.graph || function.fact != want.fact ||
 			len(function.captures) != len(want.captures) ||
 			len(function.typeArguments) != len(want.typeArguments) {
 			continue
@@ -184,4 +190,24 @@ func writeStorageMemory(
 		return
 	}
 	state.memory[path] = joinStorageValue(state.memory[path], value)
+}
+
+func storageMemoryKey(path storagePath) storagePathKey {
+	var text strings.Builder
+	for _, step := range path.steps {
+		text.WriteString(strconv.Itoa(step.Kind))
+		text.WriteByte(':')
+		text.WriteString(step.Field)
+		text.WriteByte(':')
+		text.WriteString(strconv.FormatInt(step.Index, 10))
+		text.WriteByte('/')
+	}
+	return storagePathKey{location: path.location, path: text.String()}
+}
+
+func storagePathFromWire(
+	location storageLocation,
+	path []StorageEffectPath,
+) storagePath {
+	return storagePath{location: location, steps: append([]StorageEffectPath(nil), path...)}
 }
