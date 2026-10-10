@@ -3,6 +3,7 @@ package compiler
 import (
 	"go/ast"
 	"go/token"
+	"strconv"
 )
 
 func (e *loweringEmitter) switchStatement(
@@ -81,6 +82,14 @@ func (e *loweringEmitter) switchStatement(
 	node.Tag = ast.NewIdent(selected.Name)
 	e.emitSwitchBodies(operation, node)
 	target.List = append(target.List, node)
+}
+
+func switchNegativeOne() ast.Expr {
+	return &ast.UnaryExpr{Op: token.SUB, X: switchIntegerLiteral(1)}
+}
+
+func switchIntegerLiteral(value int) ast.Expr {
+	return &ast.BasicLit{Kind: token.INT, Value: strconv.Itoa(value)}
 }
 
 func (e *loweringEmitter) emitDirectSwitch(
