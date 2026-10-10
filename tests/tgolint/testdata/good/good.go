@@ -658,3 +658,34 @@ func ReboundCapturedAlias(value, other *model.Event) string {
 	}
 	return ""
 }
+
+func CopyChecked(value model.Count) *model.Count {
+	copy := value
+	copy = value
+	return &copy
+}
+
+func ReadPromotedMethods(value *model.MethodCount, outer *model.MethodOuter) int {
+	value.WholeMethod()
+	whole := value.WholeMethod
+	whole()
+	wholeExpression := (*model.MethodCount).WholeMethod
+	wholeExpression(value)
+	valueExpression := model.MethodCount.Value
+	valueMethod := outer.Value
+	return value.Value() + valueMethod() + valueExpression(*value)
+}
+
+type mutableMeasured int
+
+func (value *mutableMeasured) Change() { *value = 99 }
+
+type mutableMethodWrapper struct{ mutableMeasured }
+
+func ChangeMutableMethods(value *mutableMethodWrapper) {
+	value.Change()
+	change := value.Change
+	change()
+	method := (*mutableMethodWrapper).Change
+	method(value)
+}

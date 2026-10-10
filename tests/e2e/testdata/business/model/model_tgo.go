@@ -32,14 +32,14 @@ func (value Quantity) check() (Quantity, error) {
 func (value Quantity) Value() int { return value.value }
 
 type PositivePoint struct {
-	value struct{ X int }
+	value int
 }
 type TgoPositivePointInput struct {
-	FieldValue struct{ X int }
+	FieldValue int
 }
 
 // NewPositivePoint constructs and checks PositivePoint.
-func NewPositivePoint(value struct{ X int }) (PositivePoint, error) {
+func NewPositivePoint(value int) (PositivePoint, error) {
 	return PositivePoint{value}.check()
 }
 
@@ -48,12 +48,12 @@ type positivePointError struct {
 
 func (positivePointError) Error() string { return "invalid PositivePoint" }
 func (value PositivePoint) check() (PositivePoint, error) {
-	if value.value.X <= 0 {
+	if value.value <= 0 {
 		return PositivePoint{}, positivePointError{}
 	}
 	return value, nil
 }
-func (value PositivePoint) Value() struct{ X int } { return value.value }
+func (value PositivePoint) Value() int { return value.value }
 
 type Multiline struct {
 	value int

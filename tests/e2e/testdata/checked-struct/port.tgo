@@ -3,12 +3,14 @@ package checkedstruct
 import "errors"
 
 var ErrInvalidPort = errors.New("invalid port")
+var checks []string
 
 type Port struct {
 	number int
 } checked
 
 func (value Port) check() (Port, error) {
+	checks = append(checks, "port")
 	if value.number < 1 || value.number > 65535 {
 		return Port{}, ErrInvalidPort
 	}
@@ -20,6 +22,7 @@ type ServicePort struct {
 } checked
 
 func (value ServicePort) check() (ServicePort, error) {
+	checks = append(checks, "service")
 	return value,
 }
 

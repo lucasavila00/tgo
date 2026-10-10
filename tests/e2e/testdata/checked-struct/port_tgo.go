@@ -8,6 +8,7 @@ import (
 )
 
 var ErrInvalidPort = errors.New("invalid port")
+var checks []string
 
 type Port struct {
 	number int
@@ -22,6 +23,7 @@ func NewPort(number int) (Port, error) {
 }
 
 func (value Port) check() (Port, error) {
+	checks = append(checks, "port")
 	if value.number < 1 || value.number > 65535 {
 		return Port{}, ErrInvalidPort
 	}
@@ -41,6 +43,7 @@ func NewServicePort(port Port) (ServicePort, error) {
 }
 
 func (value ServicePort) check() (ServicePort, error) {
+	checks = append(checks, "service")
 	return value, nil
 }
 

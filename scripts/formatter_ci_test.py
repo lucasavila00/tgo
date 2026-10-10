@@ -296,7 +296,7 @@ class BackstopVerificationTest(unittest.TestCase):
 
     def test_rejects_noop_slow_ci_recipe(self) -> None:
         recipe = (
-            '\tflock "$$(git rev-parse --git-path tgo-ci.lock)" '
+            "\t+@scripts/with-local-validation-lock.sh "
             "$(MAKE) -j2 slow-ci-unlocked"
         )
         source = MAKEFILE.read_text().replace(
@@ -322,7 +322,10 @@ class BackstopVerificationTest(unittest.TestCase):
         )
 
     def test_rejects_commented_slow_dependency(self) -> None:
-        dependency = "slow-ci-unlocked: tgolint-unit-test formatter-go-corpus"
+        dependency = (
+            "slow-ci-unlocked: tgolint-unit-test-unlocked "
+            "formatter-go-corpus-unlocked"
+        )
         source = MAKEFILE.read_text().replace(
             dependency,
             "slow-ci-unlocked:\n# " + dependency,

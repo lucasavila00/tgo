@@ -133,8 +133,11 @@ func ParsePort(text string) (Port, error) {
 ```
 
 A checked `Port` literal runs `check` and returns `(Port, error)`. After
-construction, TGo rejects direct field writes and taking the address of a field
-on a checked value.
+construction, TGo rejects field writes, field addresses, and pointer-method
+access that can change a field. A checked field must be boolean, numeric,
+string, or another checked struct by value. Named types and aliases follow the
+same rule. Pointers, collections, arrays, functions, channels, interfaces,
+enums, and ordinary structs are not valid checked fields.
 
 ## Use TGo with Go
 

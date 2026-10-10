@@ -23,8 +23,8 @@ func TestBusiness(t *testing.T) {
 	if _, err := (model.Quantity{value: 0}); err == nil {
 		t.Fatal("zero passed the constructor")
 	}
-	point, err := model.PositivePoint{value: struct{ X int }{X: 1}}
-	if err != nil || point.Value().X != 1 {
+	point, err := model.PositivePoint{value: 1}
+	if err != nil || point.Value() != 1 {
 		t.Fatalf("checked struct: %v, %v", point, err)
 	}
 	multiline, err := model.Multiline{value: 1}

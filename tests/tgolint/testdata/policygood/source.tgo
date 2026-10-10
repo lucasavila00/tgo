@@ -57,3 +57,86 @@ func choicePayload(value Choice) string {
 	payload := value.TextPayload
 	return payload().Value
 }
+
+type measured int
+
+func (value measured) Value() int { return int(value) }
+func (value *measured) Increment() { *value++ }
+
+type inner struct{ number measured } checked
+
+func (value inner) check() (inner, error) { return value, }
+
+type NestedQuantity struct {
+	number measured
+	inner  inner
+} checked
+
+func (value NestedQuantity) check() (NestedQuantity, error) {
+	value.number++
+	value.number.Increment()
+	increment := value.number.Increment
+	increment()
+	replacement := inner{number: 1}!
+	value.inner = replacement
+	return value,
+}
+
+type EmbeddedQuantity struct{ inner } checked
+
+func (value EmbeddedQuantity) check() (EmbeddedQuantity, error) { return value, }
+
+func checkedCopies(value NestedQuantity) int {
+	copy := value
+	copy = value
+	_ = &copy
+	return value.number.Value() + value.inner.number.Value()
+}
+
+func checkedPromotedRead(value EmbeddedQuantity) int {
+	return value.number.Value()
+}
+
+type measuredAlias = measured
+
+type MethodQuantity struct{ measuredAlias } checked
+
+type methodQuantityError struct{}
+
+func (methodQuantityError) Error() string { return "invalid MethodQuantity" }
+func (value MethodQuantity) check() (MethodQuantity, error) {
+	value.Increment()
+	change := value.Increment
+	change()
+	if value.measuredAlias != 2 { return , methodQuantityError{} }
+	return value,
+}
+
+func (value *MethodQuantity) WholeMethod() {}
+
+type methodQuantityAlias = MethodQuantity
+
+type MethodOuter struct{ methodQuantityAlias } checked
+
+func (value MethodOuter) check() (MethodOuter, error) { return value, }
+
+func safePromotedMethods(value *MethodQuantity, outer *MethodOuter) int {
+	value.WholeMethod()
+	whole := value.WholeMethod
+	whole()
+	wholeExpression := (*MethodQuantity).WholeMethod
+	wholeExpression(value)
+	valueExpression := MethodQuantity.Value
+	valueMethod := outer.Value
+	return value.Value() + valueMethod() + valueExpression(*value)
+}
+
+type MutableMethodWrapper struct{ measuredAlias }
+
+func changeMutableMethods(value *MutableMethodWrapper) {
+	value.Increment()
+	change := value.Increment
+	change()
+	method := (*MutableMethodWrapper).Increment
+	method(value)
+}

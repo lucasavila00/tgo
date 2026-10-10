@@ -514,23 +514,26 @@ func (c *checker) modelForSourceSelector(
 	if selection == nil {
 		return nil
 	}
+	current := selection.Recv()
+	for offset, index := range selection.Index() {
+		current = dereference(current)
+		if model := c.modelForReceiver(current); model != nil {
+			return model
+		}
+		if offset == len(selection.Index())-1 {
+			break
+		}
+		structure, ok := current.Underlying().(*types.Struct)
+		if !ok || index >= structure.NumFields() {
+			return nil
+		}
+		current = structure.Field(index).Type()
+	}
 	if function, ok := selection.Obj().(*types.Func); ok {
 		signature, _ := function.Type().(*types.Signature)
 		if signature != nil && signature.Recv() != nil {
 			return c.modelForReceiver(signature.Recv().Type())
 		}
-	}
-	current := selection.Recv()
-	for offset, index := range selection.Index() {
-		current = dereference(current)
-		structure, ok := current.Underlying().(*types.Struct)
-		if !ok || index >= structure.NumFields() {
-			return nil
-		}
-		if offset == len(selection.Index())-1 {
-			return c.modelForReceiver(current)
-		}
-		current = structure.Field(index).Type()
 	}
 	return nil
 }

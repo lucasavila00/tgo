@@ -260,6 +260,191 @@ func change(value Port) {
 	}
 }
 
+type measured int
+
+func (value measured) Value() int  { return int(value) }
+func (value *measured) Increment() { *value++ }
+
+type inner struct {
+	number measured
+}
+type TgoinnerInput struct {
+	FieldNumber measured
+}
+
+// Newinner constructs and checks inner.
+func Newinner(number measured) (inner, error) {
+	return inner{number}.check()
+}
+
+func (value inner) check() (inner, error) { return value, nil }
+
+type NestedPort struct {
+	number measured
+	inner  inner
+}
+type TgoNestedPortInput struct {
+	FieldNumber measured
+	FieldInner  inner
+}
+
+// NewNestedPort constructs and checks NestedPort.
+func NewNestedPort(number measured, inner inner) (NestedPort, error) {
+	return NestedPort{number, inner}.check()
+}
+
+func (value NestedPort) check() (NestedPort, error) {
+	value.number++
+	value.number.Increment()
+	increment := value.number.Increment
+	increment()
+	replacement, err := func(tgoInput TgoinnerInput) (inner, error) {
+		return Newinner(tgoInput.FieldNumber)
+	}(TgoinnerInput{FieldNumber: 1})
+	if err != nil {
+		return NestedPort{}, fmt.Errorf("inner: %w", err)
+	}
+
+	value.inner = replacement
+	value.inner.number = 2
+	_ = &value.inner.number
+	value.inner.number.Increment()
+	nestedIncrement := value.inner.number.Increment
+	_ = nestedIncrement
+	_ = value.inner.number.Value()
+	return value, nil
+}
+
+type EmbeddedPort struct {
+	inner
+}
+type TgoEmbeddedPortInput struct {
+	Field0 inner
+}
+
+// NewEmbeddedPort constructs and checks EmbeddedPort.
+func NewEmbeddedPort(tgoField0 inner) (EmbeddedPort, error) {
+	return EmbeddedPort{tgoField0}.check()
+}
+
+func (value EmbeddedPort) check() (EmbeddedPort, error) {
+	value.number = 3
+	_ = &value.number
+	value.number.Increment()
+	increment := value.number.Increment
+	_ = increment
+	_ = value.number.Value()
+	return value, nil
+}
+
+func changeNested(value *NestedPort, replacement inner) {
+	value.number = 4
+	value.number++
+	_ = &value.number
+	for _, value.number = range []measured{5} {
+	}
+	value.number.Increment()
+	increment := value.number.Increment
+	_ = increment
+	_ = value.number.Value()
+	value.inner = replacement
+	_ = &value.inner
+}
+
+type measuredAlias = measured
+
+func (value *measured) Change() { *value = 99 }
+
+type MethodPort struct {
+	measuredAlias
+}
+type TgoMethodPortInput struct {
+	Field0 measuredAlias
+}
+
+// NewMethodPort constructs and checks MethodPort.
+func NewMethodPort(tgoField0 measuredAlias) (MethodPort, error) {
+	return MethodPort{tgoField0}.check()
+}
+
+type methodPortError struct {
+}
+
+func (methodPortError) Error() string { return "invalid MethodPort" }
+func (value MethodPort) check() (MethodPort, error) {
+	value.Increment()
+	change := value.Increment
+	change()
+	if value.measuredAlias != 2 {
+		return MethodPort{},
+
+			methodPortError{}
+	}
+	return value, nil
+}
+
+func (value *MethodPort) WholeMethod() {}
+
+type methodPortAlias = MethodPort
+
+type MethodOuter struct {
+	methodPortAlias
+}
+type TgoMethodOuterInput struct {
+	Field0 methodPortAlias
+}
+
+// NewMethodOuter constructs and checks MethodOuter.
+func NewMethodOuter(tgoField0 methodPortAlias) (MethodOuter, error) {
+	return MethodOuter{tgoField0}.check()
+}
+
+func (value MethodOuter) check() (MethodOuter, error) { return value, nil }
+
+func changePromotedMethods(value *MethodPort, outer *MethodOuter) {
+	value.Change()
+	change := value.Change
+	change()
+	outer.Change()
+	outerChange := outer.Change
+	outerChange()
+	method := (*MethodPort).Change
+	method(value)
+	outerMethod := (*MethodOuter).Change
+	outerMethod(outer)
+	outer.WholeMethod()
+	whole := outer.WholeMethod
+	whole()
+	_ = value.Value()
+	_ = outer.Value()
+}
+
+type MethodWrapper struct {
+	MethodPort
+}
+
+type methodWrapperAlias = MethodWrapper
+
+type MethodNestedWrapper struct {
+	methodWrapperAlias
+}
+
+type MethodPointerWrapper struct {
+	*MethodWrapper
+}
+
+func changeWrappedMethods(
+	value *MethodWrapper,
+	nested *MethodNestedWrapper,
+	pointer *MethodPointerWrapper,
+) {
+	value.Change()
+	change := nested.Change
+	change()
+	method := (*MethodPointerWrapper).Change
+	method(pointer)
+}
+
 var localConstructor = NewPort
 var localCarrier = TgoPortInput{FieldNumber: 0}
 var importedConstructor = model.NewCount
@@ -280,8 +465,8 @@ func importedLiteral() model.Event {
 }
 
 func validChecked(number int) (Port, error) {
-	return func(tgoInput TgoPortInput) (Port, error) {
-		return NewPort(tgoInput.FieldNumber)
+	return func(tgoInput_1 TgoPortInput) (Port, error) {
+		return NewPort(tgoInput_1.FieldNumber)
 	}(TgoPortInput{FieldNumber: number})
 }
 
