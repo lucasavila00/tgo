@@ -579,7 +579,6 @@ func (c *checker) checkGenericZeroSafety() {
 	}
 	c.exportOrdinaryStorageFacts(storage, summaries)
 
-	_, sources := c.collectGenericValueBindings(summaries)
 	for _, file := range c.files {
 		if c.generated[file] {
 			continue
@@ -589,20 +588,10 @@ func (c *checker) checkGenericZeroSafety() {
 			if !ok {
 				return true
 			}
-			if syntax.IdentifierExpressionOf(expression) != nil {
-				if _, functionValue := coreType(c.facts.Type(expression)).(*types.Signature); !functionValue {
-					c.reportStorageGenericValueUse(expression, sources)
-				}
-			}
 			if call := syntax.CallExpressionOf(expression); call != nil {
 				c.reportGenericZeroCall(expression, summaries)
 				c.reportStorageUnknownCallArguments(expression)
 				c.reportStorageFunctionCall(expression)
-			}
-			if syntax.IndexExpressionOf(expression) != nil ||
-				syntax.IndexListExpressionOf(expression) != nil ||
-				syntax.SelectorExpressionOf(expression) != nil {
-				c.reportDirectGenericValueEscape(expression, summaries, sources)
 			}
 			return true
 		})

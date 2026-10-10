@@ -90,7 +90,6 @@ func applyStorageOperation(
 			if !effects.completed {
 				continue
 			}
-			returned = attachStorageReturnedGenericValue(returned, function)
 			if firstTransfer {
 				transferred = updated
 				firstTransfer = false
@@ -171,25 +170,6 @@ func applyStorageOperation(
 		)
 		setStorageResults(state.temps, operation.Results, []storageValue{value})
 	}
-}
-
-func attachStorageReturnedGenericValue(
-	returned []storageValue,
-	function storageFunction,
-) []storageValue {
-	if !genericFactHasEffectsAtOrAfter(function.fact, 1) {
-		return returned
-	}
-	if len(returned) == 0 {
-		returned = append(returned, storageValue{})
-	}
-	returned[0].genericValues = append(returned[0].genericValues, genericValue{
-		fact:              function.fact,
-		receiverArguments: append([]types.Type(nil), function.receiverArguments...),
-		typeArguments:     append([]types.Type(nil), function.typeArguments...),
-		callDepth:         1,
-	})
-	return returned
 }
 
 func projectStorageTypeArguments(

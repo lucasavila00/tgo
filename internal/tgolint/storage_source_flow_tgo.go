@@ -58,59 +58,6 @@ func (c *checker) reportStorageFunctionCall(expression *syntax.Expression) bool 
 	return handled
 }
 
-func (c *checker) reportStorageGenericValueUse(
-	expression *syntax.Expression,
-	sources map[*syntax.Expression]bool,
-) bool {
-	name := syntax.IdentifierExpressionOf(expression)
-	if name == nil || c.facts.DefinitionName(name) != nil {
-		return false
-	}
-	node := syntax.ExpressionNode(expression)
-	root := c.enclosingFunction(&node)
-	if root == nil {
-		return false
-	}
-	flow := c.storageFlows[*root]
-	if flow == nil {
-		flow = c.buildStorageFlow(root)
-		c.storageFlows[*root] = flow
-	}
-	state := flow.before[node]
-	stored := c.storageExpressionValue(expression, state, flow, false)
-	if len(stored.genericValues) == 0 {
-		return false
-	}
-	for _, value := range stored.genericValues {
-		current := expression
-		called := false
-		for {
-			call := c.directCallOf(current)
-			if call == nil {
-				break
-			}
-			called = true
-			c.reportGenericValueCall(call, value)
-			if value.callDepth == 0 {
-				value.conditionCall = call
-			}
-			value.callDepth++
-			current = call
-		}
-		if !called {
-			if !c.boundGenericValueSource(expression, sources) {
-				c.reportGenericValueEscape(expression, value)
-			}
-			continue
-		}
-		if genericFactHasEffectsAtOrAfter(value.fact, value.callDepth) &&
-			!c.discardedValue(current) && !c.expressionStatement(current) {
-			c.reportGenericValueEscape(current, value)
-		}
-	}
-	return true
-}
-
 func (c *checker) reportStorageUnknownCallArguments(expression *syntax.Expression) {
 	call := syntax.CallExpressionOf(expression)
 	if call == nil {
@@ -142,9 +89,6 @@ func (c *checker) reportStorageUnknownCallArguments(expression *syntax.Expressio
 	}
 	for _, argument := range call.Args {
 		value := c.storageExpressionValue(argument, state, flow, false)
-		for _, generic := range value.genericValues {
-			c.reportGenericValueEscape(argument, generic)
-		}
 		for _, function := range value.functions {
 			effects := storageGraphEffects(storageGraphCall{
 				fact: function.fact, function: function.graph,
