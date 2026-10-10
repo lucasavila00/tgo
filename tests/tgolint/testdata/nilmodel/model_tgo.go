@@ -57,11 +57,6 @@ type Syntax struct {
 // Tag returns the active tag.
 func (v Syntax) Tag() SyntaxTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Syntax) UnknownTag() string {
-	return fmt.Sprintf("Syntax: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // SyntaxItem is the Item payload.
 type SyntaxItem struct {
 	Value *Item
@@ -122,6 +117,10 @@ func (v *Syntax) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(payloadData, &payload); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Syntax.Item JSON payload: Value must not be nil")
+		}
+
 		*v = NewSyntaxItem(payload.Value)
 		return nil
 	default:
@@ -191,6 +190,10 @@ func (v *Syntax) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 		if err := jsonv2.Unmarshal(payloadData, &payload, in.Options()); err != nil {
 			return err
 		}
+		if payload.Value == nil {
+			return fmt.Errorf("invalid Syntax.Item JSON payload: Value must not be nil")
+		}
+
 		*v = NewSyntaxItem(payload.Value)
 		return nil
 	default:

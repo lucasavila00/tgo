@@ -63,11 +63,6 @@ type JSONExternal struct {
 // Tag returns the active tag.
 func (v JSONExternal) Tag() JSONExternalTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v JSONExternal) UnknownTag() string {
-	return fmt.Sprintf("JSONExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // JSONExternalCreated is the Created payload.
 type JSONExternalCreated struct {
 	ID     string    `json:"account_id"`
@@ -303,11 +298,6 @@ type JSONInternal struct {
 // Tag returns the active tag.
 func (v JSONInternal) Tag() JSONInternalTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v JSONInternal) UnknownTag() string {
-	return fmt.Sprintf("JSONInternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // JSONInternalCreated is the Created payload.
 type JSONInternalCreated struct {
 	ID     string    `json:"account_id"`
@@ -478,11 +468,6 @@ type JSONAdjacent struct {
 
 // Tag returns the active tag.
 func (v JSONAdjacent) Tag() JSONAdjacentTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v JSONAdjacent) UnknownTag() string {
-	return fmt.Sprintf("JSONAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // JSONAdjacentCreated is the Created payload.
 type JSONAdjacentCreated struct {
@@ -709,11 +694,6 @@ type JSONUntagged struct {
 // Tag returns the active tag.
 func (v JSONUntagged) Tag() JSONUntaggedTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v JSONUntagged) UnknownTag() string {
-	return fmt.Sprintf("JSONUntagged: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // JSONUntaggedNumber is the Number payload.
 type JSONUntaggedNumber struct {
 	Value int `json:"value"`
@@ -848,11 +828,6 @@ type JSONNested struct {
 
 // Tag returns the active tag.
 func (v JSONNested) Tag() JSONNestedTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v JSONNested) UnknownTag() string {
-	return fmt.Sprintf("JSONNested: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // JSONNestedNested is the Nested payload.
 type JSONNestedNested struct {
@@ -1005,11 +980,6 @@ type JSONCustom struct {
 
 // Tag returns the active tag.
 func (v JSONCustom) Tag() JSONCustomTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v JSONCustom) UnknownTag() string {
-	return fmt.Sprintf("JSONCustom: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // JSONCustomValue is the Value payload.
 type JSONCustomValue struct {
@@ -1169,11 +1139,6 @@ type JSONEscaped struct {
 // Tag returns the active tag.
 func (v JSONEscaped) Tag() JSONEscapedTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v JSONEscaped) UnknownTag() string {
-	return fmt.Sprintf("JSONEscaped: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // JSONEscapedValue is the Value payload.
 type JSONEscapedValue struct {
 	ID string `json:"id,omitempty"`
@@ -1288,11 +1253,6 @@ type JSONEscapedExternal struct {
 
 // Tag returns the active tag.
 func (v JSONEscapedExternal) Tag() JSONEscapedExternalTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v JSONEscapedExternal) UnknownTag() string {
-	return fmt.Sprintf("JSONEscapedExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // JSONEscapedExternalValue is the Value payload.
 type JSONEscapedExternalValue struct {
@@ -1451,11 +1411,6 @@ type JSONEscapedAdjacent struct {
 
 // Tag returns the active tag.
 func (v JSONEscapedAdjacent) Tag() JSONEscapedAdjacentTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v JSONEscapedAdjacent) UnknownTag() string {
-	return fmt.Sprintf("JSONEscapedAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // JSONEscapedAdjacentValue is the Value payload.
 type JSONEscapedAdjacentValue struct {
@@ -1639,11 +1594,6 @@ type JSONStringField struct {
 // Tag returns the active tag.
 func (v JSONStringField) Tag() JSONStringFieldTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v JSONStringField) UnknownTag() string {
-	return fmt.Sprintf("JSONStringField: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // JSONStringFieldValue is the Value payload.
 type JSONStringFieldValue struct {
 	Count int `json:"count,string"`
@@ -1796,11 +1746,6 @@ type JSONInternalPayloadMethod struct {
 // Tag returns the active tag.
 func (v JSONInternalPayloadMethod) Tag() JSONInternalPayloadMethodTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v JSONInternalPayloadMethod) UnknownTag() string {
-	return fmt.Sprintf("JSONInternalPayloadMethod: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // JSONInternalPayloadMethodValue is the Value payload.
 type JSONInternalPayloadMethodValue struct {
 	Seen string `json:"-"`
@@ -1914,11 +1859,6 @@ type JSONInternalPromotedMethod struct {
 
 // Tag returns the active tag.
 func (v JSONInternalPromotedMethod) Tag() JSONInternalPromotedMethodTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v JSONInternalPromotedMethod) UnknownTag() string {
-	return fmt.Sprintf("JSONInternalPromotedMethod: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // JSONInternalPromotedMethodValue is the Value payload.
 type JSONInternalPromotedMethodValue struct {
@@ -2043,11 +1983,6 @@ type JSONNonNilExternal struct {
 
 // Tag returns the active tag.
 func (v JSONNonNilExternal) Tag() JSONNonNilExternalTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v JSONNonNilExternal) UnknownTag() string {
-	return fmt.Sprintf("JSONNonNilExternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // JSONNonNilExternalValue is the Value payload.
 type JSONNonNilExternalValue struct {
@@ -2282,11 +2217,6 @@ type JSONNonNilInternal struct {
 // Tag returns the active tag.
 func (v JSONNonNilInternal) Tag() JSONNonNilInternalTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v JSONNonNilInternal) UnknownTag() string {
-	return fmt.Sprintf("JSONNonNilInternal: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // JSONNonNilInternalValue is the Value payload.
 type JSONNonNilInternalValue struct {
 	Required *JSONNonNilTarget
@@ -2404,11 +2334,6 @@ type JSONNonNilAdjacent struct {
 
 // Tag returns the active tag.
 func (v JSONNonNilAdjacent) Tag() JSONNonNilAdjacentTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v JSONNonNilAdjacent) UnknownTag() string {
-	return fmt.Sprintf("JSONNonNilAdjacent: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // JSONNonNilAdjacentValue is the Value payload.
 type JSONNonNilAdjacentValue struct {
@@ -2600,11 +2525,6 @@ type JSONNonNilUntagged struct {
 // Tag returns the active tag.
 func (v JSONNonNilUntagged) Tag() JSONNonNilUntaggedTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v JSONNonNilUntagged) UnknownTag() string {
-	return fmt.Sprintf("JSONNonNilUntagged: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // JSONNonNilUntaggedFirst is the First payload.
 type JSONNonNilUntaggedFirst struct {
 	Required *JSONNonNilTarget
@@ -2733,11 +2653,6 @@ type JSONNonNilAdvanced struct {
 
 // Tag returns the active tag.
 func (v JSONNonNilAdvanced) Tag() JSONNonNilAdvancedTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v JSONNonNilAdvanced) UnknownTag() string {
-	return fmt.Sprintf("JSONNonNilAdvanced: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // JSONNonNilAdvancedValue is the Value payload.
 type JSONNonNilAdvancedValue struct {

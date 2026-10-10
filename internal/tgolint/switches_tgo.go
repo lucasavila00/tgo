@@ -6,6 +6,7 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"strconv"
 	"strings"
 
 	"tgo/internal/variantflow"
@@ -53,7 +54,7 @@ func (c *checker) checkTagSwitch(
 						modelName(model))
 				}
 			} else {
-				hasSentinelDefault = c.tagDefaultSentinel(file, clause, receiver, model)
+				hasSentinelDefault = c.tagDefaultSentinel(file, clause, model)
 			}
 			continue
 		}
@@ -285,7 +286,7 @@ func branchTarget(node *syntax.Node, branch token.Token) bool {
 		syntax.StatementTagCase, syntax.StatementTagCommunication:
 		return false
 	default:
-		panic(statement.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -455,10 +456,9 @@ func tagConstant(model *model, tag int) string {
 func (c *checker) tagDefaultSentinel(
 	file *syntax.File,
 	clause *syntax.CaseClause,
-	receiver *syntax.Expression,
 	model *model,
 ) bool {
-	if clause == nil || receiver == nil {
+	if clause == nil {
 		return false
 	}
 	if len(clause.Body) != 1 {
@@ -479,22 +479,13 @@ func (c *checker) tagDefaultSentinel(
 	if _, ok := c.facts.Object(panicName).(*types.Builtin); !ok {
 		return false
 	}
-	unknownCall := syntax.CallExpressionOf(panicCall.Args[0])
-	if unknownCall == nil || len(unknownCall.Args) != 0 {
+	argument := *panicCall.Args[0]
+	if argument.Tag() != syntax.ExpressionTagBasicLiteral {
 		return false
 	}
-	selector := syntax.SelectorExpressionOf(unknownCall.Callee)
-	if selector == nil || selector.Selector.Name != "UnknownTag" ||
-		!sameReceiver(c.facts, receiver, selector.Expression) {
-		return false
-	}
-	selection := c.facts.Selection(unknownCall.Callee)
-	if selection == nil {
-		return false
-	}
-	function, ok := selection.Obj().(*types.Func)
-	if !ok || function.Name() != "UnknownTag" ||
-		!sameModel(c.modelForSourceSelector(unknownCall.Callee, selector), model) {
+	literal := argument.BasicLiteralPayload().Value
+	if literal.Kind != token.STRING ||
+		literal.Value != strconv.Quote("invalid "+modelName(model)+" tag") {
 		return false
 	}
 	expressionPosition := c.pass.Fset.Position(expressionStatement.Stop)

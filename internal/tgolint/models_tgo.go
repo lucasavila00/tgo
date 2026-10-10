@@ -40,11 +40,6 @@ type model struct {
 // Tag returns the active tag.
 func (v model) Tag() modelTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v model) UnknownTag() string {
-	return fmt.Sprintf("model: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // modelChecked is the Checked payload.
 type modelChecked struct {
 	Package string
@@ -360,7 +355,7 @@ func modelDescription(value *model) (string, string) {
 	case modelTagParameter:
 		return "generic", "type argument"
 	default:
-		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid model tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -390,7 +385,7 @@ func modelPackage(value *model) string {
 	case modelTagParameter:
 		return ""
 	default:
-		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid model tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -409,7 +404,7 @@ func modelVariants(value *model) []string {
 	case modelTagParameter:
 		return nil
 	default:
-		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid model tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -427,7 +422,7 @@ func modelIsChecked(value *model) bool {
 	case modelTagParameter:
 		return false
 	default:
-		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid model tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -445,7 +440,7 @@ func modelIsEnum(value *model) bool {
 	case modelTagParameter:
 		return false
 	default:
-		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid model tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -463,7 +458,7 @@ func modelIsMixed(value *model) bool {
 	case modelTagParameter:
 		return false
 	default:
-		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid model tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -499,7 +494,7 @@ func modelIsParameter(value *model) bool {
 	case modelTagParameter:
 		return true
 	default:
-		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid model tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -526,7 +521,7 @@ func encodeModelFact(value *model) *modelWireFact {
 	case modelTagParameter:
 		return nil
 	default:
-		panic(modelValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid model tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

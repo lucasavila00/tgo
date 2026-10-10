@@ -67,11 +67,6 @@ type EffectKind struct {
 // Tag returns the active tag.
 func (v EffectKind) Tag() EffectKindTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v EffectKind) UnknownTag() string {
-	return fmt.Sprintf("EffectKind: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // GobEncode returns the stable four-byte enum tag.
 func (v EffectKind) GobEncode() ([]byte, error) {
 	if v.tgoTag < EffectKindTagBoolean || v.tgoTag > EffectKindTagResliceExtends {

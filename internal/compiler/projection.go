@@ -49,10 +49,10 @@ func (p *ProjectionFacts) RangeDefinitions(
 
 // RangeUses visits use facts in the Go projection.
 func (p *ProjectionFacts) RangeUses(
-	yield func(token.Pos, types.Object, bool),
+	yield func(token.Pos, string, types.Object, bool),
 ) {
 	for identifier, object := range p.info.Uses {
-		yield(identifier.Pos(), object, p.synthetic[identifier])
+		yield(identifier.Pos(), identifier.Name, object, p.synthetic[identifier])
 	}
 }
 

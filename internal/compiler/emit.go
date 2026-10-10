@@ -117,11 +117,6 @@ func enumGo(sourceName string, declaration *model, fmtPackage string) string {
 	output.WriteString("}\n")
 	output.WriteString("// Tag returns the active tag.\n")
 	fmt.Fprintf(&output, "func (v %s) Tag() %sTag { return v.tgoTag }\n", name, name)
-	output.WriteString("// UnknownTag describes an invalid tag.\n")
-	fmt.Fprintf(&output,
-		"func (v %s) UnknownTag() string { return %s.Sprintf(%q, v.tgoTag) }\n",
-		name, fmtPackage,
-		name+": unknown tag %d — tgolint proves every tag has a case, so this is unreachable")
 	if payloadFreeEnum(declaration) {
 		emitEnumGob(&output, declaration, fmtPackage)
 	}

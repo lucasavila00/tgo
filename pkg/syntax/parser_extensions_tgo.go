@@ -388,7 +388,7 @@ func (p *sourceParser) buildFile(goFile *ast.File) (*frontFile, error) {
 		case rawDeclTagStruct:
 			declarationStarts[p.pos(value.StructPayload().start)] = true
 		default:
-			panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid rawDecl tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 	goDecls := goFile.Decls[:0]

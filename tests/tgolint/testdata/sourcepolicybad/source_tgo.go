@@ -38,11 +38,6 @@ type Local struct {
 // Tag returns the active tag.
 func (v Local) Tag() LocalTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Local) UnknownTag() string {
-	return fmt.Sprintf("Local: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // LocalReady is the Ready payload.
 type LocalReady struct {
 	ID string
@@ -214,7 +209,6 @@ type DirectImported model.Event
 type LocalTypes interface {
 	Local
 	Tag() LocalTag
-	UnknownTag() string
 	ReadyPayload() LocalReady
 }
 

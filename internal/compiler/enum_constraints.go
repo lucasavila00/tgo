@@ -91,7 +91,6 @@ func addEnumConstraintMethods(
 	}
 	at := constraint.Interface
 	add("Tag", p.generatedObject(prefix, path, declaration.Name+"Tag", at))
-	add("UnknownTag", p.generatedUniverse("string", at))
 	for _, variant := range declaration.Variants {
 		add(
 			variant.Name+"Payload",

@@ -154,7 +154,7 @@ func (c *checker) checkCompleteLiteral(
 		goTypeTagSignature, goTypeTagMap, goTypeTagChannel, goTypeTagInterface,
 		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

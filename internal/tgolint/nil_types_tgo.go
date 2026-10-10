@@ -42,11 +42,6 @@ type nilType struct {
 // Tag returns the active tag.
 func (v nilType) Tag() nilTypeTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v nilType) UnknownTag() string {
-	return fmt.Sprintf("nilType: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // GobEncode returns the stable four-byte enum tag.
 func (v nilType) GobEncode() ([]byte, error) {
 	if v.tgoTag < nilTypeTagNever || v.tgoTag > nilTypeTagOptional {
@@ -333,7 +328,7 @@ func nilTypeMembers(value nilType) uint8 {
 	case nilTypeTagOptional:
 		return 3
 	default:
-		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid nilType tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -392,7 +387,7 @@ func typeCanBeNil(typ types.Type) bool {
 	case goTypeTagNil, goTypeTagArray, goTypeTagStruct, goTypeTagTuple,
 		goTypeTagNamed, goTypeTagTypeParameter, goTypeTagUnion, goTypeTagOther:
 	default:
-		panic(classified.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid goType tag") // unreachable: tgolint requires a case per tag
 	}
 	return false
 }

@@ -489,11 +489,8 @@ func validGeneratedTagAPI(
 	variants []sourceVariant,
 ) bool {
 	tag := method(typ, "Tag")
-	unknown := method(typ, "UnknownTag")
 	if tag == nil || tag.Params().Len() != 0 || tag.Results().Len() != 1 ||
-		!types.Identical(tag.Results().At(0).Type(), tagType) ||
-		unknown == nil || unknown.Params().Len() != 0 || unknown.Results().Len() != 1 ||
-		!types.Identical(unknown.Results().At(0).Type(), types.Typ[types.String]) {
+		!types.Identical(tag.Results().At(0).Type(), tagType) {
 		return false
 	}
 	basic, ok := coreType(tagType).(*types.Basic)

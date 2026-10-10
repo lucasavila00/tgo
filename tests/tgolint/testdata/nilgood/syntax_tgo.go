@@ -11,7 +11,7 @@ func syntaxFacts(values nilmodel.SyntaxList) {
 			payload := value.ItemPayload()
 			nilmodel.Need(payload.Value)
 		default:
-			panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Syntax tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 }

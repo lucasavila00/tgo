@@ -33,11 +33,6 @@ type Response struct {
 // Tag returns the active tag.
 func (v Response) Tag() ResponseTag { return v.tgoTag }
 
-// UnknownTag describes an invalid tag.
-func (v Response) UnknownTag() string {
-	return fmt.Sprintf("Response: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
-
 // ResponseSuccess is the Success payload.
 type ResponseSuccess struct {
 	ID     int64 `json:"id"`
@@ -197,7 +192,7 @@ func protocolSymbolKind(value SymbolKind) string {
 	case SymbolKindTagVariable:
 		return "variable"
 	default:
-		panic(value.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid SymbolKind tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -226,11 +221,6 @@ type Request struct {
 
 // Tag returns the active tag.
 func (v Request) Tag() RequestTag { return v.tgoTag }
-
-// UnknownTag describes an invalid tag.
-func (v Request) UnknownTag() string {
-	return fmt.Sprintf("Request: unknown tag %d — tgolint proves every tag has a case, so this is unreachable", v.tgoTag)
-}
 
 // RequestHover is the Hover payload.
 type RequestHover struct {
@@ -848,7 +838,7 @@ func (s *protocolServer) dispatch(request Request) {
 		s.engine.Invalidate()
 		s.send(protocolSuccess(payload.ID, true))
 	default:
-		panic(request.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Request tag") // unreachable: tgolint requires a case per tag
 	}
 }
 

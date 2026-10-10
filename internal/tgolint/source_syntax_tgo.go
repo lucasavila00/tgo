@@ -39,7 +39,7 @@ func sourceStatementList(node *syntax.Node) ([]*syntax.Statement, bool) {
 	case syntax.NodeTagCommentGroup:
 		return nil, false
 	default:
-		panic(nodeValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Node tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -92,7 +92,7 @@ func statementList(statement *syntax.Statement) ([]*syntax.Statement, bool) {
 	case syntax.StatementTagRange:
 		return nil, false
 	default:
-		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -143,7 +143,7 @@ func sourceAssignment(statement *syntax.Statement) (*syntax.AssignmentStatement,
 	case syntax.StatementTagRange:
 		return nil, false
 	default:
-		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -194,7 +194,7 @@ func sourceIf(statement *syntax.Statement) (*syntax.IfStatement, bool) {
 	case syntax.StatementTagRange:
 		return nil, false
 	default:
-		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -245,7 +245,7 @@ func sourceReturn(statement *syntax.Statement) (*syntax.ReturnStatement, bool) {
 	case syntax.StatementTagRange:
 		return nil, false
 	default:
-		panic(statementValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Statement tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -309,7 +309,7 @@ func sourceCall(expression *syntax.Expression) (*syntax.CallExpression, bool) {
 	case syntax.ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -372,7 +372,7 @@ func sourceIdentifier(expression *syntax.Expression) (*syntax.Identifier, bool) 
 	case syntax.ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -435,7 +435,7 @@ func sourceBinary(expression *syntax.Expression) (*syntax.BinaryExpression, bool
 	case syntax.ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -500,7 +500,7 @@ func sourceCompositeLiteral(
 	case syntax.ExpressionTagComprehension:
 		return nil, false
 	default:
-		panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+		panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 	}
 }
 
@@ -564,7 +564,7 @@ func sourceUnparenthesized(expression *syntax.Expression) *syntax.Expression {
 		case syntax.ExpressionTagComprehension:
 			return expression
 		default:
-			panic(expressionValue.UnknownTag()) // unreachable: tgolint requires a case per tag
+			panic("invalid Expression tag") // unreachable: tgolint requires a case per tag
 		}
 	}
 }
