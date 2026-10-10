@@ -85,7 +85,12 @@ func (e *loweringEmitter) rangeStatement(
 	}
 	node.X = e.expression(operation.expressions[0], target)
 	if operation.rangeKey != 0 {
-		node.Key = e.valueName(operation.rangeKey, "index")
+		if operation.rangeKeySource != nil {
+			e.values[operation.rangeKey] = ast.NewIdent(operation.rangeKeySource.Name)
+			node.Key = operation.rangeKeySource
+		} else {
+			node.Key = e.valueName(operation.rangeKey, "index")
+		}
 	}
 	body := &ast.BlockStmt{Lbrace: node.Body.Lbrace, Rbrace: node.Body.Rbrace}
 	e.operations(operation.body, body)

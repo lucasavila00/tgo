@@ -82,6 +82,7 @@ const (
 	planBranch
 	planReturn
 	planCopy
+	planLength
 	planPlaceReady
 	planBooleanConvert
 	planDeclareValue
@@ -137,6 +138,9 @@ type plannedOperation struct {
 	packageRef     plannedPackageReference
 	declaresOutput bool
 	rangeKey       valueID
+	rangeKeySource *ast.Ident
+	rangeKeyObject types.Object
+	position       token.Pos
 }
 
 type plannedDeclaration struct {
@@ -169,6 +173,7 @@ type plannedExpressionKind uint8
 
 const (
 	planRetainedExpression plannedExpressionKind = iota
+	planValueExpression
 	planCallExpression
 	planBinaryExpression
 	planIndexExpression
@@ -201,6 +206,7 @@ type plannedExpression struct {
 	work           *plannedBlock
 	before         *plannedBlock
 	materialized   valueID
+	value          valueID
 	booleanAdapter bool
 	place          *plannedPlace
 	resultNames    []*ast.Ident
@@ -217,6 +223,7 @@ type plannedExactComprehension struct {
 	position   token.Pos
 	identity   bool
 	index      plannedValue
+	length     plannedValue
 }
 
 type plannedBuiltin struct {

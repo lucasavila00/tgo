@@ -104,7 +104,7 @@ func TestComprehensionGeneratedLoops(t *testing.T) {
 		!strings.Contains(text, "for _, sale := range account.Sales") {
 		t.Fatal("generated output does not contain the fused loop nest")
 	}
-	if !strings.Contains(text, "] = comprehensionRecord(") {
+	if !strings.Contains(text, "comprehensionRecord(") || !strings.Contains(text, "] = ") {
 		t.Fatal("generated transformed comprehension does not use indexed evaluation")
 	}
 	values := []int{1, 2, 3, 4}

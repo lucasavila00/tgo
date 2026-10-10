@@ -329,17 +329,37 @@ func (b *loweringPlanBuilder) planExactComprehension(
 		if operation.source != outer || len(operation.expressions) != 1 {
 			continue
 		}
+		allocation := plannedExpressionForSource(result.work, makeCall)
+		if allocation == nil || len(allocation.operands) < 3 {
+			return
+		}
+		identity := sameExpressionObject(b.unit.info, outer.Value, appendCall.Args[1])
+		if !identity {
+			terminal, _ := plannedOperationForSource(result.work, assignment)
+			if terminal == nil {
+				return
+			}
+		}
 		sourcePlan := operation.expressions[0]
 		sourceValue := b.newValue(plannedExpressionProducedType(sourcePlan), outer.X.Pos())
+		lengthValue := b.newValue(types.Typ[types.Int], makeCall.Pos())
 		sourcePlan.materialized = sourceValue.id
 		result.work.operations = append([]*plannedOperation{{
 			kind: planEvaluate, expressions: []*plannedExpression{sourcePlan},
 			outputs: []valueID{sourceValue.id}, preferred: "source",
+		}, {
+			kind: planLength, position: makeCall.Pos(), inputs: []valueID{sourceValue.id},
+			outputs: []valueID{lengthValue.id},
 		}}, result.work.operations...)
 		result.exact = &plannedExactComprehension{
 			makeCall: makeCall, outer: outer, assignment: assignment,
 			appendCall: appendCall, source: sourceValue, position: metadata.Position,
-			identity: sameExpressionObject(b.unit.info, outer.Value, appendCall.Args[1]),
+			identity: identity,
+			length:   lengthValue,
+		}
+		allocation.operands[2] = &plannedExpression{
+			kind: planValueExpression, typ: types.Typ[types.Int], value: lengthValue.id,
+			resultCount: 1,
 		}
 		if result.exact.identity {
 			operation.kind = planCopy

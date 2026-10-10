@@ -13,6 +13,10 @@ func (b *loweringPlanBuilder) planExactComprehensionIndex(
 	result.exact.index = b.newValue(types.Typ[types.Int], result.exact.outer.Pos())
 	if outer, _ := plannedOperationForSource(result.work, result.exact.outer); outer != nil {
 		outer.rangeKey = result.exact.index.id
+		if identifier, ok := result.exact.outer.Key.(*ast.Ident); ok && identifier.Name != "_" {
+			outer.rangeKeySource = identifier
+			outer.rangeKeyObject = b.unit.info.Defs[identifier]
+		}
 	}
 	operation, owner := plannedOperationForSource(result.work, assignment)
 	if operation == nil {
@@ -87,4 +91,41 @@ func plannedOperationForSource(
 		}
 	}
 	return nil, nil
+}
+
+func plannedExpressionForSource(block *plannedBlock, source ast.Expr) *plannedExpression {
+	if block == nil {
+		return nil
+	}
+	for _, operation := range block.operations {
+		for _, expression := range operation.expressions {
+			if found := plannedExpressionSource(expression, source); found != nil {
+				return found
+			}
+		}
+		for _, child := range []*plannedBlock{
+			operation.init, operation.test, operation.body, operation.post,
+			operation.otherwise, operation.before, operation.after,
+		} {
+			if found := plannedExpressionForSource(child, source); found != nil {
+				return found
+			}
+		}
+	}
+	return nil
+}
+
+func plannedExpressionSource(expression *plannedExpression, source ast.Expr) *plannedExpression {
+	if expression == nil {
+		return nil
+	}
+	if expression.source == source {
+		return expression
+	}
+	for _, operand := range expression.operands {
+		if found := plannedExpressionSource(operand, source); found != nil {
+			return found
+		}
+	}
+	return nil
 }

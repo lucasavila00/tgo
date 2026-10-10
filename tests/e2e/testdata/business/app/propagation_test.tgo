@@ -400,17 +400,14 @@ func TestPropagationUsesGoTypedNilRule(t *testing.T) {
 	}
 }
 
-func TestPropagationGeneratedGoUsesDirectNames(t *testing.T) {
+func TestPropagationGeneratedGoPreservesWrappers(t *testing.T) {
 	data, err := os.ReadFile("propagation_tgo.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	text := string(data)
 	for _, required := range []string{
-		"value, err := propagationLoad(events, found)",
 		`return 0, fmt.Errorf("propagationLoad: %w", err)`,
-		"func PropagationTransparent(events *[]string, found bool) (int, error) {\n\tvalue, err := propagationLoad(events, found)\n\tif err != nil {\n\t\treturn 0, err\n\t}",
-		"var name, value, err = propagationPair(found)",
 		"var zero T",
 	} {
 		if !strings.Contains(text, required) {

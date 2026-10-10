@@ -54,7 +54,8 @@ func ComprehensionByID(accounts []comprehensionAccount) comprehensionByID {
 
 func ComprehensionEmpty() []string {
 	source := []string{}
-	result := make([]string, len(source))
+	operand := len(source)
+	result := make([]string, operand)
 	copy(result, source)
 	return result
 
@@ -62,7 +63,8 @@ func ComprehensionEmpty() []string {
 
 func ComprehensionCopy(values []int) []int {
 	source := values
-	result := make([]int, len(source))
+	operand := len(source)
+	result := make([]int, operand)
 	copy(result, source)
 	return result
 
@@ -110,11 +112,12 @@ func comprehensionLoad(events *[]string, name string, fail bool) (string, error)
 
 func ComprehensionOrder(events *[]string) []string {
 	source := comprehensionSource(events, []int{1, 2})
-	result := make([]string, len(source))
+	operand := len(source)
+	result := make([]string, operand)
 	for index, value := range source {
-		operand := result
-		operand_1 := comprehensionRecord(events, "value") + string(rune('0'+value))
-		operand[index] = operand_1
+		operand_1 := result
+		operand_2 := comprehensionRecord(events, "value") + string(rune('0'+value))
+		operand_1[index] = operand_2
 	}
 	return result
 
@@ -126,7 +129,8 @@ func ComprehensionSourceError(events *[]string, fail bool) ([]string, error) {
 		return nil, fmt.Errorf("comprehensionLoad: %w", err)
 	}
 	source := []string{result_1}
-	result := make([]string, len(source))
+	operand := len(source)
+	result := make([]string, operand)
 	copy(result, source)
 	return result, nil
 }
@@ -149,15 +153,16 @@ func ComprehensionFilterError(events *[]string, fail bool) ([]string, error) {
 
 func ComprehensionResultError(events *[]string, fail bool) ([]string, error) {
 	source := []string{"value"}
-	result := make([]string, len(source))
+	operand := len(source)
+	result := make([]string, operand)
 	for index, value := range source {
-		operand := result
+		operand_1 := result
 		result_1, err := comprehensionLoad(events, "result", fail)
 		if err != nil {
 			return nil, fmt.Errorf("comprehensionLoad: %w", err)
 		}
-		operand_1 := value + result_1
-		operand[index] = operand_1
+		operand_2 := value + result_1
+		operand_1[index] = operand_2
 	}
 	return result, nil
 }
@@ -191,7 +196,8 @@ func ComprehensionForInitializer(input []int) int {
 		source :=
 
 			input
-		result := make([]int, len(source))
+		operand := len(source)
+		result := make([]int, operand)
 		copy(result, source)
 		for items := result; len(items) > 0; items = nil {
 			return items[0]

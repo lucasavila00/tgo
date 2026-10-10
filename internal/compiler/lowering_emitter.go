@@ -83,6 +83,9 @@ func (e *loweringEmitter) expression(
 	if plan == nil {
 		return nil
 	}
+	if plan.kind == planValueExpression {
+		return e.valueName(plan.value, "value")
+	}
 	if plan.place != nil {
 		return e.preparedPlaceExpression(plan.place)
 	}
@@ -151,7 +154,7 @@ func (e *loweringEmitter) emitExpressionWork(
 		}
 		builtin.call.Fun = e.unit.generatedUniverse(builtin.name, builtin.position)
 	}
-	e.applyExactComprehension(plan)
+	// Exact-comprehension allocation and terminal work are ordinary plan operations.
 }
 
 func (e *loweringEmitter) applyExpressionOperands(source ast.Expr, operands []ast.Expr) {
@@ -198,21 +201,6 @@ func applySliceOperands(node *ast.SliceExpr, operands []ast.Expr) {
 	}
 	if node.Max != nil {
 		node.Max = operands[index]
-	}
-}
-
-func (e *loweringEmitter) applyExactComprehension(
-	plan *plannedExpression,
-) {
-	if plan.exact == nil {
-		return
-	}
-	source := e.valueName(plan.exact.source.id, "source")
-	plan.exact.makeCall.Args[1] = call(
-		e.unit.generatedUniverse("len", plan.exact.position), source,
-	)
-	if plan.exact.identity {
-		return
 	}
 }
 
@@ -303,6 +291,12 @@ func (e *loweringEmitter) valueOperation(
 			e.unit.generatedUniverse("copy", operation.source.Pos()),
 			operation.copyTarget, e.valueName(operation.inputs[0], "source"),
 		)})
+	case planLength:
+		value := e.plannedValue(operation.outputs[0])
+		e.emitTypedExpressionBind(value, call(
+			e.unit.generatedUniverse("len", operation.position),
+			e.valueName(operation.inputs[0], "source"),
+		), false, output)
 	}
 }
 

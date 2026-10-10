@@ -73,6 +73,19 @@ func transformedCopy(values []int) []int {
 	}}
 }
 
+func indexedTransform(values []int, index int) []int {
+	return []int{for index, value := range values {
+		value + index
+	}}
+}
+
+func shadowedBuiltins(values []int) []int {
+	result := []int{for _, value := range values { transform(value) }}
+	make, len, copy := 1, 2, 3
+	_, _, _ = make, len, copy
+	return result
+}
+
 func record(events *[]string, event string) {
 	*events = append(*events, event)
 }
@@ -252,6 +265,26 @@ func TestGeneratedComprehensionAndSliceIdentity(t *testing.T) {
 	transformed := transformedCopy(values)
 	if len(transformed) != 4 || transformed[0] != 11 || transformed[3] != 14 {
 		t.Fatalf("transformed values=%v", transformed)
+	}
+	indexed := indexedTransform([]int{10, 20}, 99)
+	if len(indexed) != 2 || indexed[0] != 10 || indexed[1] != 21 {
+		t.Fatalf("indexed values=%v", indexed)
+	}
+	if identityCopy(nil) == nil || transformedCopy(nil) == nil ||
+		identityCopy([]int{}) == nil || transformedCopy([]int{}) == nil {
+		t.Fatal("exact comprehensions must return separate non-nil empty slices")
+	}
+	var transformedAllocated []int
+	transformedAllocations := testing.AllocsPerRun(1000, func() {
+		transformedAllocated = transformedCopy(values)
+	})
+	if transformedAllocations != 1 || len(transformedAllocated) != len(values) {
+		t.Fatalf("transformed allocations=%f values=%v", transformedAllocations,
+			transformedAllocated)
+	}
+	shadowed := shadowedBuiltins([]int{1})
+	if len(shadowed) != 1 || shadowed[0] != 11 {
+		t.Fatalf("shadowed builtins values=%v", shadowed)
 	}
 
 	events := []string{}

@@ -17,6 +17,59 @@ func TestLoweringPlanKeepsGuardedTypedWorkSeparateFromSource(t *testing.T) {
 	assertGuardedPropagationEmission(t, fixture)
 }
 
+func TestExactComprehensionPlanOwnsAllocationAndIndexedStore(t *testing.T) {
+	fixture := newLoweringPlanContractFixtureSource(t, `package sample
+func use(values []int) []int {
+	return []int{for index, value := range values { value + index }}
+}
+`)
+	assertLoweringPlanPreservesSource(t, fixture)
+	root := fixture.plan.root.operations[0].expressions[0]
+	if root.exact == nil || root.exact.source.id == 0 || root.exact.length.id == 0 ||
+		root.exact.index.id == 0 {
+		t.Fatalf("exact comprehension lacks source, length, or index facts: %#v", root.exact)
+	}
+	assertExactAllocationPlan(t, root)
+	assertExactRangeAndTerminalPlan(t, root)
+	fixture.unit.info = newInfo()
+	newLoweringEmitter(fixture.unit, fixture.source, fixture.plan).emit()
+	fixture.unit.typecheck()
+	if len(fixture.unit.typeErrors) != 0 {
+		t.Fatalf("exact plan emission does not type-check: %v\n%s", fixture.unit.typeErrors,
+			formatLoweringContractAST(t, fixture.files, fixture.source.File))
+	}
+}
+
+func assertExactAllocationPlan(t *testing.T, root *plannedExpression) {
+	t.Helper()
+	length := root.work.operations[1]
+	if length.kind != planLength || length.inputs[0] != root.exact.source.id ||
+		length.outputs[0] != root.exact.length.id || length.source != nil {
+		t.Fatalf("exact allocation does not use planned source length: %#v", length)
+	}
+	allocation := plannedExpressionForSource(root.work, root.exact.makeCall)
+	if allocation == nil || len(allocation.operands) < 3 ||
+		allocation.operands[2].kind != planValueExpression ||
+		allocation.operands[2].value != root.exact.length.id {
+		t.Fatalf("exact allocation does not consume the length ID: %#v", allocation)
+	}
+}
+
+func assertExactRangeAndTerminalPlan(t *testing.T, root *plannedExpression) {
+	t.Helper()
+	rangeOperation, _ := plannedOperationForSource(root.work, root.exact.outer)
+	terminal, _ := plannedOperationForSource(root.work, root.exact.assignment)
+	if rangeOperation == nil || rangeOperation.rangeKey != root.exact.index.id ||
+		rangeOperation.rangeKeyObject == nil || rangeOperation.source != root.exact.outer {
+		t.Fatalf("exact range does not bind its source key object: %#v", rangeOperation)
+	}
+	if terminal == nil || terminal.assignment == nil || len(terminal.assignment.stores) != 1 ||
+		!terminal.assignment.stores[0].place.preparedIndex ||
+		terminal.expressions[0].source == root.exact.appendCall {
+		t.Fatalf("exact terminal is not a planned indexed store: %#v", terminal)
+	}
+}
+
 type loweringPlanContractFixture struct {
 	files  *token.FileSet
 	unit   *packageUnit
