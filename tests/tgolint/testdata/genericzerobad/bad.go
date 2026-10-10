@@ -28,6 +28,7 @@ func Direct(
 	input any,
 	length int,
 ) {
+	genericzero.Factory[genericzero.Slot[model.Event]]{}.ReturnedVariable()()
 	genericzero.Variable[model.Event]()
 	_ = genericzero.Named[model.Event]()
 	_ = genericzero.New[model.Event]()

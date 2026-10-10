@@ -45,3 +45,7 @@ func LoadThenStoreCall(slot []func(), replacement func()) {
 func StoreFirstCallSecond(first []func(), second []func()) {
 	genericzero.StoreFirstCallSecond(first, second)
 }
+
+func IgnoreFunction(value func()) {
+	genericzero.IgnoreFunction(value)
+}

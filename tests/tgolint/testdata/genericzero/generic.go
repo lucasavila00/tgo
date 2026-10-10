@@ -13,6 +13,10 @@ func (Factory[T]) Variable() {
 	_ = value
 }
 
+func (Factory[T]) ReturnedVariable() func() {
+	return Variable[T]
+}
+
 func (Factory[T]) Make(length int) []T {
 	return make([]T, length)
 }

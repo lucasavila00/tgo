@@ -23,6 +23,7 @@ func Safe() {
 	_ = genericzero.OmittedSlice(1)
 	genericzerowrap.Twice[int]()
 	genericzero.Factory[int]{}.Variable()
+	genericzero.Factory[genericzero.Slot[int]]{}.ReturnedVariable()()
 	_ = genericzero.Make[model.Event](0)
 	genericzero.Clear([]model.Event{})
 	_ = genericzero.MapRead(
@@ -129,6 +130,7 @@ func Safe() {
 	genericzero.LoopOverwriteSafe[model.Event]()
 	genericzero.KnownIgnore[model.Event]()
 	genericzero.UnreachableKnownIgnore[model.Event]()
+	genericzerowrap.IgnoreFunction(genericzero.Nested[model.Event]())
 	imported := []func(){genericzero.Nested[model.Event]()}
 	genericzerowrap.StoreThenCall(imported, func() {})
 	shared := []func(){genericzero.Nested[model.Event]()}
