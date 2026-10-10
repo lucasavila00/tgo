@@ -209,7 +209,7 @@ func Marker() int { return 1 }
 		name        string
 		imports     string
 		body        string
-		want        string
+		wants       []string
 		forbidden   string
 		constructor string
 	}{
@@ -222,7 +222,7 @@ func Marker() int { return 1 }
 			body: `func Make(number int) (any, error) {
 	return bridge.Alias{number: number}
 }`,
-			want:        `_ "bridge"`,
+			wants:       []string{`_ "bridge"`},
 			forbidden:   "\n\t\"bridge\"\n",
 			constructor: "model.NewPort(",
 		},
@@ -235,7 +235,7 @@ func Marker() int { return 1 }
 			body: `func Make(number int) (records.Port, error) {
 	return facade.Alias{number: number}
 }`,
-			want:        `_ "bridge"`,
+			wants:       []string{`_ "bridge"`},
 			forbidden:   `facade "bridge"`,
 			constructor: "records.NewPort(",
 		},
@@ -247,7 +247,7 @@ func Marker() int { return 1 }
 )`,
 			body: `func Make(number int) (model.Port, error) { return facade.Alias{number: number} }
 func Marker() int { return facade.Marker() }`,
-			want:        `facade "bridge"`,
+			wants:       []string{`facade "bridge"`},
 			forbidden:   `_ "bridge"`,
 			constructor: "model.NewPort(",
 		},
@@ -261,8 +261,37 @@ func Marker() int { return facade.Marker() }`,
 			body: `func Make(number int) (model.Port, error) {
 	return erased.Alias{number: number + used.Marker()}
 }`,
-			want:        `used "bridge"`,
+			wants:       []string{`used "bridge"`, `_ "bridge"`},
 			forbidden:   `erased "bridge"`,
+			constructor: "model.NewPort(",
+		},
+		{
+			name: "dot literal only",
+			imports: `import (
+	"model"
+	. "bridge"
+	used "bridge"
+)`,
+			body: `func Make(number int) (model.Port, error) {
+	return Alias{number: number + used.Marker()}
+}`,
+			wants:       []string{`used "bridge"`, `_ "bridge"`},
+			forbidden:   `. "bridge"`,
+			constructor: "model.NewPort(",
+		},
+		{
+			name: "dot other source use",
+			imports: `import (
+	"model"
+	. "bridge"
+	used "bridge"
+)`,
+			body: `func Make(number int) (model.Port, error) {
+	return Alias{number: number + used.Marker()}
+}
+func ReadMarker() int { return Marker() }`,
+			wants:       []string{`used "bridge"`, `. "bridge"`},
+			forbidden:   `_ "bridge"`,
 			constructor: "model.NewPort(",
 		},
 	}
@@ -294,14 +323,13 @@ func Marker() int { return facade.Marker() }`,
 				t.Fatal(problems[0])
 			}
 			output := string(compiled.Outputs["app.tgo"])
-			if !strings.Contains(output, test.want) ||
-				strings.Contains(output, test.forbidden) {
-				t.Fatalf(
-					"generated imports do not contain %q without %q\n%s",
-					test.want,
-					test.forbidden,
-					output,
-				)
+			for _, want := range test.wants {
+				if !strings.Contains(output, want) {
+					t.Fatalf("generated imports do not contain %q\n%s", want, output)
+				}
+			}
+			if strings.Contains(output, test.forbidden) {
+				t.Fatalf("generated imports contain %q\n%s", test.forbidden, output)
 			}
 			if !strings.Contains(output, test.constructor) {
 				t.Fatalf("generated output does not use the defining constructor\n%s", output)

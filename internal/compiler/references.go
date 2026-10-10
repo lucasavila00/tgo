@@ -296,7 +296,7 @@ func (p *packageUnit) markErasedOwnerImport(
 	if imported := surfaceImport(expression, p.info); imported != nil {
 		for _, specification := range file.Imports {
 			if importPackageName(specification, p.info) == imported {
-				p.erasedImports[specification] = true
+				p.erasedImports[specification] = file
 				return
 			}
 		}
@@ -306,7 +306,7 @@ func (p *packageUnit) markErasedOwnerImport(
 		path, err := strconv.Unquote(specification.Path.Value)
 		if err == nil && path == surface.Path() &&
 			specification.Name != nil && specification.Name.Name == "." {
-			p.erasedImports[specification] = true
+			p.erasedImports[specification] = file
 			return
 		}
 	}
@@ -369,11 +369,11 @@ func surfaceTypePackage(expression ast.Expr, info *types.Info) *types.Package {
 // blankUnusedErasedImports preserves imports whose only type use was lowered.
 func (p *packageUnit) blankUnusedErasedImports() bool {
 	changed := false
-	for specification := range p.erasedImports {
+	for specification, file := range p.erasedImports {
 		if specification.Name != nil && specification.Name.Name == "_" {
 			continue
 		}
-		if p.importUsed(specification) {
+		if p.importUsed(file, specification) {
 			continue
 		}
 		specification.Name = ast.NewIdent("_")
@@ -383,18 +383,16 @@ func (p *packageUnit) blankUnusedErasedImports() bool {
 }
 
 // importUsed reports whether lowered syntax still refers to one import.
-func (p *packageUnit) importUsed(specification *ast.ImportSpec) bool {
+func (p *packageUnit) importUsed(
+	file *ast.File,
+	specification *ast.ImportSpec,
+) bool {
 	path, err := strconv.Unquote(specification.Path.Value)
 	if err != nil {
 		return true
 	}
 	if specification.Name != nil && specification.Name.Name == "." {
-		for _, object := range p.info.Uses {
-			if object != nil && object.Pkg() != nil && object.Pkg().Path() == path {
-				return true
-			}
-		}
-		return false
+		return p.dotImportUsed(file, path)
 	}
 	imported := importPackageName(specification, p.info)
 	for _, object := range p.info.Uses {
@@ -403,6 +401,29 @@ func (p *packageUnit) importUsed(specification *ast.ImportSpec) bool {
 		}
 	}
 	return false
+}
+
+// dotImportUsed reports whether one file still has an unqualified package use.
+func (p *packageUnit) dotImportUsed(file *ast.File, path string) bool {
+	used := false
+	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
+		identifier, ok := cursor.Node().(*ast.Ident)
+		if !ok {
+			return true
+		}
+		if selector, ok := cursor.Parent().(*ast.SelectorExpr); ok &&
+			selector.Sel == identifier {
+			return true
+		}
+		object := p.info.Uses[identifier]
+		if object == nil || object.Pkg() == nil || object.Pkg().Path() != path ||
+			object.Parent() != object.Pkg().Scope() {
+			return true
+		}
+		used = true
+		return false
+	}, nil)
+	return used
 }
 
 // validateGeneratedReferences rejects a source name that captures inserted code.

@@ -11,7 +11,7 @@ func (p *packageUnit) prepare() {
 	p.generated = make(map[ast.Decl]bool)
 	p.generatedValues = make(map[*ast.ValueSpec]bool)
 	p.sourceReferences = make(map[token.Pos]types.Object)
-	p.erasedImports = make(map[*ast.ImportSpec]bool)
+	p.erasedImports = make(map[*ast.ImportSpec]*ast.File)
 	p.references = nil
 	for _, source := range p.Sources {
 		p.markGenerated(source)
