@@ -176,11 +176,129 @@ func (l *propagationLowerer) directVariableDeclaration(
 	if !ok {
 		return append(statements, node), true
 	}
+	errorName.NamePos = value.Names[len(value.Names)-1].End()
 	l.rememberDirectResultNames(value.Names, signature)
 	value.Names = append(value.Names, errorName)
 	value.Values = call.Rhs
 	statements[callIndex] = node
+	if value.Comment != nil {
+		for _, statement := range statements[callIndex+1:] {
+			positionGeneratedStatement(statement, value.Comment.End()+1)
+		}
+	}
 	return statements, true
+}
+
+func positionGeneratedStatement(statement ast.Stmt, position token.Pos) {
+	switch node := statement.(type) {
+	case *ast.AssignStmt:
+		positionGeneratedAssignment(node, position)
+	case *ast.DeclStmt:
+		if declaration, ok := node.Decl.(*ast.GenDecl); ok {
+			positionGeneratedDeclaration(declaration, position)
+		}
+	case *ast.IfStmt:
+		positionGeneratedIf(node, position)
+	}
+}
+
+func positionGeneratedAssignment(statement *ast.AssignStmt, position token.Pos) {
+	if statement.TokPos == token.NoPos {
+		statement.TokPos = position
+	}
+	for _, expression := range statement.Lhs {
+		positionGeneratedExpression(expression, position)
+	}
+	for _, expression := range statement.Rhs {
+		positionGeneratedExpression(expression, position)
+	}
+}
+
+func positionGeneratedDeclaration(declaration *ast.GenDecl, position token.Pos) {
+	if declaration.TokPos == token.NoPos {
+		declaration.TokPos = position
+	}
+	for _, specification := range declaration.Specs {
+		value, ok := specification.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+		for _, name := range value.Names {
+			positionGeneratedExpression(name, position)
+		}
+		for _, expression := range value.Values {
+			positionGeneratedExpression(expression, position)
+		}
+	}
+}
+
+func positionGeneratedIf(branch *ast.IfStmt, position token.Pos) {
+	if branch.If == token.NoPos {
+		branch.If = position
+	}
+	positionGeneratedExpression(branch.Cond, position)
+	if branch.Body.Lbrace == token.NoPos {
+		branch.Body.Lbrace = position
+	}
+	if branch.Body.Rbrace == token.NoPos {
+		branch.Body.Rbrace = position
+	}
+	for _, statement := range branch.Body.List {
+		positionGeneratedBranchStatement(statement, position)
+	}
+}
+
+func positionGeneratedBranchStatement(statement ast.Stmt, position token.Pos) {
+	if returned, ok := statement.(*ast.ReturnStmt); ok {
+		if returned.Return == token.NoPos {
+			returned.Return = position
+		}
+		for _, result := range returned.Results {
+			positionGeneratedExpression(result, position)
+		}
+		return
+	}
+	positionGeneratedStatement(statement, position)
+}
+
+func positionGeneratedExpression(expression ast.Expr, position token.Pos) {
+	switch node := expression.(type) {
+	case *ast.Ident:
+		if node.NamePos == token.NoPos {
+			node.NamePos = position
+		}
+	case *ast.BasicLit:
+		if node.ValuePos == token.NoPos {
+			node.ValuePos = position
+		}
+	case *ast.BinaryExpr:
+		if node.OpPos == token.NoPos {
+			node.OpPos = position
+		}
+		positionGeneratedExpression(node.X, position)
+		positionGeneratedExpression(node.Y, position)
+	case *ast.CallExpr:
+		if node.Lparen == token.NoPos {
+			node.Lparen = position
+		}
+		if node.Rparen == token.NoPos {
+			node.Rparen = position
+		}
+		positionGeneratedExpression(node.Fun, position)
+		for _, argument := range node.Args {
+			positionGeneratedExpression(argument, position)
+		}
+	case *ast.SelectorExpr:
+		positionGeneratedExpression(node.X, position)
+		positionGeneratedExpression(node.Sel, position)
+	case *ast.CompositeLit:
+		if node.Lbrace == token.NoPos {
+			node.Lbrace = position
+		}
+		if node.Rbrace == token.NoPos {
+			node.Rbrace = position
+		}
+	}
 }
 
 // directCall returns the call assignment and its error branch for a direct marker.

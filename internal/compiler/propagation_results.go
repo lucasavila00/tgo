@@ -14,7 +14,7 @@ func (l *propagationLowerer) errorBranch(
 	errorName *ast.Ident,
 ) ast.Stmt {
 	zeroValues, body := l.zeroReturnValues(metadata.Bang, len(l.function.resultAST)-1)
-	returnedError := ast.Expr(errorName)
+	returnedError := ast.Expr(ast.NewIdent(errorName.Name))
 	if !metadata.Transparent {
 		formatError := l.unit.generatedObject(
 			l.formatQualifier(), "fmt", "Errorf", metadata.Bang,
@@ -30,7 +30,7 @@ func (l *propagationLowerer) errorBranch(
 	body = append(body, &ast.ReturnStmt{Results: results})
 	return &ast.IfStmt{
 		Cond: &ast.BinaryExpr{
-			X: errorName, Op: token.NEQ,
+			X: ast.NewIdent(errorName.Name), Op: token.NEQ,
 			Y: l.unit.generatedUniverse("nil", metadata.Bang),
 		},
 		Body: &ast.BlockStmt{List: body},
