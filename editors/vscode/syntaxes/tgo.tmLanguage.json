@@ -62,7 +62,7 @@
           ]
         },
         {
-          "match": "(?<![A-Za-z0-9_.)\\]][ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "match": "(?<![\\p{L}\\p{Nd}_.)\\]][ \\t]*)(%+)(?=[*\\p{L}_(\\[])",
           "captures": {
             "1": {
               "name": "storage.modifier.non-nil.tgo"
@@ -70,7 +70,7 @@
           }
         },
         {
-          "match": "(\\[\\s*\\])([ \\t]*)(%+)(?=[*A-Za-z_(\\[])",
+          "match": "(\\[\\s*\\])([ \\t]*)(%+)(?=[*\\p{L}_(\\[])",
           "captures": {
             "1": {
               "patterns": [
@@ -85,7 +85,7 @@
           }
         },
         {
-          "match": "(\\b(?:chan|case|return)\\b)([ \\t]+)(%+)(?=[*A-Za-z_(\\[])",
+          "match": "(\\b(?:chan|case|return)\\b)([ \\t]+)(%+)(?=[*\\p{L}_(\\[])",
           "captures": {
             "1": {
               "patterns": [
@@ -107,11 +107,7 @@
             "4": {
               "patterns": [
                 {
-                  "name": "storage.modifier.non-nil.tgo",
-                  "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                },
-                {
-                  "include": "source.go"
+                  "include": "#type-contents"
                 }
               ]
             }
@@ -142,11 +138,7 @@
             "2": {
               "patterns": [
                 {
-                  "name": "storage.modifier.non-nil.tgo",
-                  "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                },
-                {
-                  "include": "source.go"
+                  "include": "#type-contents"
                 }
               ]
             }
@@ -158,7 +150,7 @@
           ]
         },
         {
-          "match": "(^[ \\t]*type[ \\t]+[A-Za-z_]\\w*(?:[ \\t]*\\[[^\\]\\r\\n]*\\])?[ \\t]+(?:=[ \\t]*)?)(?!(?:enum|struct)\\b)([^=\\r\\n]+)",
+          "match": "(^[ \\t]*type[ \\t]+[A-Za-z_]\\w*(?:[ \\t]*\\[[^\\]\\r\\n]*\\])?[ \\t]+(?:=[ \\t]*)?)(?!(?:enum|struct)\\b)(%+)?([^=\\r\\n]+)",
           "captures": {
             "1": {
               "patterns": [
@@ -168,13 +160,12 @@
               ]
             },
             "2": {
+              "name": "storage.modifier.non-nil.tgo"
+            },
+            "3": {
               "patterns": [
                 {
-                  "name": "storage.modifier.non-nil.tgo",
-                  "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                },
-                {
-                  "include": "source.go"
+                  "include": "#type-contents"
                 }
               ]
             }
@@ -188,11 +179,7 @@
             "4": {
               "patterns": [
                 {
-                  "name": "storage.modifier.non-nil.tgo",
-                  "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                },
-                {
-                  "include": "source.go"
+                  "include": "#type-contents"
                 }
               ]
             }
@@ -204,7 +191,7 @@
           ]
         },
         {
-          "match": "(^[ \\t]*var[ \\t]+(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)([^=\\r\\n]+)",
+          "match": "(^[ \\t]*var[ \\t]+(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)(%+)?([^=\\r\\n]+)",
           "captures": {
             "1": {
               "patterns": [
@@ -214,13 +201,12 @@
               ]
             },
             "2": {
+              "name": "storage.modifier.non-nil.tgo"
+            },
+            "3": {
               "patterns": [
                 {
-                  "name": "storage.modifier.non-nil.tgo",
-                  "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                },
-                {
-                  "include": "source.go"
+                  "include": "#type-contents"
                 }
               ]
             }
@@ -238,11 +224,7 @@
                 "4": {
                   "patterns": [
                     {
-                      "name": "storage.modifier.non-nil.tgo",
-                      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                    },
-                    {
-                      "include": "source.go"
+                      "include": "#type-contents"
                     }
                   ]
                 }
@@ -254,7 +236,7 @@
               ]
             },
             {
-              "match": "(^[ \\t]*(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)(?!func\\b)([^=\\r\\n]+)",
+              "match": "(^[ \\t]*(?:[A-Za-z_]\\w*[ \\t]*,[ \\t]*)*[A-Za-z_]\\w*[ \\t]+)(?!func\\b)(%+)?([^=\\r\\n]+)",
               "captures": {
                 "1": {
                   "patterns": [
@@ -264,13 +246,12 @@
                   ]
                 },
                 "2": {
+                  "name": "storage.modifier.non-nil.tgo"
+                },
+                "3": {
                   "patterns": [
                     {
-                      "name": "storage.modifier.non-nil.tgo",
-                      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                    },
-                    {
-                      "include": "source.go"
+                      "include": "#type-contents"
                     }
                   ]
                 }
@@ -287,22 +268,14 @@
             "1": {
               "patterns": [
                 {
-                  "name": "storage.modifier.non-nil.tgo",
-                  "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                },
-                {
-                  "include": "source.go"
+                  "include": "#type-contents"
                 }
               ]
             },
             "2": {
               "patterns": [
                 {
-                  "name": "storage.modifier.non-nil.tgo",
-                  "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                },
-                {
-                  "include": "source.go"
+                  "include": "#type-contents"
                 }
               ]
             }
@@ -338,6 +311,9 @@
     "L:meta.function.type.tgo -comment -string": {
       "patterns": [
         {
+          "include": "#array-type-modifier"
+        },
+        {
           "include": "#non-nil-type-modifier"
         }
       ]
@@ -345,12 +321,18 @@
     "L:meta.interface.tgo -comment -string": {
       "patterns": [
         {
+          "include": "#array-type-modifier"
+        },
+        {
           "include": "#non-nil-type-modifier"
         }
       ]
     },
     "L:meta.function.signature.tgo -comment -string": {
       "patterns": [
+        {
+          "include": "#array-type-modifier"
+        },
         {
           "match": "(?<!\\[[^\\]\\r\\n]*)(?:(?<=^)|(?<=[(,]))([ \\t]*)([A-Za-z_]\\w*(?:[ \\t]*,[ \\t]*[A-Za-z_]\\w*)*)([ \\t]+)(%+)(?=[*\\p{L}_(\\[])",
           "captures": {
@@ -416,9 +398,47 @@
         }
       ]
     },
+    "array-type-modifier": {
+      "begin": "\\[",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.begin.bracket.square.go"
+        }
+      },
+      "end": "(\\])([ \\t]*)(?:(%+)(?=[*\\p{L}_(\\[]))?",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.end.bracket.square.go"
+        },
+        "3": {
+          "name": "storage.modifier.non-nil.tgo"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#balanced-square-brackets"
+        },
+        {
+          "include": "source.go"
+        }
+      ]
+    },
     "non-nil-type-modifier": {
       "name": "storage.modifier.non-nil.tgo",
       "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*\\p{L}_(\\[])"
+    },
+    "type-contents": {
+      "patterns": [
+        {
+          "include": "#array-type-modifier"
+        },
+        {
+          "include": "#non-nil-type-modifier"
+        },
+        {
+          "include": "source.go"
+        }
+      ]
     },
     "multiline-function-type": {
       "begin": "\\bfunc[ \\t]*\\([ \\t]*$",
@@ -428,11 +448,7 @@
         "4": {
           "patterns": [
             {
-              "name": "storage.modifier.non-nil.tgo",
-              "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*\\p{L}_(\\[])"
-            },
-            {
-              "include": "source.go"
+              "include": "#type-contents"
             }
           ]
         }
@@ -449,10 +465,7 @@
     "function-type-contents": {
       "patterns": [
         {
-          "include": "#non-nil-type-modifier"
-        },
-        {
-          "include": "source.go"
+          "include": "#type-contents"
         }
       ]
     },
@@ -506,11 +519,7 @@
                 "4": {
                   "patterns": [
                     {
-                      "name": "storage.modifier.non-nil.tgo",
-                      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                    },
-                    {
-                      "include": "source.go"
+                      "include": "#type-contents"
                     }
                   ]
                 }
@@ -542,11 +551,7 @@
                 "3": {
                   "patterns": [
                     {
-                      "name": "storage.modifier.non-nil.tgo",
-                      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                    },
-                    {
-                      "include": "source.go"
+                      "include": "#type-contents"
                     }
                   ]
                 }
@@ -573,11 +578,7 @@
                 "3": {
                   "patterns": [
                     {
-                      "name": "storage.modifier.non-nil.tgo",
-                      "match": "(?<!\\[[^\\]\\r\\n]*)%+(?=[*A-Za-z_(\\[])"
-                    },
-                    {
-                      "include": "source.go"
+                      "include": "#type-contents"
                     }
                   ]
                 }

@@ -11,9 +11,11 @@ type MultilineEvent enum
 
 type Port struct { number int } checked
 type Τ struct{}
+type Υ struct{}
 type CheckedRecord struct {
 	value int
 	Field %[2]%T
+	UnicodeField [2]%Τ
 	owner %User
 	history []%User
 	lookup map[string]%User
@@ -40,6 +42,10 @@ type UserPointer = %User
 type UserPointerMap = map[string][]%*User
 type DirectUserPointerMap = map[string]%User
 type UserArray [2]%User
+type Alias [2]%Τ
+type Chain [1][2]%Τ
+type Composed %[2]%Τ
+type FunctionType func([2]%Τ) [2]%Υ
 type MultilineUserArray [
 	2
 ]%User
@@ -107,6 +113,8 @@ type MultilineReader interface
 }
 var currentUser %User
 var Group = [2]%T{}
+var Typed [2]%Τ
+var FunctionValue func([2]%Τ) [2]%Υ
 var multilineVariableFactory func(
 	value %VariableInput,
 ) %VariableResult
@@ -149,6 +157,8 @@ var (
 type WhereAlias where
 
 func read(ok bool, owner %User) error {
+	var local [2]%Τ
+	_ = local
 	_ = Request{..default}
 	value := load() /* keep */ !
 	value = load()!!

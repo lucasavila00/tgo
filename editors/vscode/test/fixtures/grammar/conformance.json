@@ -526,6 +526,72 @@
         "token": "%",
         "has": "storage.modifier.non-nil.tgo",
         "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type Alias [2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type Chain [1][2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "UnicodeField [2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var Typed [2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var local [2]%Τ",
+        "token": "%",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var FunctionValue func([2]%Τ) [2]%Υ",
+        "token": "%Τ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "var FunctionValue func([2]%Τ) [2]%Υ",
+        "token": "%Υ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type FunctionType func([2]%Τ) [2]%Υ",
+        "token": "%Τ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type FunctionType func([2]%Τ) [2]%Υ",
+        "token": "%Υ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type Composed %[2]%Τ",
+        "token": "%[2]",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
+      },
+      {
+        "line": "type Composed %[2]%Τ",
+        "token": "%Τ",
+        "has": "storage.modifier.non-nil.tgo",
+        "not": "keyword.operator.arithmetic.go"
       }
     ],
     "negative": [
