@@ -557,6 +557,8 @@ func (c %checker) genericZeroFact(
 
 func (summary %genericEffectSummary) effects() GenericEffectFact {
 	return GenericEffectFact{
+		Version: 1,
+		Storage: summary.storage,
 		ZeroEffects: append([]GenericEffect(nil), summary.zeroEffects...),
 		AccessEffects: append(
 			[]GenericEffect(nil), summary.accessEffects...,

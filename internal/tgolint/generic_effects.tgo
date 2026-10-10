@@ -102,6 +102,7 @@ type genericEffectSummary struct {
 	reachable                    map[syntax.Node]bool
 	root                         %syntax.Node
 	body                         %syntax.BlockStatement
+	storage                      StorageEffectGraph
 }
 
 type returnedGenericBody struct {
@@ -126,14 +127,22 @@ type returnedClosureSource struct {
 // checkGenericZeroSafety builds effect facts and checks each concrete call.
 func (c %checker) checkGenericZeroSafety() {
 	summaries := c.collectGenericZeroSummaries()
+	storage := c.collectStorageEffectGraphs()
+	c.resolveStorageEffectGraphs(storage)
+	for function, summary := range summaries {
+		if graph := storage[function]; graph != nil {
+			summary.storage = graph.graph
+		}
+	}
 	c.propagateGenericZeroFacts(summaries)
 
 	for _, summary := range summaries {
 		fact := summary.fact()
-		if fact.hasEffects() {
+		if fact.hasEffects() || fact.Storage.Known {
 			c.pass.ExportObjectFact(summary.function, &fact)
 		}
 	}
+	c.exportOrdinaryStorageFacts(storage, summaries)
 
 	bindings, sources := c.collectGenericValueBindings(summaries)
 	for _, file := range c.files {

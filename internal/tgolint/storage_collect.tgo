@@ -1,0 +1,423 @@
+package tgolint
+
+import (
+	"go/types"
+
+	"tgo/pkg/syntax"
+	"tgo/pkg/syntax/cfg"
+)
+
+type storageGraphSummary struct {
+	function *types.Func
+	graph    StorageEffectGraph
+}
+
+type storageGraphBuilder struct {
+	checker   %checker
+	file      %syntax.File
+	graph     %StorageEffectGraph
+	function  %StorageEffectFunction
+	regions   map[types.Object]StorageEffectRegion
+	nextTemp  int
+	nextSite  int
+	nextGraph int
+}
+
+func (c %checker) collectStorageEffectGraphs() map[*types.Func]%storageGraphSummary {
+	result := make(map[*types.Func]%storageGraphSummary)
+	for _, file := range c.files {
+		if c.generated[file] {
+			continue
+		}
+		inspectGenericFile(file, func(node %syntax.Node) bool {
+			declaration, ok := syntax.FunctionDeclarationOf(node)
+			if !ok || declaration.Body == nil {
+				return true
+			}
+			function, ok := c.facts.DefinitionName(declaration.Name).(*types.Func)
+			if !ok {
+				return false
+			}
+			builder := newStorageGraphBuilder(c, file, function)
+			builder.addFunction(declaration.Body, nil)
+			result[function.Origin()] = &storageGraphSummary{
+				function: function.Origin(), graph: *builder.graph,
+			}
+			return false
+		})
+	}
+	return result
+}
+
+func newStorageGraphBuilder(
+	c %checker,
+	file %syntax.File,
+	function *types.Func,
+) %storageGraphBuilder {
+	graph := &StorageEffectGraph{Known: true, Entry: 0, Functions: nil}
+	builder := &storageGraphBuilder{
+		checker: c, file: file, graph: graph, function: nil,
+		regions: make(map[types.Object]StorageEffectRegion),
+		nextTemp: 1, nextSite: 1, nextGraph: 0,
+	}
+	signature, _ := function.Type().(*types.Signature)
+	if signature != nil {
+		for index := 0; index < signature.Params().Len(); index++ {
+			builder.regions[signature.Params().At(index)] = StorageEffectRegion{
+				Root: storageRootParameter, ID: index, Path: nil,
+			}
+		}
+		for index := 0; index < signature.Results().Len(); index++ {
+			result := signature.Results().At(index)
+			if result.Name() != "" {
+				builder.regions[result] = StorageEffectRegion{
+					Root: storageRootResult, ID: index, Path: nil,
+				}
+			}
+		}
+	}
+	return builder
+}
+
+func (b %storageGraphBuilder) addFunction(
+	body %syntax.BlockStatement,
+	captures []StorageEffectRegion,
+) int {
+	id := b.nextGraph
+	b.nextGraph++
+	function := StorageEffectFunction{ID: id, Captures: captures, Blocks: nil}
+	previous := b.function
+	b.function = &function
+	graph := cfg.New(body, b.checker.callMayReturn)
+	for _, source := range graph.Blocks {
+		block := StorageEffectBlock{ID: int(source.Index), Operations: nil, Successors: nil}
+		for _, node := range source.Nodes {
+			b.collectNode(&block, node)
+		}
+		for index, successor := range source.Succs {
+			edge := StorageEffectEdge{Block: int(successor.Index), Condition: 0, Expected: true}
+			if len(source.Succs) == 2 {
+				edge.Expected = index == 0
+			}
+			block.Successors = append(block.Successors, edge)
+		}
+		b.function.Blocks = append(b.function.Blocks, block)
+	}
+	b.graph.Functions = append(b.graph.Functions, function)
+	b.function = previous
+	return id
+}
+
+func (b %storageGraphBuilder) collectNode(block %StorageEffectBlock, node syntax.Node) {
+	if statement, ok := syntax.StatementOf(&node); ok {
+		if assignment := syntax.AssignmentStatementOf(statement); assignment != nil {
+			b.collectAssignment(block, assignment)
+			return
+		}
+		if returned := syntax.ReturnStatementOf(statement); returned != nil {
+			values := b.collectExpressions(block, returned.Results)
+			if len(values) == 0 {
+				values = b.namedResultValues(block)
+			}
+			block.Operations = append(block.Operations, StorageEffectOperation{
+				Kind: storageEffectReturn, Inputs: values,
+			})
+			return
+		}
+		if expression := syntax.ExpressionStatementOf(statement); expression != nil {
+			b.collectExpression(block, expression.Expression)
+			return
+		}
+	}
+	if specification, ok := syntax.SpecificationOf(&node); ok {
+		if values := syntax.ValueSpecificationOf(specification); values != nil {
+			inputs := b.collectExpressions(block, values.Values)
+			for index, name := range values.Names {
+				if index >= len(inputs) || name.Name == "_" {
+					continue
+				}
+				object := b.checker.facts.DefinitionName(name)
+				region := StorageEffectRegion{Root: storageRootAllocation, ID: b.nextSite}
+				b.nextSite++
+				b.regions[object] = region
+				block.Operations = append(block.Operations, StorageEffectOperation{
+					Kind: storageEffectWrite, Target: region, Inputs: []int{inputs[index]},
+				})
+			}
+		}
+	}
+	if expression, ok := syntax.ExpressionOf(&node); ok {
+		b.collectExpression(block, expression)
+	}
+}
+
+func (b %storageGraphBuilder) namedResultValues(block %StorageEffectBlock) []int {
+	count := 0
+	for _, region := range b.regions {
+		if region.Root == storageRootResult && region.ID >= count {
+			count = region.ID + 1
+		}
+	}
+	values := make([]int, count)
+	for object, region := range b.regions {
+		if region.Root != storageRootResult || object == nil {
+			continue
+		}
+		value := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectRead, Source: region, Results: []int{value},
+		})
+		values[region.ID] = value
+	}
+	return values
+}
+
+func (b %storageGraphBuilder) collectAssignment(
+	block %StorageEffectBlock,
+	assignment *syntax.AssignmentStatement,
+) {
+	for _, target := range assignment.Left {
+		b.collectAddressInputs(block, target)
+	}
+	values := b.collectExpressions(block, assignment.Right)
+	for index, target := range assignment.Left {
+		if index >= len(values) {
+			break
+		}
+		region, ok := b.expressionRegion(target)
+		if !ok {
+			continue
+		}
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectWrite, Target: region, Inputs: []int{values[index]},
+		})
+	}
+}
+
+func (b %storageGraphBuilder) collectAddressInputs(
+	block %StorageEffectBlock,
+	expression %syntax.Expression,
+) {
+	if index := syntax.IndexExpressionOf(expression); index != nil {
+		b.collectExpression(block, index.Expression)
+		b.collectExpression(block, index.Index)
+		return
+	}
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		b.collectExpression(block, selector.Expression)
+	}
+}
+
+func (b %storageGraphBuilder) collectExpressions(
+	block %StorageEffectBlock,
+	expressions []%syntax.Expression,
+) []int {
+	var values []int = nil
+	for _, expression := range expressions {
+		values = append(values, b.collectExpression(block, expression))
+	}
+	return values
+}
+
+func (b %storageGraphBuilder) collectExpression(
+	block %StorageEffectBlock,
+	expression %syntax.Expression,
+) int {
+	if expression == nil {
+		return 0
+	}
+	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
+		return b.collectExpression(block, parenthesized.Expression)
+	}
+	if call := syntax.CallExpressionOf(expression); call != nil {
+		callee := b.collectExpression(block, call.Callee)
+		arguments := b.collectExpressions(block, call.Args)
+		result := b.newTemp()
+		if name := syntax.IdentifierExpressionOf(call.Callee); name != nil {
+			if builtin, ok := b.checker.facts.Object(name).(*types.Builtin); ok {
+				regions := make([]StorageEffectRegion, 0, len(call.Args))
+				for _, argument := range call.Args {
+					region, _ := b.expressionRegion(argument)
+					regions = append(regions, region)
+				}
+				kind := 0
+				if builtin.Name() == "append" {
+					kind = storageEffectAppend
+				}
+				if builtin.Name() == "copy" {
+					kind = storageEffectCopy
+				}
+				if kind != 0 {
+					block.Operations = append(block.Operations, StorageEffectOperation{
+						Kind: kind, Regions: regions, Inputs: arguments,
+						Results: []int{result},
+					})
+					return result
+				}
+			}
+		}
+		function := -1
+		if object, ok := b.checker.genericCallObject(call.Callee).(*types.Func); ok {
+			function = b.functionID(object.Origin())
+		}
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectCall, Inputs: append([]int{callee}, arguments...),
+			Results: []int{result}, Function: function,
+		})
+		return result
+	}
+	node := syntax.ExpressionNode(expression)
+	if literal, ok := syntax.FunctionLiteralOf(&node); ok {
+		return b.collectFunctionLiteral(block, literal)
+	}
+	if region, ok := b.expressionRegion(expression); ok {
+		result := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectRead, Source: region, Results: []int{result},
+		})
+		return result
+	}
+	var result int = 0
+	for _, child := range syntax.Children(b.file, &node) {
+		childExpression, ok := syntax.ExpressionOf(child)
+		if ok {
+			result = b.collectExpression(block, childExpression)
+		}
+	}
+	if result != 0 {
+		return result
+	}
+	result = b.newTemp()
+	return result
+}
+
+func (b %storageGraphBuilder) collectFunctionLiteral(
+	block %StorageEffectBlock,
+	literal %syntax.FunctionLiteral,
+) int {
+	var objects []types.Object = nil
+	var captures []StorageEffectRegion = nil
+	inspectGenericBlock(literal.Body, func(node %syntax.Node) bool {
+		if nested, ok := syntax.FunctionLiteralOf(node); ok && nested != literal {
+			return false
+		}
+		name, ok := syntax.IdentifierOf(node)
+		if !ok {
+			return true
+		}
+		object := b.checker.facts.Object(name)
+		region, found := b.regions[object]
+		if !found || containsStorageObject(objects, object) {
+			return true
+		}
+		objects = append(objects, object)
+		captures = append(captures, region)
+		return true
+	})
+	saved := b.regions
+	b.regions = make(map[types.Object]StorageEffectRegion)
+	for index, object := range objects {
+		b.regions[object] = StorageEffectRegion{
+			Root: storageRootCapture, ID: index,
+		}
+	}
+	function := b.addFunction(literal.Body, captures)
+	b.regions = saved
+	result := b.newTemp()
+	block.Operations = append(block.Operations, StorageEffectOperation{
+		Kind: storageEffectFunction, Regions: captures,
+		Results: []int{result}, Function: function,
+	})
+	return result
+}
+
+func containsStorageObject(objects []types.Object, want types.Object) bool {
+	for _, object := range objects {
+		if object == want {
+			return true
+		}
+	}
+	return false
+}
+
+func (b %storageGraphBuilder) expressionRegion(
+	expression %syntax.Expression,
+) (StorageEffectRegion, bool) {
+	if name := syntax.IdentifierExpressionOf(expression); name != nil {
+		object := b.checker.facts.Object(name)
+		if region, ok := b.regions[object]; ok {
+			return region, true
+		}
+		region := StorageEffectRegion{Root: storageRootAllocation, ID: b.nextSite}
+		b.nextSite++
+		b.regions[object] = region
+		return region, true
+	}
+	if selector := syntax.SelectorExpressionOf(expression); selector != nil {
+		region, ok := b.expressionRegion(selector.Expression)
+		if ok {
+			region.Path = append(region.Path, StorageEffectPath{
+				Kind: storagePathField, Field: selector.Selector.Name,
+			})
+		}
+		return region, ok
+	}
+	if index := syntax.IndexExpressionOf(expression); index != nil {
+		region, ok := b.expressionRegion(index.Expression)
+		if ok {
+			region.Path = append(region.Path, StorageEffectPath{Kind: storagePathAnyIndex})
+		}
+		return region, ok
+	}
+	return StorageEffectRegion{}, false
+}
+
+func (b %storageGraphBuilder) newTemp() int {
+	result := b.nextTemp
+	b.nextTemp++
+	return result
+}
+
+func (b %storageGraphBuilder) functionID(function *types.Func) int {
+	if function == nil {
+		return -1
+	}
+	return int(function.Pos())
+}
+
+func (c %checker) resolveStorageEffectGraphs(
+	summaries map[*types.Func]%storageGraphSummary,
+) {
+	_ = summaries
+}
+
+func (c %checker) exportOrdinaryStorageFacts(
+	storage map[*types.Func]%storageGraphSummary,
+	generic map[*types.Func]%genericEffectSummary,
+) {
+	for function, summary := range storage {
+		if generic[function] != nil || !storageRelevantSignature(function) {
+			continue
+		}
+		fact := &GenericEffectFact{Version: 1, Storage: summary.graph}
+		c.pass.ExportObjectFact(function, fact)
+	}
+}
+
+func storageRelevantSignature(function *types.Func) bool {
+	signature, _ := function.Type().(*types.Signature)
+	if signature == nil {
+		return false
+	}
+	for index := 0; index < signature.Params().Len(); index++ {
+		typ := coreType(signature.Params().At(index).Type())
+		if _, ok := typ.(*types.Signature); ok {
+			return true
+		}
+		if _, ok := typ.(*types.Slice); ok {
+			return true
+		}
+	}
+	return signature.TypeParams().Len() != 0
+}
+

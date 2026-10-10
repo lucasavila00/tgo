@@ -34,10 +34,10 @@ type StorageEffectOperation struct {
 	Kind      int
 	Target    StorageEffectRegion
 	Source    StorageEffectRegion
-	Arguments []StorageEffectRegion
-	Temp      int
+	Regions   []StorageEffectRegion
+	Inputs    []int
+	Results   []int
 	Function  int
-	Value     int
 }
 
 const (
@@ -49,6 +49,7 @@ const (
 	storageEffectAppend
 	storageEffectCopy
 	storageEffectReturn
+	storageEffectFunction
 )
 
 // StorageEffectRegion names parameter, capture, temporary, or allocation storage.
@@ -64,6 +65,7 @@ const (
 	storageRootCapture
 	storageRootTemporary
 	storageRootAllocation
+	storageRootResult
 )
 
 // StorageEffectPath selects one field or index slot.
