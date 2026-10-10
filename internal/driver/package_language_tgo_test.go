@@ -168,6 +168,98 @@ func TestBuildIgnoresInactiveOtherLanguage(t *testing.T) {
 	}
 }
 
+func TestBuildFromGoOnlyPackage(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writePackageLanguageFile(
+		t, root, "go.mod", "module example.com/graph\n\ngo 1.27\n",
+	)
+	for _, name := range []string{"app", "bridge", "broken", "model"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writePackageLanguageFile(
+		t, filepath.Join(root, "app"), "app.go",
+		"package app\n\nimport \"example.com/graph/bridge\"\n\n"+
+			"func Label() string { return bridge.Label() }\n",
+	)
+	writePackageLanguageFile(
+		t, filepath.Join(root, "bridge"), "bridge.go",
+		"package bridge\n\nimport \"example.com/graph/model\"\n\n"+
+			"func Label() string { return model.Label() }\n",
+	)
+	writePackageLanguageFile(
+		t, filepath.Join(root, "model"), "model.tgo",
+		"package model\n\nfunc Label() string { return \"ready\" }\n",
+	)
+	writePackageLanguageFile(
+		t, filepath.Join(root, "broken"), "broken.go", "package broken\n\nimport (\n",
+	)
+	output := filepath.Join(root, "model", "model_tgo.go")
+	if _, err := os.Stat(output); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("initial generated output exists: %v", err)
+	}
+	compiled, err := CompileWorkspace(root)
+	if err != nil {
+		t.Fatalf("compile workspace: %v", err)
+	}
+	if len(compiled) != 1 {
+		t.Fatalf("compiled package count = %d, want 1", len(compiled))
+	}
+	if compiled[0].Path != "example.com/graph/model" {
+		t.Fatalf("compiled package path = %q, want model", compiled[0].Path)
+	}
+	views, err := CompileWorkspaceViewsContext(context.Background(), root)
+	if err != nil {
+		t.Fatalf("compile workspace views: %v", err)
+	}
+	if len(views) != 1 {
+		t.Fatalf("compiled view count = %d, want 1", len(views))
+	}
+	if views[0].Package.Path != "example.com/graph/model" {
+		t.Fatalf("compiled view path = %q, want model", views[0].Package.Path)
+	}
+	if err := Build(root, []string{"./app"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(output); err != nil {
+		t.Fatalf("TGo dependency output: %v", err)
+	}
+}
+
+func TestBuildGoOnlyGraphWithoutTGoDependency(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writePackageLanguageFile(
+		t, root, "go.mod", "module example.com/goonly\n\ngo 1.27\n",
+	)
+	for _, name := range []string{"app", "bridge"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writePackageLanguageFile(
+		t, filepath.Join(root, "app"), "app.go",
+		"package app\n\nimport \"example.com/goonly/bridge\"\n\n"+
+			"func Label() string { return bridge.Label() }\n",
+	)
+	writePackageLanguageFile(
+		t, filepath.Join(root, "bridge"), "bridge.go",
+		"package bridge\n\nfunc Label() string { return \"ready\" }\n",
+	)
+	if err := Build(root, []string{"./app"}); err != nil {
+		t.Fatalf("Go-only build result = %v, want nil", err)
+	}
+	outputs, err := filepath.Glob(filepath.Join(root, "*", "*_tgo.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(outputs) != 0 {
+		t.Fatalf("generated outputs = %v, want none", outputs)
+	}
+}
+
 func TestMatchingTestSourcesIgnoresCgoWhenDisabled(t *testing.T) {
 	t.Parallel()
 	directory := t.TempDir()
