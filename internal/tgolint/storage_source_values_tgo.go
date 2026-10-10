@@ -330,6 +330,7 @@ func (c *checker) storageCallValues(
 			arguments: arguments, captures: function.captures,
 			typeArguments: function.typeArguments,
 		}, state)
+		updated = projectStorageCallerState(state, updated, values)
 		replaceStorageState(state, updated)
 		for index, value := range values {
 			for len(results) <= index {

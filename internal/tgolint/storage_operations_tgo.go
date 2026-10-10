@@ -90,6 +90,7 @@ func applyStorageOperation(
 			if !effects.completed {
 				continue
 			}
+			updated = projectStorageCallerState(before, updated, returned)
 			if firstTransfer {
 				transferred = updated
 				firstTransfer = false
@@ -169,6 +170,61 @@ func applyStorageOperation(
 			storageInput(state.temps, operation.Inputs, 1),
 		)
 		setStorageResults(state.temps, operation.Results, []storageValue{value})
+	}
+}
+
+func projectStorageCallerState(
+	before storageState,
+	updated storageState,
+	returned []storageValue,
+) storageState {
+	locations := make(map[storageLocation]bool)
+	for path := range before.memory {
+		locations[path.location] = true
+	}
+	for _, value := range before.cells {
+		addStorageValueLocations(locations, value)
+	}
+	for _, value := range returned {
+		addStorageValueLocations(locations, value)
+	}
+	for changed := true; changed; {
+		changed = false
+		for path, value := range updated.memory {
+			if !locations[path.location] {
+				continue
+			}
+			beforeCount := len(locations)
+			addStorageValueLocations(locations, value)
+			changed = changed || len(locations) != beforeCount
+		}
+	}
+	result := newStorageState()
+	for object, value := range before.cells {
+		result.cells[object] = cloneStorageValue(value)
+	}
+	for path, value := range updated.memory {
+		if locations[path.location] {
+			result.memory[path] = cloneStorageValue(value)
+		}
+	}
+	return result
+}
+
+func addStorageValueLocations(
+	locations map[storageLocation]bool,
+	value storageValue,
+) {
+	for _, region := range value.regions {
+		locations[region.location] = true
+	}
+	for _, slice := range value.slices {
+		locations[slice.backing] = true
+	}
+	for _, function := range value.functions {
+		for _, capture := range function.captures {
+			locations[capture.location] = true
+		}
 	}
 }
 
