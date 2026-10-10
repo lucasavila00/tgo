@@ -3,6 +3,7 @@
 package tgolint
 
 import (
+	"go/constant"
 	"go/token"
 	"go/types"
 
@@ -100,11 +101,16 @@ func (b *storageGraphBuilder) addFunction(
 	graph := cfg.New(body, b.checker.callMayReturn)
 	for _, source := range graph.Blocks {
 		block := StorageEffectBlock{ID: int(source.Index), Operations: nil, Successors: nil}
+		condition := 0
 		for _, node := range source.Nodes {
+			before := b.nextTemp
 			b.collectNode(&block, node)
+			if b.nextTemp > before {
+				condition = b.nextTemp - 1
+			}
 		}
 		for index, successor := range source.Succs {
-			edge := StorageEffectEdge{Block: int(successor.Index), Condition: 0, Expected: true}
+			edge := StorageEffectEdge{Block: int(successor.Index), Condition: condition, Expected: true}
 			if len(source.Succs) == 2 {
 				edge.Expected = index == 0
 			}
@@ -245,6 +251,13 @@ func (b *storageGraphBuilder) collectExpression(
 	if parenthesized := syntax.ParenthesizedExpressionOf(expression); parenthesized != nil {
 		return b.collectExpression(block, parenthesized.Expression)
 	}
+	if value := b.checker.facts.Constant(expression); value != nil && value.Kind() == constant.Bool {
+		result := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectBoolean, Results: []int{result}, Boolean: constant.BoolVal(value),
+		})
+		return result
+	}
 	if object, ok := b.checker.genericCallObject(expression).(*types.Func); ok &&
 		syntax.CallExpressionOf(expression) == nil {
 		result := b.newTemp()
@@ -294,9 +307,14 @@ func (b *storageGraphBuilder) collectExpression(
 					kind = storageEffectCopy
 				}
 				if kind != 0 {
+					target := StorageEffectRegion{}
+					if kind == storageEffectAppend {
+						target = StorageEffectRegion{Root: storageRootAllocation, ID: b.nextSite}
+						b.nextSite++
+					}
 					block.Operations = append(block.Operations, StorageEffectOperation{
 						Kind: kind, Regions: regions, Inputs: arguments,
-						Results: results,
+						Results: results, Target: target,
 					})
 					return result
 				}
@@ -309,6 +327,7 @@ func (b *storageGraphBuilder) collectExpression(
 		block.Operations = append(block.Operations, StorageEffectOperation{
 			Kind: storageEffectCall, Inputs: append([]int{callee}, arguments...),
 			Results: results, Function: function,
+			TypeArguments: b.callTypeArgumentProjection(call.Callee),
 		})
 		return result
 	}
@@ -332,6 +351,33 @@ func (b *storageGraphBuilder) collectExpression(
 				Inputs: []int{result, 0, value}, Length: int64(index), KnownLength: true,
 			})
 		}
+		return result
+	}
+	if sliced := syntax.SliceExpressionOf(expression); sliced != nil {
+		base := b.collectExpression(block, sliced.Expression)
+		low := int64(0)
+		lowKnown := true
+		if sliced.Low != nil {
+			b.collectExpression(block, sliced.Low)
+			low, lowKnown = storageExpressionConstantInt(b.checker, sliced.Low)
+		}
+		high, highKnown := int64(0), false
+		if sliced.High != nil {
+			b.collectExpression(block, sliced.High)
+			high, highKnown = storageExpressionConstantInt(b.checker, sliced.High)
+		}
+		maximum, maximumKnown := int64(0), false
+		if sliced.Max != nil {
+			b.collectExpression(block, sliced.Max)
+			maximum, maximumKnown = storageExpressionConstantInt(b.checker, sliced.Max)
+		}
+		result := b.newTemp()
+		block.Operations = append(block.Operations, StorageEffectOperation{
+			Kind: storageEffectSlice, Inputs: []int{base}, Results: []int{result},
+			Offset: low, KnownOffset: lowKnown,
+			Length: high, KnownLength: highKnown,
+			Capacity: maximum, KnownCapacity: maximumKnown,
+		})
 		return result
 	}
 	if indexed := syntax.IndexExpressionOf(expression); indexed != nil {
@@ -370,6 +416,39 @@ func (b *storageGraphBuilder) collectExpression(
 		return result
 	}
 	result = b.newTemp()
+	return result
+}
+
+func (b *storageGraphBuilder) callTypeArgumentProjection(
+	callee *syntax.Expression,
+) []int {
+	identifier := genericCallIdentifier(callee)
+	if identifier == nil {
+		return nil
+	}
+	instance, ok := b.checker.facts.Instance(identifier)
+	if !ok {
+		return nil
+	}
+	signature, _ := b.root.Type().(*types.Signature)
+	if signature == nil {
+		return nil
+	}
+	parameters := signature.TypeParams()
+	result := make([]int, instance.TypeArgs.Len())
+	for index := range result {
+		result[index] = -1
+		argument, ok := instance.TypeArgs.At(index).(*types.TypeParam)
+		if !ok {
+			continue
+		}
+		for parameter := 0; parameter < parameters.Len(); parameter++ {
+			if parameters.At(parameter) == argument {
+				result[index] = parameter
+				break
+			}
+		}
+	}
 	return result
 }
 
@@ -537,6 +616,12 @@ func attachOrderedStorageEffects(
 		if function.ID != functionID {
 			continue
 		}
+		function.ZeroEffects = append(
+			[]GenericEffect(nil), zero[token.NoPos]...,
+		)
+		function.AccessEffects = append(
+			[]GenericEffect(nil), access[token.NoPos]...,
+		)
 		for blockIndex := range function.Blocks {
 			block := &function.Blocks[blockIndex]
 			for operationIndex := range block.Operations {

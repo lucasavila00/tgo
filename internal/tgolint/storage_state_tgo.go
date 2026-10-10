@@ -37,10 +37,12 @@ type storageSlice struct {
 }
 
 type storageValue struct {
-	unknown   bool
-	functions []storageFunction
-	regions   []storagePath
-	slices    []storageSlice
+	unknown    bool
+	trueValue  bool
+	falseValue bool
+	functions  []storageFunction
+	regions    []storagePath
+	slices     []storageSlice
 }
 
 type storageState struct {
@@ -93,6 +95,8 @@ func joinStorageState(left storageState, right storageState) storageState {
 func joinStorageValue(left storageValue, right storageValue) storageValue {
 	joined := cloneStorageValue(left)
 	joined.unknown = left.unknown || right.unknown
+	joined.trueValue = left.trueValue || right.trueValue
+	joined.falseValue = left.falseValue || right.falseValue
 	for _, function := range right.functions {
 		if !containsStorageFunction(joined.functions, function) {
 			joined.functions = append(joined.functions, function)

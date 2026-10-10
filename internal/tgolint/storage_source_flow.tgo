@@ -296,8 +296,12 @@ func (c %checker) storageTargetPaths(
 		}
 		var paths []storagePath = nil
 		for _, slice := range base.slices {
+			current := step
+			if current.Kind == storagePathIndex {
+				current.Index += slice.offset
+			}
 			paths = append(paths, storagePath{
-				location: slice.backing, steps: []StorageEffectPath{step},
+				location: slice.backing, steps: []StorageEffectPath{current},
 			})
 		}
 		for _, region := range base.regions {

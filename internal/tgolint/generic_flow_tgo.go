@@ -603,7 +603,10 @@ func (c *checker) recordStorageGenericEffect(
 	if zero {
 		target = summary.storageZeroAt
 	}
-	position := syntax.NodePosition(node)
+	position := token.NoPos
+	if node != nil {
+		position = syntax.NodePosition(node)
+	}
 	for _, current := range target[position] {
 		if genericEffectsEqual(current, effect) {
 			return

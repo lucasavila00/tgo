@@ -33,12 +33,28 @@ type storageGraphCall struct {
 	typeArguments []types.Type
 }
 
+type storageCallKey struct {
+	fact     *GenericEffectFact
+	function int
+}
+
+type storageExecutionResult struct {
+	storage storageState
+	returns []storageValue
+	effects storageInvocationEffects
+}
+
+type storageExecutionContext struct {
+	active         map[storageCallKey]bool
+	approximations map[storageCallKey]storageExecutionResult
+}
+
 func executeStorageGraph(
 	call storageGraphCall,
 	state storageState,
 ) (storageState, []storageValue) {
-	active := make(map[int]bool)
-	storage, values, _ := executeStorageFunction(call, state, active)
+	context := newStorageExecutionContext()
+	storage, values, _ := executeStorageFunction(call, state, context)
 	return storage, values
 }
 
@@ -46,28 +62,72 @@ func storageGraphEffects(
 	call storageGraphCall,
 	state storageState,
 ) storageInvocationEffects {
-	active := make(map[int]bool)
-	_, _, effects := executeStorageFunction(call, state, active)
+	context := newStorageExecutionContext()
+	_, _, effects := executeStorageFunction(call, state, context)
 	return effects
+}
+
+func newStorageExecutionContext() *storageExecutionContext {
+	return &storageExecutionContext{
+		active:         make(map[storageCallKey]bool),
+		approximations: make(map[storageCallKey]storageExecutionResult),
+	}
 }
 
 func executeStorageFunction(
 	call storageGraphCall,
 	state storageState,
-	active map[int]bool,
+	context *storageExecutionContext,
 ) (storageState, []storageValue, storageInvocationEffects) {
 	function := findStorageEffectFunction(call.fact.Storage, call.function)
 	if function == nil {
 		return state, nil, storageInvocationEffects{}
 	}
-	if active[call.function] {
-		return state, nil, recursiveStorageEffects(function)
+	key := storageCallKey{fact: call.fact, function: call.function}
+	if context.active[key] {
+		if result, ok := context.approximations[key]; ok {
+			return cloneStorageState(result.storage), cloneStorageValues(result.returns), result.effects
+		}
+		return cloneStorageState(state), nil, storageInvocationEffects{}
 	}
-	active[call.function] = true
-	defer delete(active, call.function)
+	context.active[key] = true
+	defer delete(context.active, key)
+	previous := storageExecutionResult{storage: cloneStorageState(state)}
+	for {
+		context.approximations[key] = previous
+		storage, returns, effects := executeStorageFunctionOnce(call, state, context, function)
+		next := storageExecutionResult{
+			storage: joinStorageState(previous.storage, storage),
+			returns: joinStorageValues(previous.returns, returns),
+			effects: storageInvocationEffects{
+				zero: appendGenericEffects(
+					append([]GenericEffect(nil), previous.effects.zero...), effects.zero,
+				),
+				access: appendGenericEffects(
+					append([]GenericEffect(nil), previous.effects.access...), effects.access,
+				),
+			},
+		}
+		if reflect.DeepEqual(previous, next) {
+			return next.storage, next.returns, next.effects
+		}
+		previous = next
+	}
+}
+
+func executeStorageFunctionOnce(
+	call storageGraphCall,
+	state storageState,
+	context *storageExecutionContext,
+	function *StorageEffectFunction,
+) (storageState, []storageValue, storageInvocationEffects) {
 	entries := make(map[int]storageExecutionState)
 	entries[0] = storageExecutionState{
 		storage: cloneStorageState(state), temps: make(map[int]storageValue), returns: nil,
+		effects: storageInvocationEffects{
+			zero:   append([]GenericEffect(nil), function.ZeroEffects...),
+			access: append([]GenericEffect(nil), function.AccessEffects...),
+		},
 	}
 	queue := []int{0}
 	queued := map[int]bool{0: true}
@@ -82,12 +142,15 @@ func executeStorageFunction(
 		}
 		current := cloneStorageExecution(entries[blockID])
 		for _, operation := range block.Operations {
-			applyStorageOperation(&current, call, operation, active)
+			applyStorageOperation(&current, call, operation, context)
 		}
 		if len(block.Successors) == 0 {
 			exits = append(exits, current)
 		}
 		for _, edge := range block.Successors {
+			if !storageEdgePossible(current.temps, edge) {
+				continue
+			}
 			joined, changed := joinStorageExecution(entries[edge.Block], current)
 			if changed {
 				entries[edge.Block] = joined
@@ -115,15 +178,37 @@ func executeStorageFunction(
 	return result, returns, effects
 }
 
-func recursiveStorageEffects(function *StorageEffectFunction) storageInvocationEffects {
-	var effects storageInvocationEffects
-	for _, block := range function.Blocks {
-		for _, operation := range block.Operations {
-			effects.zero = appendGenericEffects(effects.zero, operation.ZeroEffects)
-			effects.access = appendGenericEffects(effects.access, operation.AccessEffects)
-		}
+func storageEdgePossible(
+	temps map[int]storageValue,
+	edge StorageEffectEdge,
+) bool {
+	if edge.Condition == 0 {
+		return true
 	}
-	return effects
+	value := temps[edge.Condition]
+	if value.unknown || value.trueValue == value.falseValue {
+		return true
+	}
+	return value.trueValue == edge.Expected
+}
+
+func cloneStorageValues(values []storageValue) []storageValue {
+	result := make([]storageValue, len(values))
+	for index, value := range values {
+		result[index] = cloneStorageValue(value)
+	}
+	return result
+}
+
+func joinStorageValues(left []storageValue, right []storageValue) []storageValue {
+	result := cloneStorageValues(left)
+	for index, value := range right {
+		for len(result) <= index {
+			result = append(result, storageValue{})
+		}
+		result[index] = joinStorageValue(result[index], value)
+	}
+	return result
 }
 
 func findStorageEffectFunction(

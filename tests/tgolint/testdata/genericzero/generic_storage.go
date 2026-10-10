@@ -260,13 +260,13 @@ func SharedSlotAfterWrite[T any]() {
 
 func DiscardedAppendReuse[T any]() {
 	values := make([]func(), 0, 1)
-	append(values, storedEffect[T])
+	_ = append(values, storedEffect[T])
 	values[:1][0]()
 }
 
 func DiscardedAppendFresh[T any]() {
 	values := make([]func(), 0, 0)
-	append(values, storedEffect[T])
+	_ = append(values, storedEffect[T])
 }
 
 func CopyThenCall[T any]() {
@@ -303,4 +303,21 @@ func IgnoreFunction(value func()) {}
 
 func KnownIgnore[T any]() {
 	IgnoreFunction(storedEffect[T])
+}
+
+func GuardedStore(slot []func(), replacement func(), store bool) {
+	if store {
+		slot[0] = replacement
+	}
+	slot[0]()
+}
+
+func GuardedSafe[T any]() {
+	values := []func(){storedEffect[T]}
+	GuardedStore(values, func() {}, true)
+}
+
+func GuardedUnsafe[T any]() {
+	values := []func(){storedEffect[T]}
+	GuardedStore(values, func() {}, false)
 }

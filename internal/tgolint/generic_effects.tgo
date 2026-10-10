@@ -571,7 +571,9 @@ func (c %checker) markGenericZeroUnconditional(
 	typ types.Type,
 ) {
 	for parameter := range zeroTypeParameters(typ, summary.parameters, make(map[types.Type]bool)) {
-		c.addGenericEffect(summary, true, parameter, noGenericEffect())
+		effect := noGenericEffect()
+		c.addGenericEffect(summary, true, parameter, effect)
+		c.recordStorageGenericEffect(summary, nil, true, parameter, effect)
 	}
 }
 

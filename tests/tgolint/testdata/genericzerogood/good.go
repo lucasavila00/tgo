@@ -122,6 +122,7 @@ func Safe() {
 	genericzero.DiscardedAppendFresh[model.Event]()
 	genericzero.ZeroCopyThenCall[model.Event]()
 	genericzero.RecursiveSafe[model.Event]()
+	genericzero.GuardedSafe[model.Event]()
 	genericzero.KnownIgnore[model.Event]()
 	imported := []func(){genericzero.Nested[model.Event]()}
 	genericzerowrap.StoreThenCall(imported, func() {})

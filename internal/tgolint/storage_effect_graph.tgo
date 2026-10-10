@@ -40,12 +40,16 @@ type StorageEffectOperation struct {
 	Regions       []StorageEffectRegion
 	Inputs        []int
 	Results       []int
+	TypeArguments []int
 	Function      int
 	Field         string
+	Offset        int64
 	Length        int64
 	Capacity      int64
+	KnownOffset   bool
 	KnownLength   bool
 	KnownCapacity bool
+	Boolean       bool
 	ZeroEffects   []GenericEffect
 	AccessEffects []GenericEffect
 }
@@ -65,6 +69,7 @@ const (
 	storageEffectIndexWrite
 	storageEffectFieldRead
 	storageEffectFieldWrite
+	storageEffectBoolean
 )
 
 // StorageEffectRegion names parameter, capture, temporary, or allocation storage.

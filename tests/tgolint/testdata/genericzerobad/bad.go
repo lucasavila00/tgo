@@ -212,6 +212,7 @@ func FunctionValues(event model.Event) {
 	genericzero.DiscardedAppendReuse[model.Event]()
 	genericzero.CopyThenCall[model.Event]()
 	genericzero.RecursiveUnsafe[model.Event]()
+	genericzero.GuardedUnsafe[model.Event]()
 	imported := []func(){genericzero.Nested[model.Event]()}
 	genericzerowrap.CallThenStore(imported, func() {})
 	imported = []func(){genericzero.Nested[model.Event]()}

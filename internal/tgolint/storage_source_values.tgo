@@ -18,6 +18,9 @@ func (c %checker) storageExpressionValue(
 	}
 	node := syntax.ExpressionNode(expression)
 	flow.before[node] = cloneStorageState(state)
+	if value := c.facts.Constant(expression); value != nil && value.Kind() == constant.Bool {
+		return storageValue{trueValue: constant.BoolVal(value), falseValue: !constant.BoolVal(value)}
+	}
 	if function, ok := c.genericCallObject(expression).(*types.Func); ok {
 		return c.storageNamedFunctionValue(expression, function.Origin())
 	}
@@ -69,9 +72,15 @@ func (c %checker) storageExpressionValue(
 		}
 		var result storageValue
 		for _, slice := range base.slices {
+			if step.Kind == storagePathIndex {
+				step.Index += slice.offset
+			}
 			path := storagePath{location: slice.backing, steps: []StorageEffectPath{step}}
 			result = joinStorageValue(result, readStorageMemory(state, storageMemoryKey(path)))
 			result.regions = append(result.regions, path)
+			if step.Kind == storagePathIndex {
+				step.Index -= slice.offset
+			}
 		}
 		for _, region := range base.regions {
 			region.steps = append(region.steps, step)
@@ -82,16 +91,20 @@ func (c %checker) storageExpressionValue(
 	}
 	if slice := syntax.SliceExpressionOf(expression); slice != nil {
 		value := c.storageExpressionValue(slice.Expression, state, flow, apply)
+		operation := StorageEffectOperation{KnownOffset: true}
 		if slice.Low != nil {
 			c.storageExpressionValue(slice.Low, state, flow, apply)
+			operation.Offset, operation.KnownOffset = storageExpressionConstantInt(c, slice.Low)
 		}
 		if slice.High != nil {
 			c.storageExpressionValue(slice.High, state, flow, apply)
+			operation.Length, operation.KnownLength = storageExpressionConstantInt(c, slice.High)
 		}
 		if slice.Max != nil {
 			c.storageExpressionValue(slice.Max, state, flow, apply)
+			operation.Capacity, operation.KnownCapacity = storageExpressionConstantInt(c, slice.Max)
 		}
-		return value
+		return resliceStorageValue(value, operation)
 	}
 	var value storageValue
 	for _, child := range syntax.Children(c.file, &node) {
@@ -120,7 +133,8 @@ func (c %checker) storageCompositeValue(
 	if _, ok := coreType(c.facts.Type(expression)).(*types.Slice); ok {
 		value.slices = []storageSlice{{
 			backing: location, length: int64(len(literal.Elements)),
-			capacity: int64(len(literal.Elements)), knownLength: true, knownCapacity: true,
+			capacity: int64(len(literal.Elements)), knownOffset: true,
+			knownLength: true, knownCapacity: true,
 		}}
 	}
 	next := int64(0)
@@ -323,7 +337,7 @@ func (c %checker) storageBuiltinValue(
 			return storageValue{slices: []storageSlice{{
 				backing: storageLocation{graph: -3, site: int(syntax.ExpressionPosition(expression))},
 				length:  length, capacity: capacity,
-				knownLength: lengthKnown, knownCapacity: capacityKnown,
+				knownOffset: true, knownLength: lengthKnown, knownCapacity: capacityKnown,
 			}}}
 		}
 	}
@@ -335,22 +349,27 @@ func (c %checker) storageBuiltinValue(
 				slice.length+int64(len(arguments)-1) <= slice.capacity
 			fresh := !slice.knownCapacity || !reuse
 			if reuse {
-				for _, item := range arguments[1:] {
-					path := storagePath{location: slice.backing, steps: []StorageEffectPath{{
-						Kind: storagePathAnyIndex,
-					}}}
-					writeStorageMemory(state, storageMemoryKey(path), item, false)
+				for index, item := range arguments[1:] {
+					writeStorageSliceIndex(
+						state, slice, slice.length+int64(index), item, false,
+					)
 				}
 				slice.length += int64(len(arguments) - 1)
 				result = append(result, slice)
 			}
 			if fresh {
-				result = append(result, storageSlice{
+				freshSlice := storageSlice{
 					backing: storageLocation{
-						graph: -3, site: int(syntax.ExpressionPosition(expression)), merged: true,
+						graph: -3, site: int(syntax.ExpressionPosition(expression)),
 					},
-					length: slice.length + int64(len(arguments)-1), knownLength: slice.knownLength,
-				})
+					knownOffset: true,
+					length:      slice.length + int64(len(arguments)-1), knownLength: slice.knownLength,
+				}
+				copyStorageSliceElements(state, freshSlice, slice)
+				for index, item := range arguments[1:] {
+					writeStorageSliceIndex(state, freshSlice, slice.length+int64(index), item, false)
+				}
+				result = append(result, freshSlice)
 			}
 		}
 		value.slices = result
@@ -379,6 +398,18 @@ func storageConstantInt(
 	return result, exact
 }
 
+func storageExpressionConstantInt(
+	c %checker,
+	expression %syntax.Expression,
+) (int64, bool) {
+	value := c.facts.Constant(expression)
+	if value == nil || value.Kind() != constant.Int {
+		return 0, false
+	}
+	result, exact := constant.Int64Val(value)
+	return result, exact
+}
+
 func copyStorageSlices(
 	state storageState,
 	destination storageValue,
@@ -390,19 +421,44 @@ func copyStorageSlices(
 				origin.knownLength && origin.length == 0 {
 				continue
 			}
-			from := storagePath{location: origin.backing, steps: []StorageEffectPath{{
-				Kind: storagePathAnyIndex,
-			}}}
-			snapshot := readStorageMemory(state, storageMemoryKey(from))
-			to := storagePath{location: target.backing, steps: []StorageEffectPath{{
-				Kind: storagePathAnyIndex,
-			}}}
-			writeStorageMemory(state, storageMemoryKey(to), snapshot, false)
+			copyStorageSliceElements(state, target, origin)
 		}
 	}
 }
 
+func copyStorageSliceElements(
+	state storageState,
+	destination storageSlice,
+	source storageSlice,
+) {
+	if destination.knownLength && source.knownLength {
+		length := destination.length
+		if source.length < length {
+			length = source.length
+		}
+		values := make([]storageValue, length)
+		for index := int64(0); index < length; index++ {
+			path := storagePath{location: source.backing, steps: []StorageEffectPath{{
+				Kind: storagePathIndex, Index: source.offset + index,
+			}}}
+			values[index] = readStorageMemory(state, storageMemoryKey(path))
+		}
+		for index, value := range values {
+			writeStorageSliceIndex(state, destination, int64(index), value, true)
+		}
+		return
+	}
+	from := storagePath{location: source.backing, steps: []StorageEffectPath{{
+		Kind: storagePathAnyIndex,
+	}}}
+	snapshot := readStorageMemory(state, storageMemoryKey(from))
+	to := storagePath{location: destination.backing, steps: []StorageEffectPath{{
+		Kind: storagePathAnyIndex,
+	}}}
+	writeStorageMemory(state, storageMemoryKey(to), snapshot, false)
+}
+
 func reflectStorageValueEmpty(value storageValue) bool {
-	return !value.unknown && len(value.functions) == 0 &&
+	return !value.unknown && !value.trueValue && !value.falseValue && len(value.functions) == 0 &&
 		len(value.regions) == 0 && len(value.slices) == 0
 }
