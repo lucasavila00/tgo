@@ -19,7 +19,9 @@ func storageCallInputKey(
 	constants := storageFunctionIntegerConstants(call)
 	writeStorageLocationKey(&text, storageLocation{
 		owner: call.caller, graph: call.callerGraph, site: call.callSite,
-		merged: call.summary,
+		merged:          call.summary,
+		immediateCaller: call.immediateCaller,
+		immediateGraph:  call.immediateGraph, immediateSite: call.immediateSite,
 	})
 	text.WriteByte('|')
 	for _, argument := range call.arguments {
@@ -159,21 +161,25 @@ func writeStoragePathKey(text *strings.Builder, path storagePath) {
 
 func writeStorageLocationKey(text *strings.Builder, location storageLocation) {
 	text.WriteString(fmt.Sprintf(
-		"%p:%d:%d:%d:%t:%p:%d:%d", location.owner, location.graph,
+		"%p:%d:%d:%d:%t:%p:%d:%d:%p:%d:%d", location.owner, location.graph,
 		location.site, location.kind, location.merged, location.caller,
-		location.callerGraph, location.callSite,
+		location.callerGraph, location.callSite, location.immediateCaller,
+		location.immediateGraph, location.immediateSite,
 	))
 }
 
 type storageLocation struct {
-	owner       *GenericEffectFact
-	graph       int
-	site        int
-	kind        int
-	merged      bool
-	caller      *GenericEffectFact
-	callerGraph int
-	callSite    int
+	owner           *GenericEffectFact
+	graph           int
+	site            int
+	kind            int
+	merged          bool
+	caller          *GenericEffectFact
+	callerGraph     int
+	callSite        int
+	immediateCaller *GenericEffectFact
+	immediateGraph  int
+	immediateSite   int
 }
 
 type storagePath struct {

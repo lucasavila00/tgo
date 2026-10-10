@@ -81,6 +81,8 @@ func applyStorageOperation(
 				summary: call.summary || storageCallOperationRepeated(
 					call.fact.Storage, call.function, operation.Position,
 				),
+				immediateCaller: call.fact, immediateGraph: call.function,
+				immediateSite: operation.Position,
 			}
 			input := storageCallInputState(before, arguments, function.captures)
 			updated, returned, effects := executeStorageFunction(nested, input, context)
@@ -128,7 +130,9 @@ func applyStorageOperation(
 			owner: call.fact, graph: call.function, site: operation.Target.ID,
 			kind:   storageRootAllocation,
 			caller: call.caller, callerGraph: call.callerGraph,
-			callSite: call.callSite,
+			callSite:        call.callSite,
+			immediateCaller: call.immediateCaller,
+			immediateGraph:  call.immediateGraph, immediateSite: call.immediateSite,
 			merged: call.summary || storageAllocationRepeated(
 				call.fact.Storage, call.function, operation.Target.ID,
 			),
@@ -667,7 +671,9 @@ func resolveStoragePaths(
 		paths = append(paths, storagePath{location: storageLocation{
 			owner: call.fact, graph: call.function, site: region.ID, kind: region.Root,
 			caller: call.caller, callerGraph: call.callerGraph,
-			callSite: call.callSite,
+			callSite:        call.callSite,
+			immediateCaller: call.immediateCaller,
+			immediateGraph:  call.immediateGraph, immediateSite: call.immediateSite,
 		}})
 	}
 	for index := range paths {

@@ -41,6 +41,9 @@ type storageGraphCall struct {
 	caller            *GenericEffectFact
 	callerGraph       int
 	callSite          int
+	immediateCaller   *GenericEffectFact
+	immediateGraph    int
+	immediateSite     int
 	summary           bool
 }
 
@@ -122,7 +125,10 @@ func executeStorageFunction(
 		for index, argument := range call.arguments {
 			path := storagePath{location: storageLocation{
 				owner: call.fact, graph: call.function, site: index,
-				kind: storageRootParameter,
+				kind:   storageRootParameter,
+				caller: call.caller, callerGraph: call.callerGraph,
+				callSite: call.callSite, immediateCaller: call.immediateCaller,
+				immediateGraph: call.immediateGraph, immediateSite: call.immediateSite,
 			}}
 			call.parameterCells[index] = path
 			writeStorageMemory(state, storageMemoryKey(path), argument, true)

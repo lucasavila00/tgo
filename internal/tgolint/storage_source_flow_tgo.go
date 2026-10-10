@@ -46,7 +46,9 @@ func (c *checker) reportStorageFunctionCall(expression *syntax.Expression) bool 
 			receiverArguments: function.receiverArguments,
 			typeArguments:     function.typeArguments,
 			caller:            function.fact, callerGraph: function.graph,
-			callSite: int(syntax.ExpressionPosition(expression)),
+			callSite:        int(syntax.ExpressionPosition(expression)),
+			immediateCaller: function.fact, immediateGraph: function.graph,
+			immediateSite: int(syntax.ExpressionPosition(expression)),
 		}, state, flow.context)
 		c.reportGenericEffects(
 			expression, expression, effects.zero, function.receiverArguments,
@@ -98,7 +100,9 @@ func (c *checker) reportStorageUnknownCallArguments(expression *syntax.Expressio
 				receiverArguments: function.receiverArguments,
 				typeArguments:     function.typeArguments,
 				caller:            function.fact, callerGraph: function.graph,
-				callSite: int(syntax.ExpressionPosition(expression)),
+				callSite:        int(syntax.ExpressionPosition(expression)),
+				immediateCaller: function.fact, immediateGraph: function.graph,
+				immediateSite: int(syntax.ExpressionPosition(expression)),
 			}, state, flow.context)
 			c.reportGenericEffects(
 				argument, argument, effects.zero, function.receiverArguments,
@@ -146,7 +150,9 @@ func (c *checker) reportStorageFactCall(
 		arguments: arguments, captures: nil, typeArguments: typeArguments,
 		receiverArguments: receiverArguments,
 		caller:            fact, callerGraph: fact.Storage.Entry,
-		callSite: int(syntax.ExpressionPosition(expression)),
+		callSite:        int(syntax.ExpressionPosition(expression)),
+		immediateCaller: fact, immediateGraph: fact.Storage.Entry,
+		immediateSite: int(syntax.ExpressionPosition(expression)),
 	}, state, flow.context)
 	c.reportGenericEffects(
 		expression, expression, effects.zero,
