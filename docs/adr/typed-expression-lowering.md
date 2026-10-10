@@ -45,8 +45,9 @@ Use typed temporary variables only where evaluation order requires them.
 
 Keep labels and jumps bound to source targets. Generated blocks must not
 change scope, post execution, or valid jumps. Propagation returns from the
-source function and keeps error identity. Do not hide work in function wrappers
-or reject valid source to avoid lowering it.
+source function. `!!` returns the same error interface value; `!` wraps it once
+with the specified call name. Do not hide work in function wrappers or reject
+valid source to avoid lowering it.
 
 ## Evidence and alternatives
 
