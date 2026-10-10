@@ -1124,7 +1124,12 @@ func (b *loweringPlanBuilder) assignmentPlace(expression ast.Expr) *plannedPlace
 			place.base = b.assignmentPlace(node.X)
 		}
 	case *ast.IndexExpr:
-		containerType := types.Unalias(b.expressionType(node.X))
+		containerPlan := b.expression(node.X)
+		containerType := containerPlan.typ
+		if !validPlannedType(containerType) && len(containerPlan.results) == 1 {
+			containerType = containerPlan.results[0].typ
+		}
+		containerType = types.Unalias(containerType)
 		if named, ok := containerType.(*types.Named); ok {
 			containerType = named.Underlying()
 		}
@@ -1137,11 +1142,11 @@ func (b *loweringPlanBuilder) assignmentPlace(expression ast.Expr) *plannedPlace
 			place.base = b.derefPlace(node.X)
 		case *types.Slice:
 			place.kind = planSliceIndexPlace
-			place.container = b.expression(node.X)
+			place.container = containerPlan
 			place.values = append(place.values, b.newValue(place.container.typ, node.X.Pos()))
 		case *types.Map:
 			place.kind = planMapIndexPlace
-			place.container = b.expression(node.X)
+			place.container = containerPlan
 			place.values = append(place.values, b.newValue(place.container.typ, node.X.Pos()))
 		}
 		place.index = b.expression(node.Index)
