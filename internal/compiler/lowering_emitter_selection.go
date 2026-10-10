@@ -11,7 +11,10 @@ func (e *loweringEmitter) switchStatement(
 ) {
 	node := operation.source.(*ast.SwitchStmt)
 	target := output
-	if operation.init != nil {
+	if operation.init != nil && !blockHasPlannedWork(operation.init) &&
+		len(operation.init.operations) == 1 {
+		node.Init = operation.init.operations[0].source
+	} else if operation.init != nil {
 		wrapper := &ast.BlockStmt{}
 		e.operations(operation.init, wrapper)
 		node.Init = nil

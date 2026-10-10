@@ -21,7 +21,11 @@ type plannedPlace struct {
 	id       placeID
 	typ      types.Type
 	position token.Pos
+	source   ast.Expr
 	operands []*plannedExpression
+	values   []plannedValue
+	preserve []bool
+	address  []bool
 }
 
 type plannedBlock struct {
@@ -69,10 +73,22 @@ type plannedOperation struct {
 	errorValue     valueID
 	metadata       *propagationSource
 	operator       token.Token
+	preferred      string
 	communications []*plannedCommunication
 	headerBindings []plannedHeaderBinding
 	binding        *plannedOperation
 	after          *plannedBlock
+	declarations   []*plannedDeclaration
+	failureCommas  []token.Pos
+	labelHasGoto   bool
+}
+
+type plannedDeclaration struct {
+	source      *ast.ValueSpec
+	expressions []*plannedExpression
+	before      *plannedBlock
+	binding     *plannedOperation
+	after       *plannedBlock
 }
 
 type plannedCommunication struct {
@@ -126,6 +142,16 @@ type plannedExpression struct {
 	materialized  valueID
 	resultNames   []*ast.Ident
 	builtins      []*plannedBuiltin
+	exact         *plannedExactComprehension
+}
+
+type plannedExactComprehension struct {
+	makeCall   *ast.CallExpr
+	outer      *ast.RangeStmt
+	assignment *ast.AssignStmt
+	appendCall *ast.CallExpr
+	source     plannedValue
+	position   token.Pos
 }
 
 type plannedBuiltin struct {
@@ -150,6 +176,7 @@ type loweringPlanBuilder struct {
 	nextTarget   targetID
 	bindings     map[types.Object]types.Type
 	currentScope scopeID
+	gotos        map[string]bool
 }
 
 func buildFunctionLoweringPlan(
@@ -161,6 +188,7 @@ func buildFunctionLoweringPlan(
 	builder := &loweringPlanBuilder{
 		unit: unit, source: source, function: function, plan: plan,
 		bindings: make(map[types.Object]types.Type),
+		gotos:    functionGotoLabels(function.body),
 	}
 	plan.root = builder.block(function.body.List)
 	return plan
@@ -278,15 +306,61 @@ func (b *loweringPlanBuilder) statement(statement ast.Stmt) *plannedOperation {
 		operation.kind = planLabeledStatement
 		operation.target = b.target()
 		operation.body = b.block([]ast.Stmt{node.Stmt})
+		operation.labelHasGoto = b.gotos[node.Label.Name]
 	default:
-		operation.expressions = b.statementExpressions(statement)
-		operation.before = b.orderExpressions(operation.expressions)
+		if declaration, ok := statement.(*ast.DeclStmt); ok {
+			operation.declarations = b.declarationPlans(declaration)
+			for _, specification := range operation.declarations {
+				operation.expressions = append(operation.expressions, specification.expressions...)
+			}
+		} else {
+			operation.expressions = b.statementExpressions(statement)
+			operation.before = b.orderExpressions(operation.expressions)
+		}
 		if assignment, ok := statement.(*ast.AssignStmt); ok {
 			operation.places = b.assignmentPlaces(assignment.Lhs...)
 		}
 		b.directStatementBinding(operation)
 	}
+	if returned, ok := statement.(*ast.ReturnStmt); ok {
+		operation.failureCommas = append(operation.failureCommas, b.source.FailureReturns[returned]...)
+	}
 	return operation
+}
+
+func (b *loweringPlanBuilder) declarationPlans(
+	statement *ast.DeclStmt,
+) []*plannedDeclaration {
+	general, ok := statement.Decl.(*ast.GenDecl)
+	if !ok {
+		return nil
+	}
+	result := []*plannedDeclaration(nil)
+	for _, item := range general.Specs {
+		value, ok := item.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+		planned := &plannedDeclaration{
+			source: value, expressions: b.expressionList(value.Values),
+		}
+		planned.before = b.orderExpressions(planned.expressions)
+		temporarySource := &ast.DeclStmt{Decl: &ast.GenDecl{
+			Tok: general.Tok, Specs: []ast.Spec{value},
+		}}
+		temporary := &plannedOperation{
+			source: temporarySource, expressions: planned.expressions,
+		}
+		b.directStatementBinding(temporary)
+		planned.binding, planned.after = temporary.binding, temporary.after
+		result = append(result, planned)
+		targets := make([]ast.Expr, len(value.Names))
+		for index, name := range value.Names {
+			targets[index] = name
+		}
+		b.bindExpressions(targets, value.Values)
+	}
+	return result
 }
 
 func (b *loweringPlanBuilder) directStatementBinding(operation *plannedOperation) {
@@ -314,7 +388,7 @@ func (b *loweringPlanBuilder) directStatementBinding(operation *plannedOperation
 			return
 		}
 		value, ok := declaration.Specs[0].(*ast.ValueSpec)
-		if !ok || len(value.Values) != 1 {
+		if !ok || value.Type != nil || len(value.Values) != 1 {
 			return
 		}
 		targets = len(value.Names)
@@ -597,6 +671,29 @@ func (b *loweringPlanBuilder) expression(expression ast.Expr) *plannedExpression
 							result.builtins = append(result.builtins, &plannedBuiltin{
 								call: appendCall, name: "append", position: metadata.Position,
 							})
+							if len(makeCall.Args) == 2 && len(function.Body.List) == 3 &&
+								len(outer.Body.List) == 1 &&
+								underlyingSlice(b.expressionType(outer.X)) != nil &&
+								underlyingSlice(b.expressionType(makeCall.Args[0])) != nil {
+								for _, operation := range result.work.operations {
+									if operation.source != outer || len(operation.expressions) != 1 {
+										continue
+									}
+									sourcePlan := operation.expressions[0]
+									sourceValue := b.newValue(sourcePlan.typ, outer.X.Pos())
+									sourcePlan.materialized = sourceValue.id
+									result.work.operations = append([]*plannedOperation{{
+										kind: planEvaluate, expressions: []*plannedExpression{sourcePlan},
+										outputs: []valueID{sourceValue.id}, preferred: "source",
+									}}, result.work.operations...)
+									result.exact = &plannedExactComprehension{
+										makeCall: makeCall, outer: outer, assignment: assignment,
+										appendCall: appendCall, source: sourceValue,
+										position: metadata.Position,
+									}
+									break
+								}
+							}
 						}
 					}
 				}
@@ -791,7 +888,29 @@ func (b *loweringPlanBuilder) assignmentPlaces(expressions ...ast.Expr) []*plann
 		}
 		place := &plannedPlace{
 			id: placeID(len(b.plan.places) + 1), typ: b.expressionType(expression),
-			position: expression.Pos(), operands: b.placeOperands(expression),
+			position: expression.Pos(), source: expression, operands: b.placeOperands(expression),
+		}
+		for index, operand := range place.operands {
+			address := false
+			if indexed, ok := expression.(*ast.IndexExpr); ok && index == 0 {
+				address = admitsArray(b.expressionType(indexed.X)) &&
+					b.unit.info.Types[indexed.X].Addressable()
+			}
+			if selector, ok := expression.(*ast.SelectorExpr); ok && index == 0 {
+				_, pointer := types.Unalias(b.expressionType(selector.X)).(*types.Pointer)
+				address = !pointer && b.unit.info.Types[selector.X].Addressable()
+			}
+			place.address = append(place.address, address)
+			place.preserve = append(place.preserve, false)
+			if operand.typ == nil {
+				place.values = append(place.values, plannedValue{})
+				continue
+			}
+			typ := operand.typ
+			if address {
+				typ = types.NewPointer(typ)
+			}
+			place.values = append(place.values, b.newValue(typ, operand.source.Pos()))
 		}
 		b.plan.places = append(b.plan.places, place)
 		result = append(result, place)

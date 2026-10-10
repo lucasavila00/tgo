@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"go/types"
 	"strconv"
@@ -16,6 +17,7 @@ type loweringEmitter struct {
 	names    map[string]bool
 	values   map[valueID]*ast.Ident
 	fmtAlias string
+	hoisted  []ast.Stmt
 }
 
 func newLoweringEmitter(
@@ -66,8 +68,12 @@ func (e *loweringEmitter) expression(
 		e.operations(plan.work, block)
 		if plan.kind == planComprehensionExpression {
 			for _, builtin := range plan.builtins {
+				if plan.exact != nil && builtin.call == plan.exact.appendCall {
+					continue
+				}
 				builtin.call.Fun = e.unit.generatedUniverse(builtin.name, builtin.position)
 			}
+			e.applyExactComprehension(plan)
 		}
 		if len(plan.results) == 1 {
 			return e.valueName(plan.results[0].id, "result")
@@ -120,6 +126,25 @@ func (e *loweringEmitter) expression(
 	return plan.source
 }
 
+func (e *loweringEmitter) applyExactComprehension(plan *plannedExpression) {
+	if plan.exact == nil {
+		return
+	}
+	source := e.valueName(plan.exact.source.id, "source")
+	plan.exact.makeCall.Args[1] = call(
+		e.unit.generatedUniverse("len", plan.exact.position), source,
+	)
+	index, ok := plan.exact.outer.Key.(*ast.Ident)
+	if !ok || index.Name == "_" {
+		index = e.freshName("index")
+		plan.exact.outer.Key = index
+	}
+	plan.exact.assignment.Lhs[0] = &ast.IndexExpr{
+		X: plan.exact.assignment.Lhs[0], Index: index,
+	}
+	plan.exact.assignment.Rhs[0] = plan.exact.appendCall.Args[1]
+}
+
 func (e *loweringEmitter) operations(plan *plannedBlock, output *ast.BlockStmt) {
 	for _, operation := range plan.operations {
 		e.operation(operation, output)
@@ -129,7 +154,7 @@ func (e *loweringEmitter) operations(plan *plannedBlock, output *ast.BlockStmt) 
 func (e *loweringEmitter) emit() {
 	body := &ast.BlockStmt{Lbrace: e.plan.function.body.Lbrace, Rbrace: e.plan.function.body.Rbrace}
 	e.operations(e.plan.root, body)
-	e.plan.function.body.List = body.List
+	e.plan.function.body.List = append(e.hoisted, body.List...)
 }
 
 func (e *loweringEmitter) operation(
@@ -170,7 +195,7 @@ func (e *loweringEmitter) operation(
 		expression.materialized = materialized
 		if len(operation.outputs) != 0 {
 			output.List = append(output.List, &ast.AssignStmt{
-				Lhs: []ast.Expr{e.valueName(operation.outputs[0], "operand")},
+				Lhs: []ast.Expr{e.valueName(operation.outputs[0], operation.preferredName())},
 				Tok: token.DEFINE, Rhs: []ast.Expr{value},
 			})
 		}
@@ -214,28 +239,124 @@ func (e *loweringEmitter) operation(
 	}
 }
 
+func (operation *plannedOperation) preferredName() string {
+	if operation.preferred != "" {
+		return operation.preferred
+	}
+	return "operand"
+}
+
 func (e *loweringEmitter) labeledStatement(
 	operation *plannedOperation,
 	output *ast.BlockStmt,
 ) {
 	node := operation.source.(*ast.LabeledStmt)
+	if e.labeledDeclaration(operation, node, output) {
+		return
+	}
 	body := &ast.BlockStmt{}
 	e.operations(operation.body, body)
 	if len(body.List) == 0 {
 		return
 	}
-	last := len(body.List) - 1
-	switch body.List[last].(type) {
+	if len(body.List) == 1 && body.List[0] == node.Stmt {
+		output.List = append(output.List, node)
+		return
+	}
+	container := body
+	if len(body.List) == 1 {
+		if block, ok := body.List[0].(*ast.BlockStmt); ok {
+			container = block
+		}
+	}
+	last := len(container.List) - 1
+	switch container.List[last].(type) {
 	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt,
 		*ast.TypeSwitchStmt, *ast.SelectStmt:
-		body.List[last] = &ast.LabeledStmt{
-			Label: node.Label, Colon: node.Colon, Stmt: body.List[last],
+		label := node.Label
+		if operation.labelHasGoto {
+			control := e.freshName("control")
+			rewriteControlBranches(container.List[last], node.Label.Name, control.Name)
+			label = control
 		}
-		output.List = append(output.List, body.List...)
+		container.List[last] = &ast.LabeledStmt{
+			Label: label, Colon: node.Colon, Stmt: container.List[last],
+		}
+		if operation.labelHasGoto {
+			node.Stmt = oneStatement(body.List)
+			output.List = append(output.List, node)
+		} else {
+			output.List = append(output.List, body.List...)
+		}
 	default:
 		node.Stmt = oneStatement(body.List)
 		output.List = append(output.List, node)
 	}
+}
+
+func (e *loweringEmitter) labeledDeclaration(
+	operation *plannedOperation,
+	node *ast.LabeledStmt,
+	output *ast.BlockStmt,
+) bool {
+	if operation.body == nil || len(operation.body.operations) != 1 {
+		return false
+	}
+	planned := operation.body.operations[0]
+	assignment, ok := planned.source.(*ast.AssignStmt)
+	if !ok || assignment.Tok != token.DEFINE || planned.binding == nil ||
+		len(assignment.Lhs)+1 != len(planned.binding.outputs) {
+		return false
+	}
+	block := &ast.BlockStmt{}
+	left := make([]ast.Expr, 0, len(planned.binding.outputs))
+	slots := make([]ast.Expr, 0, len(assignment.Lhs))
+	for index, target := range assignment.Lhs {
+		identifier, ok := target.(*ast.Ident)
+		if !ok {
+			return false
+		}
+		value := e.plannedValue(planned.binding.outputs[index])
+		zero, ok := e.zeroExpression(value.typ, nil, target.Pos())
+		if !ok {
+			return false
+		}
+		slot := e.freshName(identifier.Name)
+		e.hoisted = append(e.hoisted, &ast.AssignStmt{
+			Lhs: []ast.Expr{slot}, Tok: token.DEFINE, Rhs: []ast.Expr{zero},
+		})
+		e.values[value.id] = slot
+		left = append(left, ast.NewIdent(slot.Name))
+		slots = append(slots, ast.NewIdent(slot.Name))
+	}
+	errorID := planned.binding.outputs[len(planned.binding.outputs)-1]
+	errorName := e.valueName(errorID, "err")
+	errorType := e.unit.generatedUniverse("error", node.Colon)
+	e.hoisted = append(e.hoisted, &ast.DeclStmt{Decl: &ast.GenDecl{
+		Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{
+			Names: []*ast.Ident{errorName}, Type: errorType,
+		}},
+	}})
+	left = append(left, ast.NewIdent(errorName.Name))
+	call := e.expression(planned.binding.expressions[0], block)
+	block.List = append(block.List, &ast.AssignStmt{
+		Lhs: left, Tok: token.ASSIGN, Rhs: []ast.Expr{call},
+	})
+	e.operations(planned.after, block)
+	node.Stmt = block
+	output.List = append(output.List, node, &ast.AssignStmt{
+		Lhs: assignment.Lhs, Tok: token.DEFINE, Rhs: slots,
+	})
+	return true
+}
+
+func (e *loweringEmitter) plannedValue(id valueID) plannedValue {
+	for _, value := range e.plan.values {
+		if value.id == id {
+			return value
+		}
+	}
+	return plannedValue{}
 }
 
 func (e *loweringEmitter) typeSwitchStatement(
@@ -253,10 +374,19 @@ func (e *loweringEmitter) typeSwitchStatement(
 	}
 	if operation.test != nil && len(operation.test.operations) == 1 {
 		planned := operation.test.operations[0]
-		assignment, ok := planned.source.(*ast.AssignStmt)
-		if ok && len(planned.expressions) == 1 {
+		switch source := planned.source.(type) {
+		case *ast.AssignStmt:
+			if len(planned.expressions) != 1 {
+				break
+			}
+			assignment := source
 			assignment.Rhs = []ast.Expr{e.expression(planned.expressions[0], target)}
 			node.Assign = assignment
+		case *ast.ExprStmt:
+			if len(planned.expressions) == 1 {
+				source.X = e.expression(planned.expressions[0], target)
+				node.Assign = source
+			}
 		}
 	}
 	for index, item := range node.Body.List {
@@ -409,6 +539,14 @@ func (e *loweringEmitter) sourceStatement(
 	operation *plannedOperation,
 	output *ast.BlockStmt,
 ) {
+	if assignment, ok := operation.source.(*ast.AssignStmt); ok &&
+		len(operation.places) != 0 && operationHasExpressionWork(operation) {
+		left := make([]ast.Expr, 0, len(operation.places))
+		for _, place := range operation.places {
+			left = append(left, e.preparePlace(place, output))
+		}
+		assignment.Lhs = left
+	}
 	if operation.before != nil {
 		e.operations(operation.before, output)
 	}
@@ -417,6 +555,10 @@ func (e *loweringEmitter) sourceStatement(
 		results := make([]ast.Expr, 0, len(operation.expressions))
 		for _, expression := range operation.expressions {
 			results = append(results, e.expressionResults(expression, output)...)
+		}
+		if len(operation.failureCommas) != 0 {
+			results = e.failureResults(results, operation.failureCommas, output)
+			delete(e.source.FailureReturns, node)
 		}
 		node.Results = results
 		output.List = append(output.List, node)
@@ -450,6 +592,10 @@ func (e *loweringEmitter) sourceStatement(
 		node.Rhs = results
 		output.List = append(output.List, node)
 	case *ast.DeclStmt:
+		if len(operation.declarations) > 1 && declarationsHaveWork(operation.declarations) {
+			e.splitDeclaration(node, operation, output)
+			return
+		}
 		if operation.binding != nil {
 			declaration := node.Decl.(*ast.GenDecl)
 			value := declaration.Specs[0].(*ast.ValueSpec)
@@ -494,6 +640,170 @@ func (e *loweringEmitter) sourceStatement(
 			output.List = append(output.List, operation.source)
 		}
 	}
+}
+
+func operationHasExpressionWork(operation *plannedOperation) bool {
+	if operation.before != nil {
+		return true
+	}
+	for _, expression := range operation.expressions {
+		if plannedExpressionHasWork(expression) {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *loweringEmitter) failureResults(
+	results []ast.Expr,
+	commas []token.Pos,
+	output *ast.BlockStmt,
+) []ast.Expr {
+	if len(results) != 1 {
+		e.unit.failAt(commas[0], "failure return error expression must produce one value")
+		return results
+	}
+	if len(commas) >= e.plan.function.resultType.Len() {
+		index := e.plan.function.resultType.Len() - 1
+		if index < 0 {
+			index = 0
+		}
+		e.unit.failAt(commas[index], "failure return has more commas than preceding results")
+		return results
+	}
+	last := e.plan.function.resultType.Len() - 1
+	if last < 0 || !isPredeclaredError(e.plan.function.resultType.At(last).Type()) {
+		e.unit.failAt(commas[0], "failure return function must end in the Go error type")
+		return results
+	}
+	zeros := make([]ast.Expr, 0, len(commas)+1)
+	for index := range len(commas) {
+		typ := e.plan.function.resultType.At(index).Type()
+		typeExpression := e.plan.function.resultAST[index]
+		if value, ok := e.zeroExpression(typ, typeExpression, commas[0]); ok {
+			zeros = append(zeros, value)
+			continue
+		}
+		name := e.freshName("zero")
+		specification := &ast.ValueSpec{Names: []*ast.Ident{name}, Type: typeExpression}
+		e.unit.generatedValues[specification] = true
+		output.List = append(output.List, &ast.DeclStmt{Decl: &ast.GenDecl{
+			Tok: token.VAR, Specs: []ast.Spec{specification},
+		}})
+		zeros = append(zeros, name)
+	}
+	return append(zeros, results[0])
+}
+
+func declarationsHaveWork(declarations []*plannedDeclaration) bool {
+	for _, declaration := range declarations {
+		for _, expression := range declaration.expressions {
+			if plannedExpressionHasWork(expression) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (e *loweringEmitter) splitDeclaration(
+	node *ast.DeclStmt,
+	operation *plannedOperation,
+	output *ast.BlockStmt,
+) {
+	general := node.Decl.(*ast.GenDecl)
+	for index, planned := range operation.declarations {
+		value := planned.source
+		if value.Doc != nil {
+			for _, comment := range value.Doc.List {
+				comment.Slash = value.Pos() - 1
+			}
+		}
+		declaration := &ast.GenDecl{
+			TokPos: value.Pos(), Tok: general.Tok, Specs: []ast.Spec{value},
+		}
+		if index == 0 {
+			declaration.Doc = general.Doc
+		}
+		before := len(output.List)
+		if planned.before != nil {
+			e.operations(planned.before, output)
+		}
+		if planned.binding != nil {
+			value.Names = append(value.Names, e.valueName(
+				planned.binding.outputs[len(planned.binding.outputs)-1], "err",
+			))
+			value.Values = []ast.Expr{e.expression(planned.binding.expressions[0], output)}
+			output.List = append(output.List, &ast.DeclStmt{Decl: declaration})
+			e.operations(planned.after, output)
+		} else {
+			results := []ast.Expr(nil)
+			for _, expression := range planned.expressions {
+				results = append(results, e.expressionResults(expression, output)...)
+			}
+			value.Values = results
+			output.List = append(output.List, &ast.DeclStmt{Decl: declaration})
+		}
+		declarationIndex := len(output.List) - 1
+		for item := before; item < len(output.List); item++ {
+			if statement, ok := output.List[item].(*ast.DeclStmt); ok && statement.Decl == declaration {
+				declarationIndex = item
+				break
+			}
+		}
+		for _, statement := range output.List[before:declarationIndex] {
+			positionGeneratedStatement(statement, value.Pos())
+		}
+		positionGeneratedStatement(output.List[declarationIndex], value.Pos())
+		position := value.End()
+		if value.Comment != nil {
+			position = value.Comment.End() + 1
+		}
+		for _, statement := range output.List[declarationIndex+1:] {
+			positionGeneratedStatement(statement, position)
+		}
+	}
+}
+
+func (e *loweringEmitter) preparePlace(
+	place *plannedPlace,
+	output *ast.BlockStmt,
+) ast.Expr {
+	if place == nil {
+		return nil
+	}
+	operands := make([]ast.Expr, 0, len(place.operands))
+	for index, operand := range place.operands {
+		if place.address[index] {
+			address := &plannedExpression{
+				kind:     planUnaryExpression,
+				source:   &ast.UnaryExpr{Op: token.AND, X: operand.source},
+				typ:      place.values[index].typ,
+				operands: []*plannedExpression{operand},
+			}
+			pointer := e.emitTypedBind(place.values[index], address, output)
+			operands = append(operands, &ast.StarExpr{X: pointer})
+			continue
+		}
+		if place.preserve[index] {
+			operands = append(operands, e.expression(operand, output))
+			continue
+		}
+		operands = append(operands, e.emitTypedBind(place.values[index], operand, output))
+	}
+	switch node := place.source.(type) {
+	case *ast.ParenExpr:
+		if len(operands) != 0 {
+			node.X = operands[0]
+		}
+	case *ast.StarExpr:
+		node.X = operands[0]
+	case *ast.SelectorExpr:
+		node.X = operands[0]
+	case *ast.IndexExpr:
+		node.X, node.Index = operands[0], operands[1]
+	}
+	return place.source
 }
 
 func (e *loweringEmitter) bindSourceTargets(
@@ -549,10 +859,55 @@ func (e *loweringEmitter) emitTypedBind(
 		}
 	}
 	name := e.valueName(value.id, "operand")
-	output.List = append(output.List, &ast.AssignStmt{
-		Lhs: []ast.Expr{name}, Tok: token.DEFINE, Rhs: []ast.Expr{expression},
-	})
+	typeExpression := e.typeExpression(value.typ)
+	if typeExpression != nil {
+		output.List = append(output.List, &ast.DeclStmt{Decl: &ast.GenDecl{
+			Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{
+				Names: []*ast.Ident{name}, Type: typeExpression,
+				Values: []ast.Expr{expression},
+			}},
+		}})
+	} else {
+		output.List = append(output.List, &ast.AssignStmt{
+			Lhs: []ast.Expr{name}, Tok: token.DEFINE, Rhs: []ast.Expr{expression},
+		})
+	}
 	return ast.NewIdent(name.Name)
+}
+
+func (e *loweringEmitter) typeExpression(typ types.Type) ast.Expr {
+	if typ == nil {
+		return nil
+	}
+	text := types.TypeString(typ, func(pkg *types.Package) string {
+		if pkg == nil || pkg == e.unit.typed {
+			return ""
+		}
+		for _, specification := range e.source.File.Imports {
+			path, err := strconv.Unquote(specification.Path.Value)
+			if err != nil || path != pkg.Path() {
+				continue
+			}
+			if specification.Name == nil {
+				return pkg.Name()
+			}
+			if specification.Name.Name != "_" && specification.Name.Name != "." {
+				return specification.Name.Name
+			}
+		}
+		name := freshASTIdentifier(e.source.File, pkg.Name())
+		if name == pkg.Name() {
+			astutil.AddImport(e.unit.fs, e.source.File, pkg.Path())
+		} else {
+			astutil.AddNamedImport(e.unit.fs, e.source.File, name, pkg.Path())
+		}
+		return name
+	})
+	expression, err := parser.ParseExpr(text)
+	if err != nil {
+		return nil
+	}
+	return expression
 }
 
 func (e *loweringEmitter) expressionResults(
@@ -642,7 +997,11 @@ func (e *loweringEmitter) formatQualifier() string {
 		}
 		if specification.Name.Name == "_" {
 			e.fmtAlias = freshASTIdentifier(e.source.File, "fmt")
-			specification.Name = ast.NewIdent(e.fmtAlias)
+			if e.fmtAlias == "fmt" {
+				specification.Name = nil
+			} else {
+				specification.Name = ast.NewIdent(e.fmtAlias)
+			}
 			return e.fmtAlias
 		}
 		if specification.Name.Name == "." {
