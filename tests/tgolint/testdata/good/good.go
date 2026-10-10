@@ -569,3 +569,54 @@ func DefaultFallback(event model.Event) string {
 		return event.StoppedPayload().Reason
 	}
 }
+
+func UnusedPointerAlias(value *model.Event) string {
+	alias := value
+	_ = alias
+	if value.Tag() == model.EventTagStarted {
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func ReadOnlyPointerAlias(value *model.Event) string {
+	alias := value
+	if value.Tag() == model.EventTagStarted {
+		_ = alias.Tag()
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func ReboundPointerAlias(value, other *model.Event) string {
+	alias := value
+	alias = other
+	if value.Tag() == model.EventTagStarted {
+		*alias = model.NewEventStopped("changed")
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func ShadowedPointerAlias(value, other *model.Event) string {
+	alias := value
+	_ = alias
+	if value.Tag() == model.EventTagStarted {
+		{
+			alias := other
+			*alias = model.NewEventStopped("changed")
+		}
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func UnusedCapturedPointerAlias(value *model.Event) string {
+	alias := value
+	unused := func() { _ = alias }
+	_ = unused
+	if value.Tag() == model.EventTagStarted {
+		return value.StartedPayload().ID
+	}
+	return ""
+}

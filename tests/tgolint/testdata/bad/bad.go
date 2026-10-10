@@ -937,3 +937,85 @@ func InsufficientEarlyExitProof(event model.Event, ready bool) string {
 	}
 	return event.StartedPayload().ID
 }
+
+type EventPointerEnvelope struct {
+	Event *model.Event
+}
+
+func AliasBeforeIf(value *model.Event) string {
+	alias := value
+	if value.Tag() == model.EventTagStarted {
+		*alias = model.NewEventStopped("changed")
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func AliasAfterIf(value *model.Event) string {
+	if value.Tag() == model.EventTagStarted {
+		alias := value
+		*alias = model.NewEventStopped("changed")
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func AliasBeforeSwitch(value *model.Event) string {
+	alias := value
+	switch value.Tag() {
+	case model.EventTagStarted:
+		*alias = model.NewEventStopped("changed")
+		return value.StartedPayload().ID
+	case model.EventTagStopped:
+		return ""
+	default:
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
+	}
+}
+
+func PointerFieldAliasAfterSwitch(envelope EventPointerEnvelope) string {
+	switch envelope.Event.Tag() {
+	case model.EventTagStarted:
+		alias := envelope.Event
+		*alias = model.NewEventStopped("changed")
+		return envelope.Event.StartedPayload().ID
+	case model.EventTagStopped:
+		return ""
+	default:
+		panic("invalid Event tag") // unreachable: tgolint requires a case per tag
+	}
+}
+
+func BranchAliasWrite(value, other *model.Event, useValue bool) string {
+	alias := other
+	if useValue {
+		alias = value
+	}
+	if value.Tag() == model.EventTagStarted {
+		*alias = model.NewEventStopped("changed")
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func InvokedAliasClosure(value *model.Event) string {
+	alias := value
+	if value.Tag() == model.EventTagStarted {
+		func() { *alias = model.NewEventStopped("changed") }()
+		return value.StartedPayload().ID
+	}
+	return ""
+}
+
+func runAliasMutation(mutate func()) {
+	mutate()
+}
+
+func EscapedAliasClosure(value *model.Event) string {
+	alias := value
+	if value.Tag() == model.EventTagStarted {
+		runAliasMutation(func() { *alias = model.NewEventStopped("changed") })
+		return value.StartedPayload().ID
+	}
+	return ""
+}
