@@ -5,11 +5,12 @@ package tgolint
 import (
 	"fmt"
 	"go/types"
+	"sort"
 	"strconv"
 	"strings"
 )
 
-func storageCallInputKey(call storageGraphCall) string {
+func storageCallInputKey(call storageGraphCall, state storageState) string {
 	var text strings.Builder
 	constants := storageFunctionIntegerConstants(call)
 	for _, argument := range call.arguments {
@@ -19,6 +20,23 @@ func storageCallInputKey(call storageGraphCall) string {
 	text.WriteByte('|')
 	for _, capture := range call.captures {
 		writeStoragePathKey(&text, capture)
+		text.WriteByte(';')
+	}
+	var memory []string = nil
+	for path, value := range state.memory {
+		var item strings.Builder
+		writeStorageLocationKey(&item, path.location)
+		item.WriteString(path.path)
+		if path.wildcard {
+			item.WriteByte('*')
+		}
+		item.WriteByte('=')
+		writeStorageValueKey(&item, value, constants)
+		memory = append(memory, item.String())
+	}
+	sort.Strings(memory)
+	for _, item := range memory {
+		text.WriteString(item)
 		text.WriteByte(';')
 	}
 	return text.String()

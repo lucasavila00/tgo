@@ -331,7 +331,7 @@ func (c *checker) storageCallValues(
 			typeArguments: function.typeArguments,
 		}
 		input := storageCallInputState(state, arguments, function.captures)
-		updated, values := executeStorageGraph(graphCall, input)
+		updated, values, _ := executeStorageFunction(graphCall, input, flow.context)
 		updated = projectStorageCallerState(state, updated, values)
 		replaceStorageState(state, updated)
 		for index, value := range values {

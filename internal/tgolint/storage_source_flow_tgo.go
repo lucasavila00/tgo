@@ -155,8 +155,9 @@ func (c *checker) reportStorageFactCall(
 
 func (c *checker) buildStorageFlow(root *syntax.Node) *storageFlow {
 	flow := &storageFlow{
-		before: make(map[syntax.Node]storageState),
-		values: make(map[token.Pos][]storageValue),
+		before:  make(map[syntax.Node]storageState),
+		values:  make(map[token.Pos][]storageValue),
+		context: newStorageExecutionContext(),
 	}
 	body := genericFunctionBody(root)
 	if body == nil {

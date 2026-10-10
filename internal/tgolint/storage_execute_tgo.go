@@ -11,8 +11,9 @@ import (
 )
 
 type storageFlow struct {
-	before map[syntax.Node]storageState
-	values map[token.Pos][]storageValue
+	before  map[syntax.Node]storageState
+	values  map[token.Pos][]storageValue
+	context *storageExecutionContext
 }
 
 type storageExecutionState struct {
@@ -55,6 +56,7 @@ type storageExecutionContext struct {
 	active         map[storageCallKey]bool
 	reentered      map[storageCallKey]bool
 	approximations map[storageCallKey]storageExecutionResult
+	completed      map[storageCallKey]storageExecutionResult
 }
 
 func executeStorageGraph(
@@ -80,6 +82,7 @@ func newStorageExecutionContext() *storageExecutionContext {
 		active:         make(map[storageCallKey]bool),
 		reentered:      make(map[storageCallKey]bool),
 		approximations: make(map[storageCallKey]storageExecutionResult),
+		completed:      make(map[storageCallKey]storageExecutionResult),
 	}
 }
 
@@ -106,7 +109,10 @@ func executeStorageFunction(
 	}
 	key := storageCallKey{
 		fact: call.fact, function: call.function,
-		inputs: storageCallInputKey(call),
+		inputs: storageCallInputKey(call, state),
+	}
+	if result, ok := context.completed[key]; ok {
+		return cloneStorageState(result.storage), cloneStorageValues(result.returns), result.effects
 	}
 	if context.active[key] {
 		context.reentered[key] = true
@@ -131,6 +137,7 @@ func executeStorageFunction(
 			returns: cloneStorageValues(returns), effects: effects,
 		}
 		if !context.reentered[key] {
+			context.completed[key] = next
 			return next.storage, next.returns, next.effects
 		}
 		if initialized {
@@ -145,6 +152,7 @@ func executeStorageFunction(
 			next.effects.completed = previous.effects.completed || effects.completed
 		}
 		if initialized && reflect.DeepEqual(previous, next) {
+			context.completed[key] = next
 			return next.storage, next.returns, next.effects
 		}
 		previous = next
