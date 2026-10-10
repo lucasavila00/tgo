@@ -82,13 +82,40 @@ func (c %checker) propagateGenericSummary(
 		}{
 			{items: body.summary.zeroEffects, zero: true},
 			{items: body.summary.accessEffects, zero: false},
+		} {
+			for _, effect := range effects.items {
+				effect.MaySkip = effect.MaySkip || body.maySkip
+				changed = c.addReturnedGenericEffectAtDepth(
+					summary, effects.zero, 1, effect,
+				) || changed
+			}
+		}
+		for _, effects := range []struct {
+			items []GenericEffect
+			zero  bool
+		}{
 			{items: body.summary.returnedZeroEffects, zero: true},
 			{items: body.summary.returnedAccessEffects, zero: false},
 		} {
 			for _, effect := range effects.items {
 				effect.MaySkip = effect.MaySkip || body.maySkip
-				changed = c.addReturnedGenericEffect(
-					summary, effects.zero, effect,
+				changed = c.addReturnedGenericEffectAtDepth(
+					summary, effects.zero, 2, effect,
+				) || changed
+			}
+		}
+		for _, effects := range []struct {
+			items []GenericEffectAtDepth
+			zero  bool
+		}{
+			{items: body.summary.returnedZeroEffectsAtDepth, zero: true},
+			{items: body.summary.returnedAccessEffectsAtDepth, zero: false},
+		} {
+			for _, item := range effects.items {
+				effect := item.Effect
+				effect.MaySkip = effect.MaySkip || body.maySkip
+				changed = c.addReturnedGenericEffectAtDepth(
+					summary, effects.zero, item.CallDepth+1, effect,
 				) || changed
 			}
 		}
@@ -107,13 +134,27 @@ func (c %checker) propagateGenericSummary(
 		changed = c.propagateGenericEffects(
 			summary, returned.expression, returned.expression,
 			fact.ReturnedZeroEffects,
-			receiverArguments, typeArguments, true, true, returned.maySkip,
+			receiverArguments, typeArguments, true, 1, returned.maySkip,
 		) || changed
 		changed = c.propagateGenericEffects(
 			summary, returned.expression, returned.expression,
 			fact.ReturnedAccessEffects,
-			receiverArguments, typeArguments, false, true, returned.maySkip,
+			receiverArguments, typeArguments, false, 1, returned.maySkip,
 		) || changed
+		for _, item := range fact.ReturnedZeroEffectsAtDepth {
+			changed = c.propagateGenericEffects(
+				summary, returned.expression, returned.expression,
+				[]GenericEffect{item.Effect}, receiverArguments, typeArguments,
+				true, item.CallDepth, returned.maySkip,
+			) || changed
+		}
+		for _, item := range fact.ReturnedAccessEffectsAtDepth {
+			changed = c.propagateGenericEffects(
+				summary, returned.expression, returned.expression,
+				[]GenericEffect{item.Effect}, receiverArguments, typeArguments,
+				false, item.CallDepth, returned.maySkip,
+			) || changed
+		}
 	}
 	return changed
 }
@@ -146,11 +187,11 @@ func (c %checker) propagateGenericSummaryCalls(
 		}
 		changed = c.propagateGenericEffects(
 			summary, call, call, fact.ZeroEffects, receiverArguments, typeArguments,
-			true, false, false,
+			true, 0, false,
 		) || changed
 		changed = c.propagateGenericEffects(
 			summary, call, call, fact.AccessEffects, receiverArguments, typeArguments,
-			false, false, false,
+			false, 0, false,
 		) || changed
 	}
 	return changed
@@ -225,23 +266,21 @@ func (c %checker) propagateGenericValueEffects(
 	maySkip bool,
 ) bool {
 	conditionCall := expression
-	zeroEffects := value.fact.ZeroEffects
-	accessEffects := value.fact.AccessEffects
-	if value.returned {
+	zeroEffects := genericFactEffectsAtDepth(value.fact, value.callDepth, true)
+	accessEffects := genericFactEffectsAtDepth(value.fact, value.callDepth, false)
+	if value.callDepth > 0 {
 		if value.conditionCall == nil {
 			return false
 		}
 		conditionCall = value.conditionCall
-		zeroEffects = value.fact.ReturnedZeroEffects
-		accessEffects = value.fact.ReturnedAccessEffects
 	}
 	changed := c.propagateGenericEffects(
 		summary, expression, conditionCall, zeroEffects,
-		value.receiverArguments, value.typeArguments, true, false, maySkip,
+		value.receiverArguments, value.typeArguments, true, 0, maySkip,
 	)
 	return c.propagateGenericEffects(
 		summary, expression, conditionCall, accessEffects,
-		value.receiverArguments, value.typeArguments, false, false, maySkip,
+		value.receiverArguments, value.typeArguments, false, 0, maySkip,
 	) || changed
 }
 
@@ -263,7 +302,7 @@ func (c %checker) propagateGenericEffects(
 	receiverArguments []types.Type,
 	typeArguments []types.Type,
 	zero bool,
-	returned bool,
+	returnedDepth int,
 	additionalMaySkip bool,
 ) bool {
 	changed := false
@@ -283,10 +322,12 @@ func (c %checker) propagateGenericEffects(
 		}
 		mapped.MaySkip = mapped.MaySkip || additionalMaySkip
 		for parameter := range parameters {
-			if returned {
+			if returnedDepth > 0 {
 				mapped.Receiver = parameter.receiver
 				mapped.TypeParameter = parameter.index
-				changed = c.addReturnedGenericEffect(summary, zero, mapped) || changed
+				changed = c.addReturnedGenericEffectAtDepth(
+					summary, zero, returnedDepth, mapped,
+				) || changed
 			} else {
 				changed = c.addGenericEffect(summary, zero, parameter, mapped) || changed
 			}
@@ -494,6 +535,12 @@ func (summary %genericEffectSummary) effects() GenericEffectFact {
 		ReturnedAccessEffects: append(
 			[]GenericEffect(nil), summary.returnedAccessEffects...,
 		),
+		ReturnedZeroEffectsAtDepth: append(
+			[]GenericEffectAtDepth(nil), summary.returnedZeroEffectsAtDepth...,
+		),
+		ReturnedAccessEffectsAtDepth: append(
+			[]GenericEffectAtDepth(nil), summary.returnedAccessEffectsAtDepth...,
+		),
 	}
 }
 
@@ -504,46 +551,63 @@ func (summary %genericEffectSummary) fact() GenericEffectFact {
 	sortGenericEffects(effects.AccessEffects)
 	sortGenericEffects(effects.ReturnedZeroEffects)
 	sortGenericEffects(effects.ReturnedAccessEffects)
+	sortGenericEffectsAtDepth(effects.ReturnedZeroEffectsAtDepth)
+	sortGenericEffectsAtDepth(effects.ReturnedAccessEffectsAtDepth)
 	return effects
 }
 
 func (fact GenericEffectFact) hasEffects() bool {
 	return len(fact.ZeroEffects) != 0 || len(fact.AccessEffects) != 0 ||
-		len(fact.ReturnedZeroEffects) != 0 || len(fact.ReturnedAccessEffects) != 0
+		len(fact.ReturnedZeroEffects) != 0 || len(fact.ReturnedAccessEffects) != 0 ||
+		len(fact.ReturnedZeroEffectsAtDepth) != 0 ||
+		len(fact.ReturnedAccessEffectsAtDepth) != 0
 }
 
 func sortGenericEffects(effects []GenericEffect) {
 	sort.Slice(effects, func(left, right int) bool {
-		if effects[left].Receiver != effects[right].Receiver {
-			return !effects[left].Receiver
-		}
-		if effects[left].TypeParameter != effects[right].TypeParameter {
-			return effects[left].TypeParameter < effects[right].TypeParameter
-		}
-		if effects[left].MaySkip != effects[right].MaySkip {
-			return !effects[left].MaySkip
-		}
-		if len(effects[left].Conditions) != len(effects[right].Conditions) {
-			return len(effects[left].Conditions) < len(effects[right].Conditions)
-		}
-		for index := range effects[left].Conditions {
-			leftCondition := effects[left].Conditions[index]
-			rightCondition := effects[right].Conditions[index]
-			if leftCondition.ValueParameter != rightCondition.ValueParameter {
-				return leftCondition.ValueParameter < rightCondition.ValueParameter
-			}
-			leftKind := leftCondition.Kind.Tag()
-			rightKind := rightCondition.Kind.Tag()
-			if leftKind != rightKind {
-				return leftKind < rightKind
-			}
-			if leftCondition.OtherParameter != rightCondition.OtherParameter {
-				return leftCondition.OtherParameter < rightCondition.OtherParameter
-			}
-			if leftCondition.Expected != rightCondition.Expected {
-				return !leftCondition.Expected
-			}
-		}
-		return false
+		return genericEffectLess(effects[left], effects[right])
 	})
+}
+
+func sortGenericEffectsAtDepth(effects []GenericEffectAtDepth) {
+	sort.Slice(effects, func(left, right int) bool {
+		if effects[left].CallDepth != effects[right].CallDepth {
+			return effects[left].CallDepth < effects[right].CallDepth
+		}
+		return genericEffectLess(effects[left].Effect, effects[right].Effect)
+	})
+}
+
+func genericEffectLess(left GenericEffect, right GenericEffect) bool {
+	if left.Receiver != right.Receiver {
+		return !left.Receiver
+	}
+	if left.TypeParameter != right.TypeParameter {
+		return left.TypeParameter < right.TypeParameter
+	}
+	if left.MaySkip != right.MaySkip {
+		return !left.MaySkip
+	}
+	if len(left.Conditions) != len(right.Conditions) {
+		return len(left.Conditions) < len(right.Conditions)
+	}
+	for index := range left.Conditions {
+		leftCondition := left.Conditions[index]
+		rightCondition := right.Conditions[index]
+		if leftCondition.ValueParameter != rightCondition.ValueParameter {
+			return leftCondition.ValueParameter < rightCondition.ValueParameter
+		}
+		leftKind := leftCondition.Kind.Tag()
+		rightKind := rightCondition.Kind.Tag()
+		if leftKind != rightKind {
+			return leftKind < rightKind
+		}
+		if leftCondition.OtherParameter != rightCondition.OtherParameter {
+			return leftCondition.OtherParameter < rightCondition.OtherParameter
+		}
+		if leftCondition.Expected != rightCondition.Expected {
+			return !leftCondition.Expected
+		}
+	}
+	return false
 }

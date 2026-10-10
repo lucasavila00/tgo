@@ -18,10 +18,12 @@ import (
 // GenericEffectFact carries generic effects between analysis packages.
 
 type GenericEffectFact struct {
-	ZeroEffects           []GenericEffect
-	AccessEffects         []GenericEffect
-	ReturnedZeroEffects   []GenericEffect
-	ReturnedAccessEffects []GenericEffect
+	ZeroEffects                  []GenericEffect
+	AccessEffects                []GenericEffect
+	ReturnedZeroEffects          []GenericEffect
+	ReturnedAccessEffects        []GenericEffect
+	ReturnedZeroEffectsAtDepth   []GenericEffectAtDepth
+	ReturnedAccessEffectsAtDepth []GenericEffectAtDepth
 }
 
 // AFact marks GenericEffectFact as a Go analysis fact.
@@ -487,6 +489,13 @@ type GenericEffect struct {
 	MaySkip       bool
 }
 
+// GenericEffectAtDepth records an effect after more than one returned call.
+
+type GenericEffectAtDepth struct {
+	CallDepth int
+	Effect    GenericEffect
+}
+
 // GenericEffectCondition describes one value condition for a generic effect.
 
 type GenericEffectCondition struct {
@@ -497,20 +506,22 @@ type GenericEffectCondition struct {
 }
 
 type genericEffectSummary struct {
-	function              *types.Func
-	file                  *syntax.File
-	declaration           *syntax.FunctionDeclaration
-	parameters            map[*types.TypeParam]zeroParameter
-	zeroEffects           []GenericEffect
-	accessEffects         []GenericEffect
-	returnedZeroEffects   []GenericEffect
-	returnedAccessEffects []GenericEffect
-	calls                 []*syntax.Expression
-	returnedCalls         []returnedGenericCall
-	returnedBodies        []returnedGenericBody
-	reachable             map[syntax.Node]bool
-	root                  *syntax.Node
-	body                  *syntax.BlockStatement
+	function                     *types.Func
+	file                         *syntax.File
+	declaration                  *syntax.FunctionDeclaration
+	parameters                   map[*types.TypeParam]zeroParameter
+	zeroEffects                  []GenericEffect
+	accessEffects                []GenericEffect
+	returnedZeroEffects          []GenericEffect
+	returnedAccessEffects        []GenericEffect
+	returnedZeroEffectsAtDepth   []GenericEffectAtDepth
+	returnedAccessEffectsAtDepth []GenericEffectAtDepth
+	calls                        []*syntax.Expression
+	returnedCalls                []returnedGenericCall
+	returnedBodies               []returnedGenericBody
+	reachable                    map[syntax.Node]bool
+	root                         *syntax.Node
+	body                         *syntax.BlockStatement
 }
 
 type returnedGenericCall struct {
@@ -598,7 +609,10 @@ func (c *checker) collectGenericZeroSummaries() map[*types.Func]*genericEffectSu
 			summary := &genericEffectSummary{
 				function: object, file: file, declaration: function, parameters: parameters,
 				zeroEffects: nil, accessEffects: nil, returnedZeroEffects: nil,
-				returnedAccessEffects: nil, calls: nil, returnedCalls: nil,
+				returnedAccessEffects:        nil,
+				returnedZeroEffectsAtDepth:   nil,
+				returnedAccessEffectsAtDepth: nil,
+				calls:                        nil, returnedCalls: nil,
 				returnedBodies: nil,
 				reachable:      c.reachableNodes(function.Body), root: &root,
 				body: function.Body,

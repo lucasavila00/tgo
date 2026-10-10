@@ -23,6 +23,14 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 		AccessEffects:         nil,
 		ReturnedZeroEffects:   nil,
 		ReturnedAccessEffects: nil,
+		ReturnedZeroEffectsAtDepth: []GenericEffectAtDepth{{
+			CallDepth: 2,
+			Effect: GenericEffect{
+				Receiver: false, TypeParameter: 0,
+				Conditions: nil, MaySkip: true,
+			},
+		}},
+		ReturnedAccessEffectsAtDepth: nil,
 	}
 	data := *new(bytes.Buffer)
 	if err := gob.NewEncoder(&data).Encode(want); err != nil {
@@ -34,6 +42,11 @@ func TestGenericEffectFactGobRoundTrip(t *testing.T) {
 	}
 	if len(got.ZeroEffects) != 1 || len(got.ZeroEffects[0].Conditions) != 1 {
 		t.Fatalf("decoded fact = %#v", got)
+	}
+	if len(got.ReturnedZeroEffectsAtDepth) != 1 ||
+		got.ReturnedZeroEffectsAtDepth[0].CallDepth != 2 ||
+		!got.ReturnedZeroEffectsAtDepth[0].Effect.MaySkip {
+		t.Fatalf("decoded returned fact = %#v", got.ReturnedZeroEffectsAtDepth)
 	}
 	condition := got.ZeroEffects[0].Conditions[0]
 	if condition.Kind.Tag() != EffectKindTagBoolean || !condition.Expected ||

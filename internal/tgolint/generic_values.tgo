@@ -13,7 +13,7 @@ type genericValue struct {
 	receiverArguments []types.Type
 	typeArguments     []types.Type
 	conditionCall     *syntax.Expression
-	returned          bool
+	callDepth         int
 }
 
 type genericValueBinding struct {
@@ -154,20 +154,28 @@ func (c %checker) genericValue(
 	expression %syntax.Expression,
 	summaries map[*types.Func]%genericEffectSummary,
 ) (genericValue, bool) {
-	if callExpression := unparenthesized(expression); syntax.CallExpressionOf(callExpression) != nil {
+	callExpression := unparenthesized(expression)
+	if call := syntax.CallExpressionOf(callExpression); call != nil {
 		function, receiverArguments, typeArguments := c.genericCall(callExpression)
-		if function == nil {
+		if function != nil {
+			fact := c.genericZeroFact(function, summaries)
+			if genericFactHasEffectsAtOrAfter(fact, 1) {
+				return genericValue{
+					function: function, fact: fact,
+					receiverArguments: receiverArguments,
+					typeArguments:     typeArguments, conditionCall: callExpression,
+					callDepth: 1,
+				}, true
+			}
 			return noGenericValue(), false
 		}
-		fact := c.genericZeroFact(function, summaries)
-		if fact != nil &&
-			(len(fact.ReturnedZeroEffects) != 0 || len(fact.ReturnedAccessEffects) != 0) {
-			return genericValue{
-				function: function, fact: fact,
-				receiverArguments: receiverArguments,
-				typeArguments:     typeArguments, conditionCall: callExpression,
-				returned: true,
-			}, true
+		value, found := c.genericValue(call.Callee, summaries)
+		if !found {
+			return noGenericValue(), false
+		}
+		value.callDepth++
+		if genericFactHasEffectsAtOrAfter(value.fact, value.callDepth) {
+			return value, true
 		}
 		return noGenericValue(), false
 	}
@@ -192,7 +200,7 @@ func (c %checker) genericValue(
 		receiverArguments: c.receiverTypeArguments(expression),
 		typeArguments:     typeArguments,
 		conditionCall:     nil,
-		returned:          false,
+		callDepth:         0,
 	}, true
 }
 
@@ -207,7 +215,7 @@ func (c %checker) reportDirectGenericValueEscape(
 		return
 	}
 	value, ok := c.genericValue(expression, summaries)
-	if ok && !value.returned {
+	if ok && value.callDepth == 0 {
 		c.reportGenericValueEscape(expression, value)
 	}
 }
@@ -234,7 +242,7 @@ func (c %checker) reportReturnedGenericCall(
 	sources map[*syntax.Expression]bool,
 ) {
 	value, ok := c.genericValue(expression, summaries)
-	if !ok || !value.returned || sources[expression] {
+	if !ok || value.callDepth == 0 || sources[expression] {
 		return
 	}
 	if invocation := c.directCallOf(expression); invocation != nil {
@@ -378,16 +386,14 @@ func (c %checker) reportGenericValueCall(
 		return
 	}
 	conditionCall := expression
-	effectsZero := value.fact.ZeroEffects
-	effectsAccess := value.fact.AccessEffects
+	effectsZero := genericFactEffectsAtDepth(value.fact, value.callDepth, true)
+	effectsAccess := genericFactEffectsAtDepth(value.fact, value.callDepth, false)
 	description := "call to " + value.function.Name()
-	if value.returned {
+	if value.callDepth > 0 {
 		if value.conditionCall == nil {
 			return
 		}
 		conditionCall = value.conditionCall
-		effectsZero = value.fact.ReturnedZeroEffects
-		effectsAccess = value.fact.ReturnedAccessEffects
 		description = "call to function returned by " + value.function.Name()
 	}
 	c.reportGenericEffects(expression, conditionCall, effectsZero,
@@ -402,7 +408,7 @@ func (c %checker) reportGenericValueEscape(position *syntax.Expression, value ge
 		return
 	}
 	description := "generic tgo function value " + value.function.Name()
-	if value.returned {
+	if value.callDepth > 0 {
 		description = "function returned by " + value.function.Name()
 	}
 	c.reportResult(
@@ -413,11 +419,8 @@ func (c %checker) reportGenericValueEscape(position *syntax.Expression, value ge
 }
 
 func (c %checker) genericValueAffectsModel(value genericValue) bool {
-	zeroEffects, accessEffects := value.fact.ZeroEffects, value.fact.AccessEffects
-	if value.returned {
-		zeroEffects = value.fact.ReturnedZeroEffects
-		accessEffects = value.fact.ReturnedAccessEffects
-	}
+	zeroEffects := genericFactEffectsAtOrAfter(value.fact, value.callDepth, true)
+	accessEffects := genericFactEffectsAtOrAfter(value.fact, value.callDepth, false)
 	for _, effect := range zeroEffects {
 		if c.genericEffectModel(effect, value.receiverArguments, value.typeArguments, true) != nil {
 			return true
@@ -456,6 +459,74 @@ func (c %checker) calledDirectly(expression %syntax.Expression) bool {
 func noGenericValue() genericValue {
 	return genericValue{
 		function: nil, fact: nil, receiverArguments: nil, typeArguments: nil,
-		conditionCall: nil, returned: false,
+		conditionCall: nil, callDepth: 0,
 	}
+}
+
+func genericFactHasEffectsAtOrAfter(fact *GenericEffectFact, callDepth int) bool {
+	return len(genericFactEffectsAtOrAfter(fact, callDepth, true)) != 0 ||
+		len(genericFactEffectsAtOrAfter(fact, callDepth, false)) != 0
+}
+
+func genericFactEffectsAtDepth(
+	fact *GenericEffectFact,
+	callDepth int,
+	zero bool,
+) []GenericEffect {
+	if fact == nil {
+		return nil
+	}
+	if callDepth == 0 {
+		if zero {
+			return fact.ZeroEffects
+		}
+		return fact.AccessEffects
+	}
+	if callDepth == 1 {
+		if zero {
+			return fact.ReturnedZeroEffects
+		}
+		return fact.ReturnedAccessEffects
+	}
+	result := []GenericEffect(nil)
+	items := fact.ReturnedAccessEffectsAtDepth
+	if zero {
+		items = fact.ReturnedZeroEffectsAtDepth
+	}
+	for _, item := range items {
+		if item.CallDepth == callDepth {
+			result = append(result, item.Effect)
+		}
+	}
+	return result
+}
+
+func genericFactEffectsAtOrAfter(
+	fact *GenericEffectFact,
+	callDepth int,
+	zero bool,
+) []GenericEffect {
+	result := append([]GenericEffect(nil),
+		genericFactEffectsAtDepth(fact, callDepth, zero)...,
+	)
+	if fact == nil {
+		return result
+	}
+	items := fact.ReturnedAccessEffectsAtDepth
+	if zero {
+		items = fact.ReturnedZeroEffectsAtDepth
+	}
+	for _, item := range items {
+		if item.CallDepth > callDepth {
+			result = append(result, item.Effect)
+		}
+	}
+	if callDepth == 0 {
+		if zero {
+			result = append(result, fact.ReturnedZeroEffects...)
+		} else {
+			result = append(result, fact.ReturnedAccessEffects...)
+		}
+	}
+	return result
 }

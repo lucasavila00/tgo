@@ -338,6 +338,17 @@ func DoubleNested[T any]() func() func() {
 	}
 }
 
+func TripleNested[T any]() func() func() func() {
+	return func() func() func() {
+		return func() func() {
+			return func() {
+				var value T
+				_ = value
+			}
+		}
+	}
+}
+
 func ParenthesizedAssignedNested[T any]() func() {
 	nested := func() {}
 	(nested) = func() {

@@ -308,6 +308,36 @@ func (c %checker) addReturnedGenericEffect(
 	return c.addSummaryGenericEffect(summary, zero, true, effect)
 }
 
+func (c %checker) addReturnedGenericEffectAtDepth(
+	summary %genericEffectSummary,
+	zero bool,
+	callDepth int,
+	effect GenericEffect,
+) bool {
+	if callDepth <= 1 {
+		return c.addReturnedGenericEffect(summary, zero, effect)
+	}
+	normalized, possible := normalizeGenericEffect(effect)
+	if !possible {
+		return false
+	}
+	target := &summary.returnedAccessEffectsAtDepth
+	if zero {
+		target = &summary.returnedZeroEffectsAtDepth
+	}
+	for _, current := range *target {
+		if current.CallDepth == callDepth &&
+			equalGenericEffect(current.Effect, normalized) {
+			return false
+		}
+	}
+	*target = append(*target, GenericEffectAtDepth{
+		CallDepth: callDepth,
+		Effect:    normalized,
+	})
+	return true
+}
+
 func (c %checker) addSummaryGenericEffect(
 	summary %genericEffectSummary,
 	zero bool,
