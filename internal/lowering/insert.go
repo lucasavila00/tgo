@@ -30,11 +30,11 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	return output, nil
 }
 
-// LowerPropagations replaces checked propagation and if values with ordinary Go.
+// LowerPropagations replaces checked propagation, if values, and comprehensions with ordinary Go.
 // It returns formatted file contents by absolute path without writing files.
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), comprehensions: s.checked.Comprehensions, collectionOutputs: make(map[string]*collectionDestination), conditionals: s.checked.Conditionals, lowered: make(map[ast.Expr]bool)}
+	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), comprehensions: s.checked.Comprehensions, comprehensionRanges: make(map[*ast.RangeStmt]bool), collectionOutputs: make(map[string]*collectionDestination), conditionals: s.checked.Conditionals, lowered: make(map[ast.Expr]bool)}
 	for site, expression := range s.expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {

@@ -72,7 +72,13 @@ func (r *rewrite) exactComprehension(call *ast.CallExpr, record *frontend.Compre
 	before = append(before, variable(result, r.temporaryType(typ, call), allocation))
 	if key == nil {
 		index := r.name()
-		before = append(before, variable(index, r.temporaryType(types.Typ[types.Int], call), integer(0)))
+		if sourceKey, ok := loop.Key.(*ast.Ident); ok && sourceKey.Name != "_" {
+			object := r.source.checked.TypesInfo.Defs[sourceKey]
+			index = ast.NewIdent(r.bindings[object])
+		} else {
+			copy.Key = index
+			copy.Tok = token.DEFINE
+		}
 		r.collectionOutputs[record.Output].index = index
 	}
 	return append(before, &ast.BlockStmt{List: r.rangeStatement(&copy)})

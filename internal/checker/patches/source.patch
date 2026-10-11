@@ -206,13 +206,14 @@
  	decl          *declInfo              // package-level declaration whose init expression/function body is checked
  	scope         *Scope                 // top-most scope for lookups
  	version       goVersion              // current accepted language version; changes across files
-@@ -116,6 +118,12 @@
+@@ -116,6 +118,13 @@
  // A Checker maintains the state of the type checker.
  // It must be created with [NewChecker].
  type Checker struct {
 +	conditionalValues  map[*ast.CallExpr][]*operand
 +	expressionTypes    map[ast.Expr]Type
 +	sliceSourceContext Type
++	comprehensionRanges map[*ast.RangeStmt]bool
 +	comprehensionTypes map[string][]Type
 +	inferConditionals  map[*ast.CallExpr]bool
 +
@@ -441,7 +442,7 @@
 +				b.lstmt = lstmt
 +			}
 +		}
-+		check.conditionalStatements(s, func(statement ast.Stmt) {
++		check.expressionStatements(s, func(statement ast.Stmt) {
 +			stmtBranches(nil, statement)
 +		})
 +		b.lstmt = previous
@@ -532,7 +533,7 @@
  	// So we have to be careful not to evaluate the arg in the
  	// described situation.
  
-+	check.rejectRangeCollectionContinue(rangeVar)
++	if !check.comprehensionRanges[rangeStmt] { check.rejectRangeCollectionContinue(rangeVar) }
  	check.hasCallOrRecv = false
  	check.expr(nil, &x, rangeVar)
  
@@ -593,7 +594,7 @@
 -func hasBreak(s ast.Stmt, label string, implicit bool) bool {
 +func (check *Checker) hasBreak(s ast.Stmt, label string, implicit bool) bool {
 +	branchBreak := false
-+	check.conditionalStatements(s, func(statement ast.Stmt) {
++	check.expressionStatements(s, func(statement ast.Stmt) {
 +		branchBreak = branchBreak || check.hasBreak(statement, label, implicit)
 +	})
 +	if branchBreak {
@@ -831,7 +832,7 @@
  
  	case *ast.RangeStmt:
  		inner |= breakOk | continueOk
-+		check.statementContext = inner
++		if !check.comprehensionRanges[s] { check.statementContext = inner }
  		// s.TokPos is invalid when there are no range variables (for range x {});
  		// noNewVarPos is unused in that case, but inNode asserts a valid pos.
  		tokPos := s.TokPos

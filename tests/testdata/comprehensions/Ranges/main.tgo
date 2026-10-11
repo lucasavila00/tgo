@@ -1,0 +1,52 @@
+package main
+
+import "fmt"
+
+func sequence(yield func(int) bool) {
+	for _, value := range []int{2, 4, 6} {
+		if !yield(value) {
+			fmt.Println("iterator stopped")
+			return
+		}
+	}
+}
+
+func pairs(yield func(int, string) bool) {
+	for i, value := range []string{"a", "b"} {
+		if !yield(i, value) {
+			return
+		}
+	}
+}
+
+func visits(yield func() bool) {
+    for range 2 {
+        if !yield() { return }
+    }
+}
+
+func main() {
+	xs := []int{1, 2, 3}
+	fmt.Println([]int{x * 2 for _, x := range xs})
+	fmt.Println([]int{x for _, x := range [3]int{4, 5, 6}})
+	fmt.Println([]int{i for i := range (*[3]int)(nil)})
+	fmt.Println([]rune{r for _, r := range "aé"})
+	fmt.Println(map[int]string{i: value for i, value := range pairs})
+	fmt.Println([]int{x for x := range sequence if x < 5})
+	fmt.Println([]int{if x > 2 {break} else {x} for x := range sequence})
+	fmt.Println([]int{i for i := range 3})
+	fmt.Println([]int{1 for range visits})
+	channel := make(chan int, 2)
+	channel <- 8
+	channel <- 9
+	close(channel)
+	fmt.Println([]int{x for x := range channel})
+	fmt.Println(map[string]int{key: value * 2 for key, value := range map[string]int{"a": 1, "b": 2}})
+	fmt.Println(map[int]int{i: x * 3 for i, x := range xs})
+	fmt.Println([][2]int{[2]int{x, y} for _, x := range xs if x > 1 for y := range x})
+	var absent []int
+	empty := []int{x for _, x := range absent}
+	fmt.Println(empty == nil, len(empty))
+	closures := []func() int{func() int { return x } for _, x := range xs}
+	fmt.Println(closures[0](), closures[1](), closures[2]())
+}

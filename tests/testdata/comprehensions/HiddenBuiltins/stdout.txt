@@ -1,0 +1,2 @@
+[2 4 6] append make len
+map[0:1 1:2 2:3]

@@ -12,6 +12,7 @@ import (
 
 type sourceToken struct {
 	offset int
+	end    int
 	kind   token.Token
 	depth  int
 }
@@ -24,8 +25,12 @@ func sourceTokens(source string) []sourceToken {
 	var tokens []sourceToken
 	depth := 0
 	for {
-		position, kind, _ := scan.Scan()
-		tokens = append(tokens, sourceToken{offset: file.Offset(position), kind: kind, depth: depth})
+		position, kind, literal := scan.Scan()
+		width := len(literal)
+		if width == 0 {
+			width = len(kind.String())
+		}
+		tokens = append(tokens, sourceToken{offset: file.Offset(position), end: file.Offset(position) + width, kind: kind, depth: depth})
 		switch kind {
 		case token.LPAREN, token.LBRACK, token.LBRACE:
 			depth++

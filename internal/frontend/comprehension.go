@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/scanner"
 	"go/token"
 	"strings"
 )
@@ -15,6 +16,7 @@ type Comprehension struct {
 	Type     ast.Expr
 	Body     *ast.BlockStmt
 	Output   string
+	Ranges   []*ast.RangeStmt
 }
 
 // prepareComprehension replaces the innermost comprehension with a marker.
@@ -69,63 +71,27 @@ func (s *mappedSource) prepareComprehension(original *token.File, used map[strin
 		if end == len(tokens) {
 			return false, fmt.Errorf("%s: comprehension requires a closing brace", original.Position(original.Pos(s.offsets[start])))
 		}
+		clauses, valid := s.comprehensionClauses(tokens, first, end)
+		if !valid {
+			continue
+		}
 		name := freshComprehensionName(used)
 		output := freshComprehensionName(used)
 		records[name] = &Comprehension{Position: original.Position(original.Pos(s.offsets[start])), Output: output}
-		var text strings.Builder
-		var offsets []int
-		insert := func(value string, at int) {
-			text.WriteString(value)
-			offsets = append(offsets, insertedOffsets(len(value), s.offsets[at])...)
-		}
-		retain := func(from, to int) {
-			text.WriteString(s.text[from:to])
-			offsets = append(offsets, s.offsets[from:to]...)
-		}
-		insert(name+"(", start)
-		retain(start, tokens[open].offset)
-		insert(",func(){", tokens[open].offset)
-		var clauses []int
-		for i := first; i < end; i++ {
-			if tokens[i].depth == tokens[first].depth && (tokens[i].kind == token.FOR || tokens[i].kind == token.IF) {
-				clauses = append(clauses, i)
-			}
-		}
-		for i, clause := range clauses {
-			stop := tokens[end].offset
-			if i+1 < len(clauses) {
-				stop = tokens[clauses[i+1]].offset
-			}
-			from, to := trimClause(s.text, tokens[clause].offset, stop)
-			retain(from, to)
-			insert("{", to)
-		}
-		insert(output+"(", tokens[open].offset)
-		from, to := trimClause(s.text, tokens[open].offset+1, tokens[first].offset)
-		previous := from
-		for i := open + 1; i < first; i++ {
-			if tokens[i].kind == token.COLON && tokens[i].depth == tokens[first].depth {
-				retain(previous, tokens[i].offset)
-				insert(",", tokens[i].offset)
-				previous = tokens[i].offset + 1
-			}
-		}
-		retain(previous, to)
-		insert(");"+strings.Repeat("}", len(clauses))+"})", tokens[end].offset)
-		s.replace(start, tokens[end].offset+1, text.String(), offsets)
+		s.wrapComprehension(tokens, start, open, first, end, name, output, clauses)
 		return true, nil
 	}
 	return false, nil
 }
 
-func trimClause(source string, start, end int) (int, int) {
-	for start < end && strings.ContainsRune(" \t\r\n", rune(source[start])) {
-		start++
-	}
-	for end > start && strings.ContainsRune(" \t\r\n;,", rune(source[end-1])) {
+func clauseEnd(tokens []sourceToken, start, end int) int {
+	for end > start && (tokens[end-1].kind == token.SEMICOLON || tokens[end-1].kind == token.COMMA) {
 		end--
 	}
-	return start, end
+	if end == start {
+		return tokens[start].offset
+	}
+	return tokens[end-1].end
 }
 
 func freshComprehensionName(used map[string]bool) string {
@@ -136,4 +102,123 @@ func freshComprehensionName(used map[string]bool) string {
 			return name
 		}
 	}
+}
+
+func (s *mappedSource) wrapComprehension(tokens []sourceToken, start, open, first, end int, name, output string, clauses []int) {
+	var text strings.Builder
+	var offsets []int
+	insert := func(value string, at int) {
+		text.WriteString(value)
+		offsets = append(offsets, insertedOffsets(len(value), s.offsets[at])...)
+	}
+	retain := func(from, to int) {
+		text.WriteString(s.text[from:to])
+		offsets = append(offsets, s.offsets[from:to]...)
+	}
+	comments := func(from, to int) {
+		set := token.NewFileSet()
+		file := set.AddFile("", -1, to-from)
+		var scan scanner.Scanner
+		scan.Init(file, []byte(s.text[from:to]), nil, scanner.ScanComments)
+		for {
+			position, kind, literal := scan.Scan()
+			if kind == token.EOF {
+				break
+			}
+			if kind == token.COMMENT {
+				begin := from + file.Offset(position)
+				retain(begin, begin+len(literal))
+				insert("\n", begin)
+			}
+		}
+	}
+
+	insert(name+"(", start)
+	retain(start, tokens[open].offset)
+	insert(",func(){", tokens[open].offset)
+	for i, clause := range clauses {
+		stop := end
+		if i+1 < len(clauses) {
+			stop = clauses[i+1]
+		}
+		from, to := tokens[clause].offset, clauseEnd(tokens, clause, stop)
+		expression := tokens[clause].end
+		if tokens[clause].kind == token.FOR {
+			for j := clause + 1; j < stop; j++ {
+				if tokens[j].kind == token.RANGE && tokens[j].depth == tokens[clause].depth {
+					expression = tokens[j].end
+					break
+				}
+			}
+		}
+		retain(from, expression)
+		insert(" (", expression)
+		retain(expression, to)
+		insert("){", to)
+		comments(to, tokens[stop].offset)
+	}
+	insert(output+"(", tokens[open].offset)
+	from, to := tokens[open].offset+1, clauseEnd(tokens, open+1, first)
+	previous := from
+	for i := open + 1; i < first; i++ {
+		if tokens[i].kind == token.COLON && tokens[i].depth == tokens[first].depth {
+			retain(previous, tokens[i].offset)
+			insert(",", tokens[i].offset)
+			previous = tokens[i].offset + 1
+		}
+	}
+	retain(previous, to)
+	insert(");", to)
+	comments(to, tokens[first].offset)
+	insert(strings.Repeat("}", len(clauses))+"})", tokens[end].offset)
+	s.replace(start, tokens[end].offset+1, text.String(), offsets)
+}
+
+func comprehensionRanges(body *ast.BlockStmt) []*ast.RangeStmt {
+	var ranges []*ast.RangeStmt
+	for len(body.List) == 1 {
+		switch clause := body.List[0].(type) {
+		case *ast.RangeStmt:
+			ranges = append(ranges, clause)
+			body = clause.Body
+		case *ast.IfStmt:
+			body = clause.Body
+		default:
+			return ranges
+		}
+	}
+	return ranges
+}
+
+func (s *mappedSource) comprehensionClauses(tokens []sourceToken, first, end int) ([]int, bool) {
+	var clauses []int
+	for i := first; i < end; i++ {
+		if tokens[i].depth == tokens[first].depth && (tokens[i].kind == token.FOR || tokens[i].kind == token.IF) {
+			clauses = append(clauses, i)
+		}
+	}
+	for i, clause := range clauses {
+		stop := end
+		if i+1 < len(clauses) {
+			stop = clauses[i+1]
+		}
+		expression := clause + 1
+		if tokens[clause].kind == token.FOR {
+			for expression < stop && tokens[expression].kind != token.RANGE {
+				expression++
+			}
+			if expression == stop {
+				return nil, false
+			}
+			expression++
+		}
+		if expression >= stop {
+			return nil, false
+		}
+		last := clauseEnd(tokens, expression, stop)
+		if _, err := parser.ParseExpr(s.text[tokens[expression].offset:last]); err != nil {
+			return nil, false
+		}
+	}
+	return clauses, true
 }

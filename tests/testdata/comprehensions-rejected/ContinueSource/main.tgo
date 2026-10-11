@@ -1,0 +1,2 @@
+package p
+func f() { _ = []int{x for x := range if true {continue} else {2}} }

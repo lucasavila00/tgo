@@ -14,6 +14,7 @@ func TestParseComprehensions(t *testing.T) {
 		`[]int{if x > 0 {x} else {0} for _, x := range xs}`,
 		`[]int{x for _, x := range if true {xs} else {ys} if x > 0}`,
 		"[]int{\n x\n for _, x := range xs\n if x > 0,\n}",
+		"[]int{x // output\n for _, x := range xs // source\n if x > 0 // filter\n}",
 	} {
 		t.Run(expression, func(t *testing.T) {
 			parsed, err := ParseFile(token.NewFileSet(), "main_tgo.go", "main.tgo", []byte("package p\nvar result = "+expression), make(map[string]bool))

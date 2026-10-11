@@ -16,6 +16,8 @@ For postfix propagation, a named comment lets Go parse the surrounding call. The
 
 For if values, it prepares clear expression positions before parsing the file. Parsed syntax resolves ambiguous positions, such as colons in labels, map values, and slice bounds. Independent values share preparation edits; nested values can need more rounds. Placeholder function literals carry branch statements to the checker without creating source function boundaries.
 
+A collection comprehension records its type and ordered range and filter clauses. The marker carries ordinary Go statements and an output call. Generator bindings stay inside those statements. The checker gives the output its element or key and value types.
+
 Offsets map prepared text to original source bytes. Physical generated paths control build selection; diagnostic positions identify the original TGo file. This package does not check types or choose where generated statements run.
 
 See the [checker](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/readme.md>) for marker types and scope, the [driver](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/readme.md>) for compilation and shared terms, and [measurements](<https://github.com/lucasavila00/tgo/blob/main/docs/performance.md>) for parsing costs.
@@ -44,6 +46,20 @@ func WrapMarker(file *ast.File, expression ast.Expr, operation Marker)
 
 WrapMarker replaces the selected expression with a marker call for source checking. It changes file in place and removes the comment for this operation.
 
+## type Comprehension
+
+Comprehension records a typed collection and its range and filter statements. Output identifies the leaf call that supplies an element or a key and value.
+
+```go
+type Comprehension struct {
+    Position token.Position
+    Type     ast.Expr
+    Body     *ast.BlockStmt
+    Output   string
+    Ranges   []*ast.RangeStmt
+}
+```
+
 ## type Marker
 
 Marker records a postfix operation in Go\-compatible source.
@@ -63,9 +79,10 @@ Parsed contains Go syntax and records for the added TGo expressions.
 
 ```go
 type Parsed struct {
-    File         *ast.File
-    Conditionals map[string]token.Position
-    Propagations map[string]Marker
+    File           *ast.File
+    Comprehensions map[string]*Comprehension
+    Conditionals   map[string]token.Position
+    Propagations   map[string]Marker
 }
 ```
 

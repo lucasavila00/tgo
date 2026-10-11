@@ -43,7 +43,7 @@ A failed compilation can leave staged source or completed output at generated pa
 
 ### Code map
 
-[module.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/module.go>) handles ownership and disk stages. [propagation.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/propagation.go>) connects file selection, checking, and lowering for propagation and if values. [filename.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/filename.go>) preserves filename suffixes. The [unsafe operand check](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/unsafe_propagation.go>) rejects propagation in unsafe size and offset operands.
+[module.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/module.go>) handles ownership and disk stages. [propagation.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/propagation.go>) connects file selection, checking, and lowering for propagation, if values, and comprehensions. [filename.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/filename.go>) preserves filename suffixes. The [unsafe operand check](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/unsafe_propagation.go>) rejects propagation in unsafe size and offset operands.
 
 ### Glossary
 

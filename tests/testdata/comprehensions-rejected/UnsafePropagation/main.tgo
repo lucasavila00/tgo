@@ -1,0 +1,2 @@
+package p
+import "unsafe"; func value()(int,error){return 0,nil}; func f()error{_ = unsafe.Sizeof([]int{value()! for range 2});return nil}

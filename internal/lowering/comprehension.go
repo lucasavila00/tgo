@@ -16,6 +16,9 @@ type collectionDestination struct {
 }
 
 func (r *rewrite) comprehensionCall(call *ast.CallExpr, record *frontend.Comprehension) ([]ast.Stmt, []ast.Expr) {
+	for _, loop := range record.Ranges {
+		r.comprehensionRanges[loop] = true
+	}
 	result := r.name()
 	typ := r.typeOf(call)
 	r.collectionOutputs[record.Output] = &collectionDestination{result: result, typ: typ}
@@ -53,7 +56,7 @@ func (r *rewrite) comprehensionOutput(call *ast.CallExpr, destination *collectio
 		value := r.name()
 		before = append(before, variable(value, r.temporaryType(element, call.Args[0]), values[0]))
 		if destination.index != nil {
-			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result, Index: destination.index}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}}, &ast.IncDecStmt{X: destination.index, Tok: token.INC})
+			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{&ast.IndexExpr{X: destination.result, Index: destination.index}}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
 			return before, nil
 		}
 		if destination.grow != nil {

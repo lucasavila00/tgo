@@ -1,0 +1,7 @@
+1 [2] 3 [left source filter filter value right]
+[[2 2] [2 3]] [outer outer filter outer filter inner inner value inner value]
+[1 2] [nested produce produce consume consume]
+map[0:2] [key value key value]
+[1 2 3] [1 9 3]
+false [defer defer]
+[7 8] [defer defer]

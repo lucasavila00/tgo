@@ -74,6 +74,31 @@ cannot be a `const` initializer or an array length. Ordinary if statements keep
 Go behavior. A `continue` cannot target a range while its collection is still
 being computed.
 
+## Build a slice or map
+
+State the collection type, then the output, range clauses, and filters:
+
+```text
+names := []string{user.Name for _, user := range users if user.Active}
+byID := map[ID]User{user.ID: user for _, user := range users}
+pairs := [][2]int{[2]int{x, y} for _, x := range xs for y := range x}
+```
+
+Each range uses Go's binding and iteration rules. A false filter skips the
+remaining clauses for that visit. Later clauses and the output can use earlier
+bindings. Bindings stay inside the comprehension.
+
+The result is a fresh, non-nil slice or map, including an empty result. Maps
+evaluate the key before the value. Later equal keys replace earlier entries.
+Outputs follow Go assignment rules for the declared element, key, and value
+types. Named collection types and type parameters with a common slice or map
+shape are supported.
+
+Outputs, sources, and filters can use `if` values and propagation. Returns and
+defers belong to the enclosing function. In a filter or output, an unlabeled
+`break` or `continue` targets the current generator. In a generator's source,
+a jump can target only an already active outer construct.
+
 ## Compile and run
 
 From the repository root:

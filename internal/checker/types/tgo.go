@@ -12,6 +12,7 @@ import (
 
 // TGoOperation records the meaning of a frontend marker call.
 type TGoOperation struct {
+	Ranges        []*ast.RangeStmt
 	Comprehension bool
 	Output        string
 	Element       bool
@@ -315,15 +316,10 @@ func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*ope
 
 func (check *Checker) branchFlow(body *ast.BlockStmt) controlflow.Result {
 	return controlflow.Branch(body, controlflow.Syntax{
-		Statements: check.operationStatements,
-		Conditional: func(call *ast.CallExpr) *ast.IfStmt {
-			if op, found := check.tgoOperation(call); found && op.Conditional {
-				return call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt)
-			}
-			return nil
-		},
-		Terminates:  func(call *ast.CallExpr) bool { return check.isPanic[call] },
-		Unevaluated: func(call *ast.CallExpr) bool { return check.Types[call].Value != nil },
+		RangeSourceOutside: func(loop *ast.RangeStmt) bool { return check.comprehensionRanges[loop] },
+		Statements:         check.operationStatements,
+		Terminates:         func(call *ast.CallExpr) bool { return check.isPanic[call] },
+		Unevaluated:        func(call *ast.CallExpr) bool { return check.Types[call].Value != nil },
 	})
 }
 
@@ -424,9 +420,9 @@ func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation 
 	return statement
 }
 
-// conditionalStatements visits expressions in one statement. Nested statements
+// expressionStatements visits source statements inside added expressions. Nested statements
 // are visited by the caller; real function literals belong to another function.
-func (check *Checker) conditionalStatements(statement ast.Stmt, visit func(ast.Stmt)) {
+func (check *Checker) expressionStatements(statement ast.Stmt, visit func(ast.Stmt)) {
 	var first, second ast.Stmt
 	switch statement := statement.(type) {
 	case *ast.IfStmt:

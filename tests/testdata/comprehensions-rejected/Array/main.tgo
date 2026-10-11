@@ -1,0 +1,2 @@
+package p
+var result = [2]int{x for x := range 2}

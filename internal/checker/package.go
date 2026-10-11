@@ -105,7 +105,7 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 			}
 			file = parsed.File
 			for name, record := range parsed.Comprehensions {
-				pkg.Operations[name] = types.TGoOperation{Comprehension: true, Output: record.Output, Position: record.Position}
+				pkg.Operations[name] = types.TGoOperation{Comprehension: true, Ranges: record.Ranges, Output: record.Output, Position: record.Position}
 				pkg.Operations[record.Output] = types.TGoOperation{Element: true, Position: record.Position}
 				ast.Inspect(file, func(node ast.Node) bool {
 					if call, ok := node.(*ast.CallExpr); ok {

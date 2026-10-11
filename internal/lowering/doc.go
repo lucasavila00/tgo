@@ -1,7 +1,7 @@
 // Package lowering replaces checked expressions with equivalent Go statements.
 //
 // The [checker] supplies syntax, types, bindings, and operation records.
-// LowerPropagations handles propagation and if values. It returns formatted
+// LowerPropagations handles propagation, if values, and comprehensions. It returns formatted
 // file contents; the [driver] writes them to owned generated paths.
 //
 // # Calls and branches
@@ -24,6 +24,12 @@
 //
 // A branch that returns or jumps out needs no result assignment. Returns,
 // defers, and jumps keep their source function and targets.
+//
+// A comprehension uses one result collection and direct nested range loops.
+// Filters enclose later clauses. Each accepted slice value is appended; map
+// keys and values are saved in that order before insertion. A simple slice or
+// array range can allocate its exact result length and write by range index.
+// Returns, defers, and jumps remain in their source function.
 //
 // # Errors and saved types
 //

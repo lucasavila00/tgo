@@ -1,0 +1,1 @@
+generators must declare bindings with :=

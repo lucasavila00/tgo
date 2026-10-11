@@ -14,6 +14,11 @@
 // nested values can need more rounds. Placeholder function literals carry
 // branch statements to the checker without creating source function boundaries.
 //
+// A collection comprehension records its type and ordered range and filter
+// clauses. The marker carries ordinary Go statements and an output call.
+// Generator bindings stay inside those statements. The checker gives the
+// output its element or key and value types.
+//
 // Offsets map prepared text to original source bytes. Physical generated paths
 // control build selection; diagnostic positions identify the original TGo file.
 // This package does not check types or choose where generated statements run.

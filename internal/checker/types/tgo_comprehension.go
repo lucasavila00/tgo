@@ -2,12 +2,22 @@ package types
 
 import (
 	"go/ast"
+	"go/token"
 
 	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
 )
 
 func (check *Checker) comprehensionExpr(x *operand, call *ast.CallExpr) exprKind {
 	operation, _ := check.tgoOperation(call)
+	if check.comprehensionRanges == nil {
+		check.comprehensionRanges = make(map[*ast.RangeStmt]bool)
+	}
+	for _, loop := range operation.Ranges {
+		check.comprehensionRanges[loop] = true
+		if loop.Key != nil && loop.Tok != token.DEFINE {
+			check.error(loop, InvalidSyntaxTree, "comprehension generators must declare bindings with :=")
+		}
+	}
 	typ := check.typ(call.Args[0])
 	key, element := ComprehensionTypes(typ)
 	x.expr, x.typ_ = call, Typ[Invalid]

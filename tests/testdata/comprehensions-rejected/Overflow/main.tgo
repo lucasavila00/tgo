@@ -1,0 +1,2 @@
+package p
+var result = []uint8{256 for range 1}

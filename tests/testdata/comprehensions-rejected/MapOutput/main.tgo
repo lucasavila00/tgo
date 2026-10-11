@@ -1,0 +1,2 @@
+package p
+var result = map[int]int{x for x := range 2}

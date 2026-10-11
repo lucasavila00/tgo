@@ -1,0 +1,10 @@
+deferred
+[] failed true true
+deferred
+[] read: failed true false
+9
+[0 2]
+[0 2]
+[[0 0] [1 0]]
+outer 1 [0 1]
+[]

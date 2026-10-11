@@ -140,6 +140,7 @@ func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, orig
 				if record := result.Comprehensions[id.Name]; record != nil {
 					record.Type = call.Args[0]
 					record.Body = call.Args[1].(*ast.FuncLit).Body
+					record.Ranges = comprehensionRanges(record.Body)
 				}
 			}
 		}
