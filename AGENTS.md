@@ -1,19 +1,9 @@
 # Working principles
 
-## Repository status
-
-`compilerv2` is the active TGo compiler. Compiler source, tests, and usage
-notes are in
-[`compilerv2/`](compilerv2/README.md). The old compiler and architecture
-documents were removed. Git history retains them.
-
 Treat compiler changes as production code. Verify correctness and preserve
-source behavior.
-
-Build compilerv2 from the [compiler v2 plan](docs/adr/expression-lowering/what.md).
-Do not restore the old compiler code or architecture. The old
-specification, guides, and user agent rules have been removed. Use the README
-for syntax examples.
+source behavior. Source and tests are in `compilerv2/`. Read the
+[transpiler architecture](docs/arch/transpiler.md) and
+[lowering plan](docs/adr/expression-lowering/what.md) before compiler changes.
 
 ## 1. Think Before Coding
 

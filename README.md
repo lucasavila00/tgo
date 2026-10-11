@@ -1,17 +1,10 @@
 # TGo
 
-## Repository status
-
-`compilerv2` is the active TGo compiler. Compiler source, tests, and usage
-notes are in
-[`compilerv2/`](compilerv2/README.md). The old compiler and architecture
-documents were removed. Git history retains them.
-
-The [compilerv2 plan](docs/adr/expression-lowering/what.md) defines the new
-compiler work. Use the active compiler code.
-
 TGo is Go with extra compile-time checks and shorter error handling. Its
 `.tgo` syntax uses normal Go packages, imports, types, and calls.
+
+See the [transpiler architecture](docs/arch/transpiler.md) for the API and
+implementation.
 
 The examples below describe the language syntax, including features outside
 the current propagation work.
