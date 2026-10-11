@@ -12,11 +12,13 @@ statements needed to implement them.
 | `cmd/tgo` | Choose paths and write output | File-output policy belongs to the command. |
 | `pkg/transpiler` | Expose compilation and expression rewriting | Other tools need the same compiler without command-line policy. |
 | `internal/driver` | Select and check a module | Imports, build constraints, and tests must agree on package contents. |
+| `internal/checker` | Check source with Go types and TGo rules | Nested operators need success types before lowering. |
 | `internal/frontend` | Record added syntax | Go syntax keeps Go meaning; TGo operations retain their source identity. |
 | `internal/lowering` | Emit equivalent Go statements | This requires checked types and the expression's execution context. |
 
-Dependencies follow this order. Frontend and lowering do not call each other.
-The driver supplies checked syntax and operation records to the lowerer.
+The driver selects packages and asks the private checker to check their source.
+The checker reads frontend markers. Lowering uses the checked types and markers.
+The public API retains stock Go package objects.
 
 ## Preserve execution
 
@@ -53,9 +55,15 @@ type. A nil pointer can become a non-nil interface during that conversion.
 Checking afterward would turn success into failure. `!` returns the original
 error; `!!` adds call-name context with `%w`.
 
-Checking helpers describe success results to Go's type checker. They are not
-runtime error handling. Source checks also verify that propagation is valid
-inside the enclosing function and outside forbidden unsafe operands.
+The private checker gives `call()!` the call's success result types. For
+`outer(inner()!)!`, it checks the inner call before checking the outer call.
+Each source package is checked once; operators need no file rewrite or package
+reload. The driver then lowers the source and checks the emitted Go.
+Source checks also verify error return types and forbidden unsafe operands.
+
+`make prepare` applies tracked patches to pinned Go checker and import-reader
+source. Generated upstream files stay outside Git. See the
+[upstream source instructions](../../../internal/checker/upstream.md).
 
 The function keeps its source result names. Failure returns use saved zero
 values for results before the error. Deferred calls still run.

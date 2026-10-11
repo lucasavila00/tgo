@@ -1,9 +1,9 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/token"
-	"go/types"
 	"strconv"
 )
 
@@ -45,7 +45,7 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) []ast.Stmt {
 				break
 			}
 			value := r.name()
-			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.source.Package.TypesInfo.TypeOf(field.Type), field.Type, original.End()), nil))
+			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.source.checked.TypesInfo.TypeOf(field.Type), field.Type, original.End()), nil))
 			r.frame.values = append(r.frame.values, value)
 		}
 	}
@@ -64,9 +64,9 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([
 	var signature *types.Signature
 	switch fn := function.(type) {
 	case *ast.FuncDecl:
-		signature = r.source.Package.TypesInfo.Defs[fn.Name].Type().(*types.Signature)
+		signature = r.source.checked.TypesInfo.Defs[fn.Name].Type().(*types.Signature)
 	case *ast.FuncLit:
-		signature = r.source.Package.TypesInfo.TypeOf(fn).(*types.Signature)
+		signature = r.source.checked.TypesInfo.TypeOf(fn).(*types.Signature)
 	}
 	last := signature.Results().At(signature.Results().Len() - 1).Type()
 	if _, ok := last.Underlying().(*types.Interface); !ok || !types.AssignableTo(last, types.Universe.Lookup("error").Type()) {
@@ -115,7 +115,7 @@ func (r *rewrite) callFailure(value ast.Expr, call ast.Expr) ([]ast.Stmt, ast.Ex
 		nilCapable = true
 	}
 	if nilCapable {
-		scope := r.source.Package.Types.Scope().Innermost(call.Pos())
+		scope := r.source.checked.Types.Scope().Innermost(call.Pos())
 		_, resolved := scope.LookupParent("nil", call.Pos())
 		if resolved == types.Universe.Lookup("nil") {
 			return nil, &ast.BinaryExpr{X: value, Op: token.NEQ, Y: ast.NewIdent("nil")}

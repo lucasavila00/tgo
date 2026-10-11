@@ -11,7 +11,7 @@
 //
 // Compilation passes data through these steps: read module files, prepare a
 // separate work directory, select source with Go's build rules, check calls,
-// lower expressions, and collect output. Each step keeps the data required by
+// lower expressions, check the generated Go, and collect output. Each step keeps the data required by
 // the next step. Source files stay separate from the files used for checking.
 //
 // The driver returns the emitted module as file contents. Writing those files

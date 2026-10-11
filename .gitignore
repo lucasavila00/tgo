@@ -1,0 +1,5 @@
+/internal/checker/types/*.go
+!/internal/checker/types/tgo.go
+!/internal/checker/types/tgo_test.go
+/internal/checker/gcimporter/*.go
+/internal/checker/upstream/

@@ -1,0 +1,385 @@
+--- a/types/api.go
++++ b/types/api.go
+@@ -40,7 +40,7 @@
+ 	"go/ast"
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	_ "unsafe" // for linkname
+ )
+ 
+@@ -120,6 +120,9 @@
+ // A Config specifies the configuration for type checking.
+ // The zero value for Config is a ready-to-use default configuration.
+ type Config struct {
++	// TGo records propagation operations in the source syntax tree.
++	TGo map[string]TGoOperation
++
+ 	// Context is the context used for resolving global identifiers. If nil, the
+ 	// type checker will initialize this field with a newly created context.
+ 	Context *Context
+--- a/types/assignments.go
++++ b/types/assignments.go
+@@ -12,7 +12,7 @@
+ import (
+ 	"fmt"
+ 	"go/ast"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"strings"
+ )
+ 
+--- a/types/builtins.go
++++ b/types/builtins.go
+@@ -13,7 +13,7 @@
+ 	"go/ast"
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ )
+ 
+ // builtin type-checks a call to the built-in specified by id and
+--- a/types/call.go
++++ b/types/call.go
+@@ -9,7 +9,7 @@
+ import (
+ 	"go/ast"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"strings"
+ )
+ 
+--- a/types/check.go
++++ b/types/check.go
+@@ -11,7 +11,7 @@
+ 	"go/ast"
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"os"
+ )
+ 
+--- a/types/const.go
++++ b/types/const.go
+@@ -12,7 +12,7 @@
+ import (
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"math"
+ )
+ 
+--- a/types/conversions.go
++++ b/types/conversions.go
+@@ -11,7 +11,7 @@
+ 
+ import (
+ 	"go/constant"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"unicode"
+ )
+ 
+--- a/types/decl.go
++++ b/types/decl.go
+@@ -9,7 +9,7 @@
+ 	"go/ast"
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"slices"
+ )
+ 
+--- a/types/errors.go
++++ b/types/errors.go
+@@ -10,7 +10,7 @@
+ 	"fmt"
+ 	"go/ast"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"runtime"
+ 	"strings"
+ )
+--- a/types/expr.go
++++ b/types/expr.go
+@@ -11,7 +11,7 @@
+ 	"go/ast"
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ )
+ 
+ /*
+@@ -1121,6 +1121,9 @@
+ 		x.typ_ = T
+ 
+ 	case *ast.CallExpr:
++		if op, ok := check.tgoOperation(e); ok {
++			return check.propagationExpr(x, e, op)
++		}
+ 		return check.callExpr(x, e)
+ 
+ 	case *ast.StarExpr:
+--- a/types/gotype.go
++++ b/types/gotype.go
+@@ -89,7 +89,7 @@
+ 	"go/parser"
+ 	"go/scanner"
+ 	"go/token"
+-	"go/types"
++	"github.com/lucasavila00/tgo/internal/checker/types"
+ 	"io"
+ 	"os"
+ 	"path/filepath"
+--- a/types/index.go
++++ b/types/index.go
+@@ -10,7 +10,7 @@
+ 	"go/ast"
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ )
+ 
+ // If e is a valid function instantiation, indexExpr returns true.
+--- a/types/initorder.go
++++ b/types/initorder.go
+@@ -11,7 +11,7 @@
+ 	"cmp"
+ 	"container/heap"
+ 	"fmt"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"slices"
+ 	"sort"
+ )
+--- a/types/instantiate.go
++++ b/types/instantiate.go
+@@ -14,7 +14,7 @@
+ 	"errors"
+ 	"fmt"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ )
+ 
+ // A genericType implements access to its type parameters.
+--- a/types/interface.go
++++ b/types/interface.go
+@@ -7,7 +7,7 @@
+ import (
+ 	"go/ast"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ )
+ 
+ // ----------------------------------------------------------------------------
+--- a/types/labels.go
++++ b/types/labels.go
+@@ -7,7 +7,7 @@
+ import (
+ 	"go/ast"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"slices"
+ )
+ 
+--- a/types/literals.go
++++ b/types/literals.go
+@@ -12,7 +12,7 @@
+ import (
+ 	"go/ast"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"strings"
+ )
+ 
+--- a/types/mono.go
++++ b/types/mono.go
+@@ -10,7 +10,7 @@
+ import (
+ 	"go/ast"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ )
+ 
+ // This file implements a check to validate that a Go package doesn't
+--- a/types/operand.go
++++ b/types/operand.go
+@@ -15,7 +15,7 @@
+ 	"go/ast"
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ )
+ 
+ // An operandMode specifies the (addressing) mode of an operand.
+--- a/types/range.go
++++ b/types/range.go
+@@ -12,7 +12,7 @@
+ import (
+ 	"go/ast"
+ 	"go/constant"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ )
+ 
+ // rangeStmt type-checks a range statement of form
+--- a/types/resolver.go
++++ b/types/resolver.go
+@@ -10,7 +10,7 @@
+ 	"go/ast"
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"slices"
+ 	"strconv"
+ 	"strings"
+--- a/types/signature.go
++++ b/types/signature.go
+@@ -8,7 +8,7 @@
+ 	"fmt"
+ 	"go/ast"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"path/filepath"
+ 	"strings"
+ )
+--- a/types/stmt.go
++++ b/types/stmt.go
+@@ -10,7 +10,7 @@
+ 	"go/ast"
+ 	"go/constant"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"slices"
+ )
+ 
+--- a/types/struct.go
++++ b/types/struct.go
+@@ -7,7 +7,7 @@
+ import (
+ 	"go/ast"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"strconv"
+ )
+ 
+--- a/types/typeset.go
++++ b/types/typeset.go
+@@ -9,7 +9,7 @@
+ 
+ import (
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"slices"
+ 	"strings"
+ )
+--- a/types/typexpr.go
++++ b/types/typexpr.go
+@@ -10,7 +10,7 @@
+ 	"fmt"
+ 	"go/ast"
+ 	"go/constant"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ 	"strings"
+ )
+ 
+--- a/types/union.go
++++ b/types/union.go
+@@ -7,7 +7,7 @@
+ import (
+ 	"go/ast"
+ 	"go/token"
+-	. "internal/types/errors"
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+ )
+ 
+ // ----------------------------------------------------------------------------
+--- a/types/version.go
++++ b/types/version.go
+@@ -10,7 +10,7 @@
+ import (
+ 	"fmt"
+ 	"go/version"
+-	"internal/goversion"
++	"github.com/lucasavila00/tgo/internal/checker/upstream/goversion"
+ )
+ 
+ // A goVersion is a Go language version string of the form "go1.%d"
+--- a/gcimporter/gcimporter.go
++++ b/gcimporter/gcimporter.go
+@@ -3,15 +3,15 @@
+ // license that can be found in the LICENSE file.
+ 
+ // Package gcimporter implements Import for gc-generated object files.
+-package gcimporter // import "go/internal/gcimporter"
++package gcimporter
+ 
+ import (
+ 	"bufio"
+ 	"fmt"
+ 	"go/token"
+-	"go/types"
+-	"internal/exportdata"
+-	"internal/pkgbits"
++	"github.com/lucasavila00/tgo/internal/checker/types"
++	"github.com/lucasavila00/tgo/internal/checker/upstream/exportdata"
++	"github.com/lucasavila00/tgo/internal/checker/upstream/pkgbits"
+ 	"io"
+ 	"os"
+ )
+--- a/gcimporter/support.go
++++ b/gcimporter/support.go
+@@ -9,7 +9,7 @@
+ import (
+ 	"fmt"
+ 	"go/token"
+-	"internal/pkgbits"
++	"github.com/lucasavila00/tgo/internal/checker/upstream/pkgbits"
+ 	"sync"
+ )
+ 
+--- a/gcimporter/ureader.go
++++ b/gcimporter/ureader.go
+@@ -6,8 +6,8 @@
+ 
+ import (
+ 	"go/token"
+-	"go/types"
+-	"internal/pkgbits"
++	"github.com/lucasavila00/tgo/internal/checker/types"
++	"github.com/lucasavila00/tgo/internal/checker/upstream/pkgbits"
+ 	"slices"
+ 	"strings"
+ )
+--- a/upstream/exportdata/exportdata.go
++++ b/upstream/exportdata/exportdata.go
+@@ -14,7 +14,7 @@
+ 	"errors"
+ 	"fmt"
+ 	"go/build"
+-	"internal/saferio"
++	"github.com/lucasavila00/tgo/internal/checker/upstream/saferio"
+ 	"io"
+ 	"os"
+ 	"os/exec"

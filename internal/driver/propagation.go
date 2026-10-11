@@ -1,153 +1,74 @@
 package driver
 
 import (
-	"bytes"
-	"go/ast"
-	"go/format"
-	"go/token"
-	"go/types"
+	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/lucasavila00/tgo/internal/frontend"
+	"github.com/lucasavila00/tgo/internal/checker"
 	"github.com/lucasavila00/tgo/internal/lowering"
 	"golang.org/x/tools/go/packages"
 )
 
-// selectedSources records Go build selection and the selected TGo operations.
+// selectedSources carries Go build metadata to source checking.
 type selectedSources struct {
-	module      *preparedModule
-	activeFiles map[string]bool
-	operations  map[string]frontend.Marker
+	module   *preparedModule
+	packages []*packages.Package
 }
 
-// checkedModule carries helper-checked packages and operations to the lowerer.
+// checkedModule carries source types and active file names to lowering.
 type checkedModule struct {
-	sources    *selectedSources
-	packages   []*packages.Package
-	operations map[string]lowering.Propagation
+	sources     *selectedSources
+	packages    []*checker.Package
+	activeFiles map[string]bool
 }
 
-// selectSources keeps operators only from files selected by Go.
 func selectSources(module *preparedModule) *selectedSources {
-	initial := loadProject(module.dir)
-	activeFiles := make(map[string]bool)
-	activeOperations := make(map[string]frontend.Marker)
-	for _, pkg := range initial {
+	roots, err := packages.Load(&packages.Config{Dir: module.dir, Tests: true, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, "./...")
+	must(err)
+	var selected []*packages.Package
+	packages.Visit(roots, nil, func(pkg *packages.Package) { selected = append(selected, pkg) })
+	return &selectedSources{module: module, packages: selected}
+}
+
+// checkSources checks all selected source packages before output changes any file.
+func checkSources(sources *selectedSources) *checkedModule {
+	module := sources.module
+	loader, err := checker.NewLoader(module.dir, sources.packages, module.tgoFiles, module.used)
+	must(err)
+	checked := &checkedModule{sources: sources, activeFiles: make(map[string]bool)}
+	for _, metadata := range sources.packages {
+		if metadata.Module == nil || !metadata.Module.Main {
+			continue
+		}
+		pkg, err := loader.Check(metadata)
+		must(err)
+		checked.packages = append(checked.packages, pkg)
 		for _, filename := range pkg.GoFiles {
 			name, err := filepath.Rel(module.dir, filename)
 			must(err)
-			if module.tgoFiles[name] {
-				activeFiles[name] = true
-			}
-		}
-		for _, file := range pkg.Syntax {
-			name, err := filepath.Rel(module.dir, pkg.Fset.PositionFor(file.Pos(), false).Filename)
-			must(err)
-			if !module.tgoFiles[name] {
-				continue
-			}
-			activeFiles[name] = true
-			for _, operation := range frontend.MarkerExpressions(pkg.Fset, file, module.operations) {
-				activeOperations[operation.Name] = operation
+			if module.tgoFiles[name] != "" {
+				checked.activeFiles[name] = true
 			}
 		}
 	}
-	return &selectedSources{module: module, activeFiles: activeFiles, operations: activeOperations}
+	return checked
 }
 
-// checkPropagations resolves nested calls before the lowerer reads their types.
-func checkPropagations(sources *selectedSources) *checkedModule {
-	operations := sources.operations
-	remaining := len(operations)
-	for remaining > 0 {
-		pkgs := loadProject(sources.module.dir)
-		progress := false
-		written := make(map[string]bool)
-		for _, pkg := range pkgs {
-			for _, file := range pkg.Syntax {
-				filename := pkg.Fset.PositionFor(file.Pos(), false).Filename
-				if written[filename] {
-					continue
-				}
-				selected, operation := nextPropagation(pkg, file, operations)
-				if selected == nil {
-					continue
-				}
-				count := successResultCount(pkg.TypesInfo.TypeOf(ast.Unparen(selected)))
-				frontend.WrapMarker(file, selected, operation)
-				file.Decls = append(file.Decls, frontend.MarkerDeclaration(operation, count))
-				writeSyntax(pkg.Fset, file)
-				written[filename] = true
-				operations[operation.Name] = operation
-				remaining--
-				progress = true
-			}
-		}
-		if !progress {
-			panic("cannot type check propagation source")
-		}
-	}
-	loweredOperations := make(map[string]lowering.Propagation, len(operations))
-	for name, operation := range sources.operations {
-		loweredOperations[name] = lowering.Propagation{Wrap: operation.Wrap, CallName: operation.CallName, Position: operation.Position}
-	}
-	return &checkedModule{sources: sources, packages: loadProject(sources.module.dir), operations: loweredOperations}
-}
-
-// nextPropagation selects the smallest typed call, then the earliest one.
-func nextPropagation(pkg *packages.Package, file *ast.File, operations map[string]frontend.Marker) (ast.Expr, frontend.Marker) {
-	candidates := frontend.MarkerExpressions(pkg.Fset, file, operations)
-	var selected ast.Expr
-	var operation frontend.Marker
-	for expression, op := range candidates {
-		operations[op.Name] = op
-		typ := pkg.TypesInfo.TypeOf(ast.Unparen(expression))
-		if typ == nil || typ == types.Typ[types.Invalid] {
-			continue
-		}
-		if selected == nil || expression.End()-expression.Pos() < selected.End()-selected.Pos() || expression.End()-expression.Pos() == selected.End()-selected.Pos() && expression.Pos() < selected.Pos() {
-			selected = expression
-			operation = op
-		}
-	}
-	return selected, operation
-}
-
-// successResultCount checks the final error result and counts the other results.
-func successResultCount(result types.Type) int {
-	count := 1
-	last := result
-	if tuple, ok := result.(*types.Tuple); ok {
-		count = tuple.Len()
-		if count == 0 {
-			panic("propagation requires an error result")
-		}
-		last = tuple.At(count - 1).Type()
-	}
-	if !types.AssignableTo(last, types.Universe.Lookup("error").Type()) {
-		panic("propagation requires a final error result")
-	}
-	return count - 1
-}
-
-// lowerModule checks return targets and writes lowered package files.
+// lowerModule writes ordinary Go from the checked source syntax and types.
 func lowerModule(module *checkedModule) {
 	for _, pkg := range module.packages {
-		changed := false
-		for _, filename := range pkg.GoFiles {
-			name, err := filepath.Rel(module.sources.module.dir, filename)
-			must(err)
-			changed = changed || module.sources.activeFiles[name]
-		}
-		if !changed {
+		if len(pkg.Operations) == 0 {
 			continue
 		}
-		rejectUnsafePropagation(pkg, module.sources.operations)
-		checkPropagationReturns(pkg, module.sources.operations)
-		source, err := lowering.SourceFromPackage(pkg, module.sources.module.dir)
+		rejectUnsafePropagation(pkg)
+		operations := make(map[string]lowering.Propagation)
+		for name, operation := range pkg.Operations {
+			operations[name] = lowering.Propagation{Wrap: operation.Wrap, CallName: operation.CallName, Position: operation.Position}
+		}
+		source, err := lowering.SourceFromCheckedPackage(pkg, module.sources.module.dir)
 		must(err)
-		output, err := source.LowerPropagations(module.operations)
+		output, err := source.LowerPropagations(operations)
 		must(err)
 		for name, content := range output {
 			must(os.WriteFile(name, content, 0600))
@@ -155,8 +76,10 @@ func lowerModule(module *checkedModule) {
 	}
 }
 
-func writeSyntax(fset *token.FileSet, file *ast.File) {
-	var buf bytes.Buffer
-	must(format.Node(&buf, fset, file))
-	must(os.WriteFile(fset.PositionFor(file.Pos(), false).Filename, buf.Bytes(), 0600))
+func checkGenerated(dir string) {
+	for _, pkg := range loadProject(dir) {
+		if len(pkg.Errors) != 0 {
+			panic(fmt.Sprintf("TGo: generated Go: %s", pkg.Errors[0]))
+		}
+	}
 }

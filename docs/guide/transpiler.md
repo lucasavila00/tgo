@@ -39,6 +39,7 @@ The diagnostic identifies the operator's source position and the builtin.
 Run from the repository root:
 
 ```sh
+make prepare
 go run ./cmd/tgo /path/to/source
 go -C /path/to/source build ./...
 go -C /path/to/source test ./...

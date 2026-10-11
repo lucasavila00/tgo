@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/lucasavila00/tgo/internal/frontend"
 	"golang.org/x/mod/modfile"
 )
 
@@ -23,8 +22,8 @@ type moduleFiles struct {
 type preparedModule struct {
 	source     *moduleFiles
 	dir        string
-	tgoFiles   map[string]bool
-	operations map[string]frontend.Marker
+	tgoFiles   map[string]string
+	used       map[string]bool
 	moduleData []byte
 }
 
@@ -84,7 +83,6 @@ func readModule(root string) *moduleFiles {
 // prepareModule copies source to work and keeps replacement paths valid.
 func prepareModule(source *moduleFiles, work string) *preparedModule {
 	used := make(map[string]bool)
-	operations := make(map[string]frontend.Marker)
 	// Reserve source identifiers before the compiler adds names.
 	for _, content := range source.files {
 		for _, word := range strings.FieldsFunc(string(content), func(r rune) bool {
@@ -93,14 +91,13 @@ func prepareModule(source *moduleFiles, work string) *preparedModule {
 			used[word] = true
 		}
 	}
-	tgoFiles := make(map[string]bool)
+	tgoFiles := make(map[string]string)
 	for _, name := range source.names {
 		content := source.files[name]
 		if strings.HasSuffix(name, ".tgo") {
 			goName := generatedName(name)
-			content = frontend.MarkPostfix(name, content, used, operations)
+			tgoFiles[goName] = name
 			name = goName
-			tgoFiles[name] = true
 		}
 		path := filepath.Join(work, name)
 		must(os.MkdirAll(filepath.Dir(path), 0700))
@@ -119,18 +116,18 @@ func prepareModule(source *moduleFiles, work string) *preparedModule {
 	moduleData, err = mod.Format()
 	must(err)
 	must(os.WriteFile(filepath.Join(work, "go.mod"), moduleData, 0600))
-	return &preparedModule{source: source, dir: work, tgoFiles: tgoFiles, operations: operations, moduleData: moduleData}
+	return &preparedModule{source: source, dir: work, tgoFiles: tgoFiles, used: used, moduleData: moduleData}
 }
 
 // collectOutput keeps source and emits Go only for selected TGo files.
-func collectOutput(sources *selectedSources) map[string][]byte {
-	module := sources.module
+func collectOutput(checked *checkedModule) map[string][]byte {
+	module := checked.sources.module
 	output := make(map[string][]byte)
 	for name, content := range module.source.files {
 		if strings.HasSuffix(name, ".tgo") {
 			goName := generatedName(name)
 			output[name] = content
-			if !sources.activeFiles[goName] {
+			if !checked.activeFiles[goName] {
 				continue
 			}
 			generated, err := os.ReadFile(filepath.Join(module.dir, goName))
