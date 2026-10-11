@@ -1,0 +1,22 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+func fail(err error) (int, string, error) {
+	return .. err
+}
+
+func succeed() (int, string, error) {
+	return 7, "ok" ..
+}
+
+func main() {
+	failure := errors.New("failed")
+	value, text, err := fail(failure)
+	fmt.Println(value, text == "", err == failure)
+	value, text, err = succeed()
+	fmt.Println(value, text, err)
+}
