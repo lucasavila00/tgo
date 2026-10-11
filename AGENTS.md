@@ -105,10 +105,11 @@ Do not add safety checks, runtime behavior, abstractions, or support systems
 that the user did not request. Follow each stated trust assumption. Do not add
 checks for data or boundaries that the user declared trusted.
 
-## 9. Validate Documentation
+## 9. Use Hosted CI for Full Validation
 
-Check changed documentation and its local links. No CI or compiler test suite
-exists in this checkout. compilerv2 must provide focused validation.
+Check changed documentation and its local links. Run focused local tests for
+the changed compiler code. Push the branch and use GitHub Actions for the
+full compiler test suite. Do not run the full CI suite locally.
 
 ## 10. Do Not Post Comments Without a Request
 

@@ -2,7 +2,7 @@
 
 Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
-## Files to create
+## Test files
 
 Under `compilerv2/testdata/proof/`:
 
@@ -39,7 +39,7 @@ Under `compilerv2/testdata/proof/`:
 - Use synchronized channels and one ready select case. Accept the orders that
   Go permits where evaluation order is unspecified.
 
-## Planned command
+## Test command
 
 ```sh
 go -C compilerv2 test ./... -run '^TestProof' -count=1
