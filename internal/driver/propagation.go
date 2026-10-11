@@ -76,7 +76,7 @@ func lowerModule(module *checkedModule) {
 			relative, err := filepath.Rel(module.sources.module.dir, name)
 			must(err)
 			if module.sources.module.tgoFiles[relative] != "" {
-				must(os.WriteFile(name, content, 0600))
+				must(os.WriteFile(name, content, 0644))
 			}
 		}
 	}

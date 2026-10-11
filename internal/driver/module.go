@@ -97,7 +97,7 @@ func prepareModule(source *moduleFiles) *preparedModule {
 		}
 		goName := generatedName(name)
 		tgoFiles[goName] = name
-		must(os.WriteFile(filepath.Join(source.root, goName), source.files[name], 0600))
+		must(os.WriteFile(filepath.Join(source.root, goName), source.files[name], 0644))
 	}
 	return &preparedModule{source: source, dir: source.root, tgoFiles: tgoFiles, used: used}
 }
