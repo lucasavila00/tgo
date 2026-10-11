@@ -1,0 +1,1 @@
+TGo: main.tgo:11:32: cannot name type example.com/program/foreign.flag in a generated typed temporary: the type is private to example.com/program/foreign; expose the type with an accessible name

@@ -3,6 +3,7 @@ package lowering
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 )
 
 func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
@@ -38,7 +39,8 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 				if receive == r.target {
 					r.inserted = true
 					value := r.name()
-					clause.Comm = &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.DEFINE, Rhs: []ast.Expr{&c}}
+					before = append(before, variable(value, r.temporaryType(r.typeOf(receive), receive), nil))
+					clause.Comm = &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.ASSIGN, Rhs: []ast.Expr{&c}}
 					body = append(body, r.after([]ast.Expr{value})...)
 					body = append(body, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
 				} else {
@@ -53,8 +55,15 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 				values := make([]ast.Expr, len(comm.Lhs))
 				for i := range values {
 					values[i] = r.name()
+					typ := r.typeOf(receive)
+					if tuple, ok := typ.(*types.Tuple); ok {
+						typ = tuple.At(i).Type()
+					} else if i == 1 {
+						typ = types.Typ[types.Bool]
+					}
+					before = append(before, variable(values[i].(*ast.Ident), r.temporaryType(typ, receive), nil))
 				}
-				clause.Comm = &ast.AssignStmt{Lhs: values, Tok: token.DEFINE, Rhs: []ast.Expr{&c}}
+				clause.Comm = &ast.AssignStmt{Lhs: values, Tok: token.ASSIGN, Rhs: []ast.Expr{&c}}
 				if receive == r.target {
 					r.inserted = true
 					body = append(body, r.after(values)...)

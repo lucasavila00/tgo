@@ -187,7 +187,7 @@ func Compile(dir string) map[string][]byte {
 	}
 	loweredOperations := make(map[string]lowering.Propagation, len(operations))
 	for name, operation := range operations {
-		loweredOperations[name] = lowering.Propagation{Wrap: operation.Wrap, CallName: operation.CallName}
+		loweredOperations[name] = lowering.Propagation{Wrap: operation.Wrap, CallName: operation.CallName, Position: operation.Position}
 	}
 	for _, pkg := range loadProject(work) {
 		changed := false

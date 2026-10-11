@@ -1,0 +1,1 @@
+TGo: main.tgo:11:19: cannot name type func() (example.com/program/foreign.value, error) in a generated typed temporary: the type is private to example.com/program/foreign; expose the type with an accessible name

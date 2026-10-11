@@ -20,10 +20,13 @@ func next(fail bool) (int, error) {
 }
 
 var direct = func(fail bool) (tgo3 error) {
-	tgo4 := tgo3
-	tgo5 := tgo4
+	var tgo4 error = tgo3
+	var tgo5 error = tgo4
+
 	defer func() { trace = append(trace, "defer") }()
-	tgo1, tgo2 := next(fail)
+	var tgo1 int
+	var tgo2 error
+	tgo1, tgo2 = next(fail)
 	tgo4 = tgo2
 	if tgo4 != tgo5 {
 		return tgo4
@@ -34,10 +37,13 @@ var direct = func(fail bool) (tgo3 error) {
 }
 
 var wrapped = func(fail bool) (tgo8 error) {
-	tgo9 := tgo8
-	tgo10 := tgo9
+	var tgo9 error = tgo8
+	var tgo10 error = tgo9
+
 	defer func() { trace = append(trace, "defer") }()
-	tgo6, tgo7 := next(fail)
+	var tgo6 int
+	var tgo7 error
+	tgo6, tgo7 = next(fail)
 	tgo9 = tgo7
 	if tgo9 != tgo10 {
 		tgo9 = tgo11.Errorf("%s: %w", "next", tgo9)
@@ -51,10 +57,13 @@ var wrapped = func(fail bool) (tgo8 error) {
 var collection = map[string][]func(bool) error{
 	"run": {
 		func(fail bool) (tgo14 error) {
-			tgo15 := tgo14
-			tgo16 := tgo15
+			var tgo15 error = tgo14
+			var tgo16 error = tgo15
+
 			defer func() { trace = append(trace, "defer") }()
-			tgo12, tgo13 := next(fail)
+			var tgo12 int
+			var tgo13 error
+			tgo12, tgo13 = next(fail)
 			tgo15 = tgo13
 			if tgo15 != tgo16 {
 				return tgo15
@@ -68,10 +77,13 @@ var collection = map[string][]func(bool) error{
 
 var nested = func() func(bool) error {
 	return func(fail bool) (tgo19 error) {
-		tgo20 := tgo19
-		tgo21 := tgo20
+		var tgo20 error = tgo19
+		var tgo21 error = tgo20
+
 		defer func() { trace = append(trace, "defer") }()
-		tgo17, tgo18 := next(fail)
+		var tgo17 int
+		var tgo18 error
+		tgo17, tgo18 = next(fail)
 		tgo20 = tgo18
 		if tgo20 != tgo21 {
 			return tgo20
@@ -83,11 +95,14 @@ var nested = func() func(bool) error {
 }()
 
 var initialized = func() (tgo24 error) {
-	tgo25 := tgo24
-	tgo26 := tgo25
+	var tgo25 error = tgo24
+	var tgo26 error = tgo25
+
 	defer func() { trace = append(trace, "init-defer") }()
 	{
-		tgo22, tgo23 := next(true)
+		var tgo22 int
+		var tgo23 error
+		tgo22, tgo23 = next(true)
 		tgo25 = tgo23
 		if tgo25 != tgo26 {
 			return tgo25

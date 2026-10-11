@@ -17,7 +17,7 @@ func get() (Value, error) {
 	return 8, nil
 }
 
-func unnamed(Value string) (Value, error) {
+func unnamed(label string) (Value, error) {
 	return get()!!, nil
 }
 

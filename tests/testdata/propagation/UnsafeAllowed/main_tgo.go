@@ -12,9 +12,11 @@ type utility struct{}
 func (utility) Sizeof(value int) int { return value }
 func next() (int, error)             { return 7, nil }
 func run() (tgo3 error) {
-	tgo4 := tgo3
-	tgo5 := tgo4
-	tgo1, tgo2 := next()
+	var tgo4 error = tgo3
+	var tgo5 error = tgo4
+	var tgo1 int
+	var tgo2 error
+	tgo1, tgo2 = next()
 	tgo4 = tgo2
 	if tgo4 != tgo5 {
 		return tgo4
@@ -23,8 +25,10 @@ func run() (tgo3 error) {
 	fmt.Println(u.Sizeof(value) > 0, u.Alignof(value) > 0, u.Offsetof(value.X))
 	unsafe := utility{}
 	{
-		tgo8 := unsafe.Sizeof
-		tgo6, tgo7 := next()
+		var tgo8 func(value int) int = unsafe.Sizeof
+		var tgo6 int
+		var tgo7 error
+		tgo6, tgo7 = next()
 		tgo4 = tgo7
 		if tgo4 != tgo5 {
 			return tgo4
@@ -32,14 +36,18 @@ func run() (tgo3 error) {
 		fmt.Println(tgo8(tgo6))
 	}
 	{
-		tgo9, tgo10 := next()
+		var tgo9 int
+		var tgo10 error
+		tgo9, tgo10 = next()
 		tgo4 = tgo10
 		if tgo4 != tgo5 {
 			tgo4 = tgo11.Errorf("%s: %w", "next", tgo4)
 			return tgo4
 		}
-		tgo14 := min(tgo9, 8)
-		tgo12, tgo13 := next()
+		var tgo14 int = min(tgo9, 8)
+		var tgo12 int
+		var tgo13 error
+		tgo12, tgo13 = next()
 		tgo4 = tgo13
 		if tgo4 != tgo5 {
 			return tgo4

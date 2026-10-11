@@ -88,3 +88,19 @@ The expression proof tests insert statements at each recorded expression and
 compare the results with handwritten expectations. See the
 [test guide](../../tests/README.md) and
 [proof plan](../adr/expression-lowering/proof.md).
+
+## Typed temporaries
+
+Every generated temporary that saves an expression uses an explicit `var`
+type from the checked source. Tuple results use separate typed declarations
+and one assignment, so the call runs once. Contextual shifts keep the type
+supplied by their call, assignment, return, or field.
+
+The compiler rejects a required temporary when Go cannot name its type.
+This includes private imported types and type names hidden by source bindings.
+The error identifies the source position and type. Expose an accessible type
+at that boundary. There is no inferred temporary fallback.
+
+The Boolean lowerer uses a typed local and assigns each operand only when
+the source evaluates it. Comparisons keep their untyped Boolean behavior
+when the surrounding operation supplies a named Boolean type.

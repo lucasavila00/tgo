@@ -22,15 +22,16 @@ func (r *rewrite) integerRange(original, loop *ast.RangeStmt, before []ast.Stmt)
 		zero = r.pointerZero(place)
 	}
 	value, first := r.name(), r.name()
-	before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.DEFINE, Rhs: []ast.Expr{zero}}, &ast.AssignStmt{Lhs: []ast.Expr{first}, Tok: token.DEFINE, Rhs: []ast.Expr{boolean(true)}})
-	repeated := make([]ast.Stmt, len(setup))
-	for i, statement := range setup {
-		if assign, ok := statement.(*ast.AssignStmt); ok && assign.Tok == token.DEFINE {
-			copy := *assign
-			copy.Tok = token.ASSIGN
-			repeated[i] = &copy
+	before = append(before, variable(value, r.temporaryType(r.typeOf(original.Key), original.Key), zero), variable(first, r.temporaryType(types.Typ[types.Bool], original.Key), boolean(true)))
+	var repeated []ast.Stmt
+	for _, statement := range setup {
+		if declaration, ok := statement.(*ast.DeclStmt); ok {
+			spec := declaration.Decl.(*ast.GenDecl).Specs[0].(*ast.ValueSpec)
+			if len(spec.Values) != 0 {
+				repeated = append(repeated, &ast.AssignStmt{Lhs: []ast.Expr{spec.Names[0]}, Tok: token.ASSIGN, Rhs: spec.Values})
+			}
 		} else {
-			repeated[i] = statement
+			repeated = append(repeated, statement)
 		}
 	}
 	preparation := &ast.IfStmt{Cond: first, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{first}, Tok: token.ASSIGN, Rhs: []ast.Expr{boolean(false)}}}}, Else: &ast.BlockStmt{List: repeated}}

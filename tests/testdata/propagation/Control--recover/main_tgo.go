@@ -18,15 +18,18 @@ func step(name string) (int, error) {
 }
 
 func run() (tgo3 error) {
-	tgo4 := tgo3
-	tgo5 := tgo4
+	var tgo4 error = tgo3
+	var tgo5 error = tgo4
+
 	defer func() {
 		if recover() != nil {
 			fmt.Print("r")
 		}
 	}()
 	{
-		tgo1, tgo2 := step("P")
+		var tgo1 int
+		var tgo2 error
+		tgo1, tgo2 = step("P")
 		tgo4 = tgo2
 		if tgo4 != tgo5 {
 			return tgo4

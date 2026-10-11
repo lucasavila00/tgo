@@ -40,10 +40,12 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() (tgo3 error) {
-	tgo4 := tgo3
-	tgo5 := tgo4
+	var tgo4 error = tgo3
+	var tgo5 error = tgo4
 	{
-		tgo1, tgo2 := step("T")
+		var tgo1 int
+		var tgo2 error
+		tgo1, tgo2 = step("T")
 		tgo4 = tgo2
 		if tgo4 != tgo5 {
 			tgo4 = tgo6.Errorf("%s: %w", "step", tgo4)

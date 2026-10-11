@@ -65,7 +65,7 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	if expr == r.target && expr != r.suppressedRoot {
 		r.inserted = true
 		if r.suppressedRoot != nil {
-			saved, values := r.save(&ast.UnaryExpr{Op: token.AND, X: result})
+			saved, values := r.save(r.typedAddress(result, expr))
 			before = append(before, saved...)
 			result = &ast.StarExpr{X: values[0]}
 			before = append(before, r.after([]ast.Expr{result})...)
@@ -82,11 +82,24 @@ func (r *rewrite) address(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	r.suppressedRoot = expr
 	before, place := r.place(expr)
 	r.suppressedRoot = previous
-	saved, values := r.save(&ast.UnaryExpr{Op: token.AND, X: place})
+	saved, values := r.save(r.typedAddress(place, expr))
 	before = append(before, saved...)
 	if expr == r.target {
 		r.inserted = true
 		before = append(before, r.after([]ast.Expr{&ast.StarExpr{X: values[0]}})...)
 	}
 	return before, values[0]
+}
+
+func (r *rewrite) typedAddress(value, original ast.Expr) ast.Expr {
+	expr := &ast.UnaryExpr{Op: token.AND, X: value}
+	if r.temporaryTypes == nil {
+		r.temporaryTypes = make(map[ast.Expr]types.Type)
+	}
+	r.temporaryTypes[expr] = types.NewPointer(r.typeOf(original))
+	if r.origins == nil {
+		r.origins = make(map[ast.Expr]ast.Expr)
+	}
+	r.origins[expr] = original
+	return expr
 }

@@ -7,11 +7,13 @@ import (
 )
 
 func testRead() (tgo8 int, tgo10 error) {
-	tgo9 := tgo8
-	tgo11 := tgo10
-	tgo12 := tgo11
+	var tgo9 int = tgo8
+	var tgo11 error = tgo10
+	var tgo12 error = tgo11
 	{
-		tgo6, tgo7 := library.Read()
+		var tgo6 int
+		var tgo7 error
+		tgo6, tgo7 = library.Read()
 		tgo11 = tgo7
 		if tgo11 != tgo12 {
 			return tgo9, tgo11

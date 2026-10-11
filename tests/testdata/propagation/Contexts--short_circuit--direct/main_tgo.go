@@ -38,14 +38,15 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() (tgo3 error) {
-	tgo4 := tgo3
-	tgo5 := tgo4
+	var tgo4 error = tgo3
+	var tgo5 error = tgo4
 	{
-		tgo6 := 0 != 0 &&
-			(false && tgoPropagation1(predicate("B")))
+		var tgo6 bool
 		tgo6 = false
 		if tgo6 {
-			tgo1, tgo2 := predicate("B")
+			var tgo1 bool
+			var tgo2 error
+			tgo1, tgo2 = predicate("B")
 			tgo4 = tgo2
 			if tgo4 != tgo5 {
 				return tgo4
@@ -55,11 +56,12 @@ func run() (tgo3 error) {
 		fmt.Print(tgo6)
 	}
 	{
-		tgo9 := 0 != 0 &&
-			(true && tgoPropagation2(predicate("C")))
+		var tgo9 bool
 		tgo9 = true
 		if tgo9 {
-			tgo7, tgo8 := predicate("C")
+			var tgo7 bool
+			var tgo8 error
+			tgo7, tgo8 = predicate("C")
 			tgo4 = tgo8
 			if tgo4 != tgo5 {
 				return tgo4
@@ -84,14 +86,4 @@ func main() {
 			panic(err)
 		}
 	}
-}
-func tgoPropagation1[T0 interface {
-}, T1 interface {
-}](v0 T0, err T1) T0 {
-	return v0
-}
-func tgoPropagation2[T0 interface {
-}, T1 interface {
-}](v0 T0, err T1) T0 {
-	return v0
 }

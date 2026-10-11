@@ -27,11 +27,13 @@ func consume(a, b, c int) {
 }
 
 func run(fail bool) (tgo3 error) {
-	tgo4 := tgo3
-	tgo5 := tgo4
+	var tgo4 error = tgo3
+	var tgo5 error = tgo4
 	{
-		tgo6 := effect("L")
-		tgo1, tgo2 := target(fail)
+		var tgo6 int = effect("L")
+		var tgo1 int
+		var tgo2 error
+		tgo1, tgo2 = target(fail)
 		tgo4 = tgo2
 		if tgo4 != tgo5 {
 			return tgo4
@@ -42,10 +44,12 @@ func run(fail bool) (tgo3 error) {
 }
 
 func wrapped() (tgo9 error) {
-	tgo10 := tgo9
-	tgo11 := tgo10
+	var tgo10 error = tgo9
+	var tgo11 error = tgo10
 	{
-		tgo7, tgo8 := target(true)
+		var tgo7 int
+		var tgo8 error
+		tgo7, tgo8 = target(true)
 		tgo10 = tgo8
 		if tgo10 != tgo11 {
 			tgo10 = tgo12.Errorf("%s: %w", "target", tgo10)

@@ -35,6 +35,14 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	rejectionsData, err := os.ReadFile("testdata/proof/rejections.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rejections map[string]string
+	if err := json.Unmarshal(rejectionsData, &rejections); err != nil {
+		t.Fatal(err)
+	}
 	dir := t.TempDir()
 	if artifacts := os.Getenv("TGO_PROOF_ARTIFACTS"); artifacts != "" {
 		dir = filepath.Join(artifacts, t.Name())
@@ -85,6 +93,13 @@ func proofMatrix(t *testing.T, neutral, returnCheck bool) {
 						}
 					}
 					files, err := source.InsertAfter(site, after)
+					expected := rejections[fmt.Sprintf("%s:%d:%d", site.File, site.Start, site.End)]
+					if expected != "" {
+						if err == nil || !strings.Contains(err.Error(), expected) {
+							t.Fatalf("rejection: %v, want %s", err, expected)
+						}
+						continue
+					}
 					if err != nil {
 						t.Fatal(err)
 					}

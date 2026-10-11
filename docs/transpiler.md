@@ -93,3 +93,8 @@ An unknown site or a site without a current-function evaluation returns an error
 
 See the [architecture](arch/transpiler.md) for lowering and package dependencies,
 and the [test guide](../tests/README.md) for behavior checks and snapshots.
+
+Generated temporaries have explicit types. A source operation is rejected if
+saving its value requires a private imported type or a hidden type name that
+Go cannot use in a declaration. The diagnostic gives the source position and
+type. Expose an accessible type at that boundary.

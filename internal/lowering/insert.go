@@ -147,7 +147,12 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 		r.mapAlias = nil
 		r.sliceAlias = nil
 		r.reflectAlias = nil
+		r.typeImports = nil
 		copy := r.functionBodies(file).(*ast.File)
+		if r.err != nil {
+			return nil, r.err
+		}
+
 		copy.Decls = append(copy.Decls, r.extraDeclarations...)
 		for _, spec := range r.extraImports {
 			copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)

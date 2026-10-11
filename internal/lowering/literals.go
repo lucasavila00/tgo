@@ -105,8 +105,6 @@ func (r *rewrite) contextLiteral(value, original ast.Expr) ast.Expr {
 
 // materializeKey constructs a struct or array key without hashing it early.
 func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt, []ast.Expr) {
-	pair := r.source.parents[original].(*ast.KeyValueExpr)
-	container := r.source.parents[pair].(*ast.CompositeLit)
 	var elements []ast.Expr
 	for _, element := range value.Elts {
 		if item, ok := element.(*ast.KeyValueExpr); ok {
@@ -127,7 +125,15 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 		values = append(values, refs[0])
 	}
 	key := r.name()
-	before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{key}, Tok: token.DEFINE, Rhs: []ast.Expr{r.zeroMapKey(container, isPointer(r.source.Package.TypesInfo.TypeOf(container)))}})
+	if r.temporaryTypes == nil {
+		r.temporaryTypes = make(map[ast.Expr]types.Type)
+	}
+	r.temporaryTypes[key] = r.typeOf(original)
+	if r.origins == nil {
+		r.origins = make(map[ast.Expr]ast.Expr)
+	}
+	r.origins[key] = original
+	before = append(before, variable(key, r.temporaryType(r.typeOf(original), original), nil))
 	index := 0
 	for i, element := range value.Elts {
 		var place ast.Expr
