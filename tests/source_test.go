@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"go/ast"
 	"os"
 	"path/filepath"
 	"testing"
@@ -81,4 +82,34 @@ func run(err error) error {
 			t.Errorf("missing %s", name)
 		}
 	}
+}
+
+func TestSourceLineDirectives(t *testing.T) {
+	dir := t.TempDir()
+	input := "//line virtual.go:20\npackage input\nfunc value() int { return 1 }\nfunc run() { _ = value() }\n"
+	writeFiles(t, dir, map[string][]byte{
+		"go.mod":   []byte("module example.com/input\n\ngo 1.27.1\n"),
+		"input.go": []byte(input),
+	})
+	source, err := transpiler.Load(dir, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, site := range source.Sites {
+		if site.File != "input.go" {
+			t.Fatalf("physical source file: %q", site.File)
+		}
+		if input[site.Start:site.End] != "value()" {
+			continue
+		}
+		output, err := source.InsertAfter(site, func([]ast.Expr) []ast.Stmt { return nil })
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := output[filepath.Join(dir, "input.go")]; !ok {
+			t.Fatalf("physical output file missing: %v", output)
+		}
+		return
+	}
+	t.Fatal("missing call site")
 }

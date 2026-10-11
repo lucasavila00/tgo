@@ -1,0 +1,10 @@
+package main
+
+import "fmt"
+
+//line inside.tgo:40
+func inside() error {
+	fail()!!
+	fmt.Println("continued inside")
+	return nil
+}

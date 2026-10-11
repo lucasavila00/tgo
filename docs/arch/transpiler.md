@@ -27,7 +27,8 @@ frontend and lowering packages. Neither frontend nor lowering imports the other.
 
 `name.tgo` produces `name_tgo.go`. Test and platform suffixes stay at the end:
 `name_test.tgo` produces `name_tgo_test.go`. Existing generated files do not
-participate in source type checking. See the API guide for module output rules.
+participate in source type checking. See the API guide for module output rules. Line directives change diagnostic locations. File
+selection and output use physical source paths.
 
 ## Error propagation
 

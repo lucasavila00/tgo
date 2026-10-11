@@ -69,8 +69,9 @@ func (s *Source) inventory(file *ast.File, dir string) {
 			s.parents[n] = stack[len(stack)-1]
 		}
 		if expr, ok := n.(ast.Expr); ok {
-			start := s.Package.Fset.Position(expr.Pos())
-			end := s.Package.Fset.Position(expr.End())
+			// Use physical file names and offsets for expression sites.
+			start := s.Package.Fset.PositionFor(expr.Pos(), false)
+			end := s.Package.Fset.PositionFor(expr.End(), false)
 			name, err := filepath.Rel(dir, start.Filename)
 			if err != nil {
 				name = start.Filename

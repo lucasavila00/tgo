@@ -119,7 +119,7 @@ func Compile(dir string) map[string][]byte {
 			}
 		}
 		for _, file := range pkg.Syntax {
-			name, err := filepath.Rel(work, pkg.Fset.Position(file.Pos()).Filename)
+			name, err := filepath.Rel(work, pkg.Fset.PositionFor(file.Pos(), false).Filename)
 			must(err)
 			if !tgoFiles[name] {
 				continue
@@ -138,7 +138,7 @@ func Compile(dir string) map[string][]byte {
 		written := make(map[string]bool)
 		for _, pkg := range pkgs {
 			for _, file := range pkg.Syntax {
-				filename := pkg.Fset.Position(file.Pos()).Filename
+				filename := pkg.Fset.PositionFor(file.Pos(), false).Filename
 				if written[filename] {
 					continue
 				}
@@ -233,7 +233,7 @@ func Compile(dir string) map[string][]byte {
 func writeSyntax(fset *token.FileSet, file *ast.File) {
 	var buf bytes.Buffer
 	must(format.Node(&buf, fset, file))
-	must(os.WriteFile(fset.Position(file.Pos()).Filename, buf.Bytes(), 0600))
+	must(os.WriteFile(fset.PositionFor(file.Pos(), false).Filename, buf.Bytes(), 0600))
 }
 
 func must(err error) {
