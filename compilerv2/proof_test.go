@@ -172,7 +172,7 @@ func TestNeutral(t *testing.T) {v:=Value(1);if int(v)!=1 {t.Fatal(v)};Use(v);if 
 		}
 	}
 	checks.WriteString("}}();")
-	fmt.Fprintf(&checks, "if expected,ok:=ReferenceMarkers(%q,%d,%d,input.name,input.reached);!ok {t.Fatal(\"missing marker oracle\")};if !reflect.DeepEqual(proofMarks,expected){t.Fatalf(\"%%s marker positions: %%v, want %%v\",input.name,proofMarks,expected)}}\n", filepath.Base(site.File), site.Start, site.End)
+	fmt.Fprintf(&checks, "expected,ok:=ReferenceMarkers(%q,%d,%d,input.name,input.reached);if !ok {t.Fatal(\"missing marker oracle\")};if !reflect.DeepEqual(proofMarks,expected){t.Fatalf(\"%%s marker positions: %%v, want %%v\",input.name,proofMarks,expected)}}\n", filepath.Base(site.File), site.Start, site.End)
 	checks.WriteString("}\n")
 	if err := os.WriteFile(filepath.Join(dir, "proof_test.go"), []byte(checks.String()), 0600); err != nil {
 		t.Fatal(err)
