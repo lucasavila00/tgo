@@ -1,0 +1,24 @@
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+var effects int
+
+func main() {
+	fmt.Println(len([1][]int{[]int{if true {effects++; i} else {0} for i := range 2}}), effects)
+	fmt.Println(cap([1][]int{[]int{if true {effects++; i} else {0} for i := range 2}}), effects)
+	for range [1][]int{[]int{if true {effects++; i} else {0} for i := range 2}} {
+		fmt.Println("range", effects)
+	}
+	fmt.Println(unsafe.Sizeof([]int{if true {effects++; i} else {0} for i := range 2}), effects)
+	fmt.Println(unsafe.Alignof(map[int]int{i: if true {effects++; i} else {0} for i := range 2}), effects)
+	fmt.Println(unsafe.Offsetof((struct { Values []int }{
+        []int{if true {effects++; i} else {0} for i := range 2},
+    }).Values), effects)
+    fmt.Println([]int{i for i := range [2]int{1, 2}})
+	var pointer *[2]int
+	fmt.Println([]int{i for i := range *pointer})
+}

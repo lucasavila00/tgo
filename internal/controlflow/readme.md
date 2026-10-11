@@ -37,13 +37,14 @@ Branch follows all source paths through a branch. Jumps out of the branch end th
 
 ## type Syntax
 
-Syntax supplies callbacks for added if expressions, terminating calls, and unevaluated operands.
+Syntax identifies statements inside added expressions and Go control\-flow rules.
 
 ```go
 type Syntax struct {
-    Conditional func(*ast.CallExpr) *ast.IfStmt
-    Terminates  func(*ast.CallExpr) bool
-    Unevaluated func(*ast.CallExpr) bool
+    RangeSourceOutside func(*ast.RangeStmt) bool
+    Statements         func(*ast.CallExpr) ast.Stmt
+    Terminates         func(*ast.CallExpr) bool
+    Unevaluated        func(*ast.CallExpr) bool
 }
 ```
 

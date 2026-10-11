@@ -23,6 +23,10 @@ func (r *rewrite) capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	var before []ast.Stmt
 	var result ast.Expr = expr
+	if call, ok := expr.(*ast.CallExpr); ok && r.comprehensions[call] != nil {
+		before, values := r.expression(call)
+		return before, values[0]
+	}
 	switch e := expr.(type) {
 	case *ast.CompositeLit:
 		setup, values := r.expression(e)

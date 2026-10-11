@@ -5,11 +5,12 @@ import (
 	"go/token"
 )
 
-// Syntax supplies callbacks for added if expressions, terminating calls, and unevaluated operands.
+// Syntax identifies statements inside added expressions and Go control-flow rules.
 type Syntax struct {
-	Conditional func(*ast.CallExpr) *ast.IfStmt
-	Terminates  func(*ast.CallExpr) bool
-	Unevaluated func(*ast.CallExpr) bool
+	RangeSourceOutside func(*ast.RangeStmt) bool
+	Statements         func(*ast.CallExpr) ast.Stmt
+	Terminates         func(*ast.CallExpr) bool
+	Unevaluated        func(*ast.CallExpr) bool
 }
 
 // Result reports whether a branch can reach its last statement or its end.
@@ -159,9 +160,9 @@ func (g *graph) expression(expr ast.Expr, next *point, t targets) *point {
 		if g.syntax.Unevaluated != nil && g.syntax.Unevaluated(e) {
 			return next
 		}
-		if g.syntax.Conditional != nil {
-			if branch := g.syntax.Conditional(e); branch != nil {
-				return g.statement(branch, next, t, "")
+		if g.syntax.Statements != nil {
+			if body := g.syntax.Statements(e); body != nil {
+				return g.statement(body, next, t, "")
 			}
 		}
 		if g.syntax.Terminates != nil && g.syntax.Terminates(e) {
@@ -233,6 +234,9 @@ func (g *graph) rangeStatement(s *ast.RangeStmt, next *point, t targets, label s
 	body := g.statement(s.Body, step, inner, "")
 	body = g.expressions([]ast.Expr{s.Key, s.Value}, body, inner)
 	step.next = []*point{body, next}
+	if g.syntax.RangeSourceOutside != nil && g.syntax.RangeSourceOutside(s) {
+		inner = t
+	}
 	return g.expression(s.X, step, inner)
 }
 func (g *graph) switchStatement(s *ast.SwitchStmt, next *point, t targets, label string) *point {

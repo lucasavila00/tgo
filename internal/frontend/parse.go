@@ -10,18 +10,20 @@ import (
 
 // Parsed contains Go syntax and records for the added TGo expressions.
 type Parsed struct {
-	File         *ast.File
-	Conditionals map[string]token.Position
-	Propagations map[string]Marker
+	File           *ast.File
+	Comprehensions map[string]*Comprehension
+	Conditionals   map[string]token.Position
+	Propagations   map[string]Marker
 }
 
 type mappedSource struct {
+	input   string
 	text    string
 	offsets []int
 }
 
 func originalSource(input []byte) mappedSource {
-	s := mappedSource{text: string(input), offsets: make([]int, len(input)+1)}
+	s := mappedSource{input: string(input), text: string(input), offsets: make([]int, len(input)+1)}
 	for i := range s.offsets {
 		s.offsets[i] = i
 	}
@@ -44,7 +46,7 @@ func insertedOffsets(count, offset int) []int {
 // ParseFile parses added expressions and maps syntax positions to the input.
 // Conditional bodies remain statements in the original enclosing function.
 func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, used map[string]bool) (*Parsed, error) {
-	result := &Parsed{Conditionals: make(map[string]token.Position), Propagations: make(map[string]Marker)}
+	result := &Parsed{Comprehensions: make(map[string]*Comprehension), Conditionals: make(map[string]token.Position), Propagations: make(map[string]Marker)}
 	original := fset.AddFile(filename, -1, len(input))
 	if sourceName != filename {
 		original.AddLineColumnInfo(0, sourceName, 1, 1)
@@ -62,7 +64,15 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 	}
 	source := prepareSource(sourceName, input, used, result.Propagations)
 	for {
-		for source.prepareConditionals(filename, original, used, result.Conditionals) {
+		for {
+			conditional := source.prepareConditionals(filename, original, used, result.Conditionals)
+			changed, err := source.prepareComprehension(original, used, result.Comprehensions)
+			if err != nil {
+				return nil, err
+			}
+			if !changed && !conditional {
+				break
+			}
 		}
 		temporary := token.NewFileSet()
 		file, err := parser.ParseFile(temporary, filename, source.text, parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution)
@@ -124,6 +134,18 @@ func prepareSource(sourceName string, input []byte, used map[string]bool, propag
 func (result *Parsed) finish(fset *token.FileSet, file *ast.File, prepared, original *token.File, offsets []int) *Parsed {
 	mapPositions(file, prepared, original, offsets, make(map[ast.Node]bool))
 	result.File = file
+	ast.Inspect(file, func(node ast.Node) bool {
+		if call, ok := node.(*ast.CallExpr); ok {
+			if id, ok := call.Fun.(*ast.Ident); ok {
+				if record := result.Comprehensions[id.Name]; record != nil {
+					record.Type = call.Args[0]
+					record.Body = call.Args[1].(*ast.FuncLit).Body
+					record.Ranges = comprehensionRanges(record.Body)
+				}
+			}
+		}
+		return true
+	})
 	for expression, operation := range MarkerExpressions(fset, file, result.Propagations) {
 		result.Propagations[operation.Name] = operation
 		WrapMarker(file, expression, operation)

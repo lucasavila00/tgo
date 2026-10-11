@@ -71,14 +71,15 @@ Package keeps checked syntax and private type objects together.
 
 ```go
 type Package struct {
-    Fset         *token.FileSet
-    Syntax       []*ast.File
-    Types        *types.Package
-    TypesInfo    *types.Info
-    GoFiles      []string
-    Errors       []error
-    Operations   map[string]types.TGoOperation
-    Conditionals map[*ast.CallExpr]*ast.IfStmt
+    Fset           *token.FileSet
+    Syntax         []*ast.File
+    Types          *types.Package
+    TypesInfo      *types.Info
+    GoFiles        []string
+    Errors         []error
+    Operations     map[string]types.TGoOperation
+    Comprehensions map[*ast.CallExpr]*frontend.Comprehension
+    Conditionals   map[*ast.CallExpr]*ast.IfStmt
 }
 ```
 

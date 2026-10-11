@@ -1,0 +1,36 @@
+package main
+
+import "fmt"
+
+var trace []string
+
+func mark(label string, value int) int {
+	trace = append(trace, label)
+	return value
+}
+
+func source(label string, values []int) []int {
+	trace = append(trace, label)
+	return values
+}
+
+func show(first int, values []int, last int) {
+	fmt.Println(first, values, last, trace)
+	trace = nil
+}
+
+func main() {
+	show(mark("left", 1), []int{mark("value", x) for _, x := range source("source", []int{1, 2}) if mark("filter", x) > 1}, mark("right", 3))
+	result := [][2]int{[2]int{x, mark("inner value", y)} for _, x := range source("outer", []int{0, 2}) if mark("outer filter", x) > 0 for _, y := range source("inner", []int{x, x + 1})}
+	fmt.Println(result, trace)
+	trace = nil
+	fmt.Println([]int{mark("consume", x) for _, x := range []int{mark("produce", y) for _, y := range source("nested", []int{1, 2})}}, trace)
+	trace = nil
+	fmt.Println(map[int]int{mark("key", 0): mark("value", x) for _, x := range []int{1, 2}}, trace)
+	trace = nil
+	xs := []int{1, 2, 3}
+	copied := []int{if x == 1 {xs[1] = 9; x} else {x} for _, x := range [3]int{1, 2, 3}}
+	fmt.Println(copied, xs)
+	defer fmt.Println([]int{mark("defer", x) for _, x := range []int{7, 8}}, trace)
+	fmt.Println(false && len([]int{mark("unreached", x) for x := range 1}) > 0, trace)
+}

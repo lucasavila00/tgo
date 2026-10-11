@@ -19,14 +19,15 @@ import (
 
 // Package keeps checked syntax and private type objects together.
 type Package struct {
-	Fset         *token.FileSet
-	Syntax       []*ast.File
-	Types        *types.Package
-	TypesInfo    *types.Info
-	GoFiles      []string
-	Errors       []error
-	Operations   map[string]types.TGoOperation
-	Conditionals map[*ast.CallExpr]*ast.IfStmt
+	Fset           *token.FileSet
+	Syntax         []*ast.File
+	Types          *types.Package
+	TypesInfo      *types.Info
+	GoFiles        []string
+	Errors         []error
+	Operations     map[string]types.TGoOperation
+	Comprehensions map[*ast.CallExpr]*frontend.Comprehension
+	Conditionals   map[*ast.CallExpr]*ast.IfStmt
 }
 
 // Loader checks source packages and reads compiled dependency types.
@@ -82,7 +83,7 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 	loader.checking[metadata.ID] = true
 	defer delete(loader.checking, metadata.ID)
 	pkg := &Package{Fset: loader.fset, TypesInfo: newInfo(), GoFiles: metadata.GoFiles,
-		Operations: make(map[string]types.TGoOperation), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt)}
+		Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt)}
 	filenames := metadata.CompiledGoFiles
 	if len(filenames) == 0 {
 		filenames = metadata.GoFiles
@@ -103,6 +104,18 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 				return nil, err
 			}
 			file = parsed.File
+			for name, record := range parsed.Comprehensions {
+				pkg.Operations[name] = types.TGoOperation{Comprehension: true, Ranges: record.Ranges, Output: record.Output, Position: record.Position}
+				pkg.Operations[record.Output] = types.TGoOperation{Element: true, Position: record.Position}
+				ast.Inspect(file, func(node ast.Node) bool {
+					if call, ok := node.(*ast.CallExpr); ok {
+						if id, ok := call.Fun.(*ast.Ident); ok && id.Name == name {
+							pkg.Comprehensions[call] = record
+						}
+					}
+					return true
+				})
+			}
 			for name, pos := range parsed.Conditionals {
 				pkg.Operations[name] = types.TGoOperation{Conditional: true, Position: pos}
 			}
@@ -188,7 +201,7 @@ func CheckGo(metadata *packages.Package, dir string) (*Package, error) {
 		return nil, err
 	}
 	pkg := &Package{Fset: metadata.Fset, Syntax: metadata.Syntax, GoFiles: metadata.GoFiles,
-		TypesInfo: newInfo(), Operations: make(map[string]types.TGoOperation), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt)}
+		TypesInfo: newInfo(), Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt)}
 	loader.fset = metadata.Fset
 	return loader.check(metadata, pkg)
 }

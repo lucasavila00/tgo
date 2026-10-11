@@ -104,7 +104,7 @@ func (r *rewrite) initializerJumps(loop *ast.ForStmt) bool {
 
 func (r *rewrite) realFunction(function *ast.FuncLit) bool {
 	call, _ := r.source.parents[function].(*ast.CallExpr)
-	return r.conditionals[call] == nil
+	return r.conditionals[call] == nil && r.comprehensions[call] == nil
 }
 
 // branchTarget uses source parents and checked labels, before statements move.
@@ -123,8 +123,13 @@ func (r *rewrite) branchTarget(branch *ast.BranchStmt) ast.Stmt {
 			continue
 		}
 		switch node := node.(type) {
-		case *ast.ForStmt, *ast.RangeStmt:
-			return node.(ast.Stmt)
+		case *ast.RangeStmt:
+			if r.comprehensionRanges[node] && contains(node.X, branch) {
+				continue
+			}
+			return node
+		case *ast.ForStmt:
+			return node
 		case *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
 			if branch.Tok == token.BREAK {
 				return node.(ast.Stmt)

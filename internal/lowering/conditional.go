@@ -10,7 +10,7 @@ import (
 func (r *rewrite) packageConditional(expression ast.Expr) bool {
 	found := false
 	ast.Inspect(expression, func(node ast.Node) bool {
-		if call, ok := node.(*ast.CallExpr); ok && r.conditionals[call] != nil {
+		if call, ok := node.(*ast.CallExpr); ok && (r.conditionals[call] != nil || r.comprehensions[call] != nil) {
 			found = true
 			return false
 		}

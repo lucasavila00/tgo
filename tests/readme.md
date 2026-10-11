@@ -17,7 +17,8 @@ and retry after a source-checking failure.
 ## Fixture inputs, snapshots, and expected output
 
 Propagation fixtures live in `tests/testdata/propagation/`. If-value fixtures
-live in `tests/testdata/value-expressions/`. A fixture contains:
+live in `tests/testdata/value-expressions/`. Collection comprehensions live in
+`tests/testdata/comprehensions/`. A fixture contains:
 
 - `.tgo` inputs and a `go.mod`, with any ordinary Go source or assets.
 - `_tgo.go` snapshots beside selected inputs, with test and platform suffixes

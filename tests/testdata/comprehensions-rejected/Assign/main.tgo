@@ -1,0 +1,2 @@
+package p
+func f() { x := 0; _ = []int{x for x = range 2} }

@@ -54,7 +54,7 @@
 // # Code map
 //
 // [module.go] handles ownership and disk stages. [propagation.go] connects file
-// selection, checking, and lowering for propagation and if values. [filename.go]
+// selection, checking, and lowering for propagation, if values, and comprehensions. [filename.go]
 // preserves filename suffixes. The [unsafe operand check] rejects propagation in
 // unsafe size and offset operands.
 //

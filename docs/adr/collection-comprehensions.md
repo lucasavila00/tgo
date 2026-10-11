@@ -1,6 +1,6 @@
 # Eager slice and map comprehensions
 
-Status: proposed. This feature is not implemented.
+Status: accepted.
 
 ## Decision
 
@@ -150,28 +150,42 @@ a visible partial destination can prevent an automatic loop replacement.
 
 ## Validation
 
-Compare generated programs with independent Go loops in hosted CI. Check:
+`TestCollectionComprehensions` compiles `.tgo` fixtures, compares generated Go
+with committed snapshots, and runs both the output and independent Go loops
+against `stdout.txt`.
 
-- Syntax, named types, type parameters, comments, multiline clauses, nesting,
-  original positions, and unchanged ordinary literals.
-- Every range kind and binding count, nil inputs, constant-length exceptions,
-  Unicode, map mutation, iterator cleanup, dependent sources, and filter order.
-- Non-nil empty results, fresh storage, address-taking, duplicate keys,
-  key-before-value execution, and interface-key comparison panics.
-- Local scope, own-source shadowing, captured iteration variables, typed nil,
-  constants, overflow diagnostics, and exact source call counts.
-- Propagation identity and wrapping, if values, returns, defers, labeled jumps,
-  surrounding operands, assignments, short circuit, loops, initialization, and
-  evaluated versus unevaluated builtins.
-- Distinct eager comprehensions with visible effects and duplicate map keys.
-  Keep their production and consumption phases separate.
+The fixtures in `tests/testdata/comprehensions/` check:
 
-Compare effect traces as well as results. Snapshots must show one destination
-and no intermediate filter or transform collections. Check append and proved
-exact-length paths.
+- `Ranges`: every Go range kind, dependent generators, filters, Unicode,
+  nil inputs, closure capture, and iterator cleanup on break.
+- `Types`: named and generic collections, contextual shifts, nil and interface
+  outputs, address-taking, shadowed bindings, and non-nil empty results.
+- `Effects` and `Operations`: source call counts, separate eager collections,
+  key-before-value execution, duplicate keys, array copies, map mutation,
+  stores, go and defer arguments, and select operands. An unhashable interface
+  key must evaluate its value before insertion panics.
+- `Control`: original and wrapped errors, source returns and defers, break,
+  continue, goto, and jumps from a generator source to an active outer loop.
+- `Builtins`: array len, cap, and range execute contained comprehensions;
+  unsafe size, alignment, and offset operands remain unevaluated.
+- `HiddenBuiltins`: ordinary Go declarations named append, make, and len stay
+  unchanged while generated operations keep their meaning.
 
-Benchmark against handwritten Go and materialized filter-then-transform code.
-Cover dense and sparse filters, large inputs, nested generators, duplicate map
-keys, and unknown-length iterators. Report runtime, allocations, and bytes.
-Measure compiler time for independent and deeply nested comprehensions. Do not
-claim a speed gain before measurement.
+`TestComprehensionErrors` checks invalid types, bindings, filters, output counts,
+overflow, scope, and unsafe propagation. Diagnostics identify `.tgo` positions.
+Frontend tests check comments, multiline syntax, and ordinary loops.
+
+Snapshots show one destination, the exact-length and append paths, and map
+size hints. Effect traces check execution order independently of these snapshots.
+
+The `Benchmarks` fixture compares generated code with handwritten Go for dense
+and sparse filters, nested generators, repeated keys, and iterators. It also
+measures a materialized filter-then-transform loop. Run:
+
+```sh
+go -C tests/testdata/comprehensions/Benchmarks test -run '^$' -bench . -benchmem
+go test ./internal/driver -run '^$' -bench BenchmarkCompileComprehensions
+```
+
+The compiler benchmark measures independent and nested comprehensions at 1,
+16, and 64 expressions. Compare allocations and bytes as well as elapsed time.

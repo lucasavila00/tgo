@@ -1,0 +1,2 @@
+package p
+var result = []int{1, x for x := range 2}

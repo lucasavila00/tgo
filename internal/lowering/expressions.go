@@ -3,6 +3,7 @@ package lowering
 import (
 	"fmt"
 	"github.com/lucasavila00/tgo/internal/checker/types"
+	"github.com/lucasavila00/tgo/internal/frontend"
 	"go/ast"
 	"go/token"
 )
@@ -11,37 +12,40 @@ import (
 type After func(results []ast.Expr) []ast.Stmt
 
 type rewrite struct {
-	source            *Source
-	target            ast.Expr
-	after             After
-	names             map[string]bool
-	next              int
-	inserted          bool
-	labels            map[string]string
-	breakExits        map[*ast.BranchStmt]*ast.Ident
-	controlTargets    map[ast.Stmt]ast.Stmt
-	bindings          map[types.Object]string
-	suppressedRoot    ast.Expr
-	propagations      map[ast.Expr]Propagation
-	conditionals      map[*ast.CallExpr]*ast.IfStmt
-	lowered           map[ast.Expr]bool
-	frame             *returnFrame
-	formatAlias       *ast.Ident
-	suppressed        bool
-	extraImports      []*ast.ImportSpec
-	extraDeclarations []ast.Decl
-	zeroSequence      *ast.Ident
-	iterAlias         *ast.Ident
-	mapAlias          *ast.Ident
-	sliceAlias        *ast.Ident
-	origins           map[ast.Expr]ast.Expr
-	parameterAliases  map[*types.TypeParam]*ast.Ident
-	aliasStatements   map[ast.Node][]ast.Stmt
-	reflectAlias      *ast.Ident
-	deferredBases     map[ast.Expr]bool
-	temporaryTypes    map[ast.Expr]types.Type
-	typeImports       map[*types.Package]*ast.Ident
-	err               error
+	source              *Source
+	target              ast.Expr
+	after               After
+	names               map[string]bool
+	next                int
+	inserted            bool
+	labels              map[string]string
+	breakExits          map[*ast.BranchStmt]*ast.Ident
+	controlTargets      map[ast.Stmt]ast.Stmt
+	bindings            map[types.Object]string
+	suppressedRoot      ast.Expr
+	propagations        map[ast.Expr]Propagation
+	comprehensions      map[*ast.CallExpr]*frontend.Comprehension
+	comprehensionRanges map[*ast.RangeStmt]bool
+	collectionOutputs   map[string]*collectionDestination
+	conditionals        map[*ast.CallExpr]*ast.IfStmt
+	lowered             map[ast.Expr]bool
+	frame               *returnFrame
+	formatAlias         *ast.Ident
+	suppressed          bool
+	extraImports        []*ast.ImportSpec
+	extraDeclarations   []ast.Decl
+	zeroSequence        *ast.Ident
+	iterAlias           *ast.Ident
+	mapAlias            *ast.Ident
+	sliceAlias          *ast.Ident
+	origins             map[ast.Expr]ast.Expr
+	parameterAliases    map[*types.TypeParam]*ast.Ident
+	aliasStatements     map[ast.Node][]ast.Stmt
+	reflectAlias        *ast.Ident
+	deferredBases       map[ast.Expr]bool
+	temporaryTypes      map[ast.Expr]types.Type
+	typeImports         map[*types.Package]*ast.Ident
+	err                 error
 }
 
 func (r *rewrite) name() *ast.Ident {
@@ -187,6 +191,12 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		return r.propagatedCall(expr.(*ast.CallExpr), operation)
 	}
 	if call, ok := expr.(*ast.CallExpr); ok {
+		if record := r.comprehensions[call]; record != nil {
+			return r.comprehensionCall(call, record)
+		}
+		if id, ok := call.Fun.(*ast.Ident); ok && r.collectionOutputs[id.Name] != nil {
+			return r.comprehensionOutput(call, r.collectionOutputs[id.Name])
+		}
 		if statement := r.conditionals[call]; statement != nil {
 			return r.conditionalCall(call, statement)
 		}

@@ -1,0 +1,1 @@
+permits only one iteration variable
