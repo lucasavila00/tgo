@@ -1,6 +1,6 @@
 package main
 
-import tgo8 "fmt"
+import tgo5 "fmt"
 
 import (
 	"errors"
@@ -21,19 +21,16 @@ func next(fail bool) (int, Failure) {
 }
 
 func generic[T any](value T, fail, wrap bool) (T, Failure) {
-	type tgo5 = T
+	type tgo4 = T
 	if wrap {
-		run := func(T int) (tgo3 T, tgo6 Failure) {
-			var tgo4 tgo5 = tgo3
-			var tgo7 Failure = tgo6
+		run := func(T int) (T, Failure) {
+			var tgo3 tgo4
 			{
 				var tgo1 int
 				var tgo2 Failure
 				tgo1, tgo2 = next(fail)
 				if tgo2 != nil {
-					tgo7 = tgo2
-					tgo7 = tgo8.Errorf("%s: %w", "next", tgo7)
-					return tgo4, tgo7
+					return tgo3, tgo5.Errorf("%s: %w", "next", tgo2)
 				}
 				_ = tgo1
 			}
@@ -41,18 +38,16 @@ func generic[T any](value T, fail, wrap bool) (T, Failure) {
 		}
 		return run(0)
 	}
-	run := func(T int) (tgo11 T, tgo13 Failure) {
-		var tgo12 tgo5 = tgo11
-		var tgo14 Failure = tgo13
+	run := func(T int) (T, Failure) {
+		var tgo8 tgo4
 		{
-			var tgo9 int
-			var tgo10 Failure
-			tgo9, tgo10 = next(fail)
-			if tgo10 != nil {
-				tgo14 = tgo10
-				return tgo12, tgo14
+			var tgo6 int
+			var tgo7 Failure
+			tgo6, tgo7 = next(fail)
+			if tgo7 != nil {
+				return tgo8, tgo7
 			}
-			_ = tgo9
+			_ = tgo6
 		}
 		return value, nil
 	}
@@ -60,100 +55,87 @@ func generic[T any](value T, fail, wrap bool) (T, Failure) {
 }
 
 func named[T any](value T, fail, wrap bool) (T, Failure) {
-	type tgo18 = T
+	type tgo12 = T
 	if wrap {
 		run := func() (T T, err Failure) {
-			var tgo17 tgo18 = T
-			var tgo19 Failure = err
+			var tgo11 tgo12 = T
 			{
-				var tgo15 int
-				var tgo16 Failure
-				tgo15, tgo16 = next(fail)
-				if tgo16 != nil {
-					tgo19 = tgo16
-					tgo19 = tgo8.Errorf("%s: %w", "next", tgo19)
-					return tgo17, tgo19
+				var tgo9 int
+				var tgo10 Failure
+				tgo9, tgo10 = next(fail)
+				if tgo10 != nil {
+					return tgo11, tgo5.Errorf("%s: %w", "next", tgo10)
 				}
-				_ = tgo15
+				_ = tgo9
 			}
 			return value, nil
 		}
 		return run()
 	}
 	run := func() (T T, err Failure) {
-		var tgo22 tgo18 = T
-		var tgo23 Failure = err
+		var tgo15 tgo12 = T
 		{
-			var tgo20 int
-			var tgo21 Failure
-			tgo20, tgo21 = next(fail)
-			if tgo21 != nil {
-				tgo23 = tgo21
-				return tgo22, tgo23
+			var tgo13 int
+			var tgo14 Failure
+			tgo13, tgo14 = next(fail)
+			if tgo14 != nil {
+				return tgo15, tgo14
 			}
-			_ = tgo20
+			_ = tgo13
 		}
 		return value, nil
 	}
 	return run()
 }
 
-func annotated(Result int, fail, wrap bool) (tgo26 Visible, tgo28 Failure) {
-	var tgo27 Visible = tgo26
-	var tgo29 Failure = tgo28
+func annotated(Result int, fail, wrap bool) (Visible, Failure) {
+	var tgo18 Visible
 	if wrap {
 		{
-			var tgo24 int
-			var tgo25 Failure
-			tgo24, tgo25 = next(fail)
-			if tgo25 != nil {
-				tgo29 = tgo25
-				tgo29 = tgo8.Errorf("%s: %w", "next", tgo29)
-				return tgo27, tgo29
+			var tgo16 int
+			var tgo17 Failure
+			tgo16, tgo17 = next(fail)
+			if tgo17 != nil {
+				return tgo18, tgo5.Errorf("%s: %w", "next", tgo17)
 			}
-			_ = tgo24
+			_ = tgo16
 		}
 	} else {
 		{
-			var tgo30 int
-			var tgo31 Failure
-			tgo30, tgo31 = next(fail)
-			if tgo31 != nil {
-				tgo29 = tgo31
-				return tgo27, tgo29
+			var tgo19 int
+			var tgo20 Failure
+			tgo19, tgo20 = next(fail)
+			if tgo20 != nil {
+				return tgo18, tgo20
 			}
-			_ = tgo30
+			_ = tgo19
 		}
 	}
 	return Visible{Value: Result}, nil
 }
 
-func local(fail, wrap bool) (tgo34 int, tgo36 error) {
-	var tgo35 int = tgo34
-	var tgo37 error = tgo36
+func local(fail, wrap bool) (int, error) {
+	var tgo23 int
 	error := 1
 	if wrap {
 		{
-			var tgo32 int
-			var tgo33 Failure
-			tgo32, tgo33 = next(fail)
-			if tgo33 != nil {
-				tgo37 = tgo33
-				tgo37 = tgo8.Errorf("%s: %w", "next", tgo37)
-				return tgo35, tgo37
+			var tgo21 int
+			var tgo22 Failure
+			tgo21, tgo22 = next(fail)
+			if tgo22 != nil {
+				return tgo23, tgo5.Errorf("%s: %w", "next", tgo22)
 			}
-			_ = tgo32
+			_ = tgo21
 		}
 	} else {
 		{
-			var tgo38 int
-			var tgo39 Failure
-			tgo38, tgo39 = next(fail)
-			if tgo39 != nil {
-				tgo37 = tgo39
-				return tgo35, tgo37
+			var tgo24 int
+			var tgo25 Failure
+			tgo24, tgo25 = next(fail)
+			if tgo25 != nil {
+				return tgo23, tgo25
 			}
-			_ = tgo38
+			_ = tgo24
 		}
 	}
 	return error, nil

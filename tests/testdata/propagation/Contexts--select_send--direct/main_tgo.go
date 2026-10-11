@@ -37,8 +37,7 @@ func identity[T any](v T) (T, error) {
 	return v, err
 }
 
-func run() (tgo4 error) {
-	var tgo5 error = tgo4
+func run() error {
 	ch := make(chan int, 1)
 	{
 		var tgo1 chan int = ch
@@ -46,8 +45,7 @@ func run() (tgo4 error) {
 		var tgo3 error
 		tgo2, tgo3 = step("V")
 		if tgo3 != nil {
-			tgo5 = tgo3
-			return tgo5
+			return tgo3
 		}
 		select {
 		case tgo1 <- tgo2:

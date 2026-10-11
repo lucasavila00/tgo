@@ -11,14 +11,12 @@ import (
 var message string
 var _ embed.FS
 
-func run() (tgo3 error) {
-	var tgo4 error = tgo3
+func run() error {
 	var tgo1 int
 	var tgo2 error
 	tgo1, tgo2 = library.Read()
 	if tgo2 != nil {
-		tgo4 = tgo2
-		return tgo4
+		return tgo2
 	}
 	v := tgo1
 	fmt.Print(v, message)

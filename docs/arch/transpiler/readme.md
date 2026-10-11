@@ -63,8 +63,8 @@ if tgo2 != nil {
 consume(tgo1)
 ```
 
-The complete function also has return storage. On failure, `!!` returns the
-original error and zero values for preceding results. `!` wraps the error once
+The function keeps its source result names. On failure, `!!` returns the
+original error directly and saved zero values for preceding results. `!` wraps the error once
 with the source call name and `%w`. Deferred calls still run.
 
 The failure check precedes conversion into the caller's error result. Thus a

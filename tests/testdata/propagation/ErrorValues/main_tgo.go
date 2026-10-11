@@ -1,6 +1,6 @@
 package main
 
-import tgo7 "fmt"
+import tgo3 "fmt"
 
 import (
 	"errors"
@@ -24,40 +24,33 @@ func target(typedNil bool) error {
 	return sentinel
 }
 
-func direct() (tgo2 error) {
-	var tgo3 error = tgo2
+func direct() error {
 	{
 		var tgo1 error = target(true)
 		if tgo1 != nil {
-			tgo3 = tgo1
-			return tgo3
+			return tgo1
 		}
 	}
 	panic("not reached")
 }
 
-func wrapped() (tgo5 error) {
-	var tgo6 error = tgo5
+func wrapped() error {
 	{
-		var tgo4 error = target(false)
-		if tgo4 != nil {
-			tgo6 = tgo4
-			tgo6 = tgo7.Errorf("%s: %w", "target", tgo6)
-			return tgo6
+		var tgo2 error = target(false)
+		if tgo2 != nil {
+			return tgo3.Errorf("%s: %w", "target", tgo2)
 		}
 	}
 	panic("not reached")
 }
 
-func shadow(nil, true, false int) (tgo9 error) {
-	var tgo10 error = tgo9
+func shadow(nil, true, false int) error {
 	fmt.Print(nil, true, false)
 	{
-		var tgo8 error = target(0 != 0)
-		var tgo11 error
-		if tgo8 != tgo11 {
-			tgo10 = tgo8
-			return tgo10
+		var tgo4 error = target(0 != 0)
+		var tgo5 error
+		if tgo4 != tgo5 {
+			return tgo4
 		}
 	}
 	var success error

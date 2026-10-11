@@ -1,6 +1,6 @@
 package main
 
-import tgo4 "fmt"
+import tgo2 "fmt"
 
 import (
 	"errors"
@@ -39,14 +39,11 @@ func identity[T any](v T) (T, error) {
 	return v, err
 }
 
-func run() (tgo2 error) {
-	var tgo3 error = tgo2
+func run() error {
 	{
 		var tgo1 error = only()
 		if tgo1 != nil {
-			tgo3 = tgo1
-			tgo3 = tgo4.Errorf("%s: %w", "only", tgo3)
-			return tgo3
+			return tgo2.Errorf("%s: %w", "only", tgo1)
 		}
 	}
 	fmt.Print("b")
