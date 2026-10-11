@@ -98,6 +98,13 @@ func Compile(dir string) map[string][]byte {
 	activeFiles := make(map[string]bool)
 	activeOperations := make(map[string]propagation)
 	for _, pkg := range initial {
+		for _, filename := range pkg.GoFiles {
+			name, err := filepath.Rel(work, filename)
+			must(err)
+			if tgoFiles[name] {
+				activeFiles[name] = true
+			}
+		}
 		for _, file := range pkg.Syntax {
 			name, err := filepath.Rel(work, pkg.Fset.Position(file.Pos()).Filename)
 			must(err)
@@ -167,8 +174,8 @@ func Compile(dir string) map[string][]byte {
 	}
 	for _, pkg := range loadProject(work) {
 		changed := false
-		for _, file := range pkg.Syntax {
-			name, err := filepath.Rel(work, pkg.Fset.Position(file.Pos()).Filename)
+		for _, filename := range pkg.GoFiles {
+			name, err := filepath.Rel(work, filename)
 			must(err)
 			changed = changed || activeFiles[name]
 		}

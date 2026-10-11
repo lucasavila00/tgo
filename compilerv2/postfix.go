@@ -24,7 +24,7 @@ func markPostfix(filename string, input []byte, used map[string]bool, operations
 	fset := token.NewFileSet()
 	file := fset.AddFile(filename, -1, len(input))
 	var scan scanner.Scanner
-	scan.Init(file, input, func(pos token.Position, msg string) { panic(fmt.Sprintf("%s: %s", pos, msg)) }, scanner.ScanComments)
+	scan.Init(file, input, nil, scanner.ScanComments)
 	var output bytes.Buffer
 	previous := token.ILLEGAL
 	copied := 0

@@ -68,6 +68,17 @@ func runPropagationFiles(t *testing.T, sources map[string]string) string {
 	if err != nil {
 		t.Fatalf("run generated source: %v\n%s", err, actual)
 	}
+	for name := range sources {
+		if strings.HasSuffix(name, "_test.tgo") {
+			command := exec.Command("go", "test", "./...")
+			command.Dir = output
+			result, err := command.CombinedOutput()
+			if err != nil {
+				t.Fatalf("generated tests: %v\n%s", err, result)
+			}
+			break
+		}
+	}
 	return string(actual)
 }
 
@@ -269,6 +280,32 @@ func shadow(nil,true,false int)error{fmt.Print(nil,true,false);target(0!=0)!!;va
 func main(){var p *Failure;e:=direct();fmt.Print(e==p,"|");e=wrapped();var caught *Failure;fmt.Print(e.Error(),"|",errors.Is(e,sentinel),"|",errors.As(e,&caught),caught==sentinel,"|");fmt.Print(shadow(0,1,2)==sentinel)}
 `
 	if actual := runPropagation(t, input); actual != "true|target: failure|true|true true|0 1 2true" {
+		t.Fatalf("got %q", actual)
+	}
+}
+
+func TestPropagationProject(t *testing.T) {
+	sources := map[string]string{
+		"main.tgo": `package main
+import("fmt";"embed";"example.com/program/library")
+//go:embed message.txt
+var message string
+var _ embed.FS
+func run()error{v:=library.Read()!!;fmt.Print(v,message);return nil}
+func main(){if err:=run();err!=nil{panic(err)}}
+`,
+		"message.txt": "asset",
+		"library/value.tgo": `package library
+func Read()(int,error){return 3,nil}
+`,
+		"ignored.tgo": "//go:build excluded\n\npackage main\nfunc invalid(){this is not Go!!}\n",
+		"value_test.tgo": `package main
+import("testing";"example.com/program/library")
+func testRead()(int,error){return library.Read()!!,nil}
+func TestRead(t *testing.T){v,err:=testRead();if v!=3 || err!=nil{t.Fatal(v,err)}}
+`,
+	}
+	if actual := runPropagationFiles(t, sources); actual != "3asset" {
 		t.Fatalf("got %q", actual)
 	}
 }
