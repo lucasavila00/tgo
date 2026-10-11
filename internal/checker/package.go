@@ -28,6 +28,7 @@ type Package struct {
 	Operations     map[string]types.TGoOperation
 	Comprehensions map[*ast.CallExpr]*frontend.Comprehension
 	Conditionals   map[*ast.CallExpr]*ast.IfStmt
+	ShortReturns   map[*ast.ReturnStmt]frontend.ShortReturn
 }
 
 // Loader checks source packages and reads compiled dependency types.
@@ -83,7 +84,7 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 	loader.checking[metadata.ID] = true
 	defer delete(loader.checking, metadata.ID)
 	pkg := &Package{Fset: loader.fset, TypesInfo: newInfo(), GoFiles: metadata.GoFiles,
-		Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt)}
+		Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt), ShortReturns: make(map[*ast.ReturnStmt]frontend.ShortReturn)}
 	filenames := metadata.CompiledGoFiles
 	if len(filenames) == 0 {
 		filenames = metadata.GoFiles
@@ -116,6 +117,7 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 					return true
 				})
 			}
+			pkg.recordShortReturns(file, parsed.ShortReturns)
 			for name, pos := range parsed.Conditionals {
 				pkg.Operations[name] = types.TGoOperation{Conditional: true, Position: pos}
 			}
@@ -201,7 +203,25 @@ func CheckGo(metadata *packages.Package, dir string) (*Package, error) {
 		return nil, err
 	}
 	pkg := &Package{Fset: metadata.Fset, Syntax: metadata.Syntax, GoFiles: metadata.GoFiles,
-		TypesInfo: newInfo(), Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt)}
+		TypesInfo: newInfo(), Operations: make(map[string]types.TGoOperation), Comprehensions: make(map[*ast.CallExpr]*frontend.Comprehension), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt), ShortReturns: make(map[*ast.ReturnStmt]frontend.ShortReturn)}
 	loader.fset = metadata.Fset
 	return loader.check(metadata, pkg)
+}
+
+func (pkg *Package) recordShortReturns(file *ast.File, records map[string]frontend.ShortReturn) {
+	for name, record := range records {
+		pkg.Operations[name] = types.TGoOperation{ShortReturn: true, ZeroSuccess: record.ZeroSuccess, Position: record.Position}
+	}
+	ast.Inspect(file, func(node ast.Node) bool {
+		if statement, ok := node.(*ast.ReturnStmt); ok && len(statement.Results) == 1 {
+			if call, ok := statement.Results[0].(*ast.CallExpr); ok {
+				if id, ok := call.Fun.(*ast.Ident); ok {
+					if record, found := records[id.Name]; found {
+						pkg.ShortReturns[statement] = record
+					}
+				}
+			}
+		}
+		return true
+	})
 }
