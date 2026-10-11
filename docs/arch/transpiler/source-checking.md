@@ -55,7 +55,8 @@ packages from these files, and the private checker checks their TGo meaning.
 Lowering replaces selected generated files with ordinary Go. The driver removes
 excluded generated paths before stock Go checks the final files on disk.
 
-Only paths owned by TGo inputs are compiler outputs. Ordinary Go and assets
+Only paths owned by TGo inputs in the selected module are compiler outputs.
+A nested module retains its inputs and snapshots as assets. Ordinary Go and assets
 stay at their original paths. Go uses normal module loading and can update
 module metadata. Returned output includes current sums and makes local
 replacement paths absolute so it can be written elsewhere.

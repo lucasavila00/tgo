@@ -67,7 +67,7 @@ func readModule(root string) *moduleFiles {
 	}))
 	// Source files control compilation; matching generated files can be stale.
 	for name := range files {
-		if strings.HasSuffix(name, ".tgo") {
+		if strings.HasSuffix(name, ".tgo") && ownsModuleFile(files, name) {
 			delete(files, generatedName(name))
 		}
 	}
@@ -92,7 +92,7 @@ func prepareModule(source *moduleFiles) *preparedModule {
 	}
 	tgoFiles := make(map[string]string)
 	for _, name := range source.names {
-		if !strings.HasSuffix(name, ".tgo") {
+		if !strings.HasSuffix(name, ".tgo") || !ownsModuleFile(source.files, name) {
 			continue
 		}
 		goName := generatedName(name)
@@ -124,7 +124,7 @@ func collectOutput(checked *checkedModule) map[string][]byte {
 	module := checked.sources.module
 	output := make(map[string][]byte)
 	for name, content := range module.source.files {
-		if strings.HasSuffix(name, ".tgo") {
+		if strings.HasSuffix(name, ".tgo") && module.tgoFiles[generatedName(name)] == name {
 			goName := generatedName(name)
 			output[name] = content
 			if !checked.activeFiles[goName] {
@@ -146,4 +146,14 @@ func collectOutput(checked *checkedModule) map[string][]byte {
 		must(err)
 	}
 	return output
+}
+
+// ownsModuleFile excludes files beneath a nested module's go.mod.
+func ownsModuleFile(files map[string][]byte, name string) bool {
+	for dir := filepath.Dir(name); dir != "."; dir = filepath.Dir(dir) {
+		if _, exists := files[filepath.Join(dir, "go.mod")]; exists {
+			return false
+		}
+	}
+	return true
 }

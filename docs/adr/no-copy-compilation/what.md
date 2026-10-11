@@ -3,7 +3,8 @@
 Compile directly in the original module. Keep the private source checker,
 lowerer, and `Compile(dir) map[string][]byte`.
 
-Each `name.tgo` owns its `name_tgo.go` output. First write original TGo at that
+Each `name.tgo` in the selected module owns its `name_tgo.go` output.
+Nested modules retain their source and snapshots as returned assets. First write original TGo at that
 path so Go can select packages, imports, build constraints, and test variants.
 Check the TGo source. Then replace selected files with generated Go and remove
 generated paths for excluded inputs. Stock Go checks these final files.
