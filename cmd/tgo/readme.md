@@ -14,3 +14,6 @@ and skips files whose contents are unchanged. The command creates parent
 directories before writing. Invalid arguments, compiler errors, and write
 errors cause a panic. See the [user guide](../../docs/guide/transpiler.md) for
 output rules and examples.
+
+See the [generated Go reference](../../docs/reference/cmd/tgo.md) for exported
+declarations and source comments.

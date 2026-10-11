@@ -1,0 +1,9 @@
+{{- header .Level .Title -}}
+{{- if .Doc.Blocks -}}
+{{- spacer -}}{{- template "doc" .Doc -}}
+{{- end -}}
+{{- spacer -}}{{- codeBlock "go" .Code -}}
+{{- if .HasOutput -}}
+{{- spacer -}}{{- header (add .Level 1) "Output" -}}
+{{- spacer -}}{{- codeBlock "" .Output -}}
+{{- end -}}

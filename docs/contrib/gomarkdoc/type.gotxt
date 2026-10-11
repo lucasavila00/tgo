@@ -1,0 +1,18 @@
+{{- header .Level (printf "type %s" .Name) -}}
+{{- spacer -}}{{- template "doc" .Doc -}}
+{{- spacer -}}{{- codeBlock "go" .Decl -}}
+{{- range .Consts -}}
+{{- spacer -}}{{- template "value" . -}}
+{{- end -}}
+{{- range .Vars -}}
+{{- spacer -}}{{- template "value" . -}}
+{{- end -}}
+{{- range .Examples -}}
+{{- spacer -}}{{- template "example" . -}}
+{{- end -}}
+{{- range .Funcs -}}
+{{- spacer -}}{{- template "func" . -}}
+{{- end -}}
+{{- range .Methods -}}
+{{- spacer -}}{{- template "func" . -}}
+{{- end -}}

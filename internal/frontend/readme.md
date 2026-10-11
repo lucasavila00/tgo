@@ -17,3 +17,6 @@ lowerer, which replaces executable helper calls and removes unused declarations.
 
 See [the architecture](../../docs/arch/transpiler/readme.md) for nested-call
 preparation and the checks performed after typing.
+
+See the [generated Go reference](../../docs/reference/internal/frontend.md) for exported
+declarations and source comments.
