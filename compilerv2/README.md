@@ -123,3 +123,7 @@ Literal tests cover nested omitted types, map values, pointer keys, and array
 keys. A key with an unhashable interface field fails when the map is built,
 after its value expression runs. The engine infers the key type from an empty
 map and assigns its fields or elements to a fresh value.
+
+For an array element read, the engine saves the location's operands and runs
+the index expression before the element access can panic. An explicit address
+operation completes its address checks before insertion after that operation.
