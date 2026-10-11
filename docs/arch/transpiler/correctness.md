@@ -94,3 +94,9 @@ temporary types, and propagation in unsafe size or offset operands.
 
 [The fuzzer](../../../tests/lowering_fuzz_test.go) compares bounded programs with
 independent references. It excludes source `recover`, goroutines, and nested propagating functions.
+
+[If-expression fixtures](../../../tests/value_expressions_test.go) run generated
+Go and handwritten Go references with the same expected output. They check
+branch selection, statement order, types, scope, jumps, defer, and early returns.
+Builtin cases check typed `min`, `max`, and `complex` arguments and branches
+that return before the builtin can run. Checker tests reject branch overflow.

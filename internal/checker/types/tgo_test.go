@@ -38,6 +38,12 @@ func checkTGo(t *testing.T, source string) (*types.Info, error) {
 func TestConditionalTypes(t *testing.T) {
 	for _, source := range []string{
 		`func f(ok bool) string { return if ok { "yes" } else { "no" } }`,
+		`func f(ok bool) int8 { return min(if ok {1} else {2}, int8(3)) }`,
+		`func f(ok bool) int8 { return min(if ok {return 1} else {return 2}, int8(3)) }`,
+		`func f(ok bool) complex64 { return complex(if ok {return 1} else {return 2}, float32(3)) }`,
+		`func f(ok bool) int8 { return max(int8(3), if ok {1} else {2}) }`,
+		`func f(ok bool) complex64 { return complex(if ok {1} else {2}, float32(3)) }`,
+		`func f(ok bool) complex128 { return complex(if ok {1} else {2}, if ok {3} else {4}) }`,
 		`func f(ok bool) int { x := if ok { n:=1; n } else { 2 }; return x }`,
 		`func f(ok bool) int8 { return (if ok {127} else {0})+1 }`,
 		`func f(ok bool) int { return if ok { return 1 } else { 2 } }`,
@@ -148,6 +154,8 @@ func TestConditionalTypeErrors(t *testing.T) {
 		{`func f(ok bool) { var x [if ok {1} else {2}]int; _=x }`, "must be constant"},
 		{`func f(ok bool) { x:=if 1 {1} else {2}; _=x }`, "Boolean"},
 		{`func f(ok bool) int8 {return if ok {128} else {0}}`, "overflows"},
+		{`func f(ok bool) int8 {return min(if ok {128} else {0}, int8(3))}`, "overflows"},
+		{`func f(ok bool) complex64 {return complex(if ok {1e100} else {0}, float32(3))}`, "overflows"},
 		{`func pair() (int,int){return 1,2}; func f(ok bool) {x:=if ok {pair()} else {1}; _=x}`, "multiple-value"},
 		{`func f(ok bool) { x:=if ok {n:=1; n} else {n}; _=x }`, "undefined: n"},
 		{`func f(ok bool) { x:=if ok {goto missing} else {1}; _=x }`, "label missing not declared"},
