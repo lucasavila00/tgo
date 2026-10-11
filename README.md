@@ -2,7 +2,7 @@
 
 ## Repository status
 
-This repository is mothballed while we develop the compiler spikes in
+This repository is mothballed while we develop compilerv2 in
 [#248](https://github.com/lucasavila00/tgo/issues/248) and
 [#247](https://github.com/lucasavila00/tgo/issues/247). Only the README syntax
 examples and project documentation remain. The code, tests, build tools, CI, and architecture

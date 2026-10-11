@@ -7,7 +7,7 @@ Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 - Read the original AST (abstract syntax tree); build a new `go/ast` output.
 - Adapt [Go's ordering pass][order] to that public AST.
 - Format output with `go/format`; compile it with the Go toolchain.
-- Put the spike and its tests in a separate `spikes/expressionlowering/` module.
+- Put compilerv2 and its tests in a separate `compilerv2/` module.
   Pin Go and `golang.org/x/tools` versions when implementation starts.
 
 [WHAT](what.md) defines the transformation. [PROOF](proof.md) checks it.

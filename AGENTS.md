@@ -2,13 +2,13 @@
 
 ## Repository status
 
-This repository is mothballed while we develop the compiler spikes in
+This repository is mothballed while we develop compilerv2 in
 [#248](https://github.com/lucasavila00/tgo/issues/248) and
 [#247](https://github.com/lucasavila00/tgo/issues/247). Only the README syntax
 examples and project documentation remain. Code, tests, build tools, CI, and architecture
 documents have been removed. Git history retains them.
 
-Keep compiler experiments separate. Do not restore the removed implementation
+Keep compilerv2 separate. Do not restore the removed implementation
 or architecture unless the user requests it. The old specification, guides,
 and user agent rules have been removed. Use the README for syntax examples.
 
@@ -107,7 +107,7 @@ checks for data or boundaries that the user declared trusted.
 ## 9. Validate Documentation
 
 Check changed documentation and its local links. No CI or compiler test suite
-exists in this checkout. Each spike must provide its own focused validation.
+exists in this checkout. compilerv2 must provide focused validation.
 
 ## 10. Do Not Post Comments Without a Request
 

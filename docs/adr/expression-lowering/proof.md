@@ -4,7 +4,7 @@ Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
 ## Files to create
 
-Under `spikes/expressionlowering/testdata/proof/`:
+Under `compilerv2/testdata/proof/`:
 
 | File | Cases |
 | --- | --- |
@@ -42,7 +42,7 @@ Under `spikes/expressionlowering/testdata/proof/`:
 ## Planned command
 
 ```sh
-go -C spikes/expressionlowering test ./... -run '^TestProof' -count=1
+go -C compilerv2 test ./... -run '^TestProof' -count=1
 ```
 
 Tests: `TestProofInventory`, `TestProofNeutral`, `TestProofReturn`,
