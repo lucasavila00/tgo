@@ -1,0 +1,8 @@
+direct false <nil> [call 7 defer]
+direct true sentinel [call defer]
+wrapped false <nil> [call 7 defer]
+wrapped true next: sentinel [call defer]
+collection false <nil> [call 7 defer]
+collection true sentinel [call defer]
+nested false <nil> [call 7 defer]
+nested true sentinel [call defer]

@@ -20,6 +20,7 @@ type rewrite struct {
 	labels            map[string]string
 	suppressedRoot    ast.Expr
 	propagations      map[ast.Expr]Propagation
+	lowered           map[ast.Expr]bool
 	frame             *returnFrame
 	formatAlias       *ast.Ident
 	suppressed        bool

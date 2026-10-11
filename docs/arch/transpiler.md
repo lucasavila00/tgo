@@ -110,7 +110,16 @@ The scanner marks suffixes. The Go parser supplies the syntax tree. The Go
 type checker resolves each call. Generated generic functions let the checker
 see each call without its error result. The existing lowering engine then
 saves the call results, checks the error, and emits the return at that point.
-It lowers all marked calls in one pass over the typed source AST.
+Emission visits function declarations and function literals in the same typed
+syntax tree used by the expression inventory. This includes literals inside
+package variable initializers and collections. Outside a function, it only
+copies syntax to replace these literals; it does not move initializer effects.
+Each literal keeps its own return target. Each accepted propagation call must
+be lowered before emission can succeed. Marker calls retained only for type
+inference are not additional source operations.
+
+The traversal copies changed AST paths. Original nodes remain available for
+type information and repeated insertion through the public API.
 
 Generated result variables supply typed zero values. This keeps private and
 generic result types and avoids type names that local bindings can hide.
