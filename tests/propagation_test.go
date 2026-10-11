@@ -1,0 +1,149 @@
+package tests
+
+import (
+	"bytes"
+	"flag"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/lucasavila00/tgo/pkg/transpiler"
+)
+
+var updateSnapshots = flag.Bool("update-snapshots", false, "update generated Go snapshots")
+
+func TestPropagationFixtures(t *testing.T) {
+	fixtures, err := os.ReadDir("testdata/propagation")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fixtures) == 0 {
+		t.Fatal("no propagation fixtures")
+	}
+	for _, fixture := range fixtures {
+		if !fixture.IsDir() {
+			continue
+		}
+		t.Run(fixture.Name(), func(t *testing.T) {
+			dir := filepath.Join("testdata/propagation", fixture.Name())
+			input, err := filepath.Abs(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			files := transpiler.Compile(input)
+			source := readFiles(t, input)
+			inputs := 0
+			for name := range source {
+				if strings.HasSuffix(name, ".tgo") {
+					inputs++
+				}
+			}
+			if inputs == 0 {
+				t.Fatal("fixture has no TGo input")
+			}
+			for name, content := range files {
+				if !strings.HasSuffix(name, ".go") {
+					continue
+				}
+				if *updateSnapshots {
+					if !bytes.Equal(source[name], content) {
+						writeFiles(t, input, map[string][]byte{name: content})
+					}
+					continue
+				}
+				if saved, exists := source[name]; !exists || !bytes.Equal(content, saved) {
+					t.Errorf("generated %s differs from snapshot; inspect output before using -update-snapshots\nSAVED:\n%s\nGENERATED:\n%s", name, saved, content)
+				}
+			}
+			output := t.TempDir()
+			writeFiles(t, output, files)
+			command := exec.Command("go", "run", ".")
+			command.Dir = output
+			actual, err := command.CombinedOutput()
+			if err != nil {
+				t.Fatalf("run generated source: %v\n%s", err, actual)
+			}
+			want, err := os.ReadFile(filepath.Join(dir, "stdout.txt"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(actual, want) {
+				t.Fatalf("output: %q, want %q", actual, want)
+			}
+			for name := range files {
+				if strings.HasSuffix(name, "_test.go") {
+					command := exec.Command("go", "test", "./...")
+					command.Dir = output
+					actual, err := command.CombinedOutput()
+					if err != nil {
+						t.Fatalf("generated tests: %v\n%s", err, actual)
+					}
+					break
+				}
+			}
+		})
+	}
+}
+
+func writeFiles(t *testing.T, dir string, files map[string][]byte) {
+	t.Helper()
+	for name, content := range files {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, content, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func readFiles(t *testing.T, dir string) map[string][]byte {
+	t.Helper()
+	files := make(map[string][]byte)
+	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		name, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		files[name] = data
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
+}
+
+func TestPropagationSnapshotDeterminism(t *testing.T) {
+	for _, name := range []string{"Contexts--short_circuit--direct", "Contexts--short_circuit--wrapped"} {
+		t.Run(name, func(t *testing.T) {
+			dir := filepath.Join("testdata/propagation", name)
+			first := transpiler.Compile(dir)
+			for i := 0; i < 3; i++ {
+				next := transpiler.Compile(dir)
+				if len(next) != len(first) {
+					t.Fatal("generated file set changed")
+				}
+				for name, content := range first {
+					if !bytes.Equal(next[name], content) {
+						t.Fatalf("compilation %d changed %s", i+2, name)
+					}
+				}
+			}
+		})
+	}
+}

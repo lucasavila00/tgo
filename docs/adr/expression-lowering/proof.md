@@ -2,9 +2,9 @@
 
 Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
-## Files to create
+## Test files
 
-Under `compilerv2/testdata/proof/`:
+Under `tests/testdata/proof/`:
 
 | File | Cases |
 | --- | --- |
@@ -39,11 +39,11 @@ Under `compilerv2/testdata/proof/`:
 - Use synchronized channels and one ready select case. Accept the orders that
   Go permits where evaluation order is unspecified.
 
-## Planned command
+## Test command
 
 ```sh
-go -C compilerv2 test ./... -run '^TestProof' -count=1
+go test ./tests -run '^TestProof' -count=1
 ```
 
 Tests: `TestProofInventory`, `TestProofNeutral`, `TestProofReturn`,
-`TestProofCompile`. Run the full matrix in hosted CI; retain per-site results.
+`TestProofCompile`. Run the full matrix in hosted CI.
