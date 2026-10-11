@@ -57,6 +57,9 @@ Checking helpers describe success results to Go's type checker. They are not
 runtime error handling. Source checks also verify that propagation is valid
 inside the enclosing function and outside forbidden unsafe operands.
 
+The function keeps its source result names. Failure returns use saved zero
+values for results before the error. Deferred calls still run.
+
 ## Source controls output
 
 Generated files can be stale, so they do not participate in source checking.

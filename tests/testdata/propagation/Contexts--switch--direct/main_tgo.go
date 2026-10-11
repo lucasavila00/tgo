@@ -37,38 +37,35 @@ func identity[T any](v T) (T, error) {
 	return v, err
 }
 
-func run() (tgo3 error) {
-	var tgo4 error = tgo3
+func run() error {
 	{
 		var tgo1 int
 		var tgo2 error
 		tgo1, tgo2 = step("T")
 		if tgo2 != nil {
-			tgo4 = tgo2
-			return tgo4
+			return tgo2
 		}
-		var tgo5 int = tgo1
-		var tgo6 int = -1
-		if tgo6 == -1 {
-			var tgo7 int
-			var tgo8 error
-			tgo7, tgo8 = step("C")
-			if tgo8 != nil {
-				tgo4 = tgo8
-				return tgo4
+		var tgo3 int = tgo1
+		var tgo4 int = -1
+		if tgo4 == -1 {
+			var tgo5 int
+			var tgo6 error
+			tgo5, tgo6 = step("C")
+			if tgo6 != nil {
+				return tgo6
 			}
-			if tgo5 == tgo7 {
-				tgo6 = 0
+			if tgo3 == tgo5 {
+				tgo4 = 0
 			}
 		}
-		if tgo6 == -1 {
-			if tgo5 ==
+		if tgo4 == -1 {
+			if tgo3 ==
 
 				2 {
-				tgo6 = 1
+				tgo4 = 1
 			}
 		}
-		switch tgo6 {
+		switch tgo4 {
 		case 0:
 			fmt.Print("m")
 			fallthrough

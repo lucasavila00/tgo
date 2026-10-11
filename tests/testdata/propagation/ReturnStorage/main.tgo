@@ -1,0 +1,55 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var sentinel = errors.New("failure")
+
+func next(fail bool) (int, error) {
+	if fail {
+		return 0, sentinel
+	}
+	return 7, nil
+}
+
+func named(fail, wrap bool) (value int, err error) {
+	defer func() {
+		value += 100
+		if err != nil && !errors.Is(err, sentinel) {
+			panic("defer received the wrong error")
+		}
+	}()
+	value = 9
+	if wrap {
+		value = next(fail)!!
+	} else {
+		value = next(fail)!
+	}
+	return
+}
+
+func grouped(fail bool) (first, last error) {
+	first = sentinel
+	_ = next(fail)!
+	return
+}
+
+func blank(fail bool) (_, _ error) {
+	_ = next(fail)!
+	return sentinel, nil
+}
+
+func main() {
+	for _, fail := range []bool{false, true} {
+		for _, wrap := range []bool{false, true} {
+			value, err := named(fail, wrap)
+			fmt.Println("named", fail, wrap, value, errors.Is(err, sentinel), err == sentinel)
+		}
+		first, last := grouped(fail)
+		fmt.Println("grouped", fail, first == nil, last == sentinel)
+		first, last = blank(fail)
+		fmt.Println("blank", fail, first == nil, last == sentinel)
+	}
+}

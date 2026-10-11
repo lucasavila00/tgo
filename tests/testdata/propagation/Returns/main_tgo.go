@@ -17,68 +17,60 @@ func get() (Value, error) {
 	return 8, nil
 }
 
-func unnamed(label string) (tgo3 Value, tgo5 error) {
-	var tgo4 Value = tgo3
-	var tgo6 error = tgo5
+func unnamed(label string) (Value, error) {
+	var tgo3 Value
 	{
 		var tgo1 Value
 		var tgo2 error
 		tgo1, tgo2 = get()
 		if tgo2 != nil {
-			tgo6 = tgo2
-			return tgo4, tgo6
+			return tgo3, tgo2
 		}
 		return tgo1, nil
 	}
 }
 
 func named() (value Value, err error) {
-	var tgo9 Value = value
-	var tgo10 error = err
+	var tgo6 Value
 	value = 5
 	err = sentinel
+	{
+		var tgo4 Value
+		var tgo5 error
+		tgo4, tgo5 = get()
+		if tgo5 != nil {
+			return tgo6, tgo5
+		}
+		_ = tgo4
+	}
+	return
+}
+
+func generic[T any](value T) (T, error) {
+	var tgo9 T
 	{
 		var tgo7 Value
 		var tgo8 error
 		tgo7, tgo8 = get()
 		if tgo8 != nil {
-			tgo10 = tgo8
-			return tgo9, tgo10
+			return tgo9, tgo8
 		}
 		_ = tgo7
-	}
-	return
-}
-
-func generic[T any](value T) (tgo13 T, tgo15 error) {
-	var tgo14 T = tgo13
-	var tgo16 error = tgo15
-	{
-		var tgo11 Value
-		var tgo12 error
-		tgo11, tgo12 = get()
-		if tgo12 != nil {
-			tgo16 = tgo12
-			return tgo14, tgo16
-		}
-		_ = tgo11
 	}
 	return value, nil
 }
 
 func closure() error {
-	call := func() (tgo19 Value, tgo21 error) {
-		var tgo20 Value = tgo19
-		var tgo22 error = tgo21
+	call := func() (Value, error) {
+		var tgo12 Value
 		{
-			var tgo17 Value
-			var tgo18 error
-			tgo17, tgo18 = get()
-			if tgo18 != nil {
-				tgo22 = tgo18
-				return tgo20, tgo22
+			var tgo10 Value
+			var tgo11 error
+			tgo10, tgo11 = get()
+			if tgo11 != nil {
+				return tgo12, tgo11
 			}
-			return tgo17, nil
+			return tgo10, nil
 		}
 	}
 	v, e := call()

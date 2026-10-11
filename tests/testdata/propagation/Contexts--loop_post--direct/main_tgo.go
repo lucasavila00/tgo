@@ -37,20 +37,18 @@ func identity[T any](v T) (T, error) {
 	return v, err
 }
 
-func run() (tgo3 error) {
-	var tgo4 error = tgo3
+func run() error {
 	{
-		var tgo5 bool = 0 == 0
+		var tgo3 bool = 0 == 0
 		for i := 0; ; {
-			if tgo5 {
-				tgo5 = 0 != 0
+			if tgo3 {
+				tgo3 = 0 != 0
 			} else {
 				var tgo1 int
 				var tgo2 error
 				tgo1, tgo2 = step("P")
 				if tgo2 != nil {
-					tgo4 = tgo2
-					return tgo4
+					return tgo2
 				}
 				i += tgo1
 			}

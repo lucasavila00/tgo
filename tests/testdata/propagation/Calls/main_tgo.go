@@ -1,6 +1,6 @@
 package main
 
-import fmt_tgo10 "fmt"
+import fmt_tgo6 "fmt"
 
 import (
 	"errors"
@@ -26,34 +26,29 @@ func consume(a, b, c int) {
 	fmt.Print(a, b, c)
 }
 
-func run(fail bool) (tgo3 error) {
-	var tgo4 error = tgo3
+func run(fail bool) error {
 	{
-		var tgo5 int = effect("L")
+		var tgo3 int = effect("L")
 		var tgo1 int
 		var tgo2 error
 		tgo1, tgo2 = target(fail)
 		if tgo2 != nil {
-			tgo4 = tgo2
-			return tgo4
+			return tgo2
 		}
-		consume(tgo5, tgo1, effect("R"))
+		consume(tgo3, tgo1, effect("R"))
 	}
 	return nil
 }
 
-func wrapped() (tgo8 error) {
-	var tgo9 error = tgo8
+func wrapped() error {
 	{
-		var tgo6 int
-		var tgo7 error
-		tgo6, tgo7 = target(true)
-		if tgo7 != nil {
-			tgo9 = tgo7
-			tgo9 = fmt_tgo10.Errorf("%s: %w", "target", tgo9)
-			return tgo9
+		var tgo4 int
+		var tgo5 error
+		tgo4, tgo5 = target(true)
+		if tgo5 != nil {
+			return fmt_tgo6.Errorf("%s: %w", "target", tgo5)
 		}
-		_ = tgo6
+		_ = tgo4
 	}
 	return nil
 }

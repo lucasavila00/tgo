@@ -13,5 +13,5 @@ func run() error {
 
 func main() {
 	fmt.Println(run())
-	fmt.Println(fmt_tgo5)
+	fmt.Println(fmt_tgo3)
 }

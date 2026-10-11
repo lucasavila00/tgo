@@ -1,6 +1,6 @@
 package main
 
-import fmt_tgo9 "fmt"
+import fmt_tgo5 "fmt"
 
 import (
 	"errors"
@@ -19,8 +19,7 @@ func next(fail bool) (int, error) {
 	return 7, nil
 }
 
-func shortDirect(fail bool) (tgo3 error) {
-	var tgo4 error = tgo3
+func shortDirect(fail bool) error {
 	defer func() { trace = append(trace, "defer") }()
 	visits := 0
 	goto L
@@ -29,8 +28,7 @@ L:
 	var tgo2 error
 	tgo1, tgo2 = next(fail)
 	if tgo2 != nil {
-		tgo4 = tgo2
-		return tgo4
+		return tgo2
 	}
 	value := tgo1
 	trace = append(trace, fmt.Sprint(value))
@@ -41,21 +39,18 @@ L:
 	return nil
 }
 
-func shortWrapped(fail bool) (tgo7 error) {
-	var tgo8 error = tgo7
+func shortWrapped(fail bool) error {
 	defer func() { trace = append(trace, "defer") }()
 	visits := 0
 	goto L
 L:
-	var tgo5 int
-	var tgo6 error
-	tgo5, tgo6 = next(fail)
-	if tgo6 != nil {
-		tgo8 = tgo6
-		tgo8 = fmt_tgo9.Errorf("%s: %w", "next", tgo8)
-		return tgo8
+	var tgo3 int
+	var tgo4 error
+	tgo3, tgo4 = next(fail)
+	if tgo4 != nil {
+		return fmt_tgo5.Errorf("%s: %w", "next", tgo4)
 	}
-	value := tgo5
+	value := tgo3
 	trace = append(trace, fmt.Sprint(value))
 	visits++
 	if visits < 2 {
@@ -64,64 +59,57 @@ L:
 	return nil
 }
 
-func varDirect(fail bool) (tgo12 error) {
-	var tgo13 error = tgo12
+func varDirect(fail bool) error {
 	defer func() { trace = append(trace, "defer") }()
 	visits := 0
 	goto L
 L:
+	var tgo6 int
+	var tgo7 error
+	tgo6, tgo7 = next(fail)
+	if tgo7 != nil {
+		return tgo7
+	}
+	var value = tgo6
+	trace = append(trace, fmt.Sprint(value))
+	visits++
+	if visits < 2 {
+		goto L
+	}
+	return nil
+}
+
+func varWrapped(fail bool) error {
+	defer func() { trace = append(trace, "defer") }()
+	visits := 0
+	goto L
+L:
+	var tgo8 int
+	var tgo9 error
+	tgo8, tgo9 = next(fail)
+	if tgo9 != nil {
+		return fmt_tgo5.Errorf("%s: %w", "next", tgo9)
+	}
+	var value = tgo8
+	trace = append(trace, fmt.Sprint(value))
+	visits++
+	if visits < 2 {
+		goto L
+	}
+	return nil
+}
+
+func nestedLabels(fail bool) error {
+	goto Outer
+Outer:
+Inner:
 	var tgo10 int
 	var tgo11 error
 	tgo10, tgo11 = next(fail)
 	if tgo11 != nil {
-		tgo13 = tgo11
-		return tgo13
+		return tgo11
 	}
-	var value = tgo10
-	trace = append(trace, fmt.Sprint(value))
-	visits++
-	if visits < 2 {
-		goto L
-	}
-	return nil
-}
-
-func varWrapped(fail bool) (tgo16 error) {
-	var tgo17 error = tgo16
-	defer func() { trace = append(trace, "defer") }()
-	visits := 0
-	goto L
-L:
-	var tgo14 int
-	var tgo15 error
-	tgo14, tgo15 = next(fail)
-	if tgo15 != nil {
-		tgo17 = tgo15
-		tgo17 = fmt_tgo9.Errorf("%s: %w", "next", tgo17)
-		return tgo17
-	}
-	var value = tgo14
-	trace = append(trace, fmt.Sprint(value))
-	visits++
-	if visits < 2 {
-		goto L
-	}
-	return nil
-}
-
-func nestedLabels(fail bool) (tgo20 error) {
-	var tgo21 error = tgo20
-	goto Outer
-Outer:
-Inner:
-	var tgo18 int
-	var tgo19 error
-	tgo18, tgo19 = next(fail)
-	if tgo19 != nil {
-		tgo21 = tgo19
-		return tgo21
-	}
-	value := tgo18
+	value := tgo10
 	trace = append(trace, fmt.Sprint(value))
 	if false {
 		goto Inner

@@ -37,8 +37,7 @@ func identity[T any](v T) (T, error) {
 	return v, err
 }
 
-func run() (tgo4 error) {
-	var tgo5 error = tgo4
+func run() error {
 	a := [2]int{}
 	{
 		var tgo1 int
@@ -47,8 +46,7 @@ func run() (tgo4 error) {
 			var tgo3 error
 			tgo2, tgo3 = step("I")
 			if tgo3 != nil {
-				tgo5 = tgo3
-				return tgo5
+				return tgo3
 			}
 			a[tgo2] = tgo1
 			{

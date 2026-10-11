@@ -1,6 +1,6 @@
 package main
 
-import fmt_tgo7 "fmt"
+import fmt_tgo5 "fmt"
 
 import (
 	"errors"
@@ -39,8 +39,7 @@ func identity[T any](v T) (T, error) {
 	return v, err
 }
 
-func run() (tgo5 error) {
-	var tgo6 error = tgo5
+func run() error {
 	ch := make(chan int, 1)
 	ch <- 1
 	a := [2]int{}
@@ -53,9 +52,7 @@ func run() (tgo5 error) {
 			var tgo4 error
 			tgo3, tgo4 = step("I")
 			if tgo4 != nil {
-				tgo6 = tgo4
-				tgo6 = fmt_tgo7.Errorf("%s: %w", "step", tgo6)
-				return tgo6
+				return fmt_tgo5.Errorf("%s: %w", "step", tgo4)
 			}
 			a[tgo3] = tgo2
 			fmt.Print("b")
