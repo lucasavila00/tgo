@@ -133,8 +133,12 @@ func (check *Checker) convertConditional(call *ast.CallExpr, typ Type) {
 }
 
 func (check *Checker) conditionalBranches(statement *ast.IfStmt, context Type) []*operand {
+	packageBranch := check.sig == nil && check.scope.Parent() == check.pkg.scope
 	check.openScope(statement, "if expression")
 	defer check.closeScope()
+	if packageBranch {
+		defer check.usage(check.scope)
+	}
 	check.simpleStmt(statement.Init)
 	var condition operand
 	check.expr(nil, &condition, statement.Cond)

@@ -542,9 +542,17 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
 		check.suspendedCall("go", s.Call)
 
 	case *ast.DeferStmt:
+		if check.sig == nil {
+			check.error(s, InvalidSyntaxTree, "defer requires an enclosing function")
+			return
+		}
 		check.suspendedCall("defer", s.Call)
 
 	case *ast.ReturnStmt:
+		if check.sig == nil {
+			check.error(s, InvalidSyntaxTree, "return requires an enclosing function")
+			return
+		}
 		res := check.sig.results
 		// Return with implicit results allowed for function with named results.
 		// (If one is named, all are named.)

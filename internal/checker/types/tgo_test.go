@@ -82,6 +82,9 @@ func TestConditionalTypeErrors(t *testing.T) {
 		{`func f(ok bool) int { for { _=if ok {break} else {1} } }`, "missing return"},
 		{`func f(ok bool) int { outer: for { _=if ok {break outer} else {1} } }`, "missing return"},
 		{`func f(ok bool) { if x:=if ok {goto missing} else {1}; x>0 {} }`, "label missing not declared"},
+		{`var x = if true {return 1} else {2}`, "enclosing function"},
+		{`func f() {}; var x = if true {defer f(); 1} else {2}`, "enclosing function"},
+		{`var x = if true {unused:=1; 2} else {3}`, "declared and not used"},
 	} {
 		t.Run(test.source, func(t *testing.T) {
 			_, err := checkTGo(t, test.source)

@@ -185,6 +185,17 @@ func (r *rewrite) functionBodies(node ast.Node) ast.Node {
 		return node
 	}
 	switch fn := node.(type) {
+	case *ast.ValueSpec:
+		copy := *fn
+		copy.Values = append([]ast.Expr(nil), fn.Values...)
+		for i, value := range fn.Values {
+			if r.packageConditional(value) {
+				copy.Values[i] = r.packageInitializer(value)
+			} else {
+				copy.Values[i] = r.functionBodies(value).(ast.Expr)
+			}
+		}
+		return &copy
 	case *ast.FuncDecl:
 		copy := *fn
 		copy.Type, copy.Body = r.function(fn, fn.Type, fn.Body)
