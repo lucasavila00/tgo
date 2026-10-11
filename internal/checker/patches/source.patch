@@ -435,6 +435,16 @@
  		switch s := s.(type) {
  		case *ast.DeclStmt:
  			if d, _ := s.Decl.(*ast.GenDecl); d != nil && d.Tok == token.VAR {
+@@ -199,6 +210,9 @@
+ 				// "for" statement, and that is the one whose execution advances."
+ 				valid := false
+ 				if t := b.enclosingTarget(name); t != nil {
++					if loop, ok := t.Stmt.(*ast.RangeStmt); ok && loop.X.Pos() <= s.Pos() && s.Pos() < loop.X.End() {
++						check.error(s, MisplacedContinue, "continue cannot advance a range before its collection is computed")
++					}
+ 					switch t.Stmt.(type) {
+ 					case *ast.ForStmt, *ast.RangeStmt:
+ 						valid = true
 --- a/types/literals.go
 +++ b/types/literals.go
 @@ -12,7 +12,7 @@
@@ -494,15 +504,25 @@
  // An operandMode specifies the (addressing) mode of an operand.
 --- a/types/range.go
 +++ b/types/range.go
-@@ -12,7 +12,7 @@
+@@ -10,9 +10,9 @@
+ package types
+ 
  import (
++	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  	"go/ast"
  	"go/constant"
 -	. "internal/types/errors"
-+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
  )
  
  // rangeStmt type-checks a range statement of form
+@@ -34,6 +34,7 @@
+ 	// So we have to be careful not to evaluate the arg in the
+ 	// described situation.
+ 
++	check.rejectRangeCollectionContinue(rangeVar)
+ 	check.hasCallOrRecv = false
+ 	check.expr(nil, &x, rangeVar)
+ 
 --- a/types/resolver.go
 +++ b/types/resolver.go
 @@ -10,7 +10,7 @@

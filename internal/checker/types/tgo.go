@@ -522,3 +522,34 @@ func (check *Checker) conditionalFunctionExit(body *ast.BlockStmt) bool {
 	}
 	return true
 }
+
+// rejectRangeCollectionContinue checks jumps before a range has its collection.
+func (check *Checker) rejectRangeCollectionContinue(expr ast.Expr) {
+	ast.Walk(rangeContinueVisitor{check: check}, expr)
+}
+
+type rangeContinueVisitor struct {
+	check *Checker
+	loops int
+}
+
+func (visitor rangeContinueVisitor) Visit(node ast.Node) ast.Visitor {
+	switch node := node.(type) {
+	case nil:
+		return nil
+	case *ast.FuncLit:
+		return nil
+	case *ast.CallExpr:
+		if operation, found := visitor.check.tgoOperation(node); found && operation.Conditional {
+			ast.Walk(visitor, node.Args[0].(*ast.FuncLit).Body.List[0])
+			return nil
+		}
+	case *ast.ForStmt, *ast.RangeStmt:
+		visitor.loops++
+	case *ast.BranchStmt:
+		if node.Tok == token.CONTINUE && node.Label == nil && visitor.loops == 0 {
+			visitor.check.error(node, MisplacedContinue, "continue cannot advance a range before its collection is computed")
+		}
+	}
+	return visitor
+}

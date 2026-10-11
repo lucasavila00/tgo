@@ -1,7 +1,7 @@
 # PROOF
 
-Add `tests/testdata/value-expressions/` fixtures with TGo inputs, Go snapshots,
-handwritten Go references, and expected results. These checks are planned.
+Use TGo inputs, Go snapshots, handwritten Go references, and expected results
+in `tests/testdata/value-expressions/`.
 
 Cover:
 
@@ -17,12 +17,13 @@ Cover:
 - Runtime `int8` overflow (-128 when `ok=true`) in int8 context: `(if ok {127} else {0})+1`, without false constant-overflow errors.
 
 `TestValueExpressions` compiles inputs and compares snapshots. Run generated Go
-and references separately. Compare results, effects, panic, and defer order.
+and references. Compare values, effects, panic, and defers.
 Assert sentinel identity. Exercise both branches and skipped paths. Compare
 repeated compilation bytes.
 
-`TestValueExpressionDiagnostics` checks diagnostic file, line, column, and text:
+Check diagnostic positions and text:
 missing else/value, mixed types, tuples, constant-only contexts, escaped locals,
-unknown types, and types that generated declarations cannot name.
+unknown types, and types that generated declarations cannot name. Reject
+`continue` to a range inside its collection; keep outer-loop and body jumps.
 
-Review snapshots; tests must not update them on failure.
+Review snapshots. Never update them on failure.

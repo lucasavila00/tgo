@@ -82,6 +82,10 @@ func TestConditionalTypes(t *testing.T) {
 		`func f(ok bool) { for { if x:=if ok {continue} else {1}; x>0 {break} } }`,
 		`func f(ok bool) { for { _=if x:=if ok {break} else {1}; x>0 {2} else {3} } }`,
 		`var ok = true; var x = if ok {1} else {2}`,
+		`func f(ok bool) { outer: for { for range if ok {continue outer} else {[]int{1}} {}; break } }`,
+		`func f(ok bool) { for range if ok {for i:=0;i<2;i++ {continue}; []int{1}} else {[]int{1}} {} }`,
+		`func f(ok bool) { for range if ok {func() {for i:=0;i<2;i++ {continue}}(); []int{1}} else {[]int{1}} {} }`,
+		`func f(ok bool) { for range []int{1} { _=if ok {continue} else {1} } }`,
 		`func f(ok bool) { choice: switch if ok {break choice} else {1} {case 1:} }`,
 		`func f(ok bool) { switch 1 {case if ok {break} else {1}:} }`,
 		`func f(ok bool) { choice: switch v := (if ok {break choice} else {any(1)}).(type) {case int: _=v} }`,
@@ -131,6 +135,10 @@ func TestConditionalTypeErrors(t *testing.T) {
 		{`func f(ok bool, dst []byte) { copy(dst, if ok {"one"} else {nil}) }`, "cannot use"},
 		{`func f(ok bool, dst []byte) { copy(dst, if ok {var x []byte = if ok {"one"} else {"two"}; x} else {nil}) }`, "cannot use"},
 		{`func f(ok bool) { x:=if ok {1} else {"two"}; _=x }`, "explicit type annotation"},
+		{`func f(ok bool) { for range if ok {continue} else {[]int{1}} {} }`, "continue cannot advance a range before its collection is computed"},
+		{`func f(ok bool) { loop: for range if ok {continue loop} else {[]int{1}} {} }`, "continue cannot advance a range before its collection is computed"},
+		{`func f(ok bool) { for { for range if ok {continue} else {[]int{1}} {}; break } }`, "continue cannot advance a range before its collection is computed"},
+		{`func f(ok bool) { loop: for range if ok {for {continue loop}; []int{1}} else {[]int{1}} {} }`, "continue cannot advance a range before its collection is computed"},
 		{`func f(ok bool) { x:=if ok {nil} else {nil}; _=x }`, "explicit type annotation"},
 		{`func f(ok bool) { x:=if ok {1}; _=x }`, "requires else"},
 		{`func f(ok bool) { x:=if ok {} else {1}; _=x }`, "final value"},
@@ -167,5 +175,18 @@ func TestConditionalTypeErrors(t *testing.T) {
 				t.Fatalf("error: %v, want %q", err, test.message)
 			}
 		})
+	}
+}
+
+func TestRangeContinueDiagnostic(t *testing.T) {
+	for _, source := range []string{
+		"func f() {\n\tfor range if true {\n\t\tcontinue\n\t} else { []int{1} } {}\n}",
+		"func f() {\nloop: for range if true {\n\t\tcontinue loop\n\t} else { []int{1} } {}\n}",
+	} {
+		_, err := checkTGo(t, source)
+		const expected = "main.tgo:4:3: continue cannot advance a range before its collection is computed"
+		if err == nil || err.Error() != expected {
+			t.Fatalf("diagnostic: %v; want %s", err, expected)
+		}
 	}
 }

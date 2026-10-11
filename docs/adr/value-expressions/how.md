@@ -9,8 +9,8 @@ The private checker visits branches in the source function's scope. Keep branch
 constants until context resolves their types, including through operators and
 shifts. The complete `if` value is nonconstant. Generic inference uses every
 completing branch across conditional arguments, then checks each branch against
-the parameter type. Extend scope, jump, termination, and package dependency
-checks.
+the parameter type. Check scopes, jumps, termination, and dependencies. Reject `continue` to a
+range while computing its collection.
 
 The driver supplies private checked packages to the lowerer. Public `Load`
 retains stock `packages.Package` and checks its ordinary Go syntax separately.
