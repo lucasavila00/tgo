@@ -17,3 +17,6 @@ object and the required check timing. Each function has its own return target.
 Fresh names and explicit checked types preserve source bindings and conversions.
 See the [correctness report](../../docs/arch/transpiler/correctness.md) for
 implementation rules and the tests that check them.
+
+See the [generated Go reference](../../docs/reference/internal/lowering.md) for exported
+declarations and source comments.

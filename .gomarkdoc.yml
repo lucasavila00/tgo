@@ -1,0 +1,7 @@
+output: "docs/reference/{{.Dir}}.md"
+repository:
+  url: https://github.com/lucasavila00/tgo
+  defaultBranch: main
+  path: /
+header: |-
+  Generated from Go declarations and source comments. Run `make docs` to update this file.

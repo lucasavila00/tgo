@@ -17,3 +17,6 @@ it can insert a return before the parent expression uses those results.
 The result maps absolute file paths to formatted Go. The original typed AST
 stays available for another transformation. See the [API guide](../../docs/guide/transpiler.md)
 for signatures and callback requirements.
+
+See the [generated Go reference](../../docs/reference/pkg/transpiler.md) for exported
+declarations and source comments.

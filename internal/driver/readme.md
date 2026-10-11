@@ -18,3 +18,6 @@ The result is a map of module-relative file names to contents, including
 source and assets. For example, `name_test.tgo` adds `name_tgo_test.go`.
 [The architecture](../../docs/arch/transpiler/readme.md) explains the compilation
 passes and package dependencies.
+
+See the [generated Go reference](../../docs/reference/internal/driver.md) for exported
+declarations and source comments.
