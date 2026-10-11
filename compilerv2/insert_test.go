@@ -64,9 +64,23 @@ func next(i int) int { fmt.Print("T"); return i+1 }
 
 func runInsertion(t *testing.T, input, target string, after After) string {
 	t.Helper()
+	return runInsertionFiles(t, input, target, after, nil)
+}
+
+func runInsertionFiles(t *testing.T, input, target string, after After, extra map[string]string) string {
+	t.Helper()
 	dir := t.TempDir()
 	for name, content := range map[string]string{"go.mod": "module example.com/insertion\n\ngo 1.27.1\n", "main.go": input} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, content := range extra {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
