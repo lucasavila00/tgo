@@ -361,8 +361,7 @@ func (r *rewrite) addressableArray(expr ast.Expr) bool {
 }
 
 func (r *rewrite) arrayBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
-	before, pointer := r.address(expr)
-	return before, &ast.ParenExpr{X: &ast.StarExpr{X: pointer}}
+	return r.place(expr)
 }
 
 func (r *rewrite) untypedBoolean(expr ast.Expr) bool {

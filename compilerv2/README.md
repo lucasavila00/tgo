@@ -72,3 +72,7 @@ array keys. A key with an unhashable interface field must fail when the map is
 built, after its value expression runs. To save such a key, the engine infers
 its type from an empty map and assigns its fields or elements to a fresh value.
 It does not insert the key into a map before the original map operation.
+
+For an array element read, the engine saves the location's operands and runs
+the index expression before the element access can panic. An explicit address
+operation completes its address checks before insertion after that operation.
