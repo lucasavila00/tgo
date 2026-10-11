@@ -39,11 +39,9 @@ func identity[T any](v T) (T, error) {
 
 func run() (tgo4 error) {
 	var tgo5 error = tgo4
-
 	a := [2]int{}
 	{
 		var tgo1 int
-
 		for tgo1 = range []int{1, 2} {
 			var tgo2 int
 			var tgo3 error

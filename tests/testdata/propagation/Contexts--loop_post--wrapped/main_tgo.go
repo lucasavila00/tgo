@@ -43,7 +43,6 @@ func run() (tgo3 error) {
 	var tgo4 error = tgo3
 	{
 		var tgo6 bool = 0 == 0
-
 		for i := 0; ; {
 			if tgo6 {
 				tgo6 = 0 != 0

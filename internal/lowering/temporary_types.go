@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"reflect"
 	"strconv"
 )
 
@@ -159,6 +160,20 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 	if err != nil {
 		panic(err)
 	}
+	// Parsed type positions do not refer to the source file set.
+	ast.Inspect(result, func(node ast.Node) bool {
+		if node == nil {
+			return true
+		}
+		value := reflect.ValueOf(node).Elem()
+		for i := 0; i < value.NumField(); i++ {
+			field := value.Field(i)
+			if field.Type() == reflect.TypeFor[token.Pos]() {
+				field.SetInt(0)
+			}
+		}
+		return true
+	})
 	// Follow checked types so equal spellings do not merge different bindings.
 	var rename func(types.Type, ast.Expr)
 	fields := func(tuple *types.Tuple, list *ast.FieldList) {

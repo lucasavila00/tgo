@@ -39,7 +39,6 @@ func identity[T any](v T) (T, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-
 	a := [2]int{}
 	{
 		var tgo1 int

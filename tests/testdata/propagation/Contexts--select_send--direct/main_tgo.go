@@ -39,7 +39,6 @@ func identity[T any](v T) (T, error) {
 
 func run() (tgo4 error) {
 	var tgo5 error = tgo4
-
 	ch := make(chan int, 1)
 	{
 		var tgo1 chan int = ch

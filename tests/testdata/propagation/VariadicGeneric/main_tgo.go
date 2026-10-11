@@ -29,7 +29,6 @@ func consume[T any](f func(...T), channels chan (<-chan T), n int) {
 func run[T any](f func(...T), channels chan (<-chan T), failAt int) (tgo3 error) {
 	type tgo6 = T
 	var tgo4 error = tgo3
-
 	{
 		T := 1
 		_ = T

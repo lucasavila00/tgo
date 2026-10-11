@@ -52,7 +52,6 @@ func pair[A any, B comparable](a A, b B) (struct {
 func run[T any](x T) (tgo4 error) {
 	type tgo3 = T
 	var tgo5 error = tgo4
-
 	{
 		type T string
 		type Local = T
@@ -109,8 +108,7 @@ func run[T any](x T) (tgo4 error) {
 			F      func(tgo3, ...Local) (tgo3, Local)
 			G      box[tgo3, Local]
 			I      interface {
-				Call(
-					tgo3, ...Local) Local
+				Call(tgo3, ...Local) Local
 				echoed[tgo3]
 			}
 		}

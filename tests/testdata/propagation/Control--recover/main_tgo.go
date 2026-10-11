@@ -19,7 +19,6 @@ func step(name string) (int, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-
 	defer func() {
 		if recover() != nil {
 			fmt.Print("r")
