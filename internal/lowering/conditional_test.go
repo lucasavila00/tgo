@@ -59,7 +59,11 @@ func main() {
 	if len(roots) != 1 {
 		t.Fatalf("packages: %d", len(roots))
 	}
-	checked, err := checker.NewLoader(dir, roots, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool)).Check(roots[0])
+	loader, err := checker.NewLoader(dir, roots, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked, err := loader.Check(roots[0])
 	if err != nil {
 		t.Fatal(err)
 	}
