@@ -23,7 +23,8 @@ remain valid when they have no fields or elements. Maps require only their
 stated entries. Imported structs with inaccessible fields need factory calls.
 
 Keep explicit `new`/`make` allocation, including zero-filled slices, and typed
-zeros in failure returns and error propagation. Keep Go interop, map misses, and closed-channel behavior.
+zeros in failure returns and error propagation. Keep Go interop, map misses,
+and closed-channel behavior.
 
 Deferred closures can change initialized locals. Return expressions evaluate
 before defers. Returned references retain normal Go behavior.

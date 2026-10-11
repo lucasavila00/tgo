@@ -1,51 +1,33 @@
 # PROOF
 
-Create positive and negative fixtures under
-`compilerv2/testdata/initialization/`. Each negative fixture records the source
-position and expected rule. Compile positive output with Go and run cases
-where output text cannot prove behavior.
+Create fixtures in `compilerv2/testdata/initialization/`. Negative fixtures
+record the rejected source position. Compile and run positive output.
 
-| File | Required cases |
+| Cases | Check |
 | --- | --- |
-| `declarations.tgo` | Local/package/grouped/blank vars; tuples; shadowing |
-| `bindings.tgo` | Parameters, receivers, range, select, type switch |
-| `literals.tgo` | Complete/missing fields; embedding; nested values; aliases |
-| `collections.tgo` | Array/slice gaps, inferred length, empty values, maps |
-| `results.tgo` | Reject named/blank results in declarations, literals, types |
-| `returns.tgo` | Explicit results; reject bare value returns; allow void returns |
-| `closures.tgo` | Initialized captures; deferred local and reference changes |
-| `generics.tgo` | Generic results, constrained literals, explicit allocation |
-| `interop.tgo` | Imported private fields, factory calls, zero-valued Go calls |
-| `errors.tgo` | Failure commas, propagation, checked failure values |
+| Local, package, grouped, blank vars | Reject missing initializers |
+| Later assignment on every path | Still reject missing initializer |
+| Tuple initialization, shadowing | Accept; preserve order and binding |
+| Named and `_` results | Reject declarations, literals, function types |
+| Nested function types, aliases, interface methods | Reject named results |
+| Imported Go named results | Accept calls and function assignments |
+| Complete, missing, embedded, nested fields | Check literal completeness |
+| Keyed arrays/slices, inferred length, gaps | Check index coverage |
+| Empty structs/arrays/slices/maps | Accept empty values |
+| Aliases, generic literal types | Apply the same literal checks |
+| Explicit return, void bare return, value bare return | Accept, accept, reject |
+| Initialized deferred captures | Accept local writes and reference changes |
+| Allocation, map misses, closed channels | Preserve Go behavior |
+| Generic failure zeros, `!`, `!!` | Compile; preserve wrapping and identity |
 
-Reject named results in function aliases, nested function types, and interface
-methods as well as executable functions. Reject initializer-free locals even
-when every branch assigns them before use. Accept calls to imported Go
-functions with named results and assignments to unnamed function types.
-
-Verify that return expressions run before deferred calls. A deferred closure
-can change an initialized local, but that change does not replace a returned
-scalar value. A returned pointer can expose a deferred change to its pointee.
-Include result-free bare returns and failure commas with unnamed results.
-
-For valid cases, compare side-effect traces with handwritten Go references:
-initializer order, tuple assignment, keyed literal evaluation, panic timing,
-allocation, failure return, and deferred calls. Verify exact `!!` error
-identity and single `!` wrapping. Generated locals from expression lowering
-must not produce source-initialization errors.
-
-Test explicit zeros, nullable nil, map misses, closed-channel receives,
-`new(T)`, `new(expression)`, and slice length/capacity separately. Existing
-non-nil and checked-value checks must still reject invalid construction.
-Generic failure zeros must compile without requiring user-written helpers.
-
-Planned focused command:
+Compare side-effect traces with handwritten Go references. Check initializer
+and literal evaluation order. Check return-expression evaluation before defers:
+a deferred local write leaves a returned scalar unchanged; a pointee write is
+visible through a returned pointer. Generated locals must not trigger source
+checks. Existing non-nil and checked-value rules must still apply.
 
 ```sh
 go -C compilerv2 test ./... -run '^TestInitialization' -count=1
 ```
 
-Run full validation in hosted CI. Update README examples and language
-documentation with the implementation.
-
-[WHAT](what.md) states the rules. [HOW](how.md) states the algorithm.
+Run full validation in hosted CI.
