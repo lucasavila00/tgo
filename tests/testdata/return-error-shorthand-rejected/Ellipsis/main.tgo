@@ -1,0 +1,5 @@
+package rejected
+
+func run(values []int) (int, error) {
+	return values... ..
+}

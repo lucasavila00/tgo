@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"fmt"
+	"go/scanner"
 	"go/token"
 	"strings"
 )
@@ -25,6 +26,9 @@ func (s *mappedSource) prepareShortReturn(original *token.File, used map[string]
 		}
 		if dots < 0 {
 			continue
+		}
+		if tokens[i+1].offset == dots {
+			end = s.shortReturnCommentStart(tokens, end)
 		}
 		first := i + 1
 		leading := tokens[first].offset == dots
@@ -87,4 +91,28 @@ func (s *mappedSource) shortReturnSpan(tokens []sourceToken, start int) (int, in
 		return dots, 0, fmt.Errorf("short return permits .. only before or after its operands")
 	}
 	return dots, len(s.text), nil
+}
+
+// shortReturnCommentStart leaves a final line comment outside the marker call.
+func (s *mappedSource) shortReturnCommentStart(tokens []sourceToken, end int) int {
+	last := 0
+	for _, tok := range tokens {
+		if tok.offset >= end {
+			break
+		}
+		last = tok.end
+	}
+	set := token.NewFileSet()
+	file := set.AddFile("", -1, end-last)
+	var scan scanner.Scanner
+	scan.Init(file, []byte(s.text[last:end]), nil, scanner.ScanComments)
+	for {
+		pos, kind, literal := scan.Scan()
+		if kind == token.COMMENT && strings.HasPrefix(literal, "//") {
+			return last + file.Offset(pos)
+		}
+		if kind == token.EOF {
+			return end
+		}
+	}
 }

@@ -1,0 +1,38 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+func count(values ...int) int { return len(values) }
+
+func decimal(values []int) (float64, error) {
+	return float64(count(values...)) + 1.5 .. // trailing comment
+}
+
+func newline(err error) (int, error) {
+	return .. // leading comment
+		err // operand comment
+}
+
+func raw() (string, error) {
+	return `.. is text` ..
+}
+
+func last() (int, error) {
+	return 3 .. /* multiline
+	comment */
+}
+
+func main() {
+	value, err := decimal([]int{1, 2})
+	fmt.Println(value, err)
+	failure := errors.New("failure")
+	number, err := newline(failure)
+	fmt.Println(number, err == failure)
+	text, err := raw()
+	fmt.Println(text, err)
+	number, err = last()
+	fmt.Println(number, err)
+}

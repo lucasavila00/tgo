@@ -21,4 +21,6 @@ func main() {
 	fmt.Println(value, text == "", err == failure)
 	value, text, err = succeed()
 	fmt.Println(value, text, err)
+	value, err = one()
+	fmt.Println(value, err)
 }
