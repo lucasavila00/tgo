@@ -68,6 +68,9 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 	case *ast.ExprStmt:
 		return r.expressionStatement(s)
 	case *ast.ReturnStmt:
+		if record, found := r.shortReturns[s]; found {
+			return r.shortReturnStatement(s, record)
+		}
 		copy := *s
 		before, values := r.operands(s.Results)
 		copy.Results = values

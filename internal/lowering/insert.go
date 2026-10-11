@@ -34,7 +34,7 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 // It returns formatted file contents by absolute path without writing files.
 // It reports an error if any accepted operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), comprehensions: s.checked.Comprehensions, comprehensionRanges: make(map[*ast.RangeStmt]bool), collectionOutputs: make(map[string]*collectionDestination), conditionals: s.checked.Conditionals, lowered: make(map[ast.Expr]bool)}
+	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), comprehensions: s.checked.Comprehensions, comprehensionRanges: make(map[*ast.RangeStmt]bool), collectionOutputs: make(map[string]*collectionDestination), conditionals: s.checked.Conditionals, shortReturns: s.checked.ShortReturns, loweredReturns: make(map[*ast.ReturnStmt]bool), lowered: make(map[ast.Expr]bool)}
 	for site, expression := range s.expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -82,6 +82,11 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 			return nil, fmt.Errorf("%s: comprehension was not lowered", s.checked.Fset.Position(call.Pos()))
 		}
 	}
+	for statement := range r.shortReturns {
+		if !r.loweredReturns[statement] {
+			return nil, fmt.Errorf("%s: short return was not lowered", s.checked.Fset.Position(statement.Pos()))
+		}
+	}
 	for call := range r.conditionals {
 		if !r.lowered[call] {
 			return nil, fmt.Errorf("%s: if expression was not lowered", s.checked.Fset.Position(call.Pos()))
@@ -96,6 +101,11 @@ func (r *rewrite) contains(node ast.Node) bool {
 	}
 	if contains(node, r.target) {
 		return true
+	}
+	for statement := range r.shortReturns {
+		if contains(node, statement) {
+			return true
+		}
 	}
 	for expression := range r.propagations {
 		if contains(node, expression) {
