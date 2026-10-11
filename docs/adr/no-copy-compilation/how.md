@@ -2,7 +2,9 @@
 
 1. Read module files. Record TGo inputs and their generated paths. Exclude
    matching stale generated files from the returned input set. A nested
-   `go.mod` marks a separate module; retain its files as assets.
+   `go.mod` marks a separate module. Keep nested modules and vendor
+   dependencies as assets. Also retain `testdata` and directories whose
+   names start with `.` or `_`, as Go does.
 2. Write each original TGo input at its generated path in the module. Run
    `go/packages` there to select files, dependencies, exports, and test variants.
 3. Have the private checker read these staged source files through the frontend.

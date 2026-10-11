@@ -148,9 +148,13 @@ func collectOutput(checked *checkedModule) map[string][]byte {
 	return output
 }
 
-// ownsModuleFile excludes files beneath a nested module's go.mod.
+// ownsModuleFile keeps data directories, dependencies, and nested modules as assets.
 func ownsModuleFile(files map[string][]byte, name string) bool {
 	for dir := filepath.Dir(name); dir != "."; dir = filepath.Dir(dir) {
+		base := filepath.Base(dir)
+		if base == "vendor" || base == "testdata" || strings.HasPrefix(base, ".") || strings.HasPrefix(base, "_") {
+			return false
+		}
 		if _, exists := files[filepath.Join(dir, "go.mod")]; exists {
 			return false
 		}

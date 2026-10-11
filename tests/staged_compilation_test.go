@@ -77,10 +77,11 @@ func TestCompileStagesUseCgoHeaders(t *testing.T) {
 func TestCompileStagesUseVendorSelection(t *testing.T) {
 	root := t.TempDir()
 	files := map[string][]byte{
-		"go.mod":                            []byte("module example.com/vendorstages\n\ngo 1.27.1\n\nrequire example.com/value v1.0.0\n"),
-		"vendor/modules.txt":                []byte("# example.com/value v1.0.0\n## explicit; go 1.27.1\nexample.com/value\n"),
-		"vendor/example.com/value/value.go": []byte("package value\nfunc Value()(int,error){return 9,nil}\n"),
-		"main.tgo":                          []byte("package main\nimport (\"fmt\";\"example.com/value\")\nfunc run()error{fmt.Println(value.Value()!);return nil}\nfunc main(){if err:=run();err!=nil{panic(err)}}\n"),
+		"go.mod":                                []byte("module example.com/vendorstages\n\ngo 1.27.1\n\nrequire example.com/value v1.0.0\n"),
+		"vendor/modules.txt":                    []byte("# example.com/value v1.0.0\n## explicit; go 1.27.1\nexample.com/value\n"),
+		"vendor/example.com/value/value.tgo":    []byte("invalid TGo inside a dependency"),
+		"vendor/example.com/value/value_tgo.go": []byte("package value\nfunc Value()(int,error){return 9,nil}\n"),
+		"main.tgo":                              []byte("package main\nimport (\"fmt\";\"example.com/value\")\nfunc run()error{fmt.Println(value.Value()!);return nil}\nfunc main(){if err:=run();err!=nil{panic(err)}}\n"),
 	}
 	writeFiles(t, root, files)
 	output := transpiler.Compile(root)

@@ -2,7 +2,8 @@
 
 Run the source-checking tests and handwritten runtime references. Check:
 
-- Nested modules with invalid TGo and retained snapshots.
+- Data directories, nested modules, and vendor dependencies with invalid TGo
+  and retained snapshots.
 - TGo-only and mixed packages, subdirectories, imports, build constraints,
   platform suffixes, and internal/external test variants.
 - Invalid stale snapshots, new generated paths, excluded invalid inputs, and

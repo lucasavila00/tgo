@@ -78,11 +78,17 @@ func TestCompileReturnsModuleUpdates(t *testing.T) {
 	}
 }
 
-func TestCompileKeepsNestedModuleFiles(t *testing.T) {
+func TestCompileKeepsDataAndNestedModuleFiles(t *testing.T) {
 	root := t.TempDir()
 	files := map[string][]byte{
 		"go.mod":                    []byte("module example.com/outer\n\ngo 1.27.1\n"),
 		"main.tgo":                  []byte("package p\nvar Value = if true {1} else {2}\n"),
+		"testdata/example.tgo":      []byte("invalid fixture input"),
+		"testdata/example_tgo.go":   []byte("keep fixture snapshot"),
+		".data/example.tgo":         []byte("invalid hidden input"),
+		".data/example_tgo.go":      []byte("keep hidden snapshot"),
+		"_data/example.tgo":         []byte("invalid data input"),
+		"_data/example_tgo.go":      []byte("keep data snapshot"),
 		"nested/go.mod":             []byte("module example.com/nested\n\ngo 1.27.1\n"),
 		"nested/main.tgo":           []byte("invalid TGo source in another module"),
 		"nested/main_tgo.go":        []byte("keep another module's snapshot"),
@@ -101,12 +107,12 @@ func TestCompileKeepsNestedModuleFiles(t *testing.T) {
 	}
 	output := Compile(root)
 	for name, want := range files {
-		if !strings.HasPrefix(name, "nested/") {
+		if name == "go.mod" || name == "main.tgo" {
 			continue
 		}
 		got, err := os.ReadFile(filepath.Join(root, name))
 		if err != nil || !bytes.Equal(got, want) || !bytes.Equal(output[name], want) {
-			t.Fatalf("changed nested file %s: %v", name, err)
+			t.Fatalf("changed asset file %s: %v", name, err)
 		}
 	}
 }
