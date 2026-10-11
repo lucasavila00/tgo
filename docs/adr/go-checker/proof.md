@@ -37,5 +37,7 @@ Execute accepted fixtures against independent references to check values,
 effects, panics, and status behavior. Compare bounded runtime observations with
 static reports; an observed forbidden zero must never be omitted.
 
-Record `unsafe` and cgo boundaries as outside the proof. Run all fixture checks as project tests. Require every expected decision,
+Record `unsafe` and cgo boundaries as outside the proof.
+
+Run all fixture checks as project tests. Require every expected decision,
 diagnostic, inventory entry, generated snapshot, and runtime comparison to pass.
