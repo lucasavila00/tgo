@@ -6,11 +6,11 @@ Recognize adjacent `..` only before or after return operands. Keep Go token
 boundaries: write `1 ..`, not `1..`. Trailing `..` ends statements at
 newlines. Leading `..` needs an operand, which can start on the next line.
 
-The frontend records the operator and original positions on a return
-statement. Prepare a marker, an internal node without a runtime call, for
-Go's parser. The checker uses enclosing result types, contextual constants,
-and generic inference. Count the statement as a return for termination
-checks.
+The frontend records the operator and original positions. A marker, an
+internal syntax node, lets Go's parser read operands. Before lowering,
+reject the statement if its source function has any named result, including
+`_`. Check operands against result types and count the statement as a return
+for termination checks.
 
 ## Example
 

@@ -26,18 +26,11 @@ fit. Accept named interfaces, concrete errors, and constrained type
 parameters. Bare `return ..` is invalid. Error-only functions can use
 `return .. err`.
 
-Return unconditionally. Preserve error identity and typed nil conversions.
-Evaluate operands, assign named results, then run defers. This returns `1,
-nil`:
+Both forms require unnamed results. Reject either form if any result
+parameter has a name, including `_` and grouped names.
 
-```text
-func Count() (count int, err error) {
-    count = 9
-    defer func() { count++ }()
-    return .. nil
-}
-```
-
-The function signature supplies omitted types and result counts.
+Return unconditionally. Preserve error identity, typed nil conversions, and
+deferred calls. The function signature supplies omitted types and result
+counts.
 
 [HOW](how.md) explains lowering. [PROOF](proof.md) defines checks.
