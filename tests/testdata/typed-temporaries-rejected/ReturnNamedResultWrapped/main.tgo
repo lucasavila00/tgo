@@ -1,7 +1,7 @@
 package main
 
-type Failure interface { Error() string }
-type Result struct { Value int }
+type Failure interface{ Error() string }
+type Result struct{ Value int }
 
 func next() (int, Failure) { return 7, nil }
 
