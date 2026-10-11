@@ -21,7 +21,6 @@ func next(fail bool) (int, error) {
 
 func shortDirect(fail bool) (tgo3 error) {
 	var tgo4 error = tgo3
-
 	defer func() { trace = append(trace, "defer") }()
 	visits := 0
 	goto L
@@ -44,7 +43,6 @@ L:
 
 func shortWrapped(fail bool) (tgo7 error) {
 	var tgo8 error = tgo7
-
 	defer func() { trace = append(trace, "defer") }()
 	visits := 0
 	goto L
@@ -68,7 +66,6 @@ L:
 
 func varDirect(fail bool) (tgo12 error) {
 	var tgo13 error = tgo12
-
 	defer func() { trace = append(trace, "defer") }()
 	visits := 0
 	goto L
@@ -91,7 +88,6 @@ L:
 
 func varWrapped(fail bool) (tgo16 error) {
 	var tgo17 error = tgo16
-
 	defer func() { trace = append(trace, "defer") }()
 	visits := 0
 	goto L
@@ -115,7 +111,6 @@ L:
 
 func nestedLabels(fail bool) (tgo20 error) {
 	var tgo21 error = tgo20
-
 	goto Outer
 Outer:
 Inner:
