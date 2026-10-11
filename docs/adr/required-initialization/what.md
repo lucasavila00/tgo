@@ -1,6 +1,6 @@
 # WHAT
 
-Status: proposed. This is separate from [expression lowering][lowering].
+Status: proposed; separate from [expression lowering][lowering].
 
 Remove implicit source initialization, not the Go zero value. Require an
 initializer for every local and package `var` declaration, including grouped
@@ -50,7 +50,7 @@ Explicit allocation retains zero production. A complete zero-value ban would
 also change collection, error, and interop semantics.
 
 Approval must settle the explicit-allocation exception and complete-literal
-rule. Neither is assumed to be an accepted language rule.
+rule. Both require approval.
 
 [HOW](how.md) gives the implementation. [PROOF](proof.md) gives acceptance.
 
