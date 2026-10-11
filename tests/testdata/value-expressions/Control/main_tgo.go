@@ -114,6 +114,7 @@ func headers() int {
 	total := 0
 	{
 		var tgo13 bool = 0 == 0
+	condition:
 		for i := 0; ; {
 			if tgo13 {
 				tgo13 = 0 != 0
@@ -123,7 +124,7 @@ func headers() int {
 			}
 			var tgo12 bool
 			if i == 1 {
-				break
+				break condition
 			} else {
 				tgo12 = i < 3
 			}
@@ -138,6 +139,7 @@ func headers() int {
 	checks := 0
 	{
 		var tgo15 bool = 0 == 0
+	retry:
 		for i := 0; ; {
 			if tgo15 {
 				tgo15 = 0 != 0
@@ -147,7 +149,7 @@ func headers() int {
 			}
 			var tgo14 bool
 			if checks++; checks == 1 {
-				continue
+				continue retry
 			} else {
 				tgo14 = checks < 3
 			}
@@ -161,13 +163,14 @@ func headers() int {
 	}
 	{
 		var tgo17 bool = 0 == 0
+	post:
 		for i := 0; ; {
 			if tgo17 {
 				tgo17 = 0 != 0
 			} else {
 				var tgo16 int
 				if i == 1 {
-					break
+					break post
 				} else {
 					tgo16 = 1
 				}

@@ -75,23 +75,26 @@ func deferred() int {
 
 func headers() int {
 	total := 0
+	condition:
 	for i := 0; if i == 1 {
-		break
+		break condition
 	} else {
 		i < 3
 	}; i++ {
 		total += i
 	}
 	checks := 0
+	retry:
 	for i := 0; if checks++; checks == 1 {
-		continue
+		continue retry
 	} else {
 		checks < 3
 	}; i++ {
 		total += i
 	}
+	post:
 	for i := 0; i < 3; i += if i == 1 {
-		break
+		break post
 	} else {
 		1
 	} {

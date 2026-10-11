@@ -376,13 +376,18 @@
  	"slices"
  )
  
-@@ -121,6 +121,9 @@
+@@ -121,6 +121,14 @@
  
  	var stmtBranches func(*ast.LabeledStmt, ast.Stmt)
  	stmtBranches = func(lstmt *ast.LabeledStmt, s ast.Stmt) {
++		previous := b.lstmt
++		if _, loop := s.(*ast.ForStmt); loop && lstmt != nil {
++			b.lstmt = lstmt
++		}
 +		check.conditionalStatements(s, func(statement *ast.IfStmt) {
 +			stmtBranches(nil, statement)
 +		})
++		b.lstmt = previous
  		switch s := s.(type) {
  		case *ast.DeclStmt:
  			if d, _ := s.Decl.(*ast.GenDecl); d != nil && d.Tok == token.VAR {
