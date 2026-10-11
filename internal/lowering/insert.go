@@ -56,7 +56,8 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 	if err != nil {
 		return nil, err
 	}
-	for _, expression := range s.expressions {
+	for _, site := range s.Sites {
+		expression := s.expressions[site]
 		if _, expected := r.propagations[expression]; expected && !r.lowered[expression] {
 			return nil, fmt.Errorf("%s: propagation was not lowered", s.Package.Fset.Position(expression.Pos()))
 		}
