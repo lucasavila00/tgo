@@ -41,21 +41,38 @@ The final call remains in the output so source bindings and label targets remain
 valid. It cannot execute after the return. Earlier effects remain; later work
 is skipped. Normal deferred calls still run.
 
-| Code | Purpose |
+## Packages and dependencies
+
+```mermaid
+graph TD
+    CLI[cmd/tgo] --> API[transpiler]
+    API --> Driver[internal/driver]
+    API --> Lowering[internal/lowering]
+    Driver --> Frontend[internal/frontend]
+    Driver --> Lowering
+```
+
+| Package | Responsibility |
 | --- | --- |
-| `source.go` | Load types and inventory source expressions |
-| `expressions.go` | Save values and keep conditional evaluation |
-| `literals.go`, `zero_types.go` | Keep omitted literal types and map key timing |
-| `places.go` | Save assignment operands without reading the destination |
-| `generic_storage.go` | Retain array storage and save slice values for generic destinations |
-| `integer_range.go` | Keep the destination's named integer type in a constant range |
-| `statements.go`, `control.go`, `select.go` | Keep scope, branches, loop control, and communication timing |
-| `insert.go` | Build and format new files |
+| `transpiler` | Public `Compile`, `Load`, `Source`, `Site`, and `After` API |
+| `cmd/tgo` | CLI arguments and output files |
+| `internal/driver` | Module files, Go build selection, type checking, and compilation order |
+| `internal/frontend` | Postfix operators and marker calls for the Go type checker |
+| `internal/lowering` | Typed expression inventory, statement insertion, and Go AST emission |
+
+The frontend and lowering packages have no dependency on each other or the
+driver. The driver converts frontend marker records to lowering operations
+after type checking. The lowering package receives typed Go syntax and the
+error action for each marker call; it does not read TGo tokens or module files.
+
+Integration tests and the proof corpus remain at the module root. They use the
+public API and check the complete compilation path. The expression unit test
+lives with the lowering implementation. No test depends on driver internals.
 
 # Verification
 
 ```sh
-go -C compilerv2 test ./... -run '^TestProof' -count=1
+go -C transpiler test ./... -run '^TestProof' -count=1
 ```
 
 The manifest records expression sites, including excluded syntax and incompatible
@@ -75,7 +92,7 @@ The frontend reads `.tgo` files in a Go module. Use this command to emit a Go
 module into another directory:
 
 ```sh
-go -C compilerv2 run ./cmd/tgo -o /tmp/generated /path/to/source
+go -C transpiler run ./cmd/tgo -o /tmp/generated /path/to/source
 go -C /tmp/generated build ./...
 ```
 
@@ -116,7 +133,7 @@ keep their original dependency paths in the emitted module.
 Focused propagation checks:
 
 ```sh
-go -C compilerv2 test ./... -run '^TestPropagation' -count=1
+go -C transpiler test ./... -run '^TestPropagation' -count=1
 ```
 
 Literal tests cover nested omitted types, map values, pointer keys, and array

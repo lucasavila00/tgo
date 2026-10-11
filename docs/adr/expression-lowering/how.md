@@ -7,7 +7,7 @@ Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 - Read the original AST (abstract syntax tree); build a new `go/ast` output.
 - Adapt [Go's ordering pass][order] to that public AST.
 - Format output with `go/format`; compile it with the Go toolchain.
-- Pin Go and `golang.org/x/tools` versions in `compilerv2/go.mod`.
+- Pin Go and `golang.org/x/tools` versions in `transpiler/go.mod`.
 
 [WHAT](what.md) defines the transformation. [PROOF](proof.md) checks it.
 
