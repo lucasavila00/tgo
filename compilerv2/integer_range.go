@@ -6,6 +6,16 @@ import (
 	"go/types"
 )
 
+func unparen(expr ast.Expr) ast.Expr {
+	for {
+		paren, ok := expr.(*ast.ParenExpr)
+		if !ok {
+			return expr
+		}
+		expr = paren.X
+	}
+}
+
 // integerRange keeps the assignment target's type for a constant range count.
 func (r *rewrite) integerRange(original, loop *ast.RangeStmt, before []ast.Stmt) []ast.Stmt {
 	setup, place := r.place(original.Key)

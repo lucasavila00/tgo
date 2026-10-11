@@ -112,16 +112,6 @@ func markerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 	return result
 }
 
-func unparen(expr ast.Expr) ast.Expr {
-	for {
-		p, ok := expr.(*ast.ParenExpr)
-		if !ok {
-			return expr
-		}
-		expr = p.X
-	}
-}
-
 func wrapMarker(file *ast.File, expression ast.Expr, operation propagation) {
 	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 		if cursor.Node() == expression {

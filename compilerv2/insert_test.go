@@ -12,6 +12,8 @@ import (
 
 func TestInsertReturn(t *testing.T) {
 	cases := []struct{ name, code, target, want string }{
+		{"named integer range", `type N uint64;func run(err error)error{a:=[]N{9,9};for a[left()]=range 2{};return nil};func main(){fmt.Print(run(failure)==failure)}`, "left()", "Ltrue"},
+		{"zero integer range", `type N uint64;func run(err error)error{a:=[]N{9,9};for a[left()]=range 0{};return nil};func main(){fmt.Print(run(failure)==failure)}`, "left()", "false"},
 		{"omitted map key", `type Bad struct{Value any};func bad()any{fmt.Print("B");return []int{1}};func run(err error)error{_=map[Bad]int{{bad()}:right()};return nil};func main(){fmt.Print(run(failure)==failure)}`, "{bad()}", "Btrue"},
 		{"call", `func run(err error) error { use(left(),right()); return nil }; func main() { fmt.Print(run(failure)==failure) }`, "right()", "LRtrue"},
 		{"short circuit reached", `func run(err error) error { useBool(yes() && yes()); return nil }; func main() { fmt.Print(run(failure)==failure) }`, "yes() && yes()", "YYtrue"},

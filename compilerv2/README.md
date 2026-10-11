@@ -46,6 +46,8 @@ is skipped. Normal deferred calls still run.
 | `expressions.go` | Save values and keep conditional evaluation |
 | `literals.go`, `zero_types.go` | Keep omitted literal types and map key timing |
 | `places.go` | Save assignment operands without reading the destination |
+| `generic_storage.go` | Retain array storage and save slice values for generic destinations |
+| `integer_range.go` | Keep the destination's named integer type in a constant range |
 | `statements.go`, `control.go`, `select.go` | Keep scope, branches, loop control, and communication timing |
 | `insert.go` | Build and format new files |
 
@@ -127,3 +129,10 @@ map and assigns its fields or elements to a fresh value.
 For an array element read, the engine saves the location's operands and runs
 the index expression before the element access can panic. An explicit address
 operation completes its address checks before insertion after that operation.
+
+A type parameter can accept both arrays and slices. For arrays, the generated
+code uses the original storage. For slices, it saves the slice value, which
+contains a data pointer, length, and capacity. It selects this behavior from
+the instantiated type, without reading array elements. A fresh type alias keeps
+the parameter available if a source local has the same name. RHS results are
+saved before stores, including every result of a tuple call.
