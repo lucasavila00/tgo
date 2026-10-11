@@ -34,8 +34,8 @@ operand order, enclosing returns, defers, and jumps.
 
 ## Tradeoffs
 
-Helper functions would change return targets. Emit direct statements
-instead. Automatic fixes must prove omitted values and effects stay
-unchanged.
+Library helpers need type arguments for omitted results and separate forms
+for result counts. Return syntax uses the enclosing signature. Automatic
+fixes must prove omitted values and effects stay unchanged.
 
 [WHAT](what.md) states behavior. [PROOF](proof.md) defines checks.

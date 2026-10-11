@@ -37,7 +37,6 @@ go test ./tests -run '^TestReturnErrorShorthand$'
 ```
 
 A passing test must verify output compilation, reference behavior,
-snapshots, and diagnostics. Documentation review alone cannot establish
-these results.
+snapshots, and diagnostics.
 
 [HOW](how.md) explains lowering.
