@@ -31,7 +31,7 @@ func must(err error) {
 }
 
 func loadProject(dir string) []*packages.Package {
-	roots, err := packages.Load(&packages.Config{Dir: dir, Tests: true, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports | packages.NeedDeps}, "./...")
+	roots, err := packages.Load(&packages.Config{Dir: dir, Tests: true, Mode: packages.NeedName | packages.NeedTypes | packages.NeedImports | packages.NeedDeps}, "./...")
 	must(err)
 	var result []*packages.Package
 	packages.Visit(roots, nil, func(pkg *packages.Package) { result = append(result, pkg) })
