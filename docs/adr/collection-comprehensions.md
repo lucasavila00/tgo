@@ -5,7 +5,7 @@ Status: proposed. This feature is not implemented.
 ## Decision
 
 Combine generators, filters, and outputs in direct loops with one result
-collection. A list result is a Go slice. Recommend typed literals with the
+collection. A list result is a Go slice. Use typed literals with the
 output first:
 
 ```text
@@ -13,6 +13,10 @@ names := []string{u.Name for _, u := range users if u.Active}
 byID := map[ID]User{u.ID: u for _, u := range users if u.Active}
 pairs := [][2]int{[2]int{x, y} for _, x := range xs for _, y := range ys}
 ```
+
+State the slice or map type. Write a slice element or map `key: value`, then
+one or more `for` clauses and optional `if` filters. Use Go range bindings.
+Explicit types give `nil` and untyped constants a target type.
 
 One output, or one key and value, precedes at least one `for` clause. Further
 `for` and `if` clauses nest in source order. Generators use `for range source`
@@ -28,7 +32,7 @@ Each candidate can become direct loops. Punctuation does not determine speed.
 | Candidate | Example | Judgment |
 | --- | --- | --- |
 | Inferred, output first | `[u.Name for _, u := range users if u.Active]` | Shortest. Needs collection inference rules and new literal delimiters. |
-| Typed, output first | `[]string{u.Name for _, u := range users if u.Active}` | Clear type and output; few braces. Keeps Go literal types and bindings. Recommend. |
+| Typed, output first | `[]string{u.Name for _, u := range users if u.Active}` | Chosen. Keeps Go literal types and range bindings; makes the output explicit. |
 | Forward with `yield` | `[]string{for _, u := range users if u.Active yield u.Name}` | Reads in execution order. Adds a `yield` role. Useful for long clause chains. |
 | Nested blocks | `[]string{for _, u := range users { if u.Active { u.Name } }}` | Familiar Go loops. More nesting; extends final-expression rules to loop and filter blocks. |
 | Library pipeline | `Collect(Map(Filter(users, active), name))` | No new syntax. Function arguments and boundaries add text; fusion depends on library rules. |
@@ -38,10 +42,14 @@ would be `{u.ID: u for _, u := range users}`. Inference is feasible, but needs
 rules for nil, constants, context, and named collections. For example,
 `[1 for range n]` can default to `[]int`; `[]uint64` needs context or a type.
 
-Explicit collection types follow Go literals. Keep `:= range` because
+Choose explicit collection types because Go users already state them in literals.
+Keep `:= range` because
 `for v in xs` needs a rule to select index, key, or value. Output-first syntax
 makes the result visible without nested braces. Its cost is that execution
 starts with clauses written after the output. Long chains can use newlines.
+Inferred literals need more type rules. `yield` adds a keyword role. Nested
+blocks add braces for each loop and filter. A pipeline needs function
+arguments and separate rules to combine its operations into one loop.
 
 | Research | Approach | Lesson for TGo |
 | --- | --- | --- |
