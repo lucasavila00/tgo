@@ -5,11 +5,16 @@ import (
 	"fmt"
 	"go/ast"
 	"go/format"
+	"go/token"
 )
 
 // InsertAfter builds source files with statements after one expression.
 // The callback uses the expression's evaluated results in source order.
 func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) {
+	return s.insert(site, after, nil)
+}
+
+func (s *Source) insert(site Site, after After, propagation *propagation) (map[string][]byte, error) {
 	target, ok := s.expressions[site]
 	if !ok {
 		return nil, fmt.Errorf("expression site does not belong to this source")
@@ -17,7 +22,7 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	if site.Reason != "" {
 		return nil, fmt.Errorf("expression has no current-function evaluation: %s", site.Reason)
 	}
-	r := &rewrite{source: s, target: target, after: after, names: make(map[string]bool)}
+	r := &rewrite{source: s, target: target, after: after, names: make(map[string]bool), propagation: propagation}
 	for _, file := range s.Package.Syntax {
 		ast.Inspect(file, func(n ast.Node) bool {
 			if id, ok := n.(*ast.Ident); ok {
@@ -26,6 +31,23 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 			return true
 		})
 	}
+	if propagation != nil {
+		for node := s.parents[target]; node != nil; node = s.parents[node] {
+			switch node.(type) {
+			case *ast.FuncDecl, *ast.FuncLit:
+				r.returnFunction = node
+			}
+			if r.returnFunction != nil {
+				break
+			}
+		}
+		if r.returnFunction == nil {
+			return nil, fmt.Errorf("propagation requires a function")
+		}
+		if propagation.wrap {
+			r.formatAlias = r.name()
+		}
+	}
 	output := make(map[string][]byte)
 	for _, file := range s.Package.Syntax {
 		copy := *file
@@ -33,8 +55,19 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 		for i, decl := range file.Decls {
 			if fn, ok := decl.(*ast.FuncDecl); ok && contains(fn.Body, target) {
 				function := *fn
+				var prefix []ast.Stmt
+				if fn == r.returnFunction {
+					function.Type, prefix = r.prepareReturns(fn.Type)
+				}
 				function.Body = r.block(fn.Body)
+				function.Body.List = append(prefix, function.Body.List...)
 				copy.Decls[i] = &function
+			}
+		}
+		if propagation != nil {
+			if r.formatAlias != nil && contains(file, target) {
+				spec := &ast.ImportSpec{Name: r.formatAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: "\"fmt\""}}
+				copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)
 			}
 		}
 		var buf bytes.Buffer

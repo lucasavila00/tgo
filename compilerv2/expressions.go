@@ -19,6 +19,10 @@ type rewrite struct {
 	inserted       bool
 	labels         map[string]string
 	suppressedRoot ast.Expr
+	propagation    *propagation
+	returnFunction ast.Node
+	returnValues   []ast.Expr
+	formatAlias    *ast.Ident
 }
 
 func (r *rewrite) name() *ast.Ident {
@@ -110,6 +114,9 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	if !contains(expr, r.target) {
 		return nil, []ast.Expr{expr}
 	}
+	if expr == r.target && r.propagation != nil {
+		return r.propagatedCall(expr.(*ast.CallExpr))
+	}
 	var before []ast.Stmt
 	var result ast.Expr = expr
 	switch e := expr.(type) {
@@ -117,7 +124,12 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		copy := *e
 		labels := r.labels
 		r.labels = nil
+		var prefix []ast.Stmt
+		if e == r.returnFunction {
+			copy.Type, prefix = r.prepareReturns(e.Type)
+		}
 		copy.Body = r.block(e.Body)
+		copy.Body.List = append(prefix, copy.Body.List...)
 		r.labels = labels
 		result = &copy
 	case *ast.CallExpr:

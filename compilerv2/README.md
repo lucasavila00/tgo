@@ -65,3 +65,42 @@ Focused execution tests also cover assignments, short circuits, closures,
 loops, switches, ranges, selects, defers, jumps, tuples, Boolean conversions,
 array storage, and pointer receivers. Hosted CI keeps generated variants and
 their test results as artifacts.
+
+# Propagation frontend
+
+The frontend reads `.tgo` files in a Go module. Use this command to emit a Go
+module into another directory:
+
+```sh
+go -C compilerv2 run ./cmd/tgo -o /tmp/generated /path/to/source
+go -C /tmp/generated build ./...
+```
+
+`call()!!` returns the same non-nil error from the current function.
+`call()!` adds the source call name with `%w` once. Both operators remove the
+call's final error result from its success values. Earlier effects remain;
+later work stops on failure. Other function results are zero on this return.
+Normal deferred calls run.
+
+The scanner marks suffixes. The Go parser supplies the syntax tree. The Go
+type checker resolves each call. Generated generic functions let the checker
+see each call without its error result. The existing lowering engine then
+saves the call results, checks the error, and emits the return at that point.
+It lowers nested calls before their consumers.
+
+Generated result variables supply typed zero values. This keeps private and
+generic result types and avoids type names that local bindings can hide.
+Source named results keep their bindings and values on success.
+
+The Boolean lowerer uses a constant-false expression to infer the result type
+without executing the source expression. A generic function can remain in that
+expression for type checking. Its call cannot run. Other unused generated
+functions are removed.
+
+Focused propagation checks:
+
+```sh
+go -C compilerv2 test ./... -run '^TestPropagation' -count=1
+```
+
+The propagation PR remains a draft while its full runtime matrix is completed.
