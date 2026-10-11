@@ -116,12 +116,12 @@ func MarkerExpressions(fset *token.FileSet, file *ast.File, operations map[strin
 	return result
 }
 
-// WrapMarker replaces the selected expression with a helper call for type checking.
+// WrapMarker replaces the selected expression with a marker call for source checking.
 // It changes file in place and removes the comment for this operation.
 func WrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 		if cursor.Node() == expression {
-			cursor.Replace(&ast.CallExpr{Fun: ast.NewIdent(operation.Name), Args: []ast.Expr{ast.Unparen(expression)}})
+			cursor.Replace(&ast.CallExpr{Fun: &ast.Ident{Name: operation.Name, NamePos: expression.Pos()}, Lparen: expression.Pos(), Rparen: expression.End() - 1, Args: []ast.Expr{ast.Unparen(expression)}})
 			return false
 		}
 		return true
@@ -139,29 +139,4 @@ func WrapMarker(file *ast.File, expression ast.Expr, operation Marker) {
 		}
 	}
 	file.Comments = comments
-}
-
-// MarkerDeclaration builds a generic helper that returns count success arguments.
-// The helper accepts and discards the final error argument during type checking.
-func MarkerDeclaration(operation Marker, count int) ast.Decl {
-	parameters := &ast.FieldList{}
-	arguments := &ast.FieldList{}
-	results := &ast.FieldList{}
-	values := []ast.Expr{}
-	for i := 0; i <= count; i++ {
-		typ := ast.NewIdent(fmt.Sprintf("T%d", i))
-		parameters.List = append(parameters.List, &ast.Field{Names: []*ast.Ident{typ}, Type: &ast.InterfaceType{Methods: &ast.FieldList{}}})
-		name := ast.NewIdent("err")
-		if i < count {
-			name = ast.NewIdent(fmt.Sprintf("v%d", i))
-			results.List = append(results.List, &ast.Field{Type: typ})
-			values = append(values, name)
-		}
-		arguments.List = append(arguments.List, &ast.Field{Names: []*ast.Ident{name}, Type: typ})
-	}
-	signature := &ast.FuncType{TypeParams: parameters, Params: arguments}
-	if count > 0 {
-		signature.Results = results
-	}
-	return &ast.FuncDecl{Name: ast.NewIdent(operation.Name), Type: signature, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: values}}}}
 }

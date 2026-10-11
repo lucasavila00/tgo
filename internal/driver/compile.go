@@ -18,9 +18,10 @@ func Compile(dir string) map[string][]byte {
 	source := readModule(root)
 	prepared := prepareModule(source, work)
 	selected := selectSources(prepared)
-	checked := checkPropagations(selected)
+	checked := checkSources(selected)
 	lowerModule(checked)
-	return collectOutput(selected)
+	checkGenerated(prepared.dir)
+	return collectOutput(checked)
 }
 
 func must(err error) {

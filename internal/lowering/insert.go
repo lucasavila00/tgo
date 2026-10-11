@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/format"
-	"go/parser"
 	"go/token"
 	"reflect"
 )
@@ -60,44 +59,8 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 	for _, site := range s.Sites {
 		expression := s.expressions[site]
 		if _, expected := r.propagations[expression]; expected && !r.lowered[expression] {
-			return nil, fmt.Errorf("%s: propagation was not lowered", s.Package.Fset.Position(expression.Pos()))
+			return nil, fmt.Errorf("%s: propagation was not lowered", s.checked.Fset.Position(expression.Pos()))
 		}
-	}
-	// Keep only marker declarations that the type checker still needs.
-	used := make(map[string]bool)
-	parsed := make(map[string]*ast.File)
-	fset := token.NewFileSet()
-	for name, content := range output {
-		file, err := parser.ParseFile(fset, name, content, parser.ParseComments)
-		if err != nil {
-			return nil, err
-		}
-		parsed[name] = file
-		ast.Inspect(file, func(node ast.Node) bool {
-			if call, ok := node.(*ast.CallExpr); ok {
-				if id, ok := call.Fun.(*ast.Ident); ok {
-					used[id.Name] = true
-				}
-			}
-			return true
-		})
-	}
-	for name, file := range parsed {
-		declarations := file.Decls[:0]
-		for _, decl := range file.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok {
-				if _, marker := operations[fn.Name.Name]; marker && !used[fn.Name.Name] {
-					continue
-				}
-			}
-			declarations = append(declarations, decl)
-		}
-		file.Decls = declarations
-		var buf bytes.Buffer
-		if err := format.Node(&buf, fset, file); err != nil {
-			return nil, err
-		}
-		output[name] = buf.Bytes()
 	}
 	return output, nil
 }
@@ -129,7 +92,7 @@ func (r *rewrite) isTarget(expression ast.Expr) bool {
 }
 
 func (r *rewrite) emit() (map[string][]byte, error) {
-	for _, file := range r.source.Package.Syntax {
+	for _, file := range r.source.checked.Syntax {
 		ast.Inspect(file, func(node ast.Node) bool {
 			if id, ok := node.(*ast.Ident); ok {
 				r.names[id.Name] = true
@@ -138,7 +101,7 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 		})
 	}
 	output := make(map[string][]byte)
-	for _, file := range r.source.Package.Syntax {
+	for _, file := range r.source.checked.Syntax {
 		r.extraImports = nil
 		r.extraDeclarations = nil
 		r.formatAlias = nil
@@ -159,10 +122,10 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 			copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)
 		}
 		var buf bytes.Buffer
-		if err := format.Node(&buf, r.source.Package.Fset, copy); err != nil {
+		if err := format.Node(&buf, r.source.checked.Fset, copy); err != nil {
 			return nil, err
 		}
-		output[r.source.Package.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
+		output[r.source.checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
 	}
 	return output, nil
 }

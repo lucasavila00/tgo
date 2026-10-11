@@ -2,10 +2,10 @@ package lowering
 
 import (
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"go/types"
 	"reflect"
 	"strconv"
 )
@@ -25,7 +25,7 @@ func (r *rewrite) typeOf(expr ast.Expr) types.Type {
 	if origin := r.origins[expr]; origin != nil {
 		expr = origin
 	}
-	return r.source.Package.TypesInfo.TypeOf(expr)
+	return r.source.checked.TypesInfo.TypeOf(expr)
 }
 
 // temporaryType names the checked type without using a hidden source binding.
@@ -37,7 +37,7 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 	problem, unsafePointer, parameterNames := r.typeNameProblem(typ, position)
 	if problem != "" {
 		if r.err == nil {
-			position := r.source.Package.Fset.Position(original.Pos())
+			position := r.source.checked.Fset.Position(original.Pos())
 			var selected token.Pos
 			var best int
 			for expr, operation := range r.propagations {
@@ -56,7 +56,7 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 		return ast.NewIdent("invalid")
 	}
 	text := types.TypeString(types.Default(typ), func(pkg *types.Package) string {
-		if pkg == r.source.Package.Types {
+		if pkg == r.source.checked.Types {
 			return ""
 		}
 		if r.typeImports == nil {
@@ -112,7 +112,7 @@ func (r *rewrite) typeNameProblem(typ types.Type, position token.Pos) (string, b
 			}
 			checkName(types.Universe.Lookup(types.Default(t).String()).(*types.TypeName))
 		case *types.TypeParam:
-			scope := r.source.Package.Types.Scope().Innermost(position)
+			scope := r.source.checked.Types.Scope().Innermost(position)
 			_, resolved := scope.LookupParent(t.Obj().Name(), position)
 			if resolved != t.Obj() {
 				parameterNames[t] = r.parameterAlias(t).Name
@@ -148,7 +148,7 @@ func (r *rewrite) typeNameProblem(typ types.Type, position token.Pos) (string, b
 		case *types.Struct:
 			for i := 0; i < t.NumFields(); i++ {
 				field := t.Field(i)
-				if field.Pkg() != nil && field.Pkg() != r.source.Package.Types && !field.Exported() {
+				if field.Pkg() != nil && field.Pkg() != r.source.checked.Types && !field.Exported() {
 					problem = "the type has a private field from " + field.Pkg().Path()
 				}
 				check(field.Type())
@@ -156,7 +156,7 @@ func (r *rewrite) typeNameProblem(typ types.Type, position token.Pos) (string, b
 		case *types.Interface:
 			for i := 0; i < t.NumExplicitMethods(); i++ {
 				method := t.ExplicitMethod(i)
-				if method.Pkg() != nil && method.Pkg() != r.source.Package.Types && !method.Exported() {
+				if method.Pkg() != nil && method.Pkg() != r.source.checked.Types && !method.Exported() {
 					problem = "the type has a private method from " + method.Pkg().Path()
 				}
 				check(method.Type())
@@ -168,13 +168,13 @@ func (r *rewrite) typeNameProblem(typ types.Type, position token.Pos) (string, b
 	}
 	// A named type needs its name, not the spelling of its underlying type.
 	checkName = func(object *types.TypeName) {
-		if object.Pkg() != nil && object.Pkg() != r.source.Package.Types {
+		if object.Pkg() != nil && object.Pkg() != r.source.checked.Types {
 			if !object.Exported() {
 				problem = "the type is private to " + object.Pkg().Path()
 			}
 			return
 		}
-		scope := r.source.Package.Types.Scope().Innermost(position)
+		scope := r.source.checked.Types.Scope().Innermost(position)
 		_, resolved := scope.LookupParent(object.Name(), position)
 		if resolved == object {
 			return
