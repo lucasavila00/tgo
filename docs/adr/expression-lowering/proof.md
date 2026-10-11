@@ -46,4 +46,7 @@ go test ./tests -run '^TestProof' -count=1
 ```
 
 Tests: `TestProofInventory`, `TestProofNeutral`, `TestProofReturn`,
-`TestProofCompile`. These checks cover every expression in the manifest.
+`TestProofCompile`. These checks cover every expression in the manifest. `rejections.json` records
+sites that need an inaccessible type in a generated typed temporary. Those
+sites must report the named diagnostic. They remain in the inventory; other
+sites must compile and retain the handwritten behavior.

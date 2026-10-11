@@ -3,6 +3,9 @@ package tests
 import (
 	"go/ast"
 	"go/token"
+	"strings"
+
+	"github.com/lucasavila00/tgo/pkg/transpiler"
 	"testing"
 )
 
@@ -58,18 +61,32 @@ func main(){` + test.code + `}`
 	}
 }
 
-func TestInsertPrivateLiteralType(t *testing.T) {
+func TestInsertPrivateLiteralTypeRejected(t *testing.T) {
+	dir := t.TempDir()
 	input := `package main
-import("fmt";"example.com/insertion/foreign")
-func value()int{fmt.Print("V");return 1}
-func main(){a:=foreign.Map{{value()}:value()};fmt.Print(len(a))}
+import "example.com/insertion/foreign"
+func value() int { return 1 }
+func main() { _ = foreign.Map{{value()}:value()} }
 `
-	actual := runInsertionFiles(t, input, "{value()}", func(results []ast.Expr) []ast.Stmt {
-		return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.SelectorExpr{X: ast.NewIdent("fmt"), Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}, &ast.SelectorExpr{X: results[0], Sel: ast.NewIdent("N")}}}}}
-	}, map[string]string{"foreign/foreign.go": "package foreign\ntype key struct{N int}\ntype Map map[key]int\n"})
-	if actual != "VM1V1" {
-		t.Fatalf("got %q", actual)
+	writeFiles(t, dir, map[string][]byte{
+		"go.mod":             []byte("module example.com/insertion\n\ngo 1.27.1\n"),
+		"main.go":            []byte(input),
+		"foreign/foreign.go": []byte("package foreign\ntype key struct{N int}\ntype Map map[key]int\n"),
+	})
+	source, err := transpiler.Load(dir, ".")
+	if err != nil {
+		t.Fatal(err)
 	}
+	for _, site := range source.Sites {
+		if input[site.Start:site.End] == "{value()}" {
+			_, err := source.InsertAfter(site, func([]ast.Expr) []ast.Stmt { return nil })
+			if err == nil || !strings.Contains(err.Error(), "cannot name type example.com/insertion/foreign.key") {
+				t.Fatalf("diagnostic: %v", err)
+			}
+			return
+		}
+	}
+	t.Fatal("missing expression site")
 }
 
 func TestInsertBooleanContext(t *testing.T) {

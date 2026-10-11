@@ -112,23 +112,31 @@ see each call without its error result. The existing lowering engine then
 saves the call results, checks the error, and emits the return at that point.
 It lowers all marked calls in one pass over the typed source AST.
 
-Generated result variables supply typed zero values. This keeps private and
-generic result types and avoids type names that local bindings can hide.
-Source named results keep their bindings and values on success.
+Every generated temporary that saves an expression uses an explicit `var`
+type from the checked source. Tuple results use separate typed declarations
+and one assignment, so the call runs once. Contextual shift expressions keep
+the type supplied by their call, assignment, return, or field.
+
+The compiler rejects a required temporary when Go cannot name its type.
+This includes private imported types and type names hidden by source bindings.
+The error identifies the source position and type. Use a type with an accessible
+name at that boundary. There is no inferred temporary fallback.
+
+Generated result variables supply typed zero values. Source named results keep
+their bindings and values on success.
 
 For generic indexed variables, keep array storage and save slice or map headers.
 If the type set permits both, a generated type test selects the storage form.
 Type aliases at the start of the function keep type parameters available when
 local variables hide their source names.
 
-A literal with an omitted type keeps the type of its original container. This
-lets Go infer private element types. Map key operands are saved without moving
+A literal with an omitted type keeps the type of its original container. The saved element must still have a type that Go can name. Map key operands are saved without moving
 the map's key checks before later source work.
 
-The Boolean lowerer uses a constant-false expression to infer the result type
-without executing the source expression. A generic function can remain in that
-expression for type checking. Its call cannot run. Other unused generated
-functions are removed.
+The Boolean lowerer uses a typed local and assigns each operand only when
+the source evaluates it. Comparisons keep their untyped Boolean behavior
+when the surrounding operation supplies a named Boolean type. Unused generated
+marker functions are removed.
 
 The module loader uses Go's build selection, including test packages. All `.tgo` sources remain in the output. Only selected sources receive paired
 `_tgo.go` files; test and target suffixes follow `_tgo`. Matching generated

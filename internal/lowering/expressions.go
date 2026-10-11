@@ -35,6 +35,9 @@ type rewrite struct {
 	aliasStatements   map[ast.Node][]ast.Stmt
 	reflectAlias      *ast.Ident
 	deferredBases     map[ast.Expr]bool
+	temporaryTypes    map[ast.Expr]types.Type
+	typeImports       map[*types.Package]*ast.Ident
+	err               error
 }
 
 func (r *rewrite) name() *ast.Ident {
@@ -61,6 +64,7 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			}
 		}
 	}
+	typ := r.typeOf(expr)
 	expr = r.contextLiteral(expr, original)
 	if count == 0 {
 		return []ast.Stmt{&ast.ExprStmt{X: expr}}, nil
@@ -69,11 +73,31 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	for i := range refs {
 		refs[i] = r.name()
 	}
-	statement := &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{expr}}
-	if count == 1 && r.untypedBoolean(original) {
-		return []ast.Stmt{statement}, []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
+	var statements []ast.Stmt
+	if r.temporaryTypes == nil {
+		r.temporaryTypes = make(map[ast.Expr]types.Type)
 	}
-	return []ast.Stmt{statement}, refs
+	for i, ref := range refs {
+		resultType := typ
+		if tuple, ok := typ.(*types.Tuple); ok {
+			resultType = tuple.At(i).Type()
+		} else if i == 1 {
+			resultType = types.Typ[types.Bool]
+		}
+		var value ast.Expr
+		if count == 1 {
+			value = expr
+		}
+		statements = append(statements, variable(ref.(*ast.Ident), r.temporaryType(resultType, original), value))
+		r.temporaryTypes[ref] = types.Default(resultType)
+	}
+	if count != 1 {
+		statements = append(statements, &ast.AssignStmt{Lhs: refs, Tok: token.ASSIGN, Rhs: []ast.Expr{expr}})
+	}
+	if count == 1 && r.untypedBoolean(original) {
+		return statements, []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
+	}
+	return statements, refs
 }
 
 func (r *rewrite) resultCount(expr ast.Expr) int {
@@ -190,9 +214,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 				break
 			}
 			value := r.name()
-			// The false operand gives the local the original result type without evaluating e.
-			zero := &ast.BinaryExpr{X: &ast.BasicLit{Kind: token.INT, Value: "0"}, Op: token.NEQ, Y: &ast.BasicLit{Kind: token.INT, Value: "0"}}
-			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.DEFINE, Rhs: []ast.Expr{&ast.BinaryExpr{X: zero, Op: token.LAND, Y: e}}})
+			before = append(before, variable(value, r.temporaryType(r.typeOf(e), e), nil))
 			before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.ASSIGN, Rhs: left})
 			var condition ast.Expr = value
 			if e.Op == token.LOR {

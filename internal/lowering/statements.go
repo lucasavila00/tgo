@@ -201,7 +201,7 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 		var body []ast.Stmt
 		if len(post) != 0 {
 			first := r.name()
-			outer = append(outer, &ast.AssignStmt{Lhs: []ast.Expr{first}, Tok: token.DEFINE, Rhs: []ast.Expr{boolean(true)}})
+			outer = append(outer, variable(first, r.temporaryType(types.Typ[types.Bool], firstExpression(s)), boolean(true)))
 			body = append(body, &ast.IfStmt{Cond: first, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{first}, Tok: token.ASSIGN, Rhs: []ast.Expr{boolean(false)}}}}, Else: &ast.BlockStmt{List: post}})
 		}
 		body = append(body, condition...)

@@ -52,14 +52,15 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) (*ast.FuncType, []ast.S
 				clone.Names[j] = name
 			}
 			value := r.name()
-			prefix = append(prefix, &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.DEFINE, Rhs: []ast.Expr{name}})
+			prefix = append(prefix, variable(value, r.temporaryType(r.source.Package.TypesInfo.TypeOf(field.Type), field.Type), name))
 			r.frame.values = append(r.frame.values, value)
 		}
 		results.List[i] = &clone
 	}
 	copy.Results = &results
 	r.frame.nilError = r.name()
-	prefix = append(prefix, &ast.AssignStmt{Lhs: []ast.Expr{r.frame.nilError}, Tok: token.DEFINE, Rhs: r.frame.values[len(r.frame.values)-1:]})
+	last := original.Results.List[len(original.Results.List)-1].Type
+	prefix = append(prefix, variable(r.frame.nilError.(*ast.Ident), r.temporaryType(r.source.Package.TypesInfo.TypeOf(last), last), r.frame.values[len(r.frame.values)-1]))
 	return &copy, prefix
 }
 

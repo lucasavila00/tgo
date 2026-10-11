@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/constant"
 	"go/token"
+	"go/types"
 	"strconv"
 )
 
@@ -37,12 +38,13 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 			}
 			value := r.name()
 			*pair.output = value
+			before = append(before, variable(value, r.temporaryType(r.typeOf(pair.original), pair.original), nil))
 			setup, place := r.place(pair.original)
 			stores = append(stores, setup...)
 			lhs = append(lhs, place)
 			rhs = append(rhs, value)
 		}
-		copy.Tok = token.DEFINE
+		copy.Tok = token.ASSIGN
 		stores = append(stores, r.orderedStores(lhs, rhs, token.ASSIGN)...)
 		copy.Body = &ast.BlockStmt{List: append(stores, copy.Body)}
 	}
@@ -100,7 +102,7 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 		}
 	}
 	selected := r.name()
-	setup = append(setup, &ast.AssignStmt{Lhs: []ast.Expr{selected}, Tok: token.DEFINE, Rhs: []ast.Expr{integer(-1)}})
+	setup = append(setup, variable(selected, r.temporaryType(types.Typ[types.Int], firstExpression(s)), integer(-1)))
 	defaultCase := -1
 	for i, clause := range cases {
 		if len(clause.List) == 0 {
@@ -167,4 +169,19 @@ func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
 		return []ast.Stmt{&ast.BlockStmt{List: append(before, &copy)}}
 	}
 	return []ast.Stmt{&copy}
+}
+
+func firstExpression(node ast.Node) ast.Expr {
+	var result ast.Expr
+	ast.Inspect(node, func(n ast.Node) bool {
+		if result != nil {
+			return false
+		}
+		if expr, ok := n.(ast.Expr); ok {
+			result = expr
+			return false
+		}
+		return true
+	})
+	return result
 }

@@ -140,6 +140,7 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 		r.mapAlias = nil
 		r.sliceAlias = nil
 		r.reflectAlias = nil
+		r.typeImports = nil
 		copy := *file
 		copy.Decls = append([]ast.Decl(nil), file.Decls...)
 		for i, decl := range file.Decls {
@@ -148,6 +149,9 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 				function.Type, function.Body = r.function(fn, fn.Type, fn.Body)
 				copy.Decls[i] = &function
 			}
+		}
+		if r.err != nil {
+			return nil, r.err
 		}
 		copy.Decls = append(copy.Decls, r.extraDeclarations...)
 		for _, spec := range r.extraImports {

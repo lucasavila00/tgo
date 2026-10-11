@@ -17,7 +17,7 @@ The sources drive compilation; existing generated files are ignored.
 The runner compares generated file bytes with the committed snapshots. It
 then runs the generated program and checks its output. Generated test files
 also run with `go test`. Cases cover both propagation operators, evaluation
-order, conditional execution, storage, generic and private types, error
+order, conditional execution, storage, generic types and private-type diagnostics, error
 identity, build selection, assets, and test packages.
 
 Run one case from the repository root:
@@ -48,3 +48,9 @@ for the expression inventory and behavior checks.
 
 GitHub Actions has a fixture-build step that compiles these inputs and checks
 their snapshots before the full suite. It does not update committed files.
+
+`testdata/proof/rejections.json` lists the exact expression sites that require
+an inaccessible type in a generated typed temporary. Proof tests require the
+specified error at those sites and retain all sites in `manifest.json`.
+`testdata/typed-temporaries-rejected/` contains TGo inputs and exact diagnostics
+for private types and hidden names.

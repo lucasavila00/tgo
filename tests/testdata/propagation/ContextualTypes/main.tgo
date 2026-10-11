@@ -1,0 +1,76 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+
+)
+
+type Number uint64
+type Pair struct {
+	First uint64
+	Second int
+}
+
+var sentinel = errors.New("failed")
+var trace string
+
+func next(fail bool) (int, error) {
+	trace += "N"
+	if fail {
+		return 0, sentinel
+	}
+	return 3, nil
+}
+
+func use(value uint64, other int) {
+	fmt.Printf("%d %d ", value, other)
+}
+
+func calls(fail bool) error {
+	n := uint(40)
+	use(1<<n, next(fail)!!)
+	use(1<<n, next(fail)!)
+	return nil
+}
+
+func returns(fail bool) (uint64, int, error) {
+	n := uint(40)
+	return 1 << n, next(fail)!!, nil
+}
+
+func assign(fail bool) error {
+	n := uint(40)
+	var first uint64
+	var second int
+	first, second = 1<<n, next(fail)!!
+	use(first, second)
+	pair := Pair{First: 1 << n, Second: next(fail)!}
+	use(pair.First, pair.Second)
+	return nil
+}
+
+func useNumber(value Number, next int) { fmt.Printf("%d %d ", value, next) }
+
+func named(fail bool) error {
+	n := uint(40)
+	var value Number = 1 << n
+	useNumber(value, next(fail)!!)
+	return nil
+}
+
+func generic[T ~uint64](value T, fail bool) error {
+	consume := func(first T, second int) { fmt.Printf("%d %d ", first, second) }
+	consume(value, next(fail)!!)
+	return nil
+}
+
+func main() {
+	fmt.Print(calls(false), " ")
+	first, second, err := returns(false)
+	fmt.Printf("%d %d %v ", first, second, err)
+	fmt.Print(assign(false), " ")
+	fmt.Print(named(false), " ")
+	fmt.Print(generic(Number(9), false), " ")
+	fmt.Print(calls(true) == sentinel, " ", trace)
+}

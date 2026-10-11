@@ -79,7 +79,7 @@ func (r *rewrite) genericBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	typeFor := &ast.CallExpr{Fun: &ast.IndexExpr{X: &ast.SelectorExpr{X: r.reflectAlias, Sel: ast.NewIdent("TypeFor")}, Index: typ}}
 	kind := &ast.CallExpr{Fun: &ast.SelectorExpr{X: typeFor, Sel: ast.NewIdent("Kind")}}
 	before = append(before,
-		&ast.AssignStmt{Lhs: []ast.Expr{array}, Tok: token.DEFINE, Rhs: []ast.Expr{&ast.BinaryExpr{X: kind, Op: token.EQL, Y: &ast.SelectorExpr{X: r.reflectAlias, Sel: ast.NewIdent("Array")}}}},
+		variable(array, r.temporaryType(types.Typ[types.Bool], expr), &ast.BinaryExpr{X: kind, Op: token.EQL, Y: &ast.SelectorExpr{X: r.reflectAlias, Sel: ast.NewIdent("Array")}}),
 		&ast.DeclStmt{Decl: &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{saved}, Type: typ}}}},
 		&ast.IfStmt{Cond: &ast.UnaryExpr{Op: token.NOT, X: array}, Body: &ast.BlockStmt{List: []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{saved}, Tok: token.ASSIGN, Rhs: []ast.Expr{place}}}}},
 	)
