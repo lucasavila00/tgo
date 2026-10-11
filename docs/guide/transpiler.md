@@ -126,10 +126,10 @@ Nested modules, vendor dependencies, and data directories are not compiler
 outputs. Assets, headers, and local dependencies stay at their original paths.
 
 The compiler writes the source-checking and final versions at the same generated
-paths. It creates no temporary module. A failure can leave a source-checking
-version or completed output at those paths. Correct the TGo input and compile
-again. Invalid source and compiler failures panic. Normal Go module loading can
-update `go.mod` and `go.sum`.
+paths. Before writing, it saves existing outputs. If compilation fails, it
+restores their contents and permissions and removes new outputs. A successful
+compilation keeps the new output. Invalid source and compiler failures panic.
+Normal Go module loading can update `go.mod` and `go.sum`; these updates remain.
 
 See [the driver](../../internal/driver/readme.md) for each step.
 

@@ -72,7 +72,7 @@ func TestCompileWritesOnlyOwnedGeneratedFiles(t *testing.T) {
 	}
 }
 
-func TestCompileReplacesFailedStage(t *testing.T) {
+func TestCompileRemovesFailedStageAndAllowsRetry(t *testing.T) {
 	root := t.TempDir()
 	input := []byte("package p\nvar Value = missing\n")
 	for name, content := range map[string][]byte{"go.mod": []byte("module example.com/retry\n\ngo 1.27.1\n"), "main.tgo": input} {
@@ -85,16 +85,16 @@ func TestCompileReplacesFailedStage(t *testing.T) {
 	if failure == nil || !strings.Contains(fmt.Sprint(failure), "undefined: missing") {
 		t.Fatalf("source error: %v", failure)
 	}
-	got, err := os.ReadFile(filepath.Join(root, "main_tgo.go"))
-	if err != nil || !bytes.Equal(got, input) {
-		t.Fatalf("failed source stage: %v", err)
+	_, err := os.Stat(filepath.Join(root, "main_tgo.go"))
+	if !os.IsNotExist(err) {
+		t.Fatalf("failed compilation left output: %v", err)
 	}
 	corrected := []byte("package p\nvar Value = 3\n")
 	if err := os.WriteFile(filepath.Join(root, "main.tgo"), corrected, 0600); err != nil {
 		t.Fatal(err)
 	}
 	Compile(root)
-	got, err = os.ReadFile(filepath.Join(root, "main_tgo.go"))
+	got, err := os.ReadFile(filepath.Join(root, "main_tgo.go"))
 	if err != nil || !bytes.Equal(got, corrected) {
 		t.Fatalf("retry output: %v", err)
 	}

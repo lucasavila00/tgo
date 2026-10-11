@@ -48,8 +48,10 @@
 // at their paths. Relative replacements retain their meaning. Normal Go module
 // commands can update go.mod and go.sum.
 //
-// A failed compilation can leave staged source or completed output at generated
-// paths. Correct the TGo input and compile again to replace those files.
+// Before writing, Compile saves each owned output's contents and permissions.
+// If any compilation step fails, it restores those files and removes new outputs.
+// Successful compilation keeps the final outputs and removes excluded outputs.
+// This rollback covers generated files; Go module metadata updates remain.
 //
 // # Code map
 //
