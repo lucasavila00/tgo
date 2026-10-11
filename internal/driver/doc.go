@@ -40,9 +40,11 @@
 // # Failure behavior
 //
 // Compile returns no file contents. Invalid source and compiler failures cause
-// a panic. A failed compilation can leave the initial TGo copies or completed
-// Go output at generated paths. Correct the input and compile again to replace
-// those files.
+// a panic. Before writing, it saves existing generated files. On failure, it
+// restores their contents and permissions and removes newly created outputs.
+// A successful compilation keeps the new output. Go module metadata updates
+// remain after a failure.
+
 //
 // [public API]: https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/readme.md
 // [frontend]: https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md

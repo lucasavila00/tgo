@@ -35,5 +35,5 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 }
 
 // Compile translates the module's TGo files into Go files in the same module.
-// Invalid source and compiler failures panic.
+// On failure, it restores previous generated files and panics.
 func Compile(dir string) { driver.Compile(dir) }
