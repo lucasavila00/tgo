@@ -1,50 +1,20 @@
 # WHAT
 
-## Decision
+Compile in the original module directory without copying it. The current copy
+duplicates assets and source that checking can read at their original paths.
 
-Compile against the original module directory without copying the module into
-a temporary directory. Use overlays to present TGo files at generated Go paths
-for package selection and to check the final generated Go.
+An overlay maps a file path to alternative contents. Go sees those contents
+without changing the file on disk. Use two overlays: TGo source at generated
+Go paths for package selection, then generated Go for final checking. Ordinary
+files stay in place. Write only required overlay contents to temporary files
+outside the source directory.
 
-Keep the private source checker and expression lowerer from the
-[source-checking decision](../source-checking/what.md). This changes file
-preparation and output handling, not TGo language rules.
+Keep the [private checker and lowerer](../source-checking/what.md), TGo behavior,
+and `Compile(dir) map[string][]byte`. The result still includes source and
+assets, so reading them remains necessary. The caller writes output.
 
-## Reason
+Compilation must leave original files unchanged. Stale snapshots cannot affect
+checking. Preserve file selection, output paths, and local replacements when
+output is written elsewhere. Measure cost before claiming a speed improvement.
 
-The driver currently reads module files into memory, writes them into a separate
-directory, writes lowered Go there, and reads that output back. Assets and other
-files are copied even when source checking does not need their contents. Moving
-the module also requires adjusting relative replacement paths for checking.
-
-The checker needs selected source, types, and operation records. It does not
-need a complete module copy. Go's build tools can use alternative file contents
-at original paths through an overlay. Ordinary Go files, embedded assets,
-headers, and module dependencies can remain at their original locations.
-
-Use two views: source for checking TGo, then generated Go for stock checking.
-Keep both views separate from files visible to ordinary source-directory users.
-Writing temporary stubs directly at generated paths would change the module
-during compilation and would require restoring existing snapshots on failure.
-
-## Scope and consequences
-
-Preserve `Compile(dir) map[string][]byte`, compilation from subdirectories,
-module-relative output paths, generated names, and file selection. Compilation
-must not change the source directory. The caller still writes the returned
-contents. Matching generated snapshots cannot affect checking.
-
-The result still contains original TGo and other module files. That contract
-requires reading those files; this decision removes their temporary disk
-copies. Keep the returned module's replacement paths valid when the caller
-writes it elsewhere. Do not change the public API to return only generated files.
-
-Temporary overlay backing files are permitted outside the source directory.
-They contain only alternative file contents required by the Go tools. This
-decision does not require zero disk writes or a new cache.
-
-Preserve valid TGo behavior and the
-[automatic modernization rules](../../problem/README.md#adoption-and-automatic-modernization).
-Measure compilation cost before claiming a speed improvement.
-
-[HOW](how.md) defines the implementation. [PROOF](proof.md) defines acceptance.
+[HOW](how.md) defines the stages. [PROOF](proof.md) defines acceptance.

@@ -1,45 +1,26 @@
 # PROOF
 
-These checks are required for the implementation. This ADR does not report
-test or benchmark results.
+Required checks; no results are claimed here.
 
-## Behavior and output
+Retain the [source-checking tests](../source-checking/proof.md) and handwritten
+runtime references. Check:
 
-Retain existing module, propagation, value-expression, and lowering tests.
-Use their handwritten Go references to check execution behavior. Check:
+- Mixed and TGo-only packages, subdirectories, imports, build constraints,
+  platform suffixes, and internal/external test variants.
+- New generated paths, invalid stale snapshots, and excluded invalid inputs.
+- Embedded files, package-local cgo headers, local replacements, dependency
+  exports, module configuration, and output written elsewhere.
+- Positions, name collisions, type identity, deterministic output, retained
+  source/assets, and absence of excluded generated files.
+- Unchanged original files and directories, including snapshots and module
+  files, after source or generated-Go failures. Temporary files are removed.
 
-- Mixed Go and TGo packages, nested imports, source-only TGo packages, and
-  compilation from a module subdirectory.
-- Build constraints, platform and architecture suffixes, internal and external
-  test packages, and excluded TGo files with invalid bodies.
-- Generated paths with no existing Go file and paths with invalid stale snapshots.
-  Stale snapshots must not supply declarations or affect diagnostics.
-- Embedded files and package-local cgo headers at their original paths. Check
-  supported overlay behavior without restoring a full module copy.
-- Relative local replacements, dependency exports, module configuration, and
-  a returned module written into another directory.
-- Original source positions, generated-name collisions, package identity,
-  private type objects, and deterministic output.
-- Source checking failures and generated-Go checking failures. Original files,
-  snapshots, module files, and directory contents must remain unchanged.
-- Original TGo and assets retained in the result, selected generated files
-  emitted, excluded generated files absent, and temporary backing files removed.
+Final checking must use generated Go. Run programs after writing output.
 
-Run generated programs only after writing returned output. Final overlay checking
-must examine generated Go, not the source-checking view.
+Compare elapsed time, allocations, temporary bytes, and package loads with the
+copy-based implementation. Use identical inputs/toolchains; state cache conditions.
+Include multiple packages, propagation, conditionals, and large unrelated assets.
+Asset size must not increase temporary writes. Retain one metadata load and one
+final Go load. Run focused local tests and the full suite in hosted CI.
 
-## Cost
-
-Compare the copy-based and overlay paths on the same toolchain and inputs.
-Include several packages, propagation, conditional expressions, and a module
-with large unrelated assets. State build-cache and module-cache conditions.
-
-Record elapsed time, allocations, temporary bytes written, and package loads.
-Temporary writes must not grow with unrelated asset size. Reads needed to return
-those assets remain part of the public API cost. Retain one metadata load and
-one final generated-Go load; no load is required for each TGo operator.
-
-Run focused local tests for changed compiler code. Push the implementation
-branch and use GitHub Actions for the full compiler suite.
-
-[WHAT](what.md) records the decision. [HOW](how.md) defines the implementation.
+[WHAT](what.md) records scope. [HOW](how.md) defines the stages.
