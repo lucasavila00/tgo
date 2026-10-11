@@ -40,7 +40,11 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	for i := range refs {
 		refs[i] = r.name()
 	}
-	return []ast.Stmt{&ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{expr}}}, refs
+	statement := &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{expr}}
+	if count == 1 && r.untypedBoolean(expr) {
+		return []ast.Stmt{statement}, []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
+	}
+	return []ast.Stmt{statement}, refs
 }
 
 func (r *rewrite) resultCount(expr ast.Expr) int {
@@ -78,7 +82,7 @@ func (r *rewrite) operands(input []ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		before, refs := r.expression(expr)
 		if len(before) != 0 {
 			for i, value := range values {
-				if tv, ok := r.source.Package.TypesInfo.Types[value]; ok && (tv.Value != nil || tv.IsType() || tv.IsBuiltin()) {
+				if tv, ok := r.source.Package.TypesInfo.Types[value]; ok && (tv.Value != nil || tv.IsType() || tv.IsBuiltin() || tv.IsNil()) {
 					continue
 				}
 				if _, ok := value.(*ast.Ident); ok && r.source.Package.TypesInfo.TypeOf(value) == nil {

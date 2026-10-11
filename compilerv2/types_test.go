@@ -33,3 +33,19 @@ func main() { use((left()==right()) && (right()==left())) }
 		})
 	}
 }
+
+func TestInsertEarlierContext(t *testing.T) {
+	input := `package main
+import "fmt"
+type Flag bool
+func value() int { fmt.Print("V");return 1 }
+func use(v Flag,p *int,n int) { fmt.Print("U") }
+func main() { use(value()==1,nil,value()) }
+`
+	actual := runInsertion(t, input, "value()", func([]ast.Expr) []ast.Stmt {
+		return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.SelectorExpr{X: ast.NewIdent("fmt"), Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}}}}}
+	})
+	if actual != "VVMU" {
+		t.Fatalf("got %q, want VVMU", actual)
+	}
+}
