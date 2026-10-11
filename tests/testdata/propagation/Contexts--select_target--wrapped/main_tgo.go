@@ -52,7 +52,7 @@ func run() error {
 			var tgo4 error
 			tgo3, tgo4 = step("I")
 			if tgo4 != nil {
-				return fmt_tgo5.Errorf("%s: %w", "step", tgo4)
+				return fmt_tgo5.Errorf("step: %w", tgo4)
 			}
 			a[tgo3] = tgo2
 			fmt.Print("b")

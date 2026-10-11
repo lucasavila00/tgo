@@ -91,7 +91,7 @@ func run[T any](x T) error {
 		var tgo5 error
 		tgo4, tgo5 = pair(x, T("local"))
 		if tgo5 != nil {
-			return fmt_tgo6.Errorf("%s: %w", "pair", tgo5)
+			return fmt_tgo6.Errorf("pair: %w", tgo5)
 		}
 		wrapped := tgo4
 		var tgo7 struct {

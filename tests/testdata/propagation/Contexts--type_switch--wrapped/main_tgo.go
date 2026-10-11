@@ -45,7 +45,7 @@ func run() error {
 		var tgo2 error
 		tgo1, tgo2 = step("T")
 		if tgo2 != nil {
-			return fmt_tgo3.Errorf("%s: %w", "step", tgo2)
+			return fmt_tgo3.Errorf("step: %w", tgo2)
 		}
 		switch any(tgo1).(type) {
 		case int:
