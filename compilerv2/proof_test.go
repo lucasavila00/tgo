@@ -17,11 +17,25 @@ import (
 var updateManifest = flag.Bool("update-manifest", false, "update expression locations after a fixture change")
 
 func TestProofCompile(t *testing.T) {
+	proofMatrix(t, false)
+}
+
+func TestProofNeutral(t *testing.T) {
+	proofMatrix(t, true)
+}
+
+func proofMatrix(t *testing.T, neutral bool) {
 	root, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
+	if artifacts := os.Getenv("TGO_PROOF_ARTIFACTS"); artifacts != "" {
+		dir = filepath.Join(artifacts, t.Name())
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
 	module := fmt.Sprintf("module example.com/variants\n\ngo 1.27.1\n\nrequire github.com/lucasavila00/tgo/compilerv2 v0.0.0\nreplace github.com/lucasavila00/tgo/compilerv2 => %s\n", root)
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(module), 0600); err != nil {
 		t.Fatal(err)
@@ -38,11 +52,19 @@ func TestProofCompile(t *testing.T) {
 			}
 			t.Run(fmt.Sprintf("%s:%d", filepath.Base(site.File), site.Start), func(t *testing.T) {
 				for _, returning := range []bool{false, true} {
+					if neutral && returning {
+						continue
+					}
 					if returning && !site.ErrorReturn {
 						continue
 					}
 					after := func([]ast.Expr) []ast.Stmt {
 						return []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{integer(0)}}}
+					}
+					if neutral {
+						after = func([]ast.Expr) []ast.Stmt {
+							return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: ast.NewIdent("proofMark")}}}
+						}
 					}
 					if returning {
 						after = func([]ast.Expr) []ast.Stmt {
@@ -63,6 +85,9 @@ func TestProofCompile(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
+					if neutral {
+						writeNeutralChecks(t, variant, source.Package.Name, site)
+					}
 					t.Logf("%s: return=%t", variant, returning)
 				}
 			})
@@ -71,11 +96,72 @@ func TestProofCompile(t *testing.T) {
 	if count == 0 {
 		t.Skip("no expression sites selected")
 	}
-	cmd := exec.Command("go", "test", "-p", "4", "./...")
+	cmd := exec.Command("go", "test", "-p", "4", "-json", "./...")
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
+	if artifacts := os.Getenv("TGO_PROOF_ARTIFACTS"); artifacts != "" {
+		if writeErr := os.WriteFile(filepath.Join(dir, "results.json"), output, 0600); writeErr != nil {
+			t.Fatal(writeErr)
+		}
+	}
 	if err != nil {
 		t.Fatalf("compile expression variants: %v\n%s", err, output)
+	}
+}
+
+func writeNeutralChecks(t *testing.T, dir, packageName string, site Site) {
+	t.Helper()
+	if packageName == "foreign" {
+		checks := `package foreign
+import "testing"
+var proofMarks int
+func proofMark() {proofMarks++}
+func TestNeutral(t *testing.T) {v:=Value(1);if int(v)!=1 {t.Fatal(v)};Use(v);t.Logf("markers: %d",proofMarks)}
+`
+		if err := os.WriteFile(filepath.Join(dir, "proof_test.go"), []byte(checks), 0600); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	reference, err := os.ReadFile("testdata/proof/reference.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reference = []byte(strings.TrimPrefix(string(reference), "//go:build proofreference\n"))
+	if err := os.WriteFile(filepath.Join(dir, "reference.go"), reference, 0600); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile("testdata/proof/expect.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var inputs []proofInput
+	if err := json.Unmarshal(data, &inputs); err != nil {
+		t.Fatal(err)
+	}
+	var checks strings.Builder
+	checks.WriteString("package proof\nimport (\"testing\";\"reflect\";\"errors\")\nvar proofMarks []int\nfunc proofMark(){proofMarks=append(proofMarks,len(Trace))}\nfunc TestNeutral(t *testing.T) {sentinel:=errors.New(\"sentinel\")\n")
+	for _, input := range inputs {
+		fmt.Fprintf(&checks, "t.Run(%q,func(t *testing.T){proofMarks=nil;Reset(%t);var result error;panicked:=false;func(){defer func(){if recover()!=nil {panicked=true}}();result=Case%s(sentinel)}();if panicked!=%t {t.Fatalf(\"panic: %%v\",panicked)};if result!=nil {t.Fatalf(\"result: %%v\",result)};if !reflect.DeepEqual(Trace,Reference(%q,%t)){t.Fatalf(\"trace: %%v, want %%v\",Trace,Reference(%q,%t))};t.Logf(\"marker positions: %%v\",proofMarks)})\n", fmt.Sprintf("%s/%t", input.Name, input.Reached), input.Reached, input.Name, input.Panic, input.Name, input.Reached, input.Name, input.Reached)
+	}
+	fmt.Fprintf(&checks, "for _,input:=range []struct{name string;reached bool}{")
+	for _, input := range inputs {
+		fmt.Fprintf(&checks, "{%q,%t},", input.Name, input.Reached)
+	}
+	checks.WriteString("}{")
+	checks.WriteString("proofMarks=nil;Reset(input.reached);func(){defer func(){recover()}();switch input.name{")
+	seen := map[string]bool{}
+	for _, input := range inputs {
+		if !seen[input.Name] {
+			fmt.Fprintf(&checks, "case %q:Case%s(sentinel);", input.Name, input.Name)
+			seen[input.Name] = true
+		}
+	}
+	checks.WriteString("}}();")
+	fmt.Fprintf(&checks, "if expected,ok:=ReferenceMarkers(%q,%d,%d,input.name,input.reached);ok && !reflect.DeepEqual(proofMarks,expected){t.Fatalf(\"%%s marker positions: %%v, want %%v\",input.name,proofMarks,expected)}}\n", filepath.Base(site.File), site.Start, site.End)
+	checks.WriteString("}\n")
+	if err := os.WriteFile(filepath.Join(dir, "proof_test.go"), []byte(checks.String()), 0600); err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -21,10 +21,14 @@ jobs:
           cache-dependency-path: compilerv2/go.sum
       - name: Check compiler v2
         shell: bash
+        env:
+          TGO_PROOF_ARTIFACTS: ${{ github.workspace }}/proof-artifacts
         run: go -C compilerv2 test ./... -count=1 -json | tee proof-results.json
       - name: Keep expression-site results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: expression-site-results
-          path: proof-results.json
+          path: |
+            proof-results.json
+            proof-artifacts

@@ -49,3 +49,33 @@ func Reference(name string, reached bool) []string {
 	}
 	panic("unknown reference case")
 }
+
+// ReferenceMarkers records handwritten completion points, measured in effects.
+func ReferenceMarkers(file string, start, end int, name string, reached bool) ([]int, bool) {
+	if file != "calls.go" {
+		return nil, false
+	}
+	if name != "Calls" {
+		return nil, true
+	}
+	positions := map[[2]int]int{
+		{50, 90}:   3, // Both arguments and consume have completed.
+		{50, 57}:   0,
+		{58, 72}:   1,
+		{58, 64}:   0,
+		{65, 71}:   0,
+		{74, 89}:   2,
+		{74, 80}:   1,
+		{81, 88}:   1,
+		{92, 107}:  5,
+		{92, 99}:   3,
+		{100, 106}: 4,
+		{100, 104}: 3,
+		{116, 119}: 5,
+	}
+	position, ok := positions[[2]int{start, end}]
+	if !ok {
+		panic("missing calls marker reference")
+	}
+	return []int{position}, true
+}
