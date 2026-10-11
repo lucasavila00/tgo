@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"reflect"
 )
 
 // InsertAfter builds source files with statements after one expression.
@@ -32,7 +33,7 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 
 // LowerPropagations emits source from typed marker calls.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation)}
+	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), lowered: make(map[ast.Expr]bool)}
 	for site, expression := range s.expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -54,6 +55,12 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 	output, err := r.emit()
 	if err != nil {
 		return nil, err
+	}
+	for _, site := range s.Sites {
+		expression := s.expressions[site]
+		if _, expected := r.propagations[expression]; expected && !r.lowered[expression] {
+			return nil, fmt.Errorf("%s: propagation was not lowered", s.Package.Fset.Position(expression.Pos()))
+		}
 	}
 	// Keep only marker declarations that the type checker still needs.
 	used := make(map[string]bool)
@@ -141,27 +148,68 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 		r.sliceAlias = nil
 		r.reflectAlias = nil
 		r.typeImports = nil
-		copy := *file
-		copy.Decls = append([]ast.Decl(nil), file.Decls...)
-		for i, decl := range file.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok && r.contains(fn.Body) {
-				function := *fn
-				function.Type, function.Body = r.function(fn, fn.Type, fn.Body)
-				copy.Decls[i] = &function
-			}
-		}
+		copy := r.functionBodies(file).(*ast.File)
 		if r.err != nil {
 			return nil, r.err
 		}
+
 		copy.Decls = append(copy.Decls, r.extraDeclarations...)
 		for _, spec := range r.extraImports {
 			copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)
 		}
 		var buf bytes.Buffer
-		if err := format.Node(&buf, r.source.Package.Fset, &copy); err != nil {
+		if err := format.Node(&buf, r.source.Package.Fset, copy); err != nil {
 			return nil, err
 		}
 		output[r.source.Package.Fset.Position(file.Pos()).Filename] = buf.Bytes()
 	}
 	return output, nil
+}
+
+// functionBodies visits the same typed syntax tree as the expression inventory.
+// It copies the path to each changed function; package expressions do not run here.
+func (r *rewrite) functionBodies(node ast.Node) ast.Node {
+	if node == nil || !r.contains(node) {
+		return node
+	}
+	switch fn := node.(type) {
+	case *ast.FuncDecl:
+		copy := *fn
+		copy.Type, copy.Body = r.function(fn, fn.Type, fn.Body)
+		return &copy
+	case *ast.FuncLit:
+		copy := *fn
+		copy.Type, copy.Body = r.function(fn, fn.Type, fn.Body)
+		return &copy
+	}
+	original := reflect.ValueOf(node).Elem()
+	copy := reflect.New(original.Type())
+	copy.Elem().Set(original)
+	for i := 0; i < original.NumField(); i++ {
+		field := original.Field(i)
+		output := copy.Elem().Field(i)
+		if child, ok := field.Interface().(ast.Node); ok {
+			if (field.Kind() == reflect.Pointer || field.Kind() == reflect.Interface) && field.IsNil() {
+				continue
+			}
+			output.Set(reflect.ValueOf(r.functionBodies(child)))
+		} else if field.Kind() == reflect.Slice {
+			// Copy child slices before replacing an element; leave non-AST data alone.
+			for j := 0; j < field.Len(); j++ {
+				child, ok := field.Index(j).Interface().(ast.Node)
+				if !ok || reflect.ValueOf(child).IsNil() {
+					continue
+				}
+				rewritten := r.functionBodies(child)
+				if rewritten != child {
+					if output.Pointer() == field.Pointer() {
+						output.Set(reflect.MakeSlice(field.Type(), field.Len(), field.Len()))
+						reflect.Copy(output, field)
+					}
+					output.Index(j).Set(reflect.ValueOf(rewritten))
+				}
+			}
+		}
+	}
+	return copy.Interface().(ast.Node)
 }

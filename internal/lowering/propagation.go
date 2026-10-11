@@ -104,5 +104,6 @@ func (r *rewrite) propagatedCall(marker *ast.CallExpr, operation Propagation) ([
 	failure = append(failure, &ast.ReturnStmt{Results: r.frame.values})
 	before = append(before, &ast.IfStmt{Cond: &ast.BinaryExpr{X: errorValue, Op: token.NEQ, Y: r.frame.nilError}, Body: &ast.BlockStmt{List: failure}})
 	r.inserted = true
+	r.lowered[marker] = true
 	return before, values[:len(values)-1]
 }
