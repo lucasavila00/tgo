@@ -24,8 +24,8 @@ var fuzzBodies = []string{
 	`emit(read(0), P(1), read(2))`,
 	`emit(readX() + P(1))`,
 	`emit(P(1) + readX())`,
-	`emit(a[P(1)], read(2))`,
-	`emit(a[read(0)], P(1))`,
+	`emit(at(P(1)), read(2))`,
+	`emit(at(read(0)), P(1))`,
 	`a[read(0)] = P(1); emit(a[:]...)`,
 	`s[read(0)] = P(1); emit(s...)`,
 	`m[read(0)] = P(1); emit(m[0], m[1], m[2], m[3])`,
@@ -58,8 +58,8 @@ var fuzzBodies = []string{
 	`obj := item{value: 10}; emit(obj.get(), P(1)); emit(obj.value)`,
 	`emit(read(0), plus(read(1), P(2)), read(3))`,
 	`u, v := Q(1); emit(u, v)`,
-	`s[sliceIndex()] = P(1); emit(s...)`,
-	`m[mapIndex()] = P(1); emit(m[0], m[1], m[2], m[3])`,
+	`old := s; sliceBase()[sliceIndex()] = P(1); emit(old...); emit(s...)`,
+	`old := m; mapBase()[mapIndex()] = P(1); emit(old[0], m[0])`,
 	`f := receiver().add; f(P(1)); emit(x)`,
 	`*pointer(), a[0] = P(1), P(2); emit(x); emit(a[:]...)`,
 	`L: for i := 0; i < 2; i++ { if truth(P(1)) { continue L }; emit(i) }`,
@@ -129,6 +129,8 @@ func readX() int { fmt.Fprint(&trace, "x;"); return x }
 func at(i int) int { fmt.Fprint(&trace, "at;"); return a[i] }
 func assertInt(v any) int { fmt.Fprint(&trace, "assert;"); return v.(int) }
 func plus(a, b int) int { return a + b }
+func sliceBase() []int { fmt.Fprint(&trace, "sliceBase;"); return s }
+func mapBase() map[int]int { fmt.Fprint(&trace, "mapBase;"); return m }
 func sliceIndex() int { fmt.Fprint(&trace, "slice;"); s = []int{50, 60, 70, 80}; return 0 }
 func mapIndex() int { fmt.Fprint(&trace, "map;"); m = map[int]int{0: 50, 1: 60, 2: 70, 3: 80}; return 0 }
 func pointer() *int { fmt.Fprint(&trace, "pointer;"); return &x }
