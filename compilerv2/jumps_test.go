@@ -11,6 +11,7 @@ func TestInsertJumps(t *testing.T) {
 		{"skip generated locals", `func run() { var x int; goto Done; x=right(); Done: fmt.Print(x) }`, "right()", "0"},
 		{"labeled continue", `func run() { L: for i:=0; i<2; i=next(i) { fmt.Print(i); continue L } }`, "next(i)", "0TM1TM"},
 		{"goto and continue", `func run() { again:=false; L: for i:=0; i<2; i=next(i) { fmt.Print(i); if !again { again=true; goto L }; continue L } }`, "next(i)", "00TM1TM"},
+		{"closure label scope", `func run() { again:=false; L: for i:=0;i<1;i++ {fn:=func(){L:for j:=0;j<1;j=next(j){continue L}};fn();if !again {again=true;goto L};continue L} }`, "next(j)", "TMTM"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

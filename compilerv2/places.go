@@ -23,6 +23,9 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	var before []ast.Stmt
 	var result ast.Expr = expr
 	switch e := expr.(type) {
+	case *ast.CompositeLit:
+		setup, values := r.expression(e)
+		return setup, values[0]
 	case *ast.ParenExpr:
 		copy := *e
 		before, copy.X = r.place(e.X)
@@ -45,6 +48,10 @@ func (r *rewrite) place(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 		result = &copy
 	case *ast.SelectorExpr:
 		copy := *e
+		if r.source.Package.TypesInfo.Selections[e] == nil {
+			result = &copy
+			break
+		}
 		if _, pointer := r.source.Package.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer); pointer {
 			before, copy.X = r.capture(e.X)
 		} else {

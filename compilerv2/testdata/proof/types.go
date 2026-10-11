@@ -14,5 +14,7 @@ func CaseTypes(err error) error {
 	a[effect("receiver index")-1].add(identity(effect("method argument")))
 	consume(int(small), a[0].value)
 	foreign.Use(foreign.Value(effect("foreign argument")))
+	foreign.Number = effect("foreign store")
+	consume(foreign.Number)
 	return nil
 }

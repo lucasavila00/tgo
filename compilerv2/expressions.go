@@ -114,7 +114,10 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	switch e := expr.(type) {
 	case *ast.FuncLit:
 		copy := *e
+		labels := r.labels
+		r.labels = nil
 		copy.Body = r.block(e.Body)
+		r.labels = labels
 		result = &copy
 	case *ast.CallExpr:
 		copy := *e

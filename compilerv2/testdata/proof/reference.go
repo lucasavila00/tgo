@@ -43,7 +43,7 @@ func Reference(name string, reached bool) []string {
 	case "Jumps":
 		return []string{"labeled body", "labeled body", "labeled post", "labeled body", "labeled post"}
 	case "Types":
-		return []string{"receiver index", "method argument", "consume:[1 1]", "foreign argument"}
+		return []string{"receiver index", "method argument", "consume:[1 1]", "foreign argument", "foreign store", "consume:[1]"}
 	case "Nested":
 		return []string{"closure", "outside"}
 	}

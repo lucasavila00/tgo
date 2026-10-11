@@ -12,6 +12,8 @@ func TestInsertStorage(t *testing.T) {
 		{"array index", `var a=[2]int{1,2}; func index() int { a[0]=9;fmt.Print("I");return 0 };func main() { fmt.Print(a[index()]) }`, "index()", "IM9"},
 		{"pointer receiver", `type S struct { n int };func(s *S) Add(v int) { s.n+=v };func main() { a:=[1]S{};a[bound()-1].Add(bound());fmt.Print(a[0].n) }`, "bound()", "BBM1"},
 		{"receiver index", `type S struct { n int };func(s *S) Add(v int) { s.n+=v };func index() int { fmt.Print("I");return 0 };func main() { a:=[1]S{};a[index()].Add(bound());fmt.Print(a[0].n) }`, "index()", "IMB1"},
+		{"address literal", `type S struct{n int};func main(){p:=&S{n:bound()};fmt.Print(p.n)}`, "bound()", "BM1"},
+		{"address literal root", `type S struct{n int};func main(){p:=&S{n:bound()};fmt.Print(p.n)}`, "S{n:bound()}", "BM1"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

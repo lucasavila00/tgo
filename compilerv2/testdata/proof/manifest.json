@@ -4455,8 +4455,89 @@
   },
   {
     "file": "testdata/proof/types.go",
-    "start": 502,
-    "end": 505,
+    "start": 495,
+    "end": 509,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 495,
+    "end": 502,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 503,
+    "end": 509,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 512,
+    "end": 535,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 512,
+    "end": 518,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 519,
+    "end": 534,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 537,
+    "end": 560,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 537,
+    "end": 544,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 545,
+    "end": 559,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 545,
+    "end": 552,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 553,
+    "end": 559,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 569,
+    "end": 572,
     "kind": "*ast.Ident",
     "error_return": true
   },
@@ -4489,8 +4570,26 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 40,
+    "start": 39,
     "end": 45,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 48,
+    "end": 49,
+    "kind": "*ast.BasicLit",
+    "reason": "package scope",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 56,
+    "end": 61,
     "kind": "*ast.Ident",
     "reason": "name or syntax without a value",
     "error_return": false,
@@ -4498,8 +4597,8 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 35,
-    "end": 64,
+    "start": 51,
+    "end": 80,
     "kind": "*ast.FuncType",
     "reason": "name or syntax without a value",
     "error_return": false,
@@ -4507,8 +4606,8 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 46,
-    "end": 51,
+    "start": 62,
+    "end": 67,
     "kind": "*ast.Ident",
     "reason": "name or syntax without a value",
     "error_return": false,
@@ -4516,8 +4615,8 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 52,
-    "end": 55,
+    "start": 68,
+    "end": 71,
     "kind": "*ast.Ident",
     "reason": "type syntax",
     "error_return": false,
@@ -4525,8 +4624,8 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 57,
-    "end": 64,
+    "start": 73,
+    "end": 80,
     "kind": "*ast.Ident",
     "reason": "type syntax",
     "error_return": false,
@@ -4534,16 +4633,16 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 74,
-    "end": 88,
+    "start": 90,
+    "end": 104,
     "kind": "*ast.CallExpr",
     "error_return": false,
     "return_reason": "function does not return only error"
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 74,
-    "end": 81,
+    "start": 90,
+    "end": 97,
     "kind": "*ast.Ident",
     "reason": "type syntax",
     "error_return": false,
@@ -4551,16 +4650,16 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 82,
-    "end": 87,
+    "start": 98,
+    "end": 103,
     "kind": "*ast.Ident",
     "error_return": false,
     "return_reason": "function does not return only error"
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 96,
-    "end": 99,
+    "start": 112,
+    "end": 115,
     "kind": "*ast.Ident",
     "reason": "name or syntax without a value",
     "error_return": false,
@@ -4568,8 +4667,8 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 91,
-    "end": 114,
+    "start": 107,
+    "end": 130,
     "kind": "*ast.FuncType",
     "reason": "name or syntax without a value",
     "error_return": false,
@@ -4577,8 +4676,8 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 100,
-    "end": 105,
+    "start": 116,
+    "end": 121,
     "kind": "*ast.Ident",
     "reason": "name or syntax without a value",
     "error_return": false,
@@ -4586,8 +4685,8 @@
   },
   {
     "file": "testdata/proof/foreign/foreign.go",
-    "start": 106,
-    "end": 113,
+    "start": 122,
+    "end": 129,
     "kind": "*ast.Ident",
     "reason": "type syntax",
     "error_return": false,
