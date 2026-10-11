@@ -1,5 +1,0 @@
-package sample
-
-type Pair struct{ Left, Right string }
-
-func Join(pair Pair) string { return pair.Left + pair.Right }

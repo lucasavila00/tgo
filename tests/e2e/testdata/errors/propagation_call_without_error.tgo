@@ -1,8 +1,0 @@
-package errors
-
-func loadValue() int { return 1 }
-
-func useValue() (int, error) {
-	value := loadValue()!
-	return value, nil
-}

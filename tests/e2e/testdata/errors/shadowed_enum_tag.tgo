@@ -1,7 +1,0 @@
-package invalid
-
-type uint8 = uint64
-
-type Result enum {
-	Success struct{}
-}

@@ -7,9 +7,6 @@
 - [`tgofmt` guide](guide/TGOFMT.md): format files or standard input.
 - [Agent rules](for-agents/AGENTS.md): copyable rules for TGo repositories.
 - [Project problem](problem/README.md): the problems that guide language design.
-- [Implementation notes](implementation/README.md): repository architecture and bootstrap rules.
-- [Contributor documentation](contrib/README.md): change procedures and feature documentation.
-- [Compiler lowering](contrib/compiler-lowering.md): semantic priorities and the current lowering audit.
 
-The root [README](../README.md) is the short project overview. Test-specific notes stay beside
-their test tools.
+The root [README](../README.md) states the repository status. The guides
+describe the removed implementation; this checkout contains no build tools.

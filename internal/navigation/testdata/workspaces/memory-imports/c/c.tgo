@@ -1,7 +1,0 @@
-package c
-
-import "time"
-
-func Normalize(value time.Time) time.Time {
-	return value.UTC()
-}

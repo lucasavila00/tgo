@@ -1,5 +1,0 @@
-package errors
-
-func Values(input []int) []int {
-    return []int{for _, value := range input { value: value }}
-}

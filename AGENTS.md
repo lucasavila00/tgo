@@ -1,5 +1,17 @@
 # Working principles
 
+## Repository status
+
+This repository is mothballed while we develop the compiler spikes in
+[#248](https://github.com/lucasavila00/tgo/issues/248) and
+[#247](https://github.com/lucasavila00/tgo/issues/247). Only documentation and
+the specification remain. Code, tests, build tools, CI, and architecture
+documents have been removed. Git history retains them.
+
+Keep compiler experiments separate. Do not restore the removed implementation
+or architecture unless the user requests it. The existing guides describe the
+removed tools; their commands are not available in this checkout.
+
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
@@ -92,11 +104,10 @@ Do not add safety checks, runtime behavior, abstractions, or support systems
 that the user did not request. Follow each stated trust assumption. Do not add
 checks for data or boundaries that the user declared trusted.
 
-## 9. Use Hosted CI for Full Validation
+## 9. Validate Documentation
 
-Do not run the full CI suite locally. Push the branch and use GitHub Actions
-for full validation. Run focused local tests only to validate the changed area
-or debug a CI failure.
+Check changed documentation and its local links. No CI or compiler test suite
+exists in this checkout. Each spike must provide its own focused validation.
 
 ## 10. Do Not Post Comments Without a Request
 
@@ -108,9 +119,6 @@ This rule does not prevent the creation or update of an issue body or pull
 request body when the user requests that issue or pull request.
 
 ## 11. Lower Valid TGo Before You Restrict It
-
-Read the [compiler lowering guide](docs/contrib/compiler-lowering.md) before
-you change compiler lowering or add a source restriction.
 
 Preserve valid TGo semantics, evaluation order, scope, control flow, and error
 identity first. Generate fresh locals and blocks when the lowering needs them.

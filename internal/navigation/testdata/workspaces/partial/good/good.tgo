@@ -1,5 +1,0 @@
-package good
-
-func Target() string { return "ok" }
-
-func Use() string { return Target() }

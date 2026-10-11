@@ -1,6 +1,0 @@
-package nestedmodel
-
-type Leaf struct { Name string }
-type Child struct { Required %Leaf }
-type ChildList struct { List []%Child }
-type LeafList struct { List []%Leaf }

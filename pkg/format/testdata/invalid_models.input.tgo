@@ -1,3 +1,0 @@
-package invalidmodels
-type Empty enum {}
-type Duplicate enum{Same struct{First int};Same struct{Second string}}

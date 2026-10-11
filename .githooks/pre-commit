@@ -1,6 +1,0 @@
-#!/bin/sh
-set -eu
-cd "$(git rev-parse --show-toplevel)"
-git diff --cached --check
-TGOFMT_STAGED=1 make tgofmt-check
-MARKDOWN_STAGED=1 exec make markdown

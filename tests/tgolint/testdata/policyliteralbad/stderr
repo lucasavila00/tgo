@@ -1,5 +1,0 @@
-policyliteralbad/source.tgo:9:15: missing required field Count
-policyliteralbad/source.tgo:10:27: missing required field ID
-policyliteralbad/source.tgo:10:27: missing required field Count
-policyliteralbad/source.tgo:11:19: array and slice literals must supply every index
-policyliteralbad/source.tgo:12:19: array and slice literals must supply every index

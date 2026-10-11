@@ -1,5 +1,0 @@
-package sample
-
-import "time"
-
-var value = time.Time{..default}

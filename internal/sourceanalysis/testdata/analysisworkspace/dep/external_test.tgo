@@ -1,7 +1,0 @@
-package dep_test
-
-import "example.test/analysis/dep"
-
-func externalTestValue() dep.Choice {
-	return dep.Choice.One{Name: "external"}
-}

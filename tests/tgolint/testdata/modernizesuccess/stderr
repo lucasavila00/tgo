@@ -1,4 +1,0 @@
-modernizesuccess/bad.tgo:4:12: return with final nil can use a trailing comma
-modernizesuccess/bad.tgo:8:16: return with final nil can use a trailing comma
-modernizesuccess/bad.tgo:12:17: return with final nil can use a trailing comma
-modernizesuccess/bad.tgo:16:12: return with final nil can use a trailing comma

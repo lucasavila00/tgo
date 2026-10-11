@@ -1,4 +1,0 @@
-// Package sample uses CRLF.
-package sample
-
-func Value() int { return 1 }

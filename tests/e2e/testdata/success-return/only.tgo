@@ -1,5 +1,0 @@
-package successreturn
-
-func OnlySuccessReturn() (int, error) {
-	return 9,
-}

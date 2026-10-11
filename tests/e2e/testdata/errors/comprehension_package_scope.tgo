@@ -1,3 +1,0 @@
-package errors
-
-var values = []int{for _, value := range []int{1} { value }}
