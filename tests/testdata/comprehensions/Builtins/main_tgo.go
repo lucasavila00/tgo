@@ -149,9 +149,10 @@ func main() {
 		var tgo30 []int = make([]int, 2)
 		{
 			for i_tgo31 := range [2]int{1, 2} {
+				var tgo32 int = i_tgo31
 				{
 					var tgo33 int = i_tgo31
-					tgo30[i_tgo31] = tgo33
+					tgo30[tgo32] = tgo33
 				}
 			}
 		}
@@ -162,9 +163,10 @@ func main() {
 		var tgo34 []int = make([]int, 2)
 		{
 			for i_tgo35 := range *pointer {
+				var tgo36 int = i_tgo35
 				{
 					var tgo37 int = i_tgo35
-					tgo34[i_tgo35] = tgo37
+					tgo34[tgo36] = tgo37
 				}
 			}
 		}
