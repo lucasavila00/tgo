@@ -1,10 +1,10 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/constant"
 	"go/token"
-	"go/types"
 )
 
 // contextLiteral keeps an omitted literal type through its original container.
@@ -21,7 +21,7 @@ func (r *rewrite) contextLiteral(value, original ast.Expr) ast.Expr {
 	if !ok {
 		return value
 	}
-	typ := r.source.Package.TypesInfo.TypeOf(container).Underlying()
+	typ := r.source.checked.TypesInfo.TypeOf(container).Underlying()
 	pointer := false
 	if p, ok := typ.(*types.Pointer); ok {
 		typ = p.Elem().Underlying()
@@ -116,7 +116,7 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 	var before []ast.Stmt
 	var values []ast.Expr
 	for _, element := range elements {
-		if tv, ok := r.source.Package.TypesInfo.Types[element]; ok && (tv.Value != nil || tv.IsNil()) {
+		if tv, ok := r.source.checked.TypesInfo.Types[element]; ok && (tv.Value != nil || tv.IsNil()) {
 			values = append(values, element)
 			continue
 		}
@@ -137,7 +137,7 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 	index := 0
 	for i, element := range value.Elts {
 		var place ast.Expr
-		switch typ := r.source.Package.TypesInfo.TypeOf(original).Underlying().(type) {
+		switch typ := r.source.checked.TypesInfo.TypeOf(original).Underlying().(type) {
 		case *types.Struct:
 			name := typ.Field(i).Name()
 			if item, ok := element.(*ast.KeyValueExpr); ok {
@@ -148,7 +148,7 @@ func (r *rewrite) materializeKey(value, original *ast.CompositeLit) ([]ast.Stmt,
 			var position ast.Expr = integer(index)
 			if item, ok := element.(*ast.KeyValueExpr); ok {
 				position = item.Key
-				positionValue, _ := constant.Int64Val(r.source.Package.TypesInfo.Types[item.Key].Value)
+				positionValue, _ := constant.Int64Val(r.source.checked.TypesInfo.Types[item.Key].Value)
 				index = int(positionValue)
 			}
 			place = &ast.IndexExpr{X: key, Index: position}

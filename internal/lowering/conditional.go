@@ -1,0 +1,85 @@
+package lowering
+
+import (
+	"go/ast"
+	"go/token"
+
+	"github.com/lucasavila00/tgo/internal/checker/types"
+)
+
+func (r *rewrite) conditionalCall(call *ast.CallExpr, statement *ast.IfStmt) ([]ast.Stmt, []ast.Expr) {
+	result := r.name()
+	typ := types.Default(r.source.checked.TypesInfo.TypeOf(call))
+	declaration := variable(result, r.temporaryType(typ, call), nil)
+	if r.temporaryTypes == nil {
+		r.temporaryTypes = make(map[ast.Expr]types.Type)
+	}
+	if r.origins == nil {
+		r.origins = make(map[ast.Expr]ast.Expr)
+	}
+	r.temporaryTypes[result] = typ
+	r.origins[result] = call
+	body := r.conditionalStatement(statement, result)
+	r.lowered[call] = true
+	return append([]ast.Stmt{declaration}, body...), []ast.Expr{result}
+}
+
+func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident) []ast.Stmt {
+	copy := *statement
+	copy.Body = r.conditionalBlock(statement.Body, result)
+	switch alternative := statement.Else.(type) {
+	case *ast.BlockStmt:
+		copy.Else = r.conditionalBlock(alternative, result)
+	case *ast.IfStmt:
+		output := r.conditionalStatement(alternative, result)
+		if len(output) == 1 {
+			copy.Else = output[0]
+		} else {
+			copy.Else = &ast.BlockStmt{List: output}
+		}
+	}
+	var setup []ast.Stmt
+	if statement.Init != nil {
+		setup = r.header(statement.Init)
+	}
+	before, condition := r.expression(statement.Cond)
+	copy.Cond = condition[0]
+	if len(before) == 0 && len(setup) <= 1 {
+		if len(setup) != 0 {
+			copy.Init = setup[0]
+		}
+		return []ast.Stmt{&copy}
+	}
+	copy.Init = nil
+	return []ast.Stmt{&ast.BlockStmt{List: append(append(setup, before...), &copy)}}
+}
+
+func (r *rewrite) conditionalBlock(body *ast.BlockStmt, result *ast.Ident) *ast.BlockStmt {
+	copy := *body
+	copy.List = nil
+	last := len(body.List) - 1
+	for last >= 0 {
+		if _, empty := body.List[last].(*ast.EmptyStmt); !empty {
+			break
+		}
+		last--
+	}
+	for i, statement := range body.List {
+		if i == last {
+			switch statement := statement.(type) {
+			case *ast.IfStmt:
+				copy.List = append(copy.List, r.conditionalStatement(statement, result)...)
+				continue
+			case *ast.ExprStmt:
+				if tv := r.source.checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
+					before, values := r.expression(statement.X)
+					copy.List = append(copy.List, before...)
+					copy.List = append(copy.List, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: values})
+					continue
+				}
+			}
+		}
+		copy.List = append(copy.List, r.statement(statement)...)
+	}
+	return &copy
+}

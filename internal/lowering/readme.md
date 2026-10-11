@@ -59,7 +59,8 @@ Source contains the original syntax and its type information.
 ```go
 type Source struct {
     Package *packages.Package
-    Sites   []Site
+
+    Sites []Site
     // contains filtered or unexported fields
 }
 ```
@@ -71,6 +72,14 @@ func Load(dir, pattern string) (*Source, error)
 ```
 
 Load reads and type\-checks one Go package selected by pattern in dir. It records expression positions for later statement insertion.
+
+### func SourceFromCheckedPackage
+
+```go
+func SourceFromCheckedPackage(p *checker.Package, dir string) (*Source, error)
+```
+
+SourceFromCheckedPackage records expressions from private source checking.
 
 ### func SourceFromPackage
 

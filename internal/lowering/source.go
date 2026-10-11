@@ -2,11 +2,12 @@ package lowering
 
 import (
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/token"
-	"go/types"
 	"path/filepath"
 
+	"github.com/lucasavila00/tgo/internal/checker"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -24,6 +25,7 @@ type Site struct {
 // Source contains the original syntax and its type information.
 type Source struct {
 	Package     *packages.Package
+	checked     *checker.Package
 	Sites       []Site
 	expressions map[Site]ast.Expr
 	parents     map[ast.Node]ast.Node
@@ -36,7 +38,7 @@ func Load(dir, pattern string) (*Source, error) {
 		Dir: dir,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
 			packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo |
-			packages.NeedImports | packages.NeedDeps,
+			packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule,
 	}, pattern)
 	if err != nil {
 		return nil, err
@@ -53,7 +55,20 @@ func SourceFromPackage(p *packages.Package, dir string) (*Source, error) {
 	if len(p.Errors) != 0 {
 		return nil, fmt.Errorf("load source: %s", p.Errors[0])
 	}
-	s := &Source{Package: p, expressions: make(map[Site]ast.Expr), parents: make(map[ast.Node]ast.Node)}
+	checked, err := checker.CheckGo(p, dir)
+	if err != nil {
+		return nil, err
+	}
+	s, err := SourceFromCheckedPackage(checked, dir)
+	if err == nil {
+		s.Package = p
+	}
+	return s, err
+}
+
+// SourceFromCheckedPackage records expressions from private source checking.
+func SourceFromCheckedPackage(p *checker.Package, dir string) (*Source, error) {
+	s := &Source{checked: p, expressions: make(map[Site]ast.Expr), parents: make(map[ast.Node]ast.Node)}
 	for _, file := range p.Syntax {
 		s.inventory(file, dir)
 	}
@@ -72,14 +87,14 @@ func (s *Source) inventory(file *ast.File, dir string) {
 		}
 		if expr, ok := n.(ast.Expr); ok {
 			// Use physical file names and offsets for expression sites.
-			start := s.Package.Fset.PositionFor(expr.Pos(), false)
-			end := s.Package.Fset.PositionFor(expr.End(), false)
+			start := s.checked.Fset.PositionFor(expr.Pos(), false)
+			end := s.checked.Fset.PositionFor(expr.End(), false)
 			name, err := filepath.Rel(dir, start.Filename)
 			if err != nil {
 				name = start.Filename
 			}
 			site := Site{File: name, Start: start.Offset, End: end.Offset, Kind: fmt.Sprintf("%T", expr)}
-			tv, hasType := s.Package.TypesInfo.Types[expr]
+			tv, hasType := s.checked.TypesInfo.Types[expr]
 			switch {
 			case hasType && tv.IsBuiltin():
 				site.Reason = "builtin name"
@@ -94,8 +109,13 @@ func (s *Source) inventory(file *ast.File, dir string) {
 			var fn ast.Node
 			for i := len(stack) - 1; i >= 0; i-- {
 				switch parent := stack[i].(type) {
-				case *ast.FuncDecl, *ast.FuncLit:
+				case *ast.FuncDecl:
 					fn = parent
+				case *ast.FuncLit:
+					call, _ := s.parents[parent].(*ast.CallExpr)
+					if s.checked.Conditionals[call] == nil {
+						fn = parent
+					}
 				case *ast.GenDecl:
 					if parent.Tok == token.CONST {
 						site.Reason = "constant declaration"
@@ -132,13 +152,13 @@ func (s *Source) inventory(file *ast.File, dir string) {
 				case *ast.FuncLit:
 					typ = f.Type
 				}
-				sig, _ := s.Package.TypesInfo.TypeOf(typ).(*types.Signature)
+				sig, _ := s.checked.TypesInfo.TypeOf(typ).(*types.Signature)
 				if sig == nil {
 					if f, ok := fn.(*ast.FuncDecl); ok {
-						sig, _ = s.Package.TypesInfo.Defs[f.Name].Type().(*types.Signature)
+						sig, _ = s.checked.TypesInfo.Defs[f.Name].Type().(*types.Signature)
 					}
 					if f, ok := fn.(*ast.FuncLit); ok {
-						sig, _ = s.Package.TypesInfo.TypeOf(f).(*types.Signature)
+						sig, _ = s.checked.TypesInfo.TypeOf(f).(*types.Signature)
 					}
 				}
 				if sig != nil && sig.Results().Len() == 1 {
@@ -162,10 +182,10 @@ func (s *Source) rangeElided(statement *ast.RangeStmt) bool {
 	if statement.Value != nil {
 		return false
 	}
-	if tv := s.Package.TypesInfo.Types[statement.X]; tv.Value != nil {
+	if tv := s.checked.TypesInfo.Types[statement.X]; tv.Value != nil {
 		return true
 	}
-	typ := s.Package.TypesInfo.TypeOf(statement.X).Underlying()
+	typ := s.checked.TypesInfo.TypeOf(statement.X).Underlying()
 	if pointer, ok := typ.(*types.Pointer); ok {
 		typ = pointer.Elem().Underlying()
 	}
@@ -177,7 +197,7 @@ func (s *Source) rangeElided(statement *ast.RangeStmt) bool {
 		if _, ok := n.(*ast.FuncLit); ok {
 			return false
 		}
-		if call, ok := n.(*ast.CallExpr); ok && s.Package.TypesInfo.Types[call].Value == nil && !s.Package.TypesInfo.Types[call.Fun].IsType() {
+		if call, ok := n.(*ast.CallExpr); ok && s.checked.TypesInfo.Types[call].Value == nil && !s.checked.TypesInfo.Types[call.Fun].IsType() {
 			constantLength = false
 		}
 		if unary, ok := n.(*ast.UnaryExpr); ok && unary.Op == token.ARROW {

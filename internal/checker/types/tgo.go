@@ -1,0 +1,279 @@
+package types
+
+import (
+	"go/ast"
+	"go/token"
+
+	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
+)
+
+// TGoOperation records the meaning of a frontend marker call.
+type TGoOperation struct {
+	Conditional bool
+	Wrap        bool
+	CallName    string
+	Position    token.Position
+}
+
+func (check *Checker) tgoOperation(call *ast.CallExpr) (TGoOperation, bool) {
+	id, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return TGoOperation{}, false
+	}
+	op, found := check.conf.TGo[id.Name]
+	return op, found
+}
+
+// expressionType passes context through operators whose result has that type.
+func (check *Checker) expressionType(e ast.Expr, typ Type) {
+	if e == nil || typ == nil {
+		return
+	}
+	if check.expressionTypes == nil {
+		check.expressionTypes = make(map[ast.Expr]Type)
+	}
+	check.expressionTypes[e] = typ
+	switch e := e.(type) {
+	case *ast.ParenExpr:
+		check.expressionType(e.X, typ)
+	case *ast.UnaryExpr:
+		if e.Op == token.ADD || e.Op == token.SUB || e.Op == token.XOR || e.Op == token.NOT {
+			check.expressionType(e.X, typ)
+		}
+	case *ast.BinaryExpr:
+		if !isComparison(e.Op) {
+			check.expressionType(e.X, typ)
+			if !isShift(e.Op) {
+				check.expressionType(e.Y, typ)
+			}
+		}
+	}
+}
+
+func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.CallExpr, hint Type) exprKind {
+	x.expr = call
+	x.typ_ = Typ[Invalid]
+	body := call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt)
+	context := hint
+	if target != nil {
+		context = target.typ
+	}
+	values := check.conditionalBranches(body, context)
+	if check.conditionalValues == nil {
+		check.conditionalValues = make(map[*ast.CallExpr][]*operand)
+	}
+	check.conditionalValues[call] = values
+	for _, branch := range values {
+		if !branch.isValid() {
+			return expression
+		}
+	}
+	if context != nil {
+		for _, branch := range values {
+			check.assignment(branch, context, "if expression branch")
+			if !branch.isValid() {
+				return expression
+			}
+		}
+		x.mode_, x.typ_ = value, context
+		return expression
+	}
+	var typ Type
+	for _, branch := range values {
+		candidate := branch.typ()
+		if isUntyped(candidate) {
+			continue
+		}
+		if typ != nil && !Identical(typ, candidate) {
+			check.error(call, IncompatibleAssign, "if branch types differ; add an explicit type annotation")
+			return expression
+		}
+		typ = candidate
+	}
+	if typ != nil {
+		check.convertConditional(call, typ)
+		for _, branch := range values {
+			if !branch.isValid() {
+				return expression
+			}
+		}
+	} else {
+		for _, branch := range values {
+			if branch.isNil() {
+				continue
+			}
+			if typ == nil {
+				typ = branch.typ()
+			} else {
+				typ = maxType(typ, branch.typ())
+				if typ == nil {
+					break
+				}
+			}
+		}
+		for _, branch := range values {
+			if branch.isNil() && typ != nil {
+				typ = nil
+				break
+			}
+		}
+	}
+	if typ == nil {
+		check.error(call, IncompatibleAssign, "if result type is unknown; add an explicit type annotation")
+		return expression
+	}
+	x.mode_, x.typ_ = value, typ
+	return expression
+}
+
+func (check *Checker) convertConditional(call *ast.CallExpr, typ Type) {
+	for _, branch := range check.conditionalValues[call] {
+		check.assignment(branch, typ, "if expression branch")
+	}
+}
+
+func (check *Checker) conditionalBranches(statement *ast.IfStmt, context Type) []*operand {
+	check.openScope(statement, "if expression")
+	defer check.closeScope()
+	check.simpleStmt(statement.Init)
+	var condition operand
+	check.expr(nil, &condition, statement.Cond)
+	if condition.isValid() && !allBoolean(condition.typ()) {
+		check.error(statement.Cond, InvalidCond, "if expression condition must be Boolean")
+	}
+	values := check.conditionalBlock(statement.Body, context)
+	switch alternative := statement.Else.(type) {
+	case *ast.BlockStmt:
+		values = append(values, check.conditionalBlock(alternative, context)...)
+	case *ast.IfStmt:
+		values = append(values, check.conditionalBranches(alternative, context)...)
+	default:
+		check.error(statement, InvalidSyntaxTree, "if expression requires else")
+		values = append(values, &operand{expr: statement.Cond, typ_: Typ[Invalid]})
+	}
+	return values
+}
+
+func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*operand {
+	check.openScope(body, "if expression branch")
+	defer check.closeScope()
+	list := trimTrailingEmptyStmts(body.List)
+	if len(list) == 0 {
+		check.error(body, InvalidSyntaxTree, "if expression branch requires a final value")
+		return []*operand{{expr: &ast.BadExpr{From: body.Pos()}, typ_: Typ[Invalid]}}
+	}
+	check.stmtList(check.statementContext, list[:len(list)-1])
+	last := list[len(list)-1]
+	if conditional, ok := last.(*ast.IfStmt); ok {
+		return check.conditionalBranches(conditional, context)
+	}
+	if statement, ok := last.(*ast.ExprStmt); ok {
+		branch := new(operand)
+		check.rawExpr(newTarget(context, "if expression branch"), branch, statement.X, nil, false)
+		check.exclude(branch, 1<<builtin|1<<typexpr)
+		if branch.mode() == novalue && check.isTerminating(statement, "") {
+			return nil
+		}
+		check.singleValue(branch)
+		if branch.mode() == novalue {
+			check.error(statement, InvalidSyntaxTree, "if expression branch requires one value")
+			branch.invalidate()
+		}
+		return []*operand{branch}
+	}
+	check.stmt(check.statementContext, last)
+	if check.isTerminating(last, "") {
+		return nil
+	}
+	if branch, ok := last.(*ast.BranchStmt); ok && (branch.Tok == token.BREAK || branch.Tok == token.CONTINUE) {
+		return nil
+	}
+	check.error(last, InvalidSyntaxTree, "if expression branch requires a final value")
+	return []*operand{{expr: &ast.BadExpr{From: last.Pos()}, typ_: Typ[Invalid]}}
+}
+
+func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation TGoOperation) exprKind {
+	position := atPos(check.fset.File(call.Pos()).Pos(operation.Position.Offset))
+	check.rawExpr(nil, x, call.Args[0], nil, false)
+	x.expr = call
+	if !x.isValid() {
+		return expression
+	}
+	results, ok := x.typ().(*Tuple)
+	last := x.typ()
+	if ok && results.Len() != 0 {
+		last = results.At(results.Len() - 1).Type()
+	}
+	if !AssignableTo(last, Universe.Lookup("error").Type()) {
+		check.error(position, IncompatibleAssign, "propagation requires a final error result")
+		x.invalidate()
+		return expression
+	}
+	if check.sig == nil || check.sig.Results().Len() == 0 {
+		check.error(position, IncompatibleAssign, "propagation requires a final error interface return")
+		x.invalidate()
+		return expression
+	}
+	returned := last
+	operator := "!"
+	if operation.Wrap {
+		returned = Universe.Lookup("error").Type()
+		operator = "!!"
+	}
+	target := check.sig.Results().At(check.sig.Results().Len() - 1).Type()
+	if _, ok := target.Underlying().(*Interface); !ok || !AssignableTo(target, Universe.Lookup("error").Type()) {
+		check.error(position, IncompatibleAssign, "propagation requires a final error interface return")
+		x.invalidate()
+		return expression
+	}
+	if !AssignableTo(returned, target) {
+		check.errorf(position, IncompatibleAssign, "%s cannot return error of type %s as %s", operator, returned, target)
+		x.invalidate()
+		return expression
+	}
+	x.mode_ = value
+	switch {
+	case !ok || results.Len() == 1:
+		x.mode_ = novalue
+		x.typ_ = NewTuple()
+	case results.Len() == 2:
+		x.typ_ = results.At(0).Type()
+	default:
+		x.typ_ = NewTuple(results.vars[:results.Len()-1]...)
+	}
+	return statement
+}
+
+// conditionalStatements visits expressions in one statement. Nested statements
+// are visited by the caller; real function literals belong to another function.
+func (check *Checker) conditionalStatements(statement ast.Stmt, visit func(*ast.IfStmt)) {
+	headers := false
+	switch statement.(type) {
+	case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
+		headers = true
+	}
+	ast.Inspect(statement, func(node ast.Node) bool {
+		if node == nil {
+			return false
+		}
+		if child, ok := node.(ast.Stmt); ok && child != statement {
+			if !headers {
+				return false
+			}
+			switch child.(type) {
+			case *ast.AssignStmt, *ast.ExprStmt, *ast.IncDecStmt, *ast.SendStmt:
+				// Include simple statements in headers, but not nested bodies.
+			default:
+				return false
+			}
+		}
+		if call, ok := node.(*ast.CallExpr); ok {
+			if op, found := check.tgoOperation(call); found && op.Conditional {
+				visit(call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt))
+				return false
+			}
+		}
+		_, function := node.(*ast.FuncLit)
+		return !function
+	})
+}

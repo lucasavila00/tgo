@@ -1,10 +1,10 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/constant"
 	"go/token"
-	"go/types"
 	"strconv"
 )
 
@@ -12,7 +12,7 @@ func integer(value int) ast.Expr { return &ast.BasicLit{Kind: token.INT, Value: 
 
 func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	copy := *s
-	if value := r.source.Package.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int && constant.Sign(value) <= 0 && r.contains(s) {
+	if value := r.source.checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int && constant.Sign(value) <= 0 && r.contains(s) {
 		suppressed := r.suppressed
 		r.suppressed = true
 		copy.Body = r.block(s.Body)
@@ -30,7 +30,7 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	before, refs := r.expression(s.X)
 	copy.X = refs[0]
 	if s.Tok == token.ASSIGN && (r.contains(s.Key) || r.contains(s.Value)) {
-		if value := r.source.Package.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
+		if value := r.source.checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
 			return r.integerRange(s, &copy, before)
 		}
 		var stores []ast.Stmt
@@ -104,7 +104,7 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 	var tagValue ast.Expr
 	if len(tag) != 0 {
 		tagValue = tag[0]
-		if tv := r.source.Package.TypesInfo.Types[s.Tag]; tv.Value == nil {
+		if tv := r.source.checked.TypesInfo.Types[s.Tag]; tv.Value == nil {
 			saved, values := r.save(tagValue)
 			setup = append(setup, saved...)
 			tagValue = values[0]

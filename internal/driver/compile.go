@@ -1,12 +1,7 @@
 package driver
 
 import (
-	"bytes"
 	"fmt"
-	"go/ast"
-	"go/format"
-	"go/token"
-	"go/types"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -14,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/lucasavila00/tgo/internal/frontend"
+	"github.com/lucasavila00/tgo/internal/checker"
 	"github.com/lucasavila00/tgo/internal/lowering"
 
 	"golang.org/x/mod/modfile"
@@ -38,7 +33,6 @@ func Compile(dir string) map[string][]byte {
 	work, err := os.MkdirTemp("", "tgo-transpiler-")
 	must(err)
 	defer os.RemoveAll(work)
-	operations := make(map[string]frontend.Marker)
 	files := make(map[string][]byte)
 	used := make(map[string]bool)
 	must(filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
@@ -81,14 +75,13 @@ func Compile(dir string) map[string][]byte {
 			used[word] = true
 		}
 	}
-	tgoFiles := make(map[string]bool)
+	tgoFiles := make(map[string]string)
 	for _, name := range names {
 		content := files[name]
 		if strings.HasSuffix(name, ".tgo") {
 			goName := generatedName(name)
-			content = frontend.MarkPostfix(name, content, used, operations)
+			tgoFiles[goName] = name
 			name = goName
-			tgoFiles[name] = true
 		}
 		path := filepath.Join(work, name)
 		must(os.MkdirAll(filepath.Dir(path), 0700))
@@ -107,106 +100,49 @@ func Compile(dir string) map[string][]byte {
 	moduleData, err = mod.Format()
 	must(err)
 	must(os.WriteFile(filepath.Join(work, "go.mod"), moduleData, 0600))
-	initial := loadProject(work)
+	selected := loadMetadata(work)
+	loader := checker.NewLoader(work, selected, tgoFiles, used)
 	activeFiles := make(map[string]bool)
-	activeOperations := make(map[string]frontend.Marker)
-	for _, pkg := range initial {
+	var checked []*checker.Package
+	for _, metadata := range selected {
+		if metadata.Module == nil || !metadata.Module.Main {
+			continue
+		}
+		pkg, err := loader.Check(metadata)
+		must(err)
+		checked = append(checked, pkg)
 		for _, filename := range pkg.GoFiles {
 			name, err := filepath.Rel(work, filename)
 			must(err)
-			if tgoFiles[name] {
+			if tgoFiles[name] != "" {
 				activeFiles[name] = true
 			}
 		}
-		for _, file := range pkg.Syntax {
-			name, err := filepath.Rel(work, pkg.Fset.PositionFor(file.Pos(), false).Filename)
-			must(err)
-			if !tgoFiles[name] {
-				continue
-			}
-			activeFiles[name] = true
-			for _, operation := range frontend.MarkerExpressions(pkg.Fset, file, operations) {
-				activeOperations[operation.Name] = operation
-			}
-		}
 	}
-	operations = activeOperations
-	remaining := len(operations)
-	for remaining > 0 {
-		pkgs := loadProject(work)
-		progress := false
-		written := make(map[string]bool)
-		for _, pkg := range pkgs {
-			for _, file := range pkg.Syntax {
-				filename := pkg.Fset.PositionFor(file.Pos(), false).Filename
-				if written[filename] {
-					continue
-				}
-				candidates := frontend.MarkerExpressions(pkg.Fset, file, operations)
-				var selected ast.Expr
-				var operation frontend.Marker
-				for expression, op := range candidates {
-					operations[op.Name] = op
-					typ := pkg.TypesInfo.TypeOf(ast.Unparen(expression))
-					if typ == nil || typ == types.Typ[types.Invalid] {
-						continue
-					}
-					if selected == nil || expression.End()-expression.Pos() < selected.End()-selected.Pos() || expression.End()-expression.Pos() == selected.End()-selected.Pos() && expression.Pos() < selected.Pos() {
-						selected = expression
-						operation = op
-					}
-				}
-				if selected == nil {
-					continue
-				}
-				result := pkg.TypesInfo.TypeOf(ast.Unparen(selected))
-				count := 1
-				last := result
-				if tuple, ok := result.(*types.Tuple); ok {
-					count = tuple.Len()
-					if count == 0 {
-						panic("propagation requires an error result")
-					}
-					last = tuple.At(count - 1).Type()
-				}
-				if !types.AssignableTo(last, types.Universe.Lookup("error").Type()) {
-					panic("propagation requires a final error result")
-				}
-				frontend.WrapMarker(file, selected, operation)
-				file.Decls = append(file.Decls, frontend.MarkerDeclaration(operation, count-1))
-				writeSyntax(pkg.Fset, file)
-				written[filename] = true
-				operations[operation.Name] = operation
-				remaining--
-				progress = true
-			}
-		}
-		if !progress {
-			panic("cannot type check propagation source")
-		}
-	}
-	loweredOperations := make(map[string]lowering.Propagation, len(operations))
-	for name, operation := range operations {
-		loweredOperations[name] = lowering.Propagation{Wrap: operation.Wrap, CallName: operation.CallName, Position: operation.Position}
-	}
-	for _, pkg := range loadProject(work) {
-		changed := false
-		for _, filename := range pkg.GoFiles {
-			name, err := filepath.Rel(work, filename)
-			must(err)
-			changed = changed || activeFiles[name]
-		}
-		if !changed {
+	for _, pkg := range checked {
+		if len(pkg.Operations) == 0 {
 			continue
 		}
-		rejectUnsafePropagation(pkg, operations)
-		checkPropagationReturns(pkg, operations)
-		source, err := lowering.SourceFromPackage(pkg, work)
+		rejectUnsafePropagation(pkg)
+		operations := make(map[string]lowering.Propagation)
+		for name, operation := range pkg.Operations {
+			if !operation.Conditional {
+				operations[name] = lowering.Propagation{Wrap: operation.Wrap, CallName: operation.CallName, Position: operation.Position}
+			}
+		}
+		source, err := lowering.SourceFromCheckedPackage(pkg, work)
 		must(err)
-		output, err := source.LowerPropagations(loweredOperations)
+		output, err := source.LowerPropagations(operations)
 		must(err)
 		for name, content := range output {
 			must(os.WriteFile(name, content, 0600))
+		}
+	}
+	// Check the emitted Go with the standard checker after all source packages
+	// have been checked and lowered.
+	for _, pkg := range loadProject(work) {
+		if len(pkg.Errors) != 0 {
+			panic(fmt.Sprintf("TGo: generated Go: %s", pkg.Errors[0]))
 		}
 	}
 
@@ -231,12 +167,6 @@ func Compile(dir string) map[string][]byte {
 	return output
 }
 
-func writeSyntax(fset *token.FileSet, file *ast.File) {
-	var buf bytes.Buffer
-	must(format.Node(&buf, fset, file))
-	must(os.WriteFile(fset.PositionFor(file.Pos(), false).Filename, buf.Bytes(), 0600))
-}
-
 func must(err error) {
 	if err != nil {
 		panic(fmt.Sprintf("TGo: %v", err))
@@ -245,6 +175,14 @@ func must(err error) {
 
 func loadProject(dir string) []*packages.Package {
 	roots, err := packages.Load(&packages.Config{Dir: dir, Tests: true, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports | packages.NeedDeps}, "./...")
+	must(err)
+	var result []*packages.Package
+	packages.Visit(roots, nil, func(pkg *packages.Package) { result = append(result, pkg) })
+	return result
+}
+
+func loadMetadata(dir string) []*packages.Package {
+	roots, err := packages.Load(&packages.Config{Dir: dir, Tests: true, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, "./...")
 	must(err)
 	var result []*packages.Package
 	packages.Visit(roots, nil, func(pkg *packages.Package) { result = append(result, pkg) })

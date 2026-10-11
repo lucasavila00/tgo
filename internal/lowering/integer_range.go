@@ -1,9 +1,9 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/token"
-	"go/types"
 )
 
 // integerRange keeps the assignment target's type for a constant range count.
@@ -12,7 +12,7 @@ func (r *rewrite) integerRange(original, loop *ast.RangeStmt, before []ast.Stmt)
 	before = append(before, setup...)
 	var zero ast.Expr
 	if index, ok := ast.Unparen(place).(*ast.IndexExpr); ok {
-		if _, isMap := r.source.Package.TypesInfo.TypeOf(ast.Unparen(original.Key).(*ast.IndexExpr).X).Underlying().(*types.Map); isMap {
+		if _, isMap := r.source.checked.TypesInfo.TypeOf(ast.Unparen(original.Key).(*ast.IndexExpr).X).Underlying().(*types.Map); isMap {
 			r.prepareCollectionImports()
 			values := &ast.CallExpr{Fun: &ast.SelectorExpr{X: r.mapAlias, Sel: ast.NewIdent("Values")}, Args: []ast.Expr{index.X}}
 			zero = r.sequenceZero(values)

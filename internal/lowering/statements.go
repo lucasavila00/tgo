@@ -1,9 +1,9 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/token"
-	"go/types"
 )
 
 func (r *rewrite) block(body *ast.BlockStmt) *ast.BlockStmt {
@@ -66,7 +66,7 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 		if len(refs) == 0 {
 			if call, ok := s.X.(*ast.CallExpr); ok {
 				if id, ok := call.Fun.(*ast.Ident); ok {
-					if object := r.source.Package.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
+					if object := r.source.checked.TypesInfo.Uses[id]; object == types.Universe.Lookup("panic") {
 						// Keep the terminating statement after unreachable inserted code.
 						return append(before, s)
 					}
@@ -112,7 +112,7 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 		if deferred {
 			var refs []ast.Expr
 			for _, value := range values {
-				if tv := r.source.Package.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
+				if tv := r.source.checked.TypesInfo.Types[value]; tv.Value != nil || tv.IsNil() {
 					refs = append(refs, value)
 					continue
 				}

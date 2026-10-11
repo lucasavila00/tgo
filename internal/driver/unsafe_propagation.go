@@ -2,14 +2,13 @@ package driver
 
 import (
 	"fmt"
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
-	"go/types"
 
-	"github.com/lucasavila00/tgo/internal/frontend"
-	"golang.org/x/tools/go/packages"
+	"github.com/lucasavila00/tgo/internal/checker"
 )
 
-func rejectUnsafePropagation(pkg *packages.Package, operations map[string]frontend.Marker) {
+func rejectUnsafePropagation(pkg *checker.Package) {
 	for _, file := range pkg.Syntax {
 		ast.Inspect(file, func(node ast.Node) bool {
 			call, ok := node.(*ast.CallExpr)
@@ -42,8 +41,8 @@ func rejectUnsafePropagation(pkg *packages.Package, operations map[string]fronte
 					if !ok {
 						return true
 					}
-					operation, ok := operations[name.Name]
-					if !ok {
+					operation, ok := pkg.Operations[name.Name]
+					if !ok || operation.Conditional {
 						return true
 					}
 					operator := "!"

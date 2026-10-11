@@ -13,6 +13,7 @@ statements needed to implement them.
 | `pkg/transpiler` | Expose compilation and expression rewriting | Other tools need the same compiler without command-line policy. |
 | `internal/driver` | Select and check a module | Imports, build constraints, and tests must agree on package contents. |
 | `internal/frontend` | Record added syntax | Go syntax keeps Go meaning; TGo operations retain their source identity. |
+| `internal/checker` | Check TGo source types and scope | Added expressions need source rules before Go statements are generated. |
 | `internal/lowering` | Emit equivalent Go statements | This requires checked types and the expression's execution context. |
 
 Dependencies follow this order. Frontend and lowering do not call each other.
@@ -53,9 +54,16 @@ type. A nil pointer can become a non-nil interface during that conversion.
 Checking afterward would turn success into failure. `!` returns the original
 error; `!!` adds call-name context with `%w`.
 
-Checking helpers describe success results to Go's type checker. They are not
-runtime error handling. Source checks also verify that propagation is valid
-inside the enclosing function and outside forbidden unsafe operands.
+The private source checker handles propagation and `if` values together.
+It checks branch values against the surrounding type and keeps branch
+statements in the source function. The frontend's call markers identify added
+syntax; they do not create source functions. This keeps returns and defers in
+their original function.
+
+The checker and its compiled-package reader use the same pinned Go source.
+Their type objects stay separate from stock `go/types` objects. Public `Load`
+keeps its stock package and checks the same syntax separately for lowering.
+After lowering, stock Go checking checks the emitted module.
 
 ## Source controls output
 

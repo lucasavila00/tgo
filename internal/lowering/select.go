@@ -1,9 +1,9 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/token"
-	"go/types"
 )
 
 func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {

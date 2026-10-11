@@ -1,9 +1,9 @@
 package lowering
 
 import (
+	"github.com/lucasavila00/tgo/internal/checker/types"
 	"go/ast"
 	"go/token"
-	"go/types"
 )
 
 const (
@@ -45,7 +45,7 @@ func (r *rewrite) parameterAlias(parameter *types.TypeParam) *ast.Ident {
 		r.aliasStatements = make(map[ast.Node][]ast.Stmt)
 	}
 	var owner ast.Node
-	for id, object := range r.source.Package.TypesInfo.Defs {
+	for id, object := range r.source.checked.TypesInfo.Defs {
 		if object != parameter.Obj() {
 			continue
 		}
@@ -68,7 +68,7 @@ func (r *rewrite) parameterAlias(parameter *types.TypeParam) *ast.Ident {
 
 // genericBase keeps array storage and saves slice or map headers.
 func (r *rewrite) genericBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
-	parameter := types.Unalias(r.source.Package.TypesInfo.TypeOf(expr)).(*types.TypeParam)
+	parameter := types.Unalias(r.source.checked.TypesInfo.TypeOf(expr)).(*types.TypeParam)
 	typ := r.parameterAlias(parameter)
 	if r.reflectAlias == nil {
 		r.reflectAlias = r.nameFor("reflect")

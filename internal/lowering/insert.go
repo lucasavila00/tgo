@@ -34,7 +34,7 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 // LowerPropagations replaces typed marker calls with calls, error checks, and returns.
 // It returns Go file contents and reports an error if a selected operation was not replaced.
 func (s *Source) LowerPropagations(operations map[string]Propagation) (map[string][]byte, error) {
-	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), lowered: make(map[ast.Expr]bool)}
+	r := &rewrite{source: s, names: make(map[string]bool), propagations: make(map[ast.Expr]Propagation), conditionals: s.checked.Conditionals, lowered: make(map[ast.Expr]bool)}
 	for site, expression := range s.expressions {
 		call, ok := expression.(*ast.CallExpr)
 		if !ok {
@@ -60,7 +60,12 @@ func (s *Source) LowerPropagations(operations map[string]Propagation) (map[strin
 	for _, site := range s.Sites {
 		expression := s.expressions[site]
 		if _, expected := r.propagations[expression]; expected && !r.lowered[expression] {
-			return nil, fmt.Errorf("%s: propagation was not lowered", s.Package.Fset.Position(expression.Pos()))
+			return nil, fmt.Errorf("%s: propagation was not lowered", s.checked.Fset.Position(expression.Pos()))
+		}
+	}
+	for call := range r.conditionals {
+		if !r.lowered[call] {
+			return nil, fmt.Errorf("%s: if expression was not lowered", s.checked.Fset.Position(call.Pos()))
 		}
 	}
 	// Keep only marker declarations that the type checker still needs.
@@ -114,6 +119,11 @@ func (r *rewrite) contains(node ast.Node) bool {
 			return true
 		}
 	}
+	for expression := range r.conditionals {
+		if contains(node, expression) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -125,11 +135,12 @@ func (r *rewrite) isTarget(expression ast.Expr) bool {
 		return true
 	}
 	_, ok := r.propagations[expression]
-	return ok
+	call, _ := expression.(*ast.CallExpr)
+	return ok || r.conditionals[call] != nil
 }
 
 func (r *rewrite) emit() (map[string][]byte, error) {
-	for _, file := range r.source.Package.Syntax {
+	for _, file := range r.source.checked.Syntax {
 		ast.Inspect(file, func(node ast.Node) bool {
 			if id, ok := node.(*ast.Ident); ok {
 				r.names[id.Name] = true
@@ -138,7 +149,7 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 		})
 	}
 	output := make(map[string][]byte)
-	for _, file := range r.source.Package.Syntax {
+	for _, file := range r.source.checked.Syntax {
 		r.extraImports = nil
 		r.extraDeclarations = nil
 		r.formatAlias = nil
@@ -159,10 +170,10 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 			copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)
 		}
 		var buf bytes.Buffer
-		if err := format.Node(&buf, r.source.Package.Fset, copy); err != nil {
+		if err := format.Node(&buf, r.source.checked.Fset, copy); err != nil {
 			return nil, err
 		}
-		output[r.source.Package.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
+		output[r.source.checked.Fset.PositionFor(file.Pos(), false).Filename] = buf.Bytes()
 	}
 	return output, nil
 }
