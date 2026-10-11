@@ -100,3 +100,20 @@ Go and handwritten Go references with the same expected output. They check
 branch selection, statement order, types, scope, jumps, defer, and early returns.
 Builtin cases check typed `min`, `max`, and `complex` arguments and branches
 that return before the builtin can run. Checker tests reject branch overflow.
+
+## Frontend parsing cost
+
+`BenchmarkConditionalParsing` uses independent statements and explicitly
+parenthesized nested values. Go 1.27.1 on an AMD EPYC-Turin measured:
+
+| Input | Previous preparation | Batched preparation |
+| --- | --- | --- |
+| 32 independent values | 2.54 ms; 2.56 MB | 0.337 ms; 0.241 MB |
+| 512 independent values | 574 ms; 577 MB | 5.14 ms; 4.06 MB |
+| 512 nested values | 804 ms; 545 MB | 888 ms; 621 MB |
+
+Independent operands share one preparation edit and one complete-file parse.
+Nested operands still require repeated preparation and subtree parsing; their
+worst-case cost remains quadratic. Tests cover mixed ordinary statements,
+function-literal headers, initializers, else-if branches, labels, map values,
+slice bounds, nested operands, and original source positions.

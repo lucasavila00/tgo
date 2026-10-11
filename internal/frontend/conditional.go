@@ -63,6 +63,8 @@ func ParseFile(fset *token.FileSet, filename, sourceName string, input []byte, u
 	}
 	source := prepareSource(sourceName, input, used, result.Propagations)
 	for {
+		for source.prepareConditionals(filename, original, used, result.Conditionals) {
+		}
 		temporary := token.NewFileSet()
 		file, err := parser.ParseFile(temporary, filename, source.text, parser.ParseComments|parser.AllErrors|parser.SkipObjectResolution)
 		if err == nil {
@@ -181,21 +183,9 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string) i
 }
 
 func (s *mappedSource) wrapConditional(filename string, original *token.File, start int, used map[string]bool, conditionals map[string]token.Position) error {
-	const prefix = "package p; func f() { "
-	statementSet := token.NewFileSet()
-	statementFile, _ := parser.ParseFile(statementSet, filename, prefix+s.text[start:]+"\n}", parser.AllErrors|parser.SkipObjectResolution)
-	var conditional *ast.IfStmt
-	if statementFile != nil && len(statementFile.Decls) != 0 {
-		if fn, ok := statementFile.Decls[0].(*ast.FuncDecl); ok && fn.Body != nil && len(fn.Body.List) != 0 {
-			conditional, _ = fn.Body.List[0].(*ast.IfStmt)
-		}
-	}
-	if conditional == nil || conditional.Body == nil || !conditional.Body.Rbrace.IsValid() {
+	end := conditionalEnd(filename, s.text, start, sourceTokens(s.text))
+	if end < 0 {
 		return fmt.Errorf("%s: invalid if expression", original.Position(original.Pos(s.offsets[start])))
-	}
-	end := start + statementSet.Position(conditional.End()).Offset - len(prefix)
-	if end <= start || end > len(s.text) {
-		return fmt.Errorf("%s: incomplete if expression", original.Position(original.Pos(s.offsets[start])))
 	}
 	name := ""
 	for n := 1; ; n++ {

@@ -104,3 +104,17 @@ file selection; line directives decide diagnostic locations.
 
 See the [correctness report](correctness.md) for behavior checks and the
 [user guide](../../guide/transpiler.md) for commands and API use.
+
+## Prepare conditional syntax
+
+Go's parser owns headers and statement grammar. The frontend first finds clear
+expression operands, such as `return if` and `use(if ...)`. It checks each
+conditional's bounded syntax fragment, then wraps independent operands together
+in one buffer edit. The complete file is parsed after preparation. Token nesting
+keeps inner operands ahead of their containing expressions.
+
+A colon can introduce a label, map value, case body, or slice bound. For these
+ambiguous positions, the frontend uses the parsed AST to identify an expression
+operand. Nested expressions can need several preparation rounds. This preserves
+Go's grammar and source positions; deeply nested syntax still costs more than
+independent expressions.

@@ -143,3 +143,48 @@ func checkCopy(ok bool) {
 		t.Fatalf("if values: %d, want 5", len(parsed.Conditionals))
 	}
 }
+
+func TestConditionalBatchGrammar(t *testing.T) {
+	input := `package p
+func f(ok bool, xs []int) {
+again:
+ if ok { use(1); if !ok { goto again } }
+ use(if ready := func() bool { if ok { return true }; return false }; ready() {
+  (if ok { 1 } else { 2 })
+ } else if func() bool { return !ok }() {
+  3
+ } else { 4 })
+ use(xs[0:if ok { 1 } else { 2 }])
+ mapping := map[string]int{"value": if ok { 5 } else { 6 }}
+ _ = mapping
+}
+`
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(parsed.Conditionals) != 4 {
+		t.Fatalf("if values: %d, want 4", len(parsed.Conditionals))
+	}
+	for _, position := range parsed.Conditionals {
+		if input[position.Offset:position.Offset+2] != "if" {
+			t.Fatalf("source position: %v", position)
+		}
+	}
+}
+
+func TestConditionalBatchIndependentOperands(t *testing.T) {
+	var source strings.Builder
+	source.WriteString("package p\nfunc f(ok bool) {\n")
+	for i := 0; i < 64; i++ {
+		source.WriteString("if ok { use(0) }; use(if ok { 1 } else { 2 });\n")
+	}
+	source.WriteString("}\n")
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(source.String()), make(map[string]bool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(parsed.Conditionals) != 64 {
+		t.Fatalf("if values: %d, want 64", len(parsed.Conditionals))
+	}
+}
