@@ -39,8 +39,21 @@ use, snapshots, references, and CI. Its README is handwritten because the packag
 has only test files. The separate fuzz guide covers campaign commands and
 failure investigation.
 
-Keep one file per decision under `docs/adr/`: decision, reason, consequences,
-and validation. Link to current package explanations instead of copying them.
+For each new ADR, copy [the template](../adr/template/what.md) into
+`docs/adr/<decision>/` with three files:
+
+- `what.md`: the problem, proposed behavior, examples, and language rules.
+- `how.md`: the implementation choice, data flow, and reasons for that choice.
+- `proof.md`: concrete tests and expected results that verify the behavior.
+
+Use the [HOW template](../adr/template/how.md) and
+[PROOF template](../adr/template/proof.md) for the other two files.
+Keep each file at most 200 words, including headings and code. Replace all
+placeholders and remove sections that do not apply. Use simple English and
+small examples. Define necessary terms. Explain decisions rather than listing
+code details. Link to package explanations instead of repeating them.
+Keep proof about project behavior; execution limits of an agent or machine do
+not belong in the decision. Existing ADRs retain their paths until revised.
 [Performance](../performance.md) records historical measurements and conditions.
 The language vision describes intended features, not only implemented features.
 
