@@ -5,7 +5,8 @@ Do not retain the repeated helper-checking loop as a second path.
 
 ## Compilation stages
 
-1. Find the module and prepare a separate work directory. Original source
+1. Find the module and prepare source and generated-Go views as defined by the
+   [no-copy compilation decision](../no-copy-compilation/how.md). Original source
    controls compilation; matching generated snapshots cannot affect checking.
 2. Use `go/packages` for build selection, test package variants, import metadata,
    and compiled dependency exports. This stage does not check TGo feature rules.
@@ -16,8 +17,8 @@ Do not retain the repeated helper-checking loop as a second path.
    checked packages by package identity, including test variants. Import compiled
    dependencies with the matching private reader.
 5. Pass checked syntax, types, bindings, scopes, and operation records to the
-   existing expression lowerer. Finish source checking before writing lowered
-   files.
+   existing expression lowerer. Finish source checking before building the
+   generated-Go view.
 6. Check the emitted module with stock Go checking, then return file contents.
    The caller writes the output.
 
