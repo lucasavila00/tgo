@@ -1,0 +1,35 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - revive
+    - funlen
+  settings:
+    staticcheck:
+      checks: ["SA*"]
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: var-naming
+        - name: error-strings
+        - name: error-return
+    funlen:
+      lines: 100
+      statements: -1
+      ignore-comments: false
+  exclusions:
+    paths:
+      - tests/testdata
+
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    paths:
+      - tests/testdata
