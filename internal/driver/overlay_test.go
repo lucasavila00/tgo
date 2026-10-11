@@ -2,8 +2,10 @@ package driver
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -46,7 +48,11 @@ func TestCompileOverlayRemovesTemporaryFiles(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			func() { defer func() { _ = recover() }(); Compile(root) }()
+			var failure any
+			func() { defer func() { failure = recover() }(); Compile(root) }()
+			if strings.Contains(input, "missing") != (failure != nil) {
+				t.Fatalf("compilation result: %v", failure)
+			}
 			entries, err := os.ReadDir(temporary)
 			if err != nil {
 				t.Fatal(err)
@@ -55,5 +61,28 @@ func TestCompileOverlayRemovesTemporaryFiles(t *testing.T) {
 				t.Fatalf("temporary files remain: %v", entries)
 			}
 		})
+	}
+}
+
+func TestGeneratedOverlayChecksReplacement(t *testing.T) {
+	root := t.TempDir()
+	source := []byte("package p\nvar Value int = 1\n")
+	path := filepath.Join(root, "main.go")
+	for name, content := range map[string][]byte{"go.mod": []byte("module example.com/generatedoverlay\n\ngo 1.27.1\n"), "main.go": source} {
+		if err := os.WriteFile(filepath.Join(root, name), content, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var failure any
+	func() {
+		defer func() { failure = recover() }()
+		checkGeneratedOverlay(root, map[string][]byte{path: []byte("package p\nvar Value int = \"wrong\"\n")})
+	}()
+	if failure == nil || !strings.Contains(fmt.Sprint(failure), "generated Go:") {
+		t.Fatalf("generated overlay error: %v", failure)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(got, source) {
+		t.Fatalf("changed source after generated error: %v", err)
 	}
 }
