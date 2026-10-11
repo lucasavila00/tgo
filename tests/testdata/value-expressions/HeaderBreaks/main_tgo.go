@@ -263,6 +263,75 @@ again:
 	return attempts
 }
 
+func rangeBreak(skip bool) string {
+	trace := ""
+	{
+		{
+			var tgo25 []int
+
+			if skip {
+				trace += "C"
+				goto tgo24
+
+			} else {
+				trace += "C"
+				tgo25 = []int{1, 2}
+			}
+		choice:
+			for _, value := range tgo25 {
+				trace += fmt.Sprint(value)
+				if value == 2 {
+					break choice
+				}
+			}
+		}
+	tgo24:
+	}
+	return trace + "E"
+}
+
+func rangeBareBreak(skip bool) string {
+	trace := ""
+	{
+		{
+			var tgo27 []int
+			if skip {
+				trace += "C"
+				goto tgo26
+
+			} else {
+				trace += "C"
+				tgo27 = []int{1, 2}
+			}
+			for range tgo27 {
+				trace += "B"
+				break
+			}
+		}
+	tgo26:
+	}
+	return trace + "E"
+}
+
+func rangeOuterContinue() int {
+	total := 0
+outer:
+	for i := 0; i < 3; i++ {
+		{
+			var tgo28 []int
+			if i == 0 {
+				continue outer
+			} else {
+				tgo28 = []int{2}
+			}
+			for _, value := range tgo28 {
+				total += value
+			}
+		}
+	}
+	return total
+}
+
 func main() {
 	for _, skip := range []bool{false, true} {
 		wantInit, wantTag, wantCase, wantType, wantSend := "IBE", "TBE", "CBFE", "T1E", "CVB1"
@@ -272,12 +341,19 @@ func main() {
 		if switchInit(skip) != wantInit || switchTag(skip) != wantTag || switchCase(skip) != wantCase || typeGuard(skip) != wantType || selectSend(skip) != wantSend {
 			panic("header break")
 		}
+		wantRange, wantBareRange := "C12E", "CBE"
+		if skip {
+			wantRange, wantBareRange = "CE", "CE"
+		}
+		if rangeBreak(skip) != wantRange || rangeBareBreak(skip) != wantBareRange {
+			panic("range collection break")
+		}
 		values := selectStore(skip)
 		if skip && (values[0] != 0 || values[1] != 0) || !skip && (values[0] != 5 || values[1] != 1) {
 			panic("selected store break")
 		}
 	}
-	if continueReceive() != 11 || restart() != 2 {
+	if continueReceive() != 11 || restart() != 2 || rangeOuterContinue() != 4 {
 		panic("other jump targets")
 	}
 	fmt.Println("ok")

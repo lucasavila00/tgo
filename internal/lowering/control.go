@@ -11,13 +11,14 @@ import (
 func integer(value int) ast.Expr { return &ast.BasicLit{Kind: token.INT, Value: strconv.Itoa(value)} }
 
 func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
+	exit := r.prepareBreakExit(s, s.X)
 	copy := *s
 	copy.Body = r.block(s.Body)
 	before, refs := r.expression(s.X)
 	copy.X = refs[0]
 	if s.Tok == token.ASSIGN && (r.contains(s.Key) || r.contains(s.Value)) {
 		if value := r.source.checked.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
-			return r.integerRange(s, &copy, before)
+			return r.withBreakExit(s, &copy, r.integerRange(s, &copy, before), exit)
 		}
 		var stores []ast.Stmt
 		var lhs, rhs []ast.Expr
@@ -43,7 +44,7 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 		stores = append(stores, r.orderedStores(lhs, rhs, token.ASSIGN)...)
 		copy.Body = &ast.BlockStmt{List: append(stores, copy.Body)}
 	}
-	return append(before, &copy)
+	return r.withBreakExit(s, &copy, append(before, &copy), exit)
 }
 
 func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {

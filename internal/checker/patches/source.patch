@@ -814,6 +814,14 @@
  		// spec: "The init statement may be a short variable
  		// declaration, but the post statement must not."
  		if s, _ := s.Post.(*ast.AssignStmt); s != nil && s.Tok == token.DEFINE {
+@@ -855,6 +890,7 @@
+ 
+ 	case *ast.RangeStmt:
+ 		inner |= breakOk | continueOk
++		check.statementContext = inner
+ 		// s.TokPos is invalid when there are no range variables (for range x {});
+ 		// noNewVarPos is unused in that case, but inNode asserts a valid pos.
+ 		tokPos := s.TokPos
 --- a/types/struct.go
 +++ b/types/struct.go
 @@ -7,7 +7,7 @@
