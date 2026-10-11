@@ -30,7 +30,7 @@ func (r *rewrite) function(node ast.Node, typ *ast.FuncType, body *ast.BlockStmt
 	return typ, output
 }
 
-// prepareReturns obtains typed zero results without spelling their types in the body.
+// prepareReturns saves zero results at function entry.
 func (r *rewrite) prepareReturns(original *ast.FuncType) (*ast.FuncType, []ast.Stmt) {
 	if original.Results == nil {
 		panic("propagation requires an error return")
@@ -51,7 +51,7 @@ func (r *rewrite) prepareReturns(original *ast.FuncType) (*ast.FuncType, []ast.S
 				clone.Names[j] = name
 			}
 			value := r.name()
-			prefix = append(prefix, variable(value, r.temporaryType(r.source.Package.TypesInfo.TypeOf(field.Type), field.Type), name))
+			prefix = append(prefix, variable(value, r.temporaryTypeAt(r.source.Package.TypesInfo.TypeOf(field.Type), field.Type, original.End()), name))
 			r.frame.values = append(r.frame.values, value)
 		}
 		results.List[i] = &clone

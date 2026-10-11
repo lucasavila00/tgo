@@ -39,7 +39,7 @@ func TestTypedTemporaryRejected(t *testing.T) {
 }
 
 func TestTypedTemporaryReference(t *testing.T) {
-	for _, name := range []string{"ContextualTypes", "VariadicGeneric", "TypeNameIdentity"} {
+	for _, name := range []string{"ContextualTypes", "VariadicGeneric", "TypeNameIdentity", "ReturnTypeScope"} {
 		t.Run(name, func(t *testing.T) { checkTypedTemporaryReference(t, name) })
 	}
 }

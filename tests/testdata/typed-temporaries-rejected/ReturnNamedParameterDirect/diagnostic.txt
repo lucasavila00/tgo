@@ -1,0 +1,1 @@
+TGo: main.tgo:9:12: cannot name type example.com/returnscope.Result in a generated typed temporary: the source hides the type name Result; expose the type with an accessible name

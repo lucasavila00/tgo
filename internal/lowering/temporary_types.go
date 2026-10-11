@@ -30,6 +30,10 @@ func (r *rewrite) typeOf(expr ast.Expr) types.Type {
 
 // temporaryType names the checked type without using a hidden source binding.
 func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
+	return r.temporaryTypeAt(typ, original, original.Pos())
+}
+
+func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position token.Pos) ast.Expr {
 	var problem string
 	unsafePointer := false
 	parameterNames := make(map[*types.TypeParam]string)
@@ -44,8 +48,8 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 			}
 			checkName(types.Universe.Lookup(types.Default(t).String()).(*types.TypeName))
 		case *types.TypeParam:
-			scope := r.source.Package.Types.Scope().Innermost(original.Pos())
-			_, resolved := scope.LookupParent(t.Obj().Name(), original.Pos())
+			scope := r.source.Package.Types.Scope().Innermost(position)
+			_, resolved := scope.LookupParent(t.Obj().Name(), position)
 			if resolved != t.Obj() {
 				parameterNames[t] = r.parameterAlias(t).Name
 			}
@@ -106,8 +110,8 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 			}
 			return
 		}
-		scope := r.source.Package.Types.Scope().Innermost(original.Pos())
-		_, resolved := scope.LookupParent(object.Name(), original.Pos())
+		scope := r.source.Package.Types.Scope().Innermost(position)
+		_, resolved := scope.LookupParent(object.Name(), position)
 		if resolved == object {
 			return
 		}
