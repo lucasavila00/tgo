@@ -29,21 +29,22 @@ func writeReturnChecks(t *testing.T, dir string, site Site) {
 	}
 	var checks strings.Builder
 	checks.WriteString(`package proof
-import("testing";"reflect";"errors")
+import("testing";"reflect";"errors";"fmt")
 var proofVisits,proofExit int
 func TestReturn(t *testing.T){sentinel:=errors.New("sentinel")
 `)
 	for _, input := range inputs {
 		for visit := 1; visit <= 2; visit++ {
 			fmt.Fprintf(&checks, `t.Run(%q,func(t *testing.T){Trace=nil;Reset(%t);proofVisits=0;proofExit=%d
-var result error;panicked:=false
-func(){defer func(){if recover()!=nil{panicked=true}}();result=Case%s(sentinel)}()
+var result error;var panicValue any;panicked:=false
+func(){defer func(){panicValue=recover();panicked=panicValue!=nil}();result=Case%s(sentinel)}()
 expected,returned,wantPanic:=ReferenceReturn(%q,%d,%d,%q,%t,%d)
 if !reflect.DeepEqual(Trace,expected){t.Fatalf("trace: %%v, want %%v",Trace,expected)}
 if panicked!=wantPanic{t.Fatalf("panic: %%v, want %%v",panicked,wantPanic)}
+if fmt.Sprint(panicValue)!=ReferencePanic(%q,wantPanic){t.Fatalf("panic value: %%v",panicValue)}
 if returned {if result!=sentinel {t.Fatalf("result: %%v, want sentinel identity",result)}} else if result!=nil {t.Fatalf("result: %%v, want nil",result)}
 })
-`, fmt.Sprintf("%s/%t/%d", input.Name, input.Reached, visit), input.Reached, visit, input.Name, filepath.Base(site.File), site.Start, site.End, input.Name, input.Reached, visit)
+`, fmt.Sprintf("%s/%t/%d", input.Name, input.Reached, visit), input.Reached, visit, input.Name, filepath.Base(site.File), site.Start, site.End, input.Name, input.Reached, visit, input.Name)
 		}
 	}
 	checks.WriteString("}\n")

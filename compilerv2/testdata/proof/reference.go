@@ -301,3 +301,13 @@ func ReferenceReturn(file string, start, end int, name string, reached bool, vis
 	}
 	return trace, true, false
 }
+
+func ReferencePanic(name string, panicked bool) string {
+	if !panicked {
+		return "<nil>"
+	}
+	if name == "AssignmentPanic" {
+		return "runtime error: index out of range [1] with length 1"
+	}
+	panic("missing panic reference")
+}

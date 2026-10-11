@@ -154,9 +154,9 @@ func TestNeutral(t *testing.T) {v:=Value(1);if int(v)!=1 {t.Fatal(v)};Use(v);if 
 		t.Fatal(err)
 	}
 	var checks strings.Builder
-	checks.WriteString("package proof\nimport (\"testing\";\"reflect\";\"errors\")\nvar proofMarks []int\nfunc proofMark(){proofMarks=append(proofMarks,len(Trace))}\nfunc TestNeutral(t *testing.T) {sentinel:=errors.New(\"sentinel\")\n")
+	checks.WriteString("package proof\nimport (\"testing\";\"reflect\";\"errors\";\"fmt\")\nvar proofMarks []int\nfunc proofMark(){proofMarks=append(proofMarks,len(Trace))}\nfunc TestNeutral(t *testing.T) {sentinel:=errors.New(\"sentinel\")\n")
 	for _, input := range inputs {
-		fmt.Fprintf(&checks, "t.Run(%q,func(t *testing.T){Trace=nil;proofMarks=nil;Reset(%t);var result error;panicked:=false;func(){defer func(){if recover()!=nil {panicked=true}}();result=Case%s(sentinel)}();if panicked!=%t {t.Fatalf(\"panic: %%v\",panicked)};if result!=nil {t.Fatalf(\"result: %%v\",result)};if !reflect.DeepEqual(Trace,Reference(%q,%t)){t.Fatalf(\"trace: %%v, want %%v\",Trace,Reference(%q,%t))};t.Logf(\"marker positions: %%v\",proofMarks)})\n", fmt.Sprintf("%s/%t", input.Name, input.Reached), input.Reached, input.Name, input.Panic, input.Name, input.Reached, input.Name, input.Reached)
+		fmt.Fprintf(&checks, "t.Run(%q,func(t *testing.T){Trace=nil;proofMarks=nil;Reset(%t);var result error;var panicValue any;panicked:=false;func(){defer func(){panicValue=recover();panicked=panicValue!=nil}();result=Case%s(sentinel)}();if panicked!=%t {t.Fatalf(\"panic: %%v\",panicked)};if fmt.Sprint(panicValue)!=ReferencePanic(%q,%t) {t.Fatalf(\"panic value: %%v\",panicValue)};if result!=nil {t.Fatalf(\"result: %%v\",result)};if !reflect.DeepEqual(Trace,Reference(%q,%t)){t.Fatalf(\"trace: %%v, want %%v\",Trace,Reference(%q,%t))};t.Logf(\"marker positions: %%v\",proofMarks)})\n", fmt.Sprintf("%s/%t", input.Name, input.Reached), input.Reached, input.Name, input.Panic, input.Name, input.Panic, input.Name, input.Reached, input.Name, input.Reached)
 	}
 	fmt.Fprintf(&checks, "for _,input:=range []struct{name string;reached bool}{")
 	for _, input := range inputs {
