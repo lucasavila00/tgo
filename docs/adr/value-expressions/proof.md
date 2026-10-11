@@ -9,7 +9,7 @@ and `expect.json` (results, ordered effects, and expected errors).
 | --- | --- |
 | `if` | Both branches, nested `else if`, initializer scope |
 | `ordering` | Calls, operators, literals, assignment targets, skipped `&&`/`||` |
-| `branches` | Local bindings, shadowing, final calls, nested expressions |
+| `branches` | Local bindings, outer names read before `:=` binds, final calls, nested expressions |
 | `initialization` | Package dependencies, declaration order, selected effects |
 | `types` | Named types, interfaces, constants, nil, generics, contextual types |
 | `control` | Return, panic, all branches terminate, loop continue, labels, goto, enclosing break |

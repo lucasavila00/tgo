@@ -36,15 +36,16 @@ references visible in its body so Go retains initialization dependencies. Keep
 declaration order and evaluate branch effects only when selected. There is no
 surrounding function return or defer scope to cross.
 
-For `label := if active { "on" } else { "off" }`, generated Go includes:
+For `label := if active { "on" } else { "off" }`, generated Go uses a fresh name:
 
 ```go
-var label string
+var tgoResult string
 if active {
-    label = "on"
+    tgoResult = "on"
 } else {
-    label = "off"
+    tgoResult = "off"
 }
+label := tgoResult
 ```
 
 The driver connects frontend records, type checking, and lowering. Frontend and
