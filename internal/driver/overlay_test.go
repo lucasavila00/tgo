@@ -34,3 +34,26 @@ func TestPrepareModuleUsesOnlySourceOverlays(t *testing.T) {
 		}
 	}
 }
+
+func TestCompileOverlayRemovesTemporaryFiles(t *testing.T) {
+	for _, input := range []string{"package p\nvar Value = 1\n", "package p\nvar Value = missing\n"} {
+		t.Run(input, func(t *testing.T) {
+			root := t.TempDir()
+			temporary := t.TempDir()
+			t.Setenv("TMPDIR", temporary)
+			for name, content := range map[string]string{"go.mod": "module example.com/cleanup\n\ngo 1.27.1\n", "main.tgo": input} {
+				if err := os.WriteFile(filepath.Join(root, name), []byte(content), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			func() { defer func() { _ = recover() }(); Compile(root) }()
+			entries, err := os.ReadDir(temporary)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 0 {
+				t.Fatalf("temporary files remain: %v", entries)
+			}
+		})
+	}
+}

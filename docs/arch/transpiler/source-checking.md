@@ -46,3 +46,37 @@ go test ./internal/driver -run '^$' -bench 'BenchmarkCompile.*Propagations' -ben
 
 The baseline is main commit `8d80a62` with the same benchmark file. These results
 show this workload's cost; future changes can use the same cases for comparison.
+
+
+## Compile without a module copy
+
+Both package loads run in the original module. The first overlay maps each
+TGo input to its generated Go path. The private checker reads those TGo bytes
+from memory and ordinary Go from disk. The second overlay supplies emitted Go
+for the final check. A file excluded by build rules has an ignored overlay,
+so its stale snapshot cannot become source. Source files stay unchanged.
+
+Go writes each overlay entry to a temporary backing file and removes it after
+loading. Assets and ordinary input files are not copied. Local replacements
+remain relative during checking; returned `go.mod` uses absolute replacement
+paths so the caller can write output elsewhere.
+
+Warm-cache comparison with copy-based commit `8ba19b9`: Go 1.27.1, Linux amd64,
+`GOMAXPROCS=4`, three one-call samples after a warm-up. The table shows medians.
+Allocations exclude child processes.
+
+| Input | Copy | Overlay | Allocated bytes copy / overlay |
+| --- | ---: | ---: | ---: |
+| 32 propagation calls | 35 ms | 41 ms | 1.47 MB / 1.50 MB |
+| Two packages and a test file | 684 ms | 641 ms | 191 MB / 191 MB |
+| If value with propagation, no asset | 39 ms | 38 ms | 427 KB / 428 KB |
+| Same source with a 32 MiB asset | 164 ms | 138 ms | 67.5 MB / 67.6 MB |
+
+This removes asset writes, not the API's asset reads. The overlay test checks
+that a 1 MiB asset adds no overlay entry. Thus its temporary payload is zero;
+the copy wrote the full asset. Both paths use one metadata load and one final
+Go load. Small-input times vary and show no general speed increase.
+
+`BenchmarkCompileAssets` keeps the asset comparison reproducible. Tests check
+embed and cgo headers after output is written, excluded snapshots, relative
+replacements, unchanged source on failure, and temporary-file cleanup.
