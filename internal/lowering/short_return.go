@@ -2,6 +2,7 @@ package lowering
 
 import (
 	"go/ast"
+	"go/token"
 
 	"github.com/lucasavila00/tgo/internal/checker/types"
 	"github.com/lucasavila00/tgo/internal/frontend"
@@ -16,10 +17,11 @@ func (r *rewrite) shortReturnStatement(statement *ast.ReturnStmt, record fronten
 			r.frame.prefix = r.prepareReturns(r.frame.typ)
 			r.frame.prepared = true
 		}
-		values = append(append([]ast.Expr(nil), r.frame.values...), values...)
+		zeroValues := append([]ast.Expr(nil), r.frame.values...)
+		values = append(zeroValues, values...)
 	} else {
 		if len(values) == 1 && r.resultCount(call.Args[0]) > 1 {
-			saved, refs := r.save(values[0])
+			saved, refs := r.shortReturnTuple(values[0], call.Args[0])
 			before = append(before, saved...)
 			values = refs
 		}
@@ -39,6 +41,13 @@ func (r *rewrite) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Exp
 	if object == types.Universe.Lookup("nil") {
 		return nil, ast.NewIdent("nil")
 	}
+	results := r.shortReturnResults()
+	last := results.At(results.Len() - 1).Type()
+	zero := r.name()
+	return []ast.Stmt{variable(zero, r.temporaryType(last, statement.Results[0]), nil)}, zero
+}
+
+func (r *rewrite) shortReturnResults() *types.Tuple {
 	var signature *types.Signature
 	switch function := r.frame.function.(type) {
 	case *ast.FuncDecl:
@@ -46,7 +55,20 @@ func (r *rewrite) shortReturnNil(statement *ast.ReturnStmt) ([]ast.Stmt, ast.Exp
 	case *ast.FuncLit:
 		signature = r.source.checked.TypesInfo.TypeOf(function).(*types.Signature)
 	}
-	last := signature.Results().At(signature.Results().Len() - 1).Type()
-	zero := r.name()
-	return []ast.Stmt{variable(zero, r.temporaryType(last, statement.Results[0]), nil)}, zero
+	return signature.Results()
+}
+
+// shortReturnTuple uses declared result types, so private callee types need no name.
+func (r *rewrite) shortReturnTuple(value, original ast.Expr) ([]ast.Stmt, []ast.Expr) {
+	results := r.shortReturnResults()
+	var statements []ast.Stmt
+	var references []ast.Expr
+	for i := 0; i < results.Len()-1; i++ {
+		name := r.name()
+		resultType := r.temporaryType(results.At(i).Type(), original)
+		statements = append(statements, variable(name, resultType, nil))
+		references = append(references, name)
+	}
+	statements = append(statements, &ast.AssignStmt{Lhs: references, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+	return statements, references
 }

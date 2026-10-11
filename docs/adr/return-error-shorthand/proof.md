@@ -5,9 +5,9 @@
 `TestReturnErrorShorthand` compiles `.tgo` fixtures, checks committed Go snapshots,
 and runs output and independent Go references against expected output.
 
-Eight groups cover all three forms, every zero-value category, generic and
+Nine groups cover all three forms, every zero-value category, generic and
 concrete error types, typed nil conversions, tuple calls, contextual shifts,
-operand order, and propagation. Control cases cover defers, panics, jumps,
+operand order, propagation, and imported private tuple types. Control cases cover defers, panics, jumps,
 early returns, and skipped operands. Function literals have their own return
 signatures, including inside package initializers and unevaluated operands.
 

@@ -51,8 +51,8 @@ func pair() (int, string) {
 
 func multiple() (any, any, error) {
 	{
-		var tgo7 int
-		var tgo8 string
+		var tgo7 any
+		var tgo8 any
 		tgo7, tgo8 = pair()
 		return tgo7, tgo8, nil
 	}
