@@ -12,6 +12,7 @@ import (
 
 func TestInsertReturn(t *testing.T) {
 	cases := []struct{ name, code, target, want string }{
+		{"omitted map key", `type Bad struct{Value any};func bad()any{fmt.Print("B");return []int{1}};func run(err error)error{_=map[Bad]int{{bad()}:right()};return nil};func main(){fmt.Print(run(failure)==failure)}`, "{bad()}", "Btrue"},
 		{"call", `func run(err error) error { use(left(),right()); return nil }; func main() { fmt.Print(run(failure)==failure) }`, "right()", "LRtrue"},
 		{"short circuit reached", `func run(err error) error { useBool(yes() && yes()); return nil }; func main() { fmt.Print(run(failure)==failure) }`, "yes() && yes()", "YYtrue"},
 		{"short circuit skipped", `func run(err error) error { useBool(no() && yes()); return nil }; func main() { fmt.Print(run(failure)==failure) }`, "yes()", "NBfalse"},
