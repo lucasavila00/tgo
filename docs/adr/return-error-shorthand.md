@@ -29,7 +29,8 @@ statement at a newline.
 
 Lower to explicit Go returns with fresh typed locals. Evaluate operands once
 in Go's required order. Preserve named-result assignment before defers,
-enclosing returns, and jumps. Return errors unchanged, including typed nil conversions.
+enclosing returns, and jumps. Return errors unchanged, including typed nil
+conversions.
 
 Compare generated programs with independent Go references for values, effects,
 error identity, defers, generic types, and multiple-result calls. Check invalid
