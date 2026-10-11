@@ -11,7 +11,7 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 	var before []ast.Stmt
 	commChanged := false
 	for _, statement := range s.Body.List {
-		if contains(statement.(*ast.CommClause).Comm, r.target) {
+		if r.contains(statement.(*ast.CommClause).Comm) {
 			commChanged = true
 		}
 	}

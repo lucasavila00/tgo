@@ -7,7 +7,7 @@ import (
 )
 
 func (r *rewrite) block(body *ast.BlockStmt) *ast.BlockStmt {
-	if body == nil || (!contains(body, r.target) && !r.hasMappedBranch(body)) {
+	if body == nil || (!r.contains(body) && !r.hasMappedBranch(body)) {
 		return body
 	}
 	copy := *body
@@ -26,7 +26,7 @@ func (r *rewrite) statement(statement ast.Stmt) []ast.Stmt {
 			return []ast.Stmt{&copy}
 		}
 	}
-	if !contains(statement, r.target) && !r.hasMappedBranch(statement) {
+	if !r.contains(statement) && !r.hasMappedBranch(statement) {
 		return []ast.Stmt{statement}
 	}
 	output := r.statementInner(statement)
@@ -76,7 +76,7 @@ func (r *rewrite) statementInner(statement ast.Stmt) []ast.Stmt {
 		}
 		copy := *s
 		copy.X = refs[0]
-		if s.X == r.target {
+		if r.isTarget(s.X) {
 			// A completed expression statement has no further operation.
 			for _, ref := range refs {
 				before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{ref}})
@@ -289,7 +289,7 @@ func (r *rewrite) hasMappedBranch(node ast.Node) bool {
 }
 
 func (r *rewrite) header(statement ast.Stmt) []ast.Stmt {
-	if !contains(statement, r.target) {
+	if !r.contains(statement) {
 		return []ast.Stmt{statement}
 	}
 	return r.statementInner(statement)

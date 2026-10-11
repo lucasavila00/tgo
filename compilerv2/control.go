@@ -11,18 +11,18 @@ func integer(value int) ast.Expr { return &ast.BasicLit{Kind: token.INT, Value: 
 
 func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 	copy := *s
-	if value := r.source.Package.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int && constant.Sign(value) <= 0 && contains(s, r.target) {
-		target := r.target
-		r.target = nil
+	if value := r.source.Package.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int && constant.Sign(value) <= 0 && r.contains(s) {
+		suppressed := r.suppressed
+		r.suppressed = true
 		copy.Body = r.block(s.Body)
-		r.target = target
+		r.suppressed = suppressed
 		r.inserted = true
 		return []ast.Stmt{&copy}
 	}
 	copy.Body = r.block(s.Body)
 	before, refs := r.expression(s.X)
 	copy.X = refs[0]
-	if s.Tok == token.ASSIGN && (contains(s.Key, r.target) || contains(s.Value, r.target)) {
+	if s.Tok == token.ASSIGN && (r.contains(s.Key) || r.contains(s.Value)) {
 		if value := r.source.Package.TypesInfo.Types[s.X].Value; value != nil && value.Kind() == constant.Int {
 			return r.integerRange(s, &copy, before)
 		}
@@ -61,7 +61,7 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 	for _, statement := range s.Body.List {
 		clause := statement.(*ast.CaseClause)
 		for _, expr := range clause.List {
-			if contains(expr, r.target) {
+			if r.contains(expr) {
 				changedCases = true
 			}
 		}

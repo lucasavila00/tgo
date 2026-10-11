@@ -2,7 +2,7 @@ name: Compiler v2
 
 on:
   push:
-    branches: [feat/compilerv2-expression-lowering, main]
+    branches: [feat/compilerv2-expression-lowering, feat/compilerv2-propagation, main]
     paths: ['compilerv2/**', '.github/workflows/compilerv2.yml']
   pull_request:
     paths: ['compilerv2/**', '.github/workflows/compilerv2.yml']

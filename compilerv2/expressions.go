@@ -19,7 +19,10 @@ type rewrite struct {
 	inserted          bool
 	labels            map[string]string
 	suppressedRoot    ast.Expr
-	origins           map[ast.Expr]ast.Expr
+	propagations      map[ast.Expr]propagation
+	frame             *returnFrame
+	formatAlias       *ast.Ident
+	suppressed        bool
 	extraImports      []*ast.ImportSpec
 	extraDeclarations []ast.Decl
 	zeroSequence      *ast.Ident
@@ -27,9 +30,10 @@ type rewrite struct {
 	iterAlias         *ast.Ident
 	mapAlias          *ast.Ident
 	sliceAlias        *ast.Ident
-	reflectAlias      *ast.Ident
+	origins           map[ast.Expr]ast.Expr
 	parameterAliases  map[*types.TypeParam]*ast.Ident
 	aliasStatements   map[ast.Node][]ast.Stmt
+	reflectAlias      *ast.Ident
 	deferredBases     map[ast.Expr]bool
 }
 
@@ -131,8 +135,11 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	if expr == nil {
 		return nil, nil
 	}
-	if !contains(expr, r.target) {
+	if !r.contains(expr) {
 		return nil, []ast.Expr{expr}
+	}
+	if operation, ok := r.propagations[expr]; ok && !r.suppressed {
+		return r.propagatedCall(expr.(*ast.CallExpr), operation)
 	}
 	var before []ast.Stmt
 	var result ast.Expr = expr
@@ -141,7 +148,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		copy := *e
 		labels := r.labels
 		r.labels = nil
-		copy.Body = r.block(e.Body)
+		copy.Type, copy.Body = r.function(e, e.Type, e.Body)
 		r.labels = labels
 		result = &copy
 	case *ast.CallExpr:
@@ -229,7 +236,7 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			result = &copy
 			break
 		}
-		if r.addressableArray(e.X) && contains(e.Index, r.target) {
+		if r.addressableArray(e.X) && r.contains(e.Index) {
 			var base ast.Expr
 			before, base = r.arrayBase(e.X)
 			setup, index := r.expression(e.Index)
@@ -334,6 +341,12 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		}
 		result = &copy
 	}
+	if result != expr {
+		if r.origins == nil {
+			r.origins = make(map[ast.Expr]ast.Expr)
+		}
+		r.origins[result] = expr
+	}
 	if expr == r.target && expr != r.suppressedRoot {
 		r.inserted = true
 		if r.functionName(expr) {
@@ -343,20 +356,10 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
 		}
 		// Read types from the original expression, not from the new tree.
-		if r.origins == nil {
-			r.origins = make(map[ast.Expr]ast.Expr)
-		}
-		r.origins[result] = expr
 		saved, refs := r.save(result)
 		before = append(before, saved...)
 		before = append(before, r.after(refs)...)
 		return before, refs
-	}
-	if result != expr {
-		if r.origins == nil {
-			r.origins = make(map[ast.Expr]ast.Expr)
-		}
-		r.origins[result] = expr
 	}
 	return before, []ast.Expr{result}
 }

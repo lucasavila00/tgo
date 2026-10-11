@@ -4,9 +4,9 @@
 
 We are developing version 2 of the TGo compiler, `compilerv2`, through
 [#248](https://github.com/lucasavila00/tgo/issues/248) and
-[#247](https://github.com/lucasavila00/tgo/issues/247). Only the README syntax
-examples and project documentation remain. Code, tests, build tools, CI, and architecture
-documents have been removed. Git history retains them.
+[#247](https://github.com/lucasavila00/tgo/issues/247). Compiler source, tests, and usage notes are in
+[`compilerv2/`](compilerv2/README.md). The old compiler and architecture
+documents were removed. Git history retains them.
 
 Build compilerv2 from the [compiler v2 plan](docs/adr/expression-lowering/what.md).
 Do not restore the old compiler code or architecture for now. The old

@@ -12,7 +12,7 @@ func (r *rewrite) capture(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
 	if tv := r.source.Package.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
 		return before, value
 	}
-	if len(before) != 0 && expr == r.target {
+	if len(before) != 0 && r.isTarget(expr) {
 		return before, value
 	}
 	saved, refs := r.save(value)
