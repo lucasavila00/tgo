@@ -7,7 +7,8 @@
 //
 // Source files are authoritative. Existing generated files can be stale and
 // must not affect source checking. Two overlays replace checking contents at original paths without editing
-// the caller's files. Ordinary Go and assets stay on disk.
+// the caller's files. Ordinary Go and assets stay on disk. Small temporary
+// module metadata keeps Go dependency updates away from source files.
 //
 // Compilation passes data through these steps: read module files, prepare a
 // source overlay, select source with Go's build rules, check source packages,

@@ -26,6 +26,7 @@ type preparedModule struct {
 	used       map[string]bool
 	moduleData []byte
 	overlay    map[string][]byte
+	buildFlags []string
 }
 
 // findModule returns the module root that Go selects for dir.

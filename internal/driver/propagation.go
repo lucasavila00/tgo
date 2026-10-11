@@ -2,6 +2,7 @@ package driver
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/lucasavila00/tgo/internal/checker"
@@ -23,7 +24,7 @@ type checkedModule struct {
 }
 
 func selectSources(module *preparedModule) *selectedSources {
-	roots, err := packages.Load(&packages.Config{Dir: module.dir, Overlay: module.overlay, Tests: true, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, "./...")
+	roots, err := packages.Load(&packages.Config{Dir: module.dir, Env: append(os.Environ(), "GOWORK=off"), Overlay: module.overlay, BuildFlags: module.buildFlags, Tests: true, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedExportFile | packages.NeedModule}, "./...")
 	must(err)
 	var selected []*packages.Package
 	packages.Visit(roots, nil, func(pkg *packages.Package) { selected = append(selected, pkg) })
@@ -87,11 +88,11 @@ func lowerModule(module *checkedModule) {
 }
 
 func checkGenerated(dir string) {
-	checkGeneratedOverlay(dir, nil)
+	checkGeneratedOverlay(dir, nil, nil)
 }
 
-func checkGeneratedOverlay(dir string, overlay map[string][]byte) {
-	for _, pkg := range loadProjectOverlay(dir, overlay) {
+func checkGeneratedOverlay(dir string, overlay map[string][]byte, buildFlags []string) {
+	for _, pkg := range loadProjectOverlay(dir, overlay, buildFlags) {
 		if len(pkg.Errors) != 0 {
 			panic(fmt.Sprintf("TGo: generated Go: %s", pkg.Errors[0]))
 		}

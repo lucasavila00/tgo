@@ -76,7 +76,7 @@ func TestGeneratedOverlayChecksReplacement(t *testing.T) {
 	var failure any
 	func() {
 		defer func() { failure = recover() }()
-		checkGeneratedOverlay(root, map[string][]byte{path: []byte("package p\nvar Value int = \"wrong\"\n")})
+		checkGeneratedOverlay(root, map[string][]byte{path: []byte("package p\nvar Value int = \"wrong\"\n")}, nil)
 	}()
 	if failure == nil || !strings.Contains(fmt.Sprint(failure), "generated Go:") {
 		t.Fatalf("generated overlay error: %v", failure)

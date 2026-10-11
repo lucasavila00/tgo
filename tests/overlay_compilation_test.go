@@ -94,3 +94,49 @@ func TestCompileOverlayKeepsCgoHeaders(t *testing.T) {
 		t.Fatalf("cgo output: %v, %s", err, got)
 	}
 }
+
+func TestCompileOverlayKeepsVendorSelection(t *testing.T) {
+	root := t.TempDir()
+	files := map[string][]byte{
+		"go.mod":                            []byte("module example.com/vendoroverlay\n\ngo 1.27.1\n\nrequire example.com/value v1.0.0\n"),
+		"vendor/modules.txt":                []byte("# example.com/value v1.0.0\n## explicit; go 1.27.1\nexample.com/value\n"),
+		"vendor/example.com/value/value.go": []byte("package value\nfunc Value()(int,error){return 9,nil}\n"),
+		"main.tgo":                          []byte("package main\nimport (\"fmt\";\"example.com/value\")\nfunc run()error{fmt.Println(value.Value()!);return nil}\nfunc main(){if err:=run();err!=nil{panic(err)}}\n"),
+	}
+	writeFiles(t, root, files)
+	output := transpiler.Compile(root)
+	for name, want := range files {
+		got, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil || !bytes.Equal(got, want) {
+			t.Fatalf("changed source %s: %v", name, err)
+		}
+	}
+	out := t.TempDir()
+	writeFiles(t, out, output)
+	command := exec.Command("go", "run", ".")
+	command.Dir = out
+	got, err := command.CombinedOutput()
+	if err != nil || string(got) != "9\n" {
+		t.Fatalf("vendor output: %v, %s", err, got)
+	}
+}
+
+func TestCompileOverlaySelectsModuleInsideWorkspace(t *testing.T) {
+	base := t.TempDir()
+	writeFiles(t, base, map[string][]byte{"go.work": []byte("go 1.27.1\n\nuse ./source\n")})
+	root := filepath.Join(base, "source")
+	files := map[string][]byte{"go.mod": []byte("module example.com/workspace\n\ngo 1.27.1\n"), "main.tgo": []byte("package p\nvar Value = if true {1} else {2}\n")}
+	writeFiles(t, root, files)
+	output := transpiler.Compile(root)
+	if len(output["main_tgo.go"]) == 0 {
+		t.Fatal("missing module output")
+	}
+	assertOriginalFiles(t, root, files)
+	got, err := os.ReadFile(filepath.Join(base, "go.work"))
+	if err != nil || string(got) != "go 1.27.1\n\nuse ./source\n" {
+		t.Fatalf("changed workspace: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(base, "go.work.sum")); !os.IsNotExist(err) {
+		t.Fatalf("created workspace sum: %v", err)
+	}
+}

@@ -57,9 +57,13 @@ for the final check. A file excluded by build rules has an ignored overlay,
 so its stale snapshot cannot become source. Source files stay unchanged.
 
 Go writes each overlay entry to a temporary backing file and removes it after
-loading. Assets and ordinary input files are not copied. Local replacements
-remain relative during checking; returned `go.mod` uses absolute replacement
-paths so the caller can write output elsewhere.
+loading. Assets and ordinary input files are not copied. Both loads use a small
+temporary `go.mod` and `go.sum` through `-modfile`. This keeps Go from writing
+module metadata into the source directory, including with `-mod=mod`. Local
+replacement paths become absolute in this metadata and in returned `go.mod`.
+The caller can therefore write output elsewhere. The driver removes temporary
+metadata on success or failure. `GOWORK=off` keeps both loads within the selected
+module, as compilation in the separate directory did.
 
 Warm-cache comparison with copy-based commit `8ba19b9`: Go 1.27.1, Linux amd64,
 `GOMAXPROCS=4`, three one-call samples after a warm-up. The table shows medians.
@@ -67,10 +71,10 @@ Allocations exclude child processes.
 
 | Input | Copy | Overlay | Allocated bytes copy / overlay |
 | --- | ---: | ---: | ---: |
-| 32 propagation calls | 35 ms | 41 ms | 1.47 MB / 1.50 MB |
-| Two packages and a test file | 684 ms | 641 ms | 191 MB / 191 MB |
-| If value with propagation, no asset | 39 ms | 38 ms | 427 KB / 428 KB |
-| Same source with a 32 MiB asset | 164 ms | 138 ms | 67.5 MB / 67.6 MB |
+| 32 propagation calls | 35 ms | 38 ms | 1.47 MB / 1.50 MB |
+| Two packages and a test file | 684 ms | 588 ms | 191 MB / 191 MB |
+| If value with propagation, no asset | 39 ms | 37 ms | 427 KB / 418 KB |
+| Same source with a 32 MiB asset | 164 ms | 150 ms | 67.5 MB / 67.6 MB |
 
 This removes asset writes, not the API's asset reads. The overlay test checks
 that a 1 MiB asset adds no overlay entry. Thus its temporary payload is zero;
