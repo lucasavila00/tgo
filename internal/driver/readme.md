@@ -8,7 +8,29 @@ Generated from Go declarations and source comments. Run `make docs` to update th
 import "github.com/lucasavila00/tgo/internal/driver"
 ```
 
+Package driver compiles a Go module that contains TGo source files.
 
+Compile accepts a directory inside a module and compiles from that module's root. It writes ordinary Go beside each selected TGo input, then checks the result with Go. Callers use the [public API](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/readme.md>) or the tgo command.
+
+### Source files and output
+
+Each TGo file determines its generated file. For example, service.tgo produces service\_tgo.go. Existing generated contents do not affect compilation. Test and platform suffixes stay at the end: service\_linux\_test.tgo produces service\_tgo\_linux\_test.go.
+
+Go selects files with its usual build constraints and platform rules. This includes test packages. The compiler removes generated files for inputs that the current build excludes. It keeps those TGo inputs.
+
+The compiler excludes nested modules, vendor, testdata, and directories whose names start with a dot or underscore. It leaves ordinary source, assets, headers, and dependencies at their original paths. Thus, relative module replacements and embedded files keep their meaning.
+
+### Why compilation has two checks
+
+Go tools need Go filenames to select packages and their imports. The driver first copies each TGo input to its generated Go path. These copies still contain TGo syntax. Go supplies the file and dependency lists; the [frontend](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md>) reads the added syntax, and the [checker](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/readme.md>) checks TGo types and scope.
+
+All selected source packages must pass that check before [lowering](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md>) replaces TGo expressions with equivalent Go statements. The driver writes this Go code over the initial copies. It then checks the final module with Go's unmodified type checker. This last check confirms that Go accepts the output. The [runtime tests](<https://github.com/lucasavila00/tgo/blob/main/tests/readme.md>) also check that output behavior matches the source.
+
+Both checks use the original module paths. There is no temporary module. This keeps local dependencies and build inputs in the same environment as a normal Go build. Go module loading can update go.mod and go.sum.
+
+### Failure behavior
+
+Compile returns no file contents. Invalid source and compiler failures cause a panic. Before writing, it saves existing generated files. On failure, it restores their contents and permissions and removes newly created outputs. A successful compilation keeps the new output. Go module metadata updates remain after a failure.
 
 ## func Compile
 

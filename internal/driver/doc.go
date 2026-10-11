@@ -44,7 +44,6 @@
 // restores their contents and permissions and removes newly created outputs.
 // A successful compilation keeps the new output. Go module metadata updates
 // remain after a failure.
-
 //
 // [public API]: https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/readme.md
 // [frontend]: https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md
