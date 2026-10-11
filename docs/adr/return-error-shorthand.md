@@ -9,56 +9,35 @@ Issue: [#321](https://github.com/lucasavila00/tgo/issues/321)
 Add two forms of `return`. The function's final result must implement Go's
 built-in `error` interface. The earlier results are its success results.
 
-| TGo | Meaning in a function returning `(int, string, error)` |
+| TGo | Explicit return |
 | --- | --- |
-| `return .. err` | `return 0, "", err` |
+| `return .. err` | `return 0, err` for `(int, error)` |
+| `return value ..` | `return value, nil` |
 | `return count, name ..` | `return count, name, nil` |
 
-A leading `..` supplies the zero value of each success result's declared type.
-It requires one error expression, assignable to the final result type. A trailing
-`..` supplies nil for the final result. Explicit values must fill every success
-result and must fit their declared types under Go assignment rules.
+A leading `..` supplies each success result's typed zero value. It requires
+one error operand, assignable to the final result type. A trailing `..` supplies
+nil. Its explicit operands must fill every success result under Go assignment
+rules. Both forms return unconditionally, without testing or wrapping errors.
+A nil error stays nil; a typed nil pointer converted to a non-nil error interface
+stays non-nil.
 
-Use these forms for the issue's examples. Do not add `Ok` or `Err` functions:
-a return statement already has the result types needed to supply missing values.
-A library function would need explicit type arguments for omitted result types
-and separate forms for different result counts.
+Accept named error interfaces, concrete errors, and type parameters constrained
+by `error`. The trailing form also requires nil to be assignable to the final
+type. Thus a pointer error permits both forms; a struct error permits only the
+leading form. For a generic final type, nil must fit every allowed type.
 
-```text
-func Parse(text string) (int, error) {
-    value, err := strconv.Atoi(text)
-    if err != nil {
-        return .. err
-    }
-    return value ..
-}
-```
+In an error-only function, `return .. err` means `return err`. Bare `return ..`
+is incomplete. Use `return nil` for error-only success.
 
-Both forms return unconditionally. `return .. err` does not test, wrap, or
-replace `err`. If `err` is nil, the function returns zero success values and nil.
-If a typed nil pointer converts to a non-nil error interface, retain that result.
+A sole multiple-result expression can fill the success results: `return pair() ..`.
+Do not mix it with other operands. Accept existing TGo expressions, including
+`return load()! ..`. Keep their enclosing function and control-flow targets.
 
-Accept named error interfaces, concrete error types, and type parameters whose
-constraints require `error`. The trailing form additionally requires nil to be
-assignable to the final type. Thus a pointer error can use both forms; a struct
-error can use only the leading form. A generic final type can use the trailing
-form only when nil is assignable to every type in its constraint.
-
-In a function returning only an error, `return .. err` means `return err`.
-A bare `return ..` is incomplete: the leading form needs an error operand, and
-the trailing form needs success operands. Use the existing `return nil` for
-error-only success. Do not infer omitted operands from named result variables.
-
-A single expression that produces several values can fill the success results:
-`return pair() ..` is valid when `pair()` supplies exactly those results. Do not
-mix a multiple-result expression with other values. Existing TGo expressions
-are valid operands, including `return load()! ..`. Their returns, defers, and
-jumps retain the enclosing source function and control-flow targets.
-
-Named results follow explicit Go return behavior. Evaluate operands first, then
-assign all result variables, then execute deferred calls. A leading `..` replaces
-previous success values with zero values; a trailing `..` replaces a previous
-error with nil. For example, this function returns `1, nil`:
+Named results follow explicit Go returns: evaluate operands, assign result
+variables, then run defers. Omitted success results replace previous values
+with zeros; an omitted error replaces the previous error with nil. This example
+returns `1, nil`:
 
 ```text
 func Count() (count int, err error) {
@@ -68,126 +47,87 @@ func Count() (count int, err error) {
 }
 ```
 
+Choose return syntax instead of `Ok` and `Err` helpers. The function signature
+already supplies the omitted types and result count. Library helpers would
+need extra type arguments and separate forms for different result counts.
+
 ## HOW
 
-Read `..` as a return operator, with its two dots adjacent. Keep Go selectors,
-floating-point literals, and `...` unchanged. Follow Go's token boundaries:
-write `return 1 ..`, since `1..` starts with the floating-point token `1.`.
-The operator is valid only at the start or end of a return's operand list.
-It cannot fill a middle result or appear on both sides of the same list.
+Read adjacent `..` dots only at the start or end of a return's operand list.
+Reject a middle operator or both positions together. Preserve Go token
+boundaries: write `return 1 ..`, since `1..` starts with the float token `1.`.
+Keep selectors, `...`, strings, and comments unchanged.
 
-Apply Go's semicolon rules before the operator and within operands. After a
-trailing `..`, insert a semicolon at a newline or end of file. A leading `..`
-still needs its operand, which can start on the next line. Comments follow
-these same rules. Do not interpret dots inside comments or strings as operators.
+Apply Go semicolon rules before the operator and within operands. Trailing `..`
+ends a statement at a newline or end of file. Leading `..` needs its operand,
+which can start on the next line. Comments follow these same rules.
 
-The [frontend](../../internal/frontend/readme.md) must record the operator,
-its operands, and their original positions on a return statement. Prepare a
-Go-parsable return with a compiler marker, then let the existing parser read its
-operands. A marker is an internal syntax node, with no runtime function call.
-Keep it attached to the return so that checking does not depend on a user name.
+The [frontend](../../internal/frontend/readme.md) must record the operator and
+original positions on a return statement. Prepare a Go-parsable return with a
+marker: an internal syntax node with no runtime call. Let Go's parser read
+the operands.
 
-The [checker](../../internal/checker/readme.md) must use the enclosing source
-function's result types. Check the leading operand against the final result;
-check trailing operands against the success results. Supply these types to
-constants, nil, if values, and generic inference, as for ordinary returns.
-Count declared results, including grouped names and blank result names.
-Treat either form as a return for missing-return and branch-completion checks.
-Real function literals have their own result types. The placeholders used to
-parse if values and comprehensions do not introduce a source function.
+The [checker](../../internal/checker/readme.md) must check operands against the
+enclosing function's corresponding result types, including contextual constants,
+nil, if values, and generic inference. Treat the statement as a return for
+termination checks. Report syntax errors at `..` and operand errors at their
+original `.tgo` positions, with the expected type or count.
 
-Report malformed syntax at `..`. Report incompatible operands at their original
-`.tgo` positions, with the expected type or result count. Use the built-in error
-type by identity, even when source code declares a name `error`.
-
-The [lowerer](../../internal/lowering/readme.md) must emit an ordinary explicit
-return. Reuse the typed zero storage used by error propagation for omitted
-success values. These fresh locals must hold zero values independently of named
-results. For example:
-
-```text
-func Fail[T any](err error) (T, error) {
-    return .. err
-}
-```
-
-has the behavior of:
+The [lowerer](../../internal/lowering/readme.md) must emit an explicit Go return.
+Reuse error propagation's fresh typed zero locals for omitted success values.
+For `return .. err` in a function returning `(T, error)`, emit:
 
 ```go
-func Fail[T any](err error) (T, error) {
-    var zero T
-    return zero, err
-}
+var zero T
+return zero, err
 ```
 
-For trailing `..`, append nil after lowering the supplied values. If the source
-shadows `nil`, use fresh zero storage of the final result type. Resolve generated
-types by their checked identity, so local type names cannot change their meaning.
-
-A sole multiple-result call needs locals before the final return:
+For trailing `..`, append nil. A sole multiple-result call needs fresh locals:
 
 ```go
 first, second := pair()
 return first, second, nil
 ```
 
-Use fresh names and the checked types when a conversion needs context. Evaluate
-each operand once and preserve the order Go defines. Use the existing expression
-lowering for branches, propagation, and saved earlier operands. A return inside
-an operand can exit before the outer return completes. Do not add a helper
-function around operand evaluation: that would change the targets of returns
-and the time at which deferred calls run. Keep generated declarations inside
-blocks where necessary to preserve valid jumps. The final generated source
-must pass the stock Go checker.
+Use checked type identities and fresh names. If source code shadows `nil`,
+use zero storage of the final result type. Resolve built-in `error` by identity.
+
+Use existing expression lowering to evaluate operands once, preserve Go's
+required order, and save earlier values before later operations. Retain source
+returns, defers, and jumps through generated blocks. A helper around operands
+would change those effects. Generated output must pass the stock Go checker.
 
 Follow the [modernization rules](../problem/README.md#adoption-and-automatic-modernization).
-An automatic fix can replace explicit returns only when it proves the same
-result values and effects. For a leading form, each removed operand must be a
-zero value of its destination type, with no effects. A variable named `zero`
-is not sufficient evidence. A zero concrete value converted to an interface
-can be non-nil and must not become the interface's zero value. For a trailing
-form, the omitted expression must produce the same nil result without effects.
-An empty non-nil slice, a typed nil inside an error interface, and a call that
-returns nil do not meet these rules. Leave uncertain cases unchanged.
+Replace explicit returns only when removed operands have no effects and equal
+the omitted destination values. A variable named `zero` proves nothing.
+Conversions matter: a zero concrete value inside an interface can be non-nil.
+Leave uncertain cases unchanged.
 
 ## PROOF
 
-Add `.tgo` fixtures, generated Go snapshots, and independent Go reference
-programs under `tests/testdata/`. Compile and run both forms against the same
-expected results and effect traces. A trace records calls and deferred actions
-in execution order. References must use explicit Go returns, without compiler
-lowering code.
+Add `.tgo` fixtures, generated Go snapshots, and independent Go references under
+`tests/testdata/`. Run generated and reference programs against the same expected
+values and traces of calls and defers. References must use explicit Go returns.
 
-Check these cases:
+Check:
 
-- The three issue examples, error-only returns, multiple success results, and
-  a sole multiple-result call. Confirm each call executes once.
-- Zero values for numbers, strings, arrays, structs, pointers, slices, maps,
-  functions, channels, interfaces, named types, and generic success results.
-- Named results that already hold values, grouped and blank result names,
-  shadowed result names, and defers that read or change those results.
-- Nil errors, concrete pointer errors, struct errors in the leading form,
-  richer error interfaces, generic error constraints, and interface conversion
-  of typed nil pointers. Compare error identity as well as `errors.Is` and
-  `errors.As` behavior.
-- Contextual constants and shifts, nil success values, generic inference, and
-  if values. Include nested functions with different result lists.
-- Operand calls with effects, propagation success and failure, operand returns,
-  panics, defers, and jumps. Confirm skipped operands stay skipped and outer
-  result assignment does not occur when an operand exits first.
-- Comments, multiline operands, selectors, decimal literals, `...`, and
-  ordinary returns in the same file. Check original source positions.
-- Source names that collide with generated locals or shadow `nil`, `error`,
-  and result types. Snapshots must retain the intended type identities.
+- The three issue examples, error-only returns, sole multiple-result calls,
+  every Go zero-value kind, named types, and generic results.
+- Named results with previous values, grouped and blank names, shadowed names,
+  and defers that read or change results.
+- Nil, concrete and generic errors, richer interfaces, and typed nil pointers
+  converted to interfaces. Check error identity, `errors.Is`, and `errors.As`.
+- Contextual constants, shifts, nil, generic inference, if values, and nested
+  functions with different result lists.
+- Effects, propagation, operand returns, panics, defers, and jumps. Each reached
+  operand runs once; an early exit skips later operands and result assignment.
+- Comments, multiline syntax, floats, selectors, `...`, ordinary returns,
+  original positions, and shadowed `nil`, `error`, and type names.
 
-Require diagnostics for missing or extra success values, incompatible operands,
-a final type that does not implement error, nil incompatible with the final
-type, multiple error operands, both operator positions together, and use of
-`..` outside a return. Check termination analysis in if values and functions
-whose only exits use these forms.
+Require diagnostics for wrong result counts, incompatible types, missing
+operands, invalid operator positions, and `..` outside returns. Check functions
+and if-value branches whose only exits use these forms.
 
-For automatic fixes, compare execution before and after each accepted change.
-Require unchanged source for calls with effects, nonzero values, non-nil empty
-collections, typed nil errors converted to interfaces, other conversions that are not zero, and
-variables whose zero value cannot be proved. Include safe constants and typed
-zero declarations as accepted cases.
+For automatic fixes, compare execution before and after accepted changes.
+Accept proved typed zeros and nil. Leave effectful calls, non-nil collections,
+nonzero interface conversions, and unproved variable values unchanged.
