@@ -4,7 +4,7 @@ Issue: [#248](https://github.com/lucasavila00/tgo/issues/248)
 
 ## Test files
 
-Under `compilerv2/testdata/proof/`:
+Under `transpiler/testdata/proof/`:
 
 | File | Cases |
 | --- | --- |
@@ -42,7 +42,7 @@ Under `compilerv2/testdata/proof/`:
 ## Test command
 
 ```sh
-go -C compilerv2 test ./... -run '^TestProof' -count=1
+go -C transpiler test ./... -run '^TestProof' -count=1
 ```
 
 Tests: `TestProofInventory`, `TestProofNeutral`, `TestProofReturn`,

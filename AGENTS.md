@@ -1,7 +1,7 @@
 # Working principles
 
 Treat compiler changes as production code. Verify correctness and preserve
-source behavior. Source and tests are in `compilerv2/`. Read the
+source behavior. Source and tests are in `transpiler/`. Read the
 [transpiler architecture](docs/arch/transpiler.md) and
 [lowering plan](docs/adr/expression-lowering/what.md) before compiler changes.
 
