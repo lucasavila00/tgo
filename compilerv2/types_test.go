@@ -56,6 +56,20 @@ func main(){` + test.code + `}`
 	}
 }
 
+func TestInsertPrivateLiteralType(t *testing.T) {
+	input := `package main
+import("fmt";"example.com/insertion/foreign")
+func value()int{fmt.Print("V");return 1}
+func main(){a:=foreign.Map{{value()}:value()};fmt.Print(len(a))}
+`
+	actual := runInsertionFiles(t, input, "{value()}", func(results []ast.Expr) []ast.Stmt {
+		return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: &ast.SelectorExpr{X: ast.NewIdent("fmt"), Sel: ast.NewIdent("Print")}, Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"M"`}, &ast.SelectorExpr{X: results[0], Sel: ast.NewIdent("N")}}}}}
+	}, map[string]string{"foreign/foreign.go": "package foreign\ntype key struct{N int}\ntype Map map[key]int\n"})
+	if actual != "VM1V1" {
+		t.Fatalf("got %q", actual)
+	}
+}
+
 func TestInsertBooleanContext(t *testing.T) {
 	for _, target := range []string{"left()==right()", "(left()==right()) && (right()==left())", "right()"} {
 		t.Run(target, func(t *testing.T) {
