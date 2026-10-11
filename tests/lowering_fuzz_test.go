@@ -22,8 +22,8 @@ import (
 // that stops run on an error. It does not use the compiler's lowering rules.
 var fuzzBodies = []string{
 	`emit(read(0), P(1), read(2))`,
-	`emit(x + P(1))`,
-	`emit(P(1) + x)`,
+	`emit(readX() + P(1))`,
+	`emit(P(1) + readX())`,
 	`emit(a[P(1)], read(2))`,
 	`emit(a[read(0)], P(1))`,
 	`a[read(0)] = P(1); emit(a[:]...)`,
@@ -51,21 +51,29 @@ var fuzzBodies = []string{
 	`ch := make(chan int, 1); ch <- 5; select { case v := <-channel(P(1), ch): emit(v); default: emit(9) }`,
 	`ch := make(chan int, 1); select { case ch <- P(1): emit(<-ch); default: emit(9) }`,
 	`var p *int; *p = P(1)`,
-	`emit(a[4], P(1))`,
-	`var v any = "text"; emit(v.(int), P(1))`,
+	`emit(at(4), P(1))`,
+	`var v any = "text"; emit(assertInt(v), P(1))`,
 	`f := choose(read(0)); f(P(1), read(2))`,
 	`obj := item{value: 10}; obj.add(P(1)); emit(obj.value)`,
-	`obj := item{value: 10}; emit(obj.value, P(1)); emit(obj.value)`,
+	`obj := item{value: 10}; emit(obj.get(), P(1)); emit(obj.value)`,
+	`emit(read(0), plus(read(1), P(2)), read(3))`,
+	`u, v := Q(1); emit(u, v)`,
+	`s[sliceIndex()] = P(1); emit(s...)`,
+	`m[mapIndex()] = P(1); emit(m[0], m[1], m[2], m[3])`,
+	`f := receiver().add; f(P(1)); emit(x)`,
+	`*pointer(), a[0] = P(1), P(2); emit(x); emit(a[:]...)`,
 	`L: for i := 0; i < 2; i++ { if truth(P(1)) { continue L }; emit(i) }`,
 }
 
-var fuzzPropagation = regexp.MustCompile(`P\(([0-9]+)\)`)
+var fuzzPropagation = regexp.MustCompile(`([PQ])\(([0-9]+)\)`)
 
 func FuzzPropagationBehavior(f *testing.F) {
 	for body := range fuzzBodies {
 		// No error, an early error, and a later error for each context.
 		for _, failure := range []byte{255, 1, 2} {
-			f.Add([]byte{byte(body), failure, 0, 0, 1, 2, 3})
+			for _, operator := range []byte{0, 1} {
+				f.Add([]byte{byte(body), failure, operator, 0, 1, 2, 3})
+			}
 		}
 	}
 	f.Fuzz(func(t *testing.T, data []byte) {
@@ -117,6 +125,15 @@ func read(id int) int {
  x++; a[0]++; s[0]++; m[0]++
  return values[id %% 4]
 }
+func readX() int { fmt.Fprint(&trace, "x;"); return x }
+func at(i int) int { fmt.Fprint(&trace, "at;"); return a[i] }
+func assertInt(v any) int { fmt.Fprint(&trace, "assert;"); return v.(int) }
+func plus(a, b int) int { return a + b }
+func sliceIndex() int { fmt.Fprint(&trace, "slice;"); s = []int{50, 60, 70, 80}; return 0 }
+func mapIndex() int { fmt.Fprint(&trace, "map;"); m = map[int]int{0: 50, 1: 60, 2: 70, 3: 80}; return 0 }
+func pointer() *int { fmt.Fprint(&trace, "pointer;"); return &x }
+func receiver() *item { fmt.Fprint(&trace, "receiver;"); return &item{value: x} }
+func pairStep(id int) (int, int, error) { v, e := step(id); return v, v+1, e }
 func step(id int) (int, error) {
  value := read(id)
  if id == %d { return value, failure }
@@ -127,6 +144,7 @@ func truth(v int) bool { return v %% 2 != 0 }
 func channel(_ int, ch chan int) chan int { return ch }
 func choose(v int) func(...int) { fmt.Fprintf(&trace, "choose%%d;", v); return emit }
 type item struct { value int }
+func (p item) get() int { fmt.Fprint(&trace, "get;"); return p.value }
 func (p *item) add(v int) { p.value += v; emit(p.value) }
 func main() {
  defer func() {
@@ -144,8 +162,22 @@ func main() {
 	if wrapped {
 		op = "!"
 	}
-	input := fuzzPropagation.ReplaceAllString(string(plain), "step($1)"+op)
-	refBody := fuzzPropagation.ReplaceAllString(body, "prop(step($1))")
+	replace := func(source string, reference bool) string {
+		return fuzzPropagation.ReplaceAllStringFunc(source, func(marker string) string {
+			parts := fuzzPropagation.FindStringSubmatch(marker)
+			call, helper := "step", "prop"
+			if parts[1] == "Q" {
+				call, helper = "pairStep", "propPair"
+			}
+			call += "(" + parts[2] + ")"
+			if reference {
+				return helper + "(" + call + ")"
+			}
+			return call + op
+		})
+	}
+	input := replace(string(plain), false)
+	refBody := replace(body, true)
 	reference := common + fmt.Sprintf(`
 type stop struct { err error }
 func prop(value int, err error) int {
@@ -154,6 +186,13 @@ func prop(value int, err error) int {
   panic(stop{err})
  }
  return value
+}
+func propPair(a, b int, err error) (int, int) {
+ if err != nil {
+  if %t { err = fmt.Errorf("pairStep: %%w", err) }
+  panic(stop{err})
+ }
+ return a, b
 }
 func run() (err error) {
  defer func() {
@@ -165,7 +204,7 @@ func run() (err error) {
  %s
  return nil
 }
-`, wrapped, refBody)
+`, wrapped, wrapped, refBody)
 	formatted, err := format.Source([]byte(reference))
 	if err != nil {
 		t.Fatal(err)
