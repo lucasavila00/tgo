@@ -1,4 +1,4 @@
-output: "docs/reference/{{.Dir}}.md"
+output: "{{.Dir}}/readme.md"
 header: |-
   Generated from Go declarations and source comments. Run `make docs` to update this file.
 templateFile:

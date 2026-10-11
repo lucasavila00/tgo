@@ -1,4 +1,3 @@
-// Package transpiler emits Go source from TGo modules.
 package transpiler
 
 import (

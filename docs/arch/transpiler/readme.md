@@ -1,113 +1,71 @@
 # Transpiler architecture
 
-The transpiler reads a Go module with `.tgo` files and emits ordinary Go.
-It uses Go's scanner, parser, type checker, and build selection. It does not
-modify the Go toolchain. See the [user guide](../../guide/transpiler.md) for
-commands and the public API.
+TGo programs become ordinary Go programs. The compiler must preserve their
+execution while adding error propagation. Go supplies package selection and
+ordinary type rules. The compiler owns the meaning of TGo operators and the
+statements needed to implement them.
 
-## Package dependencies
+## Keep responsibilities separate
 
-| Package | Compiler packages it calls |
-| --- | --- |
-| `cmd/tgo` | `pkg/transpiler` |
-| `pkg/transpiler` | `internal/driver`, `internal/lowering` |
-| `internal/driver` | `internal/frontend`, `internal/lowering` |
-| `internal/frontend` | None |
-| `internal/lowering` | None |
+| Package | Responsibility | Reason |
+| --- | --- | --- |
+| `cmd/tgo` | Choose paths and write output | File-output policy belongs to the command. |
+| `pkg/transpiler` | Expose compilation and expression rewriting | Other tools need the same compiler without command-line policy. |
+| `internal/driver` | Select and check a module | Imports, build constraints, and tests must agree on package contents. |
+| `internal/frontend` | Record added syntax | Go syntax keeps Go meaning; TGo operations retain their source identity. |
+| `internal/lowering` | Emit equivalent Go statements | This requires checked types and the expression's execution context. |
 
-`cmd/tgo` reads arguments and writes files. `pkg/transpiler` exposes module
-compilation and expression-statement insertion. The driver loads modules and
-runs the compiler passes. The frontend prepares postfix operators for Go
-parsing. Lowering changes typed expressions into statements. Frontend and
-lowering do not import each other.
+Dependencies follow this order. Frontend and lowering do not call each other.
+The driver supplies checked syntax and operation records to the lowerer.
 
-## Prepare and check the source
+## Preserve execution
 
-For this source:
+Consider:
 
 ```text
-value := strconv.Atoi(text)!
+consume(first(), target()!, last())
 ```
 
-The frontend replaces `!` with a unique comment after the call. Go can parse
-the remaining source. The compiler records the operator's position and whether
-it must wrap the error.
+`first()` must run before `target()`. If `target()` fails, return its error
+before `last()` or `consume()` runs. The lowerer saves earlier values and puts
+the error check immediately after the call.
 
-The driver finds calls whose result types are available. It checks that each
-call ends with an error result, then replaces the marked call with a generated
-helper call. The helper has the call's success results but excludes its error.
-For `Atoi`, its result is `int`. This lets Go check the surrounding assignment.
-Nested propagation needs repeated loading because an inner helper can make
-an outer call's type available.
+For `left() && right()!`, the right call and its check run only when `left()`
+is true. Loop conditions keep their repeated execution. A receive assignment
+keeps its destination evaluation inside the selected case. Assignment targets
+keep their original storage.
 
-The fully prepared AST receives Go type checking. Two further checks reject
-propagation inside `unsafe.Sizeof`, `Alignof`, or `Offsetof`, and error results
-that the containing function cannot return. A helper's success-only signature
-cannot check the return statement that lowering will add.
+These rules require expression-aware lowering. Moving checks into one prefix
+would change execution. A function wrapper would change returns and defers.
+Each source function therefore keeps its own return target.
 
-## Replace helpers with calls and error checks
+## Keep types and names
 
-The helper is for type checking. It does not handle errors at runtime. Lowering
-replaces it with the original call, typed saved results, a failure check, and
-an ordinary Go return.
+Temporary variables use checked source types. In a `uint64` context,
+`var saved uint64 = 1 << n` preserves the required conversion; an inferred
+`int` temporary would change the program. Fresh names prevent collisions with
+source bindings. Added import aliases include the package name, such as
+`fmt_tgo3`; source import names stay unchanged. Required types must be nameable
+in the generated scope.
 
-For example, the essential statements for `consume(target()!)` are:
+The error check uses the call's result before conversion to the caller's return
+type. A nil pointer can become a non-nil interface during that conversion.
+Checking afterward would turn success into failure. `!` returns the original
+error; `!!` adds call-name context with `%w`.
 
-```go
-var tgo1 int
-var tgo2 error
-tgo1, tgo2 = target()
-if tgo2 != nil {
-    return tgo2
-}
-consume(tgo1)
-```
+Checking helpers describe success results to Go's type checker. They are not
+runtime error handling. Source checks also verify that propagation is valid
+inside the enclosing function and outside forbidden unsafe operands.
 
-The complete function also has return storage. On failure, `!` returns the
-original error and zero values for preceding results. `!!` wraps the error once
-with the source call name and `%w`. Deferred calls still run.
+## Source controls output
 
-The failure check precedes conversion into the caller's error result. Thus a
-nil pointer error is success, but an error interface that contains a nil pointer
-is failure. Generic results follow the instantiated type. Reflection handles
-cases where Go cannot compare the value directly with nil.
+Generated files can be stale, so they do not participate in source checking.
+Compilation works in a separate directory and returns file contents. The
+caller writes them.
 
-## Keep evaluation and scope
+`name.tgo` produces `name_tgo.go`. Test and platform suffixes stay last:
+`name_linux_test.tgo` produces `name_tgo_linux_test.go`. Physical paths decide
+file selection; line directives decide diagnostic locations.
 
-An expression rewrite returns statements and references to evaluated results.
-Its parent runs the statements and then uses those references. For
-`consume(first(), target()!, last())`, lowering saves `first()` before calling
-`target()`. If the error check returns, `last()` never runs.
-
-Conditional work stays conditional. In `left() && right()!`, the call to
-`right()` stays inside the true branch. Loop conditions and post statements
-stay on their required visits. Select operands run before selection; receive
-assignment targets run in the chosen case.
-
-Assignment lowering saves destination operands without reading the destination.
-Array stores use the original array. Slice and map stores use the saved container.
-Address checks and store checks keep their distinct execution points.
-
-Named functions and function expressions have separate return targets, including
-functions in package initializers. A label on a declaration stays on the first
-added statement; later declarations remain in the source scope.
-
-Added imports use fresh aliases such as `fmt_tgo1`. Source import names stay
-the same. Generated variables have explicit checked types and fresh names. For a shift
-used as `uint64`, `var saved uint64 = 1 << n` keeps that type; `saved := 1 << n`
-would use `int`. Type printing uses type identity, not spelling. The compiler reports an error if Go cannot
-name a required type in that scope. It does not fall back to an inferred type.
-Changed syntax is copied so the public insertion API can reuse the typed input.
-Every accepted propagation marker must be processed.
-
-## Output and checks
-
-`name.tgo` produces `name_tgo.go` beside its source. Test and platform suffixes
-stay last: `name_linux_test.tgo` produces `name_tgo_linux_test.go`. Existing
-output does not participate in source checking. Build constraints select source
-files. Line directives affect diagnostic locations; physical paths control
-file selection and output.
-
-The [correctness report](correctness.md) explains the implementation checks and
-independent behavior tests. The [test guide](../../../tests/readme.md) describes
-fixtures, snapshots, and expression-insertion tests.
+See the [correctness report](correctness.md) for behavior checks and the
+[user guide](../../guide/transpiler.md) for commands and API use.
