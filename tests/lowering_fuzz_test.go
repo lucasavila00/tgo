@@ -241,7 +241,7 @@ func TestFuzzProgramGeneration(t *testing.T) {
 	for i, body := range fuzzBodies {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			input, reference := fuzzPrograms(t, body, []byte{byte(i), 255, 0}, false)
-			if !strings.Contains(input, "!") || strings.Contains(reference, "!") {
+			if !strings.Contains(input, ")!") || strings.Contains(reference, ")!") {
 				t.Fatal("operator was not replaced correctly")
 			}
 		})
