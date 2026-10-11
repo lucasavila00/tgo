@@ -8,8 +8,7 @@ agents. Move the requested work to review without unnecessary waiting.
   unrelated finding.
 - The root agent coordinates the work, defines the scope, tracks hosted CI,
   and reviews repository state. It must not create or edit repository files.
-- Any subagent that creates or edits repository files must use the
-  `gpt-5.6-sol` model. Give each implementation subagent the full task context.
+- Give each implementation subagent the full task context.
 - The runtime has four total agent slots. The root agent uses one slot, so
   three subagent slots are available.
 - Use slots in short cycles. One subagent implements one issue, runs focused
@@ -78,7 +77,7 @@ programs and accept safe programs under the specification.
 Before implementation resumes, check the proposed model against all known
 failures and a table of relevant operations and boundaries. Include aliases,
 mutation, branches, loops, calls, and package boundaries where they apply.
-Require both safe and unsafe cases. Give a `gpt-5.6-sol` implementer the model,
+Require both safe and unsafe cases. Give the implementer the model,
 the full acceptance criteria, and the agreed tests. The independent reviewer
 must test the model across those cases, not only the last reported failure.
 
