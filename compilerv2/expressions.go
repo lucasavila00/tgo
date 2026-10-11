@@ -11,11 +11,13 @@ import (
 type After func(results []ast.Expr) []ast.Stmt
 
 type rewrite struct {
-	source *Source
-	target ast.Expr
-	after  After
-	names  map[string]bool
-	next   int
+	source   *Source
+	target   ast.Expr
+	after    After
+	names    map[string]bool
+	next     int
+	inserted bool
+	labels   map[string]string
 }
 
 func (r *rewrite) name() *ast.Ident {
@@ -30,10 +32,7 @@ func (r *rewrite) name() *ast.Ident {
 }
 
 func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	count := 1
-	if tuple, ok := r.source.Package.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
-		count = tuple.Len()
-	}
+	count := r.resultCount(expr)
 	if count == 0 {
 		return []ast.Stmt{&ast.ExprStmt{X: expr}}, nil
 	}
@@ -42,6 +41,33 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		refs[i] = r.name()
 	}
 	return []ast.Stmt{&ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{expr}}}, refs
+}
+
+func (r *rewrite) resultCount(expr ast.Expr) int {
+	if tuple, ok := r.source.Package.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
+		return tuple.Len()
+	}
+	if r.source.Package.TypesInfo.Types[expr].HasOk() {
+		var node ast.Node = expr
+		for {
+			if paren, ok := r.source.parents[node].(*ast.ParenExpr); ok {
+				node = paren
+			} else {
+				break
+			}
+		}
+		switch parent := r.source.parents[node].(type) {
+		case *ast.AssignStmt:
+			if len(parent.Rhs) == 1 && len(parent.Lhs) == 2 {
+				return 2
+			}
+		case *ast.ValueSpec:
+			if len(parent.Values) == 1 && len(parent.Names) == 2 {
+				return 2
+			}
+		}
+	}
+	return 1
 }
 
 // operands saves earlier values before a later operand emits statements.
@@ -73,9 +99,16 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	if expr == nil {
 		return nil, nil
 	}
+	if !contains(expr, r.target) {
+		return nil, []ast.Expr{expr}
+	}
 	var before []ast.Stmt
 	var result ast.Expr = expr
 	switch e := expr.(type) {
+	case *ast.FuncLit:
+		copy := *e
+		copy.Body = r.block(e.Body)
+		result = &copy
 	case *ast.CallExpr:
 		copy := *e
 		operands := append([]ast.Expr{e.Fun}, e.Args...)
@@ -95,6 +128,11 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		}
 	case *ast.UnaryExpr:
 		copy := *e
+		if e.Op == token.AND {
+			before, copy.X = r.place(e.X)
+			result = &copy
+			break
+		}
 		var values []ast.Expr
 		before, values = r.expression(e.X)
 		copy.X = values[0]
@@ -122,6 +160,9 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			rightBefore = append(rightBefore, &ast.AssignStmt{Lhs: []ast.Expr{value}, Tok: token.ASSIGN, Rhs: right})
 			before = append(before, &ast.IfStmt{Cond: condition, Body: &ast.BlockStmt{List: rightBefore}})
 			result = value
+			if r.untypedBoolean(e) {
+				result = &ast.BinaryExpr{X: value, Op: token.EQL, Y: boolean(true)}
+			}
 		} else {
 			var values []ast.Expr
 			before, values = r.operands([]ast.Expr{e.X, e.Y})
@@ -140,13 +181,84 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		before, values = r.operands([]ast.Expr{e.X, e.Index})
 		copy.X, copy.Index = values[0], values[1]
 		result = &copy
+	case *ast.StarExpr:
+		copy := *e
+		var values []ast.Expr
+		before, values = r.expression(e.X)
+		copy.X = values[0]
+		result = &copy
+	case *ast.TypeAssertExpr:
+		copy := *e
+		var values []ast.Expr
+		before, values = r.expression(e.X)
+		copy.X = values[0]
+		result = &copy
+	case *ast.IndexListExpr:
+		copy := *e
+		var values []ast.Expr
+		before, values = r.expression(e.X)
+		copy.X = values[0]
+		result = &copy
+	case *ast.SliceExpr:
+		copy := *e
+		input := []ast.Expr{e.X}
+		for _, bound := range []ast.Expr{e.Low, e.High, e.Max} {
+			if bound != nil {
+				input = append(input, bound)
+			}
+		}
+		var values []ast.Expr
+		before, values = r.operands(input)
+		copy.X = values[0]
+		i := 1
+		for _, bound := range []*ast.Expr{&copy.Low, &copy.High, &copy.Max} {
+			if *bound != nil {
+				*bound = values[i]
+				i++
+			}
+		}
+		result = &copy
+	case *ast.CompositeLit:
+		copy := *e
+		var input []ast.Expr
+		for _, element := range e.Elts {
+			if pair, ok := element.(*ast.KeyValueExpr); ok {
+				if tv := r.source.Package.TypesInfo.Types[pair.Key]; tv.IsValue() {
+					input = append(input, pair.Key)
+				}
+				input = append(input, pair.Value)
+			} else {
+				input = append(input, element)
+			}
+		}
+		var values []ast.Expr
+		before, values = r.operands(input)
+		copy.Elts = make([]ast.Expr, len(e.Elts))
+		i := 0
+		for j, element := range e.Elts {
+			if pair, ok := element.(*ast.KeyValueExpr); ok {
+				kv := *pair
+				if tv := r.source.Package.TypesInfo.Types[pair.Key]; tv.IsValue() {
+					kv.Key = values[i]
+					i++
+				}
+				kv.Value = values[i]
+				i++
+				copy.Elts[j] = &kv
+			} else {
+				copy.Elts[j] = values[i]
+				i++
+			}
+		}
+		result = &copy
 	}
 	if expr == r.target {
-		// Read types from the original expression, not from the new tree.
-		count := 1
-		if tuple, ok := r.source.Package.TypesInfo.TypeOf(expr).(*types.Tuple); ok {
-			count = tuple.Len()
+		r.inserted = true
+		if tv := r.source.Package.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
+			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
 		}
+		// Read types from the original expression, not from the new tree.
+		count := r.resultCount(expr)
 		refs := make([]ast.Expr, count)
 		for i := range refs {
 			refs[i] = r.name()
@@ -157,7 +269,35 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			before = append(before, &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{result}})
 		}
 		before = append(before, r.after(refs)...)
+		if count == 1 && r.untypedBoolean(expr) {
+			refs = []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
+		}
 		return before, refs
 	}
 	return before, []ast.Expr{result}
+}
+
+func (r *rewrite) untypedBoolean(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.ParenExpr:
+		return r.untypedBoolean(e.X)
+	case *ast.BinaryExpr:
+		switch e.Op {
+		case token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ:
+			return true
+		case token.LAND, token.LOR:
+			return r.untypedBoolean(e.X) && r.untypedBoolean(e.Y)
+		}
+	case *ast.UnaryExpr:
+		if e.Op == token.NOT {
+			return r.untypedBoolean(e.X)
+		}
+	case *ast.Ident:
+		if obj := r.source.Package.TypesInfo.Uses[e]; obj != nil {
+			if basic, ok := obj.Type().(*types.Basic); ok {
+				return basic.Kind() == types.UntypedBool
+			}
+		}
+	}
+	return false
 }

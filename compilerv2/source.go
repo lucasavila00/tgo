@@ -25,6 +25,7 @@ type Source struct {
 	Package     *packages.Package
 	Sites       []Site
 	expressions map[Site]ast.Expr
+	parents     map[ast.Node]ast.Node
 }
 
 // Load reads one Go package. It does not change its syntax tree.
@@ -45,7 +46,7 @@ func Load(dir, pattern string) (*Source, error) {
 	if len(p.Errors) != 0 {
 		return nil, fmt.Errorf("load source: %s", p.Errors[0])
 	}
-	s := &Source{Package: p, expressions: make(map[Site]ast.Expr)}
+	s := &Source{Package: p, expressions: make(map[Site]ast.Expr), parents: make(map[ast.Node]ast.Node)}
 	for _, file := range p.Syntax {
 		s.inventory(file, dir)
 	}
@@ -59,6 +60,9 @@ func (s *Source) inventory(file *ast.File, dir string) {
 			stack = stack[:len(stack)-1]
 			return true
 		}
+		if len(stack) != 0 {
+			s.parents[n] = stack[len(stack)-1]
+		}
 		if expr, ok := n.(ast.Expr); ok {
 			start := s.Package.Fset.Position(expr.Pos())
 			end := s.Package.Fset.Position(expr.End())
@@ -69,10 +73,15 @@ func (s *Source) inventory(file *ast.File, dir string) {
 			site := Site{File: name, Start: start.Offset, End: end.Offset, Kind: fmt.Sprintf("%T", expr)}
 			tv, hasType := s.Package.TypesInfo.Types[expr]
 			switch {
+			case hasType && tv.IsBuiltin():
+				site.Reason = "builtin name"
 			case hasType && tv.IsType():
 				site.Reason = "type syntax"
 			case !hasType:
 				site.Reason = "name or syntax without a value"
+			}
+			if assertion, ok := expr.(*ast.TypeAssertExpr); ok && assertion.Type == nil {
+				site.Reason = "type switch assertion syntax"
 			}
 			var fn ast.Node
 			for i := len(stack) - 1; i >= 0; i-- {
@@ -86,6 +95,10 @@ func (s *Source) inventory(file *ast.File, dir string) {
 				case *ast.ArrayType:
 					if contains(parent.Len, expr) {
 						site.Reason = "array length"
+					}
+				case *ast.RangeStmt:
+					if contains(parent.X, expr) && s.rangeElided(parent) {
+						site.Reason = "range expression is not evaluated"
 					}
 				case *ast.GoStmt:
 					if parent.Call == expr {
@@ -130,6 +143,36 @@ func (s *Source) inventory(file *ast.File, dir string) {
 		stack = append(stack, n)
 		return true
 	})
+}
+
+func (s *Source) rangeElided(statement *ast.RangeStmt) bool {
+	if statement.Value != nil {
+		return false
+	}
+	if tv := s.Package.TypesInfo.Types[statement.X]; tv.Value != nil {
+		return true
+	}
+	typ := s.Package.TypesInfo.TypeOf(statement.X).Underlying()
+	if pointer, ok := typ.(*types.Pointer); ok {
+		typ = pointer.Elem().Underlying()
+	}
+	if _, ok := typ.(*types.Array); !ok {
+		return false
+	}
+	constantLength := true
+	ast.Inspect(statement.X, func(n ast.Node) bool {
+		if _, ok := n.(*ast.FuncLit); ok {
+			return false
+		}
+		if call, ok := n.(*ast.CallExpr); ok && s.Package.TypesInfo.Types[call].Value == nil {
+			constantLength = false
+		}
+		if unary, ok := n.(*ast.UnaryExpr); ok && unary.Op == token.ARROW {
+			constantLength = false
+		}
+		return true
+	})
+	return constantLength
 }
 
 func contains(parent, child ast.Node) bool {
