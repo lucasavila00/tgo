@@ -138,6 +138,11 @@ Enable a rule only when the compiler supports its replacement. Keep compiler
 validity checks separate from linter modernization errors. Do not reject valid
 source in the compiler merely because newer syntax can express it.
 
+Modernization shortens code without changing behavior. Linting also blocks
+bad practices, such as zero-value use in TGo. The user upgrade path is to
+rename handwritten Go source and tests to `.tgo` and resolve compiler and
+linter errors. Do not add package test runs as a step in this path.
+
 Automatic fixes must preserve types, bindings, scope, evaluation order,
 control flow, error identity, error text, deferred calls, and public APIs.
 Use checked types and bindings to prove equivalence. If a change needs a
@@ -147,5 +152,3 @@ Change handwritten `.tgo` source, not generated Go outputs.
 Test both forms against the same expected behavior. Include cases where a
 similar form must not receive a fix. Check diagnostic locations, compile the
 fixed source, and verify that a second lint run does not repeat the diagnostic.
-Verify the full package upgrade path: rename handwritten Go source and tests
-to `.tgo`, resolve compiler and linter errors, and run the package tests.

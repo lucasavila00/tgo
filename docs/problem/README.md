@@ -42,10 +42,11 @@ The intended upgrade path is:
 2. Compile the package and correct compiler errors.
 3. Run the TGo linter. Apply automatic modernization fixes and resolve the
    remaining linter errors.
-4. Compile and run the package tests. Repeat until all checks pass.
 
 Generated Go files are outputs. Other packages can remain Go. The compiler
-checks language validity; the linter guides use of the new language features.
+checks language validity. Modernization shortens code without changing its
+behavior. Linting also blocks bad practices, such as zero-value use in TGo.
+Resolve compiler and linter errors to complete the upgrade.
 
 For example, a call followed by `if err != nil { return err }` can become
 `call()!!` when both forms have the same behavior. A local variable assigned
