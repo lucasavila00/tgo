@@ -11,14 +11,21 @@ import (
 type After func(results []ast.Expr) []ast.Stmt
 
 type rewrite struct {
-	source         *Source
-	target         ast.Expr
-	after          After
-	names          map[string]bool
-	next           int
-	inserted       bool
-	labels         map[string]string
-	suppressedRoot ast.Expr
+	source            *Source
+	target            ast.Expr
+	after             After
+	names             map[string]bool
+	next              int
+	inserted          bool
+	labels            map[string]string
+	suppressedRoot    ast.Expr
+	origins           map[ast.Expr]ast.Expr
+	extraImports      []*ast.ImportSpec
+	extraDeclarations []ast.Decl
+	zeroSequence      *ast.Ident
+	iterAlias         *ast.Ident
+	mapAlias          *ast.Ident
+	sliceAlias        *ast.Ident
 }
 
 func (r *rewrite) name() *ast.Ident {
@@ -33,7 +40,19 @@ func (r *rewrite) name() *ast.Ident {
 }
 
 func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
-	count := r.resultCount(expr)
+	original := expr
+	if origin := r.origins[expr]; origin != nil {
+		original = origin
+	}
+	count := r.resultCount(original)
+	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil {
+		if pair, ok := r.source.parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
+			if _, pointer := r.source.Package.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
+				return r.materializeKey(expr.(*ast.CompositeLit), literal)
+			}
+		}
+	}
+	expr = r.contextLiteral(expr, original)
 	if count == 0 {
 		return []ast.Stmt{&ast.ExprStmt{X: expr}}, nil
 	}
@@ -42,7 +61,7 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		refs[i] = r.name()
 	}
 	statement := &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{expr}}
-	if count == 1 && r.untypedBoolean(expr) {
+	if count == 1 && r.untypedBoolean(original) {
 		return []ast.Stmt{statement}, []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
 	}
 	return []ast.Stmt{statement}, refs
@@ -299,21 +318,20 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
 		}
 		// Read types from the original expression, not from the new tree.
-		count := r.resultCount(expr)
-		refs := make([]ast.Expr, count)
-		for i := range refs {
-			refs[i] = r.name()
+		if r.origins == nil {
+			r.origins = make(map[ast.Expr]ast.Expr)
 		}
-		if count == 0 {
-			before = append(before, &ast.ExprStmt{X: result})
-		} else {
-			before = append(before, &ast.AssignStmt{Lhs: refs, Tok: token.DEFINE, Rhs: []ast.Expr{result}})
-		}
+		r.origins[result] = expr
+		saved, refs := r.save(result)
+		before = append(before, saved...)
 		before = append(before, r.after(refs)...)
-		if count == 1 && r.untypedBoolean(expr) {
-			refs = []ast.Expr{&ast.BinaryExpr{X: refs[0], Op: token.EQL, Y: boolean(true)}}
-		}
 		return before, refs
+	}
+	if result != expr {
+		if r.origins == nil {
+			r.origins = make(map[ast.Expr]ast.Expr)
+		}
+		r.origins[result] = expr
 	}
 	return before, []ast.Expr{result}
 }

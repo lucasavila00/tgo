@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/format"
+	"go/token"
 )
 
 // InsertAfter builds source files with statements after one expression.
@@ -28,6 +29,8 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 	}
 	output := make(map[string][]byte)
 	for _, file := range s.Package.Syntax {
+		r.extraImports, r.extraDeclarations = nil, nil
+		r.zeroSequence, r.iterAlias, r.mapAlias, r.sliceAlias = nil, nil, nil, nil
 		copy := *file
 		copy.Decls = append([]ast.Decl(nil), file.Decls...)
 		for i, decl := range file.Decls {
@@ -38,6 +41,10 @@ func (s *Source) InsertAfter(site Site, after After) (map[string][]byte, error) 
 			}
 		}
 		var buf bytes.Buffer
+		copy.Decls = append(copy.Decls, r.extraDeclarations...)
+		for _, spec := range r.extraImports {
+			copy.Decls = append([]ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{spec}}}, copy.Decls...)
+		}
 		if err := format.Node(&buf, s.Package.Fset, &copy); err != nil {
 			return nil, err
 		}

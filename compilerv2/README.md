@@ -44,6 +44,7 @@ is skipped. Normal deferred calls still run.
 | --- | --- |
 | `source.go` | Load types and inventory source expressions |
 | `expressions.go` | Save values and keep conditional evaluation |
+| `literals.go`, `zero_types.go` | Keep omitted literal types, including map keys, without an early hash |
 | `places.go` | Save assignment operands without reading the destination |
 | `statements.go`, `control.go`, `select.go` | Keep scope, branches, loop control, and communication timing |
 | `insert.go` | Build and format new files |
@@ -65,3 +66,9 @@ Focused execution tests also cover assignments, short circuits, closures,
 loops, switches, ranges, selects, defers, jumps, tuples, Boolean conversions,
 array storage, and pointer receivers. Hosted CI keeps generated variants and
 their test results as artifacts.
+
+Literal tests also cover nested omitted types, map values, pointer keys, and
+array keys. A key with an unhashable interface field must fail when the map is
+built, after its value expression runs. To save such a key, the engine infers
+its type from an empty map and assigns its fields or elements to a fresh value.
+It does not insert the key into a map before the original map operation.
