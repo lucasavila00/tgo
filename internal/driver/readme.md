@@ -8,66 +8,29 @@ Generated from Go declarations and source comments. Run `make docs` to update th
 import "github.com/lucasavila00/tgo/internal/driver"
 ```
 
-Package driver compiles a module's TGo files into ordinary Go.
+Package driver compiles a Go module that contains TGo source files.
 
-Start here to follow the compiler. The [frontend](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md>) reads added syntax, the [checker](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/readme.md>) checks its types and scope, and [lowering](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md>) emits equivalent Go. The [public API](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/readme.md>) calls this driver. The [user guide](<https://github.com/lucasavila00/tgo/blob/main/docs/guide/transpiler.md>) explains language use.
+Compile accepts a directory inside a module and compiles from that module's root. It writes ordinary Go beside each selected TGo input, then checks the result with Go. Callers use the [public API](<https://github.com/lucasavila00/tgo/blob/main/pkg/transpiler/readme.md>) or the tgo command.
 
-### Compilation steps
+### Source files and output
 
-Compile runs these steps from [compile.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/compile.go>):
+Each TGo file determines its generated file. For example, service.tgo produces service\_tgo.go. Existing generated contents do not affect compilation. Test and platform suffixes stay at the end: service\_linux\_test.tgo produces service\_tgo\_linux\_test.go.
 
-```
-findModule -> readModule -> prepareModule -> selectSources
-    -> checkSources -> lowerModule -> checkGenerated
-```
+Go selects files with its usual build constraints and platform rules. This includes test packages. The compiler removes generated files for inputs that the current build excludes. It keeps those TGo inputs.
 
-findModule asks Go for the go.mod selected from the supplied directory. Compilation starts at that module root, even for a subdirectory argument. A directory outside a module is an error.
+The compiler excludes nested modules, vendor, testdata, and directories whose names start with a dot or underscore. It leaves ordinary source, assets, headers, and dependencies at their original paths. Thus, relative module replacements and embedded files keep their meaning.
 
-readModule lists paths and reads owned Go and TGo source. A TGo input owns its generated output; stale output contents cannot affect compilation. Nested modules, vendor, testdata, and directories starting with a dot or underscore are outside ownership. Unrelated asset contents are not read.
+### Why compilation has two checks
 
-prepareModule writes original TGo at each generated Go path. For example, service.tgo owns service\_tgo.go. Test and platform suffixes stay last, as in service\_tgo\_linux\_test.go. This first version still contains TGo syntax. Preparation also reserves source names and records original diagnostic paths.
+Go tools need Go filenames to select packages and their imports. The driver first copies each TGo input to its generated Go path. These copies still contain TGo syntax. Go supplies the file and dependency lists; the [frontend](<https://github.com/lucasavila00/tgo/blob/main/internal/frontend/readme.md>) reads the added syntax, and the [checker](<https://github.com/lucasavila00/tgo/blob/main/internal/checker/readme.md>) checks TGo types and scope.
 
-selectSources asks go/packages for files, imports, test variants, and compiled dependency information. Go applies build constraints and platform selection. This load requests metadata, not TGo type checking.
+All selected source packages must pass that check before [lowering](<https://github.com/lucasavila00/tgo/blob/main/internal/lowering/readme.md>) replaces TGo expressions with equivalent Go statements. The driver writes this Go code over the initial copies. It then checks the final module with Go's unmodified type checker. This last check confirms that Go accepts the output. The [runtime tests](<https://github.com/lucasavila00/tgo/blob/main/tests/readme.md>) also check that output behavior matches the source.
 
-checkSources checks selected source with the private checker. All source packages must pass before the final implementations are written.
+Both checks use the original module paths. There is no temporary module. This keeps local dependencies and build inputs in the same environment as a normal Go build. Go module loading can update go.mod and go.sum.
 
-lowerModule builds equivalent Go and writes it only to owned output paths. An input with no added operations already contains Go and needs no rewrite. Owned outputs excluded from this build are removed; their TGo inputs remain.
+### Failure behavior
 
-checkGenerated loads the final module with unmodified Go type checking. Compilation returns no file contents. Invalid source and compiler failures panic. Runtime [tests](<https://github.com/lucasavila00/tgo/blob/main/tests/readme.md>) check behavior that type checking cannot prove.
-
-### Files on disk
-
-Each generated path serves both stages: original TGo for source checking, then final Go. There is no module copy or separate temporary source file. Original TGo, ordinary Go, embedded assets, cgo headers, and dependencies stay at their paths. Relative replacements retain their meaning. Normal Go module commands can update go.mod and go.sum.
-
-Before writing, Compile saves each owned output's contents and permissions. If any compilation step fails, it restores those files and removes new outputs. Successful compilation keeps the final outputs and removes excluded outputs. This rollback covers generated files; Go module metadata updates remain.
-
-### Code map
-
-[module.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/module.go>) handles ownership and disk stages. [propagation.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/propagation.go>) connects file selection, checking, and lowering for propagation, if values, and comprehensions. [filename.go](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/filename.go>) preserves filename suffixes. The [unsafe operand check](<https://github.com/lucasavila00/tgo/blob/main/internal/driver/unsafe_propagation.go>) rejects propagation in unsafe size and offset operands.
-
-### Glossary
-
-AST \(abstract syntax tree\): nodes for expressions, statements, and declarations.
-
-Binding: the declaration to which a name refers.
-
-Contextual type: a type supplied by an assignment, return, argument, or conversion.
-
-Export data: compiled information about dependency types and declarations.
-
-Lowering: replacing added expressions with equivalent Go statements.
-
-Marker: a syntax node that identifies a TGo operation, not a runtime helper.
-
-Overlay: Go tooling's map of file paths to replacement contents for a load. This compiler uses disk stages instead.
-
-Package ID: Go's identity for a package, including its test variant.
-
-Private checker: the compiler's patched copy of Go's type checker.
-
-Stock Go checker: the unmodified checker used on final output.
-
-Temporary variable: a generated local that saves a value, not a temporary file.
+Compile returns no file contents. Invalid source and compiler failures cause a panic. Before writing, it saves existing generated files. On failure, it restores their contents and permissions and removes newly created outputs. A successful compilation keeps the new output. Go module metadata updates remain after a failure.
 
 ## func Compile
 

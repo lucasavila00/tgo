@@ -1,38 +1,61 @@
-// Package transpiler exposes module compilation and expression insertion.
+// Package transpiler compiles TGo modules and adds statements to ordinary Go code.
 //
-// Compile takes a directory inside a Go module, writes generated Go beside
-// owned TGo inputs, and checks the final module. It returns nothing and panics
-// on invalid source or compiler failure. See the [user guide] for language and
-// commands, and the [driver] for the compilation process and shared terms.
+// # Compile a TGo module
 //
-// # Insert statements after a Go expression
+// Call Compile with a directory inside a Go module:
 //
-// Load and InsertAfter are a separate API for ordinary Go. Load reads one
-// package and records expression sites. Source.Package retains stock Go package
-// and type objects. Private checking supplies lowering information separately.
+//	transpiler.Compile("/path/to/module")
 //
-// Source.Sites identifies expressions by file, byte offsets, and AST kind.
-// Reason marks sites without value evaluation, such as type names. ErrorReturn
-// identifies a surrounding function whose sole result is error.
+// Compile processes the whole module and writes Go files beside the TGo inputs.
+// For example, service.tgo produces service_tgo.go. It checks the final module
+// with Go. It returns nothing; invalid source or a compiler failure causes a
+// panic. See the [user guide] for TGo syntax and the [driver] for file handling
+// and failure behavior.
 //
-// InsertAfter passes saved result references to a callback, then returns
-// formatted file contents keyed by absolute paths. It does not write files.
-// For a site in a function returning only error, with err in scope:
+// # Add code after an expression runs
+//
+// Load and InsertAfter let a tool change ordinary Go source. For example, a
+// tool can print the value from fetch before consume uses it. Given:
+//
+//	consume(fetch())
+//
+// where fetch returns int, the changed code has this behavior:
+//
+//	var saved int = fetch()
+//	println(saved)
+//	consume(saved)
+//
+// The saved value prevents a second call to fetch. The added code runs only
+// when the selected expression runs. For example, if the expression is in a
+// branch that is skipped, the added code is skipped too.
+//
+// Use Load to read and type-check one Go package. Then select the expression
+// from Source.Sites. Each Site identifies an expression in the original file;
+// a nonempty Reason explains why insertion is not available for that expression.
+//
+// InsertAfter calls a function that you supply to build the added statements.
+// That function receives Go syntax nodes for the expression's saved results,
+// in result order. Use these nodes to refer to the values without evaluating
+// the original expression again.
+//
+// In this example, source is the result from Load, and site selects fetch().
+// The callback builds a println statement with the saved value as its argument.
+// It uses the go/ast package to describe the new Go code:
 //
 //	files, err := source.InsertAfter(site, func(results []ast.Expr) []ast.Stmt {
-//	    return []ast.Stmt{
-//	        &ast.ReturnStmt{Results: []ast.Expr{ast.NewIdent("err")}},
-//	    }
+//	    return []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{
+//	        Fun:  ast.NewIdent("println"),
+//	        Args: results,
+//	    }}}
 //	})
 //
-// The caller handles err and writes files. Saved references do not reevaluate
-// the original expression. Added statements run after it and before its parent
-// uses the result, only when the expression executes. Checked syntax stays
-// unchanged, so one load supports several independent rewrites.
+// Check err before using files. This example assumes that fetch returns one
+// value and that println names Go's built-in function.
 //
-// Saved values use explicit types. If a required type cannot be named in the
-// generated scope, the error identifies its type and source position.
-// An accessible type or conversion at that source boundary can resolve it.
+// The returned map contains formatted Go files keyed by absolute path.
+// InsertAfter does not write them; the caller decides which files to save.
+// It also leaves the loaded syntax unchanged. Each call makes an independent
+// rewrite, so changes from separate calls do not accumulate.
 //
 // [user guide]: https://github.com/lucasavila00/tgo/blob/main/docs/guide/transpiler.md
 // [driver]: https://github.com/lucasavila00/tgo/blob/main/internal/driver/readme.md
