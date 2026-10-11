@@ -179,7 +179,11 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 			}
 		case *ast.StarExpr:
 			rename(e.X)
+		case *ast.ParenExpr:
+			rename(e.X)
 		case *ast.ArrayType:
+			rename(e.Elt)
+		case *ast.Ellipsis:
 			rename(e.Elt)
 		case *ast.MapType:
 			rename(e.Key)

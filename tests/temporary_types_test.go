@@ -39,7 +39,14 @@ func TestTypedTemporaryRejected(t *testing.T) {
 }
 
 func TestTypedTemporaryReference(t *testing.T) {
-	fixture := "testdata/propagation/ContextualTypes"
+	for _, name := range []string{"ContextualTypes", "VariadicGeneric"} {
+		t.Run(name, func(t *testing.T) { checkTypedTemporaryReference(t, name) })
+	}
+}
+
+func checkTypedTemporaryReference(t *testing.T, name string) {
+	t.Helper()
+	fixture := filepath.Join("testdata/propagation", name)
 	generated := t.TempDir()
 	files := transpiler.Compile(fixture)
 	file, err := parser.ParseFile(token.NewFileSet(), "main_tgo.go", files["main_tgo.go"], 0)
@@ -70,7 +77,7 @@ func TestTypedTemporaryReference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, dir := range []string{generated, "testdata/propagation-reference/contextualtypes"} {
+	for _, dir := range []string{generated, filepath.Join("testdata/propagation-reference", strings.ToLower(name))} {
 		command := exec.Command("go", "run", ".")
 		command.Dir = dir
 		actual, err := command.CombinedOutput()
