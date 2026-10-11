@@ -1,7 +1,0 @@
-package sample
-
-type Account enum {
-    Personal struct {
-        Value Missing
-    }
-}

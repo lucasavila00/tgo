@@ -1,7 +1,0 @@
-package errors
-
-func check() error { return nil }
-
-func invalid() (int, error) {
-	return , check()!!
-}

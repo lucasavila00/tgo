@@ -1,4 +1,0 @@
-nilbad/local.tgo:6:9: value is not proven non-nil for %T
-nilbad/local.tgo:10:29: value is not proven non-nil for %T
-nilbad/local.tgo:15:10: value is not proven non-nil for %T
-nilbad/local.tgo:14:24: named result is not proven non-nil

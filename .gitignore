@@ -1,7 +1,0 @@
-/bin/
-__pycache__/
-.tgo.lock
-/editors/vscode/node_modules/
-/editors/vscode/.vscode-test/
-/editors/vscode/bin/
-/editors/vscode/tgo-navigation.vsix

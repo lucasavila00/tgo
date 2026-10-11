@@ -1,7 +1,0 @@
-package sample
-
-type Request struct {
-    Tags map[string]string = map[string]string{}
-}
-
-var request = Request{..default, ..default}

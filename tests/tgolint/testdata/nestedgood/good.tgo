@@ -1,8 +1,0 @@
-package nestedgood
-
-import "example.com/tgolint/nestedmodel"
-
-func children(values []%nestedmodel.Child) int { return len(values) }
-func leaves(values []%nestedmodel.Leaf) int { return len(values) }
-func childCount(value %nestedmodel.ChildList) int { return children(value.List) }
-func leafCount(value %nestedmodel.LeafList) int { return leaves(value.List) }

@@ -1,5 +1,0 @@
-package errors
-
-func Values(input []int) map[int]int {
-    return map[int]int{for _, value := range input { value }}
-}

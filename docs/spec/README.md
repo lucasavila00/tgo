@@ -164,8 +164,7 @@ statements. A loop condition checks the error on each iteration.
 
 The propagated call cannot be the direct call of `go` or `defer`, because its result would run
 outside the current return point. A missing compiler lowering for any other expression context is
-an implementation defect, not a language restriction. The
-[compiler lowering guide](../contrib/compiler-lowering.md) tracks known gaps.
+an implementation defect, not a language restriction.
 
 Generated Go keeps the source function signature. Its success path has the call, nil check, and
 branch of a manual Go error check. `!` calls `fmt.Errorf` only on failure and can allocate its
@@ -625,8 +624,7 @@ An array literal must supply every index, including indexes whose Go zero is val
 A comprehension is valid at each function expression point where its slice or
 map result is valid. The compiler runs its generated loops at that expression
 point. It must preserve surrounding evaluation order, scope, and control flow.
-A missing statement-context lowering is an implementation defect. The
-[compiler lowering guide](../contrib/compiler-lowering.md) tracks known gaps.
+A missing statement-context lowering is an implementation defect.
 
 A slice or map literal can contain one `for range` block. Each range uses `:=` with one or two
 names. A nested range adds one loop. An `if` block filters results. Use `&&` for two conditions.

@@ -1,7 +1,0 @@
-// Package sample tests comment placement.
-package sample
-
-/* ValueDoc stays attached to Value. */
-const Value = 2
-
-func Sum() int { left := 1; right := 2; return left + right } // trailing comment

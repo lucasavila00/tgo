@@ -1,6 +1,0 @@
-package sample
-
-func internalOnly() string {
-	value := Production(Record{Name: "internal"})
-	return value
-}

@@ -1,5 +1,16 @@
 # TGo
 
+## Repository status
+
+This repository is mothballed while we develop the compiler spikes in
+[#248](https://github.com/lucasavila00/tgo/issues/248) and
+[#247](https://github.com/lucasavila00/tgo/issues/247). Only documentation and
+the specification remain. The code, tests, build tools, CI, and architecture
+documents have been removed. Git history retains them.
+
+The guides below describe the removed implementation. Their build and test
+commands are not available in this checkout.
+
 TGo is Go with extra compile-time checks and shorter error handling. You write
 `.tgo` files. `tgo build` creates ordinary `.go` files that the Go toolchain can
 build and test.
@@ -162,14 +173,11 @@ See the [user guide](docs/guide/README.md) and the
 
 ## Contribute
 
-Compiler changes preserve valid TGo behavior before they improve generated Go.
-The compiler generates locals and blocks when it needs them. It does not make
-users write compiler bookkeeping. See the
-[compiler lowering guide](docs/contrib/compiler-lowering.md).
+Use the specification and user guides to define language behavior. Keep
+compiler experiments separate from the removed implementation.
 
 ## Learn more
 
 - [User guide](docs/guide/README.md)
 - [Language reference](docs/spec/README.md)
 - [`tgolint` reference](docs/spec/TGOLINT.md)
-- [Contributor documentation](docs/contrib/README.md)

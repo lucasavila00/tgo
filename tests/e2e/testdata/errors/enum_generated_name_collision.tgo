@@ -1,6 +1,0 @@
-package invalid
-
-type E enum {
-	A struct{}
-	TagA struct{}
-}
