@@ -34,10 +34,10 @@ type Loader struct {
 ### func NewLoader
 
 ```go
-func NewLoader(root string, roots []*packages.Package, tgoFiles map[string]string, used map[string]bool) *Loader
+func NewLoader(root string, roots []*packages.Package, tgoFiles map[string]string, used map[string]bool) (*Loader, error)
 ```
 
-NewLoader records dependency exports before any source package is checked.
+NewLoader records dependency exports before any source package is checked. Every source check uses the module's selected Go target architecture.
 
 ### func \(\*Loader\) Check
 

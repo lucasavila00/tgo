@@ -22,8 +22,8 @@ import (
 	"go/token"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/lucasavila00/tgo/internal/checker/gcimporter"
@@ -55,19 +55,25 @@ type Loader struct {
 	imports  map[string]*types.Package
 	exports  map[string]string
 	fset     *token.FileSet
+	sizes    types.Sizes
 }
 
 // NewLoader records dependency exports before any source package is checked.
-func NewLoader(root string, roots []*packages.Package, tgoFiles map[string]string, used map[string]bool) *Loader {
+// Every source check uses the module's selected Go target architecture.
+func NewLoader(root string, roots []*packages.Package, tgoFiles map[string]string, used map[string]bool) (*Loader, error) {
+	sizes, err := targetSizes(root)
+	if err != nil {
+		return nil, err
+	}
 	loader := &Loader{Root: root, TGoFiles: tgoFiles, Used: used,
 		packages: make(map[string]*Package), checking: make(map[string]bool),
-		imports: make(map[string]*types.Package), exports: make(map[string]string), fset: token.NewFileSet()}
+		imports: make(map[string]*types.Package), exports: make(map[string]string), fset: token.NewFileSet(), sizes: sizes}
 	packages.Visit(roots, nil, func(pkg *packages.Package) {
 		if pkg.ExportFile != "" {
 			loader.exports[pkg.PkgPath] = pkg.ExportFile
 		}
 	})
-	return loader
+	return loader, nil
 }
 
 func newInfo() *types.Info {
@@ -129,7 +135,7 @@ func (loader *Loader) Check(metadata *packages.Package) (*Package, error) {
 }
 
 func (loader *Loader) check(metadata *packages.Package, pkg *Package) (*Package, error) {
-	config := types.Config{TGo: pkg.Operations, Importer: packageImporter{loader, metadata}, Sizes: targetSizes(), Error: func(err error) { pkg.Errors = append(pkg.Errors, err) }}
+	config := types.Config{TGo: pkg.Operations, Importer: packageImporter{loader, metadata}, Sizes: loader.sizes, Error: func(err error) { pkg.Errors = append(pkg.Errors, err) }}
 	if metadata.Module != nil {
 		config.GoVersion = "go" + metadata.Module.GoVersion
 	}
@@ -152,12 +158,14 @@ func (loader *Loader) check(metadata *packages.Package, pkg *Package) (*Package,
 	return pkg, nil
 }
 
-func targetSizes() types.Sizes {
-	arch := os.Getenv("GOARCH")
-	if arch == "" {
-		arch = runtime.GOARCH
+func targetSizes(root string) (types.Sizes, error) {
+	command := exec.Command("go", "env", "GOARCH")
+	command.Dir = root
+	arch, err := command.Output()
+	if err != nil {
+		return nil, fmt.Errorf("read Go target architecture: %w", err)
 	}
-	return types.SizesFor("gc", arch)
+	return types.SizesFor("gc", strings.TrimSpace(string(arch))), nil
 }
 
 type packageImporter struct {
@@ -189,7 +197,10 @@ func (importer packageImporter) ImportFrom(path, dir string, _ types.ImportMode)
 
 // CheckGo checks ordinary Go syntax separately from its stock Go type objects.
 func CheckGo(metadata *packages.Package, dir string) (*Package, error) {
-	loader := NewLoader(dir, []*packages.Package{metadata}, nil, nil)
+	loader, err := NewLoader(dir, []*packages.Package{metadata}, nil, nil)
+	if err != nil {
+		return nil, err
+	}
 	pkg := &Package{Fset: metadata.Fset, Syntax: metadata.Syntax, GoFiles: metadata.GoFiles,
 		TypesInfo: newInfo(), Operations: make(map[string]types.TGoOperation), Conditionals: make(map[*ast.CallExpr]*ast.IfStmt)}
 	loader.fset = metadata.Fset
