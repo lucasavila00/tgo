@@ -14,9 +14,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-
-      - name: Prepare source checker
-        run: make prepare
       - name: Check Go documentation
         run: make docs-check
       - name: Build fixture outputs and check snapshots
