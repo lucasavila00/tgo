@@ -1,31 +1,43 @@
-# Check return values and effects
+# Short returns: PROOF
 
-Issue: [#321](https://github.com/lucasavila00/tgo/issues/321)
+## Behavior checks
 
-Add `.tgo` fixtures, generated Go snapshots, and independent Go references under
-`tests/testdata/`. Compile and run both programs against expected values and
-traces: records of calls and defers in execution order. References use explicit
-Go returns.
+Add fixtures under `tests/testdata/return-error-shorthand/`, with generated
+Go snapshots and independent Go references. Require identical values, error
+identity, and call order.
 
-Check:
+Check all three forms, generic zeros, multiple-result calls, typed nil
+errors, and named results. The deferred increment in [WHAT](what.md) must
+return `1, nil`. Test propagation, operand returns, panics, and jumps:
+reached operands run once; early exits skip later operands and outer result
+assignment.
 
-- All three examples, error-only returns, multiple-result calls, every
-  zero-value kind, named types, and generic results.
-- Named results with previous values, grouped and blank names, shadowed names,
-  and defers that read or change results.
-- Concrete and generic errors, richer interfaces, and typed nil conversions.
-  Compare error identity, `errors.Is`, and `errors.As`.
-- Contextual constants, shifts, nil, if values, and nested functions.
-- Propagation, operand returns, panics, and jumps. Reached operands run once;
-  early exits skip later operands and outer result assignment.
-- Comments, multiline syntax, floats, selectors, `...`, ordinary returns,
-  original positions, and shadowed `nil`, `error`, and type names.
+## Rejected inputs
 
-Require diagnostics for wrong counts, incompatible types, missing operands,
-and invalid operator positions. Check termination analysis.
+Reject bare `return ..`, both operator positions together, wrong result
+counts, incompatible operands, final non-error types, and nil incompatible
+with the final type. Diagnostics must identify the original `.tgo` position.
 
-For automatic fixes, compare execution before and after accepted changes.
-Leave effectful calls, non-nil collections, nonzero interface conversions,
-and unproved variable values unchanged.
+## Regression checks
 
-[WHAT](what.md) states behavior. [HOW](how.md) explains lowering.
+Cover contextual constants, shifts, nested functions, comments, multiline
+syntax, floats, selectors, `...`, and shadowed `nil`, `error`, and type
+names. Check termination analysis and ordinary returns.
+
+Compare automatic fixes before and after execution. Leave effectful calls,
+non-nil collections, nonzero interface conversions, and unproved values
+unchanged.
+
+## Evidence
+
+These feature checks are planned. Add `TestReturnErrorShorthand` and run:
+
+```sh
+go test ./tests -run '^TestReturnErrorShorthand$'
+```
+
+A passing test must verify output compilation, reference behavior,
+snapshots, and diagnostics. Documentation review alone cannot establish
+these results.
+
+[HOW](how.md) explains lowering.
