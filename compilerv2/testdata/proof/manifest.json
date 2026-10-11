@@ -1,0 +1,4697 @@
+[
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 20,
+    "end": 35,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 15,
+    "end": 52,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 36,
+    "end": 39,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 40,
+    "end": 45,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 47,
+    "end": 52,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 56,
+    "end": 57,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 61,
+    "end": 69,
+    "kind": "*ast.CompositeLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 61,
+    "end": 67,
+    "kind": "*ast.ArrayType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 62,
+    "end": 63,
+    "kind": "*ast.BasicLit",
+    "reason": "array length",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 64,
+    "end": 67,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 71,
+    "end": 72,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 76,
+    "end": 78,
+    "kind": "*ast.UnaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 77,
+    "end": 78,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 80,
+    "end": 81,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 85,
+    "end": 98,
+    "kind": "*ast.CompositeLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 85,
+    "end": 96,
+    "kind": "*ast.MapType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 89,
+    "end": 92,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 93,
+    "end": 96,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 100,
+    "end": 118,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 100,
+    "end": 101,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 102,
+    "end": 117,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 102,
+    "end": 108,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 109,
+    "end": 116,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 120,
+    "end": 136,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 120,
+    "end": 121,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 122,
+    "end": 135,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 122,
+    "end": 128,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 129,
+    "end": 134,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 139,
+    "end": 160,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 139,
+    "end": 145,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 146,
+    "end": 159,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 162,
+    "end": 181,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 162,
+    "end": 168,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 169,
+    "end": 180,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 183,
+    "end": 187,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 183,
+    "end": 184,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 185,
+    "end": 186,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 191,
+    "end": 204,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 191,
+    "end": 197,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 198,
+    "end": 203,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 206,
+    "end": 225,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 206,
+    "end": 213,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 214,
+    "end": 218,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 214,
+    "end": 215,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 216,
+    "end": 217,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 220,
+    "end": 224,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 220,
+    "end": 221,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 222,
+    "end": 223,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 234,
+    "end": 237,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 246,
+    "end": 265,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 241,
+    "end": 282,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 266,
+    "end": 269,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 270,
+    "end": 275,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 277,
+    "end": 282,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 286,
+    "end": 287,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 291,
+    "end": 299,
+    "kind": "*ast.CompositeLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 291,
+    "end": 297,
+    "kind": "*ast.ArrayType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 292,
+    "end": 293,
+    "kind": "*ast.BasicLit",
+    "reason": "array length",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 294,
+    "end": 297,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 301,
+    "end": 323,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 301,
+    "end": 302,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 303,
+    "end": 322,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 303,
+    "end": 309,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 310,
+    "end": 321,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 326,
+    "end": 354,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 326,
+    "end": 332,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 333,
+    "end": 353,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/assignments.go",
+    "start": 363,
+    "end": 366,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 20,
+    "end": 24,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 25,
+    "end": 29,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 36,
+    "end": 48,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 31,
+    "end": 65,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 49,
+    "end": 52,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 53,
+    "end": 58,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 60,
+    "end": 65,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 69,
+    "end": 140,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 69,
+    "end": 76,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 77,
+    "end": 139,
+    "kind": "*ast.BinaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 77,
+    "end": 107,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 77,
+    "end": 90,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 91,
+    "end": 97,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 99,
+    "end": 106,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 111,
+    "end": 139,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 111,
+    "end": 124,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 125,
+    "end": 132,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 134,
+    "end": 138,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 146,
+    "end": 151,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 152,
+    "end": 156,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 159,
+    "end": 193,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 159,
+    "end": 163,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 164,
+    "end": 192,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 164,
+    "end": 177,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 178,
+    "end": 185,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 187,
+    "end": 191,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 195,
+    "end": 215,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 195,
+    "end": 202,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 203,
+    "end": 214,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 203,
+    "end": 207,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 208,
+    "end": 213,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/booleans.go",
+    "start": 224,
+    "end": 227,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 20,
+    "end": 29,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 15,
+    "end": 46,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 30,
+    "end": 33,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 34,
+    "end": 39,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 41,
+    "end": 46,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 50,
+    "end": 90,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 50,
+    "end": 57,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 58,
+    "end": 72,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 58,
+    "end": 64,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 65,
+    "end": 71,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 74,
+    "end": 89,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 74,
+    "end": 80,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 81,
+    "end": 88,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 92,
+    "end": 107,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 92,
+    "end": 99,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 100,
+    "end": 106,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 100,
+    "end": 104,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/calls.go",
+    "start": 116,
+    "end": 119,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 20,
+    "end": 36,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 15,
+    "end": 53,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 37,
+    "end": 40,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 41,
+    "end": 46,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 48,
+    "end": 53,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 57,
+    "end": 58,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 62,
+    "end": 77,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 62,
+    "end": 68,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 69,
+    "end": 76,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 87,
+    "end": 88,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 91,
+    "end": 107,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 91,
+    "end": 97,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 98,
+    "end": 106,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 110,
+    "end": 111,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 114,
+    "end": 119,
+    "kind": "*ast.BinaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 114,
+    "end": 115,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 118,
+    "end": 119,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 128,
+    "end": 129,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 133,
+    "end": 149,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 133,
+    "end": 139,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 140,
+    "end": 148,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 152,
+    "end": 165,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 152,
+    "end": 159,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 160,
+    "end": 161,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 163,
+    "end": 164,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 170,
+    "end": 183,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 170,
+    "end": 177,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 178,
+    "end": 179,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 181,
+    "end": 182,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/declarations.go",
+    "start": 192,
+    "end": 195,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 20,
+    "end": 29,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 15,
+    "end": 46,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 30,
+    "end": 33,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 34,
+    "end": 39,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 41,
+    "end": 46,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 50,
+    "end": 55,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 59,
+    "end": 64,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 65,
+    "end": 69,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 76,
+    "end": 77,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 81,
+    "end": 82,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 84,
+    "end": 89,
+    "kind": "*ast.BinaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 84,
+    "end": 85,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 88,
+    "end": 89,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 91,
+    "end": 92,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 96,
+    "end": 118,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 96,
+    "end": 102,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 103,
+    "end": 117,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 123,
+    "end": 145,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 123,
+    "end": 129,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 130,
+    "end": 144,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 151,
+    "end": 157,
+    "kind": "*ast.UnaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 152,
+    "end": 157,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 163,
+    "end": 168,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 171,
+    "end": 175,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 184,
+    "end": 188,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 204,
+    "end": 208,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/jumps.go",
+    "start": 220,
+    "end": 223,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 20,
+    "end": 29,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 15,
+    "end": 46,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 30,
+    "end": 33,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 34,
+    "end": 39,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 41,
+    "end": 46,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 54,
+    "end": 62,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 63,
+    "end": 75,
+    "kind": "*ast.ArrayType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 65,
+    "end": 75,
+    "kind": "*ast.FuncType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 72,
+    "end": 75,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 81,
+    "end": 82,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 86,
+    "end": 104,
+    "kind": "*ast.BinaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 86,
+    "end": 100,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 86,
+    "end": 92,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 93,
+    "end": 99,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 103,
+    "end": 104,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 106,
+    "end": 111,
+    "kind": "*ast.BinaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 106,
+    "end": 107,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 110,
+    "end": 111,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 113,
+    "end": 114,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 118,
+    "end": 132,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 118,
+    "end": 124,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 125,
+    "end": 131,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 137,
+    "end": 145,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 148,
+    "end": 189,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 148,
+    "end": 154,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 155,
+    "end": 163,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 165,
+    "end": 188,
+    "kind": "*ast.FuncLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 165,
+    "end": 175,
+    "kind": "*ast.FuncType",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 172,
+    "end": 175,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 185,
+    "end": 186,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 192,
+    "end": 206,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 192,
+    "end": 198,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 199,
+    "end": 205,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 222,
+    "end": 259,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 222,
+    "end": 229,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 230,
+    "end": 243,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 230,
+    "end": 241,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 230,
+    "end": 238,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 239,
+    "end": 240,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 245,
+    "end": 258,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 245,
+    "end": 256,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 245,
+    "end": 253,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 254,
+    "end": 255,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/loops.go",
+    "start": 268,
+    "end": 271,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 20,
+    "end": 30,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 15,
+    "end": 47,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 31,
+    "end": 34,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 35,
+    "end": 40,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 42,
+    "end": 47,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 51,
+    "end": 55,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 59,
+    "end": 105,
+    "kind": "*ast.FuncLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 59,
+    "end": 71,
+    "kind": "*ast.FuncType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 66,
+    "end": 71,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 74,
+    "end": 91,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 74,
+    "end": 80,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 81,
+    "end": 90,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 100,
+    "end": 103,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 107,
+    "end": 108,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 111,
+    "end": 117,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 111,
+    "end": 115,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 119,
+    "end": 136,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 119,
+    "end": 125,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 126,
+    "end": 135,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/nested.go",
+    "start": 145,
+    "end": 148,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 20,
+    "end": 30,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 15,
+    "end": 47,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 31,
+    "end": 34,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 35,
+    "end": 40,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 42,
+    "end": 47,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 55,
+    "end": 56,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 66,
+    "end": 80,
+    "kind": "*ast.CallExpr",
+    "reason": "range expression is not evaluated",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 66,
+    "end": 75,
+    "kind": "*ast.ParenExpr",
+    "reason": "range expression is not evaluated",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 67,
+    "end": 74,
+    "kind": "*ast.StarExpr",
+    "reason": "range expression is not evaluated",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 68,
+    "end": 74,
+    "kind": "*ast.ArrayType",
+    "reason": "range expression is not evaluated",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 69,
+    "end": 70,
+    "kind": "*ast.BasicLit",
+    "reason": "range expression is not evaluated",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 71,
+    "end": 74,
+    "kind": "*ast.Ident",
+    "reason": "range expression is not evaluated",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 76,
+    "end": 79,
+    "kind": "*ast.Ident",
+    "reason": "range expression is not evaluated",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 85,
+    "end": 95,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 85,
+    "end": 92,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 93,
+    "end": 94,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 104,
+    "end": 105,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 106,
+    "end": 112,
+    "kind": "*ast.ArrayType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 107,
+    "end": 108,
+    "kind": "*ast.BasicLit",
+    "reason": "array length",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 109,
+    "end": 112,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 118,
+    "end": 119,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 121,
+    "end": 146,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 121,
+    "end": 122,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 123,
+    "end": 145,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 123,
+    "end": 129,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 130,
+    "end": 144,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 155,
+    "end": 166,
+    "kind": "*ast.CompositeLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 155,
+    "end": 160,
+    "kind": "*ast.ArrayType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 157,
+    "end": 160,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 161,
+    "end": 162,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 164,
+    "end": 165,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 171,
+    "end": 191,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 171,
+    "end": 177,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 178,
+    "end": 190,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/ranges.go",
+    "start": 203,
+    "end": 206,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 22,
+    "end": 28,
+    "kind": "*ast.BasicLit",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 35,
+    "end": 49,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 30,
+    "end": 66,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 50,
+    "end": 53,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 54,
+    "end": 59,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 61,
+    "end": 66,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 76,
+    "end": 109,
+    "kind": "*ast.CallExpr",
+    "reason": "call executes when the function returns",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 76,
+    "end": 83,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 84,
+    "end": 108,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 84,
+    "end": 90,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 91,
+    "end": 107,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 111,
+    "end": 115,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 119,
+    "end": 138,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 119,
+    "end": 123,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 124,
+    "end": 137,
+    "kind": "*ast.ChanType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 129,
+    "end": 137,
+    "kind": "*ast.StructType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 144,
+    "end": 151,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 152,
+    "end": 166,
+    "kind": "*ast.SelectorExpr",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 152,
+    "end": 156,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 157,
+    "end": 166,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 168,
+    "end": 182,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 168,
+    "end": 179,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 168,
+    "end": 175,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 176,
+    "end": 179,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 180,
+    "end": 181,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 187,
+    "end": 263,
+    "kind": "*ast.CallExpr",
+    "reason": "call executes in another goroutine",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 187,
+    "end": 240,
+    "kind": "*ast.FuncLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 187,
+    "end": 202,
+    "kind": "*ast.FuncType",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 192,
+    "end": 197,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 198,
+    "end": 201,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 211,
+    "end": 225,
+    "kind": "*ast.CallExpr",
+    "reason": "call executes when the function returns",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 211,
+    "end": 223,
+    "kind": "*ast.SelectorExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 211,
+    "end": 218,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 219,
+    "end": 223,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 227,
+    "end": 238,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 227,
+    "end": 232,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 233,
+    "end": 237,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 241,
+    "end": 262,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 241,
+    "end": 247,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 248,
+    "end": 261,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 265,
+    "end": 271,
+    "kind": "*ast.UnaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 267,
+    "end": 271,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 273,
+    "end": 287,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 273,
+    "end": 285,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 273,
+    "end": 280,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 281,
+    "end": 285,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 289,
+    "end": 309,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 289,
+    "end": 295,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 296,
+    "end": 308,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 318,
+    "end": 321,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 330,
+    "end": 341,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 325,
+    "end": 358,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 342,
+    "end": 345,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 346,
+    "end": 351,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 353,
+    "end": 358,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 368,
+    "end": 432,
+    "kind": "*ast.CallExpr",
+    "reason": "call executes when the function returns",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 368,
+    "end": 430,
+    "kind": "*ast.FuncLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 368,
+    "end": 374,
+    "kind": "*ast.FuncType",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 382,
+    "end": 398,
+    "kind": "*ast.BinaryExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 382,
+    "end": 391,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 382,
+    "end": 389,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 395,
+    "end": 398,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 404,
+    "end": 423,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 404,
+    "end": 410,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 411,
+    "end": 422,
+    "kind": "*ast.BasicLit",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 434,
+    "end": 465,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 434,
+    "end": 439,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 440,
+    "end": 464,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 440,
+    "end": 446,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/scheduling.go",
+    "start": 447,
+    "end": 463,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 20,
+    "end": 31,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 15,
+    "end": 48,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 32,
+    "end": 35,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 36,
+    "end": 41,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 43,
+    "end": 48,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 52,
+    "end": 57,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 61,
+    "end": 78,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 61,
+    "end": 65,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 66,
+    "end": 74,
+    "kind": "*ast.ChanType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 71,
+    "end": 74,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 76,
+    "end": 77,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 80,
+    "end": 85,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 89,
+    "end": 103,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 89,
+    "end": 95,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 96,
+    "end": 102,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 109,
+    "end": 110,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 111,
+    "end": 117,
+    "kind": "*ast.ArrayType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 112,
+    "end": 113,
+    "kind": "*ast.BasicLit",
+    "reason": "array length",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 114,
+    "end": 117,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 134,
+    "end": 161,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 134,
+    "end": 135,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 136,
+    "end": 160,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 136,
+    "end": 142,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 143,
+    "end": 159,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 164,
+    "end": 171,
+    "kind": "*ast.UnaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 166,
+    "end": 171,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 175,
+    "end": 193,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 175,
+    "end": 181,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 182,
+    "end": 192,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 206,
+    "end": 234,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 206,
+    "end": 212,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 213,
+    "end": 233,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/selects.go",
+    "start": 246,
+    "end": 249,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 22,
+    "end": 27,
+    "kind": "*ast.BasicLit",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 33,
+    "end": 38,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 39,
+    "end": 47,
+    "kind": "*ast.ArrayType",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 41,
+    "end": 47,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 52,
+    "end": 59,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 60,
+    "end": 64,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 71,
+    "end": 77,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 66,
+    "end": 94,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 78,
+    "end": 82,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 83,
+    "end": 89,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 91,
+    "end": 94,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 117,
+    "end": 122,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 125,
+    "end": 144,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 125,
+    "end": 131,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 132,
+    "end": 137,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 139,
+    "end": 143,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 153,
+    "end": 154,
+    "kind": "*ast.BasicLit",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 162,
+    "end": 175,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 157,
+    "end": 205,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 176,
+    "end": 180,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 181,
+    "end": 187,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 189,
+    "end": 194,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 195,
+    "end": 199,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 201,
+    "end": 205,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 208,
+    "end": 213,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 216,
+    "end": 235,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 216,
+    "end": 222,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 223,
+    "end": 228,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 230,
+    "end": 234,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 244,
+    "end": 249,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 257,
+    "end": 261,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 252,
+    "end": 274,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 265,
+    "end": 268,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 270,
+    "end": 273,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 303,
+    "end": 308,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 311,
+    "end": 332,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 311,
+    "end": 317,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 318,
+    "end": 323,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 325,
+    "end": 331,
+    "kind": "*ast.BasicLit",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 341,
+    "end": 342,
+    "kind": "*ast.BasicLit",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 344,
+    "end": 345,
+    "kind": "*ast.BasicLit",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 353,
+    "end": 360,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 348,
+    "end": 375,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 361,
+    "end": 367,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 368,
+    "end": 374,
+    "kind": "*ast.Ellipsis",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 371,
+    "end": 374,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 399,
+    "end": 404,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 407,
+    "end": 451,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 407,
+    "end": 413,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 414,
+    "end": 419,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 421,
+    "end": 450,
+    "kind": "*ast.BinaryExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 421,
+    "end": 431,
+    "kind": "*ast.BasicLit",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 432,
+    "end": 450,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 432,
+    "end": 442,
+    "kind": "*ast.SelectorExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 432,
+    "end": 435,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 436,
+    "end": 442,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 443,
+    "end": 449,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 459,
+    "end": 466,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 454,
+    "end": 478,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 467,
+    "end": 472,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 473,
+    "end": 477,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 505,
+    "end": 510,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 513,
+    "end": 556,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 513,
+    "end": 519,
+    "kind": "*ast.Ident",
+    "reason": "builtin name",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 520,
+    "end": 525,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 527,
+    "end": 555,
+    "kind": "*ast.BinaryExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 527,
+    "end": 537,
+    "kind": "*ast.BasicLit",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 538,
+    "end": 555,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 538,
+    "end": 548,
+    "kind": "*ast.SelectorExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 538,
+    "end": 541,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 542,
+    "end": 548,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 549,
+    "end": 554,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 564,
+    "end": 569,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 559,
+    "end": 583,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 570,
+    "end": 577,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 578,
+    "end": 582,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 610,
+    "end": 615,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 618,
+    "end": 621,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 623,
+    "end": 630,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/support.go",
+    "start": 633,
+    "end": 640,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 20,
+    "end": 32,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 15,
+    "end": 49,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 33,
+    "end": 36,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 37,
+    "end": 42,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 44,
+    "end": 49,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 60,
+    "end": 73,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 60,
+    "end": 66,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 67,
+    "end": 72,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 82,
+    "end": 100,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 82,
+    "end": 88,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 89,
+    "end": 99,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 104,
+    "end": 121,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 104,
+    "end": 110,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 111,
+    "end": 120,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 142,
+    "end": 160,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 142,
+    "end": 148,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 149,
+    "end": 159,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 164,
+    "end": 185,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 164,
+    "end": 170,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 171,
+    "end": 184,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 194,
+    "end": 199,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 200,
+    "end": 203,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 206,
+    "end": 207,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 216,
+    "end": 221,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 225,
+    "end": 237,
+    "kind": "*ast.TypeAssertExpr",
+    "reason": "type switch assertion syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 225,
+    "end": 230,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 246,
+    "end": 249,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 253,
+    "end": 267,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 253,
+    "end": 260,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 261,
+    "end": 266,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/switches.go",
+    "start": 279,
+    "end": 282,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 8,
+    "end": 13,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 22,
+    "end": 85,
+    "kind": "*ast.BasicLit",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 92,
+    "end": 99,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 100,
+    "end": 119,
+    "kind": "*ast.StructType",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 108,
+    "end": 113,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 114,
+    "end": 117,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 127,
+    "end": 128,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 129,
+    "end": 137,
+    "kind": "*ast.StarExpr",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 130,
+    "end": 137,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 139,
+    "end": 142,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 121,
+    "end": 153,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 143,
+    "end": 148,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 149,
+    "end": 152,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 156,
+    "end": 163,
+    "kind": "*ast.SelectorExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 156,
+    "end": 157,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 158,
+    "end": 163,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 167,
+    "end": 172,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 180,
+    "end": 188,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 175,
+    "end": 206,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 189,
+    "end": 190,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 191,
+    "end": 194,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 196,
+    "end": 201,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 202,
+    "end": 203,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 205,
+    "end": 206,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 217,
+    "end": 222,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 231,
+    "end": 240,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 226,
+    "end": 257,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 241,
+    "end": 244,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 245,
+    "end": 250,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 252,
+    "end": 257,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 267,
+    "end": 271,
+    "kind": "*ast.Ident",
+    "reason": "constant declaration",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 274,
+    "end": 282,
+    "kind": "*ast.BinaryExpr",
+    "reason": "constant declaration",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 274,
+    "end": 275,
+    "kind": "*ast.BasicLit",
+    "reason": "constant declaration",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 279,
+    "end": 282,
+    "kind": "*ast.BasicLit",
+    "reason": "constant declaration",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 288,
+    "end": 293,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 294,
+    "end": 299,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 302,
+    "end": 313,
+    "kind": "*ast.BinaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 302,
+    "end": 306,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 310,
+    "end": 313,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 315,
+    "end": 316,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 320,
+    "end": 332,
+    "kind": "*ast.CompositeLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 320,
+    "end": 330,
+    "kind": "*ast.ArrayType",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 321,
+    "end": 322,
+    "kind": "*ast.BasicLit",
+    "reason": "array length",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 323,
+    "end": 330,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 334,
+    "end": 404,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 334,
+    "end": 367,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 334,
+    "end": 363,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 334,
+    "end": 335,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 336,
+    "end": 362,
+    "kind": "*ast.BinaryExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 336,
+    "end": 360,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 336,
+    "end": 342,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 343,
+    "end": 359,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 361,
+    "end": 362,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 364,
+    "end": 367,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 368,
+    "end": 403,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 368,
+    "end": 376,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 377,
+    "end": 402,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 377,
+    "end": 383,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 384,
+    "end": 401,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 406,
+    "end": 437,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 406,
+    "end": 413,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 414,
+    "end": 424,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 414,
+    "end": 417,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 418,
+    "end": 423,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 426,
+    "end": 436,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 426,
+    "end": 430,
+    "kind": "*ast.IndexExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 426,
+    "end": 427,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 428,
+    "end": 429,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 431,
+    "end": 436,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 439,
+    "end": 493,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 439,
+    "end": 450,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 439,
+    "end": 446,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 447,
+    "end": 450,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 451,
+    "end": 492,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 451,
+    "end": 464,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 451,
+    "end": 458,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 459,
+    "end": 464,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 465,
+    "end": 491,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 465,
+    "end": 471,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 472,
+    "end": 490,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 495,
+    "end": 509,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 495,
+    "end": 502,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 503,
+    "end": 509,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 512,
+    "end": 535,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 512,
+    "end": 518,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 519,
+    "end": 534,
+    "kind": "*ast.BasicLit",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 537,
+    "end": 560,
+    "kind": "*ast.CallExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 537,
+    "end": 544,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 545,
+    "end": 559,
+    "kind": "*ast.SelectorExpr",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 545,
+    "end": 552,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 553,
+    "end": 559,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/types.go",
+    "start": 569,
+    "end": 572,
+    "kind": "*ast.Ident",
+    "error_return": true
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 8,
+    "end": 15,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 22,
+    "end": 29,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 30,
+    "end": 33,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 39,
+    "end": 45,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 48,
+    "end": 49,
+    "kind": "*ast.BasicLit",
+    "reason": "package scope",
+    "error_return": false,
+    "return_reason": "no enclosing function"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 56,
+    "end": 61,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 51,
+    "end": 80,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 62,
+    "end": 67,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 68,
+    "end": 71,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 73,
+    "end": 80,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 90,
+    "end": 104,
+    "kind": "*ast.CallExpr",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 90,
+    "end": 97,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 98,
+    "end": 103,
+    "kind": "*ast.Ident",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 112,
+    "end": 115,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 107,
+    "end": 130,
+    "kind": "*ast.FuncType",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 116,
+    "end": 121,
+    "kind": "*ast.Ident",
+    "reason": "name or syntax without a value",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  },
+  {
+    "file": "testdata/proof/foreign/foreign.go",
+    "start": 122,
+    "end": 129,
+    "kind": "*ast.Ident",
+    "reason": "type syntax",
+    "error_return": false,
+    "return_reason": "function does not return only error"
+  }
+]
