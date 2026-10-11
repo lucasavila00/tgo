@@ -47,6 +47,13 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 }
 
 func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
+	roots := []ast.Node{s.Init, s.Tag}
+	for _, stmt := range s.Body.List {
+		for _, expr := range stmt.(*ast.CaseClause).List {
+			roots = append(roots, expr)
+		}
+	}
+	exit := r.prepareBreakExit(s, roots...)
 	copy := *s
 	var init []ast.Stmt
 	if s.Init != nil {
@@ -81,10 +88,10 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 			if len(init) != 0 {
 				copy.Init = init[0]
 			}
-			return []ast.Stmt{&copy}
+			return r.withBreakExit(s, &copy, []ast.Stmt{&copy}, exit)
 		}
 		copy.Init = nil
-		return []ast.Stmt{&ast.BlockStmt{List: append(append(init, tagBefore...), &copy)}}
+		return r.withBreakExit(s, &copy, []ast.Stmt{&ast.BlockStmt{List: append(append(init, tagBefore...), &copy)}}, exit)
 	}
 	setup := append(init, tagBefore...)
 	var tagValue ast.Expr
@@ -120,10 +127,11 @@ func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
 	}
 	copy.Init = nil
 	copy.Tag = selected
-	return []ast.Stmt{&ast.BlockStmt{List: append(setup, &copy)}}
+	return r.withBreakExit(s, &copy, []ast.Stmt{&ast.BlockStmt{List: append(setup, &copy)}}, exit)
 }
 
 func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
+	exit := r.prepareBreakExit(s, s.Init, s.Assign)
 	copy := *s
 	var before []ast.Stmt
 	if s.Init != nil {
@@ -161,9 +169,9 @@ func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
 	}
 	if len(before) != 0 {
 		copy.Init = nil
-		return []ast.Stmt{&ast.BlockStmt{List: append(before, &copy)}}
+		return r.withBreakExit(s, &copy, []ast.Stmt{&ast.BlockStmt{List: append(before, &copy)}}, exit)
 	}
-	return []ast.Stmt{&copy}
+	return r.withBreakExit(s, &copy, []ast.Stmt{&copy}, exit)
 }
 
 func firstExpression(node ast.Node) ast.Expr {

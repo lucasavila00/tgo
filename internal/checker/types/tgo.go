@@ -1,3 +1,4 @@
+// Package types checks Go syntax with TGo conditional values and error propagation.
 package types
 
 import (
@@ -349,25 +350,25 @@ func (check *Checker) propagationExpr(x *operand, call *ast.CallExpr, operation 
 // conditionalStatements visits expressions in one statement. Nested statements
 // are visited by the caller; real function literals belong to another function.
 func (check *Checker) conditionalStatements(statement ast.Stmt, visit func(*ast.IfStmt)) {
-	headers := false
-	switch statement.(type) {
-	case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
-		headers = true
+	var first, second ast.Stmt
+	switch statement := statement.(type) {
+	case *ast.IfStmt:
+		first = statement.Init
+	case *ast.ForStmt:
+		first, second = statement.Init, statement.Post
+	case *ast.SwitchStmt:
+		first = statement.Init
+	case *ast.TypeSwitchStmt:
+		first, second = statement.Init, statement.Assign
+	case *ast.CommClause:
+		first = statement.Comm
 	}
 	ast.Inspect(statement, func(node ast.Node) bool {
 		if node == nil {
 			return false
 		}
-		if child, ok := node.(ast.Stmt); ok && child != statement {
-			if !headers {
-				return false
-			}
-			switch child.(type) {
-			case *ast.AssignStmt, *ast.ExprStmt, *ast.IncDecStmt, *ast.SendStmt:
-				// Include simple statements in headers, but not nested bodies.
-			default:
-				return false
-			}
+		if child, ok := node.(ast.Stmt); ok && child != statement && child != first && child != second {
+			return false
 		}
 		if call, ok := node.(*ast.CallExpr); ok {
 			if op, found := check.tgoOperation(call); found && op.Conditional {

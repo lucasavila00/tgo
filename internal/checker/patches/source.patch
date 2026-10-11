@@ -404,13 +404,16 @@
  	"slices"
  )
  
-@@ -121,6 +121,14 @@
+@@ -121,6 +121,17 @@
  
  	var stmtBranches func(*ast.LabeledStmt, ast.Stmt)
  	stmtBranches = func(lstmt *ast.LabeledStmt, s ast.Stmt) {
 +		previous := b.lstmt
-+		if _, loop := s.(*ast.ForStmt); loop && lstmt != nil {
-+			b.lstmt = lstmt
++		switch s.(type) {
++		case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
++			if lstmt != nil {
++				b.lstmt = lstmt
++			}
 +		}
 +		check.conditionalStatements(s, func(statement *ast.IfStmt) {
 +			stmtBranches(nil, statement)
@@ -500,12 +503,22 @@
  	"strings"
 --- a/types/return.go
 +++ b/types/return.go
-@@ -60,7 +60,7 @@
+@@ -52,15 +52,15 @@
+ 		}
+ 
+ 	case *ast.SwitchStmt:
+-		return check.isTerminatingSwitch(s.Body, label)
++		return !check.hasBreak(s, label, true) && check.isTerminatingSwitch(s.Body, label)
+ 
+ 	case *ast.TypeSwitchStmt:
+-		return check.isTerminatingSwitch(s.Body, label)
++		return !check.hasBreak(s, label, true) && check.isTerminatingSwitch(s.Body, label)
+ 
  	case *ast.SelectStmt:
  		for _, s := range s.Body.List {
  			cc := s.(*ast.CommClause)
 -			if !check.isTerminatingList(cc.Body, "") || hasBreakList(cc.Body, label, true) {
-+			if !check.isTerminatingList(cc.Body, "") || check.hasBreakList(cc.Body, label, true) {
++			if !check.isTerminatingList(cc.Body, "") || check.hasBreak(cc, label, true) {
  				return false
  			}
  
@@ -523,7 +536,7 @@
  			hasDefault = true
  		}
 -		if !check.isTerminatingList(cc.Body, "") || hasBreakList(cc.Body, label, true) {
-+		if !check.isTerminatingList(cc.Body, "") || check.hasBreakList(cc.Body, label, true) {
++		if !check.isTerminatingList(cc.Body, "") || check.hasBreak(cc, label, true) {
  			return false
  		}
  	}
@@ -700,7 +713,43 @@
  		var x operand
  		check.expr(nil, &x, s.Cond)
  		if x.isValid() && !allBoolean(x.typ()) {
-@@ -833,7 +852,10 @@
+@@ -629,7 +648,10 @@
+ 		check.openScope(s, "switch")
+ 		defer check.closeScope()
+ 
+-		check.simpleStmt(s.Init)
++		if s.Init != nil {
++			check.stmt(inner, s.Init)
++		}
++		check.statementContext = inner
+ 		var x operand
+ 		if s.Tag != nil {
+ 			check.expr(nil, &x, s.Tag)
+@@ -658,6 +680,11 @@
+ 				check.error(c, InvalidSyntaxTree, "incorrect expression switch case")
+ 				continue
+ 			}
++			if x.isValid() {
++				for _, value := range clause.List {
++					check.expressionType(value, x.typ())
++				}
++			}
+ 			check.caseValues(&x, clause.List, seen)
+ 			check.openScope(clause, "case")
+ 			inner := inner
+@@ -675,7 +702,10 @@
+ 		check.openScope(s, "type switch")
+ 		defer check.closeScope()
+ 
+-		check.simpleStmt(s.Init)
++		if s.Init != nil {
++			check.stmt(inner, s.Init)
++		}
++		check.statementContext = inner
+ 
+ 		// A type switch guard must be of the form:
+ 		//
+@@ -833,7 +863,10 @@
  		check.openScope(s, "for")
  		defer check.closeScope()
  
@@ -712,7 +761,7 @@
  		if s.Cond != nil {
  			var x operand
  			check.expr(nil, &x, s.Cond)
-@@ -841,7 +863,9 @@
+@@ -841,7 +874,9 @@
  				check.error(s.Cond, InvalidCond, "non-boolean condition in for statement")
  			}
  		}

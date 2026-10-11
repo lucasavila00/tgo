@@ -97,7 +97,9 @@ func TestPropagationRequiresCall(t *testing.T) {
 				}
 			}()
 			input := "package p\nfunc f(err error) error { value := (err)" + operator + "; return value }"
-			ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+			if _, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool)); err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 }

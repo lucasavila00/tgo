@@ -18,6 +18,8 @@ type rewrite struct {
 	next              int
 	inserted          bool
 	labels            map[string]string
+	breakExits        map[*ast.BranchStmt]*ast.Ident
+	controlTargets    map[ast.Stmt]ast.Stmt
 	bindings          map[types.Object]string
 	suppressedRoot    ast.Expr
 	propagations      map[ast.Expr]Propagation
@@ -29,7 +31,6 @@ type rewrite struct {
 	extraImports      []*ast.ImportSpec
 	extraDeclarations []ast.Decl
 	zeroSequence      *ast.Ident
-	zeroPointer       *ast.Ident
 	iterAlias         *ast.Ident
 	mapAlias          *ast.Ident
 	sliceAlias        *ast.Ident

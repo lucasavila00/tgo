@@ -154,7 +154,6 @@ func (r *rewrite) emit() (map[string][]byte, error) {
 		r.extraDeclarations = nil
 		r.formatAlias = nil
 		r.zeroSequence = nil
-		r.zeroPointer = nil
 		r.iterAlias = nil
 		r.mapAlias = nil
 		r.sliceAlias = nil

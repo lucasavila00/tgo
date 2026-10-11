@@ -125,6 +125,20 @@ func (r *rewrite) labeledStatement(s *ast.LabeledStmt) []ast.Stmt {
 		defer delete(r.labels, s.Label.Name)
 	}
 	statements := r.statement(s.Stmt)
+	if target := r.controlTargets[s.Stmt]; target != nil {
+		label := s.Label
+		if jump {
+			label = inner
+		}
+		if label != nil && labelUsed(statements, label.Name) {
+			attachControlLabel(statements, target, label)
+		}
+		if jump {
+			copy.Stmt = &ast.BlockStmt{List: statements}
+			return []ast.Stmt{&copy}
+		}
+		return statements
+	}
 	// Keep source declarations in their original scope, including nested labels.
 	declaration := s.Stmt
 	for {

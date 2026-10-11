@@ -5,16 +5,6 @@ import (
 	"go/token"
 )
 
-// These helpers infer a zero value's type without reading the source storage.
-func (r *rewrite) pointerZero(place ast.Expr) ast.Expr {
-	if r.zeroPointer == nil {
-		r.zeroPointer = r.name()
-		parameter, argument, zero := r.name(), r.name(), r.name()
-		r.extraDeclarations = append(r.extraDeclarations, zeroDeclaration(r.zeroPointer, parameter, argument, zero, &ast.StarExpr{X: parameter}))
-	}
-	return &ast.CallExpr{Fun: r.zeroPointer, Args: []ast.Expr{&ast.UnaryExpr{Op: token.AND, X: place}}}
-}
-
 func (r *rewrite) sequenceZero(sequence ast.Expr) ast.Expr {
 	if r.zeroSequence == nil {
 		r.zeroSequence, r.iterAlias = r.name(), r.nameFor("iter")

@@ -7,6 +7,11 @@ import (
 )
 
 func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
+	var roots []ast.Node
+	for _, stmt := range s.Body.List {
+		roots = append(roots, stmt.(*ast.CommClause).Comm)
+	}
+	exit := r.prepareBreakExit(s, roots...)
 	copy := *s
 	copy.Body = &ast.BlockStmt{}
 	var before []ast.Stmt
@@ -95,5 +100,5 @@ func (r *rewrite) selectStatement(s *ast.SelectStmt) []ast.Stmt {
 		clause.Body = body
 		copy.Body.List = append(copy.Body.List, &clause)
 	}
-	return append(before, &copy)
+	return r.withBreakExit(s, &copy, append(before, &copy), exit)
 }
