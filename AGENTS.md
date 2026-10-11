@@ -7,6 +7,7 @@ source behavior. The public API is in `pkg/transpiler/`, integration tests are i
 directories in `tests/testdata/`. Inputs control compilation. Read the
 [transpiler architecture](docs/arch/transpiler/readme.md) and
 [lowering plan](docs/adr/expression-lowering/what.md) before compiler changes.
+Follow the [adoption and automatic modernization rules](docs/problem/README.md#adoption-and-automatic-modernization).
 
 ## 1. Think Before Coding
 
