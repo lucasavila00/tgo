@@ -45,3 +45,26 @@ be replayed. Add a normal regression fixture with the fix.
 This generator checks a bounded set of program forms. It does not prove that
 all valid TGo programs compile correctly. The separate audits check types,
 source positions, build selection, closures, and other forms.
+
+## If expressions
+
+Run the if-expression campaign:
+
+```sh
+GOMAXPROCS=2 go test -tags=loweringfuzz ./tests -run '^$' \
+  -fuzz '^FuzzIfExpressionBehavior$' -parallel=1 -fuzztime=10m \
+  -fuzzminimizetime=1x -timeout=15m
+```
+
+Bytes select a statement context, nested branch shapes, conditions, leaf values,
+and propagation failures. The test compares call traces, final values, deferred
+calls, errors, and error identity with a separate Go program. Value-only reference
+branches use Go functions. References for return, defer, break, continue, and goto
+use ordinary Go statements, so these operations keep their function and loop.
+
+Go saves failures under `tests/testdata/fuzz/FuzzIfExpressionBehavior/`.
+Check and reduce each failure before creating a bug issue.
+
+Each mutation compiles and runs two programs. Limit automatic reduction to one
+execution per input; reduce confirmed failures separately. This keeps the
+campaign focused on testing new inputs.
