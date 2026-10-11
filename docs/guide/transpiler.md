@@ -26,7 +26,7 @@ For `!!`, the call's final result must be assignable to that interface. For `!`,
 the wrapped `error` must be assignable to it. On failure, other results receive
 typed zero values. Earlier effects remain; later work
 stops. Deferred calls run. A function literal has its own return target.
-Propagation works inside calls, assignments, literals, conditional expressions,
+Propagation works inside calls, assignments, literals, short-circuit expressions,
 loops, switches, ranges, selects, and arguments to `defer` and `go`.
 
 `!` and `!!` are not allowed anywhere inside an operand of
