@@ -61,7 +61,7 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	if r.temporaryTypes[expr] != nil {
 		count = 1
 	}
-	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil {
+	if literal, ok := original.(*ast.CompositeLit); ok && literal.Type == nil && r.temporaryTypes[expr] == nil {
 		if pair, ok := r.source.parents[original].(*ast.KeyValueExpr); ok && pair.Key == original {
 			if _, pointer := r.source.Package.TypesInfo.TypeOf(original).Underlying().(*types.Pointer); !pointer {
 				return r.materializeKey(expr.(*ast.CompositeLit), literal)
@@ -69,7 +69,9 @@ func (r *rewrite) save(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		}
 	}
 	typ := r.typeOf(expr)
-	expr = r.contextLiteral(expr, original)
+	if r.temporaryTypes[expr] == nil {
+		expr = r.contextLiteral(expr, original)
+	}
 	if count == 0 {
 		return []ast.Stmt{&ast.ExprStmt{X: expr}}, nil
 	}
