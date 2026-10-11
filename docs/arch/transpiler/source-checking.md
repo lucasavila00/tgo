@@ -14,6 +14,8 @@ does not grow with the number of operators.
 patch. The patch changes import paths, adds the operation map, and calls the
 TGo rule from expression checking. The matching import reader keeps imported
 objects in the same private type system. Public `Load` keeps stock Go objects.
+The loader reads Go's target architecture once, including saved Go configuration,
+and uses its word sizes for all source checks.
 
 ## Measured cost
 
@@ -23,11 +25,11 @@ compiler process; they exclude child Go processes.
 
 | Source | Before | After | Allocated bytes before / after |
 | --- | ---: | ---: | ---: |
-| 1 operator | 35 ms | 26 ms | 550 KB / 344 KB |
-| 8 independent operators | 133 ms | 31 ms | 2.33 MB / 522 KB |
-| 32 independent operators | 400 ms | 28 ms | 15.9 MB / 1.44 MB |
-| 32 nested operators | 419 ms | 27 ms | 16.4 MB / 1.39 MB |
-| Two packages and a test file, 25 operators | 13.2 s | 374 ms | 3.71 GB / 190 MB |
+| 1 operator | 35 ms | 25 ms | 550 KB / 403 KB |
+| 8 independent operators | 133 ms | 25 ms | 2.33 MB / 567 KB |
+| 32 independent operators | 400 ms | 29 ms | 15.9 MB / 1.48 MB |
+| 32 nested operators | 419 ms | 29 ms | 16.4 MB / 1.44 MB |
+| Two packages and a test file, 25 operators | 13.2 s | 398 ms | 3.71 GB / 191 MB |
 
 The single-file cases previously used 3, 10, and 34 package loads. They now use
 2. Final checking requests types and errors, without retaining syntax or

@@ -86,7 +86,10 @@ var functions = []func() error{func() error { next()!; return nil }}
 	}
 	filename := filepath.Join(dir, "main_tgo.go")
 	metadata := &packages.Package{ID: "example.com/functions", PkgPath: "example.com/functions", GoFiles: []string{filename}}
-	loader := checker.NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	loader, err := checker.NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	if err != nil {
+		t.Fatal(err)
+	}
 	checked, err := loader.Check(metadata)
 	if err != nil {
 		t.Fatal(err)

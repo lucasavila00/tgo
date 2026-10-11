@@ -21,7 +21,10 @@ func TestLoaderCachesPackageIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	metadata := &packages.Package{ID: "example.com/p", PkgPath: "example.com/p", GoFiles: []string{filename}, CompiledGoFiles: []string{filename}}
-	loader := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	loader, err := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	if err != nil {
+		t.Fatal(err)
+	}
 	first, err := loader.Check(metadata)
 	if err != nil {
 		t.Fatal(err)
@@ -122,5 +125,37 @@ func TestOrdinaryGoCheckingMatchesStock(t *testing.T) {
 				t.Fatalf("stock error: %v; private error: %v", stockErr, privateErr)
 			}
 		})
+	}
+}
+
+func TestTargetSizesUseGoConfiguration(t *testing.T) {
+	dir := t.TempDir()
+	environment := filepath.Join(dir, "goenv")
+	if err := os.WriteFile(environment, []byte("GOARCH=386\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GOENV", environment)
+	t.Setenv("GOARCH", "")
+	filename := filepath.Join(dir, "main_tgo.go")
+	source := `package p
+import "unsafe"
+var storage [4-unsafe.Sizeof(uintptr(0))]byte
+func next() error {return nil}
+func run() error {next()!;return nil}
+`
+	if err := os.WriteFile(filename, []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	metadata := &packages.Package{ID: "example.com/p", PkgPath: "example.com/p", GoFiles: []string{filename}}
+	loader, err := NewLoader(dir, []*packages.Package{metadata}, map[string]string{"main_tgo.go": "main.tgo"}, make(map[string]bool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked, err := loader.Check(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if length := checked.Types.Scope().Lookup("storage").Type().(*types.Array).Len(); length != 0 {
+		t.Fatalf("array length: %d; want 0", length)
 	}
 }

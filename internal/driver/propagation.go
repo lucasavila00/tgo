@@ -34,7 +34,8 @@ func selectSources(module *preparedModule) *selectedSources {
 // checkSources checks all selected source packages before output changes any file.
 func checkSources(sources *selectedSources) *checkedModule {
 	module := sources.module
-	loader := checker.NewLoader(module.dir, sources.packages, module.tgoFiles, module.used)
+	loader, err := checker.NewLoader(module.dir, sources.packages, module.tgoFiles, module.used)
+	must(err)
 	checked := &checkedModule{sources: sources, activeFiles: make(map[string]bool)}
 	for _, metadata := range sources.packages {
 		if metadata.Module == nil || !metadata.Module.Main {
