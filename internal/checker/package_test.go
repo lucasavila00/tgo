@@ -2,6 +2,8 @@ package checker
 
 import (
 	"go/ast"
+	"go/parser"
+	"go/token"
 	gotypes "go/types"
 	"os"
 	"path/filepath"
@@ -91,5 +93,34 @@ func TestCheckGoKeepsStockObjects(t *testing.T) {
 	})
 	if checked.Fset != stock.Fset || checked.Syntax[0] != stock.Syntax[0] {
 		t.Fatal("ordinary syntax was replaced")
+	}
+}
+
+func TestOrdinaryGoCheckingMatchesStock(t *testing.T) {
+	for _, source := range []string{
+		`func identity[T any](v T) T {return v}; var v=identity(3)`,
+		`type Set[T comparable] = map[T]bool; var v=Set[int]{1:true}`,
+		`func f() int {for i:=range 3 {if i>0 {return i}};return 0}`,
+		`func f(v any) int {switch v:=v.(type) {case int:return v;default:return 0}}`,
+		`type S struct{};func (S) F() int{return 1};var v=(S{}).F()`,
+		`var v int = "wrong"`,
+		`func f() int {}`,
+		`func f() {var v=1}`,
+		`func f() {goto end;v:=1;end:_=v}`,
+	} {
+		t.Run(source, func(t *testing.T) {
+			fset := token.NewFileSet()
+			file, err := parser.ParseFile(fset, "main.go", "package p\n"+source, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatal(err)
+			}
+			stock := gotypes.Config{}
+			_, stockErr := stock.Check("example.com/p", fset, []*ast.File{file}, nil)
+			private := types.Config{}
+			_, privateErr := private.Check("example.com/p", fset, []*ast.File{file}, nil)
+			if (stockErr == nil) != (privateErr == nil) {
+				t.Fatalf("stock error: %v; private error: %v", stockErr, privateErr)
+			}
+		})
 	}
 }
