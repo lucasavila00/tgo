@@ -106,43 +106,9 @@ version or completed output at those paths. Correct the TGo input and compile
 again. Invalid source and compiler failures panic. Normal Go module loading can
 update `go.mod` and `go.sum`.
 
-See [the complete compilation process](../arch/transpiler/readme.md) for each step.
+See [the driver](../../internal/driver/readme.md) for each step.
 
-## Call the Go API
+## Go API
 
-Import `github.com/lucasavila00/tgo/pkg/transpiler`.
-
-| Operation | What it does |
-| --- | --- |
-| `Compile(directory string)` | Writes and checks generated Go in the module; returns nothing and panics on failure. |
-| `Load(directory, pattern string) (*Source, error)` | Loads one ordinary Go package and records expression sites. |
-| `source.InsertAfter(site Site, after After) (map[string][]byte, error)` | Builds Go file contents with added statements; does not write files. |
-
-`Compile` is the module compiler. `Load` and `InsertAfter` form a separate API
-for tools that insert statements after an ordinary Go expression.
-
-`Source.Package` retains the stock `packages.Package`. `Source.Sites` lists
-expressions by file, byte offsets, and AST kind. A `Reason` marks syntax with no
-value evaluation in the current function, such as a type name. `ErrorReturn`
-identifies an enclosing function with one `error` result.
-
-The `After` callback receives references to saved results. Using those
-references does not evaluate the original expression again:
-
-```go
-files, err := source.InsertAfter(site, func(results []ast.Expr) []ast.Stmt {
-    return []ast.Stmt{
-        &ast.ReturnStmt{Results: []ast.Expr{ast.NewIdent("err")}},
-    }
-})
-```
-
-This example requires a site inside a function that returns only `error`, with
-`err` in scope. The caller handles `err` and writes `files`. Returned paths are
-absolute. Added statements execute after the selected expression and before its
-parent uses the result, only when that expression runs. The checked tree stays
-unchanged, so callers can produce several rewrites from one load.
-
-Generated saved values use explicit types. If a required declaration needs a
-private imported type or a hidden type name, compilation reports its position
-and type. An accessible type or conversion at that source boundary can resolve it.
+See [pkg/transpiler](../../pkg/transpiler/readme.md) for `Compile`, `Load`,
+and `InsertAfter`, including expression-insertion examples.

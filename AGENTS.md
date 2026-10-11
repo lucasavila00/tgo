@@ -5,8 +5,8 @@ source behavior. The public API is in `pkg/transpiler/`, integration tests are i
 `tests/`, compiler implementation is in `internal/`, and the CLI is in
 `cmd/tgo/`. TGo inputs and generated `_tgo.go` snapshots share fixture
 directories in `tests/testdata/`. Inputs control compilation. Read the
-[transpiler architecture](docs/arch/transpiler/readme.md) and
-[lowering plan](docs/adr/expression-lowering/what.md) before compiler changes.
+[compiler process](internal/driver/readme.md) and
+[lowering plan](docs/adr/expression-lowering.md) before compiler changes.
 Follow the [adoption and automatic modernization guidance](docs/problem/README.md#adoption-and-automatic-modernization).
 
 ## 1. Think Before Coding
