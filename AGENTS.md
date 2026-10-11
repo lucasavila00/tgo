@@ -124,3 +124,28 @@ Improve generated-code appearance after correctness is complete.
 Reject only invalid or unrepresentable programs. Do not replace a feasible
 compiler lowering with a linter restriction. Do not require users to write
 compiler bookkeeping by hand.
+
+## 12. Include Automatic Modernization With Language Features
+
+Follow the [adoption and modernization goals](docs/problem/README.md).
+For each language feature, identify existing Go or TGo forms that it replaces.
+Include linter diagnostics and automatic fixes for equivalent forms as part of
+the feature's design, implementation, and tests. A feature is not complete
+without its applicable modernization rules. If no equivalent older form
+exists, state why in the feature design.
+
+Enable a rule only when the compiler supports its replacement. Keep compiler
+validity checks separate from linter modernization errors. Do not reject valid
+source in the compiler merely because newer syntax can express it.
+
+Automatic fixes must preserve types, bindings, scope, evaluation order,
+control flow, error identity, error text, deferred calls, and public APIs.
+Use checked types and bindings to prove equivalence. If a change needs a
+design choice, give a clear diagnostic instead of an automatic fix.
+Change handwritten `.tgo` source, not generated Go outputs.
+
+Test both forms against the same expected behavior. Include cases where a
+similar form must not receive a fix. Check diagnostic locations, compile the
+fixed source, and verify that a second lint run does not repeat the diagnostic.
+Verify the full package upgrade path: rename handwritten Go source and tests
+to `.tgo`, resolve compiler and linter errors, and run the package tests.

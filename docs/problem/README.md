@@ -28,6 +28,37 @@ the reader.
 Data structures matter. The right model prevents impossible states and mistakes,
 both now and in the future.
 
+## Adoption and automatic modernization
+
+Shorter syntax must have a clear upgrade path from existing Go code. Users
+must not have to find and rewrite every use by hand. Each new language feature
+must include linter rules that find equivalent older forms and automatic fixes
+that use the new feature when the change can preserve behavior.
+
+The intended upgrade path is:
+
+1. Select a Go package. Rename all handwritten `.go` source and test files to
+   `.tgo`. Keep file suffixes, build constraints, imports, and module paths.
+2. Compile the package and correct compiler errors.
+3. Run the TGo linter. Apply automatic modernization fixes and resolve the
+   remaining linter errors.
+4. Compile and run the package tests. Repeat until all checks pass.
+
+Generated Go files are outputs. Other packages can remain Go. The compiler
+checks language validity; the linter guides use of the new language features.
+
+For example, a call followed by `if err != nil { return err }` can become
+`call()!!` when both forms have the same behavior. A local variable assigned
+in each conditional branch can use an `if` expression. These changes must
+preserve types, scope, evaluation order, control flow, error identity, deferred
+calls, and public APIs. Use `!` only when the existing error wrapper matches
+its behavior. Code that needs a design choice must receive a clear diagnostic
+instead of an automatic change.
+
+The previous compiler's `tgolint` rules are available in Git history before
+commit `2fb3077`. Use their error-propagation modernization checks as a design
+reference. This section defines requirements for the new tooling.
+
 ## Approaches of interest
 
 - Elixir's approach with DSLs is great.
