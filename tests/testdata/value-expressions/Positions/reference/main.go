@@ -23,7 +23,47 @@ func remove[M ~map[*int]int](mapping M) {
 	delete(mapping, nil)
 }
 
+func checkCopy(ok bool) {
+	type integers []int
+	dst := integers{1, 2}
+	calls := 0
+	var source []int
+	if ok {
+		calls++
+		source = nil
+	} else {
+		calls++
+		source = nil
+	}
+	n := copy(dst, source)
+	if ok {
+		calls++
+		source = nil
+	} else {
+		calls++
+		source = nil
+	}
+	values := append(dst, source...)
+	bytes := []byte{0, 0, 0}
+	var text string
+	if ok {
+		text = "one"
+	} else {
+		text = "two"
+	}
+	copied := copy(bytes, text)
+	unchanged := append(bytes, []byte(nil)...)
+	if copied != 3 || len(unchanged) != 3 || copy(bytes, []byte(nil)) != 0 {
+		panic("wrong byte operation")
+	}
+	if calls != 2 || n != 0 || len(values) != 2 || values[0] != 1 || values[1] != 2 {
+		panic("wrong slice operation")
+	}
+}
+
 func main() {
+	checkCopy(true)
+	checkCopy(false)
 	checkPanic(30)
 	checkPanic("other")
 	mappingWithNil := map[*int]int{nil: 30}

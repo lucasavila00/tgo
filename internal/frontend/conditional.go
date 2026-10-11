@@ -152,6 +152,9 @@ func conditionalStart(file *ast.File, temporary *token.FileSet, source string, e
 			start = diagnostic.Pos.Offset
 		}
 	}
+	if start >= 0 {
+		return start
+	}
 	var parents []ast.Node
 	ast.Inspect(file, func(node ast.Node) bool {
 		if node == nil {

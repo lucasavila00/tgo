@@ -109,3 +109,32 @@ func TestConditionalNamesKeepSourceBindings(t *testing.T) {
 		t.Fatal("conditional marker replaced a source binding")
 	}
 }
+
+func TestConditionalInsideStatementCondition(t *testing.T) {
+	input := `package p
+func checkCopy(ok bool) {
+	type integers []int
+	dst := integers{1, 2}
+	calls := 0
+	n := copy(dst, if ok { calls++; nil } else { calls++; nil })
+	values := append(dst, (if ok { calls++; nil } else { calls++; nil })...)
+	bytes := []byte{0, 0, 0}
+	copied := copy(bytes, if ok { "one" } else { "two" })
+	unchanged := append(bytes, (if ok { nil } else { nil })...)
+	if copied != 3 || len(unchanged) != 3 || copy(bytes, if ok { nil } else { nil }) != 0 {
+		panic("wrong byte operation")
+	}
+	if calls != 2 || n != 0 || len(values) != 2 || values[0] != 1 || values[1] != 2 {
+		panic("wrong slice operation")
+	}
+}
+
+`
+	parsed, err := ParseFile(token.NewFileSet(), "main.tgo", "main.tgo", []byte(input), make(map[string]bool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(parsed.Conditionals) != 5 {
+		t.Fatalf("if values: %d, want 5", len(parsed.Conditionals))
+	}
+}

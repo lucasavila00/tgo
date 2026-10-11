@@ -76,6 +76,14 @@ func TestConditionalTypes(t *testing.T) {
 		`func f(ok bool) int { return len(if ok {[2]int{1,2}} else {[2]int{3,4}}) }`,
 		`func f(ok bool) int { return cap(if ok {[2]int{1,2}} else {[2]int{3,4}}) }`,
 		`func f(ok bool) []byte { return append([]byte{}, if ok {255} else {0}) }`,
+		`func f(ok bool, dst []byte) int { return copy(dst, if ok {nil} else {nil}) }`,
+		`func f(ok bool, dst []byte) []byte { return append(dst, (if ok {nil} else {nil})...) }`,
+		`func f(ok bool, dst []byte) int { return copy(dst, if ok {if !ok {"one"} else {"two"}} else {"three"}) }`,
+		`func f(ok bool, dst []int) int { return copy(dst, if ok {nil} else {nil}) }`,
+		`func f[S ~[]int](ok bool, dst S) int { return copy(dst, if ok {nil} else {nil}) }`,
+		`func f(ok bool, dst []int) []int { return append(dst, (if ok {nil} else {nil})...) }`,
+		`func f(ok bool, dst []byte) int { return copy(dst, if ok {"one"} else {"two"}) }`,
+		`func f(ok bool, dst []byte) []byte { return append(dst, (if ok {"one"} else {"two"})...) }`,
 		`func f(ok bool) { panic(if ok {1} else {"two"}) }`,
 		`func f(ok bool) { panic(if ok {nil} else {nil}) }`,
 		`func f(ok bool, m map[*int]int) { delete(m, if ok {nil} else {nil}) }`,
@@ -95,6 +103,9 @@ func TestConditionalTypes(t *testing.T) {
 
 func TestConditionalTypeErrors(t *testing.T) {
 	for _, test := range []struct{ source, message string }{
+		{`func f(ok bool, dst []int) { copy(dst, if ok {"one"} else {"two"}) }`, "cannot use"},
+		{`func f(ok bool, dst []byte) { copy(dst, if ok {"one"} else {nil}) }`, "cannot use"},
+		{`func f(ok bool, dst []byte) { copy(dst, if ok {var x []byte = if ok {"one"} else {"two"}; x} else {nil}) }`, "cannot use"},
 		{`func f(ok bool) { x:=if ok {1} else {"two"}; _=x }`, "explicit type annotation"},
 		{`func f(ok bool) { x:=if ok {nil} else {nil}; _=x }`, "explicit type annotation"},
 		{`func f(ok bool) { x:=if ok {1}; _=x }`, "requires else"},

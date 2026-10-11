@@ -167,12 +167,13 @@
  	decl          *declInfo              // package-level declaration whose init expression/function body is checked
  	scope         *Scope                 // top-most scope for lookups
  	version       goVersion              // current accepted language version; changes across files
-@@ -116,6 +118,9 @@
+@@ -116,6 +118,10 @@
  // A Checker maintains the state of the type checker.
  // It must be created with [NewChecker].
  type Checker struct {
-+	conditionalValues map[*ast.CallExpr][]*operand
-+	expressionTypes   map[ast.Expr]Type
++	conditionalValues  map[*ast.CallExpr][]*operand
++	expressionTypes    map[ast.Expr]Type
++	sliceSourceContext Type
 +
  	// package information
  	// (initialized by NewChecker, valid for the life-time of checker)

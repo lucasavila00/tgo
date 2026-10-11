@@ -52,11 +52,14 @@ func (check *Checker) expressionType(e ast.Expr, typ Type) {
 
 // builtinArguments supplies declared parameter types to added expressions.
 func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*operand {
+	previous := check.sliceSourceContext
+	check.sliceSourceContext = nil
+	defer func() { check.sliceSourceContext = previous }()
 	if id == _Panic && len(call.Args) == 1 {
 		check.expressionType(call.Args[0], &emptyInterface)
 		return check.exprList(call.Args)
 	}
-	if (id != _Append && id != _Delete) || len(call.Args) < 2 || hasDots(call) {
+	if (id != _Append && id != _Delete && id != _Copy) || len(call.Args) < 2 {
 		return check.exprList(call.Args)
 	}
 	args := make([]*operand, len(call.Args))
@@ -65,10 +68,18 @@ func (check *Checker) builtinArguments(call *ast.CallExpr, id builtinId) []*oper
 		check.expr(nil, args[i], expression)
 		if i == 0 && args[i].isValid() {
 			var typ Type
-			if id == _Append {
-				typ, _ = sliceElem(args[i])
-			} else {
+			switch {
+			case id == _Delete && !hasDots(call):
 				typ = deleteKeyType(args[i].typ())
+			case id == _Append && !hasDots(call):
+				typ, _ = sliceElem(args[i])
+			case id == _Copy || id == _Append && hasDots(call):
+				if elem, _ := sliceElem(args[i]); elem != nil {
+					typ = NewSlice(elem)
+					if Identical(elem, universeByte) {
+						check.sliceSourceContext = typ
+					}
+				}
 			}
 			for _, value := range call.Args[1:] {
 				check.expressionType(value, typ)
@@ -112,6 +123,17 @@ func (check *Checker) conditionalExpr(target *target, x *operand, call *ast.Call
 	for _, branch := range values {
 		if !branch.isValid() {
 			return expression
+		}
+	}
+	// A byte-slice source of copy or append can instead be a string.
+	// Keep its own string type when every value branch produces a string.
+	if context != nil && check.sliceSourceContext != nil && Identical(context, check.sliceSourceContext) && len(values) != 0 {
+		strings := true
+		for _, branch := range values {
+			strings = strings && allString(branch.typ())
+		}
+		if strings {
+			context = nil
 		}
 	}
 	if context != nil {
