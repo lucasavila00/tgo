@@ -19,7 +19,6 @@ func step(name string) (int, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 
 	defer func() {
 		if recover() != nil {
@@ -31,25 +30,25 @@ func run() (tgo3 error) {
 		var tgo1 int
 		var tgo2 error
 		tgo1, tgo2 = step("I")
-		tgo4 = tgo2
-		if tgo4 != tgo5 {
+		if tgo2 != nil {
+			tgo4 = tgo2
 			return tgo4
 		}
-		var tgo6 int
-		var tgo7 error
-		tgo6, tgo7 = step("V")
-		tgo4 = tgo7
-		if tgo4 != tgo5 {
+		var tgo5 int
+		var tgo6 error
+		tgo5, tgo6 = step("V")
+		if tgo6 != nil {
+			tgo4 = tgo6
 			return tgo4
 		}
-		var tgo8 int
-		var tgo9 error
-		tgo8, tgo9 = step("W")
-		tgo4 = tgo9
-		if tgo4 != tgo5 {
+		var tgo7 int
+		var tgo8 error
+		tgo7, tgo8 = step("W")
+		if tgo8 != nil {
+			tgo4 = tgo8
 			return tgo4
 		}
-		a[tgo1], a[0] = tgo6, tgo8
+		a[tgo1], a[0] = tgo5, tgo7
 	}
 	return nil
 }

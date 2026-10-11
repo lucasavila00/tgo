@@ -19,7 +19,6 @@ func step(name string) (int, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 
 	defer func() {
 		if recover() != nil {
@@ -30,8 +29,8 @@ func run() (tgo3 error) {
 		var tgo1 int
 		var tgo2 error
 		tgo1, tgo2 = step("P")
-		tgo4 = tgo2
-		if tgo4 != tgo5 {
+		if tgo2 != nil {
+			tgo4 = tgo2
 			return tgo4
 		}
 		panic(tgo1)

@@ -1,6 +1,6 @@
 package main
 
-import tgo12 "fmt"
+import tgo10 "fmt"
 
 import (
 	"errors"
@@ -28,34 +28,32 @@ func consume(a, b, c int) {
 
 func run(fail bool) (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 	{
-		var tgo6 int = effect("L")
+		var tgo5 int = effect("L")
 		var tgo1 int
 		var tgo2 error
 		tgo1, tgo2 = target(fail)
-		tgo4 = tgo2
-		if tgo4 != tgo5 {
+		if tgo2 != nil {
+			tgo4 = tgo2
 			return tgo4
 		}
-		consume(tgo6, tgo1, effect("R"))
+		consume(tgo5, tgo1, effect("R"))
 	}
 	return nil
 }
 
-func wrapped() (tgo9 error) {
-	var tgo10 error = tgo9
-	var tgo11 error = tgo10
+func wrapped() (tgo8 error) {
+	var tgo9 error = tgo8
 	{
-		var tgo7 int
-		var tgo8 error
-		tgo7, tgo8 = target(true)
-		tgo10 = tgo8
-		if tgo10 != tgo11 {
-			tgo10 = tgo12.Errorf("%s: %w", "target", tgo10)
-			return tgo10
+		var tgo6 int
+		var tgo7 error
+		tgo6, tgo7 = target(true)
+		if tgo7 != nil {
+			tgo9 = tgo7
+			tgo9 = tgo10.Errorf("%s: %w", "target", tgo9)
+			return tgo9
 		}
-		_ = tgo7
+		_ = tgo6
 	}
 	return nil
 }

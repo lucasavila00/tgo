@@ -1,6 +1,6 @@
 package main
 
-import tgo6 "fmt"
+import tgo5 "fmt"
 
 import (
 	"errors"
@@ -41,39 +41,38 @@ func identity[T any](v T) (T, error) {
 
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 	{
 		var tgo1 int
 		var tgo2 error
 		tgo1, tgo2 = step("T")
-		tgo4 = tgo2
-		if tgo4 != tgo5 {
-			tgo4 = tgo6.Errorf("%s: %w", "step", tgo4)
+		if tgo2 != nil {
+			tgo4 = tgo2
+			tgo4 = tgo5.Errorf("%s: %w", "step", tgo4)
 			return tgo4
 		}
-		var tgo7 int = tgo1
-		var tgo8 int = -1
-		if tgo8 == -1 {
-			var tgo9 int
-			var tgo10 error
-			tgo9, tgo10 = step("C")
-			tgo4 = tgo10
-			if tgo4 != tgo5 {
-				tgo4 = tgo6.Errorf("%s: %w", "step", tgo4)
+		var tgo6 int = tgo1
+		var tgo7 int = -1
+		if tgo7 == -1 {
+			var tgo8 int
+			var tgo9 error
+			tgo8, tgo9 = step("C")
+			if tgo9 != nil {
+				tgo4 = tgo9
+				tgo4 = tgo5.Errorf("%s: %w", "step", tgo4)
 				return tgo4
 			}
-			if tgo7 == tgo9 {
-				tgo8 = 0
+			if tgo6 == tgo8 {
+				tgo7 = 0
 			}
 		}
-		if tgo8 == -1 {
-			if tgo7 ==
+		if tgo7 == -1 {
+			if tgo6 ==
 
 				2 {
-				tgo8 = 1
+				tgo7 = 1
 			}
 		}
-		switch tgo8 {
+		switch tgo7 {
 		case 0:
 			fmt.Print("m")
 			fallthrough

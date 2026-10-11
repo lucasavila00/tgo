@@ -1,6 +1,6 @@
 package main
 
-import tgo9 "fmt"
+import tgo7 "fmt"
 
 import (
 	"errors"
@@ -26,43 +26,42 @@ func target(typedNil bool) error {
 
 func direct() (tgo2 error) {
 	var tgo3 error = tgo2
-	var tgo4 error = tgo3
 	{
 		var tgo1 error = target(true)
-		tgo3 = tgo1
-		if tgo3 != tgo4 {
+		if tgo1 != nil {
+			tgo3 = tgo1
 			return tgo3
 		}
 	}
 	panic("not reached")
 }
 
-func wrapped() (tgo6 error) {
-	var tgo7 error = tgo6
-	var tgo8 error = tgo7
+func wrapped() (tgo5 error) {
+	var tgo6 error = tgo5
 	{
-		var tgo5 error = target(false)
-		tgo7 = tgo5
-		if tgo7 != tgo8 {
-			tgo7 = tgo9.Errorf("%s: %w", "target", tgo7)
-			return tgo7
+		var tgo4 error = target(false)
+		if tgo4 != nil {
+			tgo6 = tgo4
+			tgo6 = tgo7.Errorf("%s: %w", "target", tgo6)
+			return tgo6
 		}
 	}
 	panic("not reached")
 }
 
-func shadow(nil, true, false int) (tgo11 error) {
-	var tgo12 error = tgo11
-	var tgo13 error = tgo12
+func shadow(nil, true, false int) (tgo9 error) {
+	var tgo10 error = tgo9
 
 	fmt.Print(nil, true, false)
 	{
-		var tgo10 error = target(0 != 0)
-		tgo12 = tgo10
-		if tgo12 != tgo13 {
-			return tgo12
+		var tgo8 error = target(0 != 0)
+		var tgo11 error
+		if tgo8 != tgo11 {
+			tgo10 = tgo8
+			return tgo10
 		}
 	}
+
 	var success error
 	return success
 }

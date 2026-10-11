@@ -20,13 +20,12 @@ func get() (Value, error) {
 func unnamed(label string) (tgo3 Value, tgo5 error) {
 	var tgo4 Value = tgo3
 	var tgo6 error = tgo5
-	var tgo7 error = tgo6
 	{
 		var tgo1 Value
 		var tgo2 error
 		tgo1, tgo2 = get()
-		tgo6 = tgo2
-		if tgo6 != tgo7 {
+		if tgo2 != nil {
+			tgo6 = tgo2
 			return tgo4, tgo6
 		}
 		return tgo1, nil
@@ -34,56 +33,52 @@ func unnamed(label string) (tgo3 Value, tgo5 error) {
 }
 
 func named() (value Value, err error) {
-	var tgo10 Value = value
-	var tgo11 error = err
-	var tgo12 error = tgo11
-
+	var tgo9 Value = value
+	var tgo10 error = err
 	value = 5
 	err = sentinel
 	{
-		var tgo8 Value
-		var tgo9 error
-		tgo8, tgo9 = get()
-		tgo11 = tgo9
-		if tgo11 != tgo12 {
-			return tgo10, tgo11
+		var tgo7 Value
+		var tgo8 error
+		tgo7, tgo8 = get()
+		if tgo8 != nil {
+			tgo10 = tgo8
+			return tgo9, tgo10
 		}
-		_ = tgo8
+		_ = tgo7
 	}
 	return
 }
 
-func generic[T any](value T) (tgo15 T, tgo17 error) {
-	var tgo16 T = tgo15
-	var tgo18 error = tgo17
-	var tgo19 error = tgo18
+func generic[T any](value T) (tgo13 T, tgo15 error) {
+	var tgo14 T = tgo13
+	var tgo16 error = tgo15
 	{
-		var tgo13 Value
-		var tgo14 error
-		tgo13, tgo14 = get()
-		tgo18 = tgo14
-		if tgo18 != tgo19 {
-			return tgo16, tgo18
+		var tgo11 Value
+		var tgo12 error
+		tgo11, tgo12 = get()
+		if tgo12 != nil {
+			tgo16 = tgo12
+			return tgo14, tgo16
 		}
-		_ = tgo13
+		_ = tgo11
 	}
 	return value, nil
 }
 
 func closure() error {
-	call := func() (tgo22 Value, tgo24 error) {
-		var tgo23 Value = tgo22
-		var tgo25 error = tgo24
-		var tgo26 error = tgo25
+	call := func() (tgo19 Value, tgo21 error) {
+		var tgo20 Value = tgo19
+		var tgo22 error = tgo21
 		{
-			var tgo20 Value
-			var tgo21 error
-			tgo20, tgo21 = get()
-			tgo25 = tgo21
-			if tgo25 != tgo26 {
-				return tgo23, tgo25
+			var tgo17 Value
+			var tgo18 error
+			tgo17, tgo18 = get()
+			if tgo18 != nil {
+				tgo22 = tgo18
+				return tgo20, tgo22
 			}
-			return tgo20, nil
+			return tgo17, nil
 		}
 	}
 	v, e := call()

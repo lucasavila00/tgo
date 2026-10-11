@@ -1,6 +1,6 @@
 package main
 
-import tgo11 "fmt"
+import tgo10 "fmt"
 
 import (
 	"fmt"
@@ -13,46 +13,45 @@ func (utility) Sizeof(value int) int { return value }
 func next() (int, error)             { return 7, nil }
 func run() (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 	var tgo1 int
 	var tgo2 error
 	tgo1, tgo2 = next()
-	tgo4 = tgo2
-	if tgo4 != tgo5 {
+	if tgo2 != nil {
+		tgo4 = tgo2
 		return tgo4
 	}
 	value := struct{ X int }{tgo1}
 	fmt.Println(u.Sizeof(value) > 0, u.Alignof(value) > 0, u.Offsetof(value.X))
 	unsafe := utility{}
 	{
-		var tgo8 func(value int) int = unsafe.Sizeof
-		var tgo6 int
-		var tgo7 error
-		tgo6, tgo7 = next()
-		tgo4 = tgo7
-		if tgo4 != tgo5 {
+		var tgo7 func(value int) int = unsafe.Sizeof
+		var tgo5 int
+		var tgo6 error
+		tgo5, tgo6 = next()
+		if tgo6 != nil {
+			tgo4 = tgo6
 			return tgo4
 		}
-		fmt.Println(tgo8(tgo6))
+		fmt.Println(tgo7(tgo5))
 	}
 	{
-		var tgo9 int
-		var tgo10 error
-		tgo9, tgo10 = next()
-		tgo4 = tgo10
-		if tgo4 != tgo5 {
-			tgo4 = tgo11.Errorf("%s: %w", "next", tgo4)
+		var tgo8 int
+		var tgo9 error
+		tgo8, tgo9 = next()
+		if tgo9 != nil {
+			tgo4 = tgo9
+			tgo4 = tgo10.Errorf("%s: %w", "next", tgo4)
 			return tgo4
 		}
-		var tgo14 int = min(tgo9, 8)
-		var tgo12 int
-		var tgo13 error
-		tgo12, tgo13 = next()
-		tgo4 = tgo13
-		if tgo4 != tgo5 {
+		var tgo13 int = min(tgo8, 8)
+		var tgo11 int
+		var tgo12 error
+		tgo11, tgo12 = next()
+		if tgo12 != nil {
+			tgo4 = tgo12
 			return tgo4
 		}
-		fmt.Println(tgo14, max(6, tgo12))
+		fmt.Println(tgo13, max(6, tgo11))
 	}
 	return nil
 }

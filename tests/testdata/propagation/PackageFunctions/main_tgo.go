@@ -1,6 +1,6 @@
 package main
 
-import tgo11 "fmt"
+import tgo9 "fmt"
 
 import (
 	"errors"
@@ -21,14 +21,13 @@ func next(fail bool) (int, error) {
 
 var direct = func(fail bool) (tgo3 error) {
 	var tgo4 error = tgo3
-	var tgo5 error = tgo4
 
 	defer func() { trace = append(trace, "defer") }()
 	var tgo1 int
 	var tgo2 error
 	tgo1, tgo2 = next(fail)
-	tgo4 = tgo2
-	if tgo4 != tgo5 {
+	if tgo2 != nil {
+		tgo4 = tgo2
 		return tgo4
 	}
 	value := tgo1
@@ -36,39 +35,37 @@ var direct = func(fail bool) (tgo3 error) {
 	return nil
 }
 
-var wrapped = func(fail bool) (tgo8 error) {
-	var tgo9 error = tgo8
-	var tgo10 error = tgo9
+var wrapped = func(fail bool) (tgo7 error) {
+	var tgo8 error = tgo7
 
 	defer func() { trace = append(trace, "defer") }()
-	var tgo6 int
-	var tgo7 error
-	tgo6, tgo7 = next(fail)
-	tgo9 = tgo7
-	if tgo9 != tgo10 {
-		tgo9 = tgo11.Errorf("%s: %w", "next", tgo9)
-		return tgo9
+	var tgo5 int
+	var tgo6 error
+	tgo5, tgo6 = next(fail)
+	if tgo6 != nil {
+		tgo8 = tgo6
+		tgo8 = tgo9.Errorf("%s: %w", "next", tgo8)
+		return tgo8
 	}
-	value := tgo6
+	value := tgo5
 	trace = append(trace, fmt.Sprint(value))
 	return nil
 }
 
 var collection = map[string][]func(bool) error{
 	"run": {
-		func(fail bool) (tgo14 error) {
-			var tgo15 error = tgo14
-			var tgo16 error = tgo15
+		func(fail bool) (tgo12 error) {
+			var tgo13 error = tgo12
 
 			defer func() { trace = append(trace, "defer") }()
-			var tgo12 int
-			var tgo13 error
-			tgo12, tgo13 = next(fail)
-			tgo15 = tgo13
-			if tgo15 != tgo16 {
-				return tgo15
+			var tgo10 int
+			var tgo11 error
+			tgo10, tgo11 = next(fail)
+			if tgo11 != nil {
+				tgo13 = tgo11
+				return tgo13
 			}
-			value := tgo12
+			value := tgo10
 			trace = append(trace, fmt.Sprint(value))
 			return nil
 		},
@@ -76,38 +73,36 @@ var collection = map[string][]func(bool) error{
 }
 
 var nested = func() func(bool) error {
-	return func(fail bool) (tgo19 error) {
-		var tgo20 error = tgo19
-		var tgo21 error = tgo20
+	return func(fail bool) (tgo16 error) {
+		var tgo17 error = tgo16
 
 		defer func() { trace = append(trace, "defer") }()
-		var tgo17 int
-		var tgo18 error
-		tgo17, tgo18 = next(fail)
-		tgo20 = tgo18
-		if tgo20 != tgo21 {
-			return tgo20
+		var tgo14 int
+		var tgo15 error
+		tgo14, tgo15 = next(fail)
+		if tgo15 != nil {
+			tgo17 = tgo15
+			return tgo17
 		}
-		value := tgo17
+		value := tgo14
 		trace = append(trace, fmt.Sprint(value))
 		return nil
 	}
 }()
 
-var initialized = func() (tgo24 error) {
-	var tgo25 error = tgo24
-	var tgo26 error = tgo25
+var initialized = func() (tgo20 error) {
+	var tgo21 error = tgo20
 
 	defer func() { trace = append(trace, "init-defer") }()
 	{
-		var tgo22 int
-		var tgo23 error
-		tgo22, tgo23 = next(true)
-		tgo25 = tgo23
-		if tgo25 != tgo26 {
-			return tgo25
+		var tgo18 int
+		var tgo19 error
+		tgo18, tgo19 = next(true)
+		if tgo19 != nil {
+			tgo21 = tgo19
+			return tgo21
 		}
-		_ = tgo22
+		_ = tgo18
 	}
 	trace = append(trace, "unreachable")
 	return nil
