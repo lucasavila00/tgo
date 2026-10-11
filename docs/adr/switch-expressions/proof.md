@@ -1,28 +1,36 @@
-# PROOF
+# Switch expressions: PROOF
 
-Extend value-expression fixtures with TGo inputs, generated Go snapshots,
-expected output, and independent handwritten Go references. Compile and run both
-implementations. Compare values and event logs, not only generated text.
+## Behavior checks
 
-Verify:
+Extend `tests/testdata/value-expressions/` with switch fixtures, snapshots,
+expected output, and independent Go references. Compile and run both programs;
+compare values and event logs.
 
-- Initializer before tag; tag once; case expressions left to right, including
-  multiple expressions per clause; later cases skipped after a match.
-- Default written first still waits for all cases to fail. Expressionless
-  switches select the first true case.
-- Type switches retain single-type, multiple-type, nil, and default bindings
-  and scopes.
-- Nested if/switch values preserve calls, short-circuit operands, loop visits,
-  assignment destinations, and package initialization.
-- Returns skip later work; defers run at function exit; outer jumps retain
-  targets; nested-loop breaks remain valid; panics retain value and order.
-- `!` preserves error identity. `!!` adds call context; `errors.Is` and
-  `errors.As` still find the cause.
-- Contextual and named types, nil, constants, generic inference, and runtime
-  overflow follow if-expression rules.
-- Complete enum coverage succeeds; missing forms and duplicate cases fail.
+Check initializer-before-tag order, one tag evaluation, ordered cases, and
+skipped cases after a match. A default written first must wait for all cases
+to fail. For `200`, the WHAT example audits once and produces `"ok"`.
 
-Require source-position diagnostics for missing default or coverage, missing
-values, incompatible types, multiple results, constant-only uses, escaped clause
-bindings, value-switch breaks, and fallthrough. Include valid ordinary switches
-with break and fallthrough to detect regressions.
+Check expressionless and type switches, clause scopes, nested expressions,
+short-circuit operands, loop visits, stores, and package initialization.
+Returns skip later work; defers run at function exit; outer jumps retain
+targets. Panics retain value and order. `!` preserves error identity; `!!` adds
+context while preserving `errors.Is` and `errors.As` access.
+
+## Rejected inputs
+
+Require source-position diagnostics for missing default or enum coverage,
+missing values, incompatible types, multiple results, constant-only uses,
+escaped bindings, value-switch breaks, and fallthrough. Complete enum coverage
+succeeds; missing forms and duplicate cases fail.
+
+## Regression checks
+
+Check ordinary-switch breaks and fallthrough, nested-loop breaks, contextual
+types, nil, constants, generic inference, and runtime overflow.
+
+## Evidence
+
+Planned: extend `TestValueExpressions`; run
+`go test ./tests -run '^TestValueExpressions$'`.
+Passing fixtures must match independent references. The feature is not
+implemented.
