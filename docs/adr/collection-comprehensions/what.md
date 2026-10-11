@@ -8,7 +8,7 @@ loops that write into one result collection.
 
 ## Syntax
 
-Recommend typed literals with the output first:
+Use typed literals with the output first:
 
 ```text
 names := []string{u.Name for _, u := range users if u.Active}
@@ -16,9 +16,8 @@ byID := map[ID]User{u.ID: u for _, u := range users if u.Active}
 pairs := [][2]int{[2]int{x, y} for _, x := range xs for _, y := range ys}
 ```
 
-The output is easy to find; the type follows Go literals. This removes the
-nested braces in the earlier [vision sketch](../../problem/vision.md).
-[SYNTAX](syntax.md) compares alternatives.
+The type and output are explicit. Use Go range bindings for each generator.
+[SYNTAX](syntax.md) records the decision and compares alternatives.
 
 One output, or one key and value, precedes at least one `for` clause. Further
 `for` and `if` clauses nest in source order. Generators use `for range source`

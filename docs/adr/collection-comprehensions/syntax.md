@@ -1,7 +1,21 @@
 # SYNTAX
 
-Choose syntax for users first. Every candidate below can become direct loops;
-no candidate is faster because of its punctuation.
+## Decision
+
+Use typed collection literals with the output before the clauses:
+
+```text
+names := []string{u.Name for _, u := range users if u.Active}
+byID := map[ID]User{u.ID: u for _, u := range users if u.Active}
+```
+
+State the slice or map type. Write a slice element or map `key: value`, then
+one or more `for` clauses and optional `if` filters. Use Go range bindings.
+
+This form keeps Go's collection types and makes the result easy to find.
+Explicit types also give `nil` and untyped constants a target type. Clauses
+execute first, although the output appears first. Use multiple lines for long
+clause chains.
 
 ## Alternatives
 
@@ -10,7 +24,7 @@ The examples select active users and produce their names.
 | Candidate | Example | Judgment |
 | --- | --- | --- |
 | Inferred, output first | `[u.Name for _, u := range users if u.Active]` | Shortest useful form. Needs collection type inference and new literal delimiters. |
-| Typed, output first | `[]string{u.Name for _, u := range users if u.Active}` | Clear output and type; few braces. Keeps Go literal types and range bindings. Recommend. |
+| Typed, output first | `[]string{u.Name for _, u := range users if u.Active}` | Chosen. Keeps Go literal types and range bindings; makes the output explicit. |
 | Forward clauses with `yield` | `[]string{for _, u := range users if u.Active yield u.Name}` | Reads in execution order. Adds a `yield` role and keeps the type prefix. Better for long clause chains. |
 | Nested blocks | `[]string{for _, u := range users { if u.Active { u.Name } }}` | Closest to Go loops. More nesting for a small operation; extends the final-expression rule to loop and filter blocks. |
 | Library pipeline | `Collect(Map(Filter(users, active), name))` | Can work without new syntax. Function arguments add text and function boundaries; fusion depends on library execution rules. |
@@ -22,11 +36,11 @@ types, and named collections still need rules. For example, standalone
 `[1 for range n]` can default to `[]int`; producing `[]uint64` needs context
 or an explicit type. This is feasible, but it is a separate design choice.
 
-Recommend explicit types because Go users already state them in collection
+Choose explicit types because Go users already state them in collection
 literals. Keep `:= range` because `for v in xs` must decide whether `v` is an
-index, key, or value. The output-first form reduces nesting and makes the
-result shape visible. Its cost is that execution starts with the clauses,
-although the output appears first. Long chains can use multiple lines.
+index, key, or value. Inferred literals need more type rules. `yield` adds a
+keyword role. Nested blocks add braces for each loop and filter. A pipeline needs function
+arguments and separate rules to combine its operations into one loop.
 
 ## What other languages teach us
 
