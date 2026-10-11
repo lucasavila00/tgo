@@ -8,7 +8,7 @@ import (
 )
 
 func run() error {
-	v := foreign.Number("A")!!
+	v := foreign.Number("A")!
 	fmt.Printf("%T", v)
 	return nil
 }

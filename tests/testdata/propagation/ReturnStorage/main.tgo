@@ -23,21 +23,21 @@ func named(fail, wrap bool) (value int, err error) {
 	}()
 	value = 9
 	if wrap {
-		value = next(fail)!
-	} else {
 		value = next(fail)!!
+	} else {
+		value = next(fail)!
 	}
 	return
 }
 
 func grouped(fail bool) (first, last error) {
 	first = sentinel
-	_ = next(fail)!!
+	_ = next(fail)!
 	return
 }
 
 func blank(fail bool) (_, _ error) {
-	_ = next(fail)!!
+	_ = next(fail)!
 	return sentinel, nil
 }
 

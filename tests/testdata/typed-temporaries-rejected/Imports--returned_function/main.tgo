@@ -8,7 +8,7 @@ import (
 )
 
 func run() error {
-	foreign.Factory()!!()!
+	foreign.Factory()!()!!
 	return nil
 }
 

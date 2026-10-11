@@ -7,6 +7,6 @@ type S[T any] struct{ X T }
 func next[T any]() (T, error) { var value T; return value, nil }
 
 func run[T any]() error {
-	_ = u.Offsetof((next[S[T]]()!).X)
+	_ = u.Offsetof((next[S[T]]()!!).X)
 	return nil
 }

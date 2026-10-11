@@ -26,10 +26,10 @@ lowering do not import each other.
 For this source:
 
 ```text
-value := strconv.Atoi(text)!!
+value := strconv.Atoi(text)!
 ```
 
-The frontend replaces `!!` with a unique comment after the call. Go can parse
+The frontend replaces `!` with a unique comment after the call. Go can parse
 the remaining source. The compiler records the operator's position and whether
 it must wrap the error.
 
@@ -51,7 +51,7 @@ The helper is for type checking. It does not handle errors at runtime. Lowering
 replaces it with the original call, typed saved results, a failure check, and
 an ordinary Go return.
 
-For example, the essential statements for `consume(target()!!)` are:
+For example, the essential statements for `consume(target()!)` are:
 
 ```go
 var tgo1 int
@@ -63,8 +63,9 @@ if tgo2 != nil {
 consume(tgo1)
 ```
 
-The function keeps its source result names. On failure, `!!` returns the
-original error directly and saved zero values for preceding results. `!` wraps the error once
+The function keeps its source result names. On failure, `!` returns the
+original error directly and saved zero values for preceding results. `!!` wraps
+the error once
 with the source call name and `%w`. Deferred calls still run.
 
 The failure check precedes conversion into the caller's error result. Thus a
@@ -76,10 +77,10 @@ cases where Go cannot compare the value directly with nil.
 
 An expression rewrite returns statements and references to evaluated results.
 Its parent runs the statements and then uses those references. For
-`consume(first(), target()!!, last())`, lowering saves `first()` before calling
+`consume(first(), target()!, last())`, lowering saves `first()` before calling
 `target()`. If the error check returns, `last()` never runs.
 
-Conditional work stays conditional. In `left() && right()!!`, the call to
+Conditional work stays conditional. In `left() && right()!`, the call to
 `right()` stays inside the true branch. Loop conditions and post statements
 stay on their required visits. Select operands run before selection; receive
 assignment targets run in the chosen case.

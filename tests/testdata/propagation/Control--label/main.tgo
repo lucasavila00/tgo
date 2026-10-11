@@ -22,7 +22,7 @@ func run() error {
 again:
 	for i < 2 {
 		i++
-		step("B")!!
+		step("B")!
 		if i == 1 {
 			continue again
 		}

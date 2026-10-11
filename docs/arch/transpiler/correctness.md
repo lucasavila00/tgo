@@ -1,12 +1,12 @@
 # How lowering preserves execution
 
-Lowering replaces `call()!!` and `call()!` with ordinary Go statements: call
+Lowering replaces `call()!` and `call()!!` with ordinary Go statements: call
 once, test its error, return on failure, then use its success results. The rules
 below keep these statements at the point where the source call runs.
 
 ## Calls and propagation
 
-For `use(first(), target()!!, last())`, assume each success result is `int` and
+For `use(first(), target()!, last())`, assume each success result is `int` and
 the call's final result is `error`. The essential generated code is:
 
 ```go
@@ -31,8 +31,8 @@ result before conversion to the caller's return type. A nil `*E` would become a
 non-nil `error` interface after conversion, so checking the converted value
 would give the wrong answer. An interface that already contains a nil pointer
 is failure. Generic results follow their instantiated types; reflection is
-used when a direct nil comparison is not available. `!!` returns the original
-error. `!` wraps it once, inside the failure branch.
+used when a direct nil comparison is not available. `!` returns the original
+error. `!!` wraps it once, inside the failure branch.
 
 The first type check uses helpers that expose only success results. It cannot
 check a return statement that lowering has not inserted yet. The compiler
@@ -43,7 +43,7 @@ against the caller's final result. Wrapped propagation checks the wrapped
 ## Conditional execution and function boundaries
 
 The expression transform keeps a short-circuit right operand inside its branch.
-For `left() && right()!!`, `right()` and its error check run only if `left()` is
+For `left() && right()!`, `right()` and its error check run only if `left()` is
 true. A single unconditional prefix would be wrong.
 
 [Statement lowering](../../../internal/lowering/statements.go) places repeated loop

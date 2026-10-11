@@ -25,12 +25,12 @@ func consume(a, b, c int) {
 }
 
 func run(fail bool) error {
-	consume(effect("L"), target(fail)!!, effect("R"))
+	consume(effect("L"), target(fail)!, effect("R"))
 	return nil
 }
 
 func wrapped() error {
-	target(true)!
+	target(true)!!
 	return nil
 }
 

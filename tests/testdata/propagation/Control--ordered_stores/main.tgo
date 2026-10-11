@@ -24,7 +24,7 @@ func run() error {
 		}
 	}()
 	a := [1]int{}
-	a[step("I")!!], a[0] = step("V")!!, step("W")!!
+	a[step("I")!], a[0] = step("V")!, step("W")!
 	return nil
 }
 

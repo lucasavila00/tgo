@@ -51,9 +51,9 @@ func run[T any](x T) error {
 	{
 		type T string
 		type Local = T
-		direct := pair(x, T("local"))     !!
-		wrapped := pair(x, T("local"))    !
-		aliased := pair(x, Local("alias"))!!
+		direct := pair(x, T("local"))     !
+		wrapped := pair(x, T("local"))    !!
+		aliased := pair(x, Local("alias"))!
 		fmt.Println(direct.A, direct.B, direct.T, *direct.Nested[0][direct.B], direct.G.A, direct.G.B)
 		fmt.Println(wrapped.F(wrapped.A, wrapped.B))
 		fmt.Println(aliased.G.A, aliased.G.B)

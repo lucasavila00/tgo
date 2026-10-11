@@ -18,20 +18,20 @@ func TestPropagationReturnTypes(t *testing.T) {
 	for _, test := range []struct {
 		name, next, run, call, operator, from, to string
 	}{
-		{"interface rejected", "func next() (int, error) { return 1, richError{} }", "func run() Rich", "next()", "!!", "error", "Rich"},
-		{"wrapped interface rejected", "func next() (int, Rich) { return 1, richError{} }", "func run() Rich", "next()", "!", "error", "Rich"},
-		{"concrete rejected", "func next() (int, plainError) { return 1, plainError{} }", "func run() Rich", "next()", "!!", "plainError", "Rich"},
-		{"generic rejected", "func next[E error](err E) (int, E) { return 1, err }", "func run[E error](err E) Rich", "next(err)", "!!", "E", "Rich"},
-		{"generic wrapped rejected", "func next[E error](err E) (int, E) { return 1, err }", "func run[E error](err E) E", "next(err)", "!", "error", "E"},
-		{"literal rejected", "func next() (int, error) { return 1, richError{} }", "var run = func() Rich", "next()", "!!", "error", "Rich"},
-		{"wrapped literal rejected", "func next() (int, Rich) { return 1, richError{} }", "var run = func() Rich", "next()", "!", "error", "Rich"},
-		{"richer accepted", "func next() (int, Rich) { return 1, richError{} }", "func run() Rich", "next()", "!!", "", ""},
-		{"concrete accepted", "func next() (int, richError) { return 1, richError{} }", "func run() Rich", "next()", "!!", "", ""},
-		{"generic accepted", "func next[E error](err E) (int, E) { return 1, err }", "func run[E Rich](err E) Rich", "next(err)", "!!", "", ""},
-		{"generic result accepted", "func next[E error](err E) (int, E) { return 1, err }", "func run[E error](err E) E", "next(err)", "!!", "", ""},
-		{"generic wrapped accepted", "func next[E error](err E) (int, E) { return 1, err }", "func run[E error](err E) error", "next(err)", "!", "", ""},
-		{"literal accepted", "func next() (int, Rich) { return 1, richError{} }", "var run = func() error", "next()", "!!", "", ""},
-		{"wrapped accepted", "func next() (int, Rich) { return 1, richError{} }", "func run() error", "next()", "!", "", ""},
+		{"interface rejected", "func next() (int, error) { return 1, richError{} }", "func run() Rich", "next()", "!", "error", "Rich"},
+		{"wrapped interface rejected", "func next() (int, Rich) { return 1, richError{} }", "func run() Rich", "next()", "!!", "error", "Rich"},
+		{"concrete rejected", "func next() (int, plainError) { return 1, plainError{} }", "func run() Rich", "next()", "!", "plainError", "Rich"},
+		{"generic rejected", "func next[E error](err E) (int, E) { return 1, err }", "func run[E error](err E) Rich", "next(err)", "!", "E", "Rich"},
+		{"generic wrapped rejected", "func next[E error](err E) (int, E) { return 1, err }", "func run[E error](err E) E", "next(err)", "!!", "error", "E"},
+		{"literal rejected", "func next() (int, error) { return 1, richError{} }", "var run = func() Rich", "next()", "!", "error", "Rich"},
+		{"wrapped literal rejected", "func next() (int, Rich) { return 1, richError{} }", "var run = func() Rich", "next()", "!!", "error", "Rich"},
+		{"richer accepted", "func next() (int, Rich) { return 1, richError{} }", "func run() Rich", "next()", "!", "", ""},
+		{"concrete accepted", "func next() (int, richError) { return 1, richError{} }", "func run() Rich", "next()", "!", "", ""},
+		{"generic accepted", "func next[E error](err E) (int, E) { return 1, err }", "func run[E Rich](err E) Rich", "next(err)", "!", "", ""},
+		{"generic result accepted", "func next[E error](err E) (int, E) { return 1, err }", "func run[E error](err E) E", "next(err)", "!", "", ""},
+		{"generic wrapped accepted", "func next[E error](err E) (int, E) { return 1, err }", "func run[E error](err E) error", "next(err)", "!!", "", ""},
+		{"literal accepted", "func next() (int, Rich) { return 1, richError{} }", "var run = func() error", "next()", "!", "", ""},
+		{"wrapped accepted", "func next() (int, Rich) { return 1, richError{} }", "func run() error", "next()", "!!", "", ""},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			main := "func main() {}"

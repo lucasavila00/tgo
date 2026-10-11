@@ -5,7 +5,7 @@ import . "unsafe"
 func next() (int, error) { return 7, nil }
 
 func run() error {
-	x := next()!!
-	_ = x + int(Sizeof(next()!))
+	x := next()!
+	_ = x + int(Sizeof(next()!!))
 	return nil
 }

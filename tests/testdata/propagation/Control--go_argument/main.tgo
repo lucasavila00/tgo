@@ -22,7 +22,7 @@ func run() error {
 	go func(v int) {
 		fmt.Print("g")
 		close(done)
-	}(step("G")!!)
+	}(step("G")!)
 	<-done
 	return nil
 }

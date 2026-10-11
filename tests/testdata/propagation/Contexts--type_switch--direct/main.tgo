@@ -38,7 +38,7 @@ func identity[T any](v T) (T, error) {
 }
 
 func run() error {
-	switch any(step("T")!!).(type) {
+	switch any(step("T")!).(type) {
 	case int:
 		fmt.Print("m")
 	}

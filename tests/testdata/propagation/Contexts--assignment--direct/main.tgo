@@ -39,7 +39,7 @@ func identity[T any](v T) (T, error) {
 
 func run() error {
 	a := [2]int{}
-	a[step("I")!!] = step("V")!!
+	a[step("I")!] = step("V")!
 	fmt.Print(a)
 	return nil
 }

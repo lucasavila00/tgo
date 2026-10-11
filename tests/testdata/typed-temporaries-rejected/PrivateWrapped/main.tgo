@@ -5,7 +5,7 @@ import "example.com/contextualtypes/library"
 func next() (int, error) { return 1, nil }
 
 func run() error {
-	library.Use(library.Value(), next()!)
+	library.Use(library.Value(), next()!!)
 	return nil
 }
 
