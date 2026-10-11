@@ -130,7 +130,7 @@ func (r *rewrite) temporaryTypeAt(typ types.Type, original ast.Expr, position to
 				if distance < 0 {
 					distance = -distance
 				}
-				if operation.Position.IsValid() && r.frame != nil && contains(r.frame.function, expr) && (selected == 0 || distance < best || distance == best && expr.Pos() < selected) {
+				if operation.Position.IsValid() && r.frame != nil && contains(r.frame.function, expr) && (selected == 0 || distance < best || distance == best && operation.Position.Offset < position.Offset) {
 					position = operation.Position
 					selected = expr.Pos()
 					best = distance
