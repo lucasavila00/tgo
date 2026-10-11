@@ -4,9 +4,9 @@ import (
 	"go/ast"
 	"go/token"
 	"strings"
+	"testing"
 
 	"github.com/lucasavila00/tgo/pkg/transpiler"
-	"testing"
 )
 
 func TestInsertOmittedLiteralType(t *testing.T) {

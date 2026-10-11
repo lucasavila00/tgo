@@ -1,0 +1,60 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var sentinel = errors.New("failure")
+var visits int
+
+func next(failAt int) (int, error) {
+	fmt.Print("N")
+	visits++
+	if visits == failAt {
+		return 0, sentinel
+	}
+	return visits, nil
+}
+
+func consume[T any](f func(...T), n int) {
+	fmt.Print("C", n)
+	f()
+}
+
+func run[T any](f func(...T), failAt int) error {
+	{
+		T := 1
+		_ = T
+		saved := f
+		value, err := next(failAt)
+		if err != nil {
+			return err
+		}
+		consume(saved, value)
+		saved = f
+		value, err = next(failAt)
+		if err != nil {
+			return fmt.Errorf("next: %w", err)
+		}
+		consume(saved, value)
+	}
+	return nil
+}
+
+func main() {
+	for _, failAt := range []int{0, 1, 2} {
+		visits = 0
+		err := run(func(...int) { fmt.Print("F") }, failAt)
+		switch {
+		case err == nil:
+			fmt.Print("S|")
+		case err == sentinel:
+			fmt.Print("E|")
+		case errors.Is(err, sentinel):
+			fmt.Print("W|")
+		default:
+			panic(err)
+		}
+	}
+}
