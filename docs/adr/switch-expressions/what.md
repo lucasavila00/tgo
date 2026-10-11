@@ -6,6 +6,7 @@ Issue: [#263](https://github.com/lucasavila00/tgo/issues/263).
 
 Ordinary switches need repeated assignments to produce a value. Extend
 [if expressions](../value-expressions.md) with switch expressions.
+Inspired by Kotlin's `if` and `when`, TGo's `if` and `switch` produce values.
 
 ## Example
 
