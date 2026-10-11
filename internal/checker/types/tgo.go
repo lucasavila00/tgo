@@ -190,7 +190,16 @@ func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*ope
 		return []*operand{{expr: &ast.BadExpr{From: body.Pos()}, typ_: Typ[Invalid]}}
 	}
 	check.stmtList(check.statementContext, list[:len(list)-1])
-	last := list[len(list)-1]
+	original := list[len(list)-1]
+	last := original
+	for {
+		labelled, ok := last.(*ast.LabeledStmt)
+		if !ok {
+			break
+		}
+		check.hasLabel = true
+		last = labelled.Stmt
+	}
 	if conditional, ok := last.(*ast.IfStmt); ok {
 		return check.conditionalBranches(conditional, context)
 	}
@@ -208,8 +217,8 @@ func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*ope
 		}
 		return []*operand{branch}
 	}
-	check.stmt(check.statementContext, last)
-	if check.isTerminating(last, "") {
+	check.stmt(check.statementContext, original)
+	if check.isTerminating(original, "") {
 		return nil
 	}
 	if branch, ok := last.(*ast.BranchStmt); ok && (branch.Tok == token.BREAK || branch.Tok == token.CONTINUE) {

@@ -79,12 +79,15 @@ done:
 	return value
 }
 
-func deferred() int {
+func labelledValue() int { return 6 }
+
+func tail() int {
 	{
 		var tgo10 int
 		if true {
-			defer fmt.Print("F")
-			tgo10 = 5
+			goto value
+		value:
+			tgo10 = labelledValue()
 		} else {
 			tgo10 = 0
 		}
@@ -93,7 +96,24 @@ func deferred() int {
 
 }
 
+func deferred() int {
+	{
+		var tgo11 int
+		if true {
+			defer fmt.Print("F")
+			tgo11 = 5
+		} else {
+			tgo11 = 0
+		}
+		return tgo11
+	}
+
+}
+
 func main() {
+	if tail() != 6 {
+		panic("labelled value")
+	}
 	value, err := checked(false, false)
 	if value != 7 || err != nil {
 		panic("success")

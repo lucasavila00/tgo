@@ -51,6 +51,7 @@ func TestConditionalTypes(t *testing.T) {
 		`func use[T ~int](x T) T {return x}; func f[T ~int](ok bool, a,b T) T {return use(if ok {a} else {b})}`,
 		`func f(ok bool) int { for { x:=if ok {break} else {1}; return x }; return 0 }`,
 		`var ok = true; var x = if ok {1} else {2}`,
+		`func value() int {return 7}; func f(ok bool) int {return if ok {goto tail; tail: value()} else {0}}`,
 		`func f(ok bool) []any { return append([]any{}, if ok {1} else {"two"}) }`,
 		`func f(ok bool) []*int { return append([]*int{}, if ok {nil} else {nil}) }`,
 		`func f(ok bool) []byte { return append([]byte{}, if ok {255} else {0}) }`,
@@ -88,6 +89,7 @@ func TestConditionalTypeErrors(t *testing.T) {
 		{`var x = if true {return 1} else {2}`, "enclosing function"},
 		{`func f() {}; var x = if true {defer f(); 1} else {2}`, "enclosing function"},
 		{`var x = if true {unused:=1; 2} else {3}`, "declared and not used"},
+		{`func f(ok bool) int { return if ok {loop: for {break loop}} else {1} }`, "final value"},
 	} {
 		t.Run(test.source, func(t *testing.T) {
 			_, err := checkTGo(t, test.source)

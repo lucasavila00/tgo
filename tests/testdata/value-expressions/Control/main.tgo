@@ -53,6 +53,17 @@ func jump(skip bool) int {
 	return value
 }
 
+func labelledValue() int {return 6}
+
+func tail() int {
+	return if true {
+		goto value
+		value: labelledValue()
+	} else {
+		0
+	}
+}
+
 func deferred() int {
 	return if true {
 		defer fmt.Print("F")
@@ -63,6 +74,7 @@ func deferred() int {
 }
 
 func main() {
+	if tail() != 6 {panic("labelled value")}
 	value, err := checked(false, false)
 	if value != 7 || err != nil {
 		panic("success")

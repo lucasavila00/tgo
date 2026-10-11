@@ -24,7 +24,7 @@ Unsafe size and offset builtins keep their unevaluated operands.
 
 Assignments, returns, arguments, and conversions can supply the type. Branches
 must satisfy Go assignment rules. Otherwise, typed results must share
-one type, and untyped constants must fit it. Use Go constant-kind rules and default types. Bare `nil` cannot supply a type. Do not
+one type, and untyped constants must fit it. Use Go constant-kind rules and default types. `nil` cannot supply a type. Do not
 infer interfaces or convert unrelated named types. Require explicit conversion
 if the type remains unknown. If every branch terminates, require a contextual
 type or conversion.

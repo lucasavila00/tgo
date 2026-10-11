@@ -94,20 +94,45 @@ func (r *rewrite) conditionalBlock(body *ast.BlockStmt, result *ast.Ident) *ast.
 	}
 	for i, statement := range body.List {
 		if i == last {
-			switch statement := statement.(type) {
-			case *ast.IfStmt:
-				copy.List = append(copy.List, r.conditionalStatement(statement, result)...)
-				continue
-			case *ast.ExprStmt:
-				if tv := r.source.checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
-					before, values := r.expression(statement.X)
-					copy.List = append(copy.List, before...)
-					copy.List = append(copy.List, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: values})
-					continue
-				}
-			}
+			copy.List = append(copy.List, r.conditionalTail(statement, result)...)
+		} else {
+			copy.List = append(copy.List, r.statement(statement)...)
 		}
-		copy.List = append(copy.List, r.statement(statement)...)
 	}
 	return &copy
+}
+
+func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.Stmt {
+	switch statement := statement.(type) {
+	case *ast.LabeledStmt:
+		tail := statement.Stmt
+		for {
+			label, ok := tail.(*ast.LabeledStmt)
+			if !ok {
+				break
+			}
+			tail = label.Stmt
+		}
+		switch tail.(type) {
+		case *ast.ExprStmt, *ast.IfStmt:
+		default:
+			return r.statement(statement)
+		}
+		copy := *statement
+		output := r.conditionalTail(statement.Stmt, result)
+		if len(output) == 1 {
+			copy.Stmt = output[0]
+		} else {
+			copy.Stmt = &ast.BlockStmt{List: output}
+		}
+		return []ast.Stmt{&copy}
+	case *ast.IfStmt:
+		return r.conditionalStatement(statement, result)
+	case *ast.ExprStmt:
+		if tv := r.source.checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
+			before, values := r.expression(statement.X)
+			return append(before, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: values})
+		}
+	}
+	return r.statement(statement)
 }
