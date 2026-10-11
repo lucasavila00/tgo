@@ -65,6 +65,19 @@ func panics() {
 }
 func nextValue() int  { fmt.Print("before "); return 1 }
 func laterValue() int { fmt.Print("later "); return 2 }
+func nestedDead() int {
+	switch 1 {
+	case 1:
+		switch 2 {
+		case 2:
+			return 30
+		default:
+			return 40
+		}
+	default:
+		return 50
+	}
+}
 func dead(n int) int {
 	switch n {
 	case 0:
@@ -82,6 +95,6 @@ func main() {
 			panic(err)
 		}
 	}
-	fmt.Println(jump(true), jump(false), dead(0), dead(1))
+	fmt.Println(jump(true), jump(false), dead(0), dead(1), nestedDead())
 	panics()
 }

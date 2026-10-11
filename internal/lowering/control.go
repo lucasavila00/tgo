@@ -48,10 +48,14 @@ func (r *rewrite) rangeStatement(s *ast.RangeStmt) []ast.Stmt {
 }
 
 func (r *rewrite) switchStatement(s *ast.SwitchStmt) []ast.Stmt {
-	return r.valueSwitchStatement(s, nil)
+	return r.switchStatementResult(s, nil, false)
 }
 
 func (r *rewrite) valueSwitchStatement(s *ast.SwitchStmt, result *ast.Ident) []ast.Stmt {
+	return r.switchStatementResult(s, result, true)
+}
+
+func (r *rewrite) switchStatementResult(s *ast.SwitchStmt, result *ast.Ident, value bool) []ast.Stmt {
 	roots := []ast.Node{s.Init, s.Tag}
 	for _, stmt := range s.Body.List {
 		for _, expr := range stmt.(*ast.CaseClause).List {
@@ -76,7 +80,7 @@ func (r *rewrite) valueSwitchStatement(s *ast.SwitchStmt, result *ast.Ident) []a
 		}
 		c := *clause
 		c.Body = nil
-		if result != nil {
+		if value {
 			branchResult := result
 			if !r.source.checked.TypesInfo.TGoCases[clause] {
 				branchResult = nil
@@ -144,10 +148,14 @@ func (r *rewrite) valueSwitchStatement(s *ast.SwitchStmt, result *ast.Ident) []a
 }
 
 func (r *rewrite) typeSwitchStatement(s *ast.TypeSwitchStmt) []ast.Stmt {
-	return r.valueTypeSwitchStatement(s, nil)
+	return r.typeSwitchStatementResult(s, nil, false)
 }
 
 func (r *rewrite) valueTypeSwitchStatement(s *ast.TypeSwitchStmt, result *ast.Ident) []ast.Stmt {
+	return r.typeSwitchStatementResult(s, result, true)
+}
+
+func (r *rewrite) typeSwitchStatementResult(s *ast.TypeSwitchStmt, result *ast.Ident, value bool) []ast.Stmt {
 	exit := r.prepareBreakExit(s, s.Init, s.Assign)
 	copy := *s
 	var before []ast.Stmt
@@ -179,7 +187,7 @@ func (r *rewrite) valueTypeSwitchStatement(s *ast.TypeSwitchStmt, result *ast.Id
 	for _, statement := range s.Body.List {
 		clause := *statement.(*ast.CaseClause)
 		clause.Body = nil
-		if result != nil {
+		if value {
 			branchResult := result
 			if !r.source.checked.TypesInfo.TGoCases[statement.(*ast.CaseClause)] {
 				branchResult = nil

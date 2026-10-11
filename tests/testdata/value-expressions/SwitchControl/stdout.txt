@@ -1,5 +1,5 @@
 call after defer 7 false false false false
 call defer 0 true true true true
 call defer 0 false true true true
-0 9 10 20
+0 9 10 20 30
 before branch panic true

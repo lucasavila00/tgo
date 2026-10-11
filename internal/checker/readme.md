@@ -75,7 +75,7 @@ type Package struct {
     Errors         []error
     Operations     map[string]types.TGoOperation
     Comprehensions map[*ast.CallExpr]*frontend.Comprehension
-    Conditionals   map[*ast.CallExpr]*ast.IfStmt
+    Conditionals   map[*ast.CallExpr]ast.Stmt
 }
 ```
 

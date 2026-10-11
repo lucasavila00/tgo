@@ -80,17 +80,35 @@ func panics() {
 }
 func nextValue() int  { fmt.Print("before "); return 1 }
 func laterValue() int { fmt.Print("later "); return 2 }
-func dead(n int) int {
+func nestedDead() int {
 	{
 		var tgo11 int
+		switch 1 {
+		case 1:
+			switch 2 {
+			case 2:
+				return 30
+				_ = "unreachable" == "unreachable"
+			default:
+				return 40
+			}
+		default:
+			tgo11 = 50
+		}
+		return tgo11
+	}
+}
+func dead(n int) int {
+	{
+		var tgo12 int
 		switch n {
 		case 0:
 			return 10
 			_ = "unreachable" == "unreachable"
 		default:
-			tgo11 = 20
+			tgo12 = 20
 		}
-		return tgo11
+		return tgo12
 	}
 }
 func main() {
@@ -102,6 +120,6 @@ func main() {
 			panic(err)
 		}
 	}
-	fmt.Println(jump(true), jump(false), dead(0), dead(1))
+	fmt.Println(jump(true), jump(false), dead(0), dead(1), nestedDead())
 	panics()
 }
