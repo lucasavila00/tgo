@@ -13,7 +13,7 @@ The operation records the source position and whether the error needs wrapping.
 `MarkerDeclaration` builds a generic helper with the required number of
 success results. The helper lets Go check the surrounding expression without
 the call's final error result. The driver later sends these operations to the
-lowerer, which removes the helpers from output.
+lowerer, which replaces executable helper calls and removes unused declarations.
 
 See [the architecture](../../docs/arch/transpiler/readme.md) for nested-call
 preparation and the checks performed after typing.
