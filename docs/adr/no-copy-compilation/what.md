@@ -3,8 +3,8 @@
 Compile in the original module directory without copying it. The current copy
 duplicates assets and source that checking can read at their original paths.
 
-An overlay maps a file path to alternative contents. Go sees those contents
-without changing the file on disk. Use two overlays: TGo source at generated
+An [overlay](../../guide/glossary.md#overlay) maps a file path to alternative
+contents. Go sees those contents without changing the file on disk. Use two overlays: TGo source at generated
 Go paths for package selection, then generated Go for final checking. Ordinary
 files stay in place. Write only required overlay contents to temporary files
 outside the source directory.
