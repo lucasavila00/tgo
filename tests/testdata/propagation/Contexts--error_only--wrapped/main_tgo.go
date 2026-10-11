@@ -1,6 +1,6 @@
 package main
 
-import tgo4 "fmt"
+import fmt_tgo4 "fmt"
 
 import (
 	"errors"
@@ -45,7 +45,7 @@ func run() (tgo2 error) {
 		var tgo1 error = only()
 		if tgo1 != nil {
 			tgo3 = tgo1
-			tgo3 = tgo4.Errorf("%s: %w", "only", tgo3)
+			tgo3 = fmt_tgo4.Errorf("%s: %w", "only", tgo3)
 			return tgo3
 		}
 	}

@@ -171,14 +171,14 @@ func (r *rewrite) zeroMapKey(container *ast.CompositeLit, pointer bool) ast.Expr
 
 func (r *rewrite) prepareCollectionImports() {
 	if r.mapAlias == nil {
-		r.mapAlias = r.name()
+		r.mapAlias = r.nameFor("maps")
 		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.mapAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"maps"`}})
 	}
 }
 
 func (r *rewrite) prepareSliceImport() {
 	if r.sliceAlias == nil {
-		r.sliceAlias = r.name()
+		r.sliceAlias = r.nameFor("slices")
 		r.extraImports = append(r.extraImports, &ast.ImportSpec{Name: r.sliceAlias, Path: &ast.BasicLit{Kind: token.STRING, Value: `"slices"`}})
 	}
 }
