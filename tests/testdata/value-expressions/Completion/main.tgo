@@ -1,0 +1,89 @@
+package main
+
+import "fmt"
+
+func early(flag bool) int {
+	return if flag {
+		return 7
+		"unreachable"
+	} else {
+		9
+	}
+}
+
+func nested(flag bool) int {
+	return if flag {
+		if !flag {
+			return 6
+		} else {
+			return 8
+		}
+		"unreachable"
+	} else {
+		9
+	}
+}
+
+func jump(flag bool) int8 {
+	return if flag {
+		goto value
+		return 0
+	value:
+		127
+	} else {
+		1
+	}
+}
+
+func deferred(flag bool, trace *string) int {
+	return if flag {
+		defer func() { *trace += "D" }()
+		return 7
+		nil
+	} else {
+		9
+	}
+}
+
+func argument(flag bool) int {
+	return if flag {
+		var ignored int = if !flag {
+			return 6
+		} else {
+			return 8
+		}
+		_ = ignored
+		"unreachable"
+	} else {
+		9
+	}
+}
+
+func innerBreak(flag bool) int {
+	return if flag {
+		for {
+			break
+		}
+		3
+	} else {
+		9
+	}
+}
+
+func main() {
+	for _, flag := range []bool{true, false} {
+		expect, nestedExpect, jumpExpect, breakExpect := 9, 9, int8(1), 9
+		trace, traceExpect := "", ""
+		if flag {
+			expect, nestedExpect, jumpExpect, breakExpect = 7, 8, 127, 3
+			traceExpect = "D"
+		}
+		if early(flag) != expect || nested(flag) != nestedExpect || argument(flag) != nestedExpect || jump(flag) != jumpExpect || innerBreak(flag) != breakExpect {
+			panic("branch result")
+		}
+		if deferred(flag, &trace) != expect || trace != traceExpect {
+			panic("branch defer")
+		}
+	}
+	fmt.Println("ok")
+}

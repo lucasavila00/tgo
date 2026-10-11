@@ -5,6 +5,8 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/lucasavila00/tgo/internal/controlflow"
+
 	. "github.com/lucasavila00/tgo/internal/checker/upstream/errors"
 )
 
@@ -250,7 +252,38 @@ func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*ope
 		return []*operand{{expr: &ast.BadExpr{From: body.Pos()}, typ_: Typ[Invalid]}}
 	}
 	check.stmtList(check.statementContext, list[:len(list)-1])
-	original := list[len(list)-1]
+	flow := check.branchFlow(body)
+	if !flow.Tail {
+		context = nil
+	}
+	values := check.conditionalTail(list[len(list)-1], context, flow.Tail)
+	flow = check.branchFlow(body)
+	if check.Info != nil {
+		if check.TGoBranches == nil {
+			check.TGoBranches = make(map[*ast.BlockStmt]bool)
+		}
+		check.TGoBranches[body] = flow.End
+	}
+	if !flow.End {
+		return nil
+	}
+	return values
+}
+
+func (check *Checker) branchFlow(body *ast.BlockStmt) controlflow.Result {
+	return controlflow.Branch(body, controlflow.Syntax{
+		Conditional: func(call *ast.CallExpr) *ast.IfStmt {
+			if op, found := check.tgoOperation(call); found && op.Conditional {
+				return call.Args[0].(*ast.FuncLit).Body.List[0].(*ast.IfStmt)
+			}
+			return nil
+		},
+		Terminates:  func(call *ast.CallExpr) bool { return check.isPanic[call] },
+		Unevaluated: func(call *ast.CallExpr) bool { return check.Types[call].Value != nil },
+	})
+}
+
+func (check *Checker) conditionalTail(original ast.Stmt, context Type, reachable bool) []*operand {
 	last := original
 	for {
 		labelled, ok := last.(*ast.LabeledStmt)
@@ -271,14 +304,14 @@ func (check *Checker) conditionalBlock(body *ast.BlockStmt, context Type) []*ope
 			return nil
 		}
 		check.singleValue(branch)
-		if branch.mode() == novalue {
+		if branch.mode() == novalue && reachable {
 			check.error(statement, InvalidSyntaxTree, "if expression branch requires one value")
 			branch.invalidate()
 		}
 		return []*operand{branch}
 	}
 	check.stmt(check.statementContext, original)
-	if check.isTerminating(original, "") {
+	if check.isTerminating(original, "") || !reachable {
 		return nil
 	}
 	if branch, ok := last.(*ast.BranchStmt); ok && (branch.Tok == token.BREAK || branch.Tok == token.CONTINUE) {

@@ -85,6 +85,9 @@ func (r *rewrite) conditionalStatement(statement *ast.IfStmt, result *ast.Ident)
 func (r *rewrite) conditionalBlock(body *ast.BlockStmt, result *ast.Ident) *ast.BlockStmt {
 	copy := *body
 	copy.List = nil
+	if completes, recorded := r.source.checked.TypesInfo.TGoBranches[body]; recorded && !completes {
+		result = nil
+	}
 	last := len(body.List) - 1
 	for last >= 0 {
 		if _, empty := body.List[last].(*ast.EmptyStmt); !empty {
@@ -131,6 +134,15 @@ func (r *rewrite) conditionalTail(statement ast.Stmt, result *ast.Ident) []ast.S
 	case *ast.ExprStmt:
 		if tv := r.source.checked.TypesInfo.Types[statement.X]; !tv.IsVoid() {
 			before, values := r.expression(statement.X)
+			if result == nil {
+				for _, value := range values {
+					if tv.IsNil() {
+						value = &ast.CallExpr{Fun: &ast.InterfaceType{Methods: &ast.FieldList{}}, Args: []ast.Expr{value}}
+					}
+					before = append(before, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Tok: token.ASSIGN, Rhs: []ast.Expr{value}})
+				}
+				return before
+			}
 			return append(before, &ast.AssignStmt{Lhs: []ast.Expr{result}, Tok: token.ASSIGN, Rhs: values})
 		}
 	}

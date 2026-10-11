@@ -22,6 +22,16 @@
  	// Context is the context used for resolving global identifiers. If nil, the
  	// type checker will initialize this field with a newly created context.
  	Context *Context
+@@ -200,6 +203,9 @@
+ // If the package has type errors, the collected information may
+ // be incomplete.
+ type Info struct {
++	// TGoBranches records whether each conditional branch can reach its end.
++	TGoBranches map[*ast.BlockStmt]bool
++
+ 	// Types maps expressions to their types, and for constant
+ 	// expressions, also their values. Invalid expressions are
+ 	// omitted.
 --- a/types/assignments.go
 +++ b/types/assignments.go
 @@ -11,8 +11,8 @@
