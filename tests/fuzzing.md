@@ -52,7 +52,8 @@ Run the if-expression campaign:
 
 ```sh
 GOMAXPROCS=2 go test -tags=loweringfuzz ./tests -run '^$' \
-  -fuzz '^FuzzIfExpressionBehavior$' -parallel=1 -fuzztime=10m
+  -fuzz '^FuzzIfExpressionBehavior$' -parallel=1 -fuzztime=10m \
+  -fuzzminimizetime=1x -timeout=15m
 ```
 
 Bytes select a statement context, nested branch shapes, conditions, leaf values,
@@ -63,3 +64,7 @@ use ordinary Go statements, so these operations keep their function and loop.
 
 Go saves failures under `tests/testdata/fuzz/FuzzIfExpressionBehavior/`.
 Check and reduce each failure before creating a bug issue.
+
+Each mutation compiles and runs two programs. Limit automatic reduction to one
+execution per input; reduce confirmed failures separately. This keeps the
+campaign focused on testing new inputs.
