@@ -125,3 +125,8 @@ Improve generated-code appearance after correctness is complete.
 Reject only invalid or unrepresentable programs. Do not replace a feasible
 compiler lowering with a linter restriction. Do not require users to write
 compiler bookkeeping by hand.
+
+## 12. The User Merges Pull Requests
+
+Never merge a pull request or enable automatic merging. Create the pull request,
+complete its checks and review, and mark it ready for review. The user merges it.
