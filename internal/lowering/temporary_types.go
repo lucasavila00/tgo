@@ -176,6 +176,13 @@ func (r *rewrite) temporaryType(typ types.Type, original ast.Expr) ast.Expr {
 		}
 	}
 	rename = func(typ types.Type, expr ast.Expr) {
+		for {
+			parenthesized, ok := expr.(*ast.ParenExpr)
+			if !ok {
+				break
+			}
+			expr = parenthesized.X
+		}
 		switch t := typ.(type) {
 		case *types.TypeParam:
 			if name := parameterNames[t]; name != "" {
