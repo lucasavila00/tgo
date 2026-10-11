@@ -1,0 +1,17 @@
+[
+  {"name":"Calls","reached":true,"panic":false},
+  {"name":"Booleans","reached":true,"panic":false},
+  {"name":"Booleans","reached":false,"panic":false},
+  {"name":"Declarations","reached":true,"panic":false},
+  {"name":"Assignments","reached":true,"panic":false},
+  {"name":"AssignmentPanic","reached":true,"panic":true},
+  {"name":"Loops","reached":true,"panic":false},
+  {"name":"Switches","reached":true,"panic":false},
+  {"name":"Ranges","reached":true,"panic":false},
+  {"name":"Selects","reached":true,"panic":false},
+  {"name":"Scheduling","reached":true,"panic":false},
+  {"name":"Recover","reached":true,"panic":false},
+  {"name":"Jumps","reached":true,"panic":false},
+  {"name":"Types","reached":true,"panic":false},
+  {"name":"Nested","reached":true,"panic":false}
+]

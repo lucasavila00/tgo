@@ -12,12 +12,13 @@ import (
 
 // Site identifies an expression in the original source. Offsets are bytes.
 type Site struct {
-	File        string `json:"file"`
-	Start       int    `json:"start"`
-	End         int    `json:"end"`
-	Kind        string `json:"kind"`
-	Reason      string `json:"reason,omitempty"`
-	ErrorReturn bool   `json:"error_return"`
+	File         string `json:"file"`
+	Start        int    `json:"start"`
+	End          int    `json:"end"`
+	Kind         string `json:"kind"`
+	Reason       string `json:"reason,omitempty"`
+	ErrorReturn  bool   `json:"error_return"`
+	ReturnReason string `json:"return_reason,omitempty"`
 }
 
 // Source contains the original syntax and its type information.
@@ -136,6 +137,11 @@ func (s *Source) inventory(file *ast.File, dir string) {
 				if sig != nil && sig.Results().Len() == 1 {
 					site.ErrorReturn = types.Identical(sig.Results().At(0).Type(), types.Universe.Lookup("error").Type())
 				}
+				if !site.ErrorReturn {
+					site.ReturnReason = "function does not return only error"
+				}
+			} else {
+				site.ReturnReason = "no enclosing function"
 			}
 			s.Sites = append(s.Sites, site)
 			s.expressions[site] = expr

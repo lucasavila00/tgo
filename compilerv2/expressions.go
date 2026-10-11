@@ -82,6 +82,9 @@ func (r *rewrite) operands(input []ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		before, refs := r.expression(expr)
 		if len(before) != 0 {
 			for i, value := range values {
+				if r.functionName(value) {
+					continue
+				}
 				if tv, ok := r.source.Package.TypesInfo.Types[value]; ok && (tv.Value != nil || tv.IsType() || tv.IsBuiltin() || tv.IsNil()) {
 					continue
 				}
@@ -175,12 +178,33 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		}
 	case *ast.SelectorExpr:
 		copy := *e
+		if selection := r.source.Package.TypesInfo.Selections[e]; selection != nil && selection.Kind() == types.MethodVal {
+			signature := selection.Obj().Type().(*types.Signature)
+			_, pointerReceiver := signature.Recv().Type().Underlying().(*types.Pointer)
+			_, pointerValue := r.source.Package.TypesInfo.TypeOf(e.X).Underlying().(*types.Pointer)
+			if pointerReceiver && !pointerValue && r.source.Package.TypesInfo.Types[e.X].Addressable() {
+				var place ast.Expr
+				before, place = r.place(e.X)
+				copy.X = &ast.ParenExpr{X: &ast.UnaryExpr{Op: token.AND, X: place}}
+				result = &copy
+				break
+			}
+		}
 		var values []ast.Expr
 		before, values = r.expression(e.X)
 		copy.X = values[0]
 		result = &copy
 	case *ast.IndexExpr:
 		copy := *e
+		if r.addressableArray(e.X) && contains(e.Index, r.target) {
+			var base ast.Expr
+			before, base = r.arrayBase(e.X)
+			setup, index := r.expression(e.Index)
+			before = append(before, setup...)
+			copy.X, copy.Index = base, index[0]
+			result = &copy
+			break
+		}
 		var values []ast.Expr
 		before, values = r.operands([]ast.Expr{e.X, e.Index})
 		copy.X, copy.Index = values[0], values[1]
@@ -206,15 +230,24 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	case *ast.SliceExpr:
 		copy := *e
 		input := []ast.Expr{e.X}
+		array := r.addressableArray(e.X)
+		if array {
+			before, copy.X = r.arrayBase(e.X)
+			input = nil
+		}
 		for _, bound := range []ast.Expr{e.Low, e.High, e.Max} {
 			if bound != nil {
 				input = append(input, bound)
 			}
 		}
 		var values []ast.Expr
-		before, values = r.operands(input)
-		copy.X = values[0]
-		i := 1
+		setup, values := r.operands(input)
+		before = append(before, setup...)
+		i := 0
+		if !array {
+			copy.X = values[0]
+			i = 1
+		}
 		for _, bound := range []*ast.Expr{&copy.Low, &copy.High, &copy.Max} {
 			if *bound != nil {
 				*bound = values[i]
@@ -258,6 +291,9 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 	}
 	if expr == r.target {
 		r.inserted = true
+		if r.functionName(expr) {
+			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
+		}
 		if tv := r.source.Package.TypesInfo.Types[expr]; tv.Value != nil || tv.IsNil() {
 			return append(before, r.after([]ast.Expr{result})...), []ast.Expr{result}
 		}
@@ -279,6 +315,36 @@ func (r *rewrite) expression(expr ast.Expr) ([]ast.Stmt, []ast.Expr) {
 		return before, refs
 	}
 	return before, []ast.Expr{result}
+}
+
+func (r *rewrite) functionName(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		_, ok := r.source.Package.TypesInfo.Uses[e].(*types.Func)
+		return ok
+	case *ast.SelectorExpr:
+		if r.source.Package.TypesInfo.Selections[e] != nil {
+			return false
+		}
+		_, ok := r.source.Package.TypesInfo.Uses[e.Sel].(*types.Func)
+		return ok
+	case *ast.IndexExpr:
+		return r.source.Package.TypesInfo.Types[e.Index].IsType() && r.functionName(e.X)
+	case *ast.IndexListExpr:
+		return r.functionName(e.X)
+	}
+	return false
+}
+
+func (r *rewrite) addressableArray(expr ast.Expr) bool {
+	_, array := r.source.Package.TypesInfo.TypeOf(expr).Underlying().(*types.Array)
+	return array && r.source.Package.TypesInfo.Types[expr].Addressable()
+}
+
+func (r *rewrite) arrayBase(expr ast.Expr) ([]ast.Stmt, ast.Expr) {
+	before, place := r.place(expr)
+	saved, values := r.save(&ast.UnaryExpr{Op: token.AND, X: place})
+	return append(before, saved...), &ast.ParenExpr{X: &ast.StarExpr{X: values[0]}}
 }
 
 func (r *rewrite) untypedBoolean(expr ast.Expr) bool {
